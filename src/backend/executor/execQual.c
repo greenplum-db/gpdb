@@ -4968,6 +4968,7 @@ ExecEvalExprSwitchContext(ExprState *expression,
 	return retDatum;
 }
 
+
 /*
  * ExecInitExpr: prepare an expression tree for execution
  *

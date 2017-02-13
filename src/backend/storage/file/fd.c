@@ -1004,7 +1004,7 @@ OpenTemporaryFile(const char   *fileName,
 	}
 
     return OpenNamedFile(tempfilepath, create, delOnClose, closeAtEOXact);
-}    /* OpenTemporaryFile */
+}
 
 /*
  * Open an arbitrary file that will (optionally) disappear when we close it.
@@ -1084,8 +1084,7 @@ OpenNamedFile(const char   *fileName,
 	}
 
 	return file;
-}                             /* OpenNamedFile */
-
+}
 
 /*
  * close a file when done with it

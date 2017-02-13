@@ -37,7 +37,6 @@
 #include "libpq/pqformat.h"
 #include "utils/portal.h"
 
-#include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
 #include "utils/vmem_tracker.h"
 
@@ -148,8 +147,6 @@ CreateDestReceiver(CommandDest dest, Portal portal)
 void
 EndCommand(const char *commandTag, CommandDest dest)
 {
-	StringInfoData buf;
-
 	switch (dest)
 	{
 		case DestRemote:
@@ -158,15 +155,9 @@ EndCommand(const char *commandTag, CommandDest dest)
 			 * We assume the commandTag is plain ASCII and therefore
 			 * requires no encoding conversion.
 			 */
-			if (Gp_role == GP_ROLE_EXECUTE)
-			{
-				pq_beginmessage(&buf, 'C');
-				pq_send_ascii_string(&buf, commandTag);
-				pq_endmessage(&buf);
-			}
-			else
-				pq_putmessage('C', commandTag, strlen(commandTag) + 1);
+			pq_putmessage('C', commandTag, strlen(commandTag) + 1);
 			break;
+
 		case DestNone:
 		case DestDebug:
 		case DestSPI:
@@ -252,7 +243,6 @@ ReadyForQuery(CommandDest dest)
 			}
 			else if (PG_PROTOCOL_MAJOR(FrontendProtocol) >= 2)
 				pq_putemptymessage('Z');
-
 			/* Flush output at end of cycle in any case. */
 			pq_flush();
 			break;

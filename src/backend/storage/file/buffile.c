@@ -243,7 +243,8 @@ BufFileClose(BufFile *file)
  * At call, must have dirty = false, pos and nbytes = 0.
  * On exit, nbytes is number of bytes loaded.
  */
-static int BufFileLoadBuffer(BufFile *file, void* buffer, size_t bufsize)
+static int
+BufFileLoadBuffer(BufFile *file, void* buffer, size_t bufsize)
 {
 	int nb;
 
@@ -269,8 +270,6 @@ static int BufFileLoadBuffer(BufFile *file, void* buffer, size_t bufsize)
 	return nb;
 }
 
-/* BufFileLoadBuffer */
-
 /*
  * BufFileDumpBuffer
  *
@@ -278,7 +277,8 @@ static int BufFileLoadBuffer(BufFile *file, void* buffer, size_t bufsize)
  * At call, should have dirty = true, nbytes > 0.
  * On exit, dirty is cleared if successful write, and curOffset is advanced.
  */
-static void BufFileDumpBuffer(BufFile *file, const void* buffer, Size nbytes)
+static void
+BufFileDumpBuffer(BufFile *file, const void* buffer, Size nbytes)
 {
 	size_t wpos = 0;
 	size_t bytestowrite;
@@ -328,11 +328,11 @@ static void BufFileDumpBuffer(BufFile *file, const void* buffer, Size nbytes)
  *
  * Like fread() except we assume 1-byte element size.
  */
-Size
-BufFileRead(BufFile *file, void *ptr, Size size)
+size_t
+BufFileRead(BufFile *file, void *ptr, size_t size)
 {
 	size_t		nread = 0;
-	int			nthistime;
+	size_t		nthistime;
 
 	if (file->dirty)
 		BufFileFlush(file);
@@ -400,8 +400,8 @@ BufFileRead(BufFile *file, void *ptr, Size size)
  *
  * Like fwrite() except we assume 1-byte element size.
  */
-Size
-BufFileWrite(BufFile *file, const void *ptr, Size size)
+size_t
+BufFileWrite(BufFile *file, const void *ptr, size_t size)
 {
 	size_t		nwritten = 0;
 	size_t		nthistime;
@@ -556,7 +556,8 @@ BufFileSeek(BufFile *file, int64 offset, int whence)
 	return 0;
 }
 
-void BufFileTell(BufFile *file, int64 *offset)
+void
+BufFileTell(BufFile *file, int64 *offset)
 {
 	*offset = file->offset + file->pos;
 }
