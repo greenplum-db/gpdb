@@ -409,52 +409,6 @@ insert into test_table5(int_array_col ,    before_rename_col ,    change_datatyp
     insert into temp_table values ('1_zero', 1, '1_zero', 1);
     insert into temp_table values ('2_zero', 2, '2_zero', 2);
     insert into table_local select i||'_'||repeat('text',100),i,i||'_'||repeat('text',5),i from generate_series(1,50000)i;
-
---External Table
-
-CREATE EXTERNAL TABLE ext_20081031095512_23244_11671 (
-    a_party_id bigint,
-    start_date date,
-    start_time_hour smallint,
-    start_time_min smallint,
-    start_time_sec smallint,
-    duration integer,
-    record_dt timestamp without time zone,
-    framed_ip_address character varying(15)
-) LOCATION (
-    'gpfdist://97.253.36.12:9010/R_LAA_DATA_2008-10-27.dat'
-) FORMAT 'text' (delimiter ',' null '' )
-ENCODING 'UTF8'
-LOG ERRORS SEGMENT REJECT LIMIT 100 ROWS;
-
-
-CREATE WRITABLE EXTERNAL TABLE wet_ext_20081031095512_23244_11671 (
-    a_party_id bigint,
-    start_date date,
-    start_time_hour smallint,
-    start_time_min smallint,
-    start_time_sec smallint,
-    duration integer,
-    record_dt timestamp without time zone,
-    framed_ip_address character varying(15)
-) LOCATION (
-'gpfdist://97.253.36.12:9010/R_LAA_DATA_2008-10-27.dat'
-) FORMAT 'text' (delimiter ',' null '' );
-    
---Web External Table
-    
-    CREATE EXTERNAL WEB TABLE web_ex_table_vmstat_output (
-    hostname text,
-    threads text,
-    memory text,
-    page text,
-    disk text,
-    faults text,
-    cpu text
-    ) EXECUTE E'vmstat 1 2|tail -1|nawk -v H=`hostname` \'{print H"|"$1" "$2" "$3"|"$4" "$5"|"$6" "$7" "$8" "$9" "$10" "$11" "$12"|"$13" "$14" "$15" "$16"|"$17" "$18" "$19"|"$20" "$21" "$22}\'' ON HOST
-    FORMAT 'text' (delimiter '|' null ''  )
---ENCODING 'UFT8'
-;   
     
 --Tables with distributed randomly and distributed columns
     
@@ -1191,21 +1145,6 @@ truncate all_types;
 
 drop table all_types cascade;
 
-CREATE EXTERNAL TABLE ext_table1 (
-    a_party_id bigint,
-    start_date date,
-    start_time_hour smallint,
-    start_time_min smallint,
-    start_time_sec smallint,
-    duration integer,
-    record_dt timestamp without time zone,
-    framed_ip_address character varying(15)
-) LOCATION (
-    'gpfdist://97.253.36.12:9010/R_LAA_DATA_2008-10-27.dat'
-) FORMAT 'text' (delimiter ',' null '' )
-ENCODING 'UTF8';
-DROP EXTERNAL TABLE ext_table1;
-
 vacuum ;
 
 --UNVACUUMED DATA
@@ -1239,21 +1178,6 @@ delete from all_types;
 truncate all_types;
 
 drop table all_types cascade;
-
-CREATE EXTERNAL TABLE ext_table1 (
-    a_party_id bigint,
-    start_date date,
-    start_time_hour smallint,
-    start_time_min smallint,
-    start_time_sec smallint,
-    duration integer,
-    record_dt timestamp without time zone,
-    framed_ip_address character varying(15)
-) LOCATION (
-    'gpfdist://97.253.36.12:9010/R_LAA_DATA_2008-10-27.dat'
-) FORMAT 'text' (delimiter ',' null '' )
-ENCODING 'UTF8';
-DROP EXTERNAL TABLE ext_table1;
 
 \c regression
 
