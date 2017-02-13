@@ -2540,74 +2540,50 @@ validate_index(Oid heapId, Oid indexId, Snapshot snapshot)
 	ivinfo.strategy = NULL;
 	state.tuplesort = NULL;
 
-	PG_TRY();
+	if(gp_enable_mk_sort)
+		state.tuplesort = tuplesort_begin_datum_mk(NULL,
+												   TIDOID,
+												   TIDLessOperator, false,
+												   maintenance_work_mem,
+												   false);
+	else
+		state.tuplesort = tuplesort_begin_datum(TIDOID,
+												TIDLessOperator, false,
+												maintenance_work_mem,
+												false);
+	state.htups = state.itups = state.tups_inserted = 0;
+
+	(void) index_bulk_delete(&ivinfo, NULL,
+							 validate_index_callback, (void *) &state);
+
+	/* Execute the sort */
+	if(gp_enable_mk_sort)
 	{
-		if(gp_enable_mk_sort)
-			state.tuplesort = tuplesort_begin_datum_mk(NULL,
-													   TIDOID,
-													   TIDLessOperator, false,
-													   maintenance_work_mem,
-													   false);
-		else
-			state.tuplesort = tuplesort_begin_datum(TIDOID,
-													TIDLessOperator, false,
-													maintenance_work_mem,
-													false);
-		state.htups = state.itups = state.tups_inserted = 0;
-
-		(void) index_bulk_delete(&ivinfo, NULL,
-				validate_index_callback, (void *) &state);
-
-		/* Execute the sort */
-		if(gp_enable_mk_sort)
-		{
-			tuplesort_performsort_mk((Tuplesortstate_mk *)state.tuplesort);
-		}
-		else
-		{
-			tuplesort_performsort((Tuplesortstate *) state.tuplesort);
-		}
-
-		/*
-		 * Now scan the heap and "merge" it with the index
-		 */
-		validate_index_heapscan(heapRelation,
-				indexRelation,
-				indexInfo,
-				snapshot,
-				&state);
-
-		/* Done with tuplesort object */
-		if(gp_enable_mk_sort)
-		{
-			tuplesort_end_mk((Tuplesortstate_mk *)state.tuplesort);
-		}
-		else
-		{
-			tuplesort_end((Tuplesortstate *) state.tuplesort);
-		}
-
-		state.tuplesort = NULL;
-
+		tuplesort_performsort_mk((Tuplesortstate_mk *)state.tuplesort);
 	}
-	PG_CATCH();
+	else
 	{
-		/* Clean up the sort state on error */
-		if (state.tuplesort)
-		{
-			if(gp_enable_mk_sort)
-			{
-				tuplesort_end_mk((Tuplesortstate_mk *)state.tuplesort);
-			}
-			else
-			{
-				tuplesort_end((Tuplesortstate *) state.tuplesort);
-			}
-			state.tuplesort = NULL;
-		}
-		PG_RE_THROW();
+		tuplesort_performsort((Tuplesortstate *) state.tuplesort);
 	}
-	PG_END_TRY();
+
+	/*
+	 * Now scan the heap and "merge" it with the index
+	 */
+	validate_index_heapscan(heapRelation,
+							indexRelation,
+							indexInfo,
+							snapshot,
+							&state);
+
+	/* Done with tuplesort object */
+	if(gp_enable_mk_sort)
+	{
+		tuplesort_end_mk((Tuplesortstate_mk *)state.tuplesort);
+	}
+	else
+	{
+		tuplesort_end((Tuplesortstate *) state.tuplesort);
+	}
 
 	elog(DEBUG2,
 		 "validate_index found %.0f heap tuples, %.0f index tuples; inserted %.0f missing tuples",

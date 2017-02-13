@@ -116,62 +116,37 @@ btbuild(PG_FUNCTION_ARGS)
 		elog(ERROR, "index \"%s\" already contains data",
 			 RelationGetRelationName(index));
 
-	PG_TRY();
+	buildstate.spool = _bt_spoolinit(index, indexInfo->ii_Unique, false);
+
+	/*
+	 * If building a unique index, put dead tuples in a second spool to keep
+	 * them out of the uniqueness check.
+	 */
+	if (indexInfo->ii_Unique)
+		buildstate.spool2 = _bt_spoolinit(index, false, true);
+
+	/* do the heap scan */
+	reltuples = IndexBuildScan(heap, index, indexInfo, false,
+								   btbuildCallback, (void *) &buildstate);
+
+	/* okay, all heap tuples are indexed */
+	if (buildstate.spool2 && !buildstate.haveDead)
 	{
-		buildstate.spool = _bt_spoolinit(index, indexInfo->ii_Unique, false);
-
-		/*
-		 * If building a unique index, put dead tuples in a second spool to keep
-		 * them out of the uniqueness check.
-		 */
-		if (indexInfo->ii_Unique)
-			buildstate.spool2 = _bt_spoolinit(index, false, true);
-
-		/* do the heap scan */
-		reltuples = IndexBuildScan(heap, index, indexInfo, false,
-				btbuildCallback, (void *) &buildstate);
-
-		/* okay, all heap tuples are indexed */
-		if (buildstate.spool2 && !buildstate.haveDead)
-		{
-			/* spool2 turns out to be unnecessary */
-			_bt_spooldestroy(buildstate.spool2);
-			buildstate.spool2 = NULL;
-		}
-
-		/*
-		 * Finish the build by (1) completing the sort of the spool file, (2)
-		 * inserting the sorted tuples into btree pages and (3) building the upper
-		 * levels.
-		 */
-		_bt_leafbuild(buildstate.spool, buildstate.spool2);
-		_bt_spooldestroy(buildstate.spool);
-		buildstate.spool = NULL;
-
-		if (buildstate.spool2)
-		{
-			_bt_spooldestroy(buildstate.spool2);
-			buildstate.spool2 = NULL;
-		}
+		/* spool2 turns out to be unnecessary */
+		_bt_spooldestroy(buildstate.spool2);
+		buildstate.spool2 = NULL;
 	}
-	PG_CATCH();
-	{
-		/* Clean up the sort state on error */
-		if (buildstate.spool)
-		{
-			_bt_spooldestroy(buildstate.spool);
-			buildstate.spool = NULL;
-		}
 
-		if (buildstate.spool2)
-		{
-			_bt_spooldestroy(buildstate.spool2);
-			buildstate.spool2 = NULL;
-		}
+	/*
+	 * Finish the build by (1) completing the sort of the spool file, (2)
+	 * inserting the sorted tuples into btree pages and (3) building the upper
+	 * levels.
+	 */
+	_bt_leafbuild(buildstate.spool, buildstate.spool2);
+	_bt_spooldestroy(buildstate.spool);
 
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
+	if (buildstate.spool2)
+		_bt_spooldestroy(buildstate.spool2);
 
 #ifdef BTREE_BUILD_STATS
 	if (log_btree_build_stats)
