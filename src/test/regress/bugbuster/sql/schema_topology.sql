@@ -539,8 +539,6 @@ timestamptz|{OPEXPR :opno 1324 :opfuncid 0 :opresulttype 16 :opretset false :arg
 
           ALTER TABLE test_alter_table ALTER COLUMN col_set_default SET DEFAULT 0;
 
---ALTER column [ SET | DROP ] NOT NULL
-
           CREATE TABLE alter_table1(
           col_text text,
           col_numeric numeric NOT NULL
@@ -551,38 +549,21 @@ timestamptz|{OPEXPR :opno 1324 :opfuncid 0 :opresulttype 16 :opretset false :arg
           insert into alter_table1 values ('2_two',2);
           insert into alter_table1 select i||'_'||repeat('text',100),i from generate_series(3,100)i;
 
-
+--ALTER column [ SET | DROP ] NOT NULL
           ALTER TABLE alter_table1 ALTER COLUMN col_numeric DROP NOT NULL;
           ALTER TABLE alter_table1 ALTER COLUMN col_numeric SET NOT NULL;
 
 --ALTER column SET STATISTICS integer
-
-          CREATE TABLE alter_set_statistics_table(
-          col_text text,
-          col_numeric numeric NOT NULL
-          ) DISTRIBUTED RANDOMLY;
-
-          insert into alter_set_statistics_table values ('0_zero',0);
-          insert into alter_set_statistics_table values ('1_one',1);
-          insert into alter_set_statistics_table values ('2_two',2);
-          insert into alter_set_statistics_table select i||'_'||repeat('text',100),i from generate_series(3,100)i;
-
-
-          ALTER TABLE alter_set_statistics_table ALTER col_numeric SET STATISTICS 1;
+          ALTER TABLE alter_table1 ALTER col_numeric SET STATISTICS 1;
 
 --ALTER column SET STORAGE
+	 ALTER TABLE alter_table1 ALTER col_text SET STORAGE PLAIN;
 
-          CREATE TABLE alter_set_storage_table(
-          col_text text,
-          col_numeric numeric NOT NULL
-          ) DISTRIBUTED RANDOMLY;
+--OWNER TO new_owner
+          CREATE ROLE user_1;
 
-         insert into alter_set_storage_table values ('0_zero',0);
-         insert into alter_set_storage_table values ('1_one',1);
-         insert into alter_set_storage_table values ('2_two',2);
-         insert into alter_set_storage_table select i||'_'||repeat('text',100),i from generate_series(3,100)i;
-
-	 ALTER TABLE alter_set_storage_table ALTER col_text SET STORAGE PLAIN;
+          ALTER TABLE alter_table1 OWNER TO user_1;
+          -- DROP ROLE user_1;
 
 --ADD table_constraint
 
@@ -719,26 +700,6 @@ timestamptz|{OPEXPR :opno 1324 :opfuncid 0 :opresulttype 16 :opretset false :arg
           select * from parent_table;
           ALTER TABLE child_table NO INHERIT parent_table;
           select * from parent_table;
-
---OWNER TO new_owner
-
-          CREATE TABLE table_owner (
-          text_col text,
-          bigint_col bigint,
-          char_vary_col character varying(30),
-          numeric_col numeric
-          )DISTRIBUTED RANDOMLY;
-
-	  insert into table_owner values ('1_one',1111,'1_test',1);
-          insert into table_owner values ('2_two',2222,'2_test',2);
-          insert into table_owner values ('3_three',3333,'3_test',3);
-          insert into table_owner select i||'_'||repeat('text',100),i,i||'_'||repeat('text',5),i from generate_series(3,100)i;
-
-          CREATE ROLE user_1;
-
-          ALTER TABLE table_owner OWNER TO user_1;
-         -- DROP TABLE table_owner;
-          -- DROP ROLE user_1;
 
 --TODO - drop column from partitioned table
 
