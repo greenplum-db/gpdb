@@ -1338,7 +1338,7 @@ DropRole(DropRoleStmt *stmt)
 						(errcode(ERRCODE_UNDEFINED_OBJECT),
 						 errmsg("role \"%s\" does not exist", role)));
 			}
-			else
+			if (Gp_role != GP_ROLE_EXECUTE)
 			{
 				ereport(NOTICE,
 						(errmsg("role \"%s\" does not exist, skipping",

@@ -1,3 +1,5 @@
+create schema bfv_statistic;
+set search_path=bfv_statistic;
 -- start_ignore
 create language plpythonu;
 -- end_ignore
@@ -11,8 +13,6 @@ return "false"
 $$
 language plpythonu;
 set optimizer = on;
-DROP TABLE IF EXISTS foo;
-NOTICE:  table "foo" does not exist, skipping
 create table foo (a int, b int) distributed by (a);
 insert into foo values (1,1);
 insert into foo values (0,1);
@@ -33,9 +33,6 @@ select check_row_count('explain select * from foo where a is not null and b >= 1
  true
 (1 row)
 
-drop table foo;
-DROP TABLE IF EXISTS foo2;
-NOTICE:  table "foo2" does not exist, skipping
 create table foo2(a int) distributed by (a);
 insert into foo2 select generate_series(1,5);
 insert into foo2 select 1 from generate_series(1,5);
@@ -71,8 +68,6 @@ select check_row_count('explain select a from foo2 where a > 1 order by a;', 8);
 -- test missing statistics
 --
 set gp_create_table_random_default_distribution=off;
-drop table if exists foo3;
-NOTICE:  table "foo3" does not exist, skipping
 create table foo3(a int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -86,8 +81,6 @@ select * from gp_toolkit.gp_stats_missing where smischema = 'public' AND  smitab
 --
 set optimizer=on;
 set gp_create_table_random_default_distribution=off;
-drop table if exists bar_dml;
-NOTICE:  table "bar_dml" does not exist, skipping
 CREATE TABLE bar_dml (
     vtrg character varying(6) NOT NULL,
     tec_schuld_whg character varying(3) NOT NULL,
@@ -112,25 +105,23 @@ CREATE TABLE bar_dml (
 )
 WITH (appendonly=true) DISTRIBUTED RANDOMLY;
 update bar_dml set (zhlg_org, zhlg_typ_org) = (zhlg, zhlg_typ);
-drop table bar_dml;
 reset optimizer;
 --
 -- Cardinality estimation when there is no histogram and MCV
 --
-drop table if exists foo3;
-create table foo3 (a int);
+create table foo4 (a int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into foo3 select i from generate_series(1,99) i;
-insert into foo3 values (NULL);
-analyze foo3;
-select stanullfrac, stadistinct, stanumbers1 from pg_statistic where starelid='foo3'::regclass and staattnum=1;
+insert into foo4 select i from generate_series(1,99) i;
+insert into foo4 values (NULL);
+analyze foo4;
+select stanullfrac, stadistinct, stanumbers1 from pg_statistic where starelid='foo4'::regclass and staattnum=1;
  stanullfrac | stadistinct | stanumbers1 
 -------------+-------------+-------------
         0.01 |          -1 | 
 (1 row)
 
-select check_row_count('explain select a from foo3 where a > 888;', 1);
+select check_row_count('explain select a from foo4 where a > 888;', 1);
  check_row_count 
 -----------------
  true
@@ -140,8 +131,6 @@ select check_row_count('explain select a from foo3 where a > 888;', 1);
 -- Testing that the merging of memo groups inside Orca does not crash cardinality estimation inside Orca
 --
 set optimizer = on;
-drop table if exists t1 cascade;
-NOTICE:  table "t1" does not exist, skipping
 create table t1(c1 int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -223,8 +212,6 @@ reset optimizer;
 --
 -- test the generation of histogram boundaries for numeric and real data types
 --
-drop table if exists foo_real;
-NOTICE:  table "foo_real" does not exist, skipping
 create table foo_real (a int4, b real) distributed randomly;
 insert into foo_real values (0, 'Infinity');
 insert into foo_real values (0, '-Infinity');
@@ -291,8 +278,6 @@ select most_common_vals from pg_stats where tablename = 'foo_real' and attname =
  {0,-Infinity,-2.49268e+07,Infinity,NaN,-8.30285e+07,-3.43385e+07,4.31,16397,74881,93901.6,7.79946e+06}
 (1 row)
 
-drop table if exists foo_numeric;
-NOTICE:  table "foo_numeric" does not exist, skipping
 create table foo_numeric (a int4, b numeric) distributed randomly;
 insert into foo_numeric values (0, 'NaN');
 insert into foo_numeric values (0, 'NaN');
@@ -360,20 +345,15 @@ reset gp_create_table_random_default_distribution;
 --
 -- Ensure that VACUUM ANALYZE does not result in incorrect statistics
 --
-DROP TABLE IF EXISTS T25289_T1;
-NOTICE:  table "t25289_t1" does not exist, skipping
 CREATE TABLE T25289_T1 (c int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO T25289_T1 VALUES (1);
 DELETE FROM T25289_T1;
 ANALYZE T25289_T1;
-DROP TABLE T25289_T1;
 --
 -- expect NO more notice after customer run VACUUM FULL
 -- 
-DROP TABLE IF EXISTS T25289_T2;
-NOTICE:  table "t25289_t2" does not exist, skipping
 CREATE TABLE T25289_T2 (c int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -381,23 +361,17 @@ INSERT INTO T25289_T2 VALUES (1);
 DELETE FROM T25289_T2;
 VACUUM FULL T25289_T2;
 ANALYZE T25289_T2;
-DROP TABLE T25289_T2;
 --
 -- expect NO notice during analyze if table doesn't have empty pages
 --
-DROP TABLE IF EXISTS T25289_T3;
-NOTICE:  table "t25289_t3" does not exist, skipping
 CREATE TABLE T25289_T3 (c int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO T25289_T3 VALUES (1);
 ANALYZE T25289_T3;
-DROP TABLE IF EXISTS T25289_T3;
 --
 -- expect NO notice when analyzing append only tables
 -- 
-DROP TABLE IF EXISTS T25289_T4;
-NOTICE:  table "t25289_t4" does not exist, skipping
 CREATE TABLE T25289_T4 (c int, d int)
 WITH (APPENDONLY=ON) DISTRIBUTED BY (c)
 PARTITION BY RANGE(d) (START(1) END (100) EVERY(1));
@@ -501,4 +475,3 @@ NOTICE:  CREATE TABLE will create partition "t25289_t4_1_prt_97" for table "t252
 NOTICE:  CREATE TABLE will create partition "t25289_t4_1_prt_98" for table "t25289_t4"
 NOTICE:  CREATE TABLE will create partition "t25289_t4_1_prt_99" for table "t25289_t4"
 ANALYZE T25289_T4;
-DROP TABLE IF EXISTS T25289_T4;

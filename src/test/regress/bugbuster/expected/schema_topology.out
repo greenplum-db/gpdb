@@ -3855,9 +3855,6 @@ select count(*) from st_foo1,st_foo2 where st_foo1.j = st_foo2.j;
 
 DROP USER IF EXISTS testuser;
 NOTICE:  role "testuser" does not exist, skipping
-NOTICE:  role "testuser" does not exist, skipping  (seg0 rh55-qavm103:18506 pid=13677)
-NOTICE:  role "testuser" does not exist, skipping  (seg2 rh55-qavm103:18508 pid=13681)
-NOTICE:  role "testuser" does not exist, skipping  (seg1 rh55-qavm103:18507 pid=13679)
 CREATE USER testuser WITH LOGIN DENY BETWEEN DAY 'Monday' TIME '01:00:00' AND DAY 'Monday' TIME '01:30:00';;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
 SELECT r.rolname, d.start_day, d.start_time, d.end_day, d.end_time
@@ -4489,16 +4486,10 @@ revoke all on protocol gphdfs from _hadoop_perm_test_role;
 ERROR:  role "_hadoop_perm_test_role" does not exist
 DROP ROLE IF EXISTS _hadoop_perm_test_role;
 NOTICE:  role "_hadoop_perm_test_role" does not exist, skipping
-NOTICE:  role "_hadoop_perm_test_role" does not exist, skipping  (seg0 rh55-qavm103:18506 pid=13677)
-NOTICE:  role "_hadoop_perm_test_role" does not exist, skipping  (seg2 rh55-qavm103:18508 pid=13681)
-NOTICE:  role "_hadoop_perm_test_role" does not exist, skipping  (seg1 rh55-qavm103:18507 pid=13679)
 revoke all on protocol gphdfs from _hadoop_perm_test_role2;
 ERROR:  role "_hadoop_perm_test_role2" does not exist
 DROP ROLE IF EXISTS _hadoop_perm_test_role2;
 NOTICE:  role "_hadoop_perm_test_role2" does not exist, skipping
-NOTICE:  role "_hadoop_perm_test_role2" does not exist, skipping  (seg1 rh55-qavm103:18507 pid=13679)
-NOTICE:  role "_hadoop_perm_test_role2" does not exist, skipping  (seg0 rh55-qavm103:18506 pid=13677)
-NOTICE:  role "_hadoop_perm_test_role2" does not exist, skipping  (seg2 rh55-qavm103:18508 pid=13681)
 \echo -- end_ignore
 -- end_ignore
 /* Now create a new role. Initially this role should NOT

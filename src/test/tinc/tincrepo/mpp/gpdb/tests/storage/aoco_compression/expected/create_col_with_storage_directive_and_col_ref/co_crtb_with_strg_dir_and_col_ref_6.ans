@@ -159,8 +159,8 @@ COPY 4883
  a32    | date                        |                                                                                  | plain    | zlib             | 6                 | 1048576    | 
  a33    | real                        |                                                                                  | plain    | zlib             | 6                 | 1048576    | 
  a34    | money                       |                                                                                  | plain    | quicklz          | 1                 | 32768      | 
- a35    | cidr                        |                                                                                  | plain    | rle_type         | 1                 | 65536      | 
- a36    | inet                        |                                                                                  | plain    | zlib             | 6                 | 1048576    | 
+ a35    | cidr                        |                                                                                  | main     | rle_type         | 1                 | 65536      | 
+ a36    | inet                        |                                                                                  | main     | zlib             | 6                 | 1048576    | 
  a37    | time without time zone      |                                                                                  | plain    | zlib             | 6                 | 1048576    | 
  a38    | text                        |                                                                                  | extended | quicklz          | 1                 | 32768      | 
  a39    | bit(1)                      |                                                                                  | extended | rle_type         | 1                 | 65536      | 

@@ -59,7 +59,6 @@ function _main() {
         exit 1
     fi
 
-    time install_sync_tools
     time configure
     time install_gpdb
     time setup_gpadmin_user

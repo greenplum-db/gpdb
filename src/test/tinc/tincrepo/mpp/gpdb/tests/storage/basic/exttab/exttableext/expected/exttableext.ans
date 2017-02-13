@@ -244,7 +244,7 @@ DROP EXTERNAL TABLE
 CREATE EXTERNAL TABLE
     -- write to WET
     INSERT INTO exttabtest_w_5url (SELECT * FROM exttabtest);
-psql:/path/sql_file:1: ERROR:  External table has more URLs then available primary segments that can write into them  (seg0 rh55-qavm55:7532 pid=1235)
+psql:/path/sql_file:1: ERROR:  External table has more URLs than available primary segments that can write into them  (seg0 rh55-qavm55:7532 pid=1235)
 -- Test 9: Negative - duplicte protocol name (check pg_extprotocol)
     SELECT count(*) FROM pg_extprotocol WHERE ptcname='demoprot';
  count 

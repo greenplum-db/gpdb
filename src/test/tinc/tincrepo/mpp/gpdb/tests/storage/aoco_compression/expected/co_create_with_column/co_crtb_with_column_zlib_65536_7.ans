@@ -77,8 +77,8 @@ COPY 4883
  a32    | date                        |                                                                               | plain    | zlib             | 7                 | 65536      | 
  a33    | real                        |                                                                               | plain    | zlib             | 7                 | 65536      | 
  a34    | money                       |                                                                               | plain    | zlib             | 7                 | 65536      | 
- a35    | cidr                        |                                                                               | plain    | zlib             | 7                 | 65536      | 
- a36    | inet                        |                                                                               | plain    | zlib             | 7                 | 65536      | 
+ a35    | cidr                        |                                                                               | main     | zlib             | 7                 | 65536      | 
+ a36    | inet                        |                                                                               | main     | zlib             | 7                 | 65536      | 
  a37    | time without time zone      |                                                                               | plain    | zlib             | 7                 | 65536      | 
  a38    | text                        |                                                                               | extended | zlib             | 7                 | 65536      | 
  a39    | bit(1)                      |                                                                               | extended | zlib             | 7                 | 65536      | 

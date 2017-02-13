@@ -2113,7 +2113,7 @@ static struct config_string ConfigureNamesString[] =
 		{"IntervalStyle", PGC_USERSET, CLIENT_CONN_LOCALE,
 			gettext_noop("Sets the display format for interval values."),
 			NULL,
-			GUC_REPORT
+			GUC_REPORT | GUC_GPDB_ADDOPT
 		},
 		&IntervalStyle_string,
 		"postgres", assign_IntervalStyle, show_IntervalStyle

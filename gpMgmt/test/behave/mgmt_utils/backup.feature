@@ -3704,6 +3704,7 @@ Feature: Validate command line arguments
         And the timestamp from gpcrondump is stored
         Then verify the metadata dump file does not contain "GRANT"
         Then verify the metadata dump file does not contain "REVOKE"
+        And the user runs "psql -c 'DROP ROLE temprole;' bkdb"
 
     Scenario: Incremental backup with use-set-session-authorization
         Given the test is initialized

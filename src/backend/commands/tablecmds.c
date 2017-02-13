@@ -2203,6 +2203,7 @@ renameatt(Oid myrelid,
 void
 renamerel(Oid myrelid, const char *newrelname, ObjectType reltype, RenameStmt *stmt)
 {
+	Relation	targetrelation;
 	Relation	relrelation;	/* for RELATION relation */
 	HeapTuple	reltup;
 	Form_pg_class relform;
@@ -2213,17 +2214,17 @@ renamerel(Oid myrelid, const char *newrelname, ObjectType reltype, RenameStmt *s
 	bool		relhastriggers;
 	bool		isSystemRelation;
 
-	/* GPDB_83_MERGE_FIXME: For some reason, this code has been changed
-	 * in GPDB to not grab a lock on the relation. That seems incredibly
-	 * wrong to me, but need to investigate why that was done.
-	 */
-#if 0
 	/*
-	 * Grab an exclusive lock on the target table, index, sequence or view,
-	 * which we will NOT release until end of transaction.
+	 * In Postgres, grab an exclusive lock on the target table, index, sequence
+	 * or view, which we will NOT release until end of transaction.
+	 *
+	 * In GPDB, added supportability feature under GUC to allow rename table
+	 * without AccessExclusiveLock for scenarios like directly modifying system
+	 * catalogs. This will change transaction isolation behaviors, however, this
+	 * won't cause any data corruption.
 	 */
-	targetrelation = relation_open(myrelid, AccessExclusiveLock);
-#endif
+	if (!gp_allow_rename_relation_without_lock)
+		targetrelation = relation_open(myrelid, AccessExclusiveLock);
 
 	/* if this is a child table of a partitioning configuration, complain */
 	if (stmt && rel_is_child_partition(myrelid) && !stmt->bAllowPartn)
@@ -2415,6 +2416,14 @@ renamerel(Oid myrelid, const char *newrelname, ObjectType reltype, RenameStmt *s
 						   GetUserId(),
 						   "ALTER", "RENAME"
 				);
+
+	/*
+	 * In Postgres, close rel, but keep exclusive lock!
+	 *
+	 * In GPDB, skip this under GUC. Same reason as relation_open().
+	 */
+	if (!gp_allow_rename_relation_without_lock)
+		relation_close(targetrelation, NoLock);
 }
 
 static bool

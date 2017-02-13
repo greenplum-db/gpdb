@@ -15,6 +15,7 @@
 #include "postgres.h"
 
 #include <fcntl.h>
+#include <unistd.h>
 
 #include "fmgr.h"
 #include "funcapi.h"
@@ -327,7 +328,8 @@ static URL_FILE
 
 	url = quoteArgument(EXTPROTOCOL_GET_URL(fcinfo));
 	initStringInfo(&cmd);
-	appendStringInfo(&cmd, "%s%s %s %s %s", env_cmd.data, java_cmd, format,
+
+	appendStringInfo(&cmd, EXEC_URL_PREFIX "%s%s %s %s %s", env_cmd.data, java_cmd, format,
 			gp_hadoop_connector_version, url);
 
 	if (!forwrite)
@@ -345,7 +347,7 @@ static URL_FILE
 	 * don't have access to the scan counter at all. It's ok because we don't need it.
 	 */
 	external_set_env_vars(&extvar, url, false, NULL, NULL, false, 0);
-	myData = url_execute_fopen(url, cmd.data, forwrite, &extvar);
+	myData = url_execute_fopen(cmd.data, forwrite, &extvar, NULL, NULL, NULL);
 
 	/* Free the command string */
 	pfree(cmd.data);
@@ -377,10 +379,9 @@ gphdfsprotocol_import(PG_FUNCTION_ARGS)
 	 * ======================================================================= */
 	if (EXTPROTOCOL_IS_LAST_CALL(fcinfo))
 	{
-		int ret = 0;
 		if (myData != NULL && !myData->importDone)
-			ret = url_fclose(myData->importFile, false, "gphdfs protocol");
-		PG_RETURN_INT32(ret);
+			url_fclose(myData->importFile, false, "gphdfs protocol");
+		PG_RETURN_INT32(0);
 	}
 
 	/* =======================================================================
@@ -401,7 +402,7 @@ gphdfsprotocol_import(PG_FUNCTION_ARGS)
 	datlen 	= EXTPROTOCOL_GET_DATALEN(fcinfo);
 
 	if (datlen > 0 && !myData->importDone)
-		nread = piperead(myData->importFile->u.exec.pipes[EXEC_DATA_P], data, datlen);
+		nread = url_execute_fread(data, datlen, myData->importFile, NULL);
 
 	/* =======================================================================
 	 *                            DO CLOSE
@@ -441,10 +442,9 @@ gphdfsprotocol_export(PG_FUNCTION_ARGS)
 	 * ======================================================================= */
 	if (EXTPROTOCOL_IS_LAST_CALL(fcinfo))
 	{
-		int ret = 0;
 		if (myData)
-			ret = url_fclose(myData, true, "gphdfs protocol");
-		PG_RETURN_INT32(ret);
+			url_fclose(myData, true, "gphdfs protocol");
+		PG_RETURN_INT32(0);
 	}
 
 	/* =======================================================================
@@ -500,8 +500,8 @@ gphdfsprotocol_export(PG_FUNCTION_ARGS)
 			appendIntToBuffer(schema_head, schema_data->len + 2);
 			appendInt2ToBuffer(schema_head, 2);
 
-			pipewrite(myData->u.exec.pipes[EXEC_DATA_P], schema_head->data, schema_head->len);
-			pipewrite(myData->u.exec.pipes[EXEC_DATA_P], schema_data->data, schema_data->len);
+			url_execute_fwrite(schema_head->data, schema_head->len, myData, NULL);
+			url_execute_fwrite(schema_data->data, schema_data->len, myData, NULL);
 
 			pfree(schema_head->data);
 			pfree(schema_data->data);
@@ -516,7 +516,7 @@ gphdfsprotocol_export(PG_FUNCTION_ARGS)
 	datlen = EXTPROTOCOL_GET_DATALEN(fcinfo);
 
 	if (datlen > 0)
-		wrote = pipewrite(myData->u.exec.pipes[EXEC_DATA_P], data, datlen);
+		wrote = url_execute_fwrite(data, datlen, myData, NULL);
 
 	if (url_ferror(myData, wrote, ebuf, ebuflen))
 	{

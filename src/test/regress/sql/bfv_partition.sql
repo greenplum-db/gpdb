@@ -740,6 +740,30 @@ INSERT INTO bar VALUES (2,3);
 
 SELECT * FROM foo FULL JOIN bar ON foo.a = bar.b;
 
+
+---
+--- Test EXPLAIN on a hash agg that has a Sequence + Partition Selector below it.
+---
+
+-- SETUP
+-- start_ignore
+DROP TABLE IF EXISTS bar;
+-- end_ignore
+CREATE TABLE bar (b int, c int)
+PARTITION BY RANGE (b)
+(
+  START (0) END (10),
+  START (10) END (20)
+);
+
+INSERT INTO bar SELECT g % 20, g % 20 from generate_series(1, 1000) g;
+ANALYZE bar;
+
+SELECT b FROM bar GROUP BY b;
+
+EXPLAIN SELECT b FROM bar GROUP BY b;
+
+
 -- CLEANUP
 -- start_ignore
 DROP TABLE IF EXISTS foo;

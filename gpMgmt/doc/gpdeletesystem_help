@@ -38,7 +38,10 @@ OPTIONS
 
 -d <master_data_directory>
 
-Required. The master host data directory.
+Used to specify master host data directory. When this parameter is specified 
+it overrides the value of environment variable MASTER_DATA_DIRECTORY. If not
+specified, master data directory is read from environment variable 
+MASTER_DATA_DIRECTORY.
 
 
 -B <parallel_processes>

@@ -4635,7 +4635,7 @@ def checkcatReport():
     myprint('SUMMARY REPORT')
     myprint('===================================================================')
     elapsed = datetime.timedelta(seconds=int(GV.elapsedTime))
-    endTime = datetime.datetime.now().strftime('%Y-%m-%d %H:%I:%S')
+    endTime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     myprint('Completed %d test(s) on database \'%s\' at %s with elapsed time %s' \
             % (GV.totalCheckRun, GV.dbname, endTime, elapsed))
 

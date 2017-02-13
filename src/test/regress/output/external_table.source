@@ -959,7 +959,7 @@ SELECT e1.i, e2.j from exttab_cursor_2 e1 INNER JOIN exttab_cursor_2 e2 ON e1.i 
 -- The test is here to track the issue.
 FETCH exttab_cur1;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice1 subraa4-mac:40000 pid=70279)
-DETAIL:  External table exttab_cursor_2, line 7 of file://subraa4-mac/Users/abhijits/gitdev/oss_build/gpdb/src/test/regress/data/exttab_more_errors.data: "error_1"
+DETAIL:  External table exttab_cursor_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 COMMIT;
 -- This should have errors populated already
 SELECT count(*) > 0 FROM gp_read_error_log('exttab_cursor_2');
@@ -1430,7 +1430,7 @@ SELECT ( SELECT i FROM exttab_subq_2 WHERE i <= e1.i) as i, e1.j
 FROM exttab_subq_2 e1, exttab_subq_1 e2
 WHERE e1.i = e2.i;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice2 @hostname@:40000 pid=49348)
-DETAIL:  External table exttab_subq_1, line 2 of file://@hostname@@abs_srcdir@/data/exttab_few_errors.data: ""
+DETAIL:  External table exttab_subq_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 SELECT COUNT(*) > 0 FROM gp_read_error_log('exttab_subq_1');
  ?column? 
 ----------

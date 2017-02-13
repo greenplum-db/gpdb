@@ -609,8 +609,8 @@ COPY 4883
  a32    | date                        |                                                                             | plain    | rle_type         | 2                 | 65536      | 
  a33    | real                        |                                                                             | plain    | rle_type         | 2                 | 65536      | 
  a34    | money                       |                                                                             | plain    | rle_type         | 2                 | 65536      | 
- a35    | cidr                        |                                                                             | plain    | rle_type         | 2                 | 65536      | 
- a36    | inet                        |                                                                             | plain    | rle_type         | 2                 | 65536      | 
+ a35    | cidr                        |                                                                             | main     | rle_type         | 2                 | 65536      | 
+ a36    | inet                        |                                                                             | main     | rle_type         | 2                 | 65536      | 
  a37    | time without time zone      |                                                                             | plain    | rle_type         | 2                 | 65536      | 
  a38    | text                        |                                                                             | extended | rle_type         | 2                 | 65536      | 
  a39    | bit(1)                      |                                                                             | extended | rle_type         | 2                 | 65536      | 

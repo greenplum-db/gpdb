@@ -418,6 +418,7 @@ int			gp_max_partition_level;
 bool		gp_maintenance_mode;
 bool		gp_maintenance_conn;
 bool		allow_segment_DML;
+bool		gp_allow_rename_relation_without_lock = false;
 
 /* ignore EXCLUDE clauses in window spec for backwards compatibility */
 bool		gp_ignore_window_exclude = false;
@@ -628,6 +629,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&allow_segment_DML,
+		false, NULL, NULL
+	},
+	{
+		{"gp_allow_rename_relation_without_lock", PGC_USERSET, CUSTOM_OPTIONS,
+			gettext_noop("Allow ALTER TABLE RENAME without AccessExclusiveLock"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_allow_rename_relation_without_lock,
 		false, NULL, NULL
 	},
 	{

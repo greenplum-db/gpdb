@@ -66,17 +66,19 @@ function make_sync_tools() {
     # the zlib downloaded from artifacts.  Therefore, remove the zlib
     # downloaded from artifacts in order to use the native zlib.
     find ext -name 'libz.*' -exec rm -f {} \;
-    tar -czf ../../sync_tools_gpdb/sync_tools_gpdb.tar.gz ext
-
   popd
 }
 
 function build_gpdb() {
   pushd gpdb_src/gpAux
+    # Use -j4 to speed up the build. (Doesn't seem worth trying to guess a better
+    # value based on number of CPUs or anything like that. Going above -j4 wouldn't
+    # make it much faster, and -j4 is small enough to not hurt too badly even on
+    # a single-CPU system
     if [ -n "$1" ]; then
-      make "$1" GPROOT=/usr/local dist
+      make "$1" GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j4 dist
     else
-      make GPROOT=/usr/local dist
+      make GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j4 dist
     fi
   popd
 }

@@ -24,22 +24,16 @@
     <title class="- topic/title ">About Greenplum Database 5.0.0</title>
     <body class="- topic/body ">
       <p>Greenplum Database 5.0.0 is a major new release that includes product changes and
-        integrates many features from PostgreSQL 8.3. Please refer to the following sections for more
-        information about this release.</p>
+        integrates many features from PostgreSQL 8.3. Please refer to the following sections for
+        more information about this release.</p>
       <ul class="- topic/ul " id="ul_j1t_psl_fp">
         <li><xref href="#topic_yxx_bq2_lx" format="dita"/></li>
-        <li><xref href="#topic21" format="dita"/>
+        <li><xref href="#topic20" format="dita"/></li>
+        <li id="pm437579" class="- topic/li "><xref href="#topic21" format="dita"/>
         </li>
-        <li id="pm437579" class="- topic/li "><xref href="#topic31" type="topic" format="dita"
-            class="- topic/xref "/>
-        </li>
-        <li id="pm437583" class="- topic/li "><xref href="#topic34" type="topic" format="dita"
-            class="- topic/xref "/>
+        <li id="pm437583" class="- topic/li "><xref href="#id_qc5_pyd_wy" format="dita"/>
         </li>
         <li id="pm437587" class="- topic/li "><xref href="#topic36" type="topic" format="dita"
-            class="- topic/xref "/>
-        </li>
-        <li id="pm190573" class="- topic/li "><xref href="#topic37" type="topic" format="dita"
             class="- topic/xref "/>
         </li>
       </ul>
@@ -50,9 +44,37 @@
     <body>
       <p>Greenplum Database 5.0.0 includes these new features:</p>
       <ul id="ul_t5j_wbz_my">
+        <li>&lt;new features here></li>
+      </ul>
+    </body>
+  </topic>
+  <topic id="topic_epl_slm_5y">
+    <title>Changed Features</title>
+    <body>
+      <p>Greenplum Database 5.0.0 includes these changed features:</p>
+      <ul id="ul_fpl_slm_5y">
         <li>
-          <p>&lt;new features here></p>
-        </li>
+		  <p>For the <codeph>ALTER TABLE RENAME</codeph> command, renaming a relation acquires an
+		  Exclusive lock on the relation.</p>
+		  <p>In previous releases, a lock was not acquired when the <codeph>ALTER TABLE
+		  RENAME</codeph> command renamed a table. This violated the isolation level required when
+		  concurrent transactions occurred on the table. For example, without a lock, renaming a
+		  table while concurrently inserting data into a table could fail or insert data into the
+		  incorrect table.</p>
+		</li>
+      </ul>
+    </body>
+  </topic>
+  <topic id="topic_osh_g4m_5y">
+    <title>Removed and Deprecated Features</title>
+    <body>
+      <p>Greenplum Database 5.0.0 has removed these features:</p>
+      <ul id="ul_psh_g4m_5y">
+        <li>&lt;features here></li>
+      </ul>
+      <p>Greenplum Database 5.0.0 has deprecated these features:</p>
+      <ul id="ul_n35_m4m_5y">
+        <li>&lt;features here></li>
       </ul>
     </body>
   </topic>
@@ -79,7 +101,7 @@
             <row>
               <entry/>
               <entry/>
-              <entry>5.0.0</entry>
+              <entry/>
               <entry/>
             </row>
           </tbody>
@@ -114,6 +136,22 @@
           </tbody>
         </tgroup>
       </table>
+    </body>
+  </topic>
+  <topic id="id_qc5_pyd_wy">
+    <title>Limitations in Greenplum Database 5.0.0</title>
+    <body>
+      <p>Greenplum Database 5.0.0 has these limitations:</p>
+      <ul id="ul_lg5_pyd_wy">
+        <li>
+          <p>GPDB 5.0.0 does not provide QuickLZ compression, but accepts <codeph>CREATE TABLE
+              [AS]</codeph> operations with table-, partition-, and/or column-level
+              <codeph>compresstype</codeph> values identifying QuickLZ. <codeph>INSERT</codeph> and
+              <codeph>SELECT</codeph> operations on such tables will fail, returning <codeph>ERROR:
+              quicklz compression not supported</codeph>. To work around this issue, first
+              <codeph>DROP</codeph> then recreate the table without QuickLZ compression. </p>
+        </li>
+      </ul>
     </body>
   </topic>
   <topic id="topic36">

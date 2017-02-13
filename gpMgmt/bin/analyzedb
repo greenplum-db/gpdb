@@ -274,7 +274,7 @@ class AnalyzeDb(Operation):
             # The below object is needed for some functions imported from dump.py
             self.context = Context()
             self.context.master_port = self.pg_port
-            self.context.dump_database = self.dbname
+            self.context.target_db = self.dbname
 
             # The input_col_dict keeps track of the requested columns to analyze.
             # key: table name (e.g. 'public.foo')

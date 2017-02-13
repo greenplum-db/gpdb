@@ -1233,7 +1233,7 @@ cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
 	ds->primaryResults = NULL;
 	ds->dispatchParams = NULL;
 	queryText = buildGpQueryString(ds, pQueryParms, &queryTextLength);
-	cdbdisp_makeDispatcherState(ds, nSlices, cancelOnError, queryText, queryTextLength);
+	cdbdisp_makeDispatcherState(ds, nTotalSlices, cancelOnError, queryText, queryTextLength);
 
 	cdb_total_plans++;
 	cdb_total_slices += nSlices;

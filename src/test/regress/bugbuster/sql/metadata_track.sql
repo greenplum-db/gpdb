@@ -249,9 +249,6 @@ drop table mdt_test_column1;
 
 
 
---
--- QA-2003
-SET gp_enable_inheritance = true;
 
 --INHERIT & NO INHERIT mdt_parent_table
 

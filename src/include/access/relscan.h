@@ -102,7 +102,7 @@ typedef struct FileScanDescData
 	/* scan parameters */
 	Relation	fs_rd;			/* target relation descriptor */
 	Index       fs_scanrelid;
-	FILE	   *fs_file;		/* the file pointer to our URI */
+	struct URL_FILE *fs_file;	/* the file pointer to our URI */
 	char	   *fs_uri;			/* the URI string */
 	bool		fs_noop;		/* no op. this segdb has no file to scan */
 	uint32      fs_scancounter;	/* copied from struct ExternalScan in plan */

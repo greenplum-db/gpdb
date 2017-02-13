@@ -96,6 +96,7 @@ clean:
 	$(MAKE) -C contrib/pg_upgrade_support $@
 	$(MAKE) -C contrib/pg_upgrade $@
 	$(MAKE) -C gpAux/extensions $@
+	$(MAKE) -C gpMgmt $@
 # Garbage from autoconf:
 	@rm -rf autom4te.cache/
 

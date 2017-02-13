@@ -155,8 +155,8 @@ COPY 4883
  a32    | date                        | default '1988-02-21'::date                                                       | plain    | rle_type         | 2                 | 32768      | 
  a33    | real                        | default 41114                                                                    | plain    | rle_type         | 2                 | 32768      | 
  a34    | money                       | default '$7,222.00'::money                                                       | plain    | rle_type         | 2                 | 32768      | 
- a35    | cidr                        | default '192.167.2.0/24'::cidr                                                   | plain    | rle_type         | 2                 | 32768      | 
- a36    | inet                        | default '126.2.3.4'::inet                                                        | plain    | rle_type         | 2                 | 32768      | 
+ a35    | cidr                        | default '192.167.2.0/24'::cidr                                                   | main     | rle_type         | 2                 | 32768      | 
+ a36    | inet                        | default '126.2.3.4'::inet                                                        | main     | rle_type         | 2                 | 32768      | 
  a37    | time without time zone      | default '10:31:45'::time without time zone                                       | plain    | rle_type         | 2                 | 32768      | 
  a38    | text                        | default 'sdhjfsfksfkjskjfksjfkjsdfkjdshkjfhdsjkfkjsd'::text                      | extended | rle_type         | 2                 | 32768      | 
  a39    | bit(1)                      | default B'0'::"bit"                                                              | extended | rle_type         | 2                 | 32768      | 

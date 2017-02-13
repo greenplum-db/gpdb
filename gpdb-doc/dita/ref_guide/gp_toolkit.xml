@@ -27,19 +27,8 @@
       returned by schema objects. <ph>Any changes made in the gp_toolkit schema are lost when the database is backed up and then
         restored with the <codeph class="+ topic/ph pr-d/codeph ">gpcrondump</codeph> and <codeph
           class="+ topic/ph pr-d/codeph ">gpdbrestore</codeph> utilities. </ph></note>
-    <p otherprops="op-print">These are the categories for views in the <codeph>gp_toolkit</codeph> schema:<ul id="ul_ymj_vyv_yp">
-        <li><xref href="#topic2" format="dita"/></li>
-        <li><xref href="#topic5" format="dita"/></li>
-        <li><xref href="#topic8" format="dita"/></li>
-        <li><xref href="#topic16" format="dita"/></li>
-        <li><xref href="#topic21" format="dita"/></li>
-        <li><xref href="#topic24" format="dita"/></li>
-        <li><xref href="#topic26" format="dita"/></li>
-        <li><xref href="#topic32" format="dita"/></li>
-        <li><xref href="#topic36" format="dita"/></li>
-        <li><xref href="#topic38" format="dita"/></li>
-        <li><xref href="#topic49" format="dita"/></li>
-      </ul></p>
+    <p otherprops="op-print">These are the categories for views in the <codeph>gp_toolkit</codeph>
+      schema.</p>
   </body>
   <topic id="topic2" xml:lang="en" ditaarch:DITAArchVersion="1.1"
     domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"

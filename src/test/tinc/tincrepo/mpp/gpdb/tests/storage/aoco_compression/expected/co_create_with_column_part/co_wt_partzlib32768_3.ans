@@ -103,8 +103,8 @@ COPY 4883
  a32    | date                        |                                                                    | plain    | zlib             | 3                 | 32768      | 
  a33    | real                        |                                                                    | plain    | zlib             | 3                 | 32768      | 
  a34    | money                       |                                                                    | plain    | zlib             | 3                 | 32768      | 
- a35    | cidr                        |                                                                    | plain    | zlib             | 3                 | 32768      | 
- a36    | inet                        |                                                                    | plain    | zlib             | 3                 | 32768      | 
+ a35    | cidr                        |                                                                    | main     | zlib             | 3                 | 32768      | 
+ a36    | inet                        |                                                                    | main     | zlib             | 3                 | 32768      | 
  a37    | time without time zone      |                                                                    | plain    | zlib             | 3                 | 32768      | 
  a38    | text                        |                                                                    | extended | zlib             | 3                 | 32768      | 
  a39    | bit(1)                      |                                                                    | extended | zlib             | 3                 | 32768      | 
@@ -250,8 +250,8 @@ ALTER TABLE
  a32    | date                        |                                                                         | plain    | zlib             | 1                 | 32768      | 
  a33    | real                        |                                                                         | plain    | zlib             | 1                 | 32768      | 
  a34    | money                       |                                                                         | plain    | zlib             | 1                 | 32768      | 
- a35    | cidr                        |                                                                         | plain    | zlib             | 1                 | 32768      | 
- a36    | inet                        |                                                                         | plain    | zlib             | 1                 | 32768      | 
+ a35    | cidr                        |                                                                         | main     | zlib             | 1                 | 32768      | 
+ a36    | inet                        |                                                                         | main     | zlib             | 1                 | 32768      | 
  a37    | time without time zone      |                                                                         | plain    | zlib             | 1                 | 32768      | 
  a38    | text                        |                                                                         | extended | zlib             | 1                 | 32768      | 
  a39    | bit(1)                      |                                                                         | extended | zlib             | 1                 | 32768      | 
@@ -314,8 +314,8 @@ Distributed randomly
  a32    | date                        |                                                                    | plain    | 
  a33    | real                        |                                                                    | plain    | 
  a34    | money                       |                                                                    | plain    | 
- a35    | cidr                        |                                                                    | plain    | 
- a36    | inet                        |                                                                    | plain    | 
+ a35    | cidr                        |                                                                    | main     | 
+ a36    | inet                        |                                                                    | main     | 
  a37    | time without time zone      |                                                                    | plain    | 
  a38    | text                        |                                                                    | extended | 
  a39    | bit(1)                      |                                                                    | extended | 
@@ -373,8 +373,8 @@ ALTER TABLE
  a32    | date                        |                                                                    | plain    | zlib             | 3                 | 32768      | 
  a33    | real                        |                                                                    | plain    | zlib             | 3                 | 32768      | 
  a34    | money                       |                                                                    | plain    | zlib             | 3                 | 32768      | 
- a35    | cidr                        |                                                                    | plain    | zlib             | 3                 | 32768      | 
- a36    | inet                        |                                                                    | plain    | zlib             | 3                 | 32768      | 
+ a35    | cidr                        |                                                                    | main     | zlib             | 3                 | 32768      | 
+ a36    | inet                        |                                                                    | main     | zlib             | 3                 | 32768      | 
  a37    | time without time zone      |                                                                    | plain    | zlib             | 3                 | 32768      | 
  a38    | text                        |                                                                    | extended | zlib             | 3                 | 32768      | 
  a39    | bit(1)                      |                                                                    | extended | zlib             | 3                 | 32768      | 
@@ -550,8 +550,8 @@ COPY 4883
  a32    | date                        |                                                                      | plain    | zlib             | 3                 | 32768      | 
  a33    | real                        |                                                                      | plain    | zlib             | 3                 | 32768      | 
  a34    | money                       |                                                                      | plain    | zlib             | 3                 | 32768      | 
- a35    | cidr                        |                                                                      | plain    | zlib             | 3                 | 32768      | 
- a36    | inet                        |                                                                      | plain    | zlib             | 3                 | 32768      | 
+ a35    | cidr                        |                                                                      | main     | zlib             | 3                 | 32768      | 
+ a36    | inet                        |                                                                      | main     | zlib             | 3                 | 32768      | 
  a37    | time without time zone      |                                                                      | plain    | zlib             | 3                 | 32768      | 
  a38    | text                        |                                                                      | extended | zlib             | 3                 | 32768      | 
  a39    | bit(1)                      |                                                                      | extended | zlib             | 3                 | 32768      | 
@@ -697,8 +697,8 @@ ALTER TABLE
  a32    | date                        |                                                                           | plain    | zlib             | 1                 | 32768      | 
  a33    | real                        |                                                                           | plain    | zlib             | 1                 | 32768      | 
  a34    | money                       |                                                                           | plain    | zlib             | 1                 | 32768      | 
- a35    | cidr                        |                                                                           | plain    | zlib             | 1                 | 32768      | 
- a36    | inet                        |                                                                           | plain    | zlib             | 1                 | 32768      | 
+ a35    | cidr                        |                                                                           | main     | zlib             | 1                 | 32768      | 
+ a36    | inet                        |                                                                           | main     | zlib             | 1                 | 32768      | 
  a37    | time without time zone      |                                                                           | plain    | zlib             | 1                 | 32768      | 
  a38    | text                        |                                                                           | extended | zlib             | 1                 | 32768      | 
  a39    | bit(1)                      |                                                                           | extended | zlib             | 1                 | 32768      | 
@@ -761,8 +761,8 @@ Distributed randomly
  a32    | date                        |                                                                      | plain    | 
  a33    | real                        |                                                                      | plain    | 
  a34    | money                       |                                                                      | plain    | 
- a35    | cidr                        |                                                                      | plain    | 
- a36    | inet                        |                                                                      | plain    | 
+ a35    | cidr                        |                                                                      | main     | 
+ a36    | inet                        |                                                                      | main     | 
  a37    | time without time zone      |                                                                      | plain    | 
  a38    | text                        |                                                                      | extended | 
  a39    | bit(1)                      |                                                                      | extended | 

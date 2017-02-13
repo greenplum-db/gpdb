@@ -82,11 +82,6 @@
 #include <limits.h>
 
 /* headers required for process affinity bindings */
-#if defined(pg_on_solaris)
-#include <sys/types.h>
-#include <sys/processor.h>
-#include <sys/procset.h>
-#endif
 #ifdef HAVE_NUMA_H
 #define NUMA_VERSION1_COMPATIBILITY 1
 #include <numa.h>
@@ -8343,48 +8338,7 @@ pgwin32_deadchild_callback(PVOID lpParameter, BOOLEAN TimerOrWaitFired)
 
 #endif   /* WIN32 */
 
-#if defined(pg_on_solaris)
-/* SOLARIS */
-static void
-setProcAffinity(int id)
-{
-	int i, r;
-	processor_info_t info;
-	int cpu_count=0;
-	int cpus[64];
-
-	int proc_to_bind;
-
-	memset(cpus, 0, sizeof(cpus));
-
-	/* first we figure out how many processors we're dealing with (up
-	 * to 64). Note: we can't just assume that when we see the first
-	 * failure that we're done -- The Solaris documentation claims
-	 * that there can be "gaps." */
-	for (i=0; i < 64; i++)
-	{
-		r = processor_info(i, &info);
-		if (r == 0)
-		{
-			cpu_count++;
-			cpus[cpu_count - 1] = i;
-		}
-	}
-
-	/* now we use the id our caller provided to pick a processor. */
-	proc_to_bind = cpus[id % cpu_count];
-
-	r = processor_bind(P_PID, P_MYID, proc_to_bind, NULL);
-	/* ignore an error -- we'll just stay with out old (default
-	 * binding) */
-	if (r == 0)
-		elog(LOG, "Bound postmaster to processor %d", proc_to_bind);
-	else
-		elog(LOG, "process_bind() failed, will remain unbound");
-
-	return;
-}
-#elif defined(HAVE_NUMA_H) && defined(HAVE_LIBNUMA)
+#if defined(HAVE_NUMA_H) && defined(HAVE_LIBNUMA)
 /* LINUX */
 static void
 setProcAffinity(int id)

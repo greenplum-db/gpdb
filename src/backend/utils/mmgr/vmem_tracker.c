@@ -13,9 +13,10 @@
  */
 
 #include "postgres.h"
-#include "utils/gp_atomic.h"
+
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
+#include "port/atomics.h"
 #include "utils/faultinjection.h"
 #include "utils/vmem_tracker.h"
 #include "utils/session_state.h"

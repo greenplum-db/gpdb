@@ -76,7 +76,7 @@ class GpCronDump(Operation):
         if not self.context.ddboost_hosts: self.context.ddboost_hosts = []
 
         if len(self.context.dump_databases) > 0:
-            self.context.dump_database = self.context.dump_databases[0]
+            self.context.target_db = self.context.dump_databases[0]
 
         self.include_email_file = options.include_email_file
 
@@ -593,7 +593,7 @@ class GpCronDump(Operation):
                 table_list.append(table_name)
         return create_temp_file_from_list(table_list, 'include_dump_tables_file')
 
-    def get_include_exclude_for_dump_database(self, dirty_file, dbname):
+    def get_include_exclude_for_dump_database(self, dirty_file):
         """
         This is to empty the self.include_dump_tables and self.exclude_dump_tables, write all
         include tables and exclude tables into include tables file and exclude tables file respectively.
@@ -616,18 +616,18 @@ class GpCronDump(Operation):
                 if table.startswith('pg_temp_'):
                     continue
                 dump_tables_without_pg_temp.append(table)
-            include_file = expand_partitions_and_populate_filter_file(dbname,
+            include_file = expand_partitions_and_populate_filter_file(self.context,
                                                                       dump_tables_without_pg_temp,
                                                                       'include_dump_tables_file')
             self.context.include_dump_tables = []
 
         if self.context.exclude_dump_tables:
-            exclude_file = expand_partitions_and_populate_filter_file(dbname, self.context.exclude_dump_tables, 'exclude_dump_tables_file')
+            exclude_file = expand_partitions_and_populate_filter_file(self.context, self.context.exclude_dump_tables, 'exclude_dump_tables_file')
             self.context.exclude_dump_tables = []
 
         if self.context.exclude_dump_tables_file:
             exclude_tables = get_lines_from_file(self.context.exclude_dump_tables_file)
-            exclude_file = expand_partitions_and_populate_filter_file(dbname,
+            exclude_file = expand_partitions_and_populate_filter_file(self.context,
                                                                       exclude_tables,
                                                                       'exclude_dump_tables_file')
 
@@ -728,7 +728,7 @@ class GpCronDump(Operation):
             return 0
 
         for dumpdb in self.context.dump_databases:
-            self.context.dump_database = dumpdb
+            self.context.target_db = dumpdb
 
             if not self.context.incremental:
                 self.context.generate_dump_timestamp()
@@ -738,7 +738,7 @@ class GpCronDump(Operation):
                 logger.info('Successfully listed the names of backup files and pipes')
                 return 0
             if self.list_filter_tables:
-                db = self.context.dump_database
+                db = self.context.target_db
                 self._list_filter_tables(db, get_filter_file(self.context))
                 return 0
 
@@ -761,7 +761,7 @@ class GpCronDump(Operation):
                 lock_thread.start()
 
                 LOCK_TABLE_SQL = "LOCK TABLE pg_catalog.pg_class IN EXCLUSIVE MODE;"
-                conn = dbconn.connect(dbconn.DbURL(port=self.context.master_port, dbname=self.context.dump_database), utility=True)
+                conn = dbconn.connect(dbconn.DbURL(port=self.context.master_port, dbname=self.context.target_db), utility=True)
                 dbconn.execSQL(conn, LOCK_TABLE_SQL)
 
                 ao_partition_list = get_ao_partition_state(self.context)
@@ -781,7 +781,7 @@ class GpCronDump(Operation):
                     dirty_file = write_dirty_file_to_temp(dirty_partitions)
 
                 self.generate_schema_list_file()
-                (include_file, exclude_file) = self.get_include_exclude_for_dump_database(dirty_file, self.context.dump_database)
+                (include_file, exclude_file) = self.get_include_exclude_for_dump_database(dirty_file)
                 self.context.include_dump_tables_file = include_file
                 self.context.exclude_dump_tables_file = exclude_file
 
@@ -841,7 +841,7 @@ class GpCronDump(Operation):
 
                 current_exit_status = max(dump_outcome['exit_status'], post_dump_outcome['exit_status'])
                 if self.replicate and current_exit_status == 0:
-                    self.dump_timestamps.append((self.context.dump_database, post_dump_outcome["timestamp"]))
+                    self.dump_timestamps.append((self.context.target_db, post_dump_outcome["timestamp"]))
                 final_exit_status = max(final_exit_status, current_exit_status)
 
                 if self.context.incremental:
@@ -896,20 +896,20 @@ class GpCronDump(Operation):
                     logger.warn("Dump request was incomplete, however cannot rollback since no timestamp was found.")
                     MailDumpEvent("Report from gpcrondump on host %s [FAILED]" % self.cur_host,
                                   "Failed for database %s with return code %d, dump files not rolled back, because no new timestamp was found. [Start=%s End=%s] Options passed [%s]"
-                                  % (self.context.dump_database, current_exit_status, dump_outcome['time_start'], dump_outcome['time_end'], self.options_list)).run()
+                                  % (self.context.target_db, current_exit_status, dump_outcome['time_start'], dump_outcome['time_end'], self.options_list)).run()
                     raise ExceptionNoStackTraceNeeded("Dump incomplete, rollback not processed")
                 elif self.rollback:
                     logger.warn("Dump request was incomplete, rolling back dump")
                     DeleteCurrentDump(self.context).run()
                     MailDumpEvent("Report from gpcrondump on host %s [FAILED]" % self.cur_host,
                                   "Failed for database %s with return code %d dump files rolled back. [Start=%s End=%s] Options passed [%s]"
-                                  % (self.context.dump_database, current_exit_status, dump_outcome['time_start'], dump_outcome['time_end'], self.options_list)).run()
+                                  % (self.context.target_db, current_exit_status, dump_outcome['time_start'], dump_outcome['time_end'], self.options_list)).run()
                     raise ExceptionNoStackTraceNeeded("Dump incomplete, completed rollback")
                 else:
                     logger.warn("Dump request was incomplete, not rolling back because -r option was not supplied")
                     MailDumpEvent("Report from gpcrondump on host %s [FAILED]" % self.cur_host,
                                   "Failed for database %s with return code %s dump files not rolled back. [Start=%s End=%s] Options passed [%s]"
-                                  % (self.context.dump_database, current_exit_status, dump_outcome['time_start'], dump_outcome['time_end'], self.options_list)).run()
+                                  % (self.context.target_db, current_exit_status, dump_outcome['time_start'], dump_outcome['time_end'], self.options_list)).run()
                     raise ExceptionNoStackTraceNeeded("Dump incomplete, rollback not processed")
             else:
                 if self.context.clear_dumps:
@@ -929,7 +929,7 @@ class GpCronDump(Operation):
             if self.context.dump_config:
                 dump_info_dict = defaultdict(dict)
                 dump_info_dict['host'] = self.cur_host
-                dump_info_dict['dbname'] = self.context.dump_database
+                dump_info_dict['dbname'] = self.context.target_db
                 dump_info_dict['exit_status'] = current_exit_status
                 dump_info_dict['start_time'] = dump_outcome['time_start']
                 dump_info_dict['end_time'] = dump_outcome['time_end']
@@ -937,7 +937,7 @@ class GpCronDump(Operation):
 
                 dump_db_info_list.append(dump_info_dict)
             else:
-                self._send_email(self.context.dump_database, current_exit_status, dump_outcome['time_start'], dump_outcome['time_end'])
+                self._send_email(self.context.target_db, current_exit_status, dump_outcome['time_start'], dump_outcome['time_end'])
 
         if self.context.dump_config:
             config_outcome = DumpConfig(self.context).run()
@@ -1133,7 +1133,7 @@ class GpCronDump(Operation):
                 logger.info("---------------------------------------------------")
         else:
             logger.info("Dump type                            = Full database")
-        logger.info("Database to be dumped                = %s" % self.context.dump_database)
+        logger.info("Database to be dumped                = %s" % self.context.target_db)
         if self.context.dump_schema:
             logger.info("Schema to be dumped                  = %s" % self.context.dump_schema)
         if self.context.backup_dir:
@@ -1186,7 +1186,7 @@ class GpCronDump(Operation):
     def _status_report(self, timestamp, dump_outcome, exit_status, deleted_dump_set, dump_type):
         logger.info("Dump status report")
         logger.info("---------------------------------------------------")
-        logger.info("Target database                          = %s" % self.context.dump_database)
+        logger.info("Target database                          = %s" % self.context.target_db)
         logger.info("Dump subdirectory                        = %s" % timestamp[0:8])
         logger.info("Dump type                                = %s" % dump_type)
         if self.context.clear_dumps:
@@ -1238,7 +1238,7 @@ class GpCronDump(Operation):
             logger.info("Configuring for multiple database dump")
 
         for dumpdb in self.context.dump_databases:
-            self.context.dump_database = dumpdb
+            self.context.target_db = dumpdb
             ValidateDatabaseExists(self.context).run()
 
         if self.context.dump_schema:

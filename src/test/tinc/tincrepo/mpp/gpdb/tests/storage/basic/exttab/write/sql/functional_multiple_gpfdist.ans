@@ -6,4 +6,4 @@ INSERT 0 5
 CREATE WRITABLE EXTERNAL TABLE tbl_wet_multiple_gpfdist ( a int, b text) LOCATION ('gpfdist://@hostname@:@gp_port@/output/wet_2gpfdist1.tbl', 'gpfdist://@hostname@:@gp_port@/output/wet_2gpfdist2.tbl','gpfdist://@hostname@:@gp_port@/output/wet_2gpfdist3.tbl') FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null'  ) ;
 CREATE EXTERNAL TABLE
 insert into tbl_wet_multiple_gpfdist select * from test;
-psql:/path/sql_file:1: ERROR:  External table has more URLs then available primary segments that can write into them  (seg0 hawthorn9:7311 pid=14649)
+psql:/path/sql_file:1: ERROR:  External table has more URLs than available primary segments that can write into them  (seg0 hawthorn9:7311 pid=14649)

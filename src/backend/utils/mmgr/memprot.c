@@ -27,6 +27,7 @@
 #endif
 
 #include "miscadmin.h"
+#include "port/atomics.h"
 #include "storage/pg_sema.h"
 #include "storage/ipc.h"
 #include "utils/palloc.h"
@@ -37,7 +38,6 @@
 #include "utils/simex.h"
 #include "utils/vmem_tracker.h"
 #include "utils/session_state.h"
-#include "utils/gp_atomic.h"
 #include "utils/gp_alloc.h"
 
 #define SHMEM_OOM_TIME "last vmem oom time"

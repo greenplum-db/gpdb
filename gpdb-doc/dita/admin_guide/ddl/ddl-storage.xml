@@ -173,17 +173,22 @@
             <row>
               <entry colname="col1">Row</entry>
               <entry colname="col2">Table</entry>
-              <entry colname="col3"><codeph>ZLIB</codeph> and <codeph>QUICKLZ</codeph></entry>
+              <entry colname="col3"><codeph>ZLIB</codeph> and
+                <codeph>QUICKLZ</codeph><sup>1</sup></entry>
             </row>
             <row>
               <entry colname="col1">Column</entry>
               <entry colname="col2">Column and Table</entry>
               <entry colname="col3"><codeph>RLE_TYPE</codeph>, <codeph>ZLIB</codeph>, and
-                  <codeph>QUICKLZ</codeph></entry>
+                  <codeph>QUICKLZ</codeph><sup>1</sup></entry>
             </row>
           </tbody>
         </tgroup>
       </table>
+      <p>
+        <note type="note"><sup>1</sup>QuickLZ compression is available only in the commercial
+          release of Pivotal Greenplum Database.</note>
+      </p>
       <p>When choosing a compression type and level for append-optimized tables, consider these
         factors:</p>
       <ul id="ul_xlg_1wy_sp">

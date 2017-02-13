@@ -278,6 +278,7 @@ clean :
 	@rm -rf $(PYLIB_SRC_EXT)/$(LOGILAB_ASTNG_DIR)
 	@rm -rf $(STREAM_DIR)/stream lib/stream  
 	@rm -rf *.pyc lib/*.pyc
+	@rm -f gpcheckcatc gpcrondumpc gpexpandc gptransferc
 
 .PHONY: disclean
 distclean: clean
