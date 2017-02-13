@@ -14,9 +14,8 @@ top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
 
 ifneq ($(PORTNAME), win32)
-override CFLAGS += $(PTHREAD_CFLAGS) -pthread -Wno-error
+override CFLAGS += $(PTHREAD_CFLAGS) -Wno-error
 endif
-
 
 # The frontend doesn't need everything that's in LIBS, some are backend only
 LIBS := $(filter-out -lresolv, $(LIBS))
