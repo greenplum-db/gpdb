@@ -1,4 +1,4 @@
-\echo -- start_ignore
+-- start_ignore
 drop database vacuum_data_db;
 drop database unvacuum_data_db;
 drop database "TEST_DB";
@@ -88,7 +88,7 @@ select current_database();
 DROP ROLE admin ;
 
 --
-\echo -- end_ignore
+-- end_ignore
 set optimizer_disable_missing_stats_collection = on;
 
 --
@@ -329,7 +329,7 @@ CREATE TABLE table_like_parent4 (
     
    CREATE TABLE table_parent ( a int, b text) DISTRIBUTED BY (a);
    insert into table_parent values (generate_series(1,10),'test');
-\echo -- start_ignore
+-- start_ignore
    select count(*) from table_parent;
 
    CREATE TABLE table_child() INHERITS(table_parent);
@@ -338,7 +338,7 @@ CREATE TABLE table_like_parent4 (
 
    select * from table_parent;
    select * from table_child;
-   \echo -- end_ignore 
+-- end_ignore
 
 --Table Creation using Create Table As (CTAS) with both the new tables columns being explicitly or implicitly created
 
@@ -527,14 +527,12 @@ CREATE WRITABLE EXTERNAL TABLE wet_ext_20081031095512_23244_11671 (
     char_vary_col character varying(30),
     numeric_col numeric
     ) WITH OIDS DISTRIBUTED RANDOMLY;
-    
-\echo -- start_ignore
+begin;
     insert into table_with_oid values ('0_zero', 0, '0_zero', 0);
     insert into table_with_oid values ('1_zero', 1, '1_zero', 1);
     insert into table_with_oid values ('2_zero', 2, '2_zero', 2);
     insert into table_with_oid select i||'_'||repeat('text',100),i,i||'_'||repeat('text',5),i from generate_series(1,100)i;
-
-\echo -- end_ignore
+commit;
     
 --Tables with storage Parameters is covered in ao_tables
     
@@ -3069,7 +3067,7 @@ Alter table co_compr_zlib_with Drop column a12;
 --Create a CTAS table 
 CREATE TABLE co_compr_zlib_with_ctas  WITH (appendonly=true, orientation=column) AS Select * from co_compr_zlib_with;
 
-\echo -- start_ignore
+-- start_ignore
 drop table if exists csq_t1;
 drop table if exists csq_t2;
 drop table if exists csq_t3;
@@ -3091,7 +3089,7 @@ insert into csq_t3 values(1,'one');
 insert into csq_t3 values(3,'three');
 insert into csq_t3 values(5,'five');
 insert into csq_t3 values(7,'seven');
-\echo -- end_ignore
+-- end_ignore
 
 -- CSQ 01: Basic query with where clause
 select a, (select y from csq_t2 where x=a) from csq_t1 where b < 8 order by a;
@@ -3150,12 +3148,11 @@ insert into t5 values(5, '2003-4');
 		a.period between '2002-1' and '2002-4') as vsum
     where vsum < 45 order by period, vsum;
 
-\echo -- start_ignore
+-- start_ignore
 DROP TABLE IF EXISTS st_foo1;
-
 DROP TABLE IF EXISTS st_foo2;
 
-\echo -- end_ignore
+-- end_ignore
 
 create table st_foo1 (i int, j varchar(10))
 partition by list(j)
@@ -3265,12 +3262,12 @@ SELECT r.rolname, d.start_day, d.start_time, d.end_day, d.end_time
 FROM pg_auth_time_constraint d join pg_roles r ON (d.authid = r.oid)
 WHERE r.rolname = 'testuser'
 ORDER BY r.rolname, d.start_day, d.start_time, d.end_day, d.end_time;
-\echo -- start_ignore
+-- start_ignore
 drop view if exists relconstraint cascade;
 drop view if exists ptable cascade;
 drop view if exists part_closure cascade;
 drop view if exists anyconstraint cascade;
-\echo -- end_ignore
+-- end_ignore
 
 create view relconstraint
     (
@@ -3388,9 +3385,9 @@ create view anyconstraint
             left join 
         part_closure p
             on relid = partid;
-\echo -- start_ignore
+-- start_ignore
 drop table if exists mulpt_pk;
-\echo -- end_ignore
+-- end_ignore
 -- Create multi-level partitioned tables with CONSTRAINTS on distcol and ptcol
 create table mulpt_pk
 (
@@ -3411,9 +3408,9 @@ partition floor values ('A', 'B'),
 partition lower values ('100','110'),
 partition upper values ('200', '210', '220')
 );
-\echo -- start_ignore
+-- start_ignore
 drop table if exists mulpt_un;
-\echo -- end_ignore
+-- end_ignore
 create table mulpt_un
 (
 distcol int,
@@ -3439,9 +3436,9 @@ select tablename from pg_tables where tablename in ('mulpt_pk','mulpt_un') order
 
 -- create the tables with CONSTRAINTS on distcol,ptcol and subptcol, check that the tables are created.
 
-\echo -- start_ignore
+-- start_ignore
 drop table if exists mulpt_pk;
-\echo -- end_ignore
+-- end_ignore
 create table mulpt_pk
 (
 distcol int,
@@ -3462,9 +3459,9 @@ partition lower values ('100','110'),
 partition upper values ('200', '210', '220')
 );
 
-\echo -- start_ignore
+-- start_ignore
 drop table if exists mulpt_un;
-\echo -- end_ignore
+-- end_ignore
 create table mulpt_un
 (
 distcol int,
@@ -3496,22 +3493,20 @@ select conname,partid from anyconstraint where contype='u' and tableid='mulpt_un
 
 /* Note that roles are defined at the system-level and are valid
  * for all databases in your Greenplum Database system. */
-\echo -- start_ignore
+-- start_ignore
 revoke all on protocol gphdfs from _hadoop_perm_test_role;
 DROP ROLE IF EXISTS _hadoop_perm_test_role;
 revoke all on protocol gphdfs from _hadoop_perm_test_role2;
 DROP ROLE IF EXISTS _hadoop_perm_test_role2;
-\echo -- end_ignore
+-- end_ignore
 
 /* Now create a new role. Initially this role should NOT
  * be allowed to create an external hdfs table. */
 
-\echo -- start_ignore
+-- start_ignore
 DROP ROLE _hadoop_perm_test_role;
-\echo -- end_ignore
-\echo -- start_ignore
 DROP ROLE _hadoop_perm_test_role2; 
-\echo -- end_ignore
+-- end_ignore
 CREATE ROLE _hadoop_perm_test_role
 WITH CREATEEXTTABLE
 LOGIN;
@@ -3660,7 +3655,7 @@ $proc$ language plpgsql;
 
 select srf_vect();
 
-\echo -- start_ignore
+-- start_ignore
 drop role "ISO";
 drop role "geography";
 drop role "ISO_ro_1";
@@ -3739,4 +3734,4 @@ DROP RESOURCE QUEUE db_resque1;
 DROP RESOURCE QUEUE resqueu3;
 DROP RESOURCE QUEUE resqueu4;
 DROP RESOURCE QUEUE grp_rsq1;
-\echo -- end_ignore
+-- end_ignore

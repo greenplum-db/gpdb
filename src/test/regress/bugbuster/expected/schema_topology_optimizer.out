@@ -1,4 +1,3 @@
-\echo -- start_ignore
 -- start_ignore
 drop database db_test_bed;
 ERROR:  database "db_test_bed" does not exist
@@ -180,7 +179,6 @@ select current_database();
 DROP ROLE admin ;
 ERROR:  role "admin" does not exist
 --
-\echo -- end_ignore
 -- end_ignore
 set optimizer_disable_missing_stats_collection = on;
 --
@@ -365,7 +363,6 @@ CREATE TABLE table_like_parent4 (
     
    CREATE TABLE table_parent ( a int, b text) DISTRIBUTED BY (a);
    insert into table_parent values (generate_series(1,10),'test');
-\echo -- start_ignore
 -- start_ignore
    select count(*) from table_parent;
  count 
@@ -431,7 +428,6 @@ NOTICE:  Table has parent, setting distribution columns to match parent table
  12 | child
 (10 rows)
 
-   \echo -- end_ignore 
 -- end_ignore
 --Table Creation using Create Table As (CTAS) with both the new tables columns being explicitly or implicitly created
     CREATE TABLE test_table4(
@@ -604,16 +600,13 @@ NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "table_with_defau
     numeric_col numeric
     ) WITH OIDS DISTRIBUTED RANDOMLY;
 NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
-    
-\echo -- start_ignore
--- start_ignore
+begin;
     insert into table_with_oid values ('0_zero', 0, '0_zero', 0);
     insert into table_with_oid values ('1_zero', 1, '1_zero', 1);
     insert into table_with_oid values ('2_zero', 2, '2_zero', 2);
     insert into table_with_oid select i||'_'||repeat('text',100),i,i||'_'||repeat('text',5),i from generate_series(1,100)i;
-\echo -- end_ignore
--- end_ignore
-    
+commit;
+
 --Tables with storage Parameters is covered in ao_tables
     
 create table nodetest (testname text, oldnode text, newnode text) distributed by (testname);
@@ -3684,7 +3677,6 @@ NOTICE:  table "co_compr_zlib_with_ctas" does not exist, skipping
 CREATE TABLE co_compr_zlib_with_ctas  WITH (appendonly=true, orientation=column) AS Select * from co_compr_zlib_with;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'id' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-\echo -- start_ignore
 -- start_ignore
 drop table if exists csq_t1;
 NOTICE:  table "csq_t1" does not exist, skipping
@@ -3713,7 +3705,6 @@ insert into csq_t3 values(1,'one');
 insert into csq_t3 values(3,'three');
 insert into csq_t3 values(5,'five');
 insert into csq_t3 values(7,'seven');
-\echo -- end_ignore
 -- end_ignore
 -- CSQ 01: Basic query with where clause
 select a, (select y from csq_t2 where x=a) from csq_t1 where b < 8 order by a;
@@ -3828,11 +3819,9 @@ insert into t5 values(5, '2003-4');
  2002-4 |   15
 (3 rows)
 
-\echo -- start_ignore
 -- start_ignore
 DROP TABLE IF EXISTS st_foo1;
 DROP TABLE IF EXISTS st_foo2;
-\echo -- end_ignore
 -- end_ignore
 create table st_foo1 (i int, j varchar(10))
 partition by list(j)
@@ -4148,7 +4137,6 @@ ORDER BY r.rolname, d.start_day, d.start_time, d.end_day, d.end_time;
 ---------+-----------+------------+---------+----------
 (0 rows)
 
-\echo -- start_ignore
 -- start_ignore
 drop view if exists relconstraint cascade;
 NOTICE:  view "relconstraint" does not exist, skipping
@@ -4158,7 +4146,6 @@ drop view if exists part_closure cascade;
 NOTICE:  view "part_closure" does not exist, skipping
 drop view if exists anyconstraint cascade;
 NOTICE:  view "anyconstraint" does not exist, skipping
-\echo -- end_ignore
 -- end_ignore
 
 create view relconstraint
@@ -4277,11 +4264,9 @@ create view anyconstraint
             left join 
         part_closure p
             on relid = partid;
-\echo -- start_ignore
 -- start_ignore
 drop table if exists mulpt_pk;
 NOTICE:  table "mulpt_pk" does not exist, skipping
-\echo -- end_ignore
 -- end_ignore
 -- Create multi-level partitioned tables with CONSTRAINTS on distcol and ptcol
 create table mulpt_pk
@@ -4308,11 +4293,9 @@ NOTICE:  CREATE TABLE will create partition "mulpt_pk_1_prt_lower" for table "mu
 NOTICE:  CREATE TABLE will create partition "mulpt_pk_1_prt_upper" for table "mulpt_pk"
 ERROR:  PRIMARY KEY constraint must contain all columns in the partition key
 HINT:  Include column "subptcol" in the PRIMARY KEY constraint or create a part-wise UNIQUE index after creating the table instead.
-\echo -- start_ignore
 -- start_ignore
 drop table if exists mulpt_un;
 NOTICE:  table "mulpt_un" does not exist, skipping
-\echo -- end_ignore
 -- end_ignore
 create table mulpt_un
 (
@@ -4345,11 +4328,9 @@ select tablename from pg_tables where tablename in ('mulpt_pk','mulpt_un') order
 (0 rows)
 
 -- create the tables with CONSTRAINTS on distcol,ptcol and subptcol, check that the tables are created.
-\echo -- start_ignore
 -- start_ignore
 drop table if exists mulpt_pk;
 NOTICE:  table "mulpt_pk" does not exist, skipping
-\echo -- end_ignore
 -- end_ignore
 create table mulpt_pk
 (
@@ -4389,11 +4370,9 @@ NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mulpt_pk_1_prt_l
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mulpt_pk_1_prt_upper_pkey" for table "mulpt_pk_1_prt_upper"
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mulpt_pk_1_prt_upper_2_prt_1_pkey" for table "mulpt_pk_1_prt_upper_2_prt_1"
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mulpt_pk_1_prt_upper_2_prt_2_pkey" for table "mulpt_pk_1_prt_upper_2_prt_2"
-\echo -- start_ignore
 -- start_ignore
 drop table if exists mulpt_un;
 NOTICE:  table "mulpt_un" does not exist, skipping
-\echo -- end_ignore
 -- end_ignore
 create table mulpt_un
 (
@@ -4485,7 +4464,6 @@ select conname,partid from anyconstraint where contype='u' and tableid='mulpt_un
 
 /* Note that roles are defined at the system-level and are valid
  * for all databases in your Greenplum Database system. */
-\echo -- start_ignore
 -- start_ignore
 revoke all on protocol gphdfs from _hadoop_perm_test_role;
 ERROR:  role "_hadoop_perm_test_role" does not exist
@@ -4495,21 +4473,14 @@ revoke all on protocol gphdfs from _hadoop_perm_test_role2;
 ERROR:  role "_hadoop_perm_test_role2" does not exist
 DROP ROLE IF EXISTS _hadoop_perm_test_role2;
 NOTICE:  role "_hadoop_perm_test_role2" does not exist, skipping
-\echo -- end_ignore
 -- end_ignore
 /* Now create a new role. Initially this role should NOT
  * be allowed to create an external hdfs table. */
-\echo -- start_ignore
 -- start_ignore
 DROP ROLE _hadoop_perm_test_role;
 ERROR:  role "_hadoop_perm_test_role" does not exist
-\echo -- end_ignore
--- end_ignore
-\echo -- start_ignore
--- start_ignore
 DROP ROLE _hadoop_perm_test_role2; 
 ERROR:  role "_hadoop_perm_test_role2" does not exist
-\echo -- end_ignore
 -- end_ignore
 CREATE ROLE _hadoop_perm_test_role
 WITH CREATEEXTTABLE
@@ -4659,7 +4630,6 @@ NOTICE:  4 bb cc
  
 (1 row)
 
-\echo -- start_ignore
 -- start_ignore
 drop role "ISO";
 drop role "geography";
@@ -4763,5 +4733,4 @@ ERROR:  resource queue "db_resque1" does not exist
 DROP RESOURCE QUEUE resqueu3;
 DROP RESOURCE QUEUE resqueu4;
 DROP RESOURCE QUEUE grp_rsq1;
-\echo -- end_ignore
 -- end_ignore
