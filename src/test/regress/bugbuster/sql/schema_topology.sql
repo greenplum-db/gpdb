@@ -83,16 +83,9 @@ DROP ROLE func_role ;
 DROP ROLE sally;
 DROP ROLE ron;
 DROP ROLE ken;
-\c template1
-select current_database();
+
 DROP ROLE admin ;
-
---
 -- end_ignore
-set optimizer_disable_missing_stats_collection = on;
-
---
-\c regression
 
 
 --Create Table

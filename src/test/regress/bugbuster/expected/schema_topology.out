@@ -171,20 +171,9 @@ DROP ROLE ron;
 ERROR:  role "ron" does not exist
 DROP ROLE ken;
 ERROR:  role "ken" does not exist
-\c template1
-select current_database();
- current_database 
-------------------
- template1
-(1 row)
-
 DROP ROLE admin ;
 ERROR:  role "admin" does not exist
---
 -- end_ignore
-set optimizer_disable_missing_stats_collection = on;
---
-\c regression
 --Create Table
 --with uppercase
     CREATE TABLE "TABLE_NAME"( col_text text, col_numeric numeric ) DISTRIBUTED RANDOMLY;
