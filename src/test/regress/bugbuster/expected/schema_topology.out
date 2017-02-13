@@ -53,6 +53,8 @@ drop role "ISO_ro_1";
 ERROR:  role "ISO_ro_1" does not exist
 drop role "iso123" ;
 ERROR:  role "iso123" does not exist
+DROP RESOURCE QUEUE db_resque1;
+ERROR:  resource queue "db_resque1" does not exist
 DROP RESOURCE QUEUE db_resque2;
 ERROR:  resource queue "db_resque2" does not exist
 DROP RESOURCE QUEUE DB_RESque3;
@@ -157,8 +159,6 @@ DROP USER test_user_1;
 ERROR:  role "test_user_1" does not exist
 DROP RESOURCE QUEUE grp_rsq1 ;
 ERROR:  resource queue "grp_rsq1" does not exist
-DROP RESOURCE QUEUE db_resque1;
-ERROR:  resource queue "db_resque1" does not exist
 DROP ROLE domain_owner;
 ERROR:  role "domain_owner" does not exist
 DROP ROLE agg_owner;
@@ -4540,8 +4540,6 @@ DROP RESOURCE QUEUE db_resque1;
 DROP RESOURCE QUEUE db_resque2;
 DROP RESOURCE QUEUE DB_RESque3;
 DROP RESOURCE QUEUE DB_RESQUE4;
-DROP RESOURCE QUEUE db_resque1;
-ERROR:  resource queue "db_resque1" does not exist
 DROP RESOURCE QUEUE resqueu3;
 DROP RESOURCE QUEUE resqueu4;
 DROP RESOURCE QUEUE grp_rsq1;
