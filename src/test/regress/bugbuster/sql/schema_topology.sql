@@ -3503,10 +3503,6 @@ DROP ROLE IF EXISTS _hadoop_perm_test_role2;
 /* Now create a new role. Initially this role should NOT
  * be allowed to create an external hdfs table. */
 
--- start_ignore
-DROP ROLE _hadoop_perm_test_role;
-DROP ROLE _hadoop_perm_test_role2; 
--- end_ignore
 CREATE ROLE _hadoop_perm_test_role
 WITH CREATEEXTTABLE
 LOGIN;
