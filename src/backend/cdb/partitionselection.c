@@ -280,9 +280,25 @@ processLevel(PartitionSelectorState *node, int level, TupleTableSlot *inputTuple
 		/*
 		 * Neither equality predicate nor general predicate
 		 * exists. Return all the next level PartitionRule.
+		 *
+		 * WARNING: Do NOT use list_concat with satisfiedRules
+		 * and parentNode->rules. list_concat will destructively modify
+		 * satisfiedRules to point to parentNode->rules, which will
+		 * then be freed when we free satisfiedRules. This does not
+		 * apply when we execute partition_rules_for_general_predicate
+		 * as it creates its own list.
 		 */
-		satisfiedRules = list_concat(satisfiedRules, parentNode->rules);
-		satisfiedRules = lappend(satisfiedRules, parentNode->default_part);
+		ListCell* lc = NULL;
+		foreach (lc, parentNode->rules)
+		{
+			PartitionRule *rule = (PartitionRule *) lfirst(lc);
+			satisfiedRules = lappend(satisfiedRules, rule);
+		}
+
+		if (NULL != parentNode->default_part)
+		{
+			satisfiedRules = lappend(satisfiedRules, parentNode->default_part);
+		}
 	}
 
 	/* Based on the satisfied PartitionRules, go to next
@@ -336,8 +352,6 @@ processLevel(PartitionSelectorState *node, int level, TupleTableSlot *inputTuple
 			selparts->scanIds = list_concat(selparts->scanIds, selpartsChild->scanIds);
 			pfree(selpartsChild);
 		}
-
-		pfree(rule);
 	}
 
 	list_free(satisfiedRules);
