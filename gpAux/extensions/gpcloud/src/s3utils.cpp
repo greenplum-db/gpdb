@@ -34,12 +34,12 @@ bool sha1hmac_hex(const char *str, char out_hash_hex[SHA_DIGEST_STRING_LENGTH], 
     return true;
 }
 
-bool sha256_hex(const char *string, char out_hash_hex[SHA256_DIGEST_STRING_LENGTH]) {
+bool sha256_hex(const char *string, uint64_t length, char out_hash_hex[SHA256_DIGEST_STRING_LENGTH]) {
     if (!string) return false;
 
     unsigned char hash[SHA256_DIGEST_LENGTH];  // 32
 
-    SHA256((unsigned char *)string, strlen(string), hash);
+    SHA256((unsigned char *)string, length, hash);
 
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
         sprintf(out_hash_hex + (i * 2), "%02x", hash[i]);
@@ -47,6 +47,10 @@ bool sha256_hex(const char *string, char out_hash_hex[SHA256_DIGEST_STRING_LENGT
     out_hash_hex[SHA256_DIGEST_STRING_LENGTH - 1] = 0;
 
     return true;
+}
+
+bool sha256_hex(const char *string, char out_hash_hex[SHA256_DIGEST_STRING_LENGTH]) {
+    return sha256_hex(string, strlen(string), out_hash_hex);
 }
 
 bool sha256hmac(const char *str, unsigned char out_hash[32], const char *secret, int secret_len) {

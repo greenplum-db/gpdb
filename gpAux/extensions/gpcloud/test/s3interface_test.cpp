@@ -19,8 +19,6 @@ class S3InterfaceServiceTest : public testing::Test, public S3InterfaceService {
         s3ext_logtype = STDERR_LOG;
         s3ext_loglevel = EXT_INFO;
 
-        schema = "https";
-
         this->setRESTfulService(&mockRESTfulService);
     }
 
@@ -51,11 +49,6 @@ class S3InterfaceServiceTest : public testing::Test, public S3InterfaceService {
     }
 
     S3Params params;
-
-    string schema;
-    string region;
-    string bucket;
-    string prefix;
 
     MockS3RESTfulService mockRESTfulService;
 
