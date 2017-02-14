@@ -118,6 +118,7 @@ select A.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i n
 -- Basic queries with ANY clause
 -- -- -- --
 select a, x from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a = any (select x);
+select a, x from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a = any (select x) order by a, x;
 select A.i from A where A.i = any (select B.i from B where A.i = B.i) order by A.i;
 
 select * from A where A.j = any (select C.j from C where C.j = A.j) order by 1,2;
@@ -161,6 +162,7 @@ select A.i, B.i, C.j from A, B, C where A.j = all (select C.j from C where C.j =
 -- Basic queries with EXISTS clause
 -- -- -- --
 select b from qp_csq_t1 where exists(select * from qp_csq_t2 where y=a);
+select b from qp_csq_t1 where exists(select * from qp_csq_t2 where y=a) order by b;
 select A.i from A where exists(select B.i from B where A.i = B.i) order by A.i;
 
 -- with CTE 
@@ -191,6 +193,7 @@ select * from A,B,C where C.i = A.i and exists (select C.j where C.j = B.j and A
 -- Basic queries with NOT EXISTS clause
 -- -- -- --
 select b from qp_csq_t1 where not exists(select * from qp_csq_t2 where y=a);
+select b from qp_csq_t1 where not exists(select * from qp_csq_t2 where y=a) order by b;
 select A.i from A where not exists(select B.i from B where A.i = B.i) order by A.i;
 
 select * from A where not exists (select * from C,B where C.j = A.j and exists (select * from C where C.i = B.i and C.j < B.j)) order by 1,2;
@@ -283,6 +286,8 @@ select a, x from qp_csq_t2, qp_csq_t1 where qp_csq_t1.a = (select x) order by a;
 select a from qp_csq_t1 where (select (y*2)>b from qp_csq_t2 where a=x) order by a;
 SELECT a, (SELECT d FROM qp_csq_t3 WHERE a=c) FROM qp_csq_t1 GROUP BY a order by a;
 
+-- Planner should fail due to skip-level correlation not supported. ORCA should pass
+SELECT a, (SELECT (SELECT d FROM qp_csq_t3 WHERE a=c)) FROM qp_csq_t1 GROUP BY a order by a;
 
 -- ----------------------------------------------------------------------
 -- Test: Correlated Subquery: CSQ in select list (Heap) 

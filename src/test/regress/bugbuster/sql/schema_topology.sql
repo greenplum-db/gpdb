@@ -1,6 +1,5 @@
-\echo -- start_ignore
+-- start_ignore
 drop database vacuum_data_db;
-drop database unvacuum_data_db;
 drop database "TEST_DB";
 drop database "TEST_db";
 
@@ -15,6 +14,7 @@ drop role "geography" ;
 drop role "ISO_ro_1";
 drop role "iso123" ;
 
+DROP RESOURCE QUEUE db_resque1;
 DROP RESOURCE QUEUE db_resque2;
 DROP RESOURCE QUEUE DB_RESque3;
 DROP RESOURCE QUEUE DB_RESQUE4;
@@ -73,8 +73,6 @@ DROP ROLE grp_role2;
 DROP USER test_user_1;
 DROP RESOURCE QUEUE grp_rsq1 ;
 
-DROP RESOURCE QUEUE db_resque1;
-
 DROP ROLE domain_owner;
 
 DROP ROLE agg_owner;
@@ -83,16 +81,9 @@ DROP ROLE func_role ;
 DROP ROLE sally;
 DROP ROLE ron;
 DROP ROLE ken;
-\c template1
-select current_database();
+
 DROP ROLE admin ;
-
---
-\echo -- end_ignore
-set optimizer_disable_missing_stats_collection = on;
-
---
-\c regression
+-- end_ignore
 
 
 --Create Table
@@ -101,40 +92,16 @@ set optimizer_disable_missing_stats_collection = on;
     CREATE TABLE "TABLE_NAME"( col_text text, col_numeric numeric ) DISTRIBUTED RANDOMLY;
 
     insert into "TABLE_NAME" values ('0_zero',0);
-    insert into "TABLE_NAME" values ('1_one',1);
-    insert into "TABLE_NAME" values ('2_two',2);
-    insert into "TABLE_NAME" select i||'_'||repeat('text',100),i from generate_series(1,100)i;
-
---with lowercase
-    CREATE TABLE table_name( col_text text, col_numeric numeric ) DISTRIBUTED RANDOMLY;
-
-    insert into table_name values ('0_zero',0);
-    insert into table_name values ('1_one',1);
-    insert into table_name values ('2_two',2);
-    insert into table_name select i||'_'||repeat('text',100),i from generate_series(1,100)i;
 
 --with mixedcase
     CREATE TABLE "TABLE_name"( col_text text, col_numeric numeric ) DISTRIBUTED RANDOMLY;
 
     insert into "TABLE_name" values ('0_zero',0);
-    insert into "TABLE_name" values ('1_one',1);
-    insert into "TABLE_name" values ('2_two',2);
-    insert into "TABLE_name" select i||'_'||repeat('text',100),i from generate_series(1,100)i;
-
---with numbers 
-    CREATE TABLE table_123( col_text text, col_numeric numeric ) DISTRIBUTED RANDOMLY;
-
-    insert into table_123 values ('0_zero',0);
-    insert into table_123 values ('1_one',1);
-    insert into table_123 values ('2_two',2);
-    insert into table_123 select i||'_'||repeat('text',100),i from generate_series(1,100)i;
 
 --Create Sequence
 
 --with uppercase
     CREATE SEQUENCE "SERIAL" START 101;
---with lowercase
-    CREATE SEQUENCE serialone START 101;
 
 --with mixedcase
     CREATE SEQUENCE "Serial_123" START 101;
@@ -168,11 +135,6 @@ create rule two as on insert to bar_rule_ao do instead delete from foo_rule_ao w
     create user "MAIN_USER" login password 'MAIN_USER';
     --DROP USER "MAIN_USER";
 
---with lowercase
-
-    create user "sub_user" login password 'sub_user';
-    --DROP USER "sub_user" ;
-
 --with mixedcase
 
     create user "SUB_user_1" login password 'SUB_user_1';
@@ -190,11 +152,6 @@ create rule two as on insert to bar_rule_ao do instead delete from foo_rule_ao w
     create role "ISO" login password 'ISO';
     --drop role "ISO";
 
---with lowercase
-
-    create role "geography" login password 'geography';
-    --drop role "geography" ;
-
 --with mixedcase
 
     create role "ISO_ro_1" login password 'ISO_ro_1';
@@ -210,11 +167,6 @@ create rule two as on insert to bar_rule_ao do instead delete from foo_rule_ao w
 
     create schema "USDA";
     --drop schema "USDA";
-    
---with lowercase
-
-    create schema "geography";
-    --drop schema "geography";
     
 --with mixedcase
 
@@ -329,7 +281,7 @@ CREATE TABLE table_like_parent4 (
     
    CREATE TABLE table_parent ( a int, b text) DISTRIBUTED BY (a);
    insert into table_parent values (generate_series(1,10),'test');
-\echo -- start_ignore
+-- start_ignore
    select count(*) from table_parent;
 
    CREATE TABLE table_child() INHERITS(table_parent);
@@ -338,7 +290,7 @@ CREATE TABLE table_like_parent4 (
 
    select * from table_parent;
    select * from table_child;
-   \echo -- end_ignore 
+-- end_ignore
 
 --Table Creation using Create Table As (CTAS) with both the new tables columns being explicitly or implicitly created
 
@@ -409,52 +361,6 @@ insert into test_table5(int_array_col ,    before_rename_col ,    change_datatyp
     insert into temp_table values ('1_zero', 1, '1_zero', 1);
     insert into temp_table values ('2_zero', 2, '2_zero', 2);
     insert into table_local select i||'_'||repeat('text',100),i,i||'_'||repeat('text',5),i from generate_series(1,50000)i;
-
---External Table
-
-CREATE EXTERNAL TABLE ext_20081031095512_23244_11671 (
-    a_party_id bigint,
-    start_date date,
-    start_time_hour smallint,
-    start_time_min smallint,
-    start_time_sec smallint,
-    duration integer,
-    record_dt timestamp without time zone,
-    framed_ip_address character varying(15)
-) LOCATION (
-    'gpfdist://97.253.36.12:9010/R_LAA_DATA_2008-10-27.dat'
-) FORMAT 'text' (delimiter ',' null '' )
-ENCODING 'UTF8'
-LOG ERRORS SEGMENT REJECT LIMIT 100 ROWS;
-
-
-CREATE WRITABLE EXTERNAL TABLE wet_ext_20081031095512_23244_11671 (
-    a_party_id bigint,
-    start_date date,
-    start_time_hour smallint,
-    start_time_min smallint,
-    start_time_sec smallint,
-    duration integer,
-    record_dt timestamp without time zone,
-    framed_ip_address character varying(15)
-) LOCATION (
-'gpfdist://97.253.36.12:9010/R_LAA_DATA_2008-10-27.dat'
-) FORMAT 'text' (delimiter ',' null '' );
-    
---Web External Table
-    
-    CREATE EXTERNAL WEB TABLE web_ex_table_vmstat_output (
-    hostname text,
-    threads text,
-    memory text,
-    page text,
-    disk text,
-    faults text,
-    cpu text
-    ) EXECUTE E'vmstat 1 2|tail -1|nawk -v H=`hostname` \'{print H"|"$1" "$2" "$3"|"$4" "$5"|"$6" "$7" "$8" "$9" "$10" "$11" "$12"|"$13" "$14" "$15" "$16"|"$17" "$18" "$19"|"$20" "$21" "$22}\'' ON HOST
-    FORMAT 'text' (delimiter '|' null ''  )
---ENCODING 'UFT8'
-;   
     
 --Tables with distributed randomly and distributed columns
     
@@ -527,14 +433,12 @@ CREATE WRITABLE EXTERNAL TABLE wet_ext_20081031095512_23244_11671 (
     char_vary_col character varying(30),
     numeric_col numeric
     ) WITH OIDS DISTRIBUTED RANDOMLY;
-    
-\echo -- start_ignore
+begin;
     insert into table_with_oid values ('0_zero', 0, '0_zero', 0);
     insert into table_with_oid values ('1_zero', 1, '1_zero', 1);
     insert into table_with_oid values ('2_zero', 2, '2_zero', 2);
     insert into table_with_oid select i||'_'||repeat('text',100),i,i||'_'||repeat('text',5),i from generate_series(1,100)i;
-
-\echo -- end_ignore
+commit;
     
 --Tables with storage Parameters is covered in ao_tables
     
@@ -595,8 +499,6 @@ timestamptz|{OPEXPR :opno 1324 :opfuncid 0 :opresulttype 16 :opretset false :arg
 
           ALTER TABLE test_alter_table ALTER COLUMN col_set_default SET DEFAULT 0;
 
---ALTER column [ SET | DROP ] NOT NULL
-
           CREATE TABLE alter_table1(
           col_text text,
           col_numeric numeric NOT NULL
@@ -607,38 +509,21 @@ timestamptz|{OPEXPR :opno 1324 :opfuncid 0 :opresulttype 16 :opretset false :arg
           insert into alter_table1 values ('2_two',2);
           insert into alter_table1 select i||'_'||repeat('text',100),i from generate_series(3,100)i;
 
-
+--ALTER column [ SET | DROP ] NOT NULL
           ALTER TABLE alter_table1 ALTER COLUMN col_numeric DROP NOT NULL;
           ALTER TABLE alter_table1 ALTER COLUMN col_numeric SET NOT NULL;
 
 --ALTER column SET STATISTICS integer
-
-          CREATE TABLE alter_set_statistics_table(
-          col_text text,
-          col_numeric numeric NOT NULL
-          ) DISTRIBUTED RANDOMLY;
-
-          insert into alter_set_statistics_table values ('0_zero',0);
-          insert into alter_set_statistics_table values ('1_one',1);
-          insert into alter_set_statistics_table values ('2_two',2);
-          insert into alter_set_statistics_table select i||'_'||repeat('text',100),i from generate_series(3,100)i;
-
-
-          ALTER TABLE alter_set_statistics_table ALTER col_numeric SET STATISTICS 1;
+          ALTER TABLE alter_table1 ALTER col_numeric SET STATISTICS 1;
 
 --ALTER column SET STORAGE
+	 ALTER TABLE alter_table1 ALTER col_text SET STORAGE PLAIN;
 
-          CREATE TABLE alter_set_storage_table(
-          col_text text,
-          col_numeric numeric NOT NULL
-          ) DISTRIBUTED RANDOMLY;
+--OWNER TO new_owner
+          CREATE ROLE user_1;
 
-         insert into alter_set_storage_table values ('0_zero',0);
-         insert into alter_set_storage_table values ('1_one',1);
-         insert into alter_set_storage_table values ('2_two',2);
-         insert into alter_set_storage_table select i||'_'||repeat('text',100),i from generate_series(3,100)i;
-
-	 ALTER TABLE alter_set_storage_table ALTER col_text SET STORAGE PLAIN;
+          ALTER TABLE alter_table1 OWNER TO user_1;
+          -- DROP ROLE user_1;
 
 --ADD table_constraint
 
@@ -775,26 +660,6 @@ timestamptz|{OPEXPR :opno 1324 :opfuncid 0 :opresulttype 16 :opretset false :arg
           select * from parent_table;
           ALTER TABLE child_table NO INHERIT parent_table;
           select * from parent_table;
-
---OWNER TO new_owner
-
-          CREATE TABLE table_owner (
-          text_col text,
-          bigint_col bigint,
-          char_vary_col character varying(30),
-          numeric_col numeric
-          )DISTRIBUTED RANDOMLY;
-
-	  insert into table_owner values ('1_one',1111,'1_test',1);
-          insert into table_owner values ('2_two',2222,'2_test',2);
-          insert into table_owner values ('3_three',3333,'3_test',3);
-          insert into table_owner select i||'_'||repeat('text',100),i,i||'_'||repeat('text',5),i from generate_series(3,100)i;
-
-          CREATE ROLE user_1;
-
-          ALTER TABLE table_owner OWNER TO user_1;
-         -- DROP TABLE table_owner;
-          -- DROP ROLE user_1;
 
 --TODO - drop column from partitioned table
 
@@ -1193,99 +1058,9 @@ truncate all_types;
 
 drop table all_types cascade;
 
-CREATE EXTERNAL TABLE ext_table1 (
-    a_party_id bigint,
-    start_date date,
-    start_time_hour smallint,
-    start_time_min smallint,
-    start_time_sec smallint,
-    duration integer,
-    record_dt timestamp without time zone,
-    framed_ip_address character varying(15)
-) LOCATION (
-    'gpfdist://97.253.36.12:9010/R_LAA_DATA_2008-10-27.dat'
-) FORMAT 'text' (delimiter ',' null '' )
-ENCODING 'UTF8';
-DROP EXTERNAL TABLE ext_table1;
-
 vacuum ;
 
---UNVACUUMED DATA
-create database unvacuum_data_db;
-\c unvacuum_data_db
-
-CREATE TABLE all_types(bit1 bit(1),bit2 bit varying(50), boolean1 boolean, char1 char(50), charvar1 character varying(50), char2 character(50),varchar1 varchar(50),date1 date,dp1 double precision,int1 integer, interval1 interval, numeric1 numeric, real1 real,smallint1 smallint,time1 time,bigint1 bigint,bigserial1 bigserial,bytea1 bytea,cidr1 cidr,decimal1 decimal,inet1 inet,macaddr1 macaddr,money1 money,serial1 serial,text1 text,time2 time without time zone,time3 time with time zone,time4 timestamp without time zone,time5 timestamp with time zone) distributed randomly;
-
-insert into all_types values ('1','0','t','c','varchar1','char1','varchar1','2001-11-11',234.23234,23,'24',234,23,4,'12:12:12',2,3,'d','0.0.0.0',1,'0.0.0.0','AA:AA:AA:AA:AA:AA','34.23',5,'text1','00:00:00','00:00:00+1359','2001-12-13 01:51:15','2001-12-13 01:51:15+1359');
-
-insert into all_types values ('0','0','f','c','varchar2','char2','varchar2','2002-11-11',234.23234,23,'24',234,23,4,'12:12:12',2,3,'d','0.0.0.0',1,'0.0.0.0','BB:BB:BB:BB:BB:BB','34.23',5,'text2','00:00:00','00:00:00+1359','2002-12-13 01:51:15','2002-12-13 01:51:15+1359');
-
-insert into all_types values ('1','0','t','c','varchar3','char3','varchar3','2003-11-11',234.23234,23,'24',234,23,4,'12:12:12',2,3,'d','0.0.0.0',1,'0.0.0.0','CC:CC:CC:CC:CC:CC','34.23',5,'text3','00:00:00','00:00:00+1359','2003-12-13 01:51:15','2003-12-13 01:51:15+1359');
-
-insert into all_types values ('0','0','f','c','varchar4','char4','varchar4','2004-11-11',234.23234,23,'24',234,23,4,'12:12:12',2,3,'d','0.0.0.0',1,'0.0.0.0','DD:DD:DD:DD:DD:DD','34.23',5,'text4','00:00:00','00:00:00+1359','2004-12-13 01:51:15','2004-12-13 01:51:15+1359');
-
-insert into all_types values ('1','0','t','c','varchar5','char5','varchar5','2005-11-11',234.23234,23,'24',234,23,4,'12:12:12',2,3,'d','0.0.0.0',1,'0.0.0.0','EE:EE:EE:EE:EE:EE','34.23',5,'text5','00:00:00','00:00:00+1359','2005-12-13 01:51:15','2005-12-13 01:51:15+1359');
-
-update all_types set cidr1='1.1.1.1' where cidr1='0.0.0.0';
-
-update all_types set bytea1='x' where bytea1='d';
-
-update all_types set charvar1='hello' where charvar1='varchar1';
-
-delete from all_types where  charvar1='varchar2';
-
-delete from all_types where  date1 = '2003-11-11';
-
-delete from all_types;
-
-truncate all_types;
-
-drop table all_types cascade;
-
-CREATE EXTERNAL TABLE ext_table1 (
-    a_party_id bigint,
-    start_date date,
-    start_time_hour smallint,
-    start_time_min smallint,
-    start_time_sec smallint,
-    duration integer,
-    record_dt timestamp without time zone,
-    framed_ip_address character varying(15)
-) LOCATION (
-    'gpfdist://97.253.36.12:9010/R_LAA_DATA_2008-10-27.dat'
-) FORMAT 'text' (delimiter ',' null '' )
-ENCODING 'UTF8';
-DROP EXTERNAL TABLE ext_table1;
-
 \c regression
-
-CREATE TABLE employee(ID int,name varchar(10),salary real,start_date date,city varchar(10),region char(1));
-
-INSERT INTO employee values (1,'jason',40420,'02/01/2007','New York');
-INSERT INTO employee values (2,'Robert',14420,'01/02/2007','Vacouver');
-
-SELECT * FROM employee;
-
-BEGIN work;
-
-INSERT INTO employee(ID,name) values (106,'Hall');
-INSERT INTO employee values (3,'ann',40420,'02/01/2008','CA');
-INSERT INTO employee values (4,'ben',14420,'01/02/2009','Texus');
-INSERT INTO employee values (5,'cen',40420,'02/01/2007','NJ');
-INSERT INTO employee values (6,'den',14420,'01/02/2006','Vacouver');
-INSERT INTO employee values (7,'emily',40420,'02/01/2005','New York');
-INSERT INTO employee values (8,'fen',14420,'01/02/2004','Vacouver');
-INSERT INTO employee values (9,'ivel',40420,'02/01/2003','MD');
-INSERT INTO employee values (10,'sam',14420,'01/02/2002','OH');
-INSERT INTO employee values (11,'jack',40420,'02/01/2001','VT');
-INSERT INTO employee values (12,'tom',14420,'01/02/2000','CT');
-COMMIT work;
-
-BEGIN ; 
-INSERT INTO employee(ID,salary) values ( generate_series(13,100),generate_series(13,100));
-ROLLBACK ;
-
-
 
 BEGIN;
 CREATE SCHEMA admin;
@@ -1641,25 +1416,6 @@ CREATE TABLE st_foo3 (i int, j int) DISTRIBUTED  RANDOMLY;
 ALTER TABLE st_foo3 OWNER TO ken;
 
 REASSIGN OWNED BY sally,ron,ken to admin;
-    CREATE TABLE test_table(
-    text_col text,
-    bigint_col bigint,
-    char_vary_col character varying(30),
-    numeric_col numeric,
-    int_col int4,
-    float_col float4,
-    int_array_col int[],
-    before_rename_col int4,
-    change_datatype_col numeric,
-    a_ts_without timestamp without time zone,
-    b_ts_with timestamp with time zone,
-    date_column date,
-    col_set_default numeric)DISTRIBUTED RANDOMLY;
-
-    insert into test_table values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}', 0, 0, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',0);
-    insert into test_table values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}', 1, 1, '2005-10-19 10:23:54', '2005-10-19 10:23:54+02', '1-1-2001',1);
-    insert into test_table values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, 2, '2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',2);
-    insert into test_table select i||'_'||repeat('text',100),i,i||'_'||repeat('text',3),i,i,i,'{3}',i,i,'2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',i from generate_series(3,100)i;
 
     CREATE TABLE test_table1(
     text_col text,
@@ -1722,38 +1478,6 @@ CREATE TABLE test_emp_view (ename varchar(20),eno int,salary int,ssn int,gender 
 CREATE VIEW emp_view AS SELECT ename ,eno ,salary ,ssn FROM test_emp_view WHERE salary >5000;
 
 --Create the tables and views
-
-CREATE TABLE sch_tbint (
-    rnum integer NOT NULL,
-    cbint bigint
-) DISTRIBUTED BY (rnum);
-COMMENT ON TABLE sch_tbint IS 'This describes table SCH_TBINT.';
-
-CREATE TABLE sch_tchar (
-    rnum integer NOT NULL,
-    cchar character(32)
-) DISTRIBUTED BY (rnum);
-COMMENT ON TABLE sch_tchar IS 'This describes table SCH_TCHAR.';
-
-CREATE TABLE sch_tclob (
-    rnum integer NOT NULL,
-    cclob text
-) DISTRIBUTED BY (rnum);
-COMMENT ON TABLE sch_tclob IS 'This describes table SCH_TCLOB.';
-
-CREATE VIEW sch_vbint AS
-    SELECT tbint.rnum, tbint.cbint FROM sch_tbint as tbint;
-COMMENT ON VIEW sch_vbint IS 'This describes view SCH_VBINT.';
-
-CREATE VIEW sch_vchar AS
-    SELECT tchar.rnum, tchar.cchar FROM sch_tchar as tchar;
-COMMENT ON VIEW sch_vchar IS 'This describes view SCH_VCHAR.';
-
-CREATE VIEW sch_vclob AS
-    SELECT tclob.rnum, tclob.cclob FROM sch_tclob as tclob;
-COMMENT ON VIEW sch_vclob IS 'This describes view SCH_VCLOB.';
-
-
 CREATE TABLE sch_tversion (
     rnum integer NOT NULL,
     c1 integer,
@@ -3069,55 +2793,6 @@ Alter table co_compr_zlib_with Drop column a12;
 --Create a CTAS table 
 CREATE TABLE co_compr_zlib_with_ctas  WITH (appendonly=true, orientation=column) AS Select * from co_compr_zlib_with;
 
-\echo -- start_ignore
-drop table if exists csq_t1;
-drop table if exists csq_t2;
-drop table if exists csq_t3;
-
-create table csq_t1(a int, b int);
-insert into csq_t1 values (1,2);
-insert into csq_t1 values (3,4);
-insert into csq_t1 values (5,6);
-insert into csq_t1 values (7,8);
-
-create table csq_t2(x int,y int);
-insert into csq_t2 values(1,1);
-insert into csq_t2 values(3,9);
-insert into csq_t2 values(5,25);
-insert into csq_t2 values(7,49);
-
-create table csq_t3(c int, d text);
-insert into csq_t3 values(1,'one');
-insert into csq_t3 values(3,'three');
-insert into csq_t3 values(5,'five');
-insert into csq_t3 values(7,'seven');
-\echo -- end_ignore
-
--- CSQ 01: Basic query with where clause
-select a, (select y from csq_t2 where x=a) from csq_t1 where b < 8 order by a;
-
--- CSQ 02: Basic query with exists
-select b from csq_t1 where exists(select * from csq_t2 where y=a) order by b;
-
--- CSQ Q3: Basic query with not exists
-select b from csq_t1 where not exists(select * from csq_t2 where y=a) order by b;
-
--- CSQ Q4: Basic query with any
-select a, x from csq_t1, csq_t2 where csq_t1.a = any (select x) order by a, x;
-
--- CSQ Q5
-select a, x from csq_t2, csq_t1 where csq_t1.a = (select x) order by a, x;
-
-
--- CSQ Q6
-select a from csq_t1 where (select (y*2)>b from csq_t2 where a=x) order by a;
-
--- CSQ Q7
-SELECT a, (SELECT d FROM csq_t3 WHERE a=c) FROM csq_t1 GROUP BY a order by a;
-
--- CSQ Q8
-SELECT a, (SELECT (SELECT d FROM csq_t3 WHERE a=c)) FROM csq_t1 GROUP BY a order by a;
-
 CREATE TABLE t5 (val int, period text);
 insert into t5 values(5, '2001-3');
 insert into t5 values(10, '2001-4');
@@ -3150,12 +2825,11 @@ insert into t5 values(5, '2003-4');
 		a.period between '2002-1' and '2002-4') as vsum
     where vsum < 45 order by period, vsum;
 
-\echo -- start_ignore
+-- start_ignore
 DROP TABLE IF EXISTS st_foo1;
-
 DROP TABLE IF EXISTS st_foo2;
 
-\echo -- end_ignore
+-- end_ignore
 
 create table st_foo1 (i int, j varchar(10))
 partition by list(j)
@@ -3169,108 +2843,12 @@ insert into st_foo2 select i , i ||'' from generate_series(1,5) i;
 analyze st_foo1;
 analyze st_foo2;
 select count(*) from st_foo1,st_foo2 where st_foo1.j = st_foo2.j;
-DROP USER IF EXISTS testuser;
-CREATE USER testuser WITH LOGIN DENY BETWEEN DAY 'Monday' TIME '01:00:00' AND DAY 'Monday' TIME '01:30:00';;
-
-SELECT r.rolname, d.start_day, d.start_time, d.end_day, d.end_time
-FROM pg_auth_time_constraint d join pg_roles r ON (d.authid = r.oid)
-WHERE r.rolname = 'testuser'
-ORDER BY r.rolname, d.start_day, d.start_time, d.end_day, d.end_time;
-
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '01:00:00' AND DAY 'Monday' TIME '01:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '02:00:00' AND DAY 'Monday' TIME '02:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '03:00:00' AND DAY 'Monday' TIME '03:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '04:00:00' AND DAY 'Monday' TIME '04:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '05:00:00' AND DAY 'Monday' TIME '05:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '06:00:00' AND DAY 'Monday' TIME '06:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '07:00:00' AND DAY 'Monday' TIME '07:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '08:00:00' AND DAY 'Monday' TIME '08:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '09:00:00' AND DAY 'Monday' TIME '09:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '10:00:00' AND DAY 'Monday' TIME '10:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '11:00:00' AND DAY 'Monday' TIME '11:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '12:00:00' AND DAY 'Monday' TIME '12:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '13:00:00' AND DAY 'Monday' TIME '13:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '14:00:00' AND DAY 'Monday' TIME '14:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '15:00:00' AND DAY 'Monday' TIME '15:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '16:00:00' AND DAY 'Monday' TIME '16:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '17:00:00' AND DAY 'Monday' TIME '17:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '18:00:00' AND DAY 'Monday' TIME '18:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '19:00:00' AND DAY 'Monday' TIME '19:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '20:00:00' AND DAY 'Monday' TIME '20:30:00';
-
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '01:00:00' AND DAY 'Tuesday' TIME '01:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '02:00:00' AND DAY 'Tuesday' TIME '02:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '03:00:00' AND DAY 'Tuesday' TIME '03:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '04:00:00' AND DAY 'Tuesday' TIME '04:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '05:00:00' AND DAY 'Tuesday' TIME '05:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '06:00:00' AND DAY 'Tuesday' TIME '06:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '07:00:00' AND DAY 'Tuesday' TIME '07:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '08:00:00' AND DAY 'Tuesday' TIME '08:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '09:00:00' AND DAY 'Tuesday' TIME '09:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '10:00:00' AND DAY 'Tuesday' TIME '10:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '11:00:00' AND DAY 'Tuesday' TIME '11:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '12:00:00' AND DAY 'Tuesday' TIME '12:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '13:00:00' AND DAY 'Tuesday' TIME '13:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '14:00:00' AND DAY 'Tuesday' TIME '14:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '15:00:00' AND DAY 'Tuesday' TIME '15:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '16:00:00' AND DAY 'Tuesday' TIME '16:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '17:00:00' AND DAY 'Tuesday' TIME '17:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '18:00:00' AND DAY 'Tuesday' TIME '18:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '19:00:00' AND DAY 'Tuesday' TIME '19:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '20:00:00' AND DAY 'Tuesday' TIME '20:30:00';
-
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '01:00:00' AND DAY 'Wednesday' TIME '01:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '02:00:00' AND DAY 'Wednesday' TIME '02:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '03:00:00' AND DAY 'Wednesday' TIME '03:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '04:00:00' AND DAY 'Wednesday' TIME '04:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '05:00:00' AND DAY 'Wednesday' TIME '05:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '06:00:00' AND DAY 'Wednesday' TIME '06:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '07:00:00' AND DAY 'Wednesday' TIME '07:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '08:00:00' AND DAY 'Wednesday' TIME '08:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '09:00:00' AND DAY 'Wednesday' TIME '09:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '10:00:00' AND DAY 'Wednesday' TIME '10:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '11:00:00' AND DAY 'Wednesday' TIME '11:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '12:00:00' AND DAY 'Wednesday' TIME '12:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '13:00:00' AND DAY 'Wednesday' TIME '13:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '14:00:00' AND DAY 'Wednesday' TIME '14:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '15:00:00' AND DAY 'Wednesday' TIME '15:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '16:00:00' AND DAY 'Wednesday' TIME '16:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '17:00:00' AND DAY 'Wednesday' TIME '17:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '18:00:00' AND DAY 'Wednesday' TIME '18:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '19:00:00' AND DAY 'Wednesday' TIME '19:30:00';
-ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '20:00:00' AND DAY 'Wednesday' TIME '20:30:00';
-
-SELECT r.rolname, d.start_day, d.start_time, d.end_day, d.end_time
-FROM pg_auth_time_constraint d join pg_roles r ON (d.authid = r.oid)
-WHERE r.rolname = 'testuser'
-ORDER BY r.rolname, d.start_day, d.start_time, d.end_day, d.end_time;
-
-ALTER USER testuser DROP DENY FOR DAY 'Tuesday' TIME '01:30:00';
-
-SELECT r.rolname, d.start_day, d.start_time, d.end_day, d.end_time
-FROM pg_auth_time_constraint d join pg_roles r ON (d.authid = r.oid)
-WHERE r.rolname = 'testuser'
-ORDER BY r.rolname, d.start_day, d.start_time, d.end_day, d.end_time;
-
-ALTER USER testuser DROP DENY FOR DAY 'Wednesday';
-
-SELECT r.rolname, d.start_day, d.start_time, d.end_day, d.end_time
-FROM pg_auth_time_constraint d join pg_roles r ON (d.authid = r.oid)
-WHERE r.rolname = 'testuser'
-ORDER BY r.rolname, d.start_day, d.start_time, d.end_day, d.end_time;
-
-DROP USER IF EXISTS testuser;
-
-SELECT r.rolname, d.start_day, d.start_time, d.end_day, d.end_time
-FROM pg_auth_time_constraint d join pg_roles r ON (d.authid = r.oid)
-WHERE r.rolname = 'testuser'
-ORDER BY r.rolname, d.start_day, d.start_time, d.end_day, d.end_time;
-\echo -- start_ignore
+-- start_ignore
 drop view if exists relconstraint cascade;
 drop view if exists ptable cascade;
 drop view if exists part_closure cascade;
 drop view if exists anyconstraint cascade;
-\echo -- end_ignore
+-- end_ignore
 
 create view relconstraint
     (
@@ -3388,9 +2966,9 @@ create view anyconstraint
             left join 
         part_closure p
             on relid = partid;
-\echo -- start_ignore
+-- start_ignore
 drop table if exists mulpt_pk;
-\echo -- end_ignore
+-- end_ignore
 -- Create multi-level partitioned tables with CONSTRAINTS on distcol and ptcol
 create table mulpt_pk
 (
@@ -3411,9 +2989,9 @@ partition floor values ('A', 'B'),
 partition lower values ('100','110'),
 partition upper values ('200', '210', '220')
 );
-\echo -- start_ignore
+-- start_ignore
 drop table if exists mulpt_un;
-\echo -- end_ignore
+-- end_ignore
 create table mulpt_un
 (
 distcol int,
@@ -3439,9 +3017,9 @@ select tablename from pg_tables where tablename in ('mulpt_pk','mulpt_un') order
 
 -- create the tables with CONSTRAINTS on distcol,ptcol and subptcol, check that the tables are created.
 
-\echo -- start_ignore
+-- start_ignore
 drop table if exists mulpt_pk;
-\echo -- end_ignore
+-- end_ignore
 create table mulpt_pk
 (
 distcol int,
@@ -3462,9 +3040,9 @@ partition lower values ('100','110'),
 partition upper values ('200', '210', '220')
 );
 
-\echo -- start_ignore
+-- start_ignore
 drop table if exists mulpt_un;
-\echo -- end_ignore
+-- end_ignore
 create table mulpt_un
 (
 distcol int,
@@ -3496,22 +3074,16 @@ select conname,partid from anyconstraint where contype='u' and tableid='mulpt_un
 
 /* Note that roles are defined at the system-level and are valid
  * for all databases in your Greenplum Database system. */
-\echo -- start_ignore
+-- start_ignore
 revoke all on protocol gphdfs from _hadoop_perm_test_role;
 DROP ROLE IF EXISTS _hadoop_perm_test_role;
 revoke all on protocol gphdfs from _hadoop_perm_test_role2;
 DROP ROLE IF EXISTS _hadoop_perm_test_role2;
-\echo -- end_ignore
+-- end_ignore
 
 /* Now create a new role. Initially this role should NOT
  * be allowed to create an external hdfs table. */
 
-\echo -- start_ignore
-DROP ROLE _hadoop_perm_test_role;
-\echo -- end_ignore
-\echo -- start_ignore
-DROP ROLE _hadoop_perm_test_role2; 
-\echo -- end_ignore
 CREATE ROLE _hadoop_perm_test_role
 WITH CREATEEXTTABLE
 LOGIN;
@@ -3660,7 +3232,7 @@ $proc$ language plpgsql;
 
 select srf_vect();
 
-\echo -- start_ignore
+-- start_ignore
 drop role "ISO";
 drop role "geography";
 drop role "ISO_ro_1";
@@ -3714,7 +3286,6 @@ DROP USER db_user11;
 DROP USER db_user12;
 DROP USER test_user_1;
 DROP USER db_user13;
-DROP USER testuser;
 
 DROP GROUP db_grp1;
 DROP GROUP db_user_grp1;
@@ -3735,8 +3306,7 @@ DROP RESOURCE QUEUE db_resque1;
 DROP RESOURCE QUEUE db_resque2;
 DROP RESOURCE QUEUE DB_RESque3;
 DROP RESOURCE QUEUE DB_RESQUE4;
-DROP RESOURCE QUEUE db_resque1;
 DROP RESOURCE QUEUE resqueu3;
 DROP RESOURCE QUEUE resqueu4;
 DROP RESOURCE QUEUE grp_rsq1;
-\echo -- end_ignore
+-- end_ignore
