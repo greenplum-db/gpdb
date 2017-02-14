@@ -16,6 +16,7 @@
 #
 
 test: variadic_parameters default_parameters function_extensions
+test: spi
 
 test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile naivebayes join_gp union_gp gpcopy gp_create_table
 test: filter gpctas gpdist matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var
@@ -28,7 +29,7 @@ test: dispatch
 test: deadlock
 
 # test workfiles
-test: workfile/hashagg_spill workfile/hashjoin_spill workfile/materialize_spill workfile/sisc_mat_sort workfile/sisc_sort_spill workfile/sort_spill
+test: workfile/hashagg_spill workfile/hashjoin_spill workfile/materialize_spill workfile/sisc_mat_sort workfile/sisc_sort_spill workfile/sort_spill workfile/spilltodisk
 # test workfiles compressed using zlib
 # 'zlib' utilizes fault injectors so it needs to be in a group by itself
 test: zlib
@@ -78,6 +79,7 @@ test: alter_table_ao ao_create_alter_valid_table subtransaction_limit oid_consis
 ignore: icudp_full
 
 test: resource_queue
+test: wrkloadadmin
 # gp_toolkit performs a vacuum and checks that it truncated the relation. That
 # might not happen if other backends are holding transactions open, preventing
 # vacuum from removing dead tuples.
