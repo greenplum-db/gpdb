@@ -99,7 +99,7 @@ test: tsearch
 test: plancache
 test: json
 test: limit
-ignore: plpgsql
+test: plpgsql
 test: copy2
 test: temp
 test: domain
