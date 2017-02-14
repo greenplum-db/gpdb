@@ -92,40 +92,16 @@ DROP ROLE admin ;
     CREATE TABLE "TABLE_NAME"( col_text text, col_numeric numeric ) DISTRIBUTED RANDOMLY;
 
     insert into "TABLE_NAME" values ('0_zero',0);
-    insert into "TABLE_NAME" values ('1_one',1);
-    insert into "TABLE_NAME" values ('2_two',2);
-    insert into "TABLE_NAME" select i||'_'||repeat('text',100),i from generate_series(1,100)i;
-
---with lowercase
-    CREATE TABLE table_name( col_text text, col_numeric numeric ) DISTRIBUTED RANDOMLY;
-
-    insert into table_name values ('0_zero',0);
-    insert into table_name values ('1_one',1);
-    insert into table_name values ('2_two',2);
-    insert into table_name select i||'_'||repeat('text',100),i from generate_series(1,100)i;
 
 --with mixedcase
     CREATE TABLE "TABLE_name"( col_text text, col_numeric numeric ) DISTRIBUTED RANDOMLY;
 
     insert into "TABLE_name" values ('0_zero',0);
-    insert into "TABLE_name" values ('1_one',1);
-    insert into "TABLE_name" values ('2_two',2);
-    insert into "TABLE_name" select i||'_'||repeat('text',100),i from generate_series(1,100)i;
-
---with numbers 
-    CREATE TABLE table_123( col_text text, col_numeric numeric ) DISTRIBUTED RANDOMLY;
-
-    insert into table_123 values ('0_zero',0);
-    insert into table_123 values ('1_one',1);
-    insert into table_123 values ('2_two',2);
-    insert into table_123 select i||'_'||repeat('text',100),i from generate_series(1,100)i;
 
 --Create Sequence
 
 --with uppercase
     CREATE SEQUENCE "SERIAL" START 101;
---with lowercase
-    CREATE SEQUENCE serialone START 101;
 
 --with mixedcase
     CREATE SEQUENCE "Serial_123" START 101;
@@ -159,11 +135,6 @@ create rule two as on insert to bar_rule_ao do instead delete from foo_rule_ao w
     create user "MAIN_USER" login password 'MAIN_USER';
     --DROP USER "MAIN_USER";
 
---with lowercase
-
-    create user "sub_user" login password 'sub_user';
-    --DROP USER "sub_user" ;
-
 --with mixedcase
 
     create user "SUB_user_1" login password 'SUB_user_1';
@@ -181,11 +152,6 @@ create rule two as on insert to bar_rule_ao do instead delete from foo_rule_ao w
     create role "ISO" login password 'ISO';
     --drop role "ISO";
 
---with lowercase
-
-    create role "geography" login password 'geography';
-    --drop role "geography" ;
-
 --with mixedcase
 
     create role "ISO_ro_1" login password 'ISO_ro_1';
@@ -201,11 +167,6 @@ create rule two as on insert to bar_rule_ao do instead delete from foo_rule_ao w
 
     create schema "USDA";
     --drop schema "USDA";
-    
---with lowercase
-
-    create schema "geography";
-    --drop schema "geography";
     
 --with mixedcase
 
@@ -1455,25 +1416,6 @@ CREATE TABLE st_foo3 (i int, j int) DISTRIBUTED  RANDOMLY;
 ALTER TABLE st_foo3 OWNER TO ken;
 
 REASSIGN OWNED BY sally,ron,ken to admin;
-    CREATE TABLE test_table(
-    text_col text,
-    bigint_col bigint,
-    char_vary_col character varying(30),
-    numeric_col numeric,
-    int_col int4,
-    float_col float4,
-    int_array_col int[],
-    before_rename_col int4,
-    change_datatype_col numeric,
-    a_ts_without timestamp without time zone,
-    b_ts_with timestamp with time zone,
-    date_column date,
-    col_set_default numeric)DISTRIBUTED RANDOMLY;
-
-    insert into test_table values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}', 0, 0, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',0);
-    insert into test_table values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}', 1, 1, '2005-10-19 10:23:54', '2005-10-19 10:23:54+02', '1-1-2001',1);
-    insert into test_table values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, 2, '2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',2);
-    insert into test_table select i||'_'||repeat('text',100),i,i||'_'||repeat('text',3),i,i,i,'{3}',i,i,'2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',i from generate_series(3,100)i;
 
     CREATE TABLE test_table1(
     text_col text,
@@ -1536,38 +1478,6 @@ CREATE TABLE test_emp_view (ename varchar(20),eno int,salary int,ssn int,gender 
 CREATE VIEW emp_view AS SELECT ename ,eno ,salary ,ssn FROM test_emp_view WHERE salary >5000;
 
 --Create the tables and views
-
-CREATE TABLE sch_tbint (
-    rnum integer NOT NULL,
-    cbint bigint
-) DISTRIBUTED BY (rnum);
-COMMENT ON TABLE sch_tbint IS 'This describes table SCH_TBINT.';
-
-CREATE TABLE sch_tchar (
-    rnum integer NOT NULL,
-    cchar character(32)
-) DISTRIBUTED BY (rnum);
-COMMENT ON TABLE sch_tchar IS 'This describes table SCH_TCHAR.';
-
-CREATE TABLE sch_tclob (
-    rnum integer NOT NULL,
-    cclob text
-) DISTRIBUTED BY (rnum);
-COMMENT ON TABLE sch_tclob IS 'This describes table SCH_TCLOB.';
-
-CREATE VIEW sch_vbint AS
-    SELECT tbint.rnum, tbint.cbint FROM sch_tbint as tbint;
-COMMENT ON VIEW sch_vbint IS 'This describes view SCH_VBINT.';
-
-CREATE VIEW sch_vchar AS
-    SELECT tchar.rnum, tchar.cchar FROM sch_tchar as tchar;
-COMMENT ON VIEW sch_vchar IS 'This describes view SCH_VCHAR.';
-
-CREATE VIEW sch_vclob AS
-    SELECT tclob.rnum, tclob.cclob FROM sch_tclob as tclob;
-COMMENT ON VIEW sch_vclob IS 'This describes view SCH_VCLOB.';
-
-
 CREATE TABLE sch_tversion (
     rnum integer NOT NULL,
     c1 integer,
