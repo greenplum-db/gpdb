@@ -4,7 +4,7 @@ class PulseOptions
   DEFAULT_TIMEOUT_IN_HOURS = 10
   DEFAULT_POLLING_TIME_IN_SECONDS = 60
   DEFAULT_TOKEN_REFRESH_TIME_IN_SECONDS = 1200
-  DEFAULT_BUILD_REQUEST_TIME_IN_SECONDS = 60 * 15
+  DEFAULT_BUILD_REQUEST_TIME_IN_SECONDS = 60 * 20
   CONCOURSE_URL = "https://gpdb.ci.pivotalci.info/"
 
   attr_reader :url, :project_name, :username, :password, :input_dir, :output_dir, :build_artifact_url,
