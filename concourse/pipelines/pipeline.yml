@@ -437,6 +437,22 @@ jobs:
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params: *pulse_properties
 
+- name: MU_backup-restore
+  plan:
+  - aggregate: *pulse_trigger_resource
+  - task: trigger_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
+    input_mapping: *input_mappings
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore"
+  - task: monitor_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore"
 
 - name: MU_gpcheckcat
   plan:
@@ -505,6 +521,40 @@ jobs:
     params:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
+
+- name: MU_gptransfer-43x-to-5x
+  plan:
+  - aggregate: *pulse_trigger_resource
+  - task: trigger_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
+    input_mapping: *input_mappings
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_43x_to_5x"
+  - task: monitor_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_43x_to_5x"
+
+- name: MU_gptransfer-5x-to-5x
+  plan:
+  - aggregate: *pulse_trigger_resource
+  - task: trigger_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
+    input_mapping: *input_mappings
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_5x_to_5x"
+  - task: monitor_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_5x_to_5x"
 
 - name: cs-uao-regression
   plan:
@@ -694,20 +744,3 @@ jobs:
     params:
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
-
-- name: MU_gptransfer-5x-to-5x
-  plan:
-  - aggregate: *pulse_trigger_resource
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_5x_to_5x"
-  - task: monitor_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_5x_to_5x"
