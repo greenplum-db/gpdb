@@ -775,7 +775,7 @@ def get_latest_full_ts_with_nbu(context):
 def getRows(conn, exec_sql):
     curs = dbconn.execSQL(conn, exec_sql)
     results = curs.fetchall()
-    curse.close()
+    curs.close()
     return results
 
 def check_change_schema_exists(context, use_redirect):

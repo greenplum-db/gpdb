@@ -1703,7 +1703,6 @@ Perl_check_t
 Perl_ppaddr_t
 PerfmonNodeStatus
 PerfmonNodeType
-PeristentEndXaxtUntyped
 PersistentDatabaseData
 PersistentDatabaseSharedData
 PersistentEndXactAppendOnlyMirrorResyncEofs
@@ -1712,6 +1711,7 @@ PersistentEndXactFileSysActionInfo
 PersistentEndXactObjKind
 PersistentEndXactRecObjects
 PersistentEndXactRecObjHdr
+PersistentEndXactUntyped
 PersistentFilespaceData
 PersistentFilespaceSharedData
 PersistentFileSysObjData

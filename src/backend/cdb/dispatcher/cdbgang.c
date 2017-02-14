@@ -180,9 +180,6 @@ AllocateReaderGang(GangType type, char *portal_name)
 	/* let the gang know which portal it is being assigned to */
 	gp->portal_name = (portal_name ? pstrdup(portal_name) : (char *) NULL);
 
-	/* sanity check the gang */
-	insist_log(GangOK(gp), "could not connect to segment: initialization of segworker group failed");
-
 	addGangToAllocated(gp);
 
 	MemoryContextSwitchTo(oldContext);
@@ -219,7 +216,24 @@ AllocateWriterGang()
 	 * if it exists, we return it.
 	 * Else, we create a new gang
 	 */
-	if (primaryWriterGang == NULL)
+	if (primaryWriterGang != NULL)
+	{
+		if (!GangOK(primaryWriterGang))
+		{
+			elog(LOG, "WARN: existing primary writer gang is invalid, will create a new gang");
+			DisconnectAndDestroyAllGangs(true);
+			CheckForResetSession();
+			primaryWriterGang = NULL;
+			writerGang = NULL;
+		}
+		else
+		{
+			ELOG_DISPATCHER_DEBUG("Reusing an existing primary writer gang");
+			writerGang = primaryWriterGang;
+		}
+	}
+
+	if (writerGang == NULL)
 	{
 		int nsegdb = getgpsegmentCount();
 
@@ -250,16 +264,7 @@ AllocateWriterGang()
 
 		MemoryContextSwitchTo(oldContext);
 	}
-	else
-	{
-		ELOG_DISPATCHER_DEBUG("Reusing an existing primary writer gang");
-		writerGang = primaryWriterGang;
-	}
-
-	/* sanity check the gang */
-	if (!GangOK(writerGang))
-		elog(ERROR, "could not connect to segment: initialization of segworker group failed");
-
+	
 	ELOG_DISPATCHER_DEBUG("AllocateWriterGang end.");
 
 	primaryWriterGang = writerGang;
@@ -849,6 +854,14 @@ static Gang *getAvailableGang(GangType type, int size, int content)
 		Assert(false);
 	}
 
+	/* sanity check */
+	if (retGang && !GangOK(retGang))
+	{
+		/* connection is bad or segment is down */
+		DisconnectAndDestroyGang(retGang);	
+		retGang = NULL;
+	}
+		
 	return retGang;
 }
 
@@ -1193,6 +1206,10 @@ static bool cleanupGang(Gang *gp)
 		Assert(segdbDesc != NULL);
 
 		if (cdbconn_isBadConnection(segdbDesc))
+			return false;
+
+		/* if segment is down, the gang can not be reused */
+		if (!FtsTestConnection(segdbDesc->segment_database_info, false))
 			return false;
 
 		/* Note, we cancel all "still running" queries */
@@ -1673,6 +1690,8 @@ bool GangOK(Gang *gp)
 		SegmentDatabaseDescriptor *segdbDesc = &(gp->db_descriptors[i]);
 
 		if (cdbconn_isBadConnection(segdbDesc))
+			return false;
+		if (!FtsTestConnection(segdbDesc->segment_database_info, false))
 			return false;
 	}
 

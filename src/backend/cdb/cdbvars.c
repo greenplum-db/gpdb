@@ -739,7 +739,7 @@ GpVars_Verbosity gp_log_interconnect;
 /*
  * gpvars_string_to_verbosity
  */
-GpVars_Verbosity
+static GpVars_Verbosity
 gpvars_string_to_verbosity(const char *s)
 {
 	GpVars_Verbosity result;
@@ -762,7 +762,7 @@ gpvars_string_to_verbosity(const char *s)
 /*
  * gpvars_verbosity_to_string
  */
-const char *
+static const char *
 gpvars_verbosity_to_string(GpVars_Verbosity verbosity)
 {
 	switch (verbosity)
@@ -1206,20 +1206,6 @@ gpvars_assign_gp_fts_probe_pause(bool newval, bool doit, GucSource source)
 			}
 		}
 		gp_fts_probe_pause = newval;
-	}
-
-	return true;
-}
-
-bool
-gpvars_assign_gp_hash_index(bool newval, bool doit, GucSource source)
-{
-	if (doit && newval)
-	{
-		if (Gp_role == GP_ROLE_DISPATCH)
-			ereport(WARNING,
-					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				   errmsg("gp_hash_index is deprecated and has no effect")));
 	}
 
 	return true;

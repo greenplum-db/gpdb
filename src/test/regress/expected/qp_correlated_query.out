@@ -332,6 +332,15 @@ select a, x from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a = any (select x);
  7 | 7
 (4 rows)
 
+select a, x from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a = any (select x) order by a, x;
+ a | x 
+---+---
+ 1 | 1
+ 3 | 3
+ 5 | 5
+ 7 | 7
+(4 rows)
+
 select A.i from A where A.i = any (select B.i from B where A.i = B.i) order by A.i;
  i 
 ---
@@ -526,6 +535,12 @@ select b from qp_csq_t1 where exists(select * from qp_csq_t2 where y=a);
  2
 (1 row)
 
+select b from qp_csq_t1 where exists(select * from qp_csq_t2 where y=a) order by b;
+ b 
+---
+ 2
+(1 row)
+
 select A.i from A where exists(select B.i from B where A.i = B.i) order by A.i;
  i 
 ---
@@ -661,6 +676,14 @@ select * from A,B,C where C.i = A.i and exists (select C.j where C.j = B.j and A
 -- Basic queries with NOT EXISTS clause
 -- -- -- --
 select b from qp_csq_t1 where not exists(select * from qp_csq_t2 where y=a);
+ b 
+---
+ 4
+ 6
+ 8
+(3 rows)
+
+select b from qp_csq_t1 where not exists(select * from qp_csq_t2 where y=a) order by b;
  b 
 ---
  4
@@ -963,6 +986,9 @@ SELECT a, (SELECT d FROM qp_csq_t3 WHERE a=c) FROM qp_csq_t1 GROUP BY a order by
  7 | seven
 (4 rows)
 
+-- Planner should fail due to skip-level correlation not supported. ORCA should pass
+SELECT a, (SELECT (SELECT d FROM qp_csq_t3 WHERE a=c)) FROM qp_csq_t1 GROUP BY a order by a;
+ERROR:  correlated subquery with skip-level correlations is not supported
 -- ----------------------------------------------------------------------
 -- Test: Correlated Subquery: CSQ in select list (Heap) 
 -- ----------------------------------------------------------------------

@@ -256,3 +256,27 @@ CREATE OR REPLACE FUNCTION udf_raise_info() RETURNS BOOL
 AS '@abs_builddir@/regress@DLSUFFIX@', 'gangRaiseInfo' LANGUAGE C;
 
 SELECT udf_raise_info() FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0;
+
+--
+-- Error out when dispatching DTX command to busy primary writer gang
+--
+CREATE TABLE dtx_dispatch_t AS SELECT i AS c1 FROM generate_series(1,10) i;
+
+CREATE or REPLACE FUNCTION dtx_dispatch_f(integer)
+RETURNS INTEGER
+AS
+$$
+BEGIN
+        return $1 + 1;
+EXCEPTION
+        WHEN division_by_zero THEN
+        RAISE NOTICE 'caught division_by_zero';
+        return 0;
+END
+$$
+LANGUAGE plpgSQL READS SQL DATA;
+
+SELECT dtx_dispatch_f(foo.c1) FROM (SELECT c1 FROM dtx_dispatch_t WHERE c1='1' limit 1) foo;
+
+DROP FUNCTION dtx_dispatch_f(integer);
+DROP TABLE dtx_dispatch_t;

@@ -378,9 +378,6 @@ insert into ao select i, 1, 'aaa' from generate_series(1, 20) i;
 insert into ao select i, 2, 'a' from generate_series(1, 20) i;
 select distinct j from ao where j > -1 and j < 3 order by j;
 
--- Test clustering errors out
-cluster ao_j_cluster on ao_j;
-
 -- TEMP TABLES w/ INDEXES
 create temp table temp_tenk_ao5 with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
     as select * from tenk_ao5 distributed by (unique1);

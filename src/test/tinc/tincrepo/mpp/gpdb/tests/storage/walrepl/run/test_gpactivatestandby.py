@@ -57,8 +57,11 @@ class gpactivatestandby(StandbyRunMixin, MPPTestCase):
                 'gpactivatestandby -a -d invalid_directory')
         cmd.run()
         results = cmd.get_results()
-        expected = 'Current setting of MASTER_DATA_DIRECTORY not same as -d parameter'
+        expected = 'Please make sure the command gpactivatestandby is executed on current Standby host'
+        expected_regex = 'Error activating standby master: Critical required file on standby \".*\" is not present'
+
         self.assertIn(expected, results.stdout)
+        self.assertRegexpMatches(results.stdout, expected_regex)
         self.assertEqual(results.rc, 2)
 
     def test_from_not_running(self):

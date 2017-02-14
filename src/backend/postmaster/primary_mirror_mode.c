@@ -2378,7 +2378,7 @@ makeRelativeToPeerTxnFilespace(char *path)
 }
 
 /*
- * Check if the filespace information is consistent between persistant node filespace info
+ * Check if the filespace information is consistent between persistent node filespace info
  * and the values read from the flat files
  */
 bool

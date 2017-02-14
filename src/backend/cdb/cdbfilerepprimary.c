@@ -153,8 +153,8 @@ FileRepPrimary_GetAppendOnlyCommitWorkCount(void)
  * If (dataState == Change Logging) then mirroring is not required.
  * If (dataState == InSync or InResync) then mirroring is required
  * except when segmentState is in Fault.
- * In that case the request is on hold. It is waiting on third coordinator 
- * to decide about the next action (failover, stop, ...). 
+ * In that case the request is on hold. It is waiting on third coordinator
+ * to decide about the next action (failover, stop, ...).
  */
 static bool
 FileRepPrimary_IsMirroringRequired(
@@ -267,6 +267,12 @@ FileRepPrimary_IsMirroringRequired(
 						
 						/* database transitions to suspended state, IO activity on the segment is suspended */
 						primaryMirrorSetIOSuspended(TRUE);
+					}
+
+					if (!PostmasterIsAlive(true))
+					{
+						LWLockReleaseAll();
+						proc_exit(0);
 					}
 					pg_usleep(500000L); /* 500 ms */
 					continue;

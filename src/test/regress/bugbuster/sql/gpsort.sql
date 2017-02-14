@@ -443,7 +443,7 @@ order by
 	c_count desc;
 
 
-create view revenue0 (supplier_no, total_revenue) as
+create view gpsort_revenue0 (supplier_no, total_revenue) as
 	select
 		l_suppkey,
 		sum(l_extendedprice * (1 - l_discount))
@@ -464,20 +464,20 @@ select
 	total_revenue
 from
 	supplier,
-	revenue0
+	gpsort_revenue0
 where
 	s_suppkey = supplier_no
 	and total_revenue = (
 		select
 			max(total_revenue)
 		from
-			revenue0
+			gpsort_revenue0
 	)
 order by
 	s_suppkey;
 
 
-drop view revenue0;
+drop view gpsort_revenue0;
 
 
 select

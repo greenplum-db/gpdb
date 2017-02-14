@@ -857,6 +857,15 @@ BackoffSweeper()
 					const BackoffBackendSharedEntry *gl = getBackoffEntryRO(se->groupLeaderIndex);
 
 					Assert(gl->numFollowersActive > 0);
+
+					if (activeWeight <= 0.0) {
+						/*
+						 * If activeWeight <= 0.0, it should be considered unexpected
+						 * behavior. Error out here instead of risking an underflow.
+						 */
+						elog(ERROR, "activeWeight underflow!");
+					}
+
 					Assert(activeWeight > 0.0);
 					Assert(se->weight > 0.0);
 
@@ -874,18 +883,6 @@ BackoffSweeper()
 						se->backoff = false;
 						activeWeight -= (se->weight / gl->numFollowersActive);
 
-						/*
-						 * GPDB_83_MERGE_FIXME: I saw the Assert(activeWeight
-						 * > 0.0) above to fail every now and then, when
-						 * running "make installcheck-good". Something's
-						 * wrong, not sure what, but let's just silence that
-						 * failure for now
-						 */
-						if (activeWeight <= 0)
-						{
-							elog(LOG, "activeWeight underflow!");
-							activeWeight = 0.001;
-						}
 						CPUAvailable -= maxCPU;
 						found = true;
 					}

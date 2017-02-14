@@ -756,9 +756,6 @@ select distinct j from co where j > -1 and j < 3 order by j;
  2
 (3 rows)
 
--- Test clustering errors out
-cluster co_j_cluster on co_j;
-ERROR:  "co_j" is an index
 -- TEMP TABLES w/ INDEXES
 create temp table temp_tenk_aocs5 with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
     as select * from tenk_aocs5 distributed by (unique1);

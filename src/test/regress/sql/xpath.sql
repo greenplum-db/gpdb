@@ -1,15 +1,13 @@
 set xmloption='document';
 set optimizer_disable_missing_stats_collection = on;
-\! gpfdist -p 45555 -d bugbuster/data &> bugbuster/data/xpath_gpfdist.out &
--- apparently this is needed on darwin
-\! sleep 5
 
-\echo --start_ignore
-drop external table if exists readxml;
-\echo --end_ignore
+--start_ignore
+drop table if exists readxml;
+--end_ignore
 
-create readable external table readxml (text xml) location ('gpfdist://localhost:45555/CD.xml') format 'TEXT' (escape 'off' newline as 'CRLF');
+create table readxml (text xml);
 
+\copy readxml from 'data/CD.xml' with escape 'off' newline as 'CRLF';
 
 select xml_in('<a></a>');
 select xml_in('<a></>');
@@ -99,6 +97,3 @@ select xml_is_well_formed_content(text((select * from readxml)));
 
 select xml_is_well_formed_content('<adf>adsfasdf<adf>');
 select xml_is_well_formed_content('<adf>adsfasdf');
-
-\! ps -ef | grep "gpfdist -p 45555" | grep -v grep | awk '{print $2}' | xargs kill &> bugbuster/data/xpath_kill_gpfdist.out
-

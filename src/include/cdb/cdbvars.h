@@ -539,11 +539,6 @@ typedef enum GpVars_Verbosity
     GPVARS_VERBOSITY_DEBUG,
 } GpVars_Verbosity;
 
-GpVars_Verbosity
-gpvars_string_to_verbosity(const char *s);
-const char *
-gpvars_verbosity_to_string(GpVars_Verbosity verbosity);
-
 /* Enable single-slice single-row inserts. */
 extern bool gp_enable_fast_sri;
 
@@ -1060,9 +1055,6 @@ extern SeqServerControlBlock *seqServerCtl;
 extern void write_log(const char *fmt,...) __attribute__((format(printf, 1, 2)));
 
 extern void verifyGpIdentityIsSet(void);
-
-/* control current usability of enabling hash index */
-extern bool gpvars_assign_gp_hash_index(bool newval, bool doit, GucSource source);
 
 extern const char *gpvars_assign_gp_resqueue_memory_policy(const char *newval, bool doit, GucSource source __attribute__((unused)) );
 

@@ -171,7 +171,7 @@ ALTER TABLE <varname>name</varname>
                                                 Greenplum Database. Triggers in general have very
                                                 limited functionality due to the parallelism of
                                                 Greenplum Database.</note></li>
-                                <li id="ay137071"><b>CLUSTER/SET WITHOUT CLUSTER</b> — Selects or
+                                <li id="ay137071"><b>CLUSTER ON/SET WITHOUT CLUSTER</b> — Selects or
                                         removes the default index for future
                                                 <codeph>CLUSTER</codeph> operations. It does not
                                         actually re-cluster the table. Note that
@@ -180,7 +180,9 @@ ALTER TABLE <varname>name</varname>
                                         it takes so long. It is better to recreate the table with
                                                   <codeph><xref href="./CREATE_TABLE_AS.xml#topic1"
                                                   type="topic" format="dita"/></codeph> and order it
-                                        by the index column(s).</li>
+                                        by the index column(s).
+                                        <note><codeph>CLUSTER ON</codeph> is not supported on
+                                        append-optimized tables.</note></li>
                                 <li id="ay137152"><b>SET WITHOUT OIDS</b> — Removes the OID system
                                         column from the table. Note that there is no variant of
                                                 <codeph>ALTER TABLE</codeph> that allows OIDs to be

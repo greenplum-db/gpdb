@@ -782,54 +782,6 @@ SELECT id, property FROM GistTable1
   8 | 
 (1 row)
 
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-SELECT owner, property FROM GistTable1 
- WHERE property ~= '((7052,250),(6050,20))';
-  owner  |       property       
----------+----------------------
-  Patty  | (7052,250),(6050,20)
- Hypatia | (7052,250),(6050,20)
-(2 rows)
-
-SELECT owner, property FROM GistTable1 
- WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
-  owner  |       property       
----------+----------------------
-  Patty  | (7052,250),(6050,20)
- Hypatia | (7052,250),(6050,20)
-(2 rows)
-
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
-  owner  |       property       
----------+----------------------
-  Patty  | (7052,250),(6050,20)
- Hypatia | (7052,250),(6050,20)
-(2 rows)
-
--- start_ignore
-EXPLAIN
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-   ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=47)
-         Filter: property ~= '(7052,250),(6050,20)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
-
--- end_ignore
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id;
- id | property 
-----+----------
-  8 | 
-(1 row)
-
 -- ----------------------------------------------------------------------
 -- Test: test04Insert.sql
 -- ----------------------------------------------------------------------
@@ -877,7 +829,6 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- Test: test06IllegalonAO.sql
 -- ----------------------------------------------------------------------
 SET enable_seqscan = FALSE;
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
 ALTER INDEX propertyBoxIndex RENAME TO propIndex;
 UPDATE GistTable1
  SET description = 'Where''s Johnny?', bullseye = NULL
@@ -1111,39 +1062,6 @@ SELECT owner, property FROM GistTable1
  Settings:  enable_seqscan=off; optimizer=on
  Optimizer status: PQO version 1.624
 (10 rows)
-
--- end_ignore
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
- id | property 
-----+----------
-  8 | 
- 77 | 
- 86 | 
- 99 | 
-(4 rows)
-
--- start_ignore
-EXPLAIN
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=36)
-   Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=36)
-         Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=36)
-               Filter: property IS NULL
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(8 rows)
 
 -- end_ignore
 -- ----------------------------------------------------------------------
@@ -1484,54 +1402,6 @@ SELECT id, property FROM GistTable1
   8 | 
 (1 row)
 
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-SELECT owner, property FROM GistTable1 
- WHERE property ~= '((7052,250),(6050,20))';
-  owner  |       property       
----------+----------------------
-  Patty  | (7052,250),(6050,20)
- Hypatia | (7052,250),(6050,20)
-(2 rows)
-
-SELECT owner, property FROM GistTable1 
- WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
-  owner  |       property       
----------+----------------------
-  Patty  | (7052,250),(6050,20)
- Hypatia | (7052,250),(6050,20)
-(2 rows)
-
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
-  owner  |       property       
----------+----------------------
- Hypatia | (7052,250),(6050,20)
-  Patty  | (7052,250),(6050,20)
-(2 rows)
-
--- start_ignore
-EXPLAIN
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-   ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=47)
-         Filter: property ~= '(7052,250),(6050,20)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
-
--- end_ignore
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id;
- id | property 
-----+----------
-  8 | 
-(1 row)
-
 -- ----------------------------------------------------------------------
 -- Test: test04Insert.sql
 -- ----------------------------------------------------------------------
@@ -1579,7 +1449,6 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- Test: test06IllegalonAO.sql
 -- ----------------------------------------------------------------------
 SET enable_seqscan = FALSE;
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
 ALTER INDEX propertyBoxIndex RENAME TO propIndex;
 UPDATE GistTable1
  SET description = 'Where''s Johnny?', bullseye = NULL
@@ -1813,39 +1682,6 @@ SELECT owner, property FROM GistTable1
  Settings:  enable_seqscan=off; optimizer=on
  Optimizer status: PQO version 1.624
 (10 rows)
-
--- end_ignore
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
- id | property 
-----+----------
-  8 | 
- 77 | 
- 86 | 
- 99 | 
-(4 rows)
-
--- start_ignore
-EXPLAIN
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=36)
-   Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=36)
-         Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=36)
-               Filter: property IS NULL
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(8 rows)
 
 -- end_ignore
 -- ----------------------------------------------------------------------
@@ -2186,54 +2022,6 @@ SELECT id, property FROM GistTable1
   8 | 
 (1 row)
 
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-SELECT owner, property FROM GistTable1 
- WHERE property ~= '((7052,250),(6050,20))';
-  owner  |       property       
----------+----------------------
-  Patty  | (7052,250),(6050,20)
- Hypatia | (7052,250),(6050,20)
-(2 rows)
-
-SELECT owner, property FROM GistTable1 
- WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
-  owner  |       property       
----------+----------------------
-  Patty  | (7052,250),(6050,20)
- Hypatia | (7052,250),(6050,20)
-(2 rows)
-
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
-  owner  |       property       
----------+----------------------
- Hypatia | (7052,250),(6050,20)
-  Patty  | (7052,250),(6050,20)
-(2 rows)
-
--- start_ignore
-EXPLAIN
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-   ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=47)
-         Filter: property ~= '(7052,250),(6050,20)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
-
--- end_ignore
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id;
- id | property 
-----+----------
-  8 | 
-(1 row)
-
 -- ----------------------------------------------------------------------
 -- Test: test04Insert.sql
 -- ----------------------------------------------------------------------
@@ -2281,7 +2069,6 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- Test: test06IllegalonAO.sql
 -- ----------------------------------------------------------------------
 SET enable_seqscan = FALSE;
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
 ALTER INDEX propertyBoxIndex RENAME TO propIndex;
 UPDATE GistTable1
  SET description = 'Where''s Johnny?', bullseye = NULL
@@ -2515,39 +2302,6 @@ SELECT owner, property FROM GistTable1
  Settings:  enable_seqscan=off; optimizer=on
  Optimizer status: PQO version 1.624
 (10 rows)
-
--- end_ignore
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
- id | property 
-----+----------
-  8 | 
- 77 | 
- 86 | 
- 99 | 
-(4 rows)
-
--- start_ignore
-EXPLAIN
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=36)
-   Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=36)
-         Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=36)
-               Filter: property IS NULL
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(8 rows)
 
 -- end_ignore
 -- ----------------------------------------------------------------------
@@ -2888,54 +2642,6 @@ SELECT id, property FROM GistTable1
   8 | 
 (1 row)
 
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-SELECT owner, property FROM GistTable1 
- WHERE property ~= '((7052,250),(6050,20))';
-  owner  |       property       
----------+----------------------
- Hypatia | (7052,250),(6050,20)
-  Patty  | (7052,250),(6050,20)
-(2 rows)
-
-SELECT owner, property FROM GistTable1 
- WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
-  owner  |       property       
----------+----------------------
-  Patty  | (7052,250),(6050,20)
- Hypatia | (7052,250),(6050,20)
-(2 rows)
-
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
-  owner  |       property       
----------+----------------------
-  Patty  | (7052,250),(6050,20)
- Hypatia | (7052,250),(6050,20)
-(2 rows)
-
--- start_ignore
-EXPLAIN
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-   ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=47)
-         Filter: property ~= '(7052,250),(6050,20)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
-
--- end_ignore
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id;
- id | property 
-----+----------
-  8 | 
-(1 row)
-
 -- ----------------------------------------------------------------------
 -- Test: test04Insert.sql
 -- ----------------------------------------------------------------------
@@ -2983,7 +2689,6 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- Test: test06IllegalonAO.sql
 -- ----------------------------------------------------------------------
 SET enable_seqscan = FALSE;
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
 ALTER INDEX propertyBoxIndex RENAME TO propIndex;
 UPDATE GistTable1
  SET description = 'Where''s Johnny?', bullseye = NULL
@@ -3217,39 +2922,6 @@ SELECT owner, property FROM GistTable1
  Settings:  enable_seqscan=off; optimizer=on
  Optimizer status: PQO version 1.624
 (10 rows)
-
--- end_ignore
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
- id | property 
-----+----------
-  8 | 
- 77 | 
- 86 | 
- 99 | 
-(4 rows)
-
--- start_ignore
-EXPLAIN
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=36)
-   Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=36)
-         Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=36)
-               Filter: property IS NULL
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(8 rows)
 
 -- end_ignore
 -- ----------------------------------------------------------------------

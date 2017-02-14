@@ -16,6 +16,7 @@
 #
 
 test: variadic_parameters default_parameters function_extensions
+test: spi xpath
 
 test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile naivebayes join_gp union_gp gpcopy gp_create_table
 test: filter gpctas gpdist matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var
@@ -28,7 +29,7 @@ test: dispatch
 test: deadlock
 
 # test workfiles
-test: workfile/hashagg_spill workfile/hashjoin_spill workfile/materialize_spill workfile/sisc_mat_sort workfile/sisc_sort_spill workfile/sort_spill
+test: workfile/hashagg_spill workfile/hashjoin_spill workfile/materialize_spill workfile/sisc_mat_sort workfile/sisc_sort_spill workfile/sort_spill workfile/spilltodisk
 # test workfiles compressed using zlib
 # 'zlib' utilizes fault injectors so it needs to be in a group by itself
 test: zlib
@@ -66,7 +67,6 @@ test: vacuum_gp
 # Disabled tests. XXX: Why are these disabled?
 #test: olap_window
 #test: tpch500GB
-#ignore: dpe
 
 # FIXME: These tests no longer work, because they try to set
 # gp_interconnect_type, which doesn't work:
@@ -79,6 +79,7 @@ test: alter_table_ao ao_create_alter_valid_table subtransaction_limit oid_consis
 ignore: icudp_full
 
 test: resource_queue
+test: wrkloadadmin
 # gp_toolkit performs a vacuum and checks that it truncated the relation. That
 # might not happen if other backends are holding transactions open, preventing
 # vacuum from removing dead tuples.
@@ -114,7 +115,7 @@ test: qp_olap_mdqa qp_misc
 test: qp_misc_jiras qp_with_clause qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan
 test: qp_functions qp_misc_rio_join_small qp_misc_rio qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution
 
-test: qp_dpe qp_subquery qp_functions_idf qp_regexp qp_resource_queue
+test: dpe qp_dpe qp_subquery qp_functions_idf qp_regexp qp_resource_queue
 
 test: olap_setup
 test: qp_olap_group
@@ -152,6 +153,9 @@ test: uao_catalog_tables uaocs_catalog_tables uao_ddl/alter_ao_table_setstorage_
 test: uao_ddl/alter_ao_part_exch_column uao_ddl/alter_ao_part_tables_row uao_ddl/create_ao_table_500cols_column uao_ddl/alter_ao_part_tables_column
 
 test: uao_ddl/alter_drop_allcol_row uao_ddl/alter_drop_allcol_column uao_ddl/alter_rollback_row uao_ddl/alter_rollback_column uao_ddl/uao_allalter_row uao_ddl/uao_allalter_column uao_col/alter_ao_table_oid_column uao_row/alter_ao_table_oid_row
+
+test: AOCO_Compression2 schema_topology table_statistics
+test: metadata_track
 
 # Test psql \du output
 test: psql_gpdb_du

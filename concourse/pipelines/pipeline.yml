@@ -33,7 +33,7 @@ resources:
     username: {{docker_username}}
     password: {{docker_password}}
 
-- name: bin_gpdb_centos
+- name: bin_gpdb_centos6
   type: s3
   source:
     access_key_id: {{bucket-access-key-id}}
@@ -41,6 +41,15 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{bin_gpdb_centos_versioned_file}}
+
+- name: bin_gpdb_centos7
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{bin_gpdb_centos7_versioned_file}}
 
 - name: installer_rhel6_gpdb_rc
   type: s3
@@ -60,6 +69,24 @@ resources:
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: deliverables/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip.md5
 
+- name: installer_rhel7_gpdb_rc
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: deliverables/greenplum-db-4.3.99.0-build-1-rhel7-x86_64.zip
+
+- name: installer_rhel7_gpdb_rc_md5
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: deliverables/greenplum-db-4.3.99.0-build-1-rhel7-x86_64.zip.md5
+
 - name: installer_appliance_rhel6_gpdb_rc
   type: s3
   source:
@@ -78,6 +105,24 @@ resources:
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: deliverables/greenplum-db-appliance-4.3.99.0-build-1-rhel6-x86_64.zip.md5
 
+- name: installer_appliance_rhel7_gpdb_rc
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: deliverables/greenplum-db-appliance-4.3.99.0-build-1-rhel7-x86_64.zip
+
+- name: installer_appliance_rhel7_gpdb_rc_md5
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: deliverables/greenplum-db-appliance-4.3.99.0-build-1-rhel7-x86_64.zip.md5
+
 - name: qautils_rhel6_tarball
   type: s3
   source:
@@ -86,6 +131,15 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: deliverables/QAUtils-rhel6-x86_64.tar.gz
+
+- name: qautils_rhel7_tarball
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: deliverables/QAUtils-rhel7-x86_64.tar.gz
 
 - name: gpdb_src_tinc_tarball
   type: s3
@@ -146,6 +200,8 @@ jobs:
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     image: centos-gpdb-dev-6
+    output_mapping:
+      sync_tools_gpdb: sync_tools_gpdb_centos6
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
       IVYREPO_REALM: {{ivyrepo_realm}}
@@ -155,7 +211,7 @@ jobs:
       TARGET_OS_VERSION: 6
       BLD_TARGETS: ""
   - aggregate:
-    - put: bin_gpdb_centos
+    - put: bin_gpdb_centos6
       params:
         file: gpdb_artifacts/bin_gpdb.tar.gz
 
@@ -180,6 +236,8 @@ jobs:
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     image: centos-gpdb-dev-7
+    output_mapping:
+      sync_tools_gpdb: sync_tools_gpdb_centos7
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
       IVYREPO_REALM: {{ivyrepo_realm}}
@@ -188,6 +246,10 @@ jobs:
       TARGET_OS: centos
       TARGET_OS_VERSION: 7
       BLD_TARGETS: ""
+  - aggregate:
+    - put: bin_gpdb_centos7
+      params:
+        file: gpdb_artifacts/bin_gpdb.tar.gz
 
 - name: coverity_scan
   plan:
@@ -214,7 +276,7 @@ jobs:
     - get: gpdb_src
       passed: [compile_gpdb_centos6]
     - get: bin_gpdb
-      resource: bin_gpdb_centos
+      resource: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
       trigger: true
     - get: centos-gpdb-dev-6
@@ -232,7 +294,7 @@ jobs:
     - get: gpdb_src
       passed: [compile_gpdb_centos6]
     - get: bin_gpdb
-      resource: bin_gpdb_centos
+      resource: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
       trigger: true
     - get: centos-gpdb-dev-6
@@ -244,13 +306,32 @@ jobs:
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
       TEST_OS: centos
 
+- name: icw_gporca_centos7
+  serial: true
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_centos7]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos7
+      passed: [compile_gpdb_centos7]
+      trigger: true
+    - get: centos-gpdb-dev-7
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: centos-gpdb-dev-7
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on -c codegen=off' installcheck-world
+      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
+      TEST_OS: centos
+
 - name: icw_planner_codegen_centos6
   plan:
   - aggregate:
     - get: gpdb_src
       passed: [compile_gpdb_centos6]
     - get: bin_gpdb
-      resource: bin_gpdb_centos
+      resource: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
       trigger: true
     - get: centos-gpdb-dev-6
@@ -268,7 +349,7 @@ jobs:
     - get: gpdb_src
       passed: [compile_gpdb_centos6]
     - get: bin_gpdb
-      resource: bin_gpdb_centos
+      resource: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
       trigger: true
     - get: centos-gpdb-dev-6
@@ -286,7 +367,7 @@ jobs:
     - get: gpdb_src
       passed: [compile_gpdb_centos6]
     - get: bin_gpdb
-      resource: bin_gpdb_centos
+      resource: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
       trigger: true
     - get: centos-gpdb-dev-6
@@ -302,7 +383,7 @@ jobs:
     - get: gpdb_src
       passed: [compile_gpdb_centos6]
     - get: bin_gpdb
-      resource: bin_gpdb_centos
+      resource: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
       trigger: true
     - get: centos-gpdb-dev-6
@@ -320,22 +401,53 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [icw_planner_centos6, icw_gporca_centos6, icw_planner_codegen_centos6, icw_gporca_codegen_centos6, MU_check_centos]
+      passed:
+      - icw_planner_centos6
+      - icw_gporca_centos6
+      - icw_gporca_centos7
+      - icw_planner_codegen_centos6
+      - icw_gporca_codegen_centos6
+      - MU_check_centos
     - get: gpaddon_src
-    - get: bin_gpdb
-      resource: bin_gpdb_centos
-      passed: [icw_planner_centos6, icw_gporca_centos6, icw_planner_codegen_centos6, icw_gporca_codegen_centos6, MU_check_centos]
+    - get: bin_gpdb_centos6
+      passed:
+      - icw_planner_centos6
+      - icw_gporca_centos6
+      - icw_planner_codegen_centos6
+      - icw_gporca_codegen_centos6
+      - MU_check_centos
+      trigger: true
+    - get: bin_gpdb_centos7
+      passed:
+      - icw_gporca_centos7
       trigger: true
     - get: centos-gpdb-dev-6
-  - task: separate_qautils_files_for_rc
+    - get: centos-gpdb-dev-7
+  - task: separate_qautils_files_for_rc_centos6
     file: gpdb_src/concourse/tasks/separate_qautils_files_for_rc.yml
     image: centos-gpdb-dev-6
+    input_mapping:
+      bin_gpdb: bin_gpdb_centos6
+    output_mapping:
+      rc_bin_gpdb: rc_bin_gpdb_rhel6
     params:
       QAUTILS_TARBALL: rc_bin_gpdb/QAUtils-rhel6-x86_64.tar.gz
+
+  - task: separate_qautils_files_for_rc_centos7
+    file: gpdb_src/concourse/tasks/separate_qautils_files_for_rc.yml
+    image: centos-gpdb-dev-7
+    input_mapping:
+      bin_gpdb: bin_gpdb_centos7
+    output_mapping:
+      rc_bin_gpdb: rc_bin_gpdb_rhel7
+    params:
+      QAUTILS_TARBALL: rc_bin_gpdb/QAUtils-rhel7-x86_64.tar.gz
 
   - task: gpdb_src_tinc_packaging
     file: gpdb_src/concourse/tasks/gpdb_src_tinc_packaging.yml
     image: centos-gpdb-dev-6
+    input_mapping:
+      bin_gpdb: bin_gpdb_centos6
     output_mapping:
       rc_bin_gpdb: packaged_gpdb_src_tinc
     params:
@@ -344,19 +456,21 @@ jobs:
   - task: gpdb_src_behave_packaging
     file: gpdb_src/concourse/tasks/gpdb_src_behave_packaging.yml
     image: centos-gpdb-dev-6
+    input_mapping:
+      bin_gpdb: bin_gpdb_centos6
     output_mapping:
       rc_bin_gpdb: packaged_gpdb_src_behave
     params:
       GPDB_SRC_TAR_GZ: rc_bin_gpdb/greenplum-db-4.3.99.0-behave.tar.gz
 
   - aggregate:
-    - task: gpdb_rc_packaging_centos
+    - task: gpdb_rc_packaging_centos6
       file: gpdb_src/concourse/tasks/gpdb_packaging.yml
       image: centos-gpdb-dev-6
       input_mapping:
-        bin_gpdb: rc_bin_gpdb
+        bin_gpdb: rc_bin_gpdb_rhel6
       output_mapping:
-        packaged_gpdb: packaged_gpdb_rc
+        packaged_gpdb: packaged_gpdb_rc_centos6
       params:
         INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-header-rhel-gpdb.sh
         INSTALLER_ZIP: packaged_gpdb/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip
@@ -365,32 +479,73 @@ jobs:
       file: gpdb_src/concourse/tasks/gpdb_packaging.yml
       image: centos-gpdb-dev-6
       input_mapping:
-        bin_gpdb: rc_bin_gpdb
+        bin_gpdb: rc_bin_gpdb_rhel6
       output_mapping:
-        packaged_gpdb: packaged_gpdb_appliance_rc
+        packaged_gpdb: packaged_gpdb_appliance_rc_centos6
       params:
         INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-appliance-header-rhel-gpdb.sh
         INSTALLER_ZIP: packaged_gpdb/greenplum-db-appliance-4.3.99.0-build-1-rhel6-x86_64.zip
+
+    - task: gpdb_rc_packaging_centos7
+      file: gpdb_src/concourse/tasks/gpdb_packaging.yml
+      image: centos-gpdb-dev-7
+      input_mapping:
+        bin_gpdb: rc_bin_gpdb_rhel7
+      output_mapping:
+        packaged_gpdb: packaged_gpdb_rc_centos7
+      params:
+        INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-header-rhel-gpdb.sh
+        INSTALLER_ZIP: packaged_gpdb/greenplum-db-4.3.99.0-build-1-rhel7-x86_64.zip
+        ADD_README_INSTALL: true
+    - task: gpdb_appliance_rhel7_rc_packaging
+      file: gpdb_src/concourse/tasks/gpdb_packaging.yml
+      image: centos-gpdb-dev-7
+      input_mapping:
+        bin_gpdb: rc_bin_gpdb_rhel7
+      output_mapping:
+        packaged_gpdb: packaged_gpdb_appliance_rc_centos7
+      params:
+        INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-appliance-header-rhel-gpdb.sh
+        INSTALLER_ZIP: packaged_gpdb/greenplum-db-appliance-4.3.99.0-build-1-rhel7-x86_64.zip
   - aggregate:
+    # RHEL 6
     - put: installer_rhel6_gpdb_rc
       params:
-        file: packaged_gpdb_rc/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip
+        file: packaged_gpdb_rc_centos6/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip
     - put: installer_rhel6_gpdb_rc_md5
       params:
-        file: packaged_gpdb_rc/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip.md5
+        file: packaged_gpdb_rc_centos6/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip.md5
     - put: installer_appliance_rhel6_gpdb_rc
       params:
-        file: packaged_gpdb_appliance_rc/greenplum-db-appliance-4.3.99.0-build-1-rhel6-x86_64.zip
+        file: packaged_gpdb_appliance_rc_centos6/greenplum-db-appliance-4.3.99.0-build-1-rhel6-x86_64.zip
     - put: installer_appliance_rhel6_gpdb_rc_md5
       params:
-        file: packaged_gpdb_appliance_rc/greenplum-db-appliance-4.3.99.0-build-1-rhel6-x86_64.zip.md5
+        file: packaged_gpdb_appliance_rc_centos6/greenplum-db-appliance-4.3.99.0-build-1-rhel6-x86_64.zip.md5
     - put: qautils_rhel6_tarball
       params:
-        file: rc_bin_gpdb/QAUtils-rhel6-x86_64.tar.gz
+        file: rc_bin_gpdb_rhel6/QAUtils-rhel6-x86_64.tar.gz
+
+    # RHEL 7
+    - put: installer_rhel7_gpdb_rc
+      params:
+        file: packaged_gpdb_rc_centos7/greenplum-db-4.3.99.0-build-1-rhel7-x86_64.zip
+    - put: installer_rhel7_gpdb_rc_md5
+      params:
+        file: packaged_gpdb_rc_centos7/greenplum-db-4.3.99.0-build-1-rhel7-x86_64.zip.md5
+    - put: installer_appliance_rhel7_gpdb_rc
+      params:
+        file: packaged_gpdb_appliance_rc_centos7/greenplum-db-appliance-4.3.99.0-build-1-rhel7-x86_64.zip
+    - put: installer_appliance_rhel7_gpdb_rc_md5
+      params:
+        file: packaged_gpdb_appliance_rc_centos7/greenplum-db-appliance-4.3.99.0-build-1-rhel7-x86_64.zip.md5
+    - put: qautils_rhel7_tarball
+      params:
+        file: rc_bin_gpdb_rhel7/QAUtils-rhel7-x86_64.tar.gz
+
+    # Source
     - put: gpdb_src_tinc_tarball
       params:
         file: packaged_gpdb_src_tinc/greenplum-db-4.3.99.0-src.tar.gz
-
     - put: gpdb_src_behave_tarball
       params:
         file: packaged_gpdb_src_behave/greenplum-db-4.3.99.0-behave.tar.gz
@@ -437,6 +592,22 @@ jobs:
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params: *pulse_properties
 
+- name: MU_backup-restore
+  plan:
+  - aggregate: *pulse_trigger_resource
+  - task: trigger_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
+    input_mapping: *input_mappings
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore"
+  - task: monitor_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore"
 
 - name: MU_gpcheckcat
   plan:
@@ -505,6 +676,40 @@ jobs:
     params:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
+
+- name: MU_gptransfer-43x-to-5x
+  plan:
+  - aggregate: *pulse_trigger_resource
+  - task: trigger_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
+    input_mapping: *input_mappings
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_43x_to_5x"
+  - task: monitor_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_43x_to_5x"
+
+- name: MU_gptransfer-5x-to-5x
+  plan:
+  - aggregate: *pulse_trigger_resource
+  - task: trigger_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
+    input_mapping: *input_mappings
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_5x_to_5x"
+  - task: monitor_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_5x_to_5x"
 
 - name: cs-uao-regression
   plan:
@@ -686,7 +891,7 @@ jobs:
       trigger: true
     - get: bin_gpdb
       passed: [gpdb_rc_packaging_centos]
-      resource: bin_gpdb_centos
+      resource: bin_gpdb_centos6
     - get: centos-gpdb-dev-6
   - task: regression_tests_gphdfs
     file: gpdb_src/concourse/tasks/regression_tests_gphdfs.yml
@@ -694,20 +899,3 @@ jobs:
     params:
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
-
-- name: MU_gptransfer-5x-to-5x
-  plan:
-  - aggregate: *pulse_trigger_resource
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_5x_to_5x"
-  - task: monitor_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_5x_to_5x"

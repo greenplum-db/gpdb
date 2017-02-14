@@ -258,13 +258,6 @@ create_gang_retry:
 		{
 			Assert(successful_connections + in_recovery_mode_count == size);
 
-			/* FTS shows some segment DBs are down */
-			if (isFTSEnabled() &&
-				FtsTestSegmentDBIsDown(newGangDefinition->db_descriptors, size))
-				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-								errmsg("failed to acquire resources on one or more segments"),
-								errdetail("FTS detected one or more segments are down")));
-
 			if ( gp_gang_creation_retry_count <= 0 ||
 				create_gang_retry_counter++ >= gp_gang_creation_retry_count ||
 				type != GANGTYPE_PRIMARY_WRITER)
@@ -282,6 +275,22 @@ create_gang_retry:
 	PG_CATCH();
 	{
 		MemoryContextSwitchTo(GangContext);
+
+		/* FTS shows some segment DBs are down */
+		if (isFTSEnabled() &&
+			FtsTestSegmentDBIsDown(newGangDefinition->db_descriptors, size))
+		{
+
+			DisconnectAndDestroyGang(newGangDefinition);
+			newGangDefinition = NULL;
+			DisconnectAndDestroyAllGangs(true);
+			CheckForResetSession();
+			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+							errmsg("failed to acquire resources on one or more segments"),
+							errdetail("FTS detected one or more segments are down")));
+
+		}
+
 		DisconnectAndDestroyGang(newGangDefinition);
 		newGangDefinition = NULL;
 

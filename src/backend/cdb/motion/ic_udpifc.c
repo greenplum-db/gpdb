@@ -35,6 +35,7 @@
 #include "utils/faultinjector.h"
 #include "port/atomics.h"
 #include "port/pg_crc32c.h"
+#include "storage/pmsignal.h"
 
 #include "cdb/cdbselect.h"
 #include "cdb/tupchunklist.h"
@@ -642,6 +643,7 @@ static void setMainThreadWaiting(ThreadWaitingState *state, int motNodeId, int r
 static void checkRxThreadError(void);
 static void setRxThreadError(int eno);
 static void resetRxThreadError(void);
+static void SendDummyPacket(void);
 
 static void getSockAddr(struct sockaddr_storage * peer, socklen_t * peer_len, const char * listenerAddr, int listenerPort);
 static void setXmitSocketOptions(int txfd);
@@ -2582,7 +2584,7 @@ getSndBuffer(MotionConn *conn)
  * RETURNS
  *	 Initialized ChunkTransportState for the Sending Motion Node Id.
  */
-ChunkTransportStateEntry *
+static ChunkTransportStateEntry *
 startOutgoingUDPConnections(ChunkTransportState *transportStates,
 							Slice		*sendSlice,
 							int			*pOutgoingCount)
@@ -3216,12 +3218,12 @@ SetupUDPIFCInterconnect(EState *estate)
 static void
 freeDisorderedPackets(MotionConn *conn)
 {
-	int k = 0;
+	int			k;
 
 	if (conn->pkt_q == NULL)
 		return;
 
-	for(; k < Gp_interconnect_queue_depth; k++)
+	for(k = 0; k < Gp_interconnect_queue_depth; k++)
 	{
 		icpkthdr *buf = (icpkthdr *)conn->pkt_q[k];
 		if (buf != NULL)
@@ -3610,7 +3612,6 @@ TeardownUDPIFCInterconnect(ChunkTransportState *transportStates,
 static void
 prepareRxConnForRead(MotionConn *conn)
 {
-
 	elog(DEBUG3, "In prepareRxConnForRead: conn %p, q_head %d q_tail %d q_size %d", conn, conn->pkt_q_head, conn->pkt_q_tail, conn->pkt_q_size);
 
 	Assert(conn->pkt_q[conn->pkt_q_head] != NULL);
@@ -3711,9 +3712,20 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 			checkForCancelFromQD(pTransportStates);
 		}
 
-		/* NIC on master (and thus the QD connection) may become bad, check it. */
+
+		/*
+		 * 1. NIC on master (and thus the QD connection) may become bad, check it.
+		 * 2. Postmaster may become invalid, check it
+		 */
 		if ((retries & 0x3f) == 0)
+		{
 			checkQDConnectionAlive();
+
+			if (!PostmasterIsAlive(true))
+				ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+							errmsg("Interconnect failed to recv chunks"),
+							errdetail("Postmaster is not alive\n")));
+		}
 
 		pthread_mutex_lock(&ic_control_info.lock);
 
@@ -5135,12 +5147,21 @@ checkExceptions(ChunkTransportState *transportStates, ChunkTransportStateEntry *
 	}
 
 	/*
-	 * NIC on master (and thus the QD connection) may become bad, check it.
+	 * 1. NIC on master (and thus the QD connection) may become bad, check it.
+	 * 2. Postmaster may become invalid, check it
+	 *
 	 * We check modulo 2 to correlate with the deadlock check above at the
 	 * initial iteration.
 	 */
 	if ((retry & 0x3f) == 2)
+	{
 		checkQDConnectionAlive();
+
+		if (!PostmasterIsAlive(true))
+			ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+						errmsg("Interconnect failed to send chunks"),
+						errdetail("Postmaster is not alive\n")));
+	}
 }
 
 /*
@@ -6375,7 +6396,7 @@ handleMismatch(icpkthdr *pkt, struct sockaddr_storage *peer, int peer_len)
 static bool
 cacheFuturePacket(icpkthdr *pkt, struct sockaddr_storage *peer, int peer_len)
 {
-	MotionConn *conn = NULL;
+	MotionConn *conn;
 
 	conn = findConnByHeader(&ic_control_info.startupCacheHtab, pkt);
 
@@ -6665,4 +6686,110 @@ WaitInterconnectQuitUDPIFC(void)
 		pthread_join(ic_control_info.threadHandle, NULL);
 	}
 	ic_control_info.threadCreated = false;
+}
+
+/*
+ * Send a dummy packet to interconnect thread to exit poll() immediately
+ */
+static void
+SendDummyPacket(void)
+{
+	int			sockfd = -1;
+	int			ret;
+	struct addrinfo *addrs = NULL;
+	struct addrinfo *rp;
+	struct addrinfo hint;
+	uint16		udp_listener;
+	char		port_str[32] = {0};
+	char	   *dummy_pkt = "stop it";
+	int			counter;
+
+	/*
+	 * Get address info from interconnect udp listener port
+	 */
+	udp_listener = Gp_listener_port;
+	snprintf(port_str, sizeof(port_str), "%d", udp_listener);
+
+	MemSet(&hint, 0, sizeof(hint));
+	hint.ai_socktype = SOCK_DGRAM;
+	hint.ai_family = AF_UNSPEC; /* Allow for IPv4 or IPv6  */
+
+	/* Never do name resolution */
+#ifdef AI_NUMERICSERV
+	hint.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
+#else
+	hint.ai_flags = AI_NUMERICHOST;
+#endif
+
+	ret = pg_getaddrinfo_all(NULL, port_str, &hint, &addrs);
+	if (ret || !addrs)
+	{
+		elog(LOG, "send dummy packet failed, pg_getaddrinfo_all(): %m");
+		goto send_error;
+	}
+
+	for (rp = addrs; rp != NULL; rp = rp->ai_next)
+	{
+		/* Create socket according to pg_getaddrinfo_all() */
+		sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+		if (sockfd < 0)
+			continue;
+
+		if (!pg_set_noblock(sockfd))
+		{
+			if (sockfd >= 0)
+			{
+				closesocket(sockfd);
+				sockfd = -1;
+			}
+			continue;
+		}
+		break;
+	}
+
+	if (rp == NULL)
+	{
+		elog(LOG, "send dummy packet failed, create socket failed: %m");
+		goto send_error;
+	}
+
+	/*
+	 * Send a dummy package to the interconnect listener, try 10 times
+	 */
+
+	counter = 0;
+	while (counter < 10)
+	{
+		counter++;
+		ret = sendto(sockfd, dummy_pkt, strlen(dummy_pkt), 0, rp->ai_addr, rp->ai_addrlen);
+		if (ret < 0)
+		{
+			if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
+				continue;
+			else
+			{
+				elog(LOG, "send dummy packet failed, sendto failed: %m");
+				goto send_error;
+			}
+		}
+		break;
+	}
+
+	if (counter >= 10)
+	{
+		elog(LOG, "send dummy packet failed, sendto failed: %m");
+		goto send_error;
+	}
+
+	pg_freeaddrinfo_all(hint.ai_family, addrs);
+	closesocket(sockfd);
+	return;
+
+send_error:
+
+	if (addrs)
+		pg_freeaddrinfo_all(hint.ai_family, addrs);
+	if (sockfd != -1)
+		closesocket(sockfd);
+	return;
 }

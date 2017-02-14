@@ -135,15 +135,6 @@ select * from sto_alt_co2 order by bigint_col;
 Alter table sto_alt_co3  alter column before_rename_col set statistics 3;
 select * from sto_alt_co3 order by bigint_col;
 
--- Alter table cluster on indexname
-Create index sto_alt_co3_idx on sto_alt_co3(bigint_col);
-Alter table sto_alt_co3 cluster on sto_alt_co3_idx;
-select * from sto_alt_co3 order by bigint_col;
-
--- Alter table SET without cluster
-Alter table sto_alt_co3 set without cluster;
-select * from sto_alt_co3 order by bigint_col;
-
 --Alter table SET without OIDs
 Alter table sto_alt_co3 SET without oids;
 select * from sto_alt_co3 order by bigint_col;

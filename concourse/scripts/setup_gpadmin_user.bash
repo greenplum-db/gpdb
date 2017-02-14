@@ -68,6 +68,10 @@ setup_sshd() {
   test -e /etc/ssh/ssh_host_rsa_key || ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa
   test -e /etc/ssh/ssh_host_dsa_key || ssh-keygen -f /etc/ssh/ssh_host_dsa_key -N '' -t dsa
 
+  # For Centos 7, disable looking for host key types that older Centos versions don't support.
+  sed -ri 's@^HostKey /etc/ssh/ssh_host_ecdsa_key$@#&@' /etc/ssh/sshd_config
+  sed -ri 's@^HostKey /etc/ssh/ssh_host_ed25519_key$@#&@' /etc/ssh/sshd_config
+
   # See https://gist.github.com/gasi/5691565
   sed -ri 's/UsePAM yes/UsePAM no/g' /etc/ssh/sshd_config
   # Disable password authentication so builds never hang given bad keys
@@ -75,8 +79,7 @@ setup_sshd() {
 
   setup_ssh_for_user root
 
-  # Test that sshd can start
-  /etc/init.d/sshd start
+  /usr/sbin/sshd
 
   ssh_keyscan_for_user root
   ssh_keyscan_for_user gpadmin

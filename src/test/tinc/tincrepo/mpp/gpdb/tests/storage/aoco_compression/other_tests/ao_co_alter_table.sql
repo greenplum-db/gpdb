@@ -129,12 +129,6 @@ ALTER TABLE carp_die ALTER out_of_character DROP DEFAULT;
 INSERT INTO carp_die (id, wealth, timeless) VALUES (122, '122', '2010-03-02 15:46:00');
 SELECT out_of_character FROM carp_die WHERE id = 122;
 
-
--- The table cannot have already been clustered, since we do not allow indexes 
--- on AO/COT tables, but let's just see what happens when we run this command.
-ALTER TABLE carp_die SET WITHOUT CLUSTER;
-
-
 DROP FUNCTION IF EXISTS money_to_text(MONEY) CASCADE;
 CREATE FUNCTION money_to_text(MONEY) RETURNS TEXT AS
   $$

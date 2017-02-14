@@ -1,19 +1,14 @@
 ##
 ## TODO: list test sequence and test dependencies.
 ##
-test: spilltodisk
-test: wrkloadadmin
 ignore: jdbc
-test: spi
-test: load_mpph xpath
+test: load_mpph
 # these tests depend on load_mpph
 test: mpph_query mpph_aopart hashagg gpsort
 test: mpp-11333
 ignore: failover
 #mpp23872: Disabling gpcheckmirrorseg as it is erroring out bugbuster on some platforms.
 ignore: gpcheckmirrorseg
-test: AOCO_Compression2 schema_topology table_statistics
-test: metadata_track
 test: memory_quota
 test: opperf
 # end of tests

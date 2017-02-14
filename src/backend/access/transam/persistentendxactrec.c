@@ -172,7 +172,7 @@ static void PersistentEndXactRec_SetObjectInfo(
 
 	int32 len)
 {
-	PeristentEndXaxtUntyped *untyped = &objects->untyped[objKind-1];
+	PersistentEndXactUntyped *untyped = &objects->untyped[objKind-1];
 
 	untyped->data = data;
 	untyped->count = count;
@@ -190,7 +190,7 @@ static void PersistentEndXactRec_GetObjectInfo(
 
 	int32 *len)
 {
-	PeristentEndXaxtUntyped *untyped = &objects->untyped[objKind-1];
+	PersistentEndXactUntyped *untyped = &objects->untyped[objKind-1];
 
 	*data = untyped->data;
 	*count = untyped->count;

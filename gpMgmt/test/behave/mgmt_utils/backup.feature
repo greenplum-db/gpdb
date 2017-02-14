@@ -1311,6 +1311,52 @@ Feature: Validate command line arguments
         Then verify that the data of "3" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
+    Scenario: gpcrondump -u option with include table filtering
+        Given the test is initialized
+        And there is a "ao" table "public.ao_table" in "bkdb" with data
+        And there is a "co" table "public.co_table" in "bkdb" with data
+        And there is a "heap" table "public.heap_table" in "bkdb" with data
+        And there is a file "include_file" with tables "public.ao_table|public.heap_table"
+        When the user runs "gpcrondump -a -x bkdb --table-file include_file -u /tmp"
+        And gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        And all the data from "bkdb" is saved for verification
+        And there are no backup files
+        And the user runs gpdbrestore with the stored timestamp and options "-u /tmp"
+        And gpdbrestore should return a return code of 0
+        Then verify that the data of "2" tables in "bkdb" is validated after restore
+        And verify that the tuple count of all appendonly tables are consistent in "bkdb"
+
+    Scenario: gpcrondump -u option with exclude table filtering
+        Given the test is initialized
+        And there is a "ao" table "public.ao_table" in "bkdb" with data
+        And there is a "co" table "public.co_table" in "bkdb" with data
+        And there is a "heap" table "public.heap_table" in "bkdb" with data
+        And there is a file "exclude_file" with tables "public.ao_table|public.heap_table"
+        When the user runs "gpcrondump -a -x bkdb --exclude-table-file exclude_file -u /tmp"
+        And gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        And all the data from "bkdb" is saved for verification
+        And there are no backup files
+        And the user runs gpdbrestore with the stored timestamp and options "-u /tmp"
+        And gpdbrestore should return a return code of 0
+        Then verify that the data of "1" tables in "bkdb" is validated after restore
+        And verify that the tuple count of all appendonly tables are consistent in "bkdb"
+
+    Scenario: gpdbrestore -u option with include table filtering
+        Given the test is initialized
+        And there is a "ao" table "public.ao_table" in "bkdb" with data
+        And there is a "co" table "public.co_table" in "bkdb" with data
+        When the user runs "gpcrondump -a -x bkdb -u /tmp"
+        And gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        And all the data from "bkdb" is saved for verification
+        And there are no backup files
+        And the user runs gpdbrestore with the stored timestamp and options "-u /tmp -T public.ao_table"
+        And gpdbrestore should return a return code of 0
+        Then verify that the data of "1" tables in "bkdb" is validated after restore
+        And verify that the tuple count of all appendonly tables are consistent in "bkdb"
+
     Scenario: gpcrondump -x with multiple databases
         Given the test is initialized
         And database "bkdb2" is dropped and recreated
@@ -1582,6 +1628,32 @@ Feature: Validate command line arguments
         And gpdbrestore should return a return code of 0
         And verify that the data of "12" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
+
+    Scenario: gpcrondump with -u and --prefix option
+        Given the test is initialized
+        And the prefix "foo" is stored
+        And the database "bkdb2" does not exist
+        And there is a "heap" table "public.heap_table" in "bkdb" with data
+        And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
+        And there is a backupfile of tables "public.heap_table, public.ao_part_table" in "bkdb" exists for validation
+        When the user runs "gpcrondump -a -x bkdb --prefix=foo -u /tmp"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        And the user runs gpdbrestore with the stored timestamp and options "--prefix=foo --redirect=bkdb2 -u /tmp"
+        And gpdbrestore should return a return code of 0
+        And there should be dump files under "/tmp" with prefix "foo"
+        And verify that there is a "heap" table "public.heap_table" in "bkdb2" with data
+        And verify that there is a "ao" table "public.ao_part_table" in "bkdb2" with data
+
+    Scenario: gpcrondump with -u, -G, and -g
+        Given the test is initialized
+        And there is a "heap" table "public.heap_table" in "bkdb" with data
+        And there is a "ao" table "public.ao_index_table" in "bkdb" with data
+        When the user runs "gpcrondump -a -x bkdb -G -g -u /tmp"
+        And the timestamp from gpcrondump is stored
+        Then gpcrondump should return a return code of 0
+        And "global" file should be created under "/tmp"
+        And config files should be backed up on all segments in directory "/tmp"
 
     Scenario: gpdbrestore -b option should display the timestamps in sorted order
         Given the test is initialized
