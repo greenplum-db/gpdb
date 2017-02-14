@@ -101,7 +101,7 @@
         <body>
           <p>For each database that requires its use, register the PL/R language with the SQL
             command <codeph>CREATE LANGUAGE</codeph> or the utility <codeph>createlang</codeph>.
-            Only superusers can register the PL/R language with a database. For example, running
+            Because PL/R is an untrusted language, only superusers can register PL/R with a database. For example, running
             this command as the <codeph>gpadmin</codeph> system user registers the language with the
             database named <i>testdb</i>:</p>
           <codeblock>$ createlang plr -d testdb</codeblock>
@@ -128,7 +128,7 @@
         <body>
           <p>For a database that no longer requires the PL/R language, remove support for PL/R with
             the SQL command <codeph>DROP LANGUAGE</codeph> or the Greenplum Database
-              <codeph>droplang</codeph> utility. Only superusers can remove support for the PL/R
+              <codeph>droplang</codeph> utility. Because PL/R is an untrusted language, only superusers can remove support for the PL/R
             language from a database.  For example, running this command as the gpadmin user removes
             support for PL/R from the database named <i>testdb</i>:</p>
           <codeblock>$ droplang plr -d testdb</codeblock>
