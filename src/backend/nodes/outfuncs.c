@@ -297,6 +297,7 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_BOOL_FIELD(transientPlan);
 	WRITE_NODE_FIELD(planTree);
 	WRITE_NODE_FIELD(rtable);
+	WRITE_NODE_FIELD(resultRelations);
 	WRITE_NODE_FIELD(utilityStmt);
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_NODE_FIELD(subplans);
