@@ -317,8 +317,6 @@ class SuspendCheckpointCrashRecovery(MPPTestCase):
 
     def run_fault_injector_to_skip_checkpoint(self):
         tinctest.logger.info('Skip Checkpointing using fault injector.')
-        self.fileutil.inject_fault(f='checkpoint', y='reset', seg_id=1, p=self.port, o='0')
-        self.fileutil.inject_fault(f='checkpoint', y='skip', seg_id=1, p=self.port, o='0')
         self.fileutil.inject_fault(y = 'reset', f = 'checkpoint', r ='primary', H='ALL', m ='async', o = '0', p=self.port)
         (ok, out) = self.fileutil.inject_fault(y = 'skip', f = 'checkpoint', r ='primary', H='ALL', m ='async', o = '0', p=self.port)
         if not ok:

@@ -4,7 +4,7 @@ DROP EXTERNAL TABLE IF EXISTS sync2_exttab_error_log_1 cascade;
 psql:/path/sql_file:1: NOTICE:  table "sync2_exttab_error_log_1" does not exist, skipping
 DROP EXTERNAL TABLE
 CREATE EXTERNAL TABLE sync2_exttab_error_log_1( i int, j text )
-LOCATION ('gpfdist://10.110.120.144:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
+LOCATION ('gpfdist://10.0.0.6:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJESYNC2 LIMIT 50;
 psql:/path/sql_file:1: ERROR:  syntax error at or near "REJESYNC2"
 LINE 3: LOG ERRORS SEGMENT REJESYNC2 LIMIT 50;
@@ -14,7 +14,7 @@ DROP EXTERNAL TABLE IF EXISTS sync2_exttab_error_log_2 cascade;
 psql:/path/sql_file:1: NOTICE:  table "sync2_exttab_error_log_2" does not exist, skipping
 DROP EXTERNAL TABLE
 CREATE EXTERNAL TABLE sync2_exttab_error_log_2( i int, j text )
-LOCATION ('gpfdist://10.110.120.144:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
+LOCATION ('gpfdist://10.0.0.6:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJESYNC2 LIMIT 50;
 psql:/path/sql_file:1: ERROR:  syntax error at or near "REJESYNC2"
 LINE 3: LOG ERRORS SEGMENT REJESYNC2 LIMIT 50;
