@@ -4841,7 +4841,7 @@ static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
 			selector->levelPartRules[expr->level - 1]->children->part->parkind == 'l');
 
 	ListCell *lc = NULL;
-	size_t numVal = rule->parlistvalues->length;
+	size_t numVal = rule->parlistvalues ? rule->parlistvalues->length : 0;
 	Datum *array_values = NULL;
 
 	Oid	consttype = InvalidOid;
@@ -4883,9 +4883,12 @@ static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
 	 * as ExecEvalScalarArrayOp
 	 */
 	ArrayType *array = construct_array(array_values, numVal, consttype, typlen, typbyval, typalign);
-	Assert(NULL != array);
 
-	pfree(array_values);
+	if (array_values)
+	{
+		Assert(NULL != array);
+		pfree(array_values);
+	}
 
 	if (isDone)
 	{

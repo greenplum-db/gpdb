@@ -3988,6 +3988,7 @@ expression_tree_mutator(Node *node,
 		case T_PartBoundExpr:
 		case T_PartBoundInclusionExpr:
 		case T_PartBoundOpenExpr:
+		case T_PartListRuleExpr:
 			return (Node *) copyObject(node);
 		case T_Aggref:
 			{

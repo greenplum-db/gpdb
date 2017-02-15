@@ -1539,7 +1539,7 @@ typedef struct PartBoundInclusionExpr
 typedef struct PartBoundOpenExpr
 {
 	Expr		xpr;
-	int			level;			/* partitioning level */
+	int		level;			/* partitioning level */
 	bool		isLowerBound;	/* lower (min) or upper (max) bound */
 } PartBoundOpenExpr;
 
@@ -1550,8 +1550,9 @@ typedef struct PartBoundOpenExpr
  */
 typedef struct PartListRuleExpr
 {
-	Expr xpr;
-	int level;
+	Expr		xpr;
+	int			level;			/* partitioning level */
+	Oid 		resulttype;		/* the result type of expr - array type of part key */
 } PartListRuleExpr;
 
 #endif   /* PRIMNODES_H */

@@ -143,6 +143,7 @@ expression_tree_walker(Node *node,
 		case T_PartBoundExpr:
 		case T_PartBoundInclusionExpr:
 		case T_PartBoundOpenExpr:
+		case T_PartListRuleExpr:
 			/* primitive node types with no expression subnodes */
 			break;
 		case T_Aggref:
@@ -1184,6 +1185,7 @@ plan_tree_walker(Node *node,
 		case T_PartBoundExpr:
 		case T_PartBoundInclusionExpr:
 		case T_PartBoundOpenExpr:
+		case T_PartListRuleExpr:
 		case T_WindowFrame:
 		case T_WindowFrameEdge:
 		case T_WindowKey:

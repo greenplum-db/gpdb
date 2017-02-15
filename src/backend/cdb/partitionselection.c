@@ -56,7 +56,8 @@ eval_propagation_expression(PartitionSelectorState *node, Oid part_oid)
  *		eval_part_qual
  *
  *		Evaluate a qualification expression that consists of
- *		PartDefaultExpr, PartBoundExpr, PartBoundInclusionExpr, PartBoundOpenExpr
+ *		PartDefaultExpr, PartBoundExpr, PartBoundInclusionExpr, PartBoundOpenExpr,
+ *		PartListRuleExpr
  *
  *		Return true is passed, otherwise false.
  *

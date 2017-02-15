@@ -2742,6 +2742,16 @@ _copyPartBoundOpenExpr(const PartBoundOpenExpr *from)
 	return newnode;
 }
 
+static PartListRuleExpr *
+_copyPartListRuleExpr(const PartListRuleExpr *from)
+{
+	PartListRuleExpr *newnode = makeNode(PartListRuleExpr);
+	COPY_SCALAR_FIELD(level);
+	COPY_SCALAR_FIELD(resulttype);
+
+	return newnode;
+}
+
 static Query *
 _copyQuery(Query *from)
 {
@@ -5204,6 +5214,9 @@ copyObject(void *from)
 			break;
 		case T_PartBoundOpenExpr:
 			retval = _copyPartBoundOpenExpr(from);
+			break;
+		case T_PartListRuleExpr:
+			retval = _copyPartListRuleExpr(from);
 			break;
 		case T_RangeTblEntry:
 			retval = _copyRangeTblEntry(from);
