@@ -47,6 +47,8 @@ typedef struct CdbExplain_StatInst
 	instr_time	firststart;		/* Start time of first iteration of node */
 	double		peakMemBalance; /* Max mem account balance */
 	int			numPartScanned; /* Number of part tables scanned */
+	ExplainSortMethod sortMethod;	/* Type of sort */
+	double			  sortSpaceUsed; /* Memory / Disk used by sort(KBytes) */
 	int			bnotes;			/* Offset to beginning of node's extra text */
 	int			enotes;			/* Offset to end of node's extra text */
 } CdbExplain_StatInst;
@@ -114,6 +116,7 @@ typedef struct CdbExplain_NodeSummary
 	CdbExplain_Agg peakMemBalance;
 	/* Used for DynamicTableScan, DynamicIndexScan and DynamicBitmapTableScan */
 	CdbExplain_Agg totalPartTableScanned;
+	CdbExplain_Agg sortSpaceUsed[NUM_SORT_METHOD];
 
 	/* insts array info */
 	int			segindex0;		/* segment id of insts[0] */
@@ -843,6 +846,8 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
 	si->peakMemBalance = MemoryAccounting_GetAccountPeakBalance(planstate->plan->memoryAccountId);
 	si->firststart = instr->firststart;
 	si->numPartScanned = instr->numPartScanned;
+	si->sortMethod = instr->sortMethod;
+	si->sortSpaceUsed = instr->sortSpaceUsed;
 }	/* cdbexplain_collectStatsFromNode */
 
 
@@ -969,6 +974,7 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	CdbExplain_DepStatAcc memory_accounting_global_peak;
 	CdbExplain_DepStatAcc peakMemBalance;
 	CdbExplain_DepStatAcc totalPartTableScanned;
+	CdbExplain_DepStatAcc sortSpaceUsed[NUM_SORT_METHOD];
 	int			imsgptr;
 	int			nInst;
 
@@ -993,6 +999,9 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	cdbexplain_depStatAcc_init0(&totalWorkfileCreated);
 	cdbexplain_depStatAcc_init0(&peakMemBalance);
 	cdbexplain_depStatAcc_init0(&totalPartTableScanned);
+	for (int idx = 0; idx < NUM_SORT_METHOD; ++idx) {
+		cdbexplain_depStatAcc_init0(&sortSpaceUsed[idx]);
+	}
 
 	/* Initialize per-slice accumulators. */
 	cdbexplain_depStatAcc_init0(&peakmemused);
@@ -1039,6 +1048,9 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		cdbexplain_depStatAcc_upd(&totalWorkfileCreated, (rsi->workfileCreated ? 1 : 0), rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&peakMemBalance, rsi->peakMemBalance, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&totalPartTableScanned, rsi->numPartScanned, rsh, rsi, nsi);
+		if (rsi->sortMethod < NUM_SORT_METHOD && rsi->sortMethod != UNINITALIZED_SORT) {
+			cdbexplain_depStatAcc_upd(&sortSpaceUsed[rsi->sortMethod - 1], rsi->sortSpaceUsed, rsh, rsi, nsi);
+		}
 
 		/* Update per-slice accumulators. */
 		cdbexplain_depStatAcc_upd(&peakmemused, rsh->worker.peakmemused, rsh, rsi, nsi);
@@ -1054,6 +1066,9 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	ns->totalWorkfileCreated = totalWorkfileCreated.agg;
 	ns->peakMemBalance = peakMemBalance.agg;
 	ns->totalPartTableScanned = totalPartTableScanned.agg;
+	for (int idx = 0; idx < NUM_SORT_METHOD; ++idx) {
+		ns->sortSpaceUsed[idx] = sortSpaceUsed[idx].agg;
+	}
 
 	/* Roll up summary over all nodes of slice into RecvStatCtx. */
 	ctx->workmemused_max = Max(ctx->workmemused_max, workmemused.agg.vmax);
@@ -1343,6 +1358,31 @@ nodeSupportWorkfileCaching(PlanState *planstate)
 }
 
 /*
+ * nodeSupportWorkfileCaching
+ *	 Prints the sort method and memory used by sort operator.
+ */
+static void
+show_cumulative_sort_info(struct StringInfoData *str,
+		int indent,
+		const char *sort_method,
+		CdbExplain_Agg *agg)
+{
+	if (agg->vcnt > 0) {
+		if (agg->vcnt > 1)
+		{
+			appendStringInfo(str, "Sort Method:  %s  Max Memory: %ldKB  Avg Memory: %ldKB (%d segments)\n",
+					sort_method, (long)(agg->vmax), (long)(agg->vsum / agg->vcnt), agg->vcnt);
+			appendStringInfoFill(str, 2 * indent, ' ');
+		}
+		else
+		{
+			appendStringInfo(str, "Sort Method:  %s  Memory: %ldKB\n", sort_method, (long)(agg->vsum));
+			appendStringInfoFill(str, 2 * indent, ' ');
+		}
+	}
+}
+
+/*
  * cdbexplain_showExecStats
  *	  Called by qDisp process to format a node's EXPLAIN ANALYZE statistics.
  *
@@ -1443,6 +1483,13 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 								 ns->ntuples.vmax,
 								 segbuf);
 			break;
+		case T_SortState:
+			show_cumulative_sort_info(str, indent, "top-N heapsort", &ns->sortSpaceUsed[TOP_N_HEAP_SORT-1]);
+			show_cumulative_sort_info(str, indent, "quicksort", &ns->sortSpaceUsed[QUICK_SORT-1]);
+			show_cumulative_sort_info(str, indent, "external sort", &ns->sortSpaceUsed[EXTERNAL_SORT-1]);
+			show_cumulative_sort_info(str, indent, "external merge", &ns->sortSpaceUsed[EXTERNAL_MERGE-1]);
+			show_cumulative_sort_info(str, indent, "sort still in progress", &ns->sortSpaceUsed[IN_PROGRESS_SORT-1]);
+			/* no break */
 		default:
 			if (ns->ntuples.vcnt > 1)
 				appendStringInfo(str,

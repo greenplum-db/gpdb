@@ -1642,8 +1642,6 @@ explain_outNode(StringInfo str,
 						   ((Sort *) plan)->sortColIdx,
 						   SortKeystr,
 						   str, indent, es);
-			show_sort_info((SortState *) planstate,
-						   str, indent, es);
 		}
 			break;
 		case T_Result:

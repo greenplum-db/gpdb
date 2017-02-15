@@ -18,6 +18,24 @@
 
 struct CdbExplain_NodeSummary;          /* private def in cdb/cdbexplain.c */
 
+#define NUM_SORT_METHOD 5
+
+/*
+ * Different sort method in GPDB.
+ *
+ * Make sure to update NUM_SORT_METHOD when this enum changes.
+ * This enum value is used an index in the array sortSpaceUsed
+ * in struct CdbExplain_NodeSummary.
+ */
+typedef enum
+{
+	UNINITALIZED_SORT = 0,
+	TOP_N_HEAP_SORT = 1,
+	QUICK_SORT = 2,
+	EXTERNAL_SORT = 3,
+	EXTERNAL_MERGE = 4,
+	IN_PROGRESS_SORT = 5
+} ExplainSortMethod;
 
 typedef struct Instrumentation
 {
@@ -38,6 +56,8 @@ typedef struct Instrumentation
 	instr_time	firststart;		/* CDB: Start time of first iteration of node */
 	bool		workfileCreated;/* TRUE if workfiles are created in this node */
 	int		numPartScanned; /* Number of part tables scanned */
+	ExplainSortMethod sortMethod;	/* CDB: Type of sort */
+	double			  sortSpaceUsed; /* CDB: Memory / Disk used by sort(KBytes) */
     struct CdbExplain_NodeSummary  *cdbNodeSummary; /* stats from all qExecs */
 } Instrumentation;
 

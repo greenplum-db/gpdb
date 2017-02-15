@@ -377,6 +377,8 @@ struct Tuplesortstate_mk
 	int		   *gpmon_sort_tick;
 };
 
+static void tuplesort_get_stats_mk(Tuplesortstate_mk* state, ExplainSortMethod *sortMethod, double *spaceUsed);
+
 static bool
 is_sortstate_rwfile(Tuplesortstate_mk *state)
 {
@@ -1093,6 +1095,7 @@ tuplesort_finalize_stats_mk(Tuplesortstate_mk *state)
 		}
 
 		state->statsFinalized = true;
+		tuplesort_get_stats_mk(state, &state->instrument->sortMethod, &state->instrument->sortSpaceUsed);
 	}
 }
 
@@ -2625,19 +2628,17 @@ tuplesort_restorepos_mk(Tuplesortstate_mk *state)
 
 
 /*
- * tuplesort_explain - produce a line of information for EXPLAIN ANALYZE
+ * tuplesort_get_stats_mk - extract summary statistics
  *
- * This can be called after tuplesort_performsort() finishes to obtain
+ * This can be called after tuplesort_performsort_mk() finishes to obtain
  * printable summary information about how the sort was performed.
- *
- * The result is a palloc'd string.
+ * spaceUsed is measured in kilobytes.
  */
-char *
-tuplesort_explain_mk(Tuplesortstate_mk *state)
+static void
+tuplesort_get_stats_mk(Tuplesortstate_mk* state, ExplainSortMethod *sortMethod, double *spaceUsed)
 {
-	char	   *result = (char *) palloc(100);
-	long		spaceUsed;
-
+	Assert(sortMethod);
+	Assert(spaceUsed);
 	/*
 	 * Note: it might seem we should print both memory and disk usage for a
 	 * disk-based sort.  However, the current code doesn't track memory space
@@ -2648,38 +2649,28 @@ tuplesort_explain_mk(Tuplesortstate_mk *state)
 	 * tell us how much is actually used in sortcontext?
 	 */
 	if (state->tapeset)
-		spaceUsed = LogicalTapeSetBlocks(state->tapeset);
+		*spaceUsed = LogicalTapeSetBlocks(state->tapeset);
 	else
-		spaceUsed = (MemoryContextGetCurrentSpace(state->sortcontext) + 1024) / 1024;
+		*spaceUsed = (MemoryContextGetCurrentSpace(state->sortcontext) + 1024) / 1024;
 
 	switch (state->status)
 	{
-		case TSS_SORTEDINMEM:
-			if (state->mkctxt.boundUsed)
-				snprintf(result, 100,
-						"Sort Method:  top-N heapsort  Memory: %ldkB",
-						spaceUsed);
-			else
-				snprintf(result, 100,
-						"Sort Method:  quicksort  Memory: %ldkB",
-						spaceUsed);
-			break;
-		case TSS_SORTEDONTAPE:
-			snprintf(result, 100,
-					 "Sort Method:  external sort  Disk: %ldkB",
-					 spaceUsed);
-			break;
-		case TSS_FINALMERGE:
-			snprintf(result, 100,
-					 "Sort Method:  external merge  Disk: %ldkB",
-					 spaceUsed);
-			break;
-		default:
-			snprintf(result, 100, "sort still in progress");
-			break;
+	case TSS_SORTEDINMEM:
+		if (state->mkctxt.boundUsed)
+			*sortMethod = TOP_N_HEAP_SORT;
+		else
+			*sortMethod = QUICK_SORT;
+		break;
+	case TSS_SORTEDONTAPE:
+		*sortMethod = EXTERNAL_SORT;
+		break;
+	case TSS_FINALMERGE:
+		*sortMethod = EXTERNAL_MERGE;
+		break;
+	default:
+		*sortMethod = IN_PROGRESS_SORT;
 	}
-
-	return result;
+	return;
 }
 
 /*
