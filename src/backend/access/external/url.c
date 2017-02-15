@@ -84,10 +84,7 @@ url_fclose(URL_FILE *file, bool failOnError, const char *relname)
 			break;
 			
 		default: /* unknown or unsupported type - oh dear */
-			ereport(ERROR,
-					(errcode(ERRCODE_INTERNAL_ERROR),
-					 errmsg_internal("unrecognized external table type: %d",
-									 file->type)));
+			elog(ERROR, "unrecognized external table type: %d", file->type);
 			break;
     }
 }
@@ -110,8 +107,7 @@ url_feof(URL_FILE *file, int bytesread)
 			return url_custom_feof(file, bytesread);
 
 		default: /* unknown or supported type - oh dear */
-			errno = EBADF;
-			return true;
+			elog(ERROR, "unrecognized external table type: %d", file->type);
     }
 }
 
@@ -134,8 +130,7 @@ url_ferror(URL_FILE *file, int bytesread, char *ebuf, int ebuflen)
 			return url_custom_ferror(file, bytesread, ebuf, ebuflen);
 
 		default: /* unknown or supported type - oh dear */
-			errno = EBADF;
-			return true;
+			elog(ERROR, "unrecognized external table type: %d", file->type);
 	}
 }
 
@@ -157,8 +152,7 @@ url_fread(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 			return url_custom_fread(ptr, size, file, pstate);
 				
 		default: /* unknown or supported type */
-			errno = EBADF;
-			return 0;
+			elog(ERROR, "unrecognized external table type: %d", file->type);
     }
 }
 
@@ -181,8 +175,7 @@ url_fwrite(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 			return url_custom_fwrite(ptr, size, file, pstate);
 			
 		default: /* unknown or unsupported type */
-			errno = EBADF;
-			return 0;
+			elog(ERROR, "unrecognized external table type: %d", file->type);
     }
 }
 
@@ -208,6 +201,6 @@ url_fflush(URL_FILE *file, CopyState pstate)
 			break;
 
 		default: /* unknown or unsupported type */
-			break;
+			elog(ERROR, "unrecognized external table type: %d", file->type);
     }
 }
