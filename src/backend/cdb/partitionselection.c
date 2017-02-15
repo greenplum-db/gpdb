@@ -267,7 +267,10 @@ processLevel(PartitionSelectorState *node, int level, TupleTableSlot *inputTuple
 		Assert (NULL == generalPredicate);
 
 		PartitionRule *chosenRule = partition_rules_for_equality_predicate(node, level, inputTuple, parentNode);
-		satisfiedRules = lappend(satisfiedRules, chosenRule);
+		if (chosenRule != NULL)
+		{
+			satisfiedRules = lappend(satisfiedRules, chosenRule);
+		}
 	}
 	/* If generalPredicate exists */
 	else if (NULL != generalPredicate)
