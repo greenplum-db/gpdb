@@ -1,8 +1,8 @@
-CREATE DATABASE resync_db1;
+create database resync_db1 template template0;
 CREATE DATABASE
-CREATE DATABASE resync_db2;
+create database resync_db2 template template0;
 CREATE DATABASE
-CREATE DATABASE resync_db3;
+create database resync_db3 template template0;
 CREATE DATABASE
 DROP DATABASE sync1_db6;
 DROP DATABASE

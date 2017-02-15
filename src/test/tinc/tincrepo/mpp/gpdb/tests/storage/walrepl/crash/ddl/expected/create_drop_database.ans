@@ -1,6 +1,6 @@
 DROP DATABASE sto_db1;
 psql:/path/sql_file:1: ERROR:  database "sto_db1" does not exist
-CREATE DATABASE sto_db1;
+create database sto_db1 template template0;
 CREATE DATABASE
 \c sto_db1
 You are now connected to database "sto_db1" as user "sivand".

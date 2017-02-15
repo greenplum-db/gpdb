@@ -16,7 +16,7 @@ CREATE TABLESPACE
 CREATE tablespace ts_ddl2 filespace fs_ddl;
 CREATE TABLESPACE
 -- Database
-CREATE database db_ddl tablespace = ts_ddl1;
+create database db_ddl tablespace = ts_ddl1 template template0;
 CREATE DATABASE
 -- Tables
 \c db_ddl
