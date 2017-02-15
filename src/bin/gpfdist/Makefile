@@ -6,7 +6,7 @@ ifeq ($(PORTNAME),win32)
   include $(top_builddir)/gpAux/Makefile.windows
 endif
 
-override CPPFLAGS := -I. $(CPPFLAGS) $(apr_includes) $(apr_cppflags)
+override CPPFLAGS := -I. $(CPPFLAGS) $(apr_includes) $(apr_cppflags) -DFRONTEND
 override CFLAGS := $(CFLAGS) $(apr_cflags)
 
 OBJS = gpfdist.o gpfdist_helper.o fstream.o gfile.o

@@ -1,3 +1,10 @@
+#include "c.h"
+
+
+#ifndef FRONTEND
+#include "storage/fd.h"
+#endif
+
 #ifdef WIN32
 /* exclude transformation features on windows for now */
 #undef GPFXDIST
@@ -820,32 +827,47 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 #endif
 	if (!fd->is_win_pipe)
 	{
+		int syncFlag = 0;
+		int openFlags;
+		mode_t openMode;
+
+#ifndef WIN32
+		/*
+		 * MPP-13817 (support opening files without O_SYNC)
+		 */
+		if (flags & GFILE_OPEN_FOR_WRITE_SYNC)
+		{
+			/*
+			 * caller explicitly requested O_SYNC
+			 */
+			syncFlag = O_SYNC;
+		}
+		else if ((stat(fpath, &sta) == 0) && S_ISFIFO(sta.st_mode))
+		{
+			/*
+			 * use O_SYNC since we're writing to another process via a pipe
+			 */
+			syncFlag = O_SYNC;
+		}
+#endif
+		if (flags != GFILE_OPEN_FOR_READ)
+		{
+			openFlags = O_WRONLY | O_CREAT | O_BINARY | O_APPEND | syncFlag;
+			openMode = S_IRUSR | S_IWUSR;
+		}
+		else
+		{
+			openFlags = O_RDONLY | O_BINARY;
+			openMode = 0;
+		}
+
 		do
 		{
-			int syncFlag = 0;
-#ifndef WIN32
-			/*
-			 * MPP-13817 (support opening files without O_SYNC)
-			 */
-			if (flags & GFILE_OPEN_FOR_WRITE_SYNC)
-			{
-				/*
-				 * caller explicitly requested O_SYNC
-				 */
-				syncFlag = O_SYNC;
-			}
-			else if ((stat(fpath, &sta) == 0) && S_ISFIFO(sta.st_mode))
-			{
-				/*
-				 * use O_SYNC since we're writing to another process via a pipe
-				 */
-				syncFlag = O_SYNC;
-			}
+#ifdef FRONTEND
+			fd->fd.filefd = open(fpath, openFlags, openMode);
+#else
+			fd->fd.filefd = OpenTransientFile((char *) fpath, openFlags, openMode);
 #endif
-			if (flags != GFILE_OPEN_FOR_READ)
-				fd->fd.filefd = open(fpath, O_WRONLY | O_CREAT | O_BINARY | O_APPEND | syncFlag, S_IRUSR | S_IWUSR);
-			else
-				fd->fd.filefd = open(fpath, O_RDONLY | O_BINARY);
 		}
 		while (fd->fd.filefd < 0 && errno == EINTR);
 	}
@@ -980,7 +1002,11 @@ gfile_close(gfile_t*fd)
 			do
 			{
 				//fsync(fd->fd.filefd);
+#ifdef FRONTEND
 				ret = close(fd->fd.filefd);
+#else
+				ret = CloseTransientFile(fd->fd.filefd);
+#endif
 			}
 			while (ret < 0 && errno == EINTR);
 

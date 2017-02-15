@@ -268,7 +268,7 @@ analyze p3_sales;
 select relname, reltuples, relpages from pg_class where relname like 'p3_sales%' order by relname;
 select * from pg_stats where tablename like 'p3_sales%' order by tablename, attname;
 
--- Case 12: Analyzing root table using ROOTPARTITION keyword with GUC optimizer_analyze_root_partition and optimizer_analyze_midlevel_partition set to ON should update the stats for root and midlevel partitions only.
+-- Case 12: Analyzing root table using ROOTPARTITION keyword with GUC optimizer_analyze_root_partition and optimizer_analyze_midlevel_partition set to ON should only update the stats for root partition.
 set optimizer_analyze_root_partition=on;
 set optimizer_analyze_midlevel_partition=on;
 DROP TABLE if exists p3_sales;
@@ -340,7 +340,7 @@ analyze p3_sales;
 select relname, reltuples, relpages from pg_class where relname like 'p3_sales%' order by relname;
 select * from pg_stats where tablename like 'p3_sales%' order by tablename, attname;
 
--- Case 15: Analyzing root table using ROOTPARTITION keyword with GUC optimizer_analyze_root_partition set to OFF and optimizer_analyze_midlevel_partition set to On should update the stats for root, midlevel and leaf partition only.
+-- Case 15: Analyzing root table using ROOTPARTITION keyword with GUC optimizer_analyze_root_partition set to OFF and optimizer_analyze_midlevel_partition set to ON should only update the stats for root only.
 set optimizer_analyze_root_partition=off;
 set optimizer_analyze_midlevel_partition=on;
 DROP TABLE if exists p3_sales;

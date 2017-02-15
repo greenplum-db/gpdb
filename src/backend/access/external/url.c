@@ -19,25 +19,6 @@
 /* GUC */
 int readable_external_table_timeout = 0;
 
-/**
- * alloc_url_file()
- *
- * alloc URL_FILE struct and assign url field
- */
-URL_FILE *
-alloc_url_file(const char *url)
-{
-	int sz = sizeof(URL_FILE) + strlen(url) + 1;
-	URL_FILE *file = (URL_FILE *) calloc(sz, 1);
-	if (file == NULL)
-	{
-		elog(ERROR, "out of memory");
-	}
-	file->url = ((char *) file) + sizeof(URL_FILE);
-	strcpy(file->url, url);
-	return file;
-}
-
 /*
  * url_fopen
  *
@@ -45,32 +26,23 @@ alloc_url_file(const char *url)
  * standard files, or if the url happens to be a command to execute it uses
  * popen to execute it.
  *
- * Note that we need to clean up (with url_fclose) upon an error in this function.
- * This is the only function that should use url_fclose() directly. Run time errors
- * (e.g in url_fread) will invoke a cleanup via the ABORT handler (AtAbort_ExtTable),
- * which will internally call url_fclose().
+ * On error, ereport()s
  */
 URL_FILE *
-url_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int *response_code, const char **response_string)
+url_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 {
 	/*
 	 * if 'url' starts with "execute:" then it's a command to execute and
 	 * not a url (the command specified in CREATE EXTERNAL TABLE .. EXECUTE)
 	 */
 	if (pg_strncasecmp(url, EXEC_URL_PREFIX, strlen(EXEC_URL_PREFIX)) == 0)
-		return url_execute_fopen(url, forwrite, ev, pstate, response_code, response_string);
+		return url_execute_fopen(url, forwrite, ev, pstate);
 	else if (IS_FILE_URI(url))
-	{
-		return url_file_fopen(url, forwrite, ev, pstate, response_code, response_string);
-	}
+		return url_file_fopen(url, forwrite, ev, pstate);
 	else if (IS_HTTP_URI(url) || IS_GPFDIST_URI(url) || IS_GPFDISTS_URI(url))
-	{
-		return url_curl_fopen(url, forwrite, ev, pstate, response_code, response_string);
-	}
+		return url_curl_fopen(url, forwrite, ev, pstate);
 	else
-	{
-		return url_custom_fopen(url, forwrite, ev, pstate, response_code, response_string);
-	}
+		return url_custom_fopen(url, forwrite, ev, pstate);
 }
 
 /*
@@ -112,11 +84,7 @@ url_fclose(URL_FILE *file, bool failOnError, const char *relname)
 			break;
 			
 		default: /* unknown or unsupported type - oh dear */
-			free(file);
-			ereport(ERROR,
-					(errcode(ERRCODE_INTERNAL_ERROR),
-					 errmsg_internal("external table type not implemented: %d",
-									 file->type)));
+			elog(ERROR, "unrecognized external table type: %d", file->type);
 			break;
     }
 }
@@ -139,8 +107,7 @@ url_feof(URL_FILE *file, int bytesread)
 			return url_custom_feof(file, bytesread);
 
 		default: /* unknown or supported type - oh dear */
-			errno = EBADF;
-			return true;
+			elog(ERROR, "unrecognized external table type: %d", file->type);
     }
 }
 
@@ -163,8 +130,7 @@ url_ferror(URL_FILE *file, int bytesread, char *ebuf, int ebuflen)
 			return url_custom_ferror(file, bytesread, ebuf, ebuflen);
 
 		default: /* unknown or supported type - oh dear */
-			errno = EBADF;
-			return true;
+			elog(ERROR, "unrecognized external table type: %d", file->type);
 	}
 }
 
@@ -186,8 +152,7 @@ url_fread(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 			return url_custom_fread(ptr, size, file, pstate);
 				
 		default: /* unknown or supported type */
-			errno = EBADF;
-			return 0;
+			elog(ERROR, "unrecognized external table type: %d", file->type);
     }
 }
 
@@ -210,8 +175,7 @@ url_fwrite(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 			return url_custom_fwrite(ptr, size, file, pstate);
 			
 		default: /* unknown or unsupported type */
-			errno = EBADF;
-			return 0;
+			elog(ERROR, "unrecognized external table type: %d", file->type);
     }
 }
 
@@ -237,6 +201,6 @@ url_fflush(URL_FILE *file, CopyState pstate)
 			break;
 
 		default: /* unknown or unsupported type */
-			break;
+			elog(ERROR, "unrecognized external table type: %d", file->type);
     }
 }

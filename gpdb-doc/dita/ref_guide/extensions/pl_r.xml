@@ -100,8 +100,10 @@
         <title>Enabling PL/R Language Support</title>
         <body>
           <p>For each database that requires its use, register the PL/R language with the SQL
-            command <codeph>CREATE LANGUAGE</codeph> or the utility <codeph>createlang</codeph>. For
-            example, this command registers the language for the database <i>testdb</i>:</p>
+            command <codeph>CREATE LANGUAGE</codeph> or the utility <codeph>createlang</codeph>.
+            Because PL/R is an untrusted language, only superusers can register PL/R with a database. For example, running
+            this command as the <codeph>gpadmin</codeph> system user registers the language with the
+            database named <i>testdb</i>:</p>
           <codeblock>$ createlang plr -d testdb</codeblock>
           <p>PL/R is registered as an untrusted language.</p>
         </body>
@@ -124,10 +126,11 @@
       <topic id="topic7" xml:lang="en">
         <title id="py216910">Remove PL/R Support for a Database</title>
         <body>
-          <p>For a database that no long requires the PL/R language, remove support for PL/R with
+          <p>For a database that no longer requires the PL/R language, remove support for PL/R with
             the SQL command <codeph>DROP LANGUAGE</codeph> or the Greenplum Database
-              <codeph>droplang</codeph> utility. For example, running this command run as the
-            gpadmin user removes support for PL/R from the database <i>testdb</i>:</p>
+              <codeph>droplang</codeph> utility. Because PL/R is an untrusted language, only superusers can remove support for the PL/R
+            language from a database.  For example, running this command as the gpadmin user removes
+            support for PL/R from the database named <i>testdb</i>:</p>
           <codeblock>$ droplang plr -d testdb</codeblock>
         </body>
       </topic>

@@ -6,6 +6,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
+ *
  * IDENTIFICATION
  *	  $PostgreSQL: pgsql/src/backend/executor/spi.c,v 1.188.2.4 2009/01/07 20:39:05 tgl Exp $
  *
@@ -14,8 +15,6 @@
 #include "postgres.h"
 
 #include "access/printtup.h"
-#include "access/sysattr.h"
-#include "access/xact.h"
 #include "catalog/heap.h"
 #include "commands/trigger.h"
 #include "executor/spi_priv.h"
@@ -24,27 +23,13 @@
 #include "utils/typcache.h"
 #include "utils/resscheduler.h"
 
-#include "gp-libpq-fe.h"
-#include "libpq/libpq-be.h"
-#include "gp-libpq-int.h"
-#include "nodes/makefuncs.h"
-#include "nodes/parsenodes.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbsrlz.h"
-#include "cdb/cdbtm.h"
-#include "cdb/cdbdtxcontextinfo.h"
-#include "cdb/cdbdisp_query.h"
 #include "miscadmin.h"
-#include "commands/dbcommands.h"	/* get_database_name() */
-#include "postmaster/postmaster.h"		/* PostPortNumber */
-#include "postmaster/backoff.h"
 #include "postmaster/autostats.h" /* auto_stats() */
-#include "nodes/print.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_namespace.h"
 #include "executor/functions.h"
 #include "cdb/memquota.h"
-#include "executor/nodeFunctionscan.h"
 
 extern char *savedSeqServerHost;
 extern int savedSeqServerPort;
@@ -104,6 +89,7 @@ static int	_SPI_end_call(bool procmem);
 static MemoryContext _SPI_execmem(void);
 static MemoryContext _SPI_procmem(void);
 static bool _SPI_checktuples(void);
+
 
 /* =================== interface functions =================== */
 
@@ -1643,7 +1629,8 @@ spi_printtup(TupleTableSlot *slot, DestReceiver *self)
 	 * Suggested fix: In SPITupleTable, change TupleDesc tupdesc to a slot, and
 	 * access everything through slot_XXX intreface.
 	 */
-	tuptable->vals[tuptable->alloced - tuptable->free] = ExecCopySlotHeapTuple(slot);
+	tuptable->vals[tuptable->alloced - tuptable->free] =
+		ExecCopySlotHeapTuple(slot);
 	(tuptable->free)--;
 
 	MemoryContextSwitchTo(oldcxt);
@@ -1776,7 +1763,6 @@ _SPI_execute_plan(_SPI_plan * plan, ParamListInfo paramLI,
 
 	/* Be sure to restore ActiveSnapshot on error exit */
 	saveActiveSnapshot = ActiveSnapshot;
-
 	PG_TRY();
 	{
 		ListCell   *lc1;
@@ -1811,6 +1797,7 @@ _SPI_execute_plan(_SPI_plan * plan, ParamListInfo paramLI,
 				cplan = NULL;
 				stmt_list = plansource->plan->stmt_list;
 			}
+
 			foreach(lc2, stmt_list)
 			{
 				Node	   *stmt = (Node *) lfirst(lc2);

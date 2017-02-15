@@ -79,7 +79,6 @@ static int	external_getdata(URL_FILE *extfile, CopyState pstate, int maxread);
 static void external_senddata(URL_FILE *extfile, CopyState pstate);
 static void external_scan_error_callback(void *arg);
 static void readHeaderLine(CopyState pstate);
-static void close_external_source(URL_FILE *dataSource, bool failOnError, const char *relname);
 static void parseFormatString(CopyState pstate, char *fmtstr, bool iscustom);
 static void justifyDatabuf(StringInfo buf);
 
@@ -106,13 +105,6 @@ elog(DEBUG2, "external_getnext returning tuple")
 #define FILEDEBUG_2
 #define FILEDEBUG_3
 #endif   /* !defined(FILEDEBUGALL) */
-
-/*
- * A global reference to our data source so it could be freed
- * from the outside during an error/abort (in AbortTransaction).
- */
-static URL_FILE *g_dataSource = NULL;
-static MemoryContext g_dataSourceCtx = NULL;
 
 
 /* ----------------
@@ -400,23 +392,21 @@ external_endscan(FileScanDesc scan)
 		scan->fs_pstate = NULL;
 	}
 
-	PG_TRY();
+	/*
+	 * Close the external file
+	 */
+	if (!scan->fs_noop && scan->fs_file)
 	{
+		URL_FILE *f = scan->fs_file;
+
 		/*
-		 * Close the external file
+		 * Mark the handle as NULL before closing it, so that if something
+		 * goes wrong while closing, and we get called again during abort
+		 * processing, we will not try to close the source twice.
 		 */
-		if (!scan->fs_noop && scan->fs_file)
-		{
-			close_external_source(scan->fs_file, true, (const char *) relname);
-			scan->fs_file = NULL;
-		}
-	}
-	PG_CATCH();
-	{
 		scan->fs_file = NULL;
-		PG_RE_THROW();
+		url_fclose(f, true, relname);
 	}
-	PG_END_TRY();
 
 	pfree(relname);
 }
@@ -434,8 +424,15 @@ external_stopscan(FileScanDesc scan)
 	 */
 	if (!scan->fs_noop && scan->fs_file)
 	{
-		close_external_source(scan->fs_file, false, RelationGetRelationName(scan->fs_rd));
+		URL_FILE *f = scan->fs_file;
+
+		/*
+		 * Mark the handle as NULL before closing it, so that if something
+		 * goes wrong while closing, and we get called again during abort
+		 * processing, we will not try to close the source twice.
+		 */
 		scan->fs_file = NULL;
+		url_fclose(f, false, RelationGetRelationName(scan->fs_rd));
 	}
 }
 
@@ -706,10 +703,16 @@ external_insert_finish(ExternalInsertDesc extInsertDesc)
 	if (extInsertDesc->ext_file)
 	{
 		char	   *relname = pstrdup(RelationGetRelationName(extInsertDesc->ext_rel));
+		URL_FILE   *f = extInsertDesc->ext_file;
 
-		url_fflush(extInsertDesc->ext_file, extInsertDesc->ext_pstate);
-		close_external_source(extInsertDesc->ext_file, true, (const char *) relname);
+		/*
+		 * Mark the handle as NULL before closing it, so that if something
+		 * goes wrong while closing, and we get called again during abort
+		 * processing, we will not try to close the source twice.
+		 */
 		extInsertDesc->ext_file = NULL;
+		url_fflush(f, extInsertDesc->ext_pstate);
+		url_fclose(f, true, relname);
 		pfree(relname);
 	}
 
@@ -1560,8 +1563,6 @@ static void
 open_external_readable_source(FileScanDesc scan)
 {
 	extvar_t	extvar;
-	int			response_code;
-	const char *response_string;
 
 	/* set up extvar */
 	memset(&extvar, 0, sizeof(extvar));
@@ -1578,25 +1579,7 @@ open_external_readable_source(FileScanDesc scan)
 	scan->fs_file = url_fopen(scan->fs_uri,
 							  false /* for read */ ,
 							  &extvar,
-							  scan->fs_pstate,
-							  &response_code,
-							  &response_string);
-	if (!scan->fs_file)
-	{
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not open \"%s\" for reading: %d %s",
-						scan->fs_uri, response_code, response_string)));
-	}
-	else
-	{
-		/*
-		 * Get a global reference to the file pointer, so we can free it from
-		 * AbortTransaction in the case of an error or abort. We don't use it
-		 * for anything else.
-		 */
-		g_dataSource = scan->fs_file;
-	}
+							  scan->fs_pstate);
 }
 
 /*
@@ -1610,8 +1593,6 @@ static void
 open_external_writable_source(ExternalInsertDesc extInsertDesc)
 {
 	extvar_t	extvar;
-	int			response_code;
-	const char *response_string;
 
 	/* set up extvar */
 	memset(&extvar, 0, sizeof(extvar));
@@ -1628,41 +1609,7 @@ open_external_writable_source(ExternalInsertDesc extInsertDesc)
 	extInsertDesc->ext_file = url_fopen(extInsertDesc->ext_uri,
 										true /* forwrite */ ,
 										&extvar,
-										extInsertDesc->ext_pstate,
-										&response_code,
-										&response_string);
-	if (!extInsertDesc->ext_file)
-	{
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not open \"%s\" for writing: %d %s",
-				   extInsertDesc->ext_uri, response_code, response_string)));
-	}
-	else
-	{
-		/*
-		 * Get a global reference to the file pointer, so we can free it from
-		 * AbortTransaction in the case of an error or abort. We don't use it
-		 * for anything else.
-		 */
-		g_dataSource = extInsertDesc->ext_file;
-	}
-}
-
-/*
- * close the external source (for either RET or WET).
- *
- * If failOnError is true, an error closing the external file raises an ERROR.
- * If failOnError is false, an error closing the external file is written to the
- * server log.
- */
-static void
-close_external_source(URL_FILE *dataSource, bool failOnError, const char *relname)
-{
-	g_dataSource = NULL;
-
-	if (dataSource)
-		url_fclose(dataSource, failOnError, relname);
+										extInsertDesc->ext_pstate);
 }
 
 /*
@@ -1808,37 +1755,6 @@ readHeaderLine(CopyState pstate)
 		CopyReadLineText(pstate, pstate->bytesread);
 }
 
-/*
- * Free external resources on end of transaction.
- */
-void
-AtEOXact_ExtTables(bool isCommit)
-{
-	if (g_dataSource)
-	{
-		if (isCommit)
-		{
-			/* There shouldn't be any external tables still open at commit */
-			elog(WARNING, "external table reference leak");
-		}
-		close_external_source(g_dataSource, false, NULL);
-		g_dataSource = NULL;
-	}
-}
-
-/*
- * Reset g_dataSourceCtx variable on EOX.
- */
-void
-AtEOXact_ResetDataSourceCtx(void)
-{
-	/*
-	 * g_dataSourceCtx is allocated in TopTransactionContext, so it's going
-	 * away.
-	 */
-	g_dataSourceCtx = NULL;
-}
-
 void
 gfile_printf_then_putc_newline(const char *format,...)
 {
@@ -1867,16 +1783,7 @@ gfile_printf_then_putc_newline(const char *format,...)
 void *
 gfile_malloc(size_t size)
 {
-	if (g_dataSourceCtx == NULL)
-	{
-		g_dataSourceCtx = AllocSetContextCreate(TopTransactionContext,
-												"DataSourceContext",
-												ALLOCSET_SMALL_MINSIZE,
-												ALLOCSET_SMALL_INITSIZE,
-												ALLOCSET_SMALL_MAXSIZE);
-	}
-
-	return MemoryContextAlloc(g_dataSourceCtx, size);
+	return palloc(size);
 }
 
 void

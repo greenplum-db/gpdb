@@ -2381,7 +2381,6 @@ typedef struct WindowState
 	TupleTableSlot *priorslot;	/* place for prior tuple */
 	TupleTableSlot *curslot;		/* current tuple */
 	TupleTableSlot *spare;		/* current tuple */
-	TupleTableSlot *saveslot;	/* convenient place holder */
 
 	/* meta data about the current slot */
 	bool		cur_slot_is_new;	/* is this a slot from a buffer or outer plan */

@@ -59,9 +59,9 @@
       <body>
         <p>For each database that requires its use, register the PL/Python language with the SQL
           command <codeph>CREATE LANGUAGE</codeph> or the Greenplum Database utility
-            <codeph>createlang</codeph>. For example, running this command as the
-            <codeph>gpadmin</codeph> system user registers PL/Python for the database
-            <codeph>testdb</codeph>:</p>
+            <codeph>createlang</codeph>. Because PL/Python is an untrusted language, only superusers can register PL/Python with a
+          database. For example, running this command as the <codeph>gpadmin</codeph> system user
+          registers PL/Python with the database named <codeph>testdb</codeph>:</p>
         <codeblock>$ createlang plpythonu -d testdb</codeblock>
         <p>PL/Python is registered as an untrusted language.</p>
       </body>
@@ -69,11 +69,12 @@
     <topic id="topic6" xml:lang="en">
       <title>Removing PL/Python Support</title>
       <body>
-        <p>For a database that no long requires the PL/Python language, remove support for PL/Python
-          with the SQL command <codeph>DROP LANGUAGE</codeph> or the Greenplum Database
-            <codeph>droplang</codeph> utility. For example, running this command run as the
+        <p>For a database that no longer requires the PL/Python language, remove support for
+          PL/Python with the SQL command <codeph>DROP LANGUAGE</codeph> or the Greenplum Database
+            <codeph>droplang</codeph> utility. Because PL/Python is an untrusted language, only superusers can remove support for the PL/Python
+          language from a database. For example, running this command as the
             <codeph>gpadmin</codeph> system user removes support for PL/Python from the database
-            <codeph>testdb</codeph>:</p>
+          named <codeph>testdb</codeph>:</p>
         <codeblock>$ droplang plpythonu -d testdb</codeblock>
         <p>When you remove support for PL/Python, the PL/Python user-defined functions that you
           created in the database will no longer work. </p>

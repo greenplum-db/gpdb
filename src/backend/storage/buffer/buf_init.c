@@ -15,12 +15,10 @@
 #include "postgres.h"
 
 #include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/resource.h>
 
 #include "storage/bufmgr.h"
 #include "storage/buf_internals.h"
+
 
 BufferDesc *BufferDescriptors;
 char	   *BufferBlocks;
@@ -105,7 +103,8 @@ InitBufferPool(void)
 						NBuffers * sizeof(BufferDesc), &foundDescs);
 
 	BufferBlocks = (char *)
-		ShmemInitStruct("Buffer Blocks", bufferBlocksTotalSize, &foundBufs);
+		ShmemInitStruct("Buffer Blocks",
+						bufferBlocksTotalSize, &foundBufs);
 
 	/* GPDB: Init the buffer memory to something to help check for bugs */
 	memset(BufferBlocks,0xFE,bufferBlocksTotalSize);
@@ -118,7 +117,7 @@ InitBufferPool(void)
 	}
 	else
 	{
-		volatile BufferDesc *buf;
+		BufferDesc *buf;
 		int			i;
 
 		buf = BufferDescriptors;
@@ -156,7 +155,7 @@ InitBufferPool(void)
 
 	/* Init other shared buffer-management stuff */
 	StrategyInitialize(!foundDescs);
- }
+}
 
 /*
  * Initialize access to shared buffer pool

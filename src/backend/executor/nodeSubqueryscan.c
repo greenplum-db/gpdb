@@ -82,7 +82,7 @@ SubqueryNext(SubqueryScanState *node)
         CheckSendPlanStateGpmonPkt(&node->ss.ps);
     }
 
-    return slot;
+	return slot;
 }
 
 /* ----------------------------------------------------------------

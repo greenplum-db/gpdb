@@ -347,7 +347,7 @@ static URL_FILE
 	 * don't have access to the scan counter at all. It's ok because we don't need it.
 	 */
 	external_set_env_vars(&extvar, url, false, NULL, NULL, false, 0);
-	myData = url_execute_fopen(cmd.data, forwrite, &extvar, NULL, NULL, NULL);
+	myData = url_execute_fopen(cmd.data, forwrite, &extvar, NULL);
 
 	/* Free the command string */
 	pfree(cmd.data);

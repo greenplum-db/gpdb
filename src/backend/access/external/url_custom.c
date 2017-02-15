@@ -13,18 +13,34 @@
 
 #include "postgres.h"
 
+#include "access/extprotocol.h"
 #include "access/fileam.h"
 #include "catalog/pg_extprotocol.h"
+#include "commands/copy.h"
 #include "utils/memutils.h"
 
-static int32 InvokeExtProtocol(void *ptr, size_t nbytes, URL_FILE *file, CopyState pstate,
+/*
+ * Private state for an external table that's backend by a user-defined
+ * protocol handler function.
+ */
+typedef struct URL_CUSTOM_FILE
+{
+	URL_FILE	common;
+
+	FmgrInfo   *protocol_udf;
+	ExtProtocol extprotocol;
+	MemoryContext protcxt;
+
+} URL_CUSTOM_FILE;
+
+static int32 InvokeExtProtocol(void *ptr, size_t nbytes, URL_CUSTOM_FILE *file, CopyState pstate,
 								bool last_call);
 
 URL_FILE *
-url_custom_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int *response_code, const char **response_string)
+url_custom_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 {
 	/* we're using a custom protocol */
-	URL_FILE   *file;
+	URL_CUSTOM_FILE   *file;
 	MemoryContext oldcontext;
 	ExtPtcFuncType ftype;
 	Oid			procOid;
@@ -32,17 +48,18 @@ url_custom_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int *
 	int			url_len;
 	int			i;
 
-	file = alloc_url_file(url);
-	file->type = CFTYPE_CUSTOM;
+	file = palloc0(sizeof(URL_CUSTOM_FILE));
+	file->common.type = CFTYPE_CUSTOM;
+	file->common.url = pstrdup(url);
 	ftype = (forwrite ? EXTPTC_FUNC_WRITER : EXTPTC_FUNC_READER);
 
 	/* extract protocol name from url string */
-	url_len = strlen(file->url);
+	url_len = strlen(file->common.url);
 	i = 0;
-	while (file->url[i] != ':' && i < url_len - 1)
+	while (file->common.url[i] != ':' && i < url_len - 1)
 		i++;
 
-	prot_name = pstrdup(file->url);
+	prot_name = pstrdup(file->common.url);
 	prot_name[i] = '\0';
 	procOid = LookupExtProtocolFunction(prot_name, ftype, true);
 
@@ -54,43 +71,45 @@ url_custom_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int *
 	 * Note that we always Delete our new context, in normal execution
 	 * and in abort (see url_fclose()).
 	 */
-	file->u.custom.protcxt = AllocSetContextCreate(TopTransactionContext,
-												   "CustomProtocolMemCxt",
-												   ALLOCSET_DEFAULT_MINSIZE,
-												   ALLOCSET_DEFAULT_INITSIZE,
-												   ALLOCSET_DEFAULT_MAXSIZE);
+	file->protcxt = AllocSetContextCreate(TopTransactionContext,
+										  "CustomProtocolMemCxt",
+										  ALLOCSET_DEFAULT_MINSIZE,
+										  ALLOCSET_DEFAULT_INITSIZE,
+										  ALLOCSET_DEFAULT_MAXSIZE);
 
-	oldcontext = MemoryContextSwitchTo(file->u.custom.protcxt);
+	oldcontext = MemoryContextSwitchTo(file->protcxt);
 		
-	file->u.custom.protocol_udf = palloc(sizeof(FmgrInfo));
-	file->u.custom.extprotocol = (ExtProtocolData *) palloc (sizeof(ExtProtocolData));
+	file->protocol_udf = palloc(sizeof(FmgrInfo));
+	file->extprotocol = (ExtProtocolData *) palloc (sizeof(ExtProtocolData));
 
 	/* we found our function. set it in custom file handler */
-	fmgr_info(procOid, file->u.custom.protocol_udf);
+	fmgr_info(procOid, file->protocol_udf);
 
 	MemoryContextSwitchTo(oldcontext);
 
-	file->u.custom.extprotocol->prot_user_ctx = NULL;
-	file->u.custom.extprotocol->prot_last_call = false;
-	file->u.custom.extprotocol->prot_url = NULL;
-	file->u.custom.extprotocol->prot_databuf = NULL;
+	file->extprotocol->prot_user_ctx = NULL;
+	file->extprotocol->prot_last_call = false;
+	file->extprotocol->prot_url = NULL;
+	file->extprotocol->prot_databuf = NULL;
 
 	pfree(prot_name);
 
-	return file;
+	return (URL_FILE *) file;
 }
 
 void
 url_custom_fclose(URL_FILE *file, bool failOnError, const char *relname)
 {
+	URL_CUSTOM_FILE   *cfile = (URL_CUSTOM_FILE *) file;
+
 	/* last call. let the user close custom resources */
-	if (file->u.custom.protocol_udf)
-		(void) InvokeExtProtocol(NULL, 0, file, NULL, true);
+	if (cfile->protocol_udf)
+		(void) InvokeExtProtocol(NULL, 0, cfile, NULL, true);
 
 	/* now clean up everything not cleaned by user */
-	MemoryContextDelete(file->u.custom.protcxt);
+	MemoryContextDelete(cfile->protcxt);
 
-	free(file);
+	pfree(cfile);
 }
 
 bool
@@ -108,31 +127,35 @@ url_custom_ferror(URL_FILE *file, int bytesread, char *ebuf, int ebuflen)
 size_t
 url_custom_fread(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 {
-	return (size_t) InvokeExtProtocol(ptr, size, file, pstate, false);
+	URL_CUSTOM_FILE   *cfile = (URL_CUSTOM_FILE *) file;
+
+	return (size_t) InvokeExtProtocol(ptr, size, cfile, pstate, false);
 }
 
 size_t
 url_custom_fwrite(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 {
-	return (size_t) InvokeExtProtocol(ptr, size, file, pstate, false);
+	URL_CUSTOM_FILE   *cfile = (URL_CUSTOM_FILE *) file;
+
+	return (size_t) InvokeExtProtocol(ptr, size, cfile, pstate, false);
 }
 
 
 static int32
-InvokeExtProtocol(void *ptr, size_t nbytes, URL_FILE *file, CopyState pstate,
+InvokeExtProtocol(void *ptr, size_t nbytes, URL_CUSTOM_FILE *file, CopyState pstate,
 				  bool last_call)
 {
 	FunctionCallInfoData	fcinfo;
-	ExtProtocolData*		extprotocol = file->u.custom.extprotocol;
-	FmgrInfo*				extprotocol_udf = file->u.custom.protocol_udf;
+	ExtProtocolData *extprotocol = file->extprotocol;
+	FmgrInfo	   *extprotocol_udf = file->protocol_udf;
 	Datum					d;
 	MemoryContext			oldcontext;
-	
+
 	/* must have been created during url_fopen() */
 	Assert(extprotocol);
 	
 	extprotocol->type = T_ExtProtocolData;
-	extprotocol->prot_url = file->url;
+	extprotocol->prot_url = file->common.url;
 	extprotocol->prot_relation = (last_call ? NULL : pstate->rel);
 	extprotocol->prot_databuf  = (last_call ? NULL : (char *)ptr);
 	extprotocol->prot_maxbytes = nbytes;
@@ -145,7 +168,7 @@ InvokeExtProtocol(void *ptr, size_t nbytes, URL_FILE *file, CopyState pstate,
 							 /* ResultSetInfo */ NULL);
 	
 	/* invoke the protocol within a designated memory context */
-	oldcontext = MemoryContextSwitchTo(file->u.custom.protcxt);
+	oldcontext = MemoryContextSwitchTo(file->protcxt);
 	d = FunctionCallInvoke(&fcinfo);
 	MemoryContextSwitchTo(oldcontext);
 

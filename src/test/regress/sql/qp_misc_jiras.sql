@@ -2276,28 +2276,37 @@ alter table qp_misc_jiras.r
     set distributed by (c);
 drop table if exists qp_misc_jiras.r cascade;
 
+-- Triggers are applied AFTER the row has been routed per the distribution
+-- policy. However, a trigger can change the value of the distribution column.
+-- This means, we have an unexpected row in a segment, which can lead to wrong
+-- results. Including gp_segment_id in below queries allows us to ensure that
+-- no redistribution has occurred.
 CREATE TABLE qp_misc_jiras.test_trig(id int, aaa text) DISTRIBUTED BY (id);
+INSERT INTO qp_misc_jiras.test_trig VALUES (1, 'before creating trigger');
+SELECT gp_segment_id, * FROM qp_misc_jiras.test_trig;
 
 CREATE OR REPLACE FUNCTION fn_trig() RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
    NEW.aaa = NEW.aaa || '1';
+   NEW.id = NEW.id + 1;
    RAISE NOTICE '%', NEW.id;
 RETURN NEW;
 END
 $$;
-
-
 
 CREATE TRIGGER test_trig_1
 BEFORE INSERT OR UPDATE ON qp_misc_jiras.test_trig
 FOR EACH ROW
     EXECUTE PROCEDURE fn_trig();
 
+INSERT INTO qp_misc_jiras.test_trig VALUES (0, 'after creating trigger');
+
 INSERT INTO qp_misc_jiras.test_trig VALUES (1, 'aaa');
-SELECT * FROM qp_misc_jiras.test_trig;
+SELECT gp_segment_id, * FROM qp_misc_jiras.test_trig;
 
 UPDATE qp_misc_jiras.test_trig SET id = id;
-SELECT * FROM qp_misc_jiras.test_trig;
+SELECT gp_segment_id, * FROM qp_misc_jiras.test_trig;
+
 DROP TABLE qp_misc_jiras.test_trig;
 DROP FUNCTION fn_trig();
 
