@@ -2396,7 +2396,7 @@ ServerLoop(void)
 
 		/*
 		 * GPDB Change:  Reaper just sets a flag, and we call the real reaper code here.
-		 * I assume this was done because we wanted to excecute some code that wasn't safe in a
+		 * I assume this was done because we wanted to execute some code that wasn't safe in a
 		 * signal handler context (debugging code, most likely).
 		 * But the real reason is lost in antiquity.
 		 */

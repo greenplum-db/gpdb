@@ -761,6 +761,8 @@ FileRepPrimary_StartResyncManager(void)
 		Insist(segmentState == SegmentStateInResyncTransition ||
 			   segmentState == SegmentStateReady);
 
+		FileRepSubProcess_InitHeapAccess();
+
 		if (isLastLocTracked == FALSE)
 		{
 			status = FileRepResyncManager_InResyncTransition();

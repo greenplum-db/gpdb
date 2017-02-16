@@ -73,21 +73,35 @@ FileRepPrimary_StartResyncWorker(void)
 			FileRepSubProcess_SetState(FileRepStateFault);
 		}
 		
-		while (FileRepSubProcess_GetState() != FileRepStateShutdown &&
-			   FileRepSubProcess_GetState() != FileRepStateShutdownBackends &&
-			   ! (FileRepSubProcess_GetState() == FileRepStateReady && 
-			    dataState == DataStateInResync)) {
-			
+		/*
+		 * We are waiting for following conditions to move forward:
+		 *
+		 * 	Database is running
+		 * 	And
+		 * 		if dataState is InResync, we wait for FileRepSubProcess to Ready state
+		 * 		else don't wait
+		 */
+		while (!isDatabaseRunning() ||
+			   !(dataState == DataStateInResync ? FileRepSubProcess_GetState() == FileRepStateReady : true))
+		{
 			FileRepSubProcess_ProcessSignals();
+
+			if (FileRepSubProcess_GetState() == FileRepStateShutdown ||
+				FileRepSubProcess_GetState() == FileRepStateShutdownBackends)
+			{
+				break;
+			}
+
 			pg_usleep(50000L); /* 50 ms */	
 		}
 		
 		if (FileRepSubProcess_GetState() == FileRepStateShutdown ||
 			FileRepSubProcess_GetState() == FileRepStateShutdownBackends) {
-			
 			break;
 		}
 		
+		FileRepSubProcess_InitHeapAccess();
+
 		status = FileRepPrimary_RunResyncWorker();
 		
 		if (status != STATUS_OK) {

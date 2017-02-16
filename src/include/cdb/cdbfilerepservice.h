@@ -39,5 +39,6 @@ extern bool FileRepSubProcess_ProcessSignals(void);
 
 extern bool FileRepSubProcess_IsStateTransitionRequested(void);
 
+extern void FileRepSubProcess_InitHeapAccess(void);
 #endif   /* CDBFILEREPSERVICE_H */
 

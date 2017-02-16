@@ -326,6 +326,12 @@ FileRepPrimary_RunChangeTrackingCompacting(void)
 		pg_usleep(50000L); /* 50 ms */	
 	}		
 
+	/*
+	 * It is safe to initialize relcache and use heap access methods
+	 * now, after crash recovery passes have finished applying xlog.
+	 */
+	FileRepSubProcess_InitHeapAccess();
+
 	ChangeTracking_DoFullCompactingRoundIfNeeded();
 
 	
