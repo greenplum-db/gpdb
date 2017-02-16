@@ -81,8 +81,8 @@
             <entry colname="col2">char</entry>
             <entry colname="col3"/>
             <entry colname="col4"><codeph>b</codeph> for a base type, <codeph>c</codeph> for a
-              composite type, <codeph>d</codeph> for a domain, or <codeph>p</codeph> for a
-              pseudo-type.</entry>
+              composite type, <codeph>d</codeph> for a domain, <codeph>e</codeph> for an enum 
+              type, or <codeph>p</codeph> for a pseudo-type.</entry>
           </row>
           <row>
             <entry colname="col1">

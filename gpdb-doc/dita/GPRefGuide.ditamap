@@ -236,6 +236,7 @@
 			<topicref href="ref_guide/system_catalogs/pg_database.xml"/>
 			<topicref href="ref_guide/system_catalogs/pg_depend.xml"/>
 			<topicref href="ref_guide/system_catalogs/pg_description.xml"/>
+      <topicref href="ref_guide/system_catalogs/pg_enum.xml"/>
 			<topicref href="ref_guide/system_catalogs/pg_exttable.xml"/>
 			<topicref href="ref_guide/system_catalogs/pg_filespace.xml"/>
 			<topicref href="ref_guide/system_catalogs/pg_filespace_entry.xml"/>
