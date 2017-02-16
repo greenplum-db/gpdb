@@ -253,23 +253,6 @@ solarisTest:
 		echo "SOLARIS" ; \
 	fi
 
-#
-#EPYDOC
-#
-
-EPYDOC_VERSION=3.0.1
-EPYDOC_DIR=epydoc-$(EPYDOC_VERSION)
-EPYDOC_PYTHONPATH=$(PYLIB_DIR):$(PYLIB_SRC_EXT)/$(EPYDOC_DIR)/build/lib/
-
-epydoc:
-	@echo "--- epydoc"
-	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(EPYDOC_DIR).tar.gz
-	@cd $(PYLIB_SRC_EXT)/$(EPYDOC_DIR)/ && python setup.py build 1> /dev/null
-
-docs: epydoc
-	@echo "Running epydoc on management scripts..."
-	@PYTHONPATH=$(PYTHONPATH):$(EPYDOC_PYTHONPATH) $(PYLIB_SRC_EXT)/$(EPYDOC_DIR)/build/scripts-2.6/epydoc --config=.epydoc.config
-
 .PHONY: clean
 clean :
 	@rm -rf $(PYLIB_SRC_EXT)/$(LOCKFILE_DIR)
