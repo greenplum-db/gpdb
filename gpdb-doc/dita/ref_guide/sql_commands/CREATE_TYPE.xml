@@ -30,7 +30,7 @@ types. This is essentially the same as the row type of a table, but using
 when all that is wanted is to define a type. A stand-alone composite
 type is useful as the argument or return type of a function.</p></sectiondiv>
 <sectiondiv id="enum"><b>Enumerated Types</b>
-<p>The second form of <codeph>CREATE TYPE</codeph> creates an enumerated (enum) type, as described in 
+<p>The second form of <codeph>CREATE TYPE</codeph> creates an enumerated (<codeph>ENUM</codeph>) type, as described in 
 <xref href="https://www.postgresql.org/docs/8.3/static/datatype-enum.html" format="html" scope="external">Enumerated Types</xref> in the 
 PostgreSQL documentation. Enum types take a list of one or more quoted labels, each of which must be less than 
 <codeph>NAMEDATALEN</codeph> bytes long (64 in a standard build).</p>
