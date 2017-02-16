@@ -2553,7 +2553,7 @@ writeToDDFileFromInput(struct ddboost_options *dd_options)
 	char	   *buf = NULL;
 	ddp_uint64_t rw_size = dd_boost_buf_size;
 	ddp_uint64_t total_bytes = 0;
-	ddp_uint64_t read_bytes = 0;
+	ddp_int64_t read_bytes = 0;
 	ddp_path_t	path1 = {0};
 	char	   *full_path = NULL;
 	char	   *buf_iogroup = NULL;
