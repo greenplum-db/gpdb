@@ -50,7 +50,7 @@
         <p>The following figure illustrates how memory is consumed on a Greenplum Database segment
             host.<fig id="fig_py5_1sl_zp">
             <title>Greenplum Database Segment Host Memory</title>
-            <image href="../graphics/memory.png" id="image_iqn_dsl_zp"/>
+            <image href="graphics/memory.png" id="image_iqn_dsl_zp"/>
           </fig></p>
         <p>Beginning at the bottom of the illustration, the line labeled <i>A</i> represents the
           total host memory. The line directly above line <i>A</i> shows that the total host memory
@@ -195,7 +195,7 @@
         queue. </p>
       <fig id="iz153477">
         <title>Resource Queue Process</title>
-        <image href="../graphics/resource_queues.jpg" placement="break" width="443px" height="173px"
+        <image href="graphics/resource_queues.jpg" placement="break" width="443px" height="173px"
           id="image_u4c_qxw_wq"/>
       </fig>
       <p>Resource queues define classes of queries with similar resource requirements. Administratrors should create resource queues for the various types of workloads in
@@ -290,7 +290,7 @@
           Database system with <codeph>gp_vmem_protect_limit</codeph> set to 8GB:<fig
             id="fig_p3y_mg5_1q">
             <title>Resource Queue Configuration Example</title>
-            <image href="../graphics/resource_queue_examp.png" id="image_wnh_wpc_dq" width="6in"/>
+            <image href="graphics/resource_queue_examp.png" id="image_wnh_wpc_dq" width="6in"/>
           </fig></p>
         <p>This example has three classes of queries with different characteristics and service
           level agreements (SLAs). Three resource queues are configured for them. A portion of the
@@ -426,7 +426,7 @@
           equal priority setting:</p>
         <fig id="iz173993">
           <title>CPU share readjusted according to priority</title>
-          <image href="../graphics/gp_query_priority1.png" placement="break" width="432px"
+          <image href="graphics/gp_query_priority1.png" placement="break" width="432px"
             height="298px" id="image_lgv_lcy_wq"/>
         </fig>
         <note type="note">
@@ -440,7 +440,7 @@
           CPU.</p>
         <fig id="iz160829">
           <title>CPU share readjusted for maximum priority query</title>
-          <image href="../graphics/gp_query_priority2.png" placement="break" width="194px"
+          <image href="graphics/gp_query_priority2.png" placement="break" width="194px"
             height="305px" id="image_lrr_ddy_wq"/>
         </fig>
         <p>For more information about commands to set priorities, see <xref href="#topic16"

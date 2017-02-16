@@ -39,7 +39,7 @@
       <fig id="iw157574">
         <title>Spread Mirroring in Greenplum Database</title>
 
-        <image href="../../graphics/spread-mirroring.png" placement="break"/>
+        <image href="../graphics/spread-mirroring.png" placement="break"/>
       </fig>
 
     </section>
@@ -86,7 +86,7 @@
       <fig id="iw157606">
         <title>Master Mirroring in Greenplum Database</title>
 
-        <image height="165px" href="../../graphics/standby_master.jpg" placement="break"
+        <image height="165px" href="../graphics/standby_master.jpg" placement="break"
           width="271px"/>
       </fig>
     </section>

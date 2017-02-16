@@ -84,7 +84,7 @@
         optimal data transfer rates and is called <i>fast mode</i>. The following figure illustrates
         a setup on a segment host when the destination cluster has at least as many segments as the
         source cluster. </p>
-      <image id="image_ffp_qgg_cp" href="../../graphics/gptransfer-fast.png"/>
+      <image id="image_ffp_qgg_cp" href="../graphics/gptransfer-fast.png"/>
       <p>The configuration of the input end of the named pipes differs when there are fewer segments
         in the destination cluster than in the source cluster. <codeph>gptransfer</codeph> handles
         this alternative setup automatically. The difference in configuration means that
@@ -100,7 +100,7 @@
         table data into a single named pipe. A <codeph>gpfdist</codeph> process on the output of the
         named pipe serves the consolidated data to the destination cluster. The following figure
         illustrates this configuration.</p>
-      <image href="../../graphics/gptransfer-slow.png" id="image_gbx_s3c_dp"/>
+      <image href="../graphics/gptransfer-slow.png" id="image_gbx_s3c_dp"/>
       <p>On the destination side, <codeph>gptransfer</codeph> defines a readable external table with
         the <codeph>gpfdist</codeph> server on the source host as input and selects from the
         readable external table into the destination table. The data is distributed evenly to all

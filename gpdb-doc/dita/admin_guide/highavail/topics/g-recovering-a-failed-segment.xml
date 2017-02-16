@@ -22,7 +22,7 @@
       <xref href="#topic13/ki155628" type="fig" format="dita"/> shows the high-level steps for each
       of the preceding failure scenarios.<fig id="ki155628">
         <title>Segment Failure Troubleshooting Matrix</title>
-        <image href="../../../graphics/recovermatrix.png" placement="break" width="460"
+        <image href="../../graphics/recovermatrix.png" placement="break" width="460"
           height="430px" id="image_cdg_nfp_34"/>
       </fig></p>
   </body>

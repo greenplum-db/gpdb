@@ -24,7 +24,7 @@
             automatically copied to the standby master to keep it current with the primary.</p>
         <fig id="ki155262">
             <title>Master Mirroring in Greenplum Database</title>
-            <image href="../../../graphics/standby_master.jpg" placement="break" width="271px"
+            <image href="../../graphics/standby_master.jpg" placement="break" width="271px"
                 height="165px"/>
         </fig>
         <p>If the primary master fails, the replication process stops, and an administrator can

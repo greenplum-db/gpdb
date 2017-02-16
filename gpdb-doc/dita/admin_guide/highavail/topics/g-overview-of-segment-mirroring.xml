@@ -52,10 +52,10 @@
             active primary segments doubles on the host that backs the failed host. <xref
                 href="#topic3/fig_rrr_nt2_xt" format="dita"/> illustrates a group mirroring
             configuration.  </p>
-        <!--<fig id="ki169754"><image href="../../../graphics/mirrorsegs.png" placement="break" width="485px" height="135px"/></fig>-->
+        <!--<fig id="ki169754"><image href="../../graphics/mirrorsegs.png" placement="break" width="485px" height="135px"/></fig>-->
         <fig id="fig_rrr_nt2_xt">
             <title>Group Segment Mirroring in Greenplum Database</title>
-            <image href="../../../graphics/group-mirroring.png" id="image_crm_pt2_xt"/>
+            <image href="../../graphics/group-mirroring.png" id="image_crm_pt2_xt"/>
         </fig>
         <p><i>Spread mirroring</i> spreads each host's mirrors over multiple hosts so that if any
             single host fails, no other host will have more than one mirror promoted to the active
@@ -64,7 +64,7 @@
             of mirrors in a spread segment mirroring configuration.</p>
         <fig id="fig_ew1_qgg_xt">
             <title>Spread Segment Mirroring in Greenplum Database</title>
-            <image href="../../../graphics/spread-mirroring.png" id="image_zjm_wgg_xt"/>
+            <image href="../../graphics/spread-mirroring.png" id="image_zjm_wgg_xt"/>
         </fig>
         <p>The Greenplum Database utilities that create mirror segments support group and spread
             segment configurations. Custom mirroring configurations can be described in a

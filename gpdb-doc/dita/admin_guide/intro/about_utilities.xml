@@ -29,6 +29,6 @@
       query and system metrics. Greenplum Command Center has a graphical web-based user interface
       for viewing system metrics, which administrators can install separately from Greenplum
       Database. For more information, see the Greenplum Command Center documentation.</p>
-    <image href="../../graphics/cc_arch_gpdb.png" id="image_mt4_ltv_fp"/>
+    <image href="../graphics/cc_arch_gpdb.png" id="image_mt4_ltv_fp"/>
   </body>
 </topic>

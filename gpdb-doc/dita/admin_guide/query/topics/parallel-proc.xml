@@ -24,7 +24,7 @@
         the data stored in the other segment databases.</p>
       <fig id="iy139990">
         <title>Dispatching the Parallel Query Plan</title>
-        <image href="../../../graphics/parallel_plan.jpg" placement="break" width="450px"
+        <image href="../../graphics/parallel_plan.jpg" placement="break" width="450px"
           height="297px"/>
       </fig>
       <p>Certain queries may access only data on a single segment, such as single-row
@@ -35,7 +35,7 @@
         relevant row(s).</p>
       <fig id="iy145883">
         <title>Dispatching a Targeted Query Plan</title>
-        <image href="../../../graphics/targeted_dispatch.jpg" placement="break" width="454px"
+        <image href="../../graphics/targeted_dispatch.jpg" placement="break" width="454px"
           height="281px"/>
       </fig>
     </body>
@@ -80,7 +80,7 @@ WHERE dateCol = '04-30-2008';
         not to the master. </p>
       <fig id="iy140224">
         <title>Query Slice Plan</title>
-        <image href="../../../graphics/slice_plan.jpg" placement="break" width="462px"
+        <image href="../../graphics/slice_plan.jpg" placement="break" width="462px"
           height="382px"/>
       </fig>
     </body>
@@ -107,7 +107,7 @@ WHERE dateCol = '04-30-2008';
           href="#topic3/iy140224" type="fig" format="dita"/>.</p>
       <fig id="iy141495">
         <title>Query Worker Processes</title>
-        <image href="../../../graphics/gangs.jpg" placement="break" width="318px" height="288px"/>
+        <image href="../../graphics/gangs.jpg" placement="break" width="318px" height="288px"/>
       </fig>
     </body>
   </topic>

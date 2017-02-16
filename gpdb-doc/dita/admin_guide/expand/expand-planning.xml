@@ -37,7 +37,7 @@
               </row>
               <row>
                 <entry>
-                  <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
+                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_gr2_s1m_2r"/>
                 </entry>
                 <entry>Devise and execute a plan for ordering, building, and networking new hardware
@@ -45,7 +45,7 @@
               </row>
               <row>
                 <entry>
-                  <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
+                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_ryl_s1m_2r"/>
                 </entry>
                 <entry>Devise a database expansion plan. Map the number of segments per host,
@@ -54,28 +54,28 @@
               </row>
               <row>
                 <entry>
-                  <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
+                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_e2s_s1m_2r"/>
                 </entry>
                 <entry>Perform a complete schema dump.</entry>
               </row>
               <row>
                 <entry>
-                  <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
+                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_yq5_s1m_2r"/>
                 </entry>
                 <entry>Install Greenplum Database binaries on new hosts. </entry>
               </row>
               <row>
                 <entry>
-                  <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
+                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_vxw_s1m_2r"/>
                 </entry>
                 <entry>Copy SSH keys to the new hosts (<codeph>gpssh-exkeys</codeph>).</entry>
               </row>
               <row>
                 <entry>
-                  <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
+                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_zrz_s1m_2r"/>
                 </entry>
                 <entry>Validate the operating system environment of the new hardware or cloud
@@ -83,7 +83,7 @@
               </row>
               <row>
                 <entry>
-                  <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
+                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_qkb_t1m_2r"/>
                 </entry>
                 <entry>Validate disk I/O and memory bandwidth of the new hardware or cloud resources
@@ -91,7 +91,7 @@
               </row>
               <row>
                 <entry>
-                  <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
+                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_ojd_t1m_2r"/>
                 </entry>
                 <entry>Validate that the master data directory has no extremely large files in the
@@ -100,7 +100,7 @@
               </row>
               <row>
                 <entry>
-                  <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
+                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_wch_t1m_2r"/>
                 </entry>
                 <entry>Validate that there are no catalog issues
@@ -108,7 +108,7 @@
               </row>
               <row>
                 <entry>
-                  <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
+                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_ct3_t1m_2r"/>
                 </entry>
                 <entry>Prepare an expansion input file (<codeph>gpexpand</codeph>). </entry>
@@ -121,7 +121,7 @@
               </row>
               <row>
                 <entry>
-                  <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
+                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_hgm_t1m_2r"/>
                 </entry>
                 <entry>Validate the operating system environment of the combined existing and new
@@ -129,7 +129,7 @@
               </row>
               <row>
                 <entry>
-                  <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
+                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_q3q_t1m_2r"/>
                 </entry>
                 <entry>Validate disk I/O and memory bandwidth of the combined existing and new
@@ -137,7 +137,7 @@
               </row>
               <row>
                 <entry>
-                  <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
+                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_rcs_t1m_2r"/>
                 </entry>
                 <entry>Initialize new segments into the array and create an expansion schema
@@ -152,7 +152,7 @@
               </row>
               <row>
                 <entry>
-                  <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
+                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_jzy_t1m_2r"/>
                 </entry>
                 <entry>Before you start table redistribution, stop any automated snapshot processes
@@ -160,7 +160,7 @@
               </row>
               <row>
                 <entry>
-                  <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
+                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_aq1_51m_2r"/>
                 </entry>
                 <entry>Redistribute tables through the expanded system
@@ -168,14 +168,14 @@
               </row>
               <row>
                 <entry>
-                  <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
+                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_xjc_51m_2r"/>
                 </entry>
                 <entry>Remove expansion schema (<codeph>gpexpand -c</codeph>).</entry>
               </row>
               <row>
                 <entry>
-                  <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
+                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_sk2_51m_2r"/>
                 </entry>
                 <entry>Run <codeph>analyze</codeph> to update distribution statistics.<p>During the

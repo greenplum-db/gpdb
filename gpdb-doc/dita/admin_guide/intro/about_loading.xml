@@ -20,7 +20,7 @@
     <fig id="iw157638">
       <title>External Tables Using Greenplum Parallel File Server (gpfdist)</title>
 
-      <image height="275px" href="../../graphics/ext_tables.jpg" placement="break" width="454px"/>
+      <image height="275px" href="../graphics/ext_tables.jpg" placement="break" width="454px"/>
     </fig>
     <p>Another Greenplum utility, <codeph>gpload</codeph>, runs a load task that you specify in a
       YAML-formatted control file. You describe the source data locations, format, transformations

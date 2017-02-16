@@ -38,7 +38,7 @@
       which store and process the data.</p>
     <fig id="iw157440">
       <title>High-Level Greenplum Database Architecture</title>
-      <image height="316px" href="../../graphics/highlevel_arch.jpg" placement="break" width="397px"
+      <image height="316px" href="../graphics/highlevel_arch.jpg" placement="break" width="397px"
       />
     </fig>
     <p>The following topics describe the components that make up a Greenplum Database system and how
