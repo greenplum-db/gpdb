@@ -362,7 +362,6 @@ MemoryContextNoteAlloc(MemoryContext context, Size nbytes)
     Size            held;
 
     AssertArg(MemoryContextIsValid(context));
-    AssertArg(AllocSizeIsValid(nbytes));
 
     for (;;)
     {
@@ -394,7 +393,6 @@ MemoryContextNoteFree(MemoryContext context, Size nbytes)
     Size    held;
 
 	AssertArg(MemoryContextIsValid(context));
-	AssertArg(AllocSizeIsValid(nbytes));
 
     while (context)
     {
