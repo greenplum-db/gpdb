@@ -1503,8 +1503,6 @@ get_rel_oids(List *relids, VacuumStmt *vacstmt, bool isVacuum)
 	}
 	else
 	{
-		ereport(NOTICE, (errmsg("Hello")));
-
 		/* Process all plain relations listed in pg_class */
 		Relation	pgclass;
 		HeapScanDesc scan;
