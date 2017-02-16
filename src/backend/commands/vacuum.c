@@ -1503,6 +1503,8 @@ get_rel_oids(List *relids, VacuumStmt *vacstmt, bool isVacuum)
 	}
 	else
 	{
+		ereport(NOTICE, (errmsg("Hello")));
+
 		/* Process all plain relations listed in pg_class */
 		Relation	pgclass;
 		HeapScanDesc scan;
@@ -1553,6 +1555,14 @@ get_rel_oids(List *relids, VacuumStmt *vacstmt, bool isVacuum)
 			{
 				continue;
 			}
+
+			// skip mid-level partition tables if we have disabled collecting statistics for them
+			PartStatus ps = rel_part_status(candidateOid);
+			if (!optimizer_analyze_midlevel_partition && ps == PART_STATUS_INTERIOR)
+			{
+				continue;
+			}
+
 			oldcontext = MemoryContextSwitchTo(vac_context);
 			oid_list = lappend_oid(oid_list, candidateOid);
 			MemoryContextSwitchTo(oldcontext);
