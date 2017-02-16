@@ -1,0 +1,42 @@
+-- MPP-24237
+-- Security definer function causes temp table not to be dropped due to pg_toast access privileges
+CREATE or replace FUNCTION sec_definer_create_test() RETURNS void AS $$
+BEGIN
+  RAISE NOTICE 'Creating table';
+  execute 'create temporary table wmt_toast_issue_temp (name varchar, address varchar) distributed randomly';
+  RAISE NOTICE 'Table created';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+create role sec_definer_role with login ;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+grant execute on function sec_definer_create_test() to sec_definer_role;
+set role sec_definer_role;
+select sec_definer_create_test() ;
+NOTICE:  Creating table
+NOTICE:  Table created
+ sec_definer_create_test 
+-------------------------
+ 
+(1 row)
+
+-- There should be one temp table, the one we created (we assume that there are no
+-- other backends using temp tables running at the same time).
+select count(*) from pg_tables where schemaname like 'pg_temp%';
+ count 
+-------
+     1
+(1 row)
+
+-- Disconnect and reconnect.
+\c regression
+-- Check that the temporary table was dropped at disconnect.
+select count(*) from pg_tables where schemaname like 'pg_temp%';
+ count 
+-------
+     0
+(1 row)
+
+-- Clean up
+reset role;
+drop function public.sec_definer_create_test();
+drop role sec_definer_role;
