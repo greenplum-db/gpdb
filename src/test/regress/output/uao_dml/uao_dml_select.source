@@ -1,0 +1,1445 @@
+create schema uao_dml_select_@orientation@;
+set search_path=uao_dml_select_@orientation@;
+SET gp_default_storage_options='orientation=@orientation@';
+-- @Description select with aggregate function
+-- 
+DROP TABLE IF EXISTS city_uao cascade;
+DROP TABLE IF EXISTS country_uao cascade;
+DROP TABLE IF EXISTS countrylanguage_uao cascade;
+BEGIN;
+CREATE TABLE city_uao (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) with (appendonly=true) distributed by(id);
+CREATE TABLE country_uao (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true)  distributed by (code);
+CREATE TABLE countrylanguage_uao (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)  with (appendonly=true) distributed by (countrycode,language);
+COPY city_uao (id, name, countrycode, district, population) FROM '@abs_srcdir@/data/city.data';
+COPY country_uao (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM '@abs_srcdir@/data/country.data' WITH NULL AS '';
+COPY countrylanguage_uao (countrycode, "language", isofficial, percentage) FROM '@abs_srcdir@/data/countrylanguage.data';
+COMMIT;
+ANALYZE city_uao;
+ANALYZE country_uao;
+ANALYZE countrylanguage_uao;
+--query with aggregate functions
+select
+(select max(city_uao.population) from city_uao ) as WORLD_MAX_POP,
+(select avg(city_uao.population) from city_uao) AS WORLD_AVG_POP,
+ city_uao.name as populationwise_top_five_cities,city_uao.population
+ from
+ city_uao order by city_uao.population desc LIMIT 5;
+ world_max_pop |  world_avg_pop   | populationwise_top_five_cities | population 
+---------------+------------------+--------------------------------+------------
+      10500000 | 350468.223584212 | Mumbai (Bombay)                |   10500000
+      10500000 | 350468.223584212 | Seoul                          |    9981619
+      10500000 | 350468.223584212 | Sao Paulo                      |    9968485
+      10500000 | 350468.223584212 | Shanghai                       |    9696300
+      10500000 | 350468.223584212 | Jakarta                        |    9604900
+(5 rows)
+
+select
+(select min(city_uao.population) from city_uao ) as WORLD_MIN_POP,
+(select SUM(city_uao.population) from city_uao) AS WORLD_SUM_POP,
+ city_uao.name as populationwise_top_five_cities,city_uao.population
+ from
+ city_uao order by city_uao.population desc LIMIT 5;
+ world_min_pop | world_sum_pop | populationwise_top_five_cities | population 
+---------------+---------------+--------------------------------+------------
+            42 |    1429559884 | Mumbai (Bombay)                |   10500000
+            42 |    1429559884 | Seoul                          |    9981619
+            42 |    1429559884 | Sao Paulo                      |    9968485
+            42 |    1429559884 | Shanghai                       |    9696300
+            42 |    1429559884 | Jakarta                        |    9604900
+(5 rows)
+
+-- @Description select with between
+-- 
+-- Reuse the country_uao table from previous test.
+-- Using  the BETWEEN clause
+--query
+select *
+from
+country_uao
+where indepyear between 1800 and 1900
+and lifeexpectancy between 70 and 80
+and gnp between 80000 and 100000;
+ code |   name    |   continent   |    region     | surfacearea | indepyear | population | lifeexpectancy |   gnp    |  gnpold  | localname |  governmentform  |    headofstate    | capital | code2 
+------+-----------+---------------+---------------+-------------+-----------+------------+----------------+----------+----------+-----------+------------------+-------------------+---------+-------
+ VEN  | Venezuela | South America | South America |      912050 |      1811 |   24170000 |           73.1 | 95023.00 | 88434.00 | Venezuela | Federal Republic | Hugo Chavez Frias |    3539 | VE
+(1 row)
+
+-- @Description select with CASE WHEN.. ELSE
+-- 
+DROP TABLE IF EXISTS sto_uao_emp_limit_offset;
+CREATE TABLE sto_uao_emp_limit_offset (
+   empno    INT  ,
+   ename    VARCHAR(10),
+   job      VARCHAR(9),
+   mgr      INT NULL,
+   hiredate DATE,
+   sal      NUMERIC(7,2),
+   comm     NUMERIC(7,2) NULL,
+   dept     INT) with (appendonly=true) distributed by (empno);
+insert into sto_uao_emp_limit_offset values 
+ (1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
+,(2,'HARDING','MANAGER',9,'02-02-1998',52000,15,3)
+,(3,'TAFT','SALES I',2,'01-02-1996',25000,20,3)
+,(4,'HOOVER','SALES I',2,'04-02-1990',27000,15,3)
+,(5,'LINCOLN','TECH',6,'06-23-1994',22500,15,4)
+,(6,'GARFIELD','MANAGER',9,'05-01-1993',54000,20,4)
+,(7,'POLK','TECH',6,'09-22-1997',25000,15,4)
+,(8,'GRANT','ENGINEER',10,'03-30-1997',32000,20,2)
+,(9,'JACKSON','CEO',NULL,'01-01-1990',75000,30,4)
+,(10,'FILLMORE','MANAGER',9,'08-09-1994',56000,20,2)
+,(11,'ADAMS','ENGINEER',10,'03-15-1996',34000,20,2)
+,(12,'WASHINGTON','ADMIN',6,'04-16-1998',18000,15,4)
+,(13,'MONROE','ENGINEER',10,'12-03-2000',30000,20,2)
+,(14,'ROOSEVELT','CPA',9,'10-12-1995',35000,30,1)
+,(15,'More','ENGINEER',9,'10-12-1994',25000,20,2)
+,(16,'ROSE','SALES I',10,'10-12-1999',18000,15,3)
+,(17,'CLINT','CPA',2,'10-12-2001',24000,30,1);
+select ename , hiredate,
+CASE when hiredate < '01-01-1991' then 'Founders'
+when hiredate < '01-01-1996' then 'old timer'
+else 'new employee' 
+end as tag
+from sto_uao_emp_limit_offset  order by 1; 
+   ename    |  hiredate  |     tag      
+------------+------------+--------------
+ ADAMS      | 03-15-1996 | new employee
+ CLINT      | 10-12-2001 | new employee
+ FILLMORE   | 08-09-1994 | old timer
+ GARFIELD   | 05-01-1993 | old timer
+ GRANT      | 03-30-1997 | new employee
+ HARDING    | 02-02-1998 | new employee
+ HOOVER     | 04-02-1990 | Founders
+ JACKSON    | 01-01-1990 | Founders
+ JOHNSON    | 12-17-1990 | Founders
+ LINCOLN    | 06-23-1994 | old timer
+ MONROE     | 12-03-2000 | new employee
+ More       | 10-12-1994 | old timer
+ POLK       | 09-22-1997 | new employee
+ ROOSEVELT  | 10-12-1995 | old timer
+ ROSE       | 10-12-1999 | new employee
+ TAFT       | 01-02-1996 | new employee
+ WASHINGTON | 04-16-1998 | new employee
+(17 rows)
+
+-- @Description select inner/right join
+-- 
+DROP TABLE IF EXISTS sto_uao_emp_crossjoin cascade;
+CREATE TABLE sto_uao_emp_crossjoin (
+   empno    INT  ,
+   ename    VARCHAR(10),
+   job      VARCHAR(9),
+   mgr      INT NULL,
+   hiredate DATE,
+   sal      NUMERIC(7,2),
+   comm     NUMERIC(7,2) NULL,
+   dept     INT) with (appendonly=true) distributed by (empno);
+insert into sto_uao_emp_crossjoin values
+(1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
+,(2,'HARDING','MANAGER',9,'02-02-1998',52000,15,3)
+,(3,'TAFT','SALES I',2,'01-02-1996',25000,20,3)
+,(4,'HOOVER','SALES I',2,'04-02-1990',27000,15,3)
+,(5,'LINCOLN','TECH',6,'06-23-1994',22500,15,4)
+,(6,'GARFIELD','MANAGER',9,'05-01-1993',54000,20,4)
+,(7,'POLK','TECH',6,'09-22-1997',25000,15,4)
+,(8,'GRANT','ENGINEER',10,'03-30-1997',32000,20,2)
+,(9,'JACKSON','CEO',NULL,'01-01-1990',75000,30,4)
+,(10,'FILLMORE','MANAGER',9,'08-09-1994',56000,20,2)
+,(11,'ADAMS','ENGINEER',10,'03-15-1996',34000,20,2)
+,(12,'WASHINGTON','ADMIN',6,'04-16-1998',18000,15,4)
+,(13,'MONROE','ENGINEER',10,'12-03-2000',30000,20,7)
+,(14,'ROOSEVELT','CPA',9,'10-12-1995',35000,30,1)
+,(15,'More','ENGINEER',9,'10-12-1994',25000,20,2)
+,(16,'ROSE','SALES I',10,'10-12-1999',18000,15,3)
+,(17,'CLINT','CPA',2,'10-12-2001',24000,30,1);
+DROP TABLE IF EXISTS sto_uao_dept_crossjoin cascade;
+CREATE TABLE sto_uao_dept_crossjoin (
+   deptno INT NOT NULL,
+   dname  VARCHAR(14),
+   loc    VARCHAR(13)) with (appendonly=true) distributed by (deptno);
+insert into sto_uao_dept_crossjoin values
+ (1,'ACCOUNTING','ST LOUIS')
+,(2,'RESEARCH','NEW YORK')
+,(3,'SALES','ATLANTA')
+,(5,'LOGISTICS','BOSTON')
+,(4, 'OPERATIONS','SEATTLE');
+select ename,loc from sto_uao_emp_crossjoin cross join sto_uao_dept_crossjoin
+order by 1 asc, 2 asc LIMIT 10;
+ ename |   loc
+-------+----------
+ ADAMS | ATLANTA
+ ADAMS | BOSTON
+ ADAMS | NEW YORK
+ ADAMS | SEATTLE
+ ADAMS | ST LOUIS
+ CLINT | ATLANTA
+ CLINT | BOSTON
+ CLINT | NEW YORK
+ CLINT | SEATTLE
+ CLINT | ST LOUIS
+(10 rows)
+
+-- @Description select distinct
+-- 
+DROP TABLE IF EXISTS sto_uao_emp_seldistinct cascade;
+CREATE TABLE sto_uao_emp_seldistinct (
+   empno    INT  ,
+   ename    VARCHAR(10),
+   job      VARCHAR(9),
+   mgr      INT NULL,
+   hiredate DATE,
+   sal      NUMERIC(7,2),
+   comm     NUMERIC(7,2) NULL,
+   dept     INT) with (appendonly=true) distributed by (empno);
+insert into sto_uao_emp_seldistinct values
+(1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
+,(2,'HARDING','MANAGER',9,'02-02-1998',52000,15,3)
+,(3,'TAFT','SALES I',2,'01-02-1996',25000,20,3)
+,(4,'HOOVER','SALES I',2,'04-02-1990',27000,15,3)
+,(5,'LINCOLN','TECH',6,'06-23-1994',22500,15,4)
+,(6,'GARFIELD','MANAGER',9,'05-01-1993',54000,20,4)
+,(7,'POLK','TECH',6,'09-22-1997',25000,15,4)
+,(8,'GRANT','ENGINEER',10,'03-30-1997',32000,20,2)
+,(9,'JACKSON','CEO',NULL,'01-01-1990',75000,30,4)
+,(10,'FILLMORE','MANAGER',9,'08-09-1994',56000,20,2)
+,(11,'ADAMS','ENGINEER',10,'03-15-1996',34000,20,2)
+,(12,'WASHINGTON','ADMIN',6,'04-16-1998',18000,15,4)
+,(13,'MONROE','ENGINEER',10,'12-03-2000',30000,20,7)
+,(14,'ROOSEVELT','CPA',9,'10-12-1995',35000,30,1)
+,(15,'More','ENGINEER',9,'10-12-1994',25000,20,2)
+,(16,'ROSE','SALES I',10,'10-12-1999',18000,15,3)
+,(17,'CLINT','CPA',2,'10-12-2001',24000,30,1);
+SELECT distinct(dept) FROM sto_uao_emp_seldistinct order by dept;
+ dept 
+------
+    1
+    2
+    3
+    4
+    7
+(5 rows)
+
+-- @description : Create Data and execute select statements on UAO tables EXCEPT
+-- 
+DROP TABLE IF EXISTS city_uao cascade;
+DROP TABLE IF EXISTS country_uao cascade;
+DROP TABLE IF EXISTS countrylanguage_uao cascade;
+BEGIN;
+CREATE TABLE city_uao (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) with (appendonly=true) distributed by(id);
+CREATE TABLE country_uao (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true)  distributed by (code);
+CREATE TABLE countrylanguage_uao (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)  with (appendonly=true) distributed by (countrycode,language);
+COPY city_uao (id, name, countrycode, district, population) FROM stdin;
+COPY country_uao (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM stdin WITH NULL AS '';
+COPY countrylanguage_uao (countrycode, "language", isofficial, percentage) FROM stdin;
+COMMIT;
+ANALYZE city_uao;
+ANALYZE country_uao;
+ANALYZE countrylanguage_uao;
+-- Using  EXCEPT clause
+select * from city_uao where population > 770000
+UNION
+select * from city_uao where population < 100000
+EXCEPT
+select * from city_uao where countrycode in ('MEX','USA');
+  id  |        name         | countrycode |     district     | population 
+------+---------------------+-------------+------------------+------------
+ 1857 | Kelowna             | CAN         | British Colombia |      89442
+ 2413 | La Habana           | CUB         | La Habana        |    2256000
+  184 | Belize City         | BLZ         | Belize City      |      55810
+  190 | Saint George        | BMU         | Saint Georges    |       1800
+  925 | Quetzaltenango      | GTM         | Quetzaltenango   |      90801
+ 1856 | Sudbury             | CAN         | Ontario          |      92686
+ 1858 | Barrie              | CAN         | Ontario          |      89269
+ 2426 | Ciego de Avila      | CUB         | Ciego de Avila   |      98505
+  185 | Belmopan            | BLZ         | Cayo             |       7105
+  191 | Hamilton            | BMU         | Hamilton         |       1200
+  922 | Ciudad de Guatemala | GTM         | Guatemala        |     823301
+ 1810 | Montreal            | CAN         | Quebec           |    1016376
+ 1855 | Delta               | CAN         | British Colombia |      95411
+(13 rows)
+
+-- @description : Create Data and execute select statements on UAO tables GROUP BY
+-- 
+DROP TABLE IF EXISTS sto_uao_emp_groupby;
+NOTICE:  table "sto_uao_emp_groupby" does not exist, skipping
+CREATE TABLE sto_uao_emp_groupby (
+   empno    INT  ,
+   ename    VARCHAR(10),
+   job      VARCHAR(9),
+   mgr      INT NULL,
+   hiredate DATE,
+   sal      NUMERIC(7,2),
+   comm     NUMERIC(7,2) NULL,
+   dept     INT) with (appendonly=true) distributed by (empno);
+insert into sto_uao_emp_groupby values 
+ (1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
+,(2,'HARDING','MANAGER',9,'02-02-1998',52000,15,3)
+,(3,'TAFT','SALES I',2,'01-02-1996',25000,20,3)
+,(4,'HOOVER','SALES I',2,'04-02-1990',27000,15,3)
+,(5,'LINCOLN','TECH',6,'06-23-1994',22500,15,4)
+,(6,'GARFIELD','MANAGER',9,'05-01-1993',54000,20,4)
+,(7,'POLK','TECH',6,'09-22-1997',25000,15,4)
+,(8,'GRANT','ENGINEER',10,'03-30-1997',32000,20,2)
+,(9,'JACKSON','CEO',NULL,'01-01-1990',75000,30,4)
+,(10,'FILLMORE','MANAGER',9,'08-09-1994',56000,20,2)
+,(11,'ADAMS','ENGINEER',10,'03-15-1996',34000,20,2)
+,(12,'WASHINGTON','ADMIN',6,'04-16-1998',18000,15,4)
+,(13,'MONROE','ENGINEER',10,'12-03-2000',30000,20,2)
+,(14,'ROOSEVELT','CPA',9,'10-12-1995',35000,30,1)
+,(15,'More','ENGINEER',9,'10-12-1994',25000,20,2)
+,(16,'ROSE','SALES I',10,'10-12-1999',18000,15,3)
+,(17,'CLINT','CPA',2,'10-12-2001',24000,30,1);
+DROP TABLE IF EXISTS sto_uao_dept_groupby;
+NOTICE:  table "sto_uao_dept_groupby" does not exist, skipping
+CREATE TABLE sto_uao_dept_groupby (
+   deptno INT NOT NULL,
+   dname  VARCHAR(14),
+   loc    VARCHAR(13)) with (appendonly=true) distributed by (deptno);
+insert into sto_uao_dept_groupby values 
+ (1,'ACCOUNTING','ST LOUIS')
+,(2,'RESEARCH','NEW YORK')
+,(3,'SALES','ATLANTA')
+,(4, 'OPERATIONS','SEATTLE');
+-- Simple Group by
+select count(*) as num_of_emp, loc from sto_uao_dept_groupby, sto_uao_emp_groupby where sto_uao_dept_groupby.deptno = sto_uao_emp_groupby.dept group by loc order by 1 asc;
+ num_of_emp |   loc    
+------------+----------
+          2 | ST LOUIS
+          4 | ATLANTA
+          5 | NEW YORK
+          6 | SEATTLE
+(4 rows)
+
+select  loc ,job, sum(sal) as sum_of_salary, count(*) as num_emp  from sto_uao_emp_groupby,sto_uao_dept_groupby where sto_uao_emp_groupby.dept=sto_uao_dept_groupby.deptno
+group by loc,job order by loc,job;
+   loc    |   job    | sum_of_salary | num_emp 
+----------+----------+---------------+---------
+ ATLANTA  | MANAGER  |      52000.00 |       1
+ ATLANTA  | SALES I  |      70000.00 |       3
+ NEW YORK | ENGINEER |     121000.00 |       4
+ NEW YORK | MANAGER  |      56000.00 |       1
+ SEATTLE  | ADMIN    |      36000.00 |       2
+ SEATTLE  | CEO      |      75000.00 |       1
+ SEATTLE  | MANAGER  |      54000.00 |       1
+ SEATTLE  | TECH     |      47500.00 |       2
+ ST LOUIS | CPA      |      59000.00 |       2
+(9 rows)
+
+-- Rollup
+select  loc ,job,comm,sum(sal),  count(*) as cnt from sto_uao_emp_groupby,sto_uao_dept_groupby where sto_uao_emp_groupby.dept=sto_uao_dept_groupby.deptno
+and loc in ('NEW YORK', 'ATLANTA')
+group by rollup (loc,job,comm) order by loc,job,comm;
+   loc    |   job    | comm  |    sum    | cnt 
+----------+----------+-------+-----------+-----
+ ATLANTA  | MANAGER  | 15.00 |  52000.00 |   1
+ ATLANTA  | MANAGER  |       |  52000.00 |   1
+ ATLANTA  | SALES I  | 15.00 |  45000.00 |   2
+ ATLANTA  | SALES I  | 20.00 |  25000.00 |   1
+ ATLANTA  | SALES I  |       |  70000.00 |   3
+ ATLANTA  |          |       | 122000.00 |   4
+ NEW YORK | ENGINEER | 20.00 | 121000.00 |   4
+ NEW YORK | ENGINEER |       | 121000.00 |   4
+ NEW YORK | MANAGER  | 20.00 |  56000.00 |   1
+ NEW YORK | MANAGER  |       |  56000.00 |   1
+ NEW YORK |          |       | 177000.00 |   5
+          |          |       | 299000.00 |   9
+(12 rows)
+
+-- Cube
+select  loc ,job,comm,sum(sal),  count(*) as cnt from sto_uao_emp_groupby,sto_uao_dept_groupby where sto_uao_emp_groupby.dept=sto_uao_dept_groupby.deptno
+and loc != 'SEATTLE'
+group by cube (loc,job,comm) order by loc,job,comm;
+   loc    |   job    | comm  |    sum    | cnt 
+----------+----------+-------+-----------+-----
+ ATLANTA  | MANAGER  | 15.00 |  52000.00 |   1
+ ATLANTA  | MANAGER  |       |  52000.00 |   1
+ ATLANTA  | SALES I  | 15.00 |  45000.00 |   2
+ ATLANTA  | SALES I  | 20.00 |  25000.00 |   1
+ ATLANTA  | SALES I  |       |  70000.00 |   3
+ ATLANTA  |          | 15.00 |  97000.00 |   3
+ ATLANTA  |          | 20.00 |  25000.00 |   1
+ ATLANTA  |          |       | 122000.00 |   4
+ NEW YORK | ENGINEER | 20.00 | 121000.00 |   4
+ NEW YORK | ENGINEER |       | 121000.00 |   4
+ NEW YORK | MANAGER  | 20.00 |  56000.00 |   1
+ NEW YORK | MANAGER  |       |  56000.00 |   1
+ NEW YORK |          | 20.00 | 177000.00 |   5
+ NEW YORK |          |       | 177000.00 |   5
+ ST LOUIS | CPA      | 30.00 |  59000.00 |   2
+ ST LOUIS | CPA      |       |  59000.00 |   2
+ ST LOUIS |          | 30.00 |  59000.00 |   2
+ ST LOUIS |          |       |  59000.00 |   2
+          | CPA      | 30.00 |  59000.00 |   2
+          | CPA      |       |  59000.00 |   2
+          | ENGINEER | 20.00 | 121000.00 |   4
+          | ENGINEER |       | 121000.00 |   4
+          | MANAGER  | 15.00 |  52000.00 |   1
+          | MANAGER  | 20.00 |  56000.00 |   1
+          | MANAGER  |       | 108000.00 |   2
+          | SALES I  | 15.00 |  45000.00 |   2
+          | SALES I  | 20.00 |  25000.00 |   1
+          | SALES I  |       |  70000.00 |   3
+          |          | 15.00 |  97000.00 |   3
+          |          | 20.00 | 202000.00 |   6
+          |          | 30.00 |  59000.00 |   2
+          |          |       | 358000.00 |  11
+(32 rows)
+
+-- grouping sets
+select  loc ,job,comm,sum(sal) as sum from sto_uao_emp_groupby,sto_uao_dept_groupby where sto_uao_emp_groupby.dept=sto_uao_dept_groupby.deptno
+group by grouping sets ((loc,job),  (loc,comm)) 
+order by loc,job,comm;
+   loc    |   job    | comm  |    sum    
+----------+----------+-------+-----------
+ ATLANTA  | MANAGER  |       |  52000.00
+ ATLANTA  | SALES I  |       |  70000.00
+ ATLANTA  |          | 15.00 |  97000.00
+ ATLANTA  |          | 20.00 |  25000.00
+ NEW YORK | ENGINEER |       | 121000.00
+ NEW YORK | MANAGER  |       |  56000.00
+ NEW YORK |          | 20.00 | 177000.00
+ SEATTLE  | ADMIN    |       |  36000.00
+ SEATTLE  | CEO      |       |  75000.00
+ SEATTLE  | MANAGER  |       |  54000.00
+ SEATTLE  | TECH     |       |  47500.00
+ SEATTLE  |          | 10.00 |  18000.00
+ SEATTLE  |          | 15.00 |  65500.00
+ SEATTLE  |          | 20.00 |  54000.00
+ SEATTLE  |          | 30.00 |  75000.00
+ ST LOUIS | CPA      |       |  59000.00
+ ST LOUIS |          | 30.00 |  59000.00
+(17 rows)
+
+-- grouping set , rollup
+select  loc ,job, sum(sal) from sto_uao_emp_groupby,sto_uao_dept_groupby where sto_uao_emp_groupby.dept=sto_uao_dept_groupby.deptno
+group by grouping sets (loc, rollup (loc,job) ) 
+order by loc,job ;
+   loc    |   job    |    sum    
+----------+----------+-----------
+ ATLANTA  | MANAGER  |  52000.00
+ ATLANTA  | SALES I  |  70000.00
+ ATLANTA  |          | 122000.00
+ ATLANTA  |          | 122000.00
+ NEW YORK | ENGINEER | 121000.00
+ NEW YORK | MANAGER  |  56000.00
+ NEW YORK |          | 177000.00
+ NEW YORK |          | 177000.00
+ SEATTLE  | ADMIN    |  36000.00
+ SEATTLE  | CEO      |  75000.00
+ SEATTLE  | MANAGER  |  54000.00
+ SEATTLE  | TECH     |  47500.00
+ SEATTLE  |          | 212500.00
+ SEATTLE  |          | 212500.00
+ ST LOUIS | CPA      |  59000.00
+ ST LOUIS |          |  59000.00
+ ST LOUIS |          |  59000.00
+          |          | 570500.00
+(18 rows)
+
+-- @description : Create Data and execute select statements on UAO tables  HAVING
+-- 
+DROP TABLE IF EXISTS city_uao cascade;
+DROP TABLE IF EXISTS country_uao cascade;
+DROP TABLE IF EXISTS countrylanguage_uao cascade;
+BEGIN;
+CREATE TABLE city_uao (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) with (appendonly=true) distributed by(id);
+CREATE TABLE country_uao (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true)  distributed by (code);
+CREATE TABLE countrylanguage_uao (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)  with (appendonly=true) distributed by (countrycode,language);
+COPY city_uao (id, name, countrycode, district, population) FROM '@abs_srcdir@/data/city.data';
+COPY country_uao (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM '@abs_srcdir@/data/country.data' WITH NULL AS '';
+COPY countrylanguage_uao (countrycode, "language", isofficial, percentage) FROM '@abs_srcdir@/data/countrylanguage.data';
+COMMIT;
+ANALYZE city_uao;
+ANALYZE country_uao;
+ANALYZE countrylanguage_uao;
+--queries with HAVING clause
+with notdiversecountries_uao as
+(select country_uao.code,country_uao.name,country_uao.capital,d.CNT
+ from country_uao,
+ (select countrylanguage_uao.countrycode,count(*) as CNT from countrylanguage_uao group by countrycode
+  HAVING count(*) < 3) d
+ where d.countrycode = country_uao.code and country_uao.gnp > 100000)
+select country_uao.name COUNTRY,city_uao.name CAPITAL,count(*) LANGCNT from
+country_uao,city_uao,countrylanguage_uao
+where country_uao.code = countrylanguage_uao.countrycode and country_uao.capital = city_uao.id
+group by country_uao.name,city_uao.name
+HAVING count(*) NOT IN (select CNT from notdiversecountries_uao where notdiversecountries_uao.name = country_uao.name)
+order by country_uao.name
+LIMIT 10;
+       country       |     capital      | langcnt 
+---------------------+------------------+---------
+ Afghanistan         | Kabul            |       5
+ Albania             | Tirana           |       3
+ Algeria             | Alger            |       2
+ American Samoa      | Fagatogo         |       3
+ Andorra             | Andorra la Vella |       4
+ Angola              | Luanda           |       9
+ Anguilla            | The Valley       |       1
+ Antigua and Barbuda | Saint Johns      |       2
+ Argentina           | Buenos Aires     |       3
+ Armenia             | Yerevan          |       2
+(10 rows)
+
+-- @Description select inner/right join
+-- 
+DROP TABLE IF EXISTS sto_uao_emp_rightjoin cascade;
+CREATE TABLE sto_uao_emp_rightjoin (
+   empno    INT  ,
+   ename    VARCHAR(10),
+   job      VARCHAR(9),
+   mgr      INT NULL,
+   hiredate DATE,
+   sal      NUMERIC(7,2),
+   comm     NUMERIC(7,2) NULL,
+   dept     INT) with (appendonly=true) distributed by (empno);
+insert into sto_uao_emp_rightjoin values
+(1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
+,(2,'HARDING','MANAGER',9,'02-02-1998',52000,15,3)
+,(3,'TAFT','SALES I',2,'01-02-1996',25000,20,3)
+,(4,'HOOVER','SALES I',2,'04-02-1990',27000,15,3)
+,(5,'LINCOLN','TECH',6,'06-23-1994',22500,15,4)
+,(6,'GARFIELD','MANAGER',9,'05-01-1993',54000,20,4)
+,(7,'POLK','TECH',6,'09-22-1997',25000,15,4)
+,(8,'GRANT','ENGINEER',10,'03-30-1997',32000,20,2)
+,(9,'JACKSON','CEO',NULL,'01-01-1990',75000,30,4)
+,(10,'FILLMORE','MANAGER',9,'08-09-1994',56000,20,2)
+,(11,'ADAMS','ENGINEER',10,'03-15-1996',34000,20,2)
+,(12,'WASHINGTON','ADMIN',6,'04-16-1998',18000,15,4)
+,(13,'MONROE','ENGINEER',10,'12-03-2000',30000,20,7)
+,(14,'ROOSEVELT','CPA',9,'10-12-1995',35000,30,1)
+,(15,'More','ENGINEER',9,'10-12-1994',25000,20,2)
+,(16,'ROSE','SALES I',10,'10-12-1999',18000,15,3)
+,(17,'CLINT','CPA',2,'10-12-2001',24000,30,1);
+DROP TABLE IF EXISTS sto_uao_dept_rightjoin cascade;
+CREATE TABLE sto_uao_dept_rightjoin (
+   deptno INT NOT NULL,
+   dname  VARCHAR(14),
+   loc    VARCHAR(13)) with (appendonly=true) distributed by (deptno);
+insert into sto_uao_dept_rightjoin values
+ (1,'ACCOUNTING','ST LOUIS')
+,(2,'RESEARCH','NEW YORK')
+,(3,'SALES','ATLANTA')
+,(5,'LOGISTICS','BOSTON')
+,(4, 'OPERATIONS','SEATTLE');
+select ename, loc from sto_uao_emp_rightjoin left inner join sto_uao_dept_rightjoin on  sto_uao_dept_rightjoin.deptno = sto_uao_emp_rightjoin.dept order by 1 asc, 2 asc; 
+ERROR:  syntax error at or near "inner"
+LINE 1: select ename, loc from sto_uao_emp_rightjoin left inner join...
+                                                          ^
+-- @description : Create Data and execute select statements on UAO tables INTERSECT
+-- 
+DROP TABLE IF EXISTS city_uao cascade;
+DROP TABLE IF EXISTS country_uao cascade;
+DROP TABLE IF EXISTS countrylanguage_uao cascade;
+BEGIN;
+CREATE TABLE city_uao (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) with (appendonly=true) distributed by(id);
+CREATE TABLE country_uao (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true)  distributed by (code);
+CREATE TABLE countrylanguage_uao (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)  with (appendonly=true) distributed by (countrycode,language);
+COPY city_uao (id, name, countrycode, district, population) FROM stdin;
+COPY country_uao (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM stdin WITH NULL AS '';
+COPY countrylanguage_uao (countrycode, "language", isofficial, percentage) FROM stdin;
+COMMIT;
+ANALYZE city_uao;
+ANALYZE country_uao;
+ANALYZE countrylanguage_uao;
+-- Using  EXCEPT clause
+select population from city_uao where countrycode = 'CAN'
+INTERSECT
+select population from city_uao where countrycode = 'MEX';
+ population 
+------------
+      92686
+(1 row)
+
+-- @description : Create Data and execute select statements on UAO tables LIMIT OFFSET 
+-- 
+DROP TABLE IF EXISTS sto_uao_emp_limit_offset;
+CREATE TABLE sto_uao_emp_limit_offset (
+   empno    INT  ,
+   ename    VARCHAR(10),
+   job      VARCHAR(9),
+   mgr      INT NULL,
+   hiredate DATE,
+   sal      NUMERIC(7,2),
+   comm     NUMERIC(7,2) NULL,
+   dept     INT) with (appendonly=true) distributed by (empno);
+insert into sto_uao_emp_limit_offset values 
+ (1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
+,(2,'HARDING','MANAGER',9,'02-02-1998',52000,15,3)
+,(3,'TAFT','SALES I',2,'01-02-1996',25000,20,3)
+,(4,'HOOVER','SALES I',2,'04-02-1990',27000,15,3)
+,(5,'LINCOLN','TECH',6,'06-23-1994',22500,15,4)
+,(6,'GARFIELD','MANAGER',9,'05-01-1993',54000,20,4)
+,(7,'POLK','TECH',6,'09-22-1997',25000,15,4)
+,(8,'GRANT','ENGINEER',10,'03-30-1997',32000,20,2)
+,(9,'JACKSON','CEO',NULL,'01-01-1990',75000,30,4)
+,(10,'FILLMORE','MANAGER',9,'08-09-1994',56000,20,2)
+,(11,'ADAMS','ENGINEER',10,'03-15-1996',34000,20,2)
+,(12,'WASHINGTON','ADMIN',6,'04-16-1998',18000,15,4)
+,(13,'MONROE','ENGINEER',10,'12-03-2000',30000,20,2)
+,(14,'ROOSEVELT','CPA',9,'10-12-1995',35000,30,1)
+,(15,'More','ENGINEER',9,'10-12-1994',25000,20,2)
+,(16,'ROSE','SALES I',10,'10-12-1999',18000,15,3)
+,(17,'CLINT','CPA',2,'10-12-2001',24000,30,1);
+select * from sto_uao_emp_limit_offset  order by empno LIMIT 7 ;
+ empno |  ename   |   job   | mgr |  hiredate  |   sal    | comm  | dept 
+-------+----------+---------+-----+------------+----------+-------+------
+     1 | JOHNSON  | ADMIN   |   6 | 12-17-1990 | 18000.00 | 10.00 |    4
+     2 | HARDING  | MANAGER |   9 | 02-02-1998 | 52000.00 | 15.00 |    3
+     3 | TAFT     | SALES I |   2 | 01-02-1996 | 25000.00 | 20.00 |    3
+     4 | HOOVER   | SALES I |   2 | 04-02-1990 | 27000.00 | 15.00 |    3
+     5 | LINCOLN  | TECH    |   6 | 06-23-1994 | 22500.00 | 15.00 |    4
+     6 | GARFIELD | MANAGER |   9 | 05-01-1993 | 54000.00 | 20.00 |    4
+     7 | POLK     | TECH    |   6 | 09-22-1997 | 25000.00 | 15.00 |    4
+(7 rows)
+
+select * from sto_uao_emp_limit_offset  order by empno LIMIT 7 OFFSET 5;
+ empno |   ename    |   job    | mgr |  hiredate  |   sal    | comm  | dept 
+-------+------------+----------+-----+------------+----------+-------+------
+     6 | GARFIELD   | MANAGER  |   9 | 05-01-1993 | 54000.00 | 20.00 |    4
+     7 | POLK       | TECH     |   6 | 09-22-1997 | 25000.00 | 15.00 |    4
+     8 | GRANT      | ENGINEER |  10 | 03-30-1997 | 32000.00 | 20.00 |    2
+     9 | JACKSON    | CEO      |     | 01-01-1990 | 75000.00 | 30.00 |    4
+    10 | FILLMORE   | MANAGER  |   9 | 08-09-1994 | 56000.00 | 20.00 |    2
+    11 | ADAMS      | ENGINEER |  10 | 03-15-1996 | 34000.00 | 20.00 |    2
+    12 | WASHINGTON | ADMIN    |   6 | 04-16-1998 | 18000.00 | 15.00 |    4
+(7 rows)
+
+-- @description : Create Data and execute select statements on UAO tables ORDER BY ASC DESC USING 
+-- 
+--
+DROP TABLE IF EXISTS city_uao_using cascade;
+DROP TABLE IF EXISTS country_uao_using cascade;
+DROP TABLE IF EXISTS countrylanguage_uao_using cascade;
+BEGIN;
+CREATE TABLE city_uao_using (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) with (appendonly=true) distributed by(id);
+CREATE TABLE country_uao_using (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true)  distributed by (code);
+CREATE TABLE countrylanguage_uao_using (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)  with (appendonly=true) distributed by (countrycode,language);
+COPY city_uao_using (id, name, countrycode, district, population) FROM stdin;
+COPY country_uao_using (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM '@abs_srcdir@/data/country.data' WITH NULL AS '';
+COPY countrylanguage_uao_using (countrycode, "language", isofficial, percentage) FROM '@abs_srcdir@/data/countrylanguage.data';
+COMMIT;
+ANALYZE city_uao_using;
+ANALYZE country_uao_using;
+ANALYZE countrylanguage_uao_using;
+--query1
+with capitals_uao as 
+(select country_uao_using.code,id,city_uao_using.name from city_uao_using,country_uao_using 
+ where city_uao_using.countrycode = country_uao_using.code AND city_uao_using.id = country_uao_using.capital) 
+select capitals_uao.code,language from 
+capitals_uao,countrylanguage_uao_using
+where capitals_uao.code = countrylanguage_uao_using.countrycode and isofficial='true'
+order by capitals_uao.code asc,countrylanguage_uao_using.language asc LIMIT 10;
+ code |  language  
+------+------------
+ AFG  | Dari
+ AFG  | Pashto
+ AIA  | English
+ ALB  | Albaniana
+ AND  | Catalan
+ ANT  | Dutch
+ ANT  | Papiamento
+ ARE  | Arabic
+ ARG  | Spanish
+ ASM  | English
+(10 rows)
+
+with capitals_uao as
+(select country_uao_using.code,id,city_uao_using.name from city_uao_using,country_uao_using
+ where city_uao_using.countrycode = country_uao_using.code AND city_uao_using.id = country_uao_using.capital)
+select capitals_uao.code,language from
+capitals_uao,countrylanguage_uao_using
+where capitals_uao.code = countrylanguage_uao_using.countrycode and isofficial='true'
+order by capitals_uao.code desc, 2 desc LIMIT 10;
+ code |  language  
+------+------------
+ NLD  | Dutch
+ DZA  | Arabic
+ ATG  | English
+ ASM  | Samoan
+ ASM  | English
+ ARG  | Spanish
+ ARE  | Arabic
+ ANT  | Papiamento
+ ANT  | Dutch
+ AND  | Catalan
+(10 rows)
+
+with capitals_uao as
+(select country_uao_using.code,id,city_uao_using.name from city_uao_using,country_uao_using
+ where city_uao_using.countrycode = country_uao_using.code AND city_uao_using.id = country_uao_using.capital)
+select capitals_uao.code,language from
+capitals_uao,countrylanguage_uao_using
+where capitals_uao.code = countrylanguage_uao_using.countrycode and isofficial='true'
+order by capitals_uao.code asc,countrylanguage_uao_using.language desc LIMIT 10;
+ code |  language  
+------+------------
+ AFG  | Pashto
+ AFG  | Dari
+ AIA  | English
+ ALB  | Albaniana
+ AND  | Catalan
+ ANT  | Papiamento
+ ANT  | Dutch
+ ARE  | Arabic
+ ARG  | Spanish
+ ASM  | Samoan
+(10 rows)
+
+with capitals_uao as
+(select country_uao_using.code,id,city_uao_using.name from city_uao_using,country_uao_using
+ where city_uao_using.countrycode = country_uao_using.code AND city_uao_using.id = country_uao_using.capital)
+select capitals_uao.code,language from
+capitals_uao,countrylanguage_uao_using
+where capitals_uao.code = countrylanguage_uao_using.countrycode and isofficial='true'
+order by capitals_uao.code using > , 2  using > LIMIT 10;
+ code |  language  
+------+------------
+ NLD  | Dutch
+ DZA  | Arabic
+ ATG  | English
+ ASM  | Samoan
+ ASM  | English
+ ARG  | Spanish
+ ARE  | Arabic
+ ANT  | Papiamento
+ ANT  | Dutch
+ AND  | Catalan
+(10 rows)
+
+with capitals_uao as
+(select country_uao_using.code,id,city_uao_using.name from city_uao_using,country_uao_using
+ where city_uao_using.countrycode = country_uao_using.code AND city_uao_using.id = country_uao_using.capital)
+select capitals_uao.code,language from
+capitals_uao,countrylanguage_uao_using
+where capitals_uao.code = countrylanguage_uao_using.countrycode and isofficial='true'
+order by capitals_uao.code USING < , 2 using < LIMIT 10;
+ code |  language  
+------+------------
+ AFG  | Dari
+ AFG  | Pashto
+ AIA  | English
+ ALB  | Albaniana
+ AND  | Catalan
+ ANT  | Dutch
+ ANT  | Papiamento
+ ARE  | Arabic
+ ARG  | Spanish
+ ASM  | English
+(10 rows)
+
+-- @Description select outer/left join
+-- 
+DROP TABLE IF EXISTS sto_uao_emp_leftjoin cascade;
+CREATE TABLE sto_uao_emp_leftjoin (
+   empno    INT  ,
+   ename    VARCHAR(10),
+   job      VARCHAR(9),
+   mgr      INT NULL,
+   hiredate DATE,
+   sal      NUMERIC(7,2),
+   comm     NUMERIC(7,2) NULL,
+   dept     INT) with (appendonly=true) distributed by (empno);
+insert into sto_uao_emp_leftjoin values
+(1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
+,(2,'HARDING','MANAGER',9,'02-02-1998',52000,15,3)
+,(3,'TAFT','SALES I',2,'01-02-1996',25000,20,3)
+,(4,'HOOVER','SALES I',2,'04-02-1990',27000,15,3)
+,(5,'LINCOLN','TECH',6,'06-23-1994',22500,15,4)
+,(6,'GARFIELD','MANAGER',9,'05-01-1993',54000,20,4)
+,(7,'POLK','TECH',6,'09-22-1997',25000,15,4)
+,(8,'GRANT','ENGINEER',10,'03-30-1997',32000,20,2)
+,(9,'JACKSON','CEO',NULL,'01-01-1990',75000,30,4)
+,(10,'FILLMORE','MANAGER',9,'08-09-1994',56000,20,2)
+,(11,'ADAMS','ENGINEER',10,'03-15-1996',34000,20,2)
+,(12,'WASHINGTON','ADMIN',6,'04-16-1998',18000,15,4)
+,(13,'MONROE','ENGINEER',10,'12-03-2000',30000,20,7)
+,(14,'ROOSEVELT','CPA',9,'10-12-1995',35000,30,1)
+,(15,'More','ENGINEER',9,'10-12-1994',25000,20,2)
+,(16,'ROSE','SALES I',10,'10-12-1999',18000,15,3)
+,(17,'CLINT','CPA',2,'10-12-2001',24000,30,1);
+DROP TABLE IF EXISTS sto_uao_dept_leftjoin cascade;
+CREATE TABLE sto_uao_dept_leftjoin (
+   deptno INT NOT NULL,
+   dname  VARCHAR(14),
+   loc    VARCHAR(13)) with (appendonly=true) distributed by (deptno);
+insert into sto_uao_dept_leftjoin values
+ (1,'ACCOUNTING','ST LOUIS')
+,(2,'RESEARCH','NEW YORK')
+,(3,'SALES','ATLANTA')
+,(5,'LOGISTICS','BOSTON')
+,(4, 'OPERATIONS','SEATTLE');
+select ename, loc from sto_uao_emp_leftjoin left join sto_uao_dept_leftjoin on  sto_uao_dept_leftjoin.deptno = sto_uao_emp_leftjoin.dept order by 1 asc, 2 asc; 
+   ename    |   loc    
+------------+----------
+ ADAMS      | NEW YORK
+ CLINT      | ST LOUIS
+ FILLMORE   | NEW YORK
+ GARFIELD   | SEATTLE
+ GRANT      | NEW YORK
+ HARDING    | ATLANTA
+ HOOVER     | ATLANTA
+ JACKSON    | SEATTLE
+ JOHNSON    | SEATTLE
+ LINCOLN    | SEATTLE
+ MONROE     | 
+ More       | NEW YORK
+ POLK       | SEATTLE
+ ROOSEVELT  | ST LOUIS
+ ROSE       | ATLANTA
+ TAFT       | ATLANTA
+ WASHINGTON | SEATTLE
+(17 rows)
+
+-- @Description select with subquery
+-- 
+DROP TABLE IF EXISTS country_uao_subq cascade;
+BEGIN;
+CREATE TABLE country_uao_subq (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true)  distributed by (code);
+COPY country_uao_subq (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM '@abs_srcdir@/data/country.data' WITH NULL AS '';
+COMMIT;
+ANALYZE country_uao_subq;
+-- Using subquery
+select *
+from
+country_uao_subq
+where code in (select code from country_uao_subq where gnp between 80000 and 100000)
+and code in (select code from country_uao_subq where lifeexpectancy between 70 and 80)
+and code in (select code from country_uao_subq where  indepyear between 1800 and 1900);
+ code |   name    |   continent   |    region     | surfacearea | indepyear | population | lifeexpectancy |   gnp    |  gnpold  | localname |  governmentform  |    headofstate    | capital | code2 
+------+-----------+---------------+---------------+-------------+-----------+------------+----------------+----------+----------+-----------+------------------+-------------------+---------+-------
+ VEN  | Venezuela | South America | South America |      912050 |      1811 |   24170000 |           73.1 | 95023.00 | 88434.00 | Venezuela | Federal Republic | Hugo Chavez Frias |    3539 | VE
+(1 row)
+
+-- @Description select with with UNION , UNION ALL 
+-- 
+DROP TABLE IF EXISTS city_uao_union cascade;
+DROP TABLE IF EXISTS country_uao_union cascade;
+DROP TABLE IF EXISTS countrylanguage_uao_union cascade;
+BEGIN;
+CREATE TABLE city_uao_union (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) with (appendonly=true) distributed by(id);
+CREATE TABLE country_uao_union (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true)  distributed by (code);
+CREATE TABLE countrylanguage_uao_union (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)  with (appendonly=true) distributed by (countrycode,language);
+COPY city_uao_union (id, name, countrycode, district, population) FROM '@abs_srcdir@/data/city.data';
+COPY country_uao_union (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM '@abs_srcdir@/data/country.data' WITH NULL AS '';
+COPY countrylanguage_uao_union (countrycode, "language", isofficial, percentage) FROM '@abs_srcdir@/data/countrylanguage.data';
+COMMIT;
+ANALYZE city_uao_union;
+ANALYZE country_uao_union;
+ANALYZE countrylanguage_uao_union;
+--queries Using Union All and except
+with somecheapasiandiversecountries_uao as
+(
+ select FOO_uao.code,FOO_uao.COUNTRY,FOO_uao.CAPITAL,FOO_uao.headofstate,count(*) ASIAN_COUNT from
+ (
+ select country_uao_union.code,country_uao_union.name COUNTRY,city_uao_union.name CAPITAL,country_uao_union.headofstate
+ from country_uao_union,city_uao_union
+ where country_uao_union.capital = city_uao_union.id 
+ and country_uao_union.gnp < 10000
+ and country_uao_union.region = 'Southeast Asia'
+ and country_uao_union.continent = 'Asia'
+ 
+ UNION ALL
+ select country_uao_union.code,country_uao_union.name COUNTRY,city_uao_union.name CAPITAL,country_uao_union.headofstate
+ from country_uao_union,city_uao_union
+ where country_uao_union.capital = city_uao_union.id 
+ and country_uao_union.gnp < 10000
+ and country_uao_union.region = 'Eastern Asia'
+ and country_uao_union.continent = 'Asia'
+ UNION ALL
+ select country_uao_union.code,country_uao_union.name COUNTRY,city_uao_union.name CAPITAL,country_uao_union.headofstate
+ from country_uao_union,city_uao_union
+ where country_uao_union.capital = city_uao_union.id 
+ and country_uao_union.gnp < 10000
+ and country_uao_union.region = 'Middle East'
+ and country_uao_union.continent = 'Asia'
+ ) FOO_uao, countrylanguage_uao_union
+ where FOO_uao.code = countrylanguage_uao_union.countrycode
+ group by FOO_uao.code,FOO_uao.COUNTRY,FOO_uao.CAPITAL,FOO_uao.headofstate,countrylanguage_uao_union.countrycode
+ HAVING count(*) >=
+ (select min(CNT) FROM
+   (select count(*) CNT,country_uao_union.code from countrylanguage_uao_union,country_uao_union
+    where countrylanguage_uao_union.countrycode=country_uao_union.code
+    and country_uao_union.continent = 'Asia'
+    and country_uao_union.region = 'Southern and Central Asia'
+    group by country_uao_union.code
+   ) FOO1_uao
+ )
+)
+select FOO_uao.code,FOO_uao.COUNTRY,FOO_uao.CAPITAL,FOO_uao.headofstate,count(*) compared_with_cheap_asian_cnt
+from
+(
+select country_uao_union.code,country_uao_union.name COUNTRY,city_uao_union.name CAPITAL,country_uao_union.headofstate
+from country_uao_union,city_uao_union
+where country_uao_union.capital = city_uao_union.id 
+and country_uao_union.continent = 'North America'
+UNION ALL
+select country_uao_union.code,country_uao_union.name COUNTRY,city_uao_union.name CAPITAL,country_uao_union.headofstate
+from country_uao_union,city_uao_union
+where country_uao_union.capital =	city_uao_union.id	
+and country_uao_union.continent =	'South America'
+EXCEPT
+select country_uao_union.code,country_uao_union.name COUNTRY,city_uao_union.name CAPITAL,country_uao_union.headofstate
+from country_uao_union,city_uao_union
+where 
+country_uao_union.capital =     city_uao_union.id
+and country_uao_union.code='GTM'
+) FOO_uao,countrylanguage_uao_union
+where FOO_uao.code = countrylanguage_uao_union.countrycode
+group by FOO_uao.code,FOO_uao.COUNTRY,FOO_uao.CAPITAL,FOO_uao.headofstate
+HAVING count(*)  >=
+ (select min(ASIAN_COUNT) FROM
+   (select ASIAN_COUNT FROM somecheapasiandiversecountries_uao,country_uao_union
+    where somecheapasiandiversecountries_uao.code = country_uao_union.code
+    and country_uao_union.gnp >= country_uao_union.gnpold
+   ) ASIANCOUNT
+ )
+order by compared_with_cheap_asian_cnt desc, 1 asc
+LIMIT 10;
+ code |    country    |      capital      |          headofstate           | compared_with_cheap_asian_cnt 
+------+---------------+-------------------+--------------------------------+-------------------------------
+ CAN  | Canada        | Ottawa            | Elisabeth II                   |                            12
+ USA  | United States | Washington        | George W. Bush                 |                            12
+ MEX  | Mexico        | Ciudad de Mexico  | Vicente Fox Quesada            |                             6
+ PAN  | Panama        | Ciudad de Panama  | Mireya Elisa Moscoso Rodriguez |                             6
+ BRA  | Brazil        | Brasilia          | Fernando Henrique Cardoso      |                             5
+ COL  | Colombia      | Santafe de Bogota | Andres Pastrana Arango         |                             5
+ ABW  | Aruba         | Oranjestad        | Beatrix                        |                             4
+ BLZ  | Belize        | Belmopan          | Elisabeth II                   |                             4
+ BOL  | Bolivia       | La Paz            | Hugo Banzer Suarez             |                             4
+ CHL  | Chile         | Santiago de Chile | Ricardo Lagos Escobar          |                             4
+(10 rows)
+
+-- @Description PostgreSQL port of the MySQL "World" database.
+--
+-- The sample data used in the world database is Copyright Statistics 
+-- Finland, http://www.stat.fi/worldinfigures.
+--
+-- Modified to use it with GPDB
+DROP TABLE IF EXISTS city_uao cascade;
+DROP TABLE IF EXISTS country_uao cascade;
+DROP TABLE IF EXISTS countrylanguage_uao cascade;
+BEGIN;
+CREATE TABLE city_uao (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) with (appendonly=true) distributed by(id);
+CREATE TABLE country_uao (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true)  distributed by (code);
+CREATE TABLE countrylanguage_uao (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)  with (appendonly=true) distributed by (countrycode,language);
+COPY city_uao (id, name, countrycode, district, population) FROM '@abs_srcdir@/data/city.data';
+COPY country_uao (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM '@abs_srcdir@/data/country.data' WITH NULL AS '';
+COPY countrylanguage_uao (countrycode, "language", isofficial, percentage) FROM '@abs_srcdir@/data/countrylanguage.data';
+COMMIT;
+ANALYZE city_uao;
+ANALYZE country_uao;
+ANALYZE countrylanguage_uao;
+-- queries with one CTE that is referenced once
+-- Using CTE in the FROM clause
+--queries Using a CTE in the HAVING clause and Union All
+with somecheapasiandiversecountries_uao as
+(
+ select FOO_uao.code,FOO_uao.COUNTRY,FOO_uao.CAPITAL,FOO_uao.headofstate,count(*) ASIAN_COUNT from
+ (
+ select country_uao.code,country_uao.name COUNTRY,city_uao.name CAPITAL,country_uao.headofstate
+ from country_uao,city_uao
+ where country_uao.capital = city_uao.id 
+ and country_uao.gnp < 10000
+ and country_uao.region = 'Southeast Asia'
+ and country_uao.continent = 'Asia'
+ UNION ALL
+ select country_uao.code,country_uao.name COUNTRY,city_uao.name CAPITAL,country_uao.headofstate
+ from country_uao,city_uao
+ where country_uao.capital = city_uao.id 
+ and country_uao.gnp < 10000
+ and country_uao.region = 'Eastern Asia'
+ and country_uao.continent = 'Asia'
+ UNION ALL
+ select country_uao.code,country_uao.name COUNTRY,city_uao.name CAPITAL,country_uao.headofstate
+ from country_uao,city_uao
+ where country_uao.capital = city_uao.id 
+ and country_uao.gnp < 10000
+ and country_uao.region = 'Middle East'
+ and country_uao.continent = 'Asia'
+ ) FOO_uao, countrylanguage_uao
+ where FOO_uao.code = countrylanguage_uao.countrycode
+ group by FOO_uao.code,FOO_uao.COUNTRY,FOO_uao.CAPITAL,FOO_uao.headofstate,countrylanguage_uao.countrycode
+ HAVING count(*) >=
+ (select min(CNT) FROM
+   (select count(*) CNT,country_uao.code from countrylanguage_uao,country_uao
+    where countrylanguage_uao.countrycode=country_uao.code
+    and country_uao.continent = 'Asia'
+    and country_uao.region = 'Southern and Central Asia'
+    group by country_uao.code
+   ) FOO1_uao
+ )
+)
+select FOO_uao.code,FOO_uao.COUNTRY,FOO_uao.CAPITAL,FOO_uao.headofstate,count(*) compared_with_cheap_asian_cnt
+from
+(
+select country_uao.code,country_uao.name COUNTRY,city_uao.name CAPITAL,country_uao.headofstate
+from country_uao,city_uao
+where country_uao.capital = city_uao.id 
+and country_uao.continent = 'North America'
+UNION ALL
+select country_uao.code,country_uao.name COUNTRY,city_uao.name CAPITAL,country_uao.headofstate
+from country_uao,city_uao
+where country_uao.capital =	city_uao.id	
+and country_uao.continent =	'South America'
+) FOO_uao,countrylanguage_uao
+where FOO_uao.code = countrylanguage_uao.countrycode
+group by FOO_uao.code,FOO_uao.COUNTRY,FOO_uao.CAPITAL,FOO_uao.headofstate
+HAVING count(*)  >=
+ (select min(ASIAN_COUNT) FROM
+   (select ASIAN_COUNT FROM somecheapasiandiversecountries_uao,country_uao
+    where somecheapasiandiversecountries_uao.code = country_uao.code
+    and country_uao.gnp >= country_uao.gnpold
+   ) ASIANCOUNT
+ )
+order by compared_with_cheap_asian_cnt desc , 1 desc
+LIMIT 10;
+ code |    country    |       capital       |          headofstate           | compared_with_cheap_asian_cnt 
+------+---------------+---------------------+--------------------------------+-------------------------------
+ USA  | United States | Washington          | George W. Bush                 |                            12
+ CAN  | Canada        | Ottawa              | Elisabeth II                   |                            12
+ PAN  | Panama        | Ciudad de Panama    | Mireya Elisa Moscoso Rodriguez |                             6
+ MEX  | Mexico        | Ciudad de Mexico    | Vicente Fox Quesada            |                             6
+ GTM  | Guatemala     | Ciudad de Guatemala | Alfonso Portillo Cabrera       |                             5
+ COL  | Colombia      | Santafe de Bogota   | Andres Pastrana Arango         |                             5
+ BRA  | Brazil        | Brasilia            | Fernando Henrique Cardoso      |                             5
+ PRY  | Paraguay      | Asuncion            | Luis Angel Gonzalez Macchi     |                             4
+ NIC  | Nicaragua     | Managua             | Arnoldo Aleman Lacayo          |                             4
+ HND  | Honduras      | Tegucigalpa         | Carlos Roberto Flores Facusse  |                             4
+(10 rows)
+
+-- @description : Create view and execute select from view
+-- 
+DROP TABLE IF EXISTS sto_uao_emp_forview cascade;
+CREATE TABLE sto_uao_emp_forview (
+   empno    INT  ,
+   ename    VARCHAR(10),
+   job      VARCHAR(9),
+   mgr      INT NULL,
+   hiredate DATE,
+   sal      NUMERIC(7,2),
+   comm     NUMERIC(7,2) NULL,
+   dept     INT) with (appendonly=true) distributed by (empno);
+insert into sto_uao_emp_forview values 
+ (1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
+,(2,'HARDING','MANAGER',9,'02-02-1998',52000,15,3)
+,(3,'TAFT','SALES I',2,'01-02-1996',25000,20,3)
+,(4,'HOOVER','SALES I',2,'04-02-1990',27000,15,3)
+,(5,'LINCOLN','TECH',6,'06-23-1994',22500,15,4)
+,(6,'GARFIELD','MANAGER',9,'05-01-1993',54000,20,4)
+,(7,'POLK','TECH',6,'09-22-1997',25000,15,4)
+,(8,'GRANT','ENGINEER',10,'03-30-1997',32000,20,2)
+,(9,'JACKSON','CEO',NULL,'01-01-1990',75000,30,4)
+,(10,'FILLMORE','MANAGER',9,'08-09-1994',56000,20,2)
+,(11,'ADAMS','ENGINEER',10,'03-15-1996',34000,20,2)
+,(12,'WASHINGTON','ADMIN',6,'04-16-1998',18000,15,4)
+,(13,'MONROE','ENGINEER',10,'12-03-2000',30000,20,2)
+,(14,'ROOSEVELT','CPA',9,'10-12-1995',35000,30,1)
+,(15,'More','ENGINEER',9,'10-12-1994',25000,20,2)
+,(16,'ROSE','SALES I',10,'10-12-1999',18000,15,3)
+,(17,'CLINT','CPA',2,'10-12-2001',24000,30,1);
+DROP TABLE IF EXISTS sto_uao_dept_forview cascade;
+CREATE TABLE sto_uao_dept_forview (
+   deptno INT NOT NULL,
+   dname  VARCHAR(14),
+   loc    VARCHAR(13)) with (appendonly=true) distributed by (deptno);
+insert into sto_uao_dept_forview values 
+ (1,'ACCOUNTING','ST LOUIS')
+,(2,'RESEARCH','NEW YORK')
+,(3,'SALES','ATLANTA')
+,(4, 'OPERATIONS','SEATTLE');
+-- Create view
+create or replace view sto_uao_emp_view as
+select empno,ename,job,mgr,hiredate,sal,comm,dname,loc from sto_uao_dept_forview, sto_uao_emp_forview where sto_uao_dept_forview.deptno = sto_uao_emp_forview.dept; 
+select * from sto_uao_emp_view  where mgr is not NULL order by 1;
+ empno |   ename    |   job    | mgr |  hiredate  |   sal    | comm  |   dname    |   loc    
+-------+------------+----------+-----+------------+----------+-------+------------+----------
+     1 | JOHNSON    | ADMIN    |   6 | 12-17-1990 | 18000.00 | 10.00 | OPERATIONS | SEATTLE
+     2 | HARDING    | MANAGER  |   9 | 02-02-1998 | 52000.00 | 15.00 | SALES      | ATLANTA
+     3 | TAFT       | SALES I  |   2 | 01-02-1996 | 25000.00 | 20.00 | SALES      | ATLANTA
+     4 | HOOVER     | SALES I  |   2 | 04-02-1990 | 27000.00 | 15.00 | SALES      | ATLANTA
+     5 | LINCOLN    | TECH     |   6 | 06-23-1994 | 22500.00 | 15.00 | OPERATIONS | SEATTLE
+     6 | GARFIELD   | MANAGER  |   9 | 05-01-1993 | 54000.00 | 20.00 | OPERATIONS | SEATTLE
+     7 | POLK       | TECH     |   6 | 09-22-1997 | 25000.00 | 15.00 | OPERATIONS | SEATTLE
+     8 | GRANT      | ENGINEER |  10 | 03-30-1997 | 32000.00 | 20.00 | RESEARCH   | NEW YORK
+    10 | FILLMORE   | MANAGER  |   9 | 08-09-1994 | 56000.00 | 20.00 | RESEARCH   | NEW YORK
+    11 | ADAMS      | ENGINEER |  10 | 03-15-1996 | 34000.00 | 20.00 | RESEARCH   | NEW YORK
+    12 | WASHINGTON | ADMIN    |   6 | 04-16-1998 | 18000.00 | 15.00 | OPERATIONS | SEATTLE
+    13 | MONROE     | ENGINEER |  10 | 12-03-2000 | 30000.00 | 20.00 | RESEARCH   | NEW YORK
+    14 | ROOSEVELT  | CPA      |   9 | 10-12-1995 | 35000.00 | 30.00 | ACCOUNTING | ST LOUIS
+    15 | More       | ENGINEER |   9 | 10-12-1994 | 25000.00 | 20.00 | RESEARCH   | NEW YORK
+    16 | ROSE       | SALES I  |  10 | 10-12-1999 | 18000.00 | 15.00 | SALES      | ATLANTA
+    17 | CLINT      | CPA      |   2 | 10-12-2001 | 24000.00 | 30.00 | ACCOUNTING | ST LOUIS
+(16 rows)
+
+-- @Description select with where clause
+-- 
+DROP TABLE IF EXISTS city_uao_where cascade;
+DROP TABLE IF EXISTS country_uao_where cascade;
+DROP TABLE IF EXISTS countrylanguage_uao_where cascade;
+BEGIN;
+CREATE TABLE city_uao_where (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) with (appendonly=true) distributed by(id);
+CREATE TABLE country_uao_where (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true)  distributed by (code);
+CREATE TABLE countrylanguage_uao_where (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)  with (appendonly=true) distributed by (countrycode,language);
+COPY city_uao_where (id, name, countrycode, district, population) FROM '@abs_srcdir@/data/city.data';
+COPY country_uao_where (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM '@abs_srcdir@/data/country.data' WITH NULL AS '';
+COPY countrylanguage_uao_where (countrycode, "language", isofficial, percentage) FROM '@abs_srcdir@/data/countrylanguage.data';
+COMMIT;
+ANALYZE city_uao_where;
+ANALYZE country_uao_where;
+ANALYZE countrylanguage_uao_where;
+-- Using  WHERE clause
+with lang_total_uao as
+( select lang_count,countrycode from
+  (
+  (
+   select count(*) as lang_count,country_uao_where.code,countrylanguage_uao_where.countrycode
+  from country_uao_where join countrylanguage_uao_where on (country_uao_where.code=countrylanguage_uao_where.countrycode and governmentform='Federal Republic')
+  group by country_uao_where.code,countrylanguage_uao_where.countrycode order by country_uao_where.code)
+ 
+   UNION ALL
+ 
+  (
+   select count(*) as lang_count,country_uao_where.code,countrylanguage_uao_where.countrycode
+  from country_uao_where join countrylanguage_uao_where on (country_uao_where.code=countrylanguage_uao_where.countrycode and governmentform='Monarchy')
+  group by country_uao_where.code,countrylanguage_uao_where.countrycode order by country_uao_where.code)
+ 
+ ) FOO1_uao
+)
+select * from
+(
+select count(*) as cnt,country_uao_where.code,country_uao_where.name 
+from
+country_uao_where,countrylanguage_uao_where
+where country_uao_where.code=countrylanguage_uao_where.countrycode group by country_uao_where.code,country_uao_where.name) AS FOO_uao
+where foo_uao.cnt = (select max(lang_count) from lang_total_uao) order by foo_uao.code;
+ cnt | code |        name        
+-----+------+--------------------
+  12 | CAN  | Canada
+  12 | CHN  | China
+  12 | IND  | India
+  12 | RUS  | Russian Federation
+  12 | USA  | United States
+(5 rows)
+
+-- @Description select wildcard 
+-- 
+DROP TABLE IF EXISTS sto_uao_emp_wildcard cascade;
+CREATE TABLE sto_uao_emp_wildcard (
+   empno    INT  ,
+   ename    VARCHAR(10),
+   job      VARCHAR(9),
+   mgr      INT NULL,
+   hiredate DATE,
+   sal      NUMERIC(7,2),
+   comm     NUMERIC(7,2) NULL,
+   dept     INT) with (appendonly=true) distributed by (empno);
+insert into sto_uao_emp_wildcard values
+(1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
+,(2,'HARDING','MANAGER',9,'02-02-1998',52000,15,3)
+,(3,'TAFT','SALES I',2,'01-02-1996',25000,20,3)
+,(4,'HOOVER','SALES I',2,'04-02-1990',27000,15,3)
+,(5,'LINCOLN','TECH',6,'06-23-1994',22500,15,4)
+,(6,'GARFIELD','MANAGER',9,'05-01-1993',54000,20,4)
+,(7,'POLK','TECH',6,'09-22-1997',25000,15,4)
+,(8,'GRANT','ENGINEER',10,'03-30-1997',32000,20,2)
+,(9,'JACKSON','CEO',NULL,'01-01-1990',75000,30,4)
+,(10,'FILLMORE','MANAGER',9,'08-09-1994',56000,20,2)
+,(11,'ADAMS','ENGINEER',10,'03-15-1996',34000,20,2)
+,(12,'WASHINGTON','ADMIN',6,'04-16-1998',18000,15,4)
+,(13,'MONROE','ENGINEER',10,'12-03-2000',30000,20,7)
+,(14,'ROOSEVELT','CPA',9,'10-12-1995',35000,30,1)
+,(15,'More','ENGINEER',9,'10-12-1994',25000,20,2)
+,(16,'ROSE','SALES I',10,'10-12-1999',18000,15,3)
+,(17,'CLINT','CPA',2,'10-12-2001',24000,30,1);
+DROP TABLE IF EXISTS sto_uao_dept_wildcard cascade;
+CREATE TABLE sto_uao_dept_wildcard (
+   deptno INT NOT NULL,
+   dname  VARCHAR(14),
+   loc    VARCHAR(13)) with (appendonly=true) distributed by (deptno);
+insert into sto_uao_dept_wildcard values
+ (1,'ACCOUNTING','ST LOUIS')
+,(2,'RESEARCH','NEW YORK')
+,(3,'SALES','ATLANTA')
+,(5,'LOGISTICS','BOSTON')
+,(4, 'OPERATIONS','SEATTLE');
+select ename from sto_uao_emp_wildcard where dept in ( select deptno from  sto_uao_dept_wildcard  where dname like '%S')
+AND ename like 'H%' order by 1 asc LIMIT 15; 
+  ename  
+---------
+ HARDING
+ HOOVER
+(2 rows)
+
+-- @Description select with window 
+-- 
+DROP TABLE IF EXISTS uao_orders;
+CREATE TABLE uao_orders(order_id serial , customer_id integer, 
+      order_datetime timestamp, order_total numeric(10,2)) with (appendonly=true); 
+NOTICE:  CREATE TABLE will create implicit sequence "uao_orders_order_id_seq" for serial column "uao_orders.order_id"
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'order_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO uao_orders(customer_id, order_datetime, order_total)
+VALUES (1,'2009-05-01 10:00 AM', 500),
+    (1,'2009-05-15 11:00 AM', 650),
+    (2,'2009-05-11 11:00 PM', 100),
+    (2,'2009-05-12 11:00 PM', 5),
+       (3,'2009-04-11 11:00 PM', 100),
+          (1,'2009-05-20 11:00 AM', 3);
+select * from uao_orders order by order_id;
+ order_id | customer_id |   order_datetime    | order_total 
+----------+-------------+--------------------------+-------------
+        1 |           1 | Fri May 01 10:00:00 2009 |      500.00
+        2 |           1 | Fri May 15 11:00:00 2009 |      650.00
+        3 |           2 | Mon May 11 23:00:00 2009 |      100.00
+        4 |           2 | Tue May 12 23:00:00 2009 |        5.00
+        5 |           3 | Sat Apr 11 23:00:00 2009 |      100.00
+        6 |           1 | Wed May 20 11:00:00 2009 |        3.00
+(6 rows)
+
+SELECT row_number()  OVER(window_custtime) As rtime_d, 
+n.customer_id, lead(order_id) OVER(window_custtime) As cr_num, n.order_id, n.order_total
+FROM uao_orders AS n 
+WINDOW window_custtime AS (PARTITION BY n.customer_id 
+                               ORDER BY n.customer_id, n.order_id, n.order_total)
+ORDER BY  1, 2;
+ rtime_d | customer_id | cr_num | order_id | order_total 
+---------+-------------+--------+----------+-------------
+       1 |           1 |      2 |        1 |      500.00
+       1 |           2 |      4 |        3 |      100.00
+       1 |           3 |        |        5 |      100.00
+       2 |           1 |      6 |        2 |      650.00
+       2 |           2 |        |        4 |        5.00
+       3 |           1 |        |        6 |        3.00
+(6 rows)
+
