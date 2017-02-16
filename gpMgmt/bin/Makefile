@@ -169,10 +169,12 @@ SETUP_TOOLS_DIR=setuptools-$(SETUP_TOOLS_VERSION)
 PARSE_DIR=parse-$(PARSE_VERSION)
 ARG_PARSE_DIR=argparse-$(ARG_PARSE_VERSION)
 PYTHONSRC_INSTALL=$(PYLIB_SRC_EXT)/install
-PYTHONSRC_INSTALL_SITE=$(PYLIB_SRC_EXT)/install/lib/python2.6/site-packages
+PYTHON_VERSION=$(shell python -c "import sys; print '%s.%s' % (sys.version_info[0:2])")
+PYTHONSRC_INSTALL_SITE=$(PYLIB_SRC_EXT)/install/lib/python$(PYTHON_VERSION)/site-packages
 PYTHONSRC_INSTALL_PYTHON_PATH=$(PYTHONPATH):$(PYTHONSRC_INSTALL_SITE)
 BEHAVE_BIN=$(PYTHONSRC_INSTALL)/bin/behave
-MOCK_BIN=$(PYTHONSRC_INSTALL)/lib/python2.6/site-packages/mock-1.0.1-py2.6.egg
+# TODO: mock-1.0.1-py2.6.egg package should be updated.
+MOCK_BIN=$(PYTHONSRC_INSTALL)/lib/python$(PYTHON_VERSION)/site-packages/mock-1.0.1-py2.6.egg
 
 pylint:
 	@echo "--- pylint"
