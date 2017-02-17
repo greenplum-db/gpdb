@@ -342,3 +342,12 @@ crash_recovery_schema_topology:
 	-s tincrepo/mpp/gpdb/tests/storage/crashrecovery \
 	-p test_crash_recovery_schema_topology.py \
 	-p test_reindex_pg_class.py
+
+runaway_query:
+	$(TESTER) \
+		resource_management.runaway_query.runaway_query_scenario.test_runaway_query_scenario.RQTScenarioTestCase \
+		resource_management.runaway_query.runaway_detector.test_runaway_detector.RunawayDetectorTestCase \
+		resource_management.runaway_query.runaway_query_limits.test_runaway_query.RunawayQueryTestCase \
+		resource_management.runaway_query.runaway_query_multisession.test_runaway_multisession.RunawayMultiSessionTestCase \
+		resource_management.runaway_query.runaway_query_vmem_memoryaccounting.test_runaway_query_vmem_memoryaccounting.RQTMemoryAccountingTestCase \
+		resource_management.runaway_query.runaway_query_stress.test_runaway_query_stress.RunawayQueryStressTestCase

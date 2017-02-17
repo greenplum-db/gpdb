@@ -8,7 +8,7 @@
     <ul>
       <li id="pt222286">
         <xref href="#topic2" type="topic" format="dita"/>
-      </li>
+       </li>
       <li id="pt222315">
         <xref href="#topic6" type="topic" format="dita"/>
       </li>
@@ -120,13 +120,13 @@ $$ LANGUAGE plpgsql;</codeblock>
       <topic id="topic5" xml:lang="en">
         <title>Executing SQL Commands</title>
         <body>
-          <p>You can execute SQL commands with PL/gpSQL statements such as <codeph>EXECUTE</codeph>,
+          <p>You can execute SQL commands with PL/pgSQL statements such as <codeph>EXECUTE</codeph>,
               <codeph>PERFORM</codeph>, and <codeph>SELECT ... INTO</codeph>. For information about
-            the PL/gpSQL statements, see <xref
+            the PL/pgSQL statements, see <xref
               href="https://www.postgresql.org/docs/8.3/static/plpgsql-statements.html"
               scope="external" format="html"
               >https://www.postgresql.org/docs/8.3/static/plpgsql-statements.html</xref>. </p>
-          <note type="note">The PL/gpSQL statement <codeph>SELECT INTO</codeph> is not supported in
+          <note type="note">The PL/pgSQL statement <codeph>SELECT INTO</codeph> is not supported in
             the <codeph>EXECUTE</codeph> statement. </note>
         </body>
       </topic>

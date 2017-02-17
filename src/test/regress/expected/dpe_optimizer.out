@@ -1703,7 +1703,7 @@ select * from dim inner join malp on (dim.i = malp.i and dim.j = malp.j); -- onl
 (3 rows)
 
 --
--- bugs
+-- DPE: assertion failed with window function
 --
 drop schema if exists dpe_bugs cascade;
 NOTICE:  schema "dpe_bugs" does not exist, skipping

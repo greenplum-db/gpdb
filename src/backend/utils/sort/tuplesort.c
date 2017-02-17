@@ -425,6 +425,8 @@ static bool is_sortstate_rwfile(Tuplesortstate *state)
 #define REVERSEDIRECTION(state) ((*(state)->reversedirection) (state))
 #define LACKMEM(state)		((state)->availMem < 0)
 
+static void tuplesort_get_stats(Tuplesortstate *state, const char **sortMethod, const char **spaceType, long *spaceUsed);
+
 static inline void USEMEM(Tuplesortstate *state, int amt)
 {
 	state->availMem -= amt;
@@ -960,6 +962,11 @@ tuplesort_end(Tuplesortstate *state)
 		spaceUsed = (state->allowedMem - state->availMem + 1023) / 1024;
 
 	/*
+	 * Call before state->tapeset is closed.
+	 */
+	tuplesort_finalize_stats(state);
+
+	/*
 	 * Delete temporary "tape" files, if any.
 	 *
 	 * Note: want to include this in reported total cost of sort, hence need
@@ -974,8 +981,6 @@ tuplesort_end(Tuplesortstate *state)
 			workfile_mgr_close_file(NULL /* workset */, state->pfile_rwfile_state);
         }
 	}
-
-	tuplesort_finalize_stats(state);
 
 	if (trace_sort)
 	{
@@ -1019,6 +1024,10 @@ tuplesort_finalize_stats(Tuplesortstate *state)
             (double)MemoryContextGetPeakSpace(state->sortcontext);
 
 		state->statsFinalized = true;
+		tuplesort_get_stats(state,
+				&state->instrument->sortMethod,
+				&state->instrument->sortSpaceType,
+				&state->instrument->sortSpaceUsed);
     }
 }
 
@@ -2558,21 +2567,20 @@ tuplesort_restorepos(Tuplesortstate *state)
 }
 
 /*
- * tuplesort_explain - produce a line of information for EXPLAIN ANALYZE
+ * tuplesort_get_stats - extract summary statistics
  *
  * This can be called after tuplesort_performsort() finishes to obtain
  * printable summary information about how the sort was performed.
- *
- * The result is a palloc'd string.
+ * spaceUsed is measured in kilobytes.
  */
-char *
-tuplesort_explain(Tuplesortstate *state)
+static void
+tuplesort_get_stats(Tuplesortstate *state,
+					const char **sortMethod,
+					const char **spaceType,
+					long *spaceUsed)
 {
-	char	   *result = (char *) palloc(100);
-	long		spaceUsed;
-
 	/*
-	 * Note: it might seem we should print both memory and disk usage for a
+	 * Note: it might seem we should provide both memory and disk usage for a
 	 * disk-based sort.  However, the current code doesn't track memory space
 	 * accurately once we have begun to return tuples to the caller (since we
 	 * don't account for pfree's the caller is expected to do), so we cannot
@@ -2581,38 +2589,34 @@ tuplesort_explain(Tuplesortstate *state)
 	 * tell us how much is actually used in sortcontext?
 	 */
 	if (state->tapeset)
-		spaceUsed = LogicalTapeSetBlocks(state->tapeset) * (BLCKSZ / 1024);
+	{
+		*spaceType = "Disk";
+		*spaceUsed = LogicalTapeSetBlocks(state->tapeset) * (BLCKSZ / 1024);
+	}
 	else
-		spaceUsed = (state->allowedMem - state->availMem + 1023) / 1024;
+	{
+		*spaceType = "Memory";
+		*spaceUsed = (state->allowedMem - state->availMem + 1023) / 1024;
+	}
 
 	switch (state->status)
 	{
 		case TSS_SORTEDINMEM:
 			if (state->boundUsed)
-				snprintf(result, 100,
-						 "Sort Method:  top-N heapsort  Memory: %ldkB",
-						 spaceUsed);
+				*sortMethod = "top-N heapsort";
 			else
-				snprintf(result, 100,
-						 "Sort Method:  quicksort  Memory: %ldkB",
-						 spaceUsed);
+				*sortMethod = "quicksort";
 			break;
 		case TSS_SORTEDONTAPE:
-			snprintf(result, 100,
-					 "Sort Method:  external sort  Disk: %ldkB",
-					 spaceUsed);
+			*sortMethod = "external sort";
 			break;
 		case TSS_FINALMERGE:
-			snprintf(result, 100,
-					 "Sort Method:  external merge  Disk: %ldkB",
-					 spaceUsed);
+			*sortMethod = "external merge";
 			break;
 		default:
-			snprintf(result, 100, "sort still in progress");
+			*sortMethod = "still in progress";
 			break;
 	}
-
-	return result;
 }
 
 

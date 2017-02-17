@@ -28,6 +28,53 @@
 #include "utils/vmem_tracker.h"
 #include "parser/parsetree.h"
 
+#define NUM_SORT_METHOD 5
+
+#define TOP_N_HEAP_SORT_STR "top-N heapsort"
+#define QUICK_SORT_STR "quicksort"
+#define EXTERNAL_SORT_STR "external sort"
+#define EXTERNAL_MERGE_STR "external merge"
+#define IN_PROGRESS_SORT_STR "sort still in progress"
+
+#define NUM_SORT_SPACE_TYPE 2
+#define MEMORY_STR_SORT_SPACE_TYPE "Memory"
+#define DISK_STR_SORT_SPACE_TYPE "Disk"
+
+
+/*
+ * Different sort method in GPDB.
+ *
+ * Make sure to update NUM_SORT_METHOD when this enum changes.
+ * This enum value is used an index in the array sortSpaceUsed
+ * in struct CdbExplain_NodeSummary.
+ */
+typedef enum
+{
+	UNINITALIZED_SORT = 0,
+	TOP_N_HEAP_SORT = 1,
+	QUICK_SORT = 2,
+	EXTERNAL_SORT = 3,
+	EXTERNAL_MERGE = 4,
+	IN_PROGRESS_SORT = 5
+} ExplainSortMethod;
+
+typedef enum
+{
+	UNINITIALIZED_SORT_SPACE_TYPE = 0,
+	MEMORY_SORT_SPACE_TYPE = 1,
+	DISK_SORT_SPACE_TYPE = 2
+} ExplainSortSpaceType;
+
+/*
+ * Convert the above enum `ExplainSortMethod` to printable string for
+ * Explain Analyze.
+ * Note : No conversion available for `UNINITALIZED_SORT`. Caller has to index
+ * this array by subtracting 1 from origin enum value.
+ *
+ * E.g. sort_method_enum_str[TOP_N_HEAP_SORT-1]
+ */
+const char *sort_method_enum_str[] = {TOP_N_HEAP_SORT_STR, QUICK_SORT_STR, EXTERNAL_SORT_STR, EXTERNAL_MERGE_STR, IN_PROGRESS_SORT_STR};
+
 /* EXPLAIN ANALYZE statistics for one plan node of a slice */
 typedef struct CdbExplain_StatInst
 {
@@ -47,6 +94,9 @@ typedef struct CdbExplain_StatInst
 	instr_time	firststart;		/* Start time of first iteration of node */
 	double		peakMemBalance; /* Max mem account balance */
 	int			numPartScanned; /* Number of part tables scanned */
+	ExplainSortMethod sortMethod;	/* Type of sort */
+	ExplainSortSpaceType sortSpaceType;	/* Sort space type */
+	long			  sortSpaceUsed; /* Memory / Disk used by sort(KBytes) */
 	int			bnotes;			/* Offset to beginning of node's extra text */
 	int			enotes;			/* Offset to end of node's extra text */
 } CdbExplain_StatInst;
@@ -114,6 +164,8 @@ typedef struct CdbExplain_NodeSummary
 	CdbExplain_Agg peakMemBalance;
 	/* Used for DynamicTableScan, DynamicIndexScan and DynamicBitmapTableScan */
 	CdbExplain_Agg totalPartTableScanned;
+	/* Summary of space used by sort */
+	CdbExplain_Agg sortSpaceUsed[NUM_SORT_SPACE_TYPE][NUM_SORT_METHOD];
 
 	/* insts array info */
 	int			segindex0;		/* segment id of insts[0] */
@@ -276,6 +328,35 @@ static int
 static int
 			cdbexplain_countLeafPartTables(PlanState *planstate);
 
+/*
+ * Convert the sort method in string to corresponding
+ * enum ExplainSortMethod.
+ *
+ * If you change please update tuplesort_get_stats / tuplesort_get_stats_mk
+ * in tuplesort.c / tuplesort_mk.c
+ */
+static ExplainSortMethod
+String2ExplainSortMethod(const char* sortMethod) {
+	if (sortMethod == NULL) {
+		return UNINITALIZED_SORT;
+	}
+	else if (strcmp(TOP_N_HEAP_SORT_STR, sortMethod) == 0) {
+		return TOP_N_HEAP_SORT;
+	}
+	else if (strcmp(QUICK_SORT_STR, sortMethod) == 0) {
+		return QUICK_SORT;
+	}
+	else if (strcmp(EXTERNAL_SORT_STR, sortMethod) == 0) {
+		return EXTERNAL_SORT;
+	}
+	else if (strcmp(EXTERNAL_MERGE_STR, sortMethod) == 0) {
+		return EXTERNAL_MERGE;
+	}
+	else if (strcmp(IN_PROGRESS_SORT_STR, sortMethod) == 0) {
+		return IN_PROGRESS_SORT;
+	}
+	return UNINITALIZED_SORT;
+}
 
 /*
  * cdbexplain_localExecStats
@@ -843,6 +924,17 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
 	si->peakMemBalance = MemoryAccounting_GetAccountPeakBalance(planstate->plan->memoryAccountId);
 	si->firststart = instr->firststart;
 	si->numPartScanned = instr->numPartScanned;
+	si->sortMethod = String2ExplainSortMethod(instr->sortMethod);
+	if (MEMORY_STR_SORT_SPACE_TYPE == instr->sortSpaceType)
+	{
+		si->sortSpaceType = MEMORY_SORT_SPACE_TYPE;
+	}
+	else
+	{
+		AssertImply(si->sortMethod != UNINITALIZED_SORT, strcmp(DISK_STR_SORT_SPACE_TYPE, instr->sortSpaceType) == 0);
+		si->sortSpaceType = DISK_SORT_SPACE_TYPE;
+	}
+	si->sortSpaceUsed = instr->sortSpaceUsed;
 }	/* cdbexplain_collectStatsFromNode */
 
 
@@ -969,6 +1061,7 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	CdbExplain_DepStatAcc memory_accounting_global_peak;
 	CdbExplain_DepStatAcc peakMemBalance;
 	CdbExplain_DepStatAcc totalPartTableScanned;
+	CdbExplain_DepStatAcc sortSpaceUsed[NUM_SORT_SPACE_TYPE][NUM_SORT_METHOD];
 	int			imsgptr;
 	int			nInst;
 
@@ -993,6 +1086,10 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	cdbexplain_depStatAcc_init0(&totalWorkfileCreated);
 	cdbexplain_depStatAcc_init0(&peakMemBalance);
 	cdbexplain_depStatAcc_init0(&totalPartTableScanned);
+	for (int idx = 0; idx < NUM_SORT_METHOD; ++idx) {
+		cdbexplain_depStatAcc_init0(&sortSpaceUsed[MEMORY_SORT_SPACE_TYPE-1][idx]);
+		cdbexplain_depStatAcc_init0(&sortSpaceUsed[DISK_SORT_SPACE_TYPE-1][idx]);
+	}
 
 	/* Initialize per-slice accumulators. */
 	cdbexplain_depStatAcc_init0(&peakmemused);
@@ -1039,6 +1136,10 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		cdbexplain_depStatAcc_upd(&totalWorkfileCreated, (rsi->workfileCreated ? 1 : 0), rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&peakMemBalance, rsi->peakMemBalance, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&totalPartTableScanned, rsi->numPartScanned, rsh, rsi, nsi);
+		if (rsi->sortMethod < NUM_SORT_METHOD && rsi->sortMethod != UNINITALIZED_SORT && rsi->sortSpaceType != UNINITIALIZED_SORT_SPACE_TYPE) {
+			Assert(rsi->sortSpaceType <= NUM_SORT_SPACE_TYPE);
+			cdbexplain_depStatAcc_upd(&sortSpaceUsed[rsi->sortSpaceType-1][rsi->sortMethod - 1], (double)rsi->sortSpaceUsed, rsh, rsi, nsi);
+		}
 
 		/* Update per-slice accumulators. */
 		cdbexplain_depStatAcc_upd(&peakmemused, rsh->worker.peakmemused, rsh, rsi, nsi);
@@ -1054,6 +1155,10 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	ns->totalWorkfileCreated = totalWorkfileCreated.agg;
 	ns->peakMemBalance = peakMemBalance.agg;
 	ns->totalPartTableScanned = totalPartTableScanned.agg;
+	for (int idx = 0; idx < NUM_SORT_METHOD; ++idx) {
+		ns->sortSpaceUsed[MEMORY_SORT_SPACE_TYPE-1][idx] = sortSpaceUsed[MEMORY_SORT_SPACE_TYPE-1][idx].agg;
+		ns->sortSpaceUsed[DISK_SORT_SPACE_TYPE-1][idx] = sortSpaceUsed[DISK_SORT_SPACE_TYPE-1][idx].agg;
+	}
 
 	/* Roll up summary over all nodes of slice into RecvStatCtx. */
 	ctx->workmemused_max = Max(ctx->workmemused_max, workmemused.agg.vmax);
@@ -1343,6 +1448,32 @@ nodeSupportWorkfileCaching(PlanState *planstate)
 }
 
 /*
+ * nodeSupportWorkfileCaching
+ *	 Prints the sort method and memory used by sort operator.
+ */
+static void
+show_cumulative_sort_info(struct StringInfoData *str,
+		int indent,
+		const char *sort_method,
+		const char* sort_space_type,
+		CdbExplain_Agg *agg)
+{
+	if (agg->vcnt > 0) {
+		if (agg->vcnt > 1)
+		{
+			appendStringInfo(str, "Sort Method:  %s  Max %s: %ldKB  Avg %s: %ldKB (%d segments)\n",
+					sort_method, sort_space_type, (long)(agg->vmax), sort_space_type, (long)(agg->vsum / agg->vcnt), agg->vcnt);
+			appendStringInfoFill(str, 2 * indent, ' ');
+		}
+		else
+		{
+			appendStringInfo(str, "Sort Method:  %s  %s: %ldKB\n", sort_method, sort_space_type, (long)(agg->vsum));
+			appendStringInfoFill(str, 2 * indent, ' ');
+		}
+	}
+}
+
+/*
  * cdbexplain_showExecStats
  *	  Called by qDisp process to format a node's EXPLAIN ANALYZE statistics.
  *
@@ -1443,6 +1574,13 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 								 ns->ntuples.vmax,
 								 segbuf);
 			break;
+		case T_SortState:
+			for (int idx = 0; idx < NUM_SORT_METHOD; ++idx)
+			{
+				show_cumulative_sort_info(str, indent, sort_method_enum_str[idx], MEMORY_STR_SORT_SPACE_TYPE, &ns->sortSpaceUsed[MEMORY_SORT_SPACE_TYPE-1][idx]);
+				show_cumulative_sort_info(str, indent, sort_method_enum_str[idx], DISK_STR_SORT_SPACE_TYPE, &ns->sortSpaceUsed[DISK_SORT_SPACE_TYPE-1][idx]);
+			}
+			/* no break */
 		default:
 			if (ns->ntuples.vcnt > 1)
 				appendStringInfo(str,

@@ -1400,51 +1400,6 @@ Feature: gptransfer tests
         And the temporary table file "wide_row_16384.sql" is removed
         And drop the table "wide_row_16384" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d gptransfer_testdb5"
 
-    @T339868
-    Scenario: gptransfer with max-line-length of 32KB
-        Given the database is running
-        And the database "gptransfer_destdb" does not exist
-        And the database "gptransfer_testdb1" does not exist
-        And the database "gptransfer_testdb3" does not exist
-        And the database "gptransfer_testdb4" does not exist
-        And the database "gptransfer_testdb5" does not exist
-        And a table is created containing rows of length "32768" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d gptransfer_testdb5"
-        And the user runs "gptransfer -t gptransfer_testdb5.public.wide_row_32768 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --max-line-length 33792 --batch-size=10"
-        Then gptransfer should return a return code of 0
-        And verify that table "wide_row_32768" in "gptransfer_testdb5" has "10" rows
-        And the temporary table file "wide_row_32768.sql" is removed
-        And drop the table "wide_row_32768" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d gptransfer_testdb5"
-
-    @T339869
-    Scenario: gptransfer with max-line-length of 256MB
-        Given the database is running
-        And the database "gptransfer_destdb" does not exist
-        And the database "gptransfer_testdb1" does not exist
-        And the database "gptransfer_testdb3" does not exist
-        And the database "gptransfer_testdb4" does not exist
-        And the database "gptransfer_testdb5" does not exist
-        And a table is created containing rows of length "267386880" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d gptransfer_testdb5"
-        And the user runs "gptransfer -t gptransfer_testdb5.public.wide_row_267386880 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --max-line-length 268435456 --batch-size=10"
-        Then gptransfer should return a return code of 0
-        And verify that table "wide_row_267386880" in "gptransfer_testdb5" has "10" rows
-        And the temporary table file "wide_row_267386880.sql" is removed
-        And drop the table "wide_row_267386880" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d gptransfer_testdb5"
-
-    @T339871
-    Scenario: gptransfer with max-line-length of 257MB
-        Given the database is running
-        And the database "gptransfer_destdb" does not exist
-        And the database "gptransfer_testdb1" does not exist
-        And the database "gptransfer_testdb3" does not exist
-        And the database "gptransfer_testdb4" does not exist
-        And the database "gptransfer_testdb5" does not exist
-        And a table is created containing rows of length "269484032" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d gptransfer_testdb5"
-        And the user runs "gptransfer -t gptransfer_testdb5.public.wide_row_269484032 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --max-line-length 269484032 --batch-size=10"
-        Then gptransfer should return a return code of 2
-        And gptransfer should print Value must be between 32768 and 268435456 to stdout
-        And the temporary table file "wide_row_269484032.sql" is removed
-        And drop the table "wide_row_269484032" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d gptransfer_testdb5"
-
     Scenario: Negative test for gptransfer full with invalid delimiter and format option
         Given the database is running
         And the database "gptransfer_destdb" does not exist

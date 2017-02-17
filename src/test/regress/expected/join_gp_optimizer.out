@@ -361,5 +361,31 @@ select enable_xform('CXformLeftSemiJoin2HashJoin');
  CXformLeftSemiJoin2HashJoin is enabled
 (1 row)
 
+-- In case of Left Anti Semi Join, if the left rel is empty a dummy join
+-- should be created
+drop table if exists foo;
+NOTICE:  table "foo" does not exist, skipping
+drop table if exists bar;
+NOTICE:  table "bar" does not exist, skipping
+create table foo (a int, b int) distributed randomly;
+create table bar (c int, d int) distributed randomly;
+insert into foo select generate_series(1,10);
+insert into bar select generate_series(1,10);
+explain select a from foo where a<1 and a>1 and not exists (select c from bar where c=a);
+                   QUERY PLAN                   
+------------------------------------------------
+ Result  (cost=0.00..0.00 rows=0 width=4)
+   ->  Result  (cost=0.00..0.00 rows=0 width=4)
+         One-Time Filter: false
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.5.0
+(5 rows)
+
+select a from foo where a<1 and a>1 and not exists (select c from bar where c=a);
+ a 
+---
+(0 rows)
+
+-- Cleanup
 set client_min_messages='warning'; -- silence drop-cascade NOTICEs
 drop schema pred cascade;

@@ -52,7 +52,7 @@
                     Select the Explain tab to view the graphical output. For example:<fig
                         id="io149084">
                         <title>Graphical Query Plan in pgAdmin III</title>
-                        <image href="../../../graphics/pg3_queryplan.png" placement="break"
+                        <image href="../../graphics/pg3_queryplan.png" placement="break"
                             width="499px" height="379px" id="image_e2n_pyp_g4"/>
                     </fig></stepresult>
             </step>

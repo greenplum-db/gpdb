@@ -7,20 +7,10 @@
 	</booktitle>
 	<frontmatter>
 	</frontmatter>
-	<chapter href="common/welcome.xml" navtitle="Welcome"/>
-	<chapter href="relnotes/GPDB_500_README.xml"/>
 	<chapter href="common/pivotal-gpdb-features.xml"/>
+	<chapter href="relnotes/GPDB_500_README.xml"/>
 	<chapter href="admin_guide/admin_guide.ditamap" format="ditamap"/>
 	<chapter href="utility_guide/utility_guide.ditamap" format="ditamap"/>
 	<chapter href="ref_guide/ref_guide.ditamap" format="ditamap"/>
-	<chapter href="common/client-docs-unix.xml">
-		<topicref href="client_tool_guides/client_tools_unix.ditamap" format="ditamap"/>
-		<topicref href="client_tool_guides/load_tools_unix.ditamap" format="ditamap"/>
-		<topicref href="client_tool_guides/connectivity_unix.ditamap" format="ditamap"/>
-	</chapter>
-	<chapter href="common/client-docs-win.xml">
-		<topicref href="client_tool_guides/client_tools_win.ditamap" format="ditamap"/>
-		<topicref href="client_tool_guides/load_tools_win.ditamap" format="ditamap"/>
-		<topicref href="client_tool_guides/connectivity_win.ditamap" format="ditamap"/>
-	</chapter>
+	<chapter href="client_tool_guides/client_tool_guides.ditamap" format="ditamap"/>
 </bookmap>

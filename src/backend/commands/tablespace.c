@@ -952,6 +952,44 @@ AlterTableSpaceOwner(const char *name, Oid newOwnerId)
  * Routines for handling the GUC variable 'default_tablespace'.
  */
 
+/*
+ * Returns true if tablespace exists, false otherwise
+ */
+static bool
+check_tablespace(const char *tablespacename)
+{
+	bool		result;
+	Relation	rel;
+	HeapScanDesc scandesc;
+	HeapTuple	tuple;
+	ScanKeyData entry[1];
+
+	/*
+	 * Search pg_tablespace. We use a heapscan here even though there is an
+	 * index on name, on the theory that pg_tablespace will usually have just
+	 * a few entries and so an indexed lookup is a waste of effort.
+	 */
+	rel = heap_open(TableSpaceRelationId, AccessShareLock);
+
+	ScanKeyInit(&entry[0],
+				Anum_pg_tablespace_spcname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				CStringGetDatum(tablespacename));
+	scandesc = heap_beginscan(rel, SnapshotNow, 1, entry);
+	tuple = heap_getnext(scandesc, ForwardScanDirection);
+
+	/* If nothing matches then the tablespace doesn't exist */
+	if (HeapTupleIsValid(tuple))
+		result = true;
+	else
+		result = false;
+
+	heap_endscan(scandesc);
+	heap_close(rel, AccessShareLock);
+
+	return result;
+}
+
 /* assign_hook: validate new default_tablespace, do extra actions as needed */
 const char *
 assign_default_tablespace(const char *newval, bool doit, GucSource source)
@@ -962,8 +1000,13 @@ assign_default_tablespace(const char *newval, bool doit, GucSource source)
 	 */
 	if (IsTransactionState())
 	{
+		/*
+		 * get_tablespace_oid cannot be used because it acquires lock hence
+		 * ends up allocating xid (maybe in reader gang too) instead
+		 * check_tablespace is used.
+		 */
 		if (newval[0] != '\0' &&
-			!OidIsValid(get_tablespace_oid(newval, true)))
+			!check_tablespace(newval))
 		{
 			/*
 			 * When source == PGC_S_TEST, we are checking the argument of an

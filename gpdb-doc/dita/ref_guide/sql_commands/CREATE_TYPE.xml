@@ -3,6 +3,8 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="ch20941">CREATE TYPE</title><body><p id="sql_command_desc">Defines a new data type.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE TYPE <varname>name</varname> AS ( <varname>attribute_name</varname> <varname>data_type</varname> [, ... ] )
 
+CREATE TYPE <varname>name</varname> AS ENUM ( '<varname>label</varname>' [, ... ] )
+
 CREATE TYPE <varname>name</varname> (
     INPUT = <varname>input_function</varname>,
     OUTPUT = <varname>output_function</varname>
@@ -26,7 +28,14 @@ The composite type is specified by a list of attribute names and data
 types. This is essentially the same as the row type of a table, but using
 <codeph>CREATE TYPE</codeph> avoids the need to create an actual table
 when all that is wanted is to define a type. A stand-alone composite
-type is useful as the argument or return type of a function.</p></sectiondiv><sectiondiv id="section5"><b>Base Types</b><p>The second form of <codeph>CREATE TYPE</codeph>
+type is useful as the argument or return type of a function.</p></sectiondiv>
+<sectiondiv id="enum"><b>Enumerated Types</b>
+<p>The second form of <codeph>CREATE TYPE</codeph> creates an enumerated (<codeph>ENUM</codeph>) type, as described in 
+<xref href="https://www.postgresql.org/docs/8.3/static/datatype-enum.html" format="html" scope="external">Enumerated Types</xref> in the 
+PostgreSQL documentation. Enum types take a list of one or more quoted labels, each of which must be less than 
+<codeph>NAMEDATALEN</codeph> bytes long (64 in a standard build).</p>
+</sectiondiv>
+<sectiondiv id="section5"><b>Base Types</b><p>The third form of <codeph>CREATE TYPE</codeph>
                     creates a new base type (scalar type). The parameters may appear in any order,
                     not only that shown in the syntax, and most are optional. You must register two
                     or more functions (using <codeph>CREATE FUNCTION</codeph>) before defining the
@@ -150,7 +159,12 @@ generalized internal representation used by <codeph>array_in</codeph>
 and <codeph>array_out</codeph>. For historical reasons, subscripting
 of fixed-length array types starts from zero, rather than from one as
 for variable-length arrays.</p></sectiondiv></section><section id="section7"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of a type to be created. </pd></plentry><plentry><pt><varname>attribute_name</varname></pt><pd>The name of an attribute (column) for the composite type. </pd></plentry><plentry><pt><varname>data_type</varname></pt><pd>The name of an existing data type to become a column of the composite
-type. </pd></plentry><plentry><pt><varname>input_function</varname></pt><pd>The name of a function that converts data from the type's external
+type. </pd></plentry>
+<plentry>
+  <pt><varname>label</varname></pt>
+  <pd>A string literal representing the textual label associated with one value of an enum type.</pd>
+</plentry> 
+<plentry><pt><varname>input_function</varname></pt><pd>The name of a function that converts data from the type's external
 textual form to its internal form. </pd></plentry><plentry><pt><varname>output_function</varname></pt><pd>The name of a function that converts data from the type's internal
 form to its external textual form. </pd></plentry><plentry><pt><varname>receive_function</varname></pt><pd>The name of a function that converts data from the type's external
 binary form to its internal form. </pd></plentry><plentry><pt><varname>send_function</varname></pt><pd>The name of a function that converts data from the type's internal
@@ -188,7 +202,21 @@ in C.</p></section><section id="section9"><title>Examples</title><p>This example
 
 CREATE FUNCTION getfoo() RETURNS SETOF compfoo AS $$
     SELECT fooid, fooname FROM foo
-$$ LANGUAGE SQL;</codeblock><p>This example creates the base data type <codeph>box</codeph> and then uses the type in a table
+$$ LANGUAGE SQL;</codeblock>
+<p>This example creates the enumerated type <codeph>mood</codeph> and uses it in a table definition.</p> 
+<codeblock>CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy');
+CREATE TABLE person (
+    name text,
+    current_mood mood
+);
+INSERT INTO person VALUES ('Moe', 'happy');
+SELECT * FROM person WHERE current_mood = 'happy';
+ name | current_mood 
+------+--------------
+ Moe  | happy
+(1 row)
+</codeblock>
+<p>This example creates the base data type <codeph>box</codeph> and then uses the type in a table
                 definition:</p><codeblock>CREATE TYPE box;
 
 CREATE FUNCTION my_box_in_function(cstring) RETURNS box AS 

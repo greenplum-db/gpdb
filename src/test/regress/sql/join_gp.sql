@@ -157,5 +157,18 @@ select enable_xform('CXformLeftAntiSemiJoinNotIn2HashJoinNotIn');
 select enable_xform('CXformLeftOuterJoin2HashJoin');
 select enable_xform('CXformLeftSemiJoin2HashJoin');
 
+-- In case of Left Anti Semi Join, if the left rel is empty a dummy join
+-- should be created
+drop table if exists foo;
+drop table if exists bar;
+create table foo (a int, b int) distributed randomly;
+create table bar (c int, d int) distributed randomly;
+insert into foo select generate_series(1,10);
+insert into bar select generate_series(1,10);
+
+explain select a from foo where a<1 and a>1 and not exists (select c from bar where c=a);
+select a from foo where a<1 and a>1 and not exists (select c from bar where c=a);
+
+-- Cleanup
 set client_min_messages='warning'; -- silence drop-cascade NOTICEs
 drop schema pred cascade;

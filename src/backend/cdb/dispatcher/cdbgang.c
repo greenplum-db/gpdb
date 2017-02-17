@@ -220,11 +220,7 @@ AllocateWriterGang()
 	{
 		if (!GangOK(primaryWriterGang))
 		{
-			elog(LOG, "WARN: existing primary writer gang is invalid, will create a new gang");
-			DisconnectAndDestroyAllGangs(true);
-			CheckForResetSession();
-			primaryWriterGang = NULL;
-			writerGang = NULL;
+			elog(ERROR, "could not connect to segment: initialization of segworker group failed");
 		}
 		else
 		{
@@ -817,22 +813,44 @@ static Gang *getAvailableGang(GangType type, int size, int content)
 	case GANGTYPE_ENTRYDB_READER:
 		if (availableReaderGangs1 != NULL) /* There are gangs already created */
 		{
-			ListCell *cell = NULL;
-			ListCell *prevcell = NULL;
+			ListCell   *cur_item = NULL;
+			ListCell   *prev_item = NULL;
+			ListCell   *next_item = NULL;
 
-			foreach(cell, availableReaderGangs1)
+			cur_item = list_head(availableReaderGangs1);
+
+			while (cur_item != NULL)
 			{
-				Gang *gang = (Gang *) lfirst(cell);
+				Gang *gang = (Gang *) lfirst(cur_item);
 				Assert(gang != NULL);
 				Assert(gang->size == size);
+
+				next_item = lnext(cur_item);
+
 				if (gang->db_descriptors[0].segindex == content)
 				{
-					ELOG_DISPATCHER_DEBUG("reusing an available reader 1-gang for seg%d", content);
-					retGang = gang;
-					availableReaderGangs1 = list_delete_cell(availableReaderGangs1, cell, prevcell);
-					break;
+					availableReaderGangs1 = list_delete_cell(availableReaderGangs1, cur_item, prev_item);
+
+					/* sanity check */
+					if (!GangOK(gang))
+					{
+						/* connection is bad or segment is down */
+						DisconnectAndDestroyGang(gang);
+					}
+					else
+					{
+						ELOG_DISPATCHER_DEBUG("reusing an available reader 1-gang for seg%d", content);
+						retGang = gang;
+						break;
+					}
+					/* prev_item does not advance */
 				}
-				prevcell = cell;
+				else
+				{
+					prev_item = cur_item;
+				}
+
+				cur_item = next_item;
 			}
 		}
 		break;
@@ -840,13 +858,36 @@ static Gang *getAvailableGang(GangType type, int size, int content)
 	case GANGTYPE_PRIMARY_READER:
 		if (availableReaderGangsN != NULL) /* There are gangs already created */
 		{
-			ELOG_DISPATCHER_DEBUG("Reusing an available reader N-gang");
+			ListCell   *cur_item = NULL;
+			ListCell   *prev_item = NULL;
+			ListCell   *next_item = NULL;
 
-			retGang = linitial(availableReaderGangsN);
-			Assert(retGang != NULL);
-			Assert(retGang->type == type && retGang->size == size);
+			cur_item = list_head(availableReaderGangsN);
 
-			availableReaderGangsN = list_delete_first(availableReaderGangsN);
+			while (cur_item != NULL)
+			{
+				Gang *gang = (Gang *) lfirst(cur_item);
+				Assert(gang != NULL);
+				Assert(gang->size == size);
+				next_item = lnext(cur_item);
+
+				availableReaderGangsN = list_delete_cell(availableReaderGangsN, cur_item, prev_item);
+
+					/* sanity check */
+				if (!GangOK(gang))
+				{
+					/* connection is bad or segment is down */
+					DisconnectAndDestroyGang(gang);
+				}
+				else
+				{
+					ELOG_DISPATCHER_DEBUG("reusing an available reader N-gang");
+					retGang = gang;
+					break;
+				}
+				/* prev_item does not advance */
+				cur_item = next_item;
+			}
 		}
 		break;
 
@@ -854,14 +895,6 @@ static Gang *getAvailableGang(GangType type, int size, int content)
 		Assert(false);
 	}
 
-	/* sanity check */
-	if (retGang && !GangOK(retGang))
-	{
-		/* connection is bad or segment is down */
-		DisconnectAndDestroyGang(retGang);	
-		retGang = NULL;
-	}
-		
 	return retGang;
 }
 

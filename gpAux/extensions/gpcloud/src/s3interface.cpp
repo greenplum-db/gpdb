@@ -146,7 +146,10 @@ xmlParserCtxtPtr S3InterfaceService::getXMLContext(Response &response) {
 Response S3InterfaceService::getBucketResponse(const S3Url &s3Url, const string &encodedQuery) {
     HTTPHeaders headers;
     headers.Add(HOST, s3Url.getHostForCurl());
-    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+    headers.Add(X_AMZ_CONTENT_SHA256,
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");  // sha256hex
+                                                                                      // of empty
+                                                                                      // string
 
     SignRequestV4("GET", &headers, s3Url.getRegion(), s3Url.getPathForCurl(), encodedQuery,
                   this->params.getCred());
@@ -313,7 +316,10 @@ uint64_t S3InterfaceService::fetchData(uint64_t offset, S3VectorUInt8 &data, uin
     snprintf(rangeBuf, sizeof(rangeBuf), "bytes=%" PRIu64 "-%" PRIu64, offset, offset + len - 1);
     headers.Add(HOST, s3Url.getHostForCurl());
     headers.Add(RANGE, rangeBuf);
-    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+    headers.Add(X_AMZ_CONTENT_SHA256,
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");  // sha256hex
+                                                                                      // of empty
+                                                                                      // string
 
     SignRequestV4("GET", &headers, s3Url.getRegion(), s3Url.getPathForCurl(), "",
                   this->params.getCred());
@@ -339,7 +345,10 @@ S3CompressionType S3InterfaceService::checkCompressionType(const S3Url &s3Url) {
 
     headers.Add(HOST, s3Url.getHostForCurl());
     headers.Add(RANGE, rangeBuf);
-    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+    headers.Add(X_AMZ_CONTENT_SHA256,
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");  // sha256hex
+                                                                                      // of empty
+                                                                                      // string
 
     SignRequestV4("GET", &headers, s3Url.getRegion(), s3Url.getPathForCurl(), "",
                   this->params.getCred());
@@ -371,7 +380,10 @@ bool S3InterfaceService::checkKeyExistence(const S3Url &s3Url) {
     HTTPHeaders headers;
 
     headers.Add(HOST, s3Url.getHostForCurl());
-    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+    headers.Add(X_AMZ_CONTENT_SHA256,
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");  // sha256hex
+                                                                                      // of empty
+                                                                                      // string
 
     SignRequestV4("HEAD", &headers, s3Url.getRegion(), s3Url.getPathForCurl(), "",
                   this->params.getCred());
@@ -385,7 +397,10 @@ string S3InterfaceService::getUploadId(const S3Url &s3Url) {
     headers.Add(HOST, s3Url.getHostForCurl());
     headers.Disable(CONTENTTYPE);
     headers.Disable(CONTENTLENGTH);
-    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+    headers.Add(X_AMZ_CONTENT_SHA256,
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");  // sha256hex
+                                                                                      // of empty
+                                                                                      // string
 
     SignRequestV4("POST", &headers, s3Url.getRegion(), s3Url.getPathForCurl(), "uploads=",
                   this->params.getCred());
@@ -412,7 +427,10 @@ string S3InterfaceService::uploadPartOfData(S3VectorUInt8 &data, const S3Url &s3
     stringstream queryString;
 
     headers.Add(HOST, s3Url.getHostForCurl());
-    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+
+    char contentSha256[SHA256_DIGEST_STRING_LENGTH];  // 65
+    sha256_hex((const char *)data.data(), data.size(), contentSha256);
+    headers.Add(X_AMZ_CONTENT_SHA256, contentSha256);
 
     headers.Add(CONTENTTYPE, "text/plain");
     headers.Add(CONTENTLENGTH, std::to_string((unsigned long long)data.size()));
@@ -467,7 +485,11 @@ bool S3InterfaceService::completeMultiPart(const S3Url &s3Url, const string &upl
 
     headers.Add(HOST, s3Url.getHostForCurl());
     headers.Add(CONTENTTYPE, "application/xml");
-    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+
+    char contentSha256[SHA256_DIGEST_STRING_LENGTH];  // 65
+    sha256_hex(body.str().c_str(), contentSha256);
+    headers.Add(X_AMZ_CONTENT_SHA256, contentSha256);
+
     headers.Add(CONTENTLENGTH, std::to_string((unsigned long long)body.str().length()));
 
     queryString << "uploadId=" << uploadId;
@@ -497,9 +519,12 @@ bool S3InterfaceService::abortUpload(const S3Url &s3Url, const string &uploadId)
     stringstream queryString;
 
     headers.Add(HOST, s3Url.getHostForCurl());
-    headers.Add(CONTENTTYPE, "text/plain");
-    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
-    headers.Add(CONTENTLENGTH, "0");
+    headers.Disable(CONTENTTYPE);
+    headers.Disable(CONTENTLENGTH);
+    headers.Add(X_AMZ_CONTENT_SHA256,
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");  // sha256hex
+                                                                                      // of empty
+                                                                                      // string
 
     queryString << "uploadId=" << uploadId;
 

@@ -923,7 +923,7 @@ TARGET:STDOUT</codeblock>
       <title>Flow Diagram for MapReduce Example</title>
       <body>
         <p>The following diagram shows the job flow of the MapReduce job defined in the example:</p>
-        <image href="../graphics/mapreducejob.jpg" placement="break" width="487px" height="634px"/>
+        <image href="./graphics/mapreducejob.jpg" placement="break" width="487px" height="634px"/>
       </body>
     </topic>
   </topic>

@@ -377,6 +377,8 @@ struct Tuplesortstate_mk
 	int		   *gpmon_sort_tick;
 };
 
+static void tuplesort_get_stats_mk(Tuplesortstate_mk* state, const char **sortMethod, const char **spaceType, long *spaceUsed);
+
 static bool
 is_sortstate_rwfile(Tuplesortstate_mk *state)
 {
@@ -1009,9 +1011,14 @@ tuplesort_end_mk(Tuplesortstate_mk *state)
 	long		spaceUsed;
 
 	if (state->tapeset)
-		spaceUsed = LogicalTapeSetBlocks(state->tapeset);
+		spaceUsed = LogicalTapeSetBlocks(state->tapeset) * (BLCKSZ / 1024);
 	else
 		spaceUsed = (MemoryContextGetCurrentSpace(state->sortcontext) + 1024) / 1024;
+
+	/*
+	 * Call before state->tapeset is closed.
+	 */
+	tuplesort_finalize_stats_mk(state);
 
 	/*
 	 * Delete temporary "tape" files, if any.
@@ -1030,13 +1037,11 @@ tuplesort_end_mk(Tuplesortstate_mk *state)
 		}
 	}
 
-
 	if (state->work_set)
 	{
 		workfile_mgr_close_set(state->work_set);
 	}
 
-	tuplesort_finalize_stats_mk(state);
 
 	if (trace_sort)
 		PG_TRACE2(tuplesort__end, state->tapeset ? 1 : 0, spaceUsed);
@@ -1093,6 +1098,7 @@ tuplesort_finalize_stats_mk(Tuplesortstate_mk *state)
 		}
 
 		state->statsFinalized = true;
+		tuplesort_get_stats_mk(state, &state->instrument->sortMethod, &state->instrument->sortSpaceType, &state->instrument->sortSpaceUsed);
 	}
 }
 
@@ -2625,21 +2631,20 @@ tuplesort_restorepos_mk(Tuplesortstate_mk *state)
 
 
 /*
- * tuplesort_explain - produce a line of information for EXPLAIN ANALYZE
+ * tuplesort_get_stats_mk - extract summary statistics
  *
- * This can be called after tuplesort_performsort() finishes to obtain
+ * This can be called after tuplesort_performsort_mk() finishes to obtain
  * printable summary information about how the sort was performed.
- *
- * The result is a palloc'd string.
+ * spaceUsed is measured in kilobytes.
  */
-char *
-tuplesort_explain_mk(Tuplesortstate_mk *state)
+static void
+tuplesort_get_stats_mk(Tuplesortstate_mk* state,
+					   const char **sortMethod,
+					   const char **spaceType,
+					   long *spaceUsed)
 {
-	char	   *result = (char *) palloc(100);
-	long		spaceUsed;
-
 	/*
-	 * Note: it might seem we should print both memory and disk usage for a
+	 * Note: it might seem we should provide both memory and disk usage for a
 	 * disk-based sort.  However, the current code doesn't track memory space
 	 * accurately once we have begun to return tuples to the caller (since we
 	 * don't account for pfree's the caller is expected to do), so we cannot
@@ -2648,38 +2653,34 @@ tuplesort_explain_mk(Tuplesortstate_mk *state)
 	 * tell us how much is actually used in sortcontext?
 	 */
 	if (state->tapeset)
-		spaceUsed = LogicalTapeSetBlocks(state->tapeset);
+	{
+		*spaceType = "Disk";
+		*spaceUsed = LogicalTapeSetBlocks(state->tapeset) * (BLCKSZ / 1024);
+	}
 	else
-		spaceUsed = (MemoryContextGetCurrentSpace(state->sortcontext) + 1024) / 1024;
+	{
+		*spaceType = "Memory";
+		*spaceUsed = (MemoryContextGetCurrentSpace(state->sortcontext) + 1024) / 1024;
+	}
 
 	switch (state->status)
 	{
-		case TSS_SORTEDINMEM:
-			if (state->mkctxt.boundUsed)
-				snprintf(result, 100,
-						"Sort Method:  top-N heapsort  Memory: %ldkB",
-						spaceUsed);
-			else
-				snprintf(result, 100,
-						"Sort Method:  quicksort  Memory: %ldkB",
-						spaceUsed);
-			break;
-		case TSS_SORTEDONTAPE:
-			snprintf(result, 100,
-					 "Sort Method:  external sort  Disk: %ldkB",
-					 spaceUsed);
-			break;
-		case TSS_FINALMERGE:
-			snprintf(result, 100,
-					 "Sort Method:  external merge  Disk: %ldkB",
-					 spaceUsed);
-			break;
-		default:
-			snprintf(result, 100, "sort still in progress");
-			break;
+	case TSS_SORTEDINMEM:
+		if (state->mkctxt.boundUsed)
+			*sortMethod = "top-N heapsort";
+		else
+			*sortMethod = "quicksort";
+		break;
+	case TSS_SORTEDONTAPE:
+		*sortMethod = "external sort";
+		break;
+	case TSS_FINALMERGE:
+		*sortMethod = "external merge";
+		break;
+	default:
+		*sortMethod = "still in progress";
 	}
-
-	return result;
+	return;
 }
 
 /*

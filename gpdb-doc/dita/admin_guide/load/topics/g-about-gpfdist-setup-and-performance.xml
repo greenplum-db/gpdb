@@ -14,7 +14,7 @@
       </ul>
       <fig id="du165872">
          <title>External Table Using Single gpfdist Instance with Multiple NICs</title>
-         <image href="../../../graphics/ext_tables_multinic.jpg" placement="break" width="472px"
+         <image href="../../graphics/ext_tables_multinic.jpg" placement="break" width="472px"
             height="271px"/>
       </fig>
       <ul>
@@ -26,7 +26,7 @@
       </ul>
       <fig id="du165882">
          <title>External Tables Using Multiple gpfdist Instances with Multiple NICs</title>
-         <image href="../../../graphics/ext_tables.jpg" placement="break" width="467px"
+         <image href="../../graphics/ext_tables.jpg" placement="break" width="467px"
             height="282px"/>
       </fig>
       <note type="note">Use pipes (|) to separate formatted text when you submit files to

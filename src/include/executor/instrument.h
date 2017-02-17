@@ -38,6 +38,9 @@ typedef struct Instrumentation
 	instr_time	firststart;		/* CDB: Start time of first iteration of node */
 	bool		workfileCreated;/* TRUE if workfiles are created in this node */
 	int		numPartScanned; /* Number of part tables scanned */
+	const char* sortMethod;	/* CDB: Type of sort */
+	const char* sortSpaceType; /*CDB: Sort space type (Memory / Disk) */
+	long			  sortSpaceUsed; /* CDB: Memory / Disk used by sort(KBytes) */
     struct CdbExplain_NodeSummary  *cdbNodeSummary; /* stats from all qExecs */
 } Instrumentation;
 

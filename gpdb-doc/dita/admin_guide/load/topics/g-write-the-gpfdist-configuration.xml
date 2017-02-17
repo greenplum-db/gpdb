@@ -81,6 +81,6 @@ java \
       <p>The <codeph>input_transform.sh</codeph> file uses the Joost STX engine with the
                     AWK interpreter. The following diagram shows the process flow as
                         <cmdname>gpfdist</cmdname> runs the transformation.</p>
-      <image href="../../../graphics/02-pipeline.png" placement="break" width="462px" height="190px"/>
+      <image href="../../graphics/02-pipeline.png" placement="break" width="462px" height="190px"/>
    </body>
 </topic>

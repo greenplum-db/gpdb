@@ -75,7 +75,7 @@ analyze p3_sales_1_prt_2_2_prt_2_3_prt_usa;
 select relname, reltuples, relpages from pg_class where relname like 'p3_sales%' order by relname;
 select * from pg_stats where tablename like 'p3_sales%' order by tablename, attname;
 
--- Case 4: Analyzing the database with the GUC optimizer_analyze_root_partition and optimizer_analyze_midlevel_partition set to OFF should update stats for all table except root tables
+-- Case 4: Analyzing the database with the GUC optimizer_analyze_root_partition and optimizer_analyze_midlevel_partition set to OFF should only update stats for leaf partition tables
 set optimizer_analyze_root_partition=off;
 set optimizer_analyze_midlevel_partition=off;
 DROP TABLE if exists p3_sales;
@@ -99,7 +99,7 @@ analyze;
 select relname, reltuples, relpages from pg_class where relname like 'p3_sales%' order by relname;
 select * from pg_stats where tablename like 'p3_sales%' order by tablename, attname;
 
--- Case 5: Vacuum analyzing the database should vacuum all the tables for p3_sales and should update the stats for all partitions for p3_sales except root partition
+-- Case 5: Vacuum analyzing the database should vacuum all the tables for p3_sales and should only update the stats for all leaf partitions of p3_sales
 set optimizer_analyze_root_partition=off;
 set optimizer_analyze_midlevel_partition=off;
 DROP TABLE if exists p3_sales;

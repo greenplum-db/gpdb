@@ -43,8 +43,9 @@
     <title>New Features</title>
     <body>
       <p>Greenplum Database 5.0.0 includes these new features:</p>
-      <ul id="ul_t5j_wbz_my">
-        <li>&lt;new features here></li>
+      <ul>
+        <li>Enumerated data types (ENUM), introduced in PostgreSQL release 8.3. 
+       </li> 
       </ul>
     </body>
   </topic>
@@ -54,14 +55,20 @@
       <p>Greenplum Database 5.0.0 includes these changed features:</p>
       <ul id="ul_fpl_slm_5y">
         <li>
-		  <p>For the <codeph>ALTER TABLE RENAME</codeph> command, renaming a relation acquires an
-		  Exclusive lock on the relation.</p>
-		  <p>In previous releases, a lock was not acquired when the <codeph>ALTER TABLE
-		  RENAME</codeph> command renamed a table. This violated the isolation level required when
-		  concurrent transactions occurred on the table. For example, without a lock, renaming a
-		  table while concurrently inserting data into a table could fail or insert data into the
-		  incorrect table.</p>
-		</li>
+          <p>For the <codeph>ALTER TABLE RENAME</codeph> command, renaming a relation acquires an
+            Exclusive lock on the relation.</p>
+          <p>In previous releases, a lock was not acquired when the <codeph>ALTER TABLE
+              RENAME</codeph> command renamed a table. This violated the isolation level required
+            when concurrent transactions occurred on the table. For example, without a lock,
+            renaming a table while concurrently inserting data into a table could fail or insert
+            data into the incorrect table.</p>
+        </li>
+        <li>Support for updatable cursors in Greenplum Database is clarified. <codeph>UPDATE/DELETE
+            WHERE CURRENT OF...</codeph> cursor statements can be executed on the server, for
+          example in an interactive <codeph>psql</codeph> session or a script executed with
+            <codeph>psql</codeph>. Extensions such as PL/pgSQL and PL/Java do not support updatable
+          cursers. A statement that Greenplum Database does not support updatable cursors has been
+          removed from the documentation.</li>
       </ul>
     </body>
   </topic>

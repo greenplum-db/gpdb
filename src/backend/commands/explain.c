@@ -105,8 +105,6 @@ static void show_upper_qual(List *qual, const char *qlabel, Plan *plan,
 static void show_sort_keys(Plan *sortplan, int nkeys, AttrNumber *keycols,
 			   const char *qlabel,
 			   StringInfo str, int indent, ExplainState *es);
-static void show_sort_info(SortState *sortstate,
-			   StringInfo str, int indent, ExplainState *es);
 static const char *explain_get_index_name(Oid indexId);
 
 static void
@@ -1642,8 +1640,6 @@ explain_outNode(StringInfo str,
 						   ((Sort *) plan)->sortColIdx,
 						   SortKeystr,
 						   str, indent, es);
-			show_sort_info((SortState *) planstate,
-						   str, indent, es);
 		}
 			break;
 		case T_Result:
@@ -2263,33 +2259,6 @@ explain_partition_selector(PartitionSelector *ps, Plan *parent,
 		}
 
 		appendStringInfo(str, "  Partitions selected: %d (out of %d)\n", nPartsSelected, nPartsTotal);
-	}
-}
-
-/*
- * If it's EXPLAIN ANALYZE, show tuplesort explain info for a sort node
- */
-static void
-show_sort_info(SortState *sortstate,
-			   StringInfo str, int indent, ExplainState *es)
-{
-	Assert(IsA(sortstate, SortState));
-	if (es->printAnalyze && sortstate->sort_Done &&
-		sortstate->tuplesortstate != NULL &&
-		(gp_enable_mk_sort ?
-		 (void *) sortstate->tuplesortstate->sortstore_mk : (void *) sortstate->tuplesortstate->sortstore) != NULL)
-	{
-		char	   *sortinfo;
-		int			i;
-
-		if (gp_enable_mk_sort)
-			sortinfo = tuplesort_explain_mk(sortstate->tuplesortstate->sortstore_mk);
-		else
-			sortinfo = tuplesort_explain(sortstate->tuplesortstate->sortstore);
-		for (i = 0; i < indent; i++)
-			appendStringInfo(str, "  ");
-		appendStringInfo(str, "  %s\n", sortinfo);
-		pfree(sortinfo);
 	}
 }
 

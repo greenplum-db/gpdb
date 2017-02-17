@@ -38,7 +38,7 @@ FILE: prices.xml</codeblock>
       <p>The following diagram shows the relationships between the
                             <codeph>GPLOAD</codeph> control file, the <cmdname>gpfdist</cmdname>
                         configuration file, and the XML data file.</p>
-      <image href="../../../graphics/03-gpload-files.jpg" placement="break" width="415px"
+      <image href="../../graphics/03-gpload-files.jpg" placement="break" width="415px"
             height="258px"/>
    </body>
 </topic>

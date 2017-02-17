@@ -238,6 +238,18 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
+                  href="https://www.postgresql.org/docs/8.3/static/functions-enum.html"
+                  scope="external">
+                  Enum Support Functions
+                </xref>
+              </entry>
+              <entry colname="col2"/>
+              <entry colname="col3"/>
+              <entry colname="col4"/>
+            </row>
+            <row>
+              <entry colname="col1">
+                <xref format="html"
                   href="https://www.postgresql.org/docs/8.3/static/functions-geometry.html"
                   scope="external">
                   <ph>Geometric Functions and Operators</ph>

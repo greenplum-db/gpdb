@@ -571,8 +571,13 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 		case JOIN_LASJ_NOTIN:
 			/*
 			 * For antijoins, the outer and inner rel are fixed.
+			 * If left rel is empty, the result set will be empty
 			 */
-			/* GPDB_83_MERGE_FIXME: What do about dummy_rels here? */
+			if (is_dummy_rel(rel1))
+			{
+				mark_dummy_join(root, joinrel);
+				break;
+			}
 			add_paths_to_joinrel(root, joinrel, rel1, rel2, jointype, restrictlist);
 			break;
 

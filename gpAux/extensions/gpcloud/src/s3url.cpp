@@ -20,8 +20,9 @@ S3Url::S3Url(const string &sourceUrl, bool useHttps, const string &version, cons
     int result =
         http_parser_parse_url(this->sourceUrl.c_str(), this->sourceUrl.length(), false, &urlParser);
 
-    S3_CHECK_OR_DIE(result == 0, S3RuntimeError, "Failed to parse URL " + sourceUrl + " at field " +
-                                                     std::to_string((unsigned long long)result));
+    S3_CHECK_OR_DIE(result == 0, S3RuntimeError,
+                    "Failed to parse URL " + sourceUrl + " at field " +
+                        std::to_string((unsigned long long)result));
 
     this->schema = schemaStr;
     this->host = extractField(&urlParser, UF_HOST);

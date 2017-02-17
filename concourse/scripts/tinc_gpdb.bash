@@ -7,6 +7,18 @@ source "${CWDIR}/common.bash"
 
 function gen_env(){
   cat > /opt/run_test.sh <<-EOF
+
+		TINCDIR="\${1}/gpdb_src/src/test/tinc"
+		trap look4diffs ERR
+		function look4diffs() {
+		find "\${TINCDIR}" -name *.diff -exec cat {} \; >> "\${TINCDIR}/regression.diffs"
+		echo "=================================================================="
+		echo "The differences that caused some tests to fail can also be viewed in the file saved at \${TINCDIR}/regression.diffs."
+		echo "=================================================================="
+		cat "\${TINCDIR}/regression.diffs"
+		exit 1
+		}
+
 		source /usr/local/greenplum-db-devel/greenplum_path.sh
 		cd "\${1}/gpdb_src/gpAux"
 		source gpdemo/gpdemo-env.sh

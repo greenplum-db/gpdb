@@ -64,12 +64,6 @@ createGang_async(GangType type, int gang_id, int size, int content)
 	if (type == GANGTYPE_PRIMARY_WRITER)
 		Insist(!GangsExist());
 
-	/* Check writer gang firstly*/
-	if (type != GANGTYPE_PRIMARY_WRITER && !isPrimaryWriterGangAlive())
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("failed to acquire resources on one or more segments"),
-						errdetail("writer gang got broken before creating reader gangs")));
-
 create_gang_retry:
 	/* If we're in a retry, we may need to reset our initial state, a bit */
 	newGangDefinition = NULL;

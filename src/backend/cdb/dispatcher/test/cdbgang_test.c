@@ -184,9 +184,6 @@ static void test__createReaderGang(void **state)
 	will_return_count(getgpsegmentCount, segmentCount, -1);
 	will_return_count(getFtsVersion, ftsVersion, 1);
 
-	expect_any_count(isSockAlive, sock, -1);
-	will_return_count(isSockAlive, true, -1);
-
 	mockLibpq(conn, motionListener, qePid);
 
 	cdbgang_setAsync(false);

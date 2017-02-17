@@ -904,7 +904,6 @@ class GpTransfer(GpTestCase):
 
         self.subject.GpTransfer(Mock(**options), [])
 
-
     def test__validate_good_multi_column_swapped_column_ordering_list_partition_from_43x_to_5x(self):
         options = self.setup_partition_validation()
 
@@ -932,6 +931,30 @@ class GpTransfer(GpTestCase):
 
         self.assertIn("Validating partition table transfer set...", self.get_info_messages())
 
+    def test__validate_max_line_length_below_minimum(self):
+        options = self.setup_partition_to_normal_validation()
+        options.update(max_line_length=1024*16)
+        MIN_GPFDIST_MAX_LINE_LENGTH = 1024 * 32  # (32KB)
+        MAX_GPFDIST_MAX_LINE_LENGTH = 1024 * 1024 * 256  # (256MB)
+        with self.assertRaisesRegexp(Exception, "Invalid --max-line-length option.  Value must be between %d and %d" % (MIN_GPFDIST_MAX_LINE_LENGTH,
+                                                                                                                        MAX_GPFDIST_MAX_LINE_LENGTH)):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    def test__validate_max_line_length_above_maximum(self):
+        options = self.setup_partition_to_normal_validation()
+        options.update(max_line_length=1024*1024*512)
+        MIN_GPFDIST_MAX_LINE_LENGTH = 1024 * 32  # (32KB)
+        MAX_GPFDIST_MAX_LINE_LENGTH = 1024 * 1024 * 256  # (256MB)
+        with self.assertRaisesRegexp(Exception, "Invalid --max-line-length option.  Value must be between %d and %d" % (MIN_GPFDIST_MAX_LINE_LENGTH,
+                                                                                                                        MAX_GPFDIST_MAX_LINE_LENGTH)):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    def test__validate_max_line_length_valid(self):
+        options = self.setup_partition_to_normal_validation()
+        options.update(max_line_length=1024*1024)
+        MIN_GPFDIST_MAX_LINE_LENGTH = 1024 * 32  # (32KB)
+        MAX_GPFDIST_MAX_LINE_LENGTH = 1024 * 1024 * 256  # (256MB)
+        self.subject.GpTransfer(Mock(**options), [])
 
     ####################################################################################################################
     # End of tests, start of private methods/objects

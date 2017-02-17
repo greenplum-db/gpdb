@@ -496,6 +496,13 @@ AssignTransactionId(TransactionState s)
 	Assert(!TransactionIdIsValid(s->transactionId));
 	Assert(s->state == TRANS_INPROGRESS);
 
+	if (DistributedTransactionContext == DTX_CONTEXT_QE_READER ||
+		DistributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON)
+	{
+		elog(ERROR, "AssignTransactionId() called by %s process",
+			 DtxContextToString(DistributedTransactionContext));
+	}
+
 	/*
 	 * Ensure parent(s) have XIDs, so that a child always has an XID later
 	 * than its parent.  Musn't recurse here, or we might get a stack overflow
@@ -1038,15 +1045,14 @@ AtSubStart_ResourceOwner(void)
  *
  * Returns latest XID among xact and its children, or InvalidTransactionId
  * if the xact has no XID.	(We compute that here just because it's easier.)
- *
- * This is exported only to support an ugly hack in VACUUM FULL.
  */
-TransactionId
+static TransactionId
 RecordTransactionCommit(void)
 {
 	TransactionId xid;
 	bool		markXidCommitted;
 	TransactionId latestXid = InvalidTransactionId;
+	bool save_inCommit;
 	MIRRORED_LOCK_DECLARE;
 
 	int32						persistentCommitSerializeLen;
@@ -1164,6 +1170,7 @@ RecordTransactionCommit(void)
 		 * bit fuzzy, but it doesn't matter.
 		 */
 		START_CRIT_SECTION();
+		save_inCommit = MyProc->inCommit;
 		MyProc->inCommit = true;
 
 		MIRRORED_LOCK;
@@ -1370,7 +1377,7 @@ RecordTransactionCommit(void)
 	 */
 	if (markXidCommitted)
 	{
-		MyProc->inCommit = false;
+		MyProc->inCommit = save_inCommit;
 		END_CRIT_SECTION();
 
 		MIRRORED_UNLOCK;
@@ -3428,6 +3435,15 @@ CommitTransaction(void)
 		 * and FileRepResyncManager_InResyncTransition()
 		 */
 		MIRRORED_LOCK;
+		/*
+		 * Need to ensure the recording of the commit record and the
+		 * persistent post-commit work will be done either before or after a
+		 * checkpoint. The commit xlog record carries the information for
+		 * objects which serves us for crash-recovery till post-commit
+		 * persistent object work is done, hence cannot allow checkpoint in
+		 * between.
+		 */
+		MyProc->inCommit = true;
 	}
 
 	/* Prevent cancel/die interrupt while cleaning up */
@@ -3546,6 +3562,7 @@ CommitTransaction(void)
 	if (willHaveObjectsFromSmgr)
 	{
 		MIRRORED_UNLOCK;
+		MyProc->inCommit = false;
 	}
 	
 	AtEOXact_MultiXact();
