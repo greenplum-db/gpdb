@@ -18,20 +18,6 @@ limitations under the License.
 from mpp.gpdb.tests.storage.lib.sql_isolation_testcase import SQLIsolationTestCase
 from mpp.models import SQLTestCase
 
-class QueryFinishTestCase(SQLTestCase):
-    """
-    
-    @db_name queryfinish
-    @description Query-finish tests
-    @created 2014-04-17 00:00:00
-    @modified 2014-04-17 00:00:00
-    @tags dispatch limit
-    @product_version gpdb: [4.3.3.0-]
-    """
-    sql_dir = 'sql/'
-    ans_dir = 'expected/'
-    out_dir = 'output/'
-
 class QuerywithLockfromMaster(SQLIsolationTestCase):
     """
     @description: A limit query when the table has a lock on master
