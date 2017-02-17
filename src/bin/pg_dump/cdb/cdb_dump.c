@@ -536,6 +536,12 @@ startTransactionAndLock(PGconn *pMasterConn)
 	mpp_msg(logInfo, progname, "Starting a transaction on master database %s.\n", pMasterConn->dbName);
 
 	pQry = createPQExpBuffer();
+	if (pQry == NULL)
+	{
+		mpp_err_msg_cache(logError, progname, "could not create PQExpBuffer");
+		goto cleanup;
+	}
+
 	appendPQExpBuffer(pQry, "BEGIN;");
 	pRes = PQexec(pMasterConn, pQry->data);
 	if (pRes == NULL)
@@ -637,6 +643,12 @@ execCommit(PGconn *pConn)
 	PGresult   *pRes = NULL;
 
 	pQry = createPQExpBuffer();
+	if (pQry == NULL)
+	{
+		mpp_err_msg_cache(logError, progname, "could not create PQExpBuffer");
+		goto cleanup;
+	}
+
 	appendPQExpBuffer(pQry, " COMMIT");
 
 	pRes = PQexec(pConn, pQry->data);
@@ -657,7 +669,6 @@ execCommit(PGconn *pConn)
 cleanup:
 	if (pRes != NULL)
 		PQclear(pRes);
-
 	if (pQry != NULL)
 		destroyPQExpBuffer(pQry);
 
@@ -1571,7 +1582,10 @@ reportBackupResults(InputOptions inputopts, ThreadParmArray *pParmAr)
 		pszFormat = "%s%sgp_dump_%s.rpt";
 
 	pszReportPathName = MakeString(pszFormat, pszReportDirectory, dump_prefix_buf == NULL ? "" : dump_prefix_buf->data, pParmAr->pData[0].pOptionsData->pszKey);
-
+	if (pszReportPathName == NULL)
+	{
+		exit_nicely();
+	}
 	fRptFile = fopen(pszReportPathName, "w");
 	if (fRptFile == NULL)
 		mpp_err_msg(logWarn, progname, "Cannot open report file %s for writing.  Will use stdout instead.\n",
@@ -1686,8 +1700,7 @@ reportBackupResults(InputOptions inputopts, ThreadParmArray *pParmAr)
 	/* write report to stdout */
 	fprintf(stdout, "%s", reportBuf->data);
 
-	if (pszReportPathName != NULL)
-		free(pszReportPathName);
+	free(pszReportPathName);
 
 	destroyPQExpBuffer(reportBuf);
 

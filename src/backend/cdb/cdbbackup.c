@@ -456,6 +456,9 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 		}
 		free(temp);
 
+		if (pszDDBoostFileName == NULL)
+			elog(ERROR, "\nDDboost filename is NULL\n");
+
 		/* Create the gpddboost parameter string */
 		len = strlen(pszDDBoostDirName)
 			+ strlen(pszDDBoostFileName)
@@ -471,9 +474,6 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 			+ 20;
 
 		gpDDBoostCmdLine = (char *) palloc(len);
-
-		if (pszDDBoostFileName == NULL)
-			elog(ERROR, "\nDDboost filename is NULL\n");
 
 		sprintf(gpDDBoostCmdLine,
 			"%s --write-file-from-stdin --to-file=%s/%s --dd_boost_buf_size=%s ",
