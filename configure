@@ -4819,7 +4819,7 @@ fi
 # ICC pretends to be GCC but it's lying; it doesn't support these options.
 
 if test "$GCC" = yes -a "$ICC" = no; then
-  CFLAGS="$CFLAGS -Wall -Wmissing-prototypes -Wpointer-arith -Winline"
+  CFLAGS="$CFLAGS -Wall -Wmissing-prototypes -Wpointer-arith"
   # These work in some but not all gcc versions
   # GPDB code is full of declarations after statement.
   #PGAC_PROG_CC_CFLAGS_OPT([-Wdeclaration-after-statement])
