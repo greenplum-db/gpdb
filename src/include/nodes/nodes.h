@@ -221,6 +221,7 @@ typedef enum NodeTag
 	T_PartBoundInclusionExpr,
 	T_PartBoundOpenExpr,
 	T_PartListRuleExpr,
+	T_PartListNullTestExpr,
 	T_TableOidInfo,
 
 	/*
@@ -263,6 +264,7 @@ typedef enum NodeTag
 	T_PartBoundInclusionExprState,
 	T_PartBoundOpenExprState,
 	T_PartListRuleExprState,
+	T_PartListNullTestExprState,
 
 	/*
 	 * TAGS FOR PLANNER NODES (relation.h)

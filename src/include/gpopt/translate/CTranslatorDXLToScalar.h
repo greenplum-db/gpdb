@@ -386,6 +386,13 @@ namespace gpdxl
 				CMappingColIdVar *pmapcidvar
 				);
 
+			// translate a scalar part list null test into an Expr
+			Expr *PexprPartListNullTest
+				(
+				const CDXLNode *pdxlnPartListNullTest,
+				CMappingColIdVar *pmapcidvar
+				);
+
 			// translate a scalar ident into an Expr
 			Expr *PexprFromDXLNodeScId
 				(

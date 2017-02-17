@@ -1555,4 +1555,19 @@ typedef struct PartListRuleExpr
 	Oid 		resulttype;		/* the result type of expr - array type of part key */
 } PartListRuleExpr;
 
+/*
+ * PartListNullTestExpr
+ *
+ * Represents whether the list values of a partition for the specified level
+ * contains NULL or not, if nulltesttype is IS_NULL.
+ *
+ * NOTE: This expr only works for list partition.
+ */
+typedef struct PartListNullTestExpr
+{
+	Expr		xpr;
+	int			level;			/* partitioning level */
+	NullTestType nulltesttype;	/* IS NULL, IS NOT NULL */
+} PartListNullTestExpr;
+
 #endif   /* PRIMNODES_H */

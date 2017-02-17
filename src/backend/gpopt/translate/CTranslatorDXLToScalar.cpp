@@ -119,6 +119,7 @@ CTranslatorDXLToScalar::PexprFromDXLNodeScalar
 		{EdxlopScalarPartBoundInclusion, &CTranslatorDXLToScalar::PexprPartBoundInclusion},
 		{EdxlopScalarPartBoundOpen, &CTranslatorDXLToScalar::PexprPartBoundOpen},
 		{EdxlopScalarPartListValues, &CTranslatorDXLToScalar::PexprPartListValues},
+		{EdxlopScalarPartListNullTest, &CTranslatorDXLToScalar::PexprPartListNullTest},
 	};
 
 	const ULONG ulTranslators = GPOS_ARRAY_SIZE(rgTranslators);
@@ -1832,6 +1833,30 @@ CTranslatorDXLToScalar::PexprPartListValues
 	PartListRuleExpr *pexpr = MakeNode(PartListRuleExpr);
 	pexpr->level = pdxlop->UlLevel();
 	pexpr->resulttype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidType())->OidObjectId();
+
+	return (Expr *) pexpr;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToScalar::PexprPartListNullTest
+//
+//	@doc:
+//		Translates a DXL part list values into a GPDB part list null test
+//
+//---------------------------------------------------------------------------
+Expr *
+CTranslatorDXLToScalar::PexprPartListNullTest
+	(
+	const CDXLNode *pdxlnPartListNullTest,
+	CMappingColIdVar * //pmapcidvar
+	)
+{
+	CDXLScalarPartListNullTest *pdxlop = CDXLScalarPartListNullTest::PdxlopConvert(pdxlnPartListNullTest->Pdxlop());
+
+	PartListNullTestExpr *pexpr = MakeNode(PartListNullTestExpr);
+	pexpr->level = pdxlop->UlLevel();
+	pexpr->nulltesttype = pdxlop->FIsNull() ? IS_NULL : IS_NOT_NULL;
 
 	return (Expr *) pexpr;
 }
