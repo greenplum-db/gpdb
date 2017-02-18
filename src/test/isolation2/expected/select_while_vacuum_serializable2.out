@@ -56,10 +56,10 @@ count
 -----
 18333
 (1 row)
-2U: SELECT segno, tupcount FROM gp_toolkit.__gp_aoseg_name('ao');
-segno|tupcount
------+--------
-1    |21000   
+2U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount = 1 then 'one' when tupcount <= 5 then 'few' else 'many' end FROM gp_toolkit.__gp_aoseg_name('ao');
+segno|case
+-----+----
+1    |many
 (1 row)
 2: VACUUM ao;
 VACUUM
@@ -72,8 +72,8 @@ count
 COMMIT
 3: INSERT INTO ao VALUES (0);
 INSERT 1
-2U: SELECT segno, tupcount FROM gp_toolkit.__gp_aoseg_name('ao');
-segno|tupcount
------+--------
-1    |21001   
+2U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount = 1 then 'one' when tupcount <= 5 then 'few' else 'many' end FROM gp_toolkit.__gp_aoseg_name('ao');
+segno|case
+-----+----
+1    |many
 (1 row)

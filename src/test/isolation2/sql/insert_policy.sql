@@ -143,4 +143,4 @@ CREATE TABLE ao (a INT) WITH (appendonly=true);
 2U: SELECT segno, tupcount FROM gp_toolkit.__gp_aoseg_name('ao');
 1: insert into ao select generate_series(1,100000);
 1: INSERT INTO AO VALUES (2);
-2U: SELECT segno, tupcount FROM gp_toolkit.__gp_aoseg_name('ao');
+2U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount <= 5 then 'few' else 'many' end FROM gp_toolkit.__gp_aoseg_name('ao');

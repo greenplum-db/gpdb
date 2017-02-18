@@ -12,7 +12,6 @@ test: delete_while_vacuum
 test: drop_while_vacuum
 test: insert_policy
 test: insert_while_vacuum
-test: locks_reindex
 test: max_concurrency
 test: max_concurrency2
 test: modcount

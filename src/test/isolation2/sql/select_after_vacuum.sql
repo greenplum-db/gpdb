@@ -44,11 +44,11 @@ create view locktest as select coalesce(
 DELETE FROM ao WHERE a < 128;
 1: BEGIN;
 1: SELECT COUNT(*) FROM ao2;
-2U: SELECT segno, tupcount FROM gp_toolkit.__gp_aoseg_name('ao');
+2U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount = 1 then 'one' when tupcount <= 5 then 'few' else 'many' end FROM gp_toolkit.__gp_aoseg_name('ao');
 2: VACUUM ao;
 1: SELECT COUNT(*) FROM ao;
 1: SELECT * FROM locktest WHERE coalesce = 'ao';
 1: COMMIT;
 1: SELECT COUNT(*) FROM ao;
 3: INSERT INTO ao VALUES (0);
-2U: SELECT segno, tupcount FROM gp_toolkit.__gp_aoseg_name('ao');
+2U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount = 1 then 'one' when tupcount <= 5 then 'few' else 'many' end FROM gp_toolkit.__gp_aoseg_name('ao');

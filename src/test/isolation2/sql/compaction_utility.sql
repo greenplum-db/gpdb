@@ -9,4 +9,4 @@ DELETE FROM foo WHERE a < 20;
 SELECT COUNT(*) FROM foo;
 2U: VACUUM foo;
 SELECT COUNT(*) FROM foo;
-2U: SELECT segno, tupcount FROM gp_toolkit.__gp_aoseg_name('foo');
+2U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount <= 5 then 'few' else 'many' end FROM gp_toolkit.__gp_aoseg_name('foo');

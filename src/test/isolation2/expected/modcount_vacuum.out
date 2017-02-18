@@ -16,9 +16,14 @@ state|tupcount|modcount
 (1 row)
 VACUUM ao;
 VACUUM
-SELECT state, tupcount, modcount FROM gp_toolkit.__gp_aoseg_name('ao');
-state|tupcount|modcount
------+--------+--------
-1    |0       |2
-1    |6       |0
+SELECT state, modcount FROM gp_toolkit.__gp_aoseg_name('ao');
+state|modcount
+-----+--------
+1    |0       
+1    |2       
 (2 rows)
+SELECT sum(tupcount) FROM gp_toolkit.__gp_aoseg_name('ao');
+sum
+---
+6  
+(1 row)

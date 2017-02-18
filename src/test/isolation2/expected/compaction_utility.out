@@ -23,9 +23,9 @@ count
 -----
 81   
 (1 row)
-2U: SELECT segno, tupcount FROM gp_toolkit.__gp_aoseg_name('foo');
-segno|tupcount
------+--------
-0    |81      
-1    |0       
+2U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount <= 5 then 'few' else 'many' end FROM gp_toolkit.__gp_aoseg_name('foo');
+segno|case
+-----+----
+0    |many
+1    |zero
 (2 rows)

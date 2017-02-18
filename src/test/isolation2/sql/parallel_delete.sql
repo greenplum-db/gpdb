@@ -1,6 +1,6 @@
 -- @Description Tests that a delete operation in progress will block all other deletes
 -- until the transaction is committed.
--- 
+--
 DROP TABLE IF EXISTS ao;
 CREATE TABLE ao (a INT) WITH (appendonly=true) DISTRIBUTED BY (a);
 insert into ao select generate_series(1,100);

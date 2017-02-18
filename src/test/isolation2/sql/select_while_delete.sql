@@ -12,5 +12,4 @@ insert into ao select generate_series(1,100);
 2: COMMIT;
 2: SELECT * FROM ao WHERE a < 5 ORDER BY a;
 4: SELECT * FROM ao WHERE a < 10 ORDER BY a;
-2U: SELECT * FROM gp_toolkit.__gp_aovisimap_name('ao');
 4: INSERT INTO ao VALUES (0);
