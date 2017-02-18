@@ -1,0 +1,104 @@
+-- @Description The locks held after different operations
+DROP TABLE IF EXISTS ao;
+DROP
+CREATE TABLE ao (a INT, b INT) WITH (appendonly=true);
+CREATE
+INSERT INTO ao SELECT i as a, i as b FROM generate_series(1, 100) AS i;
+INSERT 100
+
+DROP VIEW IF EXISTS locktest;
+DROP
+create view locktest as select coalesce( case when relname like 'pg_toast%index' then 'toast index' when relname like 'pg_toast%' then 'toast table' when relname like 'pg_aovisimap%index' then 'visimap index' when relname like 'pg_aovisimap%' then 'visimap table' when relname like 'pg_aoseg%index' then 'aoseg index' when relname like 'pg_aoseg%' then 'aoseg table' when relname like 'pg_aocsseg%index' then 'aoseg index' when relname like 'pg_aocsseg%' then 'aoseg table' else relname end, 'dropped table'), mode, locktype from pg_locks l, pg_class c, pg_database d where relation is not null and l.database = d.oid and l.relation = c.oid and relname != 'gp_fault_strategy' and d.datname = current_database() order by 1, 3, 2;
+CREATE
+
+-- Actual test begins
+1: BEGIN;
+BEGIN
+1: INSERT INTO ao VALUES (200, 200);
+INSERT 1
+SELECT * FROM locktest;
+coalesce                  |mode               |locktype                
+--------------------------+-------------------+------------------------
+ao                        |AccessExclusiveLock|append-only segment file
+ao                        |AccessExclusiveLock|append-only segment file
+ao                        |RowExclusiveLock   |relation                
+ao                        |RowExclusiveLock   |relation                
+locktest                  |AccessShareLock    |relation                
+pg_class                  |AccessShareLock    |relation                
+pg_class_oid_index        |AccessShareLock    |relation                
+pg_class_relname_nsp_index|AccessShareLock    |relation                
+pg_locks                  |AccessShareLock    |relation                
+(9 rows)
+2U: SELECT * FROM locktest;
+coalesce                  |mode           |locktype
+--------------------------+---------------+--------
+locktest                  |AccessShareLock|relation
+pg_class                  |AccessShareLock|relation
+pg_class_oid_index        |AccessShareLock|relation
+pg_class_relname_nsp_index|AccessShareLock|relation
+pg_locks                  |AccessShareLock|relation
+(5 rows)
+1: COMMIT;
+COMMIT
+1: BEGIN;
+BEGIN
+1: DELETE FROM ao WHERE a = 1;
+DELETE 1
+SELECT * FROM locktest;
+coalesce                  |mode               |locktype                
+--------------------------+-------------------+------------------------
+ao                        |AccessExclusiveLock|append-only segment file
+ao                        |ExclusiveLock      |relation                
+ao                        |RowExclusiveLock   |relation                
+locktest                  |AccessShareLock    |relation                
+pg_class                  |AccessShareLock    |relation                
+pg_class_oid_index        |AccessShareLock    |relation                
+pg_class_relname_nsp_index|AccessShareLock    |relation                
+pg_locks                  |AccessShareLock    |relation                
+visimap index             |RowExclusiveLock   |relation                
+visimap table             |RowExclusiveLock   |relation                
+(10 rows)
+2U: SELECT * FROM locktest;
+coalesce                  |mode            |locktype
+--------------------------+----------------+--------
+ao                        |RowExclusiveLock|relation
+locktest                  |AccessShareLock |relation
+pg_class                  |AccessShareLock |relation
+pg_class_oid_index        |AccessShareLock |relation
+pg_class_relname_nsp_index|AccessShareLock |relation
+pg_locks                  |AccessShareLock |relation
+visimap index             |RowExclusiveLock|relation
+visimap table             |RowExclusiveLock|relation
+(8 rows)
+1: COMMIT;
+COMMIT
+1: BEGIN;
+BEGIN
+1: UPDATE ao SET b = -1 WHERE a = 2;
+UPDATE 1
+SELECT * FROM locktest;
+coalesce                  |mode               |locktype                
+--------------------------+-------------------+------------------------
+ao                        |AccessExclusiveLock|append-only segment file
+ao                        |AccessExclusiveLock|append-only segment file
+ao                        |ExclusiveLock      |relation                
+ao                        |RowExclusiveLock   |relation                
+locktest                  |AccessShareLock    |relation                
+pg_class                  |AccessShareLock    |relation                
+pg_class_oid_index        |AccessShareLock    |relation                
+pg_class_relname_nsp_index|AccessShareLock    |relation                
+pg_locks                  |AccessShareLock    |relation                
+visimap index             |RowExclusiveLock   |relation                
+visimap table             |RowExclusiveLock   |relation                
+(11 rows)
+2U: SELECT * FROM locktest;
+coalesce                  |mode           |locktype
+--------------------------+---------------+--------
+locktest                  |AccessShareLock|relation
+pg_class                  |AccessShareLock|relation
+pg_class_oid_index        |AccessShareLock|relation
+pg_class_relname_nsp_index|AccessShareLock|relation
+pg_locks                  |AccessShareLock|relation
+(5 rows)
+1: COMMIT;
+COMMIT

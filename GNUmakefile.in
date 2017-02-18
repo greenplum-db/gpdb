@@ -118,6 +118,7 @@ installcheck-world:
 	$(MAKE) -C src/test installcheck-good
 	$(MAKE) -C src/test installcheck-bugbuster
 	$(MAKE) -C src/test/isolation installcheck
+	$(MAKE) -C src/test/isolation2 installcheck
 	$(MAKE) -C src/pl installcheck
 	#$(MAKE) -C src/interfaces/ecpg installcheck
 	#$(MAKE) -C contrib installcheck

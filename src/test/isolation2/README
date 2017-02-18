@@ -1,0 +1,7 @@
+This directory contains additional "isolation"-style tests. That is,
+tests that require multiple simultaneous connections to the database.
+
+Some of these could be moved to the main isolation test suite, in
+src/test/isolation, but for historical reasons, these tests use a different
+syntax for specifying the tests. See sql_isolation_testcase.py for more
+details on the syntax.
