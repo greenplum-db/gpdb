@@ -274,7 +274,7 @@ CREATE RESOURCE QUEUE myqueue ITH (ACTIVE_STATEMENTS=30, MAX_COST=5000.00);
 
   <para>
    There is no <command>CREATE RESOURCE QUEUE</command> in the SQL standard.
-   Resource scheduling is a feature of Bizgres and Greenplum Database.
+   Resource scheduling is a feature of Greenplum Database.
   </para>
    </refsect1>
 
