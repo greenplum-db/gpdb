@@ -4241,36 +4241,6 @@ select tablename, partitionlevel, partitiontablename, partitionname, partitionra
 
 drop table mpp3242;
 DROP TABLE
-CREATE TABLE mpp3115 (f1 time(2) with time zone)
-partition by range (f1)
-(
-  partition "Los Angeles" start (time with time zone '00:00 PST') end (time with time zone '23:00 PST') EVERY (INTERVAL '1 hour'),
-  partition "New York" start (time with time zone '00:00 EST') end (time with time zone '23:00 EST') EVERY (INTERVAL '1 hour')
-);
-ERROR:  starting value of partition "Los Angeles_1" overlaps previous range
-LINE 4:   partition "Los Angeles" start (time with time zone '00:00 ...
-                                  ^
-alter table mpp3115 rename partition "Los Angeles" to "LA2";
-ERROR:  relation "mpp3115" does not exist
-alter table mpp3115 rename partition "Los Angeles" to "LA";
-ERROR:  relation "mpp3115" does not exist
-alter table mpp3115 rename partition "Los Angeles_1" to "LA";
-ERROR:  relation "mpp3115" does not exist
-alter table mpp3115 rename partition "Los Angeles_2" to "LA";
-ERROR:  relation "mpp3115" does not exist
-alter table mpp3115 rename partition "Los Angeles_2" to "Los Angeles_1";
-ERROR:  relation "mpp3115" does not exist
-alter table mpp3115 rename partition "Los Angeles_1" to "Los Angeles_1";
-ERROR:  relation "mpp3115" does not exist
-alter table mpp3115 rename partition "LA" to "Los Angeles_1";
-ERROR:  relation "mpp3115" does not exist
-select tablename, partitionlevel, partitiontablename, partitionname, partitionrank, partitionboundary from pg_partitions where tablename = 'mpp3115';
- tablename | partitionlevel | partitiontablename | partitionname | partitionrank | partitionboundary 
------------+----------------+--------------------+---------------+---------------+-------------------
-(0 rows)
-
-drop table mpp3115;
-ERROR:  table "mpp3115" does not exist
 CREATE TABLE mpp3523 (f1 time(2) with time zone)
 partition by range (f1)
 (

@@ -1955,6 +1955,8 @@ drop table mmm_r1 cascade;
 drop table mmm_l1 cascade;
 alter table hhh rename partition cc to aa;
 ERROR:  partition "cc" of relation "hhh" does not exist
+alter table hhh rename partition bb to aa;
+ERROR:  partition "aa" of relation "hhh" already exists
 alter table hhh rename partition aa to aa;
 ERROR:  partition "aa" of relation "hhh" already exists
 alter table hhh rename partition aa to "funky fresh";

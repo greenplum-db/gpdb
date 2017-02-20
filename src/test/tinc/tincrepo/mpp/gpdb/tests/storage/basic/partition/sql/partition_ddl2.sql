@@ -976,28 +976,6 @@ alter table mpp3242 add partition zz start ('-1') end (0);
 select tablename, partitionlevel, partitiontablename, partitionname, partitionrank, partitionboundary from pg_partitions where tablename = 'mpp3242';
 
 drop table mpp3242;
-CREATE TABLE mpp3115 (f1 time(2) with time zone)
-partition by range (f1)
-(
-  partition "Los Angeles" start (time with time zone '00:00 PST') end (time with time zone '23:00 PST') EVERY (INTERVAL '1 hour'),
-  partition "New York" start (time with time zone '00:00 EST') end (time with time zone '23:00 EST') EVERY (INTERVAL '1 hour')
-);
-
--- This should not work
-alter table mpp3115 rename partition "Los Angeles" to "LA2";
-alter table mpp3115 rename partition "Los Angeles" to "LA";
--- ALTER OK
-alter table mpp3115 rename partition "Los Angeles_1" to "LA";
-alter table mpp3115 rename partition "Los Angeles_2" to "LA";
-alter table mpp3115 rename partition "Los Angeles_2" to "Los Angeles_1";
-alter table mpp3115 rename partition "Los Angeles_1" to "Los Angeles_1";
--- ALTER OK
-alter table mpp3115 rename partition "LA" to "Los Angeles_1";
--- alter table mpp3115 rename partition "Los Angeles_1" to "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890";
-
-select tablename, partitionlevel, partitiontablename, partitionname, partitionrank, partitionboundary from pg_partitions where tablename = 'mpp3115';
-
-drop table mpp3115;
 
 CREATE TABLE mpp3523 (f1 time(2) with time zone)
 partition by range (f1)

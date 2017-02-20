@@ -1201,6 +1201,7 @@ drop table mmm_l1 cascade;
 
 
 alter table hhh rename partition cc to aa;
+alter table hhh rename partition bb to aa;
 alter table hhh rename partition aa to aa;
 alter table hhh rename partition aa to "funky fresh";
 alter table hhh rename partition "funky fresh" to aa;
