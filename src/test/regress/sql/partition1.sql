@@ -1509,3 +1509,61 @@ drop table if exists s1;
 drop table if exists s2;
 -- end_ignore
 
+
+create table mpp_2914A(id int,  buyDate date, kind char(1))
+DISTRIBUTED BY (id)
+partition by list (kind) 
+subpartition by range(buyDate) 
+subpartition template 
+(
+        start (date '2001-01-01'),
+        start (date '2002-01-01'),
+        start (date '2003-01-01'),
+        start (date '2004-01-01'),
+        start (date '2005-01-01')
+)
+(
+        partition auction  values('a','A'),
+        partition buyItNow values('b', 'B'),
+        default partition catchall
+);
+select count(*) from mpp_2914A;
+
+\d mpp_2914a*
+
+create table mpp_2914B(id int,  buyDate date, kind char(1))
+DISTRIBUTED BY (id)
+partition by list (kind)
+subpartition by range(buyDate)
+(
+        partition auction  values('a','A')
+        (
+                subpartition  y2001 start (date '2001-01-01'),
+                subpartition  y2002 start (date '2002-01-01'),
+                subpartition  y2003 start (date '2003-01-01'),
+                subpartition y2004 start (date '2004-01-01'),
+                subpartition y2005 start (date '2005-01-01')
+        ),
+        partition buyitnow  values('b','B')
+        (
+                subpartition  y2001 start (date '2001-01-01'),
+                subpartition  y2002 start (date '2002-01-01'),
+                subpartition  y2003 start (date '2003-01-01'),
+                subpartition y2004 start (date '2004-01-01'),
+                subpartition y2005 start (date '2005-01-01')
+        ),
+        default partition catchAll  
+        (
+                subpartition  y2001 start (date '2001-01-01'),
+                subpartition  y2002 start (date '2002-01-01'),
+                subpartition  y2003 start (date '2003-01-01'),
+                subpartition y2004 start (date '2004-01-01'),
+                subpartition y2005 start (date '2005-01-01')
+        )
+);
+select count(*) from mpp_2914B;
+
+\d mpp_2914b*
+
+drop table mpp_2914a cascade;
+drop table mpp_2914b cascade;

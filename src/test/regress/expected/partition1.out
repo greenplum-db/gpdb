@@ -2540,3 +2540,546 @@ select * from s1 full outer join s2 on s1.d1 = s2.d2 and s1.p1 = s2.p2 where s1.
 drop table if exists s1;
 drop table if exists s2;
 -- end_ignore
+create table mpp_2914A(id int,  buyDate date, kind char(1))
+DISTRIBUTED BY (id)
+partition by list (kind) 
+subpartition by range(buyDate) 
+subpartition template 
+(
+        start (date '2001-01-01'),
+        start (date '2002-01-01'),
+        start (date '2003-01-01'),
+        start (date '2004-01-01'),
+        start (date '2005-01-01')
+)
+(
+        partition auction  values('a','A'),
+        partition buyItNow values('b', 'B'),
+        default partition catchall
+);
+NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_auction" for table "mpp_2914a"
+NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_auction_2_prt_1" for table "mpp_2914a_1_prt_auction"
+NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_auction_2_prt_2" for table "mpp_2914a_1_prt_auction"
+NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_auction_2_prt_3" for table "mpp_2914a_1_prt_auction"
+NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_auction_2_prt_4" for table "mpp_2914a_1_prt_auction"
+NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_auction_2_prt_5" for table "mpp_2914a_1_prt_auction"
+NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_buyitnow" for table "mpp_2914a"
+NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_buyitnow_2_prt_1" for table "mpp_2914a_1_prt_buyitnow"
+NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_buyitnow_2_prt_2" for table "mpp_2914a_1_prt_buyitnow"
+NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_buyitnow_2_prt_3" for table "mpp_2914a_1_prt_buyitnow"
+NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_buyitnow_2_prt_4" for table "mpp_2914a_1_prt_buyitnow"
+NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_buyitnow_2_prt_5" for table "mpp_2914a_1_prt_buyitnow"
+NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_catchall" for table "mpp_2914a"
+NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_catchall_2_prt_1" for table "mpp_2914a_1_prt_catchall"
+NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_catchall_2_prt_2" for table "mpp_2914a_1_prt_catchall"
+NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_catchall_2_prt_3" for table "mpp_2914a_1_prt_catchall"
+NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_catchall_2_prt_4" for table "mpp_2914a_1_prt_catchall"
+NOTICE:  CREATE TABLE will create partition "mpp_2914a_1_prt_catchall_2_prt_5" for table "mpp_2914a_1_prt_catchall"
+select count(*) from mpp_2914A;
+ count 
+-------
+     0
+(1 row)
+
+\d mpp_2914a*
+      Table "public.mpp_2914a"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Number of child tables: 3 (Use \d+ to list them.)
+Distributed by: (id)
+Partition by: (kind)
+
+Table "public.mpp_2914a_1_prt_auction"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914a
+Number of child tables: 5 (Use \d+ to list them.)
+Distributed by: (id)
+Partition by: (buydate)
+
+Table "public.mpp_2914a_1_prt_auction_2_prt_1"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_auction_2_prt_1_check" CHECK (buydate >= '01-01-2001'::date AND buydate < '01-01-2002'::date)
+    "mpp_2914a_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914a_1_prt_auction
+Distributed by: (id)
+
+Table "public.mpp_2914a_1_prt_auction_2_prt_2"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_auction_2_prt_2_check" CHECK (buydate >= '01-01-2002'::date AND buydate < '01-01-2003'::date)
+    "mpp_2914a_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914a_1_prt_auction
+Distributed by: (id)
+
+Table "public.mpp_2914a_1_prt_auction_2_prt_3"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_auction_2_prt_3_check" CHECK (buydate >= '01-01-2003'::date AND buydate < '01-01-2004'::date)
+    "mpp_2914a_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914a_1_prt_auction
+Distributed by: (id)
+
+Table "public.mpp_2914a_1_prt_auction_2_prt_4"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_auction_2_prt_4_check" CHECK (buydate >= '01-01-2004'::date AND buydate < '01-01-2005'::date)
+    "mpp_2914a_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914a_1_prt_auction
+Distributed by: (id)
+
+Table "public.mpp_2914a_1_prt_auction_2_prt_5"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_auction_2_prt_5_check" CHECK (buydate >= '01-01-2005'::date)
+    "mpp_2914a_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914a_1_prt_auction
+Distributed by: (id)
+
+Table "public.mpp_2914a_1_prt_buyitnow"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914a
+Number of child tables: 5 (Use \d+ to list them.)
+Distributed by: (id)
+Partition by: (buydate)
+
+Table "public.mpp_2914a_1_prt_buyitnow_2_prt_1"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_buyitnow_2_prt_1_check" CHECK (buydate >= '01-01-2001'::date AND buydate < '01-01-2002'::date)
+    "mpp_2914a_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914a_1_prt_buyitnow
+Distributed by: (id)
+
+Table "public.mpp_2914a_1_prt_buyitnow_2_prt_2"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_buyitnow_2_prt_2_check" CHECK (buydate >= '01-01-2002'::date AND buydate < '01-01-2003'::date)
+    "mpp_2914a_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914a_1_prt_buyitnow
+Distributed by: (id)
+
+Table "public.mpp_2914a_1_prt_buyitnow_2_prt_3"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_buyitnow_2_prt_3_check" CHECK (buydate >= '01-01-2003'::date AND buydate < '01-01-2004'::date)
+    "mpp_2914a_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914a_1_prt_buyitnow
+Distributed by: (id)
+
+Table "public.mpp_2914a_1_prt_buyitnow_2_prt_4"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_buyitnow_2_prt_4_check" CHECK (buydate >= '01-01-2004'::date AND buydate < '01-01-2005'::date)
+    "mpp_2914a_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914a_1_prt_buyitnow
+Distributed by: (id)
+
+Table "public.mpp_2914a_1_prt_buyitnow_2_prt_5"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_buyitnow_2_prt_5_check" CHECK (buydate >= '01-01-2005'::date)
+    "mpp_2914a_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914a_1_prt_buyitnow
+Distributed by: (id)
+
+Table "public.mpp_2914a_1_prt_catchall"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Inherits: mpp_2914a
+Number of child tables: 5 (Use \d+ to list them.)
+Distributed by: (id)
+Partition by: (buydate)
+
+Table "public.mpp_2914a_1_prt_catchall_2_prt_1"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_catchall_2_prt_1_check" CHECK (buydate >= '01-01-2001'::date AND buydate < '01-01-2002'::date)
+Inherits: mpp_2914a_1_prt_catchall
+Distributed by: (id)
+
+Table "public.mpp_2914a_1_prt_catchall_2_prt_2"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_catchall_2_prt_2_check" CHECK (buydate >= '01-01-2002'::date AND buydate < '01-01-2003'::date)
+Inherits: mpp_2914a_1_prt_catchall
+Distributed by: (id)
+
+Table "public.mpp_2914a_1_prt_catchall_2_prt_3"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_catchall_2_prt_3_check" CHECK (buydate >= '01-01-2003'::date AND buydate < '01-01-2004'::date)
+Inherits: mpp_2914a_1_prt_catchall
+Distributed by: (id)
+
+Table "public.mpp_2914a_1_prt_catchall_2_prt_4"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_catchall_2_prt_4_check" CHECK (buydate >= '01-01-2004'::date AND buydate < '01-01-2005'::date)
+Inherits: mpp_2914a_1_prt_catchall
+Distributed by: (id)
+
+Table "public.mpp_2914a_1_prt_catchall_2_prt_5"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_catchall_2_prt_5_check" CHECK (buydate >= '01-01-2005'::date)
+Inherits: mpp_2914a_1_prt_catchall
+Distributed by: (id)
+
+create table mpp_2914B(id int,  buyDate date, kind char(1))
+DISTRIBUTED BY (id)
+partition by list (kind)
+subpartition by range(buyDate)
+(
+        partition auction  values('a','A')
+        (
+                subpartition  y2001 start (date '2001-01-01'),
+                subpartition  y2002 start (date '2002-01-01'),
+                subpartition  y2003 start (date '2003-01-01'),
+                subpartition y2004 start (date '2004-01-01'),
+                subpartition y2005 start (date '2005-01-01')
+        ),
+        partition buyitnow  values('b','B')
+        (
+                subpartition  y2001 start (date '2001-01-01'),
+                subpartition  y2002 start (date '2002-01-01'),
+                subpartition  y2003 start (date '2003-01-01'),
+                subpartition y2004 start (date '2004-01-01'),
+                subpartition y2005 start (date '2005-01-01')
+        ),
+        default partition catchAll  
+        (
+                subpartition  y2001 start (date '2001-01-01'),
+                subpartition  y2002 start (date '2002-01-01'),
+                subpartition  y2003 start (date '2003-01-01'),
+                subpartition y2004 start (date '2004-01-01'),
+                subpartition y2005 start (date '2005-01-01')
+        )
+);
+NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_auction" for table "mpp_2914b"
+NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_auction_2_prt_y2001" for table "mpp_2914b_1_prt_auction"
+NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_auction_2_prt_y2002" for table "mpp_2914b_1_prt_auction"
+NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_auction_2_prt_y2003" for table "mpp_2914b_1_prt_auction"
+NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_auction_2_prt_y2004" for table "mpp_2914b_1_prt_auction"
+NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_auction_2_prt_y2005" for table "mpp_2914b_1_prt_auction"
+NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_buyitnow" for table "mpp_2914b"
+NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_buyitnow_2_prt_y2001" for table "mpp_2914b_1_prt_buyitnow"
+NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_buyitnow_2_prt_y2002" for table "mpp_2914b_1_prt_buyitnow"
+NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_buyitnow_2_prt_y2003" for table "mpp_2914b_1_prt_buyitnow"
+NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_buyitnow_2_prt_y2004" for table "mpp_2914b_1_prt_buyitnow"
+NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_buyitnow_2_prt_y2005" for table "mpp_2914b_1_prt_buyitnow"
+NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_catchall" for table "mpp_2914b"
+NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_catchall_2_prt_y2001" for table "mpp_2914b_1_prt_catchall"
+NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_catchall_2_prt_y2002" for table "mpp_2914b_1_prt_catchall"
+NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_catchall_2_prt_y2003" for table "mpp_2914b_1_prt_catchall"
+NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_catchall_2_prt_y2004" for table "mpp_2914b_1_prt_catchall"
+NOTICE:  CREATE TABLE will create partition "mpp_2914b_1_prt_catchall_2_prt_y2005" for table "mpp_2914b_1_prt_catchall"
+select count(*) from mpp_2914B;
+ count 
+-------
+     0
+(1 row)
+
+\d mpp_2914b*
+      Table "public.mpp_2914b"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Number of child tables: 3 (Use \d+ to list them.)
+Distributed by: (id)
+Partition by: (kind)
+
+Table "public.mpp_2914b_1_prt_auction"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914b
+Number of child tables: 5 (Use \d+ to list them.)
+Distributed by: (id)
+Partition by: (buydate)
+
+Table "public.mpp_2914b_1_prt_auction_2_prt_y2001"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_auction_2_prt_y2001_check" CHECK (buydate >= '01-01-2001'::date AND buydate < '01-01-2002'::date)
+    "mpp_2914b_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914b_1_prt_auction
+Distributed by: (id)
+
+Table "public.mpp_2914b_1_prt_auction_2_prt_y2002"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_auction_2_prt_y2002_check" CHECK (buydate >= '01-01-2002'::date AND buydate < '01-01-2003'::date)
+    "mpp_2914b_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914b_1_prt_auction
+Distributed by: (id)
+
+Table "public.mpp_2914b_1_prt_auction_2_prt_y2003"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_auction_2_prt_y2003_check" CHECK (buydate >= '01-01-2003'::date AND buydate < '01-01-2004'::date)
+    "mpp_2914b_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914b_1_prt_auction
+Distributed by: (id)
+
+Table "public.mpp_2914b_1_prt_auction_2_prt_y2004"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_auction_2_prt_y2004_check" CHECK (buydate >= '01-01-2004'::date AND buydate < '01-01-2005'::date)
+    "mpp_2914b_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914b_1_prt_auction
+Distributed by: (id)
+
+Table "public.mpp_2914b_1_prt_auction_2_prt_y2005"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_auction_2_prt_y2005_check" CHECK (buydate >= '01-01-2005'::date)
+    "mpp_2914b_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914b_1_prt_auction
+Distributed by: (id)
+
+Table "public.mpp_2914b_1_prt_buyitnow"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914b
+Number of child tables: 5 (Use \d+ to list them.)
+Distributed by: (id)
+Partition by: (buydate)
+
+Table "public.mpp_2914b_1_prt_buyitnow_2_prt_y2001"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_buyitnow_2_prt_y2001_check" CHECK (buydate >= '01-01-2001'::date AND buydate < '01-01-2002'::date)
+    "mpp_2914b_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914b_1_prt_buyitnow
+Distributed by: (id)
+
+Table "public.mpp_2914b_1_prt_buyitnow_2_prt_y2002"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_buyitnow_2_prt_y2002_check" CHECK (buydate >= '01-01-2002'::date AND buydate < '01-01-2003'::date)
+    "mpp_2914b_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914b_1_prt_buyitnow
+Distributed by: (id)
+
+Table "public.mpp_2914b_1_prt_buyitnow_2_prt_y2003"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_buyitnow_2_prt_y2003_check" CHECK (buydate >= '01-01-2003'::date AND buydate < '01-01-2004'::date)
+    "mpp_2914b_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914b_1_prt_buyitnow
+Distributed by: (id)
+
+Table "public.mpp_2914b_1_prt_buyitnow_2_prt_y2004"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_buyitnow_2_prt_y2004_check" CHECK (buydate >= '01-01-2004'::date AND buydate < '01-01-2005'::date)
+    "mpp_2914b_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914b_1_prt_buyitnow
+Distributed by: (id)
+
+Table "public.mpp_2914b_1_prt_buyitnow_2_prt_y2005"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_buyitnow_2_prt_y2005_check" CHECK (buydate >= '01-01-2005'::date)
+    "mpp_2914b_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914b_1_prt_buyitnow
+Distributed by: (id)
+
+Table "public.mpp_2914b_1_prt_catchall"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Inherits: mpp_2914b
+Number of child tables: 5 (Use \d+ to list them.)
+Distributed by: (id)
+Partition by: (buydate)
+
+Table "public.mpp_2914b_1_prt_catchall_2_prt_y2001"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_catchall_2_prt_y2001_check" CHECK (buydate >= '01-01-2001'::date AND buydate < '01-01-2002'::date)
+Inherits: mpp_2914b_1_prt_catchall
+Distributed by: (id)
+
+Table "public.mpp_2914b_1_prt_catchall_2_prt_y2002"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_catchall_2_prt_y2002_check" CHECK (buydate >= '01-01-2002'::date AND buydate < '01-01-2003'::date)
+Inherits: mpp_2914b_1_prt_catchall
+Distributed by: (id)
+
+Table "public.mpp_2914b_1_prt_catchall_2_prt_y2003"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_catchall_2_prt_y2003_check" CHECK (buydate >= '01-01-2003'::date AND buydate < '01-01-2004'::date)
+Inherits: mpp_2914b_1_prt_catchall
+Distributed by: (id)
+
+Table "public.mpp_2914b_1_prt_catchall_2_prt_y2004"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_catchall_2_prt_y2004_check" CHECK (buydate >= '01-01-2004'::date AND buydate < '01-01-2005'::date)
+Inherits: mpp_2914b_1_prt_catchall
+Distributed by: (id)
+
+Table "public.mpp_2914b_1_prt_catchall_2_prt_y2005"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_catchall_2_prt_y2005_check" CHECK (buydate >= '01-01-2005'::date)
+Inherits: mpp_2914b_1_prt_catchall
+Distributed by: (id)
+
+drop table mpp_2914a cascade;
+drop table mpp_2914b cascade;
