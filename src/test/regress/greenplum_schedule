@@ -74,7 +74,7 @@ test: vacuum_gp
 
 ignore: gp_portal_error
 test: external_table column_compression eagerfree mapred gpdtm_plpgsql alter_table_aocs alter_distribution_policy ic aoco_privileges aocs
-test: partition_indexing 
+test: partition_indexing parruleord
 test: alter_table_ao ao_create_alter_valid_table subtransaction_limit oid_consistency udf_exception_blocks
 ignore: icudp_full
 

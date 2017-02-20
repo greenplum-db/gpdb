@@ -1,4 +1,5 @@
--- @product_version gpdb: [4.3.6.0-]
+-- Tests on partition ordering, i.e. pg_partition_rule.parruleord attribute.
+
 drop table if exists pt_range;
 create table pt_range (aa int, bb int) partition by range (bb) 
 (partition foo1 start(3) inclusive end(6) exclusive, 
