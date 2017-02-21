@@ -10,7 +10,7 @@ PostgreSQL documentation
 
  <refnamediv>
   <refname>ALTER PROTOCOL</refname>
-  <refpurpose>create a custom data access protocol</refpurpose>
+  <refpurpose>change the definition of a custom data access protocol</refpurpose>
  </refnamediv>
 
  <indexterm zone="sql-alterprotocol">
