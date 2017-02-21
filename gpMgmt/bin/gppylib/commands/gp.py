@@ -8,11 +8,13 @@ TODO: docs!
 """
 import os, pickle, base64, time
 
+import re
+
 from gppylib.gplog import *
 from gppylib.db import dbconn
 from gppylib.db import catalog
 from gppylib import gparray
-from base import *
+from gppylib.commands.base import *
 from unix import *
 import pg
 from gppylib import pgconf
@@ -1725,9 +1727,37 @@ class GpRecoverSeg(Command):
        cmdStr = "$GPHOME/bin/gprecoverseg %s" % (options)
        Command.__init__(self,name,cmdStr,ctxt,remoteHost)
 
+class GpReadConfig(Command):
+    def __init__(self, name, host, seg, guc_name, ctxt=LOCAL, remote_host=None):
+        self.host = host
+        self.seg_db_id = seg.getSegmentDbId()
+        self.seg_content_id = seg.getSegmentContentId()
+        self.guc_name = guc_name
+        cat_path = findCmdInPath('cat')
+
+        cmdStr = "%s %s/postgresql.conf" % (cat_path, seg.getSegmentDataDirectory())
+        Command.__init__(self, name, cmdStr, ctxt, remote_host)
+
+    def get_guc_value(self):
+        std_out = self.get_results().stdout
+        std_out = std_out.split('\n')
+
+        VALUE_PATTERN = re.compile(".*=(.*)")
+
+        GUC_PATTERN = re.compile("^[\s]*" + self.guc_name + "[ \t]*=")
+
+        value = None
+        key_lines = [line for line in std_out if GUC_PATTERN.match(line)]
+        if key_lines:
+            value = VALUE_PATTERN.match(key_lines[-1]).group(1)
+            value = value.split('#')[0].strip()
+
+        return value
+
+    def get_seg_content_id(self):
+        return self.seg_content_id
 
 
-        
 if __name__ == '__main__':
 
     import doctest
