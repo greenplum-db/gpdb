@@ -380,6 +380,8 @@ extern int	gp_fts_probe_interval; /* GUC var - specifies polling interval for FT
 extern int	gp_fts_probe_threadcount; /* GUC var - specifies number of threads to use for FTS probes */
 extern bool	gp_fts_transition_parallel; /* GUC var - controls parallel segment transition for FTS */
 
+extern int gp_diskusage_soft_limit;
+
 extern int gp_gang_creation_retry_count; /* How many retries ? */
 extern int gp_gang_creation_retry_timer; /* How long between retries */
 

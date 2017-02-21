@@ -32,6 +32,7 @@
 #include "storage/itemptr.h"
 #include "storage/shmem.h"
 #include "storage/smgr.h"
+#include "storage/proc.h"
 #include "utils/guc.h"
 #include "utils/hsearch.h"
 #include "utils/builtins.h"
@@ -43,6 +44,11 @@
 #include "cdb/cdbpersistentstore.h"
 #include "cdb/cdbpersistentfilesysobj.h"
 #include "cdb/cdbpersistentfilespace.h"
+#include "cdb/cdbfilerepservice.h"
+
+#include <sys/statvfs.h>
+
+
 
 typedef struct PersistentFilespaceSharedData
 {
@@ -575,6 +581,147 @@ void PersistentFilespace_GetPrimaryAndMirror(
 
 	READ_PERSISTENT_STATE_ORDERED_UNLOCK;
 }
+
+
+
+/*
+ * Check the directory to see if the soft limit is exceeded. Warning
+ * is issued if the limit is exceeded.
+ *
+ * Returns: Nothing
+ */
+
+static void PersistentFilespace_CheckDirUsage(
+	const char *dir)							/* directory to check */
+{
+	int    rc = 0;
+	struct statvfs buf;
+	double percentageFull = 0.0;
+
+	if ((rc = statvfs(dir, &buf)))
+	{
+		ereport(WARNING, (errmsg("statvfs() failed for %s. Error is %s.",
+								 dir, strerror(rc)),
+						  errSendAlert(true)));
+	}
+
+	percentageFull = 100.0 - (((double)buf.f_bavail/(double)buf.f_blocks)*100.0);
+
+	if (gp_log_fts >= GPVARS_VERBOSITY_VERBOSE)
+	{
+		elog(LOG, "%s is %.2f%% full. Total Disk size=%d, free blocks=%d,"
+			" f_bsize=%lu, f_frsize=%lu, f_bavail=%d",
+			 dir, percentageFull, buf.f_blocks, buf.f_bfree,
+			buf.f_bsize, buf.f_frsize, buf.f_bavail);
+	}
+
+	if (gp_diskusage_soft_limit && (percentageFull >= gp_diskusage_soft_limit))
+	{
+		ereport(WARNING, (errmsg(
+			"SoftLimit of %d%% crossed for directory %s. Current utilization is %.2f%%."
+			" Please free up space before the disk becomes full.",
+			gp_diskusage_soft_limit, dir, percentageFull),
+						  errSendAlert(true)));
+	}
+}
+
+
+
+/*
+ * Callback to iterate over gp_persistent_filespace_node table.
+ *
+ * The filespace location obtained from the table is checked for exceeding soft
+ * limit.
+ *
+ * Returns: true so that the callback should be called for next iteration
+ *
+ */
+
+static bool PersistentFilespace_CheckDiskUsageScanTupleCallback(
+	ItemPointer persistentTid,		   /* tuple id  */
+	int64				persistentSerialNum, /* serial number of the tuple */
+	Datum      *values)							 /* tuple data values */
+{
+	Oid		filespaceOid;
+	int16	dbId1;
+	char	locationBlankPadded1[FilespaceLocationBlankPaddedWithNullTermLen];
+	int16	dbId2;
+	char	locationBlankPadded2[FilespaceLocationBlankPaddedWithNullTermLen];
+
+	PersistentFileSysState       state;
+	int64	                       createMirrorDataLossTrackingSessionNum;
+	MirroredObjectExistenceState mirrorExistenceState;
+	int32					               reserved;
+	TransactionId	               parentXid;
+	int64					               serialNum;
+	ItemPointerData              previousFreeTid;
+	char                        *blankLocation = NULL;
+
+	GpPersistentFilespaceNode_GetValues(
+									values,
+									&filespaceOid,
+									&dbId1,
+									locationBlankPadded1,
+									&dbId2,
+									locationBlankPadded2,
+									&state,
+									&createMirrorDataLossTrackingSessionNum,
+									&mirrorExistenceState,
+									&reserved,
+									&parentXid,
+									&serialNum,
+									&previousFreeTid);
+
+	if ((blankLocation = strchr(locationBlankPadded1, ' ')))
+		*blankLocation = '\0';
+
+	PersistentFilespace_CheckDirUsage(locationBlankPadded1);
+
+	return true;									/* continue */
+}
+
+
+
+/*
+ * If the soft limit is not set, then return immediately.
+ *
+ * Check the Data Directory for disk usage.
+ *
+ * Iterate over the gp_persistent_filespace_node table using the
+ * PersistentFilespace_CheckDiskUsageScanTupleCallback() to see if the
+ * soft disk usage limit is exceeded for any of the filespaces.
+ *
+ * Returns: Nothing
+ */
+
+void PersistentFilespace_CheckDiskUsage(void)
+{
+	if (!gp_diskusage_soft_limit)
+		return;
+
+	PersistentFilespace_CheckDirUsage(DataDir);
+
+	if (MyProc == NULL)
+	{
+		/* This initialization is necessary to perform the scan of the
+		 * gp_persistent_filespace_node table */
+
+		BaseInit();
+		InitAuxiliaryProcess();
+		InitBufferPoolBackend();
+		FileRepSubProcess_InitializeResyncManagerProcess();
+	}
+
+	PersistentFilespace_VerifyInitScan();
+
+	PersistentFileSysObj_Scan(PersistentFsObjType_FilespaceDir,
+							  PersistentFilespace_CheckDiskUsageScanTupleCallback);
+
+	return;
+}
+
+
+
 
 // -----------------------------------------------------------------------------
 // State Change

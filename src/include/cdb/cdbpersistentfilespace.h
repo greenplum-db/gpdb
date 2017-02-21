@@ -63,6 +63,18 @@ extern void PersistentFilespace_GetPrimaryAndMirror(
 				/* The primary filespace directory path.  Return NULL for global and base. 
 				 * Or, returns NULL when mirror not configured. */
 
+
+/*
+ * Check the DataDir and all filespaces to see if their corresponding disk
+ * storage has exceeded the disk usage hard or soft limits.  Issue warnings if
+ * that is the case.
+ *
+ * Returns: Nothing
+ */
+
+extern void PersistentFilespace_CheckDiskUsage(void);
+
+
 /*
  * Indicate we intend to create a relation file as part of the current transaction.
  *
