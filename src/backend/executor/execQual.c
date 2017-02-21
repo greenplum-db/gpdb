@@ -4848,11 +4848,13 @@ static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
 	int16	typlen = 0;
 	bool typbyval = false;
 	char typalign = 'i';
+	bool *is_null = NULL;
 
 	// TODO: Can we ever have 0 list values? Currently it gives parser error.
 	// But a default part might be interesting.
 	if (numVal > 0)
 	{
+		is_null = palloc0(sizeof(bool) * numVal);
 		List *headOfValues = lfirst(rule->parlistvalues->head);
 		Const *firstValue = (Const *) lfirst(list_nth_cell(headOfValues, 0));
 		consttype = firstValue->consttype;
@@ -4873,7 +4875,14 @@ static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
 			Assert (IsA(value, Const));
 
 			con = (Const *) value;
-			array_values[datumIdx++] = con->constvalue;
+			array_values[datumIdx] = con->constvalue;
+
+			if (con->constisnull)
+			{
+				is_null[datumIdx] = true;
+			}
+
+			++datumIdx;
 		}
 	}
 
@@ -4882,18 +4891,30 @@ static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
 	 * we will just create an empty array. Returning null might return NULL from parent operator, such
 	 * as ExecEvalScalarArrayOp
 	 */
-	ArrayType *array = construct_array(array_values, numVal, consttype, typlen, typbyval, typalign);
+	int			dims[1];
+	int			lbs[1];
+
+	dims[0] = numVal;
+	lbs[0] = 1;
+
+	ArrayType *array = construct_md_array(array_values, is_null, 1, dims, lbs,
+			consttype, typlen, typbyval, typalign);
+			//construct_array(array_values, numVal, consttype, typlen, typbyval, typalign);
 
 	if (array_values)
 	{
 		Assert(NULL != array);
 		pfree(array_values);
+
+		Assert(NULL != is_null);
+		pfree(is_null);
 	}
 
 	if (isDone)
 	{
 		*isDone = ExprSingleResult;
 	}
+
 	*isNull = false;
 	return PointerGetDatum(array);
 }
@@ -4925,8 +4946,10 @@ static Datum ExecEvalPartListNullTestExpr(PartListNullTestExprState *exprstate,
 
 	*isNull = false;
 
-	// TODO: Can we ever have 0 list values? Currently it gives parser error.
-	// But a default part might be interesting.
+	/*
+	 * TODO: Can we ever have 0 list values? Currently it gives parser error.
+	 * But a default part might be interesting.
+	 */
 	if (numVal > 0)
 	{
 		Const *con = NULL;
@@ -4940,14 +4963,19 @@ static Datum ExecEvalPartListNullTestExpr(PartListNullTestExprState *exprstate,
 
 			con = (Const *) value;
 
-			if (con->constisnull)
+			if (con->constisnull && expr->nulltesttype == IS_NULL)
 			{
-				return  expr->nulltesttype == IS_NULL ? BoolGetDatum(true) : BoolGetDatum(false);
+				/* Found at least on null value when we were asked to find one */
+				return BoolGetDatum(true);
+			}
+			else if (!con->constisnull && expr->nulltesttype == IS_NOT_NULL)
+			{
+				return BoolGetDatum(true);
 			}
 		}
 	}
 
-	return  expr->nulltesttype == IS_NULL ? BoolGetDatum(false) : BoolGetDatum(true);
+	return BoolGetDatum(false);
 }
 
 /* ----------------------------------------------------------------
