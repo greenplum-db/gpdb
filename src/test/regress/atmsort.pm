@@ -1113,7 +1113,7 @@ sub atmsort_bigloop
     my $big_ignore = 0;
     my $define_match_expression = undef;
 
-    print $atmsort_outfh "GP_IGNORE: formatted by atmsort.pm\n";
+#    print $atmsort_outfh "GP_IGNORE: formatted by atmsort.pm\n";
 
     my $do_equiv = $glob_compare_equiv || $glob_make_equiv_expected;
 
