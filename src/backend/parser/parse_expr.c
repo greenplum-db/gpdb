@@ -2892,6 +2892,9 @@ exprType(Node *expr)
 		case T_PartListRuleExpr:
 			type = ((PartListRuleExpr *) expr)->resulttype;
 			break;
+		case T_PartListNullTestExpr:
+			type = BOOLOID;
+			break;
 		default:
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(expr));
 			type = InvalidOid;	/* keep compiler quiet */

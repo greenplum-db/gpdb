@@ -3989,6 +3989,7 @@ expression_tree_mutator(Node *node,
 		case T_PartBoundInclusionExpr:
 		case T_PartBoundOpenExpr:
 		case T_PartListRuleExpr:
+		case T_PartListNullTestExpr:
 			return (Node *) copyObject(node);
 		case T_Aggref:
 			{

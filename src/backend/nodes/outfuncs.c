@@ -3278,6 +3278,15 @@ _outPartListRuleExpr(StringInfo str, PartListRuleExpr *node)
 	WRITE_OID_FIELD(resulttype);
 }
 
+static void
+_outPartListNullTestExpr(StringInfo str, PartListNullTestExpr *node)
+{
+	WRITE_NODE_TYPE("PARTLISTNULLTESTEXPR");
+
+	WRITE_INT_FIELD(level);
+	WRITE_ENUM_FIELD(nulltesttype, NullTestType);
+}
+
 #ifndef COMPILING_BINARY_FUNCS
 static void
 _outColumnDef(StringInfo str, ColumnDef *node)
@@ -5099,6 +5108,10 @@ _outNode(StringInfo str, void *obj)
 
 			case T_PartListRuleExpr:
 				_outPartListRuleExpr(str, obj);
+				break;
+
+			case T_PartListNullTestExpr:
+				_outPartListNullTestExpr(str, obj);
 				break;
 
 			case T_CreateTrigStmt:
