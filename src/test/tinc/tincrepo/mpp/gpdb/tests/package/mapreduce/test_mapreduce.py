@@ -72,7 +72,7 @@ class MapreduceMPPTestCase(MPPTestCase):
             scp_cmd = 'gpscp  -h ' +' -h '.join(map(str,hosts)) +' '+ sharedObj + ' =:%s' % so_dir
             run_shell_command(scp_cmd)
             if res['rc']:
-                raise Excpetion('Could not copy shared object to primary segment')
+                raise Exception('Could not copy shared object to primary segment')
 
     def check_orca(self):
         cmd = 'gpconfig -s optimizer'
@@ -80,7 +80,7 @@ class MapreduceMPPTestCase(MPPTestCase):
         run_shell_command(cmd, 'check if orca enabled', res)        
         for line in res['stdout']:
             if 'Master  value: off' in line or 'Segment value: off' in line:
-                return false
+                return False
         return True
 
     def doTest(self, fileName):
@@ -349,7 +349,7 @@ class MapreduceMPPTestCase(MPPTestCase):
         cmd = "gpmapreduce -f mpp5551.yml;echo $?"
         self.run_gpmapreduce_cmd(gpmaprcmd=cmd, expected_ret = 1)
 
-    def test_Neg_InvalidTable(self):
+    def test_Neg_InvalidTable2(self):
         "Invalid Table"
         cmd = "gpmapreduce -f mpp5550.yml"
         self.run_gpmapreduce_cmd(gpmaprcmd=cmd, expected_ret = 1)
@@ -371,7 +371,7 @@ class MapreduceMPPTestCase(MPPTestCase):
         cmd = "gpmapreduce -f neg_missingYMLversion.yml"
         self.run_gpmapreduce_cmd(gpmaprcmd=cmd, expected_ret = 1)
 
-    def test_Neg_MissingYMLversion(self):
+    def test_Neg_MissingYMLversion2(self):
         "missing YML version"
         cmd = "gpmapreduce -f neg_invalidYMLversion.yml"
         self.run_gpmapreduce_cmd(gpmaprcmd=cmd, expected_ret = 1)
@@ -603,7 +603,7 @@ class MapreduceMPPTestCase(MPPTestCase):
         """
         self.runFunctionTest("scalar_consolidation","1outParam_unnamedInYml_unnamed")
 
-    def test_scalar_consolidation_1outParam_unnamedInYml_namedInDB(self):
+    def test_scalar_consolidation_1outParam_unnamedInYml_namedInDB2(self):
         """
         scalar  Consolidation use 1 named out parameter, not specified in yaml 
         """
