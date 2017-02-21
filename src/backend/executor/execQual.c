@@ -4899,6 +4899,58 @@ static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
 }
 
 /* ----------------------------------------------------------------
+ *		ExecEvalPartListNullTestExpr
+ *
+ *		Evaluate a PartListNullTestExpr
+ * ----------------------------------------------------------------
+ */
+static Datum ExecEvalPartListNullTestExpr(PartListNullTestExprState *exprstate,
+							ExprContext *econtext,
+							bool *isNull, ExprDoneCond *isDone)
+{
+	Assert(NULL != exprstate);
+	Assert(NULL != isNull);
+
+	PartListNullTestExpr *expr = (PartListNullTestExpr *) exprstate->xprstate.expr;
+
+	PartitionSelectorState *selector = exprstate->selector;
+	PartitionRule *rule = selector->levelPartRules[expr->level];
+	Assert (NULL != rule);
+	AssertImply(0 == expr->level, selector->rootPartitionNode->part->parkind == 'l');
+	AssertImply(0 < expr->level, selector->levelPartRules[expr->level - 1] != NULL &&
+			selector->levelPartRules[expr->level - 1]->children->part->parkind == 'l');
+
+	ListCell *lc = NULL;
+	size_t numVal = rule->parlistvalues ? rule->parlistvalues->length : 0;
+
+	*isNull = false;
+
+	// TODO: Can we ever have 0 list values? Currently it gives parser error.
+	// But a default part might be interesting.
+	if (numVal > 0)
+	{
+		Const *con = NULL;
+		foreach (lc, rule->parlistvalues)
+		{
+			List *values = (List *) lfirst(lc);
+			/* make sure it is single-column partition */
+			Assert (1 == list_length(values));
+			Node *value = (Node *) lfirst(list_nth_cell(values, 0));
+			Assert (IsA(value, Const));
+
+			con = (Const *) value;
+
+			if (con->constisnull)
+			{
+				return  expr->nulltesttype == IS_NULL ? BoolGetDatum(true) : BoolGetDatum(false);
+			}
+		}
+	}
+
+	return  expr->nulltesttype == IS_NULL ? BoolGetDatum(false) : BoolGetDatum(true);
+}
+
+/* ----------------------------------------------------------------
  *    ExecEvalCurrentOfExpr
  *
  *    Evaluate CURRENT OF
@@ -5923,6 +5975,19 @@ ExecInitExpr(Expr *node, PlanState *parent)
 				state = (ExprState *) exprstate;
 			}
 			break;
+
+		case T_PartListNullTestExpr:
+			{
+				Insist(parent && IsA(parent, PartitionSelectorState));
+				PartitionSelectorState *psstate = (PartitionSelectorState *) parent;
+				PartListNullTestExprState *exprstate = makeNode(PartListNullTestExprState);
+				exprstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalPartListNullTestExpr;
+				exprstate->selector = psstate;
+
+				state = (ExprState *) exprstate;
+			}
+			break;
+
 		default:
 			elog(ERROR, "unrecognized node type: %d",
 				 (int) nodeTag(node));

@@ -1082,7 +1082,7 @@ typedef struct PartListNullTestExprState
 	ExprState	xprstate;
 
 	/* PartitionSelectorState where expression evaluator can look for rules */
-	struct PartitionSelectorState *psstate;
+	struct PartitionSelectorState *selector;
 } PartListNullTestExprState;
 
 /* ----------------
