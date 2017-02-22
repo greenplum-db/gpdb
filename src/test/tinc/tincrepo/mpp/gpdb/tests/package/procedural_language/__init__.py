@@ -83,20 +83,3 @@ class ProceduralLanguage:
             return False
         else:
             return True
- 
-    def drop_lanaguage_from_db(self, language_name, dbname=os.environ.get('PGDATABASE', 'gptest')):
-        """
-        @summary: Drops a procedural language from a given database
-        
-        @param language_name: The name of the procedural language to drop, e.g. plperl
-        @param dbname: Optional. The name of the database. If not speciried, uses PGDATABASE if defined in environment or gptest if not.
-        @return: list - (True, output of sql) if language is dropped, (False, output of sql) otherwise
-        @raise Exception: If sql returns an error  
-        """
-        sql = 'drop language if exists %s cascade' % language_name
-        result = PSQL.run_sql_command(sql_cmd = sql, flags = '-q -t', dbname=dbname)
-        tinctest.logger.info("Running command - %s" % sql)
-        if 'error' in result.lower():
-            return False
-        else:
-            return True
