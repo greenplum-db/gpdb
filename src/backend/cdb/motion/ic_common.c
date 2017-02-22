@@ -59,8 +59,19 @@
  * GLOBAL STATE VARIABLES
  */
 
-/* Socket file descriptor for the listener. */
-int		UDP_listenerFd;
+/* Socket file descriptor for the listener and sender. */
+int		ICListenerSocket;
+int 	ICSenderSocket;
+
+/*
+ * Ports of Interconnect, assigned by initMotionLayerIPC() at process startup.
+ * These ports are used for the duration of this process and should never change.
+ */
+uint16	ICListenerPort;
+uint16 	ICSenderPort;
+
+int 	ICSenderFamily;
+
 
 /* Socket file descriptor for the sequence server. */
 int		savedSeqServerFd = -1;
@@ -202,11 +213,9 @@ InitMotionLayerIPC(void)
 	savedSeqServerFd = -1;
 
 	/* use a local uint16 to remove warning of 'incompatible type' */
-	uint16 port;
-	InitMotionUDPIFC(&UDP_listenerFd, &port);
-	Gp_listener_port = port;
+	InitMotionUDPIFC();
 
-	elog(DEBUG1, "Interconnect listening on udp port %d", Gp_listener_port);
+	elog(DEBUG1, "Interconnect listener port %d, sender port %d", ICListenerPort, ICSenderPort);
 }
 
 /* See ml_ipc.h */
@@ -220,12 +229,12 @@ CleanUpMotionLayerIPC(void)
 
 	/* close down the Interconnect listener socket. */
 
-	if (UDP_listenerFd >= 0)
-		closesocket(UDP_listenerFd);
+	if (ICListenerSocket >= 0)
+		closesocket(ICListenerSocket);
 
 	/* be safe and reset global state variables. */
-	Gp_listener_port = 0;
-	UDP_listenerFd = -1;
+	ICListenerPort = 0;
+	ICListenerSocket = -1;
 }
 
 /* See ml_ipc.h */

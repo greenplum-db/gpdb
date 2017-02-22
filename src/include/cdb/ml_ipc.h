@@ -17,8 +17,21 @@
 struct SliceTable;                          /* #include "nodes/execnodes.h" */
 struct EState;                              /* #include "nodes/execnodes.h" */
 
-/* listener filedescriptors */
-extern int		UDP_listenerFd;
+/* Socket file descriptor for the listener and sender. */
+extern int	ICListenerSocket;
+extern int	ICSenderSocket;
+
+/*
+ * Ports of Interconnect, assigned by initMotionLayerIPC() at process startup.
+ * These ports are used for the duration of this process and should never change.
+ */
+extern uint16	ICListenerPort;
+extern uint16	ICSenderPort;
+
+extern int	ICSenderFamily;
+
+
+
 
 /* 2 bytes to store the size of the entire packet.	a packet is composed of
  * of one or more serialized TupleChunks (each of which has a TupleChunk
@@ -276,7 +289,7 @@ extern ChunkTransportStateEntry *removeChunkTransportState(ChunkTransportState *
 
 extern TupleChunkListItem RecvTupleChunk(MotionConn *conn, bool inTeardown);
 
-extern void InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort);
+extern void InitMotionUDPIFC(void);
 extern void markUDPConnInactiveIFC(MotionConn *conn);
 extern void CleanupMotionUDPIFC(void);
 extern void WaitInterconnectQuitUDPIFC(void);

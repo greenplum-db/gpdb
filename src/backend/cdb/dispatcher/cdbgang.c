@@ -37,6 +37,7 @@
 #include "cdb/cdbtm.h"			/* discardDtxTransaction() */
 #include "cdb/cdbutil.h"		/* CdbComponentDatabaseInfo */
 #include "cdb/cdbvars.h"		/* Gp_role, etc. */
+#include "cdb/ml_ipc.h"
 #include "storage/bfz.h"
 #include "gp-libpq-fe.h"
 #include "gp-libpq-int.h"
@@ -1048,7 +1049,7 @@ getCdbProcessesForQD(int isPrimary)
 	 * interconnect connection.
 	 */
 	proc->listenerAddr = NULL;
-	proc->listenerPort = Gp_listener_port;
+	proc->listenerPort = ICListenerPort;
 
 	proc->pid = MyProcPid;
 	proc->contentid = -1;
