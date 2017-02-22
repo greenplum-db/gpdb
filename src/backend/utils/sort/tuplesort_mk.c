@@ -3456,6 +3456,7 @@ tupsort_prepare_char(MKEntry *a, bool isCHAR)
 
 	kstr.ref = 1;
 	kstr.xfrm_pos = lenToStore + 1;
+	kstr.isPrefixOnly = storePrefixOnly ? 1 : 0;
 	memcpy(kstr.data, p, lenToStore);
 	kstr.data[lenToStore] = '\0';
 
@@ -3557,7 +3558,6 @@ tupsort_prepare_char(MKEntry *a, bool isCHAR)
 	/*
 	 * finalize result
 	 */
-	ret->isPrefixOnly = storePrefixOnly ? 1 : 0;
 	a->d = PointerGetDatum(ret);
 	mke_set_refc(a);
 }
