@@ -85,10 +85,10 @@ test: wrkloadadmin
 # vacuum from removing dead tuples.
 test: gp_toolkit
 
-test: filespace trig auth_constraint role rle portals_updatable plpgsql_cache timeseries resource_queue_function pg_stat_last_operation gp_numeric_agg partindex_test direct_dispatch partition_pruning_with_fn dsp runtime_stats
+test: filespace trig auth_constraint role rle portals_updatable plpgsql_cache timeseries resource_queue_function pg_stat_last_operation gp_numeric_agg partindex_test partition_pruning_with_fn dsp runtime_stats
 
 # direct dispatch tests
-test: bfv_dd bfv_dd_multicolumn bfv_dd_types
+test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types
 
 # catalog test uses pg_get_constraintdef which may report ERROR when executed
 # concurrently with other tests. Cause pg_get_constraintdef() looks up
