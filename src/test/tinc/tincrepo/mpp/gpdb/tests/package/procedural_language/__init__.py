@@ -56,7 +56,7 @@ class ProceduralLanguage:
         @summary: Checks if a given procedural language is defined in a given database.
         
         @param language_name: The name of the procedural language, e.g. plperl
-        @param dbname: Optional. The name of the database.  If not speciried, uses PGDATABASE if defined in environment or gptest if not.
+        @param dbname: Optional. The name of the database.  If not specified, uses PGDATABASE if defined in environment or gptest if not.
         @return: True if language is found in pg_language, False otherwise 
         """  
         sql = "select lanname from pg_language where lanname = '%s'" % language_name
@@ -71,8 +71,8 @@ class ProceduralLanguage:
         """
         @summary: Creates a procedural language from a given database
         
-        @param language_name: The name of the procedural language to aded, e.g. plperl
-        @param dbname: Optional. The name of the database. If not speciried, uses PGDATABASE if defined in environment or gptest if not.
+        @param language_name: The name of the procedural language to added, e.g. plperl
+        @param dbname: Optional. The name of the database. If not specified, uses PGDATABASE if defined in environment or gptest if not.
         @return: list - (True, output of sql) if language is added, (False, output of sql) otherwise
         @raise Exception: If sql returns an error  
         """
