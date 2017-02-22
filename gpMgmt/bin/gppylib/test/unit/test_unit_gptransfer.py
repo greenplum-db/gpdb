@@ -153,6 +153,8 @@ class GpTransfer(GpTestCase):
 
     def tearDown(self):
         shutil.rmtree(self.TEMP_DIR)
+        super(GpTransfer, self).tearDown()
+
 
     @patch('gptransfer.TableValidatorFactory', return_value=Mock())
     def test__get_distributed_by_quotes_column_name(self, mock1):

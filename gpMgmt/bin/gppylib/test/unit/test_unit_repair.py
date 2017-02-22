@@ -104,6 +104,7 @@ class RepairTestCase(GpTestCase):
 
     def tearDown(self):
         shutil.rmtree(self.repair_dir_path)
+        super(RepairTestCase, self).tearDown()
 
 if __name__ == '__main__':
     run_tests()

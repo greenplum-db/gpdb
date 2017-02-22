@@ -68,6 +68,7 @@ class GpConfig(GpTestCase):
 
     def tearDown(self):
         shutil.rmtree(self.temp_dir)
+        super(GpConfig, self).tearDown()
 
     def createGpArrayWith2Primary2Mirrors(self):
         master = GpDB.initFromString(
