@@ -1,8 +1,0 @@
--- Test: plperl 63
-SELECT getme('ourkey');
- getme 
--------
- 
-(1 row)
-
-							  

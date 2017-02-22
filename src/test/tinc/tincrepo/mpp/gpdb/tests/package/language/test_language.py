@@ -277,14 +277,6 @@ class languageTestCase(MPPTestCase):
         """ Language PL/PGSQL: function call modes """
         self.doPLPGSQL(None, "plpgsql/test001_function_call_modes", default='-e')
 
-    def test_PLPERL001_function_call_modes(self):
-        """ Language PL/PERL: function call modes """
-        self.doPLPERL(None, "plperl/test001_function_call_modes", default='-e')
-
-    def test_PLPERLU001_function_call_modes(self):
-        """ Language PL/PERLU: function call modes """
-        self.doPLPERLU(None, "plperlu/test001_function_call_modes", default='-e')
-
     def test_PLPYTHONU001_function_call_modes(self):
         """ Language PL/PYTHONU: function call modes """
         self.doPLPYTHONU(None, "plpythonu/test001_function_call_modes", default='-e')
