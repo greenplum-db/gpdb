@@ -562,6 +562,10 @@ struct UnackQueueRing
  */
 static UnackQueueRing unack_queue_ring = {0, 0, 0};
 
+static int ICSenderSocket = -1;
+static uint16 ICSenderPort = 0;
+static int ICSenderFamily = 0;
+
 /*
  * AckSendParam
  *
@@ -1366,9 +1370,10 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 					errmsg("failed to initialize connection htab for startup cache")));
 
 	/*
-	 * setup listening socket.
+	 * setup listening socket and sending socket for Interconnect.
 	 */
 	setupUDPListeningSocket(listenerSocketFd, listenerPort, &txFamily);
+	setupUDPListeningSocket(&ICSenderSocket, &ICSenderPort, &ICSenderFamily);
 
 	/* Initialize receive control data. */
 	resetMainThreadWaiting(&rx_control_info.mainWaitingState);
@@ -1460,6 +1465,12 @@ CleanupMotionUDPIFC(void)
 	snd_control_info.ackBuffer = NULL;
 
 	MemoryContextDelete(ic_control_info.memContext);
+
+	if (ICSenderSocket >= 0)
+		closesocket(ICSenderSocket);
+	ICSenderSocket = -1;
+	ICSenderPort = 0;
+	ICSenderFamily = 0;
 
 #ifdef USE_ASSERT_CHECKING
 	/*
@@ -2663,10 +2674,9 @@ startOutgoingUDPConnections(ChunkTransportState *transportStates,
 		conn++;
 	}
 
-	pEntry->txfd = -1;
-	pEntry->txport = 0;
-	setupUDPListeningSocket(&pEntry->txfd, &port, &pEntry->txfd_family);
-	pEntry->txport = port;
+	pEntry->txfd = ICSenderSocket;
+	pEntry->txport = ICSenderPort;
+	pEntry->txfd_family = ICSenderFamily;
 
 	return pEntry;
 
@@ -3383,11 +3393,6 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
     	{
     		/* now it is safe to remove. */
     		pEntry = removeChunkTransportState(transportStates, mySlice->sliceIndex);
-
-    		if (pEntry->txfd >= 0)
-    			closesocket(pEntry->txfd);
-    		pEntry->txfd = -1;
-    		pEntry->txfd_family = 0;
 
     		/* connection array allocation may fail in interconnect setup. */
     		if (pEntry->conns)
