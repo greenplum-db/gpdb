@@ -24,8 +24,12 @@ select count(*) from pg_tables where schemaname like 'pg_temp%';
 -- Disconnect and reconnect.
 \c regression
 
+-- It can take a while for the old backend to finish cleaning up the
+-- temp tables.
+select pg_sleep(2);
+
 -- Check that the temporary table was dropped at disconnect.
-select count(*) from pg_tables where schemaname like 'pg_temp%';
+select * from pg_tables where schemaname like 'pg_temp%';
 
 -- Clean up
 reset role;

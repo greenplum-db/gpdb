@@ -108,11 +108,10 @@ test: aggregate_with_groupingsets
 
 test: nested_case_null sort
 
-test: bfv_cte bfv_joins bfv_subquery bfv_planner bfv_legacy
-
-# This test gets confused if there are other connections, with temp tables,
-# active at the same time.
-test: bfv_temp
+# NOTE: The bfv_temp test assumes that there are no temporary tables in
+# other sessions. Therefore the other tests in this group mustn't create
+# temp tables
+test: bfv_cte bfv_joins bfv_subquery bfv_planner bfv_legacy bfv_temp
 
 test: qp_olap_mdqa qp_misc
 
