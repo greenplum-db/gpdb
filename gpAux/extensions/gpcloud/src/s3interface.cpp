@@ -104,7 +104,7 @@ ResponseCode S3InterfaceService::headResponseWithRetries(const string &url, HTTP
                 S3_DIE(S3QueryAbort, "Uploading is interrupted");
             }
 
-            S3WARN("Failed to get a good response in PUT from '%s', retrying ...", url.c_str());
+            S3WARN("Failed to get a good response in HEAD from '%s', retrying ...", url.c_str());
         }
     };
 
@@ -122,7 +122,7 @@ Response S3InterfaceService::deleteRequestWithRetries(const string &url, HTTPHea
             if (S3QueryIsAbortInProgress()) {
                 S3_DIE(S3QueryAbort, "Uploading is interrupted");
             }
-            S3WARN("Failed to get a good response in PUT from '%s', retrying ...", url.c_str());
+            S3WARN("Failed to get a good response in DELETE from '%s', retrying ...", url.c_str());
         }
     };
 

@@ -17,7 +17,8 @@ bool sha1hmac_hex(const char* str, char out_hash_hex[SHA_DIGEST_STRING_LENGTH], 
 
 bool sha256(const char* string, unsigned char out_hash[SHA256_DIGEST_LENGTH]);
 
-bool sha256_hex(const char* string, uint64_t length, char out_hash_hex[SHA256_DIGEST_STRING_LENGTH]);
+bool sha256_hex(const char* string, uint64_t length,
+                char out_hash_hex[SHA256_DIGEST_STRING_LENGTH]);
 
 bool sha256_hex(const char* string, char out_hash_hex[SHA256_DIGEST_STRING_LENGTH]);
 

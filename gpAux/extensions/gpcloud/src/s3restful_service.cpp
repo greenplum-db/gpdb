@@ -133,6 +133,10 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers) {
         // Get the HTTP response status code from HTTP header
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
 
+        if (responseCode == 500) {
+            S3_DIE(S3ConnectionError, "Server temporary unavailable");
+        }
+
         response.FillResponse(responseCode);
     }
 
@@ -168,6 +172,10 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers, const S3
         // Get the HTTP response status code from HTTP header
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
 
+        if (responseCode == 500) {
+            S3_DIE(S3ConnectionError, "Server temporary unavailable");
+        }
+
         response.FillResponse(responseCode);
     }
 
@@ -202,6 +210,10 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
         // Get the HTTP response status code from HTTP header
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
 
+        if (responseCode == 500) {
+            S3_DIE(S3ConnectionError, "Server temporary unavailable");
+        }
+
         response.FillResponse(responseCode);
     }
 
@@ -235,6 +247,10 @@ ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers) {
     } else {
         // Get the HTTP response status code from HTTP header
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
+
+        if (responseCode == 500) {
+            S3_DIE(S3ConnectionError, "Server temporary unavailable");
+        }
     }
 
     return responseCode;
@@ -266,6 +282,11 @@ Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers
         long responseCode;
         // Get the HTTP response status code from HTTP header
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
+
+        if (responseCode == 500) {
+            S3_DIE(S3ConnectionError, "Server temporary unavailable");
+        }
+
         response.FillResponse(responseCode);
     }
 
