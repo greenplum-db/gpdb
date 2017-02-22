@@ -92,6 +92,11 @@ comptype_to_name(char *comptype)
  * compression type.
  *
  * Comparison is case insensitive.
+ *
+ * NOTE: This function performs a catalog lookup, which can cause cache
+ * invalidation. If 'comptype' points to the relcache, i.e.
+ * RelationData->rd_appendonly->compresstype, that reference is no longer
+ * valid after the call!
  */
 PGFunction *
 GetCompressionImplementation(char *comptype)
@@ -105,9 +110,21 @@ GetCompressionImplementation(char *comptype)
 	ScanKeyData	scankey;
 	SysScanDesc scan;
 
+	/*
+	 * Many callers pass RelationData->rd_appendonly->compresstype as
+	 * the argument. That can become invalid, if heap_open below causes
+	 * a relcache invalidation. Call comptype_to_name() on the argument
+	 * first, to make a copy of it before we call heap_open().
+	 *
+	 * This is hazardous to the callers, too, if they try to use the
+	 * string after the call for something else, but there isn't much
+	 * we can do about it here.
+	 */
+	compname = comptype_to_name(comptype);
+
 	comprel = heap_open(CompressionRelationId, AccessShareLock);
 
-	compname = comptype_to_name(comptype);
+	comptype = NULL;	/* heap_open might have invalidated this */
 
 	/* SELECT * FROM pg_compression WHERE compname = :1 */
 	ScanKeyInit(&scankey,
@@ -122,7 +139,7 @@ GetCompressionImplementation(char *comptype)
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("unknown compress type \"%s\"",
-						comptype)));
+						NameStr(compname))));
 
 	funcs = palloc0(sizeof(PGFunction) * NUM_COMPRESS_FUNCS);
 
