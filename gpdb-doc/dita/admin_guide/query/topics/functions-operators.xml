@@ -646,7 +646,8 @@ SELECT foo();
                         <row>
                             <entry colname="col1">
                                 <codeph>matrix_add(array[], array[])</codeph>
-                            </entry>
+                                <p>Deprecated. See <xref href="#topic31/madlib-deprecate"
+                                        format="dita">Note</xref>.</p></entry>
                             <entry colname="col2">
                                 <codeph>smallint[], int[], bigint[], float[]</codeph>
                             </entry>
@@ -658,7 +659,8 @@ SELECT foo();
                         <row>
                             <entry colname="col1">
                                 <codeph>matrix_multiply( array[], array[])</codeph>
-                            </entry>
+                                <p>Deprecated. See <xref href="#topic31/madlib-deprecate"
+                                        format="dita">Note</xref>.</p></entry>
                             <entry colname="col2">
                                 <codeph>smallint[]int[], bigint[], float[]</codeph>
                             </entry>
@@ -672,7 +674,8 @@ SELECT foo();
                         <row>
                             <entry colname="col1">
                                 <codeph>matrix_multiply( array[], <i>expr</i>)</codeph>
-                            </entry>
+                                <p>Deprecated. See <xref href="#topic31/madlib-deprecate"
+                                        format="dita">Note</xref>.</p></entry>
                             <entry colname="col2">
                                 <codeph>int[], float[]</codeph>
                             </entry>
@@ -686,7 +689,8 @@ SELECT foo();
                         <row>
                             <entry colname="col1">
                                 <codeph>matrix_transpose( array[])</codeph>
-                            </entry>
+                                <p>Deprecated. See <xref href="#topic31/madlib-deprecate"
+                                        format="dita">Note</xref>.</p></entry>
                             <entry colname="col2">Same as input <codeph>array</codeph> type.</entry>
                             <entry colname="col3">
                                 <codeph>matrix_transpose( array [[1,1,1],[2,2,2]])</codeph>
@@ -696,7 +700,8 @@ SELECT foo();
                         <row>
                             <entry colname="col1">
                                 <codeph>pinv(array [])</codeph>
-                            </entry>
+                                <p>Deprecated. See <xref href="#topic31/madlib-deprecate"
+                                        format="dita">Note</xref>.</p></entry>
                             <entry colname="col2">
                                 <codeph>smallint[]int[], bigint[], float[]</codeph>
                             </entry>
@@ -846,7 +851,8 @@ SELECT sum(myvalue) FROM mymatrix;
                         <row>
                             <entry colname="col1">
                                 <codeph>mregr_coef(expr, array[])</codeph>
-                            </entry>
+                                <p>Deprecated. See <xref href="#topic31/madlib-deprecate"
+                                        format="dita">Note</xref>.</p></entry>
                             <entry colname="col2">
                                 <codeph>float[]</codeph>
                             </entry>
@@ -864,7 +870,8 @@ SELECT sum(myvalue) FROM mymatrix;
                         <row>
                             <entry colname="col1">
                                 <codeph>mregr_r2 (<i>expr</i>, array[])</codeph>
-                            </entry>
+                                <p>Deprecated. See <xref href="#topic31/madlib-deprecate"
+                                        format="dita">Note</xref>.</p></entry>
                             <entry colname="col2">
                                 <codeph>float</codeph>
                             </entry>
@@ -879,7 +886,8 @@ SELECT sum(myvalue) FROM mymatrix;
                         <row>
                             <entry colname="col1">
                                 <codeph>mregr_pvalues(<i>expr</i>, array[])</codeph>
-                            </entry>
+                                <p>Deprecated. See <xref href="#topic31/madlib-deprecate"
+                                        format="dita">Note</xref>.</p></entry>
                             <entry colname="col2">
                                 <codeph>float[]</codeph>
                             </entry>
@@ -894,7 +902,8 @@ SELECT sum(myvalue) FROM mymatrix;
                         <row>
                             <entry colname="col1">
                                 <codeph>mregr_tstats(<i>expr</i>, array[])</codeph>
-                            </entry>
+                                <p>Deprecated. See <xref href="#topic31/madlib-deprecate"
+                                        format="dita">Note</xref>.</p></entry>
                             <entry colname="col2">
                                 <codeph>float[]</codeph>
                             </entry>
@@ -909,7 +918,8 @@ SELECT sum(myvalue) FROM mymatrix;
                         <row>
                             <entry colname="col1">
                                 <codeph>nb_classify(text[], bigint, bigint[], bigint[])</codeph>
-                            </entry>
+                                <p>Deprecated. See <xref href="#topic31/madlib-deprecate"
+                                        format="dita">Note</xref>.</p></entry>
                             <entry colname="col2">
                                 <codeph>text</codeph>
                             </entry>
@@ -926,7 +936,8 @@ SELECT sum(myvalue) FROM mymatrix;
                             <entry colname="col1">
                                 <codeph>nb_probabilities(text[], bigint, bigint[],
                                     bigint[])</codeph>
-                            </entry>
+                                <p>Deprecated. See <xref href="#topic31/madlib-deprecate"
+                                        format="dita">Note</xref>.</p></entry>
                             <entry colname="col2">text</entry>
                             <entry colname="col3">
                                 <codeph>nb_probabilities(classes, attr_count, class_count,
@@ -940,6 +951,63 @@ SELECT sum(myvalue) FROM mymatrix;
                     </tbody>
                 </tgroup>
             </table>
+            <note id="madlib-deprecate">The deprecated advanced analytic functions and advance
+                aggregate functions will be removed from Greenplum Database in a future release.
+                Equivalent functionality as well as other mathematical, statistical, and
+                machine-learning methods are available in the Greenplum Database MADlib
+                    extension.<table frame="all" rowsep="1" colsep="1" id="table_r41_mcx_vy">
+                    <title>Deprecated Greenplum Database Analytic and Aggregate Functions</title>
+                    <tgroup cols="2">
+                        <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+                        <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+                        <thead>
+                            <row>
+                                <entry>Greenplum Database Analytic/Aggregate Function</entry>
+                                <entry>MADlib Function</entry>
+                            </row>
+                        </thead>
+                        <tbody>
+                            <row>
+                                <entry><codeph>matrix_add()</codeph></entry>
+                                <entry><codeph>array_add</codeph></entry>
+                            </row>
+                            <row>
+                                <entry><codeph>matrix_multiply()</codeph></entry>
+                                <entry><codeph>array_mult</codeph>,
+                                        <codeph>array_scalar_mult</codeph></entry>
+                            </row>
+                            <row>
+                                <entry><codeph>matrix_transpose()</codeph></entry>
+                                <entry><codeph>matrix_trans</codeph><p>The MADlib function syntax
+                                        and format are different than
+                                            <codeph>matrix_transpose()</codeph></p></entry>
+                            </row>
+                            <row>
+                                <entry><codeph>pinv()</codeph></entry>
+                                <entry><codeph>matrix_pinv</codeph>,
+                                        <codeph>__matrix_pinv_final</codeph>
+                                    <p>The MADlib function syntax and format are different than
+                                            <codeph>pinv()</codeph></p></entry>
+                            </row>
+                            <row>
+                                <entry><codeph>mregr_coef()</codeph><p><codeph>mregr_r2()</codeph></p><p><codeph>mregr_pvalues()</codeph></p><p><codeph>mregr_tstats()</codeph></p></entry>
+                                <entry><codeph>linregr_train</codeph>
+                                    <p>The MADlib function returns an object of type
+                                            <codeph>linregr_result</codeph> that contains the
+                                        results of the aggregate functions. </p></entry>
+                            </row>
+                            <row>
+                                <entry><codeph>nb_classify()</codeph><p><codeph>nb_probabilities()</codeph></p></entry>
+                                <entry><codeph>create_nb_classify_view</codeph>
+                                    <p><codeph>create_nb_probs_view</codeph></p><p>The MADlib
+                                        functions provide similar functionality.</p></entry>
+                            </row>
+                        </tbody>
+                    </tgroup>
+                </table><p>For information about installing and using the MADlib extension package,
+                    see <xref href="../../../ref_guide/extensions/madlib.xml#topic1">Greenplum
+                        MADlib Extension for Analytics</xref> in the <cite>Greenplum Database
+                        Reference Guide</cite>.</p></note>
         </body>
         <topic id="topic32" xml:lang="en">
             <title>Advanced Analytic Function Examples</title>
@@ -996,10 +1064,8 @@ from regr_example;
                     <p>Greenplum Database returns <codeph>NaN</codeph> (not a number) if the results
                         of any of these agregates are undefined. This can happen if there is a very
                         small amount of data.</p>
-                    <note type="note">
-                        <p>The intercept is computed by setting one of the independent variables to
-                                <codeph>1</codeph>, as shown in the preceding example.</p>
-                    </note>
+                    <note type="note">The intercept is computed by setting one of the independent
+                        variables to <codeph>1</codeph>, as shown in the preceding example.</note>
                 </body>
             </topic>
             <topic id="topic34" xml:lang="en">

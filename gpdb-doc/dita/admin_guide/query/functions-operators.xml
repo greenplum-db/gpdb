@@ -991,7 +991,7 @@ PERCENTILE_CONT (0.5) WITHIN GROUP (ORDER BY salary DESC)
 FROM employees GROUP BY department_id;</codeblock>
               </entry>
 
-              <entry colname="col4">Performs an inverse distirbution function that assumes a
+              <entry colname="col4">Performs an inverse distribution function that assumes a
                 continuous distribution model. It takes a percentile value and a sort specification
                 and returns the same datatype as the numeric datatype of the argument. This returned
                 value is a computed result after performing linear interpolation. Null are ignored
@@ -1018,7 +1018,7 @@ PERCENTILE_DESC (0.5) WITHIN GROUP (ORDER BY salary DESC)
 FROM employees GROUP BY department_id;</codeblock>
               </entry>
 
-              <entry colname="col4">Performs an inverse distirbution function that assumes a
+              <entry colname="col4">Performs an inverse distribution function that assumes a
                 discrete distribution model. It takes a percentile value and a sort specification.
                 This returned value is an element from the set. Null are ignored in this
                 calculation.</entry>
