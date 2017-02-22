@@ -37,12 +37,12 @@ class GpConfig(GpTestCase):
         self.gparray = self.createGpArrayWith2Primary2Mirrors()
         self.host_cache = Mock()
 
-        host = GpHost('localhost')
+        self.host = GpHost('localhost')
         seg = Segment()
         db = self.gparray.master
         seg.addPrimary(db)
-        host.addDB(seg)
-        self.host_cache.get_hosts.return_value = [host]
+        self.host.addDB(seg)
+        self.host_cache.get_hosts.return_value = [self.host]
         self.host_cache.ping_hosts.return_value = []
 
         self.master_read_config = Mock()
@@ -132,6 +132,11 @@ class GpConfig(GpTestCase):
 
         self.subject.do_main()
 
+        self.pool.addCommand.assert_called_once_with(self.master_read_config)
+        self.pool.join.assert_called_once_with()
+        self.pool.check_results.assert_called_once_with()
+        self.pool.haltWork.assert_called_once_with()
+        self.pool.joinWorkers.assert_called_once_with()
         self.assertEqual(self.subject.logger.error.call_count, 0)
         self.assertIn("foo", mock_stdout.getvalue())
 
@@ -156,8 +161,11 @@ class GpConfig(GpTestCase):
         another_segment_read_config.get_seg_id.return_value = 1
         self.pool.getCompletedItems.return_value.append(another_segment_read_config)
 
+        self.host_cache.get_hosts.return_value.extend([self.host, self.host])
+
         self.subject.do_main()
 
+        self.assertEqual(self.pool.addCommand.call_count, 3)
         self.assertEqual(self.subject.logger.error.call_count, 0)
         self.assertIn("WARNING: GUCS ARE OUT OF SYNC", mock_stdout.getvalue())
         self.assertIn("bar", mock_stdout.getvalue())
