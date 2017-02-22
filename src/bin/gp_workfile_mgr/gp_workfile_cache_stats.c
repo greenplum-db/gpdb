@@ -200,7 +200,7 @@ gp_workfile_mgr_cache_entries(PG_FUNCTION_ARGS)
 		}
 
 		values[0] = Int32GetDatum(Gp_segment);
-		strncpy(work_set_path, work_set->path, MAXPGPATH);
+		strlcpy(work_set_path, work_set->path, MAXPGPATH);
 
 		values[2] = UInt32GetDatum(crtEntry->hashvalue);
 

@@ -229,7 +229,7 @@ cache_test_create()
 	cacheCtl.keyOffset = GPDB_OFFSET(TestCacheElt, key);
 
 	cacheCtl.hash = string_hash;
-	cacheCtl.keyCopy = (HashCopyFunc) strncpy;
+	cacheCtl.keyCopy = (HashCopyFunc) strlcpy;
 	cacheCtl.match = (HashCompareFunc) strncmp;
 
 	cacheCtl.cleanupEntry = cacheEltCleanup;
@@ -1993,7 +1993,7 @@ syncrefhastable_test_create(void)
 	syncHTCtl.keySize = TEST_NAME_LENGTH;
 
 	syncHTCtl.hash = string_hash;
-	syncHTCtl.keyCopy = (HashCopyFunc) strncpy;
+	syncHTCtl.keyCopy = (HashCopyFunc) strlcpy;
 	syncHTCtl.match = (HashCompareFunc) strncmp;
 
 	syncHTCtl.numElements = TEST_HT_NUM_ELEMENTS;
