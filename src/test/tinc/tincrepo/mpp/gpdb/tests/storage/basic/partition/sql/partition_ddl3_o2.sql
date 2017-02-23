@@ -3,8 +3,6 @@
 -- start_matchsubs
 -- m/%USER%/
 -- s/%USER%/username/
--- m/sh: /
--- s/sh: //
 -- s/command //
 -- s/line 1: //
 -- m/type: \\d+/
@@ -713,9 +711,6 @@ partition by range (f1)
   partition est start (time with time zone '00:00 EST') end (time with time zone '23:00 EST') EVERY (INTERVAL '1 hour')
 );
 DROP TABLE mpp3114;
-\! gpaddpart
-\! gpcreatepart
-\! gpdeletepart
 CREATE TABLE sg_cal_detail_r1 (
      datacenter character varying(32),
      poolname character varying(128),

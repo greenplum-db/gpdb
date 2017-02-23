@@ -7,8 +7,6 @@ SET
 -- start_matchsubs
 -- m/%USER%/
 -- s/%USER%/username/
--- m/sh: /
--- s/sh: //
 -- s/command //
 -- s/line 1: //
 -- m/type: \\d+/
@@ -1870,12 +1868,6 @@ LINE 4:   partition pst start (time with time zone '00:00 PST') end ...
                         ^
 DROP TABLE mpp3114;
 psql:/path/sql_file:1: ERROR:  table "mpp3114" does not exist
-\! gpaddpart
-sh: gpaddpart: command not found
-\! gpcreatepart
-sh: gpcreatepart: command not found
-\! gpdeletepart
-sh: gpdeletepart: command not found
 CREATE TABLE sg_cal_detail_r1 (
      datacenter character varying(32),
      poolname character varying(128),
