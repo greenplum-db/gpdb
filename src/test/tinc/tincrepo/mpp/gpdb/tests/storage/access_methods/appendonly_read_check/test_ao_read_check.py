@@ -71,14 +71,6 @@ class AppendOnlyReadCheckTests(MPPTestCase):
                         line = line.replace('<relfilenode_oid>', str(relfilenode_oid))
                     fp1.write(line)
 
-    def test_alter_appendonly(self):
-        out_file = os.path.join(self.output_dir, 'alter_ao_co.out')
-        ans_file = os.path.join(self.ans_dir, 'alter_ao_co.ans')
-        sql_file = os.path.join(self.sql_dir, 'alter_ao_co.sql')
-        PSQL.run_sql_file(sql_file, out_file=out_file)
-        if not Gpdiff.are_files_equal(out_file, ans_file):
-            raise Exception('Alter table failed for append only tables !')
-
     def test_vacuum_appendonly(self):
         out_file = os.path.join(self.output_dir, 'vacuum_ao_co.out')
         ans_file = os.path.join(self.ans_dir, 'vacuum_ao_co.ans')
