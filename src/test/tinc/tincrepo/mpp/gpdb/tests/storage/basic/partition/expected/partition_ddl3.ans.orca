@@ -3564,44 +3564,6 @@ drop function mpp5431_f1();
 DROP FUNCTION
 drop table mpp5431;
 DROP TABLE
-CREATE TABLE sg_cal_event_silvertail_hour (
-caldt date NOT NULL,                                               
-calhr smallint NOT NULL,
-ip character varying(128),
-transactionid character varying(32),
-transactiontime timestamp(2) without time zone
-)
-WITH (appendonly=true, compresslevel=5)
-distributed by (ip) PARTITION BY RANGE(transactiontime)
-(
-PARTITION "P2009041607"
-START ('2009-04-16 07:00:00'::timestamp without time zone)
-END ('2009-04-16 08:00:00'::timestamp without time zone),
-PARTITION "P2009041608"
-START ('2009-04-16 08:00:00'::timestamp without time zone)
-END ('2009-04-16 09:00:00'::timestamp without time zone),
-DEFAULT PARTITION st_default
-);
-CREATE TABLE
-ALTER TABLE SG_CAL_EVENT_SILVERTAIL_HOUR SPLIT DEFAULT PARTITION
-START ('2009-04-29 07:00:00'::timestamp) INCLUSIVE END ('2009-04-29
-08:00:00'::timestamp) EXCLUSIVE INTO ( PARTITION "P2009042907" ,
-PARTITION st_default );
-ALTER TABLE
-select pg_get_partition_def('sg_cal_event_silvertail_hour'::regclass, true);
-                                                                                      pg_get_partition_def                                                                                       
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- PARTITION BY RANGE(transactiontime)                                                                                                                                                             
-           (                                                                                                                                                                                     
-           PARTITION "P2009041607" START ('2009-04-16 07:00:00'::timestamp without time zone) END ('2009-04-16 08:00:00'::timestamp without time zone) WITH (appendonly=true, compresslevel=5),  
-           PARTITION "P2009041608" START ('2009-04-16 08:00:00'::timestamp without time zone) END ('2009-04-16 09:00:00'::timestamp without time zone) WITH (appendonly=true, compresslevel=5),  
-           PARTITION "P2009042907" START ('2009-04-29 07:00:00'::timestamp without time zone) END ('2009-04-29 08:00:00'::timestamp without time zone) WITH (appendonly=true, compresslevel=5),  
-           DEFAULT PARTITION st_default  WITH (appendonly=true, compresslevel=5)                                                                                                                 
-           )
-(1 row)
-
-drop table sg_cal_event_silvertail_hour;
-DROP TABLE
 CREATE TABLE mpp6612 (
         unique1         int4,
         unique2         int4,
