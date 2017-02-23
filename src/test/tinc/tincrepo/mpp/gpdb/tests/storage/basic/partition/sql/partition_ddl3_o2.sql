@@ -1032,38 +1032,6 @@ insert into mpp3487 select i from generate_series(1, 9) i;
 vacuum analyze mpp3487;
 select  schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_freqs, histogram_bounds, correlation from pg_stats where tablename like 'mpp3487%' order by 2;
 drop table mpp3487;
-create table mpp4892 (a char, b int, d char)
-partition by range (b)
-subpartition by list (d)
-subpartition template (
- subpartition sp1 values ('a'),
- subpartition sp2 values ('b'))
-(
-start (1) end (10) every (1)
-);
-
--- works
-alter table mpp4892 add partition p1 end (11);
-
--- complain about existing template
-alter table mpp4892 add partition p3 end (13) (subpartition sp3 values ('c'));
-
--- remove template
-alter table mpp4892 set subpartition template ();
-
--- should work (because the template is gone)
-alter table mpp4892 add partition p3 end (13) (subpartition sp3 values ('c'));
-
--- complain because the template is already gone
-alter table mpp4892 set subpartition template ();
-
--- should work
-alter table mpp4892 set subpartition template (subpartition sp3 values ('c'));
-
--- should work
-alter table mpp4892 add partition p4 end (15);
-
-drop table mpp4892;
 -- Negative Test for Alter subpartition template
 CREATE TABLE qa147sales (trans_id int, date date, amount 
 decimal(9,2), region text)  

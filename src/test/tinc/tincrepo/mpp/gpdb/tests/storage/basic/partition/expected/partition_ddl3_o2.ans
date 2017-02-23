@@ -2212,39 +2212,6 @@ select  schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_c
 
 drop table mpp3487;
 DROP TABLE
-create table mpp4892 (a char, b int, d char)
-partition by range (b)
-subpartition by list (d)
-subpartition template (
- subpartition sp1 values ('a'),
- subpartition sp2 values ('b'))
-(
-start (1) end (10) every (1)
-);
-CREATE TABLE
--- works
-alter table mpp4892 add partition p1 end (11);
-ALTER TABLE
--- complain about existing template
-alter table mpp4892 add partition p3 end (13) (subpartition sp3 values ('c'));
-psql:/path/sql_file:1: ERROR:  subpartition configuration conflicts with subpartition template
--- remove template
-alter table mpp4892 set subpartition template ();
-ALTER TABLE
--- should work (because the template is gone)
-alter table mpp4892 add partition p3 end (13) (subpartition sp3 values ('c'));
-ALTER TABLE
--- complain because the template is already gone
-alter table mpp4892 set subpartition template ();
-psql:/path/sql_file:1: ERROR:  relation "mpp4892" does not have a level 1 subpartition template specification
--- should work
-alter table mpp4892 set subpartition template (subpartition sp3 values ('c'));
-ALTER TABLE
--- should work
-alter table mpp4892 add partition p4 end (15);
-ALTER TABLE
-drop table mpp4892;
-DROP TABLE
 -- Negative Test for Alter subpartition template
 CREATE TABLE qa147sales (trans_id int, date date, amount 
 decimal(9,2), region text)  
