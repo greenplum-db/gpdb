@@ -45,8 +45,9 @@ def parseargs():
     parser.add_option('-f', '--file', action='store_true')
     (options, args) = parser.parse_args()
 
-    validate_mutual_options(options)
+    options.entry = None
     validate_four_verbs(options)
+    validate_mutual_options(options)
     return options
 
 
