@@ -53,11 +53,8 @@ class AOCOCompressionTestCase(ScenarioTestCase):
 
 @tinctest.dataProvider('test_types_large')
 def test_data_provider():
-    data = {'test_05_1_co_create_with_column_large':['co_create_with_column_large_1G_zlib'],
-            'test_05_2_co_create_with_column_large':['co_create_with_column_large_1G_quick_rle'],
-            'test_05_3_co_create_with_column_large':['co_create_with_column_large_2G_zlib'],
+    data = {'test_05_3_co_create_with_column_large':['co_create_with_column_large_2G_zlib'],
             'test_05_4_co_create_with_column_large':['co_create_with_column_large_2G_quick_rle'],
-            'test_05_5_co_create_with_column_large':['co_create_with_column_large_1G_zlib_2'],
             'test_05_6_co_create_with_column_large':['co_create_with_column_large_2G_zlib_2'],
             'test_06_1_ao_create_with_row_part_large':['ao_create_with_row_part_large_1G_zlib'],
             'test_06_2_ao_create_with_row_part_large':['ao_create_with_row_part_large_1G_quick_rle'],
