@@ -29,10 +29,14 @@ class S3RESTfulService : public RESTfulService {
    private:
     uint64_t lowSpeedLimit;
     uint64_t lowSpeedTime;
+
     bool debugCurl;
     bool verifyCert;
+
     uint64_t chunkBufferSize;
     S3MemoryContext s3MemContext;
+
+    void performCurl(CURL* curl, Response& response);
 };
 
 #endif /* INCLUDE_S3RESTFUL_SERVICE_H_ */

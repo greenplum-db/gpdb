@@ -103,24 +103,7 @@ struct CURLWrapper {
     CURL *curl;
 };
 
-// get() will execute HTTP GET RESTful API with given url/headers/params,
-// and return raw response content.
-//
-// This method does not care about response format, caller need to handle
-// response format accordingly.
-Response S3RESTfulService::get(const string &url, HTTPHeaders &headers) {
-    Response response(RESPONSE_ERROR, this->s3MemContext);
-    response.getRawData().reserve(this->chunkBufferSize);
-
-    headers.CreateList();
-    CURLWrapper wrapper(url, headers.GetList(), this->lowSpeedLimit, this->lowSpeedTime,
-                        this->debugCurl);
-    CURL *curl = wrapper.curl;
-
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, this->verifyCert);
-
+void S3RESTfulService::performCurl(CURL *curl, Response &response) {
     CURLcode res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
         if (res == CURLE_COULDNT_RESOLVE_HOST) {
@@ -139,6 +122,27 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers) {
 
         response.FillResponse(responseCode);
     }
+}
+
+// get() will execute HTTP GET RESTful API with given url/headers/params,
+// and return raw response content.
+//
+// This method does not care about response format, caller need to handle
+// response format accordingly.
+Response S3RESTfulService::get(const string &url, HTTPHeaders &headers) {
+    Response response(RESPONSE_ERROR, this->s3MemContext);
+    response.getRawData().reserve(this->chunkBufferSize);
+
+    headers.CreateList();
+    CURLWrapper wrapper(url, headers.GetList(), this->lowSpeedLimit, this->lowSpeedTime,
+                        this->debugCurl);
+    CURL *curl = wrapper.curl;
+
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, this->verifyCert);
+
+    this->performCurl(curl, response);
 
     return response;
 }
@@ -164,20 +168,7 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers, const S3
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *)&response);
     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, RESTfulServiceHeadersWriteFuncCallback);
 
-    CURLcode res = curl_easy_perform(curl);
-    if (res != CURLE_OK) {
-        S3_DIE(S3ConnectionError, curl_easy_strerror(res));
-    } else {
-        long responseCode;
-        // Get the HTTP response status code from HTTP header
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
-
-        if (responseCode == 500) {
-            S3_DIE(S3ConnectionError, "Server temporary unavailable");
-        }
-
-        response.FillResponse(responseCode);
-    }
+    this->performCurl(curl, response);
 
     return response;
 }
@@ -202,20 +193,7 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, RESTfulServiceReadFuncCallback);
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
 
-    CURLcode res = curl_easy_perform(curl);
-    if (res != CURLE_OK) {
-        S3_DIE(S3ConnectionError, curl_easy_strerror(res));
-    } else {
-        long responseCode;
-        // Get the HTTP response status code from HTTP header
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
-
-        if (responseCode == 500) {
-            S3_DIE(S3ConnectionError, "Server temporary unavailable");
-        }
-
-        response.FillResponse(responseCode);
-    }
+    this->performCurl(curl, response);
 
     return response;
 }
@@ -226,7 +204,7 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
 // Currently, this method only return the HTTP code, will be extended if needed in the future
 // implementation.
 ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers) {
-    ResponseCode responseCode = HeadResponseFail;
+    Response response(RESPONSE_ERROR);
 
     headers.CreateList();
     CURLWrapper wrapper(url, headers.GetList(), this->lowSpeedLimit, this->lowSpeedTime,
@@ -237,23 +215,9 @@ ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers) {
     curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, this->verifyCert);
 
-    CURLcode res = curl_easy_perform(curl);
-    if (res != CURLE_OK) {
-        if (res == CURLE_COULDNT_RESOLVE_HOST) {
-            S3_DIE(S3ResolveError, curl_easy_strerror(res));
-        } else {
-            S3_DIE(S3ConnectionError, curl_easy_strerror(res));
-        }
-    } else {
-        // Get the HTTP response status code from HTTP header
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
+    this->performCurl(curl, response);
 
-        if (responseCode == 500) {
-            S3_DIE(S3ConnectionError, "Server temporary unavailable");
-        }
-    }
-
-    return responseCode;
+    return response.getResponseCode();
 }
 
 Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers) {
@@ -275,20 +239,7 @@ Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, RESTfulServiceReadFuncCallback);
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
 
-    CURLcode res = curl_easy_perform(curl);
-    if (res != CURLE_OK) {
-        S3_DIE(S3ConnectionError, curl_easy_strerror(res));
-    } else {
-        long responseCode;
-        // Get the HTTP response status code from HTTP header
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
-
-        if (responseCode == 500) {
-            S3_DIE(S3ConnectionError, "Server temporary unavailable");
-        }
-
-        response.FillResponse(responseCode);
-    }
+    this->performCurl(curl, response);
 
     return response;
 }
