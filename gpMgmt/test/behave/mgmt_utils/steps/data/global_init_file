@@ -72,4 +72,7 @@ s/Checksum: \w+//
 m/External options: {}\n/
 s/External options: {}\n//
 
+m/Execute on: all segments\n/
+s/Execute on: all segments\n//
+
 -- end_matchsubs
