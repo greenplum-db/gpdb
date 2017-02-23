@@ -1324,45 +1324,7 @@ insert into mpp5427 select i from generate_series(10000000, 15000000) i;
 select * from pg_stats where tablename like 'mpp5427%';
 
 drop table mpp5427;
-CREATE TABLE mpp5185 (id int, mpp5185 int, year date, gender
-char(1)) DISTRIBUTED BY (id, gender, year)
-partition by list (gender)
-subpartition by range (year)
-subpartition template (
-start (date '2001-01-01'),
-start (date '2002-01-01'),
-start (date '2003-01-01'),
-start (date '2004-01-01'),
-start (date '2005-01-01')
-)
-(
-partition boys values ('M'),
-partition girls values ('F')
-);
 
-alter table mpp5185 set subpartition template ();
-
--- nothing there
-select * from pg_partition_templates where tablename='mpp5185';
-
-alter table mpp5185 set subpartition template (default subpartition def2);
-
--- def2 is there
-select * from pg_partition_templates where tablename='mpp5185';
-
--- try again
-alter table mpp5185 set subpartition template (default subpartition def2);
-
--- hey, nothing there!
-select * from pg_partition_templates where tablename='mpp5185';
-
--- try again
-alter table mpp5185 set subpartition template (default subpartition def2);
-
--- yay! it's back!
-select * from pg_partition_templates where tablename='mpp5185';
-
-drop table mpp5185;
 -- MPP-5524
 create table mpp5524 (a int, b int, c int, d int) partition by range(d) (start(1) end(20) every(1));
 -- Not allowed
