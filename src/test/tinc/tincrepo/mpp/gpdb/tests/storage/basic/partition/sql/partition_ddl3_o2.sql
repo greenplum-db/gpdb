@@ -429,31 +429,7 @@ CREATE TABLE mpp3762_weather_partition (
 
 drop table mpp3762_cities, mpp3762_weather cascade;
 drop table mpp3762_cities_partition, mpp3762_weather_partition cascade;
-CREATE TABLE mpp3678 (
-id int,
-rank int,
-year int,
-gender char(1),
-count int )
 
-DISTRIBUTED BY (id)
-PARTITION BY LIST (gender)
-SUBPARTITION BY RANGE (year)
-SUBPARTITION TEMPLATE (
-SUBPARTITION year1 START (2001),
-SUBPARTITION year2 START (2002),
-SUBPARTITION year3 START (2003),
-SUBPARTITION year4 START (2004),
-SUBPARTITION year5 START (2005),
-SUBPARTITION year6 START (2006) END (2007) )
-(PARTITION girls VALUES ('F'),
-PARTITION boys VALUES ('M') );
-
-alter table mpp3678 alter partition girls add default partition gfuture;
-alter table mpp3678 alter partition boys add default partition bfuture;
-alter table mpp3678 alter partition boys split default partition start ('2006') exclusive end ('2007') inclusive into (partition year7, partition bfuture);
-
-drop table mpp3678;
 create table mpp3754a ( i int, d date, primary key (d)) partition by range(d) ( start ('2008-01-01')  inclusive end ('2008-12-01')  exclusive every (interval '1 month'));
 create table mpp3754b ( i int, d date, constraint prim_tr primary key (d)) partition by range(d) ( start ('2008-01-01')  inclusive end ('2008-12-01')  exclusive every (interval '1 month'));
 
