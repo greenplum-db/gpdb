@@ -105,11 +105,3 @@ class AppendOnlyReadCheckTests(MPPTestCase):
         if not Gpdiff.are_files_equal(out_file, ans_file, match_sub=[local_path('sql/init_file')]):
             raise Exception('Corruption test of pg_aocsseg failed for appendonly tables !')
 
-    def test_ao_read_check_subtransaction(self):
-        sql_file = os.path.join(self.sql_dir, 'sub_transaction.sql') 
-        ans_file = os.path.join(self.ans_dir, 'sub_transaction.ans') 
-        out_file = os.path.join(self.output_dir, 'sub_transaction.out')
-        PSQL.run_sql_file(sql_file=sql_file, out_file=out_file)
-        if not Gpdiff.are_files_equal(out_file, ans_file):
-            raise Exception('Subtransaction tests failed !')
-
