@@ -6156,6 +6156,8 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 			errtblname = PQgetvalue(res, 0, 7);
 			extencoding = PQgetvalue(res, 0, 8);
 			writable = PQgetvalue(res, 0, 9);
+			execlocations = "";
+			options = "";
 		}
 
 		if ((command && strlen(command) > 0) ||
@@ -6199,7 +6201,7 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		PQExpBufferData tmpbuf;
 		initPQExpBuffer(&tmpbuf);
 
-		char	   *on_clause = execlocations;
+		char	   *on_clause = gpdb5 ? execlocations : urilocations;
 
 		/* remove curly braces */
 		on_clause[strlen(on_clause) - 1] = '\0';
