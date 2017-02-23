@@ -1372,19 +1372,6 @@ alter table mpp5524 alter partition for(rank(2)) set distributed by (c);
 insert into mpp5524 select i, i+1, i+2, i+3 from generate_series(1, 10) i;
 drop table mpp5524;
 
-create table mpp5397 (a int, b int, c int) 
-  distributed by (a) 
-  partition by range (b)  (partition a1 start (0) end (5), partition a2 end (10),  partition a3 end(15));
-
-alter table mpp5397 drop column c;
-\d mpp5397*
-
-alter table mpp5397 add partition z end (20);
-\d mpp5397*
-
-select * from pg_partitions where tablename='mpp5397';
-
-drop table mpp5397;
 CREATE TABLE sg_cal_event_silvertail_hour (
 caldt date NOT NULL,
 calhr smallint NOT NULL,
