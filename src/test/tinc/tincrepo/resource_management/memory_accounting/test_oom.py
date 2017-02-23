@@ -5,6 +5,7 @@ from mpp.models import MPPTestCase
 from mpp.lib.PSQL import PSQL
 
 from gppylib.commands.base import Command
+from mpp.lib.gpConfig import GpConfig
 from tinctest.models.scenario import ScenarioTestCase
 
 class OOMTestCase(MPPTestCase, ScenarioTestCase):
@@ -38,25 +39,32 @@ class OOMTestCase(MPPTestCase, ScenarioTestCase):
         if self.gp_version() == "gpdb":
             self.prd = ""
 
-        tinctest.logger.info('Setting GUC and restarting DB')
+        gpconfig = GpConfig()
 
-        if self.name == 'OOMTestCase.test_06_OOM_massivequery':
-            vmem = 40 # Set vmem_protect for GPDB
-            Command('Run gpconfig to set GUC gp_vmem_protect_limit' ,
-                    'source $GPHOME/greenplum_path.sh;gpconfig -c gp_vmem_protect_limit -m %s -v %s' % (vmem, vmem)).run(validateAfter=True)
-        elif self.name == 'OOMTestCase.test_07_OOM_abort_query':
-            Command('Run gpconfig to set GUC gp_vmem_protect_limit' ,
-                    'source $GPHOME/greenplum_path.sh;gpconfig -c gp_vmem_limit_per_query -v "4MB" --skipvalidation').run(validateAfter=True)
-        elif self.name == 'OOMTestCase.test_05_dumpusage':
-            Command('Run gpconfig to set GUC gp_vmem_protect_limit' ,
-                    'source $GPHOME/greenplum_path.sh;gpconfig -c gp_vmem_protect_limit -m 4 -v 4').run(validateAfter=True)
+        expected_vmem = '20'
+        expected_runaway_perc = '0'
+
+        restart_db = False
+
+        if self.name == "OOMTestCase.test_07_OOM_abort_query":
+            gpconfig.setParameter('gp_vmem_limit_per_query', '2MB', '2MB', '--skipvalidation')
+            restart_db = True
+
+        (vmem, _) = gpconfig.getParameter('gp_vmem_protect_limit')
+        (runaway_perc, _) = GpConfig().getParameter('runaway_detector_activation_percent')
+
+        if runaway_perc == expected_runaway_perc and vmem == expected_vmem:
+            tinctest.logger.info('gp_vmem_protect_limit and runaway_detector_activation_percent GUCs already set correctly')
         else:
-            Command('Run gpconfig to set GUC gp_vmem_protect_limit' ,
-                    'source $GPHOME/greenplum_path.sh;gpconfig -c gp_vmem_protect_limit -m 20 -v 20').run(validateAfter=True)
+            tinctest.logger.info('Setting GUC and restarting DB')
+            gpconfig.setParameter('runaway_detector_activation_percent', expected_runaway_perc, expected_runaway_perc)
+            gpconfig.setParameter('gp_vmem_protect_limit', expected_vmem, expected_vmem)
+            restart_db = True
 
-        # Restart DB
-        Command('Restart database for GUCs to take effect',
-                'source $GPHOME/greenplum_path.sh && gpstop -ar').run(validateAfter=True)
+        if restart_db:
+            # Restart DB
+            Command('Restart database for GUCs to take effect',
+                    'source $GPHOME/greenplum_path.sh && gpstop -ar').run(validateAfter=True)
 
         super(OOMTestCase, self).setUp()
 

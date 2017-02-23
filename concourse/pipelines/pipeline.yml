@@ -919,20 +919,22 @@ jobs:
 
 - name: QP_memory-accounting
   plan:
-  - aggregate: *pulse_trigger_resource
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
+  - aggregate:
+    - get: gpdb_src
+      passed: [gpdb_rc_packaging_centos]
+      trigger: true
+    - get: bin_gpdb
+      passed: [gpdb_rc_packaging_centos]
+      resource: bin_gpdb_centos6
+    - get: centos-gpdb-dev-6
+  - task: memory-accounting
+    timeout: 3h
+    file: gpdb_src/concourse/tasks/tinc_gpdb.yml
+    image: centos-gpdb-dev-6
     params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "QP_memory-accounting"
-  - task: monitor_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "QP_memory-accounting"
+      MAKE_TEST_COMMAND: memory_accounting
+      BLDWRAP_POSTGRES_CONF_ADDONS: ""
+      TEST_OS: "centos"
 
 - name: QP_runaway-query
   plan:
