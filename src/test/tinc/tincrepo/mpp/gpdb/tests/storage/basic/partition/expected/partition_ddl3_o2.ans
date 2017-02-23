@@ -3389,49 +3389,6 @@ select pg_get_partition_def('sg_cal_event_silvertail_hour'::regclass, true);
 
 drop table sg_cal_event_silvertail_hour;
 DROP TABLE
-create domain mpp3544domainvarchar varchar(5);
-CREATE DOMAIN
-create domain mpp3544domainnumeric numeric(8,2);
-CREATE DOMAIN
-create domain mpp3544domainint4 int4;
-CREATE DOMAIN
-create domain mpp3544domaintext text;
-CREATE DOMAIN
--- Test tables using domains
-create table mpp3544basictest1
-           ( testint4 mpp3544domainint4
-           , testtext mpp3544domaintext
-           , testvarchar mpp3544domainvarchar
-           , testnumeric mpp3544domainnumeric
-           )
-partition by LIST(testvarchar)
-(
-partition aa values ('aaaaa'),
-partition bb values ('bbbbb'),
-partition cc values ('ccccc')
-);
-CREATE TABLE
-create table mpp3544basictest2
-           ( testint4 mpp3544domainint4
-           , testtext mpp3544domaintext
-           , testvarchar mpp3544domainvarchar
-           , testnumeric mpp3544domainnumeric
-           )
-partition by RANGE(testint4)
-(start (1) end (10) every (1));
-CREATE TABLE
-drop domain mpp3544domainvarchar cascade;
-DROP DOMAIN
-drop domain mpp3544domainnumeric cascade;
-DROP DOMAIN
-drop domain mpp3544domaintext cascade;
-DROP DOMAIN
-drop domain mpp3544domainint4 cascade;
-DROP DOMAIN
-drop table mpp3544basictest1;
-DROP TABLE
-drop table mpp3544basictest2;
-DROP TABLE
 CREATE TABLE mpp6612 (
         unique1         int4,
         unique2         int4,
