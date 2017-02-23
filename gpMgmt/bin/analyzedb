@@ -142,7 +142,7 @@ INNER JOIN (VALUES %s) o(orig_name) ON c.oid = o.orig_name::regclass
 """
 
 GET_LEAF_ROOT_MAPPING_SQL = """
-SELECT n.nspname || '.' || c2.relname, n.nspname || '.' || c.relname from pg_class c, pg_class c2, pg_namespace n, pg_partition pp, pg_partition_rule ppr
+SELECT n.nspname, c2.relname, n.nspname, c.relname from pg_class c, pg_class c2, pg_namespace n, pg_partition pp, pg_partition_rule ppr
 WHERE ppr.parchildrelid in (%s) AND ppr.paroid = pp.oid AND pp.parrelid = c.oid AND c.relnamespace = n.oid AND ppr.parchildrelid = c2.oid;
 """
 
@@ -724,7 +724,7 @@ class AnalyzeDb(Operation):
         oid_str = get_oid_str(candidates)
         qresult = run_sql(self.conn, GET_LEAF_ROOT_MAPPING_SQL % oid_str)
         for mapping in qresult:
-            leaf_root_dict[mapping[0]] = mapping[1]
+            leaf_root_dict[(mapping[0], mapping[1])] = (mapping[2], mapping[3])
 
         for can in candidates:
             if can in leaf_root_dict: # this is a leaf partition
