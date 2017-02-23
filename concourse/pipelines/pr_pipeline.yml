@@ -72,6 +72,7 @@ jobs:
     plan:
     - aggregate:
       - get: gpdb_pr
+        version: every
         trigger: true
       - get: gpaddon_src 
       - get: centos-gpdb-dev-6
@@ -128,10 +129,11 @@ jobs:
         passed:
         - compile_gpdb_centos6
         - compile_gpdb_custom_config_centos6
+        version: every
+        trigger: true
       - get: bin_gpdb
         resource: bin_gpdb_centos
         passed: [compile_gpdb_centos6]
-        trigger: true
       - get: centos-gpdb-dev-6
     - task: ic_gpdb
       file: gpdb_pr/concourse/tasks/ic_gpdb.yml
@@ -156,10 +158,11 @@ jobs:
         passed:
         - compile_gpdb_centos6
         - compile_gpdb_custom_config_centos6
+        version: every
+        trigger: true
       - get: bin_gpdb
         resource: bin_gpdb_centos
         passed: [compile_gpdb_centos6]
-        trigger: true
       - get: centos-gpdb-dev-6
     - task: ic_gpdb
       file: gpdb_pr/concourse/tasks/ic_gpdb.yml
@@ -184,10 +187,11 @@ jobs:
         passed:
         - compile_gpdb_centos6
         - compile_gpdb_custom_config_centos6
+        version: every
+        trigger: true
       - get: bin_gpdb
         resource: bin_gpdb_centos
         passed: [compile_gpdb_centos6]
-        trigger: true
       - get: centos-gpdb-dev-6
     - task: MU_check_centos
       file: gpdb_pr/concourse/tasks/gpMgmt_check_gpdb.yml
@@ -224,12 +228,13 @@ jobs:
         passed:
         - icw_planner_centos6
         - MU_check_centos
+        version: every
+        trigger: true
       - get: bin_gpdb
         resource: bin_gpdb_centos
         passed:
         - icw_planner_centos6
         - MU_check_centos
-        trigger: true
       - get: centos-gpdb-dev-6
       - get: gpaddon_src
     - task: separate_qautils_files_for_rc
