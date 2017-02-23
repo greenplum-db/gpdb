@@ -1594,31 +1594,6 @@ alter table mpp6612 alter column unique2 type char(10);
 
 
 drop table mpp6612;
-CREATE TABLE mpp6611 (
-        unique1         int4,
-        unique2         int4,
-        two                     int4,
-        four            int4,
-        ten                     int4,
-        twenty          int4,
-        hundred         int4,
-        thousand        int4,
-        twothousand     int4,
-        fivethous       int4,
-        tenthous        int4,
-        odd                     int4,
-        even            int4,
-        stringu1        name,
-        stringu2        name,
-        string4         name
-) partition by range (unique1)
-( partition aa start (0) end (1000) every (500), default partition default_part );
-
-alter table mpp6611 rename to mpp6611a;
-
-\d mpp6611a*
-
-drop table mpp6611a;
 create table mpp4048 (aaa int, bbb date)
 partition by range (bbb)
 subpartition by range (bbb)
