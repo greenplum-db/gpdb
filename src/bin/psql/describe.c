@@ -1805,9 +1805,9 @@ describeOneTableDetails(const char *schemaname,
 	{
 		/* Footer information about an external table */
 		PGresult   *result;
-        bool	    gpdb5 = isGPDB5000OrLater();
-		char	   *optionsName = gpdb5 ? ", x.options " : "";
-		char	   *execLocations = gpdb5 ? "x.urilocation, x.execlocation" : "x.location";
+        bool	    gpdb5OrLater = isGPDB5000OrLater();
+		char	   *optionsName = gpdb5OrLater ? ", x.options " : "";
+		char	   *execLocations = gpdb5OrLater ? "x.urilocation, x.execlocation" : "x.location";
 
 		printfPQExpBuffer(&buf,
 						  "SELECT %s, x.fmttype, x.fmtopts, x.command, "
@@ -1845,7 +1845,7 @@ describeOneTableDetails(const char *schemaname,
 			char       *format;
 			char	   *options;
 
-			if (gpdb5)
+			if (gpdb5OrLater)
 			{
 				urislocation = PQgetvalue(result, 0, 0);
 				execlocation = PQgetvalue(result, 0, 1);
@@ -1926,7 +1926,7 @@ describeOneTableDetails(const char *schemaname,
 			printfPQExpBuffer(&tmpbuf, _("Format options: %s"), fmtopts);
 			printTableAddFooter(&cont, tmpbuf.data);
 
-		    if (gpdb5)
+		    if (gpdb5OrLater)
 			{
 				/* external table options */
 				printfPQExpBuffer(&tmpbuf, _("External options: %s"), options);
@@ -1940,21 +1940,21 @@ describeOneTableDetails(const char *schemaname,
 				printfPQExpBuffer(&tmpbuf, _("Command: %s"), command);
 				printTableAddFooter(&cont, tmpbuf.data);
 
-				char* onclause = gpdb5 ? execlocation : urislocation;
-				onclause[strlen(onclause) - 1] = '\0'; /* don't print the '}' character */
-				onclause++; /* don't print the '{' character */
+				char* on_clause = gpdb5OrLater ? execlocation : urislocation;
+				on_clause[strlen(on_clause) - 1] = '\0'; /* don't print the '}' character */
+				on_clause++; /* don't print the '{' character */
 
-				if(strncmp(onclause, "HOST:", strlen("HOST:")) == 0)
-					printfPQExpBuffer(&tmpbuf, _("Execute on: host '%s'"), onclause + strlen("HOST:"));
-				else if(strncmp(onclause, "PER_HOST", strlen("PER_HOST")) == 0)
+				if(strncmp(on_clause, "HOST:", strlen("HOST:")) == 0)
+					printfPQExpBuffer(&tmpbuf, _("Execute on: host '%s'"), on_clause + strlen("HOST:"));
+				else if(strncmp(on_clause, "PER_HOST", strlen("PER_HOST")) == 0)
 					printfPQExpBuffer(&tmpbuf, _("Execute on: one segment per host"));
-				else if(strncmp(onclause, "MASTER_ONLY", strlen("MASTER_ONLY")) == 0)
+				else if(strncmp(on_clause, "MASTER_ONLY", strlen("MASTER_ONLY")) == 0)
 					printfPQExpBuffer(&tmpbuf, _("Execute on: master segment"));
-				else if(strncmp(onclause, "SEGMENT_ID:", strlen("SEGMENT_ID:")) == 0)
-					printfPQExpBuffer(&tmpbuf, _("Execute on: segment %s"), onclause + strlen("SEGMENT_ID:"));
-				else if(strncmp(onclause, "TOTAL_SEGS:", strlen("TOTAL_SEGS:")) == 0)
-					printfPQExpBuffer(&tmpbuf, _("Execute on: %s random segments"), onclause + strlen("TOTAL_SEGS:"));
-				else if(strncmp(onclause, "ALL_SEGMENTS", strlen("ALL_SEGMENTS")) == 0)
+				else if(strncmp(on_clause, "SEGMENT_ID:", strlen("SEGMENT_ID:")) == 0)
+					printfPQExpBuffer(&tmpbuf, _("Execute on: segment %s"), on_clause + strlen("SEGMENT_ID:"));
+				else if(strncmp(on_clause, "TOTAL_SEGS:", strlen("TOTAL_SEGS:")) == 0)
+					printfPQExpBuffer(&tmpbuf, _("Execute on: %s random segments"), on_clause + strlen("TOTAL_SEGS:"));
+				else if(strncmp(on_clause, "ALL_SEGMENTS", strlen("ALL_SEGMENTS")) == 0)
 					printfPQExpBuffer(&tmpbuf, _("Execute on: all segments"));
 				else
 					printfPQExpBuffer(&tmpbuf, _("Execute on: ERROR: invalid catalog entry (describe.c)"));
@@ -1971,7 +1971,7 @@ describeOneTableDetails(const char *schemaname,
 				printfPQExpBuffer(&tmpbuf, _("External location: %s"), urislocation);
 				printTableAddFooter(&cont, tmpbuf.data);
 
-				if (gpdb5)
+				if (gpdb5OrLater)
 				{
 					execlocation[strlen(execlocation) - 1] = '\0'; /* don't print the '}' character */
 					execlocation++; /* don't print the '{' character */
