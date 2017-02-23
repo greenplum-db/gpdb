@@ -260,20 +260,6 @@ alter table mpp3607 add partition ee start (-10);
 alter table mpp3607 add partition ff start (-9) end (-8); -- Overlaps
 
 drop table mpp3607;
-create table mpp3621 (aa date, bb date) partition by range (bb)
-(partition foo start('2008-01-01'));
-
-alter table mpp3621 add partition a1 start ('2007-01-01') end ('2007-02-01');
-alter table mpp3621 add partition a2 start ('2007-02-01') end ('2007-03-01');
-alter table mpp3621 add partition a3 start ('2007-03-01') end ('2007-04-01');
-alter table mpp3621 add partition a4 start ('2007-09-01') end ('2007-10-01');
-alter table mpp3621 add partition a5 start ('2007-08-01') end ('2007-09-01');
-alter table mpp3621 add partition a6 start ('2007-04-01') end ('2007-05-01');
-alter table mpp3621 add partition a7 start ('2007-05-01') end ('2007-06-01');
--- alter table mpp3621 add partition a8 start ('2007-07-01') end ('2007-08-01'); -- MPP-3667
-alter table mpp3621 add partition a9 start ('2007-06-01') end ('2007-07-01');
-
-drop table mpp3621;
 CREATE TABLE mpp3632(a int, b int, c int, d int, e int, f int, g int, h int, i int, j int, k int, l int, m int, n int, o int, p int, q int, r int, s int, t int, u int, v int, w int, x int, y int, z int)
 partition by range (a)
 ( partition aa start (1) end (10) every (1) );
@@ -327,23 +313,7 @@ alter table mpp3681 add default partition def;
 alter table mpp3681 split default partition start('2008-04-01') inclusive end('2008-05-01') exclusive into (partition apr08, default partition);
 
 drop table mpp3681;
--- MPP-3687, MPP-3667, MPP-3593
-create table mpp3667 (aa date, bb date) partition by range (bb)
-(partition foo start('2008-01-01'));
-
-alter table mpp3667 add partition a1 start ('2007-01-01') end ('2007-02-01');
-alter table mpp3667 add partition a2 start ('2007-02-01') end ('2007-03-01');
-alter table mpp3667 add partition a3 start ('2007-03-01') end ('2007-04-01');
-alter table mpp3667 add partition a4 start ('2007-09-01') end ('2007-10-01');
-alter table mpp3667 add partition a5 start ('2007-08-01') end ('2007-09-01');
-alter table mpp3667 add partition a6 start ('2007-04-01') end ('2007-05-01');
-alter table mpp3667 add partition a7 start ('2007-05-01') end ('2007-06-01');
-alter table mpp3667 add partition a8 start ('2007-07-01') end ('2007-08-01');
-alter table mpp3667 add partition a9 start ('2007-06-01') end ('2007-07-01');
-
-drop table mpp3667;
-
-
+-- MPP-3593
 create table mpp3593 (i int) partition by range(i) (start(1) end(100) every(10));
 insert into mpp3593 select i from generate_series(1, 99) i;
 alter table mpp3593 split partition for(1) at (5) into (partition aa, partition bb);
