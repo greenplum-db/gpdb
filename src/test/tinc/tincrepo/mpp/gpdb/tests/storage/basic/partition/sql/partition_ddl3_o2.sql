@@ -1372,53 +1372,6 @@ alter table mpp5524 alter partition for(rank(2)) set distributed by (c);
 insert into mpp5524 select i, i+1, i+2, i+3 from generate_series(1, 10) i;
 drop table mpp5524;
 
--- Some note:
--- 1. after successfully added a level subpartition template, we are able to update the subpartition template
--- 2. We cannot add partition with incomplete subpartition template
--- NULL is not allowed in RANGE partition
-CREATE TABLE mpp5984 ( ps_partkey integer,
-ps_suppkey integer, ps_availqty integer,
-ps_supplycost numeric, ps_comment character varying(199) )
-PARTITION BY RANGE(ps_partkey)
-
-partition nnull start (NULL)
-);
-
-CREATE TABLE mpp5984 ( ps_partkey integer,
-ps_suppkey integer, ps_availqty integer,
-ps_supplycost numeric, ps_comment character varying(199) )
-PARTITION BY RANGE(ps_partkey)
-(
-partition nnull start (NULL),
-partition aa start (100) end (200)
-);
-
-CREATE TABLE mpp5984 ( ps_partkey integer,
-ps_suppkey integer, ps_availqty integer,
-ps_supplycost numeric, ps_comment character varying(199) )
-PARTITION BY RANGE(ps_partkey)
-(
-partition nnull start (300) end (NULL)
-);
-
-CREATE TABLE mpp5984 ( ps_partkey integer,
-ps_suppkey integer, ps_availqty integer,
-ps_supplycost numeric, ps_comment character varying(199) )
-PARTITION BY RANGE(ps_partkey)
-subpartition by range (ps_partkey)
-subpartition template
-( subpartition sp1 start(0) end (100) every(10),
-  subpartition sp2 start(100) end (200) every(10)
-)
-( partition aa start (0) end (100),
-  partition bb start (100) end (200)
-);
-
-alter table mpp5984 add partition nnull2 start(NULL); 
-alter table mpp5984 add partition nnull2 start(100) end (NULL); 
-alter table mpp5984 add partition nnull2 start(NULL) end (100); 
-
-drop table mpp5984;
 create table mpp5397 (a int, b int, c int) 
   distributed by (a) 
   partition by range (b)  (partition a1 start (0) end (5), partition a2 end (10),  partition a3 end(15));
