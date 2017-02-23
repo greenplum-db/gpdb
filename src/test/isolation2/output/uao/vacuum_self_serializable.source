@@ -1,0 +1,36 @@
+-- @Description Ensures that a vacuum with serializable works ok
+-- 
+DROP TABLE IF EXISTS ao;
+DROP
+CREATE TABLE ao (a INT, b INT) WITH (appendonly=true, orientation=@orientation@);
+CREATE
+INSERT INTO ao SELECT i as a, i as b FROM generate_series(1, 100) AS i;
+INSERT 100
+
+DELETE FROM ao WHERE a < 20;
+DELETE 19
+SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+SET
+SELECT COUNT(*) FROM ao;
+count
+-----
+81   
+(1 row)
+SELECT segno, tupcount FROM gp_ao_or_aocs_seg_name('ao');
+segno|tupcount
+-----+--------
+1    |100     
+(1 row)
+VACUUM ao;
+VACUUM
+SELECT segno, tupcount FROM gp_ao_or_aocs_seg_name('ao');
+segno|tupcount
+-----+--------
+1    |0       
+2    |81      
+(2 rows)
+SELECT COUNT(*) FROM ao;
+count
+-----
+81   
+(1 row)

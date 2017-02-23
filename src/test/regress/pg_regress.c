@@ -687,7 +687,7 @@ convert_sourcefiles_in(char *source, char * dest_dir, char *dest, char *suffix)
 		bool		has_tokens = false;
 
 		if (aodir && strncmp(*name, aodir, strlen(aodir)) == 0 &&
-			strcmp(*name + strlen(*name) - 7, ".source") != 0)
+			(strlen(*name) < 8 || strcmp(*name + strlen(*name) - 7, ".source") != 0))
 		{
 			snprintf(srcfile, MAXPGPATH, "%s/%s",  indir, *name);
 			snprintf(destfile, MAXPGPATH, "%s/%s/%s", dest_dir, dest, *name);

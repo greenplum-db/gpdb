@@ -1,0 +1,31 @@
+-- @Description Tests the basic behavior of (lazy) vacuum when called from utility mode
+--
+DROP TABLE IF EXISTS foo;
+DROP
+CREATE TABLE foo (a INT, b INT, c CHAR(128)) WITH (appendonly=true, orientation=@orientation@);
+CREATE
+CREATE INDEX foo_index ON foo(b);
+CREATE
+INSERT INTO foo SELECT i as a, 1 as b, 'hello world' as c FROM generate_series(1, 100) AS i;
+INSERT 100
+
+DELETE FROM foo WHERE a < 20;
+DELETE 19
+SELECT COUNT(*) FROM foo;
+count
+-----
+81   
+(1 row)
+2U: VACUUM foo;
+VACUUM
+SELECT COUNT(*) FROM foo;
+count
+-----
+81   
+(1 row)
+2U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount <= 5 then 'few' else 'many' end FROM gp_ao_or_aocs_seg_name('foo');
+segno|case
+-----+----
+0    |many
+1    |zero
+(2 rows)
