@@ -1768,10 +1768,6 @@ Distributed randomly
 drop table mpp3817;
 DROP TABLE
 -- All these should error out because they have overlapping range partitions
-create table ttt (t int) partition by range(t) (partition a start (1) end(10), partition b start(5) end(15));
-psql:/path/sql_file:1: ERROR:  starting value of partition "b" overlaps previous range
-LINE 1: ...ge(t) (partition a start (1) end(10), partition b start(5) e...
-                                                             ^
 CREATE TABLE NATION (
             N_NATIONKEY INTEGER,
             N_NAME CHAR(25),

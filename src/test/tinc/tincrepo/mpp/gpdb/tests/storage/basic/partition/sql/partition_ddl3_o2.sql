@@ -623,8 +623,6 @@ alter table mpp3817 drop column unique2;
 drop table mpp3817;
 -- All these should error out because they have overlapping range partitions
 
-create table ttt (t int) partition by range(t) (partition a start (1) end(10), partition b start(5) end(15));
-
 CREATE TABLE NATION (
             N_NATIONKEY INTEGER,
             N_NAME CHAR(25),
