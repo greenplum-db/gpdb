@@ -6797,7 +6797,6 @@ check_next_every_name(char *parname1, char *nextname, int parrank)
 
 	initStringInfo(&sid1);
 
-	truncateStringInfo(&sid1, 0);
 	appendStringInfo(&sid1, "%s_%d", parname1, parrank);
 
 	bstat = nextname && (0 == strcmp(sid1.data, nextname));
@@ -6908,8 +6907,6 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 
 		initStringInfo(&sid2);
 
-		truncateStringInfo(&sid2, 0);
-
 		/*
 		 * If it's in a nondefault tablespace, say so
 		 * (append after the reloptions)
@@ -6937,8 +6934,6 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 			PQExpBuffer      	 pqbuf = createPQExpBuffer();
 
 			initStringInfo(&sid1);
-
-			truncateStringInfo(&sid1, 0);
 
 			/* always quote to make WITH (tablename=...) work correctly */
 			/* MPP-12243: but don't use quote_identifier if already quoted! */
@@ -7008,8 +7003,6 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 
 		initStringInfo(&buf);
 		initStringInfo(&sid3);
-
-		truncateStringInfo(&sid3, 0);
 
 		/* NOTE: only the template case */
 		Assert(part->paristemplate);

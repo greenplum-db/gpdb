@@ -4983,18 +4983,11 @@ get_part_rule(Relation rel,
 		ListCell				*lc;
 		AlterPartitionId		*pid2	= NULL;
 		PgPartRule*				 prule2 = NULL;
-		StringInfoData			 sid1, sid2;
-
-		initStringInfo(&sid1);
-		initStringInfo(&sid2);
 
 		lc = list_head(l1);
 		prule2 = (PgPartRule*) lfirst(lc);
 		if (prule2 && prule2->topRule && prule2->topRule->children)
 			pNode = prule2->topRule->children;
-
-		truncateStringInfo(&sid1, 0);
-		appendStringInfo(&sid1, "%s", prule2->relname);
 
 		lc = lnext(lc);
 
@@ -5003,7 +4996,7 @@ get_part_rule(Relation rel,
 		prule2 = get_part_rule1(rel,
 								pid2,
 								bExistError, bMustExist,
-								pSearch, pNode, sid1.data, &pNode2);
+								pSearch, pNode, pstrdup(prule2->relname), &pNode2);
 
 		pNode = pNode2;
 
