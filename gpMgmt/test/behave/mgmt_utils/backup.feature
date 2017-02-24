@@ -2129,7 +2129,7 @@ Feature: Validate command line arguments
         When the user runs "gpdbrestore -a -t 30160101010101 -u /tmp"
         Then gpdbrestore should return a return code of 0
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/check_metadata.sql bkdb > /tmp/check_metadata.out"
-        And verify that the contents of the files "/tmp/check_metadata.out" and "test/behave/mgmt_utils/steps/data/check_metadata.ans" are identical
+        And verify that the contents of the files "/tmp/check_metadata.ans" and "test/behave/mgmt_utils/steps/data/check_metadata.out" are identical
         And the directory "/tmp/db_dumps" is removed or does not exist
         And the directory "/tmp/check_metadata.out" is removed or does not exist
 
@@ -3126,7 +3126,7 @@ Feature: Validate command line arguments
         And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.ans"
         And the user runs gpdbrestore with the stored timestamp
         And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.out"
-        And verify that the contents of the files "/tmp/special_table_data.out" and "/tmp/special_table_data.ans" are identical
+        And verify that the contents of the files "/tmp/special_table_data.ans" and "/tmp/special_table_data.out" are identical
 
         # -s option
         When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " -s " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 ""
@@ -3135,7 +3135,7 @@ Feature: Validate command line arguments
         And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.ans"
         And the user runs gpdbrestore with the stored timestamp
         And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.out"
-        And verify that the contents of the files "/tmp/special_table_data.out" and "/tmp/special_table_data.ans" are identical
+        And verify that the contents of the files "/tmp/special_table_data.ans" and "/tmp/special_table_data.out" are identical
 
         # --exclude-schema-file option
         When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " --exclude-schema-file test/behave/mgmt_utils/steps/data/special_chars/schema-file.txt"
@@ -3252,7 +3252,7 @@ Feature: Validate command line arguments
         When the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.ans"
         And the user runs gpdbrestore with the stored timestamp
         And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.out"
-        Then verify that the contents of the files "/tmp/special_table_data.out" and "/tmp/special_table_data.ans" are identical
+        Then verify that the contents of the files "/tmp/special_table_data.ans" and "/tmp/special_table_data.out" are identical
 
         # cleanup
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/drop_special_database.sql template1"
@@ -3272,7 +3272,7 @@ Feature: Validate command line arguments
         When the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.ans"
         When the user runs gpdbrestore with the stored timestamp and options "--redirect " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;2 "" without -e option
         And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;2 " > /tmp/special_table_data.out"
-        Then verify that the contents of the files "/tmp/special_table_data.out" and "/tmp/special_table_data.ans" are identical
+        Then verify that the contents of the files "/tmp/special_table_data.ans" and "/tmp/special_table_data.out" are identical
 
         # cleanup
         And the directory "/tmp/special_table_data.out" is removed or does not exist
@@ -3298,13 +3298,13 @@ Feature: Validate command line arguments
         When the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.ans"
         When the user runs gpdbrestore with the stored timestamp and options "-S " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 ""
         And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.out"
-        Then verify that the contents of the files "/tmp/special_table_data.out" and "/tmp/special_table_data.ans" are identical
+        Then verify that the contents of the files "/tmp/special_table_data.ans" and "/tmp/special_table_data.out" are identical
 
         # -S with truncate option
         When the user runs "gpdbrestore -S " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 " -a --truncate" with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.out"
-        Then verify that the contents of the files "/tmp/special_table_data.out" and "/tmp/special_table_data.ans" are identical
+        Then verify that the contents of the files "/tmp/special_table_data.ans" and "/tmp/special_table_data.out" are identical
 
         # cleanup
         And the directory "/tmp/special_table_data.out" is removed or does not exist
@@ -3328,7 +3328,7 @@ Feature: Validate command line arguments
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/truncate_special_ao_table.sql template1"
         And the user runs gpdbrestore with the stored timestamp and options "--noplan" without -e option
         And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_ao_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_ao_table_data.out"
-        Then verify that the contents of the files "/tmp/special_ao_table_data.out" and "/tmp/special_ao_table_data.ans" are identical
+        Then verify that the contents of the files "/tmp/special_ao_table_data.ans" and "/tmp/special_ao_table_data.out" are identical
 
         # cleanup
         And the directory "/tmp/special_ao_table_data.out" is removed or does not exist

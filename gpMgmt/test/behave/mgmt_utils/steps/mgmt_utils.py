@@ -768,49 +768,53 @@ def get_timestamp_from_output_for_db(context):
 
     return db_timestamps
 
-@then('verify data integrity of database "{dbname}" between source and destination system, work-dir "{dir}"')
-def impl(context, dbname, dir):
+@then('verify data integrity of database "{dbname}" between source and destination system, work-dir "{dirname}"')
+def impl(context, dbname, dir_name):
     dbconn_src = 'psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d %s' % dbname
     dbconn_dest = 'psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -d %s' % dbname
-    for file in os.listdir(dir):
-        if file.endswith('.sql'):
+    for filename in os.listdir(dirname):
+        if filename.endswith('.sql'):
             filename_prefix = os.path.splitext(file)[0]
-            ans_file_path = os.path.join(dir,filename_prefix + '.ans')
-            out_file_path = os.path.join(dir,filename_prefix + '.out')
-            diff_file_path = os.path.join(dir,filename_prefix + '.diff')
+            ans_file_path = os.path.join(dirname,filename_prefix + '.ans')
+            out_file_path = os.path.join(dirname,filename_prefix + '.out')
+            diff_file_path = os.path.join(dirname,filename_prefix + '.diff')
             # run the command to get the exact data from the source system
-            command = '%s -f %s > %s' % (dbconn_src, os.path.join(dir, file), ans_file_path)
+            command = '%s -f %s > %s' % (dbconn_src, os.path.join(dirname, filename), ans_file_path)
             run_command(context, command)
 
             # run the command to get the data from the destination system, locally
-            command = '%s -f %s > %s' % (dbconn_dest, os.path.join(dir, file), out_file_path)
+            command = '%s -f %s > %s' % (dbconn_dest, os.path.join(dirname, filename), out_file_path)
             run_command(context, command)
 
             gpdiff_cmd = 'gpdiff.pl -w -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE: --gpd_init=test/behave/mgmt_utils/steps/data/global_init_file %s %s > %s' % (ans_file_path, out_file_path, diff_file_path)
             run_command(context, gpdiff_cmd)
             if context.ret_code != 0:
-                raise Exception ("Found difference between source and destination system, see %s" % file)
+                with open(diff_file_path, 'r') as diff_file:
+                    diff_file_contents = diff_file.read()
+                    raise Exception ("Found difference between source and destination system, see %s. \n Diff contents: \n %s" % (diff_file_path, diff_file_contents))
 
-@then('run post verifying workload under "{dir}"')
-def impl(context, dir):
-    for file in os.listdir(dir):
-        if file.endswith('.sql'):
+@then('run post verifying workload under "{dirname}"')
+def impl(context, dirname):
+    for filename in os.listdirname(dirname):
+        if filename.endswith('.sql'):
             filename_prefix = os.path.splitext(file)[0]
-            ans_file_path = os.path.join(dir,filename_prefix+'.ans')
-            out_file_path = os.path.join(dir,filename_prefix+'.out')
-            diff_file_path = os.path.join(dir,filename_prefix+'.diff')
+            ans_file_path = os.path.join(dirname,filename_prefix+'.ans')
+            out_file_path = os.path.join(dirname,filename_prefix+'.out')
+            diff_file_path = os.path.join(dirname,filename_prefix+'.diff')
 
             # run the command to get the data from the destination system, locally
             dbconn = 'psql -d template1 -p $GPTRANSFER_DEST_PORT -U $GPTRANSFER_DEST_USER -h $GPTRANSFER_DEST_HOST'
-            command = '%s -f %s > %s'%(dbconn, os.path.join(dir,file), out_file_path)
+            command = '%s -f %s > %s'%(dbconn, os.path.join(dirname,filename), out_file_path)
             run_command(context, command)
 
             gpdiff_cmd = 'gpdiff.pl -w  -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE: --gpd_init=test/behave/mgmt_utils/steps/data/global_init_file %s %s > %s'%(ans_file_path, out_file_path, diff_file_path)
             run_command(context, gpdiff_cmd)
-    for file in os.listdir(dir):
-        if file.endswith('.diff') and os.path.getsize(os.path.join(dir,file)) > 0:
+    for filename in os.listdirname(dirname):
+        if filename.endswith('.diff') and os.path.getsize(os.path.join(dirname,file)) > 0:
+            with open(filename, 'r') as diff_file:
+                diff_file_contents = diff_file.read()
             # if there is some difference generated into the diff file, raise expception
-                raise Exception ("Found difference between source and destination system, see %s"%file)
+                raise Exception ("Found difference between source and destination system, see %s. \n Diff contents: \n %s" % (filename, diff_file_contents))
 
 @then('verify that the incremental file has the stored timestamp')
 def impl(context):
@@ -1386,8 +1390,7 @@ def impl(context, filename):
     current_dir = os.path.dirname(current_path)
     golden_filename = "%s/%s" % (current_dir, filename)
     generated_filename = get_plan_filename(context)
-    if not filecmp.cmp(generated_filename, golden_filename):
-        raise Exception("File contents do not match '%s' and '%s'" % (generated_filename, golden_filename))
+    diff_files(golden_filename, generated_filename)
 
 def parse_plan_file(filename):
     plan = {}
@@ -3564,20 +3567,11 @@ def impl(context, query, dbname, sec):
         thread.start_new_thread(getRows, (dbname, query))
     time.sleep(30)
 
-@given('verify that the contents of the files "{filepath1}" and "{filepath2}" are identical')
-@when('verify that the contents of the files "{filepath1}" and "{filepath2}" are identical')
-@then('verify that the contents of the files "{filepath1}" and "{filepath2}" are identical')
-def impl(context, filepath1, filepath2):
-    contents1 = []
-    contents2 = []
-    with open(filepath1) as fr1:
-        contents1 = fr1.readlines()
-
-    with open(filepath2) as fr2:
-        contents2 = fr2.readlines()
-
-    if (contents1 != contents2):
-        raise Exception("Contents of the files: %s and %s do not match" % (filepath1, filepath2))
+@given('verify that the contents of the files "{expected_filepath}" and "{result_filepath}" are identical')
+@when('verify that the contents of the files "{expected_filepath}" and "{result_filepath}" are identical')
+@then('verify that the contents of the files "{expected_filepath}" and "{result_filepath}" are identical')
+def impl(context, expected_filepath, result_filepath):
+    diff_files(expected_filepath, result_filepath)
 
 @given('the standby is not initialized')
 @then('the standby is not initialized')
