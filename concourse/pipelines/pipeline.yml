@@ -921,10 +921,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gpdb_rc_packaging_centos]
+      passed: [compile_gpdb_centos6]
       trigger: true
     - get: bin_gpdb
-      passed: [gpdb_rc_packaging_centos]
+      passed: [compile_gpdb_centos6]
       resource: bin_gpdb_centos6
     - get: centos-gpdb-dev-6
   - task: memory-accounting
@@ -940,10 +940,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gpdb_rc_packaging_centos]
+      passed: [compile_gpdb_centos6]
       trigger: true
     - get: bin_gpdb
-      passed: [gpdb_rc_packaging_centos]
+      passed: [compile_gpdb_centos6]
       resource: bin_gpdb_centos6
     - get: centos-gpdb-dev-6
   - task: runaway-query
