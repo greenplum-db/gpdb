@@ -3693,17 +3693,15 @@ def impl(context, seg):
 
     cpCmd.run(validateAfter=True)
 
-    with open('/tmp/postmaster.pid', 'r') as fr:
-        pid = fr.readline().strip()
-
-    while True:
-        cmd = Command(name="get non-existing pid", cmdStr="ps ux | grep %s | grep -v grep | awk '{print \$2}'" % pid,
-                      remoteHost=hostname, ctxt=REMOTE)
-        cmd.run(validateAfter=True)
-        if cmd.get_stdout():
-            pid = pid + 1
-        else:
-            break
+    # Since Command creates a short-lived SSH session, we observe the PID given
+    # a throw-away remote process. Assume that the PID is unused and available on
+    # the remote in the near future.
+    # This pid is no longer associated with a
+    # running process and won't be recycled for long enough that tests
+    # have finished.
+    cmd = Command(name="get non-existing pid", cmdStr="echo \$\$", remoteHost=hostname, ctxt=REMOTE)
+    cmd.run(validateAfter=True)
+    pid = cmd.get_results().stdout.strip()
 
     with open('/tmp/postmaster.pid', 'r') as fr:
         lines = fr.readlines()
