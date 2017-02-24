@@ -431,21 +431,21 @@ jobs:
       image: centos-gpdb-dev-6
       params:
         MAKE_TEST_COMMAND: fts_transitions_part01
-        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=10 gp_fts_probe_interval=20
+        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=20 gp_fts_probe_interval=20
         TEST_OS: centos
     - task: fts_transitions_part02
       file: gpdb_src/concourse/tasks/tinc_gpdb.yml
       image: centos-gpdb-dev-6
       params:
         MAKE_TEST_COMMAND: fts_transitions_part02
-        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=10 gp_fts_probe_interval=20
+        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=20 gp_fts_probe_interval=20
         TEST_OS: centos
     - task: fts_transitions_part03
       file: gpdb_src/concourse/tasks/tinc_gpdb.yml
       image: centos-gpdb-dev-6
       params:
         MAKE_TEST_COMMAND: fts_transitions_part03
-        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=10 gp_fts_probe_interval=20
+        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=20 gp_fts_probe_interval=20
         TEST_OS: centos
 
 - name: storage
