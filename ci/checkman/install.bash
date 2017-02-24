@@ -2,7 +2,6 @@
 set -uxo pipefail
 
 CHECKMAN_INTERVAL=30 # Seconds between running checks
-CHECKMAN_VERSION=6fe6eac
 
 check_prereqs() {
   local ruby_version
@@ -17,24 +16,13 @@ check_prereqs() {
 }
 
 install_checkman() {
-  local skip_install=0
-  if [ -e  /Applications/Checkman.app/Contents/Info.plist ]; then
-    local installed_checkman_version
-    installed_checkman_version=$(/usr/libexec/PlistBuddy -c "Print 'Git SHA'" /Applications/Checkman.app/Contents/Info.plist)
-    if [ "${installed_checkman_version}" = "${CHECKMAN_VERSION}" ]; then
-      echo "Already have latest checkman installed, skipping"
-      skip_install=1
-    fi
+  curl https://raw.githubusercontent.com/cppforlife/checkman/master/bin/install > /tmp/checkman_install.sh
+  bash  /tmp/checkman_install.sh
+  if [ $? != 0 ]; then
+    echo "Error installing checkman"
+    exit 1
   fi
-  if [ "${skip_install}" != 1 ]; then
-    curl https://raw.githubusercontent.com/cppforlife/checkman/master/bin/install > /tmp/checkman_install.sh
-    bash  /tmp/checkman_install.sh
-    if [ $? != 0 ]; then
-      echo "Error installing checkman"
-      exit 1
-    fi
-    rm -f ~/Checkman/example
-  fi
+  rm -f ~/Checkman/example
 }
 
 configure_checkman_defaults() {
