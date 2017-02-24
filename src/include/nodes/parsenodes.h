@@ -1686,7 +1686,7 @@ typedef struct PartitionBy			/* the Partition By clause */
 	PartitionByType		partType;
 	List			   *keys;		/* key columns (Partition By ...) */
 	List			   *keyopclass;	/* opclass for each key */
-	Node			   *partNum;	/* partitionS (constant number)*/
+	Node			   *partNum;	/* partitions (constant number)*/
 	Node			   *subPart;	/* optional subpartn (PartitionBy ptr) */
 	Node			   *partSpec;	/* specification or template */
 	Node			   *partDefault;/* DEFAULT partition (if exists) */

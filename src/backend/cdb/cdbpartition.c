@@ -868,7 +868,8 @@ cdb_exchange_part_constraints(Relation table,
 	int delta_checks = 0;
 
 
-	/* Setup an empty hash table mapping constraint definition
+	/*
+	 * Setup an empty hash table mapping constraint definition
 	 * strings to ConstraintEntry structures.
 	 */
 	context = AllocSetContextCreate(CurrentMemoryContext,
@@ -1597,8 +1598,6 @@ del_part_template(Oid rootrelid, int16 parlevel, Oid parent)
 /*
  * add_part_to_catalog() - add a partition to the catalog
  *
- *
-
  * NOTE: If bTemplate_Only = false, add both actual partitions and the
  * template definitions (if specified).  However, if bTemplate_Only =
  * true, then only treat the partition spec as a template.

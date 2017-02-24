@@ -722,7 +722,7 @@ DefineRelation(CreateStmt *stmt, char relkind, char relstorage, bool dispatch)
 *		DefinePartitionedRelation
 *				Create the rewrite rule for a partitioned table
 *
-* parse/analyze.c/transformPartitionBy does the bulk of the work for
+* parse_partition.c/transformPartitionBy does the bulk of the work for
 * partitioned tables, converting a single CREATE TABLE into a series
 * of statements to create the child tables for each partition.  Each
 * child table has a check constraint and a rewrite rule to ensure that

@@ -49,7 +49,7 @@ typedef struct
 } part_col_cxt;
 
 
-/* state structures for validing parsed partition specifications */
+/* state structures for validating parsed partition specifications */
 typedef struct
 {
 	ParseState *pstate;
@@ -417,7 +417,7 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 							 "partition key",
 							 what),
 						 errhint("Include column \"%s\" in the %s constraint or create "
-				"a part-wise UNIQUE index after creating the table instead.",
+								 "a part-wise UNIQUE index after creating the table instead.",
 								 strVal(partkeyname), what)));
 			}
 		}
@@ -1085,7 +1085,7 @@ make_child_node(ParseState *pstate, CreateStmt *stmt, CreateStmtContext *cxt, ch
 	 * so we can usually pick up tablespace from the parent relation.  If the
 	 * child is a top-level branch, though, we take the tablespace from the
 	 * root. Ultimately, we take the tablespace as specified in the command,
-	 * or, if none was specified, the one from the root paritioned table.
+	 * or, if none was specified, the one from the root partitioned table.
 	 */
 	if (!child_tab_stmt->tablespacename)
 	{
@@ -1724,9 +1724,11 @@ make_partition_rules(ParseState *pstate,
 				if ((everyOffset + 1) < maxEveryOffset)
 					expr_op = "<";
 				else
+				{
 					/* only be inclusive if set that way */
-				if (pRI && (PART_EDGE_INCLUSIVE == pRI->partedge))
-					expr_op = "<=";
+					if (pRI && (PART_EDGE_INCLUSIVE == pRI->partedge))
+						expr_op = "<=";
+				}
 
 				/* If have EVERY, and not the very first START or last END */
 				if ((0 != everyOffset) && (everyOffset + 1 <= maxEveryOffset))
@@ -2318,9 +2320,7 @@ make_prule_rulestmt(ParseState *pstate,
 		pIns->selectStmt = (Node *) makeNode(SelectStmt);
 		((SelectStmt *) pIns->selectStmt)->valuesLists =
 			list_make1(vl1);
-
 	}
-
 
 	return (pResult);
 }	/* end make_prule_rulestmt */
@@ -3846,7 +3846,6 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 											   ((A_Const *) n2)->location)));
 						}
 					}
-
 				}
 
 				curval = lappend(curval, newend);
@@ -3865,8 +3864,6 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 
 					outputstr = OutputFunctionCall(&finfo, res);
 				}
-
-
 
 				/* the comparison */
 				restypid = InvalidOid;
@@ -4033,7 +4030,10 @@ validate_range_partition(partValidationState *vstate)
 		vstate->prevStartEnd = currStartEnd;
 	}
 
-	vstate->prevHadName = !!(vstate->pElem->partName);	/* bool t/f */
+	if (vstate->pElem->partName != NULL)
+		vstate->prevHadName = true;
+	else
+		vstate->prevHadName = false;
 
 	if (spec->partStart)
 		PartitionRangeItemIsValid(vstate->pstate, (PartitionRangeItem *) spec->partStart);
