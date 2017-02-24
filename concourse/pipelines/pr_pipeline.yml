@@ -90,10 +90,14 @@ jobs:
         params:
           path: gpdb_pr
           status: failure
+    - put: sync-resource
 
   - name: compile_gpdb_centos6
     plan:
     - aggregate:
+      - get: sync-resource
+        version: every
+        trigger: true
       - get: gpdb_pr
         version: every
         trigger: true
@@ -125,7 +129,6 @@ jobs:
     - put: bin_gpdb_centos
       params:
         file: gpdb_artifacts/bin_gpdb.tar.gz
-    - put: sync-resource
 
   # Stage 2: Run tests
   - name: icw_planner_centos6
