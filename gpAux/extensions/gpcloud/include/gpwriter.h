@@ -13,7 +13,7 @@
 
 class GPWriter : public Writer {
    public:
-    GPWriter(const S3Params &params, const string &url, string fmt = S3_DEFAULT_FORMAT);
+    GPWriter(const S3Params &params, string fmt = S3_DEFAULT_FORMAT);
     virtual ~GPWriter() {
         this->close();
     }
@@ -28,14 +28,13 @@ class GPWriter : public Writer {
     // This should be reentrant, has no side effects when called multiple times.
     virtual void close();
 
-    const string &getKeyToUpload() const {
-        return this->params.getKeyUrl();
+    string getKeyUrlToUpload() {
+        return this->params.getS3Url().getFullUrlForCurl();
     }
 
    private:
-    void constructS3Params(const string &url);
-    string constructKeyName(const string &url);
-    string genUniqueKeyName(const string &url);
+    string constructRandomStr();
+    string genUniqueKeyName(const S3Url &s3Url);
 
    protected:
     string format;

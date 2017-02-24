@@ -851,6 +851,7 @@ int MirroredFlatFile_Drop(
 	char *path;
 	bool mirrorDrop = TRUE;
 	int	 save_errno = 0;
+	int	return_value = 0;
 	char *dir = NULL, *mirrorDir = NULL;
 	
 	if (isTxnDir(subDirectory))
@@ -884,10 +885,12 @@ int MirroredFlatFile_Drop(
 	
 	if (! isMirrorRecovery) {
 		errno = 0;
-		if (unlink(path) < 0 && !suppressError)
+		return_value = unlink(path);
+		if (return_value < 0 && !suppressError){
 			ereport(ERROR,
 					(errcode_for_file_access(),
 					 errmsg("could not unlink file \"%s\": %m", path)));
+		}
 		save_errno = errno;
 	}
 	
@@ -905,7 +908,8 @@ int MirroredFlatFile_Drop(
 	pfree(dir);
 	pfree(mirrorDir);
 
-	return save_errno;
+	errno = save_errno;
+	return return_value;
 }
 
 

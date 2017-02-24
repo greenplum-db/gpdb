@@ -96,12 +96,10 @@ extern Tuplesortstate_mk *tuplesort_begin_datum_mk(ScanState * ss,
 					  Oid sortOperator, bool nullsFirstFlag,
 					  int workMem, bool randomAccess);
 
-extern void cdb_tuplesort_init(Tuplesortstate *state, 
-							   int64 offset, int64 limit, int unique,
+extern void cdb_tuplesort_init(Tuplesortstate *state, int unique,
 							   int sort_flags,
 							   int64 maxdistinct);
-extern void cdb_tuplesort_init_mk(Tuplesortstate_mk *state, 
-							   int64 offset, int64 limit, int unique,
+extern void cdb_tuplesort_init_mk(Tuplesortstate_mk *state, int unique,
 							   int sort_flags,
 							   int64 maxdistinct);
 
@@ -139,6 +137,7 @@ extern void tuplesort_flush_mk(Tuplesortstate_mk *state);
 
 extern void tuplesort_finalize_stats(Tuplesortstate *state);
 extern void tuplesort_finalize_stats_mk(Tuplesortstate_mk *state);
+
 
 extern void tuplesort_get_stats(Tuplesortstate *state,
 		const char **sortMethod, const char ** spaceType, long *spaceUsed);

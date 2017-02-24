@@ -1,0 +1,18 @@
+-- @Description Ensures that an vacuum while a vacuum operation is ok
+-- 
+DROP TABLE IF EXISTS ao;
+CREATE TABLE ao (a INT, b INT) WITH (appendonly=true, orientation=@orientation@);
+INSERT INTO ao SELECT i as a, i as b FROM generate_series(1, 10000) AS i;
+INSERT INTO ao SELECT i as a, i as b FROM generate_series(1, 10000) AS i;
+INSERT INTO ao SELECT i as a, i as b FROM generate_series(1, 10000) AS i;
+INSERT INTO ao SELECT i as a, i as b FROM generate_series(1, 10000) AS i;
+INSERT INTO ao SELECT i as a, i as b FROM generate_series(1, 10000) AS i;
+INSERT INTO ao SELECT i as a, i as b FROM generate_series(1, 10000) AS i;
+
+DELETE FROM ao WHERE a < 1200;
+1: SELECT COUNT(*) FROM ao;
+1>: VACUUM ao;
+2: VACUUM ao;
+1<:
+1: SELECT COUNT(*) FROM ao;
+3: INSERT INTO ao VALUES (0);

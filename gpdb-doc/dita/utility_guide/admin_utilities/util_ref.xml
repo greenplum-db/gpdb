@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="km135496">Management Utility Reference</title>
+  <body>
+    <p>This reference describes the command-line management utilities provided with Greenplum Database. Greenplum Database uses the standard PostgreSQL
+      client and server programs and provides additional management utilities for administering a
+      distributed Greenplum Database DBMS. Greenplum Database management
+      utilities reside in <codeph>$GPHOME/bin</codeph>.<note>When referencing IPv6 addresses in
+          <codeph>gpfdist</codeph> URLs or when using numeric IP addresses instead of hostnames in
+        any management utility, always enclose the IP address in brackets. For command prompt use,
+        the best practice is to escape any brackets or put them inside quotation marks. For example,
+        use
+        either:<codeblock><ph>gpdbrestore -R </ph>\[2620:0:170:610::11\]
+<ph>gpdbrestore -R </ph>'[2620:0:170:610::11]'</codeblock></note></p>
+    <p>The following are the Greenplum Database management utilities.</p>
+    <simpletable id="km162860">
+      <strow>
+        <stentry>
+          <p>
+            <xref href="analyzedb.xml#topic1"/>
+          </p>
+          <p>
+            <xref href="gpactivatestandby.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpaddmirrors.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpbitmapreindex.xml#topic1"/>
+          </p>
+          <p>
+            <xref href="gpcheck.xml#topic1" type="topic" format="dita"/> (deprecated)</p>
+          <p>
+            <xref href="gpcheckcat.xml#topic1"/>
+          </p>
+          <p>gpchecknet (deprecated)</p>
+          <p>gpcheckos (deprecated)</p>
+          <p>
+            <xref href="gpcheckperf.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpconfig.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpcrondump.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpdbrestore.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpdeletesystem.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p> gpdetective (deprecated)</p>
+          <p> gp_dump (deprecated)</p>
+          <p>
+            <xref href="gpexpand.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpfdist.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpfilespace.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpinitstandby.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpinitsystem.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpload.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gplogfilter.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpmapreduce.xml#topic1" type="topic" format="dita"/>
+          </p>
+        </stentry>
+        <stentry>
+          <p>
+            <xref href="gpmfr.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpmigrator.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpmigrator_mirror.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <!-- hidden until testing is complete -msk
+            <p>
+            <xref href="gpmovemirrors.xml#topic1"/>
+          </p>-->
+          <p>
+            <xref href="gpperfmon_install.xml#topic1"/>
+          </p>
+          <p>
+            <xref href="gppkg.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>gprebuildsystem (deprecated)</p>
+          <p>
+            <xref href="gprecoverseg.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpreload.xml#topic1"/>
+          </p>
+          <p> gp_restore (deprecated)</p>
+          <p>gpsizecalc (deprecated)</p>
+          <p>
+            <xref href="gpscp.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>gpskew (deprecated)</p>
+          <p>
+            <xref href="gpseginstall.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpssh.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpssh-exkeys.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpstart.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpstate.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpstop.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p>
+            <xref href="gpsys.xml#topic1"/>
+          </p>
+          <p>
+            <xref href="gptransfer.xml#topic1"/>
+          </p>
+          <p>
+            <xref href="pgbouncer-ref.xml#topic1"/>
+          </p>
+        </stentry>
+      </strow>
+    </simpletable>
+  </body>
+  <topic id="topic_zqp_5xm_cp">
+    <title>Backend Server Programs</title>
+    <body>
+      <p>The following standard PostgreSQL server management programs are provided with Greenplum Database and reside in <codeph>$GPHOME/bin</codeph>. They are modified to
+        handle the parallelism and distribution of a Greenplum Database system. You
+        access these programs only through the Greenplum Database management tools and
+        utilities.</p>
+      <table id="km164231">
+        <title>Greenplum Database Backend Server Programs</title>
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="101pt"/>
+          <colspec colnum="2" colname="col2" colwidth="188pt"/>
+          <colspec colnum="3" colname="col3" colwidth="158pt"/>
+          <thead>
+            <row>
+              <entry colname="col1">Program Name</entry>
+              <entry colname="col2">Description</entry>
+              <entry colname="col3">Use Instead</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">
+                <codeph id="km164249">initdb</codeph>
+              </entry>
+              <entry colname="col2">This program is called by <codeph>gpinitsystem</codeph> when
+                initializing a Greenplum Database array. It is used internally to
+                create the individual segment instances and the master instance.</entry>
+              <entry colname="col3">
+                <codeph>
+                  <xref href="gpinitsystem.xml#topic1" type="topic" format="dita"/>
+                </codeph>
+              </entry>
+            </row>
+            <row>
+              <entry colname="col1">
+                <codeph id="km164262">ipcclean</codeph>
+              </entry>
+              <entry colname="col2">Not used in Greenplum Database</entry>
+              <entry colname="col3">N/A</entry>
+            </row>
+            <row>
+              <entry colname="col1">
+                <codeph id="km164272">gpsyncmaster</codeph>
+              </entry>
+              <entry colname="col2">This is the Greenplum program that
+                starts the <codeph>gpsyncagent</codeph> process on the standby master host.
+                Administrators do not call this program directly, but do so through the management
+                scripts that initialize and/or activate a standby master for a Greenplum Database system. This process is responsible for keeping the
+                standby master up to date with the primary master via a transaction log replication
+                process.</entry>
+              <entry colname="col3"><codeph><xref href="gpinitstandby.xml#topic1" type="topic"
+                    format="dita"/></codeph>, <codeph><xref href="gpactivatestandby.xml#topic1"
+                    type="topic" format="dita"/></codeph></entry>
+            </row>
+            <row>
+              <entry colname="col1">
+                <codeph id="km164291">pg_controldata</codeph>
+              </entry>
+              <entry colname="col2">Not used in Greenplum Database</entry>
+              <entry colname="col3">
+                <codeph>
+                  <xref href="gpstate.xml#topic1" type="topic" format="dita"/>
+                </codeph>
+              </entry>
+            </row>
+            <row>
+              <entry colname="col1">
+                <codeph id="km164304">pg_ctl</codeph>
+              </entry>
+              <entry colname="col2">This program is called by <codeph>gpstart</codeph> and
+                  <codeph>gpstop</codeph> when starting or stopping a Greenplum Database array. It is used internally to stop and start the individual segment instances
+                and the master instance in parallel and with the correct options.</entry>
+              <entry colname="col3"><codeph><xref href="gpstart.xml#topic1" type="topic"
+                    format="dita"/></codeph>, <codeph><xref href="gpstop.xml#topic1" type="topic"
+                    format="dita"/></codeph></entry>
+            </row>
+            <row>
+              <entry colname="col1">
+                <codeph id="km164320">pg_resetxlog</codeph>
+              </entry>
+              <entry colname="col2">Not used in Greenplum Database</entry>
+              <entry colname="col3">N/A</entry>
+            </row>
+            <row>
+              <entry colname="col1">
+                <codeph id="km164330">postgres</codeph>
+              </entry>
+              <entry colname="col2">The <codeph>postgres</codeph> executable is the actual
+                PostgreSQL server process that processes queries.</entry>
+              <entry colname="col3">The main <codeph>postgres</codeph> process (postmaster) creates
+                other <codeph>postgres</codeph> subprocesses and <codeph>postgres</codeph> session
+                as needed to handle client connections.</entry>
+            </row>
+            <row>
+              <entry colname="col1">
+                <codeph id="km164337">postmaster</codeph>
+              </entry>
+              <entry colname="col2"><codeph>postmaster</codeph> starts the <codeph>postgres</codeph>
+                database server listener process that accepts client connections. In Greenplum Database, a <codeph>postgres</codeph> database listener process
+                runs on the Greenplum master Instance and on each
+                Segment Instance.</entry>
+              <entry colname="col3">In Greenplum Database, you use <codeph><xref
+                    href="gpstart.xml#topic1" type="topic" format="dita"/></codeph> and
+                    <codeph><xref href="gpstop.xml#topic1" type="topic" format="dita"/></codeph> to
+                start all postmasters (<codeph>postgres</codeph> processes) in the system at once in
+                the correct order and with the correct options.</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+</topic>

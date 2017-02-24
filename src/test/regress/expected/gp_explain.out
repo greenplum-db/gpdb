@@ -1,0 +1,48 @@
+-- Helper function, to return the EXPLAIN ANALYZE output of a query as a normal
+-- result set, so that you can manipulate it further.
+create or replace function get_explain_output(explain_query text) returns setof text as
+$$
+declare
+  explainrow text;
+begin
+  for explainrow in execute 'EXPLAIN ANALYZE ' || explain_query
+  loop
+    return next explainrow;
+  end loop;
+end;
+$$ language plpgsql;
+--
+-- Test explain_memory_verbosity option
+-- 
+CREATE TABLE explaintest (id int4);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO explaintest SELECT generate_series(1, 10);
+EXPLAIN ANALYZE SELECT * FROM explaintest;
+                                                               QUERY PLAN                                                               
+----------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3.10 rows=10 width=4)
+   Rows out:  10 rows at destination with 0.332 ms to first row, 0.345 ms to end, start offset by 0.283 ms.
+   ->  Seq Scan on explaintest  (cost=0.00..3.10 rows=4 width=4)
+         Rows out:  Avg 3.3 rows x 3 workers.  Max 5 rows (seg1) with 0.015 ms to first row, 0.018 ms to end, start offset by 0.543 ms.
+ Slice statistics:
+   (slice0)    Executor memory: 318K bytes.
+   (slice1)    Executor memory: 50K bytes avg x 3 workers, 50K bytes max (seg0).
+ Statement statistics:
+   Memory used: 128000K bytes
+ Total runtime: 0.998 ms
+(10 rows)
+
+set explain_memory_verbosity='summary';
+-- The plan should consist of a Gather and a Seq Scan, with a
+-- "Memory: ..." line on both nodes.
+SELECT COUNT(*) from
+  get_explain_output($$
+    SELECT * FROM explaintest;
+  $$) as et
+WHERE et like '%Memory: %';
+ count 
+-------
+     2
+(1 row)
+

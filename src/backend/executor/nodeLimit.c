@@ -327,7 +327,7 @@ recompute_limits(LimitState *node)
 		int64		tuples_needed = node->count + node->offset;
 
 		/* negative test checks for overflow */
-		if (node->noCount || tuples_needed < 0)
+		if (node->noCount || tuples_needed < 0 || !gp_enable_sort_limit)
 		{
 			/* make sure flag gets reset if needed upon rescan */
 			sortState->bounded = false;

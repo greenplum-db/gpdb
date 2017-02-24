@@ -35,6 +35,7 @@ static bool words_get_match(BMBatchWords *words, BMIterateResult *result,
 							bool newentry);
 static IndexScanDesc copy_scan_desc(IndexScanDesc scan);
 static void stream_free(StreamNode *self);
+static void indexstream_free(StreamNode *self);
 static bool pull_stream(StreamNode *self, PagetableEntry *e);
 static void cleanup_pos(BMScanPosition pos);
 
@@ -210,7 +211,7 @@ bmgetmulti(PG_FUNCTION_ARGS)
 		is->type = BMS_INDEX;
 		is->pull = pull_stream;
 		is->nextblock = 0;
-		is->free = stream_free;
+		is->free = indexstream_free;
 		is->set_instrument = NULL;
 		is->upd_instrument = NULL;
 
@@ -641,6 +642,16 @@ stream_free(StreamNode *self)
 		pfree(scan);
 		pfree(so);
 	}
+}
+
+/*
+ * free the memory associated with an IndexStream
+ */
+static void
+indexstream_free(StreamNode *self) {
+	stream_free(self);
+
+	pfree(self);
 }
 
 static void

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1"><title id="am137232">ALTER FILESPACE</title><body><p id="sql_command_desc">Changes the definition of a filespace.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER FILESPACE <varname>name</varname> RENAME TO <varname>newname</varname>
+
+ALTER FILESPACE <varname>name</varname> OWNER TO <varname>newowner</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER FILESPACE</codeph> changes the definition of a filespace.
+</p><p>You must own the filespace to use <codeph>ALTER FILESPACE</codeph>.
+To alter the owner, you must also be a direct or indirect member of the
+new owning role (note that superusers have these privileges automatically).</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name of an existing filespace. </pd></plentry><plentry><pt><varname>newname</varname></pt><pd>The new name of the filespace. The new name cannot begin with <varname>pg_</varname>
+or <varname>gp_</varname> (reserved for system filespaces). </pd></plentry><plentry><pt><varname>newowner</varname></pt><pd>The new owner of the filespace.</pd></plentry></parml></section><section id="section5"><title>Examples</title><p>Rename filespace <codeph>myfs</codeph> to <codeph>fast_ssd</codeph>:</p><codeblock>ALTER FILESPACE myfs RENAME TO fast_ssd;</codeblock><p>Change the owner of tablespace <codeph>myfs</codeph>:</p><codeblock>ALTER FILESPACE myfs OWNER TO dba;</codeblock></section><section id="section6"><title>Compatibility</title><p>There is no <codeph>ALTER FILESPACE</codeph> statement in the SQL standard
+or in PostgreSQL.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./DROP_FILESPACE.xml#topic1" type="topic" format="dita"/></codeph>,
+          <codeph>gpfilespace</codeph> in the <i>Greenplum Database Utility Guide</i></p></section></body></topic>

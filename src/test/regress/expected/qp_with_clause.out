@@ -8980,10 +8980,6 @@ select code from tbl87 t where 1= (select count(*) from cte);
 (3 rows)
 
 --start_ignore
-drop table if exists x;
-NOTICE:  table "x" does not exist, skipping
-drop table if exists y;
-NOTICE:  table "y" does not exist, skipping
 drop table if exists foo;
 NOTICE:  table "foo" does not exist, skipping
 drop table if exists bar;
@@ -8993,30 +8989,6 @@ NOTICE:  table "emp" does not exist, skipping
 drop table if exists manager;
 NOTICE:  table "manager" does not exist, skipping
 --end_ignore
-CREATE TABLE x(a int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into x values(1), (2);
-CREATE TABLE y (m integer NOT NULL, n smallint);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'm' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into y values(10, 1);
-insert into y values(20, 1);
-with yy as (
-   select m
-   from y,
-        (select 1 as p) iv
-   where n = iv.p
-)
-select * from x, yy order by 1, 2;
- a | m  
----+----
- 1 | 10
- 1 | 20
- 2 | 10
- 2 | 20
-(4 rows)
-
 -------------------------------------------------------------------------------------------------------------------------------
 CREATE TABLE foo (key INTEGER, value INTEGER);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'key' as the Greenplum Database data distribution key for this table.

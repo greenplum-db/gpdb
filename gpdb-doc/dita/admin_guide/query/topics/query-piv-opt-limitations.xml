@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title>GPORCA Limitations</title>
+  <abstract>
+    <shortdesc>There are limitations in Greenplum Database<ph>
+        4.3.5.0 and later</ph> when GPORCA is enabled. The Pivotal Query
+      Optimizer and the legacy query optimizer currently coexist in Greenplum Database<ph> 4.3.5.0 and later</ph> because GPORCA does not
+      support all Greenplum Database features. </shortdesc>
+  </abstract>
+  <body>
+    <p>This section describes the limitations. <ul id="ul_a3q_pbm_vp">
+        <li><xref href="#topic_kgn_vxl_vp" format="dita"/></li>
+        <li><xref href="#topic_u4t_vxl_vp" format="dita"/></li>
+        <li><xref href="#topic_fdl_gfb_3r" format="dita"/></li>
+      </ul></p>
+  </body>
+  <topic id="topic_kgn_vxl_vp">
+    <title>Unsupported SQL Query Features</title>
+    <body>
+      <p>These are unsupported features when GPORCA is enabled: <ul
+          id="ul_ndm_gyl_vp">
+          <li>Indexed expressions (an index defined as expression based on one or more columns of
+            the table)</li>
+          <li><cmdname>PERCENTILE</cmdname> window function</li>
+          <li>External parameters</li>
+          <li>These types of partitioned tables:<ul id="ul_v2m_mmc_bt">
+              <li>Non-uniform partitioned tables.</li>
+              <li>Partitioned tables that have been altered to use an external table as a leaf child
+                partition.</li>
+            </ul></li>
+          <li>SortMergeJoin (SMJ)</li>
+          <li>Ordered aggregations</li>
+          <li>These analytics extensions:<ul id="ul_iwr_3yl_vp">
+              <li>CUBE</li>
+              <li>Multiple grouping sets</li>
+            </ul></li>
+          <li>These scalar operators:<ul id="ul_nd2_kyl_vp">
+              <li><cmdname>ROW</cmdname></li>
+              <li><cmdname>ROWCOMPARE</cmdname></li>
+              <li><cmdname>FIELDSELECT</cmdname></li>
+            </ul></li>
+          <li>Multiple <cmdname>DISTINCT</cmdname> qualified aggregate functions </li>
+          <li>Inverse distribution functions</li>
+        </ul></p>
+    </body>
+  </topic>
+  <topic id="topic_u4t_vxl_vp">
+    <title>Performance Regressions</title>
+    <body>
+      <p>When GPORCA is enabled in Greenplum Database, the
+        following features are known performance regressions:<ul id="ul_zp2_4yl_vp">
+          <li>Short running queries - For GPORCA, short running queries might
+            encounter additional overhead due to GPORCA enhancements for
+            determining an optimal query execution plan.</li>
+          <li><cmdname>ANALYZE</cmdname> - For GPORCA, the
+              <cmdname>ANALYZE</cmdname> command generates root partition statistics for partitioned
+            tables. For the legacy optimizer, these statistics are not generated.</li>
+          <li>DML operations - For GPORCA, DML enhancements including the support
+            of updates on partition and distribution keys might require additional overhead. </li>
+        </ul></p>
+      <p>Also, enhanced functionality of the features from previous versions could result in
+        additional time required when GPORCA executes SQL statements with the
+        features. </p>
+    </body>
+  </topic>
+  <topic id="topic_fdl_gfb_3r">
+    <title>Greenplum Command Center Database Limitation</title>
+    <body>
+      <p>For Greenplum Command Center monitoring performance, use the default setting
+        for GPORCA (<codeph>off</codeph>) for the <i>gpperfmon</i> database that is
+        used by Greenplum Command Center. Enabling GPORCA for the <i>gpperfmon</i>
+        database is not supported. To ensure that GPORCA is disabled for the
+          <i>gpperfmon</i> database, run this command on the system where the database is
+        installed:</p>
+      <codeblock>ALTER DATABASE gpperfmon SET OPTIMIZER = OFF</codeblock>
+    </body>
+  </topic>
+</topic>

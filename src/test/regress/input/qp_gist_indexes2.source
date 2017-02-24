@@ -496,26 +496,6 @@ SELECT id, property FROM GistTable1
  WHERE property IS NULL 
  ORDER BY id;
 
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-
-SELECT owner, property FROM GistTable1 
- WHERE property ~= '((7052,250),(6050,20))';
-SELECT owner, property FROM GistTable1 
- WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
--- start_ignore
-EXPLAIN
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
--- end_ignore
-
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id;
-
-
 -- ----------------------------------------------------------------------
 -- Test: test04Insert.sql
 -- ----------------------------------------------------------------------
@@ -550,8 +530,6 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
-
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
 
 ALTER INDEX propertyBoxIndex RENAME TO propIndex;
 
@@ -685,22 +663,6 @@ SELECT owner, property FROM GistTable1
  ORDER BY id
  ;
 -- end_ignore
-
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
--- start_ignore
-EXPLAIN
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
--- end_ignore
-
 
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
@@ -933,26 +895,6 @@ SELECT id, property FROM GistTable1
  WHERE property IS NULL 
  ORDER BY id;
 
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-
-SELECT owner, property FROM GistTable1 
- WHERE property ~= '((7052,250),(6050,20))';
-SELECT owner, property FROM GistTable1 
- WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
--- start_ignore
-EXPLAIN
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
--- end_ignore
-
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id;
-
-
 -- ----------------------------------------------------------------------
 -- Test: test04Insert.sql
 -- ----------------------------------------------------------------------
@@ -988,8 +930,6 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
-
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
 
 ALTER INDEX propertyBoxIndex RENAME TO propIndex;
 
@@ -1123,22 +1063,6 @@ SELECT owner, property FROM GistTable1
  ORDER BY id
  ;
 -- end_ignore
-
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
--- start_ignore
-EXPLAIN
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
--- end_ignore
-
 
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
@@ -1371,26 +1295,6 @@ SELECT id, property FROM GistTable1
  WHERE property IS NULL 
  ORDER BY id;
 
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-
-SELECT owner, property FROM GistTable1 
- WHERE property ~= '((7052,250),(6050,20))';
-SELECT owner, property FROM GistTable1 
- WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
--- start_ignore
-EXPLAIN
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
--- end_ignore
-
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id;
-
-
 -- ----------------------------------------------------------------------
 -- Test: test04Insert.sql
 -- ----------------------------------------------------------------------
@@ -1426,8 +1330,6 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
-
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
 
 ALTER INDEX propertyBoxIndex RENAME TO propIndex;
 
@@ -1561,22 +1463,6 @@ SELECT owner, property FROM GistTable1
  ORDER BY id
  ;
 -- end_ignore
-
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
--- start_ignore
-EXPLAIN
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
--- end_ignore
-
 
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
@@ -1810,26 +1696,6 @@ SELECT id, property FROM GistTable1
  WHERE property IS NULL 
  ORDER BY id;
 
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-
-SELECT owner, property FROM GistTable1 
- WHERE property ~= '((7052,250),(6050,20))';
-SELECT owner, property FROM GistTable1 
- WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
--- start_ignore
-EXPLAIN
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
--- end_ignore
-
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id;
-
-
 -- ----------------------------------------------------------------------
 -- Test: test04Insert.sql
 -- ----------------------------------------------------------------------
@@ -1865,8 +1731,6 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
-
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
 
 ALTER INDEX propertyBoxIndex RENAME TO propIndex;
 
@@ -1997,21 +1861,6 @@ SELECT owner, property FROM GistTable1
 EXPLAIN 
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL
- ORDER BY id
- ;
--- end_ignore
-
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
--- start_ignore
-EXPLAIN
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
  ORDER BY id
  ;
 -- end_ignore

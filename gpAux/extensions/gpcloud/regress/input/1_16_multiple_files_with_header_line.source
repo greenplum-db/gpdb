@@ -1,13 +1,13 @@
 --- test set 1: multiple files with header and different EOLs ---
 -- with line terminator '\n' (LF)
 CREATE READABLE EXTERNAL TABLE s3regress_multiple_files_with_header_line_lf(date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/csv_with_header/ config=/home/gpadmin/s3.conf') FORMAT 'csv' (HEADER NEWLINE 'LF');
+        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/csv_with_header/ config=@config_file@') FORMAT 'csv' (HEADER NEWLINE 'LF');
 
 SELECT count(*) FROM s3regress_multiple_files_with_header_line_lf;
 
 -- with line terminator '\r\n' (CRLF)
 CREATE READABLE EXTERNAL TABLE s3regress_multiple_files_with_header_line_crlf(date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/csv_with_header_crlf/ config=/home/gpadmin/s3.conf') FORMAT 'csv' (HEADER NEWLINE 'CRLF');
+        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/csv_with_header_crlf/ config=@config_file@') FORMAT 'csv' (HEADER NEWLINE 'CRLF');
 
 SELECT count(*) FROM s3regress_multiple_files_with_header_line_crlf;
 
@@ -16,7 +16,7 @@ SELECT count(*) FROM s3regress_multiple_files_with_header_line_crlf;
 
 -- with line terminator '\r\n' (CRLF)
 CREATE READABLE EXTERNAL TABLE s3regress_multiple_files_without_header_line_lf(date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/csv_without_header/ config=/home/gpadmin/s3.conf') FORMAT 'csv' (NEWLINE 'LF');
+        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/csv_without_header/ config=@config_file@') FORMAT 'csv' (NEWLINE 'LF');
 
 -- join query between a table with LF eol and the other table with CRLF eol.
 SELECT count(*) FROM s3regress_multiple_files_with_header_line_crlf crlf, s3regress_multiple_files_with_header_line_lf lf where crlf.volume = lf.volume;

@@ -261,8 +261,6 @@ Create table neg_tb32 (a1 int ,a2 char(5),a3 text,a4 timestamp ,a5 date)  with (
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "neg_tb32_1_prt_1" for table "neg_tb32"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "neg_tb32_1_prt_2" for table "neg_tb32"
 psql:/path/sql_file:1: ERROR:  unknown compresstype "abc"
-LINE 4:                     subpartition part2 values('F') , Column ...
-                                                      ^
 --Create table with not allowed compresslevel
 Drop table if exists neg_tb33 ;
 psql:/path/sql_file:1: NOTICE:  table "neg_tb33" does not exist, skipping
@@ -275,8 +273,6 @@ Create table neg_tb33 (a1 int,a2 char(5),a3 text,a4 timestamp ,a5 date )  with (
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "neg_tb33_1_prt_1" for table "neg_tb33"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "neg_tb33_1_prt_2" for table "neg_tb33"
 psql:/path/sql_file:1: ERROR:  compresslevel=5 is out of range for quicklz (should be 1)
-LINE 4:                     subpartition part2 values('F') , Column ...
-                                                      ^
 Drop table if exists neg_tb34 ;
 psql:/path/sql_file:1: NOTICE:  table "neg_tb34" does not exist, skipping
 DROP TABLE
@@ -288,8 +284,6 @@ Create table neg_tb34 (a1 int,a2 char(5),a3 text,a4 timestamp ,a5 date)  with (a
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "neg_tb34_1_prt_1" for table "neg_tb34"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "neg_tb34_1_prt_2" for table "neg_tb34"
 psql:/path/sql_file:1: ERROR:  compresslevel=11 is out of range (should be between 0 and 9)
-LINE 4:                     subpartition part2 values('F') , Column ...
-                                                      ^
 --Create table with not allowed blocksize
 Drop table if exists neg_tb35 ;
 psql:/path/sql_file:1: NOTICE:  table "neg_tb35" does not exist, skipping
@@ -302,8 +296,6 @@ Create table neg_tb35 (a1 int,a2 char(5),a3 text,a4 timestamp ,a5 date )  with (
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "neg_tb35_1_prt_1" for table "neg_tb35"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "neg_tb35_1_prt_2" for table "neg_tb35"
 psql:/path/sql_file:1: ERROR:  block size must be between 8KB and 2MB and be an 8KB multiple. Got 11111
-LINE 4:                     subpartition part2 values('F') , Column ...
-                                                      ^
 --Create table with case insensitive compresstype
 Drop table if exists neg_tb36 ;
 DROP TABLE

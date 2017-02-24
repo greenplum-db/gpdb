@@ -57,9 +57,7 @@ DROP SCHEMA common_schema;
 -- SHA-256 testing
 set password_hash_algorithm to "SHA-256";
 create role sha256 password 'abc';
--- MPP-15865
--- OpenSSL SHA2 returning a different SHA2 to RSA BSAFE!
---select rolname, rolpassword from pg_authid where rolname = 'sha256';
+select rolname, rolpassword from pg_authid where rolname = 'sha256';
 drop role sha256;
 
 create role superuser;

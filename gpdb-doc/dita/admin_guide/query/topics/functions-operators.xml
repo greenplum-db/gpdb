@@ -1,0 +1,1423 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic26" xml:lang="en">
+    <title id="in151167">Using Functions and Operators</title>
+    <body>
+        <ul>
+            <li id="in140953">
+                <xref format="dita" href="#topic27" type="topic"/>
+            </li>
+            <li id="in141620">
+                <xref format="dita" href="#topic28" type="topic"/>
+            </li>
+            <li id="in141625">
+                <xref format="dita" href="#topic29" type="topic"/>
+            </li>
+            <li id="in184735">
+                <xref format="dita" href="#topic30" type="topic"/>
+            </li>
+            <li id="in184739">
+                <xref format="dita" href="#topic31" type="topic"/>
+            </li>
+        </ul>
+    </body>
+    <topic id="topic27" xml:lang="en">
+        <title id="in201560">Using Functions in Greenplum Database</title>
+        <body>
+            <table id="in201681">
+                <title>Functions in Greenplum Database</title>
+                <tgroup cols="4">
+                    <colspec colname="col1" colnum="1" colwidth="77*"/>
+                    <colspec colname="col2" colnum="2" colwidth="86*"/>
+                    <colspec colname="col3" colnum="3" colwidth="144*"/>
+                    <colspec colname="col4" colnum="4" colwidth="144*"/>
+                    <thead>
+                        <row>
+                            <entry colname="col1">Function Type</entry>
+                            <entry colname="col2">Greenplum Support</entry>
+                            <entry colname="col3">Description</entry>
+                            <entry colname="col4">Comments</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row>
+                            <entry colname="col1">IMMUTABLE</entry>
+                            <entry colname="col2">Yes</entry>
+                            <entry colname="col3">Relies only on information directly in its
+                                argument list. Given the same argument values, always returns the
+                                same result.</entry>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">STABLE</entry>
+                            <entry colname="col2">Yes, in most cases</entry>
+                            <entry colname="col3">Within a single table scan, returns the same
+                                result for same argument values, but results change across SQL
+                                statements.</entry>
+                            <entry colname="col4">Results depend on database lookups or parameter
+                                values. <codeph>current_timestamp</codeph> family of functions is
+                                    <codeph>STABLE</codeph>; values do not change within an
+                                execution.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">VOLATILE</entry>
+                            <entry colname="col2">Restricted</entry>
+                            <entry colname="col3">Function values can change within a single table
+                                scan. For example: <codeph>random()</codeph>,
+                                    <codeph>currval()</codeph>,
+                                <codeph>timeofday()</codeph>.</entry>
+                            <entry colname="col4">Any function with side effects is volatile, even
+                                if its result is predictable. For example:
+                                <codeph>setval()</codeph>.</entry>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+            <p>In Greenplum Database, data is divided up across segments — each segment is a
+                distinct PostgreSQL database. To prevent inconsistent or unexpected results, do not
+                execute functions classified as <codeph>VOLATILE</codeph> at the segment level if
+                they contain SQL commands or modify the database in any way. For example, functions
+                such as <codeph>setval()</codeph> are not allowed to execute on distributed data in
+                Greenplum Database because they can cause inconsistent data between segment
+                instances.</p>
+            <p>To ensure data consistency, you can safely use <codeph>VOLATILE</codeph> and
+                    <codeph>STABLE</codeph> functions in statements that are evaluated on and run
+                from the master. For example, the following statements run on the master (statements
+                without a <codeph>FROM</codeph> clause):</p>
+            <p>
+                <codeblock>SELECT setval('myseq', 201);
+SELECT foo();
+</codeblock>
+            </p>
+            <p>If a statement has a <codeph>FROM</codeph> clause containing a distributed table
+                    <i>and</i> the function in the <codeph>FROM</codeph> clause returns a set of
+                rows, the statement can run on the segments:</p>
+            <p>
+                <codeblock>SELECT * from foo();
+</codeblock>
+            </p>
+            <p>Greenplum Database does not support functions that return a table reference
+                    (<codeph>rangeFuncs</codeph>) or functions that use the
+                    <codeph>refCursor</codeph> datatype.</p>
+        </body>
+    </topic>
+    <topic id="topic28" xml:lang="en">
+        <title id="in141451">User-Defined Functions</title>
+        <body>
+            <p>Greenplum Database supports user-defined functions. See <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/extend.html" scope="external"
+                    >Extending SQL</xref> in the PostgreSQL documentation for more information.</p>
+            <p>Use the <codeph>CREATE FUNCTION</codeph> statement to register user-defined functions
+                that are used as described in <xref format="dita" href="#topic27" type="topic"/>. By
+                default, user-defined functions are declared as <codeph>VOLATILE</codeph>, so if
+                your user-defined function is <codeph>IMMUTABLE</codeph> or <codeph>STABLE</codeph>,
+                you must specify the correct volatility level when you register your function.</p>
+            <p>When you create user-defined functions, avoid using fatal errors or destructive
+                calls. Greenplum Database may respond to such errors with a sudden shutdown or
+                restart.</p>
+            <p>In Greenplum Database, the shared library files for user-created functions must
+                reside in the same library path location on every host in the Greenplum Database
+                array (masters, segments, and mirrors).</p>
+        </body>
+    </topic>
+    <topic id="topic29" xml:lang="en">
+        <title id="in141007">Built-in Functions and Operators</title>
+        <body>
+            <p>The following table lists the categories of built-in functions and operators
+                supported by PostgreSQL. All functions and operators are supported in Greenplum
+                Database as in PostgreSQL with the exception of <codeph>STABLE</codeph> and
+                    <codeph>VOLATILE</codeph> functions, which are subject to the restrictions noted
+                in <xref format="dita" href="#topic27" type="topic"/>. See the <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions.html" scope="external"
+                    >Functions and Operators</xref> section of the PostgreSQL documentation for more
+                information about these built-in functions and operators.</p>
+            <table id="in204913">
+                <title>Built-in functions and operators</title>
+                <tgroup cols="4">
+                    <colspec colname="col1" colnum="1" colwidth="129.02*"/>
+                    <colspec colname="col2" colnum="2" colwidth="108*"/>
+                    <colspec colname="col3" colnum="3" colwidth="144*"/>
+                    <colspec colname="col4" colnum="4" colwidth="86*"/>
+                    <thead>
+                        <row>
+                            <entry colname="col1">Operator/Function Category</entry>
+                            <entry colname="col2">VOLATILE Functions</entry>
+                            <entry colname="col3">STABLE Functions</entry>
+                            <entry colname="col4">Restrictions</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions.html#FUNCTIONS-LOGICAL"
+                                    scope="external">Logical Operators</xref>
+                            </entry>
+                            <entry colname="col2"/>
+                            <entry colname="col3"/>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-comparison.html"
+                                    scope="external">Comparison Operators</xref>
+                            </entry>
+                            <entry colname="col2"/>
+                            <entry colname="col3"/>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-math.html"
+                                    scope="external">
+                                    <ph>Mathematical Functions and Operators</ph>
+                                </xref>
+                            </entry>
+                            <entry colname="col2">random<p>setseed</p></entry>
+                            <entry colname="col3"/>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-string.html"
+                                    scope="external">
+                                    <ph>String Functions and Operators</ph>
+                                </xref>
+                            </entry>
+                            <entry colname="col2">
+                                <i>All built-in conversion functions</i>
+                            </entry>
+                            <entry colname="col3">convert<p>pg_client_encoding</p></entry>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-binarystring.html"
+                                    scope="external">
+                                    <ph>Binary String Functions and Operators</ph>
+                                </xref>
+                            </entry>
+                            <entry colname="col2"/>
+                            <entry colname="col3"/>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-bitstring.html"
+                                    scope="external">
+                                    <ph>Bit String Functions and Operators</ph>
+                                </xref>
+                            </entry>
+                            <entry colname="col2"/>
+                            <entry colname="col3"/>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="http://www.postgresql.org/docs/8.3/static/functions-matching.html"
+                                    scope="external">
+                                    <ph>Pattern Matching</ph>
+                                </xref>
+                            </entry>
+                            <entry colname="col2"/>
+                            <entry colname="col3"/>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-formatting.html"
+                                    scope="external">
+                                    <ph>Data Type Formatting Functions</ph>
+                                </xref>
+                            </entry>
+                            <entry colname="col2"/>
+                            <entry colname="col3">to_char<p>to_timestamp</p></entry>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-datetime.html"
+                                    scope="external">
+                                    <ph>Date/Time Functions and Operators</ph>
+                                </xref>
+                            </entry>
+                            <entry colname="col2">timeofday</entry>
+                            <entry colname="col3"
+                                    >age<p>current_date</p><p>current_time</p><p>current_timestamp</p><p>localtime</p><p>localtimestamp</p><p>now</p></entry>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-geometry.html"
+                                    scope="external">
+                                    <ph>Geometric Functions and Operators</ph>
+                                </xref>
+                            </entry>
+                            <entry colname="col2"/>
+                            <entry colname="col3"/>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-net.html"
+                                    scope="external">
+                                    <ph>Network Address Functions and Operators</ph>
+                                </xref>
+                            </entry>
+                            <entry colname="col2"/>
+                            <entry colname="col3"/>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-sequence.html"
+                                    scope="external">
+                                    <ph>Sequence Manipulation Functions</ph>
+                                </xref>
+                            </entry>
+                            <entry colname="col2"
+                                >currval<p>lastval</p><p>nextval</p><p>setval</p></entry>
+                            <entry colname="col3"/>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-conditional.html"
+                                    scope="external">
+                                    <ph>Conditional Expressions</ph>
+                                </xref>
+                            </entry>
+                            <entry colname="col2"/>
+                            <entry colname="col3"/>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-array.html"
+                                    scope="external">
+                                    <ph>Array Functions and Operators</ph>
+                                </xref>
+                            </entry>
+                            <entry colname="col2"/>
+                            <entry colname="col3">
+                                <i>All array functions</i>
+                            </entry>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-aggregate.html"
+                                    scope="external">
+                                    <ph>Aggregate Functions</ph>
+                                </xref>
+                            </entry>
+                            <entry colname="col2"/>
+                            <entry colname="col3"/>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-subquery.html"
+                                    scope="external">
+                                    <ph>Subquery Expressions</ph>
+                                </xref>
+                            </entry>
+                            <entry colname="col2"/>
+                            <entry colname="col3"/>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-comparisons.html"
+                                    scope="external">
+                                    <ph>Row and Array Comparisons</ph>
+                                </xref>
+                            </entry>
+                            <entry colname="col2"/>
+                            <entry colname="col3"/>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-srf.html"
+                                    scope="external">
+                                    <ph>Set Returning Functions</ph>
+                                </xref>
+                            </entry>
+                            <entry colname="col2">generate_series</entry>
+                            <entry colname="col3"/>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-info.html"
+                                    scope="external">
+                                    <ph>System Information Functions</ph>
+                                </xref>
+                            </entry>
+                            <entry colname="col2"/>
+                            <entry colname="col3">
+                                <i>All session information functions</i>
+                                <p>
+                                    <i>All access privilege inquiry functions</i>
+                                </p>
+                                <p>
+                                    <i>All schema visibility inquiry functions</i>
+                                </p>
+                                <p>
+                                    <i>All system catalog information functions</i>
+                                </p>
+                                <p>
+                                    <i>All comment information functions</i>
+                                </p>
+                            </entry>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-admin.html"
+                                    scope="external">
+                                    <ph>System Administration Functions</ph>
+                                </xref>
+                            </entry>
+                            <entry colname="col2"
+                                    >set_config<p>pg_cancel_backend</p><p>pg_reload_conf</p><p>pg_rotate_logfile</p><p>pg_start_backup</p><p>pg_stop_backup</p><p>pg_size_pretty</p><p>pg_ls_dir</p><p>pg_read_file</p><p>pg_stat_file</p></entry>
+                            <entry colname="col3">current_setting<p><i>All database object size
+                                        functions</i></p></entry>
+                            <entry colname="col4"/>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <xref format="html"
+                                    href="http://www.postgresql.org/docs/9.1/interactive/functions-xml.html"
+                                    scope="external">XML Functions</xref>
+                            </entry>
+                            <entry colname="col2"/>
+                            <entry colname="col3">xmlagg(xml)<p>xmlexists(text,
+                                    xml)</p><p>xml_is_well_formed(text)</p><p>xml_is_well_formed_document(text)</p><p>xml_is_well_formed_content(text)</p><p>xpath(text,
+                                    xml)</p><p>xpath(text, xml, text[])</p><p>xpath_exists(text,
+                                    xml)</p><p>xpath_exists(text, xml,
+                                    text[])</p><p>xml(text)</p><p>text(xml)</p><p>xmlcomment(xml)</p><p>xmlconcat2(xml,
+                                    xml)</p></entry>
+                            <entry colname="col4"/>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+        </body>
+    </topic>
+    <topic id="topic30" xml:lang="en">
+        <title id="in179666">Window Functions</title>
+        <body>
+            <p>The following built-in window functions are Greenplum extensions to the PostgreSQL
+                database. All window functions are <i>immutable</i>. For more information about
+                window functions, see <xref href="../topics/defining-queries.xml#topic13"/>.</p>
+            <table id="in164369">
+                <title>Window functions</title>
+                <tgroup cols="4">
+                    <colspec colname="col1" colnum="1" colwidth="87.46*"/>
+                    <colspec colname="col2" colnum="2" colwidth="59*"/>
+                    <colspec colname="col3" colnum="3" colwidth="180*"/>
+                    <colspec colname="col4" colnum="4" colwidth="121.77*"/>
+                    <thead>
+                        <row>
+                            <entry colname="col1">Function</entry>
+                            <entry colname="col2">Return Type</entry>
+                            <entry colname="col3">Full Syntax</entry>
+                            <entry colname="col4">Description</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>cume_dist()</codeph>
+                            </entry>
+                            <entry colname="col2">
+                                <codeph>double precision</codeph>
+                            </entry>
+                            <entry colname="col3">
+                                <codeph>CUME_DIST() OVER ( [PARTITION BY </codeph>
+                                <ph>expr</ph>
+                                <codeph>] ORDER BY </codeph>
+                                <ph>expr</ph>
+                                <codeph> )</codeph>
+                            </entry>
+                            <entry colname="col4">Calculates the cumulative distribution of a value
+                                in a group of values. Rows with equal values always evaluate to the
+                                same cumulative distribution value.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>dense_rank()</codeph>
+                            </entry>
+                            <entry colname="col2">
+                                <codeph>bigint</codeph>
+                            </entry>
+                            <entry colname="col3">
+                                <codeph>DENSE_RANK () OVER ( [PARTITION BY </codeph>
+                                <ph>expr</ph>
+                                <codeph>] ORDER BY </codeph>
+                                <ph>expr</ph>
+                                <codeph>)</codeph>
+                            </entry>
+                            <entry colname="col4">Computes the rank of a row in an ordered group of
+                                rows without skipping rank values. Rows with equal values are given
+                                the same rank value.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>first_value(<i>expr</i>)</codeph>
+                            </entry>
+                            <entry colname="col2">same as input <ph>expr</ph> type</entry>
+                            <entry colname="col3">
+                                <codeph>FIRST_VALUE(</codeph>
+                                <ph>expr</ph>
+                                <codeph>) OVER ( [PARTITION BY </codeph>
+                                <ph>expr</ph>
+                                <codeph>] ORDER BY </codeph>
+                                <ph>expr</ph>
+                                <codeph> [ROWS|RANGE </codeph>
+                                <ph>frame_expr</ph>
+                                <codeph>] )</codeph>
+                            </entry>
+                            <entry colname="col4">Returns the first value in an ordered set of
+                                values.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>lag(<i>expr</i> [,<i>offset</i>] [,<i>default</i>])</codeph>
+                            </entry>
+                            <entry colname="col2">same as input <i>expr</i> type</entry>
+                            <entry colname="col3">
+                                <codeph>LAG(</codeph>
+                                <i>expr</i>
+                                <codeph> [,</codeph>
+                                <i>offset</i>
+                                <codeph>] [,</codeph>
+                                <i>default</i>
+                                <codeph>]) OVER ( [PARTITION BY </codeph>
+                                <i>expr</i>
+                                <codeph>] ORDER BY </codeph>
+                                <i>expr</i>
+                                <codeph> )</codeph>
+                            </entry>
+                            <entry colname="col4">Provides access to more than one row of the same
+                                table without doing a self join. Given a series of rows returned
+                                from a query and a position of the cursor, <codeph>LAG</codeph>
+                                provides access to a row at a given physical offset prior to that
+                                position. The default <codeph>offset</codeph> is 1. <i>default</i>
+                                sets the value that is returned if the offset goes beyond the scope
+                                of the window. If <i>default</i> is not specified, the default value
+                                is null.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>last_value<i>expr</i></codeph>
+                            </entry>
+                            <entry colname="col2">same as input <i>expr</i> type</entry>
+                            <entry colname="col3">
+                                <codeph>LAST_VALUE(<i>expr</i>) OVER ( [PARTITION BY <i>expr</i>]
+                                    ORDER BY <i>expr</i> [ROWS|RANGE <i>frame_expr</i>] )</codeph>
+                            </entry>
+                            <entry colname="col4">Returns the last value in an ordered set of
+                                values.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>
+                                    <codeph>lead(<i>expr</i> [,<i>offset</i>]
+                                        [,<i>default</i>])</codeph>
+                                </codeph>
+                            </entry>
+                            <entry colname="col2">same as input <i>expr</i> type</entry>
+                            <entry colname="col3">
+                                <codeph>LEAD(<i>expr </i>[,<i>offset</i>]
+                                        [,<i>expr</i><i>default</i>]) OVER ( [PARTITION BY
+                                        <i>expr</i>] ORDER BY <i>expr</i> )</codeph>
+                            </entry>
+                            <entry colname="col4">Provides access to more than one row of the same
+                                table without doing a self join. Given a series of rows returned
+                                from a query and a position of the cursor, <codeph>lead</codeph>
+                                provides access to a row at a given physical offset after that
+                                position. If <i>offset</i> is not specified, the default offset is
+                                1. <i>default</i> sets the value that is returned if the offset goes
+                                beyond the scope of the window. If <i>default</i> is not specified,
+                                the default value is null.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>ntile(<i>expr</i>)</codeph>
+                            </entry>
+                            <entry colname="col2">bigint</entry>
+                            <entry colname="col3">
+                                <codeph>NTILE(<i>expr</i>) OVER ( [PARTITION BY <i>expr</i>] ORDER
+                                    BY <i>expr</i> )</codeph>
+                            </entry>
+                            <entry colname="col4">Divides an ordered data set into a number of
+                                buckets (as defined by <i>expr</i>) and assigns a bucket number to
+                                each row.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1"><codeph>percent_rank(</codeph>)</entry>
+                            <entry colname="col2">
+                                <codeph>double precision</codeph>
+                            </entry>
+                            <entry colname="col3">
+                                <codeph>PERCENT_RANK () OVER ( [PARTITION BY <i>expr</i>] ORDER BY
+                                        <i>expr </i>)</codeph>
+                            </entry>
+                            <entry colname="col4">Calculates the rank of a hypothetical row
+                                    <codeph>R</codeph> minus 1, divided by 1 less than the number of
+                                rows being evaluated (within a window partition).</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>rank()</codeph>
+                            </entry>
+                            <entry colname="col2">bigint</entry>
+                            <entry colname="col3">
+                                <codeph>RANK () OVER ( [PARTITION BY <i>expr</i>] ORDER BY <i>expr
+                                    </i>)</codeph>
+                            </entry>
+                            <entry colname="col4">Calculates the rank of a row in an ordered group
+                                of values. Rows with equal values for the ranking criteria receive
+                                the same rank. The number of tied rows are added to the rank number
+                                to calculate the next rank value. Ranks may not be consecutive
+                                numbers in this case.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1"><codeph>row_number(</codeph>)</entry>
+                            <entry colname="col2">
+                                <codeph>bigint</codeph>
+                            </entry>
+                            <entry colname="col3">
+                                <codeph>ROW_NUMBER () OVER ( [PARTITION BY <i>expr</i>] ORDER BY
+                                        <i>expr </i>)</codeph>
+                            </entry>
+                            <entry colname="col4">Assigns a unique number to each row to which it is
+                                applied (either each row in a window partition or each row of the
+                                query).</entry>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+        </body>
+    </topic>
+    <topic id="topic31" xml:lang="en">
+        <title id="in184703">Advanced Analytic Functions</title>
+        <body>
+            <p>The following built-in advanced analytic functions are Greenplum extensions of the
+                PostgreSQL database. Analytic functions are <i>immutable</i>.</p>
+            <table id="in207312">
+                <title>Advanced Analytic Functions</title>
+                <tgroup cols="4">
+                    <colspec colname="col1" colnum="1" colwidth="1*"/>
+                    <colspec colname="col2" colnum="2" colwidth="1*"/>
+                    <colspec colname="col3" colnum="3" colwidth="1*"/>
+                    <colspec colname="col4" colnum="4" colwidth="1*"/>
+                    <thead>
+                        <row>
+                            <entry colname="col1">Function</entry>
+                            <entry colname="col2">Return Type</entry>
+                            <entry colname="col3">Full Syntax</entry>
+                            <entry colname="col4">Description</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>matrix_add(array[], array[])</codeph>
+                            </entry>
+                            <entry colname="col2">
+                                <codeph>smallint[], int[], bigint[], float[]</codeph>
+                            </entry>
+                            <entry colname="col3"><codeph>matrix_add( array[[1,1],[2,2]],
+                                    array[[3,4],[5,6]]</codeph>)</entry>
+                            <entry colname="col4">Adds two two-dimensional matrices. The matrices
+                                must be conformable.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>matrix_multiply( array[], array[])</codeph>
+                            </entry>
+                            <entry colname="col2">
+                                <codeph>smallint[]int[], bigint[], float[]</codeph>
+                            </entry>
+                            <entry colname="col3">
+                                <codeph>matrix_multiply( array[[2,0,0],[0,2,0],[0,0,2]],
+                                    array[[3,0,3],[0,3,0],[0,0,3]] )</codeph>
+                            </entry>
+                            <entry colname="col4">Multiplies two, three- dimensional arrays. The
+                                matrices must be conformable.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>matrix_multiply( array[], <i>expr</i>)</codeph>
+                            </entry>
+                            <entry colname="col2">
+                                <codeph>int[], float[]</codeph>
+                            </entry>
+                            <entry colname="col3">
+                                <codeph>matrix_multiply( array[[1,1,1], [2,2,2], [3,3,3]],
+                                    2)</codeph>
+                            </entry>
+                            <entry colname="col4">Multiplies a two-dimensional array and a scalar
+                                numeric value.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>matrix_transpose( array[])</codeph>
+                            </entry>
+                            <entry colname="col2">Same as input <codeph>array</codeph> type.</entry>
+                            <entry colname="col3">
+                                <codeph>matrix_transpose( array [[1,1,1],[2,2,2]])</codeph>
+                            </entry>
+                            <entry colname="col4">Transposes a two-dimensional array.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>pinv(array [])</codeph>
+                            </entry>
+                            <entry colname="col2">
+                                <codeph>smallint[]int[], bigint[], float[]</codeph>
+                            </entry>
+                            <entry colname="col3">
+                                <codeph>pinv(array[[2.5,0,0],[0,1,0],[0,0,.5]]) </codeph>
+                            </entry>
+                            <entry colname="col4">Calculates the Moore-Penrose pseudoinverse of a
+                                matrix.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>unnest (array[])</codeph>
+                            </entry>
+                            <entry colname="col2">set of <codeph>anyelement</codeph></entry>
+                            <entry colname="col3">
+                                <codeph>unnest( array['one', 'row', 'per', 'item'])</codeph>
+                            </entry>
+                            <entry colname="col4">Transforms a one dimensional array into rows.
+                                Returns a set of <codeph>anyelement</codeph>, a polymorphic <xref
+                                    format="html"
+                                    href="https://www.postgresql.org/docs/8.3/static/datatype-pseudo.html"
+                                    scope="external"><ph>pseudotype in
+                                PostgreSQL</ph></xref>.</entry>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+            <table id="in2073121">
+                <title>Advanced Aggregate Functions</title>
+                <tgroup cols="4">
+                    <colspec colname="col1" colnum="1" colwidth="102.44*"/>
+                    <colspec colname="col2" colnum="2" colwidth="59*"/>
+                    <colspec colname="col3" colnum="3" colwidth="201.99*"/>
+                    <colspec colname="col4" colnum="4" colwidth="128*"/>
+                    <thead>
+                        <row>
+                            <entry colname="col1">Function</entry>
+                            <entry colname="col2">Return Type</entry>
+                            <entry colname="col3">Full Syntax</entry>
+                            <entry colname="col4">Description</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>MEDIAN (<i>expr</i>)</codeph>
+                            </entry>
+                            <entry colname="col2">
+                                <codeph>timestamp, timestampz, interval, float</codeph>
+                            </entry>
+                            <entry colname="col3">
+                                <codeph>MEDIAN (<i>expression</i>)</codeph>
+                                <p>
+                                    <i>Example:</i>
+                                </p>
+                                <codeblock>SELECT department_id, MEDIAN(salary) 
+FROM employees 
+GROUP BY department_id; </codeblock>
+                            </entry>
+                            <entry colname="col4">Can take a two-dimensional array as input. Treats
+                                such arrays as matrices.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>PERCENTILE_CONT (<i>expr</i>) WITHIN GROUP (ORDER BY
+                                        <i>expr</i> [DESC/ASC])</codeph>
+                            </entry>
+                            <entry colname="col2">
+                                <codeph>timestamp, timestampz, interval, float</codeph>
+                            </entry>
+                            <entry colname="col3">
+                                <codeph>PERCENTILE_CONT(<i>percentage</i>) WITHIN GROUP (ORDER BY
+                                        <i>expression</i>)</codeph>
+                                <p>
+                                    <i>Example:</i>
+                                </p>
+                                <codeblock>SELECT department_id,
+PERCENTILE_CONT (0.5) WITHIN GROUP (ORDER BY salary DESC)
+"Median_cont"; 
+FROM employees GROUP BY department_id;</codeblock>
+                            </entry>
+                            <entry colname="col4">Performs an inverse distribution function that
+                                assumes a continuous distribution model. It takes a percentile value
+                                and a sort specification and returns the same datatype as the
+                                numeric datatype of the argument. This returned value is a computed
+                                result after performing linear interpolation. Null are ignored in
+                                this calculation.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1"><codeph>PERCENTILE_DISC (<i>expr</i>) WITHIN GROUP
+                                    (ORDER BY <i>expr</i> [DESC/ASC]</codeph>)</entry>
+                            <entry colname="col2">
+                                <codeph>timestamp, timestampz, interval, float</codeph>
+                            </entry>
+                            <entry colname="col3">
+                                <codeph>PERCENTILE_DISC(<i>percentage</i>) WITHIN GROUP (ORDER BY
+                                        <i>expression</i>)</codeph>
+                                <p>
+                                    <i>Example:</i>
+                                </p>
+                                <codeblock>SELECT department_id, 
+PERCENTILE_DISC (0.5) WITHIN GROUP (ORDER BY salary DESC)
+"Median_desc"; 
+FROM employees GROUP BY department_id;</codeblock>
+                            </entry>
+                            <entry colname="col4">Performs an inverse distribution function that
+                                assumes a discrete distribution model. It takes a percentile value
+                                and a sort specification. This returned value is an element from the
+                                set. Null are ignored in this calculation.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>sum(array[])</codeph>
+                            </entry>
+                            <entry colname="col2">
+                                <codeph>smallint[]int[], bigint[], float[]</codeph>
+                            </entry>
+                            <entry colname="col3">
+                                <codeph>sum(array[[1,2],[3,4]])</codeph>
+                                <p>
+                                    <i>Example:</i>
+                                </p>
+                                <codeblock>CREATE TABLE mymatrix (myvalue int[]);
+INSERT INTO mymatrix VALUES (array[[1,2],[3,4]]);
+INSERT INTO mymatrix VALUES (array[[0,1],[1,0]]);
+SELECT sum(myvalue) FROM mymatrix;
+ sum 
+---------------
+ {{1,3},{4,4}}</codeblock>
+                            </entry>
+                            <entry colname="col4">Performs matrix summation. Can take as input a
+                                two-dimensional array that is treated as a matrix.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>pivot_sum (label[], label, expr)</codeph>
+                            </entry>
+                            <entry colname="col2">
+                                <codeph>int[], bigint[], float[]</codeph>
+                            </entry>
+                            <entry colname="col3">
+                                <codeph>pivot_sum( array['A1','A2'], attr, value)</codeph>
+                            </entry>
+                            <entry colname="col4">A pivot aggregation using sum to resolve duplicate
+                                entries.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>mregr_coef(expr, array[])</codeph>
+                            </entry>
+                            <entry colname="col2">
+                                <codeph>float[]</codeph>
+                            </entry>
+                            <entry colname="col3">
+                                <codeph>mregr_coef(y, array[1, x1, x2])</codeph>
+                            </entry>
+                            <entry colname="col4">The four <codeph>mregr_* </codeph>aggregates
+                                perform linear regressions using the ordinary-least-squares method.
+                                    <codeph>mregr_coef</codeph> calculates the regression
+                                coefficients. The size of the return array for
+                                    <codeph>mregr_coef</codeph> is the same as the size of the input
+                                array of independent variables, since the return array contains the
+                                coefficient for each independent variable.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>mregr_r2 (<i>expr</i>, array[])</codeph>
+                            </entry>
+                            <entry colname="col2">
+                                <codeph>float</codeph>
+                            </entry>
+                            <entry colname="col3">
+                                <codeph>mregr_r2(y, array[1, x1, x2])</codeph>
+                            </entry>
+                            <entry colname="col4">The four <codeph>mregr_* </codeph>aggregates
+                                perform linear regressions using the ordinary-least-squares method.
+                                    <codeph>mregr_r2</codeph> calculates the r-squared error value
+                                for the regression.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>mregr_pvalues(<i>expr</i>, array[])</codeph>
+                            </entry>
+                            <entry colname="col2">
+                                <codeph>float[]</codeph>
+                            </entry>
+                            <entry colname="col3">
+                                <codeph>mregr_pvalues(y, array[1, x1, x2])</codeph>
+                            </entry>
+                            <entry colname="col4">The four <codeph>mregr_* </codeph>aggregates
+                                perform linear regressions using the ordinary-least-squares method.
+                                    <codeph>mregr_pvalues</codeph> calculates the p-values for the
+                                regression.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>mregr_tstats(<i>expr</i>, array[])</codeph>
+                            </entry>
+                            <entry colname="col2">
+                                <codeph>float[]</codeph>
+                            </entry>
+                            <entry colname="col3">
+                                <codeph>mregr_tstats(y, array[1, x1, x2])</codeph>
+                            </entry>
+                            <entry colname="col4">The four <codeph>mregr_* </codeph>aggregates
+                                perform linear regressions using the ordinary-least-squares method.
+                                    <codeph>mregr_tstats</codeph> calculates the t-statistics for
+                                the regression.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>nb_classify(text[], bigint, bigint[], bigint[])</codeph>
+                            </entry>
+                            <entry colname="col2">
+                                <codeph>text</codeph>
+                            </entry>
+                            <entry colname="col3">
+                                <codeph>nb_classify(classes, attr_count, class_count,
+                                    class_total)</codeph>
+                            </entry>
+                            <entry colname="col4">Classify rows using a Naive Bayes Classifier. This
+                                aggregate uses a baseline of training data to predict the
+                                classification of new rows and returns the class with the largest
+                                likelihood of appearing in the new rows.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">
+                                <codeph>nb_probabilities(text[], bigint, bigint[],
+                                    bigint[])</codeph>
+                            </entry>
+                            <entry colname="col2">text</entry>
+                            <entry colname="col3">
+                                <codeph>nb_probabilities(classes, attr_count, class_count,
+                                    class_total)</codeph>
+                            </entry>
+                            <entry colname="col4">Determine probability for each class using a Naive
+                                Bayes Classifier. This aggregate uses a baseline of training data to
+                                predict the classification of new rows and returns the probabilities
+                                that each class will appear in new rows.</entry>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+        </body>
+        <topic id="topic32" xml:lang="en">
+            <title>Advanced Analytic Function Examples</title>
+            <body>
+                <p>These examples illustrate selected advanced analytic functions in queries on
+                    simplified example data. They are for the multiple linear regression aggregate
+                    functions and for Naive Bayes Classification with
+                    <codeph>nb_classify</codeph>.</p>
+            </body>
+            <topic id="topic33" xml:lang="en">
+                <title>Linear Regression Aggregates Example</title>
+                <body>
+                    <p>The following example uses the four linear regression aggregates
+                            <codeph>mregr_coef</codeph>, <codeph>mregr_r2</codeph>,
+                            <codeph>mregr_pvalues</codeph>, and <codeph>mregr_tstats</codeph><ph>
+                            i</ph>n a query on the example table <codeph>regr_example</codeph>. In
+                        this example query, all the aggregates take the dependent variable as the
+                        first parameter and an array of independent variables as the second
+                        parameter.</p>
+                    <codeblock>SELECT mregr_coef(y, array[1, x1, x2]), 
+       mregr_r2(y, array[1, x1, x2]),
+       mregr_pvalues(y, array[1, x1, x2]),
+       mregr_tstats(y, array[1, x1, x2])
+from regr_example;
+</codeblock>
+                    <p>Table <codeph>regr_example</codeph>:</p>
+                    <codeblock> id | y  | x1 | x2
+----+----+----+----
+  1 |  5 |  2 |  1
+  2 | 10 |  4 |  2
+  3 |  6 |  3 |  1
+  4 |  8 |  3 |  1
+</codeblock>
+                    <p>
+                        <ph>Running the example query against this table yields one row of data with
+                            the following values:</ph>
+                    </p>
+                    <p><codeph>mregr_coef</codeph>:</p>
+                    <codeblock>{-7.105427357601e-15,2.00000000000003,0.999999999999943}
+</codeblock>
+                    <p><codeph>mregr_r2</codeph>:</p>
+                    <codeblock>0.86440677966103
+</codeblock>
+                    <p>
+                        <codeph>mregr_pvalues:</codeph>
+                    </p>
+                    <codeblock>{0.999999999999999,0.454371051656992,0.783653104061216}
+</codeblock>
+                    <p>
+                        <codeph>mregr_tstats:</codeph>
+                    </p>
+                    <codeblock>{-2.24693341988919e-15,1.15470053837932,0.35355339059327}
+</codeblock>
+                    <p>Greenplum Database returns <codeph>NaN</codeph> (not a number) if the results
+                        of any of these agregates are undefined. This can happen if there is a very
+                        small amount of data.</p>
+                    <note type="note">
+                        <p>The intercept is computed by setting one of the independent variables to
+                                <codeph>1</codeph>, as shown in the preceding example.</p>
+                    </note>
+                </body>
+            </topic>
+            <topic id="topic34" xml:lang="en">
+                <title>Naive Bayes Classification Examples</title>
+                <body>
+                    <p>The aggregates <codeph>nb_classify and nb_probabilities</codeph> are used
+                        within a larger four-step classification process that involves the creation
+                        of tables and views for training data. The following two examples show all
+                        the steps. The first example shows a small data set with arbitrary values,
+                        and the second example is the Greenplum implementation of a popular Naive
+                        Bayes example based on weather conditions.</p>
+                </body>
+            </topic>
+            <topic id="topic35" xml:lang="en">
+                <title>Overview</title>
+                <body>
+                    <p>The following describes the Naive Bayes classification procedure. In the
+                        examples, the value names become the values of the field <i>attr</i>:</p>
+                    <ol>
+                        <li id="in191086">Unpivot the data.<p>If the data is not denormalized,
+                                create a view with the identification and classification that
+                                unpivots all the values. If the data is already in denormalized
+                                form, you do not need to unpivot the data. </p></li>
+                        <li id="in191088">Create a training table.<p>The training table shifts the
+                                view of the data to the values of the field <i>attr</i>.</p></li>
+                        <li id="in191090">Create a summary view of the training data.</li>
+                        <li id="in191091">Aggregate the data with <codeph>nb_classify</codeph><ph>,
+                                </ph><codeph>nb_probabilities</codeph><ph>,or both.</ph></li>
+                    </ol>
+                </body>
+            </topic>
+            <topic id="topic36" xml:lang="en">
+                <title>Naive Bayes Example 1 – Small Table</title>
+                <body>
+                    <p>This example begins with the normalized data in the example table
+                            <codeph>class_example</codeph> and proceeds through four discrete
+                        steps:</p>
+                    <p>Table <codeph>class_example</codeph>:</p>
+                    <codeblock> id | class | a1 | a2 | a3 
+----+-------+----+----+----
+  1 | C1    |  1 |  2 |  3
+  2 | C1    |  1 |  4 |  3
+  3 | C2    |  0 |  2 |  2
+  4 | C1    |  1 |  2 |  1
+  5 | C2    |  1 |  2 |  2
+  6 | C2    |  0 |  1 |  3
+</codeblock>
+                    <ol>
+                        <li id="in191096">Unpivot the data.<p>For use as training data, the data in
+                                    <codeph>class_example</codeph> must be unpivoted because the
+                                data is in denormalized form. The terms in single quotation marks
+                                define the values to use for the new field <i>attr</i>. By
+                                convention, these values are the same as the field names in the
+                                normalized table. In this example, these values are capitalized to
+                                highlight where they are created in the command.</p><p>
+                                <codeblock>CREATE view class_example_unpivot AS
+SELECT id, class, unnest(array['A1', 'A2', 'A3']) as attr, 
+unnest(array[a1,a2,a3]) as value FROM class_example; 
+</codeblock>
+                            </p><p>The unpivoted view shows the normalized data. It is not necessary
+                                to use this view. Use the command <codeph>SELECT * from
+                                    class_example_unpivot </codeph><ph>to see the denormalized
+                                    data:</ph></p><p>
+                                <codeblock> id | class | attr | value
+----+-------+------+-------
+  2 | C1    | A1   |     1
+  2 | C1    | A2   |     2
+  2 | C1    | A3   |     1
+  4 | C2    | A1   |     1
+  4 | C2    | A2   |     2
+  4 | C2    | A3   |     2
+  6 | C2    | A1   |     0
+  6 | C2    | A2   |     1
+  6 | C2    | A3   |     3
+  1 | C1    | A1   |     1
+  1 | C1    | A2   |     2
+  1 | C1    | A3   |     3
+  3 | C1    | A1   |     1
+  3 | C1    | A2   |     4
+  3 | C1    | A3   |     3
+  5 | C2    | A1   |     0
+  5 | C2    | A2   |     2
+  5 | C2    | A3   |     2
+(18 rows)
+</codeblock>
+                            </p></li>
+                        <li id="in191121">Create a training table from the unpivoted data.<p>The
+                                terms in single quotation marks define the values to sum. The terms
+                                in the array passed into <codeph>pivot_sum</codeph> must match the
+                                number and names of classifications in the original data. In the
+                                example, C1 and C2:</p><p>
+                                <codeblock>CREATE table class_example_nb_training AS
+SELECT attr, value, pivot_sum(array['C1', 'C2'], class, 1) 
+as class_count
+FROM   class_example_unpivot
+GROUP BY attr, value
+DISTRIBUTED by (attr); 
+</codeblock>
+                            </p><p>The following is the resulting training table:</p><p>
+                                <codeblock> attr | value | class_count
+------+-------+-------------
+ A3   |     1 | {1,0}
+ A3   |     3 | {2,1}
+ A1   |     1 | {3,1}
+ A1   |     0 | {0,2}
+ A3   |     2 | {0,2}
+ A2   |     2 | {2,2}
+ A2   |     4 | {1,0}
+ A2   |     1 | {0,1}
+(8 rows)
+</codeblock>
+                            </p></li>
+                        <li id="in191136">Create a summary view of the training data.<p>
+                                <codeblock>CREATE VIEW class_example_nb_classify_functions AS
+SELECT attr, value, class_count, array['C1', 'C2'] as classes,
+sum(class_count) over (wa)::integer[] as class_total,
+count(distinct value) over (wa) as attr_count
+FROM class_example_nb_training
+WINDOW wa as (partition by attr);</codeblock>
+                            </p><p>The following is the resulting training table:</p><p>
+                                <codeblock>attr| value | class_count| classes | class_total |attr_count
+-----+-------+------------+---------+-------------+---------
+ A2  |     2 | {2,2}      | {C1,C2} | {3,3}       |         3
+ A2  |     4 | {1,0}      | {C1,C2} | {3,3}       |         3
+ A2  |     1 | {0,1}      | {C1,C2} | {3,3}       |         3
+ A1  |     0 | {0,2}      | {C1,C2} | {3,3}       |         2
+ A1  |     1 | {3,1}      | {C1,C2} | {3,3}       |         2
+ A3  |     2 | {0,2}      | {C1,C2} | {3,3}       |         3
+ A3  |     3 | {2,1}      | {C1,C2} | {3,3}       |         3
+ A3  |     1 | {1,0}      | {C1,C2} | {3,3}       |         3
+(8 rows)
+</codeblock>
+                            </p></li>
+                        <li id="in191150">Classify rows with <codeph>nb_classify</codeph> and
+                            display the probability with <codeph>nb_probabilities</codeph>. <p>After
+                                you prepare the view, the training data is ready for use as a
+                                baseline for determining the class of incoming rows. The following
+                                query predicts whether rows are of class <codeph>C1</codeph> or
+                                    <codeph>C2</codeph> by using the <codeph>nb_classify</codeph>
+                                aggregate:</p><p>
+                                <codeblock>SELECT nb_classify(classes, attr_count, class_count, 
+class_total) as class
+FROM class_example_nb_classify_functions
+where (attr = 'A1' and value = 0) or (attr = 'A2' and value = 
+2) or (attr = 'A3' and value = 1);
+</codeblock>
+                            </p><p>Running the example query against this simple table yields one
+                                row of data displaying these values:</p><p>This query yields the
+                                expected single-row result of <codeph>C1</codeph>.</p><p>
+                                <codeblock>class 
+-------
+C2
+(1 row)
+</codeblock>
+                            </p><p>Display the probabilities for each class with
+                                    <codeph>nb_probabilities</codeph>. </p><p>Once the view is
+                                prepared, the system can use the training data as a baseline for
+                                determining the class of incoming rows. The following query predicts
+                                whether rows are of class <codeph>C1</codeph> or <codeph>C2</codeph>
+                                by using the <codeph>nb_probabilities</codeph> aggregate:</p><p>
+                                <codeblock>SELECT nb_probabilities(classes, attr_count, class_count, 
+class_total) as probability
+FROM class_example_nb_classify_functions
+where (attr = 'A1' and value = 0) or (attr = 'A2' and value = 
+2) or (attr = 'A3' and value = 1);
+</codeblock>
+                            </p><p><ph>Running the example query against this simple table yields
+                                    one row of data displaying the probabilities for each
+                                    class:</ph></p><p>This query yields the expected single-row
+                                result showing two probabilities, the first for
+                                <codeph>C1,</codeph>and the second for <codeph>C2</codeph>.</p><p>
+                                <codeblock>probability
+-------------
+ {0.4,0.6}
+(1 row)
+</codeblock>
+                            </p><p>You can display the classification and the probabilities with the
+                                following query.</p><p>
+                                <codeblock>SELECT nb_classify(classes, attr_count, class_count, 
+class_total) as class, nb_probabilities(classes, attr_count, 
+class_count, class_total) as probability FROM 
+class_example_nb_classify where (attr = 'A1' and value = 0) 
+or (attr = 'A2' and value = 2) or (attr = 'A3' and value = 
+1); 
+</codeblock>
+                            </p><p>This query produces the following result:</p></li>
+                        <li>
+                            <codeblock> class | probability
+-------+-------------
+    C2 | {0.4,0.6}
+ (1 row)
+</codeblock>
+                        </li>
+                    </ol>
+                    <p>Actual data in production scenarios is more extensive than this example data
+                        and yields better results. Accuracy of classification with
+                            <codeph>nb_classify and nb_probabilities</codeph> improves significantly
+                        with larger sets of training data.</p>
+                </body>
+            </topic>
+            <topic id="topic37" xml:lang="en">
+                <title>Naive Bayes Example 2 – Weather and Outdoor Sports</title>
+                <body>
+                    <p>This example calculates the probabilities of whether the user will play an
+                        outdoor sport, such as golf or tennis, based on weather conditions. The
+                        table <codeph>weather_example</codeph> contains the example values. The
+                        identification field for the table is <i>day</i>. There are two
+                        classifications held in the field play: <codeph>Yes</codeph> or
+                            <codeph>No</codeph>. There are four weather attributes, <i>outlook</i>,
+                            <i>temperature</i>, <i>humidity</i>, and <i>wind</i>. The data is
+                        normalized.</p>
+                    <codeblock> day | play | outlook  | temperature | humidity | wind
+-----+------+----------+-------------+----------+--------
+ 2   | No   | Sunny    | Hot         | High     | Strong
+ 4   | Yes  | Rain     | Mild        | High     | Weak
+ 6   | No   | Rain     | Cool        | Normal   | Strong
+ 8   | No   | Sunny    | Mild        | High     | Weak
+10   | Yes  | Rain     | Mild        | Normal   | Weak
+12   | Yes  | Overcast | Mild        | High     | Strong
+14   | No   | Rain     | Mild        | High     | Strong
+ 1   | No   | Sunny    | Hot         | High     | Weak
+ 3   | Yes  | Overcast | Hot         | High     | Weak
+ 5   | Yes  | Rain     | Cool        | Normal   | Weak
+ 7   | Yes  | Overcast | Cool        | Normal   | Strong
+ 9   | Yes  | Sunny    | Cool        | Normal   | Weak
+11   | Yes  | Sunny    | Mild        | Normal   | Strong
+13   | Yes  | Overcast | Hot         | Normal   | Weak
+ (14 rows)</codeblock>
+                    <p>Because this data is normalized, all four Naive Bayes steps are required.</p>
+                    <ol>
+                        <li id="in191194">Unpivot the data.<p>
+                                <codeblock>CREATE view weather_example_unpivot AS SELECT day, play, 
+unnest(array['outlook','temperature', 'humidity','wind']) as 
+attr, unnest(array[outlook,temperature,humidity,wind]) as 
+value FROM weather_example; 
+</codeblock>
+                            </p><p>Note the use of quotation marks in the command. </p><p>The
+                                    <codeph>SELECT * from weather_example_unpivot</codeph> displays
+                                the denormalized data and contains the following 56 rows.
+                            </p><codeblock>
+ day | play | attr        | value
+-----+------+-------------+----------
+   2 | No   | outlook     | Sunny
+   2 | No   | temperature | Hot
+   2 | No   | humidity    | High
+   2 | No   | wind        | Strong
+   4 | Yes  | outlook     | Rain
+   4 | Yes  | temperature | Mild
+   4 | Yes  | humidity    | High
+   4 | Yes  | wind        | Weak
+   6 | No   | outlook     | Rain
+   6 | No   | temperature | Cool
+   6 | No   | humidity    | Normal
+   6 | No   | wind        | Strong
+   8 | No   | outlook     | Sunny
+   8 | No   | temperature | Mild
+   8 | No   | humidity    | High
+   8 | No   | wind        | Weak
+  10 | Yes  | outlook     | Rain
+  10 | Yes  | temperature | Mild
+  10 | Yes  | humidity    | Normal
+  10 | Yes  | wind        | Weak
+  12 | Yes  | outlook     | Overcast
+  12 | Yes  | temperature | Mild
+  12 | Yes  | humidity    | High
+  12 | Yes  | wind        | Strong
+  14 | No   | outlook     | Rain
+  14 | No   | temperature | Mild
+  14 | No   | humidity    | High
+  14 | No   | wind        | Strong
+   1 | No   | outlook     | Sunny
+   1 | No   | temperature | Hot
+   1 | No   | humidity    | High
+   1 | No   | wind        | Weak
+   3 | Yes  | outlook     | Overcast
+   3 | Yes  | temperature | Hot
+   3 | Yes  | humidity    | High
+   3 | Yes  | wind        | Weak
+   5 | Yes  | outlook     | Rain
+   5 | Yes  | temperature | Cool
+   5 | Yes  | humidity    | Normal
+   5 | Yes  | wind        | Weak
+   7 | Yes  | outlook     | Overcast
+   7 | Yes  | temperature | Cool
+   7 | Yes  | humidity    | Normal
+   7 | Yes  | wind        | Strong
+   9 | Yes  | outlook     | Sunny
+   9 | Yes  | temperature | Cool
+   9 | Yes  | humidity    | Normal
+   9 | Yes  | wind        | Weak
+  11 | Yes  | outlook     | Sunny
+  11 | Yes  | temperature | Mild
+  11 | Yes  | humidity    | Normal
+  11 | Yes  | wind        | Strong
+  13 | Yes  | outlook     | Overcast
+  13 | Yes  | temperature | Hot
+  13 | Yes  | humidity    | Normal
+  13 | Yes  | wind        | Weak
+  (56 rows)</codeblock></li>
+                        <li id="in191257">Create a training table.<p>
+                                <codeblock>CREATE table weather_example_nb_training AS SELECT attr, 
+value, pivot_sum(array['Yes','No'], play, 1) as class_count 
+FROM weather_example_unpivot GROUP BY attr, value 
+DISTRIBUTED by (attr); 
+</codeblock>
+                            </p><p>The <codeph>SELECT * from weather_example_nb_training</codeph>
+                                displays the training data and contains the following 10 rows.
+                            </p><codeblock>
+ attr        | value    | class_count
+-------------+----------+-------------
+outlook      | Rain     | {3,2}
+humidity     | High     | {3,4}
+outlook      | Overcast | {4,0}
+humidity     | Normal   | {6,1}
+outlook      | Sunny    | {2,3}
+wind         | Strong   | {3,3}
+temperature  | Hot      | {2,2}
+temperature  | Cool     | {3,1}
+temperature  | Mild     | {4,2}
+wind         | Weak     | {6,2}
+(10 rows)</codeblock></li>
+                        <li id="in191273">Create a summary view of the training data.<p>
+                                <codeblock>CREATE VIEW weather_example_nb_classify_functions AS SELECT 
+attr, value, class_count, array['Yes','No'] as 
+classes,sum(class_count) over (wa)::integer[] as 
+class_total,count(distinct value) over (wa) as attr_count 
+FROM weather_example_nb_training WINDOW wa as (partition by attr);
+</codeblock>
+                            </p>
+                            <p>The <codeph>SELECT * from
+                                    weather_example_nb_classify_function</codeph> displays the
+                                training data and contains the following 10 rows.</p>
+                            <codeblock>
+attr        |  value  | class_count| classes | class_total| attr_count
+------------+-------- +------------+---------+------------+-----------
+temperature | Mild    | {4,2}      | {Yes,No}| {9,5}      |         3
+temperature | Cool    | {3,1}      | {Yes,No}| {9,5}      |         3
+temperature | Hot     | {2,2}      | {Yes,No}| {9,5}      |         3
+wind        | Weak    | {6,2}      | {Yes,No}| {9,5}      |         2
+wind        | Strong  | {3,3}      | {Yes,No}| {9,5}      |         2
+humidity    | High    | {3,4}      | {Yes,No}| {9,5}      |         2
+humidity    | Normal  | {6,1}      | {Yes,No}| {9,5}      |         2
+outlook     | Sunny   | {2,3}      | {Yes,No}| {9,5}      |         3
+outlook     | Overcast| {4,0}      | {Yes,No}| {9,5}      |         3
+outlook     | Rain    | {3,2}      | {Yes,No}| {9,5}      |         3
+(10 rows)</codeblock></li>
+                        <li id="in191289">Aggregate the data with <codeph>nb_classify</codeph><ph>,
+                                </ph><codeph>nb_probabilities</codeph><ph>, or both.</ph><p>Decide
+                                what to classify. To classify only one record with the following
+                                values:</p>
+                            <codeblock>temperature | wind | humidity | outlook
+------------+------+----------+---------
+Cool        | Weak | High     | Overcast
+</codeblock><p>Use
+                                the following command to aggregate the data. The result gives the
+                                classification <codeph>Yes</codeph> or <codeph>No</codeph> and the
+                                probability of playing outdoor sports under this particular set of
+                                conditions.</p><p>
+                                <codeblock>SELECT nb_classify(classes, attr_count, class_count, 
+class_total) as class,
+       nb_probabilities(classes, attr_count, class_count, 
+class_total) as probability
+FROM weather_example_nb_classify_functions where
+  (attr = 'temperature' and value = 'Cool') or
+  (attr = 'wind'        and value = 'Weak') or
+  (attr = 'humidity'    and value = 'High') or
+  (attr = 'outlook'     and value = 'Overcast');
+</codeblock>
+                            </p><p>The result is a single row.</p><p>
+                                <codeblock>class  |              probability
+-------+---------------------------------------
+ Yes   | {0.858103353920726,0.141896646079274}
+(1 row)
+</codeblock>
+                            </p><p>To classify a group of records, load them into a table. In this
+                                example, the table <codeph>t1</codeph> contains the following
+                                records:</p><p>
+                                <codeblock> day | outlook  | temperature | humidity |  wind
+-----+----------+-------------+----------+--------
+  15 | Sunny    | Mild        | High     | Strong
+  16 | Rain     | Cool        | Normal   | Strong
+  17 | Overcast | Hot         | Normal   | Weak
+  18 | Rain     | Hot         | High     | Weak
+(4 rows)
+</codeblock>
+                            </p><p>The following command aggregates the data against this table. The
+                                result gives the classification <codeph>Yes</codeph> or
+                                    <codeph>No</codeph> and the probability of playing outdoor
+                                sports for each set of conditions in the table <codeph>t1</codeph>.
+                                Both the <codeph>nb_classify</codeph> and
+                                    <codeph>nb_probabilities</codeph> aggregates are used.</p><p>
+                                <codeblock>SELECT t1.day, 
+       t1.temperature, t1.wind, t1.humidity, t1.outlook,
+       nb_classify(classes, attr_count, class_count, 
+class_total) as class,
+       nb_probabilities(classes, attr_count, class_count, 
+class_total) as probability
+FROM t1, weather_example_nb_classify_functions
+WHERE
+  (attr = 'temperature' and value = t1.temperature) or
+  (attr = 'wind'        and value = t1.wind) or
+  (attr = 'humidity'    and value = t1.humidity) or
+  (attr = 'outlook'     and value = t1.outlook)
+GROUP BY t1.day, t1.temperature, t1.wind, t1.humidity, 
+t1.outlook;
+</codeblock>
+                            </p><p>The result is a four rows, one for each record in
+                                    <codeph>t1</codeph>.</p><codeblock>day| temp| wind   | humidity | outlook  | class | probability
+---+-----+--------+----------+----------+-------+--------------
+15 | Mild| Strong | High     | Sunny    | No    | {0.244694132334582,0.755305867665418}
+16 | Cool| Strong | Normal   | Rain     | Yes   | {0.751471997809119,0.248528002190881}
+18 | Hot | Weak   | High     | Rain     | No    | {0.446387538890131,0.553612461109869}
+17 | Hot | Weak   | Normal   | Overcast | Yes   | {0.9297192642788,0.0702807357212004}
+(4 rows)
+</codeblock></li>
+                    </ol>
+                </body>
+            </topic>
+        </topic>
+    </topic>
+</topic>

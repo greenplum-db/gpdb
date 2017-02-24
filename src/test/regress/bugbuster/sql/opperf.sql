@@ -1,4 +1,4 @@
-\c tpch_heap
+\c mpph_heap
 select count(*), sum(n_nationkey), min(n_nationkey), max(n_nationkey) from nation;
 select count(*), sum(r_regionkey), min(r_regionkey), max(r_regionkey) from region;
 select count(*), sum(p_partkey), min(p_partkey), max(p_partkey) from part;

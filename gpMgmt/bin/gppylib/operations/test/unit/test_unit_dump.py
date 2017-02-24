@@ -12,7 +12,7 @@ class DumpTestCase(unittest.TestCase):
     @patch('gppylib.operations.backup_utils.Context.get_master_port', return_value = 5432)
     def setUp(self, mock):
         context = Context()
-        context.dump_database='testdb'
+        context.target_db='testdb'
         context.dump_schema='testschema'
         context.include_dump_tables_file='/tmp/table_list.txt'
         context.master_datadir=context.backup_dir='/data/master/p1'
@@ -1126,7 +1126,7 @@ class DumpTestCase(unittest.TestCase):
         fakeContext = Mock()
         fakeContext.ddboost = False
         fakeContext.master_port = 9999
-        fakeContext.dump_database = 'db_name'
+        fakeContext.target_db= 'db_name'
 
         dump_stats = DumpStats(fakeContext)
         dump_stats.get_include_tables_from_context = Mock(return_value=['schema1.table1', 'schema2.table2'])

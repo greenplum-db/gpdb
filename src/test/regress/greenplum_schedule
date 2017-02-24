@@ -15,19 +15,24 @@
 #   hitting max_connections limit on segments.
 #
 
-test: variadic_parameters default_parameters
+test: variadic_parameters default_parameters function_extensions
+test: spi xpath
 
-# test workfiles compressed using zlib
-# 'zlib' utilizes fault injectors so it needs to be in a group by itself
-test: zlib
-
-test: leastsquares
-test: opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile naivebayes join_gp union_gp gpcopy gp_create_table
-test: filter gpctas gpdist matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var
+test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile naivebayes join_gp union_gp gpcopy gp_create_table
+test: filter gpctas gpdist matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var gp_explain
 test: bitmap_index gp_dump_query_oids analyze
 test: indexjoin as_alias regex_gp gpparams with_clause transient_types gp_rules
 # dispatch should always run seperately from other cases.
 test: dispatch
+
+# deadlock tests run separately - because we don't know which one gets stuck.
+test: deadlock
+
+# test workfiles
+test: workfile/hashagg_spill workfile/hashjoin_spill workfile/materialize_spill workfile/sisc_mat_sort workfile/sisc_sort_spill workfile/sort_spill workfile/spilltodisk
+# test workfiles compressed using zlib
+# 'zlib' utilizes fault injectors so it needs to be in a group by itself
+test: zlib
 
 # This test will change the gp_workfile_limit_per_segment and will need to restart the DB.
 # It will also use faultinjector - so it needs to be in a group by itself.
@@ -48,7 +53,7 @@ test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 distributed_transactions 
 # long-running tests. Unfortunately, 'partition' also assumes that there
 # are no other partitioned tables present in the database, so it cannot run
 # in parallel with tests that use partitions.
-test: partition appendonly alter_distpol_dropped
+test: partition appendonly alter_distpol_dropped query_finish
 # 'partition_locking' gets confused if other backends run concurrently and
 # hold locks.
 test: partition_locking
@@ -62,29 +67,29 @@ test: vacuum_gp
 # Disabled tests. XXX: Why are these disabled?
 #test: olap_window
 #test: tpch500GB
-#ignore: dpe
 
 # FIXME: These tests no longer work, because they try to set
 # gp_interconnect_type, which doesn't work:
 # ERROR:  parameter "gp_interconnect_type" cannot be set after connection start
 
 ignore: gp_portal_error
-test: external_table column_compression eagerfree mapred gpdtm_plpgsql alter_table_aocs alter_distribution_policy ic aoco_privileges
-test: partition_indexing 
-test: alter_table_ao ao_create_alter_valid_table subtransaction_limit oid_consistency
+test: external_table column_compression eagerfree mapred gpdtm_plpgsql alter_table_aocs alter_table_aocs2 alter_distribution_policy ic aoco_privileges aocs
+test: partition_indexing parruleord
+test: alter_table_ao ao_create_alter_valid_table subtransaction_limit oid_consistency udf_exception_blocks
 ignore: icudp_full
-test: aocs
 
-test: resource_queue
+test: resource_queue resource_queue_function
+test: wrkloadadmin
+
 # gp_toolkit performs a vacuum and checks that it truncated the relation. That
 # might not happen if other backends are holding transactions open, preventing
 # vacuum from removing dead tuples.
 test: gp_toolkit
 
-test: filespace trig auth_constraint role rle portals_updatable plpgsql_cache timeseries resource_queue_function pg_stat_last_operation gp_numeric_agg partindex_test direct_dispatch partition_pruning_with_fn dsp runtime_stats
+test: gp_toolkit_ao_funcs filespace trig auth_constraint role rle portals_updatable plpgsql_cache timeseries pg_stat_last_operation gp_numeric_agg partindex_test partition_pruning_with_fn dsp runtime_stats
 
 # direct dispatch tests
-test: bfv_dd bfv_dd_multicolumn bfv_dd_types
+test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types
 
 # catalog test uses pg_get_constraintdef which may report ERROR when executed
 # concurrently with other tests. Cause pg_get_constraintdef() looks up
@@ -102,16 +107,19 @@ test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition DML_over_joins 
  
 test: aggregate_with_groupingsets 
 
-test: nested_case_null
+test: nested_case_null sort
 
-test: bfv_cte bfv_joins bfv_subquery bfv_planner bfv_legacy
+# NOTE: The bfv_temp test assumes that there are no temporary tables in
+# other sessions. Therefore the other tests in this group mustn't create
+# temp tables
+test: bfv_cte bfv_joins bfv_subquery bfv_planner bfv_legacy bfv_temp
 
 test: qp_olap_mdqa qp_misc
 
 test: qp_misc_jiras qp_with_clause qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan
 test: qp_functions qp_misc_rio_join_small qp_misc_rio qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution
 
-test: qp_dpe qp_subquery qp_functions_idf qp_regexp qp_resource_queue
+test: dpe qp_dpe qp_subquery qp_functions_idf qp_regexp qp_resource_queue
 
 test: olap_setup
 test: qp_olap_group
@@ -139,14 +147,36 @@ test: uaocs_compaction/index_stats
 test: uaocs_compaction/index
 test: uaocs_compaction/drop_column
 
-test: uao_ddl/alter_ao_table_oid_column uao_ddl/cursor_row uao_ddl/cursor_column uao_ddl/alter_ao_table_statistics_row uao_ddl/analyze_ao_table_every_dml_row uao_ddl/analyze_ao_table_every_dml_column uao_ddl/alter_ao_table_statistics_column uao_ddl/alter_ao_table_setdefault_row uao_ddl/alter_ao_table_index_row uao_ddl/alter_ao_table_owner_column
-test: uao_ddl/alter_ao_table_owner_row uao_ddl/alter_ao_table_setstorage_row uao_ddl/alter_ao_table_constraint_row uao_ddl/alter_ao_table_constraint_column uao_ddl/alter_ao_table_index_column uao_ddl/alter_ao_table_oid_row uao_ddl/blocksize_row uao_ddl/compresstype_column uao_ddl/alter_ao_table_setdefault_column uao_ddl/blocksize_column
+test: uao_ddl/cursor_row uao_ddl/cursor_column uao_ddl/alter_ao_table_statistics_row uao_ddl/analyze_ao_table_every_dml_row uao_ddl/analyze_ao_table_every_dml_column uao_ddl/alter_ao_table_statistics_column uao_ddl/alter_ao_table_setdefault_row uao_ddl/alter_ao_table_index_row uao_ddl/alter_ao_table_owner_column
+test: uao_ddl/alter_ao_table_owner_row uao_ddl/alter_ao_table_setstorage_row uao_ddl/alter_ao_table_constraint_row uao_ddl/alter_ao_table_constraint_column uao_ddl/alter_ao_table_index_column uao_ddl/blocksize_row uao_ddl/compresstype_column uao_ddl/alter_ao_table_setdefault_column uao_ddl/blocksize_column
 # Do not add the two uao*_catalog_tables tests to a group that runs
 # serializable transactions.  They run VACUUM FULL on append-optimized
 # tables and assume that no AWAITING_DROP segfiles exist at the end of
 # VACUUM FULL.
 test: uao_catalog_tables uaocs_catalog_tables uao_ddl/alter_ao_table_setstorage_column uao_ddl/alter_ao_table_col_ddl_row uao_ddl/compresstype_row uao_ddl/alter_ao_table_col_ddl_column uao_ddl/alter_ao_part_tables_splitpartition_row uao_ddl/alter_ao_part_tables_splitpartition_column uao_ddl/create_ao_tables_row uao_ddl/create_ao_table_500cols_row uao_ddl/create_ao_tables_column uao_ddl/alter_ao_part_exch_row
 test: uao_ddl/alter_ao_part_exch_column uao_ddl/alter_ao_part_tables_row uao_ddl/create_ao_table_500cols_column uao_ddl/alter_ao_part_tables_column
+
+test: uao_ddl/alter_drop_allcol_row uao_ddl/alter_drop_allcol_column uao_ddl/alter_rollback_row uao_ddl/alter_rollback_column uao_ddl/uao_allalter_row uao_ddl/uao_allalter_column uao_col/alter_ao_table_oid_column uao_row/alter_ao_table_oid_row
+
+# These tests use gp_select_invisible and VACUUM, and will get confused if there are
+# concurrent transactions holding back the global xmin.
+test: uao_dml/uao_dml_row
+test: uao_dml/uao_dml_column
+test: uao_dml/uao_dml_cursor_row uao_dml/uao_dml_select_row uao_dml/uao_dml_cursor_column uao_dml/uao_dml_select_column
+
+test: ao_locks
+test: freeze_aux_tables
+
+# These cannot run in parallel, because they check that VACUUM FULL shrinks table size.
+# A concurrent session could hold back the xid horizon and prevent old tuples from being
+# removed.
+test: vacuum_full_ao
+test: vacuum_full_freeze_heap
+test: vacuum_full_heap
+test: vacuum_full_heap_bitmapindex
+
+test: AOCO_Compression2 schema_topology table_statistics
+test: metadata_track
 
 # Test psql \du output
 test: psql_gpdb_du

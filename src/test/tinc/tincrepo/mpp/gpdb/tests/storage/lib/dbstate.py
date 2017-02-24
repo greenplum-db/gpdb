@@ -43,28 +43,15 @@ class DbStateClass(MPPTestCase):
         cmd ="select count(*) from gp_segment_configuration where content<> -1 and mode = 's' and status = 'u';"
         count_up_and_sync = PSQL.run_sql_command(cmd, flags ='-q -t', dbname='postgres')
         if count_all.strip() != count_up_and_sync.strip() :
-            tinctest.logger.info('Exiting the test. The cluster is not in up/sync ............')
-            os._exit(1)
+            raise Exception('The cluster is not in up/sync ............')
         else:
             tinctest.logger.info("\n Starting New Test: System is up and in sync .........")
 
-    def check_catalog(self,dbname=None, alldb=True, online=False, testname=None, outputFile=None, run_repair=True, host=None, port=None, expected_rc=0):
-        '''1. Run gpcheckcat 2. Run repairscript if present 3. Run gpcheckcat again. Repeat this 5 times'''
-        errorCode = 1
-        if run_repair:
-            i = 0
-            while i < 5:
-                (errorCode, hasError, gpcheckcat_output, repairScriptDir) =  self.gpverify.gpcheckcat(dbname=dbname, alldb=alldb, online=online, testname=testname, outputFile=outputFile, host=host, port=port)
-                tinctest.logger.info(" %s Gpcheckcat iteration . ErrorCode: %s " % (i,errorCode))
-                if errorCode == 0:
-                    break
-                else:
-                    self.gpverify.run_repair_script(repairScriptDir,dbname=dbname, alldb=alldb, online=online, testname=testname, outputFile=outputFile, host=host, port=port)
-                    i = i+1
-        else:
-            (errorCode, hasError, gpcheckcat_output, repairScriptDir) =  self.gpverify.gpcheckcat(dbname=dbname, alldb=alldb, online=online, testname=testname, outputFile=outputFile, host=host, port=port)
-        if errorCode != expected_rc:
-            raise Exception('GpCheckcat failed, %s != %s '% (errorCode, expected_rc))
+    def check_catalog(self,dbname=None, alldb=True, online=False, testname=None, outputFile=None, host=None, port=None):
+        '''1. Run gpcheckcat'''
+        (errorCode, hasError, gpcheckcat_output, repairScriptDir) =  self.gpverify.gpcheckcat(dbname=dbname, alldb=alldb, online=online, testname=testname, outputFile=outputFile, host=host, port=port)
+        if errorCode != 0:
+            raise Exception('GpCheckcat failed with errcode %s '% (errorCode))
 
     def check_mirrorintegrity(self, master=False):
         '''Runs checkmirrorintegrity(default), check_mastermirrorintegrity(when master=True) '''

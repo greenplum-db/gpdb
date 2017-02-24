@@ -1,6 +1,7 @@
 create schema alter_ao_table_col_ddl_@orientation@;
 set search_path="$user",alter_ao_table_col_ddl_@orientation@,public;
 SET gp_default_storage_options='orientation=@orientation@';
+BEGIN;
 CREATE TABLE sto_alt_uao1(
           text_col text default 'remove it',
           bigint_col bigint,
@@ -110,3 +111,4 @@ HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For 
 (1 row)
 
 set gp_select_invisible = false;
+COMMIT;

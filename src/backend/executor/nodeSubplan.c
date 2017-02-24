@@ -24,12 +24,10 @@
 #include "access/heapam.h"
 #include "executor/executor.h"
 #include "executor/nodeSubplan.h"
-#include "cdb/cdbexplain.h"             /* cdbexplain_recvSubplanStats */
+#include "cdb/cdbexplain.h"             /* cdbexplain_recvExecStats */
 #include "cdb/cdbvars.h"
-#include "cdb/cdbsrlz.h"
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdisp_query.h"
-#include "cdb/cdbtm.h"
 #include "cdb/ml_ipc.h"
 #include "nodes/makefuncs.h"
 #include "optimizer/clauses.h"
@@ -325,8 +323,8 @@ ExecScanSubPlan(SubPlanState *node,
 
 			if (node->curTuple)
 				pfree(node->curTuple);
-
 			node->curTuple = ExecCopySlotMemTuple(slot);
+
 			MemoryContextSwitchTo(econtext->ecxt_per_query_memory);
 
 			result = memtuple_getattr(node->curTuple, slot->tts_mt_bind, 1, isNull);

@@ -57,3 +57,6 @@ __databases__['queryfinish'] = DispatchSkewDatabase()
 
 # Database for Memory Accounting Tests
 __databases__['memory_accounting'] = DataSetDatabase(database_name='memory_accounting')
+
+# Database for Runaway query termination
+__databases__['runaway_query'] = DataSetDatabase(database_name='runaway_query')

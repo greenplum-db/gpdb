@@ -352,12 +352,14 @@ static void ATExecPartAddInternal(Relation rel, Node *def);
 
 static RangeVar *make_temp_table_name(Relation rel, BackendId id);
 static bool prebuild_temp_table(Relation rel, RangeVar *tmpname, List *distro,
-								List *opts, List **hidden_types, bool isTmpTableAo,
+								List *opts, bool isTmpTableAo,
 								bool useExistingColumnAttributes);
 static void ATPartitionCheck(AlterTableType subtype, Relation rel, bool rejectroot, bool recursing);
 static void ATExternalPartitionCheck(AlterTableType subtype, Relation rel, bool recursing);
 
 static char *alterTableCmdString(AlterTableType subtype);
+
+static void change_dropped_col_datatypes(Relation rel);
 
 /* ----------------------------------------------------------------
  *		DefineRelation
@@ -720,7 +722,7 @@ DefineRelation(CreateStmt *stmt, char relkind, char relstorage, bool dispatch)
 *		DefinePartitionedRelation
 *				Create the rewrite rule for a partitioned table
 *
-* parse/analyze.c/transformPartitionBy does the bulk of the work for
+* parse_partition.c/transformPartitionBy does the bulk of the work for
 * partitioned tables, converting a single CREATE TABLE into a series
 * of statements to create the child tables for each partition.  Each
 * child table has a check constraint and a rewrite rule to ensure that
@@ -2201,6 +2203,7 @@ renameatt(Oid myrelid,
 void
 renamerel(Oid myrelid, const char *newrelname, ObjectType reltype, RenameStmt *stmt)
 {
+	Relation	targetrelation;
 	Relation	relrelation;	/* for RELATION relation */
 	HeapTuple	reltup;
 	Form_pg_class relform;
@@ -2211,17 +2214,17 @@ renamerel(Oid myrelid, const char *newrelname, ObjectType reltype, RenameStmt *s
 	bool		relhastriggers;
 	bool		isSystemRelation;
 
-	/* GPDB_83_MERGE_FIXME: For some reason, this code has been changed
-	 * in GPDB to not grab a lock on the relation. That seems incredibly
-	 * wrong to me, but need to investigate why that was done.
-	 */
-#if 0
 	/*
-	 * Grab an exclusive lock on the target table, index, sequence or view,
-	 * which we will NOT release until end of transaction.
+	 * In Postgres, grab an exclusive lock on the target table, index, sequence
+	 * or view, which we will NOT release until end of transaction.
+	 *
+	 * In GPDB, added supportability feature under GUC to allow rename table
+	 * without AccessExclusiveLock for scenarios like directly modifying system
+	 * catalogs. This will change transaction isolation behaviors, however, this
+	 * won't cause any data corruption.
 	 */
-	targetrelation = relation_open(myrelid, AccessExclusiveLock);
-#endif
+	if (!gp_allow_rename_relation_without_lock)
+		targetrelation = relation_open(myrelid, AccessExclusiveLock);
 
 	/* if this is a child table of a partitioning configuration, complain */
 	if (stmt && rel_is_child_partition(myrelid) && !stmt->bAllowPartn)
@@ -2413,6 +2416,14 @@ renamerel(Oid myrelid, const char *newrelname, ObjectType reltype, RenameStmt *s
 						   GetUserId(),
 						   "ALTER", "RENAME"
 				);
+
+	/*
+	 * In Postgres, close rel, but keep exclusive lock!
+	 *
+	 * In GPDB, skip this under GUC. Same reason as relation_open().
+	 */
+	if (!gp_allow_rename_relation_without_lock)
+		relation_close(targetrelation, NoLock);
 }
 
 static bool
@@ -2781,8 +2792,6 @@ ATController(Relation rel, List *cmds, bool recurse)
 
 						List *qeRelids = qeData->relids;
 						masterSetCmd->relids = list_concat(masterSetCmd->relids, qeRelids);
-						List *qeHiddenTypes = qeData->hiddenTypes;
-						masterSetCmd->hiddenTypes = list_concat(masterSetCmd->hiddenTypes, qeHiddenTypes);
 					}
 				}
 			}
@@ -9067,6 +9076,15 @@ ATExecClusterOn(Relation rel, const char *indexName)
 {
 	Oid			indexOid;
 
+	if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("cannot cluster append-only table \"%s\": not supported",
+						RelationGetRelationName(rel))));
+		return;
+	}
+
 	indexOid = get_relname_relid(indexName, rel->rd_rel->relnamespace);
 
 	if (!OidIsValid(indexOid))
@@ -10986,6 +11004,62 @@ reloptions_list(Oid relid)
 }
 
 /*
+ * Update the pg_attribute entries of dropped columns in given relation,
+ * as if they were of type int4.
+ *
+ * This is used by ALTER TABLE SET DISTRIBUTED BY, which swaps the
+ * relation file with a newly constructed temp table. The temp table is
+ * constructed with int4 columns standing in for the dropped columns,
+ * and this function is used to update the original table's definition
+ * to match that.
+ */
+static void
+change_dropped_col_datatypes(Relation rel)
+{
+	Relation	catalogRelation;
+	SysScanDesc scan;
+	ScanKeyData key;
+	HeapTuple	tuple;
+
+	/*
+	 * Loop through all dropped columns.
+	 */
+	catalogRelation = heap_open(AttributeRelationId, RowExclusiveLock);
+	ScanKeyInit(&key,
+				Anum_pg_attribute_attrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(RelationGetRelid(rel)));
+	scan = systable_beginscan(catalogRelation, AttributeRelidNumIndexId,
+							  true, SnapshotNow, 1, &key);
+	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
+	{
+		Form_pg_attribute att = (Form_pg_attribute) GETSTRUCT(tuple);
+		HeapTuple copyTuple;
+
+		if (att->attisdropped)
+		{
+			Assert(att->attnum > 0 && att->attnum <= RelationGetNumberOfAttributes(rel));
+
+			copyTuple = heap_copytuple(tuple);
+			att = (Form_pg_attribute) GETSTRUCT(copyTuple);
+
+			att->attlen = sizeof(int32);
+			att->attndims = 0;
+			att->atttypmod = -1;
+			att->attbyval = true;
+			att->attstorage = 'p';
+			att->attalign = 'i';
+
+			simple_heap_update(catalogRelation, &tuple->t_self, copyTuple);
+			CatalogUpdateIndexes(catalogRelation, copyTuple);
+		}
+	}
+	systable_endscan(scan);
+
+	heap_close(catalogRelation, RowExclusiveLock);
+}
+
+/*
  * Build:
  *
  * CREATE TABLE pg_temp_<NNNN> AS SELECT * FROM rel
@@ -10993,7 +11067,7 @@ reloptions_list(Oid relid)
  */
 static QueryDesc *
 build_ctas_with_dist(Relation rel, List *dist_clause,
-					 List *storage_opts, RangeVar **tmprv, List **hidden_types,
+					 List *storage_opts, RangeVar **tmprv,
 					 bool useExistingColumnAttributes)
 {
 	Query *q;
@@ -11005,16 +11079,38 @@ build_ctas_with_dist(Relation rel, List *dist_clause,
 	DestReceiver *dest;
 	QueryDesc *queryDesc;
 	RangeVar *tmprel = make_temp_table_name(rel, MyBackendId);
-	bool pre_built;
+	TupleDesc	tupdesc;
+	int			attno;
+	bool		pre_built;
 
+	tupdesc = RelationGetDescr(rel);
+
+	for (attno = 0; attno < tupdesc->natts; attno++)
 	{
-		ResTarget *t = makeNode(ResTarget);
-	    ColumnRef *c = makeNode(ColumnRef);
-        c->fields = list_make1(makeString("*"));
-        c->location = -1;
-        t->val = (Node *)c;
-        t->location = -1;
-		s->targetList = list_make1(t);
+		Form_pg_attribute att = tupdesc->attrs[attno];
+		ResTarget  *t;
+
+		t = makeNode(ResTarget);
+
+		if (!att->attisdropped)
+		{
+			ColumnRef 		   *c;
+
+			c = makeNode(ColumnRef);
+			c->location = -1;
+			c->fields = lappend(c->fields, makeString(pstrdup(get_namespace_name(RelationGetNamespace(rel)))));
+			c->fields = lappend(c->fields, makeString(pstrdup(RelationGetRelationName(rel))));
+			c->fields = lappend(c->fields, makeString(pstrdup(NameStr(att->attname))));
+			t->val = (Node *) c;
+		}
+		else
+		{
+			/* Use a dummy NULL::int4 column to stand in for any dropped columns. */
+			t->val = (Node *) makeConst(INT4OID, -1, sizeof(int32), (Datum) 0, true, true);
+		}
+		t->location = -1;
+
+		s->targetList = lappend(s->targetList, t);
 	}
 
 	from_tbl = makeRangeVar(get_namespace_name(RelationGetNamespace(rel)),
@@ -11030,7 +11126,7 @@ build_ctas_with_dist(Relation rel, List *dist_clause,
 		storage_opts = lappend(storage_opts, defWithOids(true));
 
 	pre_built = prebuild_temp_table(rel, tmprel, dist_clause,
-									storage_opts, hidden_types,
+									storage_opts,
 									(RelationIsAoRows(rel) ||
 									 RelationIsAoCols(rel)),
 									useExistingColumnAttributes);
@@ -11143,349 +11239,14 @@ new_rel_opts(Relation rel, List *lwith)
 static RangeVar *
 make_temp_table_name(Relation rel, BackendId id)
 {
-	char *nspname,
-		 tmpname[NAMEDATALEN];
+	char	   *nspname;
+	char		tmpname[NAMEDATALEN];
+
 	/* temporary enough */
 	snprintf(tmpname, NAMEDATALEN, "pg_temp_%u_%i", RelationGetRelid(rel), id);
 	nspname = get_namespace_name(RelationGetNamespace(rel));
 
 	return makeRangeVar(nspname, pstrdup(tmpname), -1);
-}
-
-/* Fill-in the names field of the given TypeName node with the name
- * of an existing type that matches the given internal length, and alignment.
- *
- * If none can be found, return NULL, else return the given TypeName
- * pointer.
- *
- * It may seem as if we should include by-value in the test, but built-in
- * types cover the allowable internal lengths for these and we don't want
- * to second guess.
- *
- * Specifically for use by make_typename.
- */
-static TypeName *
-pick_name_of_similar_type(TypeName *tname, int2 typlen, char typalign)
-{
-	Relation	typerel;
-	ScanKeyData scankey[2];
-	SysScanDesc scan;
-	HeapTuple	tuple;
-
-	/* XXX XXX: not sure why this is RowExclusiveLock */
-	typerel = heap_open(TypeRelationId, RowExclusiveLock);
-
-	/* SELECT * FROM pg_type WHERE typlen = :1 AND typalign = :2 FOR UPDATE */
-	ScanKeyInit(&scankey[0],
-				Anum_pg_type_typlen,
-				BTEqualStrategyNumber, F_INT2EQ,
-				Int16GetDatum(typlen));
-	ScanKeyInit(&scankey[1],
-				Anum_pg_type_typalign,
-				BTEqualStrategyNumber, F_CHAREQ,
-				CharGetDatum(typalign));
-	/* No index */
-	scan = systable_beginscan(typerel, InvalidOid, false,
-							  SnapshotNow, 2, scankey);
-	tuple = systable_getnext(scan);
-	if (HeapTupleIsValid(tuple))
-	{
-		Form_pg_type typtuple = (Form_pg_type)GETSTRUCT(tuple);
-		tname->names =
-			list_make2(makeString(get_namespace_name(typtuple->typnamespace)),
-					   makeString(pstrdup(NameStr(typtuple->typname))));
-	}
-	else
-		tname = NULL;
-
-	systable_endscan(scan);
-	heap_close(typerel, RowExclusiveLock);
-
-	return tname;
-}
-
-/*
- * Build the basic CreateFunctionStmt statement for dispatch as part of
- * build_hidden_type().
- */
-static CreateFunctionStmt *
-build_iofunc(char *newname, char *iotype, char *baseio, char *returns)
-{
-	CreateFunctionStmt *iofunc;
-	char ioname[NAMEDATALEN];
-	FunctionParameter *param;
-	List *args;
-
-	if (strcmp("in", iotype) == 0)
-	   args = list_make2(makeString("pg_catalog"), makeString("cstring"));
-	else
-		args = list_make1(makeString(newname));
-
-	/*
-	 * CREATE FUNCTION F(cstring) RETURNS shelltype AS 'int4(cstring)' language
-	 * internal;
-	 */
-	iofunc = makeNode(CreateFunctionStmt);
-	snprintf(ioname, NAMEDATALEN, "%s_%s", newname, iotype);
-	iofunc->funcname = list_make1(makeString(pstrdup(ioname)));
-	param = makeNode(FunctionParameter);
-	param->argType = makeTypeNameFromNameList(args);
-	param->mode = FUNC_PARAM_IN;
-	iofunc->parameters = list_make1(param);
-	iofunc->returnType = makeTypeName(returns);
-	iofunc->options = list_make2(makeDefElem("as", (Node *)list_make1(makeString(baseio))),
-								 makeDefElem("language", (Node *)makeString("internal")));
-
-	return iofunc;
-}
-
-/*
- * Build a temporary hidden type for dropped columns for which there is no
- * suitable pg_type entry. We find these "ghost types" when a user has created a
- * type, dropped a column using it and THEN dropped the type. There is a kind of
- * "homeopathic echo" here, where we have the structural details of the type in
- * pg_attribute but no way of pin pointing the type configuration by name.
- *
- * Procedure:
- * a) Build a shell type
- * b) Create IO functions
- * c) Fill out the shell type with IO functions and correct length and alignment
- * data
- *
- * The IO functions do not have to do anything because all values in the column
- * will be NULL, the functions will never be called.
- */
-static TypeName *
-build_hidden_type(Form_pg_attribute att)
-{
-	DefineStmt *newtype;
-	CreateFunctionStmt *iofunc;
-	Value *inputname;
-	Value *outputname;
-	DestReceiver *dest = None_Receiver;
-	Query *q;
-	char *alignname = NULL;
-	TypeName *typname;
-	char newname[NAMEDATALEN];
-
-	Assert(Gp_role == GP_ROLE_DISPATCH);
-
-	snprintf(newname, NAMEDATALEN, "pg_atsdb_%u_%i_%u", att->attrelid,
-			 att->attnum, MyBackendId);
-
-	/* shell type */
-	newtype = makeNode(DefineStmt);
-	newtype->kind = OBJECT_TYPE;
-	newtype->defnames = list_make1(makeString(newname));
-
-	/* that's all that's needed for the shell! */
-	q = parse_analyze((Node *)newtype, NULL, NULL, 0);
-	ProcessUtility((Node *)q->utilityStmt,
-				   synthetic_sql,
-				   NULL,
-				   false, /* not top level */
-				   dest,
-				   NULL);
-	CommandCounterIncrement();
-
-	/*
-	 * Now for the input function.
-	 */
-	iofunc = build_iofunc(newname, "in", "int4in", newname);
-	inputname = copyObject(linitial(iofunc->funcname));
-	q = parse_analyze((Node *)iofunc, NULL, NULL, 0);
-	ProcessUtility((Node *)q->utilityStmt,
-				   synthetic_sql,
-				   NULL,
-				   false, /* not top level */
-				   dest,
-				   NULL);
-	CommandCounterIncrement();
-
-	/* and then output */
-	/* output function accepts shellname as its argument */
-	iofunc = build_iofunc(newname, "out", "int4out", "cstring");
-	outputname = copyObject(linitial(iofunc->funcname));
-	q = parse_analyze((Node *)iofunc, NULL, NULL, 0);
-	ProcessUtility((Node *)q->utilityStmt,
-				   synthetic_sql,
-				   NULL,
-				   false, /* not top level */
-				   dest,
-				   NULL);
-	CommandCounterIncrement();
-
-	/* now build full type */
-	newtype = makeNode(DefineStmt);
-	newtype->kind = OBJECT_TYPE;
-	newtype->defnames = list_make1(makeString(newname));
-
-	newtype->definition = lappend(newtype->definition, makeDefElem("input", (Node *)inputname));
-	newtype->definition = lappend(newtype->definition, makeDefElem("output", (Node *)outputname));
-
-	if (att->attbyval)
-		newtype->definition = lappend(newtype->definition, makeDefElem("passedbyvalue",
-																	   (Node *)makeInteger(1)));
-
-	if (att->attlen == -1)
-		newtype->definition = lappend(newtype->definition, makeDefElem("internallength",
-																	   (Node *)makeString("variable")));
-	else
-		newtype->definition = lappend(newtype->definition, makeDefElem("internallength",
-																	   (Node *)makeInteger(att->attlen)));
-
-	if (att->attalign == 'd')
-		alignname = "double";
-	else if (att->attalign == 'i')
-		alignname = "int4";
-	else if (att->attalign == 's')
-		alignname = "int2";
-	else if (att->attalign == 'c')
-		alignname = "char";
-	else
-		Assert(false); /* shouldn't get here */
-
-	newtype->definition = lappend(newtype->definition, makeDefElem("alignment",
-																   (Node *)makeString(alignname)));
-
-	q = parse_analyze((Node *)newtype, NULL, NULL, 0);
-	ProcessUtility((Node *)q->utilityStmt,
-				   synthetic_sql,
-				   NULL,
-				   false, /* not top level */
-				   dest,
-				   NULL);
-	CommandCounterIncrement();
-
-	typname = makeNode(TypeName);
-	typname->names = list_make1(makeString(pstrdup(newname)));
-
-	return typname;
-}
-
-/* Allocate and return a pointer to a TypeName node specifying the
- * qualified name of an existing type that matches the internal length
- * and alignment of the given pg_attribute tuple.
- *
- * First we try a few hard-coded builtin types. Internal types exist for
- *    select distinct typlen, typalign
- *    from pg_type where typlen > 0;
- * on a new catalog.  Names are not unique.
- *
- * MPP-5483: If that fails, we look in pg_type for a match.  If even that
- * fails, we issue an error.
- *
- * Specifically for use by prebuilt_temp_table.
- */
-static TypeName *
-make_typname(Form_pg_attribute att, bool *built)
-{
-	TypeName *tname = makeNode(TypeName);
-	int2 attlen = att->attlen;
-	Value *typname = NULL;
-	bool dig_in_catalog = false;
-
-	Assert(att->attisdropped); /* better not be here unless */
-
-	tname->typemod = att->atttypmod;
-
-	if (attlen == -1)
-	{
-		if (att->attalign == 'i')
-		{
-			if (att->atttypmod < MaxAttrSize)
-				typname = makeString(pstrdup("varchar"));
-			else
-				typname = makeString(pstrdup("numeric"));
-
-			/* 
-			 * We're building dropped columns. Dropped columns should never
-			 * create a TOAST table because they only ever contain NULL. So,
-			 * even if the original typmod was -1 (variable length), set it to a
-			 * real value so that we avoid TOAST creation. To do this, we must
-			 * be one byte longer than the maximum variable length header size.
-			 * See needs_toast_table().
-			 *
-			 * XXX: there may be occassions where tables with dropped TOASTable
-			 * columns do still have TOAST tables. Need to explore those.
-			 */
-			tname->typemod = 1 + Max(NUMERIC_HDRSZ, VARHDRSZ);
-		}
-		else if (att->attalign == 'd')
-			typname = makeString(pstrdup("path"));
-		else
-			dig_in_catalog = true;
-	}
-	else if (attlen == 1 && att->attalign == 'c')
-    {
-		typname = makeString(pstrdup("char"));
-    }
-	else if (attlen == 2 && att->attalign == 's')
-    {
-		typname = makeString(pstrdup("int2"));
-    }
-	else if (attlen == 4 && att->attalign == 'i')
-    {
-		typname = makeString(pstrdup("int4"));
-    }
-	else if (attlen == 6 && att->attalign == 's')
-    {
-            typname = makeString(pstrdup("tid"));
-	}
-    else if (attlen == 6 && att->attalign == 'i')
-	{
-            typname = makeString(pstrdup("macaddr"));
-    }
-	else if (attlen == 8 && att->attalign == 'd')
-    {
-		typname = makeString(pstrdup("int8"));
-    }
-	else if (attlen == 12 && att->attalign == 'd')
-    {
-			typname = makeString(pstrdup("timetz"));
-	}
-	else if (attlen == 12 && att->attalign == 'i')
-	{
-		typname = makeString(pstrdup("tinterval"));
-    }
-	else if (attlen == 16 && att->attalign == 'd')
-    {
-		typname = makeString(pstrdup("interval"));
-    }
-	else if (attlen == 24 && att->attalign == 'd')
-    {
-		typname = makeString(pstrdup("circle"));
-    }
-	else if (attlen == 32 && att->attalign == 'd')
-    {
-		typname = makeString(pstrdup("box"));
-    }
-	else if (attlen == 64 && att->attalign == 'i')
-    {
-		typname = makeString(pstrdup("name"));
-    }
-	else
-	{
-		dig_in_catalog = true;
-    }
-
-	*built = false; /* assume we found an existing type */
-	if ( dig_in_catalog )
-	{
-		tname = pick_name_of_similar_type(tname, attlen, att->attalign);
-		if (!tname)
-		{
-			*built = true;
-			tname = build_hidden_type(att);
-		}
-	}
-	else
-	{
-		tname->names = list_make2(makeString(pstrdup("pg_catalog")), typname);
-	}
-
-	tname->location = -1;
-	return tname;
 }
 
 /*
@@ -11502,13 +11263,11 @@ make_typname(Form_pg_attribute att, bool *built)
  */
 static bool
 prebuild_temp_table(Relation rel, RangeVar *tmpname, List *distro, List *opts,
-					List **hidden_types, bool isTmpTableAo, 
-					bool useExistingColumnAttributes)
+					bool isTmpTableAo, bool useExistingColumnAttributes)
 {
 	bool need_rebuild = false;
 	int attno = 0;
 	TupleDesc tupdesc = RelationGetDescr(rel);
-	List *drop_atts = NIL; /* attnums where we want an attribute to drop */
 
 	/* 
 	 * We cannot CTAS and do per column compression for AOCO tables so we need
@@ -11545,7 +11304,6 @@ prebuild_temp_table(Relation rel, RangeVar *tmpname, List *distro, List *opts,
 	{
 		CreateStmt *cs = makeNode(CreateStmt);
 		Query *q;
-		char *dstr = "__gp_atsdb_droppedcol";
 		DestReceiver *dest = None_Receiver;
 		List **col_encs = NULL;
 
@@ -11608,16 +11366,18 @@ prebuild_temp_table(Relation rel, RangeVar *tmpname, List *distro, List *opts,
 
 			if (att->attisdropped)
 			{
-				NameData alias;
-				bool built;
-
-				tname = make_typname(att, &built);
-				snprintf(NameStr(alias), sizeof(alias), "%s%d", dstr, attno);
-				cd->colname = pstrdup(NameStr(alias));
-				drop_atts = lappend_int(drop_atts, attno);
-
-				if (built)
-					*hidden_types = lappend(*hidden_types, tname->names);
+				/*
+				 * Use dummy int4 columns to stand in for dropped columns.
+				 * We cannot easily reconstruct the original layout, because
+				 * we don't know what the original datatype was, and it might
+				 * not even exist anymore. This means that the temp table is
+				 * not binary-compatible with the old table. We will fix that
+				 * by updating the catalogs of the original table, to match
+				 * the temp table we build here, before swapping the relation
+				 * files.
+				 */
+				tname = makeTypeNameFromOid(INT4OID, -1);
+				cd->colname = pstrdup(NameStr(att->attname));
 			}
 			else
 			{
@@ -11669,41 +11429,6 @@ prebuild_temp_table(Relation rel, RangeVar *tmpname, List *distro, List *opts,
 					   dest,
 					   NULL);
 		CommandCounterIncrement();
-
-		/* should always be true */
-		if (drop_atts)
-		{
-			/* Build an ALTER TABLE DROP COLUMN statement */
-			AlterTableStmt *ats = makeNode(AlterTableStmt);
-			ListCell *lc;
-
-			ats->relkind = OBJECT_TABLE;
-			ats->relation = tmpname;
-
-			foreach(lc, drop_atts)
-			{
-				AlterTableCmd *atc = makeNode(AlterTableCmd);
-				NameData colname;
-
-				attno = lfirst_int(lc);
-				atc->subtype = AT_DropColumn;
-				snprintf(NameStr(colname), NAMEDATALEN, "%s%d", dstr, attno);
-				atc->name = pstrdup(NameStr(colname));
-				ats->cmds = lappend(ats->cmds, atc);
-			}
-#ifdef NOT_USED
-			elog_node_display(NOTICE, "DROP STATEMENT", ats, true);
-#endif
-
-			q = parse_analyze((Node *)ats, NULL, NULL, 0);
-			ProcessUtility((Node *)q->utilityStmt,
-						   synthetic_sql,
-						   NULL,
-						   false, /* not top level */
-						   dest,
-						   NULL);
-			CommandCounterIncrement();
-		}
 	}
 	return need_rebuild;
 }
@@ -11809,7 +11534,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 	bool		is_ao = false;
 	bool        is_aocs = false;
 	char        relstorage = RELSTORAGE_HEAP;
-	List	   *hidden_types = NIL; /* types we need to build for dropped columns */
 	int         nattr; /* number of attributes */
 	bool useExistingColumnAttributes = true;
 	SetDistributionCmd *qe_data = NULL; 
@@ -12157,7 +11881,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		queryDesc = build_ctas_with_dist(rel, ldistro,
 						untransformRelOptions(newOptions),
 						&tmprv,
-						&hidden_types, useExistingColumnAttributes);
+						useExistingColumnAttributes);
 
 		PG_TRY();
 		{
@@ -12241,7 +11965,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		backend_id = qe_data->backendId;
 		tmprv = make_temp_table_name(rel, backend_id);
 		oid_map = qe_data->indexOidMap;
-		hidden_types = qe_data->hiddenTypes;
 
 		if (list_length(lprime) == 3)
 		{
@@ -12278,6 +12001,13 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 	ATExecChangeOwner(RangeVarGetRelid(tmprv, false),
 					  rel->rd_rel->relowner, true);
 	CommandCounterIncrement(); /* see the effects of the command */
+
+	/*
+	 * Update pg_attribute for dropped columns. The temp table we built
+	 * uses int4 to stand in for any dropped columns, so we need to update
+	 * the original table's definition to match the new contents.
+	 */
+	change_dropped_col_datatypes(rel);
 
 	/*
 	 * Step (f) - swap relfilenodes and MORE !!!
@@ -12360,8 +12090,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 
 		qe_data->indexOidMap = oid_map;
 
-		if (hidden_types)
-			qe_data->hiddenTypes = hidden_types;
 		linitial(lprime) = lwith;
 		lsecond(lprime) = qe_data;
 		lprime = lappend(lprime, makeInteger(is_ao ? (is_aocs ? 2 : 1) : 0));
@@ -12375,23 +12103,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		object.objectSubId = 0;
 
 		performDeletion(&object, DROP_RESTRICT);
-
-		if (hidden_types)
-		{
-			object.classId = TypeRelationId;
-
-			foreach(lc, hidden_types)
-			{
-				TypeName *tname = makeTypeNameFromNameList(lfirst(lc));
-				int32		typmod;
-				Oid			typid = typenameTypeId(NULL, tname, &typmod);
-
-				object.objectId = typid;
-
-				/* cascade to get rid of functions */
-				performDeletion(&object, DROP_CASCADE);
-			}
-		}
 	}
 
 l_distro_fini:
@@ -14869,6 +14580,7 @@ ATPExecPartSplit(Relation *rel,
 		ct->relKind = RELKIND_RELATION;
 		ct->ownerid = (*rel)->rd_rel->relowner;
 		ct->is_split_part = true;
+		/* No transformation happens for this stmt in parse_analyze() */
 		q = parse_analyze((Node *)ct, NULL, NULL, 0);
 		ProcessUtility((Node *)q->utilityStmt,
 					   synthetic_sql,
@@ -14911,6 +14623,7 @@ ATPExecPartSplit(Relation *rel,
 		mypc2->location = -1;
 		cmd->def = (Node *)mypc;
 		ats->cmds = list_make1(cmd);
+		/* No transformation happens for this stmt in parse_analyze() */
 		q = parse_analyze((Node *)ats, NULL, NULL, 0);
 
 		heap_close(*rel, NoLock);
@@ -14966,16 +14679,10 @@ ATPExecPartSplit(Relation *rel,
 		mypc->arg2 = (Node *)makeNode(AlterPartitionCmd);
 
 		cmd->def = (Node *)mypc;
+		/* No transformation happens for this stmt in parse_analyze() */
 		q = parse_analyze((Node *)ats, NULL, NULL, 0);
 		heap_close(*rel, NoLock);
 
-		/* GPDB_83_MERGE_FIXME: the original comment said:
-		 *
-		 * [result of parse_analyze] Might have expanded to multiple statements if, for example, the
-		 * master table has indexes on it.
-		 *
-		 * Can that really happen? How do we handle that nowadays?
-		 */
 		ProcessUtility((Node *)q->utilityStmt,
 					   synthetic_sql,
 					   NULL,
@@ -15334,6 +15041,7 @@ ATPExecPartSplit(Relation *rel,
 			}
 
 			ats->cmds = list_make1(cmd);
+			/* No transformation happens for this stmt in parse_analyze() */
 			q = parse_analyze((Node *)ats, NULL, NULL, 0);
 
 			heap_close(*rel, NoLock);

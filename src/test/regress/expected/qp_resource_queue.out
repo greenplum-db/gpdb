@@ -11,14 +11,8 @@ set search_path to qp_resource_queue;
 -- start_ignore
 drop role if exists tbl16369_user1;
 NOTICE:  role "tbl16369_user1" does not exist, skipping
-NOTICE:  role "tbl16369_user1" does not exist, skipping  (seg1 nikos-mac:25433 pid=58771)
-NOTICE:  role "tbl16369_user1" does not exist, skipping  (seg0 nikos-mac:25432 pid=58769)
-NOTICE:  role "tbl16369_user1" does not exist, skipping  (seg2 nikos-mac:25434 pid=58772)
 drop role if exists tbl16369_user3;
 NOTICE:  role "tbl16369_user3" does not exist, skipping
-NOTICE:  role "tbl16369_user3" does not exist, skipping  (seg1 nikos-mac:25433 pid=58771)
-NOTICE:  role "tbl16369_user3" does not exist, skipping  (seg0 nikos-mac:25432 pid=58769)
-NOTICE:  role "tbl16369_user3" does not exist, skipping  (seg2 nikos-mac:25434 pid=58772)
 drop resource queue tbl16369_resq1;
 ERROR:  resource queue "tbl16369_resq1" does not exist
 drop resource queue tbl16369_resq3;

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title>Considerations when Using GPORCA</title>
+  <abstract>
+    <shortdesc> To execute queries optimally with GPORCA, query criteria to
+      consider. </shortdesc>
+  </abstract>
+  <body>
+    <p>Ensure the following criteria are met:<ul id="ul_bpd_4rb_kr">
+        <li>The table does not contain multi-column partition keys.</li>
+        <li>The multi-level partitioned table is a uniform multi-level partitioned table. See <xref
+            href="query-piv-uniform-part-tbl.xml#topic1"/>.</li>
+        <li>The server configuration parameter <codeph>optimizer_enable_master_only_queries</codeph>
+          is set to <codeph>on</codeph> when running against master only tables such as the system
+          table <i>pg_attribute</i>. For information about the parameter, see the <cite>Greenplum
+            Database Reference Guide</cite>.<note>Enabling this parameter decreases performance of
+            short running catalog queries. To avoid this issue, set this parameter only for a
+            session or a query. </note></li>
+        <li>Statistics have been collected on the root partition of a partitioned table.</li>
+      </ul></p>
+    <p>If the partitioned table contains more than 20,000 partitions, consider a redesign of the
+      table schema. </p>
+    <p>These server configuration parameters affect GPORCA query processing.</p>
+    <ul id="ul_jt3_nnq_1y">
+      <li>The parameter <codeph>optimizer_join_order_threshold</codeph> specifies the maximum number
+        of join children for which GPORCA uses the dynamic programming-based
+        join ordering algorithm.</li>
+      <li>The parameter <codeph>optimizer_parallel_union</codeph> controls the amount of
+        parallelization that occurs for queries that contain a <codeph>UNION</codeph> or
+          <codeph>UNION ALL</codeph> clause. When the value is <codeph>on</codeph>, Pivotal Query
+        Optimizer can generate a query plan the child operations of a <codeph>UNION</codeph> or
+          <codeph>UNION ALL</codeph> operation execute in parallel on segment instances. </li>
+      <li>The parameter <codeph>optimizer_sort_factor</codeph> controls the cost factor that Pivotal
+        Query Optimizer applies to sorting operations during query optimization. The cost factor can
+        be adjusted for queries when data skew is present. </li>
+    </ul>
+    <p> For information about the parameter, see the <cite>Greenplum Database Reference
+      Guide</cite>.</p>
+    <p>GPORCA generates minidumps to describe the optimization context for a
+      given query. The minidump files are used by Pivotal support to analyze Greenplum Database
+      issues. The information in the file is not in a format that can be easily used by customers
+      for debugging or troubleshooting. The minidump file is located under the master data directory
+      and uses the following naming format:</p>
+    <p>
+      <codeph>Minidump_<varname>date</varname>_<varname>time</varname>.mdp</codeph>
+    </p>
+    <p>For information about the minidump file, see the server configuration parameter
+        <codeph>optimizer_minidump</codeph> in the <cite>Greenplum Database Reference
+      Guide</cite>.</p>
+    <p>When the <codeph>EXPLAIN ANALYZE</codeph> command uses GPORCA, the
+        <codeph>EXPLAIN</codeph> plan shows only the number of partitions that are being eliminated.
+      The scanned partitions are not shown. To show name of the scanned partitions in the segment
+      logs set the server configuration parameter <codeph>gp_log_dynamic_partition_pruning</codeph>
+      to <codeph>on</codeph>. This example <codeph>SET</codeph> command enables the parameter.</p>
+    <p>
+      <codeblock>SET gp_log_dynamic_partition_pruning = on;</codeblock>
+    </p>
+  </body>
+</topic>

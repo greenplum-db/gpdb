@@ -116,7 +116,7 @@ def impl(context, cid):
     mirror_bufpool_resync_changed_page_count, mirror_bufpool_resync_ckpt_loc,
     mirror_bufpool_resync_ckpt_block_num, mirror_append_only_loss_eof,
     mirror_append_only_new_eof, relation_bufpool_kind, parent_xid,
-    persistent_serial_num, previous_free_tid) from (select
+    persistent_serial_num) from (select
     ctid,tablespace_oid,database_oid,relfilenode_oid,
     segment_file_num,relation_storage_manager,
     persistent_state,create_mirror_data_loss_tracking_session_num,
@@ -125,7 +125,7 @@ def impl(context, cid):
     mirror_bufpool_resync_changed_page_count, mirror_bufpool_resync_ckpt_loc,
     mirror_bufpool_resync_ckpt_block_num, mirror_append_only_loss_eof,
     mirror_append_only_new_eof, relation_bufpool_kind, parent_xid,
-    persistent_serial_num, previous_free_tid from gp_persistent_relation_node
+    persistent_serial_num from gp_persistent_relation_node
     limit 1) as test; ''' % mirror_state
     runCommandOnRemoteSegment(context, cid, add_persistent_query)
 

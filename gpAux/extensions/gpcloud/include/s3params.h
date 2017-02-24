@@ -3,12 +3,22 @@
 
 #include "s3common_headers.h"
 #include "s3memory_mgmt.h"
+#include "s3url.h"
 
 class S3Params {
    public:
-    S3Params() : keySize(0), chunkSize(0), numOfChunks(0) {
+    S3Params(const string& sourceUrl = "", bool useHttps = true, const string& version = "",
+             const string& region = "")
+        : s3Url(sourceUrl, useHttps, version, region), keySize(0), chunkSize(0), numOfChunks(0) {
     }
+
     virtual ~S3Params() {
+    }
+
+    S3Params setPrefix(const string& key) {
+        S3Params params(*this);
+        params.getS3Url().setPrefix(key);
+        return params;
     }
 
     uint64_t getChunkSize() const {
@@ -33,22 +43,6 @@ class S3Params {
         this->cred.token = token;
     }
 
-    const string& getRegion() const {
-        return region;
-    }
-
-    void setRegion(const string& region) {
-        this->region = region;
-    }
-
-    const string& getKeyUrl() const {
-        return keyUrl;
-    }
-
-    void setKeyUrl(const string& url) {
-        this->keyUrl = url;
-    }
-
     uint64_t getNumOfChunks() const {
         return numOfChunks;
     }
@@ -63,14 +57,6 @@ class S3Params {
 
     void setKeySize(uint64_t size) {
         this->keySize = size;
-    }
-
-    const string& getBaseUrl() const {
-        return baseUrl;
-    }
-
-    void setBaseUrl(const string& url) {
-        this->baseUrl = url;
     }
 
     uint64_t getLowSpeedLimit() const {
@@ -89,14 +75,6 @@ class S3Params {
         this->lowSpeedTime = lowSpeedTime;
     }
 
-    bool isEncryption() const {
-        return encryption;
-    }
-
-    void setEncryption(bool encryption) {
-        this->encryption = encryption;
-    }
-
     bool isDebugCurl() const {
         return debugCurl;
     }
@@ -109,6 +87,13 @@ class S3Params {
         return autoCompress;
     }
 
+    bool isVerifyCert() const {
+        return verifyCert;
+    }
+    void setVerifyCert(bool verifyCert) {
+        this->verifyCert = verifyCert;
+    }
+
     void setAutoCompress(bool autoCompress) {
         this->autoCompress = autoCompress;
     }
@@ -117,24 +102,31 @@ class S3Params {
         return memoryContext;
     }
 
-   private:
-    string baseUrl;  // original url to read/write.
+    S3Url& getS3Url() {
+        return s3Url;
+    }
 
-    string keyUrl;
+    const S3Url& getS3Url() const {
+        return s3Url;
+    }
+
+   private:
+    S3Url s3Url;  // original url to read/write.
+
     uint64_t keySize;  // key/file size.
 
     S3Credential cred;  // S3 credential.
 
-    string region;
     uint64_t chunkSize;    // chunk size
     uint64_t numOfChunks;  // number of chunks(threads).
 
     uint64_t lowSpeedLimit;  // low speed limit
     uint64_t lowSpeedTime;   // low speed timeout
 
-    bool encryption;    // HTTP or HTTPS
     bool debugCurl;     // debug curl or not
     bool autoCompress;  // whether to compress data before uploading
+    bool verifyCert;  // This option determines whether curl verifies the authenticity of the peer's
+                      // certificate.
 
     S3MemoryContext memoryContext;
 };

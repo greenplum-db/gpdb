@@ -157,8 +157,7 @@ PGPORT=15432 make installcheck-good
 You must first install the below libraries in the below order (see the READMEs on each repository):
 
 1. https://github.com/greenplum-db/gp-xerces
-2. https://github.com/greenplum-db/gpos
-3. https://github.com/greenplum-db/gporca
+2. https://github.com/greenplum-db/gporca
 
 Next, change your `configure` command to have the additional option `--enable-orca`.
 ```

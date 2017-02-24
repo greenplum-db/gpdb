@@ -14,8 +14,12 @@ endif
 
 # Targets
 PROGRAM = gpcheckcloud
-OBJS = gpcheckcloud.o ../../lib/http_parser.o ../../lib/ini.o $(addprefix ../../src/,$(COMMON_OBJS))
+OBJS = gpcheckcloud.o ../../lib/http_parser.o ../../lib/ini.o $(COMMON_OBJS)
 
 # Launch
 PGXS := $(shell pg_config --pgxs)
 include $(PGXS)
+
+%.o: ../../src/%.cpp
+	@# CPPFLAGS := $(PG_CPPFLAGS) $(CPPFLAGS)
+	$(CXX) -c $(CPPFLAGS) $< -o $@

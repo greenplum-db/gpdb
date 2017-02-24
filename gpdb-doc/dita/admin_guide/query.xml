@@ -1,0 +1,2867 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="in138244">Querying Data</title>
+  <shortdesc>This topic provides information about using SQL in Greenplum databases.</shortdesc>
+  <body>
+    <p>You enter SQL statements called queries to view, change, and analyze data in a database using
+      the <codeph>psql</codeph> interactive SQL client and other client tools.</p>
+  </body>
+
+  <topic id="topic2" xml:lang="en">
+    <title id="in140509">Defining Queries</title>
+
+    <body>
+      <p>This topic describes how to construct SQL queries in Greenplum Database.</p>
+
+      <ul>
+        <li id="in143747">
+          <xref format="dita" href="#topic3" type="topic"/>
+        </li>
+
+        <li id="in143755">
+          <xref format="dita" href="#topic4" type="topic"/>
+        </li>
+      </ul>
+    </body>
+
+    <topic id="topic3" xml:lang="en">
+      <title id="in140510">SQL Lexicon</title>
+
+      <body>
+        <p>SQL is a standard language for accessing databases. The language consists of elements
+          that enable data storage, retrieval, analysis, viewing, manipulation, and so on. You use
+          SQL commands to construct queries and commands that the Greenplum Database engine
+          understands. SQL queries consist of a sequence of commands. Commands consist of a sequence
+          of valid tokens in correct syntax order, terminated by a semicolon (<codeph>;</codeph>).
+          For more information about SQL commands, see the <cite>Greenplum Database Reference
+            Guide</cite>.</p>
+
+        <p>Greenplum Database uses PostgreSQL's structure and syntax, with some exceptions. For more
+          information about SQL rules and concepts in PostgreSQL, see "SQL Syntax" in the PostgreSQL
+          documentation.</p>
+      </body>
+    </topic>
+
+    <topic id="topic4" xml:lang="en">
+      <title id="in140511">SQL Value Expressions</title>
+
+      <body>
+        <p>SQL value expressions consist of one or more values, symbols, operators, SQL functions,
+          and data. The expressions compare data or perform calculations and return a value as the
+          result. Calculations include logical, arithmetic, and set operations.</p>
+
+        <p>The following are value expressions:</p>
+
+        <ul>
+          <li id="in199821">An aggregate expression</li>
+
+          <li id="in199865">An array constructor</li>
+
+          <li id="in199876">A column reference</li>
+
+          <li id="in199883">A constant or literal value</li>
+
+          <li id="in143969">A correlated subquery</li>
+
+          <li id="in199893">A field selection expression</li>
+
+          <li id="in199900">A function call</li>
+
+          <li id="in205284">A new column value in an <codeph>INSERT</codeph> or
+              <codeph>UPDATE</codeph></li>
+
+          <li id="in205286">An operator invocation column reference</li>
+
+          <li id="in144037">A positional parameter reference, in the body of a function definition
+            or prepared statement</li>
+
+          <li id="in144106">A row constructor</li>
+
+          <li id="in199915">A scalar subquery</li>
+
+          <li id="in205305">A search condition in a <codeph>WHERE</codeph> clause</li>
+
+          <li id="in205332">A target list of a <codeph>SELECT</codeph> command</li>
+
+          <li id="in199922">A type cast</li>
+
+          <li id="in199929">A value expression in parentheses, useful to group sub-expressions and
+            override precedence</li>
+
+          <li id="in199936">A window expression</li>
+        </ul>
+
+        <p>SQL constructs such as functions and operators are expressions but do not follow any
+          general syntax rules. For more information about these constructs, see <xref format="dita"
+            href="#topic26" type="topic"/>.</p>
+      </body>
+
+      <topic id="topic5" xml:lang="en">
+        <title>Column References</title>
+
+        <body>
+          <p>A column reference has the form:</p>
+
+          <p>
+            <codeblock><i>correlation</i>.<i>columnname</i></codeblock>
+          </p>
+
+          <p>Here, <codeph>correlation</codeph> is the name of a table (possibly qualified with a
+            schema name) or an alias for a table defined with a <codeph>FROM</codeph> clause or one
+            of the keywords <codeph>NEW</codeph> or <codeph>OLD</codeph>. <codeph>NEW</codeph> and
+              <codeph>OLD</codeph> can appear only in rewrite rules, but you can use other
+            correlation names in any SQL statement. If the column name is unique across all tables
+            in the query, you can omit the "<codeph>correlation.</codeph>" part of the column
+            reference.</p>
+        </body>
+      </topic>
+
+      <topic id="topic6" xml:lang="en">
+        <title>Positional Parameters</title>
+
+        <body>
+          <p>Positional parameters are arguments to SQL statements or functions that you reference
+            by their positions in a series of arguments. For example, <codeph>$1</codeph> refers to
+            the first argument, <codeph>$2</codeph> to the second argument, and so on. The values of
+            positional parameters are set from arguments external to the SQL statement or supplied
+            when SQL functions are invoked. Some client libraries support specifying data values
+            separately from the SQL command, in which case parameters refer to the out-of-line data
+            values. A parameter reference has the form:</p>
+
+          <p>
+            <codeblock>$number</codeblock>
+          </p>
+
+          <p>For example:</p>
+
+          <p>
+            <codeblock>CREATE FUNCTION dept(text) RETURNS dept
+    AS $$ SELECT * FROM dept WHERE name = $1 $$
+    LANGUAGE SQL;</codeblock>
+          </p>
+
+          <p>Here, the <codeph>$1</codeph> references the value of the first function argument
+            whenever the function is invoked.</p>
+        </body>
+      </topic>
+
+      <topic id="topic7" xml:lang="en">
+        <title>Subscripts</title>
+
+        <body>
+          <p>If an expression yields a value of an array type, you can extract a specific element of
+            the array value as follows:</p>
+
+          <p>
+            <codeblock><i>expression</i>[<i>subscript</i>]
+</codeblock>
+          </p>
+
+          <p>You can extract multiple adjacent elements, called an array slice, as follows
+            (including the brackets):</p>
+
+          <p>
+            <codeblock><i>expression</i>[<i>lower_subscript</i>:<i>upper_subscript</i>]
+</codeblock>
+          </p>
+
+          <p>Each subscript is an expression and yields an integer value.</p>
+
+          <p>Array expressions usually must be in parentheses, but you can omit the parentheses when
+            the expression to be subscripted is a column reference or positional parameter. You can
+            concatenate multiple subscripts when the original array is multidimensional. For example
+            (including the parentheses):</p>
+
+          <p>
+            <codeblock>mytable.arraycolumn[4]</codeblock>
+            <codeblock>mytable.two_d_column[17][34]</codeblock>
+            <codeblock>$1[10:42]</codeblock>
+            <codeblock>(arrayfunction(a,b))[42]</codeblock>
+          </p>
+        </body>
+      </topic>
+
+      <topic id="topic8" xml:lang="en">
+        <title>Field Selection</title>
+
+        <body>
+          <p>If an expression yields a value of a composite type (row type), you can extract a
+            specific field of the row as follows:</p>
+
+          <p>
+            <codeblock><i>expression</i>.<i>fieldname</i></codeblock>
+          </p>
+
+          <p>The row expression usually must be in parentheses, but you can omit these parentheses
+            when the expression to be selected from is a table reference or positional parameter.
+            For example:</p>
+
+          <p>
+            <codeblock>mytable.mycolumn
+</codeblock>
+            <codeblock>$1.somecolumn
+</codeblock>
+            <codeblock>(rowfunction(a,b)).col3
+</codeblock>
+          </p>
+
+          <p>A qualified column reference is a special case of field selection syntax.</p>
+        </body>
+      </topic>
+
+      <topic id="topic9" xml:lang="en">
+        <title>Operator Invocations</title>
+
+        <body>
+          <p>Operator invocations have the following possible syntaxes:</p>
+
+          <p>
+            <codeblock><i>expression operator expression</i>(binary infix operator)</codeblock>
+            <codeblock><i>operator expression</i>(unary prefix operator)</codeblock>
+            <codeblock><i>expression operator</i>(unary postfix operator)</codeblock>
+          </p>
+
+          <p>Where <i>operator</i> is an operator token, one of the key words <codeph>AND</codeph>,
+              <codeph>OR</codeph>, or <codeph>NOT</codeph>, or qualified operator name in the
+            form:</p>
+
+          <p>
+            <codeblock>OPERATOR(<i>schema</i>.<i>operatorname</i>)</codeblock>
+          </p>
+
+          <p>Available operators and whether they are unary or binary depends on the operators that
+            the system or user defines. For more information about built-in operators, see <xref
+              format="dita" href="#topic29" type="topic"/>.</p>
+        </body>
+      </topic>
+
+      <topic id="topic10" xml:lang="en">
+        <title id="in144774">Function Calls</title>
+
+        <body>
+          <p>The syntax for a function call is the name of a function (possibly qualified with a
+            schema name), followed by its argument list enclosed in parentheses:</p>
+
+          <p>
+            <codeblock><i>function</i> ([<i>expression</i> [, <i>expression</i> ... ]])</codeblock>
+          </p>
+
+          <p>For example, the following function call computes the square root of 2:</p>
+
+          <p>
+            <codeblock>sqrt(2)</codeblock>
+          </p>
+
+          <p>See the <cite>Greenplum Database Reference Guide</cite> for lists of the built-in
+            functions by category. You can add custom functions, too.</p>
+        </body>
+      </topic>
+
+      <topic id="topic11" xml:lang="en">
+        <title id="in144846">Aggregate Expressions</title>
+
+        <body>
+          <p>An aggregate expression applies an aggregate function across the rows that a query
+            selects. An aggregate function performs a calculation on a set of values and returns a
+            single value, such as the sum or average of the set of values. The syntax of an
+            aggregate expression is one of the following:</p>
+
+          <ul>
+            <li id="in144858"><codeph><i>aggregate_name</i> ([ , ... ] ) [FILTER (WHERE
+                  <i>condition</i>)] </codeph> — operates across all input rows for which the
+              expected result value is non-null. <codeph>ALL</codeph> is the default.</li>
+
+            <li id="in144859"><codeph><i>aggregate_name</i>(ALL<i>expression</i>[ , ... ] ) [FILTER
+                (WHERE <i>condition</i>)]</codeph> — operates identically to the first form because
+                <codeph>ALL</codeph> is the default</li>
+
+            <li id="in144860"><codeph><i>aggregate_name</i>(DISTINCT <i>expression</i>[ , ... ] )
+                [FILTER (WHERE <i>condition</i>)]</codeph> — operates across all distinct non-null
+              values of input rows</li>
+
+            <li id="in144861"><codeph><i>aggregate_name</i>(*) [FILTER (WHERE
+                <i>condition</i>)]</codeph> — operates on all rows with values both null and
+              non-null. Generally, this form is most useful for the <codeph>count(*)</codeph>
+              aggregate function.</li>
+          </ul>
+
+          <p>Where <i>aggregate_name</i> is a previously defined aggregate (possibly
+            schema-qualified) and <i>expression</i> is any value expression that does not contain an
+            aggregate expression.</p>
+
+          <p>For example, <codeph>count(*)</codeph> yields the total number of input rows,
+              <codeph>count(f1)</codeph> yields the number of input rows in which
+              <codeph>f1</codeph> is <ph>non-null, and </ph><codeph>count(distinct f1)</codeph>
+            yields the number of distinct non-null values of <codeph>f1</codeph>.</p>
+
+          <p>You can specify a condition with the <codeph>FILTER</codeph> clause to limit the input
+            rows to the aggregate function. For example:</p>
+
+          <p>
+            <codeblock>SELECT count(*) FILTER (WHERE gender='F') FROM employee;</codeblock>
+          </p>
+
+          <p>The <codeph>WHERE <codeph>condition</codeph></codeph> of the <codeph>FILTER</codeph>
+            clause cannot contain a set-returning function, subquery, window function, or outer
+            reference. If you use a user-defined aggregate function, declare the state transition
+            function as <codeph>STRICT</codeph> (see <codeph>CREATE AGGREGATE</codeph>).</p>
+
+          <p>For predefined aggregate functions, see <xref format="dita" href="#topic29"
+              type="topic"/>. You can also add custom aggregate functions.</p>
+
+          <p>Greenplum Database provides the <codeph>MEDIAN</codeph> aggregate function, which
+            returns the fiftieth percentile of the <codeph>PERCENTILE_CONT</codeph> result and
+            special aggregate expressions for inverse distribution functions as follows:</p>
+
+          <p>
+            <codeblock>PERCENTILE_CONT(_percentage_) WITHIN GROUP (ORDER BY _expression_)
+</codeblock>
+            <codeblock>PERCENTILE_DISC(_percentage_) WITHIN GROUP (ORDER BY _expression_)
+</codeblock>
+          </p>
+
+          <p>Currently you can use only these two expressions with the keyword <codeph>WITHIN
+              GROUP</codeph>.</p>
+        </body>
+
+        <topic id="topic12" xml:lang="en">
+          <title>Limitations of Aggregate Expressions</title>
+
+          <body>
+            <p>The following are current limitations of the aggregate expressions:</p>
+
+            <ul>
+              <li id="in199103">Greenplum Database does not support the following keywords: ALL,
+                DISTINCT, FILTER and OVER. See <xref format="dita" href="#topic31/in2073121"/> for
+                more details.</li>
+
+              <li id="in199105">An aggregate expression can appear only in the result list or HAVING
+                clause of a SELECT command. It is forbidden in other clauses, such as WHERE, because
+                those clauses are logically evaluated before the results of aggregates form. This
+                restriction applies to the query level to which the aggregate belongs.</li>
+
+              <li id="in200910">When an aggregate expression appears in a subquery, the aggregate is
+                normally evaluated over the rows of the subquery. If the aggregate's arguments
+                contain only outer-level variables, the aggregate belongs to the nearest such outer
+                level and evaluates over the rows of that query. The aggregate expression as a whole
+                is then an outer reference for the subquery in which it appears, and the aggregate
+                expression acts as a constant over any one evaluation of that subquery. See <xref
+                  format="dita" href="#topic15" type="topic"/> and <xref format="dita"
+                  href="#topic29" type="topic"/>.</li>
+
+              <li id="in200915">Greenplum Database does not support DISTINCT with multiple input
+                expressions.</li>
+            </ul>
+          </body>
+        </topic>
+      </topic>
+
+      <topic id="topic13" xml:lang="en">
+        <title id="in199183">Window Expressions</title>
+
+        <body>
+          <p>Window expressions allow application developers to more easily compose complex online
+            analytical processing (OLAP) queries using standard SQL commands. For example, with
+            window expressions, users can calculate moving averages or sums over various intervals,
+            reset aggregations and ranks as selected column values change, and express complex
+            ratios in simple terms.</p>
+
+          <p>A window expression represents the application of a <i>window function</i> applied to a
+              <i>window frame</i>, which is defined in a special <codeph>OVER()</codeph> clause. A
+            window partition is a set of rows that are grouped together to apply a window function.
+            Unlike aggregate functions, which return a result value for each group of rows, window
+            functions return a result value for every row, but that value is calculated with respect
+            to the rows in a particular window partition. If no partition is specified, the window
+            function is computed over the complete intermediate result set.</p>
+
+          <p>The syntax of a window expression is:</p>
+
+          <p>
+            <codeblock><i>window_function</i> ( [<i>expression</i> [, ...]] ) OVER ( <i>window_specification</i> )</codeblock>
+          </p>
+
+          <p>Where <i><codeph>window_function</codeph></i> is one of the functions listed in <xref
+              format="dita" href="#topic30" type="topic"/>, <i><codeph>expression</codeph></i> is
+            any value expression that does not contain a window expression, and
+                <i><codeph>window_specification</codeph></i> is:</p>
+
+          <p><codeblock>[<i>window_name</i>]
+[PARTITION BY <i>expression </i>[, ...]]
+[[ORDER BY <i>expression</i> [ASC | DESC | USING <i>operator</i>] [, ...]
+    [{RANGE | ROWS} 
+       { UNBOUNDED PRECEDING
+       | <i>expression</i> PRECEDING
+       | CURRENT ROW
+       | BETWEEN <i>window_frame_bound</i> AND <i>window_frame_bound</i> }]]</codeblock>    and
+            where <codeph><i>window_frame_bound</i></codeph> can be one
+            of:<codeblock>    UNBOUNDED PRECEDING
+    <i>expression</i> PRECEDING
+    CURRENT ROW
+    <i>expression</i> FOLLOWING
+    UNBOUNDED FOLLOWING</codeblock></p>
+
+          <p>A window expression can appear only in the select list of a <codeph>SELECT</codeph>
+            command. For example:</p>
+
+          <p>
+            <codeblock>SELECT count(*) OVER(PARTITION BY customer_id), * FROM sales;
+</codeblock>
+          </p>
+
+          <p>The <codeph>OVER</codeph> clause differentiates window functions from other aggregate
+            or reporting functions. The <codeph>OVER</codeph> clause defines the
+                <i><codeph>window_specification</codeph></i> to which the window function is
+            applied. A window specification has the following characteristics:</p>
+
+          <ul>
+            <li id="in166168">The <codeph>PARTITION BY</codeph> clause defines the window partitions
+              to which the window function is applied. If omitted, the entire result set is treated
+              as one partition.</li>
+
+            <li id="in167327">The <codeph>ORDER BY</codeph> clause defines the expression(s) for
+              sorting rows within a window partition. The <codeph>ORDER BY</codeph> clause of a
+              window specification is separate and distinct from the <codeph>ORDER BY</codeph>
+              clause of a regular query expression. The <codeph>ORDER BY</codeph> clause is required
+              for the window functions that calculate rankings, as it identifies the measure(s) for
+              the ranking values. For OLAP aggregations, the <codeph>ORDER BY</codeph> clause is
+              required to use window frames (the <codeph>ROWS</codeph> | <codeph>RANGE</codeph>
+              clause).</li>
+          </ul>
+
+          <note type="note">Columns of data types without a coherent ordering, such as
+              <codeph>time</codeph>, are not good candidates for use in the <codeph>ORDER
+              BY</codeph> clause of a window specification. <codeph>Time</codeph>, with or without a
+            specified time zone, lacks a coherent ordering because addition and subtraction do not
+            have the expected effects. For example, the following is not generally true:
+              <codeph>x::time &lt; x::time + '2 hour'::interval</codeph></note>
+
+          <ul>
+            <li id="in167503">The <codeph>ROWS/RANGE</codeph> clause defines a window frame for
+              aggregate (non-ranking) window functions. A window frame defines a set of rows within
+              a window partition. When a window frame is defined, the window function computes on
+              the contents of this moving frame rather than the fixed contents of the entire window
+              partition. Window frames are row-based (<codeph>ROWS</codeph>) or value-based
+                (<codeph>RANGE</codeph>).</li>
+          </ul>
+        </body>
+      </topic>
+
+      <topic id="topic14" xml:lang="en">
+        <title>Type Casts</title>
+
+        <body>
+          <p>A type cast specifies a conversion from one data type to another. Greenplum Database
+            accepts two equivalent syntaxes for type casts:</p>
+
+          <p>
+            <codeblock>CAST ( expression AS type )
+expression::type
+</codeblock>
+          </p>
+
+          <p>The <codeph>CAST</codeph> syntax conforms to SQL; the syntax with <codeph>::</codeph>
+            is historical PostgreSQL usage.</p>
+
+          <p>A cast applied to a value expression of a known type is a run-time type conversion. The
+            cast succeeds only if a suitable type conversion function is defined. This differs from
+            the use of casts with constants. A cast applied to a string literal represents the
+            initial assignment of a type to a literal constant value, so it succeeds for any type if
+            the contents of the string literal are acceptable input syntax for the data type.</p>
+
+          <p>You can usually omit an explicit type cast if there is no ambiguity about the type a
+            value expression must produce; for example, when it is assigned to a table column, the
+            system automatically applies a type cast. The system applies automatic casting only to
+            casts marked "OK to apply implicitly" in system catalogs. Other casts must be invoked
+            with explicit casting syntax to prevent unexpected conversions from being applied
+            without the user's knowledge.</p>
+        </body>
+      </topic>
+
+      <topic id="topic15" xml:lang="en">
+        <title id="in145048">Scalar Subqueries</title>
+
+        <body>
+          <p>A scalar subquery is a <codeph>SELECT</codeph> query in parentheses that returns
+            exactly one row with one column. Do not use a <codeph>SELECT</codeph> query that returns
+            multiple rows or columns as a scalar subquery. The query runs and uses the returned
+            value in the surrounding value expression. A correlated scalar subquery contains
+            references to the outer query block.</p>
+        </body>
+      </topic>
+
+      <topic id="topic16" xml:lang="en">
+        <title>Correlated Subqueries</title>
+
+        <body>
+          <p>A correlated subquery (CSQ) is a <codeph>SELECT</codeph> query with a
+              <codeph>WHERE</codeph> clause or target list that contains references to the parent
+            outer clause. CSQs efficiently express results in terms of results of another query.
+            Greenplum Database supports correlated subqueries that provide compatibility with many
+            existing applications. A CSQ is a scalar or table subquery, depending on whether it
+            returns one or multiple rows. Greenplum Database does not support correlated subqueries
+            with skip-level correlations.</p>
+        </body>
+      </topic>
+
+      <topic id="topic17" xml:lang="en">
+        <title>Correlated Subquery Examples</title>
+
+        <topic id="topic18" xml:lang="en">
+          <title>Example 1 – Scalar correlated subquery</title>
+
+          <body>
+            <codeblock>SELECT * FROM t1 WHERE t1.x 
+            &gt; (SELECT MAX(t2.x) FROM t2 WHERE t2.y = t1.y);
+</codeblock>
+          </body>
+        </topic>
+
+        <topic id="topic19" xml:lang="en">
+          <title>Example 2 – Correlated EXISTS subquery</title>
+
+          <body>
+            <codeblock>SELECT * FROM t1 WHERE 
+EXISTS (SELECT 1 FROM t2 WHERE t2.x = t1.x);
+</codeblock>
+
+            <p>Greenplum Database uses one of the following methods to run CSQs:</p>
+
+            <ul>
+              <li id="in197793">Unnest the CSQ into join operations &#8211; This method is most
+                efficient, and it is how Greenplum Database runs most CSQs, including queries from
+                the TPC-H benchmark.</li>
+
+              <li id="in197800">Run the CSQ on every row of the outer query &#8211; This method is
+                relatively inefficient, and it is how Greenplum Database runs queries that contain
+                CSQs in the <codeph>SELECT</codeph> list or are connected by <codeph>OR</codeph>
+                conditions.</li>
+            </ul>
+
+            <p>The following examples illustrate how to rewrite some of these types of queries to
+              improve performance.</p>
+          </body>
+        </topic>
+
+        <topic id="topic20" xml:lang="en">
+          <title>Example 3 - CSQ in the Select List</title>
+
+          <body>
+            <p>
+              <i>Original Query</i>
+            </p>
+
+            <codeblock>SELECT T1.a,
+      (SELECT COUNT(DISTINCT T2.z) FROM t2 WHERE t1.x = t2.y) dt2 
+FROM t1;</codeblock>
+
+            <p>Rewrite this query to perform an inner join with <codeph>t1</codeph> first and then
+              perform a left join with <codeph>t1</codeph> again. The rewrite applies for only an
+              equijoin in the correlated condition.</p>
+
+            <p>
+              <i>Rewritten Query</i>
+            </p>
+
+            <codeblock>SELECT t1.a, dt2 FROM t1 
+       LEFT JOIN 
+        (SELECT t2.y AS csq_y, COUNT(DISTINCT t2.z) AS dt2 
+              FROM t1, t2 WHERE t1.x = t2.y 
+              GROUP BY t1.x) 
+       ON (t1.x = csq_y);
+</codeblock>
+          </body>
+        </topic>
+      </topic>
+
+      <topic id="topic21" xml:lang="en">
+        <title>Example 4 - CSQs connected by OR Clauses</title>
+
+        <body>
+          <p>
+            <i>Original Query</i>
+          </p>
+
+          <codeblock>SELECT * FROM t1 
+WHERE 
+x &gt; (SELECT COUNT(*) FROM t2 WHERE t1.x = t2.x) 
+OR x &lt; (SELECT COUNT(*) FROM t3 WHERE t1.y = t3.y)
+</codeblock>
+
+          <p>Rewrite this query to separate it into two parts with a union on the
+              <codeph>OR</codeph> conditions.</p>
+
+          <p>
+            <i>Rewritten Query</i>
+          </p>
+
+          <codeblock>SELECT * FROM t1 
+WHERE x &gt; (SELECT count(*) FROM t2 WHERE t1.x = t2.x) 
+UNION 
+SELECT * FROM t1 
+WHERE x &lt; (SELECT count(*) FROM t3 WHERE t1.y = t3.y)
+</codeblock>
+
+          <p>To view the query plan, use <codeph>EXPLAIN SELECT</codeph> or <codeph>EXPLAIN ANALYZE
+              SELECT</codeph>. Subplan nodes in the query plan indicate that the query will run on
+            every row of the outer query, and the query is a candidate for rewriting. For more
+            information about these statements, see <xref format="dita" href="#topic39" type="topic"
+            />.</p>
+        </body>
+      </topic>
+
+      <topic id="topic22" xml:lang="en">
+        <title>Advanced Table Functions</title>
+
+        <body>
+          <p>Greenplum Database supports table functions with <codeph>TABLE</codeph> value
+            expressions. You can sort input rows for advanced table functions with an <codeph>ORDER
+              BY</codeph> clause. You can redistribute them with a <codeph>SCATTER BY</codeph>
+            clause to specify one or more columns or an expression for which rows with the specified
+            characteristics are available to the same process. This usage is similar to using a
+              <codeph>DISTRIBUTED BY</codeph> clause when creating a table, but the redistribution
+            occurs when the query runs.</p>
+
+          <p>The following command uses the <codeph>TABLE</codeph> function with the <codeph>SCATTER
+              BY</codeph> clause in the the GPText function <codeph>gptext.index()</codeph> to
+            populate the index <codeph>mytest.articles</codeph> with data from the messages
+            table:</p>
+
+          <p>
+            <codeblock>SELECT * FROM gptext.index(TABLE(SELECT * FROM messages 
+SCATTER BY distrib_id), 'mytest.articles');
+</codeblock>
+          </p>
+
+          <note type="note">
+            <p>Based on the distribution of data, Greenplum Database automatically parallelizes
+              table functions with <codeph>TABLE</codeph> value parameters over the nodes of the
+              cluster.</p>
+          </note>
+
+          <p>For information about the function <codeph>gptext.index()</codeph>, see the Pivotal
+            GPText documentation.</p>
+        </body>
+      </topic>
+
+      <topic id="topic23" xml:lang="en">
+        <title>Array Constructors</title>
+
+        <body>
+          <p>An array constructor is an expression that builds an array value from values for its
+            member elements. A simple array constructor consists of the key word
+              <codeph>ARRAY</codeph>, a left square bracket <codeph>[</codeph>, one or more
+            expressions separated by commas for the array element values, and a right square bracket
+              <codeph>]</codeph>. For example,</p>
+
+          <p>
+            <codeblock>SELECT ARRAY[1,2,3+4];
+  array
+---------
+ {1,2,7}
+</codeblock>
+          </p>
+
+          <p>The array element type is the common type of its member expressions, determined using
+            the same rules as for <codeph>UNION</codeph> or <codeph>CASE</codeph> constructs.</p>
+
+          <p>You can build multidimensional array values by nesting array constructors. In the inner
+            constructors, you can omit the keyword <codeph>ARRAY</codeph>. For example, the
+            following two <codeph>SELECT</codeph> statements produce the same result:</p>
+
+          <p>
+            <codeblock>SELECT ARRAY[ARRAY[1,2], ARRAY[3,4]];
+SELECT ARRAY[[1,2],[3,4]];
+     array
+---------------
+ {{1,2},{3,4}}
+</codeblock>
+          </p>
+
+          <p>Since multidimensional arrays must be rectangular, inner constructors at the same level
+            must produce sub-arrays of identical dimensions.</p>
+
+          <p>Multidimensional array constructor elements are not limited to a
+              sub-<codeph>ARRAY</codeph> construct; they are anything that produces an array of the
+            proper kind. For example:</p>
+
+          <codeblock>CREATE TABLE arr(f1 int[], f2 int[]);
+INSERT INTO arr VALUES (ARRAY[[1,2],[3,4]], 
+ARRAY[[5,6],[7,8]]);
+SELECT ARRAY[f1, f2, '{{9,10},{11,12}}'::int[]] FROM arr;
+                     array
+------------------------------------------------
+ {{{1,2},{3,4}},{{5,6},{7,8}},{{9,10},{11,12}}}
+</codeblock>
+
+          <p>You can construct an array from the results of a subquery. Write the array constructor
+            with the keyword <codeph>ARRAY</codeph> followed by a subquery in parentheses. For
+            example:</p>
+
+          <codeblock>SELECT ARRAY(SELECT oid FROM pg_proc WHERE proname LIKE 'bytea%');
+                          ?column?
+-----------------------------------------------------------
+ {2011,1954,1948,1952,1951,1244,1950,2005,1949,1953,2006,31}
+</codeblock>
+
+          <p>The subquery must return a single column. The resulting one-dimensional array has an
+            element for each row in the subquery result, with an element type matching that of the
+            subquery's output column. The subscripts of an array value built with
+              <codeph>ARRAY</codeph> always begin with <codeph>1</codeph>.</p>
+        </body>
+      </topic>
+
+      <topic id="topic24" xml:lang="en">
+        <title>Row Constructors</title>
+
+        <body>
+          <p>A row constructor is an expression that builds a row value (also called a composite
+            value) from values for its member fields. For example,</p>
+
+          <p>
+            <codeblock>SELECT ROW(1,2.5,'this is a test');
+</codeblock>
+          </p>
+
+          <p>Row constructors have the syntax <codeph>rowvalue.*</codeph>, which expands to a list
+            of the elements of the row value, as when you use the syntax <codeph>.*</codeph> at the
+            top level of a <codeph>SELECT</codeph> list. For example, if table <codeph>t</codeph>
+            has columns <codeph>f1</codeph> and <codeph>f2</codeph>, the following queries are the
+            same:</p>
+
+          <p>
+            <codeblock>SELECT ROW(t.*, 42) FROM t;
+SELECT ROW(t.f1, t.f2, 42) FROM t;
+</codeblock>
+          </p>
+
+          <p>By default, the value created by a <codeph>ROW</codeph> expression has an anonymous
+            record type. If necessary, it can be cast to a named composite type — either the row
+            type of a table, or a composite type created with <codeph>CREATE TYPE AS</codeph>. To
+            avoid ambiguity, you can explicitly cast the value if necessary. For example:</p>
+
+          <p>
+            <codeblock>CREATE TABLE mytable(f1 int, f2 float, f3 text);
+CREATE FUNCTION getf1(mytable) RETURNS int AS 'SELECT $1.f1' 
+LANGUAGE SQL;
+</codeblock>
+          </p>
+
+          <p>In the following query, you do not need to cast the value because there is only one
+              <codeph>getf1()</codeph> function and therefore no ambiguity:</p>
+
+          <p>
+            <codeblock>SELECT getf1(ROW(1,2.5,'this is a test'));
+ getf1
+-------
+     1
+CREATE TYPE myrowtype AS (f1 int, f2 text, f3 numeric);
+CREATE FUNCTION getf1(myrowtype) RETURNS int AS 'SELECT 
+$1.f1' LANGUAGE SQL;
+</codeblock>
+          </p>
+
+          <p>Now we need a cast to indicate which function to call:</p>
+
+          <p>
+            <codeblock>SELECT getf1(ROW(1,2.5,'this is a test'));
+ERROR:  function getf1(record) is not unique
+</codeblock>
+            <codeblock>SELECT getf1(ROW(1,2.5,'this is a test')::mytable);
+ getf1
+-------
+     1
+SELECT getf1(CAST(ROW(11,'this is a test',2.5) AS 
+myrowtype));
+ getf1
+-------
+    11
+</codeblock>
+          </p>
+
+          <p>You can use row constructors to build composite values to be stored in a composite-type
+            table column or to be passed to a function that accepts a composite parameter.</p>
+        </body>
+      </topic>
+
+      <topic id="topic25" xml:lang="en">
+        <title>Expression Evaluation Rules</title>
+
+        <body>
+          <p>The order of evaluation of subexpressions is undefined. The inputs of an operator or
+            function are not necessarily evaluated left-to-right or in any other fixed order.</p>
+
+          <p>If you can determine the result of an expression by evaluating only some parts of the
+            expression, then other subexpressions might not be evaluated at all. For example, in the
+            following expression:</p>
+
+          <p>
+            <codeblock>SELECT true OR somefunc();
+</codeblock>
+          </p>
+
+          <p><codeph>somefunc()</codeph> would probably not be called at all. The same is true in
+            the following expression:</p>
+
+          <p>
+            <codeblock>SELECT somefunc() OR true;
+</codeblock>
+          </p>
+
+          <p>This is not the same as the left-to-right evaluation order that Boolean operators
+            enforce in some programming languages.</p>
+
+          <p>Do not use functions with side effects as part of complex expressions, especially in
+              <codeph>WHERE</codeph> and <codeph>HAVING</codeph> clauses, because those clauses are
+            extensively reprocessed when developing an execution plan. Boolean expressions
+              (<codeph>AND</codeph>/<codeph>OR</codeph>/<codeph>NOT</codeph> combinations) in those
+            clauses can be reorganized in any manner that Boolean algebra laws allow.</p>
+
+          <p>Use a <codeph>CASE</codeph> construct to force evaluation order. The following example
+            is an untrustworthy way to avoid division by zero in a <codeph>WHERE</codeph>
+            clause:</p>
+
+          <p>
+            <codeblock>SELECT ... WHERE x &lt;&gt; 0 AND y/x &gt; 1.5;
+</codeblock>
+          </p>
+
+          <p>The following example shows a trustworthy evaluation order:</p>
+
+          <p>
+            <codeblock>SELECT ... WHERE CASE WHEN x &lt;&gt; 0 THEN y/x &gt; 1.5 ELSE false 
+END;
+</codeblock>
+          </p>
+
+          <p>This <codeph>CASE</codeph> construct usage defeats optimization attempts; use it only
+            when necessary.</p>
+        </body>
+      </topic>
+    </topic>
+  </topic>
+
+  <topic id="topic26" xml:lang="en">
+    <title id="in151167">Using Functions and Operators</title>
+
+    <body>
+      <ul>
+        <li id="in140953">
+          <xref format="dita" href="#topic27" type="topic"/>
+        </li>
+
+        <li id="in141620">
+          <xref format="dita" href="#topic28" type="topic"/>
+        </li>
+
+        <li id="in141625">
+          <xref format="dita" href="#topic29" type="topic"/>
+        </li>
+
+        <li id="in184735">
+          <xref format="dita" href="#topic30" type="topic"/>
+        </li>
+
+        <li id="in184739">
+          <xref format="dita" href="#topic31" type="topic"/>
+        </li>
+      </ul>
+    </body>
+
+    <topic id="topic27" xml:lang="en">
+      <title id="in201560">Using Functions in Greenplum Database</title>
+
+      <body>
+        <table id="in201681">
+          <title>Functions in Greenplum Database</title>
+
+          <tgroup cols="4">
+            <colspec colname="col1" colnum="1" colwidth="77*"/>
+
+            <colspec colname="col2" colnum="2" colwidth="86*"/>
+
+            <colspec colname="col3" colnum="3" colwidth="144*"/>
+
+            <colspec colname="col4" colnum="4" colwidth="144*"/>
+
+            <thead>
+              <row>
+                <entry colname="col1">Function Type</entry>
+
+                <entry colname="col2">Greenplum Support</entry>
+
+                <entry colname="col3">Description</entry>
+
+                <entry colname="col4">Comments</entry>
+              </row>
+            </thead>
+
+            <tbody>
+              <row>
+                <entry colname="col1">IMMUTABLE</entry>
+
+                <entry colname="col2">Yes</entry>
+
+                <entry colname="col3">Relies only on information directly in its argument list.
+                  Given the same argument values, always returns the same result.</entry>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">STABLE</entry>
+
+                <entry colname="col2">Yes, in most cases</entry>
+
+                <entry colname="col3">Within a single table scan, returns the same result for same
+                  argument values, but results change across SQL statements.</entry>
+
+                <entry colname="col4">Results depend on database lookups or parameter values.
+                    <codeph>current_timestamp</codeph> family of functions is
+                    <codeph>STABLE</codeph>; values do not change within an execution.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">VOLATILE</entry>
+
+                <entry colname="col2">Restricted</entry>
+
+                <entry colname="col3">Function values can change within a single table scan. For
+                  example: <codeph>random()</codeph>, <codeph>currval()</codeph>,
+                    <codeph>timeofday()</codeph>.</entry>
+
+                <entry colname="col4">Any function with side effects is volatile, even if its result
+                  is predictable. For example: <codeph>setval()</codeph>.</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+
+        <p>In Greenplum Database, data is divided up across segments — each segment is a distinct
+          PostgreSQL database. To prevent inconsistent or unexpected results, do not execute
+          functions classified as <codeph>VOLATILE</codeph> at the segment level if they contain SQL
+          commands or modify the database in any way. For example, functions such as
+            <codeph>setval()</codeph> are not allowed to execute on distributed data in Greenplum
+          Database because they can cause inconsistent data between segment instances.</p>
+
+        <p>To ensure data consistency, you can safely use <codeph>VOLATILE</codeph> and
+            <codeph>STABLE</codeph> functions in statements that are evaluated on and run from the
+          master. For example, the following statements run on the master (statements without a
+            <codeph>FROM</codeph> clause):</p>
+
+        <p>
+          <codeblock>SELECT setval('myseq', 201);
+SELECT foo();
+</codeblock>
+        </p>
+
+        <p>If a statement has a <codeph>FROM</codeph> clause containing a distributed table
+            <i>and</i> the function in the <codeph>FROM</codeph> clause returns a set of rows, the
+          statement can run on the segments:</p>
+
+        <p>
+          <codeblock>SELECT * from foo();
+</codeblock>
+        </p>
+
+        <p>Greenplum Database does not support functions that return a table reference
+            (<codeph>rangeFuncs</codeph>) or functions that use the <codeph>refCursor</codeph>
+          datatype.</p>
+      </body>
+    </topic>
+
+    <topic id="topic28" xml:lang="en">
+      <title id="in141451">User-Defined Functions</title>
+
+      <body>
+        <p>Greenplum Database supports user-defined functions. See <xref format="html"
+            href="https://www.postgresql.org/docs/8.3/static/extend.html" scope="external">Extending
+            SQL</xref> in the PostgreSQL documentation for more information.</p>
+
+        <p>Use the <codeph>CREATE FUNCTION</codeph> statement to register user-defined functions
+          that are used as described in <xref format="dita" href="#topic27" type="topic"/>. By
+          default, user-defined functions are declared as <codeph>VOLATILE</codeph>, so if your
+          user-defined function is <codeph>IMMUTABLE</codeph> or <codeph>STABLE</codeph>, you must
+          specify the correct volatility level when you register your function.</p>
+
+        <p>When you create user-defined functions, avoid using fatal errors or destructive calls.
+          Greenplum Database may respond to such errors with a sudden shutdown or restart.</p>
+
+        <p>In Greenplum Database, the shared library files for user-created functions must reside in
+          the same library path location on every host in the Greenplum Database array (masters,
+          segments, and mirrors).</p>
+      </body>
+    </topic>
+
+    <topic id="topic29" xml:lang="en">
+      <title id="in141007">Built-in Functions and Operators</title>
+
+      <body>
+        <p>The following table lists the categories of built-in functions and operators supported by
+          PostgreSQL. All functions and operators are supported in Greenplum Database as in
+          PostgreSQL with the exception of <codeph>STABLE</codeph> and <codeph>VOLATILE</codeph>
+          functions, which are subject to the restrictions noted in <xref format="dita"
+            href="#topic27" type="topic"/>. See the <xref format="html"
+            href="https://www.postgresql.org/docs/8.3/static/functions.html" scope="external"
+            >Functions and Operators</xref> section of the PostgreSQL documentation for more
+          information about these built-in functions and operators.</p>
+
+        <table id="in204913">
+          <title>Built-in functions and operators</title>
+
+          <tgroup cols="4">
+            <colspec colname="col1" colnum="1" colwidth="129.02*"/>
+
+            <colspec colname="col2" colnum="2" colwidth="108*"/>
+
+            <colspec colname="col3" colnum="3" colwidth="144*"/>
+
+            <colspec colname="col4" colnum="4" colwidth="86*"/>
+
+            <thead>
+              <row>
+                <entry colname="col1">Operator/Function Category</entry>
+
+                <entry colname="col2">VOLATILE Functions</entry>
+
+                <entry colname="col3">STABLE Functions</entry>
+
+                <entry colname="col4">Restrictions</entry>
+              </row>
+            </thead>
+
+            <tbody>
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions.html#FUNCTIONS-LOGICAL"
+                    scope="external">Logical Operators</xref>
+                </entry>
+
+                <entry colname="col2"/>
+
+                <entry colname="col3"/>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-comparison.html"
+                    scope="external">Comparison Operators</xref>
+                </entry>
+
+                <entry colname="col2"/>
+
+                <entry colname="col3"/>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-math.html"
+                    scope="external">
+                    <ph>Mathematical Functions and Operators</ph>
+                  </xref>
+                </entry>
+
+                <entry colname="col2">random<p>setseed</p></entry>
+
+                <entry colname="col3"/>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-string.html"
+                    scope="external">
+                    <ph>String Functions and Operators</ph>
+                  </xref>
+                </entry>
+
+                <entry colname="col2">
+                  <i>All built-in conversion functions</i>
+                </entry>
+
+                <entry colname="col3">convert<p>pg_client_encoding</p></entry>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-binarystring.html"
+                    scope="external">
+                    <ph>Binary String Functions and Operators</ph>
+                  </xref>
+                </entry>
+
+                <entry colname="col2"/>
+
+                <entry colname="col3"/>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-bitstring.html"
+                    scope="external">
+                    <ph>Bit String Functions and Operators</ph>
+                  </xref>
+                </entry>
+
+                <entry colname="col2"/>
+
+                <entry colname="col3"/>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="http://www.postgresql.org/docs/8.3/static/functions-matching.html"
+                    scope="external">
+                    <ph>Pattern Matching</ph>
+                  </xref>
+                </entry>
+
+                <entry colname="col2"/>
+
+                <entry colname="col3"/>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-formatting.html"
+                    scope="external">
+                    <ph>Data Type Formatting Functions</ph>
+                  </xref>
+                </entry>
+
+                <entry colname="col2"/>
+
+                <entry colname="col3">to_char<p>to_timestamp</p></entry>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-datetime.html"
+                    scope="external">
+                    <ph>Date/Time Functions and Operators</ph>
+                  </xref>
+                </entry>
+
+                <entry colname="col2">timeofday</entry>
+
+                <entry colname="col3"
+                    >age<p>current_date</p><p>current_time</p><p>current_timestamp</p><p>localtime</p><p>localtimestamp</p><p>now</p></entry>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-geometry.html"
+                    scope="external">
+                    <ph>Geometric Functions and Operators</ph>
+                  </xref>
+                </entry>
+
+                <entry colname="col2"/>
+
+                <entry colname="col3"/>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-net.html"
+                    scope="external">
+                    <ph>Network Address Functions and Operators</ph>
+                  </xref>
+                </entry>
+
+                <entry colname="col2"/>
+
+                <entry colname="col3"/>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-sequence.html"
+                    scope="external">
+                    <ph>Sequence Manipulation Functions</ph>
+                  </xref>
+                </entry>
+
+                <entry colname="col2">currval<p>lastval</p><p>nextval</p><p>setval</p></entry>
+
+                <entry colname="col3"/>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-conditional.html"
+                    scope="external">
+                    <ph>Conditional Expressions</ph>
+                  </xref>
+                </entry>
+
+                <entry colname="col2"/>
+
+                <entry colname="col3"/>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-array.html"
+                    scope="external">
+                    <ph>Array Functions and Operators</ph>
+                  </xref>
+                </entry>
+
+                <entry colname="col2"/>
+
+                <entry colname="col3">
+                  <i>All array functions</i>
+                </entry>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-aggregate.html"
+                    scope="external">
+                    <ph>Aggregate Functions</ph>
+                  </xref>
+                </entry>
+
+                <entry colname="col2"/>
+
+                <entry colname="col3"/>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-subquery.html"
+                    scope="external">
+                    <ph>Subquery Expressions</ph>
+                  </xref>
+                </entry>
+
+                <entry colname="col2"/>
+
+                <entry colname="col3"/>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-comparisons.html"
+                    scope="external">
+                    <ph>Row and Array Comparisons</ph>
+                  </xref>
+                </entry>
+
+                <entry colname="col2"/>
+
+                <entry colname="col3"/>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-srf.html"
+                    scope="external">
+                    <ph>Set Returning Functions</ph>
+                  </xref>
+                </entry>
+
+                <entry colname="col2">generate_series</entry>
+
+                <entry colname="col3"/>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-info.html"
+                    scope="external">
+                    <ph>System Information Functions</ph>
+                  </xref>
+                </entry>
+
+                <entry colname="col2"/>
+
+                <entry colname="col3">
+                  <i>All session information functions</i>
+                  <p>
+                    <i>All access privilege inquiry functions</i>
+                  </p>
+                  <p>
+                    <i>All schema visibility inquiry functions</i>
+                  </p>
+                  <p>
+                    <i>All system catalog information functions</i>
+                  </p>
+                  <p>
+                    <i>All comment information functions</i>
+                  </p>
+                </entry>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-admin.html"
+                    scope="external">
+                    <ph>System Administration Functions</ph>
+                  </xref>
+                </entry>
+
+                <entry colname="col2"
+                    >set_config<p>pg_cancel_backend</p><p>pg_reload_conf</p><p>pg_rotate_logfile</p><p>pg_start_backup</p><p>pg_stop_backup</p><p>pg_size_pretty</p><p>pg_ls_dir</p><p>pg_read_file</p><p>pg_stat_file</p></entry>
+
+                <entry colname="col3">current_setting<p><i>All database object size
+                    functions</i></p></entry>
+
+                <entry colname="col4"/>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <xref format="html"
+                    href="http://www.postgresql.org/docs/9.1/interactive/functions-xml.html"
+                    scope="external">XML Functions</xref>
+                </entry>
+
+                <entry colname="col2"/>
+
+                <entry colname="col3">xmlagg(xml)<p>xmlexists(text,
+                    xml)</p><p>xml_is_well_formed(text)</p><p>xml_is_well_formed_document(text)</p><p>xml_is_well_formed_content(text)</p><p>xpath(text,
+                    xml)</p><p>xpath(text, xml, text[])</p><p>xpath_exists(text,
+                    xml)</p><p>xpath_exists(text, xml,
+                    text[])</p><p>xml(text)</p><p>text(xml)</p><p>xmlcomment(xml)</p><p>xmlconcat2(xml,
+                    xml)</p></entry>
+
+                <entry colname="col4"/>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+      </body>
+    </topic>
+
+    <topic id="topic30" xml:lang="en">
+      <title id="in179666">Window Functions</title>
+
+      <body>
+        <p>The following built-in window functions are Greenplum extensions to the PostgreSQL
+          database. All window functions are <i>immutable</i>. For more information about window
+          functions, see <xref format="dita" href="#topic13" type="topic"/>.</p>
+
+        <table id="in164369">
+          <title>Window functions</title>
+
+          <tgroup cols="4">
+            <colspec colname="col1" colnum="1" colwidth="87.46*"/>
+
+            <colspec colname="col2" colnum="2" colwidth="59*"/>
+
+            <colspec colname="col3" colnum="3" colwidth="180*"/>
+
+            <colspec colname="col4" colnum="4" colwidth="121.77*"/>
+
+            <thead>
+              <row>
+                <entry colname="col1">Function</entry>
+
+                <entry colname="col2">Return Type</entry>
+
+                <entry colname="col3">Full Syntax</entry>
+
+                <entry colname="col4">Description</entry>
+              </row>
+            </thead>
+
+            <tbody>
+              <row>
+                <entry colname="col1">
+                  <codeph>cume_dist()</codeph>
+                </entry>
+
+                <entry colname="col2">
+                  <codeph>double precision</codeph>
+                </entry>
+
+                <entry colname="col3">
+                  <codeph>CUME_DIST() OVER ( [PARTITION BY </codeph>
+                  <ph>expr</ph>
+                  <codeph>] ORDER BY </codeph>
+                  <ph>expr</ph>
+                  <codeph> )</codeph>
+                </entry>
+
+                <entry colname="col4">Calculates the cumulative distribution of a value in a group
+                  of values. Rows with equal values always evaluate to the same cumulative
+                  distribution value.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>dense_rank()</codeph>
+                </entry>
+
+                <entry colname="col2">
+                  <codeph>bigint</codeph>
+                </entry>
+
+                <entry colname="col3">
+                  <codeph>DENSE_RANK () OVER ( [PARTITION BY </codeph>
+                  <ph>expr</ph>
+                  <codeph>] ORDER BY </codeph>
+                  <ph>expr</ph>
+                  <codeph>)</codeph>
+                </entry>
+
+                <entry colname="col4">Computes the rank of a row in an ordered group of rows without
+                  skipping rank values. Rows with equal values are given the same rank
+                  value.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>first_value(<i>expr</i>)</codeph>
+                </entry>
+
+                <entry colname="col2">same as input <ph>expr</ph> type</entry>
+
+                <entry colname="col3">
+                  <codeph>FIRST_VALUE(</codeph>
+                  <ph>expr</ph>
+                  <codeph>) OVER ( [PARTITION BY </codeph>
+                  <ph>expr</ph>
+                  <codeph>] ORDER BY </codeph>
+                  <ph>expr</ph>
+                  <codeph> [ROWS|RANGE </codeph>
+                  <ph>frame_expr</ph>
+                  <codeph>] )</codeph>
+                </entry>
+
+                <entry colname="col4">Returns the first value in an ordered set of values.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>lag(<i>expr</i> [,<i>offset</i>] [,<i>default</i>])</codeph>
+                </entry>
+
+                <entry colname="col2">same as input <i>expr</i> type</entry>
+
+                <entry colname="col3">
+                  <codeph>LAG(</codeph>
+                  <i>expr</i>
+                  <codeph> [,</codeph>
+                  <i>offset</i>
+                  <codeph>] [,</codeph>
+                  <i>default</i>
+                  <codeph>]) OVER ( [PARTITION BY </codeph>
+                  <i>expr</i>
+                  <codeph>] ORDER BY </codeph>
+                  <i>expr</i>
+                  <codeph> )</codeph>
+                </entry>
+
+                <entry colname="col4">Provides access to more than one row of the same table without
+                  doing a self join. Given a series of rows returned from a query and a position of
+                  the cursor, <codeph>LAG</codeph> provides access to a row at a given physical
+                  offset prior to that position. The default <codeph>offset</codeph> is 1.
+                    <i>default</i> sets the value that is returned if the offset goes beyond the
+                  scope of the window. If <i>default</i> is not specified, the default value is
+                  null.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>last_value<i>expr</i></codeph>
+                </entry>
+
+                <entry colname="col2">same as input <i>expr</i> type</entry>
+
+                <entry colname="col3">
+                  <codeph>LAST_VALUE(<i>expr</i>) OVER ( [PARTITION BY <i>expr</i>] ORDER BY
+                      <i>expr</i> [ROWS|RANGE <i>frame_expr</i>] )</codeph>
+                </entry>
+
+                <entry colname="col4">Returns the last value in an ordered set of values.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>
+                    <codeph>lead(<i>expr</i> [,<i>offset</i>] [,<i>default</i>])</codeph>
+                  </codeph>
+                </entry>
+
+                <entry colname="col2">same as input <i>expr</i> type</entry>
+
+                <entry colname="col3">
+                  <codeph>LEAD(<i>expr </i>[,<i>offset</i>] [,<i>expr</i><i>default</i>]) OVER (
+                    [PARTITION BY <i>expr</i>] ORDER BY <i>expr</i> )</codeph>
+                </entry>
+
+                <entry colname="col4">Provides access to more than one row of the same table without
+                  doing a self join. Given a series of rows returned from a query and a position of
+                  the cursor, <codeph>lead</codeph> provides access to a row at a given physical
+                  offset after that position. If <i>offset</i> is not specified, the default offset
+                  is 1. <i>default</i> sets the value that is returned if the offset goes beyond the
+                  scope of the window. If <i>default</i> is not specified, the default value is
+                  null.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>ntile(<i>expr</i>)</codeph>
+                </entry>
+
+                <entry colname="col2">bigint</entry>
+
+                <entry colname="col3">
+                  <codeph>NTILE(<i>expr</i>) OVER ( [PARTITION BY <i>expr</i>] ORDER BY <i>expr</i>
+                    )</codeph>
+                </entry>
+
+                <entry colname="col4">Divides an ordered data set into a number of buckets (as
+                  defined by <i>expr</i>) and assigns a bucket number to each row.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1"><codeph>percent_rank(</codeph>)</entry>
+
+                <entry colname="col2">
+                  <codeph>double precision</codeph>
+                </entry>
+
+                <entry colname="col3">
+                  <codeph>PERCENT_RANK () OVER ( [PARTITION BY <i>expr</i>] ORDER BY <i>expr
+                    </i>)</codeph>
+                </entry>
+
+                <entry colname="col4">Calculates the rank of a hypothetical row <codeph>R</codeph>
+                  minus 1, divided by 1 less than the number of rows being evaluated (within a
+                  window partition).</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>rank()</codeph>
+                </entry>
+
+                <entry colname="col2">bigint</entry>
+
+                <entry colname="col3">
+                  <codeph>RANK () OVER ( [PARTITION BY <i>expr</i>] ORDER BY <i>expr </i>)</codeph>
+                </entry>
+
+                <entry colname="col4">Calculates the rank of a row in an ordered group of values.
+                  Rows with equal values for the ranking criteria receive the same rank. The number
+                  of tied rows are added to the rank number to calculate the next rank value. Ranks
+                  may not be consecutive numbers in this case.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1"><codeph>row_number(</codeph>)</entry>
+
+                <entry colname="col2">
+                  <codeph>bigint</codeph>
+                </entry>
+
+                <entry colname="col3">
+                  <codeph>ROW_NUMBER () OVER ( [PARTITION BY <i>expr</i>] ORDER BY <i>expr
+                    </i>)</codeph>
+                </entry>
+
+                <entry colname="col4">Assigns a unique number to each row to which it is applied
+                  (either each row in a window partition or each row of the query).</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+      </body>
+    </topic>
+
+    <topic id="topic31" xml:lang="en">
+      <title id="in184703">Advanced Analytic Functions</title>
+
+      <body>
+        <p>The following built-in advanced analytic functions are Greenplum extensions of the
+          PostgreSQL database. Analytic functions are <i>immutable</i>.</p>
+
+        <table id="in207312">
+          <title>Advanced Analytic Functions</title>
+
+          <tgroup cols="4">
+            <colspec colname="col1" colnum="1" colwidth="1*"/>
+
+            <colspec colname="col2" colnum="2" colwidth="1*"/>
+
+            <colspec colname="col3" colnum="3" colwidth="1*"/>
+
+            <colspec colname="col4" colnum="4" colwidth="1*"/>
+
+            <thead>
+              <row>
+                <entry colname="col1">Function</entry>
+
+                <entry colname="col2">Return Type</entry>
+
+                <entry colname="col3">Full Syntax</entry>
+
+                <entry colname="col4">Description</entry>
+              </row>
+            </thead>
+
+            <tbody>
+              <row>
+                <entry colname="col1">
+                  <codeph>matrix_add(array[], array[])</codeph>
+                </entry>
+
+                <entry colname="col2">
+                  <codeph>smallint[], int[], bigint[], float[]</codeph>
+                </entry>
+
+                <entry colname="col3"><codeph>matrix_add( array[[1,1],[2,2]],
+                    array[[3,4],[5,6]]</codeph>)</entry>
+
+                <entry colname="col4">Adds two two-dimensional matrices. The matrices must be
+                  conformable.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>matrix_multiply( array[], array[])</codeph>
+                </entry>
+
+                <entry colname="col2">
+                  <codeph>smallint[]int[], bigint[], float[]</codeph>
+                </entry>
+
+                <entry colname="col3">
+                  <codeph>matrix_multiply( array[[2,0,0],[0,2,0],[0,0,2]],
+                    array[[3,0,3],[0,3,0],[0,0,3]] )</codeph>
+                </entry>
+
+                <entry colname="col4">Multiplies two, three- dimensional arrays. The matrices must
+                  be conformable.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>matrix_multiply( array[], <i>expr</i>)</codeph>
+                </entry>
+
+                <entry colname="col2">
+                  <codeph>int[], float[]</codeph>
+                </entry>
+
+                <entry colname="col3">
+                  <codeph>matrix_multiply( array[[1,1,1], [2,2,2], [3,3,3]], 2)</codeph>
+                </entry>
+
+                <entry colname="col4">Multiplies a two-dimensional array and a scalar numeric
+                  value.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>matrix_transpose( array[])</codeph>
+                </entry>
+
+                <entry colname="col2">Same as input <codeph>array</codeph> type.</entry>
+
+                <entry colname="col3">
+                  <codeph>matrix_transpose( array [[1,1,1],[2,2,2]])</codeph>
+                </entry>
+
+                <entry colname="col4">Transposes a two-dimensional array.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>pinv(array [])</codeph>
+                </entry>
+
+                <entry colname="col2">
+                  <codeph>smallint[]int[], bigint[], float[]</codeph>
+                </entry>
+
+                <entry colname="col3">
+                  <codeph>pinv(array[[2.5,0,0],[0,1,0],[0,0,.5]]) </codeph>
+                </entry>
+
+                <entry colname="col4">Calculates the Moore-Penrose pseudoinverse of a
+                  matrix.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>unnest (array[])</codeph>
+                </entry>
+
+                <entry colname="col2">set of <codeph>anyelement</codeph></entry>
+
+                <entry colname="col3">
+                  <codeph>unnest( array['one', 'row', 'per', 'item'])</codeph>
+                </entry>
+
+                <entry colname="col4">Transforms a one dimensional array into rows. Returns a set of
+                    <codeph>anyelement</codeph>, a polymorphic <xref format="html"
+                    href="https://www.postgresql.org/docs/8.3/static/datatype-pseudo.html"
+                    scope="external"><ph>pseudotype in PostgreSQL</ph></xref>.</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+
+        <table id="in2073121">
+          <title>Advanced Aggregate Functions</title>
+
+          <tgroup cols="4">
+            <colspec colname="col1" colnum="1" colwidth="102.44*"/>
+
+            <colspec colname="col2" colnum="2" colwidth="59*"/>
+
+            <colspec colname="col3" colnum="3" colwidth="201.99*"/>
+
+            <colspec colname="col4" colnum="4" colwidth="128*"/>
+
+            <thead>
+              <row>
+                <entry colname="col1">Function</entry>
+
+                <entry colname="col2">Return Type</entry>
+
+                <entry colname="col3">Full Syntax</entry>
+
+                <entry colname="col4">Description</entry>
+              </row>
+            </thead>
+
+            <tbody>
+              <row>
+                <entry colname="col1">
+                  <codeph>MEDIAN (<i>expr</i>)</codeph>
+                </entry>
+
+                <entry colname="col2">
+                  <codeph>timestamp, timestampz, interval, float</codeph>
+                </entry>
+
+                <entry colname="col3">
+                  <codeph>MEDIAN (<i>expression</i>)</codeph>
+                  <p>
+                    <i>Example:</i>
+                  </p>
+                  <codeblock>SELECT department_id, MEDIAN(salary) 
+FROM employees 
+GROUP BY department_id; </codeblock>
+                </entry>
+
+                <entry colname="col4">Can take a two-dimensional array as input. Treats such arrays
+                  as matrices.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>PERCENTILE_CONT (<i>expr</i>) WITHIN GROUP (ORDER BY <i>expr</i>
+                    [DESC/ASC])</codeph>
+                </entry>
+
+                <entry colname="col2">
+                  <codeph>timestamp, timestampz, interval, float</codeph>
+                </entry>
+
+                <entry colname="col3">
+                  <codeph>PERCENTILE_CONT(<i>percentage</i>) WITHIN GROUP (ORDER BY
+                      <i>expression</i>)</codeph>
+                  <p>
+                    <i>Example:</i>
+                  </p>
+                  <codeblock>SELECT department_id,
+PERCENTILE_CONT (0.5) WITHIN GROUP (ORDER BY salary DESC)
+"Median_cont"; 
+FROM employees GROUP BY department_id;</codeblock>
+                </entry>
+
+                <entry colname="col4">Performs an inverse distirbution function that assumes a
+                  continuous distribution model. It takes a percentile value and a sort
+                  specification and returns the same datatype as the numeric datatype of the
+                  argument. This returned value is a computed result after performing linear
+                  interpolation. Null are ignored in this calculation.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1"><codeph>PERCENTILE_DESC (<i>expr</i>) WITHIN GROUP (ORDER BY
+                      <i>expr</i> [DESC/ASC]</codeph>)</entry>
+
+                <entry colname="col2">
+                  <codeph>timestamp, timestampz, interval, float</codeph>
+                </entry>
+
+                <entry colname="col3">
+                  <codeph>PERCENTILE_DESC(<i>percentage</i>) WITHIN GROUP (ORDER BY
+                      <i>expression</i>)</codeph>
+                  <p>
+                    <i>Example:</i>
+                  </p>
+                  <codeblock>SELECT department_id, 
+PERCENTILE_DESC (0.5) WITHIN GROUP (ORDER BY salary DESC)
+"Median_desc"; 
+FROM employees GROUP BY department_id;</codeblock>
+                </entry>
+
+                <entry colname="col4">Performs an inverse distirbution function that assumes a
+                  discrete distribution model. It takes a percentile value and a sort specification.
+                  This returned value is an element from the set. Null are ignored in this
+                  calculation.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>sum(array[])</codeph>
+                </entry>
+
+                <entry colname="col2">
+                  <codeph>smallint[]int[], bigint[], float[]</codeph>
+                </entry>
+
+                <entry colname="col3">
+                  <codeph>sum(array[[1,2],[3,4]])</codeph>
+                  <p>
+                    <i>Example:</i>
+                  </p>
+                  <codeblock>CREATE TABLE mymatrix (myvalue int[]);
+INSERT INTO mymatrix VALUES (array[[1,2],[3,4]]);
+INSERT INTO mymatrix VALUES (array[[0,1],[1,0]]);
+SELECT sum(myvalue) FROM mymatrix;
+ sum 
+---------------
+ {{1,3},{4,4}}</codeblock>
+                </entry>
+
+                <entry colname="col4">Performs matrix summation. Can take as input a two-dimensional
+                  array that is treated as a matrix.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>pivot_sum (label[], label, expr)</codeph>
+                </entry>
+
+                <entry colname="col2">
+                  <codeph>int[], bigint[], float[]</codeph>
+                </entry>
+
+                <entry colname="col3">
+                  <codeph>pivot_sum( array['A1','A2'], attr, value)</codeph>
+                </entry>
+
+                <entry colname="col4">A pivot aggregation using sum to resolve duplicate
+                  entries.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>mregr_coef(expr, array[])</codeph>
+                </entry>
+
+                <entry colname="col2">
+                  <codeph>float[]</codeph>
+                </entry>
+
+                <entry colname="col3">
+                  <codeph>mregr_coef(y, array[1, x1, x2])</codeph>
+                </entry>
+
+                <entry colname="col4">The four <codeph>mregr_* </codeph>aggregates perform linear
+                  regressions using the ordinary-least-squares method. <codeph>mregr_coef</codeph>
+                  calculates the regression coefficients. The size of the return array for
+                    <codeph>mregr_coef</codeph> is the same as the size of the input array of
+                  independent variables, since the return array contains the coefficient for each
+                  independent variable.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>mregr_r2 (<i>expr</i>, array[])</codeph>
+                </entry>
+
+                <entry colname="col2">
+                  <codeph>float</codeph>
+                </entry>
+
+                <entry colname="col3">
+                  <codeph>mregr_r2(y, array[1, x1, x2])</codeph>
+                </entry>
+
+                <entry colname="col4">The four <codeph>mregr_* </codeph>aggregates perform linear
+                  regressions using the ordinary-least-squares method. <codeph>mregr_r2</codeph>
+                  calculates the r-squared error value for the regression.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>mregr_pvalues(<i>expr</i>, array[])</codeph>
+                </entry>
+
+                <entry colname="col2">
+                  <codeph>float[]</codeph>
+                </entry>
+
+                <entry colname="col3">
+                  <codeph>mregr_pvalues(y, array[1, x1, x2])</codeph>
+                </entry>
+
+                <entry colname="col4">The four <codeph>mregr_* </codeph>aggregates perform linear
+                  regressions using the ordinary-least-squares method.
+                    <codeph>mregr_pvalues</codeph> calculates the p-values for the
+                  regression.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>mregr_tstats(<i>expr</i>, array[])</codeph>
+                </entry>
+
+                <entry colname="col2">
+                  <codeph>float[]</codeph>
+                </entry>
+
+                <entry colname="col3">
+                  <codeph>mregr_tstats(y, array[1, x1, x2])</codeph>
+                </entry>
+
+                <entry colname="col4">The four <codeph>mregr_* </codeph>aggregates perform linear
+                  regressions using the ordinary-least-squares method. <codeph>mregr_tstats</codeph>
+                  calculates the t-statistics for the regression.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>nb_classify(text[], bigint, bigint[], bigint[])</codeph>
+                </entry>
+
+                <entry colname="col2">
+                  <codeph>text</codeph>
+                </entry>
+
+                <entry colname="col3">
+                  <codeph>nb_classify(classes, attr_count, class_count, class_total)</codeph>
+                </entry>
+
+                <entry colname="col4">Classify rows using a Naive Bayes Classifier. This aggregate
+                  uses a baseline of training data to predict the classification of new rows and
+                  returns the class with the largest likelihood of appearing in the new
+                  rows.</entry>
+              </row>
+
+              <row>
+                <entry colname="col1">
+                  <codeph>nb_probabilities(text[], bigint, bigint[], bigint[])</codeph>
+                </entry>
+
+                <entry colname="col2">text</entry>
+
+                <entry colname="col3">
+                  <codeph>nb_probabilities(classes, attr_count, class_count, class_total)</codeph>
+                </entry>
+
+                <entry colname="col4">Determine probability for each class using a Naive Bayes
+                  Classifier. This aggregate uses a baseline of training data to predict the
+                  classification of new rows and returns the probabilities that each class will
+                  appear in new rows.</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+      </body>
+
+      <topic id="topic32" xml:lang="en">
+        <title>Advanced Analytic Function Examples</title>
+
+        <body>
+          <p>These examples illustrate selected advanced analytic functions in queries on simplified
+            example data. They are for the multiple linear regression aggregate functions and for
+            Naive Bayes Classification with <codeph>nb_classify</codeph>.</p>
+        </body>
+
+        <topic id="topic33" xml:lang="en">
+          <title>Linear Regression Aggregates Example</title>
+
+          <body>
+            <p>The following example uses the four linear regression aggregates
+                <codeph>mregr_coef</codeph>, <codeph>mregr_r2</codeph>,
+                <codeph>mregr_pvalues</codeph>, and <codeph>mregr_tstats</codeph><ph> i</ph>n a
+              query on the example table <codeph>regr_example</codeph>. In this example query, all
+              the aggregates take the dependent variable as the first parameter and an array of
+              independent variables as the second parameter.</p>
+
+            <codeblock>SELECT mregr_coef(y, array[1, x1, x2]), 
+       mregr_r2(y, array[1, x1, x2]),
+       mregr_pvalues(y, array[1, x1, x2]),
+       mregr_tstats(y, array[1, x1, x2])
+from regr_example;
+</codeblock>
+
+            <p>Table <codeph>regr_example</codeph>:</p>
+
+            <codeblock> id | y  | x1 | x2
+----+----+----+----
+  1 |  5 |  2 |  1
+  2 | 10 |  4 |  2
+  3 |  6 |  3 |  1
+  4 |  8 |  3 |  1
+</codeblock>
+
+            <p>
+              <ph>Running the example query against this table yields one row of data with the
+                following values:</ph>
+            </p>
+
+            <p><codeph>mregr_coef</codeph>:</p>
+
+            <codeblock>{-7.105427357601e-15,2.00000000000003,0.999999999999943}
+</codeblock>
+
+            <p><codeph>mregr_r2</codeph>:</p>
+
+            <codeblock>0.86440677966103
+</codeblock>
+
+            <p>
+              <codeph>mregr_pvalues:</codeph>
+            </p>
+
+            <codeblock>{0.999999999999999,0.454371051656992,0.783653104061216}
+</codeblock>
+
+            <p>
+              <codeph>mregr_tstats:</codeph>
+            </p>
+
+            <codeblock>{-2.24693341988919e-15,1.15470053837932,0.35355339059327}
+</codeblock>
+
+            <p>Greenplum Database returns <codeph>NaN</codeph> (not a number) if the results of any
+              of these agregates are undefined. This can happen if there is a very small amount of
+              data.</p>
+
+            <note type="note">
+              <p>The intercept is computed by setting one of the independent variables to
+                  <codeph>1</codeph>, as shown in the preceding example.</p>
+            </note>
+          </body>
+        </topic>
+
+        <topic id="topic34" xml:lang="en">
+          <title>Naive Bayes Classification Examples</title>
+
+          <body>
+            <p>The aggregates <codeph>nb_classify and nb_probabilities</codeph> are used within a
+              larger four-step classification process that involves the creation of tables and views
+              for training data. The following two examples show all the steps. The first example
+              shows a small data set with arbitrary values, and the second example is the Greenplum
+              implementation of a popular Naive Bayes example based on weather conditions.</p>
+          </body>
+        </topic>
+
+        <topic id="topic35" xml:lang="en">
+          <title>Overview</title>
+
+          <body>
+            <p>The following describes the Naive Bayes classification procedure. In the examples,
+              the value names become the values of the field <i>attr</i>:</p>
+
+            <ol>
+              <li id="in191086">Unpivot the data.<p>If the data is not denormalized, create a view
+                  with the identification and classification that unpivots all the values. If the
+                  data is already in denormalized form, you do not need to unpivot the data.
+                </p></li>
+
+              <li id="in191088">Create a training table.<p>The training table shifts the view of the
+                  data to the values of the field <i>attr</i>.</p></li>
+
+              <li id="in191090">Create a summary view of the training data.</li>
+
+              <li id="in191091">Aggregate the data with <codeph>nb_classify</codeph><ph>,
+                  </ph><codeph>nb_probabilities</codeph><ph>,or both.</ph></li>
+            </ol>
+          </body>
+        </topic>
+
+        <topic id="topic36" xml:lang="en">
+          <title>Naive Bayes Example 1 – Small Table</title>
+
+          <body>
+            <p>This example begins with the normalized data in the example table
+                <codeph>class_example</codeph> and proceeds through four discrete steps:</p>
+
+            <p>Table <codeph>class_example</codeph>:</p>
+
+            <codeblock> id | class | a1 | a2 | a3 
+----+-------+----+----+----
+  1 | C1    |  1 |  2 |  3
+  2 | C1    |  1 |  4 |  3
+  3 | C2    |  0 |  2 |  2
+  4 | C1    |  1 |  2 |  1
+  5 | C2    |  1 |  2 |  2
+  6 | C2    |  0 |  1 |  3
+</codeblock>
+
+            <ol>
+              <li id="in191096">Unpivot the data.<p>For use as training data, the data in
+                    <codeph>class_example</codeph> must be unpivoted because the data is in
+                  denormalized form. The terms in single quotation marks define the values to use
+                  for the new field <i>attr</i>. By convention, these values are the same as the
+                  field names in the normalized table. In this example, these values are capitalized
+                  to highlight where they are created in the command.</p><p>
+                  <codeblock>CREATE view class_example_unpivot AS
+SELECT id, class, unnest(array['A1', 'A2', 'A3']) as attr, 
+unnest(array[a1,a2,a3]) as value FROM class_example; 
+</codeblock>
+                </p><p>The unpivoted view shows the normalized data. It is not necessary to use this
+                  view. Use the command <codeph>SELECT * from class_example_unpivot </codeph><ph>to
+                    see the denormalized data:</ph></p><p>
+                  <codeblock> id | class | attr | value
+----+-------+------+-------
+  2 | C1    | A1   |     1
+  2 | C1    | A2   |     2
+  2 | C1    | A3   |     1
+  4 | C2    | A1   |     1
+  4 | C2    | A2   |     2
+  4 | C2    | A3   |     2
+  6 | C2    | A1   |     0
+  6 | C2    | A2   |     1
+  6 | C2    | A3   |     3
+  1 | C1    | A1   |     1
+  1 | C1    | A2   |     2
+  1 | C1    | A3   |     3
+  3 | C1    | A1   |     1
+  3 | C1    | A2   |     4
+  3 | C1    | A3   |     3
+  5 | C2    | A1   |     0
+  5 | C2    | A2   |     2
+  5 | C2    | A3   |     2
+(18 rows)
+</codeblock>
+                </p></li>
+
+              <li id="in191121">Create a training table from the unpivoted data.<p>The terms in
+                  single quotation marks define the values to sum. The terms in the array passed
+                  into <codeph>pivot_sum</codeph> must match the number and names of classifications
+                  in the original data. In the example, C1 and C2:</p><p>
+                  <codeblock>CREATE table class_example_nb_training AS
+SELECT attr, value, pivot_sum(array['C1', 'C2'], class, 1) 
+as class_count
+FROM   class_example_unpivot
+GROUP BY attr, value
+DISTRIBUTED by (attr); 
+</codeblock>
+                </p><p>The following is the resulting training table:</p><p>
+                  <codeblock> attr | value | class_count
+------+-------+-------------
+ A3   |     1 | {1,0}
+ A3   |     3 | {2,1}
+ A1   |     1 | {3,1}
+ A1   |     0 | {0,2}
+ A3   |     2 | {0,2}
+ A2   |     2 | {2,2}
+ A2   |     4 | {1,0}
+ A2   |     1 | {0,1}
+(8 rows)
+</codeblock>
+                </p></li>
+
+              <li id="in191136">Create a summary view of the training data.<p>
+                  <codeblock>CREATE VIEW class_example_nb_classify_functions AS
+SELECT attr, value, class_count, array['C1', 'C2'] as classes,
+sum(class_count) over (wa)::integer[] as class_total,
+count(distinct value) over (wa) as attr_count
+FROM class_example_nb_training
+WINDOW wa as (partition by attr);</codeblock>
+                </p><p>The following is the resulting training table:</p><p>
+                  <codeblock>attr| value | class_count| classes | class_total |attr_count
+-----+-------+------------+---------+-------------+---------
+ A2  |     2 | {2,2}      | {C1,C2} | {3,3}       |         3
+ A2  |     4 | {1,0}      | {C1,C2} | {3,3}       |         3
+ A2  |     1 | {0,1}      | {C1,C2} | {3,3}       |         3
+ A1  |     0 | {0,2}      | {C1,C2} | {3,3}       |         2
+ A1  |     1 | {3,1}      | {C1,C2} | {3,3}       |         2
+ A3  |     2 | {0,2}      | {C1,C2} | {3,3}       |         3
+ A3  |     3 | {2,1}      | {C1,C2} | {3,3}       |         3
+ A3  |     1 | {1,0}      | {C1,C2} | {3,3}       |         3
+(8 rows)
+</codeblock>
+                </p></li>
+
+              <li id="in191150">Classify rows with <codeph>nb_classify</codeph> and display the
+                probability with <codeph>nb_probabilities</codeph>. <p>After you prepare the view,
+                  the training data is ready for use as a baseline for determining the class of
+                  incoming rows. The following query predicts whether rows are of class
+                    <codeph>C1</codeph> or <codeph>C2</codeph> by using the
+                    <codeph>nb_classify</codeph> aggregate:</p><p>
+                  <codeblock>SELECT nb_classify(classes, attr_count, class_count, 
+class_total) as class
+FROM class_example_nb_classify_functions
+where (attr = 'A1' and value = 0) or (attr = 'A2' and value = 
+2) or (attr = 'A3' and value = 1);
+</codeblock>
+                </p><p>Running the example query against this simple table yields one row of data
+                  displaying these values:</p><p>This query yields the expected single-row result of
+                    <codeph>C1</codeph>.</p><p>
+                  <codeblock>class 
+-------
+C2
+(1 row)
+</codeblock>
+                </p><p>Display the probabilities for each class with
+                    <codeph>nb_probabilities</codeph>. </p><p>Once the view is prepared, the system
+                  can use the training data as a baseline for determining the class of incoming
+                  rows. The following query predicts whether rows are of class <codeph>C1</codeph>
+                  or <codeph>C2</codeph> by using the <codeph>nb_probabilities</codeph>
+                  aggregate:</p><p>
+                  <codeblock>SELECT nb_probabilities(classes, attr_count, class_count, 
+class_total) as probability
+FROM class_example_nb_classify_functions
+where (attr = 'A1' and value = 0) or (attr = 'A2' and value = 
+2) or (attr = 'A3' and value = 1);
+</codeblock>
+                </p><p><ph>Running the example query against this simple table yields one row of
+                    data displaying the probabilities for each class:</ph></p><p>This query yields
+                  the expected single-row result showing two probabilities, the first for
+                    <codeph>C1,</codeph>and the second for <codeph>C2</codeph>.</p><p>
+                  <codeblock>probability
+-------------
+ {0.4,0.6}
+(1 row)
+</codeblock>
+                </p><p>You can display the classification and the probabilities with the following
+                  query.</p><p>
+                  <codeblock>SELECT nb_classify(classes, attr_count, class_count, 
+class_total) as class, nb_probabilities(classes, attr_count, 
+class_count, class_total) as probability FROM 
+class_example_nb_classify where (attr = 'A1' and value = 0) 
+or (attr = 'A2' and value = 2) or (attr = 'A3' and value = 
+1); 
+</codeblock>
+                </p><p>This query produces the following result:</p></li>
+
+              <li>
+                <codeblock> class | probability
+-------+-------------
+    C2 | {0.4,0.6}
+ (1 row)
+</codeblock>
+              </li>
+            </ol>
+
+            <p>Actual data in production scenarios is more extensive than this example data and
+              yields better results. Accuracy of classification with <codeph>nb_classify and
+                nb_probabilities</codeph> improves significantly with larger sets of training
+              data.</p>
+          </body>
+        </topic>
+
+        <topic id="topic37" xml:lang="en">
+          <title>Naive Bayes Example 2 – Weather and Outdoor Sports</title>
+
+          <body>
+            <p>This example calculates the probabilities of whether the user will play an outdoor
+              sport, such as golf or tennis, based on weather conditions. The table
+                <codeph>weather_example</codeph> contains the example values. The identification
+              field for the table is <i>day</i>. There are two classifications held in the field
+              play: <codeph>Yes</codeph> or <codeph>No</codeph>. There are four weather attributes,
+                <i>outlook</i>, <i>temperature</i>, <i>humidity</i>, and <i>wind</i>. The data is
+              normalized.</p>
+
+            <codeblock> day | play | outlook  | temperature | humidity | wind
+-----+------+----------+-------------+----------+--------
+ 2   | No   | Sunny    | Hot         | High     | Strong
+ 4   | Yes  | Rain     | Mild        | High     | Weak
+ 6   | No   | Rain     | Cool        | Normal   | Strong
+ 8   | No   | Sunny    | Mild        | High     | Weak
+10   | Yes  | Rain     | Mild        | Normal   | Weak
+12   | Yes  | Overcast | Mild        | High     | Strong
+14   | No   | Rain     | Mild        | High     | Strong
+ 1   | No   | Sunny    | Hot         | High     | Weak
+ 3   | Yes  | Overcast | Hot         | High     | Weak
+ 5   | Yes  | Rain     | Cool        | Normal   | Weak
+ 7   | Yes  | Overcast | Cool        | Normal   | Strong
+ 9   | Yes  | Sunny    | Cool        | Normal   | Weak
+11   | Yes  | Sunny    | Mild        | Normal   | Strong
+13   | Yes  | Overcast | Hot         | Normal   | Weak
+ (14 rows)</codeblock>
+
+            <p>Because this data is normalized, all four Naive Bayes steps are required.</p>
+
+            <ol>
+              <li id="in191194">Unpivot the data.<p>
+                  <codeblock>CREATE view weather_example_unpivot AS SELECT day, play, 
+unnest(array['outlook','temperature', 'humidity','wind']) as 
+attr, unnest(array[outlook,temperature,humidity,wind]) as 
+value FROM weather_example; 
+</codeblock>
+                </p><p>Note the use of quotation marks in the command. </p><p>The <codeph>SELECT *
+                    from weather_example_unpivot</codeph> displays the denormalized data and
+                  contains the following 56 rows.
+                </p><codeblock>
+ day | play | attr        | value
+-----+------+-------------+----------
+   2 | No   | outlook     | Sunny
+   2 | No   | temperature | Hot
+   2 | No   | humidity    | High
+   2 | No   | wind        | Strong
+   4 | Yes  | outlook     | Rain
+   4 | Yes  | temperature | Mild
+   4 | Yes  | humidity    | High
+   4 | Yes  | wind        | Weak
+   6 | No   | outlook     | Rain
+   6 | No   | temperature | Cool
+   6 | No   | humidity    | Normal
+   6 | No   | wind        | Strong
+   8 | No   | outlook     | Sunny
+   8 | No   | temperature | Mild
+   8 | No   | humidity    | High
+   8 | No   | wind        | Weak
+  10 | Yes  | outlook     | Rain
+  10 | Yes  | temperature | Mild
+  10 | Yes  | humidity    | Normal
+  10 | Yes  | wind        | Weak
+  12 | Yes  | outlook     | Overcast
+  12 | Yes  | temperature | Mild
+  12 | Yes  | humidity    | High
+  12 | Yes  | wind        | Strong
+  14 | No   | outlook     | Rain
+  14 | No   | temperature | Mild
+  14 | No   | humidity    | High
+  14 | No   | wind        | Strong
+   1 | No   | outlook     | Sunny
+   1 | No   | temperature | Hot
+   1 | No   | humidity    | High
+   1 | No   | wind        | Weak
+   3 | Yes  | outlook     | Overcast
+   3 | Yes  | temperature | Hot
+   3 | Yes  | humidity    | High
+   3 | Yes  | wind        | Weak
+   5 | Yes  | outlook     | Rain
+   5 | Yes  | temperature | Cool
+   5 | Yes  | humidity    | Normal
+   5 | Yes  | wind        | Weak
+   7 | Yes  | outlook     | Overcast
+   7 | Yes  | temperature | Cool
+   7 | Yes  | humidity    | Normal
+   7 | Yes  | wind        | Strong
+   9 | Yes  | outlook     | Sunny
+   9 | Yes  | temperature | Cool
+   9 | Yes  | humidity    | Normal
+   9 | Yes  | wind        | Weak
+  11 | Yes  | outlook     | Sunny
+  11 | Yes  | temperature | Mild
+  11 | Yes  | humidity    | Normal
+  11 | Yes  | wind        | Strong
+  13 | Yes  | outlook     | Overcast
+  13 | Yes  | temperature | Hot
+  13 | Yes  | humidity    | Normal
+  13 | Yes  | wind        | Weak
+  (56 rows)</codeblock></li>
+
+              <li id="in191257">Create a training table.<p>
+                  <codeblock>CREATE table weather_example_nb_training AS SELECT attr, 
+value, pivot_sum(array['Yes','No'], play, 1) as class_count 
+FROM weather_example_unpivot GROUP BY attr, value 
+DISTRIBUTED by (attr); 
+</codeblock>
+                </p><p>The <codeph>SELECT * from weather_example_nb_training</codeph> displays the
+                  training data and contains the following 10 rows.
+                </p><codeblock>
+ attr        | value    | class_count
+-------------+----------+-------------
+outlook      | Rain     | {3,2}
+humidity     | High     | {3,4}
+outlook      | Overcast | {4,0}
+humidity     | Normal   | {6,1}
+outlook      | Sunny    | {2,3}
+wind         | Strong   | {3,3}
+temperature  | Hot      | {2,2}
+temperature  | Cool     | {3,1}
+temperature  | Mild     | {4,2}
+wind         | Weak     | {6,2}
+(10 rows)</codeblock></li>
+
+              <li id="in191273">Create a summary view of the training
+                  data.<p><codeblock>CREATE VIEW weather_example_nb_classify_functions AS SELECT 
+attr, value, class_count, array['Yes','No'] as 
+classes,sum(class_count) over (wa)::integer[] as 
+class_total,count(distinct value) over (wa) as attr_count 
+FROM weather_example_nb_training WINDOW wa as (partition by attr);
+</codeblock></p>
+                <p>The <codeph>SELECT * from weather_example_nb_classify_function</codeph> displays
+                  the training data and contains the following 10 rows.</p>
+                <codeblock>
+attr        |  value  | class_count| classes | class_total| attr_count
+------------+-------- +------------+---------+------------+-----------
+temperature | Mild    | {4,2}      | {Yes,No}| {9,5}      |         3
+temperature | Cool    | {3,1}      | {Yes,No}| {9,5}      |         3
+temperature | Hot     | {2,2}      | {Yes,No}| {9,5}      |         3
+wind        | Weak    | {6,2}      | {Yes,No}| {9,5}      |         2
+wind        | Strong  | {3,3}      | {Yes,No}| {9,5}      |         2
+humidity    | High    | {3,4}      | {Yes,No}| {9,5}      |         2
+humidity    | Normal  | {6,1}      | {Yes,No}| {9,5}      |         2
+outlook     | Sunny   | {2,3}      | {Yes,No}| {9,5}      |         3
+outlook     | Overcast| {4,0}      | {Yes,No}| {9,5}      |         3
+outlook     | Rain    | {3,2}      | {Yes,No}| {9,5}      |         3
+(10 rows)</codeblock></li>
+
+              <li id="in191289">Aggregate the data with <codeph>nb_classify</codeph><ph>,
+                  </ph><codeph>nb_probabilities</codeph><ph>, or both.</ph><p>Decide what to
+                  classify. To classify only one record with the following values:</p>
+                <codeblock>temperature | wind | humidity | outlook
+------------+------+----------+---------
+Cool        | Weak | High     | Overcast
+</codeblock><p>Use
+                  the following command to aggregate the data. The result gives the classification
+                    <codeph>Yes</codeph> or <codeph>No</codeph> and the probability of playing
+                  outdoor sports under this particular set of conditions.</p><p>
+                  <codeblock>SELECT nb_classify(classes, attr_count, class_count, 
+class_total) as class,
+       nb_probabilities(classes, attr_count, class_count, 
+class_total) as probability
+FROM weather_example_nb_classify_functions where
+  (attr = 'temperature' and value = 'Cool') or
+  (attr = 'wind'        and value = 'Weak') or
+  (attr = 'humidity'    and value = 'High') or
+  (attr = 'outlook'     and value = 'Overcast');
+</codeblock>
+                </p><p>The result is a single row.</p><p>
+                  <codeblock>class  |              probability
+-------+---------------------------------------
+ Yes   | {0.858103353920726,0.141896646079274}
+(1 row)
+</codeblock>
+                </p><p>To classify a group of records, load them into a table. In this example, the
+                  table <codeph>t1</codeph> contains the following records:</p><p>
+                  <codeblock> day | outlook  | temperature | humidity |  wind
+-----+----------+-------------+----------+--------
+  15 | Sunny    | Mild        | High     | Strong
+  16 | Rain     | Cool        | Normal   | Strong
+  17 | Overcast | Hot         | Normal   | Weak
+  18 | Rain     | Hot         | High     | Weak
+(4 rows)
+</codeblock>
+                </p><p>The following command aggregates the data against this table. The result
+                  gives the classification <codeph>Yes</codeph> or <codeph>No</codeph> and the
+                  probability of playing outdoor sports for each set of conditions in the table
+                    <codeph>t1</codeph>. Both the <codeph>nb_classify</codeph> and
+                    <codeph>nb_probabilities</codeph> aggregates are used.</p><p>
+                  <codeblock>SELECT t1.day, 
+       t1.temperature, t1.wind, t1.humidity, t1.outlook,
+       nb_classify(classes, attr_count, class_count, 
+class_total) as class,
+       nb_probabilities(classes, attr_count, class_count, 
+class_total) as probability
+FROM t1, weather_example_nb_classify_functions
+WHERE
+  (attr = 'temperature' and value = t1.temperature) or
+  (attr = 'wind'        and value = t1.wind) or
+  (attr = 'humidity'    and value = t1.humidity) or
+  (attr = 'outlook'     and value = t1.outlook)
+GROUP BY t1.day, t1.temperature, t1.wind, t1.humidity, 
+t1.outlook;
+</codeblock>
+                </p><p>The result is a four rows, one for each record in
+                <codeph>t1</codeph>.</p><codeblock>day| temp| wind   | humidity | outlook  | class | probability
+---+-----+--------+----------+----------+-------+--------------
+15 | Mild| Strong | High     | Sunny    | No    | {0.244694132334582,0.755305867665418}
+16 | Cool| Strong | Normal   | Rain     | Yes   | {0.751471997809119,0.248528002190881}
+18 | Hot | Weak   | High     | Rain     | No    | {0.446387538890131,0.553612461109869}
+17 | Hot | Weak   | Normal   | Overcast | Yes   | {0.9297192642788,0.0702807357212004}
+(4 rows)
+</codeblock></li>
+            </ol>
+          </body>
+        </topic>
+      </topic>
+    </topic>
+  </topic>
+
+  <topic id="topic38" xml:lang="en">
+    <title id="in198679">Query Performance</title>
+
+    <body>
+      <p>Greenplum Database dynamically eliminates irrelevant partitions in a table and optimally
+        allocates memory for different operators in a query. These enhancements scan less data for a
+        query, accelerate query processing, and support more concurrency.</p>
+
+      <ul>
+        <li id="in198681">Dynamic Partition Elimination<p>In Greenplum Database, values available
+            only when a query runs are used to dynamically prune partitions, which improves query
+            processing speed. Enable or disable dynamic partition elimination by setting the server
+            configuration parameter <codeph>gp_dynamic_partition_pruning</codeph> to
+              <codeph>ON</codeph> or <codeph>OFF</codeph>; it is <codeph>ON</codeph> by
+          default.</p></li>
+
+        <li id="in198822">Memory Optimizations<p>Greenplum Database allocates memory optimally for
+            different operators in a query and frees and re-allocates memory during the stages of
+            processing a query.</p></li>
+      </ul>
+    </body>
+  </topic>
+
+  <topic id="topic_bvh_cg4_t4">
+    <title>Managing Spill Files Generated by Queries</title>
+
+    <body>
+      <p>Greenplum Database creates spill files, also known as workfiles, on disk if it does not
+        have sufficient memory to execute an SQL query in memory. The default value of 100,000 spill
+        files is sufficient for the majority of queries. However, if a query creates more than the
+        specified number of spill files, Greenplum Database returns this error:</p>
+
+      <codeblock>ERROR: number of workfiles per query limit exceeded</codeblock>
+
+      <p>Reasons that cause a large number of spill files to be generated include:<ul
+          id="ul_dl2_1j4_t4">
+          <li>Data skew is present in the queried data.</li>
+          <li>The amount memory allocated for the query is too low.</li>
+        </ul></p>
+
+      <p>You might be able to run the query successfully by changing the query, changing the data
+        distribution, or changing the system memory configuration. You can use the
+          <i>gp_workfile_*</i> views to see spill file usage information. You can control the
+        maximum amount of memory that can used by a query with the Greenplum Database server
+        configuration parameters <codeph>max_statement_mem</codeph>, <codeph>statement_mem</codeph>,
+        or through resource queues.</p>
+
+      <p><xref href="managing/monitor.xml#topic1"/> contains the following information: <ul
+          id="ul_pdp_kj4_t4">
+          <li>Information about skew and how to check for data skew</li>
+          <li>Information about creating and using the <i>gp_workfile_* views</i></li>
+        </ul></p>
+
+      <p>For information about server configuration parameters, see the <i>Greenplum Database
+          Reference Guide</i>. For information about resource queues, see <xref
+          href="workload_mgmt.xml#topic1"/>.</p>
+
+      <p>If you have determined that the query must create more spill files than allowed by the
+        value of server configuration parameter <codeph>gp_workfile_limit_files_per_query</codeph>,
+        you can increase the value of the parameter.</p>
+    </body>
+  </topic>
+
+  <topic id="topic39" xml:lang="en">
+    <title id="in198649">Query Profiling</title>
+
+    <body>
+      <p>Greenplum Database devises a <i>query plan</i> for each query. Choosing the right query
+        plan to match the query and data structure is necessary for good performance. A query plan
+        defines how Greenplum Database will run the query in the parallel execution environment.
+        Examine the query plans of poorly performing queries to identify possible performance tuning
+        opportunities.</p>
+
+      <p>The query planner uses data statistics maintained by the database to choose a query plan
+        with the lowest possible cost. Cost is measured in disk I/O, shown as units of disk page
+        fetches. The goal is to minimize the total execution cost for the plan.</p>
+
+      <p>View the plan for a given query with the <codeph>EXPLAIN</codeph> command.
+          <codeph>EXPLAIN</codeph> shows the query planner's estimated cost for the query plan. For
+        example:</p>
+
+      <p>
+        <codeblock>EXPLAIN SELECT * FROM names WHERE id=22;
+</codeblock>
+      </p>
+
+      <p><codeph>EXPLAIN ANALYZE</codeph> runs the statement in addition to displaying its plan.
+        This is useful for determining how close the planner's estimates are to reality. For
+        example:</p>
+
+      <p>
+        <codeblock>EXPLAIN ANALYZE SELECT * FROM names WHERE id=22;
+</codeblock>
+      </p>
+    </body>
+
+    <topic id="topic40" xml:lang="en">
+      <title>Reading EXPLAIN Output</title>
+
+      <body>
+        <p>A query plan is a tree of nodes. Each node in the plan represents a single operation,
+          such as a table scan, join, aggregation, or sort.</p>
+
+        <p>Read plans from the bottom to the top: each node feeds rows into the node directly above
+          it. The bottom nodes of a plan are usually table scan operations: sequential, index, or
+          bitmap index scans. If the query requires joins, aggregations, sorts, or other operations
+          on the rows, there are additional nodes above the scan nodes to perform these operations.
+          The topmost plan nodes are usually Greenplum Database motion nodes: redistribute, explicit
+          redistribute, broadcast, or gather motions. These operations move rows between segment
+          instances during query processing.</p>
+
+        <p>The output of <codeph>EXPLAIN</codeph> has one line for each node in the plan tree and
+          shows the basic node type and the following execution cost estimates for that plan
+          node:</p>
+
+        <ul>
+          <li id="in182482"><b>cost</b> —Measured in units of disk page fetches. 1.0 equals one
+            sequential disk page read. The first estimate is the start-up cost of getting the first
+            row and the second is the total cost of cost of getting all rows. The total cost assumes
+            all rows will be retrieved, which is not always true; for example, if the query uses
+              <codeph>LIMIT</codeph>, not all rows are retrieved.</li>
+
+          <li id="in182483"><b>rows</b> —The total number of rows output by this plan node. This
+            number is usually less than the number of rows processed or scanned by the plan node,
+            reflecting the estimated selectivity of any <codeph>WHERE</codeph> clause conditions.
+            Ideally, the estimate for the topmost node approximates the number of rows that the
+            query actually returns, updates, or deletes.</li>
+
+          <li id="in182484"><b>width</b> —The total bytes of all the rows that this plan node
+            outputs.</li>
+        </ul>
+
+        <p>Note the following:</p>
+
+        <ul>
+          <li id="in203106">The cost of a node includes the cost of its child nodes. The topmost
+            plan node has the estimated total execution cost for the plan. This is the number the
+            planner intends to minimize.</li>
+
+          <li id="in203119">The cost reflects only the aspects of plan execution that the query
+            planner takes into consideration. For example, the cost does not reflect time spent
+            transmitting result rows to the client.</li>
+        </ul>
+      </body>
+
+      <topic id="topic41" xml:lang="en">
+        <title id="in182487">EXPLAIN Example</title>
+
+        <body>
+          <p>The following example describes how to read an <codeph>EXPLAIN</codeph> query plan for
+            a query:</p>
+
+          <p>
+            <codeblock>EXPLAIN SELECT * FROM names WHERE name = 'Joelle';
+                     QUERY PLAN
+------------------------------------------------------------
+Gather Motion 2:1 (slice1) (cost=0.00..20.88 rows=1 width=13)
+
+   -&gt; Seq Scan on 'names' (cost=0.00..20.88 rows=1 width=13)
+         Filter: name::text ~~ 'Joelle'::text
+</codeblock>
+          </p>
+
+          <p>Read the plan from the bottom to the top. To start, the query planner sequentially
+            scans the <i>names</i> table. Notice the <codeph>WHERE</codeph> clause is applied as a
+              <i>filter</i> condition. This means the scan operation checks the condition for each
+            row it scans and outputs only the rows that satisfy the condition.</p>
+
+          <p>The results of the scan operation are passed to a <i>gather motion</i> operation. In
+            Greenplum Database, a gather motion is when segments send rows to the master. In this
+            example, we have two segment instances that send to one master instance. This operation
+            is working on <codeph>slice1</codeph> of the parallel query execution plan. A query plan
+            is divided into <i>slices</i> so the segments can work on portions of the query plan in
+            parallel.</p>
+
+          <p>The estimated startup cost for this plan is <codeph>00.00</codeph> (no cost) and a
+            total cost of <codeph>20.88</codeph> disk page fetches. The planner estimates this query
+            will return one row.</p>
+        </body>
+      </topic>
+    </topic>
+
+    <topic id="topic42" xml:lang="en">
+      <title>Reading EXPLAIN ANALYZE Output</title>
+
+      <body>
+        <p><codeph>EXPLAIN ANALYZE</codeph> plans and runs the statement. The <codeph>EXPLAIN
+            ANALYZE</codeph> plan shows the actual execution cost along with the planner's
+          estimates. This allows you to see if the planner's estimates are close to reality.
+            <codeph>EXPLAIN ANALYZE</codeph> also shows the following:</p>
+
+        <ul>
+          <li id="in209045">The total runtime (in milliseconds) in which the query executed.</li>
+
+          <li id="in209046">The memory used by each slice of the query plan, as well as the memory
+            reserved for the whole query statement.</li>
+
+          <li id="in209047">The number of <i>workers</i> (segments) involved in a plan node
+            operation. Only segments that return rows are counted.</li>
+
+          <li id="in209048">The maximum number of rows returned by the segment that produced the
+            most rows for the operation. If multiple segments produce an equal number of rows,
+              <codeph>EXPLAIN ANALYZE</codeph> shows the segment with the longest <i>&lt;time&gt; to
+              end</i>.</li>
+
+          <li id="in209049">The segment id of the segment that produced the most rows for an
+            operation.</li>
+
+          <li id="in209050">For relevant operations, the amount of memory
+            (<codeph>work_mem</codeph>) used by the operation. If the <codeph>work_mem</codeph> was
+            insufficient to perform the operation in memory, the plan shows the amount of data
+            spilled to disk for the lowest-performing segment. For
+              example:<p><codeblock>Work_mem used: 64K bytes avg, 64K bytes max (seg0).
+Work_mem wanted: 90K bytes avg, 90K byes max (seg0) to lessen 
+workfile I/O affecting 2 workers.
+</codeblock></p></li>
+
+          <li id="in209053">The time (in milliseconds) in which the segment that produced the most
+            rows retrieved the first row, and the time taken for that segment to retrieve all rows.
+            The result may omit <i>&lt;time&gt; to first row</i> if it is the same as the
+              <i>&lt;time&gt; to end</i>.</li>
+        </ul>
+      </body>
+
+      <topic id="topic43" xml:lang="en">
+        <title>EXPLAIN ANALYZE Example</title>
+
+        <body>
+          <p>This example describes how to read an <codeph>EXPLAIN</codeph><codeph>ANALYZE</codeph>
+            query plan using the same query. The <codeph>bold</codeph> parts of the plan show actual
+            timing and rows returned for each plan node, as well as memory and time statistics for
+            the whole query.</p>
+
+          <codeblock>EXPLAIN ANALYZE SELECT * FROM names WHERE name = 'Joelle';
+                     QUERY PLAN
+------------------------------------------------------------
+Gather Motion 2:1 (slice1; segments: 2) (cost=0.00..20.88 rows=1 width=13)
+    Rows out: 1 rows at destination with 0.305 ms to first row, 0.537 ms to end, start offset by 0.289 ms.
+        -&gt; Seq Scan on names (cost=0.00..20.88 rows=1 width=13)
+             Rows out: Avg 1 rows x 2 workers. Max 1 rows (seg0) with 0.255 ms to first row, 0.486 ms to end, start offset by 0.968 ms.
+                 Filter: name = 'Joelle'::text
+ Slice statistics:
+
+      (slice0) Executor memory: 135K bytes.
+
+    (slice1) Executor memory: 151K bytes avg x 2 workers, 151K bytes max (seg0).
+
+Statement statistics:
+ Memory used: 128000K bytes
+ Total runtime: 22.548 ms
+</codeblock>
+
+          <p>Read the plan from the bottom to the top. The total elapsed time to run this query was
+              <i>22.548</i> milliseconds.</p>
+
+          <p>The <i>sequential scan</i> operation had only one segment (<i>seg0</i>) that returned
+            rows, and it returned just <i>1 row</i>. It took <i>0.255</i> milliseconds to find the
+            first row and <i>0.486</i> to scan all rows. This result is close to the planner's
+            estimate: the query planner estimated it would return one row for this query. The
+              <i>gather motion</i> (segments sending data to the master) received 1 row . The total
+            elapsed time for this operation was <i>0.537</i> milliseconds.</p>
+        </body>
+      </topic>
+    </topic>
+
+    <topic id="topic44" xml:lang="en">
+      <title>Examining Query Plans to Solve Problems</title>
+
+      <body>
+        <p>If a query performs poorly, examine its query plan and ask the following questions:</p>
+
+        <ul>
+          <li id="in182530"><b>Do operations in the plan take an exceptionally long time?</b> Look
+            for an operation consumes the majority of query processing time. For example, if an
+            index scan takes longer than expected, the index could be out-of-date and need to be
+            reindexed. Or, adjust <codeph>enable_&lt;operator&gt; </codeph>parameters to see if you
+            can force the planner to choose a different plan by disabling a particular query plan
+            operator for that query.</li>
+
+          <li id="in182538"><b>Are the planner's estimates close to reality?</b> Run <codeph>EXPLAIN
+              ANALYZE</codeph> and see if the number of rows the planner estimates is close to the
+            number of rows the query operation actually returns. If there is a large discrepancy,
+            collect more statistics on the relevant columns. See the <i>Greenplum Database Reference
+              Guide</i> for more information on the <codeph>EXPLAIN ANALYZE</codeph> and
+              <codeph>ANALYZE</codeph> commands.</li>
+
+          <li id="in182542"><b>Are selective predicates applied early in the plan?</b> Apply the
+            most selective filters early in the plan so fewer rows move up the plan tree. If the
+            query plan does not correctly estimate query predicate selectivity, collect more
+            statistics on the relevant columns. See the <codeph>ANALYZE</codeph> command in the
+              <i>Greenplum Database Reference Guide</i> for more information collecting statistics.
+            You can also try reordering the <codeph>WHERE</codeph> clause of your SQL
+            statement.</li>
+
+          <li id="in182546"><b>Does the planner choose the best join order?</b> When you have a
+            query that joins multiple tables, make sure that the planner chooses the most selective
+            join order. Joins that eliminate the largest number of rows should be done earlier in
+            the plan so fewer rows move up the plan tree. <p>If the plan is not choosing the optimal
+              join order, set <codeph>join_collapse_limit=1</codeph> and use explicit
+                <codeph>JOIN</codeph> syntax in your SQL statement to force the planner to the
+              specified join order. You can also collect more statistics on the relevant join
+              columns. See the <codeph>ANALYZE</codeph> command in the <i>Greenplum Database
+                Reference Guide</i> for more information collecting statistics.</p></li>
+
+          <li id="in182550"><b>Does the planner selectively scan partitioned tables?</b> If you use
+            table partitioning, is the planner selectively scanning only the child tables required
+            to satisfy the query predicates? Scans of the parent tables should return 0 rows since
+            the parent tables do not contain any data. See <xref
+              href="ddl/ddl-partition.xml#topic74"/> for an example of a query plan that shows a
+            selective partition scan.</li>
+
+          <li id="in182554"><b>Does the planner choose hash aggregate and hash join operations where
+              applicable?</b> Hash operations are typically much faster than other types of joins or
+            aggregations. Row comparison and sorting is done in memory rather than reading/writing
+            from disk. To enable the query planner to choose hash operations, there must be
+            sufficient memory available to hold the estimated number of rows. Try increasing work
+            memory to improve performance for a query. If possible, run an <codeph>EXPLAIN
+              ANALYZE</codeph> for the query to show which plan operations spilled to disk, how much
+            work memory they used, and how much memory was required to avoid spilling to disk. For
+                example:<p><codeph>Work_mem used: 23430K bytes avg, 23430K bytes max (seg0).
+                Work_mem wanted: 33649K bytes avg, 33649K bytes max (seg0) to lessen workfile I/O
+                affecting 2 workers.</codeph></p><p>The "bytes wanted" message from <codeph>EXPLAIN
+                ANALYZE</codeph> is based on the amount of data written to work files and is not
+              exact. The minimum <codeph>work_mem</codeph> needed can differ from the suggested
+              value.</p></li>
+        </ul>
+      </body>
+    </topic>
+  </topic>
+</topic>

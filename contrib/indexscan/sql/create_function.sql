@@ -1,0 +1,9 @@
+-- select * from readindex('pg_class_oid_index'::regclass) as (ictid tid, hctid tid, aotid text, istatus text, hstatus text, oid oid);
+CREATE OR REPLACE FUNCTION readindex(oid) RETURNS SETOF record AS
+'$libdir/indexscan', 'readindex'
+LANGUAGE C STRICT;
+
+-- Tell the system that readindex() function should be executed on all
+-- segments, rather than on the master.
+set allow_system_table_mods='dml';
+update pg_proc set prodataaccess = 's' where proname='readindex';

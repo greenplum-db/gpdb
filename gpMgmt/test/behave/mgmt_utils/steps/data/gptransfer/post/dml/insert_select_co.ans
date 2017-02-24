@@ -20,8 +20,8 @@ You are now connected to database "gptest" as user "tangp3".
  col015 | bytea                       |                                              | extended | none             | 0                 | 32768      | 
  col016 | timestamp with time zone    |                                              | plain    | none             | 0                 | 32768      | 
  col017 | interval                    |                                              | plain    | none             | 0                 | 32768      | 
- col018 | cidr                        |                                              | plain    | none             | 0                 | 32768      | 
- col019 | inet                        |                                              | plain    | none             | 0                 | 32768      | 
+ col018 | cidr                        |                                              | main     | none             | 0                 | 32768      | 
+ col019 | inet                        |                                              | main     | none             | 0                 | 32768      | 
  col020 | macaddr                     |                                              | plain    | none             | 0                 | 32768      | 
  col022 | money                       |                                              | plain    | none             | 0                 | 32768      | 
  col024 | time with time zone         |                                              | plain    | none             | 0                 | 32768      | 
@@ -69,8 +69,8 @@ Distributed by: (a)
  col015 | bytea                       |                                              | extended | none             | 0                 | 32768      | 
  col016 | timestamp with time zone    |                                              | plain    | none             | 0                 | 32768      | 
  col017 | interval                    |                                              | plain    | none             | 0                 | 32768      | 
- col018 | cidr                        |                                              | plain    | none             | 0                 | 32768      | 
- col019 | inet                        |                                              | plain    | none             | 0                 | 32768      | 
+ col018 | cidr                        |                                              | main     | none             | 0                 | 32768      | 
+ col019 | inet                        |                                              | main     | none             | 0                 | 32768      | 
  col020 | macaddr                     |                                              | plain    | none             | 0                 | 32768      | 
  col022 | money                       |                                              | plain    | none             | 0                 | 32768      | 
  col024 | time with time zone         |                                              | plain    | none             | 0                 | 32768      | 

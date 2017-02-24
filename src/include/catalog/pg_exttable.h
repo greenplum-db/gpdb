@@ -28,7 +28,8 @@
 CATALOG(pg_exttable,6040) BKI_WITHOUT_OIDS
 {
 	Oid		reloid;				/* refers to this relation's oid in pg_class  */
-	text	location[1];		/* array of URI strings */
+	text	urilocation[1];		/* array of URI strings */
+	text	execlocation[1];	/* array of ON locations */
 	char	fmttype;			/* 't' (text) or 'c' (csv) */
 	text	fmtopts;			/* the data format options */
 	text	options[1];			/* the array of external table options */
@@ -56,18 +57,19 @@ typedef FormData_pg_exttable *Form_pg_exttable;
  *		compiler constants for pg_exttable
  * ----------------
  */
-#define Natts_pg_exttable					11
+#define Natts_pg_exttable					12
 #define Anum_pg_exttable_reloid				1
-#define Anum_pg_exttable_location			2
-#define Anum_pg_exttable_fmttype			3
-#define Anum_pg_exttable_fmtopts			4
-#define Anum_pg_exttable_options			5
-#define Anum_pg_exttable_command			6
-#define Anum_pg_exttable_rejectlimit		7
-#define Anum_pg_exttable_rejectlimittype	8
-#define Anum_pg_exttable_fmterrtbl			9
-#define Anum_pg_exttable_encoding			10
-#define Anum_pg_exttable_writable			11
+#define Anum_pg_exttable_urilocation			2
+#define Anum_pg_exttable_execlocation			3
+#define Anum_pg_exttable_fmttype			4
+#define Anum_pg_exttable_fmtopts			5
+#define Anum_pg_exttable_options			6
+#define Anum_pg_exttable_command			7
+#define Anum_pg_exttable_rejectlimit		8
+#define Anum_pg_exttable_rejectlimittype	9
+#define Anum_pg_exttable_fmterrtbl			10
+#define Anum_pg_exttable_encoding			11
+#define Anum_pg_exttable_writable			12
 
 
 /*
@@ -76,7 +78,8 @@ typedef FormData_pg_exttable *Form_pg_exttable;
  */
 typedef struct ExtTableEntry
 {
-	List*	locations;
+	List*	urilocations;
+	List*	execlocations;
 	char	fmtcode;
 	char*	fmtopts;
 	List*	options;

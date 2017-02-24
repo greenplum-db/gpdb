@@ -180,52 +180,17 @@ ExecSort(SortState *node)
 
 		/* CDB */
 		{
-			ExprContext *econtext = node->ss.ps.ps_ExprContext;
-			bool 		isNull;
-			int64 		limit = 0;
-			int64 		offset = 0;
 			int 		unique = 0;
 			int 		sort_flags = gp_sort_flags; /* get the guc */
 			int         maxdistinct = gp_sort_max_distinct; /* get the guc */
-
-			if (node->limitCount)
-			{
-				limit =
-						DatumGetInt64(
-								ExecEvalExprSwitchContext(node->limitCount,
-														  econtext,
-														  &isNull,
-														  NULL));
-				/* Interpret NULL limit as no limit */
-				if (isNull)
-					limit = 0;
-				else if (limit < 0)
-					limit = 0;
-
-			}
-			if (node->limitOffset)
-			{
-				offset =
-						DatumGetInt64(
-								ExecEvalExprSwitchContext(node->limitOffset,
-														  econtext,
-														  &isNull,
-														  NULL));
-				/* Interpret NULL offset as no offset */
-				if (isNull)
-					offset = 0;
-				else if (offset < 0)
-					offset = 0;
-
-			}
 
 			if (node->noduplicates)
 				unique = 1;
 			
 			if(gp_enable_mk_sort)
-				cdb_tuplesort_init_mk(tuplesortstate_mk, offset, limit, unique, sort_flags, maxdistinct);
+				cdb_tuplesort_init_mk(tuplesortstate_mk, unique, sort_flags, maxdistinct);
 			else
-				cdb_tuplesort_init(tuplesortstate, offset, limit, unique, sort_flags, maxdistinct);
+				cdb_tuplesort_init(tuplesortstate, unique, sort_flags, maxdistinct);
 		}
 
 		/* If EXPLAIN ANALYZE, share our Instrumentation object with sort. */
@@ -413,11 +378,6 @@ ExecInitSort(Sort *node, EState *estate, int eflags)
 
 	/* CDB */ /* evaluate a limit as part of the sort */
 	{
-		/* pass node state to sort state */
-		sortstate->limitOffset = ExecInitExpr((Expr *) node->limitOffset,
-											  (PlanState *) sortstate);
-		sortstate->limitCount = ExecInitExpr((Expr *) node->limitCount,
-											 (PlanState *) sortstate);
 		sortstate->noduplicates = node->noduplicates;
 	}
 

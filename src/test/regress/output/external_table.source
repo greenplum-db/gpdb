@@ -171,7 +171,7 @@ format 'text' (delimiter '|');
 select * from badt1;
 NOTICE:  gfile stat @abs_srcdir@/data/no/such/place/badt1.tbl failure: No such file or directory  (seg0 slice1 @hostname@:50000 pid=64819)
 NOTICE:  fstream unable to open file @abs_srcdir@/data/no/such/place/badt1.tbl  (seg0 slice1 @hostname@:50000 pid=64819)
-ERROR:  could not open "file://@hostname@@abs_srcdir@/data/no/such/place/badt1.tbl" for reading: 404 file not found  (seg0 slice1 @hostname@:50000 pid=64819)
+ERROR:  could not open file "@abs_srcdir@/data/no/such/place/badt1.tbl": 404 file not found  (seg0 slice1 @hostname@:50000 pid=64819)
 drop external table badt1;
 --
 -- try a bad protocol
@@ -408,7 +408,7 @@ CREATE SCHEMA exttabletest;
 CREATE
 	EXTERNAL TABLE exttabletest.ext_nation (n_nationkey integer, n_name char(25), n_regionkey integer, n_comment varchar(152))
 	LOCATION ('file://@hostname@@abs_srcdir@/data/nation.tbl') FORMAT 'text' (delimiter '|');
-SELECT count(*) FROM pg_exttable WHERE location @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
+SELECT count(*) FROM pg_exttable WHERE urilocation @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
  count 
 -------
      1
@@ -416,7 +416,7 @@ SELECT count(*) FROM pg_exttable WHERE location @> '{file://@hostname@@abs_srcdi
 
 DROP SCHEMA exttabletest CASCADE;
 NOTICE:  drop cascades to external table exttabletest.ext_nation
-SELECT count(*) FROM pg_exttable WHERE location @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
+SELECT count(*) FROM pg_exttable WHERE urilocation @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
  count 
 -------
      0
@@ -959,7 +959,7 @@ SELECT e1.i, e2.j from exttab_cursor_2 e1 INNER JOIN exttab_cursor_2 e2 ON e1.i 
 -- The test is here to track the issue.
 FETCH exttab_cur1;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice1 subraa4-mac:40000 pid=70279)
-DETAIL:  External table exttab_cursor_2, line 7 of file://subraa4-mac/Users/abhijits/gitdev/oss_build/gpdb/src/test/regress/data/exttab_more_errors.data: "error_1"
+DETAIL:  External table exttab_cursor_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 COMMIT;
 -- This should have errors populated already
 SELECT count(*) > 0 FROM gp_read_error_log('exttab_cursor_2');
@@ -1430,7 +1430,7 @@ SELECT ( SELECT i FROM exttab_subq_2 WHERE i <= e1.i) as i, e1.j
 FROM exttab_subq_2 e1, exttab_subq_1 e2
 WHERE e1.i = e2.i;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice2 @hostname@:40000 pid=49348)
-DETAIL:  External table exttab_subq_1, line 2 of file://@hostname@@abs_srcdir@/data/exttab_few_errors.data: ""
+DETAIL:  External table exttab_subq_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 SELECT COUNT(*) > 0 FROM gp_read_error_log('exttab_subq_1');
  ?column? 
 ----------
@@ -2813,6 +2813,24 @@ SELECT COUNT(*) FROM gp_read_error_log('exttab_heap_join_1');
 (1 row)
 
 \! rm @abs_srcdir@/data/tableless.csv
+-- Create external table with on clause
+CREATE EXTERNAL TABLE exttab_with_on_master( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') ON MASTER FORMAT 'TEXT' (DELIMITER '|');
+\d exttab_with_on_master
+External table "public.exttab_with_on_master"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ i      | integer | 
+ j      | text    | 
+Type: readable
+Encoding: UTF8
+Format type: text
+Format options: delimiter '|' null '\N' escape '\'
+External options: {}
+External location: file://@hostname@@abs_srcdir@/data/exttab_few_errors.data
+Execute on: master segment
+
+DROP EXTERNAL TABLE IF EXISTS exttab_with_on_master;
 -- Create external table with 'OPTIONS'
 CREATE EXTERNAL TABLE exttab_with_option_empty( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
@@ -2834,7 +2852,8 @@ Encoding: UTF8
 Format type: text
 Format options: delimiter '|' null '\N' escape '\'
 External options: {hello=world,bonjour=again,"nihao=again and again"} 
-External location: file://@hostname@@abs_srcdir@/data/exttab_few_errors.data 
+External location: file://@hostname@@abs_srcdir@/data/exttab_few_errors.data
+Execute on: all segments
 
 \d exttab_with_option_empty 
 External table "public.exttab_with_option_empty"
@@ -2848,6 +2867,7 @@ Format type: text
 Format options: delimiter '|' null '\N' escape '\'
 External options: {} 
 External location: file://@hostname@@abs_srcdir@/data/exttab_few_errors.data
+Execute on: all segments
 
 DROP EXTERNAL TABLE IF EXISTS exttab_with_option_empty;
 DROP EXTERNAL TABLE IF EXISTS exttab_with_option_1;
@@ -2886,3 +2906,29 @@ FORMAT 'csv';
 NOTICE:  CREATE EXTERNAL TABLE will create implicit sequence "serial_a_seq" for serial column "serial.a"
 -- drop temp external table
 DROP EXTERNAL TABLE IF EXISTS serial;
+-- External table query within plpgSQL function get error
+CREATE EXTERNAL TABLE exttab_error_context_callback(c1 int, c2 int)
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab.data') FORMAT 'TEXT';
+CREATE or REPLACE FUNCTION exttab_error_context_callback_func()
+RETURNS SETOF INTEGER
+AS
+$$
+DECLARE
+    ret INTEGER;
+BEGIN
+    FOR ret IN
+        SELECT c2 from exttab_error_context_callback
+    LOOP
+        RETURN NEXT ret;
+    END LOOP;
+END
+$$
+LANGUAGE plpgSQL READS SQL DATA;
+SET gp_log_gang TO DEBUG;
+SELECT * FROM exttab_error_context_callback_func();
+ERROR:  missing data for column "c2"  (seg1 slice2 @hostname@:25532 pid=20960)
+DETAIL:  External table exttab_error_context_callback, line 1 of file://@hostname@@abs_srcdir@/data/exttab.data: "1|1_number"
+CONTEXT:  PL/pgSQL function "exttab_error_context_callback_func" line 4 at FOR over SELECT rows
+SET gp_log_gang TO DEFAULT;
+DROP FUNCTION exttab_error_context_callback_func();
+DROP EXTERNAL TABLE exttab_error_context_callback;

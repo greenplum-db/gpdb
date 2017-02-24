@@ -20,11 +20,8 @@ Range OffsetMgr::getNextOffset() {
     return ret;
 }
 
-ChunkBuffer::ChunkBuffer(const string& url, S3KeyReader& reader, const S3MemoryContext& context)
-    : sourceUrl(url),
-      chunkData(context),
-      offsetMgr(reader.getOffsetMgr()),
-      sharedKeyReader(reader) {
+ChunkBuffer::ChunkBuffer(const S3Url& s3Url, S3KeyReader& reader, const S3MemoryContext& context)
+    : s3Url(s3Url), chunkData(context), offsetMgr(reader.getOffsetMgr()), sharedKeyReader(reader) {
     s3Interface = NULL;
     Range range = offsetMgr.getNextOffset();
     curFileOffset = range.offset;
@@ -42,7 +39,7 @@ ChunkBuffer::~ChunkBuffer() {
 }
 
 ChunkBuffer& ChunkBuffer::operator=(const ChunkBuffer& other) {
-    this->sourceUrl = other.sourceUrl;
+    this->s3Url = other.s3Url;
     this->eof = other.eof;
     this->status = other.status;
     this->curFileOffset = other.curFileOffset;
@@ -122,9 +119,7 @@ uint64_t ChunkBuffer::fill() {
 
     if (leftLen != 0) {
         try {
-            readLen =
-                this->s3Interface->fetchData(offset, this->chunkData, leftLen, this->sourceUrl,
-                                             this->sharedKeyReader.getRegion());
+            readLen = this->s3Interface->fetchData(offset, this->chunkData, leftLen, this->s3Url);
             if (readLen != leftLen) {
                 S3DEBUG("Failed to fetch expected data from S3");
                 this->setSharedError(true, S3PartialResponseError(leftLen, readLen));
@@ -194,8 +189,6 @@ void S3KeyReader::open(const S3Params& params) {
     this->numOfChunks = params.getNumOfChunks();
     S3_CHECK_OR_DIE(this->numOfChunks > 0, S3RuntimeError, "numOfChunks must not be zero");
 
-    this->region = params.getRegion();
-
     this->offsetMgr.setKeySize(params.getKeySize());
     this->offsetMgr.setChunkSize(params.getChunkSize());
 
@@ -205,7 +198,7 @@ void S3KeyReader::open(const S3Params& params) {
     this->chunkBuffers.reserve(this->numOfChunks);
 
     for (uint64_t i = 0; i < this->numOfChunks; i++) {
-        this->chunkBuffers.emplace_back(params.getKeyUrl(), *this, params.getMemoryContext());
+        this->chunkBuffers.emplace_back(params.getS3Url(), *this, params.getMemoryContext());
     }
 
     for (uint64_t i = 0; i < this->numOfChunks; i++) {

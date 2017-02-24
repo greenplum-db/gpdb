@@ -139,6 +139,7 @@ DROP TABLE tmp_new;
 DROP TABLE tmp_new2;
 -- ALTER TABLE ... RENAME on corrupted relations
 SET allow_system_table_mods = dml;
+SET gp_allow_rename_relation_without_lock = ON;
 -- missing entry
 CREATE TABLE cor (a int, b float);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
@@ -165,6 +166,7 @@ ALTER TABLE othercor RENAME TO tmpcor;
 ALTER TABLE tmpcor RENAME TO cor;
 DROP TABLE cor;
 RESET allow_system_table_mods;
+RESET gp_allow_rename_relation_without_lock;
 -- ALTER TABLE ... RENAME on non-table relations
 -- renaming indexes (FIXME: this should probably test the index's functionality)
 ALTER INDEX onek_unique1 RENAME TO tmp_onek_unique1;

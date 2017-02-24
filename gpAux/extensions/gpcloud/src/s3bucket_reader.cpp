@@ -21,10 +21,12 @@ void S3BucketReader::open(const S3Params& params) {
 
     S3_CHECK_OR_DIE(this->s3Interface != NULL, S3RuntimeError, "s3Interface is NULL");
 
-    this->parseURL();
+    const S3Url& s3Url = this->params.getS3Url();
 
-    this->keyList =
-        this->s3Interface->listBucket(this->schema, this->region, this->bucket, this->prefix);
+    S3_CHECK_OR_DIE(s3Url.isValidUrl(), S3ConfigError, s3Url.getFullUrlForCurl() + " is not valid",
+                    s3Url.getFullUrlForCurl());
+
+    this->keyList = this->s3Interface->listBucket(s3Url);
 }
 
 BucketContent& S3BucketReader::getNextKey() {
@@ -34,18 +36,17 @@ BucketContent& S3BucketReader::getNextKey() {
 }
 
 S3Params S3BucketReader::constructReaderParams(BucketContent& key) {
-    S3Params readerParams = this->params;
-
     // encode the key name but leave the "/"
     // "/encoded_path/encoded_name"
-    string keyEncoded = uri_encode(key.getName());
-    find_replace(keyEncoded, "%2F", "/");
+    string keyEncoded = UriEncode(key.getName());
+    FindAndReplace(keyEncoded, "%2F", "/");
 
-    readerParams.setKeyUrl(this->getKeyURL(keyEncoded));
-    readerParams.setRegion(this->region);
+    S3Params readerParams = this->params.setPrefix(keyEncoded);
+
     readerParams.setKeySize(key.getSize());
 
-    S3DEBUG("key: %s, size: %" PRIu64, readerParams.getKeyUrl().c_str(), readerParams.getKeySize());
+    S3DEBUG("key: %s, size: %" PRIu64, readerParams.getS3Url().getFullUrlForCurl().c_str(),
+            readerParams.getKeySize());
     return readerParams;
 }
 
@@ -136,23 +137,4 @@ void S3BucketReader::close() {
     if (!this->keyList.contents.empty()) {
         this->keyList.contents.clear();
     }
-}
-
-string S3BucketReader::getKeyURL(const string& key) {
-    stringstream sstr;
-    sstr << this->schema << "://"
-         << "s3-" << this->region << ".amazonaws.com/";
-    sstr << this->bucket << "/" << key;
-    return sstr.str();
-}
-
-void S3BucketReader::parseURL() {
-    this->schema = this->params.isEncryption() ? "https" : "http";
-    this->region = S3UrlUtility::getRegionFromURL(this->params.getBaseUrl());
-    this->bucket = S3UrlUtility::getBucketFromURL(this->params.getBaseUrl());
-    this->prefix = S3UrlUtility::getPrefixFromURL(this->params.getBaseUrl());
-
-    bool ok = !(this->schema.empty() || this->region.empty() || this->bucket.empty());
-    S3_CHECK_OR_DIE(ok, S3ConfigError, this->params.getBaseUrl() + " is not valid",
-                    this->params.getBaseUrl());
 }

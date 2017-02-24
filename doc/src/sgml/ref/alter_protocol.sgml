@@ -10,7 +10,7 @@ PostgreSQL documentation
 
  <refnamediv>
   <refname>ALTER PROTOCOL</refname>
-  <refpurpose>create a custom data access protocol</refpurpose>
+  <refpurpose>change the definition of a custom data access protocol</refpurpose>
  </refnamediv>
 
  <indexterm zone="sql-alterprotocol">
@@ -30,29 +30,50 @@ ALTER PROTOCOL name OWNER TO newowner
  <refsect1>
   <title>Description</title>
 
+  <para>
+   <command>ALTER PROTOCOL</command> changes the definition of a protocol. Only
+   the protocol name or owner can be altered.  You must own the protocol to use
+   <command>ALTER PROTOCOL</command>. To alter the owner, you must also be a
+   direct or indirect member of the new owning role, and that role must have
+   <command>CREATE</command> privilege on schema of the conversion.  These
+   restrictions are in place to ensure that altering the owner only makes
+   changes that could by made by dropping and recreating the protocol. Note
+   that a superuser can alter ownership of any protocol.
+   </para>
   
  </refsect1>
 
  <refsect1>
   <title>Parameters</title>
 
- </refsect1>
+    <variablelist>
+     <varlistentry>
+      <term><replaceable class="parameter">name</replaceable></term>
+      <listitem>
+       <para>
+        The name (optionally schema-qualified) of an existing protocol.
+       </para>
+      </listitem>
+     </varlistentry>
 
- <refsect1>
-  <title>Notes</title>
+     <varlistentry>
+      <term><replaceable class="parameter">newname</replaceable></term>
+      <listitem>
+       <para>
+        The new name of the protocol.
+       </para>
+      </listitem>
+     </varlistentry>
 
- </refsect1>
-
- <refsect1>
-  <title>Examples</title>
- </refsect1>
-
- <refsect1>
-  <title>Compatibility</title>
- </refsect1>
-
- <refsect1>
-  <title>See Also</title>
+     <varlistentry>
+      <term><replaceable class="parameter">newowner</replaceable></term>
+      <listitem>
+       <para>
+        The new owner of the protocol.
+       </para>
+      </listitem>
+     </varlistentry>
+     </variablelist>
 
  </refsect1>
 

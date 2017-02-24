@@ -52,7 +52,6 @@
 #include "commands/vacuum.h"
 #include "commands/view.h"
 #include "miscadmin.h"
-#include "optimizer/planmain.h"
 #include "parser/parse_utilcmd.h"
 #include "postmaster/bgwriter.h"
 #include "rewrite/rewriteDefine.h"
@@ -63,7 +62,6 @@
 #include "utils/acl.h"
 #include "utils/guc.h"
 #include "utils/syscache.h"
-#include "lib/stringinfo.h"
 
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbpartition.h"
@@ -337,19 +335,19 @@ CheckRelationOwnership(RangeVar *rel, bool noCatalogs)
  * Note: currently no need to support Query nodes here
  */
 bool
-CommandIsReadOnly(Node *node)
+CommandIsReadOnly(Node *parsetree)
 {
-	if (IsA(node, PlannedStmt))
+	if (IsA(parsetree, PlannedStmt))
 	{
-		PlannedStmt *stmt = (PlannedStmt *) node;
+		PlannedStmt *stmt = (PlannedStmt *) parsetree;
 
 		switch (stmt->commandType)
 		{
 			case CMD_SELECT:
 				if (stmt->intoClause != NULL)
-					return false;	/* SELECT INTO */
+					return false;		/* SELECT INTO */
 				else if (stmt->rowMarks != NIL)
-					return false;	/* SELECT FOR UPDATE/SHARE */
+					return false;		/* SELECT FOR UPDATE/SHARE */
 				else
 					return true;
 			case CMD_UPDATE:
@@ -1150,7 +1148,6 @@ ProcessUtility(Node *parsetree,
 			DeallocateQuery((DeallocateStmt *) parsetree);
 			break;
 
-
 			/*
 			 * schema
 			 */
@@ -1714,7 +1711,7 @@ ProcessUtility(Node *parsetree,
 			break;
 
 			/*
-			 * ********************* RESOOURCE QUEUE statements ****
+			 * ********************* RESOURCE QUEUE statements ****
 			 */
 		case T_CreateQueueStmt:
 
@@ -2718,12 +2715,13 @@ CreateCommandTag(Node *parsetree)
 					tag = "DEALLOCATE";
 			}
 			break;
-		
-		case T_Query: /* used to be function CreateQueryTag */
+
+			/* already-planned queries */
+		case T_PlannedStmt:
 			{
-				Query *query = (Query*)parsetree;
-				
-				switch (query->commandType)
+				PlannedStmt *stmt = (PlannedStmt *) parsetree;
+
+				switch (stmt->commandType)
 				{
 					case CMD_SELECT:
 
@@ -2732,11 +2730,60 @@ CreateCommandTag(Node *parsetree)
 						 * will be useful for complaints about read-only
 						 * statements
 						 */
-						if (query->intoClause != NULL)
-							tag = "SELECT INTO";
-						else if (query->rowMarks != NIL)
+						if (stmt->utilityStmt != NULL)
 						{
-							if (((RowMarkClause *) linitial(query->rowMarks))->forUpdate)
+							Assert(IsA(stmt->utilityStmt, DeclareCursorStmt));
+							tag = "DECLARE CURSOR";
+						}
+						else if (stmt->intoClause != NULL)
+							tag = "SELECT INTO";
+						else if (stmt->rowMarks != NIL)
+						{
+							if (((RowMarkClause *) linitial(stmt->rowMarks))->forUpdate)
+								tag = "SELECT FOR UPDATE";
+							else
+								tag = "SELECT FOR SHARE";
+						}
+						else
+							tag = "SELECT";
+						break;
+					case CMD_UPDATE:
+						tag = "UPDATE";
+						break;
+					case CMD_INSERT:
+						tag = "INSERT";
+						break;
+					case CMD_DELETE:
+						tag = "DELETE";
+						break;
+					default:
+						elog(WARNING, "unrecognized commandType: %d",
+							 (int) stmt->commandType);
+						tag = "???";
+						break;
+				}
+			}
+			break;
+
+			/* parsed-and-rewritten-but-not-planned queries */
+		case T_Query:
+			{
+				Query	   *stmt = (Query *) parsetree;
+
+				switch (stmt->commandType)
+				{
+					case CMD_SELECT:
+
+						/*
+						 * We take a little extra care here so that the result
+						 * will be useful for complaints about read-only
+						 * statements
+						 */
+						if (stmt->intoClause != NULL)
+							tag = "SELECT INTO";
+						else if (stmt->rowMarks != NIL)
+						{
+							if (((RowMarkClause *) linitial(stmt->rowMarks))->forUpdate)
 								tag = "SELECT FOR UPDATE";
 							else
 								tag = "SELECT FOR SHARE";
@@ -2754,11 +2801,11 @@ CreateCommandTag(Node *parsetree)
 						tag = "DELETE";
 						break;
 					case CMD_UTILITY:
-						tag = CreateCommandTag(query->utilityStmt);
+						tag = CreateCommandTag(stmt->utilityStmt);
 						break;
 					default:
 						elog(WARNING, "unrecognized commandType: %d",
-							 (int) query->commandType);
+							 (int) stmt->commandType);
 						tag = "???";
 						break;
 				}
@@ -2770,9 +2817,9 @@ CreateCommandTag(Node *parsetree)
 			break;
 
 		default:
-			Assert(false);
 			elog(WARNING, "unrecognized node type: %d",
 				 (int) nodeTag(parsetree));
+			Assert(false);
 			tag = "???";
 			break;
 	}

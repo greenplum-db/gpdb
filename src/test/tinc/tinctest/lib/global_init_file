@@ -54,4 +54,5 @@ m/^Partition by: \(.*/
 -- m/NOTICE\:  \'VACUUM FULL\' is not safe for large tables and has been known to yield unpredictable runtimes./
 -- m/HINT:  Use \'VACUUM\' instead./
 
+m/^(?:HINT|NOTICE):\s+.+\'DISTRIBUTED BY\' clause.*/
 -- end_matchignore

@@ -355,7 +355,7 @@ delete from s where exists (select 1 from r where s.a = r.b);
 -- start_ignore
 ------------------------------------------------------------
 -- Update with Motion: unsupported cases
---     	Updating the dsitribution key
+--     	Updating the distribution key
 ------------------------------------------------------------
 -- end_ignore
 -- start_ignore
@@ -392,9 +392,9 @@ delete from s where b = (select min(a) from r where b = s.b);
 --	Update partition key (requires moving tuples from one partition to another)
 ------------------------------------------------------------
 -- end_ignore
-update p set c = c + 1;
+update p set c = c + 1 where c = 0;
 ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not supported  (seg1 rhel62-vm1:25433 pid=19028)
-update p set c = c + 1 where b in (select b from s);
+update p set c = c + 1 where b in (select b from s) and c = 0;
 ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not supported  (seg2 rhel62-vm1:25434 pid=19030)
 -- ----------------------------------------------------------------------
 -- Test: unsupported_cases1.sql
@@ -402,7 +402,7 @@ ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not
 -- start_ignore
 ------------------------------------------------------------
 -- Update with Motion: unsupported cases
---     	Updating the dsitribution key
+--     	Updating the distribution key
 ------------------------------------------------------------
 -- end_ignore
 -- start_ignore
@@ -438,9 +438,9 @@ delete from s where b = (select min(a) from r where b = s.b);
 --	Update partition key (requires moving tuples from one partition to another)
 ------------------------------------------------------------
 -- end_ignore
-update p set c = c + 1;
+update p set c = c + 1 where c = 0;
 ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not supported  (seg0 rhel62-vm1:25432 pid=19026)
-update p set c = c + 1 where b in (select b from s);
+update p set c = c + 1 where b in (select b from s) and c = 0;
 ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not supported  (seg2 rhel62-vm1:25434 pid=19030)
 -- ----------------------------------------------------------------------
 -- Test: unsupported_cases2.sql
@@ -448,7 +448,7 @@ ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not
 -- start_ignore
 ------------------------------------------------------------
 -- Update with Motion: unsupported cases
---     	Updating the dsitribution key
+--     	Updating the distribution key
 ------------------------------------------------------------
 -- end_ignore
 -- start_ignore
@@ -484,7 +484,7 @@ delete from s where b = (select min(a) from r where b = s.b);
 --	Update partition key (requires moving tuples from one partition to another)
 ------------------------------------------------------------
 -- end_ignore
-update p set c = c + 1;
+update p set c = c + 1 where c = 0;
 ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not supported  (seg2 rhel62-vm1:25434 pid=19030)
 update p set c = c + 1 where b in (select b from s where b = 36);
 ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not supported  (seg2 rhel62-vm1:25434 pid=19030)
@@ -494,7 +494,7 @@ ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not
 -- start_ignore
 ------------------------------------------------------------
 -- Update with Motion: unsupported cases
---     	Updating the dsitribution key
+--     	Updating the distribution key
 ------------------------------------------------------------
 -- end_ignore
 -- start_ignore
@@ -530,9 +530,9 @@ delete from s where b = (select min(a) from r where b = s.b);
 --	Update partition key (requires moving tuples from one partition to another)
 ------------------------------------------------------------
 -- end_ignore
-update p set c = c + 1;
+update p set c = c + 1 where c = 0;
 ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not supported  (seg0 rhel62-vm1:25432 pid=19026)
-update p set c = c + 1 where b in (select b from s);
+update p set c = c + 1 where b in (select b from s) and c = 0;
 ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not supported  (seg1 rhel62-vm1:25433 pid=19028)
 -- ----------------------------------------------------------------------
 -- Test: unsupported_cases4.sql
@@ -540,7 +540,7 @@ ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not
 -- start_ignore
 ------------------------------------------------------------
 -- Update with Motion: unsupported cases
---     	Updating the dsitribution key
+--     	Updating the distribution key
 ------------------------------------------------------------
 -- end_ignore
 -- start_ignore
@@ -576,9 +576,9 @@ delete from s where b = (select min(a) from r where b = s.b);
 --	Update partition key (requires moving tuples from one partition to another)
 ------------------------------------------------------------
 -- end_ignore
-update p set c = c + 1;
+update p set c = c + 1 where c = 0;
 ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not supported  (seg0 rhel62-vm1:25432 pid=19026)
-update p set c = c + 1 where b in (select b from s);
+update p set c = c + 1 where b in (select b from s) and c = 0;
 ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not supported  (seg0 rhel62-vm1:25432 pid=19026)
 -- ----------------------------------------------------------------------
 -- Test: unsupported_cases5.sql
@@ -586,7 +586,7 @@ ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not
 -- start_ignore
 ------------------------------------------------------------
 -- Update with Motion: unsupported cases
---     	Updating the dsitribution key
+--     	Updating the distribution key
 ------------------------------------------------------------
 -- end_ignore
 -- start_ignore
@@ -622,9 +622,9 @@ delete from s where b = (select min(a) from r where b = s.b);
 --	Update partition key (requires moving tuples from one partition to another)
 ------------------------------------------------------------
 -- end_ignore
-update p set c = c + 1;
+update p set c = c + 1 where c = 0;
 ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not supported  (seg1 rhel62-vm1:25433 pid=19028)
-update p set c = c + 1 where b in (select b from s);
+update p set c = c + 1 where b in (select b from s) and c = 0;
 ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not supported  (seg1 rhel62-vm1:25433 pid=19028)
 -- ----------------------------------------------------------------------
 -- Test: partition_motion0.sql
@@ -1197,26 +1197,26 @@ CREATE TABLE sales_par2 (id int, year int, month int, day int, region text)
                         END  (2007) EXCLUSIVE)
    ;
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2002" for table "sales_par2"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2003" for table "sales_par2"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2004" for table "sales_par2"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2005" for table "sales_par2"
-NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2006" for table "sales_par2"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2002_2_prt_usa" for table "sales_par2_1_prt_year2002"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2002_2_prt_europe" for table "sales_par2_1_prt_year2002"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2002_2_prt_asia" for table "sales_par2_1_prt_year2002"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2002_2_prt_other_regions" for table "sales_par2_1_prt_year2002"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2003" for table "sales_par2"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2003_2_prt_usa" for table "sales_par2_1_prt_year2003"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2003_2_prt_europe" for table "sales_par2_1_prt_year2003"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2003_2_prt_asia" for table "sales_par2_1_prt_year2003"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2003_2_prt_other_regions" for table "sales_par2_1_prt_year2003"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2004" for table "sales_par2"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2004_2_prt_usa" for table "sales_par2_1_prt_year2004"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2004_2_prt_europe" for table "sales_par2_1_prt_year2004"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2004_2_prt_asia" for table "sales_par2_1_prt_year2004"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2004_2_prt_other_regions" for table "sales_par2_1_prt_year2004"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2005" for table "sales_par2"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2005_2_prt_usa" for table "sales_par2_1_prt_year2005"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2005_2_prt_europe" for table "sales_par2_1_prt_year2005"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2005_2_prt_asia" for table "sales_par2_1_prt_year2005"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2005_2_prt_other_regions" for table "sales_par2_1_prt_year2005"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2006" for table "sales_par2"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2006_2_prt_usa" for table "sales_par2_1_prt_year2006"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2006_2_prt_europe" for table "sales_par2_1_prt_year2006"
 NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2006_2_prt_asia" for table "sales_par2_1_prt_year2006"
@@ -1246,26 +1246,26 @@ CREATE TABLE sales_par_CO (id int, year int, month int, day int, region text)
     			END  (2007) EXCLUSIVE)
    ;
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2002" for table "sales_par_co"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2003" for table "sales_par_co"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2004" for table "sales_par_co"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2005" for table "sales_par_co"
-NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2006" for table "sales_par_co"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2002_2_prt_usa" for table "sales_par_co_1_prt_year2002"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2002_2_prt_europe" for table "sales_par_co_1_prt_year2002"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2002_2_prt_asia" for table "sales_par_co_1_prt_year2002"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2002_2_prt_other_regions" for table "sales_par_co_1_prt_year2002"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2003" for table "sales_par_co"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2003_2_prt_usa" for table "sales_par_co_1_prt_year2003"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2003_2_prt_europe" for table "sales_par_co_1_prt_year2003"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2003_2_prt_asia" for table "sales_par_co_1_prt_year2003"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2003_2_prt_other_regions" for table "sales_par_co_1_prt_year2003"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2004" for table "sales_par_co"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2004_2_prt_usa" for table "sales_par_co_1_prt_year2004"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2004_2_prt_europe" for table "sales_par_co_1_prt_year2004"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2004_2_prt_asia" for table "sales_par_co_1_prt_year2004"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2004_2_prt_other_regions" for table "sales_par_co_1_prt_year2004"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2005" for table "sales_par_co"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2005_2_prt_usa" for table "sales_par_co_1_prt_year2005"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2005_2_prt_europe" for table "sales_par_co_1_prt_year2005"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2005_2_prt_asia" for table "sales_par_co_1_prt_year2005"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2005_2_prt_other_regions" for table "sales_par_co_1_prt_year2005"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2006" for table "sales_par_co"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2006_2_prt_usa" for table "sales_par_co_1_prt_year2006"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2006_2_prt_europe" for table "sales_par_co_1_prt_year2006"
 NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2006_2_prt_asia" for table "sales_par_co_1_prt_year2006"

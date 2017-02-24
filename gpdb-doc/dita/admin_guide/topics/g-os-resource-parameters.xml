@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic18">
+   <title>OS Resource Parameters</title>
+   <body>
+      <ul>
+         <li id="kh161068">
+            <codeph>max_files_per_process</codeph>
+         </li>
+         <li id="kh161069">
+            <codeph>shared_preload_libraries</codeph>
+         </li>
+      </ul>
+   </body>
+</topic>

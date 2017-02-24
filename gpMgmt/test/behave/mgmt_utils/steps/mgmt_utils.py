@@ -22,6 +22,7 @@ from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
 from gppylib.operations.unix import ListRemoteFilesByPattern, CheckRemoteFile
 from test.behave_utils.gpfdist_utils.gpfdist_mgmt import Gpfdist
 from test.behave_utils.utils import *
+from test.behave_utils.PgHba import PgHba, Entry
 
 master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
 if master_data_dir is None:
@@ -1557,7 +1558,7 @@ def impl(context, table, dbname, ao_table):
     try:
         backup_utils = Context()
         backup_utils.master_port = os.environ.get('PGPORT')
-        backup_utils.dump_database = dbname
+        backup_utils.target_db = dbname
         context.exception = None
         context.partition_list_res = None
         context.partition_list_res = get_partition_state(backup_utils, sch, part_info)
@@ -1624,29 +1625,30 @@ def impl(context):
     if not os.path.exists(dump_dir):
         raise Exception('Expected directory does not exist %s' % dump_dir)
 
-def validate_master_config_backup_files(context):
+def validate_master_config_backup_files(context, dir=master_data_dir):
     if not hasattr(context, "dump_prefix"):
         context.dump_prefix = ''
-    master_dump_dir = os.path.join(master_data_dir, 'db_dumps', context.backup_timestamp[0:8])
+    master_dump_dir = os.path.join(dir, 'db_dumps', context.backup_timestamp[0:8])
     dump_files = os.listdir(master_dump_dir)
     for df in dump_files:
         if df.startswith('%sgp_master_config_files' % context.dump_prefix) and df.endswith('.tar'):
             return
     raise Exception('Config files not backed up on master "%s"' % master_config_file)
 
-def validate_segment_config_backup_files(context):
+def validate_segment_config_backup_files(context, dir=None):
     if not hasattr(context, "dump_prefix"):
         context.dump_prefix = ''
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
     primary_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary()]
 
     for ps in primary_segs:
-        dump_dir = os.path.join(ps.getSegmentDataDirectory(), 'db_dumps', context.backup_timestamp[0:8])
+        seg_data_dir = dir if dir is not None else ps.getSegmentDataDirectory()
+        dump_dir = os.path.join(seg_data_dir, 'db_dumps', context.backup_timestamp[0:8])
         dump_files = ListRemoteFilesByPattern(dump_dir,
-                                              '%sgp_segment_config_files_*.tar' % context.dump_prefix,
+                                              '%sgp_segment_config_files_*_%d_*.tar' % (context.dump_prefix, ps.getSegmentDbId()),
                                               ps.getSegmentHostName()).run()
         if len(dump_files) != 1:
-            raise Exception('Error in finding config files "%s" for segment %s' % (dump_files, ps.getSegmentDataDirectory()))
+            raise Exception('Error in finding config files "%s" for segment %s' % (dump_files, seg_data_dir))
 
 @then('config files should be backed up on all segments')
 def impl(context):
@@ -1655,6 +1657,14 @@ def impl(context):
 
     validate_master_config_backup_files(context)
     validate_segment_config_backup_files(context)
+
+@then('config files should be backed up on all segments in directory "{dir}"')
+def impl(context, dir):
+    if not hasattr(context, 'backup_timestamp'):
+        raise Exception('Backup timestamp needs to be stored')
+
+    validate_master_config_backup_files(context, dir=dir)
+    validate_segment_config_backup_files(context, dir=dir)
 
 @then('verify that the table "{table_name}" in "{dbname}" has dump info for the stored timestamp')
 def impl(context, table_name, dbname):
@@ -2098,8 +2108,14 @@ def impl(context):
 
         for stored_row in context.stored_rows:
             match_this_row = True
+
             for i in range(len(stored_row)):
-                if row[i] != str(stored_row[i]):
+                value = row[i]
+
+                if isinstance(stored_row[i], bool):
+                    value = str(True if row[i] == 't' else False)
+
+                if value != str(stored_row[i]):
                     match_this_row = False
                     break
 
@@ -2300,7 +2316,7 @@ def impl(context):
 @when('user can start transactions')
 @then('user can start transactions')
 def impl(context):
-    num_retries = 50
+    num_retries = 150
     attempt = 0
     while attempt < num_retries:
         try:
@@ -4020,3 +4036,22 @@ def impl(context, segc_id, mirror_existence_state):
         cluster_state = dbconn.execSQL(conn, sql).fetchone()
         if cluster_state[0] != int(mirror_existence_state):
             raise Exception("mirror_existence_state of segment %s is %s. Expected %s." % (segc_id, cluster_state[0], mirror_existence_state))
+
+@given('a role "{role_name}" is created')
+@when('a role "{role_name}" is created')
+@then('a role "{role_name}" is created')
+def impl(context, role_name):
+    with dbconn.connect(dbconn.DbURL(dbname='template1')) as conn:
+        pghba = PgHba()
+        new_entry = Entry(entry_type='local',
+                          database='all',
+                          user=role_name,
+                          authmethod="password")
+        pghba.add_entry(new_entry)
+        pghba.write()
+
+        dbconn.execSQL(conn, "Drop role if exists dsp_role")
+
+        dbconn.execSQL(conn, "Create role %s with login password 'dsprolepwd'" % role_name)
+        dbconn.execSQL(conn, "select pg_reload_conf()")
+        conn.commit()

@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="backup-restore-over">
+  <title>Backup and Restore Overview</title>
+  <body>
+    <p>Greenplum Database supports parallel and non-parallel methods for backing up and restoring
+      databases. Parallel operations scale regardless of the number of segments in your system,
+      because segment hosts each write their data to local disk storage simultaneously. With
+      non-parallel backup and restore operations, the data must be sent over the network from the
+      segments to the master, which writes all of the data to its storage. In addition to
+      restricting I/O to one host, non-parallel backup requires that the master have sufficient
+      local disk storage to store the entire database. </p>
+    <section>
+      <title>Parallel Backup and Restore</title>
+      <p>The Greenplum Database parallel dump utility <codeph>gpcrondump</codeph> backs up the
+        Greenplum master instance and each active segment instance at the same time. </p>
+      <p>By default, <codeph>gpcrondump</codeph> creates dump files in the <codeph>db_dumps</codeph>
+        subdirectory of each segment instance. On the master, <codeph>gpcrondump</codeph> creates
+        several dump files, containing database information such as DDL statements, the system
+        catalog tables, and metadata files. On each segment, <codeph>gpcrondump</codeph> creates one
+        dump file, which contains commands to recreate the data on that segment. Each file created
+        for a backup begins with a 14-digit timestamp key that identifies the backup set the file
+        belongs to. </p>
+      <fig id="kk155499">
+        <title>Parallel Backups in Greenplum Database</title>
+        <image href="../graphics/gp_dump.jpg" placement="break" width="402px" height="226px"
+          id="image_bh4_jhx_yq"/>
+      </fig>
+      <p>The <codeph>gpdbrestore</codeph> parallel restore utility takes the timestamp key generated
+        by <codeph>gpcrondump</codeph>, validates the backup set, and restores the database objects
+        and data into a distributed database. Parallel restore operations require a complete backup
+        set created by <codeph>gpcrondump</codeph>, a full backup, and any required incremental
+        backups. As the following figure illustrates, all segments restore data from local backup
+        files simultaneously.</p>
+      <fig id="kk157614">
+        <title>Parallel Restores in Greenplum Database</title>
+        <image href="../graphics/gp_restore.jpg" placement="break" width="437px" height="241px"
+          id="image_zxw_4hx_yq"/>
+      </fig>
+      <p id="kk156487">The <codeph>gpdbrestore</codeph> utility provides flexibility and
+        verification options for use with the automated backup files produced by
+          <codeph>gpcrondump</codeph> or with backup files moved from the Greenplum cluster to an
+        alternate location. See <xref href="restore-parallel.xml" type="topic" format="dita"/>.
+          <codeph>gpdbrestore</codeph> can also be used to copy files to the alternate location.</p>
+    </section>
+    <section>
+      <title id="kk155276">Non-Parallel Backup and Restore</title>
+      <p>The PostgreSQL <codeph>pg_dump</codeph> and <codeph>pg_dumpall</codeph> non-parallel backup
+        utilities can be used to create a single dump file on the master host that contains all data
+        from all active segments. </p>
+      <p>The PostgreSQL non-parallel utilities should be used only for special cases. They are much
+        slower than using the Greenplum backup utilities since all of the data must pass through the
+        master. Additionally, it is often the case that the master host has insufficient disk space
+        to save a backup of an entire distributed Greenplum database. </p>
+      <p>The <codeph>pg_restore</codeph> utility requires compressed dump files created by
+          <codeph>pg_dump</codeph> or <codeph>pg_dumpall</codeph>. Before starting the restore, you
+        should modify the <codeph>CREATE TABLE</codeph> statements in the dump files to include the
+        Greenplum <codeph>DISTRIBUTED</codeph> clause. If you do not include the
+          <codeph>DISTRIBUTED</codeph> clause, Greenplum Database assigns default values, which may
+        not be optimal. For details, see <codeph>CREATE TABLE</codeph> in the <i>Greenplum Database
+          Reference Guide</i>.</p>
+      <p>To perform a non-parallel restore using parallel backup files, you can copy the backup
+        files from each segment host to the master host, and then load them through the master. See
+          <xref href="restore-diff-system.xml" type="topic" format="dita"/>.</p>
+      <fig id="kk156418">
+        <title>Non-parallel Restore Using Parallel Backup Files</title>
+        <image href="../graphics/nonpar_restore.jpg" placement="break" width="390px"
+          height="231px" id="image_dyn_qhx_yq"/>
+      </fig>
+      <p>Another non-parallel method for backing up Greenplum Database data is to use the
+          <codeph>COPY TO</codeph> SQL command to copy all or a portion of a table out of the
+        database to a delimited text file on the master host. </p>
+    </section>
+  </body>
+  <topic id="topic_edj_hrv_ft">
+    <title>Backup and Restore Options</title>
+    <body>
+      <p>The Greenplum Database backup and restore utilities support various locations for backup
+        files:</p>
+      <ul id="ul_gy1_tzc_gt">
+        <li>With the <codeph>gpcrondump</codeph> utility, backup files may be saved in the default
+          location, the <codeph>db_dumps</codeph> subdirectory of the master and each segment, or
+          saved to a different directory specified with the <codeph>gpcrondump -u</codeph>
+          option.</li>
+        <li>Both the <codeph>gpcrondump</codeph> and <codeph>gpdbrestore</codeph> utilities have
+          integrated support for Dell EMC Data Domain Boost and Veritas NetBackup systems.</li>
+        <li>Backup files can be saved through named pipes to any network accessible location.</li>
+        <li>Backup files saved to the default location may be moved to an archive server on the
+          network. This allows performing the backup at the highest transfer rates (when segments
+          write the backup data to fast local disk arrays) and then freeing up disk space by moving
+          the files to remote storage. </li>
+      </ul>
+      <p>You can create dumps containing selected database objects:<ul id="ul_tzq_5zc_gt">
+          <li>You can backup tables belonging to one or more schema you specify on the command line
+            or in a text file. </li>
+          <li>You can specify schema to exclude from the backup, as command-line options or in a
+            list provided in a text file. </li>
+          <li>You can backup a specified set of tables listed on the command line or in a text file.
+            The table and schema options cannot be used together in a single backup.</li>
+          <li>In addition to database objects, <codeph>gpcrondump</codeph> can backup the
+            configuration files <codeph>pg_hba.conf</codeph>, <codeph>pg_ident.conf</codeph>, and
+              <codeph>postgresql.conf</codeph>, and global database objects, such as roles and
+            tablespaces.</li>
+        </ul></p>
+      <p>You can create incremental backups:</p>
+      <ul id="ul_h3g_fxz_qt">
+        <li>An incremental backup contains only append-optimized and column-oriented tables that
+          have changed since the most recent incremental or full backup.</li>
+        <li>For partitioned append-optimized tables, only changed append-optimized/column-oriented
+          table partitions are backed up. </li>
+        <li>Incremental backups include all heap tables.</li>
+        <li>Use the <codeph>gpcrondump</codeph>
+          <codeph>--incremental</codeph> flag to specify an incremental backup.</li>
+        <li>Restoring an incremental backup requires a full backup and all subsequent incremental
+          backups, up to the backup you are restoring.</li>
+      </ul>
+      <p>The <codeph>gpdbrestore</codeph> utility offers many options:<ul id="ul_djz_g1d_gt">
+          <li>By default, <codeph>gpdbrestore</codeph> restores data to the database it was backed
+            up from. </li>
+          <li>The <codeph>--redirect</codeph> flag allows you to restore a backup to a different
+            database. </li>
+          <li>The restored database can be dropped and recreated, but the default is to restore into
+            an existing database.</li>
+          <li>Selected tables can be restored from a backup by listing the tables on the command
+            line or by listing them in a text file and specifying the text file on the command
+            line.</li>
+          <li>You can restore a database from backup files moved to an archive server. The backup
+            files are copied back into place on the master host and each segment host and then
+            restored to the database.</li>
+        </ul></p>
+    </body>
+  </topic>
+</topic>

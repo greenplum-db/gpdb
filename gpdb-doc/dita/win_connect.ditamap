@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE bookmap PUBLIC "-//OASIS//DTD DITA BookMap//EN" "bookmap.dtd">
+<bookmap xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="book"
+ ditaarch:DITAArchVersion="1.1">
+ <booktitle>
+  <mainbooktitle id="pdf_version">Connectivity Tools</mainbooktitle>
+  <!-- <booktitlealt id="pdf_revision_number">Rev: 03</booktitlealt>-->
+  <!--<booktitlealt id="copyright_date">© 2016 Pivotal Software, Inc.</booktitlealt>-->
+ </booktitle>
+ <bookmeta>
+  <prodinfo>
+   <prodname>Pivotal Software</prodname>
+   <vrmlist>
+    <vrm version="A06"/>
+   </vrmlist>
+  </prodinfo>
+ </bookmeta>
+ <!-- For PDF, this document uses the pdf-note transform -->
+ <chapter href="client_tool_guides/drivers/windows/win_connect.xml">
+  <topicref href="client_tool_guides/drivers/windows/pivotal-copyright.xml" toc="no"/>
+ </chapter>
+</bookmap>

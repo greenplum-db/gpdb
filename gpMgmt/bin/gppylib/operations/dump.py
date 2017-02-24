@@ -107,7 +107,7 @@ def get_include_schema_list_from_exclude_schema(context, exclude_schema_list):
     Don't do strip, that will remove white space inside schema name
     """
     include_schema_list = []
-    schema_list = execute_sql(GET_ALL_SCHEMAS_SQL, context.master_port, context.dump_database)
+    schema_list = execute_sql(GET_ALL_SCHEMAS_SQL, context.master_port, context.target_db)
     for schema in schema_list:
         if schema[0] not in exclude_schema_list \
            and schema[0] not in CATALOG_SCHEMA \
@@ -158,7 +158,7 @@ def get_partition_state_tuples(context, catalog_schema, partition_info):
     """
     partition_list = list()
 
-    dburl = dbconn.DbURL(port=context.master_port, dbname=context.dump_database)
+    dburl = dbconn.DbURL(port=context.master_port, dbname=context.target_db)
     num_sqls = 0
     with dbconn.connect(dburl) as conn:
         for (oid, schemaname, partition_name, tupletable) in partition_info:
@@ -304,7 +304,6 @@ def get_dirty_tables(context, ao_partition_list, co_partition_list, last_operati
     dirty_ao_tables = get_dirty_partition_tables(context, 'ao', ao_partition_list)
     dirty_co_tables = get_dirty_partition_tables(context, 'co', co_partition_list)
     dirty_metadata_set = get_tables_with_dirty_metadata(context, last_operation_data)
-    logger.info("%s" % list(dirty_heap_tables | dirty_ao_tables | dirty_co_tables | dirty_metadata_set))
 
     return list(dirty_heap_tables | dirty_ao_tables | dirty_co_tables | dirty_metadata_set)
 
@@ -336,10 +335,10 @@ def write_dirty_file(context, dirty_tables, timestamp=None):
     return dirty_list_file
 
 def get_heap_partition_list(context):
-    return execute_sql(GET_ALL_HEAP_DATATABLES_SQL, context.master_port, context.dump_database)
+    return execute_sql(GET_ALL_HEAP_DATATABLES_SQL, context.master_port, context.target_db)
 
 def get_ao_partition_list(context):
-    partition_list = execute_sql(GET_ALL_AO_DATATABLES_SQL, context.master_port, context.dump_database)
+    partition_list = execute_sql(GET_ALL_AO_DATATABLES_SQL, context.master_port, context.target_db)
     for line in partition_list:
         if len(line) != 4:
             raise Exception('Invalid results from query to get all AO tables: [%s]' % (','.join(line)))
@@ -347,7 +346,7 @@ def get_ao_partition_list(context):
     return partition_list
 
 def get_co_partition_list(context):
-    partition_list = execute_sql(GET_ALL_CO_DATATABLES_SQL, context.master_port, context.dump_database)
+    partition_list = execute_sql(GET_ALL_CO_DATATABLES_SQL, context.master_port, context.target_db)
     for line in partition_list:
         if len(line) != 4:
             raise Exception('Invalid results from query to get all CO tables: [%s]' % (','.join(line)))
@@ -358,15 +357,16 @@ def get_partition_list(master_port, dbname):
     return execute_sql(GET_ALL_DATATABLES_SQL, master_port, dbname)
 
 def get_user_table_list(context):
-    return execute_sql(GET_ALL_USER_TABLES_SQL, context.master_port, context.dump_database)
+    return execute_sql(GET_ALL_USER_TABLES_SQL, context.master_port, context.target_db)
 
 def get_user_table_list_for_schema(context, schema):
-    sql = GET_ALL_USER_TABLES_FOR_SCHEMA_SQL % pg.escape_string(schema)
-    return execute_sql(sql, context.master_port, context.dump_database)
+    with dbconn.connect(dbconn.DbURL(port=context.master_port, dbname=context.target_db)) as conn:
+        sql = GET_ALL_USER_TABLES_FOR_SCHEMA_SQL % escape_string(schema, conn)
+        return execute_sql_with_connection(sql, conn)
 
 def get_last_operation_data(context):
     # oid, action, subtype, timestamp
-    rows = execute_sql(GET_LAST_OPERATION_SQL, context.master_port, context.dump_database)
+    rows = execute_sql(GET_LAST_OPERATION_SQL, context.master_port, context.target_db)
     data = []
     for row in rows:
         if len(row) != 6:
@@ -384,7 +384,7 @@ def write_partition_list_file(context, timestamp=None):
     if filter_file:
         shutil.copyfile(filter_file, partition_list_file_name)
     else:
-        lines_to_write = get_partition_list(context.master_port, context.dump_database)
+        lines_to_write = get_partition_list(context.master_port, context.target_db)
         partition_list = []
         for line in lines_to_write:
             if len(line) != 3:
@@ -419,11 +419,11 @@ def update_filter_file(context):
     filter_tables = get_lines_from_file(filter_filename)
     tables_sql = "SELECT DISTINCT schemaname||'.'||tablename FROM pg_partitions"
     partitions_sql = "SELECT schemaname||'.'||partitiontablename FROM pg_partitions WHERE schemaname||'.'||tablename='%s';"
-    table_list = execute_sql(tables_sql, context.master_port, context.dump_database)
+    table_list = execute_sql(tables_sql, context.master_port, context.target_db)
 
     for table in table_list:
         if table[0] in filter_tables:
-            partitions_list = execute_sql(partitions_sql % table[0], context.master_port, context.dump_database)
+            partitions_list = execute_sql(partitions_sql % table[0], context.master_port, context.target_db)
             filter_tables.extend([x[0] for x in partitions_list])
 
     write_lines_to_file(filter_filename, list(set(filter_tables)))
@@ -629,7 +629,7 @@ class DumpDatabase(Operation):
             logger.info("Adding schema name %s" % self.context.dump_schema)
             dump_line += " -n \"\\\"%s\\\"\"" % self.context.dump_schema
             #dump_line += " -n \"%s\"" % self.context.dump_schema
-        db_name = shellEscape(self.context.dump_database)
+        db_name = shellEscape(self.context.target_db)
         dump_line += " %s" % checkAndAddEnclosingDoubleQuote(db_name)
         for dump_table in self.context.include_dump_tables:
             schema, table = dump_table.split('.')
@@ -874,10 +874,16 @@ class ValidateDiskSpace(Operation):
         operations = []
         gparray = GpArray.initFromCatalog(dbconn.DbURL(port=self.context.master_port), utility=True)
         segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
+        # We escape the database and table names here so we don't need to worry about using pg.DB() on the segments
+        with dbconn.connect(dbconn.DbURL(port=self.context.master_port)) as conn:
+            escaped_table_names = [escape_string(tablename, conn) for tablename in self.context.include_dump_tables]
+            escaped_dbname = escape_string(self.context.target_db, conn)
         for seg in segs:
             operations.append(RemoteOperation(ValidateSegDiskSpace(self.context,
                                                                    datadir = seg.getSegmentDataDirectory(),
-                                                                   segport = seg.getSegmentPort()),
+                                                                   segport = seg.getSegmentPort(),
+                                                                   escaped_tables = escaped_table_names,
+                                                                   escaped_dbname = escaped_dbname),
                                               seg.getSegmentHostName()))
 
         ParallelOperation(operations, self.context.batch_default).run()
@@ -896,22 +902,24 @@ class ValidateDiskSpace(Operation):
 
 class ValidateSegDiskSpace(Operation):
     # TODO: this estimation of needed space needs work. it doesn't include schemas or exclusion tables.
-    def __init__(self, context, datadir, segport):
+    def __init__(self, context, datadir, segport, escaped_tables, escaped_dbname):
         self.context = context
         self.datadir = datadir
         self.segport = segport
+        self.escaped_tables = escaped_tables
+        self.escaped_dbname = escaped_dbname
 
     def execute(self):
         needed_space = 0
-        dburl = dbconn.DbURL(dbname=self.context.dump_database, port=self.segport)
+        dburl = dbconn.DbURL(dbname=self.context.target_db, port=self.segport)
         conn = None
         try:
             conn = dbconn.connect(dburl, utility=True)
             if self.context.include_dump_tables:
-                for dump_table in self.context.include_dump_tables:
-                    needed_space += execSQLForSingleton(conn, "SELECT pg_relation_size('%s')/1024;" % pg.escape_string(dump_table))
+                for dump_table in self.escaped_tables:
+                    needed_space += execSQLForSingleton(conn, "SELECT pg_relation_size('%s')/1024;" % dump_table)
             else:
-                needed_space = execSQLForSingleton(conn, "SELECT pg_database_size('%s')/1024;" % pg.escape_string(self.context.dump_database))
+                needed_space = execSQLForSingleton(conn, "SELECT pg_database_size('%s')/1024;" % self.escaped_dbname)
         finally:
             if conn:
                 conn.close()
@@ -951,7 +959,7 @@ class ValidateGpToolkit(Operation):
         logger.info("gp_toolkit not found. Installing...")
         Psql('Installing gp_toolkit',
              filename='$GPHOME/share/postgresql/gp_toolkit.sql',
-             database=self.context.dump_database,
+             database=self.context.target_db,
              port=self.context.master_port).run(validateAfter=True)
 
 class ValidateAllDumpDirs(Operation):
@@ -1067,7 +1075,7 @@ class ValidateIncludeTargets(Operation):
             schema, table = split_fqn(dump_table)
             exists = CheckTableExists(self.context, schema, table).run()
             if not exists:
-                raise ExceptionNoStackTraceNeeded("Table %s does not exist in %s database" % (dump_table, self.context.dump_database))
+                raise ExceptionNoStackTraceNeeded("Table %s does not exist in %s database" % (dump_table, self.context.target_db))
             if self.context.dump_schema:
                 for dump_schema in self.context.dump_schema:
                     if dump_schema != schema:
@@ -1106,7 +1114,7 @@ class ValidateExcludeTargets(Operation):
                         else:
                             logger.warn("Schema dump request and exclude table %s in that schema, ignoring" % dump_table)
             else:
-                logger.warn("Exclude table %s does not exist in %s database, ignoring" % (dump_table, self.context.dump_database))
+                logger.warn("Exclude table %s does not exist in %s database, ignoring" % (dump_table, self.context.target_db))
         if len(rebuild_excludes) == 0:
             logger.warn("All exclude table names have been removed due to issues, see log file")
         return self.context.exclude_dump_tables
@@ -1121,9 +1129,9 @@ class ValidateDatabaseExists(Operation):
         try:
             dburl = dbconn.DbURL(port=self.context.master_port)
             conn = dbconn.connect(dburl)
-            count = execSQLForSingleton(conn, "select count(*) from pg_database where datname='%s';" % pg.escape_string(self.context.dump_database))
+            count = execSQLForSingleton(conn, "select count(*) from pg_database where datname='%s';" % escape_string(self.context.target_db, conn))
             if count == 0:
-                raise ExceptionNoStackTraceNeeded("Database %s does not exist." % self.context.dump_database)
+                raise ExceptionNoStackTraceNeeded("Database %s does not exist." % self.context.target_db)
         finally:
             if conn:
                 conn.close()
@@ -1137,11 +1145,11 @@ class ValidateSchemaExists(Operation):
     def execute(self):
         conn = None
         try:
-            dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.dump_database)
+            dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.target_db)
             conn = dbconn.connect(dburl)
-            count = execSQLForSingleton(conn, "select count(*) from pg_namespace where nspname='%s';" % pg.escape_string(self.schema))
+            count = execSQLForSingleton(conn, "select count(*) from pg_namespace where nspname='%s';" % escape_string(self.schema, conn))
             if count == 0:
-                raise ExceptionNoStackTraceNeeded("Schema %s does not exist in database %s." % (self.schema, self.context.dump_database))
+                raise ExceptionNoStackTraceNeeded("Schema %s does not exist in database %s." % (self.schema, self.context.target_db))
         finally:
             if conn:
                 conn.close()
@@ -1192,15 +1200,15 @@ class UpdateHistoryTable(Operation):
             conn = None
             CREATE_HISTORY_TABLE = """ create table %s (rec_date timestamp, start_time char(8), end_time char(8), options text, dump_key varchar(20), dump_exit_status smallint, script_exit_status smallint, exit_text varchar(10)) distributed by (rec_date); """ % UpdateHistoryTable.HISTORY_TABLE
             try:
-                dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.dump_database)
+                dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.target_db)
                 conn = dbconn.connect(dburl)
                 execSQL(conn, CREATE_HISTORY_TABLE)
                 conn.commit()
             except Exception, e:
-                logger.exception("Unable to create %s in %s database" % (UpdateHistoryTable.HISTORY_TABLE, self.context.dump_database))
+                logger.exception("Unable to create %s in %s database" % (UpdateHistoryTable.HISTORY_TABLE, self.context.target_db))
                 return
             else:
-                logger.info("Created %s in %s database" % (UpdateHistoryTable.HISTORY_TABLE, self.context.dump_database))
+                logger.info("Created %s in %s database" % (UpdateHistoryTable.HISTORY_TABLE, self.context.target_db))
             finally:
                 if conn:
                     conn.close()
@@ -1210,14 +1218,14 @@ class UpdateHistoryTable(Operation):
         APPEND_HISTORY_TABLE = """ insert into %s values (now(), '%s', '%s', '%s', '%s', %d, %d, '%s'); """ % (UpdateHistoryTable.HISTORY_TABLE, self.time_start, self.time_end, self.options_list, self.timestamp, self.dump_exit_status, self.pseudo_exit_status, exit_msg)
         conn = None
         try:
-            dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.dump_database)
+            dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.target_db)
             conn = dbconn.connect(dburl)
             execSQL(conn, APPEND_HISTORY_TABLE)
             conn.commit()
         except Exception, e:
-            logger.exception("Failed to insert record into %s in %s database" % (UpdateHistoryTable.HISTORY_TABLE, self.context.dump_database))
+            logger.exception("Failed to insert record into %s in %s database" % (UpdateHistoryTable.HISTORY_TABLE, self.context.target_db))
         else:
-            logger.info("Inserted dump record into %s in %s database" % (UpdateHistoryTable.HISTORY_TABLE, self.context.dump_database))
+            logger.info("Inserted dump record into %s in %s database" % (UpdateHistoryTable.HISTORY_TABLE, self.context.target_db))
         finally:
             if conn:
                 conn.close()
@@ -1441,18 +1449,18 @@ class VacuumDatabase(Operation):
 
     def execute(self):
         conn = None
-        logger.info('Commencing vacuum of %s database, please wait' % self.context.dump_database)
+        logger.info('Commencing vacuum of %s database, please wait' % self.context.target_db)
         try:
-            dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.dump_database)
+            dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.target_db)
             conn = dbconn.connect(dburl)
             cursor = conn.cursor()
             cursor.execute("commit")                          # hack to move drop stmt out of implied transaction
             cursor.execute("vacuum")
             cursor.close()
         except Exception, e:
-            logger.exception('Error encountered with vacuum of %s database' % self.context.dump_database)
+            logger.exception('Error encountered with vacuum of %s database' % self.context.target_db)
         else:
-            logger.info('Vacuum of %s completed without error' % self.context.dump_database)
+            logger.info('Vacuum of %s completed without error' % self.context.target_db)
         finally:
             if conn:
                 conn.close()
@@ -1519,7 +1527,7 @@ class DumpStats(Operation):
 
         self.write_stats_file_header()
 
-        dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.dump_database)
+        dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.target_db)
         conn = dbconn.connect(dburl)
 
         for table in sorted(include_tables):

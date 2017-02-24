@@ -79,14 +79,14 @@ bool		XactSyncCommit = true;
 
 int			CommitDelay = 0;	/* precommit delay in microseconds */
 int			CommitSiblings = 5; /* # concurrent xacts needed to sleep */
-
+#if 0 /* Upstream code not applicable to GPDB */
 /*
  * MyXactAccessedTempRel is set when a temporary relation is accessed.
  * We don't allow PREPARE TRANSACTION in that case.  (This is global
  * so that it can be set from heapam.c.)
  */
 bool		MyXactAccessedTempRel = false;
-
+#endif
 XidBuffer subxbuf;
 int32 gp_subtrans_warn_limit = 16777216; /* 16 million */
 
@@ -495,6 +495,13 @@ AssignTransactionId(TransactionState s)
 	/* Assert that caller didn't screw up */
 	Assert(!TransactionIdIsValid(s->transactionId));
 	Assert(s->state == TRANS_INPROGRESS);
+
+	if (DistributedTransactionContext == DTX_CONTEXT_QE_READER ||
+		DistributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON)
+	{
+		elog(ERROR, "AssignTransactionId() called by %s process",
+			 DtxContextToString(DistributedTransactionContext));
+	}
 
 	/*
 	 * Ensure parent(s) have XIDs, so that a child always has an XID later
@@ -1038,15 +1045,14 @@ AtSubStart_ResourceOwner(void)
  *
  * Returns latest XID among xact and its children, or InvalidTransactionId
  * if the xact has no XID.	(We compute that here just because it's easier.)
- *
- * This is exported only to support an ugly hack in VACUUM FULL.
  */
-TransactionId
+static TransactionId
 RecordTransactionCommit(void)
 {
 	TransactionId xid;
 	bool		markXidCommitted;
 	TransactionId latestXid = InvalidTransactionId;
+	bool save_inCommit;
 	MIRRORED_LOCK_DECLARE;
 
 	int32						persistentCommitSerializeLen;
@@ -1164,6 +1170,7 @@ RecordTransactionCommit(void)
 		 * bit fuzzy, but it doesn't matter.
 		 */
 		START_CRIT_SECTION();
+		save_inCommit = MyProc->inCommit;
 		MyProc->inCommit = true;
 
 		MIRRORED_LOCK;
@@ -1370,7 +1377,7 @@ RecordTransactionCommit(void)
 	 */
 	if (markXidCommitted)
 	{
-		MyProc->inCommit = false;
+		MyProc->inCommit = save_inCommit;
 		END_CRIT_SECTION();
 
 		MIRRORED_UNLOCK;
@@ -2879,7 +2886,9 @@ StartTransaction(void)
 	XactIsoLevel = DefaultXactIsoLevel;
 	XactReadOnly = DefaultXactReadOnly;
 	forceSyncCommit = false;
+#if 0 /* Upstream code not applicable to GPDB */
 	MyXactAccessedTempRel = false;
+#endif
 	seqXlogWrite = false;
 
 	/* set read only by fts, if any fts action is read only */
@@ -3393,16 +3402,6 @@ CommitTransaction(void)
 	AtEOXact_UpdateFlatFiles(true);
 
 	/*
-	 * Free external resources
-	 */
-	AtEOXact_ExtTables(true);
-
-	/* Reset g_dataSourceCtx
-	 * g_dataSourceCtx is allocated in TopTransactionContext, so it's going away.
-	 */
-	AtEOXact_ResetDataSourceCtx();
-
-	/*
 	 * Prepare all QE.
 	 */
 	prepareDtxTransaction();
@@ -3432,18 +3431,19 @@ CommitTransaction(void)
 	if (willHaveObjectsFromSmgr)
 	{
 		/*
-		 * We need to ensure the recording of the [distributed-]commit record and the
-		 * persistent post-commit work will be done either before or after a checkpoint.
-		 *
-		 * When we use CheckpointStartLock, we make sure we already have the
-		 * MirroredLock first.
-		 *
-		 * GPDB_83_MERGE_FIXME: we no longer need to worry about deadlock between
-		 * CheckpointStartLock and MirroredLock, as CheckpointStartLock is no longer
-		 * a lwlock but just a flag,  MyProc->inCommit. Do we still need to grab
-		 * MirroredLock?
+		 * This is to protect access to counter fileRepResyncShmem->appendOnlyCommitCount
+		 * and FileRepResyncManager_InResyncTransition()
 		 */
 		MIRRORED_LOCK;
+		/*
+		 * Need to ensure the recording of the commit record and the
+		 * persistent post-commit work will be done either before or after a
+		 * checkpoint. The commit xlog record carries the information for
+		 * objects which serves us for crash-recovery till post-commit
+		 * persistent object work is done, hence cannot allow checkpoint in
+		 * between.
+		 */
+		MyProc->inCommit = true;
 	}
 
 	/* Prevent cancel/die interrupt while cleaning up */
@@ -3562,6 +3562,7 @@ CommitTransaction(void)
 	if (willHaveObjectsFromSmgr)
 	{
 		MIRRORED_UNLOCK;
+		MyProc->inCommit = false;
 	}
 	
 	AtEOXact_MultiXact();
@@ -3710,6 +3711,22 @@ PrepareTransaction(void)
 	/* NOTIFY and flatfiles will be handled below */
 
 	/*
+	 * In Postgres, MyXactAccessedTempRel is used to error out if PREPARE TRANSACTION
+	 * operated on temp table.
+	 *
+	 * In GPDB, MyXactAccessedTempRel is removed.
+	 *
+	 * GPDB treat temporary table like a regular table, e.g. stored in shared buffer
+	 * instead of keep it in local buffer. The temporary table just have a shorter life
+	 * cycle either tie to the session or tie to the transaction if ON COMMIT clause is
+	 * used.
+	 *
+	 * Every transaction in GPDB is 2PC, so PREPARE TRANSACTION is used even for temp table
+	 * creation. GPDB cannot error out, otherwise, it won't be able to handle temp table
+	 * at all.
+	 */
+#if 0 /* Upstream code not applicable to GPDB */
+	/*
 	 * Don't allow PREPARE TRANSACTION if we've accessed a temporary table
 	 * in this transaction.  Having the prepared xact hold locks on another
 	 * backend's temp table seems a bad idea --- for instance it would prevent
@@ -3724,8 +3741,6 @@ PrepareTransaction(void)
 	 * cases, such as a temp table created and dropped all within the
 	 * transaction.  That seems to require much more bookkeeping though.
 	 */
-	/* In GPDB, we allow this, however. GPDB_83_MERGE_FIXME: Is it really safe? */
-#if 0
 	if (MyXactAccessedTempRel)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -3989,12 +4004,6 @@ AbortTransaction(void)
 	 */
 	AfterTriggerEndXact(false);
 	AtAbort_Portals();
-	AtEOXact_ExtTables(false);
-
-	/* reset g_dataSourceCtx
-	 * g_dataSourceCtx is allocated in TopTransactionContext, so it's going away.
-	 */
-	AtEOXact_ResetDataSourceCtx();
 
 	AtEOXact_SharedSnapshot();
 
@@ -4018,13 +4027,8 @@ AbortTransaction(void)
 	if (willHaveObjectsFromSmgr)
 	{
 		/*
-		 * We need to ensure the recording of the abort record and the
-		 * persistent post-abort work will be done either before or after a checkpoint.
-		 *
-		 * When we use CheckpointStartLock, we make sure we already have the
-		 * MirroredLock first.
-		 *
-		 * GPDB_83_MERGE_FIXME: see comments in CommitTransaction()
+		 * This is to protect access to counter fileRepResyncShmem->appendOnlyCommitCount
+		 * and FileRepResyncManager_InResyncTransition()
 		 */
 		MIRRORED_LOCK;
 	}

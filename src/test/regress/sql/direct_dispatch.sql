@@ -38,23 +38,6 @@ create unique index direct_test_uk on direct_test_partition(trans_id);
 create table direct_test_range_partition (a int, b int, c int, d int) distributed by (a) partition by range(d) (start(1) end(10) every(1));
 insert into direct_test_range_partition select i, i+1, i+2, i+3 from generate_series(1, 2) i;
 
-create table direct_test_type_real (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (real1);
-create table direct_test_type_smallint (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (smallint1);
-create table direct_test_type_boolean (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (boolean1);
-create table direct_test_type_int (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (int1);
-create table direct_test_type_double (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (double1);
-create table direct_test_type_date (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (date1);
-create table direct_test_type_numeric (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (numeric1);
-create table direct_test_type_abstime (x abstime) distributed by (x);
-create table direct_test_type_bit (x bit) distributed by (x);
-create table direct_test_type_bpchar (x bpchar) distributed by (x);
-create table direct_test_type_bytea (x bytea) distributed by (x);
-create table direct_test_type_cidr (x cidr) distributed by (x);
-create table direct_test_type_inet (x inet) distributed by (x);
-create table direct_test_type_macaddr (x macaddr) distributed by (x);
-create table direct_test_type_tinterval (x tinterval) distributed by (x);
-create table direct_test_type_varbit (x varbit) distributed by (x);
-
 commit;
 
 -- enable printing of printing info
@@ -168,25 +151,6 @@ select * from direct_test_partition where trans_id =1;
 -- Known_opt_diff: MPP-21346
 select count(*) from direct_test_range_partition where a =1;
 ----------------------------------------------------------------------------------
--- MPP-7643: various types
---
-set optimizer_enable_constant_expression_evaluation=on;
-insert into direct_test_type_real values (8,8,true,8,8,'2008-08-08',8.8);
-insert into direct_test_type_smallint values (8,8,true,8,8,'2008-08-08',8.8);
-insert into direct_test_type_boolean values (8,8,true,8,8,'2008-08-08',8.8);
-insert into direct_test_type_int values (8,8,true,8,8,'2008-08-08',8.8);
-insert into direct_test_type_double values (8,8,true,8,8,'2008-08-08',8.8);
-insert into direct_test_type_date values (8,8,true,8,8,'2008-08-08',8.8);
-insert into direct_test_type_numeric values (8,8,true,8,8,'2008-08-08',8.8);
-reset optimizer_enable_constant_expression_evaluation;
-
-select * from direct_test_type_real where real1 = 8::real;
-select * from direct_test_type_smallint where smallint1 = 8::smallint;
-select * from direct_test_type_int where int1 = 8;
-select * from direct_test_type_double where double1 = 8;
-select * from direct_test_type_date where date1 = '2008-08-08';
-select * from direct_test_type_numeric where numeric1 = 8.8;
-----------------------------------------------------------------------------------
 -- Prepared statements
 --  do same as above ones but using prepared statements, verify data goes to the right spot
 prepare test_insert (int) as insert into direct_test values ($1,100);
@@ -237,100 +201,6 @@ delete from direct_dispatch_foo where id * id = (select max(id2) from direct_dis
 -- Known_opt_diff: MPP-21346
 delete from direct_dispatch_foo where id * id = (select max(id2) from direct_dispatch_bar) AND id = 3;
 
-------------------------------------
--- more type tests 
---
--- abstime
-insert into direct_test_type_abstime values('2008-08-08');
-select 1 from direct_test_type_abstime where x = '2008-08-08';
-
-insert into direct_test_type_bit values('1');
-select * from direct_test_type_bit where x = '1';
-
-insert into direct_test_type_bpchar values('abs');
-select * from direct_test_type_bpchar where x = 'abs';
-
-insert into direct_test_type_bytea values('greenplum');
-select * from direct_test_type_bytea where x = 'greenplum';
-
-insert into direct_test_type_cidr values('68.44.55.111');
--- Known_opt_diff: MPP-21346
-select * from direct_test_type_cidr where x = '68.44.55.111';
-
-insert into direct_test_type_inet values('68.44.55.111');
-select * from direct_test_type_inet where x = '68.44.55.111';
-
-insert into direct_test_type_macaddr values('12:34:56:78:90:ab');
-select * from direct_test_type_macaddr where x = '12:34:56:78:90:ab';
-
-insert into direct_test_type_tinterval values('["2008-08-08" "2010-10-10"]');
-select 1 from direct_test_type_tinterval where x = '["2008-08-08" "2010-10-10"]';
-
-insert into direct_test_type_varbit values('0101010');
-select * from direct_test_type_varbit where x = '0101010';
-
-------------------------------------
--- int28, int82, etc. checks
-set test_print_direct_dispatch_info=off;
-CREATE TABLE direct_test_type_int2 (id int2) DISTRIBUTED BY (id);
-CREATE TABLE direct_test_type_int4 (id int4) DISTRIBUTED BY (id);
-CREATE TABLE direct_test_type_int8 (id int8) DISTRIBUTED BY (id);
-
-INSERT INTO direct_test_type_int2 VALUES (1);
-INSERT INTO direct_test_type_int4 VALUES (1);
-INSERT INTO direct_test_type_int8 VALUES (1);
-
-set test_print_direct_dispatch_info=on;
-
-SELECT * FROM direct_test_type_int2 WHERE id = 1::int2;
-SELECT * FROM direct_test_type_int2 WHERE id = 1::int4;
-SELECT * FROM direct_test_type_int2 WHERE id = 1::int8;
-
--- Known_opt_diff: MPP-21346
-SELECT * FROM direct_test_type_int2 WHERE 1::int2 = id;
--- Known_opt_diff: MPP-21346
-SELECT * FROM direct_test_type_int2 WHERE 1::int4 = id;
--- Known_opt_diff: MPP-21346
-SELECT * FROM direct_test_type_int2 WHERE 1::int8 = id;
-
-SELECT * FROM direct_test_type_int4 WHERE id = 1::int2;
-SELECT * FROM direct_test_type_int4 WHERE id = 1::int4;
-SELECT * FROM direct_test_type_int4 WHERE id = 1::int8;
-
--- Known_opt_diff: MPP-21346
-SELECT * FROM direct_test_type_int4 WHERE 1::int2 = id;
--- Known_opt_diff: MPP-21346
-SELECT * FROM direct_test_type_int4 WHERE 1::int4 = id;
--- Known_opt_diff: MPP-21346
-SELECT * FROM direct_test_type_int4 WHERE 1::int8 = id;
-
-SELECT * FROM direct_test_type_int8 WHERE id = 1::int2;
-SELECT * FROM direct_test_type_int8 WHERE id = 1::int4;
-SELECT * FROM direct_test_type_int8 WHERE id = 1::int8;
-
--- Known_opt_diff: MPP-21346
-SELECT * FROM direct_test_type_int8 WHERE 1::int2 = id;
--- Known_opt_diff: MPP-21346
-SELECT * FROM direct_test_type_int8 WHERE 1::int4 = id;
--- Known_opt_diff: MPP-21346
-SELECT * FROM direct_test_type_int8 WHERE 1::int8 = id;
-
--- overflow test
-SELECT * FROM direct_test_type_int2 WHERE id = 32768::int4;
-SELECT * FROM direct_test_type_int2 WHERE id = -32769::int4;
-
--- Known_opt_diff: MPP-21346
-SELECT * FROM direct_test_type_int2 WHERE 32768::int4 = id;
--- Known_opt_diff: MPP-21346
-SELECT * FROM direct_test_type_int2 WHERE -32769::int4 = id;
-
-SELECT * FROM direct_test_type_int2 WHERE id = 2147483648::int8;
-SELECT * FROM direct_test_type_int2 WHERE id = -2147483649::int8;
--- Known_opt_diff: MPP-21346
-SELECT * FROM direct_test_type_int2 WHERE 2147483648::int8 = id;
--- Known_opt_diff: MPP-21346
-SELECT * FROM direct_test_type_int2 WHERE -2147483649::int8 = id;
-
 -- tests with subplans (MPP-22019)
 CREATE TABLE MPP_22019_a ( i INT, j INT) DISTRIBUTED BY (i);
 INSERT INTO MPP_22019_a (
@@ -350,28 +220,9 @@ drop table if exists direct_test_two_column;
 drop table if exists direct_test_bitmap;
 drop table if exists direct_test_partition;
 drop table if exists direct_test_range_partition;
-drop table if exists direct_test_type_real;
-drop table if exists direct_test_type_smallint;
-drop table if exists direct_test_type_boolean;
-drop table if exists direct_test_type_int;
-drop table if exists direct_test_type_double;
-drop table if exists direct_test_type_date;
-drop table if exists direct_test_type_numeric;
 drop table if exists direct_dispatch_foo;
 drop table if exists direct_dispatch_bar;
-drop table if exists direct_test_type_int2;
-drop table if exists direct_test_type_int4;
-drop table if exists direct_test_type_int8;
 
-drop table if exists direct_test_type_abstime;
-drop table if exists direct_test_type_bit;
-drop table if exists direct_test_type_bpchar;
-drop table if exists direct_test_type_bytea;
-drop table if exists direct_test_type_cidr;
-drop table if exists direct_test_type_inet;
-drop table if exists direct_test_type_macaddr;
-drop table if exists direct_test_type_tinterval;
-drop table if exists direct_test_type_varbit;
 drop table if exists MPP_22019_a;
 drop table if exists MPP_22019_b;
 commit;

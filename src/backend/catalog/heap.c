@@ -1927,8 +1927,6 @@ RelationRemoveInheritance(Oid relid)
 	heap_close(catalogRelation, RowExclusiveLock);
 }
 
-/* del_part_entry_by_key is superfluous - removed */
-
 static void
 RemovePartitioning(Oid relid)
 {

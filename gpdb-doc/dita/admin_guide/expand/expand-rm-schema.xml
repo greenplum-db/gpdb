@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="expand-rm-schema" xml:lang="en">
+  <title id="no163283">Removing the Expansion Schema</title>
+  <shortdesc>To clean up after expanding the Greenplum cluster, remove the expansion
+    schema.</shortdesc>
+  <body>
+    <p>You can safely remove the expansion schema after the expansion operation is complete and
+      verified. To run another expansion operation on a Greenplum system, first remove the existing
+      expansion schema.</p>
+    <section id="no163290">
+      <title>To remove the expansion schema</title>
+      <ol>
+        <li id="no163298">Log in on the master host as the user who will be running your Greenplum
+          Database system (for example, <codeph>gpadmin</codeph>).</li>
+        <li id="no163294">Run the <codeph>gpexpand</codeph> utility with the <codeph>-c</codeph>
+          option. For example:<codeblock>$ gpexpand -c 
+$ </codeblock><note type="note">Some systems
+            require you to press Enter twice.</note></li>
+      </ol>
+    </section>
+  </body>
+</topic>

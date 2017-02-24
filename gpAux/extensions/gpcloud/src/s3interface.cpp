@@ -16,12 +16,11 @@ class XMLContextHolder {
     xmlParserCtxtPtr context;
 };
 
-S3InterfaceService::S3InterfaceService() : restfulService(NULL) {
+S3InterfaceService::S3InterfaceService() : restfulService(NULL), params("") {
     xmlInitParser();
 }
 
-S3InterfaceService::S3InterfaceService(const S3Params &params)
-    : restfulService(NULL), params(params) {
+S3InterfaceService::S3InterfaceService(const S3Params &p) : restfulService(NULL), params(p) {
     xmlInitParser();
 }
 
@@ -105,7 +104,7 @@ ResponseCode S3InterfaceService::headResponseWithRetries(const string &url, HTTP
                 S3_DIE(S3QueryAbort, "Uploading is interrupted");
             }
 
-            S3WARN("Failed to get a good response in PUT from '%s', retrying ...", url.c_str());
+            S3WARN("Failed to get a good response in HEAD from '%s', retrying ...", url.c_str());
         }
     };
 
@@ -123,64 +122,12 @@ Response S3InterfaceService::deleteRequestWithRetries(const string &url, HTTPHea
             if (S3QueryIsAbortInProgress()) {
                 S3_DIE(S3QueryAbort, "Uploading is interrupted");
             }
-            S3WARN("Failed to get a good response in PUT from '%s', retrying ...", url.c_str());
+            S3WARN("Failed to get a good response in DELETE from '%s', retrying ...", url.c_str());
         }
     };
 
     S3_DIE(S3FailedAfterRetry, url, retries, message);
 };
-
-// S3 requires query parameters specified alphabetically.
-string S3InterfaceService::getUrl(const string &prefix, const string &schema, const string &host,
-                                  const string &bucket, const string &marker) {
-    stringstream url;
-    url << schema << "://" << host << "/" << bucket;
-
-    // marker and prefix are used as the values of query parameters here
-    // so URI encode their whole string, "/" also.
-    if (!marker.empty()) {
-        url << "?marker=" << uri_encode(marker);
-    }
-
-    if (!prefix.empty()) {
-        string encodedPrefix = prefix;
-        find_replace(encodedPrefix, "/", "%2F");
-        url << (marker.empty() ? "?" : "&") << "prefix=" << encodedPrefix;
-    }
-
-    return url.str();
-}
-
-HTTPHeaders S3InterfaceService::composeHTTPHeaders(const string &url, const string &marker,
-                                                   const string &prefix, const string &region) {
-    stringstream host;
-    host << "s3-" << region << ".amazonaws.com";
-
-    HTTPHeaders headers;
-    headers.Add(HOST, host.str());
-    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
-
-    UrlParser p(url);
-
-    // marker and prefix are used as the values of query parameters here
-    // so URI encode their whole string, "/" also.
-    stringstream query;
-    if (!marker.empty()) {
-        query << "marker=" << uri_encode(marker);
-        if (!prefix.empty()) {
-            query << "&";
-        }
-    }
-    if (!prefix.empty()) {
-        string encodedPrefix = prefix;
-        find_replace(encodedPrefix, "/", "%2F");
-        query << "prefix=" << encodedPrefix;
-    }
-
-    SignRequestV4("GET", &headers, region, p.getPath(), query.str(), this->params.getCred());
-
-    return headers;
-}
 
 xmlParserCtxtPtr S3InterfaceService::getXMLContext(Response &response) {
     xmlParserCtxtPtr xmlptr =
@@ -196,11 +143,21 @@ xmlParserCtxtPtr S3InterfaceService::getXMLContext(Response &response) {
 
 // require curl 7.17 higher
 // http://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketGET.html
-Response S3InterfaceService::getBucketResponse(const string &region, const string &url,
-                                               const string &prefix, const string &marker) {
-    HTTPHeaders header = composeHTTPHeaders(url, marker, prefix, region);
+Response S3InterfaceService::getBucketResponse(const S3Url &s3Url, const string &encodedQuery) {
+    HTTPHeaders headers;
+    headers.Add(HOST, s3Url.getHostForCurl());
+    headers.Add(X_AMZ_CONTENT_SHA256,
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");  // sha256hex
+                                                                                      // of empty
+                                                                                      // string
 
-    return this->getResponseWithRetries(url, header);
+    SignRequestV4("GET", &headers, s3Url.getRegion(), s3Url.getPathForCurl(), encodedQuery,
+                  this->params.getCred());
+
+    stringstream urlWithQuery;
+    urlWithQuery << s3Url.getFullUrlForCurl() << "?" << encodedQuery;
+
+    return this->getResponseWithRetries(urlWithQuery.str(), headers);
 }
 
 bool S3InterfaceService::parseBucketXML(ListBucketResult *result, xmlParserCtxtPtr xmlcontext,
@@ -299,27 +256,38 @@ bool S3InterfaceService::parseBucketXML(ListBucketResult *result, xmlParserCtxtP
     return true;
 }
 
-// ListBucket list all keys in given bucket with given prefix.
+// ListBucket lists all keys in given bucket with given prefix.
 //
 // Return NULL when there is failure due to network instability or
 // service unstable, so that caller could retry.
 //
 // Caller should delete returned object.
-ListBucketResult S3InterfaceService::listBucket(const string &schema, const string &region,
-                                                const string &bucket, const string &prefix) {
-    stringstream host;
-    host << "s3-" << region << ".amazonaws.com";
-    S3DEBUG("Host url is %s", host.str().c_str());
-
+ListBucketResult S3InterfaceService::listBucket(S3Url s3Url) {
     ListBucketResult result;
 
     string marker = "";
+    string encodedPrefix = s3Url.getPrefix();
+    FindAndReplace(encodedPrefix, "/", "%2F");
     do {
         // To get next set(up to 1000) keys in one iteration.
         // S3 requires query parameters specified alphabetically.
-        string url = this->getUrl(prefix, schema, host.str(), bucket, marker);
 
-        Response resp = getBucketResponse(region, url, prefix, marker);
+        // marker and prefix are used as the values of query parameters here
+        // so URI encode their whole string, "/" also.
+
+        // transfer /bucket/prefix to /bucket/?prefix=prefix because we need to "GET" a real thing
+        stringstream querySs;
+        if (!marker.empty()) {
+            querySs << "marker=" << UriEncode(marker);
+        }
+
+        if (!encodedPrefix.empty()) {
+            querySs << (marker.empty() ? "prefix=" : "&prefix=") << encodedPrefix;
+        }
+        s3Url.setPrefix("");
+        string queryStr = querySs.str();
+
+        Response resp = getBucketResponse(s3Url, queryStr);
 
         if (resp.getStatus() == RESPONSE_OK) {
             xmlParserCtxtPtr xmlContext = getXMLContext(resp);
@@ -341,19 +309,22 @@ ListBucketResult S3InterfaceService::listBucket(const string &schema, const stri
 }
 
 uint64_t S3InterfaceService::fetchData(uint64_t offset, S3VectorUInt8 &data, uint64_t len,
-                                       const string &sourceUrl, const string &region) {
+                                       const S3Url &s3Url) {
     HTTPHeaders headers;
-    UrlParser parser(sourceUrl);
 
     char rangeBuf[S3_RANGE_HEADER_STRING_LEN] = {0};
     snprintf(rangeBuf, sizeof(rangeBuf), "bytes=%" PRIu64 "-%" PRIu64, offset, offset + len - 1);
-    headers.Add(HOST, parser.getHost());
+    headers.Add(HOST, s3Url.getHostForCurl());
     headers.Add(RANGE, rangeBuf);
-    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+    headers.Add(X_AMZ_CONTENT_SHA256,
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");  // sha256hex
+                                                                                      // of empty
+                                                                                      // string
 
-    SignRequestV4("GET", &headers, region, parser.getPath(), "", this->params.getCred());
+    SignRequestV4("GET", &headers, s3Url.getRegion(), s3Url.getPathForCurl(), "",
+                  this->params.getCred());
 
-    Response resp = this->getResponseWithRetries(sourceUrl, headers);
+    Response resp = this->getResponseWithRetries(s3Url.getFullUrlForCurl(), headers);
     if (resp.getStatus() == RESPONSE_OK) {
         data.swap(resp.getRawData());
         S3_CHECK_OR_DIE(data.size() == len, S3PartialResponseError, len, data.size());
@@ -366,21 +337,23 @@ uint64_t S3InterfaceService::fetchData(uint64_t offset, S3VectorUInt8 &data, uin
     }
 }
 
-S3CompressionType S3InterfaceService::checkCompressionType(const string &keyUrl,
-                                                           const string &region) {
+S3CompressionType S3InterfaceService::checkCompressionType(const S3Url &s3Url) {
     HTTPHeaders headers;
-    UrlParser parser(keyUrl);
 
     char rangeBuf[S3_RANGE_HEADER_STRING_LEN] = {0};
     snprintf(rangeBuf, sizeof(rangeBuf), "bytes=%d-%d", 0, S3_MAGIC_BYTES_NUM - 1);
 
-    headers.Add(HOST, parser.getHost());
+    headers.Add(HOST, s3Url.getHostForCurl());
     headers.Add(RANGE, rangeBuf);
-    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+    headers.Add(X_AMZ_CONTENT_SHA256,
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");  // sha256hex
+                                                                                      // of empty
+                                                                                      // string
 
-    SignRequestV4("GET", &headers, region, parser.getPath(), "", this->params.getCred());
+    SignRequestV4("GET", &headers, s3Url.getRegion(), s3Url.getPathForCurl(), "",
+                  this->params.getCred());
 
-    Response resp = this->getResponseWithRetries(keyUrl, headers);
+    Response resp = this->getResponseWithRetries(s3Url.getFullUrlForCurl(), headers);
     if (resp.getStatus() == RESPONSE_OK) {
         S3VectorUInt8 &responseData = resp.getRawData();
         if (responseData.size() < S3_MAGIC_BYTES_NUM) {
@@ -403,31 +376,37 @@ S3CompressionType S3InterfaceService::checkCompressionType(const string &keyUrl,
     return S3_COMPRESSION_PLAIN;
 }
 
-bool S3InterfaceService::checkKeyExistence(const string &keyUrl, const string &region) {
+bool S3InterfaceService::checkKeyExistence(const S3Url &s3Url) {
     HTTPHeaders headers;
-    UrlParser parser(keyUrl);
 
-    headers.Add(HOST, parser.getHost());
-    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+    headers.Add(HOST, s3Url.getHostForCurl());
+    headers.Add(X_AMZ_CONTENT_SHA256,
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");  // sha256hex
+                                                                                      // of empty
+                                                                                      // string
 
-    SignRequestV4("HEAD", &headers, region, parser.getPath(), "", this->params.getCred());
+    SignRequestV4("HEAD", &headers, s3Url.getRegion(), s3Url.getPathForCurl(), "",
+                  this->params.getCred());
 
-    return isKeyExisted(headResponseWithRetries(keyUrl, headers));
+    return isKeyExisted(headResponseWithRetries(s3Url.getFullUrlForCurl(), headers));
 }
 
-string S3InterfaceService::getUploadId(const string &keyUrl, const string &region) {
+string S3InterfaceService::getUploadId(const S3Url &s3Url) {
     HTTPHeaders headers;
-    UrlParser parser(keyUrl);
 
-    headers.Add(HOST, parser.getHost());
+    headers.Add(HOST, s3Url.getHostForCurl());
     headers.Disable(CONTENTTYPE);
     headers.Disable(CONTENTLENGTH);
-    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+    headers.Add(X_AMZ_CONTENT_SHA256,
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");  // sha256hex
+                                                                                      // of empty
+                                                                                      // string
 
-    SignRequestV4("POST", &headers, region, parser.getPath(), "uploads=", this->params.getCred());
+    SignRequestV4("POST", &headers, s3Url.getRegion(), s3Url.getPathForCurl(), "uploads=",
+                  this->params.getCred());
 
     stringstream urlWithQuery;
-    urlWithQuery << keyUrl << "?uploads";
+    urlWithQuery << s3Url.getFullUrlForCurl() << "?uploads";
 
     Response resp = this->postResponseWithRetries(urlWithQuery.str(), headers, vector<uint8_t>());
     S3MessageParser s3msg(resp);
@@ -442,26 +421,28 @@ string S3InterfaceService::getUploadId(const string &keyUrl, const string &regio
     }
 }
 
-string S3InterfaceService::uploadPartOfData(S3VectorUInt8 &data, const string &keyUrl,
-                                            const string &region, uint64_t partNumber,
-                                            const string &uploadId) {
+string S3InterfaceService::uploadPartOfData(S3VectorUInt8 &data, const S3Url &s3Url,
+                                            uint64_t partNumber, const string &uploadId) {
     HTTPHeaders headers;
-    UrlParser parser(keyUrl);
     stringstream queryString;
 
-    headers.Add(HOST, parser.getHost());
-    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+    headers.Add(HOST, s3Url.getHostForCurl());
+
+    char contentSha256[SHA256_DIGEST_STRING_LENGTH];  // 65
+    sha256_hex((const char *)data.data(), data.size(), contentSha256);
+    headers.Add(X_AMZ_CONTENT_SHA256, contentSha256);
 
     headers.Add(CONTENTTYPE, "text/plain");
-    headers.Add(CONTENTLENGTH, std::to_string((unsigned long long)data.size()));
+    // headers.Add(CONTENTLENGTH, std::to_string((unsigned long long)data.size()));
 
     queryString << "partNumber=" << partNumber << "&uploadId=" << uploadId;
 
-    SignRequestV4("PUT", &headers, region, parser.getPath(), queryString.str(),
+    SignRequestV4("PUT", &headers, s3Url.getRegion(), s3Url.getPathForCurl(), queryString.str(),
                   this->params.getCred());
 
     stringstream urlWithQuery;
-    urlWithQuery << keyUrl << "?partNumber=" << partNumber << "&uploadId=" << uploadId;
+    urlWithQuery << s3Url.getFullUrlForCurl() << "?partNumber=" << partNumber
+                 << "&uploadId=" << uploadId;
 
     Response resp = this->putResponseWithRetries(urlWithQuery.str(), headers, data);
     if (resp.getStatus() == RESPONSE_OK) {
@@ -482,11 +463,9 @@ string S3InterfaceService::uploadPartOfData(S3VectorUInt8 &data, const string &k
     }
 }
 
-bool S3InterfaceService::completeMultiPart(const string &keyUrl, const string &region,
-                                           const string &uploadId,
+bool S3InterfaceService::completeMultiPart(const S3Url &s3Url, const string &uploadId,
                                            const vector<string> &etagArray) {
     HTTPHeaders headers;
-    UrlParser parser(keyUrl);
     stringstream queryString;
 
     stringstream body;
@@ -504,18 +483,22 @@ bool S3InterfaceService::completeMultiPart(const string &keyUrl, const string &r
     }
     body << "</CompleteMultipartUpload>";
 
-    headers.Add(HOST, parser.getHost());
+    headers.Add(HOST, s3Url.getHostForCurl());
     headers.Add(CONTENTTYPE, "application/xml");
-    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+
+    char contentSha256[SHA256_DIGEST_STRING_LENGTH];  // 65
+    sha256_hex(body.str().c_str(), contentSha256);
+    headers.Add(X_AMZ_CONTENT_SHA256, contentSha256);
+
     headers.Add(CONTENTLENGTH, std::to_string((unsigned long long)body.str().length()));
 
     queryString << "uploadId=" << uploadId;
 
-    SignRequestV4("POST", &headers, region, parser.getPath(), queryString.str(),
+    SignRequestV4("POST", &headers, s3Url.getRegion(), s3Url.getPathForCurl(), queryString.str(),
                   this->params.getCred());
 
     stringstream urlWithQuery;
-    urlWithQuery << keyUrl << "?uploadId=" << uploadId;
+    urlWithQuery << s3Url.getFullUrlForCurl() << "?uploadId=" << uploadId;
 
     string bodyString = body.str();
     Response resp = this->postResponseWithRetries(
@@ -531,25 +514,26 @@ bool S3InterfaceService::completeMultiPart(const string &keyUrl, const string &r
     }
 }
 
-bool S3InterfaceService::abortUpload(const string &keyUrl, const string &region,
-                                     const string &uploadId) {
+bool S3InterfaceService::abortUpload(const S3Url &s3Url, const string &uploadId) {
     HTTPHeaders headers;
-    UrlParser parser(keyUrl);
     stringstream queryString;
 
-    headers.Add(HOST, parser.getHost());
-    headers.Add(CONTENTTYPE, "text/plain");
-    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
-    headers.Add(CONTENTLENGTH, "0");
+    headers.Add(HOST, s3Url.getHostForCurl());
+    headers.Disable(CONTENTTYPE);
+    headers.Disable(CONTENTLENGTH);
+    headers.Add(X_AMZ_CONTENT_SHA256,
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");  // sha256hex
+                                                                                      // of empty
+                                                                                      // string
 
     queryString << "uploadId=" << uploadId;
 
     // DELETE /ObjectName?uploadId=UploadId HTTP/1.1
-    SignRequestV4("DELETE", &headers, region, parser.getPath(), queryString.str(),
+    SignRequestV4("DELETE", &headers, s3Url.getRegion(), s3Url.getPathForCurl(), queryString.str(),
                   this->params.getCred());
 
     stringstream urlWithQuery;
-    urlWithQuery << keyUrl << "?uploadId=" << uploadId;
+    urlWithQuery << s3Url.getFullUrlForCurl() << "?uploadId=" << uploadId;
 
     Response resp = this->deleteRequestWithRetries(urlWithQuery.str(), headers);
 
@@ -564,6 +548,14 @@ bool S3InterfaceService::abortUpload(const string &keyUrl, const string &region,
 }
 
 S3MessageParser::S3MessageParser(const Response &resp) {
+    // Compatible S3 services don't always return XML
+    if (resp.getRawData().data() == NULL) {
+        message = "Unknown error";
+        code = "Unknown error code";
+
+        return;
+    }
+
     xmlptr = xmlCreatePushParserCtxt(NULL, NULL, (const char *)(resp.getRawData().data()),
                                      resp.getRawData().size(), "resp.xml");
     if (xmlptr != NULL) {

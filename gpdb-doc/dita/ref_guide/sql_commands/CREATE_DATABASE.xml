@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1"><title id="bp20941">CREATE DATABASE</title><body><p id="sql_command_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE DATABASE name [ [WITH] [OWNER [=] <varname>dbowner</varname>]
+                     [TEMPLATE [=] <varname>template</varname>]
+                     [ENCODING [=] <varname>encoding</varname>]
+                     [TABLESPACE [=] <varname>tablespace</varname>]
+                     [CONNECTION LIMIT [=] connlimit ] ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE DATABASE</codeph> creates a new database. To create a
+database, you must be a superuser or have the special <codeph>CREATEDB</codeph>
+privilege.</p><p>The creator becomes the owner of the new database by default. Superusers
+can create databases owned by other users by using the <codeph>OWNER</codeph>
+clause. They can even create databases owned by users with no special
+privileges. Non-superusers with <codeph>CREATEDB</codeph> privilege can
+only create databases owned by themselves.</p><p>By default, the new database will be created by cloning the standard system database
+          <codeph>template1</codeph>. A different template can be specified by writing
+          <codeph>TEMPLATE <varname>name</varname></codeph>. In particular, by writing <codeph>TEMPLATE
+          template0</codeph>, you can create a clean database containing only the standard objects
+        predefined by Greenplum Database. This is useful if you wish to avoid copying any
+        installation-local objects that may have been added to <codeph>template1</codeph>. </p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name of a database to create.</pd></plentry><plentry><pt><varname>dbowner</varname></pt><pd>The name of the database user who will own the new database, or <codeph>DEFAULT</codeph>
+to use the default owner (the user executing the command). </pd></plentry><plentry><pt><varname>template</varname></pt><pd>The name of the template from which to create the new database, or
+<codeph>DEFAULT</codeph> to use the default template (<varname>template1</varname>).
+</pd></plentry><plentry><pt><varname>encoding</varname></pt><pd>Character set encoding to use in the new database. Specify a string constant (such as
+              <codeph>'SQL_ASCII'</codeph>), an integer encoding number, or <codeph>DEFAULT</codeph>
+            to use the default encoding. For more information, see <xref
+              href="../character_sets.xml" type="topic" format="dita"/>.</pd></plentry><plentry><pt><varname>tablespace</varname></pt><pd>The name of the tablespace that will be associated with the new database,
+or <codeph>DEFAULT</codeph> to use the template database's tablespace.
+This tablespace will be the default tablespace used for objects created
+in this database.</pd></plentry><plentry><pt><varname>connlimit</varname></pt><pd>The maximum number of concurrent connections posible. The default
+of -1 means there is no limitation.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p><codeph>CREATE DATABASE</codeph> cannot be executed inside a transaction
+block.</p><p>When you copy a database by specifying its name as the template, no
+other sessions can be connected to the template database while it is
+being copied. New connections to the template database are locked out
+until <codeph>CREATE DATABASE</codeph> completes.</p><p>The <codeph>CONNECTION LIMIT</codeph> is not enforced against superusers.</p></section><section id="section6"><title>Examples</title><p>To create a new database: </p><codeblock>CREATE DATABASE gpdb;</codeblock><p>To create a database <codeph>sales</codeph> owned by user <codeph>salesapp</codeph> with a
+        default tablespace of <codeph>salesspace</codeph>: </p><codeblock>CREATE DATABASE sales OWNER salesapp TABLESPACE salesspace;</codeblock><p>To create a database <codeph>music</codeph> which supports the ISO-8859-1 character set: </p><codeblock>CREATE DATABASE music ENCODING 'LATIN1';</codeblock></section><section id="section7"><title>Compatibility</title><p>There is no <codeph>CREATE DATABASE</codeph> statement in the SQL standard.
+Databases are equivalent to catalogs, whose creation is implementation-defined.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="ALTER_DATABASE.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="./DROP_DATABASE.xml#topic1" type="topic" format="dita"
+        /></codeph></p></section></body></topic>

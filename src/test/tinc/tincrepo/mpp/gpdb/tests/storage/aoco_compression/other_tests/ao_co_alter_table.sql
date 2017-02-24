@@ -129,12 +129,6 @@ ALTER TABLE carp_die ALTER out_of_character DROP DEFAULT;
 INSERT INTO carp_die (id, wealth, timeless) VALUES (122, '122', '2010-03-02 15:46:00');
 SELECT out_of_character FROM carp_die WHERE id = 122;
 
-
--- The table cannot have already been clustered, since we do not allow indexes 
--- on AO/COT tables, but let's just see what happens when we run this command.
-ALTER TABLE carp_die SET WITHOUT CLUSTER;
-
-
 DROP FUNCTION IF EXISTS money_to_text(MONEY) CASCADE;
 CREATE FUNCTION money_to_text(MONEY) RETURNS TEXT AS
   $$
@@ -188,30 +182,6 @@ SELECT id, out_of_character
  FROM carp_die
  ORDER BY id
  ; 
-
-
--- Create a child table of carp_die, using the INHERITS clause, without 
--- specifying whether the table should be column-oriented.  
--- Should it inherit the column-orientedness of the parent?
-CREATE TABLE carpe_diem () INHERITS (carp_die);
-
--- Normally, you wouldn't copy records from a parent table to a child table, 
--- but I think I'll try it.
-INSERT INTO carpe_diem SELECT * FROM carp_die;
-SELECT id, wealth
- FROM carpe_diem 
- ORDER BY id;
-
--- If the new (child) table is column-oriented, then it should follow the 
--- same restrictions as a column-oriented table.  Since deletes on 
--- column-oriented tables are illegal, this should be illegal, too.  
--- However, this isn't failing, which implies that the child table was not 
--- created as a column-oriented table.  Is that a bug, or is the user 
--- required to specify that a child table be column-oriented???!!!
-DELETE FROM carpe_diem WHERE wealth = '$122.00';
-SELECT id, wealth
- FROM carpe_diem 
- ORDER BY id;
 
 -- Create a table with the same structure as carp_die, using the LIKE clause, 
 -- without specifying whether the table should be column-oriented.  

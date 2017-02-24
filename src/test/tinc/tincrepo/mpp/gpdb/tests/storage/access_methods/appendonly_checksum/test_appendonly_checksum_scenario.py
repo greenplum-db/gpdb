@@ -208,57 +208,6 @@ class AppendonlyChecksumTestCase(ScenarioTestCase, MPPTestCase):
             Command("Restore data-file", cmd).run(validateAfter=True)
             self.select_table(verify_sql,noncorrupted_checksum=True)
 
-    def test_aochecksum_size(self):
-            '''
-            The following test verifies that the header length is calculated properly when the checksum is on & off
-            for  small, large and bulk-dense header content.
-
-            PARAMETERS (via data_provider):
-            0. Test Name
-            1. Sql file to create scenario. 
-            2. Expected length of the header
-            3. Expected type of the header
-
-            STEPS :
-            1. Create table of required type of header (bulk, large header_content or small header_content (ao/co)
-            2. Find the data file for this relationship
-            3. Get the gp_filedump of the data file
-            4. Verify  expected length of the header
-            5. Verify  expected type of the header
-
-            @data_provider data_types_provider_aochecksum_size
-            '''
-
-            tab_name = self.test_data[0] 
-            chksum_flag = self.test_data[1][0]
-            header_size = self.test_data[1][1] 
-            header_type = self.test_data[1][2] 
-            tinctest.logger.info('=======================================')
-            tinctest.logger.info('Starting Test %s' % tab_name)
-            tinctest.logger.info('Table Name %s' % tab_name)
-            tinctest.logger.info('chksum_flag %s' % chksum_flag )
-            tinctest.logger.info('header_size %s' % header_size)
-            tinctest.logger.info('header_type %s' % header_type)
-            tinctest.logger.info('=======================================')
-            self.create_table(tab_name)        
-            (host, db_path) = self.gpfile.get_host_and_db_path(self.dbname)
-            tinctest.logger.info('Hostname=%s     data_directory=%s' %(host,db_path)) 
-            tinctest.logger.info( "tab_name : %s       chksum_flag: %s     header_size: %s   header_type: %s" % (tab_name,chksum_flag,header_size,header_type))
-            file_list = self.gpfile.get_relfile_list(self.dbname, tab_name, db_path, host)
-            for i in range(0, len(file_list)): 
-                tinctest.logger.info('Getting checksum info for table %s with  relfilenode %s' % (tab_name, file_list[i]))
-                flag=''
-                if chksum_flag == 'on':
-                   flag=' -M'
-                if tab_name.endswith('ao'):
-                   flag=flag+' -O row '
-                has_headerlen = self.gpfile.check_in_filedump(db_path, host, file_list[i], header_size,flag)
-                has_headertype = self.gpfile.check_in_filedump(db_path, host, file_list[i], header_type,flag)
-                if not has_headerlen:
-                    raise Exception ("Checksum validation failed for table %s with relfilenode: %s because header length is not %s" % (tab_name,file_list[i],header_size))
-                if not has_headertype:
-                    raise Exception ("Checksum validation failed for table %s with relfilenode: %s because header type is not %s" % (tab_name,file_list[i],header_type))
-
 @tinctest.dataProvider('data_provider_for_checksum_corruption')
 def test_data_provider_for_checksum_corruption():
     data = {
@@ -271,18 +220,3 @@ def test_data_provider_for_checksum_corruption():
                         "appendonly_verify_block_checksums_co":['appendonly_verify_block_checksums_co',CONST.EOF,CONST.FIND_CHAR]
             }
     return data
-
-@tinctest.dataProvider('data_types_provider_aochecksum_size')
-def test_data_provider_aochecksum_size():
-    data = {
-                        "chksum_on_header_bulkdense_co":[CONST.CHKSUM_ON,CONST.BULKDENSE_HEADER_LEN_WITH_CHKSUM_ON,CONST.BULKDENSE_HEADER_TYPE],
-                        "chksum_off_header_bulkdense_co":[CONST.CHKSUM_OFF,CONST.BULKDENSE_HEADER_LEN_WITH_CHKSUM_OFF,CONST.BULKDENSE_HEADER_TYPE],
-                        "chksum_off_header_sml_ao":[CONST.CHKSUM_OFF,CONST.SMALL_HEADER_LEN_WITH_CHKSUM_OFF,CONST.SMALL_HEADER_TYPE],
-                        "chksum_off_header_sml_co":[CONST.CHKSUM_OFF,CONST.SMALL_HEADER_LEN_WITH_CHKSUM_OFF,CONST.SMALL_HEADER_TYPE],
-                        "chksum_on_header_sml_ao":[CONST.CHKSUM_ON,CONST.SMALL_HEADER_LEN_WITH_CHKSUM_ON,CONST.SMALL_HEADER_TYPE],
-                        "chksum_on_header_sml_co":[CONST.CHKSUM_ON,CONST.SMALL_HEADER_LEN_WITH_CHKSUM_ON,CONST.SMALL_HEADER_TYPE],
-                        "chksum_on_header_large_co":[CONST.CHKSUM_ON,CONST.LARGE_HEADER_LEN_WITH_CHKSUM_ON,CONST.LARGE_HEADER_TYPE],
-                        "chksum_off_header_large_co":[CONST.CHKSUM_OFF,CONST.LARGE_HEADER_LEN_WITH_CHKSUM_OFF,CONST.LARGE_HEADER_TYPE]
-            } 
-    return data
-

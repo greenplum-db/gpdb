@@ -284,7 +284,10 @@ namespace gpdb {
 
 	// parts of a partitioned table
 	bool FLeafPartition(Oid oid);
-	
+
+	// partition table has an external parition
+	bool FHasExternalPartition(Oid oid);
+
 	// find the oid of the root partition given partition oid belongs to
 	Oid OidRootPartition(Oid oid);
 	
@@ -349,7 +352,7 @@ namespace gpdb {
 	ListCell *PlcListTail(List *l);
 
 	// number of items in a list
-	int UlListLength(List *l);
+	uint32 UlListLength(List *l);
 
 	// return the nth element in a list of pointers
 	void *PvListNth(List *list, int n);
@@ -375,7 +378,10 @@ namespace gpdb {
 
 	// is this a Gather motion
 	bool FMotionGather(const Motion *pmotion);
-	
+
+	// does a partition table have an appendonly child
+	bool FAppendOnlyPartitionTable(Oid rootOid);
+
 	// does a multi-level partitioned table have uniform partitioning hierarchy
 	bool FMultilevelPartitionUniform(Oid rootOid);
 
@@ -566,8 +572,8 @@ namespace gpdb {
 
 	Node *PnodeCoerceToCommonType(ParseState *pstate, Node *pnode, Oid oidTargetType, const char *context);
 
-	// deduce an individual actual datatype on the assumption that the rules for ANYARRAY/ANYELEMENT are being followed
-	Oid OidResolveGenericType(Oid declared_type, Oid context_actual_type, Oid context_declared_type);
+	// replace any polymorphic type with correct data type deduced from input arguments
+	bool FResolvePolymorphicType(int numargs, Oid *argtypes, char *argmodes, FuncExpr *call_expr);
 	
 	// hash a const value with GPDB's hash function
 	int32 ICdbHash(Const *pconst, int iSegments);

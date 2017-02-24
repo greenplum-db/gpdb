@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1"><title id="bb137420">ALTER TYPE</title><body><p id="sql_command_desc">Changes the definition of a data type.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER TYPE <varname>name</varname>
+   OWNER TO <varname>new_owner</varname> | SET SCHEMA <varname>new_schema</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER TYPE</codeph> changes the definition of an existing type.
+You can change the owner and the schema of a type. </p><p>You must own the type to use <codeph>ALTER TYPE</codeph>. To change
+the schema of a type, you must also have <codeph>CREATE</codeph> privilege
+on the new schema. To alter the owner, you must also be a direct or indirect
+member of the new owning role, and that role must have <codeph>CREATE</codeph>
+privilege on the type's schema. (These restrictions enforce that altering
+the owner does not do anything that could be done by dropping and recreating
+the type. However, a superuser can alter ownership of any type.)</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of an existing type to alter.
+</pd></plentry><plentry><pt><varname>new_owner</varname></pt><pd>The user name of the new owner of the type. </pd></plentry><plentry><pt><varname>new_schema</varname></pt><pd>The new schema for the type. </pd></plentry></parml></section><section id="section5"><title>Examples</title><p>To change the owner of the user-defined type <codeph>email</codeph> to <codeph>joe</codeph>: </p><codeblock>ALTER TYPE email OWNER TO joe;</codeblock><p>To change the schema of the user-defined type <codeph>email</codeph> to
+          <codeph>customers</codeph>: </p><codeblock>ALTER TYPE email SET SCHEMA customers;</codeblock></section><section id="section6"><title>Compatibility</title><p>There is no <codeph>ALTER TYPE</codeph> statement in the SQL standard.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="./DROP_TYPE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>

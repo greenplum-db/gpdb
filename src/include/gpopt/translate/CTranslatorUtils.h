@@ -78,14 +78,6 @@ namespace gpdxl
 			static
 			BOOL FContainsPolymorphicTypes(DrgPmdid *pdrgpmdidTypes);
 
-			// check if the given type mdid is the "ANYELEMENT" type
-			static
-			BOOL FAnyElement(IMDId *pmdidType);
-
-			// check if the given type mdid is the "ANYARRAY" type
-			static
-			BOOL FAnyArray(IMDId *pmdidType);
-
 			// resolve polymorphic types in the given array of type ids, replacing
 			// them with the actual types obtained from the query
 			static
@@ -94,7 +86,7 @@ namespace gpdxl
 						IMemoryPool *pmp,
 						DrgPmdid *pdrgpmdidTypes,
 						List *plArgTypes,
-						List *plArgsFromQuery
+						FuncExpr *pfuncexpr
 						);
 			
 			// update grouping col position mappings

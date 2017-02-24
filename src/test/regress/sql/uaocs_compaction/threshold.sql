@@ -34,3 +34,12 @@ DELETE FROM uaocs_threshold WHERE a > 100 and a < 175;
 SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
 VACUUM uaocs_threshold;
 SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+
+-- The percentage of hidden tuples should be 10.1%
+-- The threshold guc is set to 10%
+SET gp_appendonly_compaction_threshold=10;
+CREATE TABLE uaocs_threshold_boundary(a int, b int) WITH(appendonly=TRUE, orientation=COLUMN) distributed by(a);
+INSERT INTO uaocs_threshold_boundary SELECT 1, i from generate_series(1, 1000) i;
+DELETE FROM uaocs_threshold_boundary WHERE b < 102;
+VACUUM uaocs_threshold_boundary;
+SELECT * FROM gp_toolkit.__gp_aovisimap_compaction_info('uaocs_threshold_boundary'::regclass);

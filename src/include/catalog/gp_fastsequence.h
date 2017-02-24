@@ -52,6 +52,9 @@ typedef FormData_gp_fastsequence *Form_gp_fastsequence;
 extern void InsertFastSequenceEntry(Oid objid, int64 objmod,
 									int64 lastSequence);
 
+
+extern void InsertInitialFastSequenceEntries(Oid objid);
+
 /*
  * GetFastSequences
  *

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="dy20941">REASSIGN OWNED</title>
+  <body>
+    <p id="sql_command_desc">Changes the ownership of database objects owned by a database role.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock id="sql_command_synopsis">REASSIGN OWNED BY <varname>old_role</varname> [, ...] TO <varname>new_role</varname></codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p><codeph>REASSIGN OWNED</codeph> reassigns all the objects in the current database that are
+        owned by <varname>old_role</varname> to <varname>new_role</varname>. Note that it does not
+        change the ownership of the database itself.</p>
+    </section>
+    <section id="section4">
+      <title>Parameters</title>
+      <parml>
+        <plentry>
+          <pt><varname>old_role</varname></pt>
+          <pd>The name of a role. The ownership of all the objects in the current database owned by
+            this role will be reassigned to <varname>new_role</varname>. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>new_role</varname></pt>
+          <pd>The name of the role that will be made the new owner of the affected objects.</pd>
+        </plentry>
+      </parml>
+    </section>
+    <section id="section5">
+      <title>Notes</title>
+      <p><codeph>REASSIGN OWNED</codeph> is often used to prepare for the removal of one or more
+        roles. Because <codeph>REASSIGN OWNED</codeph> only affects the objects in the current
+        database, it is usually necessary to execute this command in each database that contains
+        objects owned by a role that is to be removed. </p>
+      <p>The <codeph>DROP OWNED</codeph> command is an alternative that drops all the database
+        objects owned by one or more roles. </p>
+      <p>The <codeph>REASSIGN OWNED</codeph> command does not affect the privileges granted to the
+        old roles in objects that are not owned by them. Use <codeph>DROP OWNED</codeph> to revoke
+        those privileges.</p>
+    </section>
+    <section id="section6">
+      <title>Examples</title>
+      <p>Reassign any database objects owned by the role named <codeph>sally</codeph> and
+          <codeph>bob</codeph> to <codeph>admin</codeph>;</p>
+      <codeblock>REASSIGN OWNED BY sally, bob TO admin;</codeblock>
+    </section>
+    <section id="section7">
+      <title>Compatibility</title>
+      <p>The <codeph>REASSIGN OWNED</codeph> statement is a Greenplum Database extension. </p>
+    </section>
+    <section id="section8">
+      <title>See Also</title>
+      <p><codeph><xref href="DROP_OWNED.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="DROP_ROLE.xml#topic1" type="topic" format="dita"/></codeph></p>
+    </section>
+  </body>
+</topic>

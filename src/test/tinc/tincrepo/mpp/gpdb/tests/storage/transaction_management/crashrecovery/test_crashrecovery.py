@@ -160,6 +160,10 @@ class CrashRecovery_2PC(TINCTestCase):
         assert (out.find("commit succeeded") == -1 and
                 err.find("commit succeeded") == -1 and
                 err.find("PANIC") != -1)
+
+        # Wait for a few seconds to ensure that postmaster reset has started
+        time.sleep(5)
+
         # Wait for recovery to complete, timeout after ~ 5 mins.
         attempts = 1
         recoveryComplete = False

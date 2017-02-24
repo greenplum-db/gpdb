@@ -3,8 +3,6 @@
 -- start_matchsubs
 -- m/%USER%/
 -- s/%USER%/username/
--- m/sh: /
--- s/sh: //
 -- s/command //
 -- s/line 1: //
 -- m/type: \\d+/
@@ -262,20 +260,6 @@ alter table mpp3607 add partition ee start (-10);
 alter table mpp3607 add partition ff start (-9) end (-8); -- Overlaps
 
 drop table mpp3607;
-create table mpp3621 (aa date, bb date) partition by range (bb)
-(partition foo start('2008-01-01'));
-
-alter table mpp3621 add partition a1 start ('2007-01-01') end ('2007-02-01');
-alter table mpp3621 add partition a2 start ('2007-02-01') end ('2007-03-01');
-alter table mpp3621 add partition a3 start ('2007-03-01') end ('2007-04-01');
-alter table mpp3621 add partition a4 start ('2007-09-01') end ('2007-10-01');
-alter table mpp3621 add partition a5 start ('2007-08-01') end ('2007-09-01');
-alter table mpp3621 add partition a6 start ('2007-04-01') end ('2007-05-01');
-alter table mpp3621 add partition a7 start ('2007-05-01') end ('2007-06-01');
--- alter table mpp3621 add partition a8 start ('2007-07-01') end ('2007-08-01'); -- MPP-3667
-alter table mpp3621 add partition a9 start ('2007-06-01') end ('2007-07-01');
-
-drop table mpp3621;
 CREATE TABLE mpp3632(a int, b int, c int, d int, e int, f int, g int, h int, i int, j int, k int, l int, m int, n int, o int, p int, q int, r int, s int, t int, u int, v int, w int, x int, y int, z int)
 partition by range (a)
 ( partition aa start (1) end (10) every (1) );
@@ -329,23 +313,7 @@ alter table mpp3681 add default partition def;
 alter table mpp3681 split default partition start('2008-04-01') inclusive end('2008-05-01') exclusive into (partition apr08, default partition);
 
 drop table mpp3681;
--- MPP-3687, MPP-3667, MPP-3593
-create table mpp3667 (aa date, bb date) partition by range (bb)
-(partition foo start('2008-01-01'));
-
-alter table mpp3667 add partition a1 start ('2007-01-01') end ('2007-02-01');
-alter table mpp3667 add partition a2 start ('2007-02-01') end ('2007-03-01');
-alter table mpp3667 add partition a3 start ('2007-03-01') end ('2007-04-01');
-alter table mpp3667 add partition a4 start ('2007-09-01') end ('2007-10-01');
-alter table mpp3667 add partition a5 start ('2007-08-01') end ('2007-09-01');
-alter table mpp3667 add partition a6 start ('2007-04-01') end ('2007-05-01');
-alter table mpp3667 add partition a7 start ('2007-05-01') end ('2007-06-01');
-alter table mpp3667 add partition a8 start ('2007-07-01') end ('2007-08-01');
-alter table mpp3667 add partition a9 start ('2007-06-01') end ('2007-07-01');
-
-drop table mpp3667;
-
-
+-- MPP-3593
 create table mpp3593 (i int) partition by range(i) (start(1) end(100) every(10));
 insert into mpp3593 select i from generate_series(1, 99) i;
 alter table mpp3593 split partition for(1) at (5) into (partition aa, partition bb);
@@ -461,31 +429,7 @@ CREATE TABLE mpp3762_weather_partition (
 
 drop table mpp3762_cities, mpp3762_weather cascade;
 drop table mpp3762_cities_partition, mpp3762_weather_partition cascade;
-CREATE TABLE mpp3678 (
-id int,
-rank int,
-year int,
-gender char(1),
-count int )
 
-DISTRIBUTED BY (id)
-PARTITION BY LIST (gender)
-SUBPARTITION BY RANGE (year)
-SUBPARTITION TEMPLATE (
-SUBPARTITION year1 START (2001),
-SUBPARTITION year2 START (2002),
-SUBPARTITION year3 START (2003),
-SUBPARTITION year4 START (2004),
-SUBPARTITION year5 START (2005),
-SUBPARTITION year6 START (2006) END (2007) )
-(PARTITION girls VALUES ('F'),
-PARTITION boys VALUES ('M') );
-
-alter table mpp3678 alter partition girls add default partition gfuture;
-alter table mpp3678 alter partition boys add default partition bfuture;
-alter table mpp3678 alter partition boys split default partition start ('2006') exclusive end ('2007') inclusive into (partition year7, partition bfuture);
-
-drop table mpp3678;
 create table mpp3754a ( i int, d date, primary key (d)) partition by range(d) ( start ('2008-01-01')  inclusive end ('2008-12-01')  exclusive every (interval '1 month'));
 create table mpp3754b ( i int, d date, constraint prim_tr primary key (d)) partition by range(d) ( start ('2008-01-01')  inclusive end ('2008-12-01')  exclusive every (interval '1 month'));
 
@@ -625,8 +569,6 @@ alter table mpp3817 drop column unique2;
 drop table mpp3817;
 -- All these should error out because they have overlapping range partitions
 
-create table ttt (t int) partition by range(t) (partition a start (1) end(10), partition b start(5) end(15));
-
 CREATE TABLE NATION (
             N_NATIONKEY INTEGER,
             N_NAME CHAR(25),
@@ -713,9 +655,6 @@ partition by range (f1)
   partition est start (time with time zone '00:00 EST') end (time with time zone '23:00 EST') EVERY (INTERVAL '1 hour')
 );
 DROP TABLE mpp3114;
-\! gpaddpart
-\! gpcreatepart
-\! gpdeletepart
 CREATE TABLE sg_cal_detail_r1 (
      datacenter character varying(32),
      poolname character varying(128),
@@ -1039,38 +978,6 @@ insert into mpp3487 select i from generate_series(1, 9) i;
 vacuum analyze mpp3487;
 select  schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_freqs, histogram_bounds, correlation from pg_stats where tablename like 'mpp3487%' order by 2;
 drop table mpp3487;
-create table mpp4892 (a char, b int, d char)
-partition by range (b)
-subpartition by list (d)
-subpartition template (
- subpartition sp1 values ('a'),
- subpartition sp2 values ('b'))
-(
-start (1) end (10) every (1)
-);
-
--- works
-alter table mpp4892 add partition p1 end (11);
-
--- complain about existing template
-alter table mpp4892 add partition p3 end (13) (subpartition sp3 values ('c'));
-
--- remove template
-alter table mpp4892 set subpartition template ();
-
--- should work (because the template is gone)
-alter table mpp4892 add partition p3 end (13) (subpartition sp3 values ('c'));
-
--- complain because the template is already gone
-alter table mpp4892 set subpartition template ();
-
--- should work
-alter table mpp4892 set subpartition template (subpartition sp3 values ('c'));
-
--- should work
-alter table mpp4892 add partition p4 end (15);
-
-drop table mpp4892;
 -- Negative Test for Alter subpartition template
 CREATE TABLE qa147sales (trans_id int, date date, amount 
 decimal(9,2), region text)  
@@ -1363,45 +1270,7 @@ insert into mpp5427 select i from generate_series(10000000, 15000000) i;
 select * from pg_stats where tablename like 'mpp5427%';
 
 drop table mpp5427;
-CREATE TABLE mpp5185 (id int, mpp5185 int, year date, gender
-char(1)) DISTRIBUTED BY (id, gender, year)
-partition by list (gender)
-subpartition by range (year)
-subpartition template (
-start (date '2001-01-01'),
-start (date '2002-01-01'),
-start (date '2003-01-01'),
-start (date '2004-01-01'),
-start (date '2005-01-01')
-)
-(
-partition boys values ('M'),
-partition girls values ('F')
-);
 
-alter table mpp5185 set subpartition template ();
-
--- nothing there
-select * from pg_partition_templates where tablename='mpp5185';
-
-alter table mpp5185 set subpartition template (default subpartition def2);
-
--- def2 is there
-select * from pg_partition_templates where tablename='mpp5185';
-
--- try again
-alter table mpp5185 set subpartition template (default subpartition def2);
-
--- hey, nothing there!
-select * from pg_partition_templates where tablename='mpp5185';
-
--- try again
-alter table mpp5185 set subpartition template (default subpartition def2);
-
--- yay! it's back!
-select * from pg_partition_templates where tablename='mpp5185';
-
-drop table mpp5185;
 -- MPP-5524
 create table mpp5524 (a int, b int, c int, d int) partition by range(d) (start(1) end(20) every(1));
 -- Not allowed
@@ -1410,251 +1279,7 @@ alter table mpp5524 alter partition for(rank(1)) set distributed by (b);
 alter table mpp5524 alter partition for(rank(2)) set distributed by (c);
 insert into mpp5524 select i, i+1, i+2, i+3 from generate_series(1, 10) i;
 drop table mpp5524;
-CREATE TABLE mpp5941 (a int, b date, c char,
-                     d char(4), e varchar(20), f timestamp)
-partition by range (b)
-subpartition by list (a)
-subpartition template (
-subpartition l1 values (1,2,3,4,5),
-subpartition l2 values (6,7,8,9,10) ),
-subpartition by list (e)
-subpartition template (
-subpartition ll1 values ('Engineering'),
-subpartition ll2 values ('QA') ),
-subpartition by list (c)
-subpartition template (
-subpartition lll1 values ('M'),
-subpartition lll2 values ('F') )
-(
-  start (date '2007-01-01')
-  end (date '2010-01-01') every (interval '1 year')
-);
 
--- now look at the templates that we have                                       
-
-select tablename, partitionname, partitionlevel from pg_partition_templates
-where tablename = 'mpp5941';
-
--- clear level 1                                                                
-
-alter table mpp5941 set subpartition template ();
-
-select tablename, partitionname, partitionlevel from pg_partition_templates
-where tablename = 'mpp5941';
-
--- clear level 2                                                                
-
-alter table mpp5941 alter partition for ('2008-01-01')
-set subpartition template ();
-
-select tablename, partitionname, partitionlevel from pg_partition_templates
-where tablename = 'mpp5941';
-
--- clear level 3                                                                
-alter table mpp5941 alter partition for ('2008-01-01')
-alter partition for (1)
-set subpartition template ();
-
-select tablename, partitionname, partitionlevel from pg_partition_templates
-where tablename = 'mpp5941';
-
--- no level 4 (error)                                                           
-
-alter table mpp5941 alter partition for ('2008-01-01')
-alter partition for (1) alter partition for ('QA')
-set subpartition template ();
-
-select tablename, partitionname, partitionlevel from pg_partition_templates
-where tablename = 'mpp5941';
-
--- no level 5 (error)                                                           
-
-alter table mpp5941 alter partition for ('2008-01-01')
-alter partition for (1) alter partition for ('QA')
-alter partition for ('M')
-set subpartition template ();
-
-select tablename, partitionname, partitionlevel from pg_partition_templates
-where tablename = 'mpp5941';
-
-drop table mpp5941;
-CREATE TABLE mpp5992 (a int, b date, c char,
-                     d char(4), e varchar(20), f timestamp)
-partition by range (b)
-subpartition by list (a)
-subpartition template (
-subpartition l1 values (1,2,3,4,5),
-subpartition l2 values (6,7,8,9,10) ),
-subpartition by list (e)
-subpartition template (
-subpartition ll1 values ('Engineering'),
-subpartition ll2 values ('QA') ),
-subpartition by list (c)
-subpartition template (
-subpartition lll1 values ('M'),
-subpartition lll2 values ('F') )
-(
-  start (date '2007-01-01')
-  end (date '2010-01-01') every (interval '1 year')
-);
-
--- Clear Level 2 first
-alter table mpp5992 alter partition for ('2008-01-01')
-set subpartition template ();
-select * from pg_partition_templates where tablename='mpp5992';
-
--- Try to add partition, expected to fail
-alter table mpp5992 add partition foo start (date '2011-01-01') end (date '2012-01-01');
-
--- Let's try to clear Level 3 now
-alter table mpp5992 alter partition for ('2008-01-01')
-alter partition for (1)
-set subpartition template ();
-select * from pg_partition_templates where tablename='mpp5992';
-
--- Try to add partition, expected to fail
-alter table mpp5992 add partition foo start (date '2011-01-01') end (date '2012-01-01');
-
--- Clear Level 1, and add new subpartition template
-alter table mpp5992 set subpartition template ();
--- Expected to fail since no subpartition template
-alter table mpp5992 add partition foo start (date '2011-01-01') end (date '2012-01-01');
-
--- Add only Level 1, without Level 3, expected to fail
-alter table mpp5992 set subpartition template (subpartition l1 values (1,2,3,4,5), subpartition l2 values (6,7,8,9,10) );
-
--- Add only Level 2, without Level 3, expected to fail
-alter table mpp5992 alter partition for ('2008-01-01')
-set subpartition template (
-subpartition ll1 values ('Engineering'),
-subpartition ll2 values ('QA')
-);
--- Add Level 3, successful
-alter table mpp5992 alter partition for ('2008-01-01')
-alter partition for (1)
-set subpartition template ( subpartition lll1 values ('M'),
-subpartition lll2 values ('F'));
--- Expected to fail since incomplete subpartition template
-alter table mpp5992 add partition foo start (date '2011-01-01') end (date '2012-01-01');
--- We can overwrite the subpartition template
-alter table mpp5992 alter partition for ('2008-01-01')
-alter partition for (1)
-set subpartition template ( subpartition lll1 values ('M','m'),
-subpartition lll2 values ('F','f'));
-
--- Now we need to add Level 2, not Level 1
-alter table mpp5992 alter partition for ('2008-01-01')
-set subpartition template (
-subpartition ll1 values ('Engineering'),
-subpartition ll2 values ('QA')
-);
--- Similarly, we can override in any levels when there is an existing subpartition template
-alter table mpp5992 alter partition for ('2008-01-01')
-set subpartition template (
-subpartition ll1 values ('Engineering'),
-subpartition ll2 values ('QA'),
-subpartition ll3 values ('Marketing'),
-subpartition ll4 values ('Management'),
-subpartition ll5 values ('HR')
-);
--- Lastly, add Level 1
-alter table mpp5992 set subpartition template (subpartition l1 values (1,2,3,4,5), subpartition l2 values (6,7,8,9,10) );
-alter table mpp5992 set subpartition template (subpartition l1 values (1,2,3), subpartition l2 values (4,5,6), subpartition l3 values (7,8,9,10));
-select * from pg_partition_templates where tablename='mpp5992';
--- Now we can add a new partition
-alter table mpp5992 add partition foo start (date '2011-01-01') end (date '2012-01-01');
-select * from pg_partitions where partitiontablename like '%foo%';
-drop table mpp5992;
-
--- Some note:
--- 1. after successfully added a level subpartition template, we are able to update the subpartition template
--- 2. We cannot add partition with incomplete subpartition template
--- NULL is not allowed in RANGE partition
-CREATE TABLE mpp5984 ( ps_partkey integer,
-ps_suppkey integer, ps_availqty integer,
-ps_supplycost numeric, ps_comment character varying(199) )
-PARTITION BY RANGE(ps_partkey)
-
-partition nnull start (NULL)
-);
-
-CREATE TABLE mpp5984 ( ps_partkey integer,
-ps_suppkey integer, ps_availqty integer,
-ps_supplycost numeric, ps_comment character varying(199) )
-PARTITION BY RANGE(ps_partkey)
-(
-partition nnull start (NULL),
-partition aa start (100) end (200)
-);
-
-CREATE TABLE mpp5984 ( ps_partkey integer,
-ps_suppkey integer, ps_availqty integer,
-ps_supplycost numeric, ps_comment character varying(199) )
-PARTITION BY RANGE(ps_partkey)
-(
-partition nnull start (300) end (NULL)
-);
-
-CREATE TABLE mpp5984 ( ps_partkey integer,
-ps_suppkey integer, ps_availqty integer,
-ps_supplycost numeric, ps_comment character varying(199) )
-PARTITION BY RANGE(ps_partkey)
-subpartition by range (ps_partkey)
-subpartition template
-( subpartition sp1 start(0) end (100) every(10),
-  subpartition sp2 start(100) end (200) every(10)
-)
-( partition aa start (0) end (100),
-  partition bb start (100) end (200)
-);
-
-alter table mpp5984 add partition nnull2 start(NULL); 
-alter table mpp5984 add partition nnull2 start(100) end (NULL); 
-alter table mpp5984 add partition nnull2 start(NULL) end (100); 
-
-drop table mpp5984;
-create table mpp5397 (a int, b int, c int) 
-  distributed by (a) 
-  partition by range (b)  (partition a1 start (0) end (5), partition a2 end (10),  partition a3 end(15));
-
-alter table mpp5397 drop column c;
-\d mpp5397*
-
-alter table mpp5397 add partition z end (20);
-\d mpp5397*
-
-select * from pg_partitions where tablename='mpp5397';
-
-drop table mpp5397;
-CREATE TABLE sg_cal_event_silvertail_hour (
-caldt date NOT NULL,
-calhr smallint NOT NULL,
-ip character varying(128),
-transactionid character varying(32),
-transactiontime timestamp(2) without time zone
-)
-WITH (appendonly=true, compresslevel=5)
-distributed by (ip) PARTITION BY RANGE(transactiontime)
-(
-
-PARTITION "P2009041607"
-START ('2009-04-16 07:00:00'::timestamp without time zone)
-END ('2009-04-16 08:00:00'::timestamp without time zone),
-PARTITION "P2009041608"
-START ('2009-04-16 08:00:00'::timestamp without time zone)
-END ('2009-04-16 09:00:00'::timestamp without time zone),
-DEFAULT PARTITION st_default
-
-);
-
-ALTER TABLE SG_CAL_EVENT_SILVERTAIL_HOUR SPLIT DEFAULT PARTITION
-START ('2009-04-29 07:00:00'::timestamp) INCLUSIVE END ('2009-04-29
-08:00:00'::timestamp) EXCLUSIVE INTO ( PARTITION P2009042907 ,
-PARTITION st_default );
-
-select * from pg_partitions where tablename='sg_cal_event_silvertail_hour';
-
-drop table sg_cal_event_silvertail_hour;
 CREATE TABLE fff_main (id int, rank int, year int, gender char(1), count int)
  partition by range (year) ( start (2001) end (2006) every ('1'));
 
@@ -1851,41 +1476,7 @@ PARTITION st_default );
 select pg_get_partition_def('sg_cal_event_silvertail_hour'::regclass, true);
 
 drop table sg_cal_event_silvertail_hour;
-create domain mpp3544domainvarchar varchar(5);
-create domain mpp3544domainnumeric numeric(8,2);
-create domain mpp3544domainint4 int4;
-create domain mpp3544domaintext text;
 
--- Test tables using domains
-create table mpp3544basictest1
-           ( testint4 mpp3544domainint4
-           , testtext mpp3544domaintext
-           , testvarchar mpp3544domainvarchar
-           , testnumeric mpp3544domainnumeric
-           )
-partition by LIST(testvarchar)
-(
-partition aa values ('aaaaa'),
-partition bb values ('bbbbb'),
-partition cc values ('ccccc')
-);
-
-create table mpp3544basictest2
-           ( testint4 mpp3544domainint4
-           , testtext mpp3544domaintext
-           , testvarchar mpp3544domainvarchar
-           , testnumeric mpp3544domainnumeric
-           )
-partition by RANGE(testint4)
-(start (1) end (10) every (1));
-
-drop domain mpp3544domainvarchar cascade;
-drop domain mpp3544domainnumeric cascade;
-drop domain mpp3544domaintext cascade;
-drop domain mpp3544domainint4 cascade;
-
-drop table mpp3544basictest1;
-drop table mpp3544basictest2;
 CREATE TABLE mpp6612 (
         unique1         int4,
         unique2         int4,
@@ -1920,31 +1511,6 @@ alter table mpp6612 alter column unique2 type char(10);
 
 
 drop table mpp6612;
-CREATE TABLE mpp6611 (
-        unique1         int4,
-        unique2         int4,
-        two                     int4,
-        four            int4,
-        ten                     int4,
-        twenty          int4,
-        hundred         int4,
-        thousand        int4,
-        twothousand     int4,
-        fivethous       int4,
-        tenthous        int4,
-        odd                     int4,
-        even            int4,
-        stringu1        name,
-        stringu2        name,
-        string4         name
-) partition by range (unique1)
-( partition aa start (0) end (1000) every (500), default partition default_part );
-
-alter table mpp6611 rename to mpp6611a;
-
-\d mpp6611a*
-
-drop table mpp6611a;
 create table mpp4048 (aaa int, bbb date)
 partition by range (bbb)
 subpartition by range (bbb)

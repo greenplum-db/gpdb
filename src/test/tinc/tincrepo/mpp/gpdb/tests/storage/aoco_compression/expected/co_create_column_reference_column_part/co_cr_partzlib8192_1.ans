@@ -101,8 +101,8 @@ COPY 4883
  a32    | date                        |                                                                   | plain    | zlib             | 1                 | 8192       | 
  a33    | real                        |                                                                   | plain    | zlib             | 1                 | 8192       | 
  a34    | money                       |                                                                   | plain    | zlib             | 1                 | 8192       | 
- a35    | cidr                        |                                                                   | plain    | zlib             | 1                 | 8192       | 
- a36    | inet                        |                                                                   | plain    | zlib             | 1                 | 8192       | 
+ a35    | cidr                        |                                                                   | main     | zlib             | 1                 | 8192       | 
+ a36    | inet                        |                                                                   | main     | zlib             | 1                 | 8192       | 
  a37    | time without time zone      |                                                                   | plain    | zlib             | 1                 | 8192       | 
  a38    | text                        |                                                                   | extended | zlib             | 1                 | 8192       | 
  a39    | bit(1)                      |                                                                   | extended | zlib             | 1                 | 8192       | 
@@ -332,8 +332,8 @@ COPY 4883
  a32    | date                        |                                                                     | plain    | zlib             | 1                 | 8192       | 
  a33    | real                        |                                                                     | plain    | zlib             | 1                 | 8192       | 
  a34    | money                       |                                                                     | plain    | zlib             | 1                 | 8192       | 
- a35    | cidr                        |                                                                     | plain    | zlib             | 1                 | 8192       | 
- a36    | inet                        |                                                                     | plain    | zlib             | 1                 | 8192       | 
+ a35    | cidr                        |                                                                     | main     | zlib             | 1                 | 8192       | 
+ a36    | inet                        |                                                                     | main     | zlib             | 1                 | 8192       | 
  a37    | time without time zone      |                                                                     | plain    | zlib             | 1                 | 8192       | 
  a38    | text                        |                                                                     | extended | zlib             | 1                 | 8192       | 
  a39    | bit(1)                      |                                                                     | extended | zlib             | 1                 | 8192       | 

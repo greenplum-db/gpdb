@@ -756,12 +756,12 @@ plpgsql_exec_error_callback(void *arg)
 		}
 		else
 		{
-		/*
-		 * translator: last %s is a phrase such as "while storing call
-		 * arguments into local variables"
-		 */
-		errcontext("PL/pgSQL function \"%s\" %s",
-				   estate->err_func->fn_name,
+			/*
+			 * translator: last %s is a phrase such as "while storing call
+			 * arguments into local variables"
+			 */
+			errcontext("PL/pgSQL function \"%s\" %s",
+					   estate->err_func->fn_name,
 					   _(estate->err_text));
 		}
 	}
@@ -3094,7 +3094,6 @@ exec_stmt_open(PLpgSQL_execstate *estate, PLpgSQL_stmt_open *stmt)
 	char	   *nulls;
 	bool		isnull;
 
-
 	/* ----------
 	 * Get the cursor variable and if it has an assigned name, check
 	 * that it's not in use currently.
@@ -4453,7 +4452,7 @@ exec_move_row(PLpgSQL_execstate *estate,
 		else if (tupdesc)
 		{
 			/* If we have a tupdesc but no data, form an all-nulls tuple */
-			bool   *nulls;
+			bool	   *nulls;
 
 			nulls = (bool *) palloc(tupdesc->natts * sizeof(bool));
 			memset(nulls, true, tupdesc->natts * sizeof(bool));

@@ -37,8 +37,8 @@
 #include "libpq/pqformat.h"
 #include "utils/portal.h"
 
-#include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
+#include "cdb/ml_ipc.h"
 #include "utils/vmem_tracker.h"
 
 /* ----------------
@@ -148,8 +148,6 @@ CreateDestReceiver(CommandDest dest, Portal portal)
 void
 EndCommand(const char *commandTag, CommandDest dest)
 {
-	StringInfoData buf;
-
 	switch (dest)
 	{
 		case DestRemote:
@@ -158,15 +156,9 @@ EndCommand(const char *commandTag, CommandDest dest)
 			 * We assume the commandTag is plain ASCII and therefore
 			 * requires no encoding conversion.
 			 */
-			if (Gp_role == GP_ROLE_EXECUTE)
-			{
-				pq_beginmessage(&buf, 'C');
-				pq_send_ascii_string(&buf, commandTag);
-				pq_endmessage(&buf);
-			}
-			else
-				pq_putmessage('C', commandTag, strlen(commandTag) + 1);
+			pq_putmessage('C', commandTag, strlen(commandTag) + 1);
 			break;
+
 		case DestNone:
 		case DestDebug:
 		case DestSPI:
@@ -252,7 +244,6 @@ ReadyForQuery(CommandDest dest)
 			}
 			else if (PG_PROTOCOL_MAJOR(FrontendProtocol) >= 2)
 				pq_putemptymessage('Z');
-
 			/* Flush output at end of cycle in any case. */
 			pq_flush();
 			break;
@@ -276,7 +267,7 @@ sendQEDetails(void)
 	StringInfoData buf;
 
 	pq_beginmessage(&buf, 'w');
-	pq_sendint(&buf, (int32) Gp_listener_port, sizeof(int32));			
+	pq_sendint(&buf, (int32) ICListenerPort, sizeof(int32));
 	pq_sendint(&buf, sizeof(PG_VERSION_STR), sizeof(int32));
 	pq_sendbytes(&buf, PG_VERSION_STR, sizeof(PG_VERSION_STR));
 	pq_endmessage(&buf);

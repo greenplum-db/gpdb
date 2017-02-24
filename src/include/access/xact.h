@@ -247,7 +247,6 @@ extern void UnregisterXactCallbackOnce(XactCallback callback, void *arg);
 extern void RegisterSubXactCallback(SubXactCallback callback, void *arg);
 extern void UnregisterSubXactCallback(SubXactCallback callback, void *arg);
 
-extern TransactionId RecordTransactionCommit(void);
 extern void RecordDistributedForgetCommitted(struct TMGXACT_LOG *gxact_log);
 extern bool RecordCrashTransactionAbortRecord(
 	TransactionId				xid,

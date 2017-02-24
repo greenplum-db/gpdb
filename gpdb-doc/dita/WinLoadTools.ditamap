@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE bookmap
+  PUBLIC "-//OASIS//DTD DITA BookMap//EN" "bookmap.dtd">
+<bookmap xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="book">
+   <booktitle>
+      <booklibrary id="product_name">
+         <tm trademark="Pivotal" tmtype="tm">Pivotal</tm>
+         <tm trademark="Greenplum Database" tmtype="reg">Greenplum Database</tm>
+      </booklibrary>
+      <mainbooktitle id="pdf_version">Version 4.3</mainbooktitle>
+      <booktitlealt id="pdf_title">Load Tools for Windows</booktitlealt>
+      <booktitlealt id="pdf_revision_number">Rev: A10</booktitlealt>
+      <booktitlealt id="copyright_date">© 2016 Pivotal Software, Inc.</booktitlealt>
+   </booktitle>
+   <bookmeta>
+      <author/>
+      <prodinfo>
+         <prodname>Load Tools for Windows</prodname>
+         <vrmlist>
+            <vrm version="" release="" modification=""/>
+         </vrmlist>
+      </prodinfo>
+      <bookid>
+         <bookpartno/>
+         <booknumber/>
+         <maintainer>
+            <organization/>
+            <person/>
+         </maintainer>
+      </bookid>
+      <bookrights>
+         <copyrfirst>
+            <year/>
+         </copyrfirst>
+         <copyrlast>
+            <year/>
+         </copyrlast>
+         <bookowner>
+            <organization/>
+         </bookowner>
+      </bookrights>
+   </bookmeta>
+   <frontmatter>
+      <keydef keys="product_name">
+         <topicmeta>
+            <keywords>
+               <keyword>Greenplum Database</keyword>
+            </keywords>
+         </topicmeta>
+      </keydef>
+      <keydef keys="product_name_short">
+         <topicmeta>
+            <keywords>
+               <keyword>Greenplum</keyword>
+            </keywords>
+         </topicmeta>
+      </keydef>
+      <keydef keys="toolkit_prefix">
+         <topicmeta>
+            <keywords>
+               <keyword>gp_</keyword>
+            </keywords>
+         </topicmeta>
+      </keydef>
+      <booklists>
+         <toc/>
+      </booklists>
+      <notices href="client_tool_guides/load/windows/pivotal-copyright.xml"/>
+   </frontmatter>
+   <chapter href="client_tool_guides/load/windows/win_load_install.xml"
+      navtitle="Installing Greenplum Loader"/>
+   <chapter href="client_tool_guides/load/windows/win_load_run.xml"
+      navtitle="Running Greenplum Loader"/>
+   <chapter href="client_tool_guides/load/windows/win_load_tool_ref.xml"
+      navtitle="Loader Program Reference">
+      <topicref href="client_tool_guides/load/windows/gploadpy.xml" navtitle="gpload.py"/>
+      <topicref href="client_tool_guides/load/windows/gpfdistexe.xml" navtitle="gpfdist.exe"/>
+   </chapter>
+   <chapter href="client_tool_guides/load/windows/load_sql_ref.xml" navtitle="SQL Command Reference"
+   />
+</bookmap>

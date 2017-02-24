@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+    <!--install_guide/refs/gpseginstall.xml has a conref to this topic. -->
+    <title id="jv133181">gpseginstall</title>
+    <body>
+        <p>Installs Greenplum Database on segment hosts.</p>
+        <section id="section2">
+            <title>Synopsis</title>
+            <codeblock><b>gpseginstall</b> <b>-f</b> <varname>hostfile</varname> [<b>-u</b> <varname>gpdb_admin_user</varname>] [<b>-p</b> <varname>password</varname>] 
+             [<b>-c</b> u|p|c|s|E|e|l|v]
+
+<b>gpseginstall</b> --help</codeblock>
+        </section>
+        <section id="section3">
+            <title>Description</title>
+            <p>The <codeph>gpseginstall</codeph> utility provides a simple way to quickly install
+                Greenplum Database on segment hosts that you specify in a host list file. The
+                utility does not install or update Greenplum Database on the master host. You can
+                run <codeph>gpseginstall</codeph> as <codeph>root</codeph> or as a non-root user.
+                    <codeph>gpseginstall</codeph> does not perform database initialization. See
+                    <codeph>gpinitsystem</codeph> for more information about initializing Greenplum
+                Database.</p>
+            <p>When run as root, <codeph>gpseginstall</codeph> default actions are to add a system
+                user (default is <codeph>gpadmin</codeph>), create a password (default is
+                    <codeph>changeme</codeph>), and deploy and install Greenplum Database on segment
+                hosts. To do this, <codeph>gpseginstall</codeph> locates the current Greenplum
+                Database binaries on the master from the installation path in the current user's
+                environment variables (<codeph>$GPHOME</codeph>). It compresses Greenplum Database
+                software into a <codeph>tar.gz</codeph> file and performs an MD5 checksum to verify
+                file integrity. </p>
+            <p>Then, it copies Greenplum Database to the segment hosts, installs (decompresses)
+                Greenplum Database, and changes the ownership of the Greenplum Database installation
+                to the system user you specify with the <codeph>-u</codeph> option. Lastly, it
+                exchanges keys between all Greenplum Database hosts as both root and as the system
+                user you specify with the -u option. gpseginstall also perform a user limit check
+                and verifies the version number of Greenplum Database on all the segments.</p>
+            <p>If you run gpseginstall as a non-root user, gpseginstall only compresses, copies, and
+                installs Greenplum Database on segment hosts. It can also exchanges keys between
+                Greenplum Database hosts for the current system user, and verifies the version
+                number of Greenplum Database on all the segments.</p>
+        </section>
+        <section id="section4">
+            <title>Options</title>
+            <parml>
+                <plentry>
+                    <pt>-c | --commands <varname>option_list</varname></pt>
+                    <pd>Optional. This allows you to customize <codeph>gpseginstall</codeph>
+                        actions. Note that these command options are executed by default if you do
+                        not specify the <codeph>-c</codeph> option in the
+                            <codeph>gpseginstall</codeph> syntax.<ul id="ul_vby_bnk_44">
+                            <li id="jv144166"><codeph>u</codeph>: Adds a system user.
+                                    (<codeph>root</codeph> only)</li>
+                            <li id="jv144168"><codeph>p</codeph>: Changes the password for a system
+                                user. (<codeph>root</codeph> only)</li>
+                            <li id="jv144170"><codeph>s</codeph>: Compresses, copies, decompresses
+                                (installs) Greenplum Database on all segments.</li>
+                            <li id="jv144173"><codeph>c</codeph>: Changes the ownership of the
+                                Greenplum Database installation directory on the segment hosts.
+                                    (<codeph>root</codeph> only)</li>
+                            <li id="jv144176"><codeph>E</codeph>: Exchange keys between Greenplum
+                                Database master and segment hosts for the root user.
+                                    (<codeph>root</codeph> only)</li>
+                            <li id="jv144179"><codeph>e</codeph>: Exchange keys between Greenplum
+                                Database master and segment hosts for the non-root system user. </li>
+                            <li id="jv144182"><codeph>l</codeph>: (Linux only) Checks and modifies
+                                the user limits configuration file
+                                    (<codeph>/etc/security/limits.conf</codeph> file) when adding a
+                                new user to segment hosts. (<codeph>root</codeph> only)</li>
+                            <li id="jv144186"><codeph>v</codeph>: Verifies the version of Greenplum
+                                Database running on all segments. <codeph>gpseginstall</codeph>
+                                checks the version number of the Greenplum Database installation
+                                referenced by the <codeph>$GPHOME</codeph> environment variable and
+                                symbolic link to the installation directory. An error occurs if
+                                there is a version number mismatch or the Greenplum Database
+                                installation directory cannot be found.</li>
+                        </ul></pd>
+                </plentry>
+                <plentry>
+                    <pt>-f | --file <varname>hostfile</varname></pt>
+                    <pd>Required. This specifies the file that lists the segment hosts onto which
+                        you want to install Greenplum Database.</pd>
+                    <pd>The host list file must have one host name per line and includes a host name
+                        for each segment host in your Greenplum system. Make sure there are no blank
+                        lines or extra spaces. If a host has multiple configured host names, use
+                        only one host name per host. For example:</pd>
+                    <pd>
+                        <codeblock>sdw1-1
+sdw2-1
+sdw3-1
+sdw4-1</codeblock>
+                    </pd>
+                    <pd>If available, you can use the same <codeph>gpssh-exkeys</codeph> host list
+                        file you used to exchange keys between Greenplum Database hosts.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-p | --password <varname>password</varname></pt>
+                    <pd>Optional. Sets the password for the user you specify with the
+                            <codeph>-u</codeph> option. The default password is
+                            <codeph>changeme</codeph>. This option is only available when you run
+                            <codeph>gpsetinstall</codeph> as root.</pd>
+                    <pd>Recommended security best practices:<ul id="ul_zwv_fnk_44">
+                            <li id="jv143869">Always use passwords.</li>
+                            <li id="jv144536">Do not use default passwords.</li>
+                            <li id="jv143870">Change default passwords immediately after
+                                installation.</li>
+                        </ul></pd>
+                </plentry>
+                <plentry>
+                    <pt>-u | --user <varname>user</varname></pt>
+                    <pd>Optional. This specifies the system user. This user is also the Greenplum
+                        Database administrative user. This user owns Greenplum Database installation
+                        and administers the database. This is also the user under which Greenplum
+                        Database is started/initialized. This option is only available when you run
+                            <codeph>gpseginstall</codeph> as <codeph>root</codeph>. The default is
+                            <codeph>gpadmin</codeph>. </pd>
+                </plentry>
+                <plentry>
+                    <pt>--help (help)</pt>
+                    <pd>Displays the online help.</pd>
+                </plentry>
+            </parml>
+        </section>
+        <section id="section5">
+            <title>Examples</title>
+            <p>As <codeph>root</codeph>, install a Greenplum Database on all segments, leave the
+                system user as the default (<codeph>gpadmin</codeph>) and set the
+                    <codeph>gpadmin</codeph> password to <codeph>secret123</codeph>:</p>
+            <codeblock># gpseginstall -f my_host_list_file -p secret123</codeblock>
+            <p>As a non-root user, compress and copy Greenplum Database binaries to all segments (as
+                    <codeph>gpadmin</codeph>):</p>
+            <codeblock>$ gpseginstall -f host_file</codeblock>
+            <p>As root, add a user (<codeph>gpadmin2</codeph>), set the password for the user
+                    (<codeph>secret1234</codeph>), exchange keys between hosts as the new user,
+                check user limits, and verify version numbers, but do not change ownership of
+                Greenplum binaries, compress/copy/ install Greenplum Database on segments, or
+                exchange keys as <codeph>root</codeph>.</p>
+            <codeblock>$ gpseginstall -f host_file -u gpadmin2 -p secret1234 -c upelv</codeblock>
+        </section>
+        <section>
+            <title>See Also</title>
+            <p><codeph><xref href="gpinitsystem.xml#topic1"/></codeph>, <codeph><xref
+                        href="gpssh-exkeys.xml#topic1"/></codeph></p>
+        </section>
+    </body>
+</topic>

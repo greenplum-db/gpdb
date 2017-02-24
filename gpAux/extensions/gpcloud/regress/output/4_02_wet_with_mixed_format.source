@@ -38,7 +38,7 @@ INSERT INTO s3write_mixedfmt_write_txt2 (date, time, status, sample1, sample2, v
 -- mixed formats, should fail
 SELECT * FROM s3write_mixedfmt_read;
 ERROR:  missing data for column "time"  (seg1 slice1 gpdb4dev:40001 pid=17945)
-DETAIL:  External table s3write_mixedfmt_read, line 1 of s3://s3-us-west-2.amazonaws.com/s3write.pivotal.io/regress/s3write/20160824-BAJVJZel/mixedfmt/ config=/home/gpadmin/s3.conf: "2016-07-28   12:00:00    t   0.5 0.3 3"
+DETAIL:  External table s3write_mixedfmt_read, line 1 of s3://s3-us-west-2.amazonaws.com/@write_prefix@/mixedfmt/ config=@config_file@: "2016-07-28	12:00:00	t	0.5	0.3	3"
 DROP EXTERNAL TABLE IF EXISTS s3write_mixedfmt_read;
 DROP EXTERNAL TABLE IF EXISTS s3write_mixedfmt_write_csv;
 DROP EXTERNAL TABLE IF EXISTS s3write_mixedfmt_write_txt;

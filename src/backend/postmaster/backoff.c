@@ -60,7 +60,7 @@
 #include "funcapi.h"
 #include "catalog/pg_type.h"
 #include "access/tuptoaster.h"
-#include "utils/gp_atomic.h"
+#include "port/atomics.h"
 
 extern bool gp_debug_resqueue_priority;
 
@@ -127,8 +127,8 @@ typedef struct BackoffBackendSharedEntry
 										 * backends. */
 
 	/* These fields are written to by sweeper and read by backend */
-	bool		noBackoff;		/* If set, then no backoff to be performed by
-								 * this backend */
+	bool		backoff;		/* If set to false, then no backoff to be
+								 * performed by this backend */
 	double		targetUsage;	/* Current target CPU usage as calculated by
 								 * sweeper */
 	bool		earlyBackoffExit;		/* Sweeper asking backend to stop
@@ -142,7 +142,8 @@ typedef struct BackoffBackendSharedEntry
 										 * are active */
 
 	/* These fields are wrtten by backend during init and by manual adjustment */
-	int			weight;			/* Weight of this statement */
+	int			weight;			/* Weight of the statement that this backend
+								 * belongs to */
 
 }	BackoffBackendSharedEntry;
 
@@ -175,7 +176,7 @@ BackoffState *backoffSingleton = NULL;
 
 static inline void init(StatementId * s, int sessionId, int commandCount);
 static inline void setInvalid(StatementId * s);
-static inline bool isInvalid(const StatementId * s);
+static inline bool isValid(const StatementId * s);
 static inline bool equalStatementId(const StatementId * s1, const StatementId * s2);
 
 /* Main accessor methods for backoff entries */
@@ -257,12 +258,12 @@ equalStatementId(const StatementId * s1, const StatementId * s2)
 }
 
 /**
- * Is a statemend invalid?
+ * Is a StatementId valid?
  */
 static inline bool
-isInvalid(const StatementId * s)
+isValid(const StatementId * s)
 {
-	return equalStatementId(s, &InvalidStatementId);
+	return !equalStatementId(s, &InvalidStatementId);
 }
 
 /**
@@ -415,6 +416,8 @@ getBackoffEntryRW(int index)
 /**
  * This method is called by the backend when it begins working on a new statement.
  * This initializes the backend entry corresponding to this backend.
+ * After initialization, the backend entry immediately finds its group leader, which
+ * is the first backend entry that has the same statement id with itself.
  */
 void
 BackoffBackendEntryInit(int sessionid, int commandcount, int weight)
@@ -434,7 +437,7 @@ BackoffBackendEntryInit(int sessionid, int commandcount, int weight)
 	mySharedEntry->targetUsage = 1.0 / numProcsPerSegment();	/* Initially, do not
 																 * perform any backoffs */
 	mySharedEntry->isActive = false;
-	mySharedEntry->noBackoff = false;
+	mySharedEntry->backoff = true;
 	mySharedEntry->earlyBackoffExit = false;
 
 	if (gettimeofday(&mySharedEntry->lastCheckTime, NULL) < 0)
@@ -449,7 +452,7 @@ BackoffBackendEntryInit(int sessionid, int commandcount, int weight)
 
 	/* this should happen last or the sweeper may pick up a non-complete entry */
 	init(&mySharedEntry->statementId, sessionid, commandcount);
-	Assert(!isInvalid(&mySharedEntry->statementId));
+	Assert(isValid(&mySharedEntry->statementId));
 
 	/* Local information */
 	myLocalEntry = myBackoffLocalEntry();
@@ -521,7 +524,8 @@ BackoffBackend()
 		elog(ERROR, "Unable to execute getrusage(). Please disable query prioritization.");
 	}
 
-	if (!se->noBackoff)
+	/* If backoff can be performed by this process */
+	if (se->backoff)
 	{
 		/*
 		 * How much did the cpu work on behalf of this process - incl user and
@@ -678,22 +682,52 @@ BackoffBackendTick()
 }
 
 /**
- * This looks at all the backend structures to determine if any backends are not
- * making progress. This is done by inspecting the lastchecked time. It calculates
- * the total weight of all 'active' backends to re-calculate the target CPU usage
- * per backend process.
+ * BackoffSweeper() looks at all the backend structures to determine if any
+ * backends are not making progress. This is done by inspecting the lastchecked
+ * time.  It also calculates the total weight of all 'active' backends to
+ * re-calculate the target CPU usage per backend process. If it finds that a
+ * backend is trying to request more CPU resources than the maximum CPU that it
+ * can get (such a backend is called a 'pegger'), it assigns maxCPU to it.
+ *
+ * For example:
+ * Let Qi be the ith query statement, Ri be the target CPU usage for Qi,
+ * Wi be the statement weight for Qi, W be the total statements weight.
+ * For simplicity, let's assume every statement only has 1 backend per segment.
+ *
+ * Let there be 4 active queries with weights {1,100,10,1000} with K=3 CPUs
+ * available per segment to share. The maximum CPU that a backend can get is
+ * maxCPU = 1.0. The total active statements weight is
+ * W (activeWeight) = 1 + 100 + 10 + 1000 = 1111.
+ * The following algorithm determines that Q4 is pegger, because
+ * K * W4 / W > maxCPU, which is 3000/1111 > 1.0, so we assign R4 = 1.0.
+ * Now K becomes 2.0, W becomes 111.
+ * It restarts from the beginning and determines that Q2 is now a pegger as
+ * well, because K * W2 / W > maxCPU, which is 200/111 > 1.0, we assign
+ * R2 = 1.0. Now there is only 1 CPU left and no peggers left. We continue
+ * to distribute the left 1 CPU to other backends according to their weight,
+ * so we assign the target CPU ratio of R1=1/11 and R3=10/11. The final
+ * target CPU assignments are {0.09,1.0,0.91,1.0}.
+ *
+ * If there are multiple backends within a segment running for the query Qi,
+ * the target CPU ratio Ri for query Qi is divided equally among all the
+ * active backends belonging to the query.
  */
 void
 BackoffSweeper()
 {
-	volatile double activeWeight = 0.0;
 	int			i = 0;
-	int			numValidBackends = 0;
+
+	/* The overall weight of active statements */
+	volatile double activeWeight = 0.0;
 	int			numActiveBackends = 0;
 	int			numActiveStatements = 0;
+
+	/* The overall weight of active and inactive statements */
 	int			totalStatementWeight = 0;
-	struct timeval currentTime;
+	int			numValidBackends = 0;
 	int			numStatements = 0;
+
+	struct timeval currentTime;
 
 	if (gettimeofday(&currentTime, NULL) < 0)
 	{
@@ -706,13 +740,14 @@ BackoffSweeper()
 
 	PG_TRACE(backoff__globalcheck);
 
+	/* Reset status for all the backend entries */
 	for (i = 0; i < backoffSingleton->numEntries; i++)
 	{
 		BackoffBackendSharedEntry *se = getBackoffEntryRW(i);
 
 		se->isActive = false;
 		se->numFollowersActive = 0;
-		se->noBackoff = false;
+		se->backoff = true;
 	}
 
 	/*
@@ -723,7 +758,7 @@ BackoffSweeper()
 	{
 		BackoffBackendSharedEntry *se = getBackoffEntryRW(i);
 
-		if (!isInvalid(&se->statementId))
+		if (isValid(&se->statementId))
 		{
 			Assert(se->weight > 0);
 			if (TIMEVAL_DIFF_USEC(currentTime, se->lastCheckTime)
@@ -776,7 +811,7 @@ BackoffSweeper()
 		{
 			BackoffBackendSharedEntry *se = getBackoffEntryRW(i);
 
-			se->noBackoff = true;
+			se->backoff = false;
 			se->earlyBackoffExit = true;
 			se->targetUsage = 1.0;
 		}
@@ -785,6 +820,11 @@ BackoffSweeper()
 	{
 		/**
 		 * There are multiple statements with active backends.
+		 *
+		 * Let 'found' be true if we find a backend is trying to
+		 * request more CPU resources than the maximum CPU that it can
+		 * get. No matter how high the priority of a query process, it
+		 * can utilize at most a single CPU at a time.
 		 */
 		bool		found = true;
 		int			numIterations = 0;
@@ -811,12 +851,21 @@ BackoffSweeper()
 				BackoffBackendSharedEntry *se = getBackoffEntryRW(i);
 
 				if (se->isActive
-					&& !se->noBackoff)
+					&& se->backoff)
 				{
 					double		targetCPU = 0.0;
 					const BackoffBackendSharedEntry *gl = getBackoffEntryRO(se->groupLeaderIndex);
 
 					Assert(gl->numFollowersActive > 0);
+
+					if (activeWeight <= 0.0) {
+						/*
+						 * If activeWeight <= 0.0, it should be considered unexpected
+						 * behavior. Error out here instead of risking an underflow.
+						 */
+						elog(ERROR, "activeWeight underflow!");
+					}
+
 					Assert(activeWeight > 0.0);
 					Assert(se->weight > 0.0);
 
@@ -831,21 +880,9 @@ BackoffSweeper()
 																 * when there is more
 																 * than one proc */
 						se->targetUsage = maxCPU;
-						se->noBackoff = true;
+						se->backoff = false;
 						activeWeight -= (se->weight / gl->numFollowersActive);
 
-						/*
-						 * GPDB_83_MERGE_FIXME: I saw the Assert(activeWeight
-						 * > 0.0) above to fail every now and then, when
-						 * running "make installcheck-good". Something's
-						 * wrong, not sure what, but let's just silence that
-						 * failure for now
-						 */
-						if (activeWeight <= 0)
-						{
-							elog(LOG, "activeWeight underflow!");
-							activeWeight = 0.001;
-						}
 						CPUAvailable -= maxCPU;
 						found = true;
 					}
@@ -869,7 +906,7 @@ BackoffSweeper()
 			BackoffBackendSharedEntry *se = getBackoffEntryRW(i);
 
 			if (se->isActive
-				&& !se->noBackoff)
+				&& se->backoff)
 			{
 				const BackoffBackendSharedEntry *gl = getBackoffEntryRO(se->groupLeaderIndex);
 
@@ -1369,7 +1406,7 @@ gp_list_backend_priorities(PG_FUNCTION_ARGS)
 
 		Assert(se);
 
-		if (isInvalid(&se->statementId))
+		if (!isValid(&se->statementId))
 		{
 			context->currentIndex++;
 			continue;

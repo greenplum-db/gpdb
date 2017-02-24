@@ -21,6 +21,7 @@
 #include "catalog/pg_type.h"
 #include "miscadmin.h"
 #include "utils/builtins.h"
+#include "catalog/gp_fastsequence.h"
 
 /*
  * Create append-only auxiliary relations for target relation rel.
@@ -166,6 +167,9 @@ CreateAOAuxiliaryTable(
 								 InvalidOid, InvalidOid);
 			break;
 		case RELKIND_AOSEGMENTS:
+			/* Add initial entries in gp_fastsequence */
+			InsertInitialFastSequenceEntries(aoauxiliary_relid);
+
 			UpdateAppendOnlyEntryAuxOids(relOid,
 								 aoauxiliary_relid,
 								 InvalidOid, InvalidOid,

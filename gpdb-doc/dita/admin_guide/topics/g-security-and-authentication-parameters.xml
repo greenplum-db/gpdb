@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic14">
+   <title>Security and Authentication Parameters</title>
+   <body>
+      <simpletable id="kh159695">
+         <strow>
+            <stentry>
+               <p>
+                  <codeph>authentication_timeout</codeph>
+               </p>
+               <p>
+                  <codeph>db_user_namespace</codeph>
+               </p>
+               <p>
+                  <codeph>krb_caseins_users</codeph>
+               </p>
+               <p>
+                  <codeph>krb_server_keyfile</codeph>
+               </p>
+            </stentry>
+            <stentry>
+               <p>
+                  <codeph>krb_srvname</codeph>
+               </p>
+               <p>
+                  <codeph>password_encryption</codeph>
+               </p>
+               <p>
+                  <codeph>password_hash_algorithm</codeph>
+               </p>
+               <p>
+                  <codeph>ssl</codeph>
+               </p>
+               <p>
+                  <codeph>ssl_ciphers</codeph>
+               </p>
+            </stentry>
+         </strow>
+      </simpletable>
+   </body>
+</topic>

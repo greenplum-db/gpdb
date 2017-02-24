@@ -21,8 +21,6 @@
 #include "utils/memutils.h"
 #include "utils/debugbreak.h"
 
-#include <unistd.h>
-
 /*
  * getScanMethod
  *   Return ScanMethod for a given table type.

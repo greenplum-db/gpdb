@@ -56,6 +56,7 @@ Encoding: UTF8
 Format type: text
 Format options: delimiter '|' null '\N' escape '\'
 External location: gpfdist://test1:8080/output/wet_ao_dsp.tbl
+Execute on: all segments
 
 INSERT INTO tbl_wet_ao SELECT * FROM ao_table;
 INSERT 0 3

@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# Hook to try to catch pushing pipelines without running `fly set-pipeline` first.
+
+# Refer to .git/hooks/pre-push.sample for more info on how it works.
+
+remote="$1"
+url="$2"
+
+z40=0000000000000000000000000000000000000000
+
+while read local_ref local_sha remote_ref remote_sha ; do
+  if [ "$local_sha" = $z40 ] ; then
+    # Handle delete
+    continue
+  fi
+  if [ "$remote_sha" = $z40 ] ; then
+    # New branch
+    continue
+  fi
+  # Update to existing branch, examine new commits
+  range="$remote_sha..$local_sha"
+
+  # Check for WIP commit
+  commit=$(git rev-list -n 1 "$range" -- concourse/pipelines/*)
+  if [ -n "$commit" ] ; then
+    echo 'You appear to be pushing a change to a pipeline. Please make sure you ran `fly set-pipeline` first.'
+    read -p 'Proceed with push? (y/N): ' yesno </dev/tty
+    case "$yesno" in
+      y|Y|yes|Yes|YES) ;;
+      *) echo "Aborting push" >&2; exit 1 ;;
+    esac
+  fi
+done
+
+exit 0

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="eu135496">System Catalog Reference</title>
+  <body>
+    <p>This reference describes the Greenplum Database system catalog tables and
+      views. System tables prefixed with <codeph>gp_</codeph> relate to the parallel features of
+        Greenplum Database. Tables prefixed with <codeph>pg_</codeph> are either
+      standard PostgreSQL system catalog tables supported in Greenplum Database, or
+      are related to features Greenplum that provides to enhance
+      PostgreSQL for data warehousing workloads. Note that the global system catalog for Greenplum Database resides on the master instance.</p>
+    <!--links are print-only-->
+    <ul id="ul_lyl_np1_1q" otherprops="op-print">
+      <li>
+        <xref href="catalog_ref-tables.xml#topic1" format="dita"/>
+      </li>
+      <li>
+        <xref href="catalog_ref-views.xml#topic1" format="dita"/>
+      </li>
+      <li>
+        <xref href="catalog_ref-html.xml#topic1"/>
+      </li>
+    </ul>
+  </body>
+</topic>

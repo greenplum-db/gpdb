@@ -8,3 +8,7 @@ SELECT gp_dump_query_oids('explain SELECT length(proname) FROM pg_proc');
 
 -- with a multi-query statement
 SELECT gp_dump_query_oids('SELECT length(proname) FROM pg_proc; SELECT abs(relpages) FROM pg_class');
+
+-- Test error reporting on an invalid query.
+SELECT gp_dump_query_oids('SELECT * FROM nonexistent_table');
+SELECT gp_dump_query_oids('SELECT with syntax error');

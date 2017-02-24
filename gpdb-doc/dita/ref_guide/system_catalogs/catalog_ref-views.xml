@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title>System Views</title>
+  <abstract>Greenplum Database provides the following system views not available in
+    PostgreSQL.</abstract>
+  <body>
+    <ul id="ul_hsv_3bd_xp">
+      <li>
+        <xref href="./gp_distributed_log.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>
+        <xref href="./gp_distributed_xacts.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>
+        <xref href="./gp_pgdatabase.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>
+        <xref href="./gp_resqueue_status.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>
+        <xref href="./gp_transaction_log.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>
+        <xref href="./gpexpand_expansion_progress.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>pg_max_external_files (shows number of external table files allowed per segment host when
+        using the file protocol)</li>
+      <li>
+        <xref href="./pg_partition_columns.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>
+        <xref href="./pg_partition_templates.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>
+        <xref href="./pg_partitions.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>
+        <xref href="./pg_stat_activity.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>
+        <xref href="./pg_stat_replication.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>
+        <xref href="./pg_resqueue_attributes.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>pg_resqueue_status (Deprecated. Use gp_toolkit.gp_resqueue_status.)</li>
+      <li>
+        <xref href="./pg_stats_resqueue.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>pg_user_mappings (not supported)</li>
+      <li>session_level_memory_consumption (See "Viewing Session Memory Usage Information" in the
+            <cite>Greenplum Database Administrator Guide</cite>.)</li>
+    </ul>
+    <p>For more information about the standard system views supported in PostgreSQL and Greenplum Database, see the following sections of the PostgreSQL documentation:</p>
+    <ul id="ul_c5v_3bd_xp">
+      <li>
+        <xref href="https://www.postgresql.org/docs/8.3/static/views-overview.html" scope="external"
+          format="html">System Views</xref>
+      </li>
+      <li>
+        <xref
+          href="https://www.postgresql.org/docs/8.3/static/monitoring-stats.html#MONITORING-STATS-VIEWS-TABLE"
+          scope="external" format="html">Statistics Collector Views</xref>
+      </li>
+      <li>
+        <xref href="https://www.postgresql.org/docs/8.3/static/information-schema.html"
+          scope="external" format="html">The Information Schema</xref>
+      </li>
+    </ul>
+  </body>
+</topic>

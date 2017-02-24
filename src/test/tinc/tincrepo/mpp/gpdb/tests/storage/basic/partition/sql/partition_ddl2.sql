@@ -976,28 +976,6 @@ alter table mpp3242 add partition zz start ('-1') end (0);
 select tablename, partitionlevel, partitiontablename, partitionname, partitionrank, partitionboundary from pg_partitions where tablename = 'mpp3242';
 
 drop table mpp3242;
-CREATE TABLE mpp3115 (f1 time(2) with time zone)
-partition by range (f1)
-(
-  partition "Los Angeles" start (time with time zone '00:00 PST') end (time with time zone '23:00 PST') EVERY (INTERVAL '1 hour'),
-  partition "New York" start (time with time zone '00:00 EST') end (time with time zone '23:00 EST') EVERY (INTERVAL '1 hour')
-);
-
--- This should not work
-alter table mpp3115 rename partition "Los Angeles" to "LA2";
-alter table mpp3115 rename partition "Los Angeles" to "LA";
--- ALTER OK
-alter table mpp3115 rename partition "Los Angeles_1" to "LA";
-alter table mpp3115 rename partition "Los Angeles_2" to "LA";
-alter table mpp3115 rename partition "Los Angeles_2" to "Los Angeles_1";
-alter table mpp3115 rename partition "Los Angeles_1" to "Los Angeles_1";
--- ALTER OK
-alter table mpp3115 rename partition "LA" to "Los Angeles_1";
--- alter table mpp3115 rename partition "Los Angeles_1" to "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890";
-
-select tablename, partitionlevel, partitiontablename, partitionname, partitionrank, partitionboundary from pg_partitions where tablename = 'mpp3115';
-
-drop table mpp3115;
 
 CREATE TABLE mpp3523 (f1 time(2) with time zone)
 partition by range (f1)
@@ -1099,71 +1077,6 @@ drop table mpp3260a_1_prt_10;
 
 drop table mpp3260;
 drop table mpp3260a;
-drop table if exists mpp3455 cascade;
-drop table if exists mpp3455a cascade;
-drop table if exists mpp3455b cascade;
-
-CREATE TABLE mpp3455 (
-id int,
-rank int,
-year int,
-gender char(1),
-count int )
-DISTRIBUTED BY (id)
-PARTITION BY LIST (gender)
-SUBPARTITION BY RANGE (year)
-SUBPARTITION TEMPLATE (
-SUBPARTITION 2001 START (2001),
-SUBPARTITION 2002 START (2002),
-SUBPARTITION 2003 START (2003),
-SUBPARTITION 2004 START (2004),
-SUBPARTITION 2005 START (2005),
-SUBPARTITION 2006 START (2006) END (2007) )
-(PARTITION girls VALUES ('F'),
-PARTITION boys VALUES ('M') ) ;
-
-CREATE TABLE mpp3455a (
-id int,
-rank int,
-year int,
-gender char(1),
-count int )
-DISTRIBUTED BY (id)
-PARTITION BY LIST (gender)
-SUBPARTITION BY RANGE (year)
-SUBPARTITION TEMPLATE (
-SUBPARTITION "2001" START (2001),
-SUBPARTITION "2002" START (2002),
-SUBPARTITION "2003" START (2003),
-SUBPARTITION "2004" START (2004),
-SUBPARTITION "2005" START (2005),
-SUBPARTITION "2006" START (2006) END (2007) )
-(PARTITION girls VALUES ('F'),
-PARTITION boys VALUES ('M') ) ;
-
-CREATE TABLE mpp3455b (
-id int,
-rank int,
-year int,
-gender char(1),
-count int )
-DISTRIBUTED BY (id)
-PARTITION BY LIST (gender)
-SUBPARTITION BY RANGE (year)
-SUBPARTITION TEMPLATE (
-SUBPARTITION year1 START (2001),
-SUBPARTITION year2 START (2002),
-SUBPARTITION year3 START (2003),
-SUBPARTITION year4 START (2004),
-SUBPARTITION year5 START (2005),
-SUBPARTITION year6 START (2006) END (2007) )
-(PARTITION girls VALUES ('F'),
-PARTITION boys VALUES ('M') )
-;
-
-drop table mpp3455;
-drop table mpp3455a;
-drop table mpp3455b;
 CREATE TABLE mpp3080_int8(q1 int8, q2 int8)
 partition by range (q1)
 (start (1) end (10) every (1));

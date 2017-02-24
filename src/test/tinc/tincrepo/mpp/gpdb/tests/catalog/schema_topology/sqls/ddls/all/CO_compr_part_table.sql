@@ -105,10 +105,6 @@ CREATE TABLE co_compr_part_2
 
 
 
-
-\d+ co_compr_part_2_1_prt_1_2_prt_sp1
-
-
 --Select from pg_attribute_encoding to see the table entry 
 select parencattnum, parencattoptions from pg_partition_encoding e, pg_partition p, pg_class c  where c.relname = 'co_compr_part_2' and c.oid = p.parrelid and p.oid = e.parencoid order by parencattnum limit 3;
 
@@ -117,13 +113,9 @@ select parencattnum, parencattoptions from pg_partition_encoding e, pg_partition
 alter table co_compr_part_2 add partition new_p start(5050) end (5061);
 
 --Validation with psql utility 
-  \d+ co_compr_part_2_1_prt_new_p_2_prt_sp1
 
 alter table co_compr_part_2 add default partition df_p ;
 
-
---Validation with psql utility 
-  \d+ co_compr_part_2_1_prt_df_p_2_prt_sp1
 
 
 -- Insert data 

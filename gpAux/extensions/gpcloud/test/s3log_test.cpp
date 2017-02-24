@@ -2,8 +2,7 @@
 #include "gtest/gtest.h"
 
 TEST(Logger, simple) {
-    S3Params params;
-    InitConfig(params, "data/s3test.conf", "default");
+    S3Params params = InitConfig("s3://abc/a config=data/s3test.conf section=default");
 
     InitRemoteLog();
 

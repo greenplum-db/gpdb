@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
+<map>
+    <topicref href="utility_guide.xml" navtitle="Utility Guide">
+        <topicref href="preface.xml"/>
+        <topicref href="admin_utilities/util_ref.xml" linking="targetonly">
+            <topicref href="admin_utilities/analyzedb.xml"/>
+            <topicref href="admin_utilities/gpactivatestandby.xml"/>
+            <topicref href="admin_utilities/gpaddmirrors.xml"/>
+            <topicref href="admin_utilities/gpbitmapreindex.xml"/>
+            <topicref href="admin_utilities/gpcheck.xml"/>
+            <topicref href="admin_utilities/gpcheckcat.xml"/>
+            <topicref href="admin_utilities/gpcheckperf.xml"/>
+            <topicref href="admin_utilities/gpconfig.xml"/>
+            <topicref href="admin_utilities/gpcrondump.xml"/>
+            <topicref href="admin_utilities/gpdbrestore.xml"/>
+            <topicref href="admin_utilities/gpdeletesystem.xml"/>
+            <topicref href="admin_utilities/gpexpand.xml"/>
+            <topicref href="admin_utilities/gpfdist.xml"/>
+            <topicref href="admin_utilities/gpfilespace.xml"/>
+            <topicref href="admin_utilities/gpinitstandby.xml"/>
+            <topicref href="admin_utilities/gpinitsystem.xml"/>
+            <topicref href="admin_utilities/gpload.xml"/>
+            <topicref href="admin_utilities/gplogfilter.xml"/>
+            <topicref href="admin_utilities/gpmapreduce.xml"/>
+            <topicref href="admin_utilities/gpmfr.xml"/>
+            <topicref href="admin_utilities/gpmigrator.xml"/>
+            <topicref href="admin_utilities/gpmigrator_mirror.xml"/>
+<!-- hidden until testing is complete -msk
+            <topicref href="admin_utilities/gpmovemirrors.xml"/>
+-->
+            <topicref href="admin_utilities/gpperfmon_install.xml"/>
+            <topicref href="admin_utilities/gppkg.xml"/>
+            <topicref href="admin_utilities/gprecoverseg.xml"/>
+            <topicref href="admin_utilities/gpreload.xml"/>
+            <topicref href="admin_utilities/gpscp.xml"/>
+            <topicref href="admin_utilities/gpseginstall.xml"/>
+            <topicref href="admin_utilities/gpssh.xml"/>
+            <topicref href="admin_utilities/gpssh-exkeys.xml"/>
+            <topicref href="admin_utilities/gpstart.xml"/>
+            <topicref href="admin_utilities/gpstate.xml"/>
+            <topicref href="admin_utilities/gpstop.xml"/>
+            <topicref href="admin_utilities/gpsys.xml"/>
+            <topicref href="admin_utilities/gptransfer.xml"/>
+            <topicref href="admin_utilities/pgbouncer-ref.xml"/>
+        </topicref>
+        <topicref href="cli_ref.xml">
+            <topicref href="client_utilities/ClientUtilitySummary.xml" linking="targetonly">
+                <topicref href="client_utilities/clusterdb.xml"/>
+                <topicref href="client_utilities/createdb.xml"/>
+                <topicref href="client_utilities/createuser.xml"/>
+                <topicref href="client_utilities/dropdb.xml"/>
+                <topicref href="client_utilities/droplang.xml"/>
+                <topicref href="client_utilities/dropuser.xml"/>
+                <topicref href="client_utilities/createlang.xml"/>
+                <topicref href="client_utilities/pg_config.xml"/>
+                <topicref href="client_utilities/pg_dump.xml"/>
+                <topicref href="client_utilities/pg_dumpall.xml"/>
+                <topicref href="client_utilities/pg_restore.xml"/>
+                <topicref href="client_utilities/psql.xml"/>
+                <topicref href="client_utilities/reindexdb.xml"/>
+                <topicref href="client_utilities/vacuumdb.xml"/>
+            </topicref>
+        </topicref>
+        <topicref href="orafce_ref.xml"/>
+    </topicref>
+</map>

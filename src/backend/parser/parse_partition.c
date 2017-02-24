@@ -49,7 +49,7 @@ typedef struct
 } part_col_cxt;
 
 
-/* state structures for validing parsed partition specifications */
+/* state structures for validating parsed partition specifications */
 typedef struct
 {
 	ParseState *pstate;
@@ -80,7 +80,6 @@ static void make_child_node(ParseState *pstate, CreateStmt *stmt, CreateStmtCont
 				Node *pStoreAttr, char *prtstr, bool bQuiet,
 				List *stenc);
 static void expand_hash_partition_spec(PartitionBy *pBy);
-static bool partition_col_walker(Node *node, void *context);
 static int	deparse_partition_rule(Node *pNode, char *outbuf, size_t outsize);
 static Node *
 make_prule_catalog(ParseState *pstate,
@@ -203,7 +202,6 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 	ListCell   *lc_anp = NULL;
 	List	   *key_attnums = NIL;
 	List	   *key_attnames = NIL;
-	part_col_cxt pcolcxt;
 	List	   *stenc = NIL;
 
 	if (NULL == partitionBy)
@@ -417,7 +415,7 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 							 "partition key",
 							 what),
 						 errhint("Include column \"%s\" in the %s constraint or create "
-				"a part-wise UNIQUE index after creating the table instead.",
+								 "a part-wise UNIQUE index after creating the table instead.",
 								 strVal(partkeyname), what)));
 			}
 		}
@@ -431,14 +429,8 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 	}
 	key_attnames = NIL;
 
-	/* see if there are any duplicate column references */
-	if (0)						/* MPP-3988: allow same column in multiple
-								 * partitioning keys at different levels */
-		partition_col_walker((Node *) pBy, &pcolcxt);
-
 	if (pBy->partType == PARTTYP_HASH)
 	{
-
 		if (pBy->partSpec == NULL)
 		{
 			if (pBy->partNum == NULL)
@@ -1085,7 +1077,7 @@ make_child_node(ParseState *pstate, CreateStmt *stmt, CreateStmtContext *cxt, ch
 	 * so we can usually pick up tablespace from the parent relation.  If the
 	 * child is a top-level branch, though, we take the tablespace from the
 	 * root. Ultimately, we take the tablespace as specified in the command,
-	 * or, if none was specified, the one from the root paritioned table.
+	 * or, if none was specified, the one from the root partitioned table.
 	 */
 	if (!child_tab_stmt->tablespacename)
 	{
@@ -1177,62 +1169,6 @@ expand_hash_partition_spec(PartitionBy *pBy)
 	}
 	spec->partElem = elem;
 	pBy->partSpec = (Node *) spec;
-}
-
-static bool
-partition_col_walker(Node *node, void *context)
-{
-	if (node == NULL)
-		return false;
-
-	if (IsA(node, PartitionSpec))
-	{
-		PartitionSpec *s = (PartitionSpec *) node;
-
-		if (partition_col_walker(s->subSpec, context))
-			return true;
-
-		return partition_col_walker((Node *) s->partElem, context);
-	}
-	else if (IsA(node, PartitionElem))
-	{
-		PartitionElem *el = (PartitionElem *) node;
-
-		return partition_col_walker(el->subSpec, context);
-
-	}
-	else if (IsA(node, PartitionBy))
-	{
-		PartitionBy *p = (PartitionBy *) node;
-		ListCell   *lc;
-		part_col_cxt *cxt = (part_col_cxt *) context;
-
-		foreach(lc, p->keys)
-		{
-			char	   *colname = strVal(lfirst(lc));
-			ListCell   *llc;
-
-			foreach(llc, cxt->cols)
-			{
-				char	   *col = lfirst(llc);
-
-				if (strcmp(col, colname) == 0)
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("column \"%s\" specified in multiple "
-									"partitioning keys",
-									colname),
-							 parser_errposition(cxt->pstate, p->location)));
-			}
-			cxt->cols = lappend(cxt->cols, colname);
-		}
-
-		if (partition_col_walker(p->subPart, context))
-			return true;
-		return partition_col_walker(p->partSpec, context);
-	}
-
-	return expression_tree_walker(node, partition_col_walker, context);
 }
 
 static List *
@@ -1724,9 +1660,11 @@ make_partition_rules(ParseState *pstate,
 				if ((everyOffset + 1) < maxEveryOffset)
 					expr_op = "<";
 				else
+				{
 					/* only be inclusive if set that way */
-				if (pRI && (PART_EDGE_INCLUSIVE == pRI->partedge))
-					expr_op = "<=";
+					if (pRI && (PART_EDGE_INCLUSIVE == pRI->partedge))
+						expr_op = "<=";
+				}
 
 				/* If have EVERY, and not the very first START or last END */
 				if ((0 != everyOffset) && (everyOffset + 1 <= maxEveryOffset))
@@ -2318,9 +2256,7 @@ make_prule_rulestmt(ParseState *pstate,
 		pIns->selectStmt = (Node *) makeNode(SelectStmt);
 		((SelectStmt *) pIns->selectStmt)->valuesLists =
 			list_make1(vl1);
-
 	}
-
 
 	return (pResult);
 }	/* end make_prule_rulestmt */
@@ -3846,7 +3782,6 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 											   ((A_Const *) n2)->location)));
 						}
 					}
-
 				}
 
 				curval = lappend(curval, newend);
@@ -3865,8 +3800,6 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 
 					outputstr = OutputFunctionCall(&finfo, res);
 				}
-
-
 
 				/* the comparison */
 				restypid = InvalidOid;
@@ -4033,7 +3966,10 @@ validate_range_partition(partValidationState *vstate)
 		vstate->prevStartEnd = currStartEnd;
 	}
 
-	vstate->prevHadName = !!(vstate->pElem->partName);	/* bool t/f */
+	if (vstate->pElem->partName != NULL)
+		vstate->prevHadName = true;
+	else
+		vstate->prevHadName = false;
 
 	if (spec->partStart)
 		PartitionRangeItemIsValid(vstate->pstate, (PartitionRangeItem *) spec->partStart);

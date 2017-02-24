@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic37">
+   <title>Runtime Statistics Collection Parameters</title>
+   <body>
+      <p>These parameters control the server statistics collection feature. When statistics
+          collection is enabled, you can access the statistics data using the <i>pg_stat</i> and
+            <i>pg_statio</i> family of system catalog views.</p>
+      <simpletable id="kh171301">
+         <strow>
+            <stentry>
+               <p>
+                  <codeph>stats_queue_level</codeph>
+               </p>
+               <p>
+                  <codeph>track_activities</codeph>
+               </p>
+            </stentry>
+            <stentry>
+               <p>
+                  <codeph>track_counts</codeph>
+               </p>
+               <p>
+                  <codeph>update_process_title</codeph>
+               </p>
+            </stentry>
+         </strow>
+      </simpletable>
+   </body>
+</topic>

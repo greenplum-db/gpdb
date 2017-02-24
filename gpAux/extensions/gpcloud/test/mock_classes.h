@@ -9,28 +9,26 @@
 
 class MockS3Interface : public S3Interface {
    public:
-    MOCK_METHOD4(listBucket,
-                 ListBucketResult(const string& schema, const string& region, const string& bucket,
-                                   const string& prefix));
+    MOCK_METHOD1(listBucket,
+                 ListBucketResult(S3Url));
 
-    MOCK_METHOD5(fetchData,
-                 uint64_t(uint64_t offset, S3VectorUInt8& data, uint64_t len, const string &sourceUrl,
-                          const string &region));
+    MOCK_METHOD4(fetchData,
+                 uint64_t(uint64_t , S3VectorUInt8& , uint64_t len, const S3Url &));
 
-    MOCK_METHOD2(checkCompressionType, S3CompressionType(const string& keyUrl, const string& region));
+    MOCK_METHOD1(checkCompressionType, S3CompressionType(const S3Url&));
 
-    MOCK_METHOD2(checkKeyExistence, bool(const string& keyUrl, const string& region));
+    MOCK_METHOD1(checkKeyExistence, bool(const S3Url&));
 
-    MOCK_METHOD2(getUploadId, string(const string& keyUrl, const string& region));
+    MOCK_METHOD1(getUploadId, string(const S3Url&));
 
-    MOCK_METHOD5(uploadPartOfData, string(S3VectorUInt8& data, const string& keyUrl, const string& region,
+    MOCK_METHOD4(uploadPartOfData, string(S3VectorUInt8&, const S3Url&,
                             uint64_t partNumber, const string& uploadId));
 
-    MOCK_METHOD4(completeMultiPart, bool(const string& keyUrl, const string& region,
-                           const string& uploadId, const vector<string>& etagArray));
+    MOCK_METHOD3(completeMultiPart, bool(const S3Url&,
+                           const string&, const vector<string>&));
 
-    MOCK_METHOD3(abortUpload, bool(const string &keyUrl, const string &region,
-                 const string &uploadId));
+    MOCK_METHOD2(abortUpload, bool(const S3Url &,
+                 const string &));
 
 };
 
@@ -38,17 +36,17 @@ class MockS3RESTfulService : public S3RESTfulService {
    public:
     MockS3RESTfulService(const S3Params& params):S3RESTfulService(params){}
 
-    MOCK_METHOD2(head, ResponseCode(const string &url, HTTPHeaders &headers));
+    MOCK_METHOD2(head, ResponseCode(const string &, HTTPHeaders &));
 
-    MOCK_METHOD2(get, Response(const string &url, HTTPHeaders &headers));
+    MOCK_METHOD2(get, Response(const string &, HTTPHeaders &));
 
-    MOCK_METHOD3(put, Response(const string &url, HTTPHeaders &headers,
-                               const S3VectorUInt8 &data));
+    MOCK_METHOD3(put, Response(const string &, HTTPHeaders &,
+                               const S3VectorUInt8 &));
 
-    MOCK_METHOD3(post, Response(const string &url, HTTPHeaders &headers,
-                                const vector<uint8_t> &data));
+    MOCK_METHOD3(post, Response(const string &, HTTPHeaders &,
+                                const vector<uint8_t> &));
 
-    MOCK_METHOD2(deleteRequest, Response(const string &url, HTTPHeaders &headers));
+    MOCK_METHOD2(deleteRequest, Response(const string &, HTTPHeaders &));
 };
 
 class XMLGenerator {

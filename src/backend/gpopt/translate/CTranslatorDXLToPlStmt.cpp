@@ -492,7 +492,7 @@ CTranslatorDXLToPlStmt::MapLocationsFile
 	ExtTableEntry *extentry = gpdb::Pexttable(oidRel);
 
 	ListCell *plcLocation = NULL;
-	ForEach (plcLocation, extentry->locations)
+	ForEach (plcLocation, extentry->urilocations)
 	{
 		Value* pvLocation = (Value *)lfirst(plcLocation);
 		CHAR *szUri = pvLocation->val.str;
@@ -503,9 +503,9 @@ CTranslatorDXLToPlStmt::MapLocationsFile
 		BOOL fMatchFound = false;
 
 		// try to find a segment database that can handle this uri
-		for (ULONG ul = 0; ul < pcdbCompDB->total_segment_dbs && !fMatchFound; ul++)
+		for (int i = 0; i < pcdbCompDB->total_segment_dbs && !fMatchFound; i++)
 		{
-			CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[ul];
+			CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[i];
 			INT iSegInd = pcdbCompDBInfo->segindex;
 			if (SEGMENT_IS_ACTIVE_PRIMARY(pcdbCompDBInfo))
 			{
@@ -560,7 +560,7 @@ CTranslatorDXLToPlStmt::MapLocationsFdist
 	
 	ExtTableEntry *extentry = gpdb::Pexttable(oidRel);
 
-	const ULONG ulLocations = gpdb::UlListLength(extentry->locations);
+	const ULONG ulLocations = gpdb::UlListLength(extentry->urilocations);
 	if (URI_GPFDIST == pUri->protocol || URI_GPFDISTS == pUri->protocol)
 	{
 		ulMaxParticipants = ulLocations * gp_external_max_segs;
@@ -587,7 +587,7 @@ CTranslatorDXLToPlStmt::MapLocationsFdist
 	while (!fDone)
 	{
 		ListCell *plcLocation = NULL;
-		ForEach (plcLocation, extentry->locations)
+		ForEach (plcLocation, extentry->urilocations)
 		{
 			Value* pvLocation = (Value *)lfirst(plcLocation);
 			CHAR *szUri = pvLocation->val.str;
@@ -623,16 +623,16 @@ CTranslatorDXLToPlStmt::MapLocationsFdist
 		BOOL fCandidateFound = false;
 		BOOL fMatchFound = false;
 
-		for (ULONG ul = 0; ul < pcdbCompDB->total_segment_dbs && !fMatchFound; ul++)
+		for (int i = 0; i < pcdbCompDB->total_segment_dbs && !fMatchFound; i++)
 		{
-			CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[ul];
+			CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[i];
 			INT iSegInd = pcdbCompDBInfo->segindex;
 
 			if (SEGMENT_IS_ACTIVE_PRIMARY(pcdbCompDBInfo))
 			{
 				if (fSkipRandomly)
 				{
-					GPOS_ASSERT(iSegInd < ulTotalPrimaries);
+					GPOS_ASSERT(iSegInd < (INT) ulTotalPrimaries);
 					if (rgfSkipMap[iSegInd])
 					{
 						continue;
@@ -691,7 +691,7 @@ CTranslatorDXLToPlStmt::MapLocationsExecute
 	si = NULL;
 
 	// get the ON clause (execute location) information
-	Value *pvOnClause = (Value *) gpdb::PvListNth(extentry->locations, 0);
+	Value *pvOnClause = (Value *) gpdb::PvListNth(extentry->execlocations, 0);
 	CHAR *szOnClause = pvOnClause->val.str;
 	
 	if (0 == gpos::clib::IStrCmp(szOnClause, "ALL_SEGMENTS"))
@@ -750,9 +750,9 @@ CTranslatorDXLToPlStmt::MapLocationsExecuteAllSegments
 	CdbComponentDatabases *pcdbCompDB
 	)
 {
-	for (ULONG ul = 0; ul < pcdbCompDB->total_segment_dbs; ul++)
+	for (int i = 0; i < pcdbCompDB->total_segment_dbs; i++)
 	{
-		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[ul];
+		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[i];
 		INT iSegInd = pcdbCompDBInfo->segindex;
 		if (SEGMENT_IS_ACTIVE_PRIMARY(pcdbCompDBInfo))
 		{
@@ -778,9 +778,9 @@ CTranslatorDXLToPlStmt::MapLocationsExecutePerHost
 	)
 {
 	List *plVisitedHosts = NIL;
-	for (ULONG ul = 0; ul < pcdbCompDB->total_segment_dbs; ul++)
+	for (int i = 0; i < pcdbCompDB->total_segment_dbs; i++)
 	{
-		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[ul];
+		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[i];
 		INT iSegInd = pcdbCompDBInfo->segindex;
 		if (SEGMENT_IS_ACTIVE_PRIMARY(pcdbCompDBInfo))
 		{
@@ -827,9 +827,9 @@ CTranslatorDXLToPlStmt::MapLocationsExecuteOneHost
 	)
 {
 	BOOL fMatchFound = false;
-	for (ULONG ul = 0; ul < pcdbCompDB->total_segment_dbs; ul++)
+	for (int i = 0; i < pcdbCompDB->total_segment_dbs; i++)
 	{
-		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[ul];
+		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[i];
 		INT iSegInd = pcdbCompDBInfo->segindex;
 
 		if (SEGMENT_IS_ACTIVE_PRIMARY(pcdbCompDBInfo) &&
@@ -865,9 +865,9 @@ CTranslatorDXLToPlStmt::MapLocationsExecuteOneSegment
 	)
 {
 	BOOL fMatchFound = false;
-	for (ULONG ul = 0; ul < pcdbCompDB->total_segment_dbs; ul++)
+	for (int i = 0; i < pcdbCompDB->total_segment_dbs; i++)
 	{
-		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[ul];
+		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[i];
 		INT iSegInd = pcdbCompDBInfo->segindex;
 		if (SEGMENT_IS_ACTIVE_PRIMARY(pcdbCompDBInfo) && iSegInd == iTargetSegInd)
 		{
@@ -910,13 +910,13 @@ CTranslatorDXLToPlStmt::MapLocationsExecuteRandomSegments
 	ULONG ulSkip = ulTotalPrimaries - ulSegments;
 	BOOL *rgfSkipMap = gpdb::RgfRandomSegMap(ulTotalPrimaries, ulSkip);
 
-	for (ULONG ul = 0; ul < pcdbCompDB->total_segment_dbs; ul++)
+	for (int i = 0; i < pcdbCompDB->total_segment_dbs; i++)
 	{
-		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[ul];
+		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[i];
 		INT iSegInd = pcdbCompDBInfo->segindex;
 		if (SEGMENT_IS_ACTIVE_PRIMARY(pcdbCompDBInfo))
 		{
-			GPOS_ASSERT(iSegInd < ulTotalPrimaries);
+			GPOS_ASSERT(iSegInd < (INT) ulTotalPrimaries);
 			if (rgfSkipMap[iSegInd])
 			{
 				continue;
@@ -944,9 +944,9 @@ CTranslatorDXLToPlStmt::MapLocationsHdfs
 	CHAR *szFirstUri
 	)
 {
-	for (ULONG ul = 0; ul < pcdbCompDB->total_segment_dbs; ul++)
+	for (int i = 0; i < pcdbCompDB->total_segment_dbs; i++)
 	{
-		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[ul];
+		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[i];
 		rgszSegFileMap[pcdbCompDBInfo->segindex] = PStrDup(szFirstUri);
 	}
 }
@@ -976,9 +976,9 @@ CTranslatorDXLToPlStmt::PlExternalScanUriList
 	//get the total valid primary segdb count
 	CdbComponentDatabases *pcdbCompDB = gpdb::PcdbComponentDatabases();
 	ULONG ulTotalPrimaries = 0;
-	for (ULONG ul = 0; ul < pcdbCompDB->total_segment_dbs; ul++)
+	for (int i = 0; i < pcdbCompDB->total_segment_dbs; i++)
 	{
-		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[ul];
+		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[i];
 		if (SEGMENT_IS_ACTIVE_PRIMARY(pcdbCompDBInfo))
 		{
 			ulTotalPrimaries++;
@@ -1007,13 +1007,13 @@ CTranslatorDXLToPlStmt::PlExternalScanUriList
 		fUsingLocation = true;
 	}
 
-	GPOS_ASSERT(0 < gpdb::UlListLength(extentry->locations));
+	GPOS_ASSERT(0 < gpdb::UlListLength(extentry->urilocations));
 	
 	CHAR *szFirstUri = NULL;
 	Uri *pUri = NULL;
 	if (!fUsingExecute)
 	{
-		szFirstUri = ((Value *) gpdb::PvListNth(extentry->locations, 0))->val.str;
+		szFirstUri = ((Value *) gpdb::PvListNth(extentry->urilocations, 0))->val.str;
 		pUri = gpdb::PuriParseExternalTable(szFirstUri);
 	}
 
@@ -1505,7 +1505,7 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions
 			}
 		}
 		
-		GPOS_ASSERT(IsA(pnodeFst, Var) || IsA(pnodeSnd, Var) && "expected index key in index qual");
+		GPOS_ASSERT((IsA(pnodeFst, Var) || IsA(pnodeSnd, Var)) && "expected index key in index qual");
 
 		INT iAttno = 0;
 		if (IsA(pnodeFst, Var) && ((Var *) pnodeFst)->varno != OUTER)
@@ -3052,8 +3052,6 @@ CTranslatorDXLToPlStmt::PsortFromDXLSort
 	CDXLNode *pdxlnChild = (*pdxlnSort)[EdxlsortIndexChild];
 	CDXLNode *pdxlnPrL = (*pdxlnSort)[EdxlsortIndexProjList];
 	CDXLNode *pdxlnFilter = (*pdxlnSort)[EdxlsortIndexFilter];
-	CDXLNode *pdxlnLimitCount = (*pdxlnSort)[EdxlsortIndexLimitCount];
-	CDXLNode *pdxlnLimitOffset = (*pdxlnSort)[EdxlsortIndexLimitOffset];
 
 	CDXLTranslateContext dxltrctxChild(m_pmp, false, pdxltrctxOut->PhmColParam());
 
@@ -3093,41 +3091,6 @@ CTranslatorDXLToPlStmt::PsortFromDXLSort
 
 	TranslateSortCols(pdxlnSortColList, &dxltrctxChild, psort->sortColIdx, psort->sortOperators, psort->nullsFirst);
 
-	// translate limit information
-	if (0 < pdxlnLimitCount->UlArity())
-	{
-		GPOS_ASSERT(1 == pdxlnLimitCount->UlArity());
-		const CDXLNode *pdxlnLimitCountExpr = (*pdxlnLimitCount)[0];
-		CMappingColIdVarPlStmt mapcidvarplstmt = CMappingColIdVarPlStmt
-																(
-																m_pmp,
-																NULL,
-																pdrgpdxltrctx,
-																pdxltrctxOut,
-																m_pctxdxltoplstmt,
-																pplan
-																);
-
-		psort->limitCount = (Node *) m_pdxlsctranslator->PexprFromDXLNodeScalar(pdxlnLimitCountExpr, &mapcidvarplstmt);
-	}
-
-	if (0 < pdxlnLimitOffset->UlArity())
-	{
-		GPOS_ASSERT(1 == pdxlnLimitOffset->UlArity());
-		const CDXLNode *pdxlnLimitOffsetExpr = (*pdxlnLimitOffset)[0];
-
-		CMappingColIdVarPlStmt mapcidvarplstmt = CMappingColIdVarPlStmt
-																(
-																m_pmp,
-																NULL,
-																pdrgpdxltrctx,
-																pdxltrctxOut,
-																m_pctxdxltoplstmt,
-																pplan
-																);
-
-		psort->limitOffset = (Node *) m_pdxlsctranslator->PexprFromDXLNodeScalar(pdxlnLimitOffsetExpr, &mapcidvarplstmt);
-	}
 	SetParamIds(pplan);
 
 	// cleanup
@@ -4576,7 +4539,7 @@ CTranslatorDXLToPlStmt::PlDirectDispatchSegIds
 	
 	DrgPdrgPdxldatum *pdrgpdrgpdxldatum = pdxlddinfo->Pdrgpdrgpdxldatum();
 	
-	if (0 == pdrgpdrgpdxldatum->UlSafeLength())
+	if (pdrgpdrgpdxldatum == NULL || 0 == pdrgpdrgpdxldatum->UlLength())
 	{
 		return NIL;
 	}
@@ -4790,8 +4753,6 @@ CTranslatorDXLToPlStmt::PplanAssert
 	pplan->nMotionNodes = pplanChild->nMotionNodes;
 
 	CDXLNode *pdxlnPrL = (*pdxlnAssert)[CDXLPhysicalAssert::EdxlassertIndexProjList];
-
-	List *plQuals = NULL;
 
 	DrgPdxltrctx *pdrgpdxltrctx = GPOS_NEW(m_pmp) DrgPdxltrctx(m_pmp);
 	pdrgpdxltrctx->Append(const_cast<CDXLTranslateContext*>(&dxltrctxChild));
@@ -5105,7 +5066,7 @@ CTranslatorDXLToPlStmt::PlTargetListFromProjList
 				// the left or right child of the operator
 
 				GPOS_ASSERT(NULL != pdrgpdxltrctx);
-				GPOS_ASSERT(0 != pdrgpdxltrctx->UlSafeLength());
+				GPOS_ASSERT(0 != pdrgpdxltrctx->UlLength());
 				ULONG ulColId = CDXLScalarIdent::PdxlopConvert(pdxlnExpr->Pdxlop())->Pdxlcr()->UlID();
 
 				const CDXLTranslateContext *pdxltrctxLeft = (*pdrgpdxltrctx)[0];
@@ -5115,7 +5076,7 @@ CTranslatorDXLToPlStmt::PlTargetListFromProjList
 				if (NULL == pteOriginal)
 				{
 					// variable not found on the left side
-					GPOS_ASSERT(2 == pdrgpdxltrctx->UlSafeLength());
+					GPOS_ASSERT(2 == pdrgpdxltrctx->UlLength());
 					const CDXLTranslateContext *pdxltrctxRight = (*pdrgpdxltrctx)[1];
 
 					GPOS_ASSERT(NULL != pdxltrctxRight);
@@ -5862,7 +5823,7 @@ CTranslatorDXLToPlStmt::PdistrpolicyFromCtas
 {
 	DrgPul *pdrgpulDistrCols = pdxlop->PdrgpulDistr();
 
-	const ULONG ulDistrCols = pdrgpulDistrCols->UlSafeLength();
+	const ULONG ulDistrCols = (pdrgpulDistrCols == NULL) ? 0 : pdrgpulDistrCols->UlLength();
 
 	ULONG ulDistrColsAlloc = 1;
 	if (0 < ulDistrCols)

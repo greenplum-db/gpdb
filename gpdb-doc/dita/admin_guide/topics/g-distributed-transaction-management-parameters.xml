@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic53">
+   <title>Distributed Transaction Management Parameters</title>
+   <body>
+      <ul>
+         <li id="kh165869">
+            <codeph>gp_max_local_distributed_cache</codeph>
+         </li>
+      </ul>
+   </body>
+</topic>

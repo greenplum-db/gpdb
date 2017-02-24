@@ -2024,7 +2024,7 @@ class gpload:
             sql += " WHERE pgext.fmterrtbl IS NULL " 
 
         for i, l in enumerate(self.locations):
-            sql += " and pgext.location[%s] = %s\n" % (i + 1, quote(l))
+            sql += " and pgext.urilocation[%s] = %s\n" % (i + 1, quote(l))
              
         sql+= """and pgext.fmttype = %s
                  and pgext.writable = false

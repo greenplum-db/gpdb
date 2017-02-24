@@ -49,7 +49,7 @@ core
 *.gcda
 *.gcno
 
-s3test
+gpcloud_test
 gpcheckcloud
 
 s3.conf

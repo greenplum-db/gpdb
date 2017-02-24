@@ -196,33 +196,3 @@ select count_operator('explain select count(*) from foo1,foo2 where foo1.j =foo2
 
 select count(*) from foo1,foo2 where foo1.j =foo2.j and foo2.i <= ALL(select 1 UNION select 2);
 RESET ALL;
-
--- ----------------------------------------------------------------------
--- Test: DPE: assertion failed with window function
--- ----------------------------------------------------------------------
-
--- start_ignore
-drop table if exists pat;
-drop table if exists jpat;
-
-create table pat(a int, b date) partition by range (b) (start ('2010-01-01') end ('2010-01-05') every (1), default partition other);
-insert into pat select i,date '2010-01-01' + i from generate_series(1, 10)i;
-create table jpat(a int, b date);
-insert into jpat values(1, '2010-01-02');
-
--- end_ignore
-
-select count_operator('explain select * from (select count(*) over (order by a rows between 1 preceding and 1 following), a, b from jpat)jpat inner join pat using(b);', 'Append') > 0;
-select count_operator('explain select * from (select count(*) over (order by a rows between 1 preceding and 1 following), a, b from jpat)jpat inner join pat using(b);', 'Dynamic Table Scan') > 0;
-
-select * from (select count(*) over (order by a rows between 1 preceding and 1 following), a, b from jpat)jpat inner join pat using(b);
-RESET ALL;
-
--- ----------------------------------------------------------------------
--- Test: teardown.sql
--- ----------------------------------------------------------------------
-
--- start_ignore
-drop schema qp_dpe cascade;
--- end_ignore
-RESET ALL;

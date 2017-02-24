@@ -511,22 +511,33 @@ vacuum(VacuumStmt *vacstmt, List *relids,
 			vacstmt->appendonly_relation_empty = false;
 		}
 
-		/*
-		 * Loop to process each selected relation which needs to be vacuumed.
-		 */
 		if (vacstmt->vacuum)
 		{
+			/*
+			 * Loop to process each selected relation which needs to be vacuumed.
+			 */
 			foreach(cur, vacuum_relations)
 			{
 				Oid			relid = lfirst_oid(cur);
 				vacuumStatement_Relation(vacstmt, relid, vacuum_relations, bstrategy, for_wraparound, isTopLevel);
 			}
 		}
-		/*
-		 * Loop to process each selected relation which needs to be analyzed.
-		 */
+
 		if (vacstmt->analyze)
 		{
+			/*
+			 * If there are no partition tables in the database and ANALYZE ROOTPARTITION ALL
+			 * is executed report a WARNING as no root partitions are there to be analyzed
+			 */
+			if (vacstmt->rootonly && NIL == analyze_relations && !vacstmt->relation)
+			{
+				ereport(NOTICE,
+						(errmsg("there are no partitioned tables in database to ANALYZE ROOTPARTITION")));
+			}
+
+			/*
+			 * Loop to process each selected relation which needs to be analyzed.
+			 */
 			foreach(cur, analyze_relations)
 			{
 				Oid			relid = lfirst_oid(cur);
@@ -1017,6 +1028,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 		if (!vacstmt->full)
 		{
 			/*
+			 * PostgreSQL does this:
 			 * During a lazy VACUUM we can set the PROC_IN_VACUUM flag, which lets other
 			 * concurrent VACUUMs know that they can ignore this one while
 			 * determining their OldestXmin.  (The reason we don't set it during a
@@ -1026,6 +1038,10 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 			 * removed from other tables.  An index function that depends on the
 			 * contents of other tables is arguably broken, but we won't break it
 			 * here by violating transaction semantics.)
+			 *
+			 * GPDB doesn't use PROC_IN_VACUUM, as lazy vacuum for bitmap
+			 * indexed tables performs reindex causing updates to pg_class
+			 * tuples for index entries.
 			 *
 			 * We also set the VACUUM_FOR_WRAPAROUND flag, which is passed down
 			 * by autovacuum; it's used to avoid cancelling a vacuum that was
@@ -1037,7 +1053,9 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 			 * which is probably Not Good.
 			 */
 			LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
+#if 0 /* Upstream code not applicable to GPDB */
 			MyProc->vacuumFlags |= PROC_IN_VACUUM;
+#endif
 			if (for_wraparound)
 				MyProc->vacuumFlags |= PROC_VACUUM_FOR_WRAPAROUND;
 			LWLockRelease(ProcArrayLock);
@@ -1454,12 +1472,13 @@ get_rel_oids(List *relids, VacuumStmt *vacstmt, bool isVacuum)
 				if (!vacstmt->rootonly)
 				{
 					oid_list = all_leaf_partition_relids(pn); /* all leaves */
+
+					if (optimizer_analyze_midlevel_partition)
+					{
+						oid_list = list_concat(oid_list, all_interior_partition_relids(pn)); /* interior partitions */
+					}
 				}
 				oid_list = lappend_oid(oid_list, relationOid); /* root partition */
-				if (optimizer_analyze_midlevel_partition)
-				{
-					oid_list = list_concat(oid_list, all_interior_partition_relids(pn)); /* interior partitions */
-				}
 			}
 			else if (ps == PART_STATUS_INTERIOR) /* analyze an interior partition directly */
 			{
@@ -1489,6 +1508,7 @@ get_rel_oids(List *relids, VacuumStmt *vacstmt, bool isVacuum)
 		HeapScanDesc scan;
 		HeapTuple	tuple;
 		ScanKeyData key;
+		Oid candidateOid;
 
 		ScanKeyInit(&key,
 					Anum_pg_class_relkind,
@@ -1526,8 +1546,23 @@ get_rel_oids(List *relids, VacuumStmt *vacstmt, bool isVacuum)
 				continue;
 
 			/* Make a relation list entry for this guy */
+			candidateOid = HeapTupleGetOid(tuple);
+
+			/* Skip non root partition tables if ANALYZE ROOTPARTITION ALL is executed */
+			if (vacstmt->rootonly && !rel_is_partitioned(candidateOid))
+			{
+				continue;
+			}
+
+			// skip mid-level partition tables if we have disabled collecting statistics for them
+			PartStatus ps = rel_part_status(candidateOid);
+			if (!optimizer_analyze_midlevel_partition && ps == PART_STATUS_INTERIOR)
+			{
+				continue;
+			}
+
 			oldcontext = MemoryContextSwitchTo(vac_context);
-			oid_list = lappend_oid(oid_list, HeapTupleGetOid(tuple));
+			oid_list = lappend_oid(oid_list, candidateOid);
 			MemoryContextSwitchTo(oldcontext);
 		}
 
@@ -1652,11 +1687,6 @@ vac_update_relstats_from_list(Relation rel,
  *		by the time we got done with a vacuum cycle, most of the tuples in
  *		pg_class would've been obsoleted.  Of course, this only works for
  *		fixed-size never-null columns, but these are.
- *
- *		Another reason for doing it this way is that when we are in a lazy
- *		VACUUM and have PROC_IN_VACUUM set, we mustn't do any updates ---
- *		somebody vacuuming pg_class might think they could delete a tuple
- *		marked with xmin = our xid.
  *
  *		This routine is shared by full VACUUM, lazy VACUUM, and stand-alone
  *		ANALYZE.

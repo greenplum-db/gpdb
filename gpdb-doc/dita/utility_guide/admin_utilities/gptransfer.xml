@@ -1,0 +1,819 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+    <!--install_guide/refs/gptransfer.xml has a conref to this topic. -->
+    <title id="pk138417">gptransfer</title>
+    <body>
+        <p>The <codeph>gptransfer</codeph> utility copies objects from databases in a source
+            Greenplum Database system to databases in a destination Greenplum Database system. </p>
+        <section id="section2">
+            <title>Synopsis</title>
+            <codeblock><b>gptransfer</b>
+   { <b>--full </b>|
+   { [<b>-d</b> <varname>database1</varname> [ <b>-d</b> <varname>database2</varname> ... ]] |
+   [<b>-t</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname> [ <b>-t</b> <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ]] |
+   [<b>-f</b> <varname>table-file</varname> [<b>--partition-transfer</b>
+     | <b>--partition-transfer-non-partition-target</b> ]]
+   [<b>-T</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname> [ <b>-T</b> <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ]]
+   [<b>-F</b> <varname>table-file</varname>] } }
+   [<b>--skip-existing</b> | <b>--truncate</b> | <b>--drop</b>]
+   [<b>--analyze</b>] [<b>--validate</b>=<varname>type</varname>] [<b>-x</b>] [<b>--dry-run</b>]
+   [<b>--schema-only</b> ]
+   [<b>--source-host</b>=<varname>source_host</varname> [<b>--source-port</b>=<varname>source_port</varname>]
+   [<b>--source-user</b>=<varname>source_user</varname>]]
+   [<b>--base-port</b>=<varname>base_gpfdist_port</varname>]
+   [<b>--dest-host</b>=<varname>dest_host</varname> <b>--source-map-file</b>=<varname>host_map_file</varname>
+   [<b>--dest-port</b>=<varname>port</varname>] [<b>--dest-user</b>=<varname>dest_user</varname>] ]
+   [<b>--dest-database</b>=<varname>dest_database_name</varname>]
+   [<b>--batch-size</b>=<varname>batch_size</varname>] [<b>--sub-batch-size</b>=<varname>sub_batch_size</varname>]
+   [<b>--timeout</b>=<varname>seconds</varname>]
+   [<b>--max-line-length</b>=<varname>length</varname>]
+   [<b>--work-base-dir</b>=<varname>work_dir</varname>] [<b>-l</b> <varname>log_dir</varname>]
+   [<b>--format</b>=[<b>CSV</b>|<b>TEXT</b>] ]
+   [<b>--quote</b>=<varname>character</varname> ]
+   [<b>--no-final-count</b> ]
+
+   [<b>-v</b> | <b>--verbose</b>]
+   [<b>-q</b> | <b>--quiet</b>]
+   [<b>-a</b>]
+
+<b>gptransfer --version</b>
+
+<b>gptransfer</b> <b>-h</b> | <b>-?</b> | <b>--help</b></codeblock>
+        </section>
+        <section id="section3">
+            <title>Description</title>
+            <p>The <codeph>gptransfer</codeph> utility copies database objects from a source
+                Greenplum Database system to a destination system. You can perform one of the
+                following types of operations: </p>
+            <ul>
+                <li id="pk138459">Copy a Greenplum Database system with the <codeph>--full</codeph>
+                    option. <p>This option copies all user created databases in a source system to a
+                        different destination system. If you specify the <codeph>--full</codeph>
+                        option, you must specify both a source and destination system. The
+                        destination system cannot contain any user-defined databases, only the
+                        default databases postgres, template0, and template1.</p></li>
+                <li id="pk138461">Copy a set of user defined database tables to a destination
+                    system. The <codeph>-f</codeph>, and <codeph>-t</codeph> options copy a
+                    specified set of user defined tables, table data, and re-creates the table
+                    indexes. The <codeph>-d</codeph> option copies all user defined tables, table
+                    data, and re-creates the table indexes from a specified database. <p>If the
+                        destination system is the same as the source system, you must also specify a
+                        destination database with the <codeph>--dest-database</codeph> option. When
+                        you specify a destination database, the source database tables are copied
+                        into the specified destination database. </p><p>For partitioned tables, you
+                        can specify the <codeph>--partition-transfer</codeph> or the
+                            <codeph>--partition-transfer-non-partition-target</codeph> option with
+                            <codeph>-f</codeph> option to copy specific leaf child partitions of
+                        partitioned tables from a source database. The leaf child partitions are the
+                        lowest level partitions of a partitioned database. For the
+                            <codeph>--partition-transfer</codeph> option, the destination tables are
+                        leaf child partitions. For the
+                            <codeph>--partition-transfer-non-partition-target</codeph> option, the
+                        destination tables are non-partitioned tables. </p></li>
+            </ul>
+            <p>If an invalid set of <codeph>gptransfer</codeph> options are specified, or if a
+                specified source table or database does not exist, <codeph>gptransfer</codeph>
+                returns an error and quits. No data is copied. </p>
+            <p>To copy database objects between Greenplum Database systems
+                    <codeph>gptransfer</codeph> utility uses:</p>
+            <ul>
+                <li id="pk138471">The Greenplum Database utility <codeph>gpfdist</codeph> on the
+                    source database system. The <codeph>gpfdists</codeph> protocol is not
+                    supported.</li>
+                <li id="pk138472">Writable external tables on the source database system and
+                    readable external tables on the destination database system.</li>
+                <li id="pk138473">Named pipes that transfer the data between a writable external
+                    table and a readable external table.</li>
+            </ul>
+            <p>When copying data into the destination system, it is redistributed on the Greenplum
+                Database segments of the destination system. This is the flow of data when
+                    <codeph>gptransfer</codeph> copies database data:</p>
+            <p>writable external table &gt; gpfdist &gt; named pipe &gt; gpfdist &gt; readable
+                external table</p>
+            <p>For information about transferring data with <codeph>gptransfer</codeph>, see
+                "Migrating Data with Gptransfer" in the <cite>Greenplum Database Administrator
+                    Guide</cite>.</p>
+        </section>
+        <section id="section4">
+            <title>Notes</title>
+            <p>The <cmdname>gptransfer</cmdname> utility efficiently transfers tables with large
+                amounts of data. Because of the overhead required to set up parallel transfers, the
+                utility is not recommended for transferring tables with small amounts of data. It
+                might be more efficient to copy the schema and smaller tables to the destination
+                database using other methods, such as the SQL <cmdname>COPY</cmdname> command, and
+                then use <codeph>gptransfer</codeph> to transfer large tables in batches.</p>
+            <p>When copying database data between different Greenplum Database systems,
+                    <codeph>gptransfer</codeph> requires a text file that lists all the source
+                segment host names and IP addresses. Specify the name and location of the file with
+                the <codeph>--source-map-file</codeph> option. If the file is missing or not all
+                segment hosts are listed, <codeph>gptransfer</codeph> returns an error and quits.
+                See the description of the option for file format information. </p>
+            <p>The source and destination Greenplum Database segment hosts need to be able to
+                communicate with each other. To ensure that the segment hosts can communicate, you
+                can use a tool such as the Linux <codeph>netperf</codeph> utility. </p>
+            <p>If a filespace has been created for a source Greenplum Database system, a
+                corresponding filespace must exist on the target system. </p>
+            <p>SSH keys must be exchanged between the two systems before using
+                    <codeph>gptransfer</codeph>. The <codeph>gptransfer</codeph> utility connects to
+                the source system with SSH to create the named pipes and start the
+                    <codeph>gpfdist</codeph> instances. You can use the Greenplum Database
+                    <codeph>gpssh-exkeys</codeph> utility with a list of all the source and
+                destination primary hosts to exchange keys between Greenplum Database hosts.</p>
+            <p>Source and destination systems must be able to access the <codeph>gptransfer</codeph>
+                work directory. The default directory is the user's home directory. You can specify
+                a different directory with the <codeph>--work-base-dir</codeph> option. </p>
+            <p>The <codeph>gptransfer</codeph> utility does not move configuration files such as
+                    <codeph>postgres.conf</codeph> and <codeph>pg_hba.conf</codeph>. You must set up
+                the destination system configuration separately. </p>
+            <p>The <codeph>gptransfer</codeph> utility does not move external objects such as
+                Greenplum Database extensions, third party jar files, and shared object files. You
+                must install the external objects separately. </p>
+            <p>The <codeph>gptransfer</codeph> utility does not move dependent database objects
+                unless you specify the <codeph>--full</codeph> option. For example, if a table has a
+                default value on a column that is a user-defined function, that function must exist
+                in the destination system database when using the <codeph>-t</codeph>,
+                    <codeph>-d</codeph>, or <codeph>-f</codeph> options. </p>
+            <p>If you move a set of database tables with the <codeph>-d</codeph>,
+                    <codeph>-t</codeph>, or <codeph>-f</codeph> option, and the destination table or
+                database does not exist, <codeph>gptransfer</codeph> creates it. The utility
+                re-creates any indexes on tables before copying data. </p>
+            <p>If a table exists on the destination system and one of the options
+                    <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>, or
+                    <codeph>--drop</codeph> is not specified, <codeph>gptransfer</codeph> returns an
+                error and quits.</p>
+            <p>If an error occurs when during the process of copying a table, or table validation
+                fails, <codeph>gptransfer</codeph> continues copying the other specified tables.
+                After <codeph>gptransfer</codeph> finishes, it displays a list of tables where an
+                error occurred, writes the names of tables that failed into a text file, and then
+                prints the name of the file. You can use this file with the
+                    <codeph>gptransfer</codeph> -f option to retry copying tables.</p>
+            <p>The name of the file that contains the list of tables where errors occurred is
+                    <codeph>failed_migrated_tables_</codeph><varname>yyyymmdd_hhmmss</varname><codeph>.txt</codeph>.
+                The <varname>yyyymmdd_hhmmss</varname> is a time stamp when the
+                    <codeph>gptransfer</codeph> process was started. The file is created in the
+                directory were <codeph>gptransfer</codeph> is executed. </p>
+            <p>After <codeph>gptransfer</codeph> completes copying database objects, the utility
+                compares the row count of each table copied to the destination databases with the
+                table in the source database. The utility returns the validation results for each
+                table. You can disable the table row count validation by specifying the
+                    <codeph>--no-final-count</codeph> option.</p>
+            <note>If the number of rows do not match, the table is not added to the file that lists
+                the tables where transfer errors occurred.</note>
+            <p>The <codeph>gp_external_max_segs</codeph> server configuration parameter controls the
+                number of segment instances that can access a single <codeph>gpfdist</codeph>
+                instance simultaneously. Setting a low value might affect
+                    <codeph>gptransfer</codeph> performance. For information about the parameter,
+                see the <cite>Greenplum Database Reference Guide</cite>. </p>
+            <sectiondiv id="section5">
+                <b>Limitation for the Source and Destination Systems</b>
+                <p>If you are copying data from a system with a larger number of segments to a
+                    system fewer number of segment hosts. The total number of primary segments on
+                    the destination system must be greater than or equal to the total number of
+                    segment hosts on the source system. </p>
+                <p>For example, a quarter rack V1 DCA has a total of 24 primary segments. The means
+                    the source side cannot have more than 24 segment hosts (one and one-half
+                    racks).</p>
+                <p>When you copy data from a source Greenplum Database system with a larger number
+                    of primary segment instances than on the destination system, the data transfer
+                    might be slower when compared to a transfer where the source system has fewer
+                    segment instances than the destination system. The <codeph>gptransfer</codeph>
+                    utility uses a different configuration of named pipes and
+                        <codeph>gpfdist</codeph> instances in the two situations. </p>
+            </sectiondiv>
+        </section>
+        <section id="section6">
+            <title>Options</title>
+            <parml>
+                <plentry>
+                    <pt>-a</pt>
+                    <pd>Quiet mode, do not prompt the user for confirmation. </pd>
+                </plentry>
+                <plentry>
+                    <pt>--analyze</pt>
+                    <pd>Run the <codeph>ANALYZE</codeph> command on non-system tables. The default
+                        is to not run the <codeph>ANALYZE</codeph> command. </pd>
+                </plentry>
+                <plentry>
+                    <pt>--base-port=<varname>base_gpfdist_port</varname></pt>
+                    <pd>Base port for <codeph>gpfdist</codeph> on source segment systems. If not
+                        specified, the default is 8000.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--batch-size=<varname>batch_size</varname></pt>
+                    <pd>Sets the maximum number of tables that <codeph>gptransfer</codeph>
+                        concurrently copies to the destination database. If not specified, the
+                        default is 2. The maximum is 10.<note>If the order of the transfer is
+                            important, specify a value of 1. The tables are transferred sequentially
+                            based on the order specified in the <codeph>-t</codeph> and
+                                <codeph>-f</codeph> options.</note></pd>
+                </plentry>
+                <plentry>
+                    <pt>-d <varname>database</varname></pt>
+                    <pd>A source database to copy. This option can be specified multiple times to
+                        copy multiple databases to the destination system. All the user defined
+                        tables and table data are copied to the destination system. </pd>
+                    <pd>A set of databases can be specified using the Python regular expression
+                        syntax. The regular expression pattern must be enclosed in slashes
+                                (<codeph>/<varname>RE_pattern</varname>/</codeph>). If you use a
+                        regular expression, the name must be enclosed in double quotes ("). This
+                        example <codeph>-d "demo/.*/"</codeph> specifies all databases in the
+                        Greenplum Database installation that begin with
+                            <codeph>demo</codeph>.<note>Note the following two examples for the
+                                <codeph>-d</codeph> option are equivalent. They both specify a set
+                            of databases that begins with <codeph>demo</codeph> and ends with zero
+                            or more
+                            digits.<codeblock>-d "demo/[0-9]*/"
+-d "/demo[0-9]*/"</codeblock></note></pd>
+                    <pd>If the source database does not exist, <codeph>gptransfer</codeph> returns
+                        an error and quits. If a destination database does not exist a database is
+                        created. </pd>
+                    <pd>Not valid with the <codeph>--full</codeph>, <codeph>-f</codeph>,
+                            <codeph>-t</codeph>, <codeph>--partition-transfer</codeph>, or
+                            <codeph>--partition-transfer-non-partition-target</codeph> options.</pd>
+                    <pd>Alternatively, specify the <codeph>-t</codeph> or <codeph>-f</codeph> option
+                        to copy a specified set of tables. </pd>
+                </plentry>
+                <plentry>
+                    <pt>--delimiter=<varname>delim</varname></pt>
+                    <pd>Delimiter to use for writable external tables created by
+                            <codeph>gptransfer</codeph>. Specify a single ASCII character that
+                        separates columns within each row of data. The default value is a comma
+                            (<codeph>,</codeph>). If <varname>delim</varname> is a comma
+                            (<codeph>,</codeph>) or if this option is not specified,
+                            <codeph>gptransfer</codeph> uses the <codeph>CSV</codeph> format for
+                        writable external tables. Otherwise, <codeph>gptransfer</codeph> uses the
+                            <codeph>TEXT</codeph> format.</pd>
+                    <pd>If <codeph>--delimiter</codeph>, <codeph>--format</codeph>, and
+                            <codeph>--quote</codeph> options are not specified, these are settings
+                        for writable external tables:</pd>
+                    <pd>
+                        <codeph>FORMAT 'CSV' ( DELIMITER ',' QUOTE E'\001' )</codeph>
+                    </pd>
+                    <pd>You can specify a delimiter character such as a non-printing character with
+                        the format <codeph>"\<varname>digits</varname>"</codeph> (octal). A
+                        backslash followed by the octal value for the character. The octal format
+                        must be enclosed in double quotes. This example specifies the octal
+                        character <codeph>\001</codeph>, the <codeph>SOH</codeph>
+                        character:<codeblock>--delimiter="\001"</codeblock></pd>
+                </plentry>
+                <plentry>
+                    <pt>--dest-database=<varname>dest_database_name</varname></pt>
+                    <pd>The database in the destination Greenplum Database system. If not specified,
+                        the source tables are copied into a destination system database with the
+                        same name as the source system database.</pd>
+                    <pd>This option is required if the source and destination Greenplum Database
+                        systems are the same.</pd>
+                    <pd>If destination database does not exist, it is created.</pd>
+                    <pd>Not valid with the <codeph>--full</codeph>,
+                            <codeph>--partition-transfer</codeph>, or
+                            <codeph>--partition-transfer-non-partition-target</codeph> options.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--dest-host=<varname>dest_host</varname></pt>
+                    <pd>Destination Greenplum Database hostname or IP address. If not specified, the
+                        default is the host the system running <codeph>gptransfer</codeph>
+                        (127.0.0.1)</pd>
+                </plentry>
+                <plentry>
+                    <pt>--dest-port=<varname>dest_port</varname></pt>
+                    <pd>Destination Greenplum Database port number, If not specified, the default is
+                        5432.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--dest-user=<varname>dest_user</varname></pt>
+                    <pd>User ID that is used to connect to the destination Greenplum Database
+                        system. If not specified, the default is the user gpadmin. </pd>
+                </plentry>
+                <plentry>
+                    <pt>--drop</pt>
+                    <pd>Specify this option to drop the table that is in the destination database if
+                        it already exists. Before copying table data, <codeph>gptransfer</codeph>
+                        drops the table and creates it again. </pd>
+                    <pd>At most, only one of the options can be specified
+                            <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>, or
+                            <codeph>--drop</codeph>. If one of them is not specified and the table
+                        exists in the destination system, <codeph>gptransfer</codeph> returns an
+                        error and quits. </pd>
+                    <pd>Not valid with the <codeph>--full</codeph>,
+                            <codeph>--partition-transfer</codeph>, or
+                            <codeph>--partition-transfer-non-partition-target</codeph> options.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--dry-run</pt>
+                    <pd>When you specify this option, <codeph>gptransfer</codeph> generates a list
+                        of the migration operations that would have been performed with the
+                        specified options. The data is not migrated. </pd>
+                    <pd>The information is displayed at the command line and written to the log
+                        file.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-f <varname>table-file</varname></pt>
+                    <pd>The location and name of file containing list of fully qualified table names
+                        to copy from the Greenplum Database source system. In the text file, you
+                        specify a single fully qualified table per line
+                            (<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>). </pd>
+                    <pd>A set of tables can be specified using the Python regular expression syntax.
+                        See the <codeph>-d</codeph> option for information about using regular
+                        expressions.</pd>
+                    <pd>If the source table does not exist, <codeph>gptransfer</codeph> returns an
+                        error and quits. If the destination database or table does not exist, it is
+                        created.</pd>
+                    <pd>Only the table and table data are copied and indexes are re-created.
+                        Dependent objects are not copied.</pd>
+                    <pd>You cannot specify views, or system catalog tables. The
+                            <codeph>--full</codeph> option copies user defined views.</pd>
+                    <pd>If you specify the <codeph>-d</codeph> option to copy all the tables from a
+                        database, you cannot specify individual tables from the database. </pd>
+                    <pd>Not valid with the <codeph>--full</codeph>, <codeph>-d</codeph>, or
+                            <codeph>-t</codeph> options.</pd>
+                    <pd>
+                        <parml>
+                            <plentry>
+                                <pt>--partition-transfer (partitioned destination table)</pt>
+                                <pd>Specify this option with the <codeph>-f</codeph> option to copy
+                                    data from leaf child partition tables of partitioned tables from
+                                    a source database to the leaf child partition tables in a
+                                    destination database. The text file specified by the
+                                        <codeph>-f</codeph> option contains a list of fully
+                                    qualified leaf child partition table names with this syntax. </pd>
+                                <pd>
+                                    <codeblock><varname>src_db</varname>.<varname>src_schema</varname>.<varname>src_prt_tbl</varname>[, <varname>dst_db</varname>.<varname>dst_schema</varname>.<varname>dst_prt_tbl</varname>]</codeblock>
+                                </pd>
+                                <pd>Wildcard characters are not supported in the fully qualified
+                                    table names. The destination partitioned table must exist. If
+                                    the destination leaf child partition table is not specified in
+                                    the file, <codeph>gptransfer</codeph> copies the data to the
+                                    same fully qualified table name
+                                        (<varname>db_name</varname>.<varname>schema</varname>.<varname>table</varname>)
+                                    in the destination Greenplum Database system. If the source and
+                                    destination Greenplum Database systems are the same, you must
+                                    specify a destination table where at least one of the following
+                                    must be different between the source and destination table:
+                                        <varname>db_name</varname>, <varname>schema</varname>, or
+                                        <varname>table</varname>.</pd>
+                                <pd>If either the source or destination table is not a leaf child
+                                    partition, the utility returns an error and no data are
+                                    transferred.</pd>
+                                <pd>These characteristics must be the same for the partitioned table
+                                    in the source and destination database.<ul id="ul_ztq_ppj_yx">
+                                        <li>Number of table columns and the order of the column data
+                                            types (the source and destination table names and table
+                                            column names can be different)</li>
+                                        <li>Partition level of the specified source and destination
+                                            tables</li>
+                                        <li>Partitioning criteria of the specified source and
+                                            destination leaf child partitions and child partitions
+                                            above them in the hierarchy (partition type and
+                                            partition column)</li>
+                                    </ul></pd>
+                                <pd>This option is not valid with these options:
+                                    <codeph>-d</codeph>, <codeph>--dest-database</codeph>,
+                                        <codeph>--drop</codeph>, <codeph>-F</codeph>,
+                                        <codeph>--full</codeph>, <codeph>--schema-only</codeph>,
+                                        <codeph>-T</codeph>, <codeph>-t</codeph>.<note>If a
+                                        destination table is not empty or the data in the source or
+                                        destination table changes during a transfer operation (rows
+                                        are inserted or deleted), the table row count validation
+                                        fails due to row count mismatch. <p>If the destination table
+                                            is not empty, you can specify the
+                                                <codeph>-truncate</codeph> option to truncate the
+                                            table before the transfer operation.</p><p>You can
+                                            specify the <codeph>-x</codeph> option to acquire
+                                            exclusive locks on the tables during a transfer
+                                            operation. </p></note></pd>
+                            </plentry>
+                            <plentry>
+                                <pt>--partition-transfer-non-partition-target (non-partitioned
+                                    destination table)</pt>
+                                <pd>Specify this option with the <codeph>-f</codeph> option to copy
+                                    data from leaf child partition tables of partitioned tables in a
+                                    source database to non-partitioned tables in a destination
+                                    database. The text file specified by the <codeph>-f</codeph>
+                                    option contains a list of fully qualified leaf child partition
+                                    table names in the source database and non-partitioned tables
+                                    names in the destination database with this syntax.
+                                    <codeblock><varname>src_db</varname>.<varname>src_schema</varname>.<varname>src_part_tbl</varname>, <varname>dest_db</varname>.<varname>dest_schema</varname>.<varname>dest_tbl</varname></codeblock></pd>
+                                <pd>Wildcard characters are not supported in the fully qualified
+                                    table names. The destination tables must exist, and both source
+                                    and destination table names are required in the file. </pd>
+                                <pd>If a source table is not a leaf child partition table or a
+                                    destination table is not a normal (non-partitioned) table, the
+                                    utility returns an error and no data are transferred.</pd>
+                                <pd>If the source and destination Greenplum Database systems are the
+                                    same, you must specify a destination table where at least one of
+                                    the following must be different between the source and
+                                    destination table: <varname>db_name</varname>,
+                                        <varname>schema</varname>, or <varname>table</varname>.</pd>
+                                <pd>For the partitioned table in the source database and the table
+                                    in the destination database, the number of table columns and the
+                                    order of the column data types must be the same (the source and
+                                    destination table column names can be different).</pd>
+                                <pd>The same destination table can be specified in the file for
+                                    multiple source leaf child partition tables that belong to a
+                                    single partitioned table. Transferring data from source leaf
+                                    child partition tables that belong to different partitioned
+                                    tables to a single non-partitioned table is not supported. </pd>
+                                <pd>This option is not valid with these options:
+                                    <codeph>-d</codeph>, <codeph>--dest-database</codeph>,
+                                        <codeph>--drop</codeph>, <codeph>-F</codeph>,
+                                        <codeph>--full</codeph>, <codeph>--schema-only</codeph>,
+                                        <codeph>-T</codeph>, <codeph>-t</codeph>,
+                                        <codeph>--truncate</codeph>,
+                                    <codeph>--validate</codeph>.</pd>
+                                <pd>
+                                    <note>If the data in the source or destination table changes
+                                        during a transfer operation (rows are inserted or deleted),
+                                        the table row count validation fails due to row count
+                                        mismatch. <p>You can specify the <codeph>-x</codeph> option
+                                            to acquire exclusive locks on the tables during a
+                                            transfer operation. </p></note>
+                                </pd>
+                            </plentry>
+                        </parml>
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt>-F <varname>table-file</varname></pt>
+                    <pd>The location and name of file containing list of fully qualified table names
+                        to exclude from transferring to the destination system. In the text file,
+                        you specify a single fully qualified table per line. </pd>
+                    <pd>A set of tables can be specified using the Python regular expression syntax.
+                        See the <codeph>-d</codeph> option for information about using regular
+                        expressions.</pd>
+                    <pd>The utility removes the excluded tables from the list of tables that are
+                        being transferred to the destination database before starting the transfer.
+                        If excluding tables results in no tables being transferred, the database or
+                        schema is not created in the destination system. </pd>
+                    <pd>If a source table does not exist, <codeph>gptransfer</codeph> displays a
+                        warning. </pd>
+                    <pd>Only the specified tables are excluded. To exclude dependent objects, you
+                        must explicitly specify them.</pd>
+                    <pd>You cannot specify views, or system catalog tables. </pd>
+                    <pd>Not valid with the <codeph>--full</codeph>,
+                            <codeph>--partition-transfer</codeph>, or
+                            <codeph>--partition-transfer-non-partition-target</codeph> options.</pd>
+                    <pd>You can specify the <codeph>--dry-run</codeph> option to test the command.
+                        The <codeph>-v</codeph> option, displays and logs the excluded tables.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--format=[CSV | TEXT]</pt>
+                    <pd>Specify the format of the writable external tables that are created by
+                            <codeph>gptransfer</codeph> to transfer data. Values are
+                            <codeph>CSV</codeph> for comma separated values, or
+                            <codeph>TEXT</codeph> for plain text. The default value is
+                            <codeph>CSV</codeph>. </pd>
+                    <pd>If the options <codeph>--delimiter</codeph>, <codeph>--format</codeph>, and
+                            <codeph>--quote</codeph> are not specified, these are default settings
+                        for writable external tables:</pd>
+                    <pd>
+                        <codeph>FORMAT 'CSV' ( DELIMITER ',' QUOTE E'\001' )</codeph>
+                    </pd>
+                    <pd>If you specify <codeph>TEXT</codeph>, you must also specify a non-comma
+                        delimiter with the <codeph>--delimiter=<varname>delim</varname></codeph>
+                        option. These are settings for writable external tables:</pd>
+                    <pd>
+                        <codeph>FORMAT 'TEXT' ( DELIMITER <varname>delim</varname> ESCAPE 'off'
+                            )</codeph>
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt>--full</pt>
+                    <pd>Full migration of a Greenplum Database source system to a destination
+                        system. You must specify the options for the destination system, the
+                            <codeph>--source-map-file</codeph> option, the
+                            <codeph>--dest-host</codeph> option, and if necessary, the other
+                        destination system options.</pd>
+                    <pd>The <codeph>--full</codeph> option cannot be specified with the
+                            <codeph>-t</codeph>, <codeph>-d</codeph>, <codeph>-f</codeph>,
+                            <codeph>--partition-transfer</codeph>, or
+                            <codeph>--partition-transfer-non-partition-target</codeph> options. </pd>
+                    <pd>A full migration copies all database objects including, tables, indexes,
+                        views, users, roles, functions, and resource queues for all user defined
+                        databases. The default databases, postgres, template0 and template1 are not
+                        moved. </pd>
+                    <pd>If a database exists in the destination system, besides the default
+                        postgres, template0 and template1 databases, <codeph>gptransfer</codeph>
+                        returns an error and quits. <note>The <codeph>--full</codeph> option is
+                            recommended only when the databases contain a large number of tables
+                            with large amounts of data. Because of the overhead required to set up
+                            parallel transfers, the utility is not recommended when the databases
+                            contain tables with small amounts of data. For more information, see
+                                <xref href="#topic1/section4" format="dita"
+                        >Notes</xref>.</note></pd>
+                </plentry>
+                <plentry>
+                    <pt>-l <varname>log_dir</varname></pt>
+                    <pd>Specify the <codeph>gptransfer</codeph> log file directory. If not
+                        specified, the default is <codeph>~/gpAdminLogs</codeph>.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--max-line-length=<varname>length</varname></pt>
+                    <pd>Sets the maximum allowed data row length in bytes for the
+                            <codeph>gpfdist</codeph> utility. If not specified, the default is
+                        10485760. Valid range is 32768 (32K) to 268435456 (256MB). </pd>
+                    <pd>Should be used when user data includes very wide rows (or when <codeph>line
+                            too long</codeph> error message occurs). Should not be used otherwise as
+                        it increases resource allocation. </pd>
+                </plentry>
+                <plentry>
+                    <pt>--no-final-count</pt>
+                    <pd>Disable table row count validation that is performed after
+                            <codeph>gptransfer</codeph> completes copying database objects to the
+                        target database. The default is to compare the row count of tables copied to
+                        the destination databases with the tables in the source database.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-q | --quiet</pt>
+                    <pd>If specified, suppress status messages. Messages are only sent to the log
+                        file. </pd>
+                </plentry>
+                <plentry>
+                    <pt>--quote=<varname>character</varname></pt>
+                    <pd>The quotation character when <codeph>gptransfer</codeph> creates writable
+                        external tables with the <codeph>CSV</codeph> format. Specify a single ASCII
+                        character that is used to enclose column data. The default value is the
+                        octal character <codeph>\001</codeph>, the <codeph>SOH</codeph>
+                        character.</pd>
+                    <pd>You can specify a delimiter character such as a non-printing character with
+                        the format <codeph>"\<varname>digits</varname>"</codeph> (octal). A
+                        backslash followed by the octal value for the character. The octal value
+                        must be enclosed in double quotes. </pd>
+                </plentry>
+                <plentry>
+                    <pt>--schema-only</pt>
+                    <pd>Create only the schemas specified by the command. Data is not
+                        transferred.</pd>
+                    <pd>If specified with the <codeph>--full</codeph> option,
+                            <codeph>gptransfer</codeph> replicates the complete database schema,
+                        including all tables, indexes, views, user defined types (UDT), and user
+                        defined functions (UDF) for the source databases. No data is transferred. </pd>
+                    <pd>If you specify tables with the <codeph>-t</codeph> or <codeph>-f</codeph>
+                        option with <codeph>--schema-only</codeph>, <codeph>gptransfer</codeph>
+                        creates only the tables and indexes. No data is transferred. </pd>
+                    <pd>Not valid with the <codeph>--partition-transfer</codeph>,
+                            <codeph>--partition-transfer-non-partition-target</codeph>, or
+                            <codeph>--truncate</codeph> options.<note>Because of the overhead
+                            required to set up parallel transfers, the
+                                <codeph>--schema-only</codeph> option is not recommended when
+                            transferring information for a large number of tables. For more
+                            information, see <xref href="#topic1/section4" format="dita"
+                                >Notes</xref>.</note></pd>
+                </plentry>
+                <plentry>
+                    <pt>--skip-existing</pt>
+                    <pd>Specify this option to skip copying a table from the source database if the
+                        table already exists in the destination database. </pd>
+                    <pd>At most, only one of the options can be specified
+                            <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>, or
+                            <codeph>--drop</codeph>. If one of them is not specified and the table
+                        exists in the destination system, <codeph>gptransfer</codeph> returns an
+                        error and quits. </pd>
+                    <pd>Not valid with the <codeph>--full</codeph> option.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--source-host=<varname>source_host</varname></pt>
+                    <pd>Source Greenplum Database host name or IP address. If not specified, the
+                        default host is the system running <codeph>gptransfer</codeph>
+                        (127.0.0.1).</pd>
+                </plentry>
+                <plentry>
+                    <pt>--source-map-file=<varname>host_map_file</varname></pt>
+                    <pd>File that lists source segment host name and IP addresses. If the file is
+                        missing or not all segment hosts are listed, <codeph>gptransfer</codeph>
+                        returns an error and quits.</pd>
+                    <pd>Each line of the file contains a source host name and the host IP address
+                        separated by a comma: <codeph>hostname,IPaddress</codeph>. This example
+                        lists four Greenplum Database hosts and their IP addresses.</pd>
+                    <pd>
+                        <codeblock>sdw1,192.0.2.1
+sdw2,192.0.2.2
+sdw3,192.0.2.3
+sdw4,192.0.2.4</codeblock>
+                    </pd>
+                    <pd>This option is required if the <codeph>--full</codeph> option is specified
+                        or if the source Greenplum Database system is different than the destination
+                        system. This option is not required if source and destination systems are
+                        the same. </pd>
+                </plentry>
+                <plentry>
+                    <pt>--source-port=<varname>source_port</varname></pt>
+                    <pd>Source Greenplum Database port number. If not specified, the default is
+                        5432.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--source-user=<varname>source_user</varname></pt>
+                    <pd>User ID that is used to connect to the source Greenplum Database system. If
+                        not specified, the default is the user gpadmin.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--sub-batch-size=<varname>sub_batch_size</varname></pt>
+                    <pd>Specifies the maximum degree of parallelism of the operations performed when
+                        migrating a table such as starting gpfdist instances, creating named pipes
+                        for the move operations. If not specified, the default is 25. The maximum is
+                        50.</pd>
+                    <pd>Specify the <codeph>--batch-size</codeph> option to control the maximum
+                        number of tables that <codeph>gptransfer</codeph> concurrently
+                        processes.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-t
+                        <varname>db</varname>.<varname>schema</varname>.<varname>table</varname></pt>
+                    <pd>A table from the source database system to copy. The fully qualified table
+                        name must be specified. </pd>
+                    <pd>A set of tables can be specified using the Python regular expression syntax.
+                        See the <codeph>-d</codeph> option for information about using regular
+                        expressions.</pd>
+                    <pd>If the destination table or database does not exist, it is created. This
+                        option can be specified multiple times to include multiple tables. Only the
+                        table and table data are copied and indexes are re-created. Dependent
+                        objects are not copied. </pd>
+                    <pd>If the source table does not exist, <codeph>gptransfer</codeph> returns an
+                        error and quits.</pd>
+                    <pd>If you specify the <codeph>-d</codeph> option to copy all the tables from a
+                        database, you do not need to specify individual tables from the database. </pd>
+                    <pd>Not valid with the <codeph>--full</codeph>, <codeph>-d</codeph>,
+                            <codeph>-f</codeph>, <codeph>--partition-transfer</codeph>, or
+                            <codeph>--partition-transfer-non-partition-target</codeph> options.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-T
+                        <varname>db</varname>.<varname>schema</varname>.<varname>table</varname></pt>
+                    <pd>A table from the source database system to exclude from transfer. The fully
+                        qualified table name must be specified. </pd>
+                    <pd>A set of tables can be specified using the Python regular expression syntax.
+                        See the <codeph>-d</codeph> option for information about using regular
+                        expressions.</pd>
+                    <pd>This option can be specified multiple times to include multiple tables. Only
+                        the specified tables are excluded. To exclude dependent objects, you must
+                        explicitly specify them. </pd>
+                    <pd>The utility removes the excluded tables from the list of tables that are
+                        being transferred to the destination database before starting the transfer.
+                        If excluding tables results in no tables being transferred, the database or
+                        schema is not created in the destination system.</pd>
+                    <pd>If a source table does not exist, <codeph>gptransfer</codeph> displays a
+                        warning. </pd>
+                    <pd>Not valid with the <codeph>--full</codeph>,
+                            <codeph>--partition-transfer</codeph>, or
+                            <codeph>--partition-transfer-non-partition-target</codeph>options.</pd>
+                    <pd>You can specify the <codeph>--dry-run</codeph> option to test the command.
+                        The <codeph>-v</codeph> option displays and logs the excluded tables.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--timeout <varname>seconds</varname></pt>
+                    <pd>Specify the time out value in seconds that <codeph>gptransfer</codeph>
+                        passes the <codeph>gpfdist</codeph> processes that
+                            <codeph>gptransfer</codeph> uses. The value is the time allowed for
+                        Greenplum Database to establish a connection to a <codeph>gpfdist</codeph>
+                        process. You might need to increase this value when operating on
+                        high-traffic networks.</pd>
+                    <pd>The default value is 300 seconds (5 minutes). The minimum value is 2
+                        seconds, the maximum value is 600 seconds. </pd>
+                </plentry>
+                <plentry>
+                    <pt>--truncate</pt>
+                    <pd>Specify this option to truncate the table that is in the destination
+                        database if it already exists. </pd>
+                    <pd>At most, only one of the options can be specified
+                            <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>, or
+                            <codeph>--drop</codeph>. If one of them is not specified and the table
+                        exists in the destination system, <codeph>gptransfer</codeph> returns an
+                        error and quits. </pd>
+                    <pd>Not valid with the <codeph>--full</codeph> option.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--validate=<varname>type</varname></pt>
+                    <pd>Perform data validation on table data. These are the supported types of
+                        validation.</pd>
+                    <pd><codeph>count</codeph> - Specify this value to compare row counts between
+                        source and destination table data.</pd>
+                    <pd><codeph>MD5</codeph> - Specify this value to compare MD5 values between
+                        source and destination table data. </pd>
+                    <pd>If validation for a table fails, <codeph>gptransfer</codeph> displays the
+                        name of the table and writes the file name to the text file
+                            <codeph>failed_migrated_tables_</codeph><varname>yyyymmdd_hhmmss</varname><codeph>.txt</codeph>.
+                        The <varname>yyyymmdd_hhmmss</varname> is a time stamp when the
+                            <codeph>gptransfer</codeph> process was started. The file is created in
+                        the directory where <codeph>gptransfer</codeph> is executed. <note>The file
+                            contains the table names where validation failed or other errors
+                            occurred during table migration.</note></pd>
+                </plentry>
+                <plentry>
+                    <pt>-v | --verbose</pt>
+                    <pd>If specified, sets the logging level to verbose. Additional log information
+                        is written to the log file and the command line during command execution.
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt>--work-base-dir=<varname>work_dir</varname></pt>
+                    <pd>Specify the directory that <codeph>gptransfer</codeph> uses to store
+                        temporary working files such as PID files and named pipes. The default
+                        directory is the user's home directory.</pd>
+                    <pd>Source and destination systems must be able to access the
+                            <codeph>gptransfer</codeph> work directory.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-x</pt>
+                    <pd>Acquire an exclusive lock on tables during the migration to prevent insert
+                        or updates. </pd>
+                    <pd>On the source database, an exclusive lock is acquired when
+                            <codeph>gptransfer</codeph> inserts into the external table and is
+                        released after validation.</pd>
+                    <pd>On the destination database, an exclusive lock is acquired when
+                            <codeph>gptransfer</codeph> selects from external table and released
+                        after validation.</pd>
+                    <pd>If <codeph>-x</codeph> option is not specified and
+                            <codeph>--validate</codeph> is specified, validation failures occur if
+                        data is inserted into either the source or destination table during the
+                        migration process. The <codeph>gptransfer</codeph> utility displays messages
+                        if validation errors occur.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-h | -? | --help</pt>
+                    <pd>Displays the online help. </pd>
+                </plentry>
+                <plentry>
+                    <pt>--version</pt>
+                    <pd>Displays the version of this utility.</pd>
+                </plentry>
+            </parml>
+        </section>
+        <section id="section7">
+            <title>Examples</title>
+            <p>This command copies the table <codeph>public.t1</codeph> from the database
+                    <codeph>db1</codeph> and all tables in the database <codeph>db2</codeph> to the
+                system <codeph>mytest2</codeph>. </p>
+            <codeblock>gptransfer -t db1.public.t1 -d db2 --dest-host=mytest2 \
+ --source-map-file=gp-source-hosts --truncate</codeblock>
+            <p>If the databases <codeph>db1</codeph> and <codeph>db2</codeph> do not exist on the
+                system <codeph>mytest2</codeph>, they are created. If any of the source tables exist
+                on the destination system, <codeph>gptransfer</codeph> truncates the table and
+                copies the data from the source to the destination table.</p>
+            <p>This command copies leaf child partition tables from a source system to a destination
+                system.<codeblock>gptransfer -f input_file --partition-transfer --source-host=source_host \
+ --source-user=source_user --source-port=source_port --dest-host=dest_host \
+ --dest-user=dest_user --dest-port=dest_port --source-map-file=host_map_file</codeblock></p>
+            <p>This line in <codeph>input_file</codeph> copies a leaf child partition from the
+                source system to the destination system.</p>
+            <p>
+                <codeblock> srcdb.people.person_1_prt_experienced, destdb.public.employee_1_prt_seniors</codeblock>
+            </p>
+            <p>The line assumes partitioned tables in the source and destination systems similar to
+                the following tables.<ul id="ul_bf5_nyk_w5">
+                    <li>In the <i>people</i> schema of the <i>srcdb</i> database of the source
+                        system, a partitioned table with a leaf child partition table
+                            <codeph>person_1_prt_experienced</codeph>. This <codeph>CREATE
+                            TABLE</codeph> command creates a partitioned table with the leaf child
+                        partition
+                        table.<codeblock>CREATE TABLE person(id int, title char(1))
+  DISTRIBUTED BY (id)
+  PARTITION BY list (title)
+  (PARTITION experienced VALUES ('S'),
+    PARTITION entry_level VALUES ('J'),
+    DEFAULT PARTITION other );</codeblock></li>
+                    <li>In the <i>public</i> schema of the <i>destdb</i> database of the source
+                        system, a partitioned table with a leaf child partition table
+                            <codeph>public.employee_1_prt_seniors</codeph>. This <codeph>CREATE
+                            TABLE</codeph> command creates a partitioned table with the leaf child
+                        partition
+                        table.<codeblock>CREATE TABLE employee(id int, level char(1))
+  DISTRIBUTED BY (id)
+  PARTITION BY list (level)
+  (PARTITION seniors VALUES ('S'),
+    PARTITION juniors VALUES ('J'),
+    DEFAULT PARTITION other );</codeblock></li>
+                </ul></p>
+            <p>This example uses Python regular expressions in a filter file to specify the set of
+                tables to transfer. This command specifies the <codeph>-f</codeph> option with the
+                filter file <codeph>/tmp/filter_file</codeph> to limit the tables that are
+                transferred.</p>
+            <codeblock>gptransfer -f /tmp/filter_file --source-port 5432 --source-host test4 \
+ --source-user gpadmin --dest-user gpadmin --dest-port 5432 --dest-host test1 \
+ --source-map-file /home/gpadmin/source_map_file</codeblock>
+            <p>This is the contents of <codeph>/tmp/filter_file</codeph>.</p>
+            <p>
+                <codeblock>"test1.arc/.*/./.*/"
+"test1.c/(..)/y./.*/"</codeblock>
+            </p>
+            <p>In the first line, the regular expressions for the schemas, <codeph>arc/.*/</codeph>,
+                and for the tables, <codeph>/.*/</codeph>, limit the transfer to all tables with the
+                schema names that start with <codeph>arc</codeph>.</p>
+            <p>In the second line, the regular expressions for the schemas,
+                    <codeph>c/(..)/y</codeph>, and for the tables, <codeph>/.*/</codeph>, limit the
+                transfer to all tables with the schema names that are four characters long and that
+                start with <codeph>c</codeph> and end with <codeph>y</codeph>, for example,
+                    <codeph>crty</codeph>. </p>
+            <p>When the command is run, tables in the database <codeph>test1</codeph> that satisfy
+                either condition are transferred to the destination database.</p>
+        </section>
+        <section id="section8">
+            <title>See Also</title>
+            <p>
+                <codeph><xref href="gpfdist.xml#topic1">gpfdist</xref></codeph>
+            </p>
+            <p>For information about loading and unloading data, see the <i>Greenplum Database
+                    Administrator Guide</i>.</p>
+        </section>
+    </body>
+</topic>

@@ -3,8 +3,6 @@ image_resource:
   type: docker-image
   source:
     repository: pivotaldata/centos-coverity
-    username: gpdb
-    password: a7vBWDg3mlMv
 inputs:
   - name: gpdb_src
 outputs:
@@ -13,7 +11,9 @@ run:
   path: gpdb_src/concourse/scripts/scan_with_coverity.bash
 params:
   OUTPUT_ARTIFACT_DIR: gpdb_coverity_artifacts
-  IVYREPO_HOST: repo.pivotal.io
-  IVYREPO_PASSWD: 7wdLJRV4HW2q
-  IVYREPO_REALM: Artifactory Realm
-  IVYREPO_USER: build_readonly
+  IVYREPO_HOST:
+  IVYREPO_PASSWD:
+  IVYREPO_REALM:
+  IVYREPO_USER:
+  COVERITY_TOKEN:
+  COVERITY_EMAIL:

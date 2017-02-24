@@ -14,6 +14,7 @@
     And user returns the data directory to the default location of the killed mirror
     And the user runs command "gprecoverseg -a"
     And gprecoverseg should return a return code of 0
+    And the segments are synchronized
 
   Scenario: persistent_rebuild on mirrored systems should correctly rebuild persistent tables with mirrors
     Given the database is running

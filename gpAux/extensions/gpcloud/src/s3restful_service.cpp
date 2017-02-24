@@ -1,5 +1,13 @@
 #include "s3restful_service.h"
 
+S3RESTfulService::S3RESTfulService()
+    : lowSpeedLimit(0),
+      lowSpeedTime(0),
+      debugCurl(false),
+      verifyCert(true),
+      chunkBufferSize(64 * 1024) {
+}
+
 S3RESTfulService::S3RESTfulService(const S3Params &params)
     : s3MemContext(const_cast<S3MemoryContext &>(params.getMemoryContext())) {
     // This function is not thread safe, must NOT call it when any other
@@ -10,6 +18,7 @@ S3RESTfulService::S3RESTfulService(const S3Params &params)
     this->lowSpeedTime = params.getLowSpeedTime();
     this->debugCurl = params.isDebugCurl();
     this->chunkBufferSize = params.getChunkSize();
+    this->verifyCert = params.isVerifyCert();
 }
 
 S3RESTfulService::~S3RESTfulService() {
@@ -94,6 +103,27 @@ struct CURLWrapper {
     CURL *curl;
 };
 
+void S3RESTfulService::performCurl(CURL *curl, Response &response) {
+    CURLcode res = curl_easy_perform(curl);
+    if (res != CURLE_OK) {
+        if (res == CURLE_COULDNT_RESOLVE_HOST) {
+            S3_DIE(S3ResolveError, curl_easy_strerror(res));
+        } else {
+            S3_DIE(S3ConnectionError, curl_easy_strerror(res));
+        }
+    } else {
+        long responseCode;
+        // Get the HTTP response status code from HTTP header
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
+
+        if (responseCode == 500) {
+            S3_DIE(S3ConnectionError, "Server temporary unavailable");
+        }
+
+        response.FillResponse(responseCode);
+    }
+}
+
 // get() will execute HTTP GET RESTful API with given url/headers/params,
 // and return raw response content.
 //
@@ -110,21 +140,9 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers) {
 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, this->verifyCert);
 
-    CURLcode res = curl_easy_perform(curl);
-    if (res != CURLE_OK) {
-        if (res == CURLE_COULDNT_RESOLVE_HOST) {
-            S3_DIE(S3ResolveError, curl_easy_strerror(res));
-        } else {
-            S3_DIE(S3ConnectionError, curl_easy_strerror(res));
-        }
-    } else {
-        long responseCode;
-        // Get the HTTP response status code from HTTP header
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
-
-        response.FillResponse(responseCode);
-    }
+    this->performCurl(curl, response);
 
     return response;
 }
@@ -139,8 +157,8 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers, const S3
 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, this->verifyCert);
 
-    /* options for uploading */
     UploadData uploadData(data);
     curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&uploadData);
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, RESTfulServiceReadFuncCallback);
@@ -150,17 +168,7 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers, const S3
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *)&response);
     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, RESTfulServiceHeadersWriteFuncCallback);
 
-    CURLcode res = curl_easy_perform(curl);
-
-    if (res != CURLE_OK) {
-        S3_DIE(S3ConnectionError, curl_easy_strerror(res));
-    } else {
-        long responseCode;
-        // Get the HTTP response status code from HTTP header
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
-
-        response.FillResponse(responseCode);
-    }
+    this->performCurl(curl, response);
 
     return response;
 }
@@ -176,25 +184,16 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
-
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, this->verifyCert);
     curl_easy_setopt(curl, CURLOPT_POST, 1L);
+
     S3VectorUInt8 s3data(data);
     UploadData uploadData(s3data);
     curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&uploadData);
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, RESTfulServiceReadFuncCallback);
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
 
-    CURLcode res = curl_easy_perform(curl);
-
-    if (res != CURLE_OK) {
-        S3_DIE(S3ConnectionError, curl_easy_strerror(res));
-    } else {
-        long responseCode;
-        // Get the HTTP response status code from HTTP header
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
-
-        response.FillResponse(responseCode);
-    }
+    this->performCurl(curl, response);
 
     return response;
 }
@@ -205,7 +204,7 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
 // Currently, this method only return the HTTP code, will be extended if needed in the future
 // implementation.
 ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers) {
-    ResponseCode responseCode = HeadResponseFail;
+    Response response(RESPONSE_ERROR);
 
     headers.CreateList();
     CURLWrapper wrapper(url, headers.GetList(), this->lowSpeedLimit, this->lowSpeedTime,
@@ -214,21 +213,11 @@ ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers) {
 
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "HEAD");
     curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, this->verifyCert);
 
-    CURLcode res = curl_easy_perform(curl);
+    this->performCurl(curl, response);
 
-    if (res != CURLE_OK) {
-        if (res == CURLE_COULDNT_RESOLVE_HOST) {
-            S3_DIE(S3ResolveError, curl_easy_strerror(res));
-        } else {
-            S3_DIE(S3ConnectionError, curl_easy_strerror(res));
-        }
-    } else {
-        // Get the HTTP response status code from HTTP header
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
-    }
-
-    return responseCode;
+    return response.getResponseCode();
 }
 
 Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers) {
@@ -241,7 +230,7 @@ Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers
 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceAbortFuncCallback);
-
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, this->verifyCert);
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
 
     S3VectorUInt8 data;
@@ -250,16 +239,7 @@ Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, RESTfulServiceReadFuncCallback);
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
 
-    CURLcode res = curl_easy_perform(curl);
-
-    if (res != CURLE_OK) {
-        S3_DIE(S3ConnectionError, curl_easy_strerror(res));
-    } else {
-        long responseCode;
-        // Get the HTTP response status code from HTTP header
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
-        response.FillResponse(responseCode);
-    }
+    this->performCurl(curl, response);
 
     return response;
 }

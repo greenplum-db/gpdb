@@ -531,3 +531,11 @@ COMMIT;
 select count(*) = 5 as passed from subt_reindex_heap;
 select count(*) = 5 as passed from subt_reindex_ao;
 select count(*) = 5 as passed from subt_reindex_co;
+
+-- Reindex on pg_class or reindex database hung if encountered ERROR, due to a
+-- bug. Lets have coverage to validate doesn't happen now.
+\c postgres
+SET debug_abort_after_distributed_prepared = true;
+reindex table pg_class;
+RESET debug_abort_after_distributed_prepared;
+\c regression

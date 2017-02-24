@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic59">
+   <title>Identifying Invalid CSV Files in Error Table Data</title>
+   <body>
+      <p>If a CSV file contains invalid formatting, the <i>rawdata</i> field in the error table can
+      contain several combined rows. For example, if a closing quote for a specific field is
+      missing, all the following newlines are treated as embedded newlines. When this happens,
+        Greenplum stops parsing a row when it reaches 64K, puts that
+      64K of data into the error table as a single row, resets the quote flag, and continues. If
+      this happens three times during load processing, the load file is considered invalid and the
+      entire load fails with the message "<codeph>rejected </codeph>
+      <codeph>N</codeph>
+      <codeph> or more rows</codeph>". See <xref
+        href="g-escaping-in-csv-formatted-files.xml#topic101"/> for more information on the correct
+      use of quotes in CSV files.</p>
+   </body>
+</topic>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1"><title id="cf20941">CREATE TABLESPACE</title><body><p id="sql_command_desc">Defines a new tablespace.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE TABLESPACE <varname>tablespace_name</varname> [OWNER <varname>username</varname>] 
+       FILESPACE <varname>filespace_name</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE TABLESPACE</codeph> registers a new tablespace for your
+Greenplum Database system. The tablespace name must be distinct from
+the name of any existing tablespace in the system. </p><p>A tablespace allows superusers to define an alternative location on
+the file system where the data files containing database objects (such
+as tables and indexes) may reside.</p><p>A user with appropriate privileges can pass a tablespace name to <codeph><xref
+            href="CREATE_DATABASE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
+            href="CREATE_TABLE.xml#topic1" type="topic" format="dita"/></codeph>, or <codeph><xref
+            href="CREATE_INDEX.xml#topic1" type="topic" format="dita"/></codeph> to have the data
+        files for these objects stored within the specified tablespace.</p><p>In Greenplum Database, there must be a file system location defined for the master, each primary
+        segment, and each mirror segment in order for the tablespace to have a location to store its
+        objects across an entire Greenplum system. This collection of file system locations is
+        defined in a filespace object. A filespace must be defined before you can create a
+        tablespace. See <codeph>gpfilespace</codeph> in the <i>Greenplum Database Utility Guide</i>
+        for more information.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>tablespacename</varname></pt><pd>The name of a tablespace to be created. The name cannot begin with <codeph>pg_</codeph> or
+              <codeph>gp_</codeph>, as such names are reserved for system tablespaces. </pd></plentry><plentry><pt>OWNER <varname>username</varname></pt><pd>The name of the user who will own the tablespace. If omitted, defaults
+to the user executing the command. Only superusers may create tablespaces,
+but they can assign ownership of tablespaces to non-superusers. </pd></plentry><plentry><pt>FILESPACE</pt><pd>The name of a Greenplum Database filespace that was defined using
+the <codeph>gpfilespace</codeph> management utility.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p>You must first create a filespace to be used by the tablespace. See <codeph>gpfilespace</codeph>
+        in the <i>Greenplum Database Utility Guide</i> for more information.</p><p>Tablespaces are only supported on systems that support symbolic links.
+</p><p><codeph>CREATE TABLESPACE</codeph> cannot be executed inside a transaction
+block.</p></section><section id="section6"><title>Examples</title><p>Create a new tablespace by specifying the corresponding filespace to
+use: </p><codeblock>CREATE TABLESPACE mytblspace FILESPACE myfilespace;</codeblock></section><section id="section7"><title>Compatibility</title><p><codeph>CREATE TABLESPACE</codeph> is a Greenplum Database extension.
+</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="CREATE_DATABASE.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="CREATE_TABLE.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="CREATE_INDEX.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="./DROP_TABLESPACE.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="ALTER_TABLESPACE.xml#topic1" type="topic" format="dita"/></codeph>,
+          <codeph>gpfilespace</codeph> in the <i>Greenplum Database Utility Guide</i>
+      </p></section></body></topic>

@@ -67,8 +67,6 @@ RETURNS TABLE(id integer, "time" timestamp, sessionnum integer)
 AS '$libdir/tabfunc_demo', 'sessionize' 
 LANGUAGE C;
 
-select * from pg_proc where proname = 'sessionize';
-
 SELECT *
 FROM sessionize( TABLE( SELECT id, time
                         FROM history
@@ -120,10 +118,4 @@ ORDER BY id, time;
     SELECT time FROM project( 
         TABLE( SELECT distinct * FROM history scatter by id), 2) 
     where time <'2011-08-20' order by 1;
------------------------------------------
-
--- Check catalog table pg_type for new type anytable
-    \x
-
-    select * from pg_type where typname='anytable';
 

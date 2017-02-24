@@ -1982,10 +1982,21 @@ cdb_sequence_nextval_server(Oid    tablespaceid,
     *pcached = 0;
     *pincrement = 0;
 
-	/* Find the SeqTable entry for the sequence. Note that we don't lock the
-	 * relation, because the sequence server cannot hold heavy-weight locks.
-	 * GPDB_83_MERGE_FIXME: that's why I assume we don't hold the lock, anyway...
-	 * */
+	/*
+	 * In Postgres, this method is to find the SeqTable entry for the sequence.
+	 * This is not required by sequence server. We only need to initialize
+	 * the `elm` which is used later in `cdb_sequence_nextval()`, which
+	 * is calling `read_seq_tuple()` method, and require `elm` parameter.
+	 *
+	 * In GPDB, a sequence server is used to generate unique values for all the sequence.
+	 * It doesn't have to lock on the sequence relation, because there will be
+	 * only a single instance of sequence server to handle all the requests from
+	 * segments to generate the sequence values.
+	 * To prevent collision of generating sequence values between 'master'
+	 * (e.g.`select nextval(seq)`) and 'segments' (e.g. `insert into table with
+	 * serial column`), an BUFFER_LOCK_EXCLUSIVE lock is held on the shared buffer
+	 * of the sequence relation.
+	 */
 	init_sequence(relid, &elm, NULL);
 
     /* Build a pseudo relcache entry with just enough info to call bufmgr. */

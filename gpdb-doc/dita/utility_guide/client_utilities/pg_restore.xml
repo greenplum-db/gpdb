@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="ov137116">pg_restore</title>
+  <body>
+    <p id="client_util_desc">Restores a database from an archive file created by
+        <codeph>pg_dump</codeph>.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock id="client_util_synopsis"><b>pg_restore</b> [<varname>connection_option</varname> ...] [<varname>restore_option</varname> ...] <varname>filename</varname></codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p><codeph>pg_restore</codeph> is a utility for restoring a database from an archive created
+        by <codeph><xref href="pg_dump.xml#topic1" type="topic" format="dita"/></codeph> in one of
+        the non-plain-text formats. It will issue the commands necessary to reconstruct the database
+        to the state it was in at the time it was saved. The archive files also allow
+          <codeph>pg_restore</codeph> to be selective about what is restored, or even to reorder the
+        items prior to being restored.</p>
+      <p><codeph>pg_restore</codeph> can operate in two modes. If a database name is specified, the
+        archive is restored directly into the database. Otherwise, a script containing the SQL
+        commands necessary to rebuild the database is created and written to a file or standard
+        output. The script output is equivalent to the plain text output format of
+          <codeph>pg_dump</codeph>. Some of the options controlling the output are therefore
+        analogous to <codeph>pg_dump</codeph> options. </p>
+      <p><codeph>pg_restore</codeph> cannot restore information that is not present in the archive
+        file. For instance, if the archive was made using the "dump data as <codeph>INSERT</codeph>
+        commands" option, <codeph>pg_restore</codeph> will not be able to load the data using
+          <codeph>COPY</codeph> statements.</p>
+      <note>The <codeph>--ignore-version</codeph> option is deprecated and will be removed in a
+        future release.</note>
+    </section>
+    <section id="section4">
+      <title>Options</title>
+      <parml>
+        <plentry>
+          <pt>
+            <varname>filename</varname>
+          </pt>
+          <pd>Specifies the location of the archive file to be restored. If not specified, the
+            standard input is used.</pd>
+        </plentry>
+      </parml>
+      <sectiondiv>
+        <b>Restore Options</b>
+        <parml>
+          <plentry>
+            <pt>-a | --data-only</pt>
+            <pd>Restore only the data, not the schema (data definitions).</pd>
+          </plentry>
+          <plentry>
+            <pt>-c | --clean</pt>
+            <pd>Clean (drop) database objects before recreating them.</pd>
+          </plentry>
+          <plentry>
+            <pt>-C | --create</pt>
+            <pd>Create the database before restoring into it. (When this option is used, the
+              database named with <codeph>-d</codeph> is used only to issue the initial
+                <codeph>CREATE DATABASE</codeph> command. All data is restored into the database
+              name that appears in the archive.) </pd>
+          </plentry>
+          <plentry>
+            <pt>-d <varname>dbname</varname> | --dbname=<varname>dbname</varname></pt>
+            <pd>Connect to this database and restore directly into this database. The default is to
+              use the <codeph>PGDATABASE</codeph> environment variable setting, or the same name as
+              the current system user.</pd>
+          </plentry>
+          <plentry>
+            <pt>-e | --exit-on-error</pt>
+            <pd>Exit if an error is encountered while sending SQL commands to the database. The
+              default is to continue and to display a count of errors at the end of the
+              restoration.</pd>
+          </plentry>
+          <plentry>
+            <pt>-f <varname>outfilename</varname> | --file=<varname>outfilename</varname></pt>
+            <pd>Specify output file for generated script, or for the listing when used with
+                <codeph>-l</codeph>. Default is the standard output.</pd>
+          </plentry>
+          <plentry>
+            <pt>-F t |c | --format=tar | custom</pt>
+            <pd>The format of the archive produced by <codeph><xref href="pg_dump.xml#topic1"
+                  type="topic" format="dita"/></codeph>. It is not necessary to specify the format,
+              since <codeph>pg_restore</codeph> will determine the format automatically. Format can
+              be either <codeph>tar</codeph> or <codeph>custom</codeph>.</pd>
+          </plentry>
+          <plentry>
+            <pt>-i | --ignore-version</pt>
+            <pd><note>This option is deprecated and will be removed in a future
+              release.</note>Ignore database version checks.</pd>
+          </plentry>
+          <plentry>
+            <pt>-I <varname>index</varname> | --index=<varname>index</varname></pt>
+            <pd>Restore definition of named index only. </pd>
+          </plentry>
+          <plentry>
+            <pt>-l | --list</pt>
+            <pd>List the contents of the archive. The output of this operation can be used with the
+                <codeph>-L</codeph> option to restrict and reorder the items that are restored.</pd>
+          </plentry>
+          <plentry>
+            <pt>-L <varname>list-file</varname> | --use-list=<varname>list-file</varname></pt>
+            <pd>Restore elements in the <varname>list-file</varname> only, and in the order they
+              appear in the file. Lines can be moved and may also be commented out by placing a
+                <codeph>;</codeph> at the start of the line.</pd>
+          </plentry>
+          <plentry>
+            <pt>-n <varname>schema</varname> | --schema=<varname>schema</varname></pt>
+            <pd>Restore only objects that are in the named schema. This can be combined with the
+                <codeph>-t</codeph> option to restore just a specific table. </pd>
+          </plentry>
+          <plentry>
+            <pt>-O | --no-owner</pt>
+            <pd>Do not output commands to set ownership of objects to match the original database.
+              By default, <codeph>pg_restore</codeph> issues <codeph>ALTER OWNER</codeph> or
+                <codeph>SET SESSION AUTHORIZATION</codeph> statements to set ownership of created
+              schema elements. These statements will fail unless the initial connection to the
+              database is made by a superuser (or the same user that owns all of the objects in the
+              script). With <codeph>-O</codeph>, any user name can be used for the initial
+              connection, and this user will own all the created objects.</pd>
+          </plentry>
+          <plentry>
+            <pt>-P '<varname>function-name</varname>(<varname>argtype</varname> [, ...])' |
+                --function='<varname>function-name</varname>(<varname>argtype</varname> [,
+              ...])'</pt>
+            <pd>Restore the named function only. The function name must be enclosed in quotes. Be
+              careful to spell the function name and arguments exactly as they appear in the dump
+              file's table of contents (as shown by the <codeph>--list</codeph> option).</pd>
+          </plentry>
+          <plentry>
+            <pt>-s | --schema-only</pt>
+            <pd>Restore only the schema (data definitions), not the data (table contents). Sequence
+              current values will not be restored, either. (Do not confuse this with the
+                <codeph>--schema</codeph> option, which uses the word schema in a different
+              meaning.) </pd>
+          </plentry>
+          <plentry>
+            <pt>-S <varname>username</varname> | --superuser=<varname>username</varname></pt>
+            <pd>Specify the superuser user name to use when disabling triggers. This is only
+              relevant if <codeph>--disable-triggers</codeph> is used.<note>Greenplum Database does not support user-defined triggers.</note></pd>
+          </plentry>
+          <plentry>
+            <pt>-t <varname>table</varname> | --table=<varname>table</varname></pt>
+            <pd>Restore definition and/or data of named table only. </pd>
+          </plentry>
+          <plentry>
+            <pt>-T <varname>trigger</varname> | --trigger=<varname>trigger</varname></pt>
+            <pd>Restore named trigger only.<note>Greenplum Database does not support
+                user-defined triggers.</note></pd>
+          </plentry>
+          <plentry>
+            <pt>-v | --verbose</pt>
+            <pd>Specifies verbose mode.</pd>
+          </plentry>
+          <plentry>
+            <pt>-x | --no-privileges | --no-acl</pt>
+            <pd>Prevent restoration of access privileges (<codeph>GRANT/REVOKE</codeph>
+              commands).</pd>
+          </plentry>
+          <plentry>
+            <pt>--disable-triggers</pt>
+            <pd>This option is only relevant when performing a data-only restore. It instructs
+                <codeph>pg_restore</codeph> to execute commands to temporarily disable triggers on
+              the target tables while the data is reloaded. Use this if you have triggers on the
+              tables that you do not want to invoke during data reload. The commands emitted for
+                <codeph>--disable-triggers</codeph> must be done as superuser. So, you should also
+              specify a superuser name with <codeph>-S</codeph>, or preferably run
+                <codeph>pg_restore</codeph> as a superuser. <note>Greenplum Database
+                does not support user-defined triggers.</note></pd>
+          </plentry>
+          <plentry>
+            <pt>--no-data-for-failed-tables</pt>
+            <pd>By default, table data is restored even if the creation command for the table failed
+              (e.g., because it already exists). With this option, data for such a table is skipped.
+              This behavior is useful when the target database may already contain the desired table
+              contents. Specifying this option prevents duplicate or obsolete data from being
+              loaded. This option is effective only when restoring directly into a database, not
+              when producing SQL script output.</pd>
+          </plentry>
+        </parml>
+      </sectiondiv>
+      <sectiondiv id="section5">
+        <b>Connection Options</b>
+        <parml>
+          <plentry>
+            <pt>-h <varname>host</varname> | --host <varname>host</varname></pt>
+            <pd>The host name of the machine on which the Greenplum
+              master database server is running. If not specified, reads from the environment
+              variable <codeph>PGHOST</codeph> or defaults to localhost.</pd>
+          </plentry>
+          <plentry>
+            <pt>-p <varname>port</varname> | --port <varname>port</varname></pt>
+            <pd>The TCP port on which the Greenplum Database master database server is
+              listening for connections. If not specified, reads from the environment variable
+                <codeph>PGPORT</codeph> or defaults to 5432.</pd>
+          </plentry>
+          <plentry>
+            <pt>-U <varname>username</varname> | --username <varname>username</varname></pt>
+            <pd>The database role name to connect as. If not specified, reads from the environment
+              variable <codeph>PGUSER</codeph> or defaults to the current system role name.</pd>
+          </plentry>
+          <plentry>
+            <pt>-W | --password</pt>
+            <pd>Force a password prompt.</pd>
+          </plentry>
+          <plentry>
+            <pt>-1 | --single-transaction</pt>
+            <pd>Execute the restore as a single transaction. This ensures that either all the
+              commands complete successfully, or no changes are applied.</pd>
+          </plentry>
+        </parml>
+      </sectiondiv>
+    </section>
+    <section id="section6">
+      <title>Notes</title>
+      <p>If your installation has any local additions to the <codeph>template1</codeph> database, be
+        careful to load the output of <codeph>pg_restore</codeph> into a truly empty database;
+        otherwise you are likely to get errors due to duplicate definitions of the added objects. To
+        make an empty database without any local additions, copy from <codeph>template0</codeph> not
+          <codeph>template1</codeph>, for example:</p>
+      <codeblock>CREATE DATABASE foo WITH TEMPLATE template0;</codeblock>
+      <p>When restoring data to a pre-existing table and the option
+          <codeph>--disable-triggers</codeph> is used, <codeph>pg_restore</codeph> emits commands to
+        disable triggers on user tables before inserting the data then emits commands to re-enable
+        them after the data has been inserted. If the restore is stopped in the middle, the system
+        catalogs may be left in the wrong state.</p>
+      <p><codeph>pg_restore</codeph> will not restore large objects for a single table. If an
+        archive contains large objects, then all large objects will be restored.</p>
+      <p>See also the <codeph>pg_dump</codeph> documentation for details on limitations of
+          <codeph>pg_dump</codeph>. </p>
+      <p>Once restored, it is wise to run <codeph>ANALYZE</codeph> on each restored table so the
+        query planner has useful statistics.</p>
+    </section>
+    <section id="section7">
+      <title>Examples</title>
+      <p>Assume we have dumped a database called <codeph>mydb</codeph> into a custom-format dump
+        file: </p>
+      <codeblock>pg_dump -Fc mydb &gt; db.dump</codeblock>
+      <p>To drop the database and recreate it from the dump: </p>
+      <codeblock>dropdb mydb
+pg_restore -C -d template1 db.dump</codeblock>
+      <p>To reload the dump into a new database called <codeph>newdb</codeph>. Notice there is no
+          <codeph>-C</codeph>, we instead connect directly to the database to be restored into. Also
+        note that we clone the new database from <codeph>template0</codeph> not
+          <codeph>template1</codeph>, to ensure it is initially empty: </p>
+      <codeblock>createdb -T template0 newdb
+pg_restore -d newdb db.dump</codeblock>
+      <p>To reorder database items, it is first necessary to dump the table of contents of the
+        archive:</p>
+      <codeblock>pg_restore -l db.dump &gt; db.list</codeblock>
+      <p>The listing file consists of a header and one line for each item, for example,</p>
+      <codeblock>; Archive created at Fri Jul 28 22:28:36 2006
+;     dbname: mydb
+;     TOC Entries: 74
+;     Compression: 0
+;     Dump Version: 1.4-0
+;     Format: CUSTOM
+;
+; Selected TOC Entries:
+;
+2; 145344 TABLE species postgres
+3; 145344 ACL species
+4; 145359 TABLE nt_header postgres
+5; 145359 ACL nt_header
+6; 145402 TABLE species_records postgres
+7; 145402 ACL species_records
+8; 145416 TABLE ss_old postgres
+9; 145416 ACL ss_old
+10; 145433 TABLE map_resolutions postgres
+11; 145433 ACL map_resolutions
+12; 145443 TABLE hs_old postgres
+13; 145443 ACL hs_old</codeblock>
+      <p>Semicolons start a comment, and the numbers at the start of lines refer to the internal
+        archive ID assigned to each item. Lines in the file can be commented out, deleted, and
+        reordered. For example,</p>
+      <codeblock>10; 145433 TABLE map_resolutions postgres
+;2; 145344 TABLE species postgres
+;4; 145359 TABLE nt_header postgres
+6; 145402 TABLE species_records postgres
+;8; 145416 TABLE ss_old postgres</codeblock>
+      <p>Could be used as input to <codeph>pg_restore</codeph> and would only restore items 10 and
+        6, in that order:</p>
+      <p>pg_restore -L db.list db.dump</p>
+    </section>
+    <section id="section8">
+      <title>See Also</title>
+      <p>
+        <codeph>
+          <xref href="pg_dump.xml#topic1" type="topic" format="dita"/>
+        </codeph>
+      </p>
+    </section>
+  </body>
+</topic>

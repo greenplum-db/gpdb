@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en"><title id="go138336">pg_filespace</title><body><p>The <codeph>pg_filespace</codeph> table contains information about the filespaces created in a
+        Greenplum Database system. Every system contains a default filespace,
+        <codeph>pg_system</codeph>, which is a collection of all the data directory locations
+      created at system initialization time.</p><p>A tablespace requires a file system location to store its database files. In Greenplum Database, the master and each segment (primary and mirror) needs its own
+      distinct storage location. This collection of file system locations for all components in a
+        Greenplum system is referred to as a filespace.</p><table id="go138428"><title>pg_catalog.pg_filespace</title><tgroup cols="4"><colspec colnum="1" colname="col1" colwidth="131pt"/><colspec colnum="2" colname="col2" colwidth="97pt"/><colspec colnum="3" colname="col3" colwidth="82pt"/><colspec colnum="4" colname="col4" colwidth="138pt"/><thead><row><entry colname="col1">column</entry><entry colname="col2">type</entry><entry colname="col3">references</entry><entry colname="col4">description</entry></row></thead><tbody><row><entry colname="col1"><codeph>fsname</codeph></entry><entry colname="col2">name</entry><entry colname="col3"/><entry colname="col4">The name of the filespace.</entry></row><row><entry colname="col1"><codeph>fsowner</codeph></entry><entry colname="col2">oid</entry><entry colname="col3">pg_roles.oid</entry><entry colname="col4">The object id of the role that created the filespace.</entry></row></tbody></tgroup></table></body></topic>

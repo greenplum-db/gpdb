@@ -50,16 +50,16 @@ DISCOVER=discover
 
 storage_targets: discover_targets non_discover_targets
 
-discover_targets: storage persistent_tables walrep_multinode \
-	uao_orca_both_regression upgrade pgtwophase \
+discover_targets: storage walrep_multinode \
+	upgrade pgtwophase \
 	sub_transaction_limit_removal filerep_schematopology_crashrecov
 
 non_discover_targets: aoco_compression filerep_end_to_end fts
 
 
-# GPDB-O2-TINC-Storage-no-scm
+# cs-storage
 # The following targets are pulled from:
-# http://pulse-cloud.gopivotal.com/admin/projects/GPDB-O2-TINC-Storage-no-scm/
+# http://pulse-cloud.gopivotal.com/admin/projects/cs-storage
 #
 # Refer to the properties of the pulse project and individual build
 # stages for configuration requirements.
@@ -70,67 +70,80 @@ storage: storage_vacuum_xidlimits aocoalter_catalog_loaders \
 	filerep_end_to_end_xlog_ctlog_cons
 
 storage_vacuum_xidlimits:
-	$(TESTER) $(DISCOVER) -t tincrepo \
+	$(TESTER) $(DISCOVER) \
 	-s tincrepo/mpp/gpdb/tests/storage/vacuum \
 	-q "class=XidlimitsTests"
 
 aocoalter_catalog_loaders:
-	$(TESTER) $(DISCOVER) -t tincrepo \
-	-s tincrepo/mpp/gpdb/tests/storage/aoco_alter \
-	-s tincrepo/mpp/gpdb/tests/catalog/basic \
-	-s tincrepo/mpp/gpdb/tests/catalog/gpcheckcat \
-	-s tincrepo/mpp/gpdb/tests/catalog/mpp24606 \
-	-s tincrepo/mpp/gpdb/tests/catalog/mpp25160 \
-	-s tincrepo/mpp/gpdb/tests/catalog/mpp25256 \
-	-s tincrepo/mpp/gpdb/tests/catalog/oid_inconsistency \
-	-s tincrepo/mpp/gpdb/tests/catalog/udf_exception_handling \
-	-s tincrepo/mpp/gpdb/tests/catalog/upgrade \
-	-s tincrepo/mpp/gpdb/tests/storage/loaders
+	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests \
+	-s storage/aoco_alter \
+	-s catalog/mpp24606 \
+	-s catalog/mpp25160 \
+	-s catalog/mpp25256 \
+	-s catalog/oid_inconsistency \
+	-s catalog/udf_exception_handling \
+	-s catalog/upgrade \
+	-s storage/loaders
 
 storage_queryfinish_and_transactionmanagement:
-	$(TESTER) $(DISCOVER) -t tincrepo \
-	-s tincrepo/mpp/gpdb/tests/dispatch/queryfinish \
-	-s tincrepo/mpp/gpdb/tests/storage/transaction_management \
-	-s tincrepo/mpp/gpdb/tests/storage/basic
+	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests \
+	-s dispatch/queryfinish \
+	-s storage/transaction_management \
+	-s storage/basic \
+	-s storage/uao
 
 storage_persistent_filerep_accessmethods_and_vacuum:
-	$(TESTER) $(DISCOVER) -t tincrepo \
-	-s tincrepo/mpp/gpdb/tests/storage/persistent \
-	-s tincrepo/mpp/gpdb/tests/storage/access_methods/ \
-	-s tincrepo/mpp/gpdb/tests/storage/filerep \
-	-s tincrepo/mpp/gpdb/tests/storage/vacuum \
+	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests/storage \
+	-s persistent \
+	-s access_methods \
+	-s filerep \
+	-s vacuum \
 	-q "class!=XidlimitsTests" \
-	-q "class!=Mpp18816" -q "class!=FilerepMiscTestCase"
+	-q "class!=Mpp18816" \
+	-q "class!=FilerepMiscTestCase"
 
 filerep_end_to_end_xlog_ctlog_cons:
-	$(TESTER) $(DISCOVER) -t tincrepo \
+	$(TESTER) $(DISCOVER) \
 	-s tincrepo/mpp/gpdb/tests/storage/filerep/mpp23631
 
-# GPDB-O2-Walrepl-multinode-no-scm 
+# cs-walrepl-multinode
 # The following targets are pulled from:
-# http://pulse-cloud.gopivotal.com/admin/projects/GPDB-O2-Walrepl-multinode-no-scm
+# http://pulse-cloud.gopivotal.com/admin/projects/cs-walrepl-multinode
 #
 # Refer to the properties of the pulse project and individual build
 # stages for configuration requirements.
 
-walrep_multinode:
-	$(TESTER) $(DISCOVER) -s tincrepo/mpp/gpdb/tests/storage/walrepl
+walrep_multinode: walrep_1 walrep_2
+
+walrep_1:
+	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests/storage/walrepl \
+	-s gpactivatestandby \
+	-s gpcrondump \
+	-s gpinitstandby \
+	-s gpstart \
+	-s gpstate \
+	-s gpstop \
+	-s run
+
+walrep_2:
+	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests/storage/walrepl \
+	-s basebackup \
+	-s crash \
+	-s filerep \
+	-s oom \
+	-s regress \
+	-s smart_shutdown \
+	-s syncrep \
+	-s walreceiver \
+	-s walsender \
+	-s xact \
+	-q "class!=DDLTestCase" \
+	-q "class!=DMLTestCase"
 
 
-# GPDB-O2-UAO-regression-no-scm
+# cs-aoco-compression
 # The following targets are pulled from:
-# http://pulse-cloud.gopivotal.com/admin/projects/GPDB-O2-UAO-regression-no-scm
-#
-# Refer to the properties of the pulse project and individual build
-# stages for configuration requirements.
-
-uao_orca_both_regression:
-	$(TESTER) $(DISCOVER) -s tincrepo/mpp/gpdb/tests/storage/uao
-
-
-# GPDB-O2-TINC-aoco-compression-no-scm
-# The following targets are pulled from:
-# http://pulse-cloud.gopivotal.com/admin/projects/GPDB-O2-TINC-aoco-compression-no-scm
+# http://pulse-cloud.gopivotal.com/admin/projects/cs-aoco-compression
 #
 # Refer to the properties of the pulse project and individual build
 # stages for configuration requirements.
@@ -169,9 +182,9 @@ upgrade:
 	$(TESTER) $(DISCOVER) -s tincrepo/mpp/gpdb/tests/utilities/upgrade
 
 
-# GPDB-O2-TINC-Filerep_end_to_end-no-scm
+# cs-filerep-end-to-end
 # The following targets are pulled from:
-# http://pulse-cloud.gopivotal.com/admin/projects/GPDB-O2-TINC-Filerep_end_to_end-no-scm
+# http://pulse-cloud.gopivotal.com/admin/projects/cs-filerep-end-to-end
 #
 # Refer to the properties of the pulse project and individual build
 # stages for configuration requirements.
@@ -192,9 +205,9 @@ filerep_end_to_end_incr_mirror:
 	$(TESTER) mpp.gpdb.tests.storage.filerep_end_to_end.test_filerep_e2e.FilerepE2EScenarioTestCase.test_incr_mirror
 
 
-# GPDB-O2-TINC-PgTwophase-no-scm
+# cs-pg-two-phase
 # The following targets are pulled from:
-# http://pulse-cloud.gopivotal.com/admin/projects/GPDB-O2-TINC-PgTwophase-no-scm
+# http://pulse-cloud.gopivotal.com/admin/projects/cs-pg-two-phase
 #
 # Refer to the properties of the pulse project and individual build
 # stages for configuration requirements.
@@ -244,9 +257,9 @@ test_switch_25_33:
 	-p test_switch_25_33.py
 
 
-# GPDB-O2-TINC-FTS-no-scm 
+# cs-fts
 # The following targets are pulled from:
-# http://pulse-cloud.gopivotal.com/admin/projects/GPDB-O2-TINC-FTS-no-scm
+# http://pulse-cloud.gopivotal.com/admin/projects/cs-fts
 #
 # Refer to the properties of the pulse project and individual build
 # stages for configuration requirements.
@@ -263,9 +276,9 @@ fts_transitions_part03:
 	$(TESTER) mpp.gpdb.tests.storage.fts.fts_transitions.test_fts_transitions_03
 
 
-# GPDB-O2-TINC-Sub-transaction-limit-removal-no-scm 
+# cs-sub-transaction-limit-removal
 # The following targets are pulled from:
-# http://pulse-cloud.gopivotal.com/admin/projects/GPDB-O2-TINC-Sub-transaction-limit-removal-no-scm
+# http://pulse-cloud.gopivotal.com/admin/projects/cs-sub-transaction-limit-removal
 #
 # Refer to the properties of the pulse project and individual build
 # stages for configuration requirements.
@@ -276,9 +289,9 @@ sub_transaction_limit_removal:
 	-p test*.py
 
 
-# GPDB-O2-TINC-filerep-SchemaTopology-crashrecov-no-scm
+# cs-filerep-schema-topology-crashrecov
 # The following targets are pulled from:
-# http://pulse-cloud.gopivotal.com/admin/projects/GPDB-O2-TINC-filerep-SchemaTopology-crashrecov-no-scm
+# http://pulse-cloud.gopivotal.com/admin/projects/cs-filerep-schema-topology-crashrecov
 #
 # Refer to the properties of the pulse project and individual build
 # stages for configuration requirements.
@@ -317,3 +330,12 @@ crash_recovery_schema_topology:
 	-s tincrepo/mpp/gpdb/tests/storage/crashrecovery \
 	-p test_crash_recovery_schema_topology.py \
 	-p test_reindex_pg_class.py
+
+runaway_query:
+	$(TESTER) \
+		resource_management.runaway_query.runaway_query_scenario.test_runaway_query_scenario.RQTScenarioTestCase \
+		resource_management.runaway_query.runaway_detector.test_runaway_detector.RunawayDetectorTestCase \
+		resource_management.runaway_query.runaway_query_limits.test_runaway_query.RunawayQueryTestCase \
+		resource_management.runaway_query.runaway_query_multisession.test_runaway_multisession.RunawayMultiSessionTestCase \
+		resource_management.runaway_query.runaway_query_vmem_memoryaccounting.test_runaway_query_vmem_memoryaccounting.RQTMemoryAccountingTestCase \
+		resource_management.runaway_query.runaway_query_stress.test_runaway_query_stress.RunawayQueryStressTestCase

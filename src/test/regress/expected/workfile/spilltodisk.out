@@ -1,0 +1,124 @@
+-- Test Mark/Restore in Material Node
+create table spilltest1 (a integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table spilltest2 (a integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into spilltest1 select a from generate_series(1,400000) a;
+insert into spilltest2 select a from generate_series(1,400000) a;
+set enable_hashagg=off;
+set enable_mergejoin=on;
+set enable_hashjoin=off;
+set enable_nestloop=off;
+set statement_mem=10000;
+create temporary table spilltestresult1 as
+select t1.a as t1a, t2.a as t2a
+from (select a from spilltest1 group by a) t1,
+     (select a from spilltest2 group by a) t2
+where t1.a = t2.a;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 't1a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- check that the result looks sane
+select count(*), sum(t1a), sum(t2a), sum(t1a - t2a) from spilltestresult1;
+ count  |     sum     |     sum     | sum 
+--------+-------------+-------------+-----
+ 400000 | 80000200000 | 80000200000 |   0
+(1 row)
+
+-- Test Hash Aggregation when the work mem is too small for the hash table
+create table spilltest (a integer, b integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into spilltest select a, a%25 from generate_series(1,8000) a;
+analyze;
+NOTICE:  ANALYZE detected all empty sample pages for table pg_auth_members, please run VACUUM FULL for accurate estimation.
+set enable_hashagg=on;
+set enable_groupagg=off;
+set statement_mem=10000;
+select b,count(*) from spilltest group by b;
+ b  | count 
+----+-------
+ 11 |   320
+ 17 |   320
+  5 |   320
+ 23 |   320
+ 15 |   320
+  3 |   320
+  9 |   320
+  1 |   320
+ 13 |   320
+ 21 |   320
+  7 |   320
+ 19 |   320
+ 16 |   320
+  8 |   320
+ 10 |   320
+  6 |   320
+ 14 |   320
+ 24 |   320
+ 20 |   320
+ 12 |   320
+  4 |   320
+ 18 |   320
+ 22 |   320
+  2 |   320
+  0 |   320
+(25 rows)
+
+select b,count(*) from spilltest group by b;
+ b  | count 
+----+-------
+ 11 |   320
+ 17 |   320
+  5 |   320
+ 23 |   320
+ 15 |   320
+  3 |   320
+  9 |   320
+  1 |   320
+ 13 |   320
+ 21 |   320
+  7 |   320
+ 19 |   320
+ 16 |   320
+  8 |   320
+ 10 |   320
+  6 |   320
+ 14 |   320
+ 24 |   320
+ 20 |   320
+ 12 |   320
+  4 |   320
+ 18 |   320
+ 22 |   320
+  2 |   320
+  0 |   320
+(25 rows)
+
+-- Test Hash Join when the work mem is too small for the hash table
+drop table if exists spilltest;
+create table spilltest (a integer, b integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into spilltest select a, a%25 from generate_series(1,800000) a;
+analyze; -- We have to do an analyze to force a hash join
+NOTICE:  ANALYZE detected all empty sample pages for table pg_auth_members, please run VACUUM FULL for accurate estimation.
+set enable_mergejoin=off;
+set enable_nestloop=off;
+set enable_hashjoin=on;
+set statement_mem=10000;
+create temporary table spilltestresult2 as
+select t1.a as t1a, t1.b as t1b, t2.a as t2a, t2.b as t2b from spilltest t1, spilltest t2 where t1.a = t2.a;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 't1a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- check that the result looks sane
+select count(*), sum(t1a), sum(t2a), sum(t2a), sum(t2b), sum(t1a * t1b) from spilltestresult2;
+ count  |     sum      |     sum      |     sum      |   sum   |      sum      
+--------+--------------+--------------+--------------+---------+---------------
+ 800000 | 320000400000 | 320000400000 | 320000400000 | 9600000 | 3840036800000
+(1 row)
+
+drop table spilltest1;
+drop table spilltest2;
+drop table spilltest;

@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="hg141670">pg_proc</title>
+  <body>
+    <p>The <codeph>pg_proc</codeph> system catalog table stores information about functions (or
+      procedures), both built-in functions and those defined by <codeph>CREATE FUNCTION</codeph>.
+      The table contains data for aggregate and window functions as well as plain functions. If
+        <codeph>proisagg</codeph> is true, there should be a matching row in
+        <codeph>pg_aggregate</codeph>. If <codeph>proiswin</codeph> is true, there should be a
+      matching row in <codeph>pg_window</codeph>.</p>
+    <p>For compiled functions, both built-in and dynamically loaded, <codeph>prosrc</codeph>
+      contains the function's C-language name (link symbol). For all other currently-known language
+      types, <codeph>prosrc</codeph> contains the function's source text. <codeph>probin</codeph> is
+      unused except for dynamically-loaded C functions, for which it gives the name of the shared
+      library file containing the function.</p>
+    <table id="hg150092">
+      <title>pg_catalog.pg_proc</title>
+      <tgroup cols="4">
+        <colspec colnum="1" colname="col1" colwidth="131pt"/>
+        <colspec colnum="2" colname="col2" colwidth="69pt"/>
+        <colspec colnum="3" colname="col3" colwidth="104.25pt"/>
+        <colspec colnum="4" colname="col4" colwidth="147pt"/>
+        <thead>
+          <row>
+            <entry colname="col1">column</entry>
+            <entry colname="col2">type</entry>
+            <entry colname="col3">references</entry>
+            <entry colname="col4">description</entry>
+          </row>
+        </thead>
+        <tbody>
+          <row>
+            <entry colname="col1">
+              <codeph>proname</codeph>
+            </entry>
+            <entry colname="col2">name</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Name of the function.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>pronamespace</codeph>
+            </entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3">pg_namespace.oid</entry>
+            <entry colname="col4">The OID of the namespace that contains this function.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>proowner</codeph>
+            </entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3">pg_authid.oid</entry>
+            <entry colname="col4">Owner of the function.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>prolang</codeph>
+            </entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3">pg_language.oid</entry>
+            <entry colname="col4">Implementation language or call interface of this
+              function.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>proisagg</codeph>
+            </entry>
+            <entry colname="col2">boolean</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Function is an aggregate function.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>prosecdef</codeph>
+            </entry>
+            <entry colname="col2">boolean</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Function is a security definer (for example, a 'setuid'
+              function).</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>proisstrict</codeph>
+            </entry>
+            <entry colname="col2">boolean</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Function returns NULL if any call argument is NULL. In that case
+              the function will not actually be called at all. Functions that are not strict must be
+              prepared to handle NULL inputs.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>proretset</codeph>
+            </entry>
+            <entry colname="col2">boolean</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Function returns a set (multiple values of the specified data
+              type).</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>provolatile</codeph>
+            </entry>
+            <entry colname="col2">char</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Tells whether the function's result depends only on its input
+              arguments, or is affected by outside factors. <codeph>i</codeph> = <i>immutable</i>
+              (always delivers the same result for the same inputs), <codeph>s</codeph> =
+                <i>stable</i> (results (for fixed inputs) do not change within a scan), or
+                <codeph>v</codeph> = <i>volatile</i> (results may change at any time or functions
+              with side-effects). </entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>pronargs</codeph>
+            </entry>
+            <entry colname="col2">int2</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Number of arguments.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>prorettype</codeph>
+            </entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3">pg_type.oid</entry>
+            <entry colname="col4">Data type of the return value.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>proiswin</codeph>
+            </entry>
+            <entry colname="col2">boolean</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Function is neither an aggregate nor a scalar function, but a pure
+              window function.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>proargtypes</codeph>
+            </entry>
+            <entry colname="col2">oidvector</entry>
+            <entry colname="col3">pg_type.oid</entry>
+            <entry colname="col4">An array with the data types of the function arguments. This
+              includes only input arguments (including <codeph>INOUT</codeph> arguments), and thus
+              represents the call signature of the function.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>proallargtypes</codeph>
+            </entry>
+            <entry colname="col2">oid[]</entry>
+            <entry colname="col3">pg_type.oid</entry>
+            <entry colname="col4">An array with the data types of the function arguments. This
+              includes all arguments (including <codeph>OUT</codeph> and <codeph>INOUT</codeph>
+              arguments); however, if all the arguments are <codeph>IN</codeph> arguments, this
+              field will be null. Note that subscripting is 1-based, whereas for historical reasons
+              proargtypes is subscripted from 0.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>proargmodes</codeph>
+            </entry>
+            <entry colname="col2">char[]</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">An array with the modes of the function arguments:
+                <codeph>i</codeph> = <codeph>IN</codeph>, <codeph>o</codeph> = <codeph>OUT</codeph>
+              , <codeph>b</codeph> = <codeph>INOUT</codeph>. If all the arguments are IN arguments,
+              this field will be null. Note that subscripts correspond to positions of
+              proallargtypes not proargtypes.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>proargnames</codeph>
+            </entry>
+            <entry colname="col2"> text[] </entry>
+            <entry colname="col3"/>
+            <entry colname="col4">An array with the names of the function arguments. Arguments
+              without a name are set to empty strings in the array. If none of the arguments have a
+              name, this field will be null. Note that subscripts correspond to positions of
+              proallargtypes not proargtypes.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>prosrc </codeph>
+            </entry>
+            <entry colname="col2">text</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">This tells the function handler how to invoke the function. It
+              might be the actual source code of the function for interpreted languages, a link
+              symbol, a file name, or just about anything else, depending on the implementation
+              language/call convention.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>probin</codeph>
+            </entry>
+            <entry colname="col2">bytea</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Additional information about how to invoke the function. Again,
+              the interpretation is language-specific.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>proacl</codeph>
+            </entry>
+            <entry colname="col2">aclitem[]</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Access privileges for the function as given by
+                <codeph>GRANT</codeph>/<codeph>REVOKE</codeph>.</entry>
+          </row>
+        </tbody>
+      </tgroup>
+    </table>
+  </body>
+</topic>

@@ -642,5 +642,133 @@ reset optimizer_segments;
 
 drop function if exists find_operator(query text, operator_name text);
 drop function if exists count_operator(query text, operator_name text);
+-- end_ignore
+
+---
+--- Partition table with appendonly leaf, full join
+---
+
+-- SETUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
+
+CREATE TABLE foo (a int);
+
+CREATE TABLE bar (b int, c int)
+PARTITION BY RANGE (b)
+  SUBPARTITION BY RANGE (c) SUBPARTITION TEMPLATE 
+  (
+    START (1) END (10) WITH (appendonly=true),
+    START (10) END (20)
+  ) 
+( 
+  START (1) END (10) ,
+  START (10) END (20)
+); 
+-- end_ignore
+INSERT INTO foo VALUES (1);
+INSERT INTO bar VALUES (2,3);
+
+SELECT * FROM foo FULL JOIN bar ON foo.a = bar.b;
+
+-- CLEANUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
+-- end_ignore
+
+---
+--- Partition table with appendonly set at middlevel partition, full join
+---
+
+-- SETUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
+
+CREATE TABLE foo (a int);
+
+CREATE TABLE bar (b int, c int)
+PARTITION BY RANGE (b)
+  SUBPARTITION BY RANGE (c) SUBPARTITION TEMPLATE 
+  (
+    START (1) END (10),
+    START (10) END (20)
+  ) 
+( 
+  START (1) END (10) WITH (appendonly=true),
+  START (10) END (20)
+); 
+-- end_ignore
+INSERT INTO foo VALUES (1);
+INSERT INTO bar VALUES (2,3);
+
+SELECT * FROM foo FULL JOIN bar ON foo.a = bar.b;
+
+-- CLEANUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
+-- end_ignore
+
+---
+--- Partition table with appendonly set at root partition, full join
+---
+
+-- SETUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
+
+CREATE TABLE foo (a int);
+
+CREATE TABLE bar (b int, c int) WITH (appendonly=true)
+PARTITION BY RANGE (b)
+  SUBPARTITION BY RANGE (c) SUBPARTITION TEMPLATE 
+  (
+    START (1) END (10),
+    START (10) END (20)
+  ) 
+( 
+  START (1) END (10),
+  START (10) END (20)
+); 
+-- end_ignore
+INSERT INTO foo VALUES (1);
+INSERT INTO bar VALUES (2,3);
+
+SELECT * FROM foo FULL JOIN bar ON foo.a = bar.b;
+
+
+---
+--- Test EXPLAIN on a hash agg that has a Sequence + Partition Selector below it.
+---
+
+-- SETUP
+-- start_ignore
+DROP TABLE IF EXISTS bar;
+-- end_ignore
+CREATE TABLE bar (b int, c int)
+PARTITION BY RANGE (b)
+(
+  START (0) END (10),
+  START (10) END (20)
+);
+
+INSERT INTO bar SELECT g % 20, g % 20 from generate_series(1, 1000) g;
+ANALYZE bar;
+
+SELECT b FROM bar GROUP BY b;
+
+EXPLAIN SELECT b FROM bar GROUP BY b;
+
+
+-- CLEANUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
 drop schema if exists bfv_partition;
 -- end_ignore
+
+

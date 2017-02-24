@@ -119,12 +119,9 @@ LibraryVersion()
 }
 
 extern "C" {
-StringInfo
+const char *
 OptVersion()
 {
-	StringInfo str = gpdb::SiMakeStringInfo();
-	appendStringInfo(str, "%s", GPORCA_VERSION_STRING);
-
-	return str;
+	return GPORCA_VERSION_STRING;
 }
 }

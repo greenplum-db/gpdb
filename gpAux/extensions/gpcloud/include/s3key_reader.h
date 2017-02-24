@@ -168,7 +168,7 @@ class S3KeyReader : public Reader {
 
 class ChunkBuffer {
    public:
-    ChunkBuffer(const string& url, S3KeyReader& reader, const S3MemoryContext& context);
+    ChunkBuffer(const S3Url& s3Url, S3KeyReader& reader, const S3MemoryContext& context);
 
     ~ChunkBuffer();
 
@@ -219,7 +219,7 @@ class ChunkBuffer {
     }
 
    protected:
-    string sourceUrl;
+    S3Url s3Url;
 
    private:
     bool eof;

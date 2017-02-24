@@ -30,8 +30,8 @@ CREATE TABLE
  col015 | bytea                       |                                              | extended | 
  col016 | timestamp with time zone    |                                              | plain    | 
  col017 | interval                    |                                              | plain    | 
- col018 | cidr                        |                                              | plain    | 
- col019 | inet                        |                                              | plain    | 
+ col018 | cidr                        |                                              | main     | 
+ col019 | inet                        |                                              | main     | 
  col020 | macaddr                     |                                              | plain    | 
  col022 | money                       |                                              | plain    | 
  col025 | circle                      |                                              | plain    | 
@@ -92,8 +92,8 @@ CREATE TABLE
  col015 | bytea                       |                                              | extended | 
  col016 | timestamp with time zone    |                                              | plain    | 
  col017 | interval                    |                                              | plain    | 
- col018 | cidr                        |                                              | plain    | 
- col019 | inet                        |                                              | plain    | 
+ col018 | cidr                        |                                              | main     | 
+ col019 | inet                        |                                              | main     | 
  col020 | macaddr                     |                                              | plain    | 
  col022 | money                       |                                              | plain    | 
  col025 | circle                      |                                              | plain    | 

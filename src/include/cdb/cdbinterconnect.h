@@ -14,8 +14,6 @@
 #include "access/htup.h"
 #include "cdb/htupfifo.h"
 
-struct directTransportBuffer;
-
 #include "cdb/cdbselect.h"
 #include "cdb/tupser.h"
 #include "cdb/tupchunk.h"
@@ -93,11 +91,7 @@ typedef struct icpkthdr
 typedef enum MotionConnState
 {
     mcsNull,
-    mcsAccepted,
     mcsSetupOutgoingConnection,
-    mcsConnecting,
-    mcsRecvRegMsg,
-    mcsSendRegMsg,
     mcsStarted,
 	mcsEosSent
 } MotionConnState;
@@ -221,12 +215,6 @@ struct MotionConn
 	/* pointer to the data buffer. */
 	uint8	   *pBuff;
 
-	/* transmit uses two data buffers, along with a timer */
-	uint8	   *ping;
-	uint8	   *pong;
-	uint8	   *activeXmit;
-	GpMonotonicTime activeXmitTime;
-
 	uint16		route;
 
 	/* size of the message in the buffer, if any. */
@@ -250,8 +238,6 @@ struct MotionConn
 	bool		stopRequested;
 
     MotionConnState state;
-
-    uint64      wakeup_ms;
 
 	struct icpkthdr		conn_info;
 	bool		isMirror;
@@ -299,24 +285,11 @@ typedef struct ChunkTransportStateEntry
 	int			numConns;               /* all, including mirrors if present */
     int         numPrimaryConns;        /* does not include mirrors */
 
-	/*
-	 * used for receiving. to select() from a set of interesting MotionConns
-	 * to see when data is ready to be read.  When the incoming connections
-	 * are established, read interest is turned on.  It is turned off when an
-	 * EOS (End of Stream) message is read.
-	 */
-	mpp_fd_set	readSet;
-
-	/* highest file descriptor in the readSet. */
-	int			highReadSock;
     int         scanStart;
 
     /* slice table entries */
     struct Slice   *sendSlice;
     struct Slice   *recvSlice;
-
-    /* setup info */
-    int         outgoingPortRetryCount;
 
 	int			txfd;
 	int			txfd_family;
@@ -505,10 +478,7 @@ typedef struct ChunkTransportState
 	/* keeps track of if we've "activated" connections via SetupInterconnect(). */
 	bool		activated;
 
-	bool		aggressiveRetry;
-
 	bool		teardownActive;
-	List	   *incompleteConns;
 
 	/* slice table stuff. */
 	struct SliceTable  *sliceTable;
@@ -528,5 +498,5 @@ typedef struct ChunkTransportState
 extern void dumpICBufferList(ICBufferList *list, const char *fname);
 extern void dumpUnackQueueRing(const char *fname);
 extern void dumpConnections(ChunkTransportStateEntry *pEntry, const char *fname);
-#endif   /* CDBINTERCONNECT_H */
 
+#endif   /* CDBINTERCONNECT_H */

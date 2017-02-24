@@ -6,5 +6,7 @@ m/^HINT*/
 s/^HINT*//
 m/^NOTICE*/
 s/^NOTICE*//
+m/^(?:ERROR|WARNING|CONTEXT|NOTICE):.*gid\s+=\s+(?:\d+)/
+s/gid.*/gid DUMMY/
 -- end_matchignore
 

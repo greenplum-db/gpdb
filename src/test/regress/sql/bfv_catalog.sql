@@ -1,3 +1,6 @@
+create schema bfv_catalog;
+set search_path=bfv_catalog;
+
 -- count number of certain operators in a given plan
 -- start_ignore
 create language plpythonu;
@@ -41,16 +44,10 @@ u_zj =
 AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr <= c.u_vtgnr  and a.u_zj <= c.u_zj)
 order by u_vtgnr, u_zj, u_folio;
 
-drop table q68t792_temp;
-
 --
 -- Fix bug in Expression to DXL translation for correlated queries when optimizer is turned on.
 --
 set optimizer = on;
-
-DROP TABLE IF EXISTS t1 CASCADE;
-DROP TABLE IF EXISTS t2 CASCADE;
-DROP TABLE IF EXISTS x CASCADE;
 
 CREATE TABLE t1 (a int, b int) DISTRIBUTED BY (a);
 CREATE TABLE t2 (a int, b int) DISTRIBUTED BY (a);
@@ -58,10 +55,6 @@ CREATE TABLE x (a int) DISTRIBUTED BY (a);
 
 -- intent is to: expect to have 'table scan' operator in query plan
 select count_operator('explain select * from x where a=  (select sum(t1.a)  from t1 inner join (select x.a as outer_ref, * from t2) as foo on (foo.a=t1.a+ outer_ref)  group by foo.a);', 'Table Scan') > 0;
-
-DROP TABLE t1;
-DROP TABLE t2;
-DROP TABLE x;
 
 reset optimizer;
 
@@ -528,7 +521,6 @@ where
     konst.dim_bezei     = 'NatCat-Zone'   and gesamt.dim_bezei    = 'NatCat-Zone'   and gesamt.dim_elem_lvl = 0;
 
 -- test queries that should run on the master
-drop table if exists mpp_bfv_1;
 create table mpp_bfv_1(col1 int, col2 text, col3 numeric) distributed by (col1);
 
 -- this cannot go to the _setup file, because it is not propagated here
@@ -552,14 +544,11 @@ select count_operator('explain select * from generate_series(1,10)', 'Motion');
 -- queries over distributed tables should have motions
 select count_operator('explain select col2 from mpp_bfv_1;', 'Motion');
 
-drop table mpp_bfv_1;
-
 -- this cannot go to the _teardown file, because it is not propagated here
 -- start_ignore
 select enable_xform('CXformIndexGet2IndexScan');
 -- end_ignore
 
-drop table if exists mpp_bfv_2;
 create table mpp_bfv_2(a int, b text, primary key (a)) distributed by (a);
 
 -- stop falling back to planner when catalog functions are encountered
@@ -570,7 +559,3 @@ explain select pg_lock_status();
 
 select pg_get_constraintdef(pg_constraint.oid) from pg_constraint, pg_class where conrelid=pg_class.oid and pg_class.relname='mpp_bfv_2';
 
-drop table mpp_bfv_2;
-drop table test_r_rvv_stada_dim_konst;
-drop table test_sf_dd_land_vm;
-drop function count_operator(text,text);

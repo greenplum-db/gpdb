@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="amazon-emr">
+   <title>Using Amazon EMR with Greenplum Database installed on AWS </title>
+   <body>
+      <p>Amazon Elastic MapReduce (EMR) is a managed cluster platform that can run big data
+         frameworks, such as Apache Hadoop and Apache Spark, on Amazon Web Services (AWS) to process
+         and analyze data. For a Greenplum Database system that is installed on Amazon Web Services
+         (AWS), you can define Greenplum Database external tables that use the
+            <codeph>gphdfs</codeph> protocol to access files on an Amazon EMR instance HDFS. </p>
+      <p>In addition to the steps described in <xref
+            href="g-one-time-hdfs-protocol-installation.xml#topic20"/>, you must also ensure
+         Greenplum Database can access the EMR instance. If your Greenplum Database system is
+         running on an Amazon Elastic Compute Cloud (EC2) instance, you configure the Greenplum
+         Database system and the EMR security group. </p>
+      <p>For information about Amazon EMR, see <xref href="https://aws.amazon.com/elasticmapreduce/"
+            format="html" scope="external">https://aws.amazon.com/elasticmapreduce/</xref>. For
+         information about Amazon EC2, see <xref href="https://aws.amazon.com/ec2/" format="html"
+            scope="external">https://aws.amazon.com/ec2/</xref></p>
+      <section>
+         <title>Configuring Greenplum Database and Amazon EMR</title>
+         <p>These steps describe how to set up Greenplum Database system and an Amazon EMR instance
+            to support Greenplum Database external tables:</p>
+         <ol id="ol_wsx_fkq_ft">
+            <li>Ensure that the appropriate Java (including JDK) and Hadoop environments are
+               correctly installed on all Greenplum Database segment hosts.<p>For example, Amazon
+                  EMR Release 4.0.0 includes Apache Hadoop 2.6.0. This Amazon page describes <xref
+                     href="http://aws.amazon.com/about-aws/whats-new/2015/07/amazon-emr-release-4-0-0-with-new-versions-of-apache-hadoop-hive-and-spark-now-available/"
+                     format="html" scope="external">Amazon EMR Release 4.0.0</xref>. </p><p>For
+                  information about Hadoop versions used by EMR and Greenplum Database, see <xref
+                     href="#amazon-emr/table_at3_czf_ht" format="dita"/>.</p></li>
+            <li>Ensure the environment variables and Greenplum Database server configuration
+               parameters are set:<ul id="ul_zc1_llq_ft">
+                  <li>System environment variables:<ul id="ul_z1n_4lq_ft">
+                        <li><codeph>HADOOP_HOME</codeph></li>
+                        <li><codeph>JAVA_HOME</codeph></li>
+                     </ul></li>
+                  <li>Greenplum Database server configuration parameters:<ul id="ul_bxz_2lq_ft">
+                        <li><codeph>gp_hadoop_target_version</codeph></li>
+                        <li><codeph>gp_hadoop_home</codeph></li>
+                     </ul></li>
+               </ul></li>
+            <li>Configure communication between Greenplum Database and the EMR instance Hadoop
+                  master.<p>For example, open port 8020 in the AWS security group.</p></li>
+            <li>Configure for communication between Greenplum Database and EMR instance Hadoop data
+               nodes. Open a TCP/IP port for so that Greenplum Database segments hosts can
+               communicate with EMR instance Hadoop data nodes.<p>For example, open port 50010 in
+                  the AWS security manager.</p></li>
+         </ol>
+         <p>This table lists EMR and Hadooop version information that can be used to configure
+            Greenplum Database.</p>
+         <table frame="all" id="table_at3_czf_ht">
+            <title>EMR Hadoop Configuration Information</title>
+            <tgroup cols="5">
+               <colspec colname="c1" colnum="1" colwidth="1*"/>
+               <colspec colname="c2" colnum="2" colwidth="1.02*"/>
+               <colspec colname="c3" colnum="3" colwidth="1.23*"/>
+               <colspec colname="c4" colnum="4" colwidth="1.42*"/>
+               <colspec colname="c5" colnum="5" colwidth="1.43*"/>
+               <thead>
+                  <row>
+                     <entry>EMR Version </entry>
+                     <entry>EMR Apache Hadoop Version</entry>
+                     <entry>EMR Hadoop Master Port</entry>
+                     <entry>gp_hadoop_target_version</entry>
+                     <entry>Hadoop Version on Greenplum Database Segment Hosts</entry>
+                  </row>
+               </thead>
+               <tbody>
+                  <row>
+                     <entry>4.0</entry>
+                     <entry>2.6</entry>
+                     <entry>8020</entry>
+                     <entry>
+                        <codeph>hadoop2</codeph>
+                     </entry>
+                     <entry>Apache Hadoop 2.x</entry>
+                  </row>
+                  <row>
+                     <entry>3.9</entry>
+                     <entry>2.4</entry>
+                     <entry>9000</entry>
+                     <entry>
+                        <codeph>hadoop2</codeph>
+                     </entry>
+                     <entry>Apache Hadoop 2.x</entry>
+                  </row>
+                  <row>
+                     <entry>3.8</entry>
+                     <entry>2.4</entry>
+                     <entry>9000</entry>
+                     <entry>
+                        <codeph>hadoop2</codeph>
+                     </entry>
+                     <entry>Apache Hadoop 2.x</entry>
+                  </row>
+                  <row>
+                     <entry>3.3</entry>
+                     <entry>2.4</entry>
+                     <entry>9000</entry>
+                     <entry>
+                        <codeph>hadoop2</codeph>
+                     </entry>
+                     <entry>Apache Hadoop 2.x</entry>
+                  </row>
+               </tbody>
+            </tgroup>
+         </table>
+      </section>
+   </body>
+</topic>

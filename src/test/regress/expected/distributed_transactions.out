@@ -795,3 +795,12 @@ select count(*) = 5 as passed from subt_reindex_co;
  t
 (1 row)
 
+-- Reindex on pg_class or reindex database hung if encountered ERROR, due to a
+-- bug. Lets have coverage to validate doesn't happen now.
+\c postgres
+SET debug_abort_after_distributed_prepared = true;
+reindex table pg_class;
+NOTICE:  Releasing segworker groups to retry broadcast.
+ERROR:  Raise an error as directed by Debug_abort_after_distributed_prepared
+RESET debug_abort_after_distributed_prepared;
+\c regression

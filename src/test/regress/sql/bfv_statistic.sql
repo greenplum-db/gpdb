@@ -1,3 +1,6 @@
+create schema bfv_statistic;
+set search_path=bfv_statistic;
+
 -- start_ignore
 create language plpythonu;
 -- end_ignore
@@ -14,7 +17,6 @@ language plpythonu;
 
 set optimizer = on;
 
-DROP TABLE IF EXISTS foo;
 create table foo (a int, b int) distributed by (a);
 insert into foo values (1,1);
 insert into foo values (0,1);
@@ -27,9 +29,7 @@ select stanullfrac, stadistinct, stanumbers1 from pg_statistic where starelid='f
 
 -- exercise the translator
 select check_row_count('explain select * from foo where a is not null and b >= 1;', 3);
-drop table foo;
 
-DROP TABLE IF EXISTS foo2;
 create table foo2(a int) distributed by (a);
 insert into foo2 select generate_series(1,5);
 insert into foo2 select 1 from generate_series(1,5);
@@ -37,7 +37,6 @@ insert into foo2 select 2 from generate_series(1,4);
 insert into foo2 select 3 from generate_series(1,3);
 insert into foo2 select 4 from generate_series(1,2);
 insert into foo2 select 5 from generate_series(1,1);
-
 analyze foo2;
 -- current stats
 select stanumbers1, stavalues1 from pg_statistic where starelid='foo2'::regclass;
@@ -56,7 +55,6 @@ select check_row_count('explain select a from foo2 where a > 1 order by a;', 8);
 --
 
 set gp_create_table_random_default_distribution=off;
-drop table if exists foo3;
 create table foo3(a int);
 
 select * from gp_toolkit.gp_stats_missing where smischema = 'public' AND  smitable = 'foo';
@@ -67,8 +65,6 @@ select * from gp_toolkit.gp_stats_missing where smischema = 'public' AND  smitab
 
 set optimizer=on;
 set gp_create_table_random_default_distribution=off;
-
-drop table if exists bar_dml;
 
 CREATE TABLE bar_dml (
     vtrg character varying(6) NOT NULL,
@@ -96,31 +92,27 @@ WITH (appendonly=true) DISTRIBUTED RANDOMLY;
 
 update bar_dml set (zhlg_org, zhlg_typ_org) = (zhlg, zhlg_typ);
 
-drop table bar_dml;
-
 reset optimizer;
 
 --
 -- Cardinality estimation when there is no histogram and MCV
 --
 
-drop table if exists foo3;
-create table foo3 (a int);
+create table foo4 (a int);
 
-insert into foo3 select i from generate_series(1,99) i;
-insert into foo3 values (NULL);
-analyze foo3;
+insert into foo4 select i from generate_series(1,99) i;
+insert into foo4 values (NULL);
+analyze foo4;
 
-select stanullfrac, stadistinct, stanumbers1 from pg_statistic where starelid='foo3'::regclass and staattnum=1;
+select stanullfrac, stadistinct, stanumbers1 from pg_statistic where starelid='foo4'::regclass and staattnum=1;
 
-select check_row_count('explain select a from foo3 where a > 888;', 1);
+select check_row_count('explain select a from foo4 where a > 888;', 1);
 
 --
 -- Testing that the merging of memo groups inside Orca does not crash cardinality estimation inside Orca
 --
 
 set optimizer = on;
-drop table if exists t1 cascade;
 
 create table t1(c1 int);
 insert into t1 values(1);
@@ -149,7 +141,6 @@ reset optimizer;
 -- test the generation of histogram boundaries for numeric and real data types
 --
 
-drop table if exists foo_real;
 create table foo_real (a int4, b real) distributed randomly;
 
 insert into foo_real values (0, 'Infinity');
@@ -211,7 +202,6 @@ select histogram_bounds from pg_stats where tablename = 'foo_real' and attname =
 
 select most_common_vals from pg_stats where tablename = 'foo_real' and attname = 'b';
 
-drop table if exists foo_numeric;
 create table foo_numeric (a int4, b numeric) distributed randomly;
 
 insert into foo_numeric values (0, 'NaN');
@@ -276,19 +266,14 @@ reset gp_create_table_random_default_distribution;
 -- Ensure that VACUUM ANALYZE does not result in incorrect statistics
 --
 
-DROP TABLE IF EXISTS T25289_T1;
-
 CREATE TABLE T25289_T1 (c int);
 INSERT INTO T25289_T1 VALUES (1);
 DELETE FROM T25289_T1;
 ANALYZE T25289_T1;
 
-DROP TABLE T25289_T1;
-
 --
 -- expect NO more notice after customer run VACUUM FULL
 -- 
-DROP TABLE IF EXISTS T25289_T2;
 
 CREATE TABLE T25289_T2 (c int);
 INSERT INTO T25289_T2 VALUES (1);
@@ -296,29 +281,20 @@ DELETE FROM T25289_T2;
 VACUUM FULL T25289_T2;
 ANALYZE T25289_T2;
 
-DROP TABLE T25289_T2;
-
 --
 -- expect NO notice during analyze if table doesn't have empty pages
 --
-
-DROP TABLE IF EXISTS T25289_T3;
 
 CREATE TABLE T25289_T3 (c int);
 INSERT INTO T25289_T3 VALUES (1);
 ANALYZE T25289_T3;
 
-DROP TABLE IF EXISTS T25289_T3;
-
 --
 -- expect NO notice when analyzing append only tables
 -- 
-
-DROP TABLE IF EXISTS T25289_T4;
 
 CREATE TABLE T25289_T4 (c int, d int)
 WITH (APPENDONLY=ON) DISTRIBUTED BY (c)
 PARTITION BY RANGE(d) (START(1) END (100) EVERY(1));
 ANALYZE T25289_T4;
 
-DROP TABLE IF EXISTS T25289_T4;

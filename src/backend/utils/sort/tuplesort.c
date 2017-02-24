@@ -299,7 +299,6 @@ struct Tuplesortstate
 	SortTuple  *memtuples;		/* array of SortTuple structs */
 	int			memtupcount;	/* number of tuples currently present */
 	int			memtupsize;		/* allocated length of memtuples array */
-	int64		memtupLIMIT;	/* LIMIT of memtuples array */ /*CDB*/
 	bool		memtupblimited; /* true when hit the limit */
 	int64  		discardcount;   /* count of discards */ /*CDB*/
 	int64  		totalNumTuples;    /* count of all input tuples */ /*CDB*/
@@ -425,6 +424,8 @@ static bool is_sortstate_rwfile(Tuplesortstate *state)
 #define READTUP(state,pos,stup,tape,len) ((*(state)->readtup) (state, pos, stup, tape, len))
 #define REVERSEDIRECTION(state) ((*(state)->reversedirection) (state))
 #define LACKMEM(state)		((state)->availMem < 0)
+
+static void tuplesort_get_stats(Tuplesortstate *state, const char **sortMethod, const char **spaceType, long *spaceUsed);
 
 static inline void USEMEM(Tuplesortstate *state, int amt)
 {
@@ -590,7 +591,6 @@ tuplesort_begin_common(int workMem, bool randomAccess, bool allocmemtuple)
 
 	state->memtupcount = 0;
 	state->memtupsize = 1024;	/* initial guess */
-	state->memtupLIMIT = 0; /*CDB*/
 	state->memtupblimited = false;
 	state->discardcount = 0; /*CDB*/
 	state->totalNumTuples  = 0; /*CDB*/
@@ -636,16 +636,9 @@ tuplesort_begin_common(int workMem, bool randomAccess, bool allocmemtuple)
  * and uniqueness.  Should do this after begin_heap.
  */
 void
-cdb_tuplesort_init(Tuplesortstate *state, 
-				   int64 offset, int64 limit, int unique, int sort_flags,
+cdb_tuplesort_init(Tuplesortstate *state, int unique, int sort_flags,
 				   int64 maxdistinct)
 {
-	/* set a limit to internal sorts. If the offset is non-zero but
-	 * the limit is not set, then no limit */
-	if (limit)
-	{
-		state->memtupLIMIT = offset + limit;
-	}
 	if (unique)
 		state->noduplicates = true;
 
@@ -658,7 +651,7 @@ cdb_tuplesort_init(Tuplesortstate *state,
 
 	state->standardsort = 
 			(state->mppsortflags == 0) ||
-			((state->memtupLIMIT == 0) 
+			((!state->bounded)
 			 && (!state->noduplicates)); 
 }
 
@@ -969,6 +962,11 @@ tuplesort_end(Tuplesortstate *state)
 		spaceUsed = (state->allowedMem - state->availMem + 1023) / 1024;
 
 	/*
+	 * Call before state->tapeset is closed.
+	 */
+	tuplesort_finalize_stats(state);
+
+	/*
 	 * Delete temporary "tape" files, if any.
 	 *
 	 * Note: want to include this in reported total cost of sort, hence need
@@ -983,8 +981,6 @@ tuplesort_end(Tuplesortstate *state)
 			workfile_mgr_close_file(NULL /* workset */, state->pfile_rwfile_state);
         }
 	}
-
-	tuplesort_finalize_stats(state);
 
 	if (trace_sort)
 	{
@@ -1028,6 +1024,10 @@ tuplesort_finalize_stats(Tuplesortstate *state)
             (double)MemoryContextGetPeakSpace(state->sortcontext);
 
 		state->statsFinalized = true;
+		tuplesort_get_stats(state,
+				&state->instrument->sortMethod,
+				&state->instrument->sortSpaceType,
+				&state->instrument->sortSpaceUsed);
     }
 }
 
@@ -2937,8 +2937,8 @@ tuplesort_sorted_insert(Tuplesortstate *state, SortTuple *tuple,
 	/* CDB: always add new value if never dumped or no limit, else
 	 * drop the last value if it exceeds the limit 
 	 */
-	if ((state->memtupLIMIT) 
-		&& (state->memtupcount > state->memtupLIMIT))
+	if ((state->bounded)
+		&& (state->memtupcount > state->bound))
 	{
 		/* set blimited true if have limit and memtuples are sorted */
 		state->memtupblimited = true;			

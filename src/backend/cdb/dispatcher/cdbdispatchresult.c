@@ -781,10 +781,11 @@ cdbdisp_resultBegin(CdbDispatchResults *results, int sliceIndex)
 	if (sliceIndex < 0)
 		return &results->resultArray[0];
 
+	Assert(sliceIndex < results->sliceCapacity);
+
 	si = &results->sliceMap[sliceIndex];
 
-	Assert(sliceIndex < results->sliceCapacity &&
-		   si->resultBegin >= 0 &&
+	Assert(si->resultBegin >= 0 &&
 		   si->resultBegin <= si->resultEnd &&
 		   si->resultEnd <= results->resultCount);
 

@@ -70,6 +70,25 @@ traverseQueryOids
 }
 
 /*
+ * Error context callback for handling errors in the SQL query passed as
+ * argument to gp_dump_query_oids()
+ */
+static void
+sql_query_parse_error_callback(void *arg)
+{
+	const char *query_text = (const char *) arg;
+	int			syntaxerrposition = geterrposition();
+
+	/*
+	 * The error is not in the original query. Report the query that was
+	 * passed as argument as an "internal query", and the position in it.
+	 */
+	errposition(0);
+	internalerrposition(syntaxerrposition);
+	internalerrquery(query_text);
+}
+
+/*
  * Function dumping dependent relation & function oids for a given SQL text
  */
 Datum
@@ -85,6 +104,7 @@ gp_dump_query_oids(PG_FUNCTION_ARGS)
 	StringInfoData relbuf,
 				funcbuf;
 	StringInfoData str;
+	ErrorContextCallback sqlerrcontext;
 
 	memset(&ctl, 0, sizeof(HASHCTL));
 	ctl.keysize = sizeof(Oid);
@@ -93,6 +113,14 @@ gp_dump_query_oids(PG_FUNCTION_ARGS)
 
 	relhtab = hash_create("relid hash table", 100, &ctl, HASH_ELEM | HASH_FUNCTION);
 	funchtab = hash_create("funcid hash table", 100, &ctl, HASH_ELEM | HASH_FUNCTION);
+
+	/*
+	 * Setup error traceback support for ereport().
+	 */
+	sqlerrcontext.callback = sql_query_parse_error_callback;
+	sqlerrcontext.arg = sqlText;
+	sqlerrcontext.previous = error_context_stack;
+	error_context_stack = &sqlerrcontext;
 
 	/*
 	 * Traverse through the query list. For EXPLAIN statements, the query list
@@ -117,6 +145,8 @@ gp_dump_query_oids(PG_FUNCTION_ARGS)
 		else
 			expanded_queryList = lappend(expanded_queryList, query);
 	}
+
+	error_context_stack = sqlerrcontext.previous;
 
 	/* Then scan each Query and scrape any relation and function OIDs */
 	initStringInfo(&relbuf);

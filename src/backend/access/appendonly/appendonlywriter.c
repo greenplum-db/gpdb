@@ -402,7 +402,7 @@ AORelGetHashEntry(Oid relid)
  * Gets or creates the AORelHashEntry.
  * 
  * Assumes that the AOSegFileLock is acquired.
- * The AOSegFileLock will still be aquired when this function returns, expect
+ * The AOSegFileLock will still be acquired when this function returns, expect
  * if it errors out.
  */
 static AORelHashEntryData * 
@@ -1074,13 +1074,20 @@ SetSegnoForCompactionInsert(Relation rel,
  * segdb into its local AO table.
  *
  * ROLE_DISPATCH - when this function is called on a QD the QD needs to select
- *				   a segment file number for writing data. It does so by looking
- *				   at the in-memory hash table and selecting a segment number
- *				   that the most empty across the database and is also not
- *				   currently used. Or, if we are in an explicit transaction and
- *				   inserting into the same table we use the same segno over and
- *				   over again. the passed in parameter 'existingsegno' is
- *				   meaningless for this role.
+ *				   a segment file number for writing data. It does so by
+ *				   looking at the in-memory hash table and selecting a segment
+ *				   number that the most empty across the database and is also
+ *				   not currently used. Or, if we are in an explicit
+ *				   transaction and inserting into the same table we use the
+ *				   same segno over and over again. the passed in parameter
+ *				   'existingsegno' is meaningless for this role. Also, it's
+ *				   mandatory for insert coming from same transaction as create
+ *				   (except CTAS or ALTER which use RESERVED_SEGNO) to use
+ *				   segfile 1, currenty below logic guarantees the same as it
+ *				   always checks and assigns in ascending order which file to
+ *				   use for insert. This property is leveraged to pre-create
+ *				   entries in gp_fastsequence (for further details check
+ *				   comment for InsertInitialFastSequenceEntries()).
  *
  * ROLE_EXECUTE  - we need to use the segment file number that the QD decided
  *				   on and sent to us. it is the passed in parameter - use it.

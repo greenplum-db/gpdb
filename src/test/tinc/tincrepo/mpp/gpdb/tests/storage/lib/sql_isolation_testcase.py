@@ -299,7 +299,6 @@ class SQLIsolationExecutor(object):
 # Skipping loading for this model class. Otherwise, by default, whenever this class is imported in sub-classes,
 # unittest will load tests for this class as well. If there are sql files in the same folder as the model class,
 # the loading mechanism of SQLTestCase will try to construct tests for those sqls which is not intended here.
-# uao_udf.sql in the current directory is not a test sql and this will prevent constructing a test for that sql.
 
 @tinctest.skipLoading("Model class. This annotation will prevent this class from loading tests when imported in sub-classes")
 class SQLIsolationTestCase(SQLTestCase):

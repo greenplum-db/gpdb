@@ -4672,12 +4672,12 @@ OptWeb:		WEB						{ $$ = TRUE; }
 			;
 
 ExtTypedesc:
-			LOCATION '(' cdb_string_list ')'		
+			LOCATION '(' cdb_string_list ')' ext_on_clause_list
 			{
 				ExtTableTypeDesc *n = makeNode(ExtTableTypeDesc);
 				n->exttabletype = EXTTBL_TYPE_LOCATION;
 				n->location_list = $3; 
-				n->on_clause = NIL;
+				n->on_clause = $5;
 				n->command_string = NULL;
 				$$ = (Node *)n;
 	

@@ -84,7 +84,6 @@ static Oid GetIndexOpClass(List *opclass, Oid attrType,
 static bool relationHasPrimaryKey(Relation rel);
 static bool relationHasUniqueIndex(Relation rel);
 
-bool gp_hash_index = false; /* hash index phase out. */
 
 /*
  * DefineIndex
@@ -782,9 +781,13 @@ DefineIndex(RangeVar *heapRelation,
 	 * Also, GetCurrentVirtualXIDs never reports our own vxid, so we need not
 	 * check for that.
 	 */
+#if 0  /* Upstream code not applicable to GPDB */
 	old_snapshots = GetCurrentVirtualXIDs(ActiveSnapshot->xmax, false,
 										  PROC_IS_AUTOVACUUM | PROC_IN_VACUUM);
-
+#else
+	old_snapshots = GetCurrentVirtualXIDs(ActiveSnapshot->xmax, false,
+										  PROC_IS_AUTOVACUUM);
+#endif
 	while (VirtualTransactionIdIsValid(*old_snapshots))
 	{
 		VirtualXactLockTableWait(*old_snapshots);

@@ -588,3 +588,8 @@ select * from nested_in_tbl t1  where tc1 in
   (select 1 from nested_in_tbl t2 where tc1 in
     (select 1 from nested_in_tbl t3 where t3.tc2 = t2.tc2));
 drop table nested_in_tbl;
+
+--
+-- Window query with a function scan that has non-correlated subquery.
+--
+SELECT rank() over (partition by min(c) order by min(c)) AS p_rank FROM (SELECT d AS c FROM (values(1)) d1, generate_series(0,(SELECT 2)) AS d) tt GROUP BY c;

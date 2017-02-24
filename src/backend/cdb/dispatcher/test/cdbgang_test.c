@@ -112,9 +112,6 @@ void mockLibpq(PGconn *pgConn, int motionListener, int qePid)
 	expect_value_count(PQstatus, conn, pgConn, -1);
 	will_return_count(PQstatus, CONNECTION_OK, -1);
 
-	expect_value_count(PQsocket, conn, pgConn, -1);
-	will_return_count(PQsocket, 100, -1);
-
 	expect_value_count(PQsetNoticeReceiver, conn, pgConn, -1);
 	expect_any_count(PQsetNoticeReceiver, proc, -1);
 	expect_any_count(PQsetNoticeReceiver, arg, -1);
@@ -186,9 +183,6 @@ static void test__createReaderGang(void **state)
 	will_return(IsTransactionOrTransactionBlock, true);
 	will_return_count(getgpsegmentCount, segmentCount, -1);
 	will_return_count(getFtsVersion, ftsVersion, 1);
-
-	expect_any_count(isSockAlive, sock, -1);
-	will_return_count(isSockAlive, true, -1);
 
 	mockLibpq(conn, motionListener, qePid);
 

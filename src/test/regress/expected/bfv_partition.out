@@ -1672,3 +1672,198 @@ reset optimizer_segments;
 drop function if exists find_operator(query text, operator_name text);
 drop function if exists count_operator(query text, operator_name text);
 -- end_ignore
+---
+--- Partition table with appendonly leaf, full join
+---
+-- SETUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+NOTICE:  table "foo" does not exist, skipping
+DROP TABLE IF EXISTS bar;
+NOTICE:  table "bar" does not exist, skipping
+CREATE TABLE foo (a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE bar (b int, c int)
+PARTITION BY RANGE (b)
+  SUBPARTITION BY RANGE (c) SUBPARTITION TEMPLATE 
+  (
+    START (1) END (10) WITH (appendonly=true),
+    START (10) END (20)
+  ) 
+( 
+  START (1) END (10) ,
+  START (10) END (20)
+); 
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1" for table "bar"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1_2_prt_1" for table "bar_1_prt_1"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1_2_prt_2" for table "bar_1_prt_1"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2" for table "bar"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2_2_prt_1" for table "bar_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2_2_prt_2" for table "bar_1_prt_2"
+INSERT INTO foo VALUES (1);
+INSERT INTO bar VALUES (2,3);
+-- end_ignore
+SELECT * FROM foo FULL JOIN bar ON foo.a = bar.b;
+ a | b | c 
+---+---+---
+ 1 |   |  
+   | 2 | 3
+(2 rows)
+
+-- CLEANUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
+-- end_ignore
+---
+--- Partition table with appendonly set at middlevel partition, full join
+---
+-- SETUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+NOTICE:  table "foo" does not exist, skipping
+DROP TABLE IF EXISTS bar;
+NOTICE:  table "bar" does not exist, skipping
+CREATE TABLE foo (a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE bar (b int, c int)
+PARTITION BY RANGE (b)
+  SUBPARTITION BY RANGE (c) SUBPARTITION TEMPLATE 
+  (
+    START (1) END (10),
+    START (10) END (20)
+  ) 
+( 
+  START (1) END (10) WITH (appendonly=true),
+  START (10) END (20)
+); 
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1" for table "bar"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1_2_prt_1" for table "bar_1_prt_1"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1_2_prt_2" for table "bar_1_prt_1"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2" for table "bar"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2_2_prt_1" for table "bar_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2_2_prt_2" for table "bar_1_prt_2"
+INSERT INTO foo VALUES (1);
+INSERT INTO bar VALUES (2,3);
+-- end_ignore
+SELECT * FROM foo FULL JOIN bar ON foo.a = bar.b;
+ a | b | c 
+---+---+---
+ 1 |   |  
+   | 2 | 3
+(2 rows)
+
+-- CLEANUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
+-- end_ignore
+---
+--- Partition table with appendonly set at root partition, full join
+---
+-- SETUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+NOTICE:  table "foo" does not exist, skipping
+DROP TABLE IF EXISTS bar;
+NOTICE:  table "bar" does not exist, skipping
+CREATE TABLE foo (a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE bar (b int, c int) WITH (appendonly=true)
+PARTITION BY RANGE (b)
+  SUBPARTITION BY RANGE (c) SUBPARTITION TEMPLATE 
+  (
+    START (1) END (10),
+    START (10) END (20)
+  ) 
+( 
+  START (1) END (10),
+  START (10) END (20)
+); 
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1" for table "bar"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1_2_prt_1" for table "bar_1_prt_1"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1_2_prt_2" for table "bar_1_prt_1"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2" for table "bar"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2_2_prt_1" for table "bar_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2_2_prt_2" for table "bar_1_prt_2"
+INSERT INTO foo VALUES (1);
+INSERT INTO bar VALUES (2,3);
+-- end_ignore
+SELECT * FROM foo FULL JOIN bar ON foo.a = bar.b;
+ a | b | c 
+---+---+---
+ 1 |   |  
+   | 2 | 3
+(2 rows)
+
+---
+--- Test EXPLAIN on a hash agg that has a Sequence + Partition Selector below it.
+---
+-- SETUP
+-- start_ignore
+DROP TABLE IF EXISTS bar;
+-- end_ignore
+CREATE TABLE bar (b int, c int)
+PARTITION BY RANGE (b)
+(
+  START (0) END (10),
+  START (10) END (20)
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1" for table "bar"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2" for table "bar"
+INSERT INTO bar SELECT g % 20, g % 20 from generate_series(1, 1000) g;
+ANALYZE bar;
+SELECT b FROM bar GROUP BY b;
+ b  
+----
+  7
+  4
+ 19
+  3
+  5
+ 18
+  6
+ 11
+  9
+  8
+ 12
+ 10
+ 17
+  1
+  0
+  2
+ 16
+ 15
+ 14
+ 13
+(20 rows)
+
+EXPLAIN SELECT b FROM bar GROUP BY b;
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=18.50..18.60 rows=10 width=4)
+   ->  HashAggregate  (cost=18.50..18.60 rows=4 width=4)
+         Group By: bfv_partition.bar.b
+         ->  Append  (cost=0.00..16.00 rows=334 width=4)
+               ->  Seq Scan on bar_1_prt_1 bar  (cost=0.00..8.00 rows=167 width=4)
+               ->  Seq Scan on bar_1_prt_2 bar  (cost=0.00..8.00 rows=167 width=4)
+ Optimizer status: legacy query optimizer
+(7 rows)
+
+-- CLEANUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
+drop schema if exists bfv_partition;
+-- end_ignore

@@ -11,7 +11,6 @@ enum ResponseStatus {
 };
 
 typedef long ResponseCode;
-#define HeadResponseFail -1
 
 // 2XX are successful response.
 // Here we deal with 200 (OK), 204 (no content) and 206 (partial content) currently,
@@ -46,6 +45,8 @@ class Response {
     }
 
     void FillResponse(ResponseCode responseCode) {
+        this->setResponseCode(responseCode);
+
         if (isSuccessfulResponse(responseCode)) {
             this->setStatus(RESPONSE_OK);
             this->setMessage("Success");
@@ -71,11 +72,6 @@ class Response {
         headersBuffer.insert(headersBuffer.end(), ptr, ptr + size);
     }
 
-    void clearHeadersBuffer() {
-        vector<uint8_t> emptyHeaders;
-        headersBuffer.swap(emptyHeaders);
-    }
-
     S3VectorUInt8& getRawData() {
         return dataBuffer;
     }
@@ -96,6 +92,14 @@ class Response {
         headersBuffer.swap(emptyHeaders);
     }
 
+    ResponseCode getResponseCode() const {
+        return responseCode;
+    }
+
+    void setResponseCode(ResponseCode responseCode) {
+        this->responseCode = responseCode;
+    }
+
     const string& getMessage() const {
         return message;
     }
@@ -113,9 +117,12 @@ class Response {
     }
 
    private:
+    ResponseCode responseCode;
+
     // status is OK when get full HTTP response even response body may means request failure.
     ResponseStatus status;
     string message;
+
     vector<uint8_t> headersBuffer;
     S3VectorUInt8 dataBuffer;
 };

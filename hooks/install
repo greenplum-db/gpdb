@@ -1,0 +1,6 @@
+#!/bin/sh
+hookdir=$(git rev-parse --git-dir)/hooks
+echo "Creating symlinks in $hookdir"
+
+set -ex
+ln -sf ../../hooks/pre-push $hookdir

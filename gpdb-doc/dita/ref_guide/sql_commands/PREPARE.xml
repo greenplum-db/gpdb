@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1"><title id="dx20941">PREPARE</title><body><p id="sql_command_desc">Prepare a statement for execution.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">PREPARE <varname>name</varname> [ (<varname>datatype</varname> [, ...] ) ] AS <varname>statement</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>PREPARE</codeph> creates a prepared statement, possibly with
+unbound parameters. A prepared statement is a server-side object that
+can be used to optimize performance. A prepared statement may be subsequently
+executed with a binding for its parameters. Greenplum Database may choose
+to replan the query for different executions of the same prepared statement.
+</p><p>Prepared statements can take parameters: values that are substituted
+into the statement when it is executed. When creating the prepared statement,
+refer to parameters by position, using <codeph>$1</codeph>, <codeph>$2</codeph>,
+etc. A corresponding list of parameter data types can optionally be specified.
+When a parameter's data type is not specified or is declared as unknown,
+the type is inferred from the context in which the parameter is used
+(if possible). When executing the statement, specify the actual values
+for these parameters in the <codeph>EXECUTE</codeph> statement.</p><p>Prepared statements only last for the duration of the current database session. When the session
+        ends, the prepared statement is forgotten, so it must be recreated before being used again.
+        This also means that a single prepared statement cannot be used by multiple simultaneous
+        database clients; however, each client can create their own prepared statement to use. The
+        prepared statement can be manually cleaned up using the <codeph><xref
+            href="DEALLOCATE.xml#topic1" type="topic" format="dita"/></codeph> command. </p><p>Prepared statements have the largest performance advantage when a
+single session is being used to execute a large number of similar statements.
+The performance difference will be particularly significant if the statements
+are complex to plan or rewrite, for example, if the query involves a
+join of many tables or requires the application of several rules. If
+the statement is relatively simple to plan and rewrite but relatively
+expensive to execute, the performance advantage of prepared statements
+will be less noticeable.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>An arbitrary name given to this particular prepared statement. It
+must be unique within a single session and is subsequently used to execute
+or deallocate a previously prepared statement.</pd></plentry><plentry><pt><varname>datatype</varname></pt><pd>The data type of a parameter to the prepared statement. If the data
+type of a particular parameter is unspecified or is specified as unknown,
+it will be inferred from the context in which the parameter is used.
+To refer to the parameters in the prepared statement itself, use <codeph>$1</codeph>,
+<codeph>$2</codeph>, etc. </pd></plentry><plentry><pt><varname>statement</varname></pt><pd>Any <codeph>SELECT</codeph>, <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>,
+<codeph>DELETE</codeph>, or <codeph>VALUES</codeph> statement.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p>In some situations, the query plan produced for a prepared statement
+will be inferior to the query plan that would have been chosen if the
+statement had been submitted and executed normally. This is because when
+the statement is planned and the planner attempts to determine the optimal
+query plan, the actual values of any parameters specified in the statement
+are unavailable. Greenplum Database collects statistics on the distribution
+of data in the table, and can use constant values in a statement to make
+guesses about the likely result of executing the statement. Since this
+data is unavailable when planning prepared statements with parameters,
+the chosen plan may be suboptimal. To examine the query plan Greenplum
+Database has chosen for a prepared statement, use <codeph>EXPLAIN</codeph>.
+</p><p>For more information on query planning and the statistics collected
+by Greenplum Database for that purpose, see the <codeph>ANALYZE</codeph>
+documentation. </p><p>You can see all available prepared statements of a session by querying the
+          <codeph>pg_prepared_statements</codeph> system view.</p></section><section id="section6"><title>Examples</title><p>Create a prepared statement for an <codeph>INSERT</codeph> statement,
+and then execute it:</p><codeblock>PREPARE fooplan (int, text, bool, numeric) AS INSERT INTO 
+foo VALUES($1, $2, $3, $4);
+EXECUTE fooplan(1, 'Hunter Valley', 't', 200.00);</codeblock><p>Create a prepared statement for a <codeph>SELECT</codeph> statement, and
+then execute it. Note that the data type of the second parameter is not
+specified, so it is inferred from the context in which <codeph>$2</codeph>
+is used:</p><codeblock>PREPARE usrrptplan (int) AS SELECT * FROM users u, logs l 
+WHERE u.usrid=$1 AND u.usrid=l.usrid AND l.date = $2;
+EXECUTE usrrptplan(1, current_date);</codeblock></section><section id="section7"><title>Compatibility</title><p>The SQL standard includes a <codeph>PREPARE</codeph> statement, but
+it is only for use in embedded SQL. This version of the <codeph>PREPARE</codeph>
+statement also uses a somewhat different syntax.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="EXECUTE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
+            href="DEALLOCATE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>

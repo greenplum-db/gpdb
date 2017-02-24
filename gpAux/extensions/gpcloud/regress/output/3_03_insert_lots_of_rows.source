@@ -23,3 +23,24 @@ SELECT min(volume), max(volume), count(*) FROM s3write_bulk_read;
 
 DROP EXTERNAL TABLE IF EXISTS s3write_bulk_read;
 DROP EXTERNAL TABLE IF EXISTS s3write_bulk_write;
+CREATE READABLE EXTERNAL TABLE s3write_bulk_read_onmaster (date text, time text, status bool, sample1 float, sample2 float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/bulk_onmaster/ config=@config_file@') ON MASTER FORMAT 'csv';
+CREATE WRITABLE EXTERNAL TABLE s3write_bulk_write_onmaster (date text, time text, status bool, sample1 float, sample2 float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/bulk_onmaster/ config=@config_file@') ON MASTER FORMAT 'csv';
+SELECT count(*) FROM s3write_bulk_read_onmaster;
+ count 
+-------
+     0
+(1 row)
+
+INSERT INTO s3write_bulk_write_onmaster (date, time, status, sample1, sample2, volume)
+        SELECT current_date, localtime, (random() > 0.5)::bool, trunc(random()::numeric, 8), trunc(random()::numeric, 8), v
+        FROM generate_series(1, 100000) as v;
+SELECT min(volume), max(volume), count(*) FROM s3write_bulk_read_onmaster;
+ min |   max  |  count  
+-----+--------+--------
+   1 | 100000 | 100000
+(1 row)
+
+DROP EXTERNAL TABLE IF EXISTS s3write_bulk_read_onmaster;
+DROP EXTERNAL TABLE IF EXISTS s3write_bulk_write_onmaster;

@@ -17,9 +17,10 @@
  */
 
 #include "postgres.h"
+
+#include "port/atomics.h"
 #include "storage/shmem.h"
 #include "utils/syncbitvector.h"
-#include "utils/gp_atomic.h"
 
 /*
  * bit vector access descriptor.

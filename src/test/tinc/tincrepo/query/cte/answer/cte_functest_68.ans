@@ -15,7 +15,7 @@ WITH v AS (SELECT a, b FROM foo WHERE b < 5),
 SELECT v1.a, v2.c 
 FROM v AS v1, v as v2
 WHERE v1.a =v2.c;
-psql:/data/prabhd/test/tincrepo/main/private/prabhd/query/cte/sql/../output/cte_functest_68_gucs.sql:15: ERROR:  query name "v" in WITH clause must not be specified more than once
+psql:/data/prabhd/test/tincrepo/main/private/prabhd/query/cte/sql/../output/cte_functest_68_gucs.sql:15: ERROR:  WITH query name "v" specified more than once
 LINE 2:      v AS (SELECT c, d FROM bar WHERE c < 2)
              ^
 WITH CTE(a,b) AS

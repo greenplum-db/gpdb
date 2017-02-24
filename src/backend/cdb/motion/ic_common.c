@@ -8,15 +8,6 @@
  *-------------------------------------------------------------------------
  */
 
-#ifdef WIN32
-/*
- * Need this to get WSAPoll (poll). And it
- * has to be set before any header from the Win32 API is loaded.
- */
-#undef _WIN32_WINNT
-#define _WIN32_WINNT 0x0600
-#endif
-
 #include "postgres.h"
 
 #include "nodes/execnodes.h"            /* Slice, SliceTable */
@@ -41,13 +32,6 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 
-#ifdef HAVE_POLL_H
-#include <poll.h>
-#endif
-#ifdef HAVE_SYS_POLL_H
-#include <sys/poll.h>
-#endif
-
 #include "port.h"
 
 #ifdef WIN32
@@ -56,55 +40,10 @@
 #define _WIN32_WINNT 0x0600
 #endif
 #include <winsock2.h>
-#include <ws2tcpip.h>
 #define SHUT_RDWR SD_BOTH
 #define SHUT_RD SD_RECEIVE
 #define SHUT_WR SD_SEND
 
-/* If we have old platform sdk headers, WSAPoll() might not be there */
-#ifndef POLLIN
-/* Event flag definitions for WSAPoll(). */
-
-#define POLLRDNORM  0x0100
-#define POLLRDBAND  0x0200
-#define POLLIN      (POLLRDNORM | POLLRDBAND)
-#define POLLPRI     0x0400
-
-#define POLLWRNORM  0x0010
-#define POLLOUT     (POLLWRNORM)
-#define POLLWRBAND  0x0020
-
-#define POLLERR     0x0001
-#define POLLHUP     0x0002
-#define POLLNVAL    0x0004
-
-typedef struct pollfd {
-
-    SOCKET  fd;
-    SHORT   events;
-    SHORT   revents;
-
-} WSAPOLLFD, *PWSAPOLLFD, FAR *LPWSAPOLLFD;
-__control_entrypoint(DllExport)
-WINSOCK_API_LINKAGE
-int
-WSAAPI
-WSAPoll(
-    IN OUT LPWSAPOLLFD fdArray,
-    IN ULONG fds,
-    IN INT timeout
-    );
-#endif
-
-#define poll WSAPoll
-
-/*
- * Postgres normally uses it's own custom select implementation
- * on Windows, but they haven't implemented execeptfds, which
- * we use here.  So, undef this to use the normal Winsock version
- * for now
- */
-#undef select
 #endif
 
 /*
@@ -120,22 +59,24 @@ WSAPoll(
  * GLOBAL STATE VARIABLES
  */
 
-/* Socket file descriptor for the listener. */
-int		UDP_listenerFd;
+/* Socket file descriptor for the listener and sender. */
+int		ICListenerSocket;
+int 	ICSenderSocket;
+
+/*
+ * Ports of Interconnect, assigned by initMotionLayerIPC() at process startup.
+ * These ports are used for the duration of this process and should never change.
+ */
+uint16	ICListenerPort;
+uint16 	ICSenderPort;
+
+int 	ICSenderFamily;
+
 
 /* Socket file descriptor for the sequence server. */
 int		savedSeqServerFd = -1;
 char	*savedSeqServerHost = NULL;
 uint16	savedSeqServerPort = 0;
-
-/*
- * Outgoing port assignment
- *
- * To reserve a port number for outgoing connections, we open a dummy
- * listening socket.  Nobody connects to this socket.
- */
-int		portReservationFd = -1;
-int		outgoingPort = 0;
 
 /*=========================================================================
  * FUNCTIONS PROTOTYPES
@@ -272,11 +213,9 @@ InitMotionLayerIPC(void)
 	savedSeqServerFd = -1;
 
 	/* use a local uint16 to remove warning of 'incompatible type' */
-	uint16 port;
-	InitMotionUDPIFC(&UDP_listenerFd, &port);
-	Gp_listener_port = port;
+	InitMotionUDPIFC();
 
-	elog(DEBUG1, "Interconnect listening on udp port %d", Gp_listener_port);
+	elog(DEBUG1, "Interconnect listener port %d, sender port %d", ICListenerPort, ICSenderPort);
 }
 
 /* See ml_ipc.h */
@@ -290,16 +229,12 @@ CleanUpMotionLayerIPC(void)
 
 	/* close down the Interconnect listener socket. */
 
-	if (UDP_listenerFd >= 0)
-		closesocket(UDP_listenerFd);
-
-    if (portReservationFd >= 0)
-        closesocket(portReservationFd);
+	if (ICListenerSocket >= 0)
+		closesocket(ICListenerSocket);
 
 	/* be safe and reset global state variables. */
-	Gp_listener_port = 0;
-	UDP_listenerFd = -1;
-    portReservationFd = -1;
+	ICListenerPort = 0;
+	ICListenerSocket = -1;
 }
 
 /* See ml_ipc.h */
@@ -745,7 +680,7 @@ createChunkTransportState(ChunkTransportState *transportStates,
 	{
 		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 						errmsg("Interconnect Error: A HTAB entry for motion node %d already exists.", motNodeID),
-						errdetail("conns %p numConns %d first sock %d highreadsock %d", pEntry->conns, pEntry->numConns, pEntry->conns[0].sockfd, pEntry->highReadSock)));
+						errdetail("conns %p numConns %d first sock %d", pEntry->conns, pEntry->numConns, pEntry->conns[0].sockfd)));
 	}
 
 	pEntry->valid = true;
@@ -753,11 +688,9 @@ createChunkTransportState(ChunkTransportState *transportStates,
 	pEntry->motNodeId = motNodeID;
     pEntry->numConns = numPrimaryConns;
 	pEntry->numPrimaryConns = numPrimaryConns;
-	pEntry->highReadSock = 0;
     pEntry->scanStart = 0;
     pEntry->sendSlice = sendSlice;
     pEntry->recvSlice = recvSlice;
-    pEntry->outgoingPortRetryCount = 0;
 
 	pEntry->conns = palloc0(pEntry->numConns * sizeof(pEntry->conns[0]));
 
@@ -772,11 +705,8 @@ createChunkTransportState(ChunkTransportState *transportStates,
         conn->tupleCount = 0;
         conn->stillActive = false;
         conn->stopRequested = false;
-        conn->wakeup_ms = 0;
         conn->cdbProc = NULL;
     }
-
-	MPP_FD_ZERO(&pEntry->readSet);
 
 	return pEntry;
 }
@@ -870,114 +800,6 @@ void adjustMasterRouting(Slice *recvSlice)
 				cdbProc->listenerAddr = pstrdup(MyProcPort->remote_host);
 		}
 	}
-}
-
-void
-SendDummyPacket(void)
-{
-	int sockfd = -1;
-	int ret = -1;
-	struct addrinfo* addrs = NULL;
-	struct addrinfo* rp = NULL;
-	struct addrinfo hint;
-	uint16 udp_listener;
-	char	port_str[32] = {0};
-	char* dummy_pkt = "stop it";
-
-	/*
-	 * Get address info from interconnect udp listener port
-	 */
-	udp_listener = Gp_listener_port;
-	snprintf(port_str, sizeof(port_str), "%d", udp_listener);
-
-	MemSet(&hint, 0, sizeof(hint));
-	hint.ai_socktype = SOCK_DGRAM;
-	hint.ai_family = AF_UNSPEC; /* Allow for IPv4 or IPv6  */
-
-#ifdef AI_NUMERICSERV
-	hint.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;  /* Never do name resolution */
-#else
-	hint.ai_flags = AI_NUMERICHOST;  /* Never do name resolution */
-#endif
-
-	ret = pg_getaddrinfo_all(NULL, port_str, &hint, &addrs);
-	if (ret || !addrs)
-	{
-		elog(LOG, "Send dummy packet failed, pg_getaddrinfo_all(): %s", strerror(errno));
-		goto send_error;
-	}
-
-	for (rp = addrs; rp != NULL; rp = rp->ai_next)
-	{
-		/* Create socket according to pg_getaddrinfo_all() */
-		sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-		if (sockfd < 0)
-		{
-			continue;
-		}
-
-		if (!pg_set_noblock(sockfd))
-		{
-			if (sockfd >= 0)
-			{
-				closesocket(sockfd);
-				sockfd = -1;
-			}
-			continue;
-		}
-		break;
-	}
-
-	if (rp == NULL)
-	{
-		elog(LOG, "Send dummy packet failed, create socket failed: %s", strerror(errno));
-		goto send_error;
-	}
-
-	/*
-	 * Send a dummy package to the interconnect listener, try 10 times
-	 */
-	int counter = 0;
-	while (counter < 10)
-	{
-		counter++;
-		ret = sendto(sockfd, dummy_pkt, strlen(dummy_pkt), 0, rp->ai_addr, rp->ai_addrlen);
-		if (ret < 0)
-		{
-			if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
-			{
-				continue;
-			}
-			else
-			{
-				elog(LOG, "Send dummy packet failed, sendto failed: %s", strerror(errno));
-				goto send_error;
-			}
-		}
-		break;
-	}
-
-	if (counter >= 10)
-	{
-		elog(LOG, "Send dummy packet failed, sendto failed: %s", strerror(errno));
-		goto send_error;
-	}
-
-	pg_freeaddrinfo_all(hint.ai_family, addrs);
-	closesocket(sockfd);
-	return;
-
-send_error:
-
-	if (addrs)
-	{
-		pg_freeaddrinfo_all(hint.ai_family, addrs);
-	}
-	if (sockfd != -1)
-	{
-		closesocket(sockfd);
-	}
-	return;
 }
 
 /*

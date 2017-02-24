@@ -49,7 +49,7 @@ select pg_relation_size('ivfheap') from gp_dist_random('gp_id') where gp_segment
             ]]></pre>
         <trigger><![CDATA[
 vacuum full vfheap;
-psql:/Users/haradh1/dev/tincrepo/private/haradh1/mpp-24055/vacuum/scenario/output/out/heap_mastercrash_before_truncate_trigger.sql:7: PANIC:  fault triggered, fault name:'vacuum_full_before_truncate' fault type:'panic' (faultinjector.c:630)
+PATH1/heap_mastercrash_before_truncate_trigger.sql:7: PANIC:  fault triggered, fault name:'vacuum_full_before_truncate' fault type:'panic'
 server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.

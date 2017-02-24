@@ -96,6 +96,7 @@ clean:
 	$(MAKE) -C contrib/pg_upgrade_support $@
 	$(MAKE) -C contrib/pg_upgrade $@
 	$(MAKE) -C gpAux/extensions $@
+	$(MAKE) -C gpMgmt $@
 # Garbage from autoconf:
 	@rm -rf autom4te.cache/
 
@@ -117,9 +118,12 @@ installcheck-world:
 	$(MAKE) -C src/test installcheck-good
 	$(MAKE) -C src/test installcheck-bugbuster
 	$(MAKE) -C src/test/isolation installcheck
+	$(MAKE) -C src/test/isolation2 installcheck
 	$(MAKE) -C src/pl installcheck
 	#$(MAKE) -C src/interfaces/ecpg installcheck
 	#$(MAKE) -C contrib installcheck
+	$(MAKE) -C contrib/extprotocol installcheck
+	$(MAKE) -C contrib/indexscan installcheck
 	$(MAKE) -C gpAux/extensions installcheck
 	$(MAKE) -C src/bin/gpfdist installcheck
 

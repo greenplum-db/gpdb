@@ -5,6 +5,12 @@
 -- show version
 SELECT count(*) from gp_opt_version();
 
+-- Mask out Log & timestamp for orca message that has feature not supported.
+-- start_matchsubs
+-- m/^LOG.*\"Feature/
+-- s/^LOG.*\"Feature/\"Feature/
+-- end_matchsubs
+
 -- fix the number of segments for Orca
 set optimizer_segments = 3;
 
@@ -1375,9 +1381,65 @@ set client_min_messages='log';
 select count(*) from foo group by cube(a,b);
 reset client_min_messages;
 
+-- TVF accepts ANYENUM, ANYELEMENT returns ANYENUM, ANYARRAY
+CREATE TYPE rainbow AS ENUM('red','yellow','blue');
+CREATE FUNCTION func_enum_element(ANYENUM, ANYELEMENT) RETURNS TABLE(a ANYENUM, b ANYARRAY)
+AS $$ SELECT $1, ARRAY[$2] $$ LANGUAGE SQL STABLE;
+SELECT * FROM func_enum_element('red'::rainbow, 'blue'::rainbow::anyelement);
+DROP FUNCTION IF EXISTS func_enum_element(ANYENUM, ANYELEMENT);
+
+-- TVF accepts ANYELEMENT, ANYARRAY returns ANYELEMENT, ANYENUM
+CREATE FUNCTION func_element_array(ANYELEMENT, ANYARRAY) RETURNS TABLE(a ANYELEMENT, b ANYENUM)
+AS $$ SELECT $1, $2[1]$$ LANGUAGE SQL STABLE;
+SELECT * FROM func_element_array('red'::rainbow, ARRAY['blue'::rainbow]);
+DROP FUNCTION IF EXISTS func_element_array(ANYELEMENT, ANYARRAY);
+
+-- TVF accepts ANYARRAY, ANYENUM returns ANYELEMENT
+CREATE FUNCTION func_element_array(ANYARRAY, ANYENUM) RETURNS TABLE(a ANYELEMENT, b ANYELEMENT)
+AS $$ SELECT $1[1], $2 $$ LANGUAGE SQL STABLE;
+SELECT * FROM func_element_array(ARRAY['blue'::rainbow], 'blue'::rainbow);
+DROP FUNCTION IF EXISTS func_element_array(ANYARRAY, ANYENUM);
+
+-- TVF accepts ANYARRAY argument returns ANYELEMENT, ANYENUM
+CREATE FUNCTION func_array(ANYARRAY) RETURNS TABLE(a ANYELEMENT, b ANYENUM)
+AS $$ SELECT $1[1], $1[2] $$ LANGUAGE SQL STABLE;
+SELECT * FROM func_array(ARRAY['blue'::rainbow, 'yellow'::rainbow]);
+DROP FUNCTION IF EXISTS func_array(ANYARRAY);
+
+-- TVF accepts ANYELEMENT, VARIADIC ARRAY returns ANYARRAY
+CREATE FUNCTION func_element_variadic(ANYELEMENT, VARIADIC ANYARRAY) RETURNS TABLE(a ANYARRAY)
+AS $$ SELECT array_prepend($1, $2); $$ LANGUAGE SQL STABLE;
+SELECT * FROM func_element_variadic(1.1, 1.1, 2.2, 3.3);
+DROP FUNCTION IF EXISTS func_element_variadic(ANYELEMENT, VARIADIC ANYARRAY);
+
+-- TVF accepts ANYNONARRAY returns ANYNONARRAY
+CREATE FUNCTION func_nonarray(ANYNONARRAY) RETURNS TABLE(a ANYNONARRAY)
+AS $$ SELECT $1; $$ LANGUAGE SQL STABLE;
+SELECT * FROM func_nonarray(5);
+DROP FUNCTION IF EXISTS func_nonarray(ANYNONARRAY);
+
+-- TVF accepts ANYNONARRAY, ANYENUM returns ANYARRAY
+CREATE FUNCTION func_nonarray_enum(ANYNONARRAY, ANYENUM) RETURNS TABLE(a ANYARRAY)
+AS $$ SELECT ARRAY[$1, $2]; $$ LANGUAGE SQL STABLE;
+SELECT * FROM func_nonarray_enum('blue'::rainbow, 'red'::rainbow);
+DROP FUNCTION IF EXISTS func_nonarray_enum(ANYNONARRAY, ANYENUM);
+
+-- TVF accepts ANYARRAY, ANYNONARRAY, ANYENUM returns ANYNONARRAY
+CREATE FUNCTION func_array_nonarray_enum(ANYARRAY, ANYNONARRAY, ANYENUM) RETURNS TABLE(a ANYNONARRAY)
+AS $$ SELECT $1[1]; $$ LANGUAGE SQL STABLE;
+SELECT * FROM func_array_nonarray_enum(ARRAY['blue'::rainbow, 'red'::rainbow], 'red'::rainbow, 'yellow'::rainbow);
+DROP FUNCTION IF EXISTS func_array_nonarray_enum(ANYARRAY, ANYNONARRAY, ANYENUM);
+
 -- start_ignore
 drop table foo;
 -- end_ignore
+
+-- Test GPDB Expr (T_ArrayCoerceExpr) conversion to Scalar Array Coerce Expr
+-- start_ignore
+create table foo (a int, b character varying(10));
+-- end_ignore
+-- Query should not fallback to planner
+explain select * from foo where b in ('1', '2');
 
 -- clean up
 drop schema orca cascade;

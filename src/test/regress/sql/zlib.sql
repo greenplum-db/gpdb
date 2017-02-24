@@ -9,12 +9,12 @@ SET gp_workfile_compress_algorithm=zlib;
 SET statement_mem=5000;
 
 --Fail after workfile creation and before add it to workfile set
---start_ignore
 \! gpfaultinjector -f workfile_creation_failure -y reset --seg_dbid 2
 \! gpfaultinjector -f workfile_creation_failure -y error --seg_dbid 2
---end_ignore
 
 SELECT COUNT(t1.*) FROM test_zlib_hashjoin AS t1, test_zlib_hashjoin AS t2 WHERE t1.i1=t2.i2;
+
+\! gpfaultinjector -f workfile_creation_failure -y status --seg_dbid 2
 
 RESET statement_mem;
 DROP TABLE IF EXISTS test_zlib_hagg; 
@@ -26,17 +26,15 @@ INSERT INTO test_zlib_hagg SELECT i,i,i,i FROM
 SET statement_mem=2000;
 
 --Fail after workfile creation and before add it to workfile set
---start_ignore
 \! gpfaultinjector -f workfile_creation_failure -y reset --seg_dbid 2
 \! gpfaultinjector -f workfile_creation_failure -y error --seg_dbid 2
---end_ignore
 
 SELECT MAX(i1) FROM test_zlib_hagg GROUP BY i2;
 
+\! gpfaultinjector -f workfile_creation_failure -y status --seg_dbid 2
+
 -- Reset faultinjectors
---start_ignore
 \! gpfaultinjector -f workfile_creation_failure -y reset --seg_dbid 2
---end_ignore
 
 create table t (i int, j text);
 insert into t select i, i from generate_series(1,1000000) as i;
@@ -59,18 +57,16 @@ end
 $body$ language plpgsql;
 
 -- Inject fault before we close workfile in ExecHashJoinNewBatch
---start_ignore
 \! gpfaultinjector -f workfile_hashjoin_failure -y reset --seg_dbid 2
 \! gpfaultinjector -f workfile_hashjoin_failure -y error --seg_dbid 2
---end_ignore
 
 select FuncA();
 select * from t1;
+
+\! gpfaultinjector -f workfile_hashjoin_failure -y status --seg_dbid 2
 
 drop function FuncA();
 drop table t;
 drop table t1;
 
---start_ignore
 \! gpfaultinjector -f workfile_hashjoin_failure -y reset --seg_dbid 2
---end_ignore

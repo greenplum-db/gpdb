@@ -48,9 +48,10 @@ uint64_t CompressWriter::writeOneChunk(const char* buf, uint64_t count) {
         status = deflate(&this->zstream, Z_NO_FLUSH);
         if (status < 0 && status != Z_BUF_ERROR) {
             deflateEnd(&this->zstream);
-            S3_CHECK_OR_DIE(false, S3RuntimeError, string("Failed to compress data: ") +
-                                                       std::to_string((unsigned long long)status) +
-                                                       ", " + this->zstream.msg);
+            S3_CHECK_OR_DIE(false, S3RuntimeError,
+                            string("Failed to compress data: ") +
+                                std::to_string((unsigned long long)status) + ", " +
+                                this->zstream.msg);
         }
 
         this->flush();
@@ -97,9 +98,9 @@ void CompressWriter::close() {
     deflateEnd(&this->zstream);
 
     if (status != Z_STREAM_END) {
-        S3_CHECK_OR_DIE(false, S3RuntimeError, string("Failed to compress data: ") +
-                                                   std::to_string((unsigned long long)status) +
-                                                   ", " + this->zstream.msg);
+        S3_CHECK_OR_DIE(false, S3RuntimeError,
+                        string("Failed to compress data: ") +
+                            std::to_string((unsigned long long)status) + ", " + this->zstream.msg);
     }
 
     S3DEBUG("Compression finished: Z_STREAM_END.");

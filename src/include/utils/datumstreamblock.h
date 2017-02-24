@@ -28,6 +28,36 @@ typedef enum DatumStreamVersion
 }	DatumStreamVersion;
 
 /*
+ * This depicts how different structures defined below fit together in AO
+ * block on-disk for CO table, in case of RLE_TYPE compression.
+ *
+ * +------------------------------------------------------------------------------+
+ * |                             Datum Stream Version                             |
+ * +------------------------------------------------------------------------------+
+ * | DatumStreamBlock_Orig |       DatumStreamBlock_Dense_Enhanced                |
+ * +-----------------------+------------------------------------------------------+
+ * |      Null Bit Map     |  Rle_Extension    |  Rle_Extension +  | Null Bit Map |
+ * |       (optional)      |                   |  Delta_extension  |  (optional)  |
+ * +-----------------------+-------------------+-------------------+--------------+
+ * |                       |    Null Bitmap    |    Null Bitmap    |              |
+ * |                       |     (optional)    |     (optional)    |              |
+ * |                       +-------------------+-------------------+              |
+ * |                       |  RLE Compression  |  RLE Compression  |              |
+ * |                       | Bitmap (optional) | Bitmap (optional) |              |
+ * |                       +-------------------+-------------------+     Datum    |
+ * |         Datum         |     RLE counts    |     RLE counts    |       +      |
+ * |           +           |     (optional)    |     (optional)    |   Alignment  |
+ * |       Alignment       +-------------------+-------------------+              |
+ * |                       |                   | Delta Compression |              |
+ * |                       |       Datum       |       Bitmap      |              |
+ * |                       |         +         +-------------------+              |
+ * |                       |     Alignment     |       Deltas      |              |
+ * |                       |                   +-------------------+              |
+ * |                       |                   | Datum + Alignment |              |
+ * +-----------------------+-------------------+-------------------+--------------+
+ */
+
+/*
  * Datum Stream Block (Original).
  * 16 bytes header.  Followed by data.
  */
@@ -45,8 +75,28 @@ typedef struct DatumStreamBlock_Orig
 /*
  * Datum Stream Block (Dense).
  *
- * Dense format uses an Append-Only Storage Block header that has a larger RowCount
- * field so we can store more NULL and/or represent more RLE_TYPE compressed items.
+ * Dense format uses an Append-Only Storage Block header that has a larger
+ * RowCount field so we can store more NULL and/or represent more RLE_TYPE
+ * compressed items.
+ *
+ * Small Content Header allows maximum 16k logical rows per block (only 14
+ * bits are reserved for Row Count). If small content header is used with RLE
+ * it becomes very inefficient for storage as
+ * - If 16k rows are repeated then RLE_TYPE would compress that into one row
+ * with 16k RLE counter and that is all that it could be stored into one AO
+ * block.
+ * - If 1G rows are repeated then RLE_TYPE would compress that into 64k AO
+ * blocks, each AO block would have one row with 16k RLE counter, lots of
+ * space wasted.
+ * - If 16k rows are NULL then AO block would contain only header and null
+ * bitmap, lots of space wasted.
+ *
+ * Hence DatumStreamBlock_Dense is used, which allows recording higher number
+ * of logical rows. Data gets stored more efficiently. Benefits are to allow:
+ *
+ * - better compression with RLE_TYPE
+ * - additional space saving when column has large number of NULLs
+ * - better compression with DELTA_RANGE
  *
  * 16 bytes header.
  */
@@ -543,7 +593,9 @@ DatumStreamBitMapRead_Count(
 }
 
 /*
- * DatumStreamBlockInt32Compress.
+ * DatumStreamBlockInt32Compress: Used currently for storing rle counter (how
+ * many times Datum is repeated). Upper 2 bits are reserved for tracking RLE
+ * counter length (00 =>1 byte, 01=>2 bytes, 10=>3 bytes, 11=>4 bytes).
  */
 #define Int32Compress_MaxByteLen 4
 #define Int32Compress_1ByteLimit 0x3F
@@ -713,7 +765,16 @@ DatumStreamInt32Compress_Decode(
 }
 
 /*
- * DatumStreamBlockInt32CompressReserved3.
+ * DatumStreamBlockInt32CompressReserved3: Used to encode and decode deltas
+ * (by how much the datum differs from its previous datum) for delta
+ * compression. Upper 3 bits are reserved. Upper 2 bits are used for tracking
+ * how much minimal space is needed to store the delta value (00 =>1 byte,
+ * 01=>2 bytes, 10=>3 bytes, 11=>4 bytes). 3rd bit is used for tracking if
+ * delta is positive (0) or negative (1). Lastly delta is stored as variable
+ * length but max with 29 bits of space. So, for example if datums are
+ * differing by 32 (2^5) or less then 1 byte is used to store the delta. If
+ * datums are differing by say 536870912 (2^29) then 4 bytes are used to
+ * store the delta.
  */
 #define Int32CompressReserved3_MaxByteLen 4
 #define Int32CompressReserved3_1ByteLimit 0x1F

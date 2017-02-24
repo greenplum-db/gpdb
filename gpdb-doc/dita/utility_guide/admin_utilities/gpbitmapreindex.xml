@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1"><title id="oq141610">gpbitmapreindex</title><body><p>Rebuilds bitmap indexes after a 3.3.x to 4.0.x upgrade.</p><section id="section2"><title>Synopsis</title><codeblock><b>gpbitmapreindex</b> <b>-m</b> { <b>r</b> | <b>d</b> | {<b>l</b> [<b>-o</b> <varname>output_sql_file</varname>]} }
+   [<b>-h</b> <varname>master_host</varname>] [<b>-p</b> <varname>master_port</varname>] [<b>-n</b> <varname>number_of_processes</varname>] [<b>-v</b>]
+
+<b>gpmigrator</b> <b>--version</b> 
+
+<b>gpmigrator</b> <b>--help</b> | <b>-?</b></codeblock></section><section id="section3"><title>Description</title><p>The on-disk format of bitmap indexes has changed from release 3.3.x to 4.0.x. Users who upgrade
+        must rebuild all bitmap indexes after upgrading to 4.0. The <codeph>gpbitmapreindex</codeph>
+        utility facilitates the upgrade of bitmap indexes by either running the
+          <codeph>REINDEX</codeph> command to reindex them, or running the <codeph>DROP
+          INDEX</codeph> command to simply remove them. If you decide to drop your bitmap indexes
+        rather than reindex, run <codeph>gpbitmapreindex</codeph> in <codeph>list --outfile</codeph>
+        mode first to output a SQL file that you can use to recreate the indexes later. You must be
+        the Greenplum Database superuser (<codeph>gpadmin</codeph>) in order to run
+          <codeph>gpbitmapreindex</codeph>.</p></section><section id="section4"><title>Options</title><parml><plentry><pt>-h <varname>host</varname> | --<varname>hosthost</varname></pt><pd>Specifies the host name of the machine on which the Greenplum master
+database server is running. If not specified, reads from the environment
+variable <codeph>PGHOST</codeph> or defaults to <codeph>localhost</codeph>.</pd></plentry><plentry><pt>-m {r|d|l} | --mode {reindex|drop|list}</pt><pd>Required. The bitmap index upgrade mode: either <codeph>reindex</codeph>,
+<codeph>drop</codeph>, or <codeph>list</codeph> all bitmap indexes in
+the system.</pd></plentry><plentry><pt>-n <varname>number_of_processes</varname> | --parallel <varname>number_of_processes</varname></pt><pd>The number of bitmap indexes to reindex or drop in parallel. Valid
+values are 1-16. The default is 1.</pd></plentry><plentry><pt>-o <varname>output_sql_file</varname> | --outfile <varname>output_sql_file</varname></pt><pd>When used with <codeph>list</codeph> mode, outputs a SQL file that
+can be used to recreate the bitmap indexes.</pd></plentry><plentry><pt>-p <varname>port</varname> | --port <varname>port</varname></pt><pd>Specifies the TCP port on which the Greenplum master database server
+is listening for connections. If not specified, reads from the environment
+variable <codeph>PGPORT</codeph> or defaults to 5432.</pd></plentry><plentry><pt>-v | --verbose</pt><pd>Show verbose output.</pd></plentry><plentry><pt>--version</pt><pd>Displays the version of this utility. </pd></plentry><plentry><pt>-? | --help</pt><pd>Displays the online help.</pd></plentry></parml></section><section id="section5"><title>Examples</title><p>Reindex all bitmap indexes:</p><codeblock>gpbitmapreindex -m r</codeblock><p>Output a file of SQL commands that can be used to recreate all bitmap
+indexes:</p><codeblock>gpbitmapreindex -m list --outfile /home/gpadmin/bmp_ix.sql</codeblock><p>Drop all bitmap indexes and run in verbose mode:</p><codeblock>gpbitmapreindex -m d -v</codeblock></section><section id="section6"><title>See Also</title><p><i>Greenplum Database Reference Guide</i>: <codeph>REINDEX</codeph>,<codeph> DROP
+          INDEX</codeph>,<codeph> CREATE INDEX</codeph></p></section></body></topic>

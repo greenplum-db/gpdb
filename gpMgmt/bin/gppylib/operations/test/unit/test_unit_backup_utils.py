@@ -246,35 +246,35 @@ class BackupUtilsTestCase(GpTestCase):
 
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['--', '-- Database creation', '--', '', "CREATE DATABASE bkdb WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = dcddev;"])
     def test_check_cdatabase_exists_default(self, mock):
-        self.context.dump_database = 'bkdb'
+        self.context.target_db = 'bkdb'
         report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
         result = check_cdatabase_exists(self.context, report_file)
         self.assertTrue(result)
 
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['--', '-- Database creation', '--', '', "CREATE DATABASE fullbkdb WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = dcddev;"])
     def test_check_cdatabase_exists_bad_dbname(self, mock):
-        self.context.dump_database = 'bkdb'
+        self.context.target_db = 'bkdb'
         report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
         result = check_cdatabase_exists(self.context, report_file)
         self.assertFalse(result)
 
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['--', '-- Database creation', '--', '', "CREATE bkdb WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = dcddev;"])
     def test_check_cdatabase_exists_no_database(self, mock):
-        self.context.dump_database = 'bkdb'
+        self.context.target_db = 'bkdb'
         report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
         result = check_cdatabase_exists(self.context, report_file)
         self.assertFalse(result)
 
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=[])
     def test_check_cdatabase_exists_empty_file(self, mock):
-        self.context.dump_database = 'bkdb'
+        self.context.target_db = 'bkdb'
         report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
         result = check_cdatabase_exists(self.context, report_file)
         self.assertFalse(result)
 
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['--', '-- Database creation', '--', '', 'CREATE DATABASE'])
     def test_check_cdatabase_exists_no_dbname(self, mock):
-        self.context.dump_database = 'bkdb'
+        self.context.target_db = 'bkdb'
         report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
         result = check_cdatabase_exists(self.context, report_file)
         self.assertFalse(result)
@@ -282,7 +282,7 @@ class BackupUtilsTestCase(GpTestCase):
     @patch('gppylib.operations.backup_utils.Command.run')
     @patch('gppylib.operations.dump.Command.get_results', return_value=CommandResult(0, "CREATE DATABASE", "", True, False))
     def test_check_cdatabase_exists_command_result(self, mock1, mock2):
-        self.context.dump_database = 'bkdb'
+        self.context.target_db = 'bkdb'
         report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
         self.context.ddboost = True
         result = check_cdatabase_exists(self.context, report_file)
@@ -674,20 +674,20 @@ class BackupUtilsTestCase(GpTestCase):
     @patch('gppylib.operations.backup_utils.dbconn.connect')
     @patch('pygresql.pgdb.pgdbCursor.fetchall', return_value=[['public', 'tl1'], ['public', 'tl2']])
     def test_expand_partition_tables_default(self, mock1, mock2, mock3):
-        dbname = 'foo'
+        self.context.target_db = 'foo'
         restore_tables = ['public.t1', 'public.t2']
         expected_output = ['public.tl1', 'public.tl2', 'public.t2']
-        result = expand_partition_tables(dbname, restore_tables)
+        result = expand_partition_tables(self.context, restore_tables)
         self.assertEqual(result.sort(), expected_output.sort())
 
     @patch('gppylib.operations.backup_utils.dbconn.execSQL')
     @patch('gppylib.operations.backup_utils.dbconn.connect')
     @patch('pygresql.pgdb.pgdbCursor.fetchall', return_value=[])
     def test_expand_partition_tables_no_change(self, mock1, mock2, mock3):
-        dbname = 'foo'
+        self.context.target_db = 'foo'
         restore_tables = ['public.t1', 'public.t2']
         expected_output = ['public.t1', 'public.t2']
-        result = expand_partition_tables(dbname, restore_tables)
+        result = expand_partition_tables(self.context, restore_tables)
         self.assertEqual(result.sort(), expected_output.sort())
 
     def test_populate_filter_tables_all_part_tables(self):
@@ -778,28 +778,31 @@ class BackupUtilsTestCase(GpTestCase):
         indices = get_batch_from_list(length, batch)
         self.assertEqual(expected, indices)
 
-    def test_list_to_quoted_string_default(self):
+    @patch('gppylib.operations.backup_utils.escape_string', side_effect=['public.ao_table', 'public.co_table'])
+    def test_list_to_quoted_string_default(self, mock1):
         input = ['public.ao_table', 'public.co_table']
         expected = "'public.ao_table', 'public.co_table'"
-        output = list_to_quoted_string(input)
+        output = list_to_quoted_string(Mock(), input)
         self.assertEqual(expected, output)
 
-    def test_list_to_quoted_string_whitespace(self):
+    @patch('gppylib.operations.backup_utils.escape_string', side_effect=['   public.ao_table', 'public.co_table   '])
+    def test_list_to_quoted_string_whitespace(self, mock1):
         input = ['   public.ao_table', 'public.co_table   ']
         expected = "'   public.ao_table', 'public.co_table   '"
-        output = list_to_quoted_string(input)
+        output = list_to_quoted_string(Mock(), input)
         self.assertEqual(expected, output)
 
-    def test_list_to_quoted_string_one_table(self):
+    @patch('gppylib.operations.backup_utils.escape_string', return_value='public.ao_table')
+    def test_list_to_quoted_string_one_table(self, mock1):
         input = ['public.ao_table']
         expected = "'public.ao_table'"
-        output = list_to_quoted_string(input)
+        output = list_to_quoted_string(Mock(), input)
         self.assertEqual(expected, output)
 
     def test_list_to_quoted_string_no_tables(self):
         input = []
         expected = "''"
-        output = list_to_quoted_string(input)
+        output = list_to_quoted_string(None, input)
         self.assertEqual(expected, output)
 
     def test_generate_filename_with_prefix(self):

@@ -19,7 +19,7 @@ if sys.version_info < (2, 5, 0) or sys.version_info >= (3, 0, 0):
     sys.exit(1)
 
 
-MAIN_VERSION = [4,3,99,99]    # version number for main
+MAIN_VERSION = [5,99,99]    # version number for main
 
 
 #============================================================
@@ -47,7 +47,8 @@ class GpVersion:
                 '4.0',
                 '4.1',
                 '4.2',
-                '4.3'
+                '4.3',
+                '5'
               ]
 
     #------------------------------------------------------------
@@ -81,7 +82,7 @@ class GpVersion:
                     isinstance(v, list) or
                     isinstance(v, tuple)):
                 v = str(v)
-            
+
             # Convert a string into the version components.
             # 
             # There are several version formats that we anticipate receiving:
@@ -97,7 +98,6 @@ class GpVersion:
             #    "<VERSION> <BUILD>"
             #
             if isinstance(v, str):
-
                 # See if it matches one of the two the long formats
                 regex = r"\(Greenplum Database\)? ([^ ]+) build ([^ )]+)"
                 m = re.search(regex, v)
@@ -137,7 +137,7 @@ class GpVersion:
                 #        
                 #        we ignore the usual build version and use the special
                 #        vilue for "<BUILD>" instead.
-                regex = r"[0123456789.]+\d"
+                regex = r"[0123456789.]*\d"
                 m = re.search(regex, v)
                 if not m:
                     raise StandardError("unable to coerce to version")
@@ -158,16 +158,21 @@ class GpVersion:
             if not isinstance(v, list):
                 raise StandardError("Internal coding error")
 
-            # Convert a list into a real version
-            if len(v) < 2:
+            # As of GPDB 5, version strings moved from four digits (4.3.X.X) to three (5.X.X)
+            minlen = 2 if int(v[0]) <= 4 else 1
+            maxlen = 4 if int(v[0]) <= 4 else 3
+            if len(v) < minlen:
                 raise StandardError("Version too short")
-            if len(v) > 4:
+            elif len(v) > maxlen:
                 raise StandardError("Version too long")
-            if len(v) < 4:
+            elif len(v) < maxlen:
                 v.extend([99,99])
-
             v = map(int, v)  # Convert to integers
-            self.version = v[:4]  # If we extended beyond 4 cut it back down
+            if v[0] <= 4:
+                self.version = v[:4]
+            else:
+                self.version = v[:3]
+
             if not self.build:
                 self.build = 'dev'
 
@@ -198,10 +203,16 @@ class GpVersion:
         '''
         if self.version == MAIN_VERSION:
             v = 'main'
-        elif self.version[2] == 99 and self.version[3] == 99: 
-            v = '.'.join(map(str,self.version[:2]))
+        elif self.version[0] <= 4:
+            if self.version[2] == 99 and self.version[3] == 99:
+                v = '.'.join(map(str,self.version[:2]))
+            else:
+                v = '.'.join(map(str,self.version[:4]))
         else:
-            v = '.'.join(map(str,self.version[:4]))
+            if self.version[1] == 99 and self.version[2] == 99:
+                v = '%d' % self.version[0]
+            else:
+                v = '.'.join(map(str,self.version[:3]))
 
         if self.build:
             return "%s build %s" % (v, self.build)
@@ -225,9 +236,12 @@ class GpVersion:
     #------------------------------------------------------------
     def getVersionRelease(self):
         '''
-        Returns the major (first 2 values) portion of the version.
+        Returns the major (first 2 values for <= 4.3, first value for >= 5) portion of the version.
         '''
-        return '.'.join(map(str,self.version[:2]))
+        if self.version[0] <= 4:
+            return '.'.join(map(str,self.version[:2]))
+        else:
+            return '%d' % self.version[0]
 
     #------------------------------------------------------------
     def isVersionRelease(self, version):
@@ -235,7 +249,7 @@ class GpVersion:
         Returns true if the version matches a particular major release.
         '''
         other = GpVersion(version)
-        return self.version[0:2] == other.version[0:2]
+        return self.getVersionRelease() == other.getVersionRelease()
 
     #------------------------------------------------------------
     def isVersionCurrentRelease(self):

@@ -54,30 +54,17 @@ class AOCOCompressionTestCase(ScenarioTestCase):
 
 @tinctest.dataProvider('test_types_large')
 def test_data_provider():
-    data = {'test_01_1_co_create_storage_directive_large':['co_create_storage_directive_large_1G_zlib'],
-            'test_01_2_co_create_storage_directive_large':['co_create_storage_directive_large_1G_quick_rle'],
-            'test_01_3_co_create_storage_directive_large':['co_create_storage_directive_large_2G_zlib'],
+    data = {'test_01_3_co_create_storage_directive_large':['co_create_storage_directive_large_2G_zlib'],
             'test_01_4_co_create_storage_directive_large':['co_create_storage_directive_large_2G_quick_rle'],
-            'test_01_5_co_create_storage_directive_large':['co_create_storage_directive_large_1G_zlib_2'],
             'test_01_6_co_create_storage_directive_large':['co_create_storage_directive_large_2G_zlib_2'],
-            'test_02_1_co_create_column_reference_default_large':['co_create_column_reference_default_large_1G_zlib'],
-            'test_02_2_co_create_column_reference_default_large':['co_create_column_reference_default_large_1G_quick_rle'],
             'test_02_3_co_create_column_reference_default_large':['co_create_column_reference_default_large_2G_zlib'],
             'test_02_4_co_create_column_reference_default_large':['co_create_column_reference_default_large_2G_quick_rle'],
-            'test_02_5_co_create_column_reference_default_large':['co_create_column_reference_default_large_1G_zlib_2'],
             'test_02_6_co_create_column_reference_default_large':['co_create_column_reference_default_large_2G_zlib_2'],
-            'test_03_1_co_create_column_reference_column_large':['co_create_column_reference_column_large_1G_zlib'],
-            'test_03_2_co_create_column_reference_column_large':['co_create_column_reference_column_large_1G_quick_rle'],
             'test_03_3_co_create_column_reference_column_large':['co_create_column_reference_column_large_2G_zlib'],
             'test_03_4_co_create_column_reference_column_large':['co_create_column_reference_column_large_2G_quick_rle'],
-            'test_03_5_co_create_column_reference_column_large':['co_create_column_reference_column_large_1G_zlib_2'],
             'test_03_6_co_create_column_reference_column_large':['co_create_column_reference_column_large_2G_zlib_2'],
-            'test_04_1_ao_create_with_row_large':['ao_create_with_row_large_1G_zlib'],
-            'test_04_2_ao_create_with_row_large':['ao_create_with_row_large_1G_quick_rle'],
             'test_04_3_ao_create_with_row_large':['ao_create_with_row_large_2G_zlib'],
             'test_04_4_ao_create_with_row_large':['ao_create_with_row_large_2G_quick_rle'],
-            'test_04_5_ao_create_with_row_large':['ao_create_with_row_large_1G_zlib_2'],
-            'test_04_6_ao_create_with_row_large':['ao_create_with_row_large_2G_zlib_2'],
            }
     return data
 

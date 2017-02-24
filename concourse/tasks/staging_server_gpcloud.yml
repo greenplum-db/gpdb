@@ -9,7 +9,6 @@ image_resource:
 inputs:
   - name: gpdb_src
   - name: bin_gpdb
-  - name: sync_tools_gpdb
 params:
   EC2_PRIVATE_KEY:
   EC2_INSTANCE_IP:

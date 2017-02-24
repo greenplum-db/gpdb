@@ -3614,7 +3614,9 @@ backend_read_statsfile(void)
 	}
 
 	if (count >= PGSTAT_POLL_LOOP_COUNT)
-		elog(WARNING, "pgstat wait timeout");
+		ereport(LOG,
+				(errmsg("using stale statistics instead of current ones "
+						"because stats collector is not responding")));
 
 	/* Autovacuum launcher wants stats about all databases */
 	pgStatDBHash = pgstat_read_statsfile(InvalidOid, false);

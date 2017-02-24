@@ -312,8 +312,6 @@ initialize_aggregates(AggState *aggstate,
 
 			/* CDB: Set enhanced sort options. */
 			{
-				int64 		limit = 0;
-				int64 		offset = 0;
 				int 		unique = peragg->aggref->aggdistinct &&
 									 ( gp_enable_sort_distinct ? 1 : 0) ;
 				int 		sort_flags = gp_sort_flags; /* get the guc */
@@ -321,11 +319,11 @@ initialize_aggregates(AggState *aggstate,
 
 				if(gp_enable_mk_sort)
 					cdb_tuplesort_init_mk((Tuplesortstate_mk *) peraggstate->sortstate, 
-							offset, limit, unique, 
+							unique,
 							sort_flags, maxdistinct);
 				else
 					cdb_tuplesort_init((Tuplesortstate *) peraggstate->sortstate, 
-							offset, limit, unique, 
+							unique,
 							sort_flags, maxdistinct);
 			}
 		}

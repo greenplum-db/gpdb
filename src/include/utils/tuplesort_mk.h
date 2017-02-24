@@ -274,8 +274,9 @@ typedef struct MKContext {
     Relation indexRel;
     MemTupleBinding *mt_bind;
 
-    /* Limit the sort?  If 0 then we sort all input values, else we keep only the first limit-many values */
-    int32 limit;
+    bool		bounded;		/* did caller specify a maximum number of tuples to return? */
+    bool		boundUsed;		/* true if we made use of a bounded heap */
+    int			bound;			/* if bounded, the maximum number of tuples */
 
     /* Bit trick: this mask will be set so it can be used to negate a return value.  See comments on usage */
     int32 limitmask;

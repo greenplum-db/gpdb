@@ -117,7 +117,6 @@ struct PGAllocator {
     T* allocate(size_t n) {
         if (prealloc) {
             return (T*)prealloc->Allocate();
-
         } else {
             return std::allocator<T>().allocate(n);
         }

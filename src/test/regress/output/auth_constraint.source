@@ -58,6 +58,9 @@ DROP ROLE abc;
 ---
 --- basic time level constraints
 --- 
+CREATE ROLE abc WITH LOGIN DENY DAY 'Saturday';
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+DROP ROLE abc;
 CREATE ROLE abc DENY DAY 2 TIME '13:15:34';
 NOTICE:  resource queue required -- using default resource queue "pg_default"
 select c.start_day, c.start_time, c.end_day, c.end_time from pg_authid a, pg_auth_time_constraint c where c.authid = a.oid and a.rolname = 'abc';
@@ -797,6 +800,14 @@ DROP ROLE abc;
 CREATE ROLE abc DENY DAY 'Monkey' TIME '12:00:00';
 ERROR:  invalid weekday name "Monkey"
 HINT:  Day of week must be one of 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'.
+CREATE ROLE abc WITH LOGIN DENY BETWEEN DAY 'Monday' TIME '00:00' AND DAY 'Monday' TIME '25:00';
+ERROR:  date/time field value out of range: "25:00"
+CREATE ROLE abc WITH LOGIN DENY BETWEEN DAY 'Monday' TIME '01:65 AM' AND DAY 'Monday' TIME '12:00 PM';
+ERROR:  date/time field value out of range: "01:65 AM"
+CREATE ROLE abc WITH LOGIN DENY BETWEEN DAY 'Monday' TIME '-01:00' AND DAY 'Monday' TIME '06:00 PM';
+ERROR:  invalid input syntax for type time: "-01:00"
+CREATE ROLE abc DENY BETWEEN DAY 'Monday' TIME '00:00' AND DAY 'Monday' TIME '25:00';
+ERROR:  date/time field value out of range: "25:00"
 ---
 --- What is '24:00:00'? Apparently, '2011-08-30 24:00:00' == '2011-08-31 00:00:00'.
 --- But interpreted as a sole time value, '24:00:00' != '00:00:00' and
@@ -936,6 +947,9 @@ RESET allow_system_table_mods;
 ---
 --- Superuser testing across CREATE ROLE, ALTER ROLE, and trigger
 ---
+create role abc with login nosuperuser nocreaterole;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+drop role abc;
 create role abc superuser deny day 1;
 ERROR:  cannot create superuser with DENY rules
 create role abc superuser;
@@ -963,3 +977,294 @@ insert into pg_auth_time_constraint (select oid, 1, '00:00:00', 1, '24:00:00' fr
 WARNING:  time constraints are being added against superuser
 DROP ROLE abc;
 RESET allow_system_table_mods;
+--
+-- More DENY tests.
+--
+CREATE ROLE abc WITH LOGIN DENY BETWEEN DAY 'Monday' TIME '01:00:00' AND DAY 'Monday' TIME '01:30:00';;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+SELECT r.rolname, d.start_day, d.start_time, d.end_day, d.end_time
+FROM pg_auth_time_constraint d join pg_roles r ON (d.authid = r.oid)
+WHERE r.rolname = 'abc'
+ORDER BY r.rolname, d.start_day, d.start_time, d.end_day, d.end_time;
+ rolname | start_day | start_time | end_day | end_time 
+---------+-----------+------------+---------+----------
+ abc     |         1 | 01:00:00   |       1 | 01:30:00
+(1 row)
+
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '01:00:00' AND DAY 'Monday' TIME '01:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '02:00:00' AND DAY 'Monday' TIME '02:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '03:00:00' AND DAY 'Monday' TIME '03:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '04:00:00' AND DAY 'Monday' TIME '04:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '05:00:00' AND DAY 'Monday' TIME '05:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '06:00:00' AND DAY 'Monday' TIME '06:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '07:00:00' AND DAY 'Monday' TIME '07:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '08:00:00' AND DAY 'Monday' TIME '08:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '09:00:00' AND DAY 'Monday' TIME '09:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '10:00:00' AND DAY 'Monday' TIME '10:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '11:00:00' AND DAY 'Monday' TIME '11:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '12:00:00' AND DAY 'Monday' TIME '12:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '13:00:00' AND DAY 'Monday' TIME '13:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '14:00:00' AND DAY 'Monday' TIME '14:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '15:00:00' AND DAY 'Monday' TIME '15:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '16:00:00' AND DAY 'Monday' TIME '16:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '17:00:00' AND DAY 'Monday' TIME '17:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '18:00:00' AND DAY 'Monday' TIME '18:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '19:00:00' AND DAY 'Monday' TIME '19:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Monday' TIME '20:00:00' AND DAY 'Monday' TIME '20:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '01:00:00' AND DAY 'Tuesday' TIME '01:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '02:00:00' AND DAY 'Tuesday' TIME '02:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '03:00:00' AND DAY 'Tuesday' TIME '03:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '04:00:00' AND DAY 'Tuesday' TIME '04:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '05:00:00' AND DAY 'Tuesday' TIME '05:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '06:00:00' AND DAY 'Tuesday' TIME '06:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '07:00:00' AND DAY 'Tuesday' TIME '07:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '08:00:00' AND DAY 'Tuesday' TIME '08:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '09:00:00' AND DAY 'Tuesday' TIME '09:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '10:00:00' AND DAY 'Tuesday' TIME '10:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '11:00:00' AND DAY 'Tuesday' TIME '11:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '12:00:00' AND DAY 'Tuesday' TIME '12:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '13:00:00' AND DAY 'Tuesday' TIME '13:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '14:00:00' AND DAY 'Tuesday' TIME '14:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '15:00:00' AND DAY 'Tuesday' TIME '15:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '16:00:00' AND DAY 'Tuesday' TIME '16:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '17:00:00' AND DAY 'Tuesday' TIME '17:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '18:00:00' AND DAY 'Tuesday' TIME '18:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '19:00:00' AND DAY 'Tuesday' TIME '19:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '20:00:00' AND DAY 'Tuesday' TIME '20:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '01:00:00' AND DAY 'Wednesday' TIME '01:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '02:00:00' AND DAY 'Wednesday' TIME '02:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '03:00:00' AND DAY 'Wednesday' TIME '03:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '04:00:00' AND DAY 'Wednesday' TIME '04:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '05:00:00' AND DAY 'Wednesday' TIME '05:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '06:00:00' AND DAY 'Wednesday' TIME '06:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '07:00:00' AND DAY 'Wednesday' TIME '07:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '08:00:00' AND DAY 'Wednesday' TIME '08:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '09:00:00' AND DAY 'Wednesday' TIME '09:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '10:00:00' AND DAY 'Wednesday' TIME '10:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '11:00:00' AND DAY 'Wednesday' TIME '11:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '12:00:00' AND DAY 'Wednesday' TIME '12:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '13:00:00' AND DAY 'Wednesday' TIME '13:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '14:00:00' AND DAY 'Wednesday' TIME '14:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '15:00:00' AND DAY 'Wednesday' TIME '15:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '16:00:00' AND DAY 'Wednesday' TIME '16:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '17:00:00' AND DAY 'Wednesday' TIME '17:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '18:00:00' AND DAY 'Wednesday' TIME '18:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '19:00:00' AND DAY 'Wednesday' TIME '19:30:00';
+ALTER ROLE abc DENY BETWEEN DAY 'Wednesday' TIME '20:00:00' AND DAY 'Wednesday' TIME '20:30:00';
+SELECT r.rolname, d.start_day, d.start_time, d.end_day, d.end_time
+FROM pg_auth_time_constraint d join pg_roles r ON (d.authid = r.oid)
+WHERE r.rolname = 'abc'
+ORDER BY r.rolname, d.start_day, d.start_time, d.end_day, d.end_time;
+ rolname | start_day | start_time | end_day | end_time 
+---------+-----------+------------+---------+----------
+ abc     |         1 | 01:00:00   |       1 | 01:30:00
+ abc     |         1 | 01:00:00   |       1 | 01:30:00
+ abc     |         1 | 02:00:00   |       1 | 02:30:00
+ abc     |         1 | 03:00:00   |       1 | 03:30:00
+ abc     |         1 | 04:00:00   |       1 | 04:30:00
+ abc     |         1 | 05:00:00   |       1 | 05:30:00
+ abc     |         1 | 06:00:00   |       1 | 06:30:00
+ abc     |         1 | 07:00:00   |       1 | 07:30:00
+ abc     |         1 | 08:00:00   |       1 | 08:30:00
+ abc     |         1 | 09:00:00   |       1 | 09:30:00
+ abc     |         1 | 10:00:00   |       1 | 10:30:00
+ abc     |         1 | 11:00:00   |       1 | 11:30:00
+ abc     |         1 | 12:00:00   |       1 | 12:30:00
+ abc     |         1 | 13:00:00   |       1 | 13:30:00
+ abc     |         1 | 14:00:00   |       1 | 14:30:00
+ abc     |         1 | 15:00:00   |       1 | 15:30:00
+ abc     |         1 | 16:00:00   |       1 | 16:30:00
+ abc     |         1 | 17:00:00   |       1 | 17:30:00
+ abc     |         1 | 18:00:00   |       1 | 18:30:00
+ abc     |         1 | 19:00:00   |       1 | 19:30:00
+ abc     |         1 | 20:00:00   |       1 | 20:30:00
+ abc     |         2 | 01:00:00   |       2 | 01:30:00
+ abc     |         2 | 02:00:00   |       2 | 02:30:00
+ abc     |         2 | 03:00:00   |       2 | 03:30:00
+ abc     |         2 | 04:00:00   |       2 | 04:30:00
+ abc     |         2 | 05:00:00   |       2 | 05:30:00
+ abc     |         2 | 06:00:00   |       2 | 06:30:00
+ abc     |         2 | 07:00:00   |       2 | 07:30:00
+ abc     |         2 | 08:00:00   |       2 | 08:30:00
+ abc     |         2 | 09:00:00   |       2 | 09:30:00
+ abc     |         2 | 10:00:00   |       2 | 10:30:00
+ abc     |         2 | 11:00:00   |       2 | 11:30:00
+ abc     |         2 | 12:00:00   |       2 | 12:30:00
+ abc     |         2 | 13:00:00   |       2 | 13:30:00
+ abc     |         2 | 14:00:00   |       2 | 14:30:00
+ abc     |         2 | 15:00:00   |       2 | 15:30:00
+ abc     |         2 | 16:00:00   |       2 | 16:30:00
+ abc     |         2 | 17:00:00   |       2 | 17:30:00
+ abc     |         2 | 18:00:00   |       2 | 18:30:00
+ abc     |         2 | 19:00:00   |       2 | 19:30:00
+ abc     |         2 | 20:00:00   |       2 | 20:30:00
+ abc     |         3 | 01:00:00   |       3 | 01:30:00
+ abc     |         3 | 02:00:00   |       3 | 02:30:00
+ abc     |         3 | 03:00:00   |       3 | 03:30:00
+ abc     |         3 | 04:00:00   |       3 | 04:30:00
+ abc     |         3 | 05:00:00   |       3 | 05:30:00
+ abc     |         3 | 06:00:00   |       3 | 06:30:00
+ abc     |         3 | 07:00:00   |       3 | 07:30:00
+ abc     |         3 | 08:00:00   |       3 | 08:30:00
+ abc     |         3 | 09:00:00   |       3 | 09:30:00
+ abc     |         3 | 10:00:00   |       3 | 10:30:00
+ abc     |         3 | 11:00:00   |       3 | 11:30:00
+ abc     |         3 | 12:00:00   |       3 | 12:30:00
+ abc     |         3 | 13:00:00   |       3 | 13:30:00
+ abc     |         3 | 14:00:00   |       3 | 14:30:00
+ abc     |         3 | 15:00:00   |       3 | 15:30:00
+ abc     |         3 | 16:00:00   |       3 | 16:30:00
+ abc     |         3 | 17:00:00   |       3 | 17:30:00
+ abc     |         3 | 18:00:00   |       3 | 18:30:00
+ abc     |         3 | 19:00:00   |       3 | 19:30:00
+ abc     |         3 | 20:00:00   |       3 | 20:30:00
+(61 rows)
+
+ALTER ROLE abc DROP DENY FOR DAY 'Tuesday' TIME '01:30:00';
+NOTICE:  dropping DENY rule for "abc" between Tuesday 01:00:00 and Tuesday 01:30:00
+SELECT r.rolname, d.start_day, d.start_time, d.end_day, d.end_time
+FROM pg_auth_time_constraint d join pg_roles r ON (d.authid = r.oid)
+WHERE r.rolname = 'abc'
+ORDER BY r.rolname, d.start_day, d.start_time, d.end_day, d.end_time;
+ rolname | start_day | start_time | end_day | end_time 
+---------+-----------+------------+---------+----------
+ abc     |         1 | 01:00:00   |       1 | 01:30:00
+ abc     |         1 | 01:00:00   |       1 | 01:30:00
+ abc     |         1 | 02:00:00   |       1 | 02:30:00
+ abc     |         1 | 03:00:00   |       1 | 03:30:00
+ abc     |         1 | 04:00:00   |       1 | 04:30:00
+ abc     |         1 | 05:00:00   |       1 | 05:30:00
+ abc     |         1 | 06:00:00   |       1 | 06:30:00
+ abc     |         1 | 07:00:00   |       1 | 07:30:00
+ abc     |         1 | 08:00:00   |       1 | 08:30:00
+ abc     |         1 | 09:00:00   |       1 | 09:30:00
+ abc     |         1 | 10:00:00   |       1 | 10:30:00
+ abc     |         1 | 11:00:00   |       1 | 11:30:00
+ abc     |         1 | 12:00:00   |       1 | 12:30:00
+ abc     |         1 | 13:00:00   |       1 | 13:30:00
+ abc     |         1 | 14:00:00   |       1 | 14:30:00
+ abc     |         1 | 15:00:00   |       1 | 15:30:00
+ abc     |         1 | 16:00:00   |       1 | 16:30:00
+ abc     |         1 | 17:00:00   |       1 | 17:30:00
+ abc     |         1 | 18:00:00   |       1 | 18:30:00
+ abc     |         1 | 19:00:00   |       1 | 19:30:00
+ abc     |         1 | 20:00:00   |       1 | 20:30:00
+ abc     |         2 | 02:00:00   |       2 | 02:30:00
+ abc     |         2 | 03:00:00   |       2 | 03:30:00
+ abc     |         2 | 04:00:00   |       2 | 04:30:00
+ abc     |         2 | 05:00:00   |       2 | 05:30:00
+ abc     |         2 | 06:00:00   |       2 | 06:30:00
+ abc     |         2 | 07:00:00   |       2 | 07:30:00
+ abc     |         2 | 08:00:00   |       2 | 08:30:00
+ abc     |         2 | 09:00:00   |       2 | 09:30:00
+ abc     |         2 | 10:00:00   |       2 | 10:30:00
+ abc     |         2 | 11:00:00   |       2 | 11:30:00
+ abc     |         2 | 12:00:00   |       2 | 12:30:00
+ abc     |         2 | 13:00:00   |       2 | 13:30:00
+ abc     |         2 | 14:00:00   |       2 | 14:30:00
+ abc     |         2 | 15:00:00   |       2 | 15:30:00
+ abc     |         2 | 16:00:00   |       2 | 16:30:00
+ abc     |         2 | 17:00:00   |       2 | 17:30:00
+ abc     |         2 | 18:00:00   |       2 | 18:30:00
+ abc     |         2 | 19:00:00   |       2 | 19:30:00
+ abc     |         2 | 20:00:00   |       2 | 20:30:00
+ abc     |         3 | 01:00:00   |       3 | 01:30:00
+ abc     |         3 | 02:00:00   |       3 | 02:30:00
+ abc     |         3 | 03:00:00   |       3 | 03:30:00
+ abc     |         3 | 04:00:00   |       3 | 04:30:00
+ abc     |         3 | 05:00:00   |       3 | 05:30:00
+ abc     |         3 | 06:00:00   |       3 | 06:30:00
+ abc     |         3 | 07:00:00   |       3 | 07:30:00
+ abc     |         3 | 08:00:00   |       3 | 08:30:00
+ abc     |         3 | 09:00:00   |       3 | 09:30:00
+ abc     |         3 | 10:00:00   |       3 | 10:30:00
+ abc     |         3 | 11:00:00   |       3 | 11:30:00
+ abc     |         3 | 12:00:00   |       3 | 12:30:00
+ abc     |         3 | 13:00:00   |       3 | 13:30:00
+ abc     |         3 | 14:00:00   |       3 | 14:30:00
+ abc     |         3 | 15:00:00   |       3 | 15:30:00
+ abc     |         3 | 16:00:00   |       3 | 16:30:00
+ abc     |         3 | 17:00:00   |       3 | 17:30:00
+ abc     |         3 | 18:00:00   |       3 | 18:30:00
+ abc     |         3 | 19:00:00   |       3 | 19:30:00
+ abc     |         3 | 20:00:00   |       3 | 20:30:00
+(60 rows)
+
+ALTER ROLE abc DROP DENY FOR DAY 'Wednesday';
+NOTICE:  dropping DENY rule for "abc" between Wednesday 01:00:00 and Wednesday 01:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 02:00:00 and Wednesday 02:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 03:00:00 and Wednesday 03:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 04:00:00 and Wednesday 04:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 05:00:00 and Wednesday 05:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 06:00:00 and Wednesday 06:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 07:00:00 and Wednesday 07:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 08:00:00 and Wednesday 08:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 09:00:00 and Wednesday 09:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 10:00:00 and Wednesday 10:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 11:00:00 and Wednesday 11:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 12:00:00 and Wednesday 12:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 13:00:00 and Wednesday 13:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 14:00:00 and Wednesday 14:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 15:00:00 and Wednesday 15:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 16:00:00 and Wednesday 16:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 17:00:00 and Wednesday 17:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 18:00:00 and Wednesday 18:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 19:00:00 and Wednesday 19:30:00
+NOTICE:  dropping DENY rule for "abc" between Wednesday 20:00:00 and Wednesday 20:30:00
+SELECT r.rolname, d.start_day, d.start_time, d.end_day, d.end_time
+FROM pg_auth_time_constraint d join pg_roles r ON (d.authid = r.oid)
+WHERE r.rolname = 'abc'
+ORDER BY r.rolname, d.start_day, d.start_time, d.end_day, d.end_time;
+ rolname | start_day | start_time | end_day | end_time 
+---------+-----------+------------+---------+----------
+ abc     |         1 | 01:00:00   |       1 | 01:30:00
+ abc     |         1 | 01:00:00   |       1 | 01:30:00
+ abc     |         1 | 02:00:00   |       1 | 02:30:00
+ abc     |         1 | 03:00:00   |       1 | 03:30:00
+ abc     |         1 | 04:00:00   |       1 | 04:30:00
+ abc     |         1 | 05:00:00   |       1 | 05:30:00
+ abc     |         1 | 06:00:00   |       1 | 06:30:00
+ abc     |         1 | 07:00:00   |       1 | 07:30:00
+ abc     |         1 | 08:00:00   |       1 | 08:30:00
+ abc     |         1 | 09:00:00   |       1 | 09:30:00
+ abc     |         1 | 10:00:00   |       1 | 10:30:00
+ abc     |         1 | 11:00:00   |       1 | 11:30:00
+ abc     |         1 | 12:00:00   |       1 | 12:30:00
+ abc     |         1 | 13:00:00   |       1 | 13:30:00
+ abc     |         1 | 14:00:00   |       1 | 14:30:00
+ abc     |         1 | 15:00:00   |       1 | 15:30:00
+ abc     |         1 | 16:00:00   |       1 | 16:30:00
+ abc     |         1 | 17:00:00   |       1 | 17:30:00
+ abc     |         1 | 18:00:00   |       1 | 18:30:00
+ abc     |         1 | 19:00:00   |       1 | 19:30:00
+ abc     |         1 | 20:00:00   |       1 | 20:30:00
+ abc     |         2 | 02:00:00   |       2 | 02:30:00
+ abc     |         2 | 03:00:00   |       2 | 03:30:00
+ abc     |         2 | 04:00:00   |       2 | 04:30:00
+ abc     |         2 | 05:00:00   |       2 | 05:30:00
+ abc     |         2 | 06:00:00   |       2 | 06:30:00
+ abc     |         2 | 07:00:00   |       2 | 07:30:00
+ abc     |         2 | 08:00:00   |       2 | 08:30:00
+ abc     |         2 | 09:00:00   |       2 | 09:30:00
+ abc     |         2 | 10:00:00   |       2 | 10:30:00
+ abc     |         2 | 11:00:00   |       2 | 11:30:00
+ abc     |         2 | 12:00:00   |       2 | 12:30:00
+ abc     |         2 | 13:00:00   |       2 | 13:30:00
+ abc     |         2 | 14:00:00   |       2 | 14:30:00
+ abc     |         2 | 15:00:00   |       2 | 15:30:00
+ abc     |         2 | 16:00:00   |       2 | 16:30:00
+ abc     |         2 | 17:00:00   |       2 | 17:30:00
+ abc     |         2 | 18:00:00   |       2 | 18:30:00
+ abc     |         2 | 19:00:00   |       2 | 19:30:00
+ abc     |         2 | 20:00:00   |       2 | 20:30:00
+(40 rows)
+
+DROP ROLE IF EXISTS abc;
+SELECT r.rolname, d.start_day, d.start_time, d.end_day, d.end_time
+FROM pg_auth_time_constraint d join pg_roles r ON (d.authid = r.oid)
+WHERE r.rolname = 'abc'
+ORDER BY r.rolname, d.start_day, d.start_time, d.end_day, d.end_time;
+ rolname | start_day | start_time | end_day | end_time 
+---------+-----------+------------+---------+----------
+(0 rows)
+

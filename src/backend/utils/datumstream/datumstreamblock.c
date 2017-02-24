@@ -2930,6 +2930,13 @@ DatumStreamBlockWrite_DeltaAdd(
 	Assert(dsw->nth <= dsw->maxDatumPerBlock);
 }
 
+/*
+ * Delta compression is applied only if delta between the adjacent tuples can
+ * be stored max by 4 bytes. Since upper 3 bits are reserved, leaves room of
+ * 29 bits max value for delta to be stored. If delta turns out to be larger
+ * than this value, delta compression is not applied for this tuple instead
+ * actual value is directly stored.
+ */
 #define MAX_DELTA_SUPPORTED_DELTA_COMPRESSION 0x1FFFFFFF
 
 static Delta_Compression_status
@@ -2998,7 +3005,13 @@ DatumStreamBlockWrite_PerformDeltaCompression(
 			break;
 	}
 
-	if (delta > MAX_DELTA_SUPPORTED_DELTA_COMPRESSION)
+	/*
+	 * Check if delta value fits the storage reserved for it. Important is to
+	 * also check for overflow case, where delta goes negative. As logic above
+	 * always subtracts smaller number from larger, delta must be positive
+	 * except overflow case.
+	 */
+	if (delta < 0 || delta > MAX_DELTA_SUPPORTED_DELTA_COMPRESSION)
 	{
 		return DELTA_COMPRESSION_NOT_APPLIED;
 	}

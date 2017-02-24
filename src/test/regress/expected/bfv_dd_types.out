@@ -227,6 +227,13 @@ INFO:  Dispatch command to SINGLE content
  12:34:56:78:90:ab
 (1 row)
 
+select 1 from direct_test_type_tinterval where x = '["2008-08-08" "2010-10-10"]';
+INFO:  Dispatch command to SINGLE content
+ ?column? 
+----------
+        1
+(1 row)
+
 select * from direct_test_type_varbit where x = '0101010';
 INFO:  Dispatch command to SINGLE content
     x    

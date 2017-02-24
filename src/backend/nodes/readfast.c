@@ -2050,8 +2050,6 @@ _readSort(void)
 	READ_BOOL_ARRAY(nullsFirst, local_node->numCols);
 
     /* CDB */
-	READ_NODE_FIELD(limitOffset);
-	READ_NODE_FIELD(limitCount);
 	READ_BOOL_FIELD(noduplicates);
 
 	READ_ENUM_FIELD(share_type, ShareType);

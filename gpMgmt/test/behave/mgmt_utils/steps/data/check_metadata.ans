@@ -17,7 +17,7 @@ Distributed by: (a)
  b      | integer |           | plain   | 
 Indexes:
     "idx_a" UNIQUE, btree (a)
-Triggers:
+Disabled triggers:
     before_heap_ins_trig BEFORE INSERT ON heap_table FOR EACH ROW EXECUTE PROCEDURE trigger_func()
 Has OIDs: no
 Distributed by: (a)

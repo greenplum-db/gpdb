@@ -255,9 +255,9 @@ CREATE SCHEMA exttabletest;
 CREATE
 	EXTERNAL TABLE exttabletest.ext_nation (n_nationkey integer, n_name char(25), n_regionkey integer, n_comment varchar(152))
 	LOCATION ('file://@hostname@@abs_srcdir@/data/nation.tbl') FORMAT 'text' (delimiter '|');
-SELECT count(*) FROM pg_exttable WHERE location @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
+SELECT count(*) FROM pg_exttable WHERE urilocation @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
 DROP SCHEMA exttabletest CASCADE;
-SELECT count(*) FROM pg_exttable WHERE location @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
+SELECT count(*) FROM pg_exttable WHERE urilocation @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
 
 -- Tests for MPP17980: generating artificial CTIDs for external table scans
 -- This is necessary because the planner currently generates plans that include
@@ -1368,6 +1368,15 @@ SELECT COUNT(*) FROM gp_read_error_log('exttab_heap_join_1');
 
 \! rm @abs_srcdir@/data/tableless.csv
 
+-- Create external table with on clause
+
+CREATE EXTERNAL TABLE exttab_with_on_master( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') ON MASTER FORMAT 'TEXT' (DELIMITER '|');
+
+\d exttab_with_on_master
+
+DROP EXTERNAL TABLE IF EXISTS exttab_with_on_master;
+
 -- Create external table with 'OPTIONS'
 CREATE EXTERNAL TABLE exttab_with_option_empty( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
@@ -1421,3 +1430,32 @@ FORMAT 'csv';
 
 -- drop temp external table
 DROP EXTERNAL TABLE IF EXISTS serial;
+
+-- External table query within plpgSQL function get error
+CREATE EXTERNAL TABLE exttab_error_context_callback(c1 int, c2 int)
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab.data') FORMAT 'TEXT';
+
+CREATE or REPLACE FUNCTION exttab_error_context_callback_func()
+RETURNS SETOF INTEGER
+AS
+$$
+DECLARE
+    ret INTEGER;
+BEGIN
+    FOR ret IN
+        SELECT c2 from exttab_error_context_callback
+    LOOP
+        RETURN NEXT ret;
+    END LOOP;
+END
+$$
+LANGUAGE plpgSQL READS SQL DATA;
+
+SET gp_log_gang TO DEBUG;
+
+SELECT * FROM exttab_error_context_callback_func();
+
+SET gp_log_gang TO DEFAULT;
+
+DROP FUNCTION exttab_error_context_callback_func();
+DROP EXTERNAL TABLE exttab_error_context_callback;

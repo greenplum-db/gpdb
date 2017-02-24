@@ -539,14 +539,15 @@ COptTasks::Execute
 {
 	Assert(pfunc);
 
+	CHAR *err_buf = (CHAR *) palloc(GPOPT_ERROR_BUFFER_SIZE);
+	err_buf[0] = '\0';
+
 	// initialize DXL support
 	InitDXL();
 
 	bool abort_flag = false;
 
 	CAutoMemoryPool amp(CAutoMemoryPool::ElcNone, CMemoryPoolManager::EatTracker, false /* fThreadSafe */);
-	IMemoryPool *pmp = amp.Pmp();
-	CHAR *err_buf = SzAllocate(pmp, GPOPT_ERROR_BUFFER_SIZE);
 
 	gpos_exec_params params;
 	params.func = pfunc;
@@ -578,7 +579,7 @@ COptTasks::LogErrorAndDelete(CHAR* err_buf) {
 		elog(LOG, "%s", SzFromWsz((WCHAR *)err_buf));
 	}
 
-	GPOS_DELETE_ARRAY(err_buf);
+	pfree(err_buf);
 }
 
 
@@ -1000,7 +1001,7 @@ COptTasks::PvOptimizeTask
 		CMDCache::Reset();
 		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
 	}
-	else if (CMDCache::ULLGetCacheQuota() != optimizer_mdcache_size * 1024L)
+	else if (CMDCache::ULLGetCacheQuota() != (ULLONG) optimizer_mdcache_size * 1024L)
 	{
 		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
 	}
@@ -1573,7 +1574,7 @@ COptTasks::PvEvalExprFromDXLTask
 		CMDCache::Reset();
 		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
 	}
-	else if (CMDCache::ULLGetCacheQuota() != optimizer_mdcache_size * 1024L)
+	else if (CMDCache::ULLGetCacheQuota() != (ULLONG) optimizer_mdcache_size * 1024L)
 	{
 		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
 	}

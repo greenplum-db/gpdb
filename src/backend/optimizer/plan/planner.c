@@ -356,8 +356,7 @@ planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 #ifdef USE_ORCA
 	if (optimizer
 		&& (GP_ROLE_UTILITY != Gp_role)
-		&& (MASTER_CONTENT_ID == GpIdentity.segindex)
-		&& !query_has_external_partition(parse))
+		&& (MASTER_CONTENT_ID == GpIdentity.segindex))
 	{
 		if (gp_log_optimization_time)
 		{

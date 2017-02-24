@@ -2284,11 +2284,6 @@ typedef struct SortState
 	bool		bounded_Done;	/* value of bounded we did the sort with */
 	int64		bound_Done;		/* value of bound we did the sort with */
 	GenericTupStore *tuplesortstate; /* private state of tuplesort.c */
-	/* CDB */ /* limit state */
-
-	/* GPDB_83_MERGE_FIXME: Are these redundant with the "bound" fields? */
-	ExprState  *limitOffset;	/* OFFSET parameter, or NULL if none */
-	ExprState  *limitCount;		/* COUNT parameter, or NULL if none */
 	bool		noduplicates;	/* true if discard duplicate rows */
 
 	void	   *share_lk_ctxt;
@@ -2386,7 +2381,6 @@ typedef struct WindowState
 	TupleTableSlot *priorslot;	/* place for prior tuple */
 	TupleTableSlot *curslot;		/* current tuple */
 	TupleTableSlot *spare;		/* current tuple */
-	TupleTableSlot *saveslot;	/* convenient place holder */
 
 	/* meta data about the current slot */
 	bool		cur_slot_is_new;	/* is this a slot from a buffer or outer plan */

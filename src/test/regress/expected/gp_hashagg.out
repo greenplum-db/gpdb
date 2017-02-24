@@ -65,3 +65,70 @@ group by tbl_a.id ;
   1 |    100
 (1 row)
 
+--
+-- Test that the planner doesn't try to use a hash agg for a type that is not hashable.
+--
+-- First create a type to test with.
+CREATE TYPE nohash_int;
+CREATE FUNCTION nohash_int_in(cstring) RETURNS nohash_int IMMUTABLE STRICT LANGUAGE INTERNAL AS 'int4in';
+NOTICE:  return type nohash_int is only a shell
+CREATE FUNCTION nohash_int_out(nohash_int) RETURNS cstring IMMUTABLE STRICT LANGUAGE INTERNAL AS 'int4out';
+NOTICE:  argument type nohash_int is only a shell
+CREATE TYPE nohash_int (INPUT = nohash_int_in, OUTPUT=nohash_int_out, INTERNALLENGTH=4, PASSEDBYVALUE, ALIGNMENT=int4);
+-- Create comparison operators and opclass.
+CREATE FUNCTION nohash_int_cmp(nohash_int, nohash_int) RETURNS integer AS 'btint4cmp' LANGUAGE 'internal' IMMUTABLE STRICT;
+CREATE FUNCTION nohash_int_lt(nohash_int, nohash_int) RETURNS bool IMMUTABLE STRICT LANGUAGE INTERNAL AS 'int4lt';
+CREATE FUNCTION nohash_int_le(nohash_int, nohash_int) RETURNS bool IMMUTABLE STRICT LANGUAGE INTERNAL AS 'int4le';
+CREATE FUNCTION nohash_int_eq(nohash_int, nohash_int) RETURNS bool IMMUTABLE STRICT LANGUAGE INTERNAL AS 'int4eq';
+CREATE FUNCTION nohash_int_ge(nohash_int, nohash_int) RETURNS bool IMMUTABLE STRICT LANGUAGE INTERNAL AS 'int4ge';
+CREATE FUNCTION nohash_int_gt(nohash_int, nohash_int) RETURNS bool IMMUTABLE STRICT LANGUAGE INTERNAL AS 'int4gt';
+CREATE OPERATOR <  (PROCEDURE=nohash_int_lt, LEFTARG=nohash_int, RIGHTARG=nohash_int);
+CREATE OPERATOR <= (PROCEDURE=nohash_int_le, LEFTARG=nohash_int, RIGHTARG=nohash_int);
+CREATE OPERATOR =  (PROCEDURE=nohash_int_eq, LEFTARG=nohash_int, RIGHTARG=nohash_int);
+CREATE OPERATOR >= (PROCEDURE=nohash_int_ge, LEFTARG=nohash_int, RIGHTARG=nohash_int);
+CREATE OPERATOR >  (PROCEDURE=nohash_int_gt, LEFTARG=nohash_int, RIGHTARG=nohash_int);
+CREATE OPERATOR CLASS nohash_int_bt_ops DEFAULT
+	FOR TYPE nohash_int USING btree AS
+	OPERATOR 1  <,
+	OPERATOR 2  <=,
+	OPERATOR 3  =,
+	OPERATOR 4  >=,
+	OPERATOR 5  >,
+	FUNCTION 1  nohash_int_cmp(nohash_int, nohash_int);
+-- A test table
+create table hashagg_test2(normal_int int4, nohash_int nohash_int) distributed randomly;
+insert into hashagg_test2 select g%10, (g%10)::text::nohash_int from generate_series(1, 10000) g;
+-- Prefer hash aggs
+set enable_sort=off;
+-- These should both work. The first is expected to use a hash agg. The second will
+-- use a Sort + Group, because nohash_int type is not hashable.
+select normal_int from hashagg_test2 group by normal_int;
+ normal_int 
+------------
+          0
+          1
+          2
+          3
+          4
+          5
+          6
+          7
+          8
+          9
+(10 rows)
+
+select nohash_int from hashagg_test2 group by nohash_int;
+ nohash_int 
+------------
+ 0
+ 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+(10 rows)
+

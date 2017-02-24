@@ -1158,18 +1158,6 @@ lazy_truncate_heap(Relation onerel, LVRelStats *vacrelstats)
 	vacrelstats->rel_pages = new_rel_pages;
 	vacrelstats->pages_removed = old_rel_pages - new_rel_pages;
 
-/*
- * GPDB_83_MERGE_FIXME: The PostgreSQL commit above explains why we *must*
- * keep the lock. But in GDPB, we just drop it. Either the upstream comment
- * is wrong (unlikely), or GPDB is playing dangerous fast-and-loose with the
- * lock, and the deadlock needs to be fixed some other way (likely)
- */
-	/*
-	 * We can't keep the exclusive lock until commit, since this will cause
-	 * deadlock, see MPP-5733.
-	 */
-	UnlockRelation(onerel, AccessExclusiveLock);
-
 	ereport(elevel,
 			(errmsg("\"%s\": truncated %u to %u pages",
 					RelationGetRelationName(onerel),

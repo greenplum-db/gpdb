@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic40">
+   <title>Statement Behavior Parameters</title>
+   <body>
+      <simpletable id="kh163609">
+         <strow>
+            <stentry>
+               <p>
+                  <codeph>check_function_bodies</codeph>
+               </p>
+               <p>
+                  <codeph>default_tablespace</codeph>
+               </p>
+               <p>
+                  <codeph>default_transaction_isolation</codeph>
+               </p>
+               <p>
+                  <codeph>default_transaction_read_only</codeph>
+               </p>
+            </stentry>
+            <stentry>
+               <p>
+                  <codeph>search_path</codeph>
+               </p>
+               <p>
+                  <codeph>statement_timeout</codeph>
+               </p>
+               <p>
+                  <codeph>vacuum_freeze_min_age</codeph>
+               </p>
+            </stentry>
+         </strow>
+      </simpletable>
+   </body>
+</topic>

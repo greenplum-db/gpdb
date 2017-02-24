@@ -2800,24 +2800,6 @@ afterTriggerInvokeEvents(int query_depth,
 			{
 				ResultRelInfo *rInfo;
 
-				/* GPDB_83_MERGE_FIXME: We had this in GPDB before the merge.
-				 * There are no comments on why this is needed, and I don't get it.
-				 */
-#if 0				
-				if (locally_opened)
-				{
-					/* close prior rel if any */
-					if (rel)
-						heap_close(rel, NoLock);
-					if (trigdesc)
-						FreeTriggerDesc(trigdesc);
-					if (finfo)
-						pfree(finfo);
-					Assert(instr == NULL);		/* never used in this case */
-				}
-				locally_opened = true;
-#endif
-
 				rInfo = ExecGetTriggerResultRel(estate, event->ate_relid);
 				rel = rInfo->ri_RelationDesc;
 				trigdesc = rInfo->ri_TrigDesc;

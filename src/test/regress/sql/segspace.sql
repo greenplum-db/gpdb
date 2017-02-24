@@ -31,10 +31,8 @@ ANALYZE segspace_test_hj_skew;
 ------------ Interrupting SELECT query that spills -------------------
 
 -- enable the fault injector
---start_ignore
 \! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
 \! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
---end_ignore
 
 set gp_workfile_type_hashjoin=buffile;
 set statement_mem=2048;
@@ -44,6 +42,8 @@ set gp_hashjoin_metadata_memory_percent=0;
 begin;
 SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
 rollback;
+
+\! gpfaultinjector -f exec_hashjoin_new_batch -y status --seg_dbid 2
 
 -- check used segspace after test
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
@@ -71,10 +71,8 @@ set gp_autostats_mode = none;
 set gp_hashjoin_metadata_memory_percent=0;
 
 -- enable the fault injector
---start_ignore
 \! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
 \! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
---end_ignore
 
 begin;
 
@@ -82,6 +80,8 @@ insert into segspace_t1_created
 SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
 
 rollback;
+
+\! gpfaultinjector -f exec_hashjoin_new_batch -y status --seg_dbid 2
 
 -- check used segspace after test
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
@@ -111,10 +111,8 @@ set gp_autostats_mode = none;
 set gp_hashjoin_metadata_memory_percent=0;
 
 -- enable the fault injector
---start_ignore
 \! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
 \! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
---end_ignore
 
 begin;
 
@@ -122,6 +120,8 @@ create table segspace_t1_created AS
 SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
 
 rollback;
+
+\! gpfaultinjector -f exec_hashjoin_new_batch -y status --seg_dbid 2
 
 -- check used segspace after test
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
@@ -157,10 +157,8 @@ set gp_enable_mk_sort=on;
 set gp_cte_sharing=on;
 
 -- enable the fault injector
---start_ignore
 \! gpfaultinjector -f workfile_write_failure -y reset --seg_dbid 2
 \! gpfaultinjector -f workfile_write_failure -y error --seg_dbid 2
---end_ignore
 
 -- LEAK in UPDATE: update with sisc xslice sort
 update foo set j=m.cc1 from (
@@ -169,6 +167,8 @@ update foo set j=m.cc1 from (
   select t1.i1 as cc1, t1.i2 as cc2
   from ctesisc as t1, ctesisc as t2
   where t1.i1 = t2.i2 ) as m;
+
+\! gpfaultinjector -f exec_hashjoin_new_batch -y status --seg_dbid 2
 
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
 
@@ -207,16 +207,16 @@ insert into foo select i, i % 1000 from
 set statement_mem=1024; -- 1mb for 3 segment to get leak.
 
 -- enable the fault injector
---start_ignore
 \! gpfaultinjector -f workfile_write_failure -y reset --seg_dbid 2
 \! gpfaultinjector -f workfile_write_failure -y error --seg_dbid 2
---end_ignore
 
 -- LEAK in DELETE with APPEND ONLY tables
 delete from testsisc using (
   select *
   from foo
 ) src  where testsisc.i1 = src.i;
+
+\! gpfaultinjector -f exec_hashjoin_new_batch -y status --seg_dbid 2
 
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
 
@@ -243,16 +243,16 @@ drop table if exists foo;
 create table foo (c int, d int);
 
 -- enable the fault injector
---start_ignore
 \! gpfaultinjector -f workfile_write_failure -y reset --seg_dbid 2
 \! gpfaultinjector -f workfile_write_failure -y error --seg_dbid 2
---end_ignore
 
 -- expect to see leak if we hit error
 update foo set d = i1 from (select i1,i2 from testsort order by i2) x;
 
 -- check counter leak
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
+
+\! gpfaultinjector -f exec_hashjoin_new_batch -y status --seg_dbid 2
 
 -- Run the test without fault injection
 -- expect to see leak if we hit error
@@ -276,15 +276,15 @@ create table foo (c int, d int);
 -- expect to see leak if we hit error
 
 -- enable the fault injector
---start_ignore
 \! gpfaultinjector -f workfile_write_failure -y reset --seg_dbid 2
 \! gpfaultinjector -f workfile_write_failure -y error --seg_dbid 2
---end_ignore
 
 update foo set d = i1 from (with ctesisc as (select * from testsisc order by i2)
 select * from
 (select count(*) from ctesisc) x(a), ctesisc
 where x.a = ctesisc.i1) y;
+
+\! gpfaultinjector -f exec_hashjoin_new_batch -y status --seg_dbid 2
 
 -- check counter leak
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;

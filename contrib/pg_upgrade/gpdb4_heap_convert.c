@@ -213,6 +213,7 @@ make_room(migratorContext *ctx, char *page)
 			oldhdr->pd_lower -= sizeof(ItemIdData);
 
 			/* Did we make enough room? */
+			space = (int) oldhdr->pd_upper - (int) oldhdr->pd_lower;
 			if (space >= SizeOfPageHeaderData - VERSION4_SizeOfPageHeaderData)
 				return;
 		}
@@ -246,6 +247,10 @@ make_room(migratorContext *ctx, char *page)
 			pg_log(ctx, PG_FATAL, "unexpected line pointer flags on old-format page: 0x%x\n", iid.lp_flags);
 		}
 	}
+
+	/* Ensure that we have a victim tuple here before assuming so */
+	if (victim_lp_len == -1)
+		pg_log(ctx, PG_FATAL, "victim tuple for moving wasn't found\n");
 
 	/* Cross-check */
 	if (oldhdr->pd_upper != victim_lp_off)

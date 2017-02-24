@@ -32,7 +32,7 @@ def parseargs( help=False ):
         help='Number of concurrent session from which to execute the queries')
     # --dbname
     parser.add_option( '--dbname', metavar='<dbname>', default='gptest',
-        help='Database where Tpch tables are created and data loaded.')
+        help='Database where mpph tables are created and data loaded.')
     # --username
     parser.add_option( '--username', metavar='<username>', default='gpadmin',
         help='Database username to use while executing the query')

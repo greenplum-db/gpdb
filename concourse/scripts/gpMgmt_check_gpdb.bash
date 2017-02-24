@@ -28,11 +28,14 @@ function gen_env(){
 		    done
 		    exit 1
 		}
+		base_path=\${1}
 		source /usr/local/greenplum-db-devel/greenplum_path.sh
 		source /opt/gcc_env.sh
-		source \${1}/gpdb_src/gpAux/gpdemo/gpdemo-env.sh
-		cd \${1}/gpdb_src/gpMgmt/bin
+		source \${base_path}/gpdb_src/gpAux/gpdemo/gpdemo-env.sh
+		cd \${base_path}/gpdb_src/gpMgmt/bin
 		make check
+		# show results into concourse
+		cat \${base_path}/gpdb_src/gpMgmt/gpMgmt_testunit_results.log
 	EOF
 
 	chmod a+x /opt/run_test.sh
@@ -44,7 +47,6 @@ function setup_gpadmin_user() {
 
 function _main() {
 
-    install_sync_tools
     configure
     install_gpdb
     setup_gpadmin_user

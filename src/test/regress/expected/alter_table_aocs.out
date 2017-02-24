@@ -264,9 +264,38 @@ create table addcol6 (a int, b int)
    with (appendonly=true, orientation=column) distributed by (a);
 begin;
 insert into addcol6 select i,i from generate_series(1,10)i;
--- abort the first insert, so as to advance gp_fastsequence for this
+-- abort the first insert, still should advance gp_fastsequence for this
 -- relation.
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='addcol6'));
+   case    | objmod | last_sequence | gp_segment_id 
+-----------+--------+---------------+---------------
+ NormalXid |      0 |             0 |             1
+ NormalXid |      1 |           100 |             1
+ NormalXid |      0 |             0 |             2
+ NormalXid |      1 |           100 |             2
+ NormalXid |      0 |             0 |             0
+ NormalXid |      1 |           100 |             0
+(6 rows)
+
 abort;
+-- check gp_fastsequence remains advanced.
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='addcol6'));
+   case    | objmod | last_sequence | gp_segment_id 
+-----------+--------+---------------+---------------
+ NormalXid |      0 |             0 |             1
+ NormalXid |      1 |           100 |             1
+ NormalXid |      0 |             0 |             2
+ NormalXid |      1 |           100 |             2
+ NormalXid |      0 |             0 |             0
+ NormalXid |      1 |           100 |             0
+(6 rows)
+
 insert into addcol6 select i,i/2 from generate_series(1,20)i;
 alter table addcol6 add column c float default 1.2;
 select a,c from addcol6 where b > 5 order by a;
@@ -282,6 +311,21 @@ select a,c from addcol6 where b > 5 order by a;
  19 | 1.2
  20 | 1.2
 (9 rows)
+
+-- Lets validate after alter gp_fastsequence reflects correctly.
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='addcol6'));
+   case    | objmod | last_sequence | gp_segment_id 
+-----------+--------+---------------+---------------
+ NormalXid |      0 |             0 |             0
+ NormalXid |      1 |           200 |             0
+ NormalXid |      0 |             0 |             1
+ NormalXid |      1 |           200 |             1
+ NormalXid |      0 |             0 |             2
+ NormalXid |      1 |           200 |             2
+(6 rows)
 
 -- add column with default value as sequence
 alter table addcol6 add column d serial;
@@ -694,68 +738,5 @@ ERROR:  cannot split partition with child partitions
 HINT:  Try splitting the child partitions.
 -- cleanup so as not to affect other installcheck tests
 -- (e.g. column_compression).
+set client_min_messages='WARNING';
 drop schema aocs_addcol cascade;
-NOTICE:  drop cascades to append only columnar table aocs_multi_level_part_table_1_prt_yearyyyy_2_prt_def
-NOTICE:  drop cascades to append only columnar table aocs_multi_level_part_table_1_prt_yearyyyy
-NOTICE:  drop cascades to append only columnar table aocs_multi_level_part_table_1_prt_part3_2_prt_def
-NOTICE:  drop cascades to constraint aocs_multi_level_part_table_1_prt_part3_check on append only columnar table aocs_multi_level_part_table_1_prt_part3_2_prt_def
-NOTICE:  drop cascades to append only columnar table aocs_multi_level_part_table_1_prt_part3_2_prt_asia
-NOTICE:  drop cascades to constraint aocs_multi_level_part_table_1_prt_part3_check on append only columnar table aocs_multi_level_part_table_1_prt_part3_2_prt_asia
-NOTICE:  drop cascades to constraint aocs_multi_level_part_table_1_prt_part3_2_prt_asia_check on append only columnar table aocs_multi_level_part_table_1_prt_part3_2_prt_asia
-NOTICE:  drop cascades to append only columnar table aocs_multi_level_part_table_1_prt_part3_2_prt_usa
-NOTICE:  drop cascades to constraint aocs_multi_level_part_table_1_prt_part3_check on append only columnar table aocs_multi_level_part_table_1_prt_part3_2_prt_usa
-NOTICE:  drop cascades to constraint aocs_multi_level_part_table_1_prt_part3_2_prt_usa_check on append only columnar table aocs_multi_level_part_table_1_prt_part3_2_prt_usa
-NOTICE:  drop cascades to append only columnar table aocs_multi_level_part_table_1_prt_part3
-NOTICE:  drop cascades to constraint aocs_multi_level_part_table_1_prt_part3_check on append only columnar table aocs_multi_level_part_table_1_prt_part3
-NOTICE:  drop cascades to append only columnar table aocs_multi_level_part_table_1_prt_part2_2_prt_asia
-NOTICE:  drop cascades to constraint aocs_multi_level_part_table_1_prt_part2_check on append only columnar table aocs_multi_level_part_table_1_prt_part2_2_prt_asia
-NOTICE:  drop cascades to constraint aocs_multi_level_part_table_1_prt_part2_2_prt_asia_check on append only columnar table aocs_multi_level_part_table_1_prt_part2_2_prt_asia
-NOTICE:  drop cascades to append only columnar table aocs_multi_level_part_table_1_prt_part2_2_prt_usa
-NOTICE:  drop cascades to constraint aocs_multi_level_part_table_1_prt_part2_check on append only columnar table aocs_multi_level_part_table_1_prt_part2_2_prt_usa
-NOTICE:  drop cascades to constraint aocs_multi_level_part_table_1_prt_part2_2_prt_usa_check on append only columnar table aocs_multi_level_part_table_1_prt_part2_2_prt_usa
-NOTICE:  drop cascades to append only columnar table aocs_multi_level_part_table_1_prt_part2
-NOTICE:  drop cascades to constraint aocs_multi_level_part_table_1_prt_part2_check on append only columnar table aocs_multi_level_part_table_1_prt_part2
-NOTICE:  drop cascades to append only columnar table aocs_multi_level_part_table_1_prt_part1_2_prt_def
-NOTICE:  drop cascades to constraint aocs_multi_level_part_table_1_prt_part1_check on append only columnar table aocs_multi_level_part_table_1_prt_part1_2_prt_def
-NOTICE:  drop cascades to append only columnar table aocs_multi_level_part_table_1_prt_part1_2_prt_asia
-NOTICE:  drop cascades to constraint aocs_multi_level_part_table_1_prt_part1_check on append only columnar table aocs_multi_level_part_table_1_prt_part1_2_prt_asia
-NOTICE:  drop cascades to constraint aocs_multi_level_part_table_1_prt_part1_2_prt_asia_check on append only columnar table aocs_multi_level_part_table_1_prt_part1_2_prt_asia
-NOTICE:  drop cascades to append only columnar table aocs_multi_level_part_table_1_prt_part1_2_prt_usa
-NOTICE:  drop cascades to constraint aocs_multi_level_part_table_1_prt_part1_check on append only columnar table aocs_multi_level_part_table_1_prt_part1_2_prt_usa
-NOTICE:  drop cascades to constraint aocs_multi_level_part_table_1_prt_part1_2_prt_usa_check on append only columnar table aocs_multi_level_part_table_1_prt_part1_2_prt_usa
-NOTICE:  drop cascades to append only columnar table aocs_multi_level_part_table_1_prt_part1
-NOTICE:  drop cascades to constraint aocs_multi_level_part_table_1_prt_part1_check on append only columnar table aocs_multi_level_part_table_1_prt_part1
-NOTICE:  drop cascades to append only columnar table aocs_multi_level_part_table
-NOTICE:  drop cascades to table alter_aocs_part_table_1_prt_4
-NOTICE:  drop cascades to constraint alter_aocs_part_table_1_prt_4_check on table alter_aocs_part_table_1_prt_4
-NOTICE:  drop cascades to append only table alter_aocs_part_table_1_prt_3
-NOTICE:  drop cascades to constraint alter_aocs_part_table_1_prt_3_check on append only table alter_aocs_part_table_1_prt_3
-NOTICE:  drop cascades to append only columnar table alter_aocs_part_table_1_prt_foo
-NOTICE:  drop cascades to append only columnar table alter_aocs_part_table_1_prt_r1302684005
-NOTICE:  drop cascades to constraint alter_aocs_part_table_1_prt_r1302684005_check on append only columnar table alter_aocs_part_table_1_prt_r1302684005
-NOTICE:  drop cascades to append only columnar table alter_aocs_part_table_1_prt_r2045619544
-NOTICE:  drop cascades to constraint alter_aocs_part_table_1_prt_r2045619544_check on append only columnar table alter_aocs_part_table_1_prt_r2045619544
-NOTICE:  drop cascades to append only columnar table alter_aocs_part_table_1_prt_5
-NOTICE:  drop cascades to constraint alter_aocs_part_table_1_prt_5_check on append only columnar table alter_aocs_part_table_1_prt_5
-NOTICE:  drop cascades to append only columnar table alter_aocs_heap_table
-NOTICE:  drop cascades to constraint alter_aocs_part_table_1_prt_4_check on append only columnar table alter_aocs_heap_table
-NOTICE:  drop cascades to append only columnar table alter_aocs_ao_table
-NOTICE:  drop cascades to constraint alter_aocs_part_table_1_prt_3_check on append only columnar table alter_aocs_ao_table
-NOTICE:  drop cascades to append only columnar table alter_aocs_part_table
-NOTICE:  drop cascades to append only columnar table addcol8
-NOTICE:  drop cascades to append only table addcol7_1_prt_part201204
-NOTICE:  drop cascades to constraint addcol7_1_prt_part201204_check on append only table addcol7_1_prt_part201204
-NOTICE:  drop cascades to append only columnar table addcol7_1_prt_part201203
-NOTICE:  drop cascades to constraint addcol7_1_prt_part201203_check on append only columnar table addcol7_1_prt_part201203
-NOTICE:  drop cascades to append only columnar table addcol7_1_prt_part201202
-NOTICE:  drop cascades to constraint addcol7_1_prt_part201202_check on append only columnar table addcol7_1_prt_part201202
-NOTICE:  drop cascades to append only columnar table addcol7
-NOTICE:  drop cascades to sequence addcol6_d_seq
-NOTICE:  drop cascades to default for append only columnar table addcol6 column d
-NOTICE:  drop cascades to append only columnar table addcol6
-NOTICE:  drop cascades to append only columnar table addcol5
-NOTICE:  drop cascades to append only columnar table addcol4
-NOTICE:  drop cascades to append only columnar table addcol3
-NOTICE:  drop cascades to append only columnar table addcol2
-NOTICE:  drop cascades to append only columnar table addcol1
-NOTICE:  drop cascades to constraint tcheck on append only columnar table addcol1

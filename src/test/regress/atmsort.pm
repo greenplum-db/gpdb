@@ -275,12 +275,6 @@ s/\s+\(seg.*pid.*\)//
 m/^(?:ERROR|WARNING|CONTEXT|NOTICE):.*gid\s+=\s+(?:\d+)/
 s/gid.*/gid DUMMY/
 
-m/^(?:ERROR|WARNING|CONTEXT|NOTICE):.*DTM error.*gathered (?:\d+) results from cmd.*/
-s/gathered.*results/gathered SOME_NUMBER_OF results/
-
-m/^(?:ERROR|WARNING|CONTEXT|NOTICE):\s+Could not .* savepoint/
-s/\.c\:\d+\)/\.c\:SOME_LINE\)/
-
 m/^(?:ERROR|WARNING|CONTEXT|NOTICE):.*connection.*failed.*(?:http|gpfdist)/
 s/connection.*failed.*(http|gpfdist).*/connection failed dummy_protocol\:\/\/DUMMY_LOCATION/
 
@@ -1118,21 +1112,8 @@ sub atmsort_bigloop
     my $directive = {};
     my $big_ignore = 0;
     my $define_match_expression = undef;
-    my $error_detail_exttab_trifecta_skip = 0; # don't ask!
-    my $verzion = "unknown";
 
-    if (q$Revision$ =~ /\d+/)
-    {
-        $verzion = do { my @r = (q$Revision$ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r }; # must be all one line, for MakeMaker
-    }
-        my $format_fix = << "EOF_formatfix";
-                                ))}
-EOF_formatfix
-    # NOTE: define $format_fix with HERE document just to fix emacs
-    # indenting due to comment char in Q expression...
-
-    $verzion = $0 . " version " . $verzion;
-    print $atmsort_outfh "GP_IGNORE: formatted by $verzion\n";
+    print $atmsort_outfh "GP_IGNORE: formatted by atmsort.pm\n";
 
     my $do_equiv = $glob_compare_equiv || $glob_make_equiv_expected;
 
@@ -1141,12 +1122,6 @@ EOF_formatfix
     {
       reprocess_row:
         my $ini = $_;
-
-        if ($error_detail_exttab_trifecta_skip)
-        {
-            $error_detail_exttab_trifecta_skip = 0;
-            next;
-        }
 
         # look for match/substitution or match/ignore expressions
         if (defined($define_match_expression))
@@ -1469,35 +1444,6 @@ EOF_formatfix
         # if MATCH then SUBSTITUTE
         # see HERE document for definitions
         $ini = match_then_subs($ini);
-
-        if ($ini =~ m/External table .*line (?:\d)+/)
-        {
-            $ini =~ s/External table .*line (\d)+.*/External table DUMMY_EX, line DUMMY_LINE of DUMMY_LOCATION/;
-            $ini =~ s/\s+/ /;
-            # MPP-1557,AUTO-3: horrific ERROR DETAIL External Table trifecta
-            if ($glob_verbose)
-            {
-                print $atmsort_outfh 'GP_IGNORE: External Table ERROR DETAIL fixup' . "\n";
-            }
-            if ($ini !~ m/^DETAIL/)
-            {
-                # find a "blank" DETAIL tag preceding current line
-                if (scalar(@outarr) && ($outarr[-1] =~ m/^DETAIL:\s+$/))
-                {
-                    pop @outarr;
-                    $ini = "DETAIL: " . $ini;
-                    $ini =~ s/\s+/ /;
-                    # need to skip the next record
-                    $error_detail_exttab_trifecta_skip = 1;
-                }
-            }
-
-            if (scalar(@outarr) &&
-                ($outarr[-1] =~ m/^ERROR:\s+missing data for column/))
-            {
-                $outarr[-1] = 'ERROR:  missing data for column DUMMY_COL' . "\n";
-            }
-        }
 
         # if MATCH then IGNORE
         # see HERE document for definitions

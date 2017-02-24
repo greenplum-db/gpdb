@@ -222,6 +222,7 @@ CTranslatorScalarToDXL::PdxlnScOpFromExpr
 		{T_RelabelType, &CTranslatorScalarToDXL::PdxlnScCastFromRelabelType},
 		{T_CoerceToDomain, &CTranslatorScalarToDXL::PdxlnScCoerceFromCoerce},
 		{T_CoerceViaIO, &CTranslatorScalarToDXL::PdxlnScCoerceFromCoerceViaIO},
+		{T_ArrayCoerceExpr, &CTranslatorScalarToDXL::PdxlnScArrayCoerceExprFromExpr},
 		{T_SubLink, &CTranslatorScalarToDXL::PdxlnFromSublink},
 		{T_ArrayExpr, &CTranslatorScalarToDXL::PdxlnArray},
 		{T_ArrayRef, &CTranslatorScalarToDXL::PdxlnArrayRef},
@@ -1173,6 +1174,52 @@ CTranslatorScalarToDXL::PdxlnScCoerceFromCoerceViaIO
 
         return pdxln;
 }
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorScalarToDXL::PdxlnScArrayCoerceExprFromExpr
+//	@doc:
+//		Create a DXL node for a scalar array coerce expression from a
+// 		GPDB Array Coerce expression
+//---------------------------------------------------------------------------
+CDXLNode *
+CTranslatorScalarToDXL::PdxlnScArrayCoerceExprFromExpr
+	(
+	const Expr *pexpr,
+	const CMappingVarColId* pmapvarcolid
+	)
+{
+	GPOS_ASSERT(IsA(pexpr, ArrayCoerceExpr));
+	const ArrayCoerceExpr *parraycoerce = (ArrayCoerceExpr *) pexpr;
+	
+	GPOS_ASSERT(NULL != parraycoerce->arg);
+	
+	CDXLNode *pdxlnChild = PdxlnScOpFromExpr(parraycoerce->arg, pmapvarcolid);
+	
+	GPOS_ASSERT(NULL != pdxlnChild);
+	
+	CDXLNode *pdxln = GPOS_NEW(m_pmp) CDXLNode
+					(
+					m_pmp,
+					GPOS_NEW(m_pmp) CDXLScalarArrayCoerceExpr
+							(
+							m_pmp,
+							GPOS_NEW(m_pmp) CMDIdGPDB(parraycoerce->elemfuncid),
+							GPOS_NEW(m_pmp) CMDIdGPDB(parraycoerce->resulttype),
+							parraycoerce->resulttypmod,
+							parraycoerce->isExplicit,
+							(EdxlCoercionForm) parraycoerce->coerceformat,
+							parraycoerce->location
+							)
+					);
+	
+        pdxln->AddChild(pdxlnChild);
+
+        return pdxln;
+}
+
+
+
 
 //---------------------------------------------------------------------------
 //	@function:

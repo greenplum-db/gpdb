@@ -1,0 +1,49 @@
+-- @Description Tests the behavior of full vacuum w.r.t. the pg_class statistics
+--
+DROP TABLE IF EXISTS foo;
+DROP
+
+CREATE TABLE foo (a INT, b INT, c CHAR(128)) WITH (appendonly=true, orientation=@orientation@) DISTRIBUTED BY (a);
+CREATE
+CREATE INDEX foo_index ON foo(b);
+CREATE
+INSERT INTO foo SELECT i as a, i as b, 'hello world' as c FROM generate_series(1, 50) AS i;
+INSERT 50
+INSERT INTO foo SELECT i as a, i as b, 'hello world' as c FROM generate_series(51, 100) AS i;
+INSERT 50
+ANALYZE foo;
+ANALYZE
+
+-- ensure that the scan go through the index
+SET enable_seqscan=false;
+SET
+SELECT relname, reltuples FROM pg_class WHERE relname = 'foo';
+relname|reltuples
+-------+---------
+foo    |100      
+(1 row)
+SELECT relname, reltuples FROM pg_class WHERE relname = 'foo_index';
+relname  |reltuples
+---------+---------
+foo_index|100      
+(1 row)
+DELETE FROM foo WHERE a < 16;
+DELETE 15
+VACUUM FULL foo;
+VACUUM
+SELECT relname, reltuples FROM pg_class WHERE relname = 'foo';
+relname|reltuples
+-------+---------
+foo    |85       
+(1 row)
+SELECT relname, reltuples FROM pg_class WHERE relname = 'foo_index';
+relname  |reltuples
+---------+---------
+foo_index|85       
+(1 row)
+SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg_name('foo');
+segno|tupcount|state
+-----+--------+-----
+1    |0       |1    
+2    |85      |1    
+(2 rows)

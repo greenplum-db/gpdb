@@ -166,6 +166,7 @@ DROP TABLE tmp_new2;
 
 -- ALTER TABLE ... RENAME on corrupted relations
 SET allow_system_table_mods = dml;
+SET gp_allow_rename_relation_without_lock = ON;
 -- missing entry
 CREATE TABLE cor (a int, b float);
 INSERT INTO cor SELECT i, i+1 FROM generate_series(1,100)i;
@@ -189,6 +190,7 @@ ALTER TABLE tmpcor RENAME TO cor;
 DROP TABLE cor;
 
 RESET allow_system_table_mods;
+RESET gp_allow_rename_relation_without_lock;
 
 -- ALTER TABLE ... RENAME on non-table relations
 -- renaming indexes (FIXME: this should probably test the index's functionality)

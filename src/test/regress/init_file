@@ -1,3 +1,7 @@
+-- This file contains global patterns of messages that should be ignored or
+-- masked out, when comparing test results with the expected output.
+-- Individual tests can contain additional patterns specific to the test.
+
 -- start_matchignore
 # match ignore the gpmon WARNING message
 m/^WARNING:  gpmon:.*Connection refused.*/
@@ -47,15 +51,6 @@ m/^NOTICE:.*building index for child partition ".*"/
 # E.g exchanged partition "p1" of relation "parttest_t" with relation "pg_temp_4062621"
 m/^NOTICE:.*exchanged partition ".*" with relation ".*"/
 
-# The following two NOTICEs are generated when user runs CREATE function. In
-# some cases, when the database creates a function internally, the NOTICE might
-# have OIDs embedded in it.
-# For e.g  NOTICE:  return type pg_atsdb_133977_2_3 is only a shell. It is not
-# really providing useful information to the user and hence can be ignored.
-m/^NOTICE:.*return type .* is only a shell/
-
-m/^NOTICE:.*argument type .* is only a shell/
-
 # The following NOTICE is generated when a user creates a table with no
 # columns. E.g CREATE TABLE foo(). It is to inform the user that database
 # cannot find any columns on which to distribute the data. Merging tests from
@@ -79,14 +74,6 @@ m/^WARNING:  could not close temporary file .*: No such file or directory/
 m/\s+\(entry db(.*)+\spid=\d+\)/
 s/\s+\(entry db(.*)+\spid=\d+\)//
 
-#In alter_table_distribution_policy tests, some test cases emit NOTICE message
-#like the following
-#drop cascades to function pg_atsdb_211851_2_4_out.
-#The name contains OID embedded in it and it can change with test runs. We want
-#to remove these and diff the rest.
-m/^NOTICE:.*drop cascades to.*/
-s/^NOTICE:.*drop cascades to.*/^NOTICE: drop cascades to /
-
 # Mask out some numbers (parts of partition names) that vary from run to run.
 m/overlaps existing partition "r\d+"/
 s/overlaps existing partition "r\d+"/partition "r##########"/
@@ -95,14 +82,7 @@ s/overlaps existing partition "r\d+"/partition "r##########"/
 m/Table "pg_temp_\d+.temp/
 s/Table "pg_temp_\d+.temp/Table "pg_temp_#####/
 
-# Mask out Log & timestamp for orca message that has feature not supported.
-m/^LOG.*\"Feature/
-s/^LOG.*\"Feature/\"Feature/
-
-m/^DETAIL:  Internal error: No motion listener port \(seg\d.*:.*\)/
-s/^DETAIL:  Internal error: No motion listener port \(seg\d.*:.*\)//
-
-# Mask out whoami message for dispatch
-m/^ \(seg\d .*:\d+\)/
-s/^ \(seg\d .*:\d+\)//
+# Mask out timestamp and whoami message for gpfaultinjector
+m/^\d+.*gpfaultinjector.*-\[INFO\]:-/
+s/^\d+.*gpfaultinjector.*-\[INFO\]:-//
 -- end_matchsubs

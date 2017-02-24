@@ -457,8 +457,6 @@ _outSort(StringInfo str, Sort *node)
 	WRITE_BOOL_ARRAY(nullsFirst, node->numCols);
 
     /* CDB */
-	WRITE_NODE_FIELD(limitOffset);
-	WRITE_NODE_FIELD(limitCount);
     WRITE_BOOL_FIELD(noduplicates);
 
 	WRITE_ENUM_FIELD(share_type, ShareType);

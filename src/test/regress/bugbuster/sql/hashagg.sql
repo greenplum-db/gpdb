@@ -1,4 +1,4 @@
-\c tpch_heap
+\c mpph_heap
 set enable_groupagg=off;
 set enable_hashagg=on;
 select c_nationkey, count(*) from customer group by c_nationkey;

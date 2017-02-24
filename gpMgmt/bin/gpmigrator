@@ -2166,7 +2166,7 @@ class GPUpgrade(GPUpgradeBase):
             #   - template1 must be processed first and handles the updates for
             #     the shared tables
             #   - the master is always called with gp_persistent_build_db(false)
-            #   - segments call gp_peristent_build_db(true) when there are 
+            #   - segments call gp_persistent_build_db(true) when there are
             #     mirrors
             fname = os.path.join(logdir, 'persistent_master.sql')
             f = open(fname, 'w')

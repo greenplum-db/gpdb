@@ -2029,10 +2029,34 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 
 			estate->es_junkFilter = NULL;
 			/*
-			 * GPDB_83_MERGE_FIXME: Disabled this test, because it was hit by the
-			 * qp_executor regression test. Disabling it doesn't seem to be have any
-			 * ill effect, which is a bit baffling. I think we have some other
-			 * mechanism to do FOR UPDATE/SHARE. We lock the whole table, perhaps?
+			 * In Postgres the optimizer (planner) would add a junk
+			 * TID column for each table in the rowMarks. And the
+			 * executor will lock the tuples when executing the
+			 * root node in the plan.
+			 *
+			 * The below check seems dormant even in Postgres: to
+			 * actually cover the `elog(ERROR)`, the code path
+			 * needs to have
+			 *   1. No junk TID columns
+			 *   2. A non-empty rowMarks list
+			 *
+			 * In Postgres the above conditions are all-or-nothing.
+			 * So the check feels more like an `Assert` rather than
+			 * an `elog(ERROR)`, and it seems to be dead code.
+			 *
+			 * In Greenplum, the above condition does not hold.
+			 * Greenplum has a different (but compliant)
+			 * implementation, where we place a lock on each table
+			 * in the rowMarks.  Consequently, we do *not* generate
+			 * the junk column in the plan (except for tables that
+			 * are only on the master). See preprocess_targetlist
+			 * in preptlist.c This is reasonable because the root
+			 * node is most likely executing in a different slice
+			 * from the leaf nodes (which are most likely SCAN's):
+			 * by the time a (hypothetical) TID reaches the root
+			 * node, there's no guarantee that the tuple has not
+			 * passed through a motion node, hence it makes no
+			 * sense locking it.
 			 */
 #if 0
 			if (estate->es_rowMarks)

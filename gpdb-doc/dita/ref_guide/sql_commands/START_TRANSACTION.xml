@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+    <title id="eo20941">START TRANSACTION</title>
+    <body>
+        <p id="sql_command_desc">Starts a transaction block.</p>
+        <section id="section2">
+            <title>Synopsis</title>
+            <codeblock id="sql_command_synopsis">START TRANSACTION [SERIALIZABLE | READ COMMITTED | READ UNCOMMITTED]
+                  [READ WRITE | READ ONLY]</codeblock>
+        </section>
+        <section id="section3">
+            <title>Description</title>
+            <p><codeph>START TRANSACTION</codeph> begins a new transaction block. If the isolation
+                level or read/write mode is specified, the new transaction has those
+                characteristics, as if <codeph><xref href="SET_TRANSACTION.xml#topic1" type="topic"
+                        format="dita"/></codeph> was executed. This is the same as the
+                    <codeph>BEGIN</codeph> command.</p>
+        </section>
+        <section id="section4">
+            <title>Parameters</title>
+            <parml>
+                <plentry>
+                    <pt>SERIALIZABLE</pt>
+                    <pt>READ COMMITTED</pt>
+                    <pt>READ UNCOMMITTED</pt>
+                    <pd>The SQL standard defines four transaction isolation levels: <codeph>READ
+                            COMMITTED</codeph>, <codeph>READ UNCOMMITTED</codeph>,
+                            <codeph>SERIALIZABLE</codeph>, and <codeph>REPEATABLE READ</codeph>. The
+                        default behavior is that a statement can only see rows committed before it
+                        began (<codeph>READ COMMITTED</codeph>). In Greenplum Database <codeph>READ
+                            UNCOMMITTED</codeph> is treated the same as <codeph>READ
+                            COMMITTED</codeph>.  <codeph>REPEATABLE READ</codeph> is not supported;
+                        use <codeph>SERIALIZABLE</codeph> if this behavior is required.
+                            <codeph>SERIALIZABLE</codeph>, wherein all statements of the current
+                        transaction can only see rows committed before the first statement was
+                        executed in the transaction, is the strictest transaction isolation. This
+                        level emulates serial transaction execution, as if transactions had been
+                        executed one after another, serially, rather than concurrently. Applications
+                        using this level must be prepared to retry transactions due to serialization
+                        failures.</pd>
+                </plentry>
+                <plentry>
+                    <pt>READ WRITE</pt>
+                    <pt>READ ONLY</pt>
+                    <pd>Determines whether the transaction is read/write or read-only. Read/write is
+                        the default. When a transaction is read-only, the following SQL commands are
+                        disallowed: <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>,
+                            <codeph>DELETE</codeph>, and <codeph>COPY FROM</codeph> if the table
+                        they would write to is not a temporary table; all <codeph>CREATE</codeph>,
+                            <codeph>ALTER</codeph>, and <codeph>DROP</codeph> commands;
+                            <codeph>GRANT</codeph>, <codeph>REVOKE</codeph>,
+                            <codeph>TRUNCATE</codeph>; and <codeph>EXPLAIN ANALYZE</codeph> and
+                            <codeph>EXECUTE</codeph> if the command they would execute is among
+                        those listed.</pd>
+                </plentry>
+            </parml>
+        </section>
+        <section id="section5">
+            <title>Examples</title>
+            <p>To begin a transaction block: </p>
+            <codeblock>START TRANSACTION;</codeblock>
+        </section>
+        <section id="section6">
+            <title>Compatibility</title>
+            <p>In the standard, it is not necessary to issue <codeph>START TRANSACTION</codeph> to
+                start a transaction block: any SQL command implicitly begins a block. Greenplum
+                Database behavior can be seen as implicitly issuing a <codeph>COMMIT</codeph> after
+                each command that does not follow <codeph>START TRANSACTION</codeph> (or
+                    <codeph>BEGIN</codeph>), and it is therefore often called 'autocommit'. Other
+                relational database systems may offer an autocommit feature as a convenience. </p>
+            <p>The SQL standard requires commas between successive
+                    <varname>transaction_modes</varname>, but for historical reasons Greenplum
+                Database allows the commas to be omitted. </p>
+            <p>See also the compatibility section of <codeph><xref href="SET_TRANSACTION.xml#topic1"
+                        type="topic" format="dita"/></codeph>.</p>
+        </section>
+        <section id="section7">
+            <title>See Also</title>
+            <p><codeph><xref href="BEGIN.xml#topic1" type="topic" format="dita"/></codeph>,
+                        <codeph><xref href="SET_TRANSACTION.xml#topic1" type="topic" format="dita"
+                    /></codeph></p>
+        </section>
+    </body>
+</topic>

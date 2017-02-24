@@ -66,20 +66,36 @@ SELECT '0.0'::float8;
 -- bad input
 INSERT INTO FLOAT8_TBL(f1) VALUES ('');
 psql:/path/sql_file:1: ERROR:  invalid input syntax for type double precision: ""
+LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('');
+                                           ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('     ');
 psql:/path/sql_file:1: ERROR:  invalid input syntax for type double precision: "     "
+LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('     ');
+                                           ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('xyz');
 psql:/path/sql_file:1: ERROR:  invalid input syntax for type double precision: "xyz"
+LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('xyz');
+                                           ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('5.0.0');
 psql:/path/sql_file:1: ERROR:  invalid input syntax for type double precision: "5.0.0"
+LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('5.0.0');
+                                           ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('5 . 0');
 psql:/path/sql_file:1: ERROR:  invalid input syntax for type double precision: "5 . 0"
+LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('5 . 0');
+                                           ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('5.   0');
 psql:/path/sql_file:1: ERROR:  invalid input syntax for type double precision: "5.   0"
+LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('5.   0');
+                                           ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('    - 3');
 psql:/path/sql_file:1: ERROR:  invalid input syntax for type double precision: "    - 3"
+LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('    - 3');
+                                           ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('123           5');
 psql:/path/sql_file:1: ERROR:  invalid input syntax for type double precision: "123           5"
+LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('123           5');
+                                           ^
 -- special inputs
 SELECT 'NaN'::float8;
  float8 
@@ -454,16 +470,28 @@ SELECT '' AS five, f1 FROM FLOAT8_TBL ORDER BY 2;
 -- test for over- and underflow 
 INSERT INTO FLOAT8_TBL(f1) VALUES ('10e400');
 psql:/path/sql_file:1: ERROR:  value out of range: overflow
+LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('10e400');
+                                           ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('-10e400');
 psql:/path/sql_file:1: ERROR:  value out of range: overflow
+LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('-10e400');
+                                           ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('1e309');
 psql:/path/sql_file:1: ERROR:  value out of range: overflow
+LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('1e309');
+                                           ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('10e-400');
 psql:/path/sql_file:1: ERROR:  value out of range: underflow
+LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('10e-400');
+                                           ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('-10e-400');
 psql:/path/sql_file:1: ERROR:  value out of range: underflow
+LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('-10e-400');
+                                           ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('1e-324');
 psql:/path/sql_file:1: ERROR:  value out of range: underflow
+LINE 1: INSERT INTO FLOAT8_TBL(f1) VALUES ('1e-324');
+                                           ^
 INSERT INTO FLOAT8_TBL(f1) VALUES ('1e308');
 INSERT 0 1
 INSERT INTO FLOAT8_TBL(f1) VALUES ('1e-323');

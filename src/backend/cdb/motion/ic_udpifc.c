@@ -30,12 +30,12 @@
 #include "miscadmin.h"
 #include "libpq/libpq-be.h"
 #include "libpq/ip.h"
-#include "utils/gp_atomic.h"
 #include "utils/builtins.h"
 #include "utils/debugbreak.h"
 #include "utils/faultinjector.h"
-#include "utils/pg_crc.h"
+#include "port/atomics.h"
 #include "port/pg_crc32c.h"
+#include "storage/pmsignal.h"
 
 #include "cdb/cdbselect.h"
 #include "cdb/tupchunklist.h"
@@ -643,11 +643,12 @@ static void setMainThreadWaiting(ThreadWaitingState *state, int motNodeId, int r
 static void checkRxThreadError(void);
 static void setRxThreadError(int eno);
 static void resetRxThreadError(void);
+static void SendDummyPacket(void);
 
 static void getSockAddr(struct sockaddr_storage * peer, socklen_t * peer_len, const char * listenerAddr, int listenerPort);
 static void setXmitSocketOptions(int txfd);
 static uint32 setSocketBufferSize(int fd, int type, int expectedSize, int leastSize);
-static void setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFamily);
+static void setUDPSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFamily);
 static ChunkTransportStateEntry *startOutgoingUDPConnections(ChunkTransportState *transportStates,
 															 Slice *sendSlice,
 															 int *pOutgoingCount);
@@ -1141,11 +1142,11 @@ resetRxThreadError()
 
 
 /*
- * setupUDPListeningSocket
+ * setUDPSocket
  * 		Setup udp listening socket.
  */
 static void
-setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFamily)
+setUDPSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFamily)
 {
 	int					errnoSave;
 	int					fd = -1;
@@ -1257,7 +1258,8 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 		elog(DEBUG1,"bind addrlen %d fam %d",rp->ai_addrlen,rp->ai_addr->sa_family);
 		if (bind(fd, rp->ai_addr, rp->ai_addrlen) == 0)
 		{
-			*txFamily = rp->ai_family;
+			if (txFamily != NULL)
+				*txFamily = rp->ai_family;
 			break;					/* Success */
 		}
 
@@ -1328,10 +1330,9 @@ initMutex(pthread_mutex_t *mutex)
  * 		Initialize UDP specific comms, and create rx-thread.
  */
 void
-InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
+InitMotionUDPIFC(void)
 {
 	int pthread_err;
-	int txFamily = -1;
 
 	/* attributes of the thread we're creating */
 	pthread_attr_t t_atts;
@@ -1365,9 +1366,10 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 					errmsg("failed to initialize connection htab for startup cache")));
 
 	/*
-	 * setup listening socket.
+	 * setup listening socket and sending socket for Interconnect.
 	 */
-	setupUDPListeningSocket(listenerSocketFd, listenerPort, &txFamily);
+	setUDPSocket(&ICListenerSocket, &ICListenerPort, NULL);
+	setUDPSocket(&ICSenderSocket, &ICSenderPort, &ICSenderFamily);
 
 	/* Initialize receive control data. */
 	resetMainThreadWaiting(&rx_control_info.mainWaitingState);
@@ -1400,12 +1402,7 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 	 * size are large (1M+) */
 	pthread_attr_init(&t_atts);
 
-#ifdef pg_on_solaris
-	/* Solaris doesn't have PTHREAD_STACK_MIN ? */
-	pthread_attr_setstacksize(&t_atts, (128*1024));
-#else
 	pthread_attr_setstacksize(&t_atts, Max(PTHREAD_STACK_MIN, (128*1024)));
-#endif
 	pthread_err = pthread_create(&ic_control_info.threadHandle, &t_atts, rxThreadFunc, NULL);
 
 	pthread_attr_destroy(&t_atts);
@@ -1464,6 +1461,12 @@ CleanupMotionUDPIFC(void)
 	snd_control_info.ackBuffer = NULL;
 
 	MemoryContextDelete(ic_control_info.memContext);
+
+	if (ICSenderSocket >= 0)
+		closesocket(ICSenderSocket);
+	ICSenderSocket = -1;
+	ICSenderPort = 0;
+	ICSenderFamily = 0;
 
 #ifdef USE_ASSERT_CHECKING
 	/*
@@ -1800,7 +1803,7 @@ setAckSendParam(AckSendParam *param, MotionConn *conn, int32 flags, uint32 seq, 
 static inline void
 sendAckWithParam(AckSendParam *param)
 {
-	sendControlMessage(&param->msg, UDP_listenerFd, (struct sockaddr *)&param->peer, param->peer_len);
+	sendControlMessage(&param->msg, ICListenerSocket, (struct sockaddr *)&param->peer, param->peer_len);
 }
 
 /*
@@ -1824,7 +1827,7 @@ sendAck(MotionConn *conn, int32 flags, uint32 seq, uint32 extraSeq)
 					msg.flags, msg.motNodeId, conn->route, msg.seq, msg.extraSeq);
 #endif
 
-	sendControlMessage(&msg, UDP_listenerFd, (struct sockaddr *)&conn->peer, conn->peer_len);
+	sendControlMessage(&msg, ICListenerSocket, (struct sockaddr *)&conn->peer, conn->peer_len);
 
 }
 
@@ -1855,7 +1858,7 @@ sendDisorderAck(MotionConn *conn, uint32 seq, uint32 extraSeq, uint32 lostPktCnt
 	}
 #endif
 
-	sendControlMessage(disorderBuffer, UDP_listenerFd, (struct sockaddr *)&conn->peer, conn->peer_len);
+	sendControlMessage(disorderBuffer, ICListenerSocket, (struct sockaddr *)&conn->peer, conn->peer_len);
 
 }
 
@@ -2588,7 +2591,7 @@ getSndBuffer(MotionConn *conn)
  * RETURNS
  *	 Initialized ChunkTransportState for the Sending Motion Node Id.
  */
-ChunkTransportStateEntry *
+static ChunkTransportStateEntry *
 startOutgoingUDPConnections(ChunkTransportState *transportStates,
 							Slice		*sendSlice,
 							int			*pOutgoingCount)
@@ -2599,7 +2602,6 @@ startOutgoingUDPConnections(ChunkTransportState *transportStates,
 	Slice	   *recvSlice;
 	CdbProcess *cdbProc;
 	int					i;
-	uint16 port = 0;
 
 	*pOutgoingCount = 0;
 
@@ -2667,10 +2669,9 @@ startOutgoingUDPConnections(ChunkTransportState *transportStates,
 		conn++;
 	}
 
-	pEntry->txfd = -1;
-	pEntry->txport = 0;
-	setupUDPListeningSocket(&pEntry->txfd, &port, &pEntry->txfd_family);
-	pEntry->txport = port;
+	pEntry->txfd = ICSenderSocket;
+	pEntry->txport = ICSenderPort;
+	pEntry->txfd_family = ICSenderFamily;
 
 	return pEntry;
 
@@ -2742,7 +2743,6 @@ setupOutgoingUDPConnection(ChunkTransportState *transportStates, ChunkTransportS
 	Assert(conn->state == mcsSetupOutgoingConnection);
 	Assert(conn->cdbProc);
 
-	conn->wakeup_ms = 0;
 	conn->remoteContentId = cdbProc->contentid;
 	conn->stat_min_ack_time = ~((uint64)0);
 
@@ -2857,7 +2857,7 @@ setupOutgoingUDPConnection(ChunkTransportState *transportStates, ChunkTransportS
 		elog(DEBUG1, "setupOutgoingUDPConnection: node %d route %d srccontent %d dstcontent %d: %s",
 			 pEntry->motNodeId, conn->route, Gp_segment, conn->cdbProc->contentid, conn->remoteHostAndPort);
 
-	conn->conn_info.srcListenerPort = Gp_listener_port;
+	conn->conn_info.srcListenerPort = ICListenerPort;
 	conn->conn_info.srcPid = MyProcPid;
 	conn->conn_info.dstPid = conn->cdbProc->pid;
 	conn->conn_info.dstListenerPort = conn->cdbProc->listenerPort;
@@ -3005,7 +3005,6 @@ SetupUDPIFCInterconnect_Internal(EState *estate)
 
 	estate->interconnect_context->teardownActive = false;
 	estate->interconnect_context->activated = false;
-	estate->interconnect_context->incompleteConns = NIL;
 	estate->interconnect_context->sliceTable = NULL;
 	estate->interconnect_context->sliceId = -1;
 
@@ -3113,7 +3112,7 @@ SetupUDPIFCInterconnect_Internal(EState *estate)
 				conn->conn_info.srcListenerPort = conn->cdbProc->listenerPort;
 				conn->conn_info.srcPid = conn->cdbProc->pid;
 				conn->conn_info.dstPid = MyProcPid;
-				conn->conn_info.dstListenerPort = Gp_listener_port;
+				conn->conn_info.dstListenerPort = ICListenerPort;
 				conn->conn_info.sessionId = gp_session_id;
 				conn->conn_info.icId = gp_interconnect_id;
 				conn->conn_info.flags = UDPIC_FLAGS_RECEIVER_TO_SENDER;
@@ -3174,7 +3173,7 @@ SetupUDPIFCInterconnect_Internal(EState *estate)
 								"%d incoming, %d outgoing routes for gp_interconnect_id %d. "
 								"Listening on ports=%d sockfd=%d.",
 								expectedTotalIncoming, expectedTotalOutgoing, gp_interconnect_id,
-								Gp_listener_port, UDP_listenerFd)));
+								ICListenerPort, ICListenerSocket)));
 
 	/* If there are packets cached by background thread, add them to the connections. */
 	if (gp_interconnect_cache_future_packets)
@@ -3224,12 +3223,12 @@ SetupUDPIFCInterconnect(EState *estate)
 static void
 freeDisorderedPackets(MotionConn *conn)
 {
-	int k = 0;
+	int			k;
 
 	if (conn->pkt_q == NULL)
 		return;
 
-	for(; k < Gp_interconnect_queue_depth; k++)
+	for(k = 0; k < Gp_interconnect_queue_depth; k++)
 	{
 		icpkthdr *buf = (icpkthdr *)conn->pkt_q[k];
 		if (buf != NULL)
@@ -3389,11 +3388,6 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
     	{
     		/* now it is safe to remove. */
     		pEntry = removeChunkTransportState(transportStates, mySlice->sliceIndex);
-
-    		if (pEntry->txfd >= 0)
-    			closesocket(pEntry->txfd);
-    		pEntry->txfd = -1;
-    		pEntry->txfd_family = 0;
 
     		/* connection array allocation may fail in interconnect setup. */
     		if (pEntry->conns)
@@ -3618,7 +3612,6 @@ TeardownUDPIFCInterconnect(ChunkTransportState *transportStates,
 static void
 prepareRxConnForRead(MotionConn *conn)
 {
-
 	elog(DEBUG3, "In prepareRxConnForRead: conn %p, q_head %d q_tail %d q_size %d", conn, conn->pkt_q_head, conn->pkt_q_tail, conn->pkt_q_size);
 
 	Assert(conn->pkt_q[conn->pkt_q_head] != NULL);
@@ -3719,9 +3712,20 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 			checkForCancelFromQD(pTransportStates);
 		}
 
-		/* NIC on master (and thus the QD connection) may become bad, check it. */
+
+		/*
+		 * 1. NIC on master (and thus the QD connection) may become bad, check it.
+		 * 2. Postmaster may become invalid, check it
+		 */
 		if ((retries & 0x3f) == 0)
+		{
 			checkQDConnectionAlive();
+
+			if (!PostmasterIsAlive(true))
+				ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+							errmsg("Interconnect failed to recv chunks"),
+							errdetail("Postmaster is not alive\n")));
+		}
 
 		pthread_mutex_lock(&ic_control_info.lock);
 
@@ -4206,7 +4210,7 @@ handleAcks(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntr
 		 */
 		if (pkt->srcContentId == Gp_segment &&
 				pkt->srcPid == MyProcPid &&
-				pkt->srcListenerPort == Gp_listener_port &&
+				pkt->srcListenerPort == ICListenerPort &&
 				pkt->sessionId == gp_session_id &&
 				pkt->icId == gp_interconnect_id)
 		{
@@ -4335,7 +4339,7 @@ handleAcks(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntr
 					pkt->srcContentId, Gp_segment,
 					pkt->srcPid, MyProcPid,
 					pkt->dstPid,
-					pkt->srcListenerPort, Gp_listener_port,
+					pkt->srcListenerPort, ICListenerPort,
 					pkt->dstListenerPort,
 					pkt->sessionId, gp_session_id,
 					pkt->icId, gp_interconnect_id);
@@ -5143,12 +5147,21 @@ checkExceptions(ChunkTransportState *transportStates, ChunkTransportStateEntry *
 	}
 
 	/*
-	 * NIC on master (and thus the QD connection) may become bad, check it.
+	 * 1. NIC on master (and thus the QD connection) may become bad, check it.
+	 * 2. Postmaster may become invalid, check it
+	 *
 	 * We check modulo 2 to correlate with the deadlock check above at the
 	 * initial iteration.
 	 */
 	if ((retry & 0x3f) == 2)
+	{
 		checkQDConnectionAlive();
+
+		if (!PostmasterIsAlive(true))
+			ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+						errmsg("Interconnect failed to send chunks"),
+						errdetail("Postmaster is not alive\n")));
+	}
 }
 
 /*
@@ -6002,7 +6015,7 @@ rxThreadFunc(void *arg)
 		if (!skip_poll)
 		{
 			/* Do we have inbound traffic to handle ?*/
-			nfd.fd = UDP_listenerFd;
+			nfd.fd = ICListenerSocket;
 			nfd.events = POLLIN;
 
 			n = poll(&nfd, 1, RX_THREAD_POLL_TIMEOUT);
@@ -6049,7 +6062,7 @@ rxThreadFunc(void *arg)
 			socklen_t peerlen;
 
 			peerlen = sizeof(peer);
-			read_count = recvfrom(UDP_listenerFd, (char *)pkt, Gp_max_packet_size, 0,
+			read_count = recvfrom(ICListenerSocket, (char *)pkt, Gp_max_packet_size, 0,
 								  (struct sockaddr *)&peer, &peerlen);
 
 			expected = 1;
@@ -6383,7 +6396,7 @@ handleMismatch(icpkthdr *pkt, struct sockaddr_storage *peer, int peer_len)
 static bool
 cacheFuturePacket(icpkthdr *pkt, struct sockaddr_storage *peer, int peer_len)
 {
-	MotionConn *conn = NULL;
+	MotionConn *conn;
 
 	conn = findConnByHeader(&ic_control_info.startupCacheHtab, pkt);
 
@@ -6673,4 +6686,110 @@ WaitInterconnectQuitUDPIFC(void)
 		pthread_join(ic_control_info.threadHandle, NULL);
 	}
 	ic_control_info.threadCreated = false;
+}
+
+/*
+ * Send a dummy packet to interconnect thread to exit poll() immediately
+ */
+static void
+SendDummyPacket(void)
+{
+	int			sockfd = -1;
+	int			ret;
+	struct addrinfo *addrs = NULL;
+	struct addrinfo *rp;
+	struct addrinfo hint;
+	uint16		udp_listener;
+	char		port_str[32] = {0};
+	char	   *dummy_pkt = "stop it";
+	int			counter;
+
+	/*
+	 * Get address info from interconnect udp listener port
+	 */
+	udp_listener = ICListenerPort;
+	snprintf(port_str, sizeof(port_str), "%d", udp_listener);
+
+	MemSet(&hint, 0, sizeof(hint));
+	hint.ai_socktype = SOCK_DGRAM;
+	hint.ai_family = AF_UNSPEC; /* Allow for IPv4 or IPv6  */
+
+	/* Never do name resolution */
+#ifdef AI_NUMERICSERV
+	hint.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
+#else
+	hint.ai_flags = AI_NUMERICHOST;
+#endif
+
+	ret = pg_getaddrinfo_all(NULL, port_str, &hint, &addrs);
+	if (ret || !addrs)
+	{
+		elog(LOG, "send dummy packet failed, pg_getaddrinfo_all(): %m");
+		goto send_error;
+	}
+
+	for (rp = addrs; rp != NULL; rp = rp->ai_next)
+	{
+		/* Create socket according to pg_getaddrinfo_all() */
+		sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+		if (sockfd < 0)
+			continue;
+
+		if (!pg_set_noblock(sockfd))
+		{
+			if (sockfd >= 0)
+			{
+				closesocket(sockfd);
+				sockfd = -1;
+			}
+			continue;
+		}
+		break;
+	}
+
+	if (rp == NULL)
+	{
+		elog(LOG, "send dummy packet failed, create socket failed: %m");
+		goto send_error;
+	}
+
+	/*
+	 * Send a dummy package to the interconnect listener, try 10 times
+	 */
+
+	counter = 0;
+	while (counter < 10)
+	{
+		counter++;
+		ret = sendto(sockfd, dummy_pkt, strlen(dummy_pkt), 0, rp->ai_addr, rp->ai_addrlen);
+		if (ret < 0)
+		{
+			if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
+				continue;
+			else
+			{
+				elog(LOG, "send dummy packet failed, sendto failed: %m");
+				goto send_error;
+			}
+		}
+		break;
+	}
+
+	if (counter >= 10)
+	{
+		elog(LOG, "send dummy packet failed, sendto failed: %m");
+		goto send_error;
+	}
+
+	pg_freeaddrinfo_all(hint.ai_family, addrs);
+	closesocket(sockfd);
+	return;
+
+send_error:
+
+	if (addrs)
+		pg_freeaddrinfo_all(hint.ai_family, addrs);
+	if (sockfd != -1)
+		closesocket(sockfd);
+	return;
 }

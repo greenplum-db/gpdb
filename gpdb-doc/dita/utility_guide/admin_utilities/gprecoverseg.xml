@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="mb20941">gprecoverseg</title>
+  <body>
+    <p>Recovers a primary or mirror segment instance that has been marked as down (if mirroring is
+      enabled).</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock><b>gprecoverseg</b> [<b>-p</b> <varname>new_recover_host</varname>[,...]] | <b>-i</b> <varname>recover_config_file</varname> | 
+              <b>-s</b> <varname>filespace_config_file</varname>] [<b>-d</b> <varname>master_data_directory</varname>] 
+             [<b>-B</b> <varname>parallel_processes</varname>] [<b>-F</b>] [<b>-a</b>] [<b>-q</b>] [<b>-l</b> <varname>logfile_directory</varname>]
+
+<b>gprecoverseg</b> <b>-r</b> 
+
+<b>gprecoverseg</b> <b>-o</b> <varname>output_recover_config_file</varname> | <b>-S</b> <varname>output_filespace_config_file</varname>
+             [<b>-p</b> <varname>new_recover_host</varname>[,...]]
+
+<b>gprecoverseg</b> <b>-?</b> 
+
+<b>gprecoverseg</b> <b>--version</b></codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p>In a system with mirrors enabled, the <codeph>gprecoverseg</codeph> utility reactivates a
+        failed segment instance and identifies the changed database files that require
+        resynchronization. Once <codeph>gprecoverseg</codeph> completes this process, the system
+        goes into <i>resyncronizing</i> mode until the recovered segment is brought up to date. The
+        system is online and fully operational during resyncronization.</p>
+      <p>During an incremental recovery (the <codeph>-F</codeph> option is not specified), if
+          <codeph>gprecoverseg</codeph> detects a segment instance with mirroring disabled in a
+        system with mirrors enabled, the utility reports that mirroring is disabled for the segment,
+        does not attempt to recover that segment instance, and continues the recovery process.</p>
+      <p>A segment instance can fail for several reasons, such as a host failure, network failure,
+        or disk failure. When a segment instance fails, its status is marked as <i>down</i> in the
+        Greenplum Database system catalog, and its mirror is activated in <i>change tracking</i>
+        mode. In order to bring the failed segment instance back into operation again, you must
+        first correct the problem that made it fail in the first place, and then recover the segment
+        instance in Greenplum Database using <codeph>gprecoverseg</codeph>.</p>
+      <p>Segment recovery using <codeph>gprecoverseg</codeph> requires that you have an active
+        mirror to recover from. For systems that do not have mirroring enabled, or in the event of a
+        double fault (a primary and mirror pair both down at the same time) — you must take manual
+        steps to recover the failed segment instances and then perform a system restart to bring the
+        segments back online. For example, this command restarts a system.</p>
+      <codeblock>gpstop -r</codeblock>
+      <p>By default, a failed segment is recovered in place, meaning that the system brings the
+        segment back online on the same host and data directory location on which it was originally
+        configured. In this case, use the following format for the recovery configuration file
+        (using <codeph>-i</codeph>).</p>
+      <codeblock>filespaceOrder=[filespace1_fsname[, filespace2_fsname[, ...]]
+&lt;failed_host_address&gt;:&lt;port&gt;:&lt;data_directory&gt; </codeblock>
+      <p>In some cases, this may not be possible (for example, if a host was physically damaged and
+        cannot be recovered). In this situation, <codeph>gprecoverseg</codeph> allows you to recover
+        failed segments to a completely new host (using <codeph>-p</codeph>), on an alternative data
+        directory location on your remaining live segment hosts (using <codeph>-s</codeph>), or by
+        supplying a recovery configuration file (using <codeph>-i</codeph>) in the following format.
+        The word <b>SPACE</b> indicates the location of a required space. Do not add additional
+        spaces.</p>
+      <codeblock>filespaceOrder=[filespace1_fsname[, filespace2_fsname[, ...]]
+&lt;failed_host_address&gt;:&lt;port&gt;:&lt;data_directory&gt;<b>SPACE</b>
+&lt;recovery_host_address&gt;:&lt;port&gt;:&lt;replication_port&gt;:&lt;data_directory&gt;
+[:&lt;fselocation&gt;:...]</codeblock>
+      <p>See the <codeph>-i</codeph> option below for details and examples of a recovery
+        configuration file.</p>
+      <p>The <codeph>gp_segment_configuration</codeph>, <codeph>pg_filespace</codeph>, and
+          <codeph>pg_filespace_entry</codeph> system catalog tables can help you determine your
+        current segment configuration so that you can plan your mirror recovery configuration. For
+        example, run the following query:</p>
+      <codeblock>=# SELECT dbid, content, address, port, 
+   replication_port, fselocation as datadir 
+   FROM gp_segment_configuration, pg_filespace_entry 
+   WHERE dbid=fsedbid 
+   ORDER BY dbid;</codeblock>
+      <p>The new recovery segment host must be pre-installed with the Greenplum Database software
+        and configured exactly the same as the existing segment hosts. A spare data directory
+        location must exist on all currently configured segment hosts and have enough disk space to
+        accommodate the failed segments.</p>
+      <p>The recovery process marks the segment as up again in the Greenplum Database system
+        catalog, and then initiates the resyncronization process to bring the transactional state of
+        the segment up-to-date with the latest changes. The system is online and available during
+        resyncronization. To check the status of the resyncronization process run:</p>
+      <codeblock>gpstate -m</codeblock>
+    </section>
+    <section id="section4">
+      <title>Options</title>
+      <parml>
+        <plentry>
+          <pt>-a (do not prompt)</pt>
+          <pd>Do not prompt the user for confirmation.</pd>
+        </plentry>
+        <plentry>
+          <pt>-B <varname>parallel_processes</varname></pt>
+          <pd>The number of segments to recover in parallel. If not specified, the utility will
+            start up to four parallel processes depending on how many segment instances it needs to
+            recover.</pd>
+        </plentry>
+        <plentry>
+          <pt>-d <varname>master_data_directory</varname></pt>
+          <pd>Optional. The master host data directory. If not specified, the value set for
+              <codeph>$MASTER_DATA_DIRECTORY</codeph> will be used.</pd>
+        </plentry>
+        <plentry>
+          <pt>-F (full recovery)</pt>
+          <pd>Optional. Perform a full copy of the active segment instance in order to recover the
+            failed segment. The default is to only copy over the incremental changes that occurred
+            while the segment was down.</pd>
+        </plentry>
+        <plentry>
+          <pt>-i <varname>recover_config_file</varname></pt>
+          <pd>Specifies the name of a file with the details about failed segments to recover. Each
+            line in the file is in the following format. The word <b>SPACE</b> indicates the
+            location of a required space. Do not add additional
+                spaces.<codeblock>filespaceOrder=[filespace1_fsname[, filespace2_fsname[, ...]]
+&lt;failed_host_address&gt;:&lt;port&gt;:&lt;data_directory&gt;<b>SPACE</b> 
+&lt;recovery_host_address&gt;:&lt;port&gt;:&lt;replication_port&gt;:&lt;data_directory&gt;
+[:&lt;fselocation&gt;:...]</codeblock><p><b>Comments</b></p><p>Lines
+              beginning with <codeph>#</codeph> are treated as comments and
+                ignored.</p><p><b>Filespace Order</b></p><p>The first comment line that is not a
+              comment specifies filespace ordering. This line starts with
+                <codeph>filespaceOrder=</codeph> and is followed by list of filespace names
+              delimited by a colon. For example:</p><p>
+              <codeblock>filespaceOrder=raid1:raid2</codeblock>
+            </p><p>The default <codeph>pg_system</codeph> filespace should not appear in this list.
+              The list should be left empty on a system with no filespaces other than the default
+                <codeph>pg_system</codeph> filespace. For example:</p><p>
+              <codeblock>filespaceOrder=</codeblock>
+            </p><p><b>Segments to Recover</b></p><p>Each line after the first specifies a segment to
+              recover. This line can have one of two formats. In the event of in-place recovery,
+              enter one group of colon delimited fields in the line. For example:</p><p>
+              <codeblock>failedAddress:failedPort:failedDataDirectory</codeblock>
+            </p><p>For recovery to a new location, enter two groups of fields separated by a space
+              in the line. The required space is indicated by <b>SPACE</b>. Do not add additional
+              spaces.</p><p>
+              <codeblock>failedAddress:failedPort:failedDataDirectory<b>SPACE</b>newAddress:
+newPort:newReplicationPort:newDataDirectory</codeblock>
+            </p><p>On a system with additional filespaces, the second group of fields is expected to
+              be followed with a list of the corresponding filespace locations separated by
+              additional colons. For example, on a system with two additional filespaces, enter two
+              additional directories in the second group, as follows. The required space is
+              indicated by <b>SPACE</b>. Do not add additional
+                spaces.</p><codeblock>failedAddress:failedPort:failedDataDirectory<b>SPACE</b>newAddress:
+newPort:newReplicationPort:newDataDirectory:location1:location2</codeblock><p><b>Examples</b></p><p><b>In-place
+                recovery of a single
+                mirror</b></p><codeblock>filespaceOrder=
+sdw1-1:50001:/data1/mirror/gpseg16</codeblock><p><b>Recovery
+                of a single mirror to a new
+                host</b></p><codeblock>filespaceOrder=
+sdw1-1:50001:/data1/mirror/gpseg16<b>SPACE</b>sdw4-1:
+50001:51001:/data1/recover1/gpseg16</codeblock><p><b>Recovery
+                of a single mirror to a new host on a system with an extra
+                filespace</b></p><codeblock>filespaceOrder=
+fs1sdw1-1:50001:/data1/mirror/gpseg16<b>SPACE</b>sdw4-1:
+50001:51001:/data1/recover1/gpseg16:/data1/fs1/gpseg16</codeblock><p><b>Obtaining
+                a Sample File</b></p><p>You can use the <codeph>-o</codeph> option to output a
+              sample recovery configuration file to use as a starting point.</p></pd>
+        </plentry>
+        <plentry>
+          <pt>-l <varname>logfile_directory</varname></pt>
+          <pd>The directory to write the log file. Defaults to <codeph>~/gpAdminLogs</codeph>.</pd>
+        </plentry>
+        <plentry>
+          <pt>-o <varname>output_recover_config_file</varname></pt>
+          <pd>Specifies a file name and location to output a sample recovery configuration file. The
+            output file lists the currently invalid segments and their default recovery location in
+            the format that is required by the <codeph>-i</codeph> option. Use together with the
+              <codeph>-p</codeph> option to output a sample file for recovering on a different host.
+            This file can be edited to supply alternate recovery locations if needed.</pd>
+        </plentry>
+        <plentry>
+          <pt>-p <varname>new_recover_host</varname>[,...]</pt>
+          <pd>Specifies a spare host outside of the currently configured Greenplum Database array on
+            which to recover invalid segments. In the case of multiple failed segment hosts, you can
+            specify a comma-separated list. The spare host must have the Greenplum Database software
+            installed and configured, and have the same hardware and OS configuration as the current
+            segment hosts (same OS version, locales, <codeph>gpadmin</codeph> user account, data
+            directory locations created, ssh keys exchanged, number of network interfaces, network
+            interface naming convention, and so on.).</pd>
+        </plentry>
+        <plentry>
+          <pt>-q (no screen output)</pt>
+          <pd>Run in quiet mode. Command output is not displayed on the screen, but is still written
+            to the log file.</pd>
+        </plentry>
+        <plentry>
+          <pt>-r (rebalance segments)</pt>
+          <pd>After a segment recovery, segment instances may not be returned to the preferred role
+            that they were given at system initialization time. This can leave the system in a
+            potentially unbalanced state, as some segment hosts may have more active segments than
+            is optimal for top system performance. This option rebalances primary and mirror
+            segments by returning them to their preferred roles. All segments must be valid and
+            synchronized before running <codeph>gprecoverseg -r</codeph>. If there are any in
+            progress queries, they will be cancelled and rolled back.</pd>
+        </plentry>
+        <plentry>
+          <pt>-s <varname>filespace_config_file</varname></pt>
+          <pd>Specifies the name of a configuration file that contains file system locations on the
+            currently configured segment hosts where you can recover failed segment instances. The
+            filespace configuration file is in the format of:</pd>
+          <pd>
+            <codeblock>pg_system=<varname>default_fselocation</varname>
+<varname>filespace1_name</varname>=<varname>filespace1_fselocation</varname>
+<varname>filespace2_name</varname>=<varname>filespace2_fselocation</varname>
+...</codeblock>
+          </pd>
+          <pd>If your system does not have additional filespaces configured, this file will only
+            have one location (for the default filespace, <codeph>pg_system</codeph>). These file
+            system locations must exist on all segment hosts in the array and have sufficient disk
+            space to accommodate recovered segments.</pd>
+          <pd>Note: The <codeph>-s</codeph> and <codeph>-S</codeph> options are only used when you
+            recover to existing hosts in the cluster. You cannot use these options when you recover
+            to a new host. To recover to a new host, use the <codeph>-i</codeph> and
+              <codeph>-o</codeph> options.</pd>
+        </plentry>
+        <plentry>
+          <pt>-S <varname>output_filespace_config_file</varname></pt>
+          <pd>Specifies a file name and location to output a sample filespace configuration file in
+            the format that is required by the <codeph>-s</codeph> option. This file should be
+            edited to supply the correct alternate filespace locations.</pd>
+        </plentry>
+        <plentry>
+          <pt>-v (verbose)</pt>
+          <pd>Sets logging output to verbose.</pd>
+        </plentry>
+        <plentry>
+          <pt>--version (version)</pt>
+          <pd>Displays the version of this utility.</pd>
+        </plentry>
+        <plentry>
+          <pt>-? (help)</pt>
+          <pd>Displays the online help.</pd>
+        </plentry>
+      </parml>
+    </section>
+    <section id="section5">
+      <title>Examples</title>
+      <p>Recover any failed segment instances in place:</p>
+      <codeblock>$ gprecoverseg</codeblock>
+      <p>Rebalance your Greenplum Database system after a recovery by resetting all segments to
+        their preferred role. First check that all segments are up and synchronized.</p>
+      <codeblock>$ gpstate -m
+$ gprecoverseg -r</codeblock>
+      <p>Recover any failed segment instances to a newly configured spare segment host:</p>
+      <codeblock>$ gprecoverseg -i <varname>recover_config_file</varname></codeblock>
+      <p>Output the default recovery configuration file:</p>
+      <codeblock>$ gprecoverseg -o /home/gpadmin/recover_config_file</codeblock>
+    </section>
+    <section id="section6">
+      <title>See Also</title>
+      <p><codeph><xref href="./gpstart.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="./gpstop.xml#topic1" type="topic" format="dita"/></codeph></p>
+    </section>
+  </body>
+</topic>

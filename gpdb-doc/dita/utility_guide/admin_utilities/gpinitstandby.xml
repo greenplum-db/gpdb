@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+    <!--install_guide/refs/gpinitstandby.xml has a conref to this topic. -->
+    <title id="js140845">gpinitstandby</title>
+    <body>
+        <p>Adds and/or initializes a standby master host for a Greenplum Database
+            system.</p>
+        <section id="section2">
+            <title>Synopsis</title>
+            <codeblock><b>gpinitstandby</b> { <b>-s</b> <varname>standby_hostname</varname> [<b>-P</b> port] 
+      [<b>-F</b> <varname>list_of_filespaces</varname>] | <b>-r</b> | <b>-n</b> } 
+      [<b>-a</b>] [<b>-q</b>] [<b>-D</b>] [<b>-l</b> <varname>logfile_directory</varname>]
+
+<b>gpinitstandby</b> <b>-v</b> 
+
+<b>gpinitstandby</b> <b>-?</b></codeblock>
+        </section>
+        <section id="section3">
+            <title>Description</title>
+            <p>The <codeph>gpinitstandby</codeph> utility adds a backup, standby master host to your
+                    Greenplum Database system. If your system has an existing standby
+                master host configured, use the <codeph>-r</codeph> option to remove it before
+                adding the new standby master host. </p>
+            <p>Before running this utility, make sure that the Greenplum Database
+                software is installed on the standby master host and that you have exchanged SSH
+                keys between the hosts. It is recommended that the master port is set to the same
+                port number on the master host and the backup master host. </p>
+            <p>This utility should be run on the currently active <i>primary</i> master host.<ph
+                   > See the <i>Greenplum Database Installation Guide</i> for
+                    instructions.</ph></p>
+            <p>The utility performs the following steps:</p>
+            <ul>
+                <li id="js138559">Updates the Greenplum Database system catalog to
+                    remove the existing standby master host information (if the <codeph>-r</codeph>
+                    option is supplied) </li>
+                <li id="js138555">Updates the Greenplum Database system catalog to add
+                    the new standby master host information </li>
+                <li id="js138431">Edits the <codeph>pg_hba.conf</codeph> file of the Greenplum Database master to allow access from the newly added standby
+                    master.</li>
+                <li id="js137684">Sets up the standby master instance on the alternate master
+                    host</li>
+                <li id="js137686">Starts the synchronization process</li>
+            </ul>
+            <p>A backup, standby master host serves as a 'warm standby' in the event of the primary
+                master host becoming non-operational. The standby master is kept up to date by
+                transaction log replication processes (the <codeph>walsender</codeph> and
+                    <codeph>walreceiver</codeph>), which run on the primary master and standby
+                master hosts and keep the data between the primary and standby master hosts
+                synchronized. If the primary master fails, the log replication process is shut down,
+                and the standby master can be activated in its place by using the
+                    <codeph>gpactivatestandby</codeph> utility. Upon activation of the standby
+                master, the replicated logs are used to reconstruct the state of the master host at
+                the time of the last successfully committed transaction. </p>
+            <p>The activated standby master effectively becomes the Greenplum Database
+                master, accepting client connections on the master port and performing normal master
+                operations such as SQL command processing and workload management. </p>
+            <note type="important">If the <codeph>gpinitstandby</codeph> utility previously failed
+                to initialize the standby master, you must delete the files in the standby master
+                data directory before running <codeph>gpinitstandby</codeph> again. The standby
+                master data directory is not cleaned up after an initialization failure because it
+                contains log files that can help in determining the reason for the failure.<p>If an
+                    initialization failure occurs, a summary report file is generated in the standby
+                    host directory <codeph>/tmp</codeph>. The report file lists the directories on
+                    standby host that require clean up.</p></note>
+        </section>
+        <section id="section4">
+            <title>Options</title>
+            <parml>
+                <plentry>
+                    <pt>-a (do not prompt)</pt>
+                    <pd>Do not prompt the user for confirmation.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-D (debug)</pt>
+                    <pd>Sets logging level to debug.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-F <varname>list_of_filespaces</varname></pt>
+                    <pd>A list of filespace names and the associated locations. Each filespace name
+                        and its location is separated by a colon. If there is more than one file
+                        space name, each pair (name and location) is separated by a comma. For
+                        example: </pd>
+                    <pd>
+                        <codeblock>filespace1_name:fs1_location,filespace2_name:fs2_location</codeblock>
+                    </pd>
+                    <pd>If this option is not specified, <codeph>gpinitstandby</codeph> prompts the
+                        user for the filespace names and locations.</pd>
+                    <pd>If the list is not formatted correctly or number of filespaces do not match
+                        the number of filespaces already created in the system,
+                            <codeph>gpinitstandby</codeph> returns an error.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-l <varname>logfile_directory</varname></pt>
+                    <pd>The directory to write the log file. Defaults to
+                            <codeph>~/gpAdminLogs</codeph>.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-n (restart standby master)</pt>
+                    <pd>Specify this option to start a Greenplum Database standby
+                        master that has been configured but has stopped for some reason.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-P <varname>port</varname></pt>
+                    <pd>This option specifies the port that is used by the Greenplum Database standby master. The default is the same port
+                        used by the active Greenplum Database master. </pd>
+                    <pd>If the Greenplum Database standby master is on the same host
+                        as the active master, the ports must be different. If the ports are the same
+                        for the active and standby master and the host is the same, the utility
+                        returns an error. </pd>
+                </plentry>
+                <plentry>
+                    <pt>-q (no screen output)</pt>
+                    <pd>Run in quiet mode. Command output is not displayed on the screen, but is
+                        still written to the log file.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-r (remove standby master)</pt>
+                    <pd>Removes the currently configured standby master host from your Greenplum Database system.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-s standby_hostname</pt>
+                    <pd>The host name of the standby master host.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-v (show utility version)</pt>
+                    <pd>Displays the version, status, last updated date, and check sum of this
+                        utility.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-? (help)</pt>
+                    <pd>Displays the online help.</pd>
+                </plentry>
+            </parml>
+        </section>
+        <section id="section5">
+            <title>Examples</title>
+            <p>Add a standby master host to your Greenplum Database system and start
+                the synchronization process:</p>
+            <codeblock>gpinitstandby -s host09</codeblock>
+            <p>Start an existing standby master host and synchronize the data with the current
+                primary master host:</p>
+            <codeblock>gpinitstandby -n</codeblock>
+            <note type="note">Do not specify the -n and -s options in the same command.</note>
+            <p>Add a standby master host to your Greenplum Database system specifying
+                a different port:</p>
+            <codeblock>gpinitstandby -s myhost -P 2222</codeblock>
+            <p>If you specify the same host name as the active Greenplum Database
+                master, the installed Greenplum Database software that is used as a
+                standby master must be in a separate location from the active Greenplum Database master. Also, filespace locations that are used by the
+                standby master must be different than the filespace locations used by the active
+                    Greenplum Database master. </p>
+            <p>Remove the existing standby master from your Greenplum
+                system configuration:</p>
+            <codeblock>gpinitstandby -r</codeblock>
+        </section>
+        <section id="section6">
+            <title>See Also</title>
+            <p><codeph><xref href="./gpinitsystem.xml#topic1" type="topic" format="dita"/></codeph>,
+                        <codeph><xref href="gpaddmirrors.xml#topic1" type="topic" format="dita"
+                    /></codeph>, <codeph><xref href="gpactivatestandby.xml#topic1" type="topic"
+                        format="dita"/></codeph></p>
+        </section>
+    </body>
+</topic>

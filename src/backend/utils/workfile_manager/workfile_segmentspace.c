@@ -10,8 +10,8 @@
 
 #include "postgres.h"
 
+#include "port/atomics.h"
 #include "storage/shmem.h"
-#include "utils/gp_atomic.h"
 #include "cdb/cdbvars.h"
 #include "utils/workfile_mgr.h"
 #include "miscadmin.h"

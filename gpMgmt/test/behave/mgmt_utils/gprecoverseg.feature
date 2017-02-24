@@ -163,8 +163,9 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
         And the information of a "mirror" segment on any host is saved
-        When user kills a mirror process with the saved information
-        And wait until the mirror is down
+        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y reset" on segment "0"
+        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y fault" on segment "0"
+        Then the mirror with content id "0" is marked down in config
         When the user runs "gprecoverseg -F -a"
         Then gprecoverseg should return a return code of 0
         Given at least one segment is resynchronized

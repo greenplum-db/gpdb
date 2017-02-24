@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+    <!--install_guide/refs/gpdeletesystem.xml has a conref to this topic. -->
+    <title id="jr20941">gpdeletesystem</title>
+    <body>
+        <p>Deletes a Greenplum Database system that was initialized using
+                <codeph>gpinitsystem</codeph>.</p>
+        <section id="section2">
+            <title>Synopsis</title>
+            <codeblock><b>gpdeletesystem</b> <b>-d</b> <varname>master_data_directory</varname> [<b>-B</b> <varname>parallel_processes</varname>] 
+   [<b>-f</b>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-D</b>]
+
+<b>gpdeletesystem</b> <b>-?</b> 
+
+<b>gpdeletesystem</b> <b>-v</b></codeblock>
+        </section>
+        <section id="section3">
+            <title>Description</title>
+            <p>The <codeph>gpdeletesystem</codeph> utility will perform the following actions:</p>
+            <ul>
+                <li id="jr138351">Stop all <codeph>postgres</codeph> processes (the segment
+                    instances and master instance).</li>
+                <li id="jr138352">Deletes all data directories.</li>
+            </ul>
+            <p>Before running <codeph>gpdeletesystem</codeph>:</p>
+            <ul>
+                <li id="jr138354">Move any backup files out of the master and segment data
+                    directories.</li>
+                <li id="jr138357">Make sure that Greenplum Database is running.</li>
+                <li id="jr138359">If you are currently in a segment data directory, change directory
+                    to another location. The utility fails with an error when run from within a
+                    segment data directory. </li>
+            </ul>
+            <p>This utility will not uninstall the Greenplum Database software.</p>
+        </section>
+        <section id="section4">
+            <title>Options</title>
+            <parml>
+                <plentry>
+                    <pt>-d <varname>data_directory</varname></pt>
+                    <pd>Required. The master host data directory.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-B <varname>parallel_processes</varname></pt>
+                    <pd>The number of segments to delete in parallel. If not specified, the utility
+                        will start up to 60 parallel processes depending on how many segment
+                        instances it needs to delete.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-f (force)</pt>
+                    <pd>Force a delete even if backup files are found in the data directories. The
+                        default is to not delete Greenplum Database instances if backup files are
+                        present.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-l <varname>logfile_directory</varname></pt>
+                    <pd>The directory to write the log file. Defaults to
+                            <codeph>~/gpAdminLogs</codeph>.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-D (debug)</pt>
+                    <pd>Sets logging level to debug.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-? (help)</pt>
+                    <pd>Displays the online help.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-v (show utility version)</pt>
+                    <pd>Displays the version, status, last updated date, and check sum of this
+                        utility.</pd>
+                </plentry>
+            </parml>
+        </section>
+        <section id="section5">
+            <title>Examples</title>
+            <p>Delete a Greenplum Database system:</p>
+            <codeblock>gpdeletesystem -d /gpdata/gp-1</codeblock>
+            <p>Delete a Greenplum Database system even if backup files are present:</p>
+            <codeblock>gpdeletesystem -d /gpdata/gp-1 -f</codeblock>
+        </section>
+        <section>
+            <title>See Also</title>
+            <p><codeph><xref href="gpinitsystem.xml#topic1"/></codeph></p>
+        </section>
+    </body>
+</topic>

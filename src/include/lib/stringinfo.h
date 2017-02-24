@@ -185,7 +185,7 @@ extern void truncateStringInfo(StringInfo str, int nchars);
 
 /*------------------------
  * replaceStringInfoString
- * Replace all occurances of a string in a StringInfo with a different string.
+ * Replace all occurrences of a string in a StringInfo with a different string.
  */
 
 extern void replaceStringInfoString(StringInfo str, char *replace, char *replacement);

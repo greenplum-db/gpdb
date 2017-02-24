@@ -1,0 +1,762 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="cd20941">CREATE TABLE</title>
+  <body>
+    <p id="sql_command_desc">Defines a new table.</p>
+    <note type="note">Referential integrity syntax (foreign key constraints) is accepted but not
+      enforced.</note>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock id="sql_command_synopsis">CREATE [[GLOBAL | LOCAL] {TEMPORARY | TEMP}] TABLE <varname>table_name</varname> ( 
+[ { <varname>column_name</varname> <varname>data_type</varname> [ DEFAULT <varname>default_expr</varname> ] 
+   [<varname>column_constraint</varname> [ ... ]
+[ ENCODING ( <varname>storage_directive</varname> [,...] ) ]
+] 
+   | <varname>table_constraint</varname>
+   | LIKE <varname>other_table</varname> [{INCLUDING | EXCLUDING} 
+                      {DEFAULTS | CONSTRAINTS}] ...}
+   [, ... ] ]
+   )
+   [ INHERITS ( <varname>parent_table</varname> [, ... ] ) ]
+   [ WITH ( <varname>storage_parameter</varname>=<varname>value</varname> [, ... ] )
+   [ ON COMMIT {PRESERVE ROWS | DELETE ROWS | DROP} ]
+   [ TABLESPACE <varname>tablespace</varname> ]
+   [ DISTRIBUTED BY (<varname>column</varname>, [ ... ] ) | DISTRIBUTED RANDOMLY ]
+   [ PARTITION BY <varname>partition_type</varname> (<varname>column</varname>)
+       [ SUBPARTITION BY <varname>partition_type</varname> (<varname>column</varname>) ] 
+          [ SUBPARTITION TEMPLATE ( <varname>template_spec </varname>) ]
+       [...]
+    ( <varname>partition_spec</varname> ) 
+        | [ SUBPARTITION BY <varname>partition_type</varname> (<varname>column</varname>) ]
+          [...]
+    ( <varname>partition_spec</varname>
+      [ ( <varname>subpartition_spec</varname>
+           [(...)] 
+         ) ] 
+    )</codeblock>
+      <p>where <varname>column_constraint</varname> is:</p>
+      <codeblock>   [CONSTRAINT <varname>constraint_name</varname>]
+   NOT NULL | NULL 
+   | UNIQUE [USING INDEX TABLESPACE <varname>tablespace</varname>]
+            [WITH ( FILLFACTOR = <varname>value</varname> )]
+   | PRIMARY KEY [USING INDEX TABLESPACE <varname>tablespace</varname>] 
+                 [WITH ( FILLFACTOR = <varname>value</varname> )]
+   | CHECK ( <varname>expression</varname> )
+   | REFERENCES table_name [ ( column_name [, ... ] ) ] 
+            [ key_match_type ]
+            [ key_action ]</codeblock>
+      <p>where <varname>storage_directive</varname> for a column is:</p>
+      <codeblock>   COMPRESSTYPE={ZLIB | QUICKLZ | RLE_TYPE | NONE}
+    [COMPRESSLEVEL={0-9} ]
+    [BLOCKSIZE={8192-2097152} ]</codeblock>
+      <p>where <varname>storage_parameter</varname> for the table is:</p>
+      <codeblock>   APPENDONLY={TRUE|FALSE}
+   BLOCKSIZE={8192-2097152}
+   ORIENTATION={COLUMN|ROW}
+   CHECKSUM={TRUE|FALSE}
+   COMPRESSTYPE={ZLIB|QUICKLZ|RLE_TYPE|NONE}
+   COMPRESSLEVEL={0-9}
+   FILLFACTOR={10-100}
+   OIDS[=TRUE|FALSE]</codeblock>
+      <p>and <varname>table_constraint</varname> is:</p>
+      <codeblock>   [CONSTRAINT <varname>constraint_name</varname>]
+   UNIQUE ( <varname>column_name</varname> [, ... ] )
+          [USING INDEX TABLESPACE <varname>tablespace</varname>] 
+          [WITH ( FILLFACTOR=<varname>value</varname> )] 
+   | PRIMARY KEY ( <varname>column_name</varname> [, ... ] ) 
+                 [USING INDEX TABLESPACE <varname>tablespace</varname>] 
+                 [WITH ( FILLFACTOR=<varname>value</varname> )] 
+   | CHECK ( <varname>expression</varname> )
+   | FOREIGN KEY ( <varname>column_name</varname> [, ... ] )
+            REFERENCES table_name [ ( column_name [, ... ] ) ]
+            [ <varname>key_match_type</varname> ]
+            [ <varname>key_action</varname> ]
+            [ <varname>key_checking_mode</varname> ]</codeblock>
+      <p>where <varname>key_match_type</varname> is:</p>
+      <codeblock>    MATCH FULL
+  | SIMPLE</codeblock>
+      <p>where <varname>key_action</varname> is:</p>
+      <codeblock>    ON DELETE 
+  | ON UPDATE
+  | NO ACTION
+  | RESTRICT
+  | CASCADE
+  | SET NULL
+  | SET DEFAULT</codeblock>
+      <p>where <varname>key_checking_mode</varname> is:</p>
+      <codeblock>    DEFERRABLE
+  | NOT DEFERRABLE
+  | INITIALLY DEFERRED
+  | INITIALLY IMMEDIATE</codeblock>
+      <p>where <varname>partition_type</varname> is:</p>
+      <codeblock>    LIST
+  | RANGE</codeblock>
+      <p>where <varname>partition_specification</varname> is:</p>
+      <codeblock><varname>partition_element</varname> [, ...]</codeblock>
+      <p>and <varname>partition_element</varname> is:</p>
+      <codeblock>   DEFAULT PARTITION <varname>name</varname>
+  | [PARTITION <varname>name</varname>] VALUES (<varname>list_value</varname> [,...] )
+  | [PARTITION <varname>name</varname>] 
+     START ([<varname>datatype</varname>] '<varname>start_value</varname>') [INCLUSIVE | EXCLUSIVE]
+     [ END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE] ]
+     [ EVERY ([<varname>datatype</varname>] [<varname>number | </varname>INTERVAL] '<varname>interval_value</varname>') ]
+  | [PARTITION <varname>name</varname>] 
+     END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE]
+     [ EVERY ([<varname>datatype</varname>] [<varname>number | </varname>INTERVAL] '<varname>interval_value</varname>') ]
+[ WITH ( <varname>partition_storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
+[ TABLESPACE <varname>tablespace</varname> ]</codeblock>
+      <p>where <varname>subpartition_spec</varname> or <varname>template_spec</varname> is:</p>
+      <codeblock><varname>subpartition_element</varname> [, ...]</codeblock>
+      <p>and <varname>subpartition_element</varname> is:</p>
+      <codeblock>   DEFAULT SUBPARTITION <varname>name</varname>
+  | [SUBPARTITION <varname>name</varname>] VALUES (<varname>list_value</varname> [,...] )
+  | [SUBPARTITION <varname>name</varname>] 
+     START ([<varname>datatype</varname>] '<varname>start_value</varname>') [INCLUSIVE | EXCLUSIVE]
+     [ END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE] ]
+     [ EVERY ([<varname>datatype</varname>] [<varname>number | </varname>INTERVAL] '<varname>interval_value</varname>') ]
+  | [SUBPARTITION <varname>name</varname>] 
+     END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE]
+     [ EVERY ([<varname>datatype</varname>] [<varname>number | </varname>INTERVAL] '<varname>interval_value</varname>') ]
+[ WITH ( <varname>partition_storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
+[ TABLESPACE <varname>tablespace</varname> ]</codeblock>
+      <p>where <varname>storage_parameter</varname> for a partition is:</p>
+      <codeblock>   APPENDONLY={TRUE|FALSE}
+   BLOCKSIZE={8192-2097152}
+   ORIENTATION={COLUMN|ROW}
+   CHECKSUM={TRUE|FALSE}
+   COMPRESSTYPE={ZLIB|QUICKLZ|RLE_TYPE|NONE}
+   COMPRESSLEVEL={1-9}
+   FILLFACTOR={10-100}
+   OIDS[=TRUE|FALSE]</codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p><codeph>CREATE TABLE</codeph> creates an initially empty table in the current database. The
+        user who issues the command owns the table.</p>
+      <p>If you specify a schema name, Greenplum creates the table in the specified schema.
+        Otherwise Greenplum creates the table in the current schema. Temporary tables exist in a
+        special schema, so you cannot specify a schema name when creating a temporary table. Table
+        names must be distinct from the name of any other table, external table, sequence, index, or
+        view in the same schema.</p>
+      <p>The optional constraint clauses specify conditions that new or updated rows must satisfy
+        for an insert or update operation to succeed. A constraint is an SQL object that helps
+        define the set of valid values in the table in various ways. Constraints apply to tables,
+        not to partitions. You cannot add a constraint to a partition or subpartition.</p>
+      <p>Referential integrity constraints (foreign keys) are accepted but not enforced. The
+        information is kept in the system catalogs but is otherwise ignored.</p>
+      <p>There are two ways to define constraints: table constraints and column constraints. A
+        column constraint is defined as part of a column definition. A table constraint definition
+        is not tied to a particular column, and it can encompass more than one column. Every column
+        constraint can also be written as a table constraint; a column constraint is only a
+        notational convenience for use when the constraint only affects one column. </p>
+      <p>When creating a table, there is an additional clause to declare the Greenplum Database
+        distribution policy. If a <codeph>DISTRIBUTED BY</codeph> or <codeph>DISTRIBUTED
+          RANDOMLY</codeph> clause is not supplied, then Greenplum assigns a hash distribution
+        policy to the table using either the <codeph>PRIMARY KEY</codeph> (if the table has one) or
+        the first column of the table as the distribution key. Columns of geometric or user-defined
+        data types are not eligible as Greenplum distribution key columns. If a table does not have
+        a column of an eligible data type, the rows are distributed based on a round-robin or random
+        distribution. To ensure an even distribution of data in your Greenplum Database system, you
+        want to choose a distribution key that is unique for each record, or if that is not
+        possible, then choose <codeph>DISTRIBUTED RANDOMLY</codeph>.</p>
+      <p>The <codeph>PARTITION BY</codeph> clause allows you to divide the table into multiple
+        sub-tables (or parts) that, taken together, make up the parent table and share its schema.
+        Though the sub-tables exist as independent tables, the Greenplum Database restricts their
+        use in important ways. Internally, partitioning is implemented as a special form of
+        inheritance. Each child table partition is created with a distinct <codeph>CHECK</codeph>
+        constraint which limits the data the table can contain, based on some defining criteria. The
+          <codeph>CHECK</codeph> constraints are also used by the query optimizer to determine which
+        table partitions to scan in order to satisfy a given query predicate. These partition
+        constraints are managed automatically by the Greenplum Database.</p>
+    </section>
+    <section id="section4">
+      <title>Parameters</title>
+      <parml>
+        <plentry>
+          <pt>GLOBAL | LOCAL</pt>
+          <pd>These keywords are present for SQL standard compatibility, but have no effect in
+            Greenplum Database. </pd>
+        </plentry>
+        <plentry>
+          <pt>TEMPORARY | TEMP</pt>
+          <pd>If specified, the table is created as a temporary table. Temporary tables are
+            automatically dropped at the end of a session, or optionally at the end of the current
+            transaction (see <codeph>ON COMMIT</codeph>). Existing permanent tables with the same
+            name are not visible to the current session while the temporary table exists, unless
+            they are referenced with schema-qualified names. Any indexes created on a temporary
+            table are automatically temporary as well.</pd>
+        </plentry>
+        <plentry>
+          <pt>
+            <varname>table_name</varname>
+          </pt>
+          <pd>The name (optionally schema-qualified) of the table to be created. </pd>
+        </plentry>
+        <plentry>
+          <pt>
+            <varname>column_name</varname>
+          </pt>
+          <pd>The name of a column to be created in the new table. </pd>
+        </plentry>
+        <plentry>
+          <pt>
+            <varname>data_type</varname>
+          </pt>
+          <pd>The data type of the column. This may include array specifiers.</pd>
+          <pd>For table columns that contain textual data, Specify the data
+            type <codeph>VARCHAR</codeph> or <codeph>TEXT</codeph>. Specifying the data type
+              <codeph>CHAR</codeph> is not recommended. In Greenplum Database, the data types
+              <codeph>VARCHAR</codeph> or <codeph>TEXT</codeph> handles padding added to the data
+            (space characters added after the last non-space character) as significant characters,
+            the data type <codeph>CHAR</codeph> does not. See <xref href="#topic1/section5"
+              format="dita"/>.</pd>
+        </plentry>
+        <plentry>
+          <pt>DEFAULT <varname>default_expr</varname></pt>
+          <pd>The <codeph>DEFAULT</codeph> clause assigns a default data value for the column whose
+            column definition it appears within. The value is any variable-free expression
+            (subqueries and cross-references to other columns in the current table are not allowed).
+            The data type of the default expression must match the data type of the column. The
+            default expression will be used in any insert operation that does not specify a value
+            for the column. If there is no default for a column, then the default is null. </pd>
+        </plentry>
+        <plentry>
+          <pt> ENCODING ( <varname>storage_directive</varname> [, ...] ) </pt>
+          <pd>For a column, the optional <codeph>ENCODING</codeph> clause specifies the type of
+            compression and block size for the column data. See <xref href="#topic1/with_storage"
+              format="dita">storage_options</xref> for <codeph>COMPRESSTYPE</codeph>,
+              <codeph>COMPRESSLEVEL</codeph>, and <codeph>BLOCKSIZE</codeph> values.</pd>
+          <pd>The clause is valid only for append-optimized, column-oriented tables.</pd>
+          <pd>Column compression settings are inherited from the table level to the partition level
+            to the subpartition level. The lowest-level settings have priority.</pd>
+        </plentry>
+        <plentry>
+          <pt>INHERITS</pt>
+          <pd>The optional <codeph>INHERITS</codeph> clause specifies a list of tables from which
+            the new table automatically inherits all columns. Use of <codeph>INHERITS</codeph>
+            creates a persistent relationship between the new child table and its parent table(s).
+            Schema modifications to the parent(s) normally propagate to children as well, and by
+            default the data of the child table is included in scans of the parent(s). </pd>
+          <pd>In Greenplum Database, the <codeph>INHERITS</codeph> clause is not used when creating
+            partitioned tables. Although the concept of inheritance is used in partition
+            hierarchies, the inheritance structure of a partitioned table is created using the
+                <codeph><xref href="#topic1/part_by" format="dita">PARTITION BY</xref></codeph>
+            clause. </pd>
+          <pd>If the same column name exists in more than one parent table, an error is reported
+            unless the data types of the columns match in each of the parent tables. If there is no
+            conflict, then the duplicate columns are merged to form a single column in the new
+            table. If the column name list of the new table contains a column name that is also
+            inherited, the data type must likewise match the inherited column(s), and the column
+            definitions are merged into one. However, inherited and new column declarations of the
+            same name need not specify identical constraints: all constraints provided from any
+            declaration are merged together and all are applied to the new table. If the new table
+            explicitly specifies a default value for the column, this default overrides any defaults
+            from inherited declarations of the column. Otherwise, any parents that specify default
+            values for the column must all specify the same default, or an error will be reported.
+          </pd>
+        </plentry>
+        <plentry>
+          <pt>LIKE <varname>other_table</varname> [{INCLUDING | EXCLUDING} {DEFAULTS |
+            CONSTRAINTS}]</pt>
+          <pd>The <codeph>LIKE</codeph> clause specifies a table from which the new table
+            automatically copies all column names, data types, not-null constraints, and
+            distribution policy. Storage properties like append-optimized or partition structure are
+            not copied. Unlike <codeph>INHERITS</codeph>, the new table and original table are
+            completely decoupled after creation is complete.</pd>
+          <pd>Default expressions for the copied column definitions will only be copied if
+              <codeph>INCLUDING DEFAULTS</codeph> is specified. The default behavior is to exclude
+            default expressions, resulting in the copied columns in the new table having null
+            defaults. </pd>
+          <pd>Not-null constraints are always copied to the new table. <codeph>CHECK</codeph>
+            constraints will only be copied if <codeph>INCLUDING CONSTRAINTS</codeph> is specified;
+            other types of constraints will <varname>never</varname> be copied. Also, no distinction
+            is made between column constraints and table constraints — when constraints are
+            requested, all check constraints are copied. </pd>
+          <pd>Note also that unlike <codeph>INHERITS</codeph>, copied columns and constraints are
+            not merged with similarly named columns and constraints. If the same name is specified
+            explicitly or in another <codeph>LIKE</codeph> clause an error is signalled. </pd>
+        </plentry>
+        <plentry>
+          <pt>CONSTRAINT <varname>constraint_name</varname></pt>
+          <pd>An optional name for a column or table constraint. If the constraint is violated, the
+            constraint name is present in error messages, so constraint names like <varname>column
+              must be positive</varname> can be used to communicate helpful constraint information
+            to client applications. (Double-quotes are needed to specify constraint names that
+            contain spaces.) If a constraint name is not specified, the system generates a
+              name.<note type="note">The specified <varname>constraint_name</varname> is used for
+              the constraint, but a system-generated unique name is used for the index name. In some
+              prior releases, the provided name was used for both the constraint name and the index
+              name. </note></pd>
+        </plentry>
+        <plentry>
+          <pt>NULL | NOT NULL </pt>
+          <pd>Specifies if the column is or is not allowed to contain null values.
+              <codeph>NULL</codeph> is the default.</pd>
+        </plentry>
+        <plentry>
+          <pt>UNIQUE ( <varname>column constraint</varname> )</pt>
+          <pt>UNIQUE ( <varname>column_name</varname> [, ... ] ) ( <varname>table
+              constraint</varname> )</pt>
+          <pd>The <codeph>UNIQUE</codeph> constraint specifies that a group of one or more columns
+            of a table may contain only unique values. The behavior of the unique table constraint
+            is the same as that for column constraints, with the additional capability to span
+            multiple columns. For the purpose of a unique constraint, null values are not considered
+            equal. The column(s) that are unique must contain all the columns of the Greenplum
+            distribution key. In addition, the <codeph>&lt;key&gt;</codeph> must contain all the
+            columns in the partition key if the table is partitioned. Note that a
+              <codeph>&lt;key&gt;</codeph> constraint in a partitioned table is not the same as a
+            simple <codeph>UNIQUE INDEX</codeph>.</pd>
+          <pd>For information about unique constraint management and limitations, see <xref
+              href="#topic1/section5" format="dita"/>.</pd>
+        </plentry>
+        <plentry>
+          <pt>PRIMARY KEY ( <varname>column constraint</varname> )</pt>
+          <pt>PRIMARY KEY ( <varname>column_name</varname> [, ... ] ) ( <varname>table
+              constraint</varname> )</pt>
+          <pd>The primary key constraint specifies that a column or columns of a table may contain
+            only unique (non-duplicate), non-null values. Technically, <codeph>PRIMARY KEY</codeph>
+            is merely a combination of <codeph>UNIQUE</codeph> and <codeph>NOT NULL</codeph>, but
+            identifying a set of columns as primary key also provides metadata about the design of
+            the schema, as a primary key implies that other tables may rely on this set of columns
+            as a unique identifier for rows. For a table to have a primary key, it must be hash
+            distributed (not randomly distributed), and the primary key The column(s) that are
+            unique must contain all the columns of the Greenplum distribution key. In addition, the
+              <codeph>&lt;key&gt;</codeph> must contain all the columns in the partition key if the
+            table is partitioned. Note that a <codeph>&lt;key&gt;</codeph> constraint in a
+            partitioned table is not the same as a simple <codeph>UNIQUE INDEX</codeph>.</pd>
+          <pd>For information about primary key management and limitations, see <xref
+              href="#topic1/section5" format="dita"/>.</pd>
+        </plentry>
+        <plentry>
+          <pt>CHECK ( <varname>expression</varname> )</pt>
+          <pd>The <codeph>CHECK</codeph> clause specifies an expression producing a Boolean result
+            which new or updated rows must satisfy for an insert or update operation to succeed.
+            Expressions evaluating to <codeph>TRUE</codeph> or <codeph>UNKNOWN</codeph> succeed.
+            Should any row of an insert or update operation produce a <codeph>FALSE</codeph> result
+            an error exception is raised and the insert or update does not alter the database. A
+            check constraint specified as a column constraint should reference that column's value
+            only, while an expression appearing in a table constraint may reference multiple
+            columns. <codeph>CHECK</codeph> expressions cannot contain subqueries nor refer to
+            variables other than columns of the current row.</pd>
+        </plentry>
+        <plentry>
+          <pt>REFERENCES <varname>table_name</varname> [ ( <varname>column_name</varname> [, ... ] )
+            ]</pt>
+          <pt>[<varname> key_match_type </varname>] [ <varname>key_action</varname> ]</pt>
+          <pt>FOREIGN KEY ( <varname>column_name</varname> [, ... ] )</pt>
+          <pt>   REFERENCES <varname>table_name</varname> [ ( <varname>column_name</varname> [, ...
+            ] )</pt>
+          <pt> [<varname> key_match_type </varname>] [ <varname>key_action</varname> [
+              <varname>key_checking_mode</varname> ]</pt>
+          <pd>The <codeph>REFERENCES</codeph> and <codeph>FOREIGN KEY</codeph> clauses specify
+            referential integrity constraints (foreign key constraints). Greenplum accepts
+            referential integrity constraints as specified in PostgreSQL syntax but does not enforce
+            them. See the PostgreSQL documentation for information about referential integrity
+            constraints.</pd>
+        </plentry>
+        <plentry id="with_storage">
+          <pt>WITH ( <varname>storage_option=value</varname> )</pt>
+          <pd>The <codeph>WITH</codeph> clause can be used to set storage options for the table or
+            its indexes. Note that you can also set storage parameters on a particular partition or
+            subpartition by declaring the <codeph>WITH</codeph> clause in the partition
+            specification. The lowest-level settings have priority.</pd>
+          <pd>The defaults for some of the table storage options can be specified with the server
+            configuration parameter <codeph>gp_default_storage_options</codeph>. For information
+            about setting default storage options, see <xref href="#topic1/section5" format="dita"
+            />. </pd>
+          <pd>The following storage options are available:</pd>
+          <pd><b>APPENDONLY</b> — Set to <codeph>TRUE</codeph> to create the table as an
+            append-optimized table. If <codeph>FALSE</codeph> or not declared, the table will be
+            created as a regular heap-storage table.</pd>
+          <pd><b>BLOCKSIZE</b> — Set to the size, in bytes for each block in a table. The
+              <codeph>BLOCKSIZE</codeph> must be between 8192 and 2097152 bytes, and be a multiple
+            of 8192. The default is 32768.</pd>
+          <pd><b>ORIENTATION</b> — Set to <codeph>column</codeph> for column-oriented storage, or
+              <codeph>row</codeph> (the default) for row-oriented storage. This option is only valid
+            if <codeph>APPENDONLY=TRUE</codeph>. Heap-storage tables can only be row-oriented.</pd>
+          <pd><b>CHECKSUM</b> — This option is valid only for append-optimized tables
+              (<codeph>APPENDONLY=TRUE</codeph>). The value <codeph>TRUE</codeph> is the default and
+            enables CRC checksum validation for append-optimized tables. The checksum is calculated
+            during block creation and is stored on disk. Checksum validation is performed during
+            block reads. If the checksum calculated during the read does not match the stored
+            checksum, the transaction is aborted. If you set the value to <codeph>FALSE</codeph> to
+            disable checksum validation, checking the table data for on-disk corruption will not be
+            performed.</pd>
+          <pd><b>COMPRESSTYPE</b> — Set to <codeph>ZLIB</codeph> (the default),
+              <codeph>RLE-TYPE</codeph>, or <codeph>QUICKLZ</codeph><sup>1</sup> to specify the type
+            of compression used. The value <codeph>NONE</codeph>disables compression. QuickLZ uses
+            less CPU power and compresses data faster at a lower compression ratio than zlib.
+            Conversely, zlib provides more compact compression ratios at lower speeds. This option
+            is only valid if <codeph>APPENDONLY=TRUE</codeph>.<p>
+              <note type="note"><sup>1</sup>QuickLZ compression is available only in the commercial
+                release of Pivotal Greenplum Database.</note>
+            </p><p>The value <codeph>RLE_TYPE</codeph> is supported only if
+                <codeph>ORIENTATION</codeph> =<codeph>column</codeph> is specified, Greenplum
+              Database uses the run-length encoding (RLE) compression algorithm. RLE compresses data
+              better than the zlib or QuickLZ compression algorithm when the same data value occurs
+              in many consecutive rows.</p><p>For columns of type <codeph>BIGINT</codeph>,
+                <codeph>INTEGER</codeph>, <codeph>DATE</codeph>, <codeph>TIME</codeph>, or
+                <codeph>TIMESTAMP</codeph>, delta compression is also applied if the
+                <codeph>COMPRESSTYPE</codeph> option is set to <codeph>RLE-TYPE</codeph>
+              compression. The delta compression algorithm is based on the delta between column
+              values in consecutive rows and is designed to improve compression when data is loaded
+              in sorted order or the compression is applied to column data that is in sorted
+              order.</p><p>For information about using table compression, see "Choosing the Table
+              Storage Model" in the <cite>Greenplum Database Administrator Guide</cite>.</p></pd>
+          <pd><b>COMPRESSLEVEL</b> — For zlib compression of append-optimized tables, set to an
+            integer value between 1 (fastest compression) to 9 (highest compression ratio). QuickLZ
+            compression level can only be set to 1. If not declared, the default is 1. For
+              <codeph>RLE_TYPE</codeph>, the compression level can be set an integer value between 1
+            (fastest compression) to 4 (highest compression ratio). </pd>
+          <pd>This option is valid only if <codeph>APPENDONLY=TRUE</codeph>.</pd>
+          <pd><b>FILLFACTOR</b> — See <codeph><xref href="CREATE_INDEX.xml#topic1" type="topic"
+                format="dita"/></codeph> for more information about this index storage parameter. </pd>
+          <pd><b>OIDS</b> — Set to <codeph>OIDS=FALSE</codeph> (the default) so that rows do not
+            have object identifiers assigned to them. Greenplum strongly recommends that you do not
+            enable OIDS when creating a table. On large tables, such as those in a typical Greenplum
+            Database system, using OIDs for table rows can cause wrap-around of the 32-bit OID
+            counter. Once the counter wraps around, OIDs can no longer be assumed to be unique,
+            which not only makes them useless to user applications, but can also cause problems in
+            the Greenplum Database system catalog tables. In addition, excluding OIDs from a table
+            reduces the space required to store the table on disk by 4 bytes per row, slightly
+            improving performance. OIDS are not allowed on partitioned tables or append-optimized
+            column-oriented tables.</pd>
+        </plentry>
+        <plentry>
+          <pt>ON COMMIT</pt>
+          <pd>The behavior of temporary tables at the end of a transaction block can be controlled
+            using <codeph>ON COMMIT</codeph>. The three options are: </pd>
+          <pd><b>PRESERVE ROWS</b> - No special action is taken at the ends of transactions for
+            temporary tables. This is the default behavior. </pd>
+          <pd><b>DELETE ROWS</b> - All rows in the temporary table will be deleted at the end of
+            each transaction block. Essentially, an automatic <codeph>TRUNCATE</codeph> is done at
+            each commit. </pd>
+          <pd><b>DROP</b> - The temporary table will be dropped at the end of the current
+            transaction block. </pd>
+        </plentry>
+        <plentry>
+          <pt>TABLESPACE <varname>tablespace</varname></pt>
+          <pd>The name of the tablespace in which the new table is to be created. If not specified,
+            the database's default tablespace is used.</pd>
+        </plentry>
+        <plentry>
+          <pt>USING INDEX TABLESPACE <varname>tablespace</varname></pt>
+          <pd>This clause allows selection of the tablespace in which the index associated with a
+              <codeph>UNIQUE</codeph> or <codeph>PRIMARY KEY</codeph> constraint will be created. If
+            not specified, the database's default tablespace is used. </pd>
+        </plentry>
+        <plentry>
+          <pt>DISTRIBUTED BY (<varname>column</varname>, [ ... ] )</pt>
+          <pt>DISTRIBUTED RANDOMLY</pt>
+          <pd>Used to declare the Greenplum Database distribution policy for the table.
+              <codeph>DISTIBUTED BY</codeph> uses hash distribution with one or more columns
+            declared as the distribution key. For the most even data distribution, the distribution
+            key should be the primary key of the table or a unique column (or set of columns). If
+            that is not possible, then you may choose <codeph>DISTRIBUTED RANDOMLY</codeph>, which
+            will send the data round-robin to the segment instances. </pd>
+          <pd>The Greenplum Database server configuration parameter
+              <codeph>gp_create_table_random_default_distribution</codeph> controls the default
+            table distribution policy if the <cmdname>DISTRIBUTED BY</cmdname> clause is not
+            specified when you create a table. Greenplum Database follows these rules to create a
+            table if a distribution policy is not specified.<p>If the value of the parameter is
+                <codeph>off</codeph> (the default), Greenplum Database chooses the table
+              distribution key based on the command. If the <cmdname>LIKE</cmdname> or
+                <cmdname>INHERITS</cmdname> clause is specified in table creation command, the
+              created table uses the same distribution key as the source or parent table. </p><p>If
+              the value of the parameter is set to <codeph>on</codeph>, Greenplum Database follows
+              these rules:<ul id="ul_tbr_5kq_kq">
+                <li>If <cmdname>PRIMARY KEY</cmdname> or <cmdname>UNIQUE</cmdname> columns are not
+                  specified, the distribution of the table is random (<cmdname>DISTRIBUTED
+                    RANDOMLY</cmdname>). Table distribution is random even if the table creation
+                  command contains the <cmdname>LIKE</cmdname> or <cmdname>INHERITS</cmdname>
+                  clause. </li>
+                <li>If <cmdname>PRIMARY KEY</cmdname> or <cmdname>UNIQUE</cmdname> columns are
+                  specified, a <cmdname>DISTRIBUTED BY</cmdname> clause must also be specified. If a
+                    <cmdname>DISTRIBUTED BY</cmdname> clause is not specified as part of the table
+                  creation command, the command fails.</li>
+              </ul></p></pd>
+          <pd>For information about the parameter, see "Server Configuration Parameters."</pd>
+        </plentry>
+        <plentry id="part_by">
+          <pt>PARTITION BY</pt>
+          <pd>Declares one or more columns by which to partition the table.</pd>
+          <pd>When creating a partitioned table, Greenplum Database creates the root partitioned
+            table (the root partition) with the specified table name. Greenplum Database also
+            creates a hierarchy of tables, child tables, that are the subpartitions based on the
+            partitioning options that you specify. The Greenplum Database <i>pg_partition</i>*
+            system views contain information about the subpartition tables.</pd>
+          <pd>For each partition level (each hierarchy level of tables), a partitioned table can
+            have a maximum of 32,767 partitions. </pd>
+          <pd>
+            <note> Greenplum Database stores partitioned table data in the leaf child tables, the
+              lowest-level tables in the hierarchy of child tables for use by the partitioned
+              table.</note>
+          </pd>
+          <pd>
+            <parml>
+              <plentry>
+                <pt>
+                  <varname>partition_type</varname>
+                </pt>
+                <pd>Declares partition type: <codeph>LIST</codeph> (list of values) or
+                    <codeph>RANGE</codeph> (a numeric or date range). </pd>
+              </plentry>
+              <plentry>
+                <pt>
+                  <varname>partition_specification</varname>
+                </pt>
+                <pd>Declares the individual partitions to create. Each partition can be defined
+                  individually or, for range partitions, you can use the <codeph>EVERY</codeph>
+                  clause (with a <codeph>START</codeph> and optional <codeph>END</codeph> clause) to
+                  define an increment pattern to use to create the individual partitions.</pd>
+                <pd><b><codeph>DEFAULT PARTITION <varname>name</varname></codeph></b> — Declares a
+                  default partition. When data does not match to an existing partition, it is
+                  inserted into the default partition. Partition designs that do not have a default
+                  partition will reject incoming rows that do not match to an existing
+                  partition.</pd>
+                <pd><b><codeph>PARTITION <varname>name</varname></codeph></b> — Declares a name to
+                  use for the partition. Partitions are created using the following naming
+                  convention:
+                      <codeph><varname>parentname</varname>_<varname>level#</varname>_prt_<varname>givenname</varname></codeph>.</pd>
+                <pd><b><codeph>VALUES</codeph></b> — For list partitions, defines the value(s) that
+                  the partition will contain.</pd>
+                <pd><b><codeph>START</codeph></b> — For range partitions, defines the starting range
+                  value for the partition. By default, start values are <codeph>INCLUSIVE</codeph>.
+                  For example, if you declared a start date of '<codeph>2008-01-01</codeph>', then
+                  the partition would contain all dates greater than or equal to
+                    '<codeph>2008-01-01</codeph>'. Typically the data type of the
+                    <codeph>START</codeph> expression is the same type as the partition key column.
+                  If that is not the case, then you must explicitly cast to the intended data type. </pd>
+                <pd><b><codeph>END</codeph></b> — For range partitions, defines the ending range
+                  value for the partition. By default, end values are <codeph>EXCLUSIVE</codeph>.
+                  For example, if you declared an end date of '<codeph>2008-02-01</codeph>', then
+                  the partition would contain all dates less than but not equal to
+                    '<codeph>2008-02-01</codeph>'. Typically the data type of the
+                    <codeph>END</codeph> expression is the same type as the partition key column. If
+                  that is not the case, then you must explicitly cast to the intended data
+                  type.</pd>
+                <pd><b><codeph>EVERY</codeph></b> — For range partitions, defines how to increment
+                  the values from <codeph>START</codeph> to <codeph>END</codeph> to create
+                  individual partitions. Typically the data type of the <codeph>EVERY</codeph>
+                  expression is the same type as the partition key column. If that is not the case,
+                  then you must explicitly cast to the intended data type.</pd>
+                <pd><b><codeph>WITH</codeph>
+                  </b>— Sets the table storage options for a partition. For example, you may want
+                  older partitions to be append-optimized tables and newer partitions to be regular
+                  heap tables.</pd>
+                <pd><b><codeph>TABLESPACE</codeph></b> — The name of the tablespace in which the
+                  partition is to be created. </pd>
+              </plentry>
+            </parml>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt>SUBPARTITION BY</pt>
+          <pd>Declares one or more columns by which to subpartition the first-level partitions of
+            the table. The format of the subpartition specification is similar to that of a
+            partition specification described above. </pd>
+        </plentry>
+        <plentry>
+          <pt>SUBPARTITION TEMPLATE</pt>
+          <pd>Instead of declaring each subpartition definition individually for each partition, you
+            can optionally declare a subpartition template to be used to create the subpartitions
+            (lower level child tables). This subpartition specification would then apply to all
+            parent partitions.</pd>
+        </plentry>
+      </parml>
+    </section>
+    <section id="section5">
+      <title>Notes</title>
+      <ul id="ul_stf_sl1_tt">
+        <li>In Greenplum Database (a Postgres-based system) the data types <codeph>VARCHAR</codeph>
+          or <codeph>TEXT</codeph> handles padding added to the textual data (space characters added
+          after the last non-space character) as significant characters, the data type
+            <codeph>CHAR</codeph> does not.<p>In Greenplum Database, values of type
+                <codeph>CHAR(<varname>n</varname>)</codeph> are padded with trailing spaces to the
+            specified width <varname>n</varname>. The values are stored and displayed with the
+            spaces. However, the padding spaces are treated as semantically insignificant. When the
+            values are distributed, the trailing spaces are disregarded. The trailing spaces are
+            also treated as semantically insignificant when comparing two values of data type
+              <codeph>CHAR</codeph>, and the trailing spaces are removed when converting a character
+            value to one of the other string types. </p></li>
+        <li>Using OIDs in new applications is not recommended: where possible, using a
+            <codeph>SERIAL</codeph> or other sequence generator as the table's primary key is
+          preferred. However, if your application does make use of OIDs to identify specific rows of
+          a table, it is recommended to create a unique constraint on the OID column of that table,
+          to ensure that OIDs in the table will indeed uniquely identify rows even after counter
+          wrap-around. Avoid assuming that OIDs are unique across tables; if you need a
+          database-wide unique identifier, use the combination of table OID and row OID for the
+          purpose.</li>
+        <li>Greenplum Database has some special conditions for primary key and unique constraints
+          with regards to columns that are the <i>distribution key</i> in a Greenplum table. For a
+          unique constraint to be enforced in Greenplum Database, the table must be hash-distributed
+          (not <codeph>DISTRIBUTED RANDOMLY</codeph>), and the constraint columns must be the same
+          as (or a superset of) the table's distribution key columns. Also, the distribution key
+          must be a left-subset of the constraint columns with the columns in the correct order. For
+          example, if the primary key is (a,b,c), the distribution key can be only one of the
+          following: (a), (a,b), or (a,b,c).<p>A primary key constraint is simply a combination of a
+            unique constraint and a not-null constraint.</p><p>Greenplum Database automatically
+            creates a <codeph>UNIQUE</codeph> index for each <codeph>UNIQUE</codeph> or
+              <codeph>PRIMARY KEY</codeph> constraint to enforce uniqueness. Thus, it is not
+            necessary to create an index explicitly for primary key columns. <codeph>UNIQUE</codeph>
+            and <codeph>PRIMARY KEY</codeph> constraints are not allowed on append-optimized tables
+            because the <codeph>UNIQUE</codeph> indexes that are created by the constraints are not
+            allowed on append-optimized tables.</p><p>Foreign key constraints are not supported in
+            Greenplum Database. </p><p>For inherited tables, unique constraints, primary key
+            constraints, indexes and table privileges are <i>not</i> inherited in the current
+            implementation.</p></li>
+        <li>For append-optimized tables, <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> are not
+          allowed in a serializable transaction and will cause the transaction to abort.
+            <codeph>CLUSTER</codeph>, <codeph>DECLARE...FOR</codeph><codeph>UPDATE</codeph>, and
+          triggers are not supported with append-optimized tables.</li>
+        <li>To insert data into a partitioned table, you specify the root partitioned table, the
+          table created with the <codeph>CREATE TABLE</codeph> command. You also can specify a leaf
+          child table of the partitioned table in an <codeph>INSERT</codeph> command. An error is
+          returned if the data is not valid for the specified leaf child table. Specifying a child
+          table that is not a leaf child table in the <codeph>INSERT</codeph> command is not
+          supported. Execution of other DML commands such as <codeph>UPDATE</codeph> and
+            <codeph>DELETE</codeph> on any child table of a partitioned table is not supported.
+          These commands must be executed on the root partitioned table, the table created with the
+            <codeph>CREATE TABLE</codeph> command.</li>
+        <li>The default values for these table storage options can be specified with the server
+          configuration parameter <codeph>gp_default_storage_option</codeph>.<ul id="ul_hr1_3m1_tt">
+            <li>
+              <cmdname>APPENDONLY</cmdname>
+            </li>
+            <li>
+              <cmdname>BLOCKSIZE</cmdname>
+            </li>
+            <li>
+              <cmdname>CHECKSUM</cmdname>
+            </li>
+            <li>
+              <cmdname>COMPRESSTYPE</cmdname>
+            </li>
+            <li>
+              <cmdname>COMPRESSLEVEL</cmdname>
+            </li>
+            <li>
+              <cmdname>ORIENTATION</cmdname>
+            </li>
+          </ul><p>The defaults can be set for a database, schema, and user. For information about
+            setting storage options, see the server configuration parameter
+              <codeph>gp_default_storage_options</codeph><xref otherprops="op-hidden"
+              href="../config_params/guc_category-list.xml#gp_default_storage_options"
+                ><codeph>gp_default_storage_options</codeph></xref>.</p></li>
+      </ul>
+      <note type="important">The current Greenplum Database legacy optimizer allows list partitions
+        with multi-column (composite) partition keys. GPORCA does not support
+        composite keys, so Pivotal does not recommend using composite partition keys.</note>
+    </section>
+    <section id="section6">
+      <title>Examples</title>
+      <p>Create a table named <codeph>rank</codeph> in the schema named <codeph>baby</codeph> and
+        distribute the data using the columns <codeph>rank</codeph>, <codeph>gender</codeph>, and
+          <codeph>year</codeph>:</p>
+      <codeblock>CREATE TABLE baby.rank (id int, rank int, year smallint, 
+gender char(1), count int ) DISTRIBUTED BY (rank, gender, 
+year);</codeblock>
+      <p>Create table films and table distributors (the primary key will be used as the Greenplum
+        distribution key by default): </p>
+      <codeblock>CREATE TABLE films (
+code        char(5) CONSTRAINT firstkey PRIMARY KEY,
+title       varchar(40) NOT NULL,
+did         integer NOT NULL,
+date_prod   date,
+kind        varchar(10),
+len         interval hour to minute
+);
+
+CREATE TABLE distributors (
+did    integer PRIMARY KEY DEFAULT nextval('serial'),
+name   varchar(40) NOT NULL CHECK (name &lt;&gt; '')
+);</codeblock>
+      <p>Create a gzip-compressed, append-optimized table:</p>
+      <codeblock>CREATE TABLE sales (txn_id int, qty int, date date) 
+WITH (appendonly=true, compresslevel=5) 
+DISTRIBUTED BY (txn_id);</codeblock>
+      <p>Create a three level partitioned table using subpartition templates and default partitions
+        at each level:</p>
+      <codeblock>CREATE TABLE sales (id int, year int, month int, day int, 
+region text)
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (year)
+
+  SUBPARTITION BY RANGE (month)
+    SUBPARTITION TEMPLATE (
+       START (1) END (13) EVERY (1), 
+       DEFAULT SUBPARTITION other_months )
+
+  SUBPARTITION BY LIST (region)
+    SUBPARTITION TEMPLATE (
+       SUBPARTITION usa VALUES ('usa'),
+       SUBPARTITION europe VALUES ('europe'),
+       SUBPARTITION asia VALUES ('asia'),
+       DEFAULT SUBPARTITION other_regions)
+
+( START (2002) END (2010) EVERY (1),
+  DEFAULT PARTITION outlying_years);</codeblock>
+    </section>
+    <section id="section7">
+      <title>Compatibility</title>
+      <p><codeph>CREATE TABLE</codeph> command conforms to the SQL standard, with the following
+        exceptions:</p>
+      <ul>
+        <li id="cd150267"><b>Temporary Tables</b> — In the SQL standard, temporary tables are
+          defined just once and automatically exist (starting with empty contents) in every session
+          that needs them. Greenplum Database instead requires each session to issue its own
+            <codeph>CREATE TEMPORARY TABLE</codeph> command for each temporary table to be used.
+          This allows different sessions to use the same temporary table name for different
+          purposes, whereas the standard's approach constrains all instances of a given temporary
+          table name to have the same table structure. <p>The standard's distinction between global
+            and local temporary tables is not in Greenplum Database. Greenplum Database will accept
+            the <codeph>GLOBAL</codeph> and <codeph>LOCAL</codeph> keywords in a temporary table
+            declaration, but they have no effect. </p><p>If the <codeph>ON COMMIT</codeph> clause is
+            omitted, the SQL standard specifies that the default behavior as <codeph>ON COMMIT
+              DELETE ROWS</codeph>. However, the default behavior in Greenplum Database is
+              <codeph>ON COMMIT PRESERVE ROWS</codeph>. The <codeph>ON COMMIT DROP</codeph> option
+            does not exist in the SQL standard. </p></li>
+        <li id="cd150376"><b>Column Check Constraints</b> — The SQL standard says that
+            <codeph>CHECK</codeph> column constraints may only refer to the column they apply to;
+          only <codeph>CHECK</codeph> table constraints may refer to multiple columns. Greenplum
+          Database does not enforce this restriction; it treats column and table check constraints
+          alike. </li>
+        <li id="cd150386"><b>NULL Constraint</b> — The <codeph>NULL</codeph> constraint is a
+          Greenplum Database extension to the SQL standard that is included for compatibility with
+          some other database systems (and for symmetry with the <codeph>NOT NULL</codeph>
+          constraint). Since it is the default for any column, its presence is not required.</li>
+        <li id="cd150401"><b>Inheritance</b> — Multiple inheritance via the
+            <codeph>INHERITS</codeph> clause is a Greenplum Database language extension. SQL:1999
+          and later define single inheritance using a different syntax and different semantics.
+          SQL:1999-style inheritance is not yet supported by Greenplum Database. </li>
+        <li id="cd153512"><b>Partitioning</b> — Table partitioning via the <codeph>PARTITION
+            BY</codeph> clause is a Greenplum Database language extension. </li>
+        <li id="cd150414"><b>Zero-column tables</b> — Greenplum Database allows a table of no
+          columns to be created (for example, <codeph>CREATE TABLE foo();</codeph>). This is an
+          extension from the SQL standard, which does not allow zero-column tables. Zero-column
+          tables are not in themselves very useful, but disallowing them creates odd special cases
+          for <codeph>ALTER TABLE DROP COLUMN</codeph>, so Greenplum decided to ignore this spec
+          restriction. </li>
+        <li id="cd150435"><b>WITH clause</b> — The <codeph>WITH</codeph> clause is a Greenplum
+          Database extension; neither storage parameters nor OIDs are in the standard. </li>
+        <li id="cd150445"><b>Tablespaces</b> — The Greenplum Database concept of tablespaces is not
+          part of the SQL standard. The clauses <codeph>TABLESPACE</codeph> and <codeph>USING INDEX
+            TABLESPACE</codeph> are extensions. </li>
+        <li id="cd150459"><b>Data Distribution</b> — The Greenplum Database concept of a parallel or
+          distributed database is not part of the SQL standard. The <codeph>DISTRIBUTED</codeph>
+          clauses are extensions.</li>
+      </ul>
+    </section>
+    <section id="section8">
+      <title>See Also</title>
+      <p><codeph><xref href="ALTER_TABLE.xml#topic1" type="topic" format="dita">ALTER
+          TABLE</xref></codeph>, <codeph><xref href="./DROP_TABLE.xml#topic1" type="topic"
+            format="dita">DROP TABLE</xref></codeph>, <codeph><xref
+            href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita">CREATE EXTERNAL
+            TABLE</xref></codeph>, <codeph><xref href="./CREATE_TABLE_AS.xml#topic1" type="topic"
+            format="dita">CREATE TABLE AS</xref></codeph></p>
+    </section>
+  </body>
+</topic>

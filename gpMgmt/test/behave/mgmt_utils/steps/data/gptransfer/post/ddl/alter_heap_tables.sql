@@ -77,11 +77,6 @@ select * from sto_alt_heap2 order by bigint_col;
 Alter table sto_alt_heap3  alter column before_rename_col set statistics 3;
 select * from sto_alt_heap3 order by bigint_col;
 
--- Alter table cluster on indexname
-Create index sto_alt_heap3_idx on sto_alt_heap3(bigint_col);
-Alter table sto_alt_heap3 cluster on sto_alt_heap3_idx;
-select * from sto_alt_heap3 order by bigint_col;
-
 -- Alter table SET without cluster
 Alter table sto_alt_heap3 set without cluster;
 select * from sto_alt_heap3 order by bigint_col;

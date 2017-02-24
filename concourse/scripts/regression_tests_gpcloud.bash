@@ -50,11 +50,7 @@ function _main() {
 		exit 1
 	fi
 
-	time install_sync_tools
-	ln -s "$(pwd)/gpdb_src/gpAux/ext/rhel5_x86_64/python-2.6.2" /opt
-
 	time configure
-	sed -i s/1024/unlimited/ /etc/security/limits.d/90-nproc.conf
 	time install_gpdb
 	time setup_gpadmin_user
 	time make_cluster

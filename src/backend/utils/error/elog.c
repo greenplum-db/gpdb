@@ -58,6 +58,14 @@
 #include <syslog.h>
 #endif
 
+/*
+ * OpenSolaris has this header, but Solaris 10 doesn't.
+ * Linux and OSX 10.5 have it.
+ */
+#if !defined(_WIN32) && !defined(_WIN64)
+#include <execinfo.h>
+#endif
+
 #include "access/transam.h"
 #include "access/xact.h"
 #include "libpq/libpq.h"
@@ -79,7 +87,6 @@
 #include "cdb/cdbselect.h"
 #include "pgtime.h"
 
-#include "utils/elog.h" /* backtrace() prototype for solaris */
 #include "utils/debugbreak.h"
 #include "utils/builtins.h"  /* gp_elog() */
 
@@ -224,14 +231,6 @@ static void verify_and_replace_mbstr(char **str, int len)
 		*str = pstrdup("Message skipped due to incorrect encoding.");
 	}
 }
-
-/*
- * OpenSolaris has this header, but Solaris 10 doesn't.
- * Linux and OSX 10.5 have it.
- */
-#if !defined(pg_on_solaris) && !defined(_WIN32) && !defined(_WIN64)
-#include <execinfo.h>
-#endif
 
 /*
  * in_error_recursion_trouble --- are we at risk of infinite error recursion?
@@ -2970,8 +2969,6 @@ append_stacktrace(PipeProtoChunk *buffer, StringInfo append, void *const *stacka
 
 #if defined(__darwin__)
 	const char * prog = "atos -o";
-#elif pg_on_solaris
-	const char * prog = "gaddr2line -s -e";
 #else
 	const char * prog = "addr2line -s -e";
 #endif
@@ -4423,114 +4420,6 @@ gp_elog(PG_FUNCTION_ARGS)
 
 	PG_RETURN_VOID();
 }
-
-#if defined(pg_on_solaris)
-/* Use the Solaris stack-walker to build a (sort of) glibc compatible
- * backtrace */
-#include <ucontext.h>
-
-struct frame_info
-{
-	int frame;
-	int max;
-	void **addr;
-};
-
-static int
-get_stack_frames(uintptr_t fp, int sig __attribute__((unused)), void *context)
-{
-	struct frame_info *fi = (struct frame_info *)context;
-	int cur = fi->frame;
-
-	/* stop filling in after we've hit the limit */
-	if (cur == fi->max)
-		return 0;
-
-	fi->addr[cur] = (void *)fp;
-	fi->frame++;
-
-	return 0;
-}
-
-size_t
-backtrace(void **buffer, int size)
-{
-	ucontext_t uc;
-	struct frame_info fi;
-
-	if (getcontext(&uc) != 0)
-		return 0;
-
-	fi.addr = buffer;
-	fi.max = size;
-	fi.frame = 0;
-
-	if (walkcontext(&uc, get_stack_frames, &fi) != 0)
-		return 0;
-
-	return fi.frame;
-}
-
-char **
-backtrace_symbols(void *const *buffer, int size)
-{
-	char **result;
-	size_t bufsize;
-	int i;
-
-	bufsize = size * sizeof(char *);
-
-	/* Calculate exact size */
-	for (i=0; i < size; i++)
-	{
-		Dl_info dli;
-
-		if (dladdr(buffer[i], &dli) == 0)
-		{
-			bufsize += snprintf(NULL, 0, "%p: <not found>", buffer[i]) + 1;
-		}
-		else
-		{
-			bufsize += snprintf(NULL, 0, "%p: %s %s+0x%x", buffer[i],
-						dli.dli_fname, dli.dli_sname,
-						(int)((char *)(buffer[i]) - (char *)(dli.dli_saddr))) + 1;
-		}
-	}
-
-	result = malloc(bufsize);
-
-	if(!result)
-		ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY),
-					errmsg("Failed to get backtrace symbol: out of memory")));
-
-	{
-		int n;
-		char *cur = (char *)(result + size);
-
-		memset(result, 0, bufsize);
-
-		for (i=0; i < size; i++)
-		{
-			Dl_info dli;
-
-			if (dladdr(buffer[i], &dli) == 0)
-			{
-				n = sprintf(cur, "%p: <not found>", buffer[i]);
-			}
-			else
-			{
-				n = sprintf(cur, "%p: %s %s+0x%x", buffer[i],
-							dli.dli_fname, dli.dli_sname,
-							(int)((char *)(buffer[i]) - (char *)(dli.dli_saddr)));
-			}
-
-			result[i] = cur;
-			cur += n + 1;
-		}
-	}
-	return result;
-}
-#endif
 
 void
 debug_backtrace(void)

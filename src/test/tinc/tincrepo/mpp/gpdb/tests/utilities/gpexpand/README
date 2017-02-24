@@ -1,20 +1,31 @@
-========================================================================================================================================================================
-Tests for gpexpand utility
-========================================================================================================================================================================
+## Tests for gpexpand utility
 
-How to run:
-From the root folder, just do tinc.py discover .
+### Prerequisites:
 
-Prerequisites:
--> GPEXPAND_HOSTS environment variable needs to be set. 
-   This is a space separated list of hostnames that includes all the hosts involved in the expansion tests. For eg: GPEXPAND_HOSTS='rh55-qavm44 rh55-qavm45'
+- GPDB binaries installed on the host where the tests are running. Note that we need not
+have an initialized cluster as the tests take care of initializing a required cluster
 
--> PGDATABASE environment variable set to a valid database
+- GPDB binaries installed on all the hosts involved in the expansion tests.
 
--> GPDB / HAWQ binaries installed on the host where the tests are running. Note that we need not have an initialized cluster as the tests take care of initializing a required cluster
+- HOST\[N] environment variables need to be set, e.g. 
+```sh
+export HOST1=test1 HOST2=test2 HOST3=test3 HOST4=test4 HOST5=test5
+```
 
--> GPDB / HAWQ binaries installed on all the hosts involved in the expansion tests. This requirement might be removed  when the framework is enhanced to take care of seg install
+- PGDATABASE environment variable set to a valid database, e.g.
+```sh
+export PGDATABASE=gptest
+```
 
+- source the greenplum installation env vars and the tinc environment variables
+```bash
+source $INSTALLDIR/greenplum_path.sh # where INSTALLDIR is where greenplum was installed
+source src/test/tinc/tinc_env.sh
+```
 
-Design:
-TBD
+### How to run:
+
+From this folder as current working directory, do
+```sh
+tinc.py discover .
+```

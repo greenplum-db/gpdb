@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic15">
+      <title>When a segment host is not recoverable</title>
+      <body>
+            <p>If a host is nonoperational, for example, due to hardware failure, recover the
+                  segments onto a spare set of hardware resources. If mirroring is enabled, you can
+                  recover a segment from its mirror onto an alternate host using
+                        <codeph>gprecoverseg</codeph>. For example:</p>
+            <codeblock>$ gprecoverseg -i <i>recover_config_file</i>
+      </codeblock>
+            <p>Where the format of <codeph>
+                        <i>recover_config_file</i>
+                  </codeph> is:</p>
+            <codeblock>filespaceOrder=[<i>filespace1_name</i>[:<i>filespace2_name</i>:...]<i>failed_host_address</i>:
+<i>port</i>:<i>fselocation</i> [<i>recovery_host_address</i>:<i>port</i>:<i>replication_port</i>:<i>fselocation</i>
+[:<i>fselocation</i>:...]]</codeblock>
+            <p>For example, to recover to a different host than the failed host without additional
+                  filespaces configured (besides the default <i>pg_system</i> filespace):</p>
+            <codeblock>filespaceOrder=sdw5-2:50002:/gpdata/gpseg2 sdw9-2:50002:53002:/gpdata/gpseg2</codeblock>
+            <p>The <i>gp_segment_configuration</i> and <i>pg_filespace_entry</i> system catalog
+                  tables can help determine your current segment configuration so you can plan your
+                  mirror recovery configuration. For example, run the following query:</p>
+            <codeblock>=# SELECT dbid, content, hostname, address, port, 
+   replication_port, fselocation as datadir 
+   FROM gp_segment_configuration, pg_filespace_entry 
+   WHERE dbid=fsedbid 
+   ORDER BY dbid;</codeblock>
+            <p>The new recovery segment host must be pre-installed with the Greenplum Database
+                  software and configured exactly as the existing segment hosts.</p>
+      </body>
+</topic>

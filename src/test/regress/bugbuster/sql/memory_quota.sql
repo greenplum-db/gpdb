@@ -1,4 +1,4 @@
-\c tpch_heap
+\c mpph_heap
 
 -- start_ignore                                                                                                                                              
 REVOKE ALL PRIVILEGES ON PUBLIC.orders FROM memquota_role1;
@@ -20,12 +20,12 @@ alter resource queue memquota_resqueue1 with (memory_limit = '500MB');
 alter role memquota_role1 with resource queue memquota_resqueue1;
 
 -- concurrency = statement limit of the resource queue
-\! python bugbuster/mem_quota_util.py --complexity=1 --concurrency=4 --dbname=tpch_heap --username=memquota_role1
+\! python bugbuster/mem_quota_util.py --complexity=1 --concurrency=4 --dbname=mpph_heap --username=memquota_role1
 
 -- trigger query waiting
-\! python bugbuster/mem_quota_util.py --complexity=1 --concurrency=15 --dbname=tpch_heap --username=memquota_role1
+\! python bugbuster/mem_quota_util.py --complexity=1 --concurrency=15 --dbname=mpph_heap --username=memquota_role1
 
-\c tpch_heap
+\c mpph_heap
 
 -- use 'auto' memory allocation policy
 set gp_resqueue_memory_policy=auto;
@@ -153,7 +153,7 @@ order by FOO2.l_partkey, sum_qty
 ) FOO3;
 
 -- reset connection to reset gucs
-\c tpch_heap
+\c mpph_heap
 
 
 --query with a shallow group tree. The number of groups and memory intensive operators is same as query1                                                     

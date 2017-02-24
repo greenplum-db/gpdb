@@ -1366,7 +1366,39 @@ motion_sanity_walker(Node *node, sanity_result_t *result)
 	if (!is_plan_node(node))
 		return false;
 
-	/* special handling for branch points */
+	/*
+	 * Special handling for branch points because there is a possibility of a
+	 * deadlock if there are Motions in both branches and one side is not first
+	 * pre-fetched.
+	 *
+	 * The deadlock occurs because, when the buffers on the Send side of a Motion
+	 * are completely filled with tuples, it blocks waiting for an ACK. Without
+	 * prefetch_inner, the Join node reads one tuple from the outer side first and
+	 * then starts retrieving tuples from the inner side - either to build a
+	 * hash table (in case of HashJoin) or for joining (in case of MergeJoin and
+	 * NestedLoopJoin).
+	 *
+	 * Thus we can end up with 4 processes infinitely waiting for each other :
+	 *
+	 * A : Join slice that already retrieved an outer tuple, and is waiting for
+	 *     inner tuples from D.
+	 * B : Join slice that is still waiting for the first outer tuple from C.
+	 * C : Outer slice whose buffer is full sending tuples to A and is blocked
+	 *     waiting for an ACK from A.
+	 * D : Inner slice that is full sending tuples to B and is blocked waiting
+	 *     for an ACK from B.
+	 *
+	 * A cannot ACK C because it is waiting to finish retrieving inner tuples
+	 * from D. B cannot ACK D because it is waiting for it's first outer tuple
+	 * from C before accepting any inner tuples. This forms a circular
+	 * dependency resulting in a deadlock : C -> A -> D -> B -> C.
+	 *
+	 * We avoid this by pre-fetching all the inner tuples in such cases and
+	 * materializing them in some fashion, before moving on to outer_tuples.
+	 * This effectively breaks the cycle and prevents deadlock.
+	 *
+	 * Details: https://groups.google.com/a/greenplum.org/forum/#!msg/gpdb-dev/gMa1tW0x_fk/wuzvGXBaBAAJ
+	 */
 	switch (nodeTag(node))
 	{
 		case T_HashJoin: /* Hash join can't deadlock -- it fully

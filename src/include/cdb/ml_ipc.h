@@ -14,32 +14,24 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbgang.h"
 
-#define IC_SHORT_PACKET_LIMIT (10) /* MPP-10351: treat some short-packets as drops */
-
 struct SliceTable;                          /* #include "nodes/execnodes.h" */
 struct EState;                              /* #include "nodes/execnodes.h" */
 
-/* listener filedescriptors */
-extern int		UDP_listenerFd;
+/* Socket file descriptor for the listener and sender. */
+extern int	ICListenerSocket;
+extern int	ICSenderSocket;
 
 /*
- * Registration message
- *
- * Upon making a connection, the sender sends a registration message to
- * identify itself to the receiver.  A lot of the fields are just there
- * for validity checking.
+ * Ports of Interconnect, assigned by initMotionLayerIPC() at process startup.
+ * These ports are used for the duration of this process and should never change.
  */
-typedef struct RegisterMessage
-{
-	int32       msgBytes;
-    int32       recvSliceIndex;
-    int32       sendSliceIndex;
-	int32       srcContentId;
-	int32		srcListenerPort;
-	int32		srcPid;
-    int32       srcSessionId;
-    int32       srcCommandCount;
-}	RegisterMessage;
+extern uint16	ICListenerPort;
+extern uint16	ICSenderPort;
+
+extern int	ICSenderFamily;
+
+
+
 
 /* 2 bytes to store the size of the entire packet.	a packet is composed of
  * of one or more serialized TupleChunks (each of which has a TupleChunk
@@ -71,11 +63,6 @@ extern void CleanUpMotionLayerIPC(void);
  */
 extern void WaitInterconnectQuit(void);
 
-/*
-* Send a dummy packet to interconnect thread to exit poll() immediately
-*/
-extern void SendDummyPacket(void);
-
 /* Returns the fd of the socket that connects to the seqserver.  This value
  * is -1 if it has not been setup.
  */
@@ -101,12 +88,9 @@ extern int  GetSeqServerFD(void);
  *
  */
 extern void SetupInterconnect(struct EState *estate);
-extern void SetupUDPInterconnect(struct EState *estate);
-extern void SetupUDPIFCInterconnect(struct EState *estate);
-extern void SetupTCPInterconnect(struct EState *estate);
 
 /* The TeardownInterconnect() function should be called at the end of executing
- * a DML statement to close down all TCP socket resources that were setup during
+ * a DML statement to close down all socket resources that were setup during
  * SetupInterconnect().
  *
  * NOTE: it is important that TeardownInterconnect() happens
@@ -119,20 +103,7 @@ extern void TeardownInterconnect(ChunkTransportState *transportStates,
 								 MotionLayerState *mlStates,
 								 bool forceEOS);
 
-extern void TeardownTCPInterconnect(ChunkTransportState *transportStates,
-								 MotionLayerState *mlStates,
-								 bool forceEOS);
-
-extern void TeardownUDPInterconnect(ChunkTransportState *transportStates,
-								 MotionLayerState *mlStates,
-								 bool forceEOS);
-
-extern void TeardownUDPIFCInterconnect(ChunkTransportState *transportStates,
-								 MotionLayerState *mlStates,
-								 bool forceEOS);
-
 extern void SetupSequenceServer(const char *host, int port);
-
 extern void TeardownSequenceServer(void);
 
 
@@ -226,15 +197,12 @@ extern void DeregisterReadInterest(ChunkTransportState *transportStates,
 								   int                  srcRoute,
 								   const char          *reason);
 
-extern void readPacket(MotionConn *conn, bool inTeardown);
-
 /* 
  * Return a UDP receive buffer to our freelist.
  *
  * allows us to "keep" a buffer held for a connection, to avoid a copy
  * (see inplace in chunklist).
  */
-extern void  MlPutRxBuffer(ChunkTransportState *transportStates, int motNodeID, int route);
 extern void  MlPutRxBufferIFC(ChunkTransportState *transportStates, int motNodeID, int route);
 
 #define getChunkTransportState(transportState, motNodeID, ppEntry) \
@@ -319,21 +287,17 @@ extern ChunkTransportStateEntry *createChunkTransportState(ChunkTransportState *
 extern ChunkTransportStateEntry *removeChunkTransportState(ChunkTransportState *transportStates,
 														   int16 motNodeID);
 
-extern void InitMotionTCP(int *listenerSocketFd, uint16 *listenerPort);
-extern void InitMotionUDP(int *listenerSocketFd, uint16 *listenerPort);
-extern void InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort);
-
 extern TupleChunkListItem RecvTupleChunk(MotionConn *conn, bool inTeardown);
 
-extern void markUDPConnInactive(MotionConn *conn);
+extern void InitMotionUDPIFC(void);
 extern void markUDPConnInactiveIFC(MotionConn *conn);
-
-extern void CleanupMotionTCP(void);
-extern void CleanupMotionUDP(void);
 extern void CleanupMotionUDPIFC(void);
-
 extern void WaitInterconnectQuitUDPIFC(void);
-extern void WaitInterconnectQuitUDP(void);
+extern void SetupUDPIFCInterconnect(struct EState *estate);
+extern void TeardownUDPIFCInterconnect(ChunkTransportState *transportStates,
+								 MotionLayerState *mlStates,
+								 bool forceEOS);
+
 
 extern void adjustMasterRouting(Slice *recvSlice);
 

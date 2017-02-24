@@ -1332,11 +1332,12 @@ createdb_failure_callback(int code, Datum arg)
 	 */
 	UnlockSharedObject(DatabaseRelationId, fparms->src_dboid, 0, ShareLock);
 
+#if 0 /* Upstream code not applicable to GPDB */
 	/* Throw away any successfully copied subdirectories */
-	// GPDB_83_MERGE_FIXME: We don't do this in GPDB. Why not?
-	//remove_dbtablespaces(fparms->dest_dboid);
-}
+	remove_dbtablespaces(fparms->dest_dboid);
+#endif
 
+}
 
 /*
  * DROP DATABASE
@@ -2340,18 +2341,17 @@ have_createdb_privilege(void)
 }
 
 /*
+ * The remove_dbtablespaces() functionality is covered by AtEOXact_smgr(bool forCommit)
+ * - for `createdb()` failure during transaction abort.
+ * - for `dropdb()` during transaction commit.
+ */
+#if 0 /* Upstream code not applicable to GPDB */
+/*
  * Remove tablespace directories
  *
  * We don't know what tablespaces db_id is using, so iterate through all
  * tablespaces removing <tablespace>/db_id
  */
-/*
- * GPDB_83_MERGE_FIXME: As noted in createdb_failure_callback() it's unclear
- * why we in GPDB don't do remove_dbtablespaces(). Removing the code altogether
- * makes for strange merge conflicts though so put back the code but blocked
- * off with a preprocessor #if 0 until it has been investigated.
- */
-#if 0
 static void
 remove_dbtablespaces(Oid db_id)
 {

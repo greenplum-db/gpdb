@@ -148,10 +148,6 @@ SELECT out_of_character FROM carp_die WHERE id = 122;
  
 (1 row)
 
--- The table cannot have already been clustered, since we do not allow indexes 
--- on AO/COT tables, but let's just see what happens when we run this command.
-ALTER TABLE carp_die SET WITHOUT CLUSTER;
-ALTER TABLE
 DROP FUNCTION IF EXISTS money_to_text(MONEY) CASCADE;
 psql:/path/sql_file:1: NOTICE:  function money_to_text(money) does not exist, skipping
 DROP FUNCTION
@@ -233,36 +229,6 @@ SELECT id, out_of_character
  2147483648 | I live in the mid-S.F. Bay now a suburb of northern L.A. which extends from the south Baja coast to the point of the snows northern-most.Did you know that the high point in New York is not a building or high-flying storks but instead is the city landfillwhich makes Everest seem a molehill?And all the land we can seeis piled high with quite-toxic debris.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
 (5 rows)
 
--- Create a child table of carp_die, using the INHERITS clause, without 
--- specifying whether the table should be column-oriented.  
--- Should it inherit the column-orientedness of the parent?
-CREATE TABLE carpe_diem () INHERITS (carp_die);
-psql:/path/sql_file:1: NOTICE:  Table has parent, setting distribution columns to match parent table
-psql:/path/sql_file:1: ERROR:  cannot inherit relation "carp_die" as it is column oriented
--- Normally, you wouldn't copy records from a parent table to a child table, 
--- but I think I'll try it.
-INSERT INTO carpe_diem SELECT * FROM carp_die;
-psql:/path/sql_file:1: ERROR:  relation "carpe_diem" does not exist
-SELECT id, wealth
- FROM carpe_diem 
- ORDER BY id;
-psql:/path/sql_file:1: ERROR:  relation "carpe_diem" does not exist
-LINE 2:  FROM carpe_diem 
-              ^
--- If the new (child) table is column-oriented, then it should follow the 
--- same restrictions as a column-oriented table.  Since deletes on 
--- column-oriented tables are illegal, this should be illegal, too.  
--- However, this isn't failing, which implies that the child table was not 
--- created as a column-oriented table.  Is that a bug, or is the user 
--- required to specify that a child table be column-oriented???!!!
-DELETE FROM carpe_diem WHERE wealth = '$122.00';
-psql:/path/sql_file:1: ERROR:  relation "carpe_diem" does not exist
-SELECT id, wealth
- FROM carpe_diem 
- ORDER BY id;
-psql:/path/sql_file:1: ERROR:  relation "carpe_diem" does not exist
-LINE 2:  FROM carpe_diem 
-              ^
 -- Create a table with the same structure as carp_die, using the LIKE clause, 
 -- without specifying whether the table should be column-oriented.  
 -- Should it automatically acquire the column-orientedness of the parent?

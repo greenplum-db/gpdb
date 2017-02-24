@@ -1,0 +1,13 @@
+-- start_ignore
+-- end_ignore
+-- @Description Disable runaway query termination
+-- @author Zhongxian Gu
+-- @vlimMB 400 
+-- @slimMB 0
+-- @redzone 0
+-- will hit OOM
+-- content/segment = 0; size = 450MB; sleep = 20 sec
+select gp_allocate_palloc_gradual_test_all_segs(0, 450*1024*1024, 20);
+psql:/Users/guz4/dev/tincrepo/private/gacaragea/resource_management/runaway_query/runaway_query_limits/output/disable_rqt.sql:11: ERROR:  Out of memory  (seg0 slice1 usxxguz4m1.corp.emc.com:40000 pid=60004)
+DETAIL:  VM Protect failed to allocate 10485804 bytes, 9 MB available
+CONTEXT:  SQL function "gp_allocate_palloc_gradual_test_all_segs" statement 1

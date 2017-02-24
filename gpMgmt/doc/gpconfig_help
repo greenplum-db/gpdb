@@ -12,7 +12,7 @@ gpconfig -c <param_name> -v <value> [-m <master_value> | --masteronly]
        | -l 
    [--skipvalidation] [--verbose] [--debug]
 
-gpconfig -s <param_name> [--verbose] [--debug]
+gpconfig -s <param_name> [--flag] [--verbose] [--debug]
 
 gpconfig --help
 
@@ -119,6 +119,21 @@ then running gpconfig -s to verify the changes, you might still
 see the previous (old) values. You must reload the configuration 
 files (gpstop -u) or restart the system (gpstop -r) for changes 
 to take effect.
+
+
+--file
+
+For a configuration parameter, shows the value from the postgresql.conf
+file on all instances (master and segments) in the Greenplum Database
+system. If there is a discrepancy in a parameter value between segment
+instances, the gpconfig utility displays a warning message. Must be
+specified with the -s option.
+
+For example, a configuration parameter statement_mem is set to
+64MB for a user with the ALTER ROLE command, and the value in the
+postgresql.conf file is 128MB. Running the command
+gpconfig -s statement_mem --file displays 128MB. The command
+gpconfig -s statement_mem run by the user displays 64MB.
 
 
 --skipvalidation

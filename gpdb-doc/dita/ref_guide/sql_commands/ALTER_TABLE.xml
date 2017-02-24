@@ -1,0 +1,845 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+        <title id="ay20941">ALTER TABLE</title>
+        <body>
+                <p id="sql_command_desc">Changes the definition of a table.</p>
+                <section id="section2">
+                        <title>Synopsis</title>
+                        <codeblock id="sql_command_synopsis">ALTER TABLE [ONLY] <varname>name</varname> RENAME [COLUMN] <varname>column</varname> TO <varname>new_column</varname>
+
+ALTER TABLE <varname>name</varname> RENAME TO <varname>new_name</varname>
+
+ALTER TABLE <varname>name</varname> SET SCHEMA <varname>new_schema</varname>
+
+ALTER TABLE [ONLY] <varname>name</varname> SET 
+     DISTRIBUTED BY (<varname>column</varname>, [ ... ] ) 
+   | DISTRIBUTED RANDOMLY 
+   | WITH (REORGANIZE=true|false)
+ 
+ALTER TABLE [ONLY] <varname>name</varname> <varname>action</varname> [, ... ]
+
+ALTER TABLE <varname>name</varname>
+   [ ALTER PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) 
+   | FOR (<varname>value</varname>) } <varname>partition_action</varname> [...] ] 
+   <varname>partition_action</varname></codeblock>
+                        <p>where <varname>action</varname> is one of:</p>
+                        <codeblock>  ADD [COLUMN] <varname>column_name type</varname>
+      [<varname>column_constraint</varname> [ ... ]]
+  DROP [COLUMN] <varname>column</varname> [RESTRICT | CASCADE]
+  ALTER [COLUMN] <varname>column</varname> TYPE <varname>type</varname> [USING <varname>expression</varname>]
+  ALTER [COLUMN] <varname>column</varname> SET DEFAULT <varname>expression</varname>
+  ALTER [COLUMN] <varname>column</varname> DROP DEFAULT
+  ALTER [COLUMN] <varname>column</varname> { SET | DROP } NOT NULL
+  ALTER [COLUMN] <varname>column</varname> SET STATISTICS <varname>integer</varname>
+  ADD <varname>table_constraint</varname>
+  DROP CONSTRAINT <varname>constraint_name</varname> [RESTRICT | CASCADE]
+  DISABLE TRIGGER [<varname>trigger_name</varname> | ALL | USER]
+  ENABLE TRIGGER [<varname>trigger_name</varname> | ALL | USER]
+  CLUSTER ON <varname>index_name</varname>
+  SET WITHOUT CLUSTER
+  SET WITHOUT OIDS
+  SET (FILLFACTOR = <varname>value</varname>)
+  RESET (FILLFACTOR)
+  INHERIT <varname>parent_table</varname>
+  NO INHERIT <varname>parent_table</varname>
+  OWNER TO <varname>new_owner</varname>
+  SET TABLESPACE <varname>new_tablespace</varname></codeblock>
+                        <p>where <varname>partition_action</varname> is one of:</p>
+                        <codeblock>  ALTER DEFAULT PARTITION
+  DROP DEFAULT PARTITION [IF EXISTS]
+  DROP PARTITION [IF EXISTS] { <varname>partition_name</varname> | 
+      FOR (RANK(<varname>number</varname>)) | FOR (<varname>value</varname>) } [CASCADE]
+  TRUNCATE DEFAULT PARTITION
+  TRUNCATE PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) | 
+      FOR (<varname>value</varname>) }
+  RENAME DEFAULT PARTITION TO <varname>new_partition_name</varname>
+  RENAME PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) | 
+      FOR (<varname>value</varname>) } TO <varname>new_partition_name</varname>
+  ADD DEFAULT PARTITION <varname>name</varname> [ ( <varname>subpartition_spec</varname> ) ]
+  ADD PARTITION [<varname>partition_name</varname>] <varname>partition_element</varname>
+     [ ( <varname>subpartition_spec</varname> ) ]
+  EXCHANGE PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) | 
+       FOR (<varname>value</varname>) } WITH TABLE <varname>table_name</varname>
+        [ WITH | WITHOUT VALIDATION ]
+  EXCHANGE DEFAULT PARTITION WITH TABLE <varname>table_name</varname>
+   [ WITH | WITHOUT VALIDATION ]
+  SET SUBPARTITION TEMPLATE (<varname>subpartition_spec</varname>)
+  SPLIT DEFAULT PARTITION
+    {  AT (<varname>list_value</varname>)
+     | START([<varname>datatype</varname>] <varname>range_value</varname>) [INCLUSIVE | EXCLUSIVE] 
+        END([<varname>datatype</varname>] <varname>range_value</varname>) [INCLUSIVE | EXCLUSIVE] }
+    [ INTO ( PARTITION <varname>new_partition_name</varname>, 
+             PARTITION <varname>default_partition_name</varname> ) ]
+  SPLIT PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) | 
+     FOR (<varname>value</varname>) } AT (<varname>value</varname>) 
+    [ INTO (PARTITION <varname>partition_name</varname>, PARTITION <varname>partition_name</varname>)]  </codeblock>
+                        <p>where <varname>partition_element</varname> is:</p>
+                        <codeblock>    VALUES (<varname>list_value</varname> [,...] )
+  | START ([<varname>datatype</varname>] '<varname>start_value</varname>') [INCLUSIVE | EXCLUSIVE]
+     [ END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE] ]
+  | END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE]
+[ WITH ( <varname>partition_storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
+[ TABLESPACE <varname>tablespace</varname> ]</codeblock>
+                        <p>where <varname>subpartition_spec</varname> is:</p>
+                        <codeblock><varname>subpartition_element</varname> [, ...]</codeblock>
+                        <p>and <varname>subpartition_element</varname> is:</p>
+                        <codeblock>   DEFAULT SUBPARTITION <varname>subpartition_name</varname>
+  | [SUBPARTITION <varname>subpartition_name</varname>] VALUES (<varname>list_value</varname> [,...] )
+  | [SUBPARTITION <varname>subpartition_name</varname>] 
+     START ([<varname>datatype</varname>] '<varname>start_value</varname>') [INCLUSIVE | EXCLUSIVE]
+     [ END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE] ]
+     [ EVERY ( [<varname>number | datatype</varname>] '<varname>interval_value</varname>') ]
+  | [SUBPARTITION <varname>subpartition_name</varname>] 
+     END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE]
+     [ EVERY ( [<varname>number | datatype</varname>] '<varname>interval_value</varname>') ]
+[ WITH ( <varname>partition_storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
+[ TABLESPACE <varname>tablespace</varname> ]</codeblock>
+                        <p>where <varname>storage_parameter</varname> is:</p>
+                        <codeblock>   APPENDONLY={TRUE|FALSE}
+   BLOCKSIZE={8192-2097152}
+   ORIENTATION={COLUMN|ROW}
+   COMPRESSTYPE={ZLIB|QUICKLZ|RLE_TYPE|NONE}
+   COMPRESSLEVEL={0-9}
+   FILLFACTOR={10-100}
+   OIDS[=TRUE|FALSE]</codeblock>
+                </section>
+                <section id="section3">
+                        <title>Description</title>
+                        <p><codeph>ALTER TABLE</codeph> changes the definition of an existing table.
+                                There are several subforms: </p>
+                        <ul>
+                                <li id="ay136723"><b>ADD COLUMN</b> — Adds a new column to the
+                                        table, using the same syntax as <codeph>CREATE
+                                                TABLE</codeph>. When adding a column to an
+                                        append-optimized table a <codeph>DEFAULT</codeph> clause is
+                                        required. </li>
+                                <li><b>DROP COLUMN</b> — Drops a column from a table. Note that if
+                                        you drop table columns that are being used as the Greenplum
+                                        Database distribution key, the distribution policy for the
+                                        table will be changed to <codeph>DISTRIBUTED
+                                                RANDOMLY</codeph>. Indexes and table constraints
+                                        involving the column will be automatically dropped as well.
+                                        You will need to say <codeph>CASCADE</codeph> if anything
+                                        outside the table depends on the column (such as views). </li>
+                                <li id="ay136879"><b>ALTER COLUMN TYPE</b> — Changes the data type
+                                        of a column of a table. Note that you cannot alter column
+                                        data types that are being used as distribution or
+                                        partitioning keys. Indexes and simple table constraints
+                                        involving the column will be automatically converted to use
+                                        the new column type by reparsing the originally supplied
+                                        expression. The optional <codeph>USING</codeph> clause
+                                        specifies how to compute the new column value from the old.
+                                        If omitted, the default conversion is the same as an
+                                        assignment cast from old data type to new. A
+                                                <codeph>USING</codeph> clause must be provided if
+                                        there is no implicit or assignment cast from old to new
+                                        type.</li>
+                                <li id="ay136904"><b>SET/DROP DEFAULT</b> — Sets or removes the
+                                        default value for a column. The default values only apply to
+                                        subsequent <codeph>INSERT</codeph> commands. They do not
+                                        cause rows already in the table to change. Defaults may also
+                                        be created for views, in which case they are inserted into
+                                        statements on the view before the view's <codeph>ON
+                                                INSERT</codeph> rule is applied. </li>
+                                <li id="ay136929"><b>SET/DROP NOT NULL</b> — Changes whether a
+                                        column is marked to allow null values or to reject null
+                                        values. You can only use <codeph>SET NOT NULL</codeph> when
+                                        the column contains no null values.</li>
+                                <li id="ay136944"><b>SET STATISTICS</b> — Sets the per-column
+                                        statistics-gathering target for subsequent
+                                                <codeph>ANALYZE</codeph> operations. The target can
+                                        be set in the range 0 to 1000, or set to -1 to revert to
+                                        using the system default statistics target
+                                                (<codeph>default_statistics_target</codeph>).</li>
+                                <li id="ay137022"><b>ADD <varname>table_constraint</varname></b> —
+                                        Adds a new constraint to a table (not just a partition)
+                                        using the same syntax as <codeph>CREATE TABLE</codeph>. </li>
+                                <li id="ay137038"><b>DROP CONSTRAINT</b> — Drops the specified
+                                        constraint on a table.</li>
+                                <li id="ay137055"><b>DISABLE/ENABLE TRIGGER</b> — Disables or
+                                        enables trigger(s) belonging to the table. A disabled
+                                        trigger is still known to the system, but is not executed
+                                        when its triggering event occurs. For a deferred trigger,
+                                        the enable status is checked when the event occurs, not when
+                                        the trigger function is actually executed. One may disable
+                                        or enable a single trigger specified by name, or all
+                                        triggers on the table, or only user-created triggers.
+                                        Disabling or enabling constraint triggers requires superuser
+                                                privileges.<note> triggers are not supported in
+                                                Greenplum Database. Triggers in general have very
+                                                limited functionality due to the parallelism of
+                                                Greenplum Database.</note></li>
+                                <li id="ay137071"><b>CLUSTER ON/SET WITHOUT CLUSTER</b> — Selects or
+                                        removes the default index for future
+                                                <codeph>CLUSTER</codeph> operations. It does not
+                                        actually re-cluster the table. Note that
+                                                <codeph>CLUSTER</codeph> is not the recommended way
+                                        to physically reorder a table in Greenplum Database because
+                                        it takes so long. It is better to recreate the table with
+                                                  <codeph><xref href="./CREATE_TABLE_AS.xml#topic1"
+                                                  type="topic" format="dita"/></codeph> and order it
+                                        by the index column(s).
+                                        <note><codeph>CLUSTER ON</codeph> is not supported on
+                                        append-optimized tables.</note></li>
+                                <li id="ay137152"><b>SET WITHOUT OIDS</b> — Removes the OID system
+                                        column from the table. Note that there is no variant of
+                                                <codeph>ALTER TABLE</codeph> that allows OIDs to be
+                                        restored to a table once they have been removed. </li>
+                                <li id="ay137192"><b>SET ( FILLFACTOR = <varname>value</varname>) /
+                                                RESET (FILLFACTOR)</b> — Changes the fillfactor for
+                                        the table. The fillfactor for a table is a percentage
+                                        between 10 and 100. 100 (complete packing) is the default.
+                                        When a smaller fillfactor is specified,
+                                                <codeph>INSERT</codeph> operations pack table pages
+                                        only to the indicated percentage; the remaining space on
+                                        each page is reserved for updating rows on that page. This
+                                        gives <codeph>UPDATE</codeph> a chance to place the updated
+                                        copy of a row on the same page as the original, which is
+                                        more efficient than placing it on a different page. For a
+                                        table whose entries are never updated, complete packing is
+                                        the best choice, but in heavily updated tables smaller
+                                        fillfactors are appropriate. Note that the table contents
+                                        will not be modified immediately by this command. You will
+                                        need to rewrite the table to get the desired effects.</li>
+                                <li id="ay141947"><b>SET DISTRIBUTED</b> —Changes the distribution
+                                        policy of a table. Changes to a hash distribution policy
+                                        will cause the table data to be physically redistributed on
+                                        disk, which can be resource intensive.</li>
+                                <li id="ay137232"><b>INHERIT <varname>parent_table</varname> / NO
+                                                INHERIT <varname>parent_table</varname></b> — Adds
+                                        or removes the target table as a child of the specified
+                                        parent table. Queries against the parent will include
+                                        records of its child table. To be added as a child, the
+                                        target table must already contain all the same columns as
+                                        the parent (it could have additional columns, too). The
+                                        columns must have matching data types, and if they have
+                                                <codeph>NOT</codeph><codeph>NULL</codeph>
+                                        constraints in the parent then they must also have
+                                                <codeph>NOT NULL</codeph> constraints in the child.
+                                        There must also be matching child-table constraints for all
+                                                <codeph>CHECK</codeph> constraints of the
+                                        parent.</li>
+                                <li id="ay137262"><b>OWNER</b> — Changes the owner of the table,
+                                        sequence, or view to the specified user. </li>
+                                <li id="ay137271"><b>SET TABLESPACE</b> — Changes the table's
+                                        tablespace to the specified tablespace and moves the data
+                                        file(s) associated with the table to the new tablespace.
+                                        Indexes on the table, if any, are not moved; but they can be
+                                        moved separately with additional <codeph>SET
+                                                TABLESPACE</codeph> commands. See also
+                                                <codeph>CREATE TABLESPACE</codeph>. If changing the
+                                        tablespace of a partitioned table, all child table
+                                        partitions will also be moved to the new tablespace. </li>
+                                <li id="ay137292"><b>RENAME</b> — Changes the name of a table (or an
+                                        index, sequence, or view) or the name of an individual
+                                        column in a table. There is no effect on the stored data.
+                                        Note that Greenplum Database distribution key columns cannot
+                                        be renamed.</li>
+                                <li id="ay137307"><b>SET SCHEMA</b> — Moves the table into another
+                                        schema. Associated indexes, constraints, and sequences owned
+                                        by table columns are moved as well. </li>
+                                <li id="ay139526"><b>ALTER PARTITION | DROP PARTITION | RENAME
+                                                PARTITION | TRUNCATE PARTITION | ADD PARTITION |
+                                                SPLIT PARTITION | EXCHANGE PARTITION | SET
+                                                SUBPARTITION TEMPLATE </b>— Changes the structure of
+                                        a partitioned table. In most cases, you must go through the
+                                        parent table to alter one of its child table
+                                        partitions.</li>
+                        </ul>
+                        <note>If you add a partition to a table that has subpartition encodings, the
+                                new partition inherits the storage directives for the subpartitions.
+                                For more information about the precedence of compression settings,
+                                see "Using Compression" in the Greenplum Database Administrator
+                                Guide.</note>
+                        <p>You must own the table to use <codeph>ALTER TABLE</codeph>. To change the
+                                schema of a table, you must also have <codeph>CREATE</codeph>
+                                privilege on the new schema. To add the table as a new child of a
+                                parent table, you must own the parent table as well. To alter the
+                                owner, you must also be a direct or indirect member of the new
+                                owning role, and that role must have <codeph>CREATE</codeph>
+                                privilege on the table's schema. A superuser has these privileges
+                                automatically.</p>
+                        <note>Memory usage increases significantly when a table has many partitions,
+                                if a table has compression, or if the blocksize for a table is
+                                large. If the number of relations associated with the table is
+                                large, this condition can force an operation on the table to use
+                                more memory. For example, if the table is a CO table and has a large
+                                number of columns, each column is a relation. An operation like
+                                        <codeph>ALTER TABLE ALTER COLUMN</codeph> opens all the
+                                columns in the table allocates associated buffers. If a CO table has
+                                40 columns and 100 partitions, and the columns are compressed and
+                                the blocksize is 2 MB (with a system factor of 3), the system
+                                attempts to allocate 24 GB, that is (40 ×100) × (2 ×3) MB or 24
+                                GB.</note>
+                </section>
+                <section id="section4">
+                        <title>Parameters</title>
+                        <parml>
+                                <plentry>
+                                        <pt>ONLY</pt>
+                                        <pd>Only perform the operation on the table name specified.
+                                                If the <codeph>ONLY</codeph> keyword is not used,
+                                                the operation will be performed on the named table
+                                                and any child table partitions associated with that
+                                                table.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>
+                                                <varname>name</varname>
+                                        </pt>
+                                        <pd>The name (possibly schema-qualified) of an existing
+                                                table to alter. If <codeph>ONLY</codeph> is
+                                                specified, only that table is altered. If
+                                                  <codeph>ONLY</codeph> is not specified, the table
+                                                and all its descendant tables (if any) are updated.
+                                                  <note type="note">Constraints can only be added to
+                                                  an entire table, not to a partition. Because of
+                                                  that restriction, the <varname>name</varname>
+                                                  parameter can only contain a table name, not a
+                                                  partition name. </note></pd>
+                                </plentry>
+                        </parml>
+                        <parml>
+                                <plentry>
+                                        <pt>
+                                                <varname>column</varname>
+                                        </pt>
+                                        <pd>Name of a new or existing column. Note that Greenplum
+                                                Database distribution key columns must be treated
+                                                with special care. Altering or dropping these
+                                                columns can change the distribution policy for the
+                                                table.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>
+                                                <varname>new_column</varname>
+                                        </pt>
+                                        <pd>New name for an existing column. </pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>
+                                                <varname>new_name</varname>
+                                        </pt>
+                                        <pd>New name for the table. </pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>
+                                                <varname>type</varname>
+                                        </pt>
+                                        <pd>Data type of the new column, or new data type for an
+                                                existing column. If changing the data type of a
+                                                Greenplum distribution key column, you are only
+                                                allowed to change it to a compatible type (for
+                                                example, <codeph>text</codeph> to
+                                                  <codeph>varchar</codeph> is OK, but
+                                                  <codeph>text</codeph> to <codeph>int</codeph> is
+                                                not).</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>
+                                                <varname>table_constraint</varname>
+                                        </pt>
+                                        <pd>New table constraint for the table. Note that foreign
+                                                key constraints are currently not supported in
+                                                Greenplum Database. Also a table is only allowed one
+                                                unique constraint and the uniqueness must be within
+                                                the Greenplum Database distribution key.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>
+                                                <varname>constraint_name</varname>
+                                        </pt>
+                                        <pd>Name of an existing constraint to drop.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>CASCADE</pt>
+                                        <pd>Automatically drop objects that depend on the dropped
+                                                column or constraint (for example, views referencing
+                                                the column). </pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>RESTRICT</pt>
+                                        <pd>Refuse to drop the column or constraint if there are any
+                                                dependent objects. This is the default behavior.
+                                        </pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>
+                                                <varname>trigger_name</varname>
+                                        </pt>
+                                        <pd>Name of a single trigger to disable or enable. Note that
+                                                Greenplum Database does not support triggers.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>ALL</pt>
+                                        <pd>Disable or enable all triggers belonging to the table
+                                                including constraint related triggers. This requires
+                                                superuser privilege.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>USER</pt>
+                                        <pd>Disable or enable all user-created triggers belonging to
+                                                the table. </pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>
+                                                <varname>index_name</varname>
+                                        </pt>
+                                        <pd>The index name on which the table should be marked for
+                                                clustering. Note that <codeph>CLUSTER</codeph> is
+                                                not the recommended way to physically reorder a
+                                                table in Greenplum Database because it takes so
+                                                long. It is better to recreate the table with
+                                                  <codeph><xref href="./CREATE_TABLE_AS.xml#topic1"
+                                                  type="topic" format="dita"/></codeph> and order it
+                                                by the index column(s).</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>FILLFACTOR</pt>
+                                        <pd>Set the fillfactor percentage for a table.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>
+                                                <varname>value</varname>
+                                        </pt>
+                                        <pd>The new value for the <codeph>FILLFACTOR</codeph>
+                                                parameter, which is a percentage between 10 and 100.
+                                                100 is the default.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>DISTRIBUTED BY (<varname>column</varname>) | DISTRIBUTED
+                                                RANDOMLY</pt>
+                                        <pd>Specifies the distribution policy for a table. Changing
+                                                a hash distribution policy will cause the table data
+                                                to be physically redistributed on disk, which can be
+                                                resource intensive. If you declare the same hash
+                                                distribution policy or change from hash to random
+                                                distribution, data will not be redistributed unless
+                                                you declare <codeph>SET WITH
+                                                  (REORGANIZE=true)</codeph>.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>REORGANIZE=true|false</pt>
+                                        <pd>Use <codeph>REORGANIZE=true</codeph> when the hash
+                                                distribution policy has not changed or when you have
+                                                changed from a hash to a random distribution, and
+                                                you want to redistribute the data anyways.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>
+                                                <varname>parent_table</varname>
+                                        </pt>
+                                        <pd>A parent table to associate or de-associate with this
+                                                table. </pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>
+                                                <varname>new_owner</varname>
+                                        </pt>
+                                        <pd>The role name of the new owner of the table. </pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>
+                                                <varname>new_tablespace</varname>
+                                        </pt>
+                                        <pd>The name of the tablespace to which the table will be
+                                                moved. </pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>
+                                                <varname>new_schema</varname>
+                                        </pt>
+                                        <pd>The name of the schema to which the table will be moved.
+                                        </pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>
+                                                <varname>parent_table_name</varname>
+                                        </pt>
+                                        <pd>When altering a partitioned table, the name of the
+                                                top-level parent table.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>ALTER [DEFAULT] PARTITION</pt>
+                                        <pd>If altering a partition deeper than the first level of
+                                                partitions, the <codeph>ALTER PARTITION</codeph>
+                                                clause is used to specify which subpartition in the
+                                                hierarchy you want to alter.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>DROP [DEFAULT] PARTITION</pt>
+                                        <pd>Drops the specified partition. If the partition has
+                                                subpartitions, the subpartitions are automatically
+                                                dropped as well.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>TRUNCATE [DEFAULT] PARTITION</pt>
+                                        <pd>Truncates the specified partition. If the partition has
+                                                subpartitions, the subpartitions are automatically
+                                                truncated as well.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>RENAME [DEFAULT] PARTITION</pt>
+                                        <pd>Changes the partition name of a partition (not the
+                                                relation name). Partitioned tables are created using
+                                                the naming convention:
+                                                  <codeph>&lt;</codeph><varname>parentname</varname><codeph>&gt;_&lt;</codeph><varname>level</varname><codeph>&gt;_prt_&lt;</codeph><varname>partition_name</varname><codeph>&gt;</codeph>.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>ADD DEFAULT PARTITION</pt>
+                                        <pd>Adds a default partition to an existing partition
+                                                design. When data does not match to an existing
+                                                partition, it is inserted into the default
+                                                partition. Partition designs that do not have a
+                                                default partition will reject incoming rows that do
+                                                not match to an existing partition. Default
+                                                partitions must be given a name.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>ADD PARTITION</pt>
+                                        <pd><varname>partition_element</varname> - Using the
+                                                existing partition type of the table (range or
+                                                list), defines the boundaries of new partition you
+                                                are adding.</pd>
+                                        <pd><varname>name</varname> - A name for this new
+                                                partition.</pd>
+                                        <pd><b>VALUES</b> - For list partitions, defines the
+                                                value(s) that the partition will contain.</pd>
+                                        <pd><b>START</b> - For range partitions, defines the
+                                                starting range value for the partition. By default,
+                                                start values are <codeph>INCLUSIVE</codeph>. For
+                                                example, if you declared a start date of
+                                                  '<codeph>2008-01-01</codeph>', then the partition
+                                                would contain all dates greater than or equal to
+                                                  '<codeph>2008-01-01</codeph>'. Typically the data
+                                                type of the <codeph>START</codeph> expression is the
+                                                same type as the partition key column. If that is
+                                                not the case, then you must explicitly cast to the
+                                                intended data type.</pd>
+                                        <pd><b>END</b> - For range partitions, defines the ending
+                                                range value for the partition. By default, end
+                                                values are <codeph>EXCLUSIVE</codeph>. For example,
+                                                if you declared an end date of
+                                                  '<codeph>2008-02-01</codeph>', then the partition
+                                                would contain all dates less than but not equal to
+                                                  '<codeph>2008-02-01</codeph>'. Typically the data
+                                                type of the <codeph>END</codeph> expression is the
+                                                same type as the partition key column. If that is
+                                                not the case, then you must explicitly cast to the
+                                                intended data type.</pd>
+                                        <pd><b>WITH</b> - Sets the table storage options for a
+                                                partition. For example, you may want older
+                                                partitions to be append-optimized tables and newer
+                                                partitions to be regular heap tables. See
+                                                  <codeph><xref href="./CREATE_TABLE.xml#topic1"
+                                                  type="topic" format="dita"/></codeph> for a
+                                                description of the storage options.</pd>
+                                        <pd><b>TABLESPACE</b> - The name of the tablespace in which
+                                                the partition is to be created.</pd>
+                                        <pd><varname>subpartition_spec</varname> - Only allowed on
+                                                partition designs that were created without a
+                                                subpartition template. Declares a subpartition
+                                                specification for the new partition you are adding.
+                                                If the partitioned table was originally defined
+                                                using a subpartition template, then the template
+                                                will be used to generate the subpartitions
+                                                automatically.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>EXCHANGE [DEFAULT] PARTITION</pt>
+                                        <pd>Exchanges another table into the partition hierarchy
+                                                into the place of an existing partition. In a
+                                                multi-level partition design, you can only exchange
+                                                the lowest level partitions (those that contain
+                                                data). </pd>
+                                        <pd>The Greenplum Database server configuration parameter
+                                                  <codeph>gp_enable_exchange_default_partition</codeph>
+                                                controls availability of the <codeph>EXCHANGE
+                                                  DEFAULT PARTITION</codeph> clause. The default
+                                                value for the parameter is <codeph>off</codeph>. The
+                                                clause is not available and Greenplum Database
+                                                returns an error if the clause is specified in an
+                                                  <codeph>ALTER TABLE</codeph> command.</pd>
+                                        <pd>For information about the parameter, see <xref
+                                                  href="../config_params/guc_config.xml#topic1"
+                                                  />.<note type="warning">Before you exchange the
+                                                  default partition, you must ensure the data in the
+                                                  table to be exchanged, the new default partition,
+                                                  is valid for the default partition. For example,
+                                                  the data in the new default partition must not
+                                                  contain data that would be valid in other leaf
+                                                  child partitions of the partitioned table.
+                                                  Otherwise, queries against the partitioned table
+                                                  with the exchanged default partition that are
+                                                  executed by GPORCA might
+                                                  return incorrect results.</note></pd>
+                                        <pd><b>WITH TABLE</b>
+                                                <varname>table_name</varname> - The name of the
+                                                table you are swapping into the partition design.
+                                                You can exchange a table where the table data is
+                                                stored in the database. For example, the table is
+                                                created with the <codeph>CREATE TABLE</codeph>
+                                                command. </pd>
+                                        <pd>With the <codeph>EXCHANGE PARTITION</codeph> clause, you
+                                                can also exchange a readable external table (created
+                                                with the <codeph>CREATE EXTERNAL TABLE</codeph>
+                                                command) into the partition hierarchy in the place
+                                                of an existing leaf child partition. If you specify
+                                                a readable external table, you must also specify the
+                                                  <codeph>WITHOUT VALIDATION</codeph> clause to skip
+                                                table validation against the <codeph>CHECK</codeph>
+                                                constraint of the partition you are exchanging.</pd>
+                                        <pd>Exchanging a leaf child partition with an external table
+                                                is not supported in these cases:<ul
+                                                  id="ul_xfz_ckw_yt">
+                                                  <li>The partitioned table is created with the
+                                                  <codeph>SUBPARITION</codeph> clause or if a
+                                                  partition has a subpartition.</li>
+                                                  <li>The partitioned table contains a column with a
+                                                  check constraint or a <codeph>NOT NULL</codeph>
+                                                  constraint.</li>
+                                                </ul></pd>
+                                        <pd><b>WITH</b> | <b>WITHOUT VALIDATION</b> - Validates that
+                                                the data in the table matches the
+                                                  <codeph>CHECK</codeph> constraint of the partition
+                                                you are exchanging. The default is to validate the
+                                                data against the <codeph>CHECK</codeph> constraint.
+                                                  <note type="warning">If you specify the
+                                                  <codeph>WITHOUT VALIDATION</codeph> clause, you
+                                                  must ensure that the data in table that you are
+                                                  exchanging for an existing child leaf partition is
+                                                  valid against the <codeph>CHECK</codeph>
+                                                  constraints on the partition. Otherwise, queries
+                                                  against the partitioned table might return
+                                                  incorrect results.</note></pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>SET SUBPARTITION TEMPLATE</pt>
+                                        <pd>Modifies the subpartition template for an existing
+                                                partition. After a new subpartition template is set,
+                                                all new partitions added will have the new
+                                                subpartition design (existing partitions are not
+                                                modified).</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>SPLIT DEFAULT PARTITION</pt>
+                                        <pd>Splits a default partition. In a multi-level partition
+                                                design, you can only split the lowest level default
+                                                partitions (those that contain data). Splitting a
+                                                default partition creates a new partition containing
+                                                the values specified and leaves the default
+                                                partition containing any values that do not match to
+                                                an existing partition.</pd>
+                                        <pd><b>AT</b> - For list partitioned tables, specifies a
+                                                single list value that should be used as the
+                                                criteria for the split. </pd>
+                                        <pd><b>START</b> - For range partitioned tables, specifies a
+                                                starting value for the new partition. </pd>
+                                        <pd><b>END</b> - For range partitioned tables, specifies an
+                                                ending value for the new partition.</pd>
+                                        <pd><b>INTO</b> - Allows you to specify a name for the new
+                                                partition. When using the <codeph>INTO</codeph>
+                                                clause to split a default partition, the second
+                                                partition name specified should always be that of
+                                                the existing default partition. If you do not know
+                                                the name of the default partition, you can look it
+                                                up using the <varname>pg_partitions</varname>
+                                                view.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>SPLIT PARTITION</pt>
+                                        <pd>Splits an existing partition into two partitions. In a
+                                                multi-level partition design, you can only split the
+                                                lowest level partitions (those that contain data). </pd>
+                                        <pd><b>AT</b> - Specifies a single value that should be used
+                                                as the criteria for the split. The partition will be
+                                                divided into two new partitions with the split value
+                                                specified being the starting range for the
+                                                  <varname>latter</varname> partition.</pd>
+                                        <pd><b>INTO</b> - Allows you to specify names for the two
+                                                new partitions created by the split.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>
+                                                <varname>partition_name</varname>
+                                        </pt>
+                                        <pd>The given name of a partition. </pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>FOR (RANK(number))</pt>
+                                        <pd>For range partitions, the rank of the partition in the
+                                                range. </pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>FOR ('<varname>value</varname>')</pt>
+                                        <pd>Specifies a partition by declaring a value that falls
+                                                within the partition boundary specification. If the
+                                                value declared with <codeph>FOR</codeph> matches to
+                                                both a partition and one of its subpartitions (for
+                                                example, if the value is a date and the table is
+                                                partitioned by month and then by day), then
+                                                  <codeph>FOR</codeph> will operate on the first
+                                                level where a match is found (for example, the
+                                                monthly partition). If your intent is to operate on
+                                                a subpartition, you must declare so as follows:
+                                                  <codeph>ALTER TABLE <varname>name</varname> ALTER
+                                                  PARTITION FOR ('2008-10-01') DROP PARTITION FOR
+                                                  ('2008-10-01');</codeph></pd>
+                                </plentry>
+                        </parml>
+                </section>
+                <section id="section5">
+                        <title>Notes</title>
+                        <p>The table name specified in the <codeph>ALTER TABLE</codeph> command
+                                cannot be the following table names:<ul id="ul_kd3_c3k_54">
+                                        <li>The name of a partition within a table. </li>
+                                        <li>The name of a table specified in the <codeph>LOG ERRORS
+                                                  INTO</codeph> clause of the <codeph>CREATE
+                                                  EXTERNAL TABLE</codeph> command.</li>
+                                </ul></p>
+                        <p>Take special care when altering or dropping columns that are part of the
+                                Greenplum Database distribution key as this can change the
+                                distribution policy for the table.</p>
+                        <p>Greenplum Database does not currently support foreign key constraints.
+                                For a unique constraint to be enforced in Greenplum Database, the
+                                table must be hash-distributed (not <codeph>DISTRIBUTED
+                                        RANDOMLY</codeph>), and all of the distribution key columns
+                                must be the same as the initial columns of the unique constraint
+                                columns.</p>
+                        <p>Adding a <codeph>CHECK</codeph> or <codeph>NOT NULL</codeph> constraint
+                                requires scanning the table to verify that existing rows meet the
+                                constraint.</p>
+                        <p>When a column is added with <codeph>ADD COLUMN</codeph>, all existing
+                                rows in the table are initialized with the column's default value,
+                                or <codeph>NULL</codeph> if no <codeph>DEFAULT</codeph> clause is
+                                specified. (Note that adding a column to an append-optimized table
+                                without specifying a default value is not allowed.) Adding a column
+                                with a non-null default or changing the type of an existing column
+                                will require the entire table to be rewritten. This may take a
+                                significant amount of time for a large table; and it will
+                                temporarily require double the disk space.</p>
+                        <p>You can specify multiple changes in a single <codeph>ALTER TABLE</codeph>
+                                command, which will be done in a single pass over the table. </p>
+                        <p>The <codeph>DROP COLUMN</codeph> form does not physically remove the
+                                column, but simply makes it invisible to SQL operations. Subsequent
+                                insert and update operations in the table will store a null value
+                                for the column. Thus, dropping a column is quick but it will not
+                                immediately reduce the on-disk size of your table, as the space
+                                occupied by the dropped column is not reclaimed. The space will be
+                                reclaimed over time as existing rows are updated.</p>
+                        <p>The fact that <codeph>ALTER TYPE</codeph> requires rewriting the whole
+                                table is sometimes an advantage, because the rewriting process
+                                eliminates any dead space in the table. For example, to reclaim the
+                                space occupied by a dropped column immediately, the fastest way is:
+                                        <codeph>ALTER TABLE table ALTER COLUMN anycol TYPE
+                                        sametype;</codeph> where <varname>anycol</varname> is any
+                                remaining table column and <varname>sametype</varname> is the same
+                                type that column already has. This results in no
+                                semantically-visible change in the table, but the command forces
+                                rewriting, which gets rid of no-longer-useful data.</p>
+                        <p>If a table is partitioned or has any descendant tables, it is not
+                                permitted to add, rename, or change the type of a column in the
+                                parent table without doing the same to the descendants. This ensures
+                                that the descendants always have columns matching the parent. </p>
+                        <p>To see the structure of a partitioned table, you can use the view
+                                                <codeph><xref
+                                                href="../system_catalogs/pg_partitions.xml"
+                                                type="topic" format="dita"/></codeph>. This view can
+                                help identify the particular partitions you may want to alter.</p>
+                        <p>A recursive <codeph>DROP COLUMN</codeph> operation will remove a
+                                descendant table's column only if the descendant does not inherit
+                                that column from any other parents and never had an independent
+                                definition of the column. A nonrecursive <codeph>DROP
+                                        COLUMN</codeph> (<codeph>ALTER TABLE ONLY ... DROP
+                                        COLUMN</codeph>) never removes any descendant columns, but
+                                instead marks them as independently defined rather than inherited. </p>
+                        <p>The <codeph>TRIGGER</codeph>, <codeph>CLUSTER</codeph>,
+                                        <codeph>OWNER</codeph>, and <codeph>TABLESPACE</codeph>
+                                actions never recurse to descendant tables; that is, they always act
+                                as though <codeph>ONLY</codeph> were specified. Adding a constraint
+                                can recurse only for <codeph>CHECK</codeph> constraints.</p>
+                        <p>These <codeph>ALTER PARTITION</codeph> operations are supported if no
+                                data is changed on a partitioned table that contains a leaf child
+                                partition that has been exchanged to use an external table
+                                Otherwise, an error is returned.<ul id="ul_hcw_mrn_qs">
+                                        <li>Adding or dropping a column.</li>
+                                        <li>Changing the data type of column.</li>
+                                </ul></p>
+                        <p>These <codeph>ALTER PARTITION</codeph> operations are not supported for a
+                                partitioned table that contains a leaf child partition that has been
+                                exchanged to use an external table:<ul id="ul_edw_mrn_qs">
+                                        <li>Setting a subpartition template.</li>
+                                        <li>Altering the partition properties.</li>
+                                        <li>Creating a default partition.</li>
+                                        <li>Setting a distribution policy.</li>
+                                        <li>Setting or dropping a <codeph>NOT NULL</codeph>
+                                                constraint of column.</li>
+                                        <li>Adding or dropping constraints.</li>
+                                        <li>Splitting an external partition.</li>
+                                </ul></p>
+                        <p>Changing any part of a system catalog table is not permitted.</p>
+                </section>
+                <section id="section6">
+                        <title>Examples</title>
+                        <p>Add a column to a table:</p>
+                        <codeblock>ALTER TABLE distributors ADD COLUMN address varchar(30);</codeblock>
+                        <p>Rename an existing column:</p>
+                        <codeblock>ALTER TABLE distributors RENAME COLUMN address TO city;</codeblock>
+                        <p>Rename an existing table:</p>
+                        <codeblock>ALTER TABLE distributors RENAME TO suppliers;</codeblock>
+                        <p>Add a not-null constraint to a column:</p>
+                        <codeblock>ALTER TABLE distributors ALTER COLUMN street SET NOT NULL;</codeblock>
+                        <p>Add a check constraint to a table:</p>
+                        <codeblock>ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK 
+(char_length(zipcode) = 5);</codeblock>
+                        <p>Move a table to a different schema:</p>
+                        <codeblock>ALTER TABLE myschema.distributors SET SCHEMA yourschema;</codeblock>
+                        <p>Add a new partition to a partitioned table:</p>
+                        <codeblock>ALTER TABLE sales ADD PARTITION 
+            START (date '2009-02-01') INCLUSIVE 
+            END (date '2009-03-01') EXCLUSIVE;</codeblock>
+                        <p>Add a default partition to an existing partition design:</p>
+                        <codeblock>ALTER TABLE sales ADD DEFAULT PARTITION other;</codeblock>
+                        <p>Rename a partition:</p>
+                        <codeblock>ALTER TABLE sales RENAME PARTITION FOR ('2008-01-01') TO 
+jan08;</codeblock>
+                        <p>Drop the first (oldest) partition in a range sequence:</p>
+                        <codeblock>ALTER TABLE sales DROP PARTITION FOR (RANK(1));</codeblock>
+                        <p>Exchange a table into your partition design:</p>
+                        <codeblock>ALTER TABLE sales EXCHANGE PARTITION FOR ('2008-01-01') WITH 
+TABLE jan08;</codeblock>
+                        <p>Split the default partition (where the existing default partition's name
+                                is <codeph>other</codeph>) to add a new monthly partition for
+                                January 2009:</p>
+                        <codeblock>ALTER TABLE sales SPLIT DEFAULT PARTITION 
+START ('2009-01-01') INCLUSIVE 
+END ('2009-02-01') EXCLUSIVE 
+INTO (PARTITION jan09, PARTITION other);</codeblock>
+                        <p>Split a monthly partition into two with the first partition containing
+                                dates January 1-15 and the second partition containing dates January
+                                16-31:</p>
+                        <codeblock>ALTER TABLE sales SPLIT PARTITION FOR ('2008-01-01')
+AT ('2008-01-16')
+INTO (PARTITION jan081to15, PARTITION jan0816to31);</codeblock>
+                </section>
+                <section id="section7">
+                        <title>Compatibility</title>
+                        <p>The <codeph>ADD</codeph>, <codeph>DROP</codeph>, and <codeph>SET
+                                        DEFAULT</codeph> forms conform with the SQL standard. The
+                                other forms are Greenplum Database extensions of the SQL standard.
+                                Also, the ability to specify more than one manipulation in a single
+                                        <codeph>ALTER TABLE</codeph> command is an extension.</p>
+                        <p><codeph>ALTER TABLE DROP COLUMN</codeph> can be used to drop the only
+                                column of a table, leaving a zero-column table. This is an extension
+                                of SQL, which disallows zero-column tables.</p>
+                </section>
+                <section id="section8">
+                        <title>See Also</title>
+                        <p><codeph><xref href="./CREATE_TABLE.xml#topic1" type="topic" format="dita"
+                                        /></codeph>, <codeph><xref href="./DROP_TABLE.xml#topic1"
+                                                type="topic" format="dita"/></codeph></p>
+                </section>
+        </body>
+</topic>

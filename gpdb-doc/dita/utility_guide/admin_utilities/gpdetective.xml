@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="ks137980">gpdetective</title>
+  <body>
+    <p>Collects diagnostic information from a running Greenplum Database system.</p>
+    <p>The <codeph>gpdetective</codeph> utility is deprecated and will be removed in a future
+      release.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock><b>gpdetective</b> [<b>-h</b> <varname>hostname</varname>] [<b>-p</b> <varname>port</varname>] [<b>-U</b> <varname>username</varname>] [<b>-P</b> <varname>password</varname>] 
+     [<b>--start_date</b> <varname>number_of_days</varname> | <varname>YYYY-MM-DD</varname>] 
+     [<b>--end_date</b> <varname>YYYY-MM-DD</varname>]
+     [<b>--diagnostics</b> a|n|s|o|c] 
+     [<b>--logs</b> a|n|<varname>dbid</varname> [,<varname>dbid</varname>,... | -<varname>dbid</varname>]] 
+     [<b>--cores</b> t|f]
+     [<b>--pg_dumpall</b> t|f] [<b>--pg_dump_options</b> <varname>option</varname>[,...]] 
+     [<b>--tempdir</b> <varname>temp_dir</varname>] 
+     [<b>--connect</b> t|f]
+
+<b>gpdetective</b> <b>-v</b> 
+
+<b>gpdetective</b> <b>-?</b></codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p>The <codeph>gpdetective</codeph> utility collects information from a running Greenplum
+        Database system and creates a bzip2-compressed tar output file. This output file can then be
+        sent to Greenplum Customer Support to help with the diagnosis of Greenplum Database errors
+        or system failures. The <codeph>gpdetective</codeph> utility runs the following diagnostic
+        tests:</p>
+      <ul>
+        <li id="ks137622"><codeph><xref href="./gpstate.xml#topic1" type="topic" format="dita"
+            /></codeph> to check the system status</li>
+        <li id="ks138051"><codeph><xref href="gpcheck.xml#topic1" type="topic" format="dita"
+            /></codeph> to make sure the recommended OS settings are set on all hosts</li>
+        <li id="ks139151"><codeph>gpcheckcat</codeph> and <codeph>gpcheckdb</codeph> to check the
+          system catalog tables for inconsistencies</li>
+      </ul>
+      <p><codeph>gpdetective</codeph> captures the following files and Greenplum system
+        information:</p>
+      <ul>
+        <li id="ks138037"><codeph>postgresql.conf</codeph> configuration files (master and
+          segments)</li>
+        <li id="ks138086">log files (master and segments)</li>
+        <li id="ks139455">Greenplum Database system configuration information</li>
+        <li id="ks138149">(optional) Core files</li>
+        <li id="ks138150">(optional) Schema DDL dumps for all databases and global objects (using
+              <codeph><xref href="../client_utilities/pg_dumpall.xml#topic1"/></codeph>)</li>
+      </ul>
+      <p>A bzip2-compressed tar output file containing this information is created in the current
+        directory with a file name of
+          <codeph>gpdetective&lt;</codeph><varname>timestamp</varname><codeph>&gt;.tar.bz2.</codeph></p>
+    </section>
+    <section id="section4">
+      <title>Options</title>
+      <parml>
+        <plentry>
+          <pt>--connect t|f</pt>
+          <pd>Specifies if <codeph>gpdetective</codeph> should connect to the database to obtain
+            system information. The default is true (<codeph>t</codeph>). If false
+              (<codeph>f</codeph>), <codeph>gpdetective</codeph> only gathers information it can
+            obtain without making a connection to the database. This information includes (from the
+            master host):<ul id="ul_tkh_v5p_n4"><li id="ks139736">Log files</li><li id="ks139737"
+                >The <varname>master_data_directory/</varname><codeph>postgresql.conf</codeph>
+                file</li><li id="ks139738">The <codeph>~/gpAdminLogs</codeph> directory</li><li
+                id="ks139739"><codeph>gpcheck</codeph> output</li><li id="ks139734">Core
+              files</li></ul></pd>
+        </plentry>
+        <plentry>
+          <pt>--cores t|f </pt>
+          <pd>Determines whether or not the utility retrieves core files. The default is true
+              (<codeph>t</codeph>).</pd>
+        </plentry>
+        <plentry>
+          <pt>--diagnostics a|n|s|o|c</pt>
+          <pd>Specifies the diagnostic tests to run: all (<codeph>a</codeph>), none
+              (<codeph>n</codeph>), operating system (<codeph>o</codeph>) diagnostics, or catalog
+              (<codeph>c</codeph>) diagnostics. The default is all (<codeph>a</codeph>).</pd>
+        </plentry>
+        <plentry>
+          <pt>--end_date <varname>YYYY-MM-DD</varname></pt>
+          <pd>Sets the end date for the diagnostic information collected. The collected information
+            ends at 00:00:00 of the specified date. </pd>
+        </plentry>
+        <plentry>
+          <pt>-h <varname>hostname</varname></pt>
+          <pd>The host name of the machine on which the Greenplum master database server is running.
+            If not specified, reads from the environment variable <codeph>PGHOST</codeph> or
+            defaults to localhost.</pd>
+        </plentry>
+        <plentry>
+          <pt>--logs a|n|dbid_list</pt>
+          <pd>Specifies which log file(s) to retrieve: all (<codeph>a</codeph>), none
+              (<codeph>n</codeph>), a comma separated list of segment <codeph>dbid</codeph> numbers,
+            or a range of <codeph>dbid</codeph> numbers divided by a dash (<codeph>-</codeph>) (for
+            example, <codeph>3-6</codeph> retrieves logs from segments 3, 4, 5, and 6). The default
+            is all (<codeph>a</codeph>).</pd>
+        </plentry>
+        <plentry>
+          <pt>-P <varname>password</varname></pt>
+          <pd>If Greenplum Database is configured to use password authentication, you must also
+            supply the database superuser password. If not specified, reads from
+              <codeph>~/.pgpass</codeph> if it exists.</pd>
+        </plentry>
+        <plentry>
+          <pt>--pg_dumpall t|f</pt>
+          <pd>Determines whether or not the utility runs <codeph><xref
+                href="../client_utilities/pg_dumpall.xml#topic1"/></codeph> to collect schema DDL
+            for all databases and global objects. The default is true (<codeph>t</codeph>).</pd>
+        </plentry>
+        <plentry>
+          <pt>--pg_dump_options <varname>option</varname>[,...]</pt>
+          <pd>If <codeph>--pg_dumpall</codeph> is true, specifies a comma separated list of dump
+            options to use when the <codeph>pg_dumpall</codeph> utility is called. See <codeph><xref
+                href="../client_utilities/pg_dumpall.xml#topic1"/></codeph> for a valid list of dump
+            options.</pd>
+        </plentry>
+        <plentry>
+          <pt>-p <varname>port</varname></pt>
+          <pd>The TCP port on which the Greenplum master database server is listening for
+            connections. If not specified, reads from the environment variable
+              <codeph>PGPORT</codeph> or defaults to 5432.</pd>
+        </plentry>
+        <plentry>
+          <pt>--start_datenumber_of_days | <varname>YYYY-MM-DD</varname></pt>
+          <pd>Sets the start date for the diagnostic information collected. Specify either the
+            number of days prior, or an explicit past date.</pd>
+        </plentry>
+        <plentry>
+          <pt>--tempdir <varname>temp_dir</varname></pt>
+          <pd>Specifies the temporary directory used by <codeph>gpdetective</codeph>. The default
+            value is determined by the <codeph>$TEMP</codeph>, <codeph>$TMP</codeph> and
+              <codeph>$TMPDIR</codeph> environment variables.</pd>
+        </plentry>
+        <plentry>
+          <pt>-U <varname>gp_superuser</varname></pt>
+          <pd>The Greenplum database superuser role name to connect as (typically
+              <codeph>gpadmin</codeph>). If not specified, reads from the environment variable
+              <codeph>PGUSER</codeph> or defaults to the current system user name.</pd>
+        </plentry>
+        <plentry>
+          <pt>-v (show utility version)</pt>
+          <pd>Displays the version of this utility.</pd>
+        </plentry>
+        <plentry>
+          <pt>-? (help)</pt>
+          <pd>Displays the utility usage and syntax.</pd>
+        </plentry>
+      </parml>
+    </section>
+    <section id="section5">
+      <title>Examples</title>
+      <p>Collect all diagnostic information for a Greenplum Database system and supply the required
+        connection information for the master host:</p>
+      <codeblock>gpdetective -h mdw -p 54320 -U gpadmin -P mypassword</codeblock>
+      <p>Run diagnostics and collect all logs and system information for the past two days:</p>
+      <codeblock>gpdetective --start_date 2</codeblock>
+      <p>Do not run diagnostic tests or schema dumps, just collect the log files of the master and
+        segment 3:</p>
+      <codeblock>gpdetective --diagnostics n --logs -1,3 --pg_dumpall f</codeblock>
+    </section>
+    <section id="section6">
+      <title>See Also</title>
+      <p><codeph><xref href="./gpstate.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="gpcheck.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="../client_utilities/pg_dumpall.xml#topic1"/></codeph></p>
+    </section>
+  </body>
+</topic>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic102">
+  <title>Character Encoding</title>
+  <body>
+    <p>Character encoding systems consist of a code that pairs each character from a character set
+      with something else, such as a sequence of numbers or octets, to facilitate data stransmission
+      and storage. Greenplum Database supports a variety of character sets, including
+      single-byte character sets such as the ISO 8859 series and multiple-byte character sets such
+      as EUC (Extended UNIX Code), UTF-8, and Mule internal code. Clients can use all supported
+      character sets transparently, but a few are not supported for use within the server as a
+      server-side encoding.</p>
+    <p>Data files must be in a character encoding recognized by Greenplum Database.
+        <ph>See the <i>Greenplum Database Reference Guide</i> for the supported
+        character sets. </ph>Data files that contain invalid or unsupported encoding sequences
+      encounter errors when loading into Greenplum Database.</p>
+    <note type="note">On data files generated on a Microsoft Windows operating system, run the
+        <codeph>dos2unix</codeph> system command to remove any Windows-only characters before
+      loading into Greenplum Database.</note>
+  </body>
+</topic>

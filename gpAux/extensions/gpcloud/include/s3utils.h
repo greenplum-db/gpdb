@@ -17,6 +17,9 @@ bool sha1hmac_hex(const char* str, char out_hash_hex[SHA_DIGEST_STRING_LENGTH], 
 
 bool sha256(const char* string, unsigned char out_hash[SHA256_DIGEST_LENGTH]);
 
+bool sha256_hex(const char* string, uint64_t length,
+                char out_hash_hex[SHA256_DIGEST_STRING_LENGTH]);
+
 bool sha256_hex(const char* string, char out_hash_hex[SHA256_DIGEST_STRING_LENGTH]);
 
 bool sha256hmac(const char* str, unsigned char out_hash[SHA256_DIGEST_LENGTH], const char* secret,
@@ -49,7 +52,11 @@ class Config {
     ~Config();
     bool SectionExist(const string& sec);
     string Get(const string& sec, const string& key, const string& defaultvalue);
+    bool GetBool(const string& sec, const string& key, const string& defaultvalue);
     bool Scan(const string& sec, const string& key, const char* scanfmt, void* dst);
+    int64_t SafeScan(const string& varName, const string& section, int64_t defaultValue,
+                     int64_t minValue, int64_t maxValue);
+
     void* Handle() {
         return (void*)this->_conf;
     };
@@ -58,19 +65,19 @@ class Config {
     ini_t* _conf;
 };
 
-bool to_bool(string str);
+bool ToBool(string str);
 
-string uri_encode(const string& src);
+string UriEncode(const string& src);
 
-string uri_decode(const string& src);
+string UriDecode(const string& src);
 
-void find_replace(string& str, const string& find, const string& replace);
+void FindAndReplace(string& str, const string& find, const string& replace);
 
-void SignRequestV4(const string& method, HTTPHeaders* h, const string& orig_region,
+void SignRequestV4(const string& method, HTTPHeaders* headers, const string& origRegion,
                    const string& path, const string& query, const S3Credential& cred);
 
-string getOptS3(const string& options, const string& key);
+string GetOptS3(const string& options, const string& key);
 
-string truncateOptions(const string& url_with_options);
+string TruncateOptions(const string& url_with_options);
 
 #endif  // __S3_UTILS_H__

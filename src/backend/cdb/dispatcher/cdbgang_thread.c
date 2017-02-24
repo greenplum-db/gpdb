@@ -91,12 +91,6 @@ createGang_thread(GangType type, int gang_id, int size, int content)
 	if (type == GANGTYPE_PRIMARY_WRITER)
 		Insist(!GangsExist());
 
-	/* Check writer gang firstly*/
-	if (type != GANGTYPE_PRIMARY_WRITER && !isPrimaryWriterGangAlive())
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("failed to create gang on one or more segments"),
-						errdetail("writer gang got broken before creating reader gangs")));
-
 	initPQExpBuffer(&create_gang_error);
 
 create_gang_retry:

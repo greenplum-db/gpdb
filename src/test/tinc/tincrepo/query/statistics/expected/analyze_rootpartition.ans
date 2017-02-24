@@ -70,6 +70,6 @@ drop table arp_test2;
 DROP TABLE
 -- when there are no partition tables in the database, analyze rootpartition should give a warning
 analyze rootpartition all;
-psql:analyze_rootpartition.sql:31: WARNING:  there are no partitioned tables in database to ANALYZE ROOTPARTITION
+psql:analyze_rootpartition.sql:31: NOTICE:  there are no partitioned tables in database to ANALYZE ROOTPARTITION
 ANALYZE
 

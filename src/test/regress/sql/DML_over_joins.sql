@@ -480,7 +480,7 @@ delete from s where exists (select 1 from r where s.a = r.b);
 -- start_ignore
 ------------------------------------------------------------
 -- Update with Motion: unsupported cases
---     	Updating the dsitribution key
+--     	Updating the distribution key
 ------------------------------------------------------------
 -- end_ignore
 
@@ -519,9 +519,9 @@ delete from s where b = (select min(a) from r where b = s.b);
 ------------------------------------------------------------
 -- end_ignore
 
-update p set c = c + 1;
+update p set c = c + 1 where c = 0;
 
-update p set c = c + 1 where b in (select b from s);
+update p set c = c + 1 where b in (select b from s) and c = 0;
 -- ----------------------------------------------------------------------
 -- Test: unsupported_cases1.sql
 -- ----------------------------------------------------------------------
@@ -529,7 +529,7 @@ update p set c = c + 1 where b in (select b from s);
 -- start_ignore
 ------------------------------------------------------------
 -- Update with Motion: unsupported cases
---     	Updating the dsitribution key
+--     	Updating the distribution key
 ------------------------------------------------------------
 -- end_ignore
 
@@ -568,9 +568,9 @@ delete from s where b = (select min(a) from r where b = s.b);
 ------------------------------------------------------------
 -- end_ignore
 
-update p set c = c + 1;
+update p set c = c + 1 where c = 0;
 
-update p set c = c + 1 where b in (select b from s);
+update p set c = c + 1 where b in (select b from s) and c = 0;
 -- ----------------------------------------------------------------------
 -- Test: unsupported_cases2.sql
 -- ----------------------------------------------------------------------
@@ -578,7 +578,7 @@ update p set c = c + 1 where b in (select b from s);
 -- start_ignore
 ------------------------------------------------------------
 -- Update with Motion: unsupported cases
---     	Updating the dsitribution key
+--     	Updating the distribution key
 ------------------------------------------------------------
 -- end_ignore
 
@@ -617,7 +617,7 @@ delete from s where b = (select min(a) from r where b = s.b);
 ------------------------------------------------------------
 -- end_ignore
 
-update p set c = c + 1;
+update p set c = c + 1 where c = 0;
 
 update p set c = c + 1 where b in (select b from s where b = 36);
 -- ----------------------------------------------------------------------
@@ -627,7 +627,7 @@ update p set c = c + 1 where b in (select b from s where b = 36);
 -- start_ignore
 ------------------------------------------------------------
 -- Update with Motion: unsupported cases
---     	Updating the dsitribution key
+--     	Updating the distribution key
 ------------------------------------------------------------
 -- end_ignore
 
@@ -666,9 +666,9 @@ delete from s where b = (select min(a) from r where b = s.b);
 ------------------------------------------------------------
 -- end_ignore
 
-update p set c = c + 1;
+update p set c = c + 1 where c = 0;
 
-update p set c = c + 1 where b in (select b from s);
+update p set c = c + 1 where b in (select b from s) and c = 0;
 -- ----------------------------------------------------------------------
 -- Test: unsupported_cases4.sql
 -- ----------------------------------------------------------------------
@@ -676,7 +676,7 @@ update p set c = c + 1 where b in (select b from s);
 -- start_ignore
 ------------------------------------------------------------
 -- Update with Motion: unsupported cases
---     	Updating the dsitribution key
+--     	Updating the distribution key
 ------------------------------------------------------------
 -- end_ignore
 
@@ -715,9 +715,9 @@ delete from s where b = (select min(a) from r where b = s.b);
 ------------------------------------------------------------
 -- end_ignore
 
-update p set c = c + 1;
+update p set c = c + 1 where c = 0;
 
-update p set c = c + 1 where b in (select b from s);
+update p set c = c + 1 where b in (select b from s) and c = 0;
 -- ----------------------------------------------------------------------
 -- Test: unsupported_cases5.sql
 -- ----------------------------------------------------------------------
@@ -725,7 +725,7 @@ update p set c = c + 1 where b in (select b from s);
 -- start_ignore
 ------------------------------------------------------------
 -- Update with Motion: unsupported cases
---     	Updating the dsitribution key
+--     	Updating the distribution key
 ------------------------------------------------------------
 -- end_ignore
 
@@ -764,9 +764,9 @@ delete from s where b = (select min(a) from r where b = s.b);
 ------------------------------------------------------------
 -- end_ignore
 
-update p set c = c + 1;
+update p set c = c + 1 where c = 0;
 
-update p set c = c + 1 where b in (select b from s);
+update p set c = c + 1 where b in (select b from s) and c = 0;
 -- ----------------------------------------------------------------------
 -- Test: partition_motion0.sql
 -- ----------------------------------------------------------------------

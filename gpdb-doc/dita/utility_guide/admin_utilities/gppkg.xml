@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+    <!--install_guide/refs/gppkg.xml has a conref to this topic. -->
+    <title id="jt142031">gppkg</title>
+    <body>
+        <p>Installs Greenplum Database extensions such as pgcrypto, PL/R, PL/Java, PL/Perl, PostGIS,
+            and MADlib, along with their dependencies, across an entire cluster.</p>
+        <section id="section2">
+            <title>Synopsis</title>
+            <codeblock><b>gppkg</b> [<b>-i</b> <varname>package</varname> | <b>-u</b> <varname>package</varname> | <b>-r </b> <varname>name</varname>-<varname>version</varname> | <b>-c</b>] 
+        [<b>-d</b> <varname>master_data_directory</varname>] [<b>-a</b>] [<b>-v</b>]
+
+<b>gppkg --migrate</b> <varname>GPHOME_1</varname> <varname>GPHOME_2</varname> [<b>-a</b>] [<b>-v</b>]
+
+<b>gppkg</b> [<b>-q</b> | <b>--query</b>] <varname>query_option</varname>
+
+<b>gppkg</b> <b>-?</b> | <b>--help</b> |<b> -h</b> 
+
+<b>gppkg</b> <b>--version</b></codeblock>
+        </section>
+        <section id="section3">
+            <title>Description</title>
+            <p>The Greenplum Package Manager (<codeph>gppkg</codeph>) utility installs Greenplum
+                Database extensions, along with any dependencies, on all hosts across a cluster. It
+                will also automatically install extensions on new hosts in the case of system
+                expansion and segment recovery.</p>
+            <p>First, download one or more of the available packages from <xref
+                    href="https://network.pivotal.io" scope="external" format="html"
+                    >Pivotal Network</xref> then copy it to the master host. Use the Greenplum
+                Package Manager to install each package using the options described below.</p>
+            <note type="note">After a major upgrade to Greenplum Database, you must download and
+                install all extensions again.</note>
+            <p>Examples of database extensions and packages software that are delivered using the
+                Greenplum Package Manager are:</p>
+            <ul>
+                <li id="jt141959">PostGIS</li>
+                <li id="jt141960">PL/Java</li>
+                <li id="jt141961">PL/R</li>
+                <li id="jt141962">PL/Perl</li>
+                <li id="jt142629">MADlib</li>
+                <li id="jt141963">Pgcrypto</li>
+            </ul>
+            <p>Note that Greenplum Package Manager installation files for extension packages might
+                release outside of standard product release cycles. Current packages are available
+                from <xref href="https://network.pivotal.io" scope="external"
+                    format="html">Pivotal Network</xref>. Information about package compatibility is
+                the <cite>Greenplum Database Release Notes</cite>.</p>
+        </section>
+        <section id="section4">
+            <title>Options</title>
+            <parml>
+                <plentry>
+                    <pt>-a (do not prompt)</pt>
+                    <pd>Do not prompt the user for confirmation.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-c | --clean</pt>
+                    <pd>Reconciles the package state of the cluster to match the state of the master
+                        host. Running this option after a failed or partial install/uninstall
+                        ensures that the package installation state is consistent across the
+                        cluster.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-d <varname>master_data_directory</varname></pt>
+                    <pd>The master data directory. If not specified, the value set for
+                            <codeph>$MASTER_DATA_DIRECTORY</codeph> will be used.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-i <varname>package</varname> | --install=<varname>package</varname></pt>
+                    <pd>Installs the given package. This includes any pre/post installation steps
+                        and installation of any dependencies.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--migrate <varname>GPHOME_1</varname>
+                        <varname>GPHOME_2</varname></pt>
+                    <pd>Migrates packages from a separate <codeph>$GPHOME</codeph>. Carries over
+                        packages from one version of Greenplum Database to another.</pd>
+                    <pd>For example: <codeph>gppkg --migrate /usr/local/greenplum-db-4.2.0.1
+                            /usr/local/greenplum-db-4.2.1.0</codeph></pd>
+                    <pd>This option is automatically invoked by the installer during minor upgrades.
+                        This option is given here for cases when the user wants to migrate packages
+                        manually.</pd>
+                    <pd>Migration can only proceed if <codeph>gppkg</codeph> is executed from the
+                        installation directory to which packages are being migrated. That is,
+                            <codeph>GPHOME_2</codeph> must match the <codeph>$GPHOME</codeph> from
+                        which the currently executing <codeph>gppkg</codeph> is being run. </pd>
+                </plentry>
+                <plentry>
+                    <pt>-q | --query <varname>query_option</varname></pt>
+                    <pd>Provides information specified by <codeph>query_option</codeph> about the
+                        installed packages. Only one <codeph>query_option</codeph> can be specified
+                        at a time. The following table lists the possible values for query_option.
+                            <codeph>&lt;package_file&gt;</codeph> is the name of a package.<table
+                            id="jt142509">
+                            <title>Query Options for gppkg</title>
+                            <tgroup cols="2">
+                                <colspec colnum="1" colname="col1" colwidth="144pt"/>
+                                <colspec colnum="2" colname="col2" colwidth="165pt"/>
+                                <thead>
+                                    <row>
+                                        <entry colname="col1">query_option</entry>
+                                        <entry colname="col2">Returns</entry>
+                                    </row>
+                                </thead>
+                                <tbody>
+                                    <row>
+                                        <entry colname="col1"
+                                            ><codeph>&lt;package_file&gt;</codeph></entry>
+                                        <entry colname="col2">Whether the specified package is
+                                            installed.</entry>
+                                    </row>
+                                    <row>
+                                        <entry colname="col1"><codeph>--info
+                                                &lt;package_file&gt;</codeph></entry>
+                                        <entry colname="col2">The name, version, and other
+                                            information about the specified package.</entry>
+                                    </row>
+                                    <row>
+                                        <entry colname="col1"><codeph>--list
+                                                &lt;package_file&gt;</codeph></entry>
+                                        <entry colname="col2">The file contents of the specified
+                                            package.</entry>
+                                    </row>
+                                    <row>
+                                        <entry colname="col1"><codeph>--all</codeph></entry>
+                                        <entry colname="col2">List of all installed
+                                            packages.</entry>
+                                    </row>
+                                </tbody>
+                            </tgroup>
+                        </table></pd>
+                </plentry>
+                <plentry>
+                    <pt>-r <varname>name-version</varname> |
+                            --remove=<varname>name-version</varname></pt>
+                    <pd>Removes the specified package.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-u <varname>package</varname> | --update=<varname>package</varname></pt>
+                    <pd>Updates the given package.<note type="warning">The process of updating a
+                            package includes removing all previous versions of the system objects
+                            related to the package. For example, previous versions of shared
+                            libraries are removed. After the update process, a database function
+                            will fail when it is called if the function references a package file
+                            that has been removed.</note></pd>
+                    <pd> </pd>
+                </plentry>
+                <plentry>
+                    <pt>--version (show utility version)</pt>
+                    <pd>Displays the version of this utility.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-v | --verbose</pt>
+                    <pd>Sets the logging level to verbose.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-? | -h | --help</pt>
+                    <pd>Displays the online help.</pd>
+                </plentry>
+            </parml>
+        </section>
+    </body>
+</topic>

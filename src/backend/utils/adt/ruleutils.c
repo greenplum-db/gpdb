@@ -3076,30 +3076,14 @@ push_plan(deparse_namespace *dpns, Plan *subplan)
 		dpns->outer_plan = (Plan *) linitial(((Append *) subplan)->appendplans);
 	else if (IsA(subplan, Sequence))
 	{
-		ListCell *child;
-
 		/*
-		 * A Sequence node often has a PartitionSelector node as its first
-		 * subplan. A PartitionSelector is special, because it doesn't return
-		 * any tuples. Instead, it tells its sibling subplans which partitions
-		 * they need to scan. The PartitionSelector doesn't have a proper
-		 * target list so look at the first regular subplan instead.
+		 * A Sequence node returns tuples from the *last* child node only.
+		 * The other subplans can even have a different, incompatible tuple
+		 * descriptor. A typical case is to have a PartitionSelector node
+		 * as the first subplan, and the Dynamic Table Scan as the second
+		 * subplan.
 		 */
-		child = list_head(((Sequence *) subplan)->subplans);
-		if (child != NULL && IsA(lfirst(child), PartitionSelector))
-			child = lnext(child);
-
-		if (child)
-			dpns->outer_plan = (Plan *) lfirst(child);
-		else
-		{
-			/*
-			 * ORCA probably never produces Sequence plans with no children, other
-			 * than the PartitionSelector, but cope with it just in case. (Only
-			 * ORCA produces Sequence nodes in the first place.)
-			 */
-			dpns->outer_plan = NULL;
-		}
+		dpns->outer_plan = (Plan *) llast(((Sequence *) subplan)->subplans);
 	}
 	else
 		dpns->outer_plan = outerPlan(subplan);
@@ -6803,7 +6787,6 @@ check_next_every_name(char *parname1, char *nextname, int parrank)
 
 	initStringInfo(&sid1);
 
-	truncateStringInfo(&sid1, 0);
 	appendStringInfo(&sid1, "%s_%d", parname1, parrank);
 
 	bstat = nextname && (0 == strcmp(sid1.data, nextname));
@@ -6914,8 +6897,6 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 
 		initStringInfo(&sid2);
 
-		truncateStringInfo(&sid2, 0);
-
 		/*
 		 * If it's in a nondefault tablespace, say so
 		 * (append after the reloptions)
@@ -6943,8 +6924,6 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 			PQExpBuffer      	 pqbuf = createPQExpBuffer();
 
 			initStringInfo(&sid1);
-
-			truncateStringInfo(&sid1, 0);
 
 			/* always quote to make WITH (tablename=...) work correctly */
 			/* MPP-12243: but don't use quote_identifier if already quoted! */
@@ -7014,8 +6993,6 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 
 		initStringInfo(&buf);
 		initStringInfo(&sid3);
-
-		truncateStringInfo(&sid3, 0);
 
 		/* NOTE: only the template case */
 		Assert(part->paristemplate);

@@ -3,7 +3,7 @@ drop table if exists foo;
 drop table if exists bar;
 -- end_ignore
 
-create table foo (a text, b int);
+create table foo (a int, b int);
 create table bar (x int, y int);
 
 insert into foo values (1, 2);

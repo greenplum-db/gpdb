@@ -169,10 +169,12 @@ SETUP_TOOLS_DIR=setuptools-$(SETUP_TOOLS_VERSION)
 PARSE_DIR=parse-$(PARSE_VERSION)
 ARG_PARSE_DIR=argparse-$(ARG_PARSE_VERSION)
 PYTHONSRC_INSTALL=$(PYLIB_SRC_EXT)/install
-PYTHONSRC_INSTALL_SITE=$(PYLIB_SRC_EXT)/install/lib/python2.6/site-packages
+PYTHON_VERSION=$(shell python -c "import sys; print '%s.%s' % (sys.version_info[0:2])")
+PYTHONSRC_INSTALL_SITE=$(PYLIB_SRC_EXT)/install/lib/python$(PYTHON_VERSION)/site-packages
 PYTHONSRC_INSTALL_PYTHON_PATH=$(PYTHONPATH):$(PYTHONSRC_INSTALL_SITE)
 BEHAVE_BIN=$(PYTHONSRC_INSTALL)/bin/behave
-MOCK_BIN=$(PYTHONSRC_INSTALL)/lib/python2.6/site-packages/mock-1.0.1-py2.6.egg
+# TODO: mock-1.0.1-py2.6.egg package should be updated.
+MOCK_BIN=$(PYTHONSRC_INSTALL)/lib/python$(PYTHON_VERSION)/site-packages/mock-1.0.1-py2.6.egg
 
 pylint:
 	@echo "--- pylint"
@@ -251,23 +253,6 @@ solarisTest:
 		echo "SOLARIS" ; \
 	fi
 
-#
-#EPYDOC
-#
-
-EPYDOC_VERSION=3.0.1
-EPYDOC_DIR=epydoc-$(EPYDOC_VERSION)
-EPYDOC_PYTHONPATH=$(PYLIB_DIR):$(PYLIB_SRC_EXT)/$(EPYDOC_DIR)/build/lib/
-
-epydoc:
-	@echo "--- epydoc"
-	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(EPYDOC_DIR).tar.gz
-	@cd $(PYLIB_SRC_EXT)/$(EPYDOC_DIR)/ && python setup.py build 1> /dev/null
-
-docs: epydoc
-	@echo "Running epydoc on management scripts..."
-	@PYTHONPATH=$(PYTHONPATH):$(EPYDOC_PYTHONPATH) $(PYLIB_SRC_EXT)/$(EPYDOC_DIR)/build/scripts-2.6/epydoc --config=.epydoc.config
-
 .PHONY: clean
 clean :
 	@rm -rf $(PYLIB_SRC_EXT)/$(LOCKFILE_DIR)
@@ -278,6 +263,7 @@ clean :
 	@rm -rf $(PYLIB_SRC_EXT)/$(LOGILAB_ASTNG_DIR)
 	@rm -rf $(STREAM_DIR)/stream lib/stream  
 	@rm -rf *.pyc lib/*.pyc
+	@rm -f gpcheckcatc gpcrondumpc gpexpandc gptransferc
 
 .PHONY: disclean
 distclean: clean

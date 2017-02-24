@@ -1004,6 +1004,22 @@ gpdb::PnodePartConstraintRel
 }
 
 bool
+gpdb::FHasExternalPartition
+	(
+	Oid oid
+	)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_partition, pg_partition_rule */
+		return rel_has_external_partition(oid);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+
+bool
 gpdb::FLeafPartition
 	(
 	Oid oid
@@ -1517,7 +1533,7 @@ gpdb::PlcListTail
 	return NULL;
 }
 
-int
+uint32
 gpdb::UlListLength
 	(
 	List *l
@@ -1628,6 +1644,20 @@ gpdb::FMotionGather
 	GP_WRAP_START;
 	{
 		return isMotionGather(pmotion);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+bool
+gpdb::FAppendOnlyPartitionTable
+	(
+	Oid rootOid
+	)
+{
+	GP_WRAP_START;
+	{
+		return rel_has_appendonly_partition(rootOid);
 	}
 	GP_WRAP_END;
 	return false;
@@ -2598,21 +2628,22 @@ gpdb::PnodeCoerceToCommonType
 	return NULL;
 }
 
-Oid
-gpdb::OidResolveGenericType
+bool
+gpdb::FResolvePolymorphicType
 	(
-	Oid declared_type,
-	Oid context_actual_type,
-	Oid context_declared_type
+	int numargs,
+	Oid *argtypes,
+	char *argmodes,
+	FuncExpr *call_expr
 	)
 {
 	GP_WRAP_START;
 	{
-		/* catalog tables: pg_type */
-		return resolve_generic_type(declared_type, context_actual_type, context_declared_type);
+		/* catalog tables: pg_proc */
+		return resolve_polymorphic_argtypes(numargs, argtypes, argmodes, (Node *)call_expr);
 	}
 	GP_WRAP_END;
-	return 0;
+	return false;
 }
 
 // hash a const value with GPDB's hash function
@@ -2925,7 +2956,7 @@ register_mdcache_invalidation_callbacks(void)
 		 */
 		/* gp_segment_config */
 	};
-	int			i;
+	unsigned int i;
 
 	for (i = 0; i < lengthof(metadata_caches); i++)
 	{

@@ -56,7 +56,6 @@ class S3KeyReaderTest : public testing::Test, public S3KeyReader {
         QueryCancelPending = false;
     }
 
-    S3Params params;
     char buffer[256];
 
     MockS3Interface s3Interface;
@@ -218,6 +217,8 @@ TEST(OffsetMgr, reset) {
 }
 
 TEST_F(S3KeyReaderTest, OpenWithZeroChunk) {
+    S3Params params("s3://abc/def");
+
     params.setNumOfChunks(0);
 
     EXPECT_THROW(this->open(params), S3RuntimeError);
@@ -236,8 +237,8 @@ class MockFetchData {
         chunkData = other.chunkData;
     }
 
-    uint64_t operator()(uint64_t offset, S3VectorUInt8 &data, uint64_t len, const string &sourceUrl,
-                        const string &region) {
+    uint64_t operator()(uint64_t offset, S3VectorUInt8 &data, uint64_t len,
+                        const S3Url &sourceUrl) {
         data = std::move(chunkData);
         return retnLen;
     }
@@ -248,12 +249,12 @@ class MockFetchData {
 };
 
 TEST_F(S3KeyReaderTest, ReadWithSingleChunk) {
+    S3Params params("s3://abc/def");
     params.setNumOfChunks(1);
-    params.setRegion("us-west-2");
     params.setKeySize(255);
     params.setChunkSize(8192);
 
-    EXPECT_CALL(s3Interface, fetchData(_, _, _, _, _)).WillOnce(Invoke(MockFetchData(255, 8192)));
+    EXPECT_CALL(s3Interface, fetchData(_, _, _, _)).WillOnce(Invoke(MockFetchData(255, 8192)));
 
     this->open(params);
 
@@ -264,12 +265,12 @@ TEST_F(S3KeyReaderTest, ReadWithSingleChunk) {
 
 TEST_F(S3KeyReaderTest, ReadWithSingleChunkNormalCase) {
     // Read buffer < chunk size < key size
+    S3Params params("s3://abc/def");
     params.setNumOfChunks(1);
-    params.setRegion("us-west-2");
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3Interface, fetchData(_, _, _, _, _))
+    EXPECT_CALL(s3Interface, fetchData(_, _, _, _))
         .WillOnce(Invoke(MockFetchData(64, 64)))
         .WillOnce(Invoke(MockFetchData(64, 64)))
         .WillOnce(Invoke(MockFetchData(64, 64)))
@@ -290,12 +291,13 @@ TEST_F(S3KeyReaderTest, ReadWithSingleChunkNormalCase) {
 }
 
 TEST_F(S3KeyReaderTest, ReadWithSmallBuffer) {
+    S3Params params("s3://abc/def");
+
     params.setNumOfChunks(1);
-    params.setRegion("us-west-2");
     params.setKeySize(255);
     params.setChunkSize(8192);
 
-    EXPECT_CALL(s3Interface, fetchData(_, _, _, _, _)).WillOnce(Invoke(MockFetchData(255, 8192)));
+    EXPECT_CALL(s3Interface, fetchData(_, _, _, _)).WillOnce(Invoke(MockFetchData(255, 8192)));
 
     this->open(params);
 
@@ -308,12 +310,13 @@ TEST_F(S3KeyReaderTest, ReadWithSmallBuffer) {
 }
 
 TEST_F(S3KeyReaderTest, CloseWithoutFinishReading) {
+    S3Params params("s3://abc/def");
+
     params.setNumOfChunks(1);
-    params.setRegion("us-west-2");
     params.setKeySize(255);
     params.setChunkSize(8192);
 
-    EXPECT_CALL(s3Interface, fetchData(_, _, _, _, _)).WillOnce(Invoke(MockFetchData(255, 8192)));
+    EXPECT_CALL(s3Interface, fetchData(_, _, _, _)).WillOnce(Invoke(MockFetchData(255, 8192)));
 
     // expect data fetched in 64,64,64,63,0 bulks
     //   when close it before finish, should have no problem
@@ -324,12 +327,13 @@ TEST_F(S3KeyReaderTest, CloseWithoutFinishReading) {
 }
 
 TEST_F(S3KeyReaderTest, ResetByInvokingClose) {
+    S3Params params("s3://abc/def");
+
     params.setNumOfChunks(1);
-    params.setRegion("us-west-2");
     params.setKeySize(255);
     params.setChunkSize(8192);
 
-    EXPECT_CALL(s3Interface, fetchData(_, _, _, _, _)).WillOnce(Invoke(MockFetchData(255, 8192)));
+    EXPECT_CALL(s3Interface, fetchData(_, _, _, _)).WillOnce(Invoke(MockFetchData(255, 8192)));
 
     this->open(params);
 
@@ -351,12 +355,13 @@ TEST_F(S3KeyReaderTest, ResetByInvokingClose) {
 }
 
 TEST_F(S3KeyReaderTest, ReadWithSmallKeySize) {
+    S3Params params("s3://abc/def");
+
     params.setNumOfChunks(1);
-    params.setRegion("us-west-2");
     params.setKeySize(2);
     params.setChunkSize(8192);
 
-    EXPECT_CALL(s3Interface, fetchData(_, _, _, _, _)).WillOnce(Invoke(MockFetchData(2, 8192)));
+    EXPECT_CALL(s3Interface, fetchData(_, _, _, _)).WillOnce(Invoke(MockFetchData(2, 8192)));
 
     this->open(params);
 
@@ -366,12 +371,13 @@ TEST_F(S3KeyReaderTest, ReadWithSmallKeySize) {
 }
 
 TEST_F(S3KeyReaderTest, ReadWithSmallChunk) {
+    S3Params params("s3://abc/def");
+
     params.setNumOfChunks(1);
-    params.setRegion("us-west-2");
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3Interface, fetchData(_, _, _, _, _))
+    EXPECT_CALL(s3Interface, fetchData(_, _, _, _))
         .WillOnce(Invoke(MockFetchData(64, 64)))
         .WillOnce(Invoke(MockFetchData(64, 64)))
         .WillOnce(Invoke(MockFetchData(64, 64)))
@@ -388,12 +394,14 @@ TEST_F(S3KeyReaderTest, ReadWithSmallChunk) {
 }
 
 TEST_F(S3KeyReaderTest, ReadWithSmallChunkDividedKeySize) {
+    S3Params params("s3://abc/def");
+
     params.setNumOfChunks(1);
-    params.setRegion("us-west-2");
+
     params.setKeySize(256);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3Interface, fetchData(_, _, _, _, _))
+    EXPECT_CALL(s3Interface, fetchData(_, _, _, _))
         .WillOnce(Invoke(MockFetchData(64, 64)))
         .WillOnce(Invoke(MockFetchData(64, 64)))
         .WillOnce(Invoke(MockFetchData(64, 64)))
@@ -410,12 +418,14 @@ TEST_F(S3KeyReaderTest, ReadWithSmallChunkDividedKeySize) {
 }
 
 TEST_F(S3KeyReaderTest, ReadWithChunkLargerThanReadBufferAndKeySize) {
+    S3Params params("s3://abc/def");
+
     params.setNumOfChunks(1);
-    params.setRegion("us-west-2");
+
     params.setKeySize(255);
     params.setChunkSize(8192);
 
-    EXPECT_CALL(s3Interface, fetchData(_, _, _, _, _)).WillOnce(Invoke(MockFetchData(255, 8192)));
+    EXPECT_CALL(s3Interface, fetchData(_, _, _, _)).WillOnce(Invoke(MockFetchData(255, 8192)));
 
     this->open(params);
 
@@ -425,12 +435,14 @@ TEST_F(S3KeyReaderTest, ReadWithChunkLargerThanReadBufferAndKeySize) {
 }
 
 TEST_F(S3KeyReaderTest, ReadWithKeyLargerThanChunkSize) {
+    S3Params params("s3://abc/def");
+
     params.setNumOfChunks(1);
-    params.setRegion("us-west-2");
+
     params.setKeySize(1024);
     params.setChunkSize(255);
 
-    EXPECT_CALL(s3Interface, fetchData(_, _, _, _, _))
+    EXPECT_CALL(s3Interface, fetchData(_, _, _, _))
         .WillOnce(Invoke(MockFetchData(255, 255)))
         .WillOnce(Invoke(MockFetchData(255, 255)))
         .WillOnce(Invoke(MockFetchData(255, 255)))
@@ -449,12 +461,14 @@ TEST_F(S3KeyReaderTest, ReadWithKeyLargerThanChunkSize) {
 }
 
 TEST_F(S3KeyReaderTest, ReadWithSameKeyChunkReadSize) {
+    S3Params params("s3://abc/def");
+
     params.setNumOfChunks(1);
-    params.setRegion("us-west-2");
+
     params.setKeySize(255);
     params.setChunkSize(255);
 
-    EXPECT_CALL(s3Interface, fetchData(_, _, _, _, _)).WillOnce(Invoke(MockFetchData(255, 255)));
+    EXPECT_CALL(s3Interface, fetchData(_, _, _, _)).WillOnce(Invoke(MockFetchData(255, 255)));
 
     this->open(params);
 
@@ -464,15 +478,17 @@ TEST_F(S3KeyReaderTest, ReadWithSameKeyChunkReadSize) {
 }
 
 TEST_F(S3KeyReaderTest, MTReadWith2Chunks) {
+    S3Params params("s3://abc/def");
+
     params.setNumOfChunks(2);
-    params.setRegion("us-west-2");
+
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3Interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(64, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(128, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(192, _, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
+    EXPECT_CALL(s3Interface, fetchData(0, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(64, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(128, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(192, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
 
     this->open(params);
 
@@ -489,15 +505,17 @@ TEST_F(S3KeyReaderTest, MTReadWith2Chunks) {
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithRedundantChunks) {
+    S3Params params("s3://abc/def");
+
     params.setNumOfChunks(8);
-    params.setRegion("us-west-2");
+
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3Interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(64, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(128, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(192, _, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
+    EXPECT_CALL(s3Interface, fetchData(0, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(64, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(128, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(192, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
 
     this->open(params);
 
@@ -514,15 +532,17 @@ TEST_F(S3KeyReaderTest, MTReadWithRedundantChunks) {
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithReusedAndUnreusedChunks) {
+    S3Params params("s3://abc/def");
+
     params.setNumOfChunks(3);
-    params.setRegion("us-west-2");
+
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3Interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(64, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(128, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(192, _, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
+    EXPECT_CALL(s3Interface, fetchData(0, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(64, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(128, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(192, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
 
     this->open(params);
 
@@ -539,15 +559,16 @@ TEST_F(S3KeyReaderTest, MTReadWithReusedAndUnreusedChunks) {
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithChunksSmallerThanReadBuffer) {
+    S3Params params("s3://abc/def");
     params.setNumOfChunks(3);
-    params.setRegion("us-west-2");
+
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3Interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(64, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(128, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(192, _, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
+    EXPECT_CALL(s3Interface, fetchData(0, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(64, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(128, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(192, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
 
     this->open(params);
 
@@ -560,15 +581,16 @@ TEST_F(S3KeyReaderTest, MTReadWithChunksSmallerThanReadBuffer) {
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithFragmentalReadRequests) {
+    S3Params params("s3://abc/def");
     params.setNumOfChunks(5);
-    params.setRegion("us-west-2");
+
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3Interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(64, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(128, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(192, _, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
+    EXPECT_CALL(s3Interface, fetchData(0, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(64, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(128, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(192, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
 
     this->open(params);
 
@@ -589,13 +611,13 @@ TEST_F(S3KeyReaderTest, MTReadWithFragmentalReadRequests) {
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithHundredsOfThreads) {
+    S3Params params("s3://abc/def");
     params.setNumOfChunks(127);
-    params.setRegion("us-west-2");
+
     params.setKeySize(1024);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3Interface, fetchData(_, _, _, _, _))
-        .WillRepeatedly(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(_, _, _, _)).WillRepeatedly(Invoke(MockFetchData(64, 64)));
 
     this->open(params);
 
@@ -652,21 +674,22 @@ TEST_F(S3KeyReaderTest, MTReadWithHundredsOfThreads) {
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithFetchDataError) {
+    S3Params params("s3://abc/def");
     params.setNumOfChunks(3);
-    params.setRegion("us-west-2");
+
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3Interface, fetchData(0, _, _, _, _))
+    EXPECT_CALL(s3Interface, fetchData(0, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(64, _, _, _, _))
+    EXPECT_CALL(s3Interface, fetchData(64, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(128, _, _, _, _))
+    EXPECT_CALL(s3Interface, fetchData(128, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Throw(S3FailedAfterRetry("", 1, "")));
-    EXPECT_CALL(s3Interface, fetchData(192, _, _, _, _))
+    EXPECT_CALL(s3Interface, fetchData(192, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Throw(S3FailedAfterRetry("", 1, "")));
 
@@ -687,21 +710,22 @@ TEST_F(S3KeyReaderTest, MTReadWithFetchDataError) {
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithUnexpectedFetchData) {
+    S3Params params("s3://abc/def");
     params.setNumOfChunks(3);
-    params.setRegion("us-west-2");
+
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3Interface, fetchData(0, _, _, _, _))
+    EXPECT_CALL(s3Interface, fetchData(0, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(64, _, _, _, _))
+    EXPECT_CALL(s3Interface, fetchData(64, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(128, _, _, _, _))
+    EXPECT_CALL(s3Interface, fetchData(128, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Throw(S3PartialResponseError(63, 64)));
-    EXPECT_CALL(s3Interface, fetchData(192, _, _, _, _))
+    EXPECT_CALL(s3Interface, fetchData(192, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Invoke(MockFetchData(63, 64)));
 
@@ -722,16 +746,17 @@ TEST_F(S3KeyReaderTest, MTReadWithUnexpectedFetchData) {
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithUnexpectedFetchDataAtSecondRound) {
+    S3Params params("s3://abc/def");
     params.setNumOfChunks(2);
-    params.setRegion("us-west-2");
+
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3Interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(64, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(128, _, _, _, _))
+    EXPECT_CALL(s3Interface, fetchData(0, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(64, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(128, _, _, _))
         .WillOnce(Throw(S3PartialResponseError(63, 64)));
-    EXPECT_CALL(s3Interface, fetchData(192, _, _, _, _))
+    EXPECT_CALL(s3Interface, fetchData(192, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Invoke(MockFetchData(63, 64)));
 
@@ -752,19 +777,20 @@ TEST_F(S3KeyReaderTest, MTReadWithUnexpectedFetchDataAtSecondRound) {
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithGPDBCancel) {
+    S3Params params("s3://abc/def");
     params.setNumOfChunks(3);
-    params.setRegion("us-west-2");
+
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3Interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(64, _, _, _, _))
+    EXPECT_CALL(s3Interface, fetchData(0, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(64, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(128, _, _, _, _))
+    EXPECT_CALL(s3Interface, fetchData(128, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(192, _, _, _, _))
+    EXPECT_CALL(s3Interface, fetchData(192, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Invoke(MockFetchData(63, 64)));
 
@@ -781,13 +807,12 @@ TEST_F(S3KeyReaderTest, MTReadWithGPDBCancel) {
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithHundredsOfThreadsAndSignalCancel) {
+    S3Params params("s3://abc/def");
     params.setNumOfChunks(127);
-    params.setRegion("us-west-2");
     params.setKeySize(1024);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3Interface, fetchData(_, _, _, _, _))
-        .WillRepeatedly(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(_, _, _, _)).WillRepeatedly(Invoke(MockFetchData(64, 64)));
 
     this->open(params);
 
@@ -807,12 +832,12 @@ TEST_F(S3KeyReaderTest, MTReadWithHundredsOfThreadsAndSignalCancel) {
 }
 
 TEST(ChunkBuffer, ChunkBufferOperatorEqual) {
-    string url;
+    S3Url s3Url("s3://whatever");
     S3KeyReader reader;
     S3MemoryContext context;
 
-    ChunkBuffer buf1(url, reader, context);
-    ChunkBuffer buf2(url, reader, context);
+    ChunkBuffer buf1(s3Url, reader, context);
+    ChunkBuffer buf2(S3Url(""), reader, context);
 
     buf1.setStatus(ReadyToRead);
     buf2.setStatus(ReadyToFill);

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic51">
+   <title>Example 7—Readable Web External Table with Script</title>
+   <body>
+      <p>Creates a readable web external table that executes a script once per segment
+                        host:</p>
+      <p>
+         <codeblock>=# CREATE EXTERNAL WEB TABLE log_output (linenum int, 
+    message text) 
+   EXECUTE '/var/load_scripts/get_log_data.sh' ON HOST 
+   FORMAT 'TEXT' (DELIMITER '|');
+</codeblock>
+      </p>
+   </body>
+</topic>

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1"><title id="bh20941">CLUSTER</title><body><p id="sql_command_desc">Physically reorders a heap storage table on disk according to an index.
+Not a recommended operation in Greenplum Database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CLUSTER <varname>indexname</varname> ON <varname>tablename</varname>
+
+CLUSTER <varname>tablename</varname>
+
+CLUSTER</codeblock></section><section id="section3"><title>Description</title><p><codeph>CLUSTER</codeph> orders a heap storage table based on an index.
+<codeph>CLUSTER</codeph> is not supported on append-optmized storage
+tables. Clustering an index means that the records are physically ordered
+on disk according to the index information. If the records you need are
+distributed randomly on disk, then the database has to seek across the
+disk to get the records requested. If those records are stored more closely
+together, then the fetching from disk is more sequential. A good example
+for a clustered index is on a date column where the data is ordered sequentially
+by date. A query against a specific date range will result in an ordered
+fetch from the disk, which leverages faster sequential access.</p><p>Clustering is a one-time operation: when the table is subsequently
+updated, the changes are not clustered. That is, no attempt is made to
+store new or updated rows according to their index order. If one wishes,
+one can periodically recluster by issuing the command again. </p><p>When a table is clustered using this command, Greenplum Database remembers
+on which index it was clustered. The form <codeph>CLUSTER</codeph> <varname>tablename</varname>
+reclusters the table on the same index that it was clustered before.
+<codeph>CLUSTER</codeph> without any parameter reclusters all previously
+clustered tables in the current database that the calling user owns,
+or all tables if called by a superuser. This form of <codeph>CLUSTER</codeph>
+cannot be executed inside a transaction block.</p><p>When a table is being clustered, an <codeph>ACCESS EXCLUSIVE</codeph>
+lock is acquired on it. This prevents any other database operations (both
+reads and writes) from operating on the table until the <codeph>CLUSTER</codeph>
+is finished.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>indexname</varname></pt><pd>The name of an index. </pd></plentry><plentry><pt><varname>tablename</varname></pt><pd>The name (optionally schema-qualified) of a table. </pd></plentry></parml></section><section id="section5"><title>Notes</title><p>In cases where you are accessing single rows randomly within a table,
+the actual order of the data in the table is unimportant. However, if
+you tend to access some data more than others, and there is an index
+that groups them together, you will benefit from using <codeph>CLUSTER</codeph>.
+If you are requesting a range of indexed values from a table, or a single
+indexed value that has multiple rows that match, <codeph>CLUSTER</codeph>
+will help because once the index identifies the table page for the first
+row that matches, all other rows that match are probably already on the
+same table page, and so you save disk accesses and speed up the query.
+</p><p>During the cluster operation, a temporary copy of the table is created
+that contains the table data in the index order. Temporary copies of
+each index on the table are created as well. Therefore, you need free
+space on disk at least equal to the sum of the table size and the index
+sizes. </p><p>Because the query optimizer records statistics about the ordering of tables, it is advisable to
+        run <codeph>ANALYZE</codeph> on the newly clustered table. Otherwise, the planner may make
+        poor choices of query plans. </p><p>There is another way to cluster data. The <codeph>CLUSTER</codeph>
+command reorders the original table by scanning it using the index you
+specify. This can be slow on large tables because the rows are fetched
+from the table in index order, and if the table is disordered, the entries
+are on random pages, so there is one disk page retrieved for every row
+moved. (Greenplum Database has a cache, but the majority of a big table
+will not fit in the cache.) The other way to cluster a table is to use
+a statement such as:</p><codeblock>CREATE TABLE newtable AS SELECT * FROM table ORDER BY column;</codeblock><p>This uses the Greenplum Database sorting code to produce the desired
+order, which is usually much faster than an index scan for disordered
+data. Then you drop the old table, use <codeph>ALTER TABLE ... RENAME</codeph>
+to rename <varname>newtable</varname> to the old name, and recreate the table's
+indexes. The big disadvantage of this approach is that it does not preserve
+OIDs, constraints, granted privileges, and other ancillary properties
+of the table — all such items must be manually recreated. Another disadvantage
+is that this way requires a sort temporary file about the same size as
+the table itself, so peak disk usage is about three times the table size
+instead of twice the table size.</p><note><codeph>CLUSTER</codeph> is not supported with append-optimized tables.</note></section><section id="section6"><title>Examples</title><p>Cluster the table <codeph>employees</codeph> on the basis of its index
+        <codeph>emp_ind</codeph>:</p><codeblock>CLUSTER emp_ind ON emp;</codeblock><p>Cluster a large table by recreating it and loading it in the correct index
+order:</p><codeblock>CREATE TABLE newtable AS SELECT * FROM table ORDER BY column;
+DROP table;
+ALTER TABLE newtable RENAME TO table;
+CREATE INDEX column_ix ON table (column);
+VACUUM ANALYZE table;</codeblock></section><section id="section7"><title>Compatibility</title><p>There is no <codeph>CLUSTER</codeph> statement in the SQL standard.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_TABLE_AS.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="./CREATE_INDEX.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>

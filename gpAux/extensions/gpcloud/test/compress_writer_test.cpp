@@ -44,7 +44,7 @@ class CompressWriterTest : public testing::Test {
     // Remember that SetUp() is run immediately before a test starts.
     virtual void SetUp() {
         compressWriter.setWriter(&writer);
-        compressWriter.open(params);
+        compressWriter.open(S3Params("s3://abc/def/"));
 
         this->out = new Byte[S3_ZIP_DECOMPRESS_CHUNKSIZE];
     }
@@ -85,7 +85,6 @@ class CompressWriterTest : public testing::Test {
         inflateEnd(&zstream);
     }
 
-    S3Params params;
     CompressWriter compressWriter;
     MockWriter writer;
 
@@ -196,7 +195,7 @@ TEST_F(CompressWriterTest, CompressCompressedData) {
 
     vector<char> compressedData;
     for (size_t i = 0; i < 3; i++) {
-        compressWriter.open(this->params);
+        compressWriter.open(S3Params("s3://abc/def"));
 
         compressedData.swap(writer.getRawDataVector());
         writer.getRawDataVector().clear();

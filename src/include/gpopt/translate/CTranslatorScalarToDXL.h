@@ -256,6 +256,13 @@ namespace gpdxl
 				const Expr *pexpr,
 				const CMappingVarColId* pmapvarcolid
 				);
+		
+			// create a DXL scalar array coerce expression node from a GPDB expression
+			CDXLNode *PdxlnScArrayCoerceExprFromExpr
+				(
+				const Expr *pexpr,
+				const CMappingVarColId* pmapvarcolid
+				);
 
 			// create a DXL scalar funcexpr node from a GPDB expression
 			CDXLNode *PdxlnScFuncExprFromFuncExpr

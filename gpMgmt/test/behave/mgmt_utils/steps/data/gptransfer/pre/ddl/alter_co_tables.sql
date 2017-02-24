@@ -57,10 +57,6 @@ insert into sto_alt_co2 values ('1_zero', 1, '1_zero', 1);
 -- Alter column  set statistics
 Alter table sto_alt_co3  alter column before_rename_col set statistics 3;
 
--- Alter table cluster on indexname
-Create index sto_alt_co3_idx on sto_alt_co3(bigint_col);
-Alter table sto_alt_co3 cluster on sto_alt_co3_idx;
-
 -- Alter table SET without cluster
 Alter table sto_alt_co3 set without cluster;
 

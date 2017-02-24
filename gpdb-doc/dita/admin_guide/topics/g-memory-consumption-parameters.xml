@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic16">
+   <title>Memory Consumption Parameters</title>
+   <body>
+      <p>These parameters control system memory usage. You can adjust
+              <codeph>gp_vmem_protect_limit</codeph> to avoid running out of memory at the segment
+            hosts during query processing.</p>
+      <simpletable id="kh160388">
+         <strow>
+            <stentry>
+               <p>
+                  <codeph>gp_vmem_idle_resource_timeout</codeph>
+               </p>
+               <p>
+                  <codeph>gp_vmem_protect_limit</codeph>
+               </p>
+               <p>
+                  <codeph>gp_vmem_protect_segworker_cache_limit</codeph>
+               </p>
+               <p>
+                  <codeph>gp_workfile_limit_files_per_query</codeph>
+               </p>
+               <p>
+                  <codeph>gp_workfile_limit_per_query</codeph>
+               </p>
+               <p>
+                  <codeph>gp_workfile_limit_per_segment</codeph>
+               </p>
+               <p>
+                  <codeph>max_appendonly_tables</codeph>
+               </p>
+               <p>
+                  <codeph>max_prepared_transactions</codeph>
+               </p>
+            </stentry>
+            <stentry>
+               <p>
+                  <codeph>max_stack_depth</codeph>
+               </p>
+               <p>
+                  <codeph>shared_buffers</codeph>
+               </p>
+               <p>
+                  <codeph>temp_buffers</codeph>
+               </p>
+            </stentry>
+         </strow>
+      </simpletable>
+   </body>
+</topic>

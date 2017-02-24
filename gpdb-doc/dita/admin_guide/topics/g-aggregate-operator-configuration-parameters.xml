@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic26">
+   <title>Aggregate Operator Configuration Parameters</title>
+   <body>
+      <simpletable id="kh162730">
+         <strow>
+            <stentry>
+               <p>
+                  <codeph>gp_enable_agg_distinct</codeph>
+               </p>
+               <p>
+                  <codeph>gp_enable_agg_distinct_pruning</codeph>
+               </p>
+               <p>
+                  <codeph>gp_enable_multiphase_agg</codeph>
+               </p>
+               <p>
+                  <codeph>gp_enable_preunique</codeph>
+               </p>
+            </stentry>
+            <stentry>
+               <p>
+                  <codeph>gp_enable_groupext_distinct_ gather</codeph>
+               </p>
+               <p>
+                  <codeph>gp_enable_groupext_distinct_ pruning</codeph>
+               </p>
+               <p>
+                  <codeph>gp_workfile_compress_algorithm</codeph>
+               </p>
+            </stentry>
+         </strow>
+      </simpletable>
+   </body>
+</topic>

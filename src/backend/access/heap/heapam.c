@@ -47,10 +47,8 @@
 #include "access/valid.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
-#include "catalog/gp_fastsequence.h"
 #include "catalog/namespace.h"
 #include "cdb/cdbfilerepprimary.h"
-#include "cdb/cdbpersistentrecovery.h"
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
 #include "pgstat.h"
@@ -947,11 +945,11 @@ relation_open(Oid relationId, LOCKMODE lockmode)
 				 errmsg("relation not found (OID %u)", relationId),
 				 errdetail("This can be validly caused by a concurrent delete operation on this object.")));
 	}
-
+#if 0 /* Upstream code not applicable to GPDB */
 	/* Make note that we've accessed a temporary relation */
 	if (r->rd_istemp)
 		MyXactAccessedTempRel = true;
-
+#endif
 	pgstat_initstats(r);
 
 	return r;
@@ -1031,11 +1029,11 @@ try_relation_open(Oid relationId, LOCKMODE lockmode, bool noWait)
 				 errmsg("relation not found (OID %u)", relationId),
 				 errdetail("This can be validly caused by a concurrent delete operation on this object.")));
 	}
-
+#if 0 /* Upstream code not applicable to GPDB */
 	/* Make note that we've accessed a temporary relation */
 	if (r->rd_istemp)
 		MyXactAccessedTempRel = true;
-
+#endif
 	pgstat_initstats(r);
 
 	return r;
@@ -1224,11 +1222,11 @@ relation_open_nowait(Oid relationId, LOCKMODE lockmode)
 				 errmsg("relation not found (OID %u)", relationId),
 				 errdetail("This can be validly caused by a concurrent delete operation on this object.")));
 	}
-
+#if 0 /* Upstream code not applicable to GPDB */
 	/* Make note that we've accessed a temporary relation */
 	if (r->rd_istemp)
 		MyXactAccessedTempRel = true;
-
+#endif
 	pgstat_initstats(r);
 
 	return r;
@@ -4273,109 +4271,6 @@ heap_inplace_update_internal(Relation relation, HeapTuple tuple, bool freeze)
 		CacheInvalidateHeapTuple(relation, tuple);
 }
 
-/*
- * heap_inplace_frozen_delete_internal - frozen delete a tuple "in place" 
- * by modifying its MVCC header. Overwriting MVCC header violates both MVCC
- * and transactional safety, so the uses of this function in Postgres are 
- * extremely limited. Nonetheless we find some places to use it.
- *
- * Modified from heap_inplace_update_internal.
- */
-static void
-heap_inplace_frozen_delete_internal(Relation relation, HeapTuple tuple, bool freeze)
-{
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
-	Buffer		buffer;
-	Page		page;
-	OffsetNumber offnum;
-	ItemId		lp = NULL;
-	HeapTupleHeader htup;
-	uint32		oldlen;
-	uint32		newlen;
-
-	/* 
-	 * Fetch gp_persistent_relation_node information that will be added
-	 * to XLOG record.
-	 */
-	RelationFetchGpRelationNodeForXLog(relation);
-	
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
-	
-	buffer = ReadBuffer(relation, ItemPointerGetBlockNumber(&(tuple->t_self)));
-	LockBuffer(buffer, BUFFER_LOCK_EXCLUSIVE);
-	page = (Page) BufferGetPage(buffer);
-
-	offnum = ItemPointerGetOffsetNumber(&(tuple->t_self));
-	if (PageGetMaxOffsetNumber(page) >= offnum)
-		lp = PageGetItemId(page, offnum);
-
-	if (PageGetMaxOffsetNumber(page) < offnum || !ItemIdIsUsed(lp))
-		elog(ERROR, "heap_inplace_frozen_delete_internal: invalid lp");
-
-	htup = (HeapTupleHeader) PageGetItem(page, lp);
-
-	oldlen = ItemIdGetLength(lp) - htup->t_hoff;
-	newlen = tuple->t_len - tuple->t_data->t_hoff;
-	if (oldlen != newlen || htup->t_hoff != tuple->t_data->t_hoff)
-		elog(ERROR, "heap_inplace_frozen_delete_internal: wrong tuple length");
-
-	/* NO EREPORT(ERROR) from here till changes are logged */
-	START_CRIT_SECTION();
-
-	htup->t_infomask &= 0;
-	htup->t_infomask |= HEAP_XMIN_INVALID;
-	HeapTupleHeaderSetXmin(htup, 0);
-	HeapTupleHeaderSetXmax(htup, FrozenTransactionId);
-
-	memcpy((char *) htup + htup->t_hoff,
-		   (char *) tuple->t_data + tuple->t_data->t_hoff,
-		   newlen);
-
-	MarkBufferDirty(buffer);
-
-	/* XLOG stuff */
-	if (!relation->rd_istemp)
-	{
-		xl_heap_inplace xlrec;
-		XLogRecPtr	recptr;
-		XLogRecData rdata[2];
-
-		xl_heaptid_set(&xlrec.target, relation, &tuple->t_self);
-
-		rdata[0].data = (char *) &xlrec;
-		rdata[0].len = SizeOfHeapInplace;
-		rdata[0].buffer = InvalidBuffer;
-		rdata[0].next = &(rdata[1]);
-
-		rdata[1].data = (char *) htup + htup->t_hoff;
-		rdata[1].len = newlen;
-		rdata[1].buffer = buffer;
-		rdata[1].buffer_std = true;
-		rdata[1].next = NULL;
-
-		if (!freeze)
-			recptr = XLogInsert(RM_HEAP_ID, XLOG_HEAP_INPLACE, rdata);
-		else
-			recptr = XLogInsert_OverrideXid(RM_HEAP_ID, XLOG_HEAP_INPLACE, rdata, FrozenTransactionId);
-
-		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
-	}
-
-	END_CRIT_SECTION();
-
-	UnlockReleaseBuffer(buffer);
-	
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-	
-	/* Send out shared cache inval if necessary */
-	if (!IsBootstrapProcessingMode())
-		CacheInvalidateHeapTuple(relation, tuple);
-}
-
 void
 frozen_heap_inplace_update(Relation relation, HeapTuple tuple)
 {
@@ -4384,18 +4279,6 @@ frozen_heap_inplace_update(Relation relation, HeapTuple tuple)
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_ENTER;
 
 	heap_inplace_update_internal(relation, tuple, true);
-
-	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_EXIT;
-}
-
-void
-frozen_heap_inplace_delete(Relation relation, HeapTuple tuple)
-{
-	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_DECLARE;
-
-	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_ENTER;
-
-	heap_inplace_frozen_delete_internal(relation, tuple, true);
 
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_EXIT;
 }
@@ -5431,42 +5314,6 @@ heap_xlog_insert(XLogRecPtr lsn, XLogRecord *record)
 	HeapTupleHeaderSetXmin(htup, record->xl_xid);
 	HeapTupleHeaderSetCmin(htup, FirstCommandId);
 	htup->t_ctid = xlrec->target.tid;
-
-	/* MPP-16881: if GPDB crashed when CTAS for AO/CO is running, we should "frozen"
-	 * delete left-over entries in gp_fastsequence catalog table when replaying XLOG
-	 * during Pass3 crash recovery.
-	 */
-	if (xlrec->target.node.relNode == FastSequenceRelationId)
-	{
-		Form_gp_fastsequence redo_entry = 
-							(Form_gp_fastsequence) ((char *) htup + htup->t_hoff);
-		HASH_SEQ_STATUS iterateStatus;
-		hash_seq_init(&iterateStatus, pass2RecoveryHashShmem->hash);
-	
-		while (true)
-		{
-			Pass2RecoveryHashEntry_s *entry = 
-									(Pass2RecoveryHashEntry_s *)
-									hash_seq_search(&iterateStatus);
-			
-			if (entry == NULL)
-				break;
-			
-			if (entry->objid == redo_entry->objid)
-			{
-				htup->t_infomask &= 0;
-				htup->t_infomask |= HEAP_XMIN_INVALID;
-				HeapTupleHeaderSetXmin(htup, 0);
-				HeapTupleHeaderSetXmax(htup, FrozenTransactionId);
-				hash_seq_term(&iterateStatus); 
-				if (Debug_persistent_print)
-					elog(LOG, "frozen deleting gp_fastsequence entry"
-						 "for aborted AO insert transaction on objid %d",
-						 redo_entry->objid);
-				break;
-			}
-		}
-	}
 
 	offnum = PageAddItem(page, (Item) htup, newlen, offnum, true, true);
 	if (offnum == InvalidOffsetNumber)

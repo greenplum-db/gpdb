@@ -81,9 +81,9 @@ AppendOnlyCompaction_DropSegmentFile(Relation aorel,
 }
 
 /*
- * Calculates the ratio of hidden tuples as an integer between 0 and 100.
+ * Calculates the ratio of hidden tuples as a double between 0 and 100
  */
-static int
+static double 
 AppendOnlyCompaction_GetHideRatio(int64 hiddenTupcount, int64 totalTupcount)
 {
 	double hideRatio;
@@ -93,7 +93,7 @@ AppendOnlyCompaction_GetHideRatio(int64 hiddenTupcount, int64 totalTupcount)
 		return 0;
 	}
 	hideRatio = ((double) hiddenTupcount) / ((double) totalTupcount) * 100.0;
-	return floor(hideRatio + 0.5);
+	return hideRatio;
 }
 
 /*
@@ -109,7 +109,7 @@ AppendOnlyCompaction_ShouldCompact(
 	bool result;
 	AppendOnlyVisimap visiMap;
 	int64 hiddenTupcount;
-	int hideRatio;
+	double hideRatio;
 
 	Assert(RelationIsAoRows(aoRelation) || RelationIsAoCols(aoRelation));
 
@@ -150,7 +150,7 @@ AppendOnlyCompaction_ShouldCompact(
 				ereportif(Debug_appendonly_print_compaction, LOG, 
 					(errmsg("Append-only compaction skipped on relation %s, segment file num %d, "
 					"hidden tupcount " INT64_FORMAT ", total tupcount " INT64_FORMAT ", " 
-					"hide ratio %d%%, threshold %d%%",
+					"hide ratio %lf%%, threshold %d%%",
 					RelationGetRelationName(aoRelation),
 					segno,
 					hiddenTupcount, segmentTotalTupcount, 
@@ -159,7 +159,7 @@ AppendOnlyCompaction_ShouldCompact(
 					(errmsg("Append-only compaction skipped on relation %s, segment file num %d",
 					RelationGetRelationName(aoRelation),
 					segno),
-					errdetail("Ratio of obsolete tuples below threshold (%d%% vs %d%%)",
+					errdetail("Ratio of obsolete tuples below threshold (%lf%% vs %d%%)",
 						hideRatio, gp_appendonly_compaction_threshold)));
 			}
 			else
@@ -167,7 +167,7 @@ AppendOnlyCompaction_ShouldCompact(
 				ereportif(Debug_appendonly_print_compaction, LOG, 
 					(errmsg("Append-only compaction skipped on relation %s, segment file num %d, "
 					"hidden tupcount " INT64_FORMAT ", total tupcount " INT64_FORMAT ", " 
-					"hide ratio %d%%, threshold %d%%",
+					"hide ratio %lf%%, threshold %d%%",
 					RelationGetRelationName(aoRelation),
 					segno,
 					hiddenTupcount, segmentTotalTupcount, 
@@ -179,7 +179,7 @@ AppendOnlyCompaction_ShouldCompact(
 			"Schedule compaction: "
 			"segno %d, "
 			"hidden tupcount " INT64_FORMAT ", total tupcount " INT64_FORMAT ", " 
-			"hide ratio %d%%, threshold %d%%",
+			"hide ratio %lf%%, threshold %d%%",
 			segno,
 			hiddenTupcount, segmentTotalTupcount, 
 			hideRatio, gp_appendonly_compaction_threshold);

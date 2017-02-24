@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE task PUBLIC "-//OASIS//DTD DITA Task//EN" "task.dtd">
+<task id="task_rkw_wbn_vp">
+    <title>Editing Server Configuration</title>
+    <shortdesc/>
+    <taskbody>
+        <context>The pgAdmin III interface provides two ways to update the server configuration in
+                <filepath>postgresql.conf</filepath>: locally, through the
+                <uicontrol>File</uicontrol> menu, and remotely on the server through the
+                <uicontrol>Tools</uicontrol> menu. Editing the server configuration remotely may be
+            more convenient in many cases, because it does not require you to upload or copy
+                <codeph>postgresql.conf</codeph>.</context>
+        <steps>
+            <step>
+                <cmd>Connect to the server whose configuration you want to edit. </cmd>
+                <info>If you are connected to multiple servers, make sure that the correct server is
+                    highlighted in the object browser in the left pane.</info>
+            </step>
+            <step>
+                <cmd>Select <menucascade>
+                        <uicontrol>Tools </uicontrol>
+                        <uicontrol>Server Configuration</uicontrol>
+                        <uicontrol> postgresql.conf</uicontrol>
+                    </menucascade>.</cmd>
+                <stepresult>The <wintitle>Backend Configuration Editor</wintitle> opens, displaying
+                    the list of available and enabled server configuration parameters.</stepresult>
+            </step>
+            <step>
+                <cmd>Locate the parameter you want to edit, and double click on the entry to open
+                    the <wintitle>Configuration settings</wintitle> dialog.</cmd>
+            </step>
+            <step>
+                <cmd>Enter the new value for the parameter, or select/deselect
+                        <uicontrol>Enabled</uicontrol> as desired and click
+                        <uicontrol>OK</uicontrol>.</cmd>
+            </step>
+            <step>
+                <cmd>If the parameter can be enabled by reloading server configuration, click the
+                    green reload icon, or select <menucascade>
+                        <uicontrol>File</uicontrol>
+                        <uicontrol>Reload server</uicontrol>
+                    </menucascade>. </cmd>
+                <info>Many parameters require a full restart of the server.</info>
+            </step>
+        </steps>
+    </taskbody>
+</task>

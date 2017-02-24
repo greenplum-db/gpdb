@@ -52,7 +52,7 @@
 
 #ifdef USE_ORCA
 extern char *SzDXLPlan(Query *parse);
-extern StringInfo OptVersion();
+extern const char *OptVersion();
 #endif
 
 
@@ -97,7 +97,6 @@ static void show_scan_qual(List *qual, const char *qlabel,
 			   Plan *scan_plan, Plan *outer_plan,
 			   ExplainState *es);
 static void show_upper_qual(List *qual, const char *qlabel, Plan *plan,
-				ExplainState *es);
 static void show_sort_keys(SortState *sortstate, ExplainState *es);
 static void show_sort_info(SortState *sortstate, ExplainState *es);
 static const char *explain_get_index_name(Oid indexId);
@@ -789,6 +788,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ExplainState *es,
     {
     	if ( es->format == EXPLAIN_FORMAT_TEXT)
     	{
+
 			appendStringInfo(es->str, "Optimizer status: ");
 			if (queryDesc->plannedstmt->planGen == PLANGEN_PLANNER)
 			{
@@ -800,7 +800,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ExplainState *es,
 				appendStringInfo(es->str, "PQO version %s\n", str->data);
 				pfree(str->data);
 				pfree(str);
-			}
+	
     	}
 		else
 		{
@@ -1780,6 +1780,7 @@ ExplainNode(Plan *plan, PlanState *planstate,
 
 				bool bNoDup = ((Sort *) plan)->noduplicates;
 
+
 				char *SortKeystr = "Sort Key";
 
 				if ((bLimit && bNoDup))
@@ -1791,6 +1792,7 @@ ExplainNode(Plan *plan, PlanState *planstate,
 				show_sort_keys((SortState*)planstate, es);
 				show_sort_info((SortState *) planstate, es);
 			}
+
 			break;
 		case T_Result:
 			show_upper_qual((List *) ((Result *) plan)->resconstantqual,
@@ -4064,6 +4066,7 @@ ExplainBeginOutput(ExplainState *es)
 }
 
 /*
+
  * Emit the end-of-output boilerplate.
  */
 static void

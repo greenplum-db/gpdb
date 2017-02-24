@@ -453,7 +453,8 @@ typedef struct RelOptInfo
 	List	   *subrtable;		/* if subquery */
 
 	/* used by external scan */
-	List		*locationlist;
+	List		*urilocationlist;
+	List		*execlocationlist;
 	char		*execcommand;
 	char		fmttype;
 	char		*fmtopts;

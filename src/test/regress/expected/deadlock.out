@@ -1,0 +1,46 @@
+-- 
+-- Test queries that can lead to deadlock. This is in a different file to
+-- isolate the test & quickly identify it if ICG doesn't complete for a very
+-- long time.
+--
+create schema deadlock;
+set search_path = deadlock;
+-- Test "Motion deadlock hazard" when Joins have Motions in both branches.
+-- see src/backend/cdb/cdbllize.c
+create table l (i int, j int) distributed by (i);
+create table r (i int, j int) distributed by (j);
+insert into l select i, 2 from generate_series(1, 100000) i;  -- one segment destination
+insert into r select i, 1 from generate_series(1, 100000) i;  -- one segment destination
+set enable_mergejoin = off;
+set enable_hashjoin = on;
+set enable_nestloop = off;
+-- Pick HJ
+select count(*) from gp_dist_random('l') left join gp_dist_random('r') on l.j + 1 = r.j;
+ count  
+--------
+ 100000
+(1 row)
+
+set enable_mergejoin = off;
+set enable_hashjoin = off;
+set enable_nestloop = on;
+-- Pick NLJ, gp_dist_random() forces MJ
+select count(*) from l left join r on l.j + 1 = r.j;
+ count  
+--------
+ 100000
+(1 row)
+
+set enable_mergejoin = on;
+set enable_hashjoin = off;
+set enable_nestloop = off;
+-- Pick MJ
+select count(*) from gp_dist_random('l') left outer join gp_dist_random('r') on l.j + 1 = r.j;
+ count  
+--------
+ 100000
+(1 row)
+
+drop schema if exists deadlock cascade;
+NOTICE:  drop cascades to table r
+NOTICE:  drop cascades to table l

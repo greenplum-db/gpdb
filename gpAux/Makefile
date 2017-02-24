@@ -200,7 +200,7 @@ ADDON_CONFIG_INCLUDES=$(BLD_TOP)/$(ADDON_DIR)/src/include
 endif
 
 # Configure in thirdparty libraries from the ext/ directory
-CONFIG_INCLUDES=$(BLD_THIRDPARTY_INCLUDE_DIR) $(BLD_THIRDPARTY_INCLUDE_DIR)/libxml2 $(BLD_THIRDPARTY_DIR)/libgpopt/include $(BLD_THIRDPARTY_DIR)/libgpos/include $(ADDON_CONFIG_INCLUDES)
+CONFIG_INCLUDES=$(BLD_THIRDPARTY_INCLUDE_DIR) $(BLD_THIRDPARTY_INCLUDE_DIR)/libxml2 $(ADDON_CONFIG_INCLUDES)
 CONFIG_LIBRARIES=$(strip $(BLD_THIRDPARTY_LIB_DIR) $(BLD_CXX_LIB_DIR) $(BLD_PTHREADS_LIB_DIR))
 CONFIGFLAGS+= --with-includes="$(CONFIG_INCLUDES)" --with-libraries="$(CONFIG_LIBRARIES)"
 
@@ -320,7 +320,7 @@ BLD_GPDB_BUILDSET=$($(BLD_ARCH)_GPDB_BUILDSET)
 # set default build steps
 define BUILD_STEPS
 	@rm -rf $(INSTLOC)
-	cd $(BUILDDIR) && $(MAKE) $(parallelexec_opts) install
+	cd $(BUILDDIR) && $(MAKE) $(PARALLEL_MAKE_OPTS) install
 	#@$(MAKE) greenplum_path INSTLOC=$(INSTLOC)
 	#@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) mkpgbouncer INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
@@ -328,6 +328,7 @@ define BUILD_STEPS
 	@$(MAKE) mkgpperfmon INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
 	@$(MAKE) mkplatform INSTLOC=$(INSTLOC)
 	if [ "$(findstring $(BLD_ARCH),$(SERVER_PLATFORMS))" != "" ]; then \
+	  $(MAKE) mkgpcloud INSTLOC=$(INSTLOC) && \
 	  $(MAKE) mkgphdfs INSTLOC=$(INSTLOC) && \
 	  $(MAKE) mkorafce INSTLOC=$(INSTLOC); \
 	fi
@@ -353,7 +354,6 @@ define BUILD_STEPS
 	rm -rf $(INSTLOC)
 	cd $(BUILDDIR)/src/include/ && $(MAKE) install
 	@$(MAKE) mkgpfdist INSTLOC=$(INSTLOC)
-	@$(MAKE) mkgps3ext INSTLOC=$(INSTLOC)
 	@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) copylibs INSTLOC=$(INSTLOC)
 	@$(MAKE) loaders INSTLOC=$(INSTLOC) LOADERSINSTLOC=$(LOADERSINSTLOC)
@@ -941,8 +941,8 @@ mkgpfdist:
 mkgphdfs:
 	@cd extensions && $(MAKE) mkgphdfs OPT="$(INSTCFLAGS)" INSTLOC=$(INSTLOC)
 
-mkgps3ext:
-	@cd extensions && $(MAKE) mks3ext OPT="$(INSTCFLAGS)" INSTLOC=$(INSTLOC)
+mkgpcloud:
+	@cd extensions && $(MAKE) mkgpcloud OPT="$(INSTCFLAGS)" INSTLOC=$(INSTLOC)
 
 mkorafce:
 	@cd extensions && $(MAKE) mkorafce OPT="$(INSTCFLAGS)" INSTLOC=$(INSTLOC)
@@ -1240,7 +1240,6 @@ gccVersionCheck :
 
 ifeq ($(BLD_ARCH),$(filter $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64))
 GPPKG_SOURCES = \
-	../src/pl/plperl \
 	$(NULL)
 else
 # Removed filtering logic for building gppkg as on suse11. It was only building
@@ -1250,7 +1249,6 @@ else
 # TODO: As we build for centos6 we can add filtering logic if necessary
 GPPKG_SOURCES = \
 	../contrib/pgcrypto \
-	../src/pl/plperl \
 	../src/bin/pg_dump/cdb/ddboost \
 	extensions/postgis-2.0.3 \
 	extensions/plr \
@@ -1304,12 +1302,10 @@ endif
 
 ifeq ($(BLD_ARCH),$(filter $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64 suse11_x86_64))
 GPPKG_ROOT_DIR = \
-	../src/pl/plperl \
 	$(NULL)
 else
 GPPKG_ROOT_DIR = \
 	../contrib/pgcrypto \
-	../src/pl/plperl \
 	$(NULL)
 endif
 

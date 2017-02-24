@@ -47,6 +47,7 @@
  */
 Portal		ActivePortal = NULL;
 
+
 static void ProcessQuery(Portal portal, /* Resource queueing need SQL, so we pass portal. */
 			 PlannedStmt *stmt,
 			 ParamListInfo params,

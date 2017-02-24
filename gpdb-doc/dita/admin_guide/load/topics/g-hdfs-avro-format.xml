@@ -1,0 +1,609 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dita PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<dita>
+  <topic id="topic_fstrm">
+    <title>Support for Avro Files</title>
+    <body>
+      <p>You can use the Greenplum Database <codeph>gphdfs</codeph> protocol to access Avro files on
+        a Hadoop file system (HDFS).</p>
+    </body>
+    <topic id="topic_mtn_dyv_vs">
+      <title>About the Avro File Format</title>
+      <body>
+        <p>An Avro file stores both the data definition (schema) and the data together in one file
+          making it easy for programs to dynamically understand the information stored in an Avro
+          file. The Avro schema is in JSON format, the data is in a binary format making it compact
+          and efficient. </p>
+        <p>The following example Avro schema defines an Avro record with 3 fields: <ul
+            id="ul_p24_dyv_vs">
+            <li>name</li>
+            <li>favorite_number</li>
+            <li>favorite_color</li>
+          </ul></p>
+        <codeblock>{"namespace": "example.avro", 
+"type": "record", "name": "User",
+  "fields": [
+    {"name": "name", "type": "string"},     
+    {"name": "favorite_number", "type": ["int", "null"]},
+    {"name": "favorite_color", "type": ["string", "null"]}
+  ]
+}</codeblock>
+        <p>These are two rows of data based on the
+          schema:<codeblock>{ "name" : "miguno" , "favorite_number" : 6 , "favorite_color" : "red" }
+{ "name" : "BlizzardCS" , "favorite_number" : 21 , "favorite_color" : "green" }</codeblock></p>
+        <p>For information about the Avro file format, see <xref
+            href="http://avro.apache.org/docs/1.7.7/" format="html" scope="external"
+            >http://avro.apache.org/docs/1.7.7/</xref></p>
+      </body>
+    </topic>
+    <topic id="topic_fdj_2sh_rt">
+      <title>Required Avro Jar Files</title>
+      <body>
+        <p>Support for the Avro file format requires these jar files:<sl>
+            <sli>avro-1.7.7.jar</sli>
+            <sli>avro-tools-1.7.7.jar</sli>
+            <sli>avro-mapred-1.7.5-hadoop2.jar (available with Apache Pig)</sli>
+          </sl></p>
+        <note>Hadoop 2 distributions include the Avro jar file
+            <codeph>$HADOOP_HOME/share/hadoop/common/lib/avro-1.7.4.jar</codeph>. To avoid
+          conflicts, you can rename the file to another file such as
+            <codeph>avro-1.7.4.jar.bak</codeph>.<p>For the Cloudera 5.4.x Hadoop distribution, only
+            the jar file <codeph>avro-mapred-1.7.5-hadoop2.jar</codeph> needs to be downloaded and
+            installed. The distribution contains the other required jar files. The other files are
+            included in the <codeph>classpath</codeph> used by the <codeph>gphdfs</codeph> protocol.
+          </p></note>
+        <p>For information about downloading the Avro jar files, see <xref
+            href="https://avro.apache.org/releases.html" format="html" scope="external"
+            >https://avro.apache.org/releases.html</xref>.</p>
+        <p>On all the Greenplum Database hosts, ensure that the jar files are installed and are on
+          the <codeph>classpath</codeph> used by the <codeph>gphdfs</codeph> protocol. The
+            <codeph>classpath</codeph> is specified by the shell script
+            <codeph>$GPHOME/lib/hadoop/hadoop_env.sh</codeph>.</p>
+        <p>As an example, if the directory <codeph>$HADOOP_HOME/share/hadoop/common/lib</codeph>
+          does not exist, create it on all Greenplum Database hosts as the <codeph>gpadmin</codeph>
+          user. Then, add the add the jar files to the directory on all hosts. </p>
+        <p>The <codeph>hadoop_env.sh</codeph> script file adds the jar files to
+            <codeph>classpath</codeph> for the <codeph>gphdfs</codeph> protocol. This fragment in
+          the script file adds the jar files to the <codeph>classpath</codeph>.
+          <codeblock>if [ -d "${HADOOP_HOME}/share/hadoop/common/lib" ]; then
+for f in ${HADOOP_HOME}/share/hadoop/common/lib/*.jar; do
+            CLASSPATH=${CLASSPATH}:$f;
+done</codeblock></p>
+      </body>
+    </topic>
+    <topic id="topic_uns_2yv_vs">
+      <title>Avro File Format Support</title>
+      <body>
+        <p>The Greenplum Database <codeph>gphdfs</codeph> protocol supports the Avro file type as an
+          external table:<ul id="ul_nkt_2yv_vs">
+            <li>Avro file format - GPDB certified with Avro version 1.7.7</li>
+            <li>Reading and writing Avro files</li>
+            <li>Support for overriding the Avro schema when reading an Avro file</li>
+            <li>Compressing Avro files during writing</li>
+            <li>Automatic Avro schema generation when writing an Avro file</li>
+          </ul></p>
+        <p>Greenplum Database returns an error if the Avro file contains unsupported features or if
+          the specified schema does not match the data.</p>
+      </body>
+      <topic id="topic_skt_2yv_vs">
+        <title>Reading from and Writing to Avro Files</title>
+        <body>
+          <p>To read from or write to an Avro file, you create an external table and specify the
+            location of the Avro file in the <codeph>LOCATION</codeph> clause and
+              <codeph>'AVRO'</codeph> in the <codeph>FORMAT</codeph> clause. For example, this is
+            the syntax for a readable external table.
+            <codeblock>CREATE EXTERNAL TABLE <varname>tablename</varname> (<varname>column_spec</varname>) LOCATION ( 'gphdfs://<varname>location</varname>') FORMAT 'AVRO' </codeblock></p>
+          <p>The <varname>location</varname> can be an individual Avro file or a directory
+            containing a set of Avro files. If the location specifies multiple files (a directory
+            name or a file name containing wildcard characters), Greenplum Database uses the schema
+            in the first file of the directory as the schema of the whole directory. For the file
+            name you can specify the wildcard character * to match any number of characters. </p>
+          <p>You can add parameters after the file specified in the <varname>location</varname>. You
+            add parameters with the http query string syntax that starts with <codeph>?</codeph> and
+              <codeph>&amp;</codeph> between field and value pairs.</p>
+          <p>For readable external tables, the only valid parameter is <codeph>schema</codeph>. The
+              <codeph>gphdfs</codeph> uses this schema instead of the Avro file schema when reading
+            Avro files. See <xref href="#topic_zrv_2yv_vs" format="dita"/>.</p>
+          <p>For writable external tables, you can specify <codeph>schema</codeph>,
+              <codeph>namespace</codeph>, and parameters for compression.</p>
+          <table id="table_hd5_2yv_vs">
+            <title>Avro External Table Parameters </title>
+            <tgroup cols="4">
+              <colspec colnum="1" colname="col1" colwidth="1*"/>
+              <colspec colnum="2" colname="col2" colwidth="1*"/>
+              <colspec colname="newCol3" colnum="3" colwidth="1*"/>
+              <colspec colnum="4" colname="col3" colwidth="2*"/>
+              <thead>
+                <row>
+                  <entry colname="col1">Parameter</entry>
+                  <entry colname="col2">Value</entry>
+                  <entry>Readable/Writable</entry>
+                  <entry colname="col3">Default Value</entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry colname="col1">schema</entry>
+                  <entry colname="col2">
+                    <varname>URL_to_schema_file</varname>
+                  </entry>
+                  <entry>Read and Write</entry>
+                  <entry colname="col3">None.<p>For a readable external table<ul id="ul_el5_2yv_vs">
+                        <li>The specified schema overrides the schema in the Avro file. See <xref
+                            href="#topic_zrv_2yv_vs" format="dita">Avro Schema Overrides</xref></li>
+                        <li>If not specified, Greenplum Database uses the Avro file schema.</li>
+                      </ul></p><p>For a writable external table<ul id="ul_kl5_2yv_vs">
+                        <li>Uses the specified schema when creating the Avro file.</li>
+                        <li>If not specified, Greenplum Database creates a schema according to the
+                          external table definition.</li>
+                      </ul></p></entry>
+                </row>
+                <row>
+                  <entry colname="col1">namespace</entry>
+                  <entry colname="col2">
+                    <varname>avro_namespace</varname>
+                  </entry>
+                  <entry>Write only</entry>
+                  <entry colname="col3">
+                    <codeph>public.avro</codeph>
+                    <p>If specified, a valid Avro <varname>namespace</varname>. </p>
+                  </entry>
+                </row>
+                <row>
+                  <entry colname="col1">compress</entry>
+                  <entry colname="col2"><codeph>true</codeph> or <codeph>false</codeph></entry>
+                  <entry>Write only</entry>
+                  <entry colname="col3">
+                    <codeph>false</codeph>
+                  </entry>
+                </row>
+                <row>
+                  <entry colname="col1">compression_type</entry>
+                  <entry colname="col2">
+                    <codeph>block</codeph>
+                  </entry>
+                  <entry>Write only</entry>
+                  <entry colname="col3">Optional. <p>For <codeph>avro</codeph> format,
+                        <codeph>compression_type</codeph> must be <codeph>block</codeph> if
+                        <codeph>compress</codeph> is <codeph>true</codeph>.</p></entry>
+                </row>
+                <row>
+                  <entry colname="col1">codec</entry>
+                  <entry colname="col2"><codeph>deflate</codeph> or <codeph>snappy</codeph></entry>
+                  <entry>Write only</entry>
+                  <entry colname="col3">
+                    <codeph>deflate</codeph>
+                  </entry>
+                </row>
+                <row>
+                  <entry colname="col1">codec_level (<codeph>deflate</codeph> codec only)</entry>
+                  <entry colname="col2">integer between 1 and 9</entry>
+                  <entry>Write only</entry>
+                  <entry colname="col3">
+                    <codeph>6</codeph>
+                    <p>The level controls the trade-off between speed and compression. Valid values
+                      are 1 to 9, where 1 is the fastest and 9 is the most compressed. </p>
+                  </entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </table>
+          <p>This set of parameters specify <codeph>snappy</codeph>
+            compression:<codeblock> 'compress=true&amp;codec=snappy'</codeblock></p>
+          <p>These two sets of parameters specify <codeph>deflate</codeph> compression and are
+            equivalent:</p>
+          <codeblock> 'compress=true&amp;codec=deflate&amp;codec_level=1'
+ 'compress=true&amp;codec_level=1'</codeblock>
+        </body>
+      </topic>
+      <topic id="topic_jt5_2yv_vs">
+        <title>Data Conversion When Reading Avro Files</title>
+        <body>
+          <p>When you create a readable external table to Avro file data, Greenplum Database
+            converts Avro data types to Greenplum Database data types.<note>When reading an Avro,
+              Greenplum Database converts the Avro field data at the top level of the Avro schema to
+              a Greenplum Database table column. This is how the <codeph>gphdfs</codeph> protocol
+              converts the Avro data types.<ul id="ul_r3x_cht_xs">
+                <li>An Avro primitive data type, Greenplum Database converts the data to a Greenplum
+                  Database type.</li>
+                <li>An Avro complex data type that is not <codeph>map</codeph> or
+                    <codeph>record</codeph>, Greenplum Database converts the data to a Greenplum
+                  Database type.</li>
+                <li>An Avro <codeph>record</codeph> that is a sub-record (nested within the top
+                  level Avro schema record), Greenplum Database converts the data XML.</li>
+              </ul></note></p>
+          <p>This table lists the Avro primitive data types and the Greenplum Database type it is
+            converted to.</p>
+          <table id="table_hmv_2yv_vs">
+            <title>Avro Primitive Data Type Support for Readable External Tables</title>
+            <tgroup cols="2">
+              <colspec colnum="1" colname="col1" colwidth="1*"/>
+              <colspec colnum="2" colname="col2" colwidth="2.88*"/>
+              <thead>
+                <row>
+                  <entry>Avro Data Type</entry>
+                  <entry>Greenplum Database Data Type</entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry>null</entry>
+                  <entry>Supported only in a Avro union data type. See <xref
+                      href="#topic_skw_2yv_vs" format="dita"/>.</entry>
+                </row>
+                <row>
+                  <entry>boolean </entry>
+                  <entry>boolean</entry>
+                </row>
+                <row>
+                  <entry>int </entry>
+                  <entry>int or smallint</entry>
+                </row>
+                <row>
+                  <entry>long </entry>
+                  <entry>bigint</entry>
+                </row>
+                <row>
+                  <entry>float </entry>
+                  <entry>real</entry>
+                </row>
+                <row>
+                  <entry>double </entry>
+                  <entry>double</entry>
+                </row>
+                <row>
+                  <entry>bytes </entry>
+                  <entry>bytea</entry>
+                </row>
+                <row>
+                  <entry>string </entry>
+                  <entry>text</entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </table>
+          <note>When reading the Avro <codeph>int</codeph> data type as Greenplum Database
+              <codeph>smallint</codeph> data type, you must ensure that the Avro
+              <codeph>int</codeph> values do not exceed the Greenplum Database maximum
+              <codeph>smallint</codeph> value. If the Avro value is too large, the Greenplum
+            Database value will be incorrect.<p>The <codeph>gphdfs</codeph> protocol converts
+              performs this conversion for <codeph>smallint</codeph>: <codeph>short result =
+                (short)IntValue;</codeph>.</p></note>
+          <p>This table lists the Avro complex data types and the and the Greenplum Database type it
+            is converted to. </p>
+          <table id="table_arg_vrc_ws">
+            <title>Avro Complex Data Type Support for Readable External Tables</title>
+            <tgroup cols="2">
+              <colspec colnum="1" colname="col1" colwidth="1*"/>
+              <colspec colnum="2" colname="col2" colwidth="2.88*"/>
+              <thead>
+                <row>
+                  <entry>Avro Data Type</entry>
+                  <entry>Greenplum Database Data Type</entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry>enum</entry>
+                  <entry>int<p>The integer represents the zero-based position of the symbol in the
+                      schema.</p></entry>
+                </row>
+                <row>
+                  <entry>array</entry>
+                  <entry>array<p>The Greenplum Database array dimensions match the Avro array
+                      dimensions. The element type is converted from the Avro data type to the
+                      Greenplum Database data type.</p></entry>
+                </row>
+                <row>
+                  <entry>maps </entry>
+                  <entry>Not supported</entry>
+                </row>
+                <row>
+                  <entry>union </entry>
+                  <entry>The first non-null data type.</entry>
+                </row>
+                <row>
+                  <entry>fixed </entry>
+                  <entry>bytea</entry>
+                </row>
+                <row>
+                  <entry>record</entry>
+                  <entry>XML data</entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </table>
+        </body>
+        <topic id="topic_nw1_f3t_xs">
+          <title>Example Avro Schema</title>
+          <body>
+            <p>This is an example Avro schema. When reading the data from the Avro file the
+                <codeph>gphdfs</codeph> protocol performs these conversions:<ul id="ul_hry_hcb_dt">
+                <li><codeph>name</codeph> and <codeph>color</codeph> data are converted to Greenplum
+                  Database <codeph>sting</codeph>.</li>
+                <li><codeph>age</codeph> data is converted to Greenplum Database
+                    <codeph>int</codeph>.</li>
+                <li><codeph>clist</codeph> records are converted to <codeph>XML</codeph>.</li>
+              </ul><codeblock>{"namespace": "example.avro",
+  "type": "record",
+  "name": "User",
+  "fields": [
+    {"name": "name", "type": "string"},
+    {"name": "number", "type": ["int", "null"]},
+    {"name": "color", "type": ["string", "null"]},
+    {"name": "clist",
+      "type": {
+       "type":"record",
+        "name":"clistRecord",
+        "fields":[
+          {"name": "class", "type": ["string", "null"]},
+          {"name": "score", "type": ["double", "null"]},
+          {"name": "grade",
+            "type": {
+             "type":"record",
+              "name":"inner2",
+              "fields":[
+                {"name":"a", "type":["double" ,"null"]},
+                {"name":"b", "type":["string","null"]}
+             ]}
+          },
+         {"name": "grade2",
+           "type": {
+            "type":"record",
+             "name":"inner",
+             "fields":[
+               {"name":"a", "type":["double","null"]},
+               {"name":"b", "type":["string","null"]},
+               {"name":"c", "type":{
+                 "type": "record",
+                 "name":"inner3",
+                 "fields":[
+                   {"name":"c1", "type":["string", "null"]},
+                   {"name":"c2", "type":["int", "null"]}
+               ]}}
+           ]}
+         }
+      ]}
+    }
+  ]
+}</codeblock></p>
+            <p>This XML is an example of how the <codeph>gpfist</codeph> protocol converts Avro data
+              from the <codeph>clist</codeph> field to XML data based on the previous schema. For
+              records nested in the Avro top-level record, <codeph>gpfist</codeph> protocol converts
+              the Avro element name to the XML element name and the name of the record is an
+              attribute of the XML element. For example, the name of the top most element
+                <codeph>clist</codeph> and the <codeph>type</codeph> attribute is the name of the
+              Avro record element <codeph>clistRecord</codeph>.
+              <codeblock>&lt;clist type="clistRecord">
+  &lt;class type="string">math&lt;/class>
+  &lt;score type="double">99.5&lt;/score>
+  &lt;grade type="inner2">
+    &lt;a type="double">88.8&lt;/a>
+    &lt;b type="string">subb0&lt;/b>
+  &lt;/grade>
+  &lt;grade2 type="inner">
+    &lt;a type="double">77.7&lt;/a>
+    &lt;b type="string">subb20&lt;/b>
+    &lt;c type="inner3">
+       &lt;c1 type="string">subc&lt;/c1>
+       &lt;c2 type="int&amp; quot;>0&lt;/c2>
+    &lt;/c>
+  &lt;/grade2>
+&lt;/clist></codeblock></p>
+          </body>
+        </topic>
+      </topic>
+      <topic id="topic_zrv_2yv_vs">
+        <title>Avro Schema Overrides for Readable External Tables</title>
+        <body>
+          <p>When you specify schema for a readable external table that specifies an Avro file as a
+            source, Greenplum Database uses the schema when reading data from the Avro file. The
+            specified schema overrides the Avro file schema.</p>
+          <p dir="ltr">You can specify a file that contains an Avro schema as part of the location
+            paramter <codeph>CREATE EXTERNAL TABLE</codeph> command, to override the Avro file
+            schema. If a set of Avro files contain different, related schemas, you can specify an
+            Avro schema to retrieve the data common to all the files.</p>
+          <p dir="ltr">Greenplum Database extracts the data from the Avro files based on the field
+            name. If an Avro file contains a field with same name, Greenplum Database reads the data
+            , otherwise a <codeph>NULL</codeph> is returned. </p>
+          <p>For example, if a set of Avro files contain one of the two different schemas. This is
+            the original schema.</p>
+          <codeblock>{
+	"type":"record",
+	"name":"tav2",
+	"namespace":"public.avro",
+	"doc":"",
+	"fields":[
+		{"name":"id","type":["null","int"],"doc":""},
+		{"name":"name","type":["null","string"],"doc":""},
+		{"name":"age","type":["null","long"],"doc":""},
+		{"name":"birth","type":["null","string"],"doc":""}
+	]
+}</codeblock>
+          <p>This updated schema contains a comment field.</p>
+          <codeblock>{
+	"type":"record",
+	"name":"tav2",
+	"namespace":"public.avro",
+	"doc":"",
+	"fields":[
+		{"name":"id","type":["null","int"],"doc":""},
+		{"name":"name","type":["null","string"],"doc":""},
+		{"name":"birth","type":["null","string"],"doc":""},
+		{"name":"age","type":["null","long"],"doc":""},
+		{"name":"comment","type":["null","string"],"doc":""}
+	]
+}</codeblock>
+          <p>You can specify an file containing this Avro schema in a <codeph>CREATE EXTERNAL
+              TABLE</codeph> command, to read the <codeph>id</codeph>, <codeph>name</codeph>,
+              <codeph>birth</codeph>, and <codeph>comment</codeph> fields from the Avro
+            files.<codeblock>{
+	"type":"record",
+	"name":"tav2",
+	"namespace":"public.avro",
+	"doc":"",
+	"fields":[
+		{"name":"id","type":["null","int"],"doc":""},
+		{"name":"name","type":["null","string"],"doc":""},
+		{"name":"birth","type":["null","string"],"doc":""},
+		{"name":"comment","type":["null","string"],"doc":""}
+	]
+}</codeblock></p>
+          <p>In this example command, the customer data is in the Avro files
+              <codeph>tmp/cust*.avro</codeph>. Each file uses one of the schemas listed previously.
+            The file <codeph>avro/cust.avsc</codeph> is a text file that contains the Avro schema
+            used to override the schemas in the customer
+            files.<codeblock>CREATE WRITABLE EXTERNAL TABLE cust_avro(id int, name text, birth date) 
+   LOCATION ('gphdfs://my_hdfs:8020/tmp/cust*.avro
+      ?schema=hdfs://my_hdfs:8020/avro/cust.avsc')
+   FORMAT 'avro';</codeblock></p>
+          <p>When reading the Avro data, if Greenplum Database reads a file that does not contain a
+              <codeph>comment</codeph> field, a <codeph>NULL</codeph> is returned for the
+              <codeph>comment</codeph> data.</p>
+        </body>
+      </topic>
+      <topic id="topic_skw_2yv_vs">
+        <title>Data Conversion when Writing Avro Files</title>
+        <body>
+          <p>When you create a writable external table to write data to an Avro file, each table row
+            is an Avro record and each table column is an Avro field. When writing an Avro file, the
+            default compression algorithm is <codeph>deflate</codeph>. </p>
+          <p>For a writable external table, if the <codeph>schema</codeph> option is not specified,
+            Greenplum Database creates an Avro schema for the Avro file based on the Greenplum
+            Database external table definition. The name of the table column is the Avro field name.
+            The data type is a union data type. See the following table:</p>
+          <table id="table_jdx_2yv_vs">
+            <title>Avro Data Types Generated by Greenplum Database </title>
+            <tgroup cols="2">
+              <colspec colnum="1" colname="col1" colwidth="1*"/>
+              <colspec colnum="2" colname="col2" colwidth="2.88*"/>
+              <thead>
+                <row>
+                  <entry>Greenplum Database Data Type</entry>
+                  <entry>Avro Union Data Type Definition </entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry>boolean </entry>
+                  <entry>
+                    <codeph>["boolean", "null"]</codeph>
+                  </entry>
+                </row>
+                <row>
+                  <entry>int </entry>
+                  <entry>
+                    <codeph>["int", "null"]</codeph>
+                  </entry>
+                </row>
+                <row>
+                  <entry>bigint </entry>
+                  <entry>
+                    <codeph>["long", "null"]</codeph>
+                  </entry>
+                </row>
+                <row>
+                  <entry>smallint</entry>
+                  <entry>
+                    <codeph>["int", "null"]</codeph>
+                  </entry>
+                </row>
+                <row>
+                  <entry>real </entry>
+                  <entry>
+                    <codeph>["float", "null"]</codeph>
+                  </entry>
+                </row>
+                <row>
+                  <entry>double </entry>
+                  <entry>
+                    <codeph>["double", "null"]</codeph>
+                  </entry>
+                </row>
+                <row>
+                  <entry>bytea </entry>
+                  <entry>
+                    <codeph>["bytes", "null"]</codeph>
+                  </entry>
+                </row>
+                <row>
+                  <entry>text</entry>
+                  <entry>
+                    <codeph>["string", "null"]</codeph>
+                  </entry>
+                </row>
+                <row>
+                  <entry>array</entry>
+                  <entry>
+                    <codeph>[{<varname>array</varname>}, "null"]</codeph>
+                    <p>The Greenplum Database array is converted to an Avro array with same
+                      dimensions and same element type as the Greenplum Database array.</p>
+                  </entry>
+                </row>
+                <row>
+                  <entry>other data types</entry>
+                  <entry>
+                    <codeph>["string", "null"]</codeph>
+                    <p>Data are formatted strings. The <codeph>gphdfs</codeph> protocol casts the
+                      data to Greenplum Database text and writes the text to the Avro file as an
+                      Avro string. For example, date and time data are formatted as date and time
+                      strings and converted to Avro string type.</p>
+                  </entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </table>
+          <p>You can specify a schema with the <codeph>schema</codeph> option. When you specify a
+            schema, the file can be on the segment hosts or a file on the HDFS that is accessible to
+            Greenplum Database. For a local file, the file must exist in all segment hosts in the
+            same location. For a file on the HDFS, the file must exist in the same cluster as the
+            data file.</p>
+          <p>This example <codeph>schema</codeph> option specifies a schema on an HDFS.</p>
+          <codeblock>'schema=hdfs://mytest:8000/avro/array_simple.avsc'</codeblock>
+          <p>This example <codeph>schema</codeph> option specifies a schema on the host file
+            system.</p>
+          <codeblock>'schema=file:///mydata/avro_schema/array_simple.avsc'</codeblock>
+        </body>
+      </topic>
+      <topic id="topic_ljx_2yv_vs">
+        <title>gphdfs Limitations for Avro Files</title>
+        <body>
+          <p>For a Greenplum Database writable external table definition, columns cannot specify
+            the <codeph>NOT NULL</codeph> clause.</p>
+          <p>Greenplum Database supports only a single top-level schema in Avro files or specified
+            with the <codeph>schema</codeph> parameter in the <codeph>CREATE EXTERNAL TABLE</codeph>
+            command. An error is returned if Greenplum Database detects multiple top-level schemas. </p>
+          <p>Greenplum Database does not support the Avro <codeph>map</codeph> data type and returns
+            an error when encountered.</p>
+          <p>When Greenplum Database reads an array from an Avro file, the array is converted to the
+            literal text value. For example, the array <codeph>[1,3]</codeph> is converted to
+              <codeph>'{1,3}'</codeph>. </p>
+          <p>User defined types (UDT), including array UDT, are supported. For a writable external
+            table, the type is converted to string.</p>
+        </body>
+      </topic>
+      <topic id="topic_bhz_2yv_vs">
+        <title>Examples </title>
+        <body>
+          <p>Simple <codeph>CREATE EXTERNAL TABLE</codeph> command that reads data from the two Avro
+            fields <codeph>id</codeph> and
+              <codeph>ba</codeph>.<codeblock> CREATE EXTERNAL TABLE avro1 (id int, ba bytea[]) 
+   LOCATION ('gphdfs://my_hdfs:8020/avro/singleAvro/array2.avro') 
+   FORMAT 'avro';</codeblock><codeph>CREATE
+              WRITABLE EXTERNAL TABLE</codeph> command specifies the Avro schema that is the
+              <codeph>gphdfs</codeph> protocol uses to create the Avro file.</p>
+          <codeblock>CREATE WRITABLE EXTERNAL TABLE at1w(id int, names text[], nums int[]) 
+   LOCATION ('gphdfs://my_hdfs:8020/tmp/at1
+      ?schema=hdfs://my_hdfs:8020/avro/array_simple.avsc')
+   FORMAT 'avro';</codeblock>
+          <p><codeph>CREATE WRITABLE EXTERNAL TABLE</codeph> command that writes to an Avro file
+            and specifies a namespace for the Avro schema.</p>
+          <codeblock>CREATE WRITABLE EXTERNAL TABLE atudt1 (id int, info myt, birth date, salary numeric ) 
+   LOCATION ('gphdfs://my_hdfs:8020/tmp/emp01.avro
+      ?namespace=public.pivotal.avro') 
+   FORMAT 'avro';</codeblock>
+        </body>
+      </topic>
+    </topic>
+  </topic>
+</dita>

@@ -52,3 +52,13 @@ select count(*) AS only_visi_tups from sto_alt_uao2_constraint;
 set gp_select_invisible = true;
 select count(*)  AS invisi_and_visi_tups from sto_alt_uao2_constraint;
 set gp_select_invisible = false;
+-- Some negative testing.
+alter table sto_alt_uao2_constraint ADD COLUMN added_col10 character varying(35)
+default NULL constraint added_col10 NOT NULL;
+alter table sto_alt_uao2_constraint ADD COLUMN added_col12 character varying(35)
+-- Mask out "by some row" printed by row-oriented AO tables
+-- start_matchsubs
+-- m/^ERROR:  check constraint.*is violated/
+-- s/^ERROR:  check constraint.*is violated.*/ERROR:  check constraint is violated/
+-- end_matchsubs
+default 'abc'  CHECK (added_col12 is NULL);

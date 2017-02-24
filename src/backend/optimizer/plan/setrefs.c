@@ -685,20 +685,6 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 			break;
 
 		case T_Sort:
-			/* GPDB has limit/offset in the sort node as well. */
-			{
-				Sort	   *splan = (Sort *) plan;
-
-				set_dummy_tlist_references(plan, rtoffset);
-				Assert(splan->plan.qual == NIL);
-
-				splan->limitOffset =
-					fix_scan_expr(glob, splan->limitOffset, rtoffset);
-				splan->limitCount =
-					fix_scan_expr(glob, splan->limitCount, rtoffset);
-			}
-			break;
-
 		case T_Hash:
 		case T_Material:
 		case T_Unique:

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
+<map>
+ <title>Accessing the Database</title>
+ <topicref href="topics/g-accessing-the-database.xml">
+  <topicref href="topics/g-establishing-a-database-session.xml"/>
+  <topicref href="topics/g-supported-client-applications.xml"/>
+  <topicref href="topics/g-greenplum-database-client-applications.xml"/>
+
+ <topicref href="topics/g-connecting-with-psql.xml"/>
+ <topicref href="topics/g-pgadmin-iii-for-greenplum-database.xml">
+  <topicref href="topics/g-installing-pgadmin-iii-for-greenplum-database.xml"/>
+  <topicref href="topics/g-documentation-for-pgadmin-iii-for-greenplum-database.xml"/>
+  <topicref href="topics/g-performing-administrative-tasks-with-pgadmin-iii.xml">
+   <topicref href="topics/g-editing-server-configuration.xml"/>
+   <topicref href="topics/g-viewing-a-graphical-query-plan.dita"/>
+  </topicref>
+ </topicref>
+  <topicref href="topics/pgbouncer.xml"/>
+ <topicref href="topics/g-database-application-interfaces.xml"/>
+ <topicref href="topics/g-third-party-client-tools.xml"/>
+ <topicref href="topics/g-troubleshooting-connection-problems.xml"/>
+</topicref>
+</map>

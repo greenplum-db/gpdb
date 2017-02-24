@@ -9,9 +9,10 @@
 #include <openssl/md5.h>
 #include <openssl/ssl.h>
 #include <pthread.h>
-#include <signal.h>
 #include <zlib.h>
 #include <algorithm>
+#include <csignal>
+#include <cstring>
 #include <map>
 #include <memory>
 #include <set>
@@ -62,8 +63,7 @@ struct S3Credential {
     string token;
 };
 
-bool InitConfig(S3Params &params, const string &urlWithOptions);
-bool InitConfig(S3Params &params, const string &path, const string &section);
+S3Params InitConfig(const string &urlWithOptions);
 
 void MaskThreadSignals();
 #endif

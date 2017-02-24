@@ -197,6 +197,10 @@ CopyPlanFields(Plan *from, Plan *newnode)
 	COPY_SCALAR_FIELD(directDispatch.isDirectDispatch);
 	COPY_NODE_FIELD(directDispatch.contentIds);
 	COPY_SCALAR_FIELD(operatorMemKB);
+	/*
+	 * Don't copy memoryAccountId and this is an index to the account array
+	 * specific to this process only.
+	 */
 }
 
 /*
@@ -878,8 +882,6 @@ _copySort(Sort *from)
 	COPY_POINTER_FIELD(nullsFirst, from->numCols * sizeof(bool));
 
     /* CDB */
-	COPY_NODE_FIELD(limitOffset);
-	COPY_NODE_FIELD(limitCount);
 	COPY_SCALAR_FIELD(noduplicates);
 
 	COPY_SCALAR_FIELD(share_type);

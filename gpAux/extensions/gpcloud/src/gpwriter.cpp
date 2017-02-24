@@ -4,28 +4,14 @@
 // Hold memory context to avoid it being destructed before GPReader or GPWriter
 extern S3MemoryContext* memoryContextHolder;
 
-GPWriter::GPWriter(const S3Params& params, const string& url, string fmt)
+GPWriter::GPWriter(const S3Params& params, string fmt)
     : format(fmt), params(params), restfulService(this->params), s3InterfaceService(this->params) {
-    string replacedURL = S3UrlUtility::replaceSchemaFromURL(url, this->params.isEncryption());
-
-    // construct a canonical URL string
-    // schema://domain/uri_encoded_path/
-    string encodedURL = uri_encode(replacedURL);
-    find_replace(encodedURL, "%3A%2F%2F", "://");
-    find_replace(encodedURL, "%2F", "/");
-
-    constructS3Params(encodedURL);
     restfulServicePtr = &restfulService;
-}
-
-void GPWriter::constructS3Params(const string& url) {
-    this->params.setBaseUrl(url);
-    this->params.setRegion(S3UrlUtility::getRegionFromURL(url));
 }
 
 void GPWriter::open(const S3Params& params) {
     this->s3InterfaceService.setRESTfulService(this->restfulServicePtr);
-    this->params.setKeyUrl(this->genUniqueKeyName(this->params.getBaseUrl()));
+    this->params = this->params.setPrefix(this->genUniqueKeyName(this->params.getS3Url()));
     this->commonWriter.setS3InterfaceService(&this->s3InterfaceService);
     this->commonWriter.open(this->params);
 }
@@ -38,17 +24,23 @@ void GPWriter::close() {
     this->commonWriter.close();
 }
 
-string GPWriter::genUniqueKeyName(const string& url) {
-    string keyName;
+string GPWriter::genUniqueKeyName(const S3Url& s3Url) {
+    string fullUrl = s3Url.getFullUrlForCurl();
 
-    do {
-        keyName = this->constructKeyName(url);
-    } while (this->s3InterfaceService.checkKeyExistence(keyName, this->params.getRegion()));
+    while (true) {
+        stringstream ss;
+        ss << s3ext_segid << this->constructRandomStr() << "." << this->format;
 
-    return keyName;
+        if (!this->s3InterfaceService.checkKeyExistence(
+                S3Url((fullUrl + ss.str()), (s3Url.getSchema() == "https"), s3Url.getVersion(),
+                      s3Url.getRegion()))) {
+            string keyName = ss.str();
+            return s3Url.getPrefix() + keyName;
+        }
+    }
 }
 
-string GPWriter::constructKeyName(const string& url) {
+string GPWriter::constructRandomStr() {
     int randomDevice = ::open("/dev/urandom", O_RDONLY);
     char randomData[32];
     size_t randomDataLen = 0;
@@ -67,11 +59,7 @@ string GPWriter::constructKeyName(const string& url) {
 
     sha256_hex(randomData, out_hash_hex);
 
-    stringstream ss;
-    ss << url << s3ext_segid << out_hash_hex + SHA256_DIGEST_STRING_LENGTH - 8 - 1 << '.'
-       << this->format;
-
-    return ss.str();
+    return out_hash_hex + SHA256_DIGEST_STRING_LENGTH - 8 - 1;
 }
 
 // invoked by s3_export(), need to be exception safe
@@ -85,18 +73,8 @@ GPWriter* writer_init(const char* url_with_options, const char* format) {
         }
 
         string urlWithOptions(url_with_options);
-        string url = truncateOptions(urlWithOptions);
 
-        if (url.empty()) {
-            return NULL;
-        }
-
-        S3Params params;
-        if (!InitConfig(params, urlWithOptions)) {
-            return NULL;
-        }
-
-        CheckEssentialConfig(params);
+        S3Params params = InitConfig(urlWithOptions);
 
         InitRemoteLog();
 
@@ -104,7 +82,7 @@ GPWriter* writer_init(const char* url_with_options, const char* format) {
         PrepareS3MemContext(params);
 
         string extName = params.isAutoCompress() ? string(format) + ".gz" : format;
-        writer = new GPWriter(params, url, extName);
+        writer = new GPWriter(params, extName);
         if (writer == NULL) {
             return NULL;
         }

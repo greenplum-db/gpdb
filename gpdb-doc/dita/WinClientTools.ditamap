@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE bookmap
+  PUBLIC "-//OASIS//DTD DITA BookMap//EN" "bookmap.dtd">
+<bookmap xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="book">
+    <booktitle>
+        <booklibrary id="product_name">
+            <tm trademark="Pivotal" tmtype="tm">Pivotal</tm>
+            <tm trademark="Greenplum Database" tmtype="reg">Greenplum Database</tm>
+        </booklibrary>
+        <mainbooktitle id="pdf_version">Version 4.3</mainbooktitle>
+        <booktitlealt id="pdf_title">Client Tools for Windows</booktitlealt>
+        <booktitlealt id="pdf_revision_number">Rev: A06</booktitlealt>
+        <booktitlealt id="copyright_date">© 2016 Pivotal Software, Inc.</booktitlealt>
+    </booktitle>
+    <bookmeta>
+        <author/>
+        <prodinfo>
+            <prodname>Client Tools for Windows</prodname>
+            <vrmlist>
+                <vrm version="" release="" modification=""/>
+            </vrmlist>
+        </prodinfo>
+        <bookid>
+            <bookpartno/>
+            <booknumber/>
+            <maintainer>
+                <organization/>
+                <person/>
+            </maintainer>
+        </bookid>
+        <bookrights>
+            <copyrfirst>
+                <year/>
+            </copyrfirst>
+            <copyrlast>
+                <year/>
+            </copyrlast>
+            <bookowner>
+                <organization/>
+            </bookowner>
+        </bookrights>
+    </bookmeta>
+    <frontmatter>
+        <keydef keys="product_name">
+            <topicmeta>
+                <keywords>
+                    <keyword>Greenplum Database</keyword>
+                </keywords>
+            </topicmeta>
+        </keydef>
+        <keydef keys="product_name_short">
+            <topicmeta>
+                <keywords>
+                    <keyword>Greenplum</keyword>
+                </keywords>
+            </topicmeta>
+        </keydef>
+        <keydef keys="toolkit_prefix">
+            <topicmeta>
+                <keywords>
+                    <keyword>gp_</keyword>
+                </keywords>
+            </topicmeta>
+        </keydef>
+        <booklists>
+            <toc/>
+        </booklists>
+        <notices href="client_tool_guides/common/pivotal-copyright.xml"/>
+    </frontmatter>
+    <chapter href="client_tool_guides/client/windows/win_client_install.xml" navtitle="Installing
+        the Greenplum Client Tools"/>
+    <chapter href="client_tool_guides/client/windows/win_client_run.xml" navtitle="Running the
+        Greenplum Client Tools"/>
+    <chapter href="client_tool_guides/client/windows/win_client_tool_ref.xml" navtitle="Client Tools
+        Reference">
+        <topicref href="client_tool_guides/client/windows/psqlexe.xml" navtitle="psql.exe"/>
+    </chapter>
+    <chapter href="client_tool_guides/common/client_sql_ref.xml" navtitle="SQL Command
+        Reference"/>
+</bookmap>

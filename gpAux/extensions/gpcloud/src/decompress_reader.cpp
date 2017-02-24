@@ -116,8 +116,9 @@ void DecompressReader::decompress() {
         S3DEBUG("Decompression finished: Z_STREAM_END.");
     } else if (status < 0 || status == Z_NEED_DICT) {
         inflateEnd(&this->zstream);
-        S3_CHECK_OR_DIE(false, S3RuntimeError, string("Failed to decompress data: ") +
-                                                   std::to_string((unsigned long long)status));
+        S3_CHECK_OR_DIE(
+            false, S3RuntimeError,
+            string("Failed to decompress data: ") + std::to_string((unsigned long long)status));
     }
 }
 

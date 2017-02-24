@@ -36,5 +36,5 @@ clean:
 	@ echo "======================================================================"
 	@ echo "Deleting cluster.... "
 	@ echo "======================================================================"
-	@ DEMO_PORT_BASE=$(PORT_BASE) ./demo_cluster.sh -d
+	@ MASTER_DEMO_PORT=$(MASTER_PORT) DEMO_PORT_BASE=$(PORT_BASE) NUM_PRIMARY_MIRROR_PAIRS=$(NUM_PRIMARY_MIRROR_PAIRS) ./demo_cluster.sh -d
 	@ echo ""

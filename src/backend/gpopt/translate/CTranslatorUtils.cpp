@@ -20,6 +20,7 @@
 #include "nodes/parsenodes.h"
 #include "access/sysattr.h"
 #include "catalog/pg_type.h"
+#include "catalog/pg_proc.h"
 #include "catalog/pg_trigger.h"
 #include "optimizer/walkers.h"
 #include "utils/rel.h"
@@ -120,7 +121,14 @@ CTranslatorUtils::Pdxltabdesc
 {
 	// generate an MDId for the table desc.
 	OID oidRel = prte->relid;
-	
+
+	if (gpdb::FHasExternalPartition(oidRel))
+	{
+		// fall back to the planner for queries with partition tables that has an external table in one of its leaf
+		// partitions.
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Query over external partitions"));
+	}
+
 	CMDIdGPDB *pmdid = CDXLUtils::Pmdid(pmp, oidRel);
 
 	const IMDRelation *pmdrel = pmda->Pmdrel(pmdid);
@@ -132,8 +140,9 @@ CTranslatorUtils::Pdxltabdesc
 	CDXLTableDescr *pdxltabdesc = GPOS_NEW(pmp) CDXLTableDescr(pmp, pmdid, pmdnameTbl, prte->checkAsUser);
 
 	const ULONG ulLen = pmdrel->UlColumns();
-	
+
 	IMDRelation::Ereldistrpolicy ereldist = pmdrel->Ereldistribution();
+
 	if (NULL != pfDistributedTable &&
 		(IMDRelation::EreldistrHash == ereldist || IMDRelation::EreldistrRandom == ereldist))
 	{
@@ -147,6 +156,7 @@ CTranslatorUtils::Pdxltabdesc
 
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Queries on master-only tables"));
 		}
+
 	// add columns from md cache relation object to table descriptor
 	for (ULONG ul = 0; ul < ulLen; ul++)
 	{
@@ -298,7 +308,7 @@ CTranslatorUtils::Pdxltvf
 												pmp,
 												pdrgpmdidOutArgTypes,
 												plArgTypes,
-												pfuncexpr->args
+												pfuncexpr
 												);
 			pdrgpmdidOutArgTypes->Release();
 			pdrgpmdidOutArgTypes = pdrgpmdidResolved;
@@ -336,64 +346,55 @@ CTranslatorUtils::PdrgpmdidResolvePolymorphicTypes
 	IMemoryPool *pmp,
 	DrgPmdid *pdrgpmdidTypes,
 	List *plArgTypes,
-	List *plArgsFromQuery
+	FuncExpr *pfuncexpr
 	)
 {
-	OID oidAnyElement = InvalidOid;
-	OID oidAnyArray = InvalidOid;
+	ULONG ulArgIndex = 0;
+
 	const ULONG ulArgTypes = gpdb::UlListLength(plArgTypes);
-	const ULONG ulArgsFromQuery = gpdb::UlListLength(plArgsFromQuery);
-	for (ULONG ul = 0; ul < ulArgTypes && ul < ulArgsFromQuery; ul++)
+	const ULONG ulArgsFromQuery = gpdb::UlListLength(pfuncexpr->args);
+	const ULONG ulNumReturnArgs = pdrgpmdidTypes->UlLength();
+	const ULONG ulNumArgs = ulArgTypes < ulArgsFromQuery ? ulArgTypes : ulArgsFromQuery;
+	const ULONG ulTotalArgs = ulNumArgs + ulNumReturnArgs;
+
+	OID argTypes[ulNumArgs];
+	char argModes[ulTotalArgs];
+
+	// copy function argument types
+	ListCell *plcArgType = NULL;
+	ForEach (plcArgType, plArgTypes)
 	{
-		OID oidArgType = gpdb::OidListNth(plArgTypes, ul);
-		OID oidArgTypeFromQuery = gpdb::OidExprType((Node *) gpdb::PvListNth(plArgsFromQuery, ul));
-
-		if (ANYELEMENTOID == oidArgType && InvalidOid == oidAnyElement)
-		{
-			oidAnyElement = oidArgTypeFromQuery;
-		}
-
-		if (ANYARRAYOID == oidArgType && InvalidOid == oidAnyArray)
-		{
-			oidAnyArray = oidArgTypeFromQuery;
-		}
+		argTypes[ulArgIndex] = lfirst_oid(plcArgType);
+		argModes[ulArgIndex++] = PROARGMODE_IN;
 	}
 
-	GPOS_ASSERT(InvalidOid != oidAnyElement || InvalidOid != oidAnyArray);
-
-	// use the resolved type to deduce the other if necessary
-	if (InvalidOid == oidAnyElement)
+	// copy function return types
+	for (ULONG ul = 0; ul < ulNumReturnArgs; ul++)
 	{
-		oidAnyElement = gpdb::OidResolveGenericType(ANYELEMENTOID, oidAnyArray, ANYARRAYOID);
+		IMDId *pmdid = (*pdrgpmdidTypes)[ul];
+		argTypes[ulArgIndex] = CMDIdGPDB::PmdidConvert(pmdid)->OidObjectId();
+		argModes[ulArgIndex++] = PROARGMODE_TABLE;
 	}
 
-	if (InvalidOid == oidAnyArray)
+	if(!gpdb::FResolvePolymorphicType(ulTotalArgs, argTypes, argModes, pfuncexpr))
 	{
-		oidAnyArray = gpdb::OidResolveGenericType(ANYARRAYOID, oidAnyElement, ANYELEMENTOID);
+		GPOS_RAISE
+				(
+				gpdxl::ExmaDXL,
+				gpdxl::ExmiDXLUnrecognizedType,
+				GPOS_WSZ_LIT("could not determine actual argument/return type for polymorphic function")
+				);
 	}
 
 	// generate a new array of mdids based on the resolved types
 	DrgPmdid *pdrgpmdidResolved = GPOS_NEW(pmp) DrgPmdid(pmp);
 
-	const ULONG ulLen = pdrgpmdidTypes->UlLength();
-	for (ULONG ul = 0; ul < ulLen; ul++)
+	// get the resolved return types
+	for (ULONG ul = ulNumArgs; ul < ulTotalArgs ; ul++)
 	{
-		IMDId *pmdid = (*pdrgpmdidTypes)[ul];
-		IMDId *pmdidResolved = NULL;
-		if (FAnyElement(pmdid))
-		{
-			pmdidResolved = GPOS_NEW(pmp) CMDIdGPDB(oidAnyElement);
-		}
-		else if (FAnyArray(pmdid))
-		{
-			pmdidResolved = GPOS_NEW(pmp) CMDIdGPDB(oidAnyArray);
-		}
-		else
-		{
-			pmdid->AddRef();
-			pmdidResolved = pmdid;
-		}
 
+		IMDId *pmdidResolved = NULL;
+		pmdidResolved = GPOS_NEW(pmp) CMDIdGPDB(argTypes[ul]);
 		pdrgpmdidResolved->Append(pmdidResolved);
 	}
 
@@ -406,9 +407,7 @@ CTranslatorUtils::PdrgpmdidResolvePolymorphicTypes
 //
 //	@doc:
 //		Check if the given mdid array contains any of the polymorphic
-//		types (ANYELEMENT, ANYARRAY)
-//
-// GPDB_83_MERGE_FIXME: What about ANYENUM?
+//		types (ANYELEMENT, ANYARRAY, ANYENUM, ANYNONARRAY)
 //
 //---------------------------------------------------------------------------
 BOOL
@@ -421,50 +420,14 @@ CTranslatorUtils::FContainsPolymorphicTypes
 	const ULONG ulLen = pdrgpmdidTypes->UlLength();
 	for (ULONG ul = 0; ul < ulLen; ul++)
 	{
-		IMDId *pmdid = (*pdrgpmdidTypes)[ul];
-		if (FAnyElement(pmdid) || FAnyArray(pmdid))
+		IMDId *pmdidType = (*pdrgpmdidTypes)[ul];
+		if (IsPolymorphicType(CMDIdGPDB::PmdidConvert(pmdidType)->OidObjectId()))
 		{
 			return true;
 		}
 	}
 
 	return false;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorUtils::FAnyElement
-//
-//	@doc:
-//		Check if the given type mdid is the "ANYELEMENT" type
-//
-//---------------------------------------------------------------------------
-BOOL
-CTranslatorUtils::FAnyElement
-	(
-	IMDId *pmdidType
-	)
-{
-	Oid oid = CMDIdGPDB::PmdidConvert(pmdidType)->OidObjectId();
-	return (ANYELEMENTOID == oid);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorUtils::FAnyArray
-//
-//	@doc:
-//		Check if the given type mdid is the "ANYARRAY" type
-//
-//---------------------------------------------------------------------------
-BOOL
-CTranslatorUtils::FAnyArray
-	(
-	IMDId *pmdidType
-	)
-{
-	Oid oid = CMDIdGPDB::PmdidConvert(pmdidType)->OidObjectId();
-	return (ANYARRAYOID == oid);
 }
 
 //---------------------------------------------------------------------------
@@ -1719,7 +1682,6 @@ CTranslatorUtils::PdxlnDummyPrElem
 	CMDIdGPDB *pmdidCopy = GPOS_NEW(pmp) CMDIdGPDB(pmdidOriginal->OidObjectId(), pmdidOriginal->UlVersionMajor(), pmdidOriginal->UlVersionMinor());
 
 	// create a column reference for the scalar identifier to be casted
-	ULONG ulColId = pdxlcdOutput->UlID();
 	CMDName *pmdname = GPOS_NEW(pmp) CMDName(pmp, pdxlcdOutput->Pmdname()->Pstr());
 	CDXLColRef *pdxlcr = GPOS_NEW(pmp) CDXLColRef(pmp, pmdname, ulColIdInput);
 	CDXLScalarIdent *pdxlopIdent = GPOS_NEW(pmp) CDXLScalarIdent(pmp, pdxlcr, pmdidCopy);
@@ -2542,9 +2504,6 @@ CTranslatorUtils::UpdateGrpColMapping
 	if (!pbsGrpCols->FBit(ulSortGrpRef))
 	{
 		ULONG ulUniqueGrpCols = pbsGrpCols->CElements();
-#ifdef GPOS_DEBUG
-		BOOL fResult = 
-#endif
 		phmululGrpColPos->FInsert(GPOS_NEW(pmp) ULONG (ulUniqueGrpCols), GPOS_NEW(pmp) ULONG(ulSortGrpRef));
 		(void) pbsGrpCols->FExchangeSet(ulSortGrpRef);
 	}

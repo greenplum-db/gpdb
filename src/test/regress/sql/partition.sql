@@ -1904,7 +1904,14 @@ where tablename = 'mpp5941';
 
 drop table mpp5941;
 
--- MPP-5984
+-- MPP-5984 - NULL is not allowed in RANGE partition
+CREATE TABLE partsupp ( ps_partkey integer,
+ps_suppkey integer, ps_availqty integer,
+ps_supplycost numeric, ps_comment character varying(199) )
+PARTITION BY RANGE(ps_partkey)
+(
+partition nnull start (NULL) end (300)
+);
 CREATE TABLE partsupp ( ps_partkey integer,
 ps_suppkey integer, ps_availqty integer,
 ps_supplycost numeric, ps_comment character varying(199) )

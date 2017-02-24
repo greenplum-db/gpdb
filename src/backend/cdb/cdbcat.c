@@ -143,17 +143,13 @@ GpPolicyFetch(MemoryContext mcxt, Oid tbloid)
 		 */
 		if (e && !e->iswritable)
 		{
-			if (e->command)
-			{
-				char	   *on_clause = (char *) strVal(linitial(e->locations));
+			char *on_clause = (char *) strVal(linitial(e->execlocations));
 
-				if (strcmp(on_clause, "MASTER_ONLY") == 0)
-				{
-					policy = (GpPolicy *) MemoryContextAlloc(mcxt, SizeOfGpPolicy(0));
-					policy->ptype = POLICYTYPE_ENTRY;
-					policy->nattrs = 0;
-					return policy;
-				}
+			if (strcmp(on_clause, "MASTER_ONLY") == 0) {
+				policy = (GpPolicy *) MemoryContextAlloc(mcxt, SizeOfGpPolicy(0));
+				policy->ptype = POLICYTYPE_ENTRY;
+				policy->nattrs = 0;
+				return policy;
 			}
 			policy = (GpPolicy *) MemoryContextAlloc(mcxt, SizeOfGpPolicy(0));
 			policy->ptype = POLICYTYPE_PARTITIONED;

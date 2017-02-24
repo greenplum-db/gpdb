@@ -118,8 +118,8 @@ COPY 185797
  a32    | date                        |                                                                             | plain    | zlib             | 6                 | 2097152    | 
  a33    | real                        |                                                                             | plain    | zlib             | 6                 | 2097152    | 
  a34    | money                       |                                                                             | plain    | zlib             | 6                 | 2097152    | 
- a35    | cidr                        |                                                                             | plain    | zlib             | 6                 | 2097152    | 
- a36    | inet                        |                                                                             | plain    | zlib             | 6                 | 2097152    | 
+ a35    | cidr                        |                                                                             | main     | zlib             | 6                 | 2097152    | 
+ a36    | inet                        |                                                                             | main     | zlib             | 6                 | 2097152    | 
  a37    | time without time zone      |                                                                             | plain    | zlib             | 6                 | 2097152    | 
  a38    | text                        |                                                                             | extended | zlib             | 6                 | 2097152    | 
  a39    | bit(1)                      |                                                                             | extended | zlib             | 6                 | 2097152    | 

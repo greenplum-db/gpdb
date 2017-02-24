@@ -126,6 +126,8 @@ ExecMaterial(MaterialState *node)
 		 * and sending Motion operators to neutralize a deadlock hazard.
 		 * MPP TODO: Remove when a better solution is implemented.
 		 *
+		 * See motion_sanity_walker() for details on how a deadlock may occur.
+		 *
 		 * ShareInput: if the material node
 		 * is used to share input, we will need to fetch all rows and put
 		 * them in tuple store

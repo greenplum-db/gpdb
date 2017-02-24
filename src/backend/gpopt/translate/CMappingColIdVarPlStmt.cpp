@@ -171,7 +171,7 @@ CMappingColIdVarPlStmt::PvarFromDXLNodeScId
 	// if lookup has failed in the first step, attempt lookup again using outer and inner contexts
 	if (0 == attno && NULL != m_pdrgpdxltrctx)
 	{
-		GPOS_ASSERT(0 != m_pdrgpdxltrctx->UlSafeLength());
+		GPOS_ASSERT(0 != m_pdrgpdxltrctx->UlLength());
 
 		const CDXLTranslateContext *pdxltrctxLeft = (*m_pdrgpdxltrctx)[0];
 
@@ -190,7 +190,7 @@ CMappingColIdVarPlStmt::PvarFromDXLNodeScId
 		}
 		else
 		{
-			const ULONG ulContexts = m_pdrgpdxltrctx->UlSafeLength();
+			const ULONG ulContexts = m_pdrgpdxltrctx->UlLength();
 			if (2 > ulContexts)
 			{
 				// there are no more children. col id not found in this tree

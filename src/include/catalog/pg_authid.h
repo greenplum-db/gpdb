@@ -65,10 +65,12 @@ CATALOG(pg_authid,1260) BKI_SHARED_RELATION
 	bool		rolcreatewextgpfd;	/* allowed to create writable gpfdist tbl?  */
 	bool		rolcreaterexthdfs;	/* allowed to create readable gphdfs tbl? */
 	bool		rolcreatewexthdfs;	/* allowed to create writable gphdfs tbl? */
+	Oid			rolresgroup;		/* ID of resource group for this role  */
 } FormData_pg_authid;
 
 /* GPDB added foreign key definitions for gpcheckcat. */
 FOREIGN_KEY(rolresqueue REFERENCES pg_resqueue(oid));
+FOREIGN_KEY(rolresgroup REFERENCES pg_resgroup(oid));
 
 #undef timestamptz
 
@@ -85,7 +87,7 @@ typedef FormData_pg_authid *Form_pg_authid;
  *		compiler constants for pg_authid
  * ----------------
  */
-#define Natts_pg_authid						17
+#define Natts_pg_authid						18
 #define Anum_pg_authid_rolname				1
 #define Anum_pg_authid_rolsuper				2
 #define Anum_pg_authid_rolinherit			3
@@ -103,6 +105,7 @@ typedef FormData_pg_authid *Form_pg_authid;
 #define Anum_pg_authid_rolcreatewextgpfd	15
 #define Anum_pg_authid_rolcreaterexthdfs	16
 #define Anum_pg_authid_rolcreatewexthdfs	17
+#define Anum_pg_authid_rolresgroup			18
 
 /* ----------------
  *		initial contents of pg_authid
@@ -110,10 +113,11 @@ typedef FormData_pg_authid *Form_pg_authid;
  * The uppercase quantities will be replaced at initdb time with
  * user choices.
  *
- * MPP-7845: add default queue DEFAULTRESQUEUE_OID 6055
+ * add default queue DEFAULTRESQUEUE_OID 6055
+ * add default group ADMINRESGROUP_OID 6438
  * ----------------
  */
-DATA(insert OID = 10 ( "POSTGRES" t t t t t t -1 _null_ _null_ _null_ 6055 t t t t t));
+DATA(insert OID = 10 ( "POSTGRES" t t t t t t -1 _null_ _null_ _null_ 6055 t t t t t 6438 ));
 
 #define BOOTSTRAP_SUPERUSERID 10
 
@@ -134,5 +138,6 @@ DATA(insert OID = 10 ( "POSTGRES" t t t t t t -1 _null_ _null_ _null_ 6055 t t t
 {1260, {"rolcreaterexthttp"},   16, -1,           1, 14, 0, -1, -1,  true, 'p' ,'c',false, false, false, true, 0}, \
 {1260, {"rolcreatewextgpfd"},   16, -1,           1, 15, 0, -1, -1,  true, 'p' ,'c',false, false, false, true, 0}, \
 {1260, {"rolcreaterexthdfs"},   16, -1,           1, 16, 0, -1, -1,  true, 'p' ,'c',false, false, false, true, 0}, \
-{1260, {"rolcreatewexthdfs"},   16, -1,           1, 17, 0, -1, -1,  true, 'p' ,'c',false, false, false, true, 0}
+{1260, {"rolcreatewexthdfs"},   16, -1,           1, 17, 0, -1, -1,  true, 'p' ,'c',false, false, false, true, 0}, \
+{1260, {"rolresgroup"}      ,   26, -1,           4, 18, 0, -1, -1,  true, 'p' ,'i',false, false, false, true, 0}
 #endif   /* PG_AUTHID_H */

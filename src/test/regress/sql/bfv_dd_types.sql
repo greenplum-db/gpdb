@@ -77,6 +77,7 @@ select * from direct_test_type_cidr where x = '68.44.55.111';
 
 select * from direct_test_type_inet where x = '68.44.55.111';
 select * from direct_test_type_macaddr where x = '12:34:56:78:90:ab';
+select 1 from direct_test_type_tinterval where x = '["2008-08-08" "2010-10-10"]';
 select * from direct_test_type_varbit where x = '0101010';
 
 SELECT * FROM direct_test_type_int2 WHERE id = 1::int2;

@@ -305,7 +305,7 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #------------------------------------------------------------------------------
 
 #gp_enable_gpperfmon=on		# Enable the performance monitor
-#gpperfmon_port=8888		# Port used the the performance monitor daemons
+#gpperfmon_port=8888		# Port used by the performance monitor daemons
 
 										
 #------------------------------------------------------------------------------

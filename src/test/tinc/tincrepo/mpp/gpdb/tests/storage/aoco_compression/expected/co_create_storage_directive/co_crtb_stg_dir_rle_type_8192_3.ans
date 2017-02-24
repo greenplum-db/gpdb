@@ -118,8 +118,8 @@ COPY 4883
  a32    | date                        |                                                                              | plain    | rle_type         | 3                 | 8192       | 
  a33    | real                        |                                                                              | plain    | rle_type         | 3                 | 8192       | 
  a34    | money                       |                                                                              | plain    | rle_type         | 3                 | 8192       | 
- a35    | cidr                        |                                                                              | plain    | rle_type         | 3                 | 8192       | 
- a36    | inet                        |                                                                              | plain    | rle_type         | 3                 | 8192       | 
+ a35    | cidr                        |                                                                              | main     | rle_type         | 3                 | 8192       | 
+ a36    | inet                        |                                                                              | main     | rle_type         | 3                 | 8192       | 
  a37    | time without time zone      |                                                                              | plain    | rle_type         | 3                 | 8192       | 
  a38    | text                        |                                                                              | extended | rle_type         | 3                 | 8192       | 
  a39    | bit(1)                      |                                                                              | extended | rle_type         | 3                 | 8192       | 

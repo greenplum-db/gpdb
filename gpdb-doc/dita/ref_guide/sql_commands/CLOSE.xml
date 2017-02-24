@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1"><title id="bg20941">CLOSE</title><body><p id="sql_command_desc">Closes a cursor.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CLOSE <varname>cursor_name</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>CLOSE</codeph> frees the resources associated with an open cursor.
+After the cursor is closed, no subsequent operations are allowed on it.
+A cursor should be closed when it is no longer needed. </p><p>Every non-holdable open cursor is implicitly closed when a transaction
+is terminated by <codeph>COMMIT</codeph> or <codeph>ROLLBACK</codeph>.
+A holdable cursor is implicitly closed if the transaction that created
+it aborts via <codeph>ROLLBACK</codeph>. If the creating transaction
+successfully commits, the holdable cursor remains open until an explicit
+<codeph>CLOSE</codeph> is executed, or the client disconnects. </p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>cursor_name</varname></pt><pd>The name of an open cursor to close.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p>Greenplum Database does not have an explicit <codeph>OPEN</codeph> cursor
+statement. A cursor is considered open when it is declared. Use the <codeph>DECLARE</codeph>
+statement to declare (and open) a cursor. </p><p>You can see all available cursors by querying the <codeph>pg_cursors</codeph> system view.</p></section><section id="section6"><title>Examples</title><p>Close the cursor <codeph>portala</codeph>:</p><codeblock>CLOSE portala;</codeblock></section><section id="section7"><title>Compatibility</title><p><codeph>CLOSE</codeph> is fully conforming with the SQL standard.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./DECLARE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
+            href="./FETCH.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
+            href="./MOVE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
