@@ -90,15 +90,10 @@ jobs:
         params:
           path: gpdb_pr
           status: failure
-    - put: sync-resource
 
   - name: compile_gpdb_centos6
     plan:
     - aggregate:
-      - get: sync-resource
-        version: every
-        trigger: true
-        passed: [compile_gpdb_custom_config_centos6]
       - get: gpdb_pr
         version: every
         trigger: true
@@ -163,7 +158,6 @@ jobs:
         params:
           path: gpdb_pr
           status: failure
-    - put: sync-resource
 
   - name: icw_gporca_codegen_centos6
     plan:
@@ -195,7 +189,6 @@ jobs:
         params:
           path: gpdb_pr
           status: failure
-    - put: sync-resource
 
   - name: MU_check_centos
     plan:
@@ -224,7 +217,6 @@ jobs:
         params:
           path: gpdb_pr
           status: failure
-    - put: sync-resource
 
   - name: report_pr_success
     plan:
@@ -247,7 +239,6 @@ jobs:
       params:
         path: gpdb_pr
         status: success
-    - put: sync-resource
 
   # Stage 3: Packaging
   - name: gpdb_rc_packaging_centos
@@ -301,4 +292,3 @@ jobs:
       - put: qautils_rhel6_tarball
         params:
           file: rc_bin_gpdb/QAUtils-rhel6-x86_64.tar.gz
-    - put: sync-resource
