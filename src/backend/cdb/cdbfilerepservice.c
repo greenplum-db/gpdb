@@ -79,8 +79,6 @@ static void FileRepSubProcess_HandleCrash(SIGNAL_ARGS);
 
 static void FileRepSubProcess_ConfigureSignals(void);
 
-extern bool FindMyDatabase(const char *name, Oid *db_id, Oid *db_tablespace);
-
 /*
  *  SIGHUP signal from main file rep process
  *  It re-loads configuration file at next convenient time.
@@ -572,11 +570,8 @@ FileRepSubProcess_SetState(FileRepState_e fileRepStateLocal)
 }
 	
 static void
-FileRepSubProcess_InitializeResyncManagerProcess(void)
+FileRepSubProcess_InitProcess(void)
 {
-	char	*fullpath;
-	char	*knownDatabase = "postgres";
-	
 	SetProcessingMode(InitProcessing);
 	
 	/*
@@ -620,11 +615,21 @@ FileRepSubProcess_InitializeResyncManagerProcess(void)
 	 * bufmgr needs another initialization call too
 	 */
 	InitBufferPoolBackend();
-	
+}
+
+void
+FileRepSubProcess_InitHeapAccess(void)
+{
+	char	*fullpath;
+	static bool heapAccessInitialized = false;
+
+	if (heapAccessInitialized)
+		return;
+
 	/* heap access requires the rel-cache */
 	RelationCacheInitialize();
 	InitCatalogCache();
-	
+
 	/*
 	 * It's now possible to do real access to the system catalogs.
 	 *
@@ -638,10 +643,8 @@ FileRepSubProcess_InitializeResyncManagerProcess(void)
 	 * tablespace; our access to the heap is going to be slightly
 	 * limited, so we'll just use some defaults.
 	 */
-	if (!FindMyDatabase(knownDatabase, &MyDatabaseId, &MyDatabaseTableSpace))
-		ereport(FATAL,
-				(errcode(ERRCODE_UNDEFINED_DATABASE),
-				 errmsg("database \"%s\" does not exit", knownDatabase)));
+	MyDatabaseId = TemplateDbOid;
+	MyDatabaseTableSpace = DEFAULTTABLESPACE_OID;
 
 	/* Now we can mark our PGPROC entry with the database ID */
 	/* (We assume this is an atomic store so no lock is needed) */
@@ -653,7 +656,7 @@ FileRepSubProcess_InitializeResyncManagerProcess(void)
 
 	RelationCacheInitializePhase3();
 
-	/* No need to StartupXLOG_Pass2(); since we're not writing any data to disk */
+	heapAccessInitialized = true;
 }
 
 static void
@@ -828,7 +831,22 @@ FileRepSubProcess_Main()
 			break;
 			
 		case FileRepProcessTypePrimaryRecovery:
-			FileRepSubProcess_InitializeResyncManagerProcess();
+			FileRepSubProcess_InitProcess();
+			/*
+			 * At this point, database is starting up and xlog is not
+			 * yet replayed.  Initializing relcache now is dangerous,
+			 * a sequential scan of catalog tables may end up with
+			 * incorrect hint bits.  E.g. a committed transaction's
+			 * dirty heap pages made it to disk but pg_clog update was
+			 * still in memory and we crashed.  If a tuple inserted by
+			 * this transaction is read during relcache
+			 * initialization, status of the tuple's xmin will be
+			 * incorrectly determined as "not commited" from pg_clog.
+			 * And HEAP_XMIN_INVALID hint bit will be set, rendering
+			 * the tuple perpetually invisible.  Relcache
+			 * initialization must be deferred to only after all of
+			 * xlog has been replayed.
+			 */
 			FileRepPrimary_StartRecovery();
 			
 			ResourceOwnerRelease(CurrentResourceOwner,
@@ -837,7 +855,8 @@ FileRepSubProcess_Main()
 			break;
 
 		case FileRepProcessTypeResyncManager:
-			FileRepSubProcess_InitializeResyncManagerProcess();
+			FileRepSubProcess_InitProcess();
+			FileRepSubProcess_InitHeapAccess();
 			FileRepPrimary_StartResyncManager();
 			
 			ResourceOwnerRelease(CurrentResourceOwner,
@@ -850,7 +869,8 @@ FileRepSubProcess_Main()
 		case FileRepProcessTypeResyncWorker3:
 		case FileRepProcessTypeResyncWorker4:
 
-			FileRepSubProcess_InitializeResyncManagerProcess();
+			FileRepSubProcess_InitProcess();
+			FileRepSubProcess_InitHeapAccess();
 			FileRepPrimary_StartResyncWorker();
 			
 			ResourceOwnerRelease(CurrentResourceOwner,

@@ -7725,6 +7725,35 @@ void
 StartupXLOG_Pass4(void)
 {
 	bool doPTCatVerification = false;
+	char *fullpath;
+
+	/*
+	 * In order to access the catalog, we need a database, and a
+	 * tablespace; our access to the heap is going to be slightly
+	 * limited, so we'll just use some defaults.
+	 */
+	if (!XLogStartup_DoNextPTCatVerificationIteration())
+	{
+		MyDatabaseId = TemplateDbOid;
+		MyDatabaseTableSpace = DEFAULTTABLESPACE_OID;
+	}
+	else
+	{
+		MyDatabaseId = XLogCtl->currentDatabaseToVerify;
+		MyDatabaseTableSpace = XLogCtl->tablespaceOfCurrentDatabaseToVerify;
+	}
+
+	/*
+	 * Now we can mark our PGPROC entry with the database ID
+	 * (We assume this is an atomic store so no lock is needed)
+	 */
+	MyProc->databaseId = MyDatabaseId;
+
+	fullpath = GetDatabasePath(MyDatabaseId, MyDatabaseTableSpace);
+
+	SetDatabasePath(fullpath);
+
+	RelationCacheInitializePhase3();
 
 	/*
 	 * Start with the basic Pass 4 integrity checks. If requested (GUC & No In-Doubt
@@ -11176,8 +11205,6 @@ HandleCrash(SIGNAL_ARGS)
 void
 StartupProcessMain(int passNum)
 {
-	char	   *fullpath;
-
 	am_startup = true;
 	/*
 	 * If possible, make this process a group leader, so that the postmaster
@@ -11294,7 +11321,24 @@ StartupProcessMain(int passNum)
 		 */
 		InitBufferPoolBackend();
 
-		/* heap access requires the rel-cache */
+		/* heap access requires the rel-cache.
+		 *
+		 * Pass 2 uses heap API to insert/update/delete from persistent
+		 * tables.  In order to use the heap API, RelationDescriptor is
+		 * required.  In pass 2, persistent tables are accessed using
+		 * DirectOpen API to obtain the RelationDescriptor.  Hence, we
+		 * don't need to load full relcache as in
+		 * RelationCacheInitializePhase3().
+		 *
+		 * However, there is cache invalidation logic within heap API
+		 * needs basic data structures for catalog cache to be
+		 * initialized.  Hence, we need to do RelationCacheInitialize(),
+		 * InitCatalogCache(), and RelationCacheInitializePhase2()
+		 * before StartupXLOG_Pass2().
+		 *
+		 * Pass 4 needs RelationCacheInitializePhase3() to do catalog
+		 * validation, after xlog replay is complete.
+		 */
 		RelationCacheInitialize();
 		InitCatalogCache();
 
@@ -11306,50 +11350,9 @@ StartupProcessMain(int passNum)
 		 */
 		RelationCacheInitializePhase2();
 
-		/*
-		 * In order to access the catalog, we need a database, and a
-		 * tablespace; our access to the heap is going to be slightly
-		 * limited, so we'll just use some defaults.
-		 */
-		if (!XLogStartup_DoNextPTCatVerificationIteration())
-		{
-			MyDatabaseId = TemplateDbOid;
-			MyDatabaseTableSpace = DEFAULTTABLESPACE_OID;
-		}
-		else
-		{
-			MyDatabaseId = XLogCtl->currentDatabaseToVerify;
-			MyDatabaseTableSpace = XLogCtl->tablespaceOfCurrentDatabaseToVerify;
-		}
-
-		/*
-		 * Now we can mark our PGPROC entry with the database ID */
-		/* (We assume this is an atomic store so no lock is needed) 
-		 */
-		MyProc->databaseId = MyDatabaseId;
-
-		fullpath = GetDatabasePath(MyDatabaseId, MyDatabaseTableSpace);
-
-		SetDatabasePath(fullpath);
-
-		RelationCacheInitializePhase3();
-
 		if (passNum == 2)
 		{
 			StartupXLOG_Pass2();
-			/*
-			 * The cache init file created by
-			 * RelationCacheInitializePhase3() contains critical
-			 * relations and index entries from template1 database.
-			 * XLOG replay in pass 3 may invalidate these entries,
-			 * e.g. redo records for reindex operation on a system
-			 * table in template1.  Therefore, delete the file now
-			 * and let pass 4 rebuild it.  Note that pass 3 does not
-			 * need relcache to operate as it uses resource manager
-			 * redo (rm_redo()) methods to replay xlog rather than
-			 * regular access methods.
-			 */
-			RelationCacheInitFileRemove();
 		}
 		else
 		{
