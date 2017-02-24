@@ -1684,6 +1684,16 @@ Feature: Incrementally analyze the database
       And "public.sales_1_prt_2" should appear in the latest state files
       And "public.sales_1_prt_3" should appear in the latest state files
 
+      @analyzedb_core @analyzedb_root_and_partition_tables @refresh_root_stats
+    Scenario: Partition tables, (entries for all parts, no change, some parts, root parts), request root stats
+      Given no state files exist for database "incr_analyze"
+      And the user runs "analyzedb -a -d incr_analyze -t public.sales"
+      When the user runs "analyzedb -a -d incr_analyze -t public.sales"
+      Then analyzedb should print There are no tables or partitions to be analyzed to stdout
+      And "public.sales_1_prt_2" should appear in the latest state files
+      And "public.sales_1_prt_3" should appear in the latest state files
+      And "public.sales" should appear in the latest report file
+
     # request mid-level
      @analyzedb_core @analyzedb_partition_tables
     Scenario: Multi-level partition and request mid-level

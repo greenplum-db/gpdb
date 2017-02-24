@@ -1,3 +1,4 @@
+import re
 import os
 import shutil
 from gppylib.db import dbconn
@@ -101,6 +102,13 @@ def impl(context, col_name, qualified_table):
         else:
             assert False, "unexpected column %s of table %s found in state file %s" % (column, qualified_table, os.path.basename(filename))
 
+@given('"{qualified_table}" appears in the latest report file')
+@then('"{qualified_table}" should appear in the latest report file')
+def impl(context, qualified_table):
+    found,filename = table_found_in_report_file(context.dbname, qualified_table)
+    if not found:
+        assert False, "table %s not found in report file %s" % (qualified_table, os.path.basename(filename))
+
 @then('output should contain either "{output1}" or "{output2}"')
 def impl(context, output1, output2):
     pat1 = re.compile(output1)
@@ -155,6 +163,15 @@ def table_found_in_state_file(dbname, qualified_table):
             return False,state_file
     return True,state_file
 
+def table_found_in_report_file(dbname, qualified_table):
+    report_file = get_latest_analyze_report_file(dbname)
+    found = False
+    for line in get_lines_from_file(report_file):
+        if qualified_table == line:
+            return True,report_file
+
+    return False,report_file
+
 def column_found_in_state_file(dbname, qualified_table, col_name_list):
     comma_name = ','.join(qualified_table.split('.'))
     files = get_latest_analyze_state_files(dbname)
@@ -206,6 +223,28 @@ def get_latest_analyze_state_files(dbname):
         if 'report' not in f:
             ret.append(os.path.join(state_files_dir, f))
     return ret
+
+def get_latest_analyze_report_file(dbname):
+    """
+    return the latest report file (absolute path)
+    """
+    master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
+    analyze_dir = os.path.join(master_data_dir, 'db_analyze', dbname)
+    if not os.path.exists(analyze_dir):
+        return []
+
+    folders = sorted(os.listdir(analyze_dir), reverse=True)
+    if len(folders) == 0:
+        return []
+
+    report_file_dir = os.path.join(analyze_dir, folders[0])
+    files = os.listdir(report_file_dir)
+
+    for f in files:
+        if 'report' in f:
+            return os.path.join(report_file_dir, f)
+
+    raise Exception("Missing report file in folder %s" % report_file_dir)
 
 def create_table_with_column_list(conn, storage_type, schemaname, tablename, col_name_list, col_type_list):
     col_name_list = col_name_list.strip().split(',')
