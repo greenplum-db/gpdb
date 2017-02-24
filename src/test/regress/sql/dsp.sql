@@ -66,7 +66,7 @@ select * from h1 where a > 5 and a < 10 order by a,b;
 select relname,relstorage,relkind,reloptions from pg_class
 	where relkind='r' and relnamespace=2200 order by relname;
 select relid::regclass, blocksize, compresstype,
-	compresslevel, columnstore from pg_appendonly order by 1;
+	compresslevel, columnstore, checksum from pg_appendonly order by 1;
 
 \c dsp2
 set gp_default_storage_options=
@@ -104,7 +104,7 @@ select * from t3 order by 1;
 select relname,relstorage,relkind,reloptions from pg_class
 	where relname in ('t1', 't2', 't3') order by 1;
 select relid::regclass, blocksize, compresstype,
-	compresslevel, columnstore from pg_appendonly order by 1;
+	compresslevel, columnstore, checksum from pg_appendonly order by 1;
 
 -- attribute encoding tests for column oriented tables
 set gp_default_storage_options=
