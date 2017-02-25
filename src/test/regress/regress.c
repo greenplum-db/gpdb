@@ -87,7 +87,7 @@ extern Datum hasGangsExist(PG_FUNCTION_ARGS);
 /*
  * check if backends exist
  * Args:
- * timeout: = 0, retrun result immediately
+ * timeout: = 0, return result immediately
  * timeout: > 0, block until no backends exist or timeout expired.
  */
 extern Datum hasBackendsExist(PG_FUNCTION_ARGS);
