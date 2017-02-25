@@ -1,0 +1,173 @@
+%YAML 1.1
+---
+VERSION:         1.0.0.1
+DEFINE:
+
+  - OUTPUT:
+      NAME:      output_table_empty
+      TABLE:
+  - OUTPUT:
+      NAME:      output_table_string
+      TABLE:     arbitrary string
+  - OUTPUT:
+      NAME:      output_table_number
+      TABLE:     100
+  - OUTPUT:
+      NAME:      output_table_list
+      TABLE:     [list]
+  - OUTPUT:
+      NAME:      output_table_mapping
+      TABLE:     {mapping: scalar}
+  - OUTPUT:
+      NAME:      output_table_mapping
+      FORMAT:    text
+
+---
+VERSION:         1.0.0.1
+DATABASE:        regression
+
+DEFINE:
+  - INPUT:
+      NAME:      input_columns_mapping
+      QUERY:     scalar
+      COLUMNS:
+
+  - OUTPUT:
+      NAME:      myoutput_replace
+      TABLE:     mytest_replace
+      MODE:      REPLACE
+
+  - OUTPUT:
+      NAME:      myoutput_append
+      TABLE:     mytest_append
+      MODE:      APPEND
+
+EXECUTE:
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_replace
+
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_append
+
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_replace
+
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_append
+---
+VERSION:         5.0.0.1
+DATABASE:        template1
+
+DEFINE:
+  - INPUT:
+      NAME:      mystart
+      QUERY:  |
+        SELECT *
+        FROM mytest;
+
+  - OUTPUT:
+      NAME:      myoutput_replace
+      TABLE:     mytest_replace
+      MODE:      REPLACE
+
+  - OUTPUT:
+      NAME:      myoutput_append
+      TABLE:     mytest_append
+      MODE:      APPEND
+
+EXECUTE:
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_replace
+
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_append
+
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_replace
+
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_append
+---
+DATABASE:        template1
+DEFINE:
+  - INPUT:
+      NAME:      mystart
+      QUERY:  |
+        SELECT *
+        FROM mytest;
+
+  - OUTPUT:
+      NAME:      myoutput_replace
+      TABLE:     mytest_replace
+      MODE:      REPLACE
+
+  - OUTPUT:
+      NAME:      myoutput_append
+      TABLE:     mytest_append
+      MODE:      APPEND
+
+EXECUTE:
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_replace
+
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_append
+
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_replace
+
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_append
+---
+VERSION:         1.0.0.1
+DATABASE:        template1
+
+DEFINE:
+  - INPUT:
+  - INPUT:
+      NAME:      mystart
+      QUERY:  |
+        SELECT *
+        FROM mytest;
+      QUERY:  |
+        SELECT *
+        FROM mytest;
+
+  - OUTPUT:
+      NAME:      myoutput_replace
+      TABLE:     mytest_replace
+      MODE:      REPLACE
+
+  - OUTPUT:
+      NAME:      myoutput_append
+      TABLE:     mytest_append
+      MODE:      APPEND
+
+EXECUTE:
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_replace
+
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_append
+
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_replace
+
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_append

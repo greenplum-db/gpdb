@@ -1,0 +1,39 @@
+%YAML 1.1
+---  
+VERSION:   1.0.0.1
+
+## Use a MAP to strip the neighbor lists from the PageRank iteration, and just return
+## (node, rank) pairs.
+DEFINE:
+  - INPUT:
+      NAME:     source
+      TABLE:    pagerank_source
+      
+  - OUTPUT:
+      NAME:     out
+      TABLE:    pagerank
+      MODE:     REPLACE
+      
+  - MAP:
+      NAME:     format
+      LANGUAGE: plperlu
+      MODE:     SINGLE
+      RETURNS:
+        - key text
+        - value float
+      FUNCTION: |
+       my ($url, $ranklist) = @_;
+       #separate the rank from the list of neighbors
+       my @rank_list = split(/, \(/, $ranklist);
+       my $rank = $rank_list[0];
+       return {"key" => $url, "value" => $rank};
+        
+  - TASK:
+      NAME:     final
+      SOURCE:   source
+      MAP:      format
+        
+EXECUTE:
+  - RUN:
+      SOURCE: final
+      TARGET: out

@@ -1,0 +1,61 @@
+%YAML 1.1
+---  
+VERSION:   1.0.0.1
+
+## Transform an adjacency relation into an input to the iterative pagerank implementation,
+## which takes tuples of the form (ID, "rank, (list,of,neighbors)")
+
+DEFINE:
+  - INPUT:
+    ## This is a set of pairs "src|dest" representing the adjacency relation of a graph
+      NAME:      network_file
+      FILE:      @hostname@:@abs_srcdir@/data/www.data
+      COLUMNS:   [key text, value text]
+      DELIMITER: '|'
+
+  - OUTPUT: 
+      NAME:  pr_source
+      TABLE: pagerank_source
+      MODE:  REPLACE
+
+  - TRANSITION:
+    ## accumulates a list of the form "(list,of,items)"
+      NAME:       cons
+      LANGUAGE:   plperlu
+      PARAMETERS: 
+        - state text
+        - value text
+      RETURNS:    
+        - value text
+      FUNCTION: |
+          my ($state, $value) = @_;
+          if (defined $state) {
+            return "$state,$value";
+          }
+          else {
+            return $value
+          }
+          
+  - FINALIZE:
+      ## returns a pair "(rank, (list,of,dests))"      
+      NAME:       rank_bundle
+      LANGUAGE:   plperlu
+      MODE:       SINGLE
+      FUNCTION: |
+        my ($out) = @_;
+        return "0.85, ($out)";
+
+  - REDUCE:
+      NAME:       pr_rank_concat
+      TRANSITION: cons
+      FINALIZE:   rank_bundle
+
+  - TASK:
+      NAME:     initialize
+      SOURCE:   network_file
+      REDUCE:   pr_rank_concat
+
+EXECUTE:
+  - RUN:
+      SOURCE: initialize
+      TARGET: pr_source

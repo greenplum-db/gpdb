@@ -494,7 +494,7 @@ row 3,data 3
 
 (1 row)
 -- 
--- Test 7) Perl syntax error lineno reporting
+-- Test 7) Syntax error lineno reporting
 --
 SELECT mapreduce('@abs_srcdir@/yml/perlerror.yml') ORDER BY 1;
 mapreduce
@@ -520,7 +520,258 @@ STDERR> Error: Object creation Failure
 STDERR> ERROR:  syntax error at line 53, near "[]"
 STDERR> CONTEXT:  compilation of PL/Perl function "mapreduce_2020_grep_map"
 STDERR> Error: Object creation Failure
+STDERR> ERROR:  syntax error at line 67, near "}GABLECK"
+STDERR> CONTEXT:  compilation of PL/Perl function "mapreduce_52431_mymap"
+STDERR> Error: Object creation Failure
+STDERR> WARNING: unset parameter - myMap(key => NULL)
+STDERR> mapreduce_PID_run_1
+STDERR> ERROR:  }GABLECK!{ at line 85. (plperl.c:2118)
+STDERR> CONTEXT:  PL/Perl function "mapreduce_52435_mymap"
+STDERR> Error: Execution Failure
+STDERR> 
+STDOUT>
+
+(3 rows)
+SELECT mapreduce('@abs_srcdir@/yml/yamlerror.yml') ORDER BY 1;
+mapreduce
+---------------------
+STDERR> Error: OUTPUT 'output_table_empty': Invalid TABLE, at line 8
+STDERR> Error: OUTPUT 'output_table_empty': Invalid TABLE, at line 8
+STDERR> Error: OUTPUT 'output_table_string': Invalid TABLE, at line 11
+STDERR> Error: OUTPUT 'output_table_string': Invalid TABLE, at line 11
+STDERR> Error: OUTPUT 'output_table_number': Invalid TABLE, at line 14
+STDERR> Error: OUTPUT 'output_table_number': Invalid TABLE, at line 14
+STDERR> Error: OUTPUT 'output_table_list': Invalid TABLE, at line 17
+STDERR> Error: OUTPUT 'output_table_list': Invalid TABLE, at line 17
+STDERR> Error: OUTPUT 'output_table_mapping': Invalid TABLE, at line 20
+STDERR> Error: OUTPUT 'output_table_mapping': Invalid TABLE, at line 20
+STDERR> Error: OUTPUT 'output_table_mapping': Missing FILE or TABLE, at line 21
+STDERR> Error: INPUT 'input_columns_mapping': Invalid COLUMNS, at line 33
+STDERR> Error: Unrecognized VERSION, at line 62
+STDERR> Error: DOCUMENT: Missing VERSION, at line 98
+STDERR> Error: INPUT must contain a YAML MAPPING, at line 138
+STDERR> Error: INPUT: Missing NAME, at line 138
+STDERR> Error: INPUT: Missing FILE, GPFDIST, TABLE, QUERY, or EXEC, at line 138
+STDERR> Error: INPUT 'mystart': Duplicate QUERY for INPUT, at line 144
+STDERR> Error: parse failure
 STDERR>
+STDOUT>
+
+(3 rows)
+-- Test 8) C functions using LIBRARY
+SELECT mapreduce('@abs_srcdir@/yml/c.yml') ORDER BY 1;
+mapreduce
+---------------------
+STDERR> mapreduce_PID_run_1
+STDERR> 
+STDOUT>
+key|value
+---+-----
+  0|  136
+  1|  401
+  3|   98
+  4| 1162
+  5|  257
+  6| 2073
+  7| 2138
+  8| 1082
+  9| 2241
+ 10|11556
+ 11| 8236
+ 12|  473
+ 13|  477
+ 14|    0
+ 15| 2287
+ 16| 2772
+ 17| 2359
+ 18|  536
+ 19|25936
+ 20|  910
+(20 rows)
+
+
+(3 rows)
+-- Test 9) PageRank
+SELECT mapreduce('@abs_srcdir@/yml/pagerank-init.yml') ORDER BY 1;
+mapreduce
+---------------------
+STDERR> mapreduce_PID_run_1
+STDERR> DONE
+STDERR> 
+STDOUT>
+
+(3 rows)
+SELECT count(*) FROM pagerank_source;
+count
+20
+(1 row)
+SELECT mapreduce('@abs_srcdir@/yml/pagerank-iter.yml') ORDER BY 1;
+mapreduce
+---------------------
+STDERR> mapreduce_PID_run_1
+STDERR> DONE
+STDERR> 
+STDOUT>
+
+(3 rows)
+SELECT mapreduce('@abs_srcdir@/yml/pagerank-final.yml') ORDER BY 1;
+mapreduce
+---------------------
+STDERR> mapreduce_PID_run_1
+STDERR> DONE
+STDERR> 
+STDOUT>
+
+(3 rows)
+SELECT ps.value, pn.value FROM pagerank_source ps JOIN pagerank_next pn USING (key) WHERE ps.key = '17';
+value|value
+0.85, (266,265,264,263,262,261,260,259,258,1)|0.265867988394584, (266,265,264,263,262,261,260,259,258,1)
+(1 row)
+-- Test setup
+CREATE TABLE simple (m int,n int) distributed randomly;
+INSERT INTO simple VALUES (1,10), (2,20), (2,21), (2,22), (3,30), (4,40), (5,50), (5,50), (10,100), (2,21);
+CREATE FUNCTION tran (value int, value int) returns int language 'C' AS '@abs_srcdir@/regress.so', 'tran';
+CREATE FUNCTION tran (state int) returns int language 'C' AS '@abs_srcdir@/regress.so', 'tran';
+CREATE FUNCTION final (state int) returns int language 'C' AS '@abs_srcdir@/regress.so', 'final';
+CREATE FUNCTION cons (state int, value int, out output int) returns int language 'C' AS '@abs_srcdir@/regress.so', 'cons';
+CREATE FUNCTION cons_wrongtype (state int, value text) returns int language 'C' AS '@abs_srcdir@/regress.so', 'cons';
+CREATE OR REPLACE FUNCTION retcomposite(int)
+    RETURNS SETOF __retcomposite
+    AS '@abs_srcdir@/regress.so', 'retcomposite'
+    LANGUAGE C IMMUTABLE STRICT;
+NOTICE:  type "__retcomposite" is not yet defined
+DETAIL:  Creating a shell type definition.
+CREATE FUNCTION gpmapred_scube_accum8(numeric,numeric) RETURNS numeric
+AS 'SELECT $1 + $2 * $2 * $2'
+LANGUAGE SQL
+IMMUTABLE
+RETURNS NULL ON NULL INPUT;
+CREATE AGGREGATE gpmapred_scube(numeric) (
+  SFUNC = gpmapred_scube_accum8,
+  STYPE  = numeric,
+  INITCOND = 0 );
+-- Test 10) Aggregate Function
+SELECT mapreduce('@abs_srcdir@/yml/aggFunction.yml') ORDER BY 1;
+mapreduce
+---------------------
+STDERR> mapreduce_PID_run_1
+STDERR> 
+STDOUT>
+ m|  value
+--+-------
+ 1|   1000
+ 2|  37170
+ 3|  27000
+ 4|  64000
+ 5| 250000
+10|1000000
+(6 rows)
+
+
+(3 rows)
+-- Test 11) Built-in Functions
+SELECT mapreduce('@abs_srcdir@/yml/builtinfunction.yml') ORDER BY 1;
+mapreduce
+---------------------
+STDERR> mapreduce_PID_run_1
+STDERR> mapreduce_PID_run_2
+STDERR> mapreduce_PID_run_3
+STDERR> mapreduce_PID_run_4
+STDERR> mapreduce_PID_run_5
+STDERR> 
+STDOUT>
+ m|value
+--+-----
+ 1|   10
+ 2|   20
+ 3|   30
+ 4|   40
+ 5|   50
+10|  100
+(6 rows)
+
+ m|value
+--+-----
+ 1|   10
+ 2|   22
+ 3|   30
+ 4|   40
+ 5|   50
+10|  100
+(6 rows)
+
+ m|value
+--+-----
+ 1|   10
+ 2|   21
+ 3|   30
+ 4|   40
+ 5|   50
+10|  100
+(6 rows)
+
+ m|value
+--+-----
+ 1|    1
+ 2|    4
+ 3|    1
+ 4|    1
+ 5|    2
+10|    1
+(6 rows)
+
+ m|value
+--+-----
+ 1|   10
+ 2|   20
+ 2|   21
+ 2|   21
+ 2|   22
+ 3|   30
+ 4|   40
+ 5|   50
+ 5|   50
+10|  100
+(10 rows)
+
+
+(3 rows)
+-- Test 12) Ambigious function
+SELECT mapreduce('@abs_srcdir@/yml/ambiguousfunction.yml') ORDER BY 1;
+mapreduce
+---------------------
+STDERR> Error: MAP 'tran': Ambiguous function, supply a function prototype for disambiguation, at line 11
+STDERR> Error: Object creation Failure
+STDERR> 
+STDOUT>
+
+(3 rows)
+-- Test 13) Parameter override
+SELECT mapreduce('@abs_srcdir@/yml/paramoverride.yml') ORDER BY 1;
+mapreduce
+---------------------
+STDERR> mapreduce_PID_run_1
+STDERR> 
+STDOUT>
+ m|retval
+--+------
+ 1|    20
+ 2|   168
+ 3|    60
+ 4|    80
+ 5|   200
+10|   200
+(6 rows)
+
+
+(3 rows)
+-- Test 14) Incorrect parameter type
+SELECT mapreduce('@abs_srcdir@/yml/paramdifftype.yml') ORDER BY 1;
+mapreduce
+---------------------
+STDERR> ERROR:  function cons_wrongtype(integer, integer) does not exist
+STDERR> Error: Object creation Failure
+STDERR> 
 STDOUT>
 
 (3 rows)

@@ -1,0 +1,20 @@
+%YAML 1.1
+---
+VERSION:         1.0.0.1
+DATABASE:        template1
+
+DEFINE:
+  - INPUT:
+      NAME:      data
+      QUERY: "select m,n as value from simple"
+
+  - TASK:
+       NAME: userAGG
+       SOURCE: data
+       REDUCE: gpmapred_scube
+
+
+EXECUTE:
+  - RUN:
+       SOURCE:  userAGG
+

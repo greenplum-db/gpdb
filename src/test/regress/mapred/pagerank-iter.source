@@ -1,0 +1,104 @@
+%YAML 1.1
+---  
+VERSION:   1.0.0.1
+
+## Inner loop of PageRank.  Takes and returns a set of tuples of the form 
+## (ID, "rank, (list,of,neighbors)").  Each parent donates 
+## 0.85*(initial_rank/|number of kids|) to each child, which adds in an extra 0.15.
+
+DEFINE:
+  - INPUT:
+    ## tuples of the form (ID, "rank, (list,of,neighbors)")
+      NAME:     source
+      TABLE:    pagerank_source
+      
+  - OUTPUT:
+    ## tuples of the form (ID, "rank, (list,of,neighbors)")
+      NAME:     next
+      TABLE:    pagerank_next
+      MODE:     REPLACE
+      
+  - MAP:
+      NAME:     pr_map
+      LANGUAGE: plperlu
+      RETURNS:
+        - key text
+        - value text
+      # The following is a confusing hack proposed in Google training slides.  
+      # This MAP will return two differently-typed values in a single stream.  
+      # First, we return the input (parent) key and its neighbors (a list). 
+      # Also, for each neighbor (child) we return its key and the 
+      # rank contribution of the parent (a float).
+      # The REDUCE will treat these differently.
+      FUNCTION: |
+        my ($node_id, $neighbor_list) = @_;
+        #separate the rank from the list of neighbors
+        my @rank_list = split(/, \(/, $neighbor_list);
+        my $rank = $rank_list[0];
+        my $list_str = $rank_list[1];
+        my $neat_list_str = "(" . $list_str;
+        chop $list_str; # remove trailing right-paren
+        
+        # First thing we output is our ID and our neighbor list
+        # return_next is the PLPerl way of returning within a loop
+        # (equivalent to "yield" in Python or Ruby.)
+        return_next({"key" => $node_id, "value" => $neat_list_str});
+        
+        # Subsequently output (neighborID: rank_contribution) pairs
+        my @list = split(/,/, $list_str);
+        my $len = $#list + 1.0;
+        if ($len > 0) {
+          for my $neighbor (@list) {
+            return_next({"key" => $neighbor, "value" => $rank/$len});
+          }
+        }
+        return undef; # this is the PLPerl way to say we're done 'return_next'-ing
+        
+        
+  - TRANSITION:
+      NAME:       pr_transition
+      LANGUAGE:   plperlu
+      # the MAP feeds us $newval's, which can be one of two types:
+      #  -- either a number "Rank", or a string "(DestList)"
+      # our running $state is a string "(DestList):r" where r is SUM of Ranks
+      FUNCTION: |
+        my ($state,$newval) = @_;
+        
+        my @state_parts = split(":", $state);
+        if ( $newval =~ m/^\(/ ) {
+          $state_parts[0] = $newval;
+        }
+        else {
+          $state_parts[1] = $state_parts[1] + $newval;
+        }
+        
+        return ($state_parts[0] . ":" . $state_parts[1]);
+        
+  - FINALIZE:
+      NAME:       pr_finalize
+      LANGUAGE:   plperlu
+      MODE:       SINGLE
+      # time to compute (1-d) + d*SUM(in_rank), where d=0.85
+      # output in the form "rank, (list,of,neighbors)"
+      FUNCTION:  |
+        my ($state) = @_;
+        my @state_parts = split(":", $state);
+        my $rank = (0.15 + 0.85*($state_parts[1]));
+        return ($rank . ", " . $state_parts[0]);
+        
+  - REDUCE:
+      NAME:       pr_reduce
+      TRANSITION: pr_transition
+      INITIALIZE: ':0.0' # be sure to format as a SQL string, using single-quotes
+      FINALIZE:   pr_finalize
+        
+  - TASK:
+      NAME:     iterate
+      SOURCE:   source
+      MAP:      pr_map
+      REDUCE:   pr_reduce
+        
+EXECUTE:
+  - RUN:
+      SOURCE: iterate
+      TARGET: next
