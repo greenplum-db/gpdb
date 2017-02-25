@@ -178,10 +178,12 @@ bool		gp_enable_slow_writer_testmode = false;
  */
 bool		gp_enable_slow_cursor_testmode = false;
 
-/**
- * Hash-join node releases hash table when it returns last tuple.
+/*
+ * TCP port the Interconnect listens on for incoming connections from other
+ * backends.  Assigned by initMotionLayerIPC() at process startup.  This port
+ * is used for the duration of this process and should never change.
  */
-bool		gp_eager_hashtable_release = true;
+int			Gp_listener_port;
 
 int			Gp_max_packet_size; /* max Interconnect packet size */
 

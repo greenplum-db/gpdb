@@ -219,10 +219,9 @@ ExecHashJoin(HashJoinState *node)
 			 */
 			ExecSquelchNode(outerNode);
 			/* end of join */
-			if (gp_eager_hashtable_release)
-			{
-				ExecEagerFreeHashJoin(node);
-			}
+
+			ExecEagerFreeHashJoin(node);
+
 			return NULL;
 		}
 
@@ -249,10 +248,9 @@ ExecHashJoin(HashJoinState *node)
 			 */
 			ExecSquelchNode(outerNode);
 			/* end of join */
-			if (gp_eager_hashtable_release)
-			{
-				ExecEagerFreeHashJoin(node);
-			}
+
+			ExecEagerFreeHashJoin(node);
+
 			return NULL;
 		}
 
@@ -283,10 +281,9 @@ ExecHashJoin(HashJoinState *node)
 			if (TupIsNull(outerTupleSlot))
 			{
 				/* end of join */
-				if (gp_eager_hashtable_release)
-				{
-					ExecEagerFreeHashJoin(node);
-				}
+
+				ExecEagerFreeHashJoin(node);
+
 				return NULL;
 			}
 
@@ -1189,8 +1186,6 @@ ExecReScanHashJoin(HashJoinState *node, ExprContext *exprCtxt)
 static void
 ReleaseHashTable(HashJoinState *node)
 {
-	Assert(gp_eager_hashtable_release);
-
 	if (node->hj_HashTable)
 	{
 		HashState  *hashState = (HashState *) innerPlanState(node);

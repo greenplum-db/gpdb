@@ -2126,16 +2126,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&gp_statistics_use_fkeys,
 		true, NULL, NULL
 	},
-
-	{
-		{"gp_eager_hashtable_release", PGC_USERSET, DEPRECATED_OPTIONS,
-			gettext_noop("This guc determines if a hash-join eagerly releases its hash table."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
-		},
-		&gp_eager_hashtable_release,
-		true, NULL, NULL
-	},
 	{
 		{"gp_resqueue_priority", PGC_POSTMASTER, RESOURCES_MGM,
 			gettext_noop("Enables priority scheduling."),
@@ -3524,16 +3514,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&planner_work_mem,
 		32768, 2 * BLCKSZ / 1024, MAX_KILOBYTES, NULL, NULL
-	},
-
-	{
-		{"max_work_mem", PGC_SUSET, DEPRECATED_OPTIONS,
-			gettext_noop("Sets the maximum value for work_mem setting."),
-			NULL,
-			GUC_UNIT_KB | GUC_GPDB_ADDOPT
-		},
-		&max_work_mem,
-		1024000, 8 * BLCKSZ / 1024, MAX_KILOBYTES, NULL, NULL
 	},
 
 	{

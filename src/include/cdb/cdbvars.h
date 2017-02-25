@@ -206,11 +206,6 @@ extern bool           gp_enable_slow_writer_testmode;
  */
 #define GP_DEFAULT_RESOURCE_QUEUE_NAME "pg_default"
 
-/**
- * Hash-join node releases hash table when it returns last tuple.
- */
-extern bool gp_eager_hashtable_release;
-
 /* Parameter gp_debug_pgproc
  *
  * This run-time parameter requests to print out detailed info relevant to
