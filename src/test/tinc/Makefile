@@ -66,8 +66,8 @@ non_discover_targets: aoco_compression filerep_end_to_end fts
 
 storage: storage_vacuum_xidlimits aocoalter_catalog_loaders \
 	storage_queryfinish_and_transactionmanagement \
-	storage_persistent_filerep_accessmethods_and_vacuum \
-	filerep_end_to_end_xlog_ctlog_cons
+	storage_persistent_accessmethods_and_vacuum \
+	storage_filerep
 
 storage_vacuum_xidlimits:
 	$(TESTER) $(DISCOVER) \
@@ -96,15 +96,13 @@ storage_persistent_filerep_accessmethods_and_vacuum:
 	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests/storage \
 	-s persistent \
 	-s access_methods \
-	-s filerep \
 	-s vacuum \
-	-q "class!=XidlimitsTests" \
-	-q "class!=Mpp18816" \
-	-q "class!=FilerepMiscTestCase"
+	-q "class!=XidlimitsTests"
 
-filerep_end_to_end_xlog_ctlog_cons:
+storage_filerep:
 	$(TESTER) $(DISCOVER) \
-	-s tincrepo/mpp/gpdb/tests/storage/filerep/mpp23631
+	-q "class!=Mpp18816" \
+	-s tincrepo/mpp/gpdb/tests/storage/filerep
 
 # cs-walrepl-multinode
 # The following targets are pulled from:

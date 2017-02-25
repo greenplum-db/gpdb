@@ -466,17 +466,17 @@ jobs:
         MAKE_TEST_COMMAND: aocoalter_catalog_loaders
         TEST_OS: centos
       image: centos-gpdb-dev-6
-    - task: storage_persistent_filerep_accessmethods_and_vacuum
+    - task: storage_persistent_accessmethods_and_vacuum
       file: gpdb_src/concourse/tasks/tinc_gpdb.yml
       params:
-        MAKE_TEST_COMMAND: storage_persistent_filerep_accessmethods_and_vacuum
+        MAKE_TEST_COMMAND: storage_persistent_accessmethods_and_vacuum
         TEST_OS: centos
       image: centos-gpdb-dev-6
       timeout: 3h
-    - task: filerep_end_to_end_xlog_ctlog_cons
+    - task: storage_filerep
       file: gpdb_src/concourse/tasks/tinc_gpdb.yml
       params:
-        MAKE_TEST_COMMAND: filerep_end_to_end_xlog_ctlog_cons
+        MAKE_TEST_COMMAND: storage_filerep
         TEST_OS: centos
       image: centos-gpdb-dev-6
       timeout: 3h
