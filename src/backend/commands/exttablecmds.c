@@ -128,9 +128,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	 * - Always allow if superuser.
 	 * - Never allow EXECUTE or 'file' exttables if not superuser.
 	 * - Allow http, gpfdist or gpfdists tables if pg_auth has the right
-	 *	 permissions for this role and for this type of table, or if
-	 *	 gp_external_grant_privileges is on (gp_external_grant_privileges
-	 *	 should be deprecated at some point).
+	 *	 permissions for this role and for this type of table
 	 *----------
 	 */
 	if (!superuser() && Gp_role == GP_ROLE_DISPATCH)
@@ -156,7 +154,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 						(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 						 errmsg("must be superuser to create an external table with a file protocol")));
 			}
-			else if (!gp_external_grant_privileges)
+			else
 			{
 				/*
 				 * Check if this role has the proper 'gpfdist', 'gpfdists' or

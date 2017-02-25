@@ -240,9 +240,8 @@
                         also specify the database role on the command line using the
                             <codeph>-U</codeph> option. </pd>
                     <pd>If the user running <codeph>gpload</codeph> is not a Greenplum Database
-                        superuser, then the server configuration parameter
-                            <codeph>gp_external_grant_privileges</codeph> must be set to
-                            <codeph>on</codeph> in order for the load to be processed. See the
+                        superuser, then the appropriate rights must be granted to the user for the
+                        load to be processed. See the
                             <i>Greenplum Database Reference Guide</i> for more information.</pd>
                 </plentry>
                 <plentry>

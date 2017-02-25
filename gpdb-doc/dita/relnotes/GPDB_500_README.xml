@@ -78,6 +78,11 @@
       <p>Greenplum Database 5.0.0 has removed these features:</p>
       <ul id="ul_psh_g4m_5y">
         <li>&lt;features here></li>
+        <li>
+          <p>The previously deprecated <codeph>gp_external_grant_privileges</codeph> GUC has
+            been removed. Rights management for creating external gphdfs and http tables is
+            performed using GRANT/REVOKE.</p>
+        </li>
       </ul>
       <p>Greenplum Database 5.0.0 has deprecated these features:</p>
       <ul id="ul_n35_m4m_5y">

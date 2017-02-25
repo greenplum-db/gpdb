@@ -33,9 +33,8 @@
         <li id="kx141310">You must be a Greenplum Database superuser to run MapReduce jobs with
             <codeph>EXEC</codeph> and <codeph>FILE</codeph> inputs.</li>
         <li id="kx141334">You must be a Greenplum Database superuser to run MapReduce jobs with
-            <codeph>GPFDIST</codeph> input unless the server configuration parameter
-            <codeph>gp_external_grant_privileges</codeph> is set to <codeph>on</codeph>. See the
-            <i>Greenplum Database Reference Guide</i> for more information.</li>
+            <codeph>GPFDIST</codeph> input unless the the user has the appropriate rigths granted.
+            See the <i>Greenplum Database Reference Guide</i> for more information.</li>
       </ul>
     </section>
     <section id="section4">

@@ -251,11 +251,6 @@ USER - Optional. Specifies which database role to use to connect.
        You can also specify the database role on the command line using 
        the -U option. 
 
-       If the user running gpload is not a Greenplum superuser, then the 
-       server configuration parameter gp_external_grant_privileges must 
-       be set to on in order for the load to be processed. See the
-       "Greenplum Database Reference Guide" for more information.
-
 HOST - Optional. Specifies Greenplum master host name. If not specified, 
        defaults to localhost or $PGHOST if set. You can also specify the 
        master host name on the command line using the -h option.

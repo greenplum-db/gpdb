@@ -1,8 +1,6 @@
 --
 -- test CREATE EXTERNAL TABLE privileges
 --
-show gp_external_grant_privileges; -- MUST BE OFF for the following tests to work.
-
 --
 -- Super User priv
 --

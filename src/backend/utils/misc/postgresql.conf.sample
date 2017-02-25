@@ -500,7 +500,6 @@ gp_resqueue_memory_policy = 'eager_free'	# memory request based queueing.
 # EXTERNAL TABLES
 #---------------------------------------------------------------------------
 #gp_external_enable_exec = on   # enable external tables with EXECUTE.
-#gp_external_grant_privileges = off #enable create http/gpfdist for non su's
 
 #---------------------------------------------------------------------------
 # APPEND ONLY TABLES
