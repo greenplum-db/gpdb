@@ -4862,34 +4862,6 @@ set_config_option(const char *name, const char *value,
 										newval, name, conf->min, conf->max)));
 						return false;
 					}
-
-					/*
-					 * If this is for "work_mem", its value also has to be smaller than or equal to
-					 * max_work_mem setting.
-					 */
-					if (strcmp(conf->gen.name, "work_mem") == 0 &&
-						newval > max_work_mem)
-					{
-						ereport(elevel,
-								(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-								 errmsg("%d is outside the valid range for parameter \"%s\" (%d .. %d)",
-										newval, name, conf->min, max_work_mem)));
-						return false;
-					}
-
-					/*
-					 * If this is for "max_work_mem", its value has to be greater than or equal to
-					 * current work_mem setting.
-					 */
-					if (strcmp(conf->gen.name, "max_work_mem") == 0 &&
-						newval < work_mem)
-					{
-						ereport(elevel,
-								(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-								 errmsg("%d is outside the valid range for parameter \"%s\" (%d .. %d)",
-										newval, name, work_mem, conf->max)));
-						return false;
-					}
 				}
 				else if (source == PGC_S_DEFAULT)
 					newval = conf->boot_val;

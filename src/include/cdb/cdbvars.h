@@ -206,11 +206,6 @@ extern bool           gp_enable_slow_writer_testmode;
  */
 #define GP_DEFAULT_RESOURCE_QUEUE_NAME "pg_default"
 
-/**
- * Hash-join node releases hash table when it returns last tuple.
- */
-extern bool gp_eager_hashtable_release;
-
 /* Parameter gp_debug_pgproc
  *
  * This run-time parameter requests to print out detailed info relevant to
@@ -934,7 +929,6 @@ extern const char *gpvars_assign_gp_gpperfmon_log_alert_level(const char *newval
 extern const char *gpvars_show_gp_gpperfmon_log_alert_level(void);
 
 
-extern int gp_hashagg_compress_spill_files;
 extern int gp_workfile_compress_algorithm;
 extern bool gp_workfile_checksumming;
 extern double gp_workfile_limit_per_segment;

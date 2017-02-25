@@ -1347,14 +1347,12 @@ ExecHashTableExplainEnd(PlanState *planstate, struct StringInfoData *buf)
 	}
 	else
 	{
-		/**
+		/*
 		 * Memory has been eagerly released. We can't get statistics
 		 * from the memory context. We approximate from stats structure.
 		 */
 
-		Assert(gp_eager_hashtable_release);
-		jinstrument->execmemused +=
-				(double) stats->workmem_max;
+		jinstrument->execmemused += (double) stats->workmem_max;
 	}
 	
     /* Report actual work_mem high water mark. */
