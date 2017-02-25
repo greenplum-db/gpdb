@@ -14,9 +14,6 @@
                   <codeph>gp_external_enable_exec</codeph>
                </p>
                <p>
-                  <codeph>gp_external_grant_privileges</codeph>
-               </p>
-               <p>
                   <codeph>gp_external_max_segs</codeph>
                </p>
             </stentry>

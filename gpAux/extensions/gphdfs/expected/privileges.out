@@ -1,12 +1,6 @@
 --
 -- test CREATE EXTERNAL TABLE privileges
 --
-show gp_external_grant_privileges; -- MUST BE OFF for the following tests to work.
- gp_external_grant_privileges 
-------------------------------
- off
-(1 row)
-
 CREATE ROLE exttab1_su SUPERUSER; -- SU with no privs in pg_auth
 CREATE ROLE exttab1_u4 CREATEEXTTABLE(protocol='gphdfs', type='readable'); 
 WARNING:  GRANT/REVOKE on gphdfs is deprecated

@@ -1,9 +1,3 @@
-show gp_external_grant_privileges; -- MUST BE OFF for the following tests to work.
- gp_external_grant_privileges 
-------------------------------
- off
-(1 row)
-
 --
 -- Super User priv
 --

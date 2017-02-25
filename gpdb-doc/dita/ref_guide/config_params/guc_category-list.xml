@@ -1121,10 +1121,6 @@
               <xref href="guc-list.xml#gp_external_enable_exec" type="section">gp_external_enable_exec</xref>
             </p>
             <p>
-              <xref href="guc-list.xml#gp_external_grant_privileges" type="section"
-                >gp_external_grant_privileges</xref>
-            </p>
-            <p>
               <xref href="guc-list.xml#gp_external_max_segs" type="section">gp_external_max_segs</xref>
             </p>
           </stentry>

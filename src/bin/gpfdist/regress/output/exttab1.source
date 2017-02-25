@@ -765,12 +765,6 @@ ERROR:  connection with gpfdist failed for gpfdist://@hostname@:7070/whois.csv. 
 --
 -- test CREATE EXTERNAL TABLE privileges
 --
-show gp_external_grant_privileges; -- MUST BE OFF for the following tests to work.
- gp_external_grant_privileges 
-------------------------------
- off
-(1 row)
-
 CREATE ROLE exttab1_su SUPERUSER; -- SU with no privs in pg_auth
 CREATE ROLE exttab1_u1 CREATEEXTTABLE(protocol='gpfdist', type='readable'); 
 NOTICE:  resource queue required -- using default resource queue "pg_default"

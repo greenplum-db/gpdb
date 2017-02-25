@@ -1321,15 +1321,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_external_grant_privileges", PGC_POSTMASTER, EXTERNAL_TABLES,
-			gettext_noop("Enable non superusers to create http or gpfdist external tables."),
-			NULL
-		},
-		&gp_external_grant_privileges,
-		false, NULL, NULL
-	},
-
-	{
 		{"resource_scheduler", PGC_POSTMASTER, RESOURCES_MGM,
 			gettext_noop("Enable resource scheduling."),
 			NULL,
