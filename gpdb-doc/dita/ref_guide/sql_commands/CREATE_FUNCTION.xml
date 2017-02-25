@@ -10,8 +10,9 @@
     { LANGUAGE <varname>langname</varname>
     | IMMUTABLE | STABLE | VOLATILE
     | CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
-    | [EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER
-    | AS '<varname>definition</varname>'
+    | [EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINE
+    | SET <varname>configuration_parameter</varname> { TO <varname>value</varname> | = <varname>value</varname> | FROM CURRENT }
+    | AS '<varname>definition</varname>'
     | AS '<varname>obj_file</varname>', '<varname>link_symbol</varname>' } ...
     [ WITH ({ DESCRIBE = describe_function
            } [, ...] ) ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE FUNCTION</codeph> defines a new function. <codeph>CREATE
@@ -112,7 +113,16 @@ it. <codeph>SECURITY DEFINER</codeph> specifies that the function is
 to be executed with the privileges of the user that created it. The key
 word <codeph>EXTERNAL</codeph> is allowed for SQL conformance, but it
 is optional since, unlike in SQL, this feature applies to all functions
-not just external ones.</pd></plentry><plentry><pt><varname>definition</varname></pt><pd>A string constant defining the function; the meaning depends on the
+not just external ones.</pd></plentry>
+                <plentry>
+                    <pt><varname>configuration_parameter</varname></pt>
+                    <pt><varname>value</varname></pt>
+                    <pd>The <codeph>SET</codeph> clause causes the specified session run-time
+                        configuration parameter to be set to the identified value when the function
+                        is entered. The configuration parameter is restored to its prior value when
+                        the function exits. <codeph>SET FROM CURRENT</codeph> applies the session's
+                        current value of the parameter when the function is entered.</pd>
+                </plentry><plentry><pt><varname>definition</varname></pt><pd>A string constant defining the function; the meaning depends on the
 language. It may be an internal function name, the path to an object
 file, an SQL command, or text in a procedural language.</pd></plentry><plentry><pt><varname>obj_file, link_symbol</varname></pt><pd>This form of the <codeph>AS</codeph> clause is used for dynamically
 loadable C language functions when the function name in the C language
@@ -159,7 +169,16 @@ quote, and a dollar sign. Inside the dollar-quoted string, single quotes,
 backslashes, or any character can be used without escaping. The string
 content is always written literally. For example, here are two different
 ways to specify the string "Dianne's horse" using dollar quoting:</p><codeblock>$$Dianne's horse$$
-$SomeTag$Dianne's horse$SomeTag$</codeblock><sectiondiv id="section7"><b>Using Functions With Queries on Distributed Data</b><p>In some cases, Greenplum Database does not support using functions in
+$SomeTag$Dianne's horse$SomeTag$</codeblock>
+            <p>If a <codeph>SET</codeph> clause is attached to a function, the effects of a
+                    <codeph>SET LOCAL</codeph> command executed inside the function for the same
+                variable are restricted to the function; the configuration parameter's prior value
+                is still restored at function exit. However, an ordinary <codeph>SET</codeph>
+                command (without <codeph>LOCAL</codeph>) overrides the <codeph>CREATE
+                    FUNCTION</codeph>
+                <codeph>SET</codeph> clause, much as it would for a previous <codeph>SET
+                    LOCAL</codeph> command. The effects of such a command will persist after
+                function exit, unless the current transaction is rolled back.</p><sectiondiv id="section7"><b>Using Functions With Queries on Distributed Data</b><p>In some cases, Greenplum Database does not support using functions in
 a query where the data in a table specified in the <codeph>FROM</codeph>
 clause is distributed over Greenplum Database segments. As an example,
 this SQL query contains the function <codeph>func()</codeph>:</p><codeblock>SELECT func(a) FROM table1;</codeblock><p>The function is not supported for use in the query if all of the following
@@ -180,7 +199,16 @@ integer AS $$
         BEGIN
                 RETURN i + 1;
         END;
-$$ LANGUAGE plpgsql;</codeblock><p>Return a record containing multiple output parameters:</p><codeblock>CREATE FUNCTION dup(in int, out f1 int, out f2 text)
+$$ LANGUAGE plpgsql;</codeblock>
+            <p>Increase the default segment host memory per query for a PL/pgSQL function:</p>
+            <codeblock>CREATE OR REPLACE FUNCTION function_with_query() RETURNS 
+SETOF text AS $$
+        BEGIN
+                RETURN QUERY
+                EXPLAIN ANALYZE SELECT * FROM large_table;
+        END;
+$$ LANGUAGE plpgsql
+SET statement_mem='256MB';</codeblock><p>Return a record containing multiple output parameters:</p><codeblock>CREATE FUNCTION dup(in int, out f1 int, out f2 text)
     AS $$ SELECT $1, CAST($1 AS text) || ' is text' $$
     LANGUAGE SQL;
 SELECT * FROM dup(42);</codeblock><p>You can do the same thing more verbosely with an explicitly named composite

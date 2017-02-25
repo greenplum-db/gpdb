@@ -13,7 +13,11 @@ ALTER FUNCTION <varname>name</varname> ( [ [<varname>argmode</varname>] [<varnam
 ALTER FUNCTION <varname>name</varname> ( [ [<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [, ...] ] ) 
    SET SCHEMA <varname>new_schema</varname></codeblock><p>where <varname>action</varname> is one of:</p><codeblock>{CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT}
 {IMMUTABLE | STABLE | VOLATILE}
-{[EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER}</codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER FUNCTION</codeph> changes the definition of a function.
+{[EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER}
+SET <varname>configuration_parameter</varname> { TO | = } { <varname>value</varname> | DEFAULT }
+SET <varname>configuration_parameter</varname> FROM CURRENT
+RESET <varname>configuration_parameter</varname>
+RESET ALL</codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER FUNCTION</codeph> changes the definition of a function.
 </p><p>You must own the function to use <codeph>ALTER FUNCTION</codeph>.
 To change a function's schema, you must also have <codeph>CREATE</codeph>
 privilege on the new schema. To alter the owner, you must also be a direct
@@ -40,12 +44,24 @@ a null result is assumed automatically. See <codeph>CREATE FUNCTION</codeph>
 for more information.</pd></plentry><plentry><pt>IMMUTABLE</pt><pt>STABLE</pt><pt>VOLATILE</pt><pd>Change the volatility of the function to the specified setting. See
 <codeph>CREATE FUNCTION</codeph> for details. </pd></plentry><plentry><pt>[ EXTERNAL ] SECURITY INVOKER</pt><pt>[ EXTERNAL ] SECURITY DEFINER</pt><pd>Change whether the function is a security definer or not. The key
 word <codeph>EXTERNAL</codeph> is ignored for SQL conformance. See <codeph>CREATE
-FUNCTION</codeph> for more information about this capability.</pd></plentry><plentry><pt>RESTRICT</pt><pd>Ignored for conformance with the SQL standard. </pd></plentry></parml></section><section id="section5"><title>Notes</title><p>Greenplum Database has limitations on the use of functions defined as <codeph>STABLE</codeph> or
+FUNCTION</codeph> for more information about this capability.</pd></plentry>
+        <plentry>
+          <pt><varname>configuration_parameter</varname></pt>
+          <pt><varname>value</varname></pt>
+          <pd>Add or change the assignment to be made to a configuration parameter when the function
+            is called. If <varname>value</varname> is  <codeph>DEFAULT</codeph> or, equivalently,
+              <codeph>RESET</codeph> is used, the function-local setting is removed, and the
+            function executes with the value present in its environment. Use <codeph>RESET
+              ALL</codeph> to clear all function-local settings. <codeph>SET FROM CURRENT</codeph>
+            applies the session's current value of the parameter when the function is entered.</pd>
+        </plentry><plentry><pt>RESTRICT</pt><pd>Ignored for conformance with the SQL standard. </pd></plentry></parml></section><section id="section5"><title>Notes</title><p>Greenplum Database has limitations on the use of functions defined as <codeph>STABLE</codeph> or
           <codeph>VOLATILE</codeph>. See <codeph><xref href="./CREATE_FUNCTION.xml#topic1"
             type="topic" format="dita"/></codeph> for more information.</p></section><section id="section6"><title>Examples</title><p>To rename the function <codeph>sqrt</codeph> for type <codeph>integer</codeph> to
           <codeph>square_root</codeph>:</p><codeblock>ALTER FUNCTION sqrt(integer) RENAME TO square_root;</codeblock><p>To change the owner of the function <codeph>sqrt</codeph> for type <codeph>integer</codeph> to
           <codeph>joe</codeph>:</p><codeblock>ALTER FUNCTION sqrt(integer) OWNER TO joe;</codeblock><p>To change the <varname>schema</varname> of the function <codeph>sqrt</codeph> for type
-          <codeph>integer</codeph> to <codeph>math</codeph>:</p><codeblock>ALTER FUNCTION sqrt(integer) SET SCHEMA math;</codeblock></section><section id="section7"><title>Compatibility</title><p>This statement is partially compatible with the <codeph>ALTER FUNCTION</codeph>
+          <codeph>integer</codeph> to <codeph>math</codeph>:</p><codeblock>ALTER FUNCTION sqrt(integer) SET SCHEMA math;</codeblock>
+      <p>To adjust the search path that is automatically set for a function:</p>
+      <codeblock>ALTER FUNCTION check_password(text) RESET search_path;</codeblock></section><section id="section7"><title>Compatibility</title><p>This statement is partially compatible with the <codeph>ALTER FUNCTION</codeph>
 statement in the SQL standard. The standard allows more properties of
 a function to be modified, but does not provide the ability to rename
 a function, make a function a security definer, or change the owner,
