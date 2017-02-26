@@ -870,10 +870,6 @@ preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_
 	Oid			pg_type_oid;
 	bool		columnstore;
 
-	/* we only support old >= 8.3 for binary upgrades */
-	if (fout->remoteVersion >= 80300)
-		return;
-
 	upgrade_query = createPQExpBuffer();
 	upgrade_buffer = createPQExpBuffer();
 

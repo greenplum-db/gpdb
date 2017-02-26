@@ -5407,6 +5407,17 @@ dumpBinaryUpgrade(Archive *fout, DumpableObject **dobjs, int numObjs)
 	if (!binary_upgrade || dataOnly)
 		return;
 
+	/*
+	 * We only support binary upgrades from GPDB versions based on
+	 * PostgreSQL 8.2 and higher. This is different from PostgreSQL
+	 * where the lower limit is at 8.3 since the on-disk format
+	 * changes introduced in 8.3 aren't supported in the upstream
+	 * version of pg_upgrade. The GPDB version of pg_upgrade does
+	 * however handle these changes.
+	 */
+	if (fout->remoteVersion < 80200)
+		return;
+
 	for (i = 0; i < numObjs; i++)
 	{
 		DumpableObject *dobj = dobjs[i];
