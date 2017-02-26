@@ -949,7 +949,6 @@ preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_
 		char		name[NAMEDATALEN];
 		Oid			part_oid;
 		Oid			conns_oid;
-		Oid			conrel_oid;
 		Oid			contyp_oid;
 		Oid			con_oid;
 		Oid			prev_oid = InvalidOid;
@@ -960,7 +959,6 @@ preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_
 						  "       co.oid AS conoid, "
 						  "       co.conname, "
 						  "       co.connamespace, "
-						  "       co.conrelid, "
 						  "       co.contypid "
 						  "FROM pg_partitions p "
 						  "JOIN pg_catalog.pg_class c ON "
@@ -996,10 +994,9 @@ preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_
 					strlcpy(name, PQgetvalue(par_res, i, PQfnumber(par_res, "conname")), sizeof(name));
 					con_oid = atooid(PQgetvalue(par_res, i, PQfnumber(par_res, "conoid")));
 					conns_oid = atooid(PQgetvalue(par_res, i, PQfnumber(par_res, "connamespace")));
-					conrel_oid = atooid(PQgetvalue(par_res, i, PQfnumber(par_res, "conrelid")));
 					contyp_oid = atooid(PQgetvalue(par_res, i, PQfnumber(par_res, "contypid")));
 
-					preassign_constraint_oid(AH, con_oid, conns_oid, name, conrel_oid, contyp_oid);
+					preassign_constraint_oid(AH, con_oid, conns_oid, name, part_oid, contyp_oid);
 				}
 
 				prev_oid = part_oid;
