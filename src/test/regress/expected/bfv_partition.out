@@ -1874,8 +1874,71 @@ EXPLAIN SELECT b FROM bar GROUP BY b;
 (7 rows)
 
 -- CLEANUP
--- start_ignore
 DROP TABLE IF EXISTS foo;
 DROP TABLE IF EXISTS bar;
+-- Test EXPLAIN ANALYZE on a partitioned table. There used to be a bug, where
+-- you got an internal error with this, because the EXPLAIN ANALYZE sends the
+-- stats from QEs to the QD at the end of query, but because the subnodes are
+-- terminated earlier, their stats were already gone.
+create table mpp8031 (oid integer,
+odate timestamp without time zone,
+cid integer)
+PARTITION BY RANGE(odate)
+(
+PARTITION foo START ('2005-05-01 00:00:00'::timestamp
+without time zone) END ('2005-07-01 00:00:00'::timestamp
+without time zone) EVERY ('2 mons'::interval),
+START ('2005-07-01 00:00:00'::timestamp without time zone)
+END ('2006-01-01 00:00:00'::timestamp without time zone)
+EVERY ('2 mons'::interval)
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'oid' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "mpp8031_1_prt_foo" for table "mpp8031"
+NOTICE:  CREATE TABLE will create partition "mpp8031_1_prt_2" for table "mpp8031"
+NOTICE:  CREATE TABLE will create partition "mpp8031_1_prt_3" for table "mpp8031"
+NOTICE:  CREATE TABLE will create partition "mpp8031_1_prt_4" for table "mpp8031"
+explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=6799.00..1021796.00 rows=80883360 width=16)
+   Rows out:  0 rows at destination with 1.011 ms to end, start offset by 0.365 ms.
+   ->  Hash Join  (cost=6799.00..1021796.00 rows=26961120 width=16)
+         Hash Cond: a.oid = b.oid
+         Rows out:  0 rows (seg0) with 0.051 ms to end, start offset by 1.246 ms.
+         ->  Append  (cost=0.00..3244.00 rows=94800 width=16)
+               Rows out:  0 rows (seg0) with 0.051 ms to end, start offset by 1.246 ms.
+               ->  Seq Scan on mpp8031_1_prt_foo a  (cost=0.00..811.00 rows=23700 width=16)
+                     Rows out:  0 rows (seg0) with 0.022 ms to end, start offset by 1.247 ms.
+               ->  Seq Scan on mpp8031_1_prt_2 a  (cost=0.00..811.00 rows=23700 width=16)
+                     Rows out:  0 rows (seg0) with 0.009 ms to end, start offset by 1.270 ms.
+               ->  Seq Scan on mpp8031_1_prt_3 a  (cost=0.00..811.00 rows=23700 width=16)
+                     Rows out:  0 rows (seg0) with 0.009 ms to end, start offset by 1.279 ms.
+               ->  Seq Scan on mpp8031_1_prt_4 a  (cost=0.00..811.00 rows=23700 width=16)
+                     Rows out:  0 rows (seg0) with 0.008 ms to end, start offset by 1.288 ms.
+         ->  Hash  (cost=3244.00..3244.00 rows=94800 width=4)
+               Rows in:  (No row requested) 0 rows (seg0) with 0 ms to end.
+               ->  Append  (cost=0.00..3244.00 rows=94800 width=4)
+                     Rows out:  (No row requested) 0 rows (seg0) with 0 ms to end.
+                     ->  Seq Scan on mpp8031_1_prt_foo b  (cost=0.00..811.00 rows=23700 width=4)
+                           Rows out:  (No row requested) 0 rows (seg0) with 0 ms to end.
+                     ->  Seq Scan on mpp8031_1_prt_2 b  (cost=0.00..811.00 rows=23700 width=4)
+                           Rows out:  (No row requested) 0 rows (seg0) with 0 ms to end.
+                     ->  Seq Scan on mpp8031_1_prt_3 b  (cost=0.00..811.00 rows=23700 width=4)
+                           Rows out:  (No row requested) 0 rows (seg0) with 0 ms to end.
+                     ->  Seq Scan on mpp8031_1_prt_4 b  (cost=0.00..811.00 rows=23700 width=4)
+                           Rows out:  (No row requested) 0 rows (seg0) with 0 ms to end.
+ Slice statistics:
+   (slice0)    Executor memory: 382K bytes.
+   (slice1)    Executor memory: 146K bytes avg x 3 workers, 146K bytes max (seg0).
+ Statement statistics:
+   Memory used: 128000K bytes
+ Optimizer status: legacy query optimizer
+ Total runtime: 2.045 ms
+(34 rows)
+
+drop table mpp8031;
+-- CLEANUP
+-- start_ignore
 drop schema if exists bfv_partition;
 -- end_ignore
