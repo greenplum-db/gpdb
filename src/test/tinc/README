@@ -29,7 +29,7 @@ Guidelines to run the tests
 * Source greenplum_path.sh before sourcing tinc_env.sh
 
 * Run `make <test target>`
-  E.g. make storage_queryfinish_and_transactionmanagement
+  E.g. make storage_uao_and_transactionmanagement
   You can find targets in the top level Makefile $TINCHOME/Makefile.
 
   -- OR --

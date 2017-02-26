@@ -65,7 +65,7 @@ non_discover_targets: aoco_compression filerep_end_to_end fts
 # stages for configuration requirements.
 
 storage: storage_vacuum_xidlimits aocoalter_catalog_loaders \
-	storage_queryfinish_and_transactionmanagement \
+	storage_uao_and_transactionmanagement \
 	storage_persistent_filerep_accessmethods_and_vacuum \
 	filerep_end_to_end_xlog_ctlog_cons
 
@@ -85,9 +85,8 @@ aocoalter_catalog_loaders:
 	-s catalog/upgrade \
 	-s storage/loaders
 
-storage_queryfinish_and_transactionmanagement:
+storage_uao_and_transactionmanagement:
 	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests \
-	-s dispatch/queryfinish \
 	-s storage/transaction_management \
 	-s storage/basic \
 	-s storage/uao

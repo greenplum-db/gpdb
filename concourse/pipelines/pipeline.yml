@@ -480,10 +480,10 @@ jobs:
         TEST_OS: centos
       image: centos-gpdb-dev-6
       timeout: 3h
-    - task: storage_queryfinish_and_transactionmanagement
+    - task: storage_uao_transactionmanagement
       file: gpdb_src/concourse/tasks/tinc_gpdb.yml
       params:
-        MAKE_TEST_COMMAND: storage_queryfinish_and_transactionmanagement
+        MAKE_TEST_COMMAND: storage_uao_and_transactionmanagement
         TEST_OS: centos
       image: centos-gpdb-dev-6
       timeout: 3h
