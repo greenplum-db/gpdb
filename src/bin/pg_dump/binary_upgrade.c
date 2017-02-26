@@ -1054,12 +1054,21 @@ preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_
 
 	PQclear(upgrade_res);
 
-	ArchiveEntry(AH, nilCatalogId, createDumpId(),
-				 objname,
-				 NULL, NULL, "",
-				 false, "BINARY UPGRADE", upgrade_buffer->data, "", NULL,
-				 NULL, 0,
-				 NULL, NULL);
+	/*
+	 * It's not unlikely that neither check resulted in more Oids preassigned
+	 * here since the type Oid is handled in the call to preassign_type_oid
+	 * leaving this function to deal with toast and AO auxiliary tables etc.
+	 * Skip adding an archive entry if nothing was added.
+	 */
+	if (upgrade_buffer->len > 0)
+	{
+		ArchiveEntry(AH, nilCatalogId, createDumpId(),
+					 objname,
+					 NULL, NULL, "",
+					 false, "BINARY UPGRADE", upgrade_buffer->data, "", NULL,
+					 NULL, 0,
+					 NULL, NULL);
+	}
 
 	destroyPQExpBuffer(upgrade_query);
 	destroyPQExpBuffer(upgrade_buffer);
