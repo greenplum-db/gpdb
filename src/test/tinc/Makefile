@@ -51,7 +51,7 @@ DISCOVER=discover
 storage_targets: discover_targets non_discover_targets
 
 discover_targets: storage walrep_multinode \
-	upgrade pgtwophase \
+	pgtwophase \
 	sub_transaction_limit_removal filerep_schematopology_crashrecov
 
 non_discover_targets: aoco_compression filerep_end_to_end fts
@@ -169,18 +169,6 @@ aoco_compression_small:
 
 aoco_compression_small_serial:
 	$(TESTER) mpp.gpdb.tests.storage.aoco_compression.test_func_aococompression_small_serial
-
-
-# GPDB-O2-TINC-Upgrade-no-scm 
-# The following targets are pulled from:
-# http://pulse-cloud.gopivotal.com/admin/projects/GPDB-O2-TINC-Upgrade-no-scm
-#
-# Refer to the properties of the pulse project and individual build
-# stages for configuration requirements.
-
-upgrade:
-	$(TESTER) $(DISCOVER) -s tincrepo/mpp/gpdb/tests/utilities/upgrade
-
 
 # cs-filerep-end-to-end
 # The following targets are pulled from:
