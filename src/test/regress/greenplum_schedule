@@ -87,7 +87,8 @@ test: wrkloadadmin
 # vacuum from removing dead tuples.
 test: gp_toolkit
 
-test: gp_toolkit_ao_funcs filespace trig auth_constraint role rle portals_updatable plpgsql_cache timeseries pg_stat_last_operation gp_numeric_agg partindex_test partition_pruning_with_fn dsp runtime_stats
+test: gp_toolkit_ao_funcs filespace trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation gp_numeric_agg partindex_test partition_pruning_with_fn runtime_stats
+test: rle rle_delta dsp
 
 # direct dispatch tests
 test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types

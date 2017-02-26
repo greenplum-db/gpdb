@@ -11248,6 +11248,15 @@ CREATE TABLE rle_co_block_boundary (
 WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3, blocksize=8192)
 DISTRIBUTED BY (distcol);
 COPY rle_co_block_boundary (distcol, col1) FROM stdin NULL AS 'NULL';
+-- Another test on RLE block boundary
+CREATE TABLE rle_block_boundary (a int, b text) with (appendonly=true, orientation=column, compresstype=rle_type);
+COPY rle_block_boundary(b) FROM STDIN;
+SELECT COUNT(*) FROM rle_block_boundary;
+ count 
+-------
+  2470
+(1 row)
+
 --
 -- Bulk dense content header with RLE compression
 begin;
