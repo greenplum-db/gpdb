@@ -349,3 +349,26 @@ created timestamp with time zone
 insert into dest_table select nextval('test_seq'::regclass), date_converter(created) from source_table;
 select count(1) from dest_table;
 
+
+RESET gp_enable_slow_writer_testmode;
+
+--
+-- The PL/pgSQL EXCEPTION block opens a subtransaction.
+-- If it's in reader, it was messing up relcache previously.
+--
+create table stran_foo(a, b) as values(1, 10), (2, 20);
+create or replace function stran_func(a int) returns int as $$
+declare
+  x int;
+begin
+  begin
+    select 1 + 2 into x;
+  exception
+    when division_by_zero then
+      raise info 'except';
+  end;
+  return x;
+end;
+$$ language plpgsql;
+
+create table stran_tt as select stran_func(b) from stran_foo;
