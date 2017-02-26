@@ -62,6 +62,11 @@ distributed by (subscription_id, bill_stmt_id)
 -- TEST
 select count_operator('explain select cust_type, subscription_status,count(distinct subscription_id),sum(voice_call_min),sum(minute_per_call) from mpp7980 where month_id =E''2009-04-01'' group by rollup(1,2);','SIGSEGV');
 
+insert into mpp7980 values('2009-04-01','xyz','zyz','1',1,1,'1');
+insert into mpp7980 values('2009-04-01','zxyz','zyz','2',2,1,'1');
+insert into mpp7980 values('2009-03-03','xyz','zyz','4',1,3,'1');
+select cust_type, subscription_status,count(distinct subscription_id),sum(voice_call_min),sum(minute_per_call) from mpp7980 where month_id ='2009-04-01' group by rollup(1,2);
+
 -- CLEANUP
 -- start_ignore
 drop table mpp7980;
