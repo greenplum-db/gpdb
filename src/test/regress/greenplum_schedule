@@ -47,13 +47,11 @@ test: query_finish_pending
 
 test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan co_nestloop_idxscan
 
-test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 distributed_transactions olap_group olap_window_seq partition1 sirv_functions
+test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 distributed_transactions olap_group olap_window_seq sirv_functions appendonly alter_distpol_dropped query_finish
 
 # 'partition' runs for a long time, so try to keep it together with other
-# long-running tests. Unfortunately, 'partition' also assumes that there
-# are no other partitioned tables present in the database, so it cannot run
-# in parallel with tests that use partitions.
-test: partition appendonly alter_distpol_dropped query_finish
+# long-running tests.
+test: partition partition1 partition_indexing parruleord
 # 'partition_locking' gets confused if other backends run concurrently and
 # hold locks.
 test: partition_locking
@@ -74,7 +72,6 @@ test: vacuum_gp
 
 ignore: gp_portal_error
 test: external_table column_compression eagerfree mapred gpdtm_plpgsql alter_table_aocs alter_table_aocs2 alter_distribution_policy ic aoco_privileges aocs
-test: partition_indexing parruleord
 test: alter_table_ao ao_create_alter_valid_table subtransaction_limit oid_consistency udf_exception_blocks
 ignore: icudp_full
 

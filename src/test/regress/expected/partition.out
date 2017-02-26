@@ -1427,7 +1427,7 @@ select pg_get_partition_def('i5'::regclass, true);
 drop table i5;
 set gp_enable_hash_partitioned_tables = false;
 -- ALTER TABLE ALTER PARTITION tests
-CREATE TABLE rank2 (id int, rank int,
+CREATE TABLE ataprank (id int, rank int,
 year date, gender char(1),
 usstate char(2))
 DISTRIBUTED BY (id, gender, year, usstate)
@@ -1450,50 +1450,50 @@ subpartition ohio values ('OH')
   partition boys values ('M'),
   partition girls values ('F')
 );
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys" for table "rank2"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan01" for table "rank2_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan01_3_prt_mass" for table "rank2_1_prt_boys_2_prt_jan01"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan01_3_prt_cali" for table "rank2_1_prt_boys_2_prt_jan01"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan01_3_prt_ohio" for table "rank2_1_prt_boys_2_prt_jan01"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan02" for table "rank2_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan02_3_prt_mass" for table "rank2_1_prt_boys_2_prt_jan02"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan02_3_prt_cali" for table "rank2_1_prt_boys_2_prt_jan02"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan02_3_prt_ohio" for table "rank2_1_prt_boys_2_prt_jan02"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan03" for table "rank2_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan03_3_prt_mass" for table "rank2_1_prt_boys_2_prt_jan03"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan03_3_prt_cali" for table "rank2_1_prt_boys_2_prt_jan03"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan03_3_prt_ohio" for table "rank2_1_prt_boys_2_prt_jan03"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan04" for table "rank2_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan04_3_prt_mass" for table "rank2_1_prt_boys_2_prt_jan04"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan04_3_prt_cali" for table "rank2_1_prt_boys_2_prt_jan04"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan04_3_prt_ohio" for table "rank2_1_prt_boys_2_prt_jan04"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan05" for table "rank2_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan05_3_prt_mass" for table "rank2_1_prt_boys_2_prt_jan05"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan05_3_prt_cali" for table "rank2_1_prt_boys_2_prt_jan05"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan05_3_prt_ohio" for table "rank2_1_prt_boys_2_prt_jan05"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls" for table "rank2"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan01" for table "rank2_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan01_3_prt_mass" for table "rank2_1_prt_girls_2_prt_jan01"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan01_3_prt_cali" for table "rank2_1_prt_girls_2_prt_jan01"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan01_3_prt_ohio" for table "rank2_1_prt_girls_2_prt_jan01"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan02" for table "rank2_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan02_3_prt_mass" for table "rank2_1_prt_girls_2_prt_jan02"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan02_3_prt_cali" for table "rank2_1_prt_girls_2_prt_jan02"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan02_3_prt_ohio" for table "rank2_1_prt_girls_2_prt_jan02"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan03" for table "rank2_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan03_3_prt_mass" for table "rank2_1_prt_girls_2_prt_jan03"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan03_3_prt_cali" for table "rank2_1_prt_girls_2_prt_jan03"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan03_3_prt_ohio" for table "rank2_1_prt_girls_2_prt_jan03"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan04" for table "rank2_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan04_3_prt_mass" for table "rank2_1_prt_girls_2_prt_jan04"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan04_3_prt_cali" for table "rank2_1_prt_girls_2_prt_jan04"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan04_3_prt_ohio" for table "rank2_1_prt_girls_2_prt_jan04"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan05" for table "rank2_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan05_3_prt_mass" for table "rank2_1_prt_girls_2_prt_jan05"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan05_3_prt_cali" for table "rank2_1_prt_girls_2_prt_jan05"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_jan05_3_prt_ohio" for table "rank2_1_prt_girls_2_prt_jan05"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys" for table "ataprank"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan01" for table "ataprank_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan01_3_prt_mass" for table "ataprank_1_prt_boys_2_prt_jan01"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan01_3_prt_cali" for table "ataprank_1_prt_boys_2_prt_jan01"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan01_3_prt_ohio" for table "ataprank_1_prt_boys_2_prt_jan01"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan02" for table "ataprank_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan02_3_prt_mass" for table "ataprank_1_prt_boys_2_prt_jan02"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan02_3_prt_cali" for table "ataprank_1_prt_boys_2_prt_jan02"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan02_3_prt_ohio" for table "ataprank_1_prt_boys_2_prt_jan02"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan03" for table "ataprank_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan03_3_prt_mass" for table "ataprank_1_prt_boys_2_prt_jan03"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan03_3_prt_cali" for table "ataprank_1_prt_boys_2_prt_jan03"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan03_3_prt_ohio" for table "ataprank_1_prt_boys_2_prt_jan03"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan04" for table "ataprank_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan04_3_prt_mass" for table "ataprank_1_prt_boys_2_prt_jan04"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan04_3_prt_cali" for table "ataprank_1_prt_boys_2_prt_jan04"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan04_3_prt_ohio" for table "ataprank_1_prt_boys_2_prt_jan04"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan05" for table "ataprank_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan05_3_prt_mass" for table "ataprank_1_prt_boys_2_prt_jan05"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan05_3_prt_cali" for table "ataprank_1_prt_boys_2_prt_jan05"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan05_3_prt_ohio" for table "ataprank_1_prt_boys_2_prt_jan05"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls" for table "ataprank"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan01" for table "ataprank_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan01_3_prt_mass" for table "ataprank_1_prt_girls_2_prt_jan01"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan01_3_prt_cali" for table "ataprank_1_prt_girls_2_prt_jan01"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan01_3_prt_ohio" for table "ataprank_1_prt_girls_2_prt_jan01"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan02" for table "ataprank_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan02_3_prt_mass" for table "ataprank_1_prt_girls_2_prt_jan02"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan02_3_prt_cali" for table "ataprank_1_prt_girls_2_prt_jan02"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan02_3_prt_ohio" for table "ataprank_1_prt_girls_2_prt_jan02"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan03" for table "ataprank_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan03_3_prt_mass" for table "ataprank_1_prt_girls_2_prt_jan03"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan03_3_prt_cali" for table "ataprank_1_prt_girls_2_prt_jan03"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan03_3_prt_ohio" for table "ataprank_1_prt_girls_2_prt_jan03"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan04" for table "ataprank_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan04_3_prt_mass" for table "ataprank_1_prt_girls_2_prt_jan04"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan04_3_prt_cali" for table "ataprank_1_prt_girls_2_prt_jan04"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan04_3_prt_ohio" for table "ataprank_1_prt_girls_2_prt_jan04"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan05" for table "ataprank_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan05_3_prt_mass" for table "ataprank_1_prt_girls_2_prt_jan05"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan05_3_prt_cali" for table "ataprank_1_prt_girls_2_prt_jan05"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_girls_2_prt_jan05_3_prt_ohio" for table "ataprank_1_prt_girls_2_prt_jan05"
 -- and without subpartition templates...
-CREATE TABLE rank3 (id int, rank int,
+CREATE TABLE ataprank2 (id int, rank int,
 year date, gender char(1),
 usstate char(2))
 DISTRIBUTED BY (id, gender, year, usstate)
@@ -1569,293 +1569,293 @@ subpartition ohio values ('OH')
 )
 )
 );
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys" for table "rank3"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan01" for table "rank3_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan01_3_prt_mass" for table "rank3_1_prt_boys_2_prt_jan01"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan01_3_prt_cali" for table "rank3_1_prt_boys_2_prt_jan01"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan01_3_prt_ohio" for table "rank3_1_prt_boys_2_prt_jan01"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan02" for table "rank3_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan02_3_prt_mass" for table "rank3_1_prt_boys_2_prt_jan02"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan02_3_prt_cali" for table "rank3_1_prt_boys_2_prt_jan02"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan02_3_prt_ohio" for table "rank3_1_prt_boys_2_prt_jan02"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan03" for table "rank3_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan03_3_prt_mass" for table "rank3_1_prt_boys_2_prt_jan03"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan03_3_prt_cali" for table "rank3_1_prt_boys_2_prt_jan03"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan03_3_prt_ohio" for table "rank3_1_prt_boys_2_prt_jan03"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan04" for table "rank3_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan04_3_prt_mass" for table "rank3_1_prt_boys_2_prt_jan04"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan04_3_prt_cali" for table "rank3_1_prt_boys_2_prt_jan04"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan04_3_prt_ohio" for table "rank3_1_prt_boys_2_prt_jan04"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan05" for table "rank3_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan05_3_prt_mass" for table "rank3_1_prt_boys_2_prt_jan05"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan05_3_prt_cali" for table "rank3_1_prt_boys_2_prt_jan05"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan05_3_prt_ohio" for table "rank3_1_prt_boys_2_prt_jan05"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls" for table "rank3"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan01" for table "rank3_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan01_3_prt_mass" for table "rank3_1_prt_girls_2_prt_jan01"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan01_3_prt_cali" for table "rank3_1_prt_girls_2_prt_jan01"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan01_3_prt_ohio" for table "rank3_1_prt_girls_2_prt_jan01"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan02" for table "rank3_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan02_3_prt_mass" for table "rank3_1_prt_girls_2_prt_jan02"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan02_3_prt_cali" for table "rank3_1_prt_girls_2_prt_jan02"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan02_3_prt_ohio" for table "rank3_1_prt_girls_2_prt_jan02"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan03" for table "rank3_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan03_3_prt_mass" for table "rank3_1_prt_girls_2_prt_jan03"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan03_3_prt_cali" for table "rank3_1_prt_girls_2_prt_jan03"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan03_3_prt_ohio" for table "rank3_1_prt_girls_2_prt_jan03"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan04" for table "rank3_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan04_3_prt_mass" for table "rank3_1_prt_girls_2_prt_jan04"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan04_3_prt_cali" for table "rank3_1_prt_girls_2_prt_jan04"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan04_3_prt_ohio" for table "rank3_1_prt_girls_2_prt_jan04"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan05" for table "rank3_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan05_3_prt_mass" for table "rank3_1_prt_girls_2_prt_jan05"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan05_3_prt_cali" for table "rank3_1_prt_girls_2_prt_jan05"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_girls_2_prt_jan05_3_prt_ohio" for table "rank3_1_prt_girls_2_prt_jan05"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys" for table "ataprank2"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan01" for table "ataprank2_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan01_3_prt_mass" for table "ataprank2_1_prt_boys_2_prt_jan01"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan01_3_prt_cali" for table "ataprank2_1_prt_boys_2_prt_jan01"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan01_3_prt_ohio" for table "ataprank2_1_prt_boys_2_prt_jan01"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan02" for table "ataprank2_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan02_3_prt_mass" for table "ataprank2_1_prt_boys_2_prt_jan02"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan02_3_prt_cali" for table "ataprank2_1_prt_boys_2_prt_jan02"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan02_3_prt_ohio" for table "ataprank2_1_prt_boys_2_prt_jan02"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan03" for table "ataprank2_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan03_3_prt_mass" for table "ataprank2_1_prt_boys_2_prt_jan03"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan03_3_prt_cali" for table "ataprank2_1_prt_boys_2_prt_jan03"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan03_3_prt_ohio" for table "ataprank2_1_prt_boys_2_prt_jan03"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan04" for table "ataprank2_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan04_3_prt_mass" for table "ataprank2_1_prt_boys_2_prt_jan04"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan04_3_prt_cali" for table "ataprank2_1_prt_boys_2_prt_jan04"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan04_3_prt_ohio" for table "ataprank2_1_prt_boys_2_prt_jan04"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan05" for table "ataprank2_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan05_3_prt_mass" for table "ataprank2_1_prt_boys_2_prt_jan05"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan05_3_prt_cali" for table "ataprank2_1_prt_boys_2_prt_jan05"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan05_3_prt_ohio" for table "ataprank2_1_prt_boys_2_prt_jan05"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls" for table "ataprank2"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan01" for table "ataprank2_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan01_3_prt_mass" for table "ataprank2_1_prt_girls_2_prt_jan01"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan01_3_prt_cali" for table "ataprank2_1_prt_girls_2_prt_jan01"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan01_3_prt_ohio" for table "ataprank2_1_prt_girls_2_prt_jan01"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan02" for table "ataprank2_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan02_3_prt_mass" for table "ataprank2_1_prt_girls_2_prt_jan02"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan02_3_prt_cali" for table "ataprank2_1_prt_girls_2_prt_jan02"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan02_3_prt_ohio" for table "ataprank2_1_prt_girls_2_prt_jan02"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan03" for table "ataprank2_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan03_3_prt_mass" for table "ataprank2_1_prt_girls_2_prt_jan03"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan03_3_prt_cali" for table "ataprank2_1_prt_girls_2_prt_jan03"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan03_3_prt_ohio" for table "ataprank2_1_prt_girls_2_prt_jan03"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan04" for table "ataprank2_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan04_3_prt_mass" for table "ataprank2_1_prt_girls_2_prt_jan04"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan04_3_prt_cali" for table "ataprank2_1_prt_girls_2_prt_jan04"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan04_3_prt_ohio" for table "ataprank2_1_prt_girls_2_prt_jan04"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan05" for table "ataprank2_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan05_3_prt_mass" for table "ataprank2_1_prt_girls_2_prt_jan05"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan05_3_prt_cali" for table "ataprank2_1_prt_girls_2_prt_jan05"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_girls_2_prt_jan05_3_prt_ohio" for table "ataprank2_1_prt_girls_2_prt_jan05"
 -- ok
-alter table rank2 truncate partition girls;
-NOTICE:  truncated partition "girls" for relation "rank2" and its children
-alter table rank2 alter partition girls truncate partition for (rank(1));
-NOTICE:  truncated partition "jan01" for partition "girls" of relation "rank2" and its children
-alter table rank2 alter partition girls alter partition 
+alter table ataprank truncate partition girls;
+NOTICE:  truncated partition "girls" for relation "ataprank" and its children
+alter table ataprank alter partition girls truncate partition for (rank(1));
+NOTICE:  truncated partition "jan01" for partition "girls" of relation "ataprank" and its children
+alter table ataprank alter partition girls alter partition 
 for (rank(1)) truncate partition mass;
-NOTICE:  truncated partition "mass" for partition "jan01" of partition "girls" of relation "rank2"
+NOTICE:  truncated partition "mass" for partition "jan01" of partition "girls" of relation "ataprank"
 -- don't NOTIFY of children if cascade
-alter table rank2 truncate partition girls cascade;
+alter table ataprank truncate partition girls cascade;
 -- fail - no rank 100
-alter table rank2 alter partition girls truncate partition for (rank(100));
-ERROR:  partition for rank 100 of partition "girls" of relation "rank2" does not exist
+alter table ataprank alter partition girls truncate partition for (rank(100));
+ERROR:  partition for rank 100 of partition "girls" of relation "ataprank" does not exist
 -- fail - no funky
-alter table rank2 alter partition girls alter partition 
+alter table ataprank alter partition girls alter partition 
 for (rank(1)) truncate partition "funky";
-ERROR:  partition "funky" of partition "jan01" of partition "girls" of relation "rank2" does not exist
+ERROR:  partition "funky" of partition "jan01" of partition "girls" of relation "ataprank" does not exist
 -- fail - no funky (drop)
-alter table rank2 alter partition girls alter partition 
+alter table ataprank alter partition girls alter partition 
 for (rank(1)) drop partition "funky";
-ERROR:  partition "funky" of partition "jan01" of partition "girls" of relation "rank2" does not exist
+ERROR:  partition "funky" of partition "jan01" of partition "girls" of relation "ataprank" does not exist
 -- fail - missing name
-alter table rank2 alter partition girls alter partition 
+alter table ataprank alter partition girls alter partition 
 for (rank(1)) drop partition ;
-ERROR:  missing name or value for DROP for partition "jan01" of partition "girls" of relation "rank2"
+ERROR:  missing name or value for DROP for partition "jan01" of partition "girls" of relation "ataprank"
 -- ok
-alter table rank2 alter partition girls drop partition 
+alter table ataprank alter partition girls drop partition 
 for (rank(1)) ;
-NOTICE:  dropped partition "jan01" for partition "girls" of relation "rank2" and its children
+NOTICE:  dropped partition "jan01" for partition "girls" of relation "ataprank" and its children
 -- ok , skipping
-alter table rank2 alter partition girls drop partition if exists jan01;
-NOTICE:  partition "jan01" of partition "girls" of relation "rank2" does not exist, skipping
+alter table ataprank alter partition girls drop partition if exists jan01;
+NOTICE:  partition "jan01" of partition "girls" of relation "ataprank" does not exist, skipping
 -- ok until run out of partitions
-alter table rank2 alter partition girls drop partition ;
-NOTICE:  dropped partition "jan02" for partition "girls" of relation "rank2" and its children
-alter table rank2 alter partition girls drop partition ;
-NOTICE:  dropped partition "jan03" for partition "girls" of relation "rank2" and its children
-alter table rank2 alter partition girls drop partition ;
-NOTICE:  dropped partition "jan04" for partition "girls" of relation "rank2" and its children
-alter table rank2 alter partition girls drop partition ;
-ERROR:  cannot drop partition "jan05" of partition "girls" of relation "rank2" -- only one remains
+alter table ataprank alter partition girls drop partition ;
+NOTICE:  dropped partition "jan02" for partition "girls" of relation "ataprank" and its children
+alter table ataprank alter partition girls drop partition ;
+NOTICE:  dropped partition "jan03" for partition "girls" of relation "ataprank" and its children
+alter table ataprank alter partition girls drop partition ;
+NOTICE:  dropped partition "jan04" for partition "girls" of relation "ataprank" and its children
+alter table ataprank alter partition girls drop partition ;
+ERROR:  cannot drop partition "jan05" of partition "girls" of relation "ataprank" -- only one remains
 HINT:  DROP the parent partition to remove the final partition
-alter table rank2 alter partition girls drop partition ;
-ERROR:  cannot drop partition "jan05" of partition "girls" of relation "rank2" -- only one remains
+alter table ataprank alter partition girls drop partition ;
+ERROR:  cannot drop partition "jan05" of partition "girls" of relation "ataprank" -- only one remains
 HINT:  DROP the parent partition to remove the final partition
 -- ok, skipping
-alter table rank2 alter partition girls drop partition if exists for (rank(5));
-NOTICE:  partition for specified rank of partition "girls" of relation "rank2" does not exist, skipping
+alter table ataprank alter partition girls drop partition if exists for (rank(5));
+NOTICE:  partition for specified rank of partition "girls" of relation "ataprank" does not exist, skipping
 -- ok
-alter table rank2 alter partition girls rename partition jan05 
+alter table ataprank alter partition girls rename partition jan05 
 to "funky fresh";
-NOTICE:  renamed partition "jan05" to "funky fresh" for partition "girls" of relation "rank2"
-alter table rank2 alter partition girls rename partition "funky fresh"
+NOTICE:  renamed partition "jan05" to "funky fresh" for partition "girls" of relation "ataprank"
+alter table ataprank alter partition girls rename partition "funky fresh"
 to jan05;
-NOTICE:  renamed partition "funky fresh" to "jan05" for partition "girls" of relation "rank2"
+NOTICE:  renamed partition "funky fresh" to "jan05" for partition "girls" of relation "ataprank"
 -- fail , not exist
-alter table rank2 alter partition girls alter partition jan05 rename
+alter table ataprank alter partition girls alter partition jan05 rename
 partition jan01 to foo;
-ERROR:  partition "jan01" of partition "jan05" of partition "girls" of relation "rank2" does not exist
+ERROR:  partition "jan01" of partition "jan05" of partition "girls" of relation "ataprank" does not exist
 -- fail not exist
-alter table rank2 alter partition girls alter partition jan05 alter
+alter table ataprank alter partition girls alter partition jan05 alter
 partition cali rename partition foo to bar;
-ERROR:  partition "foo" of partition "cali" of partition "jan05" of partition "girls" of relation "rank2" does not exist
+ERROR:  partition "foo" of partition "cali" of partition "jan05" of partition "girls" of relation "ataprank" does not exist
 -- fail not partitioned
-alter table rank2 alter partition girls alter partition jan05 alter
+alter table ataprank alter partition girls alter partition jan05 alter
 partition cali alter partition foo drop partition bar;
-ERROR:  partition "cali" of partition "jan05" of partition "girls" of relation "rank2" is not partitioned
+ERROR:  partition "cali" of partition "jan05" of partition "girls" of relation "ataprank" is not partitioned
 -- ADD PARTITION, with and without templates
--- fails for rank2 (due to template), works for rank3
-alter table rank2
+-- fails for ataprank (due to template), works for ataprank2
+alter table ataprank
 add partition neuter values ('N')
     (subpartition foo
          start ('2001-01-01') end ('2002-01-01')
          every (interval '1 month')
             (subpartition bar values ('AZ')));
 ERROR:  subpartition configuration conflicts with subpartition template
-alter table rank3
+alter table ataprank2
 add partition neuter values ('N')
     (subpartition foo
          start ('2001-01-01') end ('2002-01-01')
          every (interval '1 month')
             (subpartition bar values ('AZ')));
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter" for table "rank3"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_1" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_1_3_prt_bar" for table "rank3_1_prt_neuter_2_prt_foo_1"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_2" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_2_3_prt_bar" for table "rank3_1_prt_neuter_2_prt_foo_2"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_3" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_3_3_prt_bar" for table "rank3_1_prt_neuter_2_prt_foo_3"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_4" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_4_3_prt_bar" for table "rank3_1_prt_neuter_2_prt_foo_4"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_5" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_5_3_prt_bar" for table "rank3_1_prt_neuter_2_prt_foo_5"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_6" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_6_3_prt_bar" for table "rank3_1_prt_neuter_2_prt_foo_6"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_7" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_7_3_prt_bar" for table "rank3_1_prt_neuter_2_prt_foo_7"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_8" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_8_3_prt_bar" for table "rank3_1_prt_neuter_2_prt_foo_8"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_9" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_9_3_prt_bar" for table "rank3_1_prt_neuter_2_prt_foo_9"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_10" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_10_3_prt_bar" for table "rank3_1_prt_neuter_2_prt_foo_10"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_11" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_11_3_prt_bar" for table "rank3_1_prt_neuter_2_prt_foo_11"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_12" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_12_3_prt_bar" for table "rank3_1_prt_neuter_2_prt_foo_12"
--- fail , no subpartition spec for rank3, works for rank2
-alter table rank2 alter partition boys
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter" for table "ataprank2"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_1" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_1_3_prt_bar" for table "ataprank2_1_prt_neuter_2_prt_foo_1"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_2" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_2_3_prt_bar" for table "ataprank2_1_prt_neuter_2_prt_foo_2"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_3" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_3_3_prt_bar" for table "ataprank2_1_prt_neuter_2_prt_foo_3"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_4" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_4_3_prt_bar" for table "ataprank2_1_prt_neuter_2_prt_foo_4"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_5" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_5_3_prt_bar" for table "ataprank2_1_prt_neuter_2_prt_foo_5"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_6" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_6_3_prt_bar" for table "ataprank2_1_prt_neuter_2_prt_foo_6"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_7" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_7_3_prt_bar" for table "ataprank2_1_prt_neuter_2_prt_foo_7"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_8" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_8_3_prt_bar" for table "ataprank2_1_prt_neuter_2_prt_foo_8"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_9" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_9_3_prt_bar" for table "ataprank2_1_prt_neuter_2_prt_foo_9"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_10" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_10_3_prt_bar" for table "ataprank2_1_prt_neuter_2_prt_foo_10"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_11" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_11_3_prt_bar" for table "ataprank2_1_prt_neuter_2_prt_foo_11"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_12" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_12_3_prt_bar" for table "ataprank2_1_prt_neuter_2_prt_foo_12"
+-- fail , no subpartition spec for ataprank2, works for ataprank
+alter table ataprank alter partition boys
 add partition jan00 start ('2000-01-01') end ('2001-01-01');
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan00" for table "rank2_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan00_3_prt_mass" for table "rank2_1_prt_boys_2_prt_jan00"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan00_3_prt_cali" for table "rank2_1_prt_boys_2_prt_jan00"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan00_3_prt_ohio" for table "rank2_1_prt_boys_2_prt_jan00"
-alter table rank3 alter partition boys
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan00" for table "ataprank_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan00_3_prt_mass" for table "ataprank_1_prt_boys_2_prt_jan00"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan00_3_prt_cali" for table "ataprank_1_prt_boys_2_prt_jan00"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan00_3_prt_ohio" for table "ataprank_1_prt_boys_2_prt_jan00"
+alter table ataprank2 alter partition boys
 add partition jan00 start ('2000-01-01') end ('2001-01-01');
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan00" for table "rank3_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan00" for table "ataprank2_1_prt_boys"
 ERROR:  no partitions specified at depth 3
--- work - create subpartition for rank3, fail for rank2
-alter table rank2 alter partition boys
+-- work - create subpartition for ataprank2, fail for ataprank
+alter table ataprank alter partition boys
 add partition jan99 start ('1999-01-01') end ('2000-01-01')
   (subpartition ariz values ('AZ'));
 ERROR:  subpartition configuration conflicts with subpartition template
-alter table rank3 alter partition boys
+alter table ataprank2 alter partition boys
 add partition jan00 start ('2000-01-01') end ('2001-01-01')
   (subpartition ariz values ('AZ'));
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan00" for table "rank3_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan00_3_prt_ariz" for table "rank3_1_prt_boys_2_prt_jan00"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan00" for table "ataprank2_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan00_3_prt_ariz" for table "ataprank2_1_prt_boys_2_prt_jan00"
 -- works for both -- adding leaf partition doesn't conflict with template
-alter table rank2 alter partition boys
+alter table ataprank alter partition boys
 alter partition jan00 
 add partition haw values ('HI');
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_jan00_3_prt_haw" for table "rank2_1_prt_boys_2_prt_jan00"
-alter table rank3 alter partition boys
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_boys_2_prt_jan00_3_prt_haw" for table "ataprank_1_prt_boys_2_prt_jan00"
+alter table ataprank2 alter partition boys
 alter partition jan00 
 add partition haw values ('HI');
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_boys_2_prt_jan00_3_prt_haw" for table "rank3_1_prt_boys_2_prt_jan00"
-alter table rank2 drop partition neuter;
-ERROR:  partition "neuter" of relation "rank2" does not exist
-alter table rank3 drop partition neuter;
-NOTICE:  dropped partition "neuter" for relation "rank3" and its children
--- fail , no subpartition spec for rank3, work for rank2
-alter table rank2
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_boys_2_prt_jan00_3_prt_haw" for table "ataprank2_1_prt_boys_2_prt_jan00"
+alter table ataprank drop partition neuter;
+ERROR:  partition "neuter" of relation "ataprank" does not exist
+alter table ataprank2 drop partition neuter;
+NOTICE:  dropped partition "neuter" for relation "ataprank2" and its children
+-- fail , no subpartition spec for ataprank2, work for ataprank
+alter table ataprank
 add default partition neuter ;
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter" for table "rank2"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan01" for table "rank2_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan01_3_prt_mass" for table "rank2_1_prt_neuter_2_prt_jan01"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan01_3_prt_cali" for table "rank2_1_prt_neuter_2_prt_jan01"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan01_3_prt_ohio" for table "rank2_1_prt_neuter_2_prt_jan01"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan01_3_prt_haw" for table "rank2_1_prt_neuter_2_prt_jan01"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan02" for table "rank2_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan02_3_prt_mass" for table "rank2_1_prt_neuter_2_prt_jan02"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan02_3_prt_cali" for table "rank2_1_prt_neuter_2_prt_jan02"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan02_3_prt_ohio" for table "rank2_1_prt_neuter_2_prt_jan02"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan02_3_prt_haw" for table "rank2_1_prt_neuter_2_prt_jan02"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan03" for table "rank2_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan03_3_prt_mass" for table "rank2_1_prt_neuter_2_prt_jan03"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan03_3_prt_cali" for table "rank2_1_prt_neuter_2_prt_jan03"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan03_3_prt_ohio" for table "rank2_1_prt_neuter_2_prt_jan03"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan03_3_prt_haw" for table "rank2_1_prt_neuter_2_prt_jan03"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan04" for table "rank2_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan04_3_prt_mass" for table "rank2_1_prt_neuter_2_prt_jan04"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan04_3_prt_cali" for table "rank2_1_prt_neuter_2_prt_jan04"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan04_3_prt_ohio" for table "rank2_1_prt_neuter_2_prt_jan04"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan04_3_prt_haw" for table "rank2_1_prt_neuter_2_prt_jan04"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan05" for table "rank2_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan05_3_prt_mass" for table "rank2_1_prt_neuter_2_prt_jan05"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan05_3_prt_cali" for table "rank2_1_prt_neuter_2_prt_jan05"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan05_3_prt_ohio" for table "rank2_1_prt_neuter_2_prt_jan05"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_jan05_3_prt_haw" for table "rank2_1_prt_neuter_2_prt_jan05"
-alter table rank3
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter" for table "ataprank"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan01" for table "ataprank_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan01_3_prt_mass" for table "ataprank_1_prt_neuter_2_prt_jan01"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan01_3_prt_cali" for table "ataprank_1_prt_neuter_2_prt_jan01"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan01_3_prt_ohio" for table "ataprank_1_prt_neuter_2_prt_jan01"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan01_3_prt_haw" for table "ataprank_1_prt_neuter_2_prt_jan01"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan02" for table "ataprank_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan02_3_prt_mass" for table "ataprank_1_prt_neuter_2_prt_jan02"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan02_3_prt_cali" for table "ataprank_1_prt_neuter_2_prt_jan02"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan02_3_prt_ohio" for table "ataprank_1_prt_neuter_2_prt_jan02"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan02_3_prt_haw" for table "ataprank_1_prt_neuter_2_prt_jan02"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan03" for table "ataprank_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan03_3_prt_mass" for table "ataprank_1_prt_neuter_2_prt_jan03"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan03_3_prt_cali" for table "ataprank_1_prt_neuter_2_prt_jan03"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan03_3_prt_ohio" for table "ataprank_1_prt_neuter_2_prt_jan03"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan03_3_prt_haw" for table "ataprank_1_prt_neuter_2_prt_jan03"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan04" for table "ataprank_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan04_3_prt_mass" for table "ataprank_1_prt_neuter_2_prt_jan04"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan04_3_prt_cali" for table "ataprank_1_prt_neuter_2_prt_jan04"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan04_3_prt_ohio" for table "ataprank_1_prt_neuter_2_prt_jan04"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan04_3_prt_haw" for table "ataprank_1_prt_neuter_2_prt_jan04"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan05" for table "ataprank_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan05_3_prt_mass" for table "ataprank_1_prt_neuter_2_prt_jan05"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan05_3_prt_cali" for table "ataprank_1_prt_neuter_2_prt_jan05"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan05_3_prt_ohio" for table "ataprank_1_prt_neuter_2_prt_jan05"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_jan05_3_prt_haw" for table "ataprank_1_prt_neuter_2_prt_jan05"
+alter table ataprank2
 add default partition neuter ;
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter" for table "rank3"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter" for table "ataprank2"
 ERROR:  no partitions specified at depth 2
-alter table rank2
+alter table ataprank
 add default partition neuter 
     (subpartition foo
          start ('2001-01-01') end ('2002-01-01')
          every (interval '1 month')
             (subpartition ariz values ('AZ')));
-ERROR:  partition "neuter" of relation "rank2" already exists
-alter table rank3
+ERROR:  partition "neuter" of relation "ataprank" already exists
+alter table ataprank2
 add default partition neuter 
     (subpartition foo
          start ('2001-01-01') end ('2002-01-01')
          every (interval '1 month')
             (subpartition ariz values ('AZ')));
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter" for table "rank3"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_1" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_1_3_prt_ariz" for table "rank3_1_prt_neuter_2_prt_foo_1"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_2" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_2_3_prt_ariz" for table "rank3_1_prt_neuter_2_prt_foo_2"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_3" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_3_3_prt_ariz" for table "rank3_1_prt_neuter_2_prt_foo_3"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_4" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_4_3_prt_ariz" for table "rank3_1_prt_neuter_2_prt_foo_4"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_5" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_5_3_prt_ariz" for table "rank3_1_prt_neuter_2_prt_foo_5"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_6" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_6_3_prt_ariz" for table "rank3_1_prt_neuter_2_prt_foo_6"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_7" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_7_3_prt_ariz" for table "rank3_1_prt_neuter_2_prt_foo_7"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_8" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_8_3_prt_ariz" for table "rank3_1_prt_neuter_2_prt_foo_8"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_9" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_9_3_prt_ariz" for table "rank3_1_prt_neuter_2_prt_foo_9"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_10" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_10_3_prt_ariz" for table "rank3_1_prt_neuter_2_prt_foo_10"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_11" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_11_3_prt_ariz" for table "rank3_1_prt_neuter_2_prt_foo_11"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_12" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_foo_12_3_prt_ariz" for table "rank3_1_prt_neuter_2_prt_foo_12"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter" for table "ataprank2"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_1" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_1_3_prt_ariz" for table "ataprank2_1_prt_neuter_2_prt_foo_1"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_2" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_2_3_prt_ariz" for table "ataprank2_1_prt_neuter_2_prt_foo_2"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_3" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_3_3_prt_ariz" for table "ataprank2_1_prt_neuter_2_prt_foo_3"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_4" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_4_3_prt_ariz" for table "ataprank2_1_prt_neuter_2_prt_foo_4"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_5" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_5_3_prt_ariz" for table "ataprank2_1_prt_neuter_2_prt_foo_5"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_6" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_6_3_prt_ariz" for table "ataprank2_1_prt_neuter_2_prt_foo_6"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_7" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_7_3_prt_ariz" for table "ataprank2_1_prt_neuter_2_prt_foo_7"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_8" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_8_3_prt_ariz" for table "ataprank2_1_prt_neuter_2_prt_foo_8"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_9" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_9_3_prt_ariz" for table "ataprank2_1_prt_neuter_2_prt_foo_9"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_10" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_10_3_prt_ariz" for table "ataprank2_1_prt_neuter_2_prt_foo_10"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_11" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_11_3_prt_ariz" for table "ataprank2_1_prt_neuter_2_prt_foo_11"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_12" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_foo_12_3_prt_ariz" for table "ataprank2_1_prt_neuter_2_prt_foo_12"
 -- fail
-alter table rank2
+alter table ataprank
 alter default partition add default partition def1 
 (subpartition haw values ('HI'));
 ERROR:  subpartition configuration conflicts with subpartition template
 -- fail
-alter table rank2
+alter table ataprank
 alter default partition alter default partition 
 add default partition def2;
-ERROR:  DEFAULT partition of partition "neuter" of relation "rank2" does not exist
+ERROR:  DEFAULT partition of partition "neuter" of relation "ataprank" does not exist
 -- work
-alter table rank2
+alter table ataprank
 alter default partition add default partition def1;
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_def1" for table "rank2_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_def1_3_prt_mass" for table "rank2_1_prt_neuter_2_prt_def1"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_def1_3_prt_cali" for table "rank2_1_prt_neuter_2_prt_def1"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_def1_3_prt_ohio" for table "rank2_1_prt_neuter_2_prt_def1"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_def1_3_prt_haw" for table "rank2_1_prt_neuter_2_prt_def1"
-alter table rank2
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_def1" for table "ataprank_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_def1_3_prt_mass" for table "ataprank_1_prt_neuter_2_prt_def1"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_def1_3_prt_cali" for table "ataprank_1_prt_neuter_2_prt_def1"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_def1_3_prt_ohio" for table "ataprank_1_prt_neuter_2_prt_def1"
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_def1_3_prt_haw" for table "ataprank_1_prt_neuter_2_prt_def1"
+alter table ataprank
 alter default partition alter default partition 
 add default partition def2;
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_neuter_2_prt_def1_3_prt_def2" for table "rank2_1_prt_neuter_2_prt_def1"
-alter table rank3
+NOTICE:  CREATE TABLE will create partition "ataprank_1_prt_neuter_2_prt_def1_3_prt_def2" for table "ataprank_1_prt_neuter_2_prt_def1"
+alter table ataprank2
 alter default partition add default partition def1 
 (subpartition haw values ('HI'));
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_def1" for table "rank3_1_prt_neuter"
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_def1_3_prt_haw" for table "rank3_1_prt_neuter_2_prt_def1"
-alter table rank3
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_def1" for table "ataprank2_1_prt_neuter"
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_def1_3_prt_haw" for table "ataprank2_1_prt_neuter_2_prt_def1"
+alter table ataprank2
 alter default partition alter default partition 
 add default partition def2;
-NOTICE:  CREATE TABLE will create partition "rank3_1_prt_neuter_2_prt_def1_3_prt_def2" for table "rank3_1_prt_neuter_2_prt_def1"
-drop table rank2 ;
-drop table rank3 ;
+NOTICE:  CREATE TABLE will create partition "ataprank2_1_prt_neuter_2_prt_def1_3_prt_def2" for table "ataprank2_1_prt_neuter_2_prt_def1"
+drop table ataprank ;
+drop table ataprank2 ;
 -- **END** ALTER TABLE ALTER PARTITION tests
 -- Test casting
 create table f (i int) partition by range (i) (start(1::int) end(10::int));
@@ -3000,7 +3000,7 @@ alter table list_test drop column c;
 ERROR:  cannot drop partitioning column "c"
 drop table list_test;
 -- MPP-3678: allow exchange and split on tables with subpartitioning
-CREATE TABLE rank (
+CREATE TABLE rank_exc (
 id int,
 rank int,
 year int,
@@ -3019,52 +3019,52 @@ SUBPARTITION year6 START (2006) END (2007) )
 (PARTITION girls VALUES ('F'),
 PARTITION boys VALUES ('M')
 );
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_year1" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_year2" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_year3" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_year4" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_year5" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_year6" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_year1" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_year2" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_year3" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_year4" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_year5" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_year6" for table "rank_1_prt_boys"
-alter table rank alter partition girls add default partition gfuture;
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_gfuture" for table "rank_1_prt_girls"
-alter table rank alter partition boys add default partition bfuture;
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_bfuture" for table "rank_1_prt_boys"
-insert into rank values(1, 1, 2007, 'M', 1);
-insert into rank values(2, 2, 2008, 'M', 3);
-select * from rank;
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_girls" for table "rank_exc"
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_girls_2_prt_year1" for table "rank_exc_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_girls_2_prt_year2" for table "rank_exc_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_girls_2_prt_year3" for table "rank_exc_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_girls_2_prt_year4" for table "rank_exc_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_girls_2_prt_year5" for table "rank_exc_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_girls_2_prt_year6" for table "rank_exc_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_boys" for table "rank_exc"
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_boys_2_prt_year1" for table "rank_exc_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_boys_2_prt_year2" for table "rank_exc_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_boys_2_prt_year3" for table "rank_exc_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_boys_2_prt_year4" for table "rank_exc_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_boys_2_prt_year5" for table "rank_exc_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_boys_2_prt_year6" for table "rank_exc_1_prt_boys"
+alter table rank_exc alter partition girls add default partition gfuture;
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_girls_2_prt_gfuture" for table "rank_exc_1_prt_girls"
+alter table rank_exc alter partition boys add default partition bfuture;
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_boys_2_prt_bfuture" for table "rank_exc_1_prt_boys"
+insert into rank_exc values(1, 1, 2007, 'M', 1);
+insert into rank_exc values(2, 2, 2008, 'M', 3);
+select * from rank_exc;
  id | rank | year | gender | count 
 ----+------+------+--------+-------
   1 |    1 | 2007 | M      |     1
   2 |    2 | 2008 | M      |     3
 (2 rows)
 
-alter table rank alter partition boys split default partition start ('2007')
+alter table rank_exc alter partition boys split default partition start ('2007')
 end ('2008') into (partition bfuture, partition year7);
-NOTICE:  exchanged partition "bfuture" of partition "boys" of relation "rank" with relation "pg_temp_4028684"
-NOTICE:  dropped partition "bfuture" for partition "boys" of relation "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_year7" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_bfuture" for table "rank_1_prt_boys"
-select * from rank_1_prt_boys_2_prt_bfuture;
+NOTICE:  exchanged partition "bfuture" of partition "boys" of relation "rank_exc" with relation "pg_temp_4028684"
+NOTICE:  dropped partition "bfuture" for partition "boys" of relation "rank_exc"
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_boys_2_prt_year7" for table "rank_exc_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_boys_2_prt_bfuture" for table "rank_exc_1_prt_boys"
+select * from rank_exc_1_prt_boys_2_prt_bfuture;
  id | rank | year | gender | count 
 ----+------+------+--------+-------
   2 |    2 | 2008 | M      |     3
 (1 row)
 
-select * from rank_1_prt_boys_2_prt_year7;
+select * from rank_exc_1_prt_boys_2_prt_year7;
  id | rank | year | gender | count 
 ----+------+------+--------+-------
   1 |    1 | 2007 | M      |     1
 (1 row)
 
-select * from rank;
+select * from rank_exc;
  id | rank | year | gender | count 
 ----+------+------+--------+-------
   2 |    2 | 2008 | M      |     3
@@ -3072,13 +3072,13 @@ select * from rank;
 (2 rows)
 
 --exchange test
-create table r (like rank);
+create table r (like rank_exc);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
-insert into rank values(3, 3, 2004, 'F', 100);
+insert into rank_exc values(3, 3, 2004, 'F', 100);
 insert into r values(3, 3, 2004, 'F', 100000);
-alter table rank alter partition girls exchange partition year4 with table r;
-NOTICE:  exchanged partition "year4" of partition "girls" of relation "rank" with relation "r"
-select * from rank_1_prt_girls_2_prt_year4;
+alter table rank_exc alter partition girls exchange partition year4 with table r;
+NOTICE:  exchanged partition "year4" of partition "girls" of relation "rank_exc" with relation "r"
+select * from rank_exc_1_prt_girls_2_prt_year4;
  id | rank | year | gender | count  
 ----+------+------+--------+--------
   3 |    3 | 2004 | F      | 100000
@@ -3090,9 +3090,9 @@ select * from r;
   3 |    3 | 2004 | F      |   100
 (1 row)
 
-alter table rank alter partition girls exchange partition year4 with table r;
-NOTICE:  exchanged partition "year4" of partition "girls" of relation "rank" with relation "r"
-select * from rank_1_prt_girls_2_prt_year4;
+alter table rank_exc alter partition girls exchange partition year4 with table r;
+NOTICE:  exchanged partition "year4" of partition "girls" of relation "rank_exc" with relation "r"
+select * from rank_exc_1_prt_girls_2_prt_year4;
  id | rank | year | gender | count 
 ----+------+------+--------+-------
   3 |    3 | 2004 | F      |   100
@@ -3105,14 +3105,14 @@ select * from r;
 (1 row)
 
 -- Split test
-alter table rank alter partition girls split default partition start('2008')
+alter table rank_exc alter partition girls split default partition start('2008')
   end('2020') into (partition years, partition gfuture);
-NOTICE:  exchanged partition "gfuture" of partition "girls" of relation "rank" with relation "pg_temp_4028684"
-NOTICE:  dropped partition "gfuture" for partition "girls" of relation "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_years" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_gfuture" for table "rank_1_prt_girls"
-insert into rank values(4, 4, 2009, 'F', 100);
-drop table rank;
+NOTICE:  exchanged partition "gfuture" of partition "girls" of relation "rank_exc" with relation "pg_temp_4028684"
+NOTICE:  dropped partition "gfuture" for partition "girls" of relation "rank_exc"
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_girls_2_prt_years" for table "rank_exc_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "rank_exc_1_prt_girls_2_prt_gfuture" for table "rank_exc_1_prt_girls"
+insert into rank_exc values(4, 4, 2009, 'F', 100);
+drop table rank_exc;
 drop table r;
 -- MPP-4245: remove virtual subpartition templates when we drop the partitioned
 -- table
@@ -3302,7 +3302,7 @@ LINE 9: );
          ^
 -- MPP-5185
 -- Should work
-CREATE TABLE rank (id int, rank int, year date, gender
+CREATE TABLE rank_settemp (id int, rank int, year date, gender
 char(1)) DISTRIBUTED BY (id, gender, year)
 partition by list (gender)
 subpartition by range (year)
@@ -3317,45 +3317,49 @@ start (date '2005-01-01')
 partition boys values ('M'),
 partition girls values ('F')
 );
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_1" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_2" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_3" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_4" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_5" for table "rank_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_1" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_2" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_3" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_4" for table "rank_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_5" for table "rank_1_prt_girls"
-alter table rank set subpartition template ();
-NOTICE:  dropped level 1 subpartition template specification for relation "rank"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_boys" for table "rank_settemp"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_boys_2_prt_1" for table "rank_settemp_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_boys_2_prt_2" for table "rank_settemp_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_boys_2_prt_3" for table "rank_settemp_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_boys_2_prt_4" for table "rank_settemp_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_boys_2_prt_5" for table "rank_settemp_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_girls" for table "rank_settemp"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_girls_2_prt_1" for table "rank_settemp_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_girls_2_prt_2" for table "rank_settemp_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_girls_2_prt_3" for table "rank_settemp_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_girls_2_prt_4" for table "rank_settemp_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_girls_2_prt_5" for table "rank_settemp_1_prt_girls"
+alter table rank_settemp set subpartition template ();
+NOTICE:  dropped level 1 subpartition template specification for relation "rank_settemp"
 -- nothing there
-select * from pg_partition_templates;
+select * from pg_partition_templates where tablename like 'rank_settemp%';
  schemaname | tablename | partitionname | partitiontype | partitionlevel | partitionrank | partitionposition | partitionlistvalues | partitionrangestart | partitionstartinclusive | partitionrangeend | partitionendinclusive | partitioneveryclause | partitionisdefault | partitionboundary 
 ------------+-----------+---------------+---------------+----------------+---------------+-------------------+---------------------+---------------------+-------------------------+-------------------+-----------------------+----------------------+--------------------+-------------------
 (0 rows)
 
-alter table rank set subpartition template (default subpartition def2);
-NOTICE:  adding level 1 subpartition template specification for relation "rank"
+alter table rank_settemp set subpartition template (default subpartition def2);
+NOTICE:  adding level 1 subpartition template specification for relation "rank_settemp"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_subpartition_template" for table "rank_settemp"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_subpartition_template_2_prt_def2" for table "rank_settemp_1_prt_subpartition_template"
 -- def2 is there
-select * from pg_partition_templates;
- schemaname | tablename | partitionname | partitiontype | partitionlevel | partitionrank | partitionposition | partitionlistvalues | partitionrangestart | partitionstartinclusive | partitionrangeend | partitionendinclusive | partitioneveryclause | partitionisdefault |     partitionboundary      
-------------+-----------+---------------+---------------+----------------+---------------+-------------------+---------------------+---------------------+-------------------------+-------------------+-----------------------+----------------------+--------------------+----------------------------
- public     | rank      | def2          | range         |              1 |             1 |                 1 |                     |                     | f                       |                   | f                     |                      | t                  | DEFAULT SUBPARTITION def2 
+select * from pg_partition_templates where tablename like 'rank_settemp%';
+ schemaname |  tablename   | partitionname | partitiontype | partitionlevel | partitionrank | partitionposition | partitionlistvalues | partitionrangestart | partitionstartinclusive | partitionrangeend | partitionendinclusive | partitioneveryclause | partitionisdefault |     partitionboundary      
+------------+--------------+---------------+---------------+----------------+---------------+-------------------+---------------------+---------------------+-------------------------+-------------------+-----------------------+----------------------+--------------------+----------------------------
+ public     | rank_settemp | def2          | range         |              1 |             1 |                 1 |                     |                     | f                       |                   | f                     |                      | t                  | DEFAULT SUBPARTITION def2 
 (1 row)
 
-alter table rank set subpartition template (default subpartition def2);
-NOTICE:  replacing level 1 subpartition template specification for relation "rank"
+alter table rank_settemp set subpartition template (default subpartition def2);
+NOTICE:  replacing level 1 subpartition template specification for relation "rank_settemp"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_subpartition_template" for table "rank_settemp"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_subpartition_template_2_prt_def2" for table "rank_settemp_1_prt_subpartition_template"
 -- Should still be there
-select * from pg_partition_templates;
- schemaname | tablename | partitionname | partitiontype | partitionlevel | partitionrank | partitionposition | partitionlistvalues | partitionrangestart | partitionstartinclusive | partitionrangeend | partitionendinclusive | partitioneveryclause | partitionisdefault |     partitionboundary      
-------------+-----------+---------------+---------------+----------------+---------------+-------------------+---------------------+---------------------+-------------------------+-------------------+-----------------------+----------------------+--------------------+----------------------------
- public     | rank      | def2          | range         |              1 |             1 |                 1 |                     |                     | f                       |                   | f                     |                      | t                  | DEFAULT SUBPARTITION def2 
+select * from pg_partition_templates where tablename like 'rank_settemp%';
+ schemaname |  tablename   | partitionname | partitiontype | partitionlevel | partitionrank | partitionposition | partitionlistvalues | partitionrangestart | partitionstartinclusive | partitionrangeend | partitionendinclusive | partitioneveryclause | partitionisdefault |     partitionboundary      
+------------+--------------+---------------+---------------+----------------+---------------+-------------------+---------------------+---------------------+-------------------------+-------------------+-----------------------+----------------------+--------------------+----------------------------
+ public     | rank_settemp | def2          | range         |              1 |             1 |                 1 |                     |                     | f                       |                   | f                     |                      | t                  | DEFAULT SUBPARTITION def2 
 (1 row)
 
-drop table rank;
+drop table rank_settemp;
 -- MPP-5397
 -- should be able to add partition after dropped a col
 create table mpp_5397 (a int, b int, c int) 
@@ -3374,54 +3378,54 @@ NOTICE:  CREATE TABLE will create partition "mpp_5397_1_prt_z" for table "mpp_53
 drop table mpp_5397;
 -- MPP-4987 -- make sure we can't damage a partitioning configuration
 -- MPP-8405: disallow OIDS on partitioned tables 
-create table rank (i int, j int) with oids partition by range(j) (start(1) end(10)
+create table rank_damage (i int, j int) with oids partition by range(j) (start(1) end(10)
 every(1));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_1" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_2" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_3" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_4" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_5" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_6" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_7" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_8" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_9" for table "rank"
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_1" for table "rank_damage"
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_2" for table "rank_damage"
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_3" for table "rank_damage"
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_4" for table "rank_damage"
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_5" for table "rank_damage"
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_6" for table "rank_damage"
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_7" for table "rank_damage"
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_8" for table "rank_damage"
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_9" for table "rank_damage"
 ERROR:  OIDS=TRUE is not allowed on partitioned tables. Use OIDS=FALSE
 -- this works
-create table rank (i int, j int)  partition by range(j) (start(1) end(10)
+create table rank_damage (i int, j int)  partition by range(j) (start(1) end(10)
 every(1));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_1" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_2" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_3" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_4" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_5" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_6" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_7" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_8" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_9" for table "rank"
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_1" for table "rank_damage"
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_2" for table "rank_damage"
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_3" for table "rank_damage"
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_4" for table "rank_damage"
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_5" for table "rank_damage"
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_6" for table "rank_damage"
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_7" for table "rank_damage"
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_8" for table "rank_damage"
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_9" for table "rank_damage"
 -- should all fail
-alter table rank_1_prt_1 no inherit rank;
-ERROR:  can't alter inheritance on "rank_1_prt_1"; it is a partitioned table or part thereof
-create table rank2(like rank);
+alter table rank_damage_1_prt_1 no inherit rank_damage;
+ERROR:  can't alter inheritance on "rank_damage_1_prt_1"; it is a partitioned table or part thereof
+create table rank2_damage(like rank_damage);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
-alter table rank_1_prt_1 inherit rank2;
-ERROR:  can't alter inheritance on "rank_1_prt_1"; it is a partitioned table or part thereof
-alter table rank_1_prt_1 alter column i type bigint;
-ERROR:  can't alter a column datatype of "rank_1_prt_1"; it is part of a partitioned table
+alter table rank_damage_1_prt_1 inherit rank2_damage;
+ERROR:  can't alter inheritance on "rank_damage_1_prt_1"; it is a partitioned table or part thereof
+alter table rank_damage_1_prt_1 alter column i type bigint;
+ERROR:  can't alter a column datatype of "rank_damage_1_prt_1"; it is part of a partitioned table
 HINT:  You may be able to perform the operation on the partitioned table as a whole.
-alter table rank_1_prt_1 set without oids;
-ERROR:  can't alter the oid setting of "rank_1_prt_1"; it is part of a partitioned table
+alter table rank_damage_1_prt_1 set without oids;
+ERROR:  can't alter the oid setting of "rank_damage_1_prt_1"; it is part of a partitioned table
 HINT:  You may be able to perform the operation on the partitioned table as a whole.
-alter table rank_1_prt_1 drop constraint rank_1_prt_1_check;
-ERROR:  can't drop a constraint from "rank_1_prt_1"; it is part of a partitioned table
+alter table rank_damage_1_prt_1 drop constraint rank_damage_1_prt_1_check;
+ERROR:  can't drop a constraint from "rank_damage_1_prt_1"; it is part of a partitioned table
 HINT:  You may be able to perform the operation on the partitioned table as a whole.
-alter table rank add partition ppo end (22) with (oids = true);
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_ppo" for table "rank"
+alter table rank_damage add partition ppo end (22) with (oids = true);
+NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_ppo" for table "rank_damage"
 ERROR:  OIDS=TRUE is not allowed on partitioned tables. Use OIDS=FALSE
-drop table rank, rank2;
+drop table rank_damage, rank2_damage;
 -- MPP-5831, type cast in SPLIT
 CREATE TABLE sg_cal_event_silvertail_hour (
 caldt date NOT NULL,
@@ -6850,13 +6854,10 @@ alter table pnx
     split partition a at ('x1')
     into (partition b, partition c);
 ERROR:  cannot split into an existing partition
-select * 
-from redundantly_named_part;
- tableid |   partid   | partname 
----------+------------+----------
- at      | at_1_prt_2 | 
- at      | at_1_prt_3 | 
-(2 rows)
+select * from redundantly_named_part where tableid::text like '%pnx%';
+ tableid | partid | partname 
+---------+--------+----------
+(0 rows)
 
 select tableoid::regclass, * 
 from pnx;
@@ -6915,13 +6916,10 @@ alter table pxn
     split partition a at ('x1')
     into (partition c, partition b);
 ERROR:  cannot split into an existing partition
-select * 
-from redundantly_named_part;
- tableid |   partid   | partname 
----------+------------+----------
- at      | at_1_prt_2 | 
- at      | at_1_prt_3 | 
-(2 rows)
+select * from redundantly_named_part where tableid::text like '%pxn%';
+ tableid | partid | partname 
+---------+--------+----------
+(0 rows)
 
 select tableoid::regclass, * 
 from pxn;
@@ -6979,13 +6977,10 @@ alter table pxn
     split partition a at (5)
     into (partition b, partition c);
 ERROR:  cannot split into an existing partition
-select * 
-from redundantly_named_part;
- tableid |   partid   | partname 
----------+------------+----------
- at      | at_1_prt_2 | 
- at      | at_1_prt_3 | 
-(2 rows)
+select * from redundantly_named_part where tableid::text like '%pxn%';
+ tableid | partid | partname 
+---------+--------+----------
+(0 rows)
 
 select tableoid::regclass, * 
 from pxn;
@@ -7043,13 +7038,10 @@ alter table pxn
     split partition a at (5)
     into (partition c, partition b);
 ERROR:  cannot split into an existing partition
-select * 
-from redundantly_named_part;
- tableid |   partid   | partname 
----------+------------+----------
- at      | at_1_prt_2 | 
- at      | at_1_prt_3 | 
-(2 rows)
+select * from redundantly_named_part where tableid::text like '%pxn%';
+ tableid | partid | partname 
+---------+--------+----------
+(0 rows)
 
 select tableoid::regclass, * 
 from pxn;
