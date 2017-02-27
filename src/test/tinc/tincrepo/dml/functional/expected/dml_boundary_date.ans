@@ -63,6 +63,8 @@ SELECT * FROM dml_date ORDER BY 1;
 
 INSERT INTO dml_date VALUES ('4714-01-01 BC');
 psql:dml_boundary_date.sql:24: ERROR:  date out of range: "4714-01-01 BC"
+LINE 1: INSERT INTO dml_date VALUES ('4714-01-01 BC');
+                                     ^
 SELECT * FROM dml_date ORDER BY 1;
        a       
 ---------------

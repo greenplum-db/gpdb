@@ -28,6 +28,8 @@ SELECT * FROM dml_bit ORDER BY 1;
 -- OUT OF RANGE VALUES
 INSERT INTO dml_bit VALUES('True');
 psql:dml_boundary_bit.sql:18: ERROR:  "T" is not a valid binary digit
+LINE 1: INSERT INTO dml_bit VALUES('True');
+                                   ^
 SELECT * FROM dml_bit ORDER BY 1;
  a 
 ---

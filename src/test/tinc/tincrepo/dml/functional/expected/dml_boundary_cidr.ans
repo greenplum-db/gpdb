@@ -49,6 +49,8 @@ SELECT * FROM dml_cidr ORDER BY 1;
 -- OUT OF RANGE
 INSERT INTO dml_cidr VALUES('204.248.199.199/30');
 psql:dml_boundary_cidr.sql:22: ERROR:  invalid cidr value: "204.248.199.199/30"
+LINE 1: INSERT INTO dml_cidr VALUES('204.248.199.199/30');
+                                    ^
 DETAIL:  Value has bits set to right of mask.
 SELECT * FROM dml_cidr ORDER BY 1;
          a          
@@ -60,6 +62,8 @@ SELECT * FROM dml_cidr ORDER BY 1;
 
 INSERT INTO dml_cidr VALUES('2001:4f8:3:ba:2e0:81ff:fe22:d1f1/120');
 psql:dml_boundary_cidr.sql:24: ERROR:  invalid cidr value: "2001:4f8:3:ba:2e0:81ff:fe22:d1f1/120"
+LINE 1: INSERT INTO dml_cidr VALUES('2001:4f8:3:ba:2e0:81ff:fe22:d1f...
+                                    ^
 DETAIL:  Value has bits set to right of mask.
 SELECT * FROM dml_cidr ORDER BY 1;
          a          

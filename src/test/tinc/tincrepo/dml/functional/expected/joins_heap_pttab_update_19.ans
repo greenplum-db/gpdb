@@ -18,6 +18,8 @@ SELECT SUM(b) FROM dml_heap_pt_r;
 
 UPDATE dml_heap_pt_r SET b = MAX(dml_heap_pt_s.b) FROM dml_heap_pt_s WHERE dml_heap_pt_r.b = dml_heap_pt_s.a;
 psql:/data2/prabhd/test/tincrepo/main/main/dml/functional/sql/../output/joins_heap_pttab_update_19_gucs.sql:11: ERROR:  cannot use aggregate function in UPDATE
+LINE 1: UPDATE dml_heap_pt_r SET b = MAX(dml_heap_pt_s.b) FROM dml_h...
+                                     ^
 SELECT SUM(b) FROM dml_heap_pt_r;
   sum  
 -------

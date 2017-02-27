@@ -21,6 +21,8 @@ LINE 1: SELECT COUNT(*) FROM ( SELECT ('a')::int, dml_co_r.b,10 FROM...
                                        ^
 INSERT INTO dml_co_r SELECT ('a')::int, dml_co_r.b,10 FROM dml_co_s WHERE dml_co_r.b = dml_co_s.b;
 psql:/data2/prabhd/test/tincrepo/main/main/dml/functional/sql/../output/joins_co_regtab_insert_20_gucs.sql:12: ERROR:  invalid input syntax for integer: "a"
+LINE 1: INSERT INTO dml_co_r SELECT ('a')::int, dml_co_r.b,10 FROM d...
+                                     ^
 SELECT COUNT(*) FROM dml_co_r;
  count 
 -------

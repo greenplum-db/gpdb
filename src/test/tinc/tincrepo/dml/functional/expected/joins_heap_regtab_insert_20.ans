@@ -21,6 +21,8 @@ LINE 1: SELECT COUNT(*) FROM ( SELECT ('a')::int, dml_heap_r.b,10 FR...
                                        ^
 INSERT INTO dml_heap_r SELECT ('a')::int, dml_heap_r.b,10 FROM dml_heap_s WHERE dml_heap_r.b = dml_heap_s.b;
 psql:/data2/prabhd/test/tincrepo/main/main/dml/functional/sql/../output/joins_heap_regtab_insert_20_gucs.sql:12: ERROR:  invalid input syntax for integer: "a"
+LINE 1: INSERT INTO dml_heap_r SELECT ('a')::int, dml_heap_r.b,10 FR...
+                                       ^
 SELECT COUNT(*) FROM dml_heap_r;
  count 
 -------

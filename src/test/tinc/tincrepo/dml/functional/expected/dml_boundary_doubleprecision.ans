@@ -44,6 +44,8 @@ SELECT * FROM dml_dp ORDER BY 1;
 -- OUT OF RANGE
 INSERT INTO dml_dp VALUES('5.7107617381473e+1000');
 psql:/data/soedoj/tincrepo/main/dml/functional/output/dml_boundary_doubleprecision_orca.sql:27: ERROR:  value out of range: overflow
+LINE 1: INSERT INTO dml_dp VALUES('5.7107617381473e+1000');
+                                  ^
 SELECT * FROM dml_dp ORDER BY 1;
           a          
 ---------------------
@@ -53,6 +55,8 @@ SELECT * FROM dml_dp ORDER BY 1;
 
 INSERT INTO dml_dp VALUES('5.7107617381473e-1000');
 psql:/data/soedoj/tincrepo/main/dml/functional/output/dml_boundary_doubleprecision_orca.sql:29: ERROR:  value out of range: underflow
+LINE 1: INSERT INTO dml_dp VALUES('5.7107617381473e-1000');
+                                  ^
 SELECT * FROM dml_dp ORDER BY 1;
           a          
 ---------------------

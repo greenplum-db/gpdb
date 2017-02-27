@@ -49,6 +49,8 @@ SELECT * FROM dml_inet ORDER BY 1;
 -- OUT OF RANGE VALUES
 INSERT INTO dml_inet VALUES ('192.168.23.20/33');
 psql:dml_boundary_inet.sql:22: ERROR:  invalid input syntax for type inet: "192.168.23.20/33"
+LINE 1: INSERT INTO dml_inet VALUES ('192.168.23.20/33');
+                                     ^
 SELECT * FROM dml_inet ORDER BY 1;
   a  
 -----
@@ -59,6 +61,8 @@ SELECT * FROM dml_inet ORDER BY 1;
 
 INSERT INTO dml_inet VALUES('');
 psql:dml_boundary_inet.sql:24: ERROR:  invalid input syntax for type inet: ""
+LINE 1: INSERT INTO dml_inet VALUES('');
+                                    ^
 SELECT * FROM dml_inet ORDER BY 1;
   a  
 -----

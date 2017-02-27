@@ -28,6 +28,8 @@ SELECT * FROM dml_macaddr ORDER BY 1;
 --INVALID VALUES
 INSERT INTO dml_macaddr VALUES('FF:FF:FF:FF:FF:FF0');
 psql:dml_boundary_macaddr.sql:17: ERROR:  invalid octet value in "macaddr" value: "FF:FF:FF:FF:FF:FF0"
+LINE 1: INSERT INTO dml_macaddr VALUES('FF:FF:FF:FF:FF:FF0');
+                                       ^
 SELECT * FROM dml_macaddr ORDER BY 1;
          a         
 -------------------

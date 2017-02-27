@@ -16,6 +16,8 @@ LINE 1: SELECT COUNT(*) FROM (SELECT ('a')::int, dml_ao_pt_r.b,10 FR...
                                       ^
 INSERT INTO dml_ao_pt_r SELECT ('a')::int, dml_ao_pt_r.b,10 FROM dml_ao_pt_s WHERE dml_ao_pt_r.b = dml_ao_pt_s.b;
 psql:joins_ao_pttab_insert_20.sql:9: ERROR:  invalid input syntax for integer: "a"
+LINE 1: INSERT INTO dml_ao_pt_r SELECT ('a')::int, dml_ao_pt_r.b,10 ...
+                                        ^
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count
 -------

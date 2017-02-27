@@ -38,6 +38,8 @@ SELECT * FROM dml_real ORDER BY 1;
 -- OUT OF RANGE VALUES
 INSERT INTO dml_real VALUES('-3.40e+39');
 psql:dml_boundary_real.sql:21: ERROR:  value out of range: overflow
+LINE 1: INSERT INTO dml_real VALUES('-3.40e+39');
+                                    ^
 SELECT * FROM dml_real ORDER BY 1;
  a 
 ---
@@ -47,6 +49,8 @@ SELECT * FROM dml_real ORDER BY 1;
 
 INSERT INTO dml_real VALUES('-1.00e-46');
 psql:dml_boundary_real.sql:23: ERROR:  value out of range: underflow
+LINE 1: INSERT INTO dml_real VALUES('-1.00e-46');
+                                    ^
 SELECT * FROM dml_real ORDER BY 1;
  a 
 ---
