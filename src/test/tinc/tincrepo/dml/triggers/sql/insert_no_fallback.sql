@@ -1,3 +1,4 @@
+-- @skip #140439825
 --start_ignore
 SET client_min_messages='log';
 INSERT INTO dml_trigger_table_1 VALUES('TEST',10);

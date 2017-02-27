@@ -3,6 +3,7 @@
 -- @tags ORCA bfv
 -- @gpopt 1.522
 -- @description bfv for MPP-22263
+-- @skip MPP-22263
 
 --start_ignore
 explain
