@@ -1,4 +1,4 @@
-@gppersistent_rebuid
+@persistent_rebuild
   Feature: persistent rebuild tests
 
   Scenario: Persistent rebuild tools should not error out when mirror is marked down and files are missing in the data directory for single node
