@@ -63,6 +63,7 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       s3conf: {{s3_configuration_file}}
+      overwrite_gpcloud: true
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
 
@@ -82,6 +83,7 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       s3conf: {{s3_configuration_file}}
+      overwrite_gpcloud: true
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
 
