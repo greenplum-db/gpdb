@@ -19,11 +19,11 @@
 #include "nodes/plannodes.h"
 #include "storage/lock.h"
 #include "tcop/dest.h"
+#include "utils/resource_manager.h"
 
 /*
  * GUC variables.
  */
-extern bool	ResourceScheduler;
 extern int	MaxResourceQueues;
 extern int	MaxResourcePortalsPerXact;
 extern bool	ResourceSelectOnly;

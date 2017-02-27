@@ -347,6 +347,7 @@ static char *gp_log_fts_str;
 static char *gp_log_interconnect_str;
 static char *gp_interconnect_type_str;
 static char *gp_interconnect_fc_method_str;
+static char *gp_resource_manager_str;
 
 /*
  * These variables are all dummies that don't do anything, except in some
@@ -5241,6 +5242,14 @@ struct config_string ConfigureNamesString_gp[] =
 		"MEDIUM", gpvars_assign_gp_resqueue_priority_default_value, NULL
 	},
 
+	{
+		{"gp_resource_manager", PGC_POSTMASTER, RESOURCES,
+			gettext_noop("Sets the type of resource manager."),
+			gettext_noop("Only support \"queue\" and \"group\" for now.")
+		},
+		&gp_resource_manager_str,
+		"queue", gpvars_assign_gp_resource_manager_policy, gpvars_show_gp_resource_manager_policy,
+	},
 	{
 		{"gp_email_smtp_server", PGC_SUSET, LOGGING,
 			gettext_noop("Sets the SMTP server and port used to send email alerts."),
