@@ -740,36 +740,12 @@ RelationFetchGpRelationNodeForXLog_Index(
 
 	if (deep >= 2)
 	{
-		int saveDeep;
-
-		if (Debug_gp_relation_node_fetch_wait_for_debugging)
-		{
-			/* Code for investigating MPP-16395, will be removed as part of the fix */
-			elog(WARNING, "RelationFetchGpRelationNodeForXLog_Index [%d] for non-heap %u/%u/%u (deep %d) -- waiting for debug attach...",
-				 countInThisBackend,
-				 relation->rd_node.spcNode,
-				 relation->rd_node.dbNode,
-				 relation->rd_node.relNode,
-				 deep);
-
-			for (int i=0; i < 24 * 60; i++)
-			{
-				pg_usleep(60000000L); /* 60 sec */
-			}
-		}
-
-		/*
-		 * Reset counter in case the user continues to use the session.
-		 */
-		saveDeep = deep;
-		deep = 0;
-
 		elog(ERROR, "RelationFetchGpRelationNodeForXLog_Index [%d] for non-heap %u/%u/%u (deep %d)",
 			 countInThisBackend,
 			 relation->rd_node.spcNode,
 			 relation->rd_node.dbNode,
 			 relation->rd_node.relNode,
-			 saveDeep);
+			 deep);
 	}
 
 	RelationFetchSegFile0GpRelationNode(relation);
