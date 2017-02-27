@@ -340,7 +340,7 @@ GRANT SELECT ON sales TO guest;
           optimizer. For information about uniform multi-level partitioned tables, see <xref
             href="../query/topics/query-piv-uniform-part-tbl.xml#topic1"/>.</p>
         <p>Exchanging a leaf child partition with an external table is not supported if the
-          partitioned table is created with the <codeph>SUBPARITION</codeph> clause or if a
+          partitioned table is created with the <codeph>SUBPARTITION</codeph> clause or if a
           partition has a subpartition. For information about exchanging a leaf child partition with
           an external table, see <xref href="#topic_yhz_gpn_qs" format="dita"/>.</p>
         <p>These are limitations for partitioned tables when a leaf child partition of the table is
@@ -807,7 +807,7 @@ INTO (PARTITION jan09, default partition);
           partition elimination to prevent scanning the older, unneeded partitions.</p>
         <p>Exchanging a leaf child partition with an external table is not supported in these
             cases:<ul id="ul_ijp_pqx_bt">
-            <li>The partitioned table is created with the <codeph>SUBPARITION</codeph> clause or if
+            <li>The partitioned table is created with the <codeph>SUBPARTITION</codeph> clause or if
               a partition has a subpartition.</li>
             <li>The partitioned table contains a column with a check constraint or a <codeph>NOT
                 NULL</codeph> constraint.</li>
