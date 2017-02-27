@@ -11,7 +11,7 @@ SET
 SET
 -- end_ignore
 SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_sql_int_imm(5)) from foo) r order by 1,2,3; 
-psql:/data/tungs1_cdbfast/tincrepo/main/functions/functionProperty/sql/../output/function_in_subqry_constant_withfunc2_115_gucs.sql:11: ERROR:  function cannot execute on segment because it accesses relation "public.bar" (functions.c:152)  (entry db rh55-qavm20:5432 pid=18463) (cdbdisp.c:1487)
+psql:/data/tungs1_cdbfast/tincrepo/main/functions/functionProperty/sql/../output/function_in_subqry_constant_withfunc2_115_gucs.sql:11: ERROR:  function cannot execute on segment because it accesses relation "public.bar"  (entry db rh55-qavm20:5432 pid=18463) (cdbdisp.c:1487)
 DETAIL:  
 	 SQL statement " SELECT d FROM bar WHERE c <>  $1 "
 PL/pgSQL function "func1_read_setint_sql_vol" line 4 at for over select rows

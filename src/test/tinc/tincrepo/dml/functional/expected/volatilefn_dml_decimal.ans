@@ -54,7 +54,7 @@ END
 $$ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
 CREATE FUNCTION
 INSERT INTO volatilefn_dml_decimal(col1,col3) SELECT col2,func(14) FROM volatilefn_dml_decimal_candidate;
-psql:volatilefn_dml_decimal.sql:49: ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg0 rh55-qavm52:34533 pid=31259) (cdbdisp.c:1525)
+psql:volatilefn_dml_decimal.sql:49: ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg0 rh55-qavm52:34533 pid=31259)
 DETAIL:  
 	 SQL statement "DROP TABLE IF EXISTS foo"
 PL/pgSQL function "func" line 3 at SQL statement

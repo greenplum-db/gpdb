@@ -5,7 +5,7 @@
 -- @created 2013-04-03 12:00:00
 -- @tags functionProperties
 SELECT * FROM foo, (SELECT func1_nosql_vol(func2_read_int_vol(5)) from foo) r order by 1,2,3; 
-psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_subqry_constant_withfunc2_6.sql:7: ERROR:  function cannot execute on segment because it accesses relation "public.bar" (functions.c:152)  (seg0 slice1 rh55-qavm20:40500 pid=13865) (cdbdisp.c:1476)
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_subqry_constant_withfunc2_6.sql:7: ERROR:  function cannot execute on segment because it accesses relation "public.bar"  (seg0 slice1 rh55-qavm20:40500 pid=13865)
 DETAIL:  
 	 SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
 PL/pgSQL function "func2_read_int_vol" line 4 at SQL statement

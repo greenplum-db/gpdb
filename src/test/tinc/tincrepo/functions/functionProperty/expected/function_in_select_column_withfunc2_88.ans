@@ -5,7 +5,7 @@
 -- @created 2013-04-03 12:00:00
 -- @tags functionProperties
 SELECT func1_sql_setint_imm(func2_mod_int_vol(a)) FROM foo order by 1; 
-psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_select_column_withfunc2_88.sql:7: ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:134)  (seg0 slice1 rh55-qavm20:40500 pid=12349) (cdbdisp.c:1476)
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_select_column_withfunc2_88.sql:7: ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg0 slice1 rh55-qavm20:40500 pid=12349)
 DETAIL:  
 	 SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
 PL/pgSQL function "func2_mod_int_vol" line 2 at SQL statement

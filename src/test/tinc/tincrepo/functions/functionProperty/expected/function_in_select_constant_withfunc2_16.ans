@@ -5,7 +5,7 @@
 -- @created 2013-04-03 12:00:00
 -- @tags functionProperties
 SELECT func1_nosql_stb(func2_read_int_vol(5)) FROM foo order by 1; 
-psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_select_constant_withfunc2_16.sql:7: ERROR:  function cannot execute on segment because it accesses relation "public.bar" (functions.c:152)  (seg0 slice1 rh55-qavm20:40500 pid=19964) (cdbdisp.c:1476)
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_select_constant_withfunc2_16.sql:7: ERROR:  function cannot execute on segment because it accesses relation "public.bar"  (seg0 slice1 rh55-qavm20:40500 pid=19964)
 DETAIL:  
 	 SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
 PL/pgSQL function "func2_read_int_vol" line 4 at SQL statement

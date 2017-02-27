@@ -7,7 +7,7 @@
 -- @created 2013-04-03 12:00:00
 -- @tags functionProperties 
 SELECT * FROM func1_read_setint_sql_stb(func2_mod_int_vol(5)), foo order by 1,2,3; 
-psql:/data/tungs1_cdbfast/tincrepo/main/functions/functionProperty/output/function_in_from_join_withfunc2_128.sql:11: ERROR:  query plan with multiple segworker groups is not supported (cdbdisp.c:505)
+psql:/data/tungs1_cdbfast/tincrepo/main/functions/functionProperty/output/function_in_from_join_withfunc2_128.sql:11: ERROR:  query plan with multiple segworker groups is not supported
 HINT:  likely caused by a function that reads or modifies data in a distributed table
 CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
 PL/pgSQL function "func2_mod_int_vol" line 2 at SQL statement
