@@ -63,9 +63,6 @@
 #define S_PER_D (60 * 60 * 24)
 #define MS_PER_D (1000 * 60 * 60 * 24)
 
-static bool defunct_bool = false;
-static double defunct_double = 0;
-
 /*
  * Assign/Show hook functions defined in this module
  */
@@ -141,12 +138,10 @@ char	   *Debug_dtm_action_protocol_str;
 bool		Debug_print_full_dtm = false;
 bool		Debug_print_snapshot_dtm = false;
 bool		Debug_print_qd_mirroring = false;
-bool		Debug_permit_same_host_standby = false;
 bool		Debug_print_semaphore_detail = false;
 bool		Debug_disable_distributed_snapshot = false;
 bool		Debug_abort_after_distributed_prepared = false;
 bool		Debug_abort_after_segment_prepared = false;
-bool		Debug_print_tablespace = false;
 bool		Debug_print_server_processes = false;
 bool		Debug_print_control_checkpoints = false;
 bool		Debug_appendonly_print_insert = false;
@@ -154,8 +149,6 @@ bool		Debug_appendonly_print_insert_tuple = false;
 bool		Debug_appendonly_print_scan = false;
 bool		Debug_appendonly_print_scan_tuple = false;
 bool		Debug_appendonly_print_delete = false;
-bool		Debug_appendonly_print_update = false;
-bool		Debug_appendonly_print_update_tuple = false;
 bool		Debug_appendonly_print_storage_headers = false;
 bool		Debug_appendonly_print_verify_write_block = false;
 bool		Debug_appendonly_use_no_toast = false;
@@ -202,7 +195,6 @@ bool		Debug_persistent_store_print = false;
 int			Debug_persistent_store_print_level = LOG;
 bool		Debug_persistent_bootstrap_print = false;
 bool		persistent_integrity_checks = true;
-bool		disable_persistent_diagnostic_dump = false;
 bool		debug_persistent_ptcat_verification = false;
 bool		debug_print_persistent_checks = false;
 bool		Debug_bulk_load_bypass_wal = true;
@@ -235,7 +227,6 @@ bool		gp_dump_memory_usage = FALSE;
 int			verify_checkpoint_interval =
 VERIFY_CHECKPOINT_INTERVAL_DEFAULT;
 
-bool		Debug_rle_type_compression = false;
 bool		rle_type_compression_stats = false;
 
 bool		Debug_database_command_print = false;
@@ -261,7 +252,6 @@ bool		Debug_filerep_crc_on = true;
 bool		Debug_filerep_print = false;
 bool		Debug_filerep_gcov = false;
 bool		Debug_filerep_config_print = false;
-bool		Debug_filerep_verify_performance_print = false;
 bool		Debug_filerep_memory_log_flush = false;
 bool		filerep_mirrorvalidation_during_resync = false;
 bool		log_filerep_to_syslogger = false;
@@ -299,11 +289,9 @@ int			Debug_dtm_action_target = DEBUG_DTM_ACTION_TARGET_DEFAULT;
 
 int			Debug_dtm_action_protocol = DEBUG_DTM_ACTION_PROTOCOL_DEFAULT;
 
-#define DEBUG_DTM_ACTION_DELAY_MS_DEFAULT 5000
 #define DEBUG_DTM_ACTION_SEGMENT_DEFAULT 1
 #define DEBUG_DTM_ACTION_NESTINGLEVEL_DEFAULT 0
 
-int			Debug_dtm_action_delay_ms = DEBUG_DTM_ACTION_DELAY_MS_DEFAULT;
 int			Debug_dtm_action_segment = DEBUG_DTM_ACTION_SEGMENT_DEFAULT;
 int			Debug_dtm_action_nestinglevel = DEBUG_DTM_ACTION_NESTINGLEVEL_DEFAULT;
 
@@ -746,16 +734,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&log_dispatch_stats,
 		false, assign_dispatch_log_stats, NULL
-	},
-
-	{
-		{"enable_agg_restructure", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Deprecated: use gp_enable_multiphase_agg."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&defunct_bool,
-		true, NULL, NULL
 	},
 
 	{
@@ -1384,16 +1362,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"debug_permit_same_host_standby", PGC_SUSET, LOGGING_WHAT,
-			gettext_noop("Permits QD mirroring standby to exist on same host as primary."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_permit_same_host_standby,
-		false, NULL, NULL
-	},
-
-	{
 		{"Debug_print_semaphore_detail", PGC_SUSET, LOGGING_WHAT,
 			gettext_noop("Print semaphore detailed information."),
 			NULL,
@@ -1430,16 +1398,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&Debug_abort_after_segment_prepared,
-		false, NULL, NULL
-	},
-
-	{
-		{"debug_print_tablespace", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print TABLESPACE debugging information."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_print_tablespace,
 		false, NULL, NULL
 	},
 
@@ -1540,26 +1498,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&Debug_appendonly_print_delete,
-		false, NULL, NULL
-	},
-
-	{
-		{"debug_appendonly_print_update", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print log messages for append-only update."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_appendonly_print_update,
-		false, NULL, NULL
-	},
-
-	{
-		{"debug_appendonly_print_update_tuple", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print log messages for append-only update tuples (caution -- generates a lot of log!)."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_appendonly_print_update_tuple,
 		false, NULL, NULL
 	},
 
@@ -1701,16 +1639,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&persistent_integrity_checks,
 		false, NULL, NULL
-	},
-
-	{
-		{"disable_persistent_diagnostic_dump", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("When set disables printing full PT on erros."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&disable_persistent_diagnostic_dump,
-		true, NULL, NULL
 	},
 
 	{
@@ -2143,15 +2071,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&Debug_filerep_crc_on,
 		false, NULL, NULL
 	},
-	{
-		{"debug_rle_type_compression", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("enable extensive debugging information for rle_type compression"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_rle_type_compression,
-		false, NULL, NULL
-	},
 
 	{
 		{"rle_type_compression_stats", PGC_SUSET, DEVELOPER_OPTIONS,
@@ -2201,16 +2120,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&Debug_filerep_config_print,
 		true, NULL, NULL
-	},
-
-	{
-		{"debug_filerep_verify_performance_print", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("enable filerep verify performance tracing"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_filerep_verify_performance_print,
-		false, NULL, NULL
 	},
 
 	{
@@ -3401,16 +3310,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_max_filespaces,
 		GP_MAX_FILESPACES_DEFAULT, 8, 256, NULL, NULL
-	},
-
-	{
-		{"debug_dtm_action_delay_ms", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Sets the debug DTM action delay in milliseconds."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_UNIT_MS
-		},
-		&Debug_dtm_action_delay_ms,
-		DEBUG_DTM_ACTION_DELAY_MS_DEFAULT, 0, INT_MAX / 1000, NULL, NULL
 	},
 
 	{
@@ -4766,17 +4665,6 @@ struct config_real ConfigureNamesReal_gp[] =
 		},
 		&gp_motion_cost_per_row,
 		0, 0, DBL_MAX, NULL, NULL
-	},
-
-	{
-		{"gp_hashagg_rewrite_limit", PGC_USERSET, QUERY_TUNING_OTHER,
-			gettext_noop("(Obsolete) Planner will not choose hashed aggregation if "
-						 "expected number of extra passes exceeds limit."),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&defunct_double,
-		2.0, 1.0, 100.0, NULL, NULL
 	},
 
 	{

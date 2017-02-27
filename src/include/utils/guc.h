@@ -144,7 +144,6 @@ extern bool Explain_pretty_print;
 extern bool	Debug_print_full_dtm;
 extern bool	Debug_print_snapshot_dtm;
 extern bool	Debug_print_qd_mirroring;
-extern bool Debug_permit_same_host_standby;
 extern bool Debug_print_semaphore_detail;
 extern bool Debug_disable_distributed_snapshot;
 extern bool Debug_abort_after_distributed_prepared;
@@ -154,8 +153,6 @@ extern bool Debug_appendonly_print_insert_tuple;
 extern bool Debug_appendonly_print_scan;
 extern bool Debug_appendonly_print_scan_tuple;
 extern bool Debug_appendonly_print_delete;
-extern bool Debug_appendonly_print_update;
-extern bool Debug_appendonly_print_update_tuple;
 extern bool Debug_appendonly_print_storage_headers;
 extern bool Debug_appendonly_print_verify_write_block;
 extern bool Debug_appendonly_use_no_toast;
@@ -211,7 +208,6 @@ extern bool Disable_persistent_recovery_logging;
 extern bool	Debug_persistent_store_print;
 extern bool Debug_persistent_bootstrap_print;
 extern bool persistent_integrity_checks;
-extern bool disable_persistent_diagnostic_dump;
 extern bool debug_persistent_ptcat_verification;
 extern bool debug_print_persistent_checks;
 extern bool Debug_bulk_load_bypass_wal;
@@ -244,7 +240,6 @@ extern bool Debug_filerep_crc_on;
 extern bool Debug_filerep_print;
 extern bool Debug_filerep_gcov;
 extern bool Debug_filerep_config_print;
-extern bool Debug_filerep_verify_performance_print;
 extern bool Debug_filerep_memory_log_flush;
 extern bool filerep_mirrorvalidation_during_resync;
 extern bool log_filerep_to_syslogger;
@@ -273,10 +268,8 @@ extern bool gp_ignore_window_exclude;
 
 extern int verify_checkpoint_interval;
 
-extern bool Debug_rle_type_compression;
 extern bool rle_type_compression_stats;
 
-extern bool Debug_print_tablespace;
 extern bool	Debug_print_server_processes;
 extern bool Debug_print_control_checkpoints;
 extern bool	Debug_dtm_action_primary;
@@ -341,7 +334,6 @@ typedef enum
 extern int Debug_dtm_action;
 extern int Debug_dtm_action_target;
 extern int Debug_dtm_action_protocol;
-extern int Debug_dtm_action_delay_ms;
 extern int Debug_dtm_action_segment;
 extern int Debug_dtm_action_nestinglevel;
 
