@@ -6040,6 +6040,7 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		bool		iswritable = false;
 		char	   *options;
 		bool		gpdb5OrLater = isGPDB5000OrLater();
+		char	   *on_clause;
 
 		/*
 		 * DROP must be fully qualified in case same name appears in
@@ -6145,7 +6146,11 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 			extencoding = PQgetvalue(res, 0, 9);
 			writable = PQgetvalue(res, 0, 10);
 			options = PQgetvalue(res, 0, 11);
-		} else {
+
+			on_clause = execlocations;
+		}
+		else
+		{
 			urilocations = PQgetvalue(res, 0, 0);
 			fmttype = PQgetvalue(res, 0, 1);
 			fmtopts = PQgetvalue(res, 0, 2);
@@ -6158,6 +6163,11 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 			writable = PQgetvalue(res, 0, 9);
 			execlocations = "";
 			options = "";
+
+			if (command && strlen(command) > 0)
+				on_clause = command;
+			else
+				on_clause = NULL;
 		}
 
 		if ((command && strlen(command) > 0) ||
@@ -6198,31 +6208,6 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 
 		appendPQExpBuffer(q, "\n)");
 
-		PQExpBufferData tmpbuf;
-		initPQExpBuffer(&tmpbuf);
-
-		char	   *on_clause = gpdb5OrLater ? execlocations : urilocations;
-
-		/* remove curly braces */
-		on_clause[strlen(on_clause) - 1] = '\0';
-		on_clause++;
-
-		if (strncmp(on_clause, "HOST:", strlen("HOST:")) == 0)
-			appendPQExpBuffer(&tmpbuf, "ON HOST '%s' ", on_clause + strlen("HOST:"));
-		else if (strncmp(on_clause, "PER_HOST", strlen("PER_HOST")) == 0)
-			appendPQExpBuffer(&tmpbuf, "ON HOST ");
-		else if (strncmp(on_clause, "MASTER_ONLY", strlen("MASTER_ONLY")) == 0)
-			appendPQExpBuffer(&tmpbuf, "ON MASTER ");
-		else if (strncmp(on_clause, "SEGMENT_ID:", strlen("SEGMENT_ID:")) == 0)
-			appendPQExpBuffer(&tmpbuf, "ON SEGMENT %s ", on_clause + strlen("SEGMENT_ID:"));
-		else if (strncmp(on_clause, "TOTAL_SEGS:", strlen("TOTAL_SEGS:")) == 0)
-			appendPQExpBuffer(&tmpbuf, "ON %s ", on_clause + strlen("TOTAL_SEGS:"));
-		else if (strncmp(on_clause, "ALL_SEGMENTS", strlen("ALL_SEGMENTS")) == 0)
-			appendPQExpBuffer(&tmpbuf, "ON ALL ");
-		else
-			write_msg(NULL, "illegal ON clause catalog information \"%s\""
-					  "for command '%s'\n", on_clause, command);
-
 		if (command && strlen(command) > 0)
 		{
 			/* add EXECUTE clause */
@@ -6230,18 +6215,10 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 			appendPQExpBuffer(q, " EXECUTE E'%s' ", tmpstring);
 			free(tmpstring);
 			tmpstring = NULL;
-
-			/* add ON clause (unless WRITABLE table, which doesn't allow ON) */
-			if (!iswritable)
-			{
-				appendBinaryPQExpBuffer(q, tmpbuf.data, tmpbuf.len);
-			}
-			appendPQExpBuffer(q, "\n ");
 		}
 		else
 		{
 			/* add LOCATION clause, remove '{"' and '"}' */
-
 			urilocations[strlen(urilocations) - 1] = '\0';
 			urilocations++;
 
@@ -6265,9 +6242,40 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 				appendPQExpBuffer(q, ",\n    '%s'", location);
 			}
 			appendPQExpBuffer(q, "\n) ");
-
-			appendBinaryPQExpBuffer(q, tmpbuf.data, tmpbuf.len);
 		}
+
+		/*
+		 * Add ON clause (unless WRITABLE table, which doesn't allow ON).
+		 * ON clauses were up until 5.0 supported only on EXECUTE, in 5.0
+		 * and thereafter they are allowed on all external tables.
+		 */
+		if (!iswritable && on_clause)
+		{
+			/* remove curly braces */
+			on_clause[strlen(on_clause) - 1] = '\0';
+			on_clause++;
+
+			if (strncmp(on_clause, "HOST:", strlen("HOST:")) == 0)
+				appendPQExpBuffer(q, "ON HOST '%s' ", on_clause + strlen("HOST:"));
+			else if (strncmp(on_clause, "PER_HOST", strlen("PER_HOST")) == 0)
+				appendPQExpBufferStr(q, "ON HOST ");
+			else if (strncmp(on_clause, "MASTER_ONLY", strlen("MASTER_ONLY")) == 0)
+				appendPQExpBufferStr(q, "ON MASTER ");
+			else if (strncmp(on_clause, "SEGMENT_ID:", strlen("SEGMENT_ID:")) == 0)
+				appendPQExpBuffer(q, "ON SEGMENT %s ", on_clause + strlen("SEGMENT_ID:"));
+			else if (strncmp(on_clause, "TOTAL_SEGS:", strlen("TOTAL_SEGS:")) == 0)
+				appendPQExpBuffer(q, "ON %s ", on_clause + strlen("TOTAL_SEGS:"));
+			else if (strncmp(on_clause, "ALL_SEGMENTS", strlen("ALL_SEGMENTS")) == 0)
+				appendPQExpBufferStr(q, "ON ALL ");
+			else
+			{
+				write_msg(NULL, "illegal ON clause catalog information \"%s\" "
+						  "for command '%s' on table \"%s\"\n",
+						  on_clause, command, fmtId(tbinfo->dobj.name));
+				exit_nicely();
+			}
+		}
+		appendPQExpBufferChar(q, '\n');
 
 		/* add FORMAT clause */
 		tmpstring = escape_fmtopts_string((const char *) fmtopts);
