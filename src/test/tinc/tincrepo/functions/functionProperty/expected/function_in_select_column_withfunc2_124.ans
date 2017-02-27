@@ -14,4 +14,4 @@ psql:/data/tungs1_cdbfast/tincrepo/main/functions/functionProperty/sql/../output
 SELECT func1_read_setint_sql_stb(func2_sql_int_stb(a)) FROM foo order by 1; 
 psql:/data/tungs1_cdbfast/tincrepo/main/functions/functionProperty/sql/../output/function_in_select_column_withfunc2_124_gucs.sql:10: ERROR:  Cannot dispatch multiple queries to the segments. (cdbdisp.c:489)
 HINT:  Likely caused by a function that reads or modifies data in a distributed table.
-CONTEXT:  PL/pgSQL function "func1_read_setint_sql_stb" line 4 at for over select rows
+CONTEXT:  PL/pgSQL function "func1_read_setint_sql_stb" line 4 at FOR over SELECT rows

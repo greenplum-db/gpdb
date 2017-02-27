@@ -14,4 +14,4 @@ SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_sql_int_vol(5))) r or
 psql:/data/tungs1_cdbfast/tincrepo/main/functions/functionProperty/sql/../output/function_in_subqry_withfunc2_113_gucs.sql:11: ERROR:  function cannot execute on segment because it accesses relation "public.bar"  (entry db rh55-qavm20:5432 pid=5285) (cdbdisp.c:1487)
 DETAIL:  
 	 SQL statement " SELECT d FROM bar WHERE c <>  $1 "
-PL/pgSQL function "func1_read_setint_sql_vol" line 4 at for over select rows
+PL/pgSQL function "func1_read_setint_sql_vol" line 4 at FOR over SELECT rows
