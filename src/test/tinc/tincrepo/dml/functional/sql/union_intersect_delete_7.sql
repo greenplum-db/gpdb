@@ -9,6 +9,6 @@ set gp_enable_column_oriented_table=on;
 \echo --end_ignore
 
 SELECT COUNT(*) FROM dml_union_r;
-DELETE FROM dml_union_r WHERE a = (SELECT NULL UNION SELECT NULL); 
+DELETE FROM dml_union_r WHERE a = (SELECT NULL UNION SELECT NULL)::int; 
 SELECT COUNT(*) FROM dml_union_r;
 

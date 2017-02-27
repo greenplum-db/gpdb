@@ -15,7 +15,7 @@ SELECT COUNT(*) FROM dml_union_r;
    120
 (1 row)
 
-DELETE FROM dml_union_r WHERE a = (SELECT NULL INTERSECT SELECT NULL);
+DELETE FROM dml_union_r WHERE a = (SELECT NULL INTERSECT SELECT NULL)::int;
 DELETE 0
 SELECT COUNT(*) FROM dml_union_r;
  count 
