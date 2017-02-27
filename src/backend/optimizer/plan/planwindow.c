@@ -1509,7 +1509,7 @@ set_window_keys(WindowContext *context, int wind_index)
 		}
 	}
 	
-	/* Careful.  Within sort key, parition key may overlap order keys. */
+	/* Careful.  Within sort key, partition key may overlap order keys. */
 	nextsk = skoffset = winfo->orderkeys_offset;
 	
 	/* Make a WindowKey per SpecInfo. */

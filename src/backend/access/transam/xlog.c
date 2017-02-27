@@ -7463,7 +7463,7 @@ StartupXLOG_Pass2(void)
 		if (Debug_persistent_recovery_print)
 			elog(PersistentRecovery_DebugPrintLevel(),
 				"Read the checkpoint record location saved from pass1, "
-				"and setup the prepared transation hash list.");
+				"and setup the prepared transaction hash list.");
 		record = XLogReadRecord(&XLogCtl->pass1LastCheckpointLoc, false, PANIC);
 		SetupCheckpointPreparedTransactionList(record);
 	}

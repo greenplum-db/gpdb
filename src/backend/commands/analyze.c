@@ -1521,10 +1521,10 @@ analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples, float4 *rel
 	List *allRelOids = NIL;
 
 	/* if GUC optimizer_analyze_root_partition is off, we do not analyze root partitions, unless
-	 * using the 'ANALYZE ROOTPARITION tablename' command.
+	 * using the 'ANALYZE ROOTPARTITION tablename' command.
 	 * This is done by estimating the reltuples to be 0 and thus bypass the actual analyze.
 	 * See MPP-21427.
-	 * For mid-level parititions, we aggregate the reltuples and relpages from all leaf children beneath.
+	 * For mid-level partitions, we aggregate the reltuples and relpages from all leaf children beneath.
 	 */
 	if (rel_part_status(relationOid) == PART_STATUS_INTERIOR ||
 			(rel_is_partitioned(relationOid) && (optimizer_analyze_root_partition || rootonly)))

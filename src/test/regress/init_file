@@ -41,7 +41,7 @@ m/^NOTICE:.*resource queue required -- using default resource queue ".*"/
 
 # The following NOTICE is generated when a user creates an index on the parent
 # partition table. For each child partition, it informs the user that the
-# database will create an index for that parition. The messages might appear in
+# database will create an index for that partition. The messages might appear in
 # different order for the child partitions.
 m/^NOTICE:.*building index for child partition ".*"/
 

@@ -1,5 +1,5 @@
 set optimizer_disable_missing_stats_collection = on;
--- MPP-23647 Create a paritioned appendonly table, let its age
+-- MPP-23647 Create a partitioned appendonly table, let its age
 -- increase during the test.  We will vacuum it at the end of the
 -- test.
 create table ao_age_test (i int, b bool, c char, d date)
@@ -130,7 +130,7 @@ insert into vactst select i, (i%123 > 50), (i/11) || '', '2008/10/12'::date + (i
 from generate_series(0, 99) i;
 vacuum analyze vactst;
 drop table vactst;
--- MPP-23647 Vacuum appendonly paritioned table ao_age_test, check
+-- MPP-23647 Vacuum appendonly partitioned table ao_age_test, check
 -- that its age is correctly updated along with its partitions.
 set vacuum_freeze_min_age=20;
 show vacuum_freeze_min_age;

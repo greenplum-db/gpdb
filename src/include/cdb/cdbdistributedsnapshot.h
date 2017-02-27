@@ -52,7 +52,7 @@ typedef struct DistributedSnapshotHeader
 	DistributedTransactionId 	xmin;	/* XID < xmin are visible to me */
 	DistributedTransactionId 	xmax;	/* XID >= xmax are invisible to me */
 	int32						count;	/* 
-										 * Count of distributed transations
+										 * Count of distributed transactions
 										 * in inProgress*Array. 
 										 */
 	int32						maxCount;

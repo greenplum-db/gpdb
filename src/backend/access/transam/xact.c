@@ -1844,7 +1844,7 @@ bool RecordCrashTransactionAbortRecord(
 	bool           validStatus;
 
 	/* Fix for MPP-12614. The call to TransactionIdGetStatus() has been removed since    */
-	/* The clog many not have the the referenced transation as of crash recovery         */
+	/* The clog many not have the the referenced transaction as of crash recovery        */
 	/* pass 2. The clog will be fully built in pass 3 of crash recovery.                 */
 	/* The new call "InRecoveryTansactionIdGetStatus will return TRUE or FALSE in the    */
 	/* validStatus parameter, which indicates whether or not the returned value is good. */

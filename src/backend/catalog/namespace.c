@@ -3238,7 +3238,7 @@ void
 DropTempTableNamespaceForResetSession(Oid namespaceOid)
 {
 	if (IsTransactionOrTransactionBlock())
-		elog(ERROR, "Called within a transation");
+		elog(ERROR, "Called within a transaction");
 	
 	StartTransactionCommand();
 
