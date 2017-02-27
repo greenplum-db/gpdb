@@ -5,7 +5,6 @@
 -- @product_version gpdb: [4.3-]
 -- @optimizer_mode on	
 -- @description Tests for MPP-21090
--- @skip #140373273
 \echo --start_ignore
 set gp_enable_column_oriented_table=on;
 \echo --end_ignore
