@@ -2590,16 +2590,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&optimizer_print_optimization_context,
 		false, NULL, NULL
 	},
-	{
-		{"gp_reject_internal_tcp_connection", PGC_POSTMASTER,
-			DEVELOPER_OPTIONS,
-			gettext_noop("Permit internal TCP connections to the master."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_reject_internal_tcp_conn,
-		true, NULL, NULL
-	},
 
 	{
 		{"optimizer_print_optimization_stats", PGC_USERSET, LOGGING_WHAT,
