@@ -18,6 +18,6 @@ SELECT * FROM dml_trigger_table_1 order by 2;
  NEW TEST |  10 | a
 (1 row)
 
-\!grep Planner %MYD%/output/update_fallback_orca.out
+\!sed -n '/Planner/p' %MYD%/output/update_fallback_orca.out
 psql:%MYD%/output/update_fallback_orca.sql:20: LOG:  Planner produced plan :0
-\!grep Planner %MYD%/output/update_fallback_orca.out
+\!sed -n '/Planner/p' %MYD%/output/update_fallback_orca.out

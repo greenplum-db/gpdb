@@ -18,5 +18,5 @@ SELECT * FROM dml_trigger_table_1 order by 2;
 ------+-----
 (0 rows)
 
-\!grep Planner /Users/elhela/dev/tincrepo/private/QP/dml/triggers/output/delete_no_fallback_orca.out
-\!grep Planner /Users/elhela/dev/tincrepo/private/QP/dml/triggers/output/delete_no_fallback_orca.out
+\!sed -n '/Planner/p' %MYD%/output/delete_no_fallback_orca.out
+\!sed -n '/Planner/p' %MYD%/output/delete_no_fallback_orca.out

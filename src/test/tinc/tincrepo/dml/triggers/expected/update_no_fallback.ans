@@ -19,5 +19,5 @@ SELECT * FROM dml_trigger_table_1 order by 2;
  NEW TEST |  10 | 
 (1 row)
 
-\!grep Planner /Users/elhela/dev/tincrepo/private/QP/dml/triggers/output/update_no_fallback_orca.out
-\!grep Planner /Users/elhela/dev/tincrepo/private/QP/dml/triggers/output/update_no_fallback_orca.out
+\!sed -n '/Planner/p' %MYD%/output/update_no_fallback_orca.out
+\!sed -n '/Planner/p' %MYD%/output/update_no_fallback_orca.out

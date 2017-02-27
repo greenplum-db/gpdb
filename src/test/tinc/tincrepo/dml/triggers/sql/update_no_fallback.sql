@@ -8,4 +8,4 @@ SET client_min_messages='notice';
 
 SELECT * FROM dml_trigger_table_1 order by 2;
 
-\!grep Planner %MYD%/output/update_no_fallback_orca.out
+\!sed -n '/Planner/p' %MYD%/output/update_no_fallback_orca.out
