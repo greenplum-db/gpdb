@@ -6340,23 +6340,13 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 				appendPQExpBuffer(q, "\n");
 
 				/*
-				 * NOTE: error tables get automatically generated if don't
-				 * exist. therefore we must be sure that this statment will be
-				 * dumped after the error relation CREATE is dumped, so that
-				 * we won't try to create it twice. For now we rely on the
-				 * fact that we pick dumpable objects sorted by OID, and error
-				 * table oid *should* always be less than its external table
-				 * oid (could that not be true sometimes?)
+				 * Error tables were removed in 5.0 and replaced with file
+				 * error logging. The catalog syntax for identifying error
+				 * logging is however still using the pg_exttable.fmterrtbl
+				 * attribute so we use the errtblname for emitting LOG ERRORS.
 				 */
 				if (errtblname && strlen(errtblname) > 0)
-				{
 					appendPQExpBuffer(q, "LOG ERRORS ");
-					if(strcmp(fmtId(errtblname), fmtId(tbinfo->dobj.name)))
-					{
-						appendPQExpBuffer(q, "INTO %s.", fmtId(errnspname));
-						appendPQExpBuffer(q, "%s ", fmtId(errtblname));
-					}
-				}
 
 				/* reject limit */
 				appendPQExpBuffer(q, "SEGMENT REJECT LIMIT %s", rejlim);
