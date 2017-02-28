@@ -385,6 +385,7 @@ extern char  *data_directory;
 // ORCA-related gucs
 extern bool	optimizer;
 extern bool	optimizer_log;
+extern bool	optimizer_trace_fallback;
 extern bool optimizer_minidump;
 extern int  optimizer_cost_model;
 extern bool optimizer_print_query;

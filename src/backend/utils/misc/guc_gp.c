@@ -463,6 +463,7 @@ bool		gp_enable_relsize_collection = false;
 bool		optimizer_control = true;
 bool		optimizer;
 bool		optimizer_log;
+bool		optimizer_trace_fallback;
 bool		optimizer_partition_selection_log;
 bool		optimizer_minidump;
 int			optimizer_cost_model;
@@ -2450,6 +2451,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&optimizer_log,
 		true, NULL, NULL
+	},
+
+	{
+		{"optimizer_trace_fallback", PGC_USERSET, LOGGING_WHAT,
+			gettext_noop("Print a message at INFO level, whenever GPORCA falls back."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_trace_fallback,
+		false, NULL, NULL
 	},
 
 	{
