@@ -773,12 +773,12 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ExplainState *es,
 			}
 		else
 		{
-			ExplainOpenGroup("Settings", "Settings", false, es);
+			ExplainOpenGroup("Settings", "Settings", true, es);
 			foreach(cell, gucs_to_show)
 			{
 				ExplainPropertyText( ((NameValue *)(cell->data.ptr_value))->name, ((NameValue *)(cell->data.ptr_value))->value, es);
 			}
-			ExplainCloseGroup("Settings", "Settings", false, es);
+			ExplainCloseGroup("Settings", "Settings", true, es);
 		}
 		list_free(gucs_to_show);
 	}
