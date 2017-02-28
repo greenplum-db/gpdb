@@ -665,9 +665,8 @@ DropAllPreparedStatements(void)
  * Implements the 'EXPLAIN EXECUTE' utility statement.
  */
 void
-ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainStmt *stmt,
-					const char *queryString,
-					ParamListInfo params, TupOutputState *tstate)
+ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainState *es,
+					const char *queryString, ParamListInfo params)
 {
 	PreparedStatement *entry;
 	CachedPlan *cplan;
@@ -709,9 +708,6 @@ ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainStmt *stmt,
 	foreach(p, plan_list)
 	{
 		PlannedStmt *pstmt = (PlannedStmt *) lfirst(p);
-		bool		is_last_query;
-
-		is_last_query = (lnext(p) == NULL);
 
 		if (IsA(pstmt, PlannedStmt))
 		{
@@ -729,19 +725,18 @@ ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainStmt *stmt,
 				pstmt->intoClause = execstmt->into;
 			}
 
-			ExplainOnePlan(pstmt, paramLI, stmt, queryString, tstate);
+			ExplainOnePlan(pstmt, es, queryString, paramLI);
 		}
 		else
 		{
-			ExplainOneUtility((Node *) pstmt, stmt, queryString,
-							  params, tstate);
+			ExplainOneUtility((Node *) pstmt, es, queryString, paramLI);
 		}
 
 		/* No need for CommandCounterIncrement, as ExplainOnePlan did it */
 
-		/* put a blank line between plans */
-		if (!is_last_query)
-			do_text_output_oneline(tstate, "");
+		/* Separate plans with an appropriate separator */
+		if (lnext(p) != NULL)
+			ExplainSeparatePlans(es);
 	}
 
 	if (estate)

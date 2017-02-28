@@ -545,6 +545,11 @@ typedef enum
 	INDEX_CHECK_ALL
 } IndexCheckType;
 
+typedef struct NameValue {
+    	const char *name;
+    	const char *value;
+ }NameValue;
+
 extern IndexCheckType gp_indexcheck_insert;
 extern IndexCheckType gp_indexcheck_vacuum;
 
@@ -641,13 +646,8 @@ extern int	GUC_complaint_elevel(GucSource source);
 
 extern void pg_timezone_abbrev_initialize(void);
 
-extern int  gp_guc_list_show(struct StringInfoData    *buf,
-                              const char               *pfx,
-                              const char               *fmt,
-                              GucSource                 excluding,
-                              List                     *guclist)
-                /* This extension allows gcc to check the format string */
-                __attribute__((__format__(__printf__, 3, 0)));
+extern List *  gp_guc_list_show(GucSource                 excluding,
+                              List                     *guclist);
 
 #ifdef EXEC_BACKEND
 extern void write_nondefault_variables(GucContext context);

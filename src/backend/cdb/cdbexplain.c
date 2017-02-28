@@ -1485,15 +1485,12 @@ show_cumulative_sort_info(struct StringInfoData *str,
  */
 void
 cdbexplain_showExecStats(struct PlanState *planstate,
-						 struct StringInfoData *str,
-						 int indent,
-						 struct CdbExplain_ShowStatCtx *ctx)
+						 struct CdbExplain_ShowStatCtx *ctx, ExplainState *es)
 {
 	Instrumentation *instr = planstate->instrument;
 	CdbExplain_NodeSummary *ns = instr->cdbNodeSummary;
 	instr_time	timediff;
 	double		ntuples_avg;
-	int			i;
 
 	const char *s_row = " row";
 	char		firstbuf[50];
@@ -1502,6 +1499,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 	char		maxbuf[50];
 	char		segbuf[50];
 	char		startbuf[50];
+	int		i;
 
 	/* Might not have received stats from qExecs if they hit errors. */
 	if (!ns)
@@ -1518,7 +1516,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 	/*
 	 * Row counts.  Also, timings from the worker with the most output rows.
 	 */
-	appendStringInfoFill(str, 2 * indent, ' ');
+	appendStringInfoSpaces(es->str, es->indent);
 	cdbexplain_formatSeg(segbuf, sizeof(segbuf), ns->ntuples.imax, ns->ninst);
 	ntuples_avg = cdbexplain_agg_avg(&ns->ntuples);
 	switch (planstate->type)
@@ -1528,7 +1526,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 		case T_BitmapIndexScanState:
 			s_row = "";
 			if (ns->ntuples.vcnt > 1)
-				appendStringInfo(str,
+				appendStringInfo(es->str,
 								 "Bitmaps out:  Avg %.1f x %d workers."
 								 "  Max %.0f%s",
 								 ntuples_avg,
@@ -1536,7 +1534,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 								 ns->ntuples.vmax,
 								 segbuf);
 			else
-				appendStringInfo(str,
+				appendStringInfo(es->str,
 								 "Bitmaps out:  %s%.0f%s",
 								 noRowRequested,
 								 ns->ntuples.vmax,
@@ -1544,7 +1542,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 			break;
 		case T_HashState:
 			if (ns->ntuples.vcnt > 1)
-				appendStringInfo(str,
+				appendStringInfo(es->str,
 								 "Rows in:  Avg %.1f rows x %d workers."
 								 "  Max %.0f rows%s",
 								 ntuples_avg,
@@ -1552,7 +1550,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 								 ns->ntuples.vmax,
 								 segbuf);
 			else
-				appendStringInfo(str,
+				appendStringInfo(es->str,
 								 "Rows in:  %s%.0f rows%s",
 								 noRowRequested,
 								 ns->ntuples.vmax,
@@ -1560,7 +1558,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 			break;
 		case T_MotionState:
 			if (ns->ntuples.vcnt > 1)
-				appendStringInfo(str,
+				appendStringInfo(es->str,
 								 "Rows out:  Avg %.1f rows x %d workers"
 								 " at destination.  Max %.0f rows%s",
 								 ntuples_avg,
@@ -1568,7 +1566,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 								 ns->ntuples.vmax,
 								 segbuf);
 			else
-				appendStringInfo(str,
+				appendStringInfo(es->str,
 								 "Rows out:  %s%.0f rows at destination%s",
 								 noRowRequested,
 								 ns->ntuples.vmax,
@@ -1583,7 +1581,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 			/* no break */
 		default:
 			if (ns->ntuples.vcnt > 1)
-				appendStringInfo(str,
+				appendStringInfo(es->str,
 								 "Rows out:  Avg %.1f rows x %d workers."
 								 "  Max %.0f rows%s",
 								 ntuples_avg,
@@ -1591,7 +1589,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 								 ns->ntuples.vmax,
 								 segbuf);
 			else
-				appendStringInfo(str,
+				appendStringInfo(es->str,
 								 "Rows out:  %s%.0f rows%s",
 								 noRowRequested,
 								 ns->ntuples.vmax,
@@ -1609,19 +1607,19 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 	 * any valid elapsed time for first tuple.
 	 */
 	if ((instr->ntuples > 0) && (strcmp(firstbuf, totalbuf) != 0))
-		appendStringInfo(str,
+		appendStringInfo(es->str,
 						 " with %s to first%s, %s to end",
 						 firstbuf,
 						 s_row,
 						 totalbuf);
 	else
-		appendStringInfo(str,
+		appendStringInfo(es->str,
 						 " with %s to end",
 						 totalbuf);
 
 	/* Number of rescans */
 	if (instr->nloops > 1)
-		appendStringInfo(str, " of %.0f scans", instr->nloops);
+		appendStringInfo(es->str, " of %.0f scans", instr->nloops);
 
 	/* Time from start of query on qDisp to this worker's first result row */
 	if (!(INSTR_TIME_IS_ZERO(instr->firststart)))
@@ -1629,10 +1627,10 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 		INSTR_TIME_SET_ZERO(timediff);
 		INSTR_TIME_ACCUM_DIFF(timediff, instr->firststart, ctx->querystarttime);
 		cdbexplain_formatSeconds(startbuf, sizeof(startbuf), INSTR_TIME_GET_DOUBLE(timediff));
-		appendStringInfo(str, ", start offset by %s", startbuf);
+		appendStringInfo(es->str, ", start offset by %s", startbuf);
 	}
 
-	appendStringInfoString(str, ".\n");
+	appendStringInfoString(es->str, ".\n");
 
 	if ((EXPLAIN_MEMORY_VERBOSITY_DETAIL <= explain_memory_verbosity)
 		&& planstate->type == T_MotionState)
@@ -1642,11 +1640,11 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 
 		for (int iWorker = 0; iWorker < ctx->slices[curSliceId].nworker; iWorker++)
 		{
-			appendStringInfoFill(str, 2 * indent, ' ');
-			appendStringInfo(str, "slice %d, seg %d\n", curSliceId, iWorker);
+			appendStringInfoSpaces(es->str, es->indent * 2);
+			appendStringInfo(es->str, "slice %d, seg %d\n", curSliceId, iWorker);
 
 			MemoryAccounting_CombinedAccountArrayToString(ctx->slices[curSliceId].memoryAccounts[iWorker],
-														  ctx->slices[curSliceId].memoryAccountCount[iWorker], str, indent + 1);
+														  ctx->slices[curSliceId].memoryAccountCount[iWorker], es->str, es->indent + 1);
 		}
 	}
 
@@ -1656,17 +1654,17 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 	 */
 	if (ns->execmemused.vcnt > 0)
 	{
-		appendStringInfoFill(str, 2 * indent, ' ');
+		appendStringInfoSpaces(es->str, es->indent*2);
 		cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ns->execmemused.vmax);
 		if (ns->execmemused.vcnt == 1)
-			appendStringInfo(str,
+			appendStringInfo(es->str,
 							 "Executor memory:  %s.\n",
 							 maxbuf);
 		else
 		{
 			cdbexplain_formatSeg(segbuf, sizeof(segbuf), ns->execmemused.imax, ns->ninst);
 			cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), cdbexplain_agg_avg(&ns->execmemused));
-			appendStringInfo(str,
+			appendStringInfo(es->str,
 							 "Executor memory:  %s avg, %s max%s.\n",
 							 avgbuf,
 							 maxbuf,
@@ -1679,17 +1677,17 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 	 */
 	if (ns->workmemused.vcnt > 0)
 	{
-		appendStringInfoFill(str, 2 * indent, ' ');
+		appendStringInfoSpaces(es->str, es->indent*2);
 		cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ns->workmemused.vmax);
 		if (ns->workmemused.vcnt == 1)
-			appendStringInfo(str,
+			appendStringInfo(es->str,
 							 "Work_mem used:  %s.",
 							 maxbuf);
 		else
 		{
 			cdbexplain_formatSeg(segbuf, sizeof(segbuf), ns->workmemused.imax, ns->ninst);
 			cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), cdbexplain_agg_avg(&ns->workmemused));
-			appendStringInfo(str,
+			appendStringInfo(es->str,
 							 "Work_mem used:  %s avg, %s max%s.",
 							 avgbuf,
 							 maxbuf,
@@ -1702,12 +1700,12 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 		 */
 		if (nodeSupportWorkfileCaching(planstate))
 		{
-			appendStringInfo(str,
+			appendStringInfo(es->str,
 							 " Workfile: (%d spilling)",
 							 ns->totalWorkfileCreated.vcnt);
 		}
 
-		appendStringInfo(str, "\n");
+		ExplainSeparatePlans(&es);
 
 	}
 
@@ -1716,11 +1714,11 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 		/*
 		 * Memory account balance without overhead
 		 */
-		appendStringInfoFill(str, 2 * indent, ' ');
+		appendStringInfoSpaces(es->str, es->indent * 2);
 		cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ns->peakMemBalance.vmax);
 		if (ns->peakMemBalance.vcnt == 1)
 		{
-			appendStringInfo(str,
+			appendStringInfo(es->str,
 							 "Memory:  %s.\n",
 							 maxbuf);
 		}
@@ -1728,7 +1726,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 		{
 			cdbexplain_formatSeg(segbuf, sizeof(segbuf), ns->peakMemBalance.imax, ns->ninst);
 			cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), cdbexplain_agg_avg(&ns->peakMemBalance));
-			appendStringInfo(str,
+			appendStringInfo(es->str,
 							 "Memory:  %s avg, %s max%s.\n",
 							 avgbuf,
 							 maxbuf,
@@ -1741,11 +1739,11 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 	 */
 	if (ns->workmemwanted.vcnt > 0)
 	{
-		appendStringInfoFill(str, 2 * indent, ' ');
+		appendStringInfoSpaces(es->str, es->indent * 2);
 		cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ns->workmemwanted.vmax);
 		if (ns->ninst == 1)
 		{
-			appendStringInfo(str,
+			appendStringInfo(es->str,
 							 "Work_mem wanted: %s to lessen workfile I/O.\n",
 							 maxbuf);
 		}
@@ -1753,7 +1751,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 		{
 			cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), cdbexplain_agg_avg(&ns->workmemwanted));
 			cdbexplain_formatSeg(segbuf, sizeof(segbuf), ns->workmemwanted.imax, ns->ninst);
-			appendStringInfo(str,
+			appendStringInfo(es->str,
 							 "Work_mem wanted: %s avg, %s max%s"
 						   " to lessen workfile I/O affecting %d workers.\n",
 							 avgbuf,
@@ -1790,8 +1788,8 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 			{
 				int			numTotalLeafParts = cdbexplain_countLeafPartTables(planstate);
 
-				appendStringInfoFill(str, 2 * indent, ' ');
-				appendStringInfo(str,
+				appendStringInfoSpaces(es->str, es->indent * 2);
+				appendStringInfo(es->str,
 								 "Partitions scanned:  0 (out of %d).\n",
 								 numTotalLeafParts);
 			}
@@ -1801,7 +1799,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 			cdbexplain_formatSeg(segbuf, sizeof(segbuf), ns->totalPartTableScanned.imax, ns->ninst);
 			int			numTotalLeafParts = cdbexplain_countLeafPartTables(planstate);
 
-			appendStringInfoFill(str, 2 * indent, ' ');
+			appendStringInfoSpaces(es->str, es->indent * 2);
 
 			/* only 1 segment scans partitions */
 			if (1 == ns->totalPartTableScanned.vcnt)
@@ -1811,7 +1809,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 				{
 					double		totalPartTableScannedPerRescan = ns->totalPartTableScanned.vmax / instr->nloops;
 
-					appendStringInfo(str,
+					appendStringInfo(es->str,
 									 "Partitions scanned:  %.0f (out of %d) %s of %.0f scans.\n",
 									 totalPartTableScannedPerRescan,
 									 numTotalLeafParts,
@@ -1820,7 +1818,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 				}
 				else
 				{
-					appendStringInfo(str,
+					appendStringInfo(es->str,
 							   "Partitions scanned:  %.0f (out of %d) %s.\n",
 									 ns->totalPartTableScanned.vmax,
 									 numTotalLeafParts,
@@ -1835,7 +1833,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 					double		totalPartTableScannedPerRescan = nPartTableScanned_avg / instr->nloops;
 					double		maxPartTableScannedPerRescan = ns->totalPartTableScanned.vmax / instr->nloops;
 
-					appendStringInfo(str,
+					appendStringInfo(es->str,
 									 "Partitions scanned:  Avg %.1f (out of %d) x %d workers of %.0f scans."
 									 "  Max %.0f parts%s.\n",
 									 totalPartTableScannedPerRescan,
@@ -1848,7 +1846,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 				}
 				else
 				{
-					appendStringInfo(str,
+					appendStringInfo(es->str,
 					"Partitions scanned:  Avg %.1f (out of %d) x %d workers."
 									 "  Max %.0f parts%s.\n",
 									 nPartTableScanned_avg,
@@ -1870,8 +1868,8 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 
 		if (nsi->bnotes < nsi->enotes)
 		{
-			cdbexplain_formatExtraText(str,
-									   indent,
+			cdbexplain_formatExtraText(es->str,
+									   es->indent,
 									   (ns->ninst == 1) ? -1
 									   : ns->segindex0 + i,
 									   ctx->extratextbuf.data + nsi->bnotes,
@@ -1890,9 +1888,8 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 		 * create a header for all stats: separate each individual stat by an
 		 * underscore, separate the grouped stats for each node by a slash
 		 */
-		appendStringInfoFill(str, 2 * indent, ' ');
-		appendStringInfoString(str,
-							   "allstat: "
+		appendStringInfoSpaces(es->str, es->indent * 2);
+		appendStringInfoString(es->str,"allstat: "
 
 		/*
 		 * "seg_starttime_firststart_counter_firsttuple_startup_total_ntuples_n
@@ -1915,14 +1912,14 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 			cdbexplain_formatSeconds(startbuf, sizeof(startbuf), INSTR_TIME_GET_DOUBLE(timediff));
 			cdbexplain_formatSeconds(totalbuf, sizeof(totalbuf), nsi->total);
 
-			appendStringInfo(str,
+			appendStringInfo(es->str,
 							 "/seg%d_%s_%s_%.0f",
 							 ns->segindex0 + i,
 							 startbuf,
 							 totalbuf,
 							 nsi->ntuples);
 		}
-		appendStringInfoString(str, "//end\n");
+		appendStringInfoString(es->str, "//end\n");
 	}
 }	/* cdbexplain_showExecStats */
 

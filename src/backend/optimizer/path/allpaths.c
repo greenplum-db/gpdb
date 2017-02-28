@@ -20,6 +20,7 @@
 #include "catalog/pg_type.h"	/* INT4OID, INT8OID */
 #include "nodes/makefuncs.h"
 #include "nodes/relation.h"
+#include "nodes/pg_list.h"
 #ifdef OPTIMIZER_DEBUG
 #include "nodes/print.h"
 #endif
@@ -1790,13 +1791,28 @@ cdb_no_path_for_query(void)
 	StringInfoData buf;
 
 	initStringInfo(&buf);
-	if (gp_guc_list_show(&buf, NULL, "%s=%s; ", PGC_S_DEFAULT, gp_guc_list_for_no_plan))
+
+	List *gucs_to_show = gp_guc_list_show(PGC_S_DEFAULT, gp_guc_list_for_no_plan);
+
+	if (length(gucs_to_show) )
+	{
+		ListCell *cell;
+		appendStringInfo(&buf, "Settings:  ");
+		foreach(cell, gucs_to_show)
+		{
+			appendStringInfo(&buf, "%s=%s; ", ((NameValue *)(cell->data.ptr_value))->name, ((NameValue *)(cell->data.ptr_value))->value);
+		}
+		truncateStringInfo(&buf, buf.len - 2);  /* drop final "; " */
+		appendStringInfoChar(&buf, '\n');
+		list_free(gucs_to_show);
+
 		ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_CONFIGURED),
-					errmsg("Query requires a feature that has been disabled "
-						   "by a configuration setting."),
-			 errdetail("Could not devise a query plan for the given query."),
-						errhint("Current settings:  %s", buf.data)
-						));
+				errmsg("Query requires a feature that has been disabled "
+					   "by a configuration setting."),
+		 errdetail("Could not devise a query plan for the given query."),
+					errhint("Current settings:  %s", buf.data)
+					));
+	}
 	else
 		elog(ERROR, "Could not devise a query plan for the given query.");
 	Insist(0);					/* not reached */

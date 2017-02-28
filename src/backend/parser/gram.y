@@ -330,7 +330,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <ival>	opt_interval
 %type <node>	overlay_placing substr_from substr_for
 
-%type <boolean> opt_instead opt_analyze
+%type <boolean> opt_instead
 %type <boolean> index_opt_unique opt_verbose opt_full
 %type <boolean> opt_freeze opt_default opt_ordered opt_recheck
 %type <boolean> opt_rootonly_all
@@ -389,6 +389,10 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <range>	relation_expr
 %type <range>	relation_expr_opt_alias
 %type <target>	target_el single_set_clause set_target insert_column_item
+%type <str>     explain_option_name
+%type <node>    explain_option_arg
+%type <defelt>  explain_option_elem
+%type <list>    explain_option_list
 
 %type <typnam>	Typename SimpleTypename ConstTypename
 				GenericType Numeric opt_float
@@ -8777,25 +8781,43 @@ opt_name_list:
  *
  *		QUERY:
  *				EXPLAIN [ANALYZE] [VERBOSE] query
+ *              EXPLAIN (options ) query
  *
  *****************************************************************************/
 
-ExplainStmt: EXPLAIN opt_analyze opt_verbose opt_dxl opt_force codegen ExplainableStmt
-				{
-					ExplainStmt *n = makeNode(ExplainStmt);
-					n->analyze = $2;
-					n->verbose = $3;
-					n->dxl = $4;
-					if($5)
-						ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), 
-								errmsg("cannot use force with explain statement")
-							       ));
-					n->codegen = $6;
-					n->query = $7;
-					$$ = (Node *)n;
-				}
-		;
-
+ExplainStmt:
+        EXPLAIN ExplainableStmt
+                {
+                    ExplainStmt *n = makeNode(ExplainStmt);
+                    n->query = $2;
+                    n->options = NIL;
+                    $$ = (Node *) n;
+                }
+        | EXPLAIN analyze_keyword opt_verbose ExplainableStmt
+                {
+                    ExplainStmt *n = makeNode(ExplainStmt);
+                    n->query = $4;
+                    n->options = list_make1(makeDefElem("analyze", NULL));
+                    if ($3)
+                        n->options = lappend(n->options,
+                                             makeDefElem("verbose", NULL));
+                    $$ = (Node *) n;
+                }
+        | EXPLAIN VERBOSE ExplainableStmt
+                {
+                    ExplainStmt *n = makeNode(ExplainStmt);
+                    n->query = $3;
+                    n->options = list_make1(makeDefElem("verbose", NULL));
+                    $$ = (Node *) n;
+                }
+        | EXPLAIN '(' explain_option_list ')' ExplainableStmt
+                {
+                    ExplainStmt *n = makeNode(ExplainStmt);
+                    n->query = $5;
+                    n->options = $3;
+                    $$ = (Node *) n;
+                }
+        ;
 ExplainableStmt:
 			SelectStmt
 			| InsertStmt
@@ -8817,10 +8839,37 @@ opt_dxl:	DXL										{ $$ = TRUE; }
 			| /*EMPTY*/								{ $$ = FALSE; }
 		;
 
-opt_analyze:
-			analyze_keyword			{ $$ = TRUE; }
-			| /* EMPTY */			{ $$ = FALSE; }
-		;
+explain_option_list:
+            explain_option_elem
+                {
+                    $$ = list_make1($1);
+                }
+            | explain_option_list ',' explain_option_elem
+                {
+                    $$ = lappend($1, $3);
+                }
+        ;
+
+explain_option_elem:
+            explain_option_name explain_option_arg
+                {
+                    $$ = makeDefElem($1, $2);
+                }
+        ;
+
+explain_option_name:
+            ColId                   { $$ = $1; }
+            | analyze_keyword       { $$ = "analyze"; }
+            | VERBOSE               { $$ = "verbose"; }
+        ;
+
+explain_option_arg:
+            opt_boolean             { $$ = (Node *) makeString($1); }
+            | ColId_or_Sconst       { $$ = (Node *) makeString($1); }
+            | NumericOnly           { $$ = (Node *) $1; }
+            | /* EMPTY */           { $$ = NULL; }
+        ;
+
 
 codegen:
 			CODEGEN				{ $$ = TRUE; }

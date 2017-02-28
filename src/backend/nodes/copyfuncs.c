@@ -3788,8 +3788,7 @@ _copyExplainStmt(ExplainStmt *from)
 	ExplainStmt *newnode = makeNode(ExplainStmt);
 
 	COPY_NODE_FIELD(query);
-	COPY_SCALAR_FIELD(verbose);
-	COPY_SCALAR_FIELD(analyze);
+	COPY_NODE_FIELD(options);
 
 	return newnode;
 }

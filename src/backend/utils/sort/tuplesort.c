@@ -92,7 +92,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplesort.c,v 1.92 2009/08/01 20:59:17 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplesort.c,v 1.93 2009/08/10 05:46:50 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -425,7 +425,7 @@ static bool is_sortstate_rwfile(Tuplesortstate *state)
 #define REVERSEDIRECTION(state) ((*(state)->reversedirection) (state))
 #define LACKMEM(state)		((state)->availMem < 0)
 
-static void tuplesort_get_stats(Tuplesortstate *state, const char **sortMethod, const char **spaceType, long *spaceUsed);
+void tuplesort_get_stats(Tuplesortstate *state, const char **sortMethod, const char **spaceType, long *spaceUsed);
 
 static inline void USEMEM(Tuplesortstate *state, int amt)
 {
@@ -2573,7 +2573,7 @@ tuplesort_restorepos(Tuplesortstate *state)
  * printable summary information about how the sort was performed.
  * spaceUsed is measured in kilobytes.
  */
-static void
+
 tuplesort_get_stats(Tuplesortstate *state,
 					const char **sortMethod,
 					const char **spaceType,
