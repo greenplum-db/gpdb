@@ -92,7 +92,7 @@ storage_queryfinish_and_transactionmanagement:
 	-s storage/basic \
 	-s storage/uao
 
-storage_persistent_filerep_accessmethods_and_vacuum:
+storage_persistent_accessmethods_and_vacuum:
 	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests/storage \
 	-s persistent \
 	-s access_methods \
