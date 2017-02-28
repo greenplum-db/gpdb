@@ -1452,23 +1452,22 @@ nodeSupportWorkfileCaching(PlanState *planstate)
  *	 Prints the sort method and memory used by sort operator.
  */
 static void
-show_cumulative_sort_info(struct StringInfoData *str,
-		int indent,
-		const char *sort_method,
+show_cumulative_sort_info(const char *sort_method,
 		const char* sort_space_type,
-		CdbExplain_Agg *agg)
+		CdbExplain_Agg *agg,
+		ExplainState *es)
 {
 	if (agg->vcnt > 0) {
 		if (agg->vcnt > 1)
 		{
-			appendStringInfo(str, "Sort Method:  %s  Max %s: %ldKB  Avg %s: %ldKB (%d segments)\n",
+			appendStringInfo(es->str, "Sort Method:  %s  Max %s: %ldKB  Avg %s: %ldKB (%d segments)\n",
 					sort_method, sort_space_type, (long)(agg->vmax), sort_space_type, (long)(agg->vsum / agg->vcnt), agg->vcnt);
-			appendStringInfoFill(str, 2 * indent, ' ');
+			appendStringInfoFill(es->str, 2 * es->indent, ' ');
 		}
 		else
 		{
-			appendStringInfo(str, "Sort Method:  %s  %s: %ldKB\n", sort_method, sort_space_type, (long)(agg->vsum));
-			appendStringInfoFill(str, 2 * indent, ' ');
+			appendStringInfo(es->str, "Sort Method:  %s  %s: %ldKB\n", sort_method, sort_space_type, (long)(agg->vsum));
+			appendStringInfoFill(es->str, 2 * es->indent, ' ');
 		}
 	}
 }
@@ -1575,8 +1574,10 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 		case T_SortState:
 			for (int idx = 0; idx < NUM_SORT_METHOD; ++idx)
 			{
-				show_cumulative_sort_info(str, indent, sort_method_enum_str[idx], MEMORY_STR_SORT_SPACE_TYPE, &ns->sortSpaceUsed[MEMORY_SORT_SPACE_TYPE-1][idx]);
-				show_cumulative_sort_info(str, indent, sort_method_enum_str[idx], DISK_STR_SORT_SPACE_TYPE, &ns->sortSpaceUsed[DISK_SORT_SPACE_TYPE-1][idx]);
+				show_cumulative_sort_info(sort_method_enum_str[idx],
+						MEMORY_STR_SORT_SPACE_TYPE, &ns->sortSpaceUsed[MEMORY_SORT_SPACE_TYPE-1][idx], es);
+				show_cumulative_sort_info(sort_method_enum_str[idx],
+						DISK_STR_SORT_SPACE_TYPE, &ns->sortSpaceUsed[DISK_SORT_SPACE_TYPE-1][idx], es);
 			}
 			/* no break */
 		default:
@@ -1705,7 +1706,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 							 ns->totalWorkfileCreated.vcnt);
 		}
 
-		ExplainSeparatePlans(&es);
+		ExplainSeparatePlans(es);
 
 	}
 
