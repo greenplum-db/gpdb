@@ -19,7 +19,7 @@ Feature: NetBackup Integration with GPDB
         And the netbackup params have been parsed
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
-        And there is a backupfile of tables "public.heap_table, public.ao_part_table" in "bkdb" exists for validation
+        And a backup file of tables "public.heap_table, public.ao_part_table" in "bkdb" exists for validation
         When the user runs valgrind with "gp_dump --gp-d=db_dumps --gp-s=p --gp-c bkdb" and options " " and suppressions file "netbackup_suppressions.txt" using netbackup
 
     @nbupartI
@@ -28,7 +28,7 @@ Feature: NetBackup Integration with GPDB
         And the netbackup params have been parsed
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
-        And there is a backupfile of tables "public.heap_table, public.ao_part_table" in "bkdb" exists for validation
+        And a backup file of tables "public.heap_table, public.ao_part_table" in "bkdb" exists for validation
         And the tables "public.heap_table" are in dirty hack file "/tmp/dirty_hack.txt"
         When the user runs valgrind with "gp_dump --gp-d=db_dumps --gp-s=p --gp-c --table-file=/tmp/dirty_hack.txt bkdb" and options " " and suppressions file "netbackup_suppressions.txt" using netbackup
 
@@ -38,7 +38,7 @@ Feature: NetBackup Integration with GPDB
         And the netbackup params have been parsed
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" table "public.ao_table" in "bkdb" with data
-        And there is a backupfile of tables "public.heap_table, public.ao_table" in "bkdb" exists for validation
+        And a backup file of tables "public.heap_table, public.ao_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb" using netbackup
         And gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -50,7 +50,7 @@ Feature: NetBackup Integration with GPDB
         And the netbackup params have been parsed
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" table "public.ao_table" in "bkdb" with data
-        And there is a backupfile of tables "public.heap_table, public.ao_table" in "bkdb" exists for validation
+        And a backup file of tables "public.heap_table, public.ao_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb" using netbackup
         And gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -251,10 +251,10 @@ Feature: NetBackup Integration with GPDB
     Scenario: Full Backup with option -s and Restore
         Given the test is initialized
         And the netbackup params have been parsed
-        And there is schema "schema_heap, schema_ao" exists in "bkdb"
+        And schema "schema_heap, schema_ao" exists in "bkdb"
         And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
         And there is a "ao" table "schema_ao.ao_table" in "bkdb" with data
-        And there is a backupfile of tables "schema_heap.heap_table, schema_ao.ao_table" in "bkdb" exists for validation
+        And a backup file of tables "schema_heap.heap_table, schema_ao.ao_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb -s schema_heap --netbackup-block-size 2048" using netbackup
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -268,7 +268,7 @@ Feature: NetBackup Integration with GPDB
         Given the test is initialized
         And the netbackup params have been parsed
         And there is a "heap" table "public.heap_table" in "bkdb" with data
-        And there is a backupfile of tables "public.heap_table" in "bkdb" exists for validation
+        And a backup file of tables "public.heap_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb -t public.heap_table --netbackup-block-size 2048" using netbackup
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -283,7 +283,7 @@ Feature: NetBackup Integration with GPDB
         And the netbackup params have been parsed
         And there is a "ao" table "public.ao_table" in "bkdb" with data
         And there is a "co" table "public.co_table" in "bkdb" with data
-        And there is a backupfile of tables "public.co_table" in "bkdb" exists for validation
+        And a backup file of tables "public.co_table" in "bkdb" exists for validation
         And there is a file "exclude_file" with tables "public.ao_table"
         When the user runs "gpcrondump -a -x bkdb --exclude-table-file exclude_file --netbackup-block-size 2048" using netbackup
         Then gpcrondump should return a return code of 0
@@ -301,7 +301,7 @@ Feature: NetBackup Integration with GPDB
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" table "public.ao_table" in "bkdb" with data
         And there is a "co" table "public.co_table" in "bkdb" with data
-        And there is a backupfile of tables "public.heap_table, public.ao_table" in "bkdb" exists for validation
+        And a backup file of tables "public.heap_table, public.ao_table" in "bkdb" exists for validation
         And there is a file "include_file" with tables "public.ao_table|public.heap_table"
         When the user runs "gpcrondump -a -x bkdb --table-file include_file --netbackup-block-size 2048" using netbackup
         Then gpcrondump should return a return code of 0
@@ -589,7 +589,7 @@ Feature: NetBackup Integration with GPDB
         And the prefix "foo" is stored
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
-        And there is a backupfile of tables "public.heap_table, public.ao_part_table" in "bkdb" exists for validation
+        And a backup file of tables "public.heap_table, public.ao_part_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb --prefix=foo --netbackup-block-size 2048" using netbackup
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -608,7 +608,7 @@ Feature: NetBackup Integration with GPDB
         And the prefix "foo" is stored
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" table "public.ao_table" in "bkdb" with data
-        And there is a backupfile of tables "public.heap_table, public.ao_table" in "bkdb" exists for validation
+        And a backup file of tables "public.heap_table, public.ao_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb --prefix=foo -u /tmp --netbackup-block-size 2048" using netbackup
         Then gpcrondump should return a return code of 0
         And the subdir from gpcrondump is stored
@@ -812,7 +812,7 @@ Feature: NetBackup Integration with GPDB
         And the netbackup params have been parsed
         And there is a "heap" table "public.heap_table" with compression "None" in "bkdb" with data and 1000000 rows
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
-        And there is a backupfile of tables "public.heap_table, public.ao_part_table" in "bkdb" exists for validation
+        And a backup file of tables "public.heap_table, public.ao_part_table" in "bkdb" exists for validation
         When the user runs the "gpcrondump -a -x bkdb" in a worker pool "w1" using netbackup
         And this test sleeps for "2" seconds
         And the "gpcrondump" has a lock on the pg_class table in "bkdb"
@@ -841,7 +841,7 @@ Feature: NetBackup Integration with GPDB
         And the timestamp from gpcrondump is stored
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/describe_multi_byte_char.sql bkdb > /tmp/describe_multi_byte_char_before"
         And the user runs "psql -c '\d public.ao_index_table' bkdb > /tmp/describe_ao_index_table_before"
-        When there is a backupfile of tables "ao_index_table, co_index_table, heap_index_table" in "bkdb" exists for validation
+        When a backup file of tables "ao_index_table, co_index_table, heap_index_table" in "bkdb" exists for validation
         And table "public.ao_index_table" is dropped in "bkdb"
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/drop_table_with_multi_byte_char.sql bkdb"
         When the user runs gpdbrestore with the stored timestamp and options "--table-file test/behave/mgmt_utils/steps/data/include_tables_with_metadata_postdata --netbackup-block-size 4096" without -e option using netbackup
@@ -1033,7 +1033,7 @@ Feature: NetBackup Integration with GPDB
     Scenario: Multiple Incremental backup and restore
         Given the test is initialized
         And the netbackup params have been parsed
-        And there is schema "testschema" exists in "bkdb"
+        And schema "testschema" exists in "bkdb"
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "heap" partition table "public.heap_part_table" in "bkdb" with data
         And there is a "heap" table "testschema.heap_table" in "bkdb" with data
@@ -1077,7 +1077,7 @@ Feature: NetBackup Integration with GPDB
     Scenario: Non compressed incremental backup
         Given the test is initialized
         And the netbackup params have been parsed
-        And there is schema "testschema" exists in "bkdb"
+        And schema "testschema" exists in "bkdb"
         And there is a "heap" table "testschema.heap_table" in "bkdb" with data
         And there is a "ao" table "testschema.ao_table" in "bkdb" with data
         And there is a "co" partition table "testschema.co_part_table" in "bkdb" with data
@@ -1111,7 +1111,7 @@ Feature: NetBackup Integration with GPDB
     Scenario: Verify the gpcrondump -h option works with full and incremental backups
         Given the test is initialized
         And the netbackup params have been parsed
-        And there is schema "testschema" exists in "bkdb"
+        And schema "testschema" exists in "bkdb"
         And there is a "ao" table "testschema.ao_table" in "bkdb" with data
         And there is a "co" table "testschema.co_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -h" using netbackup
@@ -1365,7 +1365,7 @@ Feature: NetBackup Integration with GPDB
     Scenario: Incremental Backup and Restore of specified post data objects
         Given the test is initialized
         And the netbackup params have been parsed
-        And there is schema "testschema" exists in "bkdb"
+        And schema "testschema" exists in "bkdb"
         And there is a list to store the incremental backup timestamps
         And there is a "heap" table "testschema.heap_table" in "bkdb" with data
         And there is a "heap" partition table "public.heap_part_table" in "bkdb" with data
@@ -1424,7 +1424,7 @@ Feature: NetBackup Integration with GPDB
     Scenario: Restore -T for incremental dump should restore metadata/postdata objects for tablenames with English and multibyte (chinese) characters
         Given the test is initialized
         And the netbackup params have been parsed
-        And there is schema "schema_heap" exists in "bkdb"
+        And schema "schema_heap" exists in "bkdb"
         And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
         And there is a "ao" table "public.ao_index_table" with index "ao_index" compression "None" in "bkdb" with data
         And there is a "co" table "public.co_index_table" with index "co_index" compression "None" in "bkdb" with data
@@ -1442,7 +1442,7 @@ Feature: NetBackup Integration with GPDB
         And the timestamp from gpcrondump is stored
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/describe_multi_byte_char.sql bkdb > /tmp/describe_multi_byte_char_before"
         And the user runs "psql -c '\d public.ao_index_table' bkdb > /tmp/describe_ao_index_table_before"
-        When there is a backupfile of tables "ao_index_table, co_index_table, heap_index_table" in "bkdb" exists for validation
+        When a backup file of tables "ao_index_table, co_index_table, heap_index_table" in "bkdb" exists for validation
         And table "public.ao_index_table" is dropped in "bkdb"
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/drop_table_with_multi_byte_char.sql bkdb"
         When the user runs gpdbrestore with the stored timestamp and options "--table-file test/behave/mgmt_utils/steps/data/include_tables_with_metadata_postdata --netbackup-block-size 4096" without -e option using netbackup

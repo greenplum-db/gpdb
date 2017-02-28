@@ -290,9 +290,10 @@ def diff_backup_restore_data(context, backup_file, restore_file):
 def validate_restore_data(context, new_table, dbname, backedup_table=None, backedup_dbname=None):
     if new_table == "public.gpcrondump_history":
         return
-    table_filename = dbname + "_" + new_table.strip() + "_restore"
-    get_table_data_to_file(table_filename, new_table, dbname)
-
+    dbname = dbname.strip()
+    new_table = new_table.strip()
+    filename = dbname + "_" + new_table + "_restore"
+    get_table_data_to_file(filename, new_table, dbname)
     current_dir = os.getcwd()
 
     if backedup_table != None:
@@ -341,7 +342,7 @@ def backup_db_data(context, dbname):
         backup_data(context, nm, dbname)
 
 def backup_data(context, tablename, dbname):
-    filename = dbname + "_" + tablename + "_backup"
+    filename = dbname.strip() + "_" + tablename.strip() + "_backup"
     get_table_data_to_file(filename, tablename, dbname)
 
 def backup_data_to_file(context, tablename, dbname, filename):
