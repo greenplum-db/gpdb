@@ -514,25 +514,6 @@ jobs:
       BLDWRAP_POSTGRES_CONF_ADDONS: ""
       TEST_OS: "centos"
 
-- name: QP_runaway-query
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: bin_gpdb
-      passed: [compile_gpdb_centos6]
-      resource: bin_gpdb_centos6
-    - get: centos-gpdb-dev-6
-  - task: runaway-query
-    timeout: 3h
-    file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      MAKE_TEST_COMMAND: runaway_query
-      BLDWRAP_POSTGRES_CONF_ADDONS: ""
-      TEST_OS: "centos"
-
 - name: regression_tests_gphdfs_centos
   plan:
   - aggregate:
@@ -980,25 +961,6 @@ jobs:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "GPDB-5-CCLE"
 
-- name: QP_memory-accounting
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: bin_gpdb
-      passed: [compile_gpdb_centos6]
-      resource: bin_gpdb_centos6
-    - get: centos-gpdb-dev-6
-  - task: memory-accounting
-    timeout: 3h
-    file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      MAKE_TEST_COMMAND: memory_accounting
-      BLDWRAP_POSTGRES_CONF_ADDONS: ""
-      TEST_OS: "centos"
-
 - name: QP_runaway-query
   plan:
   - aggregate:
@@ -1017,23 +979,6 @@ jobs:
       MAKE_TEST_COMMAND: runaway_query
       BLDWRAP_POSTGRES_CONF_ADDONS: ""
       TEST_OS: "centos"
-
-- name: regression_tests_gphdfs_centos
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gpdb_rc_packaging_centos]
-      trigger: true
-    - get: bin_gpdb
-      passed: [gpdb_rc_packaging_centos]
-      resource: bin_gpdb_centos6
-    - get: centos-gpdb-dev-6
-  - task: regression_tests_gphdfs
-    file: gpdb_src/concourse/tasks/regression_tests_gphdfs.yml
-    image: centos-gpdb-dev-6
-    params:
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
 
 - name: QP_optimizer-functional
   plan:
