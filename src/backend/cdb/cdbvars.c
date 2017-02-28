@@ -1228,6 +1228,7 @@ gpvars_show_gp_resource_manager_policy(void)
 		case RESOURCE_MANAGER_POLICY_GROUP:
 			return "group";
 		default:
+			Assert(!"unexpected resource manager policy");
 			return "unknown";
 	}
 }

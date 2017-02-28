@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * manager.c
+ * resource_manager.c
  *	  GPDB resource manager code.
  *
  *

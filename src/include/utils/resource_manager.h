@@ -7,12 +7,12 @@
  * Copyright (c) 2006-2017, Greenplum inc.
  *
  * IDENTIFICATION
- *	  $PostgreSQL: $
+ *		src/include/utils/resource_manager.h
  *
  *-------------------------------------------------------------------------
  */
-#ifndef RESOURCEMANGER_H
-#define RESOURCEMANGER_H
+#ifndef RESOURCEMANAGER_H
+#define RESOURCEMANAGER_H
 
 typedef enum
 {
@@ -26,4 +26,4 @@ typedef enum
 extern bool	ResourceScheduler;
 extern ResourceManagerPolicy Gp_resource_manager_policy;
 
-#endif   /* RESOURCEMANGER_H */
+#endif   /* RESOURCEMANAGER_H */
