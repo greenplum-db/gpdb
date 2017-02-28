@@ -38,7 +38,7 @@ function _main() {
     fi
 
     time install_gpdb
-    time ./gpdb_src/concourse/scripts/setup_gpadmin_user.bash "$TEST_OS"
+    time ./gpdb_src/concourse/scripts/setup_gpadmin_user.bash
 
     time make_cluster
 
