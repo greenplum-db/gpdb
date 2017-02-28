@@ -188,15 +188,11 @@ TEST_F(S3InterfaceServiceTest, PostResponseWithRetriesAndSuccess) {
     EXPECT_EQ(RESPONSE_OK, this->postResponseWithRetries(url, headers, data).getStatus());
 }
 
-TEST_F(S3InterfaceServiceTest, ListBucketThrowExceptionWithInvalidUrl) {
-    EXPECT_THROW(result = this->listBucket(S3Url("s3://")), S3RuntimeError);
-}
-
 TEST_F(S3InterfaceServiceTest, ListBucketWithWrongRegion) {
     EXPECT_CALL(mockRESTfulService, get(_, _)).WillRepeatedly(Throw(S3ConnectionError("")));
 
-    EXPECT_THROW(this->listBucket(S3Url("s3://s3-noexist.amazonaws.com/bucket/prefix")),
-                 S3FailedAfterRetry);
+    S3Url s3Url("s3://s3-noexist.amazonaws.com/bucket/prefix");
+    EXPECT_THROW(this->listBucket(s3Url), S3FailedAfterRetry);
 }
 
 TEST_F(S3InterfaceServiceTest, ListBucketWithWrongBucketName) {

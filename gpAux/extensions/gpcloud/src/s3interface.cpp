@@ -262,7 +262,7 @@ bool S3InterfaceService::parseBucketXML(ListBucketResult *result, xmlParserCtxtP
 // service unstable, so that caller could retry.
 //
 // Caller should delete returned object.
-ListBucketResult S3InterfaceService::listBucket(S3Url s3Url) {
+ListBucketResult S3InterfaceService::listBucket(S3Url &s3Url) {
     ListBucketResult result;
 
     string marker = "";
@@ -547,7 +547,7 @@ bool S3InterfaceService::abortUpload(const S3Url &s3Url, const string &uploadId)
     }
 }
 
-S3MessageParser::S3MessageParser(const Response &resp) {
+S3MessageParser::S3MessageParser(const Response &resp) : xmlptr(NULL) {
     // Compatible S3 services don't always return XML
     if (resp.getRawData().data() == NULL) {
         message = "Unknown error";

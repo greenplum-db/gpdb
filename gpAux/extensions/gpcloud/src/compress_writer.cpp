@@ -7,7 +7,10 @@ CompressWriter::CompressWriter() : writer(NULL), isClosed(true) {
 }
 
 CompressWriter::~CompressWriter() {
-    this->close();
+    try {
+        this->close();
+    } catch (...) {
+    }
     delete this->out;
 }
 

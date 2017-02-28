@@ -72,7 +72,7 @@ class S3Interface {
     virtual ~S3Interface() {
     }
 
-    virtual ListBucketResult listBucket(S3Url s3Url) = 0;
+    virtual ListBucketResult listBucket(S3Url &s3Url) = 0;
 
     virtual uint64_t fetchData(uint64_t offset, S3VectorUInt8 &data, uint64_t len,
                                const S3Url &s3Url) = 0;
@@ -98,7 +98,7 @@ class S3InterfaceService : public S3Interface {
     S3InterfaceService(const S3Params &);
     virtual ~S3InterfaceService();
 
-    ListBucketResult listBucket(S3Url s3Url);
+    ListBucketResult listBucket(S3Url &s3Url);
 
     uint64_t fetchData(uint64_t offset, S3VectorUInt8 &data, uint64_t len, const S3Url &s3Url);
 

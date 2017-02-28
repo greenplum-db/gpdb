@@ -45,6 +45,8 @@ string GPWriter::constructRandomStr() {
     char randomData[32];
     size_t randomDataLen = 0;
 
+    S3_CHECK_OR_DIE(randomDevice >= 0, S3RuntimeError, "failed to generate random number");
+
     while (randomDataLen < sizeof(randomData)) {
         ssize_t result =
             ::read(randomDevice, randomData + randomDataLen, sizeof(randomData) - randomDataLen);
@@ -57,7 +59,7 @@ string GPWriter::constructRandomStr() {
 
     char out_hash_hex[SHA256_DIGEST_STRING_LENGTH];
 
-    sha256_hex(randomData, out_hash_hex);
+    sha256_hex(randomData, 32, out_hash_hex);
 
     return out_hash_hex + SHA256_DIGEST_STRING_LENGTH - 8 - 1;
 }

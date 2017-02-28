@@ -30,18 +30,18 @@ struct UploadData {
 
 class Response {
    public:
-    explicit Response(ResponseStatus status) : status(status) {
+    explicit Response(ResponseStatus status) : responseCode(-1), status(status) {
     }
     explicit Response(ResponseStatus status, S3MemoryContext& context)
-        : status(status), dataBuffer(context) {
+        : responseCode(-1), status(status), dataBuffer(context) {
     }
 
     explicit Response(ResponseStatus status, const vector<uint8_t>& dataBuffer)
-        : status(status), dataBuffer(dataBuffer) {
+        : responseCode(-1), status(status), dataBuffer(dataBuffer) {
     }
     explicit Response(ResponseStatus status, const vector<uint8_t>& headersBuffer,
                       const S3VectorUInt8& dataBuffer)
-        : status(status), headersBuffer(headersBuffer), dataBuffer(dataBuffer) {
+        : responseCode(-1), status(status), headersBuffer(headersBuffer), dataBuffer(dataBuffer) {
     }
 
     void FillResponse(ResponseCode responseCode) {

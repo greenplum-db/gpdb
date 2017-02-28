@@ -21,7 +21,7 @@ void S3BucketReader::open(const S3Params& params) {
 
     S3_CHECK_OR_DIE(this->s3Interface != NULL, S3RuntimeError, "s3Interface is NULL");
 
-    const S3Url& s3Url = this->params.getS3Url();
+    S3Url& s3Url = this->params.getS3Url();
 
     S3_CHECK_OR_DIE(s3Url.isValidUrl(), S3ConfigError, s3Url.getFullUrlForCurl() + " is not valid",
                     s3Url.getFullUrlForCurl());

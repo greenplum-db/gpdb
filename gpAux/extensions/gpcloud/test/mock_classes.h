@@ -10,7 +10,7 @@
 class MockS3Interface : public S3Interface {
    public:
     MOCK_METHOD1(listBucket,
-                 ListBucketResult(S3Url));
+                 ListBucketResult(S3Url &));
 
     MOCK_METHOD4(fetchData,
                  uint64_t(uint64_t , S3VectorUInt8& , uint64_t len, const S3Url &));
