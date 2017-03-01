@@ -63,10 +63,19 @@ delete from direct_test where key = 100;
 -- verify
 select * from direct_test order by key, value;
 
-
 -- Constant single-row insert, one column in distribution
 -- DO direct dispatch
 insert into direct_test values (NULL, 'cow');
+-- verify
+select * from direct_test order by key, value;
+
+-- DELETE with an IS NULL predicate
+-- Doesn't do direct dispatch, currently.
+delete from direct_test where key is null;
+
+-- Same single-row insert as above, but with DEFAULT instead of an explicit values.
+-- DO direct dispatch
+insert into direct_test values (default, 'cow');
 -- verify
 select * from direct_test order by key, value;
 

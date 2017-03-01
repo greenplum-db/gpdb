@@ -123,6 +123,26 @@ INFO:  Dispatch command to ALL contents
      | cow
 (1 row)
 
+-- DELETE with an IS NULL predicate
+-- Doesn't do direct dispatch, currently.
+delete from direct_test where key is null;
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+-- Same single-row insert as above, but with DEFAULT instead of an explicit values.
+-- DO direct dispatch
+insert into direct_test values (default, 'cow');
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+-- verify
+select * from direct_test order by key, value;
+INFO:  Dispatch command to ALL contents
+ key | value 
+-----+-------
+     | cow
+(1 row)
+
 -- Constant single-row insert, two columns in distribution
 -- DO direct dispatch
 -- Known_opt_diff: MPP-21346
