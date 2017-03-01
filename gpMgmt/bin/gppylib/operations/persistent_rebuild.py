@@ -1110,7 +1110,11 @@ class RebuildPersistentTables(Operation):
         cmd = GpStart('Start the greenplum databse')
         cmd.run(validateAfter=True)
         if admin_mode:
-            cmd = GpStop('Stop the greenplum database', masterOnly=True)
+            # NOTE: There might be a case where gpstart has a lingering idle
+            # connection that's not fully closed before gpstop happens.
+            # We already guaranteed that we did a fresh start, therefore, we
+            # will stop can immediately.
+            cmd = GpStop('Stop the greenplum database', masterOnly=True, force=True)
             cmd.run(validateAfter=True)
             cmd = GpStart('Start the greenplum master in admin mode', masterOnly=True)
             cmd.run(validateAfter=True)
