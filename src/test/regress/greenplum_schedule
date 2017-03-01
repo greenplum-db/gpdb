@@ -45,7 +45,7 @@ test: cursor
 # so it needs to be in a group by itself
 test: query_finish_pending
 
-test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan co_nestloop_idxscan
+test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan co_nestloop_idxscan dml_in_udf
 
 test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 distributed_transactions olap_group olap_window_seq partition1 sirv_functions
 
