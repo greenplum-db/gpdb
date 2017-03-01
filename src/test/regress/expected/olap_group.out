@@ -6002,6 +6002,15 @@ group by rollup (a,b);
 (7 rows)
 
 --end_equiv
+-- Test join between a partitioned table and non-partitioned table (MPP-20083)
+SELECT COUNT(*) 
+FROM r6756 as r, s6756 as c, s6756 as d, s6756 as e
+WHERE r.a = c.c AND r.a = d.d AND r.a = e.e;
+ count 
+-------
+   640
+(1 row)
+
 drop table r6756 cascade; --ignore
 drop table s6756 cascade; --ignore
 -- begin MPP-14021
