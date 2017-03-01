@@ -4066,7 +4066,7 @@ def impl(context):
 @when('run gppersistent_rebuild with the saved content id')
 @then('run gppersistent_rebuild with the saved content id')
 def impl(context):
-    cmdStr = "echo -e 'y\ny\n' | $GPHOME/sbin/gppersistentrebuild -c %s" % context.mirror_segcid
+    cmdStr = "echo -e 'y\ny\n' | $GPHOME/sbin/gppersistentrebuild -c %s" % context.saved_segcid
     cmd=Command(name='Run gppersistentrebuild',cmdStr=cmdStr)
     cmd.run(validateAfter=True)
     context.ret_code = cmd.get_results().rc
@@ -4075,14 +4075,22 @@ def impl(context):
 @when('the information of a "{seg}" segment on any host is saved')
 @then('the information of a "{seg}" segment on any host is saved')
 def impl(context, seg):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+
+    # TODO: Clean this up, probably take out mirror step?
     if seg == "mirror":
-        gparray = GpArray.initFromCatalog(dbconn.DbURL())
-        mirror_segs = [seg for seg in gparray.getDbList() if seg.isSegmentMirror()]
-        context.mirror_segdbId = mirror_segs[0].getSegmentDbId()
-        context.mirror_segcid = mirror_segs[0].getSegmentContentId()
-        context.mirror_segdbname = mirror_segs[0].getSegmentHostName()
-        context.mirror_datadir = mirror_segs[0].getSegmentDataDirectory()
-        context.mirror_port = mirror_segs[0].getSegmentPort()
+        to_save_segs = [seg for seg in gparray.getDbList() if seg.isSegmentMirror()]
+        context.mirror_segdbId = to_save_segs[0].getSegmentDbId()
+        context.mirror_segcid = to_save_segs[0].getSegmentContentId()
+        context.mirror_segdbname = to_save_segs[0].getSegmentHostName()
+        context.mirror_datadir = to_save_segs[0].getSegmentDataDirectory()
+        context.mirror_port = to_save_segs[0].getSegmentPort()
+    elif seg == "primary":
+        to_save_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary()]
+    elif seg == "master":
+        to_save_segs = [seg for seg in gparray.getDbList() if seg.isSegmentMaster()]
+
+    context.saved_segcid = to_save_segs[0].getSegmentContentId()
 
 @given('the user creates an index for table "{table_name}" in database "{db_name}"')
 @when('the user creates an index for table "{table_name}" in database "{db_name}"')
