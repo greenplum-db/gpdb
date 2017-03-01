@@ -26,17 +26,6 @@ function _main() {
         exit 1
     fi
 
-    if [ -z "$TEST_OS" ]; then
-        echo "FATAL: TEST_OS is not set"
-        exit 1
-    fi
-
-    if [ "$TEST_OS" != "centos" -a "$TEST_OS" != "sles" ]; then
-        echo "FATAL: TEST_OS is set to an invalid value: $TEST_OS"
-        echo "Configure TEST_OS to be centos or sles"
-        exit 1
-    fi
-
     time install_gpdb
     time ./gpdb_src/concourse/scripts/setup_gpadmin_user.bash
 

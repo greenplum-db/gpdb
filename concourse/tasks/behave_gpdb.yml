@@ -8,6 +8,5 @@ outputs:
 params:
   BEHAVE_TAGS: ""
   BLDWRAP_POSTGRES_CONF_ADDONS: ""
-  TEST_OS: ""
 run:
   path: gpdb_src/concourse/scripts/behave_gpdb.bash

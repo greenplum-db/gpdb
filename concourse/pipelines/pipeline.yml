@@ -427,14 +427,12 @@ jobs:
       passed: [compile_gpdb_centos6]
       trigger: true
     - get: centos-gpdb-dev-6
-  - aggregate:
-    - task: pt_rebuild
-      file: gpdb_src/concourse/tasks/behave_gpdb.yml
-      image: centos-gpdb-dev-6
-      params:
-        BEHAVE_TAGS: persistent_rebuild
-        BLDWRAP_POSTGRES_CONF_ADDONS: ""
-        TEST_OS: centos
+  - task: persistent_table_rebuild
+    file: gpdb_src/concourse/tasks/behave_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_TAGS: persistent_rebuild
+      BLDWRAP_POSTGRES_CONF_ADDONS: ""
 
 - name: fts
   plan:
