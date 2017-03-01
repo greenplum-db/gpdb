@@ -68,13 +68,42 @@ resources:
       secret_access_key: {{bucket-secret-access-key}}
       versioned_file: gpdb_pr/gpdb_artifacts/bin_gpdb.tar.gz
 
+  - name: sync-resource
+    type: time
+    source: {interval: 24h} # doesn't matter, but something has to be there
+
 jobs:
-  - name: compile_gpdb_centos6
+  - name: compile_gpdb_custom_config_centos6
+    public: true
     plan:
     - aggregate:
       - get: gpdb_pr
+        version: every
         trigger: true
-      - get: gpaddon_src 
+      - get: centos-gpdb-dev-6
+    - task: compile_gpdb
+      file: gpdb_pr/concourse/tasks/compile_gpdb_custom_config.yml
+      image: centos-gpdb-dev-6
+      input_mapping:
+        gpdb_src: gpdb_pr
+      on_failure:
+        put: gpdb_pr
+        params:
+          path: gpdb_pr
+          status: failure
+    - put: sync-resource
+
+  - name: compile_gpdb_centos6
+    plan:
+    - aggregate:
+      - get: sync-resource
+        version: every
+        trigger: true
+      - get: gpdb_pr
+        version: every
+        trigger: true
+        passed: [compile_gpdb_custom_config_centos6]
+      - get: gpaddon_src
       - get: centos-gpdb-dev-6
     - put: gpdb_pr
       params:
@@ -98,41 +127,25 @@ jobs:
         params:
           path: gpdb_pr
           status: failure
-    - aggregate:
-      - put: bin_gpdb_centos
-        params:
-          file: gpdb_artifacts/bin_gpdb.tar.gz
-
-  - name: compile_gpdb_custom_config_centos6
-    public: true
-    plan:
-    - aggregate:
-      - get: gpdb_pr
-        trigger: true
-      - get: centos-gpdb-dev-6
-    - task: compile_gpdb
-      file: gpdb_pr/concourse/tasks/compile_gpdb_custom_config.yml
-      image: centos-gpdb-dev-6
-      input_mapping:
-        gpdb_src: gpdb_pr
-      on_failure:
-        put: gpdb_pr
-        params:
-          path: gpdb_pr
-          status: failure
+    - put: bin_gpdb_centos
+      params:
+        file: gpdb_artifacts/bin_gpdb.tar.gz
 
   # Stage 2: Run tests
   - name: icw_planner_centos6
     plan:
     - aggregate:
+      - get: sync-resource
+        version: every
+        trigger: true
+        passed: [compile_gpdb_centos6]
       - get: gpdb_pr
-        passed:
-        - compile_gpdb_centos6
-        - compile_gpdb_custom_config_centos6
+        version: every
+        trigger: true
+        passed: [compile_gpdb_centos6]
       - get: bin_gpdb
         resource: bin_gpdb_centos
         passed: [compile_gpdb_centos6]
-        trigger: true
       - get: centos-gpdb-dev-6
     - task: ic_gpdb
       file: gpdb_pr/concourse/tasks/ic_gpdb.yml
@@ -153,14 +166,17 @@ jobs:
   - name: icw_gporca_codegen_centos6
     plan:
     - aggregate:
+      - get: sync-resource
+        version: every
+        trigger: true
+        passed: [compile_gpdb_centos6]
       - get: gpdb_pr
-        passed:
-        - compile_gpdb_centos6
-        - compile_gpdb_custom_config_centos6
+        version: every
+        trigger: true
+        passed: [compile_gpdb_centos6]
       - get: bin_gpdb
         resource: bin_gpdb_centos
         passed: [compile_gpdb_centos6]
-        trigger: true
       - get: centos-gpdb-dev-6
     - task: ic_gpdb
       file: gpdb_pr/concourse/tasks/ic_gpdb.yml
@@ -181,14 +197,17 @@ jobs:
   - name: MU_check_centos
     plan:
     - aggregate:
+      - get: sync-resource
+        version: every
+        trigger: true
+        passed: [compile_gpdb_centos6]
       - get: gpdb_pr
-        passed:
-        - compile_gpdb_centos6
-        - compile_gpdb_custom_config_centos6
+        version: every
+        trigger: true
+        passed: [compile_gpdb_centos6]
       - get: bin_gpdb
         resource: bin_gpdb_centos
         passed: [compile_gpdb_centos6]
-        trigger: true
       - get: centos-gpdb-dev-6
     - task: MU_check_centos
       file: gpdb_pr/concourse/tasks/gpMgmt_check_gpdb.yml
@@ -206,12 +225,20 @@ jobs:
   - name: report_pr_success
     plan:
     - aggregate:
-      - get: gpdb_pr
+      - get: sync-resource
+        version: every
+        trigger: true
         passed:
         - icw_planner_centos6
         - icw_gporca_codegen_centos6
         - MU_check_centos
+      - get: gpdb_pr
+        version: every
         trigger: true
+        passed:
+        - icw_planner_centos6
+        - icw_gporca_codegen_centos6
+        - MU_check_centos
     - put: gpdb_pr
       params:
         path: gpdb_pr
@@ -221,7 +248,15 @@ jobs:
   - name: gpdb_rc_packaging_centos
     plan:
     - aggregate:
+      - get: sync-resource
+        version: every
+        trigger: true
+        passed:
+        - icw_planner_centos6
+        - MU_check_centos
       - get: gpdb_pr
+        version: every
+        trigger: true
         passed:
         - icw_planner_centos6
         - MU_check_centos
@@ -230,7 +265,6 @@ jobs:
         passed:
         - icw_planner_centos6
         - MU_check_centos
-        trigger: true
       - get: centos-gpdb-dev-6
       - get: gpaddon_src
     - task: separate_qautils_files_for_rc
