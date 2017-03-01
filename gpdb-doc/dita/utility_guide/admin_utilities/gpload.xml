@@ -45,9 +45,9 @@
                 Greenplum Database external table parallel loading feature. Using a load
                 specification defined in a YAML formatted control file, <codeph>gpload</codeph>
                 executes a load by invoking the Greenplum Database parallel file server
-                        (<codeph><xref href="gpfdist.xml" type="topic" format="dita"
-                    /></codeph>), creating an external table definition based on the source data
-                defined, and executing an <codeph>INSERT</codeph>, <codeph>UPDATE</codeph> or
+                        (<codeph><xref href="gpfdist.xml" type="topic" format="dita"/></codeph>),
+                creating an external table definition based on the source data defined, and
+                executing an <codeph>INSERT</codeph>, <codeph>UPDATE</codeph> or
                     <codeph>MERGE</codeph> operation to load the source data into the target table
                 in the database.</p>
             <p>The operation, including any SQL commands specified in the <codeph>SQL</codeph>
@@ -201,7 +201,6 @@
     - <xref href="#topic1/cfencoding" format="dita">ENCODING</xref>: <varname>database_encoding</varname>
     - <xref href="#topic1/cferrorlimit" format="dita">ERROR_LIMIT</xref>: <varname>integer</varname>
     - <xref href="#topic1/cferrorlog" format="dita">LOG_ERRORS</xref>: true | false
-    - <xref href="#topic1/cferrortable" format="dita">ERROR_TABLE</xref>: <varname>schema.table_name</varname>
    <xref href="#topic1/cfexternal" format="dita">EXTERNAL</xref>:
       - <xref href="#topic1/cfschema" format="dita">SCHEMA</xref>: <varname>schema</varname> | '%'
    <xref href="#topic1/cfoutput" format="dita">OUTPUT</xref>:
@@ -241,8 +240,8 @@
                             <codeph>-U</codeph> option. </pd>
                     <pd>If the user running <codeph>gpload</codeph> is not a Greenplum Database
                         superuser, then the appropriate rights must be granted to the user for the
-                        load to be processed. See the
-                            <i>Greenplum Database Reference Guide</i> for more information.</pd>
+                        load to be processed. See the <cite>Greenplum Database Reference
+                            Guide</cite> for more information.</pd>
                 </plentry>
                 <plentry>
                     <pt id="cfhost">HOST</pt>
@@ -292,7 +291,8 @@
                                                   <codeph>gpfdist</codeph> parallel file server and
                                                   single and multiple <codeph>gpfdist</codeph>
                                                   instances, see "Loading and Unloading Data" in the
-                                                  <i>Greenplum Database Administrator Guide</i>.</p><parml>
+                                                  <cite>Greenplum Database Administrator
+                                                  Guide</cite>.</p><parml>
                                                   <plentry>
                                                   <pt id="cfsourcelocalname">LOCAL_HOSTNAME</pt>
                                                   <pd>Optional. Specifies the host name or IP
@@ -429,8 +429,8 @@
                                             <pd>Optional. Specifies the name of the input XML
                                                 transformation passed to <codeph>gpload</codeph>.
                                                 For more information about XML transformations, see
-                                                "Loading and Unloading Data" in the <i>Greenplum
-                                                  Database Administrator Guide</i>.</pd>
+                                                "Loading and Unloading Data" in the <cite>Greenplum
+                                                  Database Administrator Guide</cite>.</pd>
                                         </plentry>
                                         <plentry>
                                             <pt id="cftransformconfig">TRANSFORM_CONFIG</pt>
@@ -453,8 +453,8 @@
                                                 format. Defaults to <codeph>TEXT</codeph> if not
                                                 specified. For more information about the format of
                                                 the source data, see "Loading and Unloading Data" in
-                                                the <i>Greenplum Database Administrator
-                                                Guide</i>.</pd>
+                                                the <cite>Greenplum Database Administrator
+                                                  Guide</cite>.</pd>
                                         </plentry>
                                         <plentry>
                                             <pt id="cfdelimiter">DELIMITER</pt>
@@ -551,19 +551,18 @@
                                                 Greenplum Database segment instance during input
                                                 processing. If the error limit is not reached, all
                                                 good rows will be loaded and any error rows will
-                                                either be discarded or logged to the table specified
-                                                in <codeph>ERROR_TABLE</codeph>. The default is to
-                                                abort the load operation on the first error
-                                                encountered. Note that single row error isolation
-                                                only applies to data rows with format errors; for
-                                                example, extra or missing attributes, attributes of
-                                                a wrong data type, or invalid client encoding
-                                                sequences. Constraint errors, such as primary key
-                                                violations, will still cause the load operation to
-                                                abort if encountered. For information about handling
-                                                load errors, see "Loading and Unloading Data" in the
-                                                  <i>Greenplum Database Administrator
-                                                Guide.</i></pd>
+                                                either be discarded or captured as part of error log
+                                                information. The default is to abort the load
+                                                operation on the first error encountered. Note that
+                                                single row error isolation only applies to data rows
+                                                with format errors; for example, extra or missing
+                                                attributes, attributes of a wrong data type, or
+                                                invalid client encoding sequences. Constraint
+                                                errors, such as primary key violations, will still
+                                                cause the load operation to abort if encountered.
+                                                For information about handling load errors, see
+                                                "Loading and Unloading Data" in the <cite>Greenplum
+                                                  Database Administrator Guide.</cite></pd>
                                         </plentry>
                                         <plentry>
                                             <pt id="cferrorlog">LOG_ERRORS</pt>
@@ -584,19 +583,16 @@
                                                 <codeblock><varname>timestamp</varname>|WARN|1 bad row, please use GPDB built-in function gp_read_error_log('<parmname>table-name</parmname>') 
    to access the detailed error row</codeblock></pd>
                                             <pd>If <codeph>LOG_ERRORS: true</codeph> is specified,
-                                                  <codeph>REUSE TABLES: true</codeph> must be
+                                                  <codeph>REUSE_TABLES: true</codeph> must be
                                                 specified to retain the formatting errors in
-                                                Greenplum Database error logs. If <codeph>REUSE
-                                                  TABLES: true</codeph> is not specified, the error
-                                                information is deleted after the
-                                                  <codeph>gpload</codeph> operation. You can delete
-                                                the formatting errors from the error logs with the
-                                                Greenplum Database function
+                                                Greenplum Database error logs. If
+                                                  <codeph>REUSE_TABLES: true</codeph> is not
+                                                specified, the error information is deleted after
+                                                the <codeph>gpload</codeph> operation. Only summary
+                                                information about formatting errors is returned. You
+                                                can delete the formatting errors from the error logs
+                                                with the Greenplum Database function
                                                   <codeph>gp_truncate_error_log()</codeph>.</pd>
-                                            <pd>Only <codeph>LOG_ERRORS</codeph> or
-                                                  <codeph>ERROR_TABLE</codeph> can be specified. If
-                                                both are specified, an error message is
-                                                returned.</pd>
                                             <pd>For more information about handling load errors, see
                                                 "Loading and Unloading Data" in the <cite>Greenplum
                                                   Database Administrator Guide</cite>. For
@@ -605,26 +601,6 @@
                                                 the <codeph>CREATE EXTERNAL TABLE</codeph> command
                                                 in the <cite>Greenplum Database Reference
                                                   Guide</cite></pd>
-                                        </plentry>
-                                        <plentry>
-                                            <pt id="cferrortable">ERROR_TABLE</pt>
-                                            <pd>Optional when <codeph>ERROR_LIMIT</codeph> is
-                                                declared. Specifies an error table where rows with
-                                                formatting errors will be logged when running in
-                                                single row error isolation mode. You can then
-                                                examine this error table to see error rows that were
-                                                not loaded (if any). If the
-                                                  <codeph>ERROR_TABLE</codeph> specified already
-                                                exists, it will be used. If it does not exist, it
-                                                will be automatically generated.</pd>
-                                            <pd>Only <codeph>LOG_ERRORS</codeph> or
-                                                  <codeph>ERROR_TABLE</codeph> can be specified. If
-                                                both are specified, an error message is returned.
-                                                Use <codeph>LOG_ERRORS</codeph>
-                                                to capture formatting errors. </pd>
-                                            <pd>For more information about handling load errors, see
-                                                "Loading and Unloading Data" in the <cite>Greenplum
-                                                  Database Administrator Guide</cite>.</pd>
                                         </plentry>
                                         <plentry>
                                             <pt id="cfexternal">EXTERNAL</pt>
@@ -762,10 +738,10 @@
                                     the same load specifications. This improves performance of
                                     trickle loads (ongoing small loads to the same target
                                     table).</pd>
-                                <pd>If <codeph>LOG_ERRORS: true</codeph> is specified, <codeph>REUSE
-                                        TABLES: true</codeph> must be specified to retain the
-                                    formatting errors in Greenplum Database error logs. If
-                                        <codeph>REUSE TABLES: true</codeph> is not specified,
+                                <pd>If <codeph>LOG_ERRORS: true</codeph> is specified,
+                                        <codeph>REUSE_TABLES: true</codeph> must be specified to
+                                    retain the formatting errors in Greenplum Database error logs.
+                                    If <codeph>REUSE_TABLES: true</codeph> is not specified,
                                     formatting error information is deleted after the
                                         <codeph>gpload</codeph> operation.</pd>
                             </plentry>
@@ -854,15 +830,15 @@ GPLOAD:
     - FORMAT: text
     - DELIMITER: '|'
     - ERROR_LIMIT: 25
-    - ERROR_TABLE: payables.err_expenses
+    - LOG_ERRORS: true
    OUTPUT:
     - TABLE: payables.expenses
     - MODE: INSERT
+   PRELOAD:
+    - REUSE_TABLES: true 
    SQL:
-   - BEFORE: "INSERT INTO audit VALUES('start', 
-current_timestamp)"
-   - AFTER: "INSERT INTO audit VALUES('end', 
-current_timestamp)"</codeblock>
+   - BEFORE: "INSERT INTO audit VALUES('start', current_timestamp)"
+   - AFTER: "INSERT INTO audit VALUES('end', current_timestamp)"</codeblock>
         </section>
         <section id="section11">
             <title>See Also</title>

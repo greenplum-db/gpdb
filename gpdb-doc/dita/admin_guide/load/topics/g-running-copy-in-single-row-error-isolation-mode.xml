@@ -9,23 +9,22 @@
                 FROM</codeph> in <i>single row error isolation mode</i>, Greenplum skips rows that
             contain format errors and loads properly formatted rows. Single row error isolation mode
             applies only to rows in the input file that contain format errors. If the data contains
-            a contraint error such as violation of a <codeph>NOT NULL</codeph>,
+            a constraint error such as violation of a <codeph>NOT NULL</codeph>,
                 <codeph>CHECK</codeph>, or <codeph>UNIQUE</codeph> constraint, the operation fails
             and no data loads.</p>
         <p>Specifying <codeph>SEGMENT REJECT LIMIT</codeph> runs the <codeph>COPY</codeph> operation
             in single row error isolation mode. Specify the acceptable number of error rows on each
             segment, after which the entire <codeph>COPY FROM</codeph> operation fails and no rows
-            load. The error row count is for each Greenplum segment, not for the entire load
-            operation. </p>
+            load. The error row count is for each Greenplum Database segment, not for the entire
+            load operation. </p>
         <p>If the <codeph>COPY</codeph> operation does not reach the error limit, Greenplum loads
-            all correctly-formatted rows and discards the error rows. The <codeph>LOG ERRORS
-                INTO</codeph> clause allows you to keep error rows for further examination. Use
-                <codeph>LOG ERRORS</codeph> to capture data formatting errors internally in Greenplum Database. For example:</p>
+            all correctly-formatted rows and discards the error rows. Use the <codeph>LOG
+                ERRORS</codeph> clause to capture data formatting errors internally in Greenplum
+            Database. For example:</p>
         <example>
             <codeblock>=&gt; COPY country FROM '/data/gpdb/country_data' 
    WITH DELIMITER '|' LOG ERRORS
-   SEGMENT REJECT LIMIT 10 ROWS;
-</codeblock>
+   SEGMENT REJECT LIMIT 10 ROWS;</codeblock>
         </example>
         <p>See <xref href="g-viewing-bad-rows-in-the-error-table-or-error-log.xml#topic58"/> for
             information about investigating error rows. </p>

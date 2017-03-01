@@ -4,7 +4,6 @@
 <topic id="topic1">
   <title id="br20941">CREATE EXTERNAL TABLE</title>
   <body>
-    <!--msk =Remove INTO error_table clause in next major release-->
     <p id="sql_command_desc">Defines a new external table.</p>
     <section id="section2">
       <title>Synopsis</title>
@@ -38,7 +37,7 @@
 
            | 'CUSTOM' (Formatter=<varname>&lt;formatter specifications&gt;</varname>)
      [ ENCODING '<varname>encoding</varname>' ]
-     [ [LOG ERRORS [INTO <varname>error_table</varname>]] SEGMENT REJECT LIMIT <varname>count</varname>
+     [ [LOG ERRORS] SEGMENT REJECT LIMIT <varname>count</varname>
        [ROWS | PERCENT] ]
 
 CREATE [READABLE] EXTERNAL WEB TABLE <varname>table_name</varname>     
@@ -67,7 +66,7 @@ CREATE [READABLE] EXTERNAL WEB TABLE <varname>table_name</varname>     
                [FILL MISSING FIELDS] )]
            | 'CUSTOM' (Formatter=<varname>&lt;formatter specifications&gt;</varname>)
      [ ENCODING '<varname>encoding</varname>' ]
-     [ [LOG ERRORS [INTO <varname>error_table</varname>]] SEGMENT REJECT LIMIT <varname>count</varname>
+     [ [LOG ERRORS] SEGMENT REJECT LIMIT <varname>count</varname>
        [ROWS | PERCENT] ]
 
 CREATE WRITABLE EXTERNAL TABLE <varname>table_name</varname>
@@ -455,26 +454,13 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
               href="../character_sets.xml" type="topic" format="dita"/>.</pd>
         </plentry>
         <plentry>
-          <pt>LOG ERRORS [INTO <varname>error_table</varname>]</pt>
+          <pt>LOG ERRORS</pt>
           <pd>This is an optional clause that can precede a <codeph>SEGMENT REJECT LIMIT</codeph>
-            clause to log information about rows with formatting errors. The optional <codeph>INTO
-                <varname>error_table</varname></codeph> clause specifies an error table where rows
-            with formatting errors will be logged when running in single row error isolation mode. </pd>
-          <pd>If the <codeph>INTO <varname>error_table</varname></codeph> clause is not specified,
-            the error log information is stored internally (not in an error table). Error log
-            information that is stored internally is accessed with the Greenplum Database built-in
-            SQL function <codeph>gp_read_error_log()</codeph>.</pd>
-          <pd>If the <varname>error_table</varname> specified already exists, it is used. If it does
-            not exist, it is created. If <varname>error_table</varname> exists and does not have a
-            random distribution (the <codeph>DISTRIBUTED RANDOMLY</codeph> clause was not specified
-            when creating the table), an error is returned.</pd>
+            clause to log information about rows with formatting errors. The error log information
+            is stored internally and is accessed with the Greenplum Database built-in SQL function
+              <codeph>gp_read_error_log()</codeph>.</pd>
           <pd>See <xref href="#topic1/section8" format="dita"/> for information about the error log
             information and built-in functions for viewing and managing error log information.</pd>
-          <pd>The <varname>error_table</varname> cannot be modified with the <codeph>ALTER
-              TABLE</codeph> command.<note>The optional <codeph>INTO
-                <varname>error_table</varname></codeph> clause is deprecated and will not be
-              supported in the next major release. Only internal error logs will be
-              supported.</note></pd>
         </plentry>
         <plentry>
           <pt>SEGMENT REJECT LIMIT <varname>count</varname> [ROWS | PERCENT]</pt>
@@ -530,7 +516,7 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
    (id int, name text, sponsor text) 
    LOCATION ( 'gpfdist://filehost:8081/*.txt' ) 
    FORMAT 'TEXT' ( DELIMITER '|' NULL ' ')
-   LOG ERRORS INTO err_customer SEGMENT REJECT LIMIT 5;</codeblock>
+   LOG ERRORS SEGMENT REJECT LIMIT 5;</codeblock>
       <p>Create the same readable external table definition as above, but with CSV formatted
         files:</p>
       <codeblock>CREATE EXTERNAL TABLE ext_customer 
@@ -574,42 +560,38 @@ customer_id=123;</codeblock>
     </section>
     <section id="section8">
       <title>Notes</title>
-      <p>Greenplum database can log information about rows with formatting errors in an error table
-        or internally. When you specify <codeph>LOG ERRORS INTO
-          <varname>error_table</varname></codeph>, Greenplum Database creates the table
-          <varname>error_table</varname> that contains errors that occur while reading the external
-        table. The table is defined as follows:</p>
-      <codeblock>CREATE TABLE <varname>error_table_name</varname> ( cmdtime timestamptz, relname text, 
-    filename text, linenum int, bytenum int, errmsg text, 
-    rawdata text, rawbytes bytea ) DISTRIBUTED RANDOMLY;</codeblock>
-      <p>You can view the information in the table with SQL commands. </p>
-      <p>For error log data that is stored internally when the <codeph>INTO
-            <varname>error_table</varname></codeph> is not specified: <ul id="ul_wk3_jdj_bp">
-          <li>Use the built-in SQL function
-              <codeph>gp_read_error_log('<varname>table_name</varname>')</codeph>. It requires
-              <codeph>SELECT</codeph> privilege on <varname>table_name</varname>.<p>This example
-              displays the error log information for data copied into the table
-                <codeph>ext_expenses</codeph>:</p><codeblock>SELECT * from gp_read_error_log('ext_expenses');</codeblock><p>The
-              error log contains the same columns as the error table.</p><p>The function returns
-                <codeph>FALSE</codeph> if <codeph><varname>table_name</varname></codeph> does not
-              exist.</p></li>
-          <li>If error log data exists for the specified table, the new error log data is appended
-            to existing error log data. The error log information is not replicated to mirror
-            segments.</li>
-          <li>Use the built-in SQL function
-                <codeph>gp_truncate_error_log('<varname>table_name</varname>')</codeph> to delete
-            the error log data for <varname>table_name</varname>. It requires the table owner
-            privilege. This example deletes the error log information captured when moving data into
-            the table
-              <codeph>ext_expenses</codeph>:<codeblock>SELECT gp_truncate_error_log('ext_expenses'); </codeblock><p>The
-              function returns <codeph>FALSE</codeph> if <varname>table_name</varname> does not
-              exist.</p><p>Specify the * wildcard character to delete error log information for
-              existing tables in the current database. Specify the string <codeph>*.*</codeph> to
-              delete all database error log information, including error log information that was
-              not deleted due to previous database issues. If * is specified, database owner
-              privilege is required. If <codeph>*.*</codeph> is specified, database super-user
-              privilege is required.</p></li>
-        </ul></p>
+      <draft-comment author="msk">remove INTO clause information</draft-comment>
+      <p>When you specify the <codeph>LOG ERRORS</codeph> clause, Greenplum Database captures errors
+        that occur while reading the external table data. You can view and manage the captured error
+        log data. </p>
+      <ul id="ul_wk3_jdj_bp">
+        <li>Use the built-in SQL function
+            <codeph>gp_read_error_log('<varname>table_name</varname>')</codeph>. It requires
+            <codeph>SELECT</codeph> privilege on <varname>table_name</varname>. This example
+          displays the error log information for data loaded into table
+            <codeph>ext_expenses</codeph> with a <codeph>COPY</codeph>
+            command:<codeblock>SELECT * from gp_read_error_log('ext_expenses');</codeblock><p>For
+            information about the error log format, see <xref
+              href="../../admin_guide/load/topics/g-viewing-bad-rows-in-the-error-table-or-error-log.xml#topic58"
+              >Viewing Bad Rows in the Error Log</xref> in the <cite>Greenplum Database
+              Administrator Guide</cite>.</p><p>The function returns <codeph>FALSE</codeph> if
+              <varname>table_name</varname> does not exist.</p></li>
+        <li>If error log data exists for the specified table, the new error log data is appended to
+          existing error log data. The error log information is not replicated to mirror
+          segments.</li>
+        <li>Use the built-in SQL function
+              <codeph>gp_truncate_error_log('<varname>table_name</varname>')</codeph> to delete the
+          error log data for <varname>table_name</varname>. It requires the table owner privilege
+          This example deletes the error log information captured when moving data into the table
+            <codeph>ext_expenses</codeph>:<codeblock>SELECT gp_truncate_error_log('ext_expenses'); </codeblock><p>The
+            function returns <codeph>FALSE</codeph> if <varname>table_name</varname> does not
+            exist.</p><p>Specify the <codeph>*</codeph> wildcard character to delete error log
+            information for existing tables in the current database. Specify the string
+              <codeph>*.*</codeph> to delete all database error log information, including error log
+            information that was not deleted due to previous database issues. If * is specified,
+            database owner privilege is required. If <codeph>*.*</codeph> is specified, operating
+            system super-user privilege is required.</p></li>
+      </ul>
     </section>
     <section id="section9"><title>HDFS File Format Support for the gphdfs Protocol</title><p>If you
         specify <codeph>gphdfs</codeph> protocol to read or write file to a Hadoop file system

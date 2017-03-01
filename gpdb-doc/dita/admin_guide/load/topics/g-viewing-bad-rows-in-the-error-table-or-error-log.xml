@@ -2,19 +2,15 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic58">
-   <title>Viewing Bad Rows in the Error Table or Error Log</title>
+   <title>Viewing Bad Rows in the Error Log</title>
    <body>
-      <!--msk =Remove INTO error_table clause in next major release-->
       <p>If you use single row error isolation (see <xref
             href="g-define-an-external-table-with-single-row-error-isolation.xml#topic56"/> or <xref
             href="g-running-copy-in-single-row-error-isolation-mode.xml#topic65"/>), any rows with
-         formatting errors are either logged internally or logged into an error table. </p>
-      <note>Storing row formatting in a error table is deprecated in Greenplum Database and will not be supported in a the next major release. Only internal error logs will be
-         supported.</note>
-      <p>Greenplum Database captures the following error information in a table
-         format:</p>
+         formatting errors are logged internally by Greenplum Database. </p>
+      <p>Greenplum Database captures the following error information in a table format:</p>
       <table id="du166024">
-         <title>Error Table Format</title>
+         <title>Error Log Format</title>
          <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
             <colspec colnum="2" colname="col2" colwidth="1*"/>
@@ -35,8 +31,8 @@
                <row>
                   <entry colname="col1">relname</entry>
                   <entry colname="col2">text</entry>
-                  <entry colname="col3">The name of the external table or the target table of a COPY
-                     command.</entry>
+                  <entry colname="col3">The name of the external table or the target table of a
+                        <codeph>COPY</codeph> command.</entry>
                </row>
                <row>
                   <entry colname="col1">filename</entry>
@@ -46,9 +42,10 @@
                <row>
                   <entry colname="col1">linenum</entry>
                   <entry colname="col2">int</entry>
-                  <entry colname="col3">If COPY was used, the line number in the load file where the
-                     error occurred. For external tables using file:// protocol or gpfdist://
-                     protocol and CSV format, the file name and line number is logged.</entry>
+                  <entry colname="col3">If <codeph>COPY</codeph> was used, the line number in the
+                     load file where the error occurred. For external tables using file:// protocol
+                     or gpfdist:// protocol and CSV format, the file name and line number is
+                     logged.</entry>
                </row>
                <row>
                   <entry colname="col1">bytenum</entry>
@@ -82,16 +79,13 @@
             </tbody>
          </tgroup>
       </table>
-      <p>You can use the SQL function <codeph>gp_read_error_log()</codeph> to display formatting
-         errors that were logged internally in Greenplum Database. For example, this
-         command displays the error log information for the table <i>ext_expenses</i>:</p>
+      <p>You can use the Greenplum Databasae built-in SQL function
+            <codeph>gp_read_error_log()</codeph> to display formatting errors that are logged
+         internally. For example, this command displays the error log information for the table
+            <i>ext_expenses</i>:</p>
       <codeblock>SELECT gp_read_error_log('ext_expenses');</codeblock>
       <p>For information about managing formatting errors that are logged internally, see the
          command <codeph>COPY</codeph> or <codeph>CREATE EXTERNAL TABLE</codeph> in the
             <cite>Greenplum Database Reference Guide</cite>.</p>
-      <p>If you created an error table, you can use SQL commands to query the error table and view
-         the rows that did not load. For example:</p>
-      <codeblock>=# SELECT * from err_expenses;
-</codeblock>
    </body>
 </topic>

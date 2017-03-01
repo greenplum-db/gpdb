@@ -4,7 +4,6 @@
 <topic id="topic1">
   <title id="bk20941">COPY</title>
   <body>
-    <!--msk =Remove INTO error_table clause in next major release-->
     <p id="sql_command_desc">Copies data between a file and a table.</p>
     <section id="section2">
       <title>Synopsis</title>
@@ -19,7 +18,7 @@
        [CSV [QUOTE [ AS ] '<varname>quote</varname>'] 
             [FORCE NOT NULL <varname>column</varname> [, ...]]
        [FILL MISSING FIELDS]
-       [[LOG ERRORS [INTO <varname>error_table</varname>] [KEEP] 
+       [[LOG ERRORS]  
        SEGMENT REJECT LIMIT <varname>count</varname> [ROWS | PERCENT] ]
 
 COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} TO {'<varname>file</varname>' | STDOUT}
@@ -57,13 +56,12 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
           <codeph>CHECK</codeph>, or <codeph>UNIQUE</codeph> constraint will still be handled in
         'all-or-nothing' input mode. The user can specify the number of error rows acceptable (on a
         per-segment basis), after which the entire <codeph>COPY FROM</codeph> operation will be
-        aborted and no rows will be loaded. Note that the count of error rows is per-segment, not
-        per entire load operation. If the per-segment reject limit is not reached, then all rows not
-        containing an error will be loaded. If the limit is not reached, all good rows will be
-        loaded and any error rows discarded. If you would like to keep error rows for further
-        examination, you can optionally declare an error table using the <codeph>LOG ERRORS
-          INTO</codeph> clause. Any rows containing a format error would then be logged to the
-        specified error table.</p>
+        aborted and no rows will be loaded. The count of error rows is per-segment, not per entire
+        load operation. If the per-segment reject limit is not reached, then all rows not containing
+        an error will be loaded and any error rows discarded. To keep error rows for further
+        examination, specify the <codeph>LOG ERRORS</codeph> clause to capture error log
+        information. The error information and the row is stored internally in Greenplum
+        Database.</p>
       <sectiondiv id="section4">
         <b>Outputs</b>
         <p>On successful completion, a <codeph>COPY</codeph> command returns a command tag of the
@@ -197,29 +195,13 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
             report an error.</pd>
         </plentry>
         <plentry>
-          <pt>LOG ERRORS [INTO <varname>error_table</varname>] [KEEP]</pt>
+          <pt>LOG ERRORS</pt>
           <pd>This is an optional clause that can precede a <codeph>SEGMENT REJECT LIMIT</codeph>
-            clause to log information about rows with formatting errors. The <codeph>INTO
-                <i>error_table</i></codeph> clause specifies an error table where rows with
-            formatting errors will be logged when running in single row error isolation mode. </pd>
-          <pd>If the <codeph>INTO <varname>error_table</varname></codeph> clause is not specified,
-            the error log information is stored internally (not in an error table). Error log
-            information that is stored internally is accessed with the Greenplum Database built-in
-            SQL function <codeph>gp_read_error_log()</codeph>.</pd>
-          <pd>If the <varname>error_table</varname> specified already exists, it is used. If it does
-            not exist, it is created. If <varname>error_table</varname> exists and does not have a
-            random distribution (the <codeph>DISTRIBUTED RANDOMLY</codeph> clause was not specified
-            when creating the table), an error is returned.</pd>
-          <pd>If the command generates the error table and no errors are produced, the default is to
-            drop the error table after the operation completes unless <codeph>KEEP</codeph> is
-            specified. If the table is created and the error limit is exceeded, the entire
-            transaction is rolled back and no error data is saved. If you want the error table to
-            persist in this case, create the error table prior to running the <codeph>COPY</codeph>. </pd>
+            clause to capture error log information about rows with formatting errors. </pd>
+          <pd>Error log information is stored internally and is accessed with the Greenplum Database
+            built-in SQL function <codeph>gp_read_error_log()</codeph>.</pd>
           <pd>See <xref href="#topic1/section6" format="dita"/> for information about the error log
-            information and built-in functions for viewing and managing error log information.
-              <note>The optional <codeph>INTO <varname>error_table</varname></codeph> clause is
-              deprecated and will not be supported in a future release. Only internal error logs
-              will be supported.</note></pd>
+            information and built-in functions for viewing and managing error log information. </pd>
         </plentry>
         <plentry>
           <pt>SEGMENT REJECT LIMIT count [ROWS | PERCENT]</pt>
@@ -292,40 +274,37 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
         operation. You may wish to invoke <codeph>VACUUM</codeph> to recover the wasted space.
         Another option would be to use single row error isolation mode to filter out error rows
         while still loading good rows. </p>
-      <p>When you specify <codeph>LOG ERRORS INTO <varname>error_table</varname></codeph>, Greenplum
-        Database creates the table <varname>error_table</varname> that contains errors that occur
-        while reading the external table. The table is defined as
-        follows:<codeblock>CREATE TABLE <i>error_table_name</i> ( cmdtime timestamptz, relname text, 
-    filename text, linenum int, bytenum int, errmsg text, 
-    rawdata text, rawbytes bytea ) DISTRIBUTED RANDOMLY;</codeblock></p>
-      <p>You can view the information in the table with SQL commands. </p>
-      <p>For error log data that is stored internally when the <codeph>INTO
-          <i>error_table</i></codeph> is not specified: <ul id="ul_wk3_jdj_bp">
-          <li>Use the built-in SQL function
-              <codeph>gp_read_error_log('<varname>table_name</varname>')</codeph>. It requires
-              <codeph>SELECT</codeph> privilege on <varname>table_name</varname>. This example
-            displays the error log information for data loaded into table
-              <codeph>ext_expenses</codeph> with a <codeph>COPY</codeph>
-              command:<codeblock>SELECT * from gp_read_error_log('ext_expenses');</codeblock><p>The
-              error log contains the same columns as the error table.</p><p>The function returns
-                <codeph>FALSE</codeph> if <varname>table_name</varname> does not exist.</p></li>
-          <li>If error log data exists for the specified table, the new error log data is appended
-            to existing error log data. The error log information is not replicated to mirror
-            segments.</li>
-          <li>Use the built-in SQL function
-                <codeph>gp_truncate_error_log('<varname>table_name</varname>')</codeph> to delete
-            the error log data for <varname>table_name</varname>. It requires the table owner
-            privilege This example deletes the error log information captured when moving data into
-            the table
-              <codeph>ext_expenses</codeph>:<codeblock>SELECT gp_truncate_error_log('ext_expenses'); </codeblock><p>The
-              function returns <codeph>FALSE</codeph> if <varname>table_name</varname> does not
-              exist.</p><p>Specify the <codeph>*</codeph> wildcard character to delete error log
-              information for existing tables in the current database. Specify the string
-                <codeph>*.*</codeph> to delete all database error log information, including error
-              log information that was not deleted due to previous database issues. If * is
-              specified, database owner privilege is required. If <codeph>*.*</codeph> is specified,
-              operating system super-user privilege is required.</p></li>
-        </ul></p>
+      <p>When you specify the <codeph>LOG ERRORS</codeph> clause, Greenplum Database captures errors
+        that occur while reading the external table data. You can view and manage the captured error
+        log data. </p>
+      <ul id="ul_wk3_jdj_bp">
+        <li>Use the built-in SQL function
+            <codeph>gp_read_error_log('<varname>table_name</varname>')</codeph>. It requires
+            <codeph>SELECT</codeph> privilege on <varname>table_name</varname>. This example
+          displays the error log information for data loaded into table
+            <codeph>ext_expenses</codeph> with a <codeph>COPY</codeph>
+            command:<codeblock>SELECT * from gp_read_error_log('ext_expenses');</codeblock><p>For
+            information about the error log format, see <xref
+              href="../../admin_guide/load/topics/g-viewing-bad-rows-in-the-error-table-or-error-log.xml#topic58"
+              >Viewing Bad Rows in the Error Log</xref> in the <cite>Greenplum Database
+              Administrator Guide</cite>.</p><p>The function returns <codeph>FALSE</codeph> if
+              <varname>table_name</varname> does not exist.</p></li>
+        <li>If error log data exists for the specified table, the new error log data is appended to
+          existing error log data. The error log information is not replicated to mirror
+          segments.</li>
+        <li>Use the built-in SQL function
+              <codeph>gp_truncate_error_log('<varname>table_name</varname>')</codeph> to delete the
+          error log data for <varname>table_name</varname>. It requires the table owner privilege
+          This example deletes the error log information captured when moving data into the table
+            <codeph>ext_expenses</codeph>:<codeblock>SELECT gp_truncate_error_log('ext_expenses'); </codeblock><p>The
+            function returns <codeph>FALSE</codeph> if <varname>table_name</varname> does not
+            exist.</p><p>Specify the <codeph>*</codeph> wildcard character to delete error log
+            information for existing tables in the current database. Specify the string
+              <codeph>*.*</codeph> to delete all database error log information, including error log
+            information that was not deleted due to previous database issues. If * is specified,
+            database owner privilege is required. If <codeph>*.*</codeph> is specified, operating
+            system super-user privilege is required.</p></li>
+      </ul>
       <p>When a Greenplum Database user who is not a superuser runs a <codeph>COPY</codeph> command,
         the command can be controlled by a resource queue. The resource queue must be configured
         with the <codeph>ACTIVE_STATEMENTS</codeph> parameter that specifies a maximum limit on the
@@ -406,14 +385,13 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
             <codeph>FORCE QUOTE</codeph> to force quotes when outputting non-<codeph>NULL</codeph>
           values in specific columns. </p>
         <p>The CSV format has no standard way to distinguish a <codeph>NULL</codeph> value from an
-          empty string. Greenplum Database
-          <codeph>COPY</codeph> handles this by quoting. A <codeph>NULL</codeph> is output as the
-            <codeph>NULL</codeph> string and is not quoted, while a data value matching the
-            <codeph>NULL</codeph> string is quoted. Therefore, using the default settings, a
-            <codeph>NULL</codeph> is written as an unquoted empty string, while an empty string is
-          written with double quotes (""). Reading values follows similar rules. You can use
-            <codeph>FORCE NOT NULL</codeph> to prevent <codeph>NULL</codeph> input comparisons for
-          specific columns.</p>
+          empty string. Greenplum Database <codeph>COPY</codeph> handles this by quoting. A
+            <codeph>NULL</codeph> is output as the <codeph>NULL</codeph> string and is not quoted,
+          while a data value matching the <codeph>NULL</codeph> string is quoted. Therefore, using
+          the default settings, a <codeph>NULL</codeph> is written as an unquoted empty string,
+          while an empty string is written with double quotes (""). Reading values follows similar
+          rules. You can use <codeph>FORCE NOT NULL</codeph> to prevent <codeph>NULL</codeph> input
+          comparisons for specific columns.</p>
         <p>Because backslash is not a special character in the <codeph>CSV</codeph> format,
             <codeph>\.</codeph>, the end-of-data marker, could also appear as a data value. To avoid
           any misinterpretation, a <codeph>\.</codeph> data value appearing as a lone entry on a
@@ -426,14 +404,13 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
           include those characters. This can cause errors if you import data from a system that pads
           CSV lines with white space out to some fixed width. If such a situation arises you might
           need to preprocess the CSV file to remove the trailing white space, before importing the
-          data into Greenplum Database. </note>
-        <note><codeph>CSV</codeph> mode will both recognize and produce CSV files with quoted values
-          containing embedded carriage returns and line feeds. Thus the files are not strictly one
-          line per table row like text-mode files. </note>
-        <note>Many programs produce strange and occasionally perverse CSV files, so the file format
-          is more a convention than a standard. Thus you might encounter some files that cannot be
-          imported using this mechanism, and <codeph>COPY</codeph> might produce files that other
-          programs cannot process. </note></sectiondiv>
+          data into Greenplum Database. <p><codeph>CSV</codeph> mode will both recognize and produce
+            CSV files with quoted values containing embedded carriage returns and line feeds. Thus
+            the files are not strictly one line per table row like text-mode files
+          </p></note><note>Many programs produce strange and occasionally perverse CSV files, so the
+          file format is more a convention than a standard. Thus you might encounter some files that
+          cannot be imported using this mechanism, and <codeph>COPY</codeph> might produce files
+          that other programs cannot process. </note></sectiondiv>
     </section>
     <section id="section11">
       <title>Examples</title>
@@ -444,14 +421,10 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
       <p>Copy into a file just the countries whose names start with 'A':</p>
       <codeblock>COPY (SELECT * FROM country WHERE country_name LIKE 'A%') TO 
 '/home/usr1/sql/a_list_countries.copy';</codeblock>
-      <p>Create an error table called <codeph>err_sales</codeph> to use with single row error
-        isolation mode:</p>
-      <codeblock>CREATE TABLE err_sales ( cmdtime timestamptz, relname text, 
-filename text, linenum int, bytenum int, errmsg text, rawdata text, rawbytes bytea ) DISTRIBUTED RANDOMLY;</codeblock>
       <p>Copy data from a file into the <codeph>sales</codeph> table using single row error
-        isolation mode:</p>
-      <codeblock>COPY sales FROM '/home/usr1/sql/sales_data' LOG ERRORS INTO 
-err_sales SEGMENT REJECT LIMIT 10 ROWS;</codeblock>
+        isolation mode and log errors:</p>
+      <codeblock>COPY sales FROM '/home/usr1/sql/sales_data' LOG ERRORS 
+   SEGMENT REJECT LIMIT 10 ROWS;</codeblock>
     </section>
     <section id="section12">
       <title>Compatibility</title>
