@@ -123,6 +123,9 @@ test: qp_functions qp_misc_rio_join_small qp_misc_rio qp_correlated_query qp_tar
 
 test: dpe qp_dpe qp_subquery qp_functions_idf qp_regexp qp_resource_queue
 
+test: qp_functions_in_contexts_setup
+test: qp_functions_in_from qp_functions_in_select qp_functions_in_subquery qp_functions_in_subquery_constant qp_functions_in_with
+
 test: olap_setup
 test: qp_olap_group
 
