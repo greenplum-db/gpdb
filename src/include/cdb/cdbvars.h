@@ -1020,6 +1020,10 @@ extern void write_log(const char *fmt,...) __attribute__((format(printf, 1, 2)))
 
 extern void verifyGpIdentityIsSet(void);
 
+extern const char *gpvars_assign_gp_resource_manager_policy(const char *newval, bool doit, GucSource source __attribute__((unused)) );
+
+extern const char *gpvars_show_gp_resource_manager_policy(void);
+
 extern const char *gpvars_assign_gp_resqueue_memory_policy(const char *newval, bool doit, GucSource source __attribute__((unused)) );
 
 extern const char *gpvars_show_gp_resqueue_memory_policy(void);

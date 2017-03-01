@@ -25,6 +25,7 @@
 #include "lib/stringinfo.h"
 #include "libpq/libpq-be.h"
 #include "utils/memutils.h"
+#include "utils/resource_manager.h"
 #include "storage/bfz.h"
 #include "storage/proc.h"
 #include "cdb/memquota.h"
@@ -1191,6 +1192,46 @@ gpvars_assign_gp_fts_probe_pause(bool newval, bool doit, GucSource source)
 	return true;
 }
 
+/*
+ * gpvars_assign_gp_resource_manager_policy
+ * gpvars_show_gp_resource_manager_policy
+ */
+const char *
+gpvars_assign_gp_resource_manager_policy(const char *newval, bool doit, GucSource source __attribute__((unused)))
+{
+	ResourceManagerPolicy newtype = RESOURCE_MANAGER_POLICY_QUEUE;
+
+	if (newval == NULL || newval[0] == 0 )
+		newtype = RESOURCE_MANAGER_POLICY_QUEUE;
+	else if (!pg_strcasecmp("queue", newval))
+		newtype = RESOURCE_MANAGER_POLICY_QUEUE;
+	else if (!pg_strcasecmp("group", newval))
+		newtype = RESOURCE_MANAGER_POLICY_GROUP;
+	else
+		elog(ERROR, "unknown resource manager policy: current policy is '%s'", gpvars_show_gp_resource_manager_policy());
+
+	if (doit)
+	{
+		Gp_resource_manager_policy = newtype;
+	}
+
+	return newval;
+}
+
+const char *
+gpvars_show_gp_resource_manager_policy(void)
+{
+	switch (Gp_resource_manager_policy)
+	{
+		case RESOURCE_MANAGER_POLICY_QUEUE:
+			return "queue";
+		case RESOURCE_MANAGER_POLICY_GROUP:
+			return "group";
+		default:
+			Assert(!"unexpected resource manager policy");
+			return "unknown";
+	}
+}
 /*
  * gpvars_assign_gp_resqueue_memory_policy
  * gpvars_show_gp_resqueue_memory_policy
