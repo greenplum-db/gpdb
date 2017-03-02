@@ -1,6 +1,18 @@
--- Helper function, to return the EXPLAIN ANALYZE output of a query as a normal
+-- Helper function, to return the EXPLAIN output of a query as a normal
 -- result set, so that you can manipulate it further.
 create or replace function get_explain_output(explain_query text) returns setof text as
+$$
+declare
+  explainrow text;
+begin
+  for explainrow in execute 'EXPLAIN ' || explain_query
+  loop
+    return next explainrow;
+  end loop;
+end;
+$$ language plpgsql;
+-- Same, for EXPLAIN ANALYZE
+create or replace function get_explain_analyze_output(explain_query text) returns setof text as
 $$
 declare
   explainrow text;
@@ -39,7 +51,7 @@ set explain_memory_verbosity='summary';
 -- The plan should consist of a Gather and a Seq Scan, with a
 -- "Memory: ..." line on both nodes.
 SELECT COUNT(*) from
-  get_explain_output($$
+  get_explain_analyze_output($$
     SELECT * FROM explaintest;
   $$) as et
 WHERE et like '%Memory: %';
@@ -47,4 +59,64 @@ WHERE et like '%Memory: %';
 -------
      2
 (1 row)
+
+reset explain_memory_verbosity;
+-- Verify that the column references are OK. This tests for an old ORCA bug,
+-- where the Filter clause in the IndexScan of this query was incorrectly
+-- printed as something like:
+--
+--   Filter: "outer".column2 = mpp22263.*::text
+CREATE TABLE mpp22263 (
+        unique1         int4,
+        unique2         int4,
+        two                     int4,
+        four            int4,
+        ten                     int4,
+        twenty          int4,
+        hundred         int4,
+        thousand        int4,
+        twothousand     int4,
+        fivethous       int4,
+        tenthous        int4,
+        odd                     int4,
+        even            int4,
+        stringu1        name,
+        stringu2        name,
+        string4         name
+) distributed by (unique1);
+create index mpp22263_idx1 on mpp22263 using btree(unique1);
+explain
+select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
+WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.00 rows=1 width=256)
+   ->  Nested Loop  (cost=0.00..2.00 rows=1 width=256)
+         Join Filter: true
+         ->  Append  (cost=0.00..0.00 rows=1 width=12)
+               ->  Result  (cost=0.00..0.00 rows=1 width=12)
+                     ->  Result  (cost=0.00..0.00 rows=1 width=12)
+               ->  Result  (cost=0.00..0.00 rows=1 width=12)
+                     ->  Result  (cost=0.00..0.00 rows=1 width=12)
+         ->  Index Scan using mpp22263_idx1 on mpp22263  (cost=0.00..2.00 rows=1 width=244)
+               Index Cond: mpp22263.unique1 = (147)
+               Filter: mpp22263.stringu1::text = ('RFAAAA'::text)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+-- atmsort.pm masks out differences in the Filter line, so just memorizing
+-- the output of the above EXPLAIN isn't enough to catch a faulty Filter line.
+-- Extract the Filter explicitly.
+SELECT * from
+  get_explain_output($$
+select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
+WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
+  $$) as et
+WHERE et like '%Filter: %';
+                                et                                
+------------------------------------------------------------------
+         Join Filter: true
+               Filter: mpp22263.stringu1::text = ('RFAAAA'::text)
+(2 rows)
 

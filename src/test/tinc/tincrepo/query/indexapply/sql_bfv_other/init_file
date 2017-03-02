@@ -1,6 +1,0 @@
--- start_matchsubs
-
-m/\\\!grep 'Filter: mpp22263.stringu1::text = "outer".column2'.*/
-s/\\\!grep 'Filter: mpp22263.stringu1::text = "outer".column2'.*/\!grep 'Filter: mpp22263.stringu1::text = "outer".column2'/
-
--- end_matchsubs
