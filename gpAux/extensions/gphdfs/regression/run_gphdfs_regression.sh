@@ -88,9 +88,6 @@ _main() {
 	$HADOOPCMD fs -rm -f -r /mapreduce/*
 	$HADOOPCMD fs -rm -f -r /mapred/*
 
-	# limited_schedule
-	#${PGREGRESS} --psqldir=$GPHOME/bin/ --init-file=$CURDIR/gphdfs_init_file --schedule=$CURDIR/limited_schedule --srcdir=$CURDIR/source_replaced --inputdir=$CURDIR/source_replaced --outputdir=.
-
 	# gphdfs_regress_schedule
 	PGOPTIONS="-c optimizer=off -c codegen=off -c gp_hadoop_home=${HADOOP_HOME} -c gp_hadoop_target_version=${GP_HADOOP_TARGET_VERSION}" ${PGREGRESS} --psqldir=$GPHOME/bin/ --init-file=$CURDIR/gphdfs_init_file --schedule=$CURDIR/gphdfs_regress_schedule  --srcdir=$CURDIR/source_replaced --inputdir=$CURDIR/source_replaced --outputdir=.
 }
