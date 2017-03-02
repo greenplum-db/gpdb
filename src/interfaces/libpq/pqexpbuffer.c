@@ -375,3 +375,19 @@ appendBinaryPQExpBuffer(PQExpBuffer str, const char *data, size_t datalen)
 	 */
 	str->data[str->len] = '\0';
 }
+
+/*
+ * truncatePQExpBuffer
+ *
+ * Inject a NULL terminator at the desired len iff the PQExpBuffer is of at
+ * least that length and size (maxlen), else do nothing.
+ */
+void
+truncatePQExpBuffer(PQExpBuffer str, size_t len)
+{
+	if (len > str->maxlen || len >= str->len)
+		return;
+
+	str->data[len] = '\0';
+	str->len = len;
+}

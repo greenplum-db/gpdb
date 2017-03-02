@@ -162,3 +162,4 @@ PQpingParams              159
 PQlibVersion              160
 PQsetSingleRowMode        161
 PQconninfo                162
+truncatePQExpBuffer       163
