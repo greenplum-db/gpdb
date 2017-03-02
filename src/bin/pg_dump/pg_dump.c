@@ -216,6 +216,7 @@ static void dumpACL(Archive *fout, CatalogId objCatId, DumpId objDumpId,
 
 static void getDependencies(void);
 static void setExtPartDependency(TableInfo *tblinfo, int numTables);
+static void setPlaceholderDependency(TableInfo *tblinfo, int numTables);
 static void getDomainConstraints(TypeInfo *tinfo);
 static void getTableData(TableInfo *tblinfo, int numTables, bool oids);
 static void makeTableDataInfo(TableInfo *tbinfo, bool oids);
@@ -918,6 +919,8 @@ main(int argc, char **argv)
 	getDependencies();
 	
 	setExtPartDependency(tblinfo, numTables);
+
+	setPlaceholderDependency(tblinfo, numTables);
 
 	/*
 	 * Sort the objects into a safe dump order (no forward references).
@@ -9833,6 +9836,51 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 	{
 		reltypename = "EXTERNAL TABLE";
 		dumpExternal(tbinfo, query, q, delq);
+
+		/*
+		 * If we have a placeholder configured for this external table it means
+		 * that the external table will be part of a partitioning hierarchy and
+		 * that we are dumping it in another name to be able to exchange it
+		 * into the partitioning. The placeholder, a new table which doesn't
+		 * exist in the database we are dumping from, will be part of the
+		 * hierarchy during the restore process.
+		 *
+		 * Since TableInfo is a quite complicated structure, a deepcopy would
+		 * be not only complicated but all changes to the TableInfo would have
+		 * to be reflected. Since we need an exact copy of the external table
+		 * dobj but with another name, another relstorage and the partitioned
+		 * table as inheritance parent, temporarily scribble on the existing
+		 * dobj.
+		 */
+		if (tbinfo->placeholder)
+		{
+			char   *tmp_name = strdup(tbinfo->dobj.name);
+
+			tbinfo->relstorage = RELSTORAGE_HEAP;
+
+			/*
+			 * All placeholders should have a parent as partition members are
+			 * the only consumers of this functionality as of now, but better
+			 * safe than sorry.
+			 */
+			if (tbinfo->parrelid != 0)
+			{
+				tbinfo->numParents = 1;
+				tbinfo->parents = pg_malloc(sizeof(TableInfo *));
+
+				TableInfo *parent = findTableByOid(tbinfo->parrelid);
+				tbinfo->parents[0] = parent;
+			}
+
+			free(tbinfo->dobj.name);
+			tbinfo->dobj.name = strdup(tbinfo->placeholder);
+
+			dumpTableSchema(fout, tbinfo);
+
+			free(tbinfo->dobj.name);
+			tbinfo->dobj.name = tmp_name;
+			tbinfo->relstorage = RELSTORAGE_EXTERNAL;
+		}
 	}
 	/* END MPP ADDITION */
 	else
@@ -11417,6 +11465,24 @@ setExtPartDependency(TableInfo *tblinfo, int numTables)
 				continue;
 			addObjectDependency(&ti->dobj, tbinfo->dobj.dumpId);
 			removeObjectDependency(&tbinfo->dobj, ti->dobj.dumpId);
+		}
+	}
+}
+
+static void
+setPlaceholderDependency(TableInfo *tblinfo, int numTables)
+{
+	int		i;
+
+	for (i = 0; i < numTables; i++)
+	{
+		TableInfo *tbinfo = &(tblinfo[i]);
+
+		if (tbinfo->placeholder && tbinfo->parrelid)
+		{
+			TableInfo *parent = findTableByOid(tbinfo->parrelid);
+			addObjectDependency(&tbinfo->dobj, parent->dobj.dumpId);
+			removeObjectDependency(&parent->dobj, tbinfo->dobj.dumpId);
 		}
 	}
 }
