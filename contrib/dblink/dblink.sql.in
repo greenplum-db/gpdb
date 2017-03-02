@@ -168,25 +168,26 @@ RETURNS text
 AS 'SELECT pg_catalog.current_query()'
 LANGUAGE SQL;
 
-CREATE OR REPLACE FUNCTION dblink_send_query(text, text)
-RETURNS int4
-AS 'MODULE_PATHNAME', 'dblink_send_query'
-LANGUAGE C STRICT;
+-- GPDB does not support these functions correctly
+-- CREATE OR REPLACE FUNCTION dblink_send_query(text, text)
+-- RETURNS int4
+-- AS 'MODULE_PATHNAME', 'dblink_send_query'
+-- LANGUAGE C STRICT;
 
-CREATE OR REPLACE FUNCTION dblink_is_busy(text)
-RETURNS int4
-AS 'MODULE_PATHNAME', 'dblink_is_busy'
-LANGUAGE C STRICT;
+-- CREATE OR REPLACE FUNCTION dblink_is_busy(text)
+-- RETURNS int4
+-- AS 'MODULE_PATHNAME', 'dblink_is_busy'
+-- LANGUAGE C STRICT;
 
-CREATE OR REPLACE FUNCTION dblink_get_result(text)
-RETURNS SETOF record
-AS 'MODULE_PATHNAME', 'dblink_get_result'
-LANGUAGE C STRICT;
+-- CREATE OR REPLACE FUNCTION dblink_get_result(text)
+-- RETURNS SETOF record
+-- AS 'MODULE_PATHNAME', 'dblink_get_result'
+-- LANGUAGE C STRICT;
 
-CREATE OR REPLACE FUNCTION dblink_get_result(text, bool)
-RETURNS SETOF record
-AS 'MODULE_PATHNAME', 'dblink_get_result'
-LANGUAGE C STRICT;
+-- CREATE OR REPLACE FUNCTION dblink_get_result(text, bool)
+-- RETURNS SETOF record
+-- AS 'MODULE_PATHNAME', 'dblink_get_result'
+-- LANGUAGE C STRICT;
 
 CREATE OR REPLACE FUNCTION dblink_get_connections()
 RETURNS text[]

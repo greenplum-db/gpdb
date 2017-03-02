@@ -20,3 +20,9 @@ top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk
 endif
+
+
+installcheck:
+	-$(top_builddir)/src/test/regress/pg_regress --psqldir=$$GPHOME/bin/ --init-file=$(top_builddir)/src/test/regress/init_file --dbname=contrib_regression dblink
+
+.PHONY: installcheck

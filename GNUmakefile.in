@@ -19,6 +19,7 @@ all:
 	$(MAKE) -C contrib/formatter_fixedwidth all
 	$(MAKE) -C contrib/fuzzystrmatch all
 	$(MAKE) -C contrib/extprotocol all	
+	$(MAKE) -C contrib/dblink all
 	$(MAKE) -C contrib/gp_sparse_vector all
 	$(MAKE) -C contrib/gp_distribution_policy all
 	$(MAKE) -C contrib/gp_internal_tools all
@@ -39,6 +40,7 @@ install:
 	$(MAKE) -C contrib/formatter_fixedwidth $@
 	$(MAKE) -C contrib/fuzzystrmatch $@
 	$(MAKE) -C contrib/extprotocol $@
+	$(MAKE) -C contrib/dblink $@
 	$(MAKE) -C contrib/gp_sparse_vector $@
 	$(MAKE) -C contrib/gp_distribution_policy $@
 	$(MAKE) -C contrib/gp_internal_tools $@
@@ -61,6 +63,7 @@ installdirs uninstall:
 	$(MAKE) -C contrib/formatter_fixedwidth $@
 	$(MAKE) -C contrib/fuzzystrmatch $@
 	$(MAKE) -C contrib/extprotocol $@
+	$(MAKE) -C contrib/dblink $@
 	$(MAKE) -C contrib/gp_sparse_vector $@
 	$(MAKE) -C contrib/gp_distribution_policy $@
 	$(MAKE) -C contrib/gp_internal_tools $@
@@ -88,6 +91,7 @@ clean:
 	$(MAKE) -C contrib/formatter_fixedwidth $@
 	$(MAKE) -C contrib/fuzzystrmatch $@
 	$(MAKE) -C contrib/extprotocol $@
+	$(MAKE) -C contrib/dblink $@
 	$(MAKE) -C contrib/gp_sparse_vector $@
 	$(MAKE) -C contrib/gp_distribution_policy $@
 	$(MAKE) -C contrib/gp_internal_tools $@
@@ -123,6 +127,7 @@ installcheck-world:
 	#$(MAKE) -C src/interfaces/ecpg installcheck
 	#$(MAKE) -C contrib installcheck
 	$(MAKE) -C contrib/extprotocol installcheck
+	$(MAKE) -C contrib/dblink installcheck
 	$(MAKE) -C contrib/indexscan installcheck
 	$(MAKE) -C gpAux/extensions installcheck
 	$(MAKE) -C src/bin/gpfdist installcheck

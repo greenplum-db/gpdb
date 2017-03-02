@@ -99,7 +99,7 @@ SELECT dblink_open('rmt_foo_cursor','SELECT * FROM foo');
 SELECT dblink_close('rmt_foo_cursor',false);
 
 -- open the cursor again
-SELECT dblink_open('rmt_foo_cursor','SELECT * FROM foo');
+SELECT dblink_open('rmt_foo_cursor','SELECT * FROM foo ORDER BY f1');
 
 -- fetch some data
 SELECT *
@@ -259,7 +259,7 @@ SELECT dblink_exec('myconn','DECLARE xact_test CURSOR FOR SELECT * FROM foo');
 SELECT dblink_exec('myconn','ABORT');
 
 -- open a cursor
-SELECT dblink_open('myconn','rmt_foo_cursor','SELECT * FROM foo');
+SELECT dblink_open('myconn','rmt_foo_cursor','SELECT * FROM foo ORDER BY f1');
 
 -- fetch some data
 SELECT *
@@ -325,52 +325,6 @@ SELECT dblink_disconnect('myconn');
 -- should get 'connection "myconn" not available' error
 SELECT dblink_disconnect('myconn');
 
--- test asynchronous queries
-SELECT dblink_connect('dtest1', 'dbname=contrib_regression');
-SELECT * from 
- dblink_send_query('dtest1', 'select * from foo where f1 < 3') as t1;
-
-SELECT dblink_connect('dtest2', 'dbname=contrib_regression');
-SELECT * from 
- dblink_send_query('dtest2', 'select * from foo where f1 > 2 and f1 < 7') as t1;
-
-SELECT dblink_connect('dtest3', 'dbname=contrib_regression');
-SELECT * from 
- dblink_send_query('dtest3', 'select * from foo where f1 > 6') as t1;
-
-CREATE TEMPORARY TABLE result AS
-(SELECT * from dblink_get_result('dtest1') as t1(f1 int, f2 text, f3 text[]))
-UNION
-(SELECT * from dblink_get_result('dtest2') as t2(f1 int, f2 text, f3 text[]))
-UNION
-(SELECT * from dblink_get_result('dtest3') as t3(f1 int, f2 text, f3 text[]))
-ORDER by f1;
-
--- dblink_get_connections returns an array with elements in a machine-dependent
--- ordering, so we must resort to unnesting and sorting for a stable result
-create function unnest(anyarray) returns setof anyelement
-language sql strict immutable as $$
-select $1[i] from generate_series(array_lower($1,1), array_upper($1,1)) as i
-$$;
-
-SELECT * FROM unnest(dblink_get_connections()) ORDER BY 1;
-
-SELECT dblink_is_busy('dtest1');
-
-SELECT dblink_disconnect('dtest1');
-SELECT dblink_disconnect('dtest2');
-SELECT dblink_disconnect('dtest3');
-
-SELECT * from result;
-
-SELECT dblink_connect('dtest1', 'dbname=contrib_regression');
-SELECT * from 
- dblink_send_query('dtest1', 'select * from foo where f1 < 3') as t1;
-
-SELECT dblink_cancel_query('dtest1');
-SELECT dblink_error_message('dtest1');
-SELECT dblink_disconnect('dtest1');
-
 -- test dropped columns in dblink_build_sql_insert, dblink_build_sql_update
 CREATE TEMP TABLE test_dropped
 (
@@ -396,3 +350,18 @@ SELECT dblink_build_sql_update('test_dropped', '2', 1,
 
 SELECT dblink_build_sql_delete('test_dropped', '2', 1,
                                ARRAY['2'::TEXT]);
+
+-- test nested query for GPDB 
+CREATE TEMPORARY TABLE result AS
+(SELECT * from dblink('dbname=contrib_regression','select * from foo where f1 > 2 and f1 < 7') as t1(f1 int, f2 text, f3 text[]))
+UNION
+(SELECT * from dblink('dbname=contrib_regression','select * from foo where f1 < 3') as t2(f1 int, f2 text, f3 text[]))
+UNION
+(SELECT * from dblink('dbname=contrib_regression','select * from foo where f1 > 2 and f1 < 7') as t3(f1 int, f2 text, f3 text[]))
+ORDER by f1;
+SELECT * FROM result; 
+DROP TABLE result;
+CREATE TEMPORARY TABLE result (f1 int, f2 text, f3 text[]);
+INSERT INTO result SELECT * FROM dblink ('dbname=contrib_regression','select * from foo') AS t(f1 int, f2 text, f3 text[]);
+SELECT * FROM result;
+SELECT * FROM (SELECT * FROM dblink('dbname=contrib_regression','select * from foo') AS t(f1 int, f2 text, f3 text[])) AS t1;
