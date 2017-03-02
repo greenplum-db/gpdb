@@ -3319,6 +3319,8 @@ getTables(int *numTables)
 	int			i_reltablespace;
 	int			i_reloptions;
 	int			i_parrelid;
+	int			i_parparent;
+	Oid			parparent;
 
 	/* Make sure we are in proper schema */
 	selectSourceSchema("pg_catalog");
@@ -3358,6 +3360,7 @@ getTables(int *numTables)
 					  "d.refobjsubid as owning_col, "
 					  "(SELECT spcname FROM pg_tablespace t WHERE t.oid = c.reltablespace) AS reltablespace, "
 					  "array_to_string(c.reloptions, ', ') as reloptions, "
+					  "i.inhparent as parparent, "
 					  "p.parrelid as parrelid "
 					  "from pg_class c "
 					  "left join pg_depend d on "
@@ -3367,6 +3370,7 @@ getTables(int *numTables)
 					  "d.refclassid = c.tableoid and d.deptype = 'a') "
 					  "left join pg_partition_rule pr on c.oid = pr.parchildrelid "
 					  "left join pg_partition p on pr.paroid = p.oid "
+					  "left join pg_inherits i on i.inhrelid = c.oid "
 					  "where relkind in ('%c', '%c', '%c', '%c') %s"
 					  "order by c.oid",
 					  username_subquery,
@@ -3414,6 +3418,7 @@ getTables(int *numTables)
 	i_reltablespace = PQfnumber(res, "reltablespace");
 	i_reloptions = PQfnumber(res, "reloptions");
 	i_parrelid = PQfnumber(res, "parrelid");
+	i_parparent = PQfnumber(res, "parparent");
 
 	for (i = 0; i < ntups; i++)
 	{
@@ -3447,15 +3452,64 @@ getTables(int *numTables)
 		tblinfo[i].reltablespace = strdup(PQgetvalue(res, i, i_reltablespace));
 		tblinfo[i].reloptions = strdup(PQgetvalue(res, i, i_reloptions));
 		tblinfo[i].parrelid = atooid(PQgetvalue(res, i, i_parrelid));
-		if (tblinfo[i].parrelid != 0)
+		parparent = atooid(PQgetvalue(res, i, i_parparent));
+
+		/*
+		 * External tables which are partition members need to be dumped
+		 * differently depending on where we are dumping them, and with what
+		 * options.  The root cause is that external tables cannot form part of
+		 * partitioning definitions, but instead must be injected into the
+		 * hierarchy using ALTER TABLE statements. Thus, we dump the external
+		 * partition as a normal external table but in a unique name which
+		 * breaks it out of the partition hierarchy. We then rely on the CREATE
+		 * TABLE for the partitioned table to create the now missing partition
+		 * member. To complete the dump we then include ALTER TABLE EXCHANGE
+		 * statements to swap in the external table into the correct place and
+		 * subsequently drop the placeholder partition.
+		 *
+		 * The above process works for normal dumps, but not for dumps made as
+		 * part of pg_upgrade. pg_upgrade runs in utility mode on the
+		 * individual segments where partitioning catalogs are missing and
+		 * partitioning isn't performed. On the segments we only have the
+		 * partition members as normal tables, so the trick with relying on the
+		 * partition parent creating the placeholder doesn't work. On segments
+		 * we thus need to inject a new table into the dump as the placeholder.
+		 */
+
+		/*
+		 * parrelid comes from partitioning catalogs which indicates that we
+		 * are on a QD server. Dump the external partition with a relname that
+		 * creates it outside of the partitioning hierarchy.
+		 */
+
+		if ((tblinfo[i].parrelid != 0 || parparent != 0) && tblinfo[i].relstorage == RELSTORAGE_EXTERNAL)
 		{
+			PQExpBuffer part_name = createPQExpBuffer();
+
 			/*
-			 * Length of tmpStr is bigger than the sum of NAMEDATALEN 
-			 * and the length of EXT_PARTITION_NAME_POSTFIX 
+			 * If parrelid is zero but parparent is set, then we are on a
+			 * segment server. Here we will need to dump a placeholder table
+			 * for the partitioning, so register the required name for it
+			 * before we overwrite it.
 			 */
-			char tmpStr[500];
-			snprintf(tmpStr, sizeof(tmpStr), "%s%s", tblinfo[i].dobj.name, EXT_PARTITION_NAME_POSTFIX);
-			tblinfo[i].dobj.name = strdup(tmpStr);
+			if (tblinfo[i].parrelid == 0)
+			{
+				tblinfo[i].placeholder = strdup(tblinfo[i].dobj.name);
+				tblinfo[i].parrelid = parparent;
+			}
+
+			/*
+			 * We cannot exceed NAMEDATALEN here as that would be rejected by
+			 * the backend during restore. If the name + postfix overflows
+			 * NAMEDATALEN then truncate the fit within NAMEDATALEN.
+			 */
+			appendPQExpBuffer(part_name, "%s%s", tblinfo[i].dobj.name, EXT_PARTITION_NAME_POSTFIX);
+			truncatePQExpBuffer(part_name, NAMEDATALEN);
+
+			free(tblinfo[i].dobj.name);
+			tblinfo[i].dobj.name = strdup(part_name->data);
+
+			destroyPQExpBuffer(part_name);
 		}
 
 		/* other fields were zeroed above */
@@ -3480,7 +3534,8 @@ getTables(int *numTables)
 		 * NOTE: it'd be kinda nice to lock other relations too, not only
 		 * plain tables, but the backend doesn't presently allow that.
 		 */
-		if (tblinfo[i].dobj.dump && tblinfo[i].relkind == RELKIND_RELATION && tblinfo[i].parrelid == 0)
+		if (tblinfo[i].dobj.dump && tblinfo[i].relkind == RELKIND_RELATION &&
+			(tblinfo[i].parrelid == 0 && parparent == 0))
 		{
 			resetPQExpBuffer(lockquery);
 			appendPQExpBuffer(lockquery,
@@ -9769,6 +9824,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 {
 	PQExpBuffer query = createPQExpBuffer();
 	PQExpBuffer q = createPQExpBuffer();
+	PQExpBuffer bq = createPQExpBuffer();
 	PQExpBuffer delq = createPQExpBuffer();
 	PGresult   *res;
 	int			numParents;
@@ -10089,19 +10145,23 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		/* Exchange external partition */
 		if (gp_partitioning_available)
 		{
-			int i = 0;
-			int ntups = 0;
-			char *relname = NULL;
-			char *parname = NULL;
-			int i_relname = 0;
-			int i_parname = 0;
-			resetPQExpBuffer(query);
+			int i;
+			int ntups;
+			int i_relname;
+			int i_parname;
+			int i_partitionrank;
 
-			appendPQExpBuffer(query, "SELECT "
-						      "c.relname, pr.parname FROM pg_partition_rule pr "
-						      "join pg_class c ON pr.parchildrelid = c.oid "
-						      "join pg_partition p ON p.oid = pr.paroid "
-						      "WHERE p.parrelid = %u AND c.relstorage = 'x';", tbinfo->dobj.catId.oid);
+			resetPQExpBuffer(query);
+			appendPQExpBuffer(query,
+							  "SELECT cc.relname, ps.partitionrank, "
+							  "		  pp.parname "
+							  "FROM pg_partition p "
+							  "		JOIN pg_class c on (p.parrelid = c.oid) "
+							  "		JOIN pg_partitions ps on (c.relname = ps.tablename) "
+							  "		JOIN pg_class cc on (ps.partitiontablename = cc.relname) "
+							  "		JOIN pg_partition_rule pp on (cc.oid = pp.parchildrelid) "
+							  "WHERE p.parrelid = %u AND cc.relstorage = '%c';",
+							  tbinfo->dobj.catId.oid, RELSTORAGE_EXTERNAL);
 
 			res = PQexec(g_conn, query->data);
 			check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
@@ -10109,26 +10169,77 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			ntups = PQntuples(res);
 			i_relname = PQfnumber(res, "relname");
 			i_parname = PQfnumber(res, "parname");
+			i_partitionrank = PQfnumber(res, "partitionrank");
 
+			PQExpBuffer part_name = createPQExpBuffer();
 
 			for (i = 0; i < ntups; i++)
 			{
-				char tmpExtTable[500] = {0};
-				relname = strdup(PQgetvalue(res, i, i_relname));
-				parname = strdup(PQgetvalue(res, i, i_parname));
-				snprintf(tmpExtTable, sizeof(tmpExtTable), "%s%s", relname, EXT_PARTITION_NAME_POSTFIX);
-				appendPQExpBuffer(q, "ALTER TABLE %s ", fmtId(tbinfo->dobj.name));
-				appendPQExpBuffer(q, "EXCHANGE PARTITION %s ", fmtId(parname));
-				appendPQExpBuffer(q, "WITH TABLE %s WITHOUT VALIDATION; ", fmtId(tmpExtTable));
+				/*
+				 * We cannot exceed NAMEDATALEN here as that would be rejected by
+				 * the backend during restore. If the name + postfix overflows
+				 * NAMEDATALEN then truncate the fit within NAMEDATALEN.
+				 */
+				appendPQExpBuffer(part_name, "%s%s", PQgetvalue(res, i, i_relname), EXT_PARTITION_NAME_POSTFIX);
+				truncatePQExpBuffer(part_name, NAMEDATALEN);
 
-				appendPQExpBuffer(q, "\n");
+				appendPQExpBuffer(bq, "ALTER TABLE %s ", fmtId(tbinfo->dobj.name));
 
-				appendPQExpBuffer(q, "DROP TABLE %s; ", fmtId(tmpExtTable));
+				/*
+				 * If it is an anonymous range partition we must exchange for
+				 * the rank rather than the parname. We could always use the
+				 * rank for partition exchange but if the user has set a name
+				 * on the partition, using that will improve readability of
+				 * the dump so opt for that when we can.
+				 */
+				if (PQgetisnull(res, i, i_parname) || !strlen(PQgetvalue(res, i, i_parname)))
+				{
+					appendPQExpBuffer(bq, "EXCHANGE PARTITION FOR (rank(%s)) ",
+									  PQgetvalue(res, i, i_partitionrank));
+				}
+				else
+				{
+					appendPQExpBuffer(bq, "EXCHANGE PARTITION %s ",
+									  fmtId(PQgetvalue(res, i, i_parname)));
+				}
 
-				appendPQExpBuffer(q, "\n");
+				appendPQExpBuffer(bq, "WITH TABLE %s WITHOUT VALIDATION;\n", fmtId(part_name->data));
+
+				appendPQExpBuffer(bq, "DROP TABLE %s;\n", fmtId(part_name->data));
+
+				resetPQExpBuffer(part_name);
 			}
+			destroyPQExpBuffer(part_name);
 
 			PQclear(res);
+
+			/*
+			 * The EXCHANGE commands cannot be included in the dump during
+			 * binary upgrades as ALTER TABLE EXCHANGE is not a supported
+			 * command in utility mode. Open up a new Archive for commands
+			 * that need to be performed as a post-processing step to the
+			 * upgrade.
+			 */
+			if (binary_upgrade && bq->len > 0)
+			{
+				if (!g_bout)
+					g_bout = CreateArchive(bu_filename, archNull, 0, archModeAppend);
+
+				appendPQExpBuffer(q,
+								  "-- Table %s have external partitions that must be exchanged into the hierarchy,\n"
+								  "-- see dumpfile %s for the command to run after the upgrade has finished",
+								  tbinfo->dobj.name, bu_filename);
+
+				ArchiveEntry(g_bout, tbinfo->dobj.catId, tbinfo->dobj.dumpId,
+							 tbinfo->dobj.name,
+							 tbinfo->dobj.namespace->dobj.name, NULL, "",
+							 false, "BINARY UPGRADE",
+							 bq->data, "", NULL, NULL, 0, NULL, NULL);
+			}
+			else
+			{
+				appendPQExpBufferStr(q, bq->data);
+			}
 		}
 
 		/*
@@ -10305,6 +10416,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 	destroyPQExpBuffer(query);
 	destroyPQExpBuffer(q);
 	destroyPQExpBuffer(delq);
+	destroyPQExpBuffer(bq);
 }
 
 /*

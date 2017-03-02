@@ -497,13 +497,31 @@ preassign_type_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_type_oid, ch
 		exit_nicely();
 	}
 
-	snprintf(query_buffer, sizeof(query_buffer),
-			 "SELECT binary_upgrade.preassign_type_oid('%u'::pg_catalog.oid, "
-			 "'%s'::text, '%u'::pg_catalog.oid);\n"
-			 "SELECT binary_upgrade.preassign_arraytype_oid('%u'::pg_catalog.oid, "
-			 "'%s'::text, '%u'::pg_catalog.oid);\n",
-			 pg_type_oid, type->dobj.name, type->typnsp,
-			 type->arraytypoid, type->arraytypname, type->arraytypnsp);
+	/*
+	 * If the passed objname doesn't match the cached name, then we have an
+	 * exchanged partition which pg_dump has generated a temporary name for.
+	 * Override the type cache in this case.
+	 */
+	if (strcmp(objname, type->dobj.name) != 0)
+	{
+		snprintf(query_buffer, sizeof(query_buffer),
+				 "SELECT binary_upgrade.preassign_type_oid('%u'::pg_catalog.oid, "
+				 "'%s'::text, '%u'::pg_catalog.oid);\n"
+				 "SELECT binary_upgrade.preassign_arraytype_oid('%u'::pg_catalog.oid, "
+				 "'_%s'::text, '%u'::pg_catalog.oid);\n",
+				 pg_type_oid, objname, type->typnsp,
+				 type->arraytypoid, objname, type->arraytypnsp);
+	}
+	else
+	{
+		snprintf(query_buffer, sizeof(query_buffer),
+				 "SELECT binary_upgrade.preassign_type_oid('%u'::pg_catalog.oid, "
+				 "'%s'::text, '%u'::pg_catalog.oid);\n"
+				 "SELECT binary_upgrade.preassign_arraytype_oid('%u'::pg_catalog.oid, "
+				 "'%s'::text, '%u'::pg_catalog.oid);\n",
+				 pg_type_oid, type->dobj.name, type->typnsp,
+				 type->arraytypoid, type->arraytypname, type->arraytypnsp);
+	}
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
 				 objname,
@@ -951,9 +969,16 @@ preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_
 		Oid			contyp_oid;
 		Oid			con_oid;
 		Oid			prev_oid = InvalidOid;
+		Oid			relnamespace;
 
 		appendPQExpBuffer(parquery,
 						  "SELECT cc.oid, "
+						  "       CASE WHEN cc.relstorage = '%c' THEN "
+						  "         1::int "
+						  "       ELSE "
+						  "         NULL "
+						  "       END AS extpart, "
+						  "       cc.relnamespace, "
 						  "       p.partitiontablename AS name, "
 						  "       co.oid AS conoid, "
 						  "       co.conname, "
@@ -966,7 +991,7 @@ preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_
 						  "  (p.partitiontablename = cc.relname) "
 						  "LEFT JOIN pg_catalog.pg_constraint co ON "
 						  "  (cc.oid = co.conrelid);",
-						  pg_rel_oid);
+						  RELSTORAGE_EXTERNAL, pg_rel_oid);
 
 		par_res = PQexec(conn, parquery->data);
 		check_sql_result(par_res, conn, parquery->data, PGRES_TUPLES_OK);
@@ -984,8 +1009,26 @@ preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_
 				if (part_oid != prev_oid)
 				{
 					strlcpy(name, PQgetvalue(par_res, i, PQfnumber(par_res, "name")), sizeof(name));
-					preassign_type_oids_by_rel_oid(conn, fout, AH, part_oid, name);
-					preassign_pg_class_oids(conn, AH, part_oid);
+					if (!PQgetisnull(par_res, i, PQfnumber(par_res, "extpart")))
+					{
+						relnamespace = atooid(PQgetvalue(par_res, i, PQfnumber(par_res, "relnamespace")));
+						appendPQExpBuffer(upgrade_buffer,
+										  "SELECT binary_upgrade.preassign_relation_oid('0'::pg_catalog.oid, "
+										  "'%s'::text, '%u'::pg_catalog.oid);\n",
+										  name, relnamespace);
+
+						appendPQExpBuffer(upgrade_buffer,
+										  "SELECT binary_upgrade.preassign_type_oid('0'::pg_catalog.oid, "
+										  "'%s'::text, '%u'::pg_catalog.oid);\n"
+										  "SELECT binary_upgrade.preassign_arraytype_oid('0'::pg_catalog.oid, "
+										  "'_%s'::text, '%u'::pg_catalog.oid);\n",
+										  name, relnamespace, name, relnamespace);
+					}
+					else
+					{
+						preassign_pg_class_oids(conn, AH, part_oid, NULL);
+						preassign_type_oids_by_rel_oid(conn, fout, AH, part_oid, name);
+					}
 				}
 
 				if (!PQgetisnull(par_res, i, PQfnumber(par_res, "conname")))

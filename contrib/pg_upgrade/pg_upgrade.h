@@ -36,7 +36,11 @@
 /* contains both global db information and CREATE DATABASE commands */
 #define GLOBALS_DUMP_FILE	"pg_upgrade_dump_globals.sql"
 #define DB_DUMP_FILE		"pg_upgrade_dump_db.sql"
+#define EXTTAB_DUMP_FILE	"pg_upgrade_dump_exttab_exchange.sql"
 #define DISPATCH_DUMP_FILE	"pg_upgrade_dump_oid_dispatch.sql"
+
+/* needs to be kept in sync with pg_class.h */
+#define RELSTORAGE_EXTERNAL	'x'
 
 #ifndef WIN32
 #define pg_copy_file		copy_file
