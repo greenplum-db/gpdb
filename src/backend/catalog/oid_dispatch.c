@@ -536,7 +536,7 @@ GetPreassignedOidForTuple(Relation catalogrel, HeapTuple tuple)
 		elog(ERROR, "pre-assigned OID requested for unrecognized system catalog \"%s\"",
 			 RelationGetRelationName(catalogrel));
 
-	if ((oid = GetPreassignedOid(&searchkey)) == InvalidOid)
+	if ((oid = GetPreassignedOid(&searchkey)) == InvalidOid && !IsBinaryUpgrade)
 		elog(ERROR, "no pre-assigned OID for %s tuple \"%s\"",
 			 RelationGetRelationName(catalogrel), searchkey.objname ? searchkey.objname : "");
 	return oid;
@@ -576,7 +576,7 @@ GetPreassignedOidForRelation(Oid namespaceOid, const char *relname)
 	searchkey.namespaceOid = namespaceOid;
 	searchkey.objname = (char *) relname;
 
-	if ((oid = GetPreassignedOid(&searchkey)) == InvalidOid)
+	if ((oid = GetPreassignedOid(&searchkey)) == InvalidOid && !IsBinaryUpgrade)
 		elog(ERROR, "no pre-assigned OID for relation \"%s\"", relname);
 	return oid;
 }
