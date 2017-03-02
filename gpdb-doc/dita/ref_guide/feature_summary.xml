@@ -162,9 +162,6 @@
           <li id="ik265710">The sample clause (<codeph>TABLESAMPLE</codeph>) on
               <codeph>SELECT</codeph> statements. The <codeph>random()</codeph> function can be used
             as a work-around to get random samples from tables.</li>
-          <li id="ik265711"><codeph>NULLS FIRST/NULLS LAST</codeph> clause on
-              <codeph>SELECT</codeph> statements and subqueries (nulls are always last in Greenplum
-            Database).</li>
           <li id="ik265712">The <i>partitioned join tables</i> construct (<codeph>PARTITION
               BY</codeph> in a join).</li>
           <li id="ik265713"><codeph>GRANT SELECT</codeph> privileges on columns. Privileges can only
@@ -385,8 +382,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col2">YES</entry>
               <entry colname="col3"><b>Modified Clauses:</b><p><codeph>ESCAPE [ AS ]
                     '</codeph><i>escape</i><codeph>' | 'OFF'</codeph></p><p><b>Greenplum Database
-                    Clauses:</b></p><p><codeph>[LOG ERRORS] SEGMENT REJECT LIMIT <i>count</i>
-                    [ROWS|PERCENT]</codeph></p></entry>
+                    Clauses:</b></p><p><codeph>[LOG ERRORS] SEGMENT REJECT LIMIT </codeph><i>count</i><codeph> [ROWS|PERCENT]</codeph></p></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>CREATE AGGREGATE</codeph></entry>
