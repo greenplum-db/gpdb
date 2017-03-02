@@ -3085,3 +3085,624 @@ Distributed by: (id)
 
 drop table mpp_2914a cascade;
 drop table mpp_2914b cascade;
+create table mpp10847_pkeyconstraints(
+  pkid serial,
+  option1 int,
+  option2 int,
+  option3 int,
+  primary key(pkid, option3))
+distributed by (pkid) partition by range (option3)
+(
+partition aa start(1) end(100) inclusive,
+partition bb start(101) end(200) inclusive,
+partition cc start(201) end (300) inclusive
+);
+NOTICE:  CREATE TABLE will create implicit sequence "mpp10847_pkeyconstraints_pkid_seq" for serial column "mpp10847_pkeyconstraints.pkid"
+NOTICE:  CREATE TABLE will create partition "mpp10847_pkeyconstraints_1_prt_aa" for table "mpp10847_pkeyconstraints"
+NOTICE:  CREATE TABLE will create partition "mpp10847_pkeyconstraints_1_prt_bb" for table "mpp10847_pkeyconstraints"
+NOTICE:  CREATE TABLE will create partition "mpp10847_pkeyconstraints_1_prt_cc" for table "mpp10847_pkeyconstraints"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mpp10847_pkeyconstraints_pkey" for table "mpp10847_pkeyconstraints"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mpp10847_pkeyconstraints_1_prt_aa_pkey" for table "mpp10847_pkeyconstraints_1_prt_aa"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mpp10847_pkeyconstraints_1_prt_bb_pkey" for table "mpp10847_pkeyconstraints_1_prt_bb"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mpp10847_pkeyconstraints_1_prt_cc_pkey" for table "mpp10847_pkeyconstraints_1_prt_cc"
+insert into mpp10847_pkeyconstraints values (10000, 50, 50, 102);
+-- This is supposed to fail as you're not supposed to be able to use the same
+-- primary key in the same table. But GPDB cannot currently enforce that.
+insert into mpp10847_pkeyconstraints values (10000, 50, 50, 5);
+select * from mpp10847_pkeyconstraints;
+ pkid  | option1 | option2 | option3 
+-------+---------+---------+---------
+ 10000 |      50 |      50 |       5
+ 10000 |      50 |      50 |     102
+(2 rows)
+
+drop table mpp10847_pkeyconstraints;
+-- Test that ADD/EXCHANGE/SPLIT PARTITION works, even when there are partial or expression
+-- indexes on the table. (MPP-13750)
+create table dcl_messaging_test
+(
+        message_create_date     timestamp(3) not null,
+        trace_socket            varchar(1024) null,
+        trace_count             varchar(1024) null,
+        variable_01             varchar(1024) null,
+        variable_02             varchar(1024) null,
+        variable_03             varchar(1024) null,
+        variable_04             varchar(1024) null,
+        variable_05             varchar(1024) null,
+        variable_06             varchar(1024) null,
+        variable_07             varchar(1024) null,
+        variable_08             varchar(1024) null,
+        variable_09             varchar(1024) null,
+        variable_10             varchar(1024) null,
+        variable_11             varchar(1024) null,
+        variable_12             varchar(1024) null,
+        variable_13             varchar(1024) default('-1'),
+        variable_14             varchar(1024) null,
+        variable_15             varchar(1024) null,
+        variable_16             varchar(1024) null,
+        variable_17             varchar(1024) null,
+        variable_18             varchar(1024) null,
+        variable_19             varchar(1024) null,
+        variable_20             varchar(1024) null,
+        variable_21             varchar(1024) null,
+        variable_22             varchar(1024) null,
+        variable_23             varchar(1024) null,
+        variable_24             varchar(1024) null,
+        variable_25             varchar(1024) null,
+        variable_26             varchar(1024) null,
+        variable_27             varchar(1024) null,
+        variable_28             varchar(1024) null,
+        variable_29             varchar(1024) null,
+        variable_30             varchar(1024) null,
+        variable_31             varchar(1024) null,
+        variable_32             varchar(1024) null,
+        variable_33             varchar(1024) null,
+        variable_34             varchar(1024) null,
+        variable_35             varchar(1024) null,
+        variable_36             varchar(1024) null,
+        variable_37             varchar(1024) null,
+        variable_38             varchar(1024) null,
+        variable_39             varchar(1024) null,
+        variable_40             varchar(1024) null,
+        variable_41             varchar(1024) null,
+        variable_42             varchar(1024) null,
+        variable_43             varchar(1024) null,
+        variable_44             varchar(1024) null,
+        variable_45             varchar(1024) null,
+        variable_46             varchar(1024) null,
+        variable_47             varchar(1024) null,
+        variable_48             varchar(1024) null,
+        variable_49             varchar(1024) null,
+        variable_50             varchar(1024) null,
+        variable_51             varchar(1024) null,
+        variable_52             varchar(1024) null,
+        variable_53             varchar(1024) null,
+        variable_54             varchar(1024) null,
+        variable_55             varchar(1024) null,
+        variable_56             varchar(1024) null,
+        variable_57             varchar(1024) null,
+        variable_58             varchar(1024) null,
+        variable_59             varchar(1024) null,
+        variable_60             varchar(1024) null
+)
+distributed by (message_create_date)
+partition by range (message_create_date)
+(
+    START (timestamp '2011-09-01') END (timestamp '2011-09-15') EVERY (interval '1 day'),
+    DEFAULT PARTITION outlying_dates
+);
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_outlying_dates" for table "dcl_messaging_test"
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_2" for table "dcl_messaging_test"
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_3" for table "dcl_messaging_test"
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_4" for table "dcl_messaging_test"
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_5" for table "dcl_messaging_test"
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_6" for table "dcl_messaging_test"
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_7" for table "dcl_messaging_test"
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_8" for table "dcl_messaging_test"
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_9" for table "dcl_messaging_test"
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_10" for table "dcl_messaging_test"
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_11" for table "dcl_messaging_test"
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_12" for table "dcl_messaging_test"
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_13" for table "dcl_messaging_test"
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_14" for table "dcl_messaging_test"
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_15" for table "dcl_messaging_test"
+-- partial index
+create index dcl_messaging_test_index13 on dcl_messaging_test(variable_13) where message_create_date > '2011-09-02';
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_outlying_dates"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_2"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_3"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_4"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_5"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_6"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_7"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_8"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_9"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_10"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_11"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_12"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_13"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_14"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_15"
+-- expression index
+create index dcl_messaging_test_index16 on dcl_messaging_test(upper(variable_16));
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_outlying_dates"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_2"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_3"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_4"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_5"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_6"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_7"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_8"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_9"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_10"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_11"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_12"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_13"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_14"
+NOTICE:  building index for child partition "dcl_messaging_test_1_prt_15"
+alter table dcl_messaging_test drop default partition;
+NOTICE:  dropped partition "outlying_dates" for relation "dcl_messaging_test"
+-- ADD case
+alter table dcl_messaging_test add partition start (timestamp '2011-09-15') inclusive end (timestamp '2011-09-16') exclusive;
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_r923551027" for table "dcl_messaging_test"
+-- EXCHANGE case
+create table dcl_candidate(like dcl_messaging_test) with (appendonly=true);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+insert into dcl_candidate(message_create_date) values (timestamp '2011-09-06');
+alter table dcl_messaging_test exchange partition for ('2011-09-06') with table dcl_candidate;
+-- SPLIT case
+alter table dcl_messaging_test split partition for (timestamp '2011-09-06') at (timestamp '2011-09-06 12:00:00') into (partition x1, partition x2);
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_x1" for table "dcl_messaging_test"
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_x2" for table "dcl_messaging_test"
+--
+-- Create table with 4 partitions
+CREATE TABLE mpp13806 (id int, date date, amt decimal(10,2))
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (date)
+( START (date '2008-01-01') INCLUSIVE
+ END (date '2008-01-05') EXCLUSIVE
+ EVERY (INTERVAL '1 day') );
+NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_1" for table "mpp13806"
+NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_2" for table "mpp13806"
+NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_3" for table "mpp13806"
+NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_4" for table "mpp13806"
+-- Add unbound partition right before the start succeeds
+alter table mpp13806 add partition test end (date '2008-01-01') exclusive;
+NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_test" for table "mpp13806"
+select partitiontablename, partitionrangestart, partitionstartinclusive, partitionrangeend, partitionendinclusive from pg_partitions where tablename like 'mpp13806%' order by partitionrank;
+ partitiontablename  | partitionrangestart | partitionstartinclusive | partitionrangeend  | partitionendinclusive 
+---------------------+---------------------+-------------------------+--------------------+-----------------------
+ mpp13806_1_prt_test |                     | f                       | '01-01-2008'::date | f
+ mpp13806_1_prt_1    | '01-01-2008'::date  | t                       | '01-02-2008'::date | f
+ mpp13806_1_prt_2    | '01-02-2008'::date  | t                       | '01-03-2008'::date | f
+ mpp13806_1_prt_3    | '01-03-2008'::date  | t                       | '01-04-2008'::date | f
+ mpp13806_1_prt_4    | '01-04-2008'::date  | t                       | '01-05-2008'::date | f
+(5 rows)
+
+-- Drop the partition
+alter TABLE mpp13806 drop partition test;
+-- Add unbound partition with a gap succeeds
+alter table mpp13806 add partition test end (date '2007-12-31') exclusive;
+NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_test" for table "mpp13806"
+select partitiontablename, partitionrangestart, partitionstartinclusive, partitionrangeend, partitionendinclusive from pg_partitions where tablename like 'mpp13806%' order by partitionrank;
+ partitiontablename  | partitionrangestart | partitionstartinclusive | partitionrangeend  | partitionendinclusive 
+---------------------+---------------------+-------------------------+--------------------+-----------------------
+ mpp13806_1_prt_test |                     | f                       | '12-31-2007'::date | f
+ mpp13806_1_prt_1    | '01-01-2008'::date  | t                       | '01-02-2008'::date | f
+ mpp13806_1_prt_2    | '01-02-2008'::date  | t                       | '01-03-2008'::date | f
+ mpp13806_1_prt_3    | '01-03-2008'::date  | t                       | '01-04-2008'::date | f
+ mpp13806_1_prt_4    | '01-04-2008'::date  | t                       | '01-05-2008'::date | f
+(5 rows)
+
+-- Fill the gap succeeds/adding immediately before the first partition succeeds
+alter table mpp13806 add partition test1 start (date '2007-12-31') inclusive end (date '2008-01-01') exclusive;
+NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_test1" for table "mpp13806"
+select partitiontablename, partitionrangestart, partitionstartinclusive, partitionrangeend, partitionendinclusive from pg_partitions where tablename like 'mpp13806%' order by partitionrank;
+  partitiontablename  | partitionrangestart | partitionstartinclusive | partitionrangeend  | partitionendinclusive 
+----------------------+---------------------+-------------------------+--------------------+-----------------------
+ mpp13806_1_prt_test  |                     | f                       | '12-31-2007'::date | f
+ mpp13806_1_prt_test1 | '12-31-2007'::date  | t                       | '01-01-2008'::date | f
+ mpp13806_1_prt_1     | '01-01-2008'::date  | t                       | '01-02-2008'::date | f
+ mpp13806_1_prt_2     | '01-02-2008'::date  | t                       | '01-03-2008'::date | f
+ mpp13806_1_prt_3     | '01-03-2008'::date  | t                       | '01-04-2008'::date | f
+ mpp13806_1_prt_4     | '01-04-2008'::date  | t                       | '01-05-2008'::date | f
+(6 rows)
+
+--
+-- Create two tables mpp14613_range (range partitioned) and
+-- mpp14613_list (list partitioned) with 5 partitions (including default
+-- partition) and 3 subpartitions (including default subpartition) each
+create table mpp14613_list(
+  a int,
+  b int,
+  c int,
+  d int)
+  partition by range(b)
+  subpartition by list(c)
+  subpartition template
+ (
+    default subpartition subothers,
+    subpartition s1 values(1,2,3),
+    subpartition s2 values(4,5,6)
+ )
+ (
+    default partition others,
+    start(1) end(5) every(1)
+ );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_others" for table "mpp14613_list"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_others_2_prt_subothers" for table "mpp14613_list_1_prt_others"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_others_2_prt_s1" for table "mpp14613_list_1_prt_others"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_others_2_prt_s2" for table "mpp14613_list_1_prt_others"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_2" for table "mpp14613_list"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_2_2_prt_subothers" for table "mpp14613_list_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_2_2_prt_s1" for table "mpp14613_list_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_2_2_prt_s2" for table "mpp14613_list_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_3" for table "mpp14613_list"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_3_2_prt_subothers" for table "mpp14613_list_1_prt_3"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_3_2_prt_s1" for table "mpp14613_list_1_prt_3"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_3_2_prt_s2" for table "mpp14613_list_1_prt_3"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_4" for table "mpp14613_list"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_4_2_prt_subothers" for table "mpp14613_list_1_prt_4"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_4_2_prt_s1" for table "mpp14613_list_1_prt_4"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_4_2_prt_s2" for table "mpp14613_list_1_prt_4"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_5" for table "mpp14613_list"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_5_2_prt_subothers" for table "mpp14613_list_1_prt_5"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_5_2_prt_s1" for table "mpp14613_list_1_prt_5"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_5_2_prt_s2" for table "mpp14613_list_1_prt_5"
+create table mpp14613_range(
+  a int,
+  b int,
+  c int,
+  d int
+ )
+  partition by range(b)
+  subpartition by range(c)
+  subpartition template
+ (
+     default subpartition subothers,
+     start (1) end(7) every (3)
+ )
+ (
+     default partition others,
+     start(1) end(5) every(1)
+ );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_others" for table "mpp14613_range"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_others_2_prt_subothers" for table "mpp14613_range_1_prt_others"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_others_2_prt_2" for table "mpp14613_range_1_prt_others"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_others_2_prt_3" for table "mpp14613_range_1_prt_others"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_2" for table "mpp14613_range"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_2_2_prt_subothers" for table "mpp14613_range_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_2_2_prt_2" for table "mpp14613_range_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_2_2_prt_3" for table "mpp14613_range_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_3" for table "mpp14613_range"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_3_2_prt_subothers" for table "mpp14613_range_1_prt_3"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_3_2_prt_2" for table "mpp14613_range_1_prt_3"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_3_2_prt_3" for table "mpp14613_range_1_prt_3"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_4" for table "mpp14613_range"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_4_2_prt_subothers" for table "mpp14613_range_1_prt_4"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_4_2_prt_2" for table "mpp14613_range_1_prt_4"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_4_2_prt_3" for table "mpp14613_range_1_prt_4"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_5" for table "mpp14613_range"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_5_2_prt_subothers" for table "mpp14613_range_1_prt_5"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_5_2_prt_2" for table "mpp14613_range_1_prt_5"
+NOTICE:  CREATE TABLE will create partition "mpp14613_range_1_prt_5_2_prt_3" for table "mpp14613_range_1_prt_5"
+-- Check the partition and subpartition details
+select tablename,partitiontablename, partitionname from pg_partitions where tablename in ('mpp14613_list','mpp14613_range');
+   tablename    |             partitiontablename              | partitionname 
+----------------+---------------------------------------------+---------------
+ mpp14613_list  | mpp14613_list_1_prt_others                  | others
+ mpp14613_list  | mpp14613_list_1_prt_2                       | 
+ mpp14613_list  | mpp14613_list_1_prt_3                       | 
+ mpp14613_list  | mpp14613_list_1_prt_4                       | 
+ mpp14613_list  | mpp14613_list_1_prt_5                       | 
+ mpp14613_list  | mpp14613_list_1_prt_2_2_prt_subothers       | subothers
+ mpp14613_list  | mpp14613_list_1_prt_2_2_prt_s1              | s1
+ mpp14613_list  | mpp14613_list_1_prt_2_2_prt_s2              | s2
+ mpp14613_list  | mpp14613_list_1_prt_3_2_prt_subothers       | subothers
+ mpp14613_list  | mpp14613_list_1_prt_3_2_prt_s1              | s1
+ mpp14613_list  | mpp14613_list_1_prt_3_2_prt_s2              | s2
+ mpp14613_list  | mpp14613_list_1_prt_4_2_prt_subothers       | subothers
+ mpp14613_list  | mpp14613_list_1_prt_4_2_prt_s1              | s1
+ mpp14613_list  | mpp14613_list_1_prt_4_2_prt_s2              | s2
+ mpp14613_list  | mpp14613_list_1_prt_5_2_prt_subothers       | subothers
+ mpp14613_list  | mpp14613_list_1_prt_5_2_prt_s1              | s1
+ mpp14613_list  | mpp14613_list_1_prt_5_2_prt_s2              | s2
+ mpp14613_list  | mpp14613_list_1_prt_others_2_prt_subothers  | subothers
+ mpp14613_list  | mpp14613_list_1_prt_others_2_prt_s1         | s1
+ mpp14613_list  | mpp14613_list_1_prt_others_2_prt_s2         | s2
+ mpp14613_range | mpp14613_range_1_prt_others                 | others
+ mpp14613_range | mpp14613_range_1_prt_2                      | 
+ mpp14613_range | mpp14613_range_1_prt_3                      | 
+ mpp14613_range | mpp14613_range_1_prt_4                      | 
+ mpp14613_range | mpp14613_range_1_prt_5                      | 
+ mpp14613_range | mpp14613_range_1_prt_2_2_prt_subothers      | subothers
+ mpp14613_range | mpp14613_range_1_prt_2_2_prt_2              | 
+ mpp14613_range | mpp14613_range_1_prt_2_2_prt_3              | 
+ mpp14613_range | mpp14613_range_1_prt_3_2_prt_subothers      | subothers
+ mpp14613_range | mpp14613_range_1_prt_3_2_prt_2              | 
+ mpp14613_range | mpp14613_range_1_prt_3_2_prt_3              | 
+ mpp14613_range | mpp14613_range_1_prt_4_2_prt_subothers      | subothers
+ mpp14613_range | mpp14613_range_1_prt_4_2_prt_2              | 
+ mpp14613_range | mpp14613_range_1_prt_4_2_prt_3              | 
+ mpp14613_range | mpp14613_range_1_prt_5_2_prt_subothers      | subothers
+ mpp14613_range | mpp14613_range_1_prt_5_2_prt_2              | 
+ mpp14613_range | mpp14613_range_1_prt_5_2_prt_3              | 
+ mpp14613_range | mpp14613_range_1_prt_others_2_prt_subothers | subothers
+ mpp14613_range | mpp14613_range_1_prt_others_2_prt_2         | 
+ mpp14613_range | mpp14613_range_1_prt_others_2_prt_3         | 
+(40 rows)
+
+-- SPLIT partition
+alter table mpp14613_list alter partition others split partition subothers at (10) into (partition b1, partition b2);
+NOTICE:  exchanged partition "subothers" of partition "others" of relation "mpp14613_list" with relation "pg_temp_581997"
+NOTICE:  dropped partition "subothers" for partition "others" of relation "mpp14613_list"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_others_2_prt_b1" for table "mpp14613_list_1_prt_others"
+NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_others_2_prt_b2" for table "mpp14613_list_1_prt_others"
+alter table mpp14613_range alter partition others split partition subothers at (10) into (partition b1, partition b2);
+NOTICE:  exchanged partition "subothers" of partition "others" of relation "mpp14613_range" with relation "pg_temp_582752"
+NOTICE:  dropped partition "subothers" for partition "others" of relation "mpp14613_range"
+ERROR:  invalid partition range specification.
+--
+-- Drop index on a partitioned table. The indexes on the partitions remain.
+--
+create table pt_indx_tab (c1 integer, c2 int, c3 text) partition by range (c1) (partition A start (integer '0') end (integer '5') every (integer '1'));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "pt_indx_tab_1_prt_a_1" for table "pt_indx_tab"
+NOTICE:  CREATE TABLE will create partition "pt_indx_tab_1_prt_a_2" for table "pt_indx_tab"
+NOTICE:  CREATE TABLE will create partition "pt_indx_tab_1_prt_a_3" for table "pt_indx_tab"
+NOTICE:  CREATE TABLE will create partition "pt_indx_tab_1_prt_a_4" for table "pt_indx_tab"
+NOTICE:  CREATE TABLE will create partition "pt_indx_tab_1_prt_a_5" for table "pt_indx_tab"
+create unique index pt_indx_drop on pt_indx_tab(c1);
+NOTICE:  building index for child partition "pt_indx_tab_1_prt_a_1"
+NOTICE:  building index for child partition "pt_indx_tab_1_prt_a_2"
+NOTICE:  building index for child partition "pt_indx_tab_1_prt_a_3"
+NOTICE:  building index for child partition "pt_indx_tab_1_prt_a_4"
+NOTICE:  building index for child partition "pt_indx_tab_1_prt_a_5"
+select count(*) from pg_index where indrelid='pt_indx_tab'::regclass;
+ count 
+-------
+     1
+(1 row)
+
+select count(*) from pg_index where indrelid='pt_indx_tab_1_prt_a_1'::regclass;
+ count 
+-------
+     1
+(1 row)
+
+drop index pt_indx_drop;
+WARNING:  Only dropped the index "pt_indx_drop"
+HINT:  To drop other indexes on child partitions, drop each one explicitly.
+select count(*) from pg_index where indrelid='pt_indx_tab'::regclass;
+ count 
+-------
+     0
+(1 row)
+
+select count(*) from pg_index where indrelid='pt_indx_tab_1_prt_a_1'::regclass;
+ count 
+-------
+     1
+(1 row)
+
+--
+-- MPP-18162 CLONE (4.2.3) - List partitioning for multiple columns gives duplicate values error
+--
+create table mpp18162a
+( i1 int, i2 int)
+distributed by (i1)
+partition by list (i1, i2) (
+  partition pi0 values ( (1,1) ),
+  partition pi1 values ( (1,2) ),
+  partition pi2 values ( (2,1) )
+);
+NOTICE:  CREATE TABLE will create partition "mpp18162a_1_prt_pi0" for table "mpp18162a"
+NOTICE:  CREATE TABLE will create partition "mpp18162a_1_prt_pi1" for table "mpp18162a"
+NOTICE:  CREATE TABLE will create partition "mpp18162a_1_prt_pi2" for table "mpp18162a"
+create table mpp18162b
+( i1 int, i2 int)
+distributed by (i1)
+partition by list (i1, i2) (
+  partition pi1 values ( (3,1), (1,3) ),
+  partition pi2 values ( (4,1), (1,4) )
+);
+NOTICE:  CREATE TABLE will create partition "mpp18162b_1_prt_pi1" for table "mpp18162b"
+NOTICE:  CREATE TABLE will create partition "mpp18162b_1_prt_pi2" for table "mpp18162b"
+create table mpp18162c
+( i1 text, i2 varchar(10))
+distributed by (i1)
+partition by list (i1, i2) (
+  partition pi0 values ( ('1','1') ),
+  partition pi1 values ( ('1','2') ),
+  partition pi2 values ( ('2','1') )
+);
+NOTICE:  CREATE TABLE will create partition "mpp18162c_1_prt_pi0" for table "mpp18162c"
+NOTICE:  CREATE TABLE will create partition "mpp18162c_1_prt_pi1" for table "mpp18162c"
+NOTICE:  CREATE TABLE will create partition "mpp18162c_1_prt_pi2" for table "mpp18162c"
+create table mpp18162d
+( i1 text, i2 varchar(10))
+distributed by (i1)
+partition by list (i1, i2) (
+  partition pi1 values ( ('3','1'), ('1','3') ),
+  partition pi2 values ( ('4','1'), ('1','4') )
+);
+NOTICE:  CREATE TABLE will create partition "mpp18162d_1_prt_pi1" for table "mpp18162d"
+NOTICE:  CREATE TABLE will create partition "mpp18162d_1_prt_pi2" for table "mpp18162d"
+create table mpp18162e
+( i1 date, i2 date)
+distributed by (i1)
+partition by list (i1, i2) (
+  partition pi1 values ( (date '2008-01-01',date '2008-02-01') ),
+  partition pi2 values ( (date '2008-02-01',date '2008-01-01') ),
+  partition pi3 values ( (date '2008-03-01',date '2008-04-01') ),
+  partition pi4 values ( (date '2008-04-01',date '2008-03-01') )
+);
+NOTICE:  CREATE TABLE will create partition "mpp18162e_1_prt_pi1" for table "mpp18162e"
+NOTICE:  CREATE TABLE will create partition "mpp18162e_1_prt_pi2" for table "mpp18162e"
+NOTICE:  CREATE TABLE will create partition "mpp18162e_1_prt_pi3" for table "mpp18162e"
+NOTICE:  CREATE TABLE will create partition "mpp18162e_1_prt_pi4" for table "mpp18162e"
+create table mpp18162f
+( i1 text, i2 varchar(10))
+distributed by (i1)
+partition by list (i1, i2) (
+  partition pi1 values ( (date '2008-01-01',date '2008-02-01'), (date '2008-02-01',date '2008-01-01') ),
+  partition pi2 values ( (date '2008-03-01',date '2008-04-01'), (date '2008-04-01',date '2008-03-01') )
+);
+NOTICE:  CREATE TABLE will create partition "mpp18162f_1_prt_pi1" for table "mpp18162f"
+NOTICE:  CREATE TABLE will create partition "mpp18162f_1_prt_pi2" for table "mpp18162f"
+--
+-- Test changing the datatype of a column in a partitioning key column.
+-- (Not supported, throws an error).
+--
+create table mpp18179 (a int, b int, i int)
+distributed by (a)
+partition by list (a,b)
+   ( PARTITION ab1 VALUES ((1,1)),
+     PARTITION ab2 values ((1,2)),
+     default partition other
+   );
+NOTICE:  CREATE TABLE will create partition "mpp18179_1_prt_ab1" for table "mpp18179"
+NOTICE:  CREATE TABLE will create partition "mpp18179_1_prt_ab2" for table "mpp18179"
+NOTICE:  CREATE TABLE will create partition "mpp18179_1_prt_other" for table "mpp18179"
+alter table mpp18179 alter column a type varchar(20);
+ERROR:  cannot alter type of a column used in a partitioning key
+alter table mpp18179 alter column b type varchar(20);
+ERROR:  cannot alter type of a column used in a partitioning key
+--
+-- Drop index on partitioned table, and recreate it.
+--
+CREATE TABLE mpp7635_aoi_table2 (id INTEGER)
+ PARTITION BY RANGE (id)
+  (START (0) END (200000) EVERY (100000))
+;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "mpp7635_aoi_table2_1_prt_1" for table "mpp7635_aoi_table2"
+NOTICE:  CREATE TABLE will create partition "mpp7635_aoi_table2_1_prt_2" for table "mpp7635_aoi_table2"
+INSERT INTO mpp7635_aoi_table2(id) VALUES (0);
+-- Create index
+CREATE INDEX mpp7635_ix3 ON mpp7635_aoi_table2 USING BITMAP (id);
+NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_1"
+NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_2"
+select * from pg_indexes where tablename like 'mpp7635%';
+ schemaname |         tablename          |      indexname      | tablespace |                                     indexdef                                     
+------------+----------------------------+---------------------+------------+----------------------------------------------------------------------------------
+ public     | mpp7635_aoi_table2         | mpp7635_ix3         |            | CREATE INDEX mpp7635_ix3 ON mpp7635_aoi_table2 USING bitmap (id)
+ public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_ix3_1_prt_1 |            | CREATE INDEX mpp7635_ix3_1_prt_1 ON mpp7635_aoi_table2_1_prt_1 USING bitmap (id)
+ public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_ix3_1_prt_2 |            | CREATE INDEX mpp7635_ix3_1_prt_2 ON mpp7635_aoi_table2_1_prt_2 USING bitmap (id)
+(3 rows)
+
+-- Drop it. This only drops it from the root table, not the partitions.
+DROP INDEX mpp7635_ix3;
+WARNING:  Only dropped the index "mpp7635_ix3"
+HINT:  To drop other indexes on child partitions, drop each one explicitly.
+select * from pg_indexes where tablename like 'mpp7635%';
+ schemaname |         tablename          |      indexname      | tablespace |                                     indexdef                                     
+------------+----------------------------+---------------------+------------+----------------------------------------------------------------------------------
+ public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_ix3_1_prt_1 |            | CREATE INDEX mpp7635_ix3_1_prt_1 ON mpp7635_aoi_table2_1_prt_1 USING bitmap (id)
+ public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_ix3_1_prt_2 |            | CREATE INDEX mpp7635_ix3_1_prt_2 ON mpp7635_aoi_table2_1_prt_2 USING bitmap (id)
+(2 rows)
+
+-- Create it again. This creates the index on the partitions, too, so you
+-- end up with duplicate indexes on the partitions. It's a bit silly, but
+-- should still work, and not throw a "relation already exists" error, for
+-- example.
+CREATE INDEX mpp7635_ix3 ON mpp7635_aoi_table2 (id);
+NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_1"
+NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_2"
+select * from pg_indexes where tablename like 'mpp7635%';
+ schemaname |         tablename          |      indexname       | tablespace |                                     indexdef                                     
+------------+----------------------------+----------------------+------------+----------------------------------------------------------------------------------
+ public     | mpp7635_aoi_table2         | mpp7635_ix3          |            | CREATE INDEX mpp7635_ix3 ON mpp7635_aoi_table2 USING btree (id)
+ public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_ix3_1_prt_1  |            | CREATE INDEX mpp7635_ix3_1_prt_1 ON mpp7635_aoi_table2_1_prt_1 USING bitmap (id)
+ public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_ix3_1_prt_11 |            | CREATE INDEX mpp7635_ix3_1_prt_11 ON mpp7635_aoi_table2_1_prt_1 USING btree (id)
+ public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_ix3_1_prt_2  |            | CREATE INDEX mpp7635_ix3_1_prt_2 ON mpp7635_aoi_table2_1_prt_2 USING bitmap (id)
+ public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_ix3_1_prt_21 |            | CREATE INDEX mpp7635_ix3_1_prt_21 ON mpp7635_aoi_table2_1_prt_2 USING btree (id)
+(5 rows)
+
+--
+-- Test handling of NULL values in SPLIT PARTITION.
+--
+CREATE TABLE mpp7863 (id int, dat char(8))
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (dat)
+( PARTITION Oct09 START (200910) INCLUSIVE END (200911) EXCLUSIVE ,
+PARTITION Nov09 START (200911) INCLUSIVE END (200912) EXCLUSIVE ,
+PARTITION Dec09 START (200912) INCLUSIVE END (201001) EXCLUSIVE ,
+DEFAULT PARTITION extra);
+NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_extra" for table "mpp7863"
+NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_oct09" for table "mpp7863"
+NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_nov09" for table "mpp7863"
+NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_dec09" for table "mpp7863"
+insert into mpp7863 values(generate_series(1, 100),'200910');
+insert into mpp7863 values(generate_series(101, 200),'200911');
+insert into mpp7863 values(generate_series(201, 300),'200912');
+insert into mpp7863 values(generate_series(301, 30300),'');
+insert into mpp7863 (id) values(generate_series(30301, 60300));
+insert into mpp7863 values(generate_series(60301, 60400),'201001');
+select count(*) from mpp7863_1_prt_extra;
+ count 
+-------
+ 60100
+(1 row)
+
+select count(*) from mpp7863_1_prt_extra where dat is null;
+ count 
+-------
+ 30000
+(1 row)
+
+select count(*) from mpp7863_1_prt_extra where dat ='';
+ count 
+-------
+ 30000
+(1 row)
+
+select count(*) from mpp7863;
+ count 
+-------
+ 60400
+(1 row)
+
+alter table mpp7863 split default partition start (201001) inclusive end (201002) exclusive into (partition jan10,default partition);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  exchanged partition "extra" of relation "mpp7863" with relation "pg_temp_17362"
+NOTICE:  dropped partition "extra" for relation "mpp7863"
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_jan10" for table "mpp7863"
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_extra" for table "mpp7863"
+select count(*) from mpp7863_1_prt_extra where dat is null;
+ count 
+-------
+ 30000
+(1 row)
+
+select count(*) from mpp7863_1_prt_extra where dat ='';
+ count 
+-------
+ 30000
+(1 row)
+
+select count(*) from mpp7863_1_prt_extra;
+ count 
+-------
+ 60000
+(1 row)
+
+select dat, count(*) from mpp7863 group by 1 order by 2,1;
+   dat    | count 
+----------+-------
+ 200910   |   100
+ 200911   |   100
+ 200912   |   100
+ 201001   |   100
+          | 30000
+          | 30000
+(6 rows)
+

@@ -710,7 +710,7 @@ set gp_enable_hash_partitioned_tables = false;
 
 -- ALTER TABLE ALTER PARTITION tests
 
-CREATE TABLE rank2 (id int, rank int,
+CREATE TABLE ataprank (id int, rank int,
 year date, gender char(1),
 usstate char(2))
 DISTRIBUTED BY (id, gender, year, usstate)
@@ -735,7 +735,7 @@ subpartition ohio values ('OH')
 );
 
 -- and without subpartition templates...
-CREATE TABLE rank3 (id int, rank int,
+CREATE TABLE ataprank2 (id int, rank int,
 year date, gender char(1),
 usstate char(2))
 DISTRIBUTED BY (id, gender, year, usstate)
@@ -813,118 +813,118 @@ subpartition ohio values ('OH')
 );
 
 -- ok
-alter table rank2 truncate partition girls;
-alter table rank2 alter partition girls truncate partition for (rank(1));
-alter table rank2 alter partition girls alter partition 
+alter table ataprank truncate partition girls;
+alter table ataprank alter partition girls truncate partition for (rank(1));
+alter table ataprank alter partition girls alter partition 
 for (rank(1)) truncate partition mass;
 
 -- don't NOTIFY of children if cascade
-alter table rank2 truncate partition girls cascade;
+alter table ataprank truncate partition girls cascade;
 
 -- fail - no rank 100
-alter table rank2 alter partition girls truncate partition for (rank(100));
+alter table ataprank alter partition girls truncate partition for (rank(100));
 
 -- fail - no funky
-alter table rank2 alter partition girls alter partition 
+alter table ataprank alter partition girls alter partition 
 for (rank(1)) truncate partition "funky";
 
 -- fail - no funky (drop)
-alter table rank2 alter partition girls alter partition 
+alter table ataprank alter partition girls alter partition 
 for (rank(1)) drop partition "funky";
 
 -- fail - missing name
-alter table rank2 alter partition girls alter partition 
+alter table ataprank alter partition girls alter partition 
 for (rank(1)) drop partition ;
 
 -- ok
-alter table rank2 alter partition girls drop partition 
+alter table ataprank alter partition girls drop partition 
 for (rank(1)) ;
 
 -- ok , skipping
-alter table rank2 alter partition girls drop partition if exists jan01;
+alter table ataprank alter partition girls drop partition if exists jan01;
 
 -- ok until run out of partitions
-alter table rank2 alter partition girls drop partition ;
-alter table rank2 alter partition girls drop partition ;
-alter table rank2 alter partition girls drop partition ;
-alter table rank2 alter partition girls drop partition ;
-alter table rank2 alter partition girls drop partition ;
+alter table ataprank alter partition girls drop partition ;
+alter table ataprank alter partition girls drop partition ;
+alter table ataprank alter partition girls drop partition ;
+alter table ataprank alter partition girls drop partition ;
+alter table ataprank alter partition girls drop partition ;
 
 -- ok, skipping
-alter table rank2 alter partition girls drop partition if exists for (rank(5));
+alter table ataprank alter partition girls drop partition if exists for (rank(5));
 
 -- ok
-alter table rank2 alter partition girls rename partition jan05 
+alter table ataprank alter partition girls rename partition jan05 
 to "funky fresh";
-alter table rank2 alter partition girls rename partition "funky fresh"
+alter table ataprank alter partition girls rename partition "funky fresh"
 to jan05;
 
 -- fail , not exist
-alter table rank2 alter partition girls alter partition jan05 rename
+alter table ataprank alter partition girls alter partition jan05 rename
 partition jan01 to foo;
 
 -- fail not exist
-alter table rank2 alter partition girls alter partition jan05 alter
+alter table ataprank alter partition girls alter partition jan05 alter
 partition cali rename partition foo to bar;
 
 -- fail not partitioned
-alter table rank2 alter partition girls alter partition jan05 alter
+alter table ataprank alter partition girls alter partition jan05 alter
 partition cali alter partition foo drop partition bar;
 
 -- ADD PARTITION, with and without templates
 
--- fails for rank2 (due to template), works for rank3
-alter table rank2
+-- fails for ataprank (due to template), works for ataprank2
+alter table ataprank
 add partition neuter values ('N')
     (subpartition foo
          start ('2001-01-01') end ('2002-01-01')
          every (interval '1 month')
             (subpartition bar values ('AZ')));
-alter table rank3
+alter table ataprank2
 add partition neuter values ('N')
     (subpartition foo
          start ('2001-01-01') end ('2002-01-01')
          every (interval '1 month')
             (subpartition bar values ('AZ')));
 
--- fail , no subpartition spec for rank3, works for rank2
-alter table rank2 alter partition boys
+-- fail , no subpartition spec for ataprank2, works for ataprank
+alter table ataprank alter partition boys
 add partition jan00 start ('2000-01-01') end ('2001-01-01');
-alter table rank3 alter partition boys
+alter table ataprank2 alter partition boys
 add partition jan00 start ('2000-01-01') end ('2001-01-01');
 
--- work - create subpartition for rank3, fail for rank2
-alter table rank2 alter partition boys
+-- work - create subpartition for ataprank2, fail for ataprank
+alter table ataprank alter partition boys
 add partition jan99 start ('1999-01-01') end ('2000-01-01')
   (subpartition ariz values ('AZ'));
-alter table rank3 alter partition boys
+alter table ataprank2 alter partition boys
 add partition jan00 start ('2000-01-01') end ('2001-01-01')
   (subpartition ariz values ('AZ'));
 
 -- works for both -- adding leaf partition doesn't conflict with template
-alter table rank2 alter partition boys
+alter table ataprank alter partition boys
 alter partition jan00 
 add partition haw values ('HI');
-alter table rank3 alter partition boys
+alter table ataprank2 alter partition boys
 alter partition jan00 
 add partition haw values ('HI');
 
-alter table rank2 drop partition neuter;
-alter table rank3 drop partition neuter;
+alter table ataprank drop partition neuter;
+alter table ataprank2 drop partition neuter;
 
--- fail , no subpartition spec for rank3, work for rank2
-alter table rank2
+-- fail , no subpartition spec for ataprank2, work for ataprank
+alter table ataprank
 add default partition neuter ;
-alter table rank3
+alter table ataprank2
 add default partition neuter ;
 
-alter table rank2
+alter table ataprank
 add default partition neuter 
     (subpartition foo
          start ('2001-01-01') end ('2002-01-01')
          every (interval '1 month')
             (subpartition ariz values ('AZ')));
-alter table rank3
+alter table ataprank2
 add default partition neuter 
     (subpartition foo
          start ('2001-01-01') end ('2002-01-01')
@@ -932,32 +932,32 @@ add default partition neuter
             (subpartition ariz values ('AZ')));
 
 -- fail
-alter table rank2
+alter table ataprank
 alter default partition add default partition def1 
 (subpartition haw values ('HI'));
 -- fail
-alter table rank2
+alter table ataprank
 alter default partition alter default partition 
 add default partition def2;
 -- work
-alter table rank2
+alter table ataprank
 alter default partition add default partition def1;
-alter table rank2
+alter table ataprank
 alter default partition alter default partition 
 add default partition def2;
 
 
 
-alter table rank3
+alter table ataprank2
 alter default partition add default partition def1 
 (subpartition haw values ('HI'));
-alter table rank3
+alter table ataprank2
 alter default partition alter default partition 
 add default partition def2;
 
 
-drop table rank2 ;
-drop table rank3 ;
+drop table ataprank ;
+drop table ataprank2 ;
 
 -- **END** ALTER TABLE ALTER PARTITION tests
 
@@ -1487,7 +1487,7 @@ alter table list_test drop column c;
 drop table list_test;
 
 -- MPP-3678: allow exchange and split on tables with subpartitioning
-CREATE TABLE rank (
+CREATE TABLE rank_exc (
 id int,
 rank int,
 year int,
@@ -1507,33 +1507,33 @@ SUBPARTITION year6 START (2006) END (2007) )
 (PARTITION girls VALUES ('F'),
 PARTITION boys VALUES ('M')
 );
-alter table rank alter partition girls add default partition gfuture;
-alter table rank alter partition boys add default partition bfuture;
-insert into rank values(1, 1, 2007, 'M', 1);
-insert into rank values(2, 2, 2008, 'M', 3);
-select * from rank;
-alter table rank alter partition boys split default partition start ('2007')
+alter table rank_exc alter partition girls add default partition gfuture;
+alter table rank_exc alter partition boys add default partition bfuture;
+insert into rank_exc values(1, 1, 2007, 'M', 1);
+insert into rank_exc values(2, 2, 2008, 'M', 3);
+select * from rank_exc;
+alter table rank_exc alter partition boys split default partition start ('2007')
 end ('2008') into (partition bfuture, partition year7);
-select * from rank_1_prt_boys_2_prt_bfuture;
-select * from rank_1_prt_boys_2_prt_year7;
-select * from rank;
+select * from rank_exc_1_prt_boys_2_prt_bfuture;
+select * from rank_exc_1_prt_boys_2_prt_year7;
+select * from rank_exc;
 
 --exchange test
-create table r (like rank);
-insert into rank values(3, 3, 2004, 'F', 100);
+create table r (like rank_exc);
+insert into rank_exc values(3, 3, 2004, 'F', 100);
 insert into r values(3, 3, 2004, 'F', 100000);
-alter table rank alter partition girls exchange partition year4 with table r;
-select * from rank_1_prt_girls_2_prt_year4;
+alter table rank_exc alter partition girls exchange partition year4 with table r;
+select * from rank_exc_1_prt_girls_2_prt_year4;
 select * from r;
-alter table rank alter partition girls exchange partition year4 with table r;
-select * from rank_1_prt_girls_2_prt_year4;
+alter table rank_exc alter partition girls exchange partition year4 with table r;
+select * from rank_exc_1_prt_girls_2_prt_year4;
 select * from r;
 
 -- Split test
-alter table rank alter partition girls split default partition start('2008')
+alter table rank_exc alter partition girls split default partition start('2008')
   end('2020') into (partition years, partition gfuture);
-insert into rank values(4, 4, 2009, 'F', 100);
-drop table rank;
+insert into rank_exc values(4, 4, 2009, 'F', 100);
+drop table rank_exc;
 drop table r;
 
 -- MPP-4245: remove virtual subpartition templates when we drop the partitioned
@@ -1642,7 +1642,7 @@ SUBPARTITION TEMPLATE
 
 -- MPP-5185
 -- Should work
-CREATE TABLE rank (id int, rank int, year date, gender
+CREATE TABLE rank_settemp (id int, rank int, year date, gender
 char(1)) DISTRIBUTED BY (id, gender, year)
 partition by list (gender)
 subpartition by range (year)
@@ -1658,21 +1658,21 @@ partition boys values ('M'),
 partition girls values ('F')
 );
 
-alter table rank set subpartition template ();
+alter table rank_settemp set subpartition template ();
 
 -- nothing there
-select * from pg_partition_templates;
+select * from pg_partition_templates where tablename like 'rank_settemp%';
 
-alter table rank set subpartition template (default subpartition def2);
+alter table rank_settemp set subpartition template (default subpartition def2);
 
 -- def2 is there
-select * from pg_partition_templates;
+select * from pg_partition_templates where tablename like 'rank_settemp%';
 
-alter table rank set subpartition template (default subpartition def2);
+alter table rank_settemp set subpartition template (default subpartition def2);
 -- Should still be there
-select * from pg_partition_templates;
+select * from pg_partition_templates where tablename like 'rank_settemp%';
 
-drop table rank;
+drop table rank_settemp;
 
 -- MPP-5397
 -- should be able to add partition after dropped a col
@@ -1693,20 +1693,20 @@ drop table mpp_5397;
 
 -- MPP-4987 -- make sure we can't damage a partitioning configuration
 -- MPP-8405: disallow OIDS on partitioned tables 
-create table rank (i int, j int) with oids partition by range(j) (start(1) end(10)
+create table rank_damage (i int, j int) with oids partition by range(j) (start(1) end(10)
 every(1));
 -- this works
-create table rank (i int, j int)  partition by range(j) (start(1) end(10)
+create table rank_damage (i int, j int)  partition by range(j) (start(1) end(10)
 every(1));
 -- should all fail
-alter table rank_1_prt_1 no inherit rank;
-create table rank2(like rank);
-alter table rank_1_prt_1 inherit rank2;
-alter table rank_1_prt_1 alter column i type bigint;
-alter table rank_1_prt_1 set without oids;
-alter table rank_1_prt_1 drop constraint rank_1_prt_1_check;
-alter table rank add partition ppo end (22) with (oids = true);
-drop table rank, rank2;
+alter table rank_damage_1_prt_1 no inherit rank_damage;
+create table rank2_damage(like rank_damage);
+alter table rank_damage_1_prt_1 inherit rank2_damage;
+alter table rank_damage_1_prt_1 alter column i type bigint;
+alter table rank_damage_1_prt_1 set without oids;
+alter table rank_damage_1_prt_1 drop constraint rank_damage_1_prt_1_check;
+alter table rank_damage add partition ppo end (22) with (oids = true);
+drop table rank_damage, rank2_damage;
 
 -- MPP-5831, type cast in SPLIT
 CREATE TABLE sg_cal_event_silvertail_hour (
@@ -3353,8 +3353,7 @@ alter table pnx
     split partition a at ('x1')
     into (partition b, partition c);
 
-select * 
-from redundantly_named_part;
+select * from redundantly_named_part where tableid::text like '%pnx%';
 
 select tableoid::regclass, * 
 from pnx;
@@ -3392,8 +3391,7 @@ alter table pxn
     split partition a at ('x1')
     into (partition c, partition b);
 
-select * 
-from redundantly_named_part;
+select * from redundantly_named_part where tableid::text like '%pxn%';
 
 select tableoid::regclass, * 
 from pxn;
@@ -3430,8 +3428,7 @@ alter table pxn
     split partition a at (5)
     into (partition b, partition c);
 
-select * 
-from redundantly_named_part;
+select * from redundantly_named_part where tableid::text like '%pxn%';
 
 select tableoid::regclass, * 
 from pxn;
@@ -3468,8 +3465,7 @@ alter table pxn
     split partition a at (5)
     into (partition c, partition b);
 
-select * 
-from redundantly_named_part;
+select * from redundantly_named_part where tableid::text like '%pxn%';
 
 select tableoid::regclass, * 
 from pxn;

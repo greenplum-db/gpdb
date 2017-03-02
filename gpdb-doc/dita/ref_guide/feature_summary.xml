@@ -382,7 +382,8 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col2">YES</entry>
               <entry colname="col3"><b>Modified Clauses:</b><p><codeph>ESCAPE [ AS ]
                     '</codeph><i>escape</i><codeph>' | 'OFF'</codeph></p><p><b>Greenplum Database
-                    Clauses:</b></p><p><codeph>[LOG ERRORS] SEGMENT REJECT LIMIT </codeph><i>count</i><codeph> [ROWS|PERCENT]</codeph></p></entry>
+                    Clauses:</b></p><p><codeph>[LOG ERRORS] SEGMENT REJECT LIMIT
+                    </codeph><i>count</i><codeph> [ROWS|PERCENT]</codeph></p></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>CREATE AGGREGATE</codeph></entry>

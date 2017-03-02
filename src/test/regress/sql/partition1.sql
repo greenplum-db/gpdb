@@ -1568,3 +1568,334 @@ select count(*) from mpp_2914B;
 
 drop table mpp_2914a cascade;
 drop table mpp_2914b cascade;
+
+create table mpp10847_pkeyconstraints(
+  pkid serial,
+  option1 int,
+  option2 int,
+  option3 int,
+  primary key(pkid, option3))
+distributed by (pkid) partition by range (option3)
+(
+partition aa start(1) end(100) inclusive,
+partition bb start(101) end(200) inclusive,
+partition cc start(201) end (300) inclusive
+);
+
+insert into mpp10847_pkeyconstraints values (10000, 50, 50, 102);
+-- This is supposed to fail as you're not supposed to be able to use the same
+-- primary key in the same table. But GPDB cannot currently enforce that.
+insert into mpp10847_pkeyconstraints values (10000, 50, 50, 5);
+
+select * from mpp10847_pkeyconstraints;
+
+drop table mpp10847_pkeyconstraints;
+
+
+-- Test that ADD/EXCHANGE/SPLIT PARTITION works, even when there are partial or expression
+-- indexes on the table. (MPP-13750)
+create table dcl_messaging_test
+(
+        message_create_date     timestamp(3) not null,
+        trace_socket            varchar(1024) null,
+        trace_count             varchar(1024) null,
+        variable_01             varchar(1024) null,
+        variable_02             varchar(1024) null,
+        variable_03             varchar(1024) null,
+        variable_04             varchar(1024) null,
+        variable_05             varchar(1024) null,
+        variable_06             varchar(1024) null,
+        variable_07             varchar(1024) null,
+        variable_08             varchar(1024) null,
+        variable_09             varchar(1024) null,
+        variable_10             varchar(1024) null,
+        variable_11             varchar(1024) null,
+        variable_12             varchar(1024) null,
+        variable_13             varchar(1024) default('-1'),
+        variable_14             varchar(1024) null,
+        variable_15             varchar(1024) null,
+        variable_16             varchar(1024) null,
+        variable_17             varchar(1024) null,
+        variable_18             varchar(1024) null,
+        variable_19             varchar(1024) null,
+        variable_20             varchar(1024) null,
+        variable_21             varchar(1024) null,
+        variable_22             varchar(1024) null,
+        variable_23             varchar(1024) null,
+        variable_24             varchar(1024) null,
+        variable_25             varchar(1024) null,
+        variable_26             varchar(1024) null,
+        variable_27             varchar(1024) null,
+        variable_28             varchar(1024) null,
+        variable_29             varchar(1024) null,
+        variable_30             varchar(1024) null,
+        variable_31             varchar(1024) null,
+        variable_32             varchar(1024) null,
+        variable_33             varchar(1024) null,
+        variable_34             varchar(1024) null,
+        variable_35             varchar(1024) null,
+        variable_36             varchar(1024) null,
+        variable_37             varchar(1024) null,
+        variable_38             varchar(1024) null,
+        variable_39             varchar(1024) null,
+        variable_40             varchar(1024) null,
+        variable_41             varchar(1024) null,
+        variable_42             varchar(1024) null,
+        variable_43             varchar(1024) null,
+        variable_44             varchar(1024) null,
+        variable_45             varchar(1024) null,
+        variable_46             varchar(1024) null,
+        variable_47             varchar(1024) null,
+        variable_48             varchar(1024) null,
+        variable_49             varchar(1024) null,
+        variable_50             varchar(1024) null,
+        variable_51             varchar(1024) null,
+        variable_52             varchar(1024) null,
+        variable_53             varchar(1024) null,
+        variable_54             varchar(1024) null,
+        variable_55             varchar(1024) null,
+        variable_56             varchar(1024) null,
+        variable_57             varchar(1024) null,
+        variable_58             varchar(1024) null,
+        variable_59             varchar(1024) null,
+        variable_60             varchar(1024) null
+)
+distributed by (message_create_date)
+partition by range (message_create_date)
+(
+    START (timestamp '2011-09-01') END (timestamp '2011-09-15') EVERY (interval '1 day'),
+    DEFAULT PARTITION outlying_dates
+);
+-- partial index
+create index dcl_messaging_test_index13 on dcl_messaging_test(variable_13) where message_create_date > '2011-09-02';
+-- expression index
+create index dcl_messaging_test_index16 on dcl_messaging_test(upper(variable_16));
+alter table dcl_messaging_test drop default partition;
+
+-- ADD case
+alter table dcl_messaging_test add partition start (timestamp '2011-09-15') inclusive end (timestamp '2011-09-16') exclusive;
+
+-- EXCHANGE case
+create table dcl_candidate(like dcl_messaging_test) with (appendonly=true);
+insert into dcl_candidate(message_create_date) values (timestamp '2011-09-06');
+alter table dcl_messaging_test exchange partition for ('2011-09-06') with table dcl_candidate;
+
+-- SPLIT case
+alter table dcl_messaging_test split partition for (timestamp '2011-09-06') at (timestamp '2011-09-06 12:00:00') into (partition x1, partition x2);
+
+
+--
+-- Create table with 4 partitions
+CREATE TABLE mpp13806 (id int, date date, amt decimal(10,2))
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (date)
+( START (date '2008-01-01') INCLUSIVE
+ END (date '2008-01-05') EXCLUSIVE
+ EVERY (INTERVAL '1 day') );
+
+-- Add unbound partition right before the start succeeds
+alter table mpp13806 add partition test end (date '2008-01-01') exclusive;
+select partitiontablename, partitionrangestart, partitionstartinclusive, partitionrangeend, partitionendinclusive from pg_partitions where tablename like 'mpp13806%' order by partitionrank;
+
+-- Drop the partition
+alter TABLE mpp13806 drop partition test;
+
+-- Add unbound partition with a gap succeeds
+alter table mpp13806 add partition test end (date '2007-12-31') exclusive;
+select partitiontablename, partitionrangestart, partitionstartinclusive, partitionrangeend, partitionendinclusive from pg_partitions where tablename like 'mpp13806%' order by partitionrank;
+
+-- Fill the gap succeeds/adding immediately before the first partition succeeds
+alter table mpp13806 add partition test1 start (date '2007-12-31') inclusive end (date '2008-01-01') exclusive;
+select partitiontablename, partitionrangestart, partitionstartinclusive, partitionrangeend, partitionendinclusive from pg_partitions where tablename like 'mpp13806%' order by partitionrank;
+
+
+--
+-- Create two tables mpp14613_range (range partitioned) and
+-- mpp14613_list (list partitioned) with 5 partitions (including default
+-- partition) and 3 subpartitions (including default subpartition) each
+create table mpp14613_list(
+  a int,
+  b int,
+  c int,
+  d int)
+  partition by range(b)
+  subpartition by list(c)
+  subpartition template
+ (
+    default subpartition subothers,
+    subpartition s1 values(1,2,3),
+    subpartition s2 values(4,5,6)
+ )
+ (
+    default partition others,
+    start(1) end(5) every(1)
+ );
+
+create table mpp14613_range(
+  a int,
+  b int,
+  c int,
+  d int
+ )
+  partition by range(b)
+  subpartition by range(c)
+  subpartition template
+ (
+     default subpartition subothers,
+     start (1) end(7) every (3)
+ )
+ (
+     default partition others,
+     start(1) end(5) every(1)
+ );
+
+-- Check the partition and subpartition details
+select tablename,partitiontablename, partitionname from pg_partitions where tablename in ('mpp14613_list','mpp14613_range');
+
+-- SPLIT partition
+alter table mpp14613_list alter partition others split partition subothers at (10) into (partition b1, partition b2);
+alter table mpp14613_range alter partition others split partition subothers at (10) into (partition b1, partition b2);
+
+
+--
+-- Drop index on a partitioned table. The indexes on the partitions remain.
+--
+create table pt_indx_tab (c1 integer, c2 int, c3 text) partition by range (c1) (partition A start (integer '0') end (integer '5') every (integer '1'));
+
+create unique index pt_indx_drop on pt_indx_tab(c1);
+
+select count(*) from pg_index where indrelid='pt_indx_tab'::regclass;
+select count(*) from pg_index where indrelid='pt_indx_tab_1_prt_a_1'::regclass;
+
+drop index pt_indx_drop;
+
+select count(*) from pg_index where indrelid='pt_indx_tab'::regclass;
+select count(*) from pg_index where indrelid='pt_indx_tab_1_prt_a_1'::regclass;
+
+
+--
+-- MPP-18162 CLONE (4.2.3) - List partitioning for multiple columns gives duplicate values error
+--
+create table mpp18162a
+( i1 int, i2 int)
+distributed by (i1)
+partition by list (i1, i2) (
+  partition pi0 values ( (1,1) ),
+  partition pi1 values ( (1,2) ),
+  partition pi2 values ( (2,1) )
+);
+
+create table mpp18162b
+( i1 int, i2 int)
+distributed by (i1)
+partition by list (i1, i2) (
+  partition pi1 values ( (3,1), (1,3) ),
+  partition pi2 values ( (4,1), (1,4) )
+);
+
+create table mpp18162c
+( i1 text, i2 varchar(10))
+distributed by (i1)
+partition by list (i1, i2) (
+  partition pi0 values ( ('1','1') ),
+  partition pi1 values ( ('1','2') ),
+  partition pi2 values ( ('2','1') )
+);
+
+create table mpp18162d
+( i1 text, i2 varchar(10))
+distributed by (i1)
+partition by list (i1, i2) (
+  partition pi1 values ( ('3','1'), ('1','3') ),
+  partition pi2 values ( ('4','1'), ('1','4') )
+);
+
+create table mpp18162e
+( i1 date, i2 date)
+distributed by (i1)
+partition by list (i1, i2) (
+  partition pi1 values ( (date '2008-01-01',date '2008-02-01') ),
+  partition pi2 values ( (date '2008-02-01',date '2008-01-01') ),
+  partition pi3 values ( (date '2008-03-01',date '2008-04-01') ),
+  partition pi4 values ( (date '2008-04-01',date '2008-03-01') )
+);
+
+create table mpp18162f
+( i1 text, i2 varchar(10))
+distributed by (i1)
+partition by list (i1, i2) (
+  partition pi1 values ( (date '2008-01-01',date '2008-02-01'), (date '2008-02-01',date '2008-01-01') ),
+  partition pi2 values ( (date '2008-03-01',date '2008-04-01'), (date '2008-04-01',date '2008-03-01') )
+);
+
+
+--
+-- Test changing the datatype of a column in a partitioning key column.
+-- (Not supported, throws an error).
+--
+create table mpp18179 (a int, b int, i int)
+distributed by (a)
+partition by list (a,b)
+   ( PARTITION ab1 VALUES ((1,1)),
+     PARTITION ab2 values ((1,2)),
+     default partition other
+   );
+
+alter table mpp18179 alter column a type varchar(20);
+alter table mpp18179 alter column b type varchar(20);
+
+
+--
+-- Drop index on partitioned table, and recreate it.
+--
+CREATE TABLE mpp7635_aoi_table2 (id INTEGER)
+ PARTITION BY RANGE (id)
+  (START (0) END (200000) EVERY (100000))
+;
+INSERT INTO mpp7635_aoi_table2(id) VALUES (0);
+
+-- Create index
+CREATE INDEX mpp7635_ix3 ON mpp7635_aoi_table2 USING BITMAP (id);
+select * from pg_indexes where tablename like 'mpp7635%';
+
+-- Drop it. This only drops it from the root table, not the partitions.
+DROP INDEX mpp7635_ix3;
+select * from pg_indexes where tablename like 'mpp7635%';
+
+-- Create it again. This creates the index on the partitions, too, so you
+-- end up with duplicate indexes on the partitions. It's a bit silly, but
+-- should still work, and not throw a "relation already exists" error, for
+-- example.
+CREATE INDEX mpp7635_ix3 ON mpp7635_aoi_table2 (id);
+select * from pg_indexes where tablename like 'mpp7635%';
+
+
+--
+-- Test handling of NULL values in SPLIT PARTITION.
+--
+CREATE TABLE mpp7863 (id int, dat char(8))
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (dat)
+( PARTITION Oct09 START (200910) INCLUSIVE END (200911) EXCLUSIVE ,
+PARTITION Nov09 START (200911) INCLUSIVE END (200912) EXCLUSIVE ,
+PARTITION Dec09 START (200912) INCLUSIVE END (201001) EXCLUSIVE ,
+DEFAULT PARTITION extra);
+
+insert into mpp7863 values(generate_series(1, 100),'200910');
+insert into mpp7863 values(generate_series(101, 200),'200911');
+insert into mpp7863 values(generate_series(201, 300),'200912');
+insert into mpp7863 values(generate_series(301, 30300),'');
+insert into mpp7863 (id) values(generate_series(30301, 60300));
+insert into mpp7863 values(generate_series(60301, 60400),'201001');
+
+select count(*) from mpp7863_1_prt_extra;
+select count(*) from mpp7863_1_prt_extra where dat is null;
+select count(*) from mpp7863_1_prt_extra where dat ='';
+select count(*) from mpp7863;
+
+alter table mpp7863 split default partition start (201001) inclusive end (201002) exclusive into (partition jan10,default partition);
+select count(*) from mpp7863_1_prt_extra where dat is null;
+select count(*) from mpp7863_1_prt_extra where dat ='';
+select count(*) from mpp7863_1_prt_extra;
+
+select dat, count(*) from mpp7863 group by 1 order by 2,1;

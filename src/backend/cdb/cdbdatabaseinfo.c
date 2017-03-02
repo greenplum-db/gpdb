@@ -1061,6 +1061,15 @@ DatabaseInfo_HandleAppendOnly(
 			aoEntry = DatabaseInfo_FindPgAppendOnly(
 											pgAppendOnlyHashTable,
 											dbInfoRel->relationOid);
+
+			if ((aoEntry->segrelid == 0) || (aoEntry->visimaprelid == 0) ||
+				(aoEntry->visimapidxid == 0))
+				elog(ERROR, "Null entries for Append-Only relation id %u, "
+					 "relation name %s, segrelid %u, visimaprelid %u, "
+					 "visimapidxid %u", dbInfoRel->relationOid,
+					 dbInfoRel->relname, aoEntry->segrelid,
+					 aoEntry->visimaprelid, aoEntry->visimapidxid);
+
 			if (Debug_persistent_print)
 				elog(Persistent_DebugPrintLevel(), 
 					 "DatabaseInfo_AddPgClassStoredRelation: Append-Only entry for relation id %u, relation name %s, "
@@ -1188,6 +1197,10 @@ DatabaseInfo_CollectPgAppendOnly(
 		aoEntry = (Form_pg_appendonly) GETSTRUCT(tuple);
 
 		Assert(aoEntry != NULL);
+
+		if (aoEntry->segrelid == 0)
+			elog(ERROR, "Null segrelid in pg_appendonly for relation id %u",
+				 aoEntry->relid);
 
 		if (Debug_persistent_print)
 			elog(Persistent_DebugPrintLevel(), 

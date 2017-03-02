@@ -9,7 +9,15 @@ class S3Params {
    public:
     S3Params(const string& sourceUrl = "", bool useHttps = true, const string& version = "",
              const string& region = "")
-        : s3Url(sourceUrl, useHttps, version, region), keySize(0), chunkSize(0), numOfChunks(0) {
+        : s3Url(sourceUrl, useHttps, version, region),
+          keySize(0),
+          chunkSize(0),
+          numOfChunks(0),
+          lowSpeedLimit(0),
+          lowSpeedTime(0),
+          debugCurl(false),
+          autoCompress(false),
+          verifyCert(false) {
     }
 
     virtual ~S3Params() {

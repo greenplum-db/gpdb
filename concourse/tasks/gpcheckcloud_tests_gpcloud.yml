@@ -11,5 +11,6 @@ inputs:
   - name: bin_gpdb
 params:
   s3conf:
+  overwrite_gpcloud:
 run:
   path: gpdb_src/concourse/scripts/gpcheckcloud_tests_gpcloud.bash

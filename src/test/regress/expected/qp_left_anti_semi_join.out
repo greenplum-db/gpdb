@@ -1,0 +1,513 @@
+-- Tests for Left Anti Semi Joins
+create schema lasj;
+set search_path='lasj';
+create table foo (a int, b int);
+create table bar (x int, y int);
+insert into foo values (1, 2);
+insert into foo values (12, 20);
+insert into foo values (NULL, 2);
+insert into foo values (15, 2);
+insert into foo values (NULL, NULL);
+insert into foo values (1, 12);
+insert into foo values (1, 102);
+insert into bar select i/10, i from generate_series(1, 100)i;
+insert into bar values (NULL, 101);
+insert into bar values (NULL, 102);
+insert into bar values (NULL, NULL);
+-- We will run the same queries with hash joins enabled, and disabled. First,
+-- disabled.
+set enable_hashjoin=off;
+SELECT disable_xform('CXformLeftAntiSemiJoin2HashJoin');
+                disable_xform                
+---------------------------------------------
+ CXformLeftAntiSemiJoin2HashJoin is disabled
+(1 row)
+
+-- empty outer, non-empty inner
+SELECT * FROM foo WHERE b = -1 AND a = ALL (SELECT x FROM bar WHERE y <= 100);
+ a | b 
+---+---
+(0 rows)
+
+-- outer with nulls, non-empty inner
+SELECT * FROM foo WHERE b = 2 AND a = ALL (SELECT x FROM bar WHERE y >=10 AND y < 20);
+ a | b 
+---+---
+ 1 | 2
+(1 row)
+
+-- outer with nulls, empty inner
+SELECT * FROM foo WHERE b = 2 AND a = ALL (SELECT x FROM bar WHERE y = -1) order by 1, 2;
+ a  | b 
+----+---
+  1 | 2
+ 15 | 2
+    | 2
+(3 rows)
+
+-- outer with nulls, inner with nulls
+SELECT * FROM foo WHERE a = ALL (SELECT x FROM bar WHERE x = 1 OR x IS NULL);
+ a | b 
+---+---
+(0 rows)
+
+-- empty outer, non-empty inner
+SELECT * FROM (SELECT * FROM foo WHERE b = -1) foo2 FULL OUTER JOIN bar ON (a = x);
+ a | b | x  |  y  
+---+---+----+-----
+   |   | 10 | 100
+   |   |  3 |  31
+   |   |  3 |  32
+   |   |  3 |  33
+   |   |  3 |  34
+   |   |  3 |  35
+   |   |  3 |  36
+   |   |  3 |  37
+   |   |  3 |  38
+   |   |  3 |  39
+   |   |  3 |  30
+   |   |  9 |  90
+   |   |  9 |  99
+   |   |  9 |  98
+   |   |  9 |  91
+   |   |  9 |  92
+   |   |  9 |  93
+   |   |  9 |  94
+   |   |  9 |  95
+   |   |  9 |  96
+   |   |  9 |  97
+   |   |    | 101
+   |   |    |    
+   |   |    | 102
+   |   |  2 |  29
+   |   |  2 |  28
+   |   |  2 |  27
+   |   |  2 |  26
+   |   |  2 |  25
+   |   |  2 |  24
+   |   |  2 |  23
+   |   |  2 |  22
+   |   |  2 |  21
+   |   |  2 |  20
+   |   |  8 |  89
+   |   |  8 |  88
+   |   |  8 |  87
+   |   |  8 |  86
+   |   |  8 |  85
+   |   |  8 |  84
+   |   |  8 |  83
+   |   |  8 |  82
+   |   |  8 |  81
+   |   |  8 |  80
+   |   |  5 |  50
+   |   |  5 |  51
+   |   |  5 |  52
+   |   |  5 |  53
+   |   |  5 |  54
+   |   |  5 |  55
+   |   |  5 |  56
+   |   |  5 |  57
+   |   |  5 |  58
+   |   |  5 |  59
+   |   |  1 |  19
+   |   |  1 |  18
+   |   |  1 |  17
+   |   |  1 |  16
+   |   |  1 |  15
+   |   |  1 |  14
+   |   |  1 |  13
+   |   |  1 |  12
+   |   |  1 |  11
+   |   |  1 |  10
+   |   |  7 |  79
+   |   |  7 |  78
+   |   |  7 |  77
+   |   |  7 |  76
+   |   |  7 |  75
+   |   |  7 |  74
+   |   |  7 |  73
+   |   |  7 |  72
+   |   |  7 |  71
+   |   |  7 |  70
+   |   |  4 |  40
+   |   |  4 |  41
+   |   |  4 |  42
+   |   |  4 |  43
+   |   |  4 |  44
+   |   |  4 |  45
+   |   |  4 |  46
+   |   |  4 |  47
+   |   |  4 |  48
+   |   |  4 |  49
+   |   |  0 |   9
+   |   |  0 |   8
+   |   |  0 |   7
+   |   |  0 |   6
+   |   |  0 |   5
+   |   |  0 |   4
+   |   |  0 |   3
+   |   |  0 |   2
+   |   |  0 |   1
+   |   |  6 |  69
+   |   |  6 |  68
+   |   |  6 |  67
+   |   |  6 |  66
+   |   |  6 |  65
+   |   |  6 |  64
+   |   |  6 |  63
+   |   |  6 |  62
+   |   |  6 |  61
+   |   |  6 |  60
+(103 rows)
+
+-- non-empty outer, empty inner
+SELECT * FROM foo FULL OUTER JOIN (SELECT * FROM bar WHERE y = -1) bar2 ON (a = x);
+ a  |  b  | x | y 
+----+-----+---+---
+ 15 |   2 |   |  
+    |   2 |   |  
+    |     |   |  
+ 12 |  20 |   |  
+  1 |   2 |   |  
+  1 |  12 |   |  
+  1 | 102 |   |  
+(7 rows)
+
+-- non-empty outer, non-empty inner
+SELECT * FROM (SELECT * FROM foo WHERE b = 2) foo2 FULL OUTER JOIN (SELECT * FROM bar WHERE y BETWEEN 16 AND 22 OR x IS NULL) bar2 ON (a = x);
+ a  | b | x |  y  
+----+---+---+-----
+ 15 | 2 |   |    
+  1 | 2 | 1 |  16
+  1 | 2 | 1 |  17
+  1 | 2 | 1 |  18
+  1 | 2 | 1 |  19
+    | 2 |   |    
+    |   |   | 101
+    |   |   | 102
+    |   |   |    
+    |   | 2 |  20
+    |   | 2 |  21
+    |   | 2 |  22
+(12 rows)
+
+-- empty outer, non-empty inner
+SELECT * FROM foo WHERE b = -1 AND (a, b) NOT IN (SELECT x, y FROM bar WHERE y <= 100);
+ a | b 
+---+---
+(0 rows)
+
+-- outer with nulls, non-empty inner
+SELECT * FROM foo WHERE (a, b) NOT IN (SELECT x, y FROM bar WHERE y <= 100);
+ a  |  b  
+----+-----
+  1 |   2
+  1 | 102
+ 15 |   2
+ 12 |  20
+(4 rows)
+
+-- outer with nulls, empty inner
+SELECT * FROM foo WHERE (a, b) NOT IN (SELECT x, y FROM bar WHERE y = -1);
+ a  |  b  
+----+-----
+ 12 |  20
+ 15 |   2
+    |   2
+  1 |   2
+  1 |  12
+  1 | 102
+    |
+(7 rows)
+
+-- outer with nulls, inner with partial nulls
+SELECT * FROM foo WHERE (a, b) NOT IN (SELECT x, y FROM bar WHERE y IS NOT NULL);
+ a  | b  
+----+----
+  1 |  2
+ 12 | 20
+ 15 |  2
+(3 rows)
+
+-- outer with nulls, inner with null tuples
+SELECT * FROM foo WHERE (a, b) NOT IN (SELECT x, y FROM bar);
+ a | b 
+---+---
+(0 rows)
+
+-- empty outer, non-empty inner
+SELECT * FROM foo WHERE b = -1 AND a NOT IN (SELECT x FROM bar WHERE y <= 100);
+ a | b 
+---+---
+(0 rows)
+
+-- outer with nulls, non-empty inner
+SELECT * FROM foo WHERE b = 2 AND a NOT IN (SELECT x FROM bar WHERE y <= 100);
+ a  | b 
+----+---
+ 15 | 2
+(1 row)
+
+-- outer with nulls, empty inner
+SELECT * FROM foo WHERE b = 2 AND a NOT IN (SELECT x FROM bar WHERE y = -1) order by 1, 2;
+ a  | b 
+----+---
+  1 | 2
+ 15 | 2
+    | 2
+(3 rows)
+
+-- outer with nulls, inner with nulls
+SELECT * FROM foo WHERE a NOT IN (SELECT x FROM bar);
+ a | b 
+---+---
+(0 rows)
+
+-- Now run the same tests again, with hashjoins enabled.
+set enable_hashjoin=on;
+SELECT enable_xform('CXformLeftAntiSemiJoin2HashJoin');
+                enable_xform                
+--------------------------------------------
+ CXformLeftAntiSemiJoin2HashJoin is enabled
+(1 row)
+
+-- empty outer, non-empty inner
+SELECT * FROM foo WHERE b = -1 AND a = ALL (SELECT x FROM bar WHERE y <= 100);
+ a | b 
+---+---
+(0 rows)
+
+-- outer with nulls, non-empty inner
+SELECT * FROM foo WHERE b = 2 AND a = ALL (SELECT x FROM bar WHERE y >=10 AND y < 20);
+ a | b 
+---+---
+ 1 | 2
+(1 row)
+
+-- outer with nulls, empty inner
+SELECT * FROM foo WHERE b = 2 AND a = ALL (SELECT x FROM bar WHERE y = -1) order by 1, 2;
+ a  | b 
+----+---
+  1 | 2
+ 15 | 2
+    | 2
+(3 rows)
+
+-- outer with nulls, inner with nulls
+SELECT * FROM foo WHERE a = ALL (SELECT x FROM bar WHERE x = 1 OR x IS NULL);
+ a | b 
+---+---
+(0 rows)
+
+-- empty outer, non-empty inner
+SELECT * FROM (SELECT * FROM foo WHERE b = -1) foo2 FULL OUTER JOIN bar ON (a = x);
+ a | b | x  |  y  
+---+---+----+-----
+   |   | 10 | 100
+   |   |  3 |  31
+   |   |  3 |  32
+   |   |  3 |  33
+   |   |  3 |  34
+   |   |  3 |  35
+   |   |  3 |  36
+   |   |  3 |  37
+   |   |  3 |  38
+   |   |  3 |  39
+   |   |  3 |  30
+   |   |  9 |  90
+   |   |  9 |  99
+   |   |  9 |  98
+   |   |  9 |  91
+   |   |  9 |  92
+   |   |  9 |  93
+   |   |  9 |  94
+   |   |  9 |  95
+   |   |  9 |  96
+   |   |  9 |  97
+   |   |    | 101
+   |   |    |    
+   |   |    | 102
+   |   |  2 |  29
+   |   |  2 |  28
+   |   |  2 |  27
+   |   |  2 |  26
+   |   |  2 |  25
+   |   |  2 |  24
+   |   |  2 |  23
+   |   |  2 |  22
+   |   |  2 |  21
+   |   |  2 |  20
+   |   |  8 |  89
+   |   |  8 |  88
+   |   |  8 |  87
+   |   |  8 |  86
+   |   |  8 |  85
+   |   |  8 |  84
+   |   |  8 |  83
+   |   |  8 |  82
+   |   |  8 |  81
+   |   |  8 |  80
+   |   |  5 |  50
+   |   |  5 |  51
+   |   |  5 |  52
+   |   |  5 |  53
+   |   |  5 |  54
+   |   |  5 |  55
+   |   |  5 |  56
+   |   |  5 |  57
+   |   |  5 |  58
+   |   |  5 |  59
+   |   |  1 |  19
+   |   |  1 |  18
+   |   |  1 |  17
+   |   |  1 |  16
+   |   |  1 |  15
+   |   |  1 |  14
+   |   |  1 |  13
+   |   |  1 |  12
+   |   |  1 |  11
+   |   |  1 |  10
+   |   |  7 |  79
+   |   |  7 |  78
+   |   |  7 |  77
+   |   |  7 |  76
+   |   |  7 |  75
+   |   |  7 |  74
+   |   |  7 |  73
+   |   |  7 |  72
+   |   |  7 |  71
+   |   |  7 |  70
+   |   |  4 |  40
+   |   |  4 |  41
+   |   |  4 |  42
+   |   |  4 |  43
+   |   |  4 |  44
+   |   |  4 |  45
+   |   |  4 |  46
+   |   |  4 |  47
+   |   |  4 |  48
+   |   |  4 |  49
+   |   |  0 |   9
+   |   |  0 |   8
+   |   |  0 |   7
+   |   |  0 |   6
+   |   |  0 |   5
+   |   |  0 |   4
+   |   |  0 |   3
+   |   |  0 |   2
+   |   |  0 |   1
+   |   |  6 |  69
+   |   |  6 |  68
+   |   |  6 |  67
+   |   |  6 |  66
+   |   |  6 |  65
+   |   |  6 |  64
+   |   |  6 |  63
+   |   |  6 |  62
+   |   |  6 |  61
+   |   |  6 |  60
+(103 rows)
+
+-- non-empty outer, empty inner
+SELECT * FROM foo FULL OUTER JOIN (SELECT * FROM bar WHERE y = -1) bar2 ON (a = x);
+ a  |  b  | x | y 
+----+-----+---+---
+ 15 |   2 |   |  
+    |   2 |   |  
+    |     |   |  
+ 12 |  20 |   |  
+  1 |   2 |   |  
+  1 |  12 |   |  
+  1 | 102 |   |  
+(7 rows)
+
+-- non-empty outer, non-empty inner
+SELECT * FROM (SELECT * FROM foo WHERE b = 2) foo2 FULL OUTER JOIN (SELECT * FROM bar WHERE y BETWEEN 16 AND 22 OR x IS NULL) bar2 ON (a = x);
+ a  | b | x |  y  
+----+---+---+-----
+ 15 | 2 |   |    
+  1 | 2 | 1 |  16
+  1 | 2 | 1 |  17
+  1 | 2 | 1 |  18
+  1 | 2 | 1 |  19
+    | 2 |   |    
+    |   |   | 101
+    |   |   | 102
+    |   |   |    
+    |   | 2 |  20
+    |   | 2 |  21
+    |   | 2 |  22
+(12 rows)
+
+-- empty outer, non-empty inner
+SELECT * FROM foo WHERE b = -1 AND (a, b) NOT IN (SELECT x, y FROM bar WHERE y <= 100);
+ a | b 
+---+---
+(0 rows)
+
+-- outer with nulls, non-empty inner
+SELECT * FROM foo WHERE (a, b) NOT IN (SELECT x, y FROM bar WHERE y <= 100);
+ a  |  b  
+----+-----
+  1 |   2
+  1 | 102
+ 15 |   2
+ 12 |  20
+(4 rows)
+
+-- outer with nulls, empty inner
+SELECT * FROM foo WHERE (a, b) NOT IN (SELECT x, y FROM bar WHERE y = -1);
+ a  |  b  
+----+-----
+ 12 |  20
+ 15 |   2
+    |   2
+  1 |   2
+  1 |  12
+  1 | 102
+    |
+(7 rows)
+
+-- outer with nulls, inner with partial nulls
+SELECT * FROM foo WHERE (a, b) NOT IN (SELECT x, y FROM bar WHERE y IS NOT NULL);
+ a  | b  
+----+----
+  1 |  2
+ 12 | 20
+ 15 |  2
+(3 rows)
+
+-- outer with nulls, inner with null tuples
+SELECT * FROM foo WHERE (a, b) NOT IN (SELECT x, y FROM bar);
+ a | b 
+---+---
+(0 rows)
+
+-- empty outer, non-empty inner
+SELECT * FROM foo WHERE b = -1 AND a NOT IN (SELECT x FROM bar WHERE y <= 100);
+ a | b 
+---+---
+(0 rows)
+
+-- outer with nulls, non-empty inner
+SELECT * FROM foo WHERE b = 2 AND a NOT IN (SELECT x FROM bar WHERE y <= 100);
+ a  | b 
+----+---
+ 15 | 2
+(1 row)
+
+-- outer with nulls, empty inner
+SELECT * FROM foo WHERE b = 2 AND a NOT IN (SELECT x FROM bar WHERE y = -1) order by 1, 2;
+ a  | b 
+----+---
+  1 | 2
+ 15 | 2
+    | 2
+(3 rows)
+
+-- outer with nulls, inner with nulls
+SELECT * FROM foo WHERE a NOT IN (SELECT x FROM bar);
+ a | b 
+---+---
+(0 rows)
+

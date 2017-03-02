@@ -16,7 +16,10 @@ class S3KeyWriter : public Writer {
         pthread_mutex_init(&this->exceptionMutex, NULL);
     }
     virtual ~S3KeyWriter() {
-        this->close();
+        try {
+            this->close();
+        } catch (...) {
+        }
         pthread_mutex_destroy(&this->mutex);
         pthread_cond_destroy(&this->cv);
         pthread_mutex_destroy(&this->exceptionMutex);

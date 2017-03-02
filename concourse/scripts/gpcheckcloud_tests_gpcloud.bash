@@ -12,8 +12,11 @@ function gen_env(){
 	source /opt/gcc_env.sh
 	source /usr/local/greenplum-db-devel/greenplum_path.sh
 
-	cd "\${1}/gpdb_src/gpAux/extensions/gpcloud"
-	make -B gpcheckcloud
+	if [ "$overwrite_gpcloud" = "true" ]
+	then
+		cd "\${1}/gpdb_src/gpAux/extensions/gpcloud"
+		make install -C bin/gpcheckcloud
+	fi
 
 	cd "\${1}/gpdb_src/gpAux/extensions/gpcloud/regress"
 	bash gpcheckcloud_regress.sh

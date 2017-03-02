@@ -535,6 +535,8 @@ select * from Tbl04 where (x,y) not in (select x,y from Tbl10);
 
 select * from Tbl04 where (x,y) not in (select 1,y from Tbl10);
 
+select * from tbl10 where y not in (select 1 where false);
+
 -- start_ignore
 alter table Tbl10 alter column x set not null;
 -- end_ignore
@@ -609,4 +611,3 @@ select * from TblUp2;
 -- start_ignore
 drop schema qp_subquery cascade;
 -- end_ignore
-

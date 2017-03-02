@@ -1,7 +1,7 @@
 #!/bin/bash
 
 EXIT_CODE=0
-GPCHECKCLOUD=../bin/gpcheckcloud/gpcheckcloud
+[ -n "`command -v gpcheckcloud`" ] && GPCHECKCLOUD=gpcheckcloud || GPCHECKCLOUD=../bin/gpcheckcloud/gpcheckcloud
 RANDOM_PREFIX=gpcheckcloud-$(date +%Y%m%d)-$(cat /dev/urandom | env LC_CTYPE=C tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
 
 echo "Preparing data to upload..."

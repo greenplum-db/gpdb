@@ -62,6 +62,11 @@ distributed by (subscription_id, bill_stmt_id)
 -- TEST
 select count_operator('explain select cust_type, subscription_status,count(distinct subscription_id),sum(voice_call_min),sum(minute_per_call) from mpp7980 where month_id =E''2009-04-01'' group by rollup(1,2);','SIGSEGV');
 
+insert into mpp7980 values('2009-04-01','xyz','zyz','1',1,1,'1');
+insert into mpp7980 values('2009-04-01','zxyz','zyz','2',2,1,'1');
+insert into mpp7980 values('2009-03-03','xyz','zyz','4',1,3,'1');
+select cust_type, subscription_status,count(distinct subscription_id),sum(voice_call_min),sum(minute_per_call) from mpp7980 where month_id ='2009-04-01' group by rollup(1,2);
+
 -- CLEANUP
 -- start_ignore
 drop table mpp7980;
@@ -765,10 +770,31 @@ EXPLAIN SELECT b FROM bar GROUP BY b;
 
 
 -- CLEANUP
--- start_ignore
 DROP TABLE IF EXISTS foo;
 DROP TABLE IF EXISTS bar;
+
+
+-- Test EXPLAIN ANALYZE on a partitioned table. There used to be a bug, where
+-- you got an internal error with this, because the EXPLAIN ANALYZE sends the
+-- stats from QEs to the QD at the end of query, but because the subnodes are
+-- terminated earlier, their stats were already gone.
+create table mpp8031 (oid integer,
+odate timestamp without time zone,
+cid integer)
+PARTITION BY RANGE(odate)
+(
+PARTITION foo START ('2005-05-01 00:00:00'::timestamp
+without time zone) END ('2005-07-01 00:00:00'::timestamp
+without time zone) EVERY ('2 mons'::interval),
+
+START ('2005-07-01 00:00:00'::timestamp without time zone)
+END ('2006-01-01 00:00:00'::timestamp without time zone)
+EVERY ('2 mons'::interval)
+);
+explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
+drop table mpp8031;
+
+-- CLEANUP
+-- start_ignore
 drop schema if exists bfv_partition;
 -- end_ignore
-
-

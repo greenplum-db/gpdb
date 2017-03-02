@@ -22,4 +22,5 @@ SELECT * FROM foo WHERE (a, b) NOT IN (SELECT x, y FROM bar WHERE y = -1);
  1  |  12
  1  | 102
     |   2
-(6 rows)
+    |    
+(7 rows)
