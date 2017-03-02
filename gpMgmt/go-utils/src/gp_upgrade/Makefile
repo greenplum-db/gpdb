@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 .DEFAULT_GOAL := test
 
 .PHONY : build
@@ -21,7 +22,10 @@ format : dependencies
 ginkgo : dependencies
 		ginkgo -r -randomizeSuites -randomizeAllSpecs -race 2>&1
 
-test : format ginkgo
+sshd_build :
+		./compile_test_sshd_server.sh
+
+test : format sshd_build ginkgo
 
 ci : ginkgo
 

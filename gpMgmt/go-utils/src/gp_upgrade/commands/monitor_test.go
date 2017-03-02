@@ -14,4 +14,14 @@ var _ = Describe("monitor", func() {
 		Eventually(session).Should(Exit(1))
 		Eventually(session.Err).Should(Say("the required flags `--host' and `--segment_id' were not specified"))
 	})
+
+	It("connects to the host, yielding a session", func() {
+		// ssh.tell_it_to("respond that pg_upgrade isn't running")
+
+		session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022")
+		Eventually(session).Should(Exit(0))
+
+		// We would like to assert that connector was called -- can we spy on a mock of it at test runtime?
+		Eventually(session.Out).Should(Say("pg_upgrade is not running on host 'localhost', segment_id '42'"))
+	})
 })

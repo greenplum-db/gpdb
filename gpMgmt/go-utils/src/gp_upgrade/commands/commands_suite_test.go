@@ -7,6 +7,14 @@ import (
 
 	"os/exec"
 	"testing"
+
+	"fmt"
+
+	"io/ioutil"
+
+	"io"
+
+	"golang.org/x/crypto/ssh"
 )
 
 func TestCommands(t *testing.T) {
@@ -16,11 +24,33 @@ func TestCommands(t *testing.T) {
 
 var (
 	commandPath string
+	gConfig     *ssh.ServerConfig
+	sshd        *exec.Cmd
+	stdout      io.ReadCloser
+	stderr      io.ReadCloser
 )
 
-var _ = BeforeEach(func() {})
+var _ = BeforeEach(func() {
+	sshd = exec.Command("./sshd/sshd")
+	stdout, _ = sshd.StdoutPipe()
+	stderr, _ = sshd.StderrPipe()
 
-var _ = AfterEach(func() {})
+	err := sshd.Start()
+	Expect(err).ToNot(HaveOccurred())
+})
+
+var _ = AfterEach(func() {
+	if sshd != nil {
+		sshd.Process.Kill()
+		slurp, _ := ioutil.ReadAll(stdout)
+		fmt.Println("sshd stdout: " + string(slurp))
+
+		// todo not clear why stderr causes panic in sshd server
+		//slurp, _ = ioutil.ReadAll(stderr)
+		//fmt.Println("sshd stderr: " + string(slurp))
+		sshd = nil
+	}
+})
 
 var _ = SynchronizedBeforeSuite(func() []byte {
 	executable_path, err := Build("gp_upgrade")
@@ -35,6 +65,10 @@ var _ = SynchronizedAfterSuite(func() {}, func() {
 })
 
 func runCommand(args ...string) *Session {
+
+	// IMPORTANT TEST INFO: exec.Command forks and runs in a separate process,
+	// which has its own Golang context; any mocks/fakes you set up in
+	// the test context will NOT be meaningful in the new exec.Command context.
 	cmd := exec.Command(commandPath, args...)
 	session, err := Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
