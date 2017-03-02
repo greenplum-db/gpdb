@@ -36,7 +36,7 @@
 /* contains both global db information and CREATE DATABASE commands */
 #define GLOBALS_DUMP_FILE	"pg_upgrade_dump_globals.sql"
 #define DB_DUMP_FILE		"pg_upgrade_dump_db.sql"
-#define ARRAY_DUMP_FILE		"pg_upgrade_dump_arraytypes.sql"
+#define DISPATCH_DUMP_FILE	"pg_upgrade_dump_oid_dispatch.sql"
 
 #ifndef WIN32
 #define pg_copy_file		copy_file
@@ -170,6 +170,27 @@ typedef struct
 	int			nrels;
 } RelInfoArr;
 
+typedef enum
+{
+	DISPATCH_ARRAYTYPE = 0,
+	DISPATCH_TYPE,
+	DISPATCH_RELATION
+} dispatchType;
+
+typedef struct
+{
+	dispatchType type;
+	Oid			oid;
+	char		name[NAMEDATALEN];
+	Oid			namespace_oid;
+} DispatchInfo;
+
+typedef struct
+{
+	DispatchInfo   *dispatches;
+	int				ndispatch;
+} DispatchArr;
+
 /*
  * The following structure represents a relation mapping.
  */
@@ -199,6 +220,7 @@ typedef struct
 	Oid			db_oid;			/* oid of the database */
 	char		db_name[NAMEDATALEN];	/* database name */
 	char		db_tblspace[MAXPGPATH]; /* database default tablespace path */
+	DispatchArr dispatch_arr;	/* array of elements to dispatch to segments */
 	RelInfoArr	rel_arr;		/* array of all user relinfos */
 } DbInfo;
 
@@ -344,6 +366,8 @@ void		check_cluster_versions(migratorContext *ctx);
 void		check_cluster_compatibility(migratorContext *ctx, bool live_check);
 void create_script_for_old_cluster_deletion(migratorContext *ctx,
 									   char **deletion_script_file_name);
+void		get_oid_for_dispatch(migratorContext *ctx, Cluster whichCluster);
+char	   *exclude_oid_for_dispatch(migratorContext *ctx, const DbInfo *db);
 
 
 /* controldata.c */
@@ -357,6 +381,7 @@ void check_control_data(migratorContext *ctx, ControlData *oldctrl,
 
 void		generate_old_dump(migratorContext *ctx);
 void		split_old_dump(migratorContext *ctx);
+void		generate_dispatch_dump(migratorContext *ctx, Cluster whichCluster);
 
 
 /* exec.c */
@@ -476,6 +501,7 @@ void		check_for_libpq_envvars(migratorContext *ctx);
 void		exit_nicely(migratorContext *ctx, bool need_cleanup);
 void	   *pg_malloc(migratorContext *ctx, int n);
 void		pg_free(void *p);
+void	   *pg_realloc(migratorContext *ctx, void *ptr, int n);
 char	   *pg_strdup(migratorContext *ctx, const char *s);
 char	   *quote_identifier(migratorContext *ctx, const char *s);
 int			get_user_info(migratorContext *ctx, char **user_name);
@@ -516,6 +542,6 @@ char *old_8_3_create_sequence_script(migratorContext *ctx,
 							   Cluster whichCluster);
 
 /* version_old_gpdb4.c */
-void old_GPDB4_dump_array_types(migratorContext *ctx, Cluster whichCluster);
+void old_GPDB4_find_array_types(migratorContext *ctx);
 void old_GPDB4_check_for_money_data_type_usage(migratorContext *ctx, Cluster whichCluster);
 void old_GPDB4_check_no_free_aoseg(migratorContext *ctx, Cluster whichCluster);

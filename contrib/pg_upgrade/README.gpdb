@@ -10,13 +10,19 @@ upgrading the QD and then the QEs.
 Extensions to upstream pg_upgrade
 ---------------------------------
 
-pg_upgrade is in PostgreSQL only maintaning the Oids of types, Greenplum
-however requires all Oids to be maintained such that they are synchronized
-between QD and QEs after upgrade. The binary-upgrade option in pg_dump has
-been extended to inject Oid preservation calls for all required object types
-in the dump. Technically, the Oids needn't be preserved during upgrade as
-long as they are synchronized between QD/QEs after the upgrade. The current
-implementation preserves the Oids rather than allocate new ones.
+pg_upgrade is in PostgreSQL only maintaining the Oids of types across an
+upgrade, Greenplum Database however requires all Oids to be maintained such
+that they are synchronized between QD and QEs after the upgrade. The
+binary-upgrade option in pg_dump has been extended to inject Oid preservation
+calls for all required object types in the dump. Technically, the Oids needn't
+be preserved during upgrade as long as they are synchronized between QD/QEs
+after the upgrade. The current implementation preserves the Oids rather than
+allocate new ones. When objects require Oid synchronization, pg_upgrade will on
+the QD dump the synchronization commands in a special dump file called
+pg_upgrade_dump_oid_dispatch.sql.  This file must then be placed in the working
+directory on the QEs during upgrade to incorporate the Oid synchronization.
+There is no automated process for putting this file on the QEs, it needs to be
+done manually (or automated via third party scripts).
 
 Functionality for restoring the append-only catalog relations is in
 aotable.c, Greenplum specific checks for upgrading from GPDB 4 are added to

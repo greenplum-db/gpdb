@@ -769,3 +769,142 @@ check_for_reg_data_type_usage(migratorContext *ctx, Cluster whichCluster)
 	else
 		check_ok(ctx);
 }
+
+/*
+ *	exclude_oid_for_dispatch
+ *
+ *	Generate a string suitable for the relation query in get_rel_info() to
+ *	exclude any relation stored as a dispatch object. The reason for excluding
+ *	them is that any table object registered as an Oid dispatch will be
+ *	definition be a new table and not one that should be upgraded from the old
+ *	cluster to the new.
+ */
+char *
+exclude_oid_for_dispatch(migratorContext *ctx, const DbInfo *master_db)
+{
+	ClusterInfo *old_cluster = &ctx->old;
+	char	query[QUERY_ALLOC];
+	char   *p = query;
+	int		dispno;
+	int		dbnum;
+	DbInfo *db = (DbInfo *) master_db;
+
+	memset(query, '\0', QUERY_ALLOC);
+
+	for (dbnum = 0; dbnum < old_cluster->dbarr.ndbs; dbnum++)
+	{
+		db = &old_cluster->dbarr.dbs[dbnum];
+
+		if (strcmp(db->db_name, master_db->db_name) == 0)
+			break;
+	}
+
+	if (db->dispatch_arr.ndispatch > 0)
+	{
+		for (dispno = 0; dispno < db->dispatch_arr.ndispatch; dispno++)
+		{
+			DispatchInfo   *rel = &db->dispatch_arr.dispatches[dispno];
+			int				ret;
+
+			if (rel->type == DISPATCH_RELATION)
+			{
+				ret = snprintf(p, sizeof(query) - (p - query), " AND relname <> '%s'::text ", rel->name);
+				if (ret >= (sizeof(query) - (p - query)))
+					pg_log(ctx, PG_FATAL, "Dispatch exclusion too large");
+
+				p = query + strlen(query);
+			}
+		}
+	}
+
+	if (p > query)
+		return pg_strdup(ctx, query);
+	
+	return NULL;
+}
+
+/*
+ *	get_oid_for_dispatch
+ *
+ *	Traverses the databases in the new cluster and for each dispatch object
+ *	found without an Oid, queries the database to extract the Oid. Any object
+ *	with an Oid already set will be kept intact.
+ */
+void
+get_oid_for_dispatch(migratorContext *ctx, Cluster whichCluster)
+{
+	ClusterInfo *active_cluster = (whichCluster == CLUSTER_OLD) ?
+	&ctx->old : &ctx->new;
+	char		query[QUERY_ALLOC];
+	int			dbnum;
+
+	for (dbnum = 0; dbnum < active_cluster->dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		int			ntups;
+		int			dispno;
+		DbInfo	   *active_db = &active_cluster->dbarr.dbs[dbnum];
+		PGconn	   *conn;
+
+		if (active_db->dispatch_arr.ndispatch > 0)
+		{
+			/*
+			 * This assumes that the new cluster has a database with the
+			 * identical name to the old cluster. This assumption should hold
+			 * given the nature of pg_upgrade.
+			 */
+			conn = connectToServer(ctx, active_db->db_name, CLUSTER_NEW);
+
+			/*
+			 * This is an inefficient way of getting the Oids. A single query
+			 * which projects all Oids and finds the matching DispatchInfo
+			 * entries would be a possible improvement.
+			 */
+			for (dispno = 0; dispno < active_db->dispatch_arr.ndispatch; dispno++)
+			{
+				DispatchInfo	*d = &active_db->dispatch_arr.dispatches[dispno];
+
+				/*
+				 * If the object has an Oid already then there is nothing to
+				 * backfill so skip.
+				 */
+				if (d->oid != InvalidOid)
+					continue;
+
+				if (d->type == DISPATCH_RELATION)
+				{
+					snprintf(query, sizeof(query),
+							 "SELECT oid FROM pg_class "
+							 "WHERE relname = '%s'::text "
+							 "  AND relnamespace = '%u'::pg_catalog.oid;",
+							 d->name, d->namespace_oid);
+				}
+				else if (d->type == DISPATCH_TYPE || d->type == DISPATCH_ARRAYTYPE)
+				{
+					snprintf(query, sizeof(query),
+							 "SELECT oid FROM pg_type "
+							 "WHERE typname = '%s'::text "
+							 "  AND typnamespace = '%u'::pg_catalog.oid;",
+							 d->name, d->namespace_oid);
+				}
+				else
+				{
+					pg_log(ctx, PG_FATAL, "Oid dispatch for unknown object: %d\n", d->type);
+				}
+
+				res = executeQueryOrDie(ctx, conn, query);
+				ntups = PQntuples(res);
+
+				if (ntups == 0)
+					pg_log(ctx, PG_WARNING, "Object not found in Oid dispatch: %s\n", d->name);
+				else
+					d->oid = atooid(PQgetvalue(res, 0, PQfnumber(res, "oid")));
+
+				PQclear(res);
+			}
+
+			PQfinish(conn);
+		}
+	}
+	check_ok(ctx);
+}

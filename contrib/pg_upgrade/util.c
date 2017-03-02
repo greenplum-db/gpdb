@@ -231,6 +231,18 @@ pg_free(void *p)
 }
 
 
+void *
+pg_realloc(migratorContext *ctx, void *ptr, int n)
+{
+	void *p = realloc(ptr, n);
+
+	if (p == NULL)
+		pg_log(ctx, PG_FATAL, "%s: out of memory\n", ctx->progname);
+
+	return p;
+}
+
+
 char *
 pg_strdup(migratorContext *ctx, const char *s)
 {

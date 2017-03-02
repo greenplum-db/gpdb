@@ -21,6 +21,7 @@ static void prepare_new_cluster(migratorContext *ctx);
 static void prepare_new_databases(migratorContext *ctx);
 static void create_new_objects(migratorContext *ctx);
 static void rebuild_persistent(migratorContext *ctx);
+static void dump_oid_dispatch(migratorContext *ctx);
 static void copy_clog_xlog_xid(migratorContext *ctx);
 static void copy_distributedlog(migratorContext *ctx);
 static void set_frozenxids(migratorContext *ctx);
@@ -92,6 +93,8 @@ main(int argc, char **argv)
 						 ctx.old.pgdata, ctx.new.pgdata);
 
 	rebuild_persistent(&ctx);
+
+	dump_oid_dispatch(&ctx);
 
 	/*
 	 * Assuming OIDs are only used in system tables, there is no need to
@@ -420,6 +423,28 @@ rebuild_persistent(migratorContext *ctx)
 }
 
 static void
+dump_oid_dispatch(migratorContext *ctx)
+{
+	start_postmaster(ctx, CLUSTER_NEW, false);
+
+	prep_status(ctx, "Extracting generated Oids from QD");
+	get_oid_for_dispatch(ctx, CLUSTER_OLD);
+	get_oid_for_dispatch(ctx, CLUSTER_NEW);
+	check_ok(ctx);
+
+	/*
+	 * We only need the postmaster active for getting the Oids, dumping
+	 * is done from pg_upgrade data structures.
+	 */
+	stop_postmaster(ctx, false, false);
+
+	prep_status(ctx, "Dumping Oid for dispatching to QEs");
+	generate_dispatch_dump(ctx, CLUSTER_OLD);
+	generate_dispatch_dump(ctx, CLUSTER_NEW);
+	check_ok(ctx);
+}
+
+static void
 create_new_objects(migratorContext *ctx)
 {
 	/* -- NEW -- */
@@ -454,7 +479,7 @@ create_new_objects(migratorContext *ctx)
 	 * before shutting down the new cluster
 	 */
 	if (GET_MAJOR_VERSION(ctx->old.major_version) <= 802)
-		old_GPDB4_dump_array_types(ctx, CLUSTER_NEW);
+		old_GPDB4_find_array_types(ctx);
 
 	uninstall_support_functions(ctx);
 

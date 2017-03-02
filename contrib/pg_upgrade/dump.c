@@ -9,6 +9,77 @@
 
 #include "pg_upgrade.h"
 
+/*
+ *	generate_dispatch_dump
+ *
+ *	Dump the Oids created in the QD as part of the database restore such that
+ *	they can be dispatched to the QEs to keep Oid synchronization. The Oids
+ *	are dumped as binary_upgrade.preassign_XXX() calls.
+ */
+void
+generate_dispatch_dump(migratorContext *ctx, Cluster whichCluster)
+{
+	ClusterInfo *active_cluster = (whichCluster == CLUSTER_OLD) ?
+	&ctx->old : &ctx->new;
+	FILE	   *script = NULL;
+	char		output_path[MAXPGPATH];
+	int			dbnum;
+	int			i;
+
+	prep_status(ctx, "Creating Oid dispatch dump for %s cluster",
+				(whichCluster == CLUSTER_OLD ? "old" : "new"));
+
+	snprintf(output_path, sizeof(output_path), "%s/%s", ctx->cwd, DISPATCH_DUMP_FILE);
+
+	for (dbnum = 0; dbnum < active_cluster->dbarr.ndbs; dbnum++)
+	{
+		DbInfo	   *active_db = &active_cluster->dbarr.dbs[dbnum];
+
+		if (active_db->dispatch_arr.ndispatch > 0)
+		{
+			if (!script && (script = fopen(output_path, "a")) == NULL)
+				pg_log(ctx, PG_FATAL, "Could not create necessary file:  %s\n",
+					   output_path);
+
+			for (i = 0; i < active_db->dispatch_arr.ndispatch; i++)
+			{
+				DispatchInfo	*d = &active_db->dispatch_arr.dispatches[i];
+
+				if (d->type == DISPATCH_ARRAYTYPE)
+				{
+					fprintf(script,
+							"SELECT binary_upgrade.preassign_arraytype_oid("
+								"'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid);\n",
+							 d->oid, d->name, d->namespace_oid);
+				}
+				else if (d->type == DISPATCH_RELATION)
+				{
+					fprintf(script,
+							"SELECT binary_upgrade.preassign_relation_oid("
+								"'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid);\n",
+							d->oid, d->name, d->namespace_oid);
+				}
+				else if (d->type == DISPATCH_TYPE)
+				{
+					fprintf(script,
+							"SELECT binary_upgrade.preassign_type_oid("
+								"'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid);\n",
+							d->oid, d->name, d->namespace_oid);
+				}
+				else
+				{
+					fclose(script);
+					pg_log(ctx, PG_FATAL, "Oid dispatch for unknown object: %d\n", d->type);
+				}
+			}
+		}
+	}
+
+	if (script)
+		fclose(script);
+
+	check_ok(ctx);
+}
 
 
 void
@@ -73,7 +144,7 @@ split_old_dump(migratorContext *ctx)
 		pg_log(ctx, PG_FATAL, "Cannot write to dump file %s\n", filename);
 	current_output = globals_dump;
 
-	snprintf(filename, sizeof(filename), "%s/%s", ctx->cwd, ARRAY_DUMP_FILE);
+	snprintf(filename, sizeof(filename), "%s/%s", ctx->cwd, DISPATCH_DUMP_FILE);
 	array_dump = fopen(filename, PG_BINARY_R);
 
 	/* patterns used to prevent our own username from being recreated */

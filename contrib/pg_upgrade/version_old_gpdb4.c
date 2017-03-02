@@ -14,12 +14,12 @@
  *
  *	While being in this file, and being specific for upgrading from GPDB4, it
  *	needs to run in the new cluster. Since array types for base relation types
- *	came in PostgreSQL 8.3 and CREATE TABLE automatically creates them, we
- *	need to synchronize the OIDs for these so perform a mini dump after the
- *	restore into the new cluster for use when upgrading the segments.
+ *	came in PostgreSQL 8.3 and CREATE TABLE automatically creates them, we need
+ *	to synchronize the OIDs for these. Create dispatch entries for the
+ *	arraytypes such that they are included in the Oid dispatch dump.
  */
 void
-old_GPDB4_dump_array_types(migratorContext *ctx, Cluster whichCluster)
+old_GPDB4_find_array_types(migratorContext *ctx)
 {
 	ClusterInfo    *new_cluster = &ctx->new;
 	DbInfo		   *active_db;
@@ -27,20 +27,15 @@ old_GPDB4_dump_array_types(migratorContext *ctx, Cluster whichCluster)
 	PGresult	   *res;
 	int				dbnum;
 	int				i;
-	char		   *typname;
-	char		   *typoid;
-	char		   *typnamespace;
-	FILE		   *script = NULL;
-	char			output_path[MAXPGPATH];
+	int				ntups;
+	bool			found = false;
 
-	prep_status(ctx, "Dumping array types");
-
-	snprintf(output_path, sizeof(output_path), "%s/%s", ctx->cwd, ARRAY_DUMP_FILE);
+	prep_status(ctx, "Extracting Oids for new array types");
 
 	for (dbnum = 0; dbnum < new_cluster->dbarr.ndbs; dbnum++)
 	{
 		active_db = &new_cluster->dbarr.dbs[dbnum];
-		conn = connectToServer(ctx, active_db->db_name, whichCluster);
+		conn = connectToServer(ctx, active_db->db_name, CLUSTER_NEW);
 
 		res = executeQueryOrDie(ctx, conn,
 								"SELECT ta.oid, ta.typname, ta.typnamespace "
@@ -49,28 +44,36 @@ old_GPDB4_dump_array_types(migratorContext *ctx, Cluster whichCluster)
 								"       JOIN pg_type ta ON ta.oid = t.typarray "
 								"GROUP BY 1, 2, 3");
 
-		if (PQntuples(res) > 0)
+		ntups = PQntuples(res);
+
+		if (ntups > 0)
 		{
-			if (!script && (script = fopen(output_path, "w")) == NULL)
-				pg_log(ctx, PG_FATAL, "Could not create necessary file:  %s\n",
-					   output_path);
-		}
+			found = true;
 
-		for (i = 0; i < PQntuples(res); i++)
-		{
-			typoid = pg_strdup(ctx, PQgetvalue(res, i, PQfnumber(res, "oid")));
-			typname = pg_strdup(ctx, PQgetvalue(res, i, PQfnumber(res, "typname")));
-			typnamespace = pg_strdup(ctx, PQgetvalue(res, i, PQfnumber(res, "typnamespace")));
+			/*
+			 * The current database may already have dispatch objects
+			 * associated with it, reallocate the array to fit the new
+			 * arraytypes if so.
+			 */
+			if (active_db->dispatch_arr.ndispatch > 0)
+			{
+				int size = (active_db->dispatch_arr.ndispatch + ntups) * sizeof(DispatchInfo);
+				active_db->dispatch_arr.dispatches = pg_realloc(ctx, active_db->dispatch_arr.dispatches, size);
+			}
+			else
+				active_db->dispatch_arr.dispatches = pg_malloc(ctx, ntups * sizeof(DispatchInfo));
 
-			fprintf(script,
-					"SELECT binary_upgrade.preassign_arraytype_oid('%s'::pg_catalog.oid, "
-																  "'%s'::text, "
-																  "'%s'::pg_catalog.oid);\n",
-					 typoid, typname, typnamespace);
+			for (i = 0; i < ntups; i++)
+			{
+				DispatchInfo *curr = &active_db->dispatch_arr.dispatches[active_db->dispatch_arr.ndispatch + i];
 
-			pg_free(typoid);
-			pg_free(typname);
-			pg_free(typnamespace);
+				curr->type = DISPATCH_ARRAYTYPE;
+				curr->oid = atooid(PQgetvalue(res, i, PQfnumber(res, "oid")));
+				strlcpy(curr->name, PQgetvalue(res, i, PQfnumber(res, "typname")), sizeof(curr->name));
+				curr->namespace_oid = atooid(PQgetvalue(res, i, PQfnumber(res, "typnamespace")));
+			}
+
+			active_db->dispatch_arr.ndispatch += ntups;
 		}
 
 		PQclear(res);
@@ -78,18 +81,16 @@ old_GPDB4_dump_array_types(migratorContext *ctx, Cluster whichCluster)
 	}
 	check_ok(ctx);
 
-	if (script)
+	if (found)
 	{
-		fclose(script);
-
 		pg_log(ctx, PG_REPORT, "\n\n"
 			   "| In upgrading from GPDB4, new array types\n"
 			   "| are created for base rowtypes. In order to\n"
-			   "| dispatch these OIDs to the QE segments,\n"
+			   "| dispatch these Oids to the QE segments,\n"
 			   "| pg_upgrade has left a dump file which need\n"
 			   "| to be placed in the working directory of\n"
-			   "| pg_upgrade on the QE before upgrading:\n"
-			   "| %s\n\n", ARRAY_DUMP_FILE);
+			   "| pg_upgrade on all QEs before upgrading:\n"
+			   "| %s\n\n", DISPATCH_DUMP_FILE);
 	}
 }
 
