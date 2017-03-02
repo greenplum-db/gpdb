@@ -12,4 +12,4 @@
   <topicref href="load_tools_win.ditamap" format="ditamap"/>
   <topicref href="connectivity_win.ditamap" format="ditamap"/>
  </topicref>
-</map>
+ <topicref href="../../index.html" scope="external" navtitle="Greenplum Database Docs Home" format="html" otherprops="pivotal"/></map>

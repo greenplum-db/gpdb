@@ -52,4 +52,5 @@
                 id="perf_troubleshoot"/>
         </topicref>
     </topicref>
+    <topicref href="../../index.html" scope="external" navtitle="Greenplum Database Docs Home" format="html" otherprops="pivotal"/>
 </map>

@@ -2,7 +2,6 @@
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
     <topicref href="utility_guide.xml" navtitle="Utility Guide">
-        <topicref href="preface.xml"/>
         <topicref href="admin_utilities/util_ref.xml" linking="targetonly">
             <topicref href="admin_utilities/analyzedb.xml"/>
             <topicref href="admin_utilities/gpactivatestandby.xml"/>
@@ -63,5 +62,5 @@
             </topicref>
         </topicref>
         <topicref href="orafce_ref.xml"/>
-    </topicref>
+    </topicref><topicref href="../../index.html" scope="external" navtitle="Greenplum Database Docs Home" format="html" otherprops="pivotal"/>
 </map>

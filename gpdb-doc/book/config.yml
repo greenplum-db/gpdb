@@ -7,6 +7,7 @@ dita_sections:
     name: dita
   directory: docs-gpdb
   ditamap_location: gpdb-webhelp.ditamap
+  ditaval_location: gpdb-webhelp.ditaval
 
 template_variables:
   book_title: Greenplum Database Documentation
