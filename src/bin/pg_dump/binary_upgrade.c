@@ -32,7 +32,7 @@ static int				numtypecache;
 static void preassign_type_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_type_oid, char *objname);
 static void preassign_constraint_oid(Archive *AH, Oid constroid, Oid nsoid, char *objname, Oid contable, Oid condomain);
 static void preassign_attrdefs_oid(Archive *AH, Oid attrdefoid, Oid attreloid, int adnum);
-static void preassign_pg_class_oids(PGconn *conn, Archive *AH, Oid pg_class_oid);
+static void preassign_pg_class_oids(PGconn *conn, Archive *AH, Oid pg_class_oid, char *relname);
 static void preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_rel_oid, char *objname);
 
 void
@@ -375,7 +375,7 @@ dumpTypeOid(PGconn *conn, Archive *fout, Archive *AH, TypeInfo *info)
 	else if (info->typtype == TYPTYPE_COMPOSITE)
 	{
 		preassign_type_oid(conn, fout, AH, info->dobj.catId.oid, info->dobj.name);
-		preassign_pg_class_oids(conn, AH, info->typrelid);
+		preassign_pg_class_oids(conn, AH, info->typrelid, NULL);
 	}
 }
 
@@ -535,7 +535,7 @@ dumpConstraintOid(PGconn *conn, Archive *AH, ConstraintInfo *info)
 		if (indxinfo == NULL)
 			return;
 
-		preassign_pg_class_oids(conn, AH, indxinfo->dobj.catId.oid);
+		preassign_pg_class_oids(conn, AH, indxinfo->dobj.catId.oid, NULL);
 		preassign_constraint_oid(AH, info->dobj.catId.oid,
 								 info->dobj.namespace->dobj.catId.oid,
 								 info->dobj.name,
@@ -551,7 +551,7 @@ dumpConstraintOid(PGconn *conn, Archive *AH, ConstraintInfo *info)
 			return;
 
 		if (tbinfo)
-			preassign_pg_class_oids(conn, AH, tbinfo->dobj.catId.oid);
+			preassign_pg_class_oids(conn, AH, tbinfo->dobj.catId.oid, NULL);
 
 		preassign_constraint_oid(AH, info->dobj.catId.oid,
 								 info->dobj.namespace->dobj.catId.oid,
@@ -658,7 +658,7 @@ dumpIndexOid(PGconn *conn, Archive *AH, IndxInfo *info)
 	if (!info->dobj.dump)
 		return;
 
-	preassign_pg_class_oids(conn, AH, info->dobj.catId.oid);
+	preassign_pg_class_oids(conn, AH, info->dobj.catId.oid, info->dobj.name);
 }
 
 void
@@ -670,7 +670,7 @@ dumpTableOid(PGconn *conn, Archive *fout, Archive *AH, TableInfo *info)
 	if (!info->dobj.dump)
 		return;
 
-	preassign_pg_class_oids(conn, AH, info->dobj.catId.oid);
+	preassign_pg_class_oids(conn, AH, info->dobj.catId.oid, info->dobj.name);
 	preassign_type_oids_by_rel_oid(conn, fout, AH, info->dobj.catId.oid,
 								   info->dobj.name);
 
@@ -699,7 +699,7 @@ dumpTableOid(PGconn *conn, Archive *fout, Archive *AH, TableInfo *info)
 }
 
 static void
-preassign_pg_class_oids(PGconn *conn, Archive *AH, Oid pg_class_oid)
+preassign_pg_class_oids(PGconn *conn, Archive *AH, Oid pg_class_oid, char *relname)
 {
 	PQExpBuffer upgrade_query = createPQExpBuffer();
 	PQExpBuffer upgrade_buffer = createPQExpBuffer();
@@ -751,7 +751,10 @@ preassign_pg_class_oids(PGconn *conn, Archive *AH, Oid pg_class_oid)
 	pg_class_reltoastrelid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "reltoastrelid")));
 	pg_class_reltoastidxid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "reltoastidxid")));
 	pg_class_relnamespace = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "relnamespace")));
-	pg_class_relname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "relname"));
+	if (relname != NULL)
+		pg_class_relname = relname;
+	else
+		pg_class_relname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "relname"));
 	pg_appendonly_segrelid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "segrelid")));
 	pg_appendonly_blkdirrelid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "blkdirrelid")));
 	pg_appendonly_blkdiridxid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "blkdiridxid")));
