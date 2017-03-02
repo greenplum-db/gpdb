@@ -117,11 +117,11 @@ not just external ones.</pd></plentry>
                 <plentry>
                     <pt><varname>configuration_parameter</varname></pt>
                     <pt><varname>value</varname></pt>
-                    <pd>The <codeph>SET</codeph> clause causes the specified session run-time
-                        configuration parameter to be set to the identified value when the function
-                        is entered. The configuration parameter is restored to its prior value when
-                        the function exits. <codeph>SET FROM CURRENT</codeph> applies the session's
-                        current value of the parameter when the function is entered.</pd>
+                    <pd>The <codeph>SET</codeph> clause applies a value to a session configuration
+                        parameter when the function is entered. The configuration parameter is
+                        restored to its prior value when the function exits. <codeph>SET FROM
+                            CURRENT</codeph> applies the session's current value of the parameter
+                        when the function is entered.</pd>
                 </plentry><plentry><pt><varname>definition</varname></pt><pd>A string constant defining the function; the meaning depends on the
 language. It may be an internal function name, the path to an object
 file, an SQL command, or text in a procedural language.</pd></plentry><plentry><pt><varname>obj_file, link_symbol</varname></pt><pd>This form of the <codeph>AS</codeph> clause is used for dynamically
@@ -173,12 +173,12 @@ $SomeTag$Dianne's horse$SomeTag$</codeblock>
             <p>If a <codeph>SET</codeph> clause is attached to a function, the effects of a
                     <codeph>SET LOCAL</codeph> command executed inside the function for the same
                 variable are restricted to the function; the configuration parameter's prior value
-                is still restored at function exit. However, an ordinary <codeph>SET</codeph>
+                is still restored when the function exits. However, an ordinary <codeph>SET</codeph>
                 command (without <codeph>LOCAL</codeph>) overrides the <codeph>CREATE
                     FUNCTION</codeph>
                 <codeph>SET</codeph> clause, much as it would for a previous <codeph>SET
-                    LOCAL</codeph> command. The effects of such a command will persist after
-                function exit, unless the current transaction is rolled back.</p><sectiondiv id="section7"><b>Using Functions With Queries on Distributed Data</b><p>In some cases, Greenplum Database does not support using functions in
+                    LOCAL</codeph> command. The effects of such a command will persist after the
+                function exits, unless the current transaction is rolled back.</p><sectiondiv id="section7"><b>Using Functions With Queries on Distributed Data</b><p>In some cases, Greenplum Database does not support using functions in
 a query where the data in a table specified in the <codeph>FROM</codeph>
 clause is distributed over Greenplum Database segments. As an example,
 this SQL query contains the function <codeph>func()</codeph>:</p><codeblock>SELECT func(a) FROM table1;</codeblock><p>The function is not supported for use in the query if all of the following

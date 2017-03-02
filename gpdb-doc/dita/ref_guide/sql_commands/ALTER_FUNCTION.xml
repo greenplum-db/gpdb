@@ -48,8 +48,8 @@ FUNCTION</codeph> for more information about this capability.</pd></plentry>
         <plentry>
           <pt><varname>configuration_parameter</varname></pt>
           <pt><varname>value</varname></pt>
-          <pd>Add or change the assignment to be made to a configuration parameter when the function
-            is called. If <varname>value</varname> is  <codeph>DEFAULT</codeph> or, equivalently,
+          <pd>Set or change the value of a configuration parameter when the function is called. If
+              <varname>value</varname> is <codeph>DEFAULT</codeph> or, equivalently,
               <codeph>RESET</codeph> is used, the function-local setting is removed, and the
             function executes with the value present in its environment. Use <codeph>RESET
               ALL</codeph> to clear all function-local settings. <codeph>SET FROM CURRENT</codeph>

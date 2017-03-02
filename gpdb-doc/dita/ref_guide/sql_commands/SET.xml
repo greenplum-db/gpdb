@@ -28,14 +28,14 @@ SET [SESSION | LOCAL] TIME ZONE {<varname>timezone</varname> | LOCAL | DEFAULT}<
         value will be seen until the end of the transaction, but afterwards (if the transaction is
         committed) the <codeph>SET</codeph> value will take effect.</p>
       <p>If <codeph>SET LOCAL</codeph> is used within a function that includes a
-          <codeph>SET</codeph> option for the same variable (see <codeph><xref
+          <codeph>SET</codeph> option for the same configuration parameter (see <codeph><xref
             href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>), the effects
         of the <codeph>SET LOCAL</codeph> command disappear at function exit; the value in effect
         when the function was called is restored anyway. This allows <codeph>SET LOCAL</codeph> to
         be used for dynamic or repeated changes of a parameter within a function, while retaining
         the convenience of using the <codeph>SET</codeph> option to save and restore the caller's
-        value.  Note that a regular <codeph>SET</codeph> command overrides any surrounding
-        function's <codeph>SET</codeph> option; its effects persist unless rolled back.</p>
+        value. Note that a regular <codeph>SET</codeph> command overrides any surrounding function's
+          <codeph>SET</codeph> option; its effects persist unless rolled back.</p>
       <p>If you create a cursor with the <codeph>DECLARE</codeph> command in a transaction, you
         cannot use the <codeph>SET</codeph> command in the transaction until you close the cursor
         with the <codeph>CLOSE</codeph> command.</p>
