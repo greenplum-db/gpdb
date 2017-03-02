@@ -1,5 +1,4 @@
 from mpp.models import SQLTestCase
-from dml.functional import DMLSQLTestCase
 import os
 
 '''

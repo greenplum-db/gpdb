@@ -3,7 +3,6 @@
 -- @modified 2012-12-05 12:00:00 
 -- @tags dml 
 -- @db_name dmldb
--- @execute_all_plans True
 -- @description update_test7: Update distcol where join on target table non dist key
 -- start_ignore
 SET optimizer_log=on;SET optimizer=on;

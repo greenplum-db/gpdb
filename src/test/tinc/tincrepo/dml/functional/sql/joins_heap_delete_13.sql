@@ -3,7 +3,6 @@
 -- @tags dml 
 -- @db_name dmldb
 -- @description test13: Delete with multiple joins
--- @execute_all_plans True
 \echo --start_ignore
 set gp_enable_column_oriented_table=on;
 \echo --end_ignore

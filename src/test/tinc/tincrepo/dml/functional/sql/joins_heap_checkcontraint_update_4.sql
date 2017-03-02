@@ -4,7 +4,6 @@
 -- @tags dml 
 -- @db_name dmldb
 -- @gpopt 1.532
--- @execute_all_plans True
 -- @description test4: Negative test - Update moving tuple across partition .also violates the check constraint
 \echo --start_ignore
 set gp_enable_column_oriented_table=on;

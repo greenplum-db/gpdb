@@ -3,7 +3,6 @@
 -- @modified 2012-12-05 12:00:00 
 -- @tags dml 
 -- @db_name dmldb
--- @execute_all_plans True
 -- @description test1: Update data that satisfy the check constraints 
 \echo --start_ignore
 set gp_enable_column_oriented_table=on;

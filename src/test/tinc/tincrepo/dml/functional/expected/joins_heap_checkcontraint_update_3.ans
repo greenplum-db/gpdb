@@ -9,7 +9,6 @@ SET
 -- @modified 2012-12-05 12:00:00 
 -- @tags dml 
 -- @db_name dmldb
--- @execute_all_plans True
 -- @description test3: Negative test - Update violates check constraint(not NULL constraint)
 \echo --start_ignore
 --start_ignore

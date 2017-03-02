@@ -4,7 +4,6 @@
 -- @tags dml 
 -- @db_name dmldb
 -- @gpopt 1.532
--- @execute_all_plans True
 -- @description update_test18: Negative test - Update with sub-query returning more than one row
 \echo --start_ignore
 set gp_enable_column_oriented_table=on;

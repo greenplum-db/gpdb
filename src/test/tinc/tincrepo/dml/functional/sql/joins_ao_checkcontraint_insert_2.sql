@@ -4,7 +4,6 @@
 -- @tags dml HAWQ
 -- @db_name dmldb
 -- @gpopt 1.532
--- @execute_all_plans True
 -- @description test2: Negative test - Insert default value violates check constraint
 \echo --start_ignore
 set gp_enable_column_oriented_table=on;

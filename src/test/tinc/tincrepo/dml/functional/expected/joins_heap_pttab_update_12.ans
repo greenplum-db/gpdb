@@ -3,7 +3,6 @@
 -- @modified 2012-12-05 12:00:00 
 -- @tags dml 
 -- @description update_test12: Update and limit in subquery
--- @execute_all_plans True
 -- @db_name dmldb
 -- start_ignore
 SET optimizer_log=on;SET optimizer=on;

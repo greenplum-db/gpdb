@@ -3,7 +3,6 @@
 -- @modified 2012-12-05 12:00:00 
 -- @tags dml 
 -- @db_name dmldb
--- @execute_all_plans True
 -- @skip MPP-19148
 -- @description update_test22: Update on table wit composite distribution key
 \echo --start_ignore
