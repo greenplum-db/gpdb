@@ -1,10 +1,13 @@
-The Greenplum pg_upgrade code is based on pg_upgrade from 9.0.23 and has
-been extended to work with Greenplum. This README is intended to document the
-changes that have been done.
+The Greenplum Database pg_upgrade code is based on pg_upgrade from PostgreSQL
+9.0.23 and has been extended to work with Greenplum. This README is intended to
+document the changes that have been done and the Greenplum Database specific
+handling which is required to upgrade a Greenplum Database cluster.
 
-Operation of pg_upgrade remains unchanged as are the available command line
-parameters. Upgrading a Greenplum cluster with pg_upgrade is done by first
-upgrading the QD and then the QEs.
+The user-facing operation of pg_upgrade remains unchanged, as are the available
+command line parameters. The internals of pg_upgrade are however extended to
+support Greenplum Database. Upgrading a Greenplum Database cluster with
+pg_upgrade is done by first upgrading the QD and then the QEs. All QEs can be
+upgraded in parallel to save time.
 
 
 Extensions to upstream pg_upgrade
@@ -37,7 +40,7 @@ upgraded. This is because new Oids are allocated during the QD upgrade and
 these needs to be distributed to the QEs in order to preserve the QD/QE Oid
 synchronization.
 
-* Each base relation type is in 5.0 defined as an array type, something which
+* Each base relation type is defined as an array type in 5.0, something which
   is not supported in 4.3. The arraytypes for base relations will be created
   during upgrade and thier Oids recorded. To be able to distribute the Oids to
   the QEs, the upgrade will leave a dump file in the working directory named
