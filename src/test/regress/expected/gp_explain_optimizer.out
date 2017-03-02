@@ -1,3 +1,5 @@
+create schema gpexplain;
+set search_path = gpexplain;
 -- Helper function, to return the EXPLAIN output of a query as a normal
 -- result set, so that you can manipulate it further.
 create or replace function get_explain_output(explain_query text) returns setof text as
@@ -98,8 +100,8 @@ WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
                ->  Result  (cost=0.00..0.00 rows=1 width=12)
                      ->  Result  (cost=0.00..0.00 rows=1 width=12)
          ->  Index Scan using mpp22263_idx1 on mpp22263  (cost=0.00..2.00 rows=1 width=244)
-               Index Cond: mpp22263.unique1 = (147)
-               Filter: mpp22263.stringu1::text = ('RFAAAA'::text)
+               Index Cond: mpp22263.unique1 = "outer".column1
+               Filter: mpp22263.stringu1::text = "outer".column2
  Settings:  optimizer=on
  Optimizer status: PQO version 2.7.0
 (13 rows)
@@ -113,9 +115,33 @@ select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
 WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
   $$) as et
 WHERE et like '%Filter: %';
-                                et                                
-------------------------------------------------------------------
+                               et                                
+-----------------------------------------------------------------
          Join Filter: true
-               Filter: mpp22263.stringu1::text = ('RFAAAA'::text)
+               Filter: mpp22263.stringu1::text = "outer".column2
 (2 rows)
+
+--
+-- Join condition in explain plan should represent constants with proper
+-- variable name
+--
+create table foo (a int) distributed randomly;
+-- "outer", "inner" prefix must also be prefixed to variable name as length of rtable > 1
+SELECT * from
+get_explain_output($$ 
+	select * from (values (1)) as f(a) join (values(2)) b(b) on a = b join foo on true join foo as foo2 on true $$) as et
+WHERE et like '%Hash Cond:%';
+                          et                          
+------------------------------------------------------
+         Hash Cond: "inner".column1 = "outer".column1
+(1 row)
+
+SELECT * from
+get_explain_output($$
+	select * from (values (1)) as f(a) join (values(2)) b(b) on a = b$$) as et
+WHERE et like '%Hash Cond:%';
+               et               
+--------------------------------
+   Hash Cond: column1 = column1
+(1 row)
 

@@ -3165,14 +3165,30 @@ get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 		push_plan(dpns, dpns->outer_plan);
 
 		/*
-		 * Force parentheses because our caller probably assumed a Var is a
-		 * simple expression.
+		 * In cases where the INNER VAR subtree (left/right) contains a CONST
+		 * in Target Entry use outer for refname and resname for attname.
 		 */
-		if (!IsA(tle->expr, Var))
-			appendStringInfoChar(buf, '(');
-		get_rule_expr((Node *) tle->expr, context, true);
-		if (!IsA(tle->expr, Var))
-			appendStringInfoChar(buf, ')');
+		if (IsA(tle->expr, Const) && tle->resname)
+		{
+			if (context->varprefix)
+			{
+				appendStringInfoString(buf, quote_identifier("outer"));
+				appendStringInfoChar(buf, '.');
+			}
+			appendStringInfoString(buf, tle->resname);
+		}
+		else
+		{
+			/*
+			 * Force parentheses because our caller probably assumed a Var is a
+			 * simple expression.
+			 */
+			if (!IsA(tle->expr, Var))
+				appendStringInfoChar(buf, '(');
+			get_rule_expr((Node *) tle->expr, context, true);
+			if (!IsA(tle->expr, Var))
+				appendStringInfoChar(buf, ')');
+		}
 
 		dpns->outer_plan = save_outer;
 		dpns->inner_plan = save_inner;
@@ -3194,14 +3210,30 @@ get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 		push_plan(dpns, dpns->inner_plan);
 
 		/*
-		 * Force parentheses because our caller probably assumed a Var is a
-		 * simple expression.
+		 * In cases where the INNER VAR subtree (left/right) contains a CONST
+		 * in Target Entry use inner for refname and resname for attname.
 		 */
-		if (!IsA(tle->expr, Var))
-			appendStringInfoChar(buf, '(');
-		get_rule_expr((Node *) tle->expr, context, true);
-		if (!IsA(tle->expr, Var))
-			appendStringInfoChar(buf, ')');
+		if (IsA(tle->expr, Const) && tle->resname)
+		{
+			if (context->varprefix)
+			{
+				appendStringInfoString(buf, quote_identifier("inner"));
+				appendStringInfoChar(buf, '.');
+			}
+			appendStringInfoString(buf, tle->resname);
+		}
+		else
+		{
+			/*
+			 * Force parentheses because our caller probably assumed a Var is a
+			 * simple expression.
+			 */
+			if (!IsA(tle->expr, Var))
+				appendStringInfoChar(buf, '(');
+			get_rule_expr((Node *) tle->expr, context, true);
+			if (!IsA(tle->expr, Var))
+				appendStringInfoChar(buf, ')');
+		}
 
 		dpns->outer_plan = save_outer;
 		dpns->inner_plan = save_inner;

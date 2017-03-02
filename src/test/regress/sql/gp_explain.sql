@@ -1,3 +1,5 @@
+create schema gpexplain;
+set search_path = gpexplain;
 
 -- Helper function, to return the EXPLAIN output of a query as a normal
 -- result set, so that you can manipulate it further.
@@ -87,3 +89,19 @@ select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
 WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
   $$) as et
 WHERE et like '%Filter: %';
+
+--
+-- Join condition in explain plan should represent constants with proper
+-- variable name
+--
+create table foo (a int) distributed randomly;
+-- "outer", "inner" prefix must also be prefixed to variable name as length of rtable > 1
+SELECT * from
+get_explain_output($$ 
+	select * from (values (1)) as f(a) join (values(2)) b(b) on a = b join foo on true join foo as foo2 on true $$) as et
+WHERE et like '%Hash Cond:%';
+
+SELECT * from
+get_explain_output($$
+	select * from (values (1)) as f(a) join (values(2)) b(b) on a = b$$) as et
+WHERE et like '%Hash Cond:%';
