@@ -124,7 +124,7 @@ test: qp_functions_in_contexts_setup
 test: qp_functions_in_from qp_functions_in_select qp_functions_in_subquery qp_functions_in_subquery_constant qp_functions_in_with
 
 test: olap_setup
-test: qp_olap_group
+test: qp_olap_group qp_olap_group2
 
 ignore: tpch500GB_orca
 

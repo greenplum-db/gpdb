@@ -1,6 +1,0 @@
--- start_matchignore
---
-m/LOG:/
-m/\[OPT\]/
---
--- end_matchignore
