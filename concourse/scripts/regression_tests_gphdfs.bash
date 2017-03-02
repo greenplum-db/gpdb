@@ -9,6 +9,29 @@ function gen_env(){
 	cat > /home/gpadmin/run_regression_test.sh <<-EOF
 	set -exo pipefail
 
+	trap look4diffs ERR
+	dir=\${1}
+
+	function look4diffs() {
+
+	    diff_files=\`find \${dir}/gpdb_src/gpAux/extensions/gphdfs/regression -name regression.diffs\`
+
+	    for diff_file in \${diff_files}; do
+		if [ -f "\${diff_file}" ]; then
+		    cat <<-FEOF
+
+					======================================================================
+					DIFF FILE: \${diff_file}
+					----------------------------------------------------------------------
+
+					\$(cat "\${diff_file}")
+
+				FEOF
+		fi
+	    done
+	    exit 1
+	}
+
 	source /opt/gcc_env.sh
 	source /usr/local/greenplum-db-devel/greenplum_path.sh
 
@@ -37,7 +60,6 @@ function gen_env(){
 	cd "\${1}/gpdb_src/gpAux/extensions/gphdfs/regression"
 	GP_HADOOP_TARGET_VERSION=cdh4.1 HADOOP_HOST=localhost HADOOP_PORT=9000 ./run_gphdfs_regression.sh
 
-	[ -s regression.diffs ] && cat regression.diffs && exit 1
 	exit 0
 	EOF
 
