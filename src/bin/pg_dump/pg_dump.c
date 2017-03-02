@@ -85,6 +85,10 @@ bool		g_verbose;			/* User wants verbose narration of our
 								 * activities. */
 Archive    *g_fout;				/* the script file */
 PGconn	   *g_conn;				/* the database connection */
+Archive    *g_bout = NULL;		/* The script file for binary upgrade */
+
+#define BINARY_OUTPUT_POSTPROCESSING "binary_output.dump"
+const char *bu_filename = BINARY_OUTPUT_POSTPROCESSING;
 
 /* various user-settable parameters */
 bool		schemaOnly;
@@ -437,6 +441,7 @@ main(int argc, char **argv)
 		{"post-data-schema-only", no_argument, &postDataSchemaOnly, 1},
 		{"function-oids", required_argument, NULL, 3},
 		{"relation-oids", required_argument, NULL, 4},
+		{"binary-upgrade-filename", required_argument, NULL, 5},
 		/* END MPP ADDITION */
 		{NULL, 0, NULL, 0}
 	};
@@ -645,6 +650,10 @@ main(int argc, char **argv)
 			case 4:
 				simple_string_list_append(&relid_string_list, optarg);
 				include_everything = false;
+				break;
+
+			case 5:
+				bu_filename = strdup(optarg);
 				break;
 
 			default:
@@ -970,6 +979,28 @@ main(int argc, char **argv)
 	}
 
 	CloseArchive(g_fout);
+
+	/*
+	 * If we have generated post processing steps for the upgrade process,
+	 * dump the archive as well.
+	 */
+	if (g_bout)
+	{
+		RestoreOptions *bu_opt = NewRestoreOptions();
+		bu_opt->filename = (char *) bu_filename;
+		bu_opt->dropSchema = 0;
+		bu_opt->aclsSkip = 1;
+		bu_opt->superuser = 0;
+		bu_opt->createDB = 0;
+		bu_opt->noOwner = 1;
+		bu_opt->disable_triggers = 1;
+		bu_opt->use_setsessauth = 0;
+		bu_opt->dataOnly = 0;
+		bu_opt->compression = 0;
+
+		RestoreArchive(g_bout, bu_opt);
+		CloseArchive(g_bout);
+	}
 
 	PQfinish(g_conn);
 
