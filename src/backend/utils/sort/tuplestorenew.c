@@ -1,6 +1,22 @@
 /*
  * tuplestorenew.c
  *		A better tuplestore
+ *
+ *		Design overview:
+ *		Each tuple store has many pages. Each page has a page header
+ *		(NTupleStorePageHeader), followed by a fixed area of binary raw data
+ *		(char data[NTS_MAX_ENTRY_SIZE]), followed by a directory of tuple slots
+ *		(NTupleStorePageSlotEntry). Each tuple slot simply saves a index where
+ *		the slot's data starts in the byte array and a size to indicate how many
+ *		bytes to read from the index.
+ *
+ *		All the pages are linked together using each page header's
+ *		(NTupleStorePageHeader) prev_1 and next_1 pointers. This pointers are
+ *		only valid for in memory pages.
+ *
+ *		Each page's slot table grows from end to beginning (using the same byte
+ *		array) and the data grows from beginning to end. Therefore, all the slot
+ *		indexes are negative.
  */
 
 #include "postgres.h"
