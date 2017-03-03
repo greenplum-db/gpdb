@@ -38,12 +38,12 @@ function prep_env_for_centos() {
     ;;
   esac
 
-  ln -sf /$(pwd)/gpdb_src/gpAux/ext/${BLDARCH}/python-2.6.2 /opt/python-2.6.2
+  ln -sf /$(pwd)/gpdb_src/gpAux/ext/${BLDARCH}/python-2.7.12 /opt/python-2.7.12
   export PATH=${JAVA_HOME}/bin:${PATH}
 }
 
 function prep_env_for_sles() {
-  ln -sf "$(pwd)/gpdb_src/gpAux/ext/sles11_x86_64/python-2.6.2" /opt
+  ln -sf "$(pwd)/gpdb_src/gpAux/ext/sles11_x86_64/python-2.7.12" /opt
   export JAVA_HOME=/usr/lib64/jvm/java-1.6.0-openjdk-1.6.0
   export PATH=${JAVA_HOME}/bin:${PATH}
   source /opt/gcc_env.sh

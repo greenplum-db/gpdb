@@ -42,6 +42,6 @@ workaround_before_concourse_stops_stripping_suid_bits() {
 }
 
 function run_test() {
-  ln -s "$(pwd)/gpdb_src/gpAux/ext/rhel6_x86_64/python-2.6.2" /opt
+  ln -s "$(pwd)/gpdb_src/gpAux/ext/rhel6_x86_64/python-2.7.12" /opt
   su - gpadmin -c "bash /opt/run_test.sh $(pwd)"
 }
