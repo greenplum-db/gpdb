@@ -177,6 +177,14 @@ test: vacuum_full_freeze_heap
 test: vacuum_full_heap
 test: vacuum_full_heap_bitmapindex
 
+# These cannot run in parallel, because they check that VACUUM FULL shrinks table size.
+# A concurrent session could hold back the xid horizon and prevent old tuples from being
+# removed.
+test: vacuum_full_ao
+test: vacuum_full_freeze_heap
+test: vacuum_full_heap
+test: vacuum_full_heap_bitmapindex
+
 test: AOCO_Compression2 schema_topology table_statistics
 test: metadata_track
 
