@@ -12,12 +12,6 @@
 
 #include "cdb_bsa_util.h"
 
-char                    *BackupFilePathName;
-int						BackupFilePathLength = 0;
-char                    *NetBackupPolicy = NULL;
-char                    *NetBackupServiceHost = NULL;
-char                    *NetBackupSchedule = NULL;
-char                    *NetBackupKeyword = NULL;
 char					*progname;
 char					*netbackupDumpFilename = NULL;
 char					*netbackupServiceHost = NULL;
@@ -121,56 +115,12 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	BackupFilePathLength = strlen(netbackupDumpFilename);
-	BackupFilePathName = (char *)malloc(sizeof(char) *(1 + BackupFilePathLength));
-	if(BackupFilePathName == NULL){
-		mpp_err_msg("ERROR", "gp_bsa_dump_agent", "Failed to allocate memory for Backup Filename\n");
-		exit(1);
-	}
-	memset(BackupFilePathName, 0x00, (1 + BackupFilePathLength));
-	strncpy(BackupFilePathName, netbackupDumpFilename, (1 + BackupFilePathLength));
-
-	NetBackupServiceHost = (char *)malloc(sizeof(char) *(1 + strlen(netbackupServiceHost)));
-	if(NetBackupServiceHost == NULL){
-		mpp_err_msg("ERROR", "gp_bsa_dump_agent", "Failed to allocate memory for NetBackup Service Hostname\n");
-		exit(1);
-	}
-	memset(NetBackupServiceHost, 0x00, (1 + strlen(netbackupServiceHost)));
-	strncpy(NetBackupServiceHost, netbackupServiceHost, (1 + strlen(netbackupServiceHost)));
-
-	NetBackupPolicy = (char *)malloc(sizeof(char) *(1 + strlen(netbackupPolicy)));
-	if(NetBackupPolicy == NULL){
-		mpp_err_msg("ERROR", "gp_bsa_dump_agent", "Failed to allocate memory for NetBackup Policy name\n");
-		exit(1);
-	}
-	memset(NetBackupPolicy, 0x00, (1 + strlen(netbackupPolicy)));
-	strncpy(NetBackupPolicy, netbackupPolicy, (1 + strlen(netbackupPolicy)));
-
-	NetBackupSchedule = (char *)malloc(sizeof(char) *(1 + strlen(netbackupSchedule)));
-	if(NetBackupSchedule == NULL){
-		mpp_err_msg("ERROR", "gp_bsa_dump_agent", "Failed to allocate memory for NetBackup Schedule name\n");
-		exit(1);
-	}
-	memset(NetBackupSchedule, 0x00, (1 + strlen(netbackupSchedule)));
-	strncpy(NetBackupSchedule, netbackupSchedule, (1 + strlen(netbackupSchedule)));
-
-	if (netbackupKeyword)
-	{
-		NetBackupKeyword = (char *)malloc(sizeof(char) *(1 + strlen(netbackupKeyword)));
-		if(NetBackupKeyword == NULL){
-			mpp_err_msg("ERROR", "gp_bsa_dump_agent", "Failed to allocate memory for NetBackup Keyword\n");
-			exit(1);
-		}
-		memset(NetBackupKeyword, 0x00, (1 + strlen(netbackupKeyword)));
-		strncpy(NetBackupKeyword, netbackupKeyword, (1 + strlen(netbackupKeyword)));
-	}
-
-	if(initBSADumpSession(NetBackupServiceHost, NetBackupPolicy, NetBackupSchedule, NetBackupKeyword) != 0){
+	if(initBSADumpSession(netbackupServiceHost, netbackupPolicy, netbackupSchedule, netbackupKeyword) != 0){
 		mpp_err_msg("ERROR", "gp_bsa_dump_agent", "Failed to initialize NetBackup BSA session for Backup\n");
 		exit(1);
 	}
 
-	if(createBSADumpObject(BackupFilePathName) != 0){
+	if(createBSADumpObject(netbackupDumpFilename) != 0){
 		mpp_err_msg("ERROR", "gp_bsa_dump_agent", "Failed to create NetBackup BSA object to perform Backup\n");
 		exit(1);
 	}
@@ -185,16 +135,6 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	free(netbackupDumpFilename);
-	free(netbackupSchedule);
-	free(netbackupPolicy);
-	free(netbackupServiceHost);
-	free(netbackupKeyword);
-	free(BackupFilePathName);
-	free(NetBackupServiceHost);
-	free(NetBackupPolicy);
-	free(NetBackupSchedule);
-	free(NetBackupKeyword);
 	exit(0);
 }
 

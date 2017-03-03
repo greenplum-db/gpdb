@@ -11,10 +11,6 @@
 
 #include "cdb_bsa_util.h"
 
-char                    *BackupFilePathName;
-int						BackupFilePathLength = 0;
-char					*NetBackupServiceHost;
-char					*NetBackupQueryObject;
 char					*progname;
 char					*netbackupRestoreFilename = NULL;
 char					*netbackupServiceHost = NULL;
@@ -96,61 +92,38 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if (netbackupRestoreFilename)
+	if (initBSARestoreSession(netbackupServiceHost) != 0)
 	{
-		BackupFilePathLength = strlen(netbackupRestoreFilename);
-		BackupFilePathName = (char *)malloc(sizeof(char) *(1 + BackupFilePathLength));
-		if(BackupFilePathName == NULL){
-			mpp_err_msg("ERROR", "gp_bsa_query_agent", "Failed to allocate memory for Restore Filename\n");
-			exit(1);
-		}
-		strncpy(BackupFilePathName, netbackupRestoreFilename, (1 + BackupFilePathLength));
-	}
-
-	NetBackupServiceHost = (char *)malloc(sizeof(char) *(1 + strlen(netbackupServiceHost)));
-	if(NetBackupServiceHost == NULL){
-		mpp_err_msg("ERROR", "gp_bsa_query_agent", "Failed to allocate memory for NetBackup Service Hostname\n");
-		exit(1);
-	}
-	strncpy(NetBackupServiceHost, netbackupServiceHost, (1 + strlen(netbackupServiceHost)));
-
-	if (netbackupQueryObject)
-	{
-		NetBackupQueryObject = (char *)malloc(sizeof(char) *(1 + strlen(netbackupQueryObject)));
-		if (NetBackupQueryObject == NULL) {
-			mpp_err_msg("ERROR", "gp_bsa_query_agent", "Failed to allocate memory for NetBackup Query Object\n");
-			exit(1);
-		}
-		strncpy(NetBackupQueryObject, netbackupQueryObject, (1 + strlen(netbackupQueryObject)));
-	}
-
-	if(initBSARestoreSession(NetBackupServiceHost) != 0){
 		mpp_err_msg("ERROR", "gp_bsa_query_agent", "Failed to initialize the NetBackup BSA session to query BSA object\n");
 		exit(1);
 	}
 
-	if (BackupFilePathName) {
-		if(queryBSAObject(BackupFilePathName) == NULL){
-			mpp_err_msg("INFO", "gp_bsa_query_agent", "Query to NetBackup server failed for object: %s\n", BackupFilePathName);
+	if (netbackupRestoreFilename)
+	{
+		if (queryBSAObject(netbackupRestoreFilename) == NULL)
+		{
+			mpp_err_msg("INFO", "gp_bsa_query_agent", "Query to NetBackup server failed for object: %s\n", netbackupRestoreFilename);
 		}
-		else {
-			printf("%s\n", (char *)BackupFilePathName);
+		else
+		{
+			printf("%s\n", netbackupRestoreFilename);
 		}
 	}
-	else if (NetBackupQueryObject) {
-		if (searchBSAObject(NetBackupQueryObject) != 0) {
-			mpp_err_msg("INFO", "gp_bsa_query_agent", "No objects of the format '%s' found on the NetBackup server\n", NetBackupQueryObject);
+	else if (netbackupQueryObject)
+	{
+		if (searchBSAObject(netbackupQueryObject) != 0)
+		{
+			mpp_err_msg("INFO", "gp_bsa_query_agent", "No objects of the format '%s' found on the NetBackup server\n", netbackupQueryObject);
 		}
 	}
 
 	exit(0);
-
 }
 
 static void
 help(const char *progname)
 {
-	printf(_("\n%s queries the given object to NetBackup server to determine if it has been backup up using NetBackup\n\n"), progname);
+	printf(_("\n%s queries the given object to NetBackup server to determine if it has been backed up using NetBackup\n\n"), progname);
 	printf(_("Usage:\n"));
 	printf(_("	%s [OPTION]... [FILENAME]"), progname);
 

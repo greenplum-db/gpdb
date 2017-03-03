@@ -11,8 +11,6 @@
 
 #include "cdb_bsa_util.h"
 
-char					*NetBackupServiceHost = NULL;
-char					*NetBackupDeleteObject = NULL;
 char					*progname = NULL;
 char					*netbackupServiceHost = NULL;
 char					*netbackupDeleteObject = NULL;
@@ -84,36 +82,17 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	NetBackupServiceHost = (char *)malloc(sizeof(char) *(1 + strlen(netbackupServiceHost)));
-	if(NetBackupServiceHost == NULL){
-		mpp_err_msg("ERROR", "gp_bsa_delete_agent", "Failed to allocate memory for NetBackup Service Hostname\n");
-		exit(1);
-	}
-	strncpy(NetBackupServiceHost, netbackupServiceHost, (1 + strlen(netbackupServiceHost)));
-
-	if (netbackupDeleteObject)
-	{
-		NetBackupDeleteObject = (char *)malloc(sizeof(char) *(1 + strlen(netbackupDeleteObject)));
-		if (NetBackupDeleteObject == NULL) {
-			mpp_err_msg("ERROR", "gp_bsa_delete_agent", "Failed to allocate memory for NetBackup Delete Object\n");
-			exit(1);
-		}
-		strncpy(NetBackupDeleteObject, netbackupDeleteObject, (1 + strlen(netbackupDeleteObject)));
-	}
-
-	if(initBSARestoreSession(NetBackupServiceHost) != 0){
+	if (initBSARestoreSession(netbackupServiceHost) != 0) {
 		mpp_err_msg("ERROR", "gp_bsa_delete_agent", "Failed to initialize the NetBackup BSA session to query BSA object\n");
 		exit(1);
 	}
 
-	if (NetBackupDeleteObject) {
-		if (deleteBSAObjects(NetBackupDeleteObject) != 0) {
-			mpp_err_msg("INFO", "gp_bsa_delete_agent", "No objects of the format '%s' found on the NetBackup server or could not delete objecs of the format '%s'\n", NetBackupDeleteObject, NetBackupDeleteObject);
-		}
+	if (deleteBSAObjects(netbackupDeleteObject) != 0) {
+		mpp_err_msg("INFO", "gp_bsa_delete_agent", "No objects of the format '%s' found on the NetBackup server or could not delete objecs of the format '%s'\n", netbackupDeleteObject, netbackupDeleteObject);
+		exit(1);
 	}
 
 	exit(0);
-
 }
 
 static void

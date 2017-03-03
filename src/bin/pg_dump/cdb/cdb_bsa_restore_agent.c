@@ -12,9 +12,6 @@
 
 #include "cdb_bsa_util.h"
 
-char                    *BackupFilePathName;
-int						BackupFilePathLength = 0;
-char					*NetBackupServiceHost;
 char					*progname;
 char					*netbackupRestoreFilename = NULL;
 char					*netbackupServiceHost = NULL;
@@ -91,29 +88,12 @@ main(int argc, char *argv[]){
 		exit(1);
 	}
 
-	BackupFilePathLength = strlen(netbackupRestoreFilename);
-	BackupFilePathName = (char *)malloc(sizeof(char) *(1 + BackupFilePathLength));
-	if(BackupFilePathName == NULL){
-		mpp_err_msg("ERROR", "gp_bsa_restore_agent", "Failed to allocate memory for Restore Filename\n");
-		exit(1);
-	}
-	memset(BackupFilePathName, 0x00, (1 + BackupFilePathLength));
-	strncpy(BackupFilePathName, netbackupRestoreFilename, (1 + BackupFilePathLength));
-
-	NetBackupServiceHost = (char *)malloc(sizeof(char) *(1 + strlen(netbackupServiceHost)));
-	if(NetBackupServiceHost == NULL){
-		mpp_err_msg("ERROR", "gp_bsa_dump_agent", "Failed to allocate memory for NetBackup Service Hostname\n");
-		exit(1);
-	}
-	memset(NetBackupServiceHost, 0x00, (1 + strlen(netbackupServiceHost)));
-	strncpy(NetBackupServiceHost, netbackupServiceHost, (1 + strlen(netbackupServiceHost)));
-
-	if(initBSARestoreSession(NetBackupServiceHost) != 0){
+	if(initBSARestoreSession(netbackupServiceHost) != 0){
 		mpp_err_msg("ERROR", "gp_bsa_restore_agent", "Failed to initialize the NetBackup BSA session to perform Restore\n");
 		exit(1);
 	}
 
-	if(getBSARestoreObject(BackupFilePathName) != 0){
+	if(getBSARestoreObject(netbackupRestoreFilename) != 0){
 		mpp_err_msg("ERROR", "gp_bsa_restore_agent", "Failed to get the NetBackup BSA restore object to perform Restore\n");
 		exit(1);
 	}
@@ -128,10 +108,6 @@ main(int argc, char *argv[]){
 		exit(1);
 	}
 
-	free(BackupFilePathName);
-	free(NetBackupServiceHost);
-	free(netbackupRestoreFilename);
-	free(netbackupServiceHost);
 	exit(0);
 }
 
