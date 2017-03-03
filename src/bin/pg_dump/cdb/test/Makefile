@@ -1,4 +1,4 @@
-subdir=src/bin/pg_dump/cdb
+subdir=src/bin/pg_dump/cdb/test
 top_builddir=../../../../..
 include $(top_builddir)/src/Makefile.global
 
