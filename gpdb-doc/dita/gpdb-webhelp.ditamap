@@ -8,7 +8,6 @@
 	<frontmatter>
 	</frontmatter>
 	<chapter href="common/pivotal-gpdb-features.xml"/>
-	<chapter href="relnotes/GPDB_500_README.xml"/>
 	<chapter href="admin_guide/admin_guide.ditamap" format="ditamap"/>
 	<chapter href="utility_guide/utility_guide.ditamap" format="ditamap"/>
 	<chapter href="ref_guide/ref_guide.ditamap" format="ditamap"/>
