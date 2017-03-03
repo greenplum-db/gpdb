@@ -1423,7 +1423,7 @@ SELECT DISTINCT sale.vn,sale.vn,GROUPING(sale.vn),GROUP_ID(), TO_CHAR(COALESCE(S
 FROM sale,vendor
 WHERE sale.vn=vendor.vn
 GROUP BY CUBE((sale.cn,sale.prc),(sale.vn),(sale.prc),(sale.cn)),CUBE((sale.cn,sale.cn,sale.qty),(sale.pn),(sale.pn,sale.dt,sale.cn)),ROLLUP((sale.pn),(sale.qty,sale.pn));
-ERROR:  division by zero  (seg0 slice12 office-4-59.pa.pivotal.io:25432 pid=94574)
+ERROR:  division by zero  (seg0 slice12 127.0.0.1:25432 pid=86018)
 -- ###### Queries involving STDDEV_SAMP() function ###### --
 SELECT DISTINCT sale.vn,sale.dt,sale.prc, TO_CHAR(COALESCE(STDDEV_SAMP(floor(sale.pn+sale.vn)),0),'99999999.9999999') 
 FROM sale,vendor
@@ -2229,7 +2229,7 @@ SELECT DISTINCT sale.qty,sale.qty,sale.cn,sale.cn,GROUP_ID(), TO_CHAR(COALESCE(C
 FROM sale,product,vendor,customer
 WHERE sale.pn=product.pn AND sale.vn=vendor.vn AND sale.cn=customer.cn
 GROUP BY ROLLUP((sale.vn),(sale.vn,sale.cn)),sale.qty;
-ERROR:  ORDER/GROUP BY expression not found in targetlist (tlist.c:205)
+ERROR:  ORDER/GROUP BY expression not found in targetlist
 -- ###### Queries involving REGR_AVGX() function ###### --
 SELECT DISTINCT sale.pn,sale.qty,GROUPING(sale.qty,sale.qty), TO_CHAR(COALESCE(REGR_AVGX(floor(sale.cn*sale.vn),floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(VAR_POP(floor(sale.qty-sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(STDDEV_POP(floor(sale.prc/sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.pn+sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(VAR_POP(floor(sale.pn)),0),'99999999.9999999') 
 FROM sale,customer
@@ -2287,7 +2287,7 @@ SELECT DISTINCT sale.prc,sale.vn,sale.prc,GROUPING(sale.prc), TO_CHAR(COALESCE(R
 FROM sale,customer,product
 WHERE sale.cn=customer.cn AND sale.pn=product.pn
 GROUP BY ROLLUP((sale.qty,sale.dt,sale.qty)),sale.prc,sale.vn;
-ERROR:  ORDER/GROUP BY expression not found in targetlist (tlist.c:205)
+ERROR:  ORDER/GROUP BY expression not found in targetlist
 -- ###### Queries involving REGR_INTERCEPT() function ###### --
 SELECT DISTINCT sale.pn, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(sale.pn),floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(SUM(floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(STDDEV_SAMP(floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(VAR_SAMP(floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MIN(floor(sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(VAR_POP(floor(sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(floor(sale.cn/sale.cn)),0),'99999999.9999999') 
 FROM sale
@@ -6002,4 +6002,40 @@ GROUP BY ROLLUP((sale.prc),(sale.prc,sale.vn),(sale.qty,sale.qty),(sale.vn)),GRO
     |          .0000000
     |        60.0000000
 (8 rows)
+
+-- ###### Rollup with DQA and constants in target list expressions and qualifications with same value as that of constant grouping column ###### --
+SELECT COUNT(DISTINCT cn) as cn_r, f, g FROM (SELECT cn, CASE WHEN (vn = 0) THEN 1 END AS f, 1 AS g FROM sale) sale_view GROUP BY ROLLUP(f,g);
+ cn_r | f | g 
+------+---+---
+    4 |   | 1
+    4 |   |  
+    4 |   |  
+(3 rows)
+
+SELECT COUNT(DISTINCT cn) as cn_r, f, g FROM (SELECT cn, vn + 1 AS f, 1 AS g FROM sale) sale_view GROUP BY ROLLUP(f,g) HAVING (f > 1);
+ cn_r | f  | g 
+------+----+---
+    1 | 11 | 1
+    1 | 21 | 1
+    2 | 31 | 1
+    3 | 41 | 1
+    2 | 51 | 1
+(5 rows)
+
+PREPARE p AS SELECT COUNT(DISTINCT cn) as cn_r, f, g FROM (SELECT cn, vn + $1 AS f, $1 AS g FROM sale) sale_view GROUP BY ROLLUP(f,g) HAVING (g > 1);
+EXECUTE p(2);
+ cn_r | f  | g 
+------+----+---
+    1 | 12 | 2
+    1 | 22 | 2
+    2 | 32 | 2
+    3 | 42 | 2
+    2 | 52 | 2
+    1 | 12 |  
+    1 | 22 |  
+    2 | 32 |  
+    3 | 42 |  
+    2 | 52 |  
+    4 |    |  
+(11 rows)
 

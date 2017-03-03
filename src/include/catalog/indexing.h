@@ -94,6 +94,8 @@ DECLARE_UNIQUE_INDEX(pg_authid_oid_index, 2677, on pg_authid using btree(oid oid
 #define AuthIdOidIndexId	2677
 DECLARE_INDEX(pg_authid_rolresqueue_index, 6029, on pg_authid using btree(rolresqueue oid_ops));
 #define AuthIdRolResQueueIndexId	6029
+DECLARE_INDEX(pg_authid_rolresgroup_index, 6440, on pg_authid using btree(rolresgroup oid_ops));
+#define AuthIdRolResGroupIndexId	6440
 
 DECLARE_UNIQUE_INDEX(pg_auth_members_role_member_index, 2694, on pg_auth_members using btree(roleid oid_ops, member oid_ops));
 #define AuthMemRoleMemIndexId	2694
@@ -260,6 +262,12 @@ DECLARE_UNIQUE_INDEX(pg_type_oid_index, 2703, on pg_type using btree(oid oid_ops
 DECLARE_UNIQUE_INDEX(pg_type_typname_nsp_index, 2704, on pg_type using btree(typname name_ops, typnamespace oid_ops));
 #define TypeNameNspIndexId	2704
 
+DECLARE_UNIQUE_INDEX(pg_extension_oid_index, 3080, on pg_extension using btree(oid oid_ops));
+#define ExtensionOidIndexId 3080
+
+DECLARE_UNIQUE_INDEX(pg_extension_name_index, 3081, on pg_extension using btree(extname name_ops));
+#define ExtensionNameIndexId 3081
+
 DECLARE_UNIQUE_INDEX(gp_policy_localoid_index, 6103, on gp_distribution_policy using btree(localoid oid_ops));
 #define GpPolicyLocalOidIndexId  6103
 
@@ -269,7 +277,7 @@ DECLARE_UNIQUE_INDEX(pg_appendonly_relid_index, 5007, on pg_appendonly using btr
 DECLARE_UNIQUE_INDEX(gp_fastsequence_objid_objmod_index, 6067, on gp_fastsequence using btree(objid oid_ops, objmod  int8_ops));
 #define FastSequenceObjidObjmodIndexId 6067
 
-DECLARE_UNIQUE_INDEX(gp_relation_node_index, 5095, on gp_relation_node using btree(relfilenode_oid oid_ops, segment_file_num int4_ops));
+DECLARE_UNIQUE_INDEX(gp_relation_node_index, 5095, on gp_relation_node using btree(tablespace_oid oid_ops, relfilenode_oid oid_ops, segment_file_num int4_ops));
 #define GpRelationNodeOidIndexId  5095
 
 /* MPP-6929: metadata tracking */
@@ -298,12 +306,25 @@ DECLARE_UNIQUE_INDEX(pg_resourcetype_restypid_index, 6062, on pg_resourcetype us
 DECLARE_UNIQUE_INDEX(pg_resourcetype_resname_index, 6063, on pg_resourcetype using btree(resname name_ops));
 #define ResourceTypeResnameIndexId	6063
 
-DECLARE_UNIQUE_INDEX(pg_resqueuecapability_oid_index, 6064, on pg_resqueuecapability using btree(oid oid_ops));
-#define ResQueueCapabilityOidIndexId	6064
-DECLARE_INDEX(pg_resqueuecapability_resqueueid_index, 6065, on pg_resqueuecapability using btree(resqueueid oid_ops));
-#define ResQueueCapabilityResqueueidIndexId	6065
-DECLARE_INDEX(pg_resqueuecapability_restypid_index, 6066, on pg_resqueuecapability using btree(restypid int2_ops));
-#define ResQueueCapabilityRestypidIndexId	6066
+DECLARE_UNIQUE_INDEX(pg_resqueuecapability_oid_index, 6441, on pg_resqueuecapability using btree(oid oid_ops));
+#define ResQueueCapabilityOidIndexId	6441
+DECLARE_INDEX(pg_resqueuecapability_resqueueid_index, 6442, on pg_resqueuecapability using btree(resqueueid oid_ops));
+#define ResQueueCapabilityResqueueidIndexId	6442
+DECLARE_INDEX(pg_resqueuecapability_restypid_index, 6443, on pg_resqueuecapability using btree(restypid int2_ops));
+#define ResQueueCapabilityRestypidIndexId	6443
+
+DECLARE_UNIQUE_INDEX(pg_resgroup_oid_index, 6447, on pg_resgroup using btree(oid oid_ops));
+#define ResGroupOidIndexId	6447
+DECLARE_UNIQUE_INDEX(pg_resgroup_rsgname_index, 6444, on pg_resgroup using btree(rsgname name_ops));
+#define ResGroupRsgnameIndexId	6444
+
+DECLARE_UNIQUE_INDEX(pg_resgroupcapability_oid_index, 6448, on pg_resgroupcapability using btree(oid oid_ops));
+#define ResGroupCapabilityOidIndexId	6448
+DECLARE_UNIQUE_INDEX(pg_resgroupcapability_resgroupid_reslimittype_index, 6445, on pg_resgroupcapability using btree(resgroupid oid_ops, reslimittype int2_ops));
+#define ResGroupCapabilityResgroupidResLimittypeIndexId	6445
+
+DECLARE_INDEX(pg_resgroupcapability_resgroupid_index, 6446, on pg_resgroupcapability using btree(resgroupid oid_ops));
+#define ResGroupCapabilityResgroupidIndexId	6446
 
 DECLARE_UNIQUE_INDEX(pg_partition_oid_index, 5012, on pg_partition using btree(oid oid_ops));
 #define PartitionOidIndexId	5012

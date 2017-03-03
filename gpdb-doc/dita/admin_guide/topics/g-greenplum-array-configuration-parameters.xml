@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic49">
+   <title>Greenplum Array Configuration Parameters</title>
+   <body>
+      <p>The parameters in this topic control the configuration of the Greenplum Database array and its components: segments, master, distributed transaction
+      manager, master mirror, and interconnect.</p>
+   </body>
+</topic>

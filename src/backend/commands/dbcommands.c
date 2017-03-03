@@ -843,12 +843,7 @@ createdb(CreatedbStmt *stmt)
 		AclResult	aclresult;
 
 		tablespacename = strVal(dtablespacename->arg);
-		dst_deftablespace = get_tablespace_oid(tablespacename);
-		if (!OidIsValid(dst_deftablespace))
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("tablespace \"%s\" does not exist",
-							tablespacename)));
+		dst_deftablespace = get_tablespace_oid(tablespacename, false);
 		/* check permissions */
 		aclresult = pg_tablespace_aclcheck(dst_deftablespace, GetUserId(),
 										   ACL_CREATE);
@@ -905,7 +900,7 @@ createdb(CreatedbStmt *stmt)
 	 * message than "unique index violation".  There's a race condition but
 	 * we're willing to accept the less friendly message in that case.
 	 */
-	if (OidIsValid(get_database_oid(dbname)))
+	if (OidIsValid(get_database_oid(dbname, true)))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_DATABASE),
 				 errmsg("database \"%s\" already exists", dbname)));
@@ -932,7 +927,7 @@ createdb(CreatedbStmt *stmt)
 	 */
 	pg_database_rel = heap_open(DatabaseRelationId, RowExclusiveLock);
 
-	if (Gp_role == GP_ROLE_EXECUTE)
+	if (Gp_role == GP_ROLE_EXECUTE || IsBinaryUpgrade)
 		dboid = GetPreassignedOidForDatabase(dbname);
 	else
 	{
@@ -1145,13 +1140,13 @@ createdb(CreatedbStmt *stmt)
 
 			PersistentFileSysRelStorageMgr relStorageMgr;
 
-			tablespace = dbInfoRel->reltablespace;
+			tablespace = dbInfoRel->dbInfoRelKey.reltablespace;
 			if (tablespace == GLOBALTABLESPACE_OID)
 				continue;
 
 			CHECK_FOR_INTERRUPTS();
 
-			relfilenode = dbInfoRel->relfilenodeOid;
+			relfilenode = dbInfoRel->dbInfoRelKey.relfilenode;
 			
 			srcRelFileNode.spcNode = tablespace;
 			srcRelFileNode.dbNode = info->database;
@@ -1295,7 +1290,7 @@ createdb(CreatedbStmt *stmt)
 							dst_deftablespace,
 							dboid,
 							&dbInfoGpRelationNode->gpRelationNodeTid,
-							dbInfoRel->relfilenodeOid,
+							dbInfoRel->dbInfoRelKey.relfilenode,
 							dbInfoGpRelationNode->segmentFileNum,
 							&dbInfoGpRelationNode->persistentTid,		// INPUT
 							dbInfoGpRelationNode->persistentSerialNum);	// INPUT
@@ -1337,11 +1332,12 @@ createdb_failure_callback(int code, Datum arg)
 	 */
 	UnlockSharedObject(DatabaseRelationId, fparms->src_dboid, 0, ShareLock);
 
+#if 0 /* Upstream code not applicable to GPDB */
 	/* Throw away any successfully copied subdirectories */
-	// GPDB_83_MERGE_FIXME: We don't do this in GPDB. Why not?
-	//remove_dbtablespaces(fparms->dest_dboid);
-}
+	remove_dbtablespaces(fparms->dest_dboid);
+#endif
 
+}
 
 /*
  * DROP DATABASE
@@ -1564,12 +1560,12 @@ dropdb(const char *dbname, bool missing_ok)
 			PersistentFileSysRelStorageMgr relStorageMgr;
 
 			int g;
-			if (dbInfoRel->reltablespace == GLOBALTABLESPACE_OID)
+			if (dbInfoRel->dbInfoRelKey.reltablespace == GLOBALTABLESPACE_OID)
 				continue;
 			
-			relFileNode.spcNode = dbInfoRel->reltablespace;
+			relFileNode.spcNode = dbInfoRel->dbInfoRelKey.reltablespace;
 			relFileNode.dbNode = db_id;
-			relFileNode.relNode = dbInfoRel->relfilenodeOid;
+			relFileNode.relNode = dbInfoRel->dbInfoRelKey.relfilenode;
 
 			CHECK_FOR_INTERRUPTS();
 
@@ -1701,7 +1697,7 @@ RenameDatabase(const char *oldname, const char *newname)
 	 * Make sure the new name doesn't exist.  See notes for same error in
 	 * CREATE DATABASE.
 	 */
-	if (OidIsValid(get_database_oid(newname)))
+	if (OidIsValid(get_database_oid(newname, true)))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_DATABASE),
 				 errmsg("database \"%s\" already exists", newname)));
@@ -2345,18 +2341,17 @@ have_createdb_privilege(void)
 }
 
 /*
+ * The remove_dbtablespaces() functionality is covered by AtEOXact_smgr(bool forCommit)
+ * - for `createdb()` failure during transaction abort.
+ * - for `dropdb()` during transaction commit.
+ */
+#if 0 /* Upstream code not applicable to GPDB */
+/*
  * Remove tablespace directories
  *
  * We don't know what tablespaces db_id is using, so iterate through all
  * tablespaces removing <tablespace>/db_id
  */
-/*
- * GPDB_83_MERGE_FIXME: As noted in createdb_failure_callback() it's unclear
- * why we in GPDB don't do remove_dbtablespaces(). Removing the code altogether
- * makes for strange merge conflicts though so put back the code but blocked
- * off with a preprocessor #if 0 until it has been investigated.
- */
-#if 0
 static void
 remove_dbtablespaces(Oid db_id)
 {
@@ -2491,7 +2486,7 @@ check_db_file_conflict(Oid db_id)
  * Returns InvalidOid if database name not found.
  */
 Oid
-get_database_oid(const char *dbname)
+get_database_oid(const char *dbname, bool missing_ok)
 {
 	Relation	pg_database;
 	ScanKeyData entry[1];
@@ -2521,6 +2516,12 @@ get_database_oid(const char *dbname)
 
 	systable_endscan(scan);
 	heap_close(pg_database, AccessShareLock);
+
+	if (!OidIsValid(oid) && !missing_ok)
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_DATABASE),
+				 errmsg("database \"%s\" does not exist",
+						 dbname)));
 
 	return oid;
 }

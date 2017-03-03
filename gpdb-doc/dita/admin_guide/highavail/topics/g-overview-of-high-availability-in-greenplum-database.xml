@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic2">
+   <title>Overview of Greenplum Database High Availability</title>
+   <shortdesc>A Greenplum Database cluster can be made highly available by providing a
+      fault-tolerant hardware platform, by enabling Greenplum Database
+      high-availability features, and by performing regular monitoring and maintenance procedures to
+      ensure the health of all system components. </shortdesc>
+   <body>
+      <p>Hardware components will eventually fail, whether due to normal wear or an unexpected
+         circumstance. Loss of power can lead to temporarily unavailable components. A system can be
+         made highly available by providing redundant standbys for components that can fail so that
+         services can continue uninterrupted when a failure does occur. In some cases, the cost of
+         redundancy is higher than users' tolerance for interruption in service. When this is the
+         case, the goal is to ensure that full service is able to be restored, and can be restored
+         within an expected timeframe.</p>
+      <p>With Greenplum Database, fault tolerance and data availability is achieved
+            with:<ul id="ul_lft_kpv_tp">
+            <li><xref href="#topic2/raid" format="dita">Hardware level RAID
+                  storage protection</xref></li>
+            <li><xref href="#topic2/segment_mirroring" format="dita">Greenplum
+                  segment mirroring</xref></li>
+            <li><xref href="#topic2/master_mirroring" format="dita">Master mirroring</xref></li>
+            <li><xref href="#topic2/dual_clusters" format="dita">Dual clusters</xref></li>
+            <li><xref href="#topic2/backup_restore" format="dita">Database backup and
+               restore</xref></li>
+         </ul></p>
+      <section id="raid">
+         <title>Hardware Level RAID</title>
+         <p>A best practice Greenplum Database deployment uses hardware level RAID to
+            provide high performance redundancy for single disk failure without having to go into
+            the database level fault tolerance. This provides a lower level of redundancy at the
+            disk level.</p>
+      </section>
+      <section id="segment_mirroring">
+         <title>Segment Mirroring</title>
+         <p>Greenplum Database stores data in multiple segments, each of which is a
+               Greenplum Database Postgres instance. The data for each table is spread
+            between the segments based on the distribution policy that is defined for the table in
+            the DDL at the time the table is created. When segment mirroring is enabled, for each
+            segment there is a <i>primary</i> and <i>mirror</i> pair. The primary and mirror perform
+            the same IO operations and store copies of the same data. </p>
+         <p>The mirror instance for each segment is usually initialized with the
+               <codeph>gpinitsystem</codeph> utility or the <codeph>gpexpand</codeph> utility. The
+            mirror runs on a different host than the primary instance to protect from a single
+            machine failure. There are different strategies for assigning mirrors to hosts. When
+            choosing the layout of the primaries and mirrors, it is important to consider the
+            failure scenarios to ensure that processing skew is minimized in the case of a single
+            machine failure.</p>
+      </section>
+      <section id="master_mirroring">
+         <title>Master Mirroring</title>
+         <p>There are two masters in a highly available cluster, a <i>primary</i> and a
+               <i>standby</i>. As with segments, the master and standby should be deployed on
+            different hosts so that the cluster can tolerate a single host failure. Clients connect
+            to the primary master and queries can be executed only on the primary master. The
+            secondary master is kept up-to-date by replicating the write-ahead log (WAL) from the
+            primary to the secondary. </p>
+         <p>If the master fails, the administrator runs the <codeph>gpactivatestandby</codeph>
+            utility to have the standby master take over as the new primary master. You can
+            configure a virtual IP address for the master and standby so that client programs do not
+            have to switch to a different network address when the current master changes. If the
+            master host fails, the virtual IP address can be swapped to he actual acting master.
+         </p>
+      </section>
+      <section id="dual_clusters">
+         <title>Dual Clusters</title>
+         <p>An additional level of redundancy can be provided by maintaining two Greenplum Database clusters, both storing the same data. </p>
+         <p>Two methods for keeping data synchronized on dual clusters are "dual ETL" and
+            "backup/restore."</p>
+         <p>Dual ETL provides a complete standby cluster with the same data as the primary cluster.
+            ETL (extract, transform, and load) refers to the process of cleansing, transforming,
+            validating, and loading incoming data into a data warehouse. With dual ETL, this process
+            is executed twice in parallel, once on each cluster, and is validated each time. It also
+            allows data to be queried on both clusters, doubling the query throughput. Applications
+            can take advantage of both clusters and also ensure that the ETL is successful and
+            validated on both clusters.</p>
+         <p>To maintain a dual cluster with the backup/restore method, create backups of the primary
+            cluster and restore them on the secondary cluster. This method takes longer to
+            synchronize data on the secondary cluster than the dual ETL strategy, but requires less
+            application logic to be developed. Populating a second cluster with backups is ideal in
+            use cases where data modifications and ETL are performed daily or less frequently.</p>
+      </section>
+      <section id="backup_restore">
+         <title>Backup and Restore</title>
+         <p>Making regular backups of the databases is recommended except in cases where the
+            database can be easily regenerated from the source data. Backups should be taken to
+            protect from operational, software, and hardware errors. </p>
+         <p>Use the <codeph>gpcrondump</codeph> utility to backup Greenplum databases. <codeph>gpcrondomp</codeph> performs the
+            backup in parallel across segments, so backup performance scales up as hardware is added
+            to the cluster. </p>
+         <p>When designing a backup strategy, a primary concern is where to store the backup data.
+            The data each segment manages can be backed up on the segment's local storage, but
+            should not be stored there permanently—the backup reduces disk space available to the
+            segment and, more importantly, a hardware failure could simultaneously destroy the
+            segment's live data and the backup. After performing a backup, the backup files should
+            be moved from the primary cluster to separate, safe storage. Alternatively, the backup
+            can be made directly to separate storage. </p>
+         <p>Additional options are available to backup datatabases, including the following:</p>
+         <parml>
+            <plentry>
+               <pt>Data Domain</pt>
+               <pd>Through native API integration backups can be streamed to a Dell EMC Data Domain
+                  appliance.</pd>
+            </plentry>
+            <plentry>
+               <pt>NetBackup</pt>
+               <pd>Through native API integration, backups can be streamed to a Veritas NetBackup
+                  cluster.</pd>
+            </plentry>
+            <plentry>
+               <pt>NFS</pt>
+               <pd>If an NFS mount is created on each Greenplum Database host in the
+                  cluster, backups can be written directly to the NFS mount. A scale out NFS
+                  solution is recommended to ensure that backups do not bottleneck on IO throughput
+                  of the NFS device. Dell EMC Isilon is an example that can scale out along side the
+                     Greenplum cluster.</pd>
+            </plentry>
+         </parml>
+      </section>
+      <section>
+         <title>Incremental Backups</title>
+         <p>Greenplum Database allows <i>incremental backup</i> at the partition level
+            for append-optimized and column-oriented tables. When you perform an incremental backup,
+            only the partitions for append-optimized and column-oriented tables that have changed
+            since the previous backup are backed up. (Heap tables are <i>always</i> backed up.)
+            Restoring an incremental backup requires restoring the previous full backup and
+            subsequent incremental backups. </p>
+         <p>Incremental backup is beneficial only when the database contains large, partitioned
+            tables where all but one or a few partitions remain unchanged between backups. An
+            incremental backup saves just the changed partitions and the heap tables. By not backing
+            up the unchanged partitions, the backup size and time can be significantly reduced.</p>
+         <p>If a large fact table is not partitioned, and a single row is added or changed, the
+            entire table is backed up, and there is no savings in backup size or time. Therefore,
+            incremental backup is only recommended for databases with large, partitioned tables and
+            relatively small dimension tables. </p>
+         <p>If you maintain dual clusters and use incremental backup, you can populate the second
+            cluster with the incremental backups. Use the <codeph>--noplan</codeph> option to
+            achieve this, allowing backups from the primary site to be applied faster.</p>
+      </section>
+   </body>
+</topic>

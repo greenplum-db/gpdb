@@ -34,7 +34,7 @@ CREATE TABLE
 insert into pt_ext select i,i,'test',true from generate_series(1,50) i;
 INSERT 0 50
 create temp table tmp as select * from pt_ext where col1 < 11;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
 SELECT 10
 \! rm /tmp/exttab_list
 copy tmp to '/tmp/exttab_list' csv;

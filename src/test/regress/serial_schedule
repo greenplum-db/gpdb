@@ -99,7 +99,7 @@ test: tsearch
 test: plancache
 test: json
 test: limit
-ignore: plpgsql
+test: plpgsql
 test: copy2
 test: temp
 test: domain
@@ -114,7 +114,7 @@ test: sequence
 test: polymorphism
 test: rowtypes
 test: returning
-# 83MERGE_FIXME: the largeobject test is temporarily disabled due to test errors
+# GPDB_83_MERGE_FIXME: the largeobject test is temporarily disabled due to test errors
 ignore: largeobject
 test: xml
 test: stats

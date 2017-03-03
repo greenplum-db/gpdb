@@ -1,0 +1,33 @@
+-- @author prabhd 
+-- @created 2013-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description test16b: CTE within a user-defined function
+DROP TABLE IF EXISTS foo;
+DROP TABLE
+CREATE TABLE foo AS SELECT i as a, i+1 as b from generate_series(1,10)i;
+psql:sql/cte_functest_29.sql:9: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 10
+CREATE OR REPLACE FUNCTION cte_func2()
+RETURNS int 
+as $$
+Declare
+    rcount INTEGER;
+Begin
+RETURN (SELECT COUNT(*) FROM (WITH v AS (SELECT a, b FROM foo WHERE b < 9),
+w AS (SELECT * FROM v WHERE a < 5)
+SELECT v1.a, w1.b b1, w2.b b2
+FROM v AS v1, v as v2, w AS w1, w AS w2
+WHERE v1.a = v2.b)foo);
+End;
+$$ language plpgsql READS SQL DATA;
+CREATE FUNCTION
+WITH v(a, b) AS (SELECT cte_func2() as a, b FROM foo WHERE b < 5)
+SELECT * from v ORDER BY 1;
+psql:sql/cte_functest_29.sql:27: ERROR:  function cannot execute on segment because it accesses relation "public.foo" (functions.c:152)  (seg3 slice1 rh55-qa04.sanmateo.greenplum.com:35512 pid=23354) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "SELECT  (SELECT COUNT(*) FROM (WITH v AS (SELECT a, b FROM foo WHERE b < 9), w AS (SELECT * FROM v WHERE a < 5) SELECT v1.a, w1.b b1, w2.b b2 FROM v AS v1, v as v2, w AS w1, w AS w2 WHERE v1.a = v2.b)foo)"
+PL/pgSQL function "cte_func2" line 4 at return

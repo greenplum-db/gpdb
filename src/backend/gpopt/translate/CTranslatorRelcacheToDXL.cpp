@@ -701,7 +701,7 @@ CTranslatorRelcacheToDXL::Pdrgpmdcol
 	{
 		BOOL fAOTable = IMDRelation::ErelstorageAppendOnlyRows == erelstorage ||
 				IMDRelation::ErelstorageAppendOnlyCols == erelstorage;
-		AddSystemColumns(pmp, pdrgpmdcol, rel->rd_att->tdhasoid, fAOTable);
+		AddSystemColumns(pmp, pdrgpmdcol, rel, fAOTable);
 	}
 
 	return pdrgpmdcol;
@@ -870,10 +870,13 @@ CTranslatorRelcacheToDXL::AddSystemColumns
 	(
 	IMemoryPool *pmp,
 	DrgPmdcol *pdrgpmdcol,
-	BOOL fHasOid,
+	Relation rel,
 	BOOL fAOTable
 	)
 {
+	BOOL fHasOid = rel->rd_att->tdhasoid;
+	fAOTable = fAOTable || gpdb::FAppendOnlyPartitionTable(rel->rd_id);
+
 	for (INT i= SelfItemPointerAttributeNumber; i > FirstLowInvalidHeapAttributeNumber; i--)
 	{
 		AttrNumber attno = AttrNumber(i);
@@ -883,13 +886,13 @@ CTranslatorRelcacheToDXL::AddSystemColumns
 		{
 			continue;
 		}
-		
+
 		if (FTransactionVisibilityAttribute(i) && fAOTable)
 		{
 			// skip transaction attrbutes like xmin, xmax, cmin, cmax for AO tables
 			continue;
 		}
-		
+
 		// get system name for that attribute
 		const CWStringConst *pstrSysColName = CTranslatorUtils::PstrSystemColName(attno);
 		GPOS_ASSERT(NULL != pstrSysColName);
@@ -1044,7 +1047,7 @@ CTranslatorRelcacheToDXL::Pmdindex
 	}
 
 	pmdidIndex->AddRef();	
-	DrgPmdid *pdrgpmdidOpClasses = PdrgpmdidIndexOpClasses(pmp, pmdidIndex);
+	DrgPmdid *pdrgpmdidOpFamilies = PdrgpmdidIndexOpFamilies(pmp, pmdidIndex);
 	
 	CMDIndexGPDB *pmdindex = GPOS_NEW(pmp) CMDIndexGPDB
 										(
@@ -1058,7 +1061,7 @@ CTranslatorRelcacheToDXL::Pmdindex
 										false, // fPartial
 										pdrgpulKeyCols,
 										pdrgpulIncludeCols,
-										pdrgpmdidOpClasses,
+										pdrgpmdidOpFamilies,
 										NULL // pmdpartcnstr
 										);
 
@@ -1251,7 +1254,7 @@ CTranslatorRelcacheToDXL::PmdindexPartTable
 		pmdidItemType = GPOS_NEW(pmp) CMDIdGPDB(GPDB_ANY);
 	}
 	
-	DrgPmdid *pdrgpmdidOpClasses = PdrgpmdidIndexOpClasses(pmp, pmdidIndex);
+	DrgPmdid *pdrgpmdidOpFamilies = PdrgpmdidIndexOpFamilies(pmp, pmdidIndex);
 	
 	CMDIndexGPDB *pmdindex = GPOS_NEW(pmp) CMDIndexGPDB
 										(
@@ -1265,7 +1268,7 @@ CTranslatorRelcacheToDXL::PmdindexPartTable
 										fPartial,
 										pdrgpulKeyCols,
 										pdrgpulIncludeCols,
-										pdrgpmdidOpClasses,
+										pdrgpmdidOpFamilies,
 										pmdpartcnstr
 										);
 	
@@ -1624,7 +1627,7 @@ CTranslatorRelcacheToDXL::Pmdscop
 											pmdidOpInverse,
 											ecmpt,
 											fReturnsNullOnNullInput,
-											PdrgpmdidScOpOpClasses(pmp, pmdid)
+											PdrgpmdidScOpOpFamilies(pmp, pmdid)
 											);
 	return pmdscop;
 }
@@ -2319,9 +2322,9 @@ CTranslatorRelcacheToDXL::PimdobjColStats
 
 	// total MCV frequency
 	CDouble dMCFSum = 0.0;
-	for (ULONG ul = 0; ul < iNumMCVValues; ul++)
+	for (int i = 0; i < iNumMCVValues; i++)
 	{
-		dMCFSum = dMCFSum + CDouble(pdrgfMCVFrequencies[ul]);
+		dMCFSum = dMCFSum + CDouble(pdrgfMCVFrequencies[i]);
 	}
 
 	// get histogram datums from pg_statistic entry
@@ -3423,28 +3426,28 @@ CTranslatorRelcacheToDXL::UlCmpt
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorRelcacheToDXL::PdrgpmdidIndexOpClasses
+//		CTranslatorRelcacheToDXL::PdrgpmdidIndexOpFamilies
 //
 //	@doc:
-//		Retrieve the opclasses for the keys of the given index
+//		Retrieve the opfamilies for the keys of the given index
 //
 //---------------------------------------------------------------------------
 DrgPmdid * 
-CTranslatorRelcacheToDXL::PdrgpmdidIndexOpClasses
+CTranslatorRelcacheToDXL::PdrgpmdidIndexOpFamilies
 	(
 	IMemoryPool *pmp,
 	IMDId *pmdidIndex
 	)
 {
-	List *plOpClasses = gpdb::PlIndexOpClasses(CMDIdGPDB::PmdidConvert(pmdidIndex)->OidObjectId());
+	List *plOpFamilies = gpdb::PlIndexOpFamilies(CMDIdGPDB::PmdidConvert(pmdidIndex)->OidObjectId());
 	DrgPmdid *pdrgpmdid = GPOS_NEW(pmp) DrgPmdid(pmp);
 	
 	ListCell *plc = NULL;
 	
-	ForEach(plc, plOpClasses)
+	ForEach(plc, plOpFamilies)
 	{
-		OID oidOpClass = lfirst_oid(plc);
-		pdrgpmdid->Append(GPOS_NEW(pmp) CMDIdGPDB(oidOpClass));
+		OID oidOpFamily = lfirst_oid(plc);
+		pdrgpmdid->Append(GPOS_NEW(pmp) CMDIdGPDB(oidOpFamily));
 	}
 	
 	return pdrgpmdid;
@@ -3452,28 +3455,28 @@ CTranslatorRelcacheToDXL::PdrgpmdidIndexOpClasses
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorRelcacheToDXL::PdrgpmdidScOpOpClasses
+//		CTranslatorRelcacheToDXL::PdrgpmdidScOpOpFamilies
 //
 //	@doc:
-//		Retrieve the opclasses for the keys of the given scalar operator
+//		Retrieve the families for the keys of the given scalar operator
 //
 //---------------------------------------------------------------------------
 DrgPmdid * 
-CTranslatorRelcacheToDXL::PdrgpmdidScOpOpClasses
+CTranslatorRelcacheToDXL::PdrgpmdidScOpOpFamilies
 	(
 	IMemoryPool *pmp,
 	IMDId *pmdidScOp
 	)
 {
-	List *plOpClasses = gpdb::PlScOpOpClasses(CMDIdGPDB::PmdidConvert(pmdidScOp)->OidObjectId());
+	List *plOpFamilies = gpdb::PlScOpOpFamilies(CMDIdGPDB::PmdidConvert(pmdidScOp)->OidObjectId());
 	DrgPmdid *pdrgpmdid = GPOS_NEW(pmp) DrgPmdid(pmp);
 	
 	ListCell *plc = NULL;
 	
-	ForEach(plc, plOpClasses)
+	ForEach(plc, plOpFamilies)
 	{
-		OID oidOpClass = lfirst_oid(plc);
-		pdrgpmdid->Append(GPOS_NEW(pmp) CMDIdGPDB(oidOpClass));
+		OID oidOpFamily = lfirst_oid(plc);
+		pdrgpmdid->Append(GPOS_NEW(pmp) CMDIdGPDB(oidOpFamily));
 	}
 	
 	return pdrgpmdid;

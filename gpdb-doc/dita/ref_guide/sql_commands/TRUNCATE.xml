@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1"><title id="ep20941">TRUNCATE</title><body><p id="sql_command_desc">Empties a table of all rows.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">TRUNCATE [TABLE] <varname>name</varname> [, ...] [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>TRUNCATE</codeph> quickly removes all rows from a table or set of tables. It has the same
+        effect as an unqualified <codeph><xref href="DELETE.xml#topic1" type="topic" format="dita"
+          /></codeph> on each table, but since it does not actually scan the tables it is faster.
+        This is most useful on large tables.</p>
+      <p>You must have the <codeph>TRUNCATE</codeph> privilege on the table to truncate table
+        rows.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of a table to be truncated.</pd></plentry><plentry><pt>CASCADE</pt><pd>Since this key word applies to foreign key references (which are
+not supported in Greenplum Database) it has no effect.</pd></plentry><plentry><pt>RESTRICT</pt><pd>Since this key word applies to foreign key references (which are
+not supported in Greenplum Database) it has no effect.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p><codeph>TRUNCATE</codeph> will not run any user-defined <codeph>ON
+DELETE</codeph> triggers that might exist for the tables. </p><p><codeph>TRUNCATE</codeph> will not truncate any tables that inherit
+from the named table. Only the named table is truncated, not its child
+tables.</p><p><codeph>TRUNCATE</codeph> will not truncate any sub-tables of a partitioned
+table. If you specify a sub-table of a partitioned table, <codeph>TRUNCATE</codeph>
+  will not remove rows from the sub-table and its child tables.</p></section><section id="section6"><title>Examples</title><p>Empty the table <codeph>films</codeph>:</p><codeblock>TRUNCATE films;</codeblock></section><section id="section7"><title>Compatibility</title><p>There is no <codeph>TRUNCATE</codeph> command in the SQL standard.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="DELETE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
+            href="DROP_TABLE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>

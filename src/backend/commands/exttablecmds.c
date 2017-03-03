@@ -40,6 +40,7 @@ static Datum transformExecOnClause(List *on_clause);
 static char transformFormatType(char *formatname);
 static Datum transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswritable);
 static void InvokeProtocolValidation(Oid procOid, char *procName, bool iswritable, List *locs);
+static Datum optionsListToArray(List *options);
 
 /* ----------------------------------------------------------------
 *		DefineExternalRelation
@@ -48,10 +49,10 @@ static void InvokeProtocolValidation(Oid procOid, char *procName, bool iswritabl
 * In here we first dispatch a normal DefineRelation() (with relstorage
 * external) in order to create the external relation entries in pg_class
 * pg_type etc. Then once this is done we dispatch ourselves (DefineExternalRelation)
-* in order to create the pg_exttable entry accross the gp array.
+* in order to create the pg_exttable entry across the gp array.
 *
-* Why don't we just do all of this in one dispatch run? because that
-* involves duplicating the DefineRelation() code or severly modifying it
+* Why don't we just do all of this in one dispatch run? Because that
+* involves duplicating the DefineRelation() code or severely modifying it
 * to have special cases for external tables. IMHO it's better and cleaner
 * to leave it intact and do another dispatch.
 * ----------------------------------------------------------------
@@ -67,6 +68,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	Oid			reloid = 0;
 	Oid			fmtErrTblOid = InvalidOid;
 	Datum		formatOptStr;
+	Datum		optionsStr;
 	Datum		locationUris = 0;
 	Datum		locationExec = 0;
 	char	   *commandString = NULL;
@@ -99,6 +101,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 		case EXTTBL_TYPE_LOCATION:
 
 			/* Parse and validate URI strings (LOCATION clause) */
+			locationExec = transformExecOnClause(exttypeDesc->on_clause);
 			locationUris = transformLocationUris(exttypeDesc->location_list,
 												 isweb, iswritable);
 			break;
@@ -125,9 +128,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	 * - Always allow if superuser.
 	 * - Never allow EXECUTE or 'file' exttables if not superuser.
 	 * - Allow http, gpfdist or gpfdists tables if pg_auth has the right
-	 *	 permissions for this role and for this type of table, or if
-	 *	 gp_external_grant_privileges is on (gp_external_grant_privileges
-	 *	 should be deprecated at some point).
+	 *	 permissions for this role and for this type of table
 	 *----------
 	 */
 	if (!superuser() && Gp_role == GP_ROLE_DISPATCH)
@@ -153,7 +154,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 						(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 						 errmsg("must be superuser to create an external table with a file protocol")));
 			}
-			else if (!gp_external_grant_privileges)
+			else
 			{
 				/*
 				 * Check if this role has the proper 'gpfdist', 'gpfdists' or
@@ -293,6 +294,14 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 									   iswritable);
 
 	/*
+	 * Parse and validate OPTION clause.
+	 */
+	optionsStr = optionsListToArray(createExtStmt->extOptions);
+	if (DatumGetPointer(optionsStr) == NULL)
+	{
+		optionsStr = PointerGetDatum(construct_empty_array(TEXTOID));
+	}
+	/*
 	 * Parse single row error handling info if available
 	 */
 	singlerowerrorDesc = (SingleRowErrorDesc *) createExtStmt->sreh;
@@ -359,6 +368,35 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	if (encoding < 0)
 		encoding = pg_get_client_encoding();
 
+	/*
+	 * If the number of locations (file or http URIs) exceed the number of
+	 * segments in the cluster, then all queries against the table will fail
+	 * since locations must be mapped at most one per segment. Allow the
+	 * creation since this is old pre-existing behavior but throw a WARNING
+	 * that the user must expand the cluster in order to use it (or alter
+	 * the table).
+	 */
+	if (exttypeDesc->exttabletype == EXTTBL_TYPE_LOCATION)
+	{
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			Value	*loc = lfirst(list_head(exttypeDesc->location_list));
+			Uri 	*uri = ParseExternalTableUri(loc->val.str);
+
+			if (uri->protocol == URI_FILE || uri->protocol == URI_HTTP)
+			{
+				if (getgpsegmentCount() < list_length(exttypeDesc->location_list))
+					ereport(WARNING,
+							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+							 errmsg("number of locations (%d) exceeds the number of segments (%d)",
+									list_length(exttypeDesc->location_list),
+									getgpsegmentCount()),
+							 errhint("The table cannot be queried until cluster "
+									 "is expanded so that there are at least as "
+									 "many segments as locations.")));
+			}
+		}
+	}
 
 	/*
 	 * First, create the pg_class and other regular relation catalog entries.
@@ -401,6 +439,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 						fmtErrTblOid,
 						encoding,
 						formatOptStr,
+						optionsStr,
 						locationExec,
 						locationUris);
 
@@ -457,28 +496,6 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 
 	/* We build new array using accumArrayResult */
 	astate = NULL;
-
-	/*
-	 * first, check for duplicate URI entries
-	 */
-	foreach(cell, locs)
-	{
-		Value	   *v1 = lfirst(cell);
-		const char *uri1 = v1->val.str;
-		ListCell   *rest;
-
-		for_each_cell(rest, lnext(cell))
-		{
-			Value	   *v2 = lfirst(rest);
-			const char *uri2 = v2->val.str;
-
-			if (strcmp(uri1, uri2) == 0)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("location uri \"%s\" appears more than once",
-								uri1)));
-		}
-	}
 
 	/*
 	 * iterate through the user supplied URI list from LOCATION clause.
@@ -650,6 +667,9 @@ transformExecOnClause(List *on_clause)
 	Size		len;
 	text	   *t;
 
+	if (on_clause == NIL)
+		exec_location_str = "ALL_SEGMENTS";
+	else {
 	/*
 	 * Extract options from the statement node tree NOTE: as of now we only
 	 * support one option in the ON clause and therefore more than one is an
@@ -711,6 +731,7 @@ transformExecOnClause(List *on_clause)
 				 errmsg("Unknown location code for EXECUTE in tablecmds.")));
 		}
 	}
+	}
 
 	/* convert to text[] */
 	astate = NULL;
@@ -761,6 +782,41 @@ transformFormatType(char *formatname)
 	return result;
 }
 
+/*
+ * Transform the external table options into a text array format.
+ *
+ * The result is an array that includes the format string.
+ *
+ * This method is a backported FDW's function from upper stream .
+ */
+static Datum
+optionsListToArray(List *options)
+{
+	ArrayBuildState *astate = NULL;
+	ListCell   *option;
+
+	foreach(option, options)
+	{
+		DefElem    *defel = (DefElem *) lfirst(option);
+		char       *key = defel->defname;
+		char       *val = defGetString(defel);
+		text       *t;
+		Size       len;
+
+        // first 1 for '=', last 1 for '\0'
+		len = VARHDRSZ + strlen(key) + 1 + strlen(val) + 1;
+		t = palloc(len);
+		SET_VARSIZE(t, len);
+		sprintf(VARDATA(t), "%s=%s", key, val);
+		astate = accumArrayResult(astate, PointerGetDatum(t), false,
+				                  TEXTOID, CurrentMemoryContext);
+	}
+
+	if (astate)
+		return makeArrayResult(astate, CurrentMemoryContext);
+
+	return PointerGetDatum(NULL);
+}
 
 /*
  * Transform the FORMAT options into a text field. Parse the
@@ -773,7 +829,7 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 {
 	ListCell   *option;
 	Datum		result;
-	char	   *format_str = NULL;
+	char	   *format_str;
 	char	   *delim = NULL;
 	char	   *null_print = NULL;
 	char	   *quote = NULL;
@@ -1035,15 +1091,7 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 		const int	maxlen = 32;
 
 		format_str = (char *) palloc0(maxlen + 1);
-		if (format_str)
-		{
-			sprintf((char *) format_str, "%s '%s' ", "formatter", val);
-		}
-		else
-		{
-			ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
-							errmsg("palloc return null")));
-		}
+		sprintf(format_str, "%s '%s' ", "formatter", val);
 	}
 	else
 	{
@@ -1095,8 +1143,7 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 	result = DirectFunctionCall1(textin, CStringGetDatum(format_str));
 
 	/* clean up */
-	if (format_str)
-		pfree(format_str);
+	pfree(format_str);
 	if (force_notnull)
 		pfree(fnn.data);
 	if (force_quote)

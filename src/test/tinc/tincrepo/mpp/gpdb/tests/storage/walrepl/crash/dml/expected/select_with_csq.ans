@@ -200,7 +200,7 @@ select * from A where A.j = any (select C.j from C,B where C.j = A.j and B.i = a
 (4 rows)
 
 select * from A,B where A.j = any (select C.j from C where C.j = A.j and B.i = any (select C.i from C where C.i != 10 and C.i = A.i)) order by 1,2,3,4; -- Not supported, should fail
-psql:/path/sql_file:1: ERROR:  correlated subquery with skip-level correlations is not supported (subselect.c:394)
+psql:/path/sql_file:1: ERROR:  correlated subquery with skip-level correlations is not supported
 select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i = any (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
  i  | i  |  j  
 ----+----+-----

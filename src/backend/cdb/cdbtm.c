@@ -147,6 +147,7 @@ static void doPrepareTransaction(void);
 static void doInsertForgetCommitted(void);
 static void doNotifyingCommitPrepared(void);
 static void doNotifyingAbort(void);
+static void retryAbortPrepared(void);
 static bool doNotifyCommittedInDoubt(char *gid);
 static void doAbortInDoubt(char *gid);
 static void doQEDistributedExplicitBegin(int txnOptions);
@@ -736,6 +737,8 @@ doNotifyingCommitPrepared(void)
 {
 	bool succeeded;
 	bool badGangs;
+	int retry = 0;
+	volatile int savedInterruptHoldoffCount;
 
 	CdbDispatchDirectDesc direct=default_dispatch_direct_desc;
 
@@ -754,24 +757,46 @@ doNotifyingCommitPrepared(void)
 			 (int)strlen(currentGxact->gid));
 
 	SIMPLE_FAULT_INJECTOR(DtmBroadcastCommitPrepared);
+	savedInterruptHoldoffCount = InterruptHoldoffCount;
 
-	succeeded = doDispatchDtxProtocolCommand(DTX_PROTOCOL_COMMAND_COMMIT_PREPARED, /* flags */ 0,
-											 currentGxact->gid, currentGxact->gxid,
-											 &badGangs, /* raiseError */ false,
-											 &direct, NULL, 0);
+	PG_TRY();
+	{
+		succeeded = doDispatchDtxProtocolCommand(DTX_PROTOCOL_COMMAND_COMMIT_PREPARED, /* flags */ 0,
+												 currentGxact->gid, currentGxact->gxid,
+												 &badGangs, /* raiseError */ false,
+												 &direct, NULL, 0);
+	}
+	PG_CATCH();
+	{
+		/*
+		 * restore the previous value, which is reset to 0 in errfinish.
+		 */
+		InterruptHoldoffCount = savedInterruptHoldoffCount;
+		succeeded = false;
+	}
+	PG_END_TRY();
+
 	if (!succeeded)
 	{
-		elog(WARNING, "The distributed transaction 'Commit Prepared' broadcast failed to one or more segments for gid = %s.",
+		getTmLock();
+		Assert(currentGxact->state == DTX_STATE_NOTIFYING_COMMIT_PREPARED);
+		elog(DTM_DEBUG5, "marking retry needed for distributed transaction"
+			 " 'Commit Prepared' broadcast to the segments for gid = %s.",
 			 currentGxact->gid);
+		setCurrentGxactState(DTX_STATE_RETRY_COMMIT_PREPARED);
+		setDistributedTransactionContext(DTX_CONTEXT_QD_RETRY_PHASE_2);
+		releaseTmLock();
+	}
+
+	while (!succeeded && dtx_phase2_retry_count > retry++)
+	{
+		elog(WARNING, "the distributed transaction 'Commit Prepared' broadcast "
+			 "failed to one or more segments for gid = %s.  Retrying ... try %d",
+			 currentGxact->gid, retry);
 
 		/*
 		 * We must succeed in delivering the commit to all segment instances, or any failed
 		 * segment instances must be marked INVALID.
-		 */
-
-		/*
-		 * Reset the dispatch logic (i.e. deallocate gang) so later we can attempt a retry
-		 * at the top in PostgresMain.
 		 */
 		elog(NOTICE, "Releasing segworker group to retry broadcast.");
 		DisconnectAndDestroyAllGangs(true);
@@ -781,23 +806,32 @@ doNotifyingCommitPrepared(void)
 		 * not have SharedSnapshotAdd colissions.
 		 */
 		CheckForResetSession();
+		savedInterruptHoldoffCount = InterruptHoldoffCount;
 
-		getTmLock();
-		Assert(currentGxact->state == DTX_STATE_NOTIFYING_COMMIT_PREPARED);
-
-		setCurrentGxactState( DTX_STATE_RETRY_COMMIT_PREPARED );
-
-		releaseTmLock();
-
-		elog(DTM_DEBUG5, "Marking retry needed for distributed transaction 'Commit Prepared' broadcast to the segments for gid = %s.",
-			 currentGxact->gid);
-		return;
+		PG_TRY();
+		{
+			succeeded = doDispatchDtxProtocolCommand(
+					DTX_PROTOCOL_COMMAND_RETRY_COMMIT_PREPARED, /* flags */ 0,
+					currentGxact->gid, currentGxact->gxid,
+					&badGangs, /* raiseError */ false,
+					&direct, NULL, 0);
+		}
+		PG_CATCH();
+		{
+			/*
+			 * restore the previous value, which is reset to 0 in errfinish.
+			 */
+			InterruptHoldoffCount = savedInterruptHoldoffCount;
+			succeeded = false;
+		}
+		PG_END_TRY();
 	}
-	else
-	{
-		elog(DTM_DEBUG5, "The distributed transaction 'Commit Prepared' broadcast succeeded to all the segments for gid = %s.",
-			 currentGxact->gid);
-	}
+
+	if (!succeeded)
+		elog(PANIC, "unable to complete 'Commit Prepared' broadcast for gid = %s",
+ 			 currentGxact->gid);
+	elog(DTM_DEBUG5, "the distributed transaction 'Commit Prepared' broadcast "
+		 "succeeded to all the segments for gid = %s.", currentGxact->gid);
 
 	/*
 	 * Global locking order: ProcArrayLock then DTM lock since
@@ -807,8 +841,6 @@ doNotifyingCommitPrepared(void)
 
 	getTmLock();
 
-	Assert(currentGxact->state == DTX_STATE_NOTIFYING_COMMIT_PREPARED);
-
 	doInsertForgetCommitted();
 
 	releaseTmLock();
@@ -817,10 +849,70 @@ doNotifyingCommitPrepared(void)
 }
 
 static void
+retryAbortPrepared(void)
+{
+	int retry = 0;
+	bool succeeded = false;
+	bool badGangs = false;
+	volatile int savedInterruptHoldoffCount;
+
+	CdbDispatchDirectDesc direct = default_dispatch_direct_desc;
+
+	while (!succeeded && dtx_phase2_retry_count > retry++)
+	{
+		/*
+		 * By deallocating the gang, we will force a new gang to connect to all the
+		 * segment instances.  And, we will abort the transactions in the
+		 * segments. What's left are possibily prepared transactions.
+		 */
+		elog(NOTICE, "Releasing segworker groups to retry broadcast.");
+		DisconnectAndDestroyAllGangs(true);
+
+		/*
+		 * This call will at a minimum change the session id so we will
+		 * not have SharedSnapshotAdd colissions.
+		 */
+		CheckForResetSession();
+
+		savedInterruptHoldoffCount = InterruptHoldoffCount;
+
+		PG_TRY();
+		{
+			succeeded = doDispatchDtxProtocolCommand(
+				DTX_PROTOCOL_COMMAND_RETRY_ABORT_PREPARED, /* flags */ 0,
+				currentGxact->gid, currentGxact->gxid,
+				&badGangs, /* raiseError */ false,
+				&direct, NULL, 0);
+			if (!succeeded)
+				elog(WARNING, "the distributed transaction 'Abort' broadcast "
+					 "failed to one or more segments for gid = %s.  "
+					 "Retrying ... try %d", currentGxact->gid, retry);
+		}
+		PG_CATCH();
+		{
+			/*
+			 * restore the previous value, which is reset to 0 in errfinish.
+			 */
+			InterruptHoldoffCount = savedInterruptHoldoffCount;
+			succeeded = false;
+		}
+		PG_END_TRY();
+	}
+
+	if (!succeeded)
+		elog(PANIC, "unable to complete 'Abort' broadcast for gid = %s",
+			 currentGxact->gid);
+	elog(DTM_DEBUG5, "The distributed transaction 'Abort' broadcast succeeded to "
+		 "all the segments for gid = %s.", currentGxact->gid);
+}
+
+
+static void
 doNotifyingAbort(void)
 {
 	bool succeeded;
 	bool badGangs;
+	volatile int savedInterruptHoldoffCount;
 
 	CdbDispatchDirectDesc direct=default_dispatch_direct_desc;
 
@@ -877,6 +969,7 @@ doNotifyingAbort(void)
 	{
 		DtxProtocolCommand dtxProtocolCommand;
 		char *abortString;
+		int retry = 0;
 
 		Assert(currentGxact->state == DTX_STATE_NOTIFYING_ABORT_SOME_PREPARED ||
 		       currentGxact->state == DTX_STATE_NOTIFYING_ABORT_PREPARED);
@@ -892,44 +985,37 @@ doNotifyingAbort(void)
 			abortString = "Abort Prepared";
 		}
 
-		succeeded = doDispatchDtxProtocolCommand(dtxProtocolCommand, /* flags */ 0,
-												 currentGxact->gid, currentGxact->gxid,
-												 &badGangs, /* raiseError */ false,
-												 &direct, NULL, 0);
+		savedInterruptHoldoffCount = InterruptHoldoffCount;
+
+		PG_TRY();
+		{
+			succeeded = doDispatchDtxProtocolCommand(dtxProtocolCommand, /* flags */ 0,
+													 currentGxact->gid, currentGxact->gxid,
+													 &badGangs, /* raiseError */ false,
+													 &direct, NULL, 0);
+		}
+		PG_CATCH();
+		{
+			/*
+			 * restore the previous value, which is reset to 0 in errfinish.
+			 */
+			InterruptHoldoffCount = savedInterruptHoldoffCount;
+			succeeded = false;
+		}
+		PG_END_TRY();
+
 		if (!succeeded)
 		{
-			elog(WARNING, "The distributed transaction '%s' broadcast failed to one or more segments for gid = %s.",
-				 abortString, currentGxact->gid);
-
-			/*
-			 * We must succeed in delivering the abort to all segment instances, or any failed
-			 * segment instances must be marked INVALID.
-			 */
-
-			/*
-			 * Reset the dispatch logic (i.e. deallocate gang) so we can attempt a retry.
-			 */
-			elog(NOTICE, "Releasing segworker groups to retry broadcast.");
-			DisconnectAndDestroyAllGangs(true);
-
-			/*
-			 * This call will at a minimum change the session id so we will
-			 * not have SharedSnapshotAdd colissions.
-			 */
-			CheckForResetSession();
+			elog(WARNING, "the distributed transaction '%s' broadcast failed"
+				 " to one or more segments for gid = %s.  Retrying ... try %d",
+				 abortString, currentGxact->gid, retry);
 
 			getTmLock();
 			setCurrentGxactState( DTX_STATE_RETRY_ABORT_PREPARED );
+			setDistributedTransactionContext(DTX_CONTEXT_QD_RETRY_PHASE_2);
 			releaseTmLock();
-
-			elog(DTM_DEBUG5, "Marking retry needed for distributed transaction for '%s' broadcast to the segments for gid = %s.",
-				 abortString, currentGxact->gid);
-			return;
-
 		}
-
-		elog(DTM_DEBUG5, "The distributed transaction '%s' broadcast succeeded to all the segments for gid = %s.",
-			 abortString, currentGxact->gid);
+		retryAbortPrepared();
 	}
 
 	SIMPLE_FAULT_INJECTOR(DtmBroadcastAbortPrepared);
@@ -943,160 +1029,14 @@ doNotifyingAbort(void)
 
 	Assert(currentGxact->state == DTX_STATE_NOTIFYING_ABORT_NO_PREPARED ||
 	       currentGxact->state == DTX_STATE_NOTIFYING_ABORT_SOME_PREPARED ||
-	       currentGxact->state == DTX_STATE_NOTIFYING_ABORT_PREPARED);
-
+	       currentGxact->state == DTX_STATE_NOTIFYING_ABORT_PREPARED ||
+		   currentGxact->state == DTX_STATE_RETRY_ABORT_PREPARED);
 	releaseGxact_UnderLocks();
 	elog(DTM_DEBUG5, "doNotifyingAbort called releaseGxact");
 
 	releaseTmLock();
 
 	LWLockRelease(ProcArrayLock);
-}
-
-/*
- * Attempt to retry DTM messaging.
- */
-void
-doDtxPhase2Retry(void)
-{
-	bool succeeded;
-	bool badGangs;
-
-	CdbDispatchDirectDesc direct=default_dispatch_direct_desc;
-
-	if (currentGxact == NULL)
-	{
-		elog(DTM_DEBUG5, "doDtxPhase2Retry found no work to do (currentGxact == NULL)");
-		return;
-	}
-
-	copyDirectDispatchFromTransaction(&direct);
-
-	switch (currentGxact->state)
-	{
-		case DTX_STATE_RETRY_COMMIT_PREPARED:
-		case DTX_STATE_RETRY_ABORT_PREPARED:
-			if (currentGxact->retryPhase2RecursionStop)
-			{
-				/*
-				 * Take down GP Array.
-				 */
-				elog(PANIC, "Unable to complete '%s Prepared' broadcast for gid = %s",
-					 (currentGxact->state == DTX_STATE_RETRY_COMMIT_PREPARED ? "Commit" : "Abort"),
-					 currentGxact->gid);
-			}
-			PG_TRY();
-			{
-				bool commit = (currentGxact->state == DTX_STATE_RETRY_COMMIT_PREPARED);
-				DtxProtocolCommand dtxProtocolCommand;
-				char *prepareKind;
-
-				if (commit)
-				{
-					dtxProtocolCommand = DTX_PROTOCOL_COMMAND_RETRY_COMMIT_PREPARED;
-					prepareKind = "Commit";
-				}
-				else
-				{
-					dtxProtocolCommand = DTX_PROTOCOL_COMMAND_RETRY_ABORT_PREPARED;
-					prepareKind = "Abort";
-				}
-
-				/*
-				 * Todo: Maybe we don't need DTX_CONTEXT_QD_RETRY_PHASE_2 anymore.
-				 */
-				setDistributedTransactionContext(DTX_CONTEXT_QD_RETRY_PHASE_2);
-				elog(DTM_DEBUG5,
-					 "doDtxPhase2Retry setting DistributedTransactionContext to '%s' for retry of '%s Prepared'.",
-					 DtxContextToString(DistributedTransactionContext), prepareKind);
-
-				StartTransactionCommand();
-
-				currentGxact->retryPhase2RecursionStop = true;
-
-				/*
-				 * We don't want doDispatchDtxProtocolCommand to raise error. But it will call
-				 * createGang to allocate a writer gang, which could fail and error out.
-				 *
-				 * We catch the error and log a FATAL error instead of a PANIC.
-				 */
-				PG_TRY();
-				{
-					succeeded = doDispatchDtxProtocolCommand(dtxProtocolCommand, /* flags */ 0,
-															 currentGxact->gid, currentGxact->gxid,
-															 &badGangs, /* raiseError */ false,
-															 &direct, NULL, 0);
-				}
-				PG_CATCH();
-				{
-					succeeded = false;
-				}
-				PG_END_TRY();
-
-				if (!succeeded)
-				{
-					elog(FATAL, "A retry of the distributed transaction '%s Prepared' broadcast failed to one or more segments for gid = %s.",
-						 prepareKind, currentGxact->gid);
-				}
-				else
-				{
-					elog(NOTICE, "Retry of the distributed transaction '%s Prepared' broadcast succeeded to the segments for gid = %s.",
-							prepareKind, currentGxact->gid);
-				}
-
-				/*
-				 * Global locking order: ProcArrayLock then DTM lock since
-				 * calls doInsertForgetCommitted calls releaseGxact.
-				 */
-				LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
-
-				getTmLock();
-
-				if (commit)
-				{
-					doInsertForgetCommitted();
-				}
-				else
-				{
-					releaseGxact_UnderLocks();
-				}
-				Assert(currentGxact == NULL);
-				releaseTmLock();
-
-				LWLockRelease(ProcArrayLock);
-
-				CommitTransactionCommand();
-				Assert(DistributedTransactionContext == DTX_CONTEXT_LOCAL_ONLY);
-			}
-			PG_CATCH();
-			{
-				setDistributedTransactionContext(DTX_CONTEXT_LOCAL_ONLY);
-				PG_RE_THROW();
-			}
-			PG_END_TRY();
-			break;
-
-		case DTX_STATE_ACTIVE_NOT_DISTRIBUTED:
-		case DTX_STATE_ACTIVE_DISTRIBUTED:
-		case DTX_STATE_PREPARING:
-		case DTX_STATE_PREPARED:
-		case DTX_STATE_FORCED_COMMITTED:
-		case DTX_STATE_NOTIFYING_COMMIT_PREPARED:
-		case DTX_STATE_NOTIFYING_ABORT_PREPARED:
-		case DTX_STATE_INSERTING_COMMITTED:
-		case DTX_STATE_INSERTED_COMMITTED:
-		case DTX_STATE_INSERTING_FORGET_COMMITTED:
-		case DTX_STATE_INSERTED_FORGET_COMMITTED:
-		case DTX_STATE_CRASH_COMMITTED:
-			elog(DTM_DEBUG5, "doDtxPhase2Retry dtx state \"%s\" not applicable here",
-				 DtxStateToString(currentGxact->state));
-			break;
-
-		default:
-			elog(PANIC, "Unrecognized dtx state: %d",
-				 (int) currentGxact->state);
-			break;
-	}
 }
 
 static bool
@@ -1226,21 +1166,13 @@ rollbackDtxTransaction(void)
 	case DTX_STATE_PREPARING:
 		if (currentGxact->badPrepareGangs)
 		{
-			/*
-			 * By deallocating the gang, we will force a new gang to connect to all the
-			 * segment instances.  And, we will abort the transactions in the
-			 * segments.  What's left are possibily prepared transactions.
-			 */
-			elog(WARNING, "Releasing segworker groups since one or more segment connections failed.  This will abort the transactions in the segments that did not get prepared.");
-			DisconnectAndDestroyAllGangs(true);
-
-			/*
-			 * This call will at a minimum change the session id so we will
-			 * not have SharedSnapshotAdd colissions.
-			 */
-			CheckForResetSession();
-
 			setCurrentGxactState( DTX_STATE_RETRY_ABORT_PREPARED );
+			/*
+			 * DisconnectAndDestroyAllGangs and ResetSession happens inside
+			 * retryAbortPrepared.
+			 */
+			retryAbortPrepared();
+			releaseGxact();
 			return;
 		}
 		setCurrentGxactState( DTX_STATE_NOTIFYING_ABORT_SOME_PREPARED );
@@ -2268,7 +2200,9 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand, int flags,
 
 	for (i = 0; i < resultCount; i++)
 		PQclear(results[i]);
-	free(results);
+
+	if (results)
+		free(results);
 
 	return (numOfFailed == 0);
 }

@@ -156,7 +156,7 @@ Drop table if exists ao_db_ap_t4;
 psql:/path/sql_file:1: NOTICE:  table "ao_db_ap_t4" does not exist, skipping
 DROP TABLE
 Create table ao_db_ap_t4 ( i int, j int) with(appendonly=xxxx);
-psql:/path/sql_file:1: ERROR:  invalid value for option "appendonly" (analyze.c:1479)
+psql:/path/sql_file:1: ERROR:  invalid value for option "appendonly" (parse_utilcmd.c:4071)
 -- Create table with orientation,checksum,compresstype,compresslevel, fillfactor
 Drop table if exists ao_db_ap_t5;
 psql:/path/sql_file:1: NOTICE:  table "ao_db_ap_t5" does not exist, skipping
@@ -428,7 +428,7 @@ Drop table if exists ao_db_ap_t4;
 psql:/path/sql_file:1: NOTICE:  table "ao_db_ap_t4" does not exist, skipping
 DROP TABLE
 Create table ao_db_ap_t4 ( i int, j int) with(appendonly=xxxx);
-psql:/path/sql_file:1: ERROR:  invalid value for option "appendonly" (analyze.c:1479)
+psql:/path/sql_file:1: ERROR:  invalid value for option "appendonly" (parse_utilcmd.c:4071)
 -- Create table with orientation=column
 Drop table if exists ao_db_ap_t5;
 psql:/path/sql_file:1: NOTICE:  table "ao_db_ap_t5" does not exist, skipping
@@ -506,7 +506,7 @@ DROP TABLE
 --- =====================================
 -- GUC with invalid value
 Alter database dsp_db3 set gp_default_storage_options="appendonly=xxx";
-psql:/path/sql_file:1: ERROR:  invalid bool value "xxx" for storage option "appendonly" (reloptions.c:63)
+psql:/path/sql_file:1: ERROR:  invalid bool value "xxx" for storage option "appendonly"
 -- Reset guc to default value for all three databases
 Alter database dsp_db1 set gp_default_storage_options TO DEFAULT;
 ALTER DATABASE

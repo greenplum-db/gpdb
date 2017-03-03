@@ -206,7 +206,7 @@ nb_classify_accum(PG_FUNCTION_ARGS)
 		 * Since the ln(0) is undefined we want to increment the count 
 		 * for all classes. 
 		 *
-		 * This get's a bit more complicated for the denominator which
+		 * This gets a bit more complicated for the denominator which
 		 * needs to know how many values there are for this attribute
 		 * so that we keep the total probability for the attribute = 1.
 		 * To handle this the aggregation function should be passed the
@@ -451,14 +451,14 @@ static void get_nb_state(HeapTupleHeader tuple,
 		ARR_NDIM(state->accum) != 1 ||
 		ARR_NDIM(state->total) != 1 ||
 		ARR_DIMS(state->accum)[0] != ARR_DIMS(state->classes)[0] ||
-		ARR_DIMS(state->classes)[0] != ARR_DIMS(state->classes)[0])
+		ARR_DIMS(state->classes)[0] != ARR_DIMS(state->total)[0])
 	{
 		ereport(ERROR, 
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("nb_classify: invalid accumulation state")));
 	}
 
-	/* Check that lengths matchup with what was expected */
+	/* Check that lengths match up with what was expected */
 	if (nclasses > 0 && ARR_DIMS(state->classes)[0] != nclasses) 
 	{
 		ereport(ERROR,

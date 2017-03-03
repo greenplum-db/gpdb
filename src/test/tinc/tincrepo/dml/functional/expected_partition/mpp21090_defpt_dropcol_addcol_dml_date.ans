@@ -1,0 +1,72 @@
+DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_date;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_defpt_dropcol_addcol_dml_date_opt.sql:14: NOTICE:  table "mpp21090_defpt_dropcol_addcol_dml_date" does not exist, skipping
+DROP TABLE
+CREATE TABLE mpp21090_defpt_dropcol_addcol_dml_date
+(
+    col1 date,
+    col2 date,
+    col3 char,
+    col4 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def
+);
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_defpt_dropcol_addcol_dml_date_opt.sql:26: NOTICE:  CREATE TABLE will create partition "mpp21090_defpt_dropcol_addcol_dml_date_1_prt_def" for table "mpp21090_defpt_dropcol_addcol_dml_date"
+CREATE TABLE
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_date VALUES('2013-12-31','2013-12-31','a',0);
+INSERT 0 1
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_date DROP COLUMN col4;
+ALTER TABLE
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_date SELECT '2014-02-10','2014-02-10','b';
+INSERT 0 1
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_date ORDER BY 1,2,3;
+    col1    |    col2    | col3 
+------------+------------+------
+ 2013-12-31 | 2013-12-31 | a
+ 2014-02-10 | 2014-02-10 | b
+(2 rows)
+
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_date ADD COLUMN col5 date;
+ALTER TABLE
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_date SELECT '2013-12-31','2013-12-31','c','2013-12-31';
+INSERT 0 1
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_date ORDER BY 1,2,3;
+    col1    |    col2    | col3 |    col5    
+------------+------------+------+------------
+ 2013-12-31 | 2013-12-31 | a    | 
+ 2013-12-31 | 2013-12-31 | c    | 2013-12-31
+ 2014-02-10 | 2014-02-10 | b    | 
+(3 rows)
+
+UPDATE mpp21090_defpt_dropcol_addcol_dml_date SET col1 = '2014-01-01' WHERE col2 = '2014-02-10' AND col1 = '2014-02-10';
+UPDATE 1
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_date ORDER BY 1,2,3;
+    col1    |    col2    | col3 |    col5    
+------------+------------+------+------------
+ 2013-12-31 | 2013-12-31 | a    | 
+ 2013-12-31 | 2013-12-31 | c    | 2013-12-31
+ 2014-01-01 | 2014-02-10 | b    | 
+(3 rows)
+
+-- Update partition key
+UPDATE mpp21090_defpt_dropcol_addcol_dml_date SET col2 = '2014-01-01' WHERE col2 = '2014-02-10' AND col1 = '2014-01-01';
+UPDATE 1
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_date ORDER BY 1,2,3;
+    col1    |    col2    | col3 |    col5    
+------------+------------+------+------------
+ 2013-12-31 | 2013-12-31 | a    | 
+ 2013-12-31 | 2013-12-31 | c    | 2013-12-31
+ 2014-01-01 | 2014-01-01 | b    | 
+(3 rows)
+
+DELETE FROM mpp21090_defpt_dropcol_addcol_dml_date WHERE col2 = '2014-01-01';
+DELETE 1
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_date ORDER BY 1,2,3;
+    col1    |    col2    | col3 |    col5    
+------------+------------+------+------------
+ 2013-12-31 | 2013-12-31 | a    | 
+ 2013-12-31 | 2013-12-31 | c    | 2013-12-31
+(2 rows)
+

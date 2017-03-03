@@ -347,6 +347,20 @@ class CodegenUtils {
   llvm::Value* CreateCast(llvm::Value* value);
 
   /**
+   * @brief Similar to tuple in C++, this helps to create fixed-size collection
+   *        of hetrogeneous values.
+   *
+   * @param members Different types of values that needs to be in the
+   *                collection
+   * @param name    Optional arguments to specify the name of the returned
+   *                variable in IR
+   *
+   * @return Struct object allocated in stack, that contains all members.
+   **/
+  llvm::AllocaInst* CreateMakeTuple(const std::vector<llvm::Value*>& members,
+                                const std::string& name = "");
+
+  /**
    * @brief Register an external function if previously unregistered. Otherwise
    *        return a pointer to the previously registered llvm::Function
    *
@@ -593,13 +607,6 @@ class CodegenUtils {
                                       llvm::Type* cast_type,
                                       const std::size_t cumulative_offset);
 
-  // Helper method to call any llvm intrinsic feature. E.g. CreateMulOverflow.
-  // TODO(krajaramn) : Support any number of arguments
-  llvm::Value* CreateIntrinsicInstrCall(llvm::Intrinsic::ID Id,
-                                        llvm::ArrayRef<llvm::Type*> Tys,
-                                        llvm::Value* arg0,
-                                        llvm::Value* arg1);
-
   // Helper method for GetPointerToMember(). This variadic template recursively
   // consumes pointers-to-members, adding up 'cumulative_offset' and resolving
   // 'MemberType' to '*cast_type' at the penultimate level of recursion before
@@ -613,6 +620,13 @@ class CodegenUtils {
       const std::size_t cumulative_offset,
       MemberType StructType::* pointer_to_member,
       TailPointerToMemberTypes&&... tail_pointers_to_members);
+
+  // Helper method to call any llvm intrinsic feature. E.g. CreateMulOverflow.
+  // TODO(krajaramn) : Support any number of arguments
+  llvm::Value* CreateIntrinsicInstrCall(llvm::Intrinsic::ID Id,
+                                        llvm::ArrayRef<llvm::Type*> Tys,
+                                        llvm::Value* arg0,
+                                        llvm::Value* arg1);
 
   // Helper method for RegisterExternalFunction() that appends an entry for an
   // external function to 'named_external_functions_'.
@@ -1378,26 +1392,55 @@ class ArithOpMaker<double> {
                                         llvm::Value* arg1) {
     Checker(arg0, arg1);
 
-    // TODO(armenatzoglou) Support overflow
-    return generator->ir_builder()->CreateFAdd(arg0, arg1);
+    auto irb = generator->ir_builder();
+    llvm::Value* llvm_result = irb->CreateFAdd(arg0, arg1);
+
+    llvm::AllocaInst* llvm_tuple_ptr =
+        CreateResultWithOverflow(generator,
+                                 llvm_result,
+                                 arg0,
+                                 arg1,
+                                 generator->GetConstant<bool>(true));
+    return irb->CreateLoad(llvm_tuple_ptr);
   }
 
   static llvm::Value* CreateSubOverflow(CodegenUtils* generator,
                                         llvm::Value* arg0,
                                         llvm::Value* arg1) {
     Checker(arg0, arg1);
+    auto irb = generator->ir_builder();
+    llvm::Value* llvm_result = irb->CreateFSub(arg0, arg1);
 
-    // TODO(armenatzoglou) Support overflow
-    return generator->ir_builder()->CreateFSub(arg0, arg1);
+    llvm::AllocaInst* llvm_tuple_ptr =
+        CreateResultWithOverflow(generator,
+                                 llvm_result,
+                                 arg0,
+                                 arg1,
+                                 generator->GetConstant<bool>(true));
+    return irb->CreateLoad(llvm_tuple_ptr);
   }
 
   static llvm::Value* CreateMulOverflow(CodegenUtils* generator,
                                         llvm::Value* arg0,
                                         llvm::Value* arg1) {
     Checker(arg0, arg1);
+    auto irb = generator->ir_builder();
+    llvm::Value* llvm_result = irb->CreateFMul(arg0, arg1);
 
-    // TODO(armenatzoglou) Support overflow
-    return generator->ir_builder()->CreateFMul(arg0, arg1);
+    llvm::Value* llvm_arg0_zero = irb->
+        CreateFCmpOEQ(arg0, generator->GetConstant<double>(0), "is_arg0_zero");
+    llvm::Value* llvm_arg1_zero = irb->
+        CreateFCmpOEQ(arg1, generator->GetConstant<double>(0), "is_arg1_zero");
+    llvm::Value* llvm_zero_valid = irb->CreateOr(llvm_arg0_zero,
+                                                 llvm_arg1_zero,
+                                                 "llvm_zero_valid");
+    llvm::AllocaInst* llvm_tuple_ptr =
+        CreateResultWithOverflow(generator,
+                                 llvm_result,
+                                 arg0,
+                                 arg1,
+                                 llvm_zero_valid);
+    return irb->CreateLoad(llvm_tuple_ptr);
   }
 
 
@@ -1408,6 +1451,43 @@ class ArithOpMaker<double> {
     assert(nullptr != arg1 && nullptr != arg1->getType());
     assert(arg0->getType()->isDoubleTy());
     assert(arg1->getType()->isDoubleTy());
+  }
+
+
+  // Implements CHECKFLOATVAL(float_utils.h), but instead of error out,
+  // it returns true when an overflow occurs.
+  static bool CheckDoubleVal(double val,
+                             double arg0,
+                             double arg1,
+                             bool zero_is_valid) {
+    bool inf_is_valid = isinf(arg0) || isinf(arg1);
+    if (isinf(val) && !(inf_is_valid)) {
+      return true;
+    }
+    if ((val) == 0.0 && !(zero_is_valid)) {
+      return true;
+    }
+    return false;
+  }
+
+  // Returns a struct that contains the result value and the overflow flag of
+  // the operation. It mimics llvm integer intrinsics.
+  static llvm::AllocaInst* CreateResultWithOverflow(
+      CodegenUtils* generator,
+      llvm::Value* llvm_result,
+      llvm::Value* arg0,
+      llvm::Value* arg1,
+      llvm::Value* zero_is_valid) {
+    auto irb = generator->ir_builder();
+    llvm::Function* llvm_float_overflow_func =
+        generator->GetOrRegisterExternalFunction(
+            CheckDoubleVal, "CheckDoubleVal");
+    llvm::Value* llvm_overflow = irb->CreateCall(
+        llvm_float_overflow_func,
+        { llvm_result, arg0, arg1, zero_is_valid});
+    llvm::AllocaInst* llvm_tuple_ptr = generator->CreateMakeTuple(
+        { llvm_result, llvm_overflow }, "float_result");
+    return llvm_tuple_ptr;
   }
 };
 
@@ -1574,6 +1654,64 @@ class CastMaker<
     assert(nullptr != value->getType());
     assert(value->getType()->isFloatTy() ||
            value->getType()->isDoubleTy());
+    assert(nullptr != llvm_dest_type);
+    assert(llvm_dest_type->isDoubleTy());
+  }
+};
+
+// Partial specialization for any signed integer to 64-bit float
+template <typename SignedIntType>
+class CastMaker<
+    double,
+    SignedIntType,
+    typename std::enable_if<
+        std::is_integral<SignedIntType>::value &&
+        std::is_signed<SignedIntType>::value>::type> {
+ public:
+  static llvm::Value* CreateCast(llvm::Value* value,
+                                 CodegenUtils* codegen_utils) {
+    assert(nullptr != codegen_utils);
+
+    llvm::Type* llvm_dest_type = codegen_utils->GetType<double>();
+    Checker(value, llvm_dest_type);
+    return codegen_utils->ir_builder()->CreateSIToFP(
+        value, llvm_dest_type);
+  }
+ private:
+  static void Checker(llvm::Value* value,
+                      llvm::Type* llvm_dest_type) {
+    assert(nullptr != value);
+    assert(nullptr != value->getType());
+    assert(value->getType()->isIntegerTy());
+    assert(nullptr != llvm_dest_type);
+    assert(llvm_dest_type->isDoubleTy());
+  }
+};
+
+// Partial specialization for any unsigned integer to 64-bit float
+template <typename UnsignedIntType>
+class CastMaker<
+    double,
+    UnsignedIntType,
+    typename std::enable_if<
+        std::is_integral<UnsignedIntType>::value &&
+        std::is_unsigned<UnsignedIntType>::value>::type> {
+ public:
+  static llvm::Value* CreateCast(llvm::Value* value,
+                                 CodegenUtils* codegen_utils) {
+    assert(nullptr != codegen_utils);
+
+    llvm::Type* llvm_dest_type = codegen_utils->GetType<double>();
+    Checker(value, llvm_dest_type);
+    return codegen_utils->ir_builder()->CreateUIToFP(
+        value, llvm_dest_type);
+  }
+ private:
+  static void Checker(llvm::Value* value,
+                      llvm::Type* llvm_dest_type) {
+    assert(nullptr != value);
+    assert(nullptr != value->getType());
+    assert(value->getType()->isIntegerTy());
     assert(nullptr != llvm_dest_type);
     assert(llvm_dest_type->isDoubleTy());
   }

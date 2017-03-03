@@ -1,9 +1,0 @@
-Pkgname: plperl 
-Architecture: #arch
-OS: #os
-Version: ossv5.12.4_pv1.3_gpdb4.3orca
-GPDBVersion: 4.3
-Description: Provides a procedural langauge implementation of Perl for the Greenplum Database. 
-PostInstall:
-- Master: "echo 'Please source your $GPHOME/greenplum_path.sh and restart the database.';
-          echo 'You can enable plperl by running createlang plperl -d mydatabase.' ;"

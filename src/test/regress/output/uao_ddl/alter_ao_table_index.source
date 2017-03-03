@@ -1,0 +1,78 @@
+create schema alter_ao_table_index_@orientation@;
+set search_path="$user",alter_ao_table_index_@orientation@,public;
+SET gp_default_storage_options='orientation=@orientation@';
+-- Tests to update AO tables with indexes.
+CREATE TABLE sto_alt_uao3_idx(
+  text_col text,
+  bigint_col bigint,
+  char_vary_col character varying(30),
+  numeric_col numeric
+  ) with(appendonly=true) DISTRIBUTED by (text_col);
+Create index sto_alt_uao3_idx_idx on sto_alt_uao3_idx(bigint_col);
+insert into sto_alt_uao3_idx values ('1_zero', 1, '1_zero', 1);
+insert into sto_alt_uao3_idx select 'abc_'||i, i, 'pqr'||i, i
+ from generate_series(1,100)i;
+select count(*) AS visible_only from sto_alt_uao3_idx;
+ visible_only 
+--------------
+          101
+(1 row)
+
+update sto_alt_uao3_idx set numeric_col = 100 where text_col = '1_zero';
+select count(*) AS visible_only from sto_alt_uao3_idx;
+ visible_only 
+--------------
+          101
+(1 row)
+
+set gp_select_invisible = true;
+select count(*) AS all_tuples from sto_alt_uao3_idx;
+ all_tuples 
+------------
+        102
+(1 row)
+
+set gp_select_invisible = false;
+-- Update indexed column
+update sto_alt_uao3_idx set bigint_col = numeric_col % 11;
+select * from sto_alt_uao3_idx where bigint_col = 11;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+(0 rows)
+
+set gp_select_invisible = true;
+select * from sto_alt_uao3_idx where bigint_col = 11;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ abc_11   |         11 | pqr11         |          11
+(1 row)
+
+set gp_select_invisible = false;
+-- Verify that alter table cluster on indexname is not allowed
+Alter table sto_alt_uao3_idx cluster on sto_alt_uao3_idx_idx;
+ERROR:  cannot cluster append-only table "sto_alt_uao3_idx": not supported
+select indisclustered from pg_index where indexrelid='sto_alt_uao3_idx_idx'::regclass;
+ indisclustered
+----------------
+ f
+(1 row)
+
+Alter table sto_alt_uao3_idx set without cluster;
+select indisclustered from pg_index where indexrelid='sto_alt_uao3_idx_idx'::regclass;
+ indisclustered
+----------------
+ f
+(1 row)
+
+-- Verify that cluster is not allowed
+CLUSTER sto_alt_uao3_idx using sto_alt_uao3_idx_idx;
+ERROR:  cannot cluster append-only table "sto_alt_uao3_idx": not supported
+select indisclustered from pg_index where indexrelid='sto_alt_uao3_idx_idx'::regclass;
+ indisclustered
+----------------
+ f
+(1 row)
+
+-- Verify that unique index is not allowed
+CREATE UNIQUE INDEX uni_index ON sto_alt_uao3_idx (text_col);
+ERROR:  append-only tables do not support unique indexes

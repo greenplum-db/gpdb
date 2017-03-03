@@ -28,6 +28,8 @@
 #include "lib/stringinfo.h"
 #include "cdb/cdbpullup.h"
 
+extern bool is_simple_subquery(PlannerInfo *root, Query *subquery);
+
 static Node *convert_IN_to_antijoin(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink);
 
 static int	add_expr_subquery_rte(Query *parse, Query *subselect);
@@ -74,7 +76,6 @@ static void RemoveInnerJoinQuals(Query *subselect);
 static bool find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context);
 static bool is_attribute_nonnullable(Oid relationOid, AttrNumber attrNumber);
 static bool is_targetlist_nullable(Query *subq);
-static Node *make_outer_nonnull_clause(SubLink *sublink);
 
 #define DUMMY_COLUMN_NAME "zero"
 
@@ -279,7 +280,14 @@ IsCorrelatedOpExpr(OpExpr *opexp, Expr **innerExpr)
 
 	/**
 	 * One of the vars must be outer, and other must be inner.
+	 *
+	 * If both sides of the condition referring to outer variable,
+	 * then fail to extract the innerExpr.
 	 */
+	if (contain_vars_of_level((Node *) e1, 1) && contain_vars_of_level((Node *) e2, 1))
+	{
+		return false;
+	}
 
 	Expr	   *tOuterExpr = NULL;
 	Expr	   *tInnerExpr = NULL;
@@ -299,7 +307,7 @@ IsCorrelatedOpExpr(OpExpr *opexp, Expr **innerExpr)
 	 * It is correlated only if we found an outer var and inner expr
 	 */
 
-	if (tOuterExpr)
+	if (tOuterExpr && contain_vars_of_level((Node *) tInnerExpr, 0))
 	{
 		*innerExpr = tInnerExpr;
 		return true;
@@ -901,6 +909,15 @@ convert_EXISTS_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink
 	 */
 	if (IsSubqueryMultiLevelCorrelated(subselect))
 		return (Node *) sublink;
+
+	/*
+	* Don't remove the sublink if we cannot pull-up the subquery
+	* later during pull_up_simple_subquery()
+	*/
+	if (!is_simple_subquery(root, subselect))
+	{
+		   return (Node *) sublink;
+	}
 
 	/*
 	 * 'LIMIT n' makes EXISTS false when n <= 0, and doesn't affect the
@@ -1732,93 +1749,6 @@ is_targetlist_nullable(Query *subq)
 	return result;
 }
 
-/**
- * This method looks at a sublink expression and generates a not-null
- * clause for the outer-side expression.
- * For e.g. (foo(a),bar(b)) not in (...)
- * results in foo(a) is not null OR bar(b) is not null
- */
-static Node *
-make_outer_nonnull_clause(SubLink *sublink)
-{
-	Node	   *outerNonNullClause = NULL;
-
-	Assert(nodeTag(sublink->testexpr) == T_BoolExpr || nodeTag(sublink->testexpr) == T_OpExpr);
-
-	switch (nodeTag(sublink->testexpr))
-	{
-		case T_BoolExpr:
-			{
-				/*
-				 * This is the case when the testexpr involves multiple
-				 * columns such as (foo(a), bar(b)). This is represent as an
-				 * OR expression.
-				 */
-				List	   *exprList = NIL;
-				BoolExpr   *boolExpr = (BoolExpr *) sublink->testexpr;
-
-				Assert(boolExpr->boolop == OR_EXPR);
-				ListCell   *lc = NULL;
-
-				foreach(lc, boolExpr->args)
-				{
-					Node	   *singleColumnExpr = (Node *) lfirst(lc);
-
-					Assert(nodeTag(singleColumnExpr) == T_OpExpr);
-					OpExpr	   *opExpr = (OpExpr *) singleColumnExpr;	/* opExpr represents
-																		 * foo(a) <> param */
-
-					Assert(list_length(opExpr->args) == 2);		/* i.e. foo(a), param */
-					Expr	   *outerExpr = (Expr *) lfirst(list_head(opExpr->args));	/* outerExpr represents
-																						 * foo(a) */
-
-					NullTest   *nullTest = makeNode(NullTest);
-
-					nullTest->arg = outerExpr;
-					nullTest->nulltesttype = IS_NOT_NULL;		/* nullTest represents
-																 * foo(a) is not null */
-
-					exprList = lappend(exprList, nullTest);
-				}
-				outerNonNullClause = (Node *) make_orclause(exprList);	/* represents foo(a) is
-																		 * not null OR bar(b) is
-																		 * not null */
-				break;
-			}
-		case T_OpExpr:
-			{
-				/*
-				 * This represents the single column testexpr. Does not
-				 * contain the top OR clause.
-				 */
-				OpExpr	   *opExpr = (OpExpr *) sublink->testexpr;		/* opExpr represents
-																		 * foo(a) <> param */
-
-				Assert(list_length(opExpr->args) == 2); /* i.e. foo(a), param */
-				Expr	   *outerExpr = (Expr *) lfirst(list_head(opExpr->args));		/* outerExpr represents
-																						 * foo(a) */
-
-				NullTest   *nullTest = makeNode(NullTest);
-
-				nullTest->arg = outerExpr;
-				nullTest->nulltesttype = IS_NOT_NULL;	/* nullTest represents
-														 * foo(a) is not null */
-
-				outerNonNullClause = (Node *) nullTest; /* represents foo(a) is
-														 * not null OR bar(b) is
-														 * not null */
-				break;
-			}
-		default:
-			Assert(false && "Unsupported sublink expression");
-
-	}
-
-	Assert(outerNonNullClause);
-
-	return outerNonNullClause;
-}
-
 /*
  * convert_IN_to_antijoin: can we convert an ALL SubLink to join style?
  * If not appropriate to process this SubLink, return it as it is.
@@ -1839,8 +1769,8 @@ make_outer_nonnull_clause(SubLink *sublink)
  * in a top-level where clause (or through a series of inner joins).
  */
 static Node *
-			convert_IN_to_antijoin(PlannerInfo *root, List **rtrlist_inout __attribute__((unused)),
-											   SubLink *sublink)
+convert_IN_to_antijoin(PlannerInfo *root, List **rtrlist_inout __attribute__((unused)),
+					   SubLink *sublink)
 {
 	Query	   *parse = root->parse;
 	Query	   *subselect = (Query *) sublink->subselect;
@@ -1866,18 +1796,10 @@ static Node *
 			join_expr->quals = add_null_match_clause(join_expr->quals);
 		}
 
-		/*
-		 * What clause needs to be added to ensure that the outer side does
-		 * not contain nulls. This is because nulls in the outer side are
-		 * filtered out in a NOT IN clause.
-		 */
-		Node	   *notNullConstraints = make_outer_nonnull_clause(sublink);
-
 		parse->jointree->fromlist = list_make1(join_expr);		/* Replace the join-tree
 																 * with the new one */
 
-		/** Add not null constraints for the outer side to the top-level clause*/
-		return notNullConstraints;
+		return NULL;
 	}
 	else
 	{

@@ -148,7 +148,7 @@ InsertRule(char *rulname,
 
 	/* If replacing, get rid of old dependencies and make new ones */
 	if (is_update)
-		deleteDependencyRecordsFor(RewriteRelationId, rewriteObjectId);
+		deleteDependencyRecordsFor(RewriteRelationId, rewriteObjectId, false);
 
 	/*
 	 * Install dependency on rule's relation to ensure it will go away on
@@ -383,6 +383,13 @@ DefineQueryRewrite(char *rulename,
 		{
 			HeapScanDesc scanDesc;
 
+			/* In GPDB, also forbid turning AO tables or external tables into views. */
+			if (!RelationIsHeap(event_relation))
+				ereport(ERROR,
+						(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+						 errmsg("cannot convert non-heap table \"%s\" to a view",
+								RelationGetRelationName(event_relation))));
+
 			scanDesc = heap_beginscan(event_relation, SnapshotNow, 0, NULL);
 			if (heap_getnext(scanDesc, ForwardScanDirection) != NULL)
 				ereport(ERROR,
@@ -520,6 +527,7 @@ DefineQueryRewrite(char *rulename,
 							SnapshotNow,
 							relNodeRelation,
 							event_relation->rd_id,
+							event_relation->rd_rel->reltablespace,
 							event_relation->rd_rel->relfilenode,
 							&gpRelationNodeScan);
 			

@@ -32,7 +32,7 @@ INSERT 0 5
 -- create WET with similiar schema def as the original heap table
 --
 CREATE WRITABLE EXTERNAL TABLE sync1_wet_region6 ( like sync1_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region6.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE EXTERNAL TABLE
 --
 -- insert data into the WET selecting from original table
@@ -48,7 +48,7 @@ CREATE EXTERNAL TABLE
 -- create second table with same schema def
 --
 CREATE TABLE sync1_new_region6 (like sync1_region);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 --
 -- insert into the second table reading from the RET
@@ -85,7 +85,7 @@ select * from sync1_new_region6 order by r_regionkey;
 -- create WET with similiar schema def as the original heap table
 --
 CREATE WRITABLE EXTERNAL TABLE ck_sync1_wet_region5 ( like ck_sync1_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region5.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE EXTERNAL TABLE
 --
 -- insert data into the WET selecting from original table
@@ -101,7 +101,7 @@ CREATE EXTERNAL TABLE
 -- create second table with same schema def
 --
 CREATE TABLE ck_sync1_new_region5 (like ck_sync1_region);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 --
 -- insert into the second table reading from the RET
@@ -139,7 +139,7 @@ select * from ck_sync1_new_region5 order by r_regionkey;
 -- create WET with similiar schema def as the original heap table
 --
 CREATE WRITABLE EXTERNAL TABLE ct_wet_region3 ( like ct_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region3.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE EXTERNAL TABLE
 --
 -- insert data into the WET selecting from original table
@@ -155,7 +155,7 @@ CREATE EXTERNAL TABLE
 -- create second table with same schema def
 --
 CREATE TABLE ct_new_region3 (like ct_region);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 --
 -- insert into the second table reading from the RET
@@ -192,7 +192,7 @@ select * from ct_new_region3 order by r_regionkey;
 -- create WET with similiar schema def as the original heap table
 --
 CREATE WRITABLE EXTERNAL TABLE resync_wet_region1 ( like resync_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region1.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE EXTERNAL TABLE
 --
 -- insert data into the WET selecting from original table
@@ -208,7 +208,7 @@ CREATE EXTERNAL TABLE
 -- create second table with same schema def
 --
 CREATE TABLE resync_new_region1 (like resync_region);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 --
 -- insert into the second table reading from the RET

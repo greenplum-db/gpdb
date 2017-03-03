@@ -143,6 +143,7 @@ static pid_t postmasterPID = -1;
 
 static pgpid_t get_pgpid(void);
 static char **readfile(const char *path);
+static void free_readfile(char **optlines);
 static int start_postmaster(void);
 static void read_post_opts(void);
 
@@ -393,6 +394,25 @@ readfile(const char *path)
 }
 
 
+/*
+ * Free memory allocated for optlines through readfile()
+ */
+void
+free_readfile(char **optlines)
+{
+	char   *curr_line = NULL;
+	int		i = 0;
+
+	if (!optlines)
+		return;
+
+	while ((curr_line = optlines[i++]))
+		free(curr_line);
+
+	free(optlines);
+
+	return;
+}
 
 /*
  * start/test/stop routines
@@ -565,6 +585,13 @@ test_postmaster_connection(bool do_checkpoint __attribute__((unused)))
 				strlcpy(portstr, p, Min((q - p) + 1, sizeof(portstr)));
 				/* keep looking, maybe there is another */
 			}
+
+			/*
+			 * Free the results of readfile.
+			 *
+			 * This is safe to call even if optlines is NULL.
+			 */
+			free_readfile(optlines);
 		}
 	}
 
@@ -615,26 +642,6 @@ test_postmaster_connection(bool do_checkpoint __attribute__((unused)))
 #endif
 			print_msg(".");
 
-
-		/*
-		 * our connection attempt failed.
-		 * after two attempts check if the postmaster is still alive before sleeping.
-		 */
-		if (i > 1)
-		{
-			pgpid_t pid = get_pgpid();
-			if (pid == 0)				/* no pid file */
-			{
-				write_stderr(_("%s: PID file \"%s\" does not exist\n"), progname, pid_file);
-				return PQPING_NO_RESPONSE;
-			}
-			if (!postmaster_is_alive((pid_t) pid))
-			{
-				write_stderr(_("%s: postmaster pid %ld not running\n"), progname, pid);
-				return PQPING_NO_RESPONSE;
-			}
-		}
-
 		pg_usleep(1000000); /* 1 sec */
 	}
 
@@ -684,6 +691,9 @@ read_post_opts(void)
 				write_stderr(_("%s: could not read file \"%s\"\n"), progname, postopts_file);
 				exit(1);
 			}
+
+			/* Free the results of readfile. */
+			free_readfile(optlines);
 		}
 		else if (optlines[0] == NULL || optlines[1] != NULL)
 		{
@@ -1133,14 +1143,20 @@ do_status(void)
 			if (postmaster_is_alive((pid_t) pid))
 			{
 				char	  **optlines;
+				char	  **curr_line;
 
 				printf(_("%s: server is running (PID: %ld)\n"),
 					   progname, pid);
 
 				optlines = readfile(postopts_file);
 				if (optlines != NULL)
-					for (; *optlines != NULL; optlines++)
-						fputs(*optlines, stdout);
+				{
+					for (curr_line = optlines; *curr_line != NULL; curr_line++)
+						fputs(*curr_line, stdout);
+
+					/* Free the results of readfile */
+					free_readfile(optlines);
+				}
 				return;
 			}
 		}

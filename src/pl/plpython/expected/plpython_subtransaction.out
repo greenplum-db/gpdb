@@ -46,7 +46,7 @@ SELECT * FROM subtransaction_tbl order by i;
 
 TRUNCATE subtransaction_tbl;
 SELECT subtransaction_test('SPI');
-ERROR:  plpy.SPIError: invalid input syntax for integer: "oops" (plpython.c:4718)
+ERROR:  plpy.SPIError: invalid input syntax for integer: "oops"
 LINE 1: INSERT INTO subtransaction_tbl VALUES ('oops')
                                                ^
 QUERY:  INSERT INTO subtransaction_tbl VALUES ('oops')
@@ -98,7 +98,7 @@ SELECT * FROM subtransaction_tbl order by i;
 
 TRUNCATE subtransaction_tbl;
 SELECT subtransaction_ctx_test('SPI');
-ERROR:  plpy.SPIError: invalid input syntax for integer: "oops" (plpython.c:4718)
+ERROR:  plpy.SPIError: invalid input syntax for integer: "oops"
 LINE 1: INSERT INTO subtransaction_tbl VALUES ('oops')
                                                ^
 QUERY:  INSERT INTO subtransaction_tbl VALUES ('oops')

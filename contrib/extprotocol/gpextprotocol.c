@@ -95,8 +95,7 @@ demoprot_import(PG_FUNCTION_ARGS)
 			ereport(ERROR,
 					(errcode_for_file_access(),
 					 errmsg("demoprot_import: could not open file \"%s\" for reading: %m",
-							 myData->filename),
-					 errOmitLocation(true)));
+							myData->filename)));
 		
 		EXTPROTOCOL_SET_USER_CTX(fcinfo, myData);
 	}
@@ -180,8 +179,7 @@ demoprot_export(PG_FUNCTION_ARGS)
 			ereport(ERROR,
 					(errcode_for_file_access(),
 					 errmsg("demoprot_export: could not open file \"%s\" for writing: %m",
-							 myData->filename),
-					 errOmitLocation(true)));
+							myData->filename)));
 		
 		EXTPROTOCOL_SET_USER_CTX(fcinfo, myData);
 	}

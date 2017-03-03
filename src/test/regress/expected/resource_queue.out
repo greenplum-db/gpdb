@@ -155,6 +155,11 @@ ERROR:  conflicting or redundant options
 ALTER RESOURCE QUEUE none IGNORE THRESHOLD 1 ;
 ERROR:  resource queue "none" does not exist
 DROP RESOURCE QUEUE regressq2;
+-- Resource Queue should not be created inside Transaction block the error is the expected behavior
+begin;
+CREATE RESOURCE QUEUE db_resque_new1 ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;
+ERROR:  CREATE RESOURCE QUEUE cannot run inside a transaction block
+end;
 --
 -- memory quota feature
 --

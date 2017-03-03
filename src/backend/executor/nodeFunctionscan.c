@@ -68,12 +68,13 @@ FunctionNext(FunctionScanState *node)
 	 */
 	if (tuplestorestate == NULL)
 	{
-		tuplestorestate = ExecMakeTableFunctionResult(
-				node->funcexpr,
-				node->ss.ps.ps_ExprContext,
-				node->tupdesc,
-				PlanStateOperatorMemKB( (PlanState *) node));
-		node->tuplestorestate = tuplestorestate;
+		ExprContext *econtext = node->ss.ps.ps_ExprContext;
+
+		node->tuplestorestate = tuplestorestate =
+			ExecMakeTableFunctionResult(node->funcexpr,
+										econtext,
+										node->tupdesc,
+										PlanStateOperatorMemKB( (PlanState *) node));
 
 		/* CDB: Offer extra info for EXPLAIN ANALYZE. */
 		if (node->ss.ps.instrument)
@@ -379,7 +380,7 @@ ExecFunctionReScan(FunctionScanState *node, ExprContext *exprCtxt)
 
     ItemPointerSet(&node->cdb_fake_ctid, 0, 0);
 
-    /*
+	/*
 	 * Here we have a choice whether to drop the tuplestore (and recompute the
 	 * function outputs) or just rescan it.  We must recompute if the
 	 * expression contains parameters, else we rescan.  XXX maybe we should
@@ -390,9 +391,7 @@ ExecFunctionReScan(FunctionScanState *node, ExprContext *exprCtxt)
 		ExecEagerFreeFunctionScan(node);
 	}
 	else
-	{
 		tuplestore_rescan(node->tuplestorestate);
-	}
 }
 
 void

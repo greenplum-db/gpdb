@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE bookmap
+  PUBLIC "-//OASIS//DTD DITA BookMap//EN" "bookmap.dtd">
+<bookmap xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="book">
+    <booktitle>
+        <booklibrary id="product_name">
+            <tm trademark="Pivotal" tmtype="tm">Pivotal</tm>
+            <tm trademark="Greenplum Database" tmtype="reg">Greenplum Database</tm>
+        </booklibrary>
+        <mainbooktitle id="pdf_version">Version 4.3</mainbooktitle>
+        <booktitlealt id="pdf_title">Best Practices Guide</booktitlealt>
+        <booktitlealt id="pdf_revision_number">Rev: A05</booktitlealt>
+        <booktitlealt id="copyright_date">© 2017 Pivotal Software, Inc.</booktitlealt>
+        <booktitlealt id="draft_notice"/>
+    </booktitle>
+    <bookmeta>
+        <author/>
+        <prodinfo>
+            <prodname>Best Practices Guide</prodname>
+            <vrmlist>
+                <vrm version="" release="" modification=""/>
+            </vrmlist>
+        </prodinfo>
+        <bookid>
+            <bookpartno/>
+            <booknumber/>
+            <maintainer>
+                <organization/>
+                <person/>
+            </maintainer>
+        </bookid>
+        <bookrights>
+            <copyrfirst>
+                <year/>
+            </copyrfirst>
+            <copyrlast>
+                <year/>
+            </copyrlast>
+            <bookowner>
+                <organization/>
+            </bookowner>
+        </bookrights>
+    </bookmeta>
+    <frontmatter>
+        <booklists>
+            <toc/>
+        </booklists>
+    </frontmatter>
+    <chapter href="best_practices/intro.xml">
+        <topicref href="best_practices/summary.xml"/>
+    </chapter>
+    <chapter href="best_practices/sysconfig.xml"/>
+    <chapter href="best_practices/schema.xml"/>
+    <chapter href="best_practices/workloads.xml"/>
+    <chapter href="best_practices/maintenance.xml">
+        <topicref href="best_practices/analyze.xml"/>
+        <topicref href="best_practices/bloat.xml"/>
+        <topicref href="best_practices/logfiles.xml"/>
+    </chapter>
+    <chapter href="best_practices/data_loading.xml"/>
+    <chapter href="best_practices/gptransfer.xml"/>
+    <chapter href="best_practices/security.xml"/>
+    <chapter href="best_practices/encryption.xml"/>
+    <chapter href="best_practices/kerberos-hdfs.xml"/>
+    <chapter href="best_practices/tuning_queries.xml"/>
+    <chapter href="best_practices/ha.xml"/>
+</bookmap>

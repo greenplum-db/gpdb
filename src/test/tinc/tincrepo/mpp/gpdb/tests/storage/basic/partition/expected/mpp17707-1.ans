@@ -120,13 +120,13 @@ drop table if exists co_can cascade;
 DROP TABLE
 --end_ignore
  create table heap_can(like pt_heap_tab);  
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
  create table ao_can(like pt_heap_tab) with (appendonly=true);   
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
  create table co_can(like pt_heap_tab)  with (appendonly=true,orientation=column);   
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
  -- Exchange
  alter table pt_heap_tab exchange partition for ('abc') with table ao_can ; -- Heap exchanged with  AO

@@ -270,24 +270,3 @@ echocute=echo "$(1)"; $(1)
 ifeq "$(origin check_pipe_for_errors)" "undefined"
 check_pipe_for_errors=; if [ x`echo $${PIPESTATUS[*]} | sed -e s,0,,g | sed -e s,\ ,,g` != x ]; then echo "`date` -- ERROR: failure detected in piped operation"; exit 1; fi
 endif
-
-##
-## If PARALLEL_BUILD is set to any value, calculate parallel execution
-## value.  Developers have the ability to control the parallel
-## execution characteristics.  This is performed by adjusting the max
-## system load limit (parallelexec_maxlimit) and number of CPUs
-## parallel job factor (parallelexec_cpufactor).
-##
-##   from "Optimizing Build Times Using Parallel "make"
-##   (http://developers.sun.com/solaris/articles/parallel_make.html)
-##
-##     A common rule-of-thumb is to request the number of parallel
-##     jobs to be approximately 1.5 times the number of available CPUs
-##     on the machine.
-##
-
-ifneq "$(PARALLEL_BUILD)" ""
-parallelexec_maxlimit=3.5
-parallelexec_cpufactor=1.5
-parallelexec_opts=-l$(parallelexec_maxlimit) -j$(shell PYTHONHOME=$(BLD_PYTHON) $(BLD_PYTHON)/bin/python -c "import multiprocessing ; print int((multiprocessing.cpu_count() * $(parallelexec_cpufactor)))" )
-endif

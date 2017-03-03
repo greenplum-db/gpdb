@@ -486,7 +486,7 @@ CTranslatorQueryToDXL::PdxlnFromQueryInternal()
 	CDXLNode *pdxlnCTEAnchorTop = NULL;
 	CDXLNode *pdxlnCTEAnchorBottom = NULL;
 	ConstructCTEAnchors(m_pdrgpdxlnCTE, &pdxlnCTEAnchorTop, &pdxlnCTEAnchorBottom);
-	GPOS_ASSERT_IMP(0 < m_pdrgpdxlnCTE->UlSafeLength(),
+	GPOS_ASSERT_IMP(m_pdrgpdxlnCTE == NULL || 0 < m_pdrgpdxlnCTE->UlLength(),
 					NULL != pdxlnCTEAnchorTop && NULL != pdxlnCTEAnchorBottom);
 	
 	GPOS_ASSERT_IMP(NULL != m_pquery->setOperations, 0 == gpdb::UlListLength(m_pquery->windowClause));
@@ -837,7 +837,7 @@ CTranslatorQueryToDXL::PdxlnCTAS()
 	}
 	else
 	{
-		elog(NOTICE, "Table doesn't have 'distributed by' clause. Creating a NULL policy entry.");
+		elog(NOTICE, "Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.");
 	}
 	
 	GPOS_ASSERT(IMDRelation::EreldistrMasterOnly != ereldistrpolicy);
@@ -996,11 +996,9 @@ CTranslatorQueryToDXL::PstrExtractOptionValue
 {
 	GPOS_ASSERT(NULL != pdefelem);
 
-	BOOL fNeedsFree = false;
 	CHAR *szValue = gpdb::SzDefGetString(pdefelem);
 
 	CWStringDynamic *pstrResult = CDXLUtils::PstrFromSz(m_pmp, szValue);
-	
 	
 	return pstrResult;
 }
@@ -1194,7 +1192,7 @@ CTranslatorQueryToDXL::PdxlnUpdate()
 HMIUl *
 CTranslatorQueryToDXL::PhmiulUpdateCols()
 {
-	GPOS_ASSERT((ULONG)gpdb::UlListLength(m_pquery->targetList) == m_pdrgpdxlnQueryOutput->UlLength());
+	GPOS_ASSERT(gpdb::UlListLength(m_pquery->targetList) == m_pdrgpdxlnQueryOutput->UlLength());
 	HMIUl *phmiulUpdateCols = GPOS_NEW(m_pmp) HMIUl(m_pmp);
 
 	ListCell *plc = NULL;
@@ -1647,8 +1645,6 @@ CTranslatorQueryToDXL::PdxlnWindow
 	{
 		TargetEntry *pte = (TargetEntry *) lfirst(plcTE);
 		INT iResno = (INT) lfirst_int(plcResno);
-
-		INT iSortGroupRef = (INT) pte->ressortgroupref;
 
 		TargetEntry *pteWindowSpec = CTranslatorUtils::PteWindowSpec( (Node*) pte->expr, plWindowClause, plTargetList);
 		if (NULL != pteWindowSpec)
@@ -3772,7 +3768,6 @@ CTranslatorQueryToDXL::PdxlnProjectGroupingFuncs
 		TargetEntry *pte = (TargetEntry *) lfirst(plcTE);
 		GPOS_ASSERT(IsA(pte, TargetEntry));
 
-		BOOL fGroupingCol = pbs->FBit(pte->ressortgroupref);
 		ULONG ulResno = pte->resno;
 
 		if (IsA(pte->expr, GroupingFunc))

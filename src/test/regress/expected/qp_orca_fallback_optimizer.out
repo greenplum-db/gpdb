@@ -1,0 +1,100 @@
+-- Test the optimizer_dml_constraints GUC, which forces GPORCA to fall back when there
+-- are NULL or CHECK constraints on a table.
+set optimizer_trace_fallback = on;
+DROP TABLE IF EXISTS constr_tab;
+NOTICE:  table "constr_tab" does not exist, skipping
+CREATE TABLE constr_tab ( a int check (a>0) , b int, c int, d int, CHECK (a+b>5)) DISTRIBUTED BY (a);
+set optimizer_dml_constraints = off;
+explain insert into constr_tab values (1,2,3);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert (slice0; segments: 1)  (rows=1 width=0)
+   ->  Result  (cost=0.00..0.01 rows=1 width=0)
+ Settings:  optimizer=on
+ Optimizer status: legacy query optimizer
+(4 rows)
+
+set optimizer_dml_constraints=on;
+explain insert into constr_tab values (1,2,3);
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Insert  (cost=0.00..0.03 rows=1 width=12)
+   ->  Result  (cost=0.00..0.00 rows=1 width=24)
+         ->  Assert  (cost=0.00..0.00 rows=1 width=24)
+               Assert Cond: (((1) + (2)) > 5) IS DISTINCT FROM false AND ((1) > 0) IS DISTINCT FROM false
+               ->  Result  (cost=0.00..0.00 rows=1 width=24)
+                     ->  Result  (cost=0.00..0.00 rows=1 width=1)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(8 rows)
+
+-- The remaining tests require a row in the table.
+INSERT INTO constr_tab VALUES(1,5,3,4);
+set optimizer_dml_constraints=off;
+explain update constr_tab set a = 10;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+explain update constr_tab set b = 10;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+                           QUERY PLAN                            
+-----------------------------------------------------------------
+ Update (slice0; segments: 3)  (rows=1 width=22)
+   ->  Seq Scan on constr_tab  (cost=0.00..1.01 rows=1 width=22)
+ Settings:  optimizer=on
+ Optimizer status: legacy query optimizer
+(4 rows)
+
+set optimizer_dml_constraints=on;
+explain update constr_tab set b = 10;
+                                                                QUERY PLAN                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------
+ Update  (cost=0.00..431.09 rows=1 width=1)
+   ->  Result  (cost=0.00..431.00 rows=1 width=34)
+         ->  Assert  (cost=0.00..431.00 rows=1 width=30)
+               Assert Cond: ((public.constr_tab.a + (10)) > 5) IS DISTINCT FROM false AND (public.constr_tab.a > 0) IS DISTINCT FROM false
+               ->  Split  (cost=0.00..431.00 rows=1 width=30)
+                     ->  Result  (cost=0.00..431.00 rows=1 width=30)
+                           ->  Table Scan on constr_tab  (cost=0.00..431.00 rows=1 width=26)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(9 rows)
+
+-- Same, with NOT NULL constraint.
+DROP TABLE IF EXISTS constr_tab;
+CREATE TABLE constr_tab ( a int NOT NULL, b int, c int, d int, CHECK (a+b>5)) DISTRIBUTED BY (a);
+INSERT INTO constr_tab VALUES(1,5,3,4);
+set optimizer_dml_constraints=off;
+explain update constr_tab set a = 10;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+DROP TABLE IF EXISTS constr_tab;
+CREATE TABLE constr_tab ( a int NOT NULL, b int NOT NULL, c int NOT NULL, d int NOT NULL) DISTRIBUTED BY (a,b);
+INSERT INTO constr_tab VALUES(1,5,3,4);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+INSERT INTO constr_tab VALUES(1,5,3,4);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+set optimizer_dml_constraints=off;
+explain update constr_tab set b = 10;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+DROP TABLE IF EXISTS constr_tab;
+CREATE TABLE constr_tab ( a int, b int, c int, d int) DISTRIBUTED BY (a);
+INSERT INTO constr_tab VALUES(1,5,3,4);
+INSERT INTO constr_tab VALUES(1,5,3,4);
+set optimizer_dml_constraints=off;
+explain update constr_tab set a = 10;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Update  (cost=0.00..431.09 rows=1 width=1)
+   ->  Result  (cost=0.00..431.00 rows=1 width=34)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=30)
+               Hash Key: (10)
+               ->  Result  (cost=0.00..431.00 rows=1 width=30)
+                     ->  Split  (cost=0.00..431.00 rows=1 width=30)
+                           ->  Result  (cost=0.00..431.00 rows=1 width=30)
+                                 ->  Table Scan on constr_tab  (cost=0.00..431.00 rows=1 width=26)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(10 rows)
+

@@ -41,7 +41,7 @@ do_plperl_return_next(SV *sv)
 		FlushErrorState();
 
 		/* Punt the error to Perl */
-		croak("%s", edata->message);
+		croak_cstr(edata->message);
 	}
 	PG_END_TRY();
 }
@@ -183,4 +183,3 @@ spi_spi_cursor_close(sv)
 
 BOOT:
     items = 0;  /* avoid 'unused variable' warning */
-

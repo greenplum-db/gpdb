@@ -349,6 +349,8 @@ set role resqueuetest;
 select 1;
 select n_queries_exec from pg_stat_resqueues where queuename = 'q';
 reset role;
+drop role resqueuetest;
+drop resource queue q;
 
 -- GP Readable Data Table
 

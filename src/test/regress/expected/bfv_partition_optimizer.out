@@ -69,6 +69,18 @@ select count_operator('explain select cust_type, subscription_status,count(disti
               0
 (1 row)
 
+insert into mpp7980 values('2009-04-01','xyz','zyz','1',1,1,'1');
+insert into mpp7980 values('2009-04-01','zxyz','zyz','2',2,1,'1');
+insert into mpp7980 values('2009-03-03','xyz','zyz','4',1,3,'1');
+select cust_type, subscription_status,count(distinct subscription_id),sum(voice_call_min),sum(minute_per_call) from mpp7980 where month_id ='2009-04-01' group by rollup(1,2);
+ cust_type | subscription_status | count | sum  | sum  
+-----------+---------------------+-------+------+------
+           |                     |     1 | 3.00 | 2.00
+ zyz       |                     |     1 | 3.00 | 2.00
+ zyz       | 1                   |     1 | 1.00 | 1.00
+ zyz       | 2                   |     1 | 2.00 | 1.00
+(4 rows)
+
 -- CLEANUP
 -- start_ignore
 drop table mpp7980;
@@ -1671,5 +1683,262 @@ set optimizer_partition_selection_log=off;
 reset optimizer_segments;
 drop function if exists find_operator(query text, operator_name text);
 drop function if exists count_operator(query text, operator_name text);
+drop schema if exists bfv_partition;
+-- end_ignore
+---
+--- Partition table with appendonly leaf, full join
+---
+-- SETUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+NOTICE:  table "foo" does not exist, skipping
+DROP TABLE IF EXISTS bar;
+NOTICE:  table "bar" does not exist, skipping
+CREATE TABLE foo (a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE bar (b int, c int)
+PARTITION BY RANGE (b)
+  SUBPARTITION BY RANGE (c) SUBPARTITION TEMPLATE 
+  (
+    START (1) END (10) WITH (appendonly=true),
+    START (10) END (20)
+  ) 
+( 
+  START (1) END (10) ,
+  START (10) END (20)
+); 
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1" for table "bar"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1_2_prt_1" for table "bar_1_prt_1"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1_2_prt_2" for table "bar_1_prt_1"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2" for table "bar"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2_2_prt_1" for table "bar_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2_2_prt_2" for table "bar_1_prt_2"
+INSERT INTO foo VALUES (1);
+INSERT INTO bar VALUES (2,3);
+-- end_ignore
+SELECT * FROM foo FULL JOIN bar ON foo.a = bar.b;
+ a | b | c 
+---+---+---
+ 1 |   |  
+   | 2 | 3
+(2 rows)
+
+-- CLEANUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
+-- end_ignore
+---
+--- Partition table with appendonly set at middlevel partition, full join
+---
+-- SETUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+NOTICE:  table "foo" does not exist, skipping
+DROP TABLE IF EXISTS bar;
+NOTICE:  table "bar" does not exist, skipping
+CREATE TABLE foo (a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE bar (b int, c int)
+PARTITION BY RANGE (b)
+  SUBPARTITION BY RANGE (c) SUBPARTITION TEMPLATE 
+  (
+    START (1) END (10),
+    START (10) END (20)
+  ) 
+( 
+  START (1) END (10) WITH (appendonly=true),
+  START (10) END (20)
+); 
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1" for table "bar"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1_2_prt_1" for table "bar_1_prt_1"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1_2_prt_2" for table "bar_1_prt_1"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2" for table "bar"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2_2_prt_1" for table "bar_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2_2_prt_2" for table "bar_1_prt_2"
+INSERT INTO foo VALUES (1);
+INSERT INTO bar VALUES (2,3);
+-- end_ignore
+SELECT * FROM foo FULL JOIN bar ON foo.a = bar.b;
+ a | b | c 
+---+---+---
+ 1 |   |  
+   | 2 | 3
+(2 rows)
+
+-- CLEANUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
+-- end_ignore
+---
+--- Partition table with appendonly set at root partition, full join
+---
+-- SETUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+NOTICE:  table "foo" does not exist, skipping
+DROP TABLE IF EXISTS bar;
+NOTICE:  table "bar" does not exist, skipping
+CREATE TABLE foo (a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE bar (b int, c int) WITH (appendonly=true)
+PARTITION BY RANGE (b)
+  SUBPARTITION BY RANGE (c) SUBPARTITION TEMPLATE 
+  (
+    START (1) END (10),
+    START (10) END (20)
+  ) 
+( 
+  START (1) END (10),
+  START (10) END (20)
+); 
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1" for table "bar"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1_2_prt_1" for table "bar_1_prt_1"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1_2_prt_2" for table "bar_1_prt_1"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2" for table "bar"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2_2_prt_1" for table "bar_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2_2_prt_2" for table "bar_1_prt_2"
+INSERT INTO foo VALUES (1);
+INSERT INTO bar VALUES (2,3);
+-- end_ignore
+SELECT * FROM foo FULL JOIN bar ON foo.a = bar.b;
+ a | b | c 
+---+---+---
+ 1 |   |  
+   | 2 | 3
+(2 rows)
+
+---
+--- Test EXPLAIN on a hash agg that has a Sequence + Partition Selector below it.
+---
+-- SETUP
+-- start_ignore
+DROP TABLE IF EXISTS bar;
+-- end_ignore
+CREATE TABLE bar (b int, c int)
+PARTITION BY RANGE (b)
+(
+  START (0) END (10),
+  START (10) END (20)
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_1" for table "bar"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2" for table "bar"
+INSERT INTO bar SELECT g % 20, g % 20 from generate_series(1, 1000) g;
+ANALYZE bar;
+SELECT b FROM bar GROUP BY b;
+ b  
+----
+  7
+  4
+ 19
+  3
+  5
+ 18
+  6
+ 11
+  9
+  8
+ 12
+ 10
+ 17
+  1
+  0
+  2
+ 16
+ 15
+ 14
+ 13
+(20 rows)
+
+EXPLAIN SELECT b FROM bar GROUP BY b;
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.05 rows=20 width=4)
+   ->  HashAggregate  (cost=0.00..431.05 rows=7 width=4)
+         Group By: b
+         ->  Sequence  (cost=0.00..431.01 rows=334 width=4)
+               ->  Partition Selector for bar (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                     Partitions selected: 2 (out of 2)
+               ->  Dynamic Table Scan on bar (dynamic scan id: 1)  (cost=0.00..431.01 rows=334 width=4)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.5.0
+(9 rows)
+
+-- CLEANUP
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
+-- Test EXPLAIN ANALYZE on a partitioned table. There used to be a bug, where
+-- you got an internal error with this, because the EXPLAIN ANALYZE sends the
+-- stats from QEs to the QD at the end of query, but because the subnodes are
+-- terminated earlier, their stats were already gone.
+create table mpp8031 (oid integer,
+odate timestamp without time zone,
+cid integer)
+PARTITION BY RANGE(odate)
+(
+PARTITION foo START ('2005-05-01 00:00:00'::timestamp
+without time zone) END ('2005-07-01 00:00:00'::timestamp
+without time zone) EVERY ('2 mons'::interval),
+START ('2005-07-01 00:00:00'::timestamp without time zone)
+END ('2006-01-01 00:00:00'::timestamp without time zone)
+EVERY ('2 mons'::interval)
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'oid' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "mpp8031_1_prt_foo" for table "mpp8031"
+NOTICE:  CREATE TABLE will create partition "mpp8031_1_prt_2" for table "mpp8031"
+NOTICE:  CREATE TABLE will create partition "mpp8031_1_prt_3" for table "mpp8031"
+NOTICE:  CREATE TABLE will create partition "mpp8031_1_prt_4" for table "mpp8031"
+explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=16)
+   Rows out:  0 rows at destination with 5.797 ms to end, start offset by 0.322 ms.
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=16)
+         Hash Cond: bfv_partition.mpp8031.oid = bfv_partition.mpp8031.oid
+         Rows out:  0 rows (seg0) with 5.403 ms to end, start offset by 0.666 ms.
+         ->  Sequence  (cost=0.00..431.00 rows=1 width=16)
+               Rows out:  (No row requested) 0 rows (seg0) with 0 ms to end.
+               ->  Partition Selector for mpp8031 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                     Partitions selected: 4 (out of 4)
+                     Rows out:  (No row requested) 0 rows (seg0) with 0 ms to end.
+               ->  Dynamic Table Scan on mpp8031 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=16)
+                     Rows out:  (No row requested) 0 rows (seg0) with 0 ms to end.
+                     Partitions scanned:  0 (out of 4).
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+               Rows in:  0 rows (seg0) with 0.417 ms to end, start offset by 3.443 ms.
+               ->  Sequence  (cost=0.00..431.00 rows=1 width=4)
+                     Rows out:  0 rows (seg0) with 0.416 ms to end, start offset by 3.444 ms.
+                     ->  Partition Selector for mpp8031 (dynamic scan id: 2)  (cost=10.00..100.00 rows=34 width=4)
+                           Partitions selected: 4 (out of 4)
+                           Rows out:  0 rows (seg0) with 0.022 ms to end, start offset by 3.573 ms.
+                     ->  Dynamic Table Scan on mpp8031 (dynamic scan id: 2)  (cost=0.00..431.00 rows=1 width=4)
+                           Rows out:  0 rows (seg0) with 0.392 ms to end, start offset by 3.467 ms.
+                           Partitions scanned:  Avg 4.0 (out of 4) x 3 workers.  Max 4 parts (seg0).
+ Slice statistics:
+   (slice0)    Executor memory: 382K bytes.
+   (slice1)    Executor memory: 8400K bytes avg x 3 workers, 8400K bytes max (seg0).
+ Statement statistics:
+   Memory used: 128000K bytes
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.5.0
+ Total runtime: 6.993 ms
+(31 rows)
+
+drop table mpp8031;
+-- CLEANUP
+-- start_ignore
 drop schema if exists bfv_partition;
 -- end_ignore

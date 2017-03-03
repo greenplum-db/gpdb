@@ -1,0 +1,78 @@
+-- # Global matchsubs
+
+# Ignore things that have my explicit "Ignore this!" notation
+m/IgNoReMe>>>.*<<<IgNoReMe\n/
+s/IgNoReMe>>>.*<<<IgNoReMe\n//
+m/IgNoReMe>>>.*<<<IgNoReMe/
+s/IgNoReMe>>>.*<<<IgNoReMe//
+
+# Specific to 3.4 Filerep branch with default tablespace to ignore the difference in the test which does a describe on the objects
+-- start_matchsubs
+#Table Def with index
+-- m/, tablespace "cdbfast_default_tablespace_ts_a"/
+-- s/, tablespace "cdbfast_default_tablespace_ts_a"//
+#Table Def
+-- m/Tablespace: "cdbfast_default_tablespace_ts_a"/
+-- s/Tablespace: "cdbfast_default_tablespace_ts_a"//
+-- m/tablespace "cdbfast_default_tablespace_ts_a"/
+-- s/tablespace "cdbfast_default_tablespace_ts_a"//
+# global match
+-- m/cdbfast_default_tablespace_ts_a/
+-- s/cdbfast_default_tablespace_ts_a//
+
+# Ignore some gpcheckcat output that is not significant.
+m/^\d\d\d\d\d\d\d\d:\d\d:\d\d:\d\d:gpcheckcat:default-\[INFO\]:-Checking indexes\n/
+s/^\d\d\d\d\d\d\d\d:\d\d:\d\d:\d\d:gpcheckcat:default-\[INFO\]:-Checking indexes\n//
+m/^\d\d\d\d\d\d\d\d:\d\d:\d\d:\d\d:gpcheckcat:default-\[INFO\]:-\[OK\] indexes\n/
+s/^\d\d\d\d\d\d\d\d:\d\d:\d\d:\d\d:gpcheckcat:default-\[INFO\]:-\[OK\] indexes\n//
+m/^\d\d\d\d\d\d\d\d:\d\d:\d\d:\d\d:gpcheckcat:default-\[INFO\]:------------------------------------\n/
+s/^\d\d\d\d\d\d\d\d:\d\d:\d\d:\d\d:gpcheckcat:default-\[INFO\]:------------------------------------\n//
+m/YYYYMMDD:HH:MI:SS:gpcheckcat:default-\[INFO\]:------------------------------------\n/
+s/YYYYMMDD:HH:MI:SS:gpcheckcat:default-\[INFO\]:------------------------------------\n//
+
+# Ignore MasterMirror WARNING message
+m/^WARNING:  Master mirroring is not synchronized/
+s/WARNING/GP_IGNORE: WARNING/
+
+# More insignificant gpcheckcat output to ignore...
+
+# psql 9 changes now shows username on connection. Ignore the added username.
+m/^You are now connected to database/
+s/ as user ".+"//
+
+# ignore Gather Motion segments information
+m/(slice\d+; segments: \d+)/
+s/(slice\d+; segments: \d+)/(slicexx; segments: x)/
+
+# ignore warning message for "gp_interconnect_setup_timeout" as it is deprecated
+m/WARNING:.*gp_interconnect_setup_timeout.*deprecated.*/
+s/WARNING:.*gp_interconnect_setup_timeout.*deprecated.*// 
+
+# MPP-15962
+m/WARNING:  Only dropped the index "\w+"\n/
+s/WARNING:  Only dropped the index "\w+"\n//
+
+# MPP-15962
+m/HINT:  To drop other indexes on child parts, drop each one explicitly.\n/
+s/HINT:  To drop other indexes on child parts, drop each one explicitly.\n//
+
+# ORCA Changes
+m/entry db \w+:\d+ pid=\d+/
+s/\w+:\d+ pid=\d+/host:port pid=processid/
+
+m/COptTasks\.cpp:\d+/
+s/cpp:\d+/cpp:LINENUMBER/
+
+m/cdbdisp\.c:\d+/
+s/\.c:\d+/\.c:LINENUMBER/
+
+m/Checksum: \w+/
+s/Checksum: \w+//
+
+m/External options: {}\n/
+s/External options: {}\n//
+
+m/Execute on: all segments\n/
+s/Execute on: all segments\n//
+
+-- end_matchsubs

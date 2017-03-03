@@ -203,8 +203,7 @@ internal_load_library(const char *libname)
 			ereport(ERROR,
 					(errcode_for_file_access(),
 					 errmsg("could not access file \"%s\": %m",
-							libname),
-					 errOmitLocation(true)));
+							libname)));
 
 		for (file_scanner = file_list;
 			 file_scanner != NULL &&

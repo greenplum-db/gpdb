@@ -1,0 +1,9 @@
+-- start_matchsubs
+
+m/\\!grep.*/
+s/\\!grep.*//
+
+m/^psql:.* LOG/
+s/^psql:.* LOG/LOG/
+
+-- end_matchsubs

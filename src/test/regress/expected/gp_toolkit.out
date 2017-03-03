@@ -614,6 +614,8 @@ select n_queries_exec from pg_stat_resqueues where queuename = 'q';
 (1 row)
 
 reset role;
+drop role resqueuetest;
+drop resource queue q;
 -- GP Readable Data Table
 -- Check that the tables created above are present in gp_toolkit.__gp_user_data_tables_readable
 -- view.

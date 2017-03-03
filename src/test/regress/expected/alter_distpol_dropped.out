@@ -1005,10 +1005,6 @@ drop type break_int2_variable_false_false cascade;
 NOTICE:  drop cascades to function breakout_int2_variable_false_false(break_int2_variable_false_false)
 NOTICE:  drop cascades to function breakin_int2_variable_false_false(cstring)
 alter table alter_distpol_g_int2_variable_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1180541_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1180541_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1180541_2_3_out(pg_atsdb_1180541_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1180541_2_3_in(cstring)
 select * from alter_distpol_g_int2_variable_false_false order by 1;
  i  | k  
 ----+----
@@ -1213,10 +1209,6 @@ drop type break_int2_1_false_false cascade;
 NOTICE:  drop cascades to function breakout_int2_1_false_false(break_int2_1_false_false)
 NOTICE:  drop cascades to function breakin_int2_1_false_false(cstring)
 alter table alter_distpol_g_int2_1_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1180677_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1180677_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1180677_2_3_out(pg_atsdb_1180677_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1180677_2_3_in(cstring)
 select * from alter_distpol_g_int2_1_false_false order by 1;
  i  | k  
 ----+----
@@ -1421,10 +1413,6 @@ drop type break_int2_3_false_false cascade;
 NOTICE:  drop cascades to function breakout_int2_3_false_false(break_int2_3_false_false)
 NOTICE:  drop cascades to function breakin_int2_3_false_false(cstring)
 alter table alter_distpol_g_int2_3_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1180813_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1180813_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1180813_2_3_out(pg_atsdb_1180813_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1180813_2_3_in(cstring)
 select * from alter_distpol_g_int2_3_false_false order by 1;
  i  | k  
 ----+----
@@ -1629,10 +1617,6 @@ drop type break_int2_4_false_false cascade;
 NOTICE:  drop cascades to function breakout_int2_4_false_false(break_int2_4_false_false)
 NOTICE:  drop cascades to function breakin_int2_4_false_false(cstring)
 alter table alter_distpol_g_int2_4_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1180949_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1180949_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1180949_2_3_out(pg_atsdb_1180949_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1180949_2_3_in(cstring)
 select * from alter_distpol_g_int2_4_false_false order by 1;
  i  | k  
 ----+----
@@ -1735,10 +1719,6 @@ drop type break_int2_11_false_false cascade;
 NOTICE:  drop cascades to function breakout_int2_11_false_false(break_int2_11_false_false)
 NOTICE:  drop cascades to function breakin_int2_11_false_false(cstring)
 alter table alter_distpol_g_int2_11_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1181017_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1181017_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1181017_2_3_out(pg_atsdb_1181017_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1181017_2_3_in(cstring)
 select * from alter_distpol_g_int2_11_false_false order by 1;
  i  | k  
 ----+----
@@ -1841,10 +1821,6 @@ drop type break_int2_17_false_false cascade;
 NOTICE:  drop cascades to function breakout_int2_17_false_false(break_int2_17_false_false)
 NOTICE:  drop cascades to function breakin_int2_17_false_false(cstring)
 alter table alter_distpol_g_int2_17_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1181085_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1181085_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1181085_2_3_out(pg_atsdb_1181085_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1181085_2_3_in(cstring)
 select * from alter_distpol_g_int2_17_false_false order by 1;
  i  | k  
 ----+----
@@ -1947,10 +1923,6 @@ drop type break_int2_19_false_false cascade;
 NOTICE:  drop cascades to function breakout_int2_19_false_false(break_int2_19_false_false)
 NOTICE:  drop cascades to function breakin_int2_19_false_false(cstring)
 alter table alter_distpol_g_int2_19_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1181153_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1181153_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1181153_2_3_out(pg_atsdb_1181153_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1181153_2_3_in(cstring)
 select * from alter_distpol_g_int2_19_false_false order by 1;
  i  | k  
 ----+----
@@ -2053,10 +2025,6 @@ drop type break_int2_23_false_false cascade;
 NOTICE:  drop cascades to function breakout_int2_23_false_false(break_int2_23_false_false)
 NOTICE:  drop cascades to function breakin_int2_23_false_false(cstring)
 alter table alter_distpol_g_int2_23_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1181221_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1181221_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1181221_2_3_out(pg_atsdb_1181221_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1181221_2_3_in(cstring)
 select * from alter_distpol_g_int2_23_false_false order by 1;
  i  | k  
 ----+----
@@ -2159,10 +2127,6 @@ drop type break_int2_32_false_false cascade;
 NOTICE:  drop cascades to function breakout_int2_32_false_false(break_int2_32_false_false)
 NOTICE:  drop cascades to function breakin_int2_32_false_false(cstring)
 alter table alter_distpol_g_int2_32_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1181289_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1181289_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1181289_2_3_out(pg_atsdb_1181289_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1181289_2_3_in(cstring)
 select * from alter_distpol_g_int2_32_false_false order by 1;
  i  | k  
 ----+----
@@ -2265,10 +2229,6 @@ drop type break_int2_196_false_false cascade;
 NOTICE:  drop cascades to function breakout_int2_196_false_false(break_int2_196_false_false)
 NOTICE:  drop cascades to function breakin_int2_196_false_false(cstring)
 alter table alter_distpol_g_int2_196_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1181357_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1181357_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1181357_2_3_out(pg_atsdb_1181357_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1181357_2_3_in(cstring)
 select * from alter_distpol_g_int2_196_false_false order by 1;
  i  | k  
 ----+----
@@ -2575,10 +2535,6 @@ drop type break_int4_1_false_false cascade;
 NOTICE:  drop cascades to function breakout_int4_1_false_false(break_int4_1_false_false)
 NOTICE:  drop cascades to function breakin_int4_1_false_false(cstring)
 alter table alter_distpol_g_int4_1_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1181561_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1181561_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1181561_2_3_out(pg_atsdb_1181561_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1181561_2_3_in(cstring)
 select * from alter_distpol_g_int4_1_false_false order by 1;
  i  | k  
 ----+----
@@ -2783,10 +2739,6 @@ drop type break_int4_3_false_false cascade;
 NOTICE:  drop cascades to function breakout_int4_3_false_false(break_int4_3_false_false)
 NOTICE:  drop cascades to function breakin_int4_3_false_false(cstring)
 alter table alter_distpol_g_int4_3_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1181697_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1181697_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1181697_2_3_out(pg_atsdb_1181697_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1181697_2_3_in(cstring)
 select * from alter_distpol_g_int4_3_false_false order by 1;
  i  | k  
 ----+----
@@ -3093,10 +3045,6 @@ drop type break_int4_11_false_false cascade;
 NOTICE:  drop cascades to function breakout_int4_11_false_false(break_int4_11_false_false)
 NOTICE:  drop cascades to function breakin_int4_11_false_false(cstring)
 alter table alter_distpol_g_int4_11_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1181901_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1181901_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1181901_2_3_out(pg_atsdb_1181901_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1181901_2_3_in(cstring)
 select * from alter_distpol_g_int4_11_false_false order by 1;
  i  | k  
 ----+----
@@ -3199,10 +3147,6 @@ drop type break_int4_17_false_false cascade;
 NOTICE:  drop cascades to function breakout_int4_17_false_false(break_int4_17_false_false)
 NOTICE:  drop cascades to function breakin_int4_17_false_false(cstring)
 alter table alter_distpol_g_int4_17_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1181969_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1181969_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1181969_2_3_out(pg_atsdb_1181969_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1181969_2_3_in(cstring)
 select * from alter_distpol_g_int4_17_false_false order by 1;
  i  | k  
 ----+----
@@ -3305,10 +3249,6 @@ drop type break_int4_19_false_false cascade;
 NOTICE:  drop cascades to function breakout_int4_19_false_false(break_int4_19_false_false)
 NOTICE:  drop cascades to function breakin_int4_19_false_false(cstring)
 alter table alter_distpol_g_int4_19_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1182037_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1182037_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1182037_2_3_out(pg_atsdb_1182037_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1182037_2_3_in(cstring)
 select * from alter_distpol_g_int4_19_false_false order by 1;
  i  | k  
 ----+----
@@ -3411,10 +3351,6 @@ drop type break_int4_23_false_false cascade;
 NOTICE:  drop cascades to function breakout_int4_23_false_false(break_int4_23_false_false)
 NOTICE:  drop cascades to function breakin_int4_23_false_false(cstring)
 alter table alter_distpol_g_int4_23_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1182105_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1182105_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1182105_2_3_out(pg_atsdb_1182105_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1182105_2_3_in(cstring)
 select * from alter_distpol_g_int4_23_false_false order by 1;
  i  | k  
 ----+----
@@ -3517,10 +3453,6 @@ drop type break_int4_32_false_false cascade;
 NOTICE:  drop cascades to function breakout_int4_32_false_false(break_int4_32_false_false)
 NOTICE:  drop cascades to function breakin_int4_32_false_false(cstring)
 alter table alter_distpol_g_int4_32_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1182173_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1182173_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1182173_2_3_out(pg_atsdb_1182173_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1182173_2_3_in(cstring)
 select * from alter_distpol_g_int4_32_false_false order by 1;
  i  | k  
 ----+----
@@ -3623,10 +3555,6 @@ drop type break_int4_196_false_false cascade;
 NOTICE:  drop cascades to function breakout_int4_196_false_false(break_int4_196_false_false)
 NOTICE:  drop cascades to function breakin_int4_196_false_false(cstring)
 alter table alter_distpol_g_int4_196_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1182241_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1182241_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1182241_2_3_out(pg_atsdb_1182241_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1182241_2_3_in(cstring)
 select * from alter_distpol_g_int4_196_false_false order by 1;
  i  | k  
 ----+----
@@ -3729,10 +3657,6 @@ drop type break_char_variable_false_false cascade;
 NOTICE:  drop cascades to function breakout_char_variable_false_false(break_char_variable_false_false)
 NOTICE:  drop cascades to function breakin_char_variable_false_false(cstring)
 alter table alter_distpol_g_char_variable_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1182309_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1182309_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1182309_2_3_out(pg_atsdb_1182309_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1182309_2_3_in(cstring)
 select * from alter_distpol_g_char_variable_false_false order by 1;
  i  | k  
 ----+----
@@ -4141,10 +4065,6 @@ drop type break_char_3_false_false cascade;
 NOTICE:  drop cascades to function breakout_char_3_false_false(break_char_3_false_false)
 NOTICE:  drop cascades to function breakin_char_3_false_false(cstring)
 alter table alter_distpol_g_char_3_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1182581_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1182581_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1182581_2_3_out(pg_atsdb_1182581_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1182581_2_3_in(cstring)
 select * from alter_distpol_g_char_3_false_false order by 1;
  i  | k  
 ----+----
@@ -4349,10 +4269,6 @@ drop type break_char_4_false_false cascade;
 NOTICE:  drop cascades to function breakout_char_4_false_false(break_char_4_false_false)
 NOTICE:  drop cascades to function breakin_char_4_false_false(cstring)
 alter table alter_distpol_g_char_4_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1182717_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1182717_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1182717_2_3_out(pg_atsdb_1182717_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1182717_2_3_in(cstring)
 select * from alter_distpol_g_char_4_false_false order by 1;
  i  | k  
 ----+----
@@ -4455,10 +4371,6 @@ drop type break_char_11_false_false cascade;
 NOTICE:  drop cascades to function breakout_char_11_false_false(break_char_11_false_false)
 NOTICE:  drop cascades to function breakin_char_11_false_false(cstring)
 alter table alter_distpol_g_char_11_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1182785_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1182785_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1182785_2_3_out(pg_atsdb_1182785_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1182785_2_3_in(cstring)
 select * from alter_distpol_g_char_11_false_false order by 1;
  i  | k  
 ----+----
@@ -4561,10 +4473,6 @@ drop type break_char_17_false_false cascade;
 NOTICE:  drop cascades to function breakout_char_17_false_false(break_char_17_false_false)
 NOTICE:  drop cascades to function breakin_char_17_false_false(cstring)
 alter table alter_distpol_g_char_17_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1182853_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1182853_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1182853_2_3_out(pg_atsdb_1182853_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1182853_2_3_in(cstring)
 select * from alter_distpol_g_char_17_false_false order by 1;
  i  | k  
 ----+----
@@ -4667,10 +4575,6 @@ drop type break_char_19_false_false cascade;
 NOTICE:  drop cascades to function breakout_char_19_false_false(break_char_19_false_false)
 NOTICE:  drop cascades to function breakin_char_19_false_false(cstring)
 alter table alter_distpol_g_char_19_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1182921_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1182921_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1182921_2_3_out(pg_atsdb_1182921_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1182921_2_3_in(cstring)
 select * from alter_distpol_g_char_19_false_false order by 1;
  i  | k  
 ----+----
@@ -4773,10 +4677,6 @@ drop type break_char_23_false_false cascade;
 NOTICE:  drop cascades to function breakout_char_23_false_false(break_char_23_false_false)
 NOTICE:  drop cascades to function breakin_char_23_false_false(cstring)
 alter table alter_distpol_g_char_23_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1182989_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1182989_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1182989_2_3_out(pg_atsdb_1182989_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1182989_2_3_in(cstring)
 select * from alter_distpol_g_char_23_false_false order by 1;
  i  | k  
 ----+----
@@ -4879,10 +4779,6 @@ drop type break_char_32_false_false cascade;
 NOTICE:  drop cascades to function breakout_char_32_false_false(break_char_32_false_false)
 NOTICE:  drop cascades to function breakin_char_32_false_false(cstring)
 alter table alter_distpol_g_char_32_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1183057_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1183057_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1183057_2_3_out(pg_atsdb_1183057_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1183057_2_3_in(cstring)
 select * from alter_distpol_g_char_32_false_false order by 1;
  i  | k  
 ----+----
@@ -4985,10 +4881,6 @@ drop type break_char_196_false_false cascade;
 NOTICE:  drop cascades to function breakout_char_196_false_false(break_char_196_false_false)
 NOTICE:  drop cascades to function breakin_char_196_false_false(cstring)
 alter table alter_distpol_g_char_196_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1183125_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1183125_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1183125_2_3_out(pg_atsdb_1183125_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1183125_2_3_in(cstring)
 select * from alter_distpol_g_char_196_false_false order by 1;
  i  | k  
 ----+----
@@ -5295,10 +5187,6 @@ drop type break_double_1_false_false cascade;
 NOTICE:  drop cascades to function breakout_double_1_false_false(break_double_1_false_false)
 NOTICE:  drop cascades to function breakin_double_1_false_false(cstring)
 alter table alter_distpol_g_double_1_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1183329_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1183329_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1183329_2_3_out(pg_atsdb_1183329_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1183329_2_3_in(cstring)
 select * from alter_distpol_g_double_1_false_false order by 1;
  i  | k  
 ----+----
@@ -5503,10 +5391,6 @@ drop type break_double_3_false_false cascade;
 NOTICE:  drop cascades to function breakout_double_3_false_false(break_double_3_false_false)
 NOTICE:  drop cascades to function breakin_double_3_false_false(cstring)
 alter table alter_distpol_g_double_3_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1183465_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1183465_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1183465_2_3_out(pg_atsdb_1183465_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1183465_2_3_in(cstring)
 select * from alter_distpol_g_double_3_false_false order by 1;
  i  | k  
 ----+----
@@ -5711,10 +5595,6 @@ drop type break_double_4_false_false cascade;
 NOTICE:  drop cascades to function breakout_double_4_false_false(break_double_4_false_false)
 NOTICE:  drop cascades to function breakin_double_4_false_false(cstring)
 alter table alter_distpol_g_double_4_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1183601_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1183601_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1183601_2_3_out(pg_atsdb_1183601_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1183601_2_3_in(cstring)
 select * from alter_distpol_g_double_4_false_false order by 1;
  i  | k  
 ----+----
@@ -5817,10 +5697,6 @@ drop type break_double_11_false_false cascade;
 NOTICE:  drop cascades to function breakout_double_11_false_false(break_double_11_false_false)
 NOTICE:  drop cascades to function breakin_double_11_false_false(cstring)
 alter table alter_distpol_g_double_11_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1183669_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1183669_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1183669_2_3_out(pg_atsdb_1183669_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1183669_2_3_in(cstring)
 select * from alter_distpol_g_double_11_false_false order by 1;
  i  | k  
 ----+----
@@ -5923,10 +5799,6 @@ drop type break_double_17_false_false cascade;
 NOTICE:  drop cascades to function breakout_double_17_false_false(break_double_17_false_false)
 NOTICE:  drop cascades to function breakin_double_17_false_false(cstring)
 alter table alter_distpol_g_double_17_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1183737_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1183737_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1183737_2_3_out(pg_atsdb_1183737_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1183737_2_3_in(cstring)
 select * from alter_distpol_g_double_17_false_false order by 1;
  i  | k  
 ----+----
@@ -6029,10 +5901,6 @@ drop type break_double_19_false_false cascade;
 NOTICE:  drop cascades to function breakout_double_19_false_false(break_double_19_false_false)
 NOTICE:  drop cascades to function breakin_double_19_false_false(cstring)
 alter table alter_distpol_g_double_19_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1183805_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1183805_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1183805_2_3_out(pg_atsdb_1183805_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1183805_2_3_in(cstring)
 select * from alter_distpol_g_double_19_false_false order by 1;
  i  | k  
 ----+----
@@ -6135,10 +6003,6 @@ drop type break_double_23_false_false cascade;
 NOTICE:  drop cascades to function breakout_double_23_false_false(break_double_23_false_false)
 NOTICE:  drop cascades to function breakin_double_23_false_false(cstring)
 alter table alter_distpol_g_double_23_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1183873_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1183873_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1183873_2_3_out(pg_atsdb_1183873_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1183873_2_3_in(cstring)
 select * from alter_distpol_g_double_23_false_false order by 1;
  i  | k  
 ----+----
@@ -6343,10 +6207,6 @@ drop type break_double_196_false_false cascade;
 NOTICE:  drop cascades to function breakout_double_196_false_false(break_double_196_false_false)
 NOTICE:  drop cascades to function breakin_double_196_false_false(cstring)
 alter table alter_distpol_g_double_196_false_false set with(reorganize = true) distributed randomly;
-NOTICE:  return type pg_atsdb_1184009_2_3 is only a shell
-NOTICE:  argument type pg_atsdb_1184009_2_3 is only a shell
-NOTICE:  drop cascades to function pg_atsdb_1184009_2_3_out(pg_atsdb_1184009_2_3)
-NOTICE:  drop cascades to function pg_atsdb_1184009_2_3_in(cstring)
 select * from alter_distpol_g_double_196_false_false order by 1;
  i  | k  
 ----+----

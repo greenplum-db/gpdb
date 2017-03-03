@@ -1,5 +1,5 @@
 /*
- *  cdbfilerepprimaryresync.c  
+ *	cdbfilerepresyncworker.c
  *
  *  Copyright 2009-2010 Greenplum Inc. All rights reserved.
  *
@@ -73,21 +73,35 @@ FileRepPrimary_StartResyncWorker(void)
 			FileRepSubProcess_SetState(FileRepStateFault);
 		}
 		
-		while (FileRepSubProcess_GetState() != FileRepStateShutdown &&
-			   FileRepSubProcess_GetState() != FileRepStateShutdownBackends &&
-			   ! (FileRepSubProcess_GetState() == FileRepStateReady && 
-			    dataState == DataStateInResync)) {
-			
+		/*
+		 * We are waiting for following conditions to move forward:
+		 *
+		 * 	Database is running
+		 * 	And
+		 * 		if dataState is InResync, we wait for FileRepSubProcess to Ready state
+		 * 		else don't wait
+		 */
+		while (!isDatabaseRunning() ||
+			   !(dataState == DataStateInResync ? FileRepSubProcess_GetState() == FileRepStateReady : true))
+		{
 			FileRepSubProcess_ProcessSignals();
+
+			if (FileRepSubProcess_GetState() == FileRepStateShutdown ||
+				FileRepSubProcess_GetState() == FileRepStateShutdownBackends)
+			{
+				break;
+			}
+
 			pg_usleep(50000L); /* 50 ms */	
 		}
 		
 		if (FileRepSubProcess_GetState() == FileRepStateShutdown ||
 			FileRepSubProcess_GetState() == FileRepStateShutdownBackends) {
-			
 			break;
 		}
 		
+		FileRepSubProcess_InitHeapAccess();
+
 		status = FileRepPrimary_RunResyncWorker();
 		
 		if (status != STATUS_OK) {
@@ -240,14 +254,9 @@ FileRepPrimary_ResyncWrite(FileRepResyncHashEntry_s	*entry)
 						XLogRecPtr	endResyncLSN = (isFullResync() ? 
 													FileRepResync_GetEndFullResyncLSN() :
 													FileRepResync_GetEndIncrResyncLSN());
-#ifdef FAULT_INJECTOR
-						FaultInjector_InjectFaultIfSet(
-													   FileRepResyncWorkerRead,
-													   DDLNotSpecified,
-													   "",	//databaseName
-													   ""); // tableName
-#endif				
-						
+
+						SIMPLE_FAULT_INJECTOR(FileRepResyncWorkerRead);
+
 						FileRepResync_SetReadBufferRequest();
 						buf = ReadBuffer_Resync(smgr_relation, blkno);
 						FileRepResync_ResetReadBufferRequest();
@@ -312,15 +321,9 @@ FileRepPrimary_ResyncWrite(FileRepResyncHashEntry_s	*entry)
 									  (char *)BufferGetBlock(buf),
 									  FALSE);
 						}
-						
-#ifdef FAULT_INJECTOR	
-						FaultInjector_InjectFaultIfSet(
-													   FileRepResyncWorker, 
-													   DDLNotSpecified,
-													   "",	// databaseName
-													   ""); // tableName
-#endif				
-						
+
+						SIMPLE_FAULT_INJECTOR(FileRepResyncWorker);
+
 						UnlockReleaseBuffer(buf);
 						
 						if (count > thresholdCount)
@@ -437,11 +440,6 @@ FileRepPrimary_ResyncWrite(FileRepResyncHashEntry_s	*entry)
 					/* AO and CO Data Store writes 64k size by default */
 					bufferLen = (Size) Min(2*BLCKSZ, endOffset - startOffset);
 					buffer = (char*) palloc(bufferLen);
-					if (buffer == NULL)
-						ereport(ERROR,
-								(errcode(ERRCODE_OUT_OF_MEMORY),
-								 (errmsg("not enough memory for resynchronization"))));
-					
 					MemSet(buffer, 0, bufferLen);
 					
 					while (startOffset < endOffset)
@@ -482,11 +480,8 @@ FileRepPrimary_ResyncWrite(FileRepResyncHashEntry_s	*entry)
 						bufferLen = (Size) Min(2*BLCKSZ, endOffset - startOffset);						
 					}
 					
-					if (buffer) 
-					{
-						pfree(buffer);
-						buffer = NULL;
-					}
+					pfree(buffer);
+					buffer = NULL;
 					
 					if (mirrorDataLossOccurred)
 						break;
@@ -693,7 +688,7 @@ FileRepPrimary_ResyncBufferPoolIncrementalWrite(ChangeTrackingRequest *request)
 					 * It's safe and better to perform write of the page to mirror,
 					 * for this case, as primary and mirror data pages should always
 					 * be same. So, we might do some extra work but definitely won't
-					 * loose out blocks, or error out and need to perform full recovery.
+					 * lose out blocks, or error out and need to perform full recovery.
 					 * Need to cover for this case as there are some known scenarios where
 					 * CT file can have extra records which should have been discarded,
 					 * but as we loose out information of xlog LSN cannot be discarded.
@@ -710,24 +705,12 @@ FileRepPrimary_ResyncBufferPoolIncrementalWrite(ChangeTrackingRequest *request)
 							  FALSE);
 				}
 
-#ifdef FAULT_INJECTOR	
-				FaultInjector_InjectFaultIfSet(
-											   FileRepResyncWorker, 
-											   DDLNotSpecified,
-											   "",	// databaseName
-											   ""); // tableName
-#endif				
-				
+				SIMPLE_FAULT_INJECTOR(FileRepResyncWorker);
+
 				UnlockReleaseBuffer(buf);
-				
-#ifdef FAULT_INJECTOR	
-				FaultInjector_InjectFaultIfSet(
-											   FileRepResyncWorker, 
-											   DDLNotSpecified,
-											   "",	// databaseName
-											   ""); // tableName
-#endif				
-		
+
+				SIMPLE_FAULT_INJECTOR(FileRepResyncWorker);
+
 	flush_check:			
 				if (((ii + 1) == result->count) ||
 					! (result->entries[ii].relFileNode.spcNode == result->entries[ii+1].relFileNode.spcNode &&
@@ -747,7 +730,15 @@ FileRepPrimary_ResyncBufferPoolIncrementalWrite(ChangeTrackingRequest *request)
 												 entry.fileName, 
 												 result->entries[ii].relFileNode, 
 												 0 /* segment file number is always 0 for Buffer Pool */);							 
-								 
+
+						/*
+						 * We only want to update the state with this call to
+						 * FileRepResync_UpdateEntry(), so to ensure that we
+						 * don't incur any sideeffects set the changed page
+						 * count to zero as it will only be updated to if the
+						 * hashtable entry changed page count is zero.
+						 */
+						entry.mirrorBufpoolResyncChangedPageCount = 0;
 						status = FileRepResync_UpdateEntry(&entry);
 						if (status != STATUS_OK)
 						{

@@ -1,58 +1,15 @@
-
 -- ----------------------------------------------------------------------
 -- Test: setup.sql
 -- ----------------------------------------------------------------------
 
--- start_ignore
 create schema qp_gist_indexes4;
 set search_path to qp_gist_indexes4;
--- end_ignore
-
--- ----------------------------------------------------------------------
--- Test: test01_createConversionFunctions.sql
--- ----------------------------------------------------------------------
-
-------------------------------------------------------------------------------
--- start_ignore
--- PURPOSE:
---     These functions help convert TEXT data to geometric data types (box, 
---     circle, and polygon).
--- AUTHOR: mgilkey
--- end_ignore
-------------------------------------------------------------------------------
-
--- start_ignore
-DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
-DROP FUNCTION IF EXISTS TO_CIRCLE(TEXT) CASCADE;
-DROP FUNCTION IF EXISTS TO_POLY(TEXT) CASCADE;
--- end_ignore
-
-
-CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
-  $$
-    SELECT box_in(textout($1))
-  $$ LANGUAGE SQL
-  IMMUTABLE;
-
-CREATE FUNCTION TO_CIRCLE(TEXT) RETURNS CIRCLE AS
-  $$
-    SELECT circle_in(textout($1))
-  $$ LANGUAGE SQL
-  IMMUTABLE;
-
-CREATE FUNCTION TO_POLY(TEXT) RETURNS POLYGON AS
-  $$
-    SELECT poly_in(textout($1))
-  $$ LANGUAGE SQL
-  IMMUTABLE;
-
 
 -- ----------------------------------------------------------------------
 -- Test: test02_createSeedToMangledIntegerFunctions.sql
 -- ----------------------------------------------------------------------
 
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE:
 --     These functions generate data that "jumps around a lot", i.e. 
 --         is not in ascending or descending order; 
@@ -64,20 +21,9 @@ CREATE FUNCTION TO_POLY(TEXT) RETURNS POLYGON AS
 --     they jump around enough to give an index operation some real work to 
 --     do, which wouldn't be the case if we simply generated an 
 --     ascending sequence like 1, 2, 3, ...
--- AUTHOR: mgilkey
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 
--- start_ignore
-DROP FUNCTION IF EXISTS SeedToMangledInteger(INTEGER, VARCHAR, VARCHAR);
-DROP FUNCTION IF EXISTS f1(INTEGER);
-DROP FUNCTION IF EXISTS f2(INTEGER);
-DROP FUNCTION IF EXISTS f3(INTEGER);
-DROP FUNCTION IF EXISTS f4(INTEGER);
--- end_ignore
-
-
-CREATE FUNCTION SeedToMangledInteger(seed INTEGER, v1 VARCHAR, v2 VARCHAR) 
+CREATE FUNCTION SeedToMangledInteger(seed INTEGER, v1 bytea, v2 bytea)
 RETURNS INTEGER
 AS
 $$
@@ -86,21 +32,17 @@ DECLARE
     result INTEGER;
     len1 INTEGER;
     len2 INTEGER;
-    char1 CHAR(1);
-    char2 CHAR(1);
     idx INTEGER;
     firstDigits INTEGER;
     lastDigits INTEGER;
     res INTEGER;
 BEGIN
-    len1 = char_length(v1);
-    len2 = char_length(v2);
+    len1 = octet_length(v1);
+    len2 = octet_length(v2);
     idx = seed % len1;
-    char1 = substring(v1 from idx for 1);
+    firstDigits = get_byte(v1, idx);
     idx = seed % len2;
-    char2 = substring(v2 from idx for 1);
-    firstDigits = ascii(char1);
-    lastDigits = ascii(char2);
+    lastDigits = get_byte(v2, idx);
     res = (firstDigits - 32) * 100 + (lastDigits - 32);
     RETURN res;
 END;
@@ -112,32 +54,22 @@ IMMUTABLE
 CREATE FUNCTION f1(seed INTEGER) RETURNS INTEGER
 AS
 $$
-DECLARE 
-    string1 VARCHAR;
-    string2 VARCHAR;
-BEGIN
-    string1 = 'Oh I live in the mid-S.F. Bay, now a suburb of Northern L.A., which extends from the south Baja coast, to the point of the snows northernmost.';
-    string2 = ';lkwjeqroiuoiu2rThe-8Quick90uBrown4-89Fox43yJumpedt-19Over27theLazyt4f[g9yghDoghy3-948yrASDFnvcGHJn,oqKLPwqelBVNCMXZ;foqwfpoqiuwepfhgnvpown;ONZJNI&*(^$*(@#$@##OWEUR';
-    RETURN SeedToMangledInteger(seed, string1, string2);
-END;
+  SELECT SeedToMangledInteger($1,
+          E'\\000Oh\\000I\\000live\\000in\\000the\\000mid-S.F.\\000Bay,\\000now\\000a\\000suburb\\000of\\000Northern\\000L.A.,\\000which\\000extends\\000from\\000the\\000south\\000Baja\\000coast,\\000to\\000the\\000point\\000of\\000the\\000snows\\000northernmost'::bytea,
+	  E'\\000;lkwjeqroiuoiu2rThe-8Quick90uBrown4-89Fox43yJumpedt-19Over27theLazyt4f[g9yghDoghy3-948yrASDFnvcGHJn,oqKLPwqelBVNCMXZ;foqwfpoqiuwepfhgnvpown;ONZJNI&*(^$*(@#$@##OWEU'::bytea);
 $$
-LANGUAGE PLPGSQL
+LANGUAGE SQL
 IMMUTABLE
 ;
 
 CREATE FUNCTION f2(seed INTEGER) RETURNS INTEGER
 AS
 $$
-DECLARE 
-    string1 VARCHAR;
-    string2 VARCHAR;
-BEGIN
-    string1 = 'And the mountains from which we can see are just piles of debris.';
-    string2 = ';lkwjeqroiuoiu2rThe-8Quick90uBrown4-89Fox43yJumpedt-19Over27theLazyt4f[g9yghDoghy3-948yrASDFnvcGHJn,oqKLPwqelBVNCMXZ;foqwfpoqiuwepfhgnvpown;ONZJNI&*(^$*(@#$@##OWEUR';
-    RETURN SeedToMangledInteger(seed, string1, string2);
-END;
+  SELECT SeedToMangledInteger($1,
+           E'\\000And\\000the\\000mountains\\000from\\000which\\000we\\000can\\000see\\000are\\000just\\000piles\\000of\\000debris'::bytea,
+           E'\\000;lkwjeqroiuoiu2rThe-8Quick90uBrown4-89Fox43yJumpedt-19Over27theLazyt4f[g9yghDoghy3-948yrASDFnvcGHJn,oqKLPwqelBVNCMXZ;foqwfpoqiuwepfhgnvpown;ONZJNI&*(^$*(@#$@##OWEU'::bytea);
 $$
-LANGUAGE PLPGSQL
+LANGUAGE SQL
 IMMUTABLE
 ;
 
@@ -147,32 +79,22 @@ IMMUTABLE
 CREATE FUNCTION f3(seed INTEGER) RETURNS INTEGER
 AS
 $$
-DECLARE 
-    string1 VARCHAR;
-    string2 VARCHAR;
-BEGIN
-    string1 = 'Oh I live in the mid-S.F. Bay, now a suburb of Northern L.A., which extends from the south Baja coast, to the point of the snows northernmost.';
-    string2 = 'rewqjL:KJkl;vzxc*)(_uoipnm,.7890fa@#$%sd4321n,m.7403-sdfoxc;,ew8vwer;oiuxcvlkqwer98vkpjn;lkqwer;ADOFIPUQWERLKNASDF [8QUREQFOI JQWRE8PRJ;GOVN;WEJRP98EURJNVM.ipigunvpjsdpry';
-    RETURN ABS(SeedToMangledInteger(seed, string1, string2));
-END;
+  SELECT ABS(SeedToMangledInteger($1,
+               E'\\000Oh\\000I\\000live\\000in\\000the\\000mid-S.F.\\000Bay,\\000now\\000a\\000suburb\\000of\\000Northern\\000L.A.,\\000which\\000extends\\000from\\000the\\000south\\000Baja\\000coast,\\000to\\000the\\000point\\000of\\000the\\000snows\\000northernmost'::bytea,
+               E'\\000rewqjL:KJkl;vzxc*)(_uoipnm,.7890fa@#$%sd4321n,m.7403-sdfoxc;,ew8vwer;oiuxcvlkqwer98vkpjn;lkqwer;ADOFIPUQWERLKNASDF\\000[8QUREQFOI\\000JQWRE8PRJ;GOVN;WEJRP98EURJNVM.ipigunvpjsdpr'::bytea));
 $$
-LANGUAGE PLPGSQL
+LANGUAGE SQL
 IMMUTABLE
 ;
 
 CREATE FUNCTION f4(seed INTEGER) RETURNS INTEGER
 AS
 $$
-DECLARE 
-    string1 VARCHAR;
-    string2 VARCHAR;
-BEGIN
-    string1 = 'The mountains from which we oft preach, are generally far out of reach; the examples we set, we quickly regret; so we hide alone at the beach';
-    string2 = 'ChiangMaiBangkokMoscowPhiledelphiaColoradoFujiIcelandSaskatchwanManitobaVancouverAlbertaAustraliazenoGREECEisTHAWURDBritishColumbiaFrenchQuarter';
-    RETURN SeedToMangledInteger(seed, string1, string2);
-END;
+  SELECT SeedToMangledInteger($1,
+           E'\\000The\\000mountains\\000from\\000which\\000we\\000oft\\000preach,\\000are\\000generally\\000far\\000out\\000of\\000reach;\\000the\\000examples\\000we\\000set,\\000we\\000quickly\\000regret;\\000so\\000we\\000hide\\000alone\\000at\\000the\\000beac'::bytea,
+           E'\\000ChiangMaiBangkokMoscowPhiledelphiaColoradoFujiIcelandSaskatchwanManitobaVancouverAlbertaAustraliazenoGREECEisTHAWURDBritishColumbiaFrenchQuarte'::bytea);
 $$
-LANGUAGE PLPGSQL
+LANGUAGE SQL
 IMMUTABLE
 ;
 
@@ -182,25 +104,30 @@ IMMUTABLE
 -- Test: test03_createSeedToGeometricDataTypes.sql
 -- ----------------------------------------------------------------------
 
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE:
 --     These functions generate geometric data types given an integer "seed" 
 --     value as a starting point.
--- AUTHOR: mgilkey
--- end_ignore
-------------------------------------------------------------------------------
-
--- start_ignore
-DROP FUNCTION IF EXISTS SeedToBoxAsText(INTEGER);
-DROP FUNCTION IF EXISTS SeedToBox(INTEGER);
-DROP FUNCTION IF EXISTS SeedToCircle(INTEGER);
-DROP FUNCTION IF EXISTS SeedToPolygon(INTEGER);
--- end_ignore
+-- ----------------------------------------------------------------------------
 
 
+CREATE FUNCTION SeedToPoint1(seed INTEGER) RETURNS point
+AS
+$$
+   SELECT point(f1($1), f2($1));
+$$
+LANGUAGE SQL
+IMMUTABLE
+;
 
-
+CREATE FUNCTION SeedToPoint2(seed INTEGER) RETURNS point
+AS
+$$
+   SELECT point(f3($1), f4($1));
+$$
+LANGUAGE SQL
+IMMUTABLE
+;
 
 -- A box is defined by a pair of points.
 -- A box looks like:
@@ -208,22 +135,9 @@ DROP FUNCTION IF EXISTS SeedToPolygon(INTEGER);
 CREATE FUNCTION SeedToBoxAsText(seed INTEGER) RETURNS TEXT
 AS
 $$
-DECLARE 
-    s TEXT;
-    x1 INTEGER;
-    y1 INTEGER;
-    x2 INTEGER;
-    y2 INTEGER;
-BEGIN
-   x1 = f1(seed);
-   y1 = f2(seed);
-   x2 = f3(seed);
-   y2 = f4(seed);
-   s = '((' || x1 || ', ' || y1 || '), (' || x2 || ', ' || y2 || '))';
-   RETURN s;
-END;
+   SELECT '((' || f1($1) || ', ' || f2($1) || '), (' || f3($1) || ', ' || f4($1) || '))';
 $$
-LANGUAGE PLPGSQL
+LANGUAGE SQL
 IMMUTABLE
 ;
 
@@ -233,14 +147,9 @@ IMMUTABLE
 CREATE FUNCTION SeedToBox(seed INTEGER) RETURNS BOX
 AS
 $$
-DECLARE 
-   s TEXT;
-BEGIN
-   s = SeedToBoxAsText(seed);
-   RETURN TO_BOX(s);
-END;
+  SELECT box(SeedToPoint1($1), SeedToPoint2($1));
 $$
-LANGUAGE PLPGSQL
+LANGUAGE SQL
 IMMUTABLE
 ;
 
@@ -251,20 +160,9 @@ IMMUTABLE
 CREATE FUNCTION SeedToCircle(seed INTEGER) RETURNS CIRCLE
 AS
 $$
-DECLARE 
-    s TEXT;
-    x1 INTEGER;
-    y1 INTEGER;
-    r INTEGER;
-BEGIN
-   x1 = f1(seed);
-   y1 = f2(seed);
-   r  = f3(seed);
-   s = '((' || x1 || ', ' || y1 || '), ' || r || ')';
-   RETURN TO_CIRCLE(s);
-END;
+   SELECT circle(point(f1($1), f2($1)), f3($1));
 $$
-LANGUAGE PLPGSQL
+LANGUAGE SQL
 IMMUTABLE
 ;
 
@@ -277,14 +175,9 @@ IMMUTABLE
 CREATE FUNCTION SeedToPolygon(seed INTEGER) RETURNS POLYGON
 AS
 $$
-DECLARE
-   s TEXT;
-BEGIN
-   s = SeedToBoxAsText(seed);
-   RETURN TO_POLY(s);
-END;
+   SELECT ('(' || SeedToPoint1($1)::text || ', ' || SeedToPoint2($1) || ')')::polygon;
 $$
-LANGUAGE PLPGSQL
+LANGUAGE SQL
 IMMUTABLE
 ;
 
@@ -292,17 +185,6 @@ IMMUTABLE
 -- ----------------------------------------------------------------------
 -- Test: test04_createTableAndData.sql
 -- ----------------------------------------------------------------------
-
-------------------------------------------------------------------------------
--- start_ignore
--- PURPOSE:
--- AUTHOR: mgilkey
--- end_ignore
-------------------------------------------------------------------------------
-
--- start_ignore
-DROP TABLE IF EXISTS geometricTypes;
--- end_ignore
 
 CREATE TABLE geometricTypes (seed INTEGER, c CIRCLE, b BOX, p POLYGON) 
  DISTRIBUTED BY (seed);
@@ -321,8 +203,7 @@ INSERT INTO geometricTypes (seed, c, b, p)
 -- Test: test05_select.sql
 -- ----------------------------------------------------------------------
 
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE:
 --     This does a few SELECT statements as a brief sanity check that the 
 --     indexes are working correctly.  Furthermore, we request EXPLAIN info
@@ -330,8 +211,7 @@ INSERT INTO geometricTypes (seed, c, b, p)
 --     commands, but a later part of the test checks that we used an index 
 --     scan rather than a sequential scan when executing the SELECT 
 --     statements.
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = False;
 
 SELECT * FROM geometricTypes 
@@ -360,19 +240,6 @@ EXPLAIN SELECT * FROM geometricTypes
 -- Test: test06_createIndexes.sql
 -- ----------------------------------------------------------------------
 
-------------------------------------------------------------------------------
--- start_ignore
--- PURPOSE:
--- AUTHOR: mgilkey
--- end_ignore
-------------------------------------------------------------------------------
-
--- start_ignore
-DROP INDEX IF EXISTS gt_index_c;
-DROP INDEX IF EXISTS gt_index_b;
-DROP INDEX IF EXISTS gt_index_p;
--- end_ignore
-
 CREATE INDEX gt_index_c ON geometricTypes USING GIST (c);
 CREATE INDEX gt_index_b ON geometricTypes USING GIST (b);
 CREATE INDEX gt_index_p ON geometricTypes USING GIST (p);
@@ -382,8 +249,7 @@ CREATE INDEX gt_index_p ON geometricTypes USING GIST (p);
 -- Test: test07_select.sql
 -- ----------------------------------------------------------------------
 
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE:
 --     This does a few SELECT statements as a brief sanity check that the 
 --     indexes are working correctly.  Furthermore, we request EXPLAIN info
@@ -391,8 +257,7 @@ CREATE INDEX gt_index_p ON geometricTypes USING GIST (p);
 --     commands, but a later part of the test checks that we used an index 
 --     scan rather than a sequential scan when executing the SELECT 
 --     statements.
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = False;
 
 SELECT * FROM geometricTypes 
@@ -421,14 +286,11 @@ EXPLAIN SELECT * FROM geometricTypes
 -- Test: test08_reindex.sql
 -- ----------------------------------------------------------------------
 
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE:
 --     This can be run manually to give the user the option of 
 --     interrupting the REINDEX operation with ctrl-C or another kill method.
--- AUTHOR: mgilkey
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 
 ALTER INDEX gt_index_c SET (FILLFACTOR = 20);
 ALTER INDEX gt_index_b SET (FILLFACTOR = 20);
@@ -450,21 +312,14 @@ REINDEX TABLE geometricTypes;
 -- Test: test10_rollback.sql
 -- ----------------------------------------------------------------------
 
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE:
 --     This tests ROLLBACK on the following index-related operations
 --     with GiST indexes:
 --         CREATE INDEX
 --         REINDEX
 --         ALTER INDEX
--- AUTHOR: mgilkey
--- end_ignore
-------------------------------------------------------------------------------
-
--- start_ignore
-DROP TABLE IF EXISTS gone;
--- end_ignore
+-- ----------------------------------------------------------------------------
 
 CREATE TABLE gone (seed INTEGER, already_gone CIRCLE, too_far_gone BOX, 
   paragon POLYGON)
@@ -572,8 +427,7 @@ DROP TABLE IF EXISTS gone;
 -- Test: test09_select.sql
 -- ----------------------------------------------------------------------
 
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE:
 --     This does a few SELECT statements as a brief sanity check that the 
 --     indexes are working correctly.  Furthermore, we request EXPLAIN info
@@ -581,8 +435,7 @@ DROP TABLE IF EXISTS gone;
 --     commands, but a later part of the test checks that we used an index 
 --     scan rather than a sequential scan when executing the SELECT 
 --     statements.
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = False;
 
 SELECT * FROM geometricTypes 
@@ -605,28 +458,6 @@ SELECT * FROM geometricTypes
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
 -- end_ignore
-
-
--- ----------------------------------------------------------------------
--- Test: test99_cleanup.sql
--- ----------------------------------------------------------------------
-
-------------------------------------------------------------------------------
--- start_ignore
--- PURPOSE:
--- AUTHOR: mgilkey
--- end_ignore
-------------------------------------------------------------------------------
-
--- start_ignore
-DROP TABLE IF EXISTS geometricTypes;
-DROP FUNCTION IF EXISTS SeedToMangledInteger(INTEGER, VARCHAR, VARCHAR);
-DROP FUNCTION IF EXISTS f1(INTEGER);
-DROP FUNCTION IF EXISTS f2(INTEGER);
-DROP FUNCTION IF EXISTS f3(INTEGER);
-DROP FUNCTION IF EXISTS f4(INTEGER);
--- end_ignore
-
 
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql

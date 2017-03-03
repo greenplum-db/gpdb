@@ -208,7 +208,8 @@ select matrix_add(array[32767]::smallint[], array[1]::smallint[]);      --overfl
 select matrix_add(array[32766]::smallint[], array[1]::smallint[]);      --no overflow
 select matrix_add(array[-32768]::smallint[], array[-1]::smallint[]);    --overflow
 select matrix_add(array[-32767]::smallint[], array[-1]::smallint[]);    --no overflow
-   
+select matrix_add(array[array[16000]]::smallint[], array[array[32000]]::smallint[]); --overflow
+
 -- Check overflow
 --INT: [-2147483648, 2147483647]
 select matrix_add(array[2147483647]::int[], array[1]::int[]);   --overflow

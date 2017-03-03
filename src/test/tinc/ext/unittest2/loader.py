@@ -207,6 +207,7 @@ class TestLoader(unittest.TestLoader):
         else:
             # support for discovery from dotted module names
             try:
+                start_dir = start_dir.replace('/', '.')
                 __import__(start_dir)
             except ImportError:
                 is_not_importable = True

@@ -2,7 +2,7 @@
 -- the trigger handler once. the errors and subsequent core dump were
 -- interesting.
 SELECT invalid_type_uncaught('rick');
-ERROR:  plpy.SPIError: type "test" does not exist (plpython.c:4703)
+ERROR:  plpy.SPIError: type "test" does not exist
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "invalid_type_uncaught", line 3, in <module>
     SD["plan"] = plpy.prepare(q, [ "test" ])
@@ -16,7 +16,7 @@ CONTEXT:  PL/Python function "invalid_type_caught"
 (1 row)
 
 SELECT invalid_type_reraised('rick');
-ERROR:  plpy.Error: type "test" does not exist (plpython.c:4703)
+ERROR:  plpy.Error: type "test" does not exist
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "invalid_type_reraised", line 6, in <module>
     plpy.error(str(ex))

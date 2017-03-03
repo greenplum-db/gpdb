@@ -44,10 +44,12 @@ INSERT 0 1
 SET debug_abort_after_distributed_prepared = true;
 SET
 COMMIT;
-psql:/path/sql_file:1: ERROR:  Raise an error as directed by Debug_abort_after_distributed_prepared (xact.c:3464)
+psql:/path/sql_file:1: ERROR:  Raise an error as directed by Debug_abort_after_distributed_prepared
 RESET debug_abort_after_distributed_prepared;
 RESET
 SELECT * FROM distxact1_1;
+psql:/path/sql_file:1: WARNING:  One or more columns in the following table(s) do not have statistics. (see log for column name(s))
+psql:/path/sql_file:1: WARNING:  Please analyze table(s): distxact1_1
  a 
 ---
 (0 rows)
@@ -197,7 +199,7 @@ COMMIT;
 psql:/path/sql_file:1: WARNING:  The distributed transaction 'Abort Prepared' broadcast failed to one or more segments for gid = 1426021631-0000003259.
 psql:/path/sql_file:1: NOTICE:  Releasing segworker groups to retry broadcast.
 psql:/path/sql_file:1: NOTICE:  Retry of the distributed transaction 'Abort Prepared' broadcast succeeded to the segments for gid = 1426021631-0000003259.
-psql:/path/sql_file:1: ERROR:  Raise an error as directed by Debug_abort_after_distributed_prepared (xact.c:3464)
+psql:/path/sql_file:1: ERROR:  Raise an error as directed by Debug_abort_after_distributed_prepared
 SELECT * FROM distxact1_4;
  a 
 ---
@@ -229,7 +231,7 @@ SET
 CREATE TABLE distxact2_1 (a int);
 psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-psql:/path/sql_file:1: ERROR:  Raise ERROR for debug_dtm_action = 2, commandTag = MPPEXEC UTILITY (postgres.c:1210)  (seg1 rh55-qavm62:40000 pid=13231) (cdbdisp.c:1522)
+psql:/path/sql_file:1: ERROR:  Raise ERROR for debug_dtm_action = 2, commandTag = MPPEXEC UTILITY   (seg1 rh55-qavm62:40000 pid=13231) (cdbdisp.c:1522)
 RESET debug_dtm_action_sql_command_tag;
 RESET
 RESET debug_dtm_action;
@@ -260,7 +262,7 @@ SET
 CREATE TABLE distxact2_2 (a int);
 psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-psql:/path/sql_file:1: ERROR:  Raise ERROR for debug_dtm_action = 3, commandTag = MPPEXEC UTILITY (postgres.c:1318)  (seg1 rh55-qavm62:40000 pid=13231) (cdbdisp.c:1522)
+psql:/path/sql_file:1: ERROR:  Raise ERROR for debug_dtm_action = 3, commandTag = MPPEXEC UTILITY   (seg1 rh55-qavm62:40000 pid=13231) (cdbdisp.c:1522)
 RESET debug_dtm_action_sql_command_tag;
 RESET
 RESET debug_dtm_action;
@@ -299,8 +301,8 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 CREATE TABLE
 SAVEPOINT s;
 psql:/path/sql_file:1: WARNING:  DTM error (gathered 2 results from cmd 'SAVEPOINT s')
-DETAIL:  Raise ERROR for debug_dtm_action = 2, commandTag = SAVEPOINT (postgres.c:1606)  (seg1 rh55-qavm62:40000 pid=13231)
-psql:/path/sql_file:1: ERROR:  Could not create a new savepoint (SAVEPOINT s) (xact.c:5500)
+psql:/path/sql_file:1: ERROR:  could not execute command on QE
+DETAIL:  Raise ERROR for debug_dtm_action = 2, commandTag = SAVEPOINT   (seg1 rh55-qavm62:40000 pid=13231)
 ROLLBACK;
 ROLLBACK
 RESET debug_dtm_action_sql_command_tag;
@@ -356,8 +358,8 @@ INSERT INTO distxact3_2 VALUES (28);
 INSERT 0 1
 RELEASE SAVEPOINT s;
 psql:/path/sql_file:1: WARNING:  DTM error (gathered 2 results from cmd 'RELEASE SAVEPOINT s')
-DETAIL:  Raise ERROR for debug_dtm_action = 2, commandTag = RELEASE (postgres.c:1606)  (seg1 rh55-qavm62:40000 pid=13231)
-psql:/path/sql_file:1: ERROR:  Could not release savepoint (RELEASE SAVEPOINT s) (xact.c:5650)
+psql:/path/sql_file:1: ERROR:  could not execute command on QE
+DETAIL:  Raise ERROR for debug_dtm_action = 2, commandTag = RELEASE   (seg1 rh55-qavm62:40000 pid=13231)
 ROLLBACK;
 ROLLBACK
 RESET debug_dtm_action_sql_command_tag;
@@ -412,9 +414,9 @@ INSERT 0 1
 INSERT INTO distxact3_3 VALUES (38);
 INSERT 0 1
 ROLLBACK TO SAVEPOINT s;
+psql:/path/sql_file:1: ERROR:  could not execute command on QE
 psql:/path/sql_file:1: WARNING:  DTM error (gathered 2 results from cmd 'ROLLBACK TO SAVEPOINT s')
-DETAIL:  Raise ERROR for debug_dtm_action = 2, commandTag = ROLLBACK (postgres.c:1606)  (seg1 rh55-qavm62:40000 pid=13231)
-psql:/path/sql_file:1: ERROR:  Could not rollback to savepoint (ROLLBACK TO SAVEPOINT s) (xact.c:5830)
+DETAIL:  Raise ERROR for debug_dtm_action = 2, commandTag = ROLLBACK   (seg1 rh55-qavm62:40000 pid=13231)
 ROLLBACK;
 ROLLBACK
 RESET debug_dtm_action_sql_command_tag;

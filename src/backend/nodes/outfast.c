@@ -457,8 +457,6 @@ _outSort(StringInfo str, Sort *node)
 	WRITE_BOOL_ARRAY(nullsFirst, node->numCols);
 
     /* CDB */
-	WRITE_NODE_FIELD(limitOffset);
-	WRITE_NODE_FIELD(limitCount);
     WRITE_BOOL_FIELD(noduplicates);
 
 	WRITE_ENUM_FIELD(share_type, ShareType);
@@ -695,6 +693,16 @@ _outOuterJoinInfo(StringInfo str, OuterJoinInfo *node)
  *	Stuff from parsenodes.h.
  *
  *****************************************************************************/
+
+static void
+_outCreateExtensionStmt(StringInfo str, CreateExtensionStmt *node)
+{
+	WRITE_NODE_TYPE("CREATEEXTENSIONSTMT");
+	WRITE_STRING_FIELD(extname);
+	WRITE_BOOL_FIELD(if_not_exists);
+	WRITE_NODE_FIELD(options);
+	WRITE_ENUM_FIELD(create_ext_state, CreateExtensionState);
+}
 
 static void
 _outCreateStmt(StringInfo str, CreateStmt *node)
@@ -1519,6 +1527,9 @@ _outNode(StringInfo str, void *obj)
 			case T_AppendRelInfo:
 				_outAppendRelInfo(str, obj);
 				break;
+			case T_CreateExtensionStmt:
+				_outCreateExtensionStmt(str, obj);
+				break;
 
 
 			case T_GrantStmt:
@@ -1966,6 +1977,12 @@ _outNode(StringInfo str, void *obj)
 
 			case T_AlterTypeStmt:
 				_outAlterTypeStmt(str, obj);
+				break;
+			case T_AlterExtensionStmt:
+				_outAlterExtensionStmt(str, obj);
+				break;
+			case T_AlterExtensionContentsStmt:
+				_outAlterExtensionContentsStmt(str, obj);
 				break;
 			case T_TupleDescNode:
 				_outTupleDescNode(str, obj);

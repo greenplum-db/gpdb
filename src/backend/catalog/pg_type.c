@@ -519,7 +519,7 @@ GenerateTypeDependencies(Oid typeNamespace,
 
 	if (rebuild)
 	{
-		deleteDependencyRecordsFor(TypeRelationId, typeObjectId);
+		deleteDependencyRecordsFor(TypeRelationId, typeObjectId, true);
 		deleteSharedDependencyRecordsFor(TypeRelationId, typeObjectId);
 	}
 
@@ -544,6 +544,8 @@ GenerateTypeDependencies(Oid typeNamespace,
 		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 
 		recordDependencyOnOwner(TypeRelationId, typeObjectId, owner);
+		/* dependency on extension */
+		recordDependencyOnCurrentExtension(&myself, rebuild);
 	}
 
 	/* Normal dependencies on the I/O functions */

@@ -4,7 +4,7 @@ import optparse
 import subprocess
 import sys
 import shutil
-from builds import GpBuild, GpcodegenBuild, GporcacodegenBuild
+from builds.GpBuild import GpBuild
 
 def install_gpdb(dependency_name):
     status = subprocess.call("mkdir -p /usr/local/gpdb", shell=True)
@@ -38,14 +38,7 @@ def main():
         ciCommon = GpBuild(options.mode)
     elif options.mode == 'planner':
         ciCommon = GpBuild(options.mode)
-    elif options.mode == 'codegen':
-        ciCommon = GpcodegenBuild()
-    elif options.mode == 'orca_codegen':
-        ciCommon = GporcacodegenBuild()
 
-    status = ciCommon.install_system_deps()
-    if status:
-        return status
     for dependency in args:
         status = ciCommon.install_dependency(dependency)
         if status:

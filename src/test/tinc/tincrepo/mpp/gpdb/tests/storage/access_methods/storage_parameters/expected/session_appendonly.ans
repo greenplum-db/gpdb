@@ -152,9 +152,7 @@ Drop table if exists ao_ss_ap_t4;
 psql:/path/sql_file:1: NOTICE:  table "ao_ss_ap_t4" does not exist, skipping
 DROP TABLE
 Create table ao_ss_ap_t4 ( i int, j int) with(appendonly=xxxx);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-psql:/path/sql_file:1: ERROR:  invalid value for option "appendonly" (analyze.c:xxx)
+psql:/path/sql_file:1: ERROR:  invalid value for option "appendonly" (parse_utilcmd.c:4071)
 -- Create table with orientation,checksum,compresstype,compresslevel
 Drop table if exists ao_ss_ap_t5;
 psql:/path/sql_file:1: NOTICE:  table "ao_ss_ap_t5" does not exist, skipping
@@ -351,9 +349,7 @@ Drop table if exists ao_ss_ap_t4;
 psql:/path/sql_file:1: NOTICE:  table "ao_ss_ap_t4" does not exist, skipping
 DROP TABLE
 Create table ao_ss_ap_t4 ( i int, j int) with(appendonly=xxxx);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-psql:/path/sql_file:1: ERROR:  invalid value for option "appendonly" (analyze.c:xxx)
+psql:/path/sql_file:1: ERROR:  invalid value for option "appendonly" (parse_utilcmd.c:4071)
 -- Create table with orientation=column
 Drop table if exists ao_ss_ap_t5;
 psql:/path/sql_file:1: NOTICE:  table "ao_ss_ap_t5" does not exist, skipping
@@ -426,7 +422,7 @@ DROP TABLE
 --- =====================================
 -- GUC with invalid value
 SET gp_default_storage_options="appendonly=xxx";
-psql:/path/sql_file:1: ERROR:  invalid bool value "xxx" for storage option "appendonly" (reloptions.c:63)
+psql:/path/sql_file:1: ERROR:  invalid bool value "xxx" for storage option "appendonly"
 -- Reset guc to default value 
 RESET gp_default_storage_options;
 RESET

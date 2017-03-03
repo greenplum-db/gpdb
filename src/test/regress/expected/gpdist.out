@@ -24,6 +24,9 @@ select * from T full join W on T.a = W.a/91 where T.gp_segment_id <> W.segid; --
 ---+---+-------+---
 (0 rows)
 
+drop table T;
+drop table U;
+drop table W;
 drop table if exists customer_off;
 NOTICE:  table "customer_off" does not exist, skipping
 drop table if exists customer_on;

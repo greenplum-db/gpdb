@@ -131,6 +131,23 @@ where c ='25'
 group by b, c, value2
 order by b,c;
 
+
+-- Test inheritance planning, when a SubPlan is duplicated for different
+-- child tables.
+
+create table r (a int) distributed by (a);
+create table p (a int, b int) distributed by (a);
+create table p2 (a int, b int) inherits (p) distributed by (b);
+
+insert into r values (3);
+insert into p select a, b from generate_series(1,3) a, generate_series(1,3) b;
+
+delete from p where b = 1 or (b=2 and a in (select r.a from r));
+select * from p;
+
+delete from p where b = 1 or (b=2 and a in (select b from r));
+select * from p;
+
 -- start_ignore
 drop table if exists bfv_planner_x;
 drop table if exists testbadsql;

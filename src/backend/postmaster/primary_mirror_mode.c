@@ -2067,16 +2067,6 @@ applyStepForTransitionToPrimarySegmentMode(PrimaryMirrorModeTransitionArguments 
 		case TSDoDatabaseStartup:
 			if (!pmModuleState->haveStartedDatabase)
 			{
-#ifdef USE_TEST_UTILS
-				if (filerep_inject_db_startup_fault)
-				{
-					updateSegmentState(SegmentStateFault, FaultTypeMirror);
-
-					/* wait for filerep processes to pick up the fault */
-					pg_usleep(10 * 1000 * 1000);
-				}
-#endif /* USE_TEST_UTILS */
-
 				elog(getPrimaryMirrorModeDebugLogLevel(true),
 					 "PostmasterPrimaryMirrorTransition: starting database processes");
 				pmModuleState->haveStartedDatabase = true;
@@ -2388,7 +2378,7 @@ makeRelativeToPeerTxnFilespace(char *path)
 }
 
 /*
- * Check if the filespace information is consistent between persistant node filespace info
+ * Check if the filespace information is consistent between persistent node filespace info
  * and the values read from the flat files
  */
 bool

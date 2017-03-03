@@ -27,6 +27,7 @@
 int			optreset;
 #endif
 
+#include "binary_upgradeall.h"
 #include "dumputils.h"
 #include "pg_backup.h"
 
@@ -73,6 +74,8 @@ static int	disable_dollar_quoting = 0;
 static int	disable_triggers = 0;
 static int	use_setsessauth = 0;
 static int	server_version;
+static int	binary_upgrade = 0;
+
 
 static FILE *OPF;
 static char *filename = NULL;
@@ -89,7 +92,6 @@ main(int argc, char *argv[])
 	bool		globals_only = false;
 	bool		tablespaces_only = false;
 	bool		schema_only = false;
-	static int	gp_migrator = 0;
 	bool		gp_syntax = false;
 	bool		no_gp_syntax = false;
 	PGconn	   *conn;
@@ -98,7 +100,8 @@ main(int argc, char *argv[])
 	int			c,
 				ret;
 
-	static struct option long_options[] = {
+	struct option long_options[] = {
+		{"binary-upgrade", no_argument, &binary_upgrade, 1},	/* not documented */
 		{"data-only", no_argument, NULL, 'a'},
 		{"clean", no_argument, NULL, 'c'},
 		{"inserts", no_argument, NULL, 'd'},
@@ -135,7 +138,6 @@ main(int argc, char *argv[])
 		/* START MPP ADDITION */
 		{"gp-syntax", no_argument, NULL, 1},
 		{"no-gp-syntax", no_argument, NULL, 2},
-		{"gp-migrator", no_argument, &gp_migrator, 1},
 		/* END MPP ADDITION */
 
 		{NULL, 0, NULL, 0}
@@ -357,6 +359,8 @@ main(int argc, char *argv[])
 	}
 
 	/* Add long options to the pg_dump argument list */
+	if (binary_upgrade)
+		appendPQExpBuffer(pgdumpopts, " --binary-upgrade");
 	if (disable_dollar_quoting)
 		appendPQExpBuffer(pgdumpopts, " --disable-dollar-quoting");
 	if (disable_triggers)
@@ -591,7 +595,7 @@ help(void)
 
 
 /*
- *Build the WITH clause for resource queue dump
+ * Build the WITH clause for resource queue dump
  */
 static void 
 buildWithClause(const char *resname, const char *ressetting, PQExpBuffer buf)
@@ -613,26 +617,27 @@ dumpResQueues(PGconn *conn)
 	PGresult   *res;
 	int			i_rsqname,
 				i_resname,
-				i_ressetting;
+				i_ressetting,
+				i_rqoid;
 	int			i;
 	char	   *prev_rsqname = NULL;
 	bool		bWith = false;
 
 	printfPQExpBuffer(buf,
-					  "SELECT rsqname, 'activelimit' as resname, "
+					  "SELECT oid, rsqname, 'activelimit' as resname, "
 					  "rsqcountlimit::text as ressetting, "
 					  "1 as ord FROM pg_resqueue "
 					  "UNION "
-					  "SELECT rsqname, 'costlimit' as resname, "
+					  "SELECT oid, rsqname, 'costlimit' as resname, "
 					  "rsqcostlimit::text as ressetting, "
 					  "2 as ord FROM pg_resqueue "
 					  "UNION "
-					  "SELECT  rsqname, 'overcommit' as resname, "
+					  "SELECT oid, rsqname, 'overcommit' as resname, "
 					  "case when rsqovercommit then '1' "
 					  "else '0' end as ressetting, "
 					  "3 as ord FROM pg_resqueue "
 					  "UNION "
-					  "SELECT rsqname, 'ignorecostlimit' as resname, "
+					  "SELECT oid, rsqname, 'ignorecostlimit' as resname, "
 					  "%s as ressetting, "
 					  "4 as ord FROM pg_resqueue "
 					  "%s"
@@ -642,16 +647,17 @@ dumpResQueues(PGconn *conn)
 					   : "0 AS"),
 					  (server_version >= 80214 ?
 					   "UNION "
-					   "select rq.rsqname ,  rt.resname,  rc.ressetting, "
-					   "rt.restypid as ord from "
+					   "SELECT rq.oid, rq.rsqname, rt.resname, rc.ressetting, "
+					   "rt.restypid as ord FROM "
 					   "pg_resqueue rq,  pg_resourcetype rt, "
-					   "pg_resqueuecapability rc where "
+					   "pg_resqueuecapability rc WHERE "
 					   "rq.oid=rc.resqueueid and rc.restypid = rt.restypid "
 					   : "")
 		);
 
 	res = executeQuery(conn, buf->data);
 
+	i_rqoid = PQfnumber(res, "oid");
 	i_rsqname = PQfnumber(res, "rsqname");
 	i_resname = PQfnumber(res, "resname");
 	i_ressetting = PQfnumber(res, "ressetting");
@@ -681,10 +687,12 @@ dumpResQueues(PGconn *conn)
 		const char *rsqname;
 		const char *resname;
 		const char *ressetting;
+		Oid			rqoid;
 
 		rsqname = PQgetvalue(res, i, i_rsqname);
 		resname = PQgetvalue(res, i, i_resname);
 		ressetting = PQgetvalue(res, i, i_ressetting);
+		rqoid = atooid(PQgetvalue(res, i, i_rqoid));
 
 		/* if first CREATE statement, or name changed... */
 		if (!prev_rsqname || (0 != strcmp(rsqname, prev_rsqname)))
@@ -709,11 +717,20 @@ dumpResQueues(PGconn *conn)
 
 			resetPQExpBuffer(buf);
 
-			/* MPP-6926: cannot DROP or CREATEdefault queue, so ALTER it  */
+			/* MPP-6926: cannot DROP or CREATE default queue, so ALTER it  */
 			if (0 == strcmp(rsqname, "pg_default"))
 				appendPQExpBuffer(buf, "ALTER RESOURCE QUEUE %s", fmtId(rsqname));
 			else
+			{
+				/*
+				 * Oid dispatching doesn't apply to default queues so only perform
+				 * dispatch in the non-default case
+				 */
+				if (binary_upgrade)
+					dumpResqueueOid(OPF, conn, server_version, rqoid, (char *) rsqname);
+
 				appendPQExpBuffer(buf, "CREATE RESOURCE QUEUE %s", fmtId(rsqname));
+			}
 		}
 
 		/* NOTE: currently 3.3-style, but will switch to one WITH clause... */
@@ -800,6 +817,7 @@ dumpRoles(PGconn *conn)
 				i_rolpassword,
 				i_rolvaliduntil,
 				i_rolcomment,
+				i_oid,
 				i_rolqueuename = -1,	/* keep compiler quiet */
 				i_rolcreaterextgpfd = -1,
 				i_rolcreaterexthttp = -1,
@@ -821,7 +839,7 @@ dumpRoles(PGconn *conn)
 	 * dumped later
 	 */
 	printfPQExpBuffer(buf,
-					  "SELECT rolname, rolsuper, rolinherit, "
+					  "SELECT rolname, oid, rolsuper, rolinherit, "
 					  "rolcreaterole, rolcreatedb, rolcatupdate, "
 					  "rolcanlogin, rolconnlimit, rolpassword, "
 					  "rolvaliduntil, "
@@ -844,6 +862,7 @@ dumpRoles(PGconn *conn)
 	i_rolpassword = PQfnumber(res, "rolpassword");
 	i_rolvaliduntil = PQfnumber(res, "rolvaliduntil");
 	i_rolcomment = PQfnumber(res, "rolcomment");
+	i_oid = PQfnumber(res, "oid");
 
 	if (resource_queues)
 		i_rolqueuename = PQfnumber(res, "rolqueuename");
@@ -866,13 +885,18 @@ dumpRoles(PGconn *conn)
 	for (i = 0; i < PQntuples(res); i++)
 	{
 		const char *rolename;
+		Oid			roleoid;
 
 		rolename = PQgetvalue(res, i, i_rolname);
+		roleoid = atooid(PQgetvalue(res, i, i_oid));
 
 		resetPQExpBuffer(buf);
 
 		if (output_clean)
 			appendPQExpBuffer(buf, "DROP ROLE %s;\n", fmtId(rolename));
+
+		if (binary_upgrade)
+			dumpRoleOid(OPF, roleoid, rolename);
 
 		/*
 		 * We dump CREATE ROLE followed by ALTER ROLE to ensure that the role
@@ -1080,7 +1104,7 @@ dumpFilespaces(PGconn *conn)
 	PGresult   *res;
 
 	/*
-	 * Get all filespaces execpt built-in ones (named pg_xxx)
+	 * Get all filespaces except built-in ones (named pg_xxx)
 	 */
 	if (server_version < 80214)
 	{
@@ -1089,9 +1113,10 @@ dumpFilespaces(PGconn *conn)
 	}
 	else
 	{
-		res = executeQuery(conn, "SELECT fsname, oid, "
-						   "pg_catalog.pg_get_userbyid(fsowner) as fsowner, "
-						 "pg_catalog.shobj_description(oid, 'pg_filespace') "
+		res = executeQuery(conn,
+						   "SELECT fsname, oid, "
+						   "       pg_catalog.pg_get_userbyid(fsowner) as fsowner, "
+						   "       pg_catalog.shobj_description(oid, 'pg_filespace') "
 						   "FROM pg_catalog.pg_filespace "
 						   "WHERE fsname !~ '^pg_' "
 						   "ORDER BY 1");
@@ -1116,12 +1141,15 @@ dumpFilespaces(PGconn *conn)
 		/*
 		 * Drop existing filespace if required.
 		 *
-		 * Note: this statement will fail if the an existing filespace is not
+		 * Note: this statement will fail if an existing filespace is not
 		 * empty.  But this is no different from the related code in the rest
 		 * of pg_dump.
 		 */
 		if (output_clean)
 			appendPQExpBuffer(buf, "DROP FILESPACE %s;\n", fsname);
+
+		if (binary_upgrade)
+			dumpFilespaceOid(OPF, conn, fsname);
 
 		/* Begin creating the filespace definition */
 		appendPQExpBuffer(buf, "CREATE FILESPACE %s", fsname);
@@ -1155,7 +1183,7 @@ dumpFilespaces(PGconn *conn)
 		}
 		PQclear(entries);
 
-		/* Finnish off the statement */
+		/* Finish off the statement */
 		appendPQExpBuffer(buf, "\n);\n");
 
 		/* Add a comment on the filespace if specified */
@@ -1228,6 +1256,9 @@ dumpTablespaces(PGconn *conn)
 		if (output_clean)
 			appendPQExpBuffer(buf, "DROP TABLESPACE %s;\n", spcname);
 
+		if (binary_upgrade)
+			dumpTablespaceOid(OPF, conn, spcname);
+
 		appendPQExpBuffer(buf, "CREATE TABLESPACE %s", spcname);
 		appendPQExpBuffer(buf, " OWNER %s", fmtId(spcowner));
 		appendPQExpBuffer(buf, " FILESPACE %s;\n", fmtId(fsname));
@@ -1286,7 +1317,8 @@ dumpCreateDB(PGconn *conn)
 					   "coalesce(rolname, (select rolname from pg_authid where oid=(select datdba from pg_database where datname='template0'))), "
 					   "pg_encoding_to_char(d.encoding), "
 					   "datistemplate, datacl, datconnlimit, "
-					   "(SELECT spcname FROM pg_tablespace t WHERE t.oid = d.dattablespace) AS dattablespace "
+					   "(SELECT spcname FROM pg_tablespace t WHERE t.oid = d.dattablespace) AS dattablespace, "
+					   "d.oid "
 			  "FROM pg_database d LEFT JOIN pg_authid u ON (datdba = u.oid) "
 					   "WHERE datallowconn ORDER BY 1");
 
@@ -1299,6 +1331,7 @@ dumpCreateDB(PGconn *conn)
 		char	   *dbacl = PQgetvalue(res, i, 4);
 		char	   *dbconnlimit = PQgetvalue(res, i, 5);
 		char	   *dbtablespace = PQgetvalue(res, i, 6);
+		Oid			dboid = atooid(PQgetvalue(res, i, 7));
 		char	   *fdbname;
 
 		fdbname = strdup(fmtId(dbname));
@@ -1315,6 +1348,9 @@ dumpCreateDB(PGconn *conn)
 		{
 			if (output_clean)
 				appendPQExpBuffer(buf, "DROP DATABASE %s;\n", fdbname);
+
+			if (binary_upgrade)
+				dumpDatabaseOid(OPF, dboid, fdbname);
 
 			appendPQExpBuffer(buf, "CREATE DATABASE %s", fdbname);
 

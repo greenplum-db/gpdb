@@ -391,7 +391,7 @@ TransferDependencyLink(
 	Assert(OidIsValid(oid));
 
 	/* Delete old dependency */
-	count = deleteDependencyRecordsFor(RelationRelationId, oid);
+	count = deleteDependencyRecordsFor(RelationRelationId, oid, false);
 	if (count != 1)
 		elog(LOG, "expected one dependency record for %s table, oid %u, found %ld",
 			 tabletype, oid, count);

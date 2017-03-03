@@ -35,6 +35,7 @@
 #include "tcop/utility.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
+#include "utils/bytea.h"
 #include "utils/fmgroids.h"
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
@@ -907,6 +908,59 @@ RemoveTriggerById(Oid trigOid)
 
 	/* Keep lock on trigger's rel until end of xact */
 	heap_close(rel, NoLock);
+}
+
+/*
+ * get_trigger_oid - Look up a trigger by name to find its OID.
+ *
+ * If missing_ok is false, throw an error if trigger not found.  If
+ * true, just return InvalidOid.
+ */
+Oid
+get_trigger_oid(Oid relid, const char *trigname, bool missing_ok)
+{
+	Relation	tgrel;
+	ScanKeyData skey[2];
+	SysScanDesc tgscan;
+	HeapTuple	tup;
+	Oid			oid;
+
+	/*
+	 * Find the trigger, verify permissions, set up object address
+	 */
+	tgrel = heap_open(TriggerRelationId, AccessShareLock);
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_trigger_tgrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+	ScanKeyInit(&skey[1],
+				Anum_pg_trigger_tgname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				CStringGetDatum(trigname));
+
+	tgscan = systable_beginscan(tgrel, TriggerRelidNameIndexId, true,
+								SnapshotNow, 2, skey);
+
+	tup = systable_getnext(tgscan);
+
+	if (!HeapTupleIsValid(tup))
+	{
+		if (!missing_ok)
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					 errmsg("trigger \"%s\" for table \"%s\" does not exist",
+							trigname, get_rel_name(relid))));
+		oid = InvalidOid;
+	}
+	else
+	{
+		oid = HeapTupleGetOid(tup);
+	}
+
+	systable_endscan(tgscan);
+	heap_close(tgrel, AccessShareLock);
+	return oid;
 }
 
 /*
@@ -2745,24 +2799,6 @@ afterTriggerInvokeEvents(int query_depth,
 			if (rel == NULL || RelationGetRelid(rel) != event->ate_relid)
 			{
 				ResultRelInfo *rInfo;
-
-				/* GPDB_83_MERGE_FIXME: We had this in GPDB before the merge.
-				 * There are no comments on why this is needed, and I don't get it.
-				 */
-#if 0				
-				if (locally_opened)
-				{
-					/* close prior rel if any */
-					if (rel)
-						heap_close(rel, NoLock);
-					if (trigdesc)
-						FreeTriggerDesc(trigdesc);
-					if (finfo)
-						pfree(finfo);
-					Assert(instr == NULL);		/* never used in this case */
-				}
-				locally_opened = true;
-#endif
 
 				rInfo = ExecGetTriggerResultRel(estate, event->ate_relid);
 				rel = rInfo->ri_RelationDesc;

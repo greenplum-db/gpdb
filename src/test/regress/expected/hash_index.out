@@ -1,5 +1,3 @@
-set gp_hash_index = true;
-WARNING:  gp_hash_index is deprecated and has no effect
 --
 -- HASH_INDEX
 -- grep 843938989 hash.data
@@ -203,7 +201,6 @@ SELECT h.seqno AS f20000
 -- SELECT count(*) AS i988 FROM hash_ovfl_heap
 --  WHERE x = 1000;
 -- test that we can disable hash index
-set gp_hash_index = false;
 create table hash_test(i int);
 create index hash_test_idx on hash_test using hash (i);
 ERROR:  hash indexes are not supported

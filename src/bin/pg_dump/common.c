@@ -48,23 +48,23 @@ static int	numCatalogIds = 0;
  * arrays themselves would be simpler, but it doesn't work because pg_dump.c
  * may have already established pointers between items.)
  */
-static TableInfo *tblinfo;
-static TypeInfo *typinfo;
-static TypeStorageOptions *typestorageoptions;
-static FuncInfo *funinfo;
-static OprInfo *oprinfo;
-static NamespaceInfo *nspinfo;
-static int	numTables;
-static int	numTypes;
-static int  numTypeStorageOptions;
-static int	numFuncs;
-static int	numOperators;
-static int	numNamespaces;
 static DumpableObject **tblinfoindex;
 static DumpableObject **typinfoindex;
 static DumpableObject **funinfoindex;
 static DumpableObject **oprinfoindex;
 static DumpableObject **nspinfoindex;
+static DumpableObject **extinfoindex;
+static int	numTables;
+static int	numTypes;
+static int	numFuncs;
+static int	numOperators;
+static int	numNamespaces;
+static int	numExtensions;
+static int  numTypeStorageOptions;
+
+/* This is an array of object identities, not actual DumpableObjects */
+static ExtensionMemberId *extmembers;
+static int	numextmembers;
 
 bool is_gpdump = false; /* determines whether to print extra logging messages in getSchemaData */
 
@@ -72,9 +72,8 @@ static void flagInhTables(TableInfo *tbinfo, int numTables,
 			  InhInfo *inhinfo, int numInherits);
 static void flagInhAttrs(TableInfo *tbinfo, int numTables,
 			 InhInfo *inhinfo, int numInherits);
-static DumpableObject **buildIndexArray(void *objArray, int numObjs,
-				Size objSize);
 static int	DOCatalogIdCompare(const void *p1, const void *p2);
+static int	ExtensionMemberIdCompare(const void *p1, const void *p2);
 static void findParentsByOid(TableInfo *self,
 				 InhInfo *inhinfo, int numInherits);
 static int	strInArray(const char *pattern, char **arr, int arr_size);
@@ -89,19 +88,13 @@ void		reset(void);
 TableInfo *
 getSchemaData(int *numTablesPtr, int g_role)
 {
-	AggInfo    *agginfo;
+	TableInfo  *tblinfo;
+	TypeInfo   *typinfo;
+	FuncInfo   *funinfo;
+	OprInfo    *oprinfo;
+	NamespaceInfo *nspinfo;
+	ExtensionInfo *extinfo;
 	InhInfo    *inhinfo;
-	RuleInfo   *ruleinfo;
-	ProcLangInfo *proclanginfo;
-	CastInfo   *castinfo;
-	OpclassInfo *opcinfo;
-	OpfamilyInfo *opfinfo;
-	ConvInfo   *convinfo;
-	ExtProtInfo *ptcinfo;
-	TSParserInfo *prsinfo;
-	TSTemplateInfo *tmplinfo;
-	TSDictInfo *dictinfo;
-	TSConfigInfo *cfginfo;
 	int			numAggregates;
 	int			numInherits;
 	int			numRules;
@@ -117,6 +110,20 @@ getSchemaData(int *numTablesPtr, int g_role)
 	int			numTSConfigs;
 	const char *LOGGER_INFO = "INFO";
 
+	/*
+	 * We must read extensions and extension membership info first, because
+	 * extension membership needs to be consultable during decisions about
+	 * whether other objects are to be dumped.
+	 */
+	if (g_verbose)
+		write_msg(NULL, "reading extensions\n");
+	extinfo = getExtensions(&numExtensions);
+	extinfoindex = buildIndexArray(extinfo, numExtensions, sizeof(ExtensionInfo));
+
+	if (g_verbose)
+		write_msg(NULL, "identifying extension members\n");
+	getExtensionMembership(extinfo, numExtensions);
+
 	if (is_gpdump || g_verbose)
 		status_log_msg(LOGGER_INFO, progname, "reading schemas\n");
 	nspinfo = getNamespaces(&numNamespaces);
@@ -128,7 +135,7 @@ getSchemaData(int *numTablesPtr, int g_role)
 	 * However, we have to do getNamespaces first because the tables get
 	 * linked to their containing namespaces during getTables.
 	 */
-	if (g_verbose)
+	if (is_gpdump || g_verbose)
 		write_msg(NULL, "reading user-defined tables\n");
 	tblinfo = getTables(&numTables);
 	tblinfoindex = buildIndexArray(tblinfo, numTables, sizeof(TableInfo));
@@ -152,16 +159,16 @@ getSchemaData(int *numTablesPtr, int g_role)
 		/* this must be after getFuncs */
 		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading type storage options\n");
-		typestorageoptions = getTypeStorageOptions(&numTypeStorageOptions);
+		getTypeStorageOptions(&numTypeStorageOptions);
 
 		/* this must be after getFuncs, too */
 		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading procedural languages\n");
-		proclanginfo = getProcLangs(&numProcLangs);
+		getProcLangs(&numProcLangs);
 
 		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading user-defined aggregate functions\n");
-		agginfo = getAggregates(&numAggregates);
+		getAggregates(&numAggregates);
 
 		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading user-defined operators\n");
@@ -172,49 +179,54 @@ getSchemaData(int *numTablesPtr, int g_role)
 		{
 			if (is_gpdump || g_verbose)
 				status_log_msg(LOGGER_INFO, progname, "reading user-defined external protocols\n");
-			ptcinfo = getExtProtocols(&numExtProtocols);
+			getExtProtocols(&numExtProtocols);
 		}
 
 		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading user-defined operator classes\n");
-		opcinfo = getOpclasses(&numOpclasses);
-
-		if (is_gpdump || g_verbose)
-			write_msg(NULL, "reading user-defined text search parsers\n");
-		prsinfo = getTSParsers(&numTSParsers);
-
-		if (is_gpdump || g_verbose)
-			write_msg(NULL, "reading user-defined text search templates\n");
-		tmplinfo = getTSTemplates(&numTSTemplates);
-
-		if (is_gpdump || g_verbose)
-			write_msg(NULL, "reading user-defined text search dictionaries\n");
-		dictinfo = getTSDictionaries(&numTSDicts);
-
-		if (is_gpdump || g_verbose)
-			write_msg(NULL, "reading user-defined text search configurations\n");
-		cfginfo = getTSConfigurations(&numTSConfigs);
+		getOpclasses(&numOpclasses);
 
 		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading user-defined operator families\n");
-		opfinfo = getOpfamilies(&numOpfamilies);
+		getOpfamilies(&numOpfamilies);
+
+		if (is_gpdump || g_verbose)
+			write_msg(NULL, "reading user-defined text search parsers\n");
+		getTSParsers(&numTSParsers);
+
+		if (is_gpdump || g_verbose)
+			write_msg(NULL, "reading user-defined text search templates\n");
+		getTSTemplates(&numTSTemplates);
+
+		if (is_gpdump || g_verbose)
+			write_msg(NULL, "reading user-defined text search dictionaries\n");
+		getTSDictionaries(&numTSDicts);
+
+		if (is_gpdump || g_verbose)
+			write_msg(NULL, "reading user-defined text search configurations\n");
+		getTSConfigurations(&numTSConfigs);
 
 		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading user-defined conversions\n");
-		convinfo = getConversions(&numConversions);
+		getConversions(&numConversions);
 	}
+
+	if (is_gpdump || g_verbose)
+		status_log_msg(LOGGER_INFO, progname, "reading type casts\n");
+	getCasts(&numCasts);
 
 	if (is_gpdump || g_verbose)
 		status_log_msg(LOGGER_INFO, progname, "reading table inheritance information\n");
 	inhinfo = getInherits(&numInherits);
 
-	if (is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading rewrite rules\n");
-	ruleinfo = getRules(&numRules);
+	/* Identify extension configuration tables that should be dumped */
+	if (g_verbose)
+		write_msg(NULL, "finding extension tables\n");
+	processExtensionTables(extinfo, numExtensions);
 
 	if (is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading type casts\n");
-	castinfo = getCasts(&numCasts);
+		status_log_msg(LOGGER_INFO, progname, "reading rewrite rules\n");
+	getRules(&numRules);
 
 	/* Link tables to parents, mark parents of target tables interesting */
 	if (is_gpdump || g_verbose)
@@ -649,7 +661,7 @@ findObjectByCatalogId(CatalogId catalogId)
  *
  * Returns NULL for unknown OID
  */
-static DumpableObject *
+DumpableObject *
 findObjectByOid(Oid oid, DumpableObject **indexArray, int numObjs)
 {
 	DumpableObject **low;
@@ -687,7 +699,7 @@ findObjectByOid(Oid oid, DumpableObject **indexArray, int numObjs)
 /*
  * Build an index array of DumpableObject pointers, sorted by OID
  */
-static DumpableObject **
+DumpableObject **
 buildIndexArray(void *objArray, int numObjs, Size objSize)
 {
 	DumpableObject **ptrs;
@@ -847,6 +859,93 @@ NamespaceInfo *
 findNamespaceByOid(Oid oid)
 {
 	return (NamespaceInfo *) findObjectByOid(oid, nspinfoindex, numNamespaces);
+}
+
+/*
+ * findExtensionByOid
+ *	  finds the entry (in extinfo) of the extension with the given oid
+ *	  returns NULL if not found
+ */
+ExtensionInfo *
+findExtensionByOid(Oid oid)
+{
+	return (ExtensionInfo *) findObjectByOid(oid, extinfoindex, numExtensions);
+}
+
+
+/*
+ * setExtensionMembership
+ *	  accept and save data about which objects belong to extensions
+ */
+void
+setExtensionMembership(ExtensionMemberId *extmems, int nextmems)
+{
+	/* Sort array in preparation for binary searches */
+	if (nextmems > 1)
+		qsort((void *) extmems, nextmems, sizeof(ExtensionMemberId),
+			  ExtensionMemberIdCompare);
+	/* And save */
+	extmembers = extmems;
+	numextmembers = nextmems;
+}
+
+/*
+ * findOwningExtension
+ *	  return owning extension for specified catalog ID, or NULL if none
+ */
+ExtensionInfo *
+findOwningExtension(CatalogId catalogId)
+{
+	ExtensionMemberId *low;
+	ExtensionMemberId *high;
+
+	/*
+	 * We could use bsearch() here, but the notational cruft of calling
+	 * bsearch is nearly as bad as doing it ourselves; and the generalized
+	 * bsearch function is noticeably slower as well.
+	 */
+	if (numextmembers <= 0)
+		return NULL;
+	low = extmembers;
+	high = extmembers + (numextmembers - 1);
+	while (low <= high)
+	{
+		ExtensionMemberId *middle;
+		int			difference;
+
+		middle = low + (high - low) / 2;
+		/* comparison must match ExtensionMemberIdCompare, below */
+		difference = oidcmp(middle->catId.oid, catalogId.oid);
+		if (difference == 0)
+			difference = oidcmp(middle->catId.tableoid, catalogId.tableoid);
+		if (difference == 0)
+			return middle->ext;
+		else if (difference < 0)
+			low = middle + 1;
+		else
+			high = middle - 1;
+	}
+	return NULL;
+}
+
+/*
+ * qsort comparator for ExtensionMemberIds
+ */
+static int
+ExtensionMemberIdCompare(const void *p1, const void *p2)
+{
+	const ExtensionMemberId *obj1 = (const ExtensionMemberId *) p1;
+	const ExtensionMemberId *obj2 = (const ExtensionMemberId *) p2;
+	int			cmpval;
+
+	/*
+	 * Compare OID first since it's usually unique, whereas there will only be
+	 * a few distinct values of tableoid.
+	 */
+	cmpval = oidcmp(obj1->catId.oid, obj2->catId.oid);
+	if (cmpval == 0)
+		cmpval = oidcmp(obj1->catId.tableoid, obj2->catId.tableoid);
+	return cmpval;
 }
 
 

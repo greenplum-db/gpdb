@@ -5,7 +5,7 @@ CREATE TABLE trigger_test (
         i int,
         v varchar,
 		foo rowcompnest
-) distributed by (i);
+);
 CREATE OR REPLACE FUNCTION trigger_data() RETURNS trigger LANGUAGE plperl AS $$
 
   # make sure keys are sorted for consistent results - perl no longer
@@ -173,10 +173,39 @@ ERROR:  Cannot parallelize an UPDATE statement that updates the distribution col
 SELECT * FROM trigger_test;
  i |                v                 |   foo   
 ---+----------------------------------+---------
- 2 | second line(modified by trigger) | ("(3)")
- 4 | immortal                         | ("(4)")
  1 | first line(modified by trigger)  | ("(2)")
+ 2 | second line(modified by trigger) | ("(3)")
  3 | third line(modified by trigger)  | ("(4)")
+ 4 | immortal                         | ("(4)")
+(4 rows)
+
+DROP TRIGGER "test_valid_id_trig" ON trigger_test;
+CREATE OR REPLACE FUNCTION trigger_recurse() RETURNS trigger AS $$
+	use strict;
+
+	if ($_TD->{new}{i} == 10000)
+	{
+		spi_exec_query("insert into trigger_test (i, v) values (20000, 'child');");
+
+		if ($_TD->{new}{i} != 10000)
+		{
+			die "recursive trigger modified: ". $_TD->{new}{i};
+		}
+	}
+    return;
+$$ LANGUAGE plperl;
+CREATE TRIGGER "test_trigger_recurse" BEFORE INSERT ON trigger_test
+FOR EACH ROW EXECUTE PROCEDURE "trigger_recurse"();
+INSERT INTO trigger_test (i, v) values (10000, 'top');
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement at line 6.
+DETAIL:  PL/Perl function "trigger_recurse"
+SELECT * FROM trigger_test;
+ i |                v                 |   foo   
+---+----------------------------------+---------
+ 1 | first line(modified by trigger)  | ("(2)")
+ 2 | second line(modified by trigger) | ("(3)")
+ 3 | third line(modified by trigger)  | ("(4)")
+ 4 | immortal                         | ("(4)")
 (4 rows)
 
 CREATE OR REPLACE FUNCTION immortal() RETURNS trigger AS $$

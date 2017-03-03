@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * meminstrumentation.h
+ * memaccounting.h
  *	  This file contains declarations for memory instrumentation utility
  *	  functions.
  *
@@ -222,7 +222,7 @@ MemoryAccounting_CombinedAccountArrayToString(void *accountArrayBytes,
 extern void
 MemoryAccounting_SaveToFile(int currentSliceId);
 
-extern uint32
+extern void
 MemoryAccounting_SaveToLog(void);
 
 extern void

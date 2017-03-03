@@ -36,12 +36,12 @@
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_pltemplate.h"
 #include "catalog/pg_resqueue.h"
+#include "catalog/pg_resgroup.h"
 #include "catalog/pg_shdepend.h"
 #include "catalog/pg_shdescription.h"
 #include "catalog/pg_filespace.h"
 #include "catalog/pg_filespace_entry.h"
 #include "catalog/pg_tablespace.h"
-#include "catalog/pg_resqueue.h"
 #include "catalog/pg_rewrite.h"
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_trigger.h"
@@ -647,6 +647,8 @@ IsSharedRelation(Oid relationId)
 		relationId == ResQueueRelationId ||
 		relationId == ResourceTypeRelationId ||
 		relationId == ResQueueCapabilityRelationId ||
+		relationId == ResGroupRelationId ||
+		relationId == ResGroupCapabilityRelationId ||
 		relationId == GpSanConfigRelationId ||
 		relationId == GpFaultStrategyRelationId ||
 		relationId == GpConfigurationRelationId ||
@@ -690,7 +692,13 @@ IsSharedRelation(Oid relationId)
 		relationId == ResQueueCapabilityOidIndexId ||
 		relationId == ResQueueCapabilityResqueueidIndexId ||
 		relationId == ResQueueCapabilityRestypidIndexId ||
+		relationId == ResGroupOidIndexId ||
+		relationId == ResGroupRsgnameIndexId ||
+		relationId == ResGroupCapabilityOidIndexId ||
+		relationId == ResGroupCapabilityResgroupidIndexId ||
+		relationId == ResGroupCapabilityResgroupidResLimittypeIndexId ||
 		relationId == AuthIdRolResQueueIndexId ||
+		relationId == AuthIdRolResGroupIndexId ||
 		relationId == GpSanConfigMountidIndexId ||
 		relationId == GpConfigurationContentDefinedprimaryIndexId ||
 		relationId == GpConfigurationDbidIndexId ||
@@ -909,7 +917,7 @@ GetNewRelFileNode(Oid reltablespace, bool relisshared, Relation pg_class)
 	RelFileNode rnode;
 	char	   *rpath;
 	int			fd;
-	bool		collides;
+	bool		collides = true;
 
 	/* This should match RelationInitPhysicalAddr */
 	rnode.spcNode = reltablespace ? reltablespace : MyDatabaseTableSpace;

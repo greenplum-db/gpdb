@@ -42,3 +42,19 @@ select action, b from ctas_baz order by 1,2 limit 5;
 select action, b from ctas_baz order by 2 limit 5;
 select action::text, b from ctas_baz order by 1,2 limit 5;
 
+-- Test CTAS with a function that executes another query that's dispatched.
+-- Once upon a time, we had a bug in dispatching the table's OID in this
+-- scenario.
+create table ctas_input(x int);
+insert into ctas_input select * from generate_series(1, 10);
+
+CREATE FUNCTION ctas_inputArray() RETURNS INT[] AS $$
+DECLARE theArray INT[];
+BEGIN
+   SELECT array(SELECT * FROM ctas_input ORDER BY x) INTO theArray;
+   RETURN theArray;
+--EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'Catching the exception ...%', SQLERRM;
+END;
+$$ LANGUAGE plpgsql;
+
+create table ctas_output as select ctas_inputArray()::int[] as x;

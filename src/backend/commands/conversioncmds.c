@@ -20,6 +20,7 @@
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_conversion.h"
 #include "catalog/pg_type.h"
+#include "commands/alter.h"
 #include "commands/conversioncmds.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
@@ -137,7 +138,7 @@ DropConversionCommand(List *name, DropBehavior behavior, bool missing_ok)
 {
 	Oid			conversionOid;
 
-	conversionOid = FindConversionByName(name);
+	conversionOid = get_conversion_oid(name, missing_ok);
 	if (!OidIsValid(conversionOid))
 	{
 		if (!missing_ok)
@@ -176,12 +177,7 @@ RenameConversion(List *name, const char *newname)
 
 	rel = heap_open(ConversionRelationId, RowExclusiveLock);
 
-	conversionOid = FindConversionByName(name);
-	if (!OidIsValid(conversionOid))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("conversion \"%s\" does not exist",
-						NameListToString(name))));
+	conversionOid = get_conversion_oid(name, false);
 
 	tup = SearchSysCacheCopy(CONVOID,
 							 ObjectIdGetDatum(conversionOid),
@@ -232,12 +228,7 @@ AlterConversionOwner(List *name, Oid newOwnerId)
 
 	rel = heap_open(ConversionRelationId, RowExclusiveLock);
 
-	conversionOid = FindConversionByName(name);
-	if (!OidIsValid(conversionOid))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("conversion \"%s\" does not exist",
-						NameListToString(name))));
+	conversionOid = get_conversion_oid(name, false);
 
 	AlterConversionOwner_internal(rel, conversionOid, newOwnerId);
 
@@ -327,4 +318,54 @@ AlterConversionOwner_internal(Relation rel, Oid conversionOid, Oid newOwnerId)
 								newOwnerId);
 
 	heap_freetuple(tup);
+}
+
+/*
+ * Execute ALTER CONVERSION SET SCHEMA
+ */
+void
+AlterConversionNamespace(List *name, const char *newschema)
+{
+	Oid			convOid,
+				nspOid;
+	Relation	rel;
+
+	rel = heap_open(ConversionRelationId, RowExclusiveLock);
+
+	convOid = get_conversion_oid(name, false);
+
+	/* get schema OID */
+	nspOid = LookupCreationNamespace(newschema);
+
+	AlterObjectNamespace(rel, CONVOID, CONNAMENSP,
+						 convOid, nspOid,
+						 Anum_pg_conversion_conname,
+						 Anum_pg_conversion_connamespace,
+						 Anum_pg_conversion_conowner,
+						 ACL_KIND_CONVERSION);
+
+	heap_close(rel, RowExclusiveLock);
+}
+
+/*
+ * Change conversion schema, by oid
+ */
+Oid
+AlterConversionNamespace_oid(Oid convOid, Oid newNspOid)
+{
+	Oid			oldNspOid;
+	Relation	rel;
+
+	rel = heap_open(ConversionRelationId, RowExclusiveLock);
+
+	oldNspOid = AlterObjectNamespace(rel, CONVOID, CONNAMENSP,
+									 convOid, newNspOid,
+									 Anum_pg_conversion_conname,
+									 Anum_pg_conversion_connamespace,
+									 Anum_pg_conversion_conowner,
+									 ACL_KIND_CONVERSION);
+
+	heap_close(rel, RowExclusiveLock);
+
+	return oldNspOid;
 }

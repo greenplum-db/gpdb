@@ -1,0 +1,4 @@
+UPDATE foo set b = 0 ;
+psql:/path/sql_file:1: NOTICE:  Releasing segworker groups to finish aborting the transaction.
+psql:/path/sql_file:1: ERROR:  fault triggered, fault name:'appendonly_insert' fault type:'panic' (seg0 sdw6:26022 pid=3496) (cdbdisp.c:1487)
+ERROR:  could not connect to segment: initialization of segworker group failed (cdbgang.c:xxx)

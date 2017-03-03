@@ -162,8 +162,7 @@ $$ language plperlu NO SQL;
 -- function in select clause
 --   Fails: plperl does not support SFRM_Materialize
 select foor(1);
-ERROR:  Unsupported Perl function "foor"
-DETAIL:  function returning record called in context that cannot accept type record
+ERROR:  set-valued function called in context that cannot accept a set
 CONTEXT:  PL/Perl function "foor"
 -- expanding columns in the select list
 --    Fails: record type not registered
@@ -186,8 +185,7 @@ select * from foor(1) as (fooid int, f2 int);
 -- function over function (executed on master) 
 --    Fails: plperl does not support SFRM_Materialize
 select foor(fooid), * from foor(3) as (fooid int, f2 int);
-ERROR:  Unsupported Perl function "foor"
-DETAIL:  function returning record called in context that cannot accept type record
+ERROR:  set-valued function called in context that cannot accept a set
 CONTEXT:  PL/Perl function "foor"
 -- Joining with a table
 select * from foo2, foor(3) z(fooid int, f2 int) where foo2.f2 = z.f2;

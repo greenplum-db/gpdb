@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+    <!--install_guide/refs/gpstart.xml has a conref to this topic. -->
+    <title id="jy143030">gpstart</title>
+    <body>
+        <p>Starts a Greenplum Database system.</p>
+        <section id="section2">
+            <title>Synopsis</title>
+            <codeblock><b>gpstart</b> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] [<b>-R</b>] 
+        [<b>-m</b>] [<b>-y</b>] [<b>-a</b>] [<b>-t</b> <varname>timeout_seconds</varname>] [<b>-l</b> <varname>logfile_directory</varname>] 
+        [<b>-v</b> | <b>-q</b>]
+
+<b>gpstart</b> <b>-?</b> | <b>-h</b> | <b>--help</b> 
+
+<b>gpstart</b> <b>--version</b></codeblock>
+        </section>
+        <section id="section3">
+            <title>Description</title>
+            <p>The <codeph>gpstart</codeph> utility is used to start the Greenplum Database server
+                processes. When you start a Greenplum Database system, you are actually starting
+                several <codeph>postgres</codeph> database server listener processes at once (the
+                master and all of the segment instances). The <codeph>gpstart</codeph> utility
+                handles the startup of the individual instances. Each instance is started in
+                parallel.</p>
+            <p>The first time an administrator runs <codeph>gpstart</codeph>, the utility creates a
+                hosts cache file named <codeph>.gphostcache</codeph> in the user's home directory.
+                Subsequently, the utility uses this list of hosts to start the system more
+                efficiently. If new hosts are added to the system, you must manually remove this
+                file from the <codeph>gpadmin</codeph> user's home directory. The utility will
+                create a new hosts cache file at the next startup.</p>
+            <p>Before you can start a Greenplum Database system, you must have initialized the
+                system using <codeph>gpinitsystem</codeph> first.</p>
+        </section>
+        <section id="section4">
+            <title>Options</title>
+            <parml>
+                <plentry>
+                    <pt>-a (do not prompt)</pt>
+                    <pd>Do not prompt the user for confirmation.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-B <varname>parallel_processes</varname></pt>
+                    <pd>The number of segments to start in parallel. If not specified, the utility
+                        will start up to 64 parallel processes depending on how many segment
+                        instances it needs to start.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-d <varname>master_data_directory</varname></pt>
+                    <pd>Optional. The master host data directory. If not specified, the value set
+                        for <codeph>$MASTER_DATA_DIRECTORY</codeph> will be used.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-l <varname>logfile_directory</varname></pt>
+                    <pd>The directory to write the log file. Defaults to
+                            <codeph>~/gpAdminLogs</codeph>.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-m (master only)</pt>
+                    <pd>Optional. Starts the master instance only, which may be useful for
+                        maintenance tasks. This mode only allows connections to the master in
+                        utility mode. For example:</pd>
+                    <pd>
+                        <codeblock>PGOPTIONS='-c gp_session_role=utility' psql</codeblock>
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt>-q (no screen output)</pt>
+                    <pd>Run in quiet mode. Command output is not displayed on the screen, but is
+                        still written to the log file.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-R (restricted mode)</pt>
+                    <pd>Starts Greenplum Database in restricted mode (only database superusers are
+                        allowed to connect).</pd>
+                </plentry>
+                <plentry>
+                    <pt>-t <varname>timeout_seconds</varname></pt>
+                    <pd>Specifies a timeout in seconds to wait for a segment instance to start up.
+                        If a segment instance was shutdown abnormally (due to power failure or
+                        killing its <codeph>postgres</codeph> database listener process, for
+                        example), it may take longer to start up due to the database recovery and
+                        validation process. If not specified, the default timeout is 60
+                        seconds.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-v (verbose output)</pt>
+                    <pd>Displays detailed status, progress and error messages output by the
+                        utility.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-y (do not start standby master)</pt>
+                    <pd>Optional. Do not start the standby master host. The default is to start the
+                        standby master host and synchronization process.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-? | -h | --help (help)</pt>
+                    <pd>Displays the online help.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--version (show utility version)</pt>
+                    <pd>Displays the version of this utility.</pd>
+                </plentry>
+            </parml>
+        </section>
+        <section id="section5">
+            <title>Examples</title>
+            <p>Start a Greenplum Database system:</p>
+            <codeblock>gpstart</codeblock>
+            <p>Start a Greenplum Database system in restricted mode (only allow superuser
+                connections):</p>
+            <codeblock>gpstart -R</codeblock>
+            <p>Start the Greenplum master instance only and connect in utility mode:</p>
+            <codeblock>gpstart -m PGOPTIONS='-c gp_session_role=utility' psql</codeblock>
+        </section>
+        <section id="section6">
+            <title>See Also</title>
+            <p><codeph><xref href="gpstop.xml#topic1">gpstop</xref></codeph>, <codeph><xref
+                        href="gpinitsystem.xml#topic1"/></codeph></p>
+        </section>
+    </body>
+</topic>

@@ -312,6 +312,13 @@ typedef struct LOCKTAG
 	 (locktag).locktag_type = LOCKTAG_ADVISORY, \
 	 (locktag).locktag_lockmethodid = USER_LOCKMETHOD)
 
+#define SET_LOCKTAG_RESOURCE_QUEUE(locktag, queueid) \
+	((locktag).locktag_field1 = (queueid), \
+	 (locktag).locktag_field2 = 0, \
+	 (locktag).locktag_field3 = 0, \
+	 (locktag).locktag_field4 = 0, \
+	 (locktag).locktag_type = LOCKTAG_RESOURCE_QUEUE,		\
+	 (locktag).locktag_lockmethodid = RESOURCE_LOCKMETHOD)
 
 /*
  * Per-locked-object lock information:

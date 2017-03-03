@@ -1,0 +1,1 @@
+CREATE LANGUAGE plpythonu;

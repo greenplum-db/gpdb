@@ -1,0 +1,99 @@
+DROP TABLE IF EXISTS mpp21090_dropcol_splitdefpt_addcol_dml_timestamp;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_dropcol_splitdefpt_addcol_dml_timestamp_opt.sql:14: NOTICE:  table "mpp21090_dropcol_splitdefpt_addcol_dml_timestamp" does not exist, skipping
+DROP TABLE
+CREATE TABLE mpp21090_dropcol_splitdefpt_addcol_dml_timestamp
+(
+    col1 timestamp,
+    col2 timestamp,
+    col3 char,
+    col4 timestamp
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def
+);
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_dropcol_splitdefpt_addcol_dml_timestamp_opt.sql:26: NOTICE:  CREATE TABLE will create partition "mpp21090_dropcol_splitdefpt_addcol_dml_timestamp_1_prt_def" for table "mpp21090_dropcol_splitdefpt_addcol_dml_timestamp"
+CREATE TABLE
+INSERT INTO mpp21090_dropcol_splitdefpt_addcol_dml_timestamp VALUES('2013-12-31 12:00:00','2013-12-31 12:00:00','a','2013-12-31 12:00:00');
+INSERT 0 1
+SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_timestamp ORDER BY 1,2,3,4;
+        col1         |        col2         | col3 |        col4         
+---------------------+---------------------+------+---------------------
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | a    | 2013-12-31 12:00:00
+(1 row)
+
+ALTER TABLE mpp21090_dropcol_splitdefpt_addcol_dml_timestamp DROP COLUMN col4;
+ALTER TABLE
+INSERT INTO mpp21090_dropcol_splitdefpt_addcol_dml_timestamp VALUES('2013-12-31 12:00:00','2013-12-31 12:00:00','b');
+INSERT 0 1
+SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_timestamp ORDER BY 1,2,3;
+        col1         |        col2         | col3 
+---------------------+---------------------+------
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | a
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | b
+(2 rows)
+
+ALTER TABLE mpp21090_dropcol_splitdefpt_addcol_dml_timestamp SPLIT DEFAULT PARTITION at ('2013-12-15 12:00:00') into (partition partsplitone,partition def);
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_dropcol_splitdefpt_addcol_dml_timestamp_opt.sql:36: NOTICE:  exchanged partition "def" of relation "mpp21090_dropcol_splitdefpt_addcol_dml_timestamp" with relation "pg_temp_63990"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_dropcol_splitdefpt_addcol_dml_timestamp_opt.sql:36: NOTICE:  dropped partition "def" for relation "mpp21090_dropcol_splitdefpt_addcol_dml_timestamp"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_dropcol_splitdefpt_addcol_dml_timestamp_opt.sql:36: NOTICE:  CREATE TABLE will create partition "mpp21090_dropcol_splitdefpt_addcol_dml_times_1_prt_partsplitone" for table "mpp21090_dropcol_splitdefpt_addcol_dml_timestamp"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_dropcol_splitdefpt_addcol_dml_timestamp_opt.sql:36: NOTICE:  CREATE TABLE will create partition "mpp21090_dropcol_splitdefpt_addcol_dml_timestamp_1_prt_def" for table "mpp21090_dropcol_splitdefpt_addcol_dml_timestamp"
+ALTER TABLE
+INSERT INTO mpp21090_dropcol_splitdefpt_addcol_dml_timestamp SELECT '2013-12-01 12:00:00', '2013-12-01 12:00:00','e';
+INSERT 0 1
+SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_timestamp ORDER BY 1,2,3;
+        col1         |        col2         | col3 
+---------------------+---------------------+------
+ 2013-12-01 12:00:00 | 2013-12-01 12:00:00 | e
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | a
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | b
+(3 rows)
+
+ALTER TABLE mpp21090_dropcol_splitdefpt_addcol_dml_timestamp ADD COLUMN col5 timestamp DEFAULT '2013-12-31 12:00:00';
+ALTER TABLE
+INSERT INTO mpp21090_dropcol_splitdefpt_addcol_dml_timestamp VALUES('2013-12-31 12:00:00','2013-12-31 12:00:00','c','2013-12-31 12:00:00');
+INSERT 0 1
+SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_timestamp ORDER BY 1,2,3,4;
+        col1         |        col2         | col3 |        col5         
+---------------------+---------------------+------+---------------------
+ 2013-12-01 12:00:00 | 2013-12-01 12:00:00 | e    | 2013-12-31 12:00:00
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | a    | 2013-12-31 12:00:00
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | b    | 2013-12-31 12:00:00
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | c    | 2013-12-31 12:00:00
+(4 rows)
+
+-- Update distribution key
+UPDATE mpp21090_dropcol_splitdefpt_addcol_dml_timestamp SET col1 = '2014-02-10 12:00:00' WHERE col2 = '2013-12-01 12:00:00' AND col1 = '2013-12-01 12:00:00';
+UPDATE 1
+SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_timestamp ORDER BY 1,2,3;
+        col1         |        col2         | col3 |        col5         
+---------------------+---------------------+------+---------------------
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | a    | 2013-12-31 12:00:00
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | b    | 2013-12-31 12:00:00
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | c    | 2013-12-31 12:00:00
+ 2014-02-10 12:00:00 | 2013-12-01 12:00:00 | e    | 2013-12-31 12:00:00
+(4 rows)
+
+-- Update partition key
+UPDATE mpp21090_dropcol_splitdefpt_addcol_dml_timestamp SET col2 = '2014-02-10 12:00:00' WHERE col2 = '2013-12-01 12:00:00' AND col1 = '2014-02-10 12:00:00';
+UPDATE 1
+SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_timestamp ORDER BY 1,2,3;
+        col1         |        col2         | col3 |        col5         
+---------------------+---------------------+------+---------------------
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | a    | 2013-12-31 12:00:00
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | b    | 2013-12-31 12:00:00
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | c    | 2013-12-31 12:00:00
+ 2014-02-10 12:00:00 | 2014-02-10 12:00:00 | e    | 2013-12-31 12:00:00
+(4 rows)
+
+DELETE FROM mpp21090_dropcol_splitdefpt_addcol_dml_timestamp WHERE col3='b';
+DELETE 1
+SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_timestamp ORDER BY 1,2,3;
+        col1         |        col2         | col3 |        col5         
+---------------------+---------------------+------+---------------------
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | a    | 2013-12-31 12:00:00
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | c    | 2013-12-31 12:00:00
+ 2014-02-10 12:00:00 | 2014-02-10 12:00:00 | e    | 2013-12-31 12:00:00
+(3 rows)
+

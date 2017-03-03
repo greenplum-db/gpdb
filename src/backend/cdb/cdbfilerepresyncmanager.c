@@ -165,8 +165,6 @@ typedef struct FileRepResyncShmem_s {
 	volatile int	appendOnlyCommitCount;
 		/* This counter is protected by FileRepAppendOnlyCommitCountLock */
 		
-	bool			checkpointRequest;
-	
 	bool			reMirrorAllowed;
 		/*
 		 * This flag is used just to enable FILEREP proces to perform some operation
@@ -362,14 +360,6 @@ FileRepResync_SetReMirrorAllowed(void)
 	fileRepResyncShmem->reMirrorAllowed = TRUE;
 }
 
-bool 
-FileRepResync_IsTransitionFromResyncToInSync(void)
-{
-	return((fileRepResyncShmem != NULL)?
-		   (fileRepResyncShmem->checkpointRequest == TRUE &&
-			fileRepProcessType == FileRepProcessTypeResyncManager):false);
-}
-
 bool
 FileRepResync_IsReMirrorAllowed(void)
 {
@@ -505,8 +495,6 @@ FileRepResync_ShmemInit(void)
 	
 	fileRepResyncShmem->appendOnlyCommitCount = 0;
 	
-	fileRepResyncShmem->checkpointRequest = FALSE;
-	
 	fileRepResyncShmem->reMirrorAllowed = FALSE;	
 	
 	fileRepResyncShmem->totalBlocksToSynchronize = 0;
@@ -575,9 +563,6 @@ FileRepResync_ShmemReInit(void)
 	/*
 	 * NOTE: Do not zero Commit Work Intent count for ReInit.
 	 */
-
-	fileRepResyncShmem->checkpointRequest = FALSE;
-	
 	fileRepResyncShmem->reMirrorAllowed = FALSE;	
 	
 	fileRepResyncShmem->totalBlocksToSynchronize = 0;
@@ -775,6 +760,8 @@ FileRepPrimary_StartResyncManager(void)
 		
 		Insist(segmentState == SegmentStateInResyncTransition ||
 			   segmentState == SegmentStateReady);
+
+		FileRepSubProcess_InitHeapAccess();
 
 		if (isLastLocTracked == FALSE)
 		{
@@ -1291,15 +1278,13 @@ FileRepResyncManager_InSyncTransition(void)
 		
 		MirroredFlatFile_DropFilesFromDir();
 		
-		fileRepResyncShmem->checkpointRequest = TRUE;		
-		CreateCheckPoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
-		fileRepResyncShmem->checkpointRequest = FALSE;
+		RequestCheckpoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT | CHECKPOINT_RESYNC_TO_INSYNC_TRANSITION);
 		
 		/* 
 		 * The second checkpoint is required in order to mirror pg_control
 		 * with last checkpoint position in the xlog file that is mirrored (XLogSwitch).
 		 */
-		CreateCheckPoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
+		RequestCheckpoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
 
 		FileRepSubProcess_ProcessSignals();
 		if (! (FileRepSubProcess_GetState() == FileRepStateReady &&

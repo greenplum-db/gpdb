@@ -1,0 +1,19 @@
+-- start_ignore
+SET gp_create_table_random_default_distribution=on;
+SET
+SET optimizer=off;
+SET
+-- end_ignore
+-- UNIQUE default behavior
+DROP TABLE IF EXISTS dupconstr;
+psql:/Users/garcic12/dev/tincrepo/private/QP-private/ddl/default_distribution/out/create_table_unique_planner.sql:8: NOTICE:  table "dupconstr" does not exist, skipping
+DROP TABLE
+create table dupconstr (
+						i int,
+						j int constraint test CHECK (j > 10),
+						CONSTRAINT test1 UNIQUE (i,j));
+psql:/Users/garcic12/dev/tincrepo/private/QP-private/ddl/default_distribution/out/create_table_unique_planner.sql:12: NOTICE:  CREATE TABLE / UNIQUE will create implicit index "dupconstr_i_key" for table "dupconstr"
+CREATE TABLE
+-- UNIQUE default behavior
+create unique index distpol_uidx on distpol(c1);
+CREATE INDEX

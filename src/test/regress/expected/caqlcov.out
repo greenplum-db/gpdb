@@ -18,8 +18,6 @@ drop function if exists trig();
 NOTICE:  function trig() does not exist, skipping
 drop user if exists cm_user;
 NOTICE:  role "cm_user" does not exist, skipping
-NOTICE:  role "cm_user" does not exist, skipping  (seg0 usxxreddyr3mbp1.corp.emc.com:40000 pid=58541)
-NOTICE:  role "cm_user" does not exist, skipping  (seg1 usxxreddyr3mbp1.corp.emc.com:40001 pid=58542)
 drop view if exists tview;
 NOTICE:  view "tview" does not exist, skipping
 -- end_ignore

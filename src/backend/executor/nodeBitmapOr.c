@@ -45,7 +45,7 @@
 BitmapOrState *
 ExecInitBitmapOr(BitmapOr *node, EState *estate, int eflags)
 {
-	BitmapOrState *bitmaporstate;
+	BitmapOrState *bitmaporstate = makeNode(BitmapOrState);
 	PlanState **bitmapplanstates;
 	int			nplans;
 	int			i;
@@ -54,8 +54,6 @@ ExecInitBitmapOr(BitmapOr *node, EState *estate, int eflags)
 
 	/* check for unsupported flags */
 	Assert(!(eflags & (EXEC_FLAG_BACKWARD | EXEC_FLAG_MARK)));
-
-	bitmaporstate = makeNode(BitmapOrState);
 
 	/*
 	 * Set up empty vector of subplan states
@@ -111,6 +109,14 @@ ExecCountSlotsBitmapOr(BitmapOr *node)
 
 /* ----------------------------------------------------------------
  *	   MultiExecBitmapOr
+ *
+ *	   BitmapOr node gets the bitmaps generated from BitmapIndexScan
+ *	   nodes and outputs a bitmap that ORs all input bitmaps.
+ *
+ *	   The first input bitmap is utilized to store the result of the
+ *	   OR and returned to the caller. In addition, the output points
+ *	   to a newly created OpStream node of type BMS_OR, where all
+ *	   StreamNodes of input bitmaps are added as input streams.
  * ----------------------------------------------------------------
  */
 Node *
@@ -183,6 +189,8 @@ MultiExecBitmapOr(BitmapOrState *node)
 					StreamBitmap *s = (StreamBitmap *)subresult;
 					stream_add_node((StreamBitmap *)node->bitmap, 
 									s->streamNode, BMS_OR);
+					/* node->bitmap should be the only owner of the newly created OR StreamNode */
+					s->streamNode = NULL;
 
 					/*
 					 * Don't free subresult here, as we are still using the StreamNode inside it.
@@ -208,7 +216,7 @@ MultiExecBitmapOr(BitmapOrState *node)
 
 	/* must provide our own instrumentation support */
 	if (node->ps.instrument)
-        InstrStopNode(node->ps.instrument, node->bitmap ? 1 : 0);
+		InstrStopNode(node->ps.instrument, node->bitmap ? 1 : 0);
 
 	return node->bitmap;
 }

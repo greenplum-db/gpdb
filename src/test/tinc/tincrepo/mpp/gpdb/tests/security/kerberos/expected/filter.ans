@@ -579,7 +579,7 @@ HINT:  No function matches the given name and argument types. You may need to ad
 --- TEST filter from outside scope => error
 select * from (select i from filter_test where j = 1) x1, 
               (select sum(i) filter (where i < x1.i) from filter_test where j = 2) x2;
-psql:/path/sql_file:1: ERROR:  subquery in FROM may not refer to other relations of same query level
+psql:/path/sql_file:1: ERROR:  subquery in FROM cannot refer to other relations of same query level
 LINE 2:               (select sum(i) filter (where i < x1.i) from fi...
                               ^
 --- TEST against user defined aggregation function

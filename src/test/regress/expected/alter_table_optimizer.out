@@ -137,34 +137,6 @@ SELECT * FROM tmp_new2;
 
 DROP TABLE tmp_new;
 DROP TABLE tmp_new2;
--- ALTER TABLE ... RENAME on corrupted relations
-SET allow_system_table_mods = dml;
--- missing entry
-CREATE TABLE cor (a int, b float);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-INSERT INTO cor SELECT i, i+1 FROM generate_series(1,100)i;
-DELETE FROM pg_attribute WHERE attname='a' AND attrelid='cor'::regclass;
-ALTER TABLE cor RENAME TO oldcor;
-INSERT INTO pg_attribute SELECT distinct * FROM gp_dist_random('pg_attribute') WHERE attname='a' AND attrelid='oldcor'::regclass;
-DROP TABLE oldcor;
--- typname is out of sync
-CREATE TABLE cor (a int, b float, c text);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-UPDATE pg_type SET typname='newcor' WHERE typrelid='cor'::regclass;
-ALTER TABLE cor RENAME TO newcor2;
-ALTER TABLE newcor2 RENAME TO cor;
-DROP TABLE cor;
--- relname is out of sync
-CREATE TABLE cor (a int, b int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-UPDATE pg_class SET relname='othercor' WHERE relname='cor';
-ALTER TABLE othercor RENAME TO tmpcor;
-ALTER TABLE tmpcor RENAME TO cor;
-DROP TABLE cor;
-RESET allow_system_table_mods;
 -- ALTER TABLE ... RENAME on non-table relations
 -- renaming indexes (FIXME: this should probably test the index's functionality)
 ALTER INDEX onek_unique1 RENAME TO tmp_onek_unique1;
@@ -525,20 +497,6 @@ insert into atacc1 (test,test2) values (4,5);
 insert into atacc1 (test,test2) values (5,4);
 insert into atacc1 (test,test2) values (5,5);
 drop table atacc1;
--- MPP-20466 Dis-allow duplicate constraint names for same table
-create table dupconstr (
-						i int,
-						j int constraint test CHECK (j > 10))
-						distributed by (i);
--- should fail because of duplicate constraint name
-alter table dupconstr add constraint test unique (i);
-NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "dupconstr_i_key" for table "dupconstr"
-ERROR:  constraint "test" for relation "dupconstr" already exists
-alter table dupconstr add constraint test primary key (i);
-NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "dupconstr_pkey" for table "dupconstr"
-ERROR:  constraint "test" for relation "dupconstr" already exists
--- cleanup
-drop table dupconstr;
 -- lets do some naming tests
 create table atacc1 (test int, test2 int, unique(test)) distributed by (test);
 NOTICE:  CREATE TABLE / UNIQUE will create implicit index "atacc1_test_key" for table "atacc1"
@@ -612,10 +570,10 @@ create table atacc1 ( test int );
 insert into atacc1 (test) values (0);
 -- add a primary key column without a default (fails).
 alter table atacc1 add column test2 int primary key;
-ERROR:  Cannot add column with primary key constraint (analyze.c:11406)
+ERROR:  cannot add column with primary key constraint
 -- now add a primary key column with a default (succeeds).
 alter table atacc1 add column test2 int default 0 primary key;
-ERROR:  Cannot add column with primary key constraint (analyze.c:11406)
+ERROR:  cannot add column with primary key constraint
 drop table atacc1;
 -- something a little more complicated
 create table atacc1 ( test int, test2 int) distributed by (test);
@@ -1472,27 +1430,6 @@ select f3,max(f1) from foo group by f3 order by f3;
 -- Simple tests for alter table column type
 alter table foo alter f1 TYPE integer; -- fails
 ERROR:  column "f1" cannot be cast to type "pg_catalog.int4"
-alter table foo alter f1 TYPE varchar(10);
---
--- Test ALTER COLUMN TYPE after dropped column with text datatype (see MPP-19146)
---
-drop table foo;
-create domain mytype as text;
-create temp table foo (f1 text, f2 mytype, f3 text);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into foo values('aa','bb','cc');
-drop domain mytype cascade;
-NOTICE:  drop cascades to table foo column f2
-alter table foo alter f1 TYPE varchar(10);
-drop table foo;
-create domain mytype as int;
-create temp table foo (f1 text, f2 mytype, f3 text);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into foo values('aa',0,'cc');
-drop domain mytype cascade;
-NOTICE:  drop cascades to table foo column f2
 alter table foo alter f1 TYPE varchar(10);
 create table anothertab (atcol1 serial8, atcol2 boolean,
 	constraint anothertab_chk check (atcol1 <= 3))

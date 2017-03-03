@@ -336,7 +336,6 @@ static inline void printout_sdata(SparseData sdata, char *msg, int stop)
 	if (stop)
 	  ereport(ERROR, 
 			  (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-			   errOmitLocation(true),
 			   errmsg("LAL STOP")));
 }
 
@@ -558,7 +557,6 @@ check_sdata_dimensions(SparseData left, SparseData right)
 	{
 		ereport(ERROR, 
 			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-			 errOmitLocation(true),
 			 errmsg("Operation undefined when dimension of left and right vectors are not the same")));
 	}
 }
@@ -771,7 +769,6 @@ static inline SparseData op_sdata_by_sdata(int operation,SparseData left,
 	if ((operation > 3)|| (operation < 0))
 		ereport(ERROR, 
 			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-			 errOmitLocation(true),
 			 errmsg("Operation not in range 0-3")));
 
 	while (1)

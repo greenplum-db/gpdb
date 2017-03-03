@@ -24,7 +24,7 @@ pg_regress.o:
 	$(MAKE) -C $(top_builddir)/src/test/regress pg_regress.o
 	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/pg_regress.o .
 
-gpstringsubs.pl: gpstringsubs.pl
+gpstringsubs.pl:
 	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/gpstringsubs.pl
 
 gpdiff.pl: atmsort.pm explain.pm

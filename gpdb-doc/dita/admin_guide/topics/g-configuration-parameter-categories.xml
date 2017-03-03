@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic11">
+   <title>Configuration Parameter Categories</title>
+   <body>
+      <p>Configuration parameters affect categories of server behaviors, such as resource
+         consumption, query tuning, and authentication. The following topics describe Greenplum Database configuration parameter categories. </p>
+      <p>For details about configuration parameter categories, see the <cite>Greenplum Database
+            Reference Guide</cite>.</p>
+   </body>
+</topic>

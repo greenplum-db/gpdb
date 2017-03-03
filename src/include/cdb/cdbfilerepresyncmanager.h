@@ -14,7 +14,7 @@
 #include "cdb/cdbresynchronizechangetracking.h"
 
 /* 
- * Resync Hash Table lacated in shared memory keeps 
+ * Resync Hash Table located in shared memory keeps
  * track of files that are currently in resync.
  * One entry per file.
  * It has fixed MAX number of files to be resynced
@@ -84,8 +84,6 @@ extern int FileRepResync_IncAppendOnlyCommitCount(void);
 extern int FileRepResync_DecAppendOnlyCommitCount(int	count);
 
 extern int FileRepResync_GetAppendOnlyCommitCount(void);
-
-extern bool FileRepResync_IsTransitionFromResyncToInSync(void);
 
 extern bool FileRepResync_IsReMirrorAllowed(void);
 

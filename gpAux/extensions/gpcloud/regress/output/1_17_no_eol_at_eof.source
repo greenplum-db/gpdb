@@ -1,0 +1,9 @@
+CREATE READABLE EXTERNAL TABLE s3regress_no_eol_at_eof (t int)
+        LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/no_eol_at_eof/ config=@config_file@') FORMAT 'csv';
+SELECT count(*) FROM s3regress_no_eol_at_eof;
+ count 
+-------
+    36
+(1 row)
+
+DROP EXTERNAL TABLE s3regress_no_eol_at_eof;

@@ -193,6 +193,48 @@ select count(1) from bmcrash where bitmap_col = '999' AND btree_col1 = 'abcdefg9
     23
 (1 row)
 
+select count(1) from bmcrash where btree_col1 = 'abcdefg999' AND bitmap_col = '999';
+ count 
+-------
+    10
+(1 row)
+
+select count(1) from bmcrash where btree_col1 = 'abcdefg999' OR bitmap_col = '999' AND btree_col2 = '2015-01-01';
+ count 
+-------
+    10
+(1 row)
+
+select count(1) from bmcrash where btree_col1 = 'abcdefg999' AND bitmap_col = '999' OR btree_col2 = '2015-01-01';
+ count 
+-------
+    23
+(1 row)
+
+select count(1) from bmcrash where btree_col1 = 'abcdefg999' AND btree_col2 = '2015-01-01' OR bitmap_col = '999';
+ count 
+-------
+    10
+(1 row)
+
+select count(1) from bmcrash where btree_col1 = 'abcdefg999' AND btree_col2 = '2015-01-01' AND bitmap_col = '999';
+ count 
+-------
+     0
+(1 row)
+
+select count(1) from bmcrash where btree_col1 = 'abcdefg999' OR btree_col2 = '2015-01-01' AND bitmap_col = '999';
+ count 
+-------
+    10
+(1 row)
+
+select count(1) from bmcrash where btree_col1 = 'abcdefg999' OR btree_col2 = '2015-01-01' OR bitmap_col = '999';
+ count 
+-------
+    23
+(1 row)
+
 -- start_ignore
 drop schema bm_ao cascade;
 NOTICE:  drop cascades to append only table bmcrash

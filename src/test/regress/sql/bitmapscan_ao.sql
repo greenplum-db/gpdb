@@ -173,6 +173,13 @@ select count(1) from bmcrash where bitmap_col = '999' OR btree_col1 = 'abcdefg99
 select count(1) from bmcrash where bitmap_col = '999' OR btree_col1 = 'abcdefg999' AND btree_col2 = '2015-01-01';
 select count(1) from bmcrash where bitmap_col = '999' AND btree_col1 = 'abcdefg999' OR btree_col2 = '2015-01-01';
 
+select count(1) from bmcrash where btree_col1 = 'abcdefg999' AND bitmap_col = '999';
+select count(1) from bmcrash where btree_col1 = 'abcdefg999' OR bitmap_col = '999' AND btree_col2 = '2015-01-01';
+select count(1) from bmcrash where btree_col1 = 'abcdefg999' AND bitmap_col = '999' OR btree_col2 = '2015-01-01';
+select count(1) from bmcrash where btree_col1 = 'abcdefg999' AND btree_col2 = '2015-01-01' OR bitmap_col = '999';
+select count(1) from bmcrash where btree_col1 = 'abcdefg999' AND btree_col2 = '2015-01-01' AND bitmap_col = '999';
+select count(1) from bmcrash where btree_col1 = 'abcdefg999' OR btree_col2 = '2015-01-01' AND bitmap_col = '999';
+select count(1) from bmcrash where btree_col1 = 'abcdefg999' OR btree_col2 = '2015-01-01' OR bitmap_col = '999';
 
 -- start_ignore
 drop schema bm_ao cascade;

@@ -17,8 +17,6 @@
 #ifndef GPDXL_CWalkerUtils_H
 #define GPDXL_CWalkerUtils_H
 
-#define GPDXL_QUERY_ID_START 0
-
 #include "gpopt/translate/CMappingVarColId.h"
 #include "gpopt/translate/CTranslatorScalarToDXL.h"
 #include "gpopt/translate/CTranslatorUtils.h"

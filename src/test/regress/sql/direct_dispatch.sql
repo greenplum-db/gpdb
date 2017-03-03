@@ -38,23 +38,6 @@ create unique index direct_test_uk on direct_test_partition(trans_id);
 create table direct_test_range_partition (a int, b int, c int, d int) distributed by (a) partition by range(d) (start(1) end(10) every(1));
 insert into direct_test_range_partition select i, i+1, i+2, i+3 from generate_series(1, 2) i;
 
-create table direct_test_type_real (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (real1);
-create table direct_test_type_smallint (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (smallint1);
-create table direct_test_type_boolean (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (boolean1);
-create table direct_test_type_int (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (int1);
-create table direct_test_type_double (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (double1);
-create table direct_test_type_date (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (date1);
-create table direct_test_type_numeric (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (numeric1);
-create table direct_test_type_abstime (x abstime) distributed by (x);
-create table direct_test_type_bit (x bit) distributed by (x);
-create table direct_test_type_bpchar (x bpchar) distributed by (x);
-create table direct_test_type_bytea (x bytea) distributed by (x);
-create table direct_test_type_cidr (x cidr) distributed by (x);
-create table direct_test_type_inet (x inet) distributed by (x);
-create table direct_test_type_macaddr (x macaddr) distributed by (x);
-create table direct_test_type_tinterval (x tinterval) distributed by (x);
-create table direct_test_type_varbit (x varbit) distributed by (x);
-
 commit;
 
 -- enable printing of printing info
@@ -68,22 +51,17 @@ select * from direct_test order by key, value;
 
 -- Constant single-row update, one column in distribution
 -- DO direct dispatch
--- start_ignore
 -- Known_opt_diff: MPP-21346
--- end_ignore
 update direct_test set value = 'horse' where key = 100;
 -- verify
 select * from direct_test order by key, value;
 
 -- Constant single-row delete, one column in distribution
 -- DO direct dispatch
--- start_ignore
 -- Known_opt_diff: MPP-21346
--- end_ignore
 delete from direct_test where key = 100;
 -- verify
 select * from direct_test order by key, value;
-
 
 -- Constant single-row insert, one column in distribution
 -- DO direct dispatch
@@ -91,20 +69,26 @@ insert into direct_test values (NULL, 'cow');
 -- verify
 select * from direct_test order by key, value;
 
+-- DELETE with an IS NULL predicate
+-- Doesn't do direct dispatch, currently.
+delete from direct_test where key is null;
+
+-- Same single-row insert as above, but with DEFAULT instead of an explicit values.
+-- DO direct dispatch
+insert into direct_test values (default, 'cow');
+-- verify
+select * from direct_test order by key, value;
+
 -- Constant single-row insert, two columns in distribution
 -- DO direct dispatch
--- start_ignore
 -- Known_opt_diff: MPP-21346
--- end_ignore
 insert into direct_test_two_column values (100, 101, 'cow');
 -- verify
 select * from direct_test_two_column order by key1, key2, value;
 
 -- Constant single-row update, two columns in distribution
 -- DO direct dispatch
--- start_ignore
 -- Known_opt_diff: MPP-21346
--- end_ignore
 update direct_test_two_column set value = 'horse' where key1 = 100 and key2 = 101;
 -- verify
 select * from direct_test_two_column order by key1, key2, value;
@@ -161,84 +145,20 @@ rollback;
 -------------------
 -- MPP-7634: bitmap index scan
 --
--- start_ignore
 -- Known_opt_diff: MPP-21346
--- end_ignore
 select count(*) from direct_test_bitmap where dt='2008-02-05';
--- start_ignore
 -- Known_opt_diff: MPP-21346
--- end_ignore
 select count(*) from direct_test_bitmap where dt='2008-02-01';
 ----------------------------------------------------------------------------------
 -- MPP-7637: partitioned table
 --
 insert into direct_test_partition values (1,'2008-01-02',1,'usa');
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
 select * from direct_test_partition where trans_id =1;
 ----------------------------------------------------------------------------------
 -- MPP-7638: range table partition
 --
--- start_ignore
 -- Known_opt_diff: MPP-21346
--- end_ignore
 select count(*) from direct_test_range_partition where a =1;
-----------------------------------------------------------------------------------
--- MPP-7643: various types
---
-set optimizer_enable_constant_expression_evaluation=on;
--- start_ignore
--- Known_opt_diff: MPP-21347
--- end_ignore
-insert into direct_test_type_real values (8,8,true,8,8,'2008-08-08',8.8);
--- start_ignore
--- Known_opt_diff: MPP-21347
--- end_ignore
-insert into direct_test_type_smallint values (8,8,true,8,8,'2008-08-08',8.8);
--- start_ignore
--- Known_opt_diff: MPP-21347
--- end_ignore
-insert into direct_test_type_boolean values (8,8,true,8,8,'2008-08-08',8.8);
-insert into direct_test_type_int values (8,8,true,8,8,'2008-08-08',8.8);
--- start_ignore
--- Known_opt_diff: MPP-21347
--- end_ignore
-insert into direct_test_type_double values (8,8,true,8,8,'2008-08-08',8.8);
--- start_ignore
--- Known_opt_diff: MPP-21347
--- end_ignore
-insert into direct_test_type_date values (8,8,true,8,8,'2008-08-08',8.8);
--- start_ignore
--- Known_opt_diff: MPP-21347
--- end_ignore
-insert into direct_test_type_numeric values (8,8,true,8,8,'2008-08-08',8.8);
-reset optimizer_enable_constant_expression_evaluation;
-
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-select * from direct_test_type_real where real1 = 8::real;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-select * from direct_test_type_smallint where smallint1 = 8::smallint;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-select * from direct_test_type_int where int1 = 8;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-select * from direct_test_type_double where double1 = 8;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-select * from direct_test_type_date where date1 = '2008-08-08';
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-select * from direct_test_type_numeric where numeric1 = 8.8;
 ----------------------------------------------------------------------------------
 -- Prepared statements
 --  do same as above ones but using prepared statements, verify data goes to the right spot
@@ -249,9 +169,7 @@ execute test_insert(2);
 select * from direct_test;
 
 prepare test_update (int) as update direct_test set value = 'boo' where key = $1;
--- start_ignore
 -- Known_opt_diff: MPP-21346
--- end_ignore
 execute test_update(2);
 
 select * from direct_test;
@@ -270,9 +188,7 @@ INSERT INTO direct_dispatch_bar VALUES (2, 2);
 INSERT INTO direct_dispatch_bar VALUES (3, 1);
 
 set test_print_direct_dispatch_info=on;
--- start_ignore
 -- Known_opt_diff: MPP-21346
--- end_ignore
 SELECT * FROM direct_dispatch_foo WHERE id IN
     (SELECT id2 FROM (SELECT DISTINCT id1, id2 FROM direct_dispatch_bar WHERE direct_dispatch_bar.id1 = 1) AS s) ORDER BY 1;
 --
@@ -284,236 +200,15 @@ SELECT * FROM direct_dispatch_foo WHERE id IN
 -- simple one using an expression on the variable
 SELECT * from direct_dispatch_foo WHERE id * id = 1;
 SELECT * from direct_dispatch_foo WHERE id * id = 1 OR id = 1;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
 SELECT * from direct_dispatch_foo where id * id = 1 AND id = 1;
 
 -- init plan to see how transaction escalation happens
--- start_ignore
 -- Known_opt_diff: MPP-21346
--- end_ignore
 delete from direct_dispatch_foo where id = (select max(id2) from direct_dispatch_bar where id1 = 5);
--- start_ignore
 -- Known_opt_diff: MPP-21346
--- end_ignore
 delete from direct_dispatch_foo where id * id = (select max(id2) from direct_dispatch_bar where id1 = 5) AND id = 3;
--- start_ignore
 -- Known_opt_diff: MPP-21346
--- end_ignore
 delete from direct_dispatch_foo where id * id = (select max(id2) from direct_dispatch_bar) AND id = 3;
-
-------------------------------------
--- more type tests 
---
--- abstime
--- start_ignore
--- Known_opt_diff: MPP-19812
--- end_ignore
-insert into direct_test_type_abstime values('2008-08-08');
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-select 1 from direct_test_type_abstime where x = '2008-08-08';
-
--- start_ignore
--- Known_opt_diff: MPP-19812
--- end_ignore
-insert into direct_test_type_bit values('1');
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-select * from direct_test_type_bit where x = '1';
-
--- start_ignore
--- Known_opt_diff: MPP-19812
--- end_ignore
-insert into direct_test_type_bpchar values('abs');
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-select * from direct_test_type_bpchar where x = 'abs';
-
--- start_ignore
--- Known_opt_diff: MPP-19812
--- end_ignore
-insert into direct_test_type_bytea values('greenplum');
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-select * from direct_test_type_bytea where x = 'greenplum';
-
--- start_ignore
--- Known_opt_diff: MPP-19812
--- end_ignore
-insert into direct_test_type_cidr values('68.44.55.111');
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-select * from direct_test_type_cidr where x = '68.44.55.111';
-
--- start_ignore
--- Known_opt_diff: MPP-19812
--- end_ignore
-insert into direct_test_type_inet values('68.44.55.111');
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-select * from direct_test_type_inet where x = '68.44.55.111';
-
--- start_ignore
--- Known_opt_diff: MPP-19812
--- end_ignore
-insert into direct_test_type_macaddr values('12:34:56:78:90:ab');
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-select * from direct_test_type_macaddr where x = '12:34:56:78:90:ab';
-
--- start_ignore
--- Known_opt_diff: MPP-19812
--- end_ignore
-insert into direct_test_type_tinterval values('["2008-08-08" "2010-10-10"]');
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-select 1 from direct_test_type_tinterval where x = '["2008-08-08" "2010-10-10"]';
-
--- start_ignore
--- Known_opt_diff: MPP-19812
--- end_ignore
-insert into direct_test_type_varbit values('0101010');
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-select * from direct_test_type_varbit where x = '0101010';
-
-------------------------------------
--- int28, int82, etc. checks
-set test_print_direct_dispatch_info=off;
-CREATE TABLE direct_test_type_int2 (id int2) DISTRIBUTED BY (id);
-CREATE TABLE direct_test_type_int4 (id int4) DISTRIBUTED BY (id);
-CREATE TABLE direct_test_type_int8 (id int8) DISTRIBUTED BY (id);
-
-INSERT INTO direct_test_type_int2 VALUES (1);
-INSERT INTO direct_test_type_int4 VALUES (1);
-INSERT INTO direct_test_type_int8 VALUES (1);
-
-set test_print_direct_dispatch_info=on;
-
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int2 WHERE id = 1::int2;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int2 WHERE id = 1::int4;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int2 WHERE id = 1::int8;
-
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int2 WHERE 1::int2 = id;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int2 WHERE 1::int4 = id;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int2 WHERE 1::int8 = id;
-
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int4 WHERE id = 1::int2;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int4 WHERE id = 1::int4;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int4 WHERE id = 1::int8;
-
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int4 WHERE 1::int2 = id;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int4 WHERE 1::int4 = id;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int4 WHERE 1::int8 = id;
-
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int8 WHERE id = 1::int2;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int8 WHERE id = 1::int4;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int8 WHERE id = 1::int8;
-
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int8 WHERE 1::int2 = id;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int8 WHERE 1::int4 = id;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int8 WHERE 1::int8 = id;
-
--- overflow test
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int2 WHERE id = 32768::int4;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int2 WHERE id = -32769::int4;
-
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int2 WHERE 32768::int4 = id;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int2 WHERE -32769::int4 = id;
-
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int2 WHERE id = 2147483648::int8;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int2 WHERE id = -2147483649::int8;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int2 WHERE 2147483648::int8 = id;
--- start_ignore
--- Known_opt_diff: MPP-21346
--- end_ignore
-SELECT * FROM direct_test_type_int2 WHERE -2147483649::int8 = id;
 
 -- tests with subplans (MPP-22019)
 CREATE TABLE MPP_22019_a ( i INT, j INT) DISTRIBUTED BY (i);
@@ -534,28 +229,9 @@ drop table if exists direct_test_two_column;
 drop table if exists direct_test_bitmap;
 drop table if exists direct_test_partition;
 drop table if exists direct_test_range_partition;
-drop table if exists direct_test_type_real;
-drop table if exists direct_test_type_smallint;
-drop table if exists direct_test_type_boolean;
-drop table if exists direct_test_type_int;
-drop table if exists direct_test_type_double;
-drop table if exists direct_test_type_date;
-drop table if exists direct_test_type_numeric;
 drop table if exists direct_dispatch_foo;
 drop table if exists direct_dispatch_bar;
-drop table if exists direct_test_type_int2;
-drop table if exists direct_test_type_int4;
-drop table if exists direct_test_type_int8;
 
-drop table if exists direct_test_type_abstime;
-drop table if exists direct_test_type_bit;
-drop table if exists direct_test_type_bpchar;
-drop table if exists direct_test_type_bytea;
-drop table if exists direct_test_type_cidr;
-drop table if exists direct_test_type_inet;
-drop table if exists direct_test_type_macaddr;
-drop table if exists direct_test_type_tinterval;
-drop table if exists direct_test_type_varbit;
 drop table if exists MPP_22019_a;
 drop table if exists MPP_22019_b;
 commit;

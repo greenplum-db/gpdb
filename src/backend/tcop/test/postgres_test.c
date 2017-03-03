@@ -111,7 +111,7 @@ test__ProcessInterrupts__ClientConnectionLost(void **state)
 	PG_TRY();
 	{
 		/* Run function under test */
-		ProcessInterrupts();
+		ProcessInterrupts(__FILE__, __LINE__);
 		assert_true(false);
 	}
 	PG_CATCH();
@@ -151,7 +151,7 @@ test__ProcessInterrupts__DoingCommandRead(void **state)
 	expect_any(elog_finish, fmt);
 	will_be_called(elog_finish);
 
-	ProcessInterrupts();
+	ProcessInterrupts(__FILE__, __LINE__);
 
 	assert_false(QueryCancelPending);
 
@@ -179,7 +179,7 @@ test__ProcessInterrupts__DoingCommandRead(void **state)
 	PG_TRY();
 	{
 		/* Run function under test */
-		ProcessInterrupts();
+		ProcessInterrupts(__FILE__, __LINE__);
 		assert_true(false);
 	}
 	PG_CATCH();

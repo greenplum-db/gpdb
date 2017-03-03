@@ -1,17 +1,8 @@
 -- ----------------------------------------------------------------------
 -- Test: setup.sql
 -- ----------------------------------------------------------------------
--- start_ignore
 create schema qp_gist_indexes2;
 set search_path to qp_gist_indexes2;
--- end_ignore
--- ----------------------------------------------------------------------
--- Test: test00DropTable.sql
--- ----------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable1;
-NOTICE:  table "gisttable1" does not exist, skipping
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test01create_table.sql
 -- ----------------------------------------------------------------------
@@ -25,16 +16,12 @@ COPY GistTable1 FROM
 -- ----------------------------------------------------------------------
 -- Test: test03IndexScan.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -145,13 +132,9 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test04Insert.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Insert more data.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
  VALUES (76, 'James McMurtry', 'Levelland', '((1500, 1500), (1700, 1900))', 
@@ -159,13 +142,9 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------
 -- Test: test05Select.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -194,88 +173,157 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 (19 rows)
 
 -- ----------------------------------------------------------------------
--- Test: test08UniqueAndPKey.sql
+-- Test: test06IllegalonAO.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- PURPOSE: 
---     Test UNIQUE indexes and primary keys on geometric data types.  
---     It turns out that columns with the geometric data types (at least 
---     box, polygon, and circle, and probably any others) can't be part of 
---     a distribution key.  And since Greenplum allows unique indexes only on 
---     columns that are part of the distribution key, GiST indexes cannot 
---     be unique.  And of course since primary keys rely on unique indexes, 
---     if we can't have unique GiST indexes, then we can't have primary 
---     keys on geometric data types.  So this script is basically a negative 
---     test that verifies that we get reasonable error messages when we try 
---     to create unique GiST indexes or pimary keys on gemoetric data types.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable2;
-NOTICE:  table "gisttable2" does not exist, skipping
--- end_ignore
--- Test whether geometric types can be part of a primary key.
-CREATE TABLE GistTable2 (id INTEGER, property BOX)
- DISTRIBUTED BY (property);
-ERROR:  type "box" can't be a part of a distribution key
-CREATE TABLE GistTable2 (id INTEGER, poli POLYGON)
- DISTRIBUTED BY (poli);
-ERROR:  type "polygon" can't be a part of a distribution key
-CREATE TABLE GistTable2 (id INTEGER, bullseye CIRCLE)
- DISTRIBUTED BY (bullseye);
-ERROR:  type "circle" can't be a part of a distribution key
--- start_ignore
-DROP TABLE IF EXISTS GistTable2;
-NOTICE:  table "gisttable2" does not exist, skipping
--- end_ignore
+SET enable_seqscan = FALSE;
+ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
+ALTER INDEX propertyBoxIndex RENAME TO propIndex;
+UPDATE GistTable1
+ SET description = 'Where''s Johnny?', bullseye = NULL
+ WHERE owner = 'James McMurtry';
+-- We should no longer be able to find "Levelland".
+SELECT property FROM GistTable1 
+ WHERE description = 'Levelland';
+ property 
+----------
+(0 rows)
+
+ALTER INDEX propIndex SET (FILLFACTOR=50);
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+        owner         
+----------------------
+ Hyquotia P. Cucumber
+(1 row)
+
+REINDEX INDEX propIndex;
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+        owner         
+----------------------
+ Hyquotia P. Cucumber
+(1 row)
+
+-- Delete Theodore Turner
+DELETE from GistTable1 WHERE property ~= '((2000,2000), (2100, 2100))';
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  8 | Neil, Nell, and Noel Newall     |  Null Knoll                             |                                             |                              | 
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | James McMurtry                  | Where's Johnny?                         | (1700,1900),(1500,1500)                     | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(19 rows)
+
+-- Update James McMurtry.
+UPDATE GistTable1 
+ SET owner = 'Record Company', description = 'fat profit', 
+   property = '((100,100), (200, 200))'
+ WHERE property ~= '( (1700,1900),(1500,1500) )';
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  8 | Neil, Nell, and Noel Newall     |  Null Knoll                             |                                             |                              | 
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | Record Company                  | fat profit                              | (200,200),(100,100)                         | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(19 rows)
+
+ALTER INDEX propIndex RENAME TO propertyBoxIndex;
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  8 | Neil, Nell, and Noel Newall     |  Null Knoll                             |                                             |                              | 
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | Record Company                  | fat profit                              | (200,200),(100,100)                         | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(19 rows)
+
+DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
 -- ----------------------------------------------------------------------
--- Test: test09NegativeTests.sql
+-- Test: test07select.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- PURPOSE: 
---     "Negative" tests.  Verify that we get reasonable error messages when 
---     we try to do unreasonable things, such as create indexes on types that 
---     do not support GiST (non-geometric types).
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
--- Try to create GiST indexes on non-geometric data types.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (id);
-ERROR:  data type integer has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (v);
-ERROR:  data type character varying has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (t);
-ERROR:  data type text has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (f);
-ERROR:  data type double precision has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (p);
-ERROR:  data type point has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
--- Try to create GiST indexes on a mix of geometric and 
--- non-geometric types.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (c, f);
-ERROR:  data type double precision has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
+SET enable_seqscan = FALSE;
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1
+ WHERE property IS NOT NULL
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | Record Company                  | fat profit                              | (200,200),(100,100)                         | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(18 rows)
+
 -- ----------------------------------------------------------------------
 -- Test: test10MultipleColumns.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: 
 --     Test multi-column indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -306,16 +354,12 @@ SELECT id FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test11WherePredicate.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
 --     statement.  This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- Add another record that has NULL in the property field.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (77, 'S. T. "Rip" Sunset', 'Lost Vegas',NULL,
@@ -404,31 +448,16 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
+-- ----------------------------------------------------------------------------
 -- PURPOSE:
 --     Test VACUUM on GiST indexes.
 --     Also test somewhat larger data sets than most of my other GiST index 
 --     tests.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
---     2010-04-20 mgilkey
+--
 --         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
--- end_ignore
-------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
-NOTICE:  table "gisttable13" does not exist, skipping
-DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
-NOTICE:  function to_box(text) does not exist, skipping
-DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
-NOTICE:  function insertintogisttable13(pg_catalog.int4) does not exist, skipping
-DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
-NOTICE:  function insertmanyintogisttable13(pg_catalog.int4,pg_catalog.int4) does not exist, skipping
--- end_ignore
+-- ----------------------------------------------------------------------------
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
@@ -560,54 +589,18 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
  Optimizer status: PQO version 1.624
 (5 rows)
 
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
--- end_ignore
--- ----------------------------------------------------------------------
--- Test: test14Hash.sql
--- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
--- PURPOSE:
---     Test that you get a reasonable error message when you try to create a 
---     HASH index (we no longer support those).
--- AUTHOR: mgilkey
--- end_ignore
-------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable14;
-NOTICE:  table "gisttable14" does not exist, skipping
--- end_ignore
-CREATE TABLE GistTable14 (
- id INTEGER,
- property BOX
- )
- DISTRIBUTED BY (id);
--- Try to create a hash index.
-CREATE INDEX GistIndex14a ON GistTable14 USING HASH (id);
-ERROR:  hash indexes are not supported
-CREATE INDEX GistIndex14b ON GistTable14 USING HASH (property);
-ERROR:  hash indexes are not supported
--- start_ignore
-DROP TABLE IF EXISTS GistTable14;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test15ReindexDropIndex.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     REINDEX
 --     DROP INDEX
--- AUTHOR: mgilkey
 -- NOTES:
 --     Although we seemingly ignore the output of the EXPLAIN statements, 
 --     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
 --     or something similar in order to verify that the index was used.
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
@@ -711,13 +704,6 @@ create schema qp_gist_indexes2;
 set search_path to qp_gist_indexes2;
 -- end_ignore
 -- ----------------------------------------------------------------------
--- Test: test00DropTable.sql
--- ----------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable1;
-NOTICE:  table "gisttable1" does not exist, skipping
--- end_ignore
--- ----------------------------------------------------------------------
 -- Test: test01create_table.sql
 -- ----------------------------------------------------------------------
 CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, property BOX, poli POLYGON, bullseye CIRCLE, v VARCHAR, t TEXT, f FLOAT, p POINT, c CIRCLE, filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?'
@@ -731,16 +717,12 @@ COPY GistTable1 FROM
 -- ----------------------------------------------------------------------
 -- Test: test03IndexScan.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -800,64 +782,12 @@ SELECT id, property FROM GistTable1
   8 | 
 (1 row)
 
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-SELECT owner, property FROM GistTable1 
- WHERE property ~= '((7052,250),(6050,20))';
-  owner  |       property       
----------+----------------------
-  Patty  | (7052,250),(6050,20)
- Hypatia | (7052,250),(6050,20)
-(2 rows)
-
-SELECT owner, property FROM GistTable1 
- WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
-  owner  |       property       
----------+----------------------
-  Patty  | (7052,250),(6050,20)
- Hypatia | (7052,250),(6050,20)
-(2 rows)
-
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
-  owner  |       property       
----------+----------------------
-  Patty  | (7052,250),(6050,20)
- Hypatia | (7052,250),(6050,20)
-(2 rows)
-
--- start_ignore
-EXPLAIN
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-   ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=47)
-         Filter: property ~= '(7052,250),(6050,20)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
-
--- end_ignore
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id;
- id | property 
-----+----------
-  8 | 
-(1 row)
-
 -- ----------------------------------------------------------------------
 -- Test: test04Insert.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Insert more data.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
  VALUES (76, 'James McMurtry', 'Levelland', '((1500, 1500), (1700, 1900))', 
@@ -865,13 +795,9 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------
 -- Test: test05Select.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -900,88 +826,156 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 (19 rows)
 
 -- ----------------------------------------------------------------------
--- Test: test08UniqueAndPKey.sql
+-- Test: test06IllegalonAO.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- PURPOSE: 
---     Test UNIQUE indexes and primary keys on geometric data types.  
---     It turns out that columns with the geometric data types (at least 
---     box, polygon, and circle, and probably any others) can't be part of 
---     a distribution key.  And since Greenplum allows unique indexes only on 
---     columns that are part of the distribution key, GiST indexes cannot 
---     be unique.  And of course since primary keys rely on unique indexes, 
---     if we can't have unique GiST indexes, then we can't have primary 
---     keys on geometric data types.  So this script is basically a negative 
---     test that verifies that we get reasonable error messages when we try 
---     to create unique GiST indexes or pimary keys on gemoetric data types.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable2;
-NOTICE:  table "gisttable2" does not exist, skipping
--- end_ignore
--- Test whether geometric types can be part of a primary key.
-CREATE TABLE GistTable2 (id INTEGER, property BOX)
- DISTRIBUTED BY (property);
-ERROR:  type "box" can't be a part of a distribution key
-CREATE TABLE GistTable2 (id INTEGER, poli POLYGON)
- DISTRIBUTED BY (poli);
-ERROR:  type "polygon" can't be a part of a distribution key
-CREATE TABLE GistTable2 (id INTEGER, bullseye CIRCLE)
- DISTRIBUTED BY (bullseye);
-ERROR:  type "circle" can't be a part of a distribution key
--- start_ignore
-DROP TABLE IF EXISTS GistTable2;
-NOTICE:  table "gisttable2" does not exist, skipping
--- end_ignore
+SET enable_seqscan = FALSE;
+ALTER INDEX propertyBoxIndex RENAME TO propIndex;
+UPDATE GistTable1
+ SET description = 'Where''s Johnny?', bullseye = NULL
+ WHERE owner = 'James McMurtry';
+-- We should no longer be able to find "Levelland".
+SELECT property FROM GistTable1 
+ WHERE description = 'Levelland';
+ property 
+----------
+(0 rows)
+
+ALTER INDEX propIndex SET (FILLFACTOR=50);
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+        owner         
+----------------------
+ Hyquotia P. Cucumber
+(1 row)
+
+REINDEX INDEX propIndex;
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+        owner         
+----------------------
+ Hyquotia P. Cucumber
+(1 row)
+
+-- Delete Theodore Turner
+DELETE from GistTable1 WHERE property ~= '((2000,2000), (2100, 2100))';
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  8 | Neil, Nell, and Noel Newall     |  Null Knoll                             |                                             |                              | 
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | James McMurtry                  | Where's Johnny?                         | (1700,1900),(1500,1500)                     | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(19 rows)
+
+-- Update James McMurtry.
+UPDATE GistTable1 
+ SET owner = 'Record Company', description = 'fat profit', 
+   property = '((100,100), (200, 200))'
+ WHERE property ~= '( (1700,1900),(1500,1500) )';
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  8 | Neil, Nell, and Noel Newall     |  Null Knoll                             |                                             |                              | 
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | Record Company                  | fat profit                              | (200,200),(100,100)                         | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(19 rows)
+
+ALTER INDEX propIndex RENAME TO propertyBoxIndex;
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  8 | Neil, Nell, and Noel Newall     |  Null Knoll                             |                                             |                              | 
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | Record Company                  | fat profit                              | (200,200),(100,100)                         | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(19 rows)
+
+DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
 -- ----------------------------------------------------------------------
--- Test: test09NegativeTests.sql
+-- Test: test07select.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- PURPOSE: 
---     "Negative" tests.  Verify that we get reasonable error messages when 
---     we try to do unreasonable things, such as create indexes on types that 
---     do not support GiST (non-geometric types).
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
--- Try to create GiST indexes on non-geometric data types.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (id);
-ERROR:  data type integer has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (v);
-ERROR:  data type character varying has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (t);
-ERROR:  data type text has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (f);
-ERROR:  data type double precision has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (p);
-ERROR:  data type point has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
--- Try to create GiST indexes on a mix of geometric and 
--- non-geometric types.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (c, f);
-ERROR:  data type double precision has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
+SET enable_seqscan = FALSE;
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1
+ WHERE property IS NOT NULL
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | Record Company                  | fat profit                              | (200,200),(100,100)                         | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(18 rows)
+
 -- ----------------------------------------------------------------------
 -- Test: test10MultipleColumns.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: 
 --     Test multi-column indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -1012,16 +1006,12 @@ SELECT id FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test11WherePredicate.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
 --     statement.  This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- Add another record that has NULL in the property field.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (77, 'S. T. "Rip" Sunset', 'Lost Vegas',NULL,
@@ -1074,72 +1064,25 @@ SELECT owner, property FROM GistTable1
 (10 rows)
 
 -- end_ignore
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
- id | property 
-----+----------
-  8 | 
- 77 | 
- 86 | 
- 99 | 
-(4 rows)
-
--- start_ignore
-EXPLAIN
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=36)
-   Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=36)
-         Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=36)
-               Filter: property IS NULL
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(8 rows)
-
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
+-- ----------------------------------------------------------------------------
 -- PURPOSE:
 --     Test VACUUM on GiST indexes.
 --     Also test somewhat larger data sets than most of my other GiST index 
 --     tests.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
---     2010-04-20 mgilkey
+--
 --         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
--- end_ignore
-------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
-NOTICE:  table "gisttable13" does not exist, skipping
-DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
-NOTICE:  function to_box(text) does not exist, skipping
-DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
-NOTICE:  function insertintogisttable13(pg_catalog.int4) does not exist, skipping
-DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
-NOTICE:  function insertmanyintogisttable13(pg_catalog.int4,pg_catalog.int4) does not exist, skipping
--- end_ignore
+-- ----------------------------------------------------------------------------
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
  filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?' 
  )
+ WITH (APPENDONLY=True, COMPRESSTYPE=ZLIB, COMPRESSLEVEL=1)
  DISTRIBUTED BY (id);
 -- Register a function that converts TEXT to BOX data type.
 CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
@@ -1266,54 +1209,18 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
  Optimizer status: PQO version 1.624
 (5 rows)
 
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
--- end_ignore
--- ----------------------------------------------------------------------
--- Test: test14Hash.sql
--- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
--- PURPOSE:
---     Test that you get a reasonable error message when you try to create a 
---     HASH index (we no longer support those).
--- AUTHOR: mgilkey
--- end_ignore
-------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable14;
-NOTICE:  table "gisttable14" does not exist, skipping
--- end_ignore
-CREATE TABLE GistTable14 (
- id INTEGER,
- property BOX
- )
- DISTRIBUTED BY (id);
--- Try to create a hash index.
-CREATE INDEX GistIndex14a ON GistTable14 USING HASH (id);
-ERROR:  hash indexes are not supported
-CREATE INDEX GistIndex14b ON GistTable14 USING HASH (property);
-ERROR:  hash indexes are not supported
--- start_ignore
-DROP TABLE IF EXISTS GistTable14;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test15ReindexDropIndex.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     REINDEX
 --     DROP INDEX
--- AUTHOR: mgilkey
 -- NOTES:
 --     Although we seemingly ignore the output of the EXPLAIN statements, 
 --     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
 --     or something similar in order to verify that the index was used.
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
@@ -1415,13 +1322,6 @@ NOTICE:  drop cascades to append only table gisttable1
 -- start_ignore
 create schema qp_gist_indexes2;
 set search_path to qp_gist_indexes2;
--- end_ignore
--- ----------------------------------------------------------------------
--- Test: test00DropTable.sql
--- ----------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable1;
-NOTICE:  table "gisttable1" does not exist, skipping
 -- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test01create_table.sql
@@ -1437,16 +1337,12 @@ COPY GistTable1 FROM
 -- ----------------------------------------------------------------------
 -- Test: test03IndexScan.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -1506,64 +1402,12 @@ SELECT id, property FROM GistTable1
   8 | 
 (1 row)
 
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-SELECT owner, property FROM GistTable1 
- WHERE property ~= '((7052,250),(6050,20))';
-  owner  |       property       
----------+----------------------
-  Patty  | (7052,250),(6050,20)
- Hypatia | (7052,250),(6050,20)
-(2 rows)
-
-SELECT owner, property FROM GistTable1 
- WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
-  owner  |       property       
----------+----------------------
-  Patty  | (7052,250),(6050,20)
- Hypatia | (7052,250),(6050,20)
-(2 rows)
-
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
-  owner  |       property       
----------+----------------------
- Hypatia | (7052,250),(6050,20)
-  Patty  | (7052,250),(6050,20)
-(2 rows)
-
--- start_ignore
-EXPLAIN
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-   ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=47)
-         Filter: property ~= '(7052,250),(6050,20)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
-
--- end_ignore
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id;
- id | property 
-----+----------
-  8 | 
-(1 row)
-
 -- ----------------------------------------------------------------------
 -- Test: test04Insert.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Insert more data.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
  VALUES (76, 'James McMurtry', 'Levelland', '((1500, 1500), (1700, 1900))', 
@@ -1571,13 +1415,9 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------
 -- Test: test05Select.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -1606,88 +1446,156 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 (19 rows)
 
 -- ----------------------------------------------------------------------
--- Test: test08UniqueAndPKey.sql
+-- Test: test06IllegalonAO.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- PURPOSE: 
---     Test UNIQUE indexes and primary keys on geometric data types.  
---     It turns out that columns with the geometric data types (at least 
---     box, polygon, and circle, and probably any others) can't be part of 
---     a distribution key.  And since Greenplum allows unique indexes only on 
---     columns that are part of the distribution key, GiST indexes cannot 
---     be unique.  And of course since primary keys rely on unique indexes, 
---     if we can't have unique GiST indexes, then we can't have primary 
---     keys on geometric data types.  So this script is basically a negative 
---     test that verifies that we get reasonable error messages when we try 
---     to create unique GiST indexes or pimary keys on gemoetric data types.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable2;
-NOTICE:  table "gisttable2" does not exist, skipping
--- end_ignore
--- Test whether geometric types can be part of a primary key.
-CREATE TABLE GistTable2 (id INTEGER, property BOX)
- DISTRIBUTED BY (property);
-ERROR:  type "box" can't be a part of a distribution key
-CREATE TABLE GistTable2 (id INTEGER, poli POLYGON)
- DISTRIBUTED BY (poli);
-ERROR:  type "polygon" can't be a part of a distribution key
-CREATE TABLE GistTable2 (id INTEGER, bullseye CIRCLE)
- DISTRIBUTED BY (bullseye);
-ERROR:  type "circle" can't be a part of a distribution key
--- start_ignore
-DROP TABLE IF EXISTS GistTable2;
-NOTICE:  table "gisttable2" does not exist, skipping
--- end_ignore
+SET enable_seqscan = FALSE;
+ALTER INDEX propertyBoxIndex RENAME TO propIndex;
+UPDATE GistTable1
+ SET description = 'Where''s Johnny?', bullseye = NULL
+ WHERE owner = 'James McMurtry';
+-- We should no longer be able to find "Levelland".
+SELECT property FROM GistTable1 
+ WHERE description = 'Levelland';
+ property 
+----------
+(0 rows)
+
+ALTER INDEX propIndex SET (FILLFACTOR=50);
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+        owner         
+----------------------
+ Hyquotia P. Cucumber
+(1 row)
+
+REINDEX INDEX propIndex;
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+        owner         
+----------------------
+ Hyquotia P. Cucumber
+(1 row)
+
+-- Delete Theodore Turner
+DELETE from GistTable1 WHERE property ~= '((2000,2000), (2100, 2100))';
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  8 | Neil, Nell, and Noel Newall     |  Null Knoll                             |                                             |                              | 
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | James McMurtry                  | Where's Johnny?                         | (1700,1900),(1500,1500)                     | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(19 rows)
+
+-- Update James McMurtry.
+UPDATE GistTable1 
+ SET owner = 'Record Company', description = 'fat profit', 
+   property = '((100,100), (200, 200))'
+ WHERE property ~= '( (1700,1900),(1500,1500) )';
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  8 | Neil, Nell, and Noel Newall     |  Null Knoll                             |                                             |                              | 
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | Record Company                  | fat profit                              | (200,200),(100,100)                         | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(19 rows)
+
+ALTER INDEX propIndex RENAME TO propertyBoxIndex;
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  8 | Neil, Nell, and Noel Newall     |  Null Knoll                             |                                             |                              | 
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | Record Company                  | fat profit                              | (200,200),(100,100)                         | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(19 rows)
+
+DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
 -- ----------------------------------------------------------------------
--- Test: test09NegativeTests.sql
+-- Test: test07select.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- PURPOSE: 
---     "Negative" tests.  Verify that we get reasonable error messages when 
---     we try to do unreasonable things, such as create indexes on types that 
---     do not support GiST (non-geometric types).
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
--- Try to create GiST indexes on non-geometric data types.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (id);
-ERROR:  data type integer has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (v);
-ERROR:  data type character varying has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (t);
-ERROR:  data type text has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (f);
-ERROR:  data type double precision has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (p);
-ERROR:  data type point has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
--- Try to create GiST indexes on a mix of geometric and 
--- non-geometric types.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (c, f);
-ERROR:  data type double precision has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
+SET enable_seqscan = FALSE;
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1
+ WHERE property IS NOT NULL
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | Record Company                  | fat profit                              | (200,200),(100,100)                         | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(18 rows)
+
 -- ----------------------------------------------------------------------
 -- Test: test10MultipleColumns.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: 
 --     Test multi-column indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -1718,16 +1626,12 @@ SELECT id FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test11WherePredicate.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
 --     statement.  This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- Add another record that has NULL in the property field.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (77, 'S. T. "Rip" Sunset', 'Lost Vegas',NULL,
@@ -1780,72 +1684,25 @@ SELECT owner, property FROM GistTable1
 (10 rows)
 
 -- end_ignore
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
- id | property 
-----+----------
-  8 | 
- 77 | 
- 86 | 
- 99 | 
-(4 rows)
-
--- start_ignore
-EXPLAIN
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=36)
-   Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=36)
-         Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=36)
-               Filter: property IS NULL
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(8 rows)
-
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
+-- ----------------------------------------------------------------------------
 -- PURPOSE:
 --     Test VACUUM on GiST indexes.
 --     Also test somewhat larger data sets than most of my other GiST index 
 --     tests.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
---     2010-04-20 mgilkey
+--
 --         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
--- end_ignore
-------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
-NOTICE:  table "gisttable13" does not exist, skipping
-DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
-NOTICE:  function to_box(text) does not exist, skipping
-DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
-NOTICE:  function insertintogisttable13(pg_catalog.int4) does not exist, skipping
-DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
-NOTICE:  function insertmanyintogisttable13(pg_catalog.int4,pg_catalog.int4) does not exist, skipping
--- end_ignore
+-- ----------------------------------------------------------------------------
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
  filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?' 
  )
+ WITH (APPENDONLY=True)
  DISTRIBUTED BY (id);
 -- Register a function that converts TEXT to BOX data type.
 CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
@@ -1972,54 +1829,18 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
  Optimizer status: PQO version 1.624
 (5 rows)
 
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
--- end_ignore
--- ----------------------------------------------------------------------
--- Test: test14Hash.sql
--- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
--- PURPOSE:
---     Test that you get a reasonable error message when you try to create a 
---     HASH index (we no longer support those).
--- AUTHOR: mgilkey
--- end_ignore
-------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable14;
-NOTICE:  table "gisttable14" does not exist, skipping
--- end_ignore
-CREATE TABLE GistTable14 (
- id INTEGER,
- property BOX
- )
- DISTRIBUTED BY (id);
--- Try to create a hash index.
-CREATE INDEX GistIndex14a ON GistTable14 USING HASH (id);
-ERROR:  hash indexes are not supported
-CREATE INDEX GistIndex14b ON GistTable14 USING HASH (property);
-ERROR:  hash indexes are not supported
--- start_ignore
-DROP TABLE IF EXISTS GistTable14;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test15ReindexDropIndex.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     REINDEX
 --     DROP INDEX
--- AUTHOR: mgilkey
 -- NOTES:
 --     Although we seemingly ignore the output of the EXPLAIN statements, 
 --     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
 --     or something similar in order to verify that the index was used.
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
@@ -2123,13 +1944,6 @@ create schema qp_gist_indexes2;
 set search_path to qp_gist_indexes2;
 -- end_ignore
 -- ----------------------------------------------------------------------
--- Test: test00DropTable.sql
--- ----------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable1;
-NOTICE:  table "gisttable1" does not exist, skipping
--- end_ignore
--- ----------------------------------------------------------------------
 -- Test: test01create_table.sql
 -- ----------------------------------------------------------------------
 CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, property BOX, poli POLYGON, bullseye CIRCLE, v VARCHAR, t TEXT, f FLOAT, p POINT, c CIRCLE, filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?'
@@ -2143,16 +1957,12 @@ COPY GistTable1 FROM
 -- ----------------------------------------------------------------------
 -- Test: test03IndexScan.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -2212,64 +2022,12 @@ SELECT id, property FROM GistTable1
   8 | 
 (1 row)
 
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-SELECT owner, property FROM GistTable1 
- WHERE property ~= '((7052,250),(6050,20))';
-  owner  |       property       
----------+----------------------
-  Patty  | (7052,250),(6050,20)
- Hypatia | (7052,250),(6050,20)
-(2 rows)
-
-SELECT owner, property FROM GistTable1 
- WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
-  owner  |       property       
----------+----------------------
-  Patty  | (7052,250),(6050,20)
- Hypatia | (7052,250),(6050,20)
-(2 rows)
-
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
-  owner  |       property       
----------+----------------------
- Hypatia | (7052,250),(6050,20)
-  Patty  | (7052,250),(6050,20)
-(2 rows)
-
--- start_ignore
-EXPLAIN
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-   ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=47)
-         Filter: property ~= '(7052,250),(6050,20)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
-
--- end_ignore
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id;
- id | property 
-----+----------
-  8 | 
-(1 row)
-
 -- ----------------------------------------------------------------------
 -- Test: test04Insert.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Insert more data.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
  VALUES (76, 'James McMurtry', 'Levelland', '((1500, 1500), (1700, 1900))', 
@@ -2277,13 +2035,9 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------
 -- Test: test05Select.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -2312,88 +2066,156 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 (19 rows)
 
 -- ----------------------------------------------------------------------
--- Test: test08UniqueAndPKey.sql
+-- Test: test06IllegalonAO.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- PURPOSE: 
---     Test UNIQUE indexes and primary keys on geometric data types.  
---     It turns out that columns with the geometric data types (at least 
---     box, polygon, and circle, and probably any others) can't be part of 
---     a distribution key.  And since Greenplum allows unique indexes only on 
---     columns that are part of the distribution key, GiST indexes cannot 
---     be unique.  And of course since primary keys rely on unique indexes, 
---     if we can't have unique GiST indexes, then we can't have primary 
---     keys on geometric data types.  So this script is basically a negative 
---     test that verifies that we get reasonable error messages when we try 
---     to create unique GiST indexes or pimary keys on gemoetric data types.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable2;
-NOTICE:  table "gisttable2" does not exist, skipping
--- end_ignore
--- Test whether geometric types can be part of a primary key.
-CREATE TABLE GistTable2 (id INTEGER, property BOX)
- DISTRIBUTED BY (property);
-ERROR:  type "box" can't be a part of a distribution key
-CREATE TABLE GistTable2 (id INTEGER, poli POLYGON)
- DISTRIBUTED BY (poli);
-ERROR:  type "polygon" can't be a part of a distribution key
-CREATE TABLE GistTable2 (id INTEGER, bullseye CIRCLE)
- DISTRIBUTED BY (bullseye);
-ERROR:  type "circle" can't be a part of a distribution key
--- start_ignore
-DROP TABLE IF EXISTS GistTable2;
-NOTICE:  table "gisttable2" does not exist, skipping
--- end_ignore
+SET enable_seqscan = FALSE;
+ALTER INDEX propertyBoxIndex RENAME TO propIndex;
+UPDATE GistTable1
+ SET description = 'Where''s Johnny?', bullseye = NULL
+ WHERE owner = 'James McMurtry';
+-- We should no longer be able to find "Levelland".
+SELECT property FROM GistTable1 
+ WHERE description = 'Levelland';
+ property 
+----------
+(0 rows)
+
+ALTER INDEX propIndex SET (FILLFACTOR=50);
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+        owner         
+----------------------
+ Hyquotia P. Cucumber
+(1 row)
+
+REINDEX INDEX propIndex;
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+        owner         
+----------------------
+ Hyquotia P. Cucumber
+(1 row)
+
+-- Delete Theodore Turner
+DELETE from GistTable1 WHERE property ~= '((2000,2000), (2100, 2100))';
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  8 | Neil, Nell, and Noel Newall     |  Null Knoll                             |                                             |                              | 
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | James McMurtry                  | Where's Johnny?                         | (1700,1900),(1500,1500)                     | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(19 rows)
+
+-- Update James McMurtry.
+UPDATE GistTable1 
+ SET owner = 'Record Company', description = 'fat profit', 
+   property = '((100,100), (200, 200))'
+ WHERE property ~= '( (1700,1900),(1500,1500) )';
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  8 | Neil, Nell, and Noel Newall     |  Null Knoll                             |                                             |                              | 
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | Record Company                  | fat profit                              | (200,200),(100,100)                         | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(19 rows)
+
+ALTER INDEX propIndex RENAME TO propertyBoxIndex;
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  8 | Neil, Nell, and Noel Newall     |  Null Knoll                             |                                             |                              | 
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | Record Company                  | fat profit                              | (200,200),(100,100)                         | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(19 rows)
+
+DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
 -- ----------------------------------------------------------------------
--- Test: test09NegativeTests.sql
+-- Test: test07select.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- PURPOSE: 
---     "Negative" tests.  Verify that we get reasonable error messages when 
---     we try to do unreasonable things, such as create indexes on types that 
---     do not support GiST (non-geometric types).
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
--- Try to create GiST indexes on non-geometric data types.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (id);
-ERROR:  data type integer has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (v);
-ERROR:  data type character varying has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (t);
-ERROR:  data type text has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (f);
-ERROR:  data type double precision has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (p);
-ERROR:  data type point has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
--- Try to create GiST indexes on a mix of geometric and 
--- non-geometric types.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (c, f);
-ERROR:  data type double precision has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
+SET enable_seqscan = FALSE;
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1
+ WHERE property IS NOT NULL
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | Record Company                  | fat profit                              | (200,200),(100,100)                         | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(18 rows)
+
 -- ----------------------------------------------------------------------
 -- Test: test10MultipleColumns.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: 
 --     Test multi-column indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -2424,16 +2246,12 @@ SELECT id FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test11WherePredicate.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
 --     statement.  This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- Add another record that has NULL in the property field.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (77, 'S. T. "Rip" Sunset', 'Lost Vegas',NULL,
@@ -2486,72 +2304,25 @@ SELECT owner, property FROM GistTable1
 (10 rows)
 
 -- end_ignore
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
- id | property 
-----+----------
-  8 | 
- 77 | 
- 86 | 
- 99 | 
-(4 rows)
-
--- start_ignore
-EXPLAIN
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=36)
-   Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=36)
-         Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=36)
-               Filter: property IS NULL
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(8 rows)
-
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
+-- ----------------------------------------------------------------------------
 -- PURPOSE:
 --     Test VACUUM on GiST indexes.
 --     Also test somewhat larger data sets than most of my other GiST index 
 --     tests.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
---     2010-04-20 mgilkey
+--
 --         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
--- end_ignore
-------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
-NOTICE:  table "gisttable13" does not exist, skipping
-DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
-NOTICE:  function to_box(text) does not exist, skipping
-DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
-NOTICE:  function insertintogisttable13(pg_catalog.int4) does not exist, skipping
-DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
-NOTICE:  function insertmanyintogisttable13(pg_catalog.int4,pg_catalog.int4) does not exist, skipping
--- end_ignore
+-- ----------------------------------------------------------------------------
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
  filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?' 
  )
+ WITH (APPENDONLY=True, ORIENTATION='column', COMPRESSTYPE=ZLIB, COMPRESSLEVEL=1)
  DISTRIBUTED BY (id);
 -- Register a function that converts TEXT to BOX data type.
 CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
@@ -2678,54 +2449,18 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
  Optimizer status: PQO version 1.624
 (5 rows)
 
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
--- end_ignore
--- ----------------------------------------------------------------------
--- Test: test14Hash.sql
--- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
--- PURPOSE:
---     Test that you get a reasonable error message when you try to create a 
---     HASH index (we no longer support those).
--- AUTHOR: mgilkey
--- end_ignore
-------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable14;
-NOTICE:  table "gisttable14" does not exist, skipping
--- end_ignore
-CREATE TABLE GistTable14 (
- id INTEGER,
- property BOX
- )
- DISTRIBUTED BY (id);
--- Try to create a hash index.
-CREATE INDEX GistIndex14a ON GistTable14 USING HASH (id);
-ERROR:  hash indexes are not supported
-CREATE INDEX GistIndex14b ON GistTable14 USING HASH (property);
-ERROR:  hash indexes are not supported
--- start_ignore
-DROP TABLE IF EXISTS GistTable14;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test15ReindexDropIndex.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     REINDEX
 --     DROP INDEX
--- AUTHOR: mgilkey
 -- NOTES:
 --     Although we seemingly ignore the output of the EXPLAIN statements, 
 --     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
 --     or something similar in order to verify that the index was used.
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
@@ -2829,13 +2564,6 @@ create schema qp_gist_indexes2;
 set search_path to qp_gist_indexes2;
 -- end_ignore
 -- ----------------------------------------------------------------------
--- Test: test00DropTable.sql
--- ----------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable1;
-NOTICE:  table "gisttable1" does not exist, skipping
--- end_ignore
--- ----------------------------------------------------------------------
 -- Test: test01create_table.sql
 -- ----------------------------------------------------------------------
 CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, property BOX, poli POLYGON, bullseye CIRCLE, v VARCHAR, t TEXT, f FLOAT, p POINT, c CIRCLE, filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?'
@@ -2849,16 +2577,12 @@ COPY GistTable1 FROM
 -- ----------------------------------------------------------------------
 -- Test: test03IndexScan.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -2918,64 +2642,12 @@ SELECT id, property FROM GistTable1
   8 | 
 (1 row)
 
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-SELECT owner, property FROM GistTable1 
- WHERE property ~= '((7052,250),(6050,20))';
-  owner  |       property       
----------+----------------------
- Hypatia | (7052,250),(6050,20)
-  Patty  | (7052,250),(6050,20)
-(2 rows)
-
-SELECT owner, property FROM GistTable1 
- WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
-  owner  |       property       
----------+----------------------
-  Patty  | (7052,250),(6050,20)
- Hypatia | (7052,250),(6050,20)
-(2 rows)
-
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
-  owner  |       property       
----------+----------------------
-  Patty  | (7052,250),(6050,20)
- Hypatia | (7052,250),(6050,20)
-(2 rows)
-
--- start_ignore
-EXPLAIN
-SELECT owner, property FROM GistTable1
- WHERE property ~= '( (6050, 20), (7052, 250) )';
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-   ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=47)
-         Filter: property ~= '(7052,250),(6050,20)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
-
--- end_ignore
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id;
- id | property 
-----+----------
-  8 | 
-(1 row)
-
 -- ----------------------------------------------------------------------
 -- Test: test04Insert.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Insert more data.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
  VALUES (76, 'James McMurtry', 'Levelland', '((1500, 1500), (1700, 1900))', 
@@ -2983,13 +2655,9 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------
 -- Test: test05Select.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -3018,88 +2686,156 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 (19 rows)
 
 -- ----------------------------------------------------------------------
--- Test: test08UniqueAndPKey.sql
+-- Test: test06IllegalonAO.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- PURPOSE: 
---     Test UNIQUE indexes and primary keys on geometric data types.  
---     It turns out that columns with the geometric data types (at least 
---     box, polygon, and circle, and probably any others) can't be part of 
---     a distribution key.  And since Greenplum allows unique indexes only on 
---     columns that are part of the distribution key, GiST indexes cannot 
---     be unique.  And of course since primary keys rely on unique indexes, 
---     if we can't have unique GiST indexes, then we can't have primary 
---     keys on geometric data types.  So this script is basically a negative 
---     test that verifies that we get reasonable error messages when we try 
---     to create unique GiST indexes or pimary keys on gemoetric data types.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable2;
-NOTICE:  table "gisttable2" does not exist, skipping
--- end_ignore
--- Test whether geometric types can be part of a primary key.
-CREATE TABLE GistTable2 (id INTEGER, property BOX)
- DISTRIBUTED BY (property);
-ERROR:  type "box" can't be a part of a distribution key
-CREATE TABLE GistTable2 (id INTEGER, poli POLYGON)
- DISTRIBUTED BY (poli);
-ERROR:  type "polygon" can't be a part of a distribution key
-CREATE TABLE GistTable2 (id INTEGER, bullseye CIRCLE)
- DISTRIBUTED BY (bullseye);
-ERROR:  type "circle" can't be a part of a distribution key
--- start_ignore
-DROP TABLE IF EXISTS GistTable2;
-NOTICE:  table "gisttable2" does not exist, skipping
--- end_ignore
+SET enable_seqscan = FALSE;
+ALTER INDEX propertyBoxIndex RENAME TO propIndex;
+UPDATE GistTable1
+ SET description = 'Where''s Johnny?', bullseye = NULL
+ WHERE owner = 'James McMurtry';
+-- We should no longer be able to find "Levelland".
+SELECT property FROM GistTable1 
+ WHERE description = 'Levelland';
+ property 
+----------
+(0 rows)
+
+ALTER INDEX propIndex SET (FILLFACTOR=50);
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+        owner         
+----------------------
+ Hyquotia P. Cucumber
+(1 row)
+
+REINDEX INDEX propIndex;
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+        owner         
+----------------------
+ Hyquotia P. Cucumber
+(1 row)
+
+-- Delete Theodore Turner
+DELETE from GistTable1 WHERE property ~= '((2000,2000), (2100, 2100))';
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  8 | Neil, Nell, and Noel Newall     |  Null Knoll                             |                                             |                              | 
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | James McMurtry                  | Where's Johnny?                         | (1700,1900),(1500,1500)                     | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(19 rows)
+
+-- Update James McMurtry.
+UPDATE GistTable1 
+ SET owner = 'Record Company', description = 'fat profit', 
+   property = '((100,100), (200, 200))'
+ WHERE property ~= '( (1700,1900),(1500,1500) )';
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  8 | Neil, Nell, and Noel Newall     |  Null Knoll                             |                                             |                              | 
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | Record Company                  | fat profit                              | (200,200),(100,100)                         | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(19 rows)
+
+ALTER INDEX propIndex RENAME TO propertyBoxIndex;
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  8 | Neil, Nell, and Noel Newall     |  Null Knoll                             |                                             |                              | 
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | Record Company                  | fat profit                              | (200,200),(100,100)                         | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(19 rows)
+
+DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
 -- ----------------------------------------------------------------------
--- Test: test09NegativeTests.sql
+-- Test: test07select.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- PURPOSE: 
---     "Negative" tests.  Verify that we get reasonable error messages when 
---     we try to do unreasonable things, such as create indexes on types that 
---     do not support GiST (non-geometric types).
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
--- Try to create GiST indexes on non-geometric data types.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (id);
-ERROR:  data type integer has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (v);
-ERROR:  data type character varying has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (t);
-ERROR:  data type text has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (f);
-ERROR:  data type double precision has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (p);
-ERROR:  data type point has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
--- Try to create GiST indexes on a mix of geometric and 
--- non-geometric types.
-CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (c, f);
-ERROR:  data type double precision has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
+SET enable_seqscan = FALSE;
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1
+ WHERE property IS NOT NULL
+ ORDER BY id;
+ id |              owner              |               description               |                  property                   |             poli             |   bullseye   
+----+---------------------------------+-----------------------------------------+---------------------------------------------+------------------------------+--------------
+  1 | Snidely Whiplash                |  an empire dreamt of but as yet unbuilt | (1,1),(0,0)                                 | ((0,0),(1,1),(2,2),(3,3))    | <(0,0),0>
+  3 | Theodore Roosevelt              |  overlooks Yellowstone River            | (1801,2201),(1800,2200)                     | ((3,3),(3,4),(4,3))          | <(3,3),3>
+  4 | Donald Duck                     |  overlooks Colorado River               | (1001,1001),(1000,1000)                     | ((4,4),(4,5),(5,4),(5,5))    | <(4,4),4>
+  5 | Roger Rabbit                    |  Toon Town, unit 127                    | (-999999,-100000),(-1000000,-999999)        | ((5,-1),(5,-2),(5,-5))       | <(5,5),5>
+  6 | James T. Kirk                   |  Utopia Planetia                        | (123456790,123456790),(123456789,123456789) | ((6,7),(6,5),(5,7))          | <(6,6),6>
+  7 | Albus Dumbledore                |  Hogwarts                               | (-11999990,-11999990),(-12000000,-12000000) | ((7,7),(7,8),(6,7))          | <(7,7),7>
+  9 | Hyquotia P. Cucumber            | Radical Vegan Farms                     | (42,25),(40,20)                             | ((9,9),(9,8),(8,10))         | <(9,9),9>
+ 10 | Junipero Serra                  | California                              | (200,1000),(0,0)                            | ((10,10),(10,9),(8,11))      | <(10,10),10>
+ 18 | K. Serra                        | California                              | (200,1000),(0,0)                            | ((18,18),(18,19),(17,19))    | <(18,18),18>
+ 19 | Kay Serra                       | California                              | (200,1000),(0,0)                            | ((19,19),(19,18),(20,19))    | <(19,19),19>
+ 38 | Que Sera                        | California                              | (200,1000),(0,0)                            | ((38,38),(38,39),(37,38))    | <(38,38),38>
+ 59 | Hypatia                         | Greece                                  | (7052,250),(6050,20)                        | ((59,59),(59,60),(60,59))    | <(59,59),59>
+ 66 | Miller                          | Lubbock or leave it                     | (33,1330),(3,1300)                          | ((66,660),(67,650),(68,660)) | <(66,66),66>
+ 70 |  Patty                          |  Cake                                   | (7052,250),(6050,20)                        | ((70,70),(70,60),(60,70))    | <(70,70),70>
+ 76 | Record Company                  | fat profit                              | (200,200),(100,100)                         | ((76,77),(76,75),(75,77))    | 
+ 80 |  Leading space man              |  Leading space woman                    | (3,4),(1,2)                                 | ((80,80),(80,79),(79,80))    | <(80,80),80>
+ 81 | Trailing space man              | trailing space woman                    | (3,4),(1,2)                                 | ((81,81),(81,80),(80,81))    | <(81,81),81>
+ 82 |   Leading and trailing spaces   |   leading and trailing spaces           | (3,4),(1,2)                                 | ((82,82),(82,80),(80,82))    | <(82,82),82>
+(18 rows)
+
 -- ----------------------------------------------------------------------
 -- Test: test10MultipleColumns.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: 
 --     Test multi-column indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -3130,16 +2866,12 @@ SELECT id FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test11WherePredicate.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
 --     statement.  This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- Add another record that has NULL in the property field.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (77, 'S. T. "Rip" Sunset', 'Lost Vegas',NULL,
@@ -3192,72 +2924,25 @@ SELECT owner, property FROM GistTable1
 (10 rows)
 
 -- end_ignore
--- Alter the table and see if we get the same results.
-ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
- id | property 
-----+----------
-  8 | 
- 77 | 
- 86 | 
- 99 | 
-(4 rows)
-
--- start_ignore
-EXPLAIN
-SELECT id, property FROM GistTable1 
- WHERE property IS NULL 
- ORDER BY id
- ;
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=36)
-   Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=36)
-         Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=36)
-               Filter: property IS NULL
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(8 rows)
-
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
+-- ----------------------------------------------------------------------------
 -- PURPOSE:
 --     Test VACUUM on GiST indexes.
 --     Also test somewhat larger data sets than most of my other GiST index 
 --     tests.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
---     2010-04-20 mgilkey
+--
 --         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
--- end_ignore
-------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
-NOTICE:  table "gisttable13" does not exist, skipping
-DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
-NOTICE:  function to_box(text) does not exist, skipping
-DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
-NOTICE:  function insertintogisttable13(pg_catalog.int4) does not exist, skipping
-DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
-NOTICE:  function insertmanyintogisttable13(pg_catalog.int4,pg_catalog.int4) does not exist, skipping
--- end_ignore
+-- ----------------------------------------------------------------------------
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
  filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?' 
  )
+ WITH (APPENDONLY=True, ORIENTATION='column')
  DISTRIBUTED BY (id);
 -- Register a function that converts TEXT to BOX data type.
 CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
@@ -3384,54 +3069,18 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
  Optimizer status: PQO version 1.624
 (5 rows)
 
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
--- end_ignore
--- ----------------------------------------------------------------------
--- Test: test14Hash.sql
--- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
--- PURPOSE:
---     Test that you get a reasonable error message when you try to create a 
---     HASH index (we no longer support those).
--- AUTHOR: mgilkey
--- end_ignore
-------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable14;
-NOTICE:  table "gisttable14" does not exist, skipping
--- end_ignore
-CREATE TABLE GistTable14 (
- id INTEGER,
- property BOX
- )
- DISTRIBUTED BY (id);
--- Try to create a hash index.
-CREATE INDEX GistIndex14a ON GistTable14 USING HASH (id);
-ERROR:  hash indexes are not supported
-CREATE INDEX GistIndex14b ON GistTable14 USING HASH (property);
-ERROR:  hash indexes are not supported
--- start_ignore
-DROP TABLE IF EXISTS GistTable14;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test15ReindexDropIndex.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
--- start_ignore
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     REINDEX
 --     DROP INDEX
--- AUTHOR: mgilkey
 -- NOTES:
 --     Although we seemingly ignore the output of the EXPLAIN statements, 
 --     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
 --     or something similar in order to verify that the index was used.
--- LAST MODIFIED:
--- end_ignore
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'

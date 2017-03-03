@@ -207,7 +207,7 @@ class GetDbIdInfo:
         '''
         fs_to_ts_map = {}
         fs_oids = segdb.getSegmentFilespaces().keys()
-        FILESPACE_TO_TABLESPACE_MAP_QUERY = """SELECT spcfsoid, string_agg(oid, ' ')
+        FILESPACE_TO_TABLESPACE_MAP_QUERY = """SELECT spcfsoid, string_agg(oid::text, ' ')
                                                FROM pg_tablespace
                                                WHERE spcfsoid IN (%s) GROUP BY spcfsoid""" % ', '.join(map(str, fs_oids))
         with dbconn.connect(dbconn.DbURL(dbname=DEFAULT_DATABASE)) as conn:
@@ -223,7 +223,7 @@ class GetDbIdInfo:
         The value is a list of oids which represent the oids of databases
         '''
         ts_to_dboid_map = {}
-        TABLESPACE_TO_DBOID_MAP_QUERY = """SELECT dattablespace, string_agg(oid, ' ')
+        TABLESPACE_TO_DBOID_MAP_QUERY = """SELECT dattablespace, string_agg(oid::text, ' ')
                                            FROM pg_database
                                            WHERE dattablespace IN (%s) GROUP BY dattablespace""" % ', '.join(map(str, ts_oids))
         with dbconn.connect(dbconn.DbURL(dbname=DEFAULT_DATABASE)) as conn:

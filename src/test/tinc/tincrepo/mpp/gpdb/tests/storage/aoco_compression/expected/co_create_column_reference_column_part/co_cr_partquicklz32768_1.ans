@@ -101,8 +101,8 @@ COPY 4883
  a32    | date                        |                                                                       | plain    | quicklz          | 1                 | 32768      | 
  a33    | real                        |                                                                       | plain    | quicklz          | 1                 | 32768      | 
  a34    | money                       |                                                                       | plain    | quicklz          | 1                 | 32768      | 
- a35    | cidr                        |                                                                       | plain    | quicklz          | 1                 | 32768      | 
- a36    | inet                        |                                                                       | plain    | quicklz          | 1                 | 32768      | 
+ a35    | cidr                        |                                                                       | main     | quicklz          | 1                 | 32768      | 
+ a36    | inet                        |                                                                       | main     | quicklz          | 1                 | 32768      | 
  a37    | time without time zone      |                                                                       | plain    | quicklz          | 1                 | 32768      | 
  a38    | text                        |                                                                       | extended | quicklz          | 1                 | 32768      | 
  a39    | bit(1)                      |                                                                       | extended | quicklz          | 1                 | 32768      | 
@@ -332,8 +332,8 @@ COPY 4883
  a32    | date                        |                                                                         | plain    | quicklz          | 1                 | 32768      | 
  a33    | real                        |                                                                         | plain    | quicklz          | 1                 | 32768      | 
  a34    | money                       |                                                                         | plain    | quicklz          | 1                 | 32768      | 
- a35    | cidr                        |                                                                         | plain    | quicklz          | 1                 | 32768      | 
- a36    | inet                        |                                                                         | plain    | quicklz          | 1                 | 32768      | 
+ a35    | cidr                        |                                                                         | main     | quicklz          | 1                 | 32768      | 
+ a36    | inet                        |                                                                         | main     | quicklz          | 1                 | 32768      | 
  a37    | time without time zone      |                                                                         | plain    | quicklz          | 1                 | 32768      | 
  a38    | text                        |                                                                         | extended | quicklz          | 1                 | 32768      | 
  a39    | bit(1)                      |                                                                         | extended | quicklz          | 1                 | 32768      | 

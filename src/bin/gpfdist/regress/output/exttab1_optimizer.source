@@ -594,7 +594,7 @@ format 'text' (delimiter '|');
 select * from badt1;
 NOTICE:  gfile stat @abs_srcdir@/data/no/such/place/badt1.tbl failure: No such file or directory  (seg0 slice1 @hostname@:50000 pid=64819)
 NOTICE:  fstream unable to open file @abs_srcdir@/data/no/such/place/badt1.tbl  (seg0 slice1 @hostname@:50000 pid=64819)
-ERROR:  could not open "file://@hostname@@abs_srcdir@/data/no/such/place/badt1.tbl" for reading: 404 file not found  (seg0 slice1 @hostname@:50000 pid=64819)
+ERROR:  could not open file "@abs_srcdir@/data/no/such/place/badt1.tbl": 404 file not found  (seg0 slice1 @hostname@:50000 pid=64819)
 drop external table badt1;
 --
 -- try a bad protocol
@@ -699,21 +699,19 @@ create writable external table wet_pos2(a text, b text) location('gpfdist://@hos
 create writable external table wet_pos3(like wet_pos2) location('gpfdist://@hostname@:7070/wet.out') format 'text' distributed by(a,b);
 create writable external web table wet_pos4(a text, b text) execute 'some command' format 'text';
 create writable external table wet_region(like reg_region) location('gpfdist://@hostname@:7070/wet_region.out') format 'text';
-NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 create readable external table ret_region(like wet_region) location('gpfdist://@hostname@:7070/wet_region.out') format 'text';
 -- negative
 create writable external table wet_neg1(a text, b text) location('file://@hostname@@abs_srcdir@/badt1.tbl') format 'text';
 ERROR:  unsupported URI protocol 'file' for writable external table
 HINT:  Writable external tables may use 'gpfdist', 'gpfdists' or 'gphdfs' URIs only.
-create writable external table wet_neg1(a text, b text) location('gpfdist://@hostname@:7070/wet.out', 'gpfdist://@hostname@:7070/wet.out') format 'text';
-ERROR:  location uri "gpfdist://@hostname@:7070/wet.out" appears more than once
 create writable external web table wet_pos5(a text, b text) execute 'some command' on segment 0 format 'text';
 ERROR:  ON clause may not be used with a writable external table
 --
 -- SELECT from WET (negative)
 --
 select * from wet_pos1;
-ERROR:  External scan error: It is not possible to read from a WRITABLE external table. Create the table as READABLE instead. (COptTasks.cpp:1289)
+ERROR:  External scan error: It is not possible to read from a WRITABLE external table. Create the table as READABLE instead. (CTranslatorDXLToPlStmt.cpp:973)
 --
 -- WET: export some data with INSERT SELECT, INSERT and COPY. 
 --
@@ -766,12 +764,6 @@ ERROR:  connection with gpfdist failed for gpfdist://@hostname@:7070/whois.csv. 
 --
 -- test CREATE EXTERNAL TABLE privileges
 --
-show gp_external_grant_privileges; -- MUST BE OFF for the following tests to work.
- gp_external_grant_privileges 
-------------------------------
- off
-(1 row)
-
 CREATE ROLE exttab1_su SUPERUSER; -- SU with no privs in pg_auth
 CREATE ROLE exttab1_u1 CREATEEXTTABLE(protocol='gpfdist', type='readable'); 
 NOTICE:  resource queue required -- using default resource queue "pg_default"
@@ -893,8 +885,10 @@ select count(*) from pg_catalog.pg_exttable where reloid in (select r.oid from p
 
 COPY (VALUES('1,2'),('1,2,3'),('1,'),('1')) TO '@abs_srcdir@/data/tableless.csv';
 CREATE TABLE tableless_heap(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 COPY tableless_heap FROM '@abs_srcdir@/data/tableless.csv' CSV LOG ERRORS SEGMENT REJECT LIMIT 10;
-NOTICE:  Found 3 data formatting errors (3 or more input rows). Rejected related input data.
+NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
 SELECT relname, linenum, errmsg FROM gp_read_error_log('tableless_heap');
     relname     | linenum |                errmsg                 
 ----------------+---------+---------------------------------------
@@ -903,6 +897,8 @@ SELECT relname, linenum, errmsg FROM gp_read_error_log('tableless_heap');
 (2 rows)
 
 create table errlog_save as select * from gp_read_error_log('tableless_heap');
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'cmdtime' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew
 select count(*) from errlog_save;
  count 
 -------

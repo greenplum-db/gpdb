@@ -314,7 +314,9 @@ parse_snapshot(const char *str)
 	return buf_finalize(buf);
 
 bad_format:
-	elog(ERROR, "invalid input for txid_snapshot: \"%s\"", str_start);
+	ereport(ERROR,
+			(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+			 errmsg("invalid input for txid_snapshot: \"%s\"", str_start)));
 	return NULL;
 }
 

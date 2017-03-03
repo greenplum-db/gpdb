@@ -19,7 +19,7 @@
 #include "utils/guc.h"
 
 void
-AlterTableCreateAoVisimapTableWithOid(Oid relOid, bool is_part_child)
+AlterTableCreateAoVisimapTable(Oid relOid, bool is_part_child)
 {
 	Relation	rel;
 	IndexInfo  *indexInfo;

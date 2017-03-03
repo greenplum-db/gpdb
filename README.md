@@ -115,7 +115,7 @@ Some configure options are nominally optional, but required to pass
 all regression tests. The minimum set of options for running the
 regression tests successfully is:
 
-./configure --with-perl --with-python --with-libxml --enable-mapreduce
+`./configure --with-perl --with-python --with-libxml --enable-mapreduce`
 
 ### Build GPDB with Planner
 
@@ -154,15 +154,19 @@ PGPORT=15432 make installcheck-good
 
 
 ### Build GPDB with GPORCA
+You must first install the below libraries in the below order (see the READMEs on each repository):
 
-Only need to change the `configure` with additional option `--enable-orca`.
+1. https://github.com/greenplum-db/gp-xerces
+2. https://github.com/greenplum-db/gporca
+
+Next, change your `configure` command to have the additional option `--enable-orca`.
 ```
 # Configure build environment to install at /usr/local/gpdb
 # Enable GPORCA
 # Build with perl module (PL/Perl)
 # Build with python module (PL/Python)
 # Build with XML support
-./configure --with-perl --with-python --with-libxml ---enable-mapreduce --enable-orca --prefix=/usr/local/gpdb
+./configure --with-perl --with-python --with-libxml --enable-mapreduce --enable-orca --prefix=/usr/local/gpdb
 ```
 
 Once build and started, run `psql` and check the GPOPT (e.g. GPORCA) version:
@@ -220,7 +224,7 @@ make installcheck-bugbuster
 ## Development with Docker
 
 We provide a docker image with all dependencies required to compile and test
-GPDB. You can view the dependency dockerfile at `./docker/base/Dockerfile`.
+GPDB. You can view the dependency dockerfile at `./src/tools/docker/base/Dockerfile`.
 The image is hosted on docker hub at `pivotaldata/gpdb-devel`. This docker
 image is currently under heavy development.
 
@@ -276,6 +280,11 @@ Known issues:
     Alternatively you can use the (beta) Native macOS docker client now available
     in docker 1.12.
 
+## Contributing
+
+If you have not previously done so, please fill out and
+submit the [Contributor License Agreement](https://cla.pivotal.io/sign/greenplum).
+
 ## Glossary
 
 * __QD__
@@ -291,4 +300,4 @@ Known issues:
 For Greenplum Database documentation, please check online docs:
 http://gpdb.docs.pivotal.io
 
-There is also a Vagrant-based quickstart guide for developers in `vagrant/README.md`.
+There is also a Vagrant-based quickstart guide for developers in `src/tools/vagrant/README.md`.

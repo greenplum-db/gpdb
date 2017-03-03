@@ -15,7 +15,7 @@ CREATE TABLE
 alter table sales drop column amt;
 ALTER TABLE
 create table newpart(like sales);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 alter table sales exchange partition for ('2011-01-01') with table newpart;
 ALTER TABLE
@@ -38,7 +38,7 @@ CREATE TABLE
 alter table sales add column tax float;
 ALTER TABLE
 create table newpart(like sales);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 alter table sales exchange partition for ('2011-01-01') with table newpart;
 ALTER TABLE
@@ -63,7 +63,7 @@ ALTER TABLE
 alter table sales drop column tax ;
 ALTER TABLE
 create table newpart(like sales);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 alter table sales exchange partition for ('2011-01-01') with table newpart;
 ALTER TABLE
@@ -86,7 +86,7 @@ CREATE TABLE
 alter table sales rename COLUMN id to id_change;
 ALTER TABLE
 create table newpart(like sales);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 alter table sales exchange partition for ('2011-01-01') with table newpart;
 ALTER TABLE
@@ -109,7 +109,7 @@ CREATE TABLE
 alter table sales alter COLUMN id TYPE numeric(10,2);
 ALTER TABLE
 create table newpart(like sales);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 alter table sales exchange partition for ('2011-01-01') with table newpart;
 ALTER TABLE
@@ -144,7 +144,7 @@ ALTER TABLE
 alter table sales drop column tax ;
 ALTER TABLE
 create table newpart(like sales);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 alter table sales exchange partition for ('2011-01-01') with table newpart;
 ALTER TABLE
@@ -177,7 +177,7 @@ CREATE TABLE
 alter table sales add column tax float;
 ALTER TABLE
 create table newpart(like sales);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 alter table sales split partition for(1) at (50) into (partition aa1, partition aa2);
 psql:/path/sql_file:1: NOTICE:  exchanged partition "aa" of relation "sales" with relation "pg_temp_2371071"
@@ -230,7 +230,7 @@ CREATE TABLE
 alter table sales drop column option2;
 ALTER TABLE
 create table newpart(like sales);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 alter table sales split partition for(1) at (50) into (partition aa1, partition aa2);
 psql:/path/sql_file:1: NOTICE:  exchanged partition "aa" of relation "sales" with relation "pg_temp_2371574"
@@ -281,7 +281,7 @@ CREATE TABLE
 alter table sales rename COLUMN pkid to id_change;
 ALTER TABLE
 create table newpart(like sales);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 alter table sales split partition for(1) at (50) into (partition aa1, partition aa2);
 psql:/path/sql_file:1: NOTICE:  exchanged partition "aa" of relation "sales" with relation "pg_temp_2372044"
@@ -333,7 +333,7 @@ CREATE TABLE
 alter table sales alter COLUMN option1 TYPE numeric(10,2);
 ALTER TABLE
 create table newpart(like sales);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 alter table sales split partition for(1) at (50) into (partition aa1, partition aa2);
 psql:/path/sql_file:1: NOTICE:  exchanged partition "aa" of relation "sales" with relation "pg_temp_2372503"
@@ -438,7 +438,7 @@ ALTER TABLE
 alter table sales drop column tax;
 ALTER TABLE
 create table newpart(like sales);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 alter table newpart add constraint partable_pkey primary key(pkid, option3);
 psql:/path/sql_file:1: NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "newpart_pkey" for table "newpart"
@@ -506,7 +506,7 @@ psql:/path/sql_file:1: NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit 
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "sales_1_prt_cc_pkey" for table "sales_1_prt_cc"
 CREATE TABLE
 create table newpart(like sales);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 alter table sales drop column option2;
 ALTER TABLE

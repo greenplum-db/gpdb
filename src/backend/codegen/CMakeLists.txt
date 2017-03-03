@@ -152,6 +152,7 @@ add_library(gpcodegen SHARED
             expr_tree_generator.cc
             op_expr_tree_generator.cc
             pg_date_func_generator.cc
+            pg_numeric_func_generator.cc
             var_expr_tree_generator.cc
             advance_aggregates_codegen.cc
 
@@ -266,7 +267,7 @@ add_custom_target(unittest-check
 )
 
 # Googletest framework for tests.
-SET(GTEST_DIR ../../../gpAux/extensions/gtest)
+SET(GTEST_DIR ../../../gpAux/extensions/googletest/googletest)
 add_subdirectory(${GTEST_DIR} ${CMAKE_BINARY_DIR}/gtest EXCLUDE_FROM_ALL)
 enable_testing()
 
@@ -378,6 +379,9 @@ if(EXISTS ${TXT_OBJFILE})
     )
     add_cmockery_gtest(codegen_utils_unittest.t
         tests/codegen_utils_unittest.cc
+    )
+    add_cmockery_gtest(gp_codegen_utils_unittest.t
+        tests/gp_codegen_utils_unittest.cc
     )
 endif()
 

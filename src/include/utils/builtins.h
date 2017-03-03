@@ -91,10 +91,6 @@ extern Datum boollt(PG_FUNCTION_ARGS);
 extern Datum boolgt(PG_FUNCTION_ARGS);
 extern Datum boolle(PG_FUNCTION_ARGS);
 extern Datum boolge(PG_FUNCTION_ARGS);
-extern Datum istrue(PG_FUNCTION_ARGS);
-extern Datum isfalse(PG_FUNCTION_ARGS);
-extern Datum isnottrue(PG_FUNCTION_ARGS);
-extern Datum isnotfalse(PG_FUNCTION_ARGS);
 extern Datum booland_statefunc(PG_FUNCTION_ARGS);
 extern Datum boolor_statefunc(PG_FUNCTION_ARGS);
 extern bool parse_bool(const char *value, bool *result);
@@ -119,6 +115,12 @@ extern Datum char_text(PG_FUNCTION_ARGS);
 /* domains.c */
 extern Datum domain_in(PG_FUNCTION_ARGS);
 extern Datum domain_recv(PG_FUNCTION_ARGS);
+
+/* encode.c */
+extern Datum binary_encode(PG_FUNCTION_ARGS);
+extern Datum binary_decode(PG_FUNCTION_ARGS);
+extern unsigned hex_encode(const char *src, unsigned len, char *dst);
+extern unsigned hex_decode(const char *src, unsigned len, char *dst);
 
 /* enum.c */
 extern Datum enum_in(PG_FUNCTION_ARGS);
@@ -434,6 +436,8 @@ extern Datum pg_size_pretty(PG_FUNCTION_ARGS);
 extern Datum gp_statistics_estimate_reltuples_relpages_oid(PG_FUNCTION_ARGS);
 
 /* genfile.c */
+extern bytea *read_binary_file(const char *filename,
+						 int64 seek_offset, int64 bytes_to_read);
 extern Datum pg_stat_file(PG_FUNCTION_ARGS);
 extern Datum pg_read_file(PG_FUNCTION_ARGS);
 extern Datum pg_ls_dir(PG_FUNCTION_ARGS);
@@ -444,8 +448,6 @@ extern Datum pg_logdir_ls(PG_FUNCTION_ARGS);
 extern Datum pg_file_length(PG_FUNCTION_ARGS);
 
 /* misc.c */
-extern Datum nullvalue(PG_FUNCTION_ARGS);
-extern Datum nonnullvalue(PG_FUNCTION_ARGS);
 extern Datum current_database(PG_FUNCTION_ARGS);
 extern Datum current_query(PG_FUNCTION_ARGS);
 extern Datum pg_cancel_backend(PG_FUNCTION_ARGS);
@@ -755,28 +757,6 @@ extern Datum unknownout(PG_FUNCTION_ARGS);
 extern Datum unknownrecv(PG_FUNCTION_ARGS);
 extern Datum unknownsend(PG_FUNCTION_ARGS);
 
-extern Datum byteain(PG_FUNCTION_ARGS);
-extern Datum byteaout(PG_FUNCTION_ARGS);
-extern Datum bytearecv(PG_FUNCTION_ARGS);
-extern Datum byteasend(PG_FUNCTION_ARGS);
-extern Datum byteaoctetlen(PG_FUNCTION_ARGS);
-extern Datum byteaGetByte(PG_FUNCTION_ARGS);
-extern Datum byteaGetBit(PG_FUNCTION_ARGS);
-extern Datum byteaSetByte(PG_FUNCTION_ARGS);
-extern Datum byteaSetBit(PG_FUNCTION_ARGS);
-extern Datum binary_encode(PG_FUNCTION_ARGS);
-extern Datum binary_decode(PG_FUNCTION_ARGS);
-extern Datum byteaeq(PG_FUNCTION_ARGS);
-extern Datum byteane(PG_FUNCTION_ARGS);
-extern Datum bytealt(PG_FUNCTION_ARGS);
-extern Datum byteale(PG_FUNCTION_ARGS);
-extern Datum byteagt(PG_FUNCTION_ARGS);
-extern Datum byteage(PG_FUNCTION_ARGS);
-extern Datum byteacmp(PG_FUNCTION_ARGS);
-extern Datum byteacat(PG_FUNCTION_ARGS);
-extern Datum byteapos(PG_FUNCTION_ARGS);
-extern Datum bytea_substr(PG_FUNCTION_ARGS);
-extern Datum bytea_substr_no_len(PG_FUNCTION_ARGS);
 extern Datum pg_column_size(PG_FUNCTION_ARGS);
 
 extern Datum string_agg_transfn(PG_FUNCTION_ARGS);
@@ -1083,15 +1063,6 @@ extern Datum txid_snapshot_xmax(PG_FUNCTION_ARGS);
 extern Datum txid_snapshot_xip(PG_FUNCTION_ARGS);
 extern Datum txid_visible_in_snapshot(PG_FUNCTION_ARGS);
 
-/* access/transam/twophase.c */
-extern Datum pg_prepared_xact(PG_FUNCTION_ARGS);
-
-/* commands/prepare.c */
-extern Datum pg_prepared_statement(PG_FUNCTION_ARGS);
-
-/* utils/mmgr/portalmem.c */
-extern Datum pg_cursor(PG_FUNCTION_ARGS);
-
 /* uuid.c */
 extern Datum uuid_in(PG_FUNCTION_ARGS);
 extern Datum uuid_out(PG_FUNCTION_ARGS);
@@ -1109,6 +1080,12 @@ extern Datum uuid_hash(PG_FUNCTION_ARGS);
 /* access/transam/twophase.c */
 extern Datum pg_prepared_xact(PG_FUNCTION_ARGS);
 
+/* commands/extension.c */
+extern Datum pg_available_extensions(PG_FUNCTION_ARGS);
+extern Datum pg_available_extension_versions(PG_FUNCTION_ARGS);
+extern Datum pg_extension_update_paths(PG_FUNCTION_ARGS);
+extern Datum pg_extension_config_dump(PG_FUNCTION_ARGS);
+
 /* commands/prepare.c */
 extern Datum pg_prepared_statement(PG_FUNCTION_ARGS);
 
@@ -1121,6 +1098,9 @@ extern Datum mpp_global_xid_map(PG_FUNCTION_ARGS);
 /* utils/resscheduler/resqueue.c */
 extern Datum pg_resqueue_status(PG_FUNCTION_ARGS);
 extern Datum pg_resqueue_status_kv(PG_FUNCTION_ARGS);
+
+/* utils/resgroup/resgroup.c */
+extern Datum pg_resgroup_get_status_kv(PG_FUNCTION_ARGS);
 
 /* utils/adt/matrix.c */
 extern Datum matrix_transpose(PG_FUNCTION_ARGS);
@@ -1252,7 +1232,7 @@ extern Datum percentile_disc_trans(PG_FUNCTION_ARGS);
 /* utils/workfile_manager/workfile_mgr_test.c */
 extern Datum gp_workfile_mgr_test_harness(PG_FUNCTION_ARGS);
 /* gp_partition_funtions.c */
-extern void dumpDynamicTableScanPidIndex(int index);
+extern void dumpDynamicTableScanPidIndex(EState *estate, int index);
 
 /* XForms */
 extern Datum disable_xform(PG_FUNCTION_ARGS);

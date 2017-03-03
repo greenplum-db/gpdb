@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="ce20941">CREATE TABLE AS</title>
+  <body>
+    <p id="sql_command_desc">Defines a new table from the results of a query.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock id="sql_command_synopsis">CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} ] TABLE <varname>table_name</varname>
+   [(<varname>column_name</varname> [, ...] )]
+   [ WITH ( <varname>storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
+   [ON COMMIT {PRESERVE ROWS | DELETE ROWS | DROP}]
+   [TABLESPACE <varname>tablespace</varname>]
+   AS <varname>query</varname>
+   [DISTRIBUTED BY (<varname>column</varname>, [ ... ] ) | DISTRIBUTED RANDOMLY]</codeblock>
+      <p>where <varname>storage_parameter</varname> is:</p>
+      <codeblock>   APPENDONLY={TRUE|FALSE}
+   BLOCKSIZE={8192-2097152}
+   ORIENTATION={COLUMN|ROW}
+   COMPRESSTYPE={ZLIB|QUICKLZ}
+   COMPRESSLEVEL={1-9 | 1}
+   FILLFACTOR={10-100}
+   OIDS[=TRUE|FALSE]</codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p><codeph>CREATE TABLE AS</codeph> creates a table and fills it with data computed by a
+            <codeph><xref href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph> command.
+        The table columns have the names and data types associated with the output columns of the
+          <codeph>SELECT</codeph>, however you can override the column names by giving an explicit
+        list of new column names. </p>
+      <p><codeph>CREATE TABLE AS</codeph> creates a new table and evaluates the query just once to
+        fill the new table initially. The new table will not track subsequent changes to the source
+        tables of the query.</p>
+    </section>
+    <section id="section4">
+      <title>Parameters</title>
+      <parml>
+        <plentry>
+          <pt>GLOBAL | LOCAL</pt>
+          <pd>These keywords are present for SQL standard compatibility, but have no effect in
+            Greenplum Database. </pd>
+        </plentry>
+        <plentry>
+          <pt>TEMPORARY | TEMP</pt>
+          <pd>If specified, the new table is created as a temporary table. Temporary tables are
+            automatically dropped at the end of a session, or optionally at the end of the current
+            transaction (see <codeph>ON COMMIT</codeph>). Existing permanent tables with the same
+            name are not visible to the current session while the temporary table exists, unless
+            they are referenced with schema-qualified names. Any indexes created on a temporary
+            table are automatically temporary as well.</pd>
+        </plentry>
+        <plentry>
+          <pt>
+            <varname>table_name</varname>
+          </pt>
+          <pd>The name (optionally schema-qualified) of the new table to be created. </pd>
+        </plentry>
+        <plentry>
+          <pt>
+            <varname>column_name</varname>
+          </pt>
+          <pd>The name of a column in the new table. If column names are not provided, they are
+            taken from the output column names of the query. If the table is created from an
+              <codeph>EXECUTE</codeph> command, a column name list cannot be specified.</pd>
+        </plentry>
+        <plentry>
+          <pt>WITH ( <varname>storage_parameter=value</varname> )</pt>
+          <pd>The <codeph>WITH</codeph> clause can be used to set storage options for the table or
+            its indexes. Note that you can also set different storage parameters on a particular
+            partition or subpartition by declaring the <codeph>WITH</codeph> clause in the partition
+            specification. The following storage options are available:</pd>
+          <pd>APPENDONLY — Set to <codeph>TRUE</codeph> to create the table as an append-optimized
+            table. If <codeph>FALSE</codeph> or not declared, the table will be created as a regular
+            heap-storage table.</pd>
+          <pd>BLOCKSIZE — Set to the size, in bytes for each block in a table. The <codeph>BLOCKSIZE
+            </codeph>must be between 8192 and 2097152 bytes, and be a multiple of 8192. The default
+            is 32768.</pd>
+          <pd>ORIENTATION — Set to <codeph>column</codeph> for column-oriented storage, or
+              <codeph>row</codeph> (the default) for row-oriented storage. This option is only valid
+            if <codeph>APPENDONLY=TRUE</codeph>. Heap-storage tables can only be row-oriented.</pd>
+          <pd>COMPRESSTYPE — Set to <codeph>ZLIB</codeph> (the default) or
+              <codeph>QUICKLZ</codeph><sup>1</sup> to specify the type of compression used. QuickLZ
+            uses less CPU power and compresses data faster at a lower compression ratio than zlib.
+            Conversely, zlib provides more compact compression ratios at lower speeds. This option
+            is only valid if <codeph>APPENDONLY=TRUE</codeph>. <note type="note"><sup>1</sup>QuickLZ
+              compression is available only in the commercial release of Pivotal Greenplum
+              Database.</note></pd>
+          <pd>COMPRESSLEVEL — For zlib compression of append-optimized tables, set to a value
+            between 1 (fastest compression) to 9 (highest compression ratio). QuickLZ compression
+            level can only be set to 1. If not declared, the default is 1. This option is only valid
+            if <codeph>APPENDONLY=TRUE</codeph>.</pd>
+          <pd>FILLFACTOR — See <codeph><xref href="CREATE_INDEX.xml#topic1" type="topic"
+                format="dita"/></codeph> for more information about this index storage parameter. </pd>
+          <pd>OIDS — Set to <codeph>OIDS=FALSE</codeph> (the default) so that rows do not have
+            object identifiers assigned to them. Greenplum strongly recommends that you do not
+            enable OIDS when creating a table. On large tables, such as those in a typical Greenplum
+            Database system, using OIDs for table rows can cause wrap-around of the 32-bit OID
+            counter. Once the counter wraps around, OIDs can no longer be assumed to be unique,
+            which not only makes them useless to user applications, but can also cause problems in
+            the Greenplum Database system catalog tables. In addition, excluding OIDs from a table
+            reduces the space required to store the table on disk by 4 bytes per row, slightly
+            improving performance. OIDS are not allowed on column-oriented tables.</pd>
+        </plentry>
+        <plentry>
+          <pt>ON COMMIT</pt>
+          <pd>The behavior of temporary tables at the end of a transaction block can be controlled
+            using <codeph>ON COMMIT</codeph>. The three options are: </pd>
+          <pd>PRESERVE ROWS — No special action is taken at the ends of transactions for temporary
+            tables. This is the default behavior. </pd>
+          <pd>DELETE ROWS — All rows in the temporary table will be deleted at the end of each
+            transaction block. Essentially, an automatic <codeph>TRUNCATE</codeph> is done at each
+            commit. </pd>
+          <pd>DROP — The temporary table will be dropped at the end of the current transaction
+            block. </pd>
+        </plentry>
+        <plentry>
+          <pt>TABLESPACE <varname>tablespace</varname></pt>
+          <pd>The tablespace is the name of the tablespace in which the new table is to be created.
+            If not specified, the database's default tablespace is used.</pd>
+        </plentry>
+        <plentry>
+          <pt>AS <varname>query</varname></pt>
+          <pd>A <codeph><xref href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph> or
+                <codeph><xref href="./VALUES.xml#topic1" type="topic" format="dita"/></codeph>
+            command, or an <codeph><xref href="./EXECUTE.xml#topic1" type="topic" format="dita"
+              /></codeph> command that runs a prepared <codeph>SELECT</codeph> or <codeph>VALUES
+            </codeph>query.</pd>
+        </plentry>
+        <plentry>
+          <pt>DISTRIBUTED BY (<varname>column</varname>, [ ... ] )</pt>
+          <pt>DISTRIBUTED RANDOMLY</pt>
+          <pd>Used to declare the Greenplum Database distribution policy for the table.
+              <codeph>DISTIBUTED BY</codeph> uses hash distribution with one or more columns
+            declared as the distribution key. For the most even data distribution, the distribution
+            key should be the primary key of the table or a unique column (or set of columns). If
+            that is not possible, then you may choose <codeph>DISTRIBUTED RANDOMLY</codeph>, which
+            will send the data round-robin to the segment instances. </pd>
+          <pd>The Greenplum Database server configuration parameter
+              <codeph>gp_create_table_random_default_distribution</codeph> controls the default
+            table distribution policy if the <cmdname>DISTRIBUTED BY</cmdname> clause is not
+            specified when you create a table. Greenplum Database follows these rules to create a
+            table if a distribution policy is not specified.<ul id="ul_ejv_m1b_kr">
+              <li>If the legacy query optimizer creates the table, and the value of the parameter is
+                  <codeph>off</codeph>, the table distribution policy is determined based on the
+                command.</li>
+              <li>If the legacy query optimizer creates the table, and the value of the parameter is
+                  <codeph>on</codeph>, the table distribution policy is random.</li>
+              <li>If GPORCA creates the table, the table distribution policy is
+                random. The parameter value has no affect. </li>
+            </ul></pd>
+          <pd>For information about the parameter, see "Server Configuration Parameters." For
+            information about the legacy query optimizer and GPORCA, see
+            "Querying Data" in the <cite>Greenplum Database Administrator Guide</cite>. </pd>
+        </plentry>
+      </parml>
+    </section>
+    <section id="section5">
+      <title>Notes</title>
+      <p>This command is functionally similar to <codeph><xref href="./SELECT_INTO.xml#topic1"
+            type="topic" format="dita"/></codeph>, but it is preferred since it is less likely to be
+        confused with other uses of the <codeph>SELECT INTO</codeph> syntax. Furthermore,
+          <codeph>CREATE TABLE AS</codeph> offers a superset of the functionality offered by
+          <codeph>SELECT INTO</codeph>. </p>
+      <p><codeph>CREATE TABLE AS</codeph> can be used for fast data loading from external table data
+        sources. See <codeph><xref href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic"
+            format="dita"/></codeph>.</p>
+    </section>
+    <section id="section6">
+      <title>Examples</title>
+      <p>Create a new table <codeph>films_recent</codeph> consisting of only recent entries from the
+        table <codeph>films</codeph>:</p>
+      <codeblock>CREATE TABLE films_recent AS SELECT * FROM films WHERE 
+date_prod &gt;= '2007-01-01';</codeblock>
+      <p>Create a new temporary table <codeph>films_recent</codeph>, consisting of only recent
+        entries from the table films, using a prepared statement. The new table has OIDs and will be
+        dropped at commit: </p>
+      <codeblock>PREPARE recentfilms(date) AS SELECT * FROM films WHERE 
+date_prod &gt; $1;
+CREATE TEMP TABLE films_recent WITH (OIDS) ON COMMIT DROP AS 
+EXECUTE recentfilms('2007-01-01');</codeblock>
+    </section>
+    <section id="section7">
+      <title>Compatibility</title>
+      <p><codeph>CREATE TABLE AS</codeph> conforms to the SQL standard, with the following
+        exceptions: </p>
+      <ul>
+        <li id="ce151719">The standard requires parentheses around the subquery clause; in Greenplum
+          Database, these parentheses are optional. </li>
+        <li id="ce151721">The standard defines a <codeph>WITH [NO] DATA</codeph> clause; this is not
+          currently implemented by Greenplum Database. The behavior provided by Greenplum Database
+          is equivalent to the standard's <codeph>WITH DATA</codeph> case. <codeph>WITH NO
+            DATA</codeph> can be simulated by appending <codeph>LIMIT 0</codeph> to the query. </li>
+        <li id="ce151723">Greenplum Database handles temporary tables differently from the standard;
+          see <codeph>CREATE TABLE</codeph> for details.</li>
+        <li id="ce151725">The <codeph>WITH</codeph> clause is a Greenplum Database extension;
+          neither storage parameters nor <codeph>OIDs</codeph> are in the standard. </li>
+        <li id="ce151727">The Greenplum Database concept of tablespaces is not part of the standard.
+          The <codeph>TABLESPACE</codeph> clause is an extension.</li>
+      </ul>
+    </section>
+    <section id="section8">
+      <title>See Also</title>
+      <p><codeph><xref href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"
+        /></codeph>, <codeph><xref href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic"
+            format="dita"/></codeph>, <codeph><xref href="./EXECUTE.xml#topic1" type="topic"
+            format="dita"/></codeph>, <codeph><xref href="./SELECT.xml#topic1" type="topic"
+            format="dita"/></codeph>, <codeph><xref href="./SELECT_INTO.xml#topic1" type="topic"
+            format="dita"/></codeph>, <codeph><xref href="./VALUES.xml#topic1" type="topic"
+            format="dita"/></codeph></p>
+    </section>
+  </body>
+</topic>

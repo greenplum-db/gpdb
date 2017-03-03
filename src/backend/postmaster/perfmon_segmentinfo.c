@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * segmentinfo.c
+ * perfmon_segmentinfo.c
  *    Send segment information to perfmon
  *
  * Copyright (c) 2010, Greenplum inc.

@@ -313,11 +313,7 @@ typedef enum NodeTag
 	 */
 	T_MemoryContext = 600,
 	T_AllocSetContext,
-	T_MPoolContext,
 	T_MemoryAccount,
-	T_SerializedMemoryAccount,
-
-    T_AsetDirectContext = 610,                                      /*CDB*/
 
 	/*
 	 * TAGS FOR VALUE NODES (value.h)
@@ -443,6 +439,9 @@ typedef enum NodeTag
 	T_DenyLoginInterval,
 	T_DenyLoginPoint,
 	T_AlterTypeStmt,
+	T_CreateExtensionStmt,
+	T_AlterExtensionStmt,
+	T_AlterExtensionContentsStmt,
 	T_SetDistributionCmd,
 
 	/*

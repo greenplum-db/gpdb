@@ -1,0 +1,39 @@
+CREATE READABLE EXTERNAL TABLE s3write_mixedfmt_read (date text, time text, status bool, sample1 float, sample2 float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/mixedfmt/ config=@config_file@') FORMAT 'csv';
+
+CREATE WRITABLE EXTERNAL TABLE s3write_mixedfmt_write_csv (date text, time text, status bool, sample1 float, sample2 float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/mixedfmt/ config=@config_file@') FORMAT 'csv';
+
+CREATE WRITABLE EXTERNAL TABLE s3write_mixedfmt_write_txt (date text, time text, status bool, sample1 float, sample2 float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/mixedfmt/ config=@config_file@') FORMAT 'text' (DELIMITER ',');
+
+CREATE WRITABLE EXTERNAL TABLE s3write_mixedfmt_write_txt2 (date text, time text, status bool, sample1 float, sample2 float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/mixedfmt/ config=@config_file@') FORMAT 'text';
+
+-- empty
+SELECT * FROM s3write_mixedfmt_read;
+
+-- one csv row
+INSERT INTO s3write_mixedfmt_write_csv (date, time, status, sample1, sample2, volume)
+	VALUES ('2016-07-28', '12:00:00', false, 0.5, 0.3, 1);
+
+-- one row
+SELECT * FROM s3write_mixedfmt_read;
+
+-- one text row with ',' delimiter
+INSERT INTO s3write_mixedfmt_write_txt (date, time, status, sample1, sample2, volume)
+	VALUES ('2016-07-28', '12:00:00', true, 0.5, 0.3, 2);
+
+-- two rows
+SELECT * FROM s3write_mixedfmt_read;
+
+INSERT INTO s3write_mixedfmt_write_txt2 (date, time, status, sample1, sample2, volume)
+    VALUES ('2016-07-28', '12:00:00', true, 0.5, 0.3, 3);
+
+-- mixed formats, should fail
+SELECT * FROM s3write_mixedfmt_read;
+
+DROP EXTERNAL TABLE IF EXISTS s3write_mixedfmt_read;
+DROP EXTERNAL TABLE IF EXISTS s3write_mixedfmt_write_csv;
+DROP EXTERNAL TABLE IF EXISTS s3write_mixedfmt_write_txt;
+DROP EXTERNAL TABLE IF EXISTS s3write_mixedfmt_write_txt2;

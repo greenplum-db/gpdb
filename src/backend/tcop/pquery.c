@@ -47,6 +47,7 @@
  */
 Portal		ActivePortal = NULL;
 
+
 static void ProcessQuery(Portal portal, /* Resource queueing need SQL, so we pass portal. */
 			 PlannedStmt *stmt,
 			 ParamListInfo params,
@@ -108,7 +109,6 @@ CreateQueryDesc(PlannedStmt *plannedstmt,
 
 	qd->ddesc = NULL;
 	qd->gpmon_pkt = NULL;
-	qd->memoryAccountId = MEMORY_OWNER_TYPE_Undefined;
 	
 	if (Gp_role != GP_ROLE_EXECUTE)
 	{
@@ -204,7 +204,6 @@ ProcessQuery(Portal portal,
 			 char *completionTag)
 {
 	QueryDesc  *queryDesc;
-	Oid			truncOid = InvalidOid;
 
 	/* auto-stats related */
 	Oid	relationOid = InvalidOid; 	/* relation that is modified */
@@ -336,34 +335,6 @@ ProcessQuery(Portal portal,
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		/*
-		 * MPP-4145: truncate using saved Oid from earlier.
-		 */
-		if (OidIsValid(truncOid))
-		{
-			TruncateStmt *truncStmt = NULL;
-			RangeVar   *truncRel;
-			char	*schemaName;
-			char	*relName;
-
-			truncStmt = makeNode(TruncateStmt);
-			truncStmt->behavior = DROP_RESTRICT; /* don't cascade */
-			truncStmt->relations = NIL;
-
-			schemaName = get_namespace_name(get_rel_namespace(truncOid));
-			relName = get_rel_name(truncOid);
-			if (schemaName != NULL && relName != NULL)
-			{
-				elog(DEBUG1, "converting delete into truncate on %s.%s", schemaName, relName);
-
-				/* we need a list of RangeVars */
-				truncRel = makeRangeVar(get_namespace_name(get_rel_namespace(truncOid)), get_rel_name(truncOid), -1);
-				truncStmt->relations = lappend(truncStmt->relations, truncRel);
-
-				ExecuteTruncate(truncStmt);
-			}
-		}
-		
 		/* MPP-4082. Issue automatic ANALYZE if conditions are satisfied. */
 		bool inFunction = false;
 		auto_stats(cmdType, relationOid, queryDesc->es_processed, inFunction);

@@ -35,10 +35,6 @@ class SubTransactionLimitRemovalScenarioTestCase(ScenarioTestCase):
         self.path = local_path("data")
         super(SubTransactionLimitRemovalScenarioTestCase,self).__init__(methodName)
 
-
-    def test_sub_trans_sqls(self):
-        self.run_sql_tests()
-
     def test_sub_trans_lim_removal_01(self):
         self.run_tests('SubtransactionFlushToFile', 'failover_to_mirror')
     def test_sub_trans_lim_removal_02(self):
@@ -91,34 +87,11 @@ class SubTransactionLimitRemovalScenarioTestCase(ScenarioTestCase):
     def test_validate(self):
         self.run_validate()
 
-
-    def run_sql_tests(self):
-        path_to_init="mpp.gpdb.tests.storage.sub_transaction_limit_removal.sub_transaction_limit_scenario.SubTransactionLimitRemovalTestCase."
-        path_to_sqls="mpp.gpdb.tests.storage.sub_transaction_limit_removal.sub_trans_sql_tests.sub_tans_sqls.SubTransTestCase"
-
-        clean_files = []
-        clean_files.append(path_to_init+"clean_files")
-        self.test_case_scenario.append(clean_files)
-
-        setup = []
-        setup.append((path_to_init+"method_setup"))
-        self.test_case_scenario.append(setup)
-
-        st_sqls = []
-        st_sqls.append(path_to_sqls)
-        self.test_case_scenario.append(st_sqls,serial=True)
-
-        clean_files = []
-        clean_files.append(path_to_init+"clean_files")
-        self.test_case_scenario.append(clean_files)
-
-
     def run_validate(self):
         path_to_init="mpp.gpdb.tests.storage.sub_transaction_limit_removal.sub_transaction_limit_scenario.SubTransactionLimitRemovalTestCase."
         validation = []
         validation.append((path_to_init+"_validation"))
         self.test_case_scenario.append(validation) 
-
 
     def run_tests(self, fault_name, trans_state, skip_ckpt=False):
 
@@ -150,17 +123,9 @@ class SubTransactionLimitRemovalScenarioTestCase(ScenarioTestCase):
         run_post_sqls.append((path_to_init+"run_post_sqls", [fault_name, trans_state]))
         self.test_case_scenario.append(run_post_sqls) 
 
-        run_restart_database = []
-        run_restart_database.append((path_to_init+"run_restart_database"))
-        self.test_case_scenario.append(run_restart_database)  
-
         run_gprecoverseg = []
         run_gprecoverseg.append((path_to_init+"run_gprecoverseg", ['incr']))
         self.test_case_scenario.append(run_gprecoverseg)  
-
-        reset_all_faults = []
-        reset_all_faults.append((path_to_init+"reset_all_faults"))
-        self.test_case_scenario.append(reset_all_faults)
 
         if trans_state =='failover_to_mirror':
             run_restart_database = []

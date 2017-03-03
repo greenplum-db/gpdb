@@ -329,8 +329,7 @@ TwoPhaseFindRecoverPostCheckpointPreparedTransactionsMapEntry(TransactionId xid,
          caller);
 
   return true;
-}  /* end add_recover_post_checkpoint_prepared_transactions_map_entry */
-
+}
 
 /*
  * Remove a mapping from the recover post checkpoint prepared transactions hash table.
@@ -1325,8 +1324,6 @@ EndPrepare(GlobalTransaction gxact)
 	/* Add the prepared record to our global list */
 	add_recover_post_checkpoint_prepared_transactions_map_entry(xid, &gxact->prepare_begin_lsn, "EndPrepare");
 
-	MyProc->inCommit = true;
-
 	XLogFlush(gxact->prepare_lsn);
 
 	/*
@@ -1564,9 +1561,9 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
  
 	/*
 	 * We have to lock out checkpoint start here when updating persistent relation information
-	 * like Appendonly segment's committed EOF. Otherwise there might be a window betwwen
+	 * like Appendonly segment's committed EOF. Otherwise there might be a window between
 	 * the time some data is added to an appendonly segment file and its EOF updated in the
-	 * persistent relation tables. If there is a checkpoint before updating the peristent tables
+	 * persistent relation tables. If there is a checkpoint before updating the persistent tables
 	 * and the system crash after the checkpoint, then during crash recovery we would not resync
 	 * to the right EOFs (MPP-18261).
 	 */

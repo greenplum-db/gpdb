@@ -1,0 +1,8 @@
+This directory exposes some ORCA functions as SQL-callable functions, to
+make debugging and testing easier.
+
+TODO: As of this writing, the regression tests don't work.
+
+NOTE: Some of these are referenced by tests outside the GPDB repository,
+in GPORCA's own repository. If you modify these, you may need to those tests
+too!

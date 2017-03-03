@@ -164,8 +164,8 @@ class smart_shutdown(MPPTestCase):
         flag = False
         for line in range(0, len(lines) - 1):
             if ((lines[line]).find(primary_last_ckpt_lsn) > -1):
-                self.assertTrue((lines[line + 1]).find("checkpoint") > -1)
-                self.assertTrue((lines[line + 2]).find("shutdown") > -1)
+                self.assertTrue((lines[line]).find("checkpoint") > -1)
+                self.assertTrue((lines[line]).find("shutdown") > -1)
                 flag = True
                 break
 

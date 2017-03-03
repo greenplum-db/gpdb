@@ -126,6 +126,80 @@ test__getSpillFile__Initialize_wfile_exception(void **state)
 	assert_true(false);
 }
 
+/* ==================== destroy_agg_hash_table ==================== */
+/*
+ * Test that the destroy_agg_hash_table frees all the memory.
+ */
+test__destroy_agg_hash_table__check_for_leaks(void **state)
+{
+	/* Dummy agg state to test for leaks */
+	AggState aggState;
+
+	MemoryContext testContext = AllocSetContextCreate(CurrentMemoryContext,
+			  "LeakTestContext",
+			  ALLOCSET_DEFAULT_MINSIZE,
+			  ALLOCSET_DEFAULT_INITSIZE,
+			  ALLOCSET_DEFAULT_MAXSIZE);
+
+	/*
+	 * We don't switch to testContext as we want to control all the allocations.
+	 * Instead we use MemoryContextAllocZero to explicitly allocate in that context.
+	 */
+
+	/* Create all the mocked objects */
+	HashAggTable *ht = MemoryContextAllocZero(testContext, sizeof(HashAggTable));
+	aggState.hhashtable = ht;
+	Agg *agg = MemoryContextAllocZero(testContext, sizeof(Agg));
+	agg->aggstrategy = AGG_HASHED;
+	aggState.ss.ps.plan = agg;
+
+	aggState.aggcontext =
+		AllocSetContextCreate(TopMemoryContext,
+							  "AggContext",
+							  ALLOCSET_DEFAULT_MINSIZE,
+							  ALLOCSET_DEFAULT_INITSIZE,
+							  ALLOCSET_DEFAULT_MAXSIZE);
+
+	ht->entry_cxt = AllocSetContextCreate(aggState.aggcontext,
+			 "HashAggTableContext",
+			 ALLOCSET_DEFAULT_MINSIZE,
+			 ALLOCSET_DEFAULT_INITSIZE,
+			 ALLOCSET_DEFAULT_MAXSIZE);
+
+	ht->group_buf = mpool_create(ht->entry_cxt,
+			"GroupsAndAggs Context");
+
+#define NUM_SPILL_FILES 3
+#define NUM_BUCKETS 1024
+
+	ht->buckets = MemoryContextAllocZero(testContext, sizeof(HashAggEntry) * NUM_BUCKETS);
+	ht->bloom = MemoryContextAllocZero(testContext, NUM_BUCKETS / (sizeof(uint64) * 8 /* bits */));
+
+	SpillSet *spill_set = createSpillSet(NUM_SPILL_FILES, 0 /* parent_hash_bit */);
+	ht->spill_set = spill_set;
+	spill_set->num_spill_files = NUM_SPILL_FILES;
+	for (int i = 0; i < NUM_SPILL_FILES; i++)
+	{
+		spill_set->spill_files[i].file_info = MemoryContextAllocZero(testContext, sizeof(BatchFileInfo));
+	}
+
+#ifdef CDB_PALLOC_TAGS
+	/* Make sure our testContext had some allocations */
+	assert_true(((AllocSet)testContext)->allocList != NULL);
+#endif
+
+	/* Invoke the method of interest */
+	destroy_agg_hash_table(&aggState);
+	/* Free our fake plan node before checking that the testContext is completely empty */
+	pfree(agg);
+
+	/* Nothing should be allocated anymore */
+#ifdef CDB_PALLOC_TAGS
+	assert_true(((AllocSet)testContext)->allocList == NULL);
+#endif
+	assert_true(aggState.hhashtable == NULL);
+}
+
 /* ==================== main ==================== */
 int
 main(int argc, char* argv[])
@@ -134,7 +208,8 @@ main(int argc, char* argv[])
 
 	const UnitTest tests[] = {
 		unit_test(test__getSpillFile__Initialize_wfile_success),
-		unit_test(test__getSpillFile__Initialize_wfile_exception)
+		unit_test(test__getSpillFile__Initialize_wfile_exception),
+		unit_test(test__destroy_agg_hash_table__check_for_leaks)
 	};
 
 	MemoryContextInit();

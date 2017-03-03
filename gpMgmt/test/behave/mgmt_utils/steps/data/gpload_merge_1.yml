@@ -1,0 +1,28 @@
+VERSION: 1.0.0.1
+DATABASE: testdb 
+
+GPLOAD:
+  INPUT:
+    - SOURCE:
+        PORT_RANGE: [20000, 30000]
+        FILE:
+          - test/behave/mgmt_utils/steps/data/sample_1.csv
+    - COLUMNS:
+        - id: int
+        - value: int 
+    - FORMAT: text
+    - DELIMITER: '|'
+    - QUOTE: '"'
+  OUTPUT:
+    - TABLE: tbl
+    - MODE: merge
+    - MATCH_COLUMNS:
+        - id
+    - UPDATE_COLUMNS:
+        - value
+    - MAPPING:
+        id: id
+        value: value
+
+  PRELOAD:
+    - REUSE_TABLES: true 

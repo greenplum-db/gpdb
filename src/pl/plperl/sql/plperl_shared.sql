@@ -1,3 +1,12 @@
+-- test plperl.on_plperl_init via the shared hash
+-- (must be done before plperl is first used)
+
+-- Avoid need for custom_variable_classes = 'plperl'
+LOAD 'plperl';
+
+-- testing on_plperl_init gets run, and that it can alter %_SHARED
+SET plperl.on_plperl_init = '$_SHARED{on_init} = 42';
+
 -- test the shared hash
 
 create function setme(key text, val text) returns void language plperl as $$
@@ -19,4 +28,15 @@ select setme('ourkey','ourval');
 
 select getme('ourkey');
 
+select getme('on_init');
 
+-- verify that we can use $_SHARED in strict mode
+create or replace function perl_shared() returns int as $$
+use strict;
+my $val = $_SHARED{'stuff'};
+$_SHARED{'stuff'} = '1';
+return $val;
+$$ language plperl;
+
+select perl_shared();
+select perl_shared();

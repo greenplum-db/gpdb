@@ -35,6 +35,7 @@
 #include "catalog/pg_database.h"
 #include "catalog/pg_depend.h"
 #include "catalog/pg_extprotocol.h"
+#include "catalog/pg_extension.h"
 #include "catalog/pg_filespace.h"
 #include "catalog/pg_language.h"
 #include "catalog/pg_namespace.h"
@@ -56,6 +57,7 @@
 #include "commands/comment.h"
 #include "commands/dbcommands.h"
 #include "commands/defrem.h"
+#include "commands/extension.h"
 #include "commands/extprotocolcmds.h"
 #include "commands/filespace.h"
 #include "commands/proclang.h"
@@ -122,7 +124,8 @@ static const Oid object_classes[MAX_OCLASS] = {
 	TableSpaceRelationId,		/* OCLASS_TBLSPACE */
 	FileSpaceRelationId,		/* OCLASS_FILESPACE */
 	ExtprotocolRelationId,		/* OCLASS_EXTPROTOCOL */
-	CompressionRelationId		/* OCLASS_COMPRESSION */
+	CompressionRelationId,		/* OCLASS_COMPRESSION */
+	ExtensionRelationId			/* OCLASS_EXTENSION */
 };
 
 
@@ -474,6 +477,7 @@ findAutoDeletableObjects(const ObjectAddress *object,
 				break;
 			case DEPENDENCY_AUTO:
 			case DEPENDENCY_INTERNAL:
+			case DEPENDENCY_EXTENSION:
 				/* recurse */
 				otherObject.classId = foundDep->classid;
 				otherObject.objectId = foundDep->objid;
@@ -627,6 +631,7 @@ recursiveDeletion(const ObjectAddress *object,
 				/* no problem */
 				break;
 			case DEPENDENCY_INTERNAL:
+			case DEPENDENCY_EXTENSION:
 
 				/*
 				 * This object is part of the internal implementation of
@@ -928,6 +933,7 @@ deleteDependentObjects(const ObjectAddress *object,
 				break;
 			case DEPENDENCY_AUTO:
 			case DEPENDENCY_INTERNAL:
+			case DEPENDENCY_EXTENSION:
 
 				/*
 				 * We propagate the DROP without complaint even in the
@@ -1071,10 +1077,13 @@ doDeletion(const ObjectAddress *object)
 			RemoveTSConfigurationById(object->objectId);
 			break;
 
+		case OCLASS_EXTENSION:
+			RemoveExtensionById(object->objectId);
+			break;
+
 		case OCLASS_FILESPACE:
 			RemoveFileSpaceById(object->objectId);
 			break;
-
 
 		case OCLASS_EXTPROTOCOL:
 			RemoveExtProtocolById(object->objectId);
@@ -1878,6 +1887,10 @@ getObjectClass(const ObjectAddress *object)
 			Assert(object->objectSubId == 0);
 			return OCLASS_EXTPROTOCOL;
 
+		case ExtensionRelationId:
+			Assert(object->objectSubId == 0);
+			return OCLASS_EXTENSION;
+
 		case CompressionRelationId:
 			Assert(object->objectSubId == 0);
 			return OCLASS_COMPRESSION;
@@ -1949,6 +1962,7 @@ getObjectDescription(const ObjectAddress *object)
 				appendStringInfo(&buffer, _("cast from %s to %s"),
 								 format_type_be(castForm->castsource),
 								 format_type_be(castForm->casttarget));
+
 				systable_endscan(rcscan);
 				heap_close(castDesc, AccessShareLock);
 				break;
@@ -2353,7 +2367,7 @@ getObjectDescription(const ObjectAddress *object)
 				appendStringInfo(&buffer, _("tablespace %s"), tblspace);
 				break;
 			}
-			
+
 		case OCLASS_FILESPACE:
 			{
 				char       *fsname;
@@ -2365,6 +2379,18 @@ getObjectDescription(const ObjectAddress *object)
 				appendStringInfo(&buffer, _("filespace %s"), fsname);
 				break;
 			}				
+
+		case OCLASS_EXTENSION:
+			{
+				char       *extname;
+
+				extname = get_extension_name(object->objectId);
+				if (!extname)
+					elog(ERROR, "cache lookup failed for extension %u",
+						 object->objectId);
+				appendStringInfo(&buffer, _("extension %s"), extname);
+				break;
+			}
 
 		case OCLASS_EXTPROTOCOL:
 			{
@@ -2386,6 +2412,21 @@ getObjectDescription(const ObjectAddress *object)
 	}
 
 	return buffer.data;
+}
+
+/*
+ * getObjectDescriptionOids: as above, except the object is specified by Oids
+ */
+char *
+getObjectDescriptionOids(Oid classid, Oid objid)
+{
+	ObjectAddress address;
+
+	address.classId = classid;
+	address.objectId = objid;
+	address.objectSubId = 0;
+
+	return getObjectDescription(&address);
 }
 
 /*

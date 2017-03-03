@@ -398,7 +398,7 @@ DROP TABLE
 --- =====================================
 -- GUC with invalid value
 Alter database dsp_db3 set gp_default_storage_options="appendonly=true,checksum=xxx";
-psql:/path/sql_file:1: ERROR:  invalid bool value "xxx" for storage option "checksum" (reloptions.c:119)
+psql:/path/sql_file:1: ERROR:  invalid bool value "xxx" for storage option "checksum"
 -- GUC with appendonly=false
 Alter database dsp_db3 set gp_default_storage_options="appendonly=false";
 ALTER DATABASE

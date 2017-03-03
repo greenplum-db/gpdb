@@ -372,8 +372,7 @@ extern bool smgrgetappendonlyinfo(
 
 	int64							*mirrorDataLossTrackingSessionNum);
 extern int smgrGetPendingFileSysWork(EndXactRecKind endXactRecKind,
-						  PersistentEndXactFileSysActionInfo **ptr,
-						  bool *haveNonTemp);
+						  PersistentEndXactFileSysActionInfo **ptr);
 extern int	smgrGetAppendOnlyMirrorResyncEofs(
 	EndXactRecKind									endXactRecKind,
 

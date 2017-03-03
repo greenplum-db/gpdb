@@ -82,7 +82,7 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 	CdbDispatcherState ds = {NULL, NULL, NULL};
 
 	CdbDispatchResults* pr = NULL;
-	CdbPgResults cdb_pgresults;
+	CdbPgResults cdb_pgresults = {NULL, 0};
 
 	DispatchCommandDtxProtocolParms dtxProtocolParms;
 	Gang *primaryGang;
@@ -117,8 +117,10 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 
 	if (primaryGang->dispatcherActive)
 	{
-		elog(LOG, "CdbDispatchDtxProtocolCommand: primary gang marked active re-marking");
-		primaryGang->dispatcherActive = false;
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("query plan with multiple segworker groups is not supported"),
+				 errhint("dispatching DTX commands to a busy gang")));
 	}
 
 	/*
@@ -133,6 +135,8 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 	PG_TRY();
 	{
 		cdbdisp_dispatchToGang(&ds, primaryGang, -1, direct);
+
+		cdbdisp_waitDispatchFinish(&ds);
 
 		/*
 		 * Wait for all QEs to finish.	Don't cancel.

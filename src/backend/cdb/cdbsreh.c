@@ -36,6 +36,7 @@
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
+#include "utils/bytea.h"
 #include "nodes/makefuncs.h"
 
 static int  GetNextSegid(CdbSreh *cdbsreh);
@@ -557,6 +558,7 @@ ErrorLogWrite(CdbSreh *cdbsreh)
 	char		filename[MAXPGPATH];
 	FILE	   *fp;
 	pg_crc32	crc;
+	int			ret;
 
 	Assert(OidIsValid(cdbsreh->relid));
 	ErrorLogFileName(filename, MyDatabaseId, cdbsreh->relid);
@@ -568,15 +570,20 @@ ErrorLogWrite(CdbSreh *cdbsreh)
 
 	LWLockAcquire(ErrorLogLock, LW_EXCLUSIVE);
 	fp = AllocateFile(filename, "a");
-	if (!fp)
-	{
-		mkdir(ErrorLogDir, S_IRWXU);
 
-		fp = AllocateFile(filename, "a");
+	if (!fp && (errno == EMFILE || errno == ENFILE))
+		ereport(ERROR, (errmsg("could not open \"%s\", too many open files: %m", filename)));
+
+	if (!fp && errno == ENOENT)
+	{
+		ret = mkdir(ErrorLogDir, S_IRWXU);
+		if (ret == 0)
+			fp = AllocateFile(filename, "a");
+		else
+			ereport(ERROR, (errmsg("could not create directory for errorlog \"%s\": %m", ErrorLogDir)));
 	}
 	if (!fp)
-		ereport(ERROR,
-				(errmsg("could not open \"%s\": %m", filename)));
+		ereport(ERROR, (errmsg("could not open \"%s\": %m", filename)));
 
 	/*
 	 * format:
@@ -616,7 +623,7 @@ ErrorLogRead(FILE *fp, pg_crc32 *crc)
 
 		/*
 		 * The tuple is "in-memory" format of HeapTuple.  Allocate
-		 * the whole chunk consectively.
+		 * the whole chunk consecutively.
 		 */
 		tuple = palloc(HEAPTUPLESIZE + t_len);
 		tuple->t_len = t_len;
@@ -890,10 +897,11 @@ ErrorLogDelete(Oid databaseId, Oid relationId)
 
 	if (!OidIsValid(relationId))
 	{
-		DIR	   *dir;
-		struct dirent *de;
-		char   *dirpath = ErrorLogDir;
-		char	prefix[MAXPGPATH];
+		DIR			   *dir;
+		struct dirent  *de;
+		char   		   *dirpath = ErrorLogDir;
+		char			prefix[MAXPGPATH];
+		int				len;
 
 		if (OidIsValid(databaseId))
 			snprintf(prefix, sizeof(prefix), "%u_", databaseId);
@@ -918,8 +926,16 @@ ErrorLogDelete(Oid databaseId, Oid relationId)
 			 */
 			if (!OidIsValid(databaseId))
 			{
+				len = snprintf(filename, MAXPGPATH, "%s/%s", dirpath, de->d_name);
+				if (len >= (MAXPGPATH - 1))
+				{
+					ereport(WARNING,
+						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errmsg("log filename truncation on \"%s\", unable to delete error log",
+								de->d_name))));
+					continue;
+				}
 				LWLockAcquire(ErrorLogLock, LW_EXCLUSIVE);
-				sprintf(filename, "%s/%s", dirpath, de->d_name);
 				unlink(filename);
 				LWLockRelease(ErrorLogLock);
 				continue;

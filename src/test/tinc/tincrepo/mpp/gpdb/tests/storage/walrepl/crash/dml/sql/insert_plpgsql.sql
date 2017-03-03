@@ -9,11 +9,10 @@ AS
 $$
 DECLARE
 BEGIN
-     EXECUTE 'INSERT INTO subt_plpgsql_t1(a) VALUES (%)' , i;
+    EXECUTE 'INSERT INTO subt_plpgsql_t1(a) VALUES (' || inp || ');';
 EXCEPTION
     WHEN others THEN
     RAISE NOTICE 'Error in data';
-
 END;
 $$
 LANGUAGE PLPGSQL
@@ -41,6 +40,6 @@ LANGUAGE PLPGSQL
 -- start_ignore
 drop table if exists subt_plpgsql_t1;
 -- end_ignore
-create table subt_plpgsql_t1( a char);
+create table subt_plpgsql_t1(a int);
 select subt_inData(1,105);
 select count(*) from subt_plpgsql_t1;

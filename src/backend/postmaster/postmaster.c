@@ -82,11 +82,6 @@
 #include <limits.h>
 
 /* headers required for process affinity bindings */
-#if defined(pg_on_solaris)
-#include <sys/types.h>
-#include <sys/processor.h>
-#include <sys/procset.h>
-#endif
 #ifdef HAVE_NUMA_H
 #define NUMA_VERSION1_COMPATIBILITY 1
 #include <numa.h>
@@ -567,7 +562,7 @@ static enum CAC_state canAcceptConnections(void);
 static long PostmasterRandom(void);
 static void RandomSalt(char *md5Salt);
 static void signal_child(pid_t pid, int signal);
-static void SignalSomeChildren(int signal, bool only_autovac);
+static bool SignalSomeChildren(int signal, int target);
 
 #define SignalChildren(sig)			SignalSomeChildren(sig, BACKEND_TYPE_ALL)
 #define SignalAutovacWorkers(sig)	SignalSomeChildren(sig, BACKEND_TYPE_AUTOVAC)
@@ -859,7 +854,7 @@ PostmasterMain(int argc, char *argv[])
 	 * tcop/postgres.c (the option sets should not conflict) and with the
 	 * common help() function in main/main.c.
 	 */
-	while ((opt = getopt(argc, argv, "A:b:B:C:c:D:d:EeFf:h:ijk:lN:mM:nOo:Pp:r:S:sTt:UW:yx:z:-:")) != -1)
+	while ((opt = getopt(argc, argv, "A:B:bc:D:d:EeFf:h:ijk:lN:mM:nOo:Pp:r:S:sTt:UW:yx:-:")) != -1)
 	{
 		switch (opt)
 		{
@@ -871,13 +866,10 @@ PostmasterMain(int argc, char *argv[])
 				SetConfigOption("shared_buffers", optarg, PGC_POSTMASTER, PGC_S_ARGV);
 				break;
 
-            case 'b':
-                SetConfigOption("gp_dbid", optarg, PGC_POSTMASTER, PGC_S_ARGV);
-                break;
-
-            case 'C':
-                SetConfigOption("gp_contentid", optarg, PGC_POSTMASTER, PGC_S_ARGV);
-                break;
+			case 'b':
+				/* Undocumented flag used for binary upgrades */
+				IsBinaryUpgrade = true;
+				break;
 
 			case 'D':
 				userDoption = optarg;
@@ -1081,9 +1073,6 @@ PostmasterMain(int argc, char *argv[])
 			case 'x': /* standby master dbid */
 				SetConfigOption("gp_standby_dbid", optarg, PGC_POSTMASTER, PGC_S_ARGV);
 				break;
-            case 'z':
-                SetConfigOption("gp_num_contents_in_cluster", optarg, PGC_POSTMASTER, PGC_S_ARGV);
-                break;
 
 			default:
 				write_stderr("Try \"%s --help\" for more information.\n",
@@ -1515,8 +1504,8 @@ PostmasterMain(int argc, char *argv[])
 		 * since there is no way to connect to the database in this case.
 		 */
 		ereport(FATAL,
-				(errmsg("could not load pg_hba.conf"),
-				 errOmitLocation(true)));
+				(errcode(ERRCODE_CONFIG_FILE_ERROR),
+				 (errmsg("could not load pg_hba.conf"))));
 	}
 	load_ident();
 
@@ -2407,7 +2396,7 @@ ServerLoop(void)
 
 		/*
 		 * GPDB Change:  Reaper just sets a flag, and we call the real reaper code here.
-		 * I assume this was done because we wanted to excecute some code that wasn't safe in a
+		 * I assume this was done because we wanted to execute some code that wasn't safe in a
 		 * signal handler context (debugging code, most likely).
 		 * But the real reason is lost in antiquity.
 		 */
@@ -2513,7 +2502,7 @@ ServerLoop(void)
 			}
 
 			/* If we have lost the autovacuum launcher, try to start a new one */
-			if (AutoVacPID == 0 &&
+			if (!IsBinaryUpgrade && AutoVacPID == 0 &&
 				(AutoVacuumingActive() || start_autovac_launcher) &&
 				pmState == PM_RUN)
 			{
@@ -5441,7 +5430,7 @@ HandleChildCrash(int pid, int exitstatus, const char *procname)
 		ereport((Debug_print_server_processes ? LOG : DEBUG2),
 				(errmsg_internal("sending %s to process %d",
 								 (SendStop ? "SIGSTOP" : "SIGQUIT"),
-								 (int) AutoVacPID)));
+								 (int) WalReceiverPID)));
 		signal_child(WalReceiverPID, (SendStop ? SIGSTOP : SIGQUIT));
 	}
 
@@ -6255,14 +6244,14 @@ signal_child(pid_t pid, int signal)
 }
 
 /*
- * Send a signal to all backend children, including autovacuum workers
- * (but NOT special children; dead_end children are never signaled, either).
- * If only_autovac is TRUE, only the autovacuum worker processes are signalled.
+ * Send a signal to the targeted children (but NOT special children;
+ * dead_end children are never signaled, either).
  */
-static void
-SignalSomeChildren(int signal, bool only_autovac)
+static bool
+SignalSomeChildren(int signal, int target)
 {
 	Dlelem	   *curr;
+	bool		signaled = false;
 
 	for (curr = DLGetHead(BackendList); curr; curr = DLGetSucc(curr))
 	{
@@ -6270,14 +6259,32 @@ SignalSomeChildren(int signal, bool only_autovac)
 
 		if (bp->dead_end)
 			continue;
-		if (only_autovac && !bp->is_autovacuum)
-			continue;
+
+		/*
+		 * Since target == BACKEND_TYPE_ALL is the most common case, we test
+		 * it first and avoid touching shared memory for every child.
+		 */
+		if (target != BACKEND_TYPE_ALL)
+		{
+			int			child;
+
+			if (bp->is_autovacuum)
+				child = BACKEND_TYPE_AUTOVAC;
+			else if (IsPostmasterChildWalSender(bp->child_slot))
+				child = BACKEND_TYPE_WALSND;
+			else
+				child = BACKEND_TYPE_NORMAL;
+			if (!(target & child))
+				continue;
+		}
 
 		ereport(DEBUG4,
 				(errmsg_internal("sending signal %d to process %d",
 								 signal, (int) bp->pid)));
 		signal_child(bp->pid, signal);
+		signaled = true;
 	}
+	return signaled;
 }
 
 /*
@@ -8331,48 +8338,7 @@ pgwin32_deadchild_callback(PVOID lpParameter, BOOLEAN TimerOrWaitFired)
 
 #endif   /* WIN32 */
 
-#if defined(pg_on_solaris)
-/* SOLARIS */
-static void
-setProcAffinity(int id)
-{
-	int i, r;
-	processor_info_t info;
-	int cpu_count=0;
-	int cpus[64];
-
-	int proc_to_bind;
-
-	memset(cpus, 0, sizeof(cpus));
-
-	/* first we figure out how many processors we're dealing with (up
-	 * to 64). Note: we can't just assume that when we see the first
-	 * failure that we're done -- The Solaris documentation claims
-	 * that there can be "gaps." */
-	for (i=0; i < 64; i++)
-	{
-		r = processor_info(i, &info);
-		if (r == 0)
-		{
-			cpu_count++;
-			cpus[cpu_count - 1] = i;
-		}
-	}
-
-	/* now we use the id our caller provided to pick a processor. */
-	proc_to_bind = cpus[id % cpu_count];
-
-	r = processor_bind(P_PID, P_MYID, proc_to_bind, NULL);
-	/* ignore an error -- we'll just stay with out old (default
-	 * binding) */
-	if (r == 0)
-		elog(LOG, "Bound postmaster to processor %d", proc_to_bind);
-	else
-		elog(LOG, "process_bind() failed, will remain unbound");
-
-	return;
-}
-#elif defined(HAVE_NUMA_H) && defined(HAVE_LIBNUMA)
+#if defined(HAVE_NUMA_H) && defined(HAVE_LIBNUMA)
 /* LINUX */
 static void
 setProcAffinity(int id)

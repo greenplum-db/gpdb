@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * readfuncs.c
+ * readfast.c
  *	  Binary Reader functions for Postgres tree nodes.
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
@@ -1077,6 +1077,18 @@ static void readJoinInfo(Join *local_node);
 static Bitmapset *bitmapsetRead(void);
 
 
+static CreateExtensionStmt *
+_readCreateExtensionStmt(void)
+{
+	READ_LOCALS(CreateExtensionStmt);
+	READ_STRING_FIELD(extname);
+	READ_BOOL_FIELD(if_not_exists);
+	READ_NODE_FIELD(options);
+	READ_ENUM_FIELD(create_ext_state, CreateExtensionState);
+
+	READ_DONE();
+}
+
 static CreateStmt *
 _readCreateStmt(void)
 {
@@ -1292,6 +1304,7 @@ _readCreateExternalStmt(void)
 	READ_BOOL_FIELD(isweb);
 	READ_BOOL_FIELD(iswritable);
 	READ_NODE_FIELD(sreh);
+	READ_NODE_FIELD(extOptions);
 	READ_NODE_FIELD(encoding);
 	READ_NODE_FIELD(distributedBy);
 
@@ -2037,8 +2050,6 @@ _readSort(void)
 	READ_BOOL_ARRAY(nullsFirst, local_node->numCols);
 
     /* CDB */
-	READ_NODE_FIELD(limitOffset);
-	READ_NODE_FIELD(limitCount);
 	READ_BOOL_FIELD(noduplicates);
 
 	READ_ENUM_FIELD(share_type, ShareType);
@@ -2509,6 +2520,30 @@ _readTupleDescNode(void)
 	local_node->tuple->constr = NULL;
 
 	Assert(local_node->tuple->tdtypeid == RECORDOID);
+
+	READ_DONE();
+}
+
+static AlterExtensionStmt *
+_readAlterExtensionStmt(void)
+{
+	READ_LOCALS(AlterExtensionStmt);
+	READ_STRING_FIELD(extname);
+	READ_NODE_FIELD(options);
+
+	READ_DONE();
+}
+
+static AlterExtensionContentsStmt *
+_readAlterExtensionContentsStmt(void)
+{
+	READ_LOCALS(AlterExtensionContentsStmt);
+
+	READ_STRING_FIELD(extname);
+	READ_INT_FIELD(action);
+	READ_ENUM_FIELD(objtype, ObjectType);
+	READ_NODE_FIELD(objname);
+	READ_NODE_FIELD(objargs);
 
 	READ_DONE();
 }
@@ -2999,6 +3034,9 @@ readNodeBinary(void)
 			case T_CreateExternalStmt:
 				return_value = _readCreateExternalStmt();
 				break;
+			case T_CreateExtensionStmt:
+				return_value = _readCreateExtensionStmt();
+				break;
 			case T_IndexStmt:
 				return_value = _readIndexStmt();
 				break;
@@ -3360,6 +3398,12 @@ readNodeBinary(void)
 
 			case T_AlterTypeStmt:
 				return_value = _readAlterTypeStmt();
+				break;
+			case T_AlterExtensionStmt:
+				return_value = _readAlterExtensionStmt();
+				break;
+			case T_AlterExtensionContentsStmt:
+				return_value = _readAlterExtensionContentsStmt();
 				break;
 			case T_TupleDescNode:
 				return_value = _readTupleDescNode();

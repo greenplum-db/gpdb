@@ -97,6 +97,31 @@ bool CodegenUtils::InitializeGlobal() {
          && !llvm::InitializeNativeTargetAsmParser();
 }
 
+llvm::AllocaInst* CodegenUtils::CreateMakeTuple(
+    const std::vector<llvm::Value*>& members, const std::string& name) {
+  std::vector<llvm::Type*> argument_types(members.size(), nullptr);
+  std::transform(members.begin(),
+                 members.end(),
+                 argument_types.begin(),
+                 [](llvm::Value* arg) {
+                    assert(nullptr != arg); return arg->getType();});
+  llvm::StructType* llvm_struct_type = llvm::StructType::create(
+      context_, argument_types, name.empty() ? "" : name + "_type");
+  llvm::AllocaInst* llvm_struct_ptr = ir_builder()->CreateAlloca(
+      llvm_struct_type,
+      nullptr,
+      name);
+  for (size_t member_idx = 0; member_idx < members.size(); ++member_idx) {
+    llvm::Value* llvm_mem_ptr = ir_builder()->CreateInBoundsGEP(
+        llvm_struct_type,
+        llvm_struct_ptr,
+        // This doesn't work if type is not int32_t.
+        {GetConstant<int32_t>(0), GetConstant<int32_t>(member_idx)});
+    ir_builder()->CreateStore(members[member_idx], llvm_mem_ptr);
+  }
+  return llvm_struct_ptr;
+}
+
 bool CodegenUtils::Optimize(const OptimizationLevel generic_opt_level,
                              const SizeLevel size_level,
                              const bool optimize_for_host_cpu) {

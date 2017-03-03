@@ -106,13 +106,13 @@ DROP TABLE
 DROP TABLE
 --end_ignore
   create table heap_can(like pt_heap_tab_rng);  
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
   create table ao_can(like pt_heap_tab_rng) with (appendonly=true);   
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
   create table co_can(like pt_heap_tab_rng)  with (appendonly=true,orientation=column);   
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
  alter table pt_heap_tab_rng add partition newco start(36) end(40) with (appendonly= true, orientation = column);
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_heap_tab_rng_1_prt_newco" for table "pt_heap_tab_rng"

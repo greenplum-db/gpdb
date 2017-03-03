@@ -69,12 +69,11 @@ COPY onek2 FROM '@abs_builddir@/results/onek.data';
 
 SELECT unique1 FROM onek2 WHERE unique1 < 2 ORDER BY unique1;
 
--- GPDB does not support BINARY-mode COPY.
---COPY BINARY stud_emp TO '@abs_builddir@/results/stud_emp.data';
+COPY BINARY stud_emp TO '@abs_builddir@/results/stud_emp.data';
 
---DELETE FROM stud_emp;
+DELETE FROM stud_emp;
 
---COPY BINARY stud_emp FROM '@abs_builddir@/results/stud_emp.data';
+COPY BINARY stud_emp FROM '@abs_builddir@/results/stud_emp.data';
 
 SELECT * FROM stud_emp;
 

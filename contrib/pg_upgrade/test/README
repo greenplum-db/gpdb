@@ -1,0 +1,10 @@
+This directory contains a GPDB cluster, created with version 4.3, for
+upgrade purposes. It contains different kinds of tables, with different
+datatypes and properties, to test that they can all be upgraded
+successfully. The cluster has been created by the build-test-cluster.sql
+script on 4.3.
+
+FIXME: this test cluster have been built manually with initdb, not with
+the official gpinit script. Some information related to clustering and
+mirroring is not correctly set. When that begins to matter, you should
+re-create the cluster properly!

@@ -21,7 +21,6 @@ from mpp.gpdb.tests.storage.pg_twophase.switch_checkpoint import SwitchCheckpoin
 class SwitchCheckpoint25To33(SwitchCheckpointTestCase):
     '''
     Testing state of transactions with faults on master after crash-recovery
-    @gucs gp_create_table_random_default_distribution=off
     '''
 
     def __init__(self, methodName):

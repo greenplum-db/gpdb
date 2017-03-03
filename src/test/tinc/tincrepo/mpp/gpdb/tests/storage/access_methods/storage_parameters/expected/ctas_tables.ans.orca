@@ -48,7 +48,7 @@ Drop table if exists ao_db_ap_ctas;
 psql:/path/sql_file:1: NOTICE:  table "ao_db_ap_ctas" does not exist, skipping
 DROP TABLE
 Create table ao_db_ap_ctas as select * from ao_db_ap_base;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
 SELECT 10
 \d+ ao_db_ap_ctas;
        Append-Only Table "public.ao_db_ap_ctas"
@@ -96,7 +96,7 @@ Drop table if exists ao_db_ap_ctas;
 psql:/path/sql_file:1: NOTICE:  table "ao_db_ap_ctas" does not exist, skipping
 DROP TABLE
 Create table ao_db_ap_ctas as select * from ao_db_ap_base;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
 SELECT 10
 \d+ ao_db_ap_ctas;
                             Append-Only Columnar Table "public.ao_db_ap_ctas"
@@ -130,7 +130,7 @@ Drop table if exists ao_db_ap_ctas;
 psql:/path/sql_file:1: NOTICE:  table "ao_db_ap_ctas" does not exist, skipping
 DROP TABLE
 Create table ao_db_ap_ctas as select * from ao_db_ap_base;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
 SELECT 10
 \d+ ao_db_ap_ctas;
        Append-Only Table "public.ao_db_ap_ctas"
@@ -159,7 +159,7 @@ Drop table if exists ao_db_ap_ctas;
 psql:/path/sql_file:1: NOTICE:  table "ao_db_ap_ctas" does not exist, skipping
 DROP TABLE
 Create table ao_db_ap_ctas with( appendonly=true, orientation=column) as select * from ao_db_ap_base;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
 SELECT 10
 \d+ ao_db_ap_ctas;
                             Append-Only Columnar Table "public.ao_db_ap_ctas"

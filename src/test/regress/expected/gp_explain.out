@@ -1,0 +1,111 @@
+-- Helper function, to return the EXPLAIN output of a query as a normal
+-- result set, so that you can manipulate it further.
+create or replace function get_explain_output(explain_query text) returns setof text as
+$$
+declare
+  explainrow text;
+begin
+  for explainrow in execute 'EXPLAIN ' || explain_query
+  loop
+    return next explainrow;
+  end loop;
+end;
+$$ language plpgsql;
+-- Same, for EXPLAIN ANALYZE
+create or replace function get_explain_analyze_output(explain_query text) returns setof text as
+$$
+declare
+  explainrow text;
+begin
+  for explainrow in execute 'EXPLAIN ANALYZE ' || explain_query
+  loop
+    return next explainrow;
+  end loop;
+end;
+$$ language plpgsql;
+--
+-- Test explain_memory_verbosity option
+-- 
+CREATE TABLE explaintest (id int4);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO explaintest SELECT generate_series(1, 10);
+EXPLAIN ANALYZE SELECT * FROM explaintest;
+                                                               QUERY PLAN                                                               
+----------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3.10 rows=10 width=4)
+   Rows out:  10 rows at destination with 0.332 ms to first row, 0.345 ms to end, start offset by 0.283 ms.
+   ->  Seq Scan on explaintest  (cost=0.00..3.10 rows=4 width=4)
+         Rows out:  Avg 3.3 rows x 3 workers.  Max 5 rows (seg1) with 0.015 ms to first row, 0.018 ms to end, start offset by 0.543 ms.
+ Slice statistics:
+   (slice0)    Executor memory: 318K bytes.
+   (slice1)    Executor memory: 50K bytes avg x 3 workers, 50K bytes max (seg0).
+ Statement statistics:
+   Memory used: 128000K bytes
+ Total runtime: 0.998 ms
+(10 rows)
+
+set explain_memory_verbosity='summary';
+-- The plan should consist of a Gather and a Seq Scan, with a
+-- "Memory: ..." line on both nodes.
+SELECT COUNT(*) from
+  get_explain_analyze_output($$
+    SELECT * FROM explaintest;
+  $$) as et
+WHERE et like '%Memory: %';
+ count 
+-------
+     2
+(1 row)
+
+reset explain_memory_verbosity;
+-- Verify that the column references are OK. This tests for an old ORCA bug,
+-- where the Filter clause in the IndexScan of this query was incorrectly
+-- printed as something like:
+--
+--   Filter: "outer".column2 = mpp22263.*::text
+CREATE TABLE mpp22263 (
+        unique1         int4,
+        unique2         int4,
+        two                     int4,
+        four            int4,
+        ten                     int4,
+        twenty          int4,
+        hundred         int4,
+        thousand        int4,
+        twothousand     int4,
+        fivethous       int4,
+        tenthous        int4,
+        odd                     int4,
+        even            int4,
+        stringu1        name,
+        stringu2        name,
+        string4         name
+) distributed by (unique1);
+create index mpp22263_idx1 on mpp22263 using btree(unique1);
+explain select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
+WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.06..278.70 rows=14 width=280)
+   ->  Hash Join  (cost=0.06..278.70 rows=5 width=280)
+         Hash Cond: mpp22263.unique1 = "*VALUES*".column1 AND mpp22263.stringu1::text = "*VALUES*".column2
+         ->  Seq Scan on mpp22263  (cost=0.00..219.00 rows=3967 width=244)
+         ->  Hash  (cost=0.03..0.03 rows=1 width=36)
+               ->  Values Scan on "*VALUES*"  (cost=0.00..0.03 rows=1 width=36)
+ Optimizer status: legacy query optimizer
+(7 rows)
+
+-- atmsort.pm masks out differences in the Filter line, so just memorizing
+-- the output of the above EXPLAIN isn't enough to catch a faulty Filter line.
+-- Extract the Filter explicitly.
+SELECT * from
+  get_explain_output($$
+select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
+WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
+  $$) as et
+WHERE et like '%Filter: %';
+ et 
+----
+(0 rows)
+

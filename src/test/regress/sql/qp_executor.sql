@@ -15,11 +15,9 @@ select * from cf_executor_test order by a limit 1 for share;
 --returning clause
 insert into cf_executor_test values (1) returning *;
 
---start_ignore
 drop table cf_executor_test;
 create table cf_executor_test (a integer);
 insert into cf_executor_test select a from generate_series(1,5) a;
---end_ignore
 
 select * from cf_executor_test limit null;
 select * from cf_executor_test limit 0;

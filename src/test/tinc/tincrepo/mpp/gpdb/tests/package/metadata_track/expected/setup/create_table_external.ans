@@ -15,7 +15,7 @@ CREATE external web TABLE mdt_e_REGION  ( R_REGIONKEY  INTEGER ,
                         on 1 format 'text' (delimiter '|');
 CREATE EXTERNAL TABLE
 CREATE WRITABLE EXTERNAL TABLE mdt_wet_region ( like mdt_region_1) LOCATION ('gpfdist://10.1.2.10:8088/view/wet_region.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE EXTERNAL TABLE
 CREATE EXTERNAL TABLE mdt_ret_region ( like mdt_region_1) LOCATION ('gpfdist://10.1.2.10:8088/view/wet_region.tbl') FORMAT 'TEXT' (DELIMITER AS
 '|');

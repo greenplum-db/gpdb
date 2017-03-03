@@ -9,7 +9,6 @@
 #include "postgres.h"
 #include "miscadmin.h"
 #include "pgstat.h"
-#include "utils/palloc.h"
 #include "storage/fd.h"
 #include "storage/relfilenode.h"
 

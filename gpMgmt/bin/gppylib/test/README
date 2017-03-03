@@ -1,7 +1,0 @@
-To run behave:
-
-Source greenplum_path.sh
-cd gpMgmt/bin
-
-# this will run all tests tagged with smoke
-make behave tags=smoke

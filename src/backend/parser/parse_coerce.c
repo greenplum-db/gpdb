@@ -342,17 +342,15 @@ coerce_type(ParseState *pstate, Node *node,
 	}
 
 	/*
-	 * GPDB_MERGE83_FIXME: This is still required but should be on the list
-	 * for cleaning up. Can we do this more efficiently?
+	 * CDB:  Var of type UNKNOWN probably comes from an untyped Const
+	 * or Param in the targetlist of a range subquery.  For a successful
+	 * conversion we must coerce the underlying Const or Param to a
+	 * proper type and remake the Var.
+	 * In postgres, it is handled only for insert statements (in transformInsertStmt)
+	 * but not for select queries causing some of the queries to fail.
 	 */
 	if (pstate != NULL && inputTypeId == UNKNOWNOID && IsA(node, Var))
 	{
-        /*
-         * CDB:  Var of type UNKNOWN probably comes from an untyped Const
-         * or Param in the targetlist of a range subquery.  For a successful
-         * conversion we must coerce the underlying Const or Param to a
-         * proper type and remake the Var.
-         */
 		int32	baseTypeMod = -1;
 		Oid		baseTypeId = getBaseTypeAndTypmod(targetTypeId, &baseTypeMod);
         Var    *fixvar = coerce_unknown_var(pstate, (Var *)node,

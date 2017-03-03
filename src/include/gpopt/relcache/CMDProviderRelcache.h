@@ -23,7 +23,6 @@
 
 #include "naucrates/md/CSystemId.h"
 #include "naucrates/md/IMDId.h"
-#include "naucrates/md/IMDCacheObject.h"
 #include "naucrates/md/IMDProvider.h"
 
 // fwd decl

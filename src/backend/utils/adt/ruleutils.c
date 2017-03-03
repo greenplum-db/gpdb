@@ -112,6 +112,7 @@ typedef struct
 	Plan	   *inner_plan;		/* INNER subplan, or NULL if none */
 } deparse_namespace;
 
+
 /* ----------
  * Global data
  * ----------
@@ -145,7 +146,7 @@ static char *pg_get_constraintdef_worker(Oid constraintId, bool fullCommand,
 static char *pg_get_expr_worker(text *expr, Oid relid, char *relname,
 				   int prettyFlags);
 static int print_function_arguments(StringInfo buf, HeapTuple proctup,
-									bool print_table_args, bool print_defaults);
+						 bool print_table_args, bool print_defaults);
 static void make_ruledef(StringInfo buf, HeapTuple ruletup, TupleDesc rulettc,
 			 int prettyFlags);
 static void make_viewdef(StringInfo buf, HeapTuple ruletup, TupleDesc rulettc,
@@ -219,7 +220,7 @@ static void printSubscripts(ArrayRef *aref, deparse_context *context);
 static char *get_relation_name(Oid relid);
 static char *generate_relation_name(Oid relid, List *namespaces);
 static char *generate_function_name(Oid funcid, int nargs, Oid *argtypes,
-									bool *is_variadic);
+					   bool *is_variadic);
 static char *generate_operator_name(Oid operid, Oid arg1, Oid arg2);
 static text *string_to_text(char *str);
 static char *flatten_reloptions(Oid relid);
@@ -537,7 +538,8 @@ pg_get_triggerdef(PG_FUNCTION_ARGS)
 	{
 		if (trigrec->tgconstrrelid != InvalidOid)
 			appendStringInfo(&buf, "FROM %s ",
-							 generate_relation_name(trigrec->tgconstrrelid, NIL));
+							 generate_relation_name(trigrec->tgconstrrelid,
+													NIL));
 		if (!trigrec->tgdeferrable)
 			appendStringInfo(&buf, "NOT ");
 		appendStringInfo(&buf, "DEFERRABLE INITIALLY ");
@@ -990,7 +992,8 @@ pg_get_constraintdef_worker(Oid constraintId, bool fullCommand,
 
 				/* add foreign relation name */
 				appendStringInfo(&buf, ") REFERENCES %s(",
-								 generate_relation_name(conForm->confrelid, NIL));
+								 generate_relation_name(conForm->confrelid,
+														NIL));
 
 				/* Fetch and build referenced-column list */
 				val = SysCacheGetAttr(CONSTROID, tup,
@@ -1289,7 +1292,6 @@ pg_get_expr_worker(text *expr, Oid relid, char *relname, int prettyFlags)
 		context = NIL;
 
 	/* Deparse */
-	context = deparse_context_for(relname, relid);
 	str = deparse_expression_pretty(node, context, false, false,
 									prettyFlags, 0);
 
@@ -2486,7 +2488,7 @@ get_target_list(List *targetList, deparse_context *context,
 	{
 		TargetEntry *tle = (TargetEntry *) lfirst(l);
 		char	   *colname;
-		const char *attname;
+		char	   *attname;
 
 		if (tle->resjunk)
 			continue;			/* ignore junk entries */
@@ -3075,30 +3077,14 @@ push_plan(deparse_namespace *dpns, Plan *subplan)
 		dpns->outer_plan = (Plan *) linitial(((Append *) subplan)->appendplans);
 	else if (IsA(subplan, Sequence))
 	{
-		ListCell *child;
-
 		/*
-		 * A Sequence node often has a PartitionSelector node as its first
-		 * subplan. A PartitionSelector is special, because it doesn't return
-		 * any tuples. Instead, it tells its sibling subplans which partitions
-		 * they need to scan. The PartitionSelector doesn't have a proper
-		 * target list so look at the first regular subplan instead.
+		 * A Sequence node returns tuples from the *last* child node only.
+		 * The other subplans can even have a different, incompatible tuple
+		 * descriptor. A typical case is to have a PartitionSelector node
+		 * as the first subplan, and the Dynamic Table Scan as the second
+		 * subplan.
 		 */
-		child = list_head(((Sequence *) subplan)->subplans);
-		if (child != NULL && IsA(lfirst(child), PartitionSelector))
-			child = lnext(child);
-
-		if (child)
-			dpns->outer_plan = (Plan *) lfirst(child);
-		else
-		{
-			/*
-			 * ORCA probably never produces Sequence plans with no children, other
-			 * than the PartitionSelector, but cope with it just in case. (Only
-			 * ORCA produces Sequence nodes in the first place.)
-			 */
-			dpns->outer_plan = NULL;
-		}
+		dpns->outer_plan = (Plan *) llast(((Sequence *) subplan)->subplans);
 	}
 	else
 		dpns->outer_plan = outerPlan(subplan);
@@ -3228,7 +3214,7 @@ get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 	}
 
 	/* Identify names to use */
-	schemaname = NULL;                      /* default assumptions */
+	schemaname = NULL;			/* default assumptions */
 	refname = rte->eref->aliasname;
 
 	/* Exceptions occur only if the RTE is alias-less */
@@ -5430,44 +5416,44 @@ get_windowref_expr(WindowRef *wref, deparse_context *context)
 	}
 }
 
-/*
+/* ----------
  * get_coercion_expr
  *
- *  Make a string representation of a value coerced to a specific type
+ *	Make a string representation of a value coerced to a specific type
  * ----------
  */
 static void
 get_coercion_expr(Node *arg, deparse_context *context,
-		  Oid resulttype, int32 resulttypmod,
-		  Node *parentNode)
+				  Oid resulttype, int32 resulttypmod,
+				  Node *parentNode)
 {
-    StringInfo  buf = context->buf;
+	StringInfo	buf = context->buf;
 
-    /*
-     * Since parse_coerce.c doesn't immediately collapse application of
-     * length-coercion functions to constants, what we'll typically see
-     * in such cases is a Const with typmod -1 and a length-coercion
-     * function right above it.  Avoid generating redundant output.
-     * However, beware of suppressing casts when the user actually wrote
-     * something like 'foo'::text::char(3).
-     */
-    if (arg && IsA(arg, Const) &&
-	((Const *) arg)->consttype == resulttype &&
-	((Const *) arg)->consttypmod == -1)
-    {
-	/* Show the constant without normal ::typename decoration */
-	get_const_expr((Const *) arg, context, false);
-    }
-    else
-    {
-	if (!PRETTY_PAREN(context))
-	    appendStringInfoChar(buf, '(');
-	get_rule_expr_paren(arg, context, false, parentNode);
-	if (!PRETTY_PAREN(context))
-	    appendStringInfoChar(buf, ')');
-    }
-    appendStringInfo(buf, "::%s",
-		     format_type_with_typemod(resulttype, resulttypmod));
+	/*
+	 * Since parse_coerce.c doesn't immediately collapse application of
+	 * length-coercion functions to constants, what we'll typically see
+	 * in such cases is a Const with typmod -1 and a length-coercion
+	 * function right above it.  Avoid generating redundant output.
+	 * However, beware of suppressing casts when the user actually wrote
+	 * something like 'foo'::text::char(3).
+	 */
+	if (arg && IsA(arg, Const) &&
+		((Const *) arg)->consttype == resulttype &&
+		((Const *) arg)->consttypmod == -1)
+	{
+		/* Show the constant without normal ::typename decoration */
+		get_const_expr((Const *) arg, context, false);
+	}
+	else
+	{
+		if (!PRETTY_PAREN(context))
+			appendStringInfoChar(buf, '(');
+		get_rule_expr_paren(arg, context, false, parentNode);
+		if (!PRETTY_PAREN(context))
+			appendStringInfoChar(buf, ')');
+	}
+	appendStringInfo(buf, "::%s",
+					 format_type_with_typemod(resulttype, resulttypmod));
 }
 
 /* ----------
@@ -6264,7 +6250,7 @@ quote_literal_internal(const char *literal)
 
 	len = strlen(literal);
 	/* We make a worst-case result area; wasting a little space is OK */
-	result = (char *) palloc(len * 2 + 3);
+	result = (char *) palloc(len * 2 + 3 + 1);
 
 	cp1 = literal;
 	cp2 = result;
@@ -6811,7 +6797,6 @@ check_next_every_name(char *parname1, char *nextname, int parrank)
 
 	initStringInfo(&sid1);
 
-	truncateStringInfo(&sid1, 0);
 	appendStringInfo(&sid1, "%s_%d", parname1, parrank);
 
 	bstat = nextname && (0 == strcmp(sid1.data, nextname));
@@ -6922,8 +6907,6 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 
 		initStringInfo(&sid2);
 
-		truncateStringInfo(&sid2, 0);
-
 		/*
 		 * If it's in a nondefault tablespace, say so
 		 * (append after the reloptions)
@@ -6951,8 +6934,6 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 			PQExpBuffer      	 pqbuf = createPQExpBuffer();
 
 			initStringInfo(&sid1);
-
-			truncateStringInfo(&sid1, 0);
 
 			/* always quote to make WITH (tablename=...) work correctly */
 			/* MPP-12243: but don't use quote_identifier if already quoted! */
@@ -7022,8 +7003,6 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 
 		initStringInfo(&buf);
 		initStringInfo(&sid3);
-
-		truncateStringInfo(&sid3, 0);
 
 		/* NOTE: only the template case */
 		Assert(part->paristemplate);

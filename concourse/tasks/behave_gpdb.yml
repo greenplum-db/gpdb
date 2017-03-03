@@ -1,0 +1,12 @@
+platform: linux
+image_resource:
+  type: docker-image
+inputs:
+  - name: gpdb_src
+  - name: bin_gpdb
+outputs:
+params:
+  BEHAVE_TAGS: ""
+  BLDWRAP_POSTGRES_CONF_ADDONS: ""
+run:
+  path: gpdb_src/concourse/scripts/behave_gpdb.bash

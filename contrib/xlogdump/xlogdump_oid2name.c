@@ -156,6 +156,8 @@ oid2name_to_file(const char *file)
 		{
 			fprintf(stderr, "SELECT FAILED: %s", PQerrorMessage(conn));
 			PQclear(res);
+
+			fclose(fp);
 			return false;
 		}
 
@@ -289,10 +291,10 @@ getDbName(uint32 dbid, char *buf, size_t buflen)
 	{
 		/*
 		 * Need to keep name of the database going to be connected
-		 * in order to retreive object names (tables, indexes, ...)
+		 * in order to retrieve object names (tables, indexes, ...)
 		 * at the next step, particularly in getRelName().
 		 */
-		strncpy(dbName, buf, sizeof(dbName));
+		strlcpy(dbName, buf, sizeof(dbName));
 	}
 
 	return buf;

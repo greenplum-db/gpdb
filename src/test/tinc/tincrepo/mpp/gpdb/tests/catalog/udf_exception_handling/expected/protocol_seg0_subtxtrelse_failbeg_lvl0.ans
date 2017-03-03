@@ -21,7 +21,7 @@ psql:/path/sql_file:1: NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit 
 CONTEXT:  SQL statement "CREATE TABLE shops ( id serial PRIMARY KEY, shop varchar(32) )"
 PL/pgSQL function "test_protocol_allseg" line 18 at SQL statement
 psql:/path/sql_file:1: NOTICE:  catching the exception ...2
-psql:/path/sql_file:1: ERROR:  DTM error (gathered 2 results from cmd 'Rollback Current Subtransaction') (cdbtm.c:2178)
+psql:/path/sql_file:1: ERROR:  DTM error (gathered results from cmd 'Rollback Current Subtransaction') (cdbtm.c:2178)
 DETAIL:  transaction 1398808910-0000000574 at level 1 already processed (current level 1) (cdbtm.c:4391)  (seg1 rh55-qa02.sanmateo.greenplum.com:50000 pid=31635)
 CONTEXT:  PL/pgSQL function "test_protocol_allseg" line 26 during exception cleanup
 select * from employees;

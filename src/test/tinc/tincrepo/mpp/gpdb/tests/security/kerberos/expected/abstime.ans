@@ -48,12 +48,20 @@ INSERT 0 1
 -- what happens if we specify slightly misformatted abstime? 
 INSERT INTO ABSTIME_TBL (f1) VALUES ('Feb 35, 1946 10:00:00');
 psql:/path/sql_file:1: ERROR:  date/time field value out of range: "Feb 35, 1946 10:00:00"
+LINE 1: INSERT INTO ABSTIME_TBL (f1) VALUES ('Feb 35, 1946 10:00:00'...
+                                             ^
 HINT:  Perhaps you need a different "datestyle" setting.
 INSERT INTO ABSTIME_TBL (f1) VALUES ('Feb 28, 1984 25:08:10');
 psql:/path/sql_file:1: ERROR:  date/time field value out of range: "Feb 28, 1984 25:08:10"
+LINE 1: INSERT INTO ABSTIME_TBL (f1) VALUES ('Feb 28, 1984 25:08:10'...
+                                             ^
+
 -- badly formatted abstimes:  these should result in invalid abstimes 
 INSERT INTO ABSTIME_TBL (f1) VALUES ('bad date format');
 psql:/path/sql_file:1: ERROR:  invalid input syntax for type abstime: "bad date format"
+LINE 1: INSERT INTO ABSTIME_TBL (f1) VALUES ('bad date format');
+                                             ^
+
 INSERT INTO ABSTIME_TBL (f1) VALUES ('Jun 10, 1843');
 INSERT 0 1
 -- test abstime operators

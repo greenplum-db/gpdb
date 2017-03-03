@@ -8,13 +8,18 @@ SELECT count(*) from gp_opt_version();
      1
 (1 row)
 
+-- Mask out Log & timestamp for orca message that has feature not supported.
+-- start_matchsubs
+-- m/^LOG.*\"Feature/
+-- s/^LOG.*\"Feature/\"Feature/
+-- end_matchsubs
 -- fix the number of segments for Orca
 set optimizer_segments = 3;
 set optimizer_enable_master_only_queries = on;
 -- master only tables
 create schema orca;
 create table orca.r();
-NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 set allow_system_table_mods='DML';
 delete from gp_distribution_policy where localoid='orca.r'::regclass;
 reset allow_system_table_mods;
@@ -22,7 +27,7 @@ alter table orca.r add column a int;
 alter table orca.r add column b int;
 insert into orca.r select i, i/3 from generate_series(1,20) i;
 create table orca.s();
-NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 set allow_system_table_mods='DML';
 delete from gp_distribution_policy where localoid='orca.s'::regclass;
 reset allow_system_table_mods;
@@ -3148,11 +3153,11 @@ select r.* from orca.r, orca.s where s.c=2;
 ----------------------------------------------------------------------
 set optimizer=off;
 create table orca.m();
-NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 alter table orca.m add column a int;
 alter table orca.m add column b int;
 create table orca.m1();
-NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 alter table orca.m1 add column a int;
 alter table orca.m1 add column b int;
 insert into orca.m select i-1, i%2 from generate_series(1,35) i;
@@ -7903,7 +7908,7 @@ select a, c from orca.r, orca.s where a  <> all (select c) order by a, c limit 1
 (10 rows)
 
 select a, (select (select (select c from orca.s where a=c group by c))) as subq from orca.r order by a;
-ERROR:  correlated subquery with skip-level correlations is not supported (subselect.c:395)
+ERROR:  correlated subquery with skip-level correlations is not supported
 with v as (select a,b from orca.r, orca.s where a=c)  select c from orca.s group by c having count(*) not in (select b from v where a=c) order by c;
  c 
 ---

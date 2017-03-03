@@ -321,9 +321,9 @@ ExecEvalArrayRef(ArrayRefExprState *astate,
 	if (*isNull)
 	{
 		if (isDone && *isDone == ExprEndResult)
-			return 0;	/* end of set result */
+			return (Datum) NULL;	/* end of set result */
 		if (!isAssignment)
-			return 0;
+			return (Datum) NULL;
 	}
 
 	foreach(l, astate->refupperindexpr)
@@ -348,7 +348,7 @@ ExecEvalArrayRef(ArrayRefExprState *astate,
 						(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
 				  errmsg("array subscript in assignment must not be null")));
 			*isNull = true;
-			return 0;
+			return (Datum) NULL;
 		}
 	}
 
@@ -376,7 +376,7 @@ ExecEvalArrayRef(ArrayRefExprState *astate,
 							(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
 							 errmsg("array subscript in assignment must not be null")));
 				*isNull = true;
-				return 0;
+				return (Datum) NULL;
 			}
 		}
 		/* this can't happen unless parser messed up */
@@ -4968,6 +4968,7 @@ ExecEvalExprSwitchContext(ExprState *expression,
 	return retDatum;
 }
 
+
 /*
  * ExecInitExpr: prepare an expression tree for execution
  *
@@ -6294,13 +6295,15 @@ ExecEvalFunctionArgToConst(FuncExpr *fexpr, int argno, bool *isnull)
 	 */
 	if (ExecIsExprUnsafeToConst((Node *) aexpr))
 		ereport(ERROR,
-				(errmsg("unable to resolve function argument"),
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("unable to resolve function argument"),
 				 errposition(exprLocation((Node *) aexpr))));
 
 	argtype = exprType((Node *) aexpr);
 	if (!OidIsValid(argtype))
 		ereport(ERROR,
-				(errmsg("unable to resolve function argument type"),
+				(errcode(ERRCODE_INDETERMINATE_DATATYPE),
+				 errmsg("unable to resolve function argument type"),
 				 errposition(exprLocation((Node *) aexpr))));
 	argtypmod = exprTypmod((Node *) aexpr);
 

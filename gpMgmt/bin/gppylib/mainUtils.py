@@ -143,7 +143,7 @@ class ProgramArgumentValidationException(Exception):
     """
     def __init__(self, msg, shouldPrintHelp=False):
         "init"
-        Exception.__init__(self)
+        Exception.__init__(self, msg)
         self.__shouldPrintHelp = shouldPrintHelp
         self.__msg = msg
 

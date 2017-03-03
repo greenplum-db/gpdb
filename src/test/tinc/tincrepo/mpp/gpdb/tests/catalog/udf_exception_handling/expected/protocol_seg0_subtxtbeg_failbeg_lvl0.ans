@@ -22,7 +22,7 @@ PL/pgSQL function "test_protocol_allseg" line 18 at SQL statement
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "shops_pkey" for table "shops"
 CONTEXT:  SQL statement "CREATE TABLE shops ( id serial PRIMARY KEY, shop varchar(32) )"
 PL/pgSQL function "test_protocol_allseg" line 18 at SQL statement
-psql:/path/sql_file:1: ERROR:  DTM error (gathered 2 results from cmd ' Begin Internal Subtransaction') (cdbtm.c:2178)
+psql:/path/sql_file:1: ERROR:  DTM error (gathered results from cmd ' Begin Internal Subtransaction') (cdbtm.c:2178)
 DETAIL:  Raise ERROR for debug_dtm_action = 2, debug_dtm_action_protocol =  Begin Internal Subtransaction (postgres.c:1420)  (seg0 rh55-qa01.sanmateo.greenplum.com:50000 pid=17453)
 CONTEXT:  PL/pgSQL function "test_protocol_allseg" line 26 during statement block entry
 select * from employees;

@@ -225,6 +225,8 @@ TableFunctionNext(TableFunctionState *node)
 		 * to get away with fewer pallocs.
 		 */
 		oldcontext = MemoryContextSwitchTo(econtext->ecxt_per_tuple_memory);
+		/* &user_result yields a singleton pointer - make sure only one is read */
+		Assert(1 == resultdesc->natts);
 		tuple = heap_form_tuple(resultdesc, 
 								&user_result, 
 								&node->fcinfo.isnull);

@@ -223,12 +223,61 @@ SELECT execute('cat @abs_builddir@/results/fileout_none.out') ORDER BY 1;
 SELECT execute('cat @abs_builddir@/results/fileout_replace.out') ORDER BY 1;
 SELECT execute('cat @abs_builddir@/results/fileout_append.out') ORDER BY 1;
 
-
 -- 
--- Test 7) Perl syntax error lineno reporting
+-- Test 7) Syntax error lineno reporting
 --
 SELECT mapreduce('@abs_srcdir@/yml/perlerror.yml') ORDER BY 1;
+SELECT mapreduce('@abs_srcdir@/yml/yamlerror.yml') ORDER BY 1;
 
+-- Test 8) C functions using LIBRARY
+SELECT mapreduce('@abs_srcdir@/yml/c.yml') ORDER BY 1;
+
+-- Test 9) PageRank
+SELECT mapreduce('@abs_srcdir@/yml/pagerank-init.yml') ORDER BY 1;
+SELECT count(*) FROM pagerank_source;
+SELECT mapreduce('@abs_srcdir@/yml/pagerank-iter.yml') ORDER BY 1;
+SELECT mapreduce('@abs_srcdir@/yml/pagerank-final.yml') ORDER BY 1;
+SELECT ps.value, pn.value FROM pagerank_source ps JOIN pagerank_next pn USING (key) WHERE ps.key = '17';
+
+-- Test setup
+CREATE TABLE simple (m int,n int) distributed randomly;
+INSERT INTO simple VALUES (1,10), (2,20), (2,21), (2,22), (3,30), (4,40), (5,50), (5,50), (10,100), (2,21);
+CREATE FUNCTION tran (value int, value int) returns int language 'C' AS '@abs_srcdir@/regress.so', 'tran';
+CREATE FUNCTION tran (state int) returns int language 'C' AS '@abs_srcdir@/regress.so', 'tran';
+CREATE FUNCTION final (state int) returns int language 'C' AS '@abs_srcdir@/regress.so', 'final';
+CREATE FUNCTION cons (state int, value int, out output int) returns int language 'C' AS '@abs_srcdir@/regress.so', 'cons';
+CREATE FUNCTION cons_wrongtype (state int, value text) returns int language 'C' AS '@abs_srcdir@/regress.so', 'cons';
+
+CREATE OR REPLACE FUNCTION retcomposite(int)
+    RETURNS SETOF __retcomposite
+    AS '@abs_srcdir@/regress.so', 'retcomposite'
+    LANGUAGE C IMMUTABLE STRICT;
+
+CREATE FUNCTION gpmapred_scube_accum8(numeric,numeric) RETURNS numeric
+AS 'SELECT $1 + $2 * $2 * $2'
+LANGUAGE SQL
+IMMUTABLE
+RETURNS NULL ON NULL INPUT;
+
+CREATE AGGREGATE gpmapred_scube(numeric) (
+  SFUNC = gpmapred_scube_accum8,
+  STYPE  = numeric,
+  INITCOND = 0 );
+
+-- Test 10) Aggregate Function
+SELECT mapreduce('@abs_srcdir@/yml/aggFunction.yml') ORDER BY 1;
+
+-- Test 11) Built-in Functions
+SELECT mapreduce('@abs_srcdir@/yml/builtinfunction.yml') ORDER BY 1;
+
+-- Test 12) Ambigious function
+SELECT mapreduce('@abs_srcdir@/yml/ambiguousfunction.yml') ORDER BY 1;
+
+-- Test 13) Parameter override
+SELECT mapreduce('@abs_srcdir@/yml/paramoverride.yml') ORDER BY 1;
+
+-- Test 14) Incorrect parameter type
+SELECT mapreduce('@abs_srcdir@/yml/paramdifftype.yml') ORDER BY 1;
 --
 -- Cleanup) Restore normal formatting options
 --

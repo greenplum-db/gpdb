@@ -1,0 +1,13 @@
+CREATE READABLE EXTERNAL TABLE s3regress_normal (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/ config=@config_file@') FORMAT 'csv';
+
+SELECT count(*) count, round(sum(open)) sum, round(avg(open)) avg FROM s3regress_normal;
+
+DROP EXTERNAL TABLE s3regress_normal;
+
+CREATE READABLE EXTERNAL TABLE s3regress_normal_onmaster (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/ config=@config_file@') ON MASTER FORMAT 'csv';
+
+SELECT count(*) count, round(sum(open)) sum, round(avg(open)) avg FROM s3regress_normal_onmaster;
+
+DROP EXTERNAL TABLE s3regress_normal_onmaster;

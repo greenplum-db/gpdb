@@ -1,0 +1,32 @@
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description test3: Delete with predicate
+-- start_ignore
+SET gp_optimizer=on;SET gp_log_optimizer=on;
+SET
+SET
+-- end_ignore
+SELECT COUNT(*) FROM dml_heap_s;
+ count 
+-------
+   113
+(1 row)
+
+SELECT COUNT(*) FROM dml_heap_s WHERE a is NULL;
+ count 
+-------
+    12
+(1 row)
+
+DELETE FROM dml_heap_s WHERE a is NULL; 
+DELETE 12
+SELECT COUNT(*) FROM dml_heap_s;
+ count 
+-------
+   101
+(1 row)
+

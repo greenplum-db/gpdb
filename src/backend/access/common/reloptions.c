@@ -64,8 +64,10 @@ accumAOStorageOpt(char *name, char *value,
 	if (pg_strcasecmp(SOPT_APPENDONLY, name) == 0)
 	{
 		if (!parse_bool(value, &boolval))
-			elog(ERROR, "invalid bool value \"%s\" for storage option \"%s\"",
-				 value, name);
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("invalid bool value \"%s\" for storage option \"%s\"",
+							value, name)));
 		/* "appendonly" option is explicitly specified. */
 		if (foundAO != NULL)
 			*foundAO = true;
@@ -87,8 +89,10 @@ accumAOStorageOpt(char *name, char *value,
 	{
 		if (!parse_int(value, &intval, 0 /* unit flags */,
 					   NULL /* hint message */))
-			elog(ERROR, "invalid integer value \"%s\" for storage option \"%s\"",
-				 value, name);
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("invalid integer value \"%s\" for storage option \"%s\"",
+							value, name)));
 		appendStringInfo(&buf, "%s=%d", SOPT_BLOCKSIZE, intval);
 	}
 	else if (pg_strcasecmp(SOPT_COMPTYPE, name) == 0)
@@ -99,15 +103,19 @@ accumAOStorageOpt(char *name, char *value,
 	{
 		if (!parse_int(value, &intval, 0 /* unit flags */,
 					   NULL /* hint message */))
-			elog(ERROR, "invalid integer value \"%s\" for storage option \"%s\"",
-				 value, name);
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("invalid integer value \"%s\" for storage option \"%s\"",
+							value, name)));
 		appendStringInfo(&buf, "%s=%d", SOPT_COMPLEVEL, intval);
 	}
 	else if (pg_strcasecmp(SOPT_CHECKSUM, name) == 0)
 	{
 		if (!parse_bool(value, &boolval))
-			elog(ERROR, "invalid bool value \"%s\" for storage option \"%s\"",
-				 value, name);
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("invalid bool value \"%s\" for storage option \"%s\"",
+							value, name)));
 		appendStringInfo(&buf, "%s=%s", SOPT_CHECKSUM, boolval ? "true" : "false");
 	}
 	else if (pg_strcasecmp(SOPT_ORIENTATION, name) == 0)
@@ -115,14 +123,18 @@ accumAOStorageOpt(char *name, char *value,
 		if ((pg_strcasecmp(value, "row") != 0) &&
 			(pg_strcasecmp(value, "column") != 0))
 		{
-			elog(ERROR, "invalid value \"%s\" for storage option \"%s\"",
-				 value, name);
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("invalid value \"%s\" for storage option \"%s\"",
+							value, name)));
 		}
 		appendStringInfo(&buf, "%s=%s", SOPT_ORIENTATION, value);
 	}
 	else
 	{
-		elog(ERROR, "invalid storage option \"%s\"", name);
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("invalid storage option \"%s\"", name)));
 	}
 
 	t = cstring_to_text(buf.data);
@@ -414,8 +426,10 @@ parseAOStorageOpts(const char *opts_str, bool *aovalue)
 				}
 				else if (!isspace(*cp))
 				{
-					elog(ERROR, "invalid storage option name in \"%s\"",
-						 opts_str);
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("invalid storage option name in \"%s\"",
+									opts_str)));
 				}
 				break;
 			case NAME_TOKEN:
@@ -424,8 +438,10 @@ parseAOStorageOpts(const char *opts_str, bool *aovalue)
 				else if (*cp == '=')
 					st = LEADING_VALUE;
 				else if (!isalpha(*cp))
-					elog(ERROR, "invalid storage option name in \"%s\"",
-						 opts_str);
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("invalid storage option name in \"%s\"",
+									opts_str)));
 				if (st != NAME_TOKEN)
 				{
 					name = palloc(cp - name_st + 1);
@@ -439,8 +455,9 @@ parseAOStorageOpts(const char *opts_str, bool *aovalue)
 				if (*cp == '=')
 					st = LEADING_VALUE;
 				else if (!isspace(*cp))
-					elog(ERROR, "invalid value for option \"%s\", "
-						 "expected \"=\"", name);
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("invalid value for option \"%s\", expected \"=\"", name)));
 				break;
 			case LEADING_VALUE:
 				if (isalnum(*cp))
@@ -449,7 +466,9 @@ parseAOStorageOpts(const char *opts_str, bool *aovalue)
 					value_st = cp;
 				}
 				else if (!isspace(*cp))
-					elog(ERROR, "invalid value for option \"%s\"", name);
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("invalid value for option \"%s\"", name)));
 				break;
 			case VALUE_TOKEN:
 				if (isspace(*cp))
@@ -460,7 +479,9 @@ parseAOStorageOpts(const char *opts_str, bool *aovalue)
 					st = LEADING_NAME;
 				/* Need to check '_' for rle_type */
 				else if (!(isalnum(*cp) || *cp == '_'))
-					elog(ERROR, "invalid value for option \"%s\"", name);
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							 errmsg("invalid value for option \"%s\"", name)));
 				if (st != VALUE_TOKEN)
 				{
 					value = palloc(cp - value_st + 1);
@@ -483,7 +504,9 @@ parseAOStorageOpts(const char *opts_str, bool *aovalue)
 				else if (*cp == '\0')
 					st = EOS;
 				else if (!isspace(*cp))
-					elog(ERROR, "syntax error after \"%s\"", value);
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("syntax error after \"%s\"", value)));
 				break;
 			case EOS:
 				/*
@@ -998,9 +1021,7 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 		if (relkind != RELKIND_RELATION)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("usage of parameter \"appendonly\" in a non "
-							"relation object is not supported"),
-					 errOmitLocation(false)));
+					 errmsg("usage of parameter \"appendonly\" in a non relation object is not supported")));
 
 		if (!parse_bool(values[1], &result->appendonly))
 		{
@@ -1017,9 +1038,7 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 		if (relkind != RELKIND_RELATION && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("usage of parameter \"blocksize\" in a non "
-							"relation object is not supported"),
-					 errOmitLocation(false)));
+					 errmsg("usage of parameter \"blocksize\" in a non relation object is not supported")));
 
 		if (!result->appendonly && validate)
 			ereport(ERROR,
@@ -1050,9 +1069,7 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 		if (relkind != RELKIND_RELATION && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("usage of parameter \"compresstype\" in a non "
-							"relation object is not supported"),
-					 errOmitLocation(false)));
+					 errmsg("usage of parameter \"compresstype\" in a non relation object is not supported")));
 
 		if (!result->appendonly && validate)
 			ereport(ERROR,
@@ -1076,9 +1093,7 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 		if (relkind != RELKIND_RELATION && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("usage of parameter \"compresslevel\" in a non "
-							"relation object is not supported"),
-					 errOmitLocation(false)));
+					 errmsg("usage of parameter \"compresslevel\" in a non relation object is not supported")));
 
 		if (!result->appendonly && validate)
 			ereport(ERROR,
@@ -1124,8 +1139,7 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 						 errmsg("compresslevel=%d is out of range for "
 								"quicklz (should be 1)",
-								result->compresslevel),
-						 errOmitLocation(true)));
+								result->compresslevel)));
 
 			result->compresslevel = setDefaultCompressionLevel(
 					result->compresstype);
@@ -1154,8 +1168,7 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("usage of parameter \"checksum\" in a non relation "
-							"object is not supported"),
-					 errOmitLocation(false)));
+							"object is not supported")));
 
 		if (!result->appendonly && validate)
 			ereport(ERROR,
@@ -1182,8 +1195,7 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("usage of parameter \"orientation\" in a non "
-							"relation object is not supported"),
-					 errOmitLocation(false)));
+							"relation object is not supported")));
 
 		if (!result->appendonly && validate)
 			ereport(ERROR,

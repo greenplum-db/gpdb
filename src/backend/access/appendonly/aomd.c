@@ -138,10 +138,11 @@ OpenAOSegmentFile(
 	int primaryError;
 
 	if (!ReadGpRelationNode(
-				rel->rd_node.relNode,
-				segmentFileNum,
-				&persistentTid,
-				&persistentSerialNum))
+			rel->rd_rel->reltablespace,
+			rel->rd_rel->relfilenode,
+			segmentFileNum,
+			&persistentTid,
+			&persistentSerialNum))
 	{
 		if (logicalEof == 0)
 			return false;

@@ -361,11 +361,10 @@ DESCR("XML content");
 #define XMLOID 142
 DATA(insert OID = 143 ( _xml	   PGNSP PGUID -1 f b t \054 0 142 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
 
-/* PostgreSQL's original JSON OIDs were 114 and 199 (see https://github.com/postgres/postgres/commit/5384a73f98d9829725186a7b65bf4f8adb3cfaf1#diff-8cd627dd576152b8b60cd08967931fff) */
-DATA(insert OID = 3114 (	json	   PGNSP PGUID -1 f b t \054 0 0 3199 json_in json_out json_recv json_send - - - i x f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 114 (	json	   PGNSP PGUID -1 f b t \054 0 0 199 json_in json_out json_recv json_send - - - i x f 0 -1 0 _null_ _null_ ));
 DESCR("JSON content");
-#define JSONOID 3114
-DATA(insert OID = 3199 (	_json	   PGNSP PGUID -1 f b t \054 0 3114 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
+#define JSONOID 114
+DATA(insert OID = 199 (	_json	   PGNSP PGUID -1 f b t \054 0 114 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
 
 DATA(insert OID = 195 (	complex	   PGNSP PGUID 16 f b t \054 0 0	196 complex_in complex_out complex_recv complex_send - - - d p f 0 -1 0 _null_ _null_ ));
 DESCR("double-precision floating point complex number, 16-byte storage");

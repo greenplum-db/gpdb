@@ -106,13 +106,13 @@ drop table if exists co_can cascade;
 DROP TABLE
 --end_ignore
   create table heap_can(like pt_co_tab_rng);  
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
   create table ao_can(like pt_co_tab_rng) with (appendonly=true);   
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
   create table co_can(like pt_co_tab_rng)  with (appendonly=true,orientation=column);   
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
  alter table pt_co_tab_rng add partition newao start(36) end(40) with (appendonly= true);
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_co_tab_rng_1_prt_newao" for table "pt_co_tab_rng"

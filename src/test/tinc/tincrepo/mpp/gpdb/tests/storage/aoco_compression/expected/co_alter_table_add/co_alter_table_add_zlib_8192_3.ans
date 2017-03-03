@@ -155,8 +155,8 @@ COPY 4883
  a32    | date                        | default '1988-02-21'::date                                                   | plain    | zlib             | 3                 | 8192       | 
  a33    | real                        | default 41114                                                                | plain    | zlib             | 3                 | 8192       | 
  a34    | money                       | default '$7,222.00'::money                                                   | plain    | zlib             | 3                 | 8192       | 
- a35    | cidr                        | default '192.167.2.0/24'::cidr                                               | plain    | zlib             | 3                 | 8192       | 
- a36    | inet                        | default '126.2.3.4'::inet                                                    | plain    | zlib             | 3                 | 8192       | 
+ a35    | cidr                        | default '192.167.2.0/24'::cidr                                               | main     | zlib             | 3                 | 8192       | 
+ a36    | inet                        | default '126.2.3.4'::inet                                                    | main     | zlib             | 3                 | 8192       | 
  a37    | time without time zone      | default '10:31:45'::time without time zone                                   | plain    | zlib             | 3                 | 8192       | 
  a38    | text                        | default 'sdhjfsfksfkjskjfksjfkjsdfkjdshkjfhdsjkfkjsd'::text                  | extended | zlib             | 3                 | 8192       | 
  a39    | bit(1)                      | default B'0'::"bit"                                                          | extended | zlib             | 3                 | 8192       | 

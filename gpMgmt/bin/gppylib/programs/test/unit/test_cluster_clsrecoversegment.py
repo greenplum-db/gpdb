@@ -1,135 +1,153 @@
 #!/usr/bin/env python
 
-import os
-import unittest2 as unittest
-
+from gparray import GpDB, GpArray, FAULT_STRATEGY_NONE
 from gppylib import gparray
-from gppylib.commands.base import CommandResult
-from gppylib.mainUtils import ExceptionNoStackTraceNeeded
+from gppylib.commands.base import CommandResult, WorkerPool, Command
 from gppylib.programs.clsRecoverSegment import GpRecoverSegmentProgram
-from mock import MagicMock, Mock, mock_open, patch
+from mock import Mock, patch, MagicMock
 
-class GpRecoverSegmentProgramTestCase(unittest.TestCase):
+from system.configurationInterface import GpConfigurationProvider
+from test.unit.gp_unittest import GpTestCase
 
-    def _get_mock_segment(self, name, port, address, datadir):
-        m = Mock()
-        m.getSegmentHostName.return_value = name
-        m.getSegmentAddress.return_value = address 
-        m.getSegmentPort.return_value = port
-        m.getSegmentDatadirectory.return_value = datadir
-        return m
 
-    @patch('gppylib.programs.clsRecoverSegment.GpRecoverSegmentProgram._get_dblist', return_value=[['template1']])
-    def test_check_persistent_tables(self, mock1):
-        options = Mock()
-        segments = [self._get_mock_segment('seg1', '1234', 'seg1', '/tmp/seg1'), self._get_mock_segment('seg2', '2345', 'seg2', '/tmp/seg2')]
-        mock_pool = Mock()
-        m1 = Mock()
-        m1.get_results.return_value = ''
-        m2 = Mock()
-        m2.get_results.return_value = ''
-        mock_pool.getCompletedItems.return_value = [m1, m2]
-        gprecover_prog = GpRecoverSegmentProgram(options)
-        gprecover_prog._GpRecoverSegmentProgram__pool = mock_pool 
-        gprecover_prog._check_persistent_tables(segments)
+class GpRecoverSegmentProgramTestCase(GpTestCase):
+    def setUp(self):
+        raw_options = GpRecoverSegmentProgram.createParser()
+        (options, _) = raw_options.parse_args()
+        options.spareDataDirectoryFile = None
+        options.newRecoverHosts = None
+        self.subject = GpRecoverSegmentProgram(options)
 
-    @patch('gppylib.programs.clsRecoverSegment.GpRecoverSegmentProgram._get_dblist', return_value=[['template1']])
-    def test_check_persistent_tables_no_segments(self, mock1):
-        options = Mock()
-        segments = []
-        mock_pool = Mock() 
-        mock_pool.getCompletedItems.return_value = []
-        gprecover_prog = GpRecoverSegmentProgram(options)
-        gprecover_prog._GpRecoverSegmentProgram__pool = mock_pool 
-        gprecover_prog._check_persistent_tables(segments)
+        self.execSqlResult = Mock(spec=['fetchall'])
 
-    @patch('gppylib.programs.clsRecoverSegment.GpRecoverSegmentProgram._get_dblist', return_value=[['template1']])
-    def test_check_persistent_tables_error(self, mock1):
-        options = Mock()
-        segments = [self._get_mock_segment('seg1', '1234', 'seg1', '/tmp/seg1'), self._get_mock_segment('seg2', '2345', 'seg2', '/tmp/seg2')]
-        mock_pool = Mock()
-        m1 = Mock()
-        m1.get_results.return_value = ['sdfsdf']
-        m2 = Mock()
-        m2.get_results.return_value = ['asdfas']
-        mock_pool.getCompletedItems.return_value = [m1, m2]
-        gprecover_prog = GpRecoverSegmentProgram(options)
-        gprecover_prog._GpRecoverSegmentProgram__pool = mock_pool 
+        self.gp_env = Mock()
+        GpMasterEnvironmentMock = Mock(return_value=self.gp_env)
+
+        self.gparray = Mock(spec=GpArray)
+        self.gparray.getDbList.return_value = self._segments_mock()
+
+        configProviderMock = Mock(spec=GpConfigurationProvider)
+        configProviderMock.initializeProvider.return_value = configProviderMock
+        configProviderMock.loadSystemConfig.return_value = self.gparray
+
+        self.getConfigProviderFunctionMock = Mock(GpConfigurationProvider)
+        self.getConfigProviderFunctionMock.return_value = configProviderMock
+
+        self.subject.logger = Mock()
+
+        self.worker_pool = Mock(spec=WorkerPool, return_value=None)
+        self.worker_pool.getCompletedItems.return_value = []
+        self.worker_pool.logger = self.subject.logger
+        self.worker_pool.addCommand.return_value = None
+        self.pool_completed = []
+
+
+        self.apply_patches([
+            patch("gppylib.db.dbconn.connect"),
+            patch("gppylib.db.dbconn.DbURL"),
+            patch("gppylib.db.dbconn.execSQL", return_value=self.execSqlResult),
+            patch('time.sleep'),
+
+            patch('gppylib.programs.clsRecoverSegment.GpMasterEnvironment', GpMasterEnvironmentMock),
+            # patch('gppylib.system.environment.GpMasterEnvironment.__init__', self.gp_env),
+            # patch('gppylib.system.environment.GpMasterEnvironment.getMasterPort'),
+            patch('gppylib.system.faultProberInterface.getFaultProber'),
+            patch('gppylib.system.configurationInterface.getConfigurationProvider', self.getConfigProviderFunctionMock),
+
+            patch('gppylib.commands.base.WorkerPool.__init__', self.worker_pool),
+            patch('gppylib.commands.base.WorkerPool.getCompletedItems', return_value=self.pool_completed),
+            patch('gppylib.commands.base.WorkerPool.addCommand'),
+            patch('gppylib.commands.base.WorkerPool.join'),
+        ])
+
+        # tests make use of a workaround to access a python attribute that is normally
+        # name mangled when specified with a "__" prefix. That workaround is to use _<class>__<attribute>
+        # such as  self.subject._GpRecoverSegmentProgram__pool = mock_pool
+        self.subject._GpRecoverSegmentProgram__pool = self.worker_pool
+
+    def test_check_persistent_tables__when_no_errors_detected__succeeds(self):
+        segments = [self._get_mock_segment('seg1', '1234', 'seg1', '/tmp/seg1'),
+                    self._get_mock_segment('seg2', '2345', 'seg2', '/tmp/seg2')]
+        command1 = Mock(spec=Command)
+        command1.get_results.return_value = ''
+        command2 = Mock(spec=Command)
+        command2.get_results.return_value = ''
+        self.execSqlResult.fetchall.return_value = [['template1']]
+        self.worker_pool.getCompletedItems.return_value = [command1, command2]
+        self.subject._check_persistent_tables(segments)
+
+    def test_check_persistent_tables__with_no_segments__succeeds(self):
+        self.execSqlResult.fetchall.return_value = [['template1']]
+        self.subject._check_persistent_tables([])
+
+    def test_check_persistent_tables__when_error_exists__raises(self):
+        self.execSqlResult.fetchall.return_value = [['template1']]
+        segments = [self._get_mock_segment('seg1', '1234', 'seg1', '/tmp/seg1'),
+                    self._get_mock_segment('seg2', '2345', 'seg2', '/tmp/seg2')]
+        command1 = Mock()
+        command1.get_results.return_value = ['sdfsdf']
+        command2 = Mock()
+        command2.get_results.return_value = ['asdfas']
+        self.worker_pool.getCompletedItems.return_value = [command1, command2]
         with self.assertRaisesRegexp(Exception, 'Please fix the persistent tables issue'):
-            gprecover_prog._check_persistent_tables(segments)
+            self.subject._check_persistent_tables(segments)
 
-    @patch('gppylib.programs.clsRecoverSegment.GpRecoverSegmentProgram._check_segment_state_for_connection')
-    @patch('time.sleep')
-    def test_check_database_connection(self, mock1, mock2):
-        options = Mock()
-        confProvider = Mock()
-        gprecover_prog = GpRecoverSegmentProgram(options)
-        self.assertTrue(gprecover_prog._check_database_connection(confProvider))
+    def test_check_database_connection__when_all_segments_are_ready_to_connect__returns_true(self):
+        self.gparray.getDbList.return_value = []
+        conf_provider = self._get_mock_conf_provider(self.gparray)
+        self.assertTrue(self.subject._check_database_connection(conf_provider))
 
-    @patch('gppylib.programs.clsRecoverSegment.GpRecoverSegmentProgram._check_segment_state_for_connection', side_effect=[Exception('Error')] * 5)
-    @patch('time.sleep')
-    def test_check_database_connection_exceed_max_retries(self, mock1, mock2):
-        options = Mock()
-        confProvider = Mock()
-        gprecover_prog = GpRecoverSegmentProgram(options)
-        self.assertFalse(gprecover_prog._check_database_connection(confProvider))
+    def test_check_database_connection__when_raises_beyond_max_retries__returns_false(self):
+        conf_provider_that_raises = Mock(spec=GpConfigurationProvider)
+        self.assertFalse(self.subject._check_database_connection(conf_provider_that_raises))
 
-    def test_check_segment_state(self):
-        options = Mock()
-        mock_pool = Mock()
-        m1 = Mock()
-        m1.get_results.return_value = CommandResult(1, 'Failed to connect', '', False, True)
-        m2 = Mock()
-        m2.get_results.return_value = CommandResult(0, 'segmentState: Ready', '', False, True)
-        mock_pool.getCompletedItems.return_value = []
-        confProvider = Mock()
-        m1 = Mock()
-        m1.getSegmentHostName.return_value = 'foo1'
-        m1.isSegmentUp.return_value = True
-        m1.isSegmentMaster.return_value = False
-        m2 = Mock()
-        m2.getSegmentHostName.return_value = 'foo2'
-        m2.isSegmentUp.return_value = True
-        m2.isSegmentMaster.return_value = False
-        gparray = Mock()
-        gparray.getDbList.return_value = [m1, m2]
-        confProvider.loadSystemConfig.return_value = gparray 
-        gprecover_prog = GpRecoverSegmentProgram(options)
-        gprecover_prog._GpRecoverSegmentProgram__pool = mock_pool 
-        gprecover_prog._check_segment_state_for_connection(confProvider)
+    def test_check_segment_state__when_all_segments_ready__succeeds(self):
+        conf_provider = self._get_mock_conf_provider(self.gparray)
 
-    def test_check_segment_state_with_segment_not_ready(self):
-        options = Mock()
-        m1 = Mock()
-        m1.get_results.return_value = CommandResult(0, 'Failed to connect', '', False, True)
-        m2 = Mock()
-        m2.get_results.return_value = CommandResult(0, 'segmentState: Not Ready', '', False, True)
-        mock_pool = Mock()
-        mock_pool.getCompletedItems.return_value = [m1, m2]
-        m1 = Mock()
-        m1.getSegmentHostName.return_value = 'foo1'
-        m1.isSegmentUp.return_value = True
-        m1.isSegmentMaster.return_value = False
-        m2 = Mock()
-        m2.getSegmentHostName.return_value = 'foo2'
-        m2.isSegmentUp.return_value = True
-        m2.isSegmentMaster.return_value = False
-        gparray = Mock()
-        gparray.getDbList.return_value = [m1, m2]
-        confProvider = Mock()
-        confProvider.loadSystemConfig.return_value = gparray 
-        gprecover_prog = GpRecoverSegmentProgram(options)
-        gprecover_prog._GpRecoverSegmentProgram__pool = mock_pool 
+        command1 = Mock(spec=Command)
+        command1.get_results.return_value = CommandResult(0, '', 'segmentState: Ready', False, True)
+        command2 = Mock(spec=Command)
+        command2.get_results.return_value = CommandResult(1, '', 'segmentState: Ready', False, True)
+        self.worker_pool.getCompletedItems.return_value = [command1, command2]
+
+        self.subject._check_segment_state_for_connection(conf_provider)
+
+    def test_check_segment_state__when_one_segment_not_ready__raises(self):
+        segment1 = Mock(spec=GpDB)
+        segment1.getSegmentHostName.return_value = 'foo1'
+        segment1.isSegmentUp.return_value = True
+        segment1.isSegmentMaster.return_value = False
+        segment1.isSegmentStandby.return_value = False
+
+        segment2 = Mock(spec=GpDB)
+        segment2.getSegmentHostName.return_value = 'foo2'
+        segment2.isSegmentUp.return_value = True
+        segment2.isSegmentMaster.return_value = False
+        segment2.isSegmentStandby.return_value = False
+
+        gparray_mock = Mock(spec=GpArray)
+        gparray_mock.getDbList.return_value = [segment1, segment2]
+
+        conf_provider = self._get_mock_conf_provider(gparray_mock)
+
+        command1 = Mock(spec=Command)
+        command1.get_results.return_value = CommandResult(0, '', 'segmentState: Ready', False, True)
+        command2 = Mock(spec=Command)
+        command2.get_results.return_value = CommandResult(1, '', 'Failed to connect', False, True)
+
+        self.worker_pool.getCompletedItems.return_value = [command1, command2]
+
         with self.assertRaisesRegexp(Exception, 'Not ready to connect to database'):
-            gprecover_prog._check_segment_state_for_connection(confProvider)
+            self.subject._check_segment_state_for_connection(conf_provider)
 
     @patch('gppylib.commands.base.Command.get_results')
-    def test_check_segment_state_ready_for_recovery_ignores_initial_stdout_warnings(self, mock_results):
-        options = Mock()
-        gprecover_prog = GpRecoverSegmentProgram(options)
-        gprecover_prog.logger.info = Mock()
-        mock_results.return_value = CommandResult(0, '', 'Warning: Permanently added "a4eb06fc188f,172.17.0.2" (RSA) to the list of \nmode: PrimarySegment\nsegmentState: ChangeTrackingDisabled\ndataState: InChangeTracking\n', False, True)
-        segment_mock = Mock()
+    def test_check_segment_state_ready_for_recovery_ignores_initial_stderr_warnings(self, mock_results):
+        mock_results.return_value = CommandResult(0, '',
+                                                  'Warning: Permanently added "a4eb06fc188f,172.17.0.2" (RSA) to the list of \n'
+                                                  'mode: PrimarySegment\nsegmentState: ChangeTrackingDisabled\n'
+                                                  'dataState: InChangeTracking\n',
+                                                  False, True)
+        segment_mock = Mock(spec=GpDB)
         segment_mock.isSegmentQD.return_value = False
         segment_mock.isSegmentModeInChangeLogging.return_value = True
         segment_mock.getSegmentHostName.return_value = 'foo1'
@@ -140,108 +158,129 @@ class GpRecoverSegmentProgramTestCase(unittest.TestCase):
         segment_mock.getSegmentMode.return_value = 'c'
 
         segmentList = [segment_mock]
-        dbsMap = {2:segment_mock}
+        dbsMap = {2: segment_mock}
 
-        mock_pool= Mock()
-        mock_pool.addCommand = Mock()
-        mock_pool.join = Mock()
-        gprecover_prog._GpRecoverSegmentProgram__pool = mock_pool
+        segmentStates = self.subject.check_segment_state_ready_for_recovery(segmentList, dbsMap)
 
-        segmentStates = gprecover_prog.check_segment_state_ready_for_recovery(segmentList, dbsMap)
         self.assertEquals(segmentStates, {2: 'ChangeTrackingDisabled'})
-        gprecover_prog.logger.info.assert_called_once_with('Warning: Permanently added "a4eb06fc188f,172.17.0.2" (RSA) to the list of ')
+        self.subject.logger.info.assert_called_once_with(
+            'Warning: Permanently added "a4eb06fc188f,172.17.0.2" (RSA) to the list of ')
 
     @patch('gppylib.commands.base.Command.get_results')
-    def test_check_segment_state_ready_for_recovery_with_segment_in_change_tracking_disabled(self, mock_results):
-        options = Mock()
-        mock_results.return_value = CommandResult(0, '', 'mode: PrimarySegment\nsegmentState: ChangeTrackingDisabled\ndataState: InChangeTracking\n', False, True)
-        m2 = Mock()
-        m2.isSegmentQD.return_value = False
-        m2.isSegmentModeInChangeLogging.return_value = True
-        m2.getSegmentHostName.return_value = 'foo1'
-        m2.getSegmentDataDirectory.return_value = 'bar'
-        m2.getSegmentPort.return_value = 5555
-        m2.getSegmentDbId.return_value = 2
-        m2.getSegmentRole.return_value = 'p'
-        m2.getSegmentMode.return_value = 'c'
+    def test_check_segment_state_ready_for_recovery_with_segment_in_change_tracking__sets_disabled_state(self,
+                                                                                                         mock_results):
+        mock_results.return_value = CommandResult(0, '',
+                                                  'mode: PrimarySegment\nsegmentState: ChangeTrackingDisabled\n'
+                                                  'dataState: InChangeTracking\n',
+                                                  False, True)
+        segment = Mock(spec=GpDB)
+        segment.isSegmentQD.return_value = False
+        segment.isSegmentModeInChangeLogging.return_value = True
+        segment.getSegmentHostName.return_value = 'foo1'
+        segment.getSegmentDataDirectory.return_value = 'bar'
+        segment.getSegmentPort.return_value = 5555
+        segment.getSegmentDbId.return_value = 2
+        segment.getSegmentRole.return_value = 'p'
+        segment.getSegmentMode.return_value = 'c'
 
-        segmentList = [m2]
-        dbsMap = {2:m2}
+        segmentList = [segment]
+        dbsMap = {2: segment}
 
-        gprecover_prog = GpRecoverSegmentProgram(options)
-        mock_pool= Mock()
-        mock_pool.addCommand = Mock()
-        mock_pool.join = Mock()
-        gprecover_prog._GpRecoverSegmentProgram__pool = mock_pool
-
-        segmentStates = gprecover_prog.check_segment_state_ready_for_recovery(segmentList, dbsMap)
+        segmentStates = self.subject.check_segment_state_ready_for_recovery(segmentList, dbsMap)
         self.assertEquals(segmentStates, {2: 'ChangeTrackingDisabled'})
 
     def test_output_segments_in_change_tracking_disabled_should_print_failed_segments(self):
-        segs_in_change_tracking_disabled = {2:'ChangeTrackingDisabled', 4:'ChangeTrackingDisabled'}
-        options = Mock()
-        gprecover_prog = GpRecoverSegmentProgram(options)
-        gprecover_prog.logger.warn = Mock()
-        gprecover_prog._output_segments_in_change_tracking_disabled(segs_in_change_tracking_disabled)
-        gprecover_prog.logger.warn.assert_called_once_with('Segments with dbid 2 ,4 in change tracking disabled state, need to run recoverseg with -F option.')
+        segs_in_change_tracking_disabled = {2: 'ChangeTrackingDisabled', 4: 'ChangeTrackingDisabled'}
+        self.subject._output_segments_in_change_tracking_disabled(segs_in_change_tracking_disabled)
+        self.subject.logger.warn.assert_called_once_with(
+            'Segments with dbid 2 ,4 in change tracking disabled state, need to run recoverseg with -F option.')
 
     def test_check_segment_change_tracking_disabled_state_return_true(self):
-        options = Mock()
-        gprecover_prog = GpRecoverSegmentProgram(options)
-        res = gprecover_prog.check_segment_change_tracking_disabled_state(gparray.SEGMENT_STATE_CHANGE_TRACKING_DISABLED)
+        res = self.subject.check_segment_change_tracking_disabled_state(
+            gparray.SEGMENT_STATE_CHANGE_TRACKING_DISABLED)
         self.assertEquals(res, True)
 
     def test_check_segment_change_tracking_disabled_state_return_false(self):
-        options = Mock()
-        gprecover_prog = GpRecoverSegmentProgram(options)
-        res = gprecover_prog.check_segment_change_tracking_disabled_state(gparray.SEGMENT_STATE_READY)
+        res = self.subject.check_segment_change_tracking_disabled_state(gparray.SEGMENT_STATE_READY)
         self.assertEquals(res, False)
 
     def test_output_segments_with_persistent_mirroring_disabled_should_print_failed_segments(self):
         segs_with_persistent_mirroring_disabled = [0, 1]
-        options = Mock()
-        gprecover_prog = GpRecoverSegmentProgram(options)
-        gprecover_prog.logger.warn = Mock()
-        gprecover_prog._output_segments_with_persistent_mirroring_disabled(segs_with_persistent_mirroring_disabled)
-        gprecover_prog.logger.warn.assert_called_once_with('Segments with dbid 0, 1 not recovered; persistent mirroring state is disabled.')
+        self.subject._output_segments_with_persistent_mirroring_disabled(segs_with_persistent_mirroring_disabled)
+        self.subject.logger.warn.assert_called_once_with(
+            'Segments with dbid 0, 1 not recovered; persistent mirroring state is disabled.')
 
     def test_output_segments_with_persistent_mirroring_disabled_should_not_print_if_no_segments(self):
         segs_with_persistent_mirroring_disabled = []
-        options = Mock()
-        gprecover_prog = GpRecoverSegmentProgram(options)
-        gprecover_prog.logger.warn = Mock()
-        gprecover_prog._output_segments_with_persistent_mirroring_disabled(segs_with_persistent_mirroring_disabled)
-        assert not gprecover_prog.logger.warn.called
+        self.subject._output_segments_with_persistent_mirroring_disabled(segs_with_persistent_mirroring_disabled)
+        assert not self.subject.logger.warn.called
 
-    @patch('pygresql.pgdb.pgdbCursor.fetchall', return_value=[[3], [1]])
-    def test_is_segment_mirror_state_mismatched_cluster_mirroring_enabled_segment_mirroring_disabled(self, mock_sql):
-        options = Mock()
-        gprecover_prog = GpRecoverSegmentProgram(options)
-        gparray_mock = Mock()
+    def test_is_segment_mirror_state_mismatched_cluster_mirroring_enabled_segment_mirroring_disabled(self):
+        self.execSqlResult.fetchall.return_value = [[3], [1]]
+        gparray_mock = Mock(spec=GpArray)
         gparray_mock.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_FILE_REPLICATION
-        segment_mock = Mock()
+        segment_mock = Mock(spec=GpDB)
         segment_mock.getSegmentContentId.return_value = 0
-        result = gprecover_prog.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
-        self.assertTrue(result)
+        mismatched = self.subject.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
+        self.assertTrue(mismatched)
 
-    @patch('pygresql.pgdb.pgdbCursor.fetchall', return_value=[[3]])
-    def test_is_segment_mirror_state_mismatched_cluster_and_segments_mirroring_enabled(self, mock_sql):
-        options = Mock()
-        gprecover_prog = GpRecoverSegmentProgram(options)
-        gparray_mock = Mock()
+    def test_is_segment_mirror_state_mismatched_cluster_and_segments_mirroring_enabled(self):
+        self.execSqlResult.fetchall.return_value = [[3]]
+        gparray_mock = Mock(spec=GpArray)
         gparray_mock.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_FILE_REPLICATION
-        segment_mock = Mock()
+        segment_mock = Mock(spec=GpDB)
         segment_mock.getSegmentContentId.return_value = 0
-        result = gprecover_prog.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
-        self.assertFalse(result)
+        mismatched = self.subject.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
+        self.assertFalse(mismatched)
 
-    @patch('pygresql.pgdb.pgdbCursor.fetchall', return_value=[[1]])
-    def test_is_segment_mirror_state_mismatched_cluster_and_segments_mirroring_disabled(self, mock_sql):
-        options = Mock()
-        gprecover_prog = GpRecoverSegmentProgram(options)
-        gparray_mock = Mock()
+    def test_is_segment_mirror_state_mismatched_cluster_and_segments_mirroring_disabled(self):
+        gparray_mock = Mock(spec=GpArray)
         gparray_mock.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_NONE
-        segment_mock = Mock()
+        segment_mock = Mock(spec=GpDB)
         segment_mock.getSegmentDbId.return_value = 0
-        result = gprecover_prog.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
-        self.assertFalse(result)
+        mismatched = self.subject.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
+        self.assertFalse(mismatched)
+
+    def test__run__when_no_replication_is_setup__raises(self):
+        self.gparray.getSegDbList.return_value = []
+        self.gparray.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_NONE
+
+        with self.assertRaisesRegexp(Exception, 'replication is not configured'):
+            self.subject.run()
+
+    def test__run__when_fault_strategy_is_SAN__calls_SAN_failback(self):
+        with patch.object(GpRecoverSegmentProgram, 'SanFailback', return_value=None) as san_failback:
+            self.gparray.getSegDbList.return_value = []
+            self.gparray.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_SAN
+
+            self.subject.run()
+            san_failback.assert_called_once_with(self.gparray, self.gp_env)
+
+    ############################################################
+    # Private
+    def _get_mock_segment(self, name, port, address, datadir):
+        segment = Mock(spec=GpDB)
+        segment.getSegmentHostName.return_value = name
+        segment.getSegmentAddress.return_value = address
+        segment.getSegmentPort.return_value = port
+        segment.getSegmentDataDirectory.return_value = datadir
+        return segment
+
+    def _get_mock_conf_provider(self, gparray_result=None):
+        conf_provider = Mock(spec=GpConfigurationProvider)
+        conf_provider.loadSystemConfig.return_value = gparray_result
+        return conf_provider
+
+    def _segments_mock(self):
+        segment1 = Mock(spec=GpDB)
+        segment1.getSegmentHostName.return_value = 'foo1'
+        segment1.isSegmentUp.return_value = True
+        segment1.isSegmentMaster.return_value = False
+        segment1.isSegmentStandby.return_value = False
+        segment2 = Mock(spec=GpDB)
+        segment2.getSegmentHostName.return_value = 'foo2'
+        segment2.isSegmentUp.return_value = True
+        segment2.isSegmentMaster.return_value = False
+        segment2.isSegmentStandby.return_value = False
+        return [segment1, segment2]
+

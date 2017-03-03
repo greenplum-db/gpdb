@@ -128,7 +128,6 @@ workfile_set *workfile_mgr_create_set(enum ExecWorkFileType type, bool can_be_re
 		PlanState *ps);
 void workfile_mgr_close_set(workfile_set *work_set);
 void workfile_mgr_cleanup(void);
-bool workfile_mgr_can_reuse(workfile_set *work_set, PlanState *ps);
 Size workfile_mgr_shmem_size(void);
 void workfile_mgr_cache_init(void);
 void workfile_mgr_mark_complete(workfile_set *work_set);

@@ -72,9 +72,6 @@ class ReindexPgClass(TINCTestCase):
     def test_reindex_pg_class_template1(self):
         """Test that relcache does not contain stale refilenodes after
         crash recovery.
-
-        This used to happen before we started deleting relcache init
-        file at the end of crash recovery pass 2.
         """
         self.dbname = "template1"
         self.test_reindex_pg_class()

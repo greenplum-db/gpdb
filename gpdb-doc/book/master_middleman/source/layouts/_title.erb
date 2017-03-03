@@ -1,0 +1,5 @@
+<% if current_page.data.title %>
+  <h1 class="title-container" <%= current_page.data.dita ? 'style="display: none;"' : '' %>>
+    <%= current_page.data.title %>
+  </h1>
+<% end %>

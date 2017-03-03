@@ -1,0 +1,45 @@
+DROP TABLE IF EXISTS computedcol_dml_int;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/computedcol_dml_int_opt.sql:14: NOTICE:  table "computedcol_dml_int" does not exist, skipping
+DROP TABLE
+CREATE TABLE computedcol_dml_int
+(
+    col1 int DEFAULT 20000,
+    col2 int,
+    col3 char,
+    col4 int,
+    col5 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY RANGE(col2)(partition partone start(1) end(10001) WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start(10001) end(20001) WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start(20001) end(30001), default partition def);
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/computedcol_dml_int_opt.sql:24: NOTICE:  CREATE TABLE will create partition "computedcol_dml_int_1_prt_def" for table "computedcol_dml_int"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/computedcol_dml_int_opt.sql:24: NOTICE:  CREATE TABLE will create partition "computedcol_dml_int_1_prt_partone" for table "computedcol_dml_int"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/computedcol_dml_int_opt.sql:24: NOTICE:  CREATE TABLE will create partition "computedcol_dml_int_1_prt_parttwo" for table "computedcol_dml_int"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/computedcol_dml_int_opt.sql:24: NOTICE:  CREATE TABLE will create partition "computedcol_dml_int_1_prt_partthree" for table "computedcol_dml_int"
+CREATE TABLE
+INSERT INTO computedcol_dml_int(col2,col1,col3,col5,col4) SELECT 10000::int+20000::int, 10000::int+20000::int, 'a', 1,10000::int+20000::int;
+INSERT 0 1
+INSERT INTO computedcol_dml_int(col2,col3,col5,col4) SELECT 10000::int+20000::int,'a', 1,10000::int+20000::int; 
+INSERT 0 1
+SELECT * FROM computedcol_dml_int ORDER BY 1,2,3,4;
+ col1  | col2  | col3 | col4  | col5 
+-------+-------+------+-------+------
+ 20000 | 30000 | a    | 30000 |    1
+ 30000 | 30000 | a    | 30000 |    1
+(2 rows)
+
+UPDATE computedcol_dml_int SET col1=10000::int+20000::int;
+UPDATE 2
+SELECT * FROM computedcol_dml_int ORDER BY 1,2,3,4;
+ col1  | col2  | col3 | col4  | col5 
+-------+-------+------+-------+------
+ 30000 | 30000 | a    | 30000 |    1
+ 30000 | 30000 | a    | 30000 |    1
+(2 rows)
+
+DELETE FROM computedcol_dml_int WHERE col1=20000::int + 10000::int;
+DELETE 2
+SELECT * FROM computedcol_dml_int ORDER BY 1,2,3,4;
+ col1 | col2 | col3 | col4 | col5 
+------+------+------+------+------
+(0 rows)
+

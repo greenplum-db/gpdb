@@ -72,8 +72,8 @@ gpMgmt/bin/gppylib/data/<version>.json file. There is a script for that
 in src/backend/catalog:
 
   cd src/backend/catalog
-  make 4.3.json
-  cp 4.3.json ../../../gpMgmt/bin/gppylib/data
+  make 5.0.json
+  cp 5.0.json ../../../gpMgmt/bin/gppylib/data
 
 
 If you add a column to an existing PostgreSQL catalog, you can use

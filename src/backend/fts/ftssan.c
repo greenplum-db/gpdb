@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * ftsfilerep.c
+ * ftssan.c
  *	  Implementation of interface for FireRep-specific segment state machine
  *	  and transitions
  *

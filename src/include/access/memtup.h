@@ -4,19 +4,10 @@
  * Copyright (c) 2008, Greenplum inc
  *
  */
-#ifndef MEM_TUP_H
-#define MEM_TUP_H
+#ifndef MEMTUP_H
+#define MEMTUP_H
 
 #include "access/tupdesc.h"
-
-/* 
- * TODO: implement this macro - equivalent
- * in functionality to the the following check
- * Assert(!(tup->t_data->t_infomask & HEAP_HASOID));
- * it's a sanity check.
- */
-#define MemTupleNoOidSpace(tuple) Assert(tuple) \
-
 
 typedef enum MemTupleBindFlag
 {
@@ -186,4 +177,4 @@ extern bool MemTupleHasExternal(MemTuple mtup, MemTupleBinding *pbind);
 extern bool memtuple_has_misaligned_attribute(MemTuple mtup, MemTupleBinding *pbind);
 extern MemTuple memtuple_aligned_clone(MemTuple mtup, MemTupleBinding *pbind, bool use_null_saves_aligned);
 
-#endif /* _MEM_TUP_H_ */
+#endif /* MEMTUP_H */

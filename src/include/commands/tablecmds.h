@@ -15,6 +15,7 @@
 #define TABLECMDS_H
 
 #include "access/attnum.h"
+#include "catalog/dependency.h"
 #include "catalog/gp_policy.h"
 #include "executor/executor.h"
 #include "executor/tuptable.h"
@@ -65,9 +66,13 @@ extern void AlterTableInternal(Oid relid, List *cmds, bool recurse);
 
 extern void AlterTableNamespace(RangeVar *relation, const char *newschema);
 
+extern void AlterTableNamespaceInternal(Relation rel, Oid oldNspOid,
+							Oid nspOid, ObjectAddresses *objsMoved);
+
 extern void AlterRelationNamespaceInternal(Relation classRel, Oid relOid,
 							   Oid oldNspOid, Oid newNspOid,
-							   bool hasDependEntry);
+							   bool hasDependEntry,
+							   ObjectAddresses *objsMoved);
 
 extern void CheckTableNotInUse(Relation rel, const char *stmt);
 

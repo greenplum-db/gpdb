@@ -107,7 +107,10 @@ lb_deobfuscate(const char *input)
 		return NULL;
 
 	if (len != sizeof(obfuscate_buf))
+	{
+		free(buf);
 		return NULL;
+	}
 
 	memcpy(&ob_buf, buf, sizeof(obfuscate_buf));
 	free(buf);
@@ -213,6 +216,7 @@ lb_load(const char *filepath)
 	fp = fopen(filepath, "rb");
 	if (fp == NULL)
 	{
+		free(content);
 		mpp_err_msg("ERROR", "ddboost", "could not open credentials file \"%s\" for reading: %s\n",
 					filepath, strerror(errno));
 		return NULL;
@@ -291,7 +295,7 @@ lb_load(const char *filepath)
 		if (content->items == NULL)
 		{
 			mpp_err_msg("ERROR", "ddboost", "out of memory\n");
-			return NULL;
+			goto fail;
 		}
 
 		item = &content->items[content->nitems++];
@@ -301,7 +305,7 @@ lb_load(const char *filepath)
 		if (item->key == NULL || item->value == NULL)
 		{
 			mpp_err_msg("ERROR", "ddboost", "out of memory\n");
-			return NULL;
+			goto fail;
 		}
 	}
 
@@ -309,21 +313,41 @@ lb_load(const char *filepath)
 	{
 		mpp_err_msg("ERROR", "ddboost", "error reading credentials file \"%s\"\n",
 					filepath);
-		fclose(fp);
-		return NULL;
+		goto fail;
 	}
 
 	if (fclose(fp) != 0)
 	{
+		fp = NULL;
 		mpp_err_msg("ERROR", "ddboost", "error closing credentials file \"%s\"\n",
 					strerror(errno));
-		return NULL;
+		goto fail;
 	}
 
 	return content;
 
 fail:
-	fclose(fp);
+
+	if (content->items != NULL)
+	{
+		int i;
+
+		for (i = 0; i < content->nitems; i++)
+		{
+			lockbox_item *item = &content->items[i];
+
+			if (item->key != NULL)
+				free(item->key);
+			if (item->value != NULL)
+				free(item->value);
+		}
+
+		free(content->items);
+	}
+
+	free(content);
+	if (fp != NULL)
+		fclose(fp);
 	return NULL;
 }
 

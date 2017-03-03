@@ -279,7 +279,7 @@ select t from bm_test where n ISNULL;
 -- gp_create_index_concurrently=on), test for this
 set gp_create_index_concurrently=true;
 create index concurrently should_not_work on bm_test using bitmap(a);
-ERROR:  CONCURRENTLY is not supported when creating bitmap indexes (bitmap.c:69)
+ERROR:  CONCURRENTLY is not supported when creating bitmap indexes
 -- test updates
 update bm_test set i4 = 3;
 -- should return nothing

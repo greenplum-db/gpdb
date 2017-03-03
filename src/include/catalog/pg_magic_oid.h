@@ -38,4 +38,14 @@
  */
 #define LowestGPSQLBootstrapObjectId 7500
 
+/*
+ * Reserve a block of OIDs for use during binary upgrade. We create functions
+ * needed during the upgrade here, but they are dropped after the ugprade, so
+ * should not be present in other contexts. They need a reserved block of OIDs
+ * to avoid colliding with user objects that are created later in the upgrade
+ * process.
+ */
+#define FirstBinaryUpgradeReservedObjectId 9000
+#define LastBinaryUpgradeReservedObjectId 9100
+
 #endif

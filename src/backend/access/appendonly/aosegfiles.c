@@ -2036,8 +2036,17 @@ aorow_compression_ratio_internal(Relation parentrel)
 			 * tables upgraded from GPDB 3.3 the eofuncompressed column could
 			 * contain NULL, this is fixed in more recent upgrades.
 			 */
-			if (scanint8(SPI_getvalue(tuple, tupdesc, 1), true, &eof) &&
-				scanint8(SPI_getvalue(tuple, tupdesc, 2), true, &eof_uncomp))
+			char *attr1 = SPI_getvalue(tuple, tupdesc, 1);
+			char *attr2 = SPI_getvalue(tuple, tupdesc, 2);
+
+			if (NULL == attr1 || NULL == attr2)
+			{
+				SPI_finish();
+				PG_RETURN_FLOAT8(1);
+			}
+
+			if (scanint8(attr1, true, &eof) &&
+				scanint8(attr2, true, &eof_uncomp))
 			{
 				/* guard against division by zero */
 				if (eof > 0)
@@ -2174,7 +2183,7 @@ CheckAOConsistencyWithGpRelationNode( Snapshot snapshot, Relation rel, int total
 	}
 
 	/* 
-	 * gp_relation_node alway has a zero. Hence we use Max segment file number plus 1 in order
+	 * gp_relation_node always has a zero. Hence we use Max segment file number plus 1 in order
 	 * to accomodate the zero
 	 */
 	const int num_gp_relation_node_entries = AOTupleId_MaxSegmentFileNum + 1;
@@ -2187,6 +2196,7 @@ CheckAOConsistencyWithGpRelationNode( Snapshot snapshot, Relation rel, int total
 					snapshot,
 					gp_relation_node,
 					rel->rd_id,
+					rel->rd_rel->reltablespace,
 					rel->rd_rel->relfilenode,
 					&gpRelationNodeScan);
 	while ((NULL != GpRelationNodeGetNext(

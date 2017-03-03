@@ -1,0 +1,72 @@
+DROP TABLE IF EXISTS mpp21090_pttab_dropfirstcol_addpt_index_timestamptz;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamptz_opt.sql:14: NOTICE:  table "mpp21090_pttab_dropfirstcol_addpt_index_timestamptz" does not exist, skipping
+DROP TABLE
+CREATE TABLE mpp21090_pttab_dropfirstcol_addpt_index_timestamptz
+(
+    col1 timestamptz,
+    col2 timestamptz,
+    col3 char,
+    col4 timestamptz,
+    col5 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY RANGE(col2)(partition partone start('2013-12-01 12:00:00 PST') end('2013-12-31 12:00:00 PST') WITH(APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start('2013-12-31 12:00:00 PST') end('2014-01-01 12:00:00 PST') WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start('2014-01-01 12:00:00 PST') end('2014-02-01 12:00:00 PST'));
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamptz_opt.sql:24: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_dropfirstcol_addpt_index_timestam_1_prt_partone1" for table "mpp21090_pttab_dropfirstcol_addpt_index_timestamptz"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamptz_opt.sql:24: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_dropfirstcol_addpt_index_timestam_1_prt_parttwo1" for table "mpp21090_pttab_dropfirstcol_addpt_index_timestamptz"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamptz_opt.sql:24: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_dropfirstcol_addpt_index_timest_1_prt_partthree1" for table "mpp21090_pttab_dropfirstcol_addpt_index_timestamptz"
+CREATE TABLE
+INSERT INTO mpp21090_pttab_dropfirstcol_addpt_index_timestamptz VALUES('2013-12-30 12:00:00 PST','2013-12-30 12:00:00 PST','a','2013-12-30 12:00:00 PST',0);
+INSERT 0 1
+DROP INDEX IF EXISTS mpp21090_pttab_dropfirstcol_addpt_index_idx_timestamptz;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamptz_opt.sql:28: NOTICE:  index "mpp21090_pttab_dropfirstcol_addpt_index_idx_timestamptz" does not exist, skipping
+DROP INDEX
+CREATE INDEX mpp21090_pttab_dropfirstcol_addpt_index_idx_timestamptz on mpp21090_pttab_dropfirstcol_addpt_index_timestamptz(col2);
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamptz_opt.sql:29: NOTICE:  building index for child partition "mpp21090_pttab_dropfirstcol_addpt_index_timestam_1_prt_partone1"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamptz_opt.sql:29: NOTICE:  building index for child partition "mpp21090_pttab_dropfirstcol_addpt_index_timestam_1_prt_parttwo1"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamptz_opt.sql:29: NOTICE:  building index for child partition "mpp21090_pttab_dropfirstcol_addpt_index_timest_1_prt_partthree1"
+CREATE INDEX
+ALTER TABLE mpp21090_pttab_dropfirstcol_addpt_index_timestamptz DROP COLUMN col1;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamptz_opt.sql:31: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamptz_opt.sql:31: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamptz_opt.sql:31: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamptz_opt.sql:31: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+ALTER TABLE
+ALTER TABLE mpp21090_pttab_dropfirstcol_addpt_index_timestamptz ADD PARTITION partfour start('2014-02-01 12:00:00 PST') end('2014-03-01 12:00:00 PST') inclusive;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamptz_opt.sql:32: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_dropfirstcol_addpt_index_timesta_1_prt_partfour1" for table "mpp21090_pttab_dropfirstcol_addpt_index_timestamptz"
+ALTER TABLE
+INSERT INTO mpp21090_pttab_dropfirstcol_addpt_index_timestamptz SELECT '2014-02-10 12:00:00 PST','b','2014-02-10 12:00:00 PST', 1;
+INSERT 0 1
+SELECT * FROM mpp21090_pttab_dropfirstcol_addpt_index_timestamptz ORDER BY 1,2,3;
+          col2          | col3 |          col4          | col5 
+------------------------+------+------------------------+------
+ 2013-12-30 12:00:00-08 | a    | 2013-12-30 12:00:00-08 |    0
+ 2014-02-10 12:00:00-08 | b    | 2014-02-10 12:00:00-08 |    1
+(2 rows)
+
+UPDATE mpp21090_pttab_dropfirstcol_addpt_index_timestamptz SET col4 = '2014-01-01 12:00:00 PST' WHERE col2 = '2014-02-10 12:00:00 PST' AND col4 = '2014-02-10 12:00:00 PST';
+UPDATE 1
+SELECT * FROM mpp21090_pttab_dropfirstcol_addpt_index_timestamptz ORDER BY 1,2,3;
+          col2          | col3 |          col4          | col5 
+------------------------+------+------------------------+------
+ 2013-12-30 12:00:00-08 | a    | 2013-12-30 12:00:00-08 |    0
+ 2014-02-10 12:00:00-08 | b    | 2014-01-01 12:00:00-08 |    1
+(2 rows)
+
+-- Update partition key
+UPDATE mpp21090_pttab_dropfirstcol_addpt_index_timestamptz SET col2 = '2014-01-01 12:00:00 PST' WHERE col2 = '2014-02-10 12:00:00 PST' AND col4 = '2014-01-01 12:00:00 PST';
+UPDATE 1
+SELECT * FROM mpp21090_pttab_dropfirstcol_addpt_index_timestamptz ORDER BY 1,2,3;
+          col2          | col3 |          col4          | col5 
+------------------------+------+------------------------+------
+ 2013-12-30 12:00:00-08 | a    | 2013-12-30 12:00:00-08 |    0
+ 2014-01-01 12:00:00-08 | b    | 2014-01-01 12:00:00-08 |    1
+(2 rows)
+
+DELETE FROM mpp21090_pttab_dropfirstcol_addpt_index_timestamptz WHERE col2 = '2014-01-01 12:00:00 PST';
+DELETE 1
+SELECT * FROM mpp21090_pttab_dropfirstcol_addpt_index_timestamptz ORDER BY 1,2,3;
+          col2          | col3 |          col4          | col5 
+------------------------+------+------------------------+------
+ 2013-12-30 12:00:00-08 | a    | 2013-12-30 12:00:00-08 |    0
+(1 row)
+

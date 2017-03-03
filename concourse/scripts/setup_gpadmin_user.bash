@@ -39,19 +39,38 @@ transfer_ownership() {
   chown -R gpadmin:gpadmin /home/gpadmin
 }
 
+set_limits() {
+  # Currently same as what's recommended in install guide
+  if [ -d /etc/security/limits.d ]; then
+    cat > /etc/security/limits.d/gpadmin-limits.conf <<-EOF
+		gpadmin soft core unlimited
+		gpadmin soft nproc 131072
+		gpadmin soft nofile 65536
+	EOF
+  fi
+  # Print now effective limits for gpadmin
+  su gpadmin -c 'ulimit -a'
+}
+
 setup_gpadmin_user() {
   /usr/sbin/useradd gpadmin
   echo -e "password\npassword" | passwd gpadmin
   groupadd supergroup
   usermod -a -G supergroup gpadmin
+  usermod -a -G tty gpadmin
   setup_ssh_for_user gpadmin
   transfer_ownership
+  set_limits
 }
 
 setup_sshd() {
   test -e /etc/ssh/ssh_host_key || ssh-keygen -f /etc/ssh/ssh_host_key -N '' -t rsa1
   test -e /etc/ssh/ssh_host_rsa_key || ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa
   test -e /etc/ssh/ssh_host_dsa_key || ssh-keygen -f /etc/ssh/ssh_host_dsa_key -N '' -t dsa
+
+  # For Centos 7, disable looking for host key types that older Centos versions don't support.
+  sed -ri 's@^HostKey /etc/ssh/ssh_host_ecdsa_key$@#&@' /etc/ssh/sshd_config
+  sed -ri 's@^HostKey /etc/ssh/ssh_host_ed25519_key$@#&@' /etc/ssh/sshd_config
 
   # See https://gist.github.com/gasi/5691565
   sed -ri 's/UsePAM yes/UsePAM no/g' /etc/ssh/sshd_config
@@ -60,8 +79,7 @@ setup_sshd() {
 
   setup_ssh_for_user root
 
-  # Test that sshd can start
-  /etc/init.d/sshd start
+  /usr/sbin/sshd
 
   ssh_keyscan_for_user root
   ssh_keyscan_for_user gpadmin

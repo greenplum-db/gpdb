@@ -15,13 +15,15 @@ top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
 
 BLD_TOP = $(top_builddir)/gpAux
-ifeq ($(enable_orca),yes)
-include $(BLD_TOP)/releng/releng.mk
+
+ifdef ADDON_DIR
+include $(BLD_TOP)/$(ADDON_DIR)/src/Makefile
 endif
 
 SUBDIRS = access bootstrap catalog parser commands executor \
 	fts lib libpq gp_libpq_fe main nodes optimizer port postmaster regex \
-	replication rewrite storage tcop tsearch utils $(top_builddir)/src/timezone cdb
+	replication rewrite storage tcop tsearch utils $(top_builddir)/src/timezone cdb\
+	$(ADDON_SUBDIR)
 
 ifeq ($(enable_orca),yes)
 SUBDIRS += gpopt
@@ -62,15 +64,10 @@ LIBS := $(filter-out -lpgport, $(LIBS)) $(LDAP_LIBS_BE) $(CONNECTEMCLIB)
 LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses, $(LIBS))
 
 # Add ORCA libraries
-ifeq ($(enable_orca),yes)
-LIBS := $(LIBS) -L$(LIBGPOS)/$(OBJDIR_DEFAULT)
-LIBS := $(LIBS) -L$(OPTIMIZER)/libnaucrates/$(OBJDIR_DEFAULT)
-LIBS := $(LIBS) -L$(OPTIMIZER)/libgpdbcost/$(OBJDIR_DEFAULT)
-LIBS := $(LIBS) -L$(OPTIMIZER)/libgpopt/$(OBJDIR_DEFAULT)
-LIBS := $(LIBS) -L$(XERCES_LIBDIR)
-
+#
 # The order of the libraries is significant, when building against static
 # ORCA libraries.
+ifeq ($(enable_orca),yes)
 LIBS := $(LIBS) -lgpopt -lnaucrates -lgpdbcost -lgpos
 LIBS := $(LIBS) -lxerces-c-3.1
 endif

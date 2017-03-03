@@ -1,0 +1,72 @@
+DROP TABLE IF EXISTS mpp21090_pttab_dropfirstcol_addpt_index_timestamp;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamp_opt.sql:14: NOTICE:  table "mpp21090_pttab_dropfirstcol_addpt_index_timestamp" does not exist, skipping
+DROP TABLE
+CREATE TABLE mpp21090_pttab_dropfirstcol_addpt_index_timestamp
+(
+    col1 timestamp,
+    col2 timestamp,
+    col3 char,
+    col4 timestamp,
+    col5 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY RANGE(col2)(partition partone start('2013-12-01 12:00:00') end('2013-12-31 12:00:00') WITH(APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start('2013-12-31 12:00:00') end('2014-01-01 12:00:00') inclusive WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start('2014-01-02 12:00:00') end('2014-02-01 12:00:00'));
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamp_opt.sql:24: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_dropfirstcol_addpt_index_timestamp_1_prt_partone" for table "mpp21090_pttab_dropfirstcol_addpt_index_timestamp"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamp_opt.sql:24: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_dropfirstcol_addpt_index_timestamp_1_prt_parttwo" for table "mpp21090_pttab_dropfirstcol_addpt_index_timestamp"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamp_opt.sql:24: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_dropfirstcol_addpt_index_timesta_1_prt_partthree" for table "mpp21090_pttab_dropfirstcol_addpt_index_timestamp"
+CREATE TABLE
+INSERT INTO mpp21090_pttab_dropfirstcol_addpt_index_timestamp VALUES('2013-12-30 12:00:00','2013-12-30 12:00:00','a','2013-12-30 12:00:00',0);
+INSERT 0 1
+DROP INDEX IF EXISTS mpp21090_pttab_dropfirstcol_addpt_index_idx_timestamp;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamp_opt.sql:28: NOTICE:  index "mpp21090_pttab_dropfirstcol_addpt_index_idx_timestamp" does not exist, skipping
+DROP INDEX
+CREATE INDEX mpp21090_pttab_dropfirstcol_addpt_index_idx_timestamp on mpp21090_pttab_dropfirstcol_addpt_index_timestamp(col2);
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamp_opt.sql:29: NOTICE:  building index for child partition "mpp21090_pttab_dropfirstcol_addpt_index_timestamp_1_prt_partone"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamp_opt.sql:29: NOTICE:  building index for child partition "mpp21090_pttab_dropfirstcol_addpt_index_timestamp_1_prt_parttwo"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamp_opt.sql:29: NOTICE:  building index for child partition "mpp21090_pttab_dropfirstcol_addpt_index_timesta_1_prt_partthree"
+CREATE INDEX
+ALTER TABLE mpp21090_pttab_dropfirstcol_addpt_index_timestamp DROP COLUMN col1;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamp_opt.sql:31: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamp_opt.sql:31: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamp_opt.sql:31: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamp_opt.sql:31: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+ALTER TABLE
+ALTER TABLE mpp21090_pttab_dropfirstcol_addpt_index_timestamp ADD PARTITION partfour start('2014-02-01 12:00:00') end('2014-03-01 12:00:00') inclusive;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_timestamp_opt.sql:32: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_dropfirstcol_addpt_index_timestam_1_prt_partfour" for table "mpp21090_pttab_dropfirstcol_addpt_index_timestamp"
+ALTER TABLE
+INSERT INTO mpp21090_pttab_dropfirstcol_addpt_index_timestamp SELECT '2014-02-10 12:00:00','b','2014-02-10 12:00:00', 1;
+INSERT 0 1
+SELECT * FROM mpp21090_pttab_dropfirstcol_addpt_index_timestamp ORDER BY 1,2,3;
+        col2         | col3 |        col4         | col5 
+---------------------+------+---------------------+------
+ 2013-12-30 12:00:00 | a    | 2013-12-30 12:00:00 |    0
+ 2014-02-10 12:00:00 | b    | 2014-02-10 12:00:00 |    1
+(2 rows)
+
+UPDATE mpp21090_pttab_dropfirstcol_addpt_index_timestamp SET col4 = '2014-01-01 12:00:00' WHERE col2 = '2014-02-10 12:00:00' AND col4 = '2014-02-10 12:00:00';
+UPDATE 1
+SELECT * FROM mpp21090_pttab_dropfirstcol_addpt_index_timestamp ORDER BY 1,2,3;
+        col2         | col3 |        col4         | col5 
+---------------------+------+---------------------+------
+ 2013-12-30 12:00:00 | a    | 2013-12-30 12:00:00 |    0
+ 2014-02-10 12:00:00 | b    | 2014-01-01 12:00:00 |    1
+(2 rows)
+
+-- Update partition key
+UPDATE mpp21090_pttab_dropfirstcol_addpt_index_timestamp SET col2 = '2014-01-01 12:00:00' WHERE col2 = '2014-02-10 12:00:00' AND col4 = '2014-01-01 12:00:00';
+UPDATE 1
+SELECT * FROM mpp21090_pttab_dropfirstcol_addpt_index_timestamp ORDER BY 1,2,3;
+        col2         | col3 |        col4         | col5 
+---------------------+------+---------------------+------
+ 2013-12-30 12:00:00 | a    | 2013-12-30 12:00:00 |    0
+ 2014-01-01 12:00:00 | b    | 2014-01-01 12:00:00 |    1
+(2 rows)
+
+DELETE FROM mpp21090_pttab_dropfirstcol_addpt_index_timestamp WHERE col2 = '2014-01-01 12:00:00';
+DELETE 1
+SELECT * FROM mpp21090_pttab_dropfirstcol_addpt_index_timestamp ORDER BY 1,2,3;
+        col2         | col3 |        col4         | col5 
+---------------------+------+---------------------+------
+ 2013-12-30 12:00:00 | a    | 2013-12-30 12:00:00 |    0
+(1 row)
+

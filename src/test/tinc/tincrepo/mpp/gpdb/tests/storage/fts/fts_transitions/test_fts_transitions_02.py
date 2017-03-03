@@ -50,17 +50,6 @@ class FtsTransitionsPart02(FTSTestCase):
         tinctest.logger.info("\n ===============================================")
         self.sync_postmaster_reset(fault_name, fault_type, fault_role, filerep_state, filerep_role)
 
-    def test_gpconfig_alter(self):
-        '''
-        @data_provider gpconfig
-        '''
-        filerep_role = self.test_data[1][0]
-
-        tinctest.logger.info("\n ===============================================")
-        tinctest.logger.info("\n Starting New Test: %s " % self.test_data[0][1])
-        tinctest.logger.info("\n ===============================================")
-        self.gpconfig_alter(filerep_role)
-
     def test_primary_sync_mirror_cannot_keepup_failover(self):
         tinctest.logger.info("\n ===============================================")
         tinctest.logger.info("\n Starting New Test: test_primary_sync_mirror_cannot_keepup_failover")
@@ -106,12 +95,6 @@ def test_postmaster_reset():
             'test_postmaster_reset_mpp13971': ['filerep_flush','panic','primary','sync1','mirror'] }
     return data
                
-@tinctest.dataProvider('gpconfig')
-def test_gpconfig():
-    data = {'test_12_mirror_sync_filerep_listener_failover': ['primary'],
-            'test_13_primary_sync_filerep_listener_failover': ['mirror']}
-    return data
-
 @tinctest.dataProvider('filerep_fault')
 def test_filerep_fault():
     data = {'test_23_mirror_resync_postmaster_reset_filerep_sender': ['filerep_sender'],

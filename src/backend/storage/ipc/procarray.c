@@ -35,11 +35,11 @@
 #include "access/subtrans.h"
 #include "access/transam.h"
 #include "access/xact.h"
-#include "utils/tqual.h"
 #include "access/twophase.h"
 #include "miscadmin.h"
 #include "storage/procarray.h"
 #include "utils/combocid.h"
+#include "utils/tqual.h"
 #include "cdb/cdbtm.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
@@ -86,7 +86,6 @@ static long xc_slow_answer = 0;
 #define xc_slow_answer_inc()		(xc_slow_answer++)
 
 static void DisplayXidCache(void);
-
 #else							/* !XIDCACHE_DEBUG */
 
 #define xc_by_recent_xmin_inc()		((void) 0)
@@ -97,6 +96,7 @@ static void DisplayXidCache(void);
 #define xc_no_overflow_inc()		((void) 0)
 #define xc_slow_answer_inc()		((void) 0)
 #endif   /* XIDCACHE_DEBUG */
+
 
 /*
  * Report shared-memory space needed by CreateSharedProcArray.
@@ -1102,11 +1102,12 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 		/*
 		 * First call for this snapshot
 		 */
-		snapshot->xip = (TransactionId *)malloc(arrayP->maxProcs * sizeof(TransactionId));
+		snapshot->xip = (TransactionId *)
+			malloc(arrayP->maxProcs * sizeof(TransactionId));
 		if (snapshot->xip == NULL)
-		{
-			ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
-		}
+			ereport(ERROR,
+					(errcode(ERRCODE_OUT_OF_MEMORY),
+					 errmsg("out of memory")));
 
 		Assert(snapshot->subxip == NULL);
 	}
@@ -1116,9 +1117,9 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 		snapshot->subxip = (TransactionId *)
 			malloc(arrayP->maxProcs * PGPROC_MAX_CACHED_SUBXIDS * sizeof(TransactionId));
 		if (snapshot->subxip == NULL)
-		{
-			ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
-		}
+			ereport(ERROR,
+					(errcode(ERRCODE_OUT_OF_MEMORY),
+					 errmsg("out of memory")));
 	}
 
 	/*
@@ -1187,8 +1188,7 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 		{
 			readSharedLocalSnapshot_forCursor(snapshot);
 
-			if (gp_enable_slow_cursor_testmode)
-				pg_usleep(2 * 1000 * 1000); /* 1 sec. */
+			SIMPLE_FAULT_INJECTOR(CursorQEReaderAfterSnapshot);
 
 			return snapshot;
 		}
@@ -1418,12 +1418,14 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 		volatile PGPROC *proc = arrayP->procs[index];
 		TransactionId xid;
 
+#if 0 /* Upstream code not applicable to GPDB, why explained in vacuumStatement_Relation */
 		/* Ignore procs running LAZY VACUUM */
 		if (proc->vacuumFlags & PROC_IN_VACUUM)
 			continue;
+#endif
 
 		/* Update globalxmin to be the smallest valid xmin */
-		xid = proc->xmin;               /* fetch just once */
+		xid = proc->xmin;		/* fetch just once */
 		if (TransactionIdIsNormal(xid) &&
 			TransactionIdPrecedes(xid, globalxmin))
 			globalxmin = xid;

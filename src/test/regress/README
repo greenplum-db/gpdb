@@ -290,3 +290,36 @@ float8/i.86-.*-openbsd=float8-small-is-zero
    variant that seems to work best. Therefore it is safest to use this
    mechanism only for variant results that you are willing to consider
    equally valid in all contexts.
+     __________________________________________________________________
+
+                    UAO row and column test generation
+
+   Row and column orientation tests can be generated from one .source test
+   for Updatable Append Optimized (UAO) tables.  Place the UAO .source
+   tests under input/uao*/ directory, e.g. input/uao_ddl/.  Place
+   corresponding answer files, also named as .source, into output/uao*/
+   directory.  The .source files must begin with the following header:
+
+       create schema <filename_prefix>@orientation@;
+       set search_path="$user",<filename_prefix>@orientation@,public;
+       SET gp_default_storage_options='orientation=@orientation@';
+
+   The schema creation is necessary to ensure tables created by _row.sql
+   files don't conflict with those created by _column.sql.  Using the
+   filename part of .source files is the easiest way to ensure uniqueness.
+   Replace "<filename_prefix>" with actual filename of .source files.
+
+   UAO tables can then be created in the .source test by specifying "with
+   (appendonly=true)" in the create table command.  Orientation of this
+   table is determined by the gp_default_storage_options value.
+
+   Optimizer specific answer files may be named the usual way.
+   E.g. create_ao_tables.source and create_ao_tables_optimizer.source.
+
+   The option "--ao-dir" must be specified on pg_regress command line to
+   generate the UAO row and column tests.  E.g. if create_ao_tables.source
+   test files are placed under input/uao_ddl/ and output/uao_ddl/, run
+   pg_regress as:
+
+       ./pg_regress --ao-dir=uao uao_ddl/create_ao_tables_row \
+       uao_ddl/create_ao_tables_column

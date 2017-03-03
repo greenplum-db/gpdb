@@ -4319,10 +4319,14 @@ FileRepStats_GpmonCreateSock(void)
 		elog(DEBUG1, "FileRepStats_GpmonCreateSock destAddress localhost, port %d\n",
 				 gpperfmon_port);
 
+		pg_freeaddrinfo_all(hint.ai_family, addrs);
 		return;
 	}
-	elog(WARNING, "gpmon: cannot create socket (%m)");
 
+	if (addrs)
+		pg_freeaddrinfo_all(hint.ai_family, addrs);
+
+	elog(WARNING, "gpmon: cannot create socket (%m)");
 }
 
 /*

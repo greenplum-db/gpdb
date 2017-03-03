@@ -1005,7 +1005,7 @@ pqFlush(PGconn *conn)
 /*
  * pqFlushNonBlocking:
  *
- * wrapper for pqFlush, used by FileRep,
+ * wrapper for pqFlush, used by FileRep and dispatcher.
  * conn will be temporarily set to non-blocking mode,
  * so that if not all data could be sent on 1st attempt, 
  * pqFlushNonBlocking will return 1 instead of waiting/retrying.

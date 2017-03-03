@@ -25,7 +25,9 @@
 #include "lib/stringinfo.h"
 #include "libpq/libpq-be.h"
 #include "utils/memutils.h"
+#include "utils/resource_manager.h"
 #include "storage/bfz.h"
+#include "storage/proc.h"
 #include "cdb/memquota.h"
 
 /*
@@ -72,10 +74,6 @@ int			gp_backup_directIO_read_chunk_mb = 20;		/* size of readChunk
 
 bool		gp_external_enable_exec = true;		/* allow ext tables with
 												 * EXECUTE */
-
-bool		gp_external_grant_privileges = false;		/* allow creating
-														 * http/gpfdist/gpfdists
-														 * for non-su */
 
 int			gp_external_max_segs;		/* max segdbs per gpfdist/gpfdists URI */
 
@@ -177,18 +175,6 @@ bool		gp_enable_slow_writer_testmode = false;
  */
 bool		gp_enable_slow_cursor_testmode = false;
 
-/**
- * Hash-join node releases hash table when it returns last tuple.
- */
-bool		gp_eager_hashtable_release = true;
-
-/*
- * TCP port the Interconnect listens on for incoming connections from other
- * backends.  Assigned by initMotionLayerIPC() at process startup.  This port
- * is used for the duration of this process and should never change.
- */
-int			Gp_listener_port;
-
 int			Gp_max_packet_size; /* max Interconnect packet size */
 
 int			Gp_interconnect_queue_depth = 4;	/* max number of messages
@@ -278,9 +264,6 @@ int			gp_motion_slice_noop = 0;
 int			gp_ltrace_flag = 0;
 #endif
 
-/* Internal Features */
-bool		gp_enable_alter_table_inherit_cols = false;
-
 /* During insertion in a table with parquet partitions, require tuples to be sorted by partition key */
 bool		gp_parquet_insert_sort = true;
 
@@ -316,7 +299,6 @@ int			gp_max_plan_size = 0;
 
 /* Disable setting of tuple hints while reading */
 bool		gp_disable_tuple_hints = false;
-int			gp_hashagg_compress_spill_files = 0;
 
 int			gp_workfile_compress_algorithm = 0;
 bool		gp_workfile_checksumming = false;
@@ -524,6 +506,9 @@ assign_gp_session_role(const char *newval, bool doit, GucSource source __attribu
 
 		if (Gp_role == GP_ROLE_DISPATCH)
 			Gp_segment = -1;
+
+		if (Gp_role == GP_ROLE_UTILITY && MyProc != NULL)
+			MyProc->mppIsWriter = false;
 	}
 	return newval;
 }
@@ -735,7 +720,7 @@ GpVars_Verbosity gp_log_interconnect;
 /*
  * gpvars_string_to_verbosity
  */
-GpVars_Verbosity
+static GpVars_Verbosity
 gpvars_string_to_verbosity(const char *s)
 {
 	GpVars_Verbosity result;
@@ -758,7 +743,7 @@ gpvars_string_to_verbosity(const char *s)
 /*
  * gpvars_verbosity_to_string
  */
-const char *
+static const char *
 gpvars_verbosity_to_string(GpVars_Verbosity verbosity)
 {
 	switch (verbosity)
@@ -1207,20 +1192,46 @@ gpvars_assign_gp_fts_probe_pause(bool newval, bool doit, GucSource source)
 	return true;
 }
 
-bool
-gpvars_assign_gp_hash_index(bool newval, bool doit, GucSource source)
+/*
+ * gpvars_assign_gp_resource_manager_policy
+ * gpvars_show_gp_resource_manager_policy
+ */
+const char *
+gpvars_assign_gp_resource_manager_policy(const char *newval, bool doit, GucSource source __attribute__((unused)))
 {
-	if (doit && newval)
+	ResourceManagerPolicy newtype = RESOURCE_MANAGER_POLICY_QUEUE;
+
+	if (newval == NULL || newval[0] == 0 )
+		newtype = RESOURCE_MANAGER_POLICY_QUEUE;
+	else if (!pg_strcasecmp("queue", newval))
+		newtype = RESOURCE_MANAGER_POLICY_QUEUE;
+	else if (!pg_strcasecmp("group", newval))
+		newtype = RESOURCE_MANAGER_POLICY_GROUP;
+	else
+		elog(ERROR, "unknown resource manager policy: current policy is '%s'", gpvars_show_gp_resource_manager_policy());
+
+	if (doit)
 	{
-		if (Gp_role == GP_ROLE_DISPATCH)
-			ereport(WARNING,
-					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				   errmsg("gp_hash_index is deprecated and has no effect")));
+		Gp_resource_manager_policy = newtype;
 	}
 
-	return true;
+	return newval;
 }
 
+const char *
+gpvars_show_gp_resource_manager_policy(void)
+{
+	switch (Gp_resource_manager_policy)
+	{
+		case RESOURCE_MANAGER_POLICY_QUEUE:
+			return "queue";
+		case RESOURCE_MANAGER_POLICY_GROUP:
+			return "group";
+		default:
+			Assert(!"unexpected resource manager policy");
+			return "unknown";
+	}
+}
 /*
  * gpvars_assign_gp_resqueue_memory_policy
  * gpvars_show_gp_resqueue_memory_policy

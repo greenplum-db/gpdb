@@ -498,10 +498,12 @@ SetCurrentFileSegForWrite(AppendOnlyInsertDesc aoInsertDesc)
 		 */
 		if (gp_appendonly_verify_eof &&
 			aoInsertDesc->cur_segno > 0 &&
-			ReadGpRelationNode(aoInsertDesc->aoi_rel->rd_node.relNode,
-							   aoInsertDesc->cur_segno,
-							   &persistentTid,
-							   &persistentSerialNum))
+			ReadGpRelationNode(
+				aoInsertDesc->aoi_rel->rd_rel->reltablespace,
+				aoInsertDesc->aoi_rel->rd_rel->relfilenode,
+				aoInsertDesc->cur_segno,
+				&persistentTid,
+				&persistentSerialNum))
 		{
 			elog(ERROR, "Found gp_relation_node entry for relation name %s, "
 			"relation Oid %u, relfilenode %u, segment file #%d "
@@ -547,19 +549,21 @@ SetCurrentFileSegForWrite(AppendOnlyInsertDesc aoInsertDesc)
 	else
 	{
 		if (!ReadGpRelationNode(
-					aoInsertDesc->aoi_rel->rd_node.relNode,
-					aoInsertDesc->cur_segno,
-					&persistentTid,
-					&persistentSerialNum))
+				aoInsertDesc->aoi_rel->rd_rel->reltablespace,
+				aoInsertDesc->aoi_rel->rd_rel->relfilenode,
+				aoInsertDesc->cur_segno,
+				&persistentTid,
+				&persistentSerialNum))
 		{
 			elog(ERROR, "Did not find gp_relation_node entry for relation name"
-						" %s, relation id %u, relfilenode %u, segment file #%d,"
+						" %s, relation id %u, tablespace %u, relfilenode %u, segment file #%d,"
 						" logical eof " INT64_FORMAT,
-						aoInsertDesc->aoi_rel->rd_rel->relname.data,
-						aoInsertDesc->aoi_rel->rd_id,
-						aoInsertDesc->aoi_rel->rd_node.relNode,
-						aoInsertDesc->cur_segno,
-						eof);
+				 aoInsertDesc->aoi_rel->rd_rel->relname.data,
+				 aoInsertDesc->aoi_rel->rd_id,
+				 aoInsertDesc->aoi_rel->rd_rel->reltablespace,
+				 aoInsertDesc->aoi_rel->rd_rel->relfilenode,
+				 aoInsertDesc->cur_segno,
+				 eof);
 		}
 	}
 
@@ -936,14 +940,9 @@ AppendOnlyExecutorReadBlock_Init(
 	oldcontext = MemoryContextSwitchTo(memoryContext);
 	executorReadBlock->uncompressedBuffer = (uint8 *) palloc(usableBlockSize * sizeof(uint8));
 
-	executorReadBlock->mt_bind = create_memtuple_binding(RelationGetDescr(relation));
-
-	ItemPointerSet(&executorReadBlock->cdb_fake_ctid, 0, 0);
-
 	executorReadBlock->storageRead = storageRead;
 
 	MemoryContextSwitchTo(oldcontext);
-
 }
 
 /*
@@ -959,10 +958,10 @@ AppendOnlyExecutorReadBlock_Finish(
 		executorReadBlock->uncompressedBuffer = NULL;
 	}
 
-	if (executorReadBlock->mt_bind)
+	if (executorReadBlock->numericAtts)
 	{
-		destroy_memtuple_binding(executorReadBlock->mt_bind);
-		executorReadBlock->mt_bind = NULL;
+		pfree(executorReadBlock->numericAtts);
+		executorReadBlock->numericAtts = NULL;
 	}
 }
 
@@ -978,17 +977,20 @@ AppendOnlyExecutorReadBlock_ResetCounts(
  * understood by the rest of the system.
  */
 static MemTuple
-upgrade_tuple(MemTuple mtup, MemTupleBinding *pbind, int formatversion, bool *shouldFree)
+upgrade_tuple(AppendOnlyExecutorReadBlock *executorReadBlock,
+			  MemTuple mtup, MemTupleBinding *pbind, int formatversion, bool *shouldFree)
 {
 	TupleDesc	tupdesc = pbind->tupdesc;
 	const int	natts = tupdesc->natts;
 	MemTuple	newtuple;
+	int			i;
 
 	static Datum *values = NULL;
 	static bool *isnull = NULL;
 	static int nallocated = 0;
 
 	bool		convert_alignment = false;
+	bool		convert_numerics = false;
 
 	/*
 	 * MPP-7372: If the AO table was created before the fix for this issue, it may
@@ -1000,7 +1002,36 @@ upgrade_tuple(MemTuple mtup, MemTupleBinding *pbind, int formatversion, bool *sh
 		memtuple_has_misaligned_attribute(mtup, pbind))
 		convert_alignment = true;
 
-	if (!convert_alignment)
+	if (PG82NumericConversionNeeded(formatversion))
+	{
+		/*
+		 * On first call, figure out which columns are numerics, or domains
+		 * over numerics.
+		 */
+		if (executorReadBlock->numericAtts == NULL)
+		{
+			int			n;
+
+			executorReadBlock->numericAtts = (int *) palloc(natts * sizeof(int));
+
+			n = 0;
+			for (i = 0; i < natts; i++)
+			{
+				Oid			typeoid;
+
+				typeoid = getBaseType(tupdesc->attrs[i]->atttypid);
+				if (typeoid == NUMERICOID)
+					executorReadBlock->numericAtts[n++] = i;
+			}
+			executorReadBlock->numNumericAtts = n;
+		}
+
+		/* If there were any numeric columns, we need to conver them. */
+		if (executorReadBlock->numNumericAtts > 0)
+			convert_numerics = true;
+	}
+
+	if (!convert_alignment && !convert_numerics)
 	{
 		/* No conversion required. Return the original tuple unmodified. */
 		*shouldFree = false;
@@ -1036,6 +1067,41 @@ upgrade_tuple(MemTuple mtup, MemTupleBinding *pbind, int formatversion, bool *sh
 		newtuple = memtuple_copy_to(mtup, pbind, NULL, NULL);
 	}
 
+	/*
+	 * NOTE: we do this *after* creating the new tuple, so that we can
+	 * modify the new, copied, tuple in-place.
+	 */
+	if (convert_numerics)
+	{
+		int			i;
+
+		/*
+		 * Get pointers to the datums within the tuple
+		 */
+		memtuple_deform(newtuple, pbind, values, isnull);
+
+		for (i = 0; i < executorReadBlock->numNumericAtts; i++)
+		{
+			/*
+			 * Before PostgreSQL 8.3, the n_weight and n_sign_dscale fields
+			 * were the other way 'round. Swap them.
+			 */
+			Datum		datum;
+			char	   *numericdata;
+			uint16		tmp;
+
+			if (isnull[executorReadBlock->numericAtts[i]])
+				continue;
+
+			datum = values[executorReadBlock->numericAtts[i]];
+			numericdata = VARDATA_ANY(DatumGetPointer(datum));
+
+			memcpy(&tmp, &numericdata[0], 2);
+			memcpy(&numericdata[0], &numericdata[2], 2);
+			memcpy(&numericdata[2], &tmp, 2);
+		}
+	}
+
 	*shouldFree = true;
 	return newtuple;
 }
@@ -1051,7 +1117,8 @@ AppendOnlyExecutorReadBlock_ProcessTuple(
 	TupleTableSlot 					*slot)
 {
 	bool	valid = true;	// Assume for HeapKeyTestUsingSlot define.
-	AOTupleId *aoTupleId = (AOTupleId*)&executorReadBlock->cdb_fake_ctid;
+	ItemPointerData	fake_ctid;
+	AOTupleId *aoTupleId = (AOTupleId*)&fake_ctid;
 	int			formatVersion = executorReadBlock->storageRead->formatVersion;
 
 	AORelationVersion_CheckValid(formatVersion);
@@ -1066,9 +1133,9 @@ AppendOnlyExecutorReadBlock_ProcessTuple(
 
 		/* If the tuple is not in the latest format, convert it */
 		if (formatVersion < AORelationVersion_GetLatest())
-			tuple = upgrade_tuple(tuple, slot->tts_mt_bind, formatVersion, &shouldFree);
+			tuple = upgrade_tuple(executorReadBlock, tuple, slot->tts_mt_bind, formatVersion, &shouldFree);
 		ExecStoreMinimalTuple(tuple, slot, shouldFree);
-		slot_set_ctid(slot, &(executorReadBlock->cdb_fake_ctid));
+		slot_set_ctid(slot, &fake_ctid);
 	}
 
 
@@ -1083,7 +1150,7 @@ AppendOnlyExecutorReadBlock_ProcessTuple(
 		     AppendOnlyStorageRead_RelationName(executorReadBlock->storageRead),
 		     AOTupleIdToString(aoTupleId),
 		     tupleLen,
-		     memtuple_get_size(tuple, executorReadBlock->mt_bind),
+		     memtuple_get_size(tuple, slot->tts_mt_bind),
 		     executorReadBlock->headerOffsetInFile);
 
 	return valid;
@@ -1657,7 +1724,7 @@ appendonly_beginrangescan_internal(Relation relation,
 	else
 	{
 		attr->compress = true;
-		attr->compressType = NameStr(relation->rd_appendonly->compresstype);
+		attr->compressType = pstrdup(NameStr(relation->rd_appendonly->compresstype));
 	}
 	attr->compressLevel     = relation->rd_appendonly->compresslevel;
 	attr->checksum			= relation->rd_appendonly->checksum;
@@ -2897,11 +2964,6 @@ appendonly_insert_init(Relation rel, int segno, bool update_mode)
 		 */
 		if (!OidIsValid(MemTupleGetOid(instup, aoInsertDesc->mt_bind)))
 			MemTupleSetOid(instup, aoInsertDesc->mt_bind, GetNewOid(relation));
-	}
-	else
-	{
-		/* check there is not space for an OID */
-		MemTupleNoOidSpace(instup);
 	}
 
 	if (aoInsertDesc->useNoToast)

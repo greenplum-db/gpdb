@@ -42,7 +42,6 @@
 /*
  * GUC variables.
  */
-bool	ResourceScheduler;						/* Is scheduling enabled? */
 int		MaxResourceQueues;						/* Max # of queues. */
 int		MaxResourcePortalsPerXact;				/* Max # tracked portals -
 												 * per backend . */

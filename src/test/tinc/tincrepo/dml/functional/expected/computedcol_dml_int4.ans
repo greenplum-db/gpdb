@@ -1,0 +1,45 @@
+DROP TABLE IF EXISTS computedcol_dml_int4;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/computedcol_dml_int4_opt.sql:14: NOTICE:  table "computedcol_dml_int4" does not exist, skipping
+DROP TABLE
+CREATE TABLE computedcol_dml_int4
+(
+    col1 int4 DEFAULT 10000000,
+    col2 int4,
+    col3 char,
+    col4 int4,
+    col5 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY RANGE(col2)(partition partone start(1) end(100000001)  WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start(100000001) end(200000001) WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start(200000001) end(300000001), default partition def);
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/computedcol_dml_int4_opt.sql:24: NOTICE:  CREATE TABLE will create partition "computedcol_dml_int4_1_prt_def" for table "computedcol_dml_int4"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/computedcol_dml_int4_opt.sql:24: NOTICE:  CREATE TABLE will create partition "computedcol_dml_int4_1_prt_partone" for table "computedcol_dml_int4"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/computedcol_dml_int4_opt.sql:24: NOTICE:  CREATE TABLE will create partition "computedcol_dml_int4_1_prt_parttwo" for table "computedcol_dml_int4"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/computedcol_dml_int4_opt.sql:24: NOTICE:  CREATE TABLE will create partition "computedcol_dml_int4_1_prt_partthree" for table "computedcol_dml_int4"
+CREATE TABLE
+INSERT INTO computedcol_dml_int4(col2,col1,col3,col5,col4) SELECT 20000000::int4+10000000::int4, 20000000::int4+10000000::int4, 'a', 1,20000000::int4+10000000::int4;
+INSERT 0 1
+INSERT INTO computedcol_dml_int4(col2,col3,col5,col4) SELECT 20000000::int4+10000000::int4,'a', 1,20000000::int4+10000000::int4; 
+INSERT 0 1
+SELECT * FROM computedcol_dml_int4 ORDER BY 1,2,3,4;
+   col1   |   col2   | col3 |   col4   | col5 
+----------+----------+------+----------+------
+ 10000000 | 30000000 | a    | 30000000 |    1
+ 30000000 | 30000000 | a    | 30000000 |    1
+(2 rows)
+
+UPDATE computedcol_dml_int4 SET col1=20000000::int4+10000000::int4;
+UPDATE 2
+SELECT * FROM computedcol_dml_int4 ORDER BY 1,2,3,4;
+   col1   |   col2   | col3 |   col4   | col5 
+----------+----------+------+----------+------
+ 30000000 | 30000000 | a    | 30000000 |    1
+ 30000000 | 30000000 | a    | 30000000 |    1
+(2 rows)
+
+DELETE FROM computedcol_dml_int4 WHERE col1=10000000::int4 + 20000000::int4;
+DELETE 2
+SELECT * FROM computedcol_dml_int4 ORDER BY 1,2,3,4;
+ col1 | col2 | col3 | col4 | col5 
+------+------+------+------+------
+(0 rows)
+

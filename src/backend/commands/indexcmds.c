@@ -84,7 +84,6 @@ static Oid GetIndexOpClass(List *opclass, Oid attrType,
 static bool relationHasPrimaryKey(Relation rel);
 static bool relationHasUniqueIndex(Relation rel);
 
-bool gp_hash_index = false; /* hash index phase out. */
 
 /*
  * DefineIndex
@@ -235,12 +234,7 @@ DefineIndex(RangeVar *heapRelation,
 	 */
 	if (tableSpaceName)
 	{
-		tablespaceId = get_tablespace_oid(tableSpaceName);
-		if (!OidIsValid(tablespaceId))
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("tablespace \"%s\" does not exist",
-							tableSpaceName)));
+		tablespaceId = get_tablespace_oid(tableSpaceName, false);
 	}
 	else
 	{
@@ -787,9 +781,13 @@ DefineIndex(RangeVar *heapRelation,
 	 * Also, GetCurrentVirtualXIDs never reports our own vxid, so we need not
 	 * check for that.
 	 */
+#if 0  /* Upstream code not applicable to GPDB */
 	old_snapshots = GetCurrentVirtualXIDs(ActiveSnapshot->xmax, false,
 										  PROC_IS_AUTOVACUUM | PROC_IN_VACUUM);
-
+#else
+	old_snapshots = GetCurrentVirtualXIDs(ActiveSnapshot->xmax, false,
+										  PROC_IS_AUTOVACUUM);
+#endif
 	while (VirtualTransactionIdIsValid(*old_snapshots))
 	{
 		VirtualXactLockTableWait(*old_snapshots);
@@ -1589,7 +1587,7 @@ ReindexRelationList(List *relids)
 			stmt->kind = OBJECT_TABLE;
 
 			/* perform reindex locally */
-			if (!reindex_relation(relid, true, true, true, true))
+			if (!reindex_relation(relid, true))
 				ereport(NOTICE,
 					(errmsg("table \"%s\" has no indexes",
 							RelationGetRelationName(rel))));
@@ -1634,7 +1632,7 @@ ReindexTable(ReindexStmt *stmt)
 	 */
 	if (Gp_role == GP_ROLE_EXECUTE)
 	{
-		reindex_relation(stmt->relid, true, true, true, true);
+		reindex_relation(stmt->relid, true);
 		return;
 	}
 

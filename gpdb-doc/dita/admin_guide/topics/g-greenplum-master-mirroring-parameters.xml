@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic55mirror">
+   <title>Greenplum Master and Segment Mirroring Parameters</title>
+   <body>
+      <p>These parameters control the configuration of the replication between Greenplum Database
+         primary master and standby master.</p>
+      <ul>
+         <li id="kh184294">
+            <codeph>keep_wal_segments</codeph>
+         </li>
+         <li id="kh184295">
+            <codeph>repl_catchup_within_range</codeph>
+         </li>
+         <li id="kh184296">
+            <codeph>replication_timeout</codeph>
+         </li>
+         <li id="kh184297">
+            <codeph>wal_receiver_status_interval</codeph>
+         </li>
+      </ul>
+      <p>This parameter controls validation between Greenplum Database primary segment and standby
+         segment during incremental resynchronization.</p>
+      <ul id="ul_azt_hcr_3s">
+         <li>
+            <codeph>filerep_mirrorvalidation_during_resync</codeph>
+         </li>
+      </ul>
+   </body>
+</topic>

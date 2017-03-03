@@ -1,0 +1,59 @@
+-- @author prabhd 
+-- @created 2013-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description test26b: CTE with CTAS, sub-query
+-- start_ignore
+SET gp_optimizer=on;SET gp_log_optimizer=on;
+SET
+SET
+-- end_ignore
+WITH CTE(a,b) as 
+(
+        SELECT a,b FROM foo WHERE a > 1
+) 
+SELECT SUBFOO.c,CTE.a FROM 
+(SELECT CTE.a,bar.c FROM CTE,bar WHERE CTE.a = bar.c) SUBFOO,
+CTE WHERE SUBFOO.c = CTE.b ORDER BY 1;
+ c  | a 
+----+---
+  3 | 2
+  4 | 3
+  5 | 4
+  6 | 5
+  7 | 6
+  8 | 7
+  9 | 8
+ 10 | 9
+(8 rows)
+
+DROP TABLE IF EXISTS newfoo;
+DROP TABLE
+CREATE TABLE newfoo as 
+(
+	WITH CTE(a,b) as 
+	(
+		SELECT a,b FROM foo WHERE a > 1
+	) 
+	SELECT SUBFOO.c,CTE.a FROM 
+		(
+			SELECT CTE.a,bar.c FROM CTE,bar WHERE CTE.a = bar.c
+		) SUBFOO,CTE WHERE SUBFOO.c = CTE.b
+);
+psql:/data/prabhd/test/tincrepo/main/private/prabhd/query/cte/sql/../output/cte_functest_53_gucs.sql:32: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
+SELECT 8
+SELECT * FROM newfoo ORDER BY 1;
+ c  | a 
+----+---
+  3 | 2
+  4 | 3
+  5 | 4
+  6 | 5
+  7 | 6
+  8 | 7
+  9 | 8
+ 10 | 9
+(8 rows)
+

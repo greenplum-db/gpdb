@@ -9,7 +9,141 @@
  * IDENTIFICATION
  *	  src/backend/utils/time/sharedsnapshot.c
  *
- *-------------------------------------------------------------------------
+ * In Greenplum, as part of slice plans, many postgres processes (qExecs, QE)
+ * running on a single segment database as part of the same user's SQL
+ * statement. All of the qExecs that belong to a particular user on a
+ * particular segment database need to have consistent visibility. Idea used
+ * is called "Shared Local Snapshot". Shared-memory data structure
+ * SharedSnapshotSlot shares session and transaction information among
+ * session's gang processes on a particular database instance. The processes
+ * are called a SegMate process group.
+ *
+ * A SegMate process group is a QE (Query Executor) Writer process and 0, 1 or
+ * more QE Reader processes. Greenplum needed to invent a SegMate sharing
+ * mechanism because in Postgres there is only 1 backend and most needed
+ * information is simply available in private memory. With Greenplum session
+ * parallelism on database instances, we need to have a way to share
+ * not-yet-committed session information among the SegMates. This information
+ * includes transaction snapshots, sub-transaction status, so-called combo-cid
+ * mapping, etc.
+ *
+ * An example: the QE readers need to use the same snapshot and command number
+ * information as the QE writer so they see the current data written by the QE
+ * writer. During a transaction, the QE Writer writes new data into the
+ * shared-memory buffered cache. Later in that same transaction, QE Readers
+ * will need to recognize which tuples in the shared-memory buffered cache are
+ * for its session's transaction to perform correctly.
+ *
+ * Another example: the QE readers need to know which sub-transactions are
+ * active or committed for a session's transaction so they can properly read
+ * sub-transaction data written by the QE writer for the transaction.
+ *
+ * So, the theme is to share private, not-yet-committed session transaction
+ * information with the QE Readers so the SegMate process group can all work
+ * on the transaction correctly. [We mostly think of QE Writers/Readers being
+ * on the segments. However, masters have special purpose QE Reader called the
+ * Entry DB Singleton. So, the SegMate module also works on the master.]
+ *
+ * Each shared snapshot is local only to the segment database. High level
+ * Writer gang member establishes a local transaction, acquires the slot in
+ * shared snapshot shmem space and copies the snapshot information into shared
+ * memory where the other qExecs that are segmates can find it. Following
+ * section convers details on how shared memory initialization happens, who
+ * writes the snapshot, how its controlled how/when the readers can read the
+ * snapshot, locking, etc..
+ *
+ * Shared Memory Initialization: Shared memory is setup by the postmaster. One
+ * slot for every user connection on the QD is kind of needed to store a data
+ * structure for a set of segmates to store their snapshot information. In
+ * each slot QE writer stores information defined by SharedSnapshotSlot.
+ *
+ * PQsendMppStatement: Is the same as PQsendQuery except that it also sends a
+ * serialized snapshot and xid. postgres.c has been modified to accept this
+ * new protocol message. It does pretty much the same stuff as it would for a
+ * 'Q' (normal query) except it unpacks the snapshot and xid from the QD and
+ * stores it away. All QEs get sent in a QD snapshot during statement
+ * dispatch.
+ *
+ * Global Session ID: The shared snapshot shared memory is split into slots. A
+ * set of segmates for a given user requires a single slot. The snapshot
+ * information and other information is stored within the snapshot. A unique
+ * session id identifies all the components in the system that are working for
+ * a single user session. Within a single segment database this essentially
+ * defines what it means to be "segmates."  The shared snapshot slot is
+ * identified by this unique session id. The unique session id is sent in from
+ * the QD as a GUC called "mpp_session_id". So the slot's field "slotid" will
+ * store the "mpp_session_id" that WRITER to the slot will use. Readers of the
+ * slot will find the correct slot by finding the one that has the slotid
+ * equal to their own mpp_session_id.
+ *
+ * Single Writer: Mechanism is simplified by introducing the restriction of
+ * only having a single qExec in a set of segmates capable of writing. Single
+ * WRITER qExec is the only qExec amongst all of its segmates that will ever
+ * perform database write operations.  Benefits of the approach, Single WRITER
+ * qExec is the only member of a set of segmates that need to participate in
+ * global transactions. Also... only this WRITER qExec really has to do
+ * anything during commit. Assumption seems since they are just reader qExecs
+ * that this is not a problem. The single WRITER qExec is the only qExec that
+ * is guaranteed to participate in every dispatched statement for a given user
+ * (at least to that segdb). Also, it is this WRITER qExec that performs any
+ * utility statement.
+ *
+ * Coordinating Readers and Writers: The coordination is on when the writer
+ * has set the snapshot such that the readers can get it and use it. In
+ * general, we cannot assume that the writer will get to setting it before the
+ * reader needs it and so we need to build a mechanism for the reader to (1)
+ * know that its reading the right snapshot and (2) know when it can read.
+ * The Mpp_session_id stored in the SharedSnapshotSlot is the piece of
+ * information that lets the reader know it has got the right slot. And it
+ * knows can read it when the xid and cid in the slot match the transactionid
+ * and curid sent in from the QD in the SnapshotInfo field.  Basically QE
+ * READERS aren't allowed to read the shared local snapshot until the shared
+ * local snapshot has the same QD statement id as the QE Reader. i.e. the QE
+ * WRITER updates the local snapshot and then writes the QD statement id into
+ * the slot which identifies the "freshness" of that information. Currently QE
+ * readers check that value and if its not been set they sleep (gasp!) for a
+ * while. Think this approach is definitely not elegant and robust would be
+ * great maybe to replace it with latch based approach.
+ *
+ * Cursor handling through SharedSnapshot: Cursors are funny case because they
+ * read through a snapshot taken when the create cursor command was executed,
+ * not through the current snapshot. Originally, the SharedSnapshotSlot was
+ * designed for just the current command. The default transaction isolation
+ * mode is READ COMMITTED, which cause a new snapshot to be created each
+ * command. Each command in an explicit transaction started with BEGIN and
+ * completed with COMMIT, etc. So, cursors would read through the current
+ * snapshot instead of the create cursor snapshot and see data they shouldn't
+ * see. The problem turns out to be a little more subtle because of the
+ * existence of QE Readers and the fact that QE Readers can be created later –
+ * long after the create cursor command. So, the solution was to serialize the
+ * current snapshot to a temporary file during create cursor so that
+ * subsequently created QE Readers could get the right snapshot to use from
+ * the temporary file and ignore the SharedSnapshotSlot.
+ *
+ * Sub-Transaction handling through SharedSnapshot: QE Readers need to know
+ * which sub-transactions the QE Writer has committed and which are active so
+ * QE Readers can see the right data. While a sub-transaction may be committed
+ * in an active parent transaction, that data is not formally committed until
+ * the parent commits. And, active sub-transactions are not even
+ * sub-transaction committed yet. So, other transactions cannot see active or
+ * committed sub-transaction work yet. Without adding special logic to a QE
+ * Reader, it would be considered another transaction and not see the
+ * committed or active sub-transaction work. This is because QE Readers do not
+ * start their own transaction. We just set a few variables in the xact.c
+ * module to fake making it look like there is a current transaction,
+ * including which sub-transactions are active or committed. This is a
+ * kludge. In order for the QE Reader to fake being part of the QE Writer
+ * transaction, we put the current transaction id and the values of all active
+ * and committed sub-transaction ids into the SharedSnapshotSlot shared-memory
+ * structure. Since shared-memory is not dynamic, poses an arbitrary limit on
+ * the number of sub-transaction ids we keep in the SharedSnapshotSlot
+ * in-memory. Once this limit is exceeded the sub-transaction ids are written
+ * to temp files on disk.  See how the TransactionIdIsCurrentTransactionId
+ * procedure in xact.c checks to see if the backend executing is a QE Reader
+ * (or Entry DB Singleton), and if it is, walk through the sub-transaction ids
+ * in SharedSnapshotSlot.
+ *
+ * -------------------------------------------------------------------------
  */
 
 #include "postgres.h"

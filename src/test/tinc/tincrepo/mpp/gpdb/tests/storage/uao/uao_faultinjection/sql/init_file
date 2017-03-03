@@ -4,7 +4,7 @@
 -- m/DETAIL:/
 -- s/gpfdist.+/ DUMMY_LOCATION /
 -- m/psql:/
--- s/psql:.+\//PATH1\//
+-- s/psql:.+\d+\:\s//
 -- m/(\d+)\.(\d+)\.(\d+)\.(\d+)/
 -- s/(\d+)\.(\d+)\.(\d+)\.(\d+)/HOST/g
 -- m/ /

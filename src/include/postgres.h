@@ -280,7 +280,7 @@ typedef struct
  *	sizeof(short) == 2
  *
  *  Greenplum CDB:
- *     Datum is alway 8 bytes, regardless if it is 32bit or 64bit machine.
+ *     Datum is always 8 bytes, regardless if it is 32bit or 64bit machine.
  *  so may be > sizeof(long).
  *
  * When a type narrower than Datum is stored in a Datum, we place it in the
@@ -455,10 +455,6 @@ extern PGDLLIMPORT bool assert_enabled;
 #define AssertImply(cond1, cond2) \
 		Trap(!(!(cond1) || (cond2)), "AssertImply failed")
 
-extern int ExceptionalCondition(const char *conditionName,
-					 const char *errorType,
-					 const char *fileName, int lineNumber);
-
 #define AssertEquivalent(cond1, cond2) \
 		Trap(!((bool)(cond1) == (bool)(cond2)), "AssertEquivalent failed")
 
@@ -474,7 +470,7 @@ extern int ExceptionalCondition(const char *conditionName,
 extern int ExceptionalCondition(const char *conditionName,
 					 const char *errorType,
 					 const char *fileName, int lineNumber);
-					 
+
 extern int SyncAgentMain(int, char **, const char *);
 extern void CdbProgramErrorHandler(SIGNAL_ARGS);
 extern void gp_set_thread_sigmasks(void);

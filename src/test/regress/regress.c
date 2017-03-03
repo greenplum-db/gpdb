@@ -17,6 +17,7 @@
 #include "catalog/pg_type.h"
 #include "cdb/memquota.h"
 #include "cdb/cdbgang.h"
+#include "cdb/cdbvars.h"
 #include "commands/sequence.h"
 #include "commands/trigger.h"
 #include "executor/executor.h"
@@ -83,8 +84,13 @@ extern Datum cleanupAllGangs(PG_FUNCTION_ARGS);
 /* check if QD has gangs exist */
 extern Datum hasGangsExist(PG_FUNCTION_ARGS);
 
-/* get number of backends on segments except myself */
-extern Datum numBackendsOnSegment(PG_FUNCTION_ARGS);
+/*
+ * check if backends exist
+ * Args:
+ * timeout: = 0, return result immediately
+ * timeout: > 0, block until no backends exist or timeout expired.
+ */
+extern Datum hasBackendsExist(PG_FUNCTION_ARGS);
 
 /*
  * test_atomic_ops was backported from 9.5. This prototype doesn't appear
@@ -2204,10 +2210,14 @@ project_describe(PG_FUNCTION_ARGS)
 	 */
 	avalue = DatumGetInt32(ExecEvalFunctionArgToConst(fexpr, 1, &isnull));
 	if (isnull)
-		elog(ERROR, "unable to resolve type for function");
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("unable to resolve type for function")));
 
 	if (avalue < 1 || avalue > tdesc->natts)
-		elog(ERROR, "invalid column position %d", avalue);
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("invalid column position %d", avalue)));
 
 	/* Build an output tuple a single column based on the column number above */
 	odesc = CreateTemplateTupleDesc(1, false);
@@ -2452,6 +2462,8 @@ PG_FUNCTION_INFO_V1(cleanupAllGangs);
 Datum
 cleanupAllGangs(PG_FUNCTION_ARGS)
 {
+	if (Gp_role != GP_ROLE_DISPATCH)
+		elog(ERROR, "cleanupAllGangs can only be executed on master");
 	DisconnectAndDestroyAllGangs(false);
 	PG_RETURN_BOOL(true);
 }
@@ -2460,27 +2472,43 @@ PG_FUNCTION_INFO_V1(hasGangsExist);
 Datum
 hasGangsExist(PG_FUNCTION_ARGS)
 {
+	if (Gp_role != GP_ROLE_DISPATCH)
+		elog(ERROR, "hasGangsExist can only be executed on master");
 	if (GangsExist())
 		PG_RETURN_BOOL(true);
 	PG_RETURN_BOOL(false);
 }
 
-PG_FUNCTION_INFO_V1(numBackendsOnSegment);
+PG_FUNCTION_INFO_V1(hasBackendsExist);
 Datum
-numBackendsOnSegment(PG_FUNCTION_ARGS)
+hasBackendsExist(PG_FUNCTION_ARGS)
 {
-	int	beid;
-	int32 result = 0;
+	int beid;
+	int32 result;
+	int timeout = PG_GETARG_INT32(0);
+	if (timeout < 0)
+		elog(ERROR, "timeout is expected not to be negative");
 	int pid = getpid();
-	int tot_backends = pgstat_fetch_stat_numbackends();
-	for (beid = 1; beid <= tot_backends; beid++)
+	while (timeout >= 0)
 	{
-		PgBackendStatus *beentry = pgstat_fetch_stat_beentry(beid);
-		if (beentry && beentry->st_procpid >0 && beentry->st_procpid != pid)
-			result++;
+		result = 0;
+		pgstat_clear_snapshot();
+		int tot_backends = pgstat_fetch_stat_numbackends();
+		for (beid = 1; beid <= tot_backends; beid++)
+		{
+			PgBackendStatus *beentry = pgstat_fetch_stat_beentry(beid);
+			if (beentry && beentry->st_procpid >0 && beentry->st_procpid != pid)
+				result++;
+		}
+		if (result == 0 || timeout == 0)
+			break;
+		sleep(1); /* 1 second */
+		timeout--;
 	}
 	
-	PG_RETURN_INT32(result);
+	if (result > 0)
+		PG_RETURN_BOOL(true);
+	PG_RETURN_BOOL(false);
 }
 
 #ifndef PG_HAVE_ATOMIC_FLAG_SIMULATION

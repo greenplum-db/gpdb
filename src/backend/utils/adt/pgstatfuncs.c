@@ -401,7 +401,7 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 	{
 		MemoryContext oldcontext;
 		TupleDesc	tupdesc;
-		int			nattr = 13;
+		int			nattr = 16;
 
 		funcctx = SRF_FIRSTCALL_INIT();
 
@@ -423,6 +423,13 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 
 		if (nattr > 12)
 			TupleDescInitEntry(tupdesc, (AttrNumber) 13, "waiting_for", TEXTOID, -1, 0);
+
+		if (nattr > 13)
+		{
+			TupleDescInitEntry(tupdesc, (AttrNumber) 14, "rsgid", OIDOID, -1, 0);
+			TupleDescInitEntry(tupdesc, (AttrNumber) 15, "rsgname", TEXTOID, -1, 0);
+			TupleDescInitEntry(tupdesc, (AttrNumber) 16, "rsgqueueduration", INTERVALOID, -1, 0);
+		}
 
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
 
@@ -474,8 +481,8 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 	if (funcctx->call_cntr < funcctx->max_calls)
 	{
 		/* for each row */
-		Datum		values[13];
-		bool		nulls[13];
+		Datum		values[16];
+		bool		nulls[16];
 		HeapTuple	tuple;
 		PgBackendStatus *beentry;
 
@@ -621,6 +628,17 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 					nulls[12] = true;
 			}
 
+			if (funcctx->tuple_desc->natts > 13)
+			{
+				Interval	interval;
+
+				MemSet(&interval, 0, sizeof(interval));
+
+				values[13] = ObjectIdGetDatum(0);
+				values[14] = CStringGetTextDatum("default");
+				values[15] = IntervalPGetDatum(&interval);
+			}
+
 		}
 		else
 		{
@@ -635,6 +653,12 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 			values[11] = Int32GetDatum(beentry->st_session_id);
 			if (funcctx->tuple_desc->natts > 12)
 				nulls[12] = true;
+			if (funcctx->tuple_desc->natts > 13)
+			{
+				nulls[13] = true;
+				nulls[14] = true;
+				nulls[15] = true;
+			}
 		}
 
 		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);

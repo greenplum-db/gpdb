@@ -29,7 +29,6 @@
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
-#include "utils/gp_atomic.h"
 
 #define DISPATCH_WAIT_TIMEOUT_MSEC 2000
 
@@ -72,6 +71,7 @@ typedef struct CdbDispatchCmdAsync
 
 }   CdbDispatchCmdAsync;
 
+static int	timeoutCounter = 0;
 
 static void *
 cdbdisp_makeDispatchParams_async(int maxSlices, char *queryText, int len);
@@ -85,6 +85,9 @@ cdbdisp_dispatchToGang_async(struct CdbDispatcherState *ds,
 								struct Gang *gp,
 								int sliceIndex,
 								CdbDispatchDirectDesc * dispDirect);
+static void
+cdbdisp_waitDispatchFinish_async(struct CdbDispatcherState *ds);
+
 static bool
 cdbdisp_checkForCancel_async(struct CdbDispatcherState *ds);
 
@@ -94,7 +97,8 @@ DispatcherInternalFuncs DispatcherAsyncFuncs =
 	cdbdisp_checkForCancel_async,
 	cdbdisp_makeDispatchParams_async,
 	cdbdisp_checkDispatchResult_async,
-	cdbdisp_dispatchToGang_async
+	cdbdisp_dispatchToGang_async,
+	cdbdisp_waitDispatchFinish_async
 };
 
 
@@ -116,6 +120,9 @@ static void
 checkSegmentAlive(CdbDispatchCmdAsync * pParms);
 
 static void
+handlePollError(CdbDispatchCmdAsync* pParms);
+
+static void
 handlePollSuccess(CdbDispatchCmdAsync* pParms, struct pollfd *fds);
 
 /*
@@ -134,9 +141,88 @@ cdbdisp_checkForCancel_async(struct CdbDispatcherState *ds)
 }
 
 /*
+ * Block until all data are dispatched.
+ */
+static void
+cdbdisp_waitDispatchFinish_async(struct CdbDispatcherState *ds)
+{
+	const static int DISPATCH_POLL_TIMEOUT = 500;
+	struct pollfd *fds;
+	int nfds, i;
+	CdbDispatchCmdAsync *pParms = (CdbDispatchCmdAsync*)ds->dispatchParams;
+	int dispatchCount = pParms->dispatchCount;
+
+	fds = (struct pollfd *) palloc(dispatchCount * sizeof(struct pollfd));
+
+	while(true)
+	{
+		int pollRet;
+
+		nfds = 0;
+		memset(fds, 0, dispatchCount * sizeof(struct pollfd));
+
+		for (i = 0; i < dispatchCount; i++)
+		{
+			CdbDispatchResult *qeResult = pParms->dispatchResultPtrArray[i];
+			SegmentDatabaseDescriptor *segdbDesc = qeResult->segdbDesc;
+			PGconn *conn = segdbDesc->conn;
+			int ret;
+
+			/* skip already completed connections */
+			if (conn->outCount == 0)
+				continue;
+
+			/* call send for this connection regardless of its POLLOUT status, because it may be writable NOW */
+			ret = pqFlushNonBlocking(conn);
+
+			if (ret == 0)
+				continue;
+			else if (ret > 0)
+			{
+				int sock = PQsocket(segdbDesc->conn);
+				Assert(sock >= 0);
+				fds[nfds].fd = sock;
+				fds[nfds].events = POLLOUT;
+				nfds++;
+			}
+			else if (ret < 0)
+			{
+				pqHandleSendFailure(conn);
+				char *msg = PQerrorMessage(conn);
+
+				qeResult->stillRunning = false;
+				ereport(ERROR,
+						(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+								errmsg("Command could not be dispatch to segment %s: %s", qeResult->segdbDesc->whoami, msg ? msg : "unknown error")));
+			}
+		}
+
+		if (nfds == 0)
+			break;
+
+		/* guarantee poll() is interruptible */
+		do
+		{
+			CHECK_FOR_INTERRUPTS();
+
+			pollRet = poll(fds, nfds, DISPATCH_POLL_TIMEOUT);
+			if (pollRet == 0)
+				ELOG_DISPATCHER_DEBUG("cdbdisp_waitDispatchFinish_async(): Dispatch poll timeout after %d ms", DISPATCH_POLL_TIMEOUT);
+		}
+		while (pollRet == 0 || (pollRet < 0 && (SOCK_ERRNO == EINTR || SOCK_ERRNO == EAGAIN)));
+
+		if (pollRet < 0)
+			elog(ERROR, "Poll failed during dispatch");
+	}
+
+	pfree(fds);
+}
+
+/*
  * Dispatch command to gang.
  *
- * Throw out error to upper try-catch block if anything goes wrong.
+ * Throw out error to upper try-catch block if anything goes wrong. This function only kicks off dispatching,
+ * call cdbdisp_waitDispatchFinish_async to ensure the completion
  */
 static void
 cdbdisp_dispatchToGang_async(struct CdbDispatcherState *ds,
@@ -261,7 +347,6 @@ checkDispatchResult(CdbDispatcherState *ds,
 	CdbDispatchResult *dispatchResult;
 	int	i;
 	int db_count = 0;
-	int	timeoutCounter = 0;
 	int timeout = 0;
 	bool sentSignal = false;
 	struct pollfd *fds;
@@ -353,30 +438,35 @@ checkDispatchResult(CdbDispatcherState *ds,
 
 			elog(LOG, "handlePollError poll() failed; errno=%d", sock_errno);
 
-			if (pParms->waitMode != DISPATCH_WAIT_NONE)
-			{
-				signalQEs(pParms);
-				sentSignal = true;
-			}
-			else
-				checkSegmentAlive(pParms);
-		}
-		/* If the time limit expires, poll() returns 0 */
-		else if (n == 0)
-		{
-			if (!wait)
-				break;
+			handlePollError(pParms);	
+			checkSegmentAlive(pParms);
 
 			if (pParms->waitMode != DISPATCH_WAIT_NONE)
 			{
 				signalQEs(pParms);
 				sentSignal = true;
+			}
+
+			if (!wait)
+				break;
+		}
+		/* If the time limit expires, poll() returns 0 */
+		else if (n == 0)
+		{
+			if (pParms->waitMode != DISPATCH_WAIT_NONE)
+			{
+				signalQEs(pParms);
+				sentSignal = true;
 			} 
-			else if (timeoutCounter++ > 30)
+
+			if (timeoutCounter++ > (wait ? 30 : 300))
 			{
 				checkSegmentAlive(pParms);
 				timeoutCounter = 0;
 			}
+
+			if (!wait)
+				break;
 		}
 		/* We have data waiting on one or more of the connections. */
 		else
@@ -404,7 +494,7 @@ dispatchCommand(CdbDispatchResult * dispatchResult,
 	/*
 	 * Submit the command asynchronously.
 	 */
-	if (PQsendGpQuery_shared(dispatchResult->segdbDesc->conn, (char *) query_text, query_text_len) == 0)
+	if (PQsendGpQuery_shared(dispatchResult->segdbDesc->conn, (char *) query_text, query_text_len, true) == 0)
 	{
 		char *msg = PQerrorMessage(dispatchResult->segdbDesc->conn);
 		dispatchResult->stillRunning = false;
@@ -431,6 +521,50 @@ dispatchCommand(CdbDispatchResult * dispatchResult,
 	dispatchResult->hasDispatched = true;
 
 	ELOG_DISPATCHER_DEBUG("Command dispatched to QE (%s)", dispatchResult->segdbDesc->whoami);
+}
+
+/* 
+ * Helper function to checkDispatchResult that handles errors that occur
+ * during the poll() call.
+ *
+ * NOTE: The cleanup of the connections will be performed by handlePollTimeout().
+ */
+static void
+handlePollError(CdbDispatchCmdAsync* pParms)
+{
+	int i;
+
+	for (i = 0; i < pParms->dispatchCount; i++)
+	{
+		CdbDispatchResult *dispatchResult = pParms->dispatchResultPtrArray[i];
+		SegmentDatabaseDescriptor *segdbDesc = dispatchResult->segdbDesc;
+
+		/* Skip if already finished or didn't dispatch. */
+		if (!dispatchResult->stillRunning)
+			continue;
+
+		/* We're done with this QE, sadly. */
+		if (PQstatus(segdbDesc->conn) == CONNECTION_BAD)
+		{
+			char *msg = PQerrorMessage(segdbDesc->conn);
+			if (msg)
+				elog(LOG, "Dispatcher encountered connection error on %s: %s", segdbDesc->whoami, msg);
+
+			elog(LOG, "Dispatcher noticed bad connection in handlePollError()");
+
+			/* Save error info for later. */
+			cdbdisp_appendMessageNonThread(dispatchResult, LOG,
+								  "Error after dispatch from %s: %s",
+								  segdbDesc->whoami,
+								  msg ? msg : "unknown error");
+
+			PQfinish(segdbDesc->conn);
+			segdbDesc->conn = NULL;
+			dispatchResult->stillRunning = false;
+		}
+	}
+
+	return;
 }
 
 /*
@@ -595,6 +729,12 @@ checkSegmentAlive(CdbDispatchCmdAsync * pParms)
 								  "FTS detected connection lost during dispatch to %s: %s",
 								  dispatchResult->segdbDesc->whoami, msg ? msg : "unknown error");
 
+			/*
+			 * Not a good idea to store into the PGconn object.
+			 * Instead, just close it. 
+			 */
+			PQfinish(segdbDesc->conn);
+			segdbDesc->conn = NULL;	
 		}
 
 		forceScan = false;

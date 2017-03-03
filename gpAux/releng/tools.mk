@@ -2,11 +2,6 @@ RELENG_TOOLS=$(HOME)/releng-tools
 
 include $(BLD_TOP)/Makefile.global
 
-.PHONY: p4client
-
-p4client:
-	cat $(BLD_TOP)/releng/p4client | p4 client -i
-
 # e.g. 
 # $(RELENG_TOOLS)/geos-3.2.2
 # $(RELENG_TOOLS)/proj-4.7.0

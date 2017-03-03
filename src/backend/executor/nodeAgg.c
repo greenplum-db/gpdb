@@ -134,16 +134,16 @@ typedef struct AggHashEntryData
 } AggHashEntryData;				/* VARIABLE LENGTH STRUCT */
 
 static void advance_transition_function(AggState *aggstate,
-										AggStatePerAgg peraggstate,
-										AggStatePerGroup pergroupstate,
-										FunctionCallInfoData *fcinfo,
-										MemoryManagerContainer *mem_manager);
+							AggStatePerAgg peraggstate,
+							AggStatePerGroup pergroupstate,
+							FunctionCallInfoData *fcinfo,
+							MemoryManagerContainer *mem_manager);
 static void process_ordered_aggregate_single(AggState *aggstate,
-											 AggStatePerAgg peraggstate,
-											 AggStatePerGroup pergroupstate);
+								 AggStatePerAgg peraggstate,
+								 AggStatePerGroup pergroupstate);
 static void process_ordered_aggregate_multi(AggState *aggstate,
-											 AggStatePerAgg peraggstate,
-											 AggStatePerGroup pergroupstate);
+								AggStatePerAgg peraggstate,
+								AggStatePerGroup pergroupstate);
 static void finalize_aggregate(AggState *aggstate,
 				   AggStatePerAgg peraggstate,
 				   AggStatePerGroup pergroupstate,
@@ -312,8 +312,6 @@ initialize_aggregates(AggState *aggstate,
 
 			/* CDB: Set enhanced sort options. */
 			{
-				int64 		limit = 0;
-				int64 		offset = 0;
 				int 		unique = peragg->aggref->aggdistinct &&
 									 ( gp_enable_sort_distinct ? 1 : 0) ;
 				int 		sort_flags = gp_sort_flags; /* get the guc */
@@ -321,11 +319,11 @@ initialize_aggregates(AggState *aggstate,
 
 				if(gp_enable_mk_sort)
 					cdb_tuplesort_init_mk((Tuplesortstate_mk *) peraggstate->sortstate, 
-							offset, limit, unique, 
+							unique,
 							sort_flags, maxdistinct);
 				else
 					cdb_tuplesort_init((Tuplesortstate *) peraggstate->sortstate, 
-							offset, limit, unique, 
+							unique,
 							sort_flags, maxdistinct);
 			}
 		}
@@ -408,7 +406,7 @@ advance_transition_function(AggState *aggstate,
 }
 
 Datum
-invoke_agg_trans_func(FmgrInfo *transfn, int numargs, Datum transValue,
+invoke_agg_trans_func(FmgrInfo *transfn, int numArguments, Datum transValue,
 					  bool *noTransvalue, bool *transValueIsNull,
 					  bool transtypeByVal, int16 transtypeLen, 
 					  FunctionCallInfoData *fcinfo, void *funcctx,
@@ -425,7 +423,7 @@ invoke_agg_trans_func(FmgrInfo *transfn, int numargs, Datum transValue,
 		 * For a strict transfn, nothing happens when there's a NULL input; we
 		 * just keep the prior transValue.
 		 */
-		for (i = 1; i <= numargs; i++)
+		for (i = 1; i <= numArguments; i++)
 		{
 			if (fcinfo->argnull[i])
 				return transValue;
@@ -469,7 +467,7 @@ invoke_agg_trans_func(FmgrInfo *transfn, int numargs, Datum transValue,
 	 * OK to call the transition function
 	 */
 	InitFunctionCallInfoData(*fcinfo, transfn,
-							 numargs + 1,
+							 numArguments + 1,
 							 (void *) funcctx, NULL);
 	fcinfo->arg[0] = transValue;
 	fcinfo->argnull[0] = *transValueIsNull;
@@ -519,11 +517,11 @@ advance_aggregates(AggState *aggstate, AggStatePerGroup pergroup,
 		bool isnull;
 		AggStatePerAgg peraggstate = &aggstate->peragg[aggno];
 		AggStatePerGroup pergroupstate = &pergroup[aggno];
+		int			nargs;
 		Aggref	   *aggref = peraggstate->aggref;
 		PercentileExpr *perc = peraggstate->perc;
 		int			i;
 		TupleTableSlot *slot;
-		int nargs;
 
 		if (aggref)
 			nargs = list_length(aggref->args);
@@ -535,8 +533,8 @@ advance_aggregates(AggState *aggstate, AggStatePerGroup pergroup,
 
 		/* Evaluate the current input expressions for this aggregate */
 		slot = ExecProject(peraggstate->evalproj, NULL);
-		slot_getallattrs(slot);	
-		
+		slot_getallattrs(slot);
+
 		if (peraggstate->numSortCols > 0)
 		{
 			/* DISTINCT and/or ORDER BY case */
@@ -591,7 +589,7 @@ advance_aggregates(AggState *aggstate, AggStatePerGroup pergroup,
 		{
 			/* We can apply the transition function immediately */
 			FunctionCallInfoData fcinfo;
-			
+
 			/* Load values into fcinfo */
 			/* Start from 1, since the 0th arg will be the transition value */
 			Assert(slot->PRIVATE_tts_nvalid >= nargs);
@@ -630,7 +628,7 @@ advance_aggregates(AggState *aggstate, AggStatePerGroup pergroup,
 /*
  * Run the transition function for a DISTINCT or ORDER BY aggregate
  * with only one input.  This is called after we have completed
- * entering all the input values into the sort object.	We complete the
+ * entering all the input values into the sort object.  We complete the
  * sort, read out the values in sorted order, and run the transition
  * function on each value (applying DISTINCT if appropriate).
  *
@@ -660,25 +658,24 @@ process_ordered_aggregate_single(AggState *aggstate,
 	Datum	   *newVal;
 	bool	   *isNull;
 	FunctionCallInfoData fcinfo;
-	
+
 	Assert(peraggstate->numInputs == 1);
-	
+
 	if(gp_enable_mk_sort)
 		tuplesort_performsort_mk((Tuplesortstate_mk *) peraggstate->sortstate);
 	else
 		tuplesort_performsort((Tuplesortstate *) peraggstate->sortstate);
-	
+
 	/* Load the column into argument 1 (arg 0 will be transition value) */
-	
 	newVal = fcinfo.arg + 1;
 	isNull = fcinfo.argnull + 1;
-	
+
 	/*
 	 * Note: if input type is pass-by-ref, the datums returned by the sort are
 	 * freshly palloc'd in the per-query context, so we must be careful to
 	 * pfree them when they are no longer needed.
 	 */
-	
+
 	while (
 		   gp_enable_mk_sort ? 
 		   tuplesort_getdatum_mk((Tuplesortstate_mk *)peraggstate->sortstate, true, newVal, isNull)
@@ -692,20 +689,16 @@ process_ordered_aggregate_single(AggState *aggstate,
 		 */
 		MemoryContextReset(workcontext);
 		oldContext = MemoryContextSwitchTo(workcontext);
-		
+
 		/*
 		 * If DISTINCT mode, and not distinct from prior, skip it.
 		 */
-		if (isDistinct && *isNull ) 
-		{ 
-			/* per SQL, DISTINCT doesn't use nulls */
-		}
-		else if (isDistinct &&
-				 haveOldVal &&
-				 ((oldIsNull && *isNull) ||
-				  (!oldIsNull && !*isNull &&
-				   DatumGetBool(FunctionCall2(&peraggstate->equalfn,
-											  oldVal, *newVal)))))
+		if (isDistinct &&
+			haveOldVal &&
+			((oldIsNull && *isNull) ||
+			 (!oldIsNull && !*isNull &&
+			  DatumGetBool(FunctionCall2(&peraggstate->equalfn,
+										 oldVal, *newVal)))))
 		{
 			/* equal to prior, so forget this one */
 			if (!peraggstate->inputtypeByVal && !*isNull)
@@ -723,28 +716,28 @@ process_ordered_aggregate_single(AggState *aggstate,
 			oldIsNull = *isNull;
 			haveOldVal = true;
 		}
-		
+
 		MemoryContextSwitchTo(oldContext);
 	}
-	
+
 	if (!oldIsNull && !peraggstate->inputtypeByVal)
 		pfree(DatumGetPointer(oldVal));
-	
+
 	if(gp_enable_mk_sort)
 		tuplesort_end_mk((Tuplesortstate_mk *) peraggstate->sortstate);
 	else
 		tuplesort_end((Tuplesortstate *) peraggstate->sortstate);
-	
+
 	peraggstate->sortstate = NULL;
 }
 
 /*
- * Run the transition function for an ORDER BY aggregate with more than 
- * one input.  In PG DISTINCT aggregates may also have multiple columns,
- * but in GPDB, only ORDER BY aggregates do.  This is called after we have 
- * completed  entering all the input values into the sort object.	We 
- * complete the sort, read out the values in sorted order, and run the 
- * transition function on each value.
+ * Run the transition function for an ORDER BY aggregate with more than one
+ * input.  In PG DISTINCT aggregates may also have multiple columns, but in
+ * GPDB, only ORDER BY aggregates do.  This is called after we have completed
+ * entering all the input values into the sort object.  We complete the
+ * sort, read out the values in sorted order, and run the transition
+ * function on each value.
  *
  * When called, CurrentMemoryContext should be the per-query context.
  */
@@ -888,7 +881,7 @@ static Bitmapset *
 find_unaggregated_cols(AggState *aggstate)
 {
 	Agg		   *node = (Agg *) aggstate->ss.ps.plan;
-	Bitmapset *colnos;
+	Bitmapset  *colnos;
 
 	colnos = NULL;
 	(void) find_unaggregated_cols_walker((Node *) node->plan.targetlist,
@@ -920,29 +913,29 @@ find_unaggregated_cols_walker(Node *node, Bitmapset **colnos)
 }
 
 /*
- * Create a list of the tuple columns that actually need to be stored
- * in hashtable entries.  The incoming tuples from the child plan node
- * will contain grouping columns, other columns referenced in our
- * targetlist and qual, columns used to compute the aggregate functions,
- * and perhaps just junk columns we don't use at all.  Only columns of the
- * first two types need to be stored in the hashtable, and getting rid of
- * the others can make the table entries significantly smaller.  To avoid
- * messing up Var numbering, we keep the same tuple descriptor for
- * hashtable entries as the incoming tuples have, but set unwanted columns
- * to NULL in the tuples that go into the table.
+ * Create a list of the tuple columns that actually need to be stored in
+ * hashtable entries.  The incoming tuples from the child plan node will
+ * contain grouping columns, other columns referenced in our targetlist and
+ * qual, columns used to compute the aggregate functions, and perhaps just
+ * junk columns we don't use at all.  Only columns of the first two types
+ * need to be stored in the hashtable, and getting rid of the others can
+ * make the table entries significantly smaller.  To avoid messing up Var
+ * numbering, we keep the same tuple descriptor for hashtable entries as the
+ * incoming tuples have, but set unwanted columns to NULL in the tuples that
+ * go into the table.
  *
- * To eliminate duplicates, we build a bitmapset of the needed columns,
- * then convert it to an integer list (cheaper to scan at runtime).
- * The list is in decreasing order so that the first entry is the largest;
+ * To eliminate duplicates, we build a bitmapset of the needed columns, then
+ * convert it to an integer list (cheaper to scan at runtime). The list is
+ * in decreasing order so that the first entry is the largest;
  * lookup_hash_entry depends on this to use slot_getsomeattrs correctly.
  *
- * Note: at present, searching the tlist/qual is not really necessary
- * since the parser should disallow any unaggregated references to
- * ungrouped columns.  However, the search will be needed when we add
- * support for SQL99 semantics that allow use of "functionally dependent"
- * columns that haven't been explicitly grouped by.
+ * Note: at present, searching the tlist/qual is not really necessary since
+ * the parser should disallow any unaggregated references to ungrouped
+ * columns.  However, the search will be needed when we add support for
+ * SQL99 semantics that allow use of "functionally dependent" columns that
+ * haven't been explicitly grouped by.
  */
-List *
+static List *
 find_hash_columns(AggState *aggstate)
 {
 	Agg		   *node = (Agg *) aggstate->ss.ps.plan;
@@ -963,7 +956,6 @@ find_hash_columns(AggState *aggstate)
 
 	return collist;
 }
-
 
 /*
  * Estimate per-hash-table-entry overhead for the planner.
@@ -1077,7 +1069,7 @@ ExecAgg(AggState *node)
 					}
 					node->hhashtable->state = HASHAGG_END_OF_PASSES;
 					/*
-					 * pass through. Be sure that the next case statment
+					 * pass through. Be sure that the next case statement
 					 * is HASHAGG_END_OF_PASSES.
 					 */
 
@@ -1246,7 +1238,7 @@ agg_retrieve_direct(AggState *aggstate)
 			{
 				/* outer plan produced no tuples at all */
 				aggstate->agg_done = true;
-				/* if we are grouping, we should produce no tuples too */
+				/* If we are grouping, we should produce no tuples too */
 				if (node->aggstrategy != AGG_PLAIN)
 					return NULL;
 			}
@@ -1468,9 +1460,13 @@ agg_retrieve_direct(AggState *aggstate)
 			if (peraggstate->numSortCols > 0)
 			{
 				if (peraggstate->numInputs == 1)
-					process_ordered_aggregate_single(aggstate, peraggstate, pergroupstate);
+					process_ordered_aggregate_single(aggstate,
+													 peraggstate,
+													 pergroupstate);
 				else
-					process_ordered_aggregate_multi(aggstate, peraggstate, pergroupstate);
+					process_ordered_aggregate_multi(aggstate,
+													peraggstate,
+													pergroupstate);
 
 			}
 

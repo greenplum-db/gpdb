@@ -292,7 +292,7 @@ ExecHashTableCreate(HashState *hashState, HashJoinState *hjstate, List *hashOper
 	outerNode = outerPlan(node);
 
 	ExecChooseHashTableSize(outerNode->plan_rows, outerNode->plan_width,
-			&nbuckets, &nbatch, operatorMemKB);
+							&nbuckets, &nbatch, operatorMemKB);
 
 #ifdef HJDEBUG
     elog(LOG, "HJ: nbatch = %d, nbuckets = %d\n", nbatch, nbuckets);
@@ -784,7 +784,7 @@ ExecHashIncreaseNumBatches(HashJoinTable hashtable)
 
 			ninmemory++;
 			ExecHashGetBucketAndBatch(hashtable, tuple->hashvalue,
-					&bucketno, &batchno);
+									  &bucketno, &batchno);
 			Assert(bucketno == i);
 			if (batchno == curbatch)
 			{
@@ -799,10 +799,10 @@ ExecHashIncreaseNumBatches(HashJoinTable hashtable)
 				/* dump it out */
 				Assert(batchno > curbatch);
 				ExecHashJoinSaveTuple(NULL, HJTUPLE_MINTUPLE(tuple),
-						tuple->hashvalue,
-						hashtable,
-						&hashtable->batches[batchno]->innerside,
-						hashtable->bfCxt);
+									  tuple->hashvalue,
+									  hashtable,
+									  &hashtable->batches[batchno]->innerside,
+									  hashtable->bfCxt);
 				/* and remove from hash table */
 				if (prevtuple)
 					prevtuple->next = nexttuple;
@@ -941,7 +941,7 @@ ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
 	PlanState *ps = &hashState->ps;
 
 	ExecHashGetBucketAndBatch(hashtable, hashvalue,
-			&bucketno, &batchno);
+							  &bucketno, &batchno);
 
 	batch = hashtable->batches[batchno];
 	hashTupleSize = HJTUPLE_OVERHEAD + memtuple_get_size(tuple, NULL); 
@@ -961,7 +961,7 @@ ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
 		HashJoinTuple hashTuple;
 
 		hashTuple = (HashJoinTuple) MemoryContextAlloc(hashtable->batchCxt,
-				hashTupleSize);
+													   hashTupleSize);
 		hashTuple->hashvalue = hashvalue;
 		memcpy(HJTUPLE_MINTUPLE(hashTuple), tuple, memtuple_get_size(tuple, NULL)); 
 		hashTuple->next = hashtable->buckets[bucketno];
@@ -992,9 +992,13 @@ ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
 	}
 	else
 	{
-		/*  put the tuple into a temp file for later batches  */
+		/*
+		 * put the tuple into a temp file for later batches
+		 */
 		Assert(batchno > hashtable->curbatch);
-		ExecHashJoinSaveTuple(ps, tuple, hashvalue, hashtable, &batch->innerside, hashtable->bfCxt);
+		ExecHashJoinSaveTuple(ps, tuple,
+							  hashvalue,
+							  hashtable, &batch->innerside, hashtable->bfCxt);
 	}
 	}
 	END_MEMORY_ACCOUNT();
@@ -1190,8 +1194,8 @@ ExecScanHashBucket(HashState *hashState, HashJoinState *hjstate,
 
 			/* insert hashtable's tuple into exec slot so ExecQual sees it */
 			inntuple = ExecStoreMinimalTuple(HJTUPLE_MINTUPLE(hashTuple),
-					hjstate->hj_HashTupleSlot,
-					false);	/* do not pfree */
+											 hjstate->hj_HashTupleSlot,
+											 false);	/* do not pfree */
 			econtext->ecxt_innertuple = inntuple;
 
 			/* reset temp memory each time to avoid leaks from qual expr */
@@ -1224,14 +1228,11 @@ void
 ExecHashTableReset(HashState *hashState, HashJoinTable hashtable)
 {
 	MemoryContext oldcxt;
-	int			nbuckets = 0;
+	int			nbuckets = hashtable->nbuckets;
 
 	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccountId);
 	{
-	Assert(hashtable);
 	Assert(!hashtable->eagerlyReleased);
-
-	nbuckets = hashtable->nbuckets;
 
 	/*
 	 * Release all the hash buckets and tuples acquired in the prior pass, and
@@ -1346,14 +1347,12 @@ ExecHashTableExplainEnd(PlanState *planstate, struct StringInfoData *buf)
 	}
 	else
 	{
-		/**
+		/*
 		 * Memory has been eagerly released. We can't get statistics
 		 * from the memory context. We approximate from stats structure.
 		 */
 
-		Assert(gp_eager_hashtable_release);
-		jinstrument->execmemused +=
-				(double) stats->workmem_max;
+		jinstrument->execmemused += (double) stats->workmem_max;
 	}
 	
     /* Report actual work_mem high water mark. */

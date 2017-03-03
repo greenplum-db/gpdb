@@ -47,15 +47,17 @@ SELECT gp_segment_id, rolname, array_to_string(rolconfig,',') as rolconfig
 SELECT DISTINCT 0 as gp_segment_id, rolname, array_to_string(rolconfig,',') as rolconfig
   FROM gp_dist_random('pg_authid') WHERE rolname = 'role_112911';
 
+-- Set search_path to a non-existent schema. This used to (incorrectly)
+-- print a NOTICE from each segment. (MPP-3068)
+alter role role_112911 set search_path to blahblah1;
+
 DROP ROLE role_112911;
 DROP SCHEMA common_schema;
 
 -- SHA-256 testing
 set password_hash_algorithm to "SHA-256";
 create role sha256 password 'abc';
--- MPP-15865
--- OpenSSL SHA2 returning a different SHA2 to RSA BSAFE!
---select rolname, rolpassword from pg_authid where rolname = 'sha256';
+select rolname, rolpassword from pg_authid where rolname = 'sha256';
 drop role sha256;
 
 create role superuser;

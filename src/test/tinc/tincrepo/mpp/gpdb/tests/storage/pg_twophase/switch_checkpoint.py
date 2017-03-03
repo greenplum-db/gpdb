@@ -62,7 +62,7 @@ class SwitchCheckpointTestCase(ScenarioTestCase):
                 8. Validate using gpcheckcat and gpcheckmirrorseg
 
         '''
-        test_dir = {"dtm_broadcast_prepare":"switch_ckpt_b", "dtm_broadcast_commit_prepared":"switch_ckpt_b", "dtm_xlog_distributed_commit":"switch_ckpt_c"} 
+        test_dir = {"dtm_broadcast_prepare":"switch_ckpt_a,switch_ckpt_b", "dtm_broadcast_commit_prepared":"switch_ckpt_a,switch_ckpt_b", "dtm_xlog_distributed_commit":"switch_ckpt_c"}
 
         test_case_list0 = []
         test_case_list0.append('mpp.gpdb.tests.storage.lib.dbstate.DbStateClass.check_system')
@@ -110,19 +110,20 @@ class SwitchCheckpointTestCase(ScenarioTestCase):
         test_case_list5.append(('mpp.gpdb.tests.storage.pg_twophase.PgtwoPhaseClass.run_gprecover', [crash_type, cluster_state]))
         self.test_case_scenario.append(test_case_list5)
 
-        # No tables will be created for crash_type gpstop_i and failover_to_mirror
         test_case_list6 = []
-        if fault_type == 'dtm_broadcast_commit_prepared' and crash_type not in ('failover_to_mirror', 'gpstop_i'):
+        if fault_type == 'dtm_broadcast_commit_prepared':
             test_case_list6.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_a.post_sql.test_postsqls.TestPostSQLClass')
             test_case_list6.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_b.post_sql.test_postsqls.TestPostSQLClass')
-        
-        if fault_type == 'dtm_broadcast_prepare' and crash_type not in ('failover_to_mirror', 'gpstop_i'):
+
+        # No tables will be created for crash_type failover_to_mirror
+        if fault_type == 'dtm_broadcast_prepare' and crash_type not in ('gpstop_i'):
             test_case_list6.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_a.post_sql.test_postsqls.TestPostSQLClass')
             test_case_list6.append('mpp.gpdb.tests.storage.pg_twophase.checkpoint.test_checkpoint.TestCheckpointClass')
             test_case_list6.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_b.post_sql.test_postsqls.TestPostSQLClass')
          
-        if fault_type == 'dtm_xlog_distributed_commit' and crash_type not in ('failover_to_mirror', 'gpstop_i'):
+        if fault_type == 'dtm_xlog_distributed_commit':
             test_case_list6.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_c.post_sql.test_postsqls.TestPostSQLClass')
+
         self.test_case_scenario.append(test_case_list6)
 
         test_case_list7 = []
@@ -163,7 +164,7 @@ class SwitchCheckpointTestCase(ScenarioTestCase):
         test_case_list3.append('mpp.gpdb.tests.storage.pg_twophase.PgtwoPhaseClass.switch_ckpt_switch_xlog')
         self.test_case_scenario.append(test_case_list3)
         
-        test_dir = 'switch_ckpt_serial/trigger_sql'
+        test_dir = 'switch_ckpt_serial'
         test_case_list4 = []
         test_case_list4.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_serial.trigger_sql.test_triggersqls.TestTriggerSQLClass')
         test_case_list4.append(('mpp.gpdb.tests.storage.pg_twophase.PgtwoPhaseClass.switch_ckpt_crash_and_recover', [crash_type, fault_type, test_dir, cluster_state]))
@@ -177,7 +178,7 @@ class SwitchCheckpointTestCase(ScenarioTestCase):
         test_case_list6.append(('mpp.gpdb.tests.storage.pg_twophase.PgtwoPhaseClass.run_gprecover', [crash_type, cluster_state]))
         self.test_case_scenario.append(test_case_list6)
 
-        if fault_type not in ('dtm_xlog_distributed_commit', 'dtm_broadcast_prepare'):
+        if fault_type not in ('dtm_broadcast_prepare'):
             test_case_list7 = []
             test_case_list7.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_serial.post_sql.test_postsqls.TestPostSQLClass')
             self.test_case_scenario.append(test_case_list7)

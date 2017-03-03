@@ -470,7 +470,7 @@ DROP TABLE
 --- =====================================
 -- GUC with invalid value
 SET gp_default_storage_options="appendonly=true,checksum=xxx";
-psql:/path/sql_file:1: ERROR:  invalid bool value "xxx" for storage option "checksum" (reloptions.c:124)
+psql:/path/sql_file:1: ERROR:  invalid bool value "xxx" for storage option "checksum"
 -- GUC without appedonly=true specified
 SET gp_default_storage_options="checksum=true";
 SET

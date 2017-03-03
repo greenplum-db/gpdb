@@ -22,6 +22,10 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Value.h"
 
+extern "C" {
+#include "utils/elog.h"
+}
+
 namespace gpcodegen {
 
 /** \addtogroup gpcodegen
@@ -56,7 +60,7 @@ template <>
 class ArithOpOverFlowErrorMsg<
 double> {
  public:
-  static const char* OverFlowErrMsg() { return "float8 out of range"; }
+  static const char* OverFlowErrMsg() { return "value out of range: overflow"; }
 };
 }  // namespace gpcodegen_ArithOp_detail
 
@@ -96,12 +100,10 @@ class PGArithFuncGenerator {
   static bool MulWithOverflow(gpcodegen::GpCodegenUtils* codegen_utils,
                               const PGFuncGeneratorInfo& pg_func_info,
                                llvm::Value** llvm_out_value) {
-    llvm::Value* llvm_err_msg = codegen_utils->GetConstant(
-        ArithOpOverFlowErrorMsg<rtype>::OverFlowErrMsg());
     return ArithOpWithOverflow(
         codegen_utils,
         &gpcodegen::GpCodegenUtils::CreateMulOverflow<rtype>,
-        llvm_err_msg,
+        ArithOpOverFlowErrorMsg<rtype>::OverFlowErrMsg(),
         pg_func_info,
         llvm_out_value);
   }
@@ -123,12 +125,10 @@ class PGArithFuncGenerator {
   static bool AddWithOverflow(gpcodegen::GpCodegenUtils* codegen_utils,
                               const PGFuncGeneratorInfo& pg_func_info,
                               llvm::Value** llvm_out_value) {
-    llvm::Value* llvm_err_msg = codegen_utils->GetConstant(
-        ArithOpOverFlowErrorMsg<rtype>::OverFlowErrMsg());
     return ArithOpWithOverflow(
         codegen_utils,
         &gpcodegen::GpCodegenUtils::CreateAddOverflow<rtype>,
-        llvm_err_msg,
+        ArithOpOverFlowErrorMsg<rtype>::OverFlowErrMsg(),
         pg_func_info,
         llvm_out_value);
   }
@@ -293,19 +293,17 @@ class PGArithFuncGenerator {
   static bool SubWithOverflow(gpcodegen::GpCodegenUtils* codegen_utils,
                               const PGFuncGeneratorInfo& pg_func_info,
                               llvm::Value** llvm_out_value) {
-    llvm::Value* llvm_err_msg = codegen_utils->GetConstant(
-        ArithOpOverFlowErrorMsg<rtype>::OverFlowErrMsg());
     return ArithOpWithOverflow(
         codegen_utils,
         &gpcodegen::GpCodegenUtils::CreateSubOverflow<rtype>,
-        llvm_err_msg,
+        ArithOpOverFlowErrorMsg<rtype>::OverFlowErrMsg(),
         pg_func_info,
         llvm_out_value);
   }
 
   static bool ArithOpWithOverflow(gpcodegen::GpCodegenUtils* codegen_utils,
                                   CGArithOpFunc codegen_mem_funcptr,
-                                  llvm::Value* llvm_error_msg,
+                                  const char* error_msg,
                                   const PGFuncGeneratorInfo& pg_func_info,
                                   llvm::Value** llvm_out_value);
 };
@@ -341,19 +339,17 @@ class PGArithUnaryFuncGenerator {
   static bool IncWithOverflow(gpcodegen::GpCodegenUtils* codegen_utils,
                               const PGFuncGeneratorInfo& pg_func_info,
                               llvm::Value** llvm_out_value) {
-    llvm::Value* llvm_err_msg = codegen_utils->GetConstant(
-        ArithOpOverFlowErrorMsg<rtype>::OverFlowErrMsg());
     return PGArithUnaryFuncGenerator<rtype, Arg>::ArithOpWithOverflow(
         codegen_utils,
         &gpcodegen::GpCodegenUtils::CreateIncOverflow<rtype>,
-        llvm_err_msg,
+        ArithOpOverFlowErrorMsg<rtype>::OverFlowErrMsg(),
         pg_func_info,
         llvm_out_value);
   }
 
   static bool ArithOpWithOverflow(gpcodegen::GpCodegenUtils* codegen_utils,
                                    CGArithOpFunc codegen_mem_funcptr,
-                                   llvm::Value* llvm_error_msg,
+                                   const char* error_msg,
                                    const PGFuncGeneratorInfo& pg_func_info,
                                    llvm::Value** llvm_out_value);
 };
@@ -366,7 +362,7 @@ class PGArithUnaryFuncGenerator {
  * @param codegen_utils     Utility for easy code generation.
  * @param pg_func_info      Details for pgfunc generation
  * @param llvm_arith_output Result of the arithmetic operation
- * @param llvm_error_msg    Error message to use when overflow occurs
+ * @param error_msg         Error message to use when overflow occurs
  * @param llvm_out_value    Store location for the result
  *
  * @return true if generation was successful otherwise return false
@@ -378,37 +374,34 @@ static bool CreateOverflowCheckLogic(
     gpcodegen::GpCodegenUtils* codegen_utils,
     const PGFuncGeneratorInfo& pg_func_info,
     llvm::Value* llvm_arith_output,
-    llvm::Value* llvm_error_msg,
+    const char* error_msg,
     llvm::Value** llvm_out_value) {
   assert(nullptr != codegen_utils);
   assert(nullptr != llvm_arith_output);
-  assert(nullptr != llvm_error_msg);
+  assert(nullptr != error_msg);
 
   llvm::IRBuilder<>* irb = codegen_utils->ir_builder();
-  // Check if it is a Integer type
-  if (std::is_integral<rtype>::value) {
-    llvm::BasicBlock* llvm_non_overflow_block = codegen_utils->CreateBasicBlock(
-        "arith_non_overflow_block", pg_func_info.llvm_main_func);
-    llvm::BasicBlock* llvm_overflow_block = codegen_utils->CreateBasicBlock(
-        "arith_overflow_block", pg_func_info.llvm_main_func);
 
-    *llvm_out_value = irb->CreateExtractValue(llvm_arith_output, 0);
-    llvm::Value* llvm_overflow_flag =
-        irb->CreateExtractValue(llvm_arith_output, 1);
+  llvm::BasicBlock* llvm_non_overflow_block = codegen_utils->CreateBasicBlock(
+      "arith_non_overflow_block", pg_func_info.llvm_main_func);
+  llvm::BasicBlock* llvm_overflow_block = codegen_utils->CreateBasicBlock(
+      "arith_overflow_block", pg_func_info.llvm_main_func);
 
-    irb->CreateCondBr(llvm_overflow_flag, llvm_overflow_block,
-                      llvm_non_overflow_block);
+  *llvm_out_value = irb->CreateExtractValue(llvm_arith_output, 0);
+  llvm::Value* llvm_overflow_flag =
+      irb->CreateExtractValue(llvm_arith_output, 1);
 
-    irb->SetInsertPoint(llvm_overflow_block);
-    EXPAND_CREATE_ELOG(codegen_utils,
-        ERROR,
-        "%s", llvm_error_msg);
-    irb->CreateBr(pg_func_info.llvm_error_block);
+  irb->CreateCondBr(llvm_overflow_flag, llvm_overflow_block,
+                    llvm_non_overflow_block);
 
-    irb->SetInsertPoint(llvm_non_overflow_block);
-  } else {
-    *llvm_out_value = llvm_arith_output;
-  }
+  irb->SetInsertPoint(llvm_overflow_block);
+  EXPAND_CREATE_EREPORT(codegen_utils,
+                        ERROR,
+                        ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE,
+                        error_msg);
+  irb->CreateBr(pg_func_info.llvm_error_block);
+
+  irb->SetInsertPoint(llvm_non_overflow_block);
 
   return true;
 }
@@ -417,13 +410,13 @@ template <typename rtype, typename Arg>
 bool PGArithUnaryFuncGenerator<rtype, Arg>::ArithOpWithOverflow(
     gpcodegen::GpCodegenUtils* codegen_utils,
     CGArithOpFunc codegen_mem_funcptr,
-    llvm::Value* llvm_error_msg,
+    const char* error_msg,
     const PGFuncGeneratorInfo& pg_func_info,
     llvm::Value** llvm_out_value) {
   assert(nullptr != codegen_utils);
   assert(nullptr != llvm_out_value);
   assert(nullptr != codegen_mem_funcptr);
-  assert(nullptr != llvm_error_msg);
+  assert(nullptr != error_msg);
 
   // Assumed caller checked vector size and nullptr for codegen_utils
   llvm::Value* casted_arg =
@@ -435,7 +428,7 @@ bool PGArithUnaryFuncGenerator<rtype, Arg>::ArithOpWithOverflow(
   return CreateOverflowCheckLogic<rtype>(codegen_utils,
                                          pg_func_info,
                                          llvm_arith_output,
-                                         llvm_error_msg,
+                                         error_msg,
                                          llvm_out_value);
 }
 
@@ -444,13 +437,13 @@ template <typename rtype, typename Arg0, typename Arg1>
 bool PGArithFuncGenerator<rtype, Arg0, Arg1>::ArithOpWithOverflow(
     gpcodegen::GpCodegenUtils* codegen_utils,
     CGArithOpFunc codegen_mem_funcptr,
-    llvm::Value* llvm_error_msg,
+    const char* error_msg,
     const PGFuncGeneratorInfo& pg_func_info,
     llvm::Value** llvm_out_value) {
   assert(nullptr != codegen_utils);
   assert(nullptr != llvm_out_value);
   assert(nullptr != codegen_mem_funcptr);
-  assert(nullptr != llvm_error_msg);
+  assert(nullptr != error_msg);
 
   // Assumed caller checked vector size and nullptr for codegen_utils
   llvm::Value* casted_arg0 =
@@ -464,7 +457,7 @@ bool PGArithFuncGenerator<rtype, Arg0, Arg1>::ArithOpWithOverflow(
   return CreateOverflowCheckLogic<rtype>(codegen_utils,
                                          pg_func_info,
                                          llvm_arith_output,
-                                         llvm_error_msg,
+                                         error_msg,
                                          llvm_out_value);
 }
 

@@ -1200,33 +1200,33 @@ AddNewRelationType(const char *typeName,
 {
 	return
 		TypeCreate(InvalidOid,	/* no predetermined OID */
-				   typeName,		/* type name */
-				   typeNamespace,	/* type namespace */
-				   new_rel_oid, 	/* relation oid */
+				   typeName,	/* type name */
+				   typeNamespace,		/* type namespace */
+				   new_rel_oid, /* relation oid */
 				   new_rel_kind,	/* relation kind */
-				   ownerid,			/* owner's ID */
-				   -1,				/* internal size (varlena) */
-				   'c',				/* type-type (complex) */
-				   DEFAULT_TYPDELIM,/* default array delimiter */
-				   F_RECORD_IN,		/* input procedure */
+				   ownerid,		/* owner's ID */
+				   -1,			/* internal size (varlena) */
+				   'c',			/* type-type (complex) */
+				   DEFAULT_TYPDELIM,	/* default array delimiter */
+				   F_RECORD_IN, /* input procedure */
 				   F_RECORD_OUT,	/* output procedure */
-				   F_RECORD_RECV,	/* receive procedure */
-				   F_RECORD_SEND,	/* send procedure */
-				   InvalidOid,		/* typmodin procedure - none */
-				   InvalidOid,		/* typmodout procedure - none */
-				   InvalidOid,		/* analyze procedure - default */
-				   InvalidOid,		/* array element type - irrelevant */
-				   false,			/* this is not an array type */
-				   new_array_type,	/* array type if any */
-				   InvalidOid,		/* domain base type - irrelevant */
-				   NULL,			/* default value - none */
-				   NULL,			/* default binary representation */
-				   false,			/* passed by reference */
-				   'd',				/* alignment - must be the largest! */
-				   'x',				/* fully TOASTable */
-				   -1,				/* typmod */
-				   0,				/* array dimensions for typBaseType */
-				   false);			/* Type NOT NULL */
+				   F_RECORD_RECV,		/* receive procedure */
+				   F_RECORD_SEND,		/* send procedure */
+				   InvalidOid,	/* typmodin procedure - none */
+				   InvalidOid,	/* typmodout procedure - none */
+				   InvalidOid,	/* analyze procedure - default */
+				   InvalidOid,	/* array element type - irrelevant */
+				   false,		/* this is not an array type */
+				   new_array_type,		/* array type if any */
+				   InvalidOid,	/* domain base type - irrelevant */
+				   NULL,		/* default value - none */
+				   NULL,		/* default binary representation */
+				   false,		/* passed by reference */
+				   'd',			/* alignment - must be the largest! */
+				   'x',			/* fully TOASTable */
+				   -1,			/* typmod */
+				   0,			/* array dimensions for typBaseType */
+				   false);		/* Type NOT NULL */
 }
 
 void
@@ -1234,6 +1234,7 @@ InsertGpRelationNodeTuple(
 	Relation 		gp_relation_node,
 	Oid				relationId,
 	char			*relname,
+	Oid				tablespaceOid,
 	Oid				relfilenode,
 	int32			segmentFileNum,
 	bool			updateIndex,
@@ -1269,8 +1270,15 @@ InsertGpRelationNodeTuple(
 			 persistentSerialNum,
 			 ItemPointerToString(persistentTid));
 
+	/*
+	 * gp_relation_node stores tablespaceOId in pg_class fashion, which means
+	 * defaultTablespace is represented as "0".
+	 */
+	Assert (tablespaceOid != MyDatabaseTableSpace);
+	
 	GpRelationNode_SetDatumValues(
 								values,
+								tablespaceOid,
 								relfilenode,
 								segmentFileNum,
 								/* createMirrorDataLossTrackingSessionNum */ 0,
@@ -1295,6 +1303,7 @@ void
 UpdateGpRelationNodeTuple(
 	Relation 	gp_relation_node,
 	HeapTuple 	tuple,
+	Oid         tablespaceOid,
 	Oid			relfilenode,
 	int32		segmentFileNum,
 	ItemPointer persistentTid,
@@ -1326,6 +1335,9 @@ UpdateGpRelationNodeTuple(
 	memset(repl_val, 0, sizeof(repl_val));
 	memset(repl_null, false, sizeof(repl_null));
 	memset(repl_repl, false, sizeof(repl_null));
+
+	repl_repl[Anum_gp_relation_node_tablespace_oid - 1] = true;
+	repl_val[Anum_gp_relation_node_tablespace_oid - 1] = ObjectIdGetDatum(tablespaceOid);
 
 	repl_repl[Anum_gp_relation_node_relfilenode_oid - 1] = true;
 	repl_val[Anum_gp_relation_node_relfilenode_oid - 1] = ObjectIdGetDatum(relfilenode);
@@ -1362,6 +1374,7 @@ AddNewRelationNodeTuple(
 							gp_relation_node,
 							new_rel->rd_id,
 							new_rel->rd_rel->relname.data,
+							new_rel->rd_rel->reltablespace,
 							new_rel->rd_rel->relfilenode,
 							/* segmentFileNum */ 0,
 							/* updateIndex */ true,
@@ -1421,7 +1434,7 @@ heap_create_with_catalog(const char *relname,
 		 * Some relations need to have a fixed relation type
 		 * OID, because it is referenced in code.
 		 *
-		 * 90MERGE_FIXME: In PostgreSQL 9.0, there's a
+		 * GPDB_90_MERGE_FIXME: In PostgreSQL 9.0, there's a
 		 * new BKI directive, BKI_ROWTYPE_OID(<oid>), for
 		 * doing the same. Replace this hack with that once
 		 * we merge with 9.0.
@@ -1580,7 +1593,7 @@ heap_create_with_catalog(const char *relname,
 	 * (In GPDB, heap_create can choose a different relfilenode, in a QE node,
 	 * if the one we choose is already in use.)
 	 */
-	if (!OidIsValid(relid) && Gp_role == GP_ROLE_EXECUTE)
+	if (!OidIsValid(relid) && (Gp_role == GP_ROLE_EXECUTE || IsBinaryUpgrade))
 		relid = GetPreassignedOidForRelation(relnamespace, relname);
 
 	if (!OidIsValid(relid))
@@ -1618,9 +1631,10 @@ heap_create_with_catalog(const char *relname,
 	 * during initdb).	We create array types for regular relations, views,
 	 * and composite types ... but not, eg, for toast tables or sequences.
 	 *
-	 * Also not for the auxiliary heaps created for bitmap indexes.
+	 * Also not for the auxiliary heaps created for bitmap indexes or append-
+	 * only tables.
 	 */
-	if (IsUnderPostmaster && (relkind == RELKIND_RELATION ||
+	if (IsUnderPostmaster && ((relkind == RELKIND_RELATION && !appendOnlyRel) ||
 							  relkind == RELKIND_VIEW ||
 							  relkind == RELKIND_COMPOSITE_TYPE) &&
 		relnamespace != PG_BITMAPINDEX_NAMESPACE)
@@ -1630,8 +1644,19 @@ heap_create_with_catalog(const char *relname,
 
 		relarrayname = makeArrayTypeName(relname, relnamespace);
 
-		if (Gp_role == GP_ROLE_EXECUTE)
+		/*
+		 * If we are expected to get a preassigned Oid but receive InvalidOid,
+		 * get a new Oid. This can happen during upgrades from GPDB4 to 5 where
+		 * array types over relation rowtypes were introduced so there are no
+		 * pre-existing array types to dump from the old cluster
+		 */
+		if (Gp_role == GP_ROLE_EXECUTE || IsBinaryUpgrade)
+		{
 			new_array_oid = GetPreassignedOidForType(relnamespace, relarrayname);
+
+			if (new_array_oid == InvalidOid && IsBinaryUpgrade)
+				new_array_oid = GetNewOid(pg_type);
+		}
 		else
 			new_array_oid = GetNewOid(pg_type);
 		heap_close(pg_type, AccessShareLock);
@@ -1775,6 +1800,8 @@ heap_create_with_catalog(const char *relname,
 		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 
 		recordDependencyOnOwner(RelationRelationId, relid, ownerid);
+
+		recordDependencyOnCurrentExtension(&myself, false);
 	}
 
 	/*
@@ -1794,8 +1821,7 @@ heap_create_with_catalog(const char *relname,
      * key column list in the gp_distribution_policy catalog and attach a
      * copy to the relcache entry.
      */
-    if (policy &&
-        Gp_role == GP_ROLE_DISPATCH)
+    if (policy && (Gp_role == GP_ROLE_DISPATCH || IsBinaryUpgrade))
     {
         Assert(relkind == RELKIND_RELATION);
         new_rel_desc->rd_cdbpolicy = GpPolicyCopy(GetMemoryChunkContext(new_rel_desc), policy);
@@ -1900,8 +1926,6 @@ RelationRemoveInheritance(Oid relid)
 	systable_endscan(scan);
 	heap_close(catalogRelation, RowExclusiveLock);
 }
-
-/* del_part_entry_by_key is superfluous - removed */
 
 static void
 RemovePartitioning(Oid relid)
@@ -2310,6 +2334,7 @@ remove_gp_relation_node_and_schedule_drop(Relation rel)
 						SnapshotNow,
 						relNodeRelation,
 						rel->rd_id,
+						rel->rd_rel->reltablespace,
 						rel->rd_rel->relfilenode,
 						&gpRelationNodeScan);
 		

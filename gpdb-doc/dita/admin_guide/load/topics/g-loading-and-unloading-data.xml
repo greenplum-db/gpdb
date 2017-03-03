@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title>Loading and Unloading Data</title>
+  <shortdesc>The topics in this section describe methods for loading and writing data into and out
+    of a Greenplum Database, and how to format data files.</shortdesc>
+  <body>
+    <p>Greenplum Database supports high-performance parallel data loading and unloading, and for
+      smaller amounts of data, single file, non-parallel data import and export. </p>
+    <p>Greenplum Database can read from and write to several types of external data sources,
+      including text files, Hadoop file systems, and web servers. <ul id="ul_umr_mlh_kr">
+        <li>The <codeph>COPY</codeph> SQL command transfers data between an external text file on
+          the master host and a Greenplum Database table.</li>
+        <li>External tables allow you to query data outside of the database directly and in parallel
+          using SQL commands such as <codeph>SELECT</codeph>, <codeph>JOIN</codeph>, or <codeph>SORT
+            EXTERNAL TABLE DATA</codeph>, and you can create views for external tables. External
+          tables are often used to load external data into a regular database table using a command
+          such as <codeph>CREATE TABLE table AS SELECT * FROM ext_table</codeph>. </li>
+        <li>External web tables provide access to dynamic data. They can be backed with data from
+          URLs accessed using the HTTP protocol or by the output of an OS script running on one or
+          more segments.</li>
+        <li>The <codeph>gpfdist</codeph> utility is the Greenplum Database parallel file
+          distribution program. It is an HTTP server that is used with external tables to allow
+          Greenplum Database segments to load external data in parallel, from multiple file systems.
+          You can run multiple instances of <codeph>gpfdist</codeph> on different hosts and network
+          interfaces and access them in parallel. </li>
+        <li>The <codeph>gpload</codeph> utility automates the steps of a load task using a
+          YAML-formatted control file. </li>
+        <li>The GemFire-Greenplum Connector allows the transfer of data between a Pivotal GemFire
+          region and a Greenplum Database table. Pivotal Gemfire is an in-memory data management
+          system that provides reliable asynchronous event notifications and guaranteed message
+          delivery. For information about using GemFire-Greenplum Connector, see <xref
+            href="http://ggc.docs.pivotal.io/" format="html" scope="external"
+            >http://ggc.docs.pivotal.io/</xref>. For information about Pivotal Gemfire, see <xref
+            href="http://gemfire.docs.pivotal.io/" format="html" scope="external"
+            >http://gemfire.docs.pivotal.io/</xref>.</li>
+      </ul>The method you choose to load data depends on the characteristics of the source
+      data&#8212;its location, size, format, and any transformations required. </p>
+    <p>In the simplest case, the <codeph>COPY</codeph> SQL command loads data into a table from a
+      text file that is accessible to the Greenplum Database master instance. This requires no setup
+      and provides good performance for smaller amounts of data. With the <codeph>COPY</codeph>
+      command, the data copied into or out of the database passes between a single file on the
+      master host and the database. This limits the total size of the dataset to the capacity of the
+      file system where the external file resides and limits the data transfer to a single file
+      write stream. </p>
+    <p>More efficient data loading options for large datasets take advantage of the Greenplum
+      Database MPP architecture, using the Greenplum Database segments to load data in parallel.
+      These methods allow data to load simultaneously from multiple file systems, through multiple
+      NICs, on multiple hosts, achieving very high data transfer rates. External tables allow you to
+      access external files from within the database as if they are regular database tables. When
+      used with <codeph>gpfdist</codeph>, the Greenplum Database parallel file distribution program,
+      external tables provide full parallelism by using the resources of all Greenplum Database
+      segments to load or unload data. </p>
+    <p>Greenplum Database leverages the parallel architecture of the Hadoop Distributed File System
+      to access files on that system.</p>
+  </body>
+</topic>

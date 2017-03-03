@@ -3,16 +3,14 @@
 # Copyright (c) Greenplum Inc 2016. All Rights Reserved.
 #
 
-import os
-import shutil
-import unittest2 as unittest
 from gppylib.commands.base import CommandResult
 from gppylib.operations.backup_utils import *
 
-from mock import patch, MagicMock, Mock
-from optparse import Values
+from mock import patch, Mock
 
-class BackupUtilsTestCase(unittest.TestCase):
+from test.unit.gp_unittest import GpTestCase
+
+class BackupUtilsTestCase(GpTestCase):
 
     def setUp(self):
         self.context = Context()
@@ -230,37 +228,53 @@ class BackupUtilsTestCase(unittest.TestCase):
         cdatabase_file = convert_report_filename_to_cdatabase_filename(self.context, report_file)
         self.assertEquals(expected_output, cdatabase_file)
 
+    def test_convert_report_filename_to_cdatabase_filename_with_prefix_default(self):
+        report_file = '/data/db_dumps/20160101/bar_gp_dump_20160101010101.rpt'
+        expected_output = '/data/db_dumps/20160101/bar_gp_cdatabase_1_1_20160101010101'
+        self.context.dump_prefix = 'bar_'
+        cdatabase_file = convert_report_filename_to_cdatabase_filename(self.context, report_file)
+        self.assertEquals(expected_output, cdatabase_file)
+
+    def test_convert_report_filename_to_cdatabase_filename_ddboost_with_earlier_date(self):
+        # use the date from the file to calculate the directory,
+        # not the current date
+        report_file = '/data/db_dumps/20080101/gp_dump_20080101010101.rpt'
+        expected_output = '/db_dumps/20080101/gp_cdatabase_1_1_20080101010101' #path in data domain
+        self.context.ddboost = True
+        cdatabase_file = convert_report_filename_to_cdatabase_filename(self.context, report_file)
+        self.assertEquals(expected_output, cdatabase_file)
+
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['--', '-- Database creation', '--', '', "CREATE DATABASE bkdb WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = dcddev;"])
     def test_check_cdatabase_exists_default(self, mock):
-        self.context.dump_database = 'bkdb'
+        self.context.target_db = 'bkdb'
         report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
         result = check_cdatabase_exists(self.context, report_file)
         self.assertTrue(result)
 
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['--', '-- Database creation', '--', '', "CREATE DATABASE fullbkdb WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = dcddev;"])
     def test_check_cdatabase_exists_bad_dbname(self, mock):
-        self.context.dump_database = 'bkdb'
+        self.context.target_db = 'bkdb'
         report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
         result = check_cdatabase_exists(self.context, report_file)
         self.assertFalse(result)
 
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['--', '-- Database creation', '--', '', "CREATE bkdb WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = dcddev;"])
     def test_check_cdatabase_exists_no_database(self, mock):
-        self.context.dump_database = 'bkdb'
+        self.context.target_db = 'bkdb'
         report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
         result = check_cdatabase_exists(self.context, report_file)
         self.assertFalse(result)
 
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=[])
     def test_check_cdatabase_exists_empty_file(self, mock):
-        self.context.dump_database = 'bkdb'
+        self.context.target_db = 'bkdb'
         report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
         result = check_cdatabase_exists(self.context, report_file)
         self.assertFalse(result)
 
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['--', '-- Database creation', '--', '', 'CREATE DATABASE'])
     def test_check_cdatabase_exists_no_dbname(self, mock):
-        self.context.dump_database = 'bkdb'
+        self.context.target_db = 'bkdb'
         report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
         result = check_cdatabase_exists(self.context, report_file)
         self.assertFalse(result)
@@ -268,7 +282,7 @@ class BackupUtilsTestCase(unittest.TestCase):
     @patch('gppylib.operations.backup_utils.Command.run')
     @patch('gppylib.operations.dump.Command.get_results', return_value=CommandResult(0, "CREATE DATABASE", "", True, False))
     def test_check_cdatabase_exists_command_result(self, mock1, mock2):
-        self.context.dump_database = 'bkdb'
+        self.context.target_db = 'bkdb'
         report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
         self.context.ddboost = True
         result = check_cdatabase_exists(self.context, report_file)
@@ -660,20 +674,20 @@ class BackupUtilsTestCase(unittest.TestCase):
     @patch('gppylib.operations.backup_utils.dbconn.connect')
     @patch('pygresql.pgdb.pgdbCursor.fetchall', return_value=[['public', 'tl1'], ['public', 'tl2']])
     def test_expand_partition_tables_default(self, mock1, mock2, mock3):
-        dbname = 'foo'
+        self.context.target_db = 'foo'
         restore_tables = ['public.t1', 'public.t2']
         expected_output = ['public.tl1', 'public.tl2', 'public.t2']
-        result = expand_partition_tables(dbname, restore_tables)
+        result = expand_partition_tables(self.context, restore_tables)
         self.assertEqual(result.sort(), expected_output.sort())
 
     @patch('gppylib.operations.backup_utils.dbconn.execSQL')
     @patch('gppylib.operations.backup_utils.dbconn.connect')
     @patch('pygresql.pgdb.pgdbCursor.fetchall', return_value=[])
     def test_expand_partition_tables_no_change(self, mock1, mock2, mock3):
-        dbname = 'foo'
+        self.context.target_db = 'foo'
         restore_tables = ['public.t1', 'public.t2']
         expected_output = ['public.t1', 'public.t2']
-        result = expand_partition_tables(dbname, restore_tables)
+        result = expand_partition_tables(self.context, restore_tables)
         self.assertEqual(result.sort(), expected_output.sort())
 
     def test_populate_filter_tables_all_part_tables(self):
@@ -764,28 +778,31 @@ class BackupUtilsTestCase(unittest.TestCase):
         indices = get_batch_from_list(length, batch)
         self.assertEqual(expected, indices)
 
-    def test_list_to_quoted_string_default(self):
+    @patch('gppylib.operations.backup_utils.escape_string', side_effect=['public.ao_table', 'public.co_table'])
+    def test_list_to_quoted_string_default(self, mock1):
         input = ['public.ao_table', 'public.co_table']
         expected = "'public.ao_table', 'public.co_table'"
-        output = list_to_quoted_string(input)
+        output = list_to_quoted_string(Mock(), input)
         self.assertEqual(expected, output)
 
-    def test_list_to_quoted_string_whitespace(self):
+    @patch('gppylib.operations.backup_utils.escape_string', side_effect=['   public.ao_table', 'public.co_table   '])
+    def test_list_to_quoted_string_whitespace(self, mock1):
         input = ['   public.ao_table', 'public.co_table   ']
         expected = "'   public.ao_table', 'public.co_table   '"
-        output = list_to_quoted_string(input)
+        output = list_to_quoted_string(Mock(), input)
         self.assertEqual(expected, output)
 
-    def test_list_to_quoted_string_one_table(self):
+    @patch('gppylib.operations.backup_utils.escape_string', return_value='public.ao_table')
+    def test_list_to_quoted_string_one_table(self, mock1):
         input = ['public.ao_table']
         expected = "'public.ao_table'"
-        output = list_to_quoted_string(input)
+        output = list_to_quoted_string(Mock(), input)
         self.assertEqual(expected, output)
 
     def test_list_to_quoted_string_no_tables(self):
         input = []
         expected = "''"
-        output = list_to_quoted_string(input)
+        output = list_to_quoted_string(None, input)
         self.assertEqual(expected, output)
 
     def test_generate_filename_with_prefix(self):
@@ -855,13 +872,6 @@ class BackupUtilsTestCase(unittest.TestCase):
         self.context.dump_prefix = 'foo_'
         with self.assertRaisesRegexp(Exception, 'No full backup found for incremental'):
             get_latest_full_dump_timestamp(self.context)
-
-    def test_convert_report_filename_to_cdatabase_filename_with_prefix_default(self):
-        report_file = '/data/db_dumps/20160101/bar_gp_dump_20160101010101.rpt'
-        expected_output = '/data/db_dumps/20160101/bar_gp_cdatabase_1_1_20160101010101'
-        self.context.dump_prefix = 'bar_'
-        cdatabase_file = convert_report_filename_to_cdatabase_filename(self.context, report_file)
-        self.assertEquals(expected_output, cdatabase_file)
 
     @patch('gppylib.operations.backup_utils.Command.run')
     def test_backup_file_with_nbu_default(self, mock1):
@@ -1141,3 +1151,25 @@ class BackupUtilsTestCase(unittest.TestCase):
                 context = Context()
         finally:
             os.environ['MASTER_DATA_DIRECTORY'] = old_mdd
+
+    @patch('gppylib.operations.backup_utils.execSQL')
+    def test_execute_sql_with_conn(self, execSQL):
+        cursor = Mock()
+        cursor.fetchall.return_value = 'queryResults'
+        execSQL.return_value = cursor
+
+        query = "fake query"
+        conn = Mock()
+        self.assertEquals('queryResults', execute_sql_with_connection(query, conn))
+        execSQL.assert_called_with(conn, query)
+
+    def test__escapeDoubleQuoteInSQLString(self):
+        self.assertEqual('MYDATE', escapeDoubleQuoteInSQLString('MYDATE', False))
+        self.assertEqual('MY""DATE', escapeDoubleQuoteInSQLString('MY"DATE', False))
+        self.assertEqual('MY\'DATE', escapeDoubleQuoteInSQLString('''MY'DATE''', False))
+        self.assertEqual('MY""""DATE', escapeDoubleQuoteInSQLString('MY""DATE', False))
+
+        self.assertEqual('"MYDATE"', escapeDoubleQuoteInSQLString('MYDATE'))
+        self.assertEqual('"MY""DATE"', escapeDoubleQuoteInSQLString('MY"DATE'))
+        self.assertEqual('"MY\'DATE"', escapeDoubleQuoteInSQLString('''MY'DATE'''))
+        self.assertEqual('"MY""""DATE"', escapeDoubleQuoteInSQLString('MY""DATE'))

@@ -38,8 +38,8 @@ SELECT * FROM check_cursor_files WHERE a <> 0;
 (0 rows)
 
 FETCH 1 FROM c_hold;
-GP_IGNORE: a | b 
-GP_IGNORE:---+---
-1|1
+ a | b 
+---+---
+ 1 | 1
 (1 row)
 

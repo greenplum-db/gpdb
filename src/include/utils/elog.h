@@ -287,8 +287,6 @@ extern int	geterrcode(void);
 extern int	geterrposition(void);
 extern int	getinternalerrposition(void);
 
-extern int errOmitLocation(bool omitLocation);   /* GPDB */
-
 extern int errFatalReturn(bool fatalReturn); /* GPDB: true => return on FATAL error */
 
 extern int errSendAlert(bool sendAlert);		/* GPDB: Send alert via e-mail or SNMP */
@@ -560,11 +558,6 @@ write_stderr(const char *fmt,...)
 /* This extension allows gcc to check the format string for consistency with
    the supplied arguments. */
 __attribute__((format(printf, 1, 2)));
-
-#if defined(pg_on_solaris)
-extern size_t backtrace(void **buffer, int size);
-extern char **backtrace_symbols(void *const *buffer, int size);
-#endif
 
 extern void write_message_to_server_log(int elevel,
 										int sqlerrcode,

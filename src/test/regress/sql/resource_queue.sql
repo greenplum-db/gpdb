@@ -68,6 +68,11 @@ ALTER RESOURCE QUEUE regressq2 IGNORE THRESHOLD 1 IGNORE THRESHOLD 1 ;
 ALTER RESOURCE QUEUE none IGNORE THRESHOLD 1 ;
 DROP RESOURCE QUEUE regressq2;
 
+-- Resource Queue should not be created inside Transaction block the error is the expected behavior
+begin;
+CREATE RESOURCE QUEUE db_resque_new1 ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;
+end;
+
 --
 -- memory quota feature
 --

@@ -335,7 +335,7 @@ if (1)
         "verbose|Verbose" => \$glob_atmsort_args{VERBOSE},
         "gpd_ignore_headers|gp_ignore_headers" => \$glob_atmsort_args{IGNORE_HEADERS},
         "gpd_ignore_plans|gp_ignore_plans" => \$glob_atmsort_args{IGNORE_PLANS},
-        "gpd_init|gp_init=s" => \@{$glob_atmsort_args{INIT_FILES}}
+        "gpd_init|gp_init_file=s" => \@{$glob_atmsort_args{INIT_FILES}}
     );
 
     lazy_pod2usage(-msg => $pmsg, -exitstatus => 1) unless (scalar(@ARGV) >= 2);

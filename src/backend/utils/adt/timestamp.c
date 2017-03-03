@@ -103,8 +103,7 @@ anytimestamp_typmodin(bool istz, ArrayType *ta)
 	if (n != 1)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("invalid type modifier"),
-								 errOmitLocation(true)));
+				 errmsg("invalid type modifier")));
 
 	if (*tl < 0)
 		ereport(ERROR,

@@ -545,7 +545,7 @@ class GpcrondumpTestCase(unittest.TestCase):
         gpcd = GpCronDump(self.options, None)
         dirtyfile = '/tmp/dirty'
         dbname = 'foo'
-        (inc, exc) = gpcd.get_include_exclude_for_dump_database(dirtyfile, dbname)
+        (inc, exc) = gpcd.get_include_exclude_for_dump_database(dirtyfile)
         self.assertEquals(inc, None)
         self.assertEquals(exc, None)
 
@@ -559,7 +559,7 @@ class GpcrondumpTestCase(unittest.TestCase):
         gpcd = GpCronDump(self.options, None)
         dirtyfile = '/tmp/dirty'
         dbname = 'foo'
-        (inc, exc) = gpcd.get_include_exclude_for_dump_database(dirtyfile, dbname)
+        (inc, exc) = gpcd.get_include_exclude_for_dump_database(dirtyfile)
         self.assertTrue(inc.startswith('/tmp/include_dump_tables_file'))
 
     @patch('gpcrondump.validate_current_timestamp')
@@ -572,7 +572,7 @@ class GpcrondumpTestCase(unittest.TestCase):
         gpcd = GpCronDump(self.options, None)
         dirtyfile = '/tmp/dirty'
         dbname = 'foo'
-        (inc, exc) = gpcd.get_include_exclude_for_dump_database(dirtyfile, dbname)
+        (inc, exc) = gpcd.get_include_exclude_for_dump_database(dirtyfile)
         self.assertTrue(inc.startswith('/tmp/include_dump_tables_file'))
 
     @patch('gpcrondump.validate_current_timestamp')
@@ -584,7 +584,7 @@ class GpcrondumpTestCase(unittest.TestCase):
         gpcd = GpCronDump(self.options, None)
         dirtyfile = '/tmp/dirty'
         dbname = 'foo'
-        (inc, exc) = gpcd.get_include_exclude_for_dump_database(dirtyfile, dbname)
+        (inc, exc) = gpcd.get_include_exclude_for_dump_database(dirtyfile)
         self.assertEquals(inc, '/tmp/dirty')
         self.assertEquals(exc, None)
 
@@ -598,7 +598,7 @@ class GpcrondumpTestCase(unittest.TestCase):
         gpcd = GpCronDump(self.options, None)
         dirtyfile = '/tmp/dirty'
         dbname = 'foo'
-        (inc, exc) = gpcd.get_include_exclude_for_dump_database(dirtyfile, dbname)
+        (inc, exc) = gpcd.get_include_exclude_for_dump_database(dirtyfile)
         self.assertTrue(exc.startswith('/tmp/exclude_dump_tables_file'))
 
     @patch('gpcrondump.validate_current_timestamp')
@@ -611,7 +611,7 @@ class GpcrondumpTestCase(unittest.TestCase):
         gpcd = GpCronDump(self.options, None)
         dirtyfile = '/tmp/dirty'
         dbname = 'foo'
-        (inc, exc) = gpcd.get_include_exclude_for_dump_database(dirtyfile, dbname)
+        (inc, exc) = gpcd.get_include_exclude_for_dump_database(dirtyfile)
         self.assertTrue(exc.startswith('/tmp/exclude_dump_tables_file'))
 
     @patch('gpcrondump.validate_current_timestamp')
@@ -981,12 +981,12 @@ class GpcrondumpTestCase(unittest.TestCase):
     @patch('gpcrondump.MailDumpEvent')
     @patch('gppylib.operations.backup_utils.Context.get_master_port')
     def test_send_email00(self, mock1, MailDumpEvent):
-        dump_database = 'testdb1'
+        target_db = 'testdb1'
         current_exit_status = 0
         time_start = '12:07:09'
         time_end = '12:08:18'
         cron = GpCronDump(self.options, None)
-        cron._send_email(dump_database, current_exit_status, time_start, time_end)
+        cron._send_email(target_db, current_exit_status, time_start, time_end)
 
     @patch('gppylib.commands.base.Command.run')
     @patch('gppylib.commands.base.Command.get_results')

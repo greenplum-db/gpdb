@@ -20,17 +20,17 @@ INSERT 0 1
 -- MPP-2859
 create table ctas_dst as 
 SELECT attr, class, (select count(distinct class) from ctas_src) as dclass FROM ctas_src GROUP BY attr, class distributed by (attr);
-SELECT
+SELECT 2
 drop table ctas_dst;
 DROP TABLE
 create table ctas_dst as 
 SELECT attr, class, (select max(class) from ctas_src) as maxclass FROM ctas_src GROUP BY attr, class distributed by (attr);
-SELECT
+SELECT 2
 drop table ctas_dst;
 DROP TABLE
 create table ctas_dst as 
 SELECT attr, class, (select count(distinct class) from ctas_src) as dclass, (select max(class) from ctas_src) as maxclass, (select min(class) from ctas_src) as minclass FROM ctas_src GROUP BY attr, class distributed by (attr);
-SELECT
+SELECT 2
 -- MPP-4298: "unknown" datatypes.
 drop table if exists ctas_foo;
 DROP TABLE

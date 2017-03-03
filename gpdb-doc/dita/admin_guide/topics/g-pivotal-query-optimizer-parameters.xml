@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic28">
+   <title>GPORCA Configuration Parameters</title>
+   <body>
+      <ul>
+         <li>
+            <codeph>optimizer</codeph>
+         </li>
+         <li>
+            <codeph>optimizer_array_expansion_threshold</codeph>
+         </li>
+         <li>
+            <codeph>optimizer_analyze_root_partition</codeph>
+         </li>
+         <li>
+            <codeph>optimizer_control</codeph>
+         </li>
+         <li>
+            <codeph>optimizer_enable_master_only_queries</codeph>
+         </li>
+         <li><codeph>optimizer_parallel_union</codeph></li>
+         <li><codeph>optimizer_sort_factor</codeph></li>
+      </ul>
+   </body>
+</topic>

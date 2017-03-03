@@ -187,6 +187,7 @@ typedef enum AclObjectKind
 	ACL_KIND_TSCONFIGURATION,	/* pg_ts_config */
 	ACL_KIND_FILESPACE,         /* pg_filespace */
 	ACL_KIND_EXTPROTOCOL,		/* pg_extprotocol */
+	ACL_KIND_EXTENSION,         /* pg_extension */
 	MAX_ACL_KIND				/* MUST BE LAST */
 } AclObjectKind;
 
@@ -228,6 +229,7 @@ extern bool is_member_of_role(Oid member, Oid role);
 extern bool is_member_of_role_nosuper(Oid member, Oid role);
 extern bool is_admin_of_role(Oid member, Oid role);
 extern void check_is_member_of_role(Oid member, Oid role);
+extern Oid  get_role_oid(const char *rolname, bool missing_ok);
 
 extern void select_best_grantor(Oid roleId, AclMode privileges,
 					const Acl *acl, Oid ownerId,
@@ -280,6 +282,7 @@ extern void aclcheck_error(AclResult aclerr, AclObjectKind objectkind,
 			   const char *objectname);
 
 /* ownercheck routines just return true (owner) or false (not) */
+extern bool pg_extension_ownercheck(Oid ext_oid, Oid roleid);
 extern bool pg_class_ownercheck(Oid class_oid, Oid roleid);
 extern bool pg_type_ownercheck(Oid type_oid, Oid roleid);
 extern bool pg_oper_ownercheck(Oid oper_oid, Oid roleid);
@@ -294,6 +297,7 @@ extern bool pg_database_ownercheck(Oid db_oid, Oid roleid);
 extern bool pg_conversion_ownercheck(Oid conv_oid, Oid roleid);
 extern bool pg_ts_dict_ownercheck(Oid dict_oid, Oid roleid);
 extern bool pg_ts_config_ownercheck(Oid cfg_oid, Oid roleid);
+extern bool has_createrole_privilege(Oid roleid);
 extern bool pg_extprotocol_ownercheck(Oid ptc_oid, Oid roleid);
 
 #endif   /* ACL_H */

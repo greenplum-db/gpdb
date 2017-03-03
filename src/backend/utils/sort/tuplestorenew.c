@@ -1,6 +1,22 @@
 /*
  * tuplestorenew.c
  *		A better tuplestore
+ *
+ *		Design overview:
+ *		Each tuple store has many pages. Each page has a page header
+ *		(NTupleStorePageHeader), followed by a fixed area of binary raw data
+ *		(char data[NTS_MAX_ENTRY_SIZE]), followed by a directory of tuple slots
+ *		(NTupleStorePageSlotEntry). Each tuple slot simply saves a index where
+ *		the slot's data starts in the byte array and a size to indicate how many
+ *		bytes to read from the index.
+ *
+ *		All the pages are linked together using each page header's
+ *		(NTupleStorePageHeader) prev_1 and next_1 pointers. This pointers are
+ *		only valid for in memory pages.
+ *
+ *		Each page's slot table grows from end to beginning (using the same byte
+ *		array) and the data grows from beginning to end. Therefore, all the slot
+ *		indexes are negative.
  */
 
 #include "postgres.h"
@@ -9,7 +25,6 @@
 #include "executor/execWorkfile.h"
 #include "utils/tuplestorenew.h"
 #include "utils/memutils.h"
-#include "utils/gp_alloc.h"
 
 #include "cdb/cdbvars.h"                /* currentSliceId */
 
@@ -163,6 +178,8 @@ struct NTupleStore
 
 	List *accessors;    /* all current accessors of the store */
 	bool fwacc; 		/* if I had already has a write acc */
+
+	MemoryContext mcxt; /* memory context holding this tuplestore, and the page structs */
 
 	/* instrumentation for explain analyze */
 	Instrumentation *instrument;
@@ -355,21 +372,9 @@ static void nts_return_free_page(NTupleStore *nts, NTupleStorePage *page)
 	nts->first_free_page = NTS_PREPEND_1(nts->first_free_page, page);
 }
 
-static inline void *check_malloc(int size)
-{
-	void *ptr = gp_malloc(size);
-	if(!ptr)
-		ereport(ERROR,
-				(errcode(ERRCODE_OUT_OF_MEMORY),
-				 errmsg("NTupleStore failed to malloc: out of memory")));
-	return ptr;
-}
-
 /* Get a free page.  Will shrink if necessary.
  * The page returned still belong to the store (accounted by nts->page_cnt), but it is
  * not on any list.  Caller is responsible to put it back onto a list.
- *
- * Page is allocated/freed with gcc malloc/free, not palloc/pfree.
  */
 static NTupleStorePage *nts_get_free_page(NTupleStore *nts)
 {
@@ -436,7 +441,7 @@ static NTupleStorePage *nts_get_free_page(NTupleStore *nts)
 
 				if(nts->page_cnt >= page_max)
 				{
-					gp_free(page_next);
+					pfree(page_next);
 					--nts->page_cnt;
 				}
 				else
@@ -458,7 +463,7 @@ static NTupleStorePage *nts_get_free_page(NTupleStore *nts)
 	}
 
 	Assert(page_next == NULL && nts->page_cnt < page_max);
-	page = (NTupleStorePage *) check_malloc(sizeof(NTupleStorePage));
+	page = (NTupleStorePage *) MemoryContextAlloc(nts->mcxt, sizeof(NTupleStorePage));
 	init_page(page);
 	++nts->page_cnt;
 
@@ -586,30 +591,24 @@ static NTupleStorePage *nts_load_prev_page(NTupleStore *store, NTupleStorePage *
 	}
 }
 
-static void ntuplestore_cleanup(NTupleStore *ts, bool fNormal)
+void
+ntuplestore_destroy(NTupleStore *ts)
 {
 	NTupleStorePage *p = ts->first_page;
+	ListCell *cell;
 
-	/* normal case: for each accessor, we mark it has no owning store.
-	 * This do not need to, actually, cannot be called in error out case,
-	 * because the memory context of ts->accessor has already been 
-	 * cleaned up
-	 */
-	if(fNormal)
+	/* For each accessor, we mark it has no owning store. */
+	foreach(cell, ts->accessors)
 	{
-		ListCell *cell;
-		foreach(cell, ts->accessors)
-		{
-			NTupleStoreAccessor *acc = (NTupleStoreAccessor *) lfirst(cell);
-			acc->store = NULL;
-			acc->page = NULL;
-		}
+		NTupleStoreAccessor *acc = (NTupleStoreAccessor *) lfirst(cell);
+		acc->store = NULL;
+		acc->page = NULL;
 	}
 
 	while(p)
 	{
 		NTupleStorePage *pnext = nts_page_next(p); 
-		gp_free(p);
+		pfree(p);
 		p = pnext;
 	}
 
@@ -617,7 +616,7 @@ static void ntuplestore_cleanup(NTupleStore *ts, bool fNormal)
 	while(p)
 	{
 		NTupleStorePage *pnext = nts_page_next(p); 
-		gp_free(p);
+		pfree(p);
 		p = pnext;
 	}
 
@@ -638,18 +637,14 @@ static void ntuplestore_cleanup(NTupleStore *ts, bool fNormal)
 		ts->work_set = NULL;
 	}
 
-	gp_free(ts);
-}
-
-static void XCallBack_NTS(XactEvent event, void *nts)
-{
-	ntuplestore_cleanup((NTupleStore *)nts, false);
+	pfree(ts);
 }
 
 NTupleStore *
 ntuplestore_create(int maxBytes)
 {
-	NTupleStore *store = (NTupleStore *) check_malloc(sizeof(NTupleStore));
+	NTupleStore *store = (NTupleStore *) palloc(sizeof(NTupleStore));
+	store->mcxt = CurrentMemoryContext;
 
 	store->pfile = NULL;
 	store->first_ondisk_blockn = 0;
@@ -666,7 +661,7 @@ ntuplestore_create(int maxBytes)
 	if(store->page_max < 16)
 		store->page_max = 16;
 
-	store->first_page = (NTupleStorePage *) check_malloc(sizeof(NTupleStorePage));
+	store->first_page = (NTupleStorePage *) MemoryContextAlloc(store->mcxt, sizeof(NTupleStorePage));
 	init_page(store->first_page);
 	nts_page_set_blockn(store->first_page, 0);
 
@@ -685,7 +680,6 @@ ntuplestore_create(int maxBytes)
 
 	store->instrument = NULL;
 
-	RegisterXactCallbackOnce(XCallBack_NTS, (void *) store);
 	return store;
 }
 
@@ -719,7 +713,8 @@ ntuplestore_create_readerwriter(const char *filename, int maxBytes, bool isWrite
 	}
 	else
 	{
-		store = (NTupleStore *) check_malloc(sizeof(NTupleStore));
+		store = (NTupleStore *) palloc(sizeof(NTupleStore));
+		store->mcxt = CurrentMemoryContext;
 		store->work_set = NULL;
 		store->workfiles_created = false;
 
@@ -732,7 +727,6 @@ ntuplestore_create_readerwriter(const char *filename, int maxBytes, bool isWrite
 				0 /* compressType */);
 
 		ntuplestore_init_reader(store, maxBytes);
-		RegisterXactCallbackOnce(XCallBack_NTS, (void *) store);
 	}
 	return store;
 }
@@ -759,7 +753,7 @@ ntuplestore_init_reader(NTupleStore *store, int maxBytes)
 	if(store->page_max < 16)
 		store->page_max = 16;
 
-	store->first_page = (NTupleStorePage *) check_malloc(sizeof(NTupleStorePage));
+	store->first_page = (NTupleStorePage *) MemoryContextAlloc(store->mcxt, sizeof(NTupleStorePage));
 	init_page(store->first_page);
 
 	bool fOK = ntsReadBlock(store, 0, store->first_page);
@@ -871,17 +865,19 @@ ntuplestore_flush(NTupleStore *ts)
 	}
 }
 
-void 
-ntuplestore_destroy(NTupleStore *ts)
-{
-	ntuplestore_cleanup(ts, true);
-	UnregisterXactCallbackOnce(XCallBack_NTS, (void *) ts);
-}
-
 NTupleStoreAccessor* 
 ntuplestore_create_accessor(NTupleStore *ts, bool isWriter)
 {
-	NTupleStoreAccessor *acc = (NTupleStoreAccessor *) palloc(sizeof(NTupleStoreAccessor));
+	NTupleStoreAccessor *acc;
+	MemoryContext oldcxt;
+
+	/*
+	 * The accessor is allocated in the same memory context as the tuplestore
+	 * itself.
+	 */
+	oldcxt = MemoryContextSwitchTo(ts->mcxt);
+
+	acc = (NTupleStoreAccessor *) palloc(sizeof(NTupleStoreAccessor));
 
 	acc->store = ts;
 	acc->isWriter = isWriter;
@@ -899,6 +895,8 @@ ntuplestore_create_accessor(NTupleStore *ts, bool isWriter)
 	AssertImply(isWriter, !ts->fwacc);
 	if(isWriter)
 		ts->fwacc = true;
+
+	MemoryContextSwitchTo(oldcxt);
 
 	return acc;
 }
@@ -1306,7 +1304,7 @@ bool ntuplestore_acc_current_data(NTupleStoreAccessor *tsa, void **data, int *le
 		{
 			if (tsa->tmp_lob)
 				pfree(tsa->tmp_lob);
-			tsa->tmp_lob = palloc(plobref->size);
+			tsa->tmp_lob = MemoryContextAlloc(tsa->store->mcxt, plobref->size);
 			tsa->tmp_len = plobref->size;
 		}
 

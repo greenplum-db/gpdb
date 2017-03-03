@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="md20941">gpstate</title>
+  <body>
+    <p>Shows the status of a running Greenplum Database system.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock><b>gpstate</b> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] 
+          [<b>-s</b> | <b>-b</b> | <b>-Q</b><ph> | <b>-e</b>] [<b>-m</b> | <b>-c</b></ph>] [<b>-p</b>] [<b>-i</b>] [<b>-f</b>] [<b>-v</b> | <b>-q</b>] 
+          [<b>-l</b> <varname>log_directory</varname>]
+
+<b>gpstate</b> <b>-?</b> | <b>-h</b> | <b>--help</b></codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p>The <codeph>gpstate</codeph> utility displays information about a running Greenplum Database instance. There is additional information you may want to know
+        about a Greenplum Database system, since it is comprised of multiple
+        PostgreSQL database instances (segments) spanning multiple machines. The
+          <codeph>gpstate</codeph> utility provides additional status information for a Greenplum Database system, such as:</p>
+      <ul>
+        <li id="md136156">Which segments are down.</li>
+        <li id="md136689">Master and segment configuration information (hosts, data directories,
+          etc.).</li>
+        <li id="md136182">The ports used by the system.</li>
+        <li id="md136189">A mapping of primary segments to their corresponding mirror segments.</li>
+      </ul>
+    </section>
+    <section id="section4">
+      <title>Options</title>
+      <parml>
+        <plentry>
+          <pt>-b (brief status)</pt>
+          <pd>Optional. Display a brief summary of the state of the Greenplum Database
+            system. This is the default option.</pd>
+        </plentry>
+        <plentry>
+          <pt>-B <varname>parallel_processes</varname></pt>
+          <pd>The number of segments to check in parallel. If not specified, the utility will start
+            up to 60 parallel processes depending on how many segment instances it needs to
+            check.</pd>
+        </plentry>
+        <plentry>
+          <pt>-c (show primary to mirror mappings)</pt>
+          <pd>Optional. Display mapping of primary segments to their corresponding mirror
+            segments.</pd>
+        </plentry>
+        <plentry>
+          <pt>-d <varname>master_data_directory</varname></pt>
+          <pd>Optional. The master data directory. If not specified, the value set for
+              <codeph>$MASTER_DATA_DIRECTORY</codeph> will be used.</pd>
+        </plentry>
+        <plentry>
+          <pt>-e (show segments with mirror status issues)</pt>
+          <pd>Show details on primary/mirror segment pairs that have potential issues such as 1) the
+            active segment is running in change tracking mode, meaning a segment is down 2) the
+            active segment is in resynchronization mode, meaning it is catching up changes to the
+            mirror 3) a segment is not in its preferred role, for example a segment that was a
+            primary at system initialization time is now acting as a mirror, meaning you may have
+            one or more segment hosts with unbalanced processing load.</pd>
+        </plentry>
+        <plentry>
+          <pt>-f (show standby master details)</pt>
+          <pd>Display details of the standby master host if configured.</pd>
+        </plentry>
+        <plentry>
+          <pt>-i (show Greenplum Database version)</pt>
+          <pd>Display the Greenplum Database software version information for each
+            instance.</pd>
+        </plentry>
+        <plentry>
+          <pt>-l <varname>logfile_directory</varname></pt>
+          <pd>The directory to write the log file. Defaults to <codeph>~/gpAdminLogs</codeph>.</pd>
+        </plentry>
+        <plentry>
+          <pt>-m (list mirrors)</pt>
+          <pd>Optional. List the mirror segment instances in the system, their current role, and
+            synchronization status.</pd>
+        </plentry>
+        <plentry>
+          <pt>-p (show ports)</pt>
+          <pd>List the port numbers used throughout the Greenplum Database
+            system.</pd>
+        </plentry>
+        <plentry>
+          <pt>-q (no screen output)</pt>
+          <pd>Optional. Run in quiet mode. Except for warning messages, command output is not
+            displayed on the screen. However, this information is still written to the log
+            file.</pd>
+        </plentry>
+        <plentry>
+          <pt>-Q (quick status)</pt>
+          <pd>Optional. Checks segment status in the system catalog on the master host. Does not
+            poll the segments for status.</pd>
+        </plentry>
+        <plentry>
+          <pt>-s (detailed status)</pt>
+          <pd>Optional. Displays detailed status information for the Greenplum Database system.</pd>
+        </plentry>
+        <plentry>
+          <pt>-v (verbose output)</pt>
+          <pd>Optional. Displays error messages and outputs detailed status and progress
+            information.</pd>
+        </plentry>
+        <plentry>
+          <pt>-? | -h | --help (help)</pt>
+          <pd>Displays the online help.</pd>
+        </plentry>
+      </parml>
+    </section>
+    <section id="section5">
+      <title>Output Field Definitions</title>
+      <p>The following output fields are reported by <codeph>gpstate -s</codeph> for the master:</p>
+      <table id="md138854">
+        <title>gpstate output data for the master</title>
+        <tgroup cols="2">
+          <colspec colnum="1" colname="col1" colwidth="166pt"/>
+          <colspec colnum="2" colname="col2" colwidth="208pt"/>
+          <thead>
+            <row>
+              <entry colname="col1">Output Data</entry>
+              <entry colname="col2">Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Master host</entry>
+              <entry colname="col2">host name of the master</entry>
+            </row>
+            <row>
+              <entry colname="col1">Master postgres process ID</entry>
+              <entry colname="col2">PID of the master database listener process</entry>
+            </row>
+            <row>
+              <entry colname="col1">Master data directory</entry>
+              <entry colname="col2">file system location of the master data directory</entry>
+            </row>
+            <row>
+              <entry colname="col1">Master port</entry>
+              <entry colname="col2">port of the master <codeph>postgres</codeph> database listener
+                process</entry>
+            </row>
+            <row>
+              <entry colname="col1">Master current role</entry>
+              <entry colname="col2">dispatch = regular operating mode<p>utility = maintenance mode
+                </p></entry>
+            </row>
+            <row>
+              <entry colname="col1">Greenplum array configuration
+                type</entry>
+              <entry colname="col2">Standard = one NIC per host <p>Multi-Home = multiple NICs per
+                  host</p></entry>
+            </row>
+            <row>
+              <entry colname="col1">Greenplum initsystem
+                version</entry>
+              <entry colname="col2">version of Greenplum Database when system was
+                first initialized</entry>
+            </row>
+            <row>
+              <entry colname="col1">Greenplum current version</entry>
+              <entry colname="col2">current version of Greenplum Database</entry>
+            </row>
+            <row>
+              <entry colname="col1">Postgres version</entry>
+              <entry colname="col2">version of PostgreSQL that Greenplum Database is
+                based on</entry>
+            </row>
+            <row>
+              <entry colname="col1">Greenplum mirroring status</entry>
+              <entry colname="col2">physical mirroring, SAN or none</entry>
+            </row>
+            <row>
+              <entry colname="col1">Master standby</entry>
+              <entry colname="col2">host name of the standby master</entry>
+            </row>
+            <row>
+              <entry colname="col1">Standby master state</entry>
+              <entry colname="col2">status of the standby master: active or passive</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+      <p>The following output fields are reported by <codeph>gpstate -s</codeph> for each
+        segment:</p>
+      <table id="md138181">
+        <title>gpstate output data for segments</title>
+        <tgroup cols="2">
+          <colspec colnum="1" colname="col1" colwidth="165pt"/>
+          <colspec colnum="2" colname="col2" colwidth="209.25pt"/>
+          <thead>
+            <row>
+              <entry colname="col1">Output Data</entry>
+              <entry colname="col2">Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Hostname</entry>
+              <entry colname="col2">system-configured host name</entry>
+            </row>
+            <row>
+              <entry colname="col1">Address</entry>
+              <entry colname="col2">network address host name (NIC name)</entry>
+            </row>
+            <row>
+              <entry colname="col1">Datadir</entry>
+              <entry colname="col2">file system location of segment data directory</entry>
+            </row>
+            <row>
+              <entry colname="col1">Port</entry>
+              <entry colname="col2">port number of segment <codeph>postgres</codeph> database
+                listener process</entry>
+            </row>
+            <row>
+              <entry colname="col1">Current Role</entry>
+              <entry colname="col2">current role of a segment: <varname>Mirror</varname> or
+                  <varname>Primary</varname></entry>
+            </row>
+            <row>
+              <entry colname="col1">Preferred Role</entry>
+              <entry colname="col2">role at system initialization time: <varname>Mirror</varname> or
+                  <varname>Primary</varname></entry>
+            </row>
+            <row>
+              <entry colname="col1">Mirror Status</entry>
+              <entry colname="col2">status of a primary/mirror segment
+                    pair:<p><varname>Synchronized</varname> = data is up to date on both
+                    </p><p><varname>Resynchronization</varname> = data is currently being copied
+                  from one to the other</p><p><varname>Change Tracking</varname> = segment down and
+                  active segment is logging changes</p></entry>
+            </row>
+            <row>
+              <entry colname="col1">Change tracking data size</entry>
+              <entry colname="col2">when in <varname>Change Tracking</varname> mode, the size of the
+                change log file (may grow and shrink as compression is applied)</entry>
+            </row>
+            <row>
+              <entry colname="col1">Estimated total data to synchronize</entry>
+              <entry colname="col2">when in <varname>Resynchronization</varname> mode, the estimated
+                size of data left to syncronize</entry>
+            </row>
+            <row>
+              <entry colname="col1">Data synchronized</entry>
+              <entry colname="col2">when in <varname>Resynchronization</varname> mode, the estimated
+                size of data that has already been syncronized</entry>
+            </row>
+            <row>
+              <entry colname="col1">Estimated resync progress with mirror</entry>
+              <entry colname="col2">When in <varname>Resynchronization</varname> mode, the estimated
+                percentage of completion</entry>
+            </row>
+            <row>
+              <entry colname="col1">Estimated resync end time</entry>
+              <entry colname="col2">when in <varname>Resynchronization</varname> mode, the estimated
+                time to complete</entry>
+            </row>
+            <row>
+              <entry colname="col1">File <codeph>postmaster.pid</codeph></entry>
+              <entry colname="col2">status of <codeph>postmaster.pid</codeph> lock file:
+                  <varname>Found</varname> or <varname>Missing</varname></entry>
+            </row>
+            <row>
+              <entry colname="col1">PID from <codeph>postmaster.pid</codeph> file</entry>
+              <entry colname="col2">PID found in the <codeph>postmaster.pid</codeph> file</entry>
+            </row>
+            <row>
+              <entry colname="col1">Lock files in <codeph>/tmp</codeph></entry>
+              <entry colname="col2">a segment port lock file for its <codeph>postgres</codeph>
+                process is created in <codeph>/tmp</codeph> (file is removed when a segment shuts
+                down)</entry>
+            </row>
+            <row>
+              <entry colname="col1">Active PID</entry>
+              <entry colname="col2">active process ID of a segment</entry>
+            </row>
+            <row>
+              <entry colname="col1">Master reports status as</entry>
+              <entry colname="col2">segment status as reported in the system catalog:
+                  <varname>Up</varname> or <varname>Down</varname></entry>
+            </row>
+            <row>
+              <entry colname="col1">Database status</entry>
+              <entry colname="col2">status of Greenplum Database to incoming requests:
+                  <varname>Up</varname>, <varname>Down</varname>, or <varname>Suspended</varname>. A
+                  <varname>Suspended</varname> state means database activity is temporarily paused
+                while a segment transitions from one state to another.</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+      <p>The following output fields are reported by <codeph>gpstate -f</codeph> for standby master
+        replication status:</p>
+      <table id="table_vt5_rvm_ht">
+        <title>gpstate output data for master replication</title>
+        <tgroup cols="2">
+          <colspec colnum="1" colname="col1" colwidth="165pt"/>
+          <colspec colnum="2" colname="col2" colwidth="209.25pt"/>
+          <thead>
+            <row>
+              <entry colname="col1">Output Data</entry>
+              <entry colname="col2">Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Standby address</entry>
+              <entry colname="col2">hostname of the standby master</entry>
+            </row>
+            <row>
+              <entry colname="col1">Standby data dir</entry>
+              <entry colname="col2">file system location of the standby master data
+                directory</entry>
+            </row>
+            <row>
+              <entry colname="col1">Standby port</entry>
+              <entry colname="col2">port of the standby master <codeph>postgres</codeph> database
+                listener process</entry>
+            </row>
+            <row>
+              <entry colname="col1">Standby PID</entry>
+              <entry colname="col2">process ID of the standby master </entry>
+            </row>
+            <row>
+              <entry colname="col1">Standby status</entry>
+              <entry colname="col2">status of the standby master: <varname>Standby host
+                  passive</varname>
+              </entry>
+            </row>
+
+            <row>
+              <entry colname="col1">WAL Sender State</entry>
+              <entry colname="col2">write-ahead log (WAL) streaming state:
+                  <varname>streaming</varname>,
+                <varname>startup</varname>,<varname>backup</varname>, <varname>catchup</varname>
+              </entry>
+            </row>
+            <row>
+              <entry colname="col1">Sync state</entry>
+              <entry colname="col2">WAL sender syncronization state: <varname>sync</varname></entry>
+            </row>
+            <row>
+              <entry colname="col1">Sent Location</entry>
+              <entry colname="col2">WAL sender transaction log (xlog) record sent location</entry>
+            </row>
+            <row>
+              <entry colname="col1">Flush Location</entry>
+              <entry colname="col2">WAL receiver xlog record flush location</entry>
+            </row>
+            <row>
+              <entry colname="col1">Replay Location</entry>
+              <entry colname="col2">standby xlog record replay location</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </section>
+    <section id="section6">
+      <title>Examples</title>
+      <p>Show detailed status information of a Greenplum Database system:</p>
+      <codeblock>gpstate -s</codeblock>
+      <p>Do a quick check for down segments in the master host system catalog:</p>
+      <codeblock>gpstate -Q</codeblock>
+      <p>Show information about mirror segment
+        instances:<codeblock>gpstate -m</codeblock></p>
+      <p>Show information about the standby master configuration:</p>
+      <codeblock>gpstate -f</codeblock>
+      <p>Display the Greenplum software version information:</p>
+      <codeblock>gpstate -i</codeblock>
+    </section>
+    <section id="section7">
+      <title>See Also</title>
+      <p><codeph><xref href="gpstart.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="gplogfilter.xml#topic1" type="topic" format="dita"/></codeph></p>
+    </section>
+  </body>
+</topic>

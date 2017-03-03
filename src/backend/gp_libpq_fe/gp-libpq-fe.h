@@ -405,7 +405,8 @@ extern PGresult *PQexecPrepared(PGconn *conn,
  */
 extern int PQsendGpQuery_shared(PGconn       *conn,
 								 char         *query,
-								 int          query_len);
+								 int          query_len,
+								 bool         nonblock);
 
 /* Interface for multiple-result or asynchronous queries */
 extern int	PQsendQuery(PGconn *conn, const char *query);

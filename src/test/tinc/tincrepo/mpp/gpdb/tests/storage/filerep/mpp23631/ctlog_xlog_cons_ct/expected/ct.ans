@@ -60,5 +60,5 @@ insert into r1 values (generate_series(1,1600));
 INSERT 0 1600
 insert into ao values (generate_series(1,100));
 psql:/path/sql_file:1: NOTICE:  Releasing segworker groups to finish aborting the transaction.
-psql:/path/sql_file:1: ERROR:  fault triggered, fault name:'appendonly_insert' fault type:'panic' (faultinjector.c:617)  (seg0 usentulshrmbp.corp.emc.com:40000 pid=35332) (cdbdisp.c:1525)
-ERROR:  could not temporarily connect to one or more segments (cdbgang.c:1633)
+psql:/path/sql_file:1: ERROR:  fault triggered, fault name:'appendonly_insert' fault type:'panic' (seg0 usentulshrmbp.corp.emc.com:40000 pid=35332)
+ERROR:  could not connect to segment: initialization of segworker group failed (cdbgang.c:260)

@@ -1004,6 +1004,22 @@ gpdb::PnodePartConstraintRel
 }
 
 bool
+gpdb::FHasExternalPartition
+	(
+	Oid oid
+	)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_partition, pg_partition_rule */
+		return rel_has_external_partition(oid);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+
+bool
 gpdb::FLeafPartition
 	(
 	Oid oid
@@ -1517,7 +1533,7 @@ gpdb::PlcListTail
 	return NULL;
 }
 
-int
+uint32
 gpdb::UlListLength
 	(
 	List *l
@@ -1628,6 +1644,20 @@ gpdb::FMotionGather
 	GP_WRAP_START;
 	{
 		return isMotionGather(pmotion);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+bool
+gpdb::FAppendOnlyPartitionTable
+	(
+	Oid rootOid
+	)
+{
+	GP_WRAP_START;
+	{
+		return rel_has_appendonly_partition(rootOid);
 	}
 	GP_WRAP_END;
 	return false;
@@ -2598,21 +2628,22 @@ gpdb::PnodeCoerceToCommonType
 	return NULL;
 }
 
-Oid
-gpdb::OidResolveGenericType
+bool
+gpdb::FResolvePolymorphicType
 	(
-	Oid declared_type,
-	Oid context_actual_type,
-	Oid context_declared_type
+	int numargs,
+	Oid *argtypes,
+	char *argmodes,
+	FuncExpr *call_expr
 	)
 {
 	GP_WRAP_START;
 	{
-		/* catalog tables: pg_type */
-		return resolve_generic_type(declared_type, context_actual_type, context_declared_type);
+		/* catalog tables: pg_proc */
+		return resolve_polymorphic_argtypes(numargs, argtypes, argmodes, (Node *)call_expr);
 	}
 	GP_WRAP_END;
-	return 0;
+	return false;
 }
 
 // hash a const value with GPDB's hash function
@@ -2662,12 +2693,12 @@ gpdb::CheckRTPermissions
 	GP_WRAP_END;
 }
 
-// check permissions on range table
+// get index op family properties
 void
 gpdb::IndexOpProperties
 	(
 	Oid opno,
-	Oid opclass,
+	Oid opfamily,
 	int *strategy,
 	Oid *subtype,
 	bool *recheck
@@ -2677,20 +2708,19 @@ gpdb::IndexOpProperties
 	{
 		/* catalog tables: pg_amop */
 
-		// FIXME: We assume the 'opclass' arg is actually an opfamily
-		// Also, only the right type is returned to the caller, the left
+		// Only the right type is returned to the caller, the left
 		// type is simply ignored.
 		Oid	lefttype;
 
-		get_op_opfamily_properties(opno, opclass, strategy, &lefttype, subtype, recheck);
+		get_op_opfamily_properties(opno, opfamily, strategy, &lefttype, subtype, recheck);
 		return;
 	}
 	GP_WRAP_END;
 }
 
-// get oids of opclasses for the index keys
+// get oids of opfamilies for the index keys
 List *
-gpdb::PlIndexOpClasses
+gpdb::PlIndexOpFamilies
 	(
 	Oid oidIndex
 	)
@@ -2699,9 +2729,7 @@ gpdb::PlIndexOpClasses
 	{
 		/* catalog tables: pg_index */
 
-		// FIXME: We actually return the operator *families* of the index keys.
-		// As long as we do the same for operators below, i.e. fetch the
-		// operator families that an operator belons to, this works.
+		// We return the operator families of the index keys.
 		return get_index_opfamilies(oidIndex);
 	}
 	GP_WRAP_END;
@@ -2709,9 +2737,9 @@ gpdb::PlIndexOpClasses
 	return NIL;
 }
 
-// get oids of classes this operator belongs to
+// get oids of families this operator belongs to
 List *
-gpdb::PlScOpOpClasses
+gpdb::PlScOpOpFamilies
 	(
 	Oid opno
 	)
@@ -2720,9 +2748,8 @@ gpdb::PlScOpOpClasses
 	{
 		/* catalog tables: pg_amop */
 
-		// FIXME: We actually return the operator *families* this operator
-		// belongs to. As long as we do the same for index columns above,
-		// this works.
+		// We return the operator families this operator
+		// belongs to.
 		return get_operator_opfamilies(opno);
 	}
 	GP_WRAP_END;
@@ -2929,7 +2956,7 @@ register_mdcache_invalidation_callbacks(void)
 		 */
 		/* gp_segment_config */
 	};
-	int			i;
+	unsigned int i;
 
 	for (i = 0; i < lengthof(metadata_caches); i++)
 	{

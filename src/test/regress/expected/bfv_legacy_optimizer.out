@@ -100,7 +100,7 @@ col_with_constraint numeric UNIQUE
 ) distributed BY (col_with_constraint);
 NOTICE:  CREATE TABLE / UNIQUE will create implicit index "bfv_legacy_a_col_with_constraint_key" for table "bfv_legacy_a"
 create table bfv_legacy_B as select * from bfv_legacy_A;
-NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
 select localoid::regclass, attrnums from gp_distribution_policy p left join pg_class c on (p.localoid = c.oid) where c.relname in ('bfv_legacy_a', 'bfv_legacy_b') order by 1,2;
    localoid   | attrnums 
 --------------+----------

@@ -20,7 +20,7 @@ alter table mdt_part_tbl_add set subpartition template ();
 psql:/path/sql_file:1: NOTICE:  dropped level 1 subpartition template specification for relation "mdt_part_tbl_add"
 ALTER TABLE
 alter table mdt_part_tbl_add add partition p3 end (13) (subpartition sp3 values ('c'));
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_part_tbl_add_1_prt_p3" for table "mdt_part_tbl_add"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_part_tbl_add_1_prt_p3_2_prt_sp3" for table "mdt_part_tbl_add_1_prt_p3"
 ALTER TABLE

@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dita PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<dita>
+  <topic id="topic_fstrm">
+    <title>Greenplum Fuzzy String Match Extension</title>
+    <body>
+      <p>The Greenplum Database Fuzzy String Match extension provides functions to determine
+        similarities and distance between strings based on various algorithms.</p>
+      <ul id="ul_ltl_rym_hp">
+        <li>
+          <xref href="#topic_soundex" format="dita"/>
+        </li>
+        <li>
+          <xref href="#topic_levenshtein" format="dita"/>
+        </li>
+        <li>
+          <xref href="#topic_metaphone" format="dita"/>
+        </li>
+        <li>
+          <xref href="#d_metaphone" format="dita"/>
+        </li>
+        <li>
+          <xref href="#topic_install" format="dita"/>
+        </li>
+      </ul>
+      <p>The Greenplum Database installation contains the files required for the functions in this
+        extension module and SQL scripts to define the extension functions in a database and remove
+        the functions from a database. </p>
+      <note type="warning">The functions <apiname>soundex</apiname>, <apiname>metaphone</apiname>,
+          <apiname>dmetaphone</apiname>, and <apiname>dmetaphone_alt</apiname> do not work well with
+        multibyte encodings (such as UTF-8).</note>
+      <p>The Greenplum Database Fuzzy String Match extension is based on the PostgreSQL
+        fuzzystrmatch module.</p>
+    </body>
+    <topic id="topic_soundex">
+      <title>Soundex Functions</title>
+      <body>
+        <p>The Soundex system is a method of matching similar-sounding (similar phonemes) names by
+          converting them to the same code.</p>
+        <note>Soundex is most useful for English names.</note>
+        <p>These functions work with Soundex codes:</p>
+        <codeblock>soundex(text <varname>string1</varname>) returns text
+difference(text <varname>string1</varname>, text <varname>string2</varname>) returns int</codeblock>
+        <p>The <apiname>soundex</apiname> function converts a string to its Soundex code. Soundex
+          codes consist of four characters.</p>
+        <p>The <apiname>difference</apiname> function converts two strings to their Soundex codes
+          and then reports the number of matching code positions. The result ranges from zero to
+          four, zero being no match and four being an exact match. These are some examples:</p>
+        <codeblock>SELECT soundex('hello world!');
+SELECT soundex('Anne'), soundex('Ann'), difference('Anne', 'Ann');
+SELECT soundex('Anne'), soundex('Andrew'), difference('Anne', 'Andrew');
+SELECT soundex('Anne'), soundex('Margaret'), difference('Anne', 'Margaret');
+
+CREATE TABLE s (nm text);
+
+INSERT INTO s VALUES ('john');
+INSERT INTO s VALUES ('joan');
+INSERT INTO s VALUES ('wobbly');
+INSERT INTO s VALUES ('jack');
+
+SELECT * FROM s WHERE soundex(nm) = soundex('john');
+
+SELECT * FROM s WHERE difference(s.nm, 'john') > 2;</codeblock>
+        <p>For information about the Soundex indexing system see <xref
+            href="http://www.archives.gov/research/census/soundex.html" format="html"
+            scope="external"/>. </p>
+      </body>
+    </topic>
+    <topic id="topic_levenshtein">
+      <title>Levenshtein Functions</title>
+      <body>
+        <p>These functions calculate the Levenshtein distance between two strings: </p>
+        <codeblock>levenshtein(text <varname>source</varname>, text <varname>target</varname>, int <varname>ins_cost</varname>, int <varname>del_cost</varname>, int <varname>sub_cost</varname>) returns int
+levenshtein(text <varname>source</varname>, text <varname>target</varname>) returns int
+levenshtein_less_equal(text <varname>source</varname>, text <varname>target</varname>, int <varname>ins_cost</varname>, int <varname>del_cost</varname>, int <varname>sub_cost</varname>, int <varname>max_d</varname>) returns int
+levenshtein_less_equal(text <varname>source</varname>, text <varname>target</varname>, int max_d) returns int</codeblock>
+        <p>Both the <codeph>source</codeph> and <codeph>target</codeph> parameters can be any
+          non-null string, with a maximum of 255 bytes. The cost parameters
+            <codeph>ins_cost</codeph>, <codeph>del_cost</codeph>, and <codeph>sub_cost</codeph>
+          specify cost of a character insertion, deletion, or substitution, respectively. You can
+          omit the cost parameters, as in the second version of the function; in that case the cost
+          parameters default to 1.</p>
+        <p>
+          <apiname>levenshtein_less_equal</apiname> is accelerated version of
+            <apiname>levenshtein</apiname> function for low values of distance. If actual distance
+          is less or equal then <codeph>max_d</codeph>, then
+            <apiname>levenshtein_less_equal</apiname> returns an accurate value of the distance.
+          Otherwise, this function returns value which is greater than <codeph>max_d</codeph>.
+          Examples:</p>
+        <codeblock>test=# SELECT levenshtein('GUMBO', 'GAMBOL');
+ levenshtein
+-------------
+           2
+(1 row)
+
+test=# SELECT levenshtein('GUMBO', 'GAMBOL', 2,1,1);
+ levenshtein
+-------------
+           3
+(1 row)
+
+test=# SELECT levenshtein_less_equal('extensive', 'exhaustive',2);
+ levenshtein_less_equal
+------------------------
+                      3
+(1 row)
+
+test=# SELECT levenshtein_less_equal('extensive', 'exhaustive',4);
+ levenshtein_less_equal
+------------------------
+                      4
+(1 row)</codeblock>
+        <p>For information about the Levenshtein algorithm, see <xref
+            href="http://www.levenshtein.net/" format="html" scope="external"/>.</p>
+      </body>
+    </topic>
+    <topic id="topic_metaphone">
+      <title>Metaphone Functions</title>
+      <body>
+        <p>Metaphone, like Soundex, is based on the idea of constructing a representative code for
+          an input string. Two strings are then deemed similar if they have the same codes. This
+          function calculates the metaphone code of an input string
+          :<codeblock>metaphone(text <varname>source</varname>, int <varname>max_output_length</varname>) returns text</codeblock></p>
+        <p>The <codeph>source</codeph> parameter must be a non-null string with a maximum of 255
+          characters. The <codeph>max_output_length</codeph> parameter sets the maximum length of
+          the output metaphone code; if longer, the output is truncated to this length. Example:</p>
+        <codeblock>test=# SELECT metaphone('GUMBO', 4);
+ metaphone
+-----------
+ KM
+(1 row)</codeblock>
+        <p>For information about the Metaphone algorithm, see <xref
+            href="http://en.wikipedia.org/wiki/Metaphone" format="html" scope="external"/>.</p>
+      </body>
+    </topic>
+    <topic id="d_metaphone">
+      <title>Double Metaphone Functions</title>
+      <body>
+        <p>The Double Metaphone system computes two "sounds like" strings for a given input string -
+          a "primary" and an "alternate". In most cases they are the same, but for non-English names
+          especially they can be a bit different, depending on pronunciation. These functions
+          compute the primary and alternate
+          codes:<codeblock>dmetaphone(text <varname>source</varname>) returns text
+dmetaphone_alt(text <varname>source</varname>) returns text</codeblock>
+          There is no length limit on the input strings. Example:</p>
+        <codeblock>test=# select dmetaphone('gumbo');
+ dmetaphone
+------------
+ KMP
+(1 row)</codeblock>
+        <p>For information about the Double Metaphone algorithm, see <xref
+            href="http://en.wikipedia.org/wiki/Metaphone#Double_Metaphone" format="html"
+            scope="external"/>.</p>
+      </body>
+    </topic>
+    <topic id="topic_install">
+      <title>Installing and Uninstalling the Fuzzy String Match Functions</title>
+      <body>
+        <p>Greenplum Database supplies SQL scripts to install and uninstall the Fuzzy String Match
+          extension functions.</p>
+        <p>To install the functions in a database, run the following SQL script:</p>
+        <codeblock>psql -f $GPHOME/share/postgresql/contrib/fuzzystrmatch.sql</codeblock>
+        <p>To uninstall the functions, run the following SQL script:</p>
+        <codeblock>psql -f $GPHOME/share/postgresql/contrib/uninstall_fuzzystrmatch.sql</codeblock>
+        <note>When you uninstall the Fuzzy String Match functions from a database, routines that you
+          created in the database that use the functions will no longer work.</note>
+      </body>
+    </topic>
+  </topic>
+</dita>

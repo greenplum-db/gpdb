@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="kt20941">gpexpand</title>
+  <body>
+    <p>Expands an existing Greenplum Database across new hosts in the array.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock><b>gpexpand</b> [{<b>-f</b>|<b>--hosts-file</b>} <varname>hosts_file</varname>]
+        | {<b>-i</b>|<b>--input</b>} <varname>input_file</varname> [<b>-B</b> <varname>batch_size</varname>] [<b>-V</b>|<b>--novacuum</b>] 
+        | {{<b>-d</b> | <b>--duration</b>} <varname>hh:mm:ss</varname> | {<b>-e</b>|<b>--end</b>} '<varname>YYYY-MM-DD hh:mm:ss</varname>'} 
+          [<b>-a</b>|<b>-analyze</b>] 
+          [<b>-n </b> <varname>parallel_processes</varname>]
+        | {<b>-r</b>|<b>--rollback</b>}
+        | {<b>-c</b>|<b>--clean</b>}
+        [<b>-D</b> <varname>database_name</varname>] [<b>-v</b>|<b>--verbose</b>] [<b>-s</b>|<b>--silent</b>]
+        [{<b>-t</b>|<b>--tardir</b>} <varname>directory </varname>]
+        [<b>-S</b>|<b>--simple-progress </b>]
+
+<b>gpexpand -?</b> | <b>-h</b> | <b>--help</b> 
+
+<b>gpexpand --version</b></codeblock>
+    </section>
+    <section id="section3">
+      <title>Prerequisites</title>
+      <ul>
+        <li id="kt137989">You are logged in as the Greenplum Database superuser
+            (<codeph>gpadmin</codeph>).</li>
+        <li id="kt136978">The new segment hosts have been installed and configured as per the
+          existing segment hosts. This involves:<ul id="ul_att_m1q_n4"><li id="kt138636">Configuring
+              the hardware and OS</li><li id="kt138640">Installing the Greenplum software</li><li id="kt138641">Creating the
+                <codeph>gpadmin</codeph> user account</li><li id="kt138642">Exchanging SSH keys.
+            </li></ul></li>
+        <li id="kt137052">Enough disk space on your segment hosts to temporarily hold a copy of your
+          largest table. </li>
+        <li>When redistributing data, Greenplum Database must be running in production
+          mode. Greenplum Database cannot be restricted mode or in master mode. The
+            <codeph>gpstart</codeph> options <codeph>-R</codeph> or <codeph>-m</codeph> cannot be
+          specified to start Greenplum Database. </li>
+      </ul>
+    </section>
+    <section id="section4">
+      <title>Description</title>
+      <p>The <codeph>gpexpand</codeph> utility performs system expansion in two phases: segment
+        initialization and then table redistribution. </p>
+      <p>In the initialization phase, <codeph>gpexpand</codeph> runs with an input file that
+        specifies data directories, <varname>dbid</varname> values, and other characteristics of the
+        new segments. You can create the input file manually, or by following the prompts in an
+        interactive interview.</p>
+      <p>If you choose to create the input file using the interactive interview, you can optionally
+        specify a file containing a list of expansion hosts. If your platform or command shell
+        limits the length of the list of hostnames that you can type when prompted in the interview,
+        specifying the hosts with <codeph>-f</codeph> may be mandatory. </p>
+      <p>In addition to initializing the segments, the initialization phase performs these
+        actions:</p>
+      <ul>
+        <li id="kt138259">Creates an expansion schema to store the status of the expansion
+          operation, including detailed status for tables.</li>
+        <li id="kt138260">Changes the distribution policy for all tables to <codeph>DISTRIBUTED
+            RANDOMLY</codeph>. The original distribution policies are later restored in the
+          redistribution phase.</li>
+      </ul>
+      <p>To begin the redistribution phase, you must run <codeph>gpexpand</codeph> with either the
+          <codeph>-d</codeph> (duration) or <codeph>-e</codeph> (end time) options. Until the
+        specified end time or duration is reached, the utility will redistribute tables in the
+        expansion schema. Each table is reorganized using <codeph>ALTER TABLE</codeph> commands to
+        rebalance the tables across new segments, and to set tables to their original distribution
+        policy. If <codeph>gpexpand</codeph> completes the reorganization of all tables before the
+        specified duration, it displays a success message and ends. <note>Data redistribution should
+          be performed during low-use hours. Redistribution can divided into batches over an
+          extended period.</note></p>
+    </section>
+    <section id="section5">
+      <title>Options</title>
+      <parml>
+        <plentry>
+          <pt>-a | --analyze</pt>
+          <pd>Run <codeph>ANALYZE</codeph> to update the table statistics after expansion. The
+            default is to not run <codeph>ANALYZE</codeph>.</pd>
+        </plentry>
+        <plentry>
+          <pt>-B <varname>batch_size</varname></pt>
+          <pd>Batch size of remote commands to send to a given host before making a one-second
+            pause. Default is <codeph>16</codeph>. Valid values are 1-128.</pd>
+          <pd>The <codeph>gpexpand</codeph> utility issues a number of setup commands that may
+            exceed the host's maximum threshold for authenticated connections as defined by
+              <codeph>MaxStartups</codeph> in the SSH daemon configuration. The one-second pause
+            allows authentications to be completed before <codeph>gpexpand</codeph> issues any more
+            commands. </pd>
+          <pd>The default value does not normally need to be changed. However, it may be necessary
+            to reduce the maximum number of commands if <codeph>gpexpand</codeph> fails with
+            connection errors such as <codeph>'ssh_exchange_identification: Connection closed by
+              remote host.'</codeph></pd>
+        </plentry>
+        <plentry>
+          <pt>-c | --clean</pt>
+          <pd>Remove the expansion schema.</pd>
+        </plentry>
+        <plentry>
+          <pt>-d | --duration <varname>hh:mm:ss</varname></pt>
+          <pd>Duration of the expansion session from beginning to end.</pd>
+        </plentry>
+        <plentry>
+          <pt>-D <varname>database_name</varname></pt>
+          <pd>Specifies the database in which to create the expansion schema and tables. If this
+            option is not given, the setting for the environment variable
+              <codeph>PGDATABASE</codeph> is used. The database templates
+              <varname>template1</varname> and <varname>template0</varname> cannot be used.</pd>
+        </plentry>
+        <plentry>
+          <pt>-e | --end '<varname>YYYY-MM-DD hh:mm:ss</varname>'</pt>
+          <pd>Ending date and time for the expansion session.</pd>
+        </plentry>
+        <plentry>
+          <pt>-f | --hosts-file <varname>filename</varname></pt>
+          <pd>Specifies the name of a file that contains a list of new hosts for system expansion.
+            Each line of the file must contain a single host name. </pd>
+          <pd>This file can contain hostnames with or without network interfaces specified. The
+              <codeph>gpexpand</codeph> utility handles either case, adding interface numbers to end
+            of the hostname if the original nodes are configured with multiple network
+              interfaces.<note>The Greenplum Database segment host naming
+              convention is <codeph>sdwN</codeph> where <codeph>sdw</codeph> is a prefix and
+                <codeph>N</codeph> is an integer. For example, on a Greenplum Database DCA system,
+              segment host names would be <codeph>sdw1</codeph>, <codeph>sdw2</codeph> and so on.
+              For hosts with multiple interfaces, the convention is to append a dash
+                (<codeph>-</codeph>) and number to the host name. For example,
+                s<codeph>dw1-1</codeph> and s<codeph>dw1-2</codeph> are the two interface names for
+              host <codeph>sdw1</codeph>. </note></pd>
+        </plentry>
+        <plentry>
+          <pt>-i | --input <varname>input_file</varname></pt>
+          <pd>Specifies the name of the expansion configuration file, which contains one line for
+            each segment to be added in the format of:</pd>
+          <pd>
+            <varname>hostname:address:port:fselocation:dbid:content:preferred_role:replication_port</varname>
+          </pd>
+          <pd>If your system has filespaces, <codeph>gpexpand</codeph> will expect a filespace
+            configuration file (<varname>input_file_name</varname><codeph>.fs</codeph>) to exist in
+            the same directory as your expansion configuration file. The filespace configuration
+            file is in the format of:</pd>
+          <pd>
+            <codeblock>filespaceOrder=<varname>filespace1_name</varname>:<varname>filespace2_name</varname>: ...
+dbid:<varname>/path/for/filespace1</varname>:<varname>/path/for/filespace2</varname>: ...
+dbid:<varname>/path/for/filespace1</varname>:<varname>/path/for/filespace2</varname>: ...
+...</codeblock>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt>-n <varname>parallel_processes</varname></pt>
+          <pd>The number of tables to redistribute simultaneously. Valid values are 1 - 96.</pd>
+          <pd>Each table redistribution process requires two database connections: one to alter the
+            table, and another to update the table's status in the expansion schema. Before
+            increasing <codeph>-n</codeph>, check the current value of the server configuration
+            parameter <codeph>max_connections</codeph> and make sure the maximum connection limit is
+            not exceeded.</pd>
+        </plentry>
+        <plentry>
+          <pt>-r | --rollback</pt>
+          <pd>Roll back a failed expansion setup operation. If the rollback command fails, attempt
+            again using the <codeph>-D</codeph> option to specify the database that contains the
+            expansion schema for the operation that you want to roll back.</pd>
+        </plentry>
+        <plentry>
+          <pt>-s | --silent</pt>
+          <pd>Runs in silent mode. Does not prompt for confirmation to proceed on warnings.</pd>
+        </plentry>
+        <plentry>
+          <pt>-S | --simple-progress</pt>
+          <pd>If specified, the <codeph>gpexpand</codeph> utility records only the minimum progress
+            information in the Greenplum Database table <i>gpexpand.expansion_progress</i>. The
+            utility does not record the relation size information and status information in the
+            table <i>gpexpand.status_detail</i>. </pd>
+          <pd>Specifying this option can improve performance by reducing the amount of progress
+            information written to the <codeph>gpexpand</codeph> tables.</pd>
+        </plentry>
+        <plentry>
+          <pt>[-t | --tardir] <varname>directory</varname></pt>
+          <pd>The fully qualified path to a <varname>directory</varname> on segment hosts were the
+              <codeph>gpexpand</codeph> utility copies a temporary tar file. The file contains
+            Greenplum Database files that are used to create segment instances. The default
+            directory is the user home directory.</pd>
+        </plentry>
+        <plentry>
+          <pt>-v | --verbose</pt>
+          <pd>Verbose debugging output. With this option, the utility will output all DDL and DML
+            used to expand the database.</pd>
+        </plentry>
+        <plentry>
+          <pt>--version</pt>
+          <pd>Display the utility's version number and exit.</pd>
+        </plentry>
+        <plentry>
+          <pt>-V | --novacuum</pt>
+          <pd>Do not vacuum catalog tables before creating schema copy.</pd>
+        </plentry>
+        <plentry>
+          <pt>-? | -h | --help</pt>
+          <pd>Displays the online help.</pd>
+        </plentry>
+      </parml>
+    </section>
+    <section id="section6">
+      <title>Examples</title>
+      <p>Run <codeph>gpexpand</codeph> with an input file to initialize new segments and create the
+        expansion schema in the default database:</p>
+      <codeblock>$ gpexpand -i input_file</codeblock>
+      <p>Run <codeph>gpexpand</codeph> for sixty hours maximum duration to redistribute tables to
+        new segments:</p>
+      <codeblock>$ gpexpand -d 60:00:00</codeblock>
+    </section>
+    <section id="section7">
+      <title>See Also</title>
+      <p>
+        <codeph>
+          <xref href="gpssh-exkeys.xml#topic1"/>
+        </codeph>
+      </p>
+    </section>
+  </body>
+</topic>

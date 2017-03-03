@@ -32,7 +32,6 @@ from mpp.lib.gpstop import GpStop
 
 from mpp.gpdb.tests.storage.lib.dbstate import DbStateClass
 from mpp.gpdb.tests.storage.lib import Database
-from mpp.gpdb.tests.storage.lib.common_utils import checkDBUp
 
 from mpp.lib.gpfilespace import Gpfilespace
 
@@ -67,16 +66,6 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
         else:
             tinctest.logger.info("[STLRTest] Starting New Test: System is up and in sync...")
 
-    def clean_files(self):
-        tinctest.logger.info("[STLRTest] Running clean_files")   
-
-        PSQL.run_sql_file(local_path('drop.sql'))
-        PSQL.run_sql_file(local_path('drop_filespace.sql'))
-        tinctest.logger.info("[STLRTest] printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
-         
-
     def run_sqls(self,test):
         '''
         @summary : Run the sql 
@@ -85,10 +74,6 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
         tinctest.logger.info("[STLRTest] Running run_sqls")   
         tinctest.logger.info("[STLRTest]Starting new thread to run sql %s"%(test))
         PSQL.run_sql_file(local_path(test))
-        tinctest.logger.info("[STLRTest] printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
-   
             
     def suspend_faults(self,fault_name):
         '''
@@ -100,17 +85,13 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
         self.util = Filerepe2e_Util()
 
         (ok1,out1) = self.util.inject_fault(f=fault_name, m = 'async', y = 'reset', r = 'primary', H ='ALL')
-        tinctest.logger.info("[STLRTest] printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
+
         if not ok1:
             raise Exception("[STLRTest]Fault injection failed")   
         tinctest.logger.info("[STLRTest]Done resetting the %s fault"%(fault_name))      
 
         (ok1,out1) = self.util.inject_fault(f=fault_name, m = 'async', y = 'suspend', r = 'primary', H ='ALL')
-        tinctest.logger.info("[STLRTest] printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
+
         if not ok1:
             raise Exception("[STLRTest]Fault injection failed")   
         tinctest.logger.info("[STLRTest]Done suspending the %s fault"%(fault_name))
@@ -138,9 +119,6 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
                     poll = 0
                     tinctest.logger.info("[STLRTest] Running check_fault_status %s TRUE", status)
                     return True
-            tinctest.logger.info("[STLRTest] printing gp segment configuration")
-            (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-            tinctest.logger.info(gp_seg_conf)
 
             #sleep a while before start polling again
             sleep(10)
@@ -159,9 +137,6 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
         if trans_state == 'failover_to_primary':
             tinctest.logger.info("[STLRTest] primary failover")
             (ok1,out1) = self.util.inject_fault(f='filerep_consumer', m = 'async', y = 'fault', r = 'mirror', H ='ALL')
-            tinctest.logger.info("[STLRTest] printing gp segment configuration")
-            (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-            tinctest.logger.info(gp_seg_conf)
 
             if not ok1:
                 raise Exception("[STLRTest]Fault injection failed")   
@@ -170,9 +145,7 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
         elif trans_state == 'failover_to_mirror':
             tinctest.logger.info("[STLRTest] fault for postmaster panic")
             (ok1,out1) = self.util.inject_fault(f='postmaster', m = 'async', y = 'panic', r = 'primary', H ='ALL')
-            tinctest.logger.info("[STLRTest] printing gp segment configuration")
-            (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-            tinctest.logger.info(gp_seg_conf)
+
             if not ok1:
                 raise Exception("[STLRTest]Fault injection failed")   
             tinctest.logger.info("[STLRTest]Done postmaster panic fault")
@@ -180,17 +153,11 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
         elif trans_state == 'postmaster_reset':
             tinctest.logger.info("[STLRTest] fault for filerep_sender panic")
             (ok1,out1) = self.util.inject_fault(f='filerep_sender', m = 'async', y = 'panic', r = 'primary', H ='ALL')
-            tinctest.logger.info("[STLRTest] printing gp segment configuration")
-            (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-            tinctest.logger.info(gp_seg_conf)
+
             if not ok1:
                 raise Exception("[STLRTest]Fault injection failed")   
             tinctest.logger.info("[STLRTest]Done filerep_sender panic fault")
             
-        tinctest.logger.info("[STLRTest] printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
-
         tinctest.logger.info("[STLRTest] Done Injecting Fault")
 
     def resume_faults(self,fault_name,trans_state):
@@ -215,9 +182,6 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
 
         if trans_state == 'failover_to_primary' :
             self.check_fault_status(fault_name,'completed')
-        tinctest.logger.info("[STLRTest] printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
 
     def checkPSQLRun(self, test):
         '''Check if the psql run started in parallel is over before running the _post.sql '''
@@ -243,9 +207,6 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
 
         tinctest.logger.info("[STLRTest] fault for failover_to_mirror resume")
         (ok1,out1) = self.util.inject_fault(f='filerep_resync', m = 'async', y = 'resume', r = 'primary', H ='ALL')
-        tinctest.logger.info("[STLRTest] printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
 
         if not ok1:
             raise Exception("[STLRTest]Fault injection failed")   
@@ -269,9 +230,6 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
 
         tinctest.logger.info("[STLRTest]Restarting the cluster.")
         ok = self.gpstart.run_gpstart_cmd()
-        tinctest.logger.info("[STLRTest] printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
 
         if not ok:
             raise Exception('[STLRTest]Failed to bring the cluster back up')
@@ -288,24 +246,13 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
         self.gpr = GpRecover()
 
         tinctest.logger.info("[STLRTest] Running run_gprecoverseg")   
-        tinctest.logger.info("[STLRTest] START printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
 
         if recover_option == 'full':
             self.gpr.full()
         else:
             self.gpr.incremental()
-        #Wait till the primary and mirror are in sync
-        tinctest.logger.info("[STLRTest] Middle printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
 
         self.gpr.wait_till_insync_transition()
-        tinctest.logger.info("[STLRTest] END printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
-
         
     def run_restart_database(self):
         '''
@@ -318,10 +265,6 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
         tinctest.logger.info(ok)
         ok = self.gpstart.run_gpstart_cmd()
         tinctest.logger.info(ok)       
-        tinctest.logger.info("[STLRTest] printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
-        
        
     def reset_faults(self,fault_name,current_cluster_state):
         ''''
@@ -333,28 +276,19 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
         tinctest.logger.info("[STLRTest] Resetting fault before ending test")
 
         (ok1,out1) = self.util.inject_fault(f=fault_name, m = 'async', y = 'reset', r = 'primary', H ='ALL')
-        tinctest.logger.info("[STLRTest] printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
 
         if not ok1:
             raise Exception("[STLRTest]Fault injection failed")   
         tinctest.logger.info("[STLRTest]Done resetting %s fault" %(fault_name))
 
         if current_cluster_state == 'resync':
-            tinctest.logger.info("[STLRTest] printing gp segment configuration")
-            (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-            tinctest.logger.info(gp_seg_conf)
-
             (ok1,out1) = self.util.inject_fault(f='filerep_resync', m = 'async', y = 'reset', r = 'primary', H ='ALL')
             if not ok1:
                 raise Exception("[STLRTest]Fault injection failed")   
             tinctest.logger.info("[STLRTest]Done filerep_resync fault")
 
         (ok1,out1) = self.util.inject_fault(f='checkpoint', m = 'async', y = 'reset', r = 'primary', H ='ALL')
-        tinctest.logger.info("[STLRTest] printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
+
         if not ok1:
             raise Exception("[STLRTest]Fault injection failed")   
         tinctest.logger.info("[STLRTest]Done resetting checkpoint fault" )
@@ -363,8 +297,6 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
         self.dbstate = DbStateClass('run_validation')
         tinctest.logger.info("[STLRTest] Running do_gpcheckcat")
         self.dbstate.check_catalog()
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
         return True
 
     def _validation(self):
@@ -389,13 +321,9 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
         if trans_state == 'failover_to_mirror' :
             PSQL.run_sql_file(local_path('test_while_ct.sql'))
         self.resume_faults(fault_name, trans_state)
-        tinctest.logger.info("[STLRTest] printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
-
 
     def run_post_sqls(self, fault_name ='', trans_state=''):
-        checkDBUp()
+        PSQL.wait_for_database_up();
         if (trans_state == 'failover_to_primary' or trans_state == ''):   
             post_sql = "failover_sql/subt_create_table_ao_post_commit"
         else:
@@ -407,13 +335,9 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
 
         PSQL.run_sql_file(sql_file = local_path(sql_file), out_file = local_path(out_file))
         diff_res = Gpdiff.are_files_equal(local_path(out_file), local_path(ans_file))
-        tinctest.logger.info("[STLRTest] printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
         
         if not diff_res:
            self.fail("[STLRTest]Gpdiff failed for : %s %s" %(fault_name, trans_state))
-
 
     def reset_all_faults(self):
         ''''
@@ -423,17 +347,13 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
         self.util = Filerepe2e_Util()
 
         (ok1,out1) = self.util.inject_fault(f='all', m = 'async', y = 'reset', r = 'primary', H ='ALL')
-        tinctest.logger.info("[STLRTest] printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
+
         if not ok1:
             raise Exception("[STLRTest]Fault injection failed")   
         tinctest.logger.info("[STLRTest]Done resetting all faults on primary")
 
         (ok1,out1) = self.util.inject_fault(f='all', m = 'async', y = 'reset', r = 'mirror', H ='ALL')
-        tinctest.logger.info("[STLRTest] printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
+
         if not ok1:
             raise Exception("[STLRTest]Fault injection failed")   
         tinctest.logger.info("[STLRTest]Done resetting all faults fault on mirror") 
@@ -468,24 +388,16 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
         tinctest.logger.info("[STLRTest] Running skip_checkpoint")
 
         (ok1,out1) = self.util.inject_fault(f='checkpoint', m = 'async', y = 'reset', r = 'primary', H ='ALL')
-        tinctest.logger.info("[STLRTest] printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
 
         if not ok1:
             raise Exception("[STLRTest]Fault injection failed")
         tinctest.logger.info("[STLRTest]Done resetting the checkpoint fault")
 
         (ok1,out1) = self.util.inject_fault(f='checkpoint', m = 'async', y = 'skip', r = 'primary', H ='ALL')
-        tinctest.logger.info("[STLRTest] printing gp segment configuration")
-        (gp_seg_conf) = PSQL.run_sql_command("select * from gp_segment_configuration order by dbid")
-        tinctest.logger.info(gp_seg_conf)
 
         if not ok1:
             raise Exception("[STLRTest]Fault injection failed")
         tinctest.logger.info("[STLRTest]Done skipping the checkpoint fault")
-
-
 
     def method_setup(self):
         tinctest.logger.info("Performing setup tasks")

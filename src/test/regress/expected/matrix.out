@@ -889,7 +889,8 @@ select matrix_add(array[-32767]::smallint[], array[-1]::smallint[]);    --no ove
  {-32768}
 (1 row)
 
-   
+select matrix_add(array[array[16000]]::smallint[], array[array[32000]]::smallint[]); --overflow
+ERROR:  int value out of range: overflow
 -- Check overflow
 --INT: [-2147483648, 2147483647]
 select matrix_add(array[2147483647]::int[], array[1]::int[]);   --overflow

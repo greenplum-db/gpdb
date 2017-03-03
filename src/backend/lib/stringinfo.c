@@ -338,7 +338,7 @@ truncateStringInfo(StringInfo str, int nchars)
 }                               /* truncateStringInfo */
 
 /*
- * Replace all occurances of a string in a StringInfo with a different string.
+ * Replace all occurrences of a string in a StringInfo with a different string.
  */
 void
 replaceStringInfoString(StringInfo str, char *replace, char *replacement)

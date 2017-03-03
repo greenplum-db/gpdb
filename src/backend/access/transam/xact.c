@@ -79,14 +79,14 @@ bool		XactSyncCommit = true;
 
 int			CommitDelay = 0;	/* precommit delay in microseconds */
 int			CommitSiblings = 5; /* # concurrent xacts needed to sleep */
-
+#if 0 /* Upstream code not applicable to GPDB */
 /*
  * MyXactAccessedTempRel is set when a temporary relation is accessed.
  * We don't allow PREPARE TRANSACTION in that case.  (This is global
  * so that it can be set from heapam.c.)
  */
 bool		MyXactAccessedTempRel = false;
-
+#endif
 XidBuffer subxbuf;
 int32 gp_subtrans_warn_limit = 16777216; /* 16 million */
 
@@ -324,6 +324,11 @@ static void DispatchRollbackToSavepoint(char *name);
 
 static bool search_binary_xids(TransactionId *ids, uint32 size,
 			       TransactionId xid, int32 *index);
+static void
+AddSubtransactionsToSharedSnapshot(DistributedTransactionId dxid,
+								   volatile SharedSnapshotSlot *shared_snapshot,
+								   TransactionId *subxids,
+								   uint32 subcnt);
 
 extern void FtsCondSetTxnReadOnly(bool *);
 
@@ -491,6 +496,13 @@ AssignTransactionId(TransactionState s)
 	Assert(!TransactionIdIsValid(s->transactionId));
 	Assert(s->state == TRANS_INPROGRESS);
 
+	if (DistributedTransactionContext == DTX_CONTEXT_QE_READER ||
+		DistributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON)
+	{
+		elog(ERROR, "AssignTransactionId() called by %s process",
+			 DtxContextToString(DistributedTransactionContext));
+	}
+
 	/*
 	 * Ensure parent(s) have XIDs, so that a child always has an XID later
 	 * than its parent.  Musn't recurse here, or we might get a stack overflow
@@ -535,6 +547,19 @@ AssignTransactionId(TransactionState s)
 	{
 		Assert(TransactionIdPrecedes(s->parent->transactionId, s->transactionId));
 		SubTransSetParent(s->transactionId, s->parent->transactionId);
+		elog((Debug_print_full_dtm ? LOG : DEBUG5),
+			 "adding subtransaction xid %u to Shared Local Snapshot",
+			 s->transactionId);
+		if (SharedLocalSnapshotSlot)
+		{
+			TransactionId temp_subxid = s->transactionId;
+
+			AddSubtransactionsToSharedSnapshot(
+						SharedLocalSnapshotSlot->QDxid,
+						SharedLocalSnapshotSlot,
+						&temp_subxid,
+						1);
+		}
 	}
 
 	/*
@@ -771,14 +796,11 @@ TransactionIdIsCurrentTransactionId(TransactionId xid)
 		isCurrentTransactionId = false;		/* Assume. */
 
 		/*
-		 * Cursor readers cannot directly access the writer shared
-		 * snapshot -- since it may have been modified by the writer
-		 * since we were declared. But for normal reader if sub-transactions
-		 * fit in-memory can leverage the writers array instead of subxbuf.
+		 * For readers if sub-transactions fit in-memory can leverage the
+		 * writers array instead of subxbuf.
 		 */
-		if ( (!QEDtxContextInfo.cursorContext) &&
-			(SharedLocalSnapshotSlot->inmemory_subcnt ==
-				SharedLocalSnapshotSlot->total_subcnt))
+		if (SharedLocalSnapshotSlot->inmemory_subcnt ==
+				SharedLocalSnapshotSlot->total_subcnt)
 		{
 			for (sub = 0; sub < SharedLocalSnapshotSlot->total_subcnt; sub++)
 			{
@@ -1023,15 +1045,15 @@ AtSubStart_ResourceOwner(void)
  *
  * Returns latest XID among xact and its children, or InvalidTransactionId
  * if the xact has no XID.	(We compute that here just because it's easier.)
- *
- * This is exported only to support an ugly hack in VACUUM FULL.
  */
-TransactionId
+static TransactionId
 RecordTransactionCommit(void)
 {
 	TransactionId xid;
 	bool		markXidCommitted;
 	TransactionId latestXid = InvalidTransactionId;
+	/* Initializing just to make compiler happy */
+	bool save_inCommit = MyProc->inCommit;
 	MIRRORED_LOCK_DECLARE;
 
 	int32						persistentCommitSerializeLen;
@@ -1039,7 +1061,6 @@ RecordTransactionCommit(void)
 	int16						persistentCommitObjectCount;
 	char						*persistentCommitBuffer = NULL;
 
-	bool		haveNonTemp;
 	int			nchildren;
 	TransactionId *children;
 	bool		isDtxPrepared = 0;
@@ -1063,11 +1084,6 @@ RecordTransactionCommit(void)
 										&persistentCommitObjects,
 										EndXactRecKind_Commit,
 										&persistentCommitObjectCount);
-	/* GPDB_83_MERGE_FIXME: smgrGetPendingDeletes() in upstream returns
-	 * the haveNonTemp boolean too. PersistentEndXactRec_FetchObjectsFromSmgr()
-	 * doesn't do that.
-	 */
-	haveNonTemp = (persistentCommitObjectCount > 0);
 
 	nchildren = xactGetCommittedChildren(&children);
 
@@ -1155,6 +1171,7 @@ RecordTransactionCommit(void)
 		 * bit fuzzy, but it doesn't matter.
 		 */
 		START_CRIT_SECTION();
+		save_inCommit = MyProc->inCommit;
 		MyProc->inCommit = true;
 
 		MIRRORED_LOCK;
@@ -1245,17 +1262,18 @@ RecordTransactionCommit(void)
 		}
 	}
 
+#ifdef IMPLEMENT_ASYNC_COMMIT
 	/*
-	 * Check if we want to commit asynchronously.  If the user has set
+	 * In PostgreSQL, we can defer flushing XLOG, if the user has set
 	 * synchronous_commit = off, and we're not doing cleanup of any non-temp
-	 * rels nor committing any command that wanted to force sync commit, then
-	 * we can defer flushing XLOG.	(We must not allow asynchronous commit if
-	 * there are any non-temp tables to be deleted, because we might delete
-	 * the files before the COMMIT record is flushed to disk.  We do allow
-	 * asynchronous commit if all to-be-deleted tables are temporary though,
-	 * since they are lost anyway if we crash.)
+	 * rels nor committing any command that wanted to force sync commit.
+	 *
+	 * In GPDB, however, all user transactions need to be committed synchronously,
+	 * because we use two-phase commit across the nodes. In order to make GPDB support
+	 * async-commit, we also need to implement the temp table detection.
 	 */
 	if (XactSyncCommit || forceSyncCommit || haveNonTemp)
+#endif
 	{
 		/*
 		 * Synchronous commit case.
@@ -1319,6 +1337,7 @@ RecordTransactionCommit(void)
 			TransactionIdCommitTree(nchildren, children);
 		}
 	}
+#ifdef IMPLEMENT_ASYNC_COMMIT
 	else
 	{
 		/*
@@ -1341,16 +1360,25 @@ RecordTransactionCommit(void)
 			TransactionIdAsyncCommitTree(nchildren, children, XactLastRecEnd);
 		}
 	}
+#endif
 
-	SIMPLE_FAULT_INJECTOR(DtmXLogDistributedCommit);
-
+#ifdef FAULT_INJECTOR
+	if (isDtxPrepared)
+	{
+		FaultInjector_InjectFaultIfSet(DtmXLogDistributedCommit,
+									   DDLNotSpecified,
+									   "",  // databaseName
+									   ""); // tableName
+	}
+#endif
+	
 	/*
 	 * If we entered a commit critical section, leave it now, and let
 	 * checkpoints proceed.
 	 */
 	if (markXidCommitted)
 	{
-		MyProc->inCommit = false;
+		MyProc->inCommit = save_inCommit;
 		END_CRIT_SECTION();
 
 		MIRRORED_UNLOCK;
@@ -1663,15 +1691,6 @@ RecordTransactionAbort(bool isSubXact)
 	else
 		xid = GetCurrentTransactionIdIfAny();
 
-	/* Get data needed for abort record */
-	persistentAbortSerializeLen =
-			PersistentEndXactRec_FetchObjectsFromSmgr(
-										&persistentAbortObjects,
-										EndXactRecKind_Abort,
-										&persistentAbortObjectCount);
-
-	nchildren = xactGetCommittedChildren(&children);
-
 	/*
 	 * If we haven't been assigned an XID, nobody will care whether we aborted
 	 * or not.	Hence, we're done in that case.  It does not matter if we have
@@ -1701,6 +1720,15 @@ RecordTransactionAbort(bool isSubXact)
 	if (TransactionIdDidCommit(xid))
 		elog(PANIC, "cannot abort transaction %u, it was already committed",
 			 xid);
+
+	/* Get data needed for abort record */
+	persistentAbortSerializeLen =
+			PersistentEndXactRec_FetchObjectsFromSmgr(
+										&persistentAbortObjects,
+										EndXactRecKind_Abort,
+										&persistentAbortObjectCount);
+
+	nchildren = xactGetCommittedChildren(&children);
 
 	/* XXX do we really need a critical section here? */
 	START_CRIT_SECTION();
@@ -1783,7 +1811,7 @@ RecordTransactionAbort(bool isSubXact)
 	 * subxacts, because we already have the child XID array at hand.  For
 	 * main xacts, the equivalent happens just after this function returns.
 	 */
-	if (isSubXact && isQEReader)
+	if (isSubXact)
 		XidCacheRemoveRunningXids(xid, nchildren, children, latestXid);
 
 	/* Reset XactLastRecEnd until the next transaction writes something */
@@ -1817,7 +1845,7 @@ bool RecordCrashTransactionAbortRecord(
 	bool           validStatus;
 
 	/* Fix for MPP-12614. The call to TransactionIdGetStatus() has been removed since    */
-	/* The clog many not have the the referenced transation as of crash recovery         */
+	/* The clog many not have the the referenced transaction as of crash recovery        */
 	/* pass 2. The clog will be fully built in pass 3 of crash recovery.                 */
 	/* The new call "InRecoveryTansactionIdGetStatus will return TRUE or FALSE in the    */
 	/* validStatus parameter, which indicates whether or not the returned value is good. */
@@ -2143,12 +2171,12 @@ SetSharedTransactionId_reader(TransactionId xid, CommandId cid)
 		   DistributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON);
 
 	/*
-	 * GPDB_83_MERGE_FIXME: I don't understand how the top-level XID
-	 * can ever be different here from what it was in StartTransaction().
-	 * And usually it isn't, but when I tried adding the below assertion, it was
-	 * tripped.
+	 * For DTX_CONTEXT_QE_READER or DTX_CONTEXT_QE_ENTRY_DB_SINGLETON, during
+	 * StartTransaction(), currently we temporarily set the
+	 * TopTransactionStateData.transactionId to what we find that time in
+	 * SharedLocalSnapshot slot. Since, then QE writer could have moved-on and
+	 * hence we reset the same to update to corrct value here.
 	 */
-	//Assert(TopTransactionStateData.transactionId == xid);
 	TopTransactionStateData.transactionId = xid;
 	currentCommandId = cid;
 }
@@ -2859,7 +2887,9 @@ StartTransaction(void)
 	XactIsoLevel = DefaultXactIsoLevel;
 	XactReadOnly = DefaultXactReadOnly;
 	forceSyncCommit = false;
+#if 0 /* Upstream code not applicable to GPDB */
 	MyXactAccessedTempRel = false;
+#endif
 	seqXlogWrite = false;
 
 	/* set read only by fts, if any fts action is read only */
@@ -3373,16 +3403,6 @@ CommitTransaction(void)
 	AtEOXact_UpdateFlatFiles(true);
 
 	/*
-	 * Free external resources
-	 */
-	AtEOXact_ExtTables(true);
-
-	/* Reset g_dataSourceCtx
-	 * g_dataSourceCtx is allocated in TopTransactionContext, so it's going away.
-	 */
-	AtEOXact_ResetDataSourceCtx();
-
-	/*
 	 * Prepare all QE.
 	 */
 	prepareDtxTransaction();
@@ -3401,7 +3421,9 @@ CommitTransaction(void)
 	if (Debug_abort_after_distributed_prepared &&
 		isPreparedDtxTransaction())
 	{
-		elog(ERROR,"Raise an error as directed by Debug_abort_after_distributed_prepared");
+		ereport(ERROR,
+				(errcode(ERRCODE_FAULT_INJECT),
+				 errmsg("Raise an error as directed by Debug_abort_after_distributed_prepared")));
 	}
 
 	willHaveObjectsFromSmgr =
@@ -3410,18 +3432,19 @@ CommitTransaction(void)
 	if (willHaveObjectsFromSmgr)
 	{
 		/*
-		 * We need to ensure the recording of the [distributed-]commit record and the
-		 * persistent post-commit work will be done either before or after a checkpoint.
-		 *
-		 * When we use CheckpointStartLock, we make sure we already have the
-		 * MirroredLock first.
-		 *
-		 * GPDB_83_MERGE_FIXME: we no longer need to worry about deadlock between
-		 * CheckpointStartLock and MirroredLock, as CheckpointStartLock is no longer
-		 * a lwlock but just a flag,  MyProc->inCommit. Do we still need to grab
-		 * MirroredLock?
+		 * This is to protect access to counter fileRepResyncShmem->appendOnlyCommitCount
+		 * and FileRepResyncManager_InResyncTransition()
 		 */
 		MIRRORED_LOCK;
+		/*
+		 * Need to ensure the recording of the commit record and the
+		 * persistent post-commit work will be done either before or after a
+		 * checkpoint. The commit xlog record carries the information for
+		 * objects which serves us for crash-recovery till post-commit
+		 * persistent object work is done, hence cannot allow checkpoint in
+		 * between.
+		 */
+		MyProc->inCommit = true;
 	}
 
 	/* Prevent cancel/die interrupt while cleaning up */
@@ -3540,6 +3563,7 @@ CommitTransaction(void)
 	if (willHaveObjectsFromSmgr)
 	{
 		MIRRORED_UNLOCK;
+		MyProc->inCommit = false;
 	}
 	
 	AtEOXact_MultiXact();
@@ -3688,6 +3712,22 @@ PrepareTransaction(void)
 	/* NOTIFY and flatfiles will be handled below */
 
 	/*
+	 * In Postgres, MyXactAccessedTempRel is used to error out if PREPARE TRANSACTION
+	 * operated on temp table.
+	 *
+	 * In GPDB, MyXactAccessedTempRel is removed.
+	 *
+	 * GPDB treat temporary table like a regular table, e.g. stored in shared buffer
+	 * instead of keep it in local buffer. The temporary table just have a shorter life
+	 * cycle either tie to the session or tie to the transaction if ON COMMIT clause is
+	 * used.
+	 *
+	 * Every transaction in GPDB is 2PC, so PREPARE TRANSACTION is used even for temp table
+	 * creation. GPDB cannot error out, otherwise, it won't be able to handle temp table
+	 * at all.
+	 */
+#if 0 /* Upstream code not applicable to GPDB */
+	/*
 	 * Don't allow PREPARE TRANSACTION if we've accessed a temporary table
 	 * in this transaction.  Having the prepared xact hold locks on another
 	 * backend's temp table seems a bad idea --- for instance it would prevent
@@ -3702,8 +3742,6 @@ PrepareTransaction(void)
 	 * cases, such as a temp table created and dropped all within the
 	 * transaction.  That seems to require much more bookkeeping though.
 	 */
-	/* In GPDB, we allow this, however. GPDB_83_MERGE_FIXME: Is it really safe? */
-#if 0
 	if (MyXactAccessedTempRel)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -3967,12 +4005,6 @@ AbortTransaction(void)
 	 */
 	AfterTriggerEndXact(false);
 	AtAbort_Portals();
-	AtEOXact_ExtTables(false);
-
-	/* reset g_dataSourceCtx
-	 * g_dataSourceCtx is allocated in TopTransactionContext, so it's going away.
-	 */
-	AtEOXact_ResetDataSourceCtx();
 
 	AtEOXact_SharedSnapshot();
 
@@ -3996,13 +4028,8 @@ AbortTransaction(void)
 	if (willHaveObjectsFromSmgr)
 	{
 		/*
-		 * We need to ensure the recording of the abort record and the
-		 * persistent post-abort work will be done either before or after a checkpoint.
-		 *
-		 * When we use CheckpointStartLock, we make sure we already have the
-		 * MirroredLock first.
-		 *
-		 * GPDB_83_MERGE_FIXME: see comments in CommitTransaction()
+		 * This is to protect access to counter fileRepResyncShmem->appendOnlyCommitCount
+		 * and FileRepResyncManager_InResyncTransition()
 		 */
 		MIRRORED_LOCK;
 	}
@@ -6290,6 +6317,7 @@ static void
 CleanupSubTransaction(void)
 {
 	TransactionState s = CurrentTransactionState;
+	TransactionId localXid = s->transactionId;
 
 	ShowTransactionState("CleanupSubTransaction");
 
@@ -6310,6 +6338,19 @@ CleanupSubTransaction(void)
 	s->state = TRANS_DEFAULT;
 
 	PopTransaction();
+
+	/*
+	 * While aborting the subtransaction and if we are writer, lets deregister
+	 * ourselves from the SharedLocalSnapshot, so that calls to
+	 * TransactionIdIsCurrentTransaction return FALSE for this transaction for
+	 * QE readers.
+	 */
+	if (SharedLocalSnapshotSlot && TransactionIdIsValid(localXid) &&
+		(DistributedTransactionContext != DTX_CONTEXT_QE_READER &&
+		  DistributedTransactionContext != DTX_CONTEXT_QE_ENTRY_DB_SINGLETON))
+	{
+		UpdateSubtransactionsInSharedSnapshot(SharedLocalSnapshotSlot->QDxid);
+	}
 }
 
 /*

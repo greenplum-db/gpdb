@@ -230,7 +230,7 @@ DROP TABLE
 Create table parent_like1 (a1 int ENCODING (compresstype=zlib,compresslevel=9,blocksize=32768),a2 char(5),a3  date)  with (appendonly=true,orientation=column) distributed by (a1);
 CREATE TABLE
 Create table child_like1 (like parent_like1) with (appendonly = true, orientation = column);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 \d+ parent_like1
                                 Append-Only Columnar Table "public.parent_like1"
@@ -264,7 +264,7 @@ DROP TABLE
 Create table parent_like2 (a1 int ,a2 char(5),a3  date, column a1 ENCODING (compresstype=zlib,compresslevel=9,blocksize=32768))  with (appendonly=true,orientation=column) distributed by (a1);
 CREATE TABLE
 Create table child_like2  (like parent_like2) with (appendonly = true, orientation = column);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 \d+ parent_like2
                                 Append-Only Columnar Table "public.parent_like2"
@@ -303,7 +303,7 @@ psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "parent_like3
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "parent_like3_1_prt_2" for table "parent_like3"
 CREATE TABLE
 Create table child_like3  (like parent_like3) with (appendonly = true, orientation = column) Partition by range(a1) (start(1) end(1000) every(500));
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "child_like3_1_prt_1" for table "child_like3"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "child_like3_1_prt_2" for table "child_like3"
 CREATE TABLE
@@ -362,7 +362,7 @@ Create table child_like4  (like parent_like4) with (appendonly = true, orientati
         ( subpartition part1 values('M') ,
           subpartition part2 values('F')) 
         (start(1) end(1000) every(500));
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "child_like4_1_prt_1" for table "child_like4"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "child_like4_1_prt_2" for table "child_like4"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "child_like4_1_prt_1_2_prt_part1" for table "child_like4_1_prt_1"
@@ -416,7 +416,7 @@ CREATE TABLE
 Insert into parent_like5 values(generate_series(1,100),'asd','2011-02-11');
 INSERT 0 100
 Create table child_like5  (like parent_like5) with (appendonly = true, orientation = column,compresstype=quicklz,compresslevel=1);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 \d+ parent_like5
                                 Append-Only Columnar Table "public.parent_like5"

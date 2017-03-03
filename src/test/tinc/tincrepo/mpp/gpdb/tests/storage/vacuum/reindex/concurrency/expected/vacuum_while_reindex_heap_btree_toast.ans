@@ -14,7 +14,7 @@ COMMIT
 VACUUM
 2: COMMIT;
 COMMIT
-3: SELECT COUNT(*) FROM reindex_toast_heap WHERE a = 1500;
+3: SELECT COUNT(*) FROM reindex_toast_heap WHERE a = '1500';
 count
 -----
 0    

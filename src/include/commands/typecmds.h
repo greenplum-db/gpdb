@@ -14,6 +14,7 @@
 #ifndef TYPECMDS_H
 #define TYPECMDS_H
 
+#include "catalog/dependency.h"
 #include "nodes/parsenodes.h"
 
 
@@ -39,9 +40,11 @@ extern void AlterTypeOwner(List *names, Oid newOwnerId);
 extern void AlterTypeOwnerInternal(Oid typeOid, Oid newOwnerId,
 					   bool hasDependEntry);
 extern void AlterTypeNamespace(List *names, const char *newschema);
-extern void AlterTypeNamespaceInternal(Oid typeOid, Oid nspOid,
+extern Oid  AlterTypeNamespace_oid(Oid typeOid, Oid nspOid, ObjectAddresses *objsMoved);
+extern Oid  AlterTypeNamespaceInternal(Oid typeOid, Oid nspOid,
 									   bool isImplicitArray,
-									   bool errorOnTableType);
+									   bool errorOnTableType,
+									   ObjectAddresses *objsMoved);
 extern void AlterType(AlterTypeStmt *stmt);
 extern void AlterType(AlterTypeStmt *stmt);
 

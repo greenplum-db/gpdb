@@ -316,69 +316,6 @@ boolge(PG_FUNCTION_ARGS)
 }
 
 /*
- * Per SQL92, istrue() and isfalse() should return false, not NULL,
- * when presented a NULL input (since NULL is our implementation of
- * UNKNOWN).  Conversely isnottrue() and isnotfalse() should return true.
- * Therefore, these routines are all declared not-strict in pg_proc
- * and must do their own checking for null inputs.
- *
- * Note we don't need isunknown() and isnotunknown() functions, since
- * nullvalue() and nonnullvalue() will serve.
- */
-
-Datum
-istrue(PG_FUNCTION_ARGS)
-{
-	bool		b;
-
-	if (PG_ARGISNULL(0))
-		PG_RETURN_BOOL(false);
-
-	b = PG_GETARG_BOOL(0);
-
-	PG_RETURN_BOOL(b);
-}
-
-Datum
-isfalse(PG_FUNCTION_ARGS)
-{
-	bool		b;
-
-	if (PG_ARGISNULL(0))
-		PG_RETURN_BOOL(false);
-
-	b = PG_GETARG_BOOL(0);
-
-	PG_RETURN_BOOL(!b);
-}
-
-Datum
-isnottrue(PG_FUNCTION_ARGS)
-{
-	bool		b;
-
-	if (PG_ARGISNULL(0))
-		PG_RETURN_BOOL(true);
-
-	b = PG_GETARG_BOOL(0);
-
-	PG_RETURN_BOOL(!b);
-}
-
-Datum
-isnotfalse(PG_FUNCTION_ARGS)
-{
-	bool		b;
-
-	if (PG_ARGISNULL(0))
-		PG_RETURN_BOOL(true);
-
-	b = PG_GETARG_BOOL(0);
-
-	PG_RETURN_BOOL(b);
-}
-
-/*
  * boolean-and and boolean-or aggregates.
  */
 

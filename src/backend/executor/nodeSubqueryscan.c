@@ -82,7 +82,7 @@ SubqueryNext(SubqueryScanState *node)
         CheckSendPlanStateGpmonPkt(&node->ss.ps);
     }
 
-    return slot;
+	return slot;
 }
 
 /* ----------------------------------------------------------------
@@ -172,10 +172,6 @@ ExecInitSubqueryScan(SubqueryScan *node, EState *estate, int eflags)
 	 * initialize subquery
 	 */
 	subquerystate->subplan = ExecInitNode(node->subplan, estate, eflags);
-
-	/* return borrowed share node list */
-	estate->es_sharenode = estate->es_sharenode;
-	/*subquerystate->ss.ps.ps_TupFromTlist = false;*/
 
 	/*
 	 * Initialize scan tuple type (needed by ExecAssignScanProjectionInfo)

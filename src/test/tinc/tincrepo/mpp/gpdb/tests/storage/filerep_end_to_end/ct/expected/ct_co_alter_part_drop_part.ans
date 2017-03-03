@@ -94,7 +94,7 @@ INSERT 0 1
 -- Add partition 
 --
 alter table sync1_co_alter_part_drop_part4 add partition a2 start ('2007-02-01') end ('2007-03-01');
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_co_alter_part_drop_part4_1_prt_a2" for table "sync1_co_alter_part_drop_part4"
 ALTER TABLE
 --
@@ -112,7 +112,7 @@ ALTER TABLE
 -- Add default partition
 --
 alter table sync1_co_alter_part_drop_part4 add default partition default_part;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_co_alter_part_drop_part4_1_prt_default_part" for table "sync1_co_alter_part_drop_part4"
 ALTER TABLE
 --
@@ -145,7 +145,7 @@ select count(*) from sync1_co_alter_part_drop_part4;
 -- Add partition 
 --
 alter table ck_sync1_co_alter_part_drop_part3 add partition a2 start ('2007-02-01') end ('2007-03-01');
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_co_alter_part_drop_part3_1_prt_a2" for table "ck_sync1_co_alter_part_drop_part3"
 ALTER TABLE
 --
@@ -163,7 +163,7 @@ ALTER TABLE
 -- Add default partition
 --
 alter table ck_sync1_co_alter_part_drop_part3 add default partition default_part;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_co_alter_part_drop_part3_1_prt_default_part" for table "ck_sync1_co_alter_part_drop_part3"
 ALTER TABLE
 --
@@ -196,7 +196,7 @@ select count(*) from ck_sync1_co_alter_part_drop_part3;
 -- Add partition 
 --
 alter table ct_co_alter_part_drop_part1 add partition a2 start ('2007-02-01') end ('2007-03-01');
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_drop_part1_1_prt_a2" for table "ct_co_alter_part_drop_part1"
 ALTER TABLE
 --
@@ -214,7 +214,7 @@ ALTER TABLE
 -- Add default partition
 --
 alter table ct_co_alter_part_drop_part1 add default partition default_part;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_drop_part1_1_prt_default_part" for table "ct_co_alter_part_drop_part1"
 ALTER TABLE
 --

@@ -1,5 +1,5 @@
 -- Negative: using anytable as general data type should fail
--- NOTICE:  Table doesn't have 'distributed by' clause, 
+-- NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, 
 --          and no column type is suitable for a distribution key. 
 --          Creating a NULL policy entry.
     CREATE TABLE tmpTable1 (a anytable);

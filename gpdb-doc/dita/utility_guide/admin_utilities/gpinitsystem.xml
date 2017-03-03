@@ -1,0 +1,410 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+    <!--install_guide/refs/gpinitsystem.xml has a conref to this topic. -->
+    <title id="it20941">gpinitsystem</title>
+    <body>
+        <p>Initializes a Greenplum Database system using configuration parameters specified in the
+                <codeph>gpinitsystem_config</codeph> file.</p>
+        <section id="section2">
+            <title>Synopsis</title>
+            <codeblock><b>gpinitsystem</b> <b>-c</b> <varname>gpinitsystem_config</varname>
+            [<b>-h</b> <varname>hostfile_gpinitsystem</varname>]
+            [<b>-B</b> <varname>parallel_processes</varname>] 
+            [<b>-p</b> <varname>postgresql_conf_param_file</varname>]
+            [<b>-s</b> <varname>standby_master_host</varname>]
+            [<b>--max_connections</b>=<varname>number</varname>] [<b>--shared_buffers</b> <varname>=size</varname>]
+            [<b>--locale</b>=<varname>locale</varname>] [<b>--lc-collate</b>=<varname>locale</varname>] 
+            [<b>--lc-ctype</b>=<varname>locale</varname>] [<b>--lc-messages</b>=<varname>locale</varname>] 
+            [<b>--lc-monetary</b>=<varname>locale</varname>] [<b>--lc-numeric</b>=<varname>locale</varname>] 
+            [<b>--lc-time</b>=<varname>locale</varname>] [<b>--su_password</b>=<varname>password</varname>] 
+            [<b>-S</b>] [<b>-a</b>] [<b>-q</b>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-D</b>]
+
+<b>gpinitsystem</b> <b>-?</b>
+
+<b>gpinitsystem</b> <b>-v</b></codeblock>
+        </section>
+        <section id="section3">
+            <title>Description</title>
+            <p>The <codeph>gpinitsystem</codeph> utility will create a Greenplum Database instance
+                using the values defined in a configuration file. See <xref href="#topic1/section5"
+                    type="section" format="dita"/> for more information about this configuration
+                file. Before running this utility, make sure that you have installed the Greenplum
+                Database software on all the hosts in the array.</p>
+            <p>In a Greenplum Database DBMS, each database instance (the master and all segments)
+                must be initialized across all of the hosts in the system in such a way that they
+                can all work together as a unified DBMS. The <codeph>gpinitsystem</codeph> utility
+                takes care of initializing the Greenplum master and each segment instance, and
+                configuring the system as a whole.</p>
+            <p>Before running <codeph>gpinitsystem</codeph>, you must set the
+                    <codeph>$GPHOME</codeph> environment variable to point to the location of your
+                Greenplum Database installation on the master host and exchange SSH keys between all
+                host addresses in the array using <codeph>gpssh-exkeys</codeph>.</p>
+            <p>This utility performs the following tasks:</p>
+            <ul>
+                <li id="it147947">Verifies that the parameters in the configuration file are
+                    correct.</li>
+                <li id="it147948">Ensures that a connection can be established to each host address.
+                    If a host address cannot be reached, the utility will exit.</li>
+                <li id="it147949">Verifies the locale settings.</li>
+                <li id="it147950">Displays the configuration that will be used and prompts the user
+                    for confirmation.</li>
+                <li id="it147951">Initializes the master instance.</li>
+                <li id="it147952">Initializes the standby master instance (if specified).</li>
+                <li id="it147953">Initializes the primary segment instances.</li>
+                <li id="it147954">Initializes the mirror segment instances (if mirroring is
+                    configured).</li>
+                <li id="it147957">Configures the Greenplum Database system and checks for
+                    errors.</li>
+                <li id="it147961">Starts the Greenplum Database system.</li>
+            </ul>
+        </section>
+        <section id="section4">
+            <title>Options</title>
+            <parml>
+                <plentry>
+                    <pt>-a (do not prompt)</pt>
+                    <pd>Do not prompt the user for confirmation.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-B <varname>parallel_processes</varname></pt>
+                    <pd>The number of segments to create in parallel. If not specified, the utility
+                        will start up to 4 parallel processes at a time.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-c <varname>gpinitsystem_config</varname></pt>
+                    <pd>Required. The full path and filename of the configuration file, which
+                        contains all of the defined parameters to configure and initialize a new
+                        Greenplum Database system. See <xref href="#topic1/section5" type="section"
+                            format="dita"/> for a description of this file.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-D (debug)</pt>
+                    <pd>Sets log output level to debug.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-h <varname>hostfile_gpinitsystem</varname></pt>
+                    <pd>Optional. The full path and filename of a file that contains the host
+                        addresses of your segment hosts. If not specified on the command line, you
+                        can specify the host file using the MACHINE_LIST_FILE parameter in the
+                            <varname>gpinitsystem_config</varname> file.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--locale=<varname>locale</varname> | -n <varname>locale</varname></pt>
+                    <pd>Sets the default locale used by Greenplum Database. If not specified, the
+                            <codeph>LC_ALL</codeph>, <codeph>LC_COLLATE</codeph>, or
+                            <codeph>LANG</codeph> environment variable of the master host determines
+                        the locale. If these are not set, the default locale is <codeph>C</codeph>
+                            (<codeph>POSIX</codeph>). A locale identifier consists of a language
+                        identifier and a region identifier, and optionally a character set encoding.
+                        For example, <codeph>sv_SE</codeph> is Swedish as spoken in Sweden,
+                            <codeph>en_US</codeph> is U.S. English, and <codeph>fr_CA</codeph> is
+                        French Canadian. If more than one character set can be useful for a locale,
+                        then the specifications look like this: <codeph>en_US.UTF-8</codeph> (locale
+                        specification and character set encoding). On most systems, the command
+                            <codeph>locale</codeph> will show the locale environment settings and
+                            <codeph>locale -a</codeph> will show a list of all available
+                        locales.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--lc-collate=<varname>locale</varname></pt>
+                    <pd>Similar to <codeph>--locale</codeph>, but sets the locale used for collation
+                        (sorting data). The sort order cannot be changed after Greenplum Database is
+                        initialized, so it is important to choose a collation locale that is
+                        compatible with the character set encodings that you plan to use for your
+                        data. There is a special collation name of <codeph>C</codeph> or
+                            <codeph>POSIX</codeph> (byte-order sorting as opposed to
+                        dictionary-order sorting). The <codeph>C</codeph> collation can be used with
+                        any character encoding.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--lc-ctype=<varname>locale</varname></pt>
+                    <pd>Similar to <codeph>--locale</codeph>, but sets the locale used for character
+                        classification (what character sequences are valid and how they are
+                        interpreted). This cannot be changed after Greenplum Database is
+                        initialized, so it is important to choose a character classification locale
+                        that is compatible with the data you plan to store in Greenplum
+                        Database.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--lc-messages=<varname>locale</varname></pt>
+                    <pd>Similar to <codeph>--locale</codeph>, but sets the locale used for messages
+                        output by Greenplum Database. The current version of Greenplum Database does
+                        not support multiple locales for output messages (all messages are in
+                        English), so changing this setting will not have any effect.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--lc-monetary=<varname>locale</varname></pt>
+                    <pd>Similar to <codeph>--locale</codeph>, but sets the locale used for
+                        formatting currency amounts.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--lc-numeric=<varname>locale</varname></pt>
+                    <pd>Similar to <codeph>--locale</codeph>, but sets the locale used for
+                        formatting numbers.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--lc-time=<varname>locale</varname></pt>
+                    <pd>Similar to <codeph>--locale</codeph>, but sets the locale used for
+                        formatting dates and times.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-l <varname>logfile_directory</varname></pt>
+                    <pd>The directory to write the log file. Defaults to
+                            <codeph>~/gpAdminLogs</codeph>.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--max_connections=number | -m <varname>number</varname></pt>
+                    <pd>Sets the maximum number of client connections allowed to the master. The
+                        default is 250.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-p <varname>postgresql_conf_param_file</varname></pt>
+                    <pd>Optional. The name of a file that contains <codeph>postgresql.conf</codeph>
+                        parameter settings that you want to set for Greenplum Database. These
+                        settings will be used when the individual master and segment instances are
+                        initialized. You can also set parameters after initialization using the
+                            <codeph>gpconfig</codeph> utility.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-q (no screen output)</pt>
+                    <pd>Run in quiet mode. Command output is not displayed on the screen, but is
+                        still written to the log file.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--shared_buffers=<varname>size</varname> | -b <varname>size</varname></pt>
+                    <pd>Sets the amount of memory a Greenplum server instance uses for shared memory
+                        buffers. You can specify sizing in kilobytes (kB), megabytes (MB) or
+                        gigabytes (GB). The default is 125MB.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-s <varname>standby_master_host</varname></pt>
+                    <pd>Optional. If you wish to configure a backup master host, specify the host
+                        name using this option. The Greenplum Database software must already be
+                        installed and configured on this host.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--su_password=<varname>superuser_password</varname> | -e
+                            <varname>superuser_password</varname></pt>
+                    <pd>Use this option to specify the password to set for the Greenplum Database
+                        superuser account (such as <codeph>gpadmin</codeph>). If this option is not
+                        specified, the default password <codeph>gparray</codeph> is assigned to the
+                        superuser account. You can use the <codeph>ALTER ROLE</codeph> command to
+                        change the password at a later time. <p>Recommended security best
+                            practices:</p><ul id="ul_vnd_kt2_44">
+                            <li id="it148039">Do not use the default password option for production
+                                environments.</li>
+                            <li id="it148040">Change the password immediately after
+                                installation.</li>
+                        </ul></pd>
+                </plentry>
+                <plentry>
+                    <pt>-S (spread mirror configuration)</pt>
+                    <pd>If mirroring parameters are specified, spreads the mirror segments across
+                        the available hosts. The default is to group the set of mirror segments
+                        together on an alternate host from their primary segment set. Mirror
+                        spreading places each mirror on a different host within the Greenplum
+                        Database array. Spreading is only allowed if the number of hosts is greater
+                        than the number of segment instances.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-v (show utility version)</pt>
+                    <pd>Displays the version of this utility.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-? (help)</pt>
+                    <pd>Displays the online help.</pd>
+                </plentry>
+            </parml>
+        </section>
+        <section id="section5">
+            <title id="it148051">Initialization Configuration File Format</title>
+            <p><codeph>gpinitsystem</codeph> requires a configuration file with the following
+                parameters defined. An example initialization configuration file can be found in
+                    <codeph>$GPHOME/docs/cli_help/gpconfigs/gpinitsystem_config</codeph>.</p>
+            <p>To avoid port conflicts between Greenplum Database and other applications, the
+                Greenplum Database port numbers should not be in the range specified by the
+                operating system parameter <codeph>net.ipv4.ip_local_port_range</codeph>. For
+                example, if <codeph>net.ipv4.ip_local_port_range = 10000 65535</codeph>, you could
+                set Greenplum Database base port numbers to these values.</p>
+            <p>
+                <codeblock>PORT_BASE = 6000
+MIRROR_PORT_BASE = 7000
+REPLICATION_PORT_BASE = 8000
+MIRROR_REPLICATION_PORT_BASE = 9000</codeblock>
+            </p>
+            <parml>
+                <plentry>
+                    <pt>ARRAY_NAME</pt>
+                    <pd><b>Required.</b> A name for the array you are configuring. You can use any
+                        name you like. Enclose the name in quotes if the name contains spaces.</pd>
+                </plentry>
+                <plentry>
+                    <pt>MACHINE_LIST_FILE</pt>
+                    <pd><b>Optional.</b> Can be used in place of the <codeph>-h</codeph> option.
+                        This specifies the file that contains the list of segment host address names
+                        that comprise the Greenplum Database system. The master host is assumed to
+                        be the host from which you are running the utility and should not be
+                        included in this file. If your segment hosts have multiple network
+                        interfaces, then this file would include all addresses for the host. Give
+                        the absolute path to the file.</pd>
+                </plentry>
+                <plentry>
+                    <pt>SEG_PREFIX</pt>
+                    <pd><b>Required.</b> This specifies a prefix that will be used to name the data
+                        directories on the master and segment instances. The naming convention for
+                        data directories in a Greenplum Database system is
+                            <varname>SEG_PREFIXnumber</varname> where <varname>number</varname>
+                        starts with 0 for segment instances (the master is always -1). So for
+                        example, if you choose the prefix <codeph>gpseg</codeph>, your master
+                        instance data directory would be named <codeph>gpseg-1</codeph>, and the
+                        segment instances would be named <codeph>gpseg0</codeph>,
+                            <codeph>gpseg1</codeph>, <codeph>gpseg2</codeph>,
+                            <codeph>gpseg3</codeph>, and so on.</pd>
+                </plentry>
+                <plentry>
+                    <pt id="port_base">PORT_BASE</pt>
+                    <pd><b>Required.</b> This specifies the base number by which primary segment
+                        port numbers are calculated. The first primary segment port on a host is set
+                        as <codeph>PORT_BASE</codeph>, and then incremented by one for each
+                        additional primary segment on that host. Valid values range from 1 through
+                        65535.</pd>
+                </plentry>
+                <plentry>
+                    <pt id="data_directory">DATA_DIRECTORY</pt>
+                    <pd><b>Required.</b> This specifies the data storage location(s) where the
+                        utility will create the primary segment data directories. The number of
+                        locations in the list dictate the number of primary segments that will get
+                        created per physical host (if multiple addresses for a host are listed in
+                        the host file, the number of segments will be spread evenly across the
+                        specified interface addresses). It is OK to list the same data storage area
+                        multiple times if you want your data directories created in the same
+                        location. The user who runs <codeph>gpinitsystem</codeph> (for example, the
+                            <codeph>gpadmin</codeph> user) must have permission to write to these
+                        directories. For example, this will create six primary segments per
+                        host:</pd>
+                    <pd>
+                        <codeblock>declare -a DATA_DIRECTORY=(/data1/primary /data1/primary 
+/data1/primary /data2/primary /data2/primary /data2/primary)</codeblock>
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt>MASTER_HOSTNAME</pt>
+                    <pd><b>Required.</b> The host name of the master instance. This host name must
+                        exactly match the configured host name of the machine (run the
+                            <codeph>hostname</codeph> command to determine the correct
+                        hostname).</pd>
+                </plentry>
+                <plentry>
+                    <pt>MASTER_DIRECTORY</pt>
+                    <pd><b>Required.</b> This specifies the location where the data directory will
+                        be created on the master host. You must make sure that the user who runs
+                            <codeph>gpinitsystem</codeph> (for example, the <codeph>gpadmin</codeph>
+                        user) has permissions to write to this directory.</pd>
+                </plentry>
+                <plentry>
+                    <pt>MASTER_PORT</pt>
+                    <pd><b>Required.</b> The port number for the master instance. This is the port
+                        number that users and client connections will use when accessing the
+                        Greenplum Database system.</pd>
+                </plentry>
+                <plentry>
+                    <pt>TRUSTED_SHELL</pt>
+                    <pd><b>Required.</b> The shell the <codeph>gpinitsystem</codeph> utility uses to
+                        execute commands on remote hosts. Allowed values are <codeph>ssh</codeph>.
+                        You must set up your trusted host environment before running the
+                            <codeph>gpinitsystem</codeph> utility (you can use
+                            <codeph>gpssh-exkeys</codeph> to do this).</pd>
+                </plentry>
+                <plentry>
+                    <pt>CHECK_POINT_SEGMENTS</pt>
+                    <pd><b>Required.</b> Maximum distance between automatic write ahead log (WAL)
+                        checkpoints, in log file segments (each segment is normally 16 megabytes).
+                        This will set the <codeph>checkpoint_segments</codeph> parameter in the
+                            <codeph>postgresql.conf</codeph> file for each segment instance in the
+                        Greenplum Database system.</pd>
+                </plentry>
+                <plentry>
+                    <pt>ENCODING</pt>
+                    <pd><b>Required.</b> The character set encoding to use. This character set must
+                        be compatible with the <codeph>--locale</codeph> settings used, especially
+                            <codeph>--lc-collate</codeph> and <codeph>--lc-ctype</codeph>. Greenplum
+                        Database supports the same character sets as PostgreSQL.</pd>
+                </plentry>
+                <plentry>
+                    <pt>DATABASE_NAME</pt>
+                    <pd><b>Optional.</b> The name of a Greenplum Database database to create after
+                        the system is initialized. You can always create a database later using the
+                            <codeph>CREATE DATABASE</codeph> command or the
+                            <codeph>createdb</codeph> utility.</pd>
+                </plentry>
+                <plentry>
+                    <pt id="mirror_port_base">MIRROR_PORT_BASE</pt>
+                    <pd><b>Optional.</b> This specifies the base number by which mirror segment port
+                        numbers are calculated. The first mirror segment port on a host is set as
+                            <codeph>MIRROR_PORT_BASE</codeph>, and then incremented by one for each
+                        additional mirror segment on that host. Valid values range from 1 through
+                        65535 and cannot conflict with the ports calculated by
+                            <codeph>PORT_BASE</codeph>.</pd>
+                </plentry>
+                <plentry>
+                    <pt id="replication_port_base">REPLICATION_PORT_BASE</pt>
+                    <pd><b>Optional.</b> This specifies the base number by which the port numbers
+                        for the primary file replication process are calculated. The first
+                        replication port on a host is set as <codeph>REPLICATION_PORT_BASE</codeph>,
+                        and then incremented by one for each additional primary segment on that
+                        host. Valid values range from 1 through 65535 and cannot conflict with the
+                        ports calculated by <codeph>PORT_BASE</codeph> or
+                            <codeph>MIRROR_PORT_BASE</codeph>.</pd>
+                </plentry>
+                <plentry>
+                    <pt>MIRROR_REPLICATION_PORT_BASE</pt>
+                    <pd><b>Optional.</b> This specifies the base number by which the port numbers
+                        for the mirror file replication process are calculated. The first mirror
+                        replication port on a host is set as
+                            <codeph>MIRROR_REPLICATION_PORT_BASE</codeph>, and then incremented by
+                        one for each additional mirror segment on that host. Valid values range from
+                        1 through 65535 and cannot conflict with the ports calculated by
+                            <codeph>PORT_BASE</codeph>, <codeph>MIRROR_PORT_BASE</codeph>, or
+                            <codeph>REPLICATION_PORT_BASE</codeph>.</pd>
+                </plentry>
+                <plentry>
+                    <pt>MIRROR_DATA_DIRECTORY</pt>
+                    <pd><b>Optional.</b> This specifies the data storage location(s) where the
+                        utility will create the mirror segment data directories. There must be the
+                        same number of data directories declared for mirror segment instances as for
+                        primary segment instances (see the <codeph>DATA_DIRECTORY</codeph>
+                        parameter). The user who runs <codeph>gpinitsystem</codeph> (for example,
+                        the <codeph>gpadmin</codeph> user) must have permission to write to these
+                        directories. For example:</pd>
+                    <pd>
+                        <codeblock>declare -a MIRROR_DATA_DIRECTORY=(/data1/mirror 
+/data1/mirror /data1/mirror /data2/mirror /data2/mirror 
+/data2/mirror)</codeblock>
+                    </pd>
+                </plentry>
+            </parml>
+        </section>
+        <section id="section6">
+            <title>Examples</title>
+            <p>Initialize a Greenplum Database array by supplying a configuration file and a segment
+                host address file, and set up a spread mirroring (<codeph>-S</codeph>)
+                configuration:</p>
+            <codeblock>$ gpinitsystem -c gpinitsystem_config -h 
+hostfile_gpinitsystem -S</codeblock>
+            <p>Initialize a Greenplum Database array and set the superuser remote password:</p>
+            <codeblock>$ gpinitsystem -c gpinitsystem_config -h 
+hostfile_gpinitsystem --su-password=mypassword</codeblock>
+            <p>Initialize a Greenplum Database array with an optional standby master host:</p>
+            <codeblock>$ gpinitsystem -c gpinitsystem_config -h 
+hostfile_gpinitsystem -s host09</codeblock>
+        </section>
+        <section id="section7">
+            <title>See Also</title>
+            <p><codeph><xref href="./gpssh-exkeys.xml#topic1" type="topic" format="dita"/></codeph>,
+                        <codeph><xref href="gpdeletesystem.xml#topic1" type="topic" format="dita"
+                    /></codeph></p>
+        </section>
+    </body>
+</topic>

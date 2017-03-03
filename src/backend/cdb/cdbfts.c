@@ -121,6 +121,10 @@ ftsUnlock(void)
 void
 FtsNotifyProber(void)
 {
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+
+	if (ftsProbeInfo->fts_probePid == 0)
+		return;
 	/*
 	 * This is a full-scan request. We set the request-flag == to the bitmap version flag.
 	 * When the version has been bumped, we know that the request has been filled.
@@ -128,8 +132,7 @@ FtsNotifyProber(void)
 	ftsProbeInfo->fts_probeScanRequested = ftsProbeInfo->fts_statusVersion;
 
 	/* signal fts-probe */
-	if (ftsProbeInfo->fts_probePid)
-		kill(ftsProbeInfo->fts_probePid, SIGINT);
+	kill(ftsProbeInfo->fts_probePid, SIGINT);
 
 	/* sit and spin */
 	while (ftsProbeInfo->fts_probeScanRequested == ftsProbeInfo->fts_statusVersion)

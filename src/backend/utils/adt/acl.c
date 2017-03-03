@@ -1837,19 +1837,9 @@ has_database_privilege_id_id(PG_FUNCTION_ARGS)
 static Oid
 convert_database_name(text *databasename)
 {
-	char	   *dbname;
-	Oid			oid;
+	char	   *dbname = text_to_cstring(databasename);
 
-	dbname = DatumGetCString(DirectFunctionCall1(textout,
-											 PointerGetDatum(databasename)));
-
-	oid = get_database_oid(dbname);
-	if (!OidIsValid(oid))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_DATABASE),
-				 errmsg("database \"%s\" does not exist", dbname)));
-
-	return oid;
+	return get_database_oid(dbname, false);
 }
 
 /*
@@ -2719,12 +2709,7 @@ convert_tablespace_name(text *tablespacename)
 
 	spcname = DatumGetCString(DirectFunctionCall1(textout,
 										   PointerGetDatum(tablespacename)));
-	oid = get_tablespace_oid(spcname);
-
-	if (!OidIsValid(oid))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("tablespace \"%s\" does not exist", spcname)));
+	oid = get_tablespace_oid(spcname, false);
 
 	return oid;
 }
@@ -3478,4 +3463,23 @@ select_best_grantor(Oid roleId, AclMode privileges,
 			}
 		}
 	}
+}
+
+/*
+ * get_role_oid - Given a role name, look up the role's OID.
+ *
+ * If missing_ok is false, throw an error if tablespace name not found.  If
+ * true, just return InvalidOid.
+ */
+Oid
+get_role_oid(const char *rolname, bool missing_ok)
+{
+	Oid			oid;
+
+	oid = GetSysCacheOid1(AUTHNAME, CStringGetDatum(rolname));
+	if (!OidIsValid(oid) && !missing_ok)
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("role \"%s\" does not exist", rolname)));
+	return oid;
 }

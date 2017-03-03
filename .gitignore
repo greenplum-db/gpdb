@@ -27,11 +27,6 @@ lib*dll.defautom4te.cache
 **/tags
 *.pyc
 **/vagrant-local.yml
-
-# Local excludes in root directory
-/GNUmakefile
-/config.log
-/config.status
 a.out.dSYM
 confdefs.h
 conftest.c
@@ -40,14 +35,15 @@ config.cache
 config.status.lineno
 autom4te.cache
 configure.lineno
-.config.log.swp
 Debug
 Release
 pgsql.sln
 cscope.*
 build.sh
 
-# Added
-*.swp
+# Local excludes in root directory
+/GNUmakefile
+/config.log
+/config.status
+/VERSION
 
-VERSION

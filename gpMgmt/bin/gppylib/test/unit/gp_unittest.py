@@ -6,18 +6,36 @@ class GpTestCase(unittest.TestCase):
         super(GpTestCase, self).__init__(methodName)
         self.patches = []
         self.mock_objs = []
+        self.__class__.apply_patches_counter = 0
+        self.__class__.tear_down_counter = 0
 
     def apply_patches(self, patches):
         if self.patches:
             raise Exception('Test class is already patched!')
         self.patches = patches
         self.mock_objs = [p.start() for p in self.patches]
+        self.__class__.apply_patches_counter += 1
 
     # if you have a tearDown() in your test class,
-    # be sure to call this using super.tearDown()
+    # be sure to call this using super(<child class name>, self).tearDown()
     def tearDown(self):
         [p.stop() for p in self.patches]
         self.mock_objs = []
+        self.__class__.tear_down_counter += 1
+
+    @classmethod
+    def setUpClass(cls):
+        cls.apply_patches_counter = 0
+        cls.tear_down_counter = 0
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls.apply_patches_counter > 0 and cls.apply_patches_counter != cls.tear_down_counter:
+            raise Exception("Unequal call for apply patches: %s, teardown: %s. "
+                            "You probably need to add a super(<child class>, "
+                            "self).tearDown() in your tearDown()" % (cls.apply_patches_counter,
+                                                                     cls.tear_down_counter))
+
 
 def add_setup(setup=None, teardown=None):
     """decorate test functions to add additional setup/teardown contexts"""

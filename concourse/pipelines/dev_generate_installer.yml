@@ -1,0 +1,154 @@
+## ======================================================================
+## resources
+## ======================================================================
+
+resources:
+- name: gpdb_src
+  type: git
+  source:
+    branch: {{gpdb-git-branch}}
+    private_key: {{gpdb-git-key}}
+    uri: {{gpdb-git-remote}}
+
+- name: gpaddon_src
+  type: git
+  source:
+    branch: {{gpaddon-git-branch}}
+    private_key: {{gpdb-git-key}}
+    uri: {{gpaddon-git-remote}}
+
+- name: centos-gpdb-dev-6
+  type: docker-image
+  source:
+    repository: pivotaldata/centos-gpdb-dev
+    tag: '6-gcc6.2-llvm3.7'
+    username: {{docker_username}}
+    password: {{docker_password}}
+
+- name: bin_gpdb_centos
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{dev-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{bin_gpdb_centos_versioned_file}}
+
+- name: installer_rhel6_gpdb_rc
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{dev-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: deliverables/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip
+
+- name: installer_rhel6_gpdb_rc_md5
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{dev-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: deliverables/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip.md5
+
+- name: qautils_rhel6_tarball
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{dev-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: deliverables/QAUtils-rhel6-x86_64.tar.gz
+
+- name: gpdb_src_tinc_tarball
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{dev-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: deliverables/greenplum-db-4.3.99.0-src.tar.gz
+
+
+## ======================================================================
+## jobs
+## ======================================================================
+
+jobs:
+
+- name: compile_gpdb_centos6
+  serial: true
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: compile_gpdb
+    file: gpdb_src/concourse/tasks/compile_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      IVYREPO_HOST: {{ivyrepo_host}}
+      IVYREPO_REALM: {{ivyrepo_realm}}
+      IVYREPO_USER: {{ivyrepo_user}}
+      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+      BLD_TARGETS: ""
+  - aggregate:
+    - put: bin_gpdb_centos
+      params:
+        file: gpdb_artifacts/bin_gpdb.tar.gz
+
+- name: gpdb_rc_packaging_centos
+  serial: true
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_centos6]
+    - get: gpaddon_src
+    - get: bin_gpdb
+      resource: bin_gpdb_centos
+      passed: [compile_gpdb_centos6]
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: separate_qautils_files_for_rc
+    file: gpdb_src/concourse/tasks/separate_qautils_files_for_rc.yml
+    image: centos-gpdb-dev-6
+    params:
+      QAUTILS_TARBALL: rc_bin_gpdb/QAUtils-rhel6-x86_64.tar.gz
+
+  - task: gpdb_src_tinc_packaging
+    file: gpdb_src/concourse/tasks/gpdb_src_tinc_packaging.yml
+    image: centos-gpdb-dev-6
+    output_mapping:
+      rc_bin_gpdb: packaged_gpdb_src_tinc
+    params:
+      GPDB_SRC_TAR_GZ: rc_bin_gpdb/greenplum-db-4.3.99.0-src.tar.gz
+
+  - aggregate:
+    - task: gpdb_rc_packaging_centos
+      file: gpdb_src/concourse/tasks/gpdb_packaging.yml
+      image: centos-gpdb-dev-6
+      input_mapping:
+        bin_gpdb: rc_bin_gpdb
+      output_mapping:
+        packaged_gpdb: packaged_gpdb_rc
+      params:
+        INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-header-rhel-gpdb.sh
+        INSTALLER_ZIP: packaged_gpdb/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip
+        ADD_README_INSTALL: true
+  - aggregate:
+    - put: installer_rhel6_gpdb_rc
+      params:
+        file: packaged_gpdb_rc/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip
+    - put: installer_rhel6_gpdb_rc_md5
+      params:
+        file: packaged_gpdb_rc/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip.md5
+    - put: qautils_rhel6_tarball
+      params:
+        file: rc_bin_gpdb/QAUtils-rhel6-x86_64.tar.gz
+    - put: gpdb_src_tinc_tarball
+      params:
+        file: packaged_gpdb_src_tinc/greenplum-db-4.3.99.0-src.tar.gz
+

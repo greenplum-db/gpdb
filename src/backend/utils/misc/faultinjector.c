@@ -255,6 +255,8 @@ FaultInjectorIdentifierEnumToString[] = {
 	  /* inject fault to simulate workfile creation failure  */
 	_("workfile_write_failure"),
 	  /* inject fault to simulate workfile write failure  */
+	_("workfile_hashjoin_failure"),
+	 /* inject fault before we close workfile in ExecHashJoinNewBatch */
 	_("update_committed_eof_in_persistent_table"),
 		/* inject fault before committed EOF is updated in gp_persistent_relation_node for Append Only segment files */
 	_("exec_simple_query_end_command"),
@@ -321,6 +323,10 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault in quickdie*/
 	_("after_one_slice_dispatched"),
 		/* inject fault in cdbdisp_dispatchX*/
+	_("interconnect_stop_ack_is_lost"),
+		/* inject fault in interconnect to skip sending the stop ack */
+	_("cursor_qe_reader_after_snapshot"),
+	/* inject fault after QE READER has populated snashot for cursor */
 	_("not recognized"),
 };
 
@@ -504,6 +510,7 @@ FaultInjector_InjectFaultIfSet(
 	char					tableNameLocal[NAMEDATALEN];
 	int						ii = 0;
 	int cnt = 3600;
+	FaultInjectorType_e retvalue = FaultInjectorTypeNotSpecified;
 
 	/*
 	 * Return immediately if no fault has been injected ever.  It is
@@ -520,59 +527,58 @@ FaultInjector_InjectFaultIfSet(
 	if (faultInjectorShmem->faultInjectorSlots == 0)
 		return FALSE;
 
+	snprintf(databaseNameLocal, sizeof(databaseNameLocal), "%s", databaseName);
+	snprintf(tableNameLocal, sizeof(tableNameLocal), "%s", tableName);
 	getFileRepRoleAndState(&fileRepRole, &segmentState, &dataState, NULL, NULL);
 
 	FiLockAcquire();
 
 	entryShared = FaultInjector_LookupHashEntry(identifier);
 
-	if (entryShared != NULL)
-		memcpy(entryLocal, entryShared, sizeof(FaultInjectorEntry_s));
-
-	FiLockRelease();
-	
-	/* Verify if fault injection is set */
-	
-	if (entryShared == NULL) 
-		/* fault injection is not set */
-		return FALSE;
-	
-	if (entryLocal->ddlStatement != ddlStatement) 
-		/* fault injection is not set for the specified DDL */
-		return FALSE;
-	
-	snprintf(databaseNameLocal, sizeof(databaseNameLocal), "%s", databaseName);
-	
-	if (strcmp(entryLocal->databaseName, databaseNameLocal) != 0) 
-		/* fault injection is not set for the specified database name */
-		return FALSE;
-	
-	snprintf(tableNameLocal, sizeof(tableNameLocal), "%s", tableName);
-
-	if (strcmp(entryLocal->tableName, tableNameLocal) != 0) 
-		/* fault injection is not set for the specified table name */
-		return FALSE;
-	
-	if (entryLocal->faultInjectorState == FaultInjectorStateTriggered ||
-		entryLocal->faultInjectorState == FaultInjectorStateCompleted ||
-		entryLocal->faultInjectorState == FaultInjectorStateFailed) {
-		/* fault injection was already executed */
-		return FALSE;
-	}
-
-	/* Update the injection fault entry in hash table */
-	if (entryLocal->occurrence != FILEREP_UNDEFINED)
+	do
 	{
-		if (entryLocal->occurrence > 1) 
-		{
-			entryLocal->occurrence--;
-			FaultInjector_UpdateHashEntry(entryLocal);
-			return FALSE;
+		if (entryShared == NULL)
+			/* fault injection is not set */
+			break;
+
+		if (entryShared->ddlStatement != ddlStatement)
+			/* fault injection is not set for the specified DDL */
+			break;
+
+		if (strcmp(entryShared->databaseName, databaseNameLocal) != 0)
+			/* fault injection is not set for the specified database name */
+			break;
+	
+		if (strcmp(entryShared->tableName, tableNameLocal) != 0)
+			/* fault injection is not set for the specified table name */
+			break;
+
+		if (entryShared->faultInjectorState == FaultInjectorStateCompleted ||
+			entryShared->faultInjectorState == FaultInjectorStateFailed) {
+			/* fault injection was already executed */
+			break;
 		}
 
-		entryLocal->faultInjectorState = FaultInjectorStateTriggered;
-		FaultInjector_UpdateHashEntry(entryLocal);
-	}
+		/* Update the injection fault entry in hash table */
+		if (entryShared->occurrence != FILEREP_UNDEFINED)
+		{
+			if (entryShared->occurrence > 1)
+			{
+				entryShared->occurrence--;
+				break;
+			}
+		}
+
+		entryShared->faultInjectorState = FaultInjectorStateTriggered;
+		entryShared->numTimesTriggered++;
+		memcpy(entryLocal, entryShared, sizeof(FaultInjectorEntry_s));
+		retvalue = entryLocal->faultInjectorType;
+	} while (0);
+
+	FiLockRelease();
+
+	if (retvalue == FaultInjectorTypeNotSpecified)
+		return FaultInjectorTypeNotSpecified;
 
 	/* Inject fault */
 	
@@ -581,8 +587,9 @@ FaultInjector_InjectFaultIfSet(
 			
 			break;
 		case FaultInjectorTypeSleep:
-			ereport(LOG, 
-					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
+			ereport(LOG,
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 			
@@ -623,7 +630,8 @@ FaultInjector_InjectFaultIfSet(
 					break;
 			}
 			ereport(LOG, 
-					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 			
@@ -642,7 +650,8 @@ FaultInjector_InjectFaultIfSet(
 			}
 			
 			ereport(FATAL, 
-					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 
@@ -661,7 +670,8 @@ FaultInjector_InjectFaultIfSet(
 			}
 			
 			ereport(PANIC, 
-					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 
@@ -680,13 +690,15 @@ FaultInjector_InjectFaultIfSet(
 			}
 
 			ereport(ERROR, 
-					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 			break;
 		case FaultInjectorTypeInfiniteLoop:
 			ereport(LOG, 
-					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));
 			if (entryLocal->faultInjectorIdentifier == FileRepImmediateShutdownRequested)
@@ -710,7 +722,8 @@ FaultInjector_InjectFaultIfSet(
 			break;
 		case FaultInjectorTypeDataCorruption:
 			ereport(LOG, 
-					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));							
 			break;
@@ -720,7 +733,8 @@ FaultInjector_InjectFaultIfSet(
 			FaultInjectorEntry_s	*entry;
 			
 			ereport(LOG, 
-					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 			
@@ -733,14 +747,16 @@ FaultInjector_InjectFaultIfSet(
 			if (entry != NULL)
 			{
 				ereport(LOG, 
-					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
+						(errcode(ERRCODE_FAULT_INJECT),
+						 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entry->faultInjectorType])));	
 			}
 			else
 			{
 				ereport(LOG, 
-						(errmsg("fault 'NULL', fault name:'%s'  ",
+						(errcode(ERRCODE_FAULT_INJECT),
+						 errmsg("fault 'NULL', fault name:'%s'  ",
 								FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier])));				
 
 				/*
@@ -755,7 +771,8 @@ FaultInjector_InjectFaultIfSet(
 		}
 		case FaultInjectorTypeSkip:
 			ereport(LOG, 
-					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));							
 			break;
@@ -765,7 +782,8 @@ FaultInjector_InjectFaultIfSet(
 			char	*buffer = NULL;
 			
 			ereport(LOG, 
-					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 
@@ -782,7 +800,8 @@ FaultInjector_InjectFaultIfSet(
 		case FaultInjectorTypeStatus:
 			
 			ereport(LOG, 
-					(errmsg("unexpected error, fault triggered, fault name:'%s' fault type:'%s' ",
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("unexpected error, fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 			
@@ -805,7 +824,8 @@ FaultInjector_InjectFaultIfSet(
 			 * the interrupt could be handled inside the fault injector itself
 			 */
 			ereport(LOG,
-					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));
 
@@ -817,7 +837,8 @@ FaultInjector_InjectFaultIfSet(
 		case FaultInjectorTypeFinishPending:
 		{
 			ereport(LOG,
-					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));
 			QueryFinishPending = true;
@@ -834,7 +855,8 @@ FaultInjector_InjectFaultIfSet(
 
 			RequestCheckpoint(CHECKPOINT_WAIT | CHECKPOINT_IMMEDIATE);
 			ereport(PANIC,
-					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));
 			break;
@@ -843,7 +865,8 @@ FaultInjector_InjectFaultIfSet(
 		default:
 			
 			ereport(LOG, 
-					(errmsg("unexpected error, fault triggered, fault name:'%s' fault type:'%s' ",
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("unexpected error, fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 			
@@ -1008,6 +1031,7 @@ FaultInjector_NewHashEntry(
 			case FinishPreparedTransactionAbortPass1AbortingCreateNeeded:
 			case FinishPreparedTransactionAbortPass2AbortingCreateNeeded:
 
+			case InterconnectStopAckIsLost:
 			case SendQEDetailsInitBackend:
 
 				break;
@@ -1166,6 +1190,7 @@ FaultInjector_NewHashEntry(
 		case AbortTransactionFail:
 		case WorkfileCreationFail:
 		case WorkfileWriteFail:
+		case WorkfileHashJoinFailure:
 		case UpdateCommittedEofInPersistentTable:
 		case ExecSortBeforeSorting:
 		case FaultDuringExecDynamicTableScan:
@@ -1237,6 +1262,8 @@ FaultInjector_NewHashEntry(
 	{
 		entryLocal->occurrence = FILEREP_UNDEFINED;
 	}
+
+	entryLocal->numTimesTriggered = 0;
 	strcpy(entryLocal->databaseName, entry->databaseName);
 	strcpy(entryLocal->tableName, entry->tableName);
 		
@@ -1366,12 +1393,13 @@ FaultInjector_SetFaultInjection(
 			HASH_SEQ_STATUS			hash_status;
 			FaultInjectorEntry_s	*entryLocal;
 			bool					found = FALSE;
+			int                     length;
 			
 			if (faultInjectorShmem->hash == NULL) {
 				status = STATUS_ERROR;
 				break;
-			} 
-			snprintf(entry->bufOutput, sizeof(entry->bufOutput), "Success: ");
+			}
+			length = snprintf(entry->bufOutput, sizeof(entry->bufOutput), "Success: ");
 			
 			if (entry->faultInjectorIdentifier == ChangeTrackingCompactingReport)
 			{
@@ -1382,7 +1410,7 @@ FaultInjector_SetFaultInjection(
 			}
 			
 			hash_seq_init(&hash_status, faultInjectorShmem->hash);
-			
+
 			while ((entryLocal = (FaultInjectorEntry_s *) hash_seq_search(&hash_status)) != NULL) {
 				ereport(LOG,
 					(errmsg("fault injector status: "
@@ -1393,7 +1421,8 @@ FaultInjector_SetFaultInjection(
 							"table name:'%s' "
 							"occurrence:'%d' "
 							"sleep time:'%d' "
-							"fault injection state:'%s' ",
+							"fault injection state:'%s' "
+							"num times hit:'%d' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType],
 							FaultInjectorDDLEnumToString[entryLocal->ddlStatement],
@@ -1401,29 +1430,31 @@ FaultInjector_SetFaultInjection(
 							entryLocal->tableName,
 							entryLocal->occurrence,
 							entryLocal->sleepTime,
-							FaultInjectorStateEnumToString[entryLocal->faultInjectorState])));
+							FaultInjectorStateEnumToString[entryLocal->faultInjectorState],
+						entryLocal->numTimesTriggered)));
 				
 				if (entry->faultInjectorIdentifier == entryLocal->faultInjectorIdentifier ||
-					entry->faultInjectorIdentifier == FaultInjectorIdAll) {
-						snprintf(entry->bufOutput, sizeof(entry->bufOutput), 
-								 "%s \n"
-								 "fault name:'%s' "
-								 "fault type:'%s' "
-								 "ddl statement:'%s' "
-								 "database name:'%s' "
-								 "table name:'%s' "
-								 "occurrence:'%d' "
-								 "sleep time:'%d' "
-								 "fault injection state:'%s' ",
-								 entry->bufOutput,
-								 FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
-								 FaultInjectorTypeEnumToString[entryLocal->faultInjectorType],
-								 FaultInjectorDDLEnumToString[entryLocal->ddlStatement],
-								 entryLocal->databaseName,
-								 entryLocal->tableName,
-								 entryLocal->occurrence,
-								 entryLocal->sleepTime,
-								 FaultInjectorStateEnumToString[entryLocal->faultInjectorState]);		
+					entry->faultInjectorIdentifier == FaultInjectorIdAll)
+				{
+					length = snprintf((entry->bufOutput + length), sizeof(entry->bufOutput) - length,
+									  "fault name:'%s' "
+									  "fault type:'%s' "
+									  "ddl statement:'%s' "
+									  "database name:'%s' "
+									  "table name:'%s' "
+									  "occurrence:'%d' "
+									  "sleep time:'%d' "
+									  "fault injection state:'%s'  "
+									  "num times hit:'%d' \n",
+									  FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+									  FaultInjectorTypeEnumToString[entryLocal->faultInjectorType],
+									  FaultInjectorDDLEnumToString[entryLocal->ddlStatement],
+									  entryLocal->databaseName,
+									  entryLocal->tableName,
+									  entryLocal->occurrence,
+									  entryLocal->sleepTime,
+									  FaultInjectorStateEnumToString[entryLocal->faultInjectorState],
+									  entryLocal->numTimesTriggered);
 						found = TRUE;
 				}
 			}
@@ -1436,7 +1467,8 @@ FaultInjector_SetFaultInjection(
 		}
 		case FaultInjectorTypeResume:
 			ereport(LOG, 
-					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entry->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entry->faultInjectorType])));	
 			

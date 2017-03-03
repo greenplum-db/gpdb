@@ -688,10 +688,12 @@ static void OpenAOCSDatumStreams(AOCSInsertDesc desc)
 			for (int i=0; i < nvp; i++)
 			{
 				if (desc->cur_segno > 0 &&
-					ReadGpRelationNode(desc->aoi_rel->rd_node.relNode,
-									   (i * AOTupleId_MultiplierSegmentFileNum) + desc->cur_segno,
-									   &persistentTid,
-									   &persistentSerialNum))
+					ReadGpRelationNode(
+						desc->aoi_rel->rd_rel->reltablespace,
+						desc->aoi_rel->rd_rel->relfilenode,
+						(i * AOTupleId_MultiplierSegmentFileNum) + desc->cur_segno,
+						&persistentTid,
+						&persistentSerialNum))
 				{
 					elog(ERROR, "Found gp_relation_node entry for relation name %s, "
 					"relation Oid %u, relfilenode %u, segment file #%d "

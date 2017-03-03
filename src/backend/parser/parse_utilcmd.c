@@ -1159,11 +1159,12 @@ get_opclass(Oid opclass, Oid actual_datatype)
 	return result;
 }
 
-CreateExternalStmt *
+List *
 transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 {
 	ParseState *pstate;
 	CreateStmtContext cxt;
+	List	   *result;
 	ListCell   *elements;
 	List  	   *likeDistributedBy = NIL;
 	bool	    bQuiet = false;	/* shut up transformDistributedBy messages */
@@ -1184,6 +1185,7 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 	cxt.fkconstraints = NIL;
 	cxt.ixconstraints = NIL;
 	cxt.pkey = NULL;
+	cxt.rel = NULL;
 
 	cxt.blist = NIL;
 	cxt.alist = NIL;
@@ -1303,7 +1305,11 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 	 * Output results.
 	 */
 	stmt->tableElts = cxt.columns;
-	return stmt;
+
+	result = lappend(cxt.blist, stmt);
+	result = list_concat(result, cxt.alist);
+
+	return result;
 }
 
 
@@ -1325,7 +1331,7 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 	 * utility mode creates can't have a policy.  Only the QD can have policies
 	 *
 	 */
-	if (Gp_role != GP_ROLE_DISPATCH)
+	if (Gp_role != GP_ROLE_DISPATCH && !IsBinaryUpgrade)
 	{
 		*policyp = NULL;
 		return;
@@ -1456,9 +1462,15 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 			GpPolicy  *oldTablePolicy =
 				GpPolicyFetch(CurrentMemoryContext, relId);
 
-			/* Partitioned child must have partitioned parents. */
-			if (oldTablePolicy == NULL ||
-				 oldTablePolicy->ptype != POLICYTYPE_PARTITIONED)
+			/*
+			 * Partitioned child must have partitioned parents. During binary
+			 * upgrade we allow to skip this check since that runs against a
+			 * segment in utility mode and the distribution policy isn't stored
+			 * in the segments.
+			 */
+			if ((oldTablePolicy == NULL ||
+					oldTablePolicy->ptype != POLICYTYPE_PARTITIONED) &&
+					!IsBinaryUpgrade)
 			{
 				ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
 						errmsg("cannot inherit from catalog table \"%s\" "
@@ -1505,7 +1517,7 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 	{
 		distributedBy = likeDistributedBy;
 		if (!bQuiet)
-			elog(NOTICE, "Table doesn't have 'distributed by' clause, "
+			elog(NOTICE, "Table doesn't have 'DISTRIBUTED BY' clause, "
 				 "defaulting to distribution columns from LIKE table");
 	}
 
@@ -1638,7 +1650,7 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 			 */
 			policy->nattrs = 0;
 			if (!bQuiet)
-				elog(NOTICE, "Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.");
+				elog(NOTICE, "Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.");
 		}
 
 	}
@@ -1839,7 +1851,7 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 						heap_close(rel, NoLock);
 
 						if (found)
-							elog(DEBUG1, "'distributed by' clause refers to "
+							elog(DEBUG1, "'DISTRIBUTED BY' clause refers to "
 								 "columns of inherited table");
 
 						if (found)
@@ -1937,7 +1949,7 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 						}
 						heap_close(rel, NoLock);
 						if (found)
-							elog(NOTICE, "'distributed by' clause refers to columns of inherited table");
+							elog(NOTICE, "'DISTRIBUTED BY' clause refers to columns of inherited table");
 
 						if (found)
 							break;
@@ -3068,7 +3080,8 @@ transformAlterTableStmt(AlterTableStmt *stmt, const char *queryString)
 					Assert(IsA(cmd->def, ColumnDef));
 
 					/*
-					 * Disallow adding a column with primary key constraint
+					 * Adding a column with a primary key or unique constraint
+					 * is not supported in GPDB.
 					 */
 					if (Gp_role == GP_ROLE_DISPATCH)
 					{
@@ -3077,11 +3090,13 @@ transformAlterTableStmt(AlterTableStmt *stmt, const char *queryString)
 						{
 							Constraint *cons = (Constraint *) lfirst(c);
 							if (cons->contype == CONSTR_PRIMARY)
-								elog(ERROR, "Cannot add column with primary "
-									 "key constraint");
+								ereport(ERROR,
+										(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+										 errmsg("cannot add column with primary key constraint")));
 							if (cons->contype == CONSTR_UNIQUE)
-								elog(ERROR, "Cannot add column with unique "
-									 "constraint");
+								ereport(ERROR,
+										(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+										 errmsg("cannot add column with unique constraint")));
 						}
 					}
 					transformColumnDefinition(pstate, &cxt,

@@ -14,9 +14,8 @@ top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
 
 ifneq ($(PORTNAME), win32)
-override CFLAGS += $(PTHREAD_CFLAGS) -pthread -Wno-error
+override CFLAGS += $(PTHREAD_CFLAGS) -Wno-error
 endif
-
 
 # The frontend doesn't need everything that's in LIBS, some are backend only
 LIBS := $(filter-out -lresolv, $(LIBS))
@@ -50,16 +49,17 @@ OBJS= $(PGDUMP_DIR)/pg_backup_db.o $(PGDUMP_DIR)/pg_backup_custom.o \
 
 KEYWRDOBJS = ../keywords.o ../kwlookup.o
 
-all: submake-libpq submake-libpgport cdb_dump cdb_dump_agent cdb_restore cdb_restore_agent gpddboost libgpbsa.so libgpbsa76.so libgpbsa75.so libgpbsa71.so cdb_bsa_dump_agent cdb_bsa_restore_agent cdb_bsa_query_agent cdb_bsa_delete_agent
+all: submake-libpq submake-libpgport cdb_dump cdb_dump_agent cdb_restore cdb_restore_agent gpddboost cdb_bsa_dump_agent cdb_bsa_restore_agent cdb_bsa_query_agent cdb_bsa_delete_agent libgpbsa.so libgpbsa76.so libgpbsa75.so libgpbsa71.so
+
+ifeq ($(enable_netbackup), yes)
+cdb_bsa_dump_agent cdb_bsa_restore_agent cdb_bsa_query_agent cdb_bsa_delete_agent: libgpbsa.so
+endif
 
 cdb_dump: cdb_dump.o cdb_backup_status.o cdb_seginst.o cdb_backup_state.o cdb_table.o cdb_backup_archiver.o cdb_dump_util.o cdb_dump_include.o cdb_lockbox.o $(PGDUMP_DIR)/common.o $(OBJS) $(KEYWRDOBJS) $(libpq_builddir)/libpq.a $(EXTRA_OBJS)
 	$(CC) $(CFLAGS) cdb_dump.o cdb_backup_status.o cdb_seginst.o cdb_backup_state.o cdb_table.o cdb_backup_archiver.o cdb_dump_util.o cdb_dump_include.o cdb_lockbox.o $(PGDUMP_DIR)/common.o $(OBJS) $(KEYWRDOBJS)  $(libpq) $(LDFLAGS) $(DDBOOSTLIB) $(LIBS) -o $@
 
 cdb_dump_agent: cdb_dump_agent.o $(PGDUMP_DIR)/common.o $(PGDUMP_DIR)/pg_dump_sort.o cdb_backup_archiver.o cdb_dump_util.o cdb_seginst.o cdb_table.o cdb_backup_status.o cdb_backup_state.o cdb_dump_include.o cdb_lockbox.o $(OBJS) $(KEYWRDOBJS) $(libpq_builddir)/libpq.a
 	$(CC) $(CFLAGS) cdb_dump_agent.o $(PGDUMP_DIR)/common.o $(PGDUMP_DIR)/pg_dump_sort.o cdb_dump_util.o cdb_seginst.o cdb_table.o cdb_backup_archiver.o cdb_backup_status.o cdb_backup_state.o cdb_dump_include.o cdb_lockbox.o $(OBJS) $(KEYWRDOBJS)  $(libpq) $(LDFLAGS) $(DDBOOSTLIB) $(LIBS) -o $@
-
-#cdb_dumpall_agent: cdb_dumpall_agent.o ../common.o cdb_backup_archiver.o cdb_dump_util.o cdb_lockbox.o cdb_seginst.o cdb_table.o cdb_backup_status.o $(OBJS) $(KEYWRDOBJS) $(libpq_builddir)/libpq.a
-#	$(CC) $(CFLAGS) cdb_dumpall_agent.o cdb_backup_archiver.o $(OBJS) $(KEYWRDOBJS)  $(libpq) $(LDFLAGS) $(LIBS) -o $@
 
 cdb_restore: cdb_restore.o cdb_backup_status.o cdb_seginst.o cdb_backup_state.o cdb_table.o cdb_dump_util.o cdb_lockbox.o $(PGDUMP_DIR)/dumputils.o $(libpq_builddir)/libpq.a
 	$(CC) $(CFLAGS) cdb_restore.o cdb_backup_status.o cdb_seginst.o cdb_backup_state.o cdb_table.o cdb_dump_util.o cdb_lockbox.o $(KEYWRDOBJS) $(PGDUMP_DIR)/dumputils.o $(libpq) $(LDFLAGS) $(DDBOOSTLIB) $(LIBS) -o $@
@@ -82,16 +82,18 @@ libgpbsa71.so: cdb_bsa_util.o $(libpq_builddir)/libpq.a
 libgpbsa.so: libgpbsa76.so
 	cp libgpbsa76.so libgpbsa.so
 
-cdb_bsa_dump_agent: cdb_bsa_dump_agent.o cdb_dump_util.o cdb_lockbox.o $(libpq_builddir)/libpq.a
+cdb_bsa_dump_agent cdb_bsa_restore_agent cdb_bsa_query_agent cdb_bsa_delete_agent: cdb_dump_util.o cdb_lockbox.o $(libpq_builddir)/libpq.a
+
+cdb_bsa_dump_agent: cdb_bsa_dump_agent.o
 	$(CC) $(CFLAGS) cdb_bsa_dump_agent.o cdb_dump_util.o cdb_lockbox.o $(PGDUMP_DIR)/dumputils.o $(KEYWRDOBJS) $(libpq) $(LDFLAGS) $(DDBOOSTLIB) $(GPBSALIB) $(LIBS) -o $@
 
-cdb_bsa_restore_agent: cdb_bsa_restore_agent.o cdb_dump_util.o cdb_lockbox.o $(libpq_builddir)/libpq.a
+cdb_bsa_restore_agent: cdb_bsa_restore_agent.o
 	$(CC) $(CFLAGS) cdb_bsa_restore_agent.o cdb_dump_util.o cdb_lockbox.o $(PGDUMP_DIR)/dumputils.o $(KEYWRDOBJS) $(libpq) $(LDFLAGS) $(DDBOOSTLIB) $(GPBSALIB) $(LIBS) -o $@
 
-cdb_bsa_query_agent: cdb_bsa_query_agent.o cdb_dump_util.o cdb_lockbox.o $(libpq_builddir)/libpq.a
+cdb_bsa_query_agent: cdb_bsa_query_agent.o
 	$(CC) $(CFLAGS) cdb_bsa_query_agent.o cdb_dump_util.o cdb_lockbox.o $(PGDUMP_DIR)/dumputils.o $(KEYWRDOBJS) $(libpq) $(LDFLAGS) $(DDBOOSTLIB) $(GPBSALIB) $(LIBS) -o $@
 
-cdb_bsa_delete_agent: cdb_bsa_delete_agent.o cdb_dump_util.o cdb_lockbox.o $(libpq_builddir)/libpq.a
+cdb_bsa_delete_agent: cdb_bsa_delete_agent.o
 	$(CC) $(CFLAGS) cdb_bsa_delete_agent.o cdb_dump_util.o cdb_lockbox.o $(PGDUMP_DIR)/dumputils.o $(KEYWRDOBJS) $(libpq) $(LDFLAGS) $(DDBOOSTLIB) $(GPBSALIB) $(LIBS) -o $@
 
 .PHONY: submake-backend

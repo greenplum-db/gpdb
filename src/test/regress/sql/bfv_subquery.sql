@@ -249,3 +249,25 @@ RESET enable_mergejoin;
 drop table if exists t_outer;
 drop table if exists t_inner;
 -- end_ignore
+
+--
+-- In some cases of a NOT EXISTS subquery, planner mistook one side of the
+-- predicate as a (derived or direct) attribute on the inner relation, and
+-- incorrectly decorrelated the subquery into a JOIN
+
+-- start_ignore
+drop table if exists foo;
+drop table if exists bar;
+create table foo(a, b) as (values (1, 'a'), (2, 'b'));
+create table bar(c, d) as (values (1, 'a'), (2, 'b'));
+-- end_ignore
+
+select * from foo where not exists (select * from bar where foo.a + bar.c = 1);
+select * from foo where not exists (select * from bar where foo.b || bar.d = 'hola');
+
+select * from foo where not exists (select * from bar where foo.a = foo.a + 1);
+select * from foo where not exists (select * from bar where foo.b = foo.b || 'a');
+
+select * from foo where foo.a = (select min(bar.c) from bar where foo.b || bar.d = 'bb');
+
+drop table foo, bar;

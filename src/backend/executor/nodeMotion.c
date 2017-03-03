@@ -234,6 +234,7 @@ ExecMotion(MotionState * node)
 		{
 			if (node->ps.state->active_recv_id != motion->motionID)
 			{
+				/* See motion_sanity_walker() for details on how a deadlock may occur. */
 				elog(LOG, "DEADLOCK HAZARD: Updating active_motion_id from %d to %d",
 					 node->ps.state->active_recv_id, motion->motionID);
 				node->ps.state->active_recv_id = motion->motionID;

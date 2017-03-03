@@ -1,0 +1,42 @@
+-- @author prabhd 
+-- @created 2013-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description test19b :CTE with set operations [UNION ALL]
+-- start_ignore
+SET gp_optimizer=on;SET gp_log_optimizer=on;
+SET
+SET
+-- end_ignore
+WITH Results_CTE AS (
+    SELECT t2.a, ROW_NUMBER() OVER (ORDER BY b) AS RowNum FROM foo t2 LEFT JOIN bar ON bar.d = t2.b
+UNION ALL 
+    SELECT t1.b, ROW_NUMBER() OVER (ORDER BY a) AS RowNum FROM foo t1
+LEFT JOIN bar ON bar.c = t1.a
+ ) 
+SELECT * FROM Results_CTE a INNER JOIN bar ON a.a = bar.d WHERE RowNum >= 0 AND RowNum <= 10 ORDER BY 1,2,3,4;
+ a  | rownum | c  | d  
+----+--------+----+----
+  2 |      1 |  1 |  2
+  2 |      2 |  1 |  2
+  3 |      2 |  2 |  3
+  3 |      3 |  2 |  3
+  4 |      3 |  3 |  4
+  4 |      4 |  3 |  4
+  5 |      4 |  4 |  5
+  5 |      5 |  4 |  5
+  6 |      5 |  5 |  6
+  6 |      6 |  5 |  6
+  7 |      6 |  6 |  7
+  7 |      7 |  6 |  7
+  8 |      7 |  7 |  8
+  8 |      8 |  7 |  8
+  9 |      8 |  8 |  9
+  9 |      9 |  8 |  9
+ 10 |      9 |  9 | 10
+ 10 |     10 |  9 | 10
+ 11 |     10 | 10 | 11
+(19 rows)
+

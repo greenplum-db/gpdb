@@ -197,6 +197,10 @@ CopyPlanFields(Plan *from, Plan *newnode)
 	COPY_SCALAR_FIELD(directDispatch.isDirectDispatch);
 	COPY_NODE_FIELD(directDispatch.contentIds);
 	COPY_SCALAR_FIELD(operatorMemKB);
+	/*
+	 * Don't copy memoryAccountId and this is an index to the account array
+	 * specific to this process only.
+	 */
 }
 
 /*
@@ -878,8 +882,6 @@ _copySort(Sort *from)
 	COPY_POINTER_FIELD(nullsFirst, from->numCols * sizeof(bool));
 
     /* CDB */
-	COPY_NODE_FIELD(limitOffset);
-	COPY_NODE_FIELD(limitCount);
 	COPY_SCALAR_FIELD(noduplicates);
 
 	COPY_SCALAR_FIELD(share_type);
@@ -3291,6 +3293,7 @@ _copyCreateExternalStmt(CreateExternalStmt *from)
 	COPY_SCALAR_FIELD(isweb);
 	COPY_SCALAR_FIELD(iswritable);
 	COPY_NODE_FIELD(sreh);
+	COPY_NODE_FIELD(extOptions);
 	COPY_NODE_FIELD(encoding);
 	COPY_NODE_FIELD(distributedBy);	
 	if (from->policy)
@@ -3867,6 +3870,44 @@ _copyFileSpaceEntry(FileSpaceEntry *from)
 	COPY_SCALAR_FIELD(contentid);	
 	COPY_STRING_FIELD(location);
 	COPY_STRING_FIELD(hostname);
+
+	return newnode;
+}
+
+static CreateExtensionStmt *
+_copyCreateExtensionStmt(const CreateExtensionStmt *from)
+{
+	CreateExtensionStmt *newnode = makeNode(CreateExtensionStmt);
+
+	COPY_STRING_FIELD(extname);
+	COPY_SCALAR_FIELD(if_not_exists);
+	COPY_NODE_FIELD(options);
+	COPY_SCALAR_FIELD(create_ext_state);
+
+	return newnode;
+}
+
+static AlterExtensionStmt *
+_copyAlterExtensionStmt(AlterExtensionStmt *from)
+{
+	AlterExtensionStmt *newnode = makeNode(AlterExtensionStmt);
+
+	COPY_STRING_FIELD(extname);
+	COPY_NODE_FIELD(options);
+
+	return newnode;
+}
+
+static AlterExtensionContentsStmt *
+_copyAlterExtensionContentsStmt(AlterExtensionContentsStmt *from)
+{
+	AlterExtensionContentsStmt *newnode = makeNode(AlterExtensionContentsStmt);
+
+	COPY_STRING_FIELD(extname);
+	COPY_SCALAR_FIELD(action);
+	COPY_SCALAR_FIELD(objtype);
+	COPY_NODE_FIELD(objname);
+	COPY_NODE_FIELD(objargs);
 
 	return newnode;
 }
@@ -4960,6 +5001,15 @@ copyObject(void *from)
 			break;
 		case T_DiscardStmt:
 			retval = _copyDiscardStmt(from);
+			break;
+		case T_CreateExtensionStmt:
+			retval = _copyCreateExtensionStmt(from);
+			break;
+		case T_AlterExtensionStmt:
+			retval = _copyAlterExtensionStmt(from);
+			break;
+		case T_AlterExtensionContentsStmt:
+			retval = _copyAlterExtensionContentsStmt(from);
 			break;
 		case T_CreateFileSpaceStmt:
 			retval = _copyCreateFileSpaceStmt(from);

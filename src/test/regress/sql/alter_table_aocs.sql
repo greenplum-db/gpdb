@@ -179,13 +179,29 @@ create table addcol6 (a int, b int)
 
 begin;
 insert into addcol6 select i,i from generate_series(1,10)i;
--- abort the first insert, so as to advance gp_fastsequence for this
+-- abort the first insert, still should advance gp_fastsequence for this
 -- relation.
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='addcol6'));
 abort;
+
+-- check gp_fastsequence remains advanced.
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='addcol6'));
 
 insert into addcol6 select i,i/2 from generate_series(1,20)i;
 alter table addcol6 add column c float default 1.2;
 select a,c from addcol6 where b > 5 order by a;
+
+-- Lets validate after alter gp_fastsequence reflects correctly.
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='addcol6'));
 
 -- add column with default value as sequence
 alter table addcol6 add column d serial;
@@ -393,4 +409,5 @@ alter table aocs_multi_level_part_table split partition part3 at (date '2011-01-
 
 -- cleanup so as not to affect other installcheck tests
 -- (e.g. column_compression).
+set client_min_messages='WARNING';
 drop schema aocs_addcol cascade;

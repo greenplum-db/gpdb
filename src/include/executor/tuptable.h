@@ -366,7 +366,7 @@ static inline bool slot_attisnull(TupleTableSlot *slot, int attnum)
 	return memtuple_attisnull(slot->PRIVATE_tts_memtuple, slot->tts_mt_bind, attnum);
 }
 
-#ifdef GPDB_83MERGE_FIXME
+#ifdef GPDB_83_MERGE_FIXME
 #define TTS_HAS_PHYSICAL_TUPLE(slot)  \
 	((slot)->tts_tuple != NULL && (slot)->tts_tuple != &((slot)->tts_minhdr))
 #endif

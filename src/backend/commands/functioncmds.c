@@ -2023,6 +2023,9 @@ CreateCast(CreateCastStmt *stmt)
 		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 	}
 
+	/* dependency on extension */
+	recordDependencyOnCurrentExtension(&myself, false);
+
 	heap_freetuple(tuple);
 
 	heap_close(relation, RowExclusiveLock);
@@ -2108,6 +2111,28 @@ DropCast(DropCastStmt *stmt)
 	}
 }
 
+/*
+ * get_cast_oid - given two type OIDs, look up a cast OID
+ *
+ * If missing_ok is false, throw an error if the cast is not found.  If
+ * true, just return InvalidOid.
+ */
+Oid
+get_cast_oid(Oid sourcetypeid, Oid targettypeid, bool missing_ok)
+{
+	Oid			oid;
+
+	oid = GetSysCacheOid2(CASTSOURCETARGET,
+						  ObjectIdGetDatum(sourcetypeid),
+						  ObjectIdGetDatum(targettypeid));
+	if (!OidIsValid(oid) && !missing_ok)
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("cast from type %s to type %s does not exist",
+						format_type_be(sourcetypeid),
+						format_type_be(targettypeid))));
+	return oid;
+}
 
 void
 DropCastById(Oid castOid)
@@ -2144,14 +2169,8 @@ void
 AlterFunctionNamespace(List *name, List *argtypes, bool isagg,
 					   const char *newschema)
 {
-	Oid			procOid;
-	Oid			oldNspOid;
+	Oid 		procOid;
 	Oid			nspOid;
-	HeapTuple	tup;
-	Relation	procRel;
-	Form_pg_proc proc;
-
-	procRel = heap_open(ProcedureRelationId, RowExclusiveLock);
 
 	/* get function OID */
 	if (isagg)
@@ -2159,59 +2178,47 @@ AlterFunctionNamespace(List *name, List *argtypes, bool isagg,
 	else
 		procOid = LookupFuncNameTypeNames(name, argtypes, false);
 
-	/* check permissions on function */
-	if (!pg_proc_ownercheck(procOid, GetUserId()))
-		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_PROC,
-					   NameListToString(name));
+	/* get schema OID and check its permission */
+	nspOid = LookupCreationNamespace(newschema);
 
-	tup = SearchSysCacheCopy(PROCOID,
-							 ObjectIdGetDatum(procOid),
-							 0, 0, 0);
+	AlterFunctionNamespace_oid(procOid, nspOid);
+}
+
+Oid
+AlterFunctionNamespace_oid(Oid procOid, Oid nspOid)
+{
+	Oid			oldNspOid;
+	HeapTuple	tup;
+	Relation	procRel;
+	Form_pg_proc proc;
+
+	procRel = heap_open(ProcedureRelationId, RowExclusiveLock);
+
+	tup = SearchSysCacheCopy1(PROCOID, ObjectIdGetDatum(procOid));
 	if (!HeapTupleIsValid(tup))
 		elog(ERROR, "cache lookup failed for function %u", procOid);
 	proc = (Form_pg_proc) GETSTRUCT(tup);
 
+	/* check permissions on function */
+	if (!pg_proc_ownercheck(procOid, GetUserId()))
+		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_PROC,
+					   NameStr(proc->proname));
+
 	oldNspOid = proc->pronamespace;
 
-	/* get schema OID and check its permissions */
-	nspOid = LookupCreationNamespace(newschema);
-
-	if (oldNspOid == nspOid)
-		ereport(ERROR,
-				(errcode(ERRCODE_DUPLICATE_FUNCTION),
-				 errmsg("function \"%s\" is already in schema \"%s\"",
-						NameListToString(name),
-						newschema)));
-
-	/* disallow renaming into or out of temp schemas */
-	if (isAnyTempNamespace(nspOid) || isAnyTempNamespace(oldNspOid))
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			errmsg("cannot move objects into or out of temporary schemas")));
-
-	/* same for TOAST schema */
-	if (nspOid == PG_TOAST_NAMESPACE || oldNspOid == PG_TOAST_NAMESPACE)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("cannot move objects into or out of TOAST schema")));
-
-	/* same for AO segment list schema */
-	if (nspOid == PG_AOSEGMENT_NAMESPACE || oldNspOid == PG_AOSEGMENT_NAMESPACE)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("cannot move objects into or out of AO SEGMENT schema")));
+	/* common checks on switching namespaces */
+	CheckSetNamespace(oldNspOid, nspOid, ProcedureRelationId, procOid);
 
 	/* check for duplicate name (more friendly than unique-index failure) */
-	if (SearchSysCacheExists(PROCNAMEARGSNSP,
-							 CStringGetDatum(NameStr(proc->proname)),
-							 PointerGetDatum(&proc->proargtypes),
-							 ObjectIdGetDatum(nspOid),
-							 0))
+	if (SearchSysCacheExists3(PROCNAMEARGSNSP,
+							  CStringGetDatum(NameStr(proc->proname)),
+							  PointerGetDatum(&proc->proargtypes),
+							  ObjectIdGetDatum(nspOid)))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_FUNCTION),
-				 errmsg("function \"%s\" already exists in schema \"%s\"",
-						NameStr(proc->proname),
-						newschema)));
+						errmsg("function \"%s\" already exists in schema \"%s\"",
+							   NameStr(proc->proname),
+							   get_namespace_name(nspOid))));
 
 	/* OK, modify the pg_proc row */
 
@@ -2225,13 +2232,14 @@ AlterFunctionNamespace(List *name, List *argtypes, bool isagg,
 	if (changeDependencyFor(ProcedureRelationId, procOid,
 							NamespaceRelationId, oldNspOid, nspOid) != 1)
 		elog(ERROR, "failed to change schema dependency for function \"%s\"",
-			 NameListToString(name));
+			 NameStr(proc->proname));
 
 	heap_freetuple(tup);
 
 	heap_close(procRel, RowExclusiveLock);
-}
 
+	return oldNspOid;
+}
 
 /*
  * ExecuteDoStmt

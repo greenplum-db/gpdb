@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1"><title id="oz137116">createdb</title><body><p id="client_util_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>createdb</b> [<varname>connection_option</varname> ...] [<b>-D</b> <varname>tablespace</varname>] [<b>-E</b> <varname>encoding</varname>] 
+        [<b>-O</b> <varname>owner</varname>] [<b>-T</b> <varname>template</varname>] [<b>-e</b>] [<varname>dbname</varname> ['<varname>description</varname>']]
+
+<b>createdb</b> <b>--help</b> 
+
+<b>createdb</b> <b>--version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>createdb</codeph> creates a new database in a Greenplum Database system. </p><p>Normally, the database user who executes this command becomes the
+owner of the new database. However a different owner can be specified
+via the <codeph>-O</codeph> option, if the executing user has appropriate
+privileges.</p><p><codeph>createdb</codeph> is a wrapper around the SQL command <codeph>CREATE
+DATABASE</codeph>.</p></section><section id="section4"><title>Options</title><parml><plentry><pt>dbname</pt><pd>The name of the database to be created. The name must be unique among all other databases in the
+              Greenplum system. If not specified, reads from the
+            environment variable <codeph>PGDATABASE</codeph>, then <codeph>PGUSER</codeph> or
+            defaults to the current system user.</pd></plentry><plentry><pt>description</pt><pd>A comment to be associated with the newly created database. Descriptions
+containing white space must be enclosed in quotes.</pd></plentry><plentry><pt>-D <varname>tablespace</varname> | --tablespace <varname>tablespace</varname></pt><pd>The default tablespace for the database. </pd></plentry><plentry><pt>-e echo</pt><pd>Echo the commands that createdb generates and sends to the server.</pd></plentry><plentry><pt>-E <varname>encoding</varname> | --encoding <varname>encoding</varname></pt><pd>Character set encoding to use in the new database. Specify a string constant (such as
+              <codeph>'UTF8'</codeph>), an integer encoding number, or <codeph>DEFAULT</codeph> to
+            use the default encoding. <ph>See the Greenplum Database Reference
+              Guide for information about supported character sets.</ph></pd></plentry><plentry><pt>-O <varname>owner</varname> | --owner <varname>owner</varname></pt><pd>The name of the database user who will own the new database. Defaults
+to the user executing this command. </pd></plentry><plentry><pt>-T <varname>template</varname> | --template <varname>template</varname></pt><pd>The name of the template from which to create the new database. Defaults to
+              <codeph>template1</codeph>. </pd></plentry></parml><sectiondiv id="section5"><b>Connection Options</b><parml><plentry><pt>-h <varname>host</varname> | --host <varname>host</varname></pt><pd>The host name of the machine on which the Greenplum master database
+              server is running. If not specified, reads from the environment variable
+                <codeph>PGHOST</codeph> or defaults to localhost.</pd></plentry><plentry><pt>-p <varname>port</varname> | --port <varname>port</varname></pt><pd>The TCP port on which the Greenplum master database server is
+              listening for connections. If not specified, reads from the environment variable
+                <codeph>PGPORT</codeph> or defaults to 5432.</pd></plentry><plentry><pt>-U <varname>username</varname> | --username <varname>username</varname></pt><pd>The database role name to connect as. If not specified, reads from
+the environment variable <codeph>PGUSER</codeph> or defaults to the current
+system role name.</pd></plentry><plentry><pt>-w | --no-password</pt><pd>Never issue a password prompt. If the server requires password authentication
+and a password is not available by other means such as a <codeph>.pgpass</codeph>
+file, the connection attempt will fail. This option can be useful in
+batch jobs and scripts where no user is present to enter a password.</pd></plentry><plentry><pt>-W | --password</pt><pd>Force a password prompt.</pd></plentry></parml></sectiondiv></section><section id="section6"><title>Examples</title><p>To create the database <codeph>test</codeph> using the default options:</p><codeblock>createdb test</codeblock><p>To create the database <codeph>demo</codeph> using the Greenplum
+        master on host <codeph>gpmaster</codeph>, port <codeph>54321</codeph>, using the
+          <codeph>LATIN1</codeph> encoding scheme:</p><codeblock>createdb -p 54321 -h gpmaster -E LATIN1 demo</codeblock></section><section id="section7">
+      <title>See Also</title>
+      <p><ph otherprops="op-print"><codeph>CREATE DATABASE</codeph> in the <i>Greenplum Database
+            Reference Guide</i></ph><ph otherprops="op-help"><codeph><xref
+              href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1"/></codeph></ph></p>
+    </section></body></topic>

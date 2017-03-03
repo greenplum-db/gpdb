@@ -546,7 +546,7 @@ pg_SSPI_continue(PGconn *conn)
 
 	if (conn->sspictx == NULL)
 	{
-		/* On first run, transfer retreived context handle */
+		/* On first run, transfer retrieved context handle */
 		conn->sspictx = malloc(sizeof(CtxtHandle));
 		if (conn->sspictx == NULL)
 		{

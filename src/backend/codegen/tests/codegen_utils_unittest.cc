@@ -832,6 +832,44 @@ class CodegenUtilsTest : public ::testing::Test {
     }
   }
 
+  // Helper method for CreateCastTest. Tests
+  // CodegenUtils::CreateCast() from an 'IntegerType' to 64-bit float
+  template <typename IntegerSrcType>
+  void CheckIntegerTo64FloatCast(const double double_constant) {
+    llvm::Constant* constant = codegen_utils_->GetConstant<IntegerSrcType>(
+        static_cast<IntegerSrcType>(double_constant));
+    llvm::Constant* casted_constant =
+        llvm::dyn_cast<llvm::Constant>(
+            codegen_utils_->CreateCast<double, IntegerSrcType>(
+                constant));
+    CheckGetSingleFloatingPointConstant(double_constant, casted_constant);
+  }
+
+  // Helper method for CreateCastTest. Tests
+  // CodegenUtils::CreateCast() for an 'IntegerType' with several values
+  // of the specified integer type (0, 1, 123, the maximum, and if signed,
+  // -1, -123, and the minimum) to 64-bit float.
+  template <typename IntegerSrcType>
+  void CheckIntegerTo64FloatCast() {
+    CheckIntegerTo64FloatCast<IntegerSrcType>(static_cast<double>(0));
+    CheckIntegerTo64FloatCast<IntegerSrcType>(static_cast<double>(1));
+    CheckIntegerTo64FloatCast<IntegerSrcType>(static_cast<double>(123));
+    CheckIntegerTo64FloatCast<IntegerSrcType>(
+        static_cast<double>(
+            std::numeric_limits<IntegerSrcType>::max()));
+    if (std::is_signed<IntegerSrcType>::value) {
+      IntegerSrcType src_value = -1;
+      CheckIntegerTo64FloatCast<IntegerSrcType>(
+          static_cast<double>(src_value));
+      src_value = -123;
+      CheckIntegerTo64FloatCast<IntegerSrcType>(
+          static_cast<double>(src_value));
+      src_value = std::numeric_limits<IntegerSrcType>::min();
+      CheckIntegerTo64FloatCast<IntegerSrcType>(
+          static_cast<double>(src_value));
+    }
+  }
+
   // Helper method for GetScalarConstantTest. Tests
   // CodegenUtils::GetConstant() for a single 'enum_constant'.
   template <typename EnumType>
@@ -1253,6 +1291,64 @@ class CodegenUtilsTest : public ::testing::Test {
     delete[] input_array;
     delete[] proj_indices;
     delete[] output_array;
+  }
+
+  // Helper method for CreateMakeTupleTest. This method creates LLVM function of
+  // type int(*)(MemberType... args). This LLVM function will create tuple using
+  // passed arguments. Then it checks if the value of the member in the tuple
+  // matches with arguments passed in functions. If the check fails, it will
+  // return the argument index.
+  template <typename... MemberTypes>
+  void MakeTupleFunc(const std::string& func_name) {
+    auto irb = codegen_utils_->ir_builder();
+    using LLVMFuncType = int(*)(MemberTypes... args);
+
+    llvm::Function* check_tuple_fn =
+        codegen_utils_->CreateFunction<LLVMFuncType>(
+            func_name);
+
+    irb->SetInsertPoint(codegen_utils_->CreateBasicBlock(
+        "main", check_tuple_fn));
+    llvm::BasicBlock* return_block = codegen_utils_->CreateBasicBlock(
+        "return_block", check_tuple_fn);
+    llvm::Value* llvm_ret_ptr = irb->CreateAlloca(
+        codegen_utils_->GetType<int>(), nullptr, "ret_ptr");
+    irb->CreateStore(codegen_utils_->GetConstant<int>(200), llvm_ret_ptr);
+    std::vector<llvm::Value*> members;
+    llvm::Function::arg_iterator itr = check_tuple_fn->arg_begin();
+    for (; itr != check_tuple_fn->arg_end(); ++itr) {
+      members.push_back(&(*itr));
+    }
+    llvm::Value* llvm_struct_ptr = codegen_utils_->CreateMakeTuple(
+        members, "tuple_struct");
+
+    llvm::Value* llvm_struct_a = irb->CreateLoad(llvm_struct_ptr);
+
+    for (size_t idx = 0; idx < members.size(); ++idx) {
+      llvm::BasicBlock* next_block = codegen_utils_->CreateBasicBlock(
+          "member_" + std::to_string(idx), check_tuple_fn);
+      llvm::Value* llvm_mem_val = irb->CreateExtractValue(llvm_struct_a, idx);
+      irb->CreateStore(codegen_utils_->GetConstant<int>(idx), llvm_ret_ptr);
+      llvm::Type* arg_type = members[idx]->getType();
+      ASSERT_TRUE(arg_type->isIntegerTy() ||
+                  arg_type->isFloatingPointTy());
+      llvm::Value* llvm_comp_res = nullptr;
+      if (arg_type->isIntegerTy()) {
+        llvm_comp_res = irb->CreateICmpEQ(members[idx], llvm_mem_val);
+      } else {
+        llvm_comp_res = irb->CreateFCmpOEQ(members[idx], llvm_mem_val);
+      }
+      irb->CreateCondBr(
+          llvm_comp_res,
+            next_block /* true */,
+            return_block /* false */);
+      irb->SetInsertPoint(next_block);
+    }
+    irb->CreateStore(codegen_utils_->GetConstant<int>(
+        members.size()), llvm_ret_ptr);
+    irb->CreateBr(return_block);
+    irb->SetInsertPoint(return_block);
+    irb->CreateRet(irb->CreateLoad(llvm_ret_ptr));
   }
 
   std::unique_ptr<CodegenUtils> codegen_utils_;
@@ -1886,6 +1982,14 @@ TEST_F(CodegenUtilsTest, CreateCastTest) {
   // Floating type of same size
   CheckFloatingPointCast<float, float>();
   CheckFloatingPointCast<double, double>();
+
+  // signed integer to 64-bit float
+  CheckIntegerTo64FloatCast<std::int8_t>();
+  CheckIntegerTo64FloatCast<std::int16_t>();
+
+  // unsigned integer to 64-bit float
+  CheckIntegerTo64FloatCast<std::uint8_t>();
+  CheckIntegerTo64FloatCast<std::uint16_t>();
 }
 
 TEST_F(CodegenUtilsTest, GetPointerConstantTest) {
@@ -2928,6 +3032,36 @@ TEST_F(CodegenUtilsTest, InlineFunctionTest) {
   EXPECT_TRUE(nullptr != compiled_add_two_fn);
   EXPECT_EQ(compiled_add_two_fn(5), 7);
   EXPECT_EQ(compiled_add_two_fn(-5), -3);
+}
+
+// Test CreateMakeTuple in CodegenUtils.
+TEST_F(CodegenUtilsTest, CreateMakeTupleTest) {
+  MakeTupleFunc<int64_t, bool, int32_t, float, int16_t, double>(
+      "MakeTupleFunc");
+  using MakeTupleFuncType =
+      int (*)(int64_t, bool, int32_t, float, int16_t, double);
+
+  int total_arg = 6;
+
+  // Compiled module
+  EXPECT_TRUE(codegen_utils_->PrepareForExecution(
+      CodegenUtils::OptimizationLevel::kNone, false));
+  MakeTupleFuncType compiled_tuple_fn =
+      codegen_utils_->GetFunctionPointer<MakeTupleFuncType>("MakeTupleFunc");
+
+  EXPECT_EQ(total_arg, compiled_tuple_fn(42, false, 23, 36.23, 12, 25.23));
+  EXPECT_EQ(total_arg, compiled_tuple_fn(std::numeric_limits<int64_t>::max(),
+                                         true,
+                                         std::numeric_limits<int32_t>::max(),
+                                         std::numeric_limits<float>::max(),
+                                         std::numeric_limits<int16_t>::max(),
+                                         std::numeric_limits<double>::max()));
+  EXPECT_EQ(total_arg, compiled_tuple_fn(std::numeric_limits<int64_t>::min(),
+                                         true,
+                                         std::numeric_limits<int32_t>::min(),
+                                         std::numeric_limits<float>::min(),
+                                         std::numeric_limits<int16_t>::min(),
+                                         std::numeric_limits<double>::min()));
 }
 
 

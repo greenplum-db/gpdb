@@ -420,7 +420,7 @@ class IsVersionCompatible(Operation):
         ver_list = gpversion_obj.version
 
         # The generation of the magic version number (GP_VERSION_NUM) is
-        # retreived from our configure.in file
+        # retrieved from our configure.in file
         magic_num = "%d%02d%02d" % (ver_list[0], ver_list[1],
                                     ver_list[2] if len(ver_list) > 2 else 0)
         return int(magic_num)

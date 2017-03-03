@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * gppc_client.c
+ * gppc_test.c
  *	  libgppc client program
  *
  * Copyright (c) 2012, Greenplum Inc.

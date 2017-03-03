@@ -33,6 +33,11 @@ ifeq ($(with_libxml),yes)
 WANTED_DIRS += xml2
 endif
 
+ifeq ($(enable_orca),yes)
+WANTED_DIRS += orca_debug
+endif
+
+
 # Missing:
 #		start-scripts	\ (does not have a makefile)
 

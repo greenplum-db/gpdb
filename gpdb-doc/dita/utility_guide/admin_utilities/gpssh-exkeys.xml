@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+    <!--install_guide/refs/gpssh-exkeys.xml has a conref to this topic. -->
+    <title id="jw137116">gpssh-exkeys</title>
+    <body>
+        <p>Exchanges SSH public keys between hosts.</p>
+        <section id="section2">
+            <title>Synopsis</title>
+            <codeblock><b>gpssh-exkeys</b> <b>-f</b> <varname>hostfile_exkeys</varname> | <b>- h</b> <varname>hostname</varname> [<b>-h</b> <varname>hostname</varname> ...]
+
+<b>gpssh-exkeys</b> <b>-e</b> <varname>hostfile_exkeys</varname> <b>-x</b> <varname>hostfile_gpexpand</varname>
+
+<b>gpssh-exkeys</b> <b>-?</b> 
+
+<b>gpssh-exkeys</b> <b>--version</b></codeblock>
+        </section>
+        <section id="section3">
+            <title>Description</title>
+            <p>The <codeph>gpssh-exkeys</codeph> utility exchanges SSH keys between the specified
+                host names (or host addresses). This allows SSH connections between Greenplum hosts
+                and network interfaces without a password prompt. The utility is used to initially
+                prepare a Greenplum Database system for password-free SSH access, and also to add
+                additional ssh keys when expanding a Greenplum Database system. </p>
+            <p>To specify the hosts involved in an initial SSH key exchange, use the
+                    <codeph>-f</codeph> option to specify a file containing a list of host names
+                (recommended), or use the <codeph>-h</codeph> option to name single host names on
+                the command-line. At least one host name (<codeph>-h</codeph>) or a host file is
+                required. Note that the local host is included in the key exchange by default.</p>
+            <p>To specify new expansion hosts to be added to an existing Greenplum Database system,
+                use the <codeph>-e</codeph> and <codeph>-x</codeph> options. The <codeph>-e</codeph>
+                option specifies a file containing a list of existing hosts in the system that
+                already have SSH keys. The <codeph>-x</codeph> option specifies a file containing a
+                list of new hosts that need to participate in the SSH key exchange. </p>
+            <p>Keys are exchanged as the currently logged in user. You should perform
+                the key exchange process twice: once as <codeph>root</codeph> and once as the
+                    <codeph>gpadmin</codeph> user (the user designated to own your Greenplum
+                Database installation). The Greenplum Database management utilities require that the
+                same non-root user be created on all hosts in the Greenplum Database system, and the
+                utilities must be able to connect as that user to all hosts without a password
+                prompt.</p>
+            <p>The <codeph>gpssh-exkeys</codeph> utility performs key exchange using the following
+                steps:</p>
+            <ul>
+                <li id="jw140375">Creates an RSA identification key pair for the current user if one
+                    does not already exist. The public key of this pair is added to the
+                        <codeph>authorized_keys</codeph> file of the current user.</li>
+                <li id="jw140376">Updates the <codeph>known_hosts</codeph> file of the current user
+                    with the host key of each host specified using the <codeph>-h</codeph>,
+                        <codeph>-f</codeph>, <codeph>-e</codeph>, and <codeph>-x</codeph>
+                    options.</li>
+                <li id="jw140377">Connects to each host using <codeph>ssh</codeph> and obtains the
+                        <codeph>authorized_keys</codeph>, <codeph>known_hosts</codeph>, and
+                        <codeph>id_rsa.pub</codeph> files to set up password-free access.</li>
+                <li id="jw140378">Adds keys from the <codeph>id_rsa.pub</codeph> files obtained from
+                    each host to the <codeph>authorized_keys</codeph> file of the current user.</li>
+                <li id="jw140379">Updates the <codeph>authorized_keys</codeph>,
+                        <codeph>known_hosts</codeph>, and <codeph>id_rsa.pub</codeph> files on all
+                    hosts with new host information (if any).</li>
+            </ul>
+        </section>
+        <section id="section4">
+            <title>Options</title>
+            <parml>
+                <plentry>
+                    <pt>-e <varname>hostfile_exkeys</varname></pt>
+                    <pd>When doing a system expansion, this is the name and location of a file
+                        containing all configured host names and host addresses (interface names)
+                        for each host in your <varname>current</varname> Greenplum system (master,
+                        standby master and segments), one name per line without blank lines or extra
+                        spaces. Hosts specified in this file cannot be specified in the host file
+                        used with <codeph>-x</codeph>. </pd>
+                </plentry>
+                <plentry>
+                    <pt>-f <varname>hostfile_exkeys</varname></pt>
+                    <pd>Specifies the name and location of a file containing all configured host
+                        names and host addresses (interface names) for each host in your Greenplum
+                        system (master, standby master and segments), one name per line without
+                        blank lines or extra spaces.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-h <varname>hostname</varname></pt>
+                    <pd>Specifies a single host name (or host address) that will participate in the
+                        SSH key exchange. You can use the <codeph>-h</codeph> option multiple times
+                        to specify multiple host names and host addresses.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--version</pt>
+                    <pd>Displays the version of this utility.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-x <varname>hostfile_gpexpand</varname></pt>
+                    <pd>When doing a system expansion, this is the name and location of a file
+                        containing all configured host names and host addresses (interface names)
+                        for each <varname>new segment host</varname> you are adding to your
+                        Greenplum system, one name per line without blank lines or extra spaces.
+                        Hosts specified in this file cannot be specified in the host file used with
+                            <codeph>-e</codeph>.</pd>
+                </plentry>
+                <plentry>
+                    <pt>-? (help)</pt>
+                    <pd>Displays the online help.</pd>
+                </plentry>
+            </parml>
+        </section>
+        <section id="section5">
+            <title>Examples</title>
+            <p>Exchange SSH keys between all host names and addresses listed in the file
+                    <codeph>hostfile_exkeys</codeph>:</p>
+            <codeblock>$ gpssh-exkeys -f hostfile_exkeys</codeblock>
+            <p>Exchange SSH keys between the hosts <codeph>sdw1</codeph>, <codeph>sdw2</codeph>, and
+                    <codeph>sdw3</codeph>:</p>
+            <codeblock>$ gpssh-exkeys -h sdw1 -h sdw2 -h sdw3</codeblock>
+            <p>Exchange SSH keys between existing hosts <codeph>sdw1</codeph>,
+                <codeph>sdw2</codeph>, and <codeph>sdw3</codeph>, and new hosts
+                    <codeph>sdw4</codeph> and <codeph>sdw5</codeph> as part of a system expansion
+                operation:</p>
+            <codeblock>$ cat hostfile_exkeys
+mdw
+mdw-1
+mdw-2
+smdw
+smdw-1
+smdw-2
+sdw1
+sdw1-1
+sdw1-2
+sdw2
+sdw2-1
+sdw2-2
+sdw3
+sdw3-1
+sdw3-2
+$ cat hostfile_gpexpand
+sdw4
+sdw4-1
+sdw4-2
+sdw5
+sdw5-1
+sdw5-2
+$ gpssh-exkeys -e hostfile_exkeys -x hostfile_gpexpand</codeblock>
+        </section>
+        <section id="section6">
+            <title>See Also</title>
+            <p><codeph><xref href="gpssh.xml#topic1">gpssh</xref></codeph>, <codeph><xref
+                        href="gpscp.xml#topic1">gpscp</xref></codeph></p>
+        </section>
+    </body>
+</topic>

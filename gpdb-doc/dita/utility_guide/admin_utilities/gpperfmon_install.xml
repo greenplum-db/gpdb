@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title>gpperfmon_install</title>
+  <body>
+    <p>Installs the Command Center database (<codeph>gpperfmon</codeph>) and optionally enables the
+      data collection agents.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock><b>gpperfmon_install</b>
+      [<b>--enable</b> <b>--password</b> <varname>gpmon_password</varname> <b>--port</b> <varname>gpdb_port</varname>]
+      [<b>--pgpass</b> <varname>path_to_file</varname>]
+      [<b>--verbose</b>]
+
+<b>gpperfmon_install</b> <b>--help</b> | <b>-h</b> | <b>-?</b></codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p>The <codeph>gpperfmon_install</codeph> utility automates the steps required to enable the
+        data collection agents. You must be the Greenplum Database system user
+          (<codeph>gpadmin</codeph>) in order to run this utility. If using the
+          <codeph>--enable</codeph> option, Greenplum Database must be restarted after the utility
+        completes.</p>
+      <note type="important">Greenplum Command Center does not support the <i>gpperfmon</i> database
+        when GPORCA is enabled for the database. To ensure that the Pivotal
+        Query Optimizer is disabled for the <i>gpperfmon</i> database, run this command on the
+        system where the database is
+          installed:<codeblock>ALTER DATABASE gpperfmon SET OPTIMIZER = OFF</codeblock><p>In
+          Greenplum Database 4.3.5.0, GPORCA co-exists with the legacy query
+          optimizer. For information about GPORCA, see "Querying Data" in the
+            <cite>Greenplum Database Administrator Guide</cite>.</p></note>
+      <p>When run without any options, the utility will just create the <codeph>gpperfmon</codeph>
+        database (the database used to store system metrics collected by the data collection
+        agents). When run with the <codeph>--enable</codeph> option, the utility will also run the
+        following additional tasks necessary to enable the data collection agents:</p>
+      <ol>
+        <li id="ou143278">Creates the <codeph>gpmon</codeph> superuser role in Greenplum Database.
+          The data collection agents require this role to connect to the database and write their
+          data. The <codeph>gpmon</codeph> superuser role uses MD5-encrypted password authentication
+          by default. Use the <codeph>--password</codeph> option to set the <codeph>gpmon</codeph>
+          superuser's password. Use the <codeph>--port</codeph> option to supply the port of the
+          Greenplum Database master instance.</li>
+        <li id="ou143437">Updates the <codeph>$MASTER_DATA_DIRECTORY/pg_hba.conf</codeph> file. The
+          utility adds the following lines to the host-based authentication file
+            (<codeph>pg_hba.conf</codeph>):<codeblock>local      gpperfmon     gpmon                 md5 
+host       all           gpmon  127.0.0.1/28   md5</codeblock><note>
+            <p>It may be necessary to edit the <codeph>pg_hba.conf</codeph> file after running the
+                <codeph>gpperfmon_install</codeph> utility to limit the <codeph>gpmon</codeph>
+              role's access to databases or to change the authentication method. After you edit the
+              file, run <codeph>gpstop -u</codeph> to reload the file in Greenplum Database.</p>
+            <ul id="ul_ffm_ysw_k5">
+              <li>To limit access to just the <codeph>gpperfmon</codeph> database edit the
+                  <codeph>pg_hba.conf</codeph> file and in the host entry for the
+                  <codeph>gpmon</codeph> user change the second field from <codeph>all</codeph> to
+                  <codeph>gpperfmon</codeph>:<codeblock>host       gpperfmon     gpmon    127.0.0.1/28  md5</codeblock></li>
+              <li>
+                <p>The <codeph>gpperfmon_install</codeph> utility assumes the default MD5
+                  authentication method. Greenplum Database may optionally be configured to use the
+                  SHA-256 or SHA-256-FIPS hash algorithm to compute the password hashes saved in the
+                  system catalog. This is incompatible with the MD5 authentication method, which
+                  expects an MD5 hash or clear text password in the system catalog. Because of this,
+                  if you have enabled the SHA-256 or SHA-256-FIPS hash algorithm in the database,
+                  you must edit the <codeph>pg_hba.conf</codeph> file after running the
+                    <codeph>gpperfmon_install</codeph> utility to change the authentication method
+                  for the <codeph>gpmon</codeph> role from <codeph>md5</codeph> to
+                    <codeph>password</codeph>:<codeblock>local      gpperfmon     gpmon                 md5 
+host       all           gpmon  127.0.0.1/28   password</codeblock></p>
+                <p>The <codeph>password</codeph> authentication method submits the user's clear text
+                  password for authentication and should not be used on an untrusted network. See
+                  "Protecting Passwords in Greenplum Database" in the <i>Greenplum Database
+                    Administrator Guide</i> for more information about configuring password
+                  hashing.</p>
+              </li>
+            </ul>
+          </note></li>
+        <li id="ou143384">Updates the password file (<codeph>.pgpass</codeph>). In order to allow
+          the data collection agents to connect as the <codeph>gpmon</codeph> role without a
+          password prompt, you must have a password file that has an entry for the
+            <codeph>gpmon</codeph> user. The utility adds the following entry to your password file
+          (if the file does not exist, the utility will create
+          it):<codeblock>*:5432:gpperfmon:gpmon:<varname>gpmon_password</varname></codeblock> If
+          your password file is not located in the default location (<codeph>~/.pgpass</codeph>),
+          use the <codeph>--pgpass</codeph> option to specify the file location.</li>
+        <li id="ou140687">Sets the server configuration parameters for Greenplum Command Center. The
+          following parameters must be enabled for the data collection agents to begin collecting
+          data. The utility will set the following parameters in the Greenplum Database
+            <codeph>postgresql.conf</codeph> configuration files:<ul id="ul_wrp_dtx_wr">
+            <li><codeph>gp_enable_gpperfmon=on</codeph> (in all <codeph>postgresql.conf</codeph>
+              files)</li>
+            <li><codeph>gpperfmon_port=8888</codeph> (in all <codeph>postgresql.conf</codeph> files) </li>
+            <li><codeph>gp_external_enable_exec=on</codeph> (in the master
+                <codeph>postgresql.conf</codeph> file)</li>
+          </ul><p>For information about the Greenplum Command Center, see the <cite>Greenplum
+              Command Center Administrator Guide</cite>.</p></li>
+      </ol>
+    </section>
+    <section id="section4">
+      <title>Options</title>
+      <parml>
+        <plentry>
+          <pt>--enable</pt>
+          <pd>In addition to creating the <codeph>gpperfmon</codeph> database, performs the
+            additional steps required to enable the data collection agents. When
+              <codeph>--enable</codeph> is specified the utility will also create and configure the
+              <codeph>gpmon</codeph> superuser account and set the Command Center server
+            configuration parameters in the <codeph>postgresql.conf</codeph> files.</pd>
+        </plentry>
+        <plentry>
+          <pt>--password <varname>gpmon_password</varname></pt>
+          <pd>Required if <codeph>--enable</codeph> is specified. Sets the password of the
+              <codeph>gpmon</codeph> superuser.</pd>
+        </plentry>
+        <plentry>
+          <pt>--port <varname>gpdb_port</varname></pt>
+          <pd>Required if <codeph>--enable</codeph> is specified. Specifies the connection port of
+            the Greenplum Database master.</pd>
+        </plentry>
+        <plentry>
+          <pt>--pgpass <varname>path_to_file</varname></pt>
+          <pd>Optional if <codeph>--enable</codeph> is specified. If the password file is not in the
+            default location of <codeph>~/.pgpass</codeph>, specifies the location of the password
+            file.</pd>
+        </plentry>
+        <plentry>
+          <pt>--verbose</pt>
+          <pd>Sets the logging level to verbose.</pd>
+        </plentry>
+        <plentry>
+          <pt>--help | -h | -?</pt>
+          <pd>Displays the online help.</pd>
+        </plentry>
+      </parml>
+    </section>
+    <section>
+      <title>Notes</title>
+      <p>Greenplum Command Center requires the <i>gpperfmon</i> the database role
+          <codeph>gpmon</codeph>. After the <i>gpperfmon</i> database and <codeph>gpmon</codeph>
+        role have been created, you can change the password for the <codeph>gpmon</codeph> role and
+        update the information that Greenplum Command Center uses to connect to the <i>gpperfmon</i>
+        database: </p>
+      <ol id="ol_wss_knp_wr">
+        <li>Log into Greenplum Database as a superuser and change the <codeph>gpmon</codeph>
+          password with the <codeph>ALTER ROLE</codeph>
+          command.<codeblock># ALTER ROLE gpmon WITH PASSWORD '<varname>new_password</varname>' ;</codeblock></li>
+        <li>Update the password in <codeph>.pgpass</codeph> file that is used by Greenplum Command
+          Center. The default file location is the <codeph>gpadmin</codeph> home directory
+            (<codeph>~/.pgpass</codeph>). The <codeph>.pgpass</codeph> file contains a line with the
+            <codeph>gpmon</codeph>
+          password.<codeblock>*:5432:gpperfmon:gpmon:<varname>new_password</varname></codeblock></li>
+        <li>Restart the Greenplum Command Center with the Command Center <codeph>gpcmdr</codeph>
+          utility. <codeblock> $ gpcmdr --restart</codeblock></li>
+      </ol>
+    </section>
+    <section id="section5">
+      <title>Examples</title>
+      <p>Create the <codeph>gpperfmon</codeph> database only:</p>
+      <codeblock>$ su - gpadmin
+$ gpperfmon_install</codeblock>
+      <p>Create the <codeph>gpperfmon</codeph> database, create the<codeph> gpmon</codeph>
+        superuser, and enable the data collection agents:</p>
+      <codeblock>$ su - gpadmin
+$ gpperfmon_install --enable --password p@$$word --port 5432
+$ gpstop -r</codeblock>
+    </section>
+    <section id="section6">
+      <title>See Also</title>
+      <p>
+        <codeph>
+          <xref href="./gpstop.xml#topic1" type="topic" format="dita"/>
+        </codeph>
+      </p>
+    </section>
+  </body>
+</topic>

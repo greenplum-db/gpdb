@@ -80,6 +80,27 @@ typedef struct DbInfoAppendOnlyCatalogSegmentInfo
 	int64		logicalEof;
 } DbInfoAppendOnlyCatalogSegmentInfo;
 
+/*
+ * struct DbInfoRelKeyPair -
+ *   Describes a hash table key leading to a DbInfoRel element.
+ *
+ *   The DbInfoRel struct holds this hash table key.  The key is used
+ *   to do a lookup in the HTAB dbInfoRelHashTable initialised in
+ *   DatabaseInfo_Collect.  A constructed DbInfoRelKeyPair can be used
+ *   to create a hash value from the HTAB->hash function.  This hash
+ *   value will be converted into a bucket number which will lead to
+ *   the HASHBUCKET that should contain the DbInfoRel element.
+ *
+ *   We use reltablespace and relfilenode in the key because there can
+ *   be the same relfilenode in different tablespaces.  We cannot use
+ *   relation OID because gp_relation_node does not keep that
+ *   information.
+ */
+typedef struct DbInfoRelKeyPair
+{
+	Oid	reltablespace;
+	Oid	relfilenode;
+} DbInfoRelKeyPair;
 
 /*
  * struct DbInfoRel - 
@@ -98,16 +119,15 @@ typedef struct DbInfoAppendOnlyCatalogSegmentInfo
 typedef struct DbInfoRel
 {
 	/* Key */
-	Oid									 relfilenodeOid;
+	DbInfoRelKeyPair					 dbInfoRelKey;
 
 	/* Catalog */
 	bool								 inPgClass;    /* Can we find it in pg_class ? */
 	ItemPointerData						 pgClassTid;   /* At what row id? */
 
 	/* A couple key fields from pg_class */
-	Oid									 relationOid; 
-	char								*relname;     
-	Oid									 reltablespace;
+	Oid									 relationOid;
+	char								*relname;
 	char								 relkind;
 	char								 relstorage;
 	Oid									 relam;

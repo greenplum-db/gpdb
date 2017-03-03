@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_jtv_5vy_sp">
+  <title id="im140266">Creating and Managing Tables</title>
+  <body>
+    <p> Greenplum Database tables are similar to tables in any relational database, except that
+      table rows are distributed across the different segments in the system. When you create a
+      table, you specify the table's distribution policy.</p>
+  </body>
+  <topic id="topic26" xml:lang="en">
+    <title>Creating a Table</title>
+    <body>
+      <p>The <codeph>CREATE TABLE</codeph> command creates a table and defines its structure. When
+        you create a table, you define:</p>
+      <ul id="ul_tyd_vvy_sp">
+        <li id="im142074">The columns of the table and their associated data types. See <xref
+            href="#topic27" type="topic" format="dita"/>.</li>
+        <li id="im142082">Any table or column constraints to limit the data that a column or table
+          can contain. See <xref href="#topic28" type="topic" format="dita"/>.</li>
+        <li id="im163705">The distribution policy of the table, which determines how Greenplum
+          Database divides data is across the segments. See <xref href="#topic34" type="topic"
+            format="dita"/>.</li>
+        <li id="im163709">The way the table is stored on disk. <ph>See <xref
+              href="ddl-storage.xml"/>.</ph>
+        </li>
+        <li id="im170093">The table partitioning strategy for large tables. See <xref
+            href="ddl-database.xml" type="topic" format="dita"/>.</li>
+      </ul>
+    </body>
+    <topic id="topic27" xml:lang="en">
+      <title id="im140304">Choosing Column Data Types</title>
+      <body>
+        <p>The data type of a column determines the types of data values the column can contain.
+          Choose the data type that uses the least possible space but can still accommodate your
+          data and that best constrains the data. For example, use character data types for strings,
+          date or timestamp data types for dates, and numeric data types for numbers.</p>
+        <p>For table columns that contain textual data, specify the data type
+            <codeph>VARCHAR</codeph> or <codeph>TEXT</codeph>. Specifying the data type
+            <codeph>CHAR</codeph> is not recommended. In Greenplum Database, the data types
+            <codeph>VARCHAR</codeph> or <codeph>TEXT</codeph> handles padding added to the data
+          (space characters added after the last non-space character) as significant characters, the
+          data type <codeph>CHAR</codeph> does not. For information on the character data types, see
+          the <codeph>CREATE TABLE</codeph> command in the <cite>Greenplum Database Reference
+            Guide</cite>.</p>
+        <p>Use the smallest numeric data type that will accommodate your numeric data and allow for
+          future expansion. For example, using <codeph>BIGINT</codeph> for data that fits in
+            <codeph>INT</codeph> or <codeph>SMALLINT</codeph> wastes storage space. If you expect
+          that your data values will expand over time, consider that changing from a smaller
+          datatype to a larger datatype after loading large amounts of data is costly. For example,
+          if your current data values fit in a <codeph>SMALLINT</codeph> but it is likely that the
+          values will expand, <codeph>INT</codeph> is the better long-term choice.</p>
+        <p>Use the same data types for columns that you plan to use in cross-table joins.
+          Cross-table joins usually use the primary key in one table and a foreign key in the other
+          table. When the data types are different, the database must convert one of them so that
+          the data values can be compared correctly, which adds unnecessary overhead.</p>
+        <p>Greenplum Database has a rich set of native data types available to
+          users. See the <cite>Greenplum Database Reference Guide</cite> for information about the
+          built-in data types.</p>
+      </body>
+    </topic>
+    <topic id="topic28" xml:lang="en">
+      <title id="im140306">Setting Table and Column Constraints</title>
+      <body>
+        <p>You can define constraints on columns and tables to restrict the data in your tables.
+          Greenplum Database support for constraints is the same as PostgreSQL with some
+          limitations, including:</p>
+        <ul id="ul_u12_vvy_sp">
+          <li id="im206975"><codeph>CHECK</codeph> constraints can refer only to the table on which
+            they are defined. </li>
+          <li id="im206986"><codeph>UNIQUE</codeph> and <codeph>PRIMARY KEY</codeph> constraints
+            must be compatible with their tableʼs distribution key and partitioning key, if any.
+                <note><codeph>UNIQUE</codeph> and <codeph>PRIMARY KEY</codeph> constraints are not
+              allowed on append-optimized tables because the <codeph>UNIQUE</codeph> indexes that
+              are created by the constraints are not allowed on append-optimized tables.</note></li>
+          <li id="im207041"><codeph>FOREIGN KEY</codeph> constraints are allowed, but not
+            enforced.</li>
+          <li id="im206995">Constraints that you define on partitioned tables apply to the
+            partitioned table as a whole. You cannot define constraints on the individual parts of
+            the table.</li>
+        </ul>
+      </body>
+      <topic id="topic29" xml:lang="en">
+        <title>Check Constraints</title>
+        <body>
+          <p>Check constraints allow you to specify that the value in a certain column must satisfy
+            a Boolean (truth-value) expression. For example, to require positive product prices:</p>
+          <p>
+            <codeblock>=&gt; CREATE TABLE products 
+            ( product_no integer, 
+              name text, 
+              price numeric <b>CHECK (price &gt; 0)</b> );</codeblock>
+          </p>
+        </body>
+      </topic>
+      <topic id="topic30" xml:lang="en">
+        <title>Not-Null Constraints</title>
+        <body>
+          <p>Not-null constraints specify that a column must not assume the null value. A not-null
+            constraint is always written as a column constraint. For example:</p>
+          <p>
+            <codeblock>=&gt; CREATE TABLE products 
+       ( product_no integer <b>NOT NUL</b>L,
+         name text <b>NOT NULL</b>,
+         price numeric );
+</codeblock>
+          </p>
+        </body>
+      </topic>
+      <topic id="topic31" xml:lang="en">
+        <title>Unique Constraints</title>
+        <body>
+          <p>Unique constraints ensure that the data contained in a column or a group of columns is
+            unique with respect to all the rows in the table. The table must be hash-distributed
+            (not <codeph>DISTRIBUTED RANDOMLY</codeph>), and the constraint columns must be the same
+            as (or a superset of) the table's distribution key columns. For example:</p>
+          <p>
+            <codeblock>=&gt; CREATE TABLE products 
+       ( <codeph>product_no</codeph> integer <codeph>UNIQUE</codeph>, 
+         name text, 
+         price numeric)
+<codeph>      DISTRIBUTED BY (</codeph><codeph>product_no</codeph><codeph>)</codeph>;
+</codeblock>
+          </p>
+        </body>
+      </topic>
+      <topic id="topic32" xml:lang="en">
+        <title>Primary Keys</title>
+        <body>
+          <p>A primary key constraint is a combination of a <codeph>UNIQUE</codeph> constraint and a
+              <codeph>NOT NULL</codeph> constraint. The table must be hash-distributed (not
+              <codeph>DISTRIBUTED RANDOMLY</codeph>), and the primary key columns must be the same
+            as (or a superset of) the table's distribution key columns. If a table has a primary
+            key, this column (or group of columns) is chosen as the distribution key for the table
+            by default. For example:</p>
+          <p>
+            <codeblock>=&gt; CREATE TABLE products 
+       ( <codeph>product_no</codeph> integer <codeph>PRIMARY KEY</codeph>, 
+         name text, 
+         price numeric)
+<codeph>      DISTRIBUTED BY (</codeph><codeph>product_no</codeph><codeph>)</codeph>;
+</codeblock>
+          </p>
+        </body>
+      </topic>
+      <topic id="topic33" xml:lang="en">
+        <title>Foreign Keys</title>
+        <body>
+          <p>Foreign keys are not supported. You can declare them, but referential integrity is not
+            enforced.</p>
+          <p>Foreign key constraints specify that the values in a column or a group of columns must
+            match the values appearing in some row of another table to maintain referential
+            integrity between two related tables. Referential integrity checks cannot be enforced
+            between the distributed table segments of a Greenplum database.</p>
+        </body>
+      </topic>
+    </topic>
+    <topic id="topic34" xml:lang="en">
+      <title id="im140308">Choosing the Table Distribution Policy</title>
+      <body>
+        <p>All Greenplum Database tables are distributed. When you create or alter a table, you
+          optionally specify <codeph>DISTRIBUTED BY</codeph> (hash distribution) or
+            <codeph>DISTRIBUTED RANDOMLY</codeph> (round-robin distribution) to determine the table
+          row distribution.</p>
+        <note>The Greenplum Database server configuration parameter
+            <codeph>gp_create_table_random_default_distribution</codeph> controls the table
+          distribution policy if the <cmdname>DISTRIBUTED BY</cmdname> clause is not specified when
+          you create a table. <p>For information about the parameter, see "Server
+            Configuration Parameters" of the <cite>Greenplum Database Reference
+          Guide</cite>.</p></note>
+        <p>Consider the following points when deciding on a table distribution policy.</p>
+        <ul id="ul_dc2_vvy_sp">
+          <li id="im143035"><b>Even Data Distribution</b> — For the best possible performance, all
+            segments should contain equal portions of data. If the data is unbalanced or skewed, the
+            segments with more data must work harder to perform their portion of the query
+            processing. Choose a distribution key that is unique for each record, such as the
+            primary key.</li>
+          <li id="im143036"><b>Local and Distributed Operations</b> — Local operations are faster
+            than distributed operations. Query processing is fastest if the work associated with
+            join, sort, or aggregation operations is done locally, at the segment level. Work done
+            at the system level requires distributing tuples across the segments, which is less
+            efficient. When tables share a common distribution key, the work of joining or sorting
+            on their shared distribution key columns is done locally. With a random distribution
+            policy, local join operations are not an option.</li>
+          <li id="im200996"><b>Even Query Processing</b> — For best performance, all segments should
+            handle an equal share of the query workload. Query workload can be skewed if a table's
+            data distribution policy and the query predicates are not well matched. For example,
+            suppose that a sales transactions table is distributed on the customer ID column (the
+            distribution key). If a predicate in a query references a single customer ID, the query
+            processing work is concentrated on just one segment. </li>
+        </ul>
+      </body>
+      <topic id="topic35" xml:lang="en">
+        <title>Declaring Distribution Keys</title>
+        <body>
+          <p><codeph>CREATE TABLE</codeph>'s optional clauses <codeph>DISTRIBUTED BY</codeph> and
+              <codeph>DISTRIBUTED RANDOMLY</codeph> specify the distribution policy for a table. The
+            default is a hash distribution policy that uses either the <codeph>PRIMARY KEY</codeph>
+            (if the table has one) or the first column of the table as the distribution key. Columns
+            with geometric or user-defined data types are not eligible as Greenplum distribution key
+            columns. If a table does not have an eligible column, Greenplum distributes the rows
+            randomly or in round-robin fashion.</p>
+          <p>To ensure even distribution of data, choose a distribution key that is unique for each
+            record. If that is not possible, choose <codeph>DISTRIBUTED RANDOMLY</codeph>. For
+            example:</p>
+          <p>
+            <codeblock>=&gt; CREATE TABLE products
+<codeph>                        (name varchar(40),
+                         prod_id integer,
+                         supplier_id integer)
+             DISTRIBUTED BY (prod_id);
+</codeph></codeblock>
+            <codeblock>=&gt; CREATE TABLE random_stuff
+<codeph>                        (things text,
+                         doodads text,
+                         etc text)
+             DISTRIBUTED RANDOMLY;
+</codeph></codeblock>
+          </p>
+        </body>
+      </topic>
+    </topic>
+  </topic>
+</topic>

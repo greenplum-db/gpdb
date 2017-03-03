@@ -65,7 +65,7 @@ CreateGangFunc pCreateGangFuncThreaded = createGang_thread;
 static Gang *
 createGang_thread(GangType type, int gang_id, int size, int content)
 {
-	Gang *newGangDefinition;
+	Gang *newGangDefinition = NULL;
 	SegmentDatabaseDescriptor *segdbDesc = NULL;
 	DoConnectParms *doConnectParmsAr = NULL;
 	DoConnectParms *pParms = NULL;
@@ -91,18 +91,15 @@ createGang_thread(GangType type, int gang_id, int size, int content)
 	if (type == GANGTYPE_PRIMARY_WRITER)
 		Insist(!GangsExist());
 
-	/* Check writer gang firstly*/
-	if (type != GANGTYPE_PRIMARY_WRITER && !isPrimaryWriterGangAlive())
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("failed to create gang on one or more segments"),
-						errdetail("writer gang got broken before creating reader gangs")));
-
 	initPQExpBuffer(&create_gang_error);
 
 create_gang_retry:
-	/* If we're in a retry, we may need to reset our initial state, a bit */
-	newGangDefinition = NULL;
-	doConnectParmsAr = NULL;
+	/*
+	 * If we're in a retry, we may need to reset our initial state a bit. We
+	 * also want to ensure that all resources have been released.
+	 */
+	Assert(newGangDefinition == NULL);
+	Assert(doConnectParmsAr == NULL);
 	successful_connections = 0;
 	in_recovery_mode_count = 0;
 	threadCount = 0;
@@ -220,7 +217,7 @@ create_gang_retry:
 		{
 			/*
 			 * Retry for non-writer gangs is meaningless because
-			 * writer gang must has gone when QE is in recovery mode
+			 * writer gang must be gone when QE is in recovery mode
 			 */
 			DisconnectAndDestroyGang(newGangDefinition);
 			newGangDefinition = NULL;
@@ -234,7 +231,7 @@ create_gang_retry:
 			goto create_gang_retry;
 		}
 
-		appendPQExpBuffer(&create_gang_error, "segments is in recovery mode\n");
+		appendPQExpBuffer(&create_gang_error, "segment(s) are in recovery mode\n");
 	}
 	
 exit:

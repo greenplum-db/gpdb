@@ -37,6 +37,7 @@
 #include "cdb/cdbtm.h"			/* discardDtxTransaction() */
 #include "cdb/cdbutil.h"		/* CdbComponentDatabaseInfo */
 #include "cdb/cdbvars.h"		/* Gp_role, etc. */
+#include "cdb/ml_ipc.h"
 #include "storage/bfz.h"
 #include "gp-libpq-fe.h"
 #include "gp-libpq-int.h"
@@ -93,6 +94,7 @@ static CdbComponentDatabaseInfo *findDatabaseInfoBySegIndex(
 		CdbComponentDatabases *cdbs, int segIndex);
 static void addGangToAllocated(Gang *gp);
 static Gang *getAvailableGang(GangType type, int size, int content);
+static bool readerGangsExist(void);
 
 /*
  * Create a reader gang.
@@ -179,9 +181,6 @@ AllocateReaderGang(GangType type, char *portal_name)
 	/* let the gang know which portal it is being assigned to */
 	gp->portal_name = (portal_name ? pstrdup(portal_name) : (char *) NULL);
 
-	/* sanity check the gang */
-	insist_log(GangOK(gp), "could not connect to segment: initialization of segworker group failed");
-
 	addGangToAllocated(gp);
 
 	MemoryContextSwitchTo(oldContext);
@@ -218,7 +217,20 @@ AllocateWriterGang()
 	 * if it exists, we return it.
 	 * Else, we create a new gang
 	 */
-	if (primaryWriterGang == NULL)
+	if (primaryWriterGang != NULL)
+	{
+		if (!GangOK(primaryWriterGang))
+		{
+			elog(ERROR, "could not connect to segment: initialization of segworker group failed");
+		}
+		else
+		{
+			ELOG_DISPATCHER_DEBUG("Reusing an existing primary writer gang");
+			writerGang = primaryWriterGang;
+		}
+	}
+
+	if (writerGang == NULL)
 	{
 		int nsegdb = getgpsegmentCount();
 
@@ -249,16 +261,7 @@ AllocateWriterGang()
 
 		MemoryContextSwitchTo(oldContext);
 	}
-	else
-	{
-		ELOG_DISPATCHER_DEBUG("Reusing an existing primary writer gang");
-		writerGang = primaryWriterGang;
-	}
-
-	/* sanity check the gang */
-	if (!GangOK(writerGang))
-		elog(ERROR, "could not connect to segment: initialization of segworker group failed");
-
+	
 	ELOG_DISPATCHER_DEBUG("AllocateWriterGang end.");
 
 	primaryWriterGang = writerGang;
@@ -318,9 +321,6 @@ bool segment_failure_due_to_recovery(struct PQExpBufferData* error_message)
 		return false;
 
 	fatal = _("FATAL");
-	if (fatal == NULL)
-		return false;
-
 	fatal_len = strlen(fatal);
 
 	/*
@@ -814,22 +814,44 @@ static Gang *getAvailableGang(GangType type, int size, int content)
 	case GANGTYPE_ENTRYDB_READER:
 		if (availableReaderGangs1 != NULL) /* There are gangs already created */
 		{
-			ListCell *cell = NULL;
-			ListCell *prevcell = NULL;
+			ListCell   *cur_item = NULL;
+			ListCell   *prev_item = NULL;
+			ListCell   *next_item = NULL;
 
-			foreach(cell, availableReaderGangs1)
+			cur_item = list_head(availableReaderGangs1);
+
+			while (cur_item != NULL)
 			{
-				Gang *gang = (Gang *) lfirst(cell);
+				Gang *gang = (Gang *) lfirst(cur_item);
 				Assert(gang != NULL);
 				Assert(gang->size == size);
+
+				next_item = lnext(cur_item);
+
 				if (gang->db_descriptors[0].segindex == content)
 				{
-					ELOG_DISPATCHER_DEBUG("reusing an available reader 1-gang for seg%d", content);
-					retGang = gang;
-					availableReaderGangs1 = list_delete_cell(availableReaderGangs1, cell, prevcell);
-					break;
+					availableReaderGangs1 = list_delete_cell(availableReaderGangs1, cur_item, prev_item);
+
+					/* sanity check */
+					if (!GangOK(gang))
+					{
+						/* connection is bad or segment is down */
+						DisconnectAndDestroyGang(gang);
+					}
+					else
+					{
+						ELOG_DISPATCHER_DEBUG("reusing an available reader 1-gang for seg%d", content);
+						retGang = gang;
+						break;
+					}
+					/* prev_item does not advance */
 				}
-				prevcell = cell;
+				else
+				{
+					prev_item = cur_item;
+				}
+
+				cur_item = next_item;
 			}
 		}
 		break;
@@ -837,13 +859,36 @@ static Gang *getAvailableGang(GangType type, int size, int content)
 	case GANGTYPE_PRIMARY_READER:
 		if (availableReaderGangsN != NULL) /* There are gangs already created */
 		{
-			ELOG_DISPATCHER_DEBUG("Reusing an available reader N-gang");
+			ListCell   *cur_item = NULL;
+			ListCell   *prev_item = NULL;
+			ListCell   *next_item = NULL;
 
-			retGang = linitial(availableReaderGangsN);
-			Assert(retGang != NULL);
-			Assert(retGang->type == type && retGang->size == size);
+			cur_item = list_head(availableReaderGangsN);
 
-			availableReaderGangsN = list_delete_first(availableReaderGangsN);
+			while (cur_item != NULL)
+			{
+				Gang *gang = (Gang *) lfirst(cur_item);
+				Assert(gang != NULL);
+				Assert(gang->size == size);
+				next_item = lnext(cur_item);
+
+				availableReaderGangsN = list_delete_cell(availableReaderGangsN, cur_item, prev_item);
+
+					/* sanity check */
+				if (!GangOK(gang))
+				{
+					/* connection is bad or segment is down */
+					DisconnectAndDestroyGang(gang);
+				}
+				else
+				{
+					ELOG_DISPATCHER_DEBUG("reusing an available reader N-gang");
+					retGang = gang;
+					break;
+				}
+				/* prev_item does not advance */
+				cur_item = next_item;
+			}
 		}
 		break;
 
@@ -1004,7 +1049,7 @@ getCdbProcessesForQD(int isPrimary)
 	 * interconnect connection.
 	 */
 	proc->listenerAddr = NULL;
-	proc->listenerPort = Gp_listener_port;
+	proc->listenerPort = ICListenerPort;
 
 	proc->pid = MyProcPid;
 	proc->contentid = -1;
@@ -1033,6 +1078,8 @@ DisconnectAndDestroyGang(Gang *gp)
 
 	if (gp == NULL)
 		return;
+
+	AssertImply(gp->type == GANGTYPE_PRIMARY_WRITER, !readerGangsExist());
 
 	ELOG_DISPATCHER_DEBUG("DisconnectAndDestroyGang entered: id = %d", gp->gang_id);
 
@@ -1193,6 +1240,10 @@ static bool cleanupGang(Gang *gp)
 		Assert(segdbDesc != NULL);
 
 		if (cdbconn_isBadConnection(segdbDesc))
+			return false;
+
+		/* if segment is down, the gang can not be reused */
+		if (!FtsTestConnection(segdbDesc->segment_database_info, false))
 			return false;
 
 		/* Note, we cancel all "still running" queries */
@@ -1609,13 +1660,8 @@ int gp_pthread_create(pthread_t * thread, void *(*start_routine)(void *),
 		return pthread_err;
 	}
 
-#ifdef pg_on_solaris
-	/* Solaris doesn't have PTHREAD_STACK_MIN ? */
-	pthread_err = pthread_attr_setstacksize(&t_atts, (256 * 1024));
-#else
 	pthread_err = pthread_attr_setstacksize(&t_atts,
 			Max(PTHREAD_STACK_MIN, (256 * 1024)));
-#endif
 	if (pthread_err != 0)
 	{
 		elog(LOG, "%s: pthread_attr_setstacksize failed.  Error %d", caller, pthread_err);
@@ -1679,6 +1725,8 @@ bool GangOK(Gang *gp)
 
 		if (cdbconn_isBadConnection(segdbDesc))
 			return false;
+		if (!FtsTestConnection(segdbDesc->segment_database_info, false))
+			return false;
 	}
 
 	return true;
@@ -1693,6 +1741,14 @@ bool GangsExist(void)
 			availableReaderGangs1 != NIL);
 }
 
+static bool
+readerGangsExist(void)
+{
+	return (allocatedReaderGangsN != NIL ||
+			availableReaderGangsN != NIL ||
+			allocatedReaderGangs1 != NIL ||
+			availableReaderGangs1 != NIL);
+}
 
 int largestGangsize(void)
 {

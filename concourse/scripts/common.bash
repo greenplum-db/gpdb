@@ -18,10 +18,6 @@ function install_gpdb() {
     tar -xzf bin_gpdb/bin_gpdb.tar.gz -C /usr/local/greenplum-db-devel
 }
 
-function install_sync_tools() {
-    tar -xzf sync_tools_gpdb_centos/sync_tools_gpdb.tar.gz -C gpdb_src/gpAux
-}
-
 function configure() {
   source /opt/gcc_env.sh
   pushd gpdb_src
@@ -31,6 +27,10 @@ function configure() {
 
 function make_cluster() {
   source /usr/local/greenplum-db-devel/greenplum_path.sh
+  export BLDWRAP_POSTGRES_CONF_ADDONS=${BLDWRAP_POSTGRES_CONF_ADDONS}
+  # Currently, the max_concurrency tests in src/test/isolation2
+  # require max_connections of at least 129.
+  export DEFAULT_QD_MAX_CONNECT=150
   workaround_before_concourse_stops_stripping_suid_bits
   pushd gpdb_src/gpAux/gpdemo
       su gpadmin -c make cluster

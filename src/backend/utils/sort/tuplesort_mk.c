@@ -1,7 +1,3 @@
-/*
- * GPDB_83MERGE_FIXME: PostgreSQL 8.3 added "bounded" sort support to
- * tuplesort.c. It has not been ported to tuplesort_mk.c yet
- */
 /*-------------------------------------------------------------------------
  *
  * tuplesort.c
@@ -381,6 +377,8 @@ struct Tuplesortstate_mk
 	int		   *gpmon_sort_tick;
 };
 
+static void tuplesort_get_stats_mk(Tuplesortstate_mk* state, const char **sortMethod, const char **spaceType, long *spaceUsed);
+
 static bool
 is_sortstate_rwfile(Tuplesortstate_mk *state)
 {
@@ -575,6 +573,8 @@ tuplesort_begin_common(ScanState *ss, int workMem, bool randomAccess, bool alloc
 
 	state->status = TSS_INITIAL;
 	state->randomAccess = randomAccess;
+	state->mkctxt.bounded = false;
+	state->mkctxt.boundUsed = false;
 	state->memAllowed = workMem * 1024L;
 
 	state->work_set = NULL;
@@ -615,24 +615,11 @@ tuplesort_begin_common(ScanState *ss, int workMem, bool randomAccess, bool alloc
  *
  */
 void
-cdb_tuplesort_init_mk(Tuplesortstate_mk *state,
-					  int64 offset, int64 limit, int unique, int sort_flags,
+cdb_tuplesort_init_mk(Tuplesortstate_mk *state, int unique, int sort_flags,
 					  int64 maxdistinct)
 {
 	UnusedArg(sort_flags);
 	UnusedArg(maxdistinct);
-
-	if (limit)
-	{
-		int64		uselimit = offset + limit;
-
-		/* Only use limit for less than 10 million */
-		if (uselimit < 10000000)
-		{
-			state->mkctxt.limit = (int32) uselimit;
-			state->mkctxt.limitmask = -1;
-		}
-	}
 
 	if (unique)
 		state->mkctxt.unique = true;
@@ -992,18 +979,21 @@ tuplesort_begin_datum_mk(ScanState *ss,
 void
 tuplesort_set_bound_mk(Tuplesortstate_mk *state, int64 bound)
 {
-	/*
-	 * GPDB_83_MERGE_FIXME: bounded sort not implemented for tuplesort_mk.
-	 * The top-N feature was added to tuplesort.c in PostgreSQL 8.3, but it
-	 * hasn't been ported over to tuplesort_mk.c yet. Or perhaps we should just
-	 * pick the valuable parts of tuplesort_mk.c into tuplesort.c, and get
-	 * rid of the separate tuplesort_mk.c?
-	 *
-	 * Until we do something about this, everything's still going to work,
-	 * but the top-N optimization won't apply when tuplesort_mk is used.
-	 * Note that the planner doesn't know about that, so cost estimates
-	 * involving sorting with tuplesort_mk and LIMIT might be way off.
-	 */
+	Assert(!state->mkctxt.bounded);
+
+#ifdef DEBUG_BOUNDED_SORT
+	/* Honor GUC setting that disables the feature (for easy testing) */
+	if (!optimize_bounded_sort)
+		return;
+#endif
+
+	/* We want to be able to compute bound * 2, so limit the setting */
+	if (bound > (int64) (INT_MAX / 2))
+		return;
+
+	state->mkctxt.bounded = true;
+	state->mkctxt.bound = (int) bound;
+	state->mkctxt.limitmask = -1;
 }
 
 /*
@@ -1021,9 +1011,14 @@ tuplesort_end_mk(Tuplesortstate_mk *state)
 	long		spaceUsed;
 
 	if (state->tapeset)
-		spaceUsed = LogicalTapeSetBlocks(state->tapeset);
+		spaceUsed = LogicalTapeSetBlocks(state->tapeset) * (BLCKSZ / 1024);
 	else
 		spaceUsed = (MemoryContextGetCurrentSpace(state->sortcontext) + 1024) / 1024;
+
+	/*
+	 * Call before state->tapeset is closed.
+	 */
+	tuplesort_finalize_stats_mk(state);
 
 	/*
 	 * Delete temporary "tape" files, if any.
@@ -1042,13 +1037,11 @@ tuplesort_end_mk(Tuplesortstate_mk *state)
 		}
 	}
 
-
 	if (state->work_set)
 	{
 		workfile_mgr_close_set(state->work_set);
 	}
 
-	tuplesort_finalize_stats_mk(state);
 
 	if (trace_sort)
 		PG_TRACE2(tuplesort__end, state->tapeset ? 1 : 0, spaceUsed);
@@ -1105,6 +1098,7 @@ tuplesort_finalize_stats_mk(Tuplesortstate_mk *state)
 		}
 
 		state->statsFinalized = true;
+		tuplesort_get_stats_mk(state, &state->instrument->sortMethod, &state->instrument->sortSpaceType, &state->instrument->sortSpaceUsed);
 	}
 }
 
@@ -1279,7 +1273,7 @@ puttuple_common(Tuplesortstate_mk *state, MKEntry *e)
 			}
 
 			/* full sort? */
-			if (state->mkctxt.limit == 0)
+			if (!state->mkctxt.bounded)
 			{
 				tuplesort_inmem_nolimit_insert(state, e);
 			}
@@ -1300,7 +1294,7 @@ puttuple_common(Tuplesortstate_mk *state, MKEntry *e)
 					 * the heap. No need to spill in this case, we'll just use
 					 * the in-memory heap.
 					 */
-					Assert(state->mkctxt.limit != 0);
+					Assert(state->mkctxt.bounded);
 					Assert(state->numTuplesInMem == state->mkheap->count);
 				}
 				else
@@ -1354,7 +1348,7 @@ tuplesort_performsort_mk(Tuplesortstate_mk *state)
 			 * We were able to accumulate all the tuples within the allowed
 			 * amount of memory.  Just qsort 'em and we're done.
 			 */
-			if (state->mkctxt.limit == 0)
+			if (!state->mkctxt.bounded)
 				mk_qsort(state->entries, state->entry_count, &state->mkctxt);
 			else
 				tuplesort_limit_sort(state);
@@ -1364,6 +1358,10 @@ tuplesort_performsort_mk(Tuplesortstate_mk *state)
 			state->pos.markpos.mempos = 0;
 			state->pos.markpos_eof = false;
 			state->status = TSS_SORTEDINMEM;
+			if (state->mkctxt.bounded)
+			{
+				state->mkctxt.boundUsed = true;
+			}
 
 			/* Not shareinput sort, we are done. */
 			if (!is_sortstate_rwfile(state))
@@ -2633,21 +2631,20 @@ tuplesort_restorepos_mk(Tuplesortstate_mk *state)
 
 
 /*
- * tuplesort_explain - produce a line of information for EXPLAIN ANALYZE
+ * tuplesort_get_stats_mk - extract summary statistics
  *
- * This can be called after tuplesort_performsort() finishes to obtain
+ * This can be called after tuplesort_performsort_mk() finishes to obtain
  * printable summary information about how the sort was performed.
- *
- * The result is a palloc'd string.
+ * spaceUsed is measured in kilobytes.
  */
-char *
-tuplesort_explain_mk(Tuplesortstate_mk *state)
+static void
+tuplesort_get_stats_mk(Tuplesortstate_mk* state,
+					   const char **sortMethod,
+					   const char **spaceType,
+					   long *spaceUsed)
 {
-	char	   *result = (char *) palloc(100);
-	long		spaceUsed;
-
 	/*
-	 * Note: it might seem we should print both memory and disk usage for a
+	 * Note: it might seem we should provide both memory and disk usage for a
 	 * disk-based sort.  However, the current code doesn't track memory space
 	 * accurately once we have begun to return tuples to the caller (since we
 	 * don't account for pfree's the caller is expected to do), so we cannot
@@ -2656,33 +2653,34 @@ tuplesort_explain_mk(Tuplesortstate_mk *state)
 	 * tell us how much is actually used in sortcontext?
 	 */
 	if (state->tapeset)
-		spaceUsed = LogicalTapeSetBlocks(state->tapeset);
+	{
+		*spaceType = "Disk";
+		*spaceUsed = LogicalTapeSetBlocks(state->tapeset) * (BLCKSZ / 1024);
+	}
 	else
-		spaceUsed = (MemoryContextGetCurrentSpace(state->sortcontext) + 1024) / 1024;
+	{
+		*spaceType = "Memory";
+		*spaceUsed = (MemoryContextGetCurrentSpace(state->sortcontext) + 1024) / 1024;
+	}
 
 	switch (state->status)
 	{
-		case TSS_SORTEDINMEM:
-			snprintf(result, 100,
-					 "Sort Method:  quicksort  Memory: %ldkB",
-					 spaceUsed);
-			break;
-		case TSS_SORTEDONTAPE:
-			snprintf(result, 100,
-					 "Sort Method:  external sort  Disk: %ldkB",
-					 spaceUsed);
-			break;
-		case TSS_FINALMERGE:
-			snprintf(result, 100,
-					 "Sort Method:  external merge  Disk: %ldkB",
-					 spaceUsed);
-			break;
-		default:
-			snprintf(result, 100, "sort still in progress");
-			break;
+	case TSS_SORTEDINMEM:
+		if (state->mkctxt.boundUsed)
+			*sortMethod = "top-N heapsort";
+		else
+			*sortMethod = "quicksort";
+		break;
+	case TSS_SORTEDONTAPE:
+		*sortMethod = "external sort";
+		break;
+	case TSS_FINALMERGE:
+		*sortMethod = "external merge";
+		break;
+	default:
+		*sortMethod = "still in progress";
 	}
-
-	return result;
+	return;
 }
 
 /*
@@ -3458,6 +3456,7 @@ tupsort_prepare_char(MKEntry *a, bool isCHAR)
 
 	kstr.ref = 1;
 	kstr.xfrm_pos = lenToStore + 1;
+	kstr.isPrefixOnly = storePrefixOnly ? 1 : 0;
 	memcpy(kstr.data, p, lenToStore);
 	kstr.data[lenToStore] = '\0';
 
@@ -3559,7 +3558,6 @@ tupsort_prepare_char(MKEntry *a, bool isCHAR)
 	/*
 	 * finalize result
 	 */
-	ret->isPrefixOnly = storePrefixOnly ? 1 : 0;
 	a->d = PointerGetDatum(ret);
 	mke_set_refc(a);
 }
@@ -3577,7 +3575,7 @@ tupsort_prepare_char(MKEntry *a, bool isCHAR)
 static void
 tuplesort_inmem_limit_insert(Tuplesortstate_mk *state, MKEntry *entry)
 {
-	Assert(state->mkctxt.limit > 0);
+	Assert(state->mkctxt.bounded);
 	Assert(is_under_sort_or_exec_ctxt(state));
 	Assert(!mke_is_empty(entry));
 
@@ -3597,7 +3595,7 @@ tuplesort_inmem_limit_insert(Tuplesortstate_mk *state, MKEntry *entry)
 		state->entries[state->entry_count++] = *entry;
 		state->numTuplesInMem++;
 
-		if (state->entry_count == state->mkctxt.limit)
+		if (state->entry_count == state->mkctxt.bound)
 		{
 			/* B: just hit limit. Create heap from array */
 			state->mkheap = mkheap_from_array(state->entries,
@@ -3637,7 +3635,7 @@ static void
 tuplesort_inmem_nolimit_insert(Tuplesortstate_mk *state, MKEntry *entry)
 {
 	Assert(state->status == TSS_INITIAL);
-	Assert(state->mkctxt.limit == 0);
+	Assert(!state->mkctxt.bounded);
 	Assert(is_under_sort_or_exec_ctxt(state));
 	Assert(!mke_is_empty(entry));
 	Assert(state->entry_count < state->entry_allocsize);
@@ -3686,12 +3684,12 @@ tuplesort_heap_insert(Tuplesortstate_mk *state, MKEntry *e)
 static void
 tuplesort_limit_sort(Tuplesortstate_mk *state)
 {
-	Assert(state->mkctxt.limit > 0);
+	Assert(state->mkctxt.bounded);
 	Assert(is_under_sort_or_exec_ctxt(state));
 
 	if (!state->mkheap)
 	{
-		Assert(state->entry_count <= state->mkctxt.limit);
+		Assert(state->entry_count <= state->mkctxt.bound);
 		mk_qsort(state->entries, state->entry_count, &state->mkctxt);
 		return;
 	}

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic64">
+   <title>Loading Data with COPY</title>
+   <body>
+      <p>
+         <codeph>COPY FROM</codeph> copies data from a file or standard input into a table and
+         appends the data to the table contents. <codeph>COPY</codeph> is non-parallel: data is
+         loaded in a single process using the Greenplum master instance. Using <codeph>COPY</codeph>
+         is only recommended for very small data files. </p>
+      <p>The <codeph>COPY</codeph> source file must be accessible to the master host. Specify the
+            <codeph>COPY</codeph> source file name relative to the master host location. </p>
+      <p>Greenplum copies data from <codeph>STDIN</codeph> or <codeph>STDOUT</codeph> using the
+         connection between the client and the master server. </p>
+   </body>
+</topic>

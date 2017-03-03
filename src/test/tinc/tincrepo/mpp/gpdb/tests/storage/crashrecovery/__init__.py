@@ -123,17 +123,10 @@ class SuspendCheckpointCrashRecovery(MPPTestCase):
         self.fileutil.inject_fault(f='%s' % fault_name, y='suspend', o='0', r='primary', p=self.port)
         tinctest.logger.info('Successfully injected fault to suspend %s' % fault_name)
 
-
-    def set_faults_before_executing_trigger_sqls(self, pass_num,cluster_state, test_type, ddl_type, aborting_create_needed=False):
-        ''' Set the fault before trigger sqls are executed '''
-        if (cluster_state == 'resync'):
-            self.cluster_in_resync()
+    def get_faults_before_executing_trigger_sqls(self, pass_num,cluster_state, test_type, ddl_type, aborting_create_needed=False):
+        ''' Get the fault before trigger sqls are executed '''
         fault_name=''
         tinctest.logger.info('Fault Conditions: pass_num = [%s], cluster_state = [%s], test_type =  [%s], ddl_type = [%s], aborting_create_needed = [%s]' % (pass_num, cluster_state, test_type, ddl_type, aborting_create_needed)) 
-        if (test_type == 'abort'):
-            self.fileutil.inject_fault(f='transaction_abort_after_distributed_prepared', y='reset', p=self.port, o='0', seg_id=1)
-            self.fileutil.inject_fault(f='transaction_abort_after_distributed_prepared', y='error', p=self.port, o='0', seg_id=1)
-            tinctest.logger.info('Successfully injected fault to error out after distributed prepare for abort tests')
 
         if pass_num == 1 and test_type == 'commit' and ddl_type == 'create':
             if aborting_create_needed:
@@ -167,6 +160,20 @@ class SuspendCheckpointCrashRecovery(MPPTestCase):
 
         elif pass_num == 0 and (test_type == 'abort' or test_type == 'commit'):
             pass # We already set the fault error_txn_abort_after_dist_prepare_on_master above for abort tests and for commit tests skip checkpoint is done by default for all tests.
+        return fault_name
+
+    def set_faults_before_executing_trigger_sqls(self, pass_num,cluster_state, test_type, ddl_type, aborting_create_needed=False):
+        ''' Set the fault before trigger sqls are executed '''
+        if (cluster_state == 'resync'):
+            self.cluster_in_resync()
+        fault_name=''
+        fault_name = self.get_faults_before_executing_trigger_sqls(pass_num,cluster_state, test_type, ddl_type, aborting_create_needed=False);
+
+        if (test_type == 'abort'):
+            self.fileutil.inject_fault(f='transaction_abort_after_distributed_prepared', y='reset', p=self.port, o='0', seg_id=1)
+            self.fileutil.inject_fault(f='transaction_abort_after_distributed_prepared', y='error', p=self.port, o='0', seg_id=1)
+            tinctest.logger.info('Successfully injected fault to error out after distributed prepare for abort tests')
+
         if pass_num !=0 :
             self.suspend_fault(fault_name)
         elif pass_num == 0 : 
@@ -224,21 +231,45 @@ class SuspendCheckpointCrashRecovery(MPPTestCase):
         if not down_segments:
             if self.config.is_down_segments():
                 raise Exception('Segments got marked down')
-    def run_crash_and_recovery(self,test_dir, cluster_state):
-	'''
-        The sleep is a temporary fix. This is to be removed and the code will be replaced to check fault injector status
-       	'''
-        sleep(180)
-        mydir=local_path(test_dir)+'/trigger_sql/sql/'
-        tinctest.logger.info('mydir = %s ' % mydir)
-        trigger_count = len(glob.glob1(mydir,"*trigger.sql"))
-        tinctest.logger.info('*** Count of trigger : %s *** ' % (trigger_count))
-        ret_value=self.base.get_trigger_status(trigger_count)
-        tinctest.logger.info('Value returned by get_trigger_status() = %s ' % ret_value)
+
+    ''' This is sleep free version based on fault triggered status '''
+    def run_crash_and_recovery_fast(self,test_dir, pass_num, cluster_state, test_type, ddl_type, aborting_create_needed=False):
+        if pass_num == 0:
+            self.wait_till_all_sqls_done()
+        else:
+            mydir=local_path(test_dir)+'/trigger_sql/sql/'
+            tinctest.logger.info('mydir = %s ' % mydir)
+            trigger_count = len(glob.glob1(mydir,"*trigger.sql"))
+            tinctest.logger.info('*** Count of trigger : %s *** ' % (trigger_count))
+            if test_dir == "abort_create_tests":
+               ''' vacuum full sql don't hit the suspend fault.'''
+               trigger_count = trigger_count - 1
+            if test_dir == "abort_create_needed_tests":
+                ''' Not all SQLs hit the fault for this case, hence wait for them to complete and then others to hit the fault'''
+                self.wait_till_all_sqls_done(8 + 1)
+                trigger_count = 8
+            if test_dir == "abort_abort_create_needed_tests":
+                ''' Not all SQLs hit the fault for this case, hence wait for them to complete and then others to hit the fault'''
+                self.wait_till_all_sqls_done(6 + 1)
+                trigger_count = 6
+            fault_type = self.get_faults_before_executing_trigger_sqls(pass_num, cluster_state, test_type, ddl_type, aborting_create_needed=False)
+            fault_hit = self.fileutil.check_fault_status(fault_name=fault_type, status="triggered", num_times_hit=trigger_count)
+            if not fault_hit:
+               raise Exception('Fault not hit expected number of times')
+
         self.stop_start_validate(cluster_state)
- 
+
+    def wait_till_all_sqls_done(self, count=1):
+        ''' 500 here is just an arbitrarily long time "if-we-exceed-this-then-oh-crap-lets-error-out" value '''
+        for i in range(1,500):
+            psql_count = PSQL.run_sql_command("select count(*) from pg_stat_activity where current_query <> '<IDLE>'", flags='-q -t', dbname='postgres')
+            if int(psql_count.strip()) <= count :
+                return
+            sleep(1)
+        raise Exception('SQLs expected to complete but are still running')
+
     def stop_start_validate(self, cluster_state):
-        ''' Do gpstop immediate, gpstart and see if all segments come back up fine '''   
+        ''' Do gpstop immediate, gpstart and see if all segments come back up fine '''
         if cluster_state == 'sync' :
             self.stop_db()
             self.switch_primary_mirror_role_in_utility_mode()
@@ -246,7 +277,7 @@ class SuspendCheckpointCrashRecovery(MPPTestCase):
             self.start_db(down_segments=True)
             rc = self.gprecover.incremental()
             if not rc:
-                raise Exception('Gprecvoerseg failed')
+                raise Exception('Gprecoverseg failed')
             if not self.gprecover.wait_till_insync_transition():
                 raise Exception('Segments not in sync')
         if cluster_state == 'change_tracking':
@@ -260,21 +291,22 @@ class SuspendCheckpointCrashRecovery(MPPTestCase):
             self.start_db()
             if not self.gprecover.wait_till_insync_transition():
                 raise Exception('Segments not in sync')
-        self.dbstate.check_catalog()
+        self.dbstate.check_catalog(alldb=False)
+
     def cluster_in_change_tracking(self):
         '''
-        Put Cluster into change_tracking 
+        Put Cluster into change_tracking
         '''
         self.base.invoke_fault('filerep_consumer', 'fault', role='primary')
         self.fileutil.wait_till_change_tracking_transition()
         tinctest.logger.info('Change_tracking transition complete')
 
-        
+
     def validate_system(self, cluster_state):
-        # Validate the system's integrity 
+        # Validate the system's integrity
         if (cluster_state == 'change_tracking'):
             if not self.gprecover.incremental():
-                raise Exception('Gprecvoerseg failed')
+                raise Exception('Gprecoverseg failed')
             if not self.gprecover.wait_till_insync_transition():
                 raise Exception('Segments not in sync')
             tinctest.logger.info('Segments recovered and back in sync')
@@ -283,10 +315,11 @@ class SuspendCheckpointCrashRecovery(MPPTestCase):
         if self.config.has_master_mirror():
             self.dbstate.check_mirrorintegrity(master=True)
 
-
-
     def run_fault_injector_to_skip_checkpoint(self):
         tinctest.logger.info('Skip Checkpointing using fault injector.')
+        self.fileutil.inject_fault(f='checkpoint', y='reset', seg_id=1, p=self.port, o='0')
+        self.fileutil.inject_fault(f='checkpoint', y='skip', seg_id=1, p=self.port, o='0')
+        self.fileutil.inject_fault(y = 'reset', f = 'checkpoint', r ='primary', H='ALL', m ='async', o = '0', p=self.port)
         (ok, out) = self.fileutil.inject_fault(y = 'skip', f = 'checkpoint', r ='primary', H='ALL', m ='async', o = '0', p=self.port)
         if not ok:
            raise Exception('Problem with injecting fault.')
@@ -312,7 +345,7 @@ class SuspendCheckpointCrashRecovery(MPPTestCase):
 
     def do_post_run_checks(self):
         self.stop_start_validate('sync')
-        
+
         rc = self.gprecover.incremental()
         if not rc:
             raise Exception('Gprecvoerseg failed')
@@ -320,7 +353,7 @@ class SuspendCheckpointCrashRecovery(MPPTestCase):
         self.gprecover.wait_till_insync_transition()
 
         tinctest.logger.info("Done going from resync to insync")
-        self.dbstate.check_catalog() ##
+        self.dbstate.check_catalog(alldb=False)
         self.dbstate.check_mirrorintegrity()
 
         if self.config.has_master_mirror():

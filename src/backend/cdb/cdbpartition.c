@@ -435,8 +435,9 @@ rel_partition_keys_ordered(Oid relid)
 
 	return pkeys;
 }
+
  /*
- * Dose relation have a external partition?
+ * Does relation have a external partition?
  * Returns true only when the input is the root partition
  * of a partitioned table and it has external partitions.
  */
@@ -506,6 +507,38 @@ query_has_external_partition(Query *query)
 			return true;
 		}
 	}
+	return false;
+}
+
+/*
+ * Does relation have an appendonly partition?
+ * Returns true only when the input is the root partition
+ * of a partitioned table and it has appendonly partitions.
+ */
+bool
+rel_has_appendonly_partition(Oid relid)
+{
+	ListCell *lc = NULL;
+	List	   *leaf_oid_list = NIL;
+	PartitionNode *n = get_parts(relid, 0 /*level*/ ,
+								 0 /*parent*/, false /* inctemplate */, true /*includesubparts*/);
+
+	if (n == NULL || n->rules == NULL)
+		return false;
+
+	leaf_oid_list = all_leaf_partition_relids(n); /* all leaves */
+
+	foreach(lc, leaf_oid_list)
+	{
+		Relation rel = heap_open(lfirst_oid(lc), NoLock);
+		heap_close(rel, NoLock);
+
+		if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
+		{
+			return true;
+		}
+	}
+
 	return false;
 }
 
@@ -835,7 +868,8 @@ cdb_exchange_part_constraints(Relation table,
 	int delta_checks = 0;
 
 
-	/* Setup an empty hash table mapping constraint definition
+	/*
+	 * Setup an empty hash table mapping constraint definition
 	 * strings to ConstraintEntry structures.
 	 */
 	context = AllocSetContextCreate(CurrentMemoryContext,
@@ -922,8 +956,8 @@ cdb_exchange_part_constraints(Relation table,
 			/* The regular constraint should ultimately appear on the candidate
 			 * part the same number of times and with the same name as it appears
 			 * on the partitioned table. The call to constraint_diff will find
-			 * matching names and we'll be left with occurances of the constraint
-			 * that must be added to the candidate (missing) and occurances that
+			 * matching names and we'll be left with occurrences of the constraint
+			 * that must be added to the candidate (missing) and occurrences that
 			 * must be dropped from the candidate (extra).
 			 */
 			constraint_diffs(entry->table_cons, entry->cand_cons, true, &missing, &extra);
@@ -1564,8 +1598,6 @@ del_part_template(Oid rootrelid, int16 parlevel, Oid parent)
 /*
  * add_part_to_catalog() - add a partition to the catalog
  *
- *
-
  * NOTE: If bTemplate_Only = false, add both actual partitions and the
  * template definitions (if specified).  However, if bTemplate_Only =
  * true, then only treat the partition spec as a template.
@@ -2896,7 +2928,7 @@ rel_get_leaf_relids_from_rule(Oid ruleOid)
 	ScanKeyData	scankey;
 	Relation	part_rule_rel;
 	SysScanDesc sscan;
-	bool		hasChildren;
+	bool		hasChildren = false;
 	List	   *lChildrenOid = NIL;
 	HeapTuple	tuple;
 
@@ -4344,6 +4376,9 @@ selectHashPartition(PartitionNode *partnode, Datum *values, bool *isnull,
 	PartitionRule *rule;
 	MemoryContext oldcxt = NULL;
 
+	if (partnode->rules == NIL)
+		return NULL;
+
 	if (accessMethods && accessMethods->part_cxt)
 		oldcxt = MemoryContextSwitchTo(accessMethods->part_cxt);
 
@@ -4947,18 +4982,11 @@ get_part_rule(Relation rel,
 		ListCell				*lc;
 		AlterPartitionId		*pid2	= NULL;
 		PgPartRule*				 prule2 = NULL;
-		StringInfoData			 sid1, sid2;
-
-		initStringInfo(&sid1);
-		initStringInfo(&sid2);
 
 		lc = list_head(l1);
 		prule2 = (PgPartRule*) lfirst(lc);
 		if (prule2 && prule2->topRule && prule2->topRule->children)
 			pNode = prule2->topRule->children;
-
-		truncateStringInfo(&sid1, 0);
-		appendStringInfo(&sid1, "%s", prule2->relname);
 
 		lc = lnext(lc);
 
@@ -4967,7 +4995,7 @@ get_part_rule(Relation rel,
 		prule2 = get_part_rule1(rel,
 								pid2,
 								bExistError, bMustExist,
-								pSearch, pNode, sid1.data, &pNode2);
+								pSearch, pNode, pstrdup(prule2->relname), &pNode2);
 
 		pNode = pNode2;
 
@@ -9426,8 +9454,6 @@ createValueArrays(int keyAttno, Datum **values, bool **isnull)
 {
 	*values = palloc0(keyAttno * sizeof(Datum));
 	*isnull = palloc(keyAttno * sizeof(bool));
-	Assert (NULL != values);
-	Assert (NULL != isnull);
 
 	MemSet(*isnull, true, keyAttno * sizeof(bool));
 }

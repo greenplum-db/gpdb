@@ -1,0 +1,23 @@
+This directory contains the integration tests for the management scripts.
+These tests require the following Python modules to be installed: pygresql
+These modules can be installed by running "git submodule update --init --recursive"
+if they are not already installed on your machine.
+
+To run behave:
+
+source greenplum_path.sh
+cd gpMgmt
+
+"make -f Makefile.behave behave" will run all the integration tests.
+
+"make -f Makefile.behave behave tags=[tag1,tag2,...]" will run a certain subset
+of the integration tests. For a tutorial on Behave tags, see the documentation
+at http://pythonhosted.org/behave/tutorial.html#controlling-things-with-tags.
+
+"behave test/behave/mgmt_utils" will run all the integration tests.
+
+"behave test/behave/mgmt_utils --tags=[tag1,tag2,...]" will run a certain subset of the
+integration tests.
+
+# this will run all tests tagged with smoke
+make -f Makefile.behave behave tags=smoke

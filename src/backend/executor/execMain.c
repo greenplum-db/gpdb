@@ -257,10 +257,14 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	Assert(queryDesc->estate == NULL);
 	Assert(queryDesc->plannedstmt != NULL);
 
-	Assert(queryDesc->memoryAccountId == MEMORY_OWNER_TYPE_Undefined);
-	queryDesc->memoryAccountId = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_EXECUTOR);
+	PlannedStmt *plannedStmt = queryDesc->plannedstmt;
 
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
+	if (MEMORY_OWNER_TYPE_Undefined == plannedStmt->memoryAccountId)
+	{
+		plannedStmt->memoryAccountId = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_EXECUTOR);
+	}
+
+	START_MEMORY_ACCOUNT(plannedStmt->memoryAccountId);
 
 	Assert(queryDesc->plannedstmt->intoPolicy == NULL
 		   || queryDesc->plannedstmt->intoPolicy->ptype == POLICYTYPE_PARTITIONED);
@@ -454,12 +458,7 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 			/* MPP-10329 - must always dispatch the tablespace */
 			if (intoClause->tableSpaceName)
 			{
-				reltablespace = get_tablespace_oid(intoClause->tableSpaceName);
-				if (!OidIsValid(reltablespace))
-					ereport(ERROR,
-							(errcode(ERRCODE_UNDEFINED_OBJECT),
-							 errmsg("tablespace \"%s\" does not exist",
-									intoClause->tableSpaceName)));
+				reltablespace = get_tablespace_oid(intoClause->tableSpaceName, false);
 				ddesc->intoTableSpaceName = intoClause->tableSpaceName;
 			}
 			else
@@ -647,6 +646,8 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 
 			build_tuple_node_list(&queryDesc->ddesc->transientTypeRecords);
 
+			queryDesc->ddesc->oidAssignments = GetAssignedOidsForDispatch();
+
 			/*
 			 * First, see whether we need to pre-execute any initPlan subplans.
 			 */
@@ -662,8 +663,6 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 																   queryDesc->params,
 																   queryDesc->estate->es_param_exec_vals);
 			}
-
-			queryDesc->ddesc->oidAssignments = GetAssignedOidsForDispatch();
 
 			/*
 			 * This call returns after launching the threads that send the
@@ -796,24 +795,9 @@ ExecutorRun(QueryDesc *queryDesc,
 
 	Assert(estate != NULL);
 
-	Assert(MEMORY_OWNER_TYPE_Undefined != queryDesc->memoryAccountId);
+	Assert(NULL != queryDesc->plannedstmt && MEMORY_OWNER_TYPE_Undefined != queryDesc->plannedstmt->memoryAccountId);
 
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
-
-	/*
-	 * Set dynamicTableScanInfo to the one in estate, and reset its value at
-	 * the end of ExecutorRun(). This is to support two cases:
-	 *
-	 * (1) For PLPgsql/SQL functions. There might be multiple DynamicTableScanInfos
-	 * involved, one for each statement in the function. We set the global variable
-	 * dynamicTableScanInfo to the value for the running statement here, and reset
-	 * its value at the end of ExecutorRun().
-	 *
-	 * (2) For cursor queries. Each cursor query has its own set of DynamicTableScanInfos,
-	 * and they could be called in different orders.
-	 */
-	DynamicTableScanInfo *origDynamicTableScanInfo = dynamicTableScanInfo;
-	dynamicTableScanInfo = estate->dynamicTableScanInfo;
+	START_MEMORY_ACCOUNT(queryDesc->plannedstmt->memoryAccountId);
 
 	/*
 	 * Switch into per-query memory context
@@ -933,13 +917,9 @@ ExecutorRun(QueryDesc *queryDesc,
 		 */
 		if(result == NULL)
 			estate->es_got_eos = true;
-
-		dynamicTableScanInfo = origDynamicTableScanInfo;
     }
 	PG_CATCH();
 	{
-		dynamicTableScanInfo = origDynamicTableScanInfo;
-
         /* If EXPLAIN ANALYZE, let qExec try to return stats to qDisp. */
         if (estate->es_sliceTable &&
             estate->es_sliceTable->doInstrument &&
@@ -996,9 +976,9 @@ ExecutorEnd(QueryDesc *queryDesc)
 
 	Assert(estate != NULL);
 
-	Assert(MEMORY_OWNER_TYPE_Undefined != queryDesc->memoryAccountId);
+	Assert(NULL != queryDesc->plannedstmt && MEMORY_OWNER_TYPE_Undefined != queryDesc->plannedstmt->memoryAccountId);
 
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
+	START_MEMORY_ACCOUNT(queryDesc->plannedstmt->memoryAccountId);
 
 	if (DEBUG1 >= log_min_messages)
 	{
@@ -1018,7 +998,7 @@ ExecutorEnd(QueryDesc *queryDesc)
 	{
 		for (int scanNo = 0; scanNo < estate->dynamicTableScanInfo->numScans; scanNo++)
 		{
-			dumpDynamicTableScanPidIndex(scanNo);
+			dumpDynamicTableScanPidIndex(estate, scanNo);
 		}
 	}
 
@@ -1158,9 +1138,9 @@ ExecutorRewind(QueryDesc *queryDesc)
 
 	Assert(estate != NULL);
 
-	Assert(MEMORY_OWNER_TYPE_Undefined != queryDesc->memoryAccountId);
+	Assert(NULL != queryDesc->plannedstmt && MEMORY_OWNER_TYPE_Undefined != queryDesc->plannedstmt->memoryAccountId);
 
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
+	START_MEMORY_ACCOUNT(queryDesc->plannedstmt->memoryAccountId);
 
 	/* It's probably not sensible to rescan updating queries */
 	Assert(queryDesc->operation == CMD_SELECT);
@@ -1579,10 +1559,9 @@ InitializeQueryPartsMetadata(PlannedStmt *plannedstmt, EState *estate)
 	}
 	
 	/* Populate the partitioning metadata to EState */
-	Assert(estate->dynamicTableScanInfo != NULL &&
-		   estate->dynamicTableScanInfo->memoryContext != NULL);
+	Assert(estate->dynamicTableScanInfo != NULL);
 	
-	MemoryContext oldContext = MemoryContextSwitchTo(estate->dynamicTableScanInfo->memoryContext);
+	MemoryContext oldContext = MemoryContextSwitchTo(estate->es_query_cxt);
 	
 	ListCell *lc = NULL;
 	foreach(lc, plannedstmt->queryPartsMetadata)
@@ -1688,7 +1667,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 
 			/*
 			 * Ignore access rights check on pg_statistic and pg_class, so
-			 * the QD can retreive the statistics from the QEs.
+			 * the QD can retrieve the statistics from the QEs.
 			 */
 			if (rte->relid != StatisticRelationId && rte->relid != RelationRelationId)
 			{
@@ -2050,10 +2029,34 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 
 			estate->es_junkFilter = NULL;
 			/*
-			 * GPDB_83_MERGE_FIXME: Disabled this test, because it was hit by the
-			 * qp_executor regression test. Disabling it doesn't seem to be have any
-			 * ill effect, which is a bit baffling. I think we have some other
-			 * mechanism to do FOR UPDATE/SHARE. We lock the whole table, perhaps?
+			 * In Postgres the optimizer (planner) would add a junk
+			 * TID column for each table in the rowMarks. And the
+			 * executor will lock the tuples when executing the
+			 * root node in the plan.
+			 *
+			 * The below check seems dormant even in Postgres: to
+			 * actually cover the `elog(ERROR)`, the code path
+			 * needs to have
+			 *   1. No junk TID columns
+			 *   2. A non-empty rowMarks list
+			 *
+			 * In Postgres the above conditions are all-or-nothing.
+			 * So the check feels more like an `Assert` rather than
+			 * an `elog(ERROR)`, and it seems to be dead code.
+			 *
+			 * In Greenplum, the above condition does not hold.
+			 * Greenplum has a different (but compliant)
+			 * implementation, where we place a lock on each table
+			 * in the rowMarks.  Consequently, we do *not* generate
+			 * the junk column in the plan (except for tables that
+			 * are only on the master). See preprocess_targetlist
+			 * in preptlist.c This is reasonable because the root
+			 * node is most likely executing in a different slice
+			 * from the leaf nodes (which are most likely SCAN's):
+			 * by the time a (hypothetical) TID reaches the root
+			 * node, there's no guarantee that the tuple has not
+			 * passed through a motion node, hence it makes no
+			 * sense locking it.
 			 */
 #if 0
 			if (estate->es_rowMarks)
@@ -2727,24 +2730,24 @@ ExecutePlan(EState *estate,
 	/*
 	 * Process BEFORE EACH STATEMENT triggers
 	 */
-	if (Gp_role != GP_ROLE_EXECUTE || Gp_is_writer)
+if (Gp_role != GP_ROLE_EXECUTE || Gp_is_writer)
+{
+	switch (operation)
 	{
-		switch (operation)
-		{
-			case CMD_UPDATE:
-				ExecBSUpdateTriggers(estate, estate->es_result_relation_info);
-				break;
-			case CMD_DELETE:
-				ExecBSDeleteTriggers(estate, estate->es_result_relation_info);
-				break;
-			case CMD_INSERT:
-				ExecBSInsertTriggers(estate, estate->es_result_relation_info);
-				break;
-			default:
-				/* do nothing */
-				break;
-		}
+		case CMD_UPDATE:
+			ExecBSUpdateTriggers(estate, estate->es_result_relation_info);
+			break;
+		case CMD_DELETE:
+			ExecBSDeleteTriggers(estate, estate->es_result_relation_info);
+			break;
+		case CMD_INSERT:
+			ExecBSInsertTriggers(estate, estate->es_result_relation_info);
+			break;
+		default:
+			/* do nothing */
+			break;
 	}
+}
 
 	/*
 	 * Make sure slice dependencies are met
@@ -2754,6 +2757,7 @@ ExecutePlan(EState *estate,
 	/*
 	 * Loop until we've processed the proper number of tuples from the plan.
 	 */
+
 	for (;;)
 	{
 		/* Reset the per-output-tuple exprcontext */
@@ -2782,181 +2786,179 @@ lnext:	;
 			break;
 		}
 
-		if (estate->es_plannedstmt->planGen == PLANGEN_PLANNER ||
-				operation == CMD_SELECT)
+		/* ORCA plans of UPDATES/DELETES/INSERTS are handled elsewhere. */
+		if (estate->es_plannedstmt->planGen != PLANGEN_PLANNER && operation != CMD_SELECT)
+			goto executed;
+
+		slot = planSlot;
+
+		/*
+		 * If we have a junk filter, then project a new tuple with the junk
+		 * removed.
+		 *
+		 * Store this new "clean" tuple in the junkfilter's resultSlot.
+		 * (Formerly, we stored it back over the "dirty" tuple, which is WRONG
+		 * because that tuple slot has the wrong descriptor.)
+		 *
+		 * But first, extract all the junk information we need.
+		 */
+		if ((junkfilter = estate->es_junkFilter) != NULL)
 		{
-			slot = planSlot;
-
 			/*
-			 * If we have a junk filter, then project a new tuple with the junk
-			 * removed.
-			 *
-			 * Store this new "clean" tuple in the junkfilter's resultSlot.
-			 * (Formerly, we stored it back over the "dirty" tuple, which is WRONG
-			 * because that tuple slot has the wrong descriptor.)
-			 *
-			 * But first, extract all the junk information we need.
+			 * Process any FOR UPDATE or FOR SHARE locking requested.
 			 */
-			if ((junkfilter = estate->es_junkFilter) != NULL)
+			if (estate->es_rowMarks != NIL)
 			{
-				Datum		datum;
-				bool		isNull;
+				ListCell   *l;
 
-				/*
-				 * Process any FOR UPDATE or FOR SHARE locking requested.
-				 */
-				if (estate->es_rowMarks != NIL)
+		lmark:	;
+				foreach(l, estate->es_rowMarks)
 				{
-					ListCell   *l;
-
-			lmark:	;
-					foreach(l, estate->es_rowMarks)
-					{
-						ExecRowMark *erm = lfirst(l);
-						HeapTupleData tuple;
-						Buffer		buffer;
-						ItemPointerData update_ctid;
-						TransactionId update_xmax;
-						TupleTableSlot *newSlot;
-						LockTupleMode lockmode;
-						HTSU_Result test;
-
-						/* CDB: CTIDs were not fetched for distributed relation. */
-						Relation relation = erm->relation;
-						if (relation->rd_cdbpolicy &&
-							relation->rd_cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
-							continue;
-
-						datum = ExecGetJunkAttribute(slot,
-													 erm->ctidAttNo,
-													 &isNull);
-						/* shouldn't ever get a null result... */
-						if (isNull)
-							elog(ERROR, "ctid is NULL");
-
-						tuple.t_self = *((ItemPointer) DatumGetPointer(datum));
-
-						if (erm->forUpdate)
-							lockmode = LockTupleExclusive;
-						else
-							lockmode = LockTupleShared;
-
-						test = heap_lock_tuple(erm->relation, &tuple, &buffer,
-											   &update_ctid, &update_xmax,
-											   estate->es_output_cid,
-											   lockmode,
-											   (erm->noWait ? LockTupleNoWait : LockTupleWait));
-						ReleaseBuffer(buffer);
-						switch (test)
-						{
-							case HeapTupleSelfUpdated:
-								/* treat it as deleted; do not process */
-								goto lnext;
-
-							case HeapTupleMayBeUpdated:
-								break;
-
-							case HeapTupleUpdated:
-								if (IsXactIsoLevelSerializable)
-									ereport(ERROR,
-									 (errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
-									  errmsg("could not serialize access due to concurrent update")));
-								if (!ItemPointerEquals(&update_ctid,
-													   &tuple.t_self))
-								{
-									/* updated, so look at updated version */
-									newSlot = EvalPlanQual(estate,
-														   erm->rti,
-														   &update_ctid,
-														   update_xmax);
-									if (!TupIsNull(newSlot))
-									{
-										slot = planSlot = newSlot;
-										estate->es_useEvalPlan = true;
-										goto lmark;
-									}
-								}
-
-								/*
-								 * if tuple was deleted or PlanQual failed for
-								 * updated tuple - we must not return this tuple!
-								 */
-								goto lnext;
-
-							default:
-								elog(ERROR, "unrecognized heap_lock_tuple status: %u",
-									 test);
-								return NULL;
-						}
-					}
-				}
-
-				/*
-				 * extract the 'ctid' junk attribute.
-				 */
-				if (operation == CMD_UPDATE || operation == CMD_DELETE)
-				{
+					ExecRowMark *erm = lfirst(l);
 					Datum		datum;
 					bool		isNull;
+					HeapTupleData tuple;
+					Buffer		buffer;
+					ItemPointerData update_ctid;
+					TransactionId update_xmax;
+					TupleTableSlot *newSlot;
+					LockTupleMode lockmode;
+					HTSU_Result test;
 
-					datum = ExecGetJunkAttribute(slot, junkfilter->jf_junkAttNo,
+					/* CDB: CTIDs were not fetched for distributed relation. */
+					Relation relation = erm->relation;
+					if (relation->rd_cdbpolicy &&
+						relation->rd_cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
+						continue;
+
+					datum = ExecGetJunkAttribute(slot,
+												 erm->ctidAttNo,
 												 &isNull);
 					/* shouldn't ever get a null result... */
 					if (isNull)
 						elog(ERROR, "ctid is NULL");
 
-					tupleid = (ItemPointer) DatumGetPointer(datum);
-					tuple_ctid = *tupleid;	/* make sure we don't free the ctid!! */
-					tupleid = &tuple_ctid;
+					tuple.t_self = *((ItemPointer) DatumGetPointer(datum));
+
+					if (erm->forUpdate)
+						lockmode = LockTupleExclusive;
+					else
+						lockmode = LockTupleShared;
+
+					test = heap_lock_tuple(erm->relation, &tuple, &buffer,
+										   &update_ctid, &update_xmax,
+										   estate->es_output_cid,
+										   lockmode,
+										   (erm->noWait ? LockTupleNoWait : LockTupleWait));
+					ReleaseBuffer(buffer);
+					switch (test)
+					{
+						case HeapTupleSelfUpdated:
+							/* treat it as deleted; do not process */
+							goto lnext;
+
+						case HeapTupleMayBeUpdated:
+							break;
+
+						case HeapTupleUpdated:
+							if (IsXactIsoLevelSerializable)
+								ereport(ERROR,
+								 (errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
+								  errmsg("could not serialize access due to concurrent update")));
+							if (!ItemPointerEquals(&update_ctid,
+												   &tuple.t_self))
+							{
+								/* updated, so look at updated version */
+								newSlot = EvalPlanQual(estate,
+													   erm->rti,
+													   &update_ctid,
+													   update_xmax);
+								if (!TupIsNull(newSlot))
+								{
+									slot = planSlot = newSlot;
+									estate->es_useEvalPlan = true;
+									goto lmark;
+								}
+							}
+
+							/*
+							 * if tuple was deleted or PlanQual failed for
+							 * updated tuple - we must not return this tuple!
+							 */
+							goto lnext;
+
+						default:
+							elog(ERROR, "unrecognized heap_lock_tuple status: %u",
+								 test);
+							return NULL;
+					}
 				}
-
-				/*
-				 * Create a new "clean" tuple with all junk attributes removed. We
-				 * don't need to do this for DELETE, however (there will in fact
-				 * be no non-junk attributes in a DELETE!)
-				 */
-				if (operation != CMD_DELETE)
-					slot = ExecFilterJunk(junkfilter, slot);
-			}
-
-			if (operation != CMD_SELECT && Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
-			{
-				elog(LOG,"INSERT/UPDATE/DELETE must be executed by a writer segworker group");
-				Insist(false);
 			}
 
 			/*
-			* Based on the operation, a tuple is either
-			* returned it to the user (SELECT) or inserted, deleted, or updated.
-			*/
-			switch (operation)
+			 * extract the 'ctid' junk attribute.
+			 */
+			if (operation == CMD_UPDATE || operation == CMD_DELETE)
 			{
-					case CMD_SELECT:
-						ExecSelect(slot, dest, estate);
-						result = slot;
-						break;
+				Datum		datum;
+				bool		isNull;
 
-					case CMD_INSERT:
-						ExecInsert(slot, dest, estate, PLANGEN_PLANNER, false /* isUpdate */);
-						result = NULL;
-						break;
+				datum = ExecGetJunkAttribute(slot, junkfilter->jf_junkAttNo,
+											 &isNull);
+				/* shouldn't ever get a null result... */
+				if (isNull)
+					elog(ERROR, "ctid is NULL");
 
-					case CMD_DELETE:
-						ExecDelete(tupleid, planSlot, dest, estate, PLANGEN_PLANNER, false /* isUpdate */);
-						result = NULL;
-						break;
-
-					case CMD_UPDATE:
-						ExecUpdate(slot, tupleid, planSlot, dest, estate);
-						result = NULL;
-						break;
-
-					default:
-						elog(ERROR, "unrecognized operation code: %d",
-							 (int) operation);
-						result = NULL;
-						break;
+				tupleid = (ItemPointer) DatumGetPointer(datum);
+				tuple_ctid = *tupleid;	/* make sure we don't free the ctid!! */
+				tupleid = &tuple_ctid;
 			}
+
+			/*
+			 * Create a new "clean" tuple with all junk attributes removed. We
+			 * don't need to do this for DELETE, however (there will in fact
+			 * be no non-junk attributes in a DELETE!)
+			 */
+			if (operation != CMD_DELETE)
+				slot = ExecFilterJunk(junkfilter, slot);
+		}
+
+		if (operation != CMD_SELECT && Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
+		{
+			elog(ERROR, "INSERT/UPDATE/DELETE must be executed by a writer segworker group");
+		}
+
+		/*
+		 * Based on the operation, a tuple is either
+		 * returned it to the user (SELECT) or inserted, deleted, or updated.
+		 */
+		switch (operation)
+		{
+			case CMD_SELECT:
+				ExecSelect(slot, dest, estate);
+				result = slot;
+				break;
+
+			case CMD_INSERT:
+				ExecInsert(slot, dest, estate, PLANGEN_PLANNER, false /* isUpdate */);
+				result = NULL;
+				break;
+
+			case CMD_DELETE:
+				ExecDelete(tupleid, planSlot, dest, estate, PLANGEN_PLANNER, false /* isUpdate */);
+				result = NULL;
+				break;
+
+			case CMD_UPDATE:
+				ExecUpdate(slot, tupleid, planSlot, dest, estate);
+				result = NULL;
+				break;
+
+			default:
+				elog(ERROR, "unrecognized operation code: %d",
+					 (int) operation);
+				result = NULL;
+				break;
 		}
 
 		/*
@@ -2964,6 +2966,7 @@ lnext:	;
 		 * quit, else loop again and process more tuples.  Zero numberTuples
 		 * means no limit.
 		 */
+	executed:
 		current_tuple_count++;
 		if (numberTuples && numberTuples == current_tuple_count)
 			break;
@@ -2972,24 +2975,24 @@ lnext:	;
 	/*
 	 * Process AFTER EACH STATEMENT triggers
 	 */
-	if (Gp_role != GP_ROLE_EXECUTE || Gp_is_writer)
+if (Gp_role != GP_ROLE_EXECUTE || Gp_is_writer)
+{
+	switch (operation)
 	{
-		switch (operation)
-		{
-			case CMD_UPDATE:
-				ExecASUpdateTriggers(estate, estate->es_result_relation_info);
-				break;
-			case CMD_DELETE:
-				ExecASDeleteTriggers(estate, estate->es_result_relation_info);
-				break;
-			case CMD_INSERT:
-				ExecASInsertTriggers(estate, estate->es_result_relation_info);
-				break;
-			default:
-				/* do nothing */
-				break;
-		}
+		case CMD_UPDATE:
+			ExecASUpdateTriggers(estate, estate->es_result_relation_info);
+			break;
+		case CMD_DELETE:
+			ExecASDeleteTriggers(estate, estate->es_result_relation_info);
+			break;
+		case CMD_INSERT:
+			ExecASInsertTriggers(estate, estate->es_result_relation_info);
+			break;
+		default:
+			/* do nothing */
+			break;
 	}
+}
 
 	/*
 	 * here, result is either a slot containing a tuple in the case of a
@@ -3015,11 +3018,10 @@ ExecSelect(TupleTableSlot *slot,
 	(estate->es_processed)++;
 }
 
-
 /* ----------------------------------------------------------------
  *		ExecInsert
  *
- *		INSERTs have to add the tuple into
+ *		INSERTs are trickier.. we have to insert the tuple into
  *		the base relation and insert appropriate tuples into the
  *		index relations.
  *		Insert can be part of an update operation when
@@ -4690,7 +4692,6 @@ OpenIntoRel(QueryDesc *queryDesc)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 				 errmsg("ON COMMIT can only be used on temporary tables")));
-	
 
 	/*
 	 * Security check: disallow creating temp tables from security-restricted
@@ -4717,27 +4718,32 @@ OpenIntoRel(QueryDesc *queryDesc)
 	/*
 	 * Select tablespace to use.  If not specified, use default tablespace
 	 * (which may in turn default to database's default).
+	 *
+	 * In PostgreSQL, we resolve default tablespace here. In GPDB, that's
+	 * done earlier, because we need to dispatch the final tablespace name,
+	 * after resolving any defaults, to the segments. (Otherwise, we would
+	 * rely on the assumption that default_tablespace GUC is kept in sync
+	 * in all segment connections. That actually seems to be the case, as of
+	 * this writing, but better to not rely on it.) So usually, we already
+	 * have the fully-resolved tablespace name stashed in queryDesc->ddesc->
+	 * intoTableSpaceName. In the dispatcher, we filled it in earlier, and
+	 * in executor nodes, we received it from the dispatcher along with the
+	 * query. In utility mode, however, queryDesc->ddesc is not set at all,
+	 * and we follow the PostgreSQL codepath, resolving the defaults here.
 	 */
-	intoTableSpaceName = queryDesc->ddesc->intoTableSpaceName;
+	if (queryDesc->ddesc)
+		intoTableSpaceName = queryDesc->ddesc->intoTableSpaceName;
+	else
+		intoTableSpaceName = into->tableSpaceName;
+
 	if (intoTableSpaceName)
 	{
-		tablespaceId = get_tablespace_oid(intoTableSpaceName);
-		if (!OidIsValid(tablespaceId))
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("tablespace \"%s\" does not exist",
-							intoTableSpaceName)));
+		tablespaceId = get_tablespace_oid(intoTableSpaceName, false);
 	}
 	else
 	{
 		tablespaceId = GetDefaultTablespace(into->rel->istemp);
-
-		/* Need the real tablespace id for dispatch */
-		if (!OidIsValid(tablespaceId)) 
-			tablespaceId = MyDatabaseTableSpace;
-
-		/* MPP-10329 - must dispatch tablespace */
-		into->tableSpaceName = get_tablespace_name(tablespaceId);
+		/* note InvalidOid is OK in this case */
 	}
 
 	/* Check permissions except when using the database's default space */
@@ -4822,9 +4828,9 @@ OpenIntoRel(QueryDesc *queryDesc)
 	 * CommandCounterIncrement(), so that the new tables will be visible for
 	 * insertion.
 	 */
-	AlterTableCreateToastTableWithOid(intoRelationId, false);
-	AlterTableCreateAoSegTableWithOid(intoRelationId, false);
-	AlterTableCreateAoVisimapTableWithOid(intoRelationId, false);
+	AlterTableCreateToastTable(intoRelationId, false);
+	AlterTableCreateAoSegTable(intoRelationId, false);
+	AlterTableCreateAoVisimapTable(intoRelationId, false);
 
     /* don't create AO block directory here, it'll be created when needed */
 	/*

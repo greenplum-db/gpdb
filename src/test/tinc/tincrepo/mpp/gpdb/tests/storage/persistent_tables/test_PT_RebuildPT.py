@@ -18,7 +18,6 @@ limitations under the License.
 import tinctest
 
 from mpp.gpdb.tests.storage.persistent_tables.sqls.InitialSetup import InitialSetup
-from mpp.gpdb.tests.storage.persistent_tables.sqls.generate_sqls import GenerateSqls
 from tinctest.models.scenario import ScenarioTestCase
 from mpp.gpdb.tests.storage.persistent_tables.fault.genFault import Fault
 from mpp.gpdb.tests.storage.persistent_tables import ClusterStateException
@@ -52,9 +51,6 @@ class PersistentTables(ScenarioTestCase):
         setup = InitialSetup()
         setup.createSQLFiles()
         setup.runSQLFiles()
-        tinctest.logger.info('Generating the load - sql files to be run concurrently')
-        sqldatagen = GenerateSqls()
-        sqldatagen.generate_sqls()
 
     # Replacing the setUp method with the following one, as setUp method is called twice redundantly
     def setUp(self):

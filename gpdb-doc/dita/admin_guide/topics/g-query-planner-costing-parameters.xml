@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic23">
+   <title>Legacy Query Optimizer Costing Parameters</title>
+   <body>
+      <note type="warning">Do not adjust these query costing parameters. They are tuned to reflect
+         Greenplum Database hardware configurations and typical workloads. All of these parameters
+         are related. Changing one without changing the others can have adverse effects on
+         performance. </note>
+      <simpletable id="kh181234">
+         <strow>
+            <stentry>
+               <p>
+                  <codeph>cpu_index_tuple_cost</codeph>
+               </p>
+               <p>
+                  <codeph>cpu_operator_cost</codeph>
+               </p>
+               <p>
+                  <codeph>cpu_tuple_cost</codeph>
+               </p>
+               <p>
+                  <codeph>cursor_tuple_fraction</codeph>
+               </p>
+               <p>
+                  <codeph>effective_cache_size</codeph>
+               </p>
+            </stentry>
+            <stentry>
+               <p>
+                  <codeph>gp_motion_cost_per_row</codeph>
+               </p>
+               <p>
+                  <codeph>gp_segments_for_planner</codeph>
+               </p>
+               <p>
+                  <codeph>random_page_cost</codeph>
+               </p>
+               <p>
+                  <codeph>seq_page_cost</codeph>
+               </p>
+            </stentry>
+         </strow>
+      </simpletable>
+   </body>
+</topic>

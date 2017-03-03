@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic16">
+   <title>Installing gpfdist</title>
+   <body>
+      <p>
+            <cmdname>gpfdist</cmdname> is installed in <codeph>$GPHOME/bin</codeph> of your Greenplum Database master host installation. Run <cmdname>gpfdist</cmdname>
+            from a machine other than the Greenplum Database master, such as on a
+            machine devoted to ETL processing. If you want to install <cmdname>gpfdist</cmdname> on
+            your ETL server, get it from the <i>Greenplum Load Tools</i> package and follow its
+            installation instructions.</p>
+   </body>
+</topic>

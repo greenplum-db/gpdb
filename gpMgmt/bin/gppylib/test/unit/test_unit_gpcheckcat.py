@@ -6,6 +6,7 @@ import sys
 from mock import *
 
 from gp_unittest import *
+from gppylib.gpcatalog import GPCatalogTable
 
 class GpCheckCatTestCase(GpTestCase):
     def setUp(self):
@@ -27,7 +28,7 @@ class GpCheckCatTestCase(GpTestCase):
             patch('pygresql.pgdb'),
         ])
 
-        self.subject.logger = Mock(spec=['log', 'info', 'debug', 'error'])
+        self.subject.logger = Mock(spec=['log', 'info', 'debug', 'error', 'fatal'])
         self.unique_index_violation_check.runCheck.return_value = []
         self.leaked_schema_dropper = Mock(spec=['drop_leaked_schemas'])
         self.leaked_schema_dropper.drop_leaked_schemas.return_value = []
@@ -43,6 +44,7 @@ class GpCheckCatTestCase(GpTestCase):
                                1:dict(hostname='host1', port=123, id=1, address='123', datadir='dir', content=1, dbid=1)}
         self.subject.GV.checkStatus = True
         self.subject.GV.foreignKeyStatus = True
+        self.subject.GV.missingEntryStatus = True
         self.subject.setError = Mock()
         self.subject.print_repair_issues = Mock()
 
@@ -156,17 +158,6 @@ class GpCheckCatTestCase(GpTestCase):
         # I am confused that .assert_any_call() did not seem to work as expected --Larry
         last_call = mock_log.call_args_list[0][0][2]
         self.assertEquals(last_call, "Truncated batch size to number of primaries: 50")
-
-
-    def test_do_repair_for_extra__no_issues(self):
-        issues = {}
-        self.subject.do_repair_for_extra(issues)
-        self.subject.setError.assert_not_called()
-
-    def test_do_repair_for_extra__issues_no_repair(self):
-        issues = {("pg_class", "oid"):"extra"}
-        self.subject.do_repair_for_extra(issues)
-        self.subject.setError.assert_any_call(self.subject.ERROR_NOREPAIR)
 
     @patch('gpcheckcat_modules.repair.Repair', return_value=Mock())
     @patch('gpcheckcat_modules.repair.Repair.create_repair_for_extra_missing', return_value="/tmp")
@@ -283,6 +274,53 @@ class GpCheckCatTestCase(GpTestCase):
         self.assertIn("  Execution error: Boom!", log_messages)
         self.assertFalse(self.subject.GV.checkStatus)
         self.subject.setError.assert_called_once_with(self.subject.ERROR_NOREPAIR)
+
+
+    @patch('gpcheckcat.checkTableMissingEntry', return_value = None)
+    def test_checkMissingEntry__no_issues(self, mock1):
+        cat_mock = Mock()
+        cat_tables = ["input1", "input2"]
+        cat_mock.getCatalogTables.return_value = cat_tables
+        self.subject.GV.catalog = cat_mock
+
+        self.subject.runOneCheck("missing_extraneous")
+
+        self.assertTrue(self.subject.GV.missingEntryStatus)
+        self.subject.setError.assert_not_called()
+
+    @patch('gpcheckcat.checkTableMissingEntry', return_value= {("pg_clas", "oid"): "extra"})
+    @patch('gpcheckcat.getPrimaryKeyColumn', return_value = (None,"oid"))
+    def test_checkMissingEntry__uses_oid(self, mock1, mock2):
+
+        self.subject.GV.opt['-E'] = True
+        aTable = Mock(spec=GPCatalogTable)
+
+        cat_mock = Mock()
+        cat_mock.getCatalogTables.return_value = [aTable]
+        self.subject.GV.catalog = cat_mock
+
+        self.subject.runOneCheck("missing_extraneous")
+
+        self.assertEquals(aTable.getPrimaryKey.call_count, 1)
+        self.subject.setError.assert_called_once_with(self.subject.ERROR_REMOVE)
+
+    @patch('gpcheckcat.checkTableMissingEntry', return_value= {("pg_operator", "typename, typenamespace"): "extra"})
+    @patch('gpcheckcat.getPrimaryKeyColumn', return_value = (None,None))
+    def test_checkMissingEntry__uses_pkeys(self, mock1, mock2):
+
+        self.subject.GV.opt['-E'] = True
+        aTable = MagicMock(spec=GPCatalogTable)
+        aTable.tableHasConsistentOids.return_value = False
+
+        cat_mock = Mock()
+        cat_mock.getCatalogTables.return_value = [aTable]
+        self.subject.GV.catalog = cat_mock
+
+        self.subject.runOneCheck("missing_extraneous")
+
+        self.assertEquals(aTable.getPrimaryKey.call_count, 1)
+        self.subject.setError.assert_called_once_with(self.subject.ERROR_REMOVE)
+
 
     ####################### PRIVATE METHODS #######################
 

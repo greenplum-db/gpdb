@@ -368,7 +368,7 @@ DynamicScan_CreateIterator(ScanState *scanState, Scan *scan)
 	 * Ensure that the dynahash exists even if the partition selector
 	 * didn't choose any partition for current scan node [MPP-24169].
 	 */
-	InsertPidIntoDynamicTableScanInfo(scan->partIndex, InvalidOid, InvalidPartitionSelectorId);
+	InsertPidIntoDynamicTableScanInfo(estate, scan->partIndex, InvalidOid, InvalidPartitionSelectorId);
 
 	Assert(NULL != partitionInfo && NULL != partitionInfo->pidIndexes);
 	Assert(partitionInfo->numScans >= scan->partIndex);

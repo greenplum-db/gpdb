@@ -48,14 +48,6 @@ select distinct on (foobar) * from pg_database;
 delete from;
 
 
--- start_matchsubs
---
--- # SPARC diff:
--- m/ERROR\:.*does not exist.* \(SOMEFILE\:SOMEFUNC\)/
--- s/\(SOMEFILE\:SOMEFUNC\)//
---
--- end_matchsubs
-
 -- no such relation 
 delete from nonesuch;
 

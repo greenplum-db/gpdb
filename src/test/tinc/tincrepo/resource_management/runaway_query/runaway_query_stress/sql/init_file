@@ -1,0 +1,12 @@
+-- start_matchsubs
+m/DETAIL:  Per-query VM protect limit reached/
+s/DETAIL:  Per-query VM protect limit reached.*/DETAIL:  Per-query VM protect limit reached/g
+
+
+m/DETAIL:  VM Protect failed to allocate/
+s/DETAIL:  VM Protect failed to allocate.*/DETAIL:  VM Protect failed to allocate/g
+
+m/ERROR:  Canceling query because of high VMEM usage/
+s/ERROR:  Canceling query because of high VMEM usage.*/ERROR:  Canceling query because of high VMEM usage/g
+
+-- end_matchsubs

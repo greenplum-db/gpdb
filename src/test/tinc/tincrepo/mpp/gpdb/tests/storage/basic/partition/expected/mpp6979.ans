@@ -47,7 +47,7 @@ PARTITION BY RANGE (ad_impsn_dttm)
   -- p1 derived from: (mpp6979_child.ad_impsn_fact2_c_d_1_m_1_1610396_month)
   PARTITION p1  START ('2007-10-01 00:00:00'::timestamp without time zone) INCLUSIVE END ('2007-11-01 00:00:00'::timestamp without time zone) EXCLUSIVE
 );
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ad_impsn_fact_xnewx_1_prt_p1" for table "ad_impsn_fact_xnewx"
 CREATE TABLE
 -- EXCHANGE DATA TO PARTITIONED TABLES

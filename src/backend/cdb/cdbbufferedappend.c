@@ -149,10 +149,9 @@ static void BufferedAppendWrite(
 		currentWritePosition = FileNonVirtualCurSeek(bufferedAppend->file);
 		if (currentWritePosition < 0)
 			ereport(ERROR, (errcode_for_file_access(),
-							errmsg("unable to get current position in table \"%s\" for file \"%s\" (errcode %d)",
+							errmsg("unable to get current position in table \"%s\" for file \"%s\": %m",
 								   bufferedAppend->relationName,
-							       bufferedAppend->filePathName,
-								   errno)));
+							       bufferedAppend->filePathName)));
 
 		if (currentWritePosition != bufferedAppend->largeWritePosition)
 			ereport(ERROR, (errcode_for_file_access(),
@@ -178,12 +177,12 @@ static void BufferedAppendWrite(
 		if (primaryError != 0)
 			ereport(ERROR,
 					(errcode_for_file_access(),
-					 errmsg("Could not write in table \"%s\" to segment file '%s': %m", 
+					 errmsg("Could not write in table \"%s\" to segment file \"%s\": %m",
 					 		bufferedAppend->relationName,
 							bufferedAppend->filePathName)));
 	   
 		elogif(Debug_appendonly_print_append_block, LOG,
-				"Append-Only storage write: table '%s', segment file '%s', write position " INT64_FORMAT ", "
+				"Append-Only storage write: table \"%s\", segment file \"%s\", write position " INT64_FORMAT ", "
 				"writeLen %d (equals large write length %d is %s)",
 				bufferedAppend->relationName,
 				bufferedAppend->filePathName,

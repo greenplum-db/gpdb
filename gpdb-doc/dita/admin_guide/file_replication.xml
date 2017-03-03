@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_l34_s3q_p4">
+  <title>File-Based Replication in Greenplum Database</title>
+  <body>
+    <p>Greenplum Database is a massively parallel database, and thus a distributed system. Greenplum
+      Database consists of two types of entities, a <i>master</i> instance and a number of workers,
+      called <i>segments</i>. </p>
+    <p>This short article discusses the segment-level replication scheme at a very high level.
+      Master replication is a topic for another article. Each Greenplum Database segment can be seen
+      as a single Postgres instance having its own catalog and share of data. When a Greenplum
+      Database system runs with High Availability enabled, the segments are divided into two
+      categories: <i>primary</i> and <i>secondary</i>, or <i>mirror</i>. Each primary segment has
+      one corresponding mirror segment. A primary segment, as the name suggests, receives requests
+      from the master to make changes to the segment's database, and then replicates those changes
+      to the corresponding mirror. </p>
+    <p>Segment-level replication employs a physical file replication scheme&#8212;file I/O
+      operations at the primary are replicated to the secondary. To commit a change on the primary,
+      the change must also succeed on the mirror. Changes to the primary and secondary segments are
+      both saved on disk before a transaction completes. </p>
+    <p>Data in Greenplum Database are represented with <i>tuples</i>, which are packed into
+        <i>blocks</i>. Each block has one or more tuples packed into it. Database tables are stored
+      as disk files consisting of one or more blocks. The block is the smallest unit of I/O. Any
+      change to a tuple changes the block it is saved in, and causes the primary to replicate the
+      block to the secondary, which writes the new content to the corresponding block in its copy of
+      the file.</p>
+    <p>This pattern is the basis for file replication. There are additional characteristics of the
+      file replication behavior, depending on the type of table.</p>
+    <section>
+      <title>Heap Tables</title>
+      <p>When a change is made to a heap table, the block remains in an in-memory cache. When the
+        cache is full, blocks are evicted to make room for newly updated blocks. When a block is
+        evicted from the cache it is written to disk and replicated to the mirror. Therefore, a
+        change made to a heap table may not be immediately replicated to the mirror. The delay does
+        not, however, result in inconsistencies between the primary and the mirror because the
+        transaction log is continuously replicated from the primary to the secondary. If the primary
+        fails and the secondary takes over, the logged transactions are applied to the secondary as
+        part of the switch-over. </p>
+      <p>User heap tables, catalog data stored at segments, and other Greenplum Database subsystems
+        that use in-memory cache behave in a similar manner.</p>
+    </section>
+    <section>
+      <title>Append-Only Tables</title>
+      <p>Append-only (and append-optimized) tables do not use the in-memory caching mechanism.
+        Changes made to append-only blocks are replicated immediately. Typically, write operations
+        are asynchronous, while operations such as <codeph>creat()</codeph> and
+          <codeph>fsync()</codeph> are sync-replicated (which means the primary blocks until it
+        receives the acknowledgment from the secondary). The append-only replication process applies
+        to all user data stored in append-only or append-optimized format.</p>
+    </section>
+    <section>
+      <title>Other Objects</title>
+      <p>Other database objects -- for example filespaces, which are tablespaces internally
+        represented with directories -- also use file replication to perform various operations like
+          <codeph>creat()</codeph> and <codeph>unlink()</codeph> in a synchronous way. </p>
+    </section>
+    <section>
+      <title>What happens when the mirror is down? </title>
+      <p>How does the primary replicate changes if the secondary is unavailable? The purpose of
+        mirroring is to ensure that if the primary becomes unavailable, its mirror can take over. If
+        the mirror becomes unavailable, however, the primary must not stop, and the mirror must be
+        brought up to date when it comes back online. The primary segment detects when the mirror is
+        down and saves the changes it cannot apply through file replication. This situation is
+        called <i>change-tracking</i>. The primary keeps track of the changes while the mirror is
+        down, maintaining a change log file and a system catalog to track the blocks changed in the
+        database while the mirror is down. This change-set later allows the mirror to catch up with
+        the primary, a process called a <i>resync </i>procedure. The rsync is triggered when the
+        secondary comes back online.</p>
+    </section>
+  </body>
+</topic>

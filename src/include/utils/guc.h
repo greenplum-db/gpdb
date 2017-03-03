@@ -100,6 +100,19 @@ typedef enum
 	PGC_S_SESSION				/* SET command */
 } GucSource;
 
+typedef struct name_value_pair
+{
+	char       *name;
+	char       *value;
+	struct name_value_pair *next;
+} name_value_pair;
+
+extern bool ParseConfigFile(const char *config_file, const char *calling_file,
+							int depth, GucContext context, int elevel,
+							struct name_value_pair **head_p,
+							struct name_value_pair **tail_p);
+extern void free_name_value_list(struct name_value_pair * list);
+
 typedef const char *(*GucStringAssignHook) (const char *newval, bool doit, GucSource source);
 typedef bool (*GucBoolAssignHook) (bool newval, bool doit, GucSource source);
 typedef bool (*GucIntAssignHook) (int newval, bool doit, GucSource source);
@@ -131,7 +144,6 @@ extern bool Explain_pretty_print;
 extern bool	Debug_print_full_dtm;
 extern bool	Debug_print_snapshot_dtm;
 extern bool	Debug_print_qd_mirroring;
-extern bool Debug_permit_same_host_standby;
 extern bool Debug_print_semaphore_detail;
 extern bool Debug_disable_distributed_snapshot;
 extern bool Debug_abort_after_distributed_prepared;
@@ -141,8 +153,6 @@ extern bool Debug_appendonly_print_insert_tuple;
 extern bool Debug_appendonly_print_scan;
 extern bool Debug_appendonly_print_scan_tuple;
 extern bool Debug_appendonly_print_delete;
-extern bool Debug_appendonly_print_update;
-extern bool Debug_appendonly_print_update_tuple;
 extern bool Debug_appendonly_print_storage_headers;
 extern bool Debug_appendonly_print_verify_write_block;
 extern bool Debug_appendonly_use_no_toast;
@@ -198,7 +208,6 @@ extern bool Disable_persistent_recovery_logging;
 extern bool	Debug_persistent_store_print;
 extern bool Debug_persistent_bootstrap_print;
 extern bool persistent_integrity_checks;
-extern bool disable_persistent_diagnostic_dump;
 extern bool debug_persistent_ptcat_verification;
 extern bool debug_print_persistent_checks;
 extern bool Debug_bulk_load_bypass_wal;
@@ -231,17 +240,14 @@ extern bool Debug_filerep_crc_on;
 extern bool Debug_filerep_print;
 extern bool Debug_filerep_gcov;
 extern bool Debug_filerep_config_print;
-extern bool Debug_filerep_verify_performance_print;
 extern bool Debug_filerep_memory_log_flush;
-extern bool filerep_inject_listener_fault;
-extern bool filerep_inject_db_startup_fault;
-extern bool filerep_inject_change_tracking_recovery_fault;
 extern bool filerep_mirrorvalidation_during_resync;
 extern bool log_filerep_to_syslogger;
 extern bool gp_crash_recovery_suppress_ao_eof;
 extern bool gp_create_table_random_default_distribution;
 extern bool gp_allow_non_uniform_partitioning_ddl;
 extern bool gp_enable_exchange_default_partition;
+extern int  dtx_phase2_retry_count;
 
 /* WAL replication debug gucs */
 extern bool debug_walrepl_snd;
@@ -256,15 +262,14 @@ extern bool gp_upgrade_mode;
 extern bool gp_maintenance_mode;
 extern bool gp_maintenance_conn;
 extern bool allow_segment_DML;
+extern bool gp_allow_rename_relation_without_lock;
 
 extern bool gp_ignore_window_exclude;
 
 extern int verify_checkpoint_interval;
 
-extern bool Debug_rle_type_compression;
 extern bool rle_type_compression_stats;
 
-extern bool Debug_print_tablespace;
 extern bool	Debug_print_server_processes;
 extern bool Debug_print_control_checkpoints;
 extern bool	Debug_dtm_action_primary;
@@ -329,7 +334,6 @@ typedef enum
 extern int Debug_dtm_action;
 extern int Debug_dtm_action_target;
 extern int Debug_dtm_action_protocol;
-extern int Debug_dtm_action_delay_ms;
 extern int Debug_dtm_action_segment;
 extern int Debug_dtm_action_nestinglevel;
 
@@ -381,6 +385,7 @@ extern char  *data_directory;
 // ORCA-related gucs
 extern bool	optimizer;
 extern bool	optimizer_log;
+extern bool	optimizer_trace_fallback;
 extern bool optimizer_minidump;
 extern int  optimizer_cost_model;
 extern bool optimizer_print_query;
@@ -434,6 +439,7 @@ extern int	optimizer_samples_number;
 extern int optimizer_log_failure;
 extern double optimizer_cost_threshold;
 extern double optimizer_nestloop_factor;
+extern double optimizer_sort_factor;
 extern bool optimizer_cte_inlining;
 extern int optimizer_cte_inlining_bound;
 extern double optimizer_damping_factor_filter;
@@ -441,6 +447,7 @@ extern double optimizer_damping_factor_join;
 extern double optimizer_damping_factor_groupby;
 extern int optimizer_segments;
 extern int optimizer_join_arity_for_associativity_commutativity;
+extern int optimizer_penalize_broadcast_threshold;
 extern int optimizer_array_expansion_threshold;
 extern int optimizer_join_order_threshold;
 extern bool optimizer_analyze_root_partition;

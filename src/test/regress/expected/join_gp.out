@@ -50,6 +50,33 @@ select count(*) from hjtest a1, hjtest a2 where a2.i = least (a1.i,4) and a2.j =
 (1 row)
 
 --
+-- Test for correct behavior when there is a Merge Join on top of Materialize
+-- on top of a Motion :
+-- 1. Use FULL OUTER JOIN to induce a Merge Join
+-- 2. Use a large tuple size to induce a Materialize
+-- 3. Use gp_dist_random() to induce a Redistribute
+---
+set enable_hashjoin to off;
+set enable_mergejoin to on;
+set enable_nestloop to off;
+CREATE TABLE alpha (i int, j int);
+CREATE TABLE theta (i int, j char(10000000));
+DROP TABLE IF EXISTS alpha;
+DROP TABLE IF EXISTS theta;
+INSERT INTO alpha values (1, 1), (2, 2);
+INSERT INTO theta values (1, 'f'), (2, 'g');
+SELECT *
+FROM gp_dist_random('alpha') FULL OUTER JOIN gp_dist_random('theta')
+  ON (alpha.i = theta.i)
+WHERE (alpha.j IS NULL or theta.j IS NULL);
+ i | j | i | j 
+---+---+---+---
+(0 rows)
+
+reset enable_hashjoin;
+reset enable_mergejoin;
+reset enable_nestloop;
+--
 -- Predicate propagation over equality conditions
 --
 drop schema if exists pred;
@@ -328,5 +355,29 @@ select enable_xform('CXformLeftSemiJoin2HashJoin');
  CXformLeftSemiJoin2HashJoin is enabled
 (1 row)
 
+-- In case of Left Anti Semi Join, if the left rel is empty a dummy join
+-- should be created
+drop table if exists foo;
+NOTICE:  table "foo" does not exist, skipping
+drop table if exists bar;
+NOTICE:  table "bar" does not exist, skipping
+create table foo (a int, b int) distributed randomly;
+create table bar (c int, d int) distributed randomly;
+insert into foo select generate_series(1,10);
+insert into bar select generate_series(1,10);
+explain select a from foo where a<1 and a>1 and not exists (select c from bar where c=a);
+                QUERY PLAN
+------------------------------------------
+ Result  (cost=0.00..0.01 rows=1 width=0)
+   One-Time Filter: false
+ Optimizer status: legacy query optimizer
+(3 rows)
+
+select a from foo where a<1 and a>1 and not exists (select c from bar where c=a);
+ a
+---
+(0 rows)
+
+-- Cleanup
 set client_min_messages='warning'; -- silence drop-cascade NOTICEs
 drop schema pred cascade;

@@ -65,13 +65,6 @@ delete from;
 ERROR:  syntax error at or near ";"
 LINE 1: delete from;
                    ^
--- start_matchsubs
---
--- # SPARC diff:
--- m/ERROR\:.*does not exist.* \(SOMEFILE\:SOMEFUNC\)/
--- s/\(SOMEFILE\:SOMEFUNC\)//
---
--- end_matchsubs
 -- no such relation 
 delete from nonesuch;
 ERROR:  relation "nonesuch" does not exist

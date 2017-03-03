@@ -96,6 +96,7 @@ static char *user = NULL;
 static char *srcdir = NULL;
 static _stringlist *extraroles = NULL;
 static char *initfile = NULL;
+static char *aodir = NULL;
 
 /* internal variables */
 static const char *progname;
@@ -408,6 +409,169 @@ replace_string(char *string, char *replace, char *replacement)
 	}
 }
 
+typedef struct replacements
+{
+	char *abs_srcdir;
+	char *abs_builddir;
+	char *testtablespace;
+	char *dlsuffix;
+	char *bindir;
+	char *orientation;
+} replacements;
+
+static void
+convert_line(char *line, replacements *repls)
+{
+	replace_string(line, "@abs_srcdir@", repls->abs_srcdir);
+	replace_string(line, "@abs_builddir@", repls->abs_builddir);
+	replace_string(line, "@testtablespace@", repls->testtablespace);
+	replace_string(line, "@DLSUFFIX@", repls->dlsuffix);
+	replace_string(line, "@bindir@", repls->bindir);
+	if (repls->orientation)
+		replace_string(line, "@orientation@", repls->orientation);
+}
+
+/*
+ * Generate two files for each UAO test case, one for row and the
+ * other for column orientation.
+ */
+static int
+generate_uao_sourcefiles(char *src_dir, char *dest_dir, char *suffix, replacements *repls)
+{
+	struct stat st;
+	int			ret;
+	char	  **name;
+	char	  **names;
+	int			count = 0;
+
+	/*
+	 * Return silently if src_dir or dest_dir is not a directory, in
+	 * the same spirit as in convert_sourcefiles_in().
+	 */
+	ret = stat(src_dir, &st);
+	if (ret != 0 || !S_ISDIR(st.st_mode))
+		return 0;
+
+	ret = stat(dest_dir, &st);
+	if (ret != 0 || !S_ISDIR(st.st_mode))
+		return 0;
+
+	names = pgfnames(src_dir);
+	if (!names)
+		/* Error logged in pgfnames */
+		exit_nicely(2);
+
+	/* finally loop on each file and generate the files */
+	for (name = names; *name; name++)
+	{
+		char		srcfile[MAXPGPATH];
+		char		destfile_row[MAXPGPATH];
+		char		destfile_col[MAXPGPATH];
+		char		prefix[MAXPGPATH];
+		FILE	   *infile,
+				   *outfile_row,
+				   *outfile_col;
+		char		line[1024];
+		char		line_row[1024];
+		bool		has_tokens = false;
+
+		/* reject filenames not finishing in ".source" */
+		if (strlen(*name) < 8)
+			continue;
+		if (strcmp(*name + strlen(*name) - 7, ".source") != 0)
+			continue;
+
+		count++;
+
+		/*
+		 * Build the full actual paths to open.  Optimizer specific
+		 * answer filenames must end with "optimizer".
+		 */
+		snprintf(srcfile, MAXPGPATH, "%s/%s", src_dir, *name);
+		if (strlen(*name) > 17 &&
+			strcmp(*name + strlen(*name) - 17, "_optimizer.source") == 0)
+		{
+			snprintf(prefix, strlen(*name) - 16, "%s", *name);
+			snprintf(destfile_row, MAXPGPATH, "%s/%s_row_optimizer.%s",
+					 dest_dir, prefix, suffix);
+			snprintf(destfile_col, MAXPGPATH, "%s/%s_column_optimizer.%s",
+					 dest_dir, prefix, suffix);
+		}
+		else
+		{
+			snprintf(prefix, strlen(*name) - 6, "%s", *name);
+			snprintf(destfile_row, MAXPGPATH, "%s/%s_row.%s",
+					 dest_dir, prefix, suffix);
+			snprintf(destfile_col, MAXPGPATH, "%s/%s_column.%s",
+					 dest_dir, prefix, suffix);
+		}
+
+		infile = fopen(srcfile, "r");
+		if (!infile)
+		{
+			fprintf(stderr, _("%s: could not open file \"%s\" for reading: %s\n"),
+					progname, srcfile, strerror(errno));
+			exit_nicely(2);
+		}
+		outfile_row = fopen(destfile_row, "w");
+		if (!outfile_row)
+		{
+			fprintf(stderr, _("%s: could not open file \"%s\" for writing: %s\n"),
+					progname, destfile_row, strerror(errno));
+			exit_nicely(2);
+		}
+		outfile_col = fopen(destfile_col, "w");
+		if (!outfile_col)
+		{
+			fprintf(stderr, _("%s: could not open file \"%s\" for writing: %s\n"),
+					progname, destfile_col, strerror(errno));
+			exit_nicely(2);
+		}
+
+		while (fgets(line, sizeof(line), infile))
+		{
+			strncpy(line_row, line, sizeof(line));
+			repls->orientation = "row";
+			convert_line(line_row, repls);
+			repls->orientation = "column";
+			convert_line(line, repls);
+			fputs(line, outfile_col);
+			fputs(line_row, outfile_row);
+			/*
+			 * Remember if there are any more tokens that we didn't recognize.
+			 * They need to be handled by the gpstringsubs.pl script
+			 */
+			if (!has_tokens && strchr(line, '@') != NULL)
+				has_tokens = true;
+		}
+
+		fclose(infile);
+		fclose(outfile_row);
+		fclose(outfile_col);
+		if (has_tokens)
+		{
+			char		cmd[MAXPGPATH * 3];
+			snprintf(cmd, sizeof(cmd),
+					 SYSTEMQUOTE "%s %s" SYSTEMQUOTE, gpstringsubsprog, destfile_row);
+			if (run_diff(cmd, destfile_row) != 0)
+			{
+				fprintf(stderr, _("%s: could not convert %s\n"),
+						progname, destfile_row);
+			}
+			snprintf(cmd, sizeof(cmd),
+					 SYSTEMQUOTE "%s %s" SYSTEMQUOTE, gpstringsubsprog, destfile_col);
+			if (run_diff(cmd, destfile_col) != 0)
+			{
+				fprintf(stderr, _("%s: could not convert %s\n"),
+						progname, destfile_col);
+			}
+		}
+	}
+
+	pgfnames_cleanup(names);
+	return count;
+}
+
 /*
  * Convert *.source found in the "source" directory, replacing certain tokens
  * in the file contents with their intended values, and put the resulting files
@@ -421,6 +585,7 @@ convert_sourcefiles_in(char *source, char * dest_dir, char *dest, char *suffix)
 	char		abs_builddir[MAXPGPATH];
 	char		testtablespace[MAXPGPATH];
 	char		indir[MAXPGPATH];
+	replacements repls;
 	struct stat st;
 	int			ret;
 	char	  **name;
@@ -503,6 +668,13 @@ convert_sourcefiles_in(char *source, char * dest_dir, char *dest, char *suffix)
 	make_directory(testtablespace);
 #endif
 
+	memset(&repls, 0, sizeof(repls));
+	repls.abs_srcdir = abs_srcdir;
+	repls.abs_builddir = abs_builddir;
+	repls.testtablespace = testtablespace;
+	repls.dlsuffix = DLSUFFIX;
+	repls.bindir = bindir;
+
 	/* finally loop on each file and do the replacement */
 	for (name = names; *name; name++)
 	{
@@ -513,6 +685,15 @@ convert_sourcefiles_in(char *source, char * dest_dir, char *dest, char *suffix)
 				   *outfile;
 		char		line[1024];
 		bool		has_tokens = false;
+
+		if (aodir && strncmp(*name, aodir, strlen(aodir)) == 0 &&
+			(strlen(*name) < 8 || strcmp(*name + strlen(*name) - 7, ".source") != 0))
+		{
+			snprintf(srcfile, MAXPGPATH, "%s/%s",  indir, *name);
+			snprintf(destfile, MAXPGPATH, "%s/%s/%s", dest_dir, dest, *name);
+			count += generate_uao_sourcefiles(srcfile, destfile, suffix, &repls);
+			continue;
+		}
 
 		/* reject filenames not finishing in ".source" */
 		if (strlen(*name) < 8)
@@ -544,11 +725,7 @@ convert_sourcefiles_in(char *source, char * dest_dir, char *dest, char *suffix)
 		}
 		while (fgets(line, sizeof(line), infile))
 		{
-			replace_string(line, "@abs_srcdir@", abs_srcdir);
-			replace_string(line, "@abs_builddir@", abs_builddir);
-			replace_string(line, "@testtablespace@", testtablespace);
-			replace_string(line, "@DLSUFFIX@", DLSUFFIX);
-			replace_string(line, "@bindir@", bindir);
+			convert_line(line, &repls);
 			fputs(line, outfile);
 
 			/*
@@ -2123,6 +2300,8 @@ help(void)
 	printf(_("  --srcdir=DIR              absolute path to source directory (for VPATH builds)\n"));
 	printf(_("  --temp-install=DIR        create a temporary installation in DIR\n"));
     printf(_(" --init-file=GPD_INIT_FILE  init file to be used for gpdiff\n"));
+	printf(_("  --ao-dir=DIR              directory name prefix containing generic\n"));
+	printf(_("                            UAO row and column tests\n"));
 	printf(_("\n"));
 	printf(_("Options for \"temp-install\" mode:\n"));
 	printf(_("  --no-locale               use C locale\n"));
@@ -2174,6 +2353,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{"create-role", required_argument, NULL, 18},
 		{"temp-config", required_argument, NULL, 19},
         {"init-file", required_argument, NULL, 20},
+        {"ao-dir", required_argument, NULL, 21},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -2274,6 +2454,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 				break;
             case 20:
                 initfile = strdup(optarg);
+                break;
+            case 21:
+                aodir = strdup(optarg);
                 break;
 			default:
 				/* getopt_long already emitted a complaint */

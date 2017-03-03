@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * execworkfile.h
+ * execWorkfile.h
  *    prototypes for execworkfiles.c
  *
  * Copyright (c) 2010, Greenplum Inc.

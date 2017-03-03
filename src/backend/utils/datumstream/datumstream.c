@@ -806,10 +806,11 @@ datumstreamwrite_open_file(DatumStreamWrite * ds, char *fn, int64 eof, int64 eof
 	else
 	{
 		if (!ReadGpRelationNode(
-								relFileNode.relNode,
-								segmentFileNum,
-								&persistentTid,
-								&persistentSerialNum))
+				(relFileNode.spcNode == MyDatabaseTableSpace) ? 0:relFileNode.spcNode,
+				relFileNode.relNode,
+				segmentFileNum,
+				&persistentTid,
+				&persistentSerialNum))
 		{
 			elog(ERROR, "Did not find gp_relation_node entry for relfilenode %u, segment file #%d, logical eof " INT64_FORMAT,
 				 relFileNode.relNode,

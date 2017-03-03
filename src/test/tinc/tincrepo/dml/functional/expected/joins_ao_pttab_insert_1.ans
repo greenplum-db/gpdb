@@ -1,0 +1,26 @@
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml HAWQ 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description test1: Negative test - Constant tuple Inserts( no partition for partitioning key )
+-- start_ignore
+SET gp_optimizer=on;SET gp_log_optimizer=on;
+SET
+SET
+-- end_ignore
+SELECT COUNT(*) FROM dml_ao_pt_r;
+ count 
+-------
+   100
+(1 row)
+
+INSERT INTO dml_ao_pt_r values(10);
+psql:/data2/prabhd/test/tincrepo/main/main/dml/functional/sql/../output/joins_ao_pttab_insert_1_gucs.sql:11: ERROR:  no partition for partitioning key  (seg1 sdw1:35512 pid=21544)
+SELECT COUNT(*) FROM dml_ao_pt_r;
+ count 
+-------
+   100
+(1 row)
+

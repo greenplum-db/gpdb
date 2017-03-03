@@ -61,6 +61,7 @@
 #include "tcop/tcopprot.h"
 #include "tsearch/ts_cache.h"
 #include "utils/builtins.h"
+#include "utils/bytea.h"
 #include "utils/guc_tables.h"
 #include "utils/memutils.h"
 #include "utils/pg_locale.h"
@@ -187,6 +188,10 @@ static bool assign_autovacuum_max_workers(int newval, bool doit, GucSource sourc
 static bool assign_maxconnections(int newval, bool doit, GucSource source);
 
 static const char *assign_application_name(const char *newval, bool doit, GucSource source);
+static const char *assign_bytea(const char *newval, bool doit, GucSource source);
+
+/* hack until enum configs */
+static char *bytea_output_temp="escape";
 
 static int	defunct_int = 0;
 static bool	defunct_bool = false;
@@ -602,13 +607,13 @@ static struct config_bool ConfigureNamesBool[] =
 			"sure that updates are physically written to disk. This insures "
 						 "that a database cluster will recover to a consistent state after "
 						 "an operating system or hardware crash."),
-		  GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL | GUC_DISALLOW_USER_SET
+		  GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
 		},
 		&enableFsync,
 		true, NULL, NULL
 	},
 	{
-		{"synchronous_commit", PGC_USERSET, WAL_SETTINGS,
+		{"synchronous_commit", PGC_USERSET, DEFUNCT_OPTIONS,
 			gettext_noop("Sets immediate fsync at commit."),
 			NULL
 		},
@@ -2108,7 +2113,7 @@ static struct config_string ConfigureNamesString[] =
 		{"IntervalStyle", PGC_USERSET, CLIENT_CONN_LOCALE,
 			gettext_noop("Sets the display format for interval values."),
 			NULL,
-			GUC_REPORT
+			GUC_REPORT | GUC_GPDB_ADDOPT
 		},
 		&IntervalStyle_string,
 		"postgres", assign_IntervalStyle, show_IntervalStyle
@@ -2644,7 +2649,15 @@ static struct config_string ConfigureNamesString[] =
 		&external_pid_file,
 		NULL, assign_canonical_path, NULL
 	},
-
+	/* placed here as a temporary hack until we get guc enums */
+		{
+			{"bytea_output", PGC_USERSET, CLIENT_CONN_STATEMENT,
+				gettext_noop("Sets the output format for bytea."),
+				gettext_noop("Valid values are HEX and ESCAPE.")
+			},
+			&bytea_output_temp,
+			"escape", assign_bytea, NULL, NULL
+		},
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, NULL, NULL, NULL
@@ -3551,6 +3564,7 @@ SelectConfigFiles(const char *userDoption, const char *progname)
 	{
 		write_stderr("%s cannot access the server configuration file \"%s\": %s\n",
 					 progname, ConfigFileName, strerror(errno));
+		free(configdir);
 		return false;
 	}
 
@@ -4846,34 +4860,6 @@ set_config_option(const char *name, const char *value,
 								(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 								 errmsg("%d is outside the valid range for parameter \"%s\" (%d .. %d)",
 										newval, name, conf->min, conf->max)));
-						return false;
-					}
-
-					/*
-					 * If this is for "work_mem", its value also has to be smaller than or equal to
-					 * max_work_mem setting.
-					 */
-					if (strcmp(conf->gen.name, "work_mem") == 0 &&
-						newval > max_work_mem)
-					{
-						ereport(elevel,
-								(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-								 errmsg("%d is outside the valid range for parameter \"%s\" (%d .. %d)",
-										newval, name, conf->min, max_work_mem)));
-						return false;
-					}
-
-					/*
-					 * If this is for "max_work_mem", its value has to be greater than or equal to
-					 * current work_mem setting.
-					 */
-					if (strcmp(conf->gen.name, "max_work_mem") == 0 &&
-						newval < work_mem)
-					{
-						ereport(elevel,
-								(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-								 errmsg("%d is outside the valid range for parameter \"%s\" (%d .. %d)",
-										newval, name, work_mem, conf->max)));
 						return false;
 					}
 				}
@@ -7609,6 +7595,30 @@ assign_transaction_read_only(bool newval, bool doit, GucSource source)
 	return true;
 }
 
+/*
+ * until we get enum config this is a hack
+ * to set an int value through a string
+ *
+ */
+
+static const char *
+assign_bytea( const char * newval, bool doit, GucSource source )
+{
+	int bo;
+
+	if (pg_strcasecmp(newval, "hex") == 0)
+		bo = BYTEA_OUTPUT_HEX;
+	else if (pg_strcasecmp(newval, "escape") == 0)
+		bo = BYTEA_OUTPUT_ESCAPE;
+	else
+		return NULL;
+
+	if (doit)
+	{
+		bytea_output = bo;
+	}
+	return newval;
+}
 
 static const char *
 assign_canonical_path(const char *newval, bool doit, GucSource source)

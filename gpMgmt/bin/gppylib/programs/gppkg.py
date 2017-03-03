@@ -166,7 +166,7 @@ class GpPkgProgram:
        
         logger.debug('_get_master_port')
         pgconf_dict = pgconf.readfile(os.path.join(datadir, 'postgresql.conf'))
-        return pgconf_dict.int('port')
+        return pgconf_dict.int('port') or os.getenv('PGPORT')
 
     def run(self):
         if self.build:

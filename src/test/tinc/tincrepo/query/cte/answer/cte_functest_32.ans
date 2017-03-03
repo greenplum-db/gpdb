@@ -1,0 +1,31 @@
+-- @author prabhd 
+-- @created 2013-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description test18: CTE with WINDOW function
+-- start_ignore
+SET gp_optimizer=on;SET gp_log_optimizer=on;
+SET
+SET
+-- end_ignore
+WITH CTE(a,b) AS
+(SELECT a,d FROM foo, bar WHERE foo.a = bar.d),
+CTE1(e,f) AS
+( SELECT foo.a, rank() OVER (PARTITION BY foo.b ORDER BY CTE.a) FROM foo,CTE )
+SELECT * FROM CTE1,CTE WHERE CTE.a = CTE1.f and CTE.a = 2 ORDER BY 1;
+ e  | f | a | b 
+----+---+---+---
+  1 | 2 | 2 | 2
+  2 | 2 | 2 | 2
+  3 | 2 | 2 | 2
+  4 | 2 | 2 | 2
+  5 | 2 | 2 | 2
+  6 | 2 | 2 | 2
+  7 | 2 | 2 | 2
+  8 | 2 | 2 | 2
+  9 | 2 | 2 | 2
+ 10 | 2 | 2 | 2
+(10 rows)
+

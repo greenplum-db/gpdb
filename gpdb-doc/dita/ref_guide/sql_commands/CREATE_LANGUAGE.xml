@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+    <title id="bv20941">CREATE LANGUAGE</title>
+    <body>
+        <p id="sql_command_desc">Defines a new procedural language.</p>
+        <section id="section2">
+            <title>Synopsis</title>
+            <codeblock id="sql_command_synopsis">CREATE [PROCEDURAL] LANGUAGE <varname>name</varname>
+
+CREATE [TRUSTED] [PROCEDURAL] LANGUAGE <varname>name</varname>
+       HANDLER <varname>call_handler</varname> [VALIDATOR <varname>valfunction</varname>]</codeblock>
+        </section>
+        <section id="section3">
+            <title>Description</title>
+            <p><codeph>CREATE LANGUAGE</codeph> registers a new procedural language with a Greenplum
+                database. Subsequently, functions and trigger procedures can be defined in this new
+                language. The PL/pgSQL language is already registered in all databases by
+                default.</p>
+            <p>Superusers can register a new language with a Greenplum database. A database owner
+                can also register within that database any language listed in the
+                    <codeph>pg_pltemplate</codeph> catalog in which the
+                    <codeph>tmpldbacreate</codeph> field is true. The default configuration allows
+                only trusted languages to be registered by database owners. The creator of a
+                language becomes its owner and can later drop it, rename it, or assign ownership to
+                a new user.</p>
+            <p><codeph>CREATE LANGUAGE</codeph> effectively associates the language name with a call
+                handler that is responsible for executing functions written in that language. For a
+                function written in a procedural language (a language other than C or SQL), the
+                database server has no built-in knowledge about how to interpret the function's
+                source code. The task is passed to a special handler that knows the details of the
+                language. The handler could either do all the work of parsing, syntax analysis,
+                execution, and so on or it could serve as a bridge between Greenplum Database and an
+                existing implementation of a programming language. The handler itself is a C
+                language function compiled into a shared object and loaded on demand, just like any
+                other C function. There are currently four procedural language packages included in
+                the standard Greenplum Database distribution: PL/pgSQL, PL/Perl, PL/Python, and
+                PL/Java. A language handler has also been added for PL/R, but the PL/R language
+                package is not pre-installed with Greenplum Database. See the topic on <xref
+                    href="https://www.postgresql.org/docs/8.3/static/xplang.html" scope="external"
+                    format="html">Procedural Languages</xref> in the PostgreSQL documentation for
+                more information on developing functions using these procedural languages.</p>
+            <p>The PL/Perl, PL/Java, and PL/R libraries require the correct versions of Perl, Java,
+                and R to be installed, respectively. </p>
+            <p>On RHEL and SUSE platforms, download the appropriate extensions from <xref
+                    href="https://network.pivotal.io" scope="external" format="html"
+                    >Pivotal Network</xref>, then install the extensions using the Greenplum Package
+                Manager (<codeph>gppkg</codeph>) utility to ensure that all dependencies are
+                installed as well as the extensions. See the Greenplum Database Utility Guide for
+                details about <codeph>gppkg</codeph>. </p>
+            <p>There are two forms of the <codeph>CREATE LANGUAGE</codeph> command. In the first
+                form, the user specifies the name of the desired language and the Greenplum Database
+                server uses the <codeph>pg_pltemplate</codeph> system catalog to determine the
+                correct parameters. In the second form, the user specifies the language parameters
+                as well as the language name. You can use the second form to create a language that
+                is not defined in <codeph>pg_pltemplate</codeph>. </p>
+            <p>When the server finds an entry in the <codeph>pg_pltemplate</codeph> catalog for the
+                given language name, it will use the catalog data even if the command includes
+                language parameters. This behavior simplifies loading of old dump files, which are
+                likely to contain out-of-date information about language support functions.</p>
+        </section>
+        <section id="section4">
+            <title>Parameters</title>
+            <parml>
+                <plentry>
+                    <pt>TRUSTED</pt>
+                    <pd>Ignored if the server has an entry for the specified language name in
+                            <varname>pg_pltemplate</varname>. Specifies that the call handler for
+                        the language is safe and does not offer an unprivileged user any
+                        functionality to bypass access restrictions. If this key word is omitted
+                        when registering the language, only users with the superuser privilege can
+                        use this language to create new functions.</pd>
+                </plentry>
+                <plentry>
+                    <pt>PROCEDURAL</pt>
+                    <pd>This is a noise word.</pd>
+                </plentry>
+                <plentry>
+                    <pt>
+                        <varname>name</varname>
+                    </pt>
+                    <pd>The name of the new procedural language. The language name is case
+                        insensitive. The name must be unique among the languages in the database.
+                        Built-in support is included for <codeph>plpgsql</codeph>,
+                            <codeph>plperl</codeph>, <codeph>plpython</codeph>,
+                            <codeph>plpythonu</codeph>, and <codeph>plr</codeph>. The languages
+                            <codeph>plpgsql</codeph> (PL/pgSQL) and <codeph>plpythonu</codeph>
+                        (PL/Python) are installed by default in Greenplum Database.</pd>
+                </plentry>
+                <plentry>
+                    <pt>HANDLER <varname>call_handler</varname></pt>
+                    <pd>Ignored if the server has an entry for the specified language name in
+                            <codeph>pg_pltemplate</codeph>. The name of a previously registered
+                        function that will be called to execute the procedural language functions.
+                        The call handler for a procedural language must be written in a compiled
+                        language such as C with version 1 call convention and registered with
+                        Greenplum Database as a function taking no arguments and returning the
+                            <codeph>language_handler</codeph> type, a placeholder type that is
+                        simply used to identify the function as a call handler.</pd>
+                </plentry>
+                <plentry>
+                    <pt>VALIDATOR <varname>valfunction</varname></pt>
+                    <pd>Ignored if the server has an entry for the specified language name in
+                            <codeph>pg_pltemplate</codeph>. <varname>valfunction</varname> is the
+                        name of a previously registered function that will be called when a new
+                        function in the language is created, to validate the new function. If no
+                        validator function is specified, then a new function will not be checked
+                        when it is created. The validator function must take one argument of type
+                            <codeph>oid</codeph>, which will be the OID of the to-be-created
+                        function, and will typically return <codeph>void</codeph>. </pd>
+                    <pd>A validator function would typically inspect the function body for
+                        syntactical correctness, but it can also look at other properties of the
+                        function, for example if the language cannot handle certain argument types.
+                        To signal an error, the validator function should use the
+                            <codeph>ereport()</codeph> function. The return value of the function is
+                        ignored.</pd>
+                </plentry>
+            </parml>
+        </section>
+        <section id="section5">
+            <title>Notes</title>
+            <p>The PL/pgSQL and PL/Python language extensions are installed by default in Greenplum
+                Database.</p>
+            <p>The system catalog <codeph>pg_language</codeph> records information about the
+                currently installed languages.</p>
+            <p>To create functions in a procedural language, a user must have the
+                    <codeph>USAGE</codeph> privilege for the language. By default,
+                    <codeph>USAGE</codeph> is granted to <codeph>PUBLIC</codeph> (everyone) for
+                trusted languages. This may be revoked if desired. </p>
+            <p>Procedural languages are local to individual databases. You create and drop languages
+                for individual databases.</p>
+            <p>The call handler function and the validator function (if any) must already exist if
+                the server does not have an entry for the language in
+                <codeph>pg_pltemplate</codeph>. But when there is an entry, the functions need not
+                already exist; they will be automatically defined if not present in the database. </p>
+            <p>Any shared library that implements a language must be located in the same
+                    <codeph>LD_LIBRARY_PATH</codeph> location on all segment hosts in your Greenplum
+                Database array.</p>
+        </section>
+        <section id="section6">
+            <title>Examples</title>
+            <p>The preferred way of creating any of the standard procedural languages:</p>
+            <codeblock>CREATE LANGUAGE plpgsql;
+CREATE LANGUAGE plr;</codeblock>
+            <p>For a language not known in the <codeph>pg_pltemplate</codeph> catalog:</p>
+            <codeblock>CREATE FUNCTION plsample_call_handler() RETURNS 
+language_handler
+    AS '$libdir/plsample'
+    LANGUAGE C;
+CREATE LANGUAGE plsample
+    HANDLER plsample_call_handler;</codeblock>
+        </section>
+        <section id="section7">
+            <title>Compatibility</title>
+            <p><codeph>CREATE LANGUAGE</codeph> is a Greenplum Database extension. </p>
+        </section>
+        <section id="section8">
+            <title>See Also</title>
+            <p><codeph><xref href="ALTER_LANGUAGE.xml#topic1" type="topic" format="dita"/></codeph>,
+                        <codeph><xref href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"
+                    /></codeph>, <codeph><xref href="./DROP_LANGUAGE.xml#topic1" type="topic"
+                        format="dita"/></codeph></p>
+        </section>
+    </body>
+</topic>

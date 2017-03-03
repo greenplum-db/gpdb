@@ -106,7 +106,7 @@ SELECT COUNT(*) from gp_read_error_log('exttab_first_reject_limit_2');
 DROP TABLE IF EXISTS test_first_segment_reject_limit;
 DROP TABLE
 CREATE TABLE test_first_segment_reject_limit (LIKE exttab_first_reject_limit_1);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 SET gp_initial_bad_row_limit = 500;
 SET

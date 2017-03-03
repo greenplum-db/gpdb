@@ -63,10 +63,10 @@ class xansrep(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTestCase):
         The flow of this test is as follows.
         1. Initiate the Standby using the Master (primary) postmaster
            paramerters.
-        2. A: Inject the fault to suspend Mater after Prepare done.
-        3. A: Now execute a transaction and commit it. This transaction will be blocked.
-        4. B: Inject the fault to suspend Mater after Commit done.
-        5. B: Now execute a transaction and commit it. This master will be blocked.
+        2. B: Inject the fault to suspend Mater after Commit done.
+        3. B: Now execute a transaction and commit it. This master will be blocked.
+        4. A: Inject the fault to suspend Mater after Prepare done.
+        5. A: Now execute a transaction and commit it. This transaction will be blocked.
         6. Promote the standby.
         7. Verify the result, transaction A results should not be visible and
            transaction B results should be visible.
@@ -92,30 +92,12 @@ class xansrep(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTestCase):
         num_walsender = self.wait_for_walsender()
         self.assertEqual(num_walsender, 1)
 
-        # 2. Inject fault at prepared state
-        result = fault.suspend_at(
-                    'transaction_abort_after_distributed_prepared')
-        logger.info(result.stdout)
-        self.assertEqual(result.rc, 0, result.stdout)
-
-        # 3. Now execute a transaction and commit it. The backend is expected
-        #    be blocked.
-        logger.info('Create table xansrep_prepare...')
-
-        # Due to the suspend, we don't wait for the result
-        proc = self.run_sql('create table xansrep_prepare (a int)')
-
-        logger.info('Check if suspend fault is hit ...')
-        triggered = fault.wait_triggered(
-                    'transaction_abort_after_distributed_prepared')
-        self.assertTrue(triggered, 'Fault was not triggered')
-
-        # 4. Inject fault at commit prepared state
+        # 2. Inject fault at commit prepared state
         result = fault.suspend_at('dtm_broadcast_commit_prepared')
         logger.info(result.stdout)
         self.assertEqual(result.rc, 0, result.stdout)
 
-        # 5. Now execute a transaction and commit it. The backend is expected
+        # 3. Now execute a transaction and commit it. The backend is expected
         #    be blocked.
         logger.info('Create table xansrep_commit...')
 
@@ -125,6 +107,24 @@ class xansrep(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTestCase):
 
         logger.info('Check if suspend fault is hit after commit...')
         triggered = fault.wait_triggered('dtm_broadcast_commit_prepared')
+        self.assertTrue(triggered, 'Fault was not triggered')
+
+        # 4. Inject fault at prepared state
+        result = fault.suspend_at(
+                    'transaction_abort_after_distributed_prepared')
+        logger.info(result.stdout)
+        self.assertEqual(result.rc, 0, result.stdout)
+
+        # 5. Now execute a transaction and commit it. The backend is expected
+        #    be blocked.
+        logger.info('Create table xansrep_prepare...')
+
+        # Due to the suspend, we don't wait for the result
+        proc = self.run_sql('create table xansrep_prepare (a int)')
+
+        logger.info('Check if suspend fault is hit ...')
+        triggered = fault.wait_triggered(
+                    'transaction_abort_after_distributed_prepared')
         self.assertTrue(triggered, 'Fault was not triggered')
 
         # 6. Promote standby

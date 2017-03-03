@@ -21,10 +21,10 @@ psql:/path/sql_file:1: NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit 
 CONTEXT:  SQL statement "CREATE TABLE shops ( id serial PRIMARY KEY, shop varchar(32) )"
 PL/pgSQL function "test_protocol_allseg" line 18 at SQL statement
 psql:/path/sql_file:1: NOTICE:  Releasing segworker groups to finish aborting the transaction.
-psql:/path/sql_file:1: ERROR:  DTM error (gathered 2 results from cmd ' Begin Internal Subtransaction') (cdbtm.c:2178)
+psql:/path/sql_file:1: ERROR:  DTM error (gathered results from cmd ' Begin Internal Subtransaction') (cdbtm.c:2178)
 DETAIL:  PANIC for debug_dtm_action = 4, debug_dtm_action_protocol =  Begin Internal Subtransaction (postgres.c:1426)  (seg1 rh55-qa02.sanmateo.greenplum.com:50000 pid=4985)
 CONTEXT:  PL/pgSQL function "test_protocol_allseg" line 26 during statement block entry
-ERROR:  could not temporarily connect to one or more segments (cdbgang.c:1629)
+ERROR:  could not connect to segment: initialization of segworker group failed (cdbgang.c:1629)
 select * from employees;
 psql:/path/sql_file:1: ERROR:  relation "employees" does not exist
 LINE 1: select * from employees;

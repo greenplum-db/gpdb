@@ -65,7 +65,11 @@ pygresql:
 	fi
 
 	mkdir -p $(PYLIB_DIR)/pygresql
-	cp -r $(PYLIB_SRC)/$(PYGRESQL_DIR)/build/lib.*/* $(PYLIB_DIR)/pygresql
+	if [ `uname -s` = 'Darwin' ]; then \
+	  cp -r $(PYLIB_SRC)/$(PYGRESQL_DIR)/build/lib.macosx*/* $(PYLIB_DIR)/pygresql; \
+	else \
+	  cp -r $(PYLIB_SRC)/$(PYGRESQL_DIR)/build/lib.linux*/* $(PYLIB_DIR)/pygresql; \
+	fi
 	touch $(PYLIB_DIR)/__init__.py
 
 #
@@ -165,10 +169,12 @@ SETUP_TOOLS_DIR=setuptools-$(SETUP_TOOLS_VERSION)
 PARSE_DIR=parse-$(PARSE_VERSION)
 ARG_PARSE_DIR=argparse-$(ARG_PARSE_VERSION)
 PYTHONSRC_INSTALL=$(PYLIB_SRC_EXT)/install
-PYTHONSRC_INSTALL_SITE=$(PYLIB_SRC_EXT)/install/lib/python2.6/site-packages
+PYTHON_VERSION=$(shell python -c "import sys; print '%s.%s' % (sys.version_info[0:2])")
+PYTHONSRC_INSTALL_SITE=$(PYLIB_SRC_EXT)/install/lib/python$(PYTHON_VERSION)/site-packages
 PYTHONSRC_INSTALL_PYTHON_PATH=$(PYTHONPATH):$(PYTHONSRC_INSTALL_SITE)
 BEHAVE_BIN=$(PYTHONSRC_INSTALL)/bin/behave
-MOCK_BIN=$(PYTHONSRC_INSTALL)/lib/python2.6/site-packages/mock-1.0.1-py2.6.egg
+# TODO: mock-1.0.1-py2.6.egg package should be updated.
+MOCK_BIN=$(PYTHONSRC_INSTALL)/lib/python$(PYTHON_VERSION)/site-packages/mock-1.0.1-py2.6.egg
 
 pylint:
 	@echo "--- pylint"
@@ -220,14 +226,6 @@ PYTHON_FILES=`grep -l --exclude=Makefile --exclude=gplogfilter "/bin/env python"
 			 `find ./gppylib -name "*.py"`\
 			 `find $(SRC)/../sbin -name "*.py"`
 
-behave: $(BEHAVE_BIN)
-	@echo "Running behave on management scripts..."
-	@if [ -n ""$(tags)"" ]; then \
-		PYTHONPATH=$(SERVER_SRC):$(SERVER_SBIN):$(PYTHONSRC_INSTALL_PYTHON_PATH) python $(BEHAVE_BIN) $(SERVER_SRC)/gppylib/test/behave/* --no-color -s -k --tags=$(tags) 2>&1 ; \
-	else \
-		PYTHONPATH=$(SERVER_SRC):$(SERVER_SBIN):$(PYTHONSRC_INSTALL_PYTHON_PATH) python $(BEHAVE_BIN) $(SERVER_SRC)/gppylib/test/behave/* --no-color -s 2>&1; \
-	fi
-
 checkcode: pylint
 	@echo "Running pylint on management scripts..."
 	@PYTHONPATH=$(PYTHONPATH):$(PYLINT_PYTHONPATH) $(PYLIB_SRC_EXT)/$(PYLINT_DIR)/bin/pylint -i y $(PYTHON_FILES) --rcfile=.rcfile > $(SRC)/../pylint.txt || true
@@ -241,9 +239,9 @@ check-regress:
 
 check: $(MOCK_BIN) unittest2
 	@echo "Running pure unit and also "unit" tests that require cluster to be up..."
-	@PYTHONPATH=$(SERVER_SRC):$(SERVER_SBIN):$(SRC)/ext:$(PYTHONPATH):$(PYTHONSRC_INSTALL_PYTHON_PATH):$(SBIN_DIR):$(LIB_DIR):$(PYLIB_DIR)/mock-1.0.1 \
+	@TMPDIR=/tmp PYTHONPATH=$(SERVER_SRC):$(SERVER_SBIN):$(PYTHONPATH):$(PYTHONSRC_INSTALL_PYTHON_PATH):$(SRC)/ext:$(SBIN_DIR):$(LIB_DIR):$(PYLIB_DIR)/mock-1.0.1 \
 	gppylib/gpunit discover --verbose -s $(SRC)/gppylib -p "test_unit*.py" 2> $(SRC)/../gpMgmt_testunit_results.log 1> $(SRC)/../gpMgmt_testunit_output.log
-	@PYTHONPATH=$(SERVER_SRC):$(SERVER_SBIN):$(SRC)/ext:$(PYTHONPATH):$(PYTHONSRC_INSTALL_PYTHON_PATH):$(SBIN_DIR):$(LIB_DIR):$(PYLIB_DIR)/mock-1.0.1 \
+	@TMPDIR=/tmp PYTHONPATH=$(SERVER_SRC):$(SERVER_SBIN):$(PYTHONPATH):$(PYTHONSRC_INSTALL_PYTHON_PATH):$(SRC)/ext:$(SBIN_DIR):$(LIB_DIR):$(PYLIB_DIR)/mock-1.0.1 \
 	gppylib/gpunit discover --verbose -s $(SRC)/gppylib -p "test_cluster*.py" 2>> $(SRC)/../gpMgmt_testunit_results.log 1>> $(SRC)/../gpMgmt_testunit_output.log
 
 unitdevel:
@@ -255,23 +253,7 @@ solarisTest:
 		echo "SOLARIS" ; \
 	fi
 
-#
-#EPYDOC
-#
-
-EPYDOC_VERSION=3.0.1
-EPYDOC_DIR=epydoc-$(EPYDOC_VERSION)
-EPYDOC_PYTHONPATH=$(PYLIB_DIR):$(PYLIB_SRC_EXT)/$(EPYDOC_DIR)/build/lib/
-
-epydoc:
-	@echo "--- epydoc"
-	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(EPYDOC_DIR).tar.gz
-	@cd $(PYLIB_SRC_EXT)/$(EPYDOC_DIR)/ && python setup.py build 1> /dev/null
-
-docs: epydoc
-	@echo "Running epydoc on management scripts..."
-	@PYTHONPATH=$(PYTHONPATH):$(EPYDOC_PYTHONPATH) $(PYLIB_SRC_EXT)/$(EPYDOC_DIR)/build/scripts-2.6/epydoc --config=.epydoc.config
-
+.PHONY: clean
 clean :
 	@rm -rf $(PYLIB_SRC_EXT)/$(LOCKFILE_DIR)
 	@rm -rf $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)
@@ -281,3 +263,7 @@ clean :
 	@rm -rf $(PYLIB_SRC_EXT)/$(LOGILAB_ASTNG_DIR)
 	@rm -rf $(STREAM_DIR)/stream lib/stream  
 	@rm -rf *.pyc lib/*.pyc
+	@rm -f gpcheckcatc gpcrondumpc gpexpandc gptransferc
+
+.PHONY: disclean
+distclean: clean

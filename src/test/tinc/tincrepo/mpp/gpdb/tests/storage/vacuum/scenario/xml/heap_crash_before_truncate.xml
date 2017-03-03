@@ -49,8 +49,8 @@ select pg_relation_size('ivfheap') from gp_dist_random('gp_id') where gp_segment
             ]]></pre>
         <trigger><![CDATA[
 vacuum full vfheap;
-psql:/Users/haradh1/dev/tincrepo/private/haradh1/mpp-24055/vacuum/scenario/output/out/heap_crash_before_truncate_trigger.sql:7: ERROR:  fault triggered, fault name:'vacuum_full_before_truncate' fault type:'panic' (faultinjector.c:623)  (seg0 haradh1-mac.local:40000 pid=15655) (cdbdisp.c:1526)
-ERROR:  could not temporarily connect to one or more segments (SOMEFILE:SOMEFUNC)
+ERROR:  fault triggered, fault name:'vacuum_full_before_truncate' fault type:'panic' (seg0 haradh1-mac.local:40000 pid=15655) (cdbdisp.c:1526)
+ERROR:  could not connect to segment: initialization of segworker group failed (cdbgang.c:xxx)
         ]]></trigger>
         <post><![CDATA[
 select pg_relation_size('vfheap') from gp_dist_random('gp_id') where gp_segment_id = 0;

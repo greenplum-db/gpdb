@@ -1104,7 +1104,7 @@ drop tablespace funky.regressionts1;
 ERROR:  tablespace name may not be qualified
 -- don't do this!
 drop filespace pg_system;
-ERROR:  cannot drop filespace pg_system because it is required by the database system (filespace.c:554)
+ERROR:  cannot drop filespace pg_system because it is required by the database system
 drop tablespace pg_default;
 ERROR:  permission denied for tablespace pg_default
 drop tablespace pg_global;
@@ -2469,6 +2469,27 @@ SELECT count(*) FROM fsts_busted_heap2;
 (1 row)
 
 --
+-- Test that default_tablespace correctly affects both the master and
+-- segments, in CREATE TABLE AS. (Used to have a bug where the master
+-- and segments chose different tablespace.)
+--
+set default_tablespace = 'regression_ts_b1';
+create table default_tblspc_test as select g from generate_series(1, 10) g;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'g' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- Check that the table was created in the same namespace on every node
+-- (should return 1)
+select count(*) from (
+  select relnamespace from pg_class where relname='default_tblspc_test'
+  union
+  select relnamespace from gp_dist_random('pg_class') where relname='default_tblspc_test'
+) t;
+ count 
+-------
+     1
+(1 row)
+
+--
 -- Filespace/Tablespace Transaction tests
 --
 BEGIN;
@@ -2668,6 +2689,35 @@ SELECT * FROM fsts_up_table2;
 (5 rows)
 
 RESET ROLE;
+-- create new database which we'll try to drop at the end
+create database dropdb_same_relfilenode;
+\c dropdb_same_relfilenode
+-- create two heap tables where one is on a different tablespace
+create table same_relfilenode (a int, b int) distributed by (a);
+create table same_relfilenode2 (a int, b int) tablespace regression_ts_a1 distributed by (a);
+-- change the relfilenode of one heap table to be the same as the other heap table
+set allow_system_table_mods = 'DML';
+set gp_permit_relation_node_change = true;
+update gp_relation_node set relfilenode_oid=(select relfilenode from pg_class where relname='same_relfilenode' limit 1)
+    where relfilenode_oid=(select relfilenode from pg_class where relname='same_relfilenode2' limit 1);
+update pg_class set relfilenode=(select relfilenode from pg_class where relname='same_relfilenode' limit 1)
+    where relname='same_relfilenode2';
+reset allow_system_table_mods;
+reset gp_permit_relation_node_change;
+select relname from pg_class where relfilenode='same_relfilenode'::regclass;
+      relname      
+-------------------
+ same_relfilenode
+ same_relfilenode2
+(2 rows)
+
+-- try to drop the database which should work (previously failed due to unique check on relfilenode)
+-- a warning will be given since we haven't renamed the actual segment file on all postgres
+-- instances... so suppress the warning by changing session message level to ERROR
+\c fsts_db_name1
+set client_min_messages=ERROR;
+drop database dropdb_same_relfilenode;
+reset client_min_messages;
 DROP TABLE fsts_up_table1;
 DROP TABLE fsts_up_table2;
 DROP TABLE fsts_alter_table1;

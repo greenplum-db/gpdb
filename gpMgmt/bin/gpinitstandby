@@ -836,6 +836,7 @@ def copy_master_filespaces_to_standby(options, array, master_filespace_map, stan
     # slow down the speed of gpinitstandby if containing a lot of data
     cmd_str = ' '.join(['pg_basebackup',
                         '-x', '-R',
+                        '-c', 'fast',
                         '-E', './pg_log',
                         '-E', './db_dumps',
                         '-E', './gpperfmon/data',

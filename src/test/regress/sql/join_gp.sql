@@ -24,6 +24,36 @@ insert into hjtest values(3, 4);
 select count(*) from hjtest a1, hjtest a2 where a2.i = least (a1.i,4) and a2.j = 4;
 
 --
+-- Test for correct behavior when there is a Merge Join on top of Materialize
+-- on top of a Motion :
+-- 1. Use FULL OUTER JOIN to induce a Merge Join
+-- 2. Use a large tuple size to induce a Materialize
+-- 3. Use gp_dist_random() to induce a Redistribute
+---
+
+set enable_hashjoin to off;
+set enable_mergejoin to on;
+set enable_nestloop to off;
+
+DROP TABLE IF EXISTS alpha;
+DROP TABLE IF EXISTS theta;
+
+CREATE TABLE alpha (i int, j int);
+CREATE TABLE theta (i int, j char(10000000));
+
+INSERT INTO alpha values (1, 1), (2, 2);
+INSERT INTO theta values (1, 'f'), (2, 'g');
+
+SELECT *
+FROM gp_dist_random('alpha') FULL OUTER JOIN gp_dist_random('theta')
+  ON (alpha.i = theta.i)
+WHERE (alpha.j IS NULL or theta.j IS NULL);
+
+reset enable_hashjoin;
+reset enable_mergejoin;
+reset enable_nestloop;
+
+--
 -- Predicate propagation over equality conditions
 --
 
@@ -127,5 +157,18 @@ select enable_xform('CXformLeftAntiSemiJoinNotIn2HashJoinNotIn');
 select enable_xform('CXformLeftOuterJoin2HashJoin');
 select enable_xform('CXformLeftSemiJoin2HashJoin');
 
+-- In case of Left Anti Semi Join, if the left rel is empty a dummy join
+-- should be created
+drop table if exists foo;
+drop table if exists bar;
+create table foo (a int, b int) distributed randomly;
+create table bar (c int, d int) distributed randomly;
+insert into foo select generate_series(1,10);
+insert into bar select generate_series(1,10);
+
+explain select a from foo where a<1 and a>1 and not exists (select c from bar where c=a);
+select a from foo where a<1 and a>1 and not exists (select c from bar where c=a);
+
+-- Cleanup
 set client_min_messages='warning'; -- silence drop-cascade NOTICEs
 drop schema pred cascade;

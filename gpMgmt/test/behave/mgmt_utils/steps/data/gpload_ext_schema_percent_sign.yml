@@ -1,0 +1,22 @@
+VERSION: 1.0.0.1
+DATABASE: testdb 
+
+GPLOAD:
+  INPUT:
+    - SOURCE:
+        PORT_RANGE: [20000, 30000]
+        FILE:
+          - test/behave/mgmt_utils/steps/data/gpload_reuse_ext.csv 
+    - COLUMNS:
+        - id: int
+        - msg: text 
+    - FORMAT: csv 
+    - QUOTE: '"'
+  EXTERNAL:
+    - SCHEMA: '%' 
+  OUTPUT:
+    - TABLE: gpload_ext_schema.tbl1
+    - MODE: insert 
+
+  PRELOAD:
+    - REUSE_TABLES: true 

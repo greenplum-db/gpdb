@@ -66,7 +66,7 @@ select * from h1 where a > 5 and a < 10 order by a,b;
 select relname,relstorage,relkind,reloptions from pg_class
 	where relkind='r' and relnamespace=2200 order by relname;
 select relid::regclass, blocksize, compresstype,
-	compresslevel, columnstore from pg_appendonly order by 1;
+	compresslevel, columnstore, checksum from pg_appendonly order by 1;
 
 \c dsp2
 set gp_default_storage_options=
@@ -104,7 +104,35 @@ select * from t3 order by 1;
 select relname,relstorage,relkind,reloptions from pg_class
 	where relname in ('t1', 't2', 't3') order by 1;
 select relid::regclass, blocksize, compresstype,
-	compresslevel, columnstore from pg_appendonly order by 1;
+	compresslevel, columnstore, checksum from pg_appendonly order by 1;
+
+-- The GUC has checksum=false. Test that you can still turn it in WITH, and
+-- that it affects partitions and subpartitions, too.
+Create table alter_part_tab1 (id SERIAL,a1 int ,a2 char(5) ,a3 text )
+WITH (appendonly=true, orientation=column, checksum=true,compresstype=zlib)
+partition by list(a2) subpartition by range(a1)
+subpartition template
+  (default subpartition subothers,
+   subpartition sp1 start(1) end(9) with (appendonly=true,orientation=column,checksum=true,compresstype=rle_type),
+   subpartition sp2 start(11) end(20) with(appendonly=true,orientation=column,checksum=true,compresstype=none))
+(partition p1 values('val1'),
+ partition p2 values('val2'));
+
+Insert into alter_part_tab1(a1,a2,a3)
+  select g, 'val1', 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.' from generate_series(1,10) g;
+Insert into alter_part_tab1(a1,a2,a3)
+  select g, 'val1', 'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.' from generate_series(11, 20) g;
+select count(*) from alter_part_tab1;
+
+-- Make sure that adding a column doesn't affect checksums.
+alter table alter_part_tab1 add column a4 numeric default 5.5;
+
+-- Check that it works for ADD PARTITION, too.
+ALTER TABLE alter_part_tab1 ADD partition p31 values(1) WITH (appendonly=true, orientation=column, checksum=true,compresstype=zlib);
+
+SELECT relname, checksum from pg_appendonly ao, pg_class c where ao.relid = c.oid and relname like 'alter_part_tab1%';
+
+drop table alter_part_tab1;
 
 -- attribute encoding tests for column oriented tables
 set gp_default_storage_options=

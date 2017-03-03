@@ -94,7 +94,7 @@ typedef struct fspc_agg_state
 } fspc_agg_state;
 
 #define FSPC_CHECKPOINT_BYTES(count) \
-    (SIZEOF_VARSTRUCT(count, fspc_agg_state, maps))
+	(offsetof(fspc_agg_state, maps) + sizeof(fspc_map) * (count))
 
 typedef struct tspc_agg_state
 {
@@ -107,7 +107,7 @@ typedef struct tspc_agg_state
 } tspc_agg_state;
 
 #define TSPC_CHECKPOINT_BYTES(count) \
-    (SIZEOF_VARSTRUCT(count, tspc_agg_state, maps))
+	(offsetof(tspc_agg_state, maps) + sizeof(tspc_map) * (count))
 
 typedef struct dbdir_agg_state
 {
@@ -117,10 +117,10 @@ typedef struct dbdir_agg_state
 		int64 dummy;
 	};
 	dbdir_map maps[0]; /* variable length */
-}dbdir_agg_state;
+} dbdir_agg_state;
 
 #define DBDIR_CHECKPOINT_BYTES(count) \
-    (SIZEOF_VARSTRUCT(count, dbdir_agg_state, maps))
+	(offsetof(dbdir_agg_state, maps) + sizeof(dbdir_map) * (count))
 
 
 extern void mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);

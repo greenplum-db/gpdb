@@ -1,0 +1,26 @@
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml HAWQ 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description test2: Constant tuple Inserts
+-- start_ignore
+SET gp_optimizer=on;SET gp_log_optimizer=on;
+SET
+SET
+-- end_ignore
+SELECT COUNT(*) FROM dml_co_r;
+ count 
+-------
+   113
+(1 row)
+
+INSERT INTO dml_co_r values(NULL);
+INSERT 0 1
+SELECT COUNT(*) FROM dml_co_r;
+ count 
+-------
+   114
+(1 row)
+

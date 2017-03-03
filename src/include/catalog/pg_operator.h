@@ -838,10 +838,10 @@ DATA(insert OID = 2319 ( "~<>~" PGNSP PGUID b f f 25 25 16 2319 2316 textne neqs
 
 DATA(insert OID = 2326 ( "~<~"	PGNSP PGUID b f f 1042 1042 16 2330 2329 bpchar_pattern_lt scalarltsel scalarltjoinsel ));
 DATA(insert OID = 2327 ( "~<=~" PGNSP PGUID b f f 1042 1042 16 2329 2330 bpchar_pattern_le scalarltsel scalarltjoinsel ));
-DATA(insert OID = 7076 ( "~=~"	PGNSP PGUID b t t 1042 1042 16 7076 2331 bpchar_pattern_eq eqsel eqjoinsel ));
+DATA(insert OID = 2328 ( "~=~"	PGNSP PGUID b t t 1042 1042 16 2328 2331 bpchar_pattern_eq eqsel eqjoinsel ));
 DATA(insert OID = 2329 ( "~>=~" PGNSP PGUID b f f 1042 1042 16 2327 2326 bpchar_pattern_ge scalargtsel scalargtjoinsel ));
 DATA(insert OID = 2330 ( "~>~"	PGNSP PGUID b f f 1042 1042 16 2326 2327 bpchar_pattern_gt scalargtsel scalargtjoinsel ));
-DATA(insert OID = 2331 ( "~<>~" PGNSP PGUID b f f 1042 1042 16 2331 7076 bpchar_pattern_ne neqsel neqjoinsel ));
+DATA(insert OID = 2331 ( "~<>~" PGNSP PGUID b f f 1042 1042 16 2331 2328 bpchar_pattern_ne neqsel neqjoinsel ));
 
 DATA(insert OID = 2332 ( "~<~"	PGNSP PGUID b f f 19 19 16 2336 2335 name_pattern_lt scalarltsel scalarltjoinsel ));
 DATA(insert OID = 2333 ( "~<=~" PGNSP PGUID b f f 19 19 16 2335 2336 name_pattern_le scalarltsel scalarltjoinsel ));

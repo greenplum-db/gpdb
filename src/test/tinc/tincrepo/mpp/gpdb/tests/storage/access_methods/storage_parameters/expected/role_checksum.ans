@@ -22,7 +22,7 @@ Alter role dsp_role3 set gp_default_storage_options="appendonly=false";
 ALTER ROLE
 -- GUC with invalid value
 Alter role dsp_role4 set  gp_default_storage_options="appendonly=true,checksum=xxx";
-psql:/path/sql_file:1: ERROR:  invalid bool value "xxx" for storage option "checksum" (reloptions.c:119)
+psql:/path/sql_file:1: ERROR:  invalid bool value "xxx" for storage option "checksum"
 -- Guc without appenodnly=true
 Alter role dsp_role4 set gp_default_storage_options="checksum=true";
 ALTER ROLE

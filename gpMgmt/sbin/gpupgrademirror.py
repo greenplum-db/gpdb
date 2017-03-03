@@ -206,6 +206,7 @@ def StartupPrimaries(gparray):
          # Wait for the segments to finish
          try:
              pool.join()
+             pool.haltWork()
          except:
              pool.haltWork()
              pool.joinWorkers()
@@ -261,6 +262,7 @@ def ShutdownPrimaries(gparray):
          # Wait for the segments to finish                                                                                                                
          try:
              pool.join()
+             pool.haltWork()
          except:
              pool.haltWork()
              pool.joinWorkers()

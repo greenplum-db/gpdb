@@ -264,6 +264,9 @@ class GPExpandTestCase(MPPTestCase, ScenarioTestCase):
         # Doing this in setUp to not impact test construction.
         self.hosts = get_gpexpand_hosts()
 
+        mdd = os.path.join(self.testcase_master_dir, 'gpseg-1')
+        os.environ["MASTER_DATA_DIRECTORY"] = mdd
+
         #initial config has master on HOST1 and segments on HOST2 and HOST3.
         #If we choose to add only segments ie self.number_of_expansion_hosts == 0, in the interview process we say use HOST1 and HOST2
         #if we choose to add expansion hosts ,ie self.number_of_expansion_hosts == 2, in the interview process we say use HOST3 and HOST4
@@ -277,9 +280,6 @@ class GPExpandTestCase(MPPTestCase, ScenarioTestCase):
             self._do_gpinitstandby()
         if self.use_filespaces:
             tinctest.logger.info("Setting filespaces")
-            mdd = os.path.join(self.testcase_master_dir, 'gpseg-1')
-            self.org_mdd = os.environ.get("MASTER_DATA_DIRECTORY")
-            os.environ["MASTER_DATA_DIRECTORY"]=mdd
             gpfs=Gpfilespace()
             gpfs.create_filespace('expand_filespace')
 
@@ -563,6 +563,7 @@ class GPExpandTestCase(MPPTestCase, ScenarioTestCase):
                                               "use_parallel_expansion": self.use_parallel_expansion,
                                               "number_of_parallel_table_redistributed": self.number_of_parallel_table_redistributed, 
                                               "dbname": os.environ.get('PGDATABASE'),
+                                              "output_dir": self.testcase_out_dir,
                                               "validate": True}))
                 run_tests_in_parallel.append(('%s.scenarios.run_gpexpand.GpExpandTests.check_number_of_parallel_tables_expanded' %self.package_name,
                                              {"number_of_parallel_table_redistributed": self.number_of_parallel_table_redistributed}))
@@ -588,7 +589,17 @@ class GPExpandTestCase(MPPTestCase, ScenarioTestCase):
 
         self.test_case_scenario.append(['%s.scenarios.run_gpexpand.GpExpandTests.mirror_and_catalog_validation' %self.package_name], serial=True)
 
+
 class GpExpandTests(GPExpandTestCase):
+    """
+        Regarding tags below, the "part1" and "part2" tags below split the test cases
+        into two groups based on average test duration,
+        The two groups run in parallel to reduce the overall runtime of the suite.
+        If you add additional tests, attempt to keep the groups relatively even in total duration.
+        Always add a tag for either "part1" or "part2" so that the test will be targeted by the
+        pulse "build stage" property override for variable "BLDWRAP_TINC_ARGS" found in
+        http://pulse-cloud.gopivotal.com/admin/projects/GPDB-gpexpand-parallel/
+    """
 
     def test_expand_no_segments_two_hosts(self):
         """
@@ -597,6 +608,7 @@ class GpExpandTests(GPExpandTestCase):
         @number_of_expansion_hosts 2
         @mirror_enabled true
         @use_interview true
+        @tags part1
         """
         self.construct_expansion_scenario()
 
@@ -607,6 +619,7 @@ class GpExpandTests(GPExpandTestCase):
         @number_of_expansion_segments 1
         @mirror_enabled true
         @use_interview true
+        @tags part1
         """
         self.construct_expansion_scenario()
 
@@ -618,6 +631,7 @@ class GpExpandTests(GPExpandTestCase):
         @number_of_expansion_segments 1
         @mirror_enabled true
         @use_interview true
+        @tags part1
         """
         self.construct_expansion_scenario()
 
@@ -631,6 +645,7 @@ class GpExpandTests(GPExpandTestCase):
         @use_parallel_expansion true
         @number_of_parallel_table_redistributed 4
         @use_filespaces true
+        @tags part2
         """
         self.construct_expansion_scenario()
 
@@ -644,6 +659,7 @@ class GpExpandTests(GPExpandTestCase):
         @use_interview true
         @ranks_enabled true
         @use_host_file true
+        @tags part2
         """
         self.construct_expansion_scenario()
 
@@ -655,6 +671,7 @@ class GpExpandTests(GPExpandTestCase):
         @mirror_enabled true
         @use_interview true
         @duration_enabled true
+        @tags part2
         """
         self.construct_expansion_scenario()
 
@@ -667,6 +684,7 @@ class GpExpandTests(GPExpandTestCase):
         @use_interview true
         @use_end_time true
         @standby_enabled True
+        @tags part2
         """
         self.construct_expansion_scenario()
 

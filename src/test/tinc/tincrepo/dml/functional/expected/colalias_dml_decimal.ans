@@ -1,0 +1,56 @@
+DROP TABLE IF EXISTS colalias_dml_decimal;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/colalias_dml_decimal_opt.sql:14: NOTICE:  table "colalias_dml_decimal" does not exist, skipping
+DROP TABLE
+CREATE TABLE colalias_dml_decimal
+(
+    col1 decimal DEFAULT 1.00,
+    col2 decimal,
+    col3 char,
+    col4 decimal,
+    col5 decimal
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def 
+);
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/colalias_dml_decimal_opt.sql:27: NOTICE:  CREATE TABLE will create partition "colalias_dml_decimal_1_prt_def" for table "colalias_dml_decimal"
+CREATE TABLE
+DROP TABLE IF EXISTS colalias_dml_decimal_candidate;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/colalias_dml_decimal_opt.sql:29: NOTICE:  table "colalias_dml_decimal_candidate" does not exist, skipping
+DROP TABLE
+CREATE TABLE colalias_dml_decimal_candidate
+(
+    col1 decimal DEFAULT 1.00,
+    col2 decimal,
+    col3 char,
+    col4 decimal,
+    col5 decimal
+) DISTRIBUTED by (col2);
+CREATE TABLE
+INSERT INTO colalias_dml_decimal_candidate VALUES(2.00,1.00,'a',2.00,1.00);
+INSERT 0 1
+INSERT INTO colalias_dml_decimal(col2,col1,col3,col5,col4) SELECT col1,col2,col3,col5,col4 FROM (SELECT col1,col1 as col2,col3,col5 as col4,col5  FROM colalias_dml_decimal_candidate)foo;
+INSERT 0 1
+SELECT * FROM colalias_dml_decimal ORDER BY 1,2,3,4;
+ col1 | col2 | col3 | col4 | col5 
+------+------+------+------+------
+ 2.00 | 2.00 | a    | 1.00 | 1.00
+(1 row)
+
+UPDATE colalias_dml_decimal SET col1 = (select col2 as col1 FROM colalias_dml_decimal_candidate);
+UPDATE 1
+SELECT * FROM colalias_dml_decimal ORDER BY 1,2,3,4;
+ col1 | col2 | col3 | col4 | col5 
+------+------+------+------+------
+ 1.00 | 2.00 | a    | 1.00 | 1.00
+(1 row)
+
+UPDATE colalias_dml_decimal SET col1 =colalias_dml_decimal_candidate.col2 FROM colalias_dml_decimal_candidate;
+UPDATE 1
+SELECT * FROM colalias_dml_decimal ORDER BY 1,2,3,4;
+ col1 | col2 | col3 | col4 | col5 
+------+------+------+------+------
+ 1.00 | 2.00 | a    | 1.00 | 1.00
+(1 row)
+

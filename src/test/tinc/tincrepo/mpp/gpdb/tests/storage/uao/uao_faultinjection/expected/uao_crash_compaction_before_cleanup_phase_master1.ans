@@ -1,5 +1,5 @@
 VACUUM foo;
-PANIC:  fault triggered, fault name:'compaction_before_cleanup_phase' fault type:'panic' (faultinjector.c:xxx)
+PANIC:  fault triggered, fault name:'compaction_before_cleanup_phase' fault type:'panic'
 server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.

@@ -261,7 +261,7 @@ select count(*) from sync1_ao_alter_part_rn8;
 -- Add default Partition
 --
 alter table sync1_ao_alter_part_rn1 add default partition default_part;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_ao_alter_part_rn1_1_prt_default_part" for table "sync1_ao_alter_part_rn1"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_ao_alter_part_rn1_1_prt_default_part_2_prt_1" for table "sync1_ao_alter_part_rn1_1_prt_default_part"
 ALTER TABLE

@@ -13,9 +13,10 @@
  */
 
 #include "postgres.h"
-#include "utils/gp_atomic.h"
+
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
+#include "port/atomics.h"
 #include "utils/faultinjection.h"
 #include "utils/vmem_tracker.h"
 #include "utils/session_state.h"
@@ -514,7 +515,7 @@ VmemTracker_ReserveVmem(int64 newlyRequestedBytes)
 		if (vmem_process_interrupt && InterruptPending)
 		{
 			/* ProcessInterrupts should check for InterruptHoldoffCount and CritSectionCount */
-			ProcessInterrupts();
+			ProcessInterrupts(__FILE__, __LINE__);
 		}
 
 		/*

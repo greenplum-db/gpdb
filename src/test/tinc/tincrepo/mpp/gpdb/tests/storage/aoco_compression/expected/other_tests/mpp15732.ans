@@ -54,8 +54,8 @@ where a.attrelid = c.oid
   and c.relnamespace = n.oid
   and c.relname = 'col_storage_params_table'
 order by 1,2,3,4;
- nspname | relname  | attnum |   array_to_rows   
----------+----------+--------+-------------------
+ nspname |         relname          | attnum |   array_to_rows   
+---------+--------------------------+--------+-------------------
  public  | col_storage_params_table |      1 | blocksize=32768
  public  | col_storage_params_table |      1 | compresslevel=9
  public  | col_storage_params_table |      1 | compresstype=zlib

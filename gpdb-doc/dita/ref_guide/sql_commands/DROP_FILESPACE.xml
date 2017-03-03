@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1"><title id="cu20941">DROP FILESPACE</title><body><p id="sql_command_desc">Removes a filespace.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP FILESPACE [IF EXISTS] <varname>filespacename</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP FILESPACE</codeph> removes a filespace definition and its
+system-generated data directories from the system. </p><p>A filespace can only be dropped by its owner or a superuser. The filespace
+must be empty of all tablespace objects before it can be dropped. It
+is possible that tablespaces in other databases may still be using a
+filespace even if no tablespaces in the current database are using the
+filespace. </p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>IF EXISTS</pt><pd>Do not throw an error if the filespace does not exist. A notice is
+issued in this case.</pd></plentry><plentry><pt><varname>tablespacename</varname></pt><pd>The name of the filespace to remove.</pd></plentry></parml></section><section id="section5"><title>Examples</title><p>Remove the tablespace <codeph>myfs</codeph>: </p><codeblock>DROP FILESPACE myfs;</codeblock></section><section id="section6"><title>Compatibility</title><p>There is no <codeph>DROP FILESPACE</codeph> statement in the SQL standard
+or in PostgreSQL.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="ALTER_FILESPACE.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="./DROP_TABLESPACE.xml#topic1" type="topic" format="dita"/></codeph>,
+          <codeph>gpfilespace</codeph> in the <i>Greenplum Database Utility Guide</i></p></section></body></topic>

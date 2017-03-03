@@ -1,0 +1,2105 @@
+set search_path='qp_funcs_in_contexts';
+
+-- @description function_in_select_column_0.sql
+SELECT func1_nosql_vol(a) FROM foo order by 1; 
+
+-- @description function_in_select_column_1.sql
+SELECT func1_nosql_stb(a) FROM foo order by 1; 
+
+-- @description function_in_select_column_2.sql
+SELECT func1_nosql_imm(a) FROM foo order by 1; 
+
+-- @description function_in_select_column_3.sql
+SELECT func1_sql_int_vol(a) FROM foo order by 1; 
+
+-- @description function_in_select_column_4.sql
+SELECT func1_sql_int_stb(a) FROM foo order by 1; 
+
+-- @description function_in_select_column_5.sql
+SELECT func1_sql_int_imm(a) FROM foo order by 1; 
+
+-- @description function_in_select_column_6.sql
+SELECT func1_sql_setint_vol(a) FROM foo order by 1; 
+
+-- @description function_in_select_column_7.sql
+SELECT func1_sql_setint_stb(a) FROM foo order by 1; 
+
+-- @description function_in_select_column_8.sql
+SELECT func1_sql_setint_imm(a) FROM foo order by 1; 
+
+-- @description function_in_select_column_9.sql
+SELECT func1_read_int_sql_vol(a) FROM foo order by 1; 
+
+-- @description function_in_select_column_10.sql
+SELECT func1_read_int_sql_stb(a) FROM foo order by 1; 
+
+-- @description function_in_select_column_11.sql
+SELECT func1_read_setint_sql_vol(a) FROM foo order by 1; 
+
+-- @description function_in_select_column_12.sql
+SELECT func1_read_setint_sql_stb(a) FROM foo order by 1; 
+
+-- @description function_in_select_column_13.sql
+begin;
+SELECT func1_mod_int_vol(a) FROM foo order by 1; 
+rollback;
+
+-- @description function_in_select_column_14.sql
+begin;
+SELECT func1_mod_int_stb(a) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_15.sql
+begin;
+SELECT func1_mod_setint_vol(a) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_16.sql
+begin;
+SELECT func1_mod_setint_stb(a) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_0.sql
+SELECT func1_nosql_vol(func2_nosql_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_1.sql
+SELECT func1_nosql_vol(func2_nosql_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_2.sql
+SELECT func1_nosql_vol(func2_nosql_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_3.sql
+SELECT func1_nosql_vol(func2_sql_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_4.sql
+SELECT func1_nosql_vol(func2_sql_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_5.sql
+SELECT func1_nosql_vol(func2_sql_int_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_6.sql
+SELECT func1_nosql_vol(func2_read_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_7.sql
+SELECT func1_nosql_vol(func2_read_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_8.sql
+begin;
+SELECT func1_nosql_vol(func2_mod_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_9.sql
+begin;
+SELECT func1_nosql_vol(func2_mod_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_10.sql
+SELECT func1_nosql_stb(func2_nosql_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_11.sql
+SELECT func1_nosql_stb(func2_nosql_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_12.sql
+SELECT func1_nosql_stb(func2_nosql_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_13.sql
+SELECT func1_nosql_stb(func2_sql_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_14.sql
+SELECT func1_nosql_stb(func2_sql_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_15.sql
+SELECT func1_nosql_stb(func2_sql_int_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_16.sql
+SELECT func1_nosql_stb(func2_read_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_17.sql
+SELECT func1_nosql_stb(func2_read_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_18.sql
+begin;
+SELECT func1_nosql_stb(func2_mod_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_19.sql
+begin;
+SELECT func1_nosql_stb(func2_mod_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_20.sql
+SELECT func1_nosql_imm(func2_nosql_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_21.sql
+SELECT func1_nosql_imm(func2_nosql_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_22.sql
+SELECT func1_nosql_imm(func2_nosql_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_23.sql
+SELECT func1_nosql_imm(func2_sql_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_24.sql
+SELECT func1_nosql_imm(func2_sql_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_25.sql
+SELECT func1_nosql_imm(func2_sql_int_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_26.sql
+SELECT func1_nosql_imm(func2_read_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_27.sql
+SELECT func1_nosql_imm(func2_read_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_28.sql
+begin;
+SELECT func1_nosql_imm(func2_mod_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_29.sql
+begin;
+SELECT func1_nosql_imm(func2_mod_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_30.sql
+SELECT func1_sql_int_vol(func2_nosql_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_31.sql
+SELECT func1_sql_int_vol(func2_nosql_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_32.sql
+SELECT func1_sql_int_vol(func2_nosql_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_33.sql
+SELECT func1_sql_int_vol(func2_sql_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_34.sql
+SELECT func1_sql_int_vol(func2_sql_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_35.sql
+SELECT func1_sql_int_vol(func2_sql_int_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_36.sql
+SELECT func1_sql_int_vol(func2_read_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_37.sql
+SELECT func1_sql_int_vol(func2_read_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_38.sql
+begin;
+SELECT func1_sql_int_vol(func2_mod_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_39.sql
+begin;
+SELECT func1_sql_int_vol(func2_mod_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_40.sql
+SELECT func1_sql_int_stb(func2_nosql_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_41.sql
+SELECT func1_sql_int_stb(func2_nosql_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_42.sql
+SELECT func1_sql_int_stb(func2_nosql_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_43.sql
+SELECT func1_sql_int_stb(func2_sql_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_44.sql
+SELECT func1_sql_int_stb(func2_sql_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_45.sql
+SELECT func1_sql_int_stb(func2_sql_int_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_46.sql
+SELECT func1_sql_int_stb(func2_read_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_47.sql
+SELECT func1_sql_int_stb(func2_read_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_48.sql
+begin;
+SELECT func1_sql_int_stb(func2_mod_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_49.sql
+begin;
+SELECT func1_sql_int_stb(func2_mod_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_50.sql
+SELECT func1_sql_int_imm(func2_nosql_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_51.sql
+SELECT func1_sql_int_imm(func2_nosql_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_52.sql
+SELECT func1_sql_int_imm(func2_nosql_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_53.sql
+SELECT func1_sql_int_imm(func2_sql_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_54.sql
+SELECT func1_sql_int_imm(func2_sql_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_55.sql
+SELECT func1_sql_int_imm(func2_sql_int_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_56.sql
+SELECT func1_sql_int_imm(func2_read_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_57.sql
+SELECT func1_sql_int_imm(func2_read_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_58.sql
+begin;
+SELECT func1_sql_int_imm(func2_mod_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_59.sql
+begin;
+SELECT func1_sql_int_imm(func2_mod_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_60.sql
+SELECT func1_sql_setint_vol(func2_nosql_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_61.sql
+SELECT func1_sql_setint_vol(func2_nosql_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_62.sql
+SELECT func1_sql_setint_vol(func2_nosql_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_63.sql
+SELECT func1_sql_setint_vol(func2_sql_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_64.sql
+SELECT func1_sql_setint_vol(func2_sql_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_65.sql
+SELECT func1_sql_setint_vol(func2_sql_int_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_66.sql
+SELECT func1_sql_setint_vol(func2_read_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_67.sql
+SELECT func1_sql_setint_vol(func2_read_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_68.sql
+begin;
+SELECT func1_sql_setint_vol(func2_mod_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_69.sql
+begin;
+SELECT func1_sql_setint_vol(func2_mod_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_70.sql
+SELECT func1_sql_setint_stb(func2_nosql_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_71.sql
+SELECT func1_sql_setint_stb(func2_nosql_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_72.sql
+SELECT func1_sql_setint_stb(func2_nosql_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_73.sql
+SELECT func1_sql_setint_stb(func2_sql_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_74.sql
+SELECT func1_sql_setint_stb(func2_sql_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_75.sql
+SELECT func1_sql_setint_stb(func2_sql_int_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_76.sql
+SELECT func1_sql_setint_stb(func2_read_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_77.sql
+SELECT func1_sql_setint_stb(func2_read_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_78.sql
+begin;
+SELECT func1_sql_setint_stb(func2_mod_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_79.sql
+begin;
+SELECT func1_sql_setint_stb(func2_mod_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_80.sql
+SELECT func1_sql_setint_imm(func2_nosql_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_81.sql
+SELECT func1_sql_setint_imm(func2_nosql_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_82.sql
+SELECT func1_sql_setint_imm(func2_nosql_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_83.sql
+SELECT func1_sql_setint_imm(func2_sql_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_84.sql
+SELECT func1_sql_setint_imm(func2_sql_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_85.sql
+SELECT func1_sql_setint_imm(func2_sql_int_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_86.sql
+SELECT func1_sql_setint_imm(func2_read_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_87.sql
+SELECT func1_sql_setint_imm(func2_read_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_88.sql
+begin;
+SELECT func1_sql_setint_imm(func2_mod_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_89.sql
+begin;
+SELECT func1_sql_setint_imm(func2_mod_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_90.sql
+SELECT func1_read_int_sql_vol(func2_nosql_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_91.sql
+SELECT func1_read_int_sql_vol(func2_nosql_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_92.sql
+SELECT func1_read_int_sql_vol(func2_nosql_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_93.sql
+SELECT func1_read_int_sql_vol(func2_sql_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_94.sql
+SELECT func1_read_int_sql_vol(func2_sql_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_95.sql
+SELECT func1_read_int_sql_vol(func2_sql_int_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_96.sql
+SELECT func1_read_int_sql_vol(func2_read_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_97.sql
+SELECT func1_read_int_sql_vol(func2_read_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_98.sql
+begin;
+SELECT func1_read_int_sql_vol(func2_mod_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_99.sql
+begin;
+SELECT func1_read_int_sql_vol(func2_mod_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_100.sql
+SELECT func1_read_int_sql_stb(func2_nosql_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_101.sql
+SELECT func1_read_int_sql_stb(func2_nosql_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_102.sql
+SELECT func1_read_int_sql_stb(func2_nosql_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_103.sql
+SELECT func1_read_int_sql_stb(func2_sql_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_104.sql
+SELECT func1_read_int_sql_stb(func2_sql_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_105.sql
+SELECT func1_read_int_sql_stb(func2_sql_int_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_106.sql
+SELECT func1_read_int_sql_stb(func2_read_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_107.sql
+SELECT func1_read_int_sql_stb(func2_read_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_108.sql
+begin;
+SELECT func1_read_int_sql_stb(func2_mod_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_109.sql
+begin;
+SELECT func1_read_int_sql_stb(func2_mod_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_110.sql
+SELECT func1_read_setint_sql_vol(func2_nosql_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_111.sql
+SELECT func1_read_setint_sql_vol(func2_nosql_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_112.sql
+SELECT func1_read_setint_sql_vol(func2_nosql_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_113.sql
+SELECT func1_read_setint_sql_vol(func2_sql_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_114.sql
+SELECT func1_read_setint_sql_vol(func2_sql_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_115.sql
+SELECT func1_read_setint_sql_vol(func2_sql_int_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_116.sql
+SELECT func1_read_setint_sql_vol(func2_read_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_117.sql
+SELECT func1_read_setint_sql_vol(func2_read_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_118.sql
+begin;
+SELECT func1_read_setint_sql_vol(func2_mod_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_119.sql
+begin;
+SELECT func1_read_setint_sql_vol(func2_mod_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_120.sql
+SELECT func1_read_setint_sql_stb(func2_nosql_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_121.sql
+SELECT func1_read_setint_sql_stb(func2_nosql_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_122.sql
+SELECT func1_read_setint_sql_stb(func2_nosql_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_123.sql
+SELECT func1_read_setint_sql_stb(func2_sql_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_124.sql
+SELECT func1_read_setint_sql_stb(func2_sql_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_125.sql
+SELECT func1_read_setint_sql_stb(func2_sql_int_imm(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_126.sql
+SELECT func1_read_setint_sql_stb(func2_read_int_vol(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_127.sql
+SELECT func1_read_setint_sql_stb(func2_read_int_stb(a)) FROM foo order by 1; 
+
+-- @description function_in_select_column_withfunc2_128.sql
+begin;
+SELECT func1_read_setint_sql_stb(func2_mod_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_129.sql
+begin;
+SELECT func1_read_setint_sql_stb(func2_mod_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_130.sql
+begin;
+SELECT func1_mod_int_vol(func2_nosql_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_131.sql
+begin;
+SELECT func1_mod_int_vol(func2_nosql_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_132.sql
+begin;
+SELECT func1_mod_int_vol(func2_nosql_imm(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_133.sql
+begin;
+SELECT func1_mod_int_vol(func2_sql_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_134.sql
+begin;
+SELECT func1_mod_int_vol(func2_sql_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_135.sql
+begin;
+SELECT func1_mod_int_vol(func2_sql_int_imm(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_136.sql
+begin;
+SELECT func1_mod_int_vol(func2_read_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_137.sql
+begin;
+SELECT func1_mod_int_vol(func2_read_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_138.sql
+begin;
+SELECT func1_mod_int_vol(func2_mod_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_139.sql
+begin;
+SELECT func1_mod_int_vol(func2_mod_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_140.sql
+begin;
+SELECT func1_mod_int_stb(func2_nosql_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_141.sql
+begin;
+SELECT func1_mod_int_stb(func2_nosql_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_142.sql
+begin;
+SELECT func1_mod_int_stb(func2_nosql_imm(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_143.sql
+begin;
+SELECT func1_mod_int_stb(func2_sql_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_144.sql
+begin;
+SELECT func1_mod_int_stb(func2_sql_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_145.sql
+begin;
+SELECT func1_mod_int_stb(func2_sql_int_imm(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_146.sql
+begin;
+SELECT func1_mod_int_stb(func2_read_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_147.sql
+begin;
+SELECT func1_mod_int_stb(func2_read_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_148.sql
+begin;
+SELECT func1_mod_int_stb(func2_mod_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_149.sql
+begin;
+SELECT func1_mod_int_stb(func2_mod_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_150.sql
+begin;
+SELECT func1_mod_setint_vol(func2_nosql_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_151.sql
+begin;
+SELECT func1_mod_setint_vol(func2_nosql_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_152.sql
+begin;
+SELECT func1_mod_setint_vol(func2_nosql_imm(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_153.sql
+begin;
+SELECT func1_mod_setint_vol(func2_sql_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_154.sql
+begin;
+SELECT func1_mod_setint_vol(func2_sql_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_155.sql
+begin;
+SELECT func1_mod_setint_vol(func2_sql_int_imm(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_156.sql
+begin;
+SELECT func1_mod_setint_vol(func2_read_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_157.sql
+begin;
+SELECT func1_mod_setint_vol(func2_read_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_158.sql
+begin;
+SELECT func1_mod_setint_vol(func2_mod_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_159.sql
+begin;
+SELECT func1_mod_setint_vol(func2_mod_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_160.sql
+begin;
+SELECT func1_mod_setint_stb(func2_nosql_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_161.sql
+
+begin;
+SELECT func1_mod_setint_stb(func2_nosql_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_162.sql
+begin;
+SELECT func1_mod_setint_stb(func2_nosql_imm(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_163.sql
+begin;
+SELECT func1_mod_setint_stb(func2_sql_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_164.sql
+begin;
+SELECT func1_mod_setint_stb(func2_sql_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_165.sql
+begin;
+SELECT func1_mod_setint_stb(func2_sql_int_imm(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_166.sql
+begin;
+SELECT func1_mod_setint_stb(func2_read_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_167.sql
+begin;
+SELECT func1_mod_setint_stb(func2_read_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_168.sql
+begin;
+SELECT func1_mod_setint_stb(func2_mod_int_vol(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_column_withfunc2_169.sql
+begin;
+SELECT func1_mod_setint_stb(func2_mod_int_stb(a)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_0.sql
+SELECT func1_nosql_vol(5) FROM foo order by 1; 
+
+-- @description function_in_select_constant_1.sql
+SELECT func1_nosql_stb(5) FROM foo order by 1; 
+
+-- @description function_in_select_constant_2.sql
+SELECT func1_nosql_imm(5) FROM foo order by 1; 
+
+-- @description function_in_select_constant_3.sql
+SELECT func1_sql_int_vol(5) FROM foo order by 1; 
+
+-- @description function_in_select_constant_4.sql
+SELECT func1_sql_int_stb(5) FROM foo order by 1; 
+
+-- @description function_in_select_constant_5.sql
+SELECT func1_sql_int_imm(5) FROM foo order by 1; 
+
+-- @description function_in_select_constant_6.sql
+SELECT func1_sql_setint_vol(5) FROM foo order by 1; 
+
+-- @description function_in_select_constant_7.sql
+SELECT func1_sql_setint_stb(5) FROM foo order by 1; 
+
+-- @description function_in_select_constant_8.sql
+SELECT func1_sql_setint_imm(5) FROM foo order by 1; 
+
+-- @description function_in_select_constant_9.sql
+SELECT func1_read_int_sql_vol(5) FROM foo order by 1; 
+
+-- @description function_in_select_constant_10.sql
+SELECT func1_read_int_sql_stb(5) FROM foo order by 1; 
+
+-- @description function_in_select_constant_11.sql
+SELECT func1_read_setint_sql_vol(5) FROM foo order by 1; 
+
+-- @description function_in_select_constant_12.sql
+SELECT func1_read_setint_sql_stb(5) FROM foo order by 1; 
+
+-- @description function_in_select_constant_13.sql
+begin;
+SELECT func1_mod_int_vol(5) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_14.sql
+begin;
+SELECT func1_mod_int_stb(5) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_15.sql
+begin;
+SELECT func1_mod_setint_vol(5) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_16.sql
+begin;
+SELECT func1_mod_setint_stb(5) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_0.sql
+SELECT func1_nosql_vol(func2_nosql_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_1.sql
+SELECT func1_nosql_vol(func2_nosql_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_2.sql
+SELECT func1_nosql_vol(func2_nosql_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_3.sql
+SELECT func1_nosql_vol(func2_sql_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_4.sql
+SELECT func1_nosql_vol(func2_sql_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_5.sql
+SELECT func1_nosql_vol(func2_sql_int_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_6.sql
+SELECT func1_nosql_vol(func2_read_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_7.sql
+SELECT func1_nosql_vol(func2_read_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_8.sql
+begin;
+SELECT func1_nosql_vol(func2_mod_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_9.sql
+begin;
+SELECT func1_nosql_vol(func2_mod_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_10.sql
+SELECT func1_nosql_stb(func2_nosql_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_11.sql
+SELECT func1_nosql_stb(func2_nosql_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_12.sql
+SELECT func1_nosql_stb(func2_nosql_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_13.sql
+SELECT func1_nosql_stb(func2_sql_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_14.sql
+SELECT func1_nosql_stb(func2_sql_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_15.sql
+SELECT func1_nosql_stb(func2_sql_int_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_16.sql
+SELECT func1_nosql_stb(func2_read_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_17.sql
+SELECT func1_nosql_stb(func2_read_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_18.sql
+begin;
+SELECT func1_nosql_stb(func2_mod_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_19.sql
+begin;
+SELECT func1_nosql_stb(func2_mod_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_20.sql
+SELECT func1_nosql_imm(func2_nosql_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_21.sql
+SELECT func1_nosql_imm(func2_nosql_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_22.sql
+SELECT func1_nosql_imm(func2_nosql_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_23.sql
+SELECT func1_nosql_imm(func2_sql_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_24.sql
+SELECT func1_nosql_imm(func2_sql_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_25.sql
+SELECT func1_nosql_imm(func2_sql_int_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_26.sql
+SELECT func1_nosql_imm(func2_read_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_27.sql
+SELECT func1_nosql_imm(func2_read_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_28.sql
+begin;
+SELECT func1_nosql_imm(func2_mod_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_29.sql
+begin;
+SELECT func1_nosql_imm(func2_mod_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_30.sql
+SELECT func1_sql_int_vol(func2_nosql_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_31.sql
+SELECT func1_sql_int_vol(func2_nosql_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_32.sql
+SELECT func1_sql_int_vol(func2_nosql_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_33.sql
+SELECT func1_sql_int_vol(func2_sql_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_34.sql
+SELECT func1_sql_int_vol(func2_sql_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_35.sql
+SELECT func1_sql_int_vol(func2_sql_int_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_36.sql
+SELECT func1_sql_int_vol(func2_read_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_37.sql
+SELECT func1_sql_int_vol(func2_read_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_38.sql
+begin;
+SELECT func1_sql_int_vol(func2_mod_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_39.sql
+begin;
+SELECT func1_sql_int_vol(func2_mod_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_40.sql
+SELECT func1_sql_int_stb(func2_nosql_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_41.sql
+SELECT func1_sql_int_stb(func2_nosql_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_42.sql
+SELECT func1_sql_int_stb(func2_nosql_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_43.sql
+SELECT func1_sql_int_stb(func2_sql_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_44.sql
+SELECT func1_sql_int_stb(func2_sql_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_45.sql
+SELECT func1_sql_int_stb(func2_sql_int_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_46.sql
+SELECT func1_sql_int_stb(func2_read_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_47.sql
+SELECT func1_sql_int_stb(func2_read_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_48.sql
+begin;
+SELECT func1_sql_int_stb(func2_mod_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_49.sql
+begin;
+SELECT func1_sql_int_stb(func2_mod_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_50.sql
+SELECT func1_sql_int_imm(func2_nosql_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_51.sql
+SELECT func1_sql_int_imm(func2_nosql_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_52.sql
+SELECT func1_sql_int_imm(func2_nosql_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_53.sql
+SELECT func1_sql_int_imm(func2_sql_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_54.sql
+SELECT func1_sql_int_imm(func2_sql_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_55.sql
+SELECT func1_sql_int_imm(func2_sql_int_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_56.sql
+SELECT func1_sql_int_imm(func2_read_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_57.sql
+SELECT func1_sql_int_imm(func2_read_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_58.sql
+begin;
+SELECT func1_sql_int_imm(func2_mod_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_59.sql
+begin;
+SELECT func1_sql_int_imm(func2_mod_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_60.sql
+SELECT func1_sql_setint_vol(func2_nosql_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_61.sql
+SELECT func1_sql_setint_vol(func2_nosql_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_62.sql
+SELECT func1_sql_setint_vol(func2_nosql_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_63.sql
+SELECT func1_sql_setint_vol(func2_sql_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_64.sql
+SELECT func1_sql_setint_vol(func2_sql_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_65.sql
+SELECT func1_sql_setint_vol(func2_sql_int_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_66.sql
+SELECT func1_sql_setint_vol(func2_read_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_67.sql
+SELECT func1_sql_setint_vol(func2_read_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_68.sql
+begin;
+SELECT func1_sql_setint_vol(func2_mod_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_69.sql
+begin;
+SELECT func1_sql_setint_vol(func2_mod_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_70.sql
+SELECT func1_sql_setint_stb(func2_nosql_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_71.sql
+SELECT func1_sql_setint_stb(func2_nosql_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_72.sql
+SELECT func1_sql_setint_stb(func2_nosql_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_73.sql
+SELECT func1_sql_setint_stb(func2_sql_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_74.sql
+SELECT func1_sql_setint_stb(func2_sql_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_75.sql
+SELECT func1_sql_setint_stb(func2_sql_int_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_76.sql
+SELECT func1_sql_setint_stb(func2_read_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_77.sql
+SELECT func1_sql_setint_stb(func2_read_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_78.sql
+begin;
+SELECT func1_sql_setint_stb(func2_mod_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_79.sql
+begin;
+SELECT func1_sql_setint_stb(func2_mod_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_80.sql
+SELECT func1_sql_setint_imm(func2_nosql_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_81.sql
+SELECT func1_sql_setint_imm(func2_nosql_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_82.sql
+SELECT func1_sql_setint_imm(func2_nosql_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_83.sql
+SELECT func1_sql_setint_imm(func2_sql_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_84.sql
+SELECT func1_sql_setint_imm(func2_sql_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_85.sql
+SELECT func1_sql_setint_imm(func2_sql_int_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_86.sql
+SELECT func1_sql_setint_imm(func2_read_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_87.sql
+SELECT func1_sql_setint_imm(func2_read_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_88.sql
+begin;
+SELECT func1_sql_setint_imm(func2_mod_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_89.sql
+begin;
+SELECT func1_sql_setint_imm(func2_mod_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_90.sql
+SELECT func1_read_int_sql_vol(func2_nosql_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_91.sql
+SELECT func1_read_int_sql_vol(func2_nosql_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_92.sql
+SELECT func1_read_int_sql_vol(func2_nosql_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_93.sql
+SELECT func1_read_int_sql_vol(func2_sql_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_94.sql
+SELECT func1_read_int_sql_vol(func2_sql_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_95.sql
+SELECT func1_read_int_sql_vol(func2_sql_int_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_96.sql
+SELECT func1_read_int_sql_vol(func2_read_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_97.sql
+SELECT func1_read_int_sql_vol(func2_read_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_98.sql
+begin;
+SELECT func1_read_int_sql_vol(func2_mod_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_99.sql
+begin;
+SELECT func1_read_int_sql_vol(func2_mod_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_100.sql
+SELECT func1_read_int_sql_stb(func2_nosql_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_101.sql
+SELECT func1_read_int_sql_stb(func2_nosql_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_102.sql
+SELECT func1_read_int_sql_stb(func2_nosql_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_103.sql
+SELECT func1_read_int_sql_stb(func2_sql_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_104.sql
+SELECT func1_read_int_sql_stb(func2_sql_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_105.sql
+SELECT func1_read_int_sql_stb(func2_sql_int_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_106.sql
+SELECT func1_read_int_sql_stb(func2_read_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_107.sql
+SELECT func1_read_int_sql_stb(func2_read_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_108.sql
+begin;
+SELECT func1_read_int_sql_stb(func2_mod_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_109.sql
+begin;
+SELECT func1_read_int_sql_stb(func2_mod_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_110.sql
+SELECT func1_read_setint_sql_vol(func2_nosql_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_111.sql
+SELECT func1_read_setint_sql_vol(func2_nosql_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_112.sql
+SELECT func1_read_setint_sql_vol(func2_nosql_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_113.sql
+SELECT func1_read_setint_sql_vol(func2_sql_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_114.sql
+SELECT func1_read_setint_sql_vol(func2_sql_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_115.sql
+SELECT func1_read_setint_sql_vol(func2_sql_int_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_116.sql
+SELECT func1_read_setint_sql_vol(func2_read_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_117.sql
+SELECT func1_read_setint_sql_vol(func2_read_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_118.sql
+begin;
+SELECT func1_read_setint_sql_vol(func2_mod_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_119.sql
+begin;
+SELECT func1_read_setint_sql_vol(func2_mod_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_120.sql
+SELECT func1_read_setint_sql_stb(func2_nosql_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_121.sql
+SELECT func1_read_setint_sql_stb(func2_nosql_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_122.sql
+SELECT func1_read_setint_sql_stb(func2_nosql_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_123.sql
+SELECT func1_read_setint_sql_stb(func2_sql_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_124.sql
+SELECT func1_read_setint_sql_stb(func2_sql_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_125.sql
+SELECT func1_read_setint_sql_stb(func2_sql_int_imm(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_126.sql
+SELECT func1_read_setint_sql_stb(func2_read_int_vol(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_127.sql
+SELECT func1_read_setint_sql_stb(func2_read_int_stb(5)) FROM foo order by 1; 
+
+-- @description function_in_select_constant_withfunc2_128.sql
+begin;
+SELECT func1_read_setint_sql_stb(func2_mod_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_129.sql
+begin;
+SELECT func1_read_setint_sql_stb(func2_mod_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_130.sql
+begin;
+SELECT func1_mod_int_vol(func2_nosql_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_131.sql
+begin;
+SELECT func1_mod_int_vol(func2_nosql_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_132.sql
+begin;
+SELECT func1_mod_int_vol(func2_nosql_imm(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_133.sql
+begin;
+SELECT func1_mod_int_vol(func2_sql_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_134.sql
+begin;
+SELECT func1_mod_int_vol(func2_sql_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_135.sql
+begin;
+SELECT func1_mod_int_vol(func2_sql_int_imm(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_136.sql
+begin;
+SELECT func1_mod_int_vol(func2_read_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_137.sql
+begin;
+SELECT func1_mod_int_vol(func2_read_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_138.sql
+begin;
+SELECT func1_mod_int_vol(func2_mod_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_139.sql
+begin;
+SELECT func1_mod_int_vol(func2_mod_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_140.sql
+begin;
+SELECT func1_mod_int_stb(func2_nosql_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_141.sql
+begin;
+SELECT func1_mod_int_stb(func2_nosql_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_142.sql
+begin;
+SELECT func1_mod_int_stb(func2_nosql_imm(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_143.sql
+begin;
+SELECT func1_mod_int_stb(func2_sql_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_144.sql
+begin;
+SELECT func1_mod_int_stb(func2_sql_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_145.sql
+begin;
+SELECT func1_mod_int_stb(func2_sql_int_imm(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_146.sql
+begin;
+SELECT func1_mod_int_stb(func2_read_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_147.sql
+begin;
+SELECT func1_mod_int_stb(func2_read_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_148.sql
+begin;
+SELECT func1_mod_int_stb(func2_mod_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_149.sql
+begin;
+SELECT func1_mod_int_stb(func2_mod_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_150.sql
+begin;
+SELECT func1_mod_setint_vol(func2_nosql_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_151.sql
+begin;
+SELECT func1_mod_setint_vol(func2_nosql_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_152.sql
+begin;
+SELECT func1_mod_setint_vol(func2_nosql_imm(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_153.sql
+begin;
+SELECT func1_mod_setint_vol(func2_sql_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_154.sql
+begin;
+SELECT func1_mod_setint_vol(func2_sql_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_155.sql
+begin;
+SELECT func1_mod_setint_vol(func2_sql_int_imm(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_156.sql
+begin;
+SELECT func1_mod_setint_vol(func2_read_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_157.sql
+begin;
+SELECT func1_mod_setint_vol(func2_read_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_158.sql
+begin;
+SELECT func1_mod_setint_vol(func2_mod_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_159.sql
+begin;
+SELECT func1_mod_setint_vol(func2_mod_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_160.sql
+begin;
+SELECT func1_mod_setint_stb(func2_nosql_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_161.sql
+begin;
+SELECT func1_mod_setint_stb(func2_nosql_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_162.sql
+begin;
+SELECT func1_mod_setint_stb(func2_nosql_imm(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_163.sql
+begin;
+SELECT func1_mod_setint_stb(func2_sql_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_164.sql
+begin;
+SELECT func1_mod_setint_stb(func2_sql_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_165.sql
+begin;
+SELECT func1_mod_setint_stb(func2_sql_int_imm(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_166.sql
+begin;
+SELECT func1_mod_setint_stb(func2_read_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_167.sql
+begin;
+SELECT func1_mod_setint_stb(func2_read_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_168.sql
+begin;
+SELECT func1_mod_setint_stb(func2_mod_int_vol(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_constant_withfunc2_169.sql
+begin;
+SELECT func1_mod_setint_stb(func2_mod_int_stb(5)) FROM foo order by 1;
+rollback;
+
+-- @description function_in_select_notable_0.sql
+SELECT func1_nosql_vol(5) order by 1; 
+
+-- @description function_in_select_notable_1.sql
+SELECT func1_nosql_stb(5) order by 1; 
+
+-- @description function_in_select_notable_2.sql
+SELECT func1_nosql_imm(5) order by 1; 
+
+-- @description function_in_select_notable_3.sql
+SELECT func1_sql_int_vol(5) order by 1; 
+
+-- @description function_in_select_notable_4.sql
+SELECT func1_sql_int_stb(5) order by 1; 
+
+-- @description function_in_select_notable_5.sql
+SELECT func1_sql_int_imm(5) order by 1; 
+
+-- @description function_in_select_notable_6.sql
+SELECT func1_sql_setint_vol(5) order by 1; 
+
+-- @description function_in_select_notable_7.sql
+SELECT func1_sql_setint_stb(5) order by 1; 
+
+-- @description function_in_select_notable_8.sql
+SELECT func1_sql_setint_imm(5) order by 1; 
+
+-- @description function_in_select_notable_9.sql
+SELECT func1_read_int_sql_vol(5) order by 1; 
+
+-- @description function_in_select_notable_10.sql
+SELECT func1_read_int_sql_stb(5) order by 1; 
+
+-- @description function_in_select_notable_11.sql
+SELECT func1_read_setint_sql_vol(5) order by 1; 
+
+-- @description function_in_select_notable_12.sql
+SELECT func1_read_setint_sql_stb(5) order by 1; 
+
+-- @description function_in_select_notable_13.sql
+begin;
+SELECT func1_mod_int_vol(5) order by 1;
+rollback;
+
+-- @description function_in_select_notable_14.sql
+begin;
+SELECT func1_mod_int_stb(5) order by 1;
+rollback;
+
+-- @description function_in_select_notable_15.sql
+begin;
+SELECT func1_mod_setint_vol(5) order by 1;
+rollback;
+
+-- @description function_in_select_notable_16.sql
+begin;
+SELECT func1_mod_setint_stb(5) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_0.sql
+SELECT func1_nosql_vol(func2_nosql_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_1.sql
+SELECT func1_nosql_vol(func2_nosql_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_2.sql
+SELECT func1_nosql_vol(func2_nosql_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_3.sql
+SELECT func1_nosql_vol(func2_sql_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_4.sql
+SELECT func1_nosql_vol(func2_sql_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_5.sql
+SELECT func1_nosql_vol(func2_sql_int_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_6.sql
+SELECT func1_nosql_vol(func2_read_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_7.sql
+SELECT func1_nosql_vol(func2_read_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_8.sql
+begin;
+SELECT func1_nosql_vol(func2_mod_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_9.sql
+begin;
+SELECT func1_nosql_vol(func2_mod_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_10.sql
+SELECT func1_nosql_stb(func2_nosql_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_11.sql
+SELECT func1_nosql_stb(func2_nosql_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_12.sql
+SELECT func1_nosql_stb(func2_nosql_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_13.sql
+SELECT func1_nosql_stb(func2_sql_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_14.sql
+SELECT func1_nosql_stb(func2_sql_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_15.sql
+SELECT func1_nosql_stb(func2_sql_int_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_16.sql
+SELECT func1_nosql_stb(func2_read_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_17.sql
+SELECT func1_nosql_stb(func2_read_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_18.sql
+begin;
+SELECT func1_nosql_stb(func2_mod_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_19.sql
+begin;
+SELECT func1_nosql_stb(func2_mod_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_20.sql
+SELECT func1_nosql_imm(func2_nosql_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_21.sql
+SELECT func1_nosql_imm(func2_nosql_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_22.sql
+SELECT func1_nosql_imm(func2_nosql_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_23.sql
+SELECT func1_nosql_imm(func2_sql_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_24.sql
+SELECT func1_nosql_imm(func2_sql_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_25.sql
+SELECT func1_nosql_imm(func2_sql_int_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_26.sql
+SELECT func1_nosql_imm(func2_read_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_27.sql
+SELECT func1_nosql_imm(func2_read_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_28.sql
+begin;
+SELECT func1_nosql_imm(func2_mod_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_29.sql
+begin;
+SELECT func1_nosql_imm(func2_mod_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_30.sql
+SELECT func1_sql_int_vol(func2_nosql_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_31.sql
+SELECT func1_sql_int_vol(func2_nosql_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_32.sql
+SELECT func1_sql_int_vol(func2_nosql_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_33.sql
+SELECT func1_sql_int_vol(func2_sql_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_34.sql
+SELECT func1_sql_int_vol(func2_sql_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_35.sql
+SELECT func1_sql_int_vol(func2_sql_int_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_36.sql
+SELECT func1_sql_int_vol(func2_read_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_37.sql
+SELECT func1_sql_int_vol(func2_read_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_38.sql
+begin;
+SELECT func1_sql_int_vol(func2_mod_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_39.sql
+begin;
+SELECT func1_sql_int_vol(func2_mod_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_40.sql
+SELECT func1_sql_int_stb(func2_nosql_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_41.sql
+SELECT func1_sql_int_stb(func2_nosql_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_42.sql
+SELECT func1_sql_int_stb(func2_nosql_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_43.sql
+SELECT func1_sql_int_stb(func2_sql_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_44.sql
+SELECT func1_sql_int_stb(func2_sql_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_45.sql
+SELECT func1_sql_int_stb(func2_sql_int_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_46.sql
+SELECT func1_sql_int_stb(func2_read_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_47.sql
+SELECT func1_sql_int_stb(func2_read_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_48.sql
+begin;
+SELECT func1_sql_int_stb(func2_mod_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_49.sql
+begin;
+SELECT func1_sql_int_stb(func2_mod_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_50.sql
+SELECT func1_sql_int_imm(func2_nosql_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_51.sql
+SELECT func1_sql_int_imm(func2_nosql_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_52.sql
+SELECT func1_sql_int_imm(func2_nosql_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_53.sql
+SELECT func1_sql_int_imm(func2_sql_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_54.sql
+SELECT func1_sql_int_imm(func2_sql_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_55.sql
+SELECT func1_sql_int_imm(func2_sql_int_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_56.sql
+SELECT func1_sql_int_imm(func2_read_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_57.sql
+SELECT func1_sql_int_imm(func2_read_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_58.sql
+begin;
+SELECT func1_sql_int_imm(func2_mod_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_59.sql
+begin;
+SELECT func1_sql_int_imm(func2_mod_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_60.sql
+SELECT func1_sql_setint_vol(func2_nosql_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_61.sql
+SELECT func1_sql_setint_vol(func2_nosql_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_62.sql
+SELECT func1_sql_setint_vol(func2_nosql_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_63.sql
+SELECT func1_sql_setint_vol(func2_sql_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_64.sql
+SELECT func1_sql_setint_vol(func2_sql_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_65.sql
+SELECT func1_sql_setint_vol(func2_sql_int_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_66.sql
+SELECT func1_sql_setint_vol(func2_read_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_67.sql
+SELECT func1_sql_setint_vol(func2_read_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_68.sql
+begin;
+SELECT func1_sql_setint_vol(func2_mod_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_69.sql
+begin;
+SELECT func1_sql_setint_vol(func2_mod_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_70.sql
+SELECT func1_sql_setint_stb(func2_nosql_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_71.sql
+SELECT func1_sql_setint_stb(func2_nosql_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_72.sql
+SELECT func1_sql_setint_stb(func2_nosql_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_73.sql
+SELECT func1_sql_setint_stb(func2_sql_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_74.sql
+SELECT func1_sql_setint_stb(func2_sql_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_75.sql
+SELECT func1_sql_setint_stb(func2_sql_int_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_76.sql
+SELECT func1_sql_setint_stb(func2_read_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_77.sql
+SELECT func1_sql_setint_stb(func2_read_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_78.sql
+begin;
+SELECT func1_sql_setint_stb(func2_mod_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_79.sql
+begin;
+SELECT func1_sql_setint_stb(func2_mod_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_80.sql
+SELECT func1_sql_setint_imm(func2_nosql_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_81.sql
+SELECT func1_sql_setint_imm(func2_nosql_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_82.sql
+SELECT func1_sql_setint_imm(func2_nosql_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_83.sql
+SELECT func1_sql_setint_imm(func2_sql_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_84.sql
+SELECT func1_sql_setint_imm(func2_sql_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_85.sql
+SELECT func1_sql_setint_imm(func2_sql_int_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_86.sql
+SELECT func1_sql_setint_imm(func2_read_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_87.sql
+SELECT func1_sql_setint_imm(func2_read_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_88.sql
+begin;
+SELECT func1_sql_setint_imm(func2_mod_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_89.sql
+begin;
+SELECT func1_sql_setint_imm(func2_mod_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_90.sql
+SELECT func1_read_int_sql_vol(func2_nosql_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_91.sql
+SELECT func1_read_int_sql_vol(func2_nosql_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_92.sql
+SELECT func1_read_int_sql_vol(func2_nosql_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_93.sql
+SELECT func1_read_int_sql_vol(func2_sql_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_94.sql
+SELECT func1_read_int_sql_vol(func2_sql_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_95.sql
+SELECT func1_read_int_sql_vol(func2_sql_int_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_96.sql
+SELECT func1_read_int_sql_vol(func2_read_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_97.sql
+SELECT func1_read_int_sql_vol(func2_read_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_98.sql
+begin;
+SELECT func1_read_int_sql_vol(func2_mod_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_99.sql
+begin;
+SELECT func1_read_int_sql_vol(func2_mod_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_100.sql
+SELECT func1_read_int_sql_stb(func2_nosql_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_101.sql
+SELECT func1_read_int_sql_stb(func2_nosql_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_102.sql
+SELECT func1_read_int_sql_stb(func2_nosql_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_103.sql
+SELECT func1_read_int_sql_stb(func2_sql_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_104.sql
+SELECT func1_read_int_sql_stb(func2_sql_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_105.sql
+SELECT func1_read_int_sql_stb(func2_sql_int_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_106.sql
+SELECT func1_read_int_sql_stb(func2_read_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_107.sql
+SELECT func1_read_int_sql_stb(func2_read_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_108.sql
+begin;
+SELECT func1_read_int_sql_stb(func2_mod_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_109.sql
+begin;
+SELECT func1_read_int_sql_stb(func2_mod_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_110.sql
+SELECT func1_read_setint_sql_vol(func2_nosql_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_111.sql
+SELECT func1_read_setint_sql_vol(func2_nosql_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_112.sql
+SELECT func1_read_setint_sql_vol(func2_nosql_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_113.sql
+SELECT func1_read_setint_sql_vol(func2_sql_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_114.sql
+SELECT func1_read_setint_sql_vol(func2_sql_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_115.sql
+SELECT func1_read_setint_sql_vol(func2_sql_int_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_116.sql
+SELECT func1_read_setint_sql_vol(func2_read_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_117.sql
+SELECT func1_read_setint_sql_vol(func2_read_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_118.sql
+begin;
+SELECT func1_read_setint_sql_vol(func2_mod_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_119.sql
+begin;
+SELECT func1_read_setint_sql_vol(func2_mod_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_120.sql
+SELECT func1_read_setint_sql_stb(func2_nosql_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_121.sql
+SELECT func1_read_setint_sql_stb(func2_nosql_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_122.sql
+SELECT func1_read_setint_sql_stb(func2_nosql_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_123.sql
+SELECT func1_read_setint_sql_stb(func2_sql_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_124.sql
+SELECT func1_read_setint_sql_stb(func2_sql_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_125.sql
+SELECT func1_read_setint_sql_stb(func2_sql_int_imm(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_126.sql
+SELECT func1_read_setint_sql_stb(func2_read_int_vol(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_127.sql
+SELECT func1_read_setint_sql_stb(func2_read_int_stb(5)) order by 1; 
+
+-- @description function_in_select_notable_withfunc2_128.sql
+begin;
+SELECT func1_read_setint_sql_stb(func2_mod_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_129.sql
+begin;
+SELECT func1_read_setint_sql_stb(func2_mod_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_130.sql
+begin;
+SELECT func1_mod_int_vol(func2_nosql_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_131.sql
+begin;
+SELECT func1_mod_int_vol(func2_nosql_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_132.sql
+begin;
+SELECT func1_mod_int_vol(func2_nosql_imm(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_133.sql
+begin;
+SELECT func1_mod_int_vol(func2_sql_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_134.sql
+begin;
+SELECT func1_mod_int_vol(func2_sql_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_135.sql
+begin;
+SELECT func1_mod_int_vol(func2_sql_int_imm(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_136.sql
+begin;
+SELECT func1_mod_int_vol(func2_read_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_137.sql
+begin;
+SELECT func1_mod_int_vol(func2_read_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_138.sql
+begin;
+SELECT func1_mod_int_vol(func2_mod_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_139.sql
+begin;
+SELECT func1_mod_int_vol(func2_mod_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_140.sql
+begin;
+SELECT func1_mod_int_stb(func2_nosql_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_141.sql
+begin;
+SELECT func1_mod_int_stb(func2_nosql_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_142.sql
+begin;
+SELECT func1_mod_int_stb(func2_nosql_imm(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_143.sql
+begin;
+SELECT func1_mod_int_stb(func2_sql_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_144.sql
+begin;
+SELECT func1_mod_int_stb(func2_sql_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_145.sql
+begin;
+SELECT func1_mod_int_stb(func2_sql_int_imm(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_146.sql
+begin;
+SELECT func1_mod_int_stb(func2_read_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_147.sql
+begin;
+SELECT func1_mod_int_stb(func2_read_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_148.sql
+begin;
+SELECT func1_mod_int_stb(func2_mod_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_149.sql
+begin;
+SELECT func1_mod_int_stb(func2_mod_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_150.sql
+begin;
+SELECT func1_mod_setint_vol(func2_nosql_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_151.sql
+begin;
+SELECT func1_mod_setint_vol(func2_nosql_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_152.sql
+begin;
+SELECT func1_mod_setint_vol(func2_nosql_imm(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_153.sql
+begin;
+SELECT func1_mod_setint_vol(func2_sql_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_154.sql
+begin;
+SELECT func1_mod_setint_vol(func2_sql_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_155.sql
+begin;
+SELECT func1_mod_setint_vol(func2_sql_int_imm(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_156.sql
+begin;
+SELECT func1_mod_setint_vol(func2_read_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_157.sql
+begin;
+SELECT func1_mod_setint_vol(func2_read_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_158.sql
+begin;
+SELECT func1_mod_setint_vol(func2_mod_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_159.sql
+begin;
+SELECT func1_mod_setint_vol(func2_mod_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_160.sql
+begin;
+SELECT func1_mod_setint_stb(func2_nosql_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_161.sql
+begin;
+SELECT func1_mod_setint_stb(func2_nosql_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_162.sql
+begin;
+SELECT func1_mod_setint_stb(func2_nosql_imm(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_163.sql
+begin;
+SELECT func1_mod_setint_stb(func2_sql_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_164.sql
+begin;
+SELECT func1_mod_setint_stb(func2_sql_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_165.sql
+begin;
+SELECT func1_mod_setint_stb(func2_sql_int_imm(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_166.sql
+begin;
+SELECT func1_mod_setint_stb(func2_read_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_167.sql
+begin;
+SELECT func1_mod_setint_stb(func2_read_int_stb(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_168.sql
+begin;
+SELECT func1_mod_setint_stb(func2_mod_int_vol(5)) order by 1;
+rollback;
+
+-- @description function_in_select_notable_withfunc2_169.sql
+begin;
+SELECT func1_mod_setint_stb(func2_mod_int_stb(5)) order by 1;
+rollback;

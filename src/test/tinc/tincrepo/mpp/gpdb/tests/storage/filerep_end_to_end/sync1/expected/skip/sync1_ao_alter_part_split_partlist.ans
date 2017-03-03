@@ -205,11 +205,11 @@ select count(*) from sync1_ao_alter_part_split_partlist8;
 -- split partition
 --
 alter table sync1_ao_alter_part_split_partlist1 split partition for(1) at (1,2) into (partition f1a, partition f1b);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  dropped partition "a" for relation "sync1_ao_alter_part_split_partlist1"
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_ao_alter_part_split_partlist1_1_prt_f1a" for table "sync1_ao_alter_part_split_partlist1"
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_ao_alter_part_split_partlist1_1_prt_f1b" for table "sync1_ao_alter_part_split_partlist1"
 ALTER TABLE
 --

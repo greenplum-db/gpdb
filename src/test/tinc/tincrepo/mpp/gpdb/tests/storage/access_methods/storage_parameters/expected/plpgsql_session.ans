@@ -49,7 +49,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 CONTEXT:  SQL statement "Create table dsp_pg_t1( i int, j int)"
 PL/pgSQL function "create_table" line 3 at SQL statement
 SQL statement "SELECT  create_table()"
-PL/pgSQL function "call_create_table" line 2 at perform
+PL/pgSQL function "call_create_table" line 2 at PERFORM
  call_create_table 
 -------------------
  
@@ -115,10 +115,10 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 CONTEXT:  SQL statement "Create table dsp_pg_t2( i int, j int) with (compresstype=rle_type)"
 PL/pgSQL function "create_table_with_exception" line 3 at SQL statement
 SQL statement "SELECT  create_table_with_exception()"
-PL/pgSQL function "call_create_table_with_exception" line 2 at perform
+PL/pgSQL function "call_create_table_with_exception" line 2 at PERFORM
 psql:/path/sql_file:1: NOTICE:  rle_type is not supported for row oriented tables
 CONTEXT:  SQL statement "SELECT  create_table_with_exception()"
-PL/pgSQL function "call_create_table_with_exception" line 2 at perform
+PL/pgSQL function "call_create_table_with_exception" line 2 at PERFORM
  call_create_table_with_exception 
 ----------------------------------
  

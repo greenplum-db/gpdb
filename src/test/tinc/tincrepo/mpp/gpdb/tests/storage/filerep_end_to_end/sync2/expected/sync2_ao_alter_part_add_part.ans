@@ -61,7 +61,7 @@ INSERT 0 5
 -- Add partition
 --
 alter table sync1_ao_alter_part_add_part7 add partition p1 end (11);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_ao_alter_part_add_part7_1_prt_p1" for table "sync1_ao_alter_part_add_part7"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_ao_alter_part_add_part7_1_prt_p1_2_prt_sp1" for table "sync1_ao_alter_part_add_part7_1_prt_p1"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_ao_alter_part_add_part7_1_prt_p1_2_prt_sp2" for table "sync1_ao_alter_part_add_part7_1_prt_p1"
@@ -81,7 +81,7 @@ ALTER TABLE
 -- Add Partition
 --
 alter table sync1_ao_alter_part_add_part7 add partition p3 end (13) (subpartition sp3 values ('c'));
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_ao_alter_part_add_part7_1_prt_p3" for table "sync1_ao_alter_part_add_part7"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_ao_alter_part_add_part7_1_prt_p3_2_prt_sp3" for table "sync1_ao_alter_part_add_part7_1_prt_p3"
 ALTER TABLE
@@ -96,7 +96,7 @@ INSERT 0 5
 -- Add partition
 --
 alter table ck_sync1_ao_alter_part_add_part6 add partition p1 end (11);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_add_part6_1_prt_p1" for table "ck_sync1_ao_alter_part_add_part6"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_add_part6_1_prt_p1_2_prt_sp1" for table "ck_sync1_ao_alter_part_add_part6_1_prt_p1"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_add_part6_1_prt_p1_2_prt_sp2" for table "ck_sync1_ao_alter_part_add_part6_1_prt_p1"
@@ -116,7 +116,7 @@ ALTER TABLE
 -- Add Partition
 --
 alter table ck_sync1_ao_alter_part_add_part6 add partition p3 end (13) (subpartition sp3 values ('c'));
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_add_part6_1_prt_p3" for table "ck_sync1_ao_alter_part_add_part6"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_add_part6_1_prt_p3_2_prt_sp3" for table "ck_sync1_ao_alter_part_add_part6_1_prt_p3"
 ALTER TABLE
@@ -131,7 +131,7 @@ INSERT 0 5
 -- Add partition
 --
 alter table ct_ao_alter_part_add_part4 add partition p1 end (11);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_part_add_part4_1_prt_p1" for table "ct_ao_alter_part_add_part4"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_part_add_part4_1_prt_p1_2_prt_sp1" for table "ct_ao_alter_part_add_part4_1_prt_p1"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_part_add_part4_1_prt_p1_2_prt_sp2" for table "ct_ao_alter_part_add_part4_1_prt_p1"
@@ -151,7 +151,7 @@ ALTER TABLE
 -- Add Partition
 --
 alter table ct_ao_alter_part_add_part4 add partition p3 end (13) (subpartition sp3 values ('c'));
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_part_add_part4_1_prt_p3" for table "ct_ao_alter_part_add_part4"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_part_add_part4_1_prt_p3_2_prt_sp3" for table "ct_ao_alter_part_add_part4_1_prt_p3"
 ALTER TABLE
@@ -166,7 +166,7 @@ INSERT 0 5
 -- Add partition
 --
 alter table resync_ao_alter_part_add_part2 add partition p1 end (11);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "resync_ao_alter_part_add_part2_1_prt_p1" for table "resync_ao_alter_part_add_part2"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "resync_ao_alter_part_add_part2_1_prt_p1_2_prt_sp1" for table "resync_ao_alter_part_add_part2_1_prt_p1"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "resync_ao_alter_part_add_part2_1_prt_p1_2_prt_sp2" for table "resync_ao_alter_part_add_part2_1_prt_p1"
@@ -186,7 +186,7 @@ ALTER TABLE
 -- Add Partition
 --
 alter table resync_ao_alter_part_add_part2 add partition p3 end (13) (subpartition sp3 values ('c'));
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "resync_ao_alter_part_add_part2_1_prt_p3" for table "resync_ao_alter_part_add_part2"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "resync_ao_alter_part_add_part2_1_prt_p3_2_prt_sp3" for table "resync_ao_alter_part_add_part2_1_prt_p3"
 ALTER TABLE
@@ -201,7 +201,7 @@ INSERT 0 5
 -- Add partition
 --
 alter table sync2_ao_alter_part_add_part1 add partition p1 end (11);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_ao_alter_part_add_part1_1_prt_p1" for table "sync2_ao_alter_part_add_part1"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_ao_alter_part_add_part1_1_prt_p1_2_prt_sp1" for table "sync2_ao_alter_part_add_part1_1_prt_p1"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_ao_alter_part_add_part1_1_prt_p1_2_prt_sp2" for table "sync2_ao_alter_part_add_part1_1_prt_p1"
@@ -221,7 +221,7 @@ ALTER TABLE
 -- Add Partition
 --
 alter table sync2_ao_alter_part_add_part1 add partition p3 end (13) (subpartition sp3 values ('c'));
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_ao_alter_part_add_part1_1_prt_p3" for table "sync2_ao_alter_part_add_part1"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_ao_alter_part_add_part1_1_prt_p3_2_prt_sp3" for table "sync2_ao_alter_part_add_part1_1_prt_p3"
 ALTER TABLE

@@ -347,7 +347,7 @@ ExecResultRestrPos(ResultState *node)
 	if (outerPlan != NULL)
 		ExecRestrPos(outerPlan);
 	else
-		insist_log(false, "Result nodes do not support mark/restore");
+		elog(ERROR, "Result nodes do not support mark/restore");
 }
 
 

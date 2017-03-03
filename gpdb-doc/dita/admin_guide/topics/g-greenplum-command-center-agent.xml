@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic36">
+   <title>Greenplum Command Center Agent</title>
+   <body>
+      <p>The following parameters configure the data collection agents for Greenplum Command
+            Center.</p>
+      <simpletable id="kh171891">
+         <strow>
+            <stentry>
+               <p>
+                  <codeph>gp_enable_gpperfmon</codeph>
+               </p>
+               <p>
+                  <codeph>gp_gpperfmon_send_interval</codeph>
+               </p>
+            </stentry>
+            <stentry>
+               <p>
+                  <codeph>gpperfmon_log_alert_level</codeph>
+               </p>
+               <p>
+                  <codeph>gpperfmon_port</codeph>
+               </p>
+            </stentry>
+         </strow>
+      </simpletable>
+   </body>
+</topic>

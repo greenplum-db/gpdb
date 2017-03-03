@@ -125,11 +125,17 @@ gp_fault_inject_impl(int32 reason, int64 arg)
 			}
 			break;
 		case GP_FAULT_USER_RAISE_ERROR:
-			elog(ERROR, "User fault injection raised error");
+			ereport(ERROR,
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("User fault injection raised error")));
 		case GP_FAULT_USER_RAISE_FATAL:
-			elog(FATAL, "User fault injection raised fatal");
+			ereport(FATAL,
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("User fault injection raised fatal")));
 		case GP_FAULT_USER_RAISE_PANIC:
-			elog(PANIC, "User fault injection raised panic");
+			ereport(PANIC,
+					(errcode(ERRCODE_FAULT_INJECT),
+					 errmsg("User fault injection raised panic")));
 		case GP_FAULT_USER_PROCEXIT:
 			{
 				extern void proc_exit(int);

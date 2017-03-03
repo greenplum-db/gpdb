@@ -1,0 +1,56 @@
+DROP TABLE IF EXISTS colalias_dml_timestamptz;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/colalias_dml_timestamptz_opt.sql:14: NOTICE:  table "colalias_dml_timestamptz" does not exist, skipping
+DROP TABLE
+CREATE TABLE colalias_dml_timestamptz
+(
+    col1 timestamptz DEFAULT '2014-01-01 12:00:00 PST',
+    col2 timestamptz,
+    col3 char,
+    col4 timestamptz,
+    col5 timestamptz
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def 
+);
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/colalias_dml_timestamptz_opt.sql:27: NOTICE:  CREATE TABLE will create partition "colalias_dml_timestamptz_1_prt_def" for table "colalias_dml_timestamptz"
+CREATE TABLE
+DROP TABLE IF EXISTS colalias_dml_timestamptz_candidate;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/colalias_dml_timestamptz_opt.sql:29: NOTICE:  table "colalias_dml_timestamptz_candidate" does not exist, skipping
+DROP TABLE
+CREATE TABLE colalias_dml_timestamptz_candidate
+(
+    col1 timestamptz DEFAULT '2014-01-01 12:00:00 PST',
+    col2 timestamptz,
+    col3 char,
+    col4 timestamptz,
+    col5 timestamptz
+) DISTRIBUTED by (col2);
+CREATE TABLE
+INSERT INTO colalias_dml_timestamptz_candidate VALUES('2013-12-30 12:00:00 PST','2014-01-01 12:00:00 PST','a','2013-12-30 12:00:00 PST','2014-01-01 12:00:00 PST');
+INSERT 0 1
+INSERT INTO colalias_dml_timestamptz(col2,col1,col3,col5,col4) SELECT col1,col2,col3,col5,col4 FROM (SELECT col1,col1 as col2,col3,col5 as col4,col5  FROM colalias_dml_timestamptz_candidate)foo;
+INSERT 0 1
+SELECT * FROM colalias_dml_timestamptz ORDER BY 1,2,3,4;
+          col1          |          col2          | col3 |          col4          |          col5          
+------------------------+------------------------+------+------------------------+------------------------
+ 2013-12-30 12:00:00-08 | 2013-12-30 12:00:00-08 | a    | 2014-01-01 12:00:00-08 | 2014-01-01 12:00:00-08
+(1 row)
+
+UPDATE colalias_dml_timestamptz SET col1 = (select col2 as col1 FROM colalias_dml_timestamptz_candidate);
+UPDATE 1
+SELECT * FROM colalias_dml_timestamptz ORDER BY 1,2,3,4;
+          col1          |          col2          | col3 |          col4          |          col5          
+------------------------+------------------------+------+------------------------+------------------------
+ 2014-01-01 12:00:00-08 | 2013-12-30 12:00:00-08 | a    | 2014-01-01 12:00:00-08 | 2014-01-01 12:00:00-08
+(1 row)
+
+UPDATE colalias_dml_timestamptz SET col1 =colalias_dml_timestamptz_candidate.col2 FROM colalias_dml_timestamptz_candidate;
+UPDATE 1
+SELECT * FROM colalias_dml_timestamptz ORDER BY 1,2,3,4;
+          col1          |          col2          | col3 |          col4          |          col5          
+------------------------+------------------------+------+------------------------+------------------------
+ 2014-01-01 12:00:00-08 | 2013-12-30 12:00:00-08 | a    | 2014-01-01 12:00:00-08 | 2014-01-01 12:00:00-08
+(1 row)
+

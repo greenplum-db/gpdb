@@ -80,11 +80,11 @@ select count(*) from resync_co_alter_part_split_partlist3;
 -- split partition
 --
 alter table sync1_co_alter_part_split_partlist6 split partition for(1) at (1,2) into (partition f1a, partition f1b);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  dropped partition "a" for relation "sync1_co_alter_part_split_partlist6"
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_co_alter_part_split_partlist6_1_prt_f1a" for table "sync1_co_alter_part_split_partlist6"
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_co_alter_part_split_partlist6_1_prt_f1b" for table "sync1_co_alter_part_split_partlist6"
 ALTER TABLE
 --
@@ -113,11 +113,11 @@ select count(*) from sync1_co_alter_part_split_partlist6;
 -- split partition
 --
 alter table ck_sync1_co_alter_part_split_partlist5 split partition for(1) at (1,2) into (partition f1a, partition f1b);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  dropped partition "a" for relation "ck_sync1_co_alter_part_split_partlist5"
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_co_alter_part_split_partlist5_1_prt_f1a" for table "ck_sync1_co_alter_part_split_partlist5"
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_co_alter_part_split_partlist5_1_prt_f1b" for table "ck_sync1_co_alter_part_split_partlist5"
 ALTER TABLE
 --
@@ -147,11 +147,11 @@ select count(*) from ck_sync1_co_alter_part_split_partlist5;
 -- split partition
 --
 alter table ct_co_alter_part_split_partlist3 split partition for(1) at (1,2) into (partition f1a, partition f1b);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  dropped partition "a" for relation "ct_co_alter_part_split_partlist3"
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_split_partlist3_1_prt_f1a" for table "ct_co_alter_part_split_partlist3"
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_split_partlist3_1_prt_f1b" for table "ct_co_alter_part_split_partlist3"
 ALTER TABLE
 --
@@ -180,11 +180,11 @@ select count(*) from ct_co_alter_part_split_partlist3;
 -- split partition
 --
 alter table resync_co_alter_part_split_partlist1 split partition for(1) at (1,2) into (partition f1a, partition f1b);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  dropped partition "a" for relation "resync_co_alter_part_split_partlist1"
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "resync_co_alter_part_split_partlist1_1_prt_f1a" for table "resync_co_alter_part_split_partlist1"
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "resync_co_alter_part_split_partlist1_1_prt_f1b" for table "resync_co_alter_part_split_partlist1"
 ALTER TABLE
 --

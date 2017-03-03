@@ -18,7 +18,6 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CRefCount.h"
-#include "gpos/string/CWStringConst.h"
 #include "gpos/utils.h"
 
 namespace gpdxl

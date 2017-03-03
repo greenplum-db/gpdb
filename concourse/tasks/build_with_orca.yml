@@ -1,0 +1,19 @@
+platform: linux
+image_resource:
+  type: docker-image
+  source:
+    repository: yolo/gpdbdev
+    tag: centos6
+inputs:
+  - name: bin_orca
+  - name: bin_xerces
+  - name: gpdb_src
+outputs:
+  - name: bin_gpdb
+run:
+  path: gpdb_src/concourse/scripts/build_gpdb.py
+  args:
+    - --mode=orca
+    - --output_dir=bin_gpdb/install
+    - bin_orca
+    - bin_xerces

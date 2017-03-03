@@ -71,6 +71,8 @@ extern bool rel_has_external_partition(Oid relid);
 
 extern bool query_has_external_partition(Query *query);
 
+extern bool rel_has_appendonly_partition(Oid relid);
+
 extern bool rel_is_child_partition(Oid relid);
 
 extern bool rel_is_leaf_partition(Oid relid);
@@ -221,7 +223,7 @@ extern Oid getPhysicalIndexRelid(Relation partRel, LogicalIndexInfo *iInfo);
 
 extern LogicalIndexInfo *logicalIndexInfoForIndexOid(Oid rootOid, Oid indexOid);
 
-extern void InsertPidIntoDynamicTableScanInfo(int32 index, Oid partOid, int32 selectorId);
+extern void InsertPidIntoDynamicTableScanInfo(EState *estate, int32 index, Oid partOid, int32 selectorId);
 
 extern char *
 DebugPartitionOid(Datum *elements, int n);

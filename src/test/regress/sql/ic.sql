@@ -183,3 +183,18 @@ DROP TABLE a;
 
 RESET search_path;
 DROP SCHEMA ic_udp_test CASCADE;
+
+/*
+ * If ack packet is lost in doSendStopMessageUDPIFC(), transaction with cursor
+ * should still be able to commit.
+*/
+--start_ignore
+drop table if exists ic_test_1;
+--end_ignore
+create table ic_test_1 as select i as c1, i as c2 from generate_series(1, 100000) i;
+begin;
+declare ic_test_cursor_c1 cursor for select * from ic_test_1;
+\! gpfaultinjector -q -f interconnect_stop_ack_is_lost -y reset -s 1
+\! gpfaultinjector -q -f interconnect_stop_ack_is_lost -y skip -s 1
+commit;
+drop table ic_test_1;

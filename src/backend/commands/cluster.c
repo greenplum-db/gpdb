@@ -691,7 +691,7 @@ rebuild_relation(Relation OldHeap, Oid indexOid, ClusterStmt *stmt)
 	 * because the new heap won't contain any HOT chains at all, let alone
 	 * broken ones, so it can't be necessary to set indcheckxmin.
 	 */
-	reindex_relation(tableOid, false, false, false, false);
+	reindex_relation(tableOid, false);
 }
 
 /*
@@ -769,9 +769,9 @@ make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace,
 	 * CommandCounterIncrement(), so that the new tables will be visible for
 	 * insertion.
 	 */
-	AlterTableCreateToastTableWithOid(OIDNewHeap, is_part);
-	AlterTableCreateAoSegTableWithOid(OIDNewHeap, is_part);
-	AlterTableCreateAoVisimapTableWithOid(OIDNewHeap, is_part);
+	AlterTableCreateToastTable(OIDNewHeap, is_part);
+	AlterTableCreateAoSegTable(OIDNewHeap, is_part);
+	AlterTableCreateAoVisimapTable(OIDNewHeap, is_part);
 
     if (createAoBlockDirectory)
 	    AlterTableCreateAoBlkdirTable(OIDNewHeap, is_part);
@@ -1016,7 +1016,7 @@ changeDependencyLinks(Oid baseOid1, Oid baseOid2, Oid oid1, Oid oid2,
 	/* Delete old dependencies */
 	if (oid1)
 	{
-		count = deleteDependencyRecordsFor(RelationRelationId, oid1);
+		count = deleteDependencyRecordsFor(RelationRelationId, oid1, false);
 		if (count != 1)
 			elog(ERROR, "expected one dependency record for %s table, found %ld",
 				 tabletype, count);
@@ -1024,7 +1024,7 @@ changeDependencyLinks(Oid baseOid1, Oid baseOid2, Oid oid1, Oid oid2,
 	
 	if (oid2)
 	{
-		count = deleteDependencyRecordsFor(RelationRelationId, oid2);
+		count = deleteDependencyRecordsFor(RelationRelationId, oid2, false);
 		if (count != 1)
 			elog(ERROR, "expected one dependency record for %s table, found %ld",
 				 tabletype, count);

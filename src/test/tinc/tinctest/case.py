@@ -144,7 +144,7 @@ class TINCTestCase(unittest.TestCase):
         """
         A baseline result object that can be passed on to trending tests. For eg: performance tests
         would require a baseline result object from which it can infer the previous runtime and assert
-        pass or fail for the current tun. Currently set only for tests run through deprecated tincdb,
+        pass or fail for the current run. Currently set only for tests run through deprecated tincdb,
         so this may not work anymore and may need to be removed on closer inspection.
         """
         
@@ -503,7 +503,7 @@ class _TINCProductVersionMetadata(object):
     def __eq__(self, other_product_version_metadata):
         """
         Two product version metadata objects are considered equal if all product version included
-        and prodcut version excluded objects are the same in both
+        and product version excluded objects are the same in both
         Uses literal comparisons when comparing version /version range objects
         """
         if isinstance(other_product_version_metadata, basestring):
@@ -684,7 +684,7 @@ class _TINCProductVersionRange(object):
     def _parse_product_version_range(self):
         """
         Ranges should be in the format [range1-range2], (range1-range2),
-        (range1-), (-range2) and any combination of paranthesis
+        (range1-), (-range2) and any combination of parenthesis
         '[]' means inclusive
         '()' means exclusive
         """

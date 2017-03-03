@@ -571,7 +571,7 @@ ProcedureCreate(const char *procedureName,
 	 */
 	if (is_update)
 	{
-		deleteDependencyRecordsFor(ProcedureRelationId, retval);
+		deleteDependencyRecordsFor(ProcedureRelationId, retval, true);
 		deleteProcCallbacks(retval);
 	}
 
@@ -624,6 +624,9 @@ ProcedureCreate(const char *procedureName,
 	/* dependency on owner */
 	if (!is_update)
 		recordDependencyOnOwner(ProcedureRelationId, retval, proowner);
+
+	/* dependency on extension */
+	recordDependencyOnCurrentExtension(&myself, is_update);
 
 	heap_freetuple(tup);
 

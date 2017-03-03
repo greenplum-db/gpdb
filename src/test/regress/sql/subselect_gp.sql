@@ -220,7 +220,8 @@ select count(*) from csq_t1 t1 where a > ( select avg(a)::int from csq_t1 t2 whe
 --
 -- correlation in a func expr
 --
-CREATE FUNCTION csq_f(a int) RETURNS int AS $$ select $1 $$ LANGUAGE SQL CONTAINS SQL;
+CREATE OR REPLACE FUNCTION csq_f(a int) RETURNS int AS $$ select $1 $$ LANGUAGE SQL CONTAINS SQL;
+DROP TABLE IF EXISTS csq_r;
 CREATE TABLE csq_r(a int) distributed by (a);
 INSERT INTO csq_r VALUES (1);
 
@@ -587,3 +588,8 @@ select * from nested_in_tbl t1  where tc1 in
   (select 1 from nested_in_tbl t2 where tc1 in
     (select 1 from nested_in_tbl t3 where t3.tc2 = t2.tc2));
 drop table nested_in_tbl;
+
+--
+-- Window query with a function scan that has non-correlated subquery.
+--
+SELECT rank() over (partition by min(c) order by min(c)) AS p_rank FROM (SELECT d AS c FROM (values(1)) d1, generate_series(0,(SELECT 2)) AS d) tt GROUP BY c;

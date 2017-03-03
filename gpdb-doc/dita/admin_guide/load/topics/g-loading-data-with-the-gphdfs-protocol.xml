@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic63">
+   <title>Loading Data with the gphdfs Protocol</title>
+   <body>
+      <p>If you use <codeph>INSERT INTO</codeph> to insert data into a Greenplum table from a table
+         on the Hadoop Distributed File System that was defined as an external table with the gphdfs
+         protocol, the data is copied in parallel. For example:</p>
+      <codeblock>
+         <codeph>INSERT INTO</codeph> gpdb_table (select * from hdfs_ext_table);
+</codeblock>
+   </body>
+</topic>

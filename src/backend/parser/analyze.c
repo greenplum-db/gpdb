@@ -1400,8 +1400,7 @@ generate_positional_name(AttrNumber attrno)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("can't generate internal attribute name"),
-				 errOmitLocation(true)));
+				 errmsg("can't generate internal attribute name")));
 	}
 	return pstrdup(buf);
 }
@@ -1414,7 +1413,7 @@ generate_positional_name(AttrNumber attrno)
  * target list of the input query.
  *
  * If the input Var references a join result, there will be a single
- * alias.  If not, we need to search the range table for occurances
+ * alias.  If not, we need to search the range table for occurrences
  * of the input Var in some join result's RTE and add a Var referring
  * to the appropriate attribute of the join RTE to the list.
  *
@@ -2988,6 +2987,7 @@ transformExplainStmt(ParseState *pstate, ExplainStmt *stmt)
 	return result;
 }
 
+
 /* exported so planner can check again after rewriting, query pullup, etc */
 void
 CheckSelectLocking(Query *qry)
@@ -3188,7 +3188,6 @@ applyLockingClause(Query *qry, Index rtindex, bool forUpdate, bool noWait)
 	rc->noWait = noWait;
 	qry->rowMarks = lappend(qry->rowMarks, rc);
 }
-
 
 
 /*

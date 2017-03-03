@@ -37,14 +37,9 @@
 
 #include "gpos/_api.h"
 #include "gpos/common/CAutoP.h"
-#include "gpos/error/CErrorHandlerStandard.h"
-#include "gpos/error/CLoggerStream.h"
 #include "gpos/io/COstreamFile.h"
 #include "gpos/io/COstreamString.h"
 #include "gpos/memory/CAutoMemoryPool.h"
-#include "gpos/task/CWorkerPoolManager.h"
-#include "gpos/task/CAutoTaskProxy.h"
-#include "gpos/task/CTaskContext.h"
 #include "gpos/task/CAutoTraceFlag.h"
 #include "gpos/common/CAutoP.h"
 
@@ -52,22 +47,14 @@
 #include "gpopt/translate/CTranslatorExprToDXL.h"
 
 #include "gpopt/base/CAutoOptCtxt.h"
-#include "gpopt/base/CQueryContext.h"
-#include "gpopt/engine/CEngine.h"
 #include "gpopt/engine/CEnumeratorConfig.h"
 #include "gpopt/engine/CStatisticsConfig.h"
 #include "gpopt/engine/CCTEConfig.h"
 #include "gpopt/mdcache/CAutoMDAccessor.h"
 #include "gpopt/mdcache/CMDCache.h"
-#include "gpopt/minidump/CMiniDumperDXL.h"
 #include "gpopt/minidump/CMinidumperUtils.h"
-#include "gpopt/minidump/CSerializableStackTrace.h"
-#include "gpopt/minidump/CSerializableQuery.h"
-#include "gpopt/minidump/CSerializablePlan.h"
-#include "gpopt/minidump/CSerializableMDAccessor.h"
 #include "gpopt/optimizer/COptimizer.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
-#include "gpopt/search/CSearchStage.h"
 #include "gpopt/xforms/CXformFactory.h"
 #include "gpopt/exception.h"
 
@@ -77,17 +64,12 @@
 #include "naucrates/base/CQueryToDXLResult.h"
 
 #include "naucrates/md/IMDId.h"
-#include "naucrates/md/CMDRelationGPDB.h"
 #include "naucrates/md/CMDIdRelStats.h"
-#include "naucrates/md/CMDIdColStats.h"
 
 #include "naucrates/md/CSystemId.h"
 #include "naucrates/md/IMDRelStats.h"
-#include "naucrates/md/IMDColStats.h"
-#include "naucrates/md/IMDTypeInt8.h"
 #include "naucrates/md/CMDIdCast.h"
 #include "naucrates/md/CMDIdScCmp.h"
-#include "naucrates/md/CMDTypeInt8GPDB.h"
 
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/parser/CParseHandlerDXL.h"
@@ -557,14 +539,15 @@ COptTasks::Execute
 {
 	Assert(pfunc);
 
+	CHAR *err_buf = (CHAR *) palloc(GPOPT_ERROR_BUFFER_SIZE);
+	err_buf[0] = '\0';
+
 	// initialize DXL support
 	InitDXL();
 
 	bool abort_flag = false;
 
 	CAutoMemoryPool amp(CAutoMemoryPool::ElcNone, CMemoryPoolManager::EatTracker, false /* fThreadSafe */);
-	IMemoryPool *pmp = amp.Pmp();
-	CHAR *err_buf = SzAllocate(pmp, GPOPT_ERROR_BUFFER_SIZE);
 
 	gpos_exec_params params;
 	params.func = pfunc;
@@ -596,7 +579,7 @@ COptTasks::LogErrorAndDelete(CHAR* err_buf) {
 		elog(LOG, "%s", SzFromWsz((WCHAR *)err_buf));
 	}
 
-	GPOS_DELETE_ARRAY(err_buf);
+	pfree(err_buf);
 }
 
 
@@ -799,6 +782,7 @@ COptTasks::PoconfCreate
 	ULONG ulJoinArityForAssociativityCommutativity = (ULONG) optimizer_join_arity_for_associativity_commutativity;
 	ULONG ulArrayExpansionThreshold = (ULONG) optimizer_array_expansion_threshold;
 	ULONG ulJoinOrderThreshold = (ULONG) optimizer_join_order_threshold;
+	ULONG ulBroadcastThreshold = (ULONG) optimizer_penalize_broadcast_threshold;
 
 	return GPOS_NEW(pmp) COptimizerConfig
 						(
@@ -811,7 +795,8 @@ COptTasks::PoconfCreate
 								INT_MAX /* optimizer_parts_to_force_sort_on_insert */,
 								ulJoinArityForAssociativityCommutativity,
 								ulArrayExpansionThreshold,
-								ulJoinOrderThreshold
+								ulJoinOrderThreshold,
+								ulBroadcastThreshold
 								)
 						);
 }
@@ -924,6 +909,19 @@ COptTasks::SetCostModelParams
 		CDouble dNLJFactor(optimizer_nestloop_factor);
 		pcm->Pcp()->SetParam(pcp->UlId(), dNLJFactor, dNLJFactor - 0.5, dNLJFactor + 0.5);
 	}
+
+	if (optimizer_sort_factor > 1.0 || optimizer_sort_factor < 1.0)
+	{
+		// change sort cost factor
+		ICostModelParams::SCostParam *pcp = NULL;
+		if (OPTIMIZER_GPDB_CALIBRATED == optimizer_cost_model)
+		{
+			pcp = pcm->Pcp()->PcpLookup(CCostModelParamsGPDB::EcpSortTupWidthCostUnit);
+
+			CDouble dSortFactor(optimizer_sort_factor);
+			pcm->Pcp()->SetParam(pcp->UlId(), pcp->DVal() * optimizer_sort_factor, pcp->DLowerBound() * optimizer_sort_factor, pcp->DUpperBound() * optimizer_sort_factor);
+		}
+	}
 }
 
 
@@ -1003,7 +1001,7 @@ COptTasks::PvOptimizeTask
 		CMDCache::Reset();
 		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
 	}
-	else if (CMDCache::ULLGetCacheQuota() != optimizer_mdcache_size * 1024L)
+	else if (CMDCache::ULLGetCacheQuota() != (ULLONG) optimizer_mdcache_size * 1024L)
 	{
 		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
 	}
@@ -1223,9 +1221,8 @@ COptTasks::PrintMissingStatsWarning
 				(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
 				errmsg("One or more columns in the following table(s) do not have statistics: %s", SzFromWsz(str.Wsz())),
 				errhint("For non-partitioned tables, run analyze <table_name>(<column_list>)."
-						 " For partitioned tables, run analyze rootpartition <table_name>(<column_list>)."
-						 " See log for columns missing statistics."),
-				errOmitLocation(true)));
+					" For partitioned tables, run analyze rootpartition <table_name>(<column_list>)."
+					" See log for columns missing statistics.")));
 	}
 
 }
@@ -1577,7 +1574,7 @@ COptTasks::PvEvalExprFromDXLTask
 		CMDCache::Reset();
 		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
 	}
-	else if (CMDCache::ULLGetCacheQuota() != optimizer_mdcache_size * 1024L)
+	else if (CMDCache::ULLGetCacheQuota() != (ULLONG) optimizer_mdcache_size * 1024L)
 	{
 		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
 	}

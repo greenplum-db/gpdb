@@ -3,7 +3,6 @@
 -- @modified 2013-06-24 17:00:00
 -- @tags ddl schema_topology
 -- @description Coverage for all the table and column constraints
--- @product_version gpdb: [4.2.7.1-]
 
 --Drop tables
 Drop table if exists tbl_unique_constraint;

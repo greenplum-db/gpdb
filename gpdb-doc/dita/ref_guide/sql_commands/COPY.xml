@@ -1,0 +1,469 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="bk20941">COPY</title>
+  <body>
+    <!--msk =Remove INTO error_table clause in next major release-->
+    <p id="sql_command_desc">Copies data between a file and a table.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock id="sql_command_synopsis">COPY <varname>table</varname> [(<varname>column</varname> [, ...])] FROM {'<varname>file</varname>' | STDIN}
+     [ [WITH] 
+       [OIDS]
+       [HEADER]
+       [DELIMITER [ AS ] '<varname>delimiter</varname>']
+       [NULL [ AS ] '<varname>null string</varname>']
+       [ESCAPE [ AS ] '<varname>escape</varname>' | 'OFF']
+       [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
+       [CSV [QUOTE [ AS ] '<varname>quote</varname>'] 
+            [FORCE NOT NULL <varname>column</varname> [, ...]]
+       [FILL MISSING FIELDS]
+       [[LOG ERRORS [INTO <varname>error_table</varname>] [KEEP] 
+       SEGMENT REJECT LIMIT <varname>count</varname> [ROWS | PERCENT] ]
+
+COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} TO {'<varname>file</varname>' | STDOUT}
+      [ [WITH] 
+        [OIDS]
+        [HEADER]
+        [DELIMITER [ AS ] 'delimiter']
+        [NULL [ AS ] 'null string']
+        [ESCAPE [ AS ] '<varname>escape</varname>' | 'OFF']
+        [CSV [QUOTE [ AS ] 'quote'] 
+             [FORCE QUOTE column [, ...]] ]
+      [IGNORE EXTERNAL PARTITIONS ]</codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p><codeph>COPY</codeph> moves data between Greenplum Database tables and standard file-system
+        files. <codeph>COPY TO</codeph> copies the contents of a table to a file, while <codeph>COPY
+          FROM</codeph> copies data from a file to a table (appending the data to whatever is in the
+        table already). <codeph>COPY TO</codeph> can also copy the results of a
+          <codeph>SELECT</codeph> query. </p>
+      <p>If a list of columns is specified, <codeph>COPY</codeph> will only copy the data in the
+        specified columns to or from the file. If there are any columns in the table that are not in
+        the column list, <codeph>COPY FROM</codeph> will insert the default values for those
+        columns. </p>
+      <p><codeph>COPY</codeph> with a file name instructs the Greenplum Database master host to
+        directly read from or write to a file. The file must be accessible to the master host and
+        the name must be specified from the viewpoint of the master host. When
+          <codeph>STDIN</codeph> or <codeph>STDOUT</codeph> is specified, data is transmitted via
+        the connection between the client and the master.</p>
+      <p>If <codeph>SEGMENT REJECT LIMIT</codeph> is used, then a <codeph>COPY FROM</codeph>
+        operation will operate in single row error isolation mode. In this release, single row error
+        isolation mode only applies to rows in the input file with format errors — for example,
+        extra or missing attributes, attributes of a wrong data type, or invalid client encoding
+        sequences. Constraint errors such as violation of a <codeph>NOT NULL</codeph>,
+          <codeph>CHECK</codeph>, or <codeph>UNIQUE</codeph> constraint will still be handled in
+        'all-or-nothing' input mode. The user can specify the number of error rows acceptable (on a
+        per-segment basis), after which the entire <codeph>COPY FROM</codeph> operation will be
+        aborted and no rows will be loaded. Note that the count of error rows is per-segment, not
+        per entire load operation. If the per-segment reject limit is not reached, then all rows not
+        containing an error will be loaded. If the limit is not reached, all good rows will be
+        loaded and any error rows discarded. If you would like to keep error rows for further
+        examination, you can optionally declare an error table using the <codeph>LOG ERRORS
+          INTO</codeph> clause. Any rows containing a format error would then be logged to the
+        specified error table.</p>
+      <sectiondiv id="section4">
+        <b>Outputs</b>
+        <p>On successful completion, a <codeph>COPY</codeph> command returns a command tag of the
+          form, where <varname>count</varname> is the number of rows copied:</p>
+        <codeblock>COPY <varname>count</varname></codeblock>
+        <p>If running a <codeph>COPY FROM</codeph> command in single row error isolation mode, the
+          following notice message will be returned if any rows were not loaded due to format
+          errors, where <varname>count</varname> is the number of rows rejected:</p>
+        <codeblock>NOTICE: Rejected <varname>count</varname> badly formatted rows.</codeblock>
+      </sectiondiv>
+    </section>
+    <section id="section5">
+      <title>Parameters</title>
+      <parml>
+        <plentry>
+          <pt>
+            <varname>table</varname>
+          </pt>
+          <pd>The name (optionally schema-qualified) of an existing table. </pd>
+        </plentry>
+        <plentry>
+          <pt>
+            <varname>column</varname>
+          </pt>
+          <pd>An optional list of columns to be copied. If no column list is specified, all columns
+            of the table will be copied. </pd>
+        </plentry>
+        <plentry>
+          <pt>
+            <varname>query</varname>
+          </pt>
+          <pd>A <codeph>SELECT</codeph> or <codeph>VALUES</codeph> command whose results are to be
+            copied. Note that parentheses are required around the query. </pd>
+        </plentry>
+        <plentry>
+          <pt>
+            <varname>file</varname>
+          </pt>
+          <pd>The absolute path name of the input or output file.</pd>
+        </plentry>
+        <plentry>
+          <pt>STDIN</pt>
+          <pd>Specifies that input comes from the client application.</pd>
+        </plentry>
+        <plentry>
+          <pt>STDOUT</pt>
+          <pd>Specifies that output goes to the client application. </pd>
+        </plentry>
+        <plentry>
+          <pt>OIDS</pt>
+          <pd>Specifies copying the OID for each row. (An error is raised if OIDS is specified for a
+            table that does not have OIDs, or in the case of copying a query.) </pd>
+        </plentry>
+        <plentry>
+          <pt>
+            <varname>delimiter</varname>
+          </pt>
+          <pd>The single ASCII character that separates columns within each row (line) of the file.
+            The default is a tab character in text mode, a comma in <codeph>CSV</codeph> mode. </pd>
+        </plentry>
+        <plentry>
+          <pt>
+            <varname>null string</varname>
+          </pt>
+          <pd>The string that represents a null value. The default is <codeph>\N</codeph>
+            (backslash-N) in text mode, and a empty value with no quotes in <codeph>CSV</codeph>
+            mode. You might prefer an empty string even in text mode for cases where you don't want
+            to distinguish nulls from empty strings. When using <codeph>COPY FROM</codeph>, any data
+            item that matches this string will be stored as a null value, so you should make sure
+            that you use the same string as you used with <codeph>COPY TO</codeph>. </pd>
+        </plentry>
+        <plentry>
+          <pt>
+            <varname>escape</varname>
+          </pt>
+          <pd>Specifies the single character that is used for C escape sequences (such as
+              <codeph>\n</codeph>,<codeph>\t</codeph>,<codeph>\100</codeph>, and so on) and for
+            quoting data characters that might otherwise be taken as row or column delimiters. Make
+            sure to choose an escape character that is not used anywhere in your actual column data.
+            The default escape character is <codeph>\</codeph> (backslash) for text files or
+              <codeph>"</codeph> (double quote) for CSV files, however it is possible to specify any
+            other character to represent an escape. It is also possible to disable escaping on
+            text-formatted files by specifying the value '<codeph>OFF'</codeph> as the escape value.
+            This is very useful for data such as web log data that has many embedded backslashes
+            that are not intended to be escapes.</pd>
+        </plentry>
+        <plentry>
+          <pt>NEWLINE</pt>
+          <pd>Specifies the newline used in your data files — <codeph>LF</codeph> (Line feed, 0x0A),
+              <codeph>CR</codeph> (Carriage return, 0x0D), or <codeph>CRLF</codeph> (Carriage return
+            plus line feed, 0x0D 0x0A). If not specified, a Greenplum Database segment will detect
+            the newline type by looking at the first row of data it receives and using the first
+            newline type encountered.</pd>
+        </plentry>
+        <plentry>
+          <pt>CSV</pt>
+          <pd>Selects Comma Separated Value (CSV) mode. </pd>
+        </plentry>
+        <plentry>
+          <pt>HEADER</pt>
+          <pd>Specifies that a file contains a header line with the names of each column in the
+            file. On output, the first line contains the column names from the table, and on input,
+            the first line is ignored. </pd>
+        </plentry>
+        <plentry>
+          <pt>
+            <varname>quote</varname>
+          </pt>
+          <pd>Specifies the quotation character in CSV mode. The default is double-quote. </pd>
+        </plentry>
+        <plentry>
+          <pt>FORCE QUOTE</pt>
+          <pd>In <codeph>CSV COPY TO</codeph> mode, forces quoting to be used for all
+              non-<codeph>NULL</codeph> values in each specified column. <codeph>NULL</codeph>
+            output is never quoted.</pd>
+        </plentry>
+        <plentry>
+          <pt>FORCE NOT NULL</pt>
+          <pd>In <codeph>CSV COPY FROM</codeph> mode, process each specified column as though it
+            were quoted and hence not a <codeph>NULL</codeph> value. For the default null string in
+              <codeph>CSV</codeph> mode (nothing between two delimiters), this causes missing values
+            to be evaluated as zero-length strings.</pd>
+        </plentry>
+        <plentry>
+          <pt>FILL MISSING FIELDS</pt>
+          <pd>In <codeph>COPY FROM</codeph> more for both <codeph>TEXT</codeph> and
+              <codeph>CSV</codeph>, specifying <codeph>FILL MISSING FIELDS</codeph> will set missing
+            trailing field values to <codeph>NULL</codeph> (instead of reporting an error) when a
+            row of data has missing data fields at the end of a line or row. Blank rows, fields with
+            a <codeph>NOT NULL</codeph> constraint, and trailing delimiters on a line will still
+            report an error.</pd>
+        </plentry>
+        <plentry>
+          <pt>LOG ERRORS [INTO <varname>error_table</varname>] [KEEP]</pt>
+          <pd>This is an optional clause that can precede a <codeph>SEGMENT REJECT LIMIT</codeph>
+            clause to log information about rows with formatting errors. The <codeph>INTO
+                <i>error_table</i></codeph> clause specifies an error table where rows with
+            formatting errors will be logged when running in single row error isolation mode. </pd>
+          <pd>If the <codeph>INTO <varname>error_table</varname></codeph> clause is not specified,
+            the error log information is stored internally (not in an error table). Error log
+            information that is stored internally is accessed with the Greenplum Database built-in
+            SQL function <codeph>gp_read_error_log()</codeph>.</pd>
+          <pd>If the <varname>error_table</varname> specified already exists, it is used. If it does
+            not exist, it is created. If <varname>error_table</varname> exists and does not have a
+            random distribution (the <codeph>DISTRIBUTED RANDOMLY</codeph> clause was not specified
+            when creating the table), an error is returned.</pd>
+          <pd>If the command generates the error table and no errors are produced, the default is to
+            drop the error table after the operation completes unless <codeph>KEEP</codeph> is
+            specified. If the table is created and the error limit is exceeded, the entire
+            transaction is rolled back and no error data is saved. If you want the error table to
+            persist in this case, create the error table prior to running the <codeph>COPY</codeph>. </pd>
+          <pd>See <xref href="#topic1/section6" format="dita"/> for information about the error log
+            information and built-in functions for viewing and managing error log information.
+              <note>The optional <codeph>INTO <varname>error_table</varname></codeph> clause is
+              deprecated and will not be supported in a future release. Only internal error logs
+              will be supported.</note></pd>
+        </plentry>
+        <plentry>
+          <pt>SEGMENT REJECT LIMIT count [ROWS | PERCENT]</pt>
+          <pd>Runs a <codeph>COPY FROM</codeph> operation in single row error isolation mode. If the
+            input rows have format errors they will be discarded provided that the reject limit
+            count is not reached on any Greenplum Database segment instance during the load
+            operation. The reject limit count can be specified as number of rows (the default) or
+            percentage of total rows (1-100). If <codeph>PERCENT</codeph> is used, each segment
+            starts calculating the bad row percentage only after the number of rows specified by the
+            parameter <codeph>gp_reject_percent_threshold</codeph> has been processed. The default
+            for <codeph>gp_reject_percent_threshold</codeph> is 300 rows. Constraint errors such as
+            violation of a <codeph>NOT NULL</codeph>, <codeph>CHECK</codeph>, or
+              <codeph>UNIQUE</codeph> constraint will still be handled in 'all-or-nothing' input
+            mode. If the limit is not reached, all good rows will be loaded and any error rows
+            discarded.</pd>
+          <pd>
+            <note>Greenplum Database limits the initial number of rows that can contain formatting
+              errors if the <codeph>SEGMENT REJECT LIMIT</codeph> is not triggered first or is not
+              specified. If the first 1000 rows are rejected, the <codeph>COPY</codeph> operation is
+              stopped and rolled back. <p>The limit for the number of initial rejected rows can be
+                changed with the Greenplum Database server configuration parameter
+                  <codeph>gp_initial_bad_row_limit</codeph>. See <xref
+                  href="../config_params/guc_config.xml#topic1"/> for information about the
+                parameter. </p></note>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt>IGNORE EXTERNAL PARTITIONS</pt>
+          <pd>When copying data from partitioned tables, data are not copied from leaf child
+            partitions that are external tables. A message is added to the log file when data are
+            not copied. </pd>
+          <pd>If this clause is not specified and Greenplum Database attempts to copy data from a
+            leaf child partition that is an external table, an error is returned. </pd>
+          <pd>See the next section "Notes" for information about specifying an SQL query to copy
+            data from leaf child partitions that are external tables.</pd>
+        </plentry>
+      </parml>
+    </section>
+    <section id="section6">
+      <title>Notes</title>
+      <p><codeph>COPY</codeph> can only be used with tables, not with external tables or views.
+        However, you can write <codeph>COPY (SELECT * FROM viewname) TO ...</codeph>
+      </p>
+      <p>To copy data from a partitioned table with a leaf child partition that is an external
+        table, use an SQL query to copy the data. For example, if the table
+          <codeph>my_sales</codeph> contains a with a leaf child partition that is an external
+        table, this command <codeph>COPY my_sales TO stdout</codeph> returns an error. This command
+        sends the data to stdout:<codeblock>COPY (SELECT * from my_sales ) TO stdout</codeblock></p>
+      <p>You must have <codeph>SELECT</codeph> privilege on the table whose values are read by
+          <codeph>COPY TO</codeph>, and insert privilege on the table into which values are inserted
+        by <codeph>COPY FROM</codeph>. </p>
+      <p>Files named in a <codeph>COPY</codeph> command are read or written directly by the database
+        server, not by the client application. Therefore, they must reside on or be accessible to
+        the Greenplum Database master host machine, not the client. They must be accessible to and
+        readable or writable by the Greenplum Database system user (the user ID the server runs as),
+        not the client. <codeph>COPY</codeph> naming a file is only allowed to database superusers,
+        since it allows reading or writing any file that the server has privileges to access.</p>
+      <p><codeph>COPY FROM</codeph> will invoke any triggers and check constraints on the
+        destination table. However, it will not invoke rewrite rules. Note that in this release,
+        violations of constraints are not evaluated for single row error isolation mode.</p>
+      <p><codeph>COPY</codeph> input and output is affected by <codeph>DateStyle</codeph>. To ensure
+        portability to other Greenplum Database installations that might use non-default
+          <codeph>DateStyle</codeph> settings, <codeph>DateStyle</codeph> should be set to ISO
+        before using <codeph>COPY TO</codeph>.</p>
+      <p>By default, <codeph>COPY</codeph> stops operation at the first error. This should not lead
+        to problems in the event of a <codeph>COPY TO</codeph>, but the target table will already
+        have received earlier rows in a <codeph>COPY FROM</codeph>. These rows will not be visible
+        or accessible, but they still occupy disk space. This may amount to a considerable amount of
+        wasted disk space if the failure happened well into a large <codeph>COPY FROM</codeph>
+        operation. You may wish to invoke <codeph>VACUUM</codeph> to recover the wasted space.
+        Another option would be to use single row error isolation mode to filter out error rows
+        while still loading good rows. </p>
+      <p>When you specify <codeph>LOG ERRORS INTO <varname>error_table</varname></codeph>, Greenplum
+        Database creates the table <varname>error_table</varname> that contains errors that occur
+        while reading the external table. The table is defined as
+        follows:<codeblock>CREATE TABLE <i>error_table_name</i> ( cmdtime timestamptz, relname text, 
+    filename text, linenum int, bytenum int, errmsg text, 
+    rawdata text, rawbytes bytea ) DISTRIBUTED RANDOMLY;</codeblock></p>
+      <p>You can view the information in the table with SQL commands. </p>
+      <p>For error log data that is stored internally when the <codeph>INTO
+          <i>error_table</i></codeph> is not specified: <ul id="ul_wk3_jdj_bp">
+          <li>Use the built-in SQL function
+              <codeph>gp_read_error_log('<varname>table_name</varname>')</codeph>. It requires
+              <codeph>SELECT</codeph> privilege on <varname>table_name</varname>. This example
+            displays the error log information for data loaded into table
+              <codeph>ext_expenses</codeph> with a <codeph>COPY</codeph>
+              command:<codeblock>SELECT * from gp_read_error_log('ext_expenses');</codeblock><p>The
+              error log contains the same columns as the error table.</p><p>The function returns
+                <codeph>FALSE</codeph> if <varname>table_name</varname> does not exist.</p></li>
+          <li>If error log data exists for the specified table, the new error log data is appended
+            to existing error log data. The error log information is not replicated to mirror
+            segments.</li>
+          <li>Use the built-in SQL function
+                <codeph>gp_truncate_error_log('<varname>table_name</varname>')</codeph> to delete
+            the error log data for <varname>table_name</varname>. It requires the table owner
+            privilege This example deletes the error log information captured when moving data into
+            the table
+              <codeph>ext_expenses</codeph>:<codeblock>SELECT gp_truncate_error_log('ext_expenses'); </codeblock><p>The
+              function returns <codeph>FALSE</codeph> if <varname>table_name</varname> does not
+              exist.</p><p>Specify the <codeph>*</codeph> wildcard character to delete error log
+              information for existing tables in the current database. Specify the string
+                <codeph>*.*</codeph> to delete all database error log information, including error
+              log information that was not deleted due to previous database issues. If * is
+              specified, database owner privilege is required. If <codeph>*.*</codeph> is specified,
+              operating system super-user privilege is required.</p></li>
+        </ul></p>
+      <p>When a Greenplum Database user who is not a superuser runs a <codeph>COPY</codeph> command,
+        the command can be controlled by a resource queue. The resource queue must be configured
+        with the <codeph>ACTIVE_STATEMENTS</codeph> parameter that specifies a maximum limit on the
+        number of queries that can be executed by roles assigned to that queue. Greenplum Database
+        does not apply a cost value or memory value to a <codeph>COPY</codeph> command, resource
+        queues with only cost or memory limits do not affect the running of <codeph>COPY</codeph>
+        commands.</p>
+      <p>A non-superuser can runs can run these types of <codeph>COPY</codeph> commands:<ul
+          id="ul_bf3_2pk_zs">
+          <li><codeph>COPY FROM</codeph> command where the source is <codeph>stdin</codeph></li>
+          <li><codeph>COPY TO</codeph> command where the destination is <codeph>stdout</codeph></li>
+        </ul></p>
+      <p>For information about resource queues, see "Workload Management with Resource Queues" in
+        the <cite>Greenplum Database Administrator Guide</cite>.</p>
+    </section>
+    <section id="section7">
+      <title>File Formats</title>
+      <p> File formats supported by <codeph>COPY</codeph>.</p>
+      <sectiondiv id="section8">
+        <b>Text Format</b>
+        <p>When <codeph>COPY</codeph> is used without the <codeph>CSV</codeph>, the data read or
+          written is a text file with one line per table row. Columns in a row are separated by the
+            <varname>delimiter</varname> character (tab by default). The column values themselves
+          are strings generated by the output function, or acceptable to the input function, of each
+          attribute's data type. The specified null string is used in place of columns that are
+          null. <codeph>COPY FROM</codeph> will raise an error if any line of the input file
+          contains more or fewer columns than are expected. If <codeph>OIDS</codeph> is specified,
+          the OID is read or written as the first column, preceding the user data columns.</p>
+        <p>The data file has two reserved characters that have special meaning to
+            <codeph>COPY</codeph>:</p>
+        <ul>
+          <li id="bk138828">The designated delimiter character (tab by default), which is used to
+            separate fields in the data file. </li>
+          <li id="bk138829">A UNIX-style line feed (<codeph>\n</codeph> or <codeph>0x0a</codeph>),
+            which is used to designate a new row in the data file. It is strongly recommended that
+            applications generating <codeph>COPY</codeph> data convert data line feeds to UNIX-style
+            line feeds rather than Microsoft Windows style carriage return line feeds
+              (<codeph>\r\n</codeph> or <codeph>0x0a 0x0d</codeph>). </li>
+        </ul>
+        <p>If your data contains either of these characters, you must escape the character so
+            <codeph>COPY</codeph> treats it as data and not as a field separator or new row.</p>
+        <p>By default, the escape character is a \ (backslash) for text-formatted files and a
+            <codeph>"</codeph> (double quote) for csv-formatted files. If you want to use a
+          different escape character, you can do so using the <codeph>ESCAPE AS </codeph>clause.
+          Make sure to choose an escape character that is not used anywhere in your data file as an
+          actual data value. You can also disable escaping in text-formatted files by using
+            <codeph>ESCAPE 'OFF'</codeph>.</p>
+        <p>For example, suppose you have a table with three columns and you want to load the
+          following three fields using COPY. </p>
+        <ul>
+          <li id="bk138844">percentage sign = %</li>
+          <li id="bk138845">vertical bar = |</li>
+          <li id="bk138887">backslash = \</li>
+        </ul>
+        <p>Your designated <varname>delimiter</varname> character is <codeph>|</codeph> (pipe
+          character), and your designated <varname>escape</varname> character is <codeph>*</codeph>
+          (asterisk). The formatted row in your data file would look like this:</p>
+        <codeblock>percentage sign = % | vertical bar = <b>*|</b> | backslash = \</codeblock>
+        <p>Notice how the pipe character that is part of the data has been escaped using the
+          asterisk character (*). Also notice that we do not need to escape the backslash since we
+          are using an alternative escape character.</p>
+        <p>The following characters must be preceded by the escape character if they appear as part
+          of a column value: the escape character itself, newline, carriage return, and the current
+          delimiter character. You can specify a different escape character using the <codeph>ESCAPE
+            AS</codeph> clause.</p>
+      </sectiondiv>
+      <sectiondiv id="section9">
+        <b>CSV Format</b>
+        <p>This format is used for importing and exporting the Comma Separated Value (CSV) file
+          format used by many other programs, such as spreadsheets. Instead of the escaping used by
+          Greenplum Database standard text mode, it produces and recognizes the common CSV escaping
+          mechanism. </p>
+        <p>The values in each record are separated by the <codeph>DELIMITER</codeph> character. If
+          the value contains the delimiter character, the <codeph>QUOTE</codeph> character, the
+            <codeph>ESCAPE</codeph> character (which is double quote by default), the
+            <codeph>NULL</codeph> string, a carriage return, or line feed character, then the whole
+          value is prefixed and suffixed by the <codeph>QUOTE</codeph> character. You can also use
+            <codeph>FORCE QUOTE</codeph> to force quotes when outputting non-<codeph>NULL</codeph>
+          values in specific columns. </p>
+        <p>The CSV format has no standard way to distinguish a <codeph>NULL</codeph> value from an
+          empty string. Greenplum Database
+          <codeph>COPY</codeph> handles this by quoting. A <codeph>NULL</codeph> is output as the
+            <codeph>NULL</codeph> string and is not quoted, while a data value matching the
+            <codeph>NULL</codeph> string is quoted. Therefore, using the default settings, a
+            <codeph>NULL</codeph> is written as an unquoted empty string, while an empty string is
+          written with double quotes (""). Reading values follows similar rules. You can use
+            <codeph>FORCE NOT NULL</codeph> to prevent <codeph>NULL</codeph> input comparisons for
+          specific columns.</p>
+        <p>Because backslash is not a special character in the <codeph>CSV</codeph> format,
+            <codeph>\.</codeph>, the end-of-data marker, could also appear as a data value. To avoid
+          any misinterpretation, a <codeph>\.</codeph> data value appearing as a lone entry on a
+          line is automatically quoted on output, and on input, if quoted, is not interpreted as the
+          end-of-data marker. If you are loading a file created by another application that has a
+          single unquoted column and might have a value of <codeph>\.</codeph>, you might need to
+          quote that value in the input file.</p>
+        <note>In <codeph>CSV</codeph> mode, all characters are significant. A quoted value
+          surrounded by white space, or any characters other than <codeph>DELIMITER</codeph>, will
+          include those characters. This can cause errors if you import data from a system that pads
+          CSV lines with white space out to some fixed width. If such a situation arises you might
+          need to preprocess the CSV file to remove the trailing white space, before importing the
+          data into Greenplum Database. </note>
+        <note><codeph>CSV</codeph> mode will both recognize and produce CSV files with quoted values
+          containing embedded carriage returns and line feeds. Thus the files are not strictly one
+          line per table row like text-mode files. </note>
+        <note>Many programs produce strange and occasionally perverse CSV files, so the file format
+          is more a convention than a standard. Thus you might encounter some files that cannot be
+          imported using this mechanism, and <codeph>COPY</codeph> might produce files that other
+          programs cannot process. </note></sectiondiv>
+    </section>
+    <section id="section11">
+      <title>Examples</title>
+      <p>Copy a table to the client using the vertical bar (|) as the field delimiter:</p>
+      <codeblock>COPY country TO STDOUT WITH DELIMITER '|';</codeblock>
+      <p>Copy data from a file into the <codeph>country</codeph> table:</p>
+      <codeblock>COPY country FROM '/home/usr1/sql/country_data';</codeblock>
+      <p>Copy into a file just the countries whose names start with 'A':</p>
+      <codeblock>COPY (SELECT * FROM country WHERE country_name LIKE 'A%') TO 
+'/home/usr1/sql/a_list_countries.copy';</codeblock>
+      <p>Create an error table called <codeph>err_sales</codeph> to use with single row error
+        isolation mode:</p>
+      <codeblock>CREATE TABLE err_sales ( cmdtime timestamptz, relname text, 
+filename text, linenum int, bytenum int, errmsg text, rawdata text, rawbytes bytea ) DISTRIBUTED RANDOMLY;</codeblock>
+      <p>Copy data from a file into the <codeph>sales</codeph> table using single row error
+        isolation mode:</p>
+      <codeblock>COPY sales FROM '/home/usr1/sql/sales_data' LOG ERRORS INTO 
+err_sales SEGMENT REJECT LIMIT 10 ROWS;</codeblock>
+    </section>
+    <section id="section12">
+      <title>Compatibility</title>
+      <p>There is no <codeph>COPY</codeph> statement in the SQL standard. </p>
+    </section>
+    <section id="section13">
+      <title>See Also</title>
+      <p>
+        <codeph>
+          <xref href="./CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/>
+        </codeph>
+      </p>
+    </section>
+  </body>
+</topic>

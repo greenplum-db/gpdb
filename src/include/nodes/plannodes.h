@@ -153,6 +153,9 @@ typedef struct PlannedStmt
 
 	/* What is the memory reserved for this query's execution? */
 	uint64		query_mem;
+
+	/* The overall memory consumption account (i.e., outside of an operator) */
+	MemoryAccountIdType memoryAccountId;
 } PlannedStmt;
 
 /*
@@ -849,9 +852,7 @@ typedef struct Sort
 	AttrNumber *sortColIdx;		/* their indexes in the target list */
 	Oid		   *sortOperators;	/* OIDs of operators to sort them by */
 	bool	   *nullsFirst;		/* NULLS FIRST/LAST directions */
-    /* CDB */ /* add limit node, distinct */
-	Node	   *limitOffset;	/* OFFSET parameter, or NULL if none */
-	Node	   *limitCount;		/* COUNT parameter, or NULL if none */
+    /* CDB */
 	bool		noduplicates;   /* TRUE if sort should discard duplicates */
 
 	/* Sort node can be shared */

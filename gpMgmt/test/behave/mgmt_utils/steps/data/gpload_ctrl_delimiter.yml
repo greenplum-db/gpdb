@@ -1,0 +1,21 @@
+VERSION: 1.0.0.1
+DATABASE: testdb 
+
+GPLOAD:
+  INPUT:
+    - SOURCE:
+        PORT_RANGE: [20000, 30000]
+        FILE:
+          - test/behave/mgmt_utils/steps/data/gpload_ctrl_delimiter.txt
+    - COLUMNS:
+        - col1: int
+        - col2: int 
+    - FORMAT: text
+    - DELIMITER: "\u001d"
+    - ENCODING: latin1
+  OUTPUT:
+    - TABLE: tbl3
+    - MODE: insert 
+
+  PRELOAD:
+    - REUSE_TABLES: true 

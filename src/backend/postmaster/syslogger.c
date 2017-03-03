@@ -2085,41 +2085,41 @@ logfile_rotate(bool time_based_rotation, bool size_based_rotation,
 /*
  * construct logfile name using timestamp information
  *
- * If suffix isn't NULL, append it to the name, replacing any ".log"
+ * In Postgres, if suffix isn't NULL, append it to the name, replacing any ".log"
  * that may be in the pattern.
+ *
+ * In GPDB, parameter suffix is not used. A separate refactor is needed for the API change.
  *
  * Result is palloc'd.
  */
 static char *
 logfile_getname(pg_time_t timestamp, const char *suffix, const char *log_directory, const char *log_file_pattern)
 {
-    char	   *filename;
-    int			len;
+	char	   *filename;
+	int			len;
+	char	   *tmp_suffix;
 #define CSV_SUFFIX ".csv"
+#define LOG_SUFFIX ".log"
 
-    filename = palloc(MAXPGPATH);
+	filename = palloc(MAXPGPATH);
 
-    snprintf(filename, MAXPGPATH, "%s/", log_directory);
+	snprintf(filename, MAXPGPATH, "%s/", log_directory);
 
-    len = strlen(filename);
+	len = strlen(filename);
 
-    if (strchr(log_file_pattern, '%'))
-    {
-        /* treat it as a strftime pattern */
+	if (strchr(log_file_pattern, '%'))
+	{
+		/* treat it as a strftime pattern */
 		pg_strftime(filename + len, MAXPGPATH - len, log_file_pattern,
 				   pg_localtime(&timestamp, log_timezone));
-    }
-    else
-    {
-        /* no strftime escapes, so append timestamp to new filename */
-        snprintf(filename + len, MAXPGPATH - len, "%s.%lu",
-                 log_file_pattern, (unsigned long) timestamp);
-    }
+	}
+	else
+	{
+		/* no strftime escapes, so append timestamp to new filename */
+		snprintf(filename + len, MAXPGPATH - len, "%s.%lu",
+				 log_file_pattern, (unsigned long) timestamp);
+	}
 
-	/* GPDB_83_MERGE_FIXME: The upstream code does the ".log" -> ".csv" transformation,
-	 * but not the other one. I doubt we really need that, so I think we should revert
-	 * this to the way it is in upstream, but will need to double-check. */
-#if 0
 	/*
 	 * If the logging format is 'TEXT' and the filename ends with ".csv",
 	 * replace ".csv" with ".log".
@@ -2127,37 +2127,36 @@ logfile_getname(pg_time_t timestamp, const char *suffix, const char *log_directo
 	 * If the logging format is 'CSV' and the filename does not end with ".csv",
 	 * replace the last four characters in the filename with ".cvs".
 	 */
-	{
 	if (strlen(filename) - sizeof(CSV_SUFFIX) + 1 > 0)
-		suffix = filename + (strlen(filename) - sizeof(CSV_SUFFIX) + 1);
+	{
+		tmp_suffix = filename + (strlen(filename) - sizeof(CSV_SUFFIX) + 1);
+	}
 	else
+	{
 		/*
-		 * Point the suffix to the end of string if the length of
+		 * Point the tmp_suffix to the end of string if the length of
 		 * the filename is less than ".csv".
 		 */
-		suffix = filename + strlen(filename);
-	}
-	
-	if (gp_log_format == 0 && pg_strcasecmp(suffix, CSV_SUFFIX) == 0)
-	{
-		snprintf(suffix, sizeof(CSV_SUFFIX), ".log");
-	}
-	
-	if (gp_log_format == 1 && pg_strcasecmp(suffix, CSV_SUFFIX) != 0)
-	{
-		snprintf(suffix, sizeof(CSV_SUFFIX), CSV_SUFFIX);
-	}
-#endif
-
-	if (suffix != NULL)
-	{
-		len = strlen(filename);
-		if (len > 4 && (strcmp(filename + (len - 4), ".log") == 0))
-			len -= 4;
-		strlcpy(filename + len, suffix, MAXPGPATH - len);
+		tmp_suffix = filename + strlen(filename);
 	}
 
-    return filename;
+	/*
+	 * Only change .csv to .log if gp_log_format is TEXT, otherwise leave it.
+	 *
+	 * This is to handle the case for open_alert_log_file(), which doesn't depends
+	 * on .log or .csv, but just use timestamp as extension.
+	 */
+	if (gp_log_format == 0 && pg_strcasecmp(tmp_suffix, CSV_SUFFIX) == 0)
+	{
+		snprintf(tmp_suffix, sizeof(LOG_SUFFIX), LOG_SUFFIX);
+	}
+	
+	if (gp_log_format == 1 && pg_strcasecmp(tmp_suffix, CSV_SUFFIX) != 0)
+	{
+		snprintf(tmp_suffix, sizeof(CSV_SUFFIX), CSV_SUFFIX);
+	}
+
+	return filename;
 }
 
 /*

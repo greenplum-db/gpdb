@@ -21,8 +21,7 @@
 #include "executor/nodePartitionSelector.h"
 #include "utils/memutils.h"
 
-static void
-partition_propagation(List *partOids, List *scanIds, int32 selectorId);
+static void partition_propagation(EState *estate, List *partOids, List *scanIds, int32 selectorId);
 
 /* PartitionSelector Slots */
 #define PARTITIONSELECTOR_NSLOTS 1
@@ -62,7 +61,7 @@ ExecInitPartitionSelector(PartitionSelector *node, EState *estate, int eflags)
 	/* check for unsupported flags */
 	Assert (!(eflags & (EXEC_FLAG_MARK | EXEC_FLAG_BACKWARD)));
 
-	PartitionSelectorState *psstate = initPartitionSelection(true /*isRunTime*/, node, estate);
+	PartitionSelectorState *psstate = initPartitionSelection(node, estate);
 
 	/* tuple table initialization */
 	ExecInitResultTupleSlot(estate, &psstate->ps);
@@ -117,10 +116,11 @@ TupleTableSlot *
 ExecPartitionSelector(PartitionSelectorState *node)
 {
 	PartitionSelector *ps = (PartitionSelector *) node->ps.plan;
+	EState	   *estate = node->ps.state;
 	if (ps->staticSelection)
 	{
 		/* propagate the part oids obtained via static partition selection */
-		partition_propagation(ps->staticPartOids, ps->staticScanIds, ps->selectorId);
+		partition_propagation(estate, ps->staticPartOids, ps->staticScanIds, ps->selectorId);
 		*node->acceptedLeafPart = NULL;
 		return NULL;
 	}
@@ -131,12 +131,12 @@ ExecPartitionSelector(PartitionSelectorState *node)
 	 */
 	if (NULL == node->rootPartitionNode)
 	{
-		Assert(NULL != dynamicTableScanInfo);
+		Assert(NULL != estate->dynamicTableScanInfo);
 		getPartitionNodeAndAccessMethod
 									(
 									ps->relid,
-									dynamicTableScanInfo->partsMetadata,
-									dynamicTableScanInfo->memoryContext,
+									estate->dynamicTableScanInfo->partsMetadata,
+									estate->es_query_cxt,
 									&node->rootPartitionNode,
 									&node->accessMethods
 									);
@@ -164,7 +164,7 @@ ExecPartitionSelector(PartitionSelectorState *node)
 	/* partition propagation */
 	if (NULL != ps->propagationExpression)
 	{
-		partition_propagation(selparts->partOids, selparts->scanIds, ps->selectorId);
+		partition_propagation(estate, selparts->partOids, selparts->scanIds, ps->selectorId);
 	}
 
 	list_free(selparts->partOids);
@@ -267,7 +267,7 @@ ExecEndPartitionSelector(PartitionSelectorState *node)
  * ----------------------------------------------------------------
  */
 static void
-partition_propagation(List *partOids, List *scanIds, int32 selectorId)
+partition_propagation(EState *estate, List *partOids, List *scanIds, int32 selectorId)
 {
 	Assert (list_length(partOids) == list_length(scanIds));
 
@@ -278,7 +278,7 @@ partition_propagation(List *partOids, List *scanIds, int32 selectorId)
 		Oid partOid = lfirst_oid(lcOid);
 		int scanId = lfirst_int(lcScanId);
 
-		InsertPidIntoDynamicTableScanInfo(scanId, partOid, selectorId);
+		InsertPidIntoDynamicTableScanInfo(estate, scanId, partOid, selectorId);
 	}
 }
 

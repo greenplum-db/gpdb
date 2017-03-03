@@ -20,6 +20,7 @@
 #define PG_CONSTRAINT_H
 
 #include "catalog/genbki.h"
+#include "catalog/dependency.h"
 #include "nodes/pg_list.h"
 #include "access/attnum.h"
 
@@ -213,7 +214,8 @@ extern char *ChooseConstraintName(const char *name1, const char *name2,
 extern char * GetConstraintNameByOid(Oid constraintId);
 
 extern void AlterConstraintNamespaces(Oid ownerId, Oid oldNspId,
-						  Oid newNspId, bool isType);
+						  Oid newNspId, bool isType, ObjectAddresses *objsMoved);
+extern Oid  get_constraint_oid(Oid relid, const char *conname, bool missing_ok);
 
 /**
  * Identify primary key column from foreign key column.

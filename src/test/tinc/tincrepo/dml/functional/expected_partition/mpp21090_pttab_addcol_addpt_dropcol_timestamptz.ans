@@ -1,0 +1,79 @@
+DROP TABLE IF EXISTS mpp21090_pttab_addcol_addpt_dropcol_timestamptz;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_addcol_addpt_dropcol_timestamptz_opt.sql:14: NOTICE:  table "mpp21090_pttab_addcol_addpt_dropcol_timestamptz" does not exist, skipping
+DROP TABLE
+CREATE TABLE mpp21090_pttab_addcol_addpt_dropcol_timestamptz
+(
+    col1 timestamptz,
+    col2 timestamptz,
+    col3 char,
+    col4 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY RANGE(col2)(partition partone start('2013-12-01 12:00:00 PST') end('2013-12-31 12:00:00 PST') WITH(APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start('2013-12-31 12:00:00 PST') end('2014-01-01 12:00:00 PST') WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start('2014-01-01 12:00:00 PST') end('2014-02-01 12:00:00 PST'));
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_addcol_addpt_dropcol_timestamptz_opt.sql:23: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_addcol_addpt_dropcol_timestamptz_1_prt_partone" for table "mpp21090_pttab_addcol_addpt_dropcol_timestamptz"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_addcol_addpt_dropcol_timestamptz_opt.sql:23: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_addcol_addpt_dropcol_timestamptz_1_prt_parttwo" for table "mpp21090_pttab_addcol_addpt_dropcol_timestamptz"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_addcol_addpt_dropcol_timestamptz_opt.sql:23: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_addcol_addpt_dropcol_timestamptz_1_prt_partthree" for table "mpp21090_pttab_addcol_addpt_dropcol_timestamptz"
+CREATE TABLE
+INSERT INTO mpp21090_pttab_addcol_addpt_dropcol_timestamptz VALUES('2013-12-31 12:00:00 PST','2013-12-31 12:00:00 PST','a',0);
+INSERT 0 1
+ALTER TABLE mpp21090_pttab_addcol_addpt_dropcol_timestamptz ADD COLUMN col5 timestamptz DEFAULT '2013-12-31 12:00:00 PST';
+ALTER TABLE
+ALTER TABLE mpp21090_pttab_addcol_addpt_dropcol_timestamptz ADD PARTITION partfour start('2014-02-01 12:00:00 PST') end('2014-03-01 12:00:00 PST') inclusive;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_addcol_addpt_dropcol_timestamptz_opt.sql:28: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_addcol_addpt_dropcol_timestamptz_1_prt_partfour" for table "mpp21090_pttab_addcol_addpt_dropcol_timestamptz"
+ALTER TABLE
+INSERT INTO mpp21090_pttab_addcol_addpt_dropcol_timestamptz SELECT '2014-02-10 12:00:00 PST','2014-02-10 12:00:00 PST','b',1, '2014-02-10 12:00:00 PST';
+INSERT 0 1
+SELECT * FROM mpp21090_pttab_addcol_addpt_dropcol_timestamptz ORDER BY 1,2,3;
+          col1          |          col2          | col3 | col4 |          col5          
+------------------------+------------------------+------+------+------------------------
+ 2013-12-31 12:00:00-08 | 2013-12-31 12:00:00-08 | a    |    0 | 2013-12-31 12:00:00-08
+ 2014-02-10 12:00:00-08 | 2014-02-10 12:00:00-08 | b    |    1 | 2014-02-10 12:00:00-08
+(2 rows)
+
+ALTER TABLE mpp21090_pttab_addcol_addpt_dropcol_timestamptz DROP COLUMN col1;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_addcol_addpt_dropcol_timestamptz_opt.sql:33: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_addcol_addpt_dropcol_timestamptz_opt.sql:33: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_addcol_addpt_dropcol_timestamptz_opt.sql:33: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_addcol_addpt_dropcol_timestamptz_opt.sql:33: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_addcol_addpt_dropcol_timestamptz_opt.sql:33: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+ALTER TABLE
+INSERT INTO mpp21090_pttab_addcol_addpt_dropcol_timestamptz SELECT '2014-02-10 12:00:00 PST','c',1, '2014-02-10 12:00:00 PST';
+INSERT 0 1
+SELECT * FROM mpp21090_pttab_addcol_addpt_dropcol_timestamptz ORDER BY 1,2,3;
+          col2          | col3 | col4 |          col5          
+------------------------+------+------+------------------------
+ 2013-12-31 12:00:00-08 | a    |    0 | 2013-12-31 12:00:00-08
+ 2014-02-10 12:00:00-08 | b    |    1 | 2014-02-10 12:00:00-08
+ 2014-02-10 12:00:00-08 | c    |    1 | 2014-02-10 12:00:00-08
+(3 rows)
+
+UPDATE mpp21090_pttab_addcol_addpt_dropcol_timestamptz SET col5 = '2014-01-01 12:00:00 PST' WHERE col2 = '2014-02-10 12:00:00 PST' and col3='c';
+UPDATE 1
+SELECT * FROM mpp21090_pttab_addcol_addpt_dropcol_timestamptz ORDER BY 1,2,3;
+          col2          | col3 | col4 |          col5          
+------------------------+------+------+------------------------
+ 2013-12-31 12:00:00-08 | a    |    0 | 2013-12-31 12:00:00-08
+ 2014-02-10 12:00:00-08 | b    |    1 | 2014-02-10 12:00:00-08
+ 2014-02-10 12:00:00-08 | c    |    1 | 2014-01-01 12:00:00-08
+(3 rows)
+
+-- Update partition key
+UPDATE mpp21090_pttab_addcol_addpt_dropcol_timestamptz SET col2 = '2014-01-01 12:00:00 PST' WHERE col2 = '2014-02-10 12:00:00 PST' and col3='c';
+UPDATE 1
+SELECT * FROM mpp21090_pttab_addcol_addpt_dropcol_timestamptz ORDER BY 1,2,3;
+          col2          | col3 | col4 |          col5          
+------------------------+------+------+------------------------
+ 2013-12-31 12:00:00-08 | a    |    0 | 2013-12-31 12:00:00-08
+ 2014-01-01 12:00:00-08 | c    |    1 | 2014-01-01 12:00:00-08
+ 2014-02-10 12:00:00-08 | b    |    1 | 2014-02-10 12:00:00-08
+(3 rows)
+
+DELETE FROM mpp21090_pttab_addcol_addpt_dropcol_timestamptz WHERE col2 = '2014-01-01 12:00:00 PST';
+DELETE 1
+SELECT * FROM mpp21090_pttab_addcol_addpt_dropcol_timestamptz ORDER BY 1,2,3;
+          col2          | col3 | col4 |          col5          
+------------------------+------+------+------------------------
+ 2013-12-31 12:00:00-08 | a    |    0 | 2013-12-31 12:00:00-08
+ 2014-02-10 12:00:00-08 | b    |    1 | 2014-02-10 12:00:00-08
+(2 rows)
+

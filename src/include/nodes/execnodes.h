@@ -492,11 +492,6 @@ typedef struct DynamicTableScanInfo
 	 * Partitioning metadata for all relevant partition tables.
 	 */
 	List	   *partsMetadata;
-
-	/*
-	 * The memory context in which pidIndexes are allocated.
-	 */
-	MemoryContext memoryContext;
 } DynamicTableScanInfo;
 
 /*
@@ -510,12 +505,6 @@ typedef struct DynamicTableScanInfo
  * default incremental number when the array is out of space.
  */
 #define NUM_PID_INDEXES_ADDED 10
-
-/*
- * The global variable for the information relevant to dynamic table scans.
- * During execution, this will point to the value initialized in EState.
- */
-extern DynamicTableScanInfo *dynamicTableScanInfo;
 
 /* ----------------
  *	  EState information
@@ -2251,8 +2240,6 @@ typedef struct MaterialState
 	void	   *ts_pos;
 	void	   *ts_markpos;
 	void	   *share_lk_ctxt;
-
-	bool		cached_workfiles_found;  /* true if found matching and usable cached workfiles */
 } MaterialState;
 
 /* ----------------
@@ -2297,11 +2284,6 @@ typedef struct SortState
 	bool		bounded_Done;	/* value of bounded we did the sort with */
 	int64		bound_Done;		/* value of bound we did the sort with */
 	GenericTupStore *tuplesortstate; /* private state of tuplesort.c */
-	/* CDB */ /* limit state */
-
-	/* GPDB_83MERGE_FIXME: Are these redundant with the "bound" fields? */
-	ExprState  *limitOffset;	/* OFFSET parameter, or NULL if none */
-	ExprState  *limitCount;		/* COUNT parameter, or NULL if none */
 	bool		noduplicates;	/* true if discard duplicate rows */
 
 	void	   *share_lk_ctxt;
@@ -2399,7 +2381,6 @@ typedef struct WindowState
 	TupleTableSlot *priorslot;	/* place for prior tuple */
 	TupleTableSlot *curslot;		/* current tuple */
 	TupleTableSlot *spare;		/* current tuple */
-	TupleTableSlot *saveslot;	/* convenient place holder */
 
 	/* meta data about the current slot */
 	bool		cur_slot_is_new;	/* is this a slot from a buffer or outer plan */

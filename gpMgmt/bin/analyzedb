@@ -142,7 +142,7 @@ INNER JOIN (VALUES %s) o(orig_name) ON c.oid = o.orig_name::regclass
 """
 
 GET_LEAF_ROOT_MAPPING_SQL = """
-SELECT n.nspname || '.' || c2.relname, n.nspname || '.' || c.relname from pg_class c, pg_class c2, pg_namespace n, pg_partition pp, pg_partition_rule ppr
+SELECT n.nspname, c2.relname, n.nspname, c.relname from pg_class c, pg_class c2, pg_namespace n, pg_partition pp, pg_partition_rule ppr
 WHERE ppr.parchildrelid in (%s) AND ppr.paroid = pp.oid AND pp.parrelid = c.oid AND c.relnamespace = n.oid AND ppr.parchildrelid = c2.oid;
 """
 
@@ -274,7 +274,7 @@ class AnalyzeDb(Operation):
             # The below object is needed for some functions imported from dump.py
             self.context = Context()
             self.context.master_port = self.pg_port
-            self.context.dump_database = self.dbname
+            self.context.target_db = self.dbname
 
             # The input_col_dict keeps track of the requested columns to analyze.
             # key: table name (e.g. 'public.foo')
@@ -390,12 +390,11 @@ class AnalyzeDb(Operation):
                                     (len(self.success_list), len(ordered_candidates)))
                     wait_count -= 1
 
-                for worker in pool.workers:
-                    worker.join(1)
+                pool.join()
+                pool.haltWork()
             except:
                 pool.haltWork()
-                for worker in pool.workers:
-                    worker.join(1)
+                pool.joinWorkers()
                 raise
 
             finally:
@@ -563,7 +562,7 @@ class AnalyzeDb(Operation):
             ret.append(tup)
         return ret
 
-    
+
 
     def _write_back(self, curr_ao_state, curr_last_op, prev_ao_state, prev_last_op, heap_partitions,
                    input_col_dict, prev_col_dict, root_partition_col_dict, is_full, dirty_partitions, target_list):
@@ -725,7 +724,7 @@ class AnalyzeDb(Operation):
         oid_str = get_oid_str(candidates)
         qresult = run_sql(self.conn, GET_LEAF_ROOT_MAPPING_SQL % oid_str)
         for mapping in qresult:
-            leaf_root_dict[mapping[0]] = mapping[1]
+            leaf_root_dict[(mapping[0], mapping[1])] = (mapping[2], mapping[3])
 
         for can in candidates:
             if can in leaf_root_dict: # this is a leaf partition
@@ -1134,6 +1133,7 @@ class AnalyzeWorkerPool(WorkerPool):
         self.workers=[]
         self.work_queue=Queue()
         self.completed_queue=Queue()
+        self.should_stop=False
         self.num_assigned=0
         if items is not None:
             for item in items:
@@ -1148,31 +1148,37 @@ class AnalyzeWorkerPool(WorkerPool):
         self.numWorkers = numWorkers
         self.logger = logger
 
-
-class AnalyzeWorker(Thread):
+class AnalyzeWorker(Worker):
     """
     a custom worker thread for Analyze
     """
-    pool=None
-    cmd=None
-    name=None
-    logger=None
-
-    def __init__(self,name,pool,timeout=0.05):
-        self.name=name
-        self.pool=pool
-        self.timeout=timeout
-        self.logger=logger
-        self.stoprequest = threading.Event()
-        Thread.__init__(self)
-
+    def __init__(self,name,pool):
+        Worker.__init__(self, name, pool)
+    
+    
     def run(self):
-        while not self.stoprequest.isSet():
+        while True:
             try:
-                self.cmd = self.pool.getNextWorkItem(timeout=self.timeout)
+                try:
+                    self.cmd = self.pool.getNextWorkItem()
+                except TypeError:
+                    # misleading exception raised during interpreter shutdown
+                    return 
 
-                if self.cmd is not None:
-                    # tablename = self.cmd.cmdStr.split()[-1][:-1]
+                # we must have got a command to run here
+                if self.cmd is None:
+                    self.logger.debug("[%s] got a None cmd" % self.name)
+                    self.pool.markTaskDone()
+                elif self.cmd is self.pool.halt_command:
+                    self.logger.debug("[%s] got a halt cmd" % self.name)
+                    self.pool.markTaskDone()
+                    self.cmd=None
+                    return
+                elif self.pool.should_stop:
+                    self.logger.debug("[%s] got cmd and pool is stopped: %s" % (self.name, self.cmd))
+                    self.pool.markTaskDone()
+                    self.cmd=None
+                else:
                     self.logger.info("[%s] started  %s" % (self.name, self.cmd.name))
                     start_time = time.time()
                     self.cmd.run()
@@ -1186,24 +1192,13 @@ class AnalyzeWorker(Thread):
                     self.pool.addFinishedWorkItem(self.cmd)
                     self.cmd=None
 
-            except Empty:
-                return
-
-            except:
+            except Exception,e:
+                self.logger.exception(e)
                 if self.cmd:
                     self.logger.debug("[%s] finished cmd with exception: %s" % (self.name, self.cmd))
                     self.pool.addFinishedWorkItem(self.cmd)
                     self.cmd=None
-                raise
-
-    def haltWork(self):
-        self.stoprequest.set()
-        c = self.cmd
-        if c is not None:
-            c.interrupt()
-            c.cancel()
-
-
+    
 if __name__ == '__main__':
     sys.argv[0] = EXECNAME
     simple_main(create_parser, AnalyzeDb)

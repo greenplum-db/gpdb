@@ -73,6 +73,9 @@ pg_regress$(X): pg_regress.o pg_regress_main.o
 pg_regress.o: pg_regress.c $(top_builddir)/src/port/pg_config_paths.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -I$(top_builddir)/src/port $(EXTRADEFS) -c -o $@ $<
 
+twophase_pqexecparams: twophase_pqexecparams.c
+	$(CC) $(CPPFLAGS) -I$(top_builddir)/src/interfaces/libpq -L$(GPHOME)/lib -L$(top_builddir)/src/interfaces/libpq  -o $@ $< -lpq
+
 $(top_builddir)/src/port/pg_config_paths.h: $(top_builddir)/src/Makefile.global
 	$(MAKE) -C $(top_builddir)/src/port pg_config_paths.h
 
@@ -98,7 +101,7 @@ uninstall:
 # Build dynamically-loaded object file for CREATE FUNCTION ... LANGUAGE C.
 
 NAME = regress
-OBJS = regress.o partindex.o
+OBJS = regress.o partindex.o mapred/mapred.o
 
 include $(top_srcdir)/src/Makefile.shlib
 
@@ -165,7 +168,6 @@ includecheck:
 
 pg_regress_call = ./pg_regress --inputdir=$(srcdir) --multibyte=$(MULTIBYTE) $(MAXCONNOPT) $(NOLOCALE) --init-file=$(srcdir)/init_file
 pg_regress_call_bb = ./pg_regress --inputdir=$(srcdir)/bugbuster --outputdir=$(srcdir)/bugbuster --multibyte=$(MULTIBYTE) $(MAXCONNOPT) $(NOLOCALE) --init-file=$(srcdir)/init_file
-pg_regress_call_opt = ./pg_regress --inputdir=$(srcdir)/optfunctional --outputdir=$(srcdir)/optfunctional --multibyte=$(MULTIBYTE) $(MAXCONNOPT) $(NOLOCALE) --init-file=$(srcdir)/optfunctional/init_file
 
 check: all
 	$(pg_regress_call) --temp-install=./tmp_check --top-builddir=$(top_builddir) --srcdir=$(abs_srcdir) --temp-port=$(TEMP_PORT) --schedule=$(srcdir)/parallel_schedule 
@@ -173,20 +175,13 @@ check: all
 installcheck: all
 	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/serial_schedule --srcdir=$(abs_srcdir)
 
-installcheck-good: all
+installcheck-good: all twophase_pqexecparams
 	if [ -z "$(INSTALLCHECK_GOOD_KERBEROS)" ]; then \
-	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --srcdir=$(abs_srcdir); \
+	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --srcdir=$(abs_srcdir) --ao-dir=uao; \
 	else \
 	bash kerberos/setup_test.sh; \
-	PGUSER="gpadmin/kerberos-test" $(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --srcdir=$(abs_srcdir) --host=`hostname`; \
+	PGUSER="gpadmin/kerberos-test" $(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --srcdir=$(abs_srcdir) --ao-dir=uao --host=`hostname`; \
 	fi
-
-installcheck-optfunctional: all
-	@echo "================================"
-	@echo "Installcheck-optfunctional starting ... "
-	@echo "================================"
-	export PGOPTIONS='-c optimizer=on' && \
-	$(pg_regress_call_opt) --psqldir=$(PSQLDIR) --schedule=$(srcdir)/optfunctional/optfunctional_schedule --srcdir=$(abs_srcdir)/optfunctional
 
 testbouncer: all
 	bash -c "bouncer/setup.sh"
@@ -196,17 +191,11 @@ testbouncer: all
 installcheck-bugbuster: all
 	@echo "================================"
 	@echo "BugBuster starting ... " 
-	@echo "ALL YOUR BUGS ARE BELONG TO US FROM REGRESS!"
 	@echo "================================"
 	@grep memory_quota ./bugbuster/known_good_schedule > /dev/null; \
-	if [ $$? = 0 ]; then bugbuster/bugbuster_setup.sh; fi
 	echo $(abs_srcdir)
-	$(pg_regress_call_bb)  --psqldir=$(PSQLDIR) --schedule=./bugbuster/known_good_schedule --srcdir=$(abs_srcdir)
+	$(pg_regress_call_bb)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/bugbuster/known_good_schedule --srcdir=$(abs_srcdir)/bugbuster
 	@grep memory_quota ./bugbuster/known_good_schedule > /dev/null; \
-	if [ $$? = 0 ]; then bugbuster/bugbuster_cleanup.sh; fi
-
-$(srcdir)/sql/orca_udfs.sql: $(srcdir)/sql/orca_udfs.sql.in
-	sed -e 's,%%GPOPTUTILS_NAMESPACE%%,orcaudftest,g; s,%%EXT%%,$(LDSFX),g' $(srcdir)/sql/orca_udfs.sql.in > $(srcdir)/sql/orca_udfs.sql
 
 # old interfaces follow...
 
@@ -223,9 +212,6 @@ bigcheck: all
 bkuprestore: all
 	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/bkuprestore_schedule --srcdir=$(abs_srcdir)
 
-installcheck-olaptest: all
-	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/olap_schedule --srcdir=$(abs_srcdir)
-
 ##
 ## Clean up
 ##
@@ -234,7 +220,7 @@ clean distclean maintainer-clean: clean-lib
 # things built by `all' target
 	rm -f $(NAME)$(DLSUFFIX) $(OBJS)
 	$(MAKE) -C $(contribdir)/spi clean
-	rm -f $(output_files) $(input_files) pg_regress_main.o pg_regress.o pg_regress$(X)
+	rm -f $(output_files) $(input_files) pg_regress_main.o pg_regress.o pg_regress$(X) twophase_pqexecparams
 	rm -f $(bb_output_files) $(bb_input_files)
 # things created by dynamic configs
 	find sql -type l | xargs rm -f

@@ -1,0 +1,62 @@
+DROP TABLE IF EXISTS mpp21090_pttab_droplastcol_addpt_time;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_droplastcol_addpt_time_opt.sql:14: NOTICE:  table "mpp21090_pttab_droplastcol_addpt_time" does not exist, skipping
+DROP TABLE
+CREATE TABLE mpp21090_pttab_droplastcol_addpt_time
+(
+    col1 time,
+    col2 time,
+    col3 char,
+    col4 int,
+    col5 time
+    
+) 
+DISTRIBUTED by (col1)
+PARTITION BY RANGE(col2)(partition partone start('12:00:00') end('18:00:00')  WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start('18:00:00') end('24:00:00') WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start('0:00:00') end('11:00:00'));
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_droplastcol_addpt_time_opt.sql:25: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_droplastcol_addpt_time_1_prt_partthree" for table "mpp21090_pttab_droplastcol_addpt_time"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_droplastcol_addpt_time_opt.sql:25: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_droplastcol_addpt_time_1_prt_partone" for table "mpp21090_pttab_droplastcol_addpt_time"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_droplastcol_addpt_time_opt.sql:25: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_droplastcol_addpt_time_1_prt_parttwo" for table "mpp21090_pttab_droplastcol_addpt_time"
+CREATE TABLE
+INSERT INTO mpp21090_pttab_droplastcol_addpt_time VALUES('12:00:00','12:00:00','a',0,'12:00:00');
+INSERT 0 1
+ALTER TABLE mpp21090_pttab_droplastcol_addpt_time DROP COLUMN col5;
+ALTER TABLE
+ALTER TABLE mpp21090_pttab_droplastcol_addpt_time ADD PARTITION partfour start('11:00:00') end('12:00:00');
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_droplastcol_addpt_time_opt.sql:30: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_droplastcol_addpt_time_1_prt_partfour" for table "mpp21090_pttab_droplastcol_addpt_time"
+ALTER TABLE
+INSERT INTO mpp21090_pttab_droplastcol_addpt_time SELECT '11:30:00','11:30:00','b',1;
+INSERT 0 1
+SELECT * FROM mpp21090_pttab_droplastcol_addpt_time ORDER BY 1,2,3;
+   col1   |   col2   | col3 | col4 
+----------+----------+------+------
+ 11:30:00 | 11:30:00 | b    |    1
+ 12:00:00 | 12:00:00 | a    |    0
+(2 rows)
+
+-- Update distribution key
+UPDATE mpp21090_pttab_droplastcol_addpt_time SET col1 = '1:00:00' WHERE col2 = '11:30:00' AND col1 = '11:30:00';
+UPDATE 1
+SELECT * FROM mpp21090_pttab_droplastcol_addpt_time ORDER BY 1,2,3;
+   col1   |   col2   | col3 | col4 
+----------+----------+------+------
+ 01:00:00 | 11:30:00 | b    |    1
+ 12:00:00 | 12:00:00 | a    |    0
+(2 rows)
+
+-- Update partition key
+UPDATE mpp21090_pttab_droplastcol_addpt_time SET col2 = '1:00:00' WHERE col2 = '11:30:00' AND col1 = '1:00:00';
+UPDATE 1
+SELECT * FROM mpp21090_pttab_droplastcol_addpt_time ORDER BY 1,2,3;
+   col1   |   col2   | col3 | col4 
+----------+----------+------+------
+ 01:00:00 | 01:00:00 | b    |    1
+ 12:00:00 | 12:00:00 | a    |    0
+(2 rows)
+
+DELETE FROM mpp21090_pttab_droplastcol_addpt_time WHERE col2 = '1:00:00';
+DELETE 1
+SELECT * FROM mpp21090_pttab_droplastcol_addpt_time ORDER BY 1,2,3;
+   col1   |   col2   | col3 | col4 
+----------+----------+------+------
+ 12:00:00 | 12:00:00 | a    |    0
+(1 row)
+

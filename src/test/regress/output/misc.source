@@ -65,10 +65,9 @@ SELECT unique1 FROM onek2 WHERE unique1 < 2 ORDER BY unique1;
        1
 (2 rows)
 
--- GPDB does not support BINARY-mode COPY.
---COPY BINARY stud_emp TO '@abs_builddir@/results/stud_emp.data';
---DELETE FROM stud_emp;
---COPY BINARY stud_emp FROM '@abs_builddir@/results/stud_emp.data';
+COPY BINARY stud_emp TO '@abs_builddir@/results/stud_emp.data';
+DELETE FROM stud_emp;
+COPY BINARY stud_emp FROM '@abs_builddir@/results/stud_emp.data';
 SELECT * FROM stud_emp;
  name  | age |  location  | salary | manager | gpa | percent 
 -------+-----+------------+--------+---------+-----+---------
@@ -571,6 +570,8 @@ SELECT user_relns() AS user_relns
  gp_param_setting_t
  gp_param_settings_seg_value_diffs
  gp_pgdatabase_invalid
+ gp_resgroup_config
+ gp_resgroup_status
  gp_resq_activity
  gp_resq_activity_by_queue
  gp_resq_priority_backend
@@ -660,7 +661,7 @@ SELECT user_relns() AS user_relns
  toyemp
  usr_define_type
  varchar_tbl
-(156 rows)
+(158 rows)
 
 SELECT name(equipment(hobby_construct(text 'skywalking', text 'mer')));
  name 

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic10">
+  <title>Enabling Alerts and Notifications</title>
+  <body>
+    <p>To receive notifications of system events such as segment failures,
+      enable email or SNMP alerts. See <xref href="../../managing/monitor.xml#topic4"/>.</p>
+  </body>
+</topic>

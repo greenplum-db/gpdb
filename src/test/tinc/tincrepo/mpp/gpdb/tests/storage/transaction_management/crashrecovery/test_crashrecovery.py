@@ -28,6 +28,7 @@ from tinctest.models.scenario import ScenarioTestCase
 
 from mpp.lib.gpdbverify import GpdbVerify
 from mpp.lib.PSQL import PSQL
+from mpp.lib.filerep_util import Filerepe2e_Util
 
 class CrashRecovery_2PC(TINCTestCase):
     """Recovery scenarios for distributed transactions.
@@ -37,6 +38,7 @@ class CrashRecovery_2PC(TINCTestCase):
         super(CrashRecovery_2PC, self).__init__(methodName)
         self.skipRestart = False
         self.proc = None
+        self.filereputil = Filerepe2e_Util()
 
     def setUp(self):
         tinctest.logger.info("setUp: resetting fault")
@@ -106,23 +108,11 @@ class CrashRecovery_2PC(TINCTestCase):
                       local_path('sql/ao_create.sql'))
         self.proc = cmd.runNoWait()
         tinctest.logger.info("runNoWait: %s, pid: %d" % (cmd.cmdStr, self.proc.pid))
-        # Wait until pg_stat_activity reports a "commit;" transaction.
+
+        commitBlocked = self.filereputil.check_fault_status(fault_name='dtm_xlog_distributed_commit', status="triggered", seg_id='1', num_times_hit=1);
+
         # Shutdown of primary (and mirror) should happen only after
         # the commit is blocked due to suspend fault.
-        # TODO: change this to use gpfaultinjector's status option
-        # once it is available.
-        attempts = 1
-        commitBlocked = False
-        while attempts < 20 and not commitBlocked:
-            with dbconn.connect(dbconn.DbURL(), utility=True) as conn:
-                commitBlocked = bool(
-                    dbconn.execSQLForSingleton(
-                        conn,
-                        "select count(*) > 0 from pg_stat_activity where "
-                        "current_query ~* 'commit[;]';"))
-            tinctest.logger.info("waiting for commit to be blocked")
-            time.sleep(1)
-            attempts = attempts + 1
         assert commitBlocked, "timeout waiting for commit to be blocked"
         tinctest.logger.info("commit is blocked due to suspend fault")
         # At this point, segments have already recorded the
@@ -170,10 +160,14 @@ class CrashRecovery_2PC(TINCTestCase):
         assert (out.find("commit succeeded") == -1 and
                 err.find("commit succeeded") == -1 and
                 err.find("PANIC") != -1)
-        # Wait for recovery to complete, timeout after ~ 10 seconds.
+
+        # Wait for a few seconds to ensure that postmaster reset has started
+        time.sleep(5)
+
+        # Wait for recovery to complete, timeout after ~ 5 mins.
         attempts = 1
         recoveryComplete = False
-        while attempts < 20 and not recoveryComplete:
+        while attempts < 600 and not recoveryComplete:
             recoveryComplete = "aaa150" in PSQL.run_sql_command_utility_mode(
                 "select 'aaa' || (100+50)")
             time.sleep(0.5)

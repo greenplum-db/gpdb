@@ -67,6 +67,26 @@ llvm::Value* GpCodegenUtils::CreateCppTypeToDatumCast(
   return llvm_casted_value;
 }
 
+llvm::Value* GpCodegenUtils::CreatePalloc(Size size,
+                                          const char* file,
+                                          const char *func,
+                                          int line) {
+  llvm::Function* llvm_memory_context_alloc_impl =
+      GetOrRegisterExternalFunction(MemoryContextAllocImpl,
+      "MemoryContextAllocImpl");
+  // Define llvm_memory_context_alloc_impl as a system memory allocation
+  // function that returns a pointer to allocated storage.
+  llvm_memory_context_alloc_impl->setDoesNotAlias(0 /* return value */);
+  llvm::Value* llvm_current_memory_context =
+      ir_builder()->CreateLoad(GetConstant(&CurrentMemoryContext));
+  return ir_builder()->CreateCall(llvm_memory_context_alloc_impl, {
+      llvm_current_memory_context,
+      GetConstant<Size>(size),
+          GetConstant(file),
+          GetConstant(func),
+          GetConstant(line)});
+}
+
 }  // namespace gpcodegen
 
 // EOF

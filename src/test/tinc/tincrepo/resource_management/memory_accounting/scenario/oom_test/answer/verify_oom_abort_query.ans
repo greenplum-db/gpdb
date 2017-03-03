@@ -1,0 +1,7 @@
+-- start_matchsubs
+-- m/DETAIL/
+-- s/DETAIL/GP_IGNORE: DETAIL/
+-- end_matchsubs
+select count(1) from lineitem as a, lineitem as b where a.l_orderkey = b.l_orderkey;
+psql:/data/soedoj/tincrepo/main/resource_management/memory_accounting/scenario/oom_test/output/verify_oom_abort_query.sql:5: ERROR:  Out of memory  (seg0 slice1 gpdb5.sto.dh.greenplum.com:48506 pid=8015)
+DETAIL:  Per-query VM protect limit reached: current limit is 2048 kB, requested 4194384 bytes, available 1 MB

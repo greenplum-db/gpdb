@@ -1,0 +1,16 @@
+platform: linux
+image_resource:
+  type: docker-image
+  source:
+    repository: yolo/orcadev
+    tag: centos6
+inputs:
+  - name: gpdb_src
+  - name: bin_gpdb
+outputs:
+  - name: package_tarball
+run:
+  path: gpdb_src/concourse/scripts/package_tarball.bash
+params:
+  src_root: bin_gpdb/install
+  dst_tarball: package_tarball/bin_gpdb.tar.gz

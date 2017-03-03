@@ -1,0 +1,39 @@
+-- @author prabhd 
+-- @created 2013-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description test13: Query with grouping sets (generates a plan with CTEs)
+-- start_ignore
+SET gp_optimizer=on;SET gp_log_optimizer=on;
+SET
+SET
+-- end_ignore
+SELECT a, count(*)
+FROM foo GROUP BY GROUPING SETS ((),(a), (a,b)) ORDER BY 1;
+ a  | count 
+----+-------
+  1 |     1
+  1 |     1
+  2 |     1
+  2 |     1
+  3 |     1
+  3 |     1
+  4 |     1
+  4 |     1
+  5 |     1
+  5 |     1
+  6 |     1
+  6 |     1
+  7 |     1
+  7 |     1
+  8 |     1
+  8 |     1
+  9 |     1
+  9 |     1
+ 10 |     1
+ 10 |     1
+    |    10
+(21 rows)
+

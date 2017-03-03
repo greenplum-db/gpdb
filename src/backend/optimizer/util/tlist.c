@@ -193,7 +193,13 @@ get_sortgroupref_tle(Index sortref, List *targetList)
 			return tle;
 	}
 
-	elog(ERROR, "ORDER/GROUP BY expression not found in targetlist");
+	/*
+	 * XXX: we probably should catch this earlier, but we have a
+	 * few queries in the regression suite that hit this.
+	 */
+	ereport(ERROR,
+			(errcode(ERRCODE_SYNTAX_ERROR),
+			 errmsg("ORDER/GROUP BY expression not found in targetlist")));
 	return NULL;				/* keep compiler quiet */
 }
 

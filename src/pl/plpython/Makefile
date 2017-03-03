@@ -65,7 +65,7 @@ endif
 
 SHLIB_LINK = $(python_libspec) $(python_additional_libs) $(filter -lintl,$(LIBS))
 
-REGRESS_OPTS = --dbname=$(PL_TESTDB) --load-language=plpythonu
+REGRESS_OPTS = --dbname=$(PL_TESTDB) --load-language=plpythonu --init-file=$(srcdir)/init_file
 REGRESS = plpython_schema plpython_populate plpython_function plpython_test \
 	plpython_subtransaction plpython_composite	\
 	plpython_returns plpython_error plpython_drop

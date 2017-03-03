@@ -187,6 +187,75 @@ EXPLAIN SELECT id, property AS "Property" FROM GistTable3
 -- end_ignore
 
 -- ----------------------------------------------------------------------
+-- Test: test08UniqueAndPKey.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- PURPOSE:
+--     Test UNIQUE indexes and primary keys on geometric data types.
+--     It turns out that columns with the geometric data types (at least
+--     box, polygon, and circle, and probably any others) can't be part of
+--     a distribution key.  And since Greenplum allows unique indexes only on
+--     columns that are part of the distribution key, GiST indexes cannot
+--     be unique.  And of course since primary keys rely on unique indexes,
+--     if we can't have unique GiST indexes, then we can't have primary
+--     keys on geometric data types.  So this script is basically a negative
+--     test that verifies that we get reasonable error messages when we try
+--     to create unique GiST indexes or pimary keys on gemoetric data types.
+------------------------------------------------------------------------------
+
+CREATE TABLE gisttable_pktest (id integer, property box, poli polygon, bullseye point);
+
+CREATE UNIQUE INDEX ShouldNotExist ON gisttable_pktest USING GiST (property);
+CREATE UNIQUE INDEX ShouldNotExist ON gisttable_pktest USING GiST (poli);
+CREATE UNIQUE INDEX ShouldNotExist ON gisttable_pktest USING GiST (bullseye);
+
+
+-- Test whether geometric types can be part of a primary key.
+CREATE TABLE GistTable2 (id INTEGER, property BOX) DISTRIBUTED BY (property);
+CREATE TABLE GistTable2 (id INTEGER, poli POLYGON) DISTRIBUTED BY (poli);
+CREATE TABLE GistTable2 (id INTEGER, bullseye CIRCLE) DISTRIBUTED BY (bullseye);
+
+-- ----------------------------------------------------------------------
+-- Test: test09NegativeTests.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- PURPOSE:
+--     "Negative" tests.  Verify that we get reasonable error messages when
+--     we try to do unreasonable things, such as create indexes on types that
+--     do not support GiST (non-geometric types).
+------------------------------------------------------------------------------
+
+-- Try to create GiST indexes on non-geometric data types.
+CREATE INDEX ShouldNotExist ON gisttable_pktest USING GiST (id);
+-- Try to create GiST indexes on a mix of geometric and
+-- non-geometric types.
+CREATE INDEX ShouldNotExist ON gisttable_pktest USING GiST (id, property);
+
+
+-- ----------------------------------------------------------------------
+-- Test: test14Hash.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- PURPOSE:
+--     Test that you get a reasonable error message when you try to create a
+--     HASH index (we no longer support those).
+------------------------------------------------------------------------------
+
+CREATE TABLE GistTable14 (
+ id INTEGER,
+ property BOX
+ )
+ DISTRIBUTED BY (id);
+
+-- Try to create a hash index.
+CREATE INDEX GistIndex14a ON GistTable14 USING HASH (id);
+CREATE INDEX GistIndex14b ON GistTable14 USING HASH (property);
+
+
+-- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------
 

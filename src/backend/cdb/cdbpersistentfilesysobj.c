@@ -4731,7 +4731,7 @@ static void PersistentFileSysObj_ScanStateAction(
 				WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 				/*
 				 * We calculate only RelationFile objects to create for resync.
-				 * As it seems unneccessary overhead to scan database/tablespace/etc..
+				 * As it seems unnecessary overhead to scan database/tablespace/etc..
 				 * Hence only decrement for RelationFile.
 				 */
 				if (fsObjType == PersistentFsObjType_RelationFile)
@@ -4909,7 +4909,7 @@ static void PersistentFileSysObj_ScanStateAction(
 
 					/*
 					 * We calculate only RelationFile objects to create for resync.
-					 * As it seems unneccessary overhead to scan database/tablespace/etc..
+					 * As it seems unnecessary overhead to scan database/tablespace/etc..
 					 * Hence only decrement for RelationFile.
 					 */
 					if (fsObjType == PersistentFsObjType_RelationFile)

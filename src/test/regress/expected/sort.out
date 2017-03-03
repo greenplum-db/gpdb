@@ -1,0 +1,590 @@
+create schema sort_schema;
+set search_path to sort_schema;
+ 
+-- start_ignore
+create language plpythonu;
+-- end_ignore
+ 
+-- Check if analyze output has Sort Method
+ create or replace function sort_schema.has_sortmethod(explain_analyze_query text)
+ returns setof int as
+ $$
+ rv = plpy.execute(explain_analyze_query)
+ search_text = 'Sort Method'
+ result = []
+ for i in range(len(rv)):
+     cur_line = rv[i]['QUERY PLAN']
+     if search_text.lower() in cur_line.lower():
+         result.append(1)
+ return result
+ $$
+ language plpythonu;
+ 
+ set gp_enable_mk_sort = on;
+ select sort_schema.has_sortmethod('explain analyze select * from generate_series(1, 100) g order by g limit 100;');
+ has_sortmethod 
+----------------
+              1
+(1 row)
+
+ 
+ select sort_schema.has_sortmethod('explain analyze select * from generate_series(1, 100) g order by g;');
+ has_sortmethod 
+----------------
+              1
+(1 row)
+
+ 
+ set gp_enable_mk_sort = off;
+ select sort_schema.has_sortmethod('explain analyze select * from generate_series(1, 100) g order by g limit 100;');
+ has_sortmethod 
+----------------
+              1
+(1 row)
+
+ 
+ select sort_schema.has_sortmethod('explain analyze select * from generate_series(1, 100) g order by g;');
+ has_sortmethod 
+----------------
+              1
+(1 row)
+
+ 
+ create table sort_a(i int, j int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ insert into sort_a values(1, 2);
+ 
+ set gp_enable_mk_sort = on;
+ select sort_schema.has_sortmethod('explain analyze select i from sort_a order by i;');
+ has_sortmethod 
+----------------
+              1
+(1 row)
+
+ 
+ set gp_enable_mk_sort = off;
+ select sort_schema.has_sortmethod('explain analyze select i from sort_a order by i;');
+ has_sortmethod 
+----------------
+              1
+(1 row)
+
+set gp_enable_mk_sort = on;
+create table gpsort_alltypes(dist_col int, col1 bigint, col2 bigserial, col3 bit, col4 bit varying(10), col5 bool, col6 char, col7 varchar(10), col8 cidr, col9 circle, col10 date, col11 numeric(5,2), col12 float8, col13 inet, col14 int4, col15 interval, col16 lseg, col17 macaddr, col18 money, col19 path, col20 point, col21 polygon, col22 float4, col23 serial4, col24 smallint, col25 text, col26 time, col27 timetz, col28 timestamp, col29 timestamptz) with oids distributed by (dist_col);
+NOTICE:  CREATE TABLE will create implicit sequence "gpsort_alltypes_col2_seq" for serial column "gpsort_alltypes.col2"
+NOTICE:  CREATE TABLE will create implicit sequence "gpsort_alltypes_col23_seq" for serial column "gpsort_alltypes.col23"
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+insert into gpsort_alltypes values(1, 1234567891011,13942492347494,'1','0001','yes', 'a', 'abcdefgh', '192.168.100.1', circle '((0,0),1)', '2007-01-01', 123.45, 12323423424.324, inet '192.168.1.1', 123123, interval '24 hours',lseg '((0,0),(1,1))', macaddr '12:34:56:78:90:ab', '$1000.00',  path '((0,0),(1,1),(2,2))', point '(0,0)',polygon '((0,0),(1,1))',213234.23,1,7123,'abcdsafasfasfasfasfdasfasfdasf2asdfhsadfsfs','04:00:00','04:00:00 EST','2007-01-01 04:00:00','2007-01-01 04:00:00 EST');
+insert into gpsort_alltypes values(1, 10987654321,212394723492342,'0','0010','y', 'b', 'xyz', '192.168.100.2', circle '((0,0),2)', '2007-02-01', 23.45, 1232324.324, inet '192.168.1.2', 123124, interval '12 hours',lseg '((0,0),(1,2))', macaddr '12:34:56:78:90:00', '$5000.00',  path '((0,0),(4,4),(3,3))', point '(0,1)',polygon '((-1,-2),(1,1))',213.23234,2,2343,'2342abcddfasfasf234234234','04:30:00','04:30:00 EST','2007-02-01 04:30:00','2007-02-01 04:30:00 EST');
+insert into gpsort_alltypes values(1, 122223333333366,423402340240234,'1','0100','f', 'd', '1xyz', '192.168.100.10', circle '((2,1),2)', '2001-03-02', 34.45, 312324.324, inet '192.168.2.5', 1324, interval '10 secs',lseg '((1,1),(6,6))', macaddr '12:34:56:78:89:cd', '$1.50',  path '((0,0),(4,4),(3,3),(5,5))', point '(2,1)',polygon '((2,0),(2,1))',21312121.23,4,123,'abcd23423afasflasfasf','16:30:00','16:30:00 PST','2006-02-01 16:30:00','2006-02-01 16:30:00 PST');
+insert into gpsort_alltypes values(1, 99999999999999999,312394234,'1','0000','false', 'c', 'cde', '192.168.100.3', circle '((1,1),2)', '2007-02-02', 34.45, 122324.324, inet '192.168.1.5', 13124, interval '30 mins',lseg '((0,0),(5,6))', macaddr '12:34:56:78:90:cd', '$4321.00',  path '((0,0),(4,4),(3,3))', point '(1,1)',polygon '((1,0),(2,3))',2133459.23123,3,1323,'234234abcddasdflasjflasfjalf','14:30:00','14:30:00 PST','2007-02-01 14:30:00','2007-02-01 14:30:00 PST');
+select col1 from gpsort_alltypes order by col1 asc;
+       col1        
+-------------------
+       10987654321
+     1234567891011
+   122223333333366
+ 99999999999999999
+(4 rows)
+
+select col1 from gpsort_alltypes order by col1 desc;
+       col1        
+-------------------
+ 99999999999999999
+   122223333333366
+     1234567891011
+       10987654321
+(4 rows)
+
+select col2 from gpsort_alltypes order by col2 asc;
+      col2       
+-----------------
+       312394234
+  13942492347494
+ 212394723492342
+ 423402340240234
+(4 rows)
+
+select col2 from gpsort_alltypes order by col2 desc;
+      col2       
+-----------------
+ 423402340240234
+ 212394723492342
+  13942492347494
+       312394234
+(4 rows)
+
+select col3 from gpsort_alltypes order by col3 asc;
+ col3 
+------
+ 0
+ 1
+ 1
+ 1
+(4 rows)
+
+select col3 from gpsort_alltypes order by col3 desc;
+ col3 
+------
+ 1
+ 1
+ 1
+ 0
+(4 rows)
+
+select col4 from gpsort_alltypes order by col4 asc;
+ col4 
+------
+ 0000
+ 0001
+ 0010
+ 0100
+(4 rows)
+
+select col4 from gpsort_alltypes order by col4 desc;
+ col4 
+------
+ 0100
+ 0010
+ 0001
+ 0000
+(4 rows)
+
+select col5 from gpsort_alltypes order by col5 asc;
+ col5 
+------
+ f
+ f
+ t
+ t
+(4 rows)
+
+select col5 from gpsort_alltypes order by col5 desc;
+ col5 
+------
+ t
+ t
+ f
+ f
+(4 rows)
+
+select col6 from gpsort_alltypes order by col6 asc;
+ col6 
+------
+ a
+ b
+ c
+ d
+(4 rows)
+
+select col6 from gpsort_alltypes order by col6 desc;
+ col6 
+------
+ d
+ c
+ b
+ a
+(4 rows)
+
+select col7 from gpsort_alltypes order by col7 asc;
+   col7   
+----------
+ 1xyz
+ abcdefgh
+ cde
+ xyz
+(4 rows)
+
+select col7 from gpsort_alltypes order by col7 desc;
+   col7   
+----------
+ xyz
+ cde
+ abcdefgh
+ 1xyz
+(4 rows)
+
+select col8 from gpsort_alltypes order by col8 asc;
+       col8        
+-------------------
+ 192.168.100.1/32
+ 192.168.100.2/32
+ 192.168.100.3/32
+ 192.168.100.10/32
+(4 rows)
+
+select col8 from gpsort_alltypes order by col8 desc;
+       col8        
+-------------------
+ 192.168.100.10/32
+ 192.168.100.3/32
+ 192.168.100.2/32
+ 192.168.100.1/32
+(4 rows)
+
+select col9 from gpsort_alltypes order by col9 asc;
+ERROR:  could not identify an ordering operator for type circle
+LINE 1: select col9 from gpsort_alltypes order by col9 asc;
+                                                  ^
+HINT:  Use an explicit ordering operator or modify the query.
+select col9 from gpsort_alltypes order by col9 desc;
+ERROR:  could not identify an ordering operator for type circle
+LINE 1: select col9 from gpsort_alltypes order by col9 desc;
+                                                  ^
+HINT:  Use an explicit ordering operator or modify the query.
+select col10 from gpsort_alltypes order by col10 asc;
+   col10    
+------------
+ 03-02-2001
+ 01-01-2007
+ 02-01-2007
+ 02-02-2007
+(4 rows)
+
+select col10 from gpsort_alltypes order by col10 desc;
+   col10    
+------------
+ 02-02-2007
+ 02-01-2007
+ 01-01-2007
+ 03-02-2001
+(4 rows)
+
+select col11 from gpsort_alltypes order by col11 asc;
+ col11  
+--------
+  23.45
+  34.45
+  34.45
+ 123.45
+(4 rows)
+
+select col11 from gpsort_alltypes order by col11 desc;
+ col11  
+--------
+ 123.45
+  34.45
+  34.45
+  23.45
+(4 rows)
+
+select col12 from gpsort_alltypes order by col12 asc;
+      col12      
+-----------------
+      122324.324
+      312324.324
+     1232324.324
+ 12323423424.324
+(4 rows)
+
+select col12 from gpsort_alltypes order by col12 desc;
+      col12      
+-----------------
+ 12323423424.324
+     1232324.324
+      312324.324
+      122324.324
+(4 rows)
+
+select col13 from gpsort_alltypes order by col13 asc;
+    col13    
+-------------
+ 192.168.1.1
+ 192.168.1.2
+ 192.168.1.5
+ 192.168.2.5
+(4 rows)
+
+select col13 from gpsort_alltypes order by col13 desc;
+    col13    
+-------------
+ 192.168.2.5
+ 192.168.1.5
+ 192.168.1.2
+ 192.168.1.1
+(4 rows)
+
+select col14 from gpsort_alltypes order by col14 asc;
+ col14  
+--------
+   1324
+  13124
+ 123123
+ 123124
+(4 rows)
+
+select col14 from gpsort_alltypes order by col14 desc;
+ col14  
+--------
+ 123124
+ 123123
+  13124
+   1324
+(4 rows)
+
+select col15 from gpsort_alltypes order by col15 asc;
+   col15    
+------------
+ @ 10 secs
+ @ 30 mins
+ @ 12 hours
+ @ 24 hours
+(4 rows)
+
+select col15 from gpsort_alltypes order by col15 desc;
+   col15    
+------------
+ @ 24 hours
+ @ 12 hours
+ @ 30 mins
+ @ 10 secs
+(4 rows)
+
+select col16 from gpsort_alltypes order by col16 asc;
+ERROR:  could not identify an ordering operator for type lseg
+LINE 1: select col16 from gpsort_alltypes order by col16 asc;
+                                                   ^
+HINT:  Use an explicit ordering operator or modify the query.
+select col16 from gpsort_alltypes order by col16 desc;
+ERROR:  could not identify an ordering operator for type lseg
+LINE 1: select col16 from gpsort_alltypes order by col16 desc;
+                                                   ^
+HINT:  Use an explicit ordering operator or modify the query.
+select col17 from gpsort_alltypes order by col17 asc;
+       col17       
+-------------------
+ 12:34:56:78:89:cd
+ 12:34:56:78:90:00
+ 12:34:56:78:90:ab
+ 12:34:56:78:90:cd
+(4 rows)
+
+select col17 from gpsort_alltypes order by col17 desc;
+       col17       
+-------------------
+ 12:34:56:78:90:cd
+ 12:34:56:78:90:ab
+ 12:34:56:78:90:00
+ 12:34:56:78:89:cd
+(4 rows)
+
+select col18 from gpsort_alltypes order by col18 asc;
+   col18   
+-----------
+     $1.50
+ $1,000.00
+ $4,321.00
+ $5,000.00
+(4 rows)
+
+select col18 from gpsort_alltypes order by col18 desc;
+   col18   
+-----------
+ $5,000.00
+ $4,321.00
+ $1,000.00
+     $1.50
+(4 rows)
+
+select col19 from gpsort_alltypes order by col19 asc;
+ERROR:  could not identify an ordering operator for type path
+LINE 1: select col19 from gpsort_alltypes order by col19 asc;
+                                                   ^
+HINT:  Use an explicit ordering operator or modify the query.
+select col19 from gpsort_alltypes order by col19 desc;
+ERROR:  could not identify an ordering operator for type path
+LINE 1: select col19 from gpsort_alltypes order by col19 desc;
+                                                   ^
+HINT:  Use an explicit ordering operator or modify the query.
+select col20 from gpsort_alltypes order by col20 asc;
+ERROR:  could not identify an ordering operator for type point
+LINE 1: select col20 from gpsort_alltypes order by col20 asc;
+                                                   ^
+HINT:  Use an explicit ordering operator or modify the query.
+select col20 from gpsort_alltypes order by col20 desc;
+ERROR:  could not identify an ordering operator for type point
+LINE 1: select col20 from gpsort_alltypes order by col20 desc;
+                                                   ^
+HINT:  Use an explicit ordering operator or modify the query.
+select col21 from gpsort_alltypes order by col21 asc;
+ERROR:  could not identify an ordering operator for type polygon
+LINE 1: select col21 from gpsort_alltypes order by col21 asc;
+                                                   ^
+HINT:  Use an explicit ordering operator or modify the query.
+select col21 from gpsort_alltypes order by col21 desc;
+ERROR:  could not identify an ordering operator for type polygon
+LINE 1: select col21 from gpsort_alltypes order by col21 desc;
+                                                   ^
+HINT:  Use an explicit ordering operator or modify the query.
+select col22 from gpsort_alltypes order by col22 asc;
+    col22    
+-------------
+     213.232
+      213234
+ 2.13346e+06
+ 2.13121e+07
+(4 rows)
+
+select col22 from gpsort_alltypes order by col22 desc;
+    col22    
+-------------
+ 2.13121e+07
+ 2.13346e+06
+      213234
+     213.232
+(4 rows)
+
+select col23 from gpsort_alltypes order by col23 asc;
+ col23 
+-------
+     1
+     2
+     3
+     4
+(4 rows)
+
+select col23 from gpsort_alltypes order by col23 desc;
+ col23 
+-------
+     4
+     3
+     2
+     1
+(4 rows)
+
+select col24 from gpsort_alltypes order by col24 asc;
+ col24 
+-------
+   123
+  1323
+  2343
+  7123
+(4 rows)
+
+select col24 from gpsort_alltypes order by col24 desc;
+ col24 
+-------
+  7123
+  2343
+  1323
+   123
+(4 rows)
+
+select col25 from gpsort_alltypes order by col25 asc;
+                    col25                    
+---------------------------------------------
+ 234234abcddasdflasjflasfjalf
+ 2342abcddfasfasf234234234
+ abcd23423afasflasfasf
+ abcdsafasfasfasfasfdasfasfdasf2asdfhsadfsfs
+(4 rows)
+
+select col25 from gpsort_alltypes order by col25 desc;
+                    col25                    
+---------------------------------------------
+ abcdsafasfasfasfasfdasfasfdasf2asdfhsadfsfs
+ abcd23423afasflasfasf
+ 2342abcddfasfasf234234234
+ 234234abcddasdflasjflasfjalf
+(4 rows)
+
+select col26 from gpsort_alltypes order by col26 asc;
+  col26   
+----------
+ 04:00:00
+ 04:30:00
+ 14:30:00
+ 16:30:00
+(4 rows)
+
+select col26 from gpsort_alltypes order by col26 desc;
+  col26   
+----------
+ 16:30:00
+ 14:30:00
+ 04:30:00
+ 04:00:00
+(4 rows)
+
+select col27 from gpsort_alltypes order by col27 asc;
+    col27    
+-------------
+ 04:00:00-05
+ 04:30:00-05
+ 14:30:00-08
+ 16:30:00-08
+(4 rows)
+
+select col27 from gpsort_alltypes order by col27 desc;
+    col27    
+-------------
+ 16:30:00-08
+ 14:30:00-08
+ 04:30:00-05
+ 04:00:00-05
+(4 rows)
+
+select col28 from gpsort_alltypes order by col28 asc;
+          col28           
+--------------------------
+ Wed Feb 01 16:30:00 2006
+ Mon Jan 01 04:00:00 2007
+ Thu Feb 01 04:30:00 2007
+ Thu Feb 01 14:30:00 2007
+(4 rows)
+
+select col28 from gpsort_alltypes order by col28 desc;
+          col28           
+--------------------------
+ Thu Feb 01 14:30:00 2007
+ Thu Feb 01 04:30:00 2007
+ Mon Jan 01 04:00:00 2007
+ Wed Feb 01 16:30:00 2006
+(4 rows)
+
+select col29 from gpsort_alltypes order by col29 asc;
+            col29             
+------------------------------
+ Wed Feb 01 16:30:00 2006 PST
+ Mon Jan 01 01:00:00 2007 PST
+ Thu Feb 01 01:30:00 2007 PST
+ Thu Feb 01 14:30:00 2007 PST
+(4 rows)
+
+select col29 from gpsort_alltypes order by col29 desc;
+            col29             
+------------------------------
+ Thu Feb 01 14:30:00 2007 PST
+ Thu Feb 01 01:30:00 2007 PST
+ Mon Jan 01 01:00:00 2007 PST
+ Wed Feb 01 16:30:00 2006 PST
+(4 rows)
+
+select col1, col2, col3, col4, col5 from gpsort_alltypes order by col1, col2, col3, col4, col5;
+       col1        |      col2       | col3 | col4 | col5 
+-------------------+-----------------+------+------+------
+       10987654321 | 212394723492342 | 0    | 0010 | t
+     1234567891011 |  13942492347494 | 1    | 0001 | t
+   122223333333366 | 423402340240234 | 1    | 0100 | f
+ 99999999999999999 |       312394234 | 1    | 0000 | f
+(4 rows)
+
+select col1, col2, col3, col4, col5 from gpsort_alltypes order by col3 desc, col2 asc, col1, col4, col5;
+       col1        |      col2       | col3 | col4 | col5 
+-------------------+-----------------+------+------+------
+ 99999999999999999 |       312394234 | 1    | 0000 | f
+     1234567891011 |  13942492347494 | 1    | 0001 | t
+   122223333333366 | 423402340240234 | 1    | 0100 | f
+       10987654321 | 212394723492342 | 0    | 0010 | t
+(4 rows)
+
+select col1, col2, col3, col4, col5 from gpsort_alltypes order by col5 desc, col3 asc, col2 desc, col4 asc, col1 desc;
+        col1        |      col2       | col3 | col4 | col5 
+ -------------------+-----------------+------+------+------
+        10987654321 | 212394723492342 | 0    | 0010 | t
+      1234567891011 |  13942492347494 | 1    | 0001 | t
+    122223333333366 | 423402340240234 | 1    | 0100 | f
+  99999999999999999 |       312394234 | 1    | 0000 | f
+ (4 rows)
+ 

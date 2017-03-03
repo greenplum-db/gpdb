@@ -1146,6 +1146,12 @@ select * from Tbl04 where (x,y) not in (select 1,y from Tbl10);
  3 | 4
 (1 row)
 
+select * from tbl10 where y not in (select 1 where false);
+ x | y 
+---+---
+ 1 |  
+(1 row)
+
 -- start_ignore
 alter table Tbl10 alter column x set not null;
 ALTER TABLE

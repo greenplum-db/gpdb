@@ -51,8 +51,10 @@ SSH_RETRY_DELAY=.5
 class WorkerPool(object):
     """TODO:"""
     
+    halt_command='halt command'
     def __init__(self,numWorkers=16,items=None):        
         self.workers=[]
+        self.should_stop=False
         self.work_queue=Queue()
         self.completed_queue=Queue()
         self.num_assigned=0
@@ -72,13 +74,15 @@ class WorkerPool(object):
     def getNumWorkers(self):
        return self.numWorkers
 
-    def getNextWorkItem(self,timeout=None):
-        return self.work_queue.get(block=True,timeout=timeout)
+    def getNextWorkItem(self):
+        return self.work_queue.get(block=True)
     
     def addFinishedWorkItem(self,command):
         self.completed_queue.put(command)    
         self.work_queue.task_done()
     
+    def markTaskDone(self):
+        self.work_queue.task_done()
     
     def addCommand(self,cmd):   
         self.logger.debug("Adding cmd to work_queue: %s" % cmd.cmdStr) 
@@ -153,11 +157,10 @@ class WorkerPool(object):
     
     def haltWork(self):
         self.logger.debug("WorkerPool haltWork()")
+        self.should_stop=True
         for w in self.workers:
             w.haltWork()    
-        for i in range(0,self.numWorkers):
-            self.work_queue.put('dummy command')
-
+            self.work_queue.put(self.halt_command)
 
 class OperationWorkerPool(WorkerPool):
     """ TODO: This is a hack! In reality, the WorkerPool should work with Operations, and
@@ -177,70 +180,55 @@ class OperationWorkerPool(WorkerPool):
 class Worker(Thread):
     """TODO:"""
     pool=None
-    shouldStop=False
     cmd=None
     name=None
     logger=None
     
-    def __init__(self,name,pool,timeout=5):
+    def __init__(self,name,pool):
         self.name=name
         self.pool=pool
-        self.timeout=timeout
         self.logger=logger
         Thread.__init__(self)
     
     
     def run(self):
-        try_count = 0
         while True:
             try:
-                if try_count == 5:
-                    self.logger.debug("[%s] try and get work from queue..." % self.name)
-                    try_count = 0
-                
-                if self.shouldStop:
-                    self.logger.debug('[%s] stopping' % self.name)
-                    return
-                    
                 try:
-                    self.cmd = self.pool.getNextWorkItem(timeout=self.timeout)
+                    self.cmd = self.pool.getNextWorkItem()
                 except TypeError:
                     # misleading exception raised during interpreter shutdown
                     return 
 
-                if self.cmd is not None and not self.shouldStop:
+                # we must have got a command to run here
+                if self.cmd is None:
+                    self.logger.debug("[%s] got a None cmd" % self.name)
+                    self.pool.markTaskDone()
+                elif self.cmd is self.pool.halt_command:
+                    self.logger.debug("[%s] got a halt cmd" % self.name)
+                    self.pool.markTaskDone()
+                    self.cmd=None
+                    return
+                elif self.pool.should_stop:
+                    self.logger.debug("[%s] got cmd and pool is stopped: %s" % (self.name, self.cmd))
+                    self.pool.markTaskDone()
+                    self.cmd=None
+                else:
                     self.logger.debug("[%s] got cmd: %s" % (self.name,self.cmd.cmdStr))
                     self.cmd.run()
                     self.logger.debug("[%s] finished cmd: %s" % (self.name, self.cmd))
                     self.pool.addFinishedWorkItem(self.cmd)
                     self.cmd=None
-                    try_count = 0
-                else:
-                    try_count += 1
-                    if self.shouldStop:
-                        # if we got a cmd from work queue, we should finish it before stop.
-                        if self.cmd is not None:
-                            self.pool.addFinishedWorkItem(self.cmd)
-                        self.logger.debug("[%s] stopping" % self.name)
-                        return
-                      
-            except Empty:                
-                if self.shouldStop:
-                    self.logger.debug("[%s] stopping" % self.name)
-                    return
+
             except Exception,e:
                 self.logger.exception(e)
                 if self.cmd:
                     self.logger.debug("[%s] finished cmd with exception: %s" % (self.name, self.cmd))
                     self.pool.addFinishedWorkItem(self.cmd)
                     self.cmd=None
-                    try_count = 0
-                    
-                    
     
     def haltWork(self):
         self.logger.debug("[%s] haltWork" % self.name)
-        self.shouldStop=True
 
         # this was originally coded as
         # 
@@ -258,11 +246,6 @@ class Worker(Thread):
             c.interrupt()
             c.cancel()
     
-    def signalPassiveStop(self):
-        self.shouldStop=True
-        
-
-
 
 """
 TODO: consider just having a single interface that needs to be implemented for

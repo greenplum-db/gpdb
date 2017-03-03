@@ -342,7 +342,7 @@ set gp_dynamic_partition_pruning = on;
 select * from dim inner join malp on (dim.i = malp.i and dim.j = malp.j); -- only one partition should be chosen
 
 --
--- bugs
+-- DPE: assertion failed with window function
 --
 
 drop schema if exists dpe_bugs cascade;

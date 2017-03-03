@@ -36,10 +36,12 @@ class Repair:
 
         return repair_dir
 
-    def create_repair_for_extra_missing(self, catalog_name, issues, pk_name):
+    def create_repair_for_extra_missing(self, catalog_table_obj, issues, pk_name):
 
-        extra_missing_repair_obj = RepairMissingExtraneous(catalog_name=catalog_name,
-                                                           issues=issues, pk_name=pk_name)
+        catalog_name = catalog_table_obj.getTableName()
+        extra_missing_repair_obj = RepairMissingExtraneous(catalog_table_obj=catalog_table_obj,
+                                                           issues=issues,
+                                                           pk_name=pk_name)
         repair_dir = self.create_repair_dir()
         all_seg_ids = self._context.report_cfg.keys()
         segment_to_oid_map = extra_missing_repair_obj.get_segment_to_oid_mapping(all_seg_ids)

@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * gpddboost.c
+ * cdb_ddboost_util.c
  *	  gpddboost is a utility for accessing Data Domain's ddboost
  *		  interfaces.
  *
@@ -904,9 +904,9 @@ addPassThroughLongParm(const char *Parm, const char *pszValue, char *pszPassThro
 			PQExpBuffer valueBuf = createPQExpBuffer();
 
 			if (bFirstTime)
-				pszRtn = MakeString("--%s \"%s\"", Parm, shellEscape(pszValue, valueBuf));
+				pszRtn = MakeString("--%s \"%s\"", Parm, shellEscape(pszValue, valueBuf, false, false));
 			else
-				pszRtn = MakeString("%s --%s \"%s\"", pszPassThroughParmString, Parm, shellEscape(pszValue, valueBuf));
+				pszRtn = MakeString("%s --%s \"%s\"", pszPassThroughParmString, Parm, shellEscape(pszValue, valueBuf, false, false));
 
 			destroyPQExpBuffer(valueBuf);
 		}

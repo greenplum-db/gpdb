@@ -46,6 +46,7 @@ namespace gpopt
 struct PlannedStmt;
 struct Query;
 struct List;
+struct MemoryContextData;
 
 using namespace gpos;
 using namespace gpdxl;
@@ -101,7 +102,7 @@ struct SOptContext
 	void Free(EPin epinInput, EPin epinOutput);
 
 	// Clone the error message in given context.
-	CHAR* CloneErrorMsg(MemoryContext context);
+	CHAR* CloneErrorMsg(struct MemoryContextData *context);
 
 	// casting function
 	static

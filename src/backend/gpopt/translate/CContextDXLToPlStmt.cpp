@@ -17,7 +17,7 @@
 //---------------------------------------------------------------------------
 
 #include "postgres.h"
-#include "nodes/makefuncs.h"
+#include "nodes/parsenodes.h"
 #include "nodes/plannodes.h"
 
 #include "gpopt/translate/CContextDXLToPlStmt.h"

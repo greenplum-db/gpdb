@@ -1,0 +1,49 @@
+%YAML 1.1
+---
+
+# ============================================================================
+# Support of "C" language functions was enabled in the 1.0.0.2 version of
+# the Greenplum YAML specification by adding the new "LIBRARY" attribute
+# to MAP/TRANSITION/CONSOLIDATE/FINALIZE specifications.
+# ============================================================================
+VERSION:   1.0.0.2
+
+DEFINE:
+
+  - INPUT:
+      NAME:      network
+      FILE:      @hostname@:@abs_srcdir@/data/www.data
+      COLUMNS:   [key int4, value int4]
+      DELIMITER: '|'
+
+  - TRANSITION:
+      NAME:       int4_accum
+      PARAMETERS: [state int8, value int4]
+      RETURNS:    [state int8]
+      LANGUAGE:   C
+      LIBRARY:    @abs_srcdir@/regress.so
+      FUNCTION:   int4_accum
+
+  - CONSOLIDATE:
+      NAME:       int8_add
+      PARAMETERS: [value1 int8, value2 int8]
+      RETURNS:    [value int8]
+      LANGUAGE:   C
+      LIBRARY:    @abs_srcdir@/regress.so
+      FUNCTION:   int8_add
+
+  - REDUCE:
+      NAME:        c_sum
+      TRANSITION:  int4_accum
+      CONSOLIDATE: int8_add
+
+  # This task isn't strictly necessary, we could have simply defined
+  # the REDUCE in the RUN block below.
+  - TASK:
+      NAME:        sum_mr_task
+      SOURCE:      network
+      REDUCE:      c_sum
+
+EXECUTE:
+  - RUN:
+      SOURCE:   sum_mr_task

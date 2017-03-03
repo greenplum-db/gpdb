@@ -106,10 +106,12 @@ typedef enum AORelationVersion
 	AORelationVersion_Original =  1,		/* first valid version */
 	AORelationVersion_Aligned64bit = 2,		/* version where the fixes for AOBlock and MemTuple
 											 * were introduced, see MPP-7251 and MPP-7372. */
+	AORelationVersion_PG83 = 3,				/* Same as Aligned64bit, but numerics are stored
+											 * in the PostgreSQL 8.3 format. */
 	MaxAORelationVersion                    /* must always be last */
 } AORelationVersion;
 
-#define AORelationVersion_GetLatest() AORelationVersion_Aligned64bit
+#define AORelationVersion_GetLatest() AORelationVersion_PG83
 
 #define AORelationVersion_IsValid(version) \
 	(version > AORelationVersion_None && version < MaxAORelationVersion)
@@ -132,6 +134,15 @@ static inline void AORelationVersion_CheckValid(int version)
 ( \
 	AORelationVersion_CheckValid(version), \
 	(version > AORelationVersion_Original) \
+)
+
+/*
+ * Are numerics stored in old, pre-PostgreSQL 8.3 format, and need converting?
+ */
+#define PG82NumericConversionNeeded(version) \
+( \
+	AORelationVersion_CheckValid(version), \
+	(version < AORelationVersion_PG83) \
 )
 
 #endif   /* PG_APPENDONLY_H */

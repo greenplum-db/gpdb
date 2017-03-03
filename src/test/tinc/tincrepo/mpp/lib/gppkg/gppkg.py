@@ -124,8 +124,14 @@ class Gppkg:
         if product_version.startswith('4.3'):
             gpdb_version = '4.3'
         orca = ""
-        if product_version >= '4.3.5':
-            orca = 'orca'
+        try:
+            minor_version = float(re.compile('.*\d+\.\d+\.(\d+\.\d+)').match(product_version).group(1))
+            if minor_version >= float(5.0): #minor version grabbed from 4.3.5.0 when orca was introduced
+                orca = 'orca'
+        except Exception as e:
+            logger.error("%s" % str(e))
+            raise Exception('Unable to parse product_version: %s' % product_version)
+
         os_, platform_ = self.get_os_platform()
         compatiable = self.check_os_compatibility(os_, gppkg)
         if not compatiable:

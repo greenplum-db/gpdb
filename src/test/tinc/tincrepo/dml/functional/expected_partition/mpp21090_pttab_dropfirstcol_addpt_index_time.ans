@@ -1,0 +1,72 @@
+DROP TABLE IF EXISTS mpp21090_pttab_dropfirstcol_addpt_index_time;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_time_opt.sql:14: NOTICE:  table "mpp21090_pttab_dropfirstcol_addpt_index_time" does not exist, skipping
+DROP TABLE
+CREATE TABLE mpp21090_pttab_dropfirstcol_addpt_index_time
+(
+    col1 time,
+    col2 time,
+    col3 char,
+    col4 time,
+    col5 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY RANGE(col2)(partition partone start('12:00:00') end('18:00:00')  WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start('18:00:00') end('24:00:00') WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start('0:00:00') end('11:00:00'));
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_time_opt.sql:24: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_dropfirstcol_addpt_index_time_1_prt_partthree" for table "mpp21090_pttab_dropfirstcol_addpt_index_time"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_time_opt.sql:24: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_dropfirstcol_addpt_index_time_1_prt_partone" for table "mpp21090_pttab_dropfirstcol_addpt_index_time"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_time_opt.sql:24: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_dropfirstcol_addpt_index_time_1_prt_parttwo" for table "mpp21090_pttab_dropfirstcol_addpt_index_time"
+CREATE TABLE
+INSERT INTO mpp21090_pttab_dropfirstcol_addpt_index_time VALUES('12:00:00','12:00:00','a','12:00:00',0);
+INSERT 0 1
+DROP INDEX IF EXISTS mpp21090_pttab_dropfirstcol_addpt_index_idx_time;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_time_opt.sql:28: NOTICE:  index "mpp21090_pttab_dropfirstcol_addpt_index_idx_time" does not exist, skipping
+DROP INDEX
+CREATE INDEX mpp21090_pttab_dropfirstcol_addpt_index_idx_time on mpp21090_pttab_dropfirstcol_addpt_index_time(col2);
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_time_opt.sql:29: NOTICE:  building index for child partition "mpp21090_pttab_dropfirstcol_addpt_index_time_1_prt_partthree"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_time_opt.sql:29: NOTICE:  building index for child partition "mpp21090_pttab_dropfirstcol_addpt_index_time_1_prt_partone"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_time_opt.sql:29: NOTICE:  building index for child partition "mpp21090_pttab_dropfirstcol_addpt_index_time_1_prt_parttwo"
+CREATE INDEX
+ALTER TABLE mpp21090_pttab_dropfirstcol_addpt_index_time DROP COLUMN col1;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_time_opt.sql:31: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_time_opt.sql:31: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_time_opt.sql:31: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_time_opt.sql:31: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+ALTER TABLE
+ALTER TABLE mpp21090_pttab_dropfirstcol_addpt_index_time ADD PARTITION partfour start('11:00:00') end('12:00:00');
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropfirstcol_addpt_index_time_opt.sql:32: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_dropfirstcol_addpt_index_time_1_prt_partfour" for table "mpp21090_pttab_dropfirstcol_addpt_index_time"
+ALTER TABLE
+INSERT INTO mpp21090_pttab_dropfirstcol_addpt_index_time SELECT '11:30:00','b','11:30:00', 1;
+INSERT 0 1
+SELECT * FROM mpp21090_pttab_dropfirstcol_addpt_index_time ORDER BY 1,2,3;
+   col2   | col3 |   col4   | col5 
+----------+------+----------+------
+ 11:30:00 | b    | 11:30:00 |    1
+ 12:00:00 | a    | 12:00:00 |    0
+(2 rows)
+
+UPDATE mpp21090_pttab_dropfirstcol_addpt_index_time SET col4 = '1:00:00' WHERE col2 = '11:30:00' AND col4 = '11:30:00';
+UPDATE 1
+SELECT * FROM mpp21090_pttab_dropfirstcol_addpt_index_time ORDER BY 1,2,3;
+   col2   | col3 |   col4   | col5 
+----------+------+----------+------
+ 11:30:00 | b    | 01:00:00 |    1
+ 12:00:00 | a    | 12:00:00 |    0
+(2 rows)
+
+-- Update partition key
+UPDATE mpp21090_pttab_dropfirstcol_addpt_index_time SET col2 = '1:00:00' WHERE col2 = '11:30:00' AND col4 = '1:00:00';
+UPDATE 1
+SELECT * FROM mpp21090_pttab_dropfirstcol_addpt_index_time ORDER BY 1,2,3;
+   col2   | col3 |   col4   | col5 
+----------+------+----------+------
+ 01:00:00 | b    | 01:00:00 |    1
+ 12:00:00 | a    | 12:00:00 |    0
+(2 rows)
+
+DELETE FROM mpp21090_pttab_dropfirstcol_addpt_index_time WHERE col2 = '1:00:00';
+DELETE 1
+SELECT * FROM mpp21090_pttab_dropfirstcol_addpt_index_time ORDER BY 1,2,3;
+   col2   | col3 |   col4   | col5 
+----------+------+----------+------
+ 12:00:00 | a    | 12:00:00 |    0
+(1 row)
+

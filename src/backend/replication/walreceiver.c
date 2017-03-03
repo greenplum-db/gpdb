@@ -318,7 +318,8 @@ WalReceiverMain(void)
 				 errmsg("could not open file \"%s\" for reading: %m",
 						"wal_rcv.pid")));
 	}
-	FileClose(pid_file);
+	else
+		FileClose(pid_file);
 
 	walrcv_connect(conninfo, startpoint);
 

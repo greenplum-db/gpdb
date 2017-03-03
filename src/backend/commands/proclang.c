@@ -435,6 +435,8 @@ create_proc_lang(const char *languageName,
 		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 	}
 
+	/* dependency on extension */
+	recordDependencyOnCurrentExtension(&myself, false);
 	heap_close(rel, RowExclusiveLock);
 }
 
@@ -769,4 +771,23 @@ AlterLanguageOwner_internal(HeapTuple tup, Relation rel, Oid newOwnerId)
 		changeDependencyOnOwner(LanguageRelationId, HeapTupleGetOid(tup),
 								newOwnerId);
 	}
+}
+
+/*
+ * get_language_oid - given a language name, look up the OID
+ *
+ * If missing_ok is false, throw an error if language name not found.  If
+ * true, just return InvalidOid.
+ */
+Oid
+get_language_oid(const char *langname, bool missing_ok)
+{
+	Oid			oid;
+
+	oid = GetSysCacheOid1(LANGNAME, CStringGetDatum(langname));
+	if (!OidIsValid(oid) && !missing_ok)
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("language \"%s\" does not exist", langname)));
+	return oid;
 }

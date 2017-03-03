@@ -23,7 +23,10 @@ in the data directory, in files name "<relfilenode>.<segno>", just like
 heap tables.  Unlike heap tables, each segment in an append-only table
 can have different size, and some of them can even be missing. They can
 also be larger than 1 GB, and are not expanded in BLCKSZ-sized blocks,
-like heap segments are.
+like heap segments are. Segment zero is empty unless data has been
+inserted during utility mode, in which case it's inserted into segment
+zero. Extending the table by adding attributes via ALTER TABLE will also
+push data to segment zero. Each table can have at most 127 segment files.
 
 An append-only segfile consists of a number of variable-sized blocks
 ("varblocks"), one after another. The varblocks are aligned to 4 bytes.
@@ -39,6 +42,7 @@ pg_appendonly table
 
 The "pg_appendonly" catalog table stores extra information for each AO
 table.  You can think of it as an extension of pg_class.
+
 
 Aosegments table
 ----------------

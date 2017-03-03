@@ -1,0 +1,27 @@
+-- start_ignore
+SET gp_create_table_random_default_distribution=on;
+SET
+SET optimizer=off;
+SET
+-- end_ignore
+-- @author onosen
+-- @created 2014-07-01 18:09:00
+-- @tags ORCA
+-- @optimizer_mode off
+-- @gucs gp_create_table_random_default_distribution=on
+-- @product_version gpdb: [4.3-]
+-- @description test CREATE TABLE with default distribution set to random
+select attrnums from gp_distribution_policy where
+  localoid = 'hobbies_r'::regclass;
+ attrnums 
+----------
+ 
+(1 row)
+
+select attrnums from gp_distribution_policy where
+  localoid = 'tenk1'::regclass;
+ attrnums 
+----------
+ 
+(1 row)
+

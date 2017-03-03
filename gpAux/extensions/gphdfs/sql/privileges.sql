@@ -1,8 +1,6 @@
 --
 -- test CREATE EXTERNAL TABLE privileges
 --
-show gp_external_grant_privileges; -- MUST BE OFF for the following tests to work.
-
 CREATE ROLE exttab1_su SUPERUSER; -- SU with no privs in pg_auth
 CREATE ROLE exttab1_u4 CREATEEXTTABLE(protocol='gphdfs', type='readable'); 
 CREATE ROLE exttab1_u5 CREATEEXTTABLE(protocol='gphdfs', type='writable'); 

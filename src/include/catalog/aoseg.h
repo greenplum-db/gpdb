@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * toasting.h
+ * aoseg.h
  *	  This file provides some definitions to support creation of aoseg tables
  *
  *
@@ -15,6 +15,6 @@
 /*
  * aoseg.c prototypes
  */
-extern void AlterTableCreateAoSegTableWithOid(Oid relOid, bool is_part_child);
+extern void AlterTableCreateAoSegTable(Oid relOid, bool is_part_child);
 
 #endif   /* AOSEG_H */

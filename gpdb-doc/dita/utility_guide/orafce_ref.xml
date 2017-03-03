@@ -1,0 +1,1498 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic1" xml:lang="en"
+  ditaarch:DITAArchVersion="1.1"
+  domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+  class="- topic/topic ">
+  <title id="me143671" class="- topic/title ">Oracle Compatibility Functions</title>
+  <body class="- topic/body ">
+    <p>This reference describes the Oracle Compatibility SQL functions in Greenplum Database. These
+      functions target PostgreSQL.</p>
+  </body>
+  <topic id="topic2" xml:lang="en" ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title class="- topic/title ">Installing Oracle Compatibility Functions</title>
+    <body class="- topic/body ">
+      <p>Before using any Oracle Compatibility Functions, run the installation script <codeph
+          class="+ topic/ph pr-d/codeph ">$GPHOME/share/postgresql/contrib/orafunc.sql</codeph> once
+        for each database. For example, to install the functions in database <codeph
+          class="+ topic/ph pr-d/codeph ">testdb</codeph>, use the following command:</p>
+      <codeblock>$ psql -d testdb -f $GPHOME/share/postgresql/contrib/orafunc.sql</codeblock>
+      <p>To uninstall Oracle Compatibility Functions, run the <codeph
+          class="+ topic/ph pr-d/codeph ">uinstall_orafunc.sql</codeph> script:</p>
+      <p>
+        <codeblock>$GPHOME/share/postgresql/contrib/uninstall_orafunc.sql</codeblock>
+      </p>
+      <p>The following functions are available by default and do not require running the Oracle
+        Compatibility installer: </p>
+      <ul class="- topic/ul ">
+        <li id="me155309" class="- topic/li "><codeph><xref href="#topic28" type="topic"
+              format="dita" class="- topic/xref "/></codeph></li>
+        <li id="me155326" class="- topic/li "><codeph><xref href="#topic29" type="topic"
+              format="dita" class="- topic/xref "/></codeph></li>
+        <li id="me155333" class="- topic/li "><codeph><xref href="#topic8" type="topic"
+              format="dita" class="- topic/xref "/></codeph></li>
+        <li id="me155319" class="- topic/li "><codeph><xref href="#topic9" type="topic"
+              format="dita" class="- topic/xref "/></codeph></li>
+      </ul>
+      <note type="note" class="- topic/note ">The Oracle Compatibility Functions reside in the
+          <codeph class="+ topic/ph pr-d/codeph ">oracompat</codeph> schema. To access them, prefix
+        the schema name (<codeph class="+ topic/ph pr-d/codeph ">oracompat</codeph>) or alter the
+        database search path to include the schema name. For
+          example:<codeblock>ALTER DATABASE <varname>db_name</varname> SET <varname>search_path</varname> = $<varname>user</varname>, public, oracompat; </codeblock><p>If
+          you alter the database search path, you must restart the database.</p></note>
+    </body>
+  </topic>
+  <topic id="topic3" xml:lang="en" ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title class="- topic/title ">Oracle and Greenplum Implementation Differences</title>
+    <body class="- topic/body ">
+      <p>There are some differences in the implementation of these compatibility functions in the
+        Greenplum Database from the Oracle implementation. If you use validation scripts, the output
+        may not be exactly the same as in Oracle. Some of the differences are as follows:</p>
+      <ul class="- topic/ul ">
+        <li id="me144138" class="- topic/li ">Oracle performs a decimal round off, Greenplum
+          Database does not:<ul id="ul_yt5_bz1_1p">
+            <li>2.00 becomes 2 in Oracle.</li>
+            <li>2.0.0 remains 2.00 in Greenplum Database.</li>
+          </ul></li>
+        <li id="me144139" class="- topic/li ">The provided Oracle Compatibility functions handle
+          implicit type conversions differently. For example, using the <codeph
+            class="+ topic/ph pr-d/codeph ">decode</codeph>
+            function:<codeblock>decode(<varname>expression</varname>, <varname>value</varname>, <varname>return</varname> [,<varname>value</varname>, <varname>return</varname>]...
+            [, default])</codeblock><p>Oracle
+            automatically converts <varname>expression</varname> and each <varname>value</varname>
+            to the datatype of the first <varname>value</varname> before comparing. Oracle
+            automatically converts <varname>return</varname> to the same datatype as the first
+            result. </p><p>The Greenplum implementation restricts <varname>return</varname> and
+              <codeph class="+ topic/ph pr-d/codeph ">default</codeph> to be of the same data type.
+            The <varname>expression</varname> and <varname>value</varname> can be different types if
+            the data type of <varname>value</varname> can be converted into the data type of the
+              <varname>expression</varname>. This is done implicitly. Otherwise, <codeph
+              class="+ topic/ph pr-d/codeph ">decode</codeph> fails with an <codeph
+              class="+ topic/ph pr-d/codeph ">invalid input syntax</codeph> error. For
+          example:</p><codeblock>SELECT decode('M',true,false);
+CASE
+------
+ f
+(1 row)
+SELECT decode(1,'M',true,false);
+ERROR: Invalid input syntax for integer:<i>"M" 
+</i>LINE 1: SELECT decode(1,'M',true,false);</codeblock></li>
+        <li id="me144144" class="- topic/li ">Numbers in <codeph class="+ topic/ph pr-d/codeph "
+            >bigint</codeph> format are displayed in scientific notation in Oracle, but not in
+          Greenplum Database:<ul id="ul_cld_kz1_1p">
+            <li>9223372036854775 displays as 9.2234E+15 in Oracle.</li>
+            <li>9223372036854775 remains 9223372036854775 in Greenplum Database. </li>
+          </ul></li>
+        <li id="me144146" class="- topic/li ">The default date and timestamp format in Oracle is
+          different than the default format in Greenplum Database. If the following code is
+            executed:<codeblock>CREATE TABLE TEST(date1 date, time1 timestamp, time2 
+                  timestamp with timezone);
+INSERT INTO TEST VALUES ('2001-11-11','2001-12-13 
+                 01:51:15','2001-12-13 01:51:15 -08:00');
+SELECT DECODE(date1, '2001-11-11', '2001-01-01') FROM TEST;</codeblock><p>Greenplum
+            Database returns the row, but Oracle does not return any rows.</p><note>The correct
+            syntax in Oracle to return the row
+            is:<codeblock>SELECT DECODE(to_char(date1, 'YYYY-MM-DD'), '2001-11-11', 
+              '2001-01-01') FROM TEST</codeblock></note></li>
+      </ul>
+    </body>
+  </topic>
+  <topic id="topic4" xml:lang="en" ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title class="- topic/title ">Oracle Compatibility Functions Reference</title>
+    <body class="- topic/body ">
+      <p>The following are the Oracle Compatibility Functions.</p>
+      <simpletable id="me155958" class="- topic/simpletable ">
+        <strow class="- topic/strow ">
+          <stentry class="- topic/stentry ">
+            <p><xref href="#topic5" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic6" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic7" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic8" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic9" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic12" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic13" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic14" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic15" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic16" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic17" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic18" type="topic" format="dita" class="- topic/xref "/></p>
+          </stentry>
+          <stentry class="- topic/stentry ">
+            <p><xref href="#topic19" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic20" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic21" format="dita"/></p>
+            <p><xref href="#topic22" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic23" format="dita"/></p>
+            <p><xref href="#topic24" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic25" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic26" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic27" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic28" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic29" type="topic" format="dita" class="- topic/xref "/></p>
+            <p><xref href="#topic30" type="topic" format="dita" class="- topic/xref "/></p>
+          </stentry>
+        </strow>
+      </simpletable>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic5" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me155577" class="- topic/title ">add_months</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function to add a given number of months to a given date.</p>
+      <section id="me146666" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">add_months(<varname>date_expression</varname>, <varname>months_to_add</varname>)</codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function adds <varname>months_to_add</varname> to a
+            <varname>date_expression</varname> and returns a <codeph class="+ topic/ph pr-d/codeph "
+            >DATE</codeph>.</p>
+        <p>If the <varname>date_expression</varname> specifies the last day of the month, or if the
+          resulting month has fewer days than the <varname>date_expression</varname>, then the
+          returned value is the last day of the resulting month. Otherwise, the returned value has
+          the same day of the month as the <varname>date_expression</varname>.</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>date_expression</varname></pt>
+            <pd>The starting date. This can be any expression that can be implicitly converted to
+                <codeph class="+ topic/ph pr-d/codeph ">DATE</codeph>.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>months_to_add</varname></pt>
+            <pd>The number of months to add to the <varname>date_expression</varname>. This is an
+              integer or any value that can be implicitly converted to an integer. This parameter
+              can be positive or negative.</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Example</title>
+        <codeblock>SELECT name, phone, nextcalldate FROM clientdb
+WHERE nextcalldate &gt;= add_months(CURRENT_DATE,6);</codeblock>
+        <p>Returns <codeph class="+ topic/ph pr-d/codeph ">name</codeph>, <codeph
+            class="+ topic/ph pr-d/codeph ">phone</codeph>, and <codeph
+            class="+ topic/ph pr-d/codeph ">nextcalldate</codeph> for all records where <codeph
+            class="+ topic/ph pr-d/codeph ">nextcalldate</codeph> is at least six months in the
+          future.</p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic6" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me146709" class="- topic/title ">bitand</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function that computes a logical <codeph class="+ topic/ph pr-d/codeph "
+          >AND</codeph> operation on the bits of two non-negative values.</p>
+      <section id="me146711" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">bitand(<varname>expr1</varname>, <varname>expr2</varname>)</codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function returns an integer representing an <codeph>AND</codeph>
+          operation on the bits of two non-negative values (<varname>expr1</varname> and
+            <varname>expr2</varname>). 1 is returned when the values are the same. 0 is returned
+          when the values are different. Only significant bits are compared. For example, an <codeph
+            class="+ topic/ph pr-d/codeph ">AND</codeph> operation on the integers 5 (binary 101)
+          and 1 (binary 001 or 1) compares only the rightmost bit, and results in a value of 1
+          (binary 1).</p>
+        <p>The types of <varname>expr1</varname> and <varname>expr2</varname> are <codeph
+            class="+ topic/ph pr-d/codeph ">NUMBER</codeph>, and the result is of type <codeph
+            class="+ topic/ph pr-d/codeph ">NUMBER</codeph>. If either argument is <codeph
+            class="+ topic/ph pr-d/codeph ">NULL</codeph>, the result is <codeph
+            class="+ topic/ph pr-d/codeph ">NULL</codeph>.</p>
+        <p>The arguments must be in the range <codeph>-(2(n-1)) .. ((2(n-1))-1)</codeph>. If an
+          argument is out of this range, the result is undefined.</p>
+        <note>
+          <ul class="- topic/ul " id="ul_sgq_jcm_44">
+            <li id="me146722" class="- topic/li ">The current implementation of
+                <codeph>BITAND</codeph> defines n = 128.</li>
+            <li id="me146723" class="- topic/li ">PL/SQL supports an overload of
+                <codeph>BITAND</codeph> for which the types of the inputs and of the result are all
+                <codeph>BINARY_INTEGER</codeph> and for which n = 32.</li>
+          </ul>
+        </note>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>expr1</varname></pt>
+            <pd>A non-negative integer expression.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>expr2</varname></pt>
+            <pd>A non-negative integer expression.</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Example</title>
+        <codeblock>SELECT bitand(<varname>expr1</varname>, <varname>expr2</varname>)
+FROM ClientDB;</codeblock>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic7" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me146872" class="- topic/title ">concat</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function to concatenate two strings together.</p>
+      <section id="me146874" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">concat (<varname>string1</varname>, <varname>string2</varname>)</codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function concatenates two strings (<varname>string1</varname> and
+            <varname>string2</varname>) together.</p>
+        <p>The string returned is in the same character set as <varname>string1</varname>. Its
+          datatype depends on the datatypes of the arguments.</p>
+        <p>In concatenations of two different datatypes, the datatype returned is the one that
+          results in a lossless conversion. Therefore, if one of the arguments is a <codeph
+            class="+ topic/ph pr-d/codeph ">LOB</codeph>, then the returned value is a <codeph
+            class="+ topic/ph pr-d/codeph ">LOB</codeph>. If one of the arguments is a national
+          datatype, then the returned value is a national datatype. For example:</p>
+        <codeblock>concat(CLOB, NCLOB) returns NCLOB
+concat(NCLOB, NCHAR) returns NCLOB
+concat(NCLOB, CHAR) returns NCLOB
+concat(NCHAR, CLOB) returns NCLOB</codeblock>
+        <p>This function is equivalent to the concatenation operator (<codeph
+            class="+ topic/ph pr-d/codeph ">||</codeph>).</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>string1</varname>/<varname>string2</varname></pt>
+            <pd>The two strings to concatenate together.</pd>
+            <pd>Both <varname>string1</varname> and <varname>string2</varname> can be any of the
+              datatypes <codeph class="+ topic/ph pr-d/codeph ">CHAR</codeph>, <codeph
+                class="+ topic/ph pr-d/codeph ">VARCHAR2</codeph>, <codeph
+                class="+ topic/ph pr-d/codeph ">NCHAR</codeph>, <codeph
+                class="+ topic/ph pr-d/codeph ">NVARCHAR2</codeph>, <codeph
+                class="+ topic/ph pr-d/codeph ">CLOB</codeph>, or <codeph
+                class="+ topic/ph pr-d/codeph ">NCLOB</codeph>. </pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Example</title>
+        <codeblock>SELECT concat(concat(last_name, '''s job category is '),
+     job_id)
+FROM employees </codeblock>
+        <p>Returns <codeph class="+ topic/ph pr-d/codeph ">'Smith's job category is 4B'</codeph></p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience.</p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic8" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me146949" class="- topic/title ">cosh </title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function to return the hyperbolic cosine of a given number.</p>
+      <section id="me146951" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">cosh(<varname>float8</varname>)</codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function returns the hyperbolic cosine of the floating 8 input
+          number (<varname>float8</varname>).</p>
+        <note type="note" class="- topic/note ">This function is available by default and can be
+          accessed without running the Oracle Compatibility installer.</note>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>float8</varname></pt>
+            <pd>The input number.</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Example</title>
+        <codeblock>SELECT cosh(0.2)
+FROM ClientDB;</codeblock>
+        <p>Returns <codeph class="+ topic/ph pr-d/codeph ">'1.02006675561908'</codeph>' (hyperbolic
+          cosine of 0.2)</p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic9" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me144243" class="- topic/title ">decode</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function to transform a data value to a specified return value. This
+        function is a way to implement a set of <codeph class="+ topic/ph pr-d/codeph "
+          >CASE</codeph> statements.</p>
+      <note type="note" class="- topic/note "><codeph class="+ topic/ph pr-d/codeph "
+          >decode</codeph> is converted into a reserved word in Greenplum Database. If you want to
+        use the Postgres two-argument <codeph class="+ topic/ph pr-d/codeph ">decode</codeph>
+        function that decodes binary strings previously encoded to ASCII-only representation, you
+        must invoke it by using the full schema-qualified syntax, <codeph
+          class="+ topic/ph pr-d/codeph ">pg_catalog.decode()</codeph>, or by enclosing the function
+        name in quotes <codeph class="+ topic/ph pr-d/codeph ">"decode" ()</codeph>.</note>
+      <note>Greenplum's implementation of this function transforms <codeph
+          class="+ topic/ph pr-d/codeph ">decode</codeph> into <codeph
+          class="+ topic/ph pr-d/codeph ">case</codeph>. <p>This results in the following type of
+          output:</p><codeblock>gptest=# select decode(a, 1, 'A', 2, 'B', 'C') from 
+decodetest;
+ case 
+------
+ C
+ A
+ C
+ B
+ C
+(5 rows)</codeblock><p>This
+          also means that if you deparse your view with <codeph class="+ topic/ph pr-d/codeph "
+            >decode</codeph>, you will see <codeph class="+ topic/ph pr-d/codeph ">case</codeph>
+          expression instead.</p></note>
+      <p>You should use the <codeph class="+ topic/ph pr-d/codeph ">case</codeph>
+        function instead of <codeph class="+ topic/ph pr-d/codeph ">decode</codeph>.</p>
+      <section id="me154380" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">decode(<varname>expression</varname>, <varname>value</varname>, <varname>return</varname> [,<varname>value</varname>, <varname>return</varname>]...
+       [, default])</codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>The Oracle-compatible function decode searches for a value in an expression. If the value
+          is found, the function returns the specified value.</p>
+        <note type="note" class="- topic/note ">This function is available by default and can be
+          accessed without running the Oracle Compatibility installer.</note>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>expression</varname></pt>
+            <pd>The expression to search.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>value</varname></pt>
+            <pd>The value to find in the expression.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>return</varname></pt>
+            <pd>What to return if expression matches value.</pd>
+          </plentry>
+          <plentry>
+            <pt>default</pt>
+            <pd>What to return if expression does not match any of the values.</pd>
+          </plentry>
+        </parml>
+        <p>Only one <codeph class="+ topic/ph pr-d/codeph ">expression</codeph> is passed to the
+          function. Multiple <codeph class="+ topic/ph pr-d/codeph ">value</codeph>/<codeph
+            class="+ topic/ph pr-d/codeph ">return</codeph> pairs can be passed. </p>
+        <p>The <codeph class="+ topic/ph pr-d/codeph ">default</codeph> parameter is optional. If
+            <codeph class="+ topic/ph pr-d/codeph ">default</codeph> is not specified and if <codeph
+            class="+ topic/ph pr-d/codeph ">expression</codeph> does not match any of the passed
+            <codeph class="+ topic/ph pr-d/codeph ">value</codeph> parameters, decode returns
+            <codeph class="+ topic/ph pr-d/codeph ">null</codeph>. The Greenplum implementation
+          restricts <codeph class="+ topic/ph pr-d/codeph ">return</codeph> and <codeph
+            class="+ topic/ph pr-d/codeph ">default</codeph> to be of the same data type. The
+            <codeph class="+ topic/ph pr-d/codeph ">expression</codeph> and <codeph
+            class="+ topic/ph pr-d/codeph ">value</codeph> can be different types if the data type
+          of <codeph class="+ topic/ph pr-d/codeph ">value</codeph> can be converted into the data
+          type of the <codeph class="+ topic/ph pr-d/codeph ">expression</codeph>. This is done
+          implicitly. Otherwise, <codeph class="+ topic/ph pr-d/codeph ">decode</codeph> fails with
+          an <codeph class="+ topic/ph pr-d/codeph ">invalid input syntax</codeph> error.</p>
+        <title class="- topic/title ">Examples</title>
+        <p>In the following code, <codeph class="+ topic/ph pr-d/codeph ">decode</codeph> searches
+          for a value for <codeph class="+ topic/ph pr-d/codeph ">company_id</codeph> and returns a
+          specified value for that company. If <codeph class="+ topic/ph pr-d/codeph "
+            >company_id</codeph> not one of the listed values, the default value <codeph
+            class="+ topic/ph pr-d/codeph ">Other</codeph> is returned.</p>
+        <codeblock>SELECT decode(company_id, 1, 'EMC',
+                          2, 'Greenplum',
+                          'Other')
+FROM suppliers;</codeblock>
+        <p>The following code using <codeph class="+ topic/ph pr-d/codeph ">CASE</codeph> statements
+          to produce the same result as the example using <codeph class="+ topic/ph pr-d/codeph "
+            >decode</codeph>.</p>
+        <codeblock>SELECT CASE company_id
+WHEN IS NOT DISTINCT FROM 1 THEN 'EMC'
+WHEN IS NOT DISTINCT FROM 2 THEN 'Greenplum'
+ELSE 'Other'
+END
+FROM suppliers;</codeblock>
+        <title class="- topic/title ">Notes</title>
+        <p>To assign a range of values to a single return value, either pass an expression for each
+          value in the range, or pass an expression that evaluates identically for all values in the
+          range. For example, if a fiscal year begins on August 1, the quarters are shown in the
+          following table.</p>
+        <table id="me144277" class="- topic/table ">
+          <title class="- topic/title ">Months and Quarters for Fiscal Year Beginning on August
+            1</title>
+          <tgroup cols="3" class="- topic/tgroup ">
+            <colspec colnum="1" colname="col1" colwidth="126pt" class="- topic/colspec "/>
+            <colspec colnum="2" colname="col2" colwidth="110pt" class="- topic/colspec "/>
+            <colspec colnum="3" colname="col3" colwidth="126pt" class="- topic/colspec "/>
+            <thead class="- topic/thead ">
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Range (Alpha)</entry>
+                <entry colname="col2" class="- topic/entry ">Range (Numeric)</entry>
+                <entry colname="col3" class="- topic/entry ">Quarter</entry>
+              </row>
+            </thead>
+            <tbody class="- topic/tbody ">
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">August — October</entry>
+                <entry colname="col2" class="- topic/entry ">8 — 10</entry>
+                <entry colname="col3" class="- topic/entry ">Q1</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">November — January</entry>
+                <entry colname="col2" class="- topic/entry ">11 — 1</entry>
+                <entry colname="col3" class="- topic/entry ">Q2</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">February — April</entry>
+                <entry colname="col2" class="- topic/entry ">2 — 4</entry>
+                <entry colname="col3" class="- topic/entry ">Q3</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">May — July</entry>
+                <entry colname="col2" class="- topic/entry ">5 — 7</entry>
+                <entry colname="col3" class="- topic/entry ">Q4</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+        <p>The table contains a numeric field <codeph class="+ topic/ph pr-d/codeph "
+            >curr_month</codeph> that holds the numeric value of a month, 1 – 12. There are two ways
+          to use <codeph>decode</codeph> to get the quarter:<ul id="ul_lrt_j4j_bp">
+            <li>Method 1 - Include 12 values in the <codeph>decode</codeph>
+              function:<codeblock>SELECT decode(curr_month, 1, 'Q2',
+                          2, 'Q3',
+                          3, 'Q3',
+                          4, 'Q3',
+                          5, 'Q4',
+                          6, 'Q4',
+                          7, 'Q4',
+                          8, 'Q1',
+                          9, 'Q1',
+                         10, 'Q1',
+                         11, 'Q2',
+                         12, 'Q2')
+FROM suppliers;</codeblock></li>
+          </ul><ul id="ul_wbp_44j_bp">
+            <li>Method 2 - Use an expression that defines a unique value to
+              decode:<codeblock>SELECT decode((1+MOD(curr_month+4,12)/3)::int, 1, 'Q1',
+                                               2, 'Q2',
+                                               3, 'Q3',
+                                               4, 'Q4',
+FROM suppliers;</codeblock></li>
+          </ul></p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+        <title class="- topic/title ">See Also</title>
+        <p>PostgreSQL <codeph><xref
+              href="https://www.postgresql.org/docs/8.3/static/functions-binarystring.html"
+              scope="external" format="html" class="- topic/xref ">decode</xref></codeph> (not
+          compatible with Oracle)</p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic12" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me152599" class="- topic/title ">dump</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function that returns a text value that includes the datatype code,the
+        length in bytes, and the internal representation of the expression.</p>
+      <section id="me152601" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">dump(<varname>expression</varname> [,<varname>integer</varname>]) </codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function returns a text value that includes the datatype code, the
+          length in bytes, and the internal representation of the expression.</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>expression</varname></pt>
+            <pd>Any expression</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>integer</varname></pt>
+            <pd>The number of characters to return</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Example</title>
+        <codeblock>dump('Tech') returns 'Typ=96 Len=4: 84,101,99,104'
+
+dump ('tech') returns 'Typ-96 Len=4: 84,101,99,104'
+
+dump('Tech', 10) returns 'Typ=96 Len=4: 84,101,99,104'
+
+dump('Tech', 16) returns 'Typ=96 Len=4: 54,65,63,68'
+
+dump('Tech', 1016) returns 'Typ=96 Len=4 CharacterSet=US7ASCII:     54,65,63,68'
+
+dump('Tech', 1017) returns 'Typ=96 Len=4 CharacterSet=US7ASCII:     T,e,c,h'</codeblock>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic13" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me152573" class="- topic/title ">instr</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function to return the location of a substring in a string.</p>
+      <section id="me149267" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">instr(<varname>string</varname>, <varname>substring</varname>, [<varname>position</varname>[,<varname>occurrence</varname>]])</codeblock>
+        <title class="- topic/title ">Description </title>
+        <p>This Oracle-compatible function searches for a <varname>substring</varname> in a
+            <varname>string</varname>. If found, it returns an integer indicating the position of
+          the <varname>substring</varname> in the <varname>string</varname>, if not found, the
+          function returns 0.</p>
+        <p>Optionally you can specify that the search starts at a given <varname>position</varname>
+          in the string, and only return the nth <varname>occurrence</varname> of the
+            <varname>substring</varname> in the <varname>string</varname>. </p>
+        <p><codeph class="+ topic/ph pr-d/codeph ">instr </codeph>calculates strings using
+          characters as defined by the input character set.</p>
+        <p>The value returned is of <codeph class="+ topic/ph pr-d/codeph ">NUMBER</codeph>
+          datatype.</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>string</varname></pt>
+            <pd>The string to search.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>substring</varname></pt>
+            <pd>The substring to search for in <varname>string</varname>.</pd>
+            <pd>Both <varname>string</varname> and <varname>substring</varname> can be any of the
+              datatypes <codeph class="+ topic/ph pr-d/codeph ">CHAR</codeph>, <codeph
+                class="+ topic/ph pr-d/codeph ">VARCHAR2</codeph>, <codeph
+                class="+ topic/ph pr-d/codeph ">NCHAR</codeph>, <codeph
+                class="+ topic/ph pr-d/codeph ">NVARCHAR2</codeph>, <codeph
+                class="+ topic/ph pr-d/codeph ">CLOB</codeph>, or <codeph
+                class="+ topic/ph pr-d/codeph ">NCLOB</codeph>. </pd>
+          </plentry>
+          <plentry>
+            <pt><varname>position</varname></pt>
+            <pd>The position is a nonzero integer in <varname>string</varname> where the search will
+              start. If not specified, this defaults to 1. If this value is negative, the function
+              counts backwards from the end of <varname>string</varname> then searches towards to
+              beginning from the resulting position.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>occurrence</varname></pt>
+            <pd>Occurrence is an integer indicating which occurrence of the
+                <varname>substring</varname> should be searched for. The value of occurrence must be
+              positive. </pd>
+            <pd>Both <varname>position</varname> and <varname>occurrence</varname> must be of
+              datatype <codeph class="+ topic/ph pr-d/codeph ">NUMBER</codeph>, or any datatype that
+              can be implicitly converted to <codeph class="+ topic/ph pr-d/codeph "
+              >NUMBER</codeph>, and must resolve to an integer. The default values of both
+                <varname>position</varname> and <varname>occurrence</varname> are 1, meaning that
+              the search begins at the first character of <varname>string</varname> for the first
+              occurrence of <varname>substring</varname>. The return value is relative to the
+              beginning of <varname>string</varname>, regardless of the value of
+                <varname>position</varname>, and is expressed in characters.</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Examples</title>
+        <codeblock>SELECT instr('Greenplum', 'e') 
+FROM ClientDB;</codeblock>
+        <p>Returns 3; the first occurrence of 'e'</p>
+        <codeblock>SELECT instr('Greenplum', 'e',1,2)
+FROM ClientDB;</codeblock>
+        <p>Returns 4; the second occurrence of 'e'</p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic14" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me147035" class="- topic/title ">last_day</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function to return the last day in a given month.</p>
+      <section id="me147037" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">last_day(<varname>date_expression</varname>) </codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function returns the last day of the month specified by a
+            <varname>date_expression</varname>.</p>
+        <p>The return type is always <codeph class="+ topic/ph pr-d/codeph ">DATE</codeph>,
+          regardless of the datatype of <varname>date_expression</varname>.</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>date_expression</varname></pt>
+            <pd>The date value used to calculate the last day of the month. This can be any
+              expression that can be implicitly converted to <codeph class="+ topic/ph pr-d/codeph "
+                >DATE</codeph>.</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Example</title>
+        <codeblock>SELECT name, hiredate, last_day(hiredate) "Option Date"
+FROM employees;</codeblock>
+        <p>Returns the <codeph class="+ topic/ph pr-d/codeph ">name</codeph>, <codeph
+            class="+ topic/ph pr-d/codeph ">hiredate</codeph>, and <codeph
+            class="+ topic/ph pr-d/codeph ">last_day</codeph> of the month of <codeph
+            class="+ topic/ph pr-d/codeph ">hiredate</codeph> labeled " <codeph
+            class="+ topic/ph pr-d/codeph ">Option Date</codeph>."</p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic15" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me150809" class="- topic/title ">listagg</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function that aggregates text values into a string.</p>
+      <note type="note" class="- topic/note ">This function is an overloaded function. There are two
+        Oracle-compliant <codeph class="+ topic/ph pr-d/codeph ">listagg</codeph> functions, one
+        that takes one argument, the text to be aggregated (see below), and one that takes two
+        arguments, the text to be aggregated and a delimiter (see next page).</note>
+      <section id="me150811" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">listagg(<varname>text</varname>) </codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function aggregates text values into a string.</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>text</varname></pt>
+            <pd>The text value to be aggregated into a string.</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Example</title>
+        <codeblock>SELECT listagg(t) FROM (VALUES('abc'), ('def')) as l(t) </codeblock>
+        <p>Returns: <codeph class="+ topic/ph pr-d/codeph ">abcdef</codeph></p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic16" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me151348" class="- topic/title ">listagg (2)</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function that aggregates text values into a string, separating each by the
+        separator specified in a second argument.</p>
+      <note type="note" class="- topic/note ">This function is an overloaded function. There are two
+        Oracle-compliant <codeph class="+ topic/ph pr-d/codeph ">listagg</codeph> functions, one
+        that takes one argument, the text to be aggregated (see previous page), and one that takes
+        two arguments, the text to be aggregated and a delimiter (see below).</note>
+      <section id="me151350" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">listagg(<varname>text</varname>, <varname>separator</varname>) </codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function aggregates text values into a string, separating each by
+          the separator specified in a second argument (<varname>separator</varname>).</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>text</varname></pt>
+            <pd>The text value to be aggregated into a string.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>separator</varname></pt>
+            <pd>The separator by which to delimit the text values.</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Example</title>
+        <codeblock>SELECT oracompat.listagg(t, '.') FROM (VALUES('abc'), 
+('def')) as l(t)</codeblock>
+        <p>Returns: <codeph class="+ topic/ph pr-d/codeph ">abc.def</codeph></p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic17" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me151064" class="- topic/title ">lnnvl</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function that returns <codeph class="+ topic/ph pr-d/codeph "
+          >true</codeph> if the argument is false or NULL, or <codeph
+          class="+ topic/ph pr-d/codeph ">false</codeph>.</p>
+      <section id="me151066" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">lnnvl(<varname>condition</varname>) </codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function takes as an argument a condition and returns <codeph
+            class="+ topic/ph pr-d/codeph ">true</codeph> if the condition is false or NULL and
+            <codeph class="+ topic/ph pr-d/codeph ">false</codeph> if the condition is true.</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>condition</varname></pt>
+            <pd>Any condition that evaluates to <codeph class="+ topic/ph pr-d/codeph "
+                >true</codeph>, <codeph class="+ topic/ph pr-d/codeph ">false</codeph>, or
+              NULL.</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Example</title>
+        <codeblock>SELECT lnnvl(true) </codeblock>
+        <p>Returns: <codeph class="+ topic/ph pr-d/codeph ">false</codeph></p>
+        <codeblock>SELECT lnnvl(NULL) </codeblock>
+        <p>Returns: <codeph class="+ topic/ph pr-d/codeph ">true</codeph></p>
+        <codeblock>SELECT lnnvl(false) </codeblock>
+        <p>Returns: <codeph class="+ topic/ph pr-d/codeph ">true</codeph></p>
+        <codeblock>SELECT (3=5)               </codeblock>
+        <p>Returns: <codeph class="+ topic/ph pr-d/codeph ">true</codeph></p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic18" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me147110" class="- topic/title ">months_between </title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function to evaluate the number of months between two given dates.</p>
+      <section id="me147112" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">months_between(<varname>date_expression1</varname>, <varname>date_expression2</varname>)</codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function returns the number of months between
+            <varname>date_expression1</varname> and <varname>date_expression2</varname>. </p>
+        <p>If <varname>date_expression1</varname> is later than <varname>date_expression2</varname>,
+          then the result is positive. </p>
+        <p>If <varname>date_expression1</varname> is earlier than
+            <varname>date_expression2</varname>, then the result is negative. </p>
+        <p>If <varname>date_expression1</varname> and <varname>date_expression2</varname> are either
+          the same days of the month or both last days of months, then the result is always an
+          integer. Otherwise the function calculates the fractional portion of the month based on a
+          31-day month.</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>date_expression1</varname>, <varname>date_expression2</varname></pt>
+            <pd>The date values used to calculate the number of months. This can be any expression
+              that can be implicitly converted to <codeph class="+ topic/ph pr-d/codeph "
+                >DATE</codeph>.</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Examples</title>
+        <codeblock>SELECT months_between
+    (to_date ('2003/07/01', 'yyyy/mm/dd'), 
+    to_date ('2003/03/14', 'yyyy/mm/dd'));</codeblock>
+        <p>Returns the number of months between July 1, 2003 and March 14, 2014.</p>
+        <codeblock>SELECT * FROM employees 
+    where months_between(hire_date, leave_date) &lt;12;</codeblock>
+        <p>Returns the number of months between <codeph class="+ topic/ph pr-d/codeph "
+            >hire_date</codeph> and <codeph class="+ topic/ph pr-d/codeph ">leave_date</codeph>.</p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic19" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me147255" class="- topic/title ">nanvl</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function to substitute a value for a floating point number when a
+        non-number value is encountered. </p>
+      <section id="me147257" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">nanvl(<varname>float1</varname>, <varname>float2</varname>)</codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function evaluates a floating point number
+            (<varname>float1</varname>) such as <codeph class="+ topic/ph pr-d/codeph "
+            >BINARY_FLOAT</codeph> or <codeph class="+ topic/ph pr-d/codeph "
+          >BINARY_DOUBLE</codeph>. If it is a non-number ('not a number', NaN), the function returns
+            <varname>float2</varname>. This function is most commonly used to convert non-number
+          values into either NULL or 0.</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>float1</varname></pt>
+            <pd>The <codeph class="+ topic/ph pr-d/codeph ">BINARY_FLOAT</codeph> or <codeph
+                class="+ topic/ph pr-d/codeph ">BINARY_NUMBER</codeph> to evaluate.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>float2</varname></pt>
+            <pd>The value to return if <varname>float1</varname> is not a number.</pd>
+            <pd><varname>float1</varname> and <varname>float2</varname> can be any numeric datatype
+              or any nonnumeric datatype that can be implicitly converted to a numeric datatype. The
+              function determines the argument with the highest numeric precedence, implicitly
+              converts the remaining arguments to that datatype, and returns that datatype.</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Example</title>
+        <codeblock>SELECT nanvl(binary1, 0)
+FROM MyDB;</codeblock>
+        <p>Returns 0 if the <codeph class="+ topic/ph pr-d/codeph ">binary1</codeph> field contained
+          a non-number value. Otherwise, it would return the <codeph class="+ topic/ph pr-d/codeph "
+            >binary1</codeph> value.</p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic20" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me147318" class="- topic/title ">next_day</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function to return the date of the next specified weekday after a
+        date.</p>
+      <p>This section describes using this function with a string argument; see the following page
+        for details about using this function with an integer argument.</p>
+      <note type="note" class="- topic/note ">This function is an overloaded function. There are two
+        Oracle-compliant <codeph class="+ topic/ph pr-d/codeph ">next_day</codeph> functions, one
+        that takes a date and a day of the week as its arguments (see below), and one that takes a
+        date and an integer as its arguments (see next page).</note>
+      <section id="me147322" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">next_day(<varname>date_expression</varname>, <codeph class="+ topic/ph pr-d/codeph ">day_of_the_week</codeph>)</codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function returns the first <codeph class="+ topic/ph pr-d/codeph "
+            >day_of_the_week</codeph> (Tuesday, Wednesday, etc.) to occur after a
+            <varname>date_expression</varname>. </p>
+        <p>The weekday must be specified in English.</p>
+        <p>The case of the weekday is irrelevant.</p>
+        <p>The return type is always <codeph class="+ topic/ph pr-d/codeph ">DATE</codeph>,
+          regardless of the datatype of <varname>date_expression</varname>.</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>date_expression</varname></pt>
+            <pd>The starting date. This can be any expression that can be implicitly converted to
+                <codeph class="+ topic/ph pr-d/codeph ">DATE</codeph>.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>day_of_the_week</varname></pt>
+            <pd>A string containing the name of a day, in English; for example 'Tuesday'.
+                <varname>day_of_the_week</varname> is case-insensitive.</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Example</title>
+        <codeblock>SELECT name, next_day(hiredate,"MONDAY") "Second Week Start"
+FROM employees;</codeblock>
+        <p>Returns the <codeph class="+ topic/ph pr-d/codeph ">name</codeph> and the <codeph
+            class="+ topic/ph pr-d/codeph ">date</codeph> of the next Monday after <codeph
+            class="+ topic/ph pr-d/codeph ">hiredate</codeph> labeled "<codeph
+            class="+ topic/ph pr-d/codeph ">Second Week Start</codeph>".</p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience.</p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic21" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me147385" class="- topic/title ">next_day (2)</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function to add a given number of days to a date and returns the date of
+        the following day.</p>
+      <note type="note" class="- topic/note ">This function is an overloaded function. There are two
+        Oracle <codeph class="+ topic/ph pr-d/codeph ">next_day</codeph> functions, one that takes a
+        date and a day of the week as its arguments (see previous page), and one that takes a date
+        and an integer as its arguments (see below).</note>
+      <section id="me147388" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">next_day(<varname>date_expression</varname>, <varname>days_to_add</varname>) </codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function adds the number of <varname>days_to_add</varname> to a
+            <varname>date_expression</varname> and returns the date of the day after the result.</p>
+        <p>The return type is always <codeph class="+ topic/ph pr-d/codeph ">DATE</codeph>,
+          regardless of the datatype of <varname>date_expression</varname>.</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>date_expression</varname></pt>
+            <pd>The starting date. This can be any expression that can be implicitly converted to
+                <codeph class="+ topic/ph pr-d/codeph ">DATE</codeph>.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>days_to_add</varname></pt>
+            <pd>The number of days to be add to the <varname>date_expression</varname>. This is an
+              integer or any value that can be implicitly converted to an integer. This parameter
+              can be positive or negative.</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Example</title>
+        <codeblock>SELECT name, next_day(hiredate,90) "Benefits Eligibility 
+Date"
+FROM EMPLOYEES;</codeblock>
+        <p>Returns the <codeph class="+ topic/ph pr-d/codeph ">name</codeph> and the <codeph
+            class="+ topic/ph pr-d/codeph ">date</codeph> that is 90 days after <codeph
+            class="+ topic/ph pr-d/codeph ">hiredate</codeph> labeled "<codeph
+            class="+ topic/ph pr-d/codeph ">Benefits Eligibility Date</codeph>".</p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic22" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me152443" class="- topic/title ">nlssort</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function that sorts data according to a specific collation.</p>
+      <section id="me152445" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">nlssort (<varname>variable</varname>, <varname>collation</varname>)</codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function sorts data according to a specific collation.</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>variable</varname></pt>
+            <pd>The data to sort.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>collation</varname></pt>
+            <pd>The collation type by which to sort.</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Example</title>
+        <codeblock>CREATE TABLE test (name text);
+INSERT INTO test VALUES('Anne'), ('anne'), ('Bob'), ('bob');
+SELECT * FROM test ORDER BY nlssort(name, 'en_US.UTF-8');
+ anne
+ Anne
+ bob
+ Bob
+
+SELECT * FROM test ORDER BY nlssort(name, 'C');
+ Anne
+ Bob
+ anne
+ bob </codeblock>
+        <p>In the first example, the UTF-8 collation rules are specified. This groups characters
+          together regardless of case.</p>
+        <p>In the second example, ASCII (C) collation is specified. This sorts according to ASCII
+          order. The result is that upper case characters are sorted ahead of lower case ones.</p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic23" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me144328" class="- topic/title ">nvl</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function to substitute a specified value when an expression evaluates to
+          <codeph class="+ topic/ph pr-d/codeph ">null</codeph>.</p>
+      <note type="note" class="- topic/note ">This function is analogous to the PostgreSQL <codeph
+          class="+ topic/ph pr-d/codeph ">coalesce</codeph> function.</note>
+      <section id="me144331" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">nvl(<varname>expression_to_evaluate</varname>, <varname>null_replacement_value</varname>)</codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function evaluates <varname>expression_to_evaluate</varname>. If
+          it is <codeph class="+ topic/ph pr-d/codeph ">null</codeph>, the function returns
+            <varname>null_replacement_value</varname>; otherwise, it returns
+            <varname>expression_to_evaluate</varname>.</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>expression_to_evaluate</varname></pt>
+            <pd>The expression to evaluate for a null value.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>null_replacement_value</varname></pt>
+            <pd>The value to return if <varname>expression_to_evaluate</varname> is <codeph
+                class="+ topic/ph pr-d/codeph ">null</codeph>.</pd>
+          </plentry>
+        </parml>
+        <p>Both <varname>expression_to_evaluate</varname> and
+            <varname>null_replacement_value</varname> must be the same data type.</p>
+        <title class="- topic/title ">Examples</title>
+        <codeblock>SELECT nvl(contact_name,'None') 
+FROM clients;
+SELECT nvl(amount_past_due,0) 
+FROM txns;
+SELECT nvl(nickname, firstname) 
+FROM contacts;</codeblock>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic24" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me149339" class="- topic/title ">nvl2 </title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function that returns alternate values for both null and non-null
+        values.</p>
+      <section id="me149341" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">nvl2(<varname>expression_to_evaluate</varname>, <varname>non_null_replacement_value</varname>,
+     <varname>null_replacement_value</varname>)</codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function evaluates <varname>expression_to_evaluate</varname>. If
+          it is not <codeph class="+ topic/ph pr-d/codeph ">null</codeph>, the function returns
+            <varname>non_null_replacement_value</varname>; otherwise, it returns
+            <varname>null_replacement_value</varname>.</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>expression_to_evaluate</varname></pt>
+            <pd>The expression to evaluate for a null value.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>non_null_replacement_value</varname></pt>
+            <pd>The value to return if <varname>expression_to_evaluate</varname> is not <codeph
+                class="+ topic/ph pr-d/codeph ">null</codeph>.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>null_replacement_value</varname></pt>
+            <pd>The value to return if <varname>expression_to_evaluate</varname> is <codeph
+                class="+ topic/ph pr-d/codeph ">null</codeph>.</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Example</title>
+        <codeblock>select nvl2(unit_number,'Multi Unit','Single Unit') 
+from clients;</codeblock>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+        <title class="- topic/title ">See Also</title>
+        <p><codeph><xref href="#topic9" type="topic" format="dita" class="- topic/xref "
+          /></codeph></p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic25" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me147446" class="- topic/title ">oracle.substr</title>
+    <body class="- topic/body ">
+      <p>This Oracle-compliant function extracts a portion of a string.</p>
+      <section id="me147448" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">oracle.substr(<varname>string</varname>, [<varname>start</varname> [,<varname>char_count</varname>]])</codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function extract a portion of a string.</p>
+        <p>If <varname>start</varname> is 0, it is evaluated as 1.</p>
+        <p>If <varname>start</varname> is negative, the starting position is negative, the starting
+          position is <varname>start</varname> characters moving backwards from the end of
+          string.</p>
+        <p>If <varname>char_count</varname> is not passed to the function, all characters from start
+          to the end of string are returned.</p>
+        <p>If <varname>char_count</varname> is less than 1, null is returned.</p>
+        <p>If <varname>start</varname> or <varname>char_count</varname> is a number, but not an
+          integer, the values are resolved to integers.</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>string</varname></pt>
+            <pd>The string from which to extract.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>start</varname></pt>
+            <pd>An integer specifying the starting position in the string.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>char_count</varname></pt>
+            <pd>An integer specifying the number of characters to extract.</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Example</title>
+        <codeblock>oracle.substr(name,1,15) </codeblock>
+        <p>Returns the first 15 characters of <codeph class="+ topic/ph pr-d/codeph "
+          >name</codeph>.</p>
+        <codeblock>oracle.substr("Greenplum",-4,4) </codeblock>
+        <p>Returns "<codeph class="+ topic/ph pr-d/codeph ">plum</codeph>".</p>
+        <codeblock>oracle.substr(name,2) </codeblock>
+        <p>Returns all characters of <codeph class="+ topic/ph pr-d/codeph ">name</codeph>,
+          beginning with the second character.</p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>PostgreSQL <codeph><xref
+              href="https://www.postgresql.org/docs/8.3/static/functions-string.html"
+              scope="external" format="html" class="- topic/xref ">substr</xref></codeph> (not
+          compatible with Oracle)</p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic26" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me147531" class="- topic/title ">reverse </title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function to return the input string in reverse order.</p>
+      <section id="me147533" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">reverse (<varname>string</varname>)</codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function returns the input string (<varname>string</varname>) in
+          reverse order.</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>string</varname></pt>
+            <pd>The input string.</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Example</title>
+        <codeblock>SELECT reverse('gnirts') 
+FROM ClientDB;</codeblock>
+        <p>Returns <codeph class="+ topic/ph pr-d/codeph ">'string'</codeph>'</p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic27" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me147572" class="- topic/title ">round</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function to round a date to a specific unit of measure (day, week,
+        etc.).</p>
+      <note type="note" class="- topic/note ">This function is an overloaded function. It shares the
+        same name with the Postgres <codeph class="+ topic/ph pr-d/codeph ">round</codeph>
+        mathematical function that rounds numeric input to the nearest integer or optionally to the
+        nearest x number of decimal places.</note>
+      <section id="me147575" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">round (<varname>date_time_expression</varname>, [<varname>unit_of_measure</varname>]) </codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function rounds a <varname>date_time_expression</varname> to the
+          nearest <varname>unit_of_measure</varname> (day, week, etc.). If a
+            <varname>unit_of_measure</varname> is not specified, the
+            <varname>date_time_expression</varname> is rounded to the nearest day. It operates
+          according to the rules of the Gregorian calendar.</p>
+        <p>If the <varname>date_time_expression</varname> datatype is <codeph
+            class="+ topic/ph pr-d/codeph ">TIMESTAMP</codeph>, the value returned is always of
+          datatype <codeph class="+ topic/ph pr-d/codeph ">TIMESTAMP</codeph>.</p>
+        <p>If the <varname>date_time_expression</varname> datatype is <codeph
+            class="+ topic/ph pr-d/codeph ">DATE</codeph>, the value returned is always of datatype
+            <codeph class="+ topic/ph pr-d/codeph ">DATE</codeph>.</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>date_time_expression</varname></pt>
+            <pd>The date to round. This can be any expression that can be implicitly converted to
+                <codeph class="+ topic/ph pr-d/codeph ">DATE</codeph> or <codeph
+                class="+ topic/ph pr-d/codeph ">TIMESTAMP</codeph>.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>unit_of_measure</varname></pt>
+            <pd>The unit of measure to apply for rounding. If not specified, then the
+                <varname>date_time_expression</varname> is rounded to the nearest day. Valid
+              parameters are:</pd>
+          </plentry>
+        </parml>
+        <table id="me147585" class="- topic/table ">
+          <title class="- topic/title ">Valid Parameters</title>
+          <tgroup cols="3" class="- topic/tgroup ">
+            <colspec colnum="1" colname="col1" colwidth="116pt" class="- topic/colspec "/>
+            <colspec colnum="2" colname="col2" colwidth="165pt" class="- topic/colspec "/>
+            <colspec colnum="3" colname="col3" colwidth="165pt" class="- topic/colspec "/>
+            <thead class="- topic/thead ">
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Unit</entry>
+                <entry colname="col2" class="- topic/entry ">Valid parameters</entry>
+                <entry colname="col3" class="- topic/entry ">Rounding Rule</entry>
+              </row>
+            </thead>
+            <tbody class="- topic/tbody ">
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Year</entry>
+                <entry colname="col2" class="- topic/entry ">SYYYY, YYYY, YEAR, SYEAR, YYY, YY,
+                  Y</entry>
+                <entry colname="col3" class="- topic/entry ">Rounds up on July 1st</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">ISO Year</entry>
+                <entry colname="col2" class="- topic/entry ">IYYY, IY, I</entry>
+                <entry colname="col3" class="- topic/entry "/>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Quarter</entry>
+                <entry colname="col2" class="- topic/entry ">Q</entry>
+                <entry colname="col3" class="- topic/entry ">Rounds up on the 16th day of the second
+                  month of the quarter</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Month</entry>
+                <entry colname="col2" class="- topic/entry ">MONTH, MON, MM, RM</entry>
+                <entry colname="col3" class="- topic/entry ">Rounds up on the 16th day of the
+                  month</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Week</entry>
+                <entry colname="col2" class="- topic/entry ">WW</entry>
+                <entry colname="col3" class="- topic/entry ">Same day of the week as the first day
+                  of the year</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">IW</entry>
+                <entry colname="col2" class="- topic/entry ">IW</entry>
+                <entry colname="col3" class="- topic/entry ">Same day of the week as the first day
+                  of the ISO year</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">W</entry>
+                <entry colname="col2" class="- topic/entry ">W</entry>
+                <entry colname="col3" class="- topic/entry ">Same day of the week as the first day
+                  of the month</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Day</entry>
+                <entry colname="col2" class="- topic/entry ">DDD, DD, J</entry>
+                <entry colname="col3" class="- topic/entry ">Rounds to the nearest day</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Start day of the week</entry>
+                <entry colname="col2" class="- topic/entry ">DAY, DY, D</entry>
+                <entry colname="col3" class="- topic/entry ">Rounds to the nearest start (sunday)
+                  day of the week</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Hour</entry>
+                <entry colname="col2" class="- topic/entry ">HH, HH12, HH24</entry>
+                <entry colname="col3" class="- topic/entry ">Rounds to the next hour</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Minute</entry>
+                <entry colname="col2" class="- topic/entry ">MI</entry>
+                <entry colname="col3" class="- topic/entry ">Rounds to the next minute</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+        <title class="- topic/title ">Example</title>
+        <codeblock>SELECT round(TO_DATE('27-OCT-00','DD-MON-YY'), 'YEAR')
+FROM ClientDB;</codeblock>
+        <p>Returns '01-JAN-01' (27 Oct 00 rounded to the first day of the following year (<codeph
+            class="+ topic/ph pr-d/codeph ">YEAR</codeph>))</p>
+        <codeblock>SELECT round('startdate','Q')
+FROM ClientDB;</codeblock>
+        <p>Returns '01-JUL-92' (the <codeph class="+ topic/ph pr-d/codeph ">startdate</codeph>
+          rounded to the first day of the quarter (<codeph class="+ topic/ph pr-d/codeph "
+            >Q</codeph>))</p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+        <title class="- topic/title ">See Also</title>
+        <p>PostgreSQL <codeph><xref
+              href="https://www.postgresql.org/docs/8.3/static/functions-math.html" scope="external"
+              format="html" class="- topic/xref ">round</xref></codeph> (not compatible with
+          Oracle)</p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic28" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me147490" class="- topic/title ">sinh</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function to return the hyperbolic sine of a given number.</p>
+      <section id="me147492" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">sinh(<varname>float8</varname>)</codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function returns the hyperbolic sine of the floating 8 input
+          number (<varname>float8</varname>).</p>
+        <note type="note" class="- topic/note ">This function is available by default and can be
+          accessed without running the Oracle Compatibility installer.</note>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>float8</varname></pt>
+            <pd>The input number.</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Example</title>
+        <codeblock>SELECT sinh(3) 
+FROM ClientDB;</codeblock>
+        <p>Returns <codeph class="+ topic/ph pr-d/codeph ">'10.0178749274099'</codeph>'(hyperbolic
+          sine of 3)</p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic29" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me147698" class="- topic/title ">tanh</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function to return the hyperbolic tangent of a given number.</p>
+      <section id="me147700" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">tanh(<varname>float8</varname>)</codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function returns the hyperbolic tangent of the floating 8 input
+          number (<varname>float8</varname>).</p>
+        <note type="note" class="- topic/note ">
+          <p>This function is available by default and can be accessed without running the Oracle
+            Compatibility installer.</p>
+        </note>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>float8</varname></pt>
+            <pd>The input number.</pd>
+          </plentry>
+        </parml>
+        <title class="- topic/title ">Example</title>
+        <codeblock>SELECT tanh(3)
+FROM ClientDB;</codeblock>
+        <p>Returns <codeph class="+ topic/ph pr-d/codeph ">'0.99505475368673'</codeph>' (hyperbolic
+          tangent of 3)</p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+      </section>
+    </body>
+  </topic>
+  <topic xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="topic30" xml:lang="en"
+    ditaarch:DITAArchVersion="1.1"
+    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+    class="- topic/topic ">
+    <title id="me144474" class="- topic/title ">trunc</title>
+    <body class="- topic/body ">
+      <p>Oracle-compliant function to truncate a date to a specific unit of measure (day, week,
+        hour, etc.).</p>
+      <note type="note" class="- topic/note ">
+        <p>This function is an overloaded function. It shares the same name with the Postgres
+            <codeph class="+ topic/ph pr-d/codeph ">trunc</codeph> and the Oracle <codeph
+            class="+ topic/ph pr-d/codeph ">trunc</codeph> mathematical functions. Both of these
+          truncate numeric input to the nearest integer or optionally to the nearest x number of
+          decimal places. </p>
+      </note>
+      <section id="me144477" class="- topic/section ">
+        <title class="- topic/title ">Synopsis</title>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">trunc(<varname>date_time_expression</varname>, [<varname>unit_of_measure</varname>]) </codeblock>
+        <title class="- topic/title ">Description</title>
+        <p>This Oracle-compatible function truncates a <varname>date_time_expression</varname> to
+          the nearest <varname>unit_of_measure</varname> (day, week, etc.). If a
+            <varname>unit_of_measure</varname> is not specified, the
+            <varname>date_time_expression</varname> is truncated to the nearest day. It operates
+          according to the rules of the Gregorian calendar. </p>
+        <p>If the <varname>date_time_expression</varname> datatype is <codeph
+            class="+ topic/ph pr-d/codeph ">TIMESTAMP</codeph>, the value returned is always of
+          datatype <codeph class="+ topic/ph pr-d/codeph ">TIMESTAMP</codeph>, truncated to the
+          hour/min level.</p>
+        <p>If the <varname>date_time_expression</varname> datatype is <codeph
+            class="+ topic/ph pr-d/codeph ">DATE</codeph>, the value returned is always of datatype
+            <codeph class="+ topic/ph pr-d/codeph ">DATE</codeph>.</p>
+        <title class="- topic/title ">Parameters</title>
+        <parml>
+          <plentry>
+            <pt><varname>date_time_expression</varname></pt>
+            <pd>The date to truncate. This can be any expression that can be implicitly converted to
+                <codeph class="+ topic/ph pr-d/codeph ">DATE</codeph> or <codeph
+                class="+ topic/ph pr-d/codeph ">TIMESTAMP</codeph>.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>unit_of_measure</varname></pt>
+            <pd>The unit of measure to apply for truncating. If not specified, then
+                <varname>date__time_expression</varname> is truncated to the nearest day. Valid
+              formats are:</pd>
+          </plentry>
+        </parml>
+        <table id="me144487" class="- topic/table ">
+          <title class="- topic/title ">Valid Format Parameters</title>
+          <tgroup cols="2" class="- topic/tgroup ">
+            <colspec colnum="1" colname="col1" colwidth="128pt" class="- topic/colspec "/>
+            <colspec colnum="2" colname="col2" colwidth="165pt" class="- topic/colspec "/>
+            <thead class="- topic/thead ">
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Unit</entry>
+                <entry colname="col2" class="- topic/entry ">Valid parameters</entry>
+              </row>
+            </thead>
+            <tbody class="- topic/tbody ">
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Year</entry>
+                <entry colname="col2" class="- topic/entry ">SYYYY, YYYY, YEAR, SYEAR, YYY, YY,
+                  Y</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">ISO Year</entry>
+                <entry colname="col2" class="- topic/entry ">IYYY, IY, I</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Quarter</entry>
+                <entry colname="col2" class="- topic/entry ">Q</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Month</entry>
+                <entry colname="col2" class="- topic/entry ">MONTH, MON, MM, RM</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Week</entry>
+                <entry colname="col2" class="- topic/entry ">WW</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">IW</entry>
+                <entry colname="col2" class="- topic/entry ">IW</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">W</entry>
+                <entry colname="col2" class="- topic/entry ">W</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Day</entry>
+                <entry colname="col2" class="- topic/entry ">DDD, DD, J</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Start day of the week</entry>
+                <entry colname="col2" class="- topic/entry ">DAY, DY, D</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Hour</entry>
+                <entry colname="col2" class="- topic/entry ">HH, HH12, HH24</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Minute</entry>
+                <entry colname="col2" class="- topic/entry ">MI</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+        <title class="- topic/title ">Examples</title>
+        <codeblock>SELECT TRUNC(TO_DATE('27-OCT-92','DD-MON-YY'), 'YEAR')
+FROM ClientDB;</codeblock>
+        <p>Returns '01-JAN-92' (27 Oct 92 truncated to the first day of the year (<codeph
+            class="+ topic/ph pr-d/codeph ">YEAR</codeph>))</p>
+        <codeblock>SELECT TRUNC(startdate,'Q')
+FROM ClientDB;</codeblock>
+        <p>Returns '1992-07-01' (the <codeph class="+ topic/ph pr-d/codeph ">startdate</codeph>
+          truncated to the first day of the quarter (<codeph class="+ topic/ph pr-d/codeph "
+            >Q</codeph>), depending on the date_style setting)</p>
+        <title class="- topic/title ">Compatibility</title>
+        <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
+        <title class="- topic/title ">See Also</title>
+        <p>PostgreSQL <codeph><xref
+              href="https://www.postgresql.org/docs/8.3/static/functions-math.html" scope="external"
+              format="html" class="- topic/xref ">trunc</xref></codeph> (not compatible with
+          Oracle)</p>
+      </section>
+    </body>
+  </topic>
+</topic>

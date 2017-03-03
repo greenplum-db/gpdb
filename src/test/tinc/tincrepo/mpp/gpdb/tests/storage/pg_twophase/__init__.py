@@ -160,6 +160,7 @@ class PgtwoPhaseClass(MPPTestCase):
             self.invoke_fault('postmaster', 'panic', role='primary')
             if fault_type in ('dtm_broadcast_prepare', 'dtm_broadcast_commit_prepared', 'dtm_xlog_distributed_commit') :
                 self.resume_faults(fault_type, cluster_state)
+            PSQL.wait_for_database_up()
             (rc, num) = self.filereputil.wait_till_change_tracking_transition()
             tinctest.logger.info('Value of rc and num_down %s, %s' % (rc, num))
             if fault_type == 'abort' :
@@ -169,7 +170,7 @@ class PgtwoPhaseClass(MPPTestCase):
             if not self.gprecover.wait_till_insync_transition():
                 raise Exception('Segments not in sync')                        
 
-    def get_trigger_status(self, trigger_count):
+    def get_trigger_status_old(self, trigger_count):
         '''Compare the pg_stat_activity count with the total number of trigger_sqls executed '''
         for i in range(1,50):
             psql_count = PSQL.run_sql_command('select count(*) from pg_stat_activity;', flags='-q -t', dbname='postgres')
@@ -179,17 +180,24 @@ class PgtwoPhaseClass(MPPTestCase):
             return False
         return True
 
-    def check_trigger_sql_hang(self, test_dir):
+    def get_trigger_status(self, trigger_count, fault_type):
+        if fault_type == None:
+            return self.get_trigger_status_old(trigger_count);
+
+        return self.filereputil.check_fault_status(fault_name=fault_type, status="triggered", seg_id='1', num_times_hit=trigger_count);
+
+    def check_trigger_sql_hang(self, test_dir, fault_type = None):
         '''
-        @param ddl_type : create/drop
-        @param fault_type : commit/abort/end_prepare_two_phase_sleep
         @description : Return the status of the trigger sqls: whether they are waiting on the fault 
         Since gpfaultinjector has no way to check if all the sqls are triggered, we are using 
         a count(*) on pg_stat_activity and compare the total number of trigger_sqls
-        '''    
-        trigger_dir = local_path('%s_tests/trigger_sql/' % (test_dir))
-        trigger_count = len(glob.glob1(trigger_dir,"*.ans"))
-        return self.get_trigger_status(trigger_count)
+        '''
+        trigger_count=0
+        for dir in test_dir.split(","):
+            trigger_dir = local_path('%s/trigger_sql/sql/' % (dir))
+            trigger_count += len(glob.glob1(trigger_dir,"*.sql"))
+        tinctest.logger.info('Total number of sqls to trigger %d in %s' % (trigger_count,test_dir));
+        return self.get_trigger_status(trigger_count, fault_type)
 
 
     def run_faults_before_pre(self, cluster_state):
@@ -233,6 +241,8 @@ class PgtwoPhaseClass(MPPTestCase):
         if cluster_state == 'resync':
             self.filereputil.inject_fault(f='filerep_resync', y='resume', r='primary')
 
+        PSQL.wait_for_database_up()
+
     def run_crash_and_recover(self, crash_type, fault_type, test_dir, cluster_state='sync', checkpoint='noskip'):
         '''
         @param crash_type : gpstop_i/gpstop_a/failover_to_mirror/failover_to_primary
@@ -253,19 +263,13 @@ class PgtwoPhaseClass(MPPTestCase):
     
     def gprecover_rebalance(self):
         '''
-        @description: Run gprecoverseg -r. If rc is not '0' rerun gprecoverseg -a/This is due to known open issues
+        @description: Run rebalance through gpstop -air is much faster than gprecoverseg -r for test purpose.
         '''
-        cmd = Command(name='Run gprecoverseg', cmdStr='gprecoverseg -r -a')
-        tinctest.logger.info('Running %s' % cmd.cmdStr)
-        cmd.run(validateAfter=False)
-        result = cmd.get_results()
-        if result.rc != 0:
-            rc = self.gprecover.incremental()
-            if rc:
-                return True
-        else:
-            return True
-        return False
+        rc = self.gpstop.run_gpstop_cmd(immediate = True)
+        if not rc:
+           raise Exception('Failed to stop the cluster')
+        tinctest.logger.info('Stopped cluster immediately')
+        self.start_db()
 
     def run_gprecover(self, crash_type, cluster_state='sync'):
         '''Recover the cluster if required. '''
@@ -277,15 +281,8 @@ class PgtwoPhaseClass(MPPTestCase):
                 raise Exception('Segments not in sync')                        
             tinctest.logger.info('Cluster in sync state')
             if crash_type == 'failover_to_mirror' :
-                #rc = self.gprecover.rebalance()
-                # -r has issues occasionally, may need another gprecoverseg, so using a local function
-                rc = self.gprecover_rebalance()
-                if not rc:
-                    raise Exception('Rebalance failed')
-                if not self.gprecover.wait_till_insync_transition():
-                    raise Exception('Segments not in sync')                        
+                self.gprecover_rebalance()
                 tinctest.logger.info('Successfully Rebalanced the cluster')
-    
         else:
             tinctest.logger.info('No need to run gprecoverseg. The cluster should be already in sync')
 
@@ -334,9 +331,9 @@ class PgtwoPhaseClass(MPPTestCase):
         @param fault_type : dtm_broadcast_prepare/dtm_broadcast_commit_prepared/dtm_xlog_distributed_commit
         @param test_dir : dir of the trigger_sqls
         '''
-        trigger_status = self.check_trigger_sql_hang(test_dir)
+        trigger_status = self.check_trigger_sql_hang(test_dir, fault_type)
         tinctest.logger.info('trigger_status %s' % trigger_status)
-        sleep(50) # This sleep is needed till we get a way to find the state of all suspended sqls
+
         if trigger_status == True:
             if cluster_state == 'resync':
                 self.filereputil.inject_fault(f='filerep_resync', y='resume', r='primary')

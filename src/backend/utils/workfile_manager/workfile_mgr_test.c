@@ -16,10 +16,10 @@
 #include "cdb/cdbvars.h"
 #include "executor/execWorkfile.h"
 #include "miscadmin.h"
+#include "port/atomics.h"
 #include "postmaster/primary_mirror_mode.h"
 #include "storage/bfz.h"
 #include "storage/buffile.h"
-#include "utils/gp_atomic.h"
 #include "utils/builtins.h"
 #include "utils/logtape.h"
 #include "utils/memutils.h"
@@ -195,7 +195,7 @@ cacheEltPopulate(const void *resource, const void *param)
 	TestCacheElt *elt = (TestCacheElt *) resource;
 	TestPopParam *eltInfo = (TestPopParam *) param;
 
-	strncpy(elt->key, eltInfo->key, TEST_NAME_LENGTH);
+	strlcpy(elt->key, eltInfo->key, sizeof(elt->key));
 	elt->data = eltInfo->data;
 }
 
@@ -229,7 +229,7 @@ cache_test_create()
 	cacheCtl.keyOffset = GPDB_OFFSET(TestCacheElt, key);
 
 	cacheCtl.hash = string_hash;
-	cacheCtl.keyCopy = (HashCopyFunc) strncpy;
+	cacheCtl.keyCopy = (HashCopyFunc) strlcpy;
 	cacheCtl.match = (HashCompareFunc) strncmp;
 
 	cacheCtl.cleanupEntry = cacheEltCleanup;
@@ -265,7 +265,7 @@ cache_test_acquire(void)
 	elog(LOG, "Running sub-test: CacheAcquireEntry");
 
 	TestPopParam param;
-	strncpy(param.key, "Test Key 1", TEST_NAME_LENGTH);
+	strlcpy(param.key, "Test Key 1", sizeof(param.key));
 	param.data = 4567;
 
 	CacheEntry *entry = Cache_AcquireEntry(cache, &param);
@@ -293,7 +293,7 @@ cache_test_insert()
 	elog(LOG, "Running sub-test: CacheAcquireEntry");
 
 	TestPopParam param;
-	strncpy(param.key, "Test Key 2", TEST_NAME_LENGTH);
+	strlcpy(param.key, "Test Key 2", sizeof(param.key));
 	param.data = 1111;
 
 	CacheEntry *entry = Cache_AcquireEntry(cache, &param);
@@ -308,7 +308,7 @@ cache_test_insert()
 	/* Look-up test */
 	elog(LOG, "Running sub-test: CacheLookup");
 
-	strncpy(param.key, "Test Key 2", TEST_NAME_LENGTH);
+	strlcpy(param.key, "Test Key 2", sizeof(param.key));
 	param.data = 1111;
 	CacheEntry *localEntry = Cache_AcquireEntry(cache, &param);
 
@@ -332,21 +332,21 @@ cache_test_remove(void)
 
 	/* Insert one entry */
 	TestPopParam param;
-	strncpy(param.key, testKey, TEST_NAME_LENGTH);
+	strlcpy(param.key, testKey, sizeof(param.key));
 	param.data = 1111;
 	CacheEntry *entry1 = Cache_AcquireEntry(cache, &param);
 	Cache_Insert(cache, entry1);
 	Cache_Release(cache, entry1);
 
 	/* Insert another entry */
-	strncpy(param.key, testKey, TEST_NAME_LENGTH);
+	strlcpy(param.key, testKey, sizeof(param.key));
 	param.data = 2222;
 	CacheEntry *entry2 = Cache_AcquireEntry(cache, &param);
 	Cache_Insert(cache, entry2);
 	Cache_Release(cache, entry2);
 
 	/* Look-up and remove an entry */
-	strncpy(param.key, testKey, TEST_NAME_LENGTH);
+	strlcpy(param.key, testKey, sizeof(param.key));
 	param.data = 2222;
 	CacheEntry *localEntry = Cache_AcquireEntry(cache, &param);
 
@@ -393,7 +393,7 @@ cache_test_concurrency(void)
 			/* snprintf(key, TEST_NAME_LENGTH, "PID=%d cache key no. %d", MyProcPid, i); */
 			snprintf(key, TEST_NAME_LENGTH, "cache key no. %d", i);
 
-			strncpy(param.key, key, TEST_NAME_LENGTH);
+			strlcpy(param.key, key, sizeof(param.key));
 			param.data = MyProcPid;
 
 			entries[i] = Cache_AcquireEntry(cache, &param);
@@ -419,7 +419,7 @@ cache_test_concurrency(void)
 		{
 			//snprintf(key, TEST_NAME_LENGTH, "PID=%d cache key no. %d", MyProcPid, i);
 			snprintf(key, TEST_NAME_LENGTH, "cache key no. %d", i);
-			strncpy(param.key, key, TEST_NAME_LENGTH);
+			strlcpy(param.key, key, sizeof(param.key));
 			param.data = MyProcPid;
 
 			CacheEntry *localEntry = Cache_AcquireEntry(cache, &param);
@@ -452,7 +452,7 @@ cache_test_concurrency(void)
 		{
 			//snprintf(key, TEST_NAME_LENGTH, "PID=%d cache key no. %d", MyProcPid, i);
 			snprintf(key, TEST_NAME_LENGTH, "cache key no. %d", i);
-			strncpy(param.key, key, TEST_NAME_LENGTH);
+			strlcpy(param.key, key, sizeof(param.key));
 			param.data = MyProcPid;
 
 			CacheEntry *localEntry = Cache_AcquireEntry(cache, &param);
@@ -1531,7 +1531,7 @@ buffile_large_file_test(void)
 	}
 	elog(LOG, "Running sub-test: Reading record %s", filename->data);
 
-	char *buffer= buffer = palloc(nchars * sizeof(char));
+	char *buffer = palloc(nchars * sizeof(char));
 
 	BufFileSeek(bfile,  (int64) ((int64)test_entry * (int64) nchars), SEEK_SET);
 
@@ -1624,7 +1624,7 @@ logicaltape_test(void)
 
 	/* Set target LogicalTape */
 	work_tape = LogicalTapeSetGetTape(tape_set, test_tape);
-	char *buffer= buffer = palloc(nchars * sizeof(char));
+	char *buffer = palloc(nchars * sizeof(char));
 
 	elog(LOG, "Running sub-test: Freeze LogicalTape");
 	LogicalTapeFreeze(tape_set, work_tape);
@@ -1993,7 +1993,7 @@ syncrefhastable_test_create(void)
 	syncHTCtl.keySize = TEST_NAME_LENGTH;
 
 	syncHTCtl.hash = string_hash;
-	syncHTCtl.keyCopy = (HashCopyFunc) strncpy;
+	syncHTCtl.keyCopy = (HashCopyFunc) strlcpy;
 	syncHTCtl.match = (HashCompareFunc) strncmp;
 
 	syncHTCtl.numElements = TEST_HT_NUM_ELEMENTS;

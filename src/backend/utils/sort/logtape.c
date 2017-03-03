@@ -482,14 +482,15 @@ LogicalTapeSetForgetFreeSpace(LogicalTapeSet *lts)
  * There are no error returns; we ereport() on failure.
  */
 void
-LogicalTapeWrite(LogicalTapeSet *lts, LogicalTape *lt, void *ptr, size_t size)
+LogicalTapeWrite(LogicalTapeSet *lts, LogicalTape *lt,
+				 void *ptr, size_t size)
 {
 	long        tmpBlkNum;
 	size_t		nthistime;
 
 	Assert(lt->writing);
 
-	if(lt->firstBlkNum == -1)
+	if (lt->firstBlkNum == -1)
 	{
 		lt->firstBlkNum = ltsGetFreeBlock(lts);
 		lt->currBlk.prev_blk = -1L;
@@ -500,7 +501,7 @@ LogicalTapeWrite(LogicalTapeSet *lts, LogicalTape *lt, void *ptr, size_t size)
 		lt->currPos.offset = 0;
 	}
 
-	while(size > 0)
+	while (size > 0)
 	{
 		Assert(lt->currPos.offset == lt->currBlk.payload_tail);
 		Assert(lt->currPos.offset <= LOGTAPE_BLK_PAYLOAD_SIZE);
@@ -518,7 +519,7 @@ LogicalTapeWrite(LogicalTapeSet *lts, LogicalTape *lt, void *ptr, size_t size)
 			lt->currPos.offset = 0;
 		}
 
-		nthistime = size > (LOGTAPE_BLK_PAYLOAD_SIZE - lt->currPos.offset) ? 
+		nthistime = size > (LOGTAPE_BLK_PAYLOAD_SIZE - lt->currPos.offset) ?
 			(LOGTAPE_BLK_PAYLOAD_SIZE - lt->currPos.offset) : size;
 
 		memcpy(lt->currBlk.payload + lt->currBlk.payload_tail, ptr, nthistime);
@@ -535,7 +536,7 @@ LogicalTapeWrite(LogicalTapeSet *lts, LogicalTape *lt, void *ptr, size_t size)
  * Unless the tape has been "frozen" in read state, forWrite must be the
  * opposite of the previous tape state.
  */
-void 
+void
 LogicalTapeRewind(LogicalTapeSet *lts, LogicalTape *lt, bool forWrite)
 {
 	AssertEquivalent(lt->firstBlkNum==-1, lt->currPos.blkNum == -1);
@@ -589,7 +590,8 @@ LogicalTapeRewind(LogicalTapeSet *lts, LogicalTape *lt, bool forWrite)
  * Early EOF is indicated by return value less than #bytes requested.
  */
 size_t
-LogicalTapeRead(LogicalTapeSet *lts, LogicalTape *lt, void *ptr, size_t size)
+LogicalTapeRead(LogicalTapeSet *lts, LogicalTape *lt,
+				void *ptr, size_t size)
 {
 	size_t		nread = 0;
 	size_t		nthistime;

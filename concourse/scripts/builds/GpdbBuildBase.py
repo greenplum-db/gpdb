@@ -22,48 +22,6 @@ class GpdbBuildBase:
         # Guess
         return 2
 	
-    def yum_install(self, pkg):
-        return subprocess.call(["yum", "install", "-y", pkg])
-    
-    def install_system_deps(self):
-        status = subprocess.call(["yum", "install", "-y",
-                                  "sudo",
-                                  "passwd",
-                                  "openssh-server",
-                                  "ed",
-                                  "readline-devel",
-                                  "zlib-devel",
-                                  "curl-devel",
-                                  "bzip2-devel",
-                                  "python-devel",
-                                  "apr-devel",
-                                  "libevent-devel",
-                                  "openssl-libs",
-                                  "openssl-devel",
-                                  "libyaml",
-                                  "libyaml-devel",
-                                  "epel-release",
-                                  "htop",
-                                  "perl-Env",
-                                  "perl-ExtUtils-Embed",
-                                  "libxml2-devel",
-                                  "libxslt-devel",
-                                  "libffi-devel"])
-        if status:
-            return status
-    
-        status = subprocess.call(["curl", "https://bootstrap.pypa.io/get-pip.py", "-o", "get-pip.py"])
-        if status:
-            return status
-    
-        status = subprocess.call(["python", "get-pip.py"])
-        if status:
-            return status
-    
-        status = subprocess.call(["pip", "install", "psutil", "lockfile", "paramiko", "setuptools",
-                                  "epydoc"])
-        return status
-    
     def install_dependency(self, dependency_name):
         return subprocess.call("tar -xzf " + dependency_name + "/*.tar.gz -C /usr/local", shell=True)
     

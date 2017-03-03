@@ -27,23 +27,6 @@ extern MemoryContext MessageContext;
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CGPOptimizer::TouchLibraryInitializers
-//
-//	@doc:
-//		Touch library initializers to enforce linker to include them
-//
-//---------------------------------------------------------------------------
-void
-CGPOptimizer::TouchLibraryInitializers()
-{
-	void (*gpos)(gpos_init_params*) = gpos_init;
-	void (*dxl)() = gpdxl_init;
-	void (*opt)() = gpopt_init;
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CGPOptimizer::PlstmtOptimize
 //
 //	@doc:

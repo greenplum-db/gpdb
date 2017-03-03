@@ -32,7 +32,7 @@ INSERT 0 5
 -- create WET with similiar schema def as the original heap table
 --
 CREATE WRITABLE EXTERNAL TABLE sync1_wet_region1 ( like sync1_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region1.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE EXTERNAL TABLE
 --
 -- insert data into the WET selecting from original table
@@ -48,7 +48,7 @@ CREATE EXTERNAL TABLE
 -- create second table with same schema def
 --
 CREATE TABLE sync1_new_region1 (like sync1_region);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 --
 -- insert into the second table reading from the RET

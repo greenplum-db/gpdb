@@ -37,64 +37,9 @@ endif
 ## dependent modules
 ##
 ## NOTE: Dependent project module version is kept in $(BLD_TOP)/releng/make/dependencies/ivy.xml
-## Removing EXTRA_EXT for osx as we do copy libgpos and optimizer into ext and
-## we will be using it from there rather than /opt
 ##-------------------------------------------------------------------------------------
 
-# by default use optimized build libraries of GP Optimizer
-# use 'make BLD_TYPE=debug' to work with debug build libraries of GP Optimizer
-BLD_TYPE?=opt
-
-OBJDIR_DEFAULT = .obj.$(UNAME_ALL)$(ARCH_FLAGS).$(BLD_TYPE)
-
 GREP_SED_VAR = $(BLD_TOP)/releng/make/dependencies/ivy.xml | sed -e 's|\(.*\)rev="\(.*\)"[ \t]*conf\(.*\)|\2|'
-
-XERCES_VER  = $(shell grep "\"xerces-c\""    $(GREP_SED_VAR))
-LIBGPOS_VER = $(shell grep "\"libgpos\""     $(GREP_SED_VAR))
-OPTIMIZER_VER = $(shell grep "\"optimizer\"" $(GREP_SED_VAR))
-
-LIBSTDC++_VER = $(shell grep "\"libstdc\""   $(GREP_SED_VAR))
-
-XERCES = $(BLD_TOP)/ext/$(BLD_ARCH)
-XERCES_LIBDIR = $(XERCES)/lib
-
-LIBGPOS = $(BLD_TOP)/ext/$(BLD_ARCH)/libgpos
-LIBGPOS_LIBDIR = $(LIBGPOS)/$(OBJDIR_DEFAULT)
-
-LIBSTDC++_BASEDIR = $(BLD_TOP)/ext/$(BLD_ARCH)
-
-ifeq (Darwin, $(UNAME))
-LIBSTDC++_LIBDIR = $(LIBSTDC++_BASEDIR)/lib
-endif
-
-ifeq "$(BLD_ARCH)" "rhel5_x86_32"
-LIBSTDC++_LIBDIR = $(LIBSTDC++_BASEDIR)/lib
-endif
-
-ifeq "$(BLD_ARCH)" "rhel6_x86_64"
-LIBSTDC++_LIBDIR = $(LIBSTDC++_BASEDIR)/lib64
-endif
-
-ifeq "$(BLD_ARCH)" "rhel7_x86_64"
-LIBSTDC++_LIBDIR = $(LIBSTDC++_BASEDIR)/lib64
-endif
-
-ifeq "$(BLD_ARCH)" "suse10_x86_64"
-LIBSTDC++_LIBDIR = $(LIBSTDC++_BASEDIR)/lib64
-endif
-
-ifeq "$(BLD_ARCH)" "suse11_x86_64"
-LIBSTDC++_LIBDIR = $(LIBSTDC++_BASEDIR)/lib64
-endif
-
-ifeq "$(BLD_ARCH)" "sol10_x86_32"
-LIBSTDC++_LIBDIR = $(LIBSTDC++_BASEDIR)/lib
-endif
-
-ifeq "$(BLD_ARCH)" "sol10_x86_64"
-LIBSTDC++_LIBDIR = $(LIBSTDC++_BASEDIR)/lib/amd64
-endif
-
 
 ## ---------------------------------------
 ## R-Project support
@@ -172,11 +117,10 @@ sync_tools: opt_write_test /opt/releng/apache-ant
 	 (umask 002; ANT_OPTS="-Djavax.net.ssl.trustStore=$(BLD_TOP)/releng/make/dependencies/cacerts" \
 	/opt/releng/apache-ant/bin/ant -DBLD_ARCH=$(BLD_ARCH) \
 	-Divyrepo.host=$(IVYREPO_HOST) -Divyrepo.realm="$(IVYREPO_REALM)" \
-	-Divyrepo.user=$(IVYREPO_USER) -Divyrepo.passwd=$(IVYREPO_PASSWD) resolve);
+	-Divyrepo.user=$(IVYREPO_USER) -Divyrepo.passwd="$(IVYREPO_PASSWD)" resolve);
 	@echo "Resolve finished";
 
-	wget -O - https://github.com/greenplum-db/gpos/releases/download/v1.146/bin_gpos_centos5_release.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
-	wget -O - https://github.com/greenplum-db/gporca/releases/download/v1.684/bin_orca_centos5_release.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
+	wget -O - https://github.com/greenplum-db/gporca/releases/download/v2.6.0/bin_orca_centos5_release.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
 
 clean_tools: opt_write_test
 	@cd releng/make/dependencies; \

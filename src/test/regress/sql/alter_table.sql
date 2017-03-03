@@ -164,32 +164,6 @@ SELECT * FROM tmp_new2;
 DROP TABLE tmp_new;
 DROP TABLE tmp_new2;
 
--- ALTER TABLE ... RENAME on corrupted relations
-SET allow_system_table_mods = dml;
--- missing entry
-CREATE TABLE cor (a int, b float);
-INSERT INTO cor SELECT i, i+1 FROM generate_series(1,100)i;
-DELETE FROM pg_attribute WHERE attname='a' AND attrelid='cor'::regclass;
-ALTER TABLE cor RENAME TO oldcor;
-INSERT INTO pg_attribute SELECT distinct * FROM gp_dist_random('pg_attribute') WHERE attname='a' AND attrelid='oldcor'::regclass;
-DROP TABLE oldcor;
-
--- typname is out of sync
-CREATE TABLE cor (a int, b float, c text);
-UPDATE pg_type SET typname='newcor' WHERE typrelid='cor'::regclass;
-ALTER TABLE cor RENAME TO newcor2;
-ALTER TABLE newcor2 RENAME TO cor;
-DROP TABLE cor;
-
--- relname is out of sync
-CREATE TABLE cor (a int, b int);
-UPDATE pg_class SET relname='othercor' WHERE relname='cor';
-ALTER TABLE othercor RENAME TO tmpcor;
-ALTER TABLE tmpcor RENAME TO cor;
-DROP TABLE cor;
-
-RESET allow_system_table_mods;
-
 -- ALTER TABLE ... RENAME on non-table relations
 -- renaming indexes (FIXME: this should probably test the index's functionality)
 ALTER INDEX onek_unique1 RENAME TO tmp_onek_unique1;
@@ -478,17 +452,6 @@ insert into atacc1 (test,test2) values (4,5);
 insert into atacc1 (test,test2) values (5,4);
 insert into atacc1 (test,test2) values (5,5);
 drop table atacc1;
-
--- MPP-20466 Dis-allow duplicate constraint names for same table
-create table dupconstr (
-						i int,
-						j int constraint test CHECK (j > 10))
-						distributed by (i);
--- should fail because of duplicate constraint name
-alter table dupconstr add constraint test unique (i);
-alter table dupconstr add constraint test primary key (i);
--- cleanup
-drop table dupconstr;
 
 -- lets do some naming tests
 create table atacc1 (test int, test2 int, unique(test)) distributed by (test);
@@ -1030,23 +993,6 @@ select f3,max(f1) from foo group by f3 order by f3;
 
 -- Simple tests for alter table column type
 alter table foo alter f1 TYPE integer; -- fails
-alter table foo alter f1 TYPE varchar(10);
-
---
--- Test ALTER COLUMN TYPE after dropped column with text datatype (see MPP-19146)
---
-drop table foo;
-create domain mytype as text;
-create temp table foo (f1 text, f2 mytype, f3 text);
-insert into foo values('aa','bb','cc');
-drop domain mytype cascade;
-alter table foo alter f1 TYPE varchar(10);
-
-drop table foo;
-create domain mytype as int;
-create temp table foo (f1 text, f2 mytype, f3 text);
-insert into foo values('aa',0,'cc');
-drop domain mytype cascade;
 alter table foo alter f1 TYPE varchar(10);
 
 create table anothertab (atcol1 serial8, atcol2 boolean,

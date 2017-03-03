@@ -497,6 +497,26 @@ void tuplestore_puttuple(Tuplestorestate *state, HeapTuple tuple)
 	tuplestore_puttuple_pos(state, &state->pos, tuple);
 }
 
+/*
+ * Similar to tuplestore_puttuple(), but work from values + nulls arrays.
+ * This avoids an extra tuple-construction operation.
+ */
+void
+tuplestore_putvalues(Tuplestorestate *state, TupleDesc tdesc,
+                     Datum *values, bool *isnull)
+{
+	MemoryContext oldcxt = MemoryContextSwitchTo(state->context);
+
+	MemTupleBinding *mt_bind = create_memtuple_binding(tdesc);
+	MemTuple tuple = memtuple_form_to(mt_bind, values, isnull, NULL, NULL, false);
+
+	USEMEM(state, GetMemoryChunkSpace(tuple));
+
+	tuplestore_puttuple_common(state, &state->pos, (void *) tuple);
+
+	MemoryContextSwitchTo(oldcxt);
+}
+
 static void
 tuplestore_puttuple_common(Tuplestorestate *state, TuplestorePos *pos, void *tuple)
 {

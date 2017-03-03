@@ -55,6 +55,8 @@ typedef struct DispatcherInternalFuncs
 	void (*checkResults)(struct CdbDispatcherState *ds, DispatchWaitMode waitMode);
 	void (*dispatchToGang)(struct CdbDispatcherState *ds, struct Gang *gp,
 			int sliceIndex, CdbDispatchDirectDesc *direct);
+	void (*waitDispatchFinish)(struct CdbDispatcherState *ds);
+
 }DispatcherInternalFuncs;
 
 /*--------------------------------------------------------------------*/
@@ -92,6 +94,16 @@ cdbdisp_dispatchToGang(struct CdbDispatcherState *ds,
 					   struct Gang *gp,
 					   int sliceIndex,
 					   CdbDispatchDirectDesc *direct);
+
+/*
+ * cdbdisp_waitDispatchFinish:
+ *
+ * For asynchronous dispatcher, we have to wait all dispatch to finish before we move on to query execution,
+ * otherwise we may get into a deadlock situation, e.g, gather motion node waiting for data,
+ * while segments waiting for plan. This is skipped in threaded dispatcher as data is sent in blocking style.
+ */
+void
+cdbdisp_waitDispatchFinish(struct CdbDispatcherState *ds);
 
 /*
  * CdbCheckDispatchResult:

@@ -269,10 +269,12 @@ AppendOnlyStorageWrite_TransactionCreateFile(AppendOnlyStorageWrite *storageWrit
 	/*
 	 * We may or may not have a gp_relation_node entry when the EOF is 0.
 	 */
-	if (ReadGpRelationNode(relFileNode->relNode,
-						   segmentFileNum,
-						   persistentTid,
-						   persistentSerialNum))
+	if (ReadGpRelationNode(
+			(relFileNode->spcNode == MyDatabaseTableSpace) ? 0:relFileNode->spcNode,
+			relFileNode->relNode,
+			segmentFileNum,
+			persistentTid,
+			persistentSerialNum))
 	{
 		/*
 		 * UNDONE: Verify the gp_persistent_relation_node Append-Only EOFs are
@@ -296,6 +298,7 @@ AppendOnlyStorageWrite_TransactionCreateFile(AppendOnlyStorageWrite *storageWrit
 														 * currently only used
 														 * for tracing... */
 							  storageWrite->relationName,
+							  (relFileNode->spcNode == MyDatabaseTableSpace) ? 0:relFileNode->spcNode,
 							  relFileNode->relNode,
 							  segmentFileNum,
 							   /* updateIndex */ true,
@@ -1133,9 +1136,11 @@ AppendOnlyStorageWrite_VerifyWriteBlock(AppendOnlyStorageWrite *storageWrite,
 				Assert(storageWrite->verifyWriteCompressionState != NULL);
 
 				if (cfns == NULL)
-					decompressor = NULL;
-				else
-					decompressor = cfns[COMPRESSION_DECOMPRESS];
+					ereport(ERROR,
+							(errcode(ERRCODE_GP_INTERNAL_ERROR),
+							 errmsg("decompression information missing")));
+
+				decompressor = cfns[COMPRESSION_DECOMPRESS];
 
 				gp_decompress_new(&header[offset], //Compressed data in block.
 								  compressedLen,
@@ -1297,7 +1302,7 @@ AppendOnlyStorageWrite_CompressAppend(AppendOnlyStorageWrite *storageWrite,
 							  storageWrite->compressionState);
 
 	/*
-	 * We always store the data compressed if the comprssed length is less
+	 * We always store the data compressed if the compressed length is less
 	 * than the uncompressed length.
 	 *
 	 * TODO: this is a weak assumption. It doesn't account for the fact that

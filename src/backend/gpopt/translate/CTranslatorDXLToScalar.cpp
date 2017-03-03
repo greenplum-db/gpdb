@@ -107,6 +107,7 @@ CTranslatorDXLToScalar::PexprFromDXLNodeScalar
 		{EdxlopScalarCast, &CTranslatorDXLToScalar::PrelabeltypeFromDXLNodeScCast},
 		{EdxlopScalarCoerceToDomain, &CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerceToDomain},
 		{EdxlopScalarCoerceViaIO, &CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerceViaIO},
+		{EdxlopScalarArrayCoerceExpr, &CTranslatorDXLToScalar::PcoerceFromDXLNodeScArrayCoerceExpr},
 		{EdxlopScalarInitPlan, &CTranslatorDXLToScalar::PparamFromDXLNodeScInitPlan},
 		{EdxlopScalarSubPlan, &CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan},
 		{EdxlopScalarArray, &CTranslatorDXLToScalar::PexprArray},
@@ -167,8 +168,8 @@ CTranslatorDXLToScalar::PcaseexprFromDXLNodeScIfStmt
 	CDXLNode *pdxlnCurr = const_cast<CDXLNode*>(pdxlnIfStmt);
 	Expr *pexprElse = NULL;
 
-	// An If statment is of the format: IF <condition> <then> <else>
-	// The leaf else statment is the def result of the case statement
+	// An If statement is of the format: IF <condition> <then> <else>
+	// The leaf else statement is the def result of the case statement
 	BOOL fLeafElseStatement = false;
 
 	while (!fLeafElseStatement)
@@ -860,7 +861,6 @@ CTranslatorDXLToScalar::TranslateSubplanParams
         for (ULONG ul = 0; ul < ulSize; ul++)
         {
                 CDXLColRef *pdxlcr = (*pdrgdxlcrOuterRefs)[ul];
-                ULONG ulColId = pdxlcr->UlID();
                 pdxlcr->AddRef();
                 const CMappingElementColIdParamId *pmecolidparamid = pdxltrctx->Pmecolidparamid(pdxlcr->UlID());
 
@@ -1255,13 +1255,48 @@ CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerceViaIO
 
         Expr *pexprChild = PexprFromDXLNodeScalar(pdxlnChild, pmapcidvar);
 
-
         CoerceViaIO *pcoerce = MakeNode(CoerceViaIO);
 
         pcoerce->resulttype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidResultType())->OidObjectId();
         pcoerce->arg = pexprChild;
         pcoerce->location = pdxlop->ILoc();
         pcoerce->coerceformat = (CoercionForm)  pdxlop->Edxlcf();
+
+        return (Expr *) pcoerce;
+}
+
+//---------------------------------------------------------------------------
+//      @function:
+//              CTranslatorDXLToScalar::PcoerceFromDXLNodeScArrayCoerceExpr
+//
+//      @doc:
+//              Translates a DXL scalar array coerce expr into a GPDB T_ArrayCoerceExpr node
+//
+//---------------------------------------------------------------------------
+Expr *
+CTranslatorDXLToScalar::PcoerceFromDXLNodeScArrayCoerceExpr
+        (
+        const CDXLNode *pdxlnCoerce,
+        CMappingColIdVar *pmapcidvar
+        )
+{
+        GPOS_ASSERT(NULL != pdxlnCoerce);
+        CDXLScalarArrayCoerceExpr *pdxlop = CDXLScalarArrayCoerceExpr::PdxlopConvert(pdxlnCoerce->Pdxlop());
+
+        GPOS_ASSERT(1 == pdxlnCoerce->UlArity());
+        CDXLNode *pdxlnChild = (*pdxlnCoerce)[0];
+
+        Expr *pexprChild = PexprFromDXLNodeScalar(pdxlnChild, pmapcidvar);
+
+        ArrayCoerceExpr *pcoerce = MakeNode(ArrayCoerceExpr);
+
+        pcoerce->arg = pexprChild;
+        pcoerce->elemfuncid = CMDIdGPDB::PmdidConvert(pdxlop->PmdidElementFunc())->OidObjectId();
+        pcoerce->resulttype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidResultType())->OidObjectId();
+        pcoerce->resulttypmod = pdxlop->IMod();
+        pcoerce->isExplicit = pdxlop->FIsExplicit();
+        pcoerce->coerceformat = (CoercionForm)  pdxlop->Edxlcf();
+        pcoerce->location = pdxlop->ILoc();
 
         return (Expr *) pcoerce;
 }

@@ -30,8 +30,8 @@ Options:
     -help             brief help message
     -man              full documentation
     -connect          psql connect parameters
-    -ignore           filename pattern to ignore during comparison
-    -dirignore        directory name pattern to ignore during comparison
+    -ignore           filename pattern to ignore; ANY match in the file path WILL be omitted from results
+    -dirignore        name pattern to ignore for directory file-types; does not recursively ignore contents of the directory
 	-mastermirror     compare master and standby only 
 	-forcefilecompare perform full file comparison for master/standby
 	-matchdirs        compare directory structure
@@ -62,13 +62,13 @@ Options:
 
 =item B<-ignore>
 
-Specify a filename pattern that should be excluded when comparing data
+Specify a string pattern that should be excluded when comparing the contents of data
 directories.  To specify multiple patterns, use multiple ignore
 arguments, eg:
 
   -ignore gp_dump -ignore pg_dump
 
-Note that "ignore" controls comparison of file contents and
+Note that "ignore" controls comparison of files by matching the ignore strings within the full path whereas
 "dirignore" controls the comparison of directory structure.
 
 =item B<-dirignore>
@@ -79,7 +79,7 @@ multiple patterns, use multiple dirignore arguments, eg:
 
   -dirignore gp_dump -dirignore pg_dump
 
-Note that "ignore" controls comparison of file contents and
+Note that "ignore" controls comparison of files by matching the ignore strings within the full path whereas
 "dirignore" controls the comparison of directory structure.
 
 =item B<-mastermirror> 

@@ -519,7 +519,7 @@ void MirroredAppendOnly_Create(
 					/* traceOpenFlags */ false,
 					primaryError,
 					mirrorDataLossOccurred);
-	if (primaryError != 0)
+	if ((*primaryError) != 0)
 		return;
 
 	MirroredAppendOnly_FlushAndClose(

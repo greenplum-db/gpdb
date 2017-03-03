@@ -2386,6 +2386,46 @@ LookupCreationNamespace(const char *nspname)
 }
 
 /*
+ * Common checks on switching namespaces.
+ *
+ * We complain if (1) the old and new namespaces are the same, (2) either the
+ * old or new namespaces is a temporary schema (or temporary toast schema), or
+ * (3) either the old or new namespaces is the TOAST schema.
+ */
+void
+CheckSetNamespace(Oid oldNspOid, Oid nspOid, Oid classid, Oid objid)
+{
+	if (oldNspOid == nspOid)
+		ereport(ERROR,
+				(classid == RelationRelationId ?
+				 errcode(ERRCODE_DUPLICATE_TABLE) :
+				 classid == ProcedureRelationId ?
+				 errcode(ERRCODE_DUPLICATE_FUNCTION) :
+				 errcode(ERRCODE_DUPLICATE_OBJECT),
+				 errmsg("%s is already in schema \"%s\"",
+						getObjectDescriptionOids(classid, objid),
+						get_namespace_name(nspOid))));
+
+	/* disallow renaming into or out of temp schemas */
+	if (isAnyTempNamespace(nspOid) || isAnyTempNamespace(oldNspOid))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			errmsg("cannot move objects into or out of temporary schemas")));
+
+	/* same for TOAST schema */
+	if (nspOid == PG_TOAST_NAMESPACE || oldNspOid == PG_TOAST_NAMESPACE)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("cannot move objects into or out of TOAST schema")));
+
+	/* same for AO SEGMENT schema */
+	if (nspOid == PG_AOSEGMENT_NAMESPACE || oldNspOid == PG_AOSEGMENT_NAMESPACE)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("cannot move objects into or out of AO SEGMENT schema")));
+}
+
+/*
  * QualifiedNameGetCreationNamespace
  *		Given a possibly-qualified name for an object (in List-of-Values
  *		format), determine what namespace the object should be created in.
@@ -2444,6 +2484,26 @@ QualifiedNameGetCreationNamespace(List *names, char **objname_p)
 	}
 
 	return namespaceId;
+}
+
+/*
+ * get_namespace_oid - given a namespace name, look up the OID
+ *
+ * If missing_ok is false, throw an error if namespace name not found.  If
+ * true, just return InvalidOid.
+ */
+Oid
+get_namespace_oid(const char *nspname, bool missing_ok)
+{
+	Oid			oid;
+
+	oid = GetSysCacheOid1(NAMESPACENAME, CStringGetDatum(nspname));
+	if (!OidIsValid(oid) && !missing_ok)
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_SCHEMA),
+				 errmsg("schema \"%s\" does not exist", nspname)));
+
+	return oid;
 }
 
 /*
@@ -2780,17 +2840,16 @@ PopOverrideSearchPath(void)
 	}
 }
 
-
 /*
- * FindConversionByName - find a conversion by possibly qualified name
+ * get_conversion_oid - find a conversion by possibly qualified name
  */
 Oid
-FindConversionByName(List *name)
+get_conversion_oid(List *name, bool missing_ok)
 {
 	char	   *schemaname;
 	char	   *conversion_name;
 	Oid			namespaceId;
-	Oid			conoid;
+	Oid			conoid = InvalidOid;
 	ListCell   *l;
 
 	/* deconstruct the name list */
@@ -2800,7 +2859,9 @@ FindConversionByName(List *name)
 	{
 		/* use exact schema given */
 		namespaceId = LookupExplicitNamespace(schemaname);
-		return FindConversion(conversion_name, namespaceId);
+		conoid = GetSysCacheOid2(CONNAMENSP,
+								 PointerGetDatum(conversion_name),
+								 ObjectIdGetDatum(namespaceId));
 	}
 	else
 	{
@@ -2814,14 +2875,21 @@ FindConversionByName(List *name)
 			if (namespaceId == myTempNamespace)
 				continue;		/* do not look in temp namespace */
 
-			conoid = FindConversion(conversion_name, namespaceId);
+			conoid = GetSysCacheOid2(CONNAMENSP,
+									 PointerGetDatum(conversion_name),
+									 ObjectIdGetDatum(namespaceId));
 			if (OidIsValid(conoid))
 				return conoid;
 		}
 	}
 
 	/* Not found in path */
-	return InvalidOid;
+	if (!OidIsValid(conoid) && !missing_ok)
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+						errmsg("conversion \"%s\" does not exist",
+							   NameListToString(name))));
+	return conoid;
 }
 
 /*
@@ -3170,7 +3238,7 @@ void
 DropTempTableNamespaceForResetSession(Oid namespaceOid)
 {
 	if (IsTransactionOrTransactionBlock())
-		elog(ERROR, "Called within a transation");
+		elog(ERROR, "Called within a transaction");
 	
 	StartTransactionCommand();
 

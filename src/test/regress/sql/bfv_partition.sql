@@ -62,6 +62,11 @@ distributed by (subscription_id, bill_stmt_id)
 -- TEST
 select count_operator('explain select cust_type, subscription_status,count(distinct subscription_id),sum(voice_call_min),sum(minute_per_call) from mpp7980 where month_id =E''2009-04-01'' group by rollup(1,2);','SIGSEGV');
 
+insert into mpp7980 values('2009-04-01','xyz','zyz','1',1,1,'1');
+insert into mpp7980 values('2009-04-01','zxyz','zyz','2',2,1,'1');
+insert into mpp7980 values('2009-03-03','xyz','zyz','4',1,3,'1');
+select cust_type, subscription_status,count(distinct subscription_id),sum(voice_call_min),sum(minute_per_call) from mpp7980 where month_id ='2009-04-01' group by rollup(1,2);
+
 -- CLEANUP
 -- start_ignore
 drop table mpp7980;
@@ -642,5 +647,154 @@ reset optimizer_segments;
 
 drop function if exists find_operator(query text, operator_name text);
 drop function if exists count_operator(query text, operator_name text);
+-- end_ignore
+
+---
+--- Partition table with appendonly leaf, full join
+---
+
+-- SETUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
+
+CREATE TABLE foo (a int);
+
+CREATE TABLE bar (b int, c int)
+PARTITION BY RANGE (b)
+  SUBPARTITION BY RANGE (c) SUBPARTITION TEMPLATE 
+  (
+    START (1) END (10) WITH (appendonly=true),
+    START (10) END (20)
+  ) 
+( 
+  START (1) END (10) ,
+  START (10) END (20)
+); 
+-- end_ignore
+INSERT INTO foo VALUES (1);
+INSERT INTO bar VALUES (2,3);
+
+SELECT * FROM foo FULL JOIN bar ON foo.a = bar.b;
+
+-- CLEANUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
+-- end_ignore
+
+---
+--- Partition table with appendonly set at middlevel partition, full join
+---
+
+-- SETUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
+
+CREATE TABLE foo (a int);
+
+CREATE TABLE bar (b int, c int)
+PARTITION BY RANGE (b)
+  SUBPARTITION BY RANGE (c) SUBPARTITION TEMPLATE 
+  (
+    START (1) END (10),
+    START (10) END (20)
+  ) 
+( 
+  START (1) END (10) WITH (appendonly=true),
+  START (10) END (20)
+); 
+-- end_ignore
+INSERT INTO foo VALUES (1);
+INSERT INTO bar VALUES (2,3);
+
+SELECT * FROM foo FULL JOIN bar ON foo.a = bar.b;
+
+-- CLEANUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
+-- end_ignore
+
+---
+--- Partition table with appendonly set at root partition, full join
+---
+
+-- SETUP
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
+
+CREATE TABLE foo (a int);
+
+CREATE TABLE bar (b int, c int) WITH (appendonly=true)
+PARTITION BY RANGE (b)
+  SUBPARTITION BY RANGE (c) SUBPARTITION TEMPLATE 
+  (
+    START (1) END (10),
+    START (10) END (20)
+  ) 
+( 
+  START (1) END (10),
+  START (10) END (20)
+); 
+-- end_ignore
+INSERT INTO foo VALUES (1);
+INSERT INTO bar VALUES (2,3);
+
+SELECT * FROM foo FULL JOIN bar ON foo.a = bar.b;
+
+
+---
+--- Test EXPLAIN on a hash agg that has a Sequence + Partition Selector below it.
+---
+
+-- SETUP
+-- start_ignore
+DROP TABLE IF EXISTS bar;
+-- end_ignore
+CREATE TABLE bar (b int, c int)
+PARTITION BY RANGE (b)
+(
+  START (0) END (10),
+  START (10) END (20)
+);
+
+INSERT INTO bar SELECT g % 20, g % 20 from generate_series(1, 1000) g;
+ANALYZE bar;
+
+SELECT b FROM bar GROUP BY b;
+
+EXPLAIN SELECT b FROM bar GROUP BY b;
+
+
+-- CLEANUP
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
+
+
+-- Test EXPLAIN ANALYZE on a partitioned table. There used to be a bug, where
+-- you got an internal error with this, because the EXPLAIN ANALYZE sends the
+-- stats from QEs to the QD at the end of query, but because the subnodes are
+-- terminated earlier, their stats were already gone.
+create table mpp8031 (oid integer,
+odate timestamp without time zone,
+cid integer)
+PARTITION BY RANGE(odate)
+(
+PARTITION foo START ('2005-05-01 00:00:00'::timestamp
+without time zone) END ('2005-07-01 00:00:00'::timestamp
+without time zone) EVERY ('2 mons'::interval),
+
+START ('2005-07-01 00:00:00'::timestamp without time zone)
+END ('2006-01-01 00:00:00'::timestamp without time zone)
+EVERY ('2 mons'::interval)
+);
+explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
+drop table mpp8031;
+
+-- CLEANUP
+-- start_ignore
 drop schema if exists bfv_partition;
 -- end_ignore

@@ -1229,7 +1229,7 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 	segdb_file_map = (char **) palloc(total_primaries * sizeof(char *));
 	MemSet(segdb_file_map, 0, total_primaries * sizeof(char *));
 
-	Assert(rel->locationlist != NIL);
+	Assert(rel->execlocationlist != NIL);
 
 	/* is this an EXECUTE table or a LOCATION (URI) table */
 	if (rel->execcommand)
@@ -1276,7 +1276,7 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 	 */
 	if (!using_execute)
 	{
-		first_uri_str = (char *) strVal(lfirst(list_head(rel->locationlist)));
+		first_uri_str = (char *) strVal(lfirst(list_head(rel->urilocationlist)));
 		uri = ParseExternalTableUri(first_uri_str);
 	}
 
@@ -1330,7 +1330,7 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 		 * extract file path and name from URI strings and assign them a
 		 * primary segdb
 		 */
-		foreach(c, rel->locationlist)
+		foreach(c, rel->urilocationlist)
 		{
 			const char *uri_str = (char *) strVal(lfirst(c));
 
@@ -1427,13 +1427,21 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 							   uri->protocol == URI_GPFDISTS || 
 							   uri->protocol == URI_CUSTOM))
 	{
+		char       *on_clause = NULL;
+		on_clause = (char *) strVal(lfirst(list_head(rel->execlocationlist)));
+
+		if (strcmp(on_clause, "MASTER_ONLY") == 0 && uri->protocol == URI_CUSTOM){
+			const char *uri_str = (char *) strVal(lfirst(list_head(rel->urilocationlist)));
+			segdb_file_map[0] = pstrdup(uri_str);
+			ismasteronly = true;
+		} else {
 		/*
 		 * Re-write the location list for GPFDIST or GPFDISTS before mapping to segments.
 		 *
 		 * If we happen to be dealing with URI's with the 'gpfdist' (or 'gpfdists') protocol
 		 * we do an extra step here. 
 		 *
-		 * (*) We modify the locationlist so that every
+		 * (*) We modify the urilocationlist so that every
 		 * primary segdb will get a URI (therefore we duplicate the existing
 		 * URI's until the list is of size = total_primaries). 
 		 * Example: 2 URIs, 7 total segdbs.
@@ -1459,7 +1467,7 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 		/* max num of segs that are allowed to participate in the operation */
 		if ((uri->protocol == URI_GPFDIST) || (uri->protocol == URI_GPFDISTS))
 		{
-			max_participants_allowed = list_length(rel->locationlist) *
+			max_participants_allowed = list_length(rel->urilocationlist) *
 				gp_external_max_segs;
 		}
 		else
@@ -1474,7 +1482,7 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 
 		elog(DEBUG5,
 			 "num_segs_participating = %d. max_participants_allowed = %d. number of URIs = %d",
-			 num_segs_participating, max_participants_allowed, list_length(rel->locationlist));
+			 num_segs_participating, max_participants_allowed, list_length(rel->urilocationlist));
 
 		/* see (**) above */
 		if (num_segs_participating > max_participants_allowed)
@@ -1490,12 +1498,12 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 				 total_primaries);
 		}
 
-		if (list_length(rel->locationlist) > num_segs_participating)
+		if (list_length(rel->urilocationlist) > num_segs_participating)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 					 errmsg("There are more external files (URLs) than primary "
 							"segments that can read them. Found %d URLs and "
-							"%d primary segments.",list_length(rel->locationlist),
+							"%d primary segments.",list_length(rel->urilocationlist),
 							num_segs_participating)));
 
 		/*
@@ -1505,7 +1513,7 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 		 */
 		while (!done)
 		{
-			foreach(c, rel->locationlist)
+			foreach(c, rel->urilocationlist)
 			{
 				char	   *uri_str = (char *) strVal(lfirst(c));
 
@@ -1604,6 +1612,7 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 		}
 
 	}
+	}
 	/* (3) */
 	else if (using_execute)
 	{
@@ -1624,7 +1633,7 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 		buf = NULL;
 
 		/* get the ON clause (execute location) information */
-		on_clause = (char *) strVal(lfirst(list_head(rel->locationlist)));
+		on_clause = (char *) strVal(lfirst(list_head(rel->execlocationlist)));
 
 		/*
 		 * Now we handle each one of the ON locations separately:
@@ -1794,7 +1803,7 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 	/* (4) */
 	else if (using_location && uri->protocol == URI_GPHDFS)
 	{
-		const char *uri_str = (char *) strVal(lfirst(list_head(rel->locationlist)));
+		const char *uri_str = (char *) strVal(lfirst(list_head(rel->urilocationlist)));
 
 		for (i = 0; i < db_info->total_segment_dbs; i++)
 		{
@@ -2980,6 +2989,8 @@ create_mergejoin_plan(PlannerInfo *root,
 	 * We need some kind of strict slackening operator (something which consumes all of its
 	 * input before producing a row of output) for our inner. And we need to prefetch that side
 	 * first.
+	 *
+	 * See motion_sanity_walker() for details on how a deadlock may occur.
 	 */
 	if (best_path->jpath.outerjoinpath->motionHazard && best_path->jpath.innerjoinpath->motionHazard)
 	{
@@ -4286,8 +4297,6 @@ make_sort(PlannerInfo *root, Plan *lefttree, int numCols,
 
 	Assert(sortColIdx[0] != 0);
 
-	node->limitOffset = NULL;	/* CDB */
-	node->limitCount = NULL;	/* CDB */
 	node->noduplicates = false; /* CDB */
 
 	node->share_type = SHARE_NOTSHARED;
@@ -5367,15 +5376,6 @@ make_limit(Plan *lefttree, Node *limitOffset, Node *limitCount,
 
 	node->limitOffset = limitOffset;
 	node->limitCount = limitCount;
-
-	/* CDB */	/* pass limit struct to sort */
-	if (IsA(lefttree, Sort) &&gp_enable_sort_limit)
-	{
-		Sort	   *pSort = (Sort *) lefttree;
-
-		pSort->limitOffset = copyObject(limitOffset);
-		pSort->limitCount = copyObject(limitCount);
-	}
 
 	return node;
 }

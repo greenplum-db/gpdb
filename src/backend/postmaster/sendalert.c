@@ -1,11 +1,9 @@
 /*-------------------------------------------------------------------------
  *
- * alert.c
- *
- * Send alerts via SMTP (email) or SNMP INFORM messsages.
+ * sendalert.c
+ *	  Send alerts via SMTP (email) or SNMP INFORM messages.
  *
  * Copyright (c) 2009, Greenplum
- *
  *
  *-------------------------------------------------------------------------
  */

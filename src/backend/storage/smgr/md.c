@@ -197,11 +197,10 @@ mdinit(void)
 
 	/*
 	 * Create pending-operations hashtable if we need it.  Currently, we need
-	 * it if we are standalone (not under a postmaster) OR if we are a
-	 * bootstrap-mode subprocess of a postmaster (that is, a startup or
-	 * bgwriter process).
+	 * it if we are standalone (not under a postmaster) or if we are a startup
+	 * or checkpointer auxiliary process.
 	 */
-	if (!IsUnderPostmaster || IsBootstrapProcessingMode())
+	if (!IsUnderPostmaster || AmStartupProcess() || AmCheckpointerProcess() || AmBgWriterProcess())
 	{
 		HASHCTL		hash_ctl;
 
@@ -963,9 +962,16 @@ mdunlink(
 		}
 	}
 
+	/*
+	 * In PostgreSQL, register_unlink is called to let the checkpoint process to clean up the files.
+	 * In GPDB, the cleanup is handled by persistent table. Hence, we don't need to register the
+	 * unlink request.
+	 */
+#if 0 /* Upstream code not applicable to GPDB */
 	/* Register request to unlink first segment later */
 	if (!isRedo)
 		register_unlink(rnode);
+#endif
 }
 
 static void mdsetupdropobjmirroraccess(	

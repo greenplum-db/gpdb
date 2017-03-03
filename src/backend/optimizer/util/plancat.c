@@ -386,7 +386,8 @@ get_external_relation_info(Relation relation, RelOptInfo *rel)
 	 */
 	extentry = GetExtTableEntry(RelationGetRelid(relation));
 
-	rel->locationlist = extentry->locations;	
+	rel->urilocationlist = extentry->urilocations;
+	rel->execlocationlist = extentry->execlocations;
 	rel->execcommand = extentry->command;
 	rel->fmttype = extentry->fmtcode;
 	rel->fmtopts = extentry->fmtopts;

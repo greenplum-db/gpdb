@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="fq138336">gp_san_configuration</title>
+  <body>
+    <p>The gp_san_configuration table contains mount-point information for SAN failover.</p>
+    <table id="fq138428">
+      <title>pg_catalog.gp_san_configuration</title>
+      <tgroup cols="4">
+        <colspec colnum="1" colname="col1" colwidth="131pt"/>
+        <colspec colnum="2" colname="col2" colwidth="97pt"/>
+        <colspec colnum="3" colname="col3" colwidth="82pt"/>
+        <colspec colnum="4" colname="col4" colwidth="138pt"/>
+        <thead>
+          <row>
+            <entry colname="col1">column</entry>
+            <entry colname="col2">type</entry>
+            <entry colname="col3">references</entry>
+            <entry colname="col4">description</entry>
+          </row>
+        </thead>
+        <tbody>
+          <row>
+            <entry colname="col1">
+              <codeph>mountid</codeph>
+            </entry>
+            <entry colname="col2">smallint</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">A value that identifies the mountpoint for the primary and mirror
+              hosts. This is the primary key which is referred to by the value that appears in the
+                <codeph>san_mounts</codeph> structure in <codeph>gp_segment_
+              configuration</codeph>.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>active_host</codeph>
+            </entry>
+            <entry colname="col2">char</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">The current active host. <codeph>p</codeph> indidcates primary,
+              and <codeph>m</codeph> indicates mirror.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>san_type</codeph>
+            </entry>
+            <entry colname="col2">char</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">The type of shared storage in use. <codeph>n</codeph> indidcates
+              NFS, and <codeph>e</codeph> indicates Dell EMC SAN. </entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>primary_host</codeph>
+            </entry>
+            <entry colname="col2">text</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">The name of the primary host system</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>primary_mountpoint</codeph>
+            </entry>
+            <entry colname="col2">text</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">The mount point for the primary host.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>primary_device</codeph>
+            </entry>
+            <entry colname="col2">text</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">A string specifying the device to mount on the primary
+                mountpoint.<p>For NFS, this string is similar to:
+                  <codeph>nfs-server:/exported/fs</codeph>.</p><p>For Dell EMC this is a larger string
+                that includes the WWN for the storage processor, the storage-processor IP, and the
+                storage-group name.</p><p>The <codeph>primary_device</codeph> field is identical to
+                the <codeph>mirror_device</codeph> field.</p></entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>mirror_host</codeph>
+            </entry>
+            <entry colname="col2">text</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">The name or the mirror/backup host system. </entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>mirror_mountpoint</codeph>
+            </entry>
+            <entry colname="col2">text</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">The mount point for the mirror/backup host.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>mirror_device</codeph>
+            </entry>
+            <entry colname="col2">text</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">A string specifying the device to mount on the mirror
+                mountpoint.<p>For NFS, this string is similar to:
+                  <codeph>nfs-server:/exported/fs</codeph>.</p><p>For Dell EMC this is a larger string
+                that includes the WWN for the storage processor, the storage-processor IP, and the
+                storage-group name.</p><p>The <codeph>mirror_device</codeph> field is identical to
+                the <codeph>primary_device</codeph> field.</p></entry>
+          </row>
+        </tbody>
+      </tgroup>
+    </table>
+  </body>
+</topic>

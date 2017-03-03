@@ -14,7 +14,6 @@ from gppylib.mainUtils import gp
 from gppylib import pgconf
 from optparse import Values
 from pygresql import pg
-from gppylib.operations.utils import DEFAULT_NUM_WORKERS
 import gzip
 
 logger = gplog.get_default_logger()
@@ -165,8 +164,8 @@ class Context(Values, object):
         self.db_date_dir = "%4d%02d%02d" % (year, month, day)
         self.timestamp_object = datetime(year, month, day, hours, minutes, seconds)
 
-def expand_partitions_and_populate_filter_file(dbname, partition_list, file_prefix):
-    expanded_partitions = expand_partition_tables(dbname, partition_list)
+def expand_partitions_and_populate_filter_file(context, partition_list, file_prefix):
+    expanded_partitions = expand_partition_tables(context, partition_list)
     dump_partition_list = list(set(expanded_partitions + partition_list))
     return create_temp_file_from_list(dump_partition_list, file_prefix)
 
@@ -187,11 +186,11 @@ def get_all_parent_tables(dbname):
         data = curs.fetchall()
     return set([d[0] for d in data])
 
-def list_to_quoted_string(filter_tables):
-    filter_string = "'" + "', '".join([pg.escape_string(t) for t in filter_tables]) + "'"
+def list_to_quoted_string(conn, filter_tables):
+    filter_string = "'" + "', '".join([escape_string(t, conn) for t in filter_tables]) + "'"
     return filter_string
 
-def convert_parents_to_leafs(dbname, parents):
+def convert_parents_to_leafs(context, parents):
     partition_leaves_sql = """
                            SELECT x.partitionschemaname || '.' || x.partitiontablename
                            FROM (
@@ -208,16 +207,17 @@ def convert_parents_to_leafs(dbname, parents):
     if not parents:
         return []
 
-    conn = dbconn.connect(dbconn.DbURL(dbname=dbname))
-    partition_sql = partition_leaves_sql % list_to_quoted_string(parents)
+    conn = dbconn.connect(dbconn.DbURL(dbname=context.target_db))
+    partition_sql = partition_leaves_sql % list_to_quoted_string(conn, parents)
     curs = dbconn.execSQL(conn, partition_sql)
     rows = curs.fetchall()
+    curs.close()
     return [r[0] for r in rows]
 
 
 #input: list of tables to be filtered
 #output: same list but parent tables converted to leafs
-def expand_partition_tables(dbname, filter_tables):
+def expand_partition_tables(context, filter_tables):
 
     if not filter_tables or len(filter_tables) == 0:
         return filter_tables
@@ -225,7 +225,7 @@ def expand_partition_tables(dbname, filter_tables):
     non_parent_tables = list()
     expanded_list = list()
 
-    all_parent_tables = get_all_parent_tables(dbname)
+    all_parent_tables = get_all_parent_tables(context.target_db)
     for table in filter_tables:
         if table in all_parent_tables:
             parent_tables.append(table)
@@ -236,7 +236,7 @@ def expand_partition_tables(dbname, filter_tables):
 
     local_batch_size = 1000
     for (s, e) in get_batch_from_list(len(parent_tables), local_batch_size):
-        tmp = convert_parents_to_leafs(dbname, parent_tables[s:e])
+        tmp = convert_parents_to_leafs(context, parent_tables[s:e])
         expanded_list += tmp
 
     return expanded_list
@@ -292,7 +292,7 @@ def convert_report_filename_to_cdatabase_filename(context, report_file):
 
     ddboost_parent_dir = None
     if context.ddboost:
-        ddboost_parent_dir = context.get_backup_dir(directory='')
+        ddboost_parent_dir = context.get_backup_dir(timestamp=timestamp, directory='')
     return context.generate_filename("cdatabase", timestamp=timestamp, directory=ddboost_parent_dir)
 
 def get_lines_from_dd_file(filename, ddboost_storage_unit):
@@ -320,7 +320,7 @@ def check_cdatabase_exists(context, report_file):
     else:
         cdatabase_contents = get_lines_from_file(filename, context)
 
-    dbname = escapeDoubleQuoteInSQLString(context.dump_database, forceDoubleQuote=False)
+    dbname = escapeDoubleQuoteInSQLString(context.target_db, forceDoubleQuote=False)
     for line in cdatabase_contents:
         if 'CREATE DATABASE' in line:
             dump_dbname = get_dbname_from_cdatabaseline(line)
@@ -478,6 +478,9 @@ def execute_sql(query, master_port, dbname):
     conn = dbconn.connect(dburl)
     cursor = execSQL(conn, query)
     return cursor.fetchall()
+
+def execute_sql_with_connection(query, conn):
+    return execSQL(conn, query).fetchall()
 
 def generate_master_status_prefix(dump_prefix):
     return '%sgp_dump_status_1_1_' % (dump_prefix)
@@ -769,18 +772,23 @@ def get_latest_full_ts_with_nbu(context):
 
     raise Exception('No full backup found for given incremental on the specified NetBackup server')
 
-def getRows(dbname, exec_sql):
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
-        curs = dbconn.execSQL(conn, exec_sql)
-        results = curs.fetchall()
+def getRows(conn, exec_sql):
+    curs = dbconn.execSQL(conn, exec_sql)
+    results = curs.fetchall()
+    curs.close()
     return results
 
-def check_schema_exists(schema_name, dbname):
-    schemaname = pg.escape_string(schema_name)
-    schema_check_sql = "select * from pg_catalog.pg_namespace where nspname='%s';" % schemaname
-    if len(getRows(dbname, schema_check_sql)) < 1:
-        return False
-    return True
+def check_change_schema_exists(context, use_redirect):
+    with dbconn.connect(dbconn.DbURL(port=context.master_port, dbname=context.target_db)) as conn:
+        schemaname = escape_string(context.change_schema, conn)
+        dbname = context.target_db if not use_redirect else context.redirected_restore_db
+        schema_check_sql = "select * from pg_catalog.pg_namespace where nspname='%s';" % schemaname
+        if len(getRows(conn, schema_check_sql)) < 1:
+            return False
+        return True
+
+def escape_string(string, conn):
+    return pg.DB(db=conn).escape_string(string)
 
 def unescape_string(string):
     if string:

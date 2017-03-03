@@ -2,7 +2,7 @@ INSERT INTO fooaocs VALUES(5, 6, 'c');
 INSERT 0 1
 update fooaocs set b = b+10 where a=5;
 UPDATE 2
-SELECT a, b FROM fooaocs order by a;
+SELECT a, b FROM fooaocs;
  a  | b  
 ----+----
   1 |  1
@@ -22,7 +22,7 @@ VACUUM fooaocs;
 VACUUM
 INSERT INTO fooaocs VALUES(1, 1, 'c');
 INSERT 0 1
-SELECT a, b FROM fooaocs order by a;
+SELECT a, b FROM fooaocs;
  a  | b  
 ----+----
   1 |  1
@@ -43,7 +43,7 @@ INSERT INTO foo VALUES(6, 1, 'c');
 INSERT 0 1
 update foo set b = b+10 where a=6;
 UPDATE 2
-SELECT a, b FROM foo order by a;
+SELECT a, b FROM foo;
  a  | b  
 ----+----
   4 |  1

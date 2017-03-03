@@ -25,7 +25,6 @@
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
-#include "utils/gp_atomic.h"
 
 static int getPollTimeout(const struct timeval* startTS);
 static Gang *createGang_async(GangType type, int gang_id, int size, int content);
@@ -64,12 +63,6 @@ createGang_async(GangType type, int gang_id, int size, int content)
 	/* Writer gang is created before reader gangs. */
 	if (type == GANGTYPE_PRIMARY_WRITER)
 		Insist(!GangsExist());
-
-	/* Check writer gang firstly*/
-	if (type != GANGTYPE_PRIMARY_WRITER && !isPrimaryWriterGangAlive())
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("failed to acquire resources on one or more segments"),
-						errdetail("writer gang got broken before creating reader gangs")));
 
 create_gang_retry:
 	/* If we're in a retry, we may need to reset our initial state, a bit */
@@ -239,7 +232,8 @@ create_gang_retry:
 					Assert(PQsocket(segdbDesc->conn) > 0);
 					Assert(PQsocket(segdbDesc->conn) == fds[currentFdNumber].fd);
 
-					if (fds[currentFdNumber].revents & fds[currentFdNumber].events)
+					if (fds[currentFdNumber].revents & fds[currentFdNumber].events ||
+						fds[currentFdNumber].revents & (POLLERR | POLLHUP | POLLNVAL))
 						pollingStatus[i] = PQconnectPoll(segdbDesc->conn);
 
 					currentFdNumber++;
@@ -258,13 +252,6 @@ create_gang_retry:
 		{
 			Assert(successful_connections + in_recovery_mode_count == size);
 
-			/* FTS shows some segment DBs are down */
-			if (isFTSEnabled() &&
-				FtsTestSegmentDBIsDown(newGangDefinition->db_descriptors, size))
-				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-								errmsg("failed to acquire resources on one or more segments"),
-								errdetail("FTS detected one or more segments are down")));
-
 			if ( gp_gang_creation_retry_count <= 0 ||
 				create_gang_retry_counter++ >= gp_gang_creation_retry_count ||
 				type != GANGTYPE_PRIMARY_WRITER)
@@ -282,6 +269,22 @@ create_gang_retry:
 	PG_CATCH();
 	{
 		MemoryContextSwitchTo(GangContext);
+
+		/* FTS shows some segment DBs are down */
+		if (isFTSEnabled() &&
+			FtsTestSegmentDBIsDown(newGangDefinition->db_descriptors, size))
+		{
+
+			DisconnectAndDestroyGang(newGangDefinition);
+			newGangDefinition = NULL;
+			DisconnectAndDestroyAllGangs(true);
+			CheckForResetSession();
+			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+							errmsg("failed to acquire resources on one or more segments"),
+							errdetail("FTS detected one or more segments are down")));
+
+		}
+
 		DisconnectAndDestroyGang(newGangDefinition);
 		newGangDefinition = NULL;
 

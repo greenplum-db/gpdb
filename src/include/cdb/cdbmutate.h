@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * cdbllize.h
+ * cdbmutate.h
  *	  definitions for cdbmutate.c utilities
  *
  * Copyright (c) 2005-2008, Greenplum inc

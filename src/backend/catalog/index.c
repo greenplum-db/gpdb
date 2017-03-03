@@ -634,7 +634,7 @@ index_create(Oid heapRelationId,
 	 */
 	if (!OidIsValid(indexRelationId))
 	{
-		if (Gp_role == GP_ROLE_EXECUTE)
+		if (Gp_role == GP_ROLE_EXECUTE || IsBinaryUpgrade)
 			indexRelationId = GetPreassignedOidForRelation(namespaceId, indexRelationName);
 		else
 			indexRelationId = GetNewRelFileNode(tableSpaceId, shared_relation,
@@ -730,6 +730,7 @@ index_create(Oid heapRelationId,
 							gp_relation_node,
 							indexRelation->rd_id,
 							indexRelation->rd_rel->relname.data,
+							indexRelation->rd_rel->reltablespace,
 							indexRelation->rd_rel->relfilenode,
 							/* segmentFileNum */ 0,
 							/* updateIndex */ true,
@@ -1549,6 +1550,7 @@ setNewRelfilenode(Relation relation, TransactionId freezeXid)
 						gp_relation_node,
 						relation->rd_id,
 						NameStr(relation->rd_rel->relname),
+						relation->rd_rel->reltablespace,
 						newrelfilenode,
 						/* segmentFileNum */ 0,
 						/* updateIndex */ !is_gp_relation_node_index,
@@ -2053,21 +2055,6 @@ IndexBuildHeapScan(Relation heapRelation,
 					if (!TransactionIdIsCurrentTransactionId(
 								  HeapTupleHeaderGetXmax(heapTuple->t_data)))
 					{
-						/*
-						 * GPDB_83MERGE_FIXME:
-						 *
-						 * Before the 8.3 merge, we also didn't throw an error if
-						 * it was a bitmap index. The old comment didn't explain why,
-						 * however. I don't understand why bitmap indexes would behave
-						 * differently here; indexes contain no visibility information,
-						 * this is all about how the heap works.
-						 *
-						 * I'm leaving this as it's in upstream, with no special handling
-						 * for bitmap indexes, to see what breaks. But if someone reports
-						 * a "concurrent delete in progress" error while creating a bitmap
-						 * index on a heap table, then we possibly need to put that
-						 * exception back.
-						 */
 						if (!IsSystemRelation(heapRelation))
 							elog(ERROR, "concurrent delete in progress");
 						else
@@ -2553,74 +2540,50 @@ validate_index(Oid heapId, Oid indexId, Snapshot snapshot)
 	ivinfo.strategy = NULL;
 	state.tuplesort = NULL;
 
-	PG_TRY();
+	if(gp_enable_mk_sort)
+		state.tuplesort = tuplesort_begin_datum_mk(NULL,
+												   TIDOID,
+												   TIDLessOperator, false,
+												   maintenance_work_mem,
+												   false);
+	else
+		state.tuplesort = tuplesort_begin_datum(TIDOID,
+												TIDLessOperator, false,
+												maintenance_work_mem,
+												false);
+	state.htups = state.itups = state.tups_inserted = 0;
+
+	(void) index_bulk_delete(&ivinfo, NULL,
+							 validate_index_callback, (void *) &state);
+
+	/* Execute the sort */
+	if(gp_enable_mk_sort)
 	{
-		if(gp_enable_mk_sort)
-			state.tuplesort = tuplesort_begin_datum_mk(NULL,
-													   TIDOID,
-													   TIDLessOperator, false,
-													   maintenance_work_mem,
-													   false);
-		else
-			state.tuplesort = tuplesort_begin_datum(TIDOID,
-													TIDLessOperator, false,
-													maintenance_work_mem,
-													false);
-		state.htups = state.itups = state.tups_inserted = 0;
-
-		(void) index_bulk_delete(&ivinfo, NULL,
-				validate_index_callback, (void *) &state);
-
-		/* Execute the sort */
-		if(gp_enable_mk_sort)
-		{
-			tuplesort_performsort_mk((Tuplesortstate_mk *)state.tuplesort);
-		}
-		else
-		{
-			tuplesort_performsort((Tuplesortstate *) state.tuplesort);
-		}
-
-		/*
-		 * Now scan the heap and "merge" it with the index
-		 */
-		validate_index_heapscan(heapRelation,
-				indexRelation,
-				indexInfo,
-				snapshot,
-				&state);
-
-		/* Done with tuplesort object */
-		if(gp_enable_mk_sort)
-		{
-			tuplesort_end_mk((Tuplesortstate_mk *)state.tuplesort);
-		}
-		else
-		{
-			tuplesort_end((Tuplesortstate *) state.tuplesort);
-		}
-
-		state.tuplesort = NULL;
-
+		tuplesort_performsort_mk((Tuplesortstate_mk *)state.tuplesort);
 	}
-	PG_CATCH();
+	else
 	{
-		/* Clean up the sort state on error */
-		if (state.tuplesort)
-		{
-			if(gp_enable_mk_sort)
-			{
-				tuplesort_end_mk((Tuplesortstate_mk *)state.tuplesort);
-			}
-			else
-			{
-				tuplesort_end((Tuplesortstate *) state.tuplesort);
-			}
-			state.tuplesort = NULL;
-		}
-		PG_RE_THROW();
+		tuplesort_performsort((Tuplesortstate *) state.tuplesort);
 	}
-	PG_END_TRY();
+
+	/*
+	 * Now scan the heap and "merge" it with the index
+	 */
+	validate_index_heapscan(heapRelation,
+							indexRelation,
+							indexInfo,
+							snapshot,
+							&state);
+
+	/* Done with tuplesort object */
+	if(gp_enable_mk_sort)
+	{
+		tuplesort_end_mk((Tuplesortstate_mk *)state.tuplesort);
+	}
+	else
+	{
+		tuplesort_end((Tuplesortstate *) state.tuplesort);
+	}
 
 	elog(DEBUG2,
 		 "validate_index found %.0f heap tuples, %.0f index tuples; inserted %.0f missing tuples",
@@ -3168,16 +3131,11 @@ reindex_index(Oid indexId)
  * Returns true if any indexes were rebuilt.  Note that a
  * CommandCounterIncrement will occur after each index rebuild.
  *
- * If build_map is true, build a map of index relation OID -> new relfilenode.
- * If it is false but *oidmap is valid and we're on a QE, use the
- * new relfilenode specified in the map.
+ * In GPDB, if 'toast_too' is true, we also reindex auxiliary AO heap
+ * tables: AO segments, AO block directory, and AO visibilitymap.
  */
 bool
-reindex_relation(Oid relid, 
-		bool toast_too, 
-		bool aoseg_too, 
-		bool aoblkdir_too,
-		bool aovisimap_too)
+reindex_relation(Oid relid, bool toast_too)
 {
 	Relation	rel;
 	Oid			toast_relid;
@@ -3270,10 +3228,10 @@ reindex_relation(Oid relid,
 	 * still hold the lock on the master table.
 	 */
 	if (toast_too && OidIsValid(toast_relid))
-		result |= reindex_relation(toast_relid, false, false, false, false);
+		result |= reindex_relation(toast_relid, false);
 
 	/* Obtain the aoseg_relid and aoblkdir_relid if the relation is an AO table. */
-	if ((aoseg_too || aoblkdir_too || aovisimap_too) && relIsAO)
+	if (toast_too && relIsAO)
 		GetAppendOnlyEntryAuxOids(relid, SnapshotNow,
 								  &aoseg_relid,
 								  &aoblkdir_relid, NULL,
@@ -3283,22 +3241,22 @@ reindex_relation(Oid relid,
 	 * If an AO rel has a secondary segment list rel, reindex that too while we
 	 * still hold the lock on the master table.
 	 */
-	if (aoseg_too && OidIsValid(aoseg_relid))
-		result |= reindex_relation(aoseg_relid, false, false, false, false);
+	if (toast_too && OidIsValid(aoseg_relid))
+		result |= reindex_relation(aoseg_relid, false);
 
 	/*
 	 * If an AO rel has a secondary block directory rel, reindex that too while we
 	 * still hold the lock on the master table.
 	 */
-	if (aoblkdir_too && OidIsValid(aoblkdir_relid))
-		result |= reindex_relation(aoblkdir_relid, false, false, false, false);
+	if (toast_too && OidIsValid(aoblkdir_relid))
+		result |= reindex_relation(aoblkdir_relid, false);
 	
 	/*
 	 * If an AO rel has a secondary visibility map rel, reindex that too while we
 	 * still hold the lock on the master table.
 	 */
-	if (aovisimap_too && OidIsValid(aovisimap_relid))
-		result |= reindex_relation(aovisimap_relid, false, false, false, false);
+	if (toast_too && OidIsValid(aovisimap_relid))
+		result |= reindex_relation(aovisimap_relid, false);
 
 	return result;
 }

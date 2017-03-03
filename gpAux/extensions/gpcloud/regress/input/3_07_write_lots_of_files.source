@@ -1,0 +1,30 @@
+CREATE READABLE EXTERNAL TABLE s3write_lots_of_files_read (date text, time text, status bool, sample1 float, sample2 float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/lotsoffiles/ config=@config_file@') FORMAT 'csv';
+
+CREATE WRITABLE EXTERNAL TABLE s3write_lots_of_files_write (date text, time text, status bool, sample1 float, sample2 float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/lotsoffiles/ config=@config_file@') FORMAT 'csv';
+
+SELECT count(*) FROM s3write_lots_of_files_read;
+
+CREATE OR REPLACE FUNCTION write_lots_of_files(n integer) RETURNS text AS
+$$
+DECLARE
+    i int;
+BEGIN
+    FOR i IN SELECT * FROM generate_series(1, n) LOOP
+        INSERT INTO s3write_lots_of_files_write (date, time, status, sample1, sample2, volume)
+            SELECT current_date, localtime, (random() > 0.5)::bool,
+                    trunc(random()::numeric, 8), trunc(random()::numeric, 8), i;
+    END LOOP;
+
+    RETURN textcat(textcat('Insert ', n::text), ' files');
+END;
+$$ LANGUAGE 'plpgsql';
+
+SELECT * FROM write_lots_of_files(20);
+
+select min(volume), max(volume), count(volume) from s3write_lots_of_files_read;
+
+DROP FUNCTION write_lots_of_files (integer);
+DROP EXTERNAL TABLE IF EXISTS s3write_lots_of_files_read;
+DROP EXTERNAL TABLE IF EXISTS s3write_lots_of_files_write;

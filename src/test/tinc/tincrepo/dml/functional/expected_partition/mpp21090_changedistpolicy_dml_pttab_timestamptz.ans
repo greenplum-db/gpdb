@@ -1,0 +1,64 @@
+DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_timestamptz;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_changedistpolicy_dml_pttab_timestamptz_opt.sql:14: NOTICE:  table "mpp21090_changedistpolicy_dml_pttab_timestamptz" does not exist, skipping
+DROP TABLE
+CREATE TABLE mpp21090_changedistpolicy_dml_pttab_timestamptz
+(
+    col1 timestamptz,
+    col2 timestamptz,
+    col3 char,
+    col4 timestamptz,
+    col5 int
+) DISTRIBUTED BY (col1) PARTITION BY RANGE(col2)(partition partone start('2013-12-01 12:00:00 PST') end('2013-12-31 12:00:00 PST') WITH(APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start('2013-12-31 12:00:00 PST') end('2014-01-01 12:00:00 PST') WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start('2014-01-01 12:00:00 PST') end('2014-02-01 12:00:00 PST'));
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_changedistpolicy_dml_pttab_timestamptz_opt.sql:22: NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_timestamptz_1_prt_partone" for table "mpp21090_changedistpolicy_dml_pttab_timestamptz"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_changedistpolicy_dml_pttab_timestamptz_opt.sql:22: NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_timestamptz_1_prt_parttwo" for table "mpp21090_changedistpolicy_dml_pttab_timestamptz"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_changedistpolicy_dml_pttab_timestamptz_opt.sql:22: NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_timestamptz_1_prt_partthree" for table "mpp21090_changedistpolicy_dml_pttab_timestamptz"
+CREATE TABLE
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_timestamptz VALUES('2013-12-30 12:00:00 PST','2013-12-30 12:00:00 PST','a','2013-12-30 12:00:00 PST',0);
+INSERT 0 1
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_timestamptz ORDER BY 1,2,3,4;
+          col1          |          col2          | col3 |          col4          | col5 
+------------------------+------------------------+------+------------------------+------
+ 2013-12-30 12:00:00-08 | 2013-12-30 12:00:00-08 | a    | 2013-12-30 12:00:00-08 |    0
+(1 row)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_timestamptz DROP COLUMN col4;
+ALTER TABLE
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_timestamptz VALUES('2013-12-30 12:00:00 PST','2013-12-30 12:00:00 PST','b',1);
+INSERT 0 1
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_timestamptz ORDER BY 1,2,3,4;
+          col1          |          col2          | col3 | col5 
+------------------------+------------------------+------+------
+ 2013-12-30 12:00:00-08 | 2013-12-30 12:00:00-08 | a    |    0
+ 2013-12-30 12:00:00-08 | 2013-12-30 12:00:00-08 | b    |    1
+(2 rows)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_timestamptz SET DISTRIBUTED BY (col3);
+ALTER TABLE
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_timestamptz SELECT '2014-01-01 12:00:00 PST', '2014-01-01 12:00:00 PST','c', 2;
+INSERT 0 1
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_timestamptz ORDER BY 1,2,3;
+          col1          |          col2          | col3 | col5 
+------------------------+------------------------+------+------
+ 2013-12-30 12:00:00-08 | 2013-12-30 12:00:00-08 | a    |    0
+ 2013-12-30 12:00:00-08 | 2013-12-30 12:00:00-08 | b    |    1
+ 2014-01-01 12:00:00-08 | 2014-01-01 12:00:00-08 | c    |    2
+(3 rows)
+
+UPDATE mpp21090_changedistpolicy_dml_pttab_timestamptz SET col3 ='c' WHERE col3 ='b';
+UPDATE 1
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_timestamptz ORDER BY 1,2,3;
+          col1          |          col2          | col3 | col5 
+------------------------+------------------------+------+------
+ 2013-12-30 12:00:00-08 | 2013-12-30 12:00:00-08 | a    |    0
+ 2013-12-30 12:00:00-08 | 2013-12-30 12:00:00-08 | c    |    1
+ 2014-01-01 12:00:00-08 | 2014-01-01 12:00:00-08 | c    |    2
+(3 rows)
+
+DELETE FROM mpp21090_changedistpolicy_dml_pttab_timestamptz WHERE col3 ='c';
+DELETE 2
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_timestamptz ORDER BY 1,2,3;
+          col1          |          col2          | col3 | col5 
+------------------------+------------------------+------+------
+ 2013-12-30 12:00:00-08 | 2013-12-30 12:00:00-08 | a    |    0
+(1 row)
+

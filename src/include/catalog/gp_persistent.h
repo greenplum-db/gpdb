@@ -134,6 +134,7 @@ typedef FormData_gp_persistent_relation_node *Form_gp_persistent_relation_node;
 
 CATALOG(gp_relation_node,5094) BKI_WITHOUT_OIDS
 {
+	Oid         tablespace_oid;
 	Oid			relfilenode_oid;
 	int4		segment_file_num;
 	int8		create_mirror_data_loss_tracking_session_num;
@@ -141,16 +142,14 @@ CATALOG(gp_relation_node,5094) BKI_WITHOUT_OIDS
 	int8		persistent_serial_num;
 } FormData_gp_relation_node;
 
-/* GPDB added foreign key definitions for gpcheckcat. */
-FOREIGN_KEY(relfilenode_oid REFERENCES pg_class(oid));
+#define Natts_gp_relation_node							6
+#define Anum_gp_relation_node_tablespace_oid					1
+#define Anum_gp_relation_node_relfilenode_oid					2
+#define Anum_gp_relation_node_segment_file_num					3
+#define Anum_gp_relation_node_create_mirror_data_loss_tracking_session_num	4
+#define Anum_gp_relation_node_persistent_tid					5
+#define Anum_gp_relation_node_persistent_serial_num				6
 
-#define Natts_gp_relation_node				    							5
-#define Anum_gp_relation_node_relfilenode_oid								1
-#define Anum_gp_relation_node_segment_file_num								2
-#define Anum_gp_relation_node_create_mirror_data_loss_tracking_session_num	3
-#define Anum_gp_relation_node_persistent_tid      							4
-#define Anum_gp_relation_node_persistent_serial_num     					5
- 
 typedef FormData_gp_relation_node *Form_gp_relation_node;
 
 /*
@@ -160,11 +159,12 @@ typedef FormData_gp_relation_node *Form_gp_relation_node;
  *  pg_attribute.h]
  */
 #define Schema_gp_relation_node \
-{ GpRelationNodeRelationId, {"relfilenode_oid"}, 									26, -1,	4, 1, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ GpRelationNodeRelationId, {"segment_file_num"}, 									23, -1, 4, 2, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ GpRelationNodeRelationId, {"create_mirror_data_loss_tracking_session_num"}, 		20, -1, 8, 3, 0, -1, -1, true, 'p', 'd', true, false, false, true, 0 }, \
-{ GpRelationNodeRelationId, {"persistent_tid"},										27, -1, 6, 4, 0, -1, -1, false, 'p', 's', true, false, false, true, 0 }, \
-{ GpRelationNodeRelationId, {"persistent_serial_num"},								20, -1, 8, 5, 0, -1, -1, true, 'p', 'd', true, false, false, true, 0 }
+{ GpRelationNodeRelationId, {"tablespace_oid"}, 									26, -1,	4, 1, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ GpRelationNodeRelationId, {"relfilenode_oid"}, 									26, -1,	4, 2, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ GpRelationNodeRelationId, {"segment_file_num"}, 									23, -1, 4, 3, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ GpRelationNodeRelationId, {"create_mirror_data_loss_tracking_session_num"}, 		20, -1, 8, 4, 0, -1, -1, true, 'p', 'd', true, false, false, true, 0 }, \
+{ GpRelationNodeRelationId, {"persistent_tid"},										27, -1, 6, 5, 0, -1, -1, false, 'p', 's', true, false, false, true, 0 }, \
+{ GpRelationNodeRelationId, {"persistent_serial_num"},								20, -1, 8, 6, 0, -1, -1, true, 'p', 'd', true, false, false, true, 0 }
 
 /*
  * gp_relation_node table values for FormData_pg_class.
@@ -178,7 +178,7 @@ typedef FormData_gp_relation_node *Form_gp_relation_node;
 /*
  * gp_relation_node's index.
  */
-#define Natts_gp_relation_node_index				    					2
+#define Natts_gp_relation_node_index				    					3
  
 /*
  * gp_relation_node_index table values for FormData_pg_attribute.
@@ -187,8 +187,9 @@ typedef FormData_gp_relation_node *Form_gp_relation_node;
  *  pg_attribute.h]
  */
 #define Schema_gp_relation_node_index \
-{ GpRelationNodeRelationId, {"relfilenode_oid"}, 	26, -1,	4, 1, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }, \
-{ GpRelationNodeRelationId, {"segment_file_num"}, 	23, -1, 4, 2, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 },
+{ GpRelationNodeRelationId, {"tablespace_oid"}, 	26, -1,	4, 1, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }, \
+{ GpRelationNodeRelationId, {"relfilenode_oid"}, 	26, -1,	4, 2, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }, \
+{ GpRelationNodeRelationId, {"segment_file_num"}, 	23, -1, 4, 3, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 },
 
 /*
  * gp_relation_node_index index values for FormData_pg_class.
@@ -221,10 +222,10 @@ typedef FormData_gp_relation_node *Form_gp_relation_node;
 	GpRelationNodeOidIndexId, GpRelationNodeRelationId, Natts_gp_relation_node_index, true, false, false, true, false, true, {Init_int2vector}, {Init_oidvector}, {Init_oidvector}, {Init_text}, {Init_text}
 
 #define IndKey_gp_relation_node_index \
-    1, 2
+    1, 2, 3
 
 #define IndClass_gp_relation_node_index \
-    OID_BTREE_OPS_OID, INT4_BTREE_OPS_OID
+    OID_BTREE_OPS_OID, OID_BTREE_OPS_OID, INT4_BTREE_OPS_OID
 
 /*
  * Defines for gp_persistent_database_node table
@@ -604,7 +605,7 @@ extern void GpPersistent_GetCommonValues(
 
 extern void GpRelationNode_GetValues(
 	Datum							*values,
-
+	Oid 							*tablespaceOid,
 	Oid 							*relfilenodeOid,
 	int32							*segmentFileNum,
 	int64							*createMirrorDataLossTrackingSessionNum,
@@ -613,7 +614,7 @@ extern void GpRelationNode_GetValues(
 
 extern void GpRelationNode_SetDatumValues(
 	Datum							*values,
-
+	Oid 							tablespaceOid,
 	Oid 							relfilenodeOid,
 	int32							segmentFileNum,
 	int64							createMirrorDataLossTrackingSessionNum,

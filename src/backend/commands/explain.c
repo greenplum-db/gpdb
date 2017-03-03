@@ -50,7 +50,7 @@
 
 #ifdef USE_ORCA
 extern char *SzDXLPlan(Query *parse);
-extern StringInfo OptVersion();
+extern const char *OptVersion();
 #endif
 
 
@@ -104,8 +104,6 @@ static void show_upper_qual(List *qual, const char *qlabel, Plan *plan,
 				StringInfo str, int indent, ExplainState *es);
 static void show_sort_keys(Plan *sortplan, int nkeys, AttrNumber *keycols,
 			   const char *qlabel,
-			   StringInfo str, int indent, ExplainState *es);
-static void show_sort_info(SortState *sortstate,
 			   StringInfo str, int indent, ExplainState *es);
 static const char *explain_get_index_name(Oid indexId);
 
@@ -680,10 +678,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
     	}
     	else /* PLANGEN_OPTIMIZER */
     	{
-    		StringInfo str = OptVersion();
-			appendStringInfo(&buf, "PQO version %s\n", str->data);
-			pfree(str->data);
-			pfree(str);
+			appendStringInfo(&buf, "PQO version %s\n", OptVersion());
     	}
     }
 #endif
@@ -1633,26 +1628,17 @@ explain_outNode(StringInfo str,
 			break;
 		case T_Sort:
 		{
-			bool bLimit = (((Sort *) plan)->limitCount
-						   || ((Sort *) plan)->limitOffset);
-
 			bool bNoDup = ((Sort *) plan)->noduplicates;
 
 			char *SortKeystr = "Sort Key";
 
-			if ((bLimit && bNoDup))
-				SortKeystr = "Sort Key (Limit Distinct)";
-			else if (bLimit)
-				SortKeystr = "Sort Key (Limit)";
-			else if (bNoDup)
+			if (bNoDup)
 				SortKeystr = "Sort Key (Distinct)";
 
 			show_sort_keys(plan,
 						   ((Sort *) plan)->numCols,
 						   ((Sort *) plan)->sortColIdx,
 						   SortKeystr,
-						   str, indent, es);
-			show_sort_info((SortState *) planstate,
 						   str, indent, es);
 		}
 			break;
@@ -2053,28 +2039,14 @@ show_grouping_keys(Plan        *plan,
     Node *outerPlan = (Node *) outerPlan(subplan);
     Node *innerPlan = (Node *) innerPlan(subplan);
 
-    /*
-     * For Append we cannot obtain outerPlan as the lefttree
-     * is set to NULL. So, we extract the first child from the
-     * list of appendplans
-     */
-    if (IsA(subplan, Append))
-    {
-    	Assert(NULL == outerPlan);
-    	Assert(NULL == innerPlan);
-
-    	Append *append = (Append *) subplan;
-
-    	/*
-    	 * Append node with no children is legal, at least when mark_dummy_join()
-    	 * produces such a node.
-    	 */
-    	if (NULL != append->appendplans)
-    	{
-    		outerPlan = list_nth(append->appendplans, 0);
-    		Assert(NULL != outerPlan);
-    	}
-    }
+	/*
+	 * Dig the child nodes of the subplan. This logic should match that in
+	 * push_plan function, in ruleutils.c!
+	 */
+	if (IsA(subplan, Append))
+		outerPlan = linitial(((Append *) subplan)->appendplans);
+	else if (IsA(subplan, Sequence))
+		outerPlan = (Node *) llast(((Sequence *) subplan)->subplans);
 
 	/* Set up deparse context */
 	context = deparse_context_for_plan(outerPlan,
@@ -2287,31 +2259,6 @@ explain_partition_selector(PartitionSelector *ps, Plan *parent,
 		}
 
 		appendStringInfo(str, "  Partitions selected: %d (out of %d)\n", nPartsSelected, nPartsTotal);
-	}
-}
-
-/*
- * If it's EXPLAIN ANALYZE, show tuplesort explain info for a sort node
- */
-static void
-show_sort_info(SortState *sortstate,
-			   StringInfo str, int indent, ExplainState *es)
-{
-	Assert(IsA(sortstate, SortState));
-	if (es->printAnalyze && sortstate->sort_Done &&
-		sortstate->tuplesortstate != NULL)
-	{
-		char	   *sortinfo;
-		int			i;
-
-		if (gp_enable_mk_sort)
-			sortinfo = tuplesort_explain_mk(sortstate->tuplesortstate->sortstore_mk);
-		else
-			sortinfo = tuplesort_explain(sortstate->tuplesortstate->sortstore);
-		for (i = 0; i < indent; i++)
-			appendStringInfo(str, "  ");
-		appendStringInfo(str, "  %s\n", sortinfo);
-		pfree(sortinfo);
 	}
 }
 

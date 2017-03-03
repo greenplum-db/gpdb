@@ -1,0 +1,126 @@
+DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_idx_dml_date;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_xchange_pttab_dropcol_idx_dml_date_opt.sql:14: NOTICE:  table "mpp21090_xchange_pttab_dropcol_idx_dml_date" does not exist, skipping
+DROP TABLE
+CREATE TABLE mpp21090_xchange_pttab_dropcol_idx_dml_date
+(
+    col1 date,
+    col2 date,
+    col3 char,
+    col4 int,
+    col5 date
+) 
+DISTRIBUTED by (col1)
+PARTITION BY RANGE(col2)(partition partone start('2013-12-01') end('2013-12-31') WITH(APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start('2013-12-31') end('2014-01-01') WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start('2014-01-01') end('2014-02-01'));
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_xchange_pttab_dropcol_idx_dml_date_opt.sql:24: NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_dml_date_1_prt_partone" for table "mpp21090_xchange_pttab_dropcol_idx_dml_date"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_xchange_pttab_dropcol_idx_dml_date_opt.sql:24: NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_dml_date_1_prt_parttwo" for table "mpp21090_xchange_pttab_dropcol_idx_dml_date"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_xchange_pttab_dropcol_idx_dml_date_opt.sql:24: NOTICE:  CREATE TABLE will create partition "mpp21090_xchange_pttab_dropcol_idx_dml_date_1_prt_partthree" for table "mpp21090_xchange_pttab_dropcol_idx_dml_date"
+CREATE TABLE
+INSERT INTO mpp21090_xchange_pttab_dropcol_idx_dml_date VALUES('2013-12-30','2013-12-30','a',0, '2013-12-30');
+INSERT 0 1
+SELECT * FROM mpp21090_xchange_pttab_dropcol_idx_dml_date ORDER BY 1,2,3,4;
+    col1    |    col2    | col3 | col4 |    col5    
+------------+------------+------+------+------------
+ 2013-12-30 | 2013-12-30 | a    |    0 | 2013-12-30
+(1 row)
+
+DROP INDEX IF EXISTS mpp21090_xchange_pttab_dropcol_idx_dml_idx_date;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_xchange_pttab_dropcol_idx_dml_date_opt.sql:29: NOTICE:  index "mpp21090_xchange_pttab_dropcol_idx_dml_idx_date" does not exist, skipping
+DROP INDEX
+CREATE INDEX mpp21090_xchange_pttab_dropcol_idx_dml_idx_date on mpp21090_xchange_pttab_dropcol_idx_dml_date(col2);
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_xchange_pttab_dropcol_idx_dml_date_opt.sql:30: NOTICE:  building index for child partition "mpp21090_xchange_pttab_dropcol_idx_dml_date_1_prt_partone"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_xchange_pttab_dropcol_idx_dml_date_opt.sql:30: NOTICE:  building index for child partition "mpp21090_xchange_pttab_dropcol_idx_dml_date_1_prt_parttwo"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_xchange_pttab_dropcol_idx_dml_date_opt.sql:30: NOTICE:  building index for child partition "mpp21090_xchange_pttab_dropcol_idx_dml_date_1_prt_partthree"
+CREATE INDEX
+ALTER TABLE mpp21090_xchange_pttab_dropcol_idx_dml_date DROP COLUMN col1;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_xchange_pttab_dropcol_idx_dml_date_opt.sql:32: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_xchange_pttab_dropcol_idx_dml_date_opt.sql:32: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_xchange_pttab_dropcol_idx_dml_date_opt.sql:32: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_xchange_pttab_dropcol_idx_dml_date_opt.sql:32: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+ALTER TABLE
+-- Create Candidate table for Exchange
+DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_idx_dml_date_candidate;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_xchange_pttab_dropcol_idx_dml_date_opt.sql:35: NOTICE:  table "mpp21090_xchange_pttab_dropcol_idx_dml_date_candidate" does not exist, skipping
+DROP TABLE
+CREATE TABLE mpp21090_xchange_pttab_dropcol_idx_dml_date_candidate( like mpp21090_xchange_pttab_dropcol_idx_dml_date) distributed randomly;
+CREATE TABLE
+INSERT INTO mpp21090_xchange_pttab_dropcol_idx_dml_date_candidate VALUES('2013-12-30','z',1,'2013-12-30');
+INSERT 0 1
+-- Exchange 
+ALTER TABLE mpp21090_xchange_pttab_dropcol_idx_dml_date EXCHANGE PARTITION FOR('2013-12-15') WITH TABLE mpp21090_xchange_pttab_dropcol_idx_dml_date_candidate;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_xchange_pttab_dropcol_idx_dml_date_opt.sql:40: NOTICE:  exchanged partition "partone" of relation "mpp21090_xchange_pttab_dropcol_idx_dml_date" with relation "mpp21090_xchange_pttab_dropcol_idx_dml_date_candidate"
+ALTER TABLE
+SELECT * FROM mpp21090_xchange_pttab_dropcol_idx_dml_date ORDER BY 1,2,3;
+    col2    | col3 | col4 |    col5    
+------------+------+------+------------
+ 2013-12-30 | z    |    1 | 2013-12-30
+(1 row)
+
+SELECT * FROM mpp21090_xchange_pttab_dropcol_idx_dml_date_candidate ORDER BY 1,2,3;
+    col2    | col3 | col4 |    col5    
+------------+------+------+------------
+ 2013-12-30 | a    |    0 | 2013-12-30
+(1 row)
+
+-- DML on partition table
+INSERT INTO mpp21090_xchange_pttab_dropcol_idx_dml_date SELECT  '2013-12-01','b', 1, '2013-12-01';
+INSERT 0 1
+SELECT * FROM mpp21090_xchange_pttab_dropcol_idx_dml_date ORDER BY 1,2,3;
+    col2    | col3 | col4 |    col5    
+------------+------+------+------------
+ 2013-12-01 | b    |    1 | 2013-12-01
+ 2013-12-30 | z    |    1 | 2013-12-30
+(2 rows)
+
+UPDATE mpp21090_xchange_pttab_dropcol_idx_dml_date SET col5 = '2014-02-10' WHERE col2 = '2013-12-01' AND col5 = '2013-12-01';
+UPDATE 1
+SELECT * FROM mpp21090_xchange_pttab_dropcol_idx_dml_date ORDER BY 1,2,3;
+    col2    | col3 | col4 |    col5    
+------------+------+------+------------
+ 2013-12-01 | b    |    1 | 2014-02-10
+ 2013-12-30 | z    |    1 | 2013-12-30
+(2 rows)
+
+UPDATE mpp21090_xchange_pttab_dropcol_idx_dml_date SET col2 ='2013-12-30' WHERE col3='b';
+UPDATE 1
+SELECT * FROM mpp21090_xchange_pttab_dropcol_idx_dml_date ORDER BY 1,2,3;
+    col2    | col3 | col4 |    col5    
+------------+------+------+------------
+ 2013-12-30 | b    |    1 | 2014-02-10
+ 2013-12-30 | z    |    1 | 2013-12-30
+(2 rows)
+
+DELETE FROM mpp21090_xchange_pttab_dropcol_idx_dml_date WHERE col3='b';
+DELETE 1
+SELECT * FROM mpp21090_xchange_pttab_dropcol_idx_dml_date ORDER BY 1,2,3;
+    col2    | col3 | col4 |    col5    
+------------+------+------+------------
+ 2013-12-30 | z    |    1 | 2013-12-30
+(1 row)
+
+-- DML on candidate table
+INSERT INTO mpp21090_xchange_pttab_dropcol_idx_dml_date_candidate SELECT '2013-12-01','b', 1, '2013-12-01';
+INSERT 0 1
+SELECT * FROM mpp21090_xchange_pttab_dropcol_idx_dml_date_candidate ORDER BY 1,2,3;
+    col2    | col3 | col4 |    col5    
+------------+------+------+------------
+ 2013-12-01 | b    |    1 | 2013-12-01
+ 2013-12-30 | a    |    0 | 2013-12-30
+(2 rows)
+
+UPDATE mpp21090_xchange_pttab_dropcol_idx_dml_date_candidate SET col2='2013-12-30' WHERE col3='a';
+UPDATE 1
+SELECT * FROM mpp21090_xchange_pttab_dropcol_idx_dml_date_candidate ORDER BY 1,2,3;
+    col2    | col3 | col4 |    col5    
+------------+------+------+------------
+ 2013-12-01 | b    |    1 | 2013-12-01
+ 2013-12-30 | a    |    0 | 2013-12-30
+(2 rows)
+
+DELETE FROM mpp21090_xchange_pttab_dropcol_idx_dml_date_candidate WHERE col3='a';
+DELETE 1
+SELECT * FROM mpp21090_xchange_pttab_dropcol_idx_dml_date_candidate ORDER BY 1,2,3;
+    col2    | col3 | col4 |    col5    
+------------+------+------+------------
+ 2013-12-01 | b    |    1 | 2013-12-01
+(1 row)
+

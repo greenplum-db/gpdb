@@ -546,6 +546,9 @@ class GPCatalogTable():
     def __str__(self):
         return self._name
 
+    def __hash__(self):
+        return hash(self.__str__())
+
     def __repr__(self):
         return "GPCatalogTable: %s; pkey: %s; oids: %s; acl: %s" % (
             str(self._name), str(self._pkey), str(self._has_oid), str(self._acl),

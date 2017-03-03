@@ -187,6 +187,19 @@ cdbCopyStart(CdbCopy *c, char *copyCmd)
 }
 
 /*
+ * sends data to a copy command on all segments.
+ */
+void
+cdbCopySendDataToAll(CdbCopy *c, const char *buffer, int nbytes)
+{
+	Gang *gp = c->primary_writer;
+	for (int i = 0; i < gp->size; ++i) {
+		int seg = gp->db_descriptors[i].segindex;
+		cdbCopySendData(c, seg, buffer, nbytes);
+	}
+}
+
+/*
  * sends data to a copy command on a specific segment (usually
  * the hash result of the data value).
  */
@@ -496,6 +509,7 @@ processCopyEndResults(CdbCopy *c,
 			else if (PQresultStatus(res) == PGRES_COPY_OUT)
 			{
 				char	   *buffer = NULL;
+				int			ret;
 
 				elog(LOG, "Segment still in copy out, canceling QE");
 				/*
@@ -509,10 +523,31 @@ processCopyEndResults(CdbCopy *c,
 				 */
 				PQrequestCancel(q->conn);
 
-				/* Need to consume data from QE until he recognizes cancel. */
-				PQgetCopyData(q->conn, &buffer, false);
-				if (buffer)
-					free(buffer);
+				/*
+				 * Need to consume data from the QE until cancellation is
+				 * recognized. PQgetCopyData() returns -1 when the COPY is
+				 * done, a non-zero result indicates data was returned and
+				 * in that case we'll drop it immediately since we aren't
+				 * interested in the contents.
+				 */
+				while ((ret = PQgetCopyData(q->conn, &buffer, false)) != -1)
+				{
+					if (ret > 0)
+					{
+						if (buffer)
+							PQfreemem(buffer);
+						continue;
+					}
+
+					/* An error occurred, log the error and break out */
+					if (ret == -2)
+					{
+						ereport(WARNING,
+								(errmsg("Error during cancellation: \"%s\"",
+								PQerrorMessage(q->conn))));
+						break;
+					}
+				}
 			}
 
 			/* in SREH mode, check if this seg rejected (how many) rows */

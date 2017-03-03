@@ -12,7 +12,6 @@
 
 #include "access/htup.h"
 #include "catalog/pg_type.h"
-#include "nodes/execnodes.h" //SliceTable
 #include "cdb/cdbmotion.h"
 #include "cdb/tupser.h"
 #include "cdb/cdbvars.h"
@@ -23,7 +22,6 @@
 #include "utils/numeric.h"
 #include "utils/memutils.h"
 #include "utils/builtins.h"
-#include "utils/lsyscache.h"
 #include "utils/syscache.h"
 
 #include "access/memtup.h"

@@ -19,18 +19,17 @@ function prep_env_for_centos() {
       BLDARCH=rhel6_x86_64
       export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk.x86_64
       source /opt/gcc_env.sh
-      # This is necessesary to build gphdfs.
-      # It should be removed once the build image has this included.
-      yum install -y ant-junit
       ;;
 
     7)
       BLDARCH=rhel7_x86_64
-      alternatives --set java /usr/lib/jvm/java-1.7.0-openjdk-1.7.0.111-2.6.7.2.el7_2.x86_64/jre/bin/java
-      export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-1.7.0.111-2.6.7.2.el7_2.x86_64
+      echo "Detecting java7 path ..."
+      java7_packages=$(rpm -qa | grep -F java-1.7)
+      java7_bin="$(rpm -ql $java7_packages | grep /jre/bin/java$)"
+      alternatives --set java "$java7_bin"
+      export JAVA_HOME="${java7_bin/jre\/bin\/java/}"
       ln -sf /usr/bin/xsubpp /usr/share/perl5/ExtUtils/xsubpp
       source /opt/gcc_env.sh
-      yum install -y ant-junit
       ;;
 
     *)
@@ -62,22 +61,26 @@ function generate_build_number() {
 
 function make_sync_tools() {
   pushd gpdb_src/gpAux
-    make IVYREPO_HOST=${IVYREPO_HOST} IVYREPO_REALM="${IVYREPO_REALM}" IVYREPO_USER=${IVYREPO_USER} IVYREPO_PASSWD=${IVYREPO_PASSWD} sync_tools
+    # Requires these variables in the env:
+    # IVYREPO_HOST IVYREPO_REALM IVYREPO_USER IVYREPO_PASSWD
+    make sync_tools
     # We have compiled LLVM with native zlib on CentOS6 and not from
     # the zlib downloaded from artifacts.  Therefore, remove the zlib
     # downloaded from artifacts in order to use the native zlib.
     find ext -name 'libz.*' -exec rm -f {} \;
-    tar -czf ../../sync_tools_gpdb/sync_tools_gpdb.tar.gz ext
   popd
 }
 
-
 function build_gpdb() {
   pushd gpdb_src/gpAux
+    # Use -j4 to speed up the build. (Doesn't seem worth trying to guess a better
+    # value based on number of CPUs or anything like that. Going above -j4 wouldn't
+    # make it much faster, and -j4 is small enough to not hurt too badly even on
+    # a single-CPU system
     if [ -n "$1" ]; then
-      make "$1" GPROOT=/usr/local dist
+      make "$1" GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j4 dist
     else
-      make GPROOT=/usr/local dist
+      make GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j4 dist
     fi
   popd
 }
@@ -89,7 +92,7 @@ function build_gppkg() {
 }
 
 function unittest_check_gpdb() {
-  pushd gpdb_src/gpAux
+  pushd gpdb_src
     source $GREENPLUM_INSTALL_DIR/greenplum_path.sh
     make GPROOT=/usr/local unittest-check
   popd
@@ -111,7 +114,9 @@ function export_gpdb_extensions() {
       chmod 755 greenplum-*zip*
       cp greenplum-*zip* "$GPDB_ARTIFACTS_DIR"/
     fi
-    chmod 755 "$GPDB_ARTIFACTS_DIR"/*.gppkg
+    if ls "$GPDB_ARTIFACTS_DIR"/*.gppkg 1>/dev/null 2>&1; then
+      chmod 755 "$GPDB_ARTIFACTS_DIR"/*.gppkg
+    fi
   popd
 }
 
@@ -139,6 +144,16 @@ function _main() {
   else
     BLD_TARGET_OPTION=("")
   fi
+
+  # Copy gpaddon_src into gpAux/addon directory and set the ADDON_DIR
+  # environment variable, so that quicklz support is available in enterprise
+  # builds.
+  export ADDON_DIR=addon
+  # We cannot symlink the addon directory here because `make -C` resolves the
+  # symlink and `cd`s to the actual directory. Currently the Makefile in the
+  # addon directory assumes that it is located in a particular location under
+  # the source tree and hence needs to be copied over.
+  cp -R gpaddon_src gpdb_src/gpAux/$ADDON_DIR
   build_gpdb "${BLD_TARGET_OPTION[@]}"
   build_gppkg
   unittest_check_gpdb

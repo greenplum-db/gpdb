@@ -1,0 +1,36 @@
+-- @author prabhd
+-- @created 2012-02-01 12:00:00
+-- @modified 2013-02-01 12:00:00
+-- @tags cte bfv MPP-19436
+-- @db_name world_db
+-- @product_version gpdb: [4.2.6.1-],hawq: [1.1.0.2-]
+-- @description MPP-19436
+WITH t(a,b,d) AS
+(
+  SELECT foo.a,foo.b,bar.d FROM foo,bar WHERE foo.a = bar.d
+)
+SELECT cup.*, SUM(t.d) OVER(PARTITION BY t.b) FROM  
+  ( 
+    SELECT bar.c as e,r.d FROM 
+		(
+			SELECT t.d, avg(t.a) over() FROM t
+		) r,bar
+  ) AS cup,
+t WHERE cup.e < 10
+GROUP BY cup.d, cup.e, t.d, t.b
+ORDER BY 1,2,3 
+LIMIT 10;
+ e | d | sum 
+---+---+-----
+ 1 | 2 | 162
+ 1 | 2 | 243
+ 1 | 2 | 324
+ 1 | 2 | 405
+ 1 | 2 | 486
+ 1 | 2 | 567
+ 1 | 2 | 648
+ 1 | 2 | 729
+ 1 | 2 | 810
+ 1 | 3 | 162
+(10 rows)
+

@@ -190,3 +190,15 @@ DROP TABLE IF EXISTS bfv_cte_foo;
 DROP TABLE IF EXISTS bfv_cte_bar;
 reset optimizer_cte_inlining;
 reset optimizer_cte_inlining_bound;
+
+--
+-- Test for an old bug with rescanning window functions. This needs to use
+-- catalog tables, otherwise the plan will contain a Motion node that
+-- materializes the result, and masks the problem.
+--
+with t (a,b,d) as (select 1,2,1 from pg_class limit 1)
+SELECT cup.* FROM
+ t, (
+SELECT sum(t.b) OVER(PARTITION BY t.a ) AS e FROM (select 1 as a, 2 as b from pg_class limit 1)foo,t
+) as cup
+GROUP BY cup.e;

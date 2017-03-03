@@ -1,0 +1,62 @@
+DROP TABLE IF EXISTS mpp21090_pttab_droplastcol_addpt_timestamp;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_droplastcol_addpt_timestamp_opt.sql:14: NOTICE:  table "mpp21090_pttab_droplastcol_addpt_timestamp" does not exist, skipping
+DROP TABLE
+CREATE TABLE mpp21090_pttab_droplastcol_addpt_timestamp
+(
+    col1 timestamp,
+    col2 timestamp,
+    col3 char,
+    col4 int,
+    col5 timestamp
+    
+) 
+DISTRIBUTED by (col1)
+PARTITION BY RANGE(col2)(partition partone start('2013-12-01 12:00:00') end('2013-12-31 12:00:00') WITH(APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start('2013-12-31 12:00:00') end('2014-01-01 12:00:00') inclusive WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start('2014-01-02 12:00:00') end('2014-02-01 12:00:00'));
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_droplastcol_addpt_timestamp_opt.sql:25: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_droplastcol_addpt_timestamp_1_prt_partone" for table "mpp21090_pttab_droplastcol_addpt_timestamp"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_droplastcol_addpt_timestamp_opt.sql:25: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_droplastcol_addpt_timestamp_1_prt_parttwo" for table "mpp21090_pttab_droplastcol_addpt_timestamp"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_droplastcol_addpt_timestamp_opt.sql:25: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_droplastcol_addpt_timestamp_1_prt_partthree" for table "mpp21090_pttab_droplastcol_addpt_timestamp"
+CREATE TABLE
+INSERT INTO mpp21090_pttab_droplastcol_addpt_timestamp VALUES('2013-12-31 12:00:00','2013-12-31 12:00:00','a',0,'2013-12-31 12:00:00');
+INSERT 0 1
+ALTER TABLE mpp21090_pttab_droplastcol_addpt_timestamp DROP COLUMN col5;
+ALTER TABLE
+ALTER TABLE mpp21090_pttab_droplastcol_addpt_timestamp ADD PARTITION partfour start('2014-02-01 12:00:00') end('2014-03-01 12:00:00') inclusive;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_droplastcol_addpt_timestamp_opt.sql:30: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_droplastcol_addpt_timestamp_1_prt_partfour" for table "mpp21090_pttab_droplastcol_addpt_timestamp"
+ALTER TABLE
+INSERT INTO mpp21090_pttab_droplastcol_addpt_timestamp SELECT '2014-02-10 12:00:00','2014-02-10 12:00:00','b',1;
+INSERT 0 1
+SELECT * FROM mpp21090_pttab_droplastcol_addpt_timestamp ORDER BY 1,2,3;
+        col1         |        col2         | col3 | col4 
+---------------------+---------------------+------+------
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | a    |    0
+ 2014-02-10 12:00:00 | 2014-02-10 12:00:00 | b    |    1
+(2 rows)
+
+-- Update distribution key
+UPDATE mpp21090_pttab_droplastcol_addpt_timestamp SET col1 = '2014-01-01 12:00:00' WHERE col2 = '2014-02-10 12:00:00' AND col1 = '2014-02-10 12:00:00';
+UPDATE 1
+SELECT * FROM mpp21090_pttab_droplastcol_addpt_timestamp ORDER BY 1,2,3;
+        col1         |        col2         | col3 | col4 
+---------------------+---------------------+------+------
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | a    |    0
+ 2014-01-01 12:00:00 | 2014-02-10 12:00:00 | b    |    1
+(2 rows)
+
+-- Update partition key
+UPDATE mpp21090_pttab_droplastcol_addpt_timestamp SET col2 = '2014-01-01 12:00:00' WHERE col2 = '2014-02-10 12:00:00' AND col1 = '2014-01-01 12:00:00';
+UPDATE 1
+SELECT * FROM mpp21090_pttab_droplastcol_addpt_timestamp ORDER BY 1,2,3;
+        col1         |        col2         | col3 | col4 
+---------------------+---------------------+------+------
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | a    |    0
+ 2014-01-01 12:00:00 | 2014-01-01 12:00:00 | b    |    1
+(2 rows)
+
+DELETE FROM mpp21090_pttab_droplastcol_addpt_timestamp WHERE col2 = '2014-01-01 12:00:00';
+DELETE 1
+SELECT * FROM mpp21090_pttab_droplastcol_addpt_timestamp ORDER BY 1,2,3;
+        col1         |        col2         | col3 | col4 
+---------------------+---------------------+------+------
+ 2013-12-31 12:00:00 | 2013-12-31 12:00:00 | a    |    0
+(1 row)
+

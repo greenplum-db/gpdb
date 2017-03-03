@@ -1,0 +1,89 @@
+DROP TABLE IF EXISTS mpp21090_pttab_dropcol_addcol_addpt_dml_int;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropcol_addcol_addpt_dml_int_opt.sql:14: NOTICE:  table "mpp21090_pttab_dropcol_addcol_addpt_dml_int" does not exist, skipping
+DROP TABLE
+CREATE TABLE mpp21090_pttab_dropcol_addcol_addpt_dml_int
+(
+    col1 int,
+    col2 int,
+    col3 char,
+    col4 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY RANGE(col2)(partition partone start(1) end(10001) WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start(10001) end(20001) WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start(20001) end(30001));
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropcol_addcol_addpt_dml_int_opt.sql:23: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_dropcol_addcol_addpt_dml_int_1_prt_partone" for table "mpp21090_pttab_dropcol_addcol_addpt_dml_int"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropcol_addcol_addpt_dml_int_opt.sql:23: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_dropcol_addcol_addpt_dml_int_1_prt_parttwo" for table "mpp21090_pttab_dropcol_addcol_addpt_dml_int"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropcol_addcol_addpt_dml_int_opt.sql:23: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_dropcol_addcol_addpt_dml_int_1_prt_partthree" for table "mpp21090_pttab_dropcol_addcol_addpt_dml_int"
+CREATE TABLE
+INSERT INTO mpp21090_pttab_dropcol_addcol_addpt_dml_int VALUES(20000,20000,'a',0);
+INSERT 0 1
+ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_dml_int DROP COLUMN col4;
+ALTER TABLE
+INSERT INTO mpp21090_pttab_dropcol_addcol_addpt_dml_int VALUES(20000,20000,'b');
+INSERT 0 1
+ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_dml_int ADD COLUMN col5 int DEFAULT 20000;
+ALTER TABLE
+INSERT INTO mpp21090_pttab_dropcol_addcol_addpt_dml_int SELECT 20000,20000,'c',20000;
+INSERT 0 1
+SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_dml_int ORDER BY 1,2,3;
+ col1  | col2  | col3 | col5  
+-------+-------+------+-------
+ 20000 | 20000 | a    | 20000
+ 20000 | 20000 | b    | 20000
+ 20000 | 20000 | c    | 20000
+(3 rows)
+
+UPDATE mpp21090_pttab_dropcol_addcol_addpt_dml_int SET col5 = 10000 WHERE col2 = 20000 AND col1 = 20000;
+UPDATE 3
+SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_dml_int ORDER BY 1,2,3;
+ col1  | col2  | col3 | col5  
+-------+-------+------+-------
+ 20000 | 20000 | a    | 10000
+ 20000 | 20000 | b    | 10000
+ 20000 | 20000 | c    | 10000
+(3 rows)
+
+DELETE FROM mpp21090_pttab_dropcol_addcol_addpt_dml_int WHERE col5 = 10000;
+DELETE 3
+SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_dml_int ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+(0 rows)
+
+ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_dml_int ADD PARTITION partfour start(30001) end(40001);
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropcol_addcol_addpt_dml_int_opt.sql:41: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_dropcol_addcol_addpt_dml_int_1_prt_partfour" for table "mpp21090_pttab_dropcol_addcol_addpt_dml_int"
+ALTER TABLE
+ALTER TABLE mpp21090_pttab_dropcol_addcol_addpt_dml_int ADD DEFAULT partition def;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_pttab_dropcol_addcol_addpt_dml_int_opt.sql:42: NOTICE:  CREATE TABLE will create partition "mpp21090_pttab_dropcol_addcol_addpt_dml_int_1_prt_def" for table "mpp21090_pttab_dropcol_addcol_addpt_dml_int"
+ALTER TABLE
+INSERT INTO mpp21090_pttab_dropcol_addcol_addpt_dml_int SELECT 35000,35000,'d',35000;
+INSERT 0 1
+SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_dml_int ORDER BY 1,2,3;
+ col1  | col2  | col3 | col5  
+-------+-------+------+-------
+ 35000 | 35000 | d    | 35000
+(1 row)
+
+UPDATE mpp21090_pttab_dropcol_addcol_addpt_dml_int SET col5 = 10000 WHERE col2 = 35000 AND col3 ='d';
+UPDATE 1
+SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_dml_int ORDER BY 1,2,3;
+ col1  | col2  | col3 | col5  
+-------+-------+------+-------
+ 35000 | 35000 | d    | 10000
+(1 row)
+
+-- Update partition key
+UPDATE mpp21090_pttab_dropcol_addcol_addpt_dml_int SET col2 = 10000 WHERE col2 = 35000 AND col3 ='d';
+UPDATE 1
+SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_dml_int ORDER BY 1,2,3;
+ col1  | col2  | col3 | col5  
+-------+-------+------+-------
+ 35000 | 10000 | d    | 10000
+(1 row)
+
+DELETE FROM mpp21090_pttab_dropcol_addcol_addpt_dml_int WHERE col5 = 10000;
+DELETE 1
+SELECT * FROM mpp21090_pttab_dropcol_addcol_addpt_dml_int ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+(0 rows)
+

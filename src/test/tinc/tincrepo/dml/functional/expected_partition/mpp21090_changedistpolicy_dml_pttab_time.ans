@@ -1,0 +1,66 @@
+DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_time;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_changedistpolicy_dml_pttab_time_opt.sql:14: NOTICE:  table "mpp21090_changedistpolicy_dml_pttab_time" does not exist, skipping
+DROP TABLE
+CREATE TABLE mpp21090_changedistpolicy_dml_pttab_time
+(
+    col1 time,
+    col2 time,
+    col3 char,
+    col4 time,
+    col5 int
+) DISTRIBUTED BY (col1) PARTITION BY RANGE(col2)(partition partone start('12:00:00') end('18:00:00')  WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start('18:00:00') end('24:00:00') WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start('0:00:00') end('11:00:00'));
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_changedistpolicy_dml_pttab_time_opt.sql:22: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_changedistpolicy_dml_pttab_time_opt.sql:22: NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_time_1_prt_partthree" for table "mpp21090_changedistpolicy_dml_pttab_time"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_changedistpolicy_dml_pttab_time_opt.sql:22: NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_time_1_prt_partone" for table "mpp21090_changedistpolicy_dml_pttab_time"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_changedistpolicy_dml_pttab_time_opt.sql:22: NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_time_1_prt_parttwo" for table "mpp21090_changedistpolicy_dml_pttab_time"
+CREATE TABLE
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_time VALUES('12:00:00','12:00:00','a','12:00:00',0);
+INSERT 0 1
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_time ORDER BY 1,2,3,4;
+   col1   |   col2   | col3 |   col4   | col5 
+----------+----------+------+----------+------
+ 12:00:00 | 12:00:00 | a    | 12:00:00 |    0
+(1 row)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_time DROP COLUMN col4;
+ALTER TABLE
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_time VALUES('12:00:00','12:00:00','b',1);
+INSERT 0 1
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_time ORDER BY 1,2,3,4;
+   col1   |   col2   | col3 | col5 
+----------+----------+------+------
+ 12:00:00 | 12:00:00 | a    |    0
+ 12:00:00 | 12:00:00 | b    |    1
+(2 rows)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_time SET DISTRIBUTED BY (col3);
+ALTER TABLE
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_time SELECT '1:00:00', '1:00:00','c', 2;
+INSERT 0 1
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_time ORDER BY 1,2,3;
+   col1   |   col2   | col3 | col5 
+----------+----------+------+------
+ 01:00:00 | 01:00:00 | c    |    2
+ 12:00:00 | 12:00:00 | a    |    0
+ 12:00:00 | 12:00:00 | b    |    1
+(3 rows)
+
+UPDATE mpp21090_changedistpolicy_dml_pttab_time SET col3 ='c' WHERE col3 ='b';
+UPDATE 1
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_time ORDER BY 1,2,3;
+   col1   |   col2   | col3 | col5 
+----------+----------+------+------
+ 01:00:00 | 01:00:00 | c    |    2
+ 12:00:00 | 12:00:00 | a    |    0
+ 12:00:00 | 12:00:00 | c    |    1
+(3 rows)
+
+DELETE FROM mpp21090_changedistpolicy_dml_pttab_time WHERE col3 ='c';
+DELETE 2
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_time ORDER BY 1,2,3;
+   col1   |   col2   | col3 | col5 
+----------+----------+------+------
+ 12:00:00 | 12:00:00 | a    |    0
+(1 row)
+

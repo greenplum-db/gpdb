@@ -311,7 +311,7 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 		}
 	}
 
-	PQExpBuffer escapeBuf = createPQExpBuffer();
+	PQExpBuffer escapeBuf = NULL;
 
 	pszDBName = NULL;
 	pszUserName = (char *) NULL;
@@ -324,7 +324,16 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 	if (pszDBName == NULL)
 		pszDBName = "";
 	else
+	{
+		/*
+		 * pszDBName will be pointing to the data portion of the PQExpBuffer
+		 * once escpaped (escapeBuf->data), so we can't safely destroy the
+		 * escapeBuf buffer until the end of the function.
+		 */
+		escapeBuf = createPQExpBuffer();
 		pszDBName = shellEscape(pszDBName, escapeBuf, true);
+	}
+
 	if (pszUserName == NULL)
 		pszUserName = "";
 
@@ -975,6 +984,8 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 
 	assert(pszSaveBackupfileName != NULL && pszSaveBackupfileName[0] != '\0');
 
+	destroyPQExpBuffer(escapeBuf);
+
 	return DirectFunctionCall1(textin, CStringGetDatum(pszSaveBackupfileName));
 }
 
@@ -1196,7 +1207,6 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 	len_name = strlen(pszBackupFileName);
 
 	PQExpBuffer escapeBuf = NULL;
-	PQExpBuffer aclNameBuf = NULL;
 	pszDBName = NULL;
 	pszUserName = NULL;
 	if (MyProcPort != NULL)
@@ -1209,8 +1219,12 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 		pszDBName = "";
 	else
 	{
+		/*
+		 * pszDBName will be pointing to the data portion of the PQExpBuffer
+		 * once escpaped (escapeBuf->data), so we can't safely destroy the
+		 * escapeBuf buffer until the end of the function.
+		 */
 		escapeBuf = createPQExpBuffer();
-		aclNameBuf = createPQExpBuffer();
 		pszDBName = shellEscape(pszDBName, escapeBuf, true);
 	}
 
@@ -1435,7 +1449,6 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 	assert(pszBackupFileName != NULL && pszBackupFileName[0] != '\0');
 
 	destroyPQExpBuffer(escapeBuf);
-	destroyPQExpBuffer(aclNameBuf);
 
 	return DirectFunctionCall1(textin, CStringGetDatum(pszBackupFileName));
 }

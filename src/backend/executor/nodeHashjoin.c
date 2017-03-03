@@ -27,12 +27,11 @@
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"			/* work_mem */
 
-#define EMPTY_WORKFILE_NAME "empty_workfile"
-
 static TupleTableSlot *ExecHashJoinOuterGetTuple(PlanState *outerNode,
 						  HashJoinState *hjstate,
 						  uint32 *hashvalue);
-static TupleTableSlot *ExecHashJoinGetSavedTuple(HashJoinBatchSide *side,
+static TupleTableSlot *ExecHashJoinGetSavedTuple(HashJoinState *hjstate,
+						  HashJoinBatchSide *side,
 						  uint32 *hashvalue,
 						  TupleTableSlot *tupleSlot);
 static int	ExecHashJoinNewBatch(HashJoinState *hjstate);
@@ -110,6 +109,8 @@ ExecHashJoin(HashJoinState *node)
 		 *
 		 * So now prefetch_inner is set (see createplan.c) if we have *any* motion
 		 * below us. If we don't have any motion, it doesn't matter.
+		 *
+		 * See motion_sanity_walker() for details on how a deadlock may occur.
 		 */
 		if (!node->prefetch_inner)
 		{
@@ -218,10 +219,9 @@ ExecHashJoin(HashJoinState *node)
 			 */
 			ExecSquelchNode(outerNode);
 			/* end of join */
-			if (gp_eager_hashtable_release)
-			{
-				ExecEagerFreeHashJoin(node);
-			}
+
+			ExecEagerFreeHashJoin(node);
+
 			return NULL;
 		}
 
@@ -248,10 +248,9 @@ ExecHashJoin(HashJoinState *node)
 			 */
 			ExecSquelchNode(outerNode);
 			/* end of join */
-			if (gp_eager_hashtable_release)
-			{
-				ExecEagerFreeHashJoin(node);
-			}
+
+			ExecEagerFreeHashJoin(node);
+
 			return NULL;
 		}
 
@@ -282,10 +281,9 @@ ExecHashJoin(HashJoinState *node)
 			if (TupIsNull(outerTupleSlot))
 			{
 				/* end of join */
-				if (gp_eager_hashtable_release)
-				{
-					ExecEagerFreeHashJoin(node);
-				}
+
+				ExecEagerFreeHashJoin(node);
+
 				return NULL;
 			}
 
@@ -354,8 +352,8 @@ ExecHashJoin(HashJoinState *node)
 			 * we've got a match, but still need to test non-hashed quals
 			 */
 			inntuple = ExecStoreMinimalTuple(HJTUPLE_MINTUPLE(curtuple),
-										 node->hj_HashTupleSlot,
-										 false);	/* don't pfree */
+											 node->hj_HashTupleSlot,
+											 false);	/* don't pfree */
 			econtext->ecxt_innertuple = inntuple;
 
 			/* reset temp memory each time to avoid leaks from qual expr */
@@ -369,7 +367,7 @@ ExecHashJoin(HashJoinState *node)
 			 * Only the joinquals determine MatchedOuter status, but all quals
 			 * must pass to actually return the tuple.
 			 */
-			if (joinqual == NIL || ExecQual(joinqual, econtext, false /* resultForNull */))
+			if (joinqual == NIL || ExecQual(joinqual, econtext, false))
 			{
 				node->hj_MatchedOuter = true;
 
@@ -782,7 +780,8 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 		if (QueryFinishPending)
 			return NULL;
 
-		slot = ExecHashJoinGetSavedTuple(&hashtable->batches[curbatch]->outerside,
+		slot = ExecHashJoinGetSavedTuple(hjstate,
+										 &hashtable->batches[curbatch]->outerside,
 										 hashvalue,
 										 hjstate->hj_OuterTupleSlot);
 		if (!TupIsNull(slot))
@@ -929,7 +928,8 @@ start_over:
 			if (QueryFinishPending)
 				return nbatch;
 
-			slot = ExecHashJoinGetSavedTuple(&batch->innerside,
+			slot = ExecHashJoinGetSavedTuple(hjstate,
+											 &batch->innerside,
 											 &hashvalue,
 											 hjstate->hj_HashTupleSlot);
 			if (!slot)
@@ -945,8 +945,7 @@ start_over:
 
 		/*
 		 * after we build the hash table, the inner batch file is no longer
-		 * needed.
-		 *
+		 * needed
 		 */
 		if (hjstate->js.ps.instrument)
 		{
@@ -954,6 +953,9 @@ start_over:
 			hashtable->stats->batchstats[curbatch].innerfilesize =
 				ExecWorkFile_Tell64(hashtable->batches[curbatch]->innerside.workfile);
 		}
+
+		SIMPLE_FAULT_INJECTOR(WorkfileHashJoinFailure);
+
 		workfile_mgr_close_file(hashtable->work_set, batch->innerside.workfile);
 		batch->innerside.workfile = NULL;
 	}
@@ -971,8 +973,9 @@ start_over:
 
 	if (!result)
 	{
-		ereport(ERROR, (errcode_for_file_access(),
-						errmsg("could not access temporary file")));
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("could not access temporary file")));
 	}
 
 	return curbatch;
@@ -1065,7 +1068,8 @@ ExecHashJoinSaveTuple(PlanState *ps, MemTuple tuple, uint32 hashvalue,
  * itself is stored in the given slot.
  */
 static TupleTableSlot *
-ExecHashJoinGetSavedTuple(HashJoinBatchSide *batchside,
+ExecHashJoinGetSavedTuple(HashJoinState *hjstate,
+						  HashJoinBatchSide *batchside,
 						  uint32 *hashvalue,
 						  TupleTableSlot *tupleSlot)
 {
@@ -1182,8 +1186,6 @@ ExecReScanHashJoin(HashJoinState *node, ExprContext *exprCtxt)
 static void
 ReleaseHashTable(HashJoinState *node)
 {
-	Assert(gp_eager_hashtable_release);
-
 	if (node->hj_HashTable)
 	{
 		HashState  *hashState = (HashState *) innerPlanState(node);

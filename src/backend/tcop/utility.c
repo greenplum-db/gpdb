@@ -34,6 +34,7 @@
 #include "commands/defrem.h"
 #include "commands/discard.h"
 #include "commands/explain.h"
+#include "commands/extension.h"
 #include "commands/extprotocolcmds.h"
 #include "commands/filespace.h"
 #include "commands/lockcmds.h"
@@ -51,7 +52,6 @@
 #include "commands/vacuum.h"
 #include "commands/view.h"
 #include "miscadmin.h"
-#include "optimizer/planmain.h"
 #include "parser/parse_utilcmd.h"
 #include "postmaster/bgwriter.h"
 #include "rewrite/rewriteDefine.h"
@@ -62,7 +62,6 @@
 #include "utils/acl.h"
 #include "utils/guc.h"
 #include "utils/syscache.h"
-#include "lib/stringinfo.h"
 
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbpartition.h"
@@ -336,19 +335,19 @@ CheckRelationOwnership(RangeVar *rel, bool noCatalogs)
  * Note: currently no need to support Query nodes here
  */
 bool
-CommandIsReadOnly(Node *node)
+CommandIsReadOnly(Node *parsetree)
 {
-	if (IsA(node, PlannedStmt))
+	if (IsA(parsetree, PlannedStmt))
 	{
-		PlannedStmt *stmt = (PlannedStmt *) node;
+		PlannedStmt *stmt = (PlannedStmt *) parsetree;
 
 		switch (stmt->commandType)
 		{
 			case CMD_SELECT:
 				if (stmt->intoClause != NULL)
-					return false;	/* SELECT INTO */
+					return false;		/* SELECT INTO */
 				else if (stmt->rowMarks != NIL)
-					return false;	/* SELECT FOR UPDATE/SHARE */
+					return false;		/* SELECT FOR UPDATE/SHARE */
 				else
 					return true;
 			case CMD_UPDATE:
@@ -448,6 +447,9 @@ check_xact_readonly(Node *parsetree)
 		case T_CreateQueueStmt:
 		case T_CreateRoleStmt:
 		case T_IndexStmt:
+		case T_CreateExtensionStmt:
+		case T_AlterExtensionStmt:
+		case T_AlterExtensionContentsStmt:
 		case T_CreatePLangStmt:
 		case T_CreateOpClassStmt:
 		case T_CreateOpFamilyStmt:
@@ -605,7 +607,6 @@ ProcessDropStatement(DropStmt *stmt)
 				RemoveExtProtocol(names, stmt->behavior, stmt->missing_ok);
 				break;
 
-
 			case OBJECT_TSPARSER:
 				/*
 				 * RemoveTSParser does its own permission checks
@@ -632,6 +633,13 @@ ProcessDropStatement(DropStmt *stmt)
 				 * RemoveTSConfiguration does its own permission checks
 				 */
 				RemoveTSConfiguration(names, stmt->behavior, stmt->missing_ok);
+				break;
+
+			case OBJECT_EXTENSION:
+				/*
+				 * RemoveExtension does its own permissions checks
+				 */
+				RemoveExtension(names, stmt->behavior, stmt->missing_ok);
 				break;
 
 			default:
@@ -970,16 +978,16 @@ ProcessUtility(Node *parsetree,
 
 						if (relKind != RELKIND_COMPOSITE_TYPE)
 						{
-							AlterTableCreateToastTableWithOid(relOid,
-															  cstmt->is_part_child);
-							AlterTableCreateAoSegTableWithOid(relOid,
-															  cstmt->is_part_child);
+							AlterTableCreateToastTable(relOid,
+													   cstmt->is_part_child);
+							AlterTableCreateAoSegTable(relOid,
+													   cstmt->is_part_child);
 
 							if (cstmt->buildAoBlkdir)
 								AlterTableCreateAoBlkdirTable(relOid, cstmt->is_part_child);
 
-							AlterTableCreateAoVisimapTableWithOid(relOid,
-																  cstmt->is_part_child);
+							AlterTableCreateAoVisimapTable(relOid,
+														   cstmt->is_part_child);
 						}
 
 						if (Gp_role == GP_ROLE_DISPATCH)
@@ -1019,11 +1027,41 @@ ProcessUtility(Node *parsetree,
 
 		case T_CreateExternalStmt:
 			{
-				CreateExternalStmt *stmt = (CreateExternalStmt *) parsetree;
+				List *stmts;
+				ListCell   *l;
 
 				/* Run parse analysis ... */
-				stmt = transformCreateExternalStmt(stmt, queryString);
-				DefineExternalRelation(stmt);
+				/*
+				 * GPDB: Only do parse analysis in the Query Dispatcher. The Executor
+				 * nodes receive an already-transformed statement from the QD. We only
+				 * want to process the main CreateExternalStmt here, other such
+				 * statements that would be created from the main
+				 * CreateExternalStmt by parse analysis. The QD will dispatch
+				 * those other statements separately.
+				 */
+				if (Gp_role == GP_ROLE_EXECUTE)
+					stmts = list_make1(parsetree);
+				else
+					stmts = transformCreateExternalStmt((CreateExternalStmt *) parsetree, queryString);
+
+				/* ... and do it */
+				foreach(l, stmts)
+				{
+					Node	   *stmt = (Node *) lfirst(l);
+
+					if (IsA(stmt, CreateExternalStmt))
+						DefineExternalRelation((CreateExternalStmt *) stmt);
+					else
+					{
+						/* Recurse for anything else */
+						ProcessUtility(stmt,
+									   queryString,
+									   params,
+									   false,
+									   None_Receiver,
+									   NULL);
+					}
+				}
 			}
 			break;
 
@@ -1109,7 +1147,6 @@ ProcessUtility(Node *parsetree,
 			CheckRestrictedOperation("DEALLOCATE");
 			DeallocateQuery((DeallocateStmt *) parsetree);
 			break;
-
 
 			/*
 			 * schema
@@ -1345,6 +1382,18 @@ ProcessUtility(Node *parsetree,
 			}
 			break;
 		}
+
+		case T_CreateExtensionStmt:
+			CreateExtension((CreateExtensionStmt *) parsetree);
+			break;
+
+		case T_AlterExtensionStmt:
+			ExecAlterExtensionStmt((AlterExtensionStmt *) parsetree);
+			break;
+
+		case T_AlterExtensionContentsStmt:
+			ExecAlterExtensionContentsStmt((AlterExtensionContentsStmt *) parsetree);
+			break;
 
 		case T_RuleStmt:		/* CREATE RULE */
 			DefineRule((RuleStmt *) parsetree, queryString);
@@ -1662,7 +1711,7 @@ ProcessUtility(Node *parsetree,
 			break;
 
 			/*
-			 * ********************* RESOOURCE QUEUE statements ****
+			 * ********************* RESOURCE QUEUE statements ****
 			 */
 		case T_CreateQueueStmt:
 
@@ -2109,6 +2158,9 @@ CreateCommandTag(Node *parsetree)
 				case OBJECT_TSCONFIGURATION:
 					tag = "DROP TEXT SEARCH CONFIGURATION";
 					break;
+				case OBJECT_EXTENSION:
+					tag = "DROP EXTENSION";
+					break;
 				default:
 					tag = "???";
 			}
@@ -2208,6 +2260,9 @@ CreateCommandTag(Node *parsetree)
 				case OBJECT_DOMAIN:
 					tag = "ALTER DOMAIN";
 					break;
+				case OBJECT_EXTENSION:
+					tag = "ALTER EXTENSION";
+					break;
 				case OBJECT_FUNCTION:
 					tag = "ALTER FUNCTION";
 					break;
@@ -2252,6 +2307,9 @@ CreateCommandTag(Node *parsetree)
 					break;
 				case OBJECT_DOMAIN:
 					tag = "ALTER DOMAIN";
+					break;
+				case OBJECT_EXTENSION:
+					tag = "ALTER EXTENSION";
 					break;
 				case OBJECT_FUNCTION:
 					tag = "ALTER FUNCTION";
@@ -2388,6 +2446,18 @@ CreateCommandTag(Node *parsetree)
 
 		case T_IndexStmt:
 			tag = "CREATE INDEX";
+			break;
+
+		case T_CreateExtensionStmt:
+			tag = "CREATE EXTENSION";
+			break;
+
+		case T_AlterExtensionStmt:
+			tag = "ALTER EXTENSION";
+			break;
+
+		case T_AlterExtensionContentsStmt:
+			tag = "ALTER EXTENSION";
 			break;
 
 		case T_RuleStmt:
@@ -2645,12 +2715,13 @@ CreateCommandTag(Node *parsetree)
 					tag = "DEALLOCATE";
 			}
 			break;
-		
-		case T_Query: /* used to be function CreateQueryTag */
+
+			/* already-planned queries */
+		case T_PlannedStmt:
 			{
-				Query *query = (Query*)parsetree;
-				
-				switch (query->commandType)
+				PlannedStmt *stmt = (PlannedStmt *) parsetree;
+
+				switch (stmt->commandType)
 				{
 					case CMD_SELECT:
 
@@ -2659,11 +2730,60 @@ CreateCommandTag(Node *parsetree)
 						 * will be useful for complaints about read-only
 						 * statements
 						 */
-						if (query->intoClause != NULL)
-							tag = "SELECT INTO";
-						else if (query->rowMarks != NIL)
+						if (stmt->utilityStmt != NULL)
 						{
-							if (((RowMarkClause *) linitial(query->rowMarks))->forUpdate)
+							Assert(IsA(stmt->utilityStmt, DeclareCursorStmt));
+							tag = "DECLARE CURSOR";
+						}
+						else if (stmt->intoClause != NULL)
+							tag = "SELECT INTO";
+						else if (stmt->rowMarks != NIL)
+						{
+							if (((RowMarkClause *) linitial(stmt->rowMarks))->forUpdate)
+								tag = "SELECT FOR UPDATE";
+							else
+								tag = "SELECT FOR SHARE";
+						}
+						else
+							tag = "SELECT";
+						break;
+					case CMD_UPDATE:
+						tag = "UPDATE";
+						break;
+					case CMD_INSERT:
+						tag = "INSERT";
+						break;
+					case CMD_DELETE:
+						tag = "DELETE";
+						break;
+					default:
+						elog(WARNING, "unrecognized commandType: %d",
+							 (int) stmt->commandType);
+						tag = "???";
+						break;
+				}
+			}
+			break;
+
+			/* parsed-and-rewritten-but-not-planned queries */
+		case T_Query:
+			{
+				Query	   *stmt = (Query *) parsetree;
+
+				switch (stmt->commandType)
+				{
+					case CMD_SELECT:
+
+						/*
+						 * We take a little extra care here so that the result
+						 * will be useful for complaints about read-only
+						 * statements
+						 */
+						if (stmt->intoClause != NULL)
+							tag = "SELECT INTO";
+						else if (stmt->rowMarks != NIL)
+						{
+							if (((RowMarkClause *) linitial(stmt->rowMarks))->forUpdate)
 								tag = "SELECT FOR UPDATE";
 							else
 								tag = "SELECT FOR SHARE";
@@ -2681,11 +2801,11 @@ CreateCommandTag(Node *parsetree)
 						tag = "DELETE";
 						break;
 					case CMD_UTILITY:
-						tag = CreateCommandTag(query->utilityStmt);
+						tag = CreateCommandTag(stmt->utilityStmt);
 						break;
 					default:
 						elog(WARNING, "unrecognized commandType: %d",
-							 (int) query->commandType);
+							 (int) stmt->commandType);
 						tag = "???";
 						break;
 				}
@@ -2697,9 +2817,9 @@ CreateCommandTag(Node *parsetree)
 			break;
 
 		default:
-			Assert(false);
 			elog(WARNING, "unrecognized node type: %d",
 				 (int) nodeTag(parsetree));
+			Assert(false);
 			tag = "???";
 			break;
 	}
@@ -2850,6 +2970,12 @@ GetCommandLogLevel(Node *parsetree)
 			break;
 
 		case T_IndexStmt:
+			lev = LOGSTMT_DDL;
+			break;
+
+		case T_CreateExtensionStmt:
+		case T_AlterExtensionStmt:
+		case T_AlterExtensionContentsStmt:
 			lev = LOGSTMT_DDL;
 			break;
 

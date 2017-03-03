@@ -490,7 +490,7 @@ INSERT 0 99
             ]]></pre>
         <trigger><![CDATA[
 vacuum full pg_attribute;
-ERROR:  fault triggered, fault name:'repair_frag_end' fault type:'error' (faultinjector.c:xxx)
+ERROR:  fault triggered, fault name:'repair_frag_end' fault type:'error'
         ]]></trigger>
         <post><![CDATA[
 select count(*) from vacuum_full_large_partition_heap;

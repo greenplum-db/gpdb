@@ -1,7 +1,0 @@
--- @Description Tests that it is possible to delete and update
--- an append-only table that have no index on them.
--- 
-
-UPDATE foo SET b=2 WHERE a = 1;
-DELETE FROM foo WHERE a = 1;
-SELECT a FROM foo;

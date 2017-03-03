@@ -585,6 +585,11 @@ group by rollup (a,b)
 order by 1,2;
 --end_equiv
 
+-- Test join between a partitioned table and non-partitioned table (MPP-20083)
+SELECT COUNT(*) 
+FROM r6756 as r, s6756 as c, s6756 as d, s6756 as e
+WHERE r.a = c.c AND r.a = d.d AND r.a = e.e;
+
 drop table r6756 cascade; --ignore
 drop table s6756 cascade; --ignore
 

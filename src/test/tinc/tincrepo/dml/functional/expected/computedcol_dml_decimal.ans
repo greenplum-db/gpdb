@@ -1,0 +1,45 @@
+DROP TABLE IF EXISTS computedcol_dml_decimal;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/computedcol_dml_decimal_opt.sql:14: NOTICE:  table "computedcol_dml_decimal" does not exist, skipping
+DROP TABLE
+CREATE TABLE computedcol_dml_decimal
+(
+    col1 decimal DEFAULT 1.00,
+    col2 decimal,
+    col3 char,
+    col4 decimal,
+    col5 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY RANGE(col2)(partition partone start(1.00) end(10.00)  WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start(10.00) end(20.00) WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start(20.00) end(30.00), default partition def);
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/computedcol_dml_decimal_opt.sql:24: NOTICE:  CREATE TABLE will create partition "computedcol_dml_decimal_1_prt_def" for table "computedcol_dml_decimal"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/computedcol_dml_decimal_opt.sql:24: NOTICE:  CREATE TABLE will create partition "computedcol_dml_decimal_1_prt_partone" for table "computedcol_dml_decimal"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/computedcol_dml_decimal_opt.sql:24: NOTICE:  CREATE TABLE will create partition "computedcol_dml_decimal_1_prt_parttwo" for table "computedcol_dml_decimal"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/computedcol_dml_decimal_opt.sql:24: NOTICE:  CREATE TABLE will create partition "computedcol_dml_decimal_1_prt_partthree" for table "computedcol_dml_decimal"
+CREATE TABLE
+INSERT INTO computedcol_dml_decimal(col2,col1,col3,col5,col4) SELECT 2.00::decimal+1.00::decimal, 2.00::decimal+1.00::decimal, 'a', 1,2.00::decimal+1.00::decimal;
+INSERT 0 1
+INSERT INTO computedcol_dml_decimal(col2,col3,col5,col4) SELECT 2.00::decimal+1.00::decimal,'a', 1,2.00::decimal+1.00::decimal; 
+INSERT 0 1
+SELECT * FROM computedcol_dml_decimal ORDER BY 1,2,3,4;
+ col1 | col2 | col3 | col4 | col5 
+------+------+------+------+------
+ 1.00 | 3.00 | a    | 3.00 |    1
+ 3.00 | 3.00 | a    | 3.00 |    1
+(2 rows)
+
+UPDATE computedcol_dml_decimal SET col1=2.00::decimal+1.00::decimal;
+UPDATE 2
+SELECT * FROM computedcol_dml_decimal ORDER BY 1,2,3,4;
+ col1 | col2 | col3 | col4 | col5 
+------+------+------+------+------
+ 3.00 | 3.00 | a    | 3.00 |    1
+ 3.00 | 3.00 | a    | 3.00 |    1
+(2 rows)
+
+DELETE FROM computedcol_dml_decimal WHERE col1=1.00::decimal + 2.00::decimal;
+DELETE 2
+SELECT * FROM computedcol_dml_decimal ORDER BY 1,2,3,4;
+ col1 | col2 | col3 | col4 | col5 
+------+------+------+------+------
+(0 rows)
+

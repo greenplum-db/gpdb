@@ -163,6 +163,19 @@ CREATE VIEW pg_cursors AS
          (name text, statement text, is_holdable boolean, is_binary boolean,
           is_scrollable boolean, creation_time timestamptz);
 
+CREATE VIEW pg_available_extensions AS
+    SELECT E.name, E.default_version, X.extversion AS installed_version,
+           E.comment
+      FROM pg_available_extensions() AS E
+           LEFT JOIN pg_extension AS X ON E.name = X.extname;
+
+CREATE VIEW pg_available_extension_versions AS
+    SELECT E.name, E.version, (X.extname IS NOT NULL) AS installed,
+           E.superuser, E.relocatable, E.schema, E.requires, E.comment
+      FROM pg_available_extension_versions() AS E
+           LEFT JOIN pg_extension AS X
+             ON E.name = X.extname AND E.version = X.extversion;
+
 CREATE VIEW pg_prepared_xacts AS
     SELECT P.transaction, P.gid, P.prepared,
            U.rolname AS owner, D.datname AS database
@@ -363,7 +376,10 @@ CREATE VIEW pg_stat_activity AS
             S.client_port,
             S.application_name,
             S.xact_start,
-            S.waiting_reason
+            S.waiting_reason,
+            S.rsgid,
+            S.rsgname,
+            S.rsgqueueduration
     FROM pg_database D, pg_stat_get_activity(NULL) AS S, pg_authid U
     WHERE S.datid = D.oid AND 
             S.usesysid = U.oid;

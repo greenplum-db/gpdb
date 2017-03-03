@@ -30,7 +30,7 @@
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
-#include "utils/gp_atomic.h"
+#include "port/atomics.h"
 
 #ifndef _WIN32
 #define mythread() ((unsigned long) pthread_self())
@@ -159,7 +159,8 @@ DispatcherInternalFuncs DispatcherSyncFuncs =
 	cdbdisp_shouldCancel,
 	cdbdisp_makeDispatchThreads,
 	CdbCheckDispatchResult_internal,
-	cdbdisp_dispatchToGang_internal
+	cdbdisp_dispatchToGang_internal,
+	NULL
 };
 
 /*
@@ -777,7 +778,7 @@ dispatchCommand(CdbDispatchResult * dispatchResult,
 	/*
 	 * Submit the command asynchronously.
 	 */
-	if (PQsendGpQuery_shared(dispatchResult->segdbDesc->conn, (char *) query_text, query_text_len) == 0)
+	if (PQsendGpQuery_shared(dispatchResult->segdbDesc->conn, (char *) query_text, query_text_len, false) == 0)
 		return false;
 
 	if (DEBUG1 >= log_min_messages)

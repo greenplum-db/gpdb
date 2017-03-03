@@ -39,6 +39,19 @@
 
 /* ----------------------------------------------------------------
  *		MultiExecBitmapIndexScan(node)
+ *
+ *		If IndexScanState's iss_NumArrayKeys = 0, then BitmapIndexScan
+ *		node returns a StreamBitmap that stores all the interesting rows.
+ *		The returning StreamBitmap will point to an IndexStream that contains
+ *		pointers to functions for handling the output.
+ *
+ *		If IndexScanState's iss_NumArrayKeys > 0 (e.g., WHERE clause contains
+ *		`d in (0,1)` condition and a bitmap index has been created on column d),
+ *		then iss_NumArrayKeys StreamBitmaps will be created, where every bitmap
+ *		points to an individual IndexStream. BitmapIndexScan node
+ *		returns a StreamBitmap that ORs all the above StreamBitmaps. Also, the
+ *		returning StreamBitmap will point to an OpStream of type BMS_OR whose input
+ *		streams are the IndexStreams created for every array key.
  * ----------------------------------------------------------------
  */
 Node *

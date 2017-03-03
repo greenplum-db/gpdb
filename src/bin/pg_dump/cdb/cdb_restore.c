@@ -318,50 +318,25 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 	int			i;
 
 	struct option cmdopts[] = {
-		/*{"clean", 0, NULL, 'c'}, */
-		/* {"create", 0, NULL, 'C'}, */
 		{"data-only", 0, NULL, 'a'},
 		{"post-data-schema-only", 0, NULL, 'P'},
 		{"dbname", 1, NULL, 'd'},
-		/*{"file", 1, NULL, 'f'},
-		{"format", 1, NULL, 'F'},*/
-		//{"function", 1, NULL, 'P'},
 		{"host", 1, NULL, 'h'},
 		{"ignore-version", 0, NULL, 'i'},
-		/* {"index", 1, NULL, 'I'}, */
-		/* {"list", 0, NULL, 'l'}, */
-		/* {"no-privileges", 0, NULL, 'x'}, */
 		{"no-acl", 0, NULL, 'x'},
-		/* {"no-owner", 0, NULL, 'O'}, */
 		{"no-reconnect", 0, NULL, 'R'},
 		{"port", 1, NULL, 'p'},
-		/* {"oid-order", 0, NULL, 'o'}, */
-		/* {"orig-order", 0, NULL, 'N'}, */
 		{"password", 0, NULL, 'W'},
-		/* {"rearrange", 0, NULL, 'r'}, */
 		{"schema-only", 0, NULL, 's'},
-		/* {"superuser", 1, NULL, 'S'}, */
-		/* {"table", 1, NULL, 't'}, */
-		/* {"trigger", 1, NULL, 'T'}, */
-		/* {"use-list", 1, NULL, 'L'}, */
 		{"username", 1, NULL, 'U'},
 		{"verbose", 0, NULL, 'v'},
-
-		/*
-		 * the following options don't have an equivalent short option letter,
-		 * but are available as '-X long-name'
-		 */
-		//{"use-set-session-authorization", no_argument, &use_setsessauth, 1},
-		//{"disable-triggers", no_argument, &disable_triggers, 1},
 
 		/*
 		 * the following are Greenplum Database specific, and don't have an equivalent short option
 		 */
 		{"gp-c", no_argument, NULL, 1},
-		/* {"gp-cf", required_argument, NULL, 2}, */
 		{"gp-d", required_argument, NULL, 3},
 		{"gp-i", no_argument, NULL, 4},
-		/* {"gp-hdb", required_argument, NULL, 5}, */
 		{"gp-k", required_argument, NULL, 6},
 		{"gp-r", required_argument, NULL, 7},
 		{"gp-s", required_argument, NULL, 8},
@@ -462,7 +437,7 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 			strcat(pInputOpts->pszCmdLineParms, argv[i]);
 	}
 
-	while ((c = getopt_long(argc, argv, "aPcd:h:ip:RsuU:vwW",
+	while ((c = getopt_long(argc, argv, "aPd:h:ip:RsuU:vwW",
 							cmdopts, NULL)) != -1)
 	{
 		switch (c)
@@ -476,34 +451,11 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 				opts->postdataSchemaRestore = 1;
 				postdataSchemaRestore = true;
 				break;
-/*			case 'c':		*/	/* clean (i.e., drop) schema prior to create */
-/*				opts->dropSchema = 1;
-				pInputOpts->pszPassThroughParms = addPassThroughParm(c, NULL, pInputOpts->pszPassThroughParms);
-				break;
-*/
-/*			case 'C':
-				opts->create = 1;
-				pInputOpts->pszPassThroughParms = addPassThroughParm( c, NULL, pInputOpts->pszPassThroughParms );
-				break;
-									   */
 			case 'd':
 				opts->dbname = strdup(optarg);
 				pInputOpts->pszDBName = Safe_strdup(opts->dbname);
 				pInputOpts->pszMasterDBName = Safe_strdup(opts->dbname);
 				break;
-/*			case 'f':			// output file name
-				opts->filename = strdup(optarg);
-				break;
-
-			case 'F':
-				if (strlen(optarg) != 0)
-				{
-					opts->formatName = strdup(optarg);
-					pInputOpts->pszPassThroughParms = addPassThroughParm( c, optarg, pInputOpts->pszPassThroughParms );
-				}
-
-				break;
-*/
 			case 'h':
 				if (strlen(optarg) != 0)
 				{
@@ -515,77 +467,21 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 			case 'i':
 				/* obsolete option */
 				break;
-
-				/* case 'l':		  // * Dump the TOC summary * */
-/*				opts->tocSummary = 1; */
-/*				pInputOpts->pszPassThroughParms = addPassThroughParm( c, NULL, pInputOpts->pszPassThroughParms ); */
-/*				break; */
-
-				/* case 'L':		  // * input TOC summary file name * */
-/*				opts->tocFile = strdup(optarg); */
-/*				break; */
-
-/*			case 'N':
-				opts->origOrder = 1;
-				pInputOpts->pszPassThroughParms = addPassThroughParm( c, NULL, pInputOpts->pszPassThroughParms );
-				break;
-			case 'o':
-				opts->oidOrder = 1;
-				pInputOpts->pszPassThroughParms = addPassThroughParm( c, NULL, pInputOpts->pszPassThroughParms );
-				break;
-			case 'O':
-				opts->noOwner = 1;
-				pInputOpts->pszPassThroughParms = addPassThroughParm( c, NULL, pInputOpts->pszPassThroughParms );
-				break;
-									   */ case 'p':
+			case 'p':
 				if (strlen(optarg) != 0)
 				{
 					opts->pgport = strdup(optarg);
 					pInputOpts->pszPGPort = Safe_strdup(optarg);
 				}
 				break;
-/*			case 'r':
-				opts->rearrange = 1;
-				pInputOpts->pszPassThroughParms = addPassThroughParm( c, NULL, pInputOpts->pszPassThroughParms );
-				break;
-									   */ case 'R':
+			case 'R':
 				/* no-op, still accepted for backwards compatibility */
 				break;
-/*			case 'P':			// Function
-				opts->selTypes = 1;
-				opts->selFunction = 1;
-				opts->functionNames = strdup(optarg);
-				pInputOpts->pszPassThroughParms = addPassThroughParm( c, optarg, pInputOpts->pszPassThroughParms );
-				break;
-			case 'I':			// Index
-				opts->selTypes = 1;
-				opts->selIndex = 1;
-				opts->indexNames = strdup(optarg);
-				pInputOpts->pszPassThroughParms = addPassThroughParm( c, optarg, pInputOpts->pszPassThroughParms );
-				break;
-			case 'T':			// Trigger
-				opts->selTypes = 1;
-				opts->selTrigger = 1;
-				opts->triggerNames = strdup(optarg);
-				pInputOpts->pszPassThroughParms = addPassThroughParm( c, optarg, pInputOpts->pszPassThroughParms );
-				break;
-*/
 			case 's':		/* dump schema only */
 				opts->schemaOnly = 1;
 				schemaOnly = true;
 				pInputOpts->pszPassThroughParms = addPassThroughParm(c, NULL, pInputOpts->pszPassThroughParms);
 				break;
-/* 			case 'S':		  //  * Superuser username * */
-/*				if (strlen(optarg) != 0) */
-/*					opts->superuser = strdup(optarg); */
-/*				break; */
-/*			case 't':			// Dump data for this table only
-				opts->selTypes = 1;
-				opts->selTable = 1;
-				opts->tableNames = strdup(optarg);
-				pInputOpts->pszPassThroughParms = addPassThroughParm( c, optarg, pInputOpts->pszPassThroughParms );
-				break;
-*/
 			case 'u':
 				opts->promptPassword = TRI_YES;
 				opts->username = simple_prompt("User name: ", 100, true);
@@ -610,37 +506,6 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 				opts->promptPassword = TRI_YES;
 				break;
 
-/*			case 'x':			// skip ACL dump
-				opts->aclsSkip = 1;
-				pInputOpts->pszPassThroughParms = addPassThroughParm( c, NULL, pInputOpts->pszPassThroughParms );
-				break;
-
-			case 'X':
-				if (strcmp(optarg, "use-set-session-authorization") == 0)
-				 *								  *//* no-op, still allowed
-					for compatibility */ ;
-
-				/* else if (strcmp(optarg, "disable-triggers") == 0) */
-				/* disable_triggers = 1; */
-				/* else */
-				/* { */
-				/* fprintf(stderr, */
-				/* ("%s: invalid -X option -- %s\n"), */
-				/* progname , optarg); */
-
-				/*
-				 * fprintf(stderr, ("Try \"%s --help\" for more
-				 * information.\n"), progname );
-				 */
-				/* exit(1); */
-				/* } */
-
-				/*
-				 * pInputOpts->pszPassThroughParms = addPassThroughParm( c,
-				 * optarg, pInputOpts->pszPassThroughParms );
-				 */
-				/* break; */
-
 				/* This covers the long options equivalent to -X xxx. */
 			case 0:
 				break;
@@ -648,21 +513,6 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 			case 1:
 				/* gp-c remote compression program */
 				pInputOpts->pszCompressionProgram = "gunzip";	/* Safe_strdup(optarg); */
-				break;
-
-			case 2:
-				/* gp-cf control file */
-
-				/*
-				 * temporary disabled if ( bSawCDB_S_Option ) { Ignore gp_s
-				 * option
-				 *
-				 * mpp_err_msg(logInfo, progname, "ignoring the gp-s
-				 * option, since the gp-cf option is set.\n"); }
-				 *
-				 * if (!FillCDBSet(&pInputOpts->set, optarg)) exit(1);
-				 */
-
 				break;
 
 			case 3:
@@ -675,11 +525,6 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 				pInputOpts->bOnErrorStop = false;
 				break;
 
-			case 5:
-				/* gp-hdb master database name */
-				/* pInputOpts->pszMasterDBName = Safe_strdup(optarg); */
-				break;
-
 			case 6:
 				/* gp-k backup timestamp key */
 				pInputOpts->pszKey = Safe_strdup(optarg);
@@ -689,26 +534,6 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 				/* gp-r report directory */
 				pInputOpts->pszReportDirectory = Safe_strdup(optarg);
 				break;
-			case 8:
-				/* gp-s backup set specification */
-
-				/*
-				 * temporay disabled bSawCDB_S_Option = true; if (
-				 * pInputOpts->set.type == SET_INDIVIDUAL ) { Ignore this, as
-				 * we've already encountered an individual spec
-				 * mpp_err_msg(logInfo, progname, "ignoring the gp-s
-				 * option, since the gp-cf option is set.\n"); } else
-				 *
-				 *
-				 *
-				 * { if ( strcasecmp( optarg, "a") == 0 ) pInputOpts->set.type
-				 * = SET_ALL; else if ( strcasecmp( optarg, "t") == 0 )
-				 * pInputOpts->set.type = SET_SEGDBS_ONLY; else if (
-				 * strcasecmp( optarg, "h") == 0 ) pInputOpts->set.type =
-				 * SET_MASTER_ONLY; else { mpp_err_msg(logInfo, progname,
-				 * "invalid gp-s option %s.  Must be a, t, or h.\n", optarg);
-				 * exit(1); } } break;
-				 */
 			case 9:
 
 				/* gp-l backup file location */
@@ -1837,9 +1662,9 @@ addPassThroughLongParm(const char *Parm, const char *pszValue, char *pszPassThro
                         PQExpBuffer valueBuf = createPQExpBuffer();
 
                         if (bFirstTime)
-                                pszRtn = MakeString("--%s \"%s\"", Parm, shellEscape(pszValue, valueBuf));
+                                pszRtn = MakeString("--%s \"%s\"", Parm, shellEscape(pszValue, valueBuf, false, false));
                         else
-                                pszRtn = MakeString("%s --%s \"%s\"", pszPassThroughParmString, Parm, shellEscape(pszValue, valueBuf));
+                                pszRtn = MakeString("%s --%s \"%s\"", pszPassThroughParmString, Parm, shellEscape(pszValue, valueBuf, false, false));
 
                         destroyPQExpBuffer(valueBuf);
                 }

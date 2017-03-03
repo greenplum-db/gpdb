@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * pg_dump.c
+ * cdb_dump_agent.c
  *	  pg_dump is a utility for dumping out a postgres database
  *	  into a script file.
  *
@@ -224,6 +224,7 @@ static void dumpTSParser(Archive *fout, TSParserInfo *prsinfo);
 static void dumpTSDictionary(Archive *fout, TSDictInfo *dictinfo);
 static void dumpTSTemplate(Archive *fout, TSTemplateInfo *tmplinfo);
 static void dumpTSConfig(Archive *fout, TSConfigInfo *cfginfo);
+static void dumpExtension(Archive *fout, ExtensionInfo *extinfo);
 
 static void dumpACL(Archive *fout, CatalogId objCatId, DumpId objDumpId,
 		const char *type, const char *name,
@@ -277,6 +278,8 @@ static bool isGPDB5000OrLater(void);
 Archive *makeArchive(char *filename);
 void updateDDBoostArchive(ArchiveHandle *AH);
 char *formPostDumpFilePathName(char *pszBackupDirectory, char *pszBackupKey, int pszInstID, int pszSegID);
+static void dumpDatabaseConfig(const char *dbname, PQExpBuffer *buf);
+static void makeAlterConfigCommand(const char *arrayitem, const char *type, const char *name, PQExpBuffer *buf);
 
 /* MPP additions end */
 
@@ -739,7 +742,13 @@ main(int argc, char **argv)
 					exit(1);
 				}
 				include_everything = false;
-                		strcpy(tableFileName, optarg);
+				if (strlcpy(tableFileName, optarg, sizeof(tableFileName)) >= sizeof(tableFileName))
+				{
+					fprintf(stderr,
+							_("%s: invalid --table-file option, filename too long\n"),
+							progname);
+					exit(1);
+				}
 				break;
 			case 4: 			/*	--exclude-table-file */
 				if (!open_file_and_append_to_list(optarg, &table_exclude_patterns, "exclude tables list"))
@@ -827,7 +836,13 @@ main(int argc, char **argv)
 			exit(1);
 		}
 		include_everything = false;
-		strncpy(tableFileName, incrementalFilter, sizeof(tableFileName));
+		if (strlcpy(tableFileName, incrementalFilter, sizeof(tableFileName)) >= sizeof(tableFileName))
+		{
+			fprintf(stderr,
+					_("%s: invalid --incremental-filter option -- filename too long\n"),
+					progname);
+			exit(1);
+		}
 	}
 
 	if (optind < (argc - 1))
@@ -1829,7 +1844,7 @@ dumpDatabase(Archive *AH)
 {
 	PQExpBuffer dbQry = createPQExpBuffer();
 	PQExpBuffer delQry = createPQExpBuffer();
-	PQExpBuffer creaQry = createPQExpBuffer();
+	PQExpBuffer createQry = createPQExpBuffer();
 	PGresult   *res;
 	int			ntups;
 	int			i_tableoid,
@@ -1896,17 +1911,17 @@ dumpDatabase(Archive *AH)
 	encoding = PQgetvalue(res, 0, i_encoding);
 	tablespace = PQgetvalue(res, 0, i_tablespace);
 
-	appendPQExpBuffer(creaQry, "CREATE DATABASE %s WITH TEMPLATE = template0",
+	appendPQExpBuffer(createQry, "CREATE DATABASE %s WITH TEMPLATE = template0",
 					  fmtId(datname));
 	if (strlen(encoding) > 0)
 	{
-		appendPQExpBuffer(creaQry, " ENCODING = ");
-		appendStringLiteralAH(creaQry, encoding, AH);
+		appendPQExpBuffer(createQry, " ENCODING = ");
+		appendStringLiteralAH(createQry, encoding, AH);
 	}
 	if (strlen(tablespace) > 0 && strcmp(tablespace, "pg_default") != 0)
-		appendPQExpBuffer(creaQry, " TABLESPACE = %s",
+		appendPQExpBuffer(createQry, " TABLESPACE = %s",
 						  fmtId(tablespace));
-	appendPQExpBuffer(creaQry, ";\n");
+	appendPQExpBuffer(createQry, ";\n");
 
 	appendPQExpBuffer(delQry, "DROP DATABASE %s;\n",
 					  fmtId(datname));
@@ -1922,7 +1937,7 @@ dumpDatabase(Archive *AH)
 				 dba,			/* Owner */
 				 false,			/* with oids */
 				 "DATABASE",	/* Desc */
-				 creaQry->data, /* Create */
+				 createQry->data, /* Create */
 				 delQry->data,	/* Del */
 				 NULL,			/* Copy */
 				 NULL,			/* Deps */
@@ -1954,7 +1969,7 @@ dumpDatabase(Archive *AH)
 
 	destroyPQExpBuffer(dbQry);
 	destroyPQExpBuffer(delQry);
-	destroyPQExpBuffer(creaQry);
+	destroyPQExpBuffer(createQry);
 }
 
 
@@ -2541,7 +2556,11 @@ dumpDumpableObject(Archive *fout, DumpableObject *dobj)
 	{
 		case DO_NAMESPACE:
 			if (!postDataSchemaOnly)
-			dumpNamespace(fout, (NamespaceInfo *) dobj);
+				dumpNamespace(fout, (NamespaceInfo *) dobj);
+			break;
+		case DO_EXTENSION:
+			if (!postDataSchemaOnly)
+				dumpExtension(fout, (ExtensionInfo *) dobj);
 			break;
 		case DO_TYPE:
 			if (!postDataSchemaOnly)
@@ -2653,6 +2672,14 @@ dumpDumpableObject(Archive *fout, DumpableObject *dobj)
 						 NULL, 0,
 						 dumpBlobComments, NULL);
 			break;
+		/*
+		 * The TYPE_CACHE object is only used for the pg_type cache during
+		 * binary_upgrade operation and should not be dumped. To keep the
+		 * compilers and static analyzers happy we still need to handle
+		 * the case though.
+		 */
+		case DO_TYPE_CACHE:
+			break;
 	}
 }
 
@@ -2707,6 +2734,55 @@ dumpNamespace(Archive *fout, NamespaceInfo *nspinfo)
 
 	destroyPQExpBuffer(q);
 	destroyPQExpBuffer(delq);
+}
+
+/*
+ * dumpExtension
+ *	  writes out to fout the queries to recreate an extension
+ */
+static void
+dumpExtension(Archive *fout, ExtensionInfo *extinfo)
+{
+	PQExpBuffer q;
+	PQExpBuffer delq;
+	PQExpBuffer labelq;
+	char	   *qextname;
+
+	/* Skip if not to be dumped */
+	if (!extinfo->dobj.dump || dataOnly)
+		return;
+
+	q = createPQExpBuffer();
+	delq = createPQExpBuffer();
+	labelq = createPQExpBuffer();
+
+	qextname = strdup(fmtId(extinfo->dobj.name));
+
+	appendPQExpBuffer(delq, "DROP EXTENSION %s;\n", qextname);
+	appendPQExpBuffer(q, "CREATE EXTENSION IF NOT EXISTS %s WITH SCHEMA %s;\n",
+					  qextname, fmtId(extinfo->namespace));
+
+	appendPQExpBuffer(labelq, "EXTENSION %s", qextname);
+
+	ArchiveEntry(fout, extinfo->dobj.catId, extinfo->dobj.dumpId,
+				 extinfo->dobj.name,
+				 NULL, NULL,
+				 "",
+				 false, "EXTENSION",
+				 q->data, delq->data, NULL,
+				 extinfo->dobj.dependencies, extinfo->dobj.nDeps,
+				 NULL, NULL);
+
+	/* Dump Extension Comments and Security Labels */
+	dumpComment(fout, labelq->data,
+				NULL, "",
+				extinfo->dobj.catId, 0, extinfo->dobj.dumpId);
+
+	free(qextname);
+
+	destroyPQExpBuffer(q);
+	destroyPQExpBuffer(delq);
+	destroyPQExpBuffer(labelq);
 }
 
 /*
@@ -3250,7 +3326,7 @@ dumpProcLang(Archive *fout, ProcLangInfo *plang)
 	FuncInfo   *inlineInfo = NULL;
 	FuncInfo   *validatorInfo = NULL;
 
-	if (dataOnly)
+	if (!plang->dobj.dump ||dataOnly)
 		return;
 
 	/*
@@ -3315,7 +3391,7 @@ dumpProcLang(Archive *fout, ProcLangInfo *plang)
 	{
 		appendPQExpBuffer(defqry, " HANDLER %s",
 						  fmtId(funcInfo->dobj.name));
-	
+
 		if (OidIsValid(plang->laninline))
 		{
 			appendPQExpBuffer(defqry, " INLINE ");
@@ -4036,7 +4112,7 @@ dumpCast(Archive *fout, CastInfo *cast)
 	TypeInfo   *sourceInfo;
 	TypeInfo   *targetInfo;
 
-	if (dataOnly)
+	if (!cast->dobj.dump || dataOnly)
 		return;
 
 	if (OidIsValid(cast->castfunc))
@@ -5945,7 +6021,8 @@ static void
 dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer delq)
 {
 		PGresult   *res;
-		char	   *locations;
+		char	   *urilocations;
+		char	   *execlocations;
 		char	   *location;
 		char	   *fmttype;
 		char	   *fmtopts;
@@ -5961,6 +6038,8 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		char	   *customfmt = NULL;
 		bool		isweb = false;
 		bool		iswritable = false;
+		char	   *options;
+		bool		gpdb5OrLater = isGPDB5000OrLater();
 
 		/*
 		 * DROP must be fully qualified in case same name appears in
@@ -5972,7 +6051,27 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 						  fmtId(tbinfo->dobj.name));
 
 		/* Now get required information from pg_exttable */
-		if (g_fout->remoteVersion >= 80214)
+		if (gpdb5OrLater)
+		{
+			appendPQExpBuffer(query,
+						  "SELECT x.urilocation, x.execlocation, x.fmttype, x.fmtopts, x.command, "
+								  "x.rejectlimit, x.rejectlimittype, "
+						      "(SELECT relname "
+						          "FROM pg_catalog.pg_class "
+								  "WHERE Oid=x.fmterrtbl) AS errtblname, "
+								  "x.fmterrtbl = x.reloid AS errortofile , "
+								  "pg_catalog.pg_encoding_to_char(x.encoding), "
+								  "x.writable, "
+								  "array_to_string(ARRAY( "
+								  "SELECT pg_catalog.quote_ident(option_name) || ' ' || "
+								  "pg_catalog.quote_literal(option_value) "
+								  "FROM pg_options_to_table(x.options) "
+								  "ORDER BY option_name"
+								  "), E',\n    ') AS options "
+						  "FROM pg_catalog.pg_exttable x, pg_catalog.pg_class c "
+						  "WHERE x.reloid = c.oid AND c.oid = '%u'::oid ", tbinfo->dobj.catId.oid);
+		}
+		else if (g_fout->remoteVersion >= 80214)
 		{
 			appendPQExpBuffer(query,
 					   "SELECT x.location, x.fmttype, x.fmtopts, x.command, "
@@ -6031,19 +6130,38 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 
 		}
 
-		locations = PQgetvalue(res, 0, 0);
-		fmttype = PQgetvalue(res, 0, 1);
-		fmtopts = PQgetvalue(res, 0, 2);
-		command = PQgetvalue(res, 0, 3);
-		rejlim = PQgetvalue(res, 0, 4);
-		rejlimtype = PQgetvalue(res, 0, 5);
-		errnspname = PQgetvalue(res, 0, 6);
-		errtblname = PQgetvalue(res, 0, 7);
-		extencoding = PQgetvalue(res, 0, 8);
-		writable = PQgetvalue(res, 0, 9);
+
+		if (gpdb5OrLater)
+		{
+			urilocations = PQgetvalue(res, 0, 0);
+			execlocations = PQgetvalue(res, 0, 1);
+			fmttype = PQgetvalue(res, 0, 2);
+			fmtopts = PQgetvalue(res, 0, 3);
+			command = PQgetvalue(res, 0, 4);
+			rejlim = PQgetvalue(res, 0, 5);
+			rejlimtype = PQgetvalue(res, 0, 6);
+			errnspname = PQgetvalue(res, 0, 7);
+			errtblname = PQgetvalue(res, 0, 8);
+			extencoding = PQgetvalue(res, 0, 9);
+			writable = PQgetvalue(res, 0, 10);
+			options = PQgetvalue(res, 0, 11);
+		} else {
+			urilocations = PQgetvalue(res, 0, 0);
+			fmttype = PQgetvalue(res, 0, 1);
+			fmtopts = PQgetvalue(res, 0, 2);
+			command = PQgetvalue(res, 0, 3);
+			rejlim = PQgetvalue(res, 0, 4);
+			rejlimtype = PQgetvalue(res, 0, 5);
+			errnspname = PQgetvalue(res, 0, 6);
+			errtblname = PQgetvalue(res, 0, 7);
+			extencoding = PQgetvalue(res, 0, 8);
+			writable = PQgetvalue(res, 0, 9);
+			execlocations = "";
+			options = "";
+		}
 
 		if ((command && strlen(command) > 0) ||
-			(strncmp(locations + 1, "http", strlen("http")) == 0))
+			(strncmp(urilocations + 1, "http", strlen("http")) == 0))
 			isweb = true;
 
 		if (writable && writable[0] == 't')
@@ -6058,8 +6176,8 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		int j;
 		for (j = 0; j < tbinfo->numatts; j++)
 		{
-			/* Is this one of the table's own attrs, and not dropped ? */
-			if (tbinfo->attislocal[j] && !tbinfo->attisdropped[j])
+			/* Is the attribute not dropped? */
+			if (shouldPrintColumn(tbinfo, j))
 			{
 				/* Format properly if not first attr */
 				if (actual_atts > 0)
@@ -6080,14 +6198,33 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 
 		appendPQExpBuffer(q, "\n)");
 
+		PQExpBufferData tmpbuf;
+		initPQExpBuffer(&tmpbuf);
+
+		char	   *on_clause = gpdb5OrLater ? execlocations : urilocations;
+
+		/* remove curly braces */
+		on_clause[strlen(on_clause) - 1] = '\0';
+		on_clause++;
+
+		if (strncmp(on_clause, "HOST:", strlen("HOST:")) == 0)
+			appendPQExpBuffer(&tmpbuf, "ON HOST '%s' ", on_clause + strlen("HOST:"));
+		else if (strncmp(on_clause, "PER_HOST", strlen("PER_HOST")) == 0)
+			appendPQExpBuffer(&tmpbuf, "ON HOST ");
+		else if (strncmp(on_clause, "MASTER_ONLY", strlen("MASTER_ONLY")) == 0)
+			appendPQExpBuffer(&tmpbuf, "ON MASTER ");
+		else if (strncmp(on_clause, "SEGMENT_ID:", strlen("SEGMENT_ID:")) == 0)
+			appendPQExpBuffer(&tmpbuf, "ON SEGMENT %s ", on_clause + strlen("SEGMENT_ID:"));
+		else if (strncmp(on_clause, "TOTAL_SEGS:", strlen("TOTAL_SEGS:")) == 0)
+			appendPQExpBuffer(&tmpbuf, "ON %s ", on_clause + strlen("TOTAL_SEGS:"));
+		else if (strncmp(on_clause, "ALL_SEGMENTS", strlen("ALL_SEGMENTS")) == 0)
+			appendPQExpBuffer(&tmpbuf, "ON ALL ");
+		else
+			write_msg(NULL, "illegal ON clause catalog information \"%s\""
+					  "for command '%s'\n", on_clause, command);
+
 		if (command && strlen(command) > 0)
 		{
-			char	   *on_clause = locations;
-
-			/* remove curly braces */
-			on_clause[strlen(on_clause) - 1] = '\0';
-			on_clause++;
-
 			/* add EXECUTE clause */
 			tmpstring = escape_backslashes(command, true);
 			appendPQExpBuffer(q, " EXECUTE E'%s' ", tmpstring);
@@ -6097,77 +6234,86 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 			/* add ON clause (unless WRITABLE table, which doesn't allow ON) */
 			if (!iswritable)
 			{
-				if (strncmp(on_clause, "HOST:", strlen("HOST:")) == 0)
-					appendPQExpBuffer(q, "ON HOST '%s' ", on_clause + strlen("HOST:"));
-				else if (strncmp(on_clause, "PER_HOST", strlen("PER_HOST")) == 0)
-					appendPQExpBuffer(q, "ON HOST ");
-				else if (strncmp(on_clause, "MASTER_ONLY", strlen("MASTER_ONLY")) == 0)
-					appendPQExpBuffer(q, "ON MASTER ");
-				else if (strncmp(on_clause, "SEGMENT_ID:", strlen("SEGMENT_ID:")) == 0)
-					appendPQExpBuffer(q, "ON SEGMENT %s ", on_clause + strlen("SEGMENT_ID:"));
-				else if (strncmp(on_clause, "TOTAL_SEGS:", strlen("TOTAL_SEGS:")) == 0)
-					appendPQExpBuffer(q, "ON %s ", on_clause + strlen("TOTAL_SEGS:"));
-				else if (strncmp(on_clause, "ALL_SEGMENTS", strlen("ALL_SEGMENTS")) == 0)
-					appendPQExpBuffer(q, "ON ALL ");
-				else
-					write_msg(NULL, "illegal ON clause catalog information \"%s\""
-							  "for command '%s'\n", on_clause, command);
+				appendBinaryPQExpBuffer(q, tmpbuf.data, tmpbuf.len);
 			}
 			appendPQExpBuffer(q, "\n ");
 		}
 		else
 		{
-			/* add LOCATION clause */
-			locations[strlen(locations) - 1] = '\0';
-			locations++;
-			location = nextToken(&locations, ",");
-			appendPQExpBuffer(q, " LOCATION (\n    '%s'", location);
-			for (; (location = nextToken(&locations, ",")) != NULL;)
+			/* add LOCATION clause, remove '{"' and '"}' */
+
+			urilocations[strlen(urilocations) - 1] = '\0';
+			urilocations++;
+
+			/* the URI of custom protocol will contains \"\" and need to be removed */
+
+			location = nextToken(&urilocations, ",");
+
+			if (location[0] == '\"')
 			{
+				location++;
+				location[strlen(location) - 1] = '\0';
+			}
+			appendPQExpBuffer(q, " LOCATION (\n    '%s'", location);
+			for (; (location = nextToken(&urilocations, ",")) != NULL;)
+			{
+				if (location[0] == '\"')
+				{
+					location++;
+					location[strlen(location) - 1] = '\0';
+				}
 				appendPQExpBuffer(q, ",\n    '%s'", location);
 			}
 			appendPQExpBuffer(q, "\n) ");
+
+			appendBinaryPQExpBuffer(q, tmpbuf.data, tmpbuf.len);
 		}
 
 		/* add FORMAT clause */
 		tmpstring = escape_fmtopts_string((const char *) fmtopts);
+
 		switch (fmttype[0])
 		{
-					case 't':
-						tabfmt = "text";
-						break;
-					case 'b':
-						/*
-						 * b denotes that a custom format is used.
-						 * the fmtopts string should be formatted as:
-						 * a1 = 'val1',...,an = 'valn'
-						 *
-						 */
-						tabfmt = "custom";
-						customfmt = custom_fmtopts_string(tmpstring);
-						break;
-                    case 'a':
-                        tabfmt = "avro";
-                        customfmt = custom_fmtopts_string(tmpstring);
-                        break;
-                    case 'p':
-                        tabfmt = "parquet";
-                        customfmt = custom_fmtopts_string(tmpstring);
-                        break;
-					default:
-						tabfmt = "csv";
+			case 't':
+				tabfmt = "text";
+				break;
+			case 'b':
+				/*
+				 * b denotes that a custom format is used.
+				 * the fmtopts string should be formatted as:
+				 * a1 = 'val1',...,an = 'valn'
+				 *
+				 */
+				tabfmt = "custom";
+				customfmt = custom_fmtopts_string(tmpstring);
+				break;
+			case 'a':
+				tabfmt = "avro";
+				customfmt = custom_fmtopts_string(tmpstring);
+				break;
+			case 'p':
+				tabfmt = "parquet";
+				customfmt = custom_fmtopts_string(tmpstring);
+				break;	
+			default:
+				tabfmt = "csv";
 		}
-
 		appendPQExpBuffer(q, "FORMAT '%s' (%s)\n",
-							tabfmt,
-							customfmt ? customfmt : tmpstring);
+						  tabfmt,
+						  customfmt ? customfmt : tmpstring);
 		free(tmpstring);
 		tmpstring = NULL;
 		if (customfmt)
 		{
-				free(customfmt);
-				customfmt = NULL;
+			free(customfmt);
+			customfmt = NULL;
 		}
+
+		if (gpdb5OrLater)
+		{
+			appendPQExpBuffer(q, "OPTIONS (\n %s\n )\n", options);
+		}
+
 		if (g_fout->remoteVersion >= 80205)
 		{
 			/* add ENCODING clause */
@@ -6190,28 +6336,11 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 				if (errtblname && strlen(errtblname) > 0)
 				{
 					appendPQExpBuffer(q, "LOG ERRORS ");
-
-					char *errtablename = pg_strdup(fmtId(errtblname));
-					char *tablename = pg_strdup(fmtId(tbinfo->dobj.name));
-
-					/* Check error table was not generated by LOG ERRORS statement.
-					 * To do: deprecate the use of LOG ERRORS INTO
-					 */
-					PQExpBuffer buf = createPQExpBuffer();
-					appendPQExpBuffer(buf, "%s", errtblname);
-					appendPQExpBuffer(buf, "%s", EXT_PARTITION_NAME_POSTFIX);
-
-					char *tmpStr = Safe_strdup(fmtId(buf->data));
-					if(strcmp(errtablename, tablename) && strcmp(tmpStr, tablename))
+					if(strcmp(fmtId(errtblname), fmtId(tbinfo->dobj.name)))
 					{
 						appendPQExpBuffer(q, "INTO %s.", fmtId(errnspname));
-						appendPQExpBuffer(q, "%s ", errtablename);
+						appendPQExpBuffer(q, "%s ", fmtId(errtblname));
 					}
-
-					free(errtablename);
-					free(tablename);
-					free(tmpStr);
-					destroyPQExpBuffer(buf);
 				}
 
 				/* reject limit */
@@ -6894,7 +7023,7 @@ dumpIndex(Archive *fout, IndxInfo *indxinfo)
 		 * DROP must be fully qualified in case same name appears in
 		 * pg_catalog
 		 */
-		appendPQExpBuffer(delq, "DROP INDEX %s.",
+		appendPQExpBuffer(delq, "DROP INDEX IF EXISTS %s.",
 						  fmtId(tbinfo->dobj.namespace->dobj.name));
 		appendPQExpBuffer(delq, "%s;\n",
 						  fmtId(indxinfo->dobj.name));
@@ -6995,11 +7124,11 @@ dumpConstraint(Archive *fout, ConstraintInfo *coninfo)
 		 * DROP must be fully qualified in case same name appears in
 		 * pg_catalog
 		 */
-		appendPQExpBuffer(delq, "ALTER TABLE ONLY %s.",
+		appendPQExpBuffer(delq, "select pg_temp.drop_table_constraint_only_if_exists('%s',",
 						  fmtId(tbinfo->dobj.namespace->dobj.name));
-		appendPQExpBuffer(delq, "%s ",
+		appendPQExpBuffer(delq, " '%s',",
 						  fmtId(tbinfo->dobj.name));
-		appendPQExpBuffer(delq, "DROP CONSTRAINT %s;\n",
+		appendPQExpBuffer(delq, " '%s');\n",
 						  fmtId(coninfo->dobj.name));
 
 		ArchiveEntry(fout, coninfo->dobj.catId, coninfo->dobj.dumpId,
@@ -7027,11 +7156,11 @@ dumpConstraint(Archive *fout, ConstraintInfo *coninfo)
 		 * DROP must be fully qualified in case same name appears in
 		 * pg_catalog
 		 */
-		appendPQExpBuffer(delq, "ALTER TABLE ONLY %s.",
+		appendPQExpBuffer(delq, "select pg_temp.drop_table_constraint_only_if_exists('%s',",
 						  fmtId(tbinfo->dobj.namespace->dobj.name));
-		appendPQExpBuffer(delq, "%s ",
+		appendPQExpBuffer(delq, " '%s',",
 						  fmtId(tbinfo->dobj.name));
-		appendPQExpBuffer(delq, "DROP CONSTRAINT %s;\n",
+		appendPQExpBuffer(delq, " '%s');\n",
 						  fmtId(coninfo->dobj.name));
 
 		ArchiveEntry(fout, coninfo->dobj.catId, coninfo->dobj.dumpId,
@@ -7364,7 +7493,7 @@ dumpTrigger(Archive *fout, TriggerInfo *tginfo)
 	/*
 	 * DROP must be fully qualified in case same name appears in pg_catalog
 	 */
-	appendPQExpBuffer(delqry, "DROP TRIGGER %s ",
+	appendPQExpBuffer(delqry, "DROP TRIGGER IF EXISTS %s ",
 					  fmtId(tginfo->dobj.name));
 	appendPQExpBuffer(delqry, "ON %s.",
 					  fmtId(tbinfo->dobj.namespace->dobj.name));
@@ -7569,7 +7698,7 @@ dumpRule(Archive *fout, RuleInfo *rinfo)
 	/*
 	 * DROP must be fully qualified in case same name appears in pg_catalog
 	 */
-	appendPQExpBuffer(delcmd, "DROP RULE %s ",
+	appendPQExpBuffer(delcmd, "DROP RULE IF EXISTS %s ",
 					  fmtId(rinfo->dobj.name));
 	appendPQExpBuffer(delcmd, "ON %s.",
 					  fmtId(tbinfo->dobj.namespace->dobj.name));
@@ -7660,7 +7789,7 @@ getDependencies(void)
 	appendPQExpBuffer(query, "SELECT "
 					  "classid, objid, refclassid, refobjid, deptype "
 					  "FROM pg_depend "
-					  "WHERE deptype != 'p' "
+					  "WHERE deptype != 'p' AND deptype != 'e' "
 					  "ORDER BY 1,2");
 
 	res = PQexec(g_conn, query->data);
@@ -8166,12 +8295,14 @@ formGenericFilePathName(char *keyword, char *pszBackupDirectory, char *pszBackup
 	{
 		mpp_err_msg(logWarn, progname, "Backup catalog FileName based on path %s and key %s too long",
 					pszBackupDirectory, pszBackupKey);
+		exit_nicely();
 	}
 
 	pszBackupFileName = (char *) malloc(sizeof(char) * (1 + len));
 	if (pszBackupFileName == NULL)
 	{
 		mpp_err_msg(logError, progname, "out of memory");
+		exit_nicely();
 	}
 
 	strcpy(pszBackupFileName, pszBackupDirectory);
@@ -8202,7 +8333,7 @@ dumpDatabaseDefinition()
 	FILE	   *fcat;
 	char	   *pszBackupFileName;
 	PQExpBuffer dbQry = createPQExpBuffer();
-	PQExpBuffer creaQry = createPQExpBuffer();
+	PQExpBuffer createQry = createPQExpBuffer();
 	int			ntups;
 	int			i_dba,
 				i_encoding,
@@ -8272,33 +8403,35 @@ dumpDatabaseDefinition()
 	encoding = PQgetvalue(res, 0, i_encoding);
 	tablespace = PQgetvalue(res, 0, i_tablespace);
 
-	appendPQExpBuffer(creaQry, "CREATE DATABASE %s WITH TEMPLATE = template0",
+	appendPQExpBuffer(createQry, "CREATE DATABASE %s WITH TEMPLATE = template0",
 					  fmtId(datname));
 	if (strlen(encoding) > 0)
 	{
-		appendPQExpBuffer(creaQry, " ENCODING = ");
-		appendStringLiteralConn(creaQry, encoding, g_conn);
+		appendPQExpBuffer(createQry, " ENCODING = ");
+		appendStringLiteralConn(createQry, encoding, g_conn);
 	}
 	if (strlen(dba) > 0)
 	{
-		appendPQExpBuffer(creaQry, " OWNER = %s", fmtId(dba));
+		appendPQExpBuffer(createQry, " OWNER = %s", fmtId(dba));
 	}
 
 	if (strlen(tablespace) > 0 && strcmp(tablespace, "pg_default") != 0)
-		appendPQExpBuffer(creaQry, " TABLESPACE = %s",
+		appendPQExpBuffer(createQry, " TABLESPACE = %s",
 						  fmtId(tablespace));
-	appendPQExpBuffer(creaQry, ";\n");
+	appendPQExpBuffer(createQry, ";\n");
 
-	/* write the CREATE DATABASE command to the file */
+    dumpDatabaseConfig(datname, &createQry);
+
+	/* write the CREATE DATABASE and ALTER DATABASE commands to the file */
 	if (fcat != NULL)
 	{
-		fprintf(fcat, "%s", creaQry->data);
+		fprintf(fcat, "%s", createQry->data);
 		fclose(fcat);
 	}
 
 	PQclear(res);
 	destroyPQExpBuffer(dbQry);
-	destroyPQExpBuffer(creaQry);
+	destroyPQExpBuffer(createQry);
 }
 
 #ifdef USE_DDBOOST
@@ -8314,7 +8447,7 @@ dumpDatabaseDefinitionToDDBoost()
 	PGresult   *res;
 	char	   *pszBackupFileName;
 	PQExpBuffer dbQry = createPQExpBuffer();
-	PQExpBuffer creaQry = createPQExpBuffer();
+	PQExpBuffer createQry = createPQExpBuffer();
 	int			ntups;
 	int			i_dba,
 				i_encoding,
@@ -8410,26 +8543,28 @@ dumpDatabaseDefinitionToDDBoost()
 	encoding = PQgetvalue(res, 0, i_encoding);
 	tablespace = PQgetvalue(res, 0, i_tablespace);
 
-	appendPQExpBuffer(creaQry, "CREATE DATABASE %s WITH TEMPLATE = template0",
+	appendPQExpBuffer(createQry, "CREATE DATABASE %s WITH TEMPLATE = template0",
 					  fmtId(datname));
 	if (strlen(encoding) > 0)
 	{
-		appendPQExpBuffer(creaQry, " ENCODING = ");
-		appendStringLiteralConn(creaQry, encoding, g_conn);
+		appendPQExpBuffer(createQry, " ENCODING = ");
+		appendStringLiteralConn(createQry, encoding, g_conn);
 	}
 	if (strlen(dba) > 0)
 	{
-		appendPQExpBuffer(creaQry, " OWNER = %s", dba);
+		appendPQExpBuffer(createQry, " OWNER = %s", dba);
 	}
 
 	if (strlen(tablespace) > 0 && strcmp(tablespace, "pg_default") != 0)
-		appendPQExpBuffer(creaQry, " TABLESPACE = %s",
+		appendPQExpBuffer(createQry, " TABLESPACE = %s",
 						  fmtId(tablespace));
-	appendPQExpBuffer(creaQry, ";\n");
+	appendPQExpBuffer(createQry, ";\n");
 
-	/* write the CREATE DATABASE command to the file */
-	nmemb = strlen(creaQry->data);
-	err = ddp_write(handle, creaQry->data, nmemb, offset, &ret_count);
+	dumpDatabaseConfig(datname, &createQry);
+
+	/* write the CREATE DATABASE and ALTER DATABASE commands to the file */
+	nmemb = strlen(createQry->data);
+	err = ddp_write(handle, createQry->data, nmemb, offset, &ret_count);
 	if (ret_count != nmemb)
 	{
 		mpp_err_msg(logError, progname, "write to cdatabase file failed on ddboost\n");
@@ -8439,10 +8574,77 @@ dumpDatabaseDefinitionToDDBoost()
 	ddp_close_file(handle);
 	PQclear(res);
 	destroyPQExpBuffer(dbQry);
-	destroyPQExpBuffer(creaQry);
+	destroyPQExpBuffer(createQry);
 }
 #endif
 
+/*
+ * Dump database-specific configuration such as search_path,
+ * optimizer, and gp_default_storage_options
+ */
+static void
+dumpDatabaseConfig(const char *dbname, PQExpBuffer *buf)
+{
+	int			count = 1;
+    PQExpBuffer qryBuf = createPQExpBuffer();
+
+	for (;;)
+	{
+		PGresult   *res;
+
+		printfPQExpBuffer(qryBuf, "SELECT datconfig[%d] FROM pg_database WHERE datname = ", count);
+		appendStringLiteralConn(qryBuf, dbname, g_conn);
+		appendPQExpBuffer(qryBuf, ";");
+
+		res = PQexec(g_conn, qryBuf->data);
+		if (!PQgetisnull(res, 0, 0))
+		{
+			makeAlterConfigCommand(PQgetvalue(res, 0, 0),
+								   "DATABASE", dbname, buf);
+			PQclear(res);
+			count++;
+		}
+		else
+		{
+			PQclear(res);
+			break;
+		}
+	}
+
+	destroyPQExpBuffer(qryBuf);
+}
+
+/*
+ * Helper function for dumpDatabaseConfig().
+ */
+static void
+makeAlterConfigCommand(const char *arrayitem,
+					   const char *type, const char *name, PQExpBuffer *buf)
+{
+	char	   *pos;
+	char	   *mine;
+
+	mine = strdup(arrayitem);
+	pos = strchr(mine, '=');
+	if (pos == NULL)
+		return;
+
+	*pos = 0;
+	appendPQExpBuffer(*buf, "ALTER %s %s ", type, fmtId(name));
+	appendPQExpBuffer(*buf, "SET %s TO ", fmtId(mine));
+
+	/*
+	 * Some GUC variable names are 'LIST' type and hence must not be quoted.
+	 */
+	if (pg_strcasecmp(mine, "DateStyle") == 0
+		|| pg_strcasecmp(mine, "search_path") == 0)
+		appendPQExpBuffer(*buf, "%s", pos + 1);
+	else
+		appendStringLiteralConn(*buf, pos + 1, g_conn);
+	appendPQExpBuffer(*buf, ";\n");
+
+	free(mine);
+}
 
 static int
 _parse_version(ArchiveHandle *AH, const char *versionString)

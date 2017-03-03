@@ -24,29 +24,28 @@ from mpp.lib.config import GPDBConfig
 from tinctest.lib import local_path, run_shell_command
 from mpp.lib.filerep_util import Filerepe2e_Util
 from mpp.lib.gprecoverseg import GpRecover
-from mpp.gpdb.tests.storage.lib.dbstate import DbStateClass
 from mpp.gpdb.tests.storage.lib.common_utils import Gpstate
 from mpp.gpdb.tests.storage.lib.common_utils import Gpprimarymirror
-from mpp.gpdb.tests.storage.lib.common_utils import checkDBUp
 from gppylib.commands.base import Command
 from mpp.models import MPPTestCase
-from mpp.gpdb.tests.storage.GPDBStorageBaseTestCase import GPDBStorageBaseTestCase
+from mpp.lib.gpstart import GpStart
+from mpp.lib.gpstop import GpStop
 
 class FtsTransitions(MPPTestCase):
 
     def __init__(self, methodName):
         self.pgport = os.environ.get('PGPORT')
         self.fileutil = Filerepe2e_Util()
-        self.gpconfig = GPDBConfig()
-        self.gprecover = GpRecover(self.gpconfig)
         self.gpstate = Gpstate()
         self.gpprimarymirror = Gpprimarymirror()
-        self.base = GPDBStorageBaseTestCase(self.gpconfig)
+        self.gpstart = GpStart()
+        self.gpstop = GpStop()
         super(FtsTransitions,self).__init__(methodName)
 
     def kill_first_mirror(self):
         mirror_data_loc = self.get_default_fs_loc(role='m',content=0)
-        (host, port) = self.gpconfig.get_hostandport_of_segment(psegmentNumber = 0, pRole = 'm')    
+        gpconfig = GPDBConfig()
+        (host, port) = gpconfig.get_hostandport_of_segment(psegmentNumber = 0, pRole = 'm')    
         cmdString = 'ps -ef|grep -v grep|grep \'%s\'|awk \'{print $2}\'|xargs kill -9'%mirror_data_loc
         remote = Command(name ='kill first mirror', cmdStr = cmdString, ctxt=2, remoteHost=host)
         remote.run() 
@@ -74,27 +73,6 @@ class FtsTransitions(MPPTestCase):
         filespace_loc = result.split('\n')
         return filespace_loc[0]
   
-    def gpconfig_alter(self,type,bool):
-        ''' Alter postgres configuration '''
-        if bool == 'true':
-            fault_string = "filerep_inject_listener_fault=true"
-        elif bool == 'false':
-            fault_string = "filerep_inject_listener_fault=false"
-        for record in self.gpconfig.record:
-            if type == 'primary':
-                if record.role and record.content != -1:
-                    fse_location = record.datadir
-                else:
-                    continue
-            if type == 'mirror':
-                if (not record.role) and record.content != -1:
-                    fse_location = record.datadir
-                else:
-                    continue
-            run_shell_command('ssh ' + record.hostname + ' \'echo '+fault_string + ' >> ' + fse_location +'/postgresql.conf\'')
-            tinctest.logger.info( "\n ssh   %s   'echo %s  >>   %s/postgresql.conf'" % (record.hostname, fault_string,  fse_location))
-            tinctest.logger.info( "\n  Done set %s in postgresql.conf on all primary segments" % fault_string)
-
     def set_faults(self,fault_name, type, role='mirror', port=None, occurence=None, sleeptime=None, seg_id=None):
         ''' Reset the fault and then issue the fault with the given type'''
         self.fileutil.inject_fault(f=fault_name, y=type, r=role, p=port , o=occurence, sleeptime=sleeptime, seg_id=seg_id)
@@ -103,16 +81,13 @@ class FtsTransitions(MPPTestCase):
         ''' Resume the fault issues '''
         self.fileutil.inject_fault(f=fault_name, y='resume', r=role)
 
-    def run_validation(self):
-        tinctest.logger.info('Veriy the integrity between primary and mirror ...')
-        self.dbstate = DbStateClass('run_validation')
-        self.dbstate.check_mirrorintegrity()
-
     def incremental_recoverseg(self, workerPool=False):
-        self.gprecover.incremental(workerPool)
+        gprecover = GpRecover(GPDBConfig())
+        gprecover.incremental(workerPool)
 
     def run_recoverseg_if_ct(self):
-        num_down = self.gpconfig.count_of_nodes_in_mode('c')
+        gpconfig = GPDBConfig()
+        num_down = gpconfig.count_of_nodes_in_mode('c')
         if (int(num_down) > 0):
             self.incremental_recoverseg()
 
@@ -120,7 +95,8 @@ class FtsTransitions(MPPTestCase):
         self.fileutil.wait_till_change_tracking_transition()
 
     def wait_till_insync(self):
-        self.gprecover.wait_till_insync_transition()
+        gprecover = GpRecover(GPDBConfig())
+        gprecover.wait_till_insync_transition()
 
     def run_gpstate(self, type, phase):
         self.gpstate.run_gpstate(type, phase)
@@ -139,9 +115,11 @@ class FtsTransitions(MPPTestCase):
         status = self.gpstate.verify_gpstate_output()
         self.assertTrue(status, 'Total and Cur resync object count mismatch')
 
-    def run_trigger_sql(self):
+    def run_trigger_sql(self, wait_for_db=True):
         ''' Run a sql statement to trigger postmaster reset '''
         PSQL.run_sql_file(local_path('test_ddl.sql'))
+        if wait_for_db:
+            PSQL.wait_for_database_up()
 
     def run_fts_test_ddl_dml(self):
         PSQL.run_sql_file(local_path('fts_test_ddl_dml.sql'))
@@ -155,13 +133,9 @@ class FtsTransitions(MPPTestCase):
     def run_sql_in_background(self):
         PSQL.run_sql_command('drop table if exists bar; create table bar(i int);', background=True)
 
-    def sleep_for_transition(self):
-        #gp_segment_connect_timeout is set to 10s , still need a little more time than that to complete the transition to ct
-        sleep(100)
-
     def restart_db(self):
-        self.base.stop_db()
-        self.base.start_db()
+        self.gpstop.run_gpstop_cmd(immediate = True)
+        self.gpstart.run_gpstart_cmd()
 
     def stop_db_with_no_rc_check(self):
         ''' Gpstop and dont check for rc '''
@@ -179,19 +153,11 @@ class FtsTransitions(MPPTestCase):
         self.stop_db_with_no_rc_check()
         self.start_db_with_no_rc_check()
 
-    def set_gpconfig(self, param, value):
-        ''' Set the configuration parameter using gpconfig '''
-        command = "gpconfig -c %s -v %s --skipvalidation " % (param, value)
-        run_shell_command(command)
-        self.restart_db()
-
-    def check_db(self):
-        checkDBUp()
-
     def check_fault_status(self, fault_name, seg_id=None, role=None):
         status = self.fileutil.check_fault_status(fault_name = fault_name, status ='triggered', max_cycle=20, role=role, seg_id=seg_id)
         self.assertTrue(status, 'The fault is not triggered in the time expected')
 
     def cluster_state(self):
-        state = self.gpconfig.is_not_insync_segments()
+        gpconfig = GPDBConfig()
+        state = gpconfig.is_not_insync_segments()
         self.assertTrue(state,'The cluster is not up and in sync')

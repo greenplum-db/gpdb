@@ -2054,11 +2054,8 @@ AtPrepare_Locks(void)
 		 * destroyed at the end of the session, while the transaction will be
 		 * committed from another session.
 		 */
-		/* GPDB_83MERGE_FIXME: see previous comments on removing LockTagIsTemp */
-#if 0
 		if (LockTagIsTemp(&locallock->tag.lock))
 			continue;
-#endif
 
 		/*
 		 * Create a 2PC record.
@@ -2145,17 +2142,8 @@ PostPrepare_Locks(TransactionId xid)
 		 * objects. MPP-1094: NOTE THIS CALL MAY ADD LOCKS TO OUR
 		 * TABLE!
 		 */
-		/* GPDB_83MERGE_FIXME: LockTagIsTemp() was removed in the merge,
-		 * by upstream commit f3032cbe377ecc570989e1bd2fe1aea455c12cc3. It's
-		 * not clear to me if it's still safe to skip over temp objects. I'm
-		 * pretty sure we must allow modifying temp tables in GPDB, because
-		 * every transaction uses 2PC, but how? Do we need to resurrect
-		 * LockTagIsTemp? Needs investigation...
-		 */
-#if 0
 		if (LockTagIsTemp(&locallock->tag.lock))
 			continue;
-#endif
 
 		/* since our temp-check may be modifying our lock table, we
 		 * just mark these as requiring more work */

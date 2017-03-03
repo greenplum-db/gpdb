@@ -23,6 +23,7 @@
 #include "catalog/pg_auth_time_constraint.h"
 #include "catalog/pg_auth_members.h"
 #include "catalog/pg_authid.h"
+#include "catalog/pg_resgroup.h"
 #include "commands/comment.h"
 #include "commands/user.h"
 #include "libpq/auth.h"
@@ -494,6 +495,14 @@ CreateRole(CreateRoleStmt *stmt)
 	else
 		new_record_nulls[Anum_pg_authid_rolresqueue - 1] = true;
 
+	/* hard code the resource group of the user now */
+	if (issuper)
+		new_record[Anum_pg_authid_rolresgroup - 1] = ObjectIdGetDatum(ADMINRESGROUP_OID);
+	else
+		new_record[Anum_pg_authid_rolresgroup - 1] = ObjectIdGetDatum(DEFAULTRESGROUP_OID);
+
+	new_record_nulls[Anum_pg_authid_rolresgroup - 1] = false;
+
 	new_record_nulls[Anum_pg_authid_rolconfig - 1] = true;
 
 	tuple = heap_form_tuple(pg_authid_dsc, new_record, new_record_nulls);
@@ -544,7 +553,8 @@ CreateRole(CreateRoleStmt *stmt)
 	{
 		if (issuper)
 			ereport(ERROR,
-					(errmsg("cannot create superuser with DENY rules")));
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("cannot create superuser with DENY rules")));
 		AddRoleDenials(stmt->role, roleid, addintervals);
 	}
 
@@ -1092,7 +1102,8 @@ AlterRole(AlterRoleStmt *stmt)
 	{
 		if (addintervals)
 			ereport(ERROR,
-					(errmsg("cannot alter superuser with DENY rules")));
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("cannot alter superuser with DENY rules")));
 		else
 			DelRoleDenials(stmt->role, roleid, NIL);	/* drop all preexisting constraints, if any. */
 	}
@@ -1336,7 +1347,7 @@ DropRole(DropRoleStmt *stmt)
 						(errcode(ERRCODE_UNDEFINED_OBJECT),
 						 errmsg("role \"%s\" does not exist", role)));
 			}
-			else
+			if (Gp_role != GP_ROLE_EXECUTE)
 			{
 				ereport(NOTICE,
 						(errmsg("role \"%s\" does not exist, skipping",
@@ -2572,7 +2583,8 @@ DelRoleDenials(const char *rolename, Oid roleid, List *dropintervals)
 	/* if intervals were specified and none was found, raise error */
 	if (dropintervals && !dropped_matching_interval)
 		ereport(ERROR, 
-				(errmsg("cannot find matching DENY rules for \"%s\"", rolename)));
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("cannot find matching DENY rules for \"%s\"", rolename)));
 
 	systable_endscan(sscan);
 

@@ -1808,9 +1808,8 @@ ident_inet(const SockAddr remote_addr,
 		   const SockAddr local_addr,
 		   char *ident_user)
 {
-	pgsocket	sock_fd,		/* File descriptor for socket on which we talk
-								 * to Ident */
-				rc;				/* Return code from a locally called function */
+	pgsocket	sock_fd = PGINVALID_SOCKET;		/* for talking to Ident server */
+	int			rc;				/* Return code from a locally called function */
 	bool		ident_return;
 	char		remote_addr_s[NI_MAXHOST];
 	char		remote_port[NI_MAXSERV];
@@ -1848,9 +1847,9 @@ ident_inet(const SockAddr remote_addr,
 	rc = pg_getaddrinfo_all(remote_addr_s, ident_port, &hints, &ident_serv);
 	if (rc || !ident_serv)
 	{
-		if (ident_serv)
-			pg_freeaddrinfo_all(hints.ai_family, ident_serv);
-		return false;			/* we don't expect this to happen */
+		/* we don't expect this to happen */
+		ident_return = false;
+		goto ident_inet_done;
 	}
 
 	hints.ai_flags = AI_NUMERICHOST;
@@ -1864,9 +1863,9 @@ ident_inet(const SockAddr remote_addr,
 	rc = pg_getaddrinfo_all(local_addr_s, NULL, &hints, &la);
 	if (rc || !la)
 	{
-		if (la)
-			pg_freeaddrinfo_all(hints.ai_family, la);
-		return false;			/* we don't expect this to happen */
+		/* we don't expect this to happen */
+		ident_return = false;
+		goto ident_inet_done;
 	}
 
 	sock_fd = socket(ident_serv->ai_family, ident_serv->ai_socktype,
@@ -1953,8 +1952,11 @@ ident_inet(const SockAddr remote_addr,
 ident_inet_done:
 	if (sock_fd >= 0)
 		closesocket(sock_fd);
-	pg_freeaddrinfo_all(remote_addr.addr.ss_family, ident_serv);
-	pg_freeaddrinfo_all(local_addr.addr.ss_family, la);
+	if (ident_serv)
+		pg_freeaddrinfo_all(remote_addr.addr.ss_family, ident_serv);
+	if (la)
+		pg_freeaddrinfo_all(local_addr.addr.ss_family, la);
+
 	return ident_return;
 }
 
@@ -2199,7 +2201,7 @@ authident(hbaPort *port)
  */
 
 
-#if defined(pg_on_solaris) || defined(_AIX)
+#if defined(_AIX)
 static int
 pam_passwd_conv_proc(int num_msg, struct pam_message **msg,
 					struct pam_response **resp, void *appdata_ptr)

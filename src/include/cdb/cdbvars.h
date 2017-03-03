@@ -201,23 +201,10 @@ extern int			pgstat_track_activity_query_size;
  */
 extern bool           gp_enable_slow_writer_testmode;
 
-
-/*
- * MPP-8622:
- * In order to facilitate testing of reader-gang/writer-gang synchronization
- * it is very handy to slow down the cursor (opens important race-window).
- */
-extern bool           gp_enable_slow_cursor_testmode;
-
 /*
  * MPP-6926: Resource Queues on by default
  */
 #define GP_DEFAULT_RESOURCE_QUEUE_NAME "pg_default"
-
-/**
- * Hash-join node releases hash table when it returns last tuple.
- */
-extern bool gp_eager_hashtable_release;
 
 /* Parameter gp_debug_pgproc
  *
@@ -270,15 +257,6 @@ extern int gp_backup_directIO_read_chunk_mb;
  * error. Default is 'true'
  */
 extern bool gp_external_enable_exec;
-
-/*
- * gp_external_grant_privileges
- *
- * when set to 'false' only superusers can create external tables.
- * when set to 'true' http, gpfdist and gpfdists external tables are also allowed to be
- * created by non superusers. Default is 'false'
- */
-extern bool gp_external_grant_privileges;
 
 /* gp_external_max_segs
  *
@@ -547,11 +525,6 @@ typedef enum GpVars_Verbosity
     GPVARS_VERBOSITY_DEBUG,
 } GpVars_Verbosity;
 
-GpVars_Verbosity
-gpvars_string_to_verbosity(const char *s);
-const char *
-gpvars_verbosity_to_string(GpVars_Verbosity verbosity);
-
 /* Enable single-slice single-row inserts. */
 extern bool gp_enable_fast_sri;
 
@@ -686,19 +659,6 @@ extern double gp_selectivity_damping_factor;
  * damping (ON by default)
  */
 extern bool gp_selectivity_damping_sigsort;
-
-
-/* ----- Internal Features ----- */
-
-/*
- * gp_enable_alter_table_inherit_cols
- *
- * Allows the use of the ALTER TABLE client INHERIT parent [( column_list )]
- * optional column_list.  If this variable is false (the default), use of
- * the optional column_list.  This variable is used by pg_dump --gp-migrator
- * to enable use of the extended syntax.
- */
-extern bool gp_enable_alter_table_inherit_cols;
 
 
 /* ----- Experimental Features ----- */
@@ -947,7 +907,6 @@ extern const char *gpvars_assign_gp_gpperfmon_log_alert_level(const char *newval
 extern const char *gpvars_show_gp_gpperfmon_log_alert_level(void);
 
 
-extern int gp_hashagg_compress_spill_files;
 extern int gp_workfile_compress_algorithm;
 extern bool gp_workfile_checksumming;
 extern double gp_workfile_limit_per_segment;
@@ -1045,14 +1004,6 @@ extern GpId GpIdentity;
 #define UNINITIALIZED_GP_IDENTITY_VALUE (-10000)
 extern int GpStandbyDbid;
 
-
-/* Stores the listener port that this process uses to listen for incoming
- * Interconnect connections from other Motion nodes.
- */
-extern int	Gp_listener_port;
-
-
-
 /* SequenceServer information to be shared with everyone */
 typedef struct SeqServerControlBlock
 {
@@ -1069,8 +1020,9 @@ extern void write_log(const char *fmt,...) __attribute__((format(printf, 1, 2)))
 
 extern void verifyGpIdentityIsSet(void);
 
-/* control current usability of enabling hash index */
-extern bool gpvars_assign_gp_hash_index(bool newval, bool doit, GucSource source);
+extern const char *gpvars_assign_gp_resource_manager_policy(const char *newval, bool doit, GucSource source __attribute__((unused)) );
+
+extern const char *gpvars_show_gp_resource_manager_policy(void);
 
 extern const char *gpvars_assign_gp_resqueue_memory_policy(const char *newval, bool doit, GucSource source __attribute__((unused)) );
 

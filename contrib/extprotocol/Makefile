@@ -1,5 +1,6 @@
 MODULE_big = gpextprotocol
 OBJS       = gpextprotocol.o
+REGRESS = setup exttableext
 
 PG_CPPFLAGS = -I$(libpq_srcdir)
 PG_LIBS = $(libpq_pgport)

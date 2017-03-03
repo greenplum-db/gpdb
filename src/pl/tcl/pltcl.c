@@ -491,7 +491,7 @@ pltcl_init_load_unknown(Tcl_Interp *interp)
 	AcceptInvalidationMessages();
 
 	/* Look up the appropriate relation using namespace search */
-	relOid = RangeVarGetRelid(makeRangeVar(NULL, "pltcl_modules"), true);
+	relOid = RangeVarGetRelid(makeRangeVar(NULL, "pltcl_modules", -1), true);
 
 	/* Drop out on not-found */
 	if (!OidIsValid(relOid))

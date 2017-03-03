@@ -1,0 +1,51 @@
+-- @author prabhd 
+-- @created 2013-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description test27a: DML with CTE [INSERT]
+-- start_ignore
+SET gp_optimizer=on;SET gp_log_optimizer=on;
+SET
+SET
+-- end_ignore
+WITH CTE(c,d) as 
+(
+	SELECT a,b FROM foo WHERE a > 1
+) SELECT CTE.c,bar.d FROM  CTE,bar where CTE.c = bar.d ORDER BY 1;
+ c  | d  
+----+----
+  2 |  2
+  3 |  3
+  4 |  4
+  5 |  5
+  6 |  6
+  7 |  7
+  8 |  8
+  9 |  9
+ 10 | 10
+(9 rows)
+
+INSERT INTO newfoo
+(
+	WITH CTE(c,d) as 
+	(
+		SELECT a,b FROM foo WHERE a > 1
+	) SELECT CTE.c,bar.d FROM  CTE,bar where CTE.c = bar.d
+);
+INSERT 0 9
+SELECT * FROM newfoo ORDER BY 1;
+ a  | b  
+----+----
+  2 |  2
+  3 |  3
+  4 |  4
+  5 |  5
+  6 |  6
+  7 |  7
+  8 |  8
+  9 |  9
+ 10 | 10
+(9 rows)
+

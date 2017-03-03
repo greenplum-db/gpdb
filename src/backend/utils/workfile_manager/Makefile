@@ -1,10 +1,10 @@
 #-------------------------------------------------------------------------
 #
 # Makefile--
-#    Makefile for utils/sfr
+#    Makefile for utils/workfile_manager
 #
 # IDENTIFICATION
-#    $PostgreSQL: pgsql/src/backend/utils/sort/Makefile,v 1.15 2008/02/19 10:30:09 petere Exp $
+#    src/backend/utils/workfile_manager/Makefile
 #
 #-------------------------------------------------------------------------
 

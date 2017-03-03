@@ -35,9 +35,9 @@ the following steps are needed.
    gpMgmt/bin/gppylib/data/X.X.json. Otherwise, catversion test would fail.
 
    $ cd src/backend/catalog
-   $ make 4.3.json
+   $ make 5.0.json
 
-   After 4.3.json is generated, move it to gpMgmt/bin/gppylib/data/
+   After 5.0.json is generated, move it to gpMgmt/bin/gppylib/data/
 
 5. Run make distclean, make, gpinitsystem and you should be able to see your
    newly added function in pg_proc.

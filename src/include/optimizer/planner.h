@@ -18,11 +18,11 @@
 #include "nodes/relation.h"
 #include "optimizer/clauses.h"
 
+
 /* Hook for plugins to get control in planner() */
 typedef PlannedStmt *(*planner_hook_type) (Query *parse,
-									int cursorOptions,
-									ParamListInfo boundParams);
-
+													   int cursorOptions,
+												  ParamListInfo boundParams);
 extern PGDLLIMPORT planner_hook_type planner_hook;
 
 extern ParamListInfo PlannerBoundParamList;	 /* current boundParams */
@@ -32,12 +32,11 @@ extern PlannedStmt *planner(Query *parse, int cursorOptions,
 extern PlannedStmt *standard_planner(Query *parse, int cursorOptions,
 				 ParamListInfo boundParams);
 
-extern Plan *subquery_planner(PlannerGlobal *glob,
-							  Query *parse,
-							  PlannerInfo *parent_root,
-							  double tuple_fraction,
-							  PlannerInfo **subroot,
-							  PlannerConfig *config);
+extern Plan *subquery_planner(PlannerGlobal *glob, Query *parse,
+				 PlannerInfo *parent_root,
+				 double tuple_fraction,
+				 PlannerInfo **subroot,
+				 PlannerConfig *config);
 
 extern bool choose_hashed_grouping(PlannerInfo *root,
 								   double tuple_fraction, double limit_tuples,

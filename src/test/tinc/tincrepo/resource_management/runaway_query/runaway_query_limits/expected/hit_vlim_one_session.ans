@@ -1,0 +1,13 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+-- @Description One session allocating > VLIM hits VLIM
+-- @author George Caragea
+-- @vlimMB 900 
+-- @slimMB 0
+-- content/segment = 0; size = 901MB; sleep = 0 sec; crit_section = false
+select gp_allocate_palloc_test_all_segs(0, 901 * 1024 * 1024, 0, false);
+psql:/Users/gcaragea/dev/tincrepo/private/gcaragea/resource_management/runaway_query/runaway_query_limits/output/hit_vlim_one_session_planner.sql:12: ERROR:  Out of memory  (seg0 slice1 gcaragea-mbp.local:40050 pid=7661)
+DETAIL:  VM Protect failed to allocate 944767020 bytes, 899 MB available
+CONTEXT:  SQL function "gp_allocate_palloc_test_all_segs" statement 1

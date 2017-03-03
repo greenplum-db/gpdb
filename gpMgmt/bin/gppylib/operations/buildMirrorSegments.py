@@ -463,8 +463,8 @@ class GpMirrorListToBuild:
                 port = segment.getSegmentPort()
                 dbid = segment.getSegmentDbId()
                 if port in usedPorts:
-                    raise Exception("On host %s, a port for segment with dbid %s conflicts with a port for segment dbid %s" \
-                            % (hostName, dbid, usedPorts.get(port)))
+                    raise Exception("On host %s, port %s for segment with dbid %s conflicts with port for segment dbid %s" \
+                            % (hostName, port, dbid, usedPorts.get(port)))
 
                 if segment.isSegmentQE():
                     if replicationPort is None:
@@ -472,8 +472,8 @@ class GpMirrorListToBuild:
                                 % (hostName, dbid))
 
                     if replicationPort in usedPorts:
-                        raise Exception("On host %s, a port for segment with dbid %s conflicts with a port for segment dbid %s" \
-                                % (hostName, dbid, usedPorts.get(replicationPort)))
+                        raise Exception("On host %s, replication port %s for segment with dbid %s conflicts with a port for segment dbid %s" \
+                                % (hostName, dbid, replicationPort, usedPorts.get(replicationPort)))
 
                     if port == replicationPort:
                         raise Exception("On host %s, segment with dbid %s has equal port and replication port" \

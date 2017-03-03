@@ -13,7 +13,7 @@
 
 #ifdef CODEGEN_GPDB_ASSERT_HANDLING
 extern "C" {
-#include <utils/elog.h>
+#include "postgres.h"  // NOLINT(build/include)
 
 // Overload assert handling from LLVM, and pass any error messages to GPDB.
 // LLVM has a custom implementation of __assert_rtn, only compiled
@@ -37,10 +37,9 @@ void __assert_fail(const char * expr,
     func = "";
   }
 
-  errstart(ERROR, file, line, func, TEXTDOMAIN);
-  errfinish(errcode(ERRCODE_INTERNAL_ERROR),
-            errmsg("C++ assertion failed: \"%s\"",
-            expr));
+  if ((assert_enabled) && (nullptr != expr)) {
+    ExceptionalCondition(expr, ("Failed C++ assertion"), file, line);
+  }
 
   // Normal execution beyond this point is unsafe
 }

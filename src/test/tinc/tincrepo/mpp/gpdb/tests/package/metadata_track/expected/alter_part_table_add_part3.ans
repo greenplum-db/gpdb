@@ -5,7 +5,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_part_tbl_add_1_prt_foo" for table "mdt_part_tbl_add"
 CREATE TABLE
 alter table mdt_part_tbl_add add partition a1 start ('2007-01-01') end ('2007-02-01');
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_part_tbl_add_1_prt_a1" for table "mdt_part_tbl_add"
 ALTER TABLE
 select classname,schemaname, objname, usestatus, usename, actionname, subtype, partitionlevel, parenttablename, parentschemaname  from pg_stat_partition_operations  where statime > ( select statime from pg_stat_partition_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;

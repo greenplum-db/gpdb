@@ -25,6 +25,7 @@
 #include "codegen/utils/gp_codegen_utils.h"
 #include "codegen/pg_arith_func_generator.h"
 #include "codegen/pg_date_func_generator.h"
+#include "codegen/pg_numeric_func_generator.h"
 
 #include "llvm/IR/IRBuilder.h"
 
@@ -158,6 +159,38 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
           2339,
           "date_le_timestamp",
           &PGDateFuncGenerator::DateLETimestamp,
+          nullptr,
+          true));
+
+  supported_function_[1963] = std::unique_ptr<PGFuncGeneratorInterface>(
+      new PGGenericFuncGenerator<void*, void*, int32>(
+          1963,
+          "int4_avg_accum",
+          &PGNumericFuncGenerator::GenerateIntFloatAvgAccum<int32>,
+          nullptr,
+          true));
+
+  supported_function_[3108] = std::unique_ptr<PGFuncGeneratorInterface>(
+      new PGGenericFuncGenerator<void*, void*, float8>(
+          3108,
+          "float8_avg_accum",
+          &PGNumericFuncGenerator::GenerateIntFloatAvgAccum<float8>,
+          nullptr,
+          true));
+
+  supported_function_[6009] = std::unique_ptr<PGFuncGeneratorInterface>(
+      new PGGenericFuncGenerator<void*, void*, void*>(
+          6009,
+          "int8_avg_amalg",
+          &PGNumericFuncGenerator::GenerateIntFloatAvgAmalg,
+          nullptr,
+          true));
+
+  supported_function_[3111] = std::unique_ptr<PGFuncGeneratorInterface>(
+      new PGGenericFuncGenerator<void*, void*, void*>(
+          3111,
+          "float8_avg_amalg",
+          &PGNumericFuncGenerator::GenerateIntFloatAvgAmalg,
           nullptr,
           true));
 }

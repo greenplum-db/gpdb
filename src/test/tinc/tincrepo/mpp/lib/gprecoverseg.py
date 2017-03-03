@@ -43,7 +43,6 @@ class GpRecoverseg():
 
         pool = WorkerPool()
         pool.addCommand(cmd)
-        
 
     def run(self,option=' ', validate=True, results=True):
         '''
@@ -70,7 +69,7 @@ class GpRecoverseg():
 class GpRecover(GpRecoverseg):
     '''Class for gprecoverseg utility methods '''
 
-    MAX_COUNTER=20
+    MAX_COUNTER=400
 
     def __init__(self, config=None):
         if config is not None:
@@ -108,7 +107,7 @@ class GpRecover(GpRecoverseg):
                 raise Exception('Segments did not come insync after 20 minutes')
             else:
                 counter = counter + 1
-                time.sleep(60) #Wait 1 minute before polling again
+                time.sleep(3) #Wait 3 secs before polling again
         tinctest.logger.info('Segments are synchronized ...')
         return True
         

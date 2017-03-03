@@ -102,8 +102,8 @@ COPY 185797
  a32    | date                        |                                                                         | plain    | 
  a33    | real                        |                                                                         | plain    | 
  a34    | money                       |                                                                         | plain    | 
- a35    | cidr                        |                                                                         | plain    | 
- a36    | inet                        |                                                                         | plain    | 
+ a35    | cidr                        |                                                                         | main     | 
+ a36    | inet                        |                                                                         | main     | 
  a37    | time without time zone      |                                                                         | plain    | 
  a38    | text                        |                                                                         | extended | 
  a39    | bit(1)                      |                                                                         | extended | 
@@ -251,8 +251,8 @@ ALTER TABLE
  a32    | date                        |                                                                              | plain    | 
  a33    | real                        |                                                                              | plain    | 
  a34    | money                       |                                                                              | plain    | 
- a35    | cidr                        |                                                                              | plain    | 
- a36    | inet                        |                                                                              | plain    | 
+ a35    | cidr                        |                                                                              | main     | 
+ a36    | inet                        |                                                                              | main     | 
  a37    | time without time zone      |                                                                              | plain    | 
  a38    | text                        |                                                                              | extended | 
  a39    | bit(1)                      |                                                                              | extended | 
@@ -318,8 +318,8 @@ Distributed randomly
  a32    | date                        |                                                                         | plain    | 
  a33    | real                        |                                                                         | plain    | 
  a34    | money                       |                                                                         | plain    | 
- a35    | cidr                        |                                                                         | plain    | 
- a36    | inet                        |                                                                         | plain    | 
+ a35    | cidr                        |                                                                         | main     | 
+ a36    | inet                        |                                                                         | main     | 
  a37    | time without time zone      |                                                                         | plain    | 
  a38    | text                        |                                                                         | extended | 
  a39    | bit(1)                      |                                                                         | extended | 
@@ -377,8 +377,8 @@ ALTER TABLE
  a32    | date                        |                                                                         | plain    | 
  a33    | real                        |                                                                         | plain    | 
  a34    | money                       |                                                                         | plain    | 
- a35    | cidr                        |                                                                         | plain    | 
- a36    | inet                        |                                                                         | plain    | 
+ a35    | cidr                        |                                                                         | main     | 
+ a36    | inet                        |                                                                         | main     | 
  a37    | time without time zone      |                                                                         | plain    | 
  a38    | text                        |                                                                         | extended | 
  a39    | bit(1)                      |                                                                         | extended | 
@@ -556,8 +556,8 @@ COPY 185797
  a32    | date                        |                                                                           | plain    | 
  a33    | real                        |                                                                           | plain    | 
  a34    | money                       |                                                                           | plain    | 
- a35    | cidr                        |                                                                           | plain    | 
- a36    | inet                        |                                                                           | plain    | 
+ a35    | cidr                        |                                                                           | main     | 
+ a36    | inet                        |                                                                           | main     | 
  a37    | time without time zone      |                                                                           | plain    | 
  a38    | text                        |                                                                           | extended | 
  a39    | bit(1)                      |                                                                           | extended | 
@@ -705,8 +705,8 @@ ALTER TABLE
  a32    | date                        |                                                                                | plain    | 
  a33    | real                        |                                                                                | plain    | 
  a34    | money                       |                                                                                | plain    | 
- a35    | cidr                        |                                                                                | plain    | 
- a36    | inet                        |                                                                                | plain    | 
+ a35    | cidr                        |                                                                                | main     | 
+ a36    | inet                        |                                                                                | main     | 
  a37    | time without time zone      |                                                                                | plain    | 
  a38    | text                        |                                                                                | extended | 
  a39    | bit(1)                      |                                                                                | extended | 
@@ -772,8 +772,8 @@ Distributed randomly
  a32    | date                        |                                                                           | plain    | 
  a33    | real                        |                                                                           | plain    | 
  a34    | money                       |                                                                           | plain    | 
- a35    | cidr                        |                                                                           | plain    | 
- a36    | inet                        |                                                                           | plain    | 
+ a35    | cidr                        |                                                                           | main     | 
+ a36    | inet                        |                                                                           | main     | 
  a37    | time without time zone      |                                                                           | plain    | 
  a38    | text                        |                                                                           | extended | 
  a39    | bit(1)                      |                                                                           | extended | 

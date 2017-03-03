@@ -50,6 +50,13 @@ $$ LANGUAGE plperl;
 SELECT perl_row();
 SELECT * FROM perl_row();
 
+-- test returning a composite literal
+CREATE OR REPLACE FUNCTION perl_row_lit() RETURNS testrowperl AS $$
+    return '(1,hello,world,"({{1}})")';
+$$ LANGUAGE plperl;
+
+SELECT perl_row_lit();
+
 
 CREATE OR REPLACE FUNCTION perl_set() RETURNS SETOF testrowperl AS $$
     return undef;
@@ -386,11 +393,75 @@ return $q->{rows}->[0]->{a};
 $$ LANGUAGE plperl;
 SELECT * from perl_spi_prepared_row('(1, 2)');
 
---
--- Test detection of unsafe operations
-CREATE OR REPLACE FUNCTION perl_unsafe1() RETURNS void AS $$
-	my $fd = fileno STDERR;
+-- simple test of a DO block
+DO $$
+  $a = 'This is a test';
+  elog(NOTICE, $a);
 $$ LANGUAGE plperl;
+
+-- check that restricted operations are rejected in a plperl DO block
+DO $$ system("/nonesuch"); $$ LANGUAGE plperl;
+DO $$ qx("/nonesuch"); $$ LANGUAGE plperl;
+DO $$ open my $fh, "</nonesuch"; $$ LANGUAGE plperl;
+
+-- check that eval is allowed and eval'd restricted ops are caught
+DO $$ eval q{chdir '.';}; warn "Caught: $@"; $$ LANGUAGE plperl;
+
+-- check that compiling do (dofile opcode) is allowed
+-- but that executing it for a file not already loaded (via require) dies
+DO $$ warn do "/dev/null"; $$ LANGUAGE plperl;
+
+-- check that we can't "use" a module that's not been loaded already
+-- compile-time error: "Unable to load blib.pm into plperl"
+DO $$ use blib; $$ LANGUAGE plperl;
+
+-- check that we can "use" a module that has already been loaded
+-- runtime error: "Can't use string ("foo") as a SCALAR ref while "strict refs" in use
+DO $do$ use strict; my $name = "foo"; my $ref = $$name; $do$ LANGUAGE plperl;
+
+-- check that we can "use warnings" (in this case to turn a warn into an error)
+-- yields "ERROR:  Useless use of sort in scalar context."
+DO $do$ use warnings FATAL => qw(void) ; my @y; my $x = sort @y; 1; $do$ LANGUAGE plperl;
+
+-- make sure functions marked as VOID without an explicit return work
+CREATE OR REPLACE FUNCTION myfuncs() RETURNS void AS $$
+   $_SHARED{myquote} = sub {
+       my $arg = shift;
+       $arg =~ s/(['\\])/\\$1/g;
+       return "'$arg'";
+   };
+$$ LANGUAGE plperl;
+
+SELECT myfuncs();
+
+-- make sure we can't return an array as a scalar
+CREATE OR REPLACE FUNCTION text_arrayref() RETURNS text AS $$
+	return ['array'];
+$$ LANGUAGE plperl;
+
+SELECT text_arrayref();
+
+--- make sure we can't return a hash as a scalar
+CREATE OR REPLACE FUNCTION text_hashref() RETURNS text AS $$
+	return {'hash'=>1};
+$$ LANGUAGE plperl;
+
+SELECT text_hashref();
+
+---- make sure we can't return a blessed object as a scalar
+CREATE OR REPLACE FUNCTION text_obj() RETURNS text AS $$
+	return bless({}, 'Fake::Object');
+$$ LANGUAGE plperl;
+
+SELECT text_obj();
+
+----- make sure we can't return a scalar ref
+CREATE OR REPLACE FUNCTION text_scalarref() RETURNS text AS $$
+	my $str = 'str';
+	return \$str;
+$$ LANGUAGE plperl;
+
+SELECT text_scalarref();
 
 -- check safe behavior when a function body is replaced during execution
 CREATE OR REPLACE FUNCTION self_modify(INTEGER) RETURNS INTEGER AS $$
@@ -401,12 +472,3 @@ $$ LANGUAGE plperl;
 
 SELECT self_modify(42);
 SELECT self_modify(42);
-
--- simple test of a DO block
-DO $$
-  $a = 'This is a test';
-  elog(NOTICE, $a);
-$$ LANGUAGE plperl;
-
--- check that restricted operations are rejected in a plperl DO block
-DO $$ use Config; $$ LANGUAGE plperl;

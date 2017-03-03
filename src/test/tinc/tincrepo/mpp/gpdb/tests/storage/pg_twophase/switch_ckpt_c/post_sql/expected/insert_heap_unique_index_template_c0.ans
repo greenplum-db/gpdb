@@ -17,7 +17,7 @@
  date_column         | date                        | 
 Indexes:
     "pg2_heap_unq_idx1_c0" UNIQUE, btree (text_col)
-Distributed by: (numeric_col)
+Distributed by: (text_col)
 
 insert into pg2_heap_table_unique_index_c0 values ('0_c0', 0, '0_c0', 0, 0, 0, '{0}', 0, 0, 0, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000');
 INSERT 0 1

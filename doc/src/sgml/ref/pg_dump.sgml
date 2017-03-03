@@ -758,6 +758,11 @@ CREATE DATABASE foo WITH TEMPLATE template0;
    editing of the dump file might be required.
   </para>
 
+  <para>
+   <application>pg_dump</application> also supports a
+   <literal>--binary-upgrade</> option for upgrade utility usage.
+  </para>
+
  </refsect1>
 
  <refsect1 id="pg-dump-examples">

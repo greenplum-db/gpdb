@@ -1,0 +1,48 @@
+-- @author prabhd
+-- @modified 2013-08-01 12:00:00
+-- @created 2013-08-01 12:00:00
+-- @db_name ptidx
+-- @tags partitionindexes
+-- @description Heterogeneous index,b-tree index on all parts,index, index on non-partition col
+-- start_ignore
+DROP INDEX IF EXISTS idx1;
+psql:heterogeneous_singlekey_nonptcol_df_3.sql:8: NOTICE:  index "idx1" does not exist, skipping
+DROP INDEX
+DROP INDEX IF EXISTS idx2;
+psql:heterogeneous_singlekey_nonptcol_df_3.sql:9: NOTICE:  index "idx2" does not exist, skipping
+DROP INDEX
+DROP INDEX IF EXISTS idx3;
+psql:heterogeneous_singlekey_nonptcol_df_3.sql:10: NOTICE:  index "idx3" does not exist, skipping
+DROP INDEX
+DROP INDEX IF EXISTS idx4;
+psql:heterogeneous_singlekey_nonptcol_df_3.sql:11: NOTICE:  index "idx4" does not exist, skipping
+DROP INDEX
+DROP INDEX IF EXISTS idx5;
+psql:heterogeneous_singlekey_nonptcol_df_3.sql:12: NOTICE:  index "idx5" does not exist, skipping
+DROP INDEX
+DROP INDEX IF EXISTS idx6;
+psql:heterogeneous_singlekey_nonptcol_df_3.sql:13: NOTICE:  index "idx6" does not exist, skipping
+DROP INDEX
+-- end_ignore
+CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col1);
+CREATE INDEX
+CREATE INDEX idx2 on pt_lt_tab_df_1_prt_part2(col1);
+CREATE INDEX
+CREATE INDEX idx3 on pt_lt_tab_df_1_prt_part3(col1);
+CREATE INDEX
+CREATE INDEX idx4 on pt_lt_tab_df_1_prt_part4(col1);
+CREATE INDEX
+CREATE INDEX idx5 on pt_lt_tab_df_1_prt_part5(col1);
+CREATE INDEX
+CREATE INDEX idx6 on pt_lt_tab_df_1_prt_def(col1);
+CREATE INDEX
+SELECT * FROM pt_lt_tab_df WHERE col1 > 50 ORDER BY col1 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   51 |   51 | u    | t
+   52 |   52 | u    | t
+   53 |   53 | u    | t
+   54 |   54 | x    | t
+   55 |   55 | x    | t
+(5 rows)
+

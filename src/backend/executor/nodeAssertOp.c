@@ -77,7 +77,9 @@ CheckForAssertViolations(AssertOpState* node, TupleTableSlot* slot)
 	if (0 < violationCount)
 	{
 		ereport(ERROR,
-				(errcode(plannode->errcode), errmsg("One or more assertions failed"), errdetail("%s", errorString.data), errOmitLocation(true)));
+				(errcode(plannode->errcode),
+				 errmsg("One or more assertions failed"),
+				 errdetail("%s", errorString.data)));
 
 	}
 	pfree(errorString.data);

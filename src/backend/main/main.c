@@ -342,11 +342,6 @@ help(const char *progname)
 	printf(_("  -r FILENAME     send stdout and stderr to given file\n"));
 	printf(_("  -x NUM          internal use\n"));
 
-	printf(_("\nGPDB-specific options:\n"));
-	printf(_("  -b <dbid>       startup with a particular db-id\n"));
-	printf(_("  -C <contentid>  startup with a particular content-id\n"));
-	printf(_("  -z <seg-count>  startup with a given number of content-ids\n"));
-
 	printf(_("\nPlease read the documentation for the complete list of run-time\n"
 	 "configuration settings and how to set them on the command line or in\n"
 			 "the configuration file.\n\n"

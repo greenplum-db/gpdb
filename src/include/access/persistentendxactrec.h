@@ -91,21 +91,21 @@ typedef struct PersistentEndXactAppendOnlyMirrorResyncEofs
 } PersistentEndXactAppendOnlyMirrorResyncEofs;
 
 
-typedef struct PeristentEndXaxtUntyped
+typedef struct PersistentEndXactUntyped
 {
 	void 		*data;
 
 	int32		len;
 
 	int32		count;
-} PeristentEndXaxtUntyped;
+} PersistentEndXactUntyped;
 
 /*
  * Structure containing the objects read.
  */
 typedef union PersistentEndXactRecObjects
 {
-	PeristentEndXaxtUntyped		untyped[MaxPersistentEndXactObjKind];
+	PersistentEndXactUntyped		untyped[MaxPersistentEndXactObjKind];
 
 	struct typed
 	{

@@ -206,9 +206,11 @@ linterp_abscissa(PG_FUNCTION_ARGS, bool *p_eq_bounds, bool *p_eq_abscissas)
 		}
 		break;
 	default:
-		elog(ERROR, "abscissa type not supported");
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("abscissa type not supported")));
 	}
-	
+
 	if ( p_eq_bounds )
 		*p_eq_bounds = eq_bounds;
 	

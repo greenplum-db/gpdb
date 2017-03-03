@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic9" xml:lang="en">
+  <title id="im140259">Creating and Managing Tablespaces</title>
+  <body>
+    <p>Tablespaces allow database administrators to have multiple file systems per machine and
+      decide how to best use physical storage to store database objects. They are named locations
+      within a filespace in which you can create objects. Tablespaces allow you to assign different
+      storage for frequently and infrequently used database objects or to control the I/O
+      performance on certain database objects. For example, place frequently-used tables on file
+      systems that use high performance solid-state drives (SSD), and place other tables on standard
+      hard drives.</p>
+    <p>A tablespace requires a file system location to store its database files. In Greenplum Database, the master and each segment (primary and mirror) require a distinct
+      storage location. The collection of file system locations for all components in a Greenplum system is a <i>filespace</i>. Filespaces can be used by one or
+      more tablespaces.</p>
+  </body>
+  <topic id="topic10" xml:lang="en">
+    <title id="im199401">Creating a Filespace</title>
+    <body>
+      <p>A filespace sets aside storage for your Greenplum system. A
+        filespace is a symbolic storage identifier that maps onto a set of locations in your
+          Greenplum hosts' file systems. To create a filespace, prepare
+        the logical file systems on all of your Greenplum hosts, then
+        use the <codeph>gpfilespace</codeph> utility to define the filespace. You must be a database
+        superuser to create a filespace.</p>
+      <note type="note">Greenplum Database is not directly aware of the file system
+        boundaries on your underlying systems. It stores files in the directories that you tell it
+        to use. You cannot control the location on disk of individual files within a logical file
+        system.</note>
+      <section id="im178954">
+        <title>To create a filespace using gpfilespace</title>
+        <ol id="ol_ojl_hvy_sp">
+          <li id="im178990">Log in to the Greenplum Database master as the
+              <codeph>gpadmin</codeph>
+            user.<codeblock>$ su - <codeph>gpadmin</codeph></codeblock></li>
+          <li id="im178959">Create a filespace configuration
+            file:<codeblock>$ gpfilespace -o gpfilespace_config</codeblock></li>
+          <li id="im179004">At the prompt, enter a name for the filespace, the primary segment file
+            system locations, the mirror segment file system locations, and a master file system
+            location. Primary and mirror locations refer to directories on segment hosts; the master
+            location refers to a directory on the master host and standby master, if configured. For
+            example, if your configuration has 2 primary and 2 mirror segments per
+            host:<codeblock>Enter a name for this filespace&gt; fastdisk
+primary location 1&gt; <i>/gpfs1/seg1
+</i>primary location 2&gt; <i>/gpfs1/seg2
+</i>mirror location 1&gt; <i>/gpfs2/mir1
+</i>mirror location 2&gt; <i>/gpfs2/mir2
+</i>master location&gt; <i>/gpfs1/master
+</i></codeblock></li>
+          <li id="im179011">gpfilespace creates a configuration file. Examine the file to verify
+            that the gpfilespace configuration is correct. </li>
+          <li id="im179508">Run gpfilespace again to create the filespace based on the configuration file:<p>
+              <codeblock>$ gpfilespace -c gpfilespace_config</codeblock>
+            </p></li>
+        </ol>
+      </section>
+    </body>
+  </topic>
+  <topic id="topic11" xml:lang="en">
+    <title>Moving the Location of Temporary or Transaction Files</title>
+    <body>
+      <p>You can move temporary or transaction files to a specific filespace to improve database
+        performance when running queries, creating backups, and to store data more sequentially. </p>
+      <p>The dedicated filespace for temporary and transaction files is tracked in two separate flat
+        files called gp_temporary_files_filespace and gp_transaction_files_filespace. These are
+        located in the pg_system directory on each primary and mirror segment, and on master and
+        standby. You must be a superuser to move temporary or transaction files. Only the
+          <codeph>gpfilespace</codeph> utility can write to this file.</p>
+    </body>
+    <topic id="topic12" xml:lang="en">
+      <title>About Temporary and Transaction Files</title>
+      <body>
+        <p>Unless otherwise specified, temporary and transaction files are stored together with all
+          user data. The default location of temporary files,
+            <i>&lt;filespace_directory&gt;</i>/<i>&lt;tablespace_oid&gt;</i>/<i>&lt;database_oid&gt;</i>/pgsql_tmp
+          is changed when you use <codeph>gpfilespace --movetempfiles</codeph> for the first time. </p>
+        <p>Also note the following information about temporary or transaction files:</p>
+        <ul id="ul_gkl_hvy_sp">
+          <li id="im198887">You can dedicate only one filespace for temporary or transaction files,
+            although you can use the same filespace to store other types of files.</li>
+          <li id="im198888">You cannot drop a filespace if it used by temporary files.</li>
+          <li id="im198892">You must create the filespace in advance. See <xref href="#topic10"
+              type="topic" format="dita"/>.</li>
+        </ul>
+        <section id="im198893">
+          <title>To move temporary files using gpfilespace</title>
+          <ol id="ol_bll_hvy_sp">
+            <li id="im198894">Check that the filespace exists and is different from the filespace
+              used to store all other user data.</li>
+            <li id="im198895">Issue smart shutdown to bring the Greenplum Database
+                offline.<p>If any connections are still in progess,the gpfilespace --movetempfiles
+                utility will fail.</p></li>
+            <li id="im198897">Bring Greenplum Database online with no active session
+              and run the following command:<p>
+                <codeblock>gpfilespace --movetempfilespace filespace_name</codeblock>
+              </p><p>The location of the temporary files is stored in the segment configuration
+                shared memory (PMModuleState) and used whenever temporary files are created, opened,
+                or dropped.</p></li>
+          </ol>
+          <title>To move transaction files using gpfilespace</title>
+          <ol id="ol_vll_hvy_sp">
+            <li id="im198901">Check that the filespace exists and is different from the filespace
+              used to store all other user data.</li>
+            <li id="im198902">Issue smart shutdown to bring the Greenplum Database
+                offline.<p>If any connections are still in progess,the <codeph>gpfilespace
+                  --movetransfiles</codeph> utility will fail.</p></li>
+            <li id="im198904">Bring Greenplum Database online with no active session
+              and run the following command:<p>
+                <codeblock>gpfilespace --movetransfilespace filespace_name</codeblock>
+              </p><p>The location of the transaction files is stored in the segment configuration
+                shared memory (PMModuleState) and used whenever transaction files are created,
+                opened, or dropped.</p></li>
+          </ol>
+        </section>
+      </body>
+    </topic>
+  </topic>
+  <topic id="topic13" xml:lang="en">
+    <title>Creating a Tablespace</title>
+    <body>
+      <p>After you create a filespace, use the <codeph>CREATE TABLESPACE</codeph> command to define
+        a tablespace that uses that filespace. For example:</p>
+      <p>
+        <codeblock>=# CREATE TABLESPACE fastspace FILESPACE fastdisk;
+</codeblock>
+      </p>
+      <p>Database superusers define tablespaces and grant access to database users with the
+          <codeph>GRANT</codeph><codeph>CREATE </codeph><ph>command</ph>. For example:</p>
+      <p>
+        <codeblock>=# GRANT CREATE ON TABLESPACE fastspace TO admin;
+</codeblock>
+      </p>
+    </body>
+  </topic>
+  <topic id="topic14" xml:lang="en">
+    <title>Using a Tablespace to Store Database Objects</title>
+    <body>
+      <p>Users with the <codeph>CREATE</codeph> privilege on a tablespace can create database
+        objects in that tablespace, such as tables, indexes, and databases. The command is:</p>
+      <p>
+        <codeblock>CREATE TABLE tablename(options) TABLESPACE spacename
+</codeblock>
+      </p>
+      <p>For example, the following command creates a table in the tablespace <i>space1</i>:</p>
+      <p>
+        <codeblock>CREATE TABLE foo(i int) TABLESPACE space1;
+</codeblock>
+      </p>
+      <p>You can also use the <codeph>default_tablespace</codeph> parameter to specify the default
+        tablespace for <codeph>CREATE TABLE</codeph> and <codeph>CREATE INDEX</codeph> commands that
+        do not specify a tablespace:</p>
+      <p>
+        <codeblock>SET default_tablespace = space1;
+CREATE TABLE foo(i int);
+</codeblock>
+      </p>
+      <p>The tablespace associated with a database stores that database's system catalogs, temporary
+        files created by server processes using that database, and is the default tablespace
+        selected for tables and indexes created within the database, if no
+          <codeph>TABLESPACE</codeph> is specified when the objects are created. If you do not
+        specify a tablespace when you create a database, the database uses the same tablespace used
+        by its template database.</p>
+      <p>You can use a tablespace from any database if you have appropriate privileges.</p>
+    </body>
+  </topic>
+  <topic id="topic15" xml:lang="en">
+    <title>Viewing Existing Tablespaces and Filespaces</title>
+    <body>
+      <p>Every Greenplum Database system has the following default tablespaces.</p>
+      <ul id="ul_mml_hvy_sp">
+        <li id="im200050"><codeph>pg_global</codeph> for shared system catalogs.</li>
+        <li id="im200067"><codeph>pg_default</codeph>, the default tablespace. Used by the
+            <i>template1</i> and <i>template0</i> databases. </li>
+      </ul>
+      <p>These tablespaces use the system default filespace, <codeph>pg_system</codeph>, the data
+        directory location created at system initialization.</p>
+      <p>To see filespace information, look in the <i>pg_filespace</i> and <i>pg_filespace_entry</i>
+        catalog tables. You can join these tables with <i>pg_tablespace</i> to see the full
+        definition of a tablespace. For example:</p>
+      <p>
+        <codeblock>=# SELECT spcname as tblspc, fsname as filespc, 
+          fsedbid as seg_dbid, fselocation as datadir 
+   FROM   pg_tablespace pgts, pg_filespace pgfs, 
+          pg_filespace_entry pgfse 
+   WHERE  pgts.spcfsoid=pgfse.fsefsoid 
+          AND pgfse.fsefsoid=pgfs.oid 
+   ORDER BY tblspc, seg_dbid;
+</codeblock>
+      </p>
+    </body>
+  </topic>
+  <topic id="topic16" xml:lang="en">
+    <title>Dropping Tablespaces and Filespaces</title>
+    <body>
+      <p>To drop a tablespace, you must be the tablespace owner or a superuser. You cannot drop a
+        tablespace until all objects in all databases using the tablespace are removed.</p>
+      <p>Only a superuser can drop a filespace. A filespace cannot be dropped until all tablespaces
+        using that filespace are removed.</p>
+      <p>The <codeph>DROP TABLESPACE</codeph> command removes an empty tablespace.</p>
+      <p>The <codeph>DROP FILESPACE</codeph> command removes an empty filespace.</p>
+      <note type="note">You cannot drop a filespace if it stores temporary or
+        transaction files.</note>
+    </body>
+  </topic>
+</topic>

@@ -10,11 +10,12 @@
  */
 
 #include "postgres.h"
-#include "utils/sharedcache.h"
-#include "cdb/cdbvars.h"
-#include "utils/memutils.h"
-#include "utils/gp_atomic.h"
+
 #include "cdb/cdbutil.h"
+#include "cdb/cdbvars.h"
+#include "port/atomics.h"
+#include "utils/memutils.h"
+#include "utils/sharedcache.h"
 
 /* Suffix used to generate shared memory hashtable name from cache name */
 #define CACHE_HASHTABLE_SUFFIX "_HASHTABLE"

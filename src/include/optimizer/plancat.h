@@ -40,12 +40,17 @@ extern List *find_inheritance_children(Oid inhparent);
 
 extern bool has_unique_index(RelOptInfo *rel, AttrNumber attno);
 
-extern Selectivity restriction_selectivity(PlannerInfo *root, Oid oper, List *args, int varRelid);
+extern Selectivity restriction_selectivity(PlannerInfo *root,
+						Oid operatorid,
+						List *args,
+						int varRelid);
 
-extern Selectivity join_selectivity(PlannerInfo *root, Oid op, List *args, JoinType jointype);
+extern Selectivity join_selectivity(PlannerInfo *root,
+				 Oid operatorid,
+				 List *args,
+				 JoinType jointype);
 
-void
-cdb_default_stats_warning_for_table(Oid reloid);
+extern void cdb_default_stats_warning_for_table(Oid reloid);
 
 #define DEFAULT_EXTERNAL_TABLE_PAGES 1000
 #define DEFAULT_INTERNAL_TABLE_PAGES 100

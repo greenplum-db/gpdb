@@ -41,6 +41,7 @@
 #include "utils/syscache.h"
 #include "storage/bufpage.h"
 #include "utils/faultinjector.h"
+#include "postmaster/bgwriter.h"
 
 static void
 PersistentBuild_NonTransactionTruncate(RelFileNode *relFileNode)
@@ -162,6 +163,7 @@ static void PersistentBuild_ScanGpPersistentRelationNodeForGlobal(
 						gp_relation_node,
 						relFileNode.relNode, 	// pg_class OID
 						/* relationName */ NULL,	// Optional.
+						(relFileNode.spcNode == MyDatabaseTableSpace) ? 0:relFileNode.spcNode,
 						relFileNode.relNode,	// pg_class relfilenode
 						/* segmentFileNum */ 0,
 						/* updateIndex */ false,
@@ -216,15 +218,15 @@ static void PersistentBuild_PopulateGpRelationNode(
 		ItemPointerData persistentTid;
 		int64 persistentSerialNum;
 
-		if (dbInfoRel->reltablespace == GLOBALTABLESPACE_OID &&
+		if (dbInfoRel->dbInfoRelKey.reltablespace == GLOBALTABLESPACE_OID &&
 			info->database != TemplateDbOid)
 			continue;
 
-		relFileNode.spcNode = dbInfoRel->reltablespace;
+		relFileNode.spcNode = dbInfoRel->dbInfoRelKey.reltablespace;
 		relFileNode.dbNode = 
-				(dbInfoRel->reltablespace == GLOBALTABLESPACE_OID ?
+				(dbInfoRel->dbInfoRelKey.reltablespace == GLOBALTABLESPACE_OID ?
 														0 : info->database);
-		relFileNode.relNode = dbInfoRel->relfilenodeOid;
+		relFileNode.relNode = dbInfoRel->dbInfoRelKey.relfilenode;
 
 		if (dbInfoRel->relationOid == GpRelationNodeOidIndexId)
 		{
@@ -278,6 +280,7 @@ static void PersistentBuild_PopulateGpRelationNode(
 							gp_relation_node,
 							dbInfoRel->relationOid,	// pg_class OID
 							dbInfoRel->relname,
+							(dbInfoRel->dbInfoRelKey.reltablespace == MyDatabaseTableSpace) ? 0:dbInfoRel->dbInfoRelKey.reltablespace,
 							relFileNode.relNode,	// pg_class relfilenode
 							/* segmentFileNum */ 0,
 							/* updateIndex */ false,
@@ -397,6 +400,7 @@ static void PersistentBuild_PopulateGpRelationNode(
 								gp_relation_node,
 								dbInfoRel->relationOid, // pg_class OID
 								dbInfoRel->relname,
+								(dbInfoRel->dbInfoRelKey.reltablespace == MyDatabaseTableSpace) ? 0:dbInfoRel->dbInfoRelKey.reltablespace,
 								relFileNode.relNode,	// pg_class relfilenode
 								physicalSegmentFileNum,
 								/* updateIndex */ false,
@@ -447,6 +451,7 @@ static void PersistentBuild_PopulateGpRelationNode(
 	indexInfo->ii_NumIndexAttrs = Natts_gp_relation_node_index;
 	indexInfo->ii_KeyAttrNumbers[0] = 1;
 	indexInfo->ii_KeyAttrNumbers[1] = 2;
+	indexInfo->ii_KeyAttrNumbers[2] = 3;
 	indexInfo->ii_Unique = true;
 
 	if (Debug_persistent_print)
@@ -615,10 +620,10 @@ PersistentBuild_BuildDb(
 	/* 
 	 * Since we have written XLOG records with <persistentTid,
 	 * persistentSerialNum> of zeroes because of the gp_before_persistence_work
-	 * GUC, lets do a checkpoint to force out all buffer pool pages so we never
-	 * try to redo those XLOG records in Crash Recovery.
+	 * GUC, lets request a checkpoint to force out all buffer pool pages so we
+	 * never try to redo those XLOG records in Crash Recovery.
 	 */
-	CreateCheckPoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
+	RequestCheckpoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
 
 	return count;
 }

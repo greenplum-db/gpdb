@@ -1,0 +1,89 @@
+-- @Description Testing TRQ: after a PM reset, correct reinitialization of VMEM and SessionState
+-- @author Zhongxian Gu
+-- @vlimMB 1000
+-- @slimMB 0
+-- @redzone 80
+
+-- Check that only one session is running
+1: select count(*) from session_state.session_level_memory_consumption where segid = 0;
+count
+-----
+1    
+(1 row)
+
+-- Check the vmem tracked for only one session running
+1: select vmem_mb > 995 from gp_available_vmem_mb_test_all_segs where segid = 0;
+?column?
+--------
+t       
+(1 row)
+
+-- Start another session; set gp_debug_linger to 0 so we clean up immediately on FATAL
+2: set gp_debug_linger = 0;
+SET
+
+-- Set the timeout to keep idle QEs around to 60 seconds so they don't get cleaned up
+2: set gp_vmem_idle_resource_timeout = 60000;
+SET
+
+-- Check the vmem tracked for when two sessions are running, second one still idle
+1: select vmem_mb > 995 from gp_available_vmem_mb_test_all_segs where segid = 0;
+?column?
+--------
+t       
+(1 row)
+
+-- content/segment = 0; size = 250MB; sleep = 1 sec
+2: select gp_allocate_top_memory_ctxt_test_all_segs(0, 250 * 1024 * 1024, 1);
+gp_allocate_top_memory_ctxt_test_all_segs
+-----------------------------------------
+0                                        
+0                                        
+262144000                                
+(3 rows)
+
+1&: select pg_sleep(2);  <waiting ...>
+1<:  <... completed>
+pg_sleep
+--------
+        
+(1 row)
+
+-- Check that now we have two sessions active
+1: select count(*) from session_state.session_level_memory_consumption where segid = 0;
+count
+-----
+2    
+(1 row)
+
+-- Check the vmem tracked for when two sessions are running, one using some memory
+1: select (vmem_mb > 745 AND vmem_mb < 751) from gp_available_vmem_mb_test_all_segs where segid = 0;
+?column?
+--------
+t       
+(1 row)
+
+
+-- Have session 2 to trigger a PM reset
+--  content/segment = 0; FAULT_TYPE_FATAL = 4 (SEGV); sleep = 0
+2: select gp_inject_fault_test_all_segs(0, 4, 0);
+ERROR:  Error on receive from seg0 slice2 usxxguz4m1.corp.emc.com:40000 pid=22234: server closed the connection unexpectedly
+DETAIL:  
+	This probably means the server terminated abnormally
+	before or while processing the request.
+CONTEXT:  SQL function "gp_inject_fault_test_all_segs" statement 1
+
+-- only one active session on segment 0 should be left
+3: select count(*) from session_state.session_level_memory_consumption where segid = 0;
+count
+-----
+1    
+(1 row)
+
+-- Check that now vmem tracked is back to normal
+3: select vmem_mb > 995 from gp_available_vmem_mb_test_all_segs where segid = 0;
+?column?
+--------
+t       
+(1 row)
+

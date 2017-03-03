@@ -72,7 +72,7 @@ CREATE TYPE text_w_default (
    default = 'zippo'
 );
 CREATE TABLE default_test (f1 text_w_default, f2 int42);
-NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 INSERT INTO default_test DEFAULT VALUES;
 SELECT * FROM default_test;
   f1   | f2 

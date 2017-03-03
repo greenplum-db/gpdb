@@ -84,4 +84,10 @@ extern bool listCasts(const char *pattern);
 /* \dn */
 extern bool listSchemas(const char *pattern, bool verbose);
 
+/* \dx */
+extern bool listExtensions(const char *pattern);
+
+/* \dx+ */
+extern bool listExtensionContents(const char *pattern);
+
 #endif   /* DESCRIBE_H */

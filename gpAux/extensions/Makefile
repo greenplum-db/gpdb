@@ -15,13 +15,7 @@ ifneq (${ENV_JAVA_HOME},)
 	JAVA_HOME=${ENV_JAVA_HOME}
 endif
 
-ifneq ($(with_apr_config),)
-ifneq ($(with_apr_config),yes)
-	GPFDIST_FLAG='--with-apr-config=$(with_apr_config)'
-endif
-endif
-
-all: mkdbgen mkgphdfs mks3ext
+all: mkgphdfs mkgpcloud
 
 .PHONY:
 mapreduce:
@@ -36,12 +30,10 @@ install: mapreduce
 	fi
 
 clean:
-	@if [ -f gpfdist/GNUmakefile ]; then $(MAKE) -C gpfdist clean; fi; \
 	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce clean; fi
 
 
 distclean:
-	@if [ -f gpfdist/GNUmakefile ]; then $(MAKE) -C gpfdist clean; fi; \
 	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce distclean; fi
 
 .PHONY:
@@ -51,12 +43,13 @@ mkgphdfs:
 		JAVA_HOME=${JAVA_HOME}
 
 .PHONY:
-mks3ext:
-	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -B -C gps3ext USE_PGXS=1 install
-	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -B -C gps3ext/bin/gpcheckcloud USE_PGXS=1 install
+mkgpcloud:
+	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gpcloud USE_PGXS=1 install
+	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gpcloud/bin/gpcheckcloud USE_PGXS=1 install
+	ln -sf gpcloud.so $(pkglibdir)/gps3ext.so
 
 # Only include include these files when running enterprise build
-ENTERPRISE_TARGETS="mkdbgen mkgphdfs mkorafce mkplr"
+ENTERPRISE_TARGETS="mkgphdfs mkorafce mkplr"
 ifneq ($(findstring $(MAKECMDGOALS), $(ENTERPRISE_TARGETS)),)
 include $(BLD_TOP)/Makefile.global
 include $(BLD_TOP)/Makefile.thirdparty
@@ -86,10 +79,6 @@ JAR=${JAVA_HOME}/bin/jar
 JAVADOC=${JAVA_HOME}/bin/javadoc
 
 .PHONY:
-mkdbgen:
-	$(MAKE) -f Makefile.tpch INSTLOC=$(INSTLOC)
-
-.PHONY:
 mkplr:
 	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C plr install USE_PGXS=1
 
@@ -101,9 +90,4 @@ installcheck:
 	if [ -d "$(ext_dir)" ]; then \
 		PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C orafce installcheck USE_PGXS=1 && \
 		PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gphdfs installcheck USE_PGXS=1 ; \
-	fi
-
-installcheck-good: installcheck
-	if [ "$(enable_gpfdist)" = "yes" ]; then \
-		PATH=$(prefix)/bin:$(PATH) $(MAKE) -C gpfdist installcheck USE_PGXS=1 prefix=$(prefix) ; \
 	fi

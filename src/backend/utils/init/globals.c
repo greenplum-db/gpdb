@@ -92,6 +92,7 @@ pid_t		PostmasterPid = 0;
  */
 bool		IsPostmasterEnvironment = false;
 bool		IsUnderPostmaster = false;
+bool		IsBinaryUpgrade = false;
 
 bool		ExitOnAnyError = false;
 
@@ -106,7 +107,6 @@ bool		allowSystemTableModsDDL = false;
 bool		allowSystemTableModsDML = false;
 int			planner_work_mem = 32768;
 int			work_mem = 32768;
-int			max_work_mem = 1024000;
 int			statement_mem = 256000;
 int			max_statement_mem = 2048000;
 /*

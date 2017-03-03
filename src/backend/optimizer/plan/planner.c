@@ -146,6 +146,9 @@ log_optimizer(PlannedStmt *plan, bool fUnexpectedFailure)
 		return;
 	}
 
+	if (optimizer_trace_fallback)
+		elog(INFO, "GPORCA failed to produce a plan, falling back to planner");
+
 	/* optimizer failed to produce a plan, log failure */
 	if (OPTIMIZER_ALL_FAIL == optimizer_log_failure)
 	{
@@ -356,8 +359,7 @@ planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 #ifdef USE_ORCA
 	if (optimizer
 		&& (GP_ROLE_UTILITY != Gp_role)
-		&& (MASTER_CONTENT_ID == GpIdentity.segindex)
-		&& !query_has_external_partition(parse))
+		&& (MASTER_CONTENT_ID == GpIdentity.segindex))
 	{
 		if (gp_log_optimization_time)
 		{
@@ -476,7 +478,6 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	}
 	else
 	{
-
 		/* Default assumption is we need all the tuples */
 		tuple_fraction = 0.0;
 	}
@@ -1275,11 +1276,16 @@ inheritance_planner(PlannerInfo *root)
 		root->resultRelations = list_make1_int(parentRTindex);
 		/* although dummy, it must have a valid tlist for executor */
 		tlist = preprocess_targetlist(root, parse->targetList);
-		return (Plan *) make_result(root,
+		plan = (Plan *) make_result(root,
 									tlist,
 									(Node *) list_make1(makeBoolConst(false,
 																	  false)),
 									NULL);
+
+		if (Gp_role == GP_ROLE_DISPATCH)
+			mark_plan_general(plan);
+
+		return plan;
 	}
 
 	/* Suppress Append if there's only one surviving child rel */

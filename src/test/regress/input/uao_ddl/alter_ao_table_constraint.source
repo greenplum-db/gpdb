@@ -1,0 +1,64 @@
+create schema alter_ao_table_constraint_@orientation@;
+set search_path="$user",alter_ao_table_constraint_@orientation@,public;
+SET gp_default_storage_options='orientation=@orientation@';
+-- Add/Drop constraints and validate update on AO table
+CREATE TABLE sto_alt_uao2_constraint(
+  text_col text,
+  bigint_col bigint,
+  char_vary_col character varying(30),
+  numeric_col numeric
+  ) with(appendonly=true) DISTRIBUTED RANDOMLY;
+insert into sto_alt_uao2_constraint values ('1_zero', 1, '1_zero', 1);
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL
+ AND visimapidxid is not NULL AND relid='sto_alt_uao2_constraint'::regclass;
+
+select * from sto_alt_uao2_constraint order by bigint_col;
+update sto_alt_uao2_constraint set numeric_col = 100 where text_col = '1_zero';
+select count(*) AS only_visi_tups from sto_alt_uao2_constraint;
+set gp_select_invisible = true;
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao2_constraint;
+set gp_select_invisible = false;
+-- Alter table add table constraint
+ALTER TABLE sto_alt_uao2_constraint  ADD CONSTRAINT lenchk CHECK (char_length(char_vary_col) < 10);
+insert into sto_alt_uao2_constraint values ('6_zero', 6, '6_zeroooooo', 6);
+select * from sto_alt_uao2_constraint order by bigint_col;
+select count(*) AS only_visi_tups from sto_alt_uao2_constraint;
+set gp_select_invisible = true;
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao2_constraint;
+set gp_select_invisible = false;
+insert into sto_alt_uao2_constraint values ('6_zero', 6, '6_zero', 6);
+select * from sto_alt_uao2_constraint order by bigint_col;
+select count(*) AS only_visi_tups from sto_alt_uao2_constraint;
+set gp_select_invisible = true;
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao2_constraint;
+set gp_select_invisible = false;
+update sto_alt_uao2_constraint set numeric_col = 100 where text_col = '1_zero';
+select * from sto_alt_uao2_constraint order by bigint_col;
+select count(*) AS only_visi_tups from sto_alt_uao2_constraint;
+set gp_select_invisible = true;
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao2_constraint;
+set gp_select_invisible = false;
+-- Alter table drop constriant
+Alter table sto_alt_uao2_constraint  Drop constraint lenchk;
+insert into sto_alt_uao2_constraint values ('7_zero', 7, '7_zeroooooooooo', 7);
+select * from sto_alt_uao2_constraint order by bigint_col;
+select count(*) AS only_visi_tups from sto_alt_uao2_constraint;
+set gp_select_invisible = true;
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao2_constraint;
+set gp_select_invisible = false;
+select * from sto_alt_uao2_constraint order by bigint_col;
+update sto_alt_uao2_constraint set numeric_col = 100 where text_col = '1_zero';
+select count(*) AS only_visi_tups from sto_alt_uao2_constraint;
+set gp_select_invisible = true;
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao2_constraint;
+set gp_select_invisible = false;
+-- Some negative testing.
+alter table sto_alt_uao2_constraint ADD COLUMN added_col10 character varying(35)
+default NULL constraint added_col10 NOT NULL;
+alter table sto_alt_uao2_constraint ADD COLUMN added_col12 character varying(35)
+-- Mask out "by some row" printed by row-oriented AO tables
+-- start_matchsubs
+-- m/^ERROR:  check constraint.*is violated/
+-- s/^ERROR:  check constraint.*is violated.*/ERROR:  check constraint is violated/
+-- end_matchsubs
+default 'abc'  CHECK (added_col12 is NULL);

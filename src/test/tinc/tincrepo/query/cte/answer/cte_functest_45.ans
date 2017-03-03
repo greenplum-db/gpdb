@@ -1,0 +1,33 @@
+-- @author prabhd 
+-- @created 2013-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description test24b: CTE with CSQ[EXISTS]  
+-- start_ignore
+SET gp_optimizer=on;SET gp_log_optimizer=on;
+SET
+SET
+-- end_ignore
+WITH newfoo AS
+	(
+	     SELECT foo.* FROM foo WHERE EXISTS(SELECT bar.c FROM bar WHERE foo.b = bar.c) ORDER BY foo.b
+)
+SELECT
+( SELECT max(CNT) FROM (SELECT count(*) CNT,nf1.b FROM newfoo nf1, newfoo nf2
+WHERE nf1.a = nf2.a group by nf1.b) FOO
+), * FROM newfoo ORDER BY 1,2,3;
+ ?column? | a | b  
+----------+---+----
+        1 | 1 |  2
+        1 | 2 |  3
+        1 | 3 |  4
+        1 | 4 |  5
+        1 | 5 |  6
+        1 | 6 |  7
+        1 | 7 |  8
+        1 | 8 |  9
+        1 | 9 | 10
+(9 rows)
+

@@ -1088,16 +1088,16 @@ void
 test__MemoryAccounting_SaveToLog__GeneratesCorrectString(void **state)
 {
 	char *templateString =
-"memory: account_name, child_id, parent_id, quota, peak, allocated, freed, current\n\
-memory: Vmem, 0, 0, 0, 0, 0, 0, 0\n\
-memory: Peak, 0, 0, 0, %" PRIu64 ", %" PRIu64 ", 0, %" PRIu64 "\n\
-memory: Root, 0, 0, 0, 0, 0, 0, 0\n\
-memory: Top, 1, 0, 0, %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 "\n\
-memory: X_Hash, 2, 1, 0, %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 "\n\
-memory: X_Alien, 3, 0, 0, 0, 0, 0, 0\n\
-memory: MemAcc, 4, 0, 0, %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 "\n\
-memory: Rollover, 5, 0, 0, 0, 0, 0, 0\n\
-memory: SharedHeader, 6, 0, 0, %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 "\n";
+"memory: account_name, account_id, parent_account_id, quota, peak, allocated, freed, current\n\
+memory: Vmem, -1, -1, 0, 0, 0, 0, 0\n\
+memory: Peak, -2, -2, 0, %" PRIu64 ", %" PRIu64 ", 0, %" PRIu64 "\n\
+memory: Root, 1, 1, 0, 0, 0, 0, 0\n\
+memory: SharedHeader, 2, 1, 0, %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 "\n\
+memory: Rollover, 3, 1, 0, 0, 0, 0, 0\n\
+memory: MemAcc, 4, 1, 0, %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 "\n\
+memory: X_Alien, 5, 1, 0, 0, 0, 0, 0\n\
+memory: Top, 6, 1, 0, %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 "\n\
+memory: X_Hash, 7, 6, 0, %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 "\n";
 
 	/* ActiveMemoryAccount should be Top at this point */
 	MemoryAccount *newAccount = MemoryAccounting_ConvertIdToAccount(
@@ -1124,10 +1124,10 @@ memory: SharedHeader, 6, 0, 0, %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 
 
 	snprintf(buf, sizeof(buf), templateString,
 			MemoryAccountingPeakBalance, MemoryAccountingPeakBalance, MemoryAccountingPeakBalance,
-			topAccount->peak, topAccount->allocated, topAccount->freed, topAccount->allocated - topAccount->freed,
-			newAccount->peak, newAccount->allocated, newAccount->freed, newAccount->allocated - newAccount->freed,
+			SharedChunkHeadersMemoryAccount->peak, SharedChunkHeadersMemoryAccount->allocated, SharedChunkHeadersMemoryAccount->freed, SharedChunkHeadersMemoryAccount->allocated - SharedChunkHeadersMemoryAccount->freed,
 			MemoryAccountMemoryAccount->peak, MemoryAccountMemoryAccount->allocated, MemoryAccountMemoryAccount->freed, MemoryAccountMemoryAccount->allocated - MemoryAccountMemoryAccount->freed,
-			SharedChunkHeadersMemoryAccount->peak, SharedChunkHeadersMemoryAccount->allocated, SharedChunkHeadersMemoryAccount->freed, SharedChunkHeadersMemoryAccount->allocated - SharedChunkHeadersMemoryAccount->freed);
+			topAccount->peak, topAccount->allocated, topAccount->freed, topAccount->allocated - topAccount->freed,
+			newAccount->peak, newAccount->allocated, newAccount->freed, newAccount->allocated - newAccount->freed);
 
 	/* Restore hacked counters */
 	topAccount->freed = hackedFreed;

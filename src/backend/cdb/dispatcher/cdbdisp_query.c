@@ -515,6 +515,8 @@ cdbdisp_dispatchCommandInternal(const char *strCommand,
 	{
 		cdbdisp_dispatchToGang(&ds, primaryGang, -1, DEFAULT_DISP_DIRECT);
 
+		cdbdisp_waitDispatchFinish(&ds);
+
 		/*
 		 * Block until valid results is available or one or more QEs got errors.
 		 */
@@ -528,12 +530,19 @@ cdbdisp_dispatchCommandInternal(const char *strCommand,
 			/*
 			 * debug_string_query is not meaningful for utility statement
 			 */
+			/*
+			 * XXX: It would be nice to get more details from the segment, not
+			 * just the error message. In particular, an error code would be
+			 * nice. DATA_EXCEPTION is a pretty wild guess on the real cause.
+			 */
 			if (serializedQuerytree != NULL)
-				ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
+				ereport(ERROR,
+						(errcode(ERRCODE_DATA_EXCEPTION),
 						errmsg("%s", qeErrorMsg.data)));
 			else
 
-				ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
+				ereport(ERROR,
+						(errcode(ERRCODE_DATA_EXCEPTION),
 						errmsg("could not execute command on QE"),
 						errdetail("%s", qeErrorMsg.data),
 						errhint("command: '%s'",strCommand)));
@@ -1224,7 +1233,7 @@ cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
 	ds->primaryResults = NULL;
 	ds->dispatchParams = NULL;
 	queryText = buildGpQueryString(ds, pQueryParms, &queryTextLength);
-	cdbdisp_makeDispatcherState(ds, nSlices, cancelOnError, queryText, queryTextLength);
+	cdbdisp_makeDispatcherState(ds, nTotalSlices, cancelOnError, queryText, queryTextLength);
 
 	cdb_total_plans++;
 	cdb_total_slices += nSlices;
@@ -1322,6 +1331,8 @@ cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
 	}
 
 	pfree(sliceVector);
+
+	cdbdisp_waitDispatchFinish(ds);
 
 	/*
 	 * If bailed before completely dispatched, stop QEs and throw error.
@@ -1467,6 +1478,8 @@ cdbdisp_dispatchSetCommandToAllGangs(const char *strCommand,
 			cdbdisp_dispatchToGang(ds, rg, -1, DEFAULT_DISP_DIRECT);
 		}
 	}
+
+	cdbdisp_waitDispatchFinish(ds);
 }
 
 static int *

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_eys_3wy_sp">
+  <title id="im148803">Creating and Using Sequences</title>
+  <body>
+    <p>You can use sequences to auto-increment unique ID columns of a table whenever a record is
+      added. Sequences are often used to assign unique identification numbers to rows added to a
+      table. You can declare an identifier column of type <codeph>SERIAL</codeph> to implicitly
+      create a sequence for use with a column.</p>
+  </body>
+  <topic id="topic87" xml:lang="en">
+    <title>Creating a Sequence</title>
+    <body>
+      <p>The <codeph>CREATE SEQUENCE </codeph>command creates and initializes a special single-row
+        sequence generator table with the given sequence name. The sequence name must be distinct
+        from the name of any other sequence, table, index, or view in the same schema. For
+        example:</p>
+      <p>
+        <codeblock>CREATE SEQUENCE myserial START 101;
+</codeblock>
+      </p>
+    </body>
+  </topic>
+  <topic id="topic88" xml:lang="en">
+    <title>Using a Sequence</title>
+    <body>
+      <p>After you create a sequence generator table using <codeph>CREATE SEQUENCE</codeph>, you can
+        use the <codeph>nextval</codeph> function to operate on the sequence. For example, to insert
+        a row into a table that gets the next value of a sequence:</p>
+      <p>
+        <codeblock>INSERT INTO vendors VALUES (nextval('myserial'), 'acme');
+</codeblock>
+      </p>
+      <p>You can also use the <codeph>setval</codeph> function to reset a sequence's counter value.
+        For example:</p>
+      <p>
+        <codeblock>SELECT setval('myserial', 201);
+</codeblock>
+      </p>
+      <p>A <codeph>nextval</codeph> operation is never rolled back. Afetched value is considered
+        used, even if the transaction that performed the <codeph>nextval</codeph> fails. This means
+        that failed transactions can leave unused holes in the sequence of assigned values.
+          <codeph>setval</codeph> operations are never rolled back. </p>
+      <p>Note that the <codeph>nextval</codeph> function is not allowed in <codeph>UPDATE</codeph>
+        or <codeph>DELETE</codeph> statements if mirroring is enabled, and the
+          <codeph>currval</codeph> and <codeph>lastval</codeph> functions are not supported in
+        Greenplum Database.</p>
+      <p>To examine the current settings of a sequence, query the sequence table:</p>
+      <p>
+        <codeblock>SELECT * FROM myserial;
+</codeblock>
+      </p>
+    </body>
+  </topic>
+  <topic id="topic89" xml:lang="en">
+    <title>Altering a Sequence</title>
+    <body>
+      <p>The <codeph>ALTER SEQUENCE</codeph> command changes the parameters of an existing sequence
+        generator. For example:</p>
+      <p>
+        <codeblock>ALTER SEQUENCE myserial RESTART WITH 105;
+</codeblock>
+      </p>
+      <p>Any parameters not set in the <codeph>ALTER SEQUENCE</codeph> command retain their prior
+        settings.</p>
+    </body>
+  </topic>
+  <topic id="topic90" xml:lang="en">
+    <title>Dropping a Sequence</title>
+    <body>
+      <p>The <codeph>DROP SEQUENCE</codeph> command removes a sequence generator table. For
+        example:</p>
+      <p>
+        <codeblock>DROP SEQUENCE myserial;
+</codeblock>
+      </p>
+    </body>
+  </topic>
+</topic>

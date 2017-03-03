@@ -1,0 +1,4 @@
+-- start_matchsubs
+m/\(plpython\.c:\d+\)/
+s/\(plpython\.c:\d+\)//
+-- end_matchsubs

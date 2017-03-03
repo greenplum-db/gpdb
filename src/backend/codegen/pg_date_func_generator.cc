@@ -73,8 +73,6 @@ llvm::Value* PGDateFuncGenerator::GenerateDate2Timestamp(
           GetConstant<int64_t>(USECS_PER_DAY);
 
   llvm::Value* llvm_out_value = nullptr;
-  llvm::Value* llvm_err_msg = codegen_utils->GetConstant(
-      "date out of range for timestamp");
   PGFuncGeneratorInfo pg_timestamp_func_info(
       pg_func_info.llvm_main_func,
       pg_func_info.llvm_error_block,
@@ -84,7 +82,7 @@ llvm::Value* PGDateFuncGenerator::GenerateDate2Timestamp(
   PGArithFuncGenerator<int64_t, int32_t, int64_t>::ArithOpWithOverflow(
       codegen_utils,
       &gpcodegen::GpCodegenUtils::CreateMulOverflow<int64_t>,
-      llvm_err_msg,
+      "date out of range for timestamp",
       pg_timestamp_func_info,
       &llvm_out_value);
 

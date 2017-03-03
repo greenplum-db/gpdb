@@ -200,11 +200,11 @@ select count(*) from ck_sync1_ao_alter_part_split_default_part7;
 -- split default partition
 --
 alter table sync1_ao_alter_part_split_default_part2 split default partition at ('baz') into (partition bing, default partition);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  dropped partition "baz" for relation "sync1_ao_alter_part_split_default_part2"
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_ao_alter_part_split_default_part2_1_prt_bing" for table "sync1_ao_alter_part_split_default_part2"
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_ao_alter_part_split_default_part2_1_prt_baz" for table "sync1_ao_alter_part_split_default_part2"
 ALTER TABLE
 --
@@ -231,11 +231,11 @@ select count(*) from sync1_ao_alter_part_split_default_part2;
 -- split default partition
 --
 alter table ck_sync1_ao_alter_part_split_default_part1 split default partition at ('baz') into (partition bing, default partition);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  dropped partition "baz" for relation "ck_sync1_ao_alter_part_split_default_part1"
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_split_default_part1_1_prt_bing" for table "ck_sync1_ao_alter_part_split_default_part1"
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_split_default_part1_1_prt_baz" for table "ck_sync1_ao_alter_part_split_default_part1"
 ALTER TABLE
 --

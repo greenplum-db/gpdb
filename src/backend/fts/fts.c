@@ -878,6 +878,7 @@ probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount)
 	 */
 	ResourceOwner save = CurrentResourceOwner;
 	StartTransactionCommand();
+	GetTransactionSnapshot();
 	elog(LOG, "probeUpdateConfig called for %d changes", changeCount);
 
 	histrel = heap_open(GpConfigHistoryRelationId,
@@ -1120,6 +1121,7 @@ FtsMarkSegmentsInSync(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseInf
 	 */
 	ResourceOwner save = CurrentResourceOwner;
 	StartTransactionCommand();
+	GetTransactionSnapshot();
 
 	/* update primary */
 	segStatus = ftsProbeInfo->fts_status[primary->dbid];

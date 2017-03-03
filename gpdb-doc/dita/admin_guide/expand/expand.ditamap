@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
+<map>
+ <title>Expanding a Greenplum System</title>
+ <topicref href="expand-main.xml">
+  <topicref href="expand-overview.xml"/>
+  <topicref href="expand-planning.xml"/>
+  <topicref href="expand-nodes.xml"/>
+  <topicref href="expand-initialize.xml"/>
+  <topicref href="expand-redistribute.xml" type="topic" format="dita"/>
+  <topicref href="expand-rm-schema.xml" type="topic" format="dita"/>
+ </topicref>
+</map>

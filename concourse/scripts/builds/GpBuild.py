@@ -31,5 +31,5 @@ class GpBuild(GpdbBuildBase):
         return subprocess.call([
             "runuser gpadmin -c \"source /usr/local/gpdb/greenplum_path.sh \
             && source gpAux/gpdemo/gpdemo-env.sh && PGOPTIONS='-c optimizer={0}' \
-            make installcheck-good\"".format(self.mode)], cwd="gpdb_src", shell=True)
+            make -C src/test installcheck-good\"".format(self.mode)], cwd="gpdb_src", shell=True)
     

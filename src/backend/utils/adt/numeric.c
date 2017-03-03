@@ -2933,21 +2933,8 @@ int8_invsum(PG_FUNCTION_ARGS)
 										NumericGetDatum(oldsum), newval));
 }
 
-/*
- * Routines for avg int type.  The transition datatype is a int64 for count, and a float8 for sum.
- */
-
-typedef struct IntFloatAvgTransdata
-{
-	int32   _len; /* len for varattrib, do not touch directly */
-#if 1
-	int32   pad;  /* pad so int64 and float64 will be 8 bytes aligned */
-#endif
-	int64 	count;
-	float8 sum;
-} IntFloatAvgTransdata;
-
-static inline Datum intfloat_avg_accum_decum(IntFloatAvgTransdata *transdata, float8 newval, bool acc)
+inline
+Datum intfloat_avg_accum_decum(IntFloatAvgTransdata *transdata, float8 newval, bool acc)
 {
 	if(transdata == NULL || VARSIZE(transdata) != sizeof(IntFloatAvgTransdata))
 	{

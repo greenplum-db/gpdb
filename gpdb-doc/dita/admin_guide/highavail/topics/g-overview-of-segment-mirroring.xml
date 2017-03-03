@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic3">
+    <title>Overview of Segment Mirroring</title>
+    <body>
+        <p>When Greenplum Database High Availability is enabled, there are two types of segments:
+                <i>primary</i> and <i>mirror</i>. Each primary segment has one corresponding mirror
+            segment. A primary segment receives requests from the master to make changes to the
+            segment's database and then replicates those changes to the corresponding mirror. If a
+            primary segment becomes unavailable, database queries fail over to the mirror
+            segment.</p>
+        <p>Segment mirroring employs a physical file replication scheme—data file I/O at the primary
+            is replicated to the secondary so that the mirror's files are identical to the primary's
+            files. Data in Greenplum Database are represented with <i>tuples</i>, which are packed
+            into <i>blocks</i>. Database tables are stored in disk files consisting of one or more
+            blocks. A change to a tuple changes the block it is saved in, which is then written to
+            disk on the primary and copied over the network to the mirror. The mirror updates the
+            corresponding block in its copy of the file.</p>
+        <p>For heap tables, blocks are saved in an in-memory cache until they are evicted to make
+            room for newly changed blocks. This allows the system to read or update a block in
+            memory multiple times without performing expensive disk I/O. When the block is evicted
+            from the cache, it is written to disk and replicated to the secondary. While the block
+            is held in cache, the primary and mirror have different images of the block. However,
+            the databases are still consistent because the transaction log has been replicated. If a
+            mirror takes over for a failed primary, the transactions in its log are applied to the
+            database tables.</p>
+        <p>Other database objects — for example filespaces, which are tablespaces internally
+            represented with directories—also use file replication to perform various file
+            operations in a synchronous way.</p>
+        <p>Append-optimized tables do not use the in-memory caching mechanism. Changes made to
+            append-optimized table blocks are replicated to the mirror immediately. Typically, file
+            write operations are asynchronous, while opening, creating, and synchronizing files are
+            "sync-replicated," which means the primary blocks until it receives the acknowledgment
+            from the secondary. </p>
+        <p>If a primary segment fails, the file replication process stops and the mirror segment
+            automatically starts as the active segment instance. The now active mirror's system
+            state becomes <i>Change Tracking</i>, which means the mirror maintains a system table
+            and change-log of all blocks updated while the primary segment is unavailable. When the
+            failed primary segment is repaired and ready to be brought back online, an administrator
+            initiates a recovery process and the system goes into <i>Resynchronization</i> state.
+            The recovery process applies the logged changes to the repaired primary segment. The
+            system state changes to <i>Synchronized</i> when the recovery process completes.</p>
+        <p>If the mirror segment fails or becomes inaccessible while the primary is active, the
+            primary's system state changes to <i>Change Tracking</i>, and it tracks changes to be
+            applied to the mirror when it is recovered.</p>
+        <p>Mirror segments can be placed on hosts in the cluster in different configurations, as
+            long as the primary and mirror instance for a segment are on different hosts. Each host
+            must have the same number of primary and mirror segments. The default mirroring
+            configuration is <i>group mirroring</i>, where the mirror segments for each host's
+            primary segments are placed on one other host. If a single host fails, the number of
+            active primary segments doubles on the host that backs the failed host. <xref
+                href="#topic3/fig_rrr_nt2_xt" format="dita"/> illustrates a group mirroring
+            configuration.  </p>
+        <!--<fig id="ki169754"><image href="../../graphics/mirrorsegs.png" placement="break" width="485px" height="135px"/></fig>-->
+        <fig id="fig_rrr_nt2_xt">
+            <title>Group Segment Mirroring in Greenplum Database</title>
+            <image href="../../graphics/group-mirroring.png" id="image_crm_pt2_xt"/>
+        </fig>
+        <p><i>Spread mirroring</i> spreads each host's mirrors over multiple hosts so that if any
+            single host fails, no other host will have more than one mirror promoted to the active
+            primary segment. Spread mirroring is possible only if there are more hosts than segments
+            per host. <xref href="#topic3/fig_ew1_qgg_xt" format="dita"/> illustrates the placement
+            of mirrors in a spread segment mirroring configuration.</p>
+        <fig id="fig_ew1_qgg_xt">
+            <title>Spread Segment Mirroring in Greenplum Database</title>
+            <image href="../../graphics/spread-mirroring.png" id="image_zjm_wgg_xt"/>
+        </fig>
+        <p>The Greenplum Database utilities that create mirror segments support group and spread
+            segment configurations. Custom mirroring configurations can be described in a
+            configuration file and passed on the command line. </p>
+    </body>
+</topic>

@@ -961,14 +961,6 @@ CreateQueue(CreateQueueStmt *stmt)
 									 overcommit, 
 									 ignorelimit);
 			
-			/**
-			 * Ensure that the shared data structures are consistent with
-			 * the catalog table on memory limits.
-			 */
-#ifdef USE_ASSERT_CHECKING
-			AssertMemoryLimitsMatch();
-#endif
-		
 			LWLockRelease(ResQueueLock);
 
 			if (!queueok)
@@ -1375,14 +1367,6 @@ AlterQueue(AlterQueueStmt *stmt)
 									overcommit, 
 									ignorelimit);
 			
-			/**
-			 * Ensure that the shared data structures are consistent with
-			 * the catalog table on memory limits.
-			 */
-#ifdef USE_ASSERT_CHECKING
-			AssertMemoryLimitsMatch();
-#endif
-
 			LWLockRelease(ResQueueLock);
 			
 			if (queueok != ALTERQUEUE_OK)
@@ -1534,14 +1518,6 @@ DropQueue(DropQueueStmt *stmt)
 
 			queueok = ResDestroyQueue(queueid);
 		
-			/**
-			 * Ensure that the shared data structures are consistent with
-			 * the catalog table on memory limits.
-			 */
-#ifdef USE_ASSERT_CHECKING
-			AssertMemoryLimitsMatch();
-#endif
-
 			LWLockRelease(ResQueueLock);
 
 			if (!queueok)

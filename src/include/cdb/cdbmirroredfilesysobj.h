@@ -1,14 +1,14 @@
 /*-------------------------------------------------------------------------
  *
- * cdbmirroredfsobj.h
+ * cdbmirroredfilesysobj.h
  *	  Create and drop mirrored files and directories.
  *
  * Copyright (c) 2009-2010, Greenplum inc
  *
  *-------------------------------------------------------------------------
  */
-#ifndef CDBMIRROREDFSOBJ_H
-#define CDBMIRROREDFSOBJ_H
+#ifndef CDBMIRROREDFILESYSOBJ_H
+#define CDBMIRROREDFILESYSOBJ_H
 
 #include "storage/relfilenode.h"
 #include "storage/dbdirnode.h"
@@ -224,4 +224,4 @@ extern void MirroredFileSysObj_DropRelFile(
 
 extern MirroredObjectExistenceState mirror_existence_state(void);
 
-#endif   /* CDBMIRROREDFSOBJ_H */
+#endif	/*  CDBMIRROREDFILESYSOBJ_H */

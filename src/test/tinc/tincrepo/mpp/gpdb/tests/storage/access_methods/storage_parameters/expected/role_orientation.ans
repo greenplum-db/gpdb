@@ -18,7 +18,7 @@ Alter role dsp_role2 set gp_default_storage_options="appendonly=true, orientatio
 ALTER ROLE
 -- GUC with invalid value 
 Alter role dsp_role3 set  gp_default_storage_options="appendonly=true,orientation=xxx";
-psql:/path/sql_file:1: ERROR:  invalid value "xxx" for storage option "orientation" (reloptions.c:133)
+psql:/path/sql_file:1: ERROR:  invalid value "xxx" for storage option "orientation"
 -- GUC without appendonly=true
 Alter role dsp_role3 set gp_default_storage_options="orientation=column";
 ALTER ROLE

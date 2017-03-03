@@ -1065,6 +1065,7 @@ typedef enum ObjectType
 	OBJECT_CONVERSION,
 	OBJECT_DATABASE,
 	OBJECT_DOMAIN,
+	OBJECT_EXTENSION,
 	OBJECT_FUNCTION,
 	OBJECT_INDEX,
 	OBJECT_LANGUAGE,
@@ -1123,6 +1124,45 @@ typedef enum DropBehavior
 	DROP_RESTRICT,				/* drop fails if any dependent objects */
 	DROP_CASCADE				/* remove dependent objects too */
 } DropBehavior;
+
+/* ----------------------
+ *		Create/Alter Extension Statements
+ * ----------------------
+ */
+
+typedef enum CreateExtensionState
+{
+	CREATE_EXTENSION_INIT,		/* not start to create extension */
+	CREATE_EXTENSION_BEGIN,     /* start to create extension */
+	CREATE_EXTENSION_END		/* finish to create extension */
+} CreateExtensionState;
+
+typedef struct CreateExtensionStmt
+{
+	NodeTag		type;
+	char	   *extname;
+	bool		if_not_exists;	/* just do nothing if it already exists? */
+	List	   *options;		/* List of DefElem nodes */
+	CreateExtensionState create_ext_state;		/* create extension state */
+} CreateExtensionStmt;
+
+/* Only used for ALTER EXTENSION UPDATE; later might need an action field */
+typedef struct AlterExtensionStmt
+{
+	NodeTag		type;
+	char	   *extname;
+	List	   *options;		/* List of DefElem nodes */
+} AlterExtensionStmt;
+
+typedef struct AlterExtensionContentsStmt
+{
+	NodeTag		type;
+	char	   *extname;		/* Extension's name */
+	int			action;			/* +1 = add object, -1 = drop object */
+	ObjectType	objtype;		/* Object's type */
+	List	   *objname;		/* Qualified name of the object */
+	List	   *objargs;		/* Arguments if needed (eg, for functions) */
+} AlterExtensionContentsStmt;
 
 /* ----------------------
  *	Alter Table
@@ -1505,6 +1545,7 @@ typedef struct CreateExternalStmt
 	bool		isweb;
 	bool		iswritable;
 	Node	   *sreh;			/* Single row error handling info */
+	List       *extOptions;		/* generic options to external table */
 	List	   *encoding;		/* List (size 1 max) of DefElem nodes for
 								   data encoding */
 	List       *distributedBy;   /* what columns we distribute the data by */
@@ -1645,7 +1686,7 @@ typedef struct PartitionBy			/* the Partition By clause */
 	PartitionByType		partType;
 	List			   *keys;		/* key columns (Partition By ...) */
 	List			   *keyopclass;	/* opclass for each key */
-	Node			   *partNum;	/* partitionS (constant number)*/
+	Node			   *partNum;	/* partitions (constant number)*/
 	Node			   *subPart;	/* optional subpartn (PartitionBy ptr) */
 	Node			   *partSpec;	/* specification or template */
 	Node			   *partDefault;/* DEFAULT partition (if exists) */

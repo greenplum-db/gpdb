@@ -554,8 +554,9 @@ RemoveFileSpace(List *names, DropBehavior behavior, bool missing_ok)
 	/* Disallow drop of the standard filespaces, even by superuser */
 	if (fsoid == SYSTEMFILESPACE_OID)
 		ereport(ERROR,
-				(errmsg("cannot drop filespace %s because it is required "
-						"by the database system", fsname)));
+				(errcode(ERRCODE_OBJECT_IN_USE),
+				 errmsg("cannot drop filespace %s because it is required by the database system",
+						fsname)));
 
 	/* 
 	 * Disallow drop of filespace if it is used for transaction files or
@@ -563,17 +564,15 @@ RemoveFileSpace(List *names, DropBehavior behavior, bool missing_ok)
 	 */
 	if (isFilespaceUsedForTempFiles(fsoid))
 		ereport(ERROR,
-				(errmsg("cannot drop filespace %s because it is used "
-						"by temporary files \n"
-						"Use gpfilespace --movetempfilespace <newFilespaceName>	to move temporary files to a different filespace\n"
-						"and then attempt DROP FILESPACE", fsname)));
+				(errcode(ERRCODE_OBJECT_IN_USE),
+				 errmsg("cannot drop filespace %s because it is used by temporary files", fsname),
+				 errhint("Use \"gpfilespace --movetempfilespace <newFilespaceName>\" to move temporary files to a different filespace, and try again")));
 
 	if (isFilespaceUsedForTxnFiles(fsoid))
 		ereport(ERROR,
-                                (errmsg("cannot drop filespace %s because it is used "
-                                                "by transaction files\n"
-						"Use gpfilespace --movetransfilespace <newFilespaceName> to move transaction files to a different filespace\n"
-						"and then attempt DROP FILESPACE", fsname)));
+				(errcode(ERRCODE_OBJECT_IN_USE),
+				 errmsg("cannot drop filespace %s because it is used by transaction files", fsname),
+				 errhint("Use gpfilespace --movetransfilespace <newFilespaceName> to move transaction files to a different filespace, and try again")));
 
 	/*
 	 * performDeletion only drops things that have dependencies in

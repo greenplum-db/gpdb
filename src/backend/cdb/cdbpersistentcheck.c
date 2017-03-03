@@ -498,7 +498,7 @@ static PT_PostDTMRecv_Data *PT_PostDTMRecv_Info = NULL;
  * Function to check existence of entry in table with specified values.
  * If entry exist throw the error else just return fine.
  * 
- * Intention is to block any duplicate entries from geting IN,
+ * Intention is to block any duplicate entries from getting IN,
  * hence must be called from every place trying to add entry to PT relation table.
  */
 void PTCheck_BeforeAddingEntry( PersistentStoreData *storeData, Datum *values)

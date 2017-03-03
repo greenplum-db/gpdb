@@ -53,8 +53,10 @@ class RepairTestCase(GpTestCase):
     def test_create_repair_extra__normal(self):
         self.subject = Repair(self.context, "extra", "some desc")
         self.subject.TIMESTAMP = "timestamp"
+        catalog_table_obj = Mock()
         catalog_table_name = "catalog"
-        repair_dir = self.subject.create_repair_for_extra_missing(catalog_table_name, issues=None, pk_name=None)
+        catalog_table_obj.getTableName.return_value = catalog_table_name
+        repair_dir = self.subject.create_repair_for_extra_missing(catalog_table_obj, issues=None, pk_name=None)
         self.assertEqual(repair_dir, self.repair_dir_path)
         bash_contents =[
                     "#!/bin/bash\n",
@@ -102,6 +104,7 @@ class RepairTestCase(GpTestCase):
 
     def tearDown(self):
         shutil.rmtree(self.repair_dir_path)
+        super(RepairTestCase, self).tearDown()
 
 if __name__ == '__main__':
     run_tests()

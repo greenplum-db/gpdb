@@ -59,7 +59,7 @@ extern void AlterDatabase(AlterDatabaseStmt *stmt);
 extern void AlterDatabaseSet(AlterDatabaseSetStmt *stmt);
 extern void AlterDatabaseOwner(const char *dbname, Oid newOwnerId);
 
-extern Oid	get_database_oid(const char *dbname);
+extern Oid	get_database_oid(const char *dbname, bool missing_ok);
 extern char *get_database_name(Oid dbid);
 
 extern void dbase_redo(XLogRecPtr beginLoc  __attribute__((unused)), XLogRecPtr lsn  __attribute__((unused)), XLogRecord *rptr);

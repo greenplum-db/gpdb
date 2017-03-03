@@ -63,8 +63,10 @@ extern void CreateCast(CreateCastStmt *stmt);
 extern void DropCast(DropCastStmt *stmt);
 extern void DropCastById(Oid castOid);
 extern void ExecuteDoStmt(DoStmt *stmt);
+extern Oid  get_cast_oid(Oid sourcetypeid, Oid targettypeid, bool missing_ok);
 extern void AlterFunctionNamespace(List *name, List *argtypes, bool isagg,
 					   const char *newschema);
+extern Oid	AlterFunctionNamespace_oid(Oid procOid, Oid nspOid);
 
 /* commands/operatorcmds.c */
 extern void DefineOperator(List *names, List *parameters);
@@ -73,6 +75,8 @@ extern void RemoveOperatorById(Oid operOid);
 extern void AlterOperatorOwner(List *name, TypeName *typeName1,
 				   TypeName *typename2, Oid newOwnerId);
 extern void AlterOperatorOwner_oid(Oid operOid, Oid newOwnerId);
+extern void AlterOperatorNamespace(List *names, List *argtypes, const char *newschema);
+extern Oid	AlterOperatorNamespace_oid(Oid operOid, Oid newNspOid);
 
 /* commands/aggregatecmds.c */
 extern void DefineAggregate(List *name, List *args, bool oldstyle,
@@ -94,8 +98,15 @@ extern void RenameOpClass(List *name, const char *access_method, const char *new
 extern void RenameOpFamily(List *name, const char *access_method, const char *newname);
 extern void AlterOpClassOwner(List *name, const char *access_method, Oid newOwnerId);
 extern void AlterOpClassOwner_oid(Oid opclassOid, Oid newOwnerId);
+extern void AlterOpClassNamespace(List *name, char *access_method, const char *newschema);
+extern Oid	AlterOpClassNamespace_oid(Oid opclassOid, Oid newNspOid);
 extern void AlterOpFamilyOwner(List *name, const char *access_method, Oid newOwnerId);
 extern void AlterOpFamilyOwner_oid(Oid opfamilyOid, Oid newOwnerId);
+extern void AlterOpFamilyNamespace(List *name, char *access_method, const char *newschema);
+extern Oid	AlterOpFamilyNamespace_oid(Oid opfamilyOid, Oid newNspOid);
+extern Oid  get_am_oid(const char *amname, bool missing_ok);
+extern Oid  get_opclass_oid(Oid amID, List *opclassname, bool missing_ok);
+extern Oid  get_opfamily_oid(Oid amID, List *opfamilyname, bool missing_ok);
 
 /* commands/tsearchcmds.c */
 extern void DefineTSParser(List *names, List *parameters);

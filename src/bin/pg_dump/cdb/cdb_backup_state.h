@@ -3,7 +3,7 @@
  * cdb_backup_state.h
  *
  * Structures and functions to keep track of the progress
- * of a remote backup, impolemented as a state machine
+ * of a remote backup, implemented as a state machine
  *-------------------------------------------------------------------------
  */
 #ifndef CDB_BACKUP_STATE_H

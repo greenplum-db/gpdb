@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic41">
+   <title>Locale and Formatting Parameters</title>
+   <body>
+      <simpletable id="kh163748">
+         <strow>
+            <stentry>
+               <p>
+                  <codeph>client_encoding</codeph>
+               </p>
+               <p>
+                  <codeph>DateStyle</codeph>
+               </p>
+               <p>
+                  <codeph>extra_float_digits</codeph>
+               </p>
+               <p>
+                  <codeph>IntervalStyle</codeph>
+               </p>
+               <p>
+                  <codeph>lc_collate</codeph>
+               </p>
+               <p>
+                  <codeph>lc_ctype</codeph>
+               </p>
+            </stentry>
+            <stentry>
+               <p>
+                  <codeph>lc_messages</codeph>
+               </p>
+               <p>
+                  <codeph>lc_monetary</codeph>
+               </p>
+               <p>
+                  <codeph>lc_numeric</codeph>
+               </p>
+               <p>
+                  <codeph>lc_time</codeph>
+               </p>
+               <p>
+                  <codeph>TimeZone</codeph>
+               </p>
+            </stentry>
+         </strow>
+      </simpletable>
+   </body>
+</topic>

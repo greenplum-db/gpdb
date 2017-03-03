@@ -373,13 +373,13 @@ namespace gpdxl
 			static
 			ULONG UlCmpt(IMDType::ECmpType ecmpt);
 			
-			// retrieve the opclass mdids for the given scalar op
+			// retrieve the opfamilies mdids for the given scalar op
 			static
-			DrgPmdid *PdrgpmdidScOpOpClasses(IMemoryPool *pmp, IMDId *pmdidScOp);
+			DrgPmdid *PdrgpmdidScOpOpFamilies(IMemoryPool *pmp, IMDId *pmdidScOp);
 			
-			// retrieve the opclass mdids for the given index
+			// retrieve the opfamilies mdids for the given index
 			static
-			DrgPmdid *PdrgpmdidIndexOpClasses(IMemoryPool *pmp, IMDId *pmdidIndex);
+			DrgPmdid *PdrgpmdidIndexOpFamilies(IMemoryPool *pmp, IMDId *pmdidIndex);
 
             // for non-leaf partition tables return the number of child partitions
             // else return 1
@@ -410,7 +410,7 @@ namespace gpdxl
 
 			// add system columns (oid, tid, xmin, etc) in table descriptors
 			static
-			void AddSystemColumns(IMemoryPool *pmp, DrgPmdcol *pdrgpmdcol, BOOL fhasOid, BOOL fAOTable);
+			void AddSystemColumns(IMemoryPool *pmp, DrgPmdcol *pdrgpmdcol, Relation rel, BOOL fAOTable);
 
 			// retrieve an index from the relcache
 			static

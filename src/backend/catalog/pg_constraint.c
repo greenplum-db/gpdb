@@ -666,10 +666,10 @@ RenameConstraintById(Oid conId, const char *newname)
  */
 void
 AlterConstraintNamespaces(Oid ownerId, Oid oldNspId,
-						  Oid newNspId, bool isType)
+						  Oid newNspId, bool isType, ObjectAddresses *objsMoved)
 {
 	Relation	conRel;
-	ScanKeyData key[1];
+	ScanKeyData	key[1];
 	SysScanDesc scan;
 	HeapTuple	tup;
 
@@ -699,6 +699,14 @@ AlterConstraintNamespaces(Oid ownerId, Oid oldNspId,
 	while (HeapTupleIsValid((tup = systable_getnext(scan))))
 	{
 		Form_pg_constraint conform = (Form_pg_constraint) GETSTRUCT(tup);
+		ObjectAddress thisobj;
+
+		thisobj.classId = ConstraintRelationId;
+		thisobj.objectId = HeapTupleGetOid(tup);
+		thisobj.objectSubId = 0;
+
+		if (object_address_present(&thisobj, objsMoved))
+			continue;
 
 		if (conform->connamespace == oldNspId)
 		{
@@ -716,12 +724,73 @@ AlterConstraintNamespaces(Oid ownerId, Oid oldNspId,
 			 * changeDependencyFor().
 			 */
 		}
+
+		add_exact_object_address(&thisobj, objsMoved);
 	}
 
 	systable_endscan(scan);
 
 	heap_close(conRel, RowExclusiveLock);
 }
+
+/*
+ * get_constraint_oid
+ *		Find a constraint on the specified relation with the specified name.
+ *		Returns constraint's OID.
+ */
+Oid
+get_constraint_oid(Oid relid, const char *conname, bool missing_ok)
+{
+	Relation	pg_constraint;
+	HeapTuple	tuple;
+	SysScanDesc scan;
+	ScanKeyData skey[1];
+	Oid			conOid = InvalidOid;
+
+	/*
+	 * Fetch the constraint tuple from pg_constraint.  There may be more than
+	 * one match, because constraints are not required to have unique names;
+	 * if so, error out.
+	 */
+	pg_constraint = heap_open(ConstraintRelationId, AccessShareLock);
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_constraint_conrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+
+	scan = systable_beginscan(pg_constraint, ConstraintRelidIndexId, true,
+							  SnapshotNow, 1, skey);
+
+	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
+	{
+		Form_pg_constraint con = (Form_pg_constraint) GETSTRUCT(tuple);
+
+		if (strcmp(NameStr(con->conname), conname) == 0)
+		{
+			if (OidIsValid(conOid))
+				ereport(ERROR,
+						(errcode(ERRCODE_DUPLICATE_OBJECT),
+				 errmsg("table \"%s\" has multiple constraints named \"%s\"",
+						get_rel_name(relid), conname)));
+			conOid = HeapTupleGetOid(tuple);
+		}
+	}
+
+	systable_endscan(scan);
+
+	/* If no such constraint exists, complain */
+	if (!OidIsValid(conOid) && !missing_ok)
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("constraint \"%s\" for table \"%s\" does not exist",
+						conname, get_rel_name(relid))));
+
+	heap_close(pg_constraint, AccessShareLock);
+
+	return conOid;
+}
+
 
 /**
  * This method determines if the input attribute is a foreign key and if so,

@@ -19,11 +19,11 @@
 #include "nodes/plannodes.h"
 #include "storage/lock.h"
 #include "tcop/dest.h"
+#include "utils/resource_manager.h"
 
 /*
  * GUC variables.
  */
-extern bool	ResourceScheduler;
 extern int	MaxResourceQueues;
 extern int	MaxResourcePortalsPerXact;
 extern bool	ResourceSelectOnly;
@@ -103,17 +103,6 @@ typedef struct ResPortalTag
 } ResPortalTag;
 
 
-/*
- * Lock/Queue macros (maybe first one should be in lock.h)?
- */
-#define SET_LOCKTAG_RESOURCE_QUEUE(locktag, queueid) \
-	((locktag).locktag_field1 = (queueid), \
-	 (locktag).locktag_field2 = 0, \
-	 (locktag).locktag_field3 = 0, \
-	 (locktag).locktag_field4 = 0, \
-	 (locktag).locktag_type = LOCKTAG_RESOURCE_QUEUE,		\
-	 (locktag).locktag_lockmethodid = RESOURCE_LOCKMETHOD)
-
 #define GET_RESOURCE_QUEUEID_FOR_LOCK(lock) \
 	((lock->tag).locktag_field1)
 
@@ -182,12 +171,5 @@ extern void AtCommit_ResScheduler(void);
 extern void AtAbort_ResScheduler(void);
 extern void ResHandleUtilityStmt(Portal portal, Node *stmt);
 extern bool ResLockUtilityPortal(Portal portal, float4 ignoreCostLimit);
-
-/**
- * Assert that the in-memory state matches the catalog table.
- */
-#ifdef USE_ASSERT_CHECKING
-extern void AssertMemoryLimitsMatch(void);
-#endif
 
 #endif   /* RESSCHEDULER_H */

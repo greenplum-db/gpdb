@@ -230,7 +230,8 @@ MJExamineQuals(List *mergeclauses,
 					ok = true;
 				}
 			}
-			insist_log(ok, "mergejoin clause is not an OpExpr");
+			if (!ok)
+				elog(ERROR, "mergejoin clause is not an OpExpr");
 		}
 
 		/*
@@ -660,6 +661,8 @@ ExecMergeJoin(MergeJoinState *node)
 	 *
 	 * So now prefetch_inner is set (see createplan.c) if we have *any* motion
 	 * below us. If we don't have any motion, it doesn't matter.
+	 *
+	 * See motion_sanity_walker() for details on how a deadlock may occur.
 	 */
 	if (node->prefetch_inner)
 	{
@@ -1173,7 +1176,7 @@ ExecMergeJoin(MergeJoinState *node)
 					 * ----------------
 					 */
 					if (compareResult <= 0 && !((MergeJoin*)node->js.ps.plan)->unique_outer)
-						insist_log(false, "Mergejoin: compareResult > 0, bad plan ?");
+						elog(ERROR, "Mergejoin: compareResult > 0, bad plan ?");
 					innerTupleSlot = node->mj_InnerTupleSlot;
 
 					/* reload comparison data for current inner */
@@ -1524,7 +1527,7 @@ ExecMergeJoin(MergeJoinState *node)
 				 * broken state value?
 				 */
 			default:
-				insist_log(false, "unrecognized mergejoin state: %d",
+				elog(ERROR, "unrecognized mergejoin state: %d",
 					 (int) node->mj_JoinState);
 		}
 	}
@@ -1539,6 +1542,7 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 {
 	MergeJoinState *mergestate;
 	int markflag;
+	int rewindflag;
 
 	/* check for unsupported flags */
 	Assert(!(eflags & (EXEC_FLAG_BACKWARD | EXEC_FLAG_MARK)));
@@ -1584,6 +1588,8 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 
 	mergestate->prefetch_inner = node->join.prefetch_inner;
 	mergestate->mj_squelchInner = true;
+	/* Prepare inner operators for rewind after the prefetch */
+	rewindflag = mergestate->prefetch_inner ? EXEC_FLAG_REWIND : 0;
 
 	/* mergeclauses are handled below */
 
@@ -1596,7 +1602,7 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 	markflag = node->unique_outer ? 0 : EXEC_FLAG_MARK;
 	outerPlanState(mergestate) = ExecInitNode(outerPlan(node), estate, eflags);
 	innerPlanState(mergestate) = ExecInitNode(innerPlan(node), estate,
-											  eflags | markflag);
+											  eflags | markflag | rewindflag);
 
 	/*
 	 * For certain types of inner child nodes, it is advantageous to issue
@@ -1675,10 +1681,10 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 						 errmsg("FULL JOIN is only supported with merge-joinable join conditions")));
 			break;
 		case JOIN_LASJ_NOTIN:
-			insist_log(false, "join type not supported");
+			elog(ERROR, "join type not supported");
 			break;
 		default:
-			insist_log(false, "unrecognized join type: %d",
+			elog(ERROR, "unrecognized join type: %d",
 				 (int) node->join.jointype);
 	}
 
@@ -1821,7 +1827,7 @@ initGpmonPktForMergeJoin(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *esta
 				type = PMNT_MergeUniqueInnerJoin;
 				break;
 			case JOIN_LASJ_NOTIN:
-				insist_log(false, "Join type not supported");
+				elog(ERROR, "Join type not supported");
 				break;
 		}
 

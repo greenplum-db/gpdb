@@ -1,0 +1,88 @@
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte 
+-- @description cte tests from cdbfast 
+--
+-- PostgreSQL port of the MySQL "World" database.
+--
+-- The sample data used in the world database is Copyright Statistics 
+-- Finland, http://www.stat.fi/worldinfigures.
+--
+-- Modified to use it with GPDB
+--start_ignore
+DROP TABLE IF EXISTS city cascade;
+psql:/data/prabhd/test/tinc/private/balasr3/tinctest/databases/../../tincrepo/optimizer/cte/ctedb/world.sql:17: NOTICE:  table "city" does not exist, skipping
+DROP TABLE
+DROP TABLE IF EXISTS country cascade;
+psql:/data/prabhd/test/tinc/private/balasr3/tinctest/databases/../../tincrepo/optimizer/cte/ctedb/world.sql:19: NOTICE:  table "country" does not exist, skipping
+DROP TABLE
+DROP TABLE IF EXISTS countrylanguage cascade;
+psql:/data/prabhd/test/tinc/private/balasr3/tinctest/databases/../../tincrepo/optimizer/cte/ctedb/world.sql:21: NOTICE:  table "countrylanguage" does not exist, skipping
+DROP TABLE
+--end_ignore
+BEGIN;
+BEGIN
+--SET client_encoding = 'LATIN1';
+CREATE TABLE city (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) distributed by(id);
+CREATE TABLE
+CREATE TABLE country (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) distributed by (code);
+CREATE TABLE
+CREATE TABLE countrylanguage (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)distributed by (countrycode,language);
+CREATE TABLE
+COPY city (id, name, countrycode, district, population) FROM stdin;
+--
+-- Data for Name: country; Type: TABLE DATA; Schema: public; Owner: chriskl
+--
+COPY country (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM stdin WITH NULL AS '';
+--
+-- Data for Name: countrylanguage; Type: TABLE DATA; Schema: public; Owner: chriskl
+--
+COPY countrylanguage (countrycode, "language", isofficial, percentage) FROM stdin;
+ALTER TABLE ONLY city
+    ADD CONSTRAINT city_pkey PRIMARY KEY (id);
+psql:/data/prabhd/test/tinc/private/balasr3/tinctest/databases/../../tincrepo/optimizer/cte/ctedb/world.sql:5390: NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "city_pkey" for table "city"
+ALTER TABLE
+ALTER TABLE ONLY country
+    ADD CONSTRAINT country_pkey PRIMARY KEY (code);
+psql:/data/prabhd/test/tinc/private/balasr3/tinctest/databases/../../tincrepo/optimizer/cte/ctedb/world.sql:5393: NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "country_pkey" for table "country"
+ALTER TABLE
+ALTER TABLE ONLY countrylanguage
+    ADD CONSTRAINT countrylanguage_pkey PRIMARY KEY (countrycode, "language");
+psql:/data/prabhd/test/tinc/private/balasr3/tinctest/databases/../../tincrepo/optimizer/cte/ctedb/world.sql:5396: NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "countrylanguage_pkey" for table "countrylanguage"
+ALTER TABLE
+COMMIT;
+COMMIT
+ANALYZE city;
+ANALYZE
+ANALYZE country;
+ANALYZE
+ANALYZE countrylanguage;
+ANALYZE

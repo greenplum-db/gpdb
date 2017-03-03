@@ -23,6 +23,7 @@
 #include "catalog/pg_conversion.h"
 #include "catalog/pg_database.h"
 #include "catalog/pg_description.h"
+#include "catalog/pg_extension.h"
 #include "catalog/pg_filespace.h"
 #include "catalog/pg_language.h"
 #include "catalog/pg_largeobject.h"
@@ -43,6 +44,7 @@
 #include "catalog/pg_type.h"
 #include "commands/comment.h"
 #include "commands/dbcommands.h"
+#include "commands/extension.h"
 #include "commands/filespace.h"
 #include "commands/tablespace.h"
 #include "miscadmin.h"
@@ -94,6 +96,7 @@ static void CommentTSParser(List *qualname, char *comment);
 static void CommentTSDictionary(List *qualname, char *comment);
 static void CommentTSTemplate(List *qualname, char *comment);
 static void CommentTSConfiguration(List *qualname, char *comment);
+static void CommentExtension(List *qualname, char *comment);
 
 
 /*
@@ -184,6 +187,9 @@ CommentObject(CommentStmt *stmt)
 			break;
 		case OBJECT_TSCONFIGURATION:
 			CommentTSConfiguration(stmt->objname, stmt->comment);
+			break;
+		case OBJECT_EXTENSION:
+			CommentExtension(stmt->objname, stmt->comment);
 			break;
 		default:
 			elog(ERROR, "unrecognized object type: %d",
@@ -639,14 +645,7 @@ CommentDatabase(List *qualname, char *comment)
 	 */
 
 	/* First get the database OID */
-	oid = get_database_oid(database);
-	if (!OidIsValid(oid))
-	{
-		ereport(WARNING,
-				(errcode(ERRCODE_UNDEFINED_DATABASE),
-				 errmsg("database \"%s\" does not exist", database)));
-		return;
-	}
+	oid = get_database_oid(database, false);
 
 	/* Check object security */
 	if (!pg_database_ownercheck(oid, GetUserId()))
@@ -678,14 +677,7 @@ CommentTablespace(List *qualname, char *comment)
 				 errmsg("tablespace name cannot be qualified")));
 	tablespace = strVal(linitial(qualname));
 
-	oid = get_tablespace_oid(tablespace);
-	if (!OidIsValid(oid))
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("tablespace \"%s\" does not exist", tablespace)));
-		return;
-	}
+	oid = get_tablespace_oid(tablespace, false);
 
 	/* Check object security */
 	if (!pg_tablespace_ownercheck(oid, GetUserId()))
@@ -1213,12 +1205,7 @@ CommentConversion(List *qualname, char *comment)
 {
 	Oid			conversionOid;
 
-	conversionOid = FindConversionByName(qualname);
-	if (!OidIsValid(conversionOid))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("conversion \"%s\" does not exist",
-						NameListToString(qualname))));
+	conversionOid = get_conversion_oid(qualname, false);
 
 	/* Check object security */
 	if (!pg_conversion_ownercheck(conversionOid, GetUserId()))
@@ -1663,5 +1650,23 @@ CommentTSConfiguration(List *qualname, char *comment)
 					   NameListToString(qualname));
 
 	CreateComments(cfgId, TSConfigRelationId, 0, comment);
+}
 
+static void
+CommentExtension(List *qualname, char *comment)
+{
+	char	   *extension;
+	Oid			oid;
+
+	extension = strVal(linitial(qualname));
+
+	/* First get the extension OID */
+	oid = get_extension_oid(extension, false);
+
+	/* Check object security */
+	if (!pg_extension_ownercheck(oid, GetUserId()))
+		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_DATABASE,
+					   extension);
+
+	CreateComments(oid, ExtensionRelationId, 0, comment);
 }

@@ -10,12 +10,10 @@ CREATE OR REPLACE FUNCTION foo() RETURNS integer AS $$
     return 1;
 $$ LANGUAGE plperlu; -- compile plperlu code
 SELECT * FROM bar(); -- throws exception normally (running plperl)
-ERROR:  Perl function "bar" failed (plperl.c:1961)
-DETAIL:  syntax error at or near "invalid" at line 4.
+ERROR:  syntax error at or near "invalid" at line 4.
 CONTEXT:  PL/Perl function "bar"
 SELECT * FROM foo(); -- used to cause backend crash (after switching to plperlu)
-ERROR:  Perl function "foo" failed (plperl.c:1961)
-DETAIL:  Perl function "bar" failed at line 2.
+ERROR:  syntax error at or near "invalid" at line 4. at line 2.
 CONTEXT:  PL/Perl function "foo"
 -- test redefinition of specific SP switching languages
 -- http://archives.postgresql.org/pgsql-bugs/2010-01/msg00116.php
@@ -74,9 +72,8 @@ CREATE OR REPLACE FUNCTION use_plperl() RETURNS void LANGUAGE plperl
 AS $$
 use Errno;
 $$;
-ERROR:  creation of Perl function failed
-DETAIL:  Unable to load Errno.pm into plperl at line 2.
-BEGIN failed--compilation aborted at line 2.
+ERROR:  Unable to load Errno.pm into plperl at line 2.
+DETAIL:  BEGIN failed--compilation aborted at line 2.
 CONTEXT:  compilation of PL/Perl function "use_plperl"
 -- make sure our overloaded require op gets restored/set correctly
 select use_plperlu();
@@ -89,7 +86,6 @@ CREATE OR REPLACE FUNCTION use_plperl() RETURNS void LANGUAGE plperl
 AS $$
 use Errno;
 $$;
-ERROR:  creation of Perl function failed
-DETAIL:  Unable to load Errno.pm into plperl at line 2.
-BEGIN failed--compilation aborted at line 2.
+ERROR:  Unable to load Errno.pm into plperl at line 2.
+DETAIL:  BEGIN failed--compilation aborted at line 2.
 CONTEXT:  compilation of PL/Perl function "use_plperl"

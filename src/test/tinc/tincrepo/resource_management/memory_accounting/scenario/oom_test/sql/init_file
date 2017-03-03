@@ -1,0 +1,14 @@
+--start_matchsubs
+m/^psql.*LOG.*/
+s/^psql.*LOG(.*)/LOG$1/
+
+m/^Out of memory.*/
+s/^Out of memory.*/Out of memory/
+
+m/DETAIL:  VM Protect failed to allocate.*/
+s/DETAIL:  VM Protect failed to allocate.*/DETAIL:  VM Protect failed to allocate memory/
+
+m/pg_analyze_\d+_\d+/
+s/pg_analyze_\d+_\d+/pg_analyze/
+--end_matchsubs
+

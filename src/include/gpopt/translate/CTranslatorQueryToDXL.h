@@ -17,19 +17,16 @@
 #ifndef GPDXL_CTranslatorQueryToDXL_H
 #define GPDXL_CTranslatorQueryToDXL_H
 
-#define GPDXL_QUERY_ID_START 0
 #define GPDXL_CTE_ID_START 1
 #define GPDXL_COL_ID_START 1
 
 #include "gpopt/translate/CMappingVarColId.h"
 #include "gpopt/translate/CTranslatorScalarToDXL.h"
 #include "gpopt/translate/CTranslatorUtils.h"
-#include "gpopt/translate/CCTEListEntry.h"
 
 #include "gpos/base.h"
 
 #include "naucrates/dxl/operators/CDXLNode.h"
-#include "naucrates/md/IMDType.h"
 
 // fwd declarations
 namespace gpopt

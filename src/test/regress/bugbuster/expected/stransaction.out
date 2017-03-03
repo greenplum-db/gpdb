@@ -1068,7 +1068,7 @@ create or replace function max_xacttest() returns double precision language sql 
 'select max(b) from xacttest_table' volatile;
 begin;
 update xacttest_table set b = max_xacttest() + 10 where b > 0;
-ERROR:  function cannot execute on segment because it accesses relation "public.xacttest_table" (functions.c:147)  (seg1 leopard0:27012 pid=93332) (cdbdisp.c:1484)
+ERROR:  function cannot execute on segment because it accesses relation "public.xacttest_table"  (seg1 leopard0:27012 pid=93332)
 DETAIL:  SQL function "max_xacttest" during startup
 select * from xacttest_table;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
@@ -1088,7 +1088,7 @@ create or replace function max_xacttest() returns double precision language plpg
 'begin return max(b) from xacttest_table; end' volatile;
 begin;
 update xacttest_table set b = max_xacttest() + 10 where b > 0;
-ERROR:  function cannot execute on segment because it accesses relation "public.xacttest_table" (functions.c:147)  (seg1 leopard0:27012 pid=93332) (cdbdisp.c:1484)
+ERROR:  function cannot execute on segment because it accesses relation "public.xacttest_table"  (seg1 leopard0:27012 pid=93332)
 DETAIL:  
 	 SQL statement "SELECT  max(b) from xacttest_table"
 PL/pgSQL function "max_xacttest" line 1 at return

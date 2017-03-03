@@ -305,7 +305,7 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #------------------------------------------------------------------------------
 
 #gp_enable_gpperfmon=on		# Enable the performance monitor
-#gpperfmon_port=8888		# Port used the the performance monitor daemons
+#gpperfmon_port=8888		# Port used by the performance monitor daemons
 
 										
 #------------------------------------------------------------------------------
@@ -438,6 +438,7 @@ log_autostats=off	# print additional autostats information
 #statement_timeout = 0			# 0 is disabled
 #idle_session_gang_timeout = 18s 	# in milliseconds, 0 is disabled
 #vacuum_freeze_min_age = 100000000
+#bytea_output='escape'
 
 # - Locale and Formatting -
 
@@ -499,7 +500,6 @@ gp_resqueue_memory_policy = 'eager_free'	# memory request based queueing.
 # EXTERNAL TABLES
 #---------------------------------------------------------------------------
 #gp_external_enable_exec = on   # enable external tables with EXECUTE.
-#gp_external_grant_privileges = off #enable create http/gpfdist for non su's
 
 #---------------------------------------------------------------------------
 # APPEND ONLY TABLES

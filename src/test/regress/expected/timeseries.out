@@ -388,7 +388,7 @@ select linear_interpolate(200::float8, 'nan'::float8, 'infinity'::float8, 'nan':
 
 -- A "generic" unsupported type.
 select linear_interpolate('x'::text, 'x0'::text, 0, 'x1'::text, 1000);
-ERROR:  abscissa type not supported (interpolate.c:209)
+ERROR:  abscissa type not supported
 select linear_interpolate(5, 0, 'y0'::text, 100, 'y1'::text);
 ERROR:  function linear_interpolate(integer, integer, text, integer, text) does not exist
 LINE 1: select linear_interpolate(5, 0, 'y0'::text, 100, 'y1'::text)...

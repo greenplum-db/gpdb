@@ -60,3 +60,35 @@ ALTER OPERATOR CLASS alt_opc2 USING hash OWNER TO regtest_alter_user2;  -- faile
 ALTER OPERATOR CLASS alt_opc2 USING hash OWNER TO regtest_alter_user3;  -- OK
 
 RESET SESSION AUTHORIZATION;
+
+-- Test adding operators to an existing opfamily as that requires oid
+-- dispatching to the segments
+
+-- Should fail. duplicate operator number / function number in ALTER OPERATOR FAMILY ... ADD FUNCTION
+CREATE OPERATOR FAMILY alt_opf17 USING btree;
+ALTER OPERATOR FAMILY alt_opf17 USING btree ADD OPERATOR 1 < (int4, int4), OPERATOR 1 < (int4, int4); -- operator # appears twice in same statement
+ALTER OPERATOR FAMILY alt_opf17 USING btree ADD OPERATOR 1 < (int4, int4); -- operator 1 requested first-time
+ALTER OPERATOR FAMILY alt_opf17 USING btree ADD OPERATOR 1 < (int4, int4); -- operator 1 requested again in separate statement
+ALTER OPERATOR FAMILY alt_opf17 USING btree ADD
+  OPERATOR 1 < (int4, int2) ,
+  OPERATOR 2 <= (int4, int2) ,
+  OPERATOR 3 = (int4, int2) ,
+  OPERATOR 4 >= (int4, int2) ,
+  OPERATOR 5 > (int4, int2) ,
+  FUNCTION 1 btint42cmp(int4, int2) ,
+  FUNCTION 1 btint42cmp(int4, int2);    -- procedure 1 appears twice in same statement
+ALTER OPERATOR FAMILY alt_opf17 USING btree ADD
+  OPERATOR 1 < (int4, int2) ,
+  OPERATOR 2 <= (int4, int2) ,
+  OPERATOR 3 = (int4, int2) ,
+  OPERATOR 4 >= (int4, int2) ,
+  OPERATOR 5 > (int4, int2) ,
+  FUNCTION 1 btint42cmp(int4, int2);    -- procedure 1 appears first time
+ALTER OPERATOR FAMILY alt_opf17 USING btree ADD
+  OPERATOR 1 < (int4, int2) ,
+  OPERATOR 2 <= (int4, int2) ,
+  OPERATOR 3 = (int4, int2) ,
+  OPERATOR 4 >= (int4, int2) ,
+  OPERATOR 5 > (int4, int2) ,
+  FUNCTION 1 btint42cmp(int4, int2);    -- procedure 1 requested again in separate statement
+DROP OPERATOR FAMILY alt_opf17 USING btree;

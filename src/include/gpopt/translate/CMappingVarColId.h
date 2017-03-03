@@ -27,7 +27,6 @@
 #include "gpos/common/CHashMapIter.h"
 
 #include "naucrates/dxl/operators/dxlops.h"
-#include "naucrates/dxl/operators/dxlops.h"
 #include "naucrates/dxl/CIdGenerator.h"
 
 //fwd decl

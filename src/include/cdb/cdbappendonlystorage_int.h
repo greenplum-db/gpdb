@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * cdbappendonlystorage.h
+ * cdbappendonlystorage_int.h
  *
  * Copyright (c) 2007-2009, Greenplum inc
  *

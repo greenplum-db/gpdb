@@ -16,7 +16,13 @@ limitations under the License.
 """
 
 from mpp.lib.datagen import TINCTestDatabase
+from mpp.lib.datagen.tpch import TPCHDatabase
+from mpp.lib.datagen.world.db import WorldDatabase
+from mpp.lib.datagen.functionproperty.db import FunctionPropertyTestDatabase
+from mpp.lib.datagen.functionproperty.db_builtin import BuiltinFunctionPropertyTestDatabase
+from mpp.lib.datagen.groupingfunction.db import GroupingFunctionTestDatabase
 from mpp.lib.datagen import TINCDatagenException
+from mpp.lib.datagen.dataset import DataSetDatabase
 from mpp.lib.datagen.dispatch.db import DispatchSkewDatabase
 
 # Global database dict for supported databases. Each test case will be associated with a
@@ -28,5 +34,29 @@ __databases__ = {}
 
 __databases__[TINC_TEST_DATABASE] = TINCTestDatabase(database_name=TINC_TEST_DATABASE)
 
+__databases__['analyze_db'] = TINCTestDatabase(database_name='analyze_db')
+
+#Database for CTE tests
+__databases__['world_db'] = WorldDatabase()
+
+#Databases for function property tests
+__databases__['functionproperty'] = FunctionPropertyTestDatabase(database_name = 'functionproperty')
+__databases__['builtin_functionproperty'] = BuiltinFunctionPropertyTestDatabase(database_name = 'builtin_functionproperty')
+
+#Database for grouping functions
+__databases__['groupingfunction'] = GroupingFunctionTestDatabase(database_name = 'groupingfunction')
+
+#Database for grouping functions
+__databases__['splitdqa'] = TPCHDatabase(database_name = 'splitdqa')
+
+#database for partitioning/partitionoindex
+__databases__['ptidx'] = TINCTestDatabase(database_name='ptidx')
+
 # Database for query-finish
 __databases__['queryfinish'] = DispatchSkewDatabase()
+
+# Database for Memory Accounting Tests
+__databases__['memory_accounting'] = DataSetDatabase(database_name='memory_accounting')
+
+# Database for Runaway query termination
+__databases__['runaway_query'] = DataSetDatabase(database_name='runaway_query')

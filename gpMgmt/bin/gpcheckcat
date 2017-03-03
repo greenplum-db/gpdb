@@ -2137,7 +2137,6 @@ def checkOwners():
     from gp_dist_random('pg_class') r
       join pg_class c on (c.oid = r.oid)
       left join pg_appendonly ao on (c.oid = ao.segrelid or
-                                     c.oid = ao.segidxid or
                                      c.oid = ao.blkdirrelid or
                                      c.oid = ao.blkdiridxid)
       left join pg_class t on (t.reltoastidxid = c.oid)
@@ -2536,23 +2535,35 @@ def checkPersistentTables():
 
     qname = "gp_persistent_relation_node   <=> gp_relation_node"
     qry = """
-    SELECT  coalesce(p.relfilenode_oid, r.relfilenode_oid) as relfilenode,
-        p.ctid, r.persistent_tid
-    FROM  (
-      SELECT p.ctid, p.* FROM gp_persistent_relation_node p
-      WHERE persistent_state = 2 AND p.database_oid in (
-        SELECT oid FROM pg_database WHERE datname = current_database()
-        UNION ALL
-        SELECT 0
-        )
-      ) p
-      FULL OUTER JOIN gp_relation_node r
-        ON (p.relfilenode_oid = r.relfilenode_oid and
-            p.segment_file_num = r.segment_file_num)
-    WHERE  (p.relfilenode_oid is NULL OR
-            r.relfilenode_oid is NULL OR
-            p.ctid != r.persistent_tid)
-    """
+    SELECT COALESCE(p.relfilenode_oid, r.relfilenode_oid) AS relfilenode,
+           p.ctid,
+           r.persistent_tid
+    FROM   (SELECT p.ctid,
+                   CASE
+                     WHEN p.tablespace_oid IN (SELECT dattablespace
+                                               FROM   pg_database
+                                               WHERE  datname = Current_database())
+                   THEN 0
+                     ELSE p.tablespace_oid
+                   END,
+                   p.database_oid,
+                   p.relfilenode_oid,
+                   p.segment_file_num,
+                   p.persistent_state
+            FROM   gp_persistent_relation_node p
+            WHERE  persistent_state = 2
+                   AND p.database_oid IN (SELECT oid
+                                          FROM   pg_database
+                                          WHERE  datname = Current_database()
+                                          UNION ALL
+                                          SELECT 0)) p
+           FULL OUTER JOIN gp_relation_node r
+                        ON ( p.relfilenode_oid = r.relfilenode_oid
+                             AND p.segment_file_num = r.segment_file_num
+                             AND p.tablespace_oid = r.tablespace_oid )
+    WHERE  ( p.relfilenode_oid IS NULL
+              OR r.relfilenode_oid IS NULL
+              OR p.ctid != r.persistent_tid ) """
     queries.append([qname, qry])
 
     qname = "gp_persistent_relation_node   <=> pg_class"
@@ -2718,9 +2729,9 @@ def checkACL():
 
     for cat in sorted(tables):
         checkTableACL(cat)
-
-
 # -------------------------------------------------------------------------------
+
+
 def checkTableACL(cat):
     catname = cat.getTableName()
     pkey = cat.getPrimaryKey()
@@ -2794,9 +2805,9 @@ def checkTableACL(cat):
         myprint('[ERROR] executing: Cross consistency check for ' + catname)
         myprint('  Execution error: ' + str(e))
         myprint(qry)
-
-
 # -------------------------------------------------------------------------------
+
+
 def checkForeignKey(cat_tables=None):
     logger.info('-----------------------------------')
     logger.info('Performing foreign key tests')
@@ -2827,8 +2838,9 @@ def checkForeignKey(cat_tables=None):
         setError(ERROR_NOREPAIR)
         GV.foreignKeyStatus = False
         myprint('  Execution error: ' + str(ex))
-
 # -------------------------------------------------------------------------------
+
+
 def checkMissingEntry():
     logger.info('-----------------------------------')
     logger.info('Performing cross consistency tests: check for missing or extraneous issues')
@@ -2836,24 +2848,33 @@ def checkMissingEntry():
     if GV.missingEntryStatus == None:
         GV.missingEntryStatus = True
 
-    # looks up information in the catalog:
-    tables = GV.catalog.getCatalogTables()
+    catalog_issues = _checkAllTablesForMissingEntries()
 
+    if len(catalog_issues) == 0:
+        return
+
+    if GV.opt['-E']:
+        do_repair_for_extra(catalog_issues)
+    else:
+        setError(ERROR_NOREPAIR)
+
+
+def _checkAllTablesForMissingEntries():
     catalog_issues = {}
-
+    tables = GV.catalog.getCatalogTables()
     for catalog_table_obj in sorted(tables):
         issues = checkTableMissingEntry(catalog_table_obj)
         if not issues:
             continue
-
         catalog_name = catalog_table_obj.getTableName()
         _, pk_name = getPrimaryKeyColumn(catalog_name, catalog_table_obj.getPrimaryKey())
-        catalog_issues[(catalog_name, pk_name)] = issues
-
-    do_repair_for_extra(catalog_issues)
-
-
+        # We do this check in this function rather than getPrimaryKeyColumn as
+        # it is used in checkACL and we do not want to modify that functionality
+        catalog_issues[(catalog_table_obj, pk_name)] = issues
+    return catalog_issues
 # -------------------------------------------------------------------------------
+
+
 def checkTableMissingEntry(cat):
     catname = cat.getTableName()
     pkey = cat.getPrimaryKey()
@@ -2873,9 +2894,8 @@ def checkTableMissingEntry(cat):
             return
 
     # Skip catalogs without primary key
-    if pkey == []:
-        logger.warn("[WARN] Skipped missing/extra entry check for %s" %
-                    catname)
+    if len(pkey) == 0:
+        logger.warn("[WARN] Skipped missing/extra entry check for %s" % catname)
         return
 
     castedPkey = cat.getPrimaryKey()
@@ -2924,6 +2944,7 @@ def checkTableMissingEntry(cat):
         myprint('[ERROR] executing: Missing or extraneous entries check for ' + catname)
         myprint('  Execution error: ' + str(e))
         myprint(qry)
+
 
 def checkMirroringMatching():
     # check that PT rebuild has not left behind mismatched mirroring states in the segments
@@ -3644,18 +3665,14 @@ def do_repair(sql_repair_contents, issue_type, description):
 
 
 def do_repair_for_extra(catalog_issues):
-    if len(catalog_issues) == 0:
-        return
-    if not GV.opt['-E']:
-        setError(ERROR_NOREPAIR)
-        return
-
     setError(ERROR_REMOVE)
     repair_dir_path = ""
-    for (catalog_name, pk_name), issues in catalog_issues.iteritems():
+    for (catalog_table_obj, pk_name), issues in catalog_issues.iteritems():
         try:
             repair_obj = Repair(context=GV, issue_type="extra", desc="Removing extra entries")
-            repair_dir_path = repair_obj.create_repair_for_extra_missing(catalog_name=catalog_name, issues=issues, pk_name=pk_name)
+            repair_dir_path = repair_obj.create_repair_for_extra_missing(catalog_table_obj=catalog_table_obj,
+                                                                         issues=issues,
+                                                                         pk_name=pk_name)
         except Exception, ex:
             logger.fatal(str(ex))
 
@@ -4618,7 +4635,7 @@ def checkcatReport():
     myprint('SUMMARY REPORT')
     myprint('===================================================================')
     elapsed = datetime.timedelta(seconds=int(GV.elapsedTime))
-    endTime = datetime.datetime.now().strftime('%Y-%m-%d %H:%I:%S')
+    endTime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     myprint('Completed %d test(s) on database \'%s\' at %s with elapsed time %s' \
             % (GV.totalCheckRun, GV.dbname, endTime, elapsed))
 

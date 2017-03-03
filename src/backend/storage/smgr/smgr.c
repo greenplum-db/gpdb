@@ -2546,16 +2546,12 @@ smgrSubTransAbort(void)
  * *ptr is set to point to a freshly-palloc'd array of RelFileNodes.
  * If there are no relations to be deleted, *ptr is set to NULL.
  *
- * If haveNonTemp isn't NULL, the bool it points to gets set to true if
- * there is any non-temp table pending to be deleted; false if not.
- *
  * Note that the list does not include anything scheduled for termination
  * by upper-level transactions.
  */
 int
 smgrGetPendingFileSysWork(EndXactRecKind endXactRecKind,
-						  PersistentEndXactFileSysActionInfo **ptr,
-						  bool *haveNonTemp)
+						  PersistentEndXactFileSysActionInfo **ptr)
 {
 	int			nestLevel = GetCurrentTransactionNestLevel();
 	int			nrels;
@@ -2566,9 +2562,6 @@ smgrGetPendingFileSysWork(EndXactRecKind endXactRecKind,
 	int			entryIndex;
 
 	PersistentEndXactFileSysAction action;
-
-	if (haveNonTemp)
-		*haveNonTemp = false;
 
 	Assert(endXactRecKind == EndXactRecKind_Commit ||
 		   endXactRecKind == EndXactRecKind_Abort ||
@@ -2589,8 +2582,7 @@ smgrGetPendingFileSysWork(EndXactRecKind endXactRecKind,
 	}
 
 	nrels = 0;
-	if (haveNonTemp)
-		*haveNonTemp = false;
+
 	for (pending = pendingDeletes; pending != NULL; pending = pending->next)
 	{
 		action = PendingDelete_Action(pending);
@@ -2635,9 +2627,6 @@ smgrGetPendingFileSysWork(EndXactRecKind endXactRecKind,
 
 			rptr++;
 			returned = true;
-
-			if (haveNonTemp && !pending->isLocalBuf)
-				*haveNonTemp = true;
 		}
 
 		if (Debug_persistent_print)

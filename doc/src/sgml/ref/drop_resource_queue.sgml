@@ -96,7 +96,7 @@ ALTER ROLE RESOURCE QUEUE none;
   
   <para>
    There is no <command>DROP RESOURCE QUEUE</command> in the SQL standard.
-   Resource scheduling is a feature of Bizgres and Greenplum Database.
+   Resource scheduling is a feature of Greenplum Database.
   </para>
 
  </refsect1>

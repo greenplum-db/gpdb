@@ -47,6 +47,20 @@ class SpecialFuncs(object):
         return p;
         """
 
+    @staticmethod
+    def make_body_mul_size(func):
+        return """
+        /* The real version of this checks for overflow, but this mock version doesn't bother */
+        return s1 * s2;
+        """
+
+    @staticmethod
+    def make_body_add_size(func):
+        return """
+        /* The real version of this checks for overflow, but this mock version doesn't bother */
+        return s1 + s2;
+        """
+
 class ByValStructs(object):
 
     """These are structs over 32 bit and possibly passed by-value.

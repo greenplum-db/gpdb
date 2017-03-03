@@ -24,9 +24,9 @@ NOTICE:  table "ctas_bar" does not exist, skipping
 drop table if exists ctas_baz;
 NOTICE:  table "ctas_baz" does not exist, skipping
 create table ctas_foo as select * from generate_series(1, 100);
-NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
 create table ctas_bar as select a.generate_series as a, b.generate_series as b from ctas_foo a, ctas_foo b;
-NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
 create table ctas_baz as select 'delete me' as action, * from ctas_bar distributed by (a);
 WARNING:  column "action" has type "unknown"
 DETAIL:  Proceeding with relation creation anyway.
@@ -110,3 +110,21 @@ select action::text, b from ctas_baz order by 1,2 limit 5;
  delete me | 1
 (5 rows)
 
+-- Test CTAS with a function that executes another query that's dispatched.
+-- Once upon a time, we had a bug in dispatching the table's OID in this
+-- scenario.
+create table ctas_input(x int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into ctas_input select * from generate_series(1, 10);
+CREATE FUNCTION ctas_inputArray() RETURNS INT[] AS $$
+DECLARE theArray INT[];
+BEGIN
+   SELECT array(SELECT * FROM ctas_input ORDER BY x) INTO theArray;
+   RETURN theArray;
+--EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'Catching the exception ...%', SQLERRM;
+END;
+$$ LANGUAGE plpgsql;
+create table ctas_output as select ctas_inputArray()::int[] as x;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.

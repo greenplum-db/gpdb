@@ -277,7 +277,7 @@ typedef struct TmControlBlock
 
 
 #define TMCONTROLBLOCK_BYTES(num_gxacts) \
-            (SIZEOF_VARSTRUCT(num_gxacts, TmControlBlock, gxact_array))
+	(offsetof(TmControlBlock, gxact_array) + sizeof(TMGXACT) * (num_gxacts))
 
 extern DtxContext DistributedTransactionContext;
 
@@ -358,7 +358,6 @@ extern void performDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 					int flags,
 					const char *loggingStr, const char *gid, 
 					DistributedTransactionId gxid, DtxContextInfo *contextInfo);
-extern void doDtxPhase2Retry(void);
 extern void UtilityModeFindOrCreateDtmRedoFile(void);
 extern void UtilityModeCloseDtmRedoFile(void);
 extern void PleaseDebugMe(char *caller);

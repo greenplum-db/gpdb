@@ -21,6 +21,8 @@ extern List *GetAssignedOidsForDispatch(void);
 
 /* Functions used in QE nodes */
 extern void AddPreassignedOids(List *l);
+extern void AddPreassignedOidFromBinaryUpgrade(Oid oid, Oid catalog,
+			char *objname, Oid namespaceOid, Oid keyOid1, Oid keyOid2);
 extern Oid GetPreassignedOidForTuple(Relation catalogrel, HeapTuple tuple);
 extern Oid GetPreassignedOidForRelation(Oid namespaceOid, const char *relname);
 extern Oid GetPreassignedOidForType(Oid namespaceOid, const char *typname);

@@ -24,7 +24,6 @@
 #include "gpopt/translate/CMappingVarColId.h"
 #include "gpopt/translate/CCTEListEntry.h"
 
-#include "naucrates/dxl/operators/CDXLScalarBoolExpr.h"
 #include "naucrates/dxl/CIdGenerator.h"
 
 #include "naucrates/base/IDatum.h"
@@ -253,6 +252,13 @@ namespace gpdxl
 
 			// create a DXL scalar coerceviaio node from a GPDB expression
 			CDXLNode *PdxlnScCoerceFromCoerceViaIO
+				(
+				const Expr *pexpr,
+				const CMappingVarColId* pmapvarcolid
+				);
+		
+			// create a DXL scalar array coerce expression node from a GPDB expression
+			CDXLNode *PdxlnScArrayCoerceExprFromExpr
 				(
 				const Expr *pexpr,
 				const CMappingVarColId* pmapvarcolid

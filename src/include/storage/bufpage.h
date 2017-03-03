@@ -164,8 +164,13 @@ typedef PageHeaderData *PageHeader;
  * Release 8.3 uses 4; it changed the HeapTupleHeader layout again, and
  *		added the pd_flags field (by stealing some bits from pd_tli),
  *		as well as adding the pd_prune_xid field (which enlarges the header).
+ *
+ * GPDB 4 uses 4. However, it didn't have the pd_prune_xid field
+ * GPDB 5.0 uses 14. The layout is the same as PostgreSQL 8.3's, but
+ *		we couldn't use the same version number, because we had already
+ *		used 4 for the previous format.
  */
-#define PG_PAGE_LAYOUT_VERSION		4
+#define PG_PAGE_LAYOUT_VERSION		14
 
 
 /* ----------------------------------------------------------------

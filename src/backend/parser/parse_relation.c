@@ -558,13 +558,15 @@ qualifiedNameToVar(ParseState *pstate,
 	RangeTblEntry *rte;
 	int			sublevels_up;
 
-	rte = refnameRangeTblEntry(pstate, schemaname, refname, location, &sublevels_up);
+	rte = refnameRangeTblEntry(pstate, schemaname, refname, location,
+							   &sublevels_up);
 
 	if (rte == NULL)
 	{
 		if (!implicitRTEOK)
 			return NULL;
-		rte = addImplicitRTE(pstate, makeRangeVar(schemaname, refname, location));
+		rte = addImplicitRTE(pstate,
+							 makeRangeVar(schemaname, refname, location));
 	}
 
 	return scanRTEForColumn(pstate, rte, colname, location);
@@ -1178,7 +1180,7 @@ addRangeTableEntryForFunction(ParseState *pstate,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
 			 errmsg("function \"%s\" in FROM has unsupported return type %s",
 					funcname, format_type_be(funcrettype)),
-					parser_errposition(pstate, exprLocation(funcexpr))));
+				 parser_errposition(pstate, exprLocation(funcexpr))));
 
 	/*----------
 	 * Flags:

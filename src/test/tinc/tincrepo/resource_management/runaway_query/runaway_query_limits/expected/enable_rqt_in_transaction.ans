@@ -1,0 +1,14 @@
+-- @Description Testing TRQ: A query within a transaction block, all QEs active, terminates correctly after being detected as Run-away
+-- @author Zhongxian Gu
+-- @vlimMB 400 
+-- @slimMB 0
+-- @redzone 80
+-- will hit red zone and get terminated
+-- content/segment = 0; size = 450MB; sleep = 20 sec
+begin;
+BEGIN
+select gp_allocate_palloc_gradual_test_all_segs(0, 450*1024*1024, 20);
+psql:/Users/guz4/dev/tincrepo/private/gacaragea/resource_management/runaway_query/runaway_query_limits/output/enable_rqt_in_transaction.sql:13: ERROR:  Canceling query because of high VMEM usage. Used: 321MB, available 79MB, red zone: 320MB (runaway_cleaner.c:99)  (seg0 slice1 usxxguz4m1.corp.emc.com:40000 pid=78859) (cdbdisp.c:1526)
+CONTEXT:  SQL function "gp_allocate_palloc_gradual_test_all_segs" statement 1
+commit;
+ROLLBACK

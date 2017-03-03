@@ -1255,10 +1255,10 @@ makeConfigurationDependencies(HeapTuple tuple, bool removeOld,
 	myself.objectId = HeapTupleGetOid(tuple);
 	myself.objectSubId = 0;
 
-	/* for ALTER case, first flush old dependencies */
+	/* for ALTER case, first flush old dependencies, except extension deps */
 	if (removeOld)
 	{
-		deleteDependencyRecordsFor(myself.classId, myself.objectId);
+		deleteDependencyRecordsFor(myself.classId, myself.objectId, true);
 		deleteSharedDependencyRecordsFor(myself.classId, myself.objectId);
 	}
 

@@ -1036,8 +1036,10 @@ fail:
 }
 
 int
-PQsendGpQuery_shared(PGconn *conn, char *shared_query, int query_len)
+PQsendGpQuery_shared(PGconn *conn, char *shared_query, int query_len, bool nonblock)
 {
+	int ret;
+
 	if (!PQsendQueryStart(conn))
 		return 0;
 
@@ -1075,7 +1077,12 @@ PQsendGpQuery_shared(PGconn *conn, char *shared_query, int query_len)
 	 * Give the data a push.  In nonblock mode, don't complain if we're unable
 	 * to send it all; PQgetResult() will do any additional flushing needed.
 	 */
-	if (pqFlush(conn) < 0)
+	if (nonblock)
+		ret = pqFlushNonBlocking(conn);
+	else
+		ret = pqFlush(conn);
+
+	if (ret < 0)
 	{
 		pqHandleSendFailure(conn);
 		return 0;

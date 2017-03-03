@@ -1,5 +1,5 @@
 CREATE TABLE tmpTable1 (a anytable);
-NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 ERROR:  column "a" has pseudo-type anytable
 select * from transform( TABLE(
         select * from intable 

@@ -24,6 +24,7 @@ extern "C" {
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/raw_ostream.h"
 
 
 namespace gpcodegen {
@@ -65,11 +66,15 @@ class BaseCodegen: public CodegenInterface {
     if (codegen_validate_functions && valid_generated_functions) {
       for (llvm::Function* function : uncompiled_generated_functions_) {
         assert(nullptr != function);
+        std::string func_name = function->getName();
+        std::string error_message = "";
+        llvm::raw_string_ostream out(error_message);
         // Verify function returns true if there are errors.
-        valid_generated_functions &= !llvm::verifyFunction(*function);
+        valid_generated_functions &= !llvm::verifyFunction(*function, &out);
+        out.flush();
         if (!valid_generated_functions) {
-          std::string func_name = function->getName();
-          elog(WARNING, "Broken function found '%s'", func_name.c_str());
+          elog(WARNING, "Broken function found %s: %s",
+               func_name.c_str(), error_message.c_str());
           break;
         }
       }

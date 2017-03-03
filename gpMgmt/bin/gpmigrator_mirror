@@ -357,6 +357,7 @@ class GPUpgrade(GPUpgradeBase):
         # Wait for the segments to finish
         try:
             self.pool.join()
+            self.pool.haltWork()
         except:
             self.pool.haltWork()
             self.pool.joinWorkers()

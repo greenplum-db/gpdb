@@ -150,7 +150,8 @@ PGconn *ConnectDatabase(Archive *AH,
 				const char *pghost,
 				const char *pgport,
 				const char *username,
-				enum trivalue prompt_password);
+				enum trivalue prompt_password,
+			   	bool binary_upgrade);
 
 /* Called to add a TOC entry */
 extern void ArchiveEntry(Archive *AHX,

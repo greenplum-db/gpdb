@@ -88,7 +88,7 @@ extern PGDLLIMPORT volatile int32 InterruptHoldoffCount;
 extern PGDLLIMPORT volatile int32 CritSectionCount;
 
 /* in tcop/postgres.c */
-extern void ProcessInterrupts(void);
+extern void ProcessInterrupts(const char* filename, int lineno);
 extern void BackoffBackendTick(void);
 extern bool gp_enable_resqueue_priority;
 
@@ -123,7 +123,7 @@ do { \
 		}\
 	}\
 	if (InterruptPending) \
-		ProcessInterrupts(); \
+		ProcessInterrupts(__FILE__, __LINE__); \
 	if (gp_enable_resqueue_priority)	\
 		BackoffBackendTick(); \
 	ReportOOMConsumption(); \
@@ -133,7 +133,7 @@ do { \
 #define CHECK_FOR_INTERRUPTS() \
 do { \
 	if (InterruptPending) \
-		ProcessInterrupts(); \
+		ProcessInterrupts(__FILE__, __LINE__); \
 	if (gp_enable_resqueue_priority)	\
 		BackoffBackendTick(); \
 	ReportOOMConsumption(); \
@@ -148,7 +148,7 @@ do { \
 	if (UNBLOCKED_SIGNAL_QUEUE()) \
 		pgwin32_dispatch_queued_signals(); \
 	if (InterruptPending) \
-		ProcessInterrupts(); \
+		ProcessInterrupts(__FILE__, __LINE__); \
 } while(0)
 #endif   /* WIN32 */
 
@@ -197,6 +197,7 @@ do { \
 extern pid_t PostmasterPid;
 extern bool IsPostmasterEnvironment;
 extern PGDLLIMPORT bool IsUnderPostmaster;
+extern bool IsBinaryUpgrade;
 
 extern bool ExitOnAnyError;
 
@@ -307,7 +308,6 @@ extern bool allowSystemTableModsDDL;
 extern bool allowSystemTableModsDML;
 extern PGDLLIMPORT int planner_work_mem;
 extern PGDLLIMPORT int work_mem;
-extern PGDLLIMPORT int max_work_mem;
 extern PGDLLIMPORT int maintenance_work_mem;
 extern PGDLLIMPORT int statement_mem;
 extern PGDLLIMPORT int max_statement_mem;
@@ -490,5 +490,12 @@ typedef enum
 } AuxProcType;
 
 extern AuxProcType MyAuxProcType; /* bootstrap.c */
+
+#define AmStartupProcess()          (MyAuxProcType == StartupProcess || \
+										MyAuxProcType == StartupPass2Process || \
+										MyAuxProcType == StartupPass3Process || \
+										MyAuxProcType == StartupPass4Process)
+#define AmCheckpointerProcess()     (MyAuxProcType == CheckpointProcess)
+#define AmBgWriterProcess()			(MyAuxProcType == BgWriterProcess)
 
 #endif   /* MISCADMIN_H */

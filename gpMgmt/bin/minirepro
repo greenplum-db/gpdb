@@ -17,7 +17,7 @@ information for the commands. The information can be analyzed by Pivotal
 support to perform root cause analysis.
 
 The minirepro utility reads the input SQL file, passes the input SQL
-command to gp_toolkit function gp_dump_query_oids() to get the dependent
+command to the server's gp_dump_query_oids() to get the dependent
 object ids. Then the utility uses pg_dump to dump the object DDLs, and
 queries the system catalog to collect statistics of these relations.
 The information is written to output file. The output includes a minimal
@@ -123,7 +123,7 @@ def dump_query(connectionInfo, query_file):
 
     with open(query_file, 'r') as query_f:
         sql_text = query_f.read()
-    query = "select gp_toolkit.gp_dump_query_oids('%s')" % E(sql_text)
+    query = "select pg_catalog.gp_dump_query_oids('%s')" % E(sql_text)
 
     toolkit_sql = PATH_PREFIX + 'toolkit.sql'
     with open(toolkit_sql, 'w') as toolkit_f:
@@ -137,12 +137,12 @@ def dump_query(connectionInfo, query_file):
 
     if p.wait() is not 0:
         errormsg = p.communicate()[1]
-        sys.stderr.writelines('\nError when executing function gp_toolkit.gp_dump_query_oids.\n\n' + errormsg + '\n\n')
+        sys.stderr.writelines('\nError when executing function gp_dump_query_oids.\n\n' + errormsg + '\n\n')
         sys.exit(1)
 
     outmsg, errormsg = p.communicate()
     if errormsg:
-        sys.stderr.writelines('\nError when executing function gp_toolkit.gp_dump_query_oids.\n\n' + errormsg + '\n\n')
+        sys.stderr.writelines('\nError when executing function gp_dump_query_oids.\n\n' + errormsg + '\n\n')
         sys.exit(1)
     return outmsg
 

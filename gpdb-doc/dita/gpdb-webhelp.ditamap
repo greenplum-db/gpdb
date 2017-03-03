@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE bookmap PUBLIC "-//OASIS//DTD DITA BookMap//EN" "bookmap.dtd">
+<bookmap xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="book"
+	ditaarch:DITAArchVersion="1.1">
+	<booktitle>
+		<mainbooktitle>Greenplum Database</mainbooktitle>
+	</booktitle>
+	<frontmatter>
+	</frontmatter>
+	<chapter href="common/pivotal-gpdb-features.xml"/>
+	<chapter href="admin_guide/admin_guide.ditamap" format="ditamap"/>
+	<chapter href="utility_guide/utility_guide.ditamap" format="ditamap"/>
+	<chapter href="ref_guide/ref_guide.ditamap" format="ditamap"/>
+	<chapter href="client_tool_guides/client_tool_guides.ditamap" format="ditamap"/>
+</bookmap>

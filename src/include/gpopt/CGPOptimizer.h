@@ -22,12 +22,6 @@
 
 class CGPOptimizer
 {
-	private:
-
-		// touch library initializers to enforce linker to include them
-		static
-		void TouchLibraryInitializers();
-
 	public:
 
 		// optimize given query using GP optimizer

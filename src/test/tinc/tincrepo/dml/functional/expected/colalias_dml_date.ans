@@ -1,0 +1,56 @@
+DROP TABLE IF EXISTS colalias_dml_date;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/colalias_dml_date_opt.sql:14: NOTICE:  table "colalias_dml_date" does not exist, skipping
+DROP TABLE
+CREATE TABLE colalias_dml_date
+(
+    col1 date DEFAULT '2014-01-01',
+    col2 date,
+    col3 char,
+    col4 date,
+    col5 date
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def 
+);
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/colalias_dml_date_opt.sql:27: NOTICE:  CREATE TABLE will create partition "colalias_dml_date_1_prt_def" for table "colalias_dml_date"
+CREATE TABLE
+DROP TABLE IF EXISTS colalias_dml_date_candidate;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/colalias_dml_date_opt.sql:29: NOTICE:  table "colalias_dml_date_candidate" does not exist, skipping
+DROP TABLE
+CREATE TABLE colalias_dml_date_candidate
+(
+    col1 date DEFAULT '2014-01-01',
+    col2 date,
+    col3 char,
+    col4 date,
+    col5 date
+) DISTRIBUTED by (col2);
+CREATE TABLE
+INSERT INTO colalias_dml_date_candidate VALUES('2013-12-30','2014-01-01','a','2013-12-30','2014-01-01');
+INSERT 0 1
+INSERT INTO colalias_dml_date(col2,col1,col3,col5,col4) SELECT col1,col2,col3,col5,col4 FROM (SELECT col1,col1 as col2,col3,col5 as col4,col5  FROM colalias_dml_date_candidate)foo;
+INSERT 0 1
+SELECT * FROM colalias_dml_date ORDER BY 1,2,3,4;
+    col1    |    col2    | col3 |    col4    |    col5    
+------------+------------+------+------------+------------
+ 2013-12-30 | 2013-12-30 | a    | 2014-01-01 | 2014-01-01
+(1 row)
+
+UPDATE colalias_dml_date SET col1 = (select col2 as col1 FROM colalias_dml_date_candidate);
+UPDATE 1
+SELECT * FROM colalias_dml_date ORDER BY 1,2,3,4;
+    col1    |    col2    | col3 |    col4    |    col5    
+------------+------------+------+------------+------------
+ 2014-01-01 | 2013-12-30 | a    | 2014-01-01 | 2014-01-01
+(1 row)
+
+UPDATE colalias_dml_date SET col1 =colalias_dml_date_candidate.col2 FROM colalias_dml_date_candidate;
+UPDATE 1
+SELECT * FROM colalias_dml_date ORDER BY 1,2,3,4;
+    col1    |    col2    | col3 |    col4    |    col5    
+------------+------------+------+------------+------------
+ 2014-01-01 | 2013-12-30 | a    | 2014-01-01 | 2014-01-01
+(1 row)
+

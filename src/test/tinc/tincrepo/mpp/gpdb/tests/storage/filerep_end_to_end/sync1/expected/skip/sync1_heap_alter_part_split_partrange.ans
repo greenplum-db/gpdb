@@ -189,10 +189,10 @@ select count(*) from sync1_heap_alter_part_split_partrange8;
 -- Split Partition Range
 --
 alter table sync1_heap_alter_part_split_partrange1 split partition for(1) at (5) into (partition aa, partition bb);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_heap_alter_part_split_partrange1_1_prt_aa" for table "sync1_heap_alter_part_split_partrange1"
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_heap_alter_part_split_partrange1_1_prt_bb" for table "sync1_heap_alter_part_split_partrange1"
 ALTER TABLE
 --

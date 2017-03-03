@@ -175,7 +175,6 @@ RESET enable_bitmapscan;
 --
 -- HASH
 --
-set gp_hash_index = true;
 CREATE INDEX hash_i4_index ON hash_i4_heap USING hash (random int4_ops);
 
 CREATE INDEX hash_name_index ON hash_name_heap USING hash (random name_ops);
@@ -184,7 +183,6 @@ CREATE INDEX hash_txt_index ON hash_txt_heap USING hash (random text_ops);
 
 CREATE INDEX hash_f8_index ON hash_f8_heap USING hash (random float8_ops);
 
-set gp_hash_index = false;
 -- CREATE INDEX hash_ovfl_index ON hash_ovfl_heap USING hash (x int4_ops);
 
 

@@ -17,9 +17,7 @@
 #define GPDXL_CCTEListEntry_H
 
 #include "gpos/base.h"
-#include "gpos/common/CDynamicPtrArray.h"
 #include "gpos/common/CHashMap.h"
-#include "gpos/string/CWStringBase.h"
 
 #include "naucrates/dxl/operators/CDXLNode.h"
 

@@ -45,6 +45,10 @@ update target set b=target.b+100 where c = 3 and a in (select b from todelete);
 
 select * from target;
 
+-- Also test an update with a qual that doesn't match any partition. The
+-- Append degenerates into a dummy Result with false One-Time Filter.
+alter table target drop default partition;
+update target set b = 10 where c = 10;
+
 drop table todelete;
 drop table target;
-

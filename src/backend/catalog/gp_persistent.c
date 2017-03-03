@@ -638,13 +638,15 @@ void GpPersistent_GetCommonValues(
 
 void GpRelationNode_GetValues(
 	Datum							*values,
-
+	Oid 							*tablespaceOid,
 	Oid 							*relfilenodeOid,
 	int32							*segmentFileNum,
 	int64							*createMirrorDataLossTrackingSessionNum,
 	ItemPointer		 				persistentTid,
 	int64							*persistentSerialNum)
 {
+	*tablespaceOid = DatumGetObjectId(values[Anum_gp_relation_node_tablespace_oid - 1]);
+
 	*relfilenodeOid = DatumGetObjectId(values[Anum_gp_relation_node_relfilenode_oid - 1]);
 
 	*segmentFileNum = DatumGetInt32(values[Anum_gp_relation_node_segment_file_num - 1]);
@@ -659,13 +661,16 @@ void GpRelationNode_GetValues(
 
 void GpRelationNode_SetDatumValues(
 	Datum							*values,
-
+	Oid 							tablespaceOid,
 	Oid 							relfilenodeOid,
 	int32							segmentFileNum,
 	int64							createMirrorDataLossTrackingSessionNum,
 	ItemPointer		 				persistentTid,
 	int64							persistentSerialNum)
 {
+	values[Anum_gp_relation_node_tablespace_oid - 1] =
+		ObjectIdGetDatum(tablespaceOid);
+
 	values[Anum_gp_relation_node_relfilenode_oid - 1] = 
 									ObjectIdGetDatum(relfilenodeOid);
 

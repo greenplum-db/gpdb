@@ -48,16 +48,16 @@ typedef Datum (*SlotGetAttrFn) (struct TupleTableSlot *slot, int attnum, bool *i
 
 #ifndef USE_CODEGEN
 
-#define InitCodegen();
-#define CodeGeneratorManagerCreate(module_name) NULL
-#define CodeGeneratorManagerGenerateCode(manager);
-#define CodeGeneratorManagerPrepareGeneratedFunctions(manager) 1
-#define CodeGeneratorManagerNotifyParameterChange(manager) 1
-#define CodeGeneratorManagerAccumulateExplainString(manager) 1
-#define CodeGeneratorManagerGetExplainString(manager) 1
-#define CodeGeneratorManagerDestroy(manager);
-#define GetActiveCodeGeneratorManager() NULL
-#define SetActiveCodeGeneratorManager(manager);
+#define InitCodegen() ((void) 1)
+#define CodeGeneratorManagerCreate(module_name) ((void *) NULL)
+#define CodeGeneratorManagerGenerateCode(manager) ((unsigned int) 1)
+#define CodeGeneratorManagerPrepareGeneratedFunctions(manager) ((unsigned int) 1)
+#define CodeGeneratorManagerNotifyParameterChange(manager) ((unsigned int) 1)
+#define CodeGeneratorManagerAccumulateExplainString(manager) ((void) 1)
+#define CodeGeneratorManagerGetExplainString(manager) ((char *) NULL)
+#define CodeGeneratorManagerDestroy(manager) ((void) 1)
+#define GetActiveCodeGeneratorManager() ((void *) NULL)
+#define SetActiveCodeGeneratorManager(manager) ((void) 1)
 
 #define START_CODE_GENERATOR_MANAGER(newManager)
 #define END_CODE_GENERATOR_MANAGER()
@@ -172,6 +172,18 @@ slot_getattr_regular(struct TupleTableSlot *slot, int attnum, bool *isnull);
  */
 int
 att_align_nominal_regular(int cur_offset, char attalign);
+
+/*
+ * Wrapper function for SET_VARSIZE.
+ */
+void
+SET_VARSIZE_regular(void* ptr, size_t len);
+
+/*
+ * Wrapper function for VARSIZE.
+ */
+uint32
+VARSIZE_regular(void* ptr);
 
 /*
  * returns the pointer to the ExecVariableList

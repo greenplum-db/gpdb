@@ -58,7 +58,7 @@ static void spinOffThreads(PGconn *pConn, InputOptions * pInputOpts, const Segme
 			   ThreadParmArray * pParmAr);
 static void *threadProc(void *arg);
 static bool testPartitioningSupport(void);
-static bool transformPassThroughParms(InputOptions * pInputOpts);
+static void transformPassThroughParms(InputOptions * pInputOpts);
 static bool copyFilesToSegments(InputOptions * pInputOpts, SegmentDatabaseArray *segDBAr);
 static int	getRemoteVersion(void);
 static bool no_expand_children; /* Do not expand child partitions. This option is passed from gpcrondump */
@@ -193,8 +193,7 @@ main(int argc, char **argv)
 	 * make changes and verifications (if any) needed to be made before
 	 * shipping options to the agents
 	 */
-	if (!transformPassThroughParms(&inputOpts))
-		goto cleanup;
+	transformPassThroughParms(&inputOpts);
 
 	/*
 	 * Copy necessary files to segments (from --table-file / -- exclude-table-file options)
@@ -263,9 +262,9 @@ addPassThroughParm(char Parm, const char *pszValue, char *pszPassThroughParmStri
 			PQExpBuffer valueBuf = createPQExpBuffer();
 
 			if (bFirstTime)
-				pszRtn = MakeString("-%c \"%s\"", Parm, shellEscape(pszValue, valueBuf));
+				pszRtn = MakeString("-%c \"%s\"", Parm, shellEscape(pszValue, valueBuf, false, false));
 			else
-				pszRtn = MakeString("%s -%c \"%s\"", pszPassThroughParmString, Parm, shellEscape(pszValue, valueBuf));
+				pszRtn = MakeString("%s -%c \"%s\"", pszPassThroughParmString, Parm, shellEscape(pszValue, valueBuf, false, false));
 
 			destroyPQExpBuffer(valueBuf);
 		}
@@ -306,9 +305,9 @@ addPassThroughLongParm(const char *Parm, const char *pszValue, char *pszPassThro
 			PQExpBuffer valueBuf = createPQExpBuffer();
 
 			if (bFirstTime)
-				pszRtn = MakeString("--%s \"%s\"", Parm, shellEscape(pszValue, valueBuf));
+				pszRtn = MakeString("--%s \"%s\"", Parm, shellEscape(pszValue, valueBuf, false, false));
 			else
-				pszRtn = MakeString("%s --%s \"%s\"", pszPassThroughParmString, Parm, shellEscape(pszValue, valueBuf));
+				pszRtn = MakeString("%s --%s \"%s\"", pszPassThroughParmString, Parm, shellEscape(pszValue, valueBuf, false, false));
 
 			destroyPQExpBuffer(valueBuf);
 		}
@@ -330,45 +329,6 @@ addPassThroughLongParm(const char *Parm, const char *pszValue, char *pszPassThro
 
 	return pszRtn;
 }
-
-/*
- * Error if any child tables were specified in an input option (-t or -T)
- */
-//static bool isChildSelected(char opt, SimpleOidList list)
-//{
-//	PQExpBuffer 		query = createPQExpBuffer();
-//	PGresult   			*res;
-//	SimpleOidListCell 	*cell;
-//
-//	if (list.head != NULL)
-//	{
-//		for (cell = list.head; cell; cell = cell->next)
-//		{
-//			int numtups = 0;
-//
-//			appendPQExpBuffer(query, "select 1 from pg_partition_rule "
-//									 "where parchildrelid ='%u'::pg_catalog.oid; ",
-//									  cell->val);
-//
-//			res = PQexec(g_conn, query->data);
-//			check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
-//			numtups = PQntuples(res);
-//			PQclear(res);
-//			resetPQExpBuffer(query);
-//
-//			if (numtups == 1)
-//			{
-//				mpp_err_msg_cache(logError, progname, "specifying child tables in -%c option is not allowed\n", opt);
-//				return false;
-//			}
-//
-//		}
-//	}
-//
-//	destroyPQExpBuffer(query);
-//
-//	return true;
-//}
 
 /*
  * Given an input option -t (include table) or -T (exclude table) check if this is
@@ -414,15 +374,13 @@ addChildrenToPassThrough(InputOptions *pInputOpts, char opt, SimpleOidList list)
 }
 
 /*
- * Any transformation of the input options that is passed down to the segdb dump
- * agents should be done in here.
+ * Any transformation of the input options that is passed down to the segdb
+ * dump agents should be done in here.
  *
- * For now, there's only a partitioning related transformation, see addChildrenToPassThrough
- * for more information.
- *
- * returns 'false' if error was reported. 'true' otherwise.
+ * For now, there's only a partitioning related transformation, see
+ * addChildrenToPassThrough for more information.
  */
-static bool
+static void
 transformPassThroughParms(InputOptions *pInputOpts)
 {
 
@@ -430,16 +388,9 @@ transformPassThroughParms(InputOptions *pInputOpts)
 
 	if (shouldExpandChildren(g_gp_supportsPartitioning, no_expand_children))
 	{
-
-/*		if(!isChildSelected('t', table_include_oids) || */
-/*		   !isChildSelected('T', table_exclude_oids)) */
-/*			return false; */
-
 		addChildrenToPassThrough(pInputOpts, 't', table_include_oids);
 		addChildrenToPassThrough(pInputOpts, 'T', table_exclude_oids);
 	}
-
-	return true;
 }
 
 /*
@@ -754,17 +705,12 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 {
 	bool		bRtn = false;
 	int			c;
-	char	   *pszFormat = "p";
-	bool		bOutputBlobs = false;
 	bool		bOids = false;
-	/* int				compressLevel	= -1; */
 	int			outputClean = 0;
-	/* int				outputCreate = 0; */
 	int			outputNoOwner = 0;
 	static int	disable_triggers = 0;
 	static int	auth = 0;
 	static int	skipcat = 0;
-	bool		bSawCDB_S_Option;
 	int			lenCmdLineParms;
 	int			i;
 
@@ -772,17 +718,10 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 	char		*ddboost_directory = NULL;
 #endif
 
-
 	static struct option long_options[] =
 	{
 		{"data-only", no_argument, NULL, 'a'},
-		/* {"blobs", no_argument, NULL, 'b'}, */
 		{"clean", no_argument, NULL, 'c'},
-		/* {"create", no_argument, NULL, 'C'}, */
-		/*
-		 * {"file", required_argument, NULL, 'f'},
-		 * {"format",  required_argument, NULL, 'F'},
-		 */
 		{"encoding", required_argument, NULL, 'E'},
 		{"host", required_argument, NULL, 'h'},
 		{"ignore-version", no_argument, NULL, 'i'},
@@ -801,7 +740,6 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 		{"verbose", no_argument, NULL, 'v'},
 		{"no-privileges", no_argument, NULL, 'x'},
 		{"no-acl", no_argument, NULL, 'x'},
-		/* {"compress", required_argument, NULL, 'Z'}, */
 		{"help", no_argument, NULL, '?'},
 		{"version", no_argument, NULL, 'V'},
 
@@ -812,7 +750,7 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 		{"attribute-inserts", no_argument, &column_inserts, 1},
 		{"column-inserts", no_argument, &column_inserts, 1},
 		{"disable-triggers", no_argument, &disable_triggers, 1},
-	    	{"inserts", no_argument, &dump_inserts, 1},
+		{"inserts", no_argument, &dump_inserts, 1},
 		{"gp-catalog-skip", no_argument, &skipcat, 1},
 
 		/*
@@ -820,7 +758,6 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 		 * equivalent short option
 		 */
 		{"gp-c", no_argument, NULL, 1},
-		/* {"gp-cf", required_argument, NULL, 2}, */
 		{"gp-d", required_argument, NULL, 3},
 		{"gp-r", required_argument, NULL, 4},
 		{"gp-s", required_argument, NULL, 5},
@@ -864,14 +801,6 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 	dataOnly = schemaOnly = incremental_backup = dump_inserts = column_inserts = no_expand_children = false;
 
 	progname = (char *) get_progname(argv[0]);
-
-	bSawCDB_S_Option = false;
-
-	/*if (argc == 1)
-	{
-		help(progname);
-		goto cleanup;
-	}*/
 
 	if (argc > 1)
 	{
@@ -935,21 +864,10 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 				pInputOpts->pszPassThroughParms = addPassThroughParm(c, NULL, pInputOpts->pszPassThroughParms);
 				break;
 
-/*			case 'b':			// Dump blobs
-				bOutputBlobs = true;
-				pInputOpts->pszPassThroughParms = addPassThroughParm( c, NULL, pInputOpts->pszPassThroughParms );
-				break;
-*/
 			case 'c':			/* clean (i.e., drop) schema prior to create */
 				outputClean = 1;
 				pInputOpts->pszPassThroughParms = addPassThroughParm(c, NULL, pInputOpts->pszPassThroughParms);
 				break;
-
-/*
-			case 'C':
-				outputCreateDB = 1;
-				break;
-*/
 
 			case 'd':			/* dump data as proper insert strings */
 				dump_inserts = true;
@@ -970,16 +888,6 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 				pInputOpts->pszPassThroughParms = addPassThroughParm(c, optarg, pInputOpts->pszPassThroughParms);
 				break;
 
-/* Invalid for gp_dump.
-			case 'f':
-				iopt->filename = optarg;
-				break;
-
-			case 'F':
-				pszFormat = optarg;
-				pInputOpts->pszPassThroughParms = addPassThroughParm( c, optarg, pInputOpts->pszPassThroughParms );
-				break;
-*/
 			case 'h':			/* server host */
 				pInputOpts->pszPGHost = pg_strdup(optarg);
 				break;
@@ -1089,12 +997,6 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 				}
 				break;
 
-/*			case 'Z':			// Compression Level
-				compressLevel = atoi(optarg);
-				pInputOpts->pszPassThroughParms = addPassThroughParm( c, optarg, pInputOpts->pszPassThroughParms );
-				break;
-				 */	/* This covers the long options equivalent to -X xxx. */
-
 			case 0:
 				/* This covers the long options equivalent to -X xxx. */
 				break;
@@ -1105,25 +1007,6 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 				break;
 
 			case 2:
-				/* gp-cf control file */
-					 /* temporary disabled
-					if ( bSawCDB_S_Option )
-					{
-						// Ignore gp_s option
-						mpp_msg(logInfo, progname, "ignoring the gp-s option, since the gp-cf option is set.\n");
-					}
-
-					if (!FillCDBSet(&pInputOpts->set, optarg))
-						goto cleanup;
-
-							// Validate that none of the role's are hosts
-					if (0 < CountInstanceHosts(&pInputOpts->set))
-					{
-						mpp_msg(logInfo, progname, "The control file %s contains Greenplum Database instances specifies as host name or ip address.  This is not allowed.\n",
-								optarg);
-						goto cleanup;
-					}
-					*/
 				break;
 
 			case 3:
@@ -1362,34 +1245,12 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 		goto cleanup;
 	}
 
-	if (bOutputBlobs && selectTableName != NULL)
-	{
-		mpp_err_msg_cache(logError, progname, "large-object output not supported for a single table\n");
-		mpp_err_msg_cache(logError, progname, "use a full dump instead\n");
-		goto cleanup;
-	}
-
-	if (bOutputBlobs && selectSchemaName != NULL)
-	{
-		mpp_err_msg_cache(logError, progname, "large-object output not supported for a single schema\n");
-		mpp_err_msg_cache(logError, progname, "use a full dump instead\n");
-		goto cleanup;
-	}
-
 	if (dump_inserts && bOids)
 	{
 		mpp_err_msg_cache(logError, progname, "INSERT (-d, -D) and OID (-o) options cannot be used together\n");
 		mpp_err_msg_cache(logError, progname, "(The INSERT command cannot set OIDs.)\n");
 		goto cleanup;
 	}
-
-	if (bOutputBlobs && (pszFormat[0] == 'p' || pszFormat[0] == 'P'))
-	{
-		mpp_err_msg_cache(logError, progname, "large-object output is not supported for plain-text dump files\n");
-		mpp_err_msg_cache(logError, progname, "(Use a different output format.)\n");
-		goto cleanup;
-	}
-
 
 	bRtn = true;
 
@@ -1442,21 +1303,16 @@ help(const char *progname)
 	printf(("  %s [OPTION]... [DBNAME]\n"), progname);
 
 	printf(("\nGeneral options:\n"));
-	//printf(("  -f, --file=FILENAME      output file name\n"));
-	//printf(("  -F, --format=c|t|p       output file format (custom, tar, plain text)\n"));
 	printf(("  -i, --ignore-version     proceed even when server version mismatches\n"
 			"                           gp_dump version\n"));
 	printf(("  -v, --verbose            verbose mode. adds verbose information to the\n"
 			"                           per segment status files\n"));
-	//printf(("  -Z, --compress=0-9       compression level for compressed formats\n"));
 	printf(("  --help                   show this help, then exit\n"));
 	printf(("  --version                output version information, then exit\n"));
 
 	printf(("\nOptions controlling the output content:\n"));
 	printf(("  -a, --data-only          dump only the data, not the schema\n"));
-	/* printf(("  -b, --blobs              include large objects in dump\n")); */
 	printf(("  -c, --clean              clean (drop) schema prior to create\n"));
-	//printf(("  -C, --create             include commands to create database in dump\n"));
 	printf(("  -d, --inserts            dump data as INSERT, rather than COPY, commands\n"));
 	printf(("  -D, --column-inserts     dump data as INSERT commands with column names\n"));
 	printf(_("  -E, --encoding=ENCODING  dump the data in encoding ENCODING\n"));
@@ -1516,14 +1372,15 @@ exit_nicely(void)
 
 	pszErrorMsg = MakeString("*** aborted because of error: %s\n", lastMsg);
 
-	mpp_err_msg(logError, progname, pszErrorMsg);
+	if (pszErrorMsg)
+	{
+		mpp_err_msg(logError, progname, pszErrorMsg);
+		free(pszErrorMsg);
+	}
 
 	/* Clean-up synchronization variables */
 	pthread_mutex_destroy(&MyMutex);
 	pthread_cond_destroy(&MyCondVar);
-
-	if (pszErrorMsg)
-		free(pszErrorMsg);
 
 	PQfinish(g_conn);
 	g_conn = NULL;
@@ -1640,7 +1497,13 @@ reportBackupResults(InputOptions inputopts, ThreadParmArray *pParmAr)
 	SegmentDatabase *pSegDB;
 	ThreadParm *p;
 
-	if (pParmAr == NULL || pParmAr->count == 0)
+	if (pParmAr == NULL)
+	{
+		mpp_err_msg(logError, progname, "Report data missing\n");
+		return 2;
+	}
+
+	if (pParmAr->count == 0)
 	{
 		pParmAr->count = 1;		/* just use master in this case (early error) */
 		pParmAr->pData = (ThreadParm *) calloc(1, sizeof(ThreadParm));
@@ -1730,11 +1593,9 @@ reportBackupResults(InputOptions inputopts, ThreadParmArray *pParmAr)
 	appendPQExpBuffer(reportBuf, "Compression Program: %s\n",
 		 StringNotNull(pParm0->pOptionsData->pszCompressionProgram, "None"));
 
-	appendPQExpBuffer(reportBuf, "%s", getBackupTypeString(incremental_backup));
-	appendPQExpBuffer(reportBuf, "\n");
+	appendPQExpBuffer(reportBuf, "Backup Type: %s\n", (incremental_backup ? "Incremental" : "Full"));
 
-	appendPQExpBuffer(reportBuf, "\n");
-	appendPQExpBuffer(reportBuf, "Individual Results\n");
+	appendPQExpBuffer(reportBuf, "\nIndividual Results\n");
 
 	failCount = 0;
 	errorCount = 0;

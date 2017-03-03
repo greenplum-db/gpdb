@@ -193,7 +193,7 @@ void gpmon_send(gpmon_packet_t* p)
 		if (n != sendto(gpmon.gxsock, (const char *)p, n, 0, 
 						(struct sockaddr*) &gpmon.gxaddr, 
 						sizeof(gpmon.gxaddr))) {
-			elog(WARNING, "gpmon: cannot send (%m socket %d)", gpmon.gxsock);
+			elog(LOG, "gpmon: cannot send (%m socket %d)", gpmon.gxsock);
 		}
 	}
 }

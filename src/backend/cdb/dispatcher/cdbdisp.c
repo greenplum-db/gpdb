@@ -84,7 +84,7 @@ cdbdisp_dispatchToGang(struct CdbDispatcherState *ds,
 			if (dispatchResults->writer_gang->dispatcherActive)
 			{
 				ereport(ERROR,
-						(errcode(ERRCODE_INTERNAL_ERROR),
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						 errmsg("query plan with multiple segworker groups is not supported"),
 						 errhint("likely caused by a function that reads or modifies data in a distributed table")));
 			}
@@ -98,6 +98,18 @@ cdbdisp_dispatchToGang(struct CdbDispatcherState *ds,
 	 * thread related code into a separate file.
 	 */
 	(pDispatchFuncs->dispatchToGang)(ds, gp, sliceIndex, disp_direct);
+}
+
+/*
+ * For asynchronous dispatcher, we have to wait all dispatch to finish before we move on to query execution,
+ * otherwise we may get into a deadlock situation, e.g, gather motion node waiting for data,
+ * while segments waiting for plan. This is skipped in threaded dispatcher as data is sent in blocking style.
+ */
+void
+cdbdisp_waitDispatchFinish(struct CdbDispatcherState *ds)
+{
+	if (pDispatchFuncs->waitDispatchFinish != NULL)
+		(pDispatchFuncs->waitDispatchFinish)(ds);
 }
 
 /*
@@ -216,8 +228,16 @@ cdbdisp_finishCommand(struct CdbDispatcherState *ds)
 		pr = cdbdisp_getDispatchResults(ds, &qeErrorMsg);
 	
 		if (!pr)
-			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-				errOmitLocation(true), errmsg("%s", qeErrorMsg.data)));
+		{
+			/*
+			 * XXX: It would be nice to get more details from the segment, not
+			 * just the error message. In particular, an error code would be
+			 * nice. DATA_EXCEPTION is a pretty wild guess on the real cause.
+			 */
+			ereport(ERROR,
+					(errcode(ERRCODE_DATA_EXCEPTION),
+					 errmsg("%s", qeErrorMsg.data)));
+		}
 
 		pfree(qeErrorMsg.data);
 	}

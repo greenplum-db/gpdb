@@ -357,7 +357,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 psql:/path/sql_file:1: ERROR:  rle_type cannot be used with Append Only relations row orientation
 -- Set GUC with invalid value
 SET gp_default_storage_options="appendonly=true,orientation=xxx";
-psql:/path/sql_file:1: ERROR:  invalid value "xxx" for storage option "orientation" (reloptions.c:133)
+psql:/path/sql_file:1: ERROR:  invalid value "xxx" for storage option "orientation"
 -- GUC with appenonly=false
 SET gp_default_storage_options="appendonly=false";
 SET

@@ -1,0 +1,98 @@
+CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-us-east-1.amazonaws.com/us-east-1.@read_prefix@/small17/data0000 config=@config_file@') FORMAT 'csv';
+
+\d s3regress_all_regions
+
+SELECT round(sum(open)) FROM s3regress_all_regions;
+
+DROP EXTERNAL TABLE s3regress_all_regions;
+
+CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-us-east-2.amazonaws.com/us-east-2.@read_prefix@/small17/data0000 config=@config_file@') FORMAT 'csv';
+
+\d s3regress_all_regions
+
+SELECT round(sum(open)) FROM s3regress_all_regions;
+
+DROP EXTERNAL TABLE s3regress_all_regions;
+
+CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-us-west-1.amazonaws.com/us-west-1.@read_prefix@/small17/data0000 config=@config_file@') FORMAT 'csv';
+
+\d s3regress_all_regions
+
+SELECT round(sum(open)) FROM s3regress_all_regions;
+
+DROP EXTERNAL TABLE s3regress_all_regions;
+
+CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-ap-south-1.amazonaws.com/ap-south-1.@read_prefix@/small17/data0000 config=@config_file@') FORMAT 'csv';
+
+\d s3regress_all_regions
+
+SELECT round(sum(open)) FROM s3regress_all_regions;
+
+DROP EXTERNAL TABLE s3regress_all_regions;
+
+CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-ap-northeast-2.amazonaws.com/ap-northeast-2.@read_prefix@/small17/data0000 config=@config_file@') FORMAT 'csv';
+
+\d s3regress_all_regions
+
+SELECT round(sum(open)) FROM s3regress_all_regions;
+
+DROP EXTERNAL TABLE s3regress_all_regions;
+
+CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-ap-southeast-1.amazonaws.com/ap-southeast-1.@read_prefix@/small17/data0000 config=@config_file@') FORMAT 'csv';
+
+\d s3regress_all_regions
+
+SELECT round(sum(open)) FROM s3regress_all_regions;
+
+DROP EXTERNAL TABLE s3regress_all_regions;
+
+CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-ap-southeast-2.amazonaws.com/ap-southeast-2.@read_prefix@/small17/data0000 config=@config_file@') FORMAT 'csv';
+
+\d s3regress_all_regions
+
+SELECT round(sum(open)) FROM s3regress_all_regions;
+
+DROP EXTERNAL TABLE s3regress_all_regions;
+
+CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-ap-northeast-1.amazonaws.com/ap-northeast-1.@read_prefix@/small17/data0000 config=@config_file@') FORMAT 'csv';
+
+\d s3regress_all_regions
+
+SELECT round(sum(open)) FROM s3regress_all_regions;
+
+DROP EXTERNAL TABLE s3regress_all_regions;
+
+CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-eu-central-1.amazonaws.com/eu-central-1.@read_prefix@/small17/data0000 config=@config_file@') FORMAT 'csv';
+
+\d s3regress_all_regions
+
+SELECT round(sum(open)) FROM s3regress_all_regions;
+
+DROP EXTERNAL TABLE s3regress_all_regions;
+
+CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-eu-west-1.amazonaws.com/eu-west-1.@read_prefix@/small17/data0000 config=@config_file@') FORMAT 'csv';
+
+\d s3regress_all_regions
+
+SELECT round(sum(open)) FROM s3regress_all_regions;
+
+DROP EXTERNAL TABLE s3regress_all_regions;
+
+CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-sa-east-1.amazonaws.com/sa-east-1.@read_prefix@/small17/data0000 config=@config_file@') FORMAT 'csv';
+
+\d s3regress_all_regions
+
+SELECT round(sum(open)) FROM s3regress_all_regions;
+
+DROP EXTERNAL TABLE s3regress_all_regions;

@@ -38,18 +38,18 @@ ALTER TABLE
 alter table mpp9548 add partition drop1 
     start('2010-06-02') 
     end('2010-06-03');
-NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 NOTICE:  CREATE TABLE will create partition "mpp9548_1_prt_drop1" for table "mpp9548"
-NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 ALTER TABLE
 alter table mpp9548 drop column drop2a, drop column drop2b;
 ALTER TABLE
 alter table mpp9548 add partition drop2 
     start('2010-06-03') 
     end('2010-06-04');
-NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 NOTICE:  CREATE TABLE will create partition "mpp9548_1_prt_drop2" for table "mpp9548"
-NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 ALTER TABLE
 insert into mpp9548 
 values

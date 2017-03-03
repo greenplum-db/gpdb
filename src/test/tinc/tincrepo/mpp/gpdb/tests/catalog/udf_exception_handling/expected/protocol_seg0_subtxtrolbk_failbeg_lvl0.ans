@@ -20,7 +20,7 @@ PL/pgSQL function "test_protocol_allseg" line 18 at SQL statement
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "shops_pkey" for table "shops"
 CONTEXT:  SQL statement "CREATE TABLE shops ( id serial PRIMARY KEY, shop varchar(32) )"
 PL/pgSQL function "test_protocol_allseg" line 18 at SQL statement
-psql:/path/sql_file:1: ERROR:  DTM error (gathered 2 results from cmd 'Rollback Current Subtransaction') (cdbtm.c:2178)
+psql:/path/sql_file:1: ERROR:  DTM error (gathered results from cmd 'Rollback Current Subtransaction') (cdbtm.c:2178)
 DETAIL:  Raise ERROR for debug_dtm_action = 2, debug_dtm_action_protocol = Rollback Current Subtransaction (postgres.c:1420)  (seg0 rh55-qa01.sanmateo.greenplum.com:50000 pid=30888)
 CONTEXT:  PL/pgSQL function "test_protocol_allseg" line 36 during exception cleanup
 select * from employees;

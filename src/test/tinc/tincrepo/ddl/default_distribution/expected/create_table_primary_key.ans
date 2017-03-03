@@ -1,0 +1,16 @@
+-- start_ignore
+SET gp_create_table_random_default_distribution=on;
+SET
+SET optimizer=off;
+SET
+-- end_ignore
+-- PRIMARY KEY default behavior
+select attrnums from gp_distribution_policy where
+  localoid = 'distpol'::regclass;
+ attrnums 
+----------
+ {1}
+(1 row)
+
+alter table dist add primary key (j);
+psql:/Users/garcic12/dev/tincrepo/private/QP-private/ddl/default_distribution/out/create_table_primary_key.sql:10: ERROR:  PRIMARY KEY and DISTRIBUTED RANDOMLY are incompatible

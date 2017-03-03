@@ -406,6 +406,7 @@ pg_lock_status(PG_FUNCTION_ARGS)
 				nulls[7] = true;
 				nulls[8] = true;
 				nulls[9] = true;
+				break;
 			case LOCKTAG_RELATION_APPENDONLY_SEGMENT_FILE:
 				values[1] = ObjectIdGetDatum(lock->tag.locktag_field1);
 				values[2] = ObjectIdGetDatum(lock->tag.locktag_field2);

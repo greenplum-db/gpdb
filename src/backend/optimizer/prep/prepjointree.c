@@ -54,7 +54,7 @@ static Node *pull_up_simple_subquery(PlannerInfo *root, Node *jtnode,
 						RangeTblEntry *rte,
 						bool below_outer_join,
 						bool append_rel_member);
-static bool is_simple_subquery(PlannerInfo *root, Query *subquery);
+bool is_simple_subquery(PlannerInfo *root, Query *subquery);
 static bool has_nullable_targetlist(Query *subquery);
 static bool is_safe_append_member(Query *subquery);
 static void resolvenew_in_jointree(Node *jtnode, int varno,
@@ -680,7 +680,7 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
  *	  Check a subquery in the range table to see if it's simple enough
  *	  to pull up into the parent query.
  */
-static bool
+bool
 is_simple_subquery(PlannerInfo *root, Query *subquery)
 {
 	/*

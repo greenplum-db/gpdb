@@ -399,7 +399,9 @@ make_subplan(PlannerInfo *root, Query *orig_subquery, SubLinkType subLinkType,
 			&& IsSubqueryMultiLevelCorrelated(subquery)
 			&& QueryHasDistributedRelation(subquery))
 	{
-		elog(ERROR, "correlated subquery with skip-level correlations is not supported");
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("correlated subquery with skip-level correlations is not supported")));
 	}
 
 	if ((Gp_role == GP_ROLE_DISPATCH)

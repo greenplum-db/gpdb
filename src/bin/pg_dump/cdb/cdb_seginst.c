@@ -270,8 +270,7 @@ GetDumpSegmentDatabaseArray(PGconn *pConn,
 	pSegDBAr->count = x;
 
 cleanup:
-	if (pQry != NULL)
-		destroyPQExpBuffer(pQry);
+	destroyPQExpBuffer(pQry);
 	if (pRes != NULL)
 		PQclear(pRes);
 
@@ -465,8 +464,7 @@ GetRestoreSegmentDatabaseArray(PGconn *pConn,
 	restorePairAr->count = x;
 
 cleanup:
-	if (pQry != NULL)
-		destroyPQExpBuffer(pQry);
+	destroyPQExpBuffer(pQry);
 	if (pRes != NULL)
 		PQclear(pRes);
 

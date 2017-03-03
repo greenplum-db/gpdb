@@ -69,7 +69,7 @@ select count(*) from sync2_heap_alter_part_rn2;
 -- Add default Partition
 --
 alter table sync1_heap_alter_part_rn7 add default partition default_part;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_heap_alter_part_rn7_1_prt_default_part" for table "sync1_heap_alter_part_rn7"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_heap_alter_part_rn7_1_prt_default_part_2_prt_1" for table "sync1_heap_alter_part_rn7_1_prt_default_part"
 ALTER TABLE
@@ -119,7 +119,7 @@ select count(*) from sync1_heap_alter_part_rn7_0;
 -- Add default Partition
 --
 alter table ck_sync1_heap_alter_part_rn6 add default partition default_part;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_heap_alter_part_rn6_1_prt_default_part" for table "ck_sync1_heap_alter_part_rn6"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_heap_alter_part_rn6_1_prt_default_part_2_prt_1" for table "ck_sync1_heap_alter_part_rn6_1_prt_default_part"
 ALTER TABLE
@@ -170,7 +170,7 @@ select count(*) from ck_sync1_heap_alter_part_rn6_0;
 -- Add default Partition
 --
 alter table ct_heap_alter_part_rn4 add default partition default_part;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_heap_alter_part_rn4_1_prt_default_part" for table "ct_heap_alter_part_rn4"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_heap_alter_part_rn4_1_prt_default_part_2_prt_1" for table "ct_heap_alter_part_rn4_1_prt_default_part"
 ALTER TABLE
@@ -221,7 +221,7 @@ select count(*) from ct_heap_alter_part_rn4_0;
 -- Add default Partition
 --
 alter table resync_heap_alter_part_rn2 add default partition default_part;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "resync_heap_alter_part_rn2_1_prt_default_part" for table "resync_heap_alter_part_rn2"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "resync_heap_alter_part_rn2_1_prt_default_part_2_prt_1" for table "resync_heap_alter_part_rn2_1_prt_default_part"
 ALTER TABLE
@@ -271,7 +271,7 @@ select count(*) from resync_heap_alter_part_rn2_0;
 -- Add default Partition
 --
 alter table sync2_heap_alter_part_rn1 add default partition default_part;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_heap_alter_part_rn1_1_prt_default_part" for table "sync2_heap_alter_part_rn1"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_heap_alter_part_rn1_1_prt_default_part_2_prt_1" for table "sync2_heap_alter_part_rn1_1_prt_default_part"
 ALTER TABLE

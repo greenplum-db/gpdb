@@ -128,7 +128,7 @@ INSERT 0 1
 -- Add partition 
 --
 alter table sync1_heap_alter_part_drop_part2 add partition a2 start ('2007-02-01') end ('2007-03-01');
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_heap_alter_part_drop_part2_1_prt_a2" for table "sync1_heap_alter_part_drop_part2"
 ALTER TABLE
 --
@@ -146,7 +146,7 @@ ALTER TABLE
 -- Add default partition
 --
 alter table sync1_heap_alter_part_drop_part2 add default partition default_part;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_heap_alter_part_drop_part2_1_prt_default_part" for table "sync1_heap_alter_part_drop_part2"
 ALTER TABLE
 --
@@ -179,7 +179,7 @@ select count(*) from sync1_heap_alter_part_drop_part2;
 -- Add partition 
 --
 alter table ck_sync1_heap_alter_part_drop_part1 add partition a2 start ('2007-02-01') end ('2007-03-01');
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_heap_alter_part_drop_part1_1_prt_a2" for table "ck_sync1_heap_alter_part_drop_part1"
 ALTER TABLE
 --
@@ -197,7 +197,7 @@ ALTER TABLE
 -- Add default partition
 --
 alter table ck_sync1_heap_alter_part_drop_part1 add default partition default_part;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_heap_alter_part_drop_part1_1_prt_default_part" for table "ck_sync1_heap_alter_part_drop_part1"
 ALTER TABLE
 --

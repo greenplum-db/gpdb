@@ -1,0 +1,71 @@
+DROP TABLE IF EXISTS mpp21090_dropcol_splitdfpt_dml_timestamptz;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_dropcol_splitdfpt_dml_timestamptz_opt.sql:14: NOTICE:  table "mpp21090_dropcol_splitdfpt_dml_timestamptz" does not exist, skipping
+DROP TABLE
+CREATE TABLE mpp21090_dropcol_splitdfpt_dml_timestamptz
+(
+    col1 timestamptz,
+    col2 timestamptz,
+    col3 char,
+    col4 timestamptz,
+    col5 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def
+);
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_dropcol_splitdfpt_dml_timestamptz_opt.sql:27: NOTICE:  CREATE TABLE will create partition "mpp21090_dropcol_splitdfpt_dml_timestamptz_1_prt_def" for table "mpp21090_dropcol_splitdfpt_dml_timestamptz"
+CREATE TABLE
+INSERT INTO mpp21090_dropcol_splitdfpt_dml_timestamptz VALUES('2013-12-31 12:00:00 PST','2013-12-31 12:00:00 PST','a','2013-12-31 12:00:00 PST',0);
+INSERT 0 1
+SELECT * FROM mpp21090_dropcol_splitdfpt_dml_timestamptz ORDER BY 1,2,3,4;
+          col1          |          col2          | col3 |          col4          | col5 
+------------------------+------------------------+------+------------------------+------
+ 2013-12-31 12:00:00-08 | 2013-12-31 12:00:00-08 | a    | 2013-12-31 12:00:00-08 |    0
+(1 row)
+
+ALTER TABLE mpp21090_dropcol_splitdfpt_dml_timestamptz DROP COLUMN col4;
+ALTER TABLE
+ALTER TABLE mpp21090_dropcol_splitdfpt_dml_timestamptz SPLIT DEFAULT PARTITION at ('2013-12-15 12:00:00 PST') into (partition partsplitone,partition def);
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_dropcol_splitdfpt_dml_timestamptz_opt.sql:34: NOTICE:  exchanged partition "def" of relation "mpp21090_dropcol_splitdfpt_dml_timestamptz" with relation "pg_temp_67963"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_dropcol_splitdfpt_dml_timestamptz_opt.sql:34: NOTICE:  dropped partition "def" for relation "mpp21090_dropcol_splitdfpt_dml_timestamptz"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_dropcol_splitdfpt_dml_timestamptz_opt.sql:34: NOTICE:  CREATE TABLE will create partition "mpp21090_dropcol_splitdfpt_dml_timestamptz_1_prt_partsplitone" for table "mpp21090_dropcol_splitdfpt_dml_timestamptz"
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/mpp21090_dropcol_splitdfpt_dml_timestamptz_opt.sql:34: NOTICE:  CREATE TABLE will create partition "mpp21090_dropcol_splitdfpt_dml_timestamptz_1_prt_def" for table "mpp21090_dropcol_splitdfpt_dml_timestamptz"
+ALTER TABLE
+INSERT INTO mpp21090_dropcol_splitdfpt_dml_timestamptz SELECT '2013-12-01 12:00:00 PST', '2013-12-01 12:00:00 PST','b', 1;
+INSERT 0 1
+SELECT * FROM mpp21090_dropcol_splitdfpt_dml_timestamptz ORDER BY 1,2,3;
+          col1          |          col2          | col3 | col5 
+------------------------+------------------------+------+------
+ 2013-12-01 12:00:00-08 | 2013-12-01 12:00:00-08 | b    |    1
+ 2013-12-31 12:00:00-08 | 2013-12-31 12:00:00-08 | a    |    0
+(2 rows)
+
+-- Update distribution key
+UPDATE mpp21090_dropcol_splitdfpt_dml_timestamptz SET col1 = '2014-02-10 12:00:00 PST' WHERE col2 = '2013-12-01 12:00:00 PST' AND col1 = '2013-12-01 12:00:00 PST';
+UPDATE 1
+SELECT * FROM mpp21090_dropcol_splitdfpt_dml_timestamptz ORDER BY 1,2,3;
+          col1          |          col2          | col3 | col5 
+------------------------+------------------------+------+------
+ 2013-12-31 12:00:00-08 | 2013-12-31 12:00:00-08 | a    |    0
+ 2014-02-10 12:00:00-08 | 2013-12-01 12:00:00-08 | b    |    1
+(2 rows)
+
+-- Update partition key
+UPDATE mpp21090_dropcol_splitdfpt_dml_timestamptz SET col2 = '2014-02-10 12:00:00 PST' WHERE col2 = '2013-12-01 12:00:00 PST' AND col1 = '2014-02-10 12:00:00 PST';
+UPDATE 1
+SELECT * FROM mpp21090_dropcol_splitdfpt_dml_timestamptz ORDER BY 1,2,3;
+          col1          |          col2          | col3 | col5 
+------------------------+------------------------+------+------
+ 2013-12-31 12:00:00-08 | 2013-12-31 12:00:00-08 | a    |    0
+ 2014-02-10 12:00:00-08 | 2014-02-10 12:00:00-08 | b    |    1
+(2 rows)
+
+DELETE FROM mpp21090_dropcol_splitdfpt_dml_timestamptz WHERE col3='b';
+DELETE 1
+SELECT * FROM mpp21090_dropcol_splitdfpt_dml_timestamptz ORDER BY 1,2,3;
+          col1          |          col2          | col3 | col5 
+------------------------+------------------------+------+------
+ 2013-12-31 12:00:00-08 | 2013-12-31 12:00:00-08 | a    |    0
+(1 row)
+

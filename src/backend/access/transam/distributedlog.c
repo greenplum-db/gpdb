@@ -467,7 +467,7 @@ DistributedLog_Startup(
 
 	/*
 	 * UNDONE: We really need oldest frozen xid.  If we can't get it, then
-	 * we will need to tolerate not finiding a page in 
+	 * we will need to tolerate not finding a page in
 	 * DistributedLog_SetCommitted and DistributedLog_IsCommitted.
 	 */
 	startPage = TransactionIdToPage(oldestActiveXid);

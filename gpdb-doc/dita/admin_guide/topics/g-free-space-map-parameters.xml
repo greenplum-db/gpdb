@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic17">
+   <title>Free Space Map Parameters</title>
+   <body>
+      <p>These parameters control the sizing of the <i>free space map, which contains </i>expired
+         rows. Use <codeph>VACUUM</codeph> to reclaim the free space map disk space. </p>
+      <p>See <xref href="../managing/maintain.xml#topic7"/> for information about
+         vacuuming a database.</p>
+      <ul>
+         <li id="kh183337">
+            <codeph>max_fsm_pages</codeph>
+         </li>
+         <li id="kh161010">
+            <codeph>max_fsm_relations</codeph>
+         </li>
+      </ul>
+   </body>
+</topic>

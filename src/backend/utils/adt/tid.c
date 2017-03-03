@@ -363,7 +363,9 @@ currtid_byreloid(PG_FUNCTION_ARGS)
 	/*
 	 * Immediately inform client that the function is not supported
 	 */
-	elog(ERROR, "Function currtid is not supported by GPDB");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			 errmsg("function currtid is not supported by GPDB")));
 
 	result = (ItemPointer) palloc(sizeof(ItemPointerData));
 	if (!reloid)
@@ -413,7 +415,9 @@ currtid_byrelname(PG_FUNCTION_ARGS)
 	/*
 	 * Immediately inform client that the function is not supported
 	 */
-	elog(ERROR, "Function currtid2 is not supported by GPDB");
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			 errmsg("function currtid2 is not supported by GPDB")));
 
 	relrv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
 	rel = heap_openrv(relrv, AccessShareLock);

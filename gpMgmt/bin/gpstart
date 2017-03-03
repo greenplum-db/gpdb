@@ -89,7 +89,6 @@ class GpStart:
         self.lc_monetary=None
         self.lc_numeric=None
         self.max_connections = None
-        self.gp_external_grant_privileges=None
         logger.debug("Setting level of parallelism to: %d" % self.parallel)
 
     ######
@@ -222,8 +221,6 @@ class GpStart:
         logger.debug("Read from postgresql.conf port=%s" % self.port)
         self.max_connections = pgconf_dict.int('max_connections')
         logger.debug("Read from postgresql.conf max_connections=%s" % self.max_connections)
-        self.gp_external_grant_privileges = pgconf_dict.str('gp_external_grant_privileges');
-        logger.debug("gp_external_grant_privileges is %s" % self.gp_external_grant_privileges);
 
     ######
     def _check_version(self):
@@ -262,7 +259,7 @@ class GpStart:
             controldata = PgControlData("Latest checkpoint's TimeLineID", data_dir_path, REMOTE, remoteHost)
 
         controldata.run(validateAfter=True)
-        return controldata.get_value("Latest checkpoint's TimeLineID")
+        return int(controldata.get_value("Latest checkpoint's TimeLineID"))
 
     def _check_standby_activated(self):
         logger.debug("Checking if standby has been activated...")
@@ -273,8 +270,8 @@ class GpStart:
             primary_tli = self.fetch_tli(self.master_datadir)
             standby_tli = self.fetch_tli(self.gparray.standbyMaster.getSegmentDataDirectory(), self.gparray.standbyMaster.getSegmentHostName())
 
-            logger.debug("Primary TLI = " + primary_tli)
-            logger.debug("Standby TLI = " + standby_tli)
+            logger.debug("Primary TLI = %d" % primary_tli)
+            logger.debug("Standby TLI = %d" % standby_tli)
 
             if primary_tli < standby_tli:
                 # stop the master we've started up.
@@ -370,11 +367,6 @@ class GpStart:
                 line.append("Primary" if db.isSegmentPrimary(True) else "Mirror")
             tabLog.info(line)
         tabLog.outputTable()
-# show a warn if gp_external_grant_privileges is on
-        if self.gp_external_grant_privileges and "on" in self.gp_external_grant_privileges:
-        	logger.warning("--------------------------------------")
-        	logger.warning("Using gp_external_grant_privileges is not recommended and will soon be deprecated.")
-        	logger.warning("--------------------------------------") 
 
     ######
     def _get_format_string(self):

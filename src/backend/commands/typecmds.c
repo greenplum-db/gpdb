@@ -442,16 +442,20 @@ DefineType(List *names, List *parameters)
 					   NameListToString(analyzeName));
 
 	array_type = makeArrayTypeName(typeName, typeNamespace);
+	pg_type = heap_open(TypeRelationId, AccessShareLock);
 
 	/* Preassign array type OID so we can insert it in pg_type.typarray */
-	if (Gp_role == GP_ROLE_EXECUTE)
-		array_oid = GetPreassignedOidForType(typeNamespace, array_type);
-	else
+	if (Gp_role == GP_ROLE_EXECUTE || IsBinaryUpgrade)
 	{
-		pg_type = heap_open(TypeRelationId, AccessShareLock);
-		array_oid = GetNewOid(pg_type);
-		heap_close(pg_type, AccessShareLock);
+		array_oid = GetPreassignedOidForType(typeNamespace, array_type);
+
+		if (array_oid == InvalidOid && IsBinaryUpgrade)
+			array_oid = GetNewOid(pg_type);
 	}
+	else
+		array_oid = GetNewOid(pg_type);
+
+	heap_close(pg_type, AccessShareLock);
 
 	/*
 	 * now have TypeCreate do all the real work.
@@ -1131,7 +1135,7 @@ DefineEnum(CreateEnumStmt *stmt)
 	/* Preassign array type OID so we can insert it in pg_type.typarray */
 	pg_type = heap_open(TypeRelationId, AccessShareLock);
 
-	if (Gp_role == GP_ROLE_EXECUTE)
+	if (Gp_role == GP_ROLE_EXECUTE || IsBinaryUpgrade)
 	{
 		enumTypeOid = GetPreassignedOidForType(enumNamespace, enumName);
 		enumArrayOid = GetPreassignedOidForType(enumNamespace, enumArrayName);
@@ -1566,7 +1570,7 @@ AlterDomainDefault(List *names, Node *defaultRaw)
 
 	/* Look up the domain in the type table */
 	rel = heap_open(TypeRelationId, RowExclusiveLock);
-	
+
 	tup = SearchSysCacheCopy(TYPEOID,
 							 ObjectIdGetDatum(domainoid),
 							 0, 0, 0);
@@ -2533,16 +2537,6 @@ AlterTypeOwner(List *names, Oid newOwnerId)
 				 errhint("You can alter type %s, which will alter the array type as well.",
 						 format_type_be(typTup->typelem))));
 
-	/* don't allow direct alteration of array types, either */
-	if (OidIsValid(typTup->typelem) &&
-		get_array_type(typTup->typelem) == typeOid)
-		ereport(ERROR,
-				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("cannot alter array type %s",
-						format_type_be(typeOid)),
-				 errhint("You can alter type %s, which will alter the array type as well.",
-						 format_type_be(typTup->typelem))));
-
 	/*
 	 * If the new owner is the same as the existing owner, consider the
 	 * command to have succeeded.  This is for dump restoration purposes.
@@ -2623,9 +2617,7 @@ AlterTypeOwnerInternal(Oid typeOid, Oid newOwnerId,
 
 	rel = heap_open(TypeRelationId, RowExclusiveLock);
 
-	tup = SearchSysCacheCopy(TYPEOID,
-							 ObjectIdGetDatum(typeOid),
-							 0, 0, 0);
+	tup = SearchSysCacheCopy1(TYPEOID, ObjectIdGetDatum(typeOid));
 	if (!HeapTupleIsValid(tup))
 		elog(ERROR, "cache lookup failed for type %u", typeOid);
 	typTup = (Form_pg_type) GETSTRUCT(tup);
@@ -2660,19 +2652,29 @@ AlterTypeNamespace(List *names, const char *newschema)
 	TypeName   *typename;
 	Oid			typeOid;
 	Oid			nspOid;
-	Oid			elemOid;
+	ObjectAddresses *objsMoved;
 
 	/* Make a TypeName so we can use standard type lookup machinery */
 	typename = makeTypeNameFromNameList(names);
 	typeOid = typenameTypeId(NULL, typename, NULL);
 
+	/* get schema OID and check its permissions */
+	nspOid = LookupCreationNamespace(newschema);
+
+	objsMoved = new_object_addresses();
+	AlterTypeNamespace_oid(typeOid, nspOid, objsMoved);
+	free_object_addresses(objsMoved);
+}
+
+Oid
+AlterTypeNamespace_oid(Oid typeOid, Oid nspOid, ObjectAddresses *objsMoved)
+{
+	Oid			elemOid;
+
 	/* check permissions on type */
 	if (!pg_type_ownercheck(typeOid, GetUserId()))
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_TYPE,
 					   format_type_be(typeOid));
-
-	/* get schema OID and check its permissions */
-	nspOid = LookupCreationNamespace(newschema);
 
 	/* don't allow direct alteration of array types */
 	elemOid = get_element_type(typeOid);
@@ -2685,7 +2687,7 @@ AlterTypeNamespace(List *names, const char *newschema)
 						 format_type_be(elemOid))));
 
 	/* and do the work */
-	AlterTypeNamespaceInternal(typeOid, nspOid, false, true);
+	return AlterTypeNamespaceInternal(typeOid, nspOid, false, true, objsMoved);
 }
 
 /*
@@ -2700,11 +2702,14 @@ AlterTypeNamespace(List *names, const char *newschema)
  * If errorOnTableType is TRUE, the function errors out if the type is
  * a table type.  ALTER TABLE has to be used to move a table to a new
  * namespace.
+ *
+ * Returns the type's old namespace OID.
  */
-void
+Oid
 AlterTypeNamespaceInternal(Oid typeOid, Oid nspOid,
 						   bool isImplicitArray,
-						   bool errorOnTableType)
+						   bool errorOnTableType,
+						   ObjectAddresses *objsMoved)
 {
 	Relation	rel;
 	HeapTuple	tup;
@@ -2712,12 +2717,18 @@ AlterTypeNamespaceInternal(Oid typeOid, Oid nspOid,
 	Oid			oldNspOid;
 	Oid			arrayOid;
 	bool		isCompositeType;
+	ObjectAddress thisobj;
+
+	thisobj.classId = TypeRelationId;
+	thisobj.objectId = typeOid;
+	thisobj.objectSubId = 0;
+
+	if (object_address_present(&thisobj, objsMoved))
+		return InvalidOid;
 
 	rel = heap_open(TypeRelationId, RowExclusiveLock);
 
-	tup = SearchSysCacheCopy(TYPEOID,
-							 ObjectIdGetDatum(typeOid),
-							 0, 0, 0);
+	tup = SearchSysCacheCopy1(TYPEOID, ObjectIdGetDatum(typeOid));
 	if (!HeapTupleIsValid(tup))
 		elog(ERROR, "cache lookup failed for type %u", typeOid);
 	typform = (Form_pg_type) GETSTRUCT(tup);
@@ -2725,36 +2736,13 @@ AlterTypeNamespaceInternal(Oid typeOid, Oid nspOid,
 	oldNspOid = typform->typnamespace;
 	arrayOid = typform->typarray;
 
-	if (oldNspOid == nspOid)
-		ereport(ERROR,
-				(errcode(ERRCODE_DUPLICATE_OBJECT),
-				 errmsg("type %s is already in schema \"%s\"",
-						format_type_be(typeOid),
-						get_namespace_name(nspOid))));
-
-	/* disallow renaming into or out of temp schemas */
-	if (isAnyTempNamespace(nspOid) || isAnyTempNamespace(oldNspOid))
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			errmsg("cannot move objects into or out of temporary schemas")));
-
-	/* same for TOAST schema */
-	if (nspOid == PG_TOAST_NAMESPACE || oldNspOid == PG_TOAST_NAMESPACE)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("cannot move objects into or out of TOAST schema")));
-
-	/* same for AO SEGMENT schema */
-	if (nspOid == PG_AOSEGMENT_NAMESPACE || oldNspOid == PG_AOSEGMENT_NAMESPACE)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("cannot move objects into or out of AO SEGMENT schema")));
+	/* common checks on switching namespaces */
+	CheckSetNamespace(oldNspOid, nspOid, TypeRelationId, typeOid);
 
 	/* check for duplicate name (more friendly than unique-index failure) */
-	if (SearchSysCacheExists(TYPENAMENSP,
-							 CStringGetDatum(NameStr(typform->typname)),
-							 ObjectIdGetDatum(nspOid),
-							 0, 0))
+	if (SearchSysCacheExists2(TYPENAMENSP,
+							  CStringGetDatum(NameStr(typform->typname)),
+							  ObjectIdGetDatum(nspOid)))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
 				 errmsg("type \"%s\" already exists in schema \"%s\"",
@@ -2797,7 +2785,7 @@ AlterTypeNamespaceInternal(Oid typeOid, Oid nspOid,
 
 		AlterRelationNamespaceInternal(classRel, typform->typrelid,
 									   oldNspOid, nspOid,
-									   false);
+									   false, objsMoved);
 
 		heap_close(classRel, RowExclusiveLock);
 
@@ -2806,13 +2794,13 @@ AlterTypeNamespaceInternal(Oid typeOid, Oid nspOid,
 		 * currently support this, but probably will someday).
 		 */
 		AlterConstraintNamespaces(typform->typrelid, oldNspOid,
-								  nspOid, false);
+								  nspOid, false, objsMoved);
 	}
 	else
 	{
 		/* If it's a domain, it might have constraints */
 		if (typform->typtype == TYPTYPE_DOMAIN)
-			AlterConstraintNamespaces(typeOid, oldNspOid, nspOid, true);
+			AlterConstraintNamespaces(typeOid, oldNspOid, nspOid, true, objsMoved);
 	}
 
 	/*
@@ -2830,9 +2818,13 @@ AlterTypeNamespaceInternal(Oid typeOid, Oid nspOid,
 
 	heap_close(rel, RowExclusiveLock);
 
+	add_exact_object_address(&thisobj, objsMoved);
+
 	/* Recursively alter the associated array type, if any */
 	if (OidIsValid(arrayOid))
-		AlterTypeNamespaceInternal(arrayOid, nspOid, true, true);
+		AlterTypeNamespaceInternal(arrayOid, nspOid, true, true, objsMoved);
+
+	return oldNspOid;
 }
 
 /*

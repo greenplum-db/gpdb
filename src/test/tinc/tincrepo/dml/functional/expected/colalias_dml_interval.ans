@@ -1,0 +1,56 @@
+DROP TABLE IF EXISTS colalias_dml_interval;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/colalias_dml_interval_opt.sql:14: NOTICE:  table "colalias_dml_interval" does not exist, skipping
+DROP TABLE
+CREATE TABLE colalias_dml_interval
+(
+    col1 interval DEFAULT '11 hours',
+    col2 interval,
+    col3 char,
+    col4 interval,
+    col5 interval
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def 
+);
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/colalias_dml_interval_opt.sql:27: NOTICE:  CREATE TABLE will create partition "colalias_dml_interval_1_prt_def" for table "colalias_dml_interval"
+CREATE TABLE
+DROP TABLE IF EXISTS colalias_dml_interval_candidate;
+psql:/data/prabhd/test/tincrepo/main/dml/functional/output/colalias_dml_interval_opt.sql:29: NOTICE:  table "colalias_dml_interval_candidate" does not exist, skipping
+DROP TABLE
+CREATE TABLE colalias_dml_interval_candidate
+(
+    col1 interval DEFAULT '11 hours',
+    col2 interval,
+    col3 char,
+    col4 interval,
+    col5 interval
+) DISTRIBUTED by (col2);
+CREATE TABLE
+INSERT INTO colalias_dml_interval_candidate VALUES('10 secs','11 hours','a','10 secs','11 hours');
+INSERT 0 1
+INSERT INTO colalias_dml_interval(col2,col1,col3,col5,col4) SELECT col1,col2,col3,col5,col4 FROM (SELECT col1,col1 as col2,col3,col5 as col4,col5  FROM colalias_dml_interval_candidate)foo;
+INSERT 0 1
+SELECT * FROM colalias_dml_interval ORDER BY 1,2,3,4;
+   col1   |   col2   | col3 |   col4   |   col5   
+----------+----------+------+----------+----------
+ 00:00:10 | 00:00:10 | a    | 11:00:00 | 11:00:00
+(1 row)
+
+UPDATE colalias_dml_interval SET col1 = (select col2 as col1 FROM colalias_dml_interval_candidate);
+UPDATE 1
+SELECT * FROM colalias_dml_interval ORDER BY 1,2,3,4;
+   col1   |   col2   | col3 |   col4   |   col5   
+----------+----------+------+----------+----------
+ 11:00:00 | 00:00:10 | a    | 11:00:00 | 11:00:00
+(1 row)
+
+UPDATE colalias_dml_interval SET col1 =colalias_dml_interval_candidate.col2 FROM colalias_dml_interval_candidate;
+UPDATE 1
+SELECT * FROM colalias_dml_interval ORDER BY 1,2,3,4;
+   col1   |   col2   | col3 |   col4   |   col5   
+----------+----------+------+----------+----------
+ 11:00:00 | 00:00:10 | a    | 11:00:00 | 11:00:00
+(1 row)
+

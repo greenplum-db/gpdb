@@ -1,0 +1,366 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="ix146103">Managing Data</title>
+  <shortdesc>This section provides information about manipulating data and concurrent access in
+    Greenplum Database.</shortdesc>
+  <body>
+    <p>This topic includes the following subtopics:<ul id="ul_ahw_hty_sp">
+        <li><xref href="#topic2" format="dita"/></li>
+        <li><xref href="#topic3" format="dita"/></li>
+        <li><xref href="#topic4" format="dita"/></li>
+        <li><xref href="#topic5" format="dita"/></li>
+        <li><xref href="#topic7" format="dita"/></li>
+        <li><xref href="#topic9" format="dita"/></li>
+      </ul></p>
+  </body>
+  <topic id="topic2" xml:lang="en">
+    <title id="ix140249">About Concurrency Control in Greenplum Database</title>
+    <body>
+      <p>Greenplum Database and PostgreSQL do not use locks for concurrency control. They maintain
+        data consistency using a multiversion model, Multiversion Concurrency Control (MVCC). MVCC
+        achieves transaction isolation for each database session, and each query transaction sees a
+        snapshot of data. This ensures the transaction sees consistent data that is not affected by
+        other concurrent transactions. </p>
+      <p>Because MVCC does not use explicit locks for concurrency control, lock contention is
+        minimized and Greenplum Database maintains reasonable performance in multiuser environments.
+        Locks acquired for querying (reading) data do not conflict with locks acquired for writing
+        data.</p>
+      <p>Greenplum Database provides multiple lock modes to control concurrent access to data in
+        tables. Most Greenplum Database SQL commands automatically acquire the appropriate locks to
+        ensure that referenced tables are not dropped or modified in incompatible ways while a
+        command executes. For applications that cannot adapt easily to MVCC behavior, you can use
+        the <codeph>LOCK</codeph> command to acquire explicit locks. However, proper use of MVCC
+        generally provides better performance.</p>
+      <table id="ix140861">
+        <title>Lock Modes in Greenplum Database</title>
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="2*"/>
+          <colspec colnum="2" colname="col2" colwidth="3*"/>
+          <colspec colnum="3" colname="col3" colwidth="3*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Lock Mode</entry>
+              <entry colname="col2">Associated SQL Commands</entry>
+              <entry colname="col3">Conflicts With</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">ACCESS SHARE</entry>
+              <entry colname="col2">
+                <codeph>SELECT</codeph>
+              </entry>
+              <entry colname="col3">ACCESS EXCLUSIVE</entry>
+            </row>
+            <row>
+              <entry colname="col1">ROW SHARE</entry>
+              <entry colname="col2">
+                <codeph>SELECT FOR SHARE</codeph>
+              </entry>
+              <entry colname="col3">EXCLUSIVE, ACCESS EXCLUSIVE</entry>
+            </row>
+            <row>
+              <entry colname="col1">ROW EXCLUSIVE</entry>
+              <entry colname="col2"><codeph>INSERT</codeph>, <codeph>COPY</codeph></entry>
+              <entry colname="col3">SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE</entry>
+            </row>
+            <row>
+              <entry colname="col1">SHARE UPDATE EXCLUSIVE</entry>
+              <entry colname="col2"><codeph>VACUUM</codeph> (without <codeph>FULL</codeph>),
+                  <codeph>ANALYZE</codeph></entry>
+              <entry colname="col3">SHARE UPDATE EXCLUSIVE, SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE,
+                ACCESS EXCLUSIVE</entry>
+            </row>
+            <row>
+              <entry colname="col1">SHARE</entry>
+              <entry colname="col2">
+                <codeph>CREATE INDEX</codeph>
+              </entry>
+              <entry colname="col3">ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE ROW EXCLUSIVE,
+                EXCLUSIVE, ACCESS EXCLUSIVE</entry>
+            </row>
+            <row>
+              <entry colname="col1">SHARE ROW EXCLUSIVE</entry>
+              <entry colname="col2"/>
+              <entry colname="col3">ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE ROW
+                EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE</entry>
+            </row>
+            <row>
+              <entry colname="col1">EXCLUSIVE</entry>
+              <entry colname="col2"><codeph>DELETE</codeph>, <codeph>UPDATE</codeph>, <codeph>SELECT
+                  FOR UPDATE</codeph>, See <xref href="#topic2/lock_note" format="dita"
+                >Note</xref></entry>
+              <entry colname="col3">ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE
+                ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE</entry>
+            </row>
+            <row>
+              <entry colname="col1">ACCESS EXCLUSIVE</entry>
+              <entry colname="col2"><codeph>ALTER TABLE</codeph>, <codeph>DROP TABLE</codeph>,
+                  <codeph>TRUNCATE</codeph>, <codeph>REINDEX</codeph>, <codeph>CLUSTER</codeph>,
+                  <codeph>VACUUM FULL</codeph>
+              </entry>
+              <entry colname="col3">ACCESS SHARE, ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE,
+                SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+      <note id="lock_note">In Greenplum Database, <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>,
+        and <codeph>SELECT FOR UPDATE</codeph> acquire the more restrictive lock EXCLUSIVE rather
+        than ROW EXCLUSIVE.</note>
+    </body>
+  </topic>
+  <topic id="topic3" xml:lang="en">
+    <title id="ix140259">Inserting Rows</title>
+    <body>
+      <p>Use the <codeph>INSERT</codeph> command to create rows in a table. This command requires
+        the table name and a value for each column in the table; you may optionally specify the
+        column names in any order. If you do not specify column names, list the data values in the
+        order of the columns in the table, separated by commas. </p>
+      <p>For example, to specify the column names and the values to insert:</p>
+      <codeblock>INSERT INTO products (name, price, product_no) VALUES ('Cheese', 9.99, 1);</codeblock>
+      <p>To specify only the values to insert:</p>
+      <p>
+        <codeblock>INSERT INTO products VALUES (1, 'Cheese', 9.99);
+</codeblock>
+      </p>
+      <p>Usually, the data values are literals (constants), but you can also use scalar expressions.
+        For example:</p>
+      <p>
+        <codeblock>INSERT INTO films SELECT * FROM tmp_films WHERE date_prod &lt; 
+'2004-05-07';
+</codeblock>
+      </p>
+      <p>You can insert multiple rows in a single command. For example:</p>
+      <p>
+        <codeblock>INSERT INTO products (product_no, name, price) VALUES
+    (1, 'Cheese', 9.99),
+    (2, 'Bread', 1.99),
+    (3, 'Milk', 2.99);
+</codeblock>
+      </p>
+      <p>To insert data into a partitioned table, you specify the root partitioned table, the table
+        created with the <codeph>CREATE TABLE</codeph> command. You also can specify a leaf child
+        table of the partitioned table in an <codeph>INSERT</codeph> command. An error is returned
+        if the data is not valid for the specified leaf child table. Specifying a child table that
+        is not a leaf child table in the <codeph>INSERT</codeph> command is not supported. </p>
+      <p>To insert large amounts of data, use external tables or the <codeph>COPY</codeph> command.
+        These load mechanisms are more efficient than <codeph>INSERT</codeph> for inserting large
+        quantities of rows. See <xref href="load/topics/g-loading-and-unloading-data.xml#topic1"/>
+        for more information about bulk data loading.</p>
+      <p>The storage model of append-optimized tables is optimized for bulk data loading. Greenplum
+        does not recommend single row <codeph>INSERT</codeph> statements for append-optimized
+        tables. For append-optimized tables, Greenplum Database supports a maximum of 127 concurrent
+          <codeph>INSERT</codeph> transactions into a single append-optimized table.</p>
+    </body>
+  </topic>
+  <topic id="topic4" xml:lang="en">
+    <title id="ix156852">Updating Existing Rows</title>
+    <body>
+      <p>The <codeph>UPDATE</codeph> command updates rows in a table. You can update all rows, a
+        subset of all rows, or individual rows in a table. You can update each column separately
+        without affecting other columns.</p>
+      <p>To perform an update, you need: </p>
+      <ul>
+        <li id="ix142075">The name of the table and columns to update</li>
+        <li id="ix142076">The new values of the columns</li>
+        <li id="ix142077">One or more conditions specifying the row or rows to be updated.</li>
+      </ul>
+      <p>For example, the following command updates all products that have a price of <i>5</i> to
+        have a price of <i>10</i>:</p>
+      <p>
+        <codeblock>UPDATE products SET price = 10 WHERE price = 5;
+</codeblock>
+      </p>
+      <p>Using <codeph>UPDATE</codeph> in Greenplum Database has the following restrictions:</p>
+      <ul>
+        <li id="ix155050">The Greenplum distribution key columns may not be updated.</li>
+        <li id="ix142137">If mirrors are enabled, you cannot use <codeph>STABLE</codeph> or
+            <codeph>VOLATILE</codeph> functions in an <codeph>UPDATE</codeph> statement.</li>
+        <li id="ix154711">Greenplum Database does not support the <codeph>RETURNING</codeph>
+          clause.</li>
+        <li id="ix155339">Greenplum Database partitioning columns cannot be updated.</li>
+      </ul>
+    </body>
+  </topic>
+  <topic id="topic5" xml:lang="en">
+    <title id="ix140451">Deleting Rows</title>
+    <body>
+      <p>The <codeph>DELETE</codeph> command deletes rows from a table. Specify a
+          <codeph>WHERE</codeph> clause to delete rows that match certain criteria. If you do not
+        specify a <codeph>WHERE</codeph> clause, all rows in the table are deleted. The result is a
+        valid, but empty, table. For example, to remove all rows from the products table that have a
+        price of <i>10</i>:</p>
+      <p>
+        <codeblock>DELETE FROM products WHERE price = 10;
+</codeblock>
+      </p>
+      <p>To delete all rows from a table:</p>
+      <p>
+        <codeblock>DELETE FROM products; 
+</codeblock>
+      </p>
+      <p>Using <codeph>DELETE</codeph> in Greenplum Database has similar restrictions to using
+          <codeph>UPDATE</codeph>:</p>
+      <ul>
+        <li id="ix155065">If mirrors are enabled, you cannot use <codeph>STABLE</codeph> or
+            <codeph>VOLATILE</codeph> functions in an <codeph>UPDATE</codeph> statement.</li>
+        <li id="ix154839">The <codeph>RETURNING</codeph> clause is not supported in Greenplum
+          Database.</li>
+      </ul>
+    </body>
+    <topic id="topic6" xml:lang="en">
+      <title id="ix142374">Truncating a Table</title>
+      <body>
+        <p>Use the <codeph>TRUNCATE</codeph> command to quickly remove all rows in a table. For
+          example:</p>
+        <p>
+          <codeblock>TRUNCATE mytable;
+</codeblock>
+        </p>
+        <p>This command empties a table of all rows in one operation. Note that
+            <codeph>TRUNCATE</codeph> does not scan the table, therefore it does not process
+          inherited child tables or <codeph>ON DELETE</codeph> rewrite rules. The command truncates
+          only rows in the named table.</p>
+      </body>
+    </topic>
+  </topic>
+  <topic id="topic7" xml:lang="en">
+    <title id="ix140458">Working With Transactions</title>
+    <body>
+      <p>Transactions allow you to bundle multiple SQL statements in one all-or-nothing
+        operation.</p>
+      <p>The following are the Greenplum Database SQL transaction commands:</p>
+      <ul>
+        <li id="ix140816"><codeph>BEGIN</codeph> or <codeph>START TRANSACTION </codeph>starts a
+          transaction block. </li>
+        <li id="ix140821"><codeph>END</codeph> or <codeph>COMMIT</codeph> commits the results of a
+          transaction.</li>
+        <li id="ix140822"><codeph>ROLLBACK</codeph> abandons a transaction without making any
+          changes. </li>
+        <li id="ix155584"><codeph>SAVEPOINT</codeph> marks a place in a transaction and enables
+          partial rollback. You can roll back commands executed after a savepoint while maintaining
+          commands executed before the savepoint.</li>
+        <li id="ix155585"><codeph>ROLLBACK TO SAVEPOINT </codeph>rolls back a transaction to a
+          savepoint. </li>
+        <li id="ix155589"><codeph>RELEASE SAVEPOINT </codeph>destroys a savepoint within a
+          transaction.</li>
+      </ul>
+    </body>
+    <topic id="topic8" xml:lang="en">
+      <title id="ix153949">Transaction Isolation Levels</title>
+      <body>
+        <p>Greenplum Database accepts the standard SQL transaction levels as follows:</p>
+        <ul>
+          <li id="ix153961"><i>read uncommitted</i> and <i>read committed </i> behave like the
+            standard <i>read committed</i></li>
+          <li><i>repeatable read</i> is disallowed. If the behavior of <i>repeatable read</i> is
+            required, use <i>serializable</i>.</li>
+          <li id="ix153971"><i>serializable</i> behaves in a manner similar to SQL standard
+              <i>serializable</i></li>
+        </ul>
+        <p>The following information describes the behavior of the Greenplum transaction levels:</p>
+        <ul>
+          <li id="ix153954"><b>read committed/read uncommitted</b> — Provides fast, simple, partial
+            transaction isolation. With read committed and read uncommitted transaction isolation,
+              <codeph>SELECT</codeph>, <codeph>UPDATE</codeph>, and <codeph>DELETE</codeph>
+            transactions operate on a snapshot of the database taken when the query started.</li>
+        </ul>
+        <p> A <codeph>SELECT</codeph> query:</p>
+        <ul>
+          <li id="ix154052">Sees data committed before the query starts.</li>
+          <li id="ix154063">Sees updates executed within the transaction.</li>
+          <li id="ix154073">Does not see uncommitted data outside the transaction.</li>
+          <li id="ix154080">Can possibly see changes that concurrent transactions made if the
+            concurrent transaction is committed after the initial read in its own transaction.</li>
+        </ul>
+        <p>Successive <codeph>SELECT</codeph> queries in the same transaction can see different data
+          if other concurrent transactions commit changes before the queries start.
+            <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> commands find only rows committed
+          before the commands started. </p>
+        <p>Read committed or read uncommitted transaction isolation allows concurrent transactions
+          to modify or lock a row before <codeph>UPDATE</codeph> or <codeph>DELETE</codeph> finds
+          the row. Read committed or read uncommitted transaction isolation may be inadequate for
+          applications that perform complex queries and updates and require a consistent view of the
+          database.</p>
+        <ul>
+          <li id="ix141722"><b>serializable</b> — Provides strict transaction isolation in which
+            transactions execute as if they run one after another rather than concurrently.
+            Applications on the serializable level must be designed to retry transactions in case of
+            serialization failures. In Greenplum Database, <codeph>SERIALIZABLE</codeph> prevents
+            dirty reads, non-repeatable reads, and phantom reads without expensive locking, but
+            there are other interactions that can occur between some <codeph>SERIALIZABLE</codeph>
+            transactions in Greenplum Database that prevent them from being truly serializable.
+            Transactions that run concurrently should be examined to identify interactions that are
+            not prevented by disallowing concurrent updates of the same data. Problems identified
+            can be prevented by using explicit table locks or by requiring the conflicting
+            transactions to update a dummy row introduced to represent the conflict. </li>
+        </ul>
+        <p>A <codeph>SELECT</codeph> query:</p>
+        <ul>
+          <li id="ix154139">Sees a snapshot of the data as of the start of the transaction (not as
+            of the start of the current query within the transaction).</li>
+          <li id="ix155116">Sees only data committed before the query starts.</li>
+          <li id="ix154149">Sees updates executed within the transaction.</li>
+          <li id="ix154156">Does not see uncommitted data outside the transaction.</li>
+          <li id="ix154163">Does not see changes that concurrent transactions made.<p>Successive
+                <codeph>SELECT</codeph> commands within a single transaction always see the same
+              data.</p><p><codeph>UPDATE</codeph>, <codeph>DELETE, SELECT FOR UPDATE,</codeph> and
+                <codeph>SELECT FOR SHARE</codeph> commands find only rows committed before the
+              command started. If a concurrent transaction has already updated, deleted, or locked a
+              target row when the row is found, the serializable or repeatable read transaction
+              waits for the concurrent transaction to update the row, delete the row, or roll
+              back.</p><p>If the concurrent transaction updates or deletes the row, the serializable
+              or repeatable read transaction rolls back. If the concurrent transaction rolls back,
+              then the serializable or repeatable read transaction updates or deletes the
+            row.</p></li>
+        </ul>
+        <p id="ix141505">The default transaction isolation level in Greenplum Database is <i>read
+            committed</i>. To change the isolation level for a transaction, declare the isolation
+          level when you <codeph>BEGIN</codeph> the transaction or use the <codeph>SET
+            TRANSACTION</codeph> command after the transaction starts.</p>
+      </body>
+    </topic>
+  </topic>
+  <topic id="topic9" xml:lang="en">
+    <title id="ix141487">Vacuuming the Database</title>
+    <body>
+      <p>Deleted or updated data rows occupy physical space on disk even though new transactions
+        cannot see them. Periodically running the <codeph>VACUUM</codeph> command removes these
+        expired rows. For example:</p>
+      <p>
+        <codeblock>VACUUM mytable;
+</codeblock>
+      </p>
+      <p>The <codeph>VACUUM</codeph> command collects table-level statistics such as the number of
+        rows and pages. Vacuum all tables after loading data, including append-optimized tables. For
+        information about recommended routine vacuum operations, see <xref
+          href="managing/maintain.xml#topic2" type="topic" format="dita"/>.</p>
+      <note type="important">The <codeph>VACUUM</codeph>, <codeph>VACUUM FULL</codeph>, and
+          <codeph>VACUUM ANALYZE</codeph> commands should be used to maintain the data in a
+        Greenplum database especially if updates and deletes are frequently performed on your
+        database data. See the <codeph>VACUUM</codeph> command in the <cite>Greenplum Database
+          Reference Guide</cite> for information about using the command.</note>
+    </body>
+    <topic id="topic10" xml:lang="en">
+      <title>Configuring the Free Space Map</title>
+      <body>
+        <p>Expired rows are held in the <i>free space map</i>. The free space map must be sized
+          large enough to hold all expired rows in your database. If not, a regular
+            <codeph>VACUUM</codeph> command cannot reclaim space occupied by expired rows that
+          overflow the free space map.</p>
+        <p><codeph>VACUUM FULL</codeph> reclaims all expired row space, but it is an expensive
+          operation and can take an unacceptably long time to finish on large, distributed Greenplum
+          Database tables. If the free space map overflows, you can recreate the table with a
+            <codeph>CREATE TABLE AS </codeph>statement and drop the old table. Using <codeph>VACUUM FULL</codeph> is discouraged.</p>
+        <p>Size the free space map with the following server configuration parameters:<ul
+            id="ul_cj2_xc5_h4">
+            <li><codeph>max_fsm_pages</codeph></li>
+            <li><codeph>max_fsm_relations</codeph></li>
+          </ul></p>
+      </body>
+    </topic>
+  </topic>
+</topic>

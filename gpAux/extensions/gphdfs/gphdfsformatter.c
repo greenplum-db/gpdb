@@ -206,9 +206,9 @@ static inline Oid getTypeOidFromJavaEnumOrdinal(int8 enumType)
 	case 5: return INT2OID;
 	case 6: return BYTEAOID;
 	case 7: return TEXTOID;
-	default: ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION),
-			errmsg("Ill-formatted record: unknown Java Enum Ordinal (%d)", enumType),
-		    errOmitLocation(true)));
+	default: ereport(ERROR,
+					 (errcode(ERRCODE_DATA_EXCEPTION),
+					  errmsg("Ill-formatted record: unknown Java Enum Ordinal (%d)", enumType)));
 
 	}
 	return 0;
@@ -270,9 +270,9 @@ gphdfsformatter_export(PG_FUNCTION_ARGS)
 
 	/* Must be called via the external table format manager */
 	if (!CALLED_AS_FORMATTER(fcinfo))
-		ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-						errmsg("cannot execute gphdfsformatter_export outside format manager"),
-					    errOmitLocation(true)));
+		ereport(ERROR,
+				(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+				 errmsg("cannot execute gphdfsformatter_export outside format manager")));
 
 	tupdesc = FORMATTER_GET_TUPDESC(fcinfo);
 
@@ -304,9 +304,9 @@ gphdfsformatter_export(PG_FUNCTION_ARGS)
 
 			/* External table do not support dropped columns; error out now */
 			if (tupdesc->attrs[i]->attisdropped)
-				ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-								errmsg("cannot handle external table with dropped columns"),
-							    errOmitLocation(true)));
+				ereport(ERROR,
+						(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+						 errmsg("cannot handle external table with dropped columns")));
 
 			/* Get the text/binary "send" function */
 			if (isBinaryFormatType(type))
@@ -482,9 +482,9 @@ gphdfsformatter_import(PG_FUNCTION_ARGS)
 
 	/* Must be called via the external table format manager */
 	if (!CALLED_AS_FORMATTER(fcinfo))
-		ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-						errmsg("cannot execute gphdfsformatter_import outside format manager"),
-					    errOmitLocation(true)));
+		ereport(ERROR,
+				(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+				 errmsg("cannot execute gphdfsformatter_import outside format manager")));
 
 	tupdesc = FORMATTER_GET_TUPDESC(fcinfo);
 
@@ -512,9 +512,9 @@ gphdfsformatter_import(PG_FUNCTION_ARGS)
 
 			/* External table do not support dropped columns; error out now */
 			if (tupdesc->attrs[i]->attisdropped)
-				ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-								errmsg("cannot handle external table with dropped columns"),
-							    errOmitLocation(true)));
+				ereport(ERROR,
+						(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+						 errmsg("cannot handle external table with dropped columns")));
 
 			/* Get the text/binary "receive" function */
 			if (isBinaryFormatType(type))
@@ -548,7 +548,7 @@ gphdfsformatter_import(PG_FUNCTION_ARGS)
 	 * forward and then raise the error. But then, the framework will still
 	 * call the formatter the function again. Now, the formatter function will
 	 * be provided with a zero length data buffer. In this case, we should not
-	 * raise an error again, but simply retruns "NEED MORE DATA". This is how
+	 * raise an error again, but simply returns "NEED MORE DATA". This is how
 	 * the formatter framework works.
 	 */
 	if (remaining == 0 && FORMATTER_GET_SAW_EOF(fcinfo))
@@ -559,9 +559,9 @@ gphdfsformatter_import(PG_FUNCTION_ARGS)
 		if (FORMATTER_GET_SAW_EOF(fcinfo))
 		{
 			FORMATTER_SET_BAD_ROW_DATA(fcinfo, data_buf+data_cur, remaining);
-			ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION),
-							errmsg("unexpected end of file"),
-						    errOmitLocation(true)));
+			ereport(ERROR,
+					(errcode(ERRCODE_DATA_EXCEPTION),
+					 errmsg("unexpected end of file")));
 		}
 		FORMATTER_RETURN_NOTIFICATION(fcinfo, FMT_NEED_MORE_DATA);
 	}
@@ -574,9 +574,9 @@ gphdfsformatter_import(PG_FUNCTION_ARGS)
 		if (FORMATTER_GET_SAW_EOF(fcinfo))
 		{
 			FORMATTER_SET_BAD_ROW_DATA(fcinfo, data_buf+data_cur, remaining);
-			ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION),
-							errmsg("unexpected end of file"),
-						    errOmitLocation(true)));
+			ereport(ERROR,
+					(errcode(ERRCODE_DATA_EXCEPTION),
+					 errmsg("unexpected end of file")));
 		}
 		FORMATTER_RETURN_NOTIFICATION(fcinfo, FMT_NEED_MORE_DATA);
 	}
@@ -596,15 +596,15 @@ gphdfsformatter_import(PG_FUNCTION_ARGS)
 	colcnt  = readInt2FromBuffer(data_buf, &bufidx);
 
 	if (version != GPDBWRITABLE_VERSION)
-		ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION),
-						errmsg("cannot import data version %d",	version),
-					    errOmitLocation(true)));
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("cannot import data version %d", version)));
 
 	if (colcnt != ncolumns)
-		ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION),
-						errmsg("input data column count (%d) did not match the external table definition",
-								colcnt),
-					    errOmitLocation(true)));
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("input data column count (%d) did not match the external table definition",
+						colcnt)));
 
 	/* Extract Column Type and check against External Table definition */
 	for(i=0; i< ncolumns; i++)
@@ -623,10 +623,10 @@ gphdfsformatter_import(PG_FUNCTION_ARGS)
 			intype = get_type_name(input_type);
 			Insist(intype);
 
-			ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION),
-							errmsg("input data column %d of type \"%s\" did not match the external table definition",
-									i+1, intype),
-						    errOmitLocation(true)));
+			ereport(ERROR,
+					(errcode(ERRCODE_DATA_EXCEPTION),
+					 errmsg("input data column %d of type \"%s\" did not match the external table definition",
+							i+1, intype)));
 		}
 	}
 	/* Extract null bit array */
@@ -689,10 +689,9 @@ gphdfsformatter_import(PG_FUNCTION_ARGS)
 	bufidx = DOUBLEALIGN(bufidx);
 
 	if(data_cur + tuplelen != bufidx)
-		ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-						errmsg("Tuplelen != bufidx: %d:%d:%d", tuplelen, bufidx, data_cur),
-					    errOmitLocation(true)));
-
+		ereport(ERROR,
+				(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+				 errmsg("Tuplelen != bufidx: %d:%d:%d", tuplelen, bufidx, data_cur)));
 
 	data_cur += tuplelen;
 

@@ -1,2 +1,0 @@
-alter table  foo drop column c;
-ALTER TABLE

@@ -17,6 +17,10 @@
 -- start_matchsubs
 -- m|Failed on request of size \d+ bytes|
 -- s|Failed on request of size \d+ bytes|Failed on request of size BIGALLOC bytes|
+--
+-- m/(ERROR|WARNING|CONTEXT|NOTICE):.*\(float\.c\:\d+\)/
+-- s/\(float\.c:\d+\)//
+--
 -- end_matchsubs
 
 CREATE TABLE weibull

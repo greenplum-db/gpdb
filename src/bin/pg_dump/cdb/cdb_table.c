@@ -18,42 +18,6 @@
 
 /*-------------------------------------------------------------------------
  *
- * FreeCDBAssignmentArray( CDBAssignmentArray* pAssignmentAr ) returns void
- *
- * This frees the pointers allocated in each of the CDBAssignment structs
- * that are part of the pAssignmentAr->pData array, and then frees the pData
- * pointer itself.	It does NOT free the pAssignmentAr.
- *-------------------------------------------------------------------------
- */
-/*
-void FreeCDBAssignmentArray( CDBAssignmentArray* pAssignmentAr )
-{
-	if ( pAssignmentAr == NULL )
-		return;
-
-	int i;
-	for ( i=0; i<pAssignmentAr->count; i++ )
-	{
-		CDBAssignment* pAssignment = &pAssignmentAr->pData[i];
-
-		if ( pAssignment->pszTableName != NULL )
-			free( pAssignment->pszTableName );
-		if ( pAssignment->pszNspName != NULL )
-			free( pAssignment->pszNspName );
-	}
-
-	if ( pAssignmentAr->pData != NULL )
-	{
-		free( pAssignmentAr->pData );
-		pAssignmentAr->pData = NULL;
-	}
-
-	pAssignmentAr->count = 0;
-}
-*/
-
-/*-------------------------------------------------------------------------
- *
  * FreeCDBBaseTableArray( CDBBaseTableArray* pTableAr ) returns void
  *
  * This frees the pointers allocated in each of the CBBBaseTable structs
@@ -89,118 +53,6 @@ FreeCDBBaseTableArray(CDBBaseTableArray *pTableAr)
 
 /*-------------------------------------------------------------------------
  *
- * FreeCDBInstanceArray( CDBInstanceArray* pInstanceAr ) returns void
- *
- * This frees the pointers allocated in each of the CBBInstance structs
- * that are part of the pInstanceAr->pData array, and then frees the pData
- * pointer itself.	It does NOT free the pInstanceAr.
- *-------------------------------------------------------------------------
- */
-/*
-void FreeCDBInstanceArray( CDBInstanceArray* pInstanceAr )
-{
-	if ( pInstanceAr == NULL )
-		return;
-
-	int i;
-	for ( i=0; i<pInstanceAr->count; i++ )
-	{
-		CDBInstance* pInstance = &pInstanceAr->pData[i];
-
-		if ( pInstance->pszHost != NULL )
-			free( pInstance->pszHost );
-		if ( pInstance->pszDataDir != NULL )
-			free( pInstance->pszDataDir );
-	}
-
-	if ( pInstanceAr->pData != NULL )
-	{
-		free( pInstanceAr->pData );
-		pInstanceAr->pData = NULL;
-	}
-
-	pInstanceAr->count = 0;
-}
-*/
-
-/*-------------------------------------------------------------------------
- *
- * FreeCDBPolicyArray( CDBPolicyArray* pPolicyAr ) returns void
- *
- * This frees the pointers allocated in each of the CDBPolicy structs
- * that are part of the pPolicyAr->pData array, and then frees the pData
- * pointer itself.	It does NOT free the pPolicyAr.
- *-------------------------------------------------------------------------
- */
-/*
-void FreeCDBPolicyArray( CDBPolicyArray* pPolicyAr )
-{
-	if ( pPolicyAr == NULL )
-		return;
-
-	int i;
-	for ( i=0; i<pPolicyAr->count; i++ )
-	{
-		CDBPolicy* pPolicy = &pPolicyAr->pData[i];
-
-		if ( pPolicy->pszTableName != NULL )
-			free( pPolicy->pszTableName );
-		if ( pPolicy->pszNspName != NULL )
-			free( pPolicy->pszNspName );
-		if ( pPolicy->pszParameters != NULL )
-			free( pPolicy->pszParameters );
-	}
-
-	if ( pPolicyAr->pData != NULL )
-	{
-		free( pPolicyAr->pData );
-		pPolicyAr->pData = NULL;
-	}
-
-	pPolicyAr->count = 0;
-}
-*/
-
-/*-------------------------------------------------------------------------
- *
- * FreeCDBSegArray( CDBSegArray* pSegAr ) returns void
- *
- * This frees the pointers allocated in each of the CDVSeg structs
- * that are part of the pSegAr->pData array, and then frees the pData
- * pointer itself.	It does NOT free the pSegAr.
- *-------------------------------------------------------------------------
- */
-/*
-void FreeCDBSegArray( CDBSegArray* pSegAr )
-{
-	if ( pSegAr == NULL )
-		return;
-
-	int i;
-	for ( i=0; i<pSegAr->count; i++ )
-	{
-		CDBSeg* pSeg = &pSegAr->pData[i];
-
-		if ( pSeg->pszDBName != NULL )
-			free( pSeg->pszDBName );
-		if ( pSeg->pszDBUser != NULL )
-			free( pSeg->pszDBUser );
-		if ( pSeg->pszDBPswd != NULL )
-			free( pSeg->pszDBPswd );
-	}
-
-	if ( pSegAr->pData != NULL )
-	{
-		free( pSegAr->pData );
-		pSegAr->pData = NULL;
-	}
-
-	pSegAr->count = 0;
-}
-*/
-
-/*-------------------------------------------------------------------------
- *
  * FreeCDBSegmentInstanceArray( CDBSegmentInstanceArray* pSegmentInstanceAr ) returns void
  *
  * This frees the pointers allocated in each of the CDBSegmentInstance structs
@@ -222,96 +74,6 @@ FreeCDBSegmentInstanceArray(CDBSegmentInstanceArray *pSegmentInstanceAr)
 
 	pSegmentInstanceAr->count = 0;
 }
-
-/*-------------------------------------------------------------------------
- *
- * GetCDBAssignmentArray(PGconn* pConn, const char* pszDBName, CDBAssignmentArray* pAssignmentAr )
- * returns bool
- *
- * This reads all rows from cdb_assignment,
- * joining with pg_class and pg_namespace to get the table and schema names.
- *
- * After using it, call FreeCDBAssignmentArray.
- *-------------------------------------------------------------------------
- */
-/*
-bool GetCDBAssignmentArray(PGconn* pConn, const char* pszDBName, CDBAssignmentArray* pAssignmentAr )
-{
-	bool		bRtn = false;
-	PQExpBuffer pQry = NULL;
-	PGresult*	pRes = NULL;
-
-	pAssignmentAr->count = 0;
-	pAssignmentAr->pData = NULL;
-
-	pQry = createPQExpBuffer();
-	appendPQExpBuffer(pQry,		" SELECT"
-							"	a.tbloid,"
-							"	c.relname,"
-							"	n.nspname,"
-							"	a.partno,"
-							"	a.segid"
-							"	FROM"
-							"	cdb_assignment a,"
-							"	pg_class c,"
-							"	pg_namespace n"
-							"	WHERE"
-							"	a.tbloid = c.oid"
-							" 	AND c.relnamespace = n.oid"
-							"	ORDER BY"
-							"	2" );
-
-	pRes = PQexec(pConn, pQry->data);
-	if ( pRes == NULL || PQresultStatus(pRes) != PGRES_TUPLES_OK )
-	{
-		write_err_msg("query to obtain list of cdb assignments failed : %s",
-				  PQerrorMessage(pConn));
-		goto cleanup;
-	}
-
-	int ntups = PQntuples(pRes);
-	if (ntups <= 0)
-	{
-		write_err_msg("no CDB assignments for database \"%s\"\n", pszDBName);
-		goto cleanup;
-	}
-
-	pAssignmentAr->count = ntups;
-	pAssignmentAr->pData = (CDBAssignment *)calloc( ntups, sizeof(CDBAssignment) );
-	if ( pAssignmentAr->pData == NULL )
-	{
-		write_err_msg("cannot allocate memory for query results in GetCDBAssignmentArray\n");
-		goto cleanup;
-	}
-
-	int i_tbloid	= PQfnumber(pRes, "tbloid");
-	int i_relname	= PQfnumber(pRes, "relname");
-	int i_nspname	= PQfnumber(pRes, "nspname");
-	int i_partno	= PQfnumber(pRes, "partno");
-	int i_dbid		= PQfnumber(pRes, "segid");
-
-	int i;
-	for ( i=0; i<ntups; i++ )
-	{
-		CDBAssignment* pAssignment = &pAssignmentAr->pData[i];
-		pAssignment->tbloid			= atoi(PQgetvalue(pRes, i, i_tbloid));
-		pAssignment->pszTableName	= strdup(PQgetvalue(pRes, i, i_relname));
-		pAssignment->pszNspName		= strdup(PQgetvalue(pRes, i, i_nspname));
-		pAssignment->partno			= atoi(PQgetvalue(pRes, i, i_partno));
-		pAssignment->segid			= atoi(PQgetvalue(pRes, i, i_dbid));
-	}
-
-	bRtn = true;
-
-cleanup:
-	if ( pRes != NULL )
-		PQclear(pRes);
-	if ( pQry != NULL )
-		destroyPQExpBuffer(pQry);
-
-	return bRtn;
-}
-*/
 
 /*-------------------------------------------------------------------------
  *
@@ -366,14 +128,6 @@ GetCDBBaseTableArray(PGconn *pConn, CDBBaseTableArray *pTableAr)
 
 	ntups = PQntuples(pRes);
 
-	/*
-	if (ntups <= 0)
-	{
-		write_err_msg("no Greenplum managed tables for database \"%s\"\n", pszDBName);
-		goto cleanup;
-	}
-	 */
-
 	pTableAr->count = ntups;
 	pTableAr->pData = (CDBBaseTable *) calloc(ntups, sizeof(CDBBaseTable));
 	if (pTableAr->pData == NULL)
@@ -401,8 +155,7 @@ GetCDBBaseTableArray(PGconn *pConn, CDBBaseTableArray *pTableAr)
 cleanup:
 	if (pRes != NULL)
 		PQclear(pRes);
-	if (pQry != NULL)
-		destroyPQExpBuffer(pQry);
+	destroyPQExpBuffer(pQry);
 
 	return bRtn;
 }
@@ -495,8 +248,7 @@ GetCDBSegmentInstanceArray(PGconn *pConn, const char *pszDBName, CDBSegmentInsta
 cleanup:
 	if (pRes != NULL)
 		PQclear(pRes);
-	if (pQry != NULL)
-		destroyPQExpBuffer(pQry);
+	destroyPQExpBuffer(pQry);
 
 	return bRtn;
 }

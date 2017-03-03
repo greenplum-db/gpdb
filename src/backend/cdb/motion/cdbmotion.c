@@ -12,7 +12,7 @@
 #include "postgres.h"
 
 #include "miscadmin.h"
-#include "access/heapam.h"
+#include "access/htup.h"
 #include "cdb/cdbconn.h"
 #include "nodes/execnodes.h" //SliceTable
 #include "cdb/cdbmotion.h"
@@ -21,7 +21,6 @@
 #include "cdb/ml_ipc.h"
 #include "cdb/tupser.h"
 #include "libpq/pqformat.h"
-#include "utils/hsearch.h"
 #include "utils/memutils.h"
 
 
@@ -480,12 +479,6 @@ SendTuple(MotionLayerState *mlStates,
 	clearTCList(&pMNEntry->ser_tup_info.chunkCache, &tcList);
 
 	return rc;
-}
-
-TupleChunkListItem
-get_eos_tuplechunklist(void)
-{
-	return s_eos_chunk_data;
 }
 
 /*

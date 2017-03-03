@@ -1,0 +1,40 @@
+require 'yaml'
+
+# Basic Vagrant config (API version 2)
+Vagrant.configure(2) do |config|
+  # Base box: Centos-7 box
+  # NOTE: Over time the VMI below may become outdated, so may need to be
+  #       substituted with a more recent VMI
+  config.vm.box = "boxcutter/centos72"
+
+  config.vm.hostname="gpdbvagrant"
+
+  # Give a reasonable amount of cpu and memory to the VM
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "gpdb-dev-host" # Name in VirtualBox
+    vb.memory = 8192
+    vb.cpus = 4
+    vb.customize ["storagectl", :id, "--name", "SATA Controller", "--hostiocache", "on"]
+    vb.customize ['modifyvm', :id, '--cableconnected1', 'on']
+  end
+
+  if File.file?('vagrant-local.yml')
+    local_config = YAML::load_file('vagrant-local.yml')
+    local_config['synced_folder'].each do |folder|
+      config.vm.synced_folder folder['local'], folder['shared'] unless folder['local'].nil? or folder['shared'].nil?
+    end
+  end
+
+  config.vm.define("gpdb") do |gpdb|
+    gpdb.vm.provision "shell", path: "vagrant-setup.sh"
+    gpdb.vm.provision "shell", path: "vagrant-configure-os.sh"
+    gpdb.vm.provision "shell", path: "vagrant-build-gporca.sh", privileged: false
+    gpdb.vm.provision "shell", path: "vagrant-build-gpdb.sh", privileged: false, args: "--enable-orca"
+  end
+
+  config.vm.define("gpdb_without_gporca") do |gpdb_without_gporca|
+    gpdb_without_gporca.vm.provision "shell", path: "vagrant-setup.sh"
+    gpdb_without_gporca.vm.provision "shell", path: "vagrant-configure-os.sh"
+    gpdb_without_gporca.vm.provision "shell", path: "vagrant-build-gpdb.sh", privileged: false
+  end
+end

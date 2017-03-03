@@ -1,0 +1,101 @@
+-- start_matchignore
+-- # start distro specific ignore
+m/INFO Configuration.deprecation/
+m/INFO impl.YarnClientImpl/
+m/INFO .*/
+m/^\\\!\/.*/
+m/Hadoop command-line option parsing not performed.*/
+m/\\\!export.*/
+m/INFO client.RMProxy/
+m/GP_IGNORE.*/
+m/This node is now reported.*/
+m/This node was earlier reported.*/
+m/the mapper string is mapreduce.*/
+m/the mapper string is mapred.*/
+m/DISK_MILLIS_MAPS.*/
+m/DISK_MILLIS_REDUCES.*/
+m/get map string.*/
+m/reach here.*/
+m/jar:file:.*/
+m/<time> WARN shortcircuit.DomainSocketFactory.*/
+m/\\\!hadoop_bin.*/
+-- # end distro specific ignore
+
+-- m/hdfs.DFSClient:/
+-- m/TokenCache:/
+-- m/mapred.JobClient:/
+-- m/Total input paths to process/
+-- m/Snappy native library/
+-- m/Loaded the native-hadoop library/
+-- m/Unable to load native-hadoop/
+-- m/at org.apache.hadoop.fs.Fi.*/
+-- m/Current running JobTracker is/
+-- m/\$HADOOP_HOME is deprecated /
+-- m/WARN conf.Configuration/
+-- m/INFO service.AbstractService/
+-- m/mapreduce.JobSubmitter:/
+-- m/client.YarnClientImpl/
+-- m/INFO mapreduce.Job:/
+-- m/File System Counters/
+-- m/: Number of/
+-- m/Job Counters/
+-- m/tasks=/
+-- m/ecords=/
+-- m/bytes=/
+-- m/groups=/
+-- m/outputs=/
+-- m/snapshot=/
+-- m/GC time elapsed/
+-- m/Total time spent/
+-- m/Map-Reduce Framework/
+-- m/Shuffle/
+-- m/CPU time spent/
+-- m/Total committed heap usage/
+-- m/BAD_ID=/
+-- m/CONNECTION=/
+-- m/IO_ERROR=/
+-- m/WRONG_LENGTH=/
+-- m/WRONG_MAP=/
+-- m/WRONG_REDUCE=/
+-- m/File Input Format Counters/
+-- m/File Output Format Counters/
+-- m/Bytes Read=/
+-- m/Bytes Written=/
+-- end_matchignore
+
+-- start_matchsubs
+-- m/gphdfs:\/\/.*:\d+/
+-- s/gphdfs:\/\/.*:\d+/gphdfs:\/\/<hostname>:<port>/
+-- m/gphdfs:\/\/.*\//
+-- s/gphdfs:\/\/.*\//gphdfs:\/\/<maprhostname>/
+-- m/gpfdist:\/\/.*:\d+/
+-- s/gpfdist:\/\/.*:\d+/gpfdist:\/\/<hostname>:<port>/
+-- m/\d+\/\d+\/\d+ \d+:\d+:\d+/
+-- s/\d+\/\d+\/\d+ \d+:\d+:\d+/<time>/
+-- m/at org.apache.hadoop.*java:\d+/
+-- s/at org.apache.hadoop.*java:\d+/<part of a stack trace>/
+-- m/user .*\/.*.sanmateo.greenplum.com/
+-- s/user .*\/.*.sanmateo.greenplum.com/<user>\/<host>.sanmateo.greenplum.com/
+-- m/HD.GREENPLUM.COM .*.keytab/
+-- s/HD.GREENPLUM.COM .*.keytab/<user>.keytab/
+-- m/\/.*.keytab/
+-- s/\/.*.keytab/\/<user>.keytab/
+-- m/Error: java.io.IOException:/
+-- s/Error: java.io.IOException:/java.io.IOException:/
+-- m/:\$CLASSPATH:(.*?)\-Dhdfshost/
+-- s/:\$CLASSPATH:(.*?)-Dhdfshost/:\$CLASSPATH:class_paths \-Dhdfshost/
+-- m/\-Dhdfshost=.*?\-Ddatanodeport=\d{4,5} \-Djobtrackerhost=.*?\-Djobtrackerport=\d{4,5}/
+-- s/\-Dhdfshost=.*?\-Ddatanodeport=\d{4,5} \-Djobtrackerhost=.*?\-Djobtrackerport=\d{4,5}/\-Dhdfshost=hostname \-Ddatanodeport=portno \-Djobtrackerhost=hostname -Djobtrackerport=portno/
+-- m/export HADOOP_HOME=(.*?); source (.*?)hadoop_env\.sh/
+-- s/export HADOOP_HOME=(.*?); source (.*?)hadoop_env\.sh/export HADOOP_HOME=hadoop_home; source hadoop_env /
+-- m/In DefaultPathResolver.java. Path = hdfs:\/\/(.*?)\n/
+-- s/In DefaultPathResolver.java. Path = hdfs:\/\/(.*?)\n//
+-- m/\/usr\/lib(.*?) fs/
+-- s/\/usr\/lib(.*?) fs/hadoop_bin/
+-- m/\/(.*?)\/parsefile\.py/
+-- s/\/(.*?)\/parsefile\.py/parsefile/
+-- m/grep(.*?)typemismatch.out/
+-- s/grep(.*?)typemismatch.out/grep command/
+-- m/echo(.*?)gp_large_file_log(\) \)\).+gp_large_file_log)?/
+-- s/echo(.*?)gp_large_file_log(\) \)\).+gp_large_file_log)?/echo time in gp_large_file_log/
+-- end_matchsubs

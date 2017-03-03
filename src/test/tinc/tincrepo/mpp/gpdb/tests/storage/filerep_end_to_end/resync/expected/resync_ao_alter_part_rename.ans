@@ -101,7 +101,7 @@ select count(*) from resync_ao_alter_part_rn3;
 -- Add default Partition
 --
 alter table sync1_ao_alter_part_rn6 add default partition default_part;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_ao_alter_part_rn6_1_prt_default_part" for table "sync1_ao_alter_part_rn6"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_ao_alter_part_rn6_1_prt_default_part_2_prt_1" for table "sync1_ao_alter_part_rn6_1_prt_default_part"
 ALTER TABLE
@@ -151,7 +151,7 @@ select count(*) from sync1_ao_alter_part_rn6_0;
 -- Add default Partition
 --
 alter table ck_sync1_ao_alter_part_rn5 add default partition default_part;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_rn5_1_prt_default_part" for table "ck_sync1_ao_alter_part_rn5"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_rn5_1_prt_default_part_2_prt_1" for table "ck_sync1_ao_alter_part_rn5_1_prt_default_part"
 ALTER TABLE
@@ -202,7 +202,7 @@ select count(*) from ck_sync1_ao_alter_part_rn5_0;
 -- Add default Partition
 --
 alter table ct_ao_alter_part_rn3 add default partition default_part;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_part_rn3_1_prt_default_part" for table "ct_ao_alter_part_rn3"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_part_rn3_1_prt_default_part_2_prt_1" for table "ct_ao_alter_part_rn3_1_prt_default_part"
 ALTER TABLE
@@ -253,7 +253,7 @@ select count(*) from ct_ao_alter_part_rn3_0;
 -- Add default Partition
 --
 alter table resync_ao_alter_part_rn1 add default partition default_part;
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "resync_ao_alter_part_rn1_1_prt_default_part" for table "resync_ao_alter_part_rn1"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "resync_ao_alter_part_rn1_1_prt_default_part_2_prt_1" for table "resync_ao_alter_part_rn1_1_prt_default_part"
 ALTER TABLE

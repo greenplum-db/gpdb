@@ -95,6 +95,7 @@
 #include "parser/parse_expr.h"
 #include "parser/parsetree.h"
 #include "utils/builtins.h"
+#include "utils/bytea.h"
 #include "utils/date.h"
 #include "utils/datum.h"
 #include "utils/fmgroids.h"
@@ -3617,7 +3618,7 @@ examine_variable(PlannerInfo *root, Node *node, int varRelid,
 		vardata->atttype = var->vartype;
 		vardata->atttypmod = var->vartypmod;
 
-		rte = root->simple_rte_array[var->varno];
+		rte = rt_fetch(var->varno, root->parse->rtable);
 
 		/*
 		 * If this attribute has a foreign key relationship, then first look

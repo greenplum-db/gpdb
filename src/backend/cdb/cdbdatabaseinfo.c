@@ -44,7 +44,6 @@ typedef struct RelationIdEntry
 	DbInfoRel 	*dbInfoRel;   	/* pointer */
 } RelationIdEntry;
 
-
 /*-------------------------------------------------------------------------
  * Debugging functions
  *------------------------------------------------------------------------- */
@@ -179,22 +178,29 @@ void DatabaseInfo_Trace(DatabaseInfo *info)
  */
 static DbInfoRel *DatabaseInfo_FindDbInfoRel(
 	HTAB 				*dbInfoRelHashTable,
-	
+	Oid					reltablespaceOid,
 	Oid					relfilenodeOid)
 {
 	DbInfoRel *dbInfoRel;
-
+	DbInfoRelKeyPair *dbInfoRelKey;
 	bool found;
-	
+
+	Assert(reltablespaceOid != 0);
+
+	dbInfoRelKey = (DbInfoRelKeyPair *)palloc0(sizeof(DbInfoRelKeyPair));
+	dbInfoRelKey->reltablespace = reltablespaceOid;
+	dbInfoRelKey->relfilenode = relfilenodeOid;
+
 	dbInfoRel = 
 			(DbInfoRel*) 
 					hash_search(dbInfoRelHashTable,
-								(void *) &relfilenodeOid,
+								dbInfoRelKey,
 								HASH_FIND,
 								&found);
 	if (!found)
 	{
-		elog(ERROR, "pg_class entry (relfilenode %u) not found",
+		elog(ERROR, "pg_class entry (tablespace %u, relfilenode %u) not found",
+			 reltablespaceOid,
 			 relfilenodeOid);
 		return NULL;
 	}
@@ -244,7 +250,7 @@ DatabaseInfo_DbInfoRelHashTableInit()
 
 	/* Set key and entry sizes. */
 	MemSet(&info, 0, sizeof(info));
-	info.keysize = sizeof(Oid);
+	info.keysize = sizeof(DbInfoRelKeyPair);
 	info.entrysize = sizeof(DbInfoRel);
 	info.hash = tag_hash;
 
@@ -326,10 +332,10 @@ static void DatabaseInfo_AddRelationId(
 
 /*
  * DatabaseInfo_FindRelationId()
- *   Lookup an entry to a dbInfoRel hash table
+ *   Lookup an entry to a RelationIdEntry hash table
  */
 static DbInfoRel *DatabaseInfo_FindRelationId(
-	HTAB 		*dbInfoRelHashTable,
+	HTAB 		*relationIdHashTable,
 	Oid			 relationId)
 {
 	RelationIdEntry *relationIdEntry;
@@ -338,7 +344,7 @@ static DbInfoRel *DatabaseInfo_FindRelationId(
 	
 	relationIdEntry = 
 			(RelationIdEntry*) 
-					hash_search(dbInfoRelHashTable,
+					hash_search(relationIdHashTable,
 								(void *) &relationId,
 								HASH_FIND,
 								&found);
@@ -496,10 +502,11 @@ static void DatabaseInfo_AddAppendOnlyCatalogSegmentInfo(
 
 	if (Debug_persistent_print)
 		elog(Persistent_DebugPrintLevel(), 
-			 "DatabaseInfo_AddAppendOnlyCatalogSegmentInfo: relation id %u, relation name %s, relfilenode %u, segment file #%d, EOF " INT64_FORMAT,
+			 "DatabaseInfo_AddAppendOnlyCatalogSegmentInfo: relation id %u, relation name %s, tablespace %u, relfilenode %u, segment file #%d, EOF " INT64_FORMAT,
 			 dbInfoRel->relationOid,
 			 dbInfoRel->relname,
-			 dbInfoRel->relfilenodeOid,
+			 dbInfoRel->dbInfoRelKey.reltablespace,
+			 dbInfoRel->dbInfoRelKey.relfilenode,
 			 segmentFileNum,
 			 logicalEof);
 
@@ -522,26 +529,33 @@ static void DatabaseInfo_AddPgClassStoredRelation(
 {
 	DbInfoRel	*dbInfoRel;
 	bool		 found;
+	DbInfoRelKeyPair *dbInfoRelKey;
+
+	Assert(reltablespace != 0);
+
+	dbInfoRelKey = (DbInfoRelKeyPair *)palloc0(sizeof(DbInfoRelKeyPair));
+	dbInfoRelKey->reltablespace = reltablespace;
+	dbInfoRelKey->relfilenode = relfilenode;
 
 	dbInfoRel = 
 			(DbInfoRel*) 
 					hash_search(dbInfoRelHashTable,
-								(void *) &relfilenode,
+								dbInfoRelKey,
 								HASH_ENTER,
 								&found);
 	if (found)
-		elog(ERROR, "More than one pg_class entry ('%s' %u and '%s' %u) references the same relfilenode %u",
+		elog(ERROR, "More than one pg_class entry ('%s' %u and '%s' %u) references the same tablespace %u and relfilenode %u",
 			 dbInfoRel->relname,
 			 dbInfoRel->relationOid,
 			 relname,
 			 relationOid,
+			 reltablespace,
 			 relfilenode);
 
 	dbInfoRel->inPgClass = true;
 	dbInfoRel->pgClassTid = *pgClassTid;
 	dbInfoRel->relationOid = relationOid;
 	dbInfoRel->relname = pstrdup(relname);
-	dbInfoRel->reltablespace = reltablespace;
 	dbInfoRel->relkind = relkind;
 	dbInfoRel->relstorage = relstorage;
 	dbInfoRel->relam = relam;
@@ -570,6 +584,7 @@ static void DatabaseInfo_AddPgClassStoredRelation(
 static bool DatabaseInfo_AddGpRelationNode(
 	DatabaseInfo		*info,
 	HTAB 				*dbInfoRelHashTable,
+	Oid					reltablespace,
 	Oid					relfilenode,
 	int32				segmentFileNum,
 	ItemPointer			persistentTid,
@@ -580,11 +595,25 @@ static bool DatabaseInfo_AddGpRelationNode(
 	bool found;
 
 	DbInfoGpRelationNode *dbInfoGpRelationNode;
+	DbInfoRelKeyPair *dbInfoRelKey;
+
+	dbInfoRelKey = (DbInfoRelKeyPair *)palloc0(sizeof(DbInfoRelKeyPair));
+
+	/*
+	 * pg_class and gp_relation_node stores 0 for tablespace if
+	 * relation uses default tablespace so get the value of the
+	 * default tablespace here
+	 */
+	if (reltablespace == 0)
+		dbInfoRelKey->reltablespace = info->defaultTablespace;
+	else
+		dbInfoRelKey->reltablespace = reltablespace;
+	dbInfoRelKey->relfilenode = relfilenode;
 
 	dbInfoRel = 
 			(DbInfoRel*) 
 					hash_search(dbInfoRelHashTable,
-								(void *) &relfilenode,
+								dbInfoRelKey,
 								HASH_FIND,
 								&found);
 
@@ -702,11 +731,16 @@ static void DatabaseInfo_AddRelSegFile(
 {
 	DbInfoRel	*dbInfoRel;
 	bool		 found;
+	DbInfoRelKeyPair *dbInfoRelKey;
+
+	dbInfoRelKey = (DbInfoRelKeyPair *)palloc0(sizeof(DbInfoRelKeyPair));
+	dbInfoRelKey->reltablespace = tablespace;
+	dbInfoRelKey->relfilenode = relfilenode;
 
 	/* Lookup the relfilenode in our catalog cache */
 	dbInfoRel = (DbInfoRel*) \
 		hash_search(dbInfoRelHashTable, 
-					(void *) &relfilenode,
+					dbInfoRelKey,
 					HASH_FIND,
 					&found);
 
@@ -714,7 +748,7 @@ static void DatabaseInfo_AddRelSegFile(
 	 * If the relfilenode doesn't exist in the catalog then add it to the list
 	 * of orphaned relfilenodes.
 	 */
-	if (!found || dbInfoRel->reltablespace != tablespace)
+	if (!found || dbInfoRel->dbInfoRelKey.reltablespace != tablespace)
 	{
 		DatabaseInfo_AddExtraSegmentFile(
 									info,
@@ -877,9 +911,13 @@ DbInfoRelPtrArray_Compare(const void *entry1, const void *entry2)
 	const DbInfoRel *dbInfoRel1 = *((DbInfoRel**)entry1);
 	const DbInfoRel *dbInfoRel2 = *((DbInfoRel**)entry2);
 
-	if (dbInfoRel1->relfilenodeOid == dbInfoRel2->relfilenodeOid)
+	int compresult;
+	compresult = memcmp(&dbInfoRel1->dbInfoRelKey,
+						&dbInfoRel2->dbInfoRelKey,
+						sizeof(DbInfoRelKeyPair));
+	if (compresult == 0)
 		return 0;
-	else if (dbInfoRel1->relfilenodeOid > dbInfoRel2->relfilenodeOid)
+	else if (compresult > 0)
 		return 1;
 	else
 		return -1;
@@ -955,6 +993,7 @@ DatabaseInfo_CollectGpRelationNode(
 		bool			nulls[Natts_gp_relation_node];
 		Datum			values[Natts_gp_relation_node];
 
+		Oid				reltablespace;
 		Oid				relfilenode;
 		int32			segmentFileNum;
 		int64			createMirrorDataLossTrackingSessionNum;
@@ -965,6 +1004,7 @@ DatabaseInfo_CollectGpRelationNode(
 
 		GpRelationNode_GetValues(
 							values,
+							&reltablespace,
 							&relfilenode,
 							&segmentFileNum,
 							&createMirrorDataLossTrackingSessionNum,
@@ -974,6 +1014,7 @@ DatabaseInfo_CollectGpRelationNode(
 		if (!DatabaseInfo_AddGpRelationNode(
 									info,
 									dbInfoRelHashTable,
+									reltablespace,
 									relfilenode,
 									segmentFileNum,
 									&persistentTid,
@@ -1020,6 +1061,15 @@ DatabaseInfo_HandleAppendOnly(
 			aoEntry = DatabaseInfo_FindPgAppendOnly(
 											pgAppendOnlyHashTable,
 											dbInfoRel->relationOid);
+
+			if ((aoEntry->segrelid == 0) || (aoEntry->visimaprelid == 0) ||
+				(aoEntry->visimapidxid == 0))
+				elog(ERROR, "Null entries for Append-Only relation id %u, "
+					 "relation name %s, segrelid %u, visimaprelid %u, "
+					 "visimapidxid %u", dbInfoRel->relationOid,
+					 dbInfoRel->relname, aoEntry->segrelid,
+					 aoEntry->visimaprelid, aoEntry->visimapidxid);
+
 			if (Debug_persistent_print)
 				elog(Persistent_DebugPrintLevel(), 
 					 "DatabaseInfo_AddPgClassStoredRelation: Append-Only entry for relation id %u, relation name %s, "
@@ -1059,9 +1109,9 @@ DatabaseInfo_HandleAppendOnly(
 				pg_aoseg_rel = 
 						DirectOpen_PgAoSegOpenDynamic(
 											aoEntry->segrelid,
-											dbInfoRel->reltablespace,
+											dbInfoRel->dbInfoRelKey.reltablespace,
 											info->database,
-											aosegDbInfoRel->relfilenodeOid);
+											aosegDbInfoRel->dbInfoRelKey.relfilenode);
 				
 				aoSegfileArray = 
 						GetAllFileSegInfo_pg_aoseg_rel(
@@ -1089,9 +1139,9 @@ DatabaseInfo_HandleAppendOnly(
 				pg_aocsseg_rel =
 						DirectOpen_PgAoCsSegOpenDynamic(
 											aoEntry->segrelid,
-											dbInfoRel->reltablespace,
+											dbInfoRel->dbInfoRelKey.reltablespace,
 											info->database,
-											aosegDbInfoRel->relfilenodeOid);
+											aosegDbInfoRel->dbInfoRelKey.relfilenode);
 				
 				aocsSegfileArray = GetAllAOCSFileSegInfo_pg_aocsseg_rel(
 																dbInfoRel->relnatts,
@@ -1147,6 +1197,10 @@ DatabaseInfo_CollectPgAppendOnly(
 		aoEntry = (Form_pg_appendonly) GETSTRUCT(tuple);
 
 		Assert(aoEntry != NULL);
+
+		if (aoEntry->segrelid == 0)
+			elog(ERROR, "Null segrelid in pg_appendonly for relation id %u",
+				 aoEntry->relid);
 
 		if (Debug_persistent_print)
 			elog(Persistent_DebugPrintLevel(), 

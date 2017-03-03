@@ -55,7 +55,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
   auto irb = codegen_utils->ir_builder();
   AggStatePerAgg peraggstate = &aggstate_->peragg[aggno];
   assert(nullptr != peraggstate);
-  llvm::Value *newVal = nullptr;
+  llvm::Value *llvm_newval = nullptr;
 
   // External functions
   llvm::Function* llvm_MemoryContextSwitchTo =
@@ -82,11 +82,6 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
   llvm::Value* llvm_pergroupstate_noTransValue_ptr =
       codegen_utils->GetPointerToMember(
           llvm_pergroupstate, &AggStatePerGroupData::noTransValue);
-
-  if (!peraggstate->transtypeByVal) {
-    elog(DEBUG1, "We do not support pass-by-ref datatypes.");
-    return false;
-  }
 
   assert(nullptr != peraggstate->aggref);
   assert(pg_func_info->llvm_args.size() == 1 +
@@ -171,7 +166,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
       irb->CreateStore(codegen_utils->GetConstant<Datum>(0), llvm_arg1_ptr);
     }
     // }}
-    newVal = irb->CreateCall(
+    llvm_newval = irb->CreateCall(
         llvm_datumCopyWithMemManager,
         {irb->CreateLoad(llvm_pergroupstate_transValue_ptr),
             irb->CreateLoad(llvm_arg1_ptr),
@@ -179,7 +174,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
             codegen_utils->GetConstant<int>(
                 static_cast<int>(peraggstate->transtypeLen)),
             llvm_mem_manager_arg});
-    irb->CreateStore(newVal, llvm_pergroupstate_transValue_ptr);
+    irb->CreateStore(llvm_newval, llvm_pergroupstate_transValue_ptr);
     // }}} newVal = datumCopyWithMemManager(...)
     // *transValueIsNull = false;
     irb->CreateStore(codegen_utils->GetConstant<bool>(false),
@@ -217,23 +212,64 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
     return false;
   }
   bool isGenerated =
-      pg_func_gen->GenerateCode(codegen_utils, *pg_func_info, &newVal,
+      pg_func_gen->GenerateCode(codegen_utils, *pg_func_info, &llvm_newval,
                                 llvm_pergroupstate_transValueIsNull_ptr);
   if (!isGenerated) {
     elog(DEBUG1, "Function with oid = %d was not generated successfully!",
          peraggstate->transfn.fn_oid);
     return false;
   }
-  // pergroupstate->transValue = newval
-  irb->CreateStore(codegen_utils->CreateCppTypeToDatumCast(newVal),
-                   llvm_pergroupstate_transValue_ptr);
   // We do not need to set *transValueIsNull = fcinfo->isnull, since
   // transValueIsNull is passed as argument to pg_func_gen->GenerateCode
 
-  // We do not implement the code below, because we do not support
-  // pass-by-ref datatypes
-  // if (!transtypeByVal &&
-  //         DatumGetPointer(newVal) != DatumGetPointer(transValue))
+  // !fcinfo->isnull
+  llvm::Value* llvm_fcinfo_is_not_null = irb->CreateNot(
+      irb->CreateLoad(llvm_pergroupstate_transValueIsNull_ptr));
+
+  if (!peraggstate->transtypeByVal) {
+    llvm::Value* llvm_newval_by_ref =
+        codegen_utils->CreateCppTypeToDatumCast(llvm_newval);
+
+    // if (DatumGetPointer(newVal) != DatumGetPointer(transValue) &&
+    //     !fcinfo->isnull) {{
+    llvm::Value* llvm_val_changed = irb->CreateICmpNE(
+       codegen_utils->CreateDatumToCppTypeCast<void*>(llvm_newval),
+       codegen_utils->CreateDatumToCppTypeCast<void*>(
+           irb->CreateLoad(llvm_pergroupstate_transValue_ptr)));
+
+    llvm::BasicBlock* transtypebyref_block = codegen_utils->CreateBasicBlock(
+        "transtypebyref_block", pg_func_info->llvm_main_func);
+    llvm::BasicBlock* end_transtypebyref_block =
+        codegen_utils->CreateBasicBlock("end_transtypebyref_block",
+                                        pg_func_info->llvm_main_func);
+
+    irb->CreateCondBr(irb->CreateAnd(llvm_val_changed, llvm_fcinfo_is_not_null),
+                      transtypebyref_block /* true */,
+                      end_transtypebyref_block /* false */);
+    // }} if (DatumGetPointer ...
+    irb->SetInsertPoint(transtypebyref_block);
+    // newVal = datumCopyWithMemManager(transValue, newVal, transtypeByVal,
+    //                  transtypeLen, mem_manager); {{
+    llvm_newval_by_ref = irb->CreateCall(
+            llvm_datumCopyWithMemManager, {
+                irb->CreateLoad(llvm_pergroupstate_transValue_ptr),
+                llvm_newval_by_ref,
+                codegen_utils->GetConstant<bool>(peraggstate->transtypeByVal),
+                codegen_utils->GetConstant<int>(
+                    static_cast<int>(peraggstate->transtypeLen)),
+                llvm_mem_manager_arg});
+    // pergroupstate->transValue = newval
+    irb->CreateStore(llvm_newval_by_ref,
+                     llvm_pergroupstate_transValue_ptr);
+    // }} newVal = datumCopyWithMemManager ...
+    irb->CreateBr(end_transtypebyref_block);
+
+    irb->SetInsertPoint(end_transtypebyref_block);
+  } else {
+    // pergroupstate->transValue = newval
+    irb->CreateStore(codegen_utils->CreateCppTypeToDatumCast(llvm_newval),
+                     llvm_pergroupstate_transValue_ptr);
+  }
 
   // if (!fcinfo->isnull)
   //     *noTransvalue = false;
@@ -244,9 +280,9 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
   llvm::BasicBlock* switch_memory_context_block = codegen_utils->
       CreateBasicBlock("switch_memory_context_block",
                        pg_func_info->llvm_main_func);
-  irb->CreateCondBr(irb->CreateLoad(llvm_pergroupstate_transValueIsNull_ptr),
-                    switch_memory_context_block /*true*/,
-                    set_noTransvalue_block /*false*/);
+  irb->CreateCondBr(llvm_fcinfo_is_not_null,
+                    set_noTransvalue_block /*true*/,
+                    switch_memory_context_block /*false*/);
 
   // set_noTransvalue_block
   // ----------------------

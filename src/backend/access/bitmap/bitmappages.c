@@ -1,13 +1,13 @@
 /*-------------------------------------------------------------------------
  *
- * bitmappage.c
+ * bitmappages.c
  *	  Bitmap index page management code for the bitmap index.
  *
  * Copyright (c) 2006-2008, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL$
+ *	  src/backend/access/bitmap/bitmappages.c
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"

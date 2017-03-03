@@ -1,0 +1,461 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA 1.1 Topic//EN"
+  "http://docs.oasis-open.org/dita/v1.1/OS/dtd/topic.dtd">
+<topic id="topic1" xml:lang="en">
+
+ <title id="ac110126">Preface</title>
+ <body>
+  <p>This guide provides information for system administrators and database superusers responsible
+   for administering a Greenplum Database system.</p>
+  <ul>
+   <li id="ac164243">
+    <p>
+     <xref href="#topic2" type="topic" format="dita"/>
+    </p>
+   </li>
+   <li id="ac164247">
+    <p>
+     <xref href="#topic4" type="topic" format="dita"/>
+    </p>
+   </li>
+   <li id="ac135184">
+    <p>
+     <xref href="#topic7" type="topic" format="dita"/>
+    </p>
+   </li>
+  </ul>
+ </body>
+
+ <topic id="topic2" xml:lang="en">
+
+  <title id="ac132855">About This Guide</title>
+  <body>
+   <p>This guide contains reference documentation for command-line utilities and client programs.
+    This guide is intended for system and database administrators responsible for managing a
+    Greenplum Database system. </p>
+   <p>This guide assumes knowledge of Linux/UNIX system administration, database management systems,
+    database administration, and structured query language (SQL).</p>
+   <p>Because Greenplum Database is based on PostgreSQL 8.2.15, this guide assumes some familiarity
+    with PostgreSQL. Links and cross-references to <xref
+     href="https://www.postgresql.org/docs/8.3/static/index.html" scope="external" format="html"
+      ><ph>PostgreSQL documentation</ph></xref> are provided throughout this guide for features that
+    are similar to those in Greenplum Database.</p>
+  </body>
+ </topic>
+
+ <topic id="topic3" xml:lang="en">
+
+  <title>About the Greenplum Database Documentation Set</title>
+  <body>
+   <p>The Greenplum Database 4.3 server documentation set consists of the following guides.</p>
+   <table id="ac168691">
+    <title>Greenplum Database server documentation set</title>
+    <tgroup cols="2">
+     <colspec colnum="1" colname="col1" colwidth="130pt"/>
+     <colspec colnum="2" colname="col2" colwidth="243pt"/>
+     <thead>
+      <row>
+       <entry colname="col1">
+        <p>Guide Name</p>
+       </entry>
+       <entry colname="col2">
+        <p>Description</p>
+       </entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry colname="col1">
+        <p>Greenplum Database Administrator Guide</p>
+       </entry>
+       <entry colname="col2">
+        <p>Information for administering the Greenplum Database system and managing databases. It
+         covers topics such as Greenplum Database architecture and concepts and everyday system
+         administration tasks such as configuring the server, monitoring system activity, enabling
+         high-availability, backing up and restoring databases, and expanding the system. Database
+         administration topics include configuring access control, creating databases and database
+         objects, loading data into databases, writing queries, managing workloads, and monitoring
+         and troubleshooting performance.</p>
+       </entry>
+      </row>
+      <row>
+       <entry colname="col1">
+        <p>Greenplum Database Reference Guide</p>
+       </entry>
+       <entry colname="col2">
+        <p>Reference information for Greenplum Database systems: SQL commands, system catalogs,
+         environment variables, character set support, datatypes, the Greenplum MapReduce
+         specification, postGIS extension, server parameters, the gp_toolkit administrative schema,
+         and SQL 2008 support.</p>
+       </entry>
+      </row>
+      <row>
+       <entry colname="col1">
+        <p>Greenplum Database Utility Guide</p>
+       </entry>
+       <entry colname="col2">
+        <p>Reference information for command-line utilities, client programs, and Oracle
+         compatibility functions.</p>
+       </entry>
+      </row>
+      <row>
+       <entry colname="col1">
+        <p>Greenplum Database Installation Guide</p>
+       </entry>
+       <entry colname="col2">
+        <p>Information and instructions for installing and initializing a Greenplum Database
+         system.</p>
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
+
+  </body>
+ </topic>
+
+ <topic id="topic4" xml:lang="en">
+
+  <title id="ac164282">Document Conventions</title>
+  <body>
+   <p>The following conventions are used throughout the Greenplum Database documentation to help you
+    identify certain types of information.</p>
+   <ul>
+    <li id="ac164293" otherprops="op-hidden">
+     <p>
+      <xref href="#topic5" type="topic" format="dita"/>
+     </p>
+    </li>
+    <li id="ac164297">
+     <xref href="#topic6" format="dita"/>
+    </li>
+   </ul>
+  </body>
+
+  <topic id="topic5" xml:lang="en" otherprops="op-hidden">
+   <title id="ac164370">Text Conventions</title>
+   <abstract>
+    <table id="ac164299">
+     <title>Text Conventions</title>
+     <tgroup cols="3">
+      <colspec colnum="1" colname="col1" colwidth="110pt"/>
+      <colspec colnum="2" colname="col2" colwidth="165pt"/>
+      <colspec colnum="3" colname="col3" colwidth="174pt"/>
+      <thead>
+       <row>
+        <entry colname="col1">
+         <p>Text Convention</p>
+        </entry>
+        <entry colname="col2">
+         <p>Usage</p>
+        </entry>
+        <entry colname="col3">
+         <p>Examples</p>
+        </entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+        <entry colname="col1">
+         <p>
+          <b>bold</b>
+         </p>
+        </entry>
+        <entry colname="col2">
+         <p>
+          <ph>Button, menu, tab, page, and field names in GUI applications</ph>
+         </p>
+        </entry>
+        <entry colname="col3">
+         <p>Click <b>Cancel</b><ph> to exit the page without saving your changes.</ph></p>
+        </entry>
+       </row>
+       <row>
+        <entry colname="col1">
+         <p>
+          <i>italics</i>
+         </p>
+        </entry>
+        <entry colname="col2">
+         <p>
+          <ph>New terms where they are defined</ph>
+         </p>
+         <p>
+          <ph>Database objects, such as schema, table, or columns names</ph>
+         </p>
+        </entry>
+        <entry colname="col3">
+         <p>The <i>master instance</i> is the <codeph>postgres</codeph> process that accepts client
+          connections.</p>
+         <p>Catalog information for Greenplum Database resides in the <i>pg_catalog</i> schema.</p>
+        </entry>
+       </row>
+       <row>
+        <entry colname="col1">
+         <p>
+          <codeph>monospace</codeph>
+         </p>
+        </entry>
+        <entry colname="col2">
+         <p>
+          <ph>File names and path names</ph>
+         </p>
+         <p>
+          <ph>Programs and executables</ph>
+         </p>
+         <p>
+          <ph>Command names and syntax</ph>
+         </p>
+         <p>
+          <ph>Parameter names</ph>
+         </p>
+        </entry>
+        <entry colname="col3">
+         <p>Edit the <codeph>postgresql.conf</codeph><ph> file.</ph></p>
+         <p>Use <codeph>gpstart</codeph> to start Greenplum Database.</p>
+        </entry>
+       </row>
+       <row>
+        <entry colname="col1">
+         <p>
+          <i>monospace italics</i>
+         </p>
+        </entry>
+        <entry colname="col2">
+         <p>
+          <ph>Variable information within file paths and file names</ph>
+         </p>
+         <p>
+          <ph>Variable information within command syntax</ph>
+         </p>
+        </entry>
+        <entry colname="col3">
+         <p>
+          <codeph>/home/gpadmin/<varname>config_file</varname></codeph>
+         </p>
+         <p>
+          <codeph>COPY <varname>tablename</varname> FROM '<varname>filename</varname>'</codeph>
+         </p>
+        </entry>
+       </row>
+       <row>
+        <entry colname="col1">
+         <p>
+          <b>monospace bold</b>
+         </p>
+        </entry>
+        <entry colname="col2">
+         <p>Used to call attention to a particular part of a command, parameter, or code
+          snippet.</p>
+        </entry>
+        <entry colname="col3">
+         <p>Change the host name, port, and database name in the JDBC connection URL:</p>
+         <p>
+          <codeph>jdbc:postgresql://<b>host</b>:<b>5432</b>/<b>mydb</b></codeph>
+         </p>
+        </entry>
+       </row>
+       <row>
+        <entry colname="col1">
+         <p>
+          <codeph>UPPERCASE</codeph>
+         </p>
+        </entry>
+        <entry colname="col2">
+         <p>
+          <ph>Environment variables</ph>
+         </p>
+         <p>
+          <ph>SQL commands</ph>
+         </p>
+         <p>
+          <ph>Keyboard keys</ph>
+         </p>
+        </entry>
+        <entry colname="col3">
+         <p>Make sure that the Java <codeph>/bin</codeph> directory is in your
+           <codeph>$PATH</codeph>. </p>
+         <p>
+          <codeph>SELECT * FROM <varname>my_table</varname>;</codeph>
+         </p>
+         <p>Press <codeph>CTRL+C</codeph> to escape.</p>
+        </entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </table>
+   </abstract>
+  </topic>
+
+  <topic id="topic6" xml:lang="en">
+
+   <title id="ac164424">Command Syntax Conventions</title>
+   <abstract>
+    <table id="ac164372">
+     <title>Command Syntax Conventions</title>
+     <tgroup cols="3">
+      <colspec colnum="1" colname="col1" colwidth="124pt"/>
+      <colspec colnum="2" colname="col2" colwidth="162pt"/>
+      <colspec colnum="3" colname="col3" colwidth="162pt"/>
+      <thead>
+       <row>
+        <entry colname="col1">
+         <p>Text Convention</p>
+        </entry>
+        <entry colname="col2">
+         <p>Usage</p>
+        </entry>
+        <entry colname="col3">
+         <p>Examples</p>
+        </entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+        <entry colname="col1">
+
+         <p>
+          <codeph>{ }</codeph>
+         </p>
+        </entry>
+        <entry colname="col2">
+
+         <p>Within command syntax, curly braces group related command options. Do not type the curly
+          braces.</p>
+        </entry>
+        <entry colname="col3">
+
+         <p>
+          <codeph>FROM <b>{</b> '<varname>filename</varname>' | STDIN <b>}</b></codeph>
+         </p>
+        </entry>
+       </row>
+       <row>
+        <entry colname="col1">
+
+         <p>
+          <codeph>[ ]</codeph>
+         </p>
+        </entry>
+        <entry colname="col2">
+
+         <p>Within command syntax, square brackets denote optional arguments. Do not type the
+          brackets.</p>
+        </entry>
+        <entry colname="col3">
+
+         <p>
+          <codeph>TRUNCATE <b>[</b> TABLE <b>]</b>
+           <varname>name</varname></codeph>
+         </p>
+        </entry>
+       </row>
+       <row>
+        <entry colname="col1">
+
+         <p>
+          <codeph>...</codeph>
+         </p>
+        </entry>
+        <entry colname="col2">
+
+         <p>Within command syntax, an ellipsis denotes repetition of a command, variable, or option.
+          Do not type the ellipsis.</p>
+        </entry>
+        <entry colname="col3">
+
+         <p>
+          <codeph>DROP TABLE <varname>name</varname> [,<b> ...</b>]</codeph>
+         </p>
+        </entry>
+       </row>
+       <row>
+        <entry colname="col1">
+
+         <p>
+          <codeph>|</codeph>
+         </p>
+        </entry>
+        <entry colname="col2">
+
+         <p>Within command syntax, the pipe symbol denotes an "OR" relationship. Do not type the
+          pipe symbol.</p>
+        </entry>
+        <entry colname="col3">
+
+         <p>
+          <codeph>VACUUM [ FULL <b>|</b> FREEZE ]</codeph>
+         </p>
+        </entry>
+       </row>
+       <row>
+        <entry colname="col1">
+
+         <p>
+          <codeph>$ system_command</codeph>
+         </p>
+
+         <p>
+          <codeph># root_system_command</codeph>
+         </p>
+
+         <p>
+          <codeph>=&gt; gpdb_command</codeph>
+         </p>
+
+         <p>
+          <codeph>=# su_gpdb_command</codeph>
+         </p>
+        </entry>
+        <entry colname="col2">
+
+         <p>Denotes a command prompt - do not type the prompt symbol. <codeph>$</codeph> and
+           <codeph>#</codeph> denote terminal command prompts. <codeph>=&gt;</codeph> and
+           <codeph>=#</codeph> denote Greenplum Database interactive program command prompts
+           (<codeph>psql</codeph> or <codeph>gpssh</codeph>, for example).</p>
+        </entry>
+        <entry colname="col3">
+
+         <p>
+          <codeph><b>$</b> createdb mydatabase</codeph>
+         </p>
+
+         <p>
+          <codeph><b>#</b> chown gpadmin -R /datadir</codeph>
+         </p>
+
+         <p>
+          <codeph><b>=&gt;</b> SELECT * FROM mytable;</codeph>
+         </p>
+
+         <p>
+          <codeph><b>=#</b> SELECT * FROM pg_database;</codeph>
+         </p>
+        </entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </table>
+
+   </abstract>
+  </topic>
+ </topic>
+
+ <topic id="topic7" xml:lang="en">
+
+  <title id="ac164426">Getting Support</title>
+  <body>
+   <p>Pivotal/Greenplum support, product, and licensing information can be obtained as follows.</p>
+  </body>
+
+  <topic id="topic8" xml:lang="en">
+
+   <title>Product information and Technical Support</title>
+   <body>
+    <p>For technical support, documentation, release notes, software updates, or for information
+     about Pivotal products, licensing, and services, go to <xref href="http://pivotal.io/"
+      scope="external" format="html">pivotal.io</xref>.</p>
+   </body>
+  </topic>
+ </topic>
+</topic>

@@ -176,10 +176,11 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 		AlterDatabaseStmt AlterDatabaseSetStmt AlterDomainStmt
 		AlterGroupStmt
 		AlterObjectSchemaStmt AlterOwnerStmt AlterQueueStmt AlterSeqStmt AlterTableStmt
+		AlterExtensionStmt AlterExtensionContentsStmt
 		AlterUserStmt AlterUserSetStmt AlterRoleStmt AlterRoleSetStmt
 		AnalyzeStmt ClosePortalStmt ClusterStmt CommentStmt
 		ConstraintsSetStmt CopyStmt CreateAsStmt CreateCastStmt
-		CreateDomainStmt CreateExternalStmt CreateFileSpaceStmt CreateGroupStmt
+		CreateDomainStmt CreateExtensionStmt CreateExternalStmt CreateFileSpaceStmt CreateGroupStmt
 		CreateOpClassStmt
 		CreateOpFamilyStmt AlterOpFamilyStmt CreatePLangStmt
 		CreateQueueStmt CreateSchemaStmt CreateSeqStmt CreateStmt 
@@ -226,10 +227,12 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 %type <list>	createdb_opt_list alterdb_opt_list copy_opt_list
 				ext_on_clause_list format_opt format_opt_list format_def_list transaction_mode_list
-				ext_opt_encoding_list
+				ext_options ext_options_opt ext_options_list
+				ext_opt_encoding_list create_extension_opt_list alter_extension_opt_list
 %type <defelt>	createdb_opt_item alterdb_opt_item copy_opt_item
 				ext_on_clause_item format_opt_item format_def_item transaction_mode_item
-				ext_opt_encoding_item
+				ext_options_item
+				ext_opt_encoding_item create_extension_opt_item alter_extension_opt_item
 
 %type <ival>	opt_lock lock_type cast_context
 %type <boolean>	opt_force opt_or_replace
@@ -285,7 +288,6 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 				cdb_string_list
 				opt_column_list columnList opt_name_list
 				exttab_auth_list keyvalue_list
-				opt_inherited_column_list
 				sort_clause opt_sort_clause sortby_list index_params
 				name_list from_clause from_list opt_array_bounds
 				qualified_name_list any_name any_name_list
@@ -498,8 +500,8 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 	DEFERRABLE DEFERRED DEFINER DELETE_P DELIMITER DELIMITERS DESC
 	DICTIONARY DISABLE_P DISCARD DISTINCT DO DOCUMENT_P DOMAIN_P DOUBLE_P DROP
 
-	EACH ELSE ENABLE_P ENCODING ENCRYPTED END_P ENUM_P ESCAPE EXCEPT EXCLUDING
-	EXCLUSIVE EXECUTE EXISTS EXPLAIN EXTERNAL EXTRACT
+	EACH ELSE ENABLE_P ENCODING ENCRYPTED END_P ENUM_P ESCAPE EXCEPT
+    EXCLUDING EXCLUSIVE EXECUTE EXISTS EXPLAIN EXTENSION EXTERNAL EXTRACT
 
 	FALSE_P FAMILY FETCH FIRST_P FLOAT_P FOR FORCE FOREIGN FORWARD
 	FREEZE FROM FULL FUNCTION
@@ -527,7 +529,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 	NOCREATEROLE NOCREATEUSER NOINHERIT NOLOGIN_P NONE NOSUPERUSER
 	NOT NOTHING NOTIFY NOTNULL NOWAIT NULL_P NULLIF NULLS_P NUMERIC
 
-	OBJECT_P OF OFF OFFSET OIDS OLD ON ONLY OPERATOR OPTION OR
+	OBJECT_P OF OFF OFFSET OIDS OLD ON ONLY OPERATOR OPTION OPTIONS OR
 	ORDER OUT_P OUTER_P OVERLAPS OVERLAY OWNED OWNER
 
 	PARSER PARTIAL PASSWORD PLACING PLANS POSITION
@@ -808,6 +810,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc OF
 			%nonassoc OIDS
 			%nonassoc OPTION
+			%nonassoc OPTIONS
 			%nonassoc OTHERS
 			%nonassoc OVER
 			%nonassoc OVERCOMMIT
@@ -1017,6 +1020,8 @@ stmt :
 			AlterDatabaseStmt
 			| AlterDatabaseSetStmt
 			| AlterDomainStmt
+			| AlterExtensionStmt
+			| AlterExtensionContentsStmt
 			| AlterFunctionStmt
 			| AlterGroupStmt
 			| AlterObjectSchemaStmt
@@ -1043,6 +1048,7 @@ stmt :
 			| CreateCastStmt
 			| CreateConversionStmt
 			| CreateDomainStmt
+			| CreateExtensionStmt
 			| CreateExternalStmt
 			| CreateFileSpaceStmt
 			| CreateFunctionStmt
@@ -2340,12 +2346,12 @@ alter_table_cmd:
 					n->name = $3;
 					$$ = (Node *)n;
 				}
-			/* ALTER TABLE <name> INHERIT <parent> [( column_list )] */
-			| INHERIT qualified_name opt_inherited_column_list
+			/* ALTER TABLE <name> INHERIT <parent> */
+			| INHERIT qualified_name
 				{
 					AlterTableCmd *n = makeNode(AlterTableCmd);
 					n->subtype = AT_AddInherit;
-					n->def = (Node *)list_make2($2, $3);
+					n->def = (Node *) $2;
 					$$ = (Node *)n;
 				}
 			/* ALTER TABLE <name> NO INHERIT <parent> */
@@ -3784,21 +3790,6 @@ opt_column_list:
 			| /*EMPTY*/								{ $$ = NIL; }
 		;
 		
-opt_inherited_column_list:
-			'('
-				{
-					/* Allowed only when
-					 * gp_enable_alter_table_inherit_cols is true 
-					 */
-					if (!gp_enable_alter_table_inherit_cols)
-					{
-						yyerror("syntax error");
-					}
-				}
-				columnList ')'						{ $$ = $3; }
-			| /*EMPTY*/								{ $$ = NIL; }
-		;
-
 columnList:
 			columnElem								{ $$ = list_make1($1); }
 			| columnList ',' columnElem				{ $$ = lappend($1, $3); }
@@ -4600,7 +4591,7 @@ opt_with_data:
  *****************************************************************************/
 	
 CreateExternalStmt:	CREATE OptWritable EXTERNAL OptWeb OptTemp TABLE qualified_name '(' OptExtTableElementList ')' 
-					ExtTypedesc FORMAT Sconst format_opt ext_opt_encoding_list OptSingleRowErrorHandling OptDistributedBy
+					ExtTypedesc FORMAT Sconst format_opt ext_options_opt ext_opt_encoding_list OptSingleRowErrorHandling OptDistributedBy
 						{
 							CreateExternalStmt *n = makeNode(CreateExternalStmt);
 							n->iswritable = $2;
@@ -4611,9 +4602,10 @@ CreateExternalStmt:	CREATE OptWritable EXTERNAL OptWeb OptTemp TABLE qualified_n
 							n->exttypedesc = (ExtTableTypeDesc *) $11;
 							n->format = $13;
 							n->formatOpts = $14;
-							n->encoding = $15;
-							n->sreh = $16;
-							n->distributedBy = $17;
+							n->extOptions = $15;
+							n->encoding = $16;
+							n->sreh = $17;
+							n->distributedBy = $18;
 							n->policy = 0;
 							
 							/* various syntax checks for EXECUTE external table */
@@ -4660,12 +4652,12 @@ OptWeb:		WEB						{ $$ = TRUE; }
 			;
 
 ExtTypedesc:
-			LOCATION '(' cdb_string_list ')'		
+			LOCATION '(' cdb_string_list ')' ext_on_clause_list
 			{
 				ExtTableTypeDesc *n = makeNode(ExtTableTypeDesc);
 				n->exttabletype = EXTTBL_TYPE_LOCATION;
 				n->location_list = $3; 
-				n->on_clause = NIL;
+				n->on_clause = $5;
 				n->command_string = NULL;
 				$$ = (Node *)n;
 	
@@ -4793,6 +4785,34 @@ format_opt_item:
 			| NEWLINE opt_as Sconst
 			{
 				$$ = makeDefElem("newline", (Node *)makeString($3));
+			}
+			;
+
+ext_options_opt:
+			OPTIONS ext_options					{ $$ = $2; }
+			| /*EMPTY*/                         { $$ = NIL; }
+			;
+
+ext_options:
+			'(' ext_options_list ')'           { $$ = $2; }
+			| '(' ')'                           { $$ = NIL; }
+			;
+
+ext_options_list:
+			ext_options_item
+			{
+				$$ = list_make1($1);
+			}
+			| ext_options_list ',' ext_options_item
+			{
+				$$ = lappend($1, $3);
+			}
+			;
+
+ext_options_item:
+			ColLabel Sconst
+			{
+				$$ = makeDefElem($1, (Node *)makeString($2));
 			}
 			;
 
@@ -5132,6 +5152,261 @@ CreateTableSpaceStmt: CREATE TABLESPACE name OptOwner FILESPACE name
 					n->owner = $4;
 					n->filespacename = $6;
 					$$ = (Node *) n;
+				}
+		;
+
+/*****************************************************************************
+ *
+ *		QUERY:
+ *             CREATE EXTENSION extension
+ *             [ WITH ] [ SCHEMA schema ] [ VERSION version ] [ FROM oldversion ]
+ *
+ *****************************************************************************/
+
+CreateExtensionStmt: CREATE EXTENSION name opt_with create_extension_opt_list
+				{
+					CreateExtensionStmt *n = makeNode(CreateExtensionStmt);
+					n->extname = $3;
+					n->if_not_exists = false;
+					n->options = $5;
+					$$ = (Node *) n;
+				}
+				| CREATE EXTENSION IF_P NOT EXISTS name opt_with create_extension_opt_list
+				{
+					CreateExtensionStmt *n = makeNode(CreateExtensionStmt);
+					n->extname = $6;
+					n->if_not_exists = true;
+					n->options = $8;
+					$$ = (Node *) n;
+				}
+		;
+
+create_extension_opt_list:
+			create_extension_opt_list create_extension_opt_item
+				{ $$ = lappend($1, $2); }
+			| /* EMPTY */
+				{ $$ = NIL; }
+		;
+
+create_extension_opt_item:
+			SCHEMA name
+				{
+					$$ = makeDefElem("schema", (Node *)makeString($2));
+				}
+			| VERSION_P Sconst
+				{
+					$$ = makeDefElem("new_version", (Node *)makeString($2));
+				}
+			| FROM Sconst
+				{
+					$$ = makeDefElem("old_version", (Node *)makeString($2));
+				}
+		;
+
+
+/*****************************************************************************
+ *
+ * ALTER EXTENSION name UPDATE [ TO version ]
+ *
+ *****************************************************************************/
+
+AlterExtensionStmt: ALTER EXTENSION name UPDATE alter_extension_opt_list
+				{
+					AlterExtensionStmt *n = makeNode(AlterExtensionStmt);
+					n->extname = $3;
+					n->options = $5;
+					$$ = (Node *) n;
+				}
+		;
+
+alter_extension_opt_list:
+			alter_extension_opt_list alter_extension_opt_item
+				{ $$ = lappend($1, $2); }
+			| /* EMPTY */
+				{ $$ = NIL; }
+		;
+
+alter_extension_opt_item:
+			TO Sconst
+				{
+					$$ = makeDefElem("new_version", (Node *)makeString($2));
+				}
+		;
+
+/*****************************************************************************
+ *
+ * ALTER EXTENSION name ADD/DROP object-identifier
+ *
+ *****************************************************************************/
+
+AlterExtensionContentsStmt:
+			ALTER EXTENSION name add_drop AGGREGATE func_name aggr_args
+				{
+					AlterExtensionContentsStmt *n = makeNode(AlterExtensionContentsStmt);
+					n->extname = $3;
+					n->action = $4;
+					n->objtype = OBJECT_AGGREGATE;
+					n->objname = $6;
+					n->objargs = $7;
+					$$ = (Node *)n;
+				}
+			| ALTER EXTENSION name add_drop CAST '(' Typename AS Typename ')'
+				{
+					AlterExtensionContentsStmt *n = makeNode(AlterExtensionContentsStmt);
+					n->extname = $3;
+					n->action = $4;
+					n->objtype = OBJECT_CAST;
+					n->objname = list_make1($7);
+					n->objargs = list_make1($9);
+					$$ = (Node *) n;
+				}
+			| ALTER EXTENSION name add_drop CONVERSION_P any_name
+				{
+					AlterExtensionContentsStmt *n = makeNode(AlterExtensionContentsStmt);
+					n->extname = $3;
+					n->action = $4;
+					n->objtype = OBJECT_CONVERSION;
+					n->objname = $6;
+					$$ = (Node *)n;
+				}
+			| ALTER EXTENSION name add_drop DOMAIN_P any_name
+				{
+					AlterExtensionContentsStmt *n = makeNode(AlterExtensionContentsStmt);
+					n->extname = $3;
+					n->action = $4;
+					n->objtype = OBJECT_DOMAIN;
+					n->objname = $6;
+					$$ = (Node *)n;
+				}
+			| ALTER EXTENSION name add_drop FUNCTION function_with_argtypes
+				{
+					AlterExtensionContentsStmt *n = makeNode(AlterExtensionContentsStmt);
+					n->extname = $3;
+					n->action = $4;
+					n->objtype = OBJECT_FUNCTION;
+					n->objname = $6->funcname;
+					n->objargs = $6->funcargs;
+					$$ = (Node *)n;
+				}
+			| ALTER EXTENSION name add_drop opt_procedural LANGUAGE name
+				{
+					AlterExtensionContentsStmt *n = makeNode(AlterExtensionContentsStmt);
+					n->extname = $3;
+					n->action = $4;
+					n->objtype = OBJECT_LANGUAGE;
+					n->objname = list_make1(makeString($7));
+					$$ = (Node *)n;
+				}
+			| ALTER EXTENSION name add_drop OPERATOR any_operator oper_argtypes
+				{
+					AlterExtensionContentsStmt *n = makeNode(AlterExtensionContentsStmt);
+					n->extname = $3;
+					n->action = $4;
+					n->objtype = OBJECT_OPERATOR;
+					n->objname = $6;
+					n->objargs = $7;
+					$$ = (Node *)n;
+				}
+			| ALTER EXTENSION name add_drop OPERATOR CLASS any_name USING access_method
+				{
+					AlterExtensionContentsStmt *n = makeNode(AlterExtensionContentsStmt);
+					n->extname = $3;
+					n->action = $4;
+					n->objtype = OBJECT_OPCLASS;
+					n->objname = $7;
+					n->objargs = list_make1(makeString($9));
+					$$ = (Node *)n;
+				}
+			| ALTER EXTENSION name add_drop OPERATOR FAMILY any_name USING access_method
+				{
+					AlterExtensionContentsStmt *n = makeNode(AlterExtensionContentsStmt);
+					n->extname = $3;
+					n->action = $4;
+					n->objtype = OBJECT_OPFAMILY;
+					n->objname = $7;
+					n->objargs = list_make1(makeString($9));
+					$$ = (Node *)n;
+				}
+			| ALTER EXTENSION name add_drop SCHEMA name
+				{
+					AlterExtensionContentsStmt *n = makeNode(AlterExtensionContentsStmt);
+					n->extname = $3;
+					n->action = $4;
+					n->objtype = OBJECT_SCHEMA;
+					n->objname = list_make1(makeString($6));
+					$$ = (Node *)n;
+				}
+			| ALTER EXTENSION name add_drop TABLE any_name
+				{
+					AlterExtensionContentsStmt *n = makeNode(AlterExtensionContentsStmt);
+					n->extname = $3;
+					n->action = $4;
+					n->objtype = OBJECT_TABLE;
+					n->objname = $6;
+					$$ = (Node *)n;
+				}
+			| ALTER EXTENSION name add_drop TEXT_P SEARCH PARSER any_name
+				{
+					AlterExtensionContentsStmt *n = makeNode(AlterExtensionContentsStmt);
+					n->extname = $3;
+					n->action = $4;
+					n->objtype = OBJECT_TSPARSER;
+					n->objname = $8;
+					$$ = (Node *)n;
+				}
+			| ALTER EXTENSION name add_drop TEXT_P SEARCH DICTIONARY any_name
+				{
+					AlterExtensionContentsStmt *n = makeNode(AlterExtensionContentsStmt);
+					n->extname = $3;
+					n->action = $4;
+					n->objtype = OBJECT_TSDICTIONARY;
+					n->objname = $8;
+					$$ = (Node *)n;
+				}
+			| ALTER EXTENSION name add_drop TEXT_P SEARCH TEMPLATE any_name
+				{
+					AlterExtensionContentsStmt *n = makeNode(AlterExtensionContentsStmt);
+					n->extname = $3;
+					n->action = $4;
+					n->objtype = OBJECT_TSTEMPLATE;
+					n->objname = $8;
+					$$ = (Node *)n;
+				}
+			| ALTER EXTENSION name add_drop TEXT_P SEARCH CONFIGURATION any_name
+				{
+					AlterExtensionContentsStmt *n = makeNode(AlterExtensionContentsStmt);
+					n->extname = $3;
+					n->action = $4;
+					n->objtype = OBJECT_TSCONFIGURATION;
+					n->objname = $8;
+					$$ = (Node *)n;
+				}
+			| ALTER EXTENSION name add_drop SEQUENCE any_name
+				{
+					AlterExtensionContentsStmt *n = makeNode(AlterExtensionContentsStmt);
+					n->extname = $3;
+					n->action = $4;
+					n->objtype = OBJECT_SEQUENCE;
+					n->objname = $6;
+					$$ = (Node *)n;
+				}
+			| ALTER EXTENSION name add_drop VIEW any_name
+				{
+					AlterExtensionContentsStmt *n = makeNode(AlterExtensionContentsStmt);
+					n->extname = $3;
+					n->action = $4;
+					n->objtype = OBJECT_VIEW;
+					n->objname = $6;
+					$$ = (Node *)n;
+				}
+			| ALTER EXTENSION name add_drop TYPE_P any_name
+				{
+					AlterExtensionContentsStmt *n = makeNode(AlterExtensionContentsStmt);
+					n->extname = $3;
+					n->action = $4;
+					n->objtype = OBJECT_TYPE;
+					n->objname = $6;
+					$$ = (Node *)n;
 				}
 		;
 
@@ -5860,6 +6135,7 @@ drop_type:	TABLE									{ $$ = OBJECT_TABLE; }
 			| DOMAIN_P								{ $$ = OBJECT_DOMAIN; }
 			| CONVERSION_P							{ $$ = OBJECT_CONVERSION; }
 			| SCHEMA								{ $$ = OBJECT_SCHEMA; }
+			| EXTENSION								{ $$ = OBJECT_EXTENSION; }
 			| TEXT_P SEARCH PARSER					{ $$ = OBJECT_TSPARSER; }
 			| TEXT_P SEARCH DICTIONARY				{ $$ = OBJECT_TSDICTIONARY; }
 			| TEXT_P SEARCH TEMPLATE				{ $$ = OBJECT_TSTEMPLATE; }
@@ -5907,9 +6183,9 @@ TruncateStmt:
  *	The COMMENT ON statement can take different forms based upon the type of
  *	the object associated with the comment. The form of the statement is:
  *
- *	COMMENT ON [ [ DATABASE | DOMAIN | INDEX | SEQUENCE | TABLE | TYPE | VIEW |
+ *	COMMENT ON [ [ DATABASE | DOMAIN | EXTENSION | INDEX | SEQUENCE | TABLE | TYPE | VIEW |
  *				   CONVERSION | LANGUAGE | OPERATOR CLASS | LARGE OBJECT |
- *				   CAST | COLUMN | SCHEMA | TABLESPACE | ROLE |
+ *				   CAST | COLUMN | SCHEMA | TABLESPACE | EXTENSION | ROLE |
  *				   TEXT SEARCH PARSER | TEXT SEARCH DICTIONARY |
  *				   TEXT SEARCH TEMPLATE |
  *				   TEXT SEARCH CONFIGURATION ] <objname> |
@@ -6088,6 +6364,7 @@ comment_type:
 			| VIEW								{ $$ = OBJECT_VIEW; }
 			| CONVERSION_P						{ $$ = OBJECT_CONVERSION; }
 			| TABLESPACE						{ $$ = OBJECT_TABLESPACE; }
+			| EXTENSION							{ $$ = OBJECT_EXTENSION; }
 			| ROLE								{ $$ = OBJECT_ROLE; }
 			| FILESPACE                         { $$ = OBJECT_FILESPACE; }
 			| RESOURCE QUEUE                    { $$ = OBJECT_RESQUEUE; }
@@ -7477,6 +7754,14 @@ AlterObjectSchemaStmt:
 					n->newschema = $6;
 					$$ = (Node *)n;
 				}
+			| ALTER EXTENSION any_name SET SCHEMA name
+				{
+					AlterObjectSchemaStmt *n = makeNode(AlterObjectSchemaStmt);
+					n->objectType = OBJECT_EXTENSION;
+					n->object = $3;
+					n->newschema = $6;
+					$$ = (Node *)n;
+				}
 			| ALTER FUNCTION function_with_argtypes SET SCHEMA name
 				{
 					AlterObjectSchemaStmt *n = makeNode(AlterObjectSchemaStmt);
@@ -8648,7 +8933,15 @@ DeallocateStmt: DEALLOCATE name
 
 cdb_string_list:
 			cdb_string							{ $$ = list_make1($1); }  
-			| cdb_string_list ',' cdb_string	{ $$ = lappend($1, $3); }
+			| cdb_string_list ',' cdb_string
+				{
+					if (list_member($1, $3))
+						ereport(ERROR,
+								(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+								 errmsg("duplicate location uri"),
+								 scanner_errposition(@3)));
+					$$ = lappend($1, $3);
+				}
 		;
 
 
@@ -12676,6 +12969,7 @@ unreserved_keyword:
 			| EXCLUSIVE
 			| EXECUTE
 			| EXPLAIN
+			| EXTENSION
 			| EXTERNAL
 			| FAMILY
 			| FIELDS
@@ -12761,6 +13055,7 @@ unreserved_keyword:
 			| OIDS
 			| OPERATOR
 			| OPTION
+			| OPTIONS
 			| ORDERED
 			| OTHERS
 			| OVER
@@ -13048,6 +13343,7 @@ PartitionIdentKeyword: ABORT_P
 			| OIDS
 			| OPERATOR
 			| OPTION
+			| OPTIONS
 			| OTHERS
 			| OVERCOMMIT
 			| OWNED

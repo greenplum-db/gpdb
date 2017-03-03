@@ -19,8 +19,6 @@
 #include "gpopt/translate/CTranslatorRelcacheToDXL.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 
-#include "gpos/io/COstreamString.h"
-
 #include "naucrates/dxl/CDXLUtils.h"
 
 #include "naucrates/exception.h"

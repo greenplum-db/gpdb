@@ -192,7 +192,7 @@ DROP TABLE copy_regression_out1;
 -- Zero column table
 -- ######################################################
 CREATE TABLE copy_regression_nocol();
-NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 -- copy in and out of zero column table..
 COPY copy_regression_nocol from stdin;
 COPY copy_regression_nocol from stdin;

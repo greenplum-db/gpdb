@@ -29,6 +29,7 @@ static const char *modulename = gettext_noop("sorter");
 static const int oldObjectTypePriority[] =
 {
 	1,							/* DO_NAMESPACE */
+	1,							/* DO_EXTENSION */
 	2,							/* DO_TYPE */
 	2,							/* DO_SHELL_TYPE */
 	2,							/* DO_FUNC */
@@ -64,6 +65,7 @@ static const int oldObjectTypePriority[] =
 static const int newObjectTypePriority[] =
 {
 	1,							/* DO_NAMESPACE */
+	2,							/* DO_EXTENSION */
 	3,							/* DO_TYPE */
 	3,							/* DO_SHELL_TYPE */
 	4,							/* DO_FUNC */
@@ -980,6 +982,11 @@ describeDumpableObject(DumpableObject *obj, char *buf, int bufsize)
 					 "SCHEMA %s  (ID %d OID %u)",
 					 obj->name, obj->dumpId, obj->catId.oid);
 			return;
+		case DO_EXTENSION:
+			snprintf(buf, bufsize,
+					 "EXTENSION %s  (ID %d OID %u)",
+					 obj->name, obj->dumpId, obj->catId.oid);
+			return;
 		case DO_TYPE:
 			snprintf(buf, bufsize,
 					 "TYPE %s  (ID %d OID %u)",
@@ -1118,6 +1125,8 @@ describeDumpableObject(DumpableObject *obj, char *buf, int bufsize)
 			snprintf(buf, bufsize,
 					 "BLOB COMMENTS  (ID %d)",
 					 obj->dumpId);
+			return;
+		case DO_TYPE_CACHE:
 			return;
 	}
 	/* shouldn't get here */

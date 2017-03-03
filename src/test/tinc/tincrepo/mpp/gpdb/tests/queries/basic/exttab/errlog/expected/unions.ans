@@ -57,7 +57,7 @@ SELECT * FROM gp_read_error_log('exttab_union_2')
 DROP TABLE IF EXISTS exttab_union_insert_1;
 DROP TABLE
 CREATE TABLE exttab_union_insert_1 (LIKE exttab_union_1);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 SELECT gp_truncate_error_log('exttab_union_1');
  gp_truncate_error_log 

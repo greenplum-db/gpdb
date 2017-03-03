@@ -1,5 +1,6 @@
 top_builddir = ..
 include $(top_builddir)/src/Makefile.global
+include $(top_builddir)/gpMgmt/Makefile.behave
 
 #---------------------------------------------------------------------
 # Set Version
@@ -91,7 +92,8 @@ install: generate_greenplum_path_file
 #	rm -f $(prefix)/bin/gppkg
 #endif
 
-	cp -rp sbin/* $(DESTDIR)$(prefix)/sbin/.
+	$(MAKE) -C sbin $@ prefix=$(DESTDIR)$(prefix)
+
 	#cp -p extensions/gpfdist/gpfdist$(EXE_EXT) $(DESTDIR)$(prefix)/bin/
 	cp $(top_builddir)/src/test/regress/*.pl $(DESTDIR)$(prefix)/bin
 	cp $(top_builddir)/src/test/regress/*.pm $(DESTDIR)$(prefix)/bin
@@ -117,3 +119,7 @@ install: generate_greenplum_path_file
 	rm -f $(DESTDIR)$(prefix)/bin/gpchecksubnetcfg
 	rm -rf $(DESTDIR)$(prefix)/bin/gppylib
 	find $(DESTDIR)$(prefix)/lib/python/gppylib -name test -type d | xargs rm -rf
+
+clean:
+	@$(MAKE) -C bin $@
+	@$(MAKE) -C sbin $@

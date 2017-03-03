@@ -20,6 +20,16 @@ insert into rle_runtest select 1, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' FROM generate
 select * from rle_runtest;
 drop table rle_runtest;
 
+-- This tests the delta compression's delta computation arithmetic. The bigint
+-- column is used for the same and values inserted are INT64_MIN to INT64_MAX
+-- to check extreme overflow case.
+CREATE TABLE rle_overflowtest (a INT, b BIGINT, c char) WITH (appendonly=true, compresstype=rle_type, orientation=column, compresslevel=1);
+INSERT INTO rle_overflowtest VALUES (1,9223372036854775807,'a'), (1,-9,'b');
+INSERT INTO rle_overflowtest VALUES (1,-9,'c'), (1,9223372036854775807,'d');
+INSERT INTO rle_overflowtest VALUES (1,-9223372036854775808,'e'), (1,9223372036854775807,'f');
+INSERT INTO rle_overflowtest VALUES (1,9223372036854775807,'g'), (1,-9223372036854775808,'h');
+SELECT * FROM rle_overflowtest;
+
 DROP TABLE if exists CO_1_create_table_storage_directive_RLE_TYPE_8192_1;
 
 --
@@ -2292,3 +2302,2507 @@ COPY rle_co_block_boundary (distcol, col1) FROM stdin NULL AS 'NULL';
 1	510226581578439
 1	510226576578439
 \.
+
+-- Another test on RLE block boundary
+CREATE TABLE rle_block_boundary (a int, b text) with (appendonly=true, orientation=column, compresstype=rle_type);
+
+COPY rle_block_boundary(b) FROM STDIN;
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+nnnnnnnnnnnnnnnnnn
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+nnnnnnnnnnnnn
+Inner Suburbs
+Inner Suburbs
+Middleburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Country Comfort
+Landed Gentry
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+n
+Country Comfort
+Midtown Mix
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+n
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Elite Suburbs
+Landed Gentry
+Second City Society
+Micro-City Blues
+Elite Suburbs
+Elite Suburbs
+Inner Suburbs
+The Affluentials
+Urban Cores
+Midtown Mix
+Second City Society
+City Centers
+Middleburbs
+Micro-City Blues
+Middleburbs
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Elite Suburbs
+Middleburbs
+Inner Suburbs
+Middle America
+Landed Gentry
+Second City Society
+Second City Society
+The Affluentials
+The Affluentials
+Middle America
+n
+Elite Suburbs
+Elite Suburbs
+The Affluentials
+The Affluentials
+Midtown Mix
+Midtown Mix
+Country Comfort
+Landed Gentry
+Landed Gentry
+n
+Inner Suburbs
+Inner Suburbs
+Middleburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfortountry Comfort
+Landed Gentry
+Landed Gentry
+n
+Inner Suburbs
+Middleburbs
+Inner Suburbs
+Landed Gentry
+Rustic Living
+Second City Society
+Urban Cores
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+Country Comfort
+Second City Society
+City Centers
+Middleburbs
+Middleburbs
+Micro-City Blues
+Elite Suburbs
+Urban Uptown
+Landed Gentry
+The Affluentials
+Eountry Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+The Affluentials
+n
+n
+Country Comfort
+Midtown Mix
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+The Affluentials
+n
+n
+Country Comfort
+Country Comfort
+The Affluentials
+The Affluentials
+n
+n
+Country Comfort
+Country Comfort
+Midtown Mix
+Landed Gentry
+Country Comfort
+The Affluentials
+The Affluentials
+n
+n
+Country Comfort
+Country Comfort
+The Affluentials
+The Affluentials
+n
+Midto
+Midto
+Country Comfort
+Landed Gentry
+Country Comfort
+The Affluentials
+The Affluentials
+Country Comfort
+Country Comfort
+The Affluentials
+The Affluentials
+Countryyyyyyyyyyyyyy
+Midtown Mixxxxxxxxxxxxxxx
+Landed Gentryyyyyyyyyyyyyyy
+Country Comfort
+Affluen
+Affluen
+Affluen
+\N
+The Affluentials
+\.
+
+SELECT COUNT(*) FROM rle_block_boundary;
+
+--
+-- Bulk dense content header with RLE compression
+begin;
+create table bulk_rle_tab (a int) with (appendonly=true, orientation=column, compresstype='rle_type', compresslevel=3, checksum=true);
+insert into bulk_rle_tab select i/50 from generate_series(1, 1000000)i;
+insert into bulk_rle_tab values (1),(1),(1),(1),(1),(1),(2),(2),(2),(2),(2),(2),(2),(33),(3),(3),(3),(1),(8),(19),
+    (20),(31),(32),(33),(34),(5),(5),(5),(5),(5),(6),(6),(6),(6),(6),(6),(7),(7),(7),(7),(7),(7),(7),(7),
+    (null),(7),(7),(7),(null),(8),(8),(8),(8),(8),(8),(4),(4),(null),(4),(17),(17),(17),(null),(null),(null);
+alter table bulk_rle_tab add column b varchar default 'abc' encoding(blocksize=8192);
+insert into bulk_rle_tab values (-1, 'xyz');
+update bulk_rle_tab set b = 'green' where a = -1;
+commit;
+--
+-- Small content header with RLE header inside 
+begin;
+create table sml_rle_hdr (a int) with (appendonly=true, orientation=column, compresstype='rle_type');
+insert into sml_rle_hdr values (1),(1),(1),(1),(1),(1),(2),(2),(2),(2),(2),(2),(2),(33),(3),(3),(3),(1),(8),(19),
+    (20),(31),(32),(33),(34),(5),(5),(5),(5),(5),(6),(6),(6),(6),(6),(6),(7),(7),(7),(7),(7),(7),(7),(7),
+    (null),(7),(7),(7),(null),(8),(8),(8),(8),(8),(8),(4),(4),(null),(4),(17),(17),(17),(null),(null),(null);
+alter table sml_rle_hdr add column b float default random();
+-- update / insert / select after this operation
+insert into sml_rle_hdr values (-1,-1.1);
+set client_min_messages=warning;
+update sml_rle_hdr set b = b + 10 where a = -1;
+commit;

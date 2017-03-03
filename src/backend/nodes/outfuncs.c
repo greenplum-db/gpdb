@@ -297,6 +297,7 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_BOOL_FIELD(transientPlan);
 	WRITE_NODE_FIELD(planTree);
 	WRITE_NODE_FIELD(rtable);
+	WRITE_NODE_FIELD(resultRelations);
 	WRITE_NODE_FIELD(utilityStmt);
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_NODE_FIELD(subplans);
@@ -893,8 +894,6 @@ _outSort(StringInfo str, Sort *node)
 		appendStringInfo(str, " %s", booltostr(node->nullsFirst[i]));
 
 	/* CDB */
-	WRITE_NODE_FIELD(limitOffset);
-	WRITE_NODE_FIELD(limitCount);
     WRITE_BOOL_FIELD(noduplicates);
 
 	WRITE_ENUM_FIELD(share_type, ShareType);
@@ -2018,7 +2017,8 @@ _outRelOptInfo(StringInfo str, RelOptInfo *node)
 	WRITE_UINT_FIELD(pages);
 	WRITE_FLOAT_FIELD(tuples, "%.0f");
 	WRITE_NODE_FIELD(subplan);
-	WRITE_NODE_FIELD(locationlist);
+	WRITE_NODE_FIELD(urilocationlist);
+	WRITE_NODE_FIELD(execlocationlist);
 	WRITE_STRING_FIELD(execcommand);
 	WRITE_CHAR_FIELD(fmttype);
 	WRITE_STRING_FIELD(fmtopts);
@@ -2322,6 +2322,7 @@ _outCreateExternalStmt(StringInfo str, CreateExternalStmt *node)
 	WRITE_BOOL_FIELD(isweb);
 	WRITE_BOOL_FIELD(iswritable);
 	WRITE_NODE_FIELD(sreh);
+	WRITE_NODE_FIELD(extOptions);
 	WRITE_NODE_FIELD(encoding);
 	WRITE_NODE_FIELD(distributedBy);
 }
@@ -4184,6 +4185,27 @@ _outAlterTypeStmt(StringInfo str, AlterTypeStmt *node)
 }
 
 static void
+_outAlterExtensionStmt(StringInfo str, AlterExtensionStmt *node)
+{
+	WRITE_NODE_TYPE("ALTEREXTENSIONSTMT");
+
+	WRITE_STRING_FIELD(extname);
+	WRITE_NODE_FIELD(options);
+}
+
+static void
+_outAlterExtensionContentsStmt(StringInfo str, AlterExtensionContentsStmt *node)
+{
+	WRITE_NODE_TYPE("ALTEREXTENSIONCONTENTSSTMT");
+
+	WRITE_STRING_FIELD(extname);
+	WRITE_INT_FIELD(action);
+	WRITE_ENUM_FIELD(objtype, ObjectType);
+	WRITE_NODE_FIELD(objname);
+	WRITE_NODE_FIELD(objargs);
+}
+
+static void
 _outAlterTSConfigurationStmt(StringInfo str, AlterTSConfigurationStmt *node)
 {
 	WRITE_NODE_TYPE("ALTERTSCONFIGURATIONSTMT");
@@ -5090,6 +5112,12 @@ _outNode(StringInfo str, void *obj)
 
 			case T_AlterTypeStmt:
 				_outAlterTypeStmt(str, obj);
+				break;
+			case T_AlterExtensionStmt:
+				_outAlterExtensionStmt(str, obj);
+				break;
+			case T_AlterExtensionContentsStmt:
+				_outAlterExtensionContentsStmt(str, obj);
 				break;
 			case T_TupleDescNode:
 				_outTupleDescNode(str, obj);

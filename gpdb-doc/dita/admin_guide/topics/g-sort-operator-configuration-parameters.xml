@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic25">
+   <title>Sort Operator Configuration Parameters</title>
+   <body>
+      <ul>
+         <li id="kh158154">
+            <codeph>gp_enable_sort_distinct</codeph>
+         </li>
+         <li id="kh158155">
+            <codeph>gp_enable_sort_limit</codeph>
+         </li>
+      </ul>
+   </body>
+</topic>

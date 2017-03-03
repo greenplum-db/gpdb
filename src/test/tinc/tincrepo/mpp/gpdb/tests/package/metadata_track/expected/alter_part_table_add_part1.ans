@@ -17,7 +17,7 @@ psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_part_tbl
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_part_tbl_add_1_prt_2_2_prt_sp2" for table "mdt_part_tbl_add_1_prt_2"
 CREATE TABLE
 alter table mdt_part_tbl_add add partition p1 end (11);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_part_tbl_add_1_prt_p1" for table "mdt_part_tbl_add"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_part_tbl_add_1_prt_p1_2_prt_sp1" for table "mdt_part_tbl_add_1_prt_p1"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_part_tbl_add_1_prt_p1_2_prt_sp2" for table "mdt_part_tbl_add_1_prt_p1"

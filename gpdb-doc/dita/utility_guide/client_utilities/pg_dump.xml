@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="os137116">pg_dump</title>
+  <body>
+    <p id="client_util_desc">Extracts a database into a single script file or other archive
+      file.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock id="client_util_synopsis"><b>pg_dump</b> [<varname>connection_option</varname> ...] [<varname>dump_option</varname> ...] <varname>dbname</varname></codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p><codeph>pg_dump</codeph> is a standard PostgreSQL utility for backing up a database, and is
+        also supported in Greenplum Database. It creates a single (non-parallel) dump file. For
+        routine backups of Greenplum Database, it is better to use the Greenplum Database backup
+        utility, <codeph><xref href="../admin_utilities/gpcrondump.xml#topic1"/></codeph>, for the
+        best performance.</p>
+      <p>Use <codeph>pg_dump</codeph> if you are migrating your data to another database vendor's
+        system, or to another Greenplum Database system with a different segment configuration (for
+        example, if the system you are migrating to has greater or fewer segment instances). To
+        restore, you must use the corresponding <xref href="./pg_restore.xml#topic1" type="topic"
+          format="dita"/> utility (if the dump file is in archive format), or you can use a client
+        program such as <codeph><xref href="psql.xml#topic1" type="topic" format="dita"/></codeph>
+        (if the dump file is in plain text format). </p>
+      <p>Since <codeph>pg_dump</codeph> is compatible with regular PostgreSQL, it can be used to
+        migrate data into Greenplum Database. The <codeph>pg_dump</codeph> utility in Greenplum
+        Database is very similar to the PostgreSQL <codeph>pg_dump</codeph> utility, with the
+        following exceptions and limitations:</p>
+      <ul>
+        <li id="os142186">If using <codeph>pg_dump</codeph> to backup a Greenplum Database database,
+          keep in mind that the dump operation can take a long time (several hours) for very large
+          databases. Also, you must make sure you have sufficient disk space to create the dump
+          file.</li>
+        <li id="os142181">If you are migrating data from one Greenplum Database system to another,
+          use the <codeph>--gp-syntax</codeph> command-line option to include the
+            <codeph>DISTRIBUTED BY</codeph> clause in <codeph>CREATE TABLE</codeph> statements. This
+          ensures that Greenplum Database table data is distributed with the correct distribution
+          key columns upon restore.</li>
+      </ul>
+      <p><codeph>pg_dump</codeph> makes consistent backups even if the database is being used
+        concurrently. <codeph>pg_dump</codeph> does not block other users accessing the database
+        (readers or writers). </p>
+      <p>When used with one of the archive file formats and combined with
+          <codeph>pg_restore</codeph>, <codeph>pg_dump</codeph> provides a flexible archival and
+        transfer mechanism. <codeph>pg_dump</codeph> can be used to backup an entire database, then
+          <codeph>pg_restore </codeph>can be used to examine the archive and/or select which parts
+        of the database are to be restored. The most flexible output file format is the
+          <varname>custom</varname> format (<codeph>-Fc</codeph>). It allows for selection and
+        reordering of all archived items, and is compressed by default. The tar format
+          (<codeph>-Ft</codeph>) is not compressed and it is not possible to reorder data when
+        loading, but it is otherwise quite flexible. It can be manipulated with standard UNIX tools
+        such as <codeph>tar</codeph>.</p>
+      <note>The <codeph>--ignore-version</codeph> option is deprecated and will be removed in a
+        future release.</note>
+    </section>
+    <section id="section4">
+      <title>Options</title>
+      <parml>
+        <plentry>
+          <pt>dbname</pt>
+          <pd>Specifies the name of the database to be dumped. If this is not specified, the
+            environment variable <codeph>PGDATABASE</codeph> is used. If that is not set, the user
+            name specified for the connection is used.</pd>
+        </plentry>
+      </parml>
+      <sectiondiv id="section5">
+        <b>Dump Options</b>
+        <parml>
+          <plentry>
+            <pt>-a | --data-only</pt>
+            <pd>Dump only the data, not the schema (data definitions). This option is only
+              meaningful for the plain-text format. For the archive formats, you may specify the
+              option when you call <codeph><xref href="./pg_restore.xml#topic1" type="topic"
+                  format="dita"/></codeph>. </pd>
+          </plentry>
+          <plentry>
+            <pt>-b | --blobs</pt>
+            <pd>Include large objects in the dump. This is the default behavior except when
+                <codeph>--schema</codeph>, <codeph>--table</codeph>, or
+                <codeph>--schema-only</codeph> is specified, so the <codeph>-b</codeph> switch is
+              only useful to add large objects to selective dumps. </pd>
+          </plentry>
+          <plentry>
+            <pt>-c | --clean</pt>
+            <pd>Adds commands to the text output file to clean (drop) database objects prior to (the
+              commands for) creating them. Note that objects are not dropped before the dump
+              operation begins, but <codeph>DROP</codeph> commands are added to the DDL dump output
+              files so that when you use those files to do a restore, the <codeph>DROP</codeph>
+              commands are run prior to the <codeph>CREATE</codeph> commands. This option is only
+              meaningful for the plain-text format. For the archive formats, you may specify the
+              option when you call <codeph><xref href="./pg_restore.xml#topic1" type="topic"
+                  format="dita"/></codeph>. </pd>
+          </plentry>
+          <plentry>
+            <pt>-C | --create</pt>
+            <pd>Begin the output with a command to create the database itself and reconnect to the
+              created database. (With a script of this form, it doesn't matter which database you
+              connect to before running the script.) This option is only meaningful for the
+              plain-text format. For the archive formats, you may specify the option when you call
+                  <codeph><xref href="./pg_restore.xml#topic1" type="topic" format="dita"
+              /></codeph>. </pd>
+          </plentry>
+          <plentry>
+            <pt>-d | --inserts</pt>
+            <pd>Dump data as <codeph>INSERT</codeph> commands (rather than <codeph>COPY</codeph>).
+              This will make restoration very slow; it is mainly useful for making dumps that can be
+              loaded into non-PostgreSQL-based databases. Also, since this option generates a
+              separate command for each row, an error in reloading a row causes only that row to be
+              lost rather than the entire table contents. Note that the restore may fail altogether
+              if you have rearranged column order. The <codeph>-D</codeph> option is safe against
+              column order changes, though even slower. </pd>
+          </plentry>
+          <plentry>
+            <pt>-D | --column-inserts | --attribute-inserts</pt>
+            <pd>Dump data as <codeph>INSERT</codeph> commands with explicit column names
+                <codeph>(INSERT
+                INTO</codeph><varname>table</varname><codeph>(</codeph><varname>column</varname><codeph>,
+                ...) VALUES ...)</codeph>. This will make restoration very slow; it is mainly useful
+              for making dumps that can be loaded into non-PostgreSQL-based databases. Also, since
+              this option generates a separate command for each row, an error in reloading a row
+              causes only that row to be lost rather than the entire table contents.</pd>
+          </plentry>
+          <plentry>
+            <pt>-E <varname>encoding</varname> | --encoding=<varname>encoding</varname></pt>
+            <pd>Create the dump in the specified character set encoding. By default, the dump is
+              created in the database encoding. (Another way to get the same result is to set the
+                <codeph>PGCLIENTENCODING</codeph> environment variable to the desired dump
+              encoding.)</pd>
+          </plentry>
+          <plentry>
+            <pt>-f <varname>file</varname> | --file=<varname>file</varname></pt>
+            <pd>Send output to the specified file. If this is omitted, the standard output is used.
+            </pd>
+          </plentry>
+          <plentry>
+            <pt>-F p|c|t | --format=plain|custom|tar</pt>
+            <pd>Selects the format of the output. format can be one of the following: </pd>
+            <pd>p | plain — Output a plain-text SQL script file (the default). </pd>
+            <pd>c | custom — Output a custom archive suitable for input into <codeph><xref
+                  href="./pg_restore.xml#topic1" type="topic" format="dita"/></codeph>. This is the
+              most flexible format in that it allows reordering of loading data as well as object
+              definitions. This format is also compressed by default. </pd>
+            <pd>t | tar — Output a tar archive suitable for input into <codeph><xref
+                  href="./pg_restore.xml#topic1" type="topic" format="dita"/></codeph>. Using this
+              archive format allows reordering and/or exclusion of database objects at the time the
+              database is restored. It is also possible to limit which data is reloaded at restore
+              time. </pd>
+          </plentry>
+          <plentry>
+            <pt>-i | --ignore-version</pt>
+            <pd><note>This option is deprecated and will be removed in a future
+              release.</note>Ignore version mismatch between <codeph>pg_dump</codeph> and the
+              database server. <codeph>pg_dump</codeph> can dump from servers running previous
+              releases of Greenplum Database (or PostgreSQL), but very old versions may not be
+              supported anymore. Use this option if you need to override the version check.</pd>
+          </plentry>
+          <plentry>
+            <pt>-n <varname>schema</varname> | --schema=<varname>schema</varname></pt>
+            <pd>Dump only schemas matching the schema pattern; this selects both the schema itself,
+              and all its contained objects. When this option is not specified, all non-system
+              schemas in the target database will be dumped. Multiple schemas can be selected by
+              writing multiple <codeph>-n</codeph> switches. Also, the schema parameter is
+              interpreted as a pattern according to the same rules used by
+                <codeph>psql</codeph>'s<codeph> \d</codeph> commands, so multiple schemas can also
+              be selected by writing wildcard characters in the pattern. When using wildcards, be
+              careful to quote the pattern if needed to prevent the shell from expanding the
+              wildcards.</pd>
+            <pd>Note: When -n is specified, <codeph>pg_dump</codeph> makes no attempt to dump any
+              other database objects that the selected schema(s) may depend upon. Therefore, there
+              is no guarantee that the results of a specific-schema dump can be successfully
+              restored by themselves into a clean database.<note>Non-schema objects such as blobs
+                are not dumped when <codeph>-n</codeph> is specified. You can add blobs back to the
+                dump with the <codeph>--blobs</codeph> switch.</note></pd>
+          </plentry>
+          <plentry>
+            <pt>-N <varname>schema</varname> | --exclude-schema=<varname>schema</varname></pt>
+            <pd>Do not dump any schemas matching the schema pattern. The pattern is interpreted
+              according to the same rules as for <codeph>-n</codeph>. <codeph>-N</codeph> can be
+              given more than once to exclude schemas matching any of several patterns. When both
+                <codeph>-n</codeph> and <codeph>-N</codeph> are given, the behavior is to dump just
+              the schemas that match at least one <codeph>-n</codeph> switch but no
+                <codeph>-N</codeph> switches. If <codeph>-N</codeph> appears without
+                <codeph>-n</codeph>, then schemas matching <codeph>-N</codeph> are excluded from
+              what is otherwise a normal dump.</pd>
+          </plentry>
+          <plentry>
+            <pt>-o | --oids</pt>
+            <pd>Dump object identifiers (OIDs) as part of the data for every table. Use of this
+              option is not recommended for files that are intended to be restored into Greenplum
+              Database.</pd>
+          </plentry>
+          <plentry>
+            <pt>-O | --no-owner</pt>
+            <pd>Do not output commands to set ownership of objects to match the original database.
+              By default, <codeph>pg_dump</codeph> issues <codeph>ALTER OWNER</codeph> or
+                <codeph>SET SESSION AUTHORIZATION</codeph> statements to set ownership of created
+              database objects. These statements will fail when the script is run unless it is
+              started by a superuser (or the same user that owns all of the objects in the script).
+              To make a script that can be restored by any user, but will give that user ownership
+              of all the objects, specify <codeph>-O</codeph>. This option is only meaningful for
+              the plain-text format. For the archive formats, you may specify the option when you
+              call <codeph><xref href="./pg_restore.xml#topic1" type="topic" format="dita"
+                /></codeph>.</pd>
+          </plentry>
+          <plentry>
+            <pt>-s | --schema-only</pt>
+            <pd>Dump only the object definitions (schema), not data.</pd>
+          </plentry>
+          <plentry>
+            <pt>-S <varname>username</varname> | --superuser=<varname>username</varname></pt>
+            <pd>Specify the superuser user name to use when disabling triggers. This is only
+              relevant if <codeph>--disable-triggers</codeph> is used. It is better to leave this
+              out, and instead start the resulting script as a superuser.<note>Greenplum Database
+                does not support user-defined triggers.</note></pd>
+          </plentry>
+          <plentry>
+            <pt>-t <varname>table</varname> | --table=<varname>table</varname></pt>
+            <pd>Dump only tables (or views or sequences) matching the table pattern. Specify the
+              table in the format <codeph>schema.table</codeph>.</pd>
+            <pd>Multiple tables can be selected by writing multiple <codeph>-t</codeph> switches.
+              Also, the table parameter is interpreted as a pattern according to the same rules used
+              by <codeph>psql</codeph>'s <codeph>\d</codeph> commands, so multiple tables can also
+              be selected by writing wildcard characters in the pattern. When using wildcards, be
+              careful to quote the pattern if needed to prevent the shell from expanding the
+              wildcards. The <codeph>-n</codeph> and <codeph>-N</codeph> switches have no effect
+              when <codeph>-t</codeph> is used, because tables selected by <codeph>-t</codeph> will
+              be dumped regardless of those switches, and non-table objects will not be
+                dumped.<note>When <codeph>-t</codeph> is specified, <codeph>pg_dump</codeph> makes
+                no attempt to dump any other database objects that the selected table(s) may depend
+                upon. Therefore, there is no guarantee that the results of a specific-table dump can
+                be successfully restored by themselves into a clean database.<p>Also,
+                    <codeph>-t</codeph> cannot be used to specify a child table partition. To dump a
+                  partitioned table, you must specify the parent table name.</p></note></pd>
+          </plentry>
+          <plentry>
+            <pt>-T <varname>table</varname> | --exclude-table=<varname>table</varname></pt>
+            <pd>Do not dump any tables matching the table pattern. The pattern is interpreted
+              according to the same rules as for <codeph>-t</codeph>. <codeph>-T</codeph> can be
+              given more than once to exclude tables matching any of several patterns. When both
+                <codeph>-t</codeph> and <codeph>-T</codeph> are given, the behavior is to dump just
+              the tables that match at least one <codeph>-t</codeph> switch but no
+                <codeph>-T</codeph> switches. If <codeph>-T</codeph> appears without
+                <codeph>-t</codeph>, then tables matching <codeph>-T</codeph> are excluded from what
+              is otherwise a normal dump.</pd>
+          </plentry>
+          <plentry>
+            <pt>-v | --verbose</pt>
+            <pd>Specifies verbose mode. This will cause <codeph>pg_dump</codeph> to output detailed
+              object comments and start/stop times to the dump file, and progress messages to
+              standard error.</pd>
+          </plentry>
+          <plentry>
+            <pt>-x | --no-privileges | --no-acl</pt>
+            <pd>Prevent dumping of access privileges (<codeph>GRANT/REVOKE</codeph> commands).</pd>
+          </plentry>
+          <plentry>
+            <pt>--disable-dollar-quoting</pt>
+            <pd>This option disables the use of dollar quoting for function bodies, and forces them
+              to be quoted using SQL standard string syntax.</pd>
+          </plentry>
+          <plentry>
+            <pt>--disable-triggers</pt>
+            <pd>This option is only relevant when creating a data-only dump. It instructs
+                <codeph>pg_dump</codeph> to include commands to temporarily disable triggers on the
+              target tables while the data is reloaded. Use this if you have triggers on the tables
+              that you do not want to invoke during data reload. The commands emitted for
+                <codeph>--disable-triggers</codeph> must be done as superuser. So, you should also
+              specify a superuser name with <codeph>-S</codeph>, or preferably be careful to start
+              the resulting script as a superuser. This option is only meaningful for the plain-text
+              format. For the archive formats, you may specify the option when you call
+                  <codeph><xref href="./pg_restore.xml#topic1" type="topic" format="dita"
+                /></codeph>.<note>Greenplum Database does not support user-defined
+              triggers.</note></pd>
+          </plentry>
+          <plentry>
+            <pt>--use-set-session-authorization</pt>
+            <pd>Output SQL-standard <codeph>SET SESSION AUTHORIZATION</codeph> commands instead of
+                <codeph>ALTER OWNER</codeph> commands to determine object ownership. This makes the
+              dump more standards compatible, but depending on the history of the objects in the
+              dump, may not restore properly. A dump using <codeph>SET SESSION
+                AUTHORIZATION</codeph> will require superuser privileges to restore correctly,
+              whereas <codeph>ALTER OWNER</codeph> requires lesser privileges.</pd>
+          </plentry>
+          <plentry>
+            <pt>--gp-syntax | --no-gp-syntax </pt>
+            <pd>Use <codeph>--gp-syntax</codeph> to dump Greenplum Database syntax in the
+                <codeph>CREATE TABLE</codeph> statements. This allows the distribution policy
+                (<codeph>DISTRIBUTED BY</codeph> or <codeph>DISTRIBUTED RANDOMLY</codeph> clauses)
+              of a Greenplum Database table to be dumped, which is useful for restoring into other
+              Greenplum Database systems. The default is to include Greenplum Database syntax when
+              connected to a Greenplum Database system, and to exclude it when connected to a
+              regular PostgreSQL system.</pd>
+          </plentry>
+          <plentry>
+            <pt>-Z 0..9 | --compress=0..9</pt>
+            <pd>Specify the compression level to use in archive formats that support compression.
+              Currently only the <varname>custom</varname> archive format supports compression.</pd>
+          </plentry>
+        </parml>
+      </sectiondiv>
+      <sectiondiv id="section6">
+        <b>Connection Options</b>
+        <parml>
+          <plentry>
+            <pt>-h <varname>host</varname>| --host <varname>host</varname></pt>
+            <pd>The host name of the machine on which the Greenplum Database master database server
+              is running. If not specified, reads from the environment variable
+                <codeph>PGHOST</codeph> or defaults to localhost.</pd>
+          </plentry>
+          <plentry>
+            <pt>-p <varname>port</varname>| --port <varname>port</varname></pt>
+            <pd>The TCP port on which the Greenplum Database master database server is listening for
+              connections. If not specified, reads from the environment variable
+                <codeph>PGPORT</codeph> or defaults to 5432.</pd>
+          </plentry>
+          <plentry>
+            <pt>-U <varname>username</varname>| --username <varname>username</varname></pt>
+            <pd>The database role name to connect as. If not specified, reads from the environment
+              variable <codeph>PGUSER</codeph> or defaults to the current system role name.</pd>
+          </plentry>
+          <plentry>
+            <pt>-W | --password</pt>
+            <pd>Force a password prompt.</pd>
+          </plentry>
+        </parml>
+      </sectiondiv>
+    </section>
+    <section id="section7">
+      <title>Notes</title>
+      <p>When a data-only dump is chosen and the option <codeph>--disable-triggers</codeph> is used,
+          <codeph>pg_dump</codeph> emits commands to disable triggers on user tables before
+        inserting the data and commands to re-enable them after the data has been inserted. If the
+        restore is stopped in the middle, the system catalogs may be left in the wrong state.</p>
+      <p>Members of <codeph>tar</codeph> archives are limited to a size less than 8 GB. (This is an
+        inherent limitation of the <codeph>tar</codeph> file format.) Therefore this format cannot
+        be used if the textual representation of any one table exceeds that size. The total size of
+        a tar archive and any of the other output formats is not limited, except possibly by the
+        operating system.</p>
+      <p>The dump file produced by <codeph>pg_dump</codeph> does not contain the statistics used by
+        the optimizer to make query planning decisions. Therefore, it is wise to run
+          <codeph>ANALYZE</codeph> after restoring from a dump file to ensure good performance.</p>
+    </section>
+    <section id="section8">
+      <title>Examples</title>
+      <p>Dump a database called <codeph>mydb</codeph> into a SQL-script file:</p>
+      <codeblock>pg_dump mydb &gt; db.sql</codeblock>
+      <p>To reload such a script into a (freshly created) database named <codeph>newdb</codeph>: </p>
+      <codeblock>psql -d newdb -f db.sql</codeblock>
+      <p>Dump a Greenplum Database in tar file format and include distribution policy
+        information:</p>
+      <codeblock>pg_dump -Ft --gp-syntax mydb &gt; db.tar</codeblock>
+      <p>To dump a database into a custom-format archive file: </p>
+      <codeblock>pg_dump -Fc mydb &gt; db.dump</codeblock>
+      <p>To reload an archive file into a (freshly created) database named <codeph>newdb</codeph>: </p>
+      <codeblock>pg_restore -d newdb db.dump</codeblock>
+      <p>To dump a single table named <codeph>mytab</codeph>: </p>
+      <codeblock>pg_dump -t mytab mydb &gt; db.sql</codeblock>
+      <p>To specify an upper-case or mixed-case name in <codeph>-t</codeph> and related switches,
+        you need to double-quote the name; else it will be folded to lower case. But double quotes
+        are special to the shell, so in turn they must be quoted. Thus, to dump a single table with
+        a mixed-case name, you need something like:</p>
+      <codeblock>pg_dump -t '"MixedCaseName"' mydb &gt; mytab.sql</codeblock>
+    </section>
+    <section id="section9">
+      <title>See Also</title>
+      <p><codeph><xref href="./pg_dumpall.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="pg_restore.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="psql.xml#topic1" type="topic" format="dita"/></codeph></p>
+    </section>
+  </body>
+</topic>

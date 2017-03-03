@@ -93,7 +93,7 @@ LOCATION ('gpfdist://@host@:@port@/exttab_basic_4.tbl') FORMAT 'TEXT' (DELIMITER
 LOG ERRORS SEGMENT REJECT LIMIT 100;
 CREATE EXTERNAL TABLE
 CREATE TABLE exttab_insert_1 (LIKE exttab_basic_4);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 -- Insert should go through fine
 INSERT INTO exttab_insert_1 SELECT * FROM exttab_basic_4;

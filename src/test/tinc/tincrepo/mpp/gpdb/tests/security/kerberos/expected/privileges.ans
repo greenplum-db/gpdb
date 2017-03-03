@@ -357,7 +357,6 @@ SELECT testfunc1(5); -- fail
 psql:/data/gpadmin/pulse2-agent/agents/agent1/work/GPDB-43_STABLE-TINC-kerberos_smoke/rhel6_kerberos_smoke/cdbunit/tinc/tincrepo/mpp/gpdb/tests/security/kerberos/output/privileges_planner.sql:202: ERROR:  permission denied for function testfunc1
 SELECT col1 FROM atest2 WHERE col2 = true; -- fail
 psql:/data/gpadmin/pulse2-agent/agents/agent1/work/GPDB-43_STABLE-TINC-kerberos_smoke/rhel6_kerberos_smoke/cdbunit/tinc/tincrepo/mpp/gpdb/tests/security/kerberos/output/privileges_planner.sql:203: ERROR:  permission denied for relation atest2
-ERROR:  GPDB exception. Aborting PQO plan generation. (CGPOptimizer.cpp:73)
 SELECT testfunc4(true); -- ok
  testfunc4 
 -----------

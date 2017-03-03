@@ -48,7 +48,7 @@ drop table ret;
 DROP TABLE
 --end_ignore
 create table pt_ext_heap(like pt_ext);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 alter table pt_ext exchange partition part1 with table pt_ext_heap;
 ALTER TABLE

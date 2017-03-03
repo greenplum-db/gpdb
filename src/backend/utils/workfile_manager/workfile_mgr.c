@@ -277,7 +277,7 @@ create_workset_directory(NodeTag node_type, int slice_id)
 	char *final_path = (char *) palloc0(MAXPGPATH);
 
 	/* Initialize result path. Strip prefix from path since bfz/fd add the getCurrentTempFilePath to it */
-	strncpy(final_path,
+	strlcpy(final_path,
 			workset_path_unmasked + strlen(getCurrentTempFilePath) + 1,
 			MAXPGPATH);
 
@@ -324,7 +324,7 @@ workfile_mgr_populate_set(const void *resource, const void *param)
 	work_set->session_start_time = set_info->session_start_time;
 
 	Assert(strlen(set_info->dir_path) < MAXPGPATH);
-	strncpy(work_set->path, set_info->dir_path, MAXPGPATH);
+	strlcpy(work_set->path, set_info->dir_path, MAXPGPATH);
 }
 
 /*

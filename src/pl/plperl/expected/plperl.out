@@ -101,6 +101,16 @@ SELECT * FROM perl_row();
   1 | hello | world | ({{1}})
 (1 row)
 
+-- test returning a composite literal
+CREATE OR REPLACE FUNCTION perl_row_lit() RETURNS testrowperl AS $$
+    return '(1,hello,world,"({{1}})")';
+$$ LANGUAGE plperl;
+SELECT perl_row_lit();
+       perl_row_lit        
+---------------------------
+ (1,hello,world,"({{1}})")
+(1 row)
+
 CREATE OR REPLACE FUNCTION perl_set() RETURNS SETOF testrowperl AS $$
     return undef;
 $$  LANGUAGE plperl;
@@ -204,8 +214,8 @@ CREATE OR REPLACE FUNCTION perl_record_set() RETURNS SETOF record AS $$
     return undef;
 $$  LANGUAGE plperl;
 SELECT perl_record_set();
-ERROR:  Unsupported Perl function "perl_record_set"
-DETAIL:  function returning record called in context that cannot accept type record
+ERROR:  set-valued function called in context that cannot accept a set
+CONTEXT:  PL/Perl function "perl_record_set"
 SELECT * FROM perl_record_set();
 ERROR:  a column definition list is required for functions returning "record"
 LINE 1: SELECT * FROM perl_record_set();
@@ -223,8 +233,7 @@ CREATE OR REPLACE FUNCTION perl_record_set() RETURNS SETOF record AS $$
     ];
 $$  LANGUAGE plperl;
 SELECT perl_record_set();
-ERROR:  Unsupported Perl function "perl_record_set"
-DETAIL:  function returning record called in context that cannot accept type record
+ERROR:  set-valued function called in context that cannot accept a set
 CONTEXT:  PL/Perl function "perl_record_set"
 SELECT * FROM perl_record_set();
 ERROR:  a column definition list is required for functions returning "record"
@@ -241,8 +250,7 @@ CREATE OR REPLACE FUNCTION perl_record_set() RETURNS SETOF record AS $$
     ];
 $$  LANGUAGE plperl;
 SELECT perl_record_set();
-ERROR:  Unsupported Perl function "perl_record_set"
-DETAIL:  function returning record called in context that cannot accept type record
+ERROR:  set-valued function called in context that cannot accept a set
 CONTEXT:  PL/Perl function "perl_record_set"
 SELECT * FROM perl_record_set();
 ERROR:  a column definition list is required for functions returning "record"
@@ -338,7 +346,8 @@ CREATE OR REPLACE FUNCTION foo_bad() RETURNS footype AS $$
 return 42;
 $$ LANGUAGE plperl;
 SELECT * FROM foo_bad();
-ERROR:  composite-returning PL/Perl function must return reference to hash
+ERROR:  malformed record literal: "42"
+DETAIL:  Missing left parenthesis.
 CONTEXT:  PL/Perl function "foo_bad"
 CREATE OR REPLACE FUNCTION foo_bad() RETURNS footype AS $$
 return [
@@ -347,7 +356,7 @@ return [
 ];
 $$ LANGUAGE plperl;
 SELECT * FROM foo_bad();
-ERROR:  composite-returning PL/Perl function must return reference to hash
+ERROR:  cannot convert Perl array to non-array type footype
 CONTEXT:  PL/Perl function "foo_bad"
 CREATE OR REPLACE FUNCTION foo_set_bad() RETURNS SETOF footype AS $$
     return 42;
@@ -571,8 +580,7 @@ CREATE OR REPLACE FUNCTION perl_spi_prepared_bad(double precision) RETURNS doubl
   return $result;
 $$ LANGUAGE plperl;
 SELECT perl_spi_prepared_bad(4.35) as "double precision";
-ERROR:  Perl function "perl_spi_prepared_bad" failed (SOMEFILE:SOMEFUNC)
-DETAIL:  type "does_not_exist" does not exist at line 2.
+ERROR:  type "does_not_exist" does not exist at line 2.
 CONTEXT:  PL/Perl function "perl_spi_prepared_bad"
 -- Test with a row type
 CREATE OR REPLACE FUNCTION perl_spi_prepared() RETURNS INTEGER AS $$
@@ -598,12 +606,93 @@ SELECT * from perl_spi_prepared_row('(1, 2)');
  x | y 
 ---+---
  1 | 2
---
--- Test detection of unsafe operations
-CREATE OR REPLACE FUNCTION perl_unsafe1() RETURNS void AS $$
-	my $fd = fileno STDERR;
+(1 row)
+
+-- simple test of a DO block
+DO $$
+  $a = 'This is a test';
+  elog(NOTICE, $a);
 $$ LANGUAGE plperl;
-ERROR:  creation of Perl function "perl_unsafe1" failed: 'fileno' trapped by operation mask at line 2.
+NOTICE:  This is a test
+CONTEXT:  PL/Perl anonymous code block
+-- check that restricted operations are rejected in a plperl DO block
+DO $$ system("/nonesuch"); $$ LANGUAGE plperl;
+ERROR:  'system' trapped by operation mask at line 1.
+CONTEXT:  PL/Perl anonymous code block
+DO $$ qx("/nonesuch"); $$ LANGUAGE plperl;
+ERROR:  'quoted execution (``, qx)' trapped by operation mask at line 1.
+CONTEXT:  PL/Perl anonymous code block
+DO $$ open my $fh, "</nonesuch"; $$ LANGUAGE plperl;
+ERROR:  'open' trapped by operation mask at line 1.
+CONTEXT:  PL/Perl anonymous code block
+-- check that eval is allowed and eval'd restricted ops are caught
+DO $$ eval q{chdir '.';}; warn "Caught: $@"; $$ LANGUAGE plperl;
+WARNING:  Caught: 'chdir' trapped by operation mask at line 1.
+CONTEXT:  PL/Perl anonymous code block
+-- check that compiling do (dofile opcode) is allowed
+-- but that executing it for a file not already loaded (via require) dies
+DO $$ warn do "/dev/null"; $$ LANGUAGE plperl;
+ERROR:  Unable to load /dev/null into plperl at line 1.
+CONTEXT:  PL/Perl anonymous code block
+-- check that we can't "use" a module that's not been loaded already
+-- compile-time error: "Unable to load blib.pm into plperl"
+DO $$ use blib; $$ LANGUAGE plperl;
+ERROR:  Unable to load blib.pm into plperl at line 1.
+DETAIL:  BEGIN failed--compilation aborted at line 1.
+CONTEXT:  PL/Perl anonymous code block
+-- check that we can "use" a module that has already been loaded
+-- runtime error: "Can't use string ("foo") as a SCALAR ref while "strict refs" in use
+DO $do$ use strict; my $name = "foo"; my $ref = $$name; $do$ LANGUAGE plperl;
+ERROR:  Can't use string ("foo") as a SCALAR ref while "strict refs" in use at line 1.
+CONTEXT:  PL/Perl anonymous code block
+-- check that we can "use warnings" (in this case to turn a warn into an error)
+-- yields "ERROR:  Useless use of sort in scalar context."
+DO $do$ use warnings FATAL => qw(void) ; my @y; my $x = sort @y; 1; $do$ LANGUAGE plperl;
+ERROR:  Useless use of sort in scalar context at line 1.
+CONTEXT:  PL/Perl anonymous code block
+-- make sure functions marked as VOID without an explicit return work
+CREATE OR REPLACE FUNCTION myfuncs() RETURNS void AS $$
+   $_SHARED{myquote} = sub {
+       my $arg = shift;
+       $arg =~ s/(['\\])/\\$1/g;
+       return "'$arg'";
+   };
+$$ LANGUAGE plperl;
+SELECT myfuncs();
+ myfuncs 
+---------
+ 
+(1 row)
+
+-- make sure we can't return an array as a scalar
+CREATE OR REPLACE FUNCTION text_arrayref() RETURNS text AS $$
+	return ['array'];
+$$ LANGUAGE plperl;
+SELECT text_arrayref();
+ERROR:  cannot convert Perl array to non-array type text
+CONTEXT:  PL/Perl function "text_arrayref"
+--- make sure we can't return a hash as a scalar
+CREATE OR REPLACE FUNCTION text_hashref() RETURNS text AS $$
+	return {'hash'=>1};
+$$ LANGUAGE plperl;
+SELECT text_hashref();
+ERROR:  cannot convert Perl hash to non-composite type text
+CONTEXT:  PL/Perl function "text_hashref"
+---- make sure we can't return a blessed object as a scalar
+CREATE OR REPLACE FUNCTION text_obj() RETURNS text AS $$
+	return bless({}, 'Fake::Object');
+$$ LANGUAGE plperl;
+SELECT text_obj();
+ERROR:  cannot convert Perl hash to non-composite type text
+CONTEXT:  PL/Perl function "text_obj"
+----- make sure we can't return a scalar ref
+CREATE OR REPLACE FUNCTION text_scalarref() RETURNS text AS $$
+	my $str = 'str';
+	return \$str;
+$$ LANGUAGE plperl;
+SELECT text_scalarref();
+ERROR:  PL/Perl function must return reference to hash or array
+CONTEXT:  PL/Perl function "text_scalarref"
 -- check safe behavior when a function body is replaced during execution
 CREATE OR REPLACE FUNCTION self_modify(INTEGER) RETURNS INTEGER AS $$
    spi_exec_query('CREATE OR REPLACE FUNCTION self_modify(INTEGER) RETURNS INTEGER AS \'return $_[0] * 3;\' LANGUAGE plperl;');
@@ -622,16 +711,3 @@ SELECT self_modify(42);
          126
 (1 row)
 
--- simple test of a DO block
-DO $$
-  $a = 'This is a test';
-  elog(NOTICE, $a);
-$$ LANGUAGE plperl;
-NOTICE:  This is a test
-CONTEXT:  PL/Perl anonymous code block
--- check that restricted operations are rejected in a plperl DO block
-DO $$ use Config; $$ LANGUAGE plperl;
-ERROR:  creation of Perl function failed
-DETAIL:  Unable to load Config.pm into plperl at line 1.
-BEGIN failed--compilation aborted at line 1.
-CONTEXT:  PL/Perl anonymous code block

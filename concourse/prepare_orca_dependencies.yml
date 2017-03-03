@@ -1,9 +1,0 @@
-platform: linux
-image: docker:///pivotaldata/gpdb-devel-gcc5#centos6
-inputs:
-  - name: gpdb_src
-outputs:
-  - name: bin_gpos
-  - name: bin_orca
-run:
-  path: gpdb_src/concourse/prepare_orca_dependencies.bash

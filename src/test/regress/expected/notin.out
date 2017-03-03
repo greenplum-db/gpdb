@@ -2,6 +2,8 @@
 -- NOTIN 
 -- Test NOTIN clauses
 --
+create schema notin;
+set search_path=notin;
 --
 -- generate a bunch of tables
 --
@@ -646,3 +648,12 @@ select c1 from t1 where c1 not in (select c2 from t2 where c2 > 4) and c1 > 2;
   9
 (7 rows)
 
+reset search_path;
+drop schema notin cascade;
+NOTICE:  drop cascades to table notin.l1
+NOTICE:  drop cascades to table notin.g1
+NOTICE:  drop cascades to table notin.t1n
+NOTICE:  drop cascades to table notin.t4
+NOTICE:  drop cascades to table notin.t3
+NOTICE:  drop cascades to table notin.t2
+NOTICE:  drop cascades to table notin.t1

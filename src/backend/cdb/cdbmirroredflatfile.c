@@ -170,9 +170,7 @@ int MirroredFlatFile_Open(
 		open->isActive = true;
 	}
 
-	if (dir)	
-		pfree(dir);
-
+	pfree(dir);
 	if (mirrorDir)
 		pfree(mirrorDir);
 
@@ -853,6 +851,7 @@ int MirroredFlatFile_Drop(
 	char *path;
 	bool mirrorDrop = TRUE;
 	int	 save_errno = 0;
+	int	return_value = 0;
 	char *dir = NULL, *mirrorDir = NULL;
 	
 	if (isTxnDir(subDirectory))
@@ -886,10 +885,12 @@ int MirroredFlatFile_Drop(
 	
 	if (! isMirrorRecovery) {
 		errno = 0;
-		if (unlink(path) < 0 && !suppressError)
+		return_value = unlink(path);
+		if (return_value < 0 && !suppressError){
 			ereport(ERROR,
 					(errcode_for_file_access(),
 					 errmsg("could not unlink file \"%s\": %m", path)));
+		}
 		save_errno = errno;
 	}
 	
@@ -907,7 +908,8 @@ int MirroredFlatFile_Drop(
 	pfree(dir);
 	pfree(mirrorDir);
 
-	return save_errno;
+	errno = save_errno;
+	return return_value;
 }
 
 
@@ -1042,10 +1044,6 @@ MirrorFlatFile(
 				
 		bufferLen = (Size) Min(BLCKSZ, endOffset - startOffset);
 		buffer = (char*) palloc(bufferLen);
-		if (buffer == NULL)
-			ereport(ERROR,
-					(errcode(ERRCODE_OUT_OF_MEMORY),
-					 (errmsg("Not enough shared memory for Mirroring."))));
 		
 		MemSet(buffer, 0, bufferLen);
 				
@@ -1105,10 +1103,8 @@ MirrorFlatFile(
 		MirroredFlatFile_ClosePrimary(&primaryOpen);
 	}
 
-	if (dir)
-		pfree(dir);
-	if (mirrorDir)
-		pfree(mirrorDir);	
+	pfree(dir);
+	pfree(mirrorDir);
 
 	return retval;
 }
@@ -1388,11 +1384,6 @@ PgVersionRecoverMirror(void)
 			
 			bufferLen = (Size) Min(BLCKSZ, endOffset - startOffset);
 			buffer = (char*) palloc(bufferLen);
-			if (buffer == NULL)
-				ereport(ERROR,
-						(errcode(ERRCODE_OUT_OF_MEMORY),
-						 (errmsg("not enough shared memory for mirroring"))));
-			
 			MemSet(buffer, 0, bufferLen);
 			
 			while (startOffset < endOffset) 
