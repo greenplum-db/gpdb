@@ -26,13 +26,13 @@ endif
 
 
 # The command line here should resemble the one used to build cdb_dump_agent
-cdb_dump_util.t: cdb_dump_util_test.o ../../dumputils.o ../cdb_lockbox.o ../../keywords.o ../../kwlookup.o $(CMOCKERY_OBJS)
+cdb_dump_util.t: cdb_dump_util_test.o ../dumputils.o ../cdb_lockbox.o ../keywords.o ../kwlookup.o $(CMOCKERY_OBJS)
 	$(CC) $^ $(libpq) $(LDFLAGS) $(LIBS) $(DDBOOSTLIB) -o $@
 
 # The command line here should resemble the one used to build libgpbsa
-cdb_bsa_util.t: cdb_bsa_util_test.o ../cdb_dump_util.o ../cdb_lockbox.o ../../dumputils.o ../../keywords.o ../../kwlookup.o $(CMOCKERY_OBJS)
+cdb_bsa_util.t: cdb_bsa_util_test.o ../cdb_dump_util.o ../cdb_lockbox.o ../dumputils.o ../keywords.o ../kwlookup.o $(CMOCKERY_OBJS)
 	$(CC) $^ $(libpq) $(LDFLAGS) $(LIBS) $(DDBOOSTLIB) $(NETBACKUPLIB75) -o $@
 
 # The command line here should resemble the one used to build libgpbsa
-cdb_lockbox.t: cdb_lockbox_test.o ../cdb_dump_util.o ../../dumputils.o ../../keywords.o ../../kwlookup.o $(CMOCKERY_OBJS)
+cdb_lockbox.t: cdb_lockbox_test.o ../cdb_dump_util.o ../dumputils.o ../keywords.o ../kwlookup.o $(CMOCKERY_OBJS)
 	$(CC) $^ $(libpq) $(LDFLAGS) $(LIBS) $(DDBOOSTLIB) $(NETBACKUPLIB75) -o $@

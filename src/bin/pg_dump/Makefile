@@ -44,7 +44,7 @@ pg_restore: pg_restore.o $(OBJS) $(KEYWRDOBJS) $(libpq_builddir)/libpq.a
 pg_dumpall: pg_dumpall.o dumputils.o binary_upgradeall.o $(KEYWRDOBJS) $(libpq_builddir)/libpq.a
 	$(CC) $(CFLAGS) pg_dumpall.o dumputils.o binary_upgradeall.o $(KEYWRDOBJS) $(WIN32RES) $(libpq_pgport) $(LDFLAGS) $(LIBS) -o $@$(X)
 
-submake-cdb: $(KEYWORDOBJS) $(OBJS)
+submake-cdb:
 	$(MAKE) -C cdb all
 
 install: all installdirs
