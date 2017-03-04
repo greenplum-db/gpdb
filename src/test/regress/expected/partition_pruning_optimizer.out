@@ -1,4 +1,1162 @@
 --
+-- Tests on partition pruning (with ORCA) or constraint exclusion (with the
+-- Postgres planner). These tests check that you get an "expected" plan, that
+-- only scans the partitions that are needed.
+--
+-- The "correct" plan for a given query depends a lot on the capabilities of
+-- the planner and the rest of the system, so the expected output can need
+-- updating, as the system improves.
+--
+-- Set up common test tables.
+CREATE TABLE pt_lt_tab
+(
+  col1 int,
+  col2 decimal,
+  col3 text,
+  col4 bool
+)
+distributed by (col1)
+partition by list(col2)
+(
+  partition part1 values(1,2,3,4,5,6,7,8,9,10),
+  partition part2 values(11,12,13,14,15,16,17,18,19,20),
+  partition part3 values(21,22,23,24,25,26,27,28,29,30),
+  partition part4 values(31,32,33,34,35,36,37,38,39,40),
+  partition part5 values(41,42,43,44,45,46,47,48,49,50)
+);
+NOTICE:  CREATE TABLE will create partition "pt_lt_tab_1_prt_part1" for table "pt_lt_tab"
+NOTICE:  CREATE TABLE will create partition "pt_lt_tab_1_prt_part2" for table "pt_lt_tab"
+NOTICE:  CREATE TABLE will create partition "pt_lt_tab_1_prt_part3" for table "pt_lt_tab"
+NOTICE:  CREATE TABLE will create partition "pt_lt_tab_1_prt_part4" for table "pt_lt_tab"
+NOTICE:  CREATE TABLE will create partition "pt_lt_tab_1_prt_part5" for table "pt_lt_tab"
+INSERT INTO pt_lt_tab SELECT i, i,'a',True FROM generate_series(1,3)i;
+INSERT INTO pt_lt_tab SELECT i, i,'b',True FROM generate_series(4,6)i;
+INSERT INTO pt_lt_tab SELECT i, i,'c',True FROM generate_series(7,10)i;
+INSERT INTO pt_lt_tab SELECT i, i,'e',True FROM generate_series(11,13)i;
+INSERT INTO pt_lt_tab SELECT i, i,'f',True FROM generate_series(14,16)i;
+INSERT INTO pt_lt_tab SELECT i, i,'g',True FROM generate_series(17,20)i;
+INSERT INTO pt_lt_tab SELECT i, i,'i',False FROM generate_series(21,23)i;
+INSERT INTO pt_lt_tab SELECT i, i,'k',False FROM generate_series(24,26)i;
+INSERT INTO pt_lt_tab SELECT i, i,'h',False FROM generate_series(27,30)i;
+INSERT INTO pt_lt_tab SELECT i, i,'m',False FROM generate_series(31,33)i;
+INSERT INTO pt_lt_tab SELECT i, i,'o',False FROM generate_series(34,36)i;
+INSERT INTO pt_lt_tab SELECT i, i,'n',False FROM generate_series(37,40)i;
+INSERT INTO pt_lt_tab SELECT i, i,'p',False FROM generate_series(41,43)i;
+INSERT INTO pt_lt_tab SELECT i, i,'s',False FROM generate_series(44,46)i;
+INSERT INTO pt_lt_tab SELECT i, i,'q',False FROM generate_series(47,50)i;
+ANALYZE pt_lt_tab;
+-- pt_lt_tab_df is the same as pt_lt_tab, but with a default partition (and some
+-- values in the default partition, including NULLs).
+CREATE TABLE pt_lt_tab_df
+(
+  col1 int,
+  col2 decimal,
+  col3 text,
+  col4 bool
+)
+distributed by (col1)
+partition by list(col2)
+(
+  partition part1 VALUES(1,2,3,4,5,6,7,8,9,10),
+  partition part2 VALUES(11,12,13,14,15,16,17,18,19,20),
+  partition part3 VALUES(21,22,23,24,25,26,27,28,29,30),
+  partition part4 VALUES(31,32,33,34,35,36,37,38,39,40),
+  partition part5 VALUES(41,42,43,44,45,46,47,48,49,50),
+  default partition def
+);
+NOTICE:  CREATE TABLE will create partition "pt_lt_tab_df_1_prt_part1" for table "pt_lt_tab_df"
+NOTICE:  CREATE TABLE will create partition "pt_lt_tab_df_1_prt_part2" for table "pt_lt_tab_df"
+NOTICE:  CREATE TABLE will create partition "pt_lt_tab_df_1_prt_part3" for table "pt_lt_tab_df"
+NOTICE:  CREATE TABLE will create partition "pt_lt_tab_df_1_prt_part4" for table "pt_lt_tab_df"
+NOTICE:  CREATE TABLE will create partition "pt_lt_tab_df_1_prt_part5" for table "pt_lt_tab_df"
+NOTICE:  CREATE TABLE will create partition "pt_lt_tab_df_1_prt_def" for table "pt_lt_tab_df"
+INSERT INTO pt_lt_tab_df SELECT i, i,'a',True FROM generate_series(1,3)i;
+INSERT INTO pt_lt_tab_df SELECT i, i,'b',True FROM generate_series(4,6)i;
+INSERT INTO pt_lt_tab_df SELECT i, i,'c',True FROM generate_series(7,10)i;
+INSERT INTO pt_lt_tab_df SELECT i, i,'e',True FROM generate_series(11,13)i;
+INSERT INTO pt_lt_tab_df SELECT i, i,'f',True FROM generate_series(14,16)i;
+INSERT INTO pt_lt_tab_df SELECT i, i,'g',True FROM generate_series(17,20)i;
+INSERT INTO pt_lt_tab_df SELECT i, i,'i',False FROM generate_series(21,23)i;
+INSERT INTO pt_lt_tab_df SELECT i, i,'k',False FROM generate_series(24,26)i;
+INSERT INTO pt_lt_tab_df SELECT i, i,'h',False FROM generate_series(27,30)i;
+INSERT INTO pt_lt_tab_df SELECT i, i,'m',False FROM generate_series(31,33)i;
+INSERT INTO pt_lt_tab_df SELECT i, i,'o',False FROM generate_series(34,36)i;
+INSERT INTO pt_lt_tab_df SELECT i, i,'n',False FROM generate_series(37,40)i;
+INSERT INTO pt_lt_tab_df SELECT i, i,'p',False FROM generate_series(41,43)i;
+INSERT INTO pt_lt_tab_df SELECT i, i,'s',False FROM generate_series(44,46)i;
+INSERT INTO pt_lt_tab_df SELECT i, i,'q',False FROM generate_series(47,50)i;
+INSERT INTO pt_lt_tab_df SELECT i, i,'u',True FROM generate_series(51,53)i;
+INSERT INTO pt_lt_tab_df SELECT i, i,'x',True FROM generate_series(54,56)i;
+INSERT INTO pt_lt_tab_df SELECT i, i,'w',True FROM generate_series(57,60)i;
+INSERT INTO pt_lt_tab_df VALUES(NULL,NULL,NULL,NULL);
+INSERT INTO pt_lt_tab_df VALUES(NULL,NULL,NULL,NULL);
+INSERT INTO pt_lt_tab_df VALUES(NULL,NULL,NULL,NULL);
+ANALYZE pt_lt_tab_df;
+-- @description B-tree single index key = non-partitioning key
+CREATE INDEX idx1 on pt_lt_tab(col1);
+NOTICE:  building index for child partition "pt_lt_tab_1_prt_part1"
+NOTICE:  building index for child partition "pt_lt_tab_1_prt_part2"
+NOTICE:  building index for child partition "pt_lt_tab_1_prt_part3"
+NOTICE:  building index for child partition "pt_lt_tab_1_prt_part4"
+NOTICE:  building index for child partition "pt_lt_tab_1_prt_part5"
+SELECT * FROM pt_lt_tab WHERE col1 < 10 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+    1 |    1 | a    | t
+    2 |    2 | a    | t
+    3 |    3 | a    | t
+    4 |    4 | b    | t
+    5 |    5 | b    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 < 10 ORDER BY col2,col3 LIMIT 5;
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..20.00 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..20.00 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..20.00 rows=2 width=14)
+               ->  Sort  (cost=0.00..20.00 rows=4 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..20.00 rows=4 width=14)
+                           ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 5 (out of 5)
+                           ->  Dynamic Index Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..20.00 rows=4 width=14)
+                                 Index Cond: col1 < 10
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+SELECT * FROM pt_lt_tab WHERE col1 > 50 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 > 50 ORDER BY col2,col3 LIMIT 5;
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..6.00 rows=1 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=14)
+         Merge Key: col2, col3
+         ->  Sort  (cost=0.00..6.00 rows=1 width=14)
+               Sort Key: col2, col3
+               ->  Sequence  (cost=0.00..6.00 rows=1 width=14)
+                     ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                           Partitions selected: 5 (out of 5)
+                     ->  Dynamic Index Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=14)
+                           Index Cond: col1 > 50
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(12 rows)
+
+SELECT * FROM pt_lt_tab WHERE col1 = 25 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   25 |   25 | k    | f
+(1 row)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 = 25 ORDER BY col2,col3 LIMIT 5;
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..6.00 rows=1 width=14)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..6.00 rows=1 width=14)
+         Merge Key: col2, col3
+         ->  Sort  (cost=0.00..6.00 rows=1 width=14)
+               Sort Key: col2, col3
+               ->  Sequence  (cost=0.00..6.00 rows=1 width=14)
+                     ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                           Partitions selected: 5 (out of 5)
+                     ->  Dynamic Index Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=14)
+                           Index Cond: col1 = 25
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(12 rows)
+
+SELECT * FROM pt_lt_tab WHERE col1 <> 10 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+    1 |    1 | a    | t
+    2 |    2 | a    | t
+    3 |    3 | a    | t
+    4 |    4 | b    | t
+    5 |    5 | b    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 <> 10 ORDER BY col2,col3 LIMIT 5;
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..431.01 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.01 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..431.01 rows=2 width=14)
+               ->  Sort  (cost=0.00..431.01 rows=17 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..431.00 rows=17 width=14)
+                           ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 5 (out of 5)
+                           ->  Dynamic Table Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..431.00 rows=17 width=14)
+                                 Filter: col1 <> 10
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+SELECT * FROM pt_lt_tab WHERE col1 > 10 AND col1 < 50 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   11 |   11 | e    | t
+   12 |   12 | e    | t
+   13 |   13 | e    | t
+   14 |   14 | f    | t
+   15 |   15 | f    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 > 10 AND col1 < 50 ORDER BY col2,col3 LIMIT 5;
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..78.01 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..78.01 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..78.01 rows=2 width=14)
+               ->  Sort  (cost=0.00..78.01 rows=13 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..78.00 rows=13 width=14)
+                           ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 5 (out of 5)
+                           ->  Dynamic Index Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..78.00 rows=13 width=14)
+                                 Index Cond: col1 > 10 AND col1 < 50
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+SELECT * FROM pt_lt_tab WHERE col1 > 10 OR col1 = 25 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   11 |   11 | e    | t
+   12 |   12 | e    | t
+   13 |   13 | e    | t
+   14 |   14 | f    | t
+   15 |   15 | f    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 > 10 OR col1 = 25 ORDER BY col2,col3 LIMIT 5;
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..431.01 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.01 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..431.01 rows=2 width=14)
+               ->  Sort  (cost=0.00..431.01 rows=14 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..431.00 rows=14 width=14)
+                           ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 5 (out of 5)
+                           ->  Dynamic Table Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..431.00 rows=14 width=14)
+                                 Filter: col1 > 10 OR col1 = 25
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+SELECT * FROM pt_lt_tab WHERE col1 between 10 AND 25 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   10 |   10 | c    | t
+   11 |   11 | e    | t
+   12 |   12 | e    | t
+   13 |   13 | e    | t
+   14 |   14 | f    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 between 10 AND 25 ORDER BY col2,col3 LIMIT 5;
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..30.00 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..30.00 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..30.00 rows=2 width=14)
+               ->  Sort  (cost=0.00..30.00 rows=5 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..30.00 rows=5 width=14)
+                           ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 5 (out of 5)
+                           ->  Dynamic Index Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..30.00 rows=5 width=14)
+                                 Index Cond: col1 >= 10 AND col1 <= 25
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+DROP INDEX idx1;
+WARNING:  Only dropped the index "idx1"
+HINT:  To drop other indexes on child partitions, drop each one explicitly.
+-- have to drop the indexes on the partitions explicitly.
+DROP INDEX idx1_1_prt_part1;
+DROP INDEX idx1_1_prt_part2;
+DROP INDEX idx1_1_prt_part3;
+DROP INDEX idx1_1_prt_part4;
+DROP INDEX idx1_1_prt_part5;
+-- @description B-tree single index key = partitioning key
+CREATE INDEX idx1 on pt_lt_tab(col2);
+NOTICE:  building index for child partition "pt_lt_tab_1_prt_part1"
+NOTICE:  building index for child partition "pt_lt_tab_1_prt_part2"
+NOTICE:  building index for child partition "pt_lt_tab_1_prt_part3"
+NOTICE:  building index for child partition "pt_lt_tab_1_prt_part4"
+NOTICE:  building index for child partition "pt_lt_tab_1_prt_part5"
+SELECT * FROM pt_lt_tab WHERE col2 < 10 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+    1 |    1 | a    | t
+    2 |    2 | a    | t
+    3 |    3 | a    | t
+    4 |    4 | b    | t
+    5 |    5 | b    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 < 10 ORDER BY col2,col3 LIMIT 5;
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..20.00 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..20.00 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..20.00 rows=2 width=14)
+               ->  Sort  (cost=0.00..20.00 rows=4 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..20.00 rows=4 width=14)
+                           ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: col2 < 10::numeric
+                                 Partitions selected: 1 (out of 5)
+                           ->  Dynamic Index Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..20.00 rows=4 width=14)
+                                 Index Cond: col2 < 10::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(14 rows)
+
+SELECT * FROM pt_lt_tab WHERE col2 > 50 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 50 ORDER BY col2,col3 LIMIT 5;
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..2.00 rows=1 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.00 rows=1 width=14)
+         Merge Key: col2, col3
+         ->  Sort  (cost=0.00..2.00 rows=1 width=14)
+               Sort Key: col2, col3
+               ->  Sequence  (cost=0.00..2.00 rows=1 width=14)
+                     ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                           Filter: col2 > 50::numeric
+                           Partitions selected: 0 (out of 5)
+                     ->  Dynamic Index Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..2.00 rows=1 width=14)
+                           Index Cond: col2 > 50::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+SELECT * FROM pt_lt_tab WHERE col2 = 25 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   25 |   25 | k    | f
+(1 row)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 = 25 ORDER BY col2,col3 LIMIT 5;
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..2.00 rows=1 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.00 rows=1 width=14)
+         Merge Key: col2, col3
+         ->  Sort  (cost=0.00..2.00 rows=1 width=14)
+               Sort Key: col2, col3
+               ->  Sequence  (cost=0.00..2.00 rows=1 width=14)
+                     ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                           Filter: col2 = 25::numeric
+                           Partitions selected: 1 (out of 5)
+                     ->  Dynamic Index Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..2.00 rows=1 width=14)
+                           Index Cond: col2 = 25::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+SELECT * FROM pt_lt_tab WHERE col2 <> 10 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+    1 |    1 | a    | t
+    2 |    2 | a    | t
+    3 |    3 | a    | t
+    4 |    4 | b    | t
+    5 |    5 | b    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 <> 10 ORDER BY col2,col3 LIMIT 5;
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..431.01 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.01 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..431.01 rows=2 width=14)
+               ->  Sort  (cost=0.00..431.01 rows=17 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..431.00 rows=17 width=14)
+                           ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: col2 < 10::numeric OR col2 > 10::numeric
+                                 Partitions selected: 5 (out of 5)
+                           ->  Dynamic Table Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..431.00 rows=17 width=14)
+                                 Filter: col2 <> 10::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(14 rows)
+
+SELECT * FROM pt_lt_tab WHERE col2 > 10 AND col2 < 50 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   11 |   11 | e    | t
+   12 |   12 | e    | t
+   13 |   13 | e    | t
+   14 |   14 | f    | t
+   15 |   15 | f    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 10 AND col2 < 50 ORDER BY col2,col3 LIMIT 5;
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..80.01 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..80.01 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..80.01 rows=2 width=14)
+               ->  Sort  (cost=0.00..80.01 rows=14 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..80.00 rows=14 width=14)
+                           ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: col2 > 10::numeric AND col2 < 50::numeric
+                                 Partitions selected: 4 (out of 5)
+                           ->  Dynamic Index Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..80.00 rows=14 width=14)
+                                 Index Cond: col2 > 10::numeric AND col2 < 50::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(14 rows)
+
+SELECT * FROM pt_lt_tab WHERE col2 > 10 OR col2 = 50 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   11 |   11 | e    | t
+   12 |   12 | e    | t
+   13 |   13 | e    | t
+   14 |   14 | f    | t
+   15 |   15 | f    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 10 OR col2 = 50 ORDER BY col2,col3 LIMIT 5;
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..431.01 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.01 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..431.01 rows=2 width=14)
+               ->  Sort  (cost=0.00..431.01 rows=14 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..431.00 rows=14 width=14)
+                           ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: col2 > 10::numeric AND (col2 > 10::numeric OR col2 = 50::numeric)
+                                 Partitions selected: 4 (out of 5)
+                           ->  Dynamic Table Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..431.00 rows=14 width=14)
+                                 Filter: col2 > 10::numeric OR col2 = 50::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(14 rows)
+
+SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   10 |   10 | c    | t
+   11 |   11 | e    | t
+   12 |   12 | e    | t
+   13 |   13 | e    | t
+   14 |   14 | f    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 LIMIT 5;
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..80.01 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..80.01 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..80.01 rows=2 width=14)
+               ->  Sort  (cost=0.00..80.01 rows=14 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..80.00 rows=14 width=14)
+                           ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: col2 >= 10::numeric AND col2 <= 50::numeric
+                                 Partitions selected: 5 (out of 5)
+                           ->  Dynamic Index Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..80.00 rows=14 width=14)
+                                 Index Cond: col2 >= 10::numeric AND col2 <= 50::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(14 rows)
+
+DROP INDEX idx1;
+WARNING:  Only dropped the index "idx1"
+HINT:  To drop other indexes on child partitions, drop each one explicitly.
+-- @description multiple column b-tree index
+CREATE INDEX idx1 on pt_lt_tab(col1,col2);
+NOTICE:  building index for child partition "pt_lt_tab_1_prt_part1"
+NOTICE:  building index for child partition "pt_lt_tab_1_prt_part2"
+NOTICE:  building index for child partition "pt_lt_tab_1_prt_part3"
+NOTICE:  building index for child partition "pt_lt_tab_1_prt_part4"
+NOTICE:  building index for child partition "pt_lt_tab_1_prt_part5"
+SELECT * FROM pt_lt_tab WHERE col1 < 10 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+    1 |    1 | a    | t
+    2 |    2 | a    | t
+    3 |    3 | a    | t
+    4 |    4 | b    | t
+    5 |    5 | b    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 < 10 ORDER BY col2,col3 LIMIT 5;
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..20.00 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..20.00 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..20.00 rows=2 width=14)
+               ->  Sort  (cost=0.00..20.00 rows=4 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..20.00 rows=4 width=14)
+                           ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 5 (out of 5)
+                           ->  Dynamic Index Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..20.00 rows=4 width=14)
+                                 Index Cond: col1 < 10
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+SELECT * FROM pt_lt_tab WHERE col1 > 50 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 > 50 ORDER BY col2,col3 LIMIT 5;
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..6.00 rows=1 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=14)
+         Merge Key: col2, col3
+         ->  Sort  (cost=0.00..6.00 rows=1 width=14)
+               Sort Key: col2, col3
+               ->  Sequence  (cost=0.00..6.00 rows=1 width=14)
+                     ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                           Partitions selected: 5 (out of 5)
+                     ->  Dynamic Index Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=14)
+                           Index Cond: col1 > 50
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(12 rows)
+
+SELECT * FROM pt_lt_tab WHERE col2 = 25 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   25 |   25 | k    | f
+(1 row)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 = 25 ORDER BY col2,col3 LIMIT 5;
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..2.00 rows=1 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.00 rows=1 width=14)
+         Merge Key: col2, col3
+         ->  Sort  (cost=0.00..2.00 rows=1 width=14)
+               Sort Key: col2, col3
+               ->  Sequence  (cost=0.00..2.00 rows=1 width=14)
+                     ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                           Filter: col2 = 25::numeric
+                           Partitions selected: 1 (out of 5)
+                     ->  Dynamic Index Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..2.00 rows=1 width=14)
+                           Index Cond: col2 = 25::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+SELECT * FROM pt_lt_tab WHERE col2 <> 10 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+    1 |    1 | a    | t
+    2 |    2 | a    | t
+    3 |    3 | a    | t
+    4 |    4 | b    | t
+    5 |    5 | b    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 <> 10 ORDER BY col2,col3 LIMIT 5;
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..431.01 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.01 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..431.01 rows=2 width=14)
+               ->  Sort  (cost=0.00..431.01 rows=17 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..431.00 rows=17 width=14)
+                           ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: col2 < 10::numeric OR col2 > 10::numeric
+                                 Partitions selected: 5 (out of 5)
+                           ->  Dynamic Table Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..431.00 rows=17 width=14)
+                                 Filter: col2 <> 10::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(14 rows)
+
+SELECT * FROM pt_lt_tab WHERE col2 > 10 AND col1 = 10 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 10 AND col1 = 10 ORDER BY col2,col3 LIMIT 5;
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..6.00 rows=1 width=14)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..6.00 rows=1 width=14)
+         Merge Key: col2, col3
+         ->  Sort  (cost=0.00..6.00 rows=1 width=14)
+               Sort Key: col2, col3
+               ->  Sequence  (cost=0.00..6.00 rows=1 width=14)
+                     ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                           Filter: col2 > 10::numeric
+                           Partitions selected: 4 (out of 5)
+                     ->  Dynamic Index Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=14)
+                           Index Cond: col1 = 10 AND col2 > 10::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+SELECT * FROM pt_lt_tab WHERE col2 > 10.00 OR col1 = 50 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   11 |   11 | e    | t
+   12 |   12 | e    | t
+   13 |   13 | e    | t
+   14 |   14 | f    | t
+   15 |   15 | f    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 10.00 OR col1 = 50 ORDER BY col2,col3 LIMIT 5;
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..431.01 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.01 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..431.01 rows=2 width=14)
+               ->  Sort  (cost=0.00..431.01 rows=14 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..431.00 rows=14 width=14)
+                           ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 5 (out of 5)
+                           ->  Dynamic Table Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..431.00 rows=14 width=14)
+                                 Filter: col2 > 10.00 OR col1 = 50
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   10 |   10 | c    | t
+   11 |   11 | e    | t
+   12 |   12 | e    | t
+   13 |   13 | e    | t
+   14 |   14 | f    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 LIMIT 5;
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..80.01 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..80.01 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..80.01 rows=2 width=14)
+               ->  Sort  (cost=0.00..80.01 rows=14 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..80.00 rows=14 width=14)
+                           ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: col2 >= 10::numeric AND col2 <= 50::numeric
+                                 Partitions selected: 5 (out of 5)
+                           ->  Dynamic Index Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..80.00 rows=14 width=14)
+                                 Index Cond: col2 >= 10::numeric AND col2 <= 50::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(14 rows)
+
+DROP INDEX idx1;
+WARNING:  Only dropped the index "idx1"
+HINT:  To drop other indexes on child partitions, drop each one explicitly.
+-- have to drop the indexes on the partitions explicitly.
+DROP INDEX idx1_1_prt_part1;
+DROP INDEX idx1_1_prt_part2;
+DROP INDEX idx1_1_prt_part3;
+DROP INDEX idx1_1_prt_part4;
+DROP INDEX idx1_1_prt_part5;
+-- @description Heterogeneous index, index on partition key, b-tree index on all partitions
+CREATE INDEX idx1 on pt_lt_tab_1_prt_part1(col2);
+CREATE INDEX idx2 on pt_lt_tab_1_prt_part2(col2);
+CREATE INDEX idx3 on pt_lt_tab_1_prt_part3(col2);
+CREATE INDEX idx4 on pt_lt_tab_1_prt_part4(col2);
+CREATE INDEX idx5 on pt_lt_tab_1_prt_part5(col2);
+SELECT * FROM pt_lt_tab WHERE col2 between 1 AND 50 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+    1 |    1 | a    | t
+    2 |    2 | a    | t
+    3 |    3 | a    | t
+    4 |    4 | b    | t
+    5 |    5 | b    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 between 1 AND 50 ORDER BY col2,col3 LIMIT 5;
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..100.01 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..100.01 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..100.01 rows=2 width=14)
+               ->  Sort  (cost=0.00..100.01 rows=17 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..100.01 rows=17 width=14)
+                           ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: col2 >= 1::numeric AND col2 <= 50::numeric
+                                 Partitions selected: 5 (out of 5)
+                           ->  Dynamic Index Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..100.01 rows=17 width=14)
+                                 Index Cond: col2 >= 1::numeric AND col2 <= 50::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(14 rows)
+
+SELECT * FROM pt_lt_tab WHERE col2 > 5 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+    6 |    6 | b    | t
+    7 |    7 | c    | t
+    8 |    8 | c    | t
+    9 |    9 | c    | t
+   10 |   10 | c    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 5 ORDER BY col2,col3 LIMIT 5;
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..90.01 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..90.01 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..90.01 rows=2 width=14)
+               ->  Sort  (cost=0.00..90.01 rows=15 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..90.00 rows=15 width=14)
+                           ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: col2 > 5::numeric
+                                 Partitions selected: 5 (out of 5)
+                           ->  Dynamic Index Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..90.00 rows=15 width=14)
+                                 Index Cond: col2 > 5::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(14 rows)
+
+SELECT * FROM pt_lt_tab WHERE col2 = 5 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+    5 |    5 | b    | t
+(1 row)
+
+EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 = 5 ORDER BY col2,col3 LIMIT 5;
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..2.00 rows=1 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.00 rows=1 width=14)
+         Merge Key: col2, col3
+         ->  Sort  (cost=0.00..2.00 rows=1 width=14)
+               Sort Key: col2, col3
+               ->  Sequence  (cost=0.00..2.00 rows=1 width=14)
+                     ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                           Filter: col2 = 5::numeric
+                           Partitions selected: 1 (out of 5)
+                     ->  Dynamic Index Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..2.00 rows=1 width=14)
+                           Index Cond: col2 = 5::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+DROP INDEX idx1;
+DROP INDEX idx2;
+DROP INDEX idx3;
+DROP INDEX idx4;
+DROP INDEX idx5;
+-- @description Heterogeneous index,b-tree index on all parts,index, index on non-partition col
+CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col1);
+CREATE INDEX idx2 on pt_lt_tab_df_1_prt_part2(col1);
+CREATE INDEX idx3 on pt_lt_tab_df_1_prt_part3(col1);
+CREATE INDEX idx4 on pt_lt_tab_df_1_prt_part4(col1);
+CREATE INDEX idx5 on pt_lt_tab_df_1_prt_part5(col1);
+CREATE INDEX idx6 on pt_lt_tab_df_1_prt_def(col1);
+SELECT * FROM pt_lt_tab_df WHERE col1 between 1 AND 100 ORDER BY col1 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+    1 |    1 | a    | t
+    2 |    2 | a    | t
+    3 |    3 | a    | t
+    4 |    4 | b    | t
+    5 |    5 | b    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col1 between 1 AND 100 ORDER BY col1 LIMIT 5;
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..120.01 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..120.01 rows=5 width=14)
+         Merge Key: col1
+         ->  Limit  (cost=0.00..120.01 rows=2 width=14)
+               ->  Sort  (cost=0.00..120.01 rows=20 width=14)
+                     Sort Key: col1
+                     ->  Sequence  (cost=0.00..120.01 rows=20 width=14)
+                           ->  Partition Selector for pt_lt_tab_df (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 6 (out of 6)
+                           ->  Dynamic Index Scan on pt_lt_tab_df (dynamic scan id: 1)  (cost=0.00..120.01 rows=20 width=14)
+                                 Index Cond: col1 >= 1 AND col1 <= 100
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+SELECT * FROM pt_lt_tab_df WHERE col1 > 50 ORDER BY col1 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   51 |   51 | u    | t
+   52 |   52 | u    | t
+   53 |   53 | u    | t
+   54 |   54 | x    | t
+   55 |   55 | x    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col1 > 50 ORDER BY col1 LIMIT 5;
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..16.80 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..16.80 rows=5 width=14)
+         Merge Key: col1
+         ->  Limit  (cost=0.00..16.80 rows=2 width=14)
+               ->  Sort  (cost=0.00..16.80 rows=3 width=14)
+                     Sort Key: col1
+                     ->  Sequence  (cost=0.00..16.80 rows=3 width=14)
+                           ->  Partition Selector for pt_lt_tab_df (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 6 (out of 6)
+                           ->  Dynamic Index Scan on pt_lt_tab_df (dynamic scan id: 1)  (cost=0.00..16.80 rows=3 width=14)
+                                 Index Cond: col1 > 50
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+SELECT * FROM pt_lt_tab_df WHERE col1 < 50 ORDER BY col1 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+    1 |    1 | a    | t
+    2 |    2 | a    | t
+    3 |    3 | a    | t
+    4 |    4 | b    | t
+    5 |    5 | b    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col1 < 50 ORDER BY col1 LIMIT 5;
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..100.81 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..100.81 rows=5 width=14)
+         Merge Key: col1
+         ->  Limit  (cost=0.00..100.81 rows=2 width=14)
+               ->  Sort  (cost=0.00..100.81 rows=17 width=14)
+                     Sort Key: col1
+                     ->  Sequence  (cost=0.00..100.80 rows=17 width=14)
+                           ->  Partition Selector for pt_lt_tab_df (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 6 (out of 6)
+                           ->  Dynamic Index Scan on pt_lt_tab_df (dynamic scan id: 1)  (cost=0.00..100.80 rows=17 width=14)
+                                 Index Cond: col1 < 50
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+DROP INDEX idx1;
+DROP INDEX idx2;
+DROP INDEX idx3;
+DROP INDEX idx4;
+DROP INDEX idx5;
+DROP INDEX idx6;
+-- @description Heterogeneous index,b-tree index on all parts including default, index on partition col
+CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col2);
+CREATE INDEX idx2 on pt_lt_tab_df_1_prt_part2(col2);
+CREATE INDEX idx3 on pt_lt_tab_df_1_prt_part3(col2);
+CREATE INDEX idx4 on pt_lt_tab_df_1_prt_part4(col2);
+CREATE INDEX idx5 on pt_lt_tab_df_1_prt_part5(col2);
+CREATE INDEX idx6 on pt_lt_tab_df_1_prt_def(col2);
+SELECT * FROM pt_lt_tab_df WHERE col2 between 1 AND 100 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+    1 |    1 | a    | t
+    2 |    2 | a    | t
+    3 |    3 | a    | t
+    4 |    4 | b    | t
+    5 |    5 | b    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 between 1 AND 100 ORDER BY col2,col3 LIMIT 5;
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..120.01 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..120.01 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..120.01 rows=2 width=14)
+               ->  Sort  (cost=0.00..120.01 rows=20 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..120.01 rows=20 width=14)
+                           ->  Partition Selector for pt_lt_tab_df (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: col2 >= 1::numeric AND col2 <= 100::numeric
+                                 Partitions selected: 6 (out of 6)
+                           ->  Dynamic Index Scan on pt_lt_tab_df (dynamic scan id: 1)  (cost=0.00..120.01 rows=20 width=14)
+                                 Index Cond: col2 >= 1::numeric AND col2 <= 100::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(14 rows)
+
+SELECT * FROM pt_lt_tab_df WHERE col2 > 50 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   51 |   51 | u    | t
+   52 |   52 | u    | t
+   53 |   53 | u    | t
+   54 |   54 | x    | t
+   55 |   55 | x    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 > 50 ORDER BY col2,col3 LIMIT 5;
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..19.20 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..19.20 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..19.20 rows=2 width=14)
+               ->  Sort  (cost=0.00..19.20 rows=4 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..19.20 rows=4 width=14)
+                           ->  Partition Selector for pt_lt_tab_df (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: col2 > 50::numeric
+                                 Partitions selected: 1 (out of 6)
+                           ->  Dynamic Index Scan on pt_lt_tab_df (dynamic scan id: 1)  (cost=0.00..19.20 rows=4 width=14)
+                                 Index Cond: col2 > 50::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(14 rows)
+
+SELECT * FROM pt_lt_tab_df WHERE col2 = 50 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   50 |   50 | q    | f
+(1 row)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 = 50 ORDER BY col2,col3 LIMIT 5;
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..2.00 rows=1 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.00 rows=1 width=14)
+         Merge Key: col2, col3
+         ->  Sort  (cost=0.00..2.00 rows=1 width=14)
+               Sort Key: col2, col3
+               ->  Sequence  (cost=0.00..2.00 rows=1 width=14)
+                     ->  Partition Selector for pt_lt_tab_df (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                           Filter: col2 = 50::numeric
+                           Partitions selected: 1 (out of 6)
+                     ->  Dynamic Index Scan on pt_lt_tab_df (dynamic scan id: 1)  (cost=0.00..2.00 rows=1 width=14)
+                           Index Cond: col2 = 50::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+SELECT * FROM pt_lt_tab_df WHERE col2 <> 10 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+    1 |    1 | a    | t
+    2 |    2 | a    | t
+    3 |    3 | a    | t
+    4 |    4 | b    | t
+    5 |    5 | b    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 <> 10 ORDER BY col2,col3 LIMIT 5;
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..431.01 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.01 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..431.01 rows=2 width=14)
+               ->  Sort  (cost=0.00..431.01 rows=21 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..431.00 rows=21 width=14)
+                           ->  Partition Selector for pt_lt_tab_df (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: col2 < 10::numeric OR col2 > 10::numeric
+                                 Partitions selected: 6 (out of 6)
+                           ->  Dynamic Table Scan on pt_lt_tab_df (dynamic scan id: 1)  (cost=0.00..431.00 rows=21 width=14)
+                                 Filter: col2 <> 10::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(14 rows)
+
+SELECT * FROM pt_lt_tab_df WHERE col2 between 1 AND 100 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+    1 |    1 | a    | t
+    2 |    2 | a    | t
+    3 |    3 | a    | t
+    4 |    4 | b    | t
+    5 |    5 | b    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 between 1 AND 100 ORDER BY col2,col3 LIMIT 5;
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..120.01 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..120.01 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..120.01 rows=2 width=14)
+               ->  Sort  (cost=0.00..120.01 rows=20 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..120.01 rows=20 width=14)
+                           ->  Partition Selector for pt_lt_tab_df (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: col2 >= 1::numeric AND col2 <= 100::numeric
+                                 Partitions selected: 6 (out of 6)
+                           ->  Dynamic Index Scan on pt_lt_tab_df (dynamic scan id: 1)  (cost=0.00..120.01 rows=20 width=14)
+                                 Index Cond: col2 >= 1::numeric AND col2 <= 100::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(14 rows)
+
+SELECT * FROM pt_lt_tab_df WHERE col2 < 50 AND col1 > 10 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   11 |   11 | e    | t
+   12 |   12 | e    | t
+   13 |   13 | e    | t
+   14 |   14 | f    | t
+   15 |   15 | f    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 < 50 AND col1 > 10 ORDER BY col2,col3 LIMIT 5;
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..100.81 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..100.81 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..100.81 rows=2 width=14)
+               ->  Sort  (cost=0.00..100.81 rows=14 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..100.81 rows=14 width=14)
+                           ->  Partition Selector for pt_lt_tab_df (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: col2 < 50::numeric
+                                 Partitions selected: 6 (out of 6)
+                           ->  Dynamic Index Scan on pt_lt_tab_df (dynamic scan id: 1)  (cost=0.00..100.81 rows=14 width=14)
+                                 Index Cond: col2 < 50::numeric
+                                 Filter: col2 < 50::numeric AND col1 > 10
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(15 rows)
+
+DROP INDEX idx1;
+DROP INDEX idx2;
+DROP INDEX idx3;
+DROP INDEX idx4;
+DROP INDEX idx5;
+DROP INDEX idx6;
+-- @description Heterogeneous index,b-tree index on all parts,index , multiple index 
+CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col2,col1);
+CREATE INDEX idx2 on pt_lt_tab_df_1_prt_part2(col2,col1);
+CREATE INDEX idx3 on pt_lt_tab_df_1_prt_part3(col2,col1);
+CREATE INDEX idx4 on pt_lt_tab_df_1_prt_part4(col2,col1);
+CREATE INDEX idx5 on pt_lt_tab_df_1_prt_part5(col2,col1);
+CREATE INDEX idx6 on pt_lt_tab_df_1_prt_def(col2,col1);
+SELECT * FROM pt_lt_tab_df WHERE col2 = 50 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   50 |   50 | q    | f
+(1 row)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 = 50 ORDER BY col2,col3 LIMIT 5;
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..2.00 rows=1 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.00 rows=1 width=14)
+         Merge Key: col2, col3
+         ->  Sort  (cost=0.00..2.00 rows=1 width=14)
+               Sort Key: col2, col3
+               ->  Sequence  (cost=0.00..2.00 rows=1 width=14)
+                     ->  Partition Selector for pt_lt_tab_df (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                           Filter: col2 = 50::numeric
+                           Partitions selected: 1 (out of 6)
+                     ->  Dynamic Index Scan on pt_lt_tab_df (dynamic scan id: 1)  (cost=0.00..2.00 rows=1 width=14)
+                           Index Cond: col2 = 50::numeric
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+SELECT * FROM pt_lt_tab_df WHERE col2 > 10 AND col1 between 1 AND 100 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   11 |   11 | e    | t
+   12 |   12 | e    | t
+   13 |   13 | e    | t
+   14 |   14 | f    | t
+   15 |   15 | f    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 > 10 AND col1 between 1 AND 100 ORDER BY col2,col3 LIMIT 5;
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..100.81 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..100.81 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..100.81 rows=2 width=14)
+               ->  Sort  (cost=0.00..100.81 rows=16 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..100.81 rows=17 width=14)
+                           ->  Partition Selector for pt_lt_tab_df (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: col2 > 10::numeric
+                                 Partitions selected: 5 (out of 6)
+                           ->  Dynamic Index Scan on pt_lt_tab_df (dynamic scan id: 1)  (cost=0.00..100.81 rows=17 width=14)
+                                 Index Cond: col2 > 10::numeric AND col1 >= 1 AND col1 <= 100
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(14 rows)
+
+SELECT * FROM pt_lt_tab_df WHERE col1 = 10 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   10 |   10 | c    | t
+(1 row)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col1 = 10 ORDER BY col2,col3 LIMIT 5;
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..6.00 rows=1 width=14)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..6.00 rows=1 width=14)
+         Merge Key: col2, col3
+         ->  Sort  (cost=0.00..6.00 rows=1 width=14)
+               Sort Key: col2, col3
+               ->  Sequence  (cost=0.00..6.00 rows=1 width=14)
+                     ->  Partition Selector for pt_lt_tab_df (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                           Partitions selected: 6 (out of 6)
+                     ->  Dynamic Index Scan on pt_lt_tab_df (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=14)
+                           Index Cond: col1 = 10
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.7.0
+(12 rows)
+
+DROP INDEX idx1;
+DROP INDEX idx2;
+DROP INDEX idx3;
+DROP INDEX idx4;
+DROP INDEX idx5;
+DROP INDEX idx6;
+--
 -- See MPP-6861
 --
 CREATE TABLE ds_4
