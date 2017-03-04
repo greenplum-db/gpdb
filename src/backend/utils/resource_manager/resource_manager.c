@@ -17,5 +17,5 @@
 /*
  * GUC variables.
  */
-bool	ResourceScheduler;						/* Is scheduling enabled? */
+bool	ResourceScheduler = false;						/* Is scheduling enabled? */
 ResourceManagerPolicy Gp_resource_manager_policy;
