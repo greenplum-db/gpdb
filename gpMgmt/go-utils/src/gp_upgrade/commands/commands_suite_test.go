@@ -31,7 +31,7 @@ var (
 )
 
 var _ = BeforeEach(func() {
-	sshd = exec.Command("./sshd/sshd")
+	sshd = exec.Command("../../../bin/test/sshd") //TODO refer to GOPATH
 	stdout, _ = sshd.StdoutPipe()
 	stderr, _ = sshd.StderrPipe()
 
