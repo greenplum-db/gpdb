@@ -126,6 +126,7 @@ installcheck-world:
 	$(MAKE) -C contrib/indexscan installcheck
 	$(MAKE) -C gpAux/extensions installcheck
 	$(MAKE) -C src/bin/gpfdist installcheck
+	$(MAKE) -C src/test/kerberos installcheck
 
 
 # Run mock tests, that don't require a running server. Arguably these should
