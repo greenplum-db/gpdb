@@ -914,7 +914,7 @@ CREATE_GROUP_MIRROR_ARRAY () {
 
 GET_REPLY () {
 	$ECHO -e "\n$1 Yy|Nn (default=N):"
-	$ECHO -n ">"
+	$ECHO -n "> "
 	read REPLY
 	if [ -z $REPLY ]; then
 		LOG_MSG "[WARN]:-User abort requested, Script Exits!" 1
