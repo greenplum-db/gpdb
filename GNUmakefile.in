@@ -133,6 +133,7 @@ installcheck-world:
 	$(MAKE) -C contrib/indexscan installcheck
 	$(MAKE) -C gpAux/extensions installcheck
 	$(MAKE) -C src/bin/gpfdist installcheck
+	$(MAKE) -C src/test/kerberos installcheck
 	gpcheckcat -A
 
 
