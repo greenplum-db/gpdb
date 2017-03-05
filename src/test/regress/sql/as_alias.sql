@@ -275,19 +275,50 @@ select lower("C") "%C%", upper ("B B") "BB", "D+1"||'9_nine' "D+1" from xyz1;
 select upper("B B") AS "B_B", lower ("C") AS C, ("D+1"||'9_nine') AS "D+1" from xyz1;
 select upper("B B") "B_B", lower ("C") C, ("D+1"||'9_nine') "D+1" from xyz1;
 -- end_equiv
+
 CREATE TABLE test_as_alias (a integer, b integer) DISTRIBUTED RANDOMLY;
 
--- start_equiv
 CREATE OR REPLACE FUNCTION one() returns integer as $$ select 1 AS result; $$ language sql;
 CREATE OR REPLACE FUNCTION one() returns integer as $$ select 1 result; $$ language sql;
--- end_equiv
 
--- start_equiv
 CREATE OR REPLACE FUNCTION add_em(integer, integer) RETURNS integer as $$ SELECT $1 + $2 AS sum; $$ LANGUAGE SQL CONTAINS SQL;
 CREATE OR REPLACE FUNCTION add_em(integer, integer) RETURNS integer as $$ SELECT $1 + $2 sum; $$ LANGUAGE SQL CONTAINS SQL;
--- end_equiv
 
--- start_equiv
 INSERT INTO test_as_alias select a, a%5 from generate_series(1, 20) AS a;
 INSERT INTO test_as_alias select a, a%5 from generate_series(1, 20) a;
--- end_equiv
+
+
+-- Test using column aliases that are the same as a different column's real name.
+CREATE TABLE colalias_dml_decimal
+(
+    col1 decimal DEFAULT 1.00,
+    col2 decimal,
+    col3 char,
+    col4 decimal,
+    col5 decimal
+)
+DISTRIBUTED by (col4)
+PARTITION BY LIST(col2)
+(
+    default partition def
+);
+
+CREATE TABLE colalias_dml_decimal_candidate
+(
+    col1 decimal DEFAULT 1.00,
+    col2 decimal,
+    col3 char,
+    col4 decimal,
+    col5 decimal
+) DISTRIBUTED by (col2);
+
+INSERT INTO colalias_dml_decimal_candidate VALUES(2.00,1.00,'a',2.00,1.00);
+
+INSERT INTO colalias_dml_decimal(col2,col1,col3,col5,col4) SELECT col1,col2,col3,col5,col4 FROM (SELECT col1,col1 as col2,col3,col5 as col4,col5  FROM colalias_dml_decimal_candidate)foo;
+SELECT * FROM colalias_dml_decimal ORDER BY 1,2,3,4;
+
+UPDATE colalias_dml_decimal SET col1 = (select col2 as col1 FROM colalias_dml_decimal_candidate);
+SELECT * FROM colalias_dml_decimal ORDER BY 1,2,3,4;
+
+UPDATE colalias_dml_decimal SET col1 =colalias_dml_decimal_candidate.col2 FROM colalias_dml_decimal_candidate;
+SELECT * FROM colalias_dml_decimal ORDER BY 1,2,3,4;
