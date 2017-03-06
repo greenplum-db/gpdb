@@ -105,10 +105,25 @@ INSERT INTO INSERT_TBL(y) VALUES ('-!NULL-');
 
 SELECT '' AS four, * FROM INSERT_TBL;
 
+-- GPDB: reset the table contents to match upstream.
+delete from insert_tbl;
+insert into insert_tbl values
+  (3, 'Y', -3),
+  (7, '-NULL-', -7),
+  (7, '!check failed', -7),
+  (4, '-!NULL-', -4);
+
 INSERT INTO INSERT_TBL(y,z) VALUES ('check failed', 4);
 INSERT INTO INSERT_TBL(x,y) VALUES (5, 'check failed');
+-- these fail on GPDB, because we cannot use currval in the z columns' DEFAULT like in upstream.
 INSERT INTO INSERT_TBL(x,y) VALUES (5, '!check failed');
 INSERT INTO INSERT_TBL(y) VALUES ('-!NULL-');
+
+-- GPDB: fix the table contents to match upstream again, so that the subsequent
+-- tests start with the same state as in upstream.
+insert into insert_tbl values
+  (5, '!check failed', -5),
+  (6, '-!NULL-', -6);
 
 SELECT '' AS six, * FROM INSERT_TBL;
 
@@ -155,13 +170,24 @@ CREATE TABLE tmp (xd INT, yd TEXT, zd INT) distributed by (xd);
 INSERT INTO tmp VALUES (null, 'Y', null);
 INSERT INTO tmp VALUES (5, '!check failed', null);
 INSERT INTO tmp VALUES (null, 'try again', null);
-INSERT INTO INSERT_TBL(y) select yd from tmp;
+
+-- GPDB: This INSERT  doesn't work in GPDB, because the default is
+-- different. Fix the table contents again for the next test.
+--
+--INSERT INTO INSERT_TBL(y) select yd from tmp;
+INSERT INTO INSERT_TBL VALUES
+  (4, 'Y', -4),
+  (5, '!check failed', -5),
+  (6, 'try again', -6);
 
 SELECT '' AS three, * FROM INSERT_TBL;
 
 INSERT INTO INSERT_TBL SELECT * FROM tmp WHERE yd = 'try again';
 INSERT INTO INSERT_TBL(y,z) SELECT yd, -7 FROM tmp WHERE yd = 'try again';
 INSERT INTO INSERT_TBL(y,z) SELECT yd, -8 FROM tmp WHERE yd = 'try again';
+
+-- GPDB: Fixup
+INSERT INTO INSERT_TBL VALUES (7, 'try again', -7);
 
 SELECT '' AS four, * FROM INSERT_TBL;
 
@@ -170,10 +196,12 @@ DROP TABLE tmp;
 --
 -- Check constraints on UPDATE
 --
+ALTER TABLE insert_tbl SET DISTRIBUTED BY (y);
 
---UPDATE INSERT_TBL SET x = NULL WHERE x = 5;
---UPDATE INSERT_TBL SET x = 6 WHERE x = 6;
---UPDATE INSERT_TBL SET x = -z, z = -x;
+UPDATE INSERT_TBL SET x = NULL WHERE x = 5;
+UPDATE INSERT_TBL SET x = 6 WHERE x = 6;
+UPDATE INSERT_TBL SET x = -z, z = -x;
+UPDATE INSERT_TBL SET x = z, z = x;
 
 SELECT * FROM INSERT_TBL;
 

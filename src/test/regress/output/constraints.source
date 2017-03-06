@@ -19,11 +19,11 @@ INSERT INTO DEFAULT_TBL VALUES (3, null, 1.0);
 SELECT '' AS five, * FROM DEFAULT_TBL;
  five |  i  |   x    |    f    
 ------+-----+--------+---------
-      |   1 | bruce  | 123.456
       |   1 | thomas | 57.0613
+      |   1 | bruce  | 123.456
       |   2 | vadim  | 987.654
-      |   3 |        |       1
       | 100 | marc   | 123.456
+      |   3 |        |       1
 (5 rows)
 
 CREATE SEQUENCE DEFAULT_SEQ;
@@ -36,8 +36,8 @@ INSERT INTO DEFAULTEXPR_TBL (i2) VALUES (NULL);
 SELECT '' AS four, * FROM DEFAULTEXPR_TBL;
  four | i1  | i2 
 ------+-----+----
-      |  -3 |  1
       |  -1 | -2
+      |  -3 |  1
       | 102 | -4
       | 102 |   
 (4 rows)
@@ -75,8 +75,8 @@ ERROR:  new row for relation "check_tbl" violates check constraint "check_con"
 SELECT '' AS three, * FROM CHECK_TBL;
  three | x 
 -------+---
-       | 4
        | 5
+       | 4
        | 6
 (3 rows)
 
@@ -137,27 +137,42 @@ SELECT '' AS four, * FROM INSERT_TBL;
  four | x |       y       | z  
 ------+---+---------------+----
       | 4 | Y             | -4
-      | 6 | -!NULL-       | -6
-      | 7 | !check failed | -7
       | 7 | -NULL-        | -7
+      | 7 | !check failed | -7
+      | 6 | -!NULL-       | -6
 (4 rows)
 
+-- GPDB: reset the table contents to match upstream.
+delete from insert_tbl;
+insert into insert_tbl values
+  (3, 'Y', -3),
+  (7, '-NULL-', -7),
+  (7, '!check failed', -7),
+  (4, '-!NULL-', -4);
 INSERT INTO INSERT_TBL(y,z) VALUES ('check failed', 4);
 ERROR:  new row for relation "insert_tbl" violates check constraint "insert_tbl_check"
 INSERT INTO INSERT_TBL(x,y) VALUES (5, 'check failed');
 ERROR:  new row for relation "insert_tbl" violates check constraint "insert_tbl_check"
+-- these fail on GPDB, because we cannot use currval in the z columns' DEFAULT like in upstream.
 INSERT INTO INSERT_TBL(x,y) VALUES (5, '!check failed');
 ERROR:  new row for relation "insert_tbl" violates check constraint "insert_tbl_check"
 INSERT INTO INSERT_TBL(y) VALUES ('-!NULL-');
 ERROR:  new row for relation "insert_tbl" violates check constraint "insert_con"
+-- GPDB: fix the table contents to match upstream again, so that the subsequent
+-- tests start with the same state as in upstream.
+insert into insert_tbl values
+  (5, '!check failed', -5),
+  (6, '-!NULL-', -6);
 SELECT '' AS six, * FROM INSERT_TBL;
  six | x |       y       | z  
 -----+---+---------------+----
-     | 4 | Y             | -4
-     | 6 | -!NULL-       | -6
-     | 7 | !check failed | -7
+     | 3 | Y             | -3
      | 7 | -NULL-        | -7
-(4 rows)
+     | 7 | !check failed | -7
+     | 4 | -!NULL-       | -4
+     | 5 | !check failed | -5
+     | 6 | -!NULL-       | -6
+(6 rows)
 
 SELECT 'seven' AS one, nextval('insert_seq');
   one  | nextval 
@@ -180,12 +195,14 @@ INSERT INTO INSERT_TBL VALUES (null, null, null);
 SELECT '' AS nine, * FROM INSERT_TBL;
  nine | x |       y       | z  
 ------+---+---------------+----
-      | 4 | Y             | -4
-      | 6 | -!NULL-       | -6
-      | 7 | !check failed | -7
+      | 3 | Y             | -3
       | 7 | -NULL-        | -7
+      | 7 | !check failed | -7
+      | 4 | -!NULL-       | -4
+      | 5 | !check failed | -5
+      | 6 | -!NULL-       | -6
       |   |               |   
-(5 rows)
+(7 rows)
 
 --
 -- Check inheritance of defaults and constraints
@@ -216,36 +233,58 @@ CREATE TABLE tmp (xd INT, yd TEXT, zd INT) distributed by (xd);
 INSERT INTO tmp VALUES (null, 'Y', null);
 INSERT INTO tmp VALUES (5, '!check failed', null);
 INSERT INTO tmp VALUES (null, 'try again', null);
-INSERT INTO INSERT_TBL(y) select yd from tmp;
-ERROR:  new row for relation "insert_tbl" violates check constraint "insert_con"
+-- GPDB: This INSERT  doesn't work in GPDB, because the default is
+-- different. Fix the table contents again for the next test.
+--
+--INSERT INTO INSERT_TBL(y) select yd from tmp;
+INSERT INTO INSERT_TBL VALUES
+  (4, 'Y', -4),
+  (5, '!check failed', -5),
+  (6, 'try again', -6);
 SELECT '' AS three, * FROM INSERT_TBL;
- three | x | y | z 
--------+---+---+---
-(0 rows)
+ three | x |       y       | z  
+-------+---+---------------+----
+       | 4 | Y             | -4
+       | 5 | !check failed | -5
+       | 6 | try again     | -6
+(3 rows)
 
 INSERT INTO INSERT_TBL SELECT * FROM tmp WHERE yd = 'try again';
 INSERT INTO INSERT_TBL(y,z) SELECT yd, -7 FROM tmp WHERE yd = 'try again';
 ERROR:  new row for relation "insert_tbl" violates check constraint "insert_tbl_check"
 INSERT INTO INSERT_TBL(y,z) SELECT yd, -8 FROM tmp WHERE yd = 'try again';
 ERROR:  new row for relation "insert_tbl" violates check constraint "insert_tbl_check"
+-- GPDB: Fixup
+INSERT INTO INSERT_TBL VALUES (7, 'try again', -7);
 SELECT '' AS four, * FROM INSERT_TBL;
- four | x |     y     | z 
-------+---+-----------+---
-      |   | try again |  
-(1 row)
+ four | x |       y       | z  
+------+---+---------------+----
+      | 4 | Y             | -4
+      | 5 | !check failed | -5
+      | 6 | try again     | -6
+      |   | try again     |   
+      | 7 | try again     | -7
+(5 rows)
 
 DROP TABLE tmp;
 --
 -- Check constraints on UPDATE
 --
---UPDATE INSERT_TBL SET x = NULL WHERE x = 5;
---UPDATE INSERT_TBL SET x = 6 WHERE x = 6;
---UPDATE INSERT_TBL SET x = -z, z = -x;
+ALTER TABLE insert_tbl SET DISTRIBUTED BY (y);
+UPDATE INSERT_TBL SET x = NULL WHERE x = 5;
+UPDATE INSERT_TBL SET x = 6 WHERE x = 6;
+UPDATE INSERT_TBL SET x = -z, z = -x;
+UPDATE INSERT_TBL SET x = z, z = x;
+ERROR:  new row for relation "insert_tbl" violates check constraint "insert_con"
 SELECT * FROM INSERT_TBL;
- x |     y     | z 
----+-----------+---
-   | try again |  
-(1 row)
+ x |       y       | z  
+---+---------------+----
+ 4 | Y             | -4
+   | try again     |   
+ 7 | try again     | -7
+ 5 | !check failed |   
+ 6 | try again     | -6
+(5 rows)
 
 -- DROP TABLE INSERT_TBL;
 --
@@ -310,8 +349,8 @@ SELECT '' AS three, * FROM PRIMARY_TBL;
  three | i |   t   
 -------+---+-------
        | 1 | one
-       | 1 | three
        | 2 | two
+       | 1 | three
        | 4 | three
        | 5 | one
 (5 rows)
@@ -338,8 +377,8 @@ SELECT '' AS five, * FROM UNIQUE_TBL;
       | 2 | two
       | 4 | four
       | 5 | one
-      |   | seven
       |   | six
+      |   | seven
 (6 rows)
 
 DROP TABLE UNIQUE_TBL;
@@ -358,8 +397,8 @@ SELECT '' AS five, * FROM UNIQUE_TBL;
  five | i |   t   
 ------+---+-------
       | 1 | one
-      | 1 | three
       | 2 | two
+      | 1 | three
       | 5 | one
       |   | six
 (5 rows)
