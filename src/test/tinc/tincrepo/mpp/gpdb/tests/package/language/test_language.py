@@ -195,10 +195,6 @@ class languageTestCase(MPPTestCase):
             self.skipTest('skipping test: plpython.so is not installed in $GPHOME/lib/postgresql')
 
 
-    def test_LANG0001(self):
-        """Language: Naive Bayes Classification MPP-3654"""
-        self.doTest(1)
-
     def test_PLR0000(self):
         """Language: PL/R Setup"""
         if sys.platform in ["sunos5","sunos6"]: self.skipTest("Not supported on solaris")
