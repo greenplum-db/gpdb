@@ -250,16 +250,6 @@ class languageTestCase(MPPTestCase):
         if sys.platform in ["sunos5","sunos6"]: self.skipTest("Not supported on solaris")
         self.doPLR(9,"plr/query")
 
-    def test_PLR0010(self):
-        """Language: PL/R Examples from http://www.joeconway.com/plr/"""
-        self.skipTest("Test not required. Ref: MPP-23940")
-        if self.checkAPPHOMEandLIB("plr","R_HOME"):
-            sql_file = local_path("plr/plr-function.sql")
-            PSQL.run_sql_file(sql_file = sql_file)
-            self.doPLR(1, "plr/plr-test", default='')
-        else:
-            self.skipTest('skipped')
-
     def test_PLR0011_function_call_modes(self):
         """ Language PL/R: function call modes """
         if sys.platform in ["sunos5","sunos6"]: self.skipTest("Not supported on solaris")
