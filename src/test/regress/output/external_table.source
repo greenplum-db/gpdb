@@ -361,6 +361,8 @@ create writable external table auth_ext_test3(a int) location ('gpfdist://host:8
 ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
 SET SESSION AUTHORIZATION exttab1_u2;
 create writable external table auth_ext_test3(a int) location ('gpfdist://host:8000/file') format 'text';
+create readable external table auth_ext_test3b(a int) location ('gpfdist://host:8000/file') format 'text'; -- fail
+ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
 RESET SESSION AUTHORIZATION;
 ALTER ROLE exttab1_u2 NOCREATEEXTTABLE(protocol='gpfdist', type='writable');
 SET SESSION AUTHORIZATION exttab1_u2;

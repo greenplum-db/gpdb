@@ -213,11 +213,15 @@ CREATE ROLE exttab1_u7 CREATEEXTTABLE(protocol='gphdfs', type='writable') NOCREA
 
 SET SESSION AUTHORIZATION exttab1_su;
 create readable external table auth_ext_test1(a int) location ('gpfdist://host:8000/file') format 'text';
+
 SET SESSION AUTHORIZATION exttab1_u1;
 create readable external table auth_ext_test2(a int) location ('gpfdist://host:8000/file') format 'text';
 create writable external table auth_ext_test3(a int) location ('gpfdist://host:8000/file') format 'text'; -- fail
+
 SET SESSION AUTHORIZATION exttab1_u2;
 create writable external table auth_ext_test3(a int) location ('gpfdist://host:8000/file') format 'text';
+create readable external table auth_ext_test3b(a int) location ('gpfdist://host:8000/file') format 'text'; -- fail
+
 RESET SESSION AUTHORIZATION;
 ALTER ROLE exttab1_u2 NOCREATEEXTTABLE(protocol='gpfdist', type='writable');
 SET SESSION AUTHORIZATION exttab1_u2;
