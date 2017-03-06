@@ -255,7 +255,7 @@ BLD_CONFIG_SHELL=$($(BLD_ARCH)_CONFIG_SHELL)
 $(GPPGDIR)/GNUmakefile : $(GPPGDIR)/configure  env.sh
 	rm -rf $(INSTLOC)
 	mkdir -p $(GPPGDIR) 
-	$(MAKE) -C $(GPPGDIR)/src/bin/gpfdist/ext BLD_TOP=$(BLD_TOP)
+	-[ "$(BLD_ARCH)" = "win32" ] && $(MAKE) -C $(GPPGDIR)/src/bin/gpfdist/ext BLD_TOP=$(BLD_TOP)
 	cd $(GPPGDIR) && CC="$(strip $(BLD_CC) $(BLD_CFLAGS))"    \
                      CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL) \
                      ./configure $(CONFIGFLAGS)               \
