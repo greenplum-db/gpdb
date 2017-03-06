@@ -250,26 +250,9 @@ class languageTestCase(MPPTestCase):
         if sys.platform in ["sunos5","sunos6"]: self.skipTest("Not supported on solaris")
         self.doPLR(9,"plr/query")
 
-    def test_PLR0011_function_call_modes(self):
-        """ Language PL/R: function call modes """
-        if sys.platform in ["sunos5","sunos6"]: self.skipTest("Not supported on solaris")
-        self.doPLR(None, "plr/test001_function_call_modes", default='-e')
-
     def test_PLR0012_mpp16512(self):
         """ mpp16512 - regression for pl/R: R interpreter expression evaluation error OR connection to the server lost"""
         self.doPLR(None, "plr/mpp16512", default='-e')
-
-    def test_SQL001_function_call_modes(self):
-        """ Language SQL: function call modes """
-        self.doSQL(None, "sql/test001_function_call_modes", default='-e')
-
-    def test_PLPGSQL001_function_call_modes(self):
-        """ Language PL/PGSQL: function call modes """
-        self.doPLPGSQL(None, "plpgsql/test001_function_call_modes", default='-e')
-
-    def test_PLPYTHONU001_function_call_modes(self):
-        """ Language PL/PYTHONU: function call modes """
-        self.doPLPYTHONU(None, "plpythonu/test001_function_call_modes", default='-e')
 
     def do_PLPERL_initialize(self):
         """ Language PL/PERL upgrade to 9.1: initialize test data  """
