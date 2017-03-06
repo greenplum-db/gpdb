@@ -306,12 +306,6 @@ select * from tableless_ext;
 SELECT gp_truncate_error_log('*.*');
 SELECT relname, linenum, errmsg FROM gp_read_error_log('tableless_ext');
 
--- Verify that the error log functions are a part of the catalog
--- Earlier these functions were hidden from the catalog and would not show up
--- in pg_proc
-SELECT * from pg_proc where proname = 'gp_read_error_log';
-SELECT * from pg_proc where proname = 'gp_truncate_error_log';
-
 -- Test for error log functionality 
 
 -- Scan with no errors

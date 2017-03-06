@@ -575,21 +575,6 @@ SELECT relname, linenum, errmsg FROM gp_read_error_log('tableless_ext');
 ---------+---------+--------
 (0 rows)
 
--- Verify that the error log functions are a part of the catalog
--- Earlier these functions were hidden from the catalog and would not show up
--- in pg_proc
-SELECT * from pg_proc where proname = 'gp_read_error_log';
-      proname      | pronamespace | proowner | prolang | procost | prorows | provariadic | proisagg | prosecdef | proisstrict | proretset | provolatile | pronargs | pronargdefaults | prorettype | proiswin | proargtypes |         proallargtypes         |     proargmodes     |                                 proargnames                                 | proargdefaults |      prosrc       | probin | proconfig | proacl | prodataaccess 
--------------------+--------------+----------+---------+---------+---------+-------------+----------+-----------+-------------+-----------+-------------+----------+-----------------+------------+----------+-------------+--------------------------------+---------------------+-----------------------------------------------------------------------------+----------------+-------------------+--------+-----------+--------+---------------
- gp_read_error_log |           11 |       10 |      12 |       1 |    1000 |           0 | f        | f         | t           | t         | v           |        1 |               0 |       2249 | f        | 25          | {25,1184,25,25,23,23,25,25,17} | {i,o,o,o,o,o,o,o,o} | {exttable,cmdtime,relname,filename,linenum,bytenum,errmsg,rawdata,rawbytes} |                | gp_read_error_log |        |           |        | s
-(1 row)
-
-SELECT * from pg_proc where proname = 'gp_truncate_error_log';
-        proname        | pronamespace | proowner | prolang | procost | prorows | provariadic | proisagg | prosecdef | proisstrict | proretset | provolatile | pronargs | pronargdefaults | prorettype | proiswin | proargtypes | proallargtypes | proargmodes | proargnames | proargdefaults |        prosrc         | probin | proconfig | proacl | prodataaccess 
------------------------+--------------+----------+---------+---------+---------+-------------+----------+-----------+-------------+-----------+-------------+----------+-----------------+------------+----------+-------------+----------------+-------------+-------------+----------------+-----------------------+--------+-----------+--------+---------------
- gp_truncate_error_log |           11 |       10 |      12 |       1 |       0 |           0 | f        | f         | t           | f         | v           |        1 |               0 |         16 | f        | 25          |                |             |             |                | gp_truncate_error_log |        |           |        | m
-(1 row)
-
 -- Test for error log functionality 
 -- Scan with no errors
 CREATE EXTERNAL TABLE exttab_basic_1( i int, j text ) 
