@@ -21,7 +21,10 @@ function install_gpdb() {
 function configure() {
   source /opt/gcc_env.sh
   pushd gpdb_src
-      ./configure --prefix=/usr/local/greenplum-db-devel
+      # The full set of configure options which were used for building the
+      # tree must be used here as well since the toplevel Makefile depends
+      # on these options for deciding what to test
+      ./configure --prefix=/usr/local/greenplum-db-devel --with-perl --with-python --with-libxml --enable-mapreduce
   popd
 }
 
