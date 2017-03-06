@@ -1072,6 +1072,83 @@ DROP INDEX idx3;
 DROP INDEX idx4;
 DROP INDEX idx5;
 DROP INDEX idx6;
+-- @description Negative tests Combination tests, no index on default partition
+CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col2);
+CREATE INDEX idx2 on pt_lt_tab_df_1_prt_part2(col2);
+CREATE INDEX idx3 on pt_lt_tab_df_1_prt_part3(col2);
+CREATE INDEX idx4 on pt_lt_tab_df_1_prt_part4(col2);
+CREATE INDEX idx5 on pt_lt_tab_df_1_prt_part5(col2);
+SELECT * FROM pt_lt_tab_df WHERE col2 > 51 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   52 |   52 | u    | t
+   53 |   53 | u    | t
+   54 |   54 | x    | t
+   55 |   55 | x    | t
+   56 |   56 | x    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 > 51 ORDER BY col2,col3 LIMIT 5;
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..431.00 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..431.00 rows=2 width=14)
+               ->  Sort  (cost=0.00..431.00 rows=3 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..431.00 rows=3 width=14)
+                           ->  Partition Selector for pt_lt_tab_df (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: col2 > 51::numeric
+                                 Partitions selected: 1 (out of 6)
+                           ->  Dynamic Table Scan on pt_lt_tab_df (dynamic scan id: 1)  (cost=0.00..431.00 rows=3 width=14)
+                                 Filter: col2 > 51::numeric
+ Settings:  enable_bitmapscan=on; enable_indexscan=on; enable_seqscan=off; optimizer=on
+ Optimizer status: PQO version 2.7.0
+(14 rows)
+
+SELECT * FROM pt_lt_tab_df WHERE col2 = 50 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   50 |   50 | q    | f
+(1 row)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 = 50 ORDER BY col2,col3 LIMIT 5;
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..431.00 rows=1 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=14)
+         Merge Key: col2, col3
+         ->  Sort  (cost=0.00..431.00 rows=1 width=14)
+               Sort Key: col2, col3
+               ->  Sequence  (cost=0.00..431.00 rows=1 width=14)
+                     ->  Partition Selector for pt_lt_tab_df (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                           Filter: col2 = 50::numeric
+                           Partitions selected: 1 (out of 6)
+                     ->  Dynamic Table Scan on pt_lt_tab_df (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=14)
+                           Filter: col2 = 50::numeric
+ Settings:  enable_bitmapscan=on; enable_indexscan=on; enable_seqscan=off; optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+DROP INDEX idx1;
+DROP INDEX idx2;
+DROP INDEX idx3;
+DROP INDEX idx4;
+DROP INDEX idx5;
+-- @description Negative tests Combination tests ,index exists on some regular partitions and not on the default partition
+CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col2);
+CREATE INDEX idx5 on pt_lt_tab_df_1_prt_part5(col2);
+SELECT * FROM pt_lt_tab_df WHERE col2 is NULL ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+      |      |      | 
+      |      |      | 
+      |      |      | 
+(3 rows)
+
+DROP INDEX idx1;
+DROP INDEX idx5;
 -- @description Heterogeneous index,b-tree index on all parts,index , multiple index 
 CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col2,col1);
 CREATE INDEX idx2 on pt_lt_tab_df_1_prt_part2(col2,col1);
@@ -1159,6 +1236,73 @@ DROP INDEX idx1;
 DROP INDEX idx2;
 DROP INDEX idx3;
 DROP INDEX idx4;
+DROP INDEX idx5;
+DROP INDEX idx6;
+-- @description Index exists on some continuous set of partitions, e.g. p1,p2,p3
+CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col2);
+CREATE INDEX idx2 on pt_lt_tab_df_1_prt_part2(col2);
+CREATE INDEX idx3 on pt_lt_tab_df_1_prt_part3(col2);
+SELECT * FROM pt_lt_tab_df WHERE col2 = 35 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   35 |   35 | o    | f
+(1 row)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 = 35 ORDER BY col2,col3 LIMIT 5;
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..431.00 rows=1 width=14)
+   ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=14)
+         Merge Key: col2, col3
+         ->  Sort  (cost=0.00..431.00 rows=1 width=14)
+               Sort Key: col2, col3
+               ->  Sequence  (cost=0.00..431.00 rows=1 width=14)
+                     ->  Partition Selector for pt_lt_tab_df (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
+                           Filter: col2 = 35::numeric
+                           Partitions selected: 1 (out of 6)
+                     ->  Dynamic Table Scan on pt_lt_tab_df (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=14)
+                           Filter: col2 = 35::numeric
+ Settings:  enable_bitmapscan=on; enable_indexscan=on; enable_seqscan=off; optimizer=on
+ Optimizer status: PQO version 2.7.0
+(13 rows)
+
+DROP INDEX idx1;
+DROP INDEX idx2;
+DROP INDEX idx3;
+-- @description Index exists on some regular partitions and on the default partition [INDEX exists on non-consecutive partitions, e.g. p1,p3,p5]
+CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col2);
+CREATE INDEX idx5 on pt_lt_tab_df_1_prt_part5(col2);
+CREATE INDEX idx6 on pt_lt_tab_df_1_prt_def(col2);
+SELECT * FROM pt_lt_tab_df WHERE col2 > 15 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   16 |   16 | f    | t
+   17 |   17 | g    | t
+   18 |   18 | g    | t
+   19 |   19 | g    | t
+   20 |   20 | g    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 > 15 ORDER BY col2,col3 LIMIT 5;
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..431.01 rows=3 width=14)
+   ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.01 rows=5 width=14)
+         Merge Key: col2, col3
+         ->  Limit  (cost=0.00..431.01 rows=3 width=14)
+               ->  Sort  (cost=0.00..431.01 rows=23 width=14)
+                     Sort Key: col2, col3
+                     ->  Sequence  (cost=0.00..431.00 rows=23 width=14)
+                           ->  Partition Selector for pt_lt_tab_df (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
+                                 Filter: col2 > 15::numeric
+                                 Partitions selected: 5 (out of 6)
+                           ->  Dynamic Table Scan on pt_lt_tab_df (dynamic scan id: 1)  (cost=0.00..431.00 rows=23 width=14)
+                                 Filter: col2 > 15::numeric
+ Settings:  enable_bitmapscan=on; enable_indexscan=on; enable_seqscan=off; optimizer=on
+ Optimizer status: PQO version 2.7.0
+(14 rows)
+
+DROP INDEX idx1;
 DROP INDEX idx5;
 DROP INDEX idx6;
 --

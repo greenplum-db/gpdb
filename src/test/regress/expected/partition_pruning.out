@@ -1406,6 +1406,80 @@ DROP INDEX idx3;
 DROP INDEX idx4;
 DROP INDEX idx5;
 DROP INDEX idx6;
+-- @description Negative tests Combination tests, no index on default partition
+CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col2);
+CREATE INDEX idx2 on pt_lt_tab_df_1_prt_part2(col2);
+CREATE INDEX idx3 on pt_lt_tab_df_1_prt_part3(col2);
+CREATE INDEX idx4 on pt_lt_tab_df_1_prt_part4(col2);
+CREATE INDEX idx5 on pt_lt_tab_df_1_prt_part5(col2);
+SELECT * FROM pt_lt_tab_df WHERE col2 > 51 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   52 |   52 | u    | t
+   53 |   53 | u    | t
+   54 |   54 | x    | t
+   55 |   55 | x    | t
+   56 |   56 | x    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 > 51 ORDER BY col2,col3 LIMIT 5;
+                                                    QUERY PLAN                                                    
+------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=3.33..3.44 rows=5 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=3.33..3.44 rows=5 width=14)
+         Merge Key: public.pt_lt_tab_df.col2, public.pt_lt_tab_df.col3
+         ->  Limit  (cost=3.33..3.34 rows=2 width=14)
+               ->  Sort  (cost=3.33..3.35 rows=4 width=14)
+                     Sort Key: public.pt_lt_tab_df.col2, public.pt_lt_tab_df.col3
+                     ->  Append  (cost=0.00..3.16 rows=4 width=14)
+                           ->  Seq Scan on pt_lt_tab_df_1_prt_def pt_lt_tab_df  (cost=0.00..3.16 rows=4 width=14)
+                                 Filter: col2 > 51::numeric
+ Settings:  enable_bitmapscan=on; enable_indexscan=on; enable_seqscan=off
+ Optimizer status: legacy query optimizer
+(11 rows)
+
+SELECT * FROM pt_lt_tab_df WHERE col2 = 50 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   50 |   50 | q    | f
+(1 row)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 = 50 ORDER BY col2,col3 LIMIT 5;
+                                                             QUERY PLAN                                                             
+------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=1103.54..1103.59 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1103.54..1103.59 rows=2 width=14)
+         Merge Key: public.pt_lt_tab_df.col3
+         ->  Limit  (cost=1103.54..1103.55 rows=1 width=14)
+               ->  Sort  (cost=1103.54..1103.55 rows=1 width=14)
+                     Sort Key: public.pt_lt_tab_df.col3
+                     ->  Append  (cost=0.00..1103.53 rows=1 width=14)
+                           ->  Index Scan using idx5 on pt_lt_tab_df_1_prt_part5 pt_lt_tab_df  (cost=0.00..1100.37 rows=1 width=14)
+                                 Index Cond: col2 = 50::numeric
+                           ->  Seq Scan on pt_lt_tab_df_1_prt_def pt_lt_tab_df  (cost=0.00..3.16 rows=1 width=14)
+                                 Filter: col2 = 50::numeric
+ Settings:  enable_bitmapscan=on; enable_indexscan=on; enable_seqscan=off
+ Optimizer status: legacy query optimizer
+(13 rows)
+
+DROP INDEX idx1;
+DROP INDEX idx2;
+DROP INDEX idx3;
+DROP INDEX idx4;
+DROP INDEX idx5;
+-- @description Negative tests Combination tests ,index exists on some regular partitions and not on the default partition
+CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col2);
+CREATE INDEX idx5 on pt_lt_tab_df_1_prt_part5(col2);
+SELECT * FROM pt_lt_tab_df WHERE col2 is NULL ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+      |      |      | 
+      |      |      | 
+      |      |      | 
+(3 rows)
+
+DROP INDEX idx1;
+DROP INDEX idx5;
 -- @description Heterogeneous index,b-tree index on all parts,index , multiple index 
 CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col2,col1);
 CREATE INDEX idx2 on pt_lt_tab_df_1_prt_part2(col2,col1);
@@ -1517,6 +1591,82 @@ DROP INDEX idx1;
 DROP INDEX idx2;
 DROP INDEX idx3;
 DROP INDEX idx4;
+DROP INDEX idx5;
+DROP INDEX idx6;
+-- @description Index exists on some continuous set of partitions, e.g. p1,p2,p3
+CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col2);
+CREATE INDEX idx2 on pt_lt_tab_df_1_prt_part2(col2);
+CREATE INDEX idx3 on pt_lt_tab_df_1_prt_part3(col2);
+SELECT * FROM pt_lt_tab_df WHERE col2 = 35 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   35 |   35 | o    | f
+(1 row)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 = 35 ORDER BY col2,col3 LIMIT 5;
+                                                     QUERY PLAN                                                     
+--------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=6.30..6.34 rows=2 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=6.30..6.34 rows=2 width=14)
+         Merge Key: public.pt_lt_tab_df.col3
+         ->  Limit  (cost=6.30..6.30 rows=1 width=14)
+               ->  Sort  (cost=6.30..6.30 rows=1 width=14)
+                     Sort Key: public.pt_lt_tab_df.col3
+                     ->  Append  (cost=0.00..6.29 rows=1 width=14)
+                           ->  Seq Scan on pt_lt_tab_df_1_prt_part4 pt_lt_tab_df  (cost=0.00..3.12 rows=1 width=14)
+                                 Filter: col2 = 35::numeric
+                           ->  Seq Scan on pt_lt_tab_df_1_prt_def pt_lt_tab_df  (cost=0.00..3.16 rows=1 width=14)
+                                 Filter: col2 = 35::numeric
+ Settings:  enable_bitmapscan=on; enable_indexscan=on; enable_seqscan=off
+ Optimizer status: legacy query optimizer
+(13 rows)
+
+DROP INDEX idx1;
+DROP INDEX idx2;
+DROP INDEX idx3;
+-- @description Index exists on some regular partitions and on the default partition [INDEX exists on non-consecutive partitions, e.g. p1,p3,p5]
+CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col2);
+CREATE INDEX idx5 on pt_lt_tab_df_1_prt_part5(col2);
+CREATE INDEX idx6 on pt_lt_tab_df_1_prt_def(col2);
+SELECT * FROM pt_lt_tab_df WHERE col2 > 15 ORDER BY col2,col3 LIMIT 5;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+   16 |   16 | f    | t
+   17 |   17 | g    | t
+   18 |   18 | g    | t
+   19 |   19 | g    | t
+   20 |   20 | g    | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 > 15 ORDER BY col2,col3 LIMIT 5;
+                                                             QUERY PLAN                                                             
+------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=17717.24..17717.35 rows=5 width=15)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=17717.24..17717.35 rows=5 width=15)
+         Merge Key: public.pt_lt_tab_df.col2, public.pt_lt_tab_df.col3
+         ->  Limit  (cost=17717.24..17717.25 rows=2 width=15)
+               ->  Sort  (cost=17717.24..17717.35 rows=16 width=15)
+                     Sort Key: public.pt_lt_tab_df.col2, public.pt_lt_tab_df.col3
+                     ->  Append  (cost=0.00..17716.48 rows=16 width=15)
+                           ->  Seq Scan on pt_lt_tab_df_1_prt_part2 pt_lt_tab_df  (cost=0.00..3.12 rows=2 width=14)
+                                 Filter: col2 > 15::numeric
+                           ->  Seq Scan on pt_lt_tab_df_1_prt_part3 pt_lt_tab_df  (cost=0.00..3.12 rows=4 width=14)
+                                 Filter: col2 > 15::numeric
+                           ->  Seq Scan on pt_lt_tab_df_1_prt_part4 pt_lt_tab_df  (cost=0.00..3.12 rows=4 width=14)
+                                 Filter: col2 > 15::numeric
+                           ->  Bitmap Heap Scan on pt_lt_tab_df_1_prt_part5 pt_lt_tab_df  (cost=10000.43..10003.55 rows=4 width=14)
+                                 Recheck Cond: col2 > 15::numeric
+                                 ->  Bitmap Index Scan on idx5  (cost=0.00..10000.43 rows=4 width=0)
+                                       Index Cond: col2 > 15::numeric
+                           ->  Bitmap Heap Scan on pt_lt_tab_df_1_prt_def pt_lt_tab_df  (cost=7700.43..7703.55 rows=4 width=14)
+                                 Recheck Cond: col2 > 15::numeric
+                                 ->  Bitmap Index Scan on idx6  (cost=0.00..7700.43 rows=4 width=0)
+                                       Index Cond: col2 > 15::numeric
+ Settings:  enable_bitmapscan=on; enable_indexscan=on; enable_seqscan=off
+ Optimizer status: legacy query optimizer
+(23 rows)
+
+DROP INDEX idx1;
 DROP INDEX idx5;
 DROP INDEX idx6;
 --

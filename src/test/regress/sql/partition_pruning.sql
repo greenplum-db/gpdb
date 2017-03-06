@@ -251,6 +251,34 @@ DROP INDEX idx5;
 DROP INDEX idx6;
 
 
+-- @description Negative tests Combination tests, no index on default partition
+CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col2);
+CREATE INDEX idx2 on pt_lt_tab_df_1_prt_part2(col2);
+CREATE INDEX idx3 on pt_lt_tab_df_1_prt_part3(col2);
+CREATE INDEX idx4 on pt_lt_tab_df_1_prt_part4(col2);
+CREATE INDEX idx5 on pt_lt_tab_df_1_prt_part5(col2);
+
+SELECT * FROM pt_lt_tab_df WHERE col2 > 51 ORDER BY col2,col3 LIMIT 5;
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 > 51 ORDER BY col2,col3 LIMIT 5;
+SELECT * FROM pt_lt_tab_df WHERE col2 = 50 ORDER BY col2,col3 LIMIT 5;
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 = 50 ORDER BY col2,col3 LIMIT 5;
+
+DROP INDEX idx1;
+DROP INDEX idx2;
+DROP INDEX idx3;
+DROP INDEX idx4;
+DROP INDEX idx5;
+
+-- @description Negative tests Combination tests ,index exists on some regular partitions and not on the default partition
+CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col2);
+CREATE INDEX idx5 on pt_lt_tab_df_1_prt_part5(col2);
+
+SELECT * FROM pt_lt_tab_df WHERE col2 is NULL ORDER BY col2,col3 LIMIT 5;
+
+DROP INDEX idx1;
+DROP INDEX idx5;
+
+
 -- @description Heterogeneous index,b-tree index on all parts,index , multiple index 
 CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col2,col1);
 CREATE INDEX idx2 on pt_lt_tab_df_1_prt_part2(col2,col1);
@@ -270,6 +298,32 @@ DROP INDEX idx1;
 DROP INDEX idx2;
 DROP INDEX idx3;
 DROP INDEX idx4;
+DROP INDEX idx5;
+DROP INDEX idx6;
+
+
+-- @description Index exists on some continuous set of partitions, e.g. p1,p2,p3
+CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col2);
+CREATE INDEX idx2 on pt_lt_tab_df_1_prt_part2(col2);
+CREATE INDEX idx3 on pt_lt_tab_df_1_prt_part3(col2);
+
+SELECT * FROM pt_lt_tab_df WHERE col2 = 35 ORDER BY col2,col3 LIMIT 5;
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 = 35 ORDER BY col2,col3 LIMIT 5;
+
+DROP INDEX idx1;
+DROP INDEX idx2;
+DROP INDEX idx3;
+
+
+-- @description Index exists on some regular partitions and on the default partition [INDEX exists on non-consecutive partitions, e.g. p1,p3,p5]
+CREATE INDEX idx1 on pt_lt_tab_df_1_prt_part1(col2);
+CREATE INDEX idx5 on pt_lt_tab_df_1_prt_part5(col2);
+CREATE INDEX idx6 on pt_lt_tab_df_1_prt_def(col2);
+
+SELECT * FROM pt_lt_tab_df WHERE col2 > 15 ORDER BY col2,col3 LIMIT 5;
+EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 > 15 ORDER BY col2,col3 LIMIT 5;
+
+DROP INDEX idx1;
 DROP INDEX idx5;
 DROP INDEX idx6;
 
