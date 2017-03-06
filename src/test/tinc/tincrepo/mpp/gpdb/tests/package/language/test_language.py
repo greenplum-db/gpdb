@@ -118,22 +118,6 @@ class languageTestCase(MPPTestCase):
         else:
             self.skipTest('skipping test: not plr.so found in $GPHOME/lib/postgresql')
 
-    def doSQL(self, num, filename, default='-a'):
-        """ run SQL test case """
-        # Run test cases for procedure language SQL
-
-        gp_procedural_languages().installPL('sql')
-        self.doTest(num, filename, default=default)
-
-    def doPLPGSQL(self, num, filename, default="-a"):
-        """ run PL/PGSQL test case """
-        # Check if plpgsql.so is installed in $GPHOME/lib/postgresql
-
-        if self.checkAPPHOMEandLIB("plpgsql"):
-            gp_procedural_languages().installPL('plpgsql')
-            self.doTest(num, filename, default=default)
-        else:
-            self.skipTest('skipping test: not found plpgsql.so installed in $GPHOME/lib/postgresql')
 
     def doPLPERLbyuser(self, filename, user):
         """ run PL/PERL test case """
@@ -163,36 +147,6 @@ class languageTestCase(MPPTestCase):
             self.assertTrue(Gpdiff.are_files_equal(out_file, ans_file))
         else:
             self.skipTest('skipping test: plperl.so is not installed in $GPHOME/lib/postgresql')
-
-    def doPLPERL(self, num, filename, default='-a'):
-        """ run PL/PERL test case """
-        # Check if plperl.so is installed in $GPHOME/lib/postgresql
-
-        if self.checkAPPHOMEandLIB("plperl"):
-            gp_procedural_languages().installPL('plperl')
-            self.doTest(num, filename, default=default)
-        else:
-            self.skipTest('skipping plperl.so is not installed in $GPHOME/lib/postgresql')
-
-    def doPLPERLU(self, num, filename, default='-a'):
-        """ run PL/PERLU test case """
-        # Check if plperl.so is installed in $GPHOME/lib/postgresql
-
-        if self.checkAPPHOMEandLIB("plperl"):
-            gp_procedural_languages().installPL('plperlu')
-            self.doTest(num, filename, default=default)
-        else:
-            self.skipTest('skipping test: if plperl.so is installed in $GPHOME/lib/postgresql')
-
-    def doPLPYTHONU(self, num, filename, default='-a'):
-        """ run PL/PYTHONU test case """
-        # Check if plpython.so is installed in $GPHOME/lib/postgresql
-
-        if self.checkAPPHOMEandLIB("plpython"):
-            gp_procedural_languages().installPL('plpythonu')
-            self.doTest(num, filename, default=default)
-        else:
-            self.skipTest('skipping test: plpython.so is not installed in $GPHOME/lib/postgresql')
 
 
     def test_PLR0000(self):
@@ -252,19 +206,7 @@ class languageTestCase(MPPTestCase):
 
     def do_PLPERL_initialize(self):
         """ Language PL/PERL upgrade to 9.1: initialize test data  """
-        self.doTest(None, "plperl91/test000_initialize", default='-e')
         
-        """ Initialize: generate data tbctest.lineitem.tbl, and add users to pg_hba.conf """
-        fname = os.environ.get('TINCREPOHOME') + '/mpp/lib/datagen/datasets/lineitem.csv'
-        copycmd = 'copy pltest.lineitem from \'' + fname + '\' DELIMITER \'|\';'
-        cmd = PSQL(sql_cmd = copycmd, dbname=DBNAME)
-        tinctest.logger.info("Running command - %s" %cmd)
-        cmd.run(validateAfter = False)
-        result = cmd.get_results()
-        ok = result.rc
-        out = result.stdout
-        if ok:
-            raise Exception('Copy statement failed: %s'%out )
         gpuserRole = GpUserRole(HOST, USER, DBNAME)
         gpuserRole.createUser('pltestuser','NOSUPERUSER')
         gpuserRole.createUser('plsuperuser','SUPERUSER')
@@ -282,7 +224,7 @@ class languageTestCase(MPPTestCase):
                               authmethod = 'trust')
         pghba_file.add_entry(new_ent)
         pghba_file.write()
-        grantcmd = 'GRANT ALL ON SCHEMA pltest TO pltestuser;'
+        grantcmd = 'CREATE SCHEMA pltest; GRANT ALL ON SCHEMA pltest TO pltestuser;'
         cmd = PSQL(sql_cmd = grantcmd, dbname=DBNAME)
         tinctest.logger.info("Running command - %s" %cmd)
         cmd.run(validateAfter = False)
@@ -291,38 +233,6 @@ class languageTestCase(MPPTestCase):
         out = result.stdout
         if ok:
             raise Exception('Grant all on schema pltest to pltestuser failed: %s'%out )
-
-    def test_PLPERL91001_inparameters(self):
-        """ Language PL/PERL upgrade to 9.1: IN parameters """
-        self.doPLPERL(None, "plperl91/test001_inparameters", default='-e')
-
-    def test_PLPERL91002_outparameters(self):
-        """ Language PL/PERL upgrade to 9.1: OUT parameters """
-        self.doPLPERL(None, "plperl91/test002_outparameters", default='-e')
-
-    def test_PLPERL91003_inoutparameters(self):
-        """ Language PL/PERL upgrade to 9.1: INOUT parameters """
-        self.doPLPERL(None, "plperl91/test003_inoutparameters", default='-e')
-
-    def test_PLPERL91004_miscparameters(self):
-        """ Language PL/PERL upgrade to 9.1: Multiple parameters """
-        self.doPLPERL(None, "plperl91/test004_miscparameters", default='-e')
-
-    def test_PLPERL91005_buildinfeatures(self):
-        """ Language PL/PERL upgrade to 9.1: Buidl in features """
-        self.doPLPERL(None, "plperl91/test005_buildinfeatures", default='-e')
-
-    def test_PLPERL91006_returntypes(self):
-        """ Language PL/PERL upgrade to 9.1:Different return types """
-        self.doPLPERL(None, "plperl91/test006_returntypes", default='-e')
-
-    def test_PLPERL91007_returnrecords(self):
-        """ Language PL/PERL upgrade to 9.1:return tables """
-        self.doPLPERL(None, "plperl91/test007_returnrecords", default='-e')
-
-    def test_PLPERL91008_returntables(self):
-        """ Language PL/PERL upgrade to 9.1:return record """
-        self.doPLPERL(None, "plperl91/test008_returntables", default='-e')
 
     def test_PLPERL91009_trust(self):
         """ Language PL/PERL upgrade to 9.1:File system operations are not allowed for trusted PL/PERL """
@@ -361,16 +271,4 @@ class languageTestCase(MPPTestCase):
     def test_PLPERL91011_nonsuper_untrust(self):
         """ Language PL/PERL upgrade to 9.1:File system operations are not allowed for untrusted PL/PERL """
         self.doPLPERLUbyuser("plperl91/test011_nonsuper_untrust", 'pltestuser')
-
-    def test_PLPERL91015_largedata_int(self):
-        """ Language PL/PERL upgrade to 9.1:large data set """
-        self.doPLPERL(None, "plperl91/test015_largedata_int", default='-e')
-
-    def test_PLPERL91016_largedata_type(self):
-        """ Language PL/PERL upgrade to 9.1:large data set """
-        self.doPLPERL(None, "plperl91/test016_largedata_type", default='-e')
-
-    def test_PLPERL91017_largedata_record(self):
-        """ Language PL/PERL upgrade to 9.1:large data set """
-        self.doPLPERL(None, "plperl91/test017_largedata_record", default='-e')
 
