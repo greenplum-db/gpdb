@@ -207,6 +207,8 @@ update ext set x='1' where x='2';
 ERROR:  cannot update or delete from external relation "ext"
 insert into ext(x) values('a');
 ERROR:  cannot change a readable external table "ext"
+create index ext_index on ext(x); -- should fail
+ERROR:  cannot create indexes on external tables.
 drop table ext; -- should fail (wrong object)
 ERROR:  "ext" is not a base table
 HINT:  Use DROP EXTERNAL TABLE to remove an external table
