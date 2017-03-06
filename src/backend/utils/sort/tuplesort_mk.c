@@ -377,7 +377,6 @@ struct Tuplesortstate_mk
 	int		   *gpmon_sort_tick;
 };
 
-void tuplesort_get_stats_mk(Tuplesortstate_mk* state, const char **sortMethod, const char **spaceType, long *spaceUsed);
 
 static bool
 is_sortstate_rwfile(Tuplesortstate_mk *state)

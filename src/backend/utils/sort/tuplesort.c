@@ -425,8 +425,6 @@ static bool is_sortstate_rwfile(Tuplesortstate *state)
 #define REVERSEDIRECTION(state) ((*(state)->reversedirection) (state))
 #define LACKMEM(state)		((state)->availMem < 0)
 
-void tuplesort_get_stats(Tuplesortstate *state, const char **sortMethod, const char **spaceType, long *spaceUsed);
-
 static inline void USEMEM(Tuplesortstate *state, int amt)
 {
 	state->availMem -= amt;
