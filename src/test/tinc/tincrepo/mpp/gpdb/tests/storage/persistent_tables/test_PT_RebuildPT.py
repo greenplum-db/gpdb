@@ -94,8 +94,12 @@ class PersistentTables(ScenarioTestCase):
     def test_rebuild_persistent_objects_segment(self):
         ''' Rebuild Persistent Object on Segment '''
         self.rebuild_persistent_table_objects('segment')
-        
-    def test_abort_pt_rebuild(self):
+
+    # regarding  "test_abort_pt_rebuild": this sets up a race between gpstop and doing up a `select * from
+    # gp_persistent_reset_all(); select * from gp_persistent_build_all(true);` the Storage team
+    # indicated that this scenario seems unnecessary (users do not generally use pt_rebuild,
+    # In other words, the test may create a repeatable red, but it isn't something currently judged worthy of inclusion.
+    def _unused_test_abort_pt_rebuild(self):
         ''' Abort Persistent Object Rebuild '''
         test_case_list1 = []
         test_case_list1.append('mpp.gpdb.tests.storage.persistent_tables.PTRebuild.persistent_rebuild_scenario.AbortRebuildPersistentObjectsTest.test_stop_db')

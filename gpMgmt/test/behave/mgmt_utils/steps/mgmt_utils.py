@@ -4077,7 +4077,6 @@ def impl(context):
 def impl(context, seg):
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
 
-    # TODO: Clean this up, probably take out mirror step?
     if seg == "mirror":
         to_save_segs = [seg for seg in gparray.getDbList() if seg.isSegmentMirror()]
         context.mirror_segdbId = to_save_segs[0].getSegmentDbId()

@@ -316,6 +316,14 @@ crash_recovery_schema_topology:
 	-p test_crash_recovery_schema_topology.py \
 	-p test_reindex_pg_class.py
 
+
+# Crash recovery test during ptrebuild
+
+persistent_table_rebuild:
+	$(TESTER) $(DISCOVER) \
+	-s tincrepo/mpp/gpdb/tests/storage/persistent_tables \
+	-p test_PT_RebuildPT.py
+
 # Optimizer functional tests
 optimizer_functional_part1:
 	$(TESTER) $(DISCOVER) \
