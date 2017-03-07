@@ -20,7 +20,6 @@ func NewSshConnector() Connector {
 }
 
 func (ssh_connector SshConnector) Connect(Host string, Port int) (*ssh.Session, error) {
-
 	// todo use relative path
 	path := os.Getenv("GOPATH") + "/src/gp_upgrade/commands/sshd/private_key.pem"
 	pemBytes, err := ioutil.ReadFile(path)
@@ -35,11 +34,9 @@ func (ssh_connector SshConnector) Connect(Host string, Port int) (*ssh.Session, 
 		User: "gpadmin",
 		Auth: []ssh.AuthMethod{ssh.PublicKeys(signer)},
 	}
-
 	hostAndPort := fmt.Sprintf("%s:%v", Host, Port)
 	client, err := ssh.Dial("tcp", hostAndPort, config)
 	if err != nil {
-		log.Fatal("Failed to dial: ", err)
 		return nil, err
 	}
 

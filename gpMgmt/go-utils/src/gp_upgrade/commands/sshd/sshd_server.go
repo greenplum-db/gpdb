@@ -16,6 +16,8 @@ import (
 
 	"log"
 
+	. "gp_upgrade/common"
+
 	"golang.org/x/crypto/ssh"
 )
 
@@ -33,23 +35,21 @@ func startShell(channel ssh.Channel, requests <-chan *ssh.Request) {
 			case "exec":
 				// todo handle error
 				cmdName, _ := parsePayload(payload)
-				fmt.Println("ssh payload: " + cmdName)
 				cmd := exec.Command("bash", "-c", fmt.Sprintf("%s", cmdName))
 
 				stdout, err := cmd.StdoutPipe()
-				exitcode := []byte{0, 0, 0, 0}
+				Check("Cannot get stdoutpipe", err)
 
-				// TODO: We need to somehow pass this here so that we know the results based on test
-				if cmdName == "respond that pg_upgrade isn't running" {
-					// store in some data structure
-				} else {
-					// look the command up in the data structure to see if we can respond to it
-				}
-				if cmdName == "ps auxx | grep pg_upgrade" {
+				var cheatSheet CheatSheet
+				err = cheatSheet.ReadFromFile()
+				Check("Cannot read from file", err)
 
-					stdout = ioutil.NopCloser(strings.NewReader("pg_upgrade is not running on host 'localhost', segment_id '42'"))
-					exitcode = []byte{0, 0, 0, 0}
-				}
+				// NOTE: We are intentionally overwriting the bash command output
+				// Probably not necessary to actually run the command anymore...
+				stdout = ioutil.NopCloser(strings.NewReader(cheatSheet.Response))
+				exitcode := cheatSheet.ReturnCode
+
+				//TODO: Currently reading from a file; possibly passing through ssh server instead?
 
 				//TODO: Check if read is empty
 
@@ -138,24 +138,6 @@ func listenerForever() {
 	}
 }
 
-func passwordCheck(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
-	// Should use constant-time compare (or better, salt+hash) in a production setting.
-	if c.User() == "testuser" && string(pass) == "pass" {
-		return nil, nil
-	}
-	fmt.Printf("User %s with password %s\n", c.User(), string(pass))
-	return nil, fmt.Errorf("password rejected for %q", c.User())
-}
-
-//func privateKeyCheck(c ssh.ConnMetadata) (*ssh.Permissions, error) {
-//	// Should use constant-time compare (or better, salt+hash) in a production setting.
-//	if c.User() == "testuser" && string(pass) == "pass" {
-//		return nil, nil
-//	}
-//	fmt.Printf("User %s with password %s\n", c.User(), string(pass))
-//	return nil, fmt.Errorf("password rejected for %q", c.User())
-//}
-
 func startSshServer() {
 	// todo use local file
 
@@ -219,10 +201,5 @@ func parsePayload(payload string) (string, error) {
 }
 
 func main() {
-	if len(os.Args) > 1 && "--dry-run" == os.Args[1] {
-		fmt.Println("ssh server dry run")
-		return
-	}
-	fmt.Println("Starting ssh server on port 2022")
 	startSshServer()
 }

@@ -5,14 +5,9 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gexec"
 
+	"io"
 	"os/exec"
 	"testing"
-
-	"fmt"
-
-	"io/ioutil"
-
-	"io"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -40,16 +35,7 @@ var _ = BeforeEach(func() {
 })
 
 var _ = AfterEach(func() {
-	if sshd != nil {
-		sshd.Process.Kill()
-		slurp, _ := ioutil.ReadAll(stdout)
-		fmt.Println("sshd stdout: " + string(slurp))
-
-		// todo not clear why stderr causes panic in sshd server
-		//slurp, _ = ioutil.ReadAll(stderr)
-		//fmt.Println("sshd stderr: " + string(slurp))
-		sshd = nil
-	}
+	ShutDownSshdServer()
 })
 
 var _ = SynchronizedBeforeSuite(func() []byte {
@@ -75,4 +61,11 @@ func runCommand(args ...string) *Session {
 	<-session.Exited
 
 	return session
+}
+
+func ShutDownSshdServer() {
+	if sshd != nil {
+		sshd.Process.Kill()
+		sshd = nil
+	}
 }
