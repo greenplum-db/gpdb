@@ -8,7 +8,7 @@
     <ul>
       <li id="pt222286">
         <xref href="#topic2" type="topic" format="dita"/>
-       </li>
+      </li>
       <li id="pt222315">
         <xref href="#topic6" type="topic" format="dita"/>
       </li>
@@ -44,8 +44,14 @@
       <body>
         <p>When using Greenplum Database PL/pgSQL, limitations include</p>
         <ul>
-          <li id="pt219857">Triggers are not supported</li>
-          <li id="pt222490">Cursors are forward moving only (not scrollable) </li>
+          <li id="pt219857">Triggers are not supported.</li>
+          <li id="pt222490">Cursors are forward moving only (not scrollable).</li>
+          <li>When updating or deleting rows with a cursor in Greenplum Database, the
+              <codeph>UPDATE/DELETE...WHERE CURRENT OF</codeph> cursor statement must be executed by
+            Greenplum Server. In PL/pgSQL, for example, the <codeph>UPDATE</codeph> or
+              <codeph>DELETE</codeph> statement must be wrapped in an <codeph>EXECUTE</codeph>
+              statement.<image href="https://ssl.gstatic.com/ui/v1/icons/mail/images/cleardot.gif"
+              id="image_rpk_kj1_2z"/></li>
         </ul>
         <p>For information about Greenplum Database SQL conformance, see <xref
             href="../feature_summary.xml#topic1"/> in the <cite>Greenplum Database Reference

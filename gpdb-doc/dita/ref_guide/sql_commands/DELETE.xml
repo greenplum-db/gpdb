@@ -85,11 +85,14 @@
                     <pd>The name of the cursor to use in a <codeph>WHERE CURRENT OF</codeph>
                         condition. The row to be deleted is the one most recently fetched from this
                         cursor. The cursor must be a simple (non-join, non-aggregate) query on the
-                            <codeph>DELETE</codeph> target table. See <codeph><xref
-                                href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph> for
-                        more information about creating cursors.</pd>
+                            <codeph>DELETE</codeph> target table. </pd>
                     <pd><codeph>WHERE CURRENT OF</codeph> cannot be specified together with a
                         Boolean condition.</pd>
+                    <pd>When deleting a row with a cursor in Greenplum Database, the
+                            <codeph>DELETE...WHERE CURRENT OF</codeph> cursor statement must be
+                        executed by Greenplum Database. For example, the statement must be executed
+                        from an interactive psql session or a script, or wrapped in a PL/pgSQL
+                        EXECUTE statement.</pd>
                     <pd>See <codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"
                             /></codeph> for more information about creating cursors.</pd>
                 </plentry>

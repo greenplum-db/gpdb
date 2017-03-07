@@ -39,8 +39,11 @@
       </note>
       <p>A cursor can be specified in the <codeph>WHERE CURRENT OF</codeph> clause of the
             <codeph><xref href="./UPDATE.xml#topic1" type="topic" format="dita"/></codeph> or
-            <codeph><xref href="./DELETE.xml#topic1" type="topic" format="dita"/></codeph> command
-        to update or delete table data.</p>
+            <codeph><xref href="./DELETE.xml#topic1" type="topic" format="dita"/></codeph> statement
+        to update or delete table data. The <codeph>UPDATE/DELETE...WHERE CURRENT OF</codeph> cursor
+        statement must be executed by Greenplum Database. For example, the statement must be
+        executed from an interactive psql session or a script, or wrapped in a PL/pgSQL EXECUTE
+        statement.</p>
     </section>
     <section id="section4">
       <title>Parameters</title>
