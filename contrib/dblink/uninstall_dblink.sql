@@ -73,10 +73,10 @@ DROP FUNCTION dblink_error_message(text);
 
 DROP FUNCTION dblink_get_connections();
 
-DROP FUNCTION dblink_get_result(text);
+-- DROP FUNCTION dblink_get_result(text);
 
-DROP FUNCTION dblink_get_result(text, boolean);
+-- DROP FUNCTION dblink_get_result(text, boolean);
 
-DROP FUNCTION dblink_is_busy(text);
+-- DROP FUNCTION dblink_is_busy(text);
 
-DROP FUNCTION dblink_send_query(text, text);
+-- DROP FUNCTION dblink_send_query(text, text);
