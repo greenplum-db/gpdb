@@ -1,15 +1,28 @@
+import base64
 import imp
 import os
+import pickle
 import sys
 import tempfile
 
 from StringIO import StringIO
+from pygresql.pg import DatabaseError
 
 from gparray import GpDB, GpArray, Segment
 import shutil
 from mock import *
 from gp_unittest import *
 from gphostcache import GpHost
+
+
+db_singleton_side_effect_list = []
+
+
+def singleton_side_effect(unused1, unused2):
+    # function that replaces dbconn.execSQLForSingleton(conn, sql), conditionally raising exception
+    if db_singleton_side_effect_list[0] == "DatabaseError":
+        raise DatabaseError("mock exception")
+    return db_singleton_side_effect_list[0]
 
 
 class GpConfig(GpTestCase):
@@ -29,8 +42,8 @@ class GpConfig(GpTestCase):
         self.subject.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
 
         self.conn = Mock()
-        self.rows = []
-        self.conn.execSql.return_value = self.rows
+        self.cursor = FakeCursor()
+        # self.conn.execSql.return_value = self.rows
 
         self.os_env = dict(USER="my_user")
         self.os_env["MASTER_DATA_DIRECTORY"] = self.temp_dir
@@ -41,7 +54,10 @@ class GpConfig(GpTestCase):
         seg = Segment()
         db = self.gparray.master
         seg.addPrimary(db)
+        seg.datadir = self.gparray.master.datadir
+        seg.hostname = 'localhost'
         self.host.addDB(seg)
+
         self.host_cache.get_hosts.return_value = [self.host]
         self.host_cache.ping_hosts.return_value = []
 
@@ -58,7 +74,8 @@ class GpConfig(GpTestCase):
         self.apply_patches([
             patch('os.environ', new=self.os_env),
             patch('gpconfig.dbconn.connect', return_value=self.conn),
-            patch('gpconfig.dbconn.execSQL', return_value=self.rows),
+            patch('gpconfig.dbconn.execSQL', return_value=self.cursor),
+            patch('gpconfig.dbconn.execSQLForSingleton', side_effect=singleton_side_effect),
             patch('gpconfig.GpHostCache', return_value=self.host_cache),
             patch('gpconfig.GpArray.initFromCatalog', return_value=self.gparray),
             patch('gpconfig.GpReadConfig', return_value=self.master_read_config),
@@ -69,6 +86,7 @@ class GpConfig(GpTestCase):
     def tearDown(self):
         shutil.rmtree(self.temp_dir)
         super(GpConfig, self).tearDown()
+        del db_singleton_side_effect_list[:]
 
     def createGpArrayWith2Primary2Mirrors(self):
         master = GpDB.initFromString(
@@ -160,7 +178,6 @@ class GpConfig(GpTestCase):
         another_segment_read_config.get_guc_value.return_value = "baz"
         another_segment_read_config.get_seg_id.return_value = 1
         self.pool.getCompletedItems.return_value.append(another_segment_read_config)
-
         self.host_cache.get_hosts.return_value.extend([self.host, self.host])
 
         self.subject.do_main()
@@ -171,23 +188,77 @@ class GpConfig(GpTestCase):
         self.assertIn("bar", mock_stdout.getvalue())
         self.assertIn("baz", mock_stdout.getvalue())
 
-    def test_option_change_value_masteronly_succeed(self):
+    def test_option_change_value_master_separate_succeed(self):
+        db_singleton_side_effect_list.append("some happy result")
         entry = 'my_property_name'
         sys.argv = ["gpconfig", "-c", entry, "-v", "100", "-m", "20"]
         # 'SELECT name, setting, unit, short_desc, context, vartype, min_val, max_val FROM pg_settings'
-        self.rows.extend([['my_property_name', 'setting', 'unit', 'short_desc',
+        self.cursor.set_result_for_testing([['my_property_name', 'setting', 'unit', 'short_desc',
                          'context', 'vartype', 'min_val', 'max_val']])
+
         self.subject.do_main()
 
+        self.subject.logger.info.assert_called_with("completed successfully")
+        self.assertEqual(self.pool.addCommand.call_count, 2)
+        segmentCommand = self.pool.addCommand.call_args_list[0][0][0]
+        self.assertTrue("my_property_name" in segmentCommand.cmdStr)
+        value = base64.urlsafe_b64encode(pickle.dumps("100"))
+        self.assertTrue(value in segmentCommand.cmdStr)
+        masterCommand = self.pool.addCommand.call_args_list[1][0][0]
+        self.assertTrue(("my_property_name") in masterCommand.cmdStr)
+        value = base64.urlsafe_b64encode(pickle.dumps("20"))
+        self.assertTrue(value in masterCommand.cmdStr)
 
-    def test_option_change_value_masteronly_fail_not_valid_guc(self):
-        sys.argv = ["gpconfig", "-c", "my_property_name", "-v", "100", "-m", "20"]
+    def test_option_change_value_masteronly_succeed(self):
+        db_singleton_side_effect_list.append("some happy result")
+        entry = 'my_property_name'
+        sys.argv = ["gpconfig", "-c", entry, "-v", "100", "--masteronly"]
+        # 'SELECT name, setting, unit, short_desc, context, vartype, min_val, max_val FROM pg_settings'
+        self.cursor.set_result_for_testing([['my_property_name', 'setting', 'unit', 'short_desc',
+                         'context', 'vartype', 'min_val', 'max_val']])
 
-        with self.assertRaises(SystemExit) as cm:
+        self.subject.do_main()
+
+        self.subject.logger.info.assert_called_with("completed successfully")
+        self.assertEqual(self.pool.addCommand.call_count, 1)
+        masterCommand = self.pool.addCommand.call_args_list[0][0][0]
+        self.assertTrue(("my_property_name") in masterCommand.cmdStr)
+        value = base64.urlsafe_b64encode(pickle.dumps("100"))
+        self.assertTrue(value in masterCommand.cmdStr)
+
+    def test_option_change_value_master_separate_fail_not_valid_guc(self):
+        db_singleton_side_effect_list.append("DatabaseError")
+
+        with self.assertRaisesRegexp(Exception, "not a valid GUC: my_property_name"):
+            sys.argv = ["gpconfig", "-c", "my_property_name", "-v", "100", "-m", "20"]
             self.subject.do_main()
 
-            self.assertEqual(self.subject.logger.fatal.call_count, 1)
-            self.assertEqual(cm.exception.code, 1)
+        self.assertEqual(self.subject.logger.fatal.call_count, 1)
+
+    def test_option_change_value_hidden_guc_with_skipvalidation(self):
+        sys.argv = ["gpconfig", "-c", "my_hidden_guc_name", "-v", "100", "--skipvalidation"]
+        self.subject.do_main()
+
+        self.subject.logger.info.assert_called_with("completed successfully")
+        self.assertEqual(self.pool.addCommand.call_count, 2)
+        segmentCommand = self.pool.addCommand.call_args_list[0][0][0]
+        self.assertTrue("my_hidden_guc_name" in segmentCommand.cmdStr)
+        masterCommand = self.pool.addCommand.call_args_list[1][0][0]
+        self.assertTrue(("my_hidden_guc_name") in masterCommand.cmdStr)
+        value = base64.urlsafe_b64encode(pickle.dumps("100"))
+        self.assertTrue(value in masterCommand.cmdStr)
+
+    def test_option_change_value_hidden_guc_without_skipvalidation(self):
+        db_singleton_side_effect_list.append("my happy result")
+
+        with self.assertRaisesRegexp(Exception, "GUC Validation Failed: my_hidden_guc_name cannot be changed under "
+                                                "normal conditions. Please refer to gpconfig documentation."):
+            sys.argv = ["gpconfig", "-c", "my_hidden_guc_name", "-v", "100"]
+            self.subject.do_main()
+
+        self.subject.logger.fatal.assert_called_once_with("GUC Validation Failed: my_hidden_guc_name cannot be "
+                                                          "changed under normal conditions. "
+                                                          "Please refer to gpconfig documentation.")
 
 
 if __name__ == '__main__':
