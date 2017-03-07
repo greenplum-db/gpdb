@@ -136,6 +136,7 @@ jobs:
       - get: bin_gpdb
         resource: bin_gpdb_centos
         passed: [compile_gpdb_centos6]
+        version: every
         trigger: true
       - get: centos-gpdb-dev-6
     - task: ic_gpdb
@@ -164,6 +165,7 @@ jobs:
       - get: bin_gpdb
         resource: bin_gpdb_centos
         passed: [compile_gpdb_centos6]
+        version: every
         trigger: true
       - get: centos-gpdb-dev-6
     - task: ic_gpdb
@@ -192,6 +194,7 @@ jobs:
       - get: bin_gpdb
         resource: bin_gpdb_centos
         passed: [compile_gpdb_centos6]
+        version: every
         trigger: true
       - get: centos-gpdb-dev-6
     - task: MU_check_centos

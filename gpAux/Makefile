@@ -2,7 +2,7 @@
 # Makefile for Greenplum Database
 #---------------------------------------------------------------------
 
-#This is to test pr resource
+#This is to test pr resource under other repo with moving tag
 
 # keep the default target above any targets from included makefiles
 all : devel
