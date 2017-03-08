@@ -1111,7 +1111,7 @@ sub atmsort_bigloop
     my $copy_to_stdout_result = 0;
     my $directive = {};
     my $big_ignore = 0;
-    my $define_match_expression = undef;
+    my %define_match_expression;
 
     print $atmsort_outfh "GP_IGNORE: formatted by atmsort.pm\n";
 
@@ -1124,21 +1124,28 @@ sub atmsort_bigloop
         my $ini = $_;
 
         # look for match/substitution or match/ignore expressions
-        if (defined($define_match_expression))
+        if (%define_match_expression)
         {
-            unless (($ini =~ m/\-\-\s*end\_match(subs|ignore)\s*$/))
+            if ($ini =~ m/\-\-\s*end\_match(subs|ignore)\s*$/)
             {
-                $define_match_expression .= $ini;
+                if ($define_match_expression{"type"} ne $1)
+                {
+                    die "Non-matching operation end_match" . $1 . ", " .
+                        "expected end_match" . $define_match_expression{"type"};
+                }
+            }
+            else
+            {
+                $define_match_expression{"expr"} .= $ini;
                 goto L_push_outarr;
             }
-			my $match = $1;
 
-            my @foo = split(/\n/, $define_match_expression, 2);
+            my @foo = split(/\n/, $define_match_expression{"expr"}, 2);
 
             unless (2 == scalar(@foo))
             {
                 $ini .= "GP_IGNORE: bad match definition\n";
-                undef $define_match_expression;
+                undef %define_match_expression;
                 goto L_push_outarr;
             }
 
@@ -1149,7 +1156,7 @@ sub atmsort_bigloop
             # strip off leading comment characters
             $doc1 =~ s/^\s*\-\-//gm;
 
-			if ($match eq 'subs')
+			if ($define_match_expression{"type"} eq 'subs')
             {
                 $stat = _build_match_subs($doc1, "USER");
             }
@@ -1171,7 +1178,7 @@ sub atmsort_bigloop
                 $ini .=  "GP_IGNORE: defined new match expression\n";
             }
 
-            undef $define_match_expression;
+            undef %define_match_expression;
             goto L_push_outarr;
         } # end defined match expression
 
@@ -1245,9 +1252,10 @@ sub atmsort_bigloop
 			# trailing characters at all.
 			my $has_comment = ((m/\s*\-\-.+$/) ? 1 : 0);
 
-            if ($has_comment && $ini =~ m/\-\-\s*start\_match(?:subs|ignore)\s*$/)
+            if ($has_comment && $ini =~ m/\-\-\s*start\_match(subs|ignore)\s*$/)
             {
-                $define_match_expression = $ini;
+                $define_match_expression{"type"} = $1;
+                $define_match_expression{"expr"} = $ini;
                 goto L_push_outarr;
             }
             if ($has_comment && (($ini =~ m/\-\-\s*start\_ignore\s*$/) ||
