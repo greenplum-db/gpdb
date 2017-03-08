@@ -305,11 +305,6 @@ crash_recovery_31_42:
 	-s tincrepo/mpp/gpdb/tests/storage/crashrecovery \
 	-p test_suspendcheckpoint_crashrecovery_31_to_42.py
 
-crash_recovery_filerep_end_to_end:
-	$(TESTER) $(DISCOVER) \
-	-s tincrepo/mpp/gpdb/tests/storage/crashrecovery \
-	-p test_crash_recovery_filerep.py
-
 crash_recovery_schema_topology:
 	$(TESTER) $(DISCOVER) \
 	-s tincrepo/mpp/gpdb/tests/storage/crashrecovery \

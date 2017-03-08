@@ -322,13 +322,6 @@ class SuspendCheckpointCrashRecovery(MPPTestCase):
         if not ok:
            raise Exception('Problem with injecting fault.')
 
-    def run_pre_filerep_faults(self):
-        self.run_fault_injector_to_skip_checkpoint()
-        self.fileutil.inject_fault(y = 'suspend', f = 'filerep_transition_to_sync_before_checkpoint', r ='primary', H='ALL', m ='async', o = 0, p=self.port)
-        tinctest.logger.info('Suspended filerep_transition_to_sync_before_checkpoint using fault injector')
-        self.fileutil.inject_fault(y = 'suspend', f = 'filerep_transition_to_sync_begin', r ='primary', H='ALL', m ='async', o = 0, p=self.port)
-        tinctest.logger.info('Suspended suspend_filerep_transition_to_sync_begin using fault injector')
-
     def backup_output_dir(self,test_dir, test_id):
         indir=local_path(test_dir)
         outdir = indir+'_'+test_id
