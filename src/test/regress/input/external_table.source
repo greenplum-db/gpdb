@@ -431,6 +431,10 @@ WHERE e1.i = e2.i ORDER BY e1.i
 SELECT * FROM cte1 ORDER BY cte1.i;
 select count(*) from gp_read_error_log('exttab_cte_2');
 select count(*) from gp_read_error_log('exttab_cte_1');
+-- start_ignore
+select gp_read_error_log('exttab_cte_1');
+select gp_read_error_log('exttab_cte_2');
+-- end_ignore
 
 -- CTE without segment reject limit exceeded
 select gp_truncate_error_log('exttab_cte_1');
