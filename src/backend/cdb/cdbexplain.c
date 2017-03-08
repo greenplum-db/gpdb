@@ -925,7 +925,7 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
 	si->firststart = instr->firststart;
 	si->numPartScanned = instr->numPartScanned;
 	si->sortMethod = String2ExplainSortMethod(instr->sortMethod);
-	if (MEMORY_STR_SORT_SPACE_TYPE == instr->sortSpaceType)
+	if ((instr->sortSpaceType) && (strcmp(MEMORY_STR_SORT_SPACE_TYPE, instr->sortSpaceType) == 0))
 	{
 		si->sortSpaceType = MEMORY_SORT_SPACE_TYPE;
 	}
