@@ -1820,6 +1820,12 @@ ExplainNode(Plan *plan, PlanState *planstate,
 			break;
 	}
 
+	 /* CDB: Show actual row count, etc. */
+	if (planstate->instrument)
+	{
+		cdbexplain_showExecStats(planstate, es->showstatctx, es );
+	}
+
 	/* Get ready to display the child plans */
 	haschildren = plan->initPlan ||
 		outerPlan(plan) ||
