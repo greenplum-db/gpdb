@@ -372,7 +372,7 @@ gp_email_to='test_account@example.com'
               view in the <i>gp_toolkit</i> administrative schema. For example: </p>
             <p>
               <codeblock>=&gt; SELECT * FROM gp_toolkit.gp_size_of_database 
-   ORDER BY soddatname;
+   ORDER BY sodddatname;
 </codeblock>
             </p>
           </body>
@@ -387,7 +387,7 @@ gp_email_to='test_account@example.com'
             <p>
               <codeblock>=&gt; SELECT relname AS name, sotdsize AS size, sotdtoastsize 
    AS toast, sotdadditionalsize AS other 
-   FROM gp_size_of_table_disk as sotd, pg_class 
+   FROM gp_toolkit.gp_size_of_table_disk as sotd, pg_class 
    WHERE sotd.sotdoid=pg_class.oid ORDER BY relname;
 </codeblock>
             </p>
@@ -407,7 +407,7 @@ gp_email_to='test_account@example.com'
               example:</p>
             <p>
               <codeblock>=&gt; SELECT soisize, relname as indexname
-   FROM pg_class, gp_size_of_index
+   FROM pg_class, gp_toolkit.gp_size_of_index
    WHERE pg_class.oid=gp_size_of_index.soioid 
    AND pg_class.relkind='i';
 </codeblock>
