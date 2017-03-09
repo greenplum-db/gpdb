@@ -619,8 +619,9 @@ void
 AddPreassignedOidFromBinaryUpgrade(Oid oid, Oid catalog, char *objname,
 								   Oid namespaceOid, Oid keyOid1, Oid keyOid2)
 {
-	OidAssignment assignment;
-	MemoryContext oldcontext;
+	OidAssignment	assignment;
+	MemoryContext	oldcontext;
+	ListCell	   *cur;
 
 	if (!IsBinaryUpgrade)
 		elog(ERROR, "AddPreassignedOidFromBinaryUpgrade called, but not in binary upgrade mode");
@@ -651,6 +652,27 @@ AddPreassignedOidFromBinaryUpgrade(Oid oid, Oid catalog, char *objname,
 		assignment.keyOid1 = keyOid1;
 	if (keyOid2)
 		assignment.keyOid2 = keyOid2;
+
+	/*
+	 * If we are preassigning an unknown Oid, scan the list and and see if we
+	 * have an entry with an Oid already. This can happen when Oid dispatch is
+	 * done from master to segment via pg_upgrade.
+	 */
+	if (oid == InvalidOid)
+	{
+		foreach(cur, preassigned_oids)
+		{
+			OidAssignment *p = (OidAssignment *) lfirst(cur);
+
+			if (p->catalog == catalog &&
+				(!objname || strcmp(objname, p->objname)) &&
+				namespaceOid == p->namespaceOid &&
+				keyOid1 == p->keyOid1 && keyOid2 == p->keyOid2)
+			{
+				return;
+			}
+		}
+	}
 
 	/*
 	 * Note that in binary-upgrade mode, the OID pre-assign calls are not done in
