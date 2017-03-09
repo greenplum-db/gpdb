@@ -625,6 +625,9 @@ AddPreassignedOidFromBinaryUpgrade(Oid oid, Oid catalog, char *objname,
 	if (!IsBinaryUpgrade)
 		elog(ERROR, "AddPreassignedOidFromBinaryUpgrade called, but not in binary upgrade mode");
 
+	if (catalog == InvalidOid)
+		elog(ERROR, "AddPreassignedOidFromBinaryUpgrade called with Invalid catalog relation Oid");
+
 	if (Gp_role != GP_ROLE_UTILITY)
 	{
 		/* Perhaps we should error out and shut down here? */
@@ -639,8 +642,7 @@ AddPreassignedOidFromBinaryUpgrade(Oid oid, Oid catalog, char *objname,
 	 * the members directly from the binary_upgrade function
 	 */
 	assignment.oid = oid;
-	if (catalog != InvalidOid)
-		assignment.catalog = catalog;
+	assignment.catalog = catalog;
 	if (objname != NULL)
 		assignment.objname = objname;
 	if (namespaceOid != InvalidOid)
