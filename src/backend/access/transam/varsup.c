@@ -24,7 +24,7 @@
 #include "utils/guc.h"
 #include "access/distributedlog.h"
 #include "cdb/cdbpersistentstore.h"
-
+#include "cdb/cdbvars.h"
 
 /* Number of OIDs to prefetch (preallocate) per XLOG write */
 #define VAR_OID_PREFETCH		8192
@@ -385,64 +385,108 @@ GetNewObjectId(void)
 	(ShmemVariableCache->nextOid)++;
 	(ShmemVariableCache->oidCount)--;
 
+	/* Cycle relfilenode value as well to keep both counters in sync */
+	if (Gp_role == GP_ROLE_DISPATCH && IsPostmasterEnvironment)
+	{
+		GetNewSegRelfilenode();
+		Assert(ShmemVariableCache->nextOid == ShmemVariableCache->nextRelfilenode);
+		Assert(ShmemVariableCache->oidCount == ShmemVariableCache->relfilenodeCount);
+	}
+
 	LWLockRelease(OidGenLock);
 
 	return result;
 }
 
 /*
- * To avoid clashes on pg_class.relfilenode, we keep track of which
- * OIDs have recently been used for a relfilenode. PostgreSQL doesn't
- * need this, as they rely on the monotonicity of GetNewObjectId(),
- * with checks for already-used relfilenodes in GetNewRelFileNode(),
- * but that's not enough in GPDB. In a GPDB segment node, we try to use
- * a table's OID as its relfilenode like in PostgreSQL, but because the
- * OIDs are generated in the master node, it's possible that
- * GetNewRelFileNode() chooses a value that has just been assigned for
- * a different table in the master. To work around that, we have a
- * small cache of values that have recently been used for relfilenodes,
- * and refrain from choosing them again.
+ * AdvanceObjectId -- advance object id counter for QE nodes
  *
- * If the given OID has recently been used as a relfilenode, returns
- * false. Otherwise returns true, and marks the OID as used, so that
- * subsequent calls with the same OID will return false.
- *
- * We use a small cache of 100 OIDs (NUM_RECENT_RELFILENODES). This is
- * not bulletproof, but is good enough in practice to close the race
- * condition. It is not enough by itself to ensure that a relfilenode
- * value is unique, you still need to also check that there's no
- * file in the data directory with the same name.
+ * The QD provides the preassinged OID to the QE nodes which will be
+ * used as the relation's OID. QE nodes do not use this OID as the
+ * relfilenode value anymore so the OID counter is not
+ * incremented. This function forcefully increments the QE node's OID
+ * counter to be about the same as the OID provided by the QD node.
  */
-bool
-UseOidForRelFileNode(Oid oid)
+void
+AdvanceObjectId(Oid newOid)
 {
-	int			i;
-	int			next;
-
-	/*
-	 * Note: we assume below that the array and recentRelfilenodes are
-	 * all initialized to 0 at postmaster startup.
-	 */
+	int oidCountDiff;
 
 	LWLockAcquire(OidGenLock, LW_EXCLUSIVE);
 
-	for (i = 0; i < NUM_RECENT_RELFILENODES; i++)
+	if (ShmemVariableCache->nextOid < ((Oid) FirstNormalObjectId))
 	{
-		if (ShmemVariableCache->recentRelfilenodes[i] == oid)
+		if (IsPostmasterEnvironment)
 		{
-			/* Already used. Not cool. */
-			LWLockRelease(OidGenLock);
-			return false;
+			/* wraparound in normal environment */
+			ShmemVariableCache->nextOid = FirstNormalObjectId;
+			ShmemVariableCache->oidCount = 0;
+		}
+		else
+		{
+			/* we may be bootstrapping, so don't enforce the full range */
+			if (ShmemVariableCache->nextOid < ((Oid) FirstBootstrapObjectId))
+			{
+				/* wraparound in standalone environment? */
+				ShmemVariableCache->nextOid = FirstBootstrapObjectId;
+				ShmemVariableCache->oidCount = 0;
+			}
 		}
 	}
 
-	next = ShmemVariableCache->nextRecentRelfilenode;
-	ShmemVariableCache->recentRelfilenodes[next] = oid;
-	if (++next >= NUM_RECENT_RELFILENODES)
-		next = 0;
-	ShmemVariableCache->nextRecentRelfilenode = next;
+	if (newOid >= ShmemVariableCache->nextOid)
+	{
+		oidCountDiff = ShmemVariableCache->oidCount - (newOid - ShmemVariableCache->nextOid);
+		if (oidCountDiff <= 0)
+		{
+			XLogPutNextOid(newOid + oidCountDiff + VAR_OID_PREFETCH);
+			ShmemVariableCache->oidCount = VAR_OID_PREFETCH + oidCountDiff;
+		}
+		else
+			ShmemVariableCache->oidCount = oidCountDiff;
+
+		ShmemVariableCache->nextOid = newOid + 1;
+		(ShmemVariableCache->oidCount)--;
+	}
 
 	LWLockRelease(OidGenLock);
+}
 
-	return true;
+/*
+ * GetNewSegRelfilenode -- allocate a new relfilenode value
+ *
+ * Similar to GetNewObjectId but for relfilenodes. This function has
+ * its own counter and is used by QE nodes to allocate relfilenode
+ * values instead of trying to use the preassigned OIDs provided by
+ * QD.
+ */
+Oid
+GetNewSegRelfilenode(void)
+{
+	Oid result;
+
+	LWLockAcquire(RelfilenodeGenLock, LW_EXCLUSIVE);
+
+	if (ShmemVariableCache->nextRelfilenode < ((Oid) FirstNormalObjectId) &&
+		IsPostmasterEnvironment)
+	{
+		/* wraparound in normal environment */
+		ShmemVariableCache->nextRelfilenode = FirstNormalObjectId;
+		ShmemVariableCache->relfilenodeCount = 0;
+	}
+
+	if (ShmemVariableCache->relfilenodeCount == 0)
+	{
+		XLogPutNextRelfilenode(ShmemVariableCache->nextRelfilenode + VAR_OID_PREFETCH);
+		ShmemVariableCache->relfilenodeCount = VAR_OID_PREFETCH;
+	}
+
+	result = ShmemVariableCache->nextRelfilenode;
+
+	(ShmemVariableCache->nextRelfilenode)++;
+	(ShmemVariableCache->relfilenodeCount)--;
+
+	LWLockRelease(RelfilenodeGenLock);
+
+	return result;
 }

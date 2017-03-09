@@ -45,6 +45,5 @@ extern Oid	GetNewOid(Relation relation);
 extern Oid	GetNewOidWithIndex(Relation relation, Relation indexrel);
 extern Oid GetNewRelFileNode(Oid reltablespace, bool relisshared,
 				  Relation pg_class);
-extern bool CheckNewRelFileNodeIsOk(Oid newOid, Oid reltablespace, bool relisshared);
 
 #endif   /* CATALOG_H */
