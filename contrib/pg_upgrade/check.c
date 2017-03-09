@@ -903,7 +903,7 @@ check_external_partition(migratorContext *ctx)
 			   "| to dispatch the Oids for these objects, pg_upgrade has left\n"
 			   "| a dump file which need to be placed in the working directory\n"
 			   "| of pg_upgrade on all QEs before upgrading:\n"
-			   "| %s\n\n", DISPATCH_DUMP_FILE);
+			   "| \t%s\n\n", DISPATCH_DUMP_FILE);
 	}
 }
 
@@ -912,7 +912,7 @@ check_external_partition(migratorContext *ctx)
  *
  *	Generate a string suitable for the relation query in get_rel_info() to
  *	exclude any relation stored as a dispatch object. The reason for excluding
- *	them is that any table object registered as an Oid dispatch will be
+ *	them is that any table object registered as an Oid dispatch will by
  *	definition be a new table and not one that should be upgraded from the old
  *	cluster to the new.
  */
@@ -945,7 +945,12 @@ exclude_oid_for_dispatch(migratorContext *ctx, const DbInfo *master_db)
 
 			if (rel->type == DISPATCH_RELATION)
 			{
-				ret = snprintf(p, sizeof(query) - (p - query), " AND relname <> '%s'::text ", rel->name);
+				ret = snprintf(p, sizeof(query) - (p - query),
+							   " AND NOT ARRAY[c.oid] <@ "
+							   "(SELECT ARRAY[a.oid,a.reltoastrelid,i.reltoastidxid] "
+							   "FROM pg_class a "
+							    "LEFT JOIN pg_class i ON (a.reltoastrelid=i.oid) WHERE a.relname='%s'::text) ",
+							   rel->name);
 				if (ret >= (sizeof(query) - (p - query)))
 					pg_log(ctx, PG_FATAL, "Dispatch exclusion too large");
 
