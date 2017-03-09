@@ -146,10 +146,10 @@
         will be used is not readily predictable.</p>
       <p>Because of this indeterminacy, referencing other tables only within sub-selects is safer,
         though often harder to read and slower than using a join.</p>
-      <p>Execution of <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> commands directly on a
-        specific partition (child table) of a partitioned table is not supported. Instead, these
-        commands must be executed on the root partitioned table, the table created with the
-          <codeph>CREATE TABLE</codeph> command.</p>
+      <p>Executing <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> commands directly on a
+        specific partition (child table) of a partitioned table is not supported. Instead, execute
+        these commands on the root partitioned table, the table created with the <codeph>CREATE
+          TABLE</codeph> command.</p>
     </section>
     <section id="section7">
       <title>Examples</title>
