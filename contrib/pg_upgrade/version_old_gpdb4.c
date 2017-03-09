@@ -90,7 +90,7 @@ old_GPDB4_find_array_types(migratorContext *ctx)
 			   "| pg_upgrade has left a dump file which need\n"
 			   "| to be placed in the working directory of\n"
 			   "| pg_upgrade on all QEs before upgrading:\n"
-			   "| %s\n\n", DISPATCH_DUMP_FILE);
+			   "| \t%s\n\n", DISPATCH_DUMP_FILE);
 	}
 }
 
