@@ -636,7 +636,8 @@ index_create(Oid heapRelationId,
 	{
 		if (Gp_role == GP_ROLE_EXECUTE || IsBinaryUpgrade)
 			indexRelationId = GetPreassignedOidForRelation(namespaceId, indexRelationName);
-		else
+
+		if (!OidIsValid(indexRelationId))
 			indexRelationId = GetNewRelFileNode(tableSpaceId, shared_relation,
 												pg_class);
 	}
