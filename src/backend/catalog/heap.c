@@ -747,7 +747,7 @@ void MetaTrackAddObject(Oid		classid,
 
 	MetaTrackAddUpdInternal(classid, objoid, relowner,
 							actionname, subtype,
-							rel, InvalidOid);
+							rel, NULL);
 
 	heap_close(rel, RowExclusiveLock);
 
