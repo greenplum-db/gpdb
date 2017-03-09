@@ -932,6 +932,44 @@ jobs:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "cs-walrepl-multinode"
 
+- name: cs-crashrecovery
+  plan:
+  - aggregate: *post_packaging_gets_trigger_true
+  - task: trigger_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
+    input_mapping: *input_mappings
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "cs-filerep-schema-topology-crashrecov"
+  - task: monitor_pulse
+    attempts: 2
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "cs-filerep-schema-topology-crashrecov"
+
+- name: cs-filerep-end-to-end
+  plan:
+  - get: nightly-trigger
+    trigger: true
+  - aggregate: *post_packaging_gets_trigger_false
+  - task: trigger_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
+    input_mapping: *input_mappings
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "cs-filerep-end-to-end"
+  - task: monitor_pulse
+    attempts: 2
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "cs-filerep-end-to-end"
+
 - name: cs-aoco-compression
   plan:
   - get: nightly-trigger
