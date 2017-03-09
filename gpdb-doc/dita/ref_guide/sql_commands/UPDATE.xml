@@ -111,10 +111,9 @@
             for more information about creating cursors. </pd>
           <pd><codeph>WHERE CURRENT OF</codeph> cannot be specified together with a Boolean
             condition. </pd>
-          <pd>When updating a row with a cursor in Greenplum Database, the <codeph>UPDATE...WHERE
-              CURRENT OF</codeph> cursor statement must be executed by Greenplum Database. For
-            example, the statement must be executed from an interactive psql session or a script, or
-            wrapped in a PL/pgSQL EXECUTE statement.</pd>
+          <pd>The <codeph>UPDATE...WHERE CURRENT OF</codeph> statement can only be executed on the
+            server, for example in an interactive psql session or a script. Language extensions such
+            as PL/pgSQL do not have support for updatable cursors.</pd>
           <pd>See <codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph> for
             more information about creating cursors.</pd>
         </plentry>
