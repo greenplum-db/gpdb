@@ -47,7 +47,7 @@ jobs:
         image: centos-gpdb-dev-6
         input_mapping:
           gpdb_src: gpdb_pr
-        on_failure:
+        on_failure: &pr_failure
           put: gpdb_pr
           params:
             path: gpdb_pr
@@ -59,11 +59,7 @@ jobs:
         image: centos-gpdb-dev-6
         input_mapping:
           gpdb_src: gpdb_pr
-        on_failure:
-          put: gpdb_pr
-          params:
-            path: gpdb_pr
-            status: failure
+        on_failure: *pr_failure
         params:
           IVYREPO_HOST: {{ivyrepo_host}}
           IVYREPO_REALM: {{ivyrepo_realm}}
@@ -85,11 +81,7 @@ jobs:
           BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
           TEST_OS: centos
         timeout: 1h
-        on_failure:
-          put: gpdb_pr
-          params:
-            path: gpdb_pr
-            status: failure
+        on_failure: *pr_failure
 
       - task: icw_gporca_codegen_centos6
         file: gpdb_pr/concourse/tasks/ic_gpdb.yml
@@ -102,11 +94,7 @@ jobs:
           BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
           TEST_OS: centos
         timeout: 1h30m
-        on_failure:
-          put: gpdb_pr
-          params:
-            path: gpdb_pr
-            status: failure
+        on_failure: *pr_failure
 
       - task: MU_check_centos
         file: gpdb_pr/concourse/tasks/gpMgmt_check_gpdb.yml
@@ -117,11 +105,7 @@ jobs:
         params:
           TEST_OS: centos
         timeout: 10m
-        on_failure:
-          put: gpdb_pr
-          params:
-            path: gpdb_pr
-            status: failure
+        on_failure: *pr_failure
 
     - task: separate_qautils_files_for_rc
       file: gpdb_pr/concourse/tasks/separate_qautils_files_for_rc.yml
@@ -131,11 +115,7 @@ jobs:
         bin_gpdb: gpdb_artifacts
       params:
         QAUTILS_TARBALL: rc_bin_gpdb/QAUtils-rhel6-x86_64.tar.gz
-      on_failure:
-        put: gpdb_pr
-        params:
-          path: gpdb_pr
-          status: failure
+      on_failure: *pr_failure
 
     - task: gpdb_rc_packaging_centos
       file: gpdb_pr/concourse/tasks/gpdb_packaging.yml
@@ -150,11 +130,7 @@ jobs:
         INSTALLER_ZIP: packaged_gpdb/greenplum-db-@GP_VERSION@-build-1-rhel6-x86_64.zip
         ADD_README_INSTALL: true
       timeout: 15m
-      on_failure:
-        put: gpdb_pr
-        params:
-          path: gpdb_pr
-          status: failure
+      on_failure: *pr_failure
 
     - put: report_pr_success
       resource: gpdb_pr
