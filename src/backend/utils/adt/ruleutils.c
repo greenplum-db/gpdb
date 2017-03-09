@@ -3149,6 +3149,20 @@ get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 		rte = rt_fetch(var->varno, dpns->rtable);
 		attnum = var->varattno;
 	}
+	/*
+	 * This following logic was deemed unnecessary in ce5b24ab , but the
+	 * printable predicates in PartitionSelectors currently breaks the
+	 * assumption that a VAR with OUTER or INNER varno can only point to an
+	 * immediate child or (in the case of the right child of a nested loop)
+	 * an outer sibling. Granted we abused the old explain logic in
+	 * Postgres 8.2, but it's much more involved and difficult to overhaul
+	 * that overnight.
+	*/
+	else if (var->varnoold >= 1 && var->varnoold <= list_length(dpns->rtable))
+	{
+		rte = rt_fetch(var->varnoold, dpns->rtable);
+		attnum = var->varoattno;
+	}
 	else if (var->varno == OUTER && dpns->outer_plan)
 	{
 		TargetEntry *tle;
