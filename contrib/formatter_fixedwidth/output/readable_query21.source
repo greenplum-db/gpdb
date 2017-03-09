@@ -1,0 +1,21 @@
+set datestyle = 'ISO, DMY';
+-- Load data with line delim = '@#$'
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
+    s1 char(10), s2 varchar(10), s3 text, dt timestamp, 
+    n1 smallint, n2 integer, n3 bigint, n4 decimal, 
+    n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('file://@hostname@@abs_srcdir@/data/fixedwidth_3chars_line_delimiter.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', 
+    s2='10', s3='10', dt='20', n1='5', n2='10', 
+    n3='10', n4='10', n5='10', n6='10', n7='15', line_delim='@#$');
+-- Verified data can correctly loaded with line_delim='@#$'
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+     s1     |  s2  |   s3   |         dt          | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+------------+------+--------+---------------------+----+-----+--------+-------+---------+---------+------------
+ aaa        | twoa | shpits | 2011-06-01 12:30:30 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb        | twob | shpits | 2011-06-01 12:30:30 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc        | twoc | shpits | 2011-06-01 12:30:30 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ddd        | twod | shpits | 2011-06-01 12:30:30 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+(4 rows)
+

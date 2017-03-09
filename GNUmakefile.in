@@ -127,6 +127,7 @@ installcheck-world:
 	$(MAKE) -C src/pl installcheck
 	#$(MAKE) -C src/interfaces/ecpg installcheck
 	#$(MAKE) -C contrib installcheck
+	$(MAKE) -C contrib/formatter_fixedwidth installcheck
 	$(MAKE) -C contrib/extprotocol installcheck
 	$(MAKE) -C contrib/dblink installcheck
 	$(MAKE) -C contrib/indexscan installcheck

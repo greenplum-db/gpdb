@@ -1,0 +1,11 @@
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
+    s1 char(10), s2 varchar(10), s3 text, dt timestamp, 
+    n1 smallint, n2 integer, n3 bigint, n4 decimal, 
+    n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('file://@hostname@@abs_srcdir@/data/fixedwidth_small_correct.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', 
+    s_2='10', s3='10', dt='20',n1='5', n2='10', n3='10', n4='10',
+    n5='10', n6='10', n7='15');
+
+select * from tbl_ext_fixedwidth order by s1;

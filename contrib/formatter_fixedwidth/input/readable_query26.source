@@ -1,0 +1,20 @@
+set gp_reject_percent_threshold=90;
+show gp_reject_percent_threshold;
+
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
+    s1 char(10), s2 varchar(10), s3 text, dt timestamp, 
+    n1 smallint, n2 integer, n3 bigint, n4 decimal, 
+    n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION (
+    'file://@hostname@@abs_srcdir@/data/fixedwidth_100_error_rejectlimitcrossed.tbl',
+    'file://@hostname@@abs_srcdir@/data/fixedwidth_100_error_rejectlimitcrossed_2.tbl'
+)       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', 
+    s2='10', s3='10', dt='20',n1='5', n2='10', 
+    n3='10', n4='10', n5='10', n6='10', n7='15')
+LOG ERRORS
+SEGMENT REJECT LIMIT 10 PERCENT;
+
+select count(*) from tbl_ext_fixedwidth;
+select count(*) from gp_read_error_log('tbl_ext_fixedwidth');

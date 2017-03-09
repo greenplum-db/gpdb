@@ -1,0 +1,36 @@
+-- Explicitly set preserve_blanks='OFF' 
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
+     s1 char(10), s2 varchar(10), s3 text)                                                              
+ LOCATION ('file://@hostname@@abs_srcdir@/data/fixedwidth_small_correct_whitespace.tbl')       
+ FORMAT 'CUSTOM' (formatter='fixedwidth_in', 
+     s1='10',s2='10', s3='10', preserve_blanks='OFF');
+-- Confirm only the trailing while spaces will be trimmed.
+-- The leading white spaces will be always reserved.
+select * from tbl_ext_fixedwidth order by s1;
+ s1     |    s2     |     s3     
+------------+-----------+------------
+ cha    | vara      | texta
+  chb   |  varb     |  textb
+   chc  |   varc    |   textc
+chd     |    vard   |    textd
+ che    |     vare  |     texte
+  chf   |      varf |      textf
+ chg    |     varg  |     textg
+chh     |    varh   |    texth
+   chi  |   vari    |   texti
+  chj   |  varj     |  textj
+(10 rows)
+
+select * from tbl_ext_fixedwidth where s1='cha' and s2='vara' and s3='texta';
+ s1     |  s2  |  s3   
+------------+------+-------
+ cha    | vara | texta
+(1 row)
+
+select * from tbl_ext_fixedwidth where s1='  chc' and s2='  varc' and s3='  textc';
+ s1     |   s2   |   s3    
+------------+--------+---------
+   chc  |   varc |   textc
+(1 row)
+

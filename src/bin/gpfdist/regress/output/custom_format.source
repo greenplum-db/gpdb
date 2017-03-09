@@ -68,7 +68,9 @@ SELECT * FROM gpfdist_status;
 -- 15. import data into table with string and numeric fields - FORMAT string syntax error  -- preserve_blanks with NULL defined
 --     trailing blanks are loaded, blank fields are loaded as  strings, only fields with the null value are loaded as NULL
 -- 16. import data into table with string and numeric fields - data OK - big input file
--- 17. export data into file - (the same big data that was imported)
+-- 17. import data into table with string and numeric fields - data OK - no line_delimiter in input data file
+-- 18. import data into table with string and numeric fields - data OK - line delimiter containing several chars
+-- 19. MPP-14467 import data from file - field names with spaces
 -- 1.  import data into table with string and numeric fields - data OK 
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
 NOTICE:  table "tbl_ext_fixedwidth" does not exist, skipping
@@ -10334,29 +10336,7 @@ SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
  s_9999     | s_99990  | s_999900  | Wed Jun 01 12:30:30 2011 | 999 |  99990 |  999900 |  999900 |  999900 | 999900 |  999900
 (10000 rows)
 
--- 17. export data into file - all fields have data
-DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
-CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
-(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
-LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_correct.tbl')       
-FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20',n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
-DROP EXTERNAL WEB TABLE IF EXISTS clean_out_file;
-NOTICE:  table "clean_out_file" does not exist, skipping
-CREATE EXTERNAL WEB TABLE clean_out_file (x text)
-EXECUTE E'( rm -f @abs_srcdir@/data/fixedwidth/fixedwidth_out.tbl)'
-on SEGMENT 0
-FORMAT 'text';
-SELECT * FROM clean_out_file;
- x 
----
-(0 rows)
-
-CREATE WRITABLE EXTERNAL TABLE tbl_out_fixedwidth
-(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
-LOCATION ('gpfdist://@hostname@:7575/fixedwidth_out.tbl')     
-FORMAT 'CUSTOM' (formatter='fixedwidth_out', s1='10', s2='10', s3='10', dt='25', n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
-INSERT INTO tbl_out_fixedwidth SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
--- 18. import data into table with string and numeric fields - data OK - no line_delimiter in input data file
+-- 17. import data into table with string and numeric fields - data OK - no line_delimiter in input data file
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
 CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
 (s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
@@ -10371,7 +10351,7 @@ SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
  ddd        | twod | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
 (4 rows)
 
--- 19. import data into table with string and numeric fields - data OK - line delimiter containing several chars
+-- 18. import data into table with string and numeric fields - data OK - line delimiter containing several chars
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
 CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
 (s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
@@ -10386,7 +10366,7 @@ SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
  ddd        | twod | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
 (4 rows)
 
--- 20. MPP-14467 import data from file - field names with spaces
+-- 19. MPP-14467 import data from file - field names with spaces
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
 CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
 ("s 1" char(10), "s  2" varchar(10), s3 text, "dd ttt t t" timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
@@ -10406,6 +10386,129 @@ SELECT * FROM tbl_ext_fixedwidth ORDER BY "s 1";
  iii        | twoi | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
  jjj        | twoj | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
 (10 rows)
+
+-- --------------------------------------
+-- WRITABLE tests
+-- --------------------------------------
+-- Helper to remove the output file
+DROP EXTERNAL WEB TABLE IF EXISTS clean_out_file;
+NOTICE:  table "clean_out_file" does not exist, skipping
+CREATE EXTERNAL WEB TABLE clean_out_file (x text)
+EXECUTE E'( rm -f @abs_srcdir@/data/fixedwidth/fixedwidth_out.tbl)'
+on SEGMENT 0
+FORMAT 'text';
+-- export data into file - all fields have data
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth
+  (s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_correct.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20',n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
+SELECT * FROM clean_out_file;
+ x 
+---
+(0 rows)
+
+CREATE WRITABLE EXTERNAL TABLE tbl_out_fixedwidth
+  (s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_out.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_out', s1='10', s2='10', s3='10', dt='25', n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
+INSERT INTO tbl_out_fixedwidth SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+\! cat @abs_srcdir@/data/fixedwidth/fixedwidth_out.tbl | wc
+     10     150    1260
+-- Execute query to clean out the output file
+SELECT * FROM clean_out_file;
+ x 
+---
+(0 rows)
+
+-- Create WET with line_delim=E'\n'
+DROP EXTERNAL TABLE IF EXISTS tbl_out_fixedwidth;
+CREATE WRITABLE EXTERNAL TABLE tbl_out_fixedwidth (
+  s1 char(10), s2 varchar(10), s3 text, dt timestamp,
+  n1 smallint, n2 integer, n3 bigint, n4 decimal,
+  n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_out.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_out', s1='10',
+  s2='10', s3='10', dt='25', n1='5', n2='10',
+  n3='10', n4='10', n5='10', n6='10', n7='15',line_delim=E'\n');
+-- Output data
+INSERT INTO tbl_out_fixedwidth SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+\! cat @abs_srcdir@/data/fixedwidth/fixedwidth_out.tbl | wc
+     10     150    1260
+-- Execute query to clean out the output file
+SELECT * FROM clean_out_file;
+ x 
+---
+(0 rows)
+
+-- Create WET with line_delim=E'\r\n'
+DROP EXTERNAL TABLE IF EXISTS tbl_out_fixedwidth;
+CREATE WRITABLE EXTERNAL TABLE tbl_out_fixedwidth (
+    s1 char(10), s2 varchar(10), s3 text, dt timestamp,
+    n1 smallint, n2 integer, n3 bigint, n4 decimal,
+    n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_out.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_out', s1='10',
+    s2='10', s3='10', dt='25', n1='5', n2='10',
+    n3='10', n4='10', n5='10', n6='10', n7='15',line_delim=E'\r\n');
+-- Output data
+INSERT INTO tbl_out_fixedwidth SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+\! cat @abs_srcdir@/data/fixedwidth/fixedwidth_out.tbl | wc
+     10     150    1270
+-- Execute query to clean out the output file
+SELECT * FROM clean_out_file;
+ x 
+---
+(0 rows)
+
+-- MPP-14492
+-- Create WET with line_delim='EndOfLine', which can be arbitrary string
+DROP EXTERNAL TABLE IF EXISTS tbl_out_fixedwidth;
+CREATE WRITABLE EXTERNAL TABLE tbl_out_fixedwidth (
+    s1 char(10), s2 varchar(10), s3 text, dt timestamp,
+    n1 smallint, n2 integer, n3 bigint, n4 decimal,
+    n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_out.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_out', s1='10',
+    s2='10', s3='10', dt='25', n1='5', n2='10',
+    n3='10', n4='10', n5='10', n6='10', n7='15',line_delim=E'EndOfLine');
+-- Output data
+INSERT INTO tbl_out_fixedwidth SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+\! cat @abs_srcdir@/data/fixedwidth/fixedwidth_out.tbl | wc
+      0     151    1340
+-- Clean out the output file
+SELECT * FROM clean_out_file;
+ x 
+---
+(0 rows)
+
+ -- Create a RET
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
+  s1 char(10), s2 varchar(10), s3 text,
+  col_empty character(5),col_null character varying(5)
+)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_null.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', null='', preserve_blanks='on',
+  s1='10',s2='10', s3='10', col_empty='5', col_null='5');
+-- Create WET with null string defined: null='NULL'
+DROP EXTERNAL TABLE IF EXISTS tbl_out_fixedwidth;
+CREATE WRITABLE EXTERNAL TABLE tbl_out_fixedwidth (
+    s1 char(10), s2 varchar(10), s3 text,
+     col_empty character(5),col_null character varying(5)
+)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_out.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_out', s1='10',s2='10',
+    s3='10', col_empty='5', col_null='5', null='NULL');
+-- export data to output data file
+INSERT INTO tbl_out_fixedwidth SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+\! cat @abs_srcdir@/data/fixedwidth/fixedwidth_out.tbl | grep NULL | wc
+     10      49     410
+-- Clean out the output file
+SELECT * FROM clean_out_file;
+ x 
+---
+(0 rows)
 
 -- --------------------------------------
 -- stop 'gpfdist'
