@@ -333,11 +333,11 @@ drop table unknown_test;
 -- Test nested "unknown"s from MPP-2689
 select 'foo'::text || foo from ( select foo from (select 4.5, foo from ( select
 1, 'foo' as foo) a ) b ) c;
-select 'foo'::text || foo from ( select foo from 
+select 'foo'::text || foo from ( select foo from
  (select foo || bar as foo from ( select 'bar' as bar, 'foo' as foo) a ) b ) c;
 create domain u_d as text;
 prepare p1 as select $1::u_d || foo from (select 'foo' as foo) a;
-prepare p2 as select 'foo' || foo 
+prepare p2 as select 'foo' || foo
 from (select $1::u_d || bar as foo from (select 'bar' as bar) a ) b;
 
 select 'a' as a, 'b' as b, 'c' as c, 1 as d union select * from (select 'a' as a, 'b' as b, 'c' as c, 1 as d)d;
@@ -545,6 +545,44 @@ select E'\udsfs';
 select E'\uD843\uE001';
 select E'\uDC01';
 select E'\uD834';
+
+--
+-- Additional string functions
+--
+
+SELECT initcap('hi THOMAS');
+
+SELECT lpad('hi', 5, 'xy');
+SELECT lpad('hi', 5);
+SELECT lpad('hi', -5, 'xy');
+SELECT lpad('hello', 2);
+SELECT lpad('hi', 5, '');
+
+SELECT rpad('hi', 5, 'xy');
+SELECT rpad('hi', 5);
+SELECT rpad('hi', -5, 'xy');
+SELECT rpad('hello', 2);
+SELECT rpad('hi', 5, '');
+
+SELECT ltrim('zzzytrim', 'xyz');
+
+SELECT translate('', '14', 'ax');
+SELECT translate('12345', '14', 'ax');
+
+SELECT ascii('x');
+SELECT ascii('');
+
+SELECT chr(65);
+SELECT chr(0);
+
+SELECT repeat('Pg', 4);
+SELECT repeat('Pg', -4);
+
+SELECT trim(E'\\000'::bytea from E'\\000Tom\\000'::bytea);
+SELECT btrim(E'\\000trim\\000'::bytea, E'\\000'::bytea);
+SELECT btrim(''::bytea, E'\\000'::bytea);
+SELECT btrim(E'\\000trim\\000'::bytea, ''::bytea);
+
 
 -- Clean up GPDB-added tables
 DROP TABLE char_strings_tbl;
