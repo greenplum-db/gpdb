@@ -2637,12 +2637,15 @@ tuplesort_restorepos_mk(Tuplesortstate_mk *state)
  * printable summary information about how the sort was performed.
  * spaceUsed is measured in kilobytes.
  */
-static void
-tuplesort_get_stats_mk(Tuplesortstate_mk* state,
-					   const char **sortMethod,
-					   const char **spaceType,
-					   long *spaceUsed)
+
+void
+tuplesort_get_stats_mk(Tuplesortstate_mk *state,
+					const char **sortMethod,
+					const char **spaceType,
+					long *spaceUsed)
 {
+
+
 	/*
 	 * Note: it might seem we should provide both memory and disk usage for a
 	 * disk-based sort.  However, the current code doesn't track memory space
@@ -2652,35 +2655,36 @@ tuplesort_get_stats_mk(Tuplesortstate_mk* state,
 	 * to fix.	Is it worth creating an API for the memory context code to
 	 * tell us how much is actually used in sortcontext?
 	 */
-	if (state->tapeset)
-	{
-		*spaceType = "Disk";
-		*spaceUsed = LogicalTapeSetBlocks(state->tapeset) * (BLCKSZ / 1024);
-	}
-	else
-	{
-		*spaceType = "Memory";
-		*spaceUsed = (MemoryContextGetCurrentSpace(state->sortcontext) + 1024) / 1024;
-	}
 
-	switch (state->status)
-	{
-	case TSS_SORTEDINMEM:
-		if (state->mkctxt.boundUsed)
-			*sortMethod = "top-N heapsort";
+
+	if (state->tapeset)
+		{
+			*spaceType = "Disk";
+			spaceUsed = LogicalTapeSetBlocks(state->tapeset);
+		}
 		else
-			*sortMethod = "quicksort";
-		break;
-	case TSS_SORTEDONTAPE:
-		*sortMethod = "external sort";
-		break;
-	case TSS_FINALMERGE:
-		*sortMethod = "external merge";
-		break;
-	default:
-		*sortMethod = "still in progress";
-	}
-	return;
+		{
+			*spaceType = "Memory";
+			*spaceUsed = LogicalTapeSetBlocks(state->tapeset) * (BLCKSZ / 1024);
+		}
+		switch (state->status)
+		{
+			case TSS_SORTEDINMEM:
+				if (state->mkctxt.boundUsed)
+			    *sortMethod = "top-N heapsort";
+		    else
+			    *sortMethod = "quicksort";
+				break;
+			case TSS_SORTEDONTAPE:
+				*sortMethod = "external sort";
+				break;
+			case TSS_FINALMERGE:
+				*sortMethod = "external merge";
+				break;
+			default:
+				*sortMethod = "still in progress";
+				break;
+		}
 }
 
 /*

@@ -10,6 +10,7 @@
 #ifndef CDBEXPLAIN_H
 #define CDBEXPLAIN_H
 
+#include "commands/explain.h"
 #include "executor/instrument.h"        /* instr_time */
 #include "cdb/cdbpublic.h"              /* CdbExplain_Agg */
 
@@ -140,9 +141,7 @@ cdbexplain_showExecStatsBegin(struct QueryDesc *queryDesc,
  */
 void
 cdbexplain_showExecStats(struct PlanState              *planstate,
-                         struct StringInfoData         *str,
-                         int                            indent,
-                         struct CdbExplain_ShowStatCtx *ctx);
+                         struct CdbExplain_ShowStatCtx *ctx, ExplainState *es);
 
 
 /*
