@@ -252,7 +252,7 @@ dblink_connect(PG_FUNCTION_ARGS)
 		connstr = GET_STR(PG_GETARG_TEXT_P(1));
 		connname = GET_STR(PG_GETARG_TEXT_P(0));
 	}
-	else if (PG_NARGS() == 1)
+	else
 		connstr = GET_STR(PG_GETARG_TEXT_P(0));
 
 	if (connname)
