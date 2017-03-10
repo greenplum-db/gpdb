@@ -5,7 +5,7 @@ SET gp_create_table_random_default_distribution=off;
 --start_ignore
 DROP DATABASE sto_db1;
 --end_ignore
-CREATE DATABASE sto_db1;
+create database sto_db1 template template0;
 \c sto_db1
 CREATE TABLE sto_db_tb1 (
   text_col text,

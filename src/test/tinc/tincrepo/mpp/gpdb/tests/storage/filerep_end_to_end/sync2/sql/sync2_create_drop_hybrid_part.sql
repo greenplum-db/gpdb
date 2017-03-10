@@ -30,7 +30,7 @@ subpartition sp4 start('5675') )
 );
 
 
-COPY sync2_hybrid_part1 FROM '/data/tangp3/tincrepo/private/tangp3/main/storage/filerep_end_to_end/hybrid_part.data' delimiter as '|';
+COPY sync2_hybrid_part1 FROM '/Users/aagrawal/workspace/5.0/gpdb/src/test/tinc/tincrepo/mpp/gpdb/tests/storage/filerep_end_to_end/hybrid_part.data' delimiter as '|';
 
 
 
@@ -63,7 +63,7 @@ subpartition sp4 start('5675') )
 );
 
 
-COPY sync2_hybrid_part2 FROM '/data/tangp3/tincrepo/private/tangp3/main/storage/filerep_end_to_end/hybrid_part.data' delimiter as '|';
+COPY sync2_hybrid_part2 FROM '/Users/aagrawal/workspace/5.0/gpdb/src/test/tinc/tincrepo/mpp/gpdb/tests/storage/filerep_end_to_end/hybrid_part.data' delimiter as '|';
 
 
 DROP TABLE sync1_hybrid_part7;

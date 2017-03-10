@@ -153,4 +153,4 @@ DROP FILESPACE  filerep_fs_z;
 --
 -- Create gptest which is used as PGDATABASE for CI
 --
-CREATE DATABASE gptest;
+create database gptest template template0;
