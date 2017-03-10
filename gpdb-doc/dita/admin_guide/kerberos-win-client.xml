@@ -1,0 +1,471 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title>Configuring Kerberos For Windows Clients</title>
+  <shortdesc>You can configure Microsoft Windows client applications to connect to a Greenplum
+    Database system that is configured to authenticate with Kerberos.</shortdesc>
+  <body>
+    <ul id="ul_pbc_mxz_pw">
+      <li><xref href="#topic_vjg_d5m_sv" format="dita"/></li>
+      <li><xref href="#topic_uzb_t5m_sv" format="dita"/></li>
+    </ul>
+    <p>For information about configuring Greenplum Database with Kerberos authentication, see <xref
+        href="kerberos.xml#topic1"/>.</p>
+  </body>
+  <topic id="topic_vjg_d5m_sv">
+    <title>Configure Kerberos on Windows for Greenplum Database Clients</title>
+    <body>
+      <p>When a Greenplum Database system is configured to authenticate with Kerberos, you can
+        configure Kerberos authentication for the Greenplum Database client utilities
+          <codeph>gpload</codeph> and <codeph>psql</codeph> on a Microsoft Windows system. The
+        Greenplum Database clients authenticate with Kerberos directly, not with Microsoft Active
+        Directory (AD). </p>
+      <p>This section contains the following information.</p>
+      <p>
+        <ul id="ul_ask_2r1_cw">
+          <li><xref href="#topic_vjg_d5m_sv/win_kerberos_install" format="dita"/>.</li>
+          <li><xref href="#topic_vjg_d5m_sv/win_psql_kerb" format="dita"/></li>
+          <li><xref href="#topic_vjg_d5m_sv/win_gpload_kerb" format="dita"/></li>
+          <li><xref href="#topic_vjg_d5m_sv/win_keytab" format="dita"/></li>
+          <li><xref href="#topic_vjg_d5m_sv/win_kerberos_issues" format="dita"/></li>
+        </ul>
+      </p>
+      <p>These topics assume that the Greenplum Database system is configured to authenticate with
+        Kerberos and Microsoft Active Directory. See <xref href="#topic_uzb_t5m_sv" format="dita"
+        />.</p>
+      <section id="win_kerberos_install">
+        <title>Installing Kerberos on a Windows System</title>
+        <p>To use Kerberos authentication with the Greenplum Database clients on a Windows system,
+          the MIT Kerberos Windows client must be installed on the system. For the clients you can
+          install MIT Kerberos for Windows 4.0.1 (for krb5) that is available at <xref
+            href="http://web.mit.edu/kerberos/dist/index.html" format="html" scope="external"
+            >http://web.mit.edu/kerberos/dist/index.html</xref>. </p>
+        <p>On the Windows system, you manage Kerberos tickets with the Kerberos
+            <codeph>kinit</codeph> utility</p>
+        <p>The automatic start up of the Kerberos service is not enabled. The service cannot be used
+          to authenticate with Greenplum Database.</p>
+        <p>Create a copy of the Kerberos configuration file <codeph>/etc/krb5.conf</codeph> from the
+          Greenplum Database master and place it in default Kerberos location on the Windows system
+            <codeph>C:\ProgramData\MIT\Kerberos5\krb5.ini</codeph>. In the file section
+            <codeph>[libdefaults]</codeph>, remove the Location of the Kerberos kicket cache
+            <codeph>default_ccache_name</codeph>.</p>
+        <p>On the Windows system, use the environment variable <codeph>KRB5CCNAME</codeph> to
+          specify the location of the Kerberos ticket. The value for environment variable is a file,
+          not a directory and should be unique to each login on the server. </p>
+        <p>This is an example configuration file with <codeph>default_ccache_name</codeph> removed.
+          Also, the section <codeph>[logging]</codeph> is removed. </p>
+        <codeblock>[libdefaults]
+ debug = true
+ default_etypes = aes256-cts-hmac-sha1-96
+ default_realm = EXAMPLE.LOCAL
+ dns_lookup_realm = false
+ dns_lookup_kdc = false
+ ticket_lifetime = 24h
+ renew_lifetime = 7d
+ forwardable = true
+
+[realms]
+ EXAMPLE.LOCAL = {
+  kdc =bocdc.example.local
+  admin_server = bocdc.example.local
+ }
+
+[domain_realm]
+ .example.local = EXAMPLE.LOCAL
+ example.local = EXAMPLE.LOCAL</codeblock>
+        <p>When specifying a Kerberos ticket with <codeph>KRB5CCNAME</codeph>, you can specify the
+          value in either a local user environment or within a session. These commands set
+            <codeph>KRB5CCNAME</codeph>, runs kinit, and runs the batch file to set the environment
+          variables for the Greenplum Database clients.</p>
+        <codeblock>set KRB5CCNAME=%USERPROFILE%\krb5cache
+kinit
+
+"c:\Program Files (x86)\Greenplum\greenplum-clients-4.3.7.3-build-2\greenplum_clients_path.bat"</codeblock>
+      </section>
+      <section id="win_psql_kerb">
+        <title>Running the psql Utility</title>
+        <p>After installing and configuring Kerberos and the Kerberos ticket on a Windows system,
+          you can run the Greenplum Database command line client <codeph>psql</codeph>.</p>
+        <p>If you get warnings indicating that the Console code page differs from Windows code page,
+          you can run the Windows utility <codeph>chcp</codeph> to change the code page. This is an
+          example of the warning and fix.</p>
+        <codeblock>psql -h prod1.example.local warehouse
+psql (8.2.15)
+WARNING: Console code page (850) differs from Windows code page (1252)
+ 8-bit characters might not work correctly. See psql reference
+ page "Notes for Windows users" for details.
+Type "help" for help.
+
+warehouse=# \q
+
+chcp 1252
+Active code page: 1252
+
+psql -h prod1.example.local warehouse
+psql (8.2.15)
+Type "help" for help.</codeblock>
+      </section>
+      <section id="win_keytab">
+        <title>Creating a Kerberos Keytab File</title>
+        <p>You can create and use a Kerberos <codeph>keytab</codeph> file to avoid entering a
+          password at the command line or the listing a password in a script file when connecting to
+          a Greenplum Database system. You can create a keyab file with these utilities:<ul
+            id="ul_q5z_js4_cw">
+            <li>Windows Kerberos utility <codeph>ktpass</codeph></li>
+            <li>Java JRE keytab utility <codeph>ktab</codeph><p>If you use AES256-CTS-HMAC-SHA1-96
+                encryption, you need download and install the Java extension <cite>Java Cryptography
+                  Extension (JCE) Unlimited Strength Jurisdiction Policy Files for JDK/JRE</cite>
+                from Oracle. This command creates the keyab file
+                  <codeph>svcPostgresProd1.keytab</codeph>.</p></li>
+          </ul></p>
+        <p>You run the <codeph>ktpass</codeph> utility an AD Domain Administrator. The utility
+          expects a user account to have a Service Principal Name (SPN) defined as an AD user
+          attribute, however, it does not appear to be required. You can specify it as a parameter
+          to <codeph>ktpass</codeph> and ignore the warning that it cannot be set. </p>
+        <p>The Java JRE <codeph>ktab</codeph> utiltiy does not require an AD Domain Administrator
+          does not require an SPN.</p>
+        <note>When you enter the password to create the keytab file, the password is visible on
+          screen.</note>
+        <p>This example runs the <codeph>ktpass</codeph> utility to create the ketyab
+            <codeph>dev1.keytab</codeph>.</p>
+        <codeblock>ktpass -out dev1.keytab -princ dev1@EXAMPLE.LOCAL -mapUser dev1 -pass <varname>your_password</varname> -crypto all -ptype KRB5_NT_PRINCIPAL</codeblock>
+        <p>It works despite the warning message <codeph>Unable to set SPN mapping data</codeph>.</p>
+        <p>This example runs the Java <codeph>ktab.exe</codeph> to create a keytab file
+            (<codeph>-a</codeph> option) and list the keytab name and entries (<codeph>-l</codeph>
+          <codeph>-e</codeph>
+          <codeph>-t</codeph> options).</p>
+        <codeblock>C:\Users\dev1>"\Program Files\Java\jre1.8.0_77\bin"\ktab -a dev1
+Password for dev1@EXAMPLE.LOCAL:<varname>your_password</varname>
+Done!
+Service key for dev1 is saved in C:\Users\dev1\krb5.keytab
+
+C:\Users\dev1>"\Program Files\Java\jre1.8.0_77\bin"\ktab -l -e -t
+Keytab name: C:\Users\dev1\krb5.keytab
+KVNO Timestamp Principal
+---- -------------- ------------------------------------------------------
+ 4 13/04/16 19:14 dev1@EXAMPLE.LOCAL (18:AES256 CTS mode with HMAC SHA1-96)
+ 4 13/04/16 19:14 dev1@EXAMPLE.LOCAL (17:AES128 CTS mode with HMAC SHA1-96)
+ 4 13/04/16 19:14 dev1@EXAMPLE.LOCAL (16:DES3 CBC mode with SHA1-KD)
+ 4 13/04/16 19:14 dev1@EXAMPLE.LOCAL (23:RC4 with HMAC)</codeblock>
+        <p>You can then use a keytab with the following:</p>
+        <codeblock>kinit -kt dev1.keytab dev1
+or
+kinit -kt %USERPROFILE%\krb5.keytab dev1</codeblock>
+      </section>
+      <section id="win_gpload_kerb">
+        <title>Example gpload YAML File</title>
+        <p>This is an example of running a <codeph>gpload</codeph> job with the user
+            <codeph>dev1</codeph> logged onto a Windows desktop with the AD domain.</p>
+        <p>In the example <codeph>test.yaml</codeph> control file, the <codeph>USER:</codeph> line
+          has been removed. Kerberos authentication is used.</p>
+        <codeblock>---
+VERSION: 1.0.0.1
+DATABASE: warehouse
+HOST: prod1.example.local
+PORT: 5432
+
+GPLOAD:
+   INPUT:
+    - SOURCE:
+         PORT_RANGE: [18080,18080]
+         FILE:
+           - /Users/dev1/Downloads/test.csv
+    - FORMAT: text
+    - DELIMITER: ','
+    - QUOTE: '"'
+    - ERROR_LIMIT: 25
+    - LOG_ERRORS: true
+   OUTPUT:
+    - TABLE: public.test
+    - MODE: INSERT
+   PRELOAD:
+    - REUSE_TABLES: true</codeblock>
+        <p>These commands run <codeph>kinit</codeph> and then <codeph>gpload</codeph> with the
+            <codeph>test.yaml</codeph> file and displays successful <codeph>gpload</codeph>
+          output.</p>
+        <codeblock>kinit -kt %USERPROFILE%\krb5.keytab dev1
+
+gpload.py -f test.yaml
+2016-04-10 16:54:12|INFO|gpload session started 2016-04-10 16:54:12
+2016-04-10 16:54:12|INFO|started gpfdist -p 18080 -P 18080 -f "/Users/dev1/Downloads/test.csv" -t 30
+2016-04-10 16:54:13|INFO|running time: 0.23 seconds
+2016-04-10 16:54:13|INFO|rows Inserted = 3
+2016-04-10 16:54:13|INFO|rows Updated = 0
+2016-04-10 16:54:13|INFO|data formatting errors = 0
+2016-04-10 16:54:13|INFO|gpload succeeded</codeblock>
+      </section>
+      <section id="win_kerberos_issues">
+        <title>Issues and Possible Solutions</title>
+        <ul id="ul_tkb_hds_wv">
+          <li>This message indicates that Kerberos cannot find your cache
+              file:<codeblock>Credentials cache I/O operation failed XXX
+(Kerberos error 193)
+krb5_cc_default() failed</codeblock><p>To
+              ensure that Kerberos can find the file set the environment variable
+                <codeph>KRB5CCNAME</codeph> and run <codeph>kinit</codeph>.</p>Kerberos cannot find
+            your cache file.<codeblock>set KRB5CCNAME=%USERPROFILE%\krb5cache
+kinit</codeblock></li>
+          <li>This <codeph>kinit</codeph> message indicates that the <codeph>kinit -k -t</codeph>
+            command could not find the
+              keytab.<codeblock>kinit: Generic preauthentication failure while getting initial credentials</codeblock><p>Confirm
+              the full path and filename for the Kerberos keytab file is correct.</p></li>
+        </ul>
+      </section>
+    </body>
+  </topic>
+  <topic id="topic_uzb_t5m_sv">
+    <title>Configure Client Authentication with Active Directory </title>
+    <body>
+      <p>You can configure a Microsoft Windows user with a Microsoft Active Directory (AD) account
+        for single sign-on to a Greenplum Database system. </p>
+      <p>You configure an AD user account to support logging in with Kerberos authentication. </p>
+      <p>With AD single sign-on, a Windows user can use Active Directory credentials with a Windows
+        client application to log into a Greenplum Database system. For example, a Windows user can
+        use Active Directory credentials with PGadmin III to access a Greenplum Database system.
+        Also, for Windows applications that use ODBC, the ODBC driver can use Active Directory
+        credentials to connect to a Greenplum Databases system.</p>
+      <note>Greenplum Database clients that run on Windows, like <codeph>gpload</codeph>, connect
+        with Greenplum Database directly and do not use Active Directrory. For information about
+        connecting Greenplum Database clients on Windows to a Greenplum Database system with
+        Kerberos authentication. See <xref href="#topic_vjg_d5m_sv" format="dita"/>.</note>
+      <p>This section contains the following information.<ul id="ul_o1g_1qs_bz">
+          <li><xref href="#topic_uzb_t5m_sv/ad_prereq" format="dita"/></li>
+          <li><xref href="#topic_uzb_t5m_sv/ad_setup" format="dita"/></li>
+          <li><xref href="#topic_uzb_t5m_sv/gpdb_ad_setup" format="dita"/></li>
+          <li><xref href="#topic_uzb_t5m_sv/ad_sso_examples" format="dita"/></li>
+          <li><xref href="#topic_uzb_t5m_sv/ad_problems" format="dita"/></li>
+        </ul></p>
+      <section id="ad_prereq">
+        <title>Prerequisites</title>
+        <p>These are items are required enable AD single sign-on to a Greenplum Database system.</p>
+        <ul id="ul_v2b_5n2_pw">
+          <li>The Greenplum Database system must be configured to support for Kerberos
+            authentication. For information about configuring Greenplum Database with Kerberos
+            authentication, see <xref href="#topic1" format="dita"/>. </li>
+          <li>You must know the fully-qualified domain name (FQDN) of the Greenplum Database master
+            host. Also, the Greenplum Database master host name must have a domain portion. If the
+            system does do not have a domain, you must configure the system to use a domain.<p>This
+              Linux <codeph>hostname</codeph> command displays the
+            FQDN.</p><codeblock>hostname --fqdn</codeblock></li>
+          <li>You must confirm that the Greenplum Database system has the same date and time as the
+            Active Directory domain. For example, you could set the Greenplum Database system NTP
+            time source to be an AD Domain Controller, or configure the master host to use the same
+            external time source as the AD Domain Controller.</li>
+          <li>To support single sign-on, you configure an AD user account as a Managed Service
+            Account in AD. These are requirements for Kerboros authentication.<ul id="ul_yw3_4nx_tv">
+              <li>You need to add the Service Principal Name (SPN) attribute to the user account
+                information because the Kerberos utilities require the information during Kerberos
+                authentication. </li>
+              <li>Also, as Greenplum database have unattended startups, you must also provide the
+                account login details in a Kerberos keytab file.</li>
+            </ul><note>Setting the SPN and creating the keytab requires AD administrative
+              permissions.</note></li>
+        </ul>
+      </section>
+      <section id="ad_setup">
+        <title>Active Directory Setup</title>
+        <p>The AD naming convention should support multiple Greenplum Database systems. In this
+          example, we create a new AD Managed Service Account <codeph>svcPostresProd1</codeph> for
+          our <codeph>prod1</codeph> Greenplum Database system master host. </p>
+        <p>The Active Directory domain is <codeph>example.local</codeph>.</p>
+        <p>The fully qualified domain name for the Greenplum Database master host is
+            <codeph>prod1.example.local</codeph>.</p>
+        <p>We will add the SPN <codeph>postgres/prod1.example.local</codeph> to this account.
+          Service accounts for other Greenplum Database systems will all be in the form
+              <codeph>postgres/<varname>fully.qualified.hostname</varname></codeph>.</p>
+        <p>
+          <image href="graphics/kerb-ms-ad-new-object.png" placement="break" width="412px"
+            height="280px" id="image_bxp_2fx_tv"/>
+        </p>
+        <p>In this example, the AD password is set to never expire and cannot be changed by the
+          user. The AD account password is only used when creating the Kerberos keytab file. There
+          is no requirement to provide it to a database administrator. </p>
+        <p>
+          <image href="graphics/kerb-ms-ad-new-object-2.png" placement="break" width="477px"
+            height="329px" id="image_x3d_gfx_tv"/>
+        </p>
+        <p>An AD administrator must add the Service Principal Name attribute to the account from the
+          command line with the Windows <codeph>setspn</codeph> command. This example command set
+          the SPN attribute value to <codeph>postgres/prod1.example.local</codeph> for the AD user
+            <codeph>svcPostgresProd1</codeph>:</p>
+        <codeblock>setspn -A postgres/prod1.example.local svcPostgresProd1</codeblock>
+        <p>You can see the SPN if Advanced Features are set in the Active Directory Users and
+          Computers view. Find <codeph>servicePrincipalName</codeph> in the Attribute Editor tab and
+          edit it if you need to make changes.</p>
+        <p>
+          <image href="graphics/kerb-ms-ad-attribute-editor.png" placement="break" width="447px"
+            height="398px" id="image_pbt_hfx_tv"/>
+        </p>
+        <p>The next step is to create a Kerberos keytab file. </p>
+        <p>You can select a specific cryptography method if your security requirements require it,
+          but in the absence of that, it is best to get it to work first and then remove any
+          cryptography methods you do not want.</p>
+        <p>As an AD Domain Administrator, you can list the types of encryption that your AD domain
+          controller supports with this <codeph>ktpass</codeph> command:</p>
+        <codeblock>ktpass /? </codeblock>
+        <p>As an AD Domain Administrator, you can run the <codeph>ktpass</codeph> command to create
+          a keytab file. This example command creates a svcPostgresProd1.keytab with this information:<sl>
+            <sli>ServicePrincipalName (SPN):
+                <codeph>postgres/prod1.example.local@EXAMPLE.LOCAL</codeph></sli>
+            <sli>AD user: <codeph>svcPostgresProd1</codeph></sli>
+            <sli>Encryption methods: <codeph>ALL available on AD</codeph></sli>
+            <sli>Principal Type: <codeph>KRB5_NT_PRINCIPAL</codeph></sli>
+          </sl></p>
+        <codeblock>ktpass -out svcPostgresProd1.keytab -princ postgres/prod1.example.local@EXAMPLE.LOCAL -mapUser svcPostgresProd1
+   -pass <varname>your_password</varname> -crypto all -ptype KRB5_NT_PRINCIPAL</codeblock>
+        <note>The AD domain <codeph>@EXAMPLE.LOCAL</codeph> is appended to the SPN.</note>
+        <p>You copy the keytab file <codeph>svcPostgresProd1.keytab</codeph> to the Greenplum
+          Database master host.</p>
+        <p>As an alternative to running <codeph>ktpass</codeph> as an AD Domain Administrator, you
+          can run the Java <codeph>ktab.exe</codeph> utility to generate a keytab file if you have
+          the Java JRE installed on your desktop. When you enter the password using either
+            <codeph>ktpass</codeph> or <codeph>ktab.exe</codeph>, the password will be visible on
+          the screen as a command ling argument. </p>
+        <p>This example command creates the keyab file
+            <codeph>svcPostgresProd1.keytab</codeph>.<codeblock>"c:\Program Files\Java\jre1.8.0_77\bin\ktab.exe" -a svcPostgresprod1 -k svcPostgresProd1.keytab
+Password for svcPostgresprod1@EXAMPLE.LOCAL:<varname>your_password</varname>
+Done!
+Service key for svcPostgresprod1 is saved in svcPostgresProd1.keytab</codeblock><note>If
+            you use AES256-CTS-HMAC-SHA1-96 encryption, requires download and install the Java
+            extension <cite>Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy
+              Files for JDK/JRE</cite> from Oracle. </note></p>
+      </section>
+      <section id="gpdb_ad_setup">
+        <title>Greenplum Database Setup for Active Directory</title>
+        <p>These instructions assume that the Kerberos workstation utilities
+            <codeph>krb5-workstation</codeph> are installed on the Greenplum Database master
+          host.</p>
+        <p>Update <codeph>/etc/krb5.conf</codeph> with the AD domain name details and the location
+          of an AD domain controller. This is an example configuration.</p>
+        <codeblock>[logging]
+ default = FILE:/var/log/krb5libs.log
+ kdc = FILE:/var/log/krb5kdc.log
+ admin_server = FILE:/var/log/kadmind.log
+
+[libdefaults]
+ default_realm = EXAMPLE.LOCAL
+ dns_lookup_realm = false
+ dns_lookup_kdc = false
+ ticket_lifetime = 24h
+ renew_lifetime = 7d
+ forwardable = true
+
+[realms]
+ EXAMPLE.LOCAL = {
+ kdc = bocdc.example.local
+ admin_server = bocdc.example.local
+ }
+
+[domain_realm]
+ .example.local = EXAMPLE.LOCAL
+ example.com = EXAMPLE.LOCAL</codeblock>
+        <p>Copy the Kerberos keytab file that contains the AD user information to the Greenplum
+          Database master directory. This example copies <codeph>svcPostgresProd1.keytab</codeph>
+          that was created in <xref href="#topic_uzb_t5m_sv/ad_setup" format="dita">Active Directory
+            Setup</xref>.</p>
+        <codeblock>mv svcPostgresProd1.keytab $MASTER_DATA_DIRECTORY
+chown gpadmin:gpadmin $MASTER_DATA_DIRECTORY/svcPostgresProd1.keytab
+chmod 600 $MASTER_DATA_DIRECTORY/svcPostgresProd1.keytab</codeblock>
+        <p>Add this line as the last line in the Greenplum Database <codeph>pg_hba.conf</codeph>
+          file. This line configures Greenplum Database authentication to use Active Directory for
+          authentication for connection attempt that is not matched by a previous line attempts.</p>
+        <codeblock>host all all 0.0.0.0/0 gss include_realm=0</codeblock>
+        <p>Update the Greenplum Database <codeph>postgresql.conf</codeph> file with the location
+          details for the keytab file and the principal name to use. The fully qualified hostname
+          and the default realm from <codeph>/etc/krb5.conf</codeph> forms the full service
+          principal name.</p>
+        <codeblock>krb_server_keyfile = '/data/master/gpseg-1/svcPostgresProd1.keytab'
+krb_srvname = 'postgres'</codeblock>
+        <p>Create a database role for the AD user. This example logs into default database and runs
+          the <codeph>CREATE ROLE</codeph> command. The user <codeph>dev1</codeph> was the user
+          specified when creating the keytab file in <xref href="#topic_uzb_t5m_sv/ad_setup"
+            format="dita">Active Directory Setup</xref>.</p>
+        <codeblock>psql
+create role dev1 with login superuser;</codeblock>
+        <p>Restart the database to use the updated the authentication information:</p>
+        <codeblock>gpstop -a
+gpstart  </codeblock>
+        <note>The Greenplum Database libraries might conflict with the Kerberos workstation
+          utilities such as <codeph>kinit</codeph>. If you are using these utilities on the
+          Greenplum Database master, you can either run a <codeph>gpadmin</codeph> shell that does
+          not source the <codeph>$GPHOME/greenplum_path.sh</codeph> script, or unset the
+            <codeph>LD_LIBRARY_PATH</codeph> environment variable similar to this
+          example:<codeblock>unset LD_LIBRARY_PATH
+kinit
+source $GPHOME/greenplum_path.sh</codeblock></note>
+        <p>Confirm Greenplum Database access with Kerberos authentication:</p>
+        <codeblock>kinit dev1
+psql -h prod1.example.local -U dev1</codeblock>
+      </section>
+      <section id="ad_sso_examples">
+        <title>Single Sign-On Examples</title>
+        <p>These single sign-on examples that use AD and Kerberos assume that the AD user
+            <codeph>dev1</codeph> configured for single sign-on is logged into the Windows desktop. </p>
+        <p>This example connects to Greenplum Database from pgAdmin III with single sign-on. You
+          must specify the fully qualified hostname as the Host and the Windows user ID
+            (<codeph>dev1</codeph>) as the Username when completing the New Server Registration.</p>
+        <p>
+          <image href="graphics/kerb-pgadmin-config.png" placement="break" width="319px"
+            height="327px" id="image_rb2_jfx_tv"/>
+        </p>
+        <p>Also,when you reconnect to the database, pgAdmin III prompts for a password. When
+          prompted, leave the field blank and click OK. </p>
+        <p>This example configures Aginity Workbench for Pivotal Greenplum. When using single
+          sign-on, you enable Use Integrated Security.</p>
+        <p>
+          <image href="graphics/kerb-aginity-config.png" placement="break" width="351px"
+            height="330px" id="image_wdq_kfx_tv"/>
+        </p>
+        <p>This example configures a Postgres psqlodbc driver as an ODBC source. When setting up the
+          ODBC source, do not enter a User Name or Password. This DSN can then be used by
+          applications as an ODBC data source.</p>
+        <p>
+          <image href="graphics/kerb-odbc-config.png" placement="break" width="410px" height="337px"
+            id="image_wf2_mfx_tv"/>
+        </p>
+        <p>You can use the DSN <codeph>testdata</codeph> with an R client. This example configures R
+          to access the DSN.</p>
+        <codeblock>library("RODBC")
+conn &lt;- odbcDriverConnect("testdata")
+sql &lt;- "select * from public.data1"
+my_data &lt;- sqlQuery(conn,sql)
+print(my_data)</codeblock>
+      </section>
+      <section id="ad_problems">
+        <title>Issues and Possible Solutions for Active Directory</title>
+        <ul id="ul_c4m_y1s_wv">
+          <li>Kerberos tickets contain a version number that must match the version number for
+              AD.<p>To display the version number in your keytab file, use the <codeph>klist
+                -ket</codeph> command. For
+              example:</p><codeblock>klist -ket svcPostgresProd1.keytab</codeblock><p>To get the
+              corresponding value from AD domain controller, run this command as an AD
+              Administrator:</p><codeblock>kvno postgres/prod1.example.local@EXAMPLE.LOCAL</codeblock></li>
+        </ul>
+        <ul id="ul_azk_1bs_wv">
+          <li>This login error can occur when there is a mismatch between the Widows ID and the
+            Greenplum database user role ID. This log file entry shows the login error. A user
+              <codeph>dev22</codeph> is attempting to login from a Windows desktop where the user is
+            logged in as a different Windows
+              user.<codeblock>2016-03-29 14:30:54.041151 PDT,"dev22","gpadmin",p15370,th2040321824,
+  "172.28.9.181","49283",2016-03-29 14:30:53 PDT,1917,con32,,seg-1,,,x1917,sx1,
+  "FATAL","28000","authentication failed for user ""dev22"": valid 
+  until timestamp expired",,,,,,,0,,"auth.c",628,</codeblock><p>The
+              error can also occur when the user can be authenticated, but does not have a Greenplum
+              database user role. </p><p>Ensure that the user is using the correct Windows ID and
+              that a Greenplum Database user role is configured for the user ID.</p></li>
+          <li>
+            <p>This error can occur when the Kerberos keytab does not contain a matching
+              cryptographic type to a client attempting to connect.
+              <codeblock>psql -h 'hostname' template1
+psql: GSSAPI continuation error: Unspecified GSS failure. Minor code may provide more information
+GSSAPI continuation error: Key version is not available</codeblock></p>
+            <p>The resolution is to add the additional encryption types to the keytab using
+                <codeph>ktutil</codeph> or recreating the postgres keytab with all crypto systems
+              from AD. </p>
+          </li>
+        </ul>
+      </section>
+    </body>
+  </topic>
+</topic>
