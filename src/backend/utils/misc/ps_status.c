@@ -80,7 +80,7 @@ bool		update_process_title = true;
 
 
 /* Different systems want the buffer padded differently */
-#if defined(_AIX) || defined(__linux__) || defined(__svr4__)
+#if defined(_AIX) || defined(__linux__) || defined(__darwin__)
 #define PS_PADDING '\0'
 #else
 #define PS_PADDING ' '
@@ -105,8 +105,6 @@ static size_t ps_buffer_fixed_size;		/* size of the constant prefix */
 static size_t ps_argument_size; /* size for the first argument */
 #endif
 
-static size_t   ps_host_info_size;		/*CDB*/
-static char     ps_host_info[64];       /*CDB*/
 static char     ps_username[64];        /*CDB*/
 
 /* save the original argv[] location here */
@@ -329,25 +327,6 @@ init_ps_display(const char *username, const char *dbname,
 			 PostPortNumber, username, dbname, host_info);
 #endif /* not PS_USE_SETPROCTITLE */
 
-	ps_buffer_fixed_size = strlen(ps_buffer);
-
-	real_act_prefix_size = ps_buffer_fixed_size;
-
-	set_ps_display(initial_str, true);
-
-	/* CDB */
-	StrNCpy(ps_host_info, host_info, sizeof(ps_host_info));
-	ps_host_info_size = snprintf(ps_buffer + ps_buffer_fixed_size,
-								 ps_buffer_size - ps_buffer_fixed_size,
-								 "%s ", host_info);
-
-	/*
-	 * MPP-14501, don't let a NUL from snprintf mess up our padding
-	 */
-#if defined(__darwin__)
-	ps_buffer[ps_buffer_fixed_size + ps_host_info_size] = PS_PADDING;
-#endif
-
 	ps_buffer_cur_len = ps_buffer_fixed_size = strlen(ps_buffer);
 	real_act_prefix_size = ps_buffer_fixed_size;
 
@@ -382,23 +361,10 @@ set_ps_display(const char *activity, bool force)
 		return;
 #endif
 
-	/* Drop the remote host and port from the fixed prefix. */
-	if (ps_host_info_size > 0)
-	{
-		ps_buffer_fixed_size -= ps_host_info_size;
-		cp -= ps_host_info_size;
-		ps_host_info_size = 0;
-	}
-
 	Assert(cp >= ps_buffer);
 	/* Add client session's global id. */
 	if (gp_session_id > 0 && ep - cp > 0)
 		cp += snprintf(cp, ep - cp, "con%d ", gp_session_id);
-
-	/* Add host and port.  (Not very useful for qExecs, so skip.) */
-	if (Gp_role != GP_ROLE_EXECUTE &&
-		ps_host_info[0] != '\0' && ep - cp > 0)
-		cp += snprintf(cp, ep - cp, "%s ", ps_host_info);
 
 	/* Which segment is accessed by this qExec? */
 	if (Gp_role == GP_ROLE_EXECUTE &&
@@ -420,11 +386,12 @@ set_ps_display(const char *activity, bool force)
 	 * effectively becomes ps_buffer_size.
 	 */
 	real_act_prefix_size = Min(cp, ep) - ps_buffer;
-	ps_buffer_cur_len = real_act_prefix_size;
 
 	/* Append caller's activity string. */
 	if (ep - cp > 0)
 		StrNCpy(cp, activity, ep - cp);
+
+	ps_buffer_cur_len = strlen(ps_buffer) + 1;
 
     /* Transmit new setting to kernel, if necessary */
 #ifdef PS_USE_SETPROCTITLE
@@ -492,7 +459,7 @@ get_ps_display_from_position(size_t pos, int *displen)
 	}
 #endif
 
-	*displen = (int) (ps_buffer_cur_len - ps_buffer_fixed_size);
+	*displen = (int) (ps_buffer_cur_len - real_act_prefix_size);
 
 	return ps_buffer + pos;
 }
