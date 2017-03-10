@@ -97,6 +97,8 @@
       <topicref href="admin_guide/ldap.xml"/>
       <topicref href="admin_guide/kerberos.xml" navtitle="Setting up Kerberos Authentication"
         id="kerberos"/>
+      <topicref href="admin_guide/kerberos-win-client.xml"
+        navtitle="Configuring Kerberos For Windows Clients" id="kerberos-win"/>
     </chapter>
     <chapter href="admin_guide/roles_privs.xml" navtitle="Managing Roles and Privileges"
       id="roles_privs"/>
