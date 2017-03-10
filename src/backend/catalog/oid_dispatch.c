@@ -665,7 +665,7 @@ AddPreassignedOidFromBinaryUpgrade(Oid oid, Oid catalog, char *objname,
 			OidAssignment *p = (OidAssignment *) lfirst(cur);
 
 			if (p->catalog == catalog &&
-				(!objname || strcmp(objname, p->objname)) &&
+				(!objname || strcmp(objname, p->objname) == 0) &&
 				namespaceOid == p->namespaceOid &&
 				keyOid1 == p->keyOid1 && keyOid2 == p->keyOid2)
 			{
