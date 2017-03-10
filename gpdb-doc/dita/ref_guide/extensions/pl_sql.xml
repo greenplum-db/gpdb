@@ -234,6 +234,49 @@ $$ LANGUAGE plpgsql VOLATILE;</codeblock>
           inside a PL/pgSQL function, use the SQL command <codeph>CREATE TABLE AS</codeph>.</note>
       </body>
     </topic>
+    <topic xml:lang="en" id="topic_lsh_5n5_2z">
+      <title>Example: Using Polymorphic Data Types </title>
+      <body>
+        <p>PL/pgSQL supports the polymorphic <i>anyelement</i>, <i>anyarray</i>, <i>anyenum</i>, and
+            <i>anynonarray</i> types. Using these types, you can create a single PL/pgSQL function
+          that operates on multiple data types. Refer to <xref href="../data_types.xml#topic1"
+            >Greenplum Database Data Types</xref> for additional information on polymorphic type
+          support in Greenplum Database.</p>
+        <p>A special parameter named <codeph>$0</codeph> is created when the return type of
+          PL/pgSQL function is declared as a polymorphic type. The data type of <codeph>$0</codeph>
+          identifies the return type of the function as deduced from the actual input types.</p>
+        <p>In this example, you create a polymorphic function that returns the sum of two
+          values:</p>
+        <p>
+          <codeblock>CREATE FUNCTION add_two_values(v1 anyelement,v2 anyelement)
+    RETURNS anyelement AS $$ 
+DECLARE 
+    sum ALIAS FOR $0;
+BEGIN
+    sum := v1 + v2;
+    RETURN sum;
+END;
+$$ LANGUAGE plpgsql;</codeblock>
+        </p>
+        <p>Execute  <codeph>add_two_values()</codeph> providing integer input values:</p>
+        <p>
+          <codeblock>SELECT add_two_values(1, 2);
+ add_two_values
+----------------
+              3
+(1 row)</codeblock>
+        </p>
+        <p>The return type of <codeph>add_two_values()</codeph> is integer, the type of the input
+          arguments. Now execute  <codeph>add_two_values()</codeph> providing float input
+          values:</p>
+        <codeblock>SELECT add_two_values (1.1, 2.2);
+ add_two_values
+----------------
+            3.3
+(1 row)</codeblock>
+        <p>The return type of <codeph>add_two_values()</codeph> in this case is float.</p>
+      </body>
+    </topic>
   </topic>
   <topic id="topic10" xml:lang="en">
     <title id="pt214450">References</title>

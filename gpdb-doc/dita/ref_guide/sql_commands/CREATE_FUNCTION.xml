@@ -208,7 +208,14 @@ SETOF text AS $$
                 EXPLAIN ANALYZE SELECT * FROM large_table;
         END;
 $$ LANGUAGE plpgsql
-SET statement_mem='256MB';</codeblock><p>Return a record containing multiple output parameters:</p><codeblock>CREATE FUNCTION dup(in int, out f1 int, out f2 text)
+SET statement_mem='256MB';</codeblock>
+            <p>Use polymorphic types to return an <codeph>ENUM</codeph> array:</p>
+            <codeblock>CREATE TYPE rainbow AS ENUM('red','orange','yellow','green','blue','indigo','violet');
+CREATE FUNCTION return_enum_as_array( anyenum, anyelement, anyelement ) 
+    RETURNS TABLE (ae anyenum, aa anyarray) AS $$
+    SELECT $1, array[$2, $3] 
+$$ LANGUAGE SQL STABLE;
+SELECT * FROM return_enum_as_array('red'::rainbow, 'green'::rainbow, 'blue'::rainbow);</codeblock><p>Return a record containing multiple output parameters:</p><codeblock>CREATE FUNCTION dup(in int, out f1 int, out f2 text)
     AS $$ SELECT $1, CAST($1 AS text) || ' is text' $$
     LANGUAGE SQL;
 SELECT * FROM dup(42);</codeblock><p>You can do the same thing more verbosely with an explicitly named composite

@@ -47,4 +47,42 @@ in distribution key columns.</entry></row><row><entry colname="col1">real</entry
             <entry colname="col4"/>
             <entry colname="col5">user-level transaction ID snapshot</entry>
           </row>
-</tbody></tgroup></table></body></topic>
+</tbody></tgroup></table>
+    <section>
+      <title>Polymorphic Types</title>
+      <p>Four data types of special interest are <i>anyelement</i>, <i>anyarray</i>,
+          <i>anynonarray</i>, and <i>anyenum</i>, which are collectively called polymorphic types.
+        Any function declared using these types is said to be a polymorphic function. A polymorphic
+        function can operate on many different data types, with the specific data type(s) being
+        determined by the data types actually passed to it at runtime.</p>
+      <p>Polymorphic arguments and results are tied to each other and are resolved to a specific
+        data type when a query calling a polymorphic function is parsed. Each position (either
+        argument or return value) declared as <i>anyelement</i> is allowed to have any specific
+        actual data type, but in any given call they must all be the same actual type. Each position
+        declared as <i>anyarray</i> can have any array data type, but similarly they must all be the
+        same type. If there are positions declared <i>anyarray</i> and others declared
+          <i>anyelement</i>, the actual array type in the <i>anyarray</i> positions must be an array
+        whose elements are the same type appearing in the <i>anyelement</i> positions.
+          <i>anynonarray</i> is treated exactly the same as <i>anyelement</i>, but adds the
+        additional constraint that the actual type must not be an array type. <i>anyenum</i> is
+        treated exactly the same as <i>anyelement</i>, but adds the additional constraint that the
+        actual type must be an enum type.</p>
+      <p>When more than one argument position is declared with a polymorphic type, the net effect is
+        that only certain combinations of actual argument types are allowed. For example, a function
+        declared as equal(<i>anyelement</i>, <i>anyelement</i>) will take any two input values, so
+        long as they are of the same data type.</p>
+      <p>When the return value of a function is declared as a polymorphic type, there must be at
+        least one argument position that is also polymorphic, and the actual data type supplied as
+        the argument determines the actual result type for that call. For example, if there were not
+        already an array subscripting mechanism, one could define a function that implements
+        subscripting as subscript(<i>anyarray</i>, integer) returns <i>anyelement</i>. This
+        declaration constrains the actual first argument to be an array type, and allows the parser
+        to infer the correct result type from the actual first argument's type. Another example is
+        that a function declared as f(<i>anyarray</i>) returns <i>anyenum</i> will only accept
+        arrays of enum types.</p>
+      <p>Note that <i>anynonarray</i> and <i>anyenum</i> do not represent separate type variables;
+        they are the same type as <i>anyelement</i>, just with an additional constraint. For
+        example, declaring a function as f(<i>anyelement</i>, <i>anyenum</i>) is equivalent to
+        declaring it as f(<i>anyenum</i>, <i>anyenum</i>): both actual arguments have to be the same
+        enum type.</p>
+    </section></body></topic>
