@@ -334,7 +334,7 @@ tests that are contributed alongside it.
 ### Testing guidelines
 
 At the very minimum you should always be running 
-```make installcheck-good```
+```make installcheck-world```
 to make sure that you're not breaking anything.
 
 ### Changes applicable to upstream PostgreSQL
@@ -350,7 +350,7 @@ you can be sure whether your changes may need to be forward ported.
 
 To improve the odds of the right discussion of your patch or idea happening, pay attention 
 to what the community work cycle is. If for example you send in a brand new idea in the 
-beta phase, don't be surprised if no one is paying attention because they are focused on 
+beta phase, don't be surprised if no one is paying attention because we are focused on 
 release work. Come back when the beta is done, please!
 
 You can read more on Greenplum release policy and timing in the RELEASE.md
@@ -398,8 +398,6 @@ One outcome of the peer review could be a consensus that you need to modify your
 pull request in certain ways. GitHub allows you to push additional commits into
 a branch from which a pull request was sent. Those additional commits will be then
 visible to all of the reviewers.
-
-Note that Greenplum 
 
 A peer review converges when it receives at least one +1 and no -1s votes from
 the participants. At that point you should expect one of the core team 
