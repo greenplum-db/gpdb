@@ -284,28 +284,28 @@ Known issues:
 
 Greenplum is maintained by a core team of developers with commit rights to the
 [main gpdb repository](https://github.com/greenplum-db/gpdb) on GitHub. At the
-same time we are very eager to receive contributions from anybody in the wider
-Greenplum community. This sections covers all you need to know if you want to see
+same time, we are very eager to receive contributions from anybody in the wider
+Greenplum community. This section covers all you need to know if you want to see
 your code or documentation changes be added to Greenplum repository and to the
 future releases of Greenplum.
 
 ### Getting started
 
-Greenplum is developed on GitHub and anybody wishing to contribute to it will
+Greenplum is developed on GitHub, and anybody wishing to contribute to it will
 have to [have a GitHub account](https://github.com/signup/free) and be familiar
 with [Git tools and workflow](https://wiki.postgresql.org/wiki/Working_with_Git). 
-It is also recommend that you follow [developer's mailing list](http://greenplum.org/#contribute) 
+It is also recommend that you follow the [developer's mailing list](http://greenplum.org/#contribute)
 since some of the contributions may generate more detailed discussions there.
 
 Once you have your GitHub account, [fork](https://github.com/greenplum-db/gpdb/fork)
-repository so that you can have your private copy to start hacking on and use
-as source of pull requests.
+repository so that you can have your private copy to start hacking on and to
+use as source of pull requests.
 
-Anybody contributing to Greenplum has to be covered by either Corporate or 
-Individual Contributor License Agreement. If you have not previously done so, 
-please fill out and submit the [Contributor License Agreement](https://cla.pivotal.io/sign/greenplum).
-Note that we do allow for really trivial changes to be contributed without
-a CLA if they fall under the rubric of [obvious fixes](https://cla.pivotal.io/about#obvious-fixes).
+Anybody contributing to Greenplum has to be covered by either the Corporate or
+the Individual Contributor License Agreement. If you have not previously done
+so, please fill out and submit the [Contributor License Agreement](https://cla.pivotal.io/sign/greenplum).
+Note that we do allow for really trivial changes to be contributed without a
+CLA if they fall under the rubric of [obvious fixes](https://cla.pivotal.io/about#obvious-fixes).
 However, since our GitHub workflow checks for CLA by default you may find it
 easier to submit one instead of claiming an "obvious fix" exception.
 
@@ -313,11 +313,11 @@ easier to submit one instead of claiming an "obvious fix" exception.
 
 Your chances of getting feedback and seeing your code merged into the project
 greatly depend on how granular your changes are. If you happen to have a bigger
-change in mind we highly recommend engaging on the developer's mailing list
+change in mind, we highly recommend engaging on the developer's mailing list
 first and sharing your proposal with us before you spend a lot of time writing
 code. Even when your proposal gets validated by the community, we still recommend
 doing the actual work as a series of small, self-contained commits. This makes
-reviewer's job much easier and increases the timeliness of feedback.
+the reviewer's job much easier and increases the timeliness of feedback.
 
 When it comes to C and C++ parts of Greenplum, we try to follow 
 [PostgreSQL Coding Conventions](https://www.postgresql.org/docs/devel/static/source.html).
@@ -340,16 +340,16 @@ to make sure that you're not breaking anything.
 ### Changes applicable to upstream PostgreSQL
 
 If the change you're working on touches functionality that is common between PostgreSQL
-and Greenplum you may be asked to forward port it to PostgreSQL. This is not only so
+and Greenplum, you may be asked to forward-port it to PostgreSQL. This is not only so
 that we keep reducing the delta between the two projects, but also so that any change
 that is relevant to PostgreSQL can benefit from a much broader review of the upstream
-PostgreSQL community. In general it is a good idea to keep both code bases handy so
-you can be sure whether your changes may need to be forward ported.
+PostgreSQL community. In general, it is a good idea to keep both code bases handy so
+you can be sure whether your changes may need to be forward-ported.
 
 ### Submission timing
 
 To improve the odds of the right discussion of your patch or idea happening, pay attention 
-to what the community work cycle is. If for example you send in a brand new idea in the 
+to what the community work cycle is. For example, if you send in a brand new idea in the 
 beta phase, don't be surprised if no one is paying attention because we are focused on 
 release work. Come back when the beta is done, please!
 
@@ -358,28 +358,28 @@ You can read more on Greenplum release policy and timing in the RELEASE.md
 ### Patch submission
 
 Once you are ready to share your work with the Greenplum core team and the rest of
-the Greenplum community you should push all the commits to a branch in your own 
+the Greenplum community, you should push all the commits to a branch in your own 
 repository forked from the official Greenplum and [send us a pull request](https://help.github.com/articles/about-pull-requests/).
 
-For now we require all pull requests to be submitted against the main master
+For now, we require all pull requests to be submitted against the main master
 branch, but over time, once there are many supported open source releases of Greenplum
-in the wild, you may decide to submit your pull requests against am active
+in the wild, you may decide to submit your pull requests against an active
 release branch if the change is only applicable to a given release.
 
 ### Validation checks and CI
 
-Once you submit your pull request you will immediately see a number of validation
-checks performed by our automated CI pipeline. There also will be a CLA check
-telling you whether your CLA was recognized. If any of these checks fails you will
-need to update your pull request to take care of the issue. Pull requests with
-failed validation checks are very unlikely to receive any further peer review
-from the community members.
+Once you submit your pull request, you will immediately see a number of validation
+checks performed by our automated CI pipelines. There also will be a CLA check
+telling you whether your CLA was recognized. If any of these checks fails, you
+will need to update your pull request to take care of the issue. Pull requests
+with failed validation checks are very unlikely to receive any further peer
+review from the community members.
 
 Keep in mind that the most common reason for a failed CLA check is a mismatch
 between an email on file and an email recorded in the commits submitted as
 part of the pull request.
 
-If you can not figure out why a certain validation check failed feel free to
+If you can not figure out why a certain validation check failed, feel free to
 ask on the developer's mailing list, but make sure to include a direct link
 to a pull request in your email.
 
@@ -388,10 +388,10 @@ to a pull request in your email.
 A submitted pull request with passing validation checks is assumed to be available 
 for peer review. Peer review is the process that ensures that contributions to Greenplum 
 are of high quality and align well with the road map and community expectations. Every
-member of the Greenplum community is encouraged to review pull request and provide
-feedback. Since you don't have to be a core team member to be able to do that we
+member of the Greenplum community is encouraged to review pull requests and provide
+feedback. Since you don't have to be a core team member to be able to do that, we
 recommend following a stream of pull reviews to anybody who's interested in becoming
-a long term contributor to Greenplum. As [Linus would say](https://en.wikipedia.org/wiki/Linus's_Law) 
+a long-term contributor to Greenplum. As [Linus would say](https://en.wikipedia.org/wiki/Linus's_Law) 
 "given enough eyeballs, all bugs are shallow".
 
 One outcome of the peer review could be a consensus that you need to modify your
@@ -409,19 +409,18 @@ has to have a detailed technical explanation of what's wrong with the change.
 Should a strong disagreement arise it may be advisable to take the matter onto
 the mailing list since it allows for a more natural flow of the conversation.
 
-At any time during the patch review you may experience delays based on the availability
-of reviewers and core team members. Please be patient. A lot of people working on
-Greenplum have day job commitments that may delay their feedback. That being said,
-don't get discouraged either. If you're not getting expected feedback for a few days
-add a comment asking for updates on the pull request itself or send an email to the
-mailing list.
+At any time during the patch review, you may experience delays based on the
+availability of reviewers and core team members. Please be patient. That being
+said, don't get discouraged either. If you're not getting expected feedback for
+a few days add a comment asking for updates on the pull request itself or send
+an email to the mailing list.
 
 ### Direct commits to the repository
 
 On occasion you will see core team members committing directly to the repository
 without going through the pull request workflow. This is reserved for small changes
 only and the rule of thumb we use is this: if the change touches any functionality
-that may result in a test failure then it has to go through a pull request workflow.
+that may result in a test failure, then it has to go through a pull request workflow.
 If, on the other hand, the change is in the non-functional part of the code base
 (such as fixing a typo inside of a comment block) core team members can decide to
 just commit to the repository directly.
