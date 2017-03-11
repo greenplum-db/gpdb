@@ -29,13 +29,26 @@ var _ = Describe("monitor", func() {
 		})
 	})
 
+	Describe("if a test run tries to use the default ssh key", func() {
+		It("complains", func() {
+			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42")
+
+			Eventually(session).Should(Exit(1))
+			Eventually(session.Err).Should(Say("handshake failed"))
+			Eventually(session.Err).Should(Say("unable to authenticate"))
+		})
+	})
+
+	// no test of the default port 22 versus fake sshd port 2022 because test environments could have their own sshd up on port 22
+	// no test of the default user value of gpadmin because the fake sshd doesn't discriminate between users currently
+
 	Describe("if ssh responds to ps with no pg_upgrade process", func() {
 		It("connects and reports not running", func() {
 			only_grep_itself := "gpadmin            7520   0.0  0.0  2432772    676 s004  S+    3:56PM   0:00.00 grep pg_upgrade"
 			cheatSheet := CheatSheet{Response: only_grep_itself, ReturnCode: intToBytes(0)}
 			cheatSheet.WriteToFile()
 
-			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022")
+			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
 			Eventually(session).Should(Exit(0))
 
 			expectedMsg := "pg_upgrade is not running on host 'localhost', segment_id '42'"
@@ -48,7 +61,7 @@ var _ = Describe("monitor", func() {
 			cheatSheet := CheatSheet{Response: "foo output", ReturnCode: intToBytes(1)}
 			cheatSheet.WriteToFile()
 
-			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022")
+			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
 			Eventually(session).Should(Exit(1))
 
 			expectedMsg := "cannot run ps command on remote host, output: foo output\nError: Process exited with status 1"
@@ -59,7 +72,7 @@ var _ = Describe("monitor", func() {
 	Describe("if SSH is not running at the remote end", func() {
 		It("complains with standard ssh error phrasing", func() {
 			ShutDownSshdServer()
-			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022")
+			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
 
 			Eventually(session).Should(Exit(1))
 
@@ -78,7 +91,7 @@ pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bin
 			cheatSheet := CheatSheet{Response: grep_pg_upgrade, ReturnCode: intToBytes(0)}
 			cheatSheet.WriteToFile()
 
-			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022")
+			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
 			Eventually(session).Should(Exit(0))
 
 			expectedMsg := "pg_upgrade is running on the host"

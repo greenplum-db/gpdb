@@ -5,18 +5,28 @@ import (
 	"fmt"
 	"io"
 	//"regexp"
+	"os/user"
 )
 
 type MonitorCommand struct {
 	Host       string `long:"host" required:"yes" description:"Domain name or IP of host"`
 	Port       int    `long:"port" default:"22" description:"SSH port for communication"`
+	User       string `long:"user" default:"gpadmin" description:"Name of user at ssh destination"`
+	PrivateKey string `long:"private_key" description:"Private key for ssh destination"`
 	Segment_id string `long:"segment_id" required:"yes" description:"ID of segment to monitor"`
 }
 
 func (cmd MonitorCommand) Execute([]string) error {
+	if cmd.PrivateKey == "" {
+		fmt.Println("no key specified with --private_key; using ~/.ssh/id_rsa")
+		usr, _ := user.Current()
+		fmt.Println(usr.HomeDir)
+		cmd.PrivateKey = usr.HomeDir + "/.ssh/id_rsa"
+	}
+
 	// TODO idea: refactor away from the connector factory pattern -- unnecessary seam
 	connector, _ := GetConnector("ssh")
-	session, err := connector.Connect(cmd.Host, cmd.Port)
+	session, err := connector.Connect(cmd.Host, cmd.Port, cmd.User, cmd.PrivateKey)
 	if err != nil {
 		fmt.Println(err)
 		return err
