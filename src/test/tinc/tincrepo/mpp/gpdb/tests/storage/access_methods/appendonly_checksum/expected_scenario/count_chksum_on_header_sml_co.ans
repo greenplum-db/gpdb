@@ -1,6 +1,0 @@
-select count(*) from chksum_on_header_sml_co;
- count 
--------
-    66
-(1 row)
-
