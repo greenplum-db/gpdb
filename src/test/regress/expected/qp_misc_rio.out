@@ -5,104 +5,7 @@
 create schema qp_misc_rio;
 CREATE LANGUAGE plpythonu;
 -- end_ignore
--- ----------------------------------------------------------------------
--- Test: 2 (schema drop)
--- ----------------------------------------------------------------------
-select 
-    table_schema, table_name, column_name, ordinal_position
-from 
-    information_schema.columns
-where 
-    table_schema ='test_schema'
-    and ordinal_position =1;
- table_schema | table_name | column_name | ordinal_position 
---------------+------------+-------------+------------------
-(0 rows)
-
-create schema test_schema;
-create table test_schema.test_table(c int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
--- EXPECT NO ERROR of 'violates check constraint' BEFORE drop schema
-select table_schema, table_name,column_name,ordinal_position 
-from information_schema.columns 
-where table_schema ='test_schema' and ordinal_position =1;
- table_schema | table_name | column_name | ordinal_position 
---------------+------------+-------------+------------------
- test_schema  | test_table | c           |                1
-(1 row)
-
-drop table test_schema.test_table;
-drop SCHEMA test_schema;
--- EXPECT NO ERROR of 'violates check constraint' AFTER drop schema
-select table_schema, table_name,column_name,ordinal_position 
-from information_schema.columns 
-where table_schema ='test_schema' and ordinal_position =1;
- table_schema | table_name | column_name | ordinal_position 
---------------+------------+-------------+------------------
-(0 rows)
-
--- EXPECT NO ERROR of 'violates check constraint'
-select * 
-FROM (
-	select attnum::information_schema.cardinal_number 
-	from pg_attribute 
-	where attnum > 0) q 
-where attnum = 4 limit 10;
- attnum 
---------
-      4
-      4
-      4
-      4
-      4
-      4
-      4
-      4
-      4
-      4
-(10 rows)
-
--- ----------------------------------------------------------------------
--- Test: 3
--- ----------------------------------------------------------------------
---start_ignore
-drop resource queue t3_test_q;
---end_ignore
--- Create resource queue with cost_overcommit=true
-create resource queue t3_test_q with (active_statements = 6,max_cost=5e+06 ,cost_overcommit=true, min_cost=50000);
-select * from pg_resqueue where rsqname='t3_test_q';
-  rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
------------+---------------+--------------+---------------+--------------------
- t3_test_q |             6 |        5e+06 | t             |              50000
-(1 row)
-
--- Increase cost threshold
-alter resource queue t3_test_q with (max_cost=7e6);
-select * from pg_resqueue where rsqname='t3_test_q';
-  rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
------------+---------------+--------------+---------------+--------------------
- t3_test_q |             6 |        7e+06 | t             |              50000
-(1 row)
-
--- Decrease cost threshold
-alter resource queue t3_test_q with (max_cost=1e2);
-select * from pg_resqueue where rsqname='t3_test_q';
-  rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
------------+---------------+--------------+---------------+--------------------
- t3_test_q |             6 |          100 | t             |              50000
-(1 row)
-
-drop resource queue t3_test_q;
--- ----------------------------------------------------------------------
--- Test: 4
--- ----------------------------------------------------------------------
-SELECT to_date(to_char(20110521, '99999999'),'YYYYMMDD'), to_char(20110521,'99999999'), 20110521;
-  to_date   |  to_char  | ?column? 
-------------+-----------+----------
- 05-21-2011 |  20110521 | 20110521
-(1 row)
-
+set search_path to qp_misc_rio;
 -- ----------------------------------------------------------------------
 -- Test: 5
 -- ----------------------------------------------------------------------
@@ -113,19 +16,9 @@ select mregr_pvalues(4, array[1,i]) from generate_series(1, 500) i;
 (1 row)
 
 -- ----------------------------------------------------------------------
--- Test: 6
--- ----------------------------------------------------------------------
-select row();
- row 
------
- ()
-(1 row)
-
--- ----------------------------------------------------------------------
 -- Test: 9
 -- ----------------------------------------------------------------------
 -- Expect NO ERROR like "ERROR:  Unexpected internal error (cdbsetop.c)"
-set search_path to qp_misc_rio;
 create table tb_function_test(a numeric,b numeric,c numeric,d character varying(20),e character varying(20)) distributed by (b,c);
 select *,row_number() over(partition by a,b,c order by d),row_number() over(partition by a,b,c order by e) from tb_function_test where  b=1;
  a | b | c | d | e | row_number | row_number 
@@ -148,71 +41,8 @@ select *,row_number() over(partition by a,b,c order by d),row_number() over(part
 (0 rows)
 
 -- ----------------------------------------------------------------------
--- Test: 10
--- ----------------------------------------------------------------------
--- Test \d+ after drop partition
-set search_path to qp_misc_rio;
-create table t10_t ( a int, b text) partition by range(a) (start (1) end (100) every(20));
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "t10_t_1_prt_1" for table "t10_t"
-NOTICE:  CREATE TABLE will create partition "t10_t_1_prt_2" for table "t10_t"
-NOTICE:  CREATE TABLE will create partition "t10_t_1_prt_3" for table "t10_t"
-NOTICE:  CREATE TABLE will create partition "t10_t_1_prt_4" for table "t10_t"
-NOTICE:  CREATE TABLE will create partition "t10_t_1_prt_5" for table "t10_t"
-insert into t10_t values ( generate_series(1,99),'t10_t_1');
-create index t10_t_a on t10_t using bitmap(a);
-NOTICE:  building index for child partition "t10_t_1_prt_1"
-NOTICE:  building index for child partition "t10_t_1_prt_2"
-NOTICE:  building index for child partition "t10_t_1_prt_3"
-NOTICE:  building index for child partition "t10_t_1_prt_4"
-NOTICE:  building index for child partition "t10_t_1_prt_5"
-create index t10_t_b on t10_t using bitmap(b);
-NOTICE:  building index for child partition "t10_t_1_prt_1"
-NOTICE:  building index for child partition "t10_t_1_prt_2"
-NOTICE:  building index for child partition "t10_t_1_prt_3"
-NOTICE:  building index for child partition "t10_t_1_prt_4"
-NOTICE:  building index for child partition "t10_t_1_prt_5"
-\d+ t10_t
-               Table "qp_misc_rio.t10_t"
- Column |  Type   | Modifiers | Storage  | Description 
---------+---------+-----------+----------+-------------
- a      | integer |           | plain    | 
- b      | text    |           | extended | 
-Indexes:
-    "t10_t_a" bitmap (a)
-    "t10_t_b" bitmap (b)
-Child tables: t10_t_1_prt_1,
-              t10_t_1_prt_2,
-              t10_t_1_prt_3,
-              t10_t_1_prt_4,
-              t10_t_1_prt_5
-Has OIDs: no
-Distributed by: (a)
-Partition by: (a)
-
-Alter table t10_t drop partition for (rank(1));
-\d+ t10_t
-               Table "qp_misc_rio.t10_t"
- Column |  Type   | Modifiers | Storage  | Description 
---------+---------+-----------+----------+-------------
- a      | integer |           | plain    | 
- b      | text    |           | extended | 
-Indexes:
-    "t10_t_a" bitmap (a)
-    "t10_t_b" bitmap (b)
-Child tables: t10_t_1_prt_2,
-              t10_t_1_prt_3,
-              t10_t_1_prt_4,
-              t10_t_1_prt_5
-Has OIDs: no
-Distributed by: (a)
-Partition by: (a)
-
--- ----------------------------------------------------------------------
 -- Test: 11
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
 create table t11_t(a bigint, b bigint) distributed by (a);
 insert into t11_t select a, a / 10 from generate_series(1, 100)a;
 select sum((select count(*) from t11_t group by b having b = s.b)) as sum_col from (select * from t11_t order by a)s group by b order by sum_col;
@@ -232,23 +62,6 @@ select sum((select count(*) from t11_t group by b having b = s.b)) as sum_col fr
 (11 rows)
 
 -- ----------------------------------------------------------------------
--- Test: 14
--- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
-create table tbl_t14 as select * from gp_id DISTRIBUTED RANDOMLY;
-select array(select dbid from gp_id);
- ?column? 
-----------
- {-1}
-(1 row)
-
-select array(select dbid from tbl_t14);
- ?column? 
-----------
- {-1}
-(1 row)
-
--- ----------------------------------------------------------------------
 -- Test: 15
 -- ----------------------------------------------------------------------
 -- aggregate over partition by 
@@ -266,7 +79,6 @@ group by 1,b.revenue;
 -- ----------------------------------------------------------------------
 -- Test: 16
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
 CREATE TABLE testtable0000 AS SELECT spend, row_number() OVER (PARTITION BY 0) AS i, (spend % 2) AS r
 FROM (select generate_series(1,10) as spend) x DISTRIBUTED RANDOMLY;
 CREATE TABLE testtable0001 AS SELECT *, CASE WHEN (i % 6 = 0) THEN '00'
@@ -526,7 +338,6 @@ ERROR:  number of independent variables is too large
 -- ----------------------------------------------------------------------
 -- Test: 18
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
 CREATE FUNCTION t18_pytest() RETURNS VOID LANGUAGE plpythonu AS $$
   plpy.execute("SHOW client_min_messages")
 $$;
@@ -566,7 +377,6 @@ from gp_toolkit.gp_param_setting('max_resource_queues');
 -- ----------------------------------------------------------------------
 -- Test: 21
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
 create table parts (
     partnum     text,
     cost        float8
@@ -594,7 +404,6 @@ select * from shipped_view ORDER BY 1,2;
 -- ----------------------------------------------------------------------
 -- Test: 23
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
 CREATE OR REPLACE FUNCTION func_array_argument_plpythonu(arg FLOAT8[])
 RETURNS FLOAT8
 AS $$
@@ -609,7 +418,6 @@ SELECT func_array_argument_plpythonu('{1,2,3}');
 -- ----------------------------------------------------------------------
 -- Test: 27
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
 set gp_autostats_mode to 'ON_NO_STATS';
 set gp_autostats_mode_in_functions to 'NONE';
 -- prepare function and table
@@ -734,7 +542,6 @@ RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: 30
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
 CREATE TABLE nt (i INT, j INT) DISTRIBUTED BY (j);
 INSERT INTO nt SELECT i, i FROM generate_series(1,10) i;
 SELECT lag(j) OVER (ORDER BY i ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) FROM nt;
@@ -768,7 +575,6 @@ SELECT lead(x) OVER (wx) FROM (SELECT 1 AS x, 2 AS y, 3 AS z) s WINDOW w AS (PAR
 -- ----------------------------------------------------------------------
 -- Test: 32
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
 -- Infinity value
 CREATE TABLE tbl_test_data(x float, y float) DISTRIBUTED BY (x);
 INSERT INTO tbl_test_data VALUES(1,10);
@@ -836,7 +642,6 @@ SELECT mregr_pvalues(y,array[x,1]::float[]) FROM tbl_test_data;
 -- ----------------------------------------------------------------------
 -- Test: 33
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
 create table ccdd1 (a, b) as (select 1, 1 union select 1, 1 union select 1, 1);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -850,17 +655,16 @@ select * from ccdd1;
 -- Test: 34
 -- ----------------------------------------------------------------------
 -- This is expected to fail, with an error along the lines of:
--- function cannot execute on segment because it accesses relation "public.testdata_in"
+-- function cannot execute on segment because it accesses relation "qp_misc_rio.testdata_in"
 set search_path to qp_misc_rio;
 CREATE TABLE testdata_in ( c1 INT, c2 INT ) DISTRIBUTED BY (c1);
-INSERT INTO testdata_in SELECT i, i FROM generate_series(1,100) i;
-CREATE TABLE testdata_out ( c1 INT, c2 INT ) DISTRIBUTED BY (c1);
+INSERT INTO testdata_in SELECT i, i FROM generate_series(1,10) i;
 CREATE OR REPLACE FUNCTION func_plpythonu(n INT) RETURNS SETOF testdata_in
 AS $$
         sqlstm = "SELECT * FROM testdata_in WHERE c1 <= %d ORDER BY c1;" % n
         return plpy.execute(sqlstm);
 $$ LANGUAGE plpythonu;
-INSERT INTO testdata_out SELECT * FROM func_plpythonu(10);
+INSERT INTO testdata_in SELECT * FROM func_plpythonu(2);
 ERROR:  plpy.SPIError: function cannot execute on segment because it accesses relation "qp_misc_rio.testdata_in"  (entry db krajaraman:15432 pid=63091)
 DETAIL:  
 Traceback (most recent call last):
@@ -870,7 +674,6 @@ PL/Python function "func_plpythonu"
 -- ----------------------------------------------------------------------
 -- Test: 35
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
 CREATE OR REPLACE FUNCTION func_plpythonu2(x INT)
 RETURNS INT
 AS $$
@@ -892,7 +695,6 @@ PL/Python function "func_plpythonu2"
 -- ----------------------------------------------------------------------
 -- Test: 38
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
 -- start_ignore
 drop role if exists triggertest_nopriv_a;
 drop role if exists triggertest_nopriv_b;
@@ -995,7 +797,6 @@ RESET ROLE;
 -- ----------------------------------------------------------------------
 -- Test: row_number() in subquery, with grouping in outer query
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
 create table bfv_legacy_mpp2(a int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.

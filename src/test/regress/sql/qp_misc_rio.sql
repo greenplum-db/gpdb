@@ -7,72 +7,7 @@ create schema qp_misc_rio;
 
 CREATE LANGUAGE plpythonu;
 -- end_ignore
-
--- ----------------------------------------------------------------------
--- Test: 2 (schema drop)
--- ----------------------------------------------------------------------
-
-select 
-    table_schema, table_name, column_name, ordinal_position
-from 
-    information_schema.columns
-where 
-    table_schema ='test_schema'
-    and ordinal_position =1;
-
-create schema test_schema;
-create table test_schema.test_table(c int);
-
--- EXPECT NO ERROR of 'violates check constraint' BEFORE drop schema
-select table_schema, table_name,column_name,ordinal_position 
-from information_schema.columns 
-where table_schema ='test_schema' and ordinal_position =1;
-
-drop table test_schema.test_table;
-drop SCHEMA test_schema;
-
--- EXPECT NO ERROR of 'violates check constraint' AFTER drop schema
-select table_schema, table_name,column_name,ordinal_position 
-from information_schema.columns 
-where table_schema ='test_schema' and ordinal_position =1;
-
--- EXPECT NO ERROR of 'violates check constraint'
-select * 
-FROM (
-	select attnum::information_schema.cardinal_number 
-	from pg_attribute 
-	where attnum > 0) q 
-where attnum = 4 limit 10;
-
--- ----------------------------------------------------------------------
--- Test: 3
--- ----------------------------------------------------------------------
-
---start_ignore
-drop resource queue t3_test_q;
---end_ignore
-
--- Create resource queue with cost_overcommit=true
-create resource queue t3_test_q with (active_statements = 6,max_cost=5e+06 ,cost_overcommit=true, min_cost=50000);
-
-select * from pg_resqueue where rsqname='t3_test_q';
-
--- Increase cost threshold
-alter resource queue t3_test_q with (max_cost=7e6);
-
-select * from pg_resqueue where rsqname='t3_test_q';
-
--- Decrease cost threshold
-alter resource queue t3_test_q with (max_cost=1e2);
-
-select * from pg_resqueue where rsqname='t3_test_q';
-
-drop resource queue t3_test_q;
-
--- ----------------------------------------------------------------------
--- Test: 4
--- ----------------------------------------------------------------------
-SELECT to_date(to_char(20110521, '99999999'),'YYYYMMDD'), to_char(20110521,'99999999'), 20110521;
+set search_path to qp_misc_rio;
 
 -- ----------------------------------------------------------------------
 -- Test: 5
@@ -80,16 +15,11 @@ SELECT to_date(to_char(20110521, '99999999'),'YYYYMMDD'), to_char(20110521,'9999
 select mregr_pvalues(4, array[1,i]) from generate_series(1, 500) i;
 
 -- ----------------------------------------------------------------------
--- Test: 6
--- ----------------------------------------------------------------------
-select row();
-
--- ----------------------------------------------------------------------
 -- Test: 9
 -- ----------------------------------------------------------------------
 -- Expect NO ERROR like "ERROR:  Unexpected internal error (cdbsetop.c)"
 
-set search_path to qp_misc_rio;
+
 
 create table tb_function_test(a numeric,b numeric,c numeric,d character varying(20),e character varying(20)) distributed by (b,c);
 select *,row_number() over(partition by a,b,c order by d),row_number() over(partition by a,b,c order by e) from tb_function_test where  b=1;
@@ -101,47 +31,15 @@ select *,row_number() over(partition by a,b,c order by d),row_number() over(part
 select *,row_number() over(partition by a,b,c order by d),row_number() over(partition by a,b,c order by e) from tb_function_test where b=(select a from tb_function_test limit 1);
 
 -- ----------------------------------------------------------------------
--- Test: 10
--- ----------------------------------------------------------------------
--- Test \d+ after drop partition
-
-set search_path to qp_misc_rio;
-
-create table t10_t ( a int, b text) partition by range(a) (start (1) end (100) every(20));
-
-insert into t10_t values ( generate_series(1,99),'t10_t_1');
-
-create index t10_t_a on t10_t using bitmap(a);
-
-create index t10_t_b on t10_t using bitmap(b);
-
-\d+ t10_t
-
-Alter table t10_t drop partition for (rank(1));
-
-\d+ t10_t
-
--- ----------------------------------------------------------------------
 -- Test: 11
 -- ----------------------------------------------------------------------
 
-set search_path to qp_misc_rio;
+
 
 create table t11_t(a bigint, b bigint) distributed by (a);
 insert into t11_t select a, a / 10 from generate_series(1, 100)a;
 
 select sum((select count(*) from t11_t group by b having b = s.b)) as sum_col from (select * from t11_t order by a)s group by b order by sum_col;
-
--- ----------------------------------------------------------------------
--- Test: 14
--- ----------------------------------------------------------------------
-
-set search_path to qp_misc_rio;
-
-create table tbl_t14 as select * from gp_id DISTRIBUTED RANDOMLY;
-
-select array(select dbid from gp_id);
-select array(select dbid from tbl_t14);
 
 -- ----------------------------------------------------------------------
 -- Test: 15
@@ -158,7 +56,7 @@ group by 1,b.revenue;
 -- Test: 16
 -- ----------------------------------------------------------------------
 
-set search_path to qp_misc_rio;
+
 
 CREATE TABLE testtable0000 AS SELECT spend, row_number() OVER (PARTITION BY 0) AS i, (spend % 2) AS r
 FROM (select generate_series(1,10) as spend) x DISTRIBUTED RANDOMLY;
@@ -375,7 +273,7 @@ FROM (
 -- Test: 18
 -- ----------------------------------------------------------------------
 
-set search_path to qp_misc_rio;
+
 
 CREATE FUNCTION t18_pytest() RETURNS VOID LANGUAGE plpythonu AS $$
   plpy.execute("SHOW client_min_messages")
@@ -403,7 +301,7 @@ from gp_toolkit.gp_param_setting('max_resource_queues');
 -- ----------------------------------------------------------------------
 -- Test: 21
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
+
 
 create table parts (
     partnum     text,
@@ -431,7 +329,7 @@ select * from shipped_view ORDER BY 1,2;
 -- ----------------------------------------------------------------------
 -- Test: 23
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
+
 
 CREATE OR REPLACE FUNCTION func_array_argument_plpythonu(arg FLOAT8[])
 RETURNS FLOAT8
@@ -445,7 +343,7 @@ SELECT func_array_argument_plpythonu('{1,2,3}');
 -- Test: 27
 -- ----------------------------------------------------------------------
 
-set search_path to qp_misc_rio;
+
 
 set gp_autostats_mode to 'ON_NO_STATS';
 set gp_autostats_mode_in_functions to 'NONE';
@@ -521,7 +419,7 @@ RESET ALL;
 -- Test: 30
 -- ----------------------------------------------------------------------
 
-set search_path to qp_misc_rio;
+
 
 CREATE TABLE nt (i INT, j INT) DISTRIBUTED BY (j);
 INSERT INTO nt SELECT i, i FROM generate_series(1,10) i;
@@ -538,7 +436,7 @@ SELECT lead(x) OVER (wx) FROM (SELECT 1 AS x, 2 AS y, 3 AS z) s WINDOW w AS (PAR
 -- Test: 32
 -- ----------------------------------------------------------------------
 
-set search_path to qp_misc_rio;
+
 
 -- Infinity value
 CREATE TABLE tbl_test_data(x float, y float) DISTRIBUTED BY (x);
@@ -584,8 +482,6 @@ SELECT mregr_pvalues(y,array[x,1]::float[]) FROM tbl_test_data;
 -- Test: 33
 -- ----------------------------------------------------------------------
 
-set search_path to qp_misc_rio;
-
 create table ccdd1 (a, b) as (select 1, 1 union select 1, 1 union select 1, 1);
 
 select * from ccdd1;
@@ -594,13 +490,12 @@ select * from ccdd1;
 -- Test: 34
 -- ----------------------------------------------------------------------
 -- This is expected to fail, with an error along the lines of:
--- function cannot execute on segment because it accesses relation "public.testdata_in"
+-- function cannot execute on segment because it accesses relation "qp_misc_rio.testdata_in"
 
 set search_path to qp_misc_rio;
 
 CREATE TABLE testdata_in ( c1 INT, c2 INT ) DISTRIBUTED BY (c1);
-INSERT INTO testdata_in SELECT i, i FROM generate_series(1,100) i;
-CREATE TABLE testdata_out ( c1 INT, c2 INT ) DISTRIBUTED BY (c1);
+INSERT INTO testdata_in SELECT i, i FROM generate_series(1,10) i;
 
 CREATE OR REPLACE FUNCTION func_plpythonu(n INT) RETURNS SETOF testdata_in
 AS $$
@@ -608,13 +503,12 @@ AS $$
         return plpy.execute(sqlstm);
 $$ LANGUAGE plpythonu;
 
-INSERT INTO testdata_out SELECT * FROM func_plpythonu(10);
+INSERT INTO testdata_in SELECT * FROM func_plpythonu(2);
 
 -- ----------------------------------------------------------------------
 -- Test: 35
 -- ----------------------------------------------------------------------
 
-set search_path to qp_misc_rio;
 CREATE OR REPLACE FUNCTION func_plpythonu2(x INT)
 RETURNS INT
 AS $$
@@ -631,8 +525,6 @@ SELECT func_plpythonu2(200);
 -- ----------------------------------------------------------------------
 -- Test: 38
 -- ----------------------------------------------------------------------
-
-set search_path to qp_misc_rio;
 
 -- start_ignore
 drop role if exists triggertest_nopriv_a;
@@ -736,8 +628,6 @@ RESET ROLE;
 -- Test: row_number() in subquery, with grouping in outer query
 -- ----------------------------------------------------------------------
 
-set search_path to qp_misc_rio;
-
 create table bfv_legacy_mpp2(a int);
 
 insert into bfv_legacy_mpp2 values (generate_series(1,10));
@@ -750,7 +640,3 @@ from
 ) sub1
 group by a
 order by a;
-
--- start_ignore
-drop schema qp_misc_rio cascade;
--- end_ignore
