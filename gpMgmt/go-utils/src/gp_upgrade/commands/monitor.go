@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"regexp"
+	//"regexp"
 )
 
 type MonitorCommand struct {
@@ -14,6 +14,7 @@ type MonitorCommand struct {
 }
 
 func (cmd MonitorCommand) Execute([]string) error {
+	// TODO idea: refactor away from the connector factory pattern -- unnecessary seam
 	connector, _ := GetConnector("ssh")
 	session, err := connector.Connect(cmd.Host, cmd.Port)
 	if err != nil {
@@ -23,6 +24,7 @@ func (cmd MonitorCommand) Execute([]string) error {
 
 	defer session.Close()
 
+	// TODO idea: put the output gathering into the shell parsing class? Inject session into there as a parameter?
 	result, err := session.Output("ps auxx | grep pg_upgrade")
 
 	output := string(result)
@@ -33,8 +35,13 @@ func (cmd MonitorCommand) Execute([]string) error {
 	}
 
 	// the response code will be 0 whether or not pg_upgrade is running
-	isRunning := isPgUpgradeRunning(output, cmd.Segment_id)
-	if !isRunning {
+	shellParser := ShellParser{Output: output, Segment_id: cmd.Segment_id}
+
+	isRunning := shellParser.IsPgUpgradeRunning()
+	if isRunning {
+		fmt.Println("pg_upgrade is running on the host")
+
+	} else {
 		fmt.Println(fmt.Sprintf("pg_upgrade is not running on host '%s', segment_id '%s'", cmd.Host, cmd.Segment_id))
 	}
 
@@ -42,20 +49,4 @@ func (cmd MonitorCommand) Execute([]string) error {
 	fmt.Println("result: " + output)
 
 	return nil
-}
-
-func isPgUpgradeRunning(output, segment_id string) bool {
-	if len(output) == 0 {
-		return false
-	}
-	var segmentPortRegexp = regexp.MustCompile(`--old-port (\d+)`)
-	segmentPorts := segmentPortRegexp.FindStringSubmatch(output)
-	if segmentPorts != nil {
-		fmt.Println("pg_upgrade is running on the host")
-		return true
-	}
-
-	fmt.Printf("We'd like to know if %v has pg_upgrade running for it, but not yet implemented", segment_id)
-
-	return false
 }
