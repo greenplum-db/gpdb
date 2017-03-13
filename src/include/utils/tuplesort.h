@@ -138,6 +138,12 @@ extern void tuplesort_flush_mk(Tuplesortstate_mk *state);
 extern void tuplesort_finalize_stats(Tuplesortstate *state);
 extern void tuplesort_finalize_stats_mk(Tuplesortstate_mk *state);
 
+
+extern void tuplesort_get_stats(Tuplesortstate *state,
+		const char **sortMethod, const char ** spaceType, long *spaceUsed);
+extern void tuplesort_get_stats_mk(Tuplesortstate_mk *state,
+		const char **sortMethod, const char ** spaceType, long *spaceUsed);
+
 extern int	tuplesort_merge_order(long allowedMem);
 
 /*
