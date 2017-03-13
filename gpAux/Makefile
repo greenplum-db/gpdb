@@ -154,9 +154,7 @@ DEFPORT=5432
 
 ORCA_CONFIG=--enable-orca
 ifneq "$(findstring $(BLD_ARCH),win32 win64)" ""
-APR_CONFIG=--with-apr-config=$(GPPGDIR)/src/bin/gpfdist/ext/bin/apr-1-config
 OPENSSL=openssl-0.9.8ze
-BLD_THIRDPARTY_OPENSSL_INCLUDES=-I$(GPPGDIR)/src/bin/gpfdist/ext/$(OPENSSL)/include
 else
 APR_CONFIG=--with-apr-config=$(BLD_THIRDPARTY_BIN_DIR)/apr-1-config
 endif
@@ -224,13 +222,9 @@ aix5_ppc_64_CONFIG_ADDITIONS=LDFLAGS="-Wl,-bbigtoc -L/usr/lib/threads"
 aix5_ppc_32_CONFIG_ADDITIONS=LDFLAGS="-L/usr/lib/threads"
 hpux_ia64_CONFIG_ADDITIONS=--without-readline --without-ldap
 
-win32_GPFDIST_LDFLAGS += -L/usr/i686-pc-mingw32/sys-root/mingw/lib -L$(GPPGDIR)/src/bin/gpfdist/ext/lib
-win32_GPFDIST_CFLAGS += -I/usr/i686-pc-mingw32/sys-root/mingw/include
-win32_GPFDIST_LIBS=-lgdi32 -lws2_32
-
 win32_LIBS=LIBS="$(win32_GPFDIST_LIBS)"
 win32_LDFLAGS=LDFLAGS="-L/usr/i686-pc-mingw32/sys-root/mingw/lib -L$(BLD_TOP)/ext/win32/kfw-3-2-2/lib $(win32_GPFDIST_LDFLAGS)"
-win32_CONFIG_ADDITIONS=--build=x86_x64-unknown-linux-gnu --host=i686-pc-mingw32 --without-zlib --enable-debug CC=/usr/bin/i686-pc-mingw32-gcc $(win32_LIBS) $(win32_LDFLAGS) CPP= CPPFLAGS="-I/usr/i686-pc-mingw32/sys-root/mingw/include -I$(BLD_TOP)/ext/win32/kfw-3-2-2/inc/krb5 -I$(BLD_THIRDPARTY_INCLUDE_DIR) -I$(GPPGDIR)/src/bin/gpfdist/ext/include $(BLD_THIRDPARTY_OPENSSL_INCLUDES)"
+win32_CONFIG_ADDITIONS=--build=x86_x64-unknown-linux-gnu --host=i686-pc-mingw32 --without-zlib --enable-debug CC=/usr/bin/i686-pc-mingw32-gcc $(win32_LIBS) $(win32_LDFLAGS) CPP= CPPFLAGS="-I/usr/i686-pc-mingw32/sys-root/mingw/include -I$(BLD_TOP)/ext/win32/kfw-3-2-2/inc/krb5 -I$(BLD_THIRDPARTY_INCLUDE_DIR) $(BLD_THIRDPARTY_OPENSSL_INCLUDES)"
 win64_CONFIG_ADDITIONS=--build=x86_x64-unknown-linux-gnu --host=x86_64-pc-mingw64 --without-zlib --enable-debug CC=/usr/local/mingw64/bin/x86_64-w64-mingw32-gcc LDFLAGS=-L/usr/local/mingw64/x86_64-w64-mingw32/lib CPP= CPPFLAGS=-I/usr/local/mingw64/x86_64-w64-mingw32/include
 CONFIG_ADDITIONS=$($(BLD_ARCH)_CONFIG_ADDITIONS)
 
@@ -255,7 +249,6 @@ BLD_CONFIG_SHELL=$($(BLD_ARCH)_CONFIG_SHELL)
 $(GPPGDIR)/GNUmakefile : $(GPPGDIR)/configure  env.sh
 	rm -rf $(INSTLOC)
 	mkdir -p $(GPPGDIR) 
-	$(MAKE) -C $(GPPGDIR)/src/bin/gpfdist/ext BLD_TOP=$(BLD_TOP)
 	cd $(GPPGDIR) && CC="$(strip $(BLD_CC) $(BLD_CFLAGS))"    \
                      CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL) \
                      ./configure $(CONFIGFLAGS)               \

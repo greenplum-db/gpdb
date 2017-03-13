@@ -18,10 +18,6 @@
 	path = gpMgmt/bin/pythonSrc/ext
 	url = git@github.com:greenplum-db/pythonsrc-ext.git
 	branch = master
-[submodule "src/bin/gpfdist/ext"]
-	path = src/bin/gpfdist/ext
-	url = git@github.com:greenplum-db/gpfdist-ext.git
-	branch = master
 [submodule "gpAux/extensions/googletest"]
 	path = gpAux/extensions/googletest
 	url = git@github.com:google/googletest.git
