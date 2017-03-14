@@ -25,7 +25,8 @@
                 <li id="mh146320">PostgreSQL Interactive Terminal (<xref href="./psql.xml#topic1"
                         type="topic" format="dita"/>)</li>
                 <li id="mh146321">Greenplum MapReduce Client Program (<xref
-                        href="./gpmapreduce.xml#topic1" type="topic" format="dita"/>)</li>
+                        href="./gpmapreduce.xml#topic1" type="topic" format="dita"/>) (Deprecated.
+                    This tool will be removed in Greenplum Database 6.x.)</li>
             </ul>
             <section id="mh140939">
                 <title>To install the Greenplum Database client tools</title>
