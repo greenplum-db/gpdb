@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# Helper script, to set up a test KDC for realm GPDB.EXAMPLE.
+# Helper script, to set up a test kerberos (KDC) for realm GPDB.EXAMPLE.
 #
 # The KDC database is created in ./test-kdc-db. It is
-# initialized with a service principal for "postgres/gpdb-server.example",
+# initialized with a service principal for "postgres/localhost",
 # and a user principal for "krbtestuser@GPDB.EXAMPLE".
 
 set -e  # exit on error
@@ -41,13 +41,13 @@ export KRB5_CONFIG=${KDC_PATH}/krb5.conf
 export KRB5_KDC_PROFILE=${KDC_PATH}/test-kdc-db/kdc.conf
 
 # Create KDC database, with no password
-/usr/sbin/kdb5_util create -P"" -r GPDB.EXAMPLE -s
+LD_LIBRARY_PATH= kdb5_util create -P"" -r GPDB.EXAMPLE -s
 
-# Create a service principal for the PostgreSQL serer, running at "gpdb-server.example",
+# Create a service principal for the PostgreSQL serer, running at "localhost",
 # and a keytab file for it
-/usr/sbin/kadmin.local -q "addprinc -randkey postgres/gpdb-server.example"
-/usr/sbin/kadmin.local -q "ktadd -k ./server.keytab postgres/gpdb-server.example"
+LD_LIBRARY_PATH= kadmin.local -q "addprinc -randkey postgres/localhost"
+LD_LIBRARY_PATH= kadmin.local -q "ktadd -k ./server.keytab postgres/localhost"
 
 # Create a user principal, and a keytab file for it.
-/usr/sbin/kadmin.local -q "addprinc -randkey krbtestuser@GPDB.EXAMPLE"
-/usr/sbin/kadmin.local -q "ktadd -k ./client.keytab krbtestuser@GPDB.EXAMPLE"
+LD_LIBRARY_PATH= kadmin.local -q "addprinc -randkey krbtestuser@GPDB.EXAMPLE"
+LD_LIBRARY_PATH= kadmin.local -q "ktadd -k ./client.keytab krbtestuser@GPDB.EXAMPLE"
