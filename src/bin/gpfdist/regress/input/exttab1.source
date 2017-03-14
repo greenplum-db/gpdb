@@ -355,6 +355,24 @@ INSERT INTO wet_region VALUES(4,'MIDDLE EAST','uickly special');
 SELECT DISTINCT(R_NAME) FROM ret_region ORDER BY R_NAME;
 
 -- start_ignore
+DROP TABLE IF EXISTS table_multi_locations;
+DROP EXTERNAL TABLE IF EXISTS ext_table_multi_locations;
+-- end_ignore
+
+-- The use of more than one gpfdist. Each gpfdist points to a different file to write into
+
+CREATE TABLE table_multi_locations (a int, b text) DISTRIBUTED BY (a);
+
+INSERT INTO table_multi_locations VALUES (generate_series(1,256), 'test_1');
+
+CREATE WRITABLE EXTERNAL TABLE ext_table_multi_locations (a int, b text) LOCATION ('gpfdist://@hostname@:7070/wet_multi_locations_1.tbl', 'gpfdist://@hostname@:7070/wet_multi_locations_2.tbl') FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null');
+
+INSERT INTO ext_table_multi_locations SELECT * FROM table_multi_locations;
+
+DROP TABLE IF EXISTS table_multi_locations;
+DROP EXTERNAL TABLE IF EXISTS ext_table_multi_locations;
+
+-- start_ignore
 select * from exttab1_gpfdist_status;
 select * from exttab1_gpfdist_stop;
 select * from exttab1_gpfdist_status;
