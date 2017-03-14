@@ -101,9 +101,9 @@
         <body>
           <p>For each database that requires its use, register the PL/R language with the SQL
             command <codeph>CREATE LANGUAGE</codeph> or the utility <codeph>createlang</codeph>.
-            Because PL/R is an untrusted language, only superusers can register PL/R with a database. For example, running
-            this command as the <codeph>gpadmin</codeph> system user registers the language with the
-            database named <i>testdb</i>:</p>
+            Because PL/R is an untrusted language, only superusers can register PL/R with a
+            database. For example, running this command as the <codeph>gpadmin</codeph> system user
+            registers the language with the database named <i>testdb</i>:</p>
           <codeblock>$ createlang plr -d testdb</codeblock>
           <p>PL/R is registered as an untrusted language.</p>
         </body>
@@ -128,9 +128,10 @@
         <body>
           <p>For a database that no longer requires the PL/R language, remove support for PL/R with
             the SQL command <codeph>DROP LANGUAGE</codeph> or the Greenplum Database
-              <codeph>droplang</codeph> utility. Because PL/R is an untrusted language, only superusers can remove support for the PL/R
-            language from a database.  For example, running this command as the gpadmin user removes
-            support for PL/R from the database named <i>testdb</i>:</p>
+              <codeph>droplang</codeph> utility. Because PL/R is an untrusted language, only
+            superusers can remove support for the PL/R language from a database. For example,
+            running this command as the gpadmin user removes support for PL/R from the database
+            named <i>testdb</i>:</p>
           <codeblock>$ droplang plr -d testdb</codeblock>
         </body>
       </topic>
@@ -154,8 +155,8 @@
         <p>The PL/R extension package for Greenplum Database 4.3.9.0 and later supports R language
           version 3.3.1. </p>
         <p>To migrate the Greenplum Database PL/R extension to the PL/R extension that supports R
-          3.3.1, uninstall the old PL/R extension package and install the
-          extension package that supports R 3.3.1. </p>
+          3.3.1, uninstall the old PL/R extension package and install the extension package that
+          supports R 3.3.1. </p>
         <p>See <xref href="#topic8" format="dita"/> and <xref href="#topic4" format="dita"/> for
           information about uninstalling and installing the PL/R extension package.</p>
         <p>After installing PL/R extension package that supports R 3.3.1, you must re-install R
@@ -354,8 +355,8 @@ LANGUAGE 'plr';</codeblock><p>This
             >https://github.com/pivotalsoftware/PivotalR</xref> - GitHub repository for PivotalR, a
           package that provides an R interface to operate on Greenplum Database tables and views
           that is similar to the R <cmdname>data.frame</cmdname>. PivotalR also supports using the
-          machine learning package <xref href="http://madlib.net/" format="html" scope="external"
-            >MADlib</xref> directly from R.</p>
+          machine learning package <xref href="http://madlib.incubator.apache.org//"
+            format="html" scope="external">MADlib</xref> directly from R.</p>
         <p>R documentation is installed with the Greenplum R package:</p>
         <p>
           <codeph>$GPHOME/ext/R-2.12.0/lib64/R/doc</codeph>
@@ -365,9 +366,9 @@ LANGUAGE 'plr';</codeblock><p>This
         <title>R Functions and Arguments</title>
         <body>
           <ul id="ul_yky_5l2_4p">
-            <li id="py214453">See <xref href="http://www.joeconway.com/plr/doc/plr-funcs.html"
+            <li id="py214453">See <xref href="http://www.joeconway.com/doc/plr-funcs.html"
                 scope="external" format="html"
-                >http://www.joeconway.com/plr/doc/plr-funcs.html</xref></li>
+              >http://www.joeconway.com/doc/plr-funcs.html</xref></li>
           </ul>
         </body>
       </topic>
@@ -375,9 +376,9 @@ LANGUAGE 'plr';</codeblock><p>This
         <title>Passing Data Values in R</title>
         <body>
           <ul id="ul_fly_5l2_4p">
-            <li id="py214456">See <xref href="http://www.joeconway.com/plr/doc/plr-data.html"
+            <li id="py214456">See <xref href="http://www.joeconway.com/doc/plr-data.html"
                 scope="external" format="html"
-              >http://www.joeconway.com/plr/doc/plr-data.html</xref></li>
+              >http://www.joeconway.com/doc/plr-data.html</xref></li>
           </ul>
         </body>
       </topic>
@@ -386,8 +387,8 @@ LANGUAGE 'plr';</codeblock><p>This
         <body>
           <ul id="ul_jly_5l2_4p">
             <li id="py214459">See <xref
-                href="http://www.joeconway.com/plr/doc/plr-aggregate-funcs.html " scope="external"
-                format="html">http://www.joeconway.com/plr/doc/plr-aggregate-funcs.html</xref></li>
+                href="http://www.joeconway.com/doc/plr-aggregate-funcs.html" scope="external"
+                format="html">http://www.joeconway.com/doc/plr-aggregate-funcs.html</xref></li>
           </ul>
         </body>
       </topic>

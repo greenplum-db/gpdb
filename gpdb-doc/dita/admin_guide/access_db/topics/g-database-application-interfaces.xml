@@ -29,7 +29,7 @@
                   <entry colname="col2">psqlODBC</entry>
                   <entry colname="col3">Available in the <i>Greenplum Database Connectivity</i>
                      package, which can be downloaded from <xref
-                        href="https://network.pivotal.io/products" scope="external" format="html"
+                        href="https://network.pivotal.io" scope="external" format="html"
                      />.</entry>
                </row>
                <row>
@@ -70,7 +70,7 @@
       <p>Download the appropriate PostgreSQL driver and configure connectivity to 
          your Greenplum Database master instance. Greenplum Database provides a client tools package
          that contains the supported database drivers for Greenplum Database. Download the client
-         tools package from <xref href="https://network.pivotal.io/products" scope="external"
+         tools package from <xref href="https://network.pivotal.io" scope="external"
             format="html">Pivotal Network</xref>. </p>
    </body>
 </topic>

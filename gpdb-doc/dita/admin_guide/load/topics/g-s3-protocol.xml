@@ -163,8 +163,8 @@ s3://domain/test1/abcdefff</codeblock>
                format="html" scope="external"
                >http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region</xref>. For
             information about S3 buckets and folders, see the Amazon S3 documentation <xref
-               href="http://aws.amazon.com/documentation/s3/" format="html" scope="external"
-               >http://aws.amazon.com/documentation/s3/</xref>. For information about the S3 file
+               href="https://aws.amazon.com/documentation/s3/" format="html" scope="external"
+               >https://aws.amazon.com/documentation/s3/</xref>. For information about the S3 file
             prefix, see the Amazon S3 documentation <xref
                href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ListingKeysHierarchy.html"
                format="html" scope="external">Listing Keys Hierarchically Using a Prefix and

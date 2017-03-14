@@ -293,7 +293,7 @@ ssb   2048R/4FD2EFBB 2015-01-13
           commands:<codeblock># gpg -a --export 4FD2EFBB &gt; public.key
 # gpg -a --export-secret-keys 2027CC30 &gt; secret.key</codeblock></li>
       </ol>
-      <p>See the <xref href="http://www.postgresql.org/docs/8.3/static/pgcrypto.html" format="html"
+      <p>See the <xref href="https://www.postgresql.org/docs/8.3/static/pgcrypto.html" format="html"
           scope="external">pgcrypto</xref> documentation for for more information about PGP
         encryption functions. </p>
     </section>
@@ -460,7 +460,7 @@ key_used | 9D4D255F4FD2EFBB
           <note>Different keys may have the same ID. This is rare, but is a normal event. The client
             application should try to decrypt with each one to see which fits — like handling
               <codeph>ANYKEY</codeph>. See <xref
-              href="http://www.postgresql.org/docs/8.3/static/pgcrypto.html" format="html"
+              href="https://www.postgresql.org/docs/8.3/static/pgcrypto.html" format="html"
               scope="external">pgp_key_id()</xref> in the pgcrypto documentation. </note>
         </li>
         <li>Decrypt the data using the private key.

@@ -5,7 +5,7 @@
   <title>Installing pgAdmin III for Greenplum Database</title>
   <body>
     <p>The installation package for pgAdmin III for Greenplum Database is available
-      for download from the official pgAdmin III download site (<xref href="http://www.pgadmin.org"
+      for download from the official pgAdmin III download site (<xref href="https://www.pgadmin.org"
         scope="external" format="html"/>). Installation instructions are included in the
       installation package.</p>
   </body>
