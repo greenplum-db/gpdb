@@ -10662,7 +10662,7 @@ MergeAttributesIntoExisting(Relation child_rel, Relation parent_rel, List *inhAt
 			 * not locally defined.  (Default/standard behaviour is to leave the
 			 * attribute locally defined.)
 			 */
-			if (childatt->attislocal)
+			if (childatt->attislocal && !RelationIsExternal(child_rel))
 			{
 				/* never local when we're doing partitioning */
 				if (is_partition)
