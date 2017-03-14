@@ -1,3 +1,5 @@
+set time zone PST8PDT;
+SET
 select * from uao_table1 order by bigint_col;
   text_col  | bigint_col | char_vary_col | numeric_col | int_col | float_col | int_array_col | before_rename_col | change_datatype_col |    a_ts_without     |       b_ts_with        | date_column | col_set_default 
 ------------+------------+---------------+-------------+---------+-----------+---------------+-------------------+---------------------+---------------------+------------------------+-------------+-----------------
