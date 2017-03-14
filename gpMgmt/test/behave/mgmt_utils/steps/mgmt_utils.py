@@ -1192,15 +1192,6 @@ def impl(context, table_type, tablename, dbname):
         raise Exception("Table '%s' does not exist when it should" % tablename)
     validate_restore_data(context, tablename, dbname)
 
-@when('verify that the data in the "{table_type}" table "{tablename}" is the same in "{dbname}" as in "{old_dbname}"')
-@then('verify that the data in the "{table_type}" table "{tablename}" is the same in "{dbname}" as in "{old_dbname}"')
-def impl(context, table_type, tablename, dbname, old_dbname):
-    if not check_table_exists(context, dbname=dbname, table_name=tablename, table_type=table_type):
-        raise Exception("Table '%s' does not exist in database %s when it should" % (tablename, dbname))
-    if not check_table_exists(context, dbname=old_dbname, table_name=tablename, table_type=table_type):
-        raise Exception("Table '%s' does not exist in database %s when it should" % (tablename, dbname))
-    validate_restore_data(context, tablename, dbname, old_dbname=old_dbname)
-
 @given('schema "{schema_list}" exists in "{dbname}"')
 @then('schema "{schema_list}" exists in "{dbname}"')
 def impl(context, schema_list, dbname):
