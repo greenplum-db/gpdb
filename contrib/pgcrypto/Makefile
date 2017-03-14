@@ -30,7 +30,7 @@ DATA_built	= pgcrypto.sql
 DATA		= uninstall_pgcrypto.sql
 EXTRA_CLEAN	= gen-rtab
 
-REGRESS_OPTS = --dbname=$(CONTRIB_TESTDB) --init-file=$(top_builddir)/contrib/pgcrypto/init_file 
+REGRESS_OPTS = --dbname=$(CONTRIB_TESTDB) --init-file=$(top_builddir)/src/test/regress/init_file 
 
 REGRESS = init md5 sha1 hmac-md5 hmac-sha1 blowfish rijndael \
 	$(CF_TESTS) \

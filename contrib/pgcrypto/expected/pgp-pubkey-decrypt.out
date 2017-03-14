@@ -9,14 +9,10 @@ create table keytbl (
 	pubkey text,
 	seckey text
 );
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table encdata (
 	id int4,
 	data text
 );
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into keytbl (id, name, pubkey, seckey)
 values (1, 'elg1024', '
 -----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -621,15 +617,15 @@ from keytbl, encdata where keytbl.id=6 and encdata.id=4;
 -- wrong key
 select pgp_pub_decrypt(dearmor(data), dearmor(seckey))
 from keytbl, encdata where keytbl.id=2 and encdata.id=1;
-ERROR:  Wrong key  (seg0 slice2 127.0.1.1:25435 pid=17723)
+ERROR:  Wrong key
 -- sign-only key
 select pgp_pub_decrypt(dearmor(data), dearmor(seckey))
 from keytbl, encdata where keytbl.id=4 and encdata.id=1;
-ERROR:  No encryption key found  (seg0 slice2 127.0.1.1:25435 pid=17723)
+ERROR:  No encryption key found  
 -- rsa: password-protected secret key, wrong password
 select pgp_pub_decrypt(dearmor(data), dearmor(seckey), '123')
 from keytbl, encdata where keytbl.id=7 and encdata.id=4;
-ERROR:  Wrong key or corrupt data  (seg1 slice2 127.0.1.1:25436 pid=17724)
+ERROR:  Wrong key or corrupt data  
 -- rsa: password-protected secret key, right password
 select pgp_pub_decrypt(dearmor(data), dearmor(seckey), 'parool')
 from keytbl, encdata where keytbl.id=7 and encdata.id=4;
@@ -641,16 +637,16 @@ from keytbl, encdata where keytbl.id=7 and encdata.id=4;
 -- password-protected secret key, no password
 select pgp_pub_decrypt(dearmor(data), dearmor(seckey))
 from keytbl, encdata where keytbl.id=5 and encdata.id=1;
-ERROR:  Need password for secret key  (seg0 slice2 127.0.1.1:25435 pid=17723)
+ERROR:  Need password for secret key  
 -- password-protected secret key, wrong password
 select pgp_pub_decrypt(dearmor(data), dearmor(seckey), 'foo')
 from keytbl, encdata where keytbl.id=5 and encdata.id=1;
-ERROR:  Unsupported cipher algorithm  (seg0 slice2 127.0.1.1:25435 pid=17723)
+ERROR:  Wrong key or corrupt data 
 -- password-protected secret key, right password
 select pgp_pub_decrypt(dearmor(data), dearmor(seckey), 'parool')
 from keytbl, encdata where keytbl.id=5 and encdata.id=1;
-ERROR:  Unsupported cipher algorithm  (seg0 slice2 127.0.1.1:25435 pid=17723)
+ERROR:  Wrong key or corrupt data 
 -- test for a short read from prefix_init
 select pgp_pub_decrypt(dearmor(data), dearmor(seckey))
 from keytbl, encdata where keytbl.id=6 and encdata.id=5;
-ERROR:  Wrong key or corrupt data  (seg1 slice2 127.0.1.1:25436 pid=17724)
+ERROR:  Wrong key or corrupt data
