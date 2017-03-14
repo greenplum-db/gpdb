@@ -19,9 +19,9 @@
       <codeblock>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
 &lt;?xml-stylesheet href="../stylesheets/rig.xsl" type="text/xsl" media="screen"?&gt;
 &lt;rigs 
- xmlns="http://www.energistics.org//schemas/131" 
+ xmlns="http://www.energistics.org/schemas/131" 
  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
- xsi:schemaLocation="http://www.energistics.org//schemas/131 ../obj_rig.xsd" 
+ xsi:schemaLocation="http://www.energistics.org/schemas/131 ../obj_rig.xsd" 
  version="1.3.1.1"&gt;
  &lt;documentInfo&gt;
  ... misc data ...
