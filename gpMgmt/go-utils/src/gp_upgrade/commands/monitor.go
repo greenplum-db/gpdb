@@ -24,8 +24,7 @@ func (cmd MonitorCommand) Execute([]string) error {
 		cmd.PrivateKey = usr.HomeDir + "/.ssh/id_rsa"
 	}
 
-	// TODO idea: refactor away from the connector factory pattern -- unnecessary seam
-	connector, _ := GetConnector("ssh")
+	connector := NewSshConnector()
 	session, err := connector.Connect(cmd.Host, cmd.Port, cmd.User, cmd.PrivateKey)
 	if err != nil {
 		fmt.Println(err)
