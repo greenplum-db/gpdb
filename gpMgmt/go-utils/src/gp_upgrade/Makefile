@@ -1,5 +1,6 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := test
+MODULE_NAME=$(shell basename `pwd`)
 
 .PHONY : build
 
@@ -31,4 +32,4 @@ ci : ginkgo
 
 build :
 		mkdir -p build
-		go build $(GOFLAGS)
+		go build $(GOFLAGS) -o $(GOPATH)/bin/$(MODULE_NAME)
