@@ -92,8 +92,7 @@
           the PgBouncer Administration Console. </p>
         <p>Follow these steps to set up PgBouncer.</p>
         <ol id="ol_xyn_qwg_cs">
-          <li>Create a PgBouncer configuration file, for example <codeph>pgbouncer.ini</codeph>.
-            Here is a simple configuration
+          <li>Create a PgBouncer configuration file, for example <codeph>pgbouncer.ini</codeph>.            Here is a simple configuration
               file:<codeblock>[databases]
 template1 = host=127.0.0.1 port=5432 dbname=template1
 mydb = host=127.0.0.1 port=5432 dbname=mydb
@@ -124,7 +123,7 @@ admin_users = gpadmin</codeblock><p>The
               can use the Linux <codeph>md5sum</codeph> command to calculate the MD5 string. For
               example, if the <codeph>gpadmin</codeph> password is <codeph>admin1234</codeph> the
               following command prints the string for the password
-              field:<codeblock>$ user=gpadmin; passw=admin1234; echo -n md5; echo $passwd$user | md5sum
+              field:<codeblock>$ user=gpadmin; passwd=admin1234; echo -n md5; echo $passwd$user | md5sum
 md53ce96652dedd8226c498e09ae2d26220</codeblock></p><p>And
               here is the MD5-encoded entry for the <codeph>gpadmin</codeph> user in the PgBouncer
               authentication file:</p><p>
