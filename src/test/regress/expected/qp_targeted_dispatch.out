@@ -936,6 +936,8 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'ke
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INFO:  Dispatch command to ALL contents
 INFO:  Dispatch command to ALL contents
+CONTEXT:  SQL statement "select avg(pg_column_size(Ta.key))::float4, avg(pg_column_size(Ta.value))::float4 from public.zoompp7620 as Ta"
+INFO:  Dispatch command to ALL contents
 CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=1237045"
 INFO:  Dispatch command to ALL contents
 CONTEXT:  SQL statement "select Ta.key, Ta.value from public.zoompp7620 as Ta  limit 7500 "

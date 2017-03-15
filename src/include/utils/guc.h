@@ -473,6 +473,11 @@ extern bool optimizer_prefer_scalar_dqa_multistage_agg;
 extern bool optimizer_parallel_union;
 extern bool optimizer_array_constraints;
 
+/** 
+ * GUCs related to analyze and vacuum
+ **/
+extern int analyze_column_width_threshold;
+
 /**
  * GUCs related to code generation.
  **/

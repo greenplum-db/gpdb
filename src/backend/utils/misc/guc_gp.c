@@ -553,6 +553,11 @@ bool		optimizer_prefer_scalar_dqa_multistage_agg;
 bool 		optimizer_parallel_union;
 bool		optimizer_array_constraints;
 
+/** 
+ * GUCs related to analyze and vacuum
+ **/
+int		analyze_column_width_threshold;
+
 /**
  * GUCs related to code generation.
  **/
@@ -4618,6 +4623,16 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_server_version_num,
 		GP_VERSION_NUM, GP_VERSION_NUM, GP_VERSION_NUM, NULL, NULL
+	},
+
+	{
+		{"analyze_column_width_threshold", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Maximum column width threshold for analyze and vacuum to process a column."),
+			NULL,
+			GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
+		},
+		(int *) &analyze_column_width_threshold,
+		100000000, 4, INT_MAX, NULL, NULL
 	},
 
 	/* End-of-list marker */

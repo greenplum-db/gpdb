@@ -51,7 +51,6 @@
 #include "utils/tuplesort.h"
 #include "utils/tuplesort_mk.h"
 
-
 /* Data structure for Algorithm S from Knuth 3.4.2 */
 typedef struct
 {
@@ -109,6 +108,7 @@ static bool std_typanalyze(VacAttrStats *stats);
 
 static void analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples, float4 *relPages, bool rootonly);
 static void analyzeEstimateIndexpages(Relation onerel, Relation indrel, BlockNumber *indexPages);
+static void analyzeComputeAverageWidth(Relation onerel, int attr_cnt, bool **includeAttr);
 
 /*
  *	analyze_rel() -- analyze one relation
@@ -255,12 +255,16 @@ analyze_rel(Oid relid, VacuumStmt *vacstmt,
 	 *
 	 * Note that system attributes are never analyzed.
 	 */
+
+	attr_cnt = onerel->rd_rel->relnatts;
+	bool **excludeAttr = (bool **) palloc(attr_cnt * sizeof(bool *));
+	vacattrstats = (VacAttrStats **) palloc(attr_cnt * sizeof(VacAttrStats *));
+	analyzeComputeAverageWidth(onerel, attr_cnt, excludeAttr);
+
 	if (vacstmt->va_cols != NIL)
 	{
 		ListCell   *le;
 
-		vacattrstats = (VacAttrStats **) palloc(list_length(vacstmt->va_cols) *
-												sizeof(VacAttrStats *));
 		tcnt = 0;
 		foreach(le, vacstmt->va_cols)
 		{
@@ -272,7 +276,12 @@ analyze_rel(Oid relid, VacuumStmt *vacstmt,
 						(errcode(ERRCODE_UNDEFINED_COLUMN),
 					errmsg("column \"%s\" of relation \"%s\" does not exist",
 						   col, RelationGetRelationName(onerel))));
-			vacattrstats[tcnt] = examine_attribute(onerel, i);
+
+			if (*excludeAttr[i-1])
+				vacattrstats[tcnt] = NULL;
+			else
+				vacattrstats[tcnt] = examine_attribute(onerel, i);
+
 			if (vacattrstats[tcnt] != NULL)
 				tcnt++;
 		}
@@ -280,13 +289,15 @@ analyze_rel(Oid relid, VacuumStmt *vacstmt,
 	}
 	else
 	{
-		attr_cnt = onerel->rd_att->natts;
-		vacattrstats = (VacAttrStats **)
-			palloc(attr_cnt * sizeof(VacAttrStats *));
 		tcnt = 0;
+
 		for (i = 1; i <= attr_cnt; i++)
 		{
-			vacattrstats[tcnt] = examine_attribute(onerel, i);
+			if (*excludeAttr[i-1])
+				vacattrstats[tcnt] = NULL;
+			else
+				vacattrstats[tcnt] = examine_attribute(onerel, i);
+
 			if (vacattrstats[tcnt] != NULL)
 				tcnt++;
 		}
@@ -417,10 +428,11 @@ analyze_rel(Oid relid, VacuumStmt *vacstmt,
 
 			stats->rows = rows;
 			stats->tupDesc = onerel->rd_att;
+
 			(*stats->compute_stats) (stats,
-									 std_fetch_func,
-									 numrows,
-									 totalrows);
+									std_fetch_func,
+									numrows,
+									totalrows);
 			MemoryContextResetAndDeleteChildren(col_context);
 		}
 
@@ -725,6 +737,83 @@ compute_index_stats(Relation onerel, double totalrows,
 
 	MemoryContextSwitchTo(old_context);
 	MemoryContextDelete(ind_context);
+}
+
+static void
+analyzeComputeAverageWidth(Relation onerel, int attr_cnt, bool **excludeAttr)
+{
+	StringInfoData columnStr;
+	StringInfoData str;
+	int			i;
+	const char *schemaName = NULL;
+	const char *tableName = NULL;
+	int			ret;
+	int			attrs;
+	float4		width;
+	MemoryContext oldcxt;
+
+	schemaName = get_namespace_name(RelationGetNamespace(onerel));
+	tableName = RelationGetRelationName(onerel);
+
+	/* Get the average column width and analyze the column only if its width < column width threshold */
+	initStringInfo(&columnStr);
+
+	attrs = 0;
+	for (i = 0; i < attr_cnt; i++)
+	{
+		Form_pg_attribute attr = onerel->rd_att->attrs[i];
+
+		if (attr->attisdropped)
+			continue;
+
+		if(attrs != 0)
+			appendStringInfo(&columnStr, ", ");
+		appendStringInfo(&columnStr, "avg(pg_column_size(Ta.%s))::float4", quote_identifier(NameStr(attr->attname)));
+
+		attrs++;
+	}
+
+	/* no attributes to analyze */
+	if (attrs == 0)
+		return;
+
+	initStringInfo(&str);
+	appendStringInfo(&str,"select %s from %s.%s as Ta",
+						columnStr.data,
+						quote_identifier(schemaName),
+						quote_identifier(tableName));
+
+	oldcxt = CurrentMemoryContext;
+	if (SPI_OK_CONNECT != SPI_connect())
+		ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+						errmsg("Unable to connect to execute internal query.")));
+
+	elog(elevel, "Executing SQL: %s", str.data);
+
+	ret = SPI_execute(str.data, false, 0);
+	Assert(ret > 0);
+	Assert(SPI_tuptable != NULL);
+	Assert(SPI_processed == 1);
+
+	MemoryContextSwitchTo(oldcxt);
+
+	bool isNull;
+	bool *flag;
+
+	for (i = 0; i < attr_cnt; i++)
+	{
+		flag = (bool*) palloc(sizeof(bool));
+		*flag = false;
+
+		width = DatumGetFloat4(heap_getattr(SPI_tuptable->vals[0], i + 1, SPI_tuptable->tupdesc, &isNull));
+
+		if (width > analyze_column_width_threshold)
+			*flag = true;
+
+		excludeAttr[i] = flag;
+	}
+
+	SPI_finish();
 }
 
 /*
@@ -1375,7 +1464,7 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 			}
 		}
 		else
-			appendStringInfo(&columnStr, "NULL");
+			return 0;
 
 		/*
 		 * If table is partitioned, we create a sample over all parts.

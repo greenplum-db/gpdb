@@ -794,3 +794,47 @@ select * from pg_stats where tablename like 'p3_sales%' order by tablename, attn
 -- start_ignore
 DROP TABLE IF EXISTS p3_sales;
 -- end_ignore
+-- Case 16: Analyzing a table with a large column that exceeds the analyze_column_width_threshold
+-- start_ignore
+set analyze_column_width_threshold=4;
+DROP TABLE if exists p3_sales;
+-- end_ignore
+CREATE TABLE p3_sales (id int, year int, month int, day int,
+region text)
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (year)
+    SUBPARTITION BY RANGE (month)
+       SUBPARTITION TEMPLATE (
+        START (1) END (2) EVERY (1),
+        DEFAULT SUBPARTITION other_months )
+           SUBPARTITION BY LIST (region)
+             SUBPARTITION TEMPLATE (
+               SUBPARTITION usa VALUES ('usa'),
+               DEFAULT SUBPARTITION other_regions )
+( START (2002) END (2003) EVERY (1),
+  DEFAULT PARTITION outlying_years );
+insert into p3_sales values (1, 2002, 1, 20, 'usa');
+insert into p3_sales values (1, 2002, 1, 20, 'North America');
+analyze p3_sales;
+select count(*) from pg_statistic where starelid = 'p3_sales'::regclass::oid;
+ count 
+-------
+     0
+(1 row)
+
+select count(*) from pg_statistic where starelid = 'p3_sales_1_prt_2_2_prt_2_3_prt_other_regions'::regclass::oid;
+ count 
+-------
+     4
+(1 row)
+
+select count(*) from pg_statistic where starelid = 'p3_sales_1_prt_2_2_prt_2_3_prt_usa'::regclass::oid;
+ count 
+-------
+     5
+(1 row)
+
+-- start_ignore
+reset analyze_column_width_threshold;
+DROP TABLE if exists p3_sales;
+-- end_ignore
