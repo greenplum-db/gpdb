@@ -1,0 +1,5 @@
+-- start_matchignore
+m/^DETAIL:.*/
+
+m/^(?:HINT|NOTICE):\s+.+\'DISTRIBUTED BY\' clause.*/
+-- end_matchignore
