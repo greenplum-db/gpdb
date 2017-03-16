@@ -52,3 +52,7 @@ synchronization.
   - AO table segment files will be rewritten when a segment containing numeric
     attributes are written to from database operations.
 
+* External partitions are not supported since management of external partitions
+  is not allowed in utility mode. All external partitions must be either moved
+  out of the partition hierarchy with ALTER TABLE EXCHANGE, or dropped, prior
+  to the upgrade.

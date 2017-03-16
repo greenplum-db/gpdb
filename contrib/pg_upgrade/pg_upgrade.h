@@ -38,6 +38,9 @@
 #define DB_DUMP_FILE		"pg_upgrade_dump_db.sql"
 #define ARRAY_DUMP_FILE		"pg_upgrade_dump_arraytypes.sql"
 
+/* needs to be kept in sync with pg_class.h */
+#define RELSTORAGE_EXTERNAL	'x'
+
 #ifndef WIN32
 #define pg_copy_file		copy_file
 #define pg_mv_file			rename
