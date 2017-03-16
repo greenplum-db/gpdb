@@ -286,8 +286,8 @@ Greenplum is maintained by a core team of developers with commit rights to the
 [main gpdb repository](https://github.com/greenplum-db/gpdb) on GitHub. At the
 same time, we are very eager to receive contributions from anybody in the wider
 Greenplum community. This section covers all you need to know if you want to see
-your code or documentation changes be added to Greenplum repository and to the
-future releases of Greenplum.
+your code or documentation changes be added to Greenplum and appear in the
+future releases.
 
 ### Getting started
 
@@ -329,7 +329,9 @@ We recommend using ```git diff --color``` when reviewing your changes so that yo
 don't have any spurious whitespace issues in the code that you submit.
 
 All new functionality that is contributed to Greenplum should be covered by regression
-tests that are contributed alongside it.
+tests that are contributed alongside it. If you are uncertain on how to test, or document 
+your work, please raise the question on the gpdb-dev mailinglist and the developer 
+community will do its best to help you.
 
 ### Testing guidelines
 
