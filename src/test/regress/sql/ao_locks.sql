@@ -18,11 +18,11 @@ select coalesce(
        when COUNT(*) = 1 then '1 segment'
        else 'n segments' end AS node
 from pg_locks l
-left outer join pg_class c on (l.relation = c.oid),
+left outer join pg_class c on (l.relation = c.relfilenode),
 pg_database d
 where relation is not null
 and l.database = d.oid
-and (relname <> 'gp_fault_strategy' or relname IS NULL)
+and (relname <> 'gp_fault_strategy' and relname not like 'pg_class%')
 and d.datname = current_database()
 group by l.gp_segment_id = -1, relation, relname, locktype, mode
 order by 1, 3, 2;
@@ -31,14 +31,17 @@ order by 1, 3, 2;
 BEGIN;
 INSERT INTO ao VALUES (200, 200);
 SELECT * FROM locktest;
+SELECT * FROM gp_dist_random('locktest');
 COMMIT;
 
 BEGIN;
 DELETE FROM ao WHERE a = 1;
 SELECT * FROM locktest;
+SELECT * FROM gp_dist_random('locktest');
 COMMIT;
 
 BEGIN;
 UPDATE ao SET b = -1 WHERE a = 2;
 SELECT * FROM locktest;
+SELECT * FROM gp_dist_random('locktest');
 COMMIT;

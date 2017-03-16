@@ -18,11 +18,11 @@ select coalesce(
        when COUNT(*) = 1 then '1 segment'
        else 'n segments' end AS node
 from pg_locks l
-left outer join pg_class c on (l.relation = c.oid),
+left outer join pg_class c on (l.relation = c.relfilenode),
 pg_database d
 where relation is not null
 and l.database = d.oid
-and (relname <> 'gp_fault_strategy' or relname IS NULL)
+and (relname <> 'gp_fault_strategy' and relname not like 'pg_class%')
 and d.datname = current_database()
 group by l.gp_segment_id = -1, relation, relname, locktype, mode
 order by 1, 3, 2;
@@ -30,54 +30,60 @@ order by 1, 3, 2;
 BEGIN;
 INSERT INTO ao VALUES (200, 200);
 SELECT * FROM locktest;
-          coalesce          |        mode         |         locktype         |   node    
-----------------------------+---------------------+--------------------------+-----------
- ao                         | AccessExclusiveLock | append-only segment file | 1 segment
- ao                         | AccessExclusiveLock | append-only segment file | master
- ao                         | RowExclusiveLock    | relation                 | 1 segment
- ao                         | RowExclusiveLock    | relation                 | master
- locktest                   | AccessShareLock     | relation                 | master
- pg_class                   | AccessShareLock     | relation                 | master
- pg_class_oid_index         | AccessShareLock     | relation                 | master
- pg_class_relname_nsp_index | AccessShareLock     | relation                 | master
- pg_locks                   | AccessShareLock     | relation                 | master
-(9 rows)
+ coalesce |        mode         |         locktype         |   node    
+----------+---------------------+--------------------------+-----------
+ ao       | AccessExclusiveLock | append-only segment file | master
+ ao       | RowExclusiveLock    | relation                 | 1 segment
+ ao       | RowExclusiveLock    | relation                 | master
+ locktest | AccessShareLock     | relation                 | master
+ pg_locks | AccessShareLock     | relation                 | master
+(5 rows)
+
+SELECT * FROM gp_dist_random('locktest');
+ coalesce |        mode         |         locktype         |   node    
+----------+---------------------+--------------------------+-----------
+ ao       | AccessExclusiveLock | append-only segment file | 1 segment
+(1 row)
 
 COMMIT;
 BEGIN;
 DELETE FROM ao WHERE a = 1;
 SELECT * FROM locktest;
-          coalesce          |        mode         |         locktype         |   node    
-----------------------------+---------------------+--------------------------+-----------
- ao                         | AccessExclusiveLock | append-only segment file | master
- ao                         | ExclusiveLock       | relation                 | master
- ao                         | RowExclusiveLock    | relation                 | 1 segment
- aovisimap index            | RowExclusiveLock    | relation                 | 1 segment
- aovisimap table            | RowExclusiveLock    | relation                 | 1 segment
- locktest                   | AccessShareLock     | relation                 | master
- pg_class                   | AccessShareLock     | relation                 | master
- pg_class_oid_index         | AccessShareLock     | relation                 | master
- pg_class_relname_nsp_index | AccessShareLock     | relation                 | master
- pg_locks                   | AccessShareLock     | relation                 | master
-(10 rows)
+    coalesce     |        mode         |         locktype         |   node    
+-----------------+---------------------+--------------------------+-----------
+ ao              | AccessExclusiveLock | append-only segment file | master
+ ao              | ExclusiveLock       | relation                 | master
+ ao              | RowExclusiveLock    | relation                 | 1 segment
+ aovisimap index | RowExclusiveLock    | relation                 | 1 segment
+ aovisimap table | RowExclusiveLock    | relation                 | 1 segment
+ locktest        | AccessShareLock     | relation                 | master
+ pg_locks        | AccessShareLock     | relation                 | master
+(7 rows)
+
+SELECT * FROM gp_dist_random('locktest');
+ coalesce | mode | locktype | node 
+----------+------+----------+------
+(0 rows)
 
 COMMIT;
 BEGIN;
 UPDATE ao SET b = -1 WHERE a = 2;
 SELECT * FROM locktest;
-          coalesce          |        mode         |         locktype         |   node    
-----------------------------+---------------------+--------------------------+-----------
- ao                         | AccessExclusiveLock | append-only segment file | 1 segment
- ao                         | AccessExclusiveLock | append-only segment file | master
- ao                         | ExclusiveLock       | relation                 | master
- ao                         | RowExclusiveLock    | relation                 | 1 segment
- aovisimap index            | RowExclusiveLock    | relation                 | 1 segment
- aovisimap table            | RowExclusiveLock    | relation                 | 1 segment
- locktest                   | AccessShareLock     | relation                 | master
- pg_class                   | AccessShareLock     | relation                 | master
- pg_class_oid_index         | AccessShareLock     | relation                 | master
- pg_class_relname_nsp_index | AccessShareLock     | relation                 | master
- pg_locks                   | AccessShareLock     | relation                 | master
-(11 rows)
+    coalesce     |        mode         |         locktype         |   node    
+-----------------+---------------------+--------------------------+-----------
+ ao              | AccessExclusiveLock | append-only segment file | master
+ ao              | ExclusiveLock       | relation                 | master
+ ao              | RowExclusiveLock    | relation                 | 1 segment
+ aovisimap index | RowExclusiveLock    | relation                 | 1 segment
+ aovisimap table | RowExclusiveLock    | relation                 | 1 segment
+ locktest        | AccessShareLock     | relation                 | master
+ pg_locks        | AccessShareLock     | relation                 | master
+(7 rows)
+
+SELECT * FROM gp_dist_random('locktest');
+ coalesce |        mode         |         locktype         |   node    
+----------+---------------------+--------------------------+-----------
+ ao       | AccessExclusiveLock | append-only segment file | 1 segment
+(1 row)
 
 COMMIT;

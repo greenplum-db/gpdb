@@ -27,6 +27,27 @@ and d.datname = current_database()
 group by l.gp_segment_id = -1, relation, relname, locktype, mode
 order by 1, 3, 2;
 
+create or replace view locktest_aosegfile as
+select coalesce(
+  case when relname like 'pg_toast%index' then 'toast index'
+       when relname like 'pg_toast%' then 'toast table'
+       when relname like 'pg_aoseg%' then 'aoseg table'
+       else relname end, 'dropped table'),
+  mode,
+  locktype,
+  case when l.gp_segment_id = -1 then 'master'
+       when COUNT(*) = 1 then '1 segment'
+       else 'n segments' end AS node
+from pg_locks l
+left outer join pg_class c on (l.relation = c.relfilenode),
+pg_database d
+where relation is not null
+and l.database = d.oid
+and (relname <> 'gp_fault_strategy' and relname not like 'pg_class%')
+and d.datname = current_database()
+group by l.gp_segment_id = -1, relation, relname, locktype, mode
+order by 1, 3, 2;
+
 -- Partitioned table with toast table
 begin;
 
@@ -60,7 +81,8 @@ insert into g values(1), (2), (3);
 insert into g values(1), (2), (3);
 insert into g values(1), (2), (3);
 insert into g values(1), (2), (3);
-select * from locktest;
+select * from locktest_aosegfile;
+select * from gp_dist_random('locktest_aosegfile');
 
 commit;
 -- drop

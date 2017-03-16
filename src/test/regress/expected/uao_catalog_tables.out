@@ -34,17 +34,19 @@ CREATE TYPE aoseg_pt_rec as (segno integer, tupcount bigint,
 CREATE OR REPLACE FUNCTION gp_aotable_eof_dist_random(
   IN relation_name text) RETURNS setof aoseg_pt_rec AS $$
 DECLARE
-  aorelfilenode oid;
+  ao_oid oid;
+  ao_relfilenode oid;
   result record;
 BEGIN
-  select into aorelfilenode relfilenode from pg_class where relname=quote_ident(relation_name);
+  select into ao_oid oid from pg_class where relname=quote_ident(relation_name);
+  select into ao_relfilenode relfilenode from pg_class where relname=quote_ident(relation_name);
   for result in
     EXECUTE 'select aoseg.segno, aoseg.tupcount, aoseg.eofuncompressed,
              pt.mirror_append_only_new_eof from pg_aoseg.pg_aoseg_' ||
-             aorelfilenode || ' aoseg inner join
+             ao_oid || ' aoseg inner join
              gp_persistent_relation_node pt on aoseg.segno =
              pt.segment_file_num and pt.relfilenode_oid = ' ||
-             aorelfilenode || ' and pt.mirror_append_only_new_eof =
+             ao_relfilenode || ' and pt.mirror_append_only_new_eof =
              aoseg.eofuncompressed and aoseg.eofuncompressed != 0;'
   loop
     return next result;

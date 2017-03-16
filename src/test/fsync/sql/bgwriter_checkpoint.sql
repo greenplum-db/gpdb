@@ -14,17 +14,21 @@
 --
 
 begin;
-create function num_dirty(relfilenode oid) returns bigint as
+create function num_dirty(relname name) returns bigint as
 $$
    select count(*) from dirty_buffers()
      as (tablespace oid, database oid, relfilenode oid, block int)
-     where relfilenode = $1;
+     where relfilenode in
+           (select relfilenode from pg_class
+            where relname=$1
+            union select relfilenode from gp_dist_random('pg_class')
+            where relname=$1);
 $$ language sql;
 
 -- Wait until number of dirty buffers for the specified relfiles drops
 -- to 0 or timeout occurs.  Returns false if timeout occured.
 create function wait_for_bgwriter(
-   relfilenode oid,
+   relname name,
    timeout int)
 returns boolean as
 $$
@@ -77,9 +81,9 @@ insert into fsync_test1 select i, i from generate_series(1,1000)i;
 delete from fsync_test2;
 
 -- Should return at least one dirty buffer.
-select sum(num_dirty('fsync_test1'::regclass)) > 0 as passed
+select sum(num_dirty('fsync_test1')) > 0 as passed
  from gp_dist_random('gp_id');
-select sum(num_dirty('fsync_test2'::regclass)) > 0 as passed
+select sum(num_dirty('fsync_test2')) > 0 as passed
  from gp_dist_random('gp_id');
 
 -- Flush all dirty pages by BgBufferSync()
@@ -92,8 +96,8 @@ select sum(num_dirty('fsync_test2'::regclass)) > 0 as passed
 -- The 10 indicates timeout in terms of number of iterations to be
 -- executed by the waiting function.  Each iteration sleeps for .5
 -- seconds.
-select wait_for_bgwriter('fsync_test1'::regclass, 25) as passed;
-select wait_for_bgwriter('fsync_test2'::regclass, 25) as passed;
+select wait_for_bgwriter('fsync_test1', 25) as passed;
+select wait_for_bgwriter('fsync_test2', 25) as passed;
 
 -- Inject fault to count relfiles fsync'ed by checkpointer.
 \!gpfaultinjector -f fsync_counter -m async -y skip -o 0 -H ALL -r primary | grep -i 'error\|fail\|done' | sed -e 's/.*DONE$/DONE/'
