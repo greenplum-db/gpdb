@@ -12,7 +12,7 @@ import (
 
 func main() {
 	debug.SetTraceback("all")
-	parser := flags.NewParser(&commands.UP, flags.HelpFlag)
+	parser := flags.NewParser(&commands.ALL, flags.HelpFlag)
 
 	_, err := parser.Parse()
 	if err != nil {

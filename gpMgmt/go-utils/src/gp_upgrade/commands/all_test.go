@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("up", func() {
+var _ = Describe("all", func() {
 	It("handle no params call by outputting help text", func() {
 		session := runCommand()
 

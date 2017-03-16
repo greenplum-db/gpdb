@@ -1,7 +1,7 @@
 package commands
 
-type UpCommand struct {
+type AllCommands struct {
 	Monitor MonitorCommand `command:"monitor" alias:"m" description:"Monitor Greenplum upgrade process"`
 }
 
-var UP UpCommand
+var ALL AllCommands

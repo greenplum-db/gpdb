@@ -13,7 +13,7 @@ import (
 type SshConnector struct {
 }
 
-func NewSshConnector() Connector {
+func NewSshConnector() *SshConnector {
 	conn := new(SshConnector)
 	return conn
 }
