@@ -33,6 +33,5 @@ Configuration conf = new Configuration(true);
  job.waitForCompletion(true);
      
 }</codeblock>
-    <note>Both <codeph>gpmapreduce</codeph> and the associated YAML specification are deprecated. </note>
   </body>
 </topic>
