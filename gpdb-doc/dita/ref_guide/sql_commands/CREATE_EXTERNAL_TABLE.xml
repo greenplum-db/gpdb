@@ -14,7 +14,8 @@
         | ('gpfdists://<varname>filehost</varname>[:<varname>port</varname>]/<varname>file_pattern[#transform]</varname>'
             [, ...])
         | ('gphdfs://<varname>hdfs_host</varname>[:port]/<varname>path</varname>/<varname>file</varname>')
-        | ('s3://<varname>S3_endpoint</varname>/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>]
+        | ('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>]
+             [region=<varname>S3-region</varname>]
             [config=<varname>config_file</varname>]')
       FORMAT 'TEXT' 
             [( [HEADER]
@@ -94,7 +95,8 @@ CREATE WRITABLE EXTERNAL TABLE <varname>table_name</varname>
 
 CREATE WRITABLE EXTERNAL TABLE <varname>table_name</varname>
     ( <varname>column_name</varname> <varname>data_type</varname> [, ...] | LIKE <varname>other_table </varname>)
-     LOCATION('s3://<varname>S3_endpoint</varname>/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>]
+     LOCATION('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>]
+            [region=<varname>S3-region</varname>]
             [config=<varname>config_file</varname>]')
       FORMAT 'TEXT' 
                [( [DELIMITER [AS] '<varname>delimiter</varname>']
@@ -277,33 +279,71 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
               <codeph>TEXT</codeph> and <codeph>CSV</codeph> formats are supported. The files can be
             in gzip compressed format. The <codeph>s3</codeph> protocol recognizes the gzip format
             and uncompress the files. Only the gzip compression format is supported. </pd>
-          <pd>Before you can create external tables with the <codeph>s3</codeph> protocol, you must
-            configure Greenplum Database. For information about configuring Greenplum Database, see
-              <xref href="#topic1/section10" format="dita"/>.</pd>
+          <pd>You can specify the <codeph>s3</codeph> protocol to access data on Amazon S3 or data
+            on an Amazon S3 compatible service. Before you can create external tables with the
+              <codeph>s3</codeph> protocol, you must configure Greenplum Database. For information
+            about configuring Greenplum Database, see <xref href="#topic1/section10" format="dita"
+            />.</pd>
+          <pd>For the <codeph>s3</codeph> protocol, the <codeph>LOCATION</codeph> clause specifies
+            the S3 endpoint and bucket name where data files are uploaded for the table. For
+            writable external tables you can specify an optional S3 file prefix to use when creating
+            new files for data inserted to the table.</pd>
+          <pd>If you specify an <varname>S3_prefix</varname> for read-only s3 tables, the
+              <codeph>s3</codeph> protocol selects those all those files that have the specified S3
+            file prefix.</pd>
           <pd>
-            <p>For writable S3 tables, the <codeph>s3</codeph> protocol URL specifies the endpoint
-              and bucket name where data files are uploaded for the table, as well as an optional S3
-              file prefix to use when creating new files for data inserted to the table. If you
-              specify an <varname>S3_prefix</varname> for read-only s3 tables, the
-                <codeph>s3</codeph> protocol selects those all those files that have the specified
-              S3 file prefix.</p>
             <note conref="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr/s3-prefix-note"
             />
           </pd>
-          <pd>The <codeph>config</codeph> parameter specifies the location of the required
-              <codeph>s3</codeph> protocol configuration file that contains AWS connection
-            credentials and communication parameters. </pd>
+          <pd>The <codeph>config</codeph> parameter in the <codeph>LOCATION</codeph> clause
+            specifies the location of the required <codeph>s3</codeph> protocol configuration file
+            that contains Amazon Web Services (AWS) connection credentials and communication
+            parameters. For information about <codeph>s3</codeph> configuration file parameters, see
+              <xref href="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr/s3_config_file"
+            />.</pd>
           <pd>This is an example read-only external table definition with the <codeph>s3</codeph>
             protocol.<codeblock>CREATE READABLE EXTERNAL TABLE S3TBL (date text, time text, amt int)
-   location('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/
+   LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/
       config=/home/gpadmin/aws_s3/s3.conf')
    FORMAT 'csv';</codeblock></pd>
           <pd>The S3 bucket is at the S3 endpoint <codeph>s3-us-west-2.amazonaws.com</codeph> and
             the S3 bucket name is <codeph>s3test.pivotal.io</codeph>. The S3 prefix for the files in
             the bucket is <codeph>/dataset1/normal/</codeph>. The configuration file is in
               <codeph>/home/gpadmin/s3/s3.conf</codeph> on all Greenplum Database segments.</pd>
-          <pd>See <xref href="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr"/> for more
-            information.</pd>
+          <pd>This example read-only external table specifies the same location and specifies Amazon
+            S3 region <codeph>us-west-2</codeph> with the <codeph>region</codeph>
+            parameter.<codeblock>CREATE READABLE EXTERNAL TABLE S3TBL (date text, time text, amt int)
+   LOCATION('s3://amazonaws.com/s3test.pivotal.io/dataset1/normal/
+      region=s3-us-west-2 config=/home/gpadmin/aws_s3/s3.conf')
+   FORMAT 'csv';</codeblock></pd>
+          <pd>The <varname>port</varname> is optional in the URL of the <codeph>LOCATION</codeph>
+            clause. If the <varname>port</varname> is not specified in the URL of the
+              <codeph>LOCATION</codeph> clause, the <codeph>s3</codeph> configuration file parameter
+              <codeph>encryption</codeph> affects the port used by the <codeph>s3</codeph> protocol
+            (port 80 for HTTP or port 443 for HTTPS). If the port is specified, that port is used
+            regardless of the encryption setting. For example, if port 80 is specified in the
+              <codeph>LOCATION</codeph> clause and <codeph>encryption=true</codeph> in the
+              <codeph>s3</codeph> configuration file, HTTPS requests are sent to port 80 port
+            instead of 443 and a warning is logged. </pd>
+          <pd>To specify an Amazon S3 compatible service in the <codeph>LOCATION</codeph> clause,
+            set the <codeph>s3</codeph> configuration file parameter <codeph>version</codeph> to
+              <codeph>2</codeph> and specify the <codeph>region</codeph> parameter in the
+              <codeph>LOCATION</codeph> clause. (If <codeph>version</codeph> to <codeph>2</codeph>,
+            the <codeph>region</codeph> parameter is required in the <codeph>LOCATION</codeph>
+            clause.) When you define the service in the <codeph>LOCATION</codeph> clause, you
+            specify the service endpoint in the URL and specify the service region in the
+              <codeph>region</codeph> parameter. This is an example <codeph>LOCATION</codeph> clause
+            that contains a <codeph>region</codeph> parameter and specifies an Amazon S3 compatible
+            service.
+            <codeblock>LOCATION ('s3://test.company.com/s3test.company/dataset1/normal/ <b>region=local-test</b>
+      config=/home/gpadmin/aws_s3/s3.conf')</codeblock></pd>
+          <pd>When the <codeph>version</codeph> parameter is <codeph>2</codeph>, you can also
+            specify an Amazon S3 endpoint. This example specifies an Amazon S3
+            endpoint.<codeblock>LOCATION ('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/ <b>region=us-west-2</b>
+      config=/home/gpadmin/aws_s3/s3.conf')</codeblock></pd>
+          <pd>For information about the <codeph>s3</codeph> protocol, see <xref
+              href="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr">s3://
+              Protocol</xref> in the <cite>Greenplum Database Administrator Guide</cite>.</pd>
         </plentry>
         <plentry>
           <pt>EXECUTE <varname>'command'</varname> [ON ...]</pt>
@@ -560,7 +600,6 @@ customer_id=123;</codeblock>
     </section>
     <section id="section8">
       <title>Notes</title>
-      <draft-comment author="msk">remove INTO clause information</draft-comment>
       <p>When you specify the <codeph>LOG ERRORS</codeph> clause, Greenplum Database captures errors
         that occur while reading the external table data. You can view and manage the captured error
         log data. </p>
@@ -797,7 +836,8 @@ customer_id=123;</codeblock>
         Amazon Simple Storage Service (Amazon S3) bucket. The protocol creates or downloads all
         files specified by the <codeph>LOCATION</codeph> clause. Each Greenplum Database segment
         instance downloads or uploads one file at a time using several threads. See <xref
-          href="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr"/>. </p>
+          href="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr"/> in the <cite>Greenplum
+          Database Administrator Guide</cite>. </p>
     </section>
     <section conref="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr/s3_prereq"/>
     <section conref="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr/section_tsq_n3t_3x"/>

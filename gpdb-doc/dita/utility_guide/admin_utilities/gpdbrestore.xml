@@ -202,7 +202,7 @@
           <pt>-G [include | only] (restore global objects) </pt>
           <pd>Restores database metadata information that is not associated with a specific schema
             or table, such as roles and tablespaces, if the global object dump file
-                <codeph>db_dumps/<varname>date</varname>/<varname>prefix_string_</varname>gp_global_1_1_<varname>timestamp</varname></codeph>
+                <codeph>db_dumps/<varname>date</varname>/<varname>prefix_string_</varname>gp_global_-1_1_<varname>timestamp</varname></codeph>
             is found in the master data directory. The global object file is created with the
               <codeph>gpcrondump</codeph> option <codeph>-G</codeph>.<ul id="ul_xx1_44g_h5">
               <li>The keyword <codeph>include</codeph> restores global objects in addition to

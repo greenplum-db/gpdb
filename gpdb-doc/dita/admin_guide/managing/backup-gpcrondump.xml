@@ -42,6 +42,12 @@
       backup in the format <i>YYYYMMDDHHMMSS</i>, for example
         <codeph>gp_dump_0_2_20151012195916.gz</codeph>. The <codeph>gpdbrestore</codeph> command
       uses the most recent backup by default but you can specify an earlier backup to restore. </p>
+    <p>The utility creates backup files with this file name format.</p>
+    <p><codeblock><varname>prefix_</varname>gp_dump_<varname>content</varname>_<varname>dbid</varname>_<varname>timestamp</varname></codeblock>The
+        <codeph>content</codeph> and <codeph>dbid</codeph> are identifiers for the Greenplum
+      Database segment instances that are assigned by Greenplum Database. For information about the
+      identifiers, see the Greenplum Database system catalog table <i>gp_id</i> in the
+        <cite>Greenplum Database Reference Guide</cite>. </p>
     <p>If you include the <codeph>-g</codeph> option, <codeph>gpcrondump</codeph> saves the
       configuration files with the backup. These configuration files are dumped in the master or
       segment data directory to
@@ -50,7 +56,7 @@
       in the directory specified by <codeph>--ddboost-backupdir</codeph> when the Data Domain Boost
       credentials were set. The <codeph>-G</codeph> option backs up global objects such as roles and
       tablespaces to a file in the master backup directory named
-          <codeph>gp_global_1_1_<varname>timestamp</varname></codeph>. </p>
+          <codeph>gp_global_-1_1_<varname>timestamp</varname></codeph>. </p>
     <p>If <codeph>--ddboost</codeph> is specified, the backup is located on the default storage unit
       in the directory specified by <codeph>--ddboost-backupdir</codeph> when the Data Domain Boost
       credentials were set.</p>

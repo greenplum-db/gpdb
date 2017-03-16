@@ -562,7 +562,7 @@ SELECT foo();
                 by <i>expr</i>) and assigns a bucket number to each row.</entry>
             </row>
             <row>
-              <entry colname="col1"><codeph>percent_rank(</codeph>)</entry>
+              <entry colname="col1"><codeph>percent_rank()</codeph></entry>
               <entry colname="col2">
                 <codeph>double precision</codeph>
               </entry>
@@ -588,7 +588,7 @@ SELECT foo();
                 consecutive numbers in this case.</entry>
             </row>
             <row>
-              <entry colname="col1"><codeph>row_number(</codeph>)</entry>
+              <entry colname="col1"><codeph>row_number()</codeph></entry>
               <entry colname="col2">
                 <codeph>bigint</codeph>
               </entry>
@@ -764,7 +764,7 @@ FROM employees GROUP BY department_id;</codeblock>
             </row>
             <row>
               <entry colname="col1"><codeph>PERCENTILE_DISC (<i>expr</i>) WITHIN GROUP (ORDER BY
-                    <i>expr</i> [DESC/ASC]</codeph>)</entry>
+                    <i>expr</i> [DESC/ASC])</codeph></entry>
               <entry colname="col2">
                 <codeph>timestamp, timestampz, interval, float</codeph>
               </entry>
