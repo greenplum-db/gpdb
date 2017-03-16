@@ -5,26 +5,56 @@
 -- of the locks in segments. If a relation is locked only on one segment,
 -- we print that as a special case, but otherwise we just print "n segments",
 -- meaning the relation is locked on more than one segment.
-create or replace view locktest as
+create or replace view locktest_master as
 select coalesce(
   case when relname like 'pg_toast%index' then 'toast index'
        when relname like 'pg_toast%' then 'toast table'
        when relname like 'pg_aoseg%' then 'aoseg table'
+       when relname like 'pg_aovisimap%index' then 'aovisimap index'
+       when relname like 'pg_aovisimap%' then 'aovisimap table'
        else relname end, 'dropped table'),
   mode,
   locktype,
-  case when l.gp_segment_id = -1 then 'master'
-       when COUNT(*) = 1 then '1 segment'
-       else 'n segments' end AS node
+  'master'::text as node
 from pg_locks l
-left outer join pg_class c on (l.relation = c.oid),
+left outer join pg_class c on ((l.locktype = 'append-only segment file' and l.relation = c.relfilenode) or (l.locktype != 'append-only segment file' and l.relation = c.oid)),
 pg_database d
 where relation is not null
 and l.database = d.oid
-and (relname <> 'gp_fault_strategy' or relname IS NULL)
+and (relname <> 'gp_fault_strategy' and relname != 'locktest_master' or relname is NULL)
 and d.datname = current_database()
-group by l.gp_segment_id = -1, relation, relname, locktype, mode
+and l.gp_segment_id = -1
+group by l.gp_segment_id, relation, relname, locktype, mode
 order by 1, 3, 2;
+create or replace view locktest_segments_dist as
+select relname,
+  mode,
+  locktype,
+  l.gp_segment_id as node,
+  relation
+from pg_locks l
+left outer join pg_class c on ((l.locktype = 'append-only segment file' and l.relation = c.relfilenode) or (l.locktype != 'append-only segment file' and l.relation = c.oid)),
+pg_database d
+where relation is not null
+and l.database = d.oid
+and (relname <> 'gp_fault_strategy' and relname != 'locktest_segments_dist' or relname is NULL)
+and d.datname = current_database()
+and l.gp_segment_id > -1
+group by l.gp_segment_id, relation, relname, locktype, mode;
+create or replace view locktest_segments as
+SELECT coalesce(
+  case when relname like 'pg_toast%index' then 'toast index'
+       when relname like 'pg_toast%' then 'toast table'
+       when relname like 'pg_aoseg%' then 'aoseg table'
+       when relname like 'pg_aovisimap%index' then 'aovisimap index'
+       when relname like 'pg_aovisimap%' then 'aovisimap table'
+       else relname end, 'dropped table'),
+  mode,
+  locktype,
+  case when count(*) = 1 then '1 segment'
+       else 'n segments' end as node
+  FROM gp_dist_random('locktest_segments_dist')
+  group by relname, relation, mode, locktype;
 -- Partitioned table with toast table
 begin;
 -- creation
@@ -41,13 +71,11 @@ NOTICE:  CREATE TABLE will create partition "g_1_prt_6" for table "g"
 NOTICE:  CREATE TABLE will create partition "g_1_prt_7" for table "g"
 NOTICE:  CREATE TABLE will create partition "g_1_prt_8" for table "g"
 NOTICE:  CREATE TABLE will create partition "g_1_prt_9" for table "g"
-select * from locktest;
-          coalesce          |        mode         | locktype |    node    
-----------------------------+---------------------+----------+------------
+select * from locktest_master;
+          coalesce          |        mode         | locktype |  node  
+----------------------------+---------------------+----------+--------
  g                          | AccessExclusiveLock | relation | master
- g                          | AccessExclusiveLock | relation | n segments
  gp_distribution_policy     | RowExclusiveLock    | relation | master
- locktest                   | AccessShareLock     | relation | master
  pg_class                   | AccessShareLock     | relation | master
  pg_class                   | RowExclusiveLock    | relation | master
  pg_class_oid_index         | AccessShareLock     | relation | master
@@ -58,28 +86,30 @@ select * from locktest;
  pg_partition               | RowExclusiveLock    | relation | master
  pg_partition_rule          | RowExclusiveLock    | relation | master
  pg_type                    | RowExclusiveLock    | relation | master
- toast index                | AccessExclusiveLock | relation | n segments
  toast index                | AccessExclusiveLock | relation | master
- toast table                | ShareLock           | relation | n segments
  toast table                | ShareLock           | relation | master
-(18 rows)
+(14 rows)
+
+select * from locktest_segments;
+  coalesce   |        mode         | locktype |    node    
+-------------+---------------------+----------+------------
+ toast table | ShareLock           | relation | n segments
+ pg_class    | AccessShareLock     | relation | n segments
+ g           | AccessExclusiveLock | relation | n segments
+ toast index | AccessExclusiveLock | relation | n segments
+(4 rows)
 
 commit;
 -- drop
 begin;
 drop table g;
-select * from locktest;
-          coalesce          |        mode         | locktype |    node    
-----------------------------+---------------------+----------+------------
- dropped table              | AccessExclusiveLock | relation | n segments
- dropped table              | AccessExclusiveLock | relation | master
- dropped table              | AccessExclusiveLock | relation | n segments
+select * from locktest_master;
+          coalesce          |        mode         | locktype |  node  
+----------------------------+---------------------+----------+--------
  dropped table              | AccessExclusiveLock | relation | master
  dropped table              | AccessExclusiveLock | relation | master
- dropped table              | AccessExclusiveLock | relation | n segments
- gp_distribution_policy     | RowExclusiveLock    | relation | n segments
+ dropped table              | AccessExclusiveLock | relation | master
  gp_distribution_policy     | RowExclusiveLock    | relation | master
- locktest                   | AccessShareLock     | relation | master
  pg_class                   | AccessShareLock     | relation | master
  pg_class                   | RowExclusiveLock    | relation | master
  pg_class_oid_index         | AccessShareLock     | relation | master
@@ -89,7 +119,17 @@ select * from locktest;
  pg_partition               | RowExclusiveLock    | relation | master
  pg_partition_rule          | RowExclusiveLock    | relation | master
  pg_type                    | RowExclusiveLock    | relation | master
-(18 rows)
+(13 rows)
+
+select * from locktest_segments;
+        coalesce        |         mode        | locktype |    node    
+------------------------+---------------------+----------+------------
+ dropped table          | AccessExclusiveLock | relation | n segments
+ dropped table          | AccessExclusiveLock | relation | n segments
+ dropped table          | AccessExclusiveLock | relation | n segments
+ gp_distribution_policy | RowExclusiveLock    | relation | n segments
+ pg_class               | AccessShareLock     | relation | n segments
+(5 rows)
 
 commit;
 -- AO table (ao segments, block directory won't exist after create)
@@ -104,14 +144,11 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 NOTICE:  CREATE TABLE will create partition "g_1_prt_1" for table "g"
 NOTICE:  CREATE TABLE will create partition "g_1_prt_2" for table "g"
 NOTICE:  CREATE TABLE will create partition "g_1_prt_3" for table "g"
-select * from locktest;
-          coalesce          |        mode         | locktype |    node    
-----------------------------+---------------------+----------+------------
- g                          | AccessExclusiveLock | relation | n segments
+select * from locktest_master;
+          coalesce          |        mode         | locktype |  node  
+----------------------------+---------------------+----------+--------
  g                          | AccessExclusiveLock | relation | master
  gp_distribution_policy     | RowExclusiveLock    | relation | master
- locktest                   | AccessShareLock     | relation | master
- pg_appendonly              | RowExclusiveLock    | relation | n segments
  pg_appendonly              | RowExclusiveLock    | relation | master
  pg_class                   | AccessShareLock     | relation | master
  pg_class                   | RowExclusiveLock    | relation | master
@@ -123,11 +160,19 @@ select * from locktest;
  pg_partition               | RowExclusiveLock    | relation | master
  pg_partition_rule          | RowExclusiveLock    | relation | master
  pg_type                    | RowExclusiveLock    | relation | master
- toast index                | AccessExclusiveLock | relation | n segments
  toast index                | AccessExclusiveLock | relation | master
- toast table                | ShareLock           | relation | n segments
  toast table                | ShareLock           | relation | master
-(20 rows)
+(15 rows)
+
+select * from locktest_segments;
+   coalesce    |        mode         | locktype |    node    
+---------------+---------------------+----------+------------
+ toast table   | ShareLock           | relation | n segments
+ pg_class      | AccessShareLock     | relation | n segments
+ g             | AccessExclusiveLock | relation | n segments
+ toast index   | AccessExclusiveLock | relation | n segments
+ pg_appendonly | RowExclusiveLock    | relation | n segments
+(5 rows)
 
 commit;
 begin;
@@ -137,58 +182,54 @@ insert into g values(1), (2), (3);
 insert into g values(1), (2), (3);
 insert into g values(1), (2), (3);
 insert into g values(1), (2), (3);
-select * from locktest;
-          coalesce          |        mode         |         locktype         |    node    
-----------------------------+---------------------+--------------------------+------------
- aoseg table                | AccessShareLock     | relation                 | n segments
- aoseg table                | AccessShareLock     | relation                 | n segments
- aoseg table                | AccessShareLock     | relation                 | n segments
- aoseg table                | AccessShareLock     | relation                 | n segments
- g                          | RowExclusiveLock    | relation                 | n segments
+select * from locktest_master;
+          coalesce          |        mode         |         locktype         |  node  
+----------------------------+---------------------+--------------------------+--------
  g                          | RowExclusiveLock    | relation                 | master
  g_1_prt_1                  | AccessExclusiveLock | append-only segment file | master
- g_1_prt_1                  | AccessExclusiveLock | append-only segment file | 1 segment
  g_1_prt_1                  | AccessShareLock     | relation                 | master
- g_1_prt_1                  | RowExclusiveLock    | relation                 | 1 segment
- g_1_prt_2                  | AccessExclusiveLock | append-only segment file | 1 segment
  g_1_prt_2                  | AccessExclusiveLock | append-only segment file | master
  g_1_prt_2                  | AccessShareLock     | relation                 | master
- g_1_prt_2                  | RowExclusiveLock    | relation                 | 1 segment
  g_1_prt_3                  | AccessExclusiveLock | append-only segment file | master
- g_1_prt_3                  | AccessExclusiveLock | append-only segment file | 1 segment
  g_1_prt_3                  | AccessShareLock     | relation                 | master
- g_1_prt_3                  | RowExclusiveLock    | relation                 | 1 segment
- locktest                   | AccessShareLock     | relation                 | master
  pg_class                   | AccessShareLock     | relation                 | master
  pg_class_oid_index         | AccessShareLock     | relation                 | master
  pg_class_relname_nsp_index | AccessShareLock     | relation                 | master
  pg_locks                   | AccessShareLock     | relation                 | master
-(23 rows)
+(11 rows)
+
+select * from locktest_segments;
+  coalesce   |        mode         |         locktype         |    node    
+-------------+---------------------+--------------------------+------------
+ g_1_prt_3   | RowExclusiveLock    | relation                 | 1 segment
+ pg_class    | AccessShareLock     | relation                 | n segments
+ g_1_prt_3   | AccessExclusiveLock | append-only segment file | 1 segment
+ g_1_prt_2   | RowExclusiveLock    | relation                 | 1 segment
+ aoseg table | AccessShareLock     | relation                 | n segments
+ aoseg table | AccessShareLock     | relation                 | n segments
+ aoseg table | AccessShareLock     | relation                 | n segments
+ aoseg table | AccessShareLock     | relation                 | n segments
+ g_1_prt_2   | AccessExclusiveLock | append-only segment file | 1 segment
+ g_1_prt_1   | AccessExclusiveLock | append-only segment file | 1 segment
+ g_1_prt_1   | RowExclusiveLock    | relation                 | 1 segment
+ g           | RowExclusiveLock    | relation                 | n segments
+(12 rows)
 
 commit;
 -- drop
 begin;
 drop table g;
-select * from locktest;
-          coalesce          |        mode         | locktype |    node    
-----------------------------+---------------------+----------+------------
- dropped table              | AccessExclusiveLock | relation | master
- dropped table              | AccessExclusiveLock | relation | n segments
- dropped table              | AccessExclusiveLock | relation | n segments
- dropped table              | AccessExclusiveLock | relation | n segments
- dropped table              | AccessExclusiveLock | relation | master
- dropped table              | AccessExclusiveLock | relation | master
- dropped table              | AccessExclusiveLock | relation | n segments
+select * from locktest_master;
+          coalesce          |        mode         | locktype |  node  
+----------------------------+---------------------+----------+--------
  dropped table              | AccessExclusiveLock | relation | master
  dropped table              | AccessExclusiveLock | relation | master
  dropped table              | AccessExclusiveLock | relation | master
- dropped table              | AccessExclusiveLock | relation | n segments
- dropped table              | AccessExclusiveLock | relation | n segments
- gp_distribution_policy     | RowExclusiveLock    | relation | n segments
+ dropped table              | AccessExclusiveLock | relation | master
+ dropped table              | AccessExclusiveLock | relation | master
+ dropped table              | AccessExclusiveLock | relation | master
  gp_distribution_policy     | RowExclusiveLock    | relation | master
- locktest                   | AccessShareLock     | relation | master
  pg_appendonly              | RowExclusiveLock    | relation | master
- pg_appendonly              | RowExclusiveLock    | relation | n segments
  pg_class                   | AccessShareLock     | relation | master
  pg_class                   | RowExclusiveLock    | relation | master
  pg_class_oid_index         | AccessShareLock     | relation | master
@@ -198,7 +239,21 @@ select * from locktest;
  pg_partition               | RowExclusiveLock    | relation | master
  pg_partition_rule          | RowExclusiveLock    | relation | master
  pg_type                    | RowExclusiveLock    | relation | master
-(26 rows)
+(17 rows)
+
+select * from locktest_segments;
+        coalesce        |        mode         | locktype |    node    
+------------------------+---------------------+----------+------------
+ pg_class               | AccessShareLock     | relation | n segments
+ dropped table          | AccessExclusiveLock | relation | n segments
+ dropped table          | AccessExclusiveLock | relation | n segments
+ dropped table          | AccessExclusiveLock | relation | n segments
+ dropped table          | AccessExclusiveLock | relation | n segments
+ dropped table          | AccessExclusiveLock | relation | n segments
+ dropped table          | AccessExclusiveLock | relation | n segments
+ gp_distribution_policy | RowExclusiveLock    | relation | n segments
+ pg_appendonly          | RowExclusiveLock    | relation | n segments
+(9 rows)
 
 commit;
 -- Indexing
@@ -226,20 +281,25 @@ NOTICE:  building index for child partition "g_1_prt_6"
 NOTICE:  building index for child partition "g_1_prt_7"
 NOTICE:  building index for child partition "g_1_prt_8"
 NOTICE:  building index for child partition "g_1_prt_9"
-select * from locktest;
-          coalesce          |        mode         | locktype |    node    
-----------------------------+---------------------+----------+------------
- g                          | ShareLock           | relation | n segments
+select * from locktest_master;
+          coalesce          |        mode         | locktype |  node  
+----------------------------+---------------------+----------+--------
  g                          | ShareLock           | relation | master
- g_idx                      | AccessExclusiveLock | relation | n segments
  g_idx                      | AccessExclusiveLock | relation | master
- locktest                   | AccessShareLock     | relation | master
  pg_class                   | AccessShareLock     | relation | master
  pg_class_oid_index         | AccessShareLock     | relation | master
  pg_class_relname_nsp_index | AccessShareLock     | relation | master
  pg_locks                   | AccessShareLock     | relation | master
  pg_partition_rule          | AccessShareLock     | relation | master
-(10 rows)
+(7 rows)
+
+select * from locktest_segments;
+ coalesce |        mode         | locktype |    node    
+----------+---------------------+----------+------------
+ g        | ShareLock           | relation | n segments
+ pg_class | AccessShareLock     | relation | n segments
+ g_idx    | AccessExclusiveLock | relation | n segments
+(3 rows)
 
 commit;
 -- Force use of the index in the select and delete below. We're not interested
@@ -255,74 +315,83 @@ select * from g where i = 1;
 (0 rows)
 
 -- Known_opt_diff: MPP-20936
-select * from locktest;
-          coalesce          |      mode       | locktype |   node    
-----------------------------+-----------------+----------+-----------
+select * from locktest_master;
+          coalesce          |      mode       | locktype |  node  
+----------------------------+-----------------+----------+--------
  g                          | AccessShareLock | relation | master
  g_1_prt_1                  | AccessShareLock | relation | master
- g_1_prt_1                  | AccessShareLock | relation | 1 segment
- g_idx_1_prt_1              | AccessShareLock | relation | 1 segment
  g_idx_1_prt_1              | AccessShareLock | relation | master
- locktest                   | AccessShareLock | relation | master
  pg_class                   | AccessShareLock | relation | master
  pg_class_oid_index         | AccessShareLock | relation | master
  pg_class_relname_nsp_index | AccessShareLock | relation | master
  pg_locks                   | AccessShareLock | relation | master
-(10 rows)
+(7 rows)
+
+select * from locktest_segments;
+   coalesce    |      mode       | locktype |    node    
+---------------+-----------------+----------+------------
+ g_idx_1_prt_1 | AccessShareLock | relation | 1 segment
+ pg_class      | AccessShareLock | relation | n segments
+ g_1_prt_1     | AccessShareLock | relation | 1 segment
+(3 rows)
 
 commit;
 begin;
 -- insert locking
 insert into g values(3, 'f');
-select * from locktest;
-          coalesce          |       mode       | locktype |   node    
-----------------------------+------------------+----------+-----------
+select * from locktest_master;
+          coalesce          |       mode       | locktype |  node  
+----------------------------+------------------+----------+--------
  g                          | RowExclusiveLock | relation | master
- g                          | RowExclusiveLock | relation | 1 segment
- g_1_prt_3                  | RowExclusiveLock | relation | 1 segment
- locktest                   | AccessShareLock  | relation | master
  pg_class                   | AccessShareLock  | relation | master
  pg_class_oid_index         | AccessShareLock  | relation | master
  pg_class_relname_nsp_index | AccessShareLock  | relation | master
  pg_locks                   | AccessShareLock  | relation | master
-(8 rows)
+(5 rows)
+
+select * from locktest_segments;
+ coalesce  |       mode       | locktype |    node    
+-----------+------------------+----------+------------
+ g         | RowExclusiveLock | relation | 1 segment
+ g_1_prt_3 | RowExclusiveLock | relation | 1 segment
+ pg_class  | AccessShareLock  | relation | n segments
+(3 rows)
 
 commit;
 -- delete locking
 begin;
 delete from g where i = 4;
 -- Known_opt_diff: MPP-20936
-select * from locktest;
-          coalesce          |       mode       | locktype |   node    
-----------------------------+------------------+----------+-----------
- g                          | ExclusiveLock    | relation | master
- g_1_prt_4                  | ExclusiveLock    | relation | master
- g_1_prt_4                  | RowExclusiveLock | relation | 1 segment
- locktest                   | AccessShareLock  | relation | master
- pg_class                   | AccessShareLock  | relation | master
- pg_class_oid_index         | AccessShareLock  | relation | master
- pg_class_relname_nsp_index | AccessShareLock  | relation | master
- pg_locks                   | AccessShareLock  | relation | master
-(8 rows)
+select * from locktest_master;
+          coalesce          |       mode      | locktype |  node  
+----------------------------+-----------------+----------+--------
+ g                          | ExclusiveLock   | relation | master
+ g_1_prt_4                  | ExclusiveLock   | relation | master
+ pg_class                   | AccessShareLock | relation | master
+ pg_class_oid_index         | AccessShareLock | relation | master
+ pg_class_relname_nsp_index | AccessShareLock | relation | master
+ pg_locks                   | AccessShareLock | relation | master
+(6 rows)
+
+select * from locktest_segments;
+ coalesce  |       mode       | locktype |    node    
+-----------+------------------+----------+------------
+ pg_class  | AccessShareLock  | relation | n segments
+ g_1_prt_4 | RowExclusiveLock | relation | 1 segment
+(2 rows)
 
 commit;
 -- drop index
 begin;
 drop table g;
-select * from locktest;
-          coalesce          |        mode         | locktype |    node    
-----------------------------+---------------------+----------+------------
+select * from locktest_master;
+          coalesce          |        mode         | locktype |  node  
+----------------------------+---------------------+----------+--------
  dropped table              | AccessExclusiveLock | relation | master
  dropped table              | AccessExclusiveLock | relation | master
- dropped table              | AccessExclusiveLock | relation | n segments
- dropped table              | AccessExclusiveLock | relation | n segments
- dropped table              | AccessExclusiveLock | relation | n segments
  dropped table              | AccessExclusiveLock | relation | master
- dropped table              | AccessExclusiveLock | relation | n segments
  dropped table              | AccessExclusiveLock | relation | master
  gp_distribution_policy     | RowExclusiveLock    | relation | master
- gp_distribution_policy     | RowExclusiveLock    | relation | n segments
- locktest                   | AccessShareLock     | relation | master
  pg_class                   | AccessShareLock     | relation | master
  pg_class                   | RowExclusiveLock    | relation | master
  pg_class_oid_index         | AccessShareLock     | relation | master
@@ -332,6 +401,17 @@ select * from locktest;
  pg_partition               | RowExclusiveLock    | relation | master
  pg_partition_rule          | RowExclusiveLock    | relation | master
  pg_type                    | RowExclusiveLock    | relation | master
-(20 rows)
+(14 rows)
+
+select * from locktest_segments;
+        coalesce        |        mode         | locktype |    node    
+------------------------+---------------------+----------+------------
+ pg_class               | AccessShareLock     | relation | n segments
+ dropped table          | AccessExclusiveLock | relation | n segments
+ dropped table          | AccessExclusiveLock | relation | n segments
+ dropped table          | AccessExclusiveLock | relation | n segments
+ dropped table          | AccessExclusiveLock | relation | n segments
+ gp_distribution_policy | RowExclusiveLock    | relation | n segments
+(6 rows)
 
 commit;

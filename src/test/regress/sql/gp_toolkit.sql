@@ -223,14 +223,14 @@ select relname,
        sotusize > 50000 as sz_over50kb,
        sotusize < 5000000 as sz_under5mb
 from pg_class pg, gp_toolkit.gp_size_of_table_uncompressed sotu
-where relname = 'toolkit_ao2' and pg.relfilenode=sotu.sotuoid;
+where relname = 'toolkit_ao2' and pg.oid=sotu.sotuoid;
 
 -- gp_size_of_index
 select pg.relname,
        si.soisize > 50000 as sz_over50kb,
        si.soisize < 5000000 as sz_under5mb
 from pg_class pg, gp_toolkit.gp_size_of_index si
-where relname = 'toolkit_ao2' and pg.relfilenode=si.soitableoid;
+where relname = 'toolkit_ao2' and pg.oid=si.soitableoid;
 
 -- gp_size_of_table_disk
 select relname, 
@@ -240,34 +240,34 @@ select relname,
        sotdadditionalsize > 50000 as daddsz_over_50kb,
        sotdadditionalsize < 5000000 as daddsz_under_5mb
 from pg_class pg, gp_toolkit.gp_size_of_table_disk st
-where relname = 'toolkit_ao2' and pg.relfilenode=st.sotdoid;
+where relname = 'toolkit_ao2' and pg.oid=st.sotdoid;
 
 -- gp_size_of_table_uncompressed
 select relname,
        sotusize > 500000 as uncomp_over_500kb,
        sotusize < 5000000 as uncomp_below_5mb
 from pg_class pg, gp_toolkit.gp_size_of_table_uncompressed sotu
-where relname = 'toolkit_ao2' and pg.relfilenode=sotu.sotuoid;
+where relname = 'toolkit_ao2' and pg.oid=sotu.sotuoid;
 
 -- gp_table_indexes
 select pg.relname,
        ti.tiidxoid::regclass
 from pg_class pg, gp_toolkit.gp_table_indexes ti
-where relname = 'toolkit_ao2' and pg.relfilenode=ti.tireloid;
+where relname = 'toolkit_ao2' and pg.oid=ti.tireloid;
 
 -- gp_size_of_all_table_indexes
 select pg.relname,
        soati.soatisize > 50000 as sz_over_50kb,
        soati.soatisize < 5000000 as sz_under_5mb
 from pg_class pg, gp_toolkit.gp_size_of_all_table_indexes soati
-where relname = 'toolkit_ao2' and pg.relfilenode=soati.soatioid;
+where relname = 'toolkit_ao2' and pg.oid=soati.soatioid;
 
 -- gp_size_of_table_and_indexes_disk
 select pg.relname,
        sotai.sotaidtablesize > 500000 as tablesz_over_500kb,
        sotai.sotaididxsize < 5000000 as tablesz_below_5mb
 from pg_class pg, gp_toolkit.gp_size_of_table_and_indexes_disk sotai
-where relname = 'toolkit_ao2' and pg.relfilenode=sotai.sotaidoid;
+where relname = 'toolkit_ao2' and pg.oid=sotai.sotaidoid;
 
 -- gp_size_of_table_and_indexes_licensing
 select pg.relname,
@@ -278,7 +278,7 @@ select pg.relname,
        sotail.sotailindexessize > 50000 as indexes_over_500k,
        sotail.sotailindexessize < 5000000 as uncompressed_below_5mb
 from pg_class pg, gp_toolkit.gp_size_of_table_and_indexes_licensing sotail
-where relname = 'toolkit_ao2' and pg.relfilenode=sotail.sotailoid;
+where relname = 'toolkit_ao2' and pg.oid=sotail.sotailoid;
 
 -- gp_size_of_schema_disk
 select sosdnsp,
@@ -299,7 +299,7 @@ select pg.relname,
        sopaidpartitiontablesize < 5000000 as tblsz_under5mb,
        sopaidpartitionindexessize
 from pg_class pg,gp_toolkit.gp_size_of_partition_and_indexes_disk gsopai
-where pg.relfilenode=gsopai.sopaidpartitionoid and pg.relname like 'gptoolkit_user_table_ao%';
+where pg.oid=gsopai.sopaidpartitionoid and pg.relname like 'gptoolkit_user_table_ao%';
 
 -- Test __gp_localid and __gp_masterid functions. The output of __gp_localid
 -- depends on the number of segments, so just check that it returns something.

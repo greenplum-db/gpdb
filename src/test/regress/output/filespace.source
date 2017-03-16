@@ -2704,7 +2704,7 @@ update pg_class set relfilenode=(select relfilenode from pg_class where relname=
     where relname='same_relfilenode2';
 reset allow_system_table_mods;
 reset gp_permit_relation_node_change;
-select relname from pg_class where relfilenode='same_relfilenode'::regclass;
+select relname from pg_class where relfilenode=(select relfilenode from pg_class where relname='same_relfilenode');
       relname      
 -------------------
  same_relfilenode

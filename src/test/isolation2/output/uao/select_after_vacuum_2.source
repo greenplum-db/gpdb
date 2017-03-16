@@ -53,11 +53,6 @@ INSERT 1000
 insert into ao2 select generate_series(1,1000);
 INSERT 1000
 
-DROP VIEW IF EXISTS locktest;
-DROP
-create view locktest as select coalesce( case when relname like 'pg_toast%index' then 'toast index' when relname like 'pg_toast%' then 'toast table' else relname end, 'dropped table'), mode, locktype from pg_locks l left outer join pg_class c on (l.relation = c.oid), pg_database d where relation is not null and l.database = d.oid and l.gp_segment_id = -1 and relname != 'gp_fault_strategy' and d.datname = current_database() order by 1, 3, 2;
-CREATE
-
 -- The actual test begins
 DELETE FROM ao WHERE a < 128;
 DELETE 2667
@@ -80,10 +75,16 @@ count
 -----
 18333
 (1 row)
-1: SELECT * FROM locktest WHERE coalesce = 'ao';
-coalesce|mode           |locktype
---------+---------------+--------
-ao      |AccessShareLock|relation
+1: SELECT * FROM locktest_master WHERE coalesce = 'ao';
+1: SELECT * FROM locktest_master WHERE coalesce = 'ao';
+coalesce|mode           |locktype|node
+--------+---------------+--------+------
+ao      |AccessShareLock|relation|master
+(1 row)
+1: SELECT * FROM locktest_segments WHERE coalesce = 'ao';
+coalesce|mode           |locktype|node
+--------+---------------+--------+----------
+ao      |AccessShareLock|relation|n segments
 (1 row)
 1: COMMIT;
 COMMIT

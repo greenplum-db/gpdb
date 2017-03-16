@@ -6,26 +6,58 @@
 -- of the locks in segments. If a relation is locked only on one segment,
 -- we print that as a special case, but otherwise we just print "n segments",
 -- meaning the relation is locked on more than one segment.
-create or replace view locktest as
+create or replace view locktest_master as
 select coalesce(
   case when relname like 'pg_toast%index' then 'toast index'
        when relname like 'pg_toast%' then 'toast table'
        when relname like 'pg_aoseg%' then 'aoseg table'
+       when relname like 'pg_aovisimap%index' then 'aovisimap index'
+       when relname like 'pg_aovisimap%' then 'aovisimap table'
        else relname end, 'dropped table'),
   mode,
   locktype,
-  case when l.gp_segment_id = -1 then 'master'
-       when COUNT(*) = 1 then '1 segment'
-       else 'n segments' end AS node
+  'master'::text as node
 from pg_locks l
-left outer join pg_class c on (l.relation = c.oid),
+left outer join pg_class c on ((l.locktype = 'append-only segment file' and l.relation = c.relfilenode) or (l.locktype != 'append-only segment file' and l.relation = c.oid)),
 pg_database d
 where relation is not null
 and l.database = d.oid
-and (relname <> 'gp_fault_strategy' or relname IS NULL)
+and (relname <> 'gp_fault_strategy' and relname != 'locktest_master' or relname is NULL)
 and d.datname = current_database()
-group by l.gp_segment_id = -1, relation, relname, locktype, mode
+and l.gp_segment_id = -1
+group by l.gp_segment_id, relation, relname, locktype, mode
 order by 1, 3, 2;
+
+create or replace view locktest_segments_dist as
+select relname,
+  mode,
+  locktype,
+  l.gp_segment_id as node,
+  relation
+from pg_locks l
+left outer join pg_class c on ((l.locktype = 'append-only segment file' and l.relation = c.relfilenode) or (l.locktype != 'append-only segment file' and l.relation = c.oid)),
+pg_database d
+where relation is not null
+and l.database = d.oid
+and (relname <> 'gp_fault_strategy' and relname != 'locktest_segments_dist' or relname is NULL)
+and d.datname = current_database()
+and l.gp_segment_id > -1
+group by l.gp_segment_id, relation, relname, locktype, mode;
+
+create or replace view locktest_segments as
+SELECT coalesce(
+  case when relname like 'pg_toast%index' then 'toast index'
+       when relname like 'pg_toast%' then 'toast table'
+       when relname like 'pg_aoseg%' then 'aoseg table'
+       when relname like 'pg_aovisimap%index' then 'aovisimap index'
+       when relname like 'pg_aovisimap%' then 'aovisimap table'
+       else relname end, 'dropped table'),
+  mode,
+  locktype,
+  case when count(*) = 1 then '1 segment'
+       else 'n segments' end as node
+  FROM gp_dist_random('locktest_segments_dist')
+  group by relname, relation, mode, locktype;
 
 -- Partitioned table with toast table
 begin;
@@ -34,13 +66,15 @@ begin;
 create table g (i int, t text) partition by range(i)
 (start(1) end(10) every(1));
 
-select * from locktest;
+select * from locktest_master;
+select * from locktest_segments;
 commit;
 
 -- drop
 begin;
 drop table g;
-select * from locktest;
+select * from locktest_master;
+select * from locktest_segments;
 commit;
 
 -- AO table (ao segments, block directory won't exist after create)
@@ -50,7 +84,8 @@ create table g (i int, t text, n numeric)
 with (appendonly = true)
 partition by list(i)
 (values(1), values(2), values(3));
-select * from locktest;
+select * from locktest_master;
+select * from locktest_segments;
 commit;
 begin;
 
@@ -60,13 +95,15 @@ insert into g values(1), (2), (3);
 insert into g values(1), (2), (3);
 insert into g values(1), (2), (3);
 insert into g values(1), (2), (3);
-select * from locktest;
-
+select * from locktest_master;
+select * from locktest_segments;
 commit;
+
 -- drop
 begin;
 drop table g;
-select * from locktest;
+select * from locktest_master;
+select * from locktest_segments;
 commit;
 
 -- Indexing
@@ -75,7 +112,8 @@ create table g (i int, t text) partition by range(i)
 
 begin;
 create index g_idx on g(i);
-select * from locktest;
+select * from locktest_master;
+select * from locktest_segments;
 commit;
 
 -- Force use of the index in the select and delete below. We're not interested
@@ -88,24 +126,28 @@ set enable_seqscan=off;
 begin;
 select * from g where i = 1;
 -- Known_opt_diff: MPP-20936
-select * from locktest;
+select * from locktest_master;
+select * from locktest_segments;
 commit;
 
 begin;
 -- insert locking
 insert into g values(3, 'f');
-select * from locktest;
+select * from locktest_master;
+select * from locktest_segments;
 commit;
 
 -- delete locking
 begin;
 delete from g where i = 4;
 -- Known_opt_diff: MPP-20936
-select * from locktest;
+select * from locktest_master;
+select * from locktest_segments;
 commit;
 
 -- drop index
 begin;
 drop table g;
-select * from locktest;
+select * from locktest_master;
+select * from locktest_segments;
 commit;
