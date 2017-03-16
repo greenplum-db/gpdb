@@ -1,7 +1,3 @@
-[submodule "gpAux/client"]
-	path = gpAux/client
-	url = git@github.com:greenplum-db/gpclients.git
-	branch = master
 [submodule "gpAux/extensions/plr/source"]
 	path = gpAux/extensions/plr/source
 	url = git@github.com:greenplum-db/plr.git
