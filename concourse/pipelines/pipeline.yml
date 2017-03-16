@@ -819,24 +819,6 @@ jobs:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "GPDB-BehaveGPRecoverseg"
 
-- name: MU_kerberos-smoke
-  plan:
-  - aggregate: *post_packaging_gets_trigger_true
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-kerberos_smoke"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-kerberos_smoke"
-
 - name: MU_gpexpand
   plan:
   - get: nightly-trigger
