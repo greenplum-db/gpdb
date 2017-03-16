@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2011 Greenplum, Inc.
+//	Copyright (C) 2017 Pivotal Software, Inc.
 //
 //	@filename:
 //		CMappingColIdVarPlStmt.cpp
@@ -20,6 +20,7 @@
 #include "gpopt/translate/CMappingColIdVarPlStmt.h"
 #include "gpopt/translate/CDXLTranslateContextBaseTable.h"
 
+#include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/exception.h"
 #include "naucrates/md/CMDIdGPDB.h"
 #include "naucrates/dxl/operators/CDXLScalarIdent.h"
@@ -32,6 +33,10 @@
 using namespace gpdxl;
 using namespace gpos;
 using namespace gpmd;
+using namespace gpnaucrates;
+
+typedef CHashMap<ULONG, CWStringConst, gpos::UlHash<ULONG>, gpos::FEqual<ULONG>,
+CleanupDelete<ULONG>, CleanupDelete<CWStringConst> > HMUlStr;
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -55,7 +60,36 @@ CMappingColIdVarPlStmt::CMappingColIdVarPlStmt
 	m_pdxltrctxbt(pdxltrctxbt),
 	m_pdrgpdxltrctx(pdrgpdxltrctx),
 	m_pdxltrctxOut(pdxltrctxOut),
-	m_pctxdxltoplstmt(pctxdxltoplstmt)
+	m_pctxdxltoplstmt(pctxdxltoplstmt),
+	m_fUseInnerOuter(true)
+{
+	GPOS_ASSERT(NULL != pplan);
+	m_pplan = pplan;
+}
+
+CMappingColIdVarPlStmt::CMappingColIdVarPlStmt
+	(
+	IMemoryPool *pmp,
+	const CDXLTranslateContextBaseTable *pdxltrctxbt,
+	DrgPdxltrctx *pdrgpdxltrctx,
+	CDXLTranslateContext *pdxltrctxOut,
+	CContextDXLToPlStmt *pctxdxltoplstmt,
+	Plan *pplan,
+	BOOL fUseInnerOuter,
+	HMUlUl *phmColIdRteIdxPrintableFilter,
+	HMUlUl *phmColIdAttnoPrintableFilter,
+	HMUlStr *phmColIdAliasPrintableFilter
+	)
+	:
+	CMappingColIdVar(pmp),
+	m_pdxltrctxbt(pdxltrctxbt),
+	m_pdrgpdxltrctx(pdrgpdxltrctx),
+	m_pdxltrctxOut(pdxltrctxOut),
+	m_pctxdxltoplstmt(pctxdxltoplstmt),
+	m_fUseInnerOuter(fUseInnerOuter),
+	m_phmColIdRteIdxPrintableFilter(phmColIdRteIdxPrintableFilter),
+	m_phmColIdAttnoPrintableFilter(phmColIdAttnoPrintableFilter),
+	m_phmColIdAliasPrintableFilter(phmColIdAliasPrintableFilter)
 {
 	GPOS_ASSERT(NULL != pplan);
 
@@ -154,15 +188,38 @@ CMappingColIdVarPlStmt::PvarFromDXLNodeScId
 	Index idxVarno = 0;
 	AttrNumber attno = 0;
 
+	bool fVarNoExistInHashMap = false;
+	bool fAttnoExistInHashMap = false;
+
 	Index idxVarnoold = 0;
 	AttrNumber attnoOld = 0;
 
 	const ULONG ulColId = pdxlop->Pdxlcr()->UlID();
+
+	// for printable filters, there are no INNER/OUTER references
+	// do lookup in the hashmap
+	if(!m_fUseInnerOuter)
+	{
+		ULONG *pulVarno = m_phmColIdRteIdxPrintableFilter->PtLookup(&ulColId);
+		if(pulVarno)
+		{
+			idxVarno = *pulVarno;
+			fVarNoExistInHashMap = true;
+		}
+
+		ULONG *pulAttnoMapped = m_phmColIdAttnoPrintableFilter->PtLookup(&ulColId);
+		if(pulAttnoMapped)
+		{
+			attno = (int16)(*pulAttnoMapped);
+			fAttnoExistInHashMap = true;
+		}
+	}
+
 	if (NULL != m_pdxltrctxbt)
 	{
 		// scalar id is used in a base table operator node
-		idxVarno = m_pdxltrctxbt->IRel();
-		attno = (AttrNumber) m_pdxltrctxbt->IAttnoForColId(ulColId);
+		idxVarno = fVarNoExistInHashMap ? idxVarno : m_pdxltrctxbt->IRel();
+		attno = fAttnoExistInHashMap ? attno : (AttrNumber) m_pdxltrctxbt->IAttnoForColId(ulColId);
 
 		idxVarnoold = idxVarno;
 		attnoOld = attno;
@@ -186,7 +243,7 @@ CMappingColIdVarPlStmt::PvarFromDXLNodeScId
 		if (NULL != pte)
 		{
 			// identifier comes from left child
-			idxVarno = OUTER;
+			idxVarno = fVarNoExistInHashMap ? idxVarno : OUTER;
 		}
 		else
 		{
@@ -205,7 +262,7 @@ CMappingColIdVarPlStmt::PvarFromDXLNodeScId
 
 			pte = pdxltrctxRight->Pte(ulColId);
 
-			idxVarno = INNER;
+			idxVarno = fVarNoExistInHashMap ? idxVarno : INNER;
 
 			// check any additional contexts if col is still not found yet
 			for (ULONG ul = 2; NULL == pte && ul < ulContexts; ul++)
@@ -220,7 +277,8 @@ CMappingColIdVarPlStmt::PvarFromDXLNodeScId
 				}
 
 				Var *pv = (Var*) pte->expr;
-				idxVarno = pv->varno;
+
+				idxVarno = fVarNoExistInHashMap ? idxVarno : pv->varno;
 			}
 		}
 
@@ -229,7 +287,7 @@ CMappingColIdVarPlStmt::PvarFromDXLNodeScId
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtAttributeNotFound, ulColId);
 		}
 
-		attno = pte->resno;
+		attno = fAttnoExistInHashMap ? attno : pte->resno;
 
 		// find the original varno and attno for this column
 		if (IsA(pte->expr, Var))
@@ -259,6 +317,30 @@ CMappingColIdVarPlStmt::PvarFromDXLNodeScId
 	pvar->varoattno = attnoOld;
 
 	return pvar;
+}
+
+bool
+CMappingColIdVarPlStmt::FuseInnerOuter()
+{
+	return m_fUseInnerOuter;
+}
+
+HMUlUl*
+CMappingColIdVarPlStmt::PhmColIdRteIdxPrintableFilter()
+{
+	return m_phmColIdRteIdxPrintableFilter;
+}
+
+HMUlUl*
+CMappingColIdVarPlStmt::PhmColIdAttnoPrintableFilter()
+{
+	return m_phmColIdAttnoPrintableFilter;
+}
+
+HMUlStr*
+CMappingColIdVarPlStmt::PhmColIdAliasPrintableFilter()
+{
+	return m_phmColIdAliasPrintableFilter;
 }
 
 // EOF

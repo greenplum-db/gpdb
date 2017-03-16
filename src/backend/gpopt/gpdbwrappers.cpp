@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2012 EMC Corp.
+//	Copyright (C) 2017 Pivotal Software, Inc.
 //
 //	@filename:
 //		gpdbwrappers.cpp
@@ -3026,4 +3026,23 @@ gpdb::FMDCacheNeedsReset
 	return true;
 }
 
+// Create a PrintableFilterCol for expression aliases in printable predicate
+PrintableFilterCol*
+gpdb::PMakePrintableFilter
+	(
+		char *str,
+		Oid oid
+	)
+{
+	GP_WRAP_START;
+	{
+		PrintableFilterCol *partSelectKey = makeNode(PrintableFilterCol);
+		partSelectKey->columnname = str;
+		partSelectKey->type = oid;
+		return partSelectKey;
+	}
+	GP_WRAP_END;
+
+	return NULL;
+}
 // EOF

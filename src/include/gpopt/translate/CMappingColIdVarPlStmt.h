@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2011 Greenplum, Inc.
+//	Copyright (C) 2017 Pivotal Software, Inc.
 //
 //	@filename:
 //		CMappingColIdVarPlStmt.h
@@ -23,6 +23,7 @@
 
 #include "gpopt/translate/CMappingColIdVar.h"
 #include "gpopt/translate/CDXLTranslateContext.h"
+#include "gpopt/translate/CTranslatorUtils.h"
 
 //fwd decl
 struct Var;
@@ -30,7 +31,6 @@ struct Plan;
 
 namespace gpdxl
 {
-
 	// fwd decl
 	class CDXLTranslateContextBaseTable;
 	class CContextDXLToPlStmt;
@@ -61,6 +61,20 @@ namespace gpdxl
 			// with a param node
 			CContextDXLToPlStmt *m_pctxdxltoplstmt;
 
+			BOOL m_fUseInnerOuter;
+
+			// map of UlColId to RTE index for printable filters
+			HMUlUl *m_phmColIdRteIdxPrintableFilter;
+
+			// map UlColdId to Attno for printable filters
+			HMUlUl *m_phmColIdAttnoPrintableFilter;
+
+			// map UlColdId to Column Alias for printable filters
+			typedef CHashMap<ULONG, CWStringConst, gpos::UlHash<ULONG>, gpos::FEqual<ULONG>,
+				CleanupDelete<ULONG>, CleanupDelete<CWStringConst> > HMUlStr;
+
+			HMUlStr *m_phmColIdAliasPrintableFilter;
+
 		public:
 
 			CMappingColIdVarPlStmt
@@ -71,6 +85,20 @@ namespace gpdxl
 				CDXLTranslateContext *pdxltrctxOut,
 				CContextDXLToPlStmt *pctxdxltoplstmt,
 				Plan *pplan
+				);
+
+			CMappingColIdVarPlStmt
+				(
+				IMemoryPool *pmp,
+				const CDXLTranslateContextBaseTable *pdxltrctxbt,
+				DrgPdxltrctx *pdrgpdxltrctx,
+				CDXLTranslateContext *pdxltrctxOut,
+				CContextDXLToPlStmt *pctxdxltoplstmt,
+				Plan *pplan,
+				bool fUseInnerOuter,
+				HMUlUl *phmColIdRteIdxPrintableFilter,
+				HMUlUl *phmColIdAttnoPrintableFilter,
+				HMUlStr *phmColIdAliasPrintableFilter
 				);
 
 			// translate DXL ScalarIdent node into GPDB Var node
@@ -88,6 +116,14 @@ namespace gpdxl
 
 			// return the context of the DXL->PlStmt translation
 			CContextDXLToPlStmt *Pctxdxltoplstmt();
+
+			BOOL FuseInnerOuter();
+
+			HMUlUl *PhmColIdRteIdxPrintableFilter();
+
+			HMUlUl *PhmColIdAttnoPrintableFilter();
+
+			HMUlStr *PhmColIdAliasPrintableFilter();
 	};
 }
 

@@ -105,3 +105,16 @@ SELECT * from
 get_explain_output($$
 	select * from (values (1)) as f(a) join (values(2)) b(b) on a = b$$) as et
 WHERE et like '%Hash Cond:%';
+
+--
+-- Test Printable Filter
+--
+create table partition_table(a int, pk int) distributed by (a) partition by range(pk) (start (1) end (4) every (2));
+create table another_partition_table(x int, another_pk int) distributed by (x) partition by range(another_pk) (start (1) end (4) every (2));
+create table bar (c int, d int);
+
+SELECT * from
+  get_explain_output($$
+select * from partition_table join bar on a = c and d = pk join another_partition_table on x = a and d = another_pk;
+  $$) as et
+  WHERE et like '%Filter: partition_table.pk = another_partition_table.another_pk%';

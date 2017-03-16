@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2010 Greenplum, Inc.
+//	Copyright (C) 2017 Pivotal Software, Inc.
 //
 //	@filename:
 //		CTranslatorDXLToPlStmt.h
@@ -140,6 +140,18 @@ namespace gpdxl
 			
 			CTranslatorDXLToScalar *m_pdxlsctranslator;
 
+			// map of UlColId to RTE index for printable filters
+			HMUlUl *m_phmColIdRteIdxPrintableFilter;
+
+			// map UlColdId to Attno for printable filters
+			HMUlUl *m_phmColIdAttnoPrintableFilter;
+
+			// map UlColdId to Column Alias for printable filters
+			typedef CHashMap<ULONG, CWStringConst, gpos::UlHash<ULONG>, gpos::FEqual<ULONG>,
+					CleanupDelete<ULONG>, CleanupDelete<CWStringConst> > HMUlStr;
+
+			HMUlStr *m_phmColIdAliasPrintableFilter;
+
 			// command type
 			CmdType m_cmdtype;
 			
@@ -270,6 +282,15 @@ namespace gpdxl
 			// translate the join types from its DXL representation to the GPDB one
 			static JoinType JtFromEdxljt(EdxlJoinType edxljt);
 
+			// get hash map
+			HMUlUl *PhmColIdRteIdxPrintableFilter();
+
+			// get hash map
+			HMUlUl *PhmColIdAttnoPrintableFilter();
+
+			// get hash map
+			HMUlStr *PhmColIdAliasPrintableFilter();
+
 		private:
 
 			// initialize index of operator translators
@@ -283,6 +304,9 @@ namespace gpdxl
 
 			// Set InitPlanVariable in PlannedStmt
 			void SetInitPlanVariables(PlannedStmt *);
+
+			// insert mappings for printable filters for partition selectors
+			void InsertMappingsForPrintableFilter(const CDXLTableDescr *pdxltabdesc);
 
 			// Returns the id of the plan;
 			INT IPlanId(Plan* pplparent);

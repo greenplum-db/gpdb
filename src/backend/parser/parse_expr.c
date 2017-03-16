@@ -2889,6 +2889,9 @@ exprType(Node *expr)
 		case T_PartBoundOpenExpr:
 			type = BOOLOID;
 			break;
+		case T_PrintableFilterCol:
+			type = ((PrintableFilterCol *) expr)->type;
+			break;
 		default:
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(expr));
 			type = InvalidOid;	/* keep compiler quiet */

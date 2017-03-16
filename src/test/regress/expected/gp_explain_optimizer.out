@@ -145,3 +145,25 @@ WHERE et like '%Hash Cond:%';
    Hash Cond: column1 = column1
 (1 row)
 
+--
+-- Test Printable Filter
+--
+create table partition_table(a int, pk int) distributed by (a) partition by range(pk) (start (1) end (4) every (2));
+NOTICE:  CREATE TABLE will create partition "partition_table_1_prt_1" for table "partition_table"
+NOTICE:  CREATE TABLE will create partition "partition_table_1_prt_2" for table "partition_table"
+create table another_partition_table(x int, another_pk int) distributed by (x) partition by range(another_pk) (start (1) end (4) every (2));
+NOTICE:  CREATE TABLE will create partition "another_partition_table_1_prt_1" for table "another_partition_table"
+NOTICE:  CREATE TABLE will create partition "another_partition_table_1_prt_2" for table "another_partition_table"
+create table bar (c int, d int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT * from
+  get_explain_output($$
+select * from partition_table join bar on a = c and d = pk join another_partition_table on x = a and d = another_pk;
+  $$) as et
+  WHERE et like '%Filter: partition_table.pk = another_partition_table.another_pk%';
+                                         et
+-------------------------------------------------------------------------------------
+                     Filter: partition_table.pk = another_partition_table.another_pk
+(1 row)
+
