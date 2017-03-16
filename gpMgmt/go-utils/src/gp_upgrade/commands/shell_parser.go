@@ -5,8 +5,11 @@ import (
 )
 
 type ShellParser struct {
-	Output     string
-	Segment_id string
+	Output string
+}
+
+func NewShellParser(output string) *ShellParser {
+	return &ShellParser{Output: output}
 }
 
 func (parser ShellParser) IsPgUpgradeRunning() bool {

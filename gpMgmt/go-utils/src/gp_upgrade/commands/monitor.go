@@ -44,7 +44,7 @@ func (cmd MonitorCommand) Execute([]string) error {
 	}
 
 	// the response code will be 0 whether or not pg_upgrade is running
-	shellParser := ShellParser{Output: output, Segment_id: cmd.Segment_id}
+	shellParser := ShellParser{Output: output}
 
 	isRunning := shellParser.IsPgUpgradeRunning()
 	if isRunning {
