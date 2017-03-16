@@ -689,7 +689,7 @@ Feature: Validate command line arguments
         And the user runs """psql -c "CREATE ROLE select_group NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE RESOURCE QUEUE pg_default;" bkdb71"""
         And the user runs """psql -c "CREATE ROLE test_group NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE RESOURCE QUEUE pg_default;" bkdb71"""
         When the user runs "psql -c 'CREATE ROLE foo_user' bkdb71"
-        When the user runs "gpdbrestore --table-file test/behave/mgmt_utils/steps/data/include_tables_with_grant_permissions -u /tmp -a" with the stored timestamp
+        When the user runs "gpdbrestore --table-file test/behave/mgmt_utils/steps/data/include_tables_with_grant_permissions -u /tmp -a --noanalyze" with the stored timestamp
         Then gpdbrestore should return a return code of 0
         When the user runs "psql -f test/behave/mgmt_utils/steps/data/select_multi_byte_char_tables.sql bkdb71"
         Then psql should print 2000 to stdout 4 times
@@ -777,13 +777,13 @@ Feature: Validate command line arguments
         Given the old timestamps are read from json
         When the user runs gpdbrestore with the stored timestamp
         Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print Unable to find .* or .*. Skipping restore. to stdout
+        And gpdbrestore should print Unable to find .*. Skipping restore. to stdout
 
     Scenario: 81 Incremental Backup and Restore with the master dump file missing
         Given the old timestamps are read from json
         When the user runs gpdbrestore with the stored timestamp
         Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print Unable to find .* or .*. Skipping restore. to stdout
+        And gpdbrestore should print Unable to find .*. Skipping restore. to stdout
 
     Scenario: 82 Uppercase Database Name Full Backup and Restore
         Given the old timestamps are read from json

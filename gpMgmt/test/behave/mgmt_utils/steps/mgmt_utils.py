@@ -13,6 +13,7 @@ import thread
 import yaml
 import json
 import csv
+import glob
 
 from collections import defaultdict
 from datetime import datetime
@@ -1476,12 +1477,12 @@ def impl(context, filetype, dir):
     elif filetype == "report":
         filename = 'gp_dump_%s.rpt' % context.backup_timestamp
     elif filetype == "dump":
-        filename = 'gp_dump_1_1_%s.gz' % context.backup_timestamp
+        filename = 'gp_dump_*_1_%s.gz' % context.backup_timestamp
     else:
         raise Exception("Unknown filetype '%s' specified" % filetype)
 
     dump_dir = dir if len(dir.strip()) != 0 else master_data_dir
-    file_path = os.path.join(dump_dir, 'db_dumps', context.backup_timestamp[0:8], filename)
+    file_path = glob.glob(os.path.join(dump_dir, 'db_dumps', context.backup_timestamp[0:8], filename))[0]
 
     if os.path.exists(file_path):
         os.remove(file_path)
