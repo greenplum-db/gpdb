@@ -137,14 +137,12 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 		size = add_size(size, LockShmemSize());
 		size = add_size(size, workfile_mgr_shmem_size());
 		if (Gp_role == GP_ROLE_DISPATCH)
-		{
 			size = add_size(size, AppendOnlyWriterShmemSize());
-			
-			if(ResourceScheduler)
-			{
-				size = add_size(size, ResSchedulerShmemSize());
-				size = add_size(size, ResPortalIncrementShmemSize());				
-			}
+
+		if (IsResQueueEnabled() && Gp_role == GP_ROLE_DISPATCH)
+		{
+			size = add_size(size, ResSchedulerShmemSize());
+			size = add_size(size, ResPortalIncrementShmemSize());
 		}
 		size = add_size(size, ProcGlobalShmemSize());
 		size = add_size(size, XLOGShmemSize());
@@ -323,7 +321,7 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	/*
 	 * Set up resource schedular
 	 */
-	if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler)
+	if (IsResQueueEnabled() && Gp_role == GP_ROLE_DISPATCH)
 	{
 		InitResScheduler();
 		InitResPortalIncrementHash();

@@ -947,7 +947,7 @@ CreateQueue(CreateQueueStmt *stmt)
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		if (ResourceScheduler)
+		if (IsResQueueEnabled())
 		{
 			LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
 
@@ -973,7 +973,7 @@ CreateQueue(CreateQueueStmt *stmt)
 		{
 				ereport(WARNING,
 						(errmsg("resource scheduling is disabled"),
-						 errhint("To enable set resource_scheduler=on")));
+						 errhint("To enable set resource_scheduler=on and gp_resource_manager=queue")));
 		}
 	}
 
@@ -1358,7 +1358,7 @@ AlterQueue(AlterQueueStmt *stmt)
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		if (ResourceScheduler)
+		if (IsResQueueEnabled())
 		{
 			LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
 
@@ -1391,7 +1391,7 @@ AlterQueue(AlterQueueStmt *stmt)
 		{
 			ereport(WARNING,
 					(errmsg("resource scheduling is disabled"),
-					 errhint("To enable set resource_scheduler=on")));
+					 errhint("To enable set resource_scheduler=on and gp_resource_manager=queue")));
 		}
 	}
 
@@ -1512,7 +1512,7 @@ DropQueue(DropQueueStmt *stmt)
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		if (ResourceScheduler)
+		if (IsResQueueEnabled())
 		{
 			LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
 
@@ -1529,7 +1529,7 @@ DropQueue(DropQueueStmt *stmt)
 		{
 			ereport(WARNING,
 					(errmsg("resource scheduling is disabled"),
-					 errhint("To enable set resource_scheduler=on")));
+					 errhint("To enable set resource_scheduler=on and gp_resource_manager=queue")));
 		}
 	}
 

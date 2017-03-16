@@ -30,7 +30,8 @@ SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role';
 (1 row)
 
 ALTER ROLE rg_test_role RESOURCE GROUP none;
-NOTICE:  resource group required -- using default resource group "default_group"
+WARNING:  resource group is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=group
 SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role';
  rolresgroup 
 -------------
@@ -46,6 +47,8 @@ SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role';
 (1 row)
 
 ALTER ROLE rg_test_role RESOURCE GROUP default_group;
+WARNING:  resource group is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=group
 SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role';
  rolresgroup 
 -------------
@@ -53,7 +56,8 @@ SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role';
 (1 row)
 
 ALTER ROLE rg_test_role RESOURCE GROUP none;
-NOTICE:  resource group required -- using default resource group "admin_group"
+WARNING:  resource group is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=group
 SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role';
  rolresgroup 
 -------------
@@ -91,6 +95,8 @@ ERROR:  must specify both memory_limit and cpu_rate_limit
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=.5, memory_redzone_limit=.7);
 ERROR:  must specify both memory_limit and cpu_rate_limit
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=.5, memory_limit=.6, memory_redzone_limit=.7);
+WARNING:  resource group is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=group
 SELECT groupname,concurrency,proposed_concurrency,cpu_rate_limit,memory_limit,proposed_memory_limit,memory_redzone_limit FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
    groupname   | concurrency | proposed_concurrency | cpu_rate_limit | memory_limit | proposed_memory_limit | memory_redzone_limit 
 ---------------+-------------+----------------------+----------------+--------------+-----------------------+----------------------

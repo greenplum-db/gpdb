@@ -4620,9 +4620,9 @@ PostgresMain(int argc, char *argv[],
 	SetProcessingMode(NormalProcessing);
 
 	/*
-	 * Initialize resource queue hash structure.
+	 * Initialize resource scheduler hash structure.
 	 */
-	if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler && !am_walsender)
+	if (IsResQueueEnabled() && Gp_role == GP_ROLE_DISPATCH && !am_walsender)
 		InitResQueues();
 
 	/*
