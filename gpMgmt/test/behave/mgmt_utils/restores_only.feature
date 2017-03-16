@@ -818,25 +818,25 @@ Feature: Validate command line arguments
         When the user runs gpdbrestore with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that the data of "10" tables in "bkdb85" is validated after restore
-        And the gp_toolkit schema for "bkdb85" is verified after restore
+        And verify that the schema "gp_toolkit" exists in "bkdb85"
 
     Scenario: 86 Incremental backup and Restore should create the gp_toolkit schema with -e option
         Given the old timestamps are read from json
         When the user runs gpdbrestore with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that the data of "11" tables in "bkdb86" is validated after restore
-        And the gp_toolkit schema for "bkdb86" is verified after restore
+        And verify that the schema "gp_toolkit" exists in "bkdb86"
 
     Scenario: 87 Redirected Restore should create the gp_toolkit schema with or without -e option
         Given the old timestamps are read from json
         When the user runs "gpdbrestore --redirect=bkdb87-2 -a" with the stored timestamp
         Then gpdbrestore should return a return code of 0
         Then verify that the data of "10" tables in "bkdb87-2" is validated after restore from "bkdb87"
-        And the gp_toolkit schema for "bkdb87-2" is verified after restore
+        And verify that the schema "gp_toolkit" exists in "bkdb87-2"
         And the user runs "gpdbrestore --redirect=bkdb87-2 -e -a" with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that the data of "10" tables in "bkdb87-2" is validated after restore from "bkdb87"
-        And the gp_toolkit schema for "bkdb87-2" is verified after restore
+        And verify that the schema "gp_toolkit" exists in "bkdb87-2"
 
     Scenario: 88 gpdbrestore with noanalyze
         Given the old timestamps are read from json

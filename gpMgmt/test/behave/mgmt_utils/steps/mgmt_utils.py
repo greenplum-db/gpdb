@@ -3578,20 +3578,6 @@ def impl(context, filepath1, filepath2):
     if (contents1 != contents2):
         raise Exception("Contents of the files: %s and %s do not match" % (filepath1, filepath2))
 
-def get_gp_toolkit_info(context, dbname, fname):
-    cmdStr = """psql -c '\d gp_toolkit.*' -d %s > %s""" % (dbname, fname)
-    cmd = Command(name='get gp_toolkit info to file', cmdStr=cmdStr)
-    cmd.run(validateAfter=True)
-
-@given('the gp_toolkit schema for "{dbname}" is saved for verification')
-def impl(context, dbname):
-    get_gp_toolkit_info(context, dbname, 'gp_toolkit_backup')
-
-@then('the gp_toolkit schema for "{dbname}" is verified after restore')
-def impl(context, dbname):
-    get_gp_toolkit_info(context, dbname, 'gp_toolkit_restore')
-    diff_backup_restore_data(context, 'gp_toolkit_backup', 'gp_toolkit_restore')
-
 @given('the standby is not initialized')
 @then('the standby is not initialized')
 def impl(context):

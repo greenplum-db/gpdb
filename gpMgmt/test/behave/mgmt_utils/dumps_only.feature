@@ -1328,7 +1328,6 @@ Feature: Validate command line arguments
         And there is a "heap" table "public.heap_table" in "bkdb85" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb85" with data
         And all the data from "bkdb85" is saved for verification
-        And the gp_toolkit schema for "bkdb85" is saved for verification
         When the user runs "gpcrondump -x bkdb85 -a"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -1338,7 +1337,6 @@ Feature: Validate command line arguments
         And there is a "heap" table "public.heap_table" in "bkdb86" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb86" with data
         And all the data from "bkdb86" is saved for verification
-        And the gp_toolkit schema for "bkdb86" is saved for verification
         When the user runs "gpcrondump -x bkdb86 -a"
         Then gpcrondump should return a return code of 0
         When the user runs "gpcrondump -x bkdb86 --incremental -a"
@@ -1351,7 +1349,6 @@ Feature: Validate command line arguments
         And there is a "heap" table "public.heap_table" in "bkdb87" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb87" with data
         And all the data from "bkdb87" is saved for verification
-        And the gp_toolkit schema for "bkdb87" is saved for verification
         When the user runs "gpcrondump -x bkdb87 -a"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored

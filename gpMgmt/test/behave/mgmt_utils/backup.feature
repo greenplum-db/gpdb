@@ -2587,21 +2587,19 @@ Feature: Validate command line arguments
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
         And all the data from "bkdb" is saved for verification
-        And the gp_toolkit schema for "bkdb" is saved for verification
         When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
         And verify that the data of "10" tables in "bkdb" is validated after restore
-        And the gp_toolkit schema for "bkdb" is verified after restore
+        And verify that the schema "gp_toolkit" exists in "bkdb"
 
     Scenario: Incremental backup and Restore should create the gp_toolkit schema with -e option
         Given the test is initialized
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
         And all the data from "bkdb" is saved for verification
-        And the gp_toolkit schema for "bkdb" is saved for verification
         When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
         When the user runs "gpcrondump -x bkdb --incremental -a"
@@ -2610,7 +2608,7 @@ Feature: Validate command line arguments
         And the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
         And verify that the data of "11" tables in "bkdb" is validated after restore
-        And the gp_toolkit schema for "bkdb" is verified after restore
+        And verify that the schema "gp_toolkit" exists in "bkdb"
 
     Scenario: Redirected Restore should create the gp_toolkit schema with or without -e option
         Given the test is initialized
@@ -2618,18 +2616,17 @@ Feature: Validate command line arguments
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
         And all the data from "bkdb" is saved for verification
-        And the gp_toolkit schema for "bkdb" is saved for verification
         When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And the user runs "gpdbrestore --redirect=bkdb2 -a" with the stored timestamp
         And gpdbrestore should return a return code of 0
         And verify that the data of "10" tables in "bkdb2" is validated after restore from "bkdb"
-        And the gp_toolkit schema for "bkdb2" is verified after restore
+        And verify that the schema "gp_toolkit" exists in "bkdb2"
         And the user runs "gpdbrestore --redirect=bkdb2 -e -a" with the stored timestamp
         And gpdbrestore should return a return code of 0
         And verify that the data of "10" tables in "bkdb2" is validated after restore from "bkdb"
-        And the gp_toolkit schema for "bkdb2" is verified after restore
+        And verify that the schema "gp_toolkit" exists in "bkdb2"
 
     Scenario: gpdbrestore with noanalyze
         Given the test is initialized
