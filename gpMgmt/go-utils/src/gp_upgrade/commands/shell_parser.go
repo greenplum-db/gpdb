@@ -19,7 +19,5 @@ func (parser ShellParser) IsPgUpgradeRunning() bool {
 	var segmentPortRegexp = regexp.MustCompile(`--old-port (\d+)`)
 	segmentPorts := segmentPortRegexp.FindStringSubmatch(parser.Output)
 
-	//TODO: "We'd like to know if %v has pg_upgrade running for it, but not yet implemented", parser.Segment_id
-
 	return segmentPorts != nil
 }

@@ -18,6 +18,7 @@ func NewSshConnector() *SshConnector {
 	return conn
 }
 
+// todo test me!!!!!!!!!!!!!!!!!
 func (ssh_connector SshConnector) Connect(Host string, Port int, user string, private_key string) (*ssh.Session, error) {
 	pemBytes, err := ioutil.ReadFile(private_key)
 	if err != nil {

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	//"regexp"
 	"os/user"
 )
 
@@ -17,12 +16,8 @@ type MonitorCommand struct {
 }
 
 func (cmd MonitorCommand) Execute([]string) error {
-	if cmd.PrivateKey == "" {
-		fmt.Println("no key specified with --private_key; using ~/.ssh/id_rsa")
-		usr, _ := user.Current()
-		fmt.Println(usr.HomeDir)
-		cmd.PrivateKey = usr.HomeDir + "/.ssh/id_rsa"
-	}
+	// todo test private key
+	cmd.PrivateKey = cmd.assurePrivateKeyPath(cmd.PrivateKey)
 
 	connector := NewSshConnector()
 	session, err := connector.Connect(cmd.Host, cmd.Port, cmd.User, cmd.PrivateKey)
@@ -33,29 +28,34 @@ func (cmd MonitorCommand) Execute([]string) error {
 
 	defer session.Close()
 
-	// TODO idea: put the output gathering into the shell parsing class? Inject session into there as a parameter?
+	// todo use pgrep instead
 	result, err := session.Output("ps auxx | grep pg_upgrade")
 
 	output := string(result)
 	if err != nil && err != io.EOF {
-		msg := "cannot run ps command on remote host, output: " + output + "\nError: " + err.Error()
+		msg := "cannot run pgrep command on remote host, output: " + output + "\nError: " + err.Error()
 		fmt.Println(msg)
 		return errors.New(msg)
 	}
 
-	// the response code will be 0 whether or not pg_upgrade is running
 	shellParser := ShellParser{Output: output}
-
-	isRunning := shellParser.IsPgUpgradeRunning()
-	if isRunning {
-		fmt.Println("pg_upgrade is running on the host")
-
-	} else {
-		fmt.Println(fmt.Sprintf("pg_upgrade is not running on host '%s', segment_id '%s'", cmd.Host, cmd.Segment_id))
+	addNot := ""
+	if !shellParser.IsPgUpgradeRunning() {
+		addNot = "not "
 	}
-
-	// provide default behavior for now that expresses that for this first story we're always going to say it's not running
-	fmt.Println("result: " + output)
+	fmt.Printf("pg_upgrade is %srunning on host %s", addNot, cmd.Host)
 
 	return nil
+}
+
+func (cmd MonitorCommand) assurePrivateKeyPath(private_key string) string {
+	if private_key == "" {
+		usr, err := user.Current()
+		if err != nil {
+			// todo
+			panic("cannot get current user directory")
+		}
+		return usr.HomeDir + "/.ssh/id_rsa"
+	}
+	return private_key
 }

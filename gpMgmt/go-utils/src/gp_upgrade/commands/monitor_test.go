@@ -51,7 +51,7 @@ var _ = Describe("monitor", func() {
 			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
 			Eventually(session).Should(Exit(0))
 
-			expectedMsg := "pg_upgrade is not running on host 'localhost', segment_id '42'"
+			expectedMsg := "pg_upgrade is not running on host localhost"
 			Eventually(session.Out).Should(Say(expectedMsg))
 		})
 	})
@@ -64,7 +64,7 @@ var _ = Describe("monitor", func() {
 			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
 			Eventually(session).Should(Exit(1))
 
-			expectedMsg := "cannot run ps command on remote host, output: foo output\nError: Process exited with status 1"
+			expectedMsg := "cannot run pgrep command on remote host, output: foo output\nError: Process exited with status 1"
 			Eventually(session.Out).Should(Say(expectedMsg))
 		})
 	})
@@ -94,7 +94,7 @@ pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bin
 			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
 			Eventually(session).Should(Exit(0))
 
-			expectedMsg := "pg_upgrade is running on the host"
+			expectedMsg := "pg_upgrade is running on host localhost"
 			Eventually(session.Out).Should(Say(expectedMsg))
 		})
 	})
