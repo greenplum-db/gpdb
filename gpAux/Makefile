@@ -535,8 +535,6 @@ LOADERSINSTLOC_DOCS=$(LOADERSINSTLOC)/docs
 LOADERSINSTLOC_OPENSOURCE=$(LOADERSINSTLOC)/thirdparty
 
 CONNECTIVITYINSTLOC=$(CONNECTIVITY_HOME_DIR)/greenplum-connectivity
-CONNECTIVITYINSTLOC_JDBC=$(CONNECTIVITYINSTLOC)/drivers/jdbc
-CONNECTIVITYINSTLOC_ODBC=$(CONNECTIVITYINSTLOC)/drivers/odbc
 CONNECTIVITYINSTLOC_LIB=$(CONNECTIVITYINSTLOC)/lib
 CONNECTIVITYINSTLOC_INCLUDE=$(CONNECTIVITYINSTLOC)/include
 CONNECTIVITYINSTLOC_DOCS=$(CONNECTIVITYINSTLOC)/docs
@@ -667,19 +665,11 @@ else
 	# ---- load LD_LIBRARY_PATH with the GPDB library set and build the ODBC drivers ----
 	cd $(INSTLOC)/ && \
 	  . ./greenplum_path.sh; \
-	  cd $(BLD_TOP)/client/odbc/src && \
-	    $(MAKE) all
 	# ---- copy GPDB fileset ----
 	mkdir -p $(CONNECTIVITYINSTLOC_LIB)
 	(cd $(INSTLOC)/lib && $(TAR) cf - *) | (cd $(CONNECTIVITYINSTLOC_LIB)/ && $(TAR) xvpf -)$(check_pipe_for_errors)
 	mkdir -p $(CONNECTIVITYINSTLOC_INCLUDE)
 	(cd $(INSTLOC)/include && $(TAR) cf - *) | (cd $(CONNECTIVITYINSTLOC_INCLUDE)/ && $(TAR) xvpf -)$(check_pipe_for_errors)
-	# ---- copy JDBC fileset ----
-	mkdir -p $(CONNECTIVITYINSTLOC_JDBC)
-	cp -fp client/jdbc/*.jar $(CONNECTIVITYINSTLOC_JDBC)
-	# ---- copy ODBC fileset ----
-	mkdir -p $(CONNECTIVITYINSTLOC_ODBC)
-	(cd client/odbc/src/greenplum-connectivity/odbc/ && $(TAR) cf - --exclude=*.la *) | (cd $(CONNECTIVITYINSTLOC_ODBC)/ && $(TAR) xvf -)$(check_pipe_for_errors)
 	# ---- copy scripts fileset ----
 	mkdir -p $(CONNECTIVITYINSTLOC)
 	cp -f client/scripts/greenplum_$@_path$(SCRIPT) $(CONNECTIVITYINSTLOC)/
@@ -1202,7 +1192,6 @@ clean :
 	@if [ -d $(GPPGDIR) -a -f $(GPPGDIR)/GNUmakefile ]; then cd $(GPPGDIR); $(MAKE) clean; fi
 	@if [ -d $(GPMGMT)/bin ]; then cd $(GPMGMT)/bin; $(MAKE) clean; fi
 	@if [ -d $(GPPERFMON) ]; then cd $(GPPERFMON); $(MAKE) clean; fi
-	@if [ -d client/odbc/src/Makefile ]; then cd client/odbc/src; $(MAKE) clean; fi
 
 distclean :
 #	@if [ ! -f $(ISCONFIG) ]; then echo "GPDB root not configured, no need to clean it"; fi
@@ -1211,7 +1200,6 @@ distclean :
 	@if [ -d $(GPPGDIR) -a -f $(GPPGDIR)/GNUmakefile ]; then cd $(GPPGDIR); $(MAKE) distclean; fi
 	@if [ -d $(GPMGMT)/bin ]; then cd $(GPMGMT)/bin; $(MAKE) distclean; fi
 	@if [ -d $(GPPERFMON) ]; then cd $(GPPERFMON); $(MAKE) clean; fi
-	@if [ -d client/odbc/src/Makefile ]; then cd client/odbc/src; $(MAKE) clean; fi
 	@rm -f VERSION
 	@rm -f env.sh
 
