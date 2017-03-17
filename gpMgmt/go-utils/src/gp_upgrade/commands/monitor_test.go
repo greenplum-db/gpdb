@@ -26,13 +26,11 @@ var _ = Describe("monitor", func() {
 	Describe("if SSH is not running at the remote end", func() {
 		It("complains with standard ssh error phrasing", func() {
 			ShutDownSshdServer()
+
 			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
 
 			Eventually(session).Should(Exit(1))
-
-			// typical error message from SSH
-			expectedMsg := "getsockopt: connection refused"
-			Eventually(session.Out).Should(Say(expectedMsg))
+			Eventually(session.Err).Should(Say("getsockopt: connection refused"))
 		})
 	})
 
@@ -48,8 +46,7 @@ pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bin
 			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
 			Eventually(session).Should(Exit(0))
 
-			expectedMsg := "pg_upgrade is running on host localhost"
-			Eventually(session.Out).Should(Say(expectedMsg))
+			Eventually(session.Out).Should(Say("pg_upgrade is running on host localhost"))
 		})
 	})
 	Describe("if it lacks host and segment ID", func() {
@@ -94,7 +91,7 @@ pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bin
 			Eventually(session).Should(Exit(1))
 
 			expectedMsg := "cannot run pgrep command on remote host, output: foo output\nError: Process exited with status 1"
-			Eventually(session.Out).Should(Say(expectedMsg))
+			Eventually(session.Err).Should(Say(expectedMsg))
 		})
 	})
 	Describe("if the private key cannot be ascertained", func() {
@@ -106,7 +103,7 @@ pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bin
 			os.Setenv("HOME", save)
 
 			Eventually(session).Should(Exit(1))
-			Eventually(session.Out).Should(Say("user has not specified a HOME environment value"))
+			Eventually(session.Err).Should(Say("user has not specified a HOME environment value"))
 		})
 	})
 })

@@ -18,14 +18,12 @@ func (cmd MonitorCommand) Execute([]string) error {
 	var err error
 	cmd.PrivateKey, err = NewPrivateKeyGuarantor().Check(cmd.PrivateKey)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
 	connector := NewSshConnector()
 	session, err := connector.Connect(cmd.Host, cmd.Port, cmd.User, cmd.PrivateKey)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
@@ -37,7 +35,6 @@ func (cmd MonitorCommand) Execute([]string) error {
 	output := string(result)
 	if err != nil && err != io.EOF {
 		msg := "cannot run pgrep command on remote host, output: " + output + "\nError: " + err.Error()
-		fmt.Println(msg)
 		return errors.New(msg)
 	}
 
