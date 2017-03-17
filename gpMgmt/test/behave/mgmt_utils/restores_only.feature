@@ -608,6 +608,7 @@ Feature: Validate command line arguments
         And the test is initialized with database "bkdb67"
         When the user runs "gpdbrestore -a -t 20140101010101 -u /tmp/custom_timestamps"
         Then gpdbrestore should return a return code of 0
+        And the user runs """psql -c "ALTER TABLE heap_table DISABLE TRIGGER before_heap_ins_trig;" bkdb67"""
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/check_metadata.sql bkdb67 > /tmp/check_metadata.out"
         And verify that the contents of the files "/tmp/check_metadata.out" and "test/behave/mgmt_utils/steps/data/check_metadata.ans" are identical
         And the directory "/tmp/check_metadata.out" is removed or does not exist
