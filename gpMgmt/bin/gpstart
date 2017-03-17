@@ -112,19 +112,6 @@ class GpStart:
                 if self.interactive:
                     if not userinput.ask_yesno(None, "\nContinue with master-only startup", 'N'):
                         raise UserAbortedException()
-                try:
-                    # Disable Ctrl-C
-                    signal.signal(signal.SIGINT,signal.SIG_IGN)
-
-                    self._startMaster()
-                    logger.info("Master Started...")
-
-                    if self.masteronly:
-                        return 0
-                finally:
-                    # Reenable Ctrl-C
-                    self.cleanup()
-                    signal.signal(signal.SIGINT,signal.default_int_handler)
 
         try:
             # Disable Ctrl-C
