@@ -2859,7 +2859,7 @@ NOTICE:  table "table_execute" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS tbl_wet_execute;
 NOTICE:  table "tbl_wet_execute" does not exist, skipping
 -- end_ignore
-CREATE TABLE table_execute (id integer, name varchar(40) CONSTRAINT con1 CHECK (id > 99 AND name <> '')) DISTRIBUTED RANDOMLY;
+CREATE TABLE table_execute (id integer, name varchar(40)) DISTRIBUTED RANDOMLY;
 INSERT INTO table_execute VALUES (100, 'name_1');
 INSERT INTO table_execute VALUES (200, 'name_2');
 INSERT INTO table_execute VALUES (300, 'name_3');
