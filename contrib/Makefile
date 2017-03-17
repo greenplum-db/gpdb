@@ -19,7 +19,8 @@ WANTED_DIRS = \
 		dict_xsyn \
 		intarray \
 		pageinspect \
-		test_parser
+		test_parser \
+		pg_upgrade
 
 ifeq ($(with_openssl),yes)
 WANTED_DIRS += sslinfo
