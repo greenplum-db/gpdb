@@ -1377,19 +1377,25 @@ DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv5;
 -- end_ignore
 
 -- Create writable external table with AS for DELIMITER , NULL, ESCAPE
-CREATE WRITABLE EXTERNAL TABLE tbl_wet_csv1 (a int, b text) LOCATION ('gpfdist://@hostname@/wet_csv.tbl') FORMAT 'CSV' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ');
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_csv1 (a int, b text) EXECUTE 'cat > @abs_srcdir@/data/wet_csv1.tbl' FORMAT 'CSV' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ');
 
 -- Create writable external table without AS for DELIMITER , NULL, ESCAPE
-CREATE WRITABLE EXTERNAL TABLE tbl_wet_csv2 (a int, b text) LOCATION ('gpfdist://@hostname@/wet_csv.tbl') FORMAT 'CSV' (DELIMITER AS ',' NULL 'null' ESCAPE ' ');
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_csv2 (a int, b text) EXECUTE 'cat > @abs_srcdir@/data/wet_csv2.tbl' FORMAT 'CSV' (DELIMITER AS ',' NULL 'null' ESCAPE ' ');
 
 -- Create writable external table with double quotes
-CREATE WRITABLE EXTERNAL TABLE tbl_wet_csv3 (a int, b text) LOCATION ('gpfdist://@hostname@/wet_csv.tbl') FORMAT 'CSV' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' '  QUOTE AS '"');
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_csv3 (a int, b text) EXECUTE 'cat > @abs_srcdir@/data/wet_csv3.tbl' FORMAT 'CSV' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' '  QUOTE AS '"');
 
 -- Create writable external table with single quotes
-CREATE WRITABLE EXTERNAL TABLE tbl_wet_csv4 (a int, b text) LOCATION ('gpfdist://@hostname@/wet_csv.tbl') FORMAT 'CSV' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' '  QUOTE AS '''');
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_csv4 (a int, b text) EXECUTE 'cat > @abs_srcdir@/data/wet_csv4.tbl' FORMAT 'CSV' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' '  QUOTE AS '''');
 
 -- Create writable external table with force quote
-CREATE WRITABLE EXTERNAL TABLE tbl_wet_csv5 (a int, b text) LOCATION ('gpfdist://@hostname@/wet_csv.tbl') FORMAT 'CSV' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' '  QUOTE AS '"' FORCE QUOTE char1);
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_csv5 (a int, b text) EXECUTE 'cat > @abs_srcdir@/data/wet_csv5.tbl' FORMAT 'CSV' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' '  QUOTE AS '"' FORCE QUOTE b);
+
+INSERT INTO tbl_wet_csv1 VALUES (generate_series(1,256), 'test_1');
+INSERT INTO tbl_wet_csv2 VALUES (generate_series(1,256), 'test_2');
+INSERT INTO tbl_wet_csv3 VALUES (generate_series(1,256), 'test_3');
+INSERT INTO tbl_wet_csv4 VALUES (generate_series(1,256), 'test_4');
+INSERT INTO tbl_wet_csv5 VALUES (generate_series(1,256), 'test_5');
 
 DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv1;
 DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv2;
@@ -1404,13 +1410,17 @@ DROP EXTERNAL TABLE IF EXISTS tbl_wet_text3;
 -- end_ignore
 
 -- Create writable external table with AS for DELIMITER , NULL, ESCAPE
-CREATE WRITABLE EXTERNAL TABLE tbl_wet_text1 (a int, b text) LOCATION ('gpfdist://@hostname@/wet_text.tbl') FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ');
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_text1 (a int, b text) EXECUTE 'cat > @abs_srcdir@/data/wet_text1.tbl' FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ');
 
 -- Create writable external table without AS for DELIMITER , NULL, ESCAPE
-CREATE WRITABLE EXTERNAL TABLE tbl_wet_text2 (a int, b text) LOCATION ('gpfdist://@hostname@/wet_text.tbl') FORMAT 'TEXT' (DELIMITER AS ',' NULL 'null' ESCAPE ' ');
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_text2 (a int, b text) EXECUTE 'cat > @abs_srcdir@/data/wet_text2.tbl' FORMAT 'TEXT' (DELIMITER AS ',' NULL 'null' ESCAPE ' ');
 
 -- Create writable external table with ESCAPE OFF
-CREATE WRITABLE EXTERNAL TABLE tbl_wet_text3 (a int, b text) LOCATION ('gpfdist://@hostname@/wet_text.tbl') FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null' ESCAPE 'OFF');
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_text3 (a int, b text) EXECUTE 'cat > @abs_srcdir@/data/wet_text3.tbl' FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null' ESCAPE 'OFF');
+
+INSERT INTO tbl_wet_text1 VALUES (generate_series(1,256), 'test_1');
+INSERT INTO tbl_wet_text2 VALUES (generate_series(1,256), 'test_2');
+INSERT INTO tbl_wet_text3 VALUES (generate_series(1,256), 'test_3');
 
 DROP EXTERNAL TABLE IF EXISTS tbl_wet_text1;
 DROP EXTERNAL TABLE IF EXISTS tbl_wet_text2;
@@ -1427,9 +1437,13 @@ DROP EXTERNAL TABLE IF EXISTS tbl_wet_syntax3;
 CREATE TABLE test_dp1 (a int, b text) DISTRIBUTED RANDOMLY;
 CREATE TABLE test_dp2 (a int, b text) DISTRIBUTED BY (b);
 
-CREATE WRITABLE EXTERNAL TABLE tbl_wet_syntax1 (like test_dp1) LOCATION ('gpfdist://@hostname@/wet_syntax.tbl') FORMAT 'TEXT' (DELIMITER '|' ) DISTRIBUTED BY (a);
-CREATE WRITABLE EXTERNAL TABLE tbl_wet_syntax2 (like test_dp2) LOCATION ('gpfdist://@hostname@/wet_syntax.tbl') FORMAT 'TEXT' (DELIMITER '|' ) DISTRIBUTED BY (a);
-CREATE WRITABLE EXTERNAL TABLE tbl_wet_syntax3 (like test_dp2) LOCATION ('gpfdist://@hostname@/wet_syntax.tbl') FORMAT 'TEXT' (DELIMITER '|' ) DISTRIBUTED RANDOMLY;
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_syntax1 (like test_dp1) EXECUTE 'cat > @abs_srcdir@/data/wet_syntax1.tbl' FORMAT 'TEXT' (DELIMITER '|' ) DISTRIBUTED BY (a);
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_syntax2 (like test_dp2) EXECUTE 'cat > @abs_srcdir@/data/wet_syntax2.tbl' FORMAT 'TEXT' (DELIMITER '|' ) DISTRIBUTED BY (a);
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_syntax3 (like test_dp2) EXECUTE 'cat > @abs_srcdir@/data/wet_syntax3.tbl' FORMAT 'TEXT' (DELIMITER '|' ) DISTRIBUTED RANDOMLY;
+
+INSERT INTO tbl_wet_syntax1 VALUES (generate_series(1,256), 'test_1');
+INSERT INTO tbl_wet_syntax2 VALUES (generate_series(1,256), 'test_2');
+INSERT INTO tbl_wet_syntax3 VALUES (generate_series(1,256), 'test_3');
 
 DROP TABLE IF EXISTS test_dp1;
 DROP TABLE IF EXISTS test_dp2;
@@ -1448,7 +1462,7 @@ INSERT INTO table_execute VALUES (100, 'name_1');
 INSERT INTO table_execute VALUES (200, 'name_2');
 INSERT INTO table_execute VALUES (300, 'name_3');
 
-CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_execute (like table_execute) EXECUTE 'cat > wet_execute.tbl' FORMAT 'TEXT' (DELIMITER '|' );
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_execute (like table_execute) EXECUTE 'cat > @abs_srcdir@/data/wet_execute.tbl' FORMAT 'TEXT' (DELIMITER '|' );
 
 INSERT INTO tbl_wet_execute SELECT * from table_execute ;
 
