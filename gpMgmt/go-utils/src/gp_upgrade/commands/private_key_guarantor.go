@@ -1,26 +1,25 @@
 package commands
 
 import (
-	"io"
+	"errors"
 	"os"
 )
 
 type PrivateKeyGuarantor struct {
 }
 
-// todo functional pointer for testing. TBD on this approach.
-var Stdout io.Writer = os.Stdout
-
 func NewPrivateKeyGuarantor() *PrivateKeyGuarantor {
 	conn := new(PrivateKeyGuarantor)
 	return conn
 }
 
-func (guarantor PrivateKeyGuarantor) Check(private_key string) string {
+func (guarantor PrivateKeyGuarantor) Check(private_key string) (string, error) {
 	if private_key == "" {
 		path := os.Getenv("HOME")
-		Stdout.Write([]byte("environmental variable 'HOME' not set"))
-		return path + "/.ssh/id_rsa"
+		if path == "" {
+			return "", errors.New("user has not specified a HOME environment value")
+		}
+		return path + "/.ssh/id_rsa", nil
 	}
-	return private_key
+	return private_key, nil
 }

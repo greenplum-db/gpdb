@@ -15,7 +15,12 @@ type MonitorCommand struct {
 }
 
 func (cmd MonitorCommand) Execute([]string) error {
-	cmd.PrivateKey = NewPrivateKeyGuarantor().Check(cmd.PrivateKey)
+	var err error
+	cmd.PrivateKey, err = NewPrivateKeyGuarantor().Check(cmd.PrivateKey)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
 
 	connector := NewSshConnector()
 	session, err := connector.Connect(cmd.Host, cmd.Port, cmd.User, cmd.PrivateKey)
