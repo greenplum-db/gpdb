@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os/user"
 )
 
 type MonitorCommand struct {
@@ -16,8 +15,7 @@ type MonitorCommand struct {
 }
 
 func (cmd MonitorCommand) Execute([]string) error {
-	// todo test private key
-	cmd.PrivateKey = cmd.assurePrivateKeyPath(cmd.PrivateKey)
+	cmd.PrivateKey = NewPrivateKeyGuarantor().Check(cmd.PrivateKey)
 
 	connector := NewSshConnector()
 	session, err := connector.Connect(cmd.Host, cmd.Port, cmd.User, cmd.PrivateKey)
@@ -46,16 +44,4 @@ func (cmd MonitorCommand) Execute([]string) error {
 	fmt.Printf("pg_upgrade is %srunning on host %s", addNot, cmd.Host)
 
 	return nil
-}
-
-func (cmd MonitorCommand) assurePrivateKeyPath(private_key string) string {
-	if private_key == "" {
-		usr, err := user.Current()
-		if err != nil {
-			// todo
-			panic("cannot get current user directory")
-		}
-		return usr.HomeDir + "/.ssh/id_rsa"
-	}
-	return private_key
 }
