@@ -295,8 +295,8 @@ namespace gpdb {
 	// partition attributes
 	List *PlPartitionAttrs(Oid oid);
 
-	// partition keys and kinds attributes
-	PartitionKeyKind PartitionKeyKindAttr(Oid oid);
+	// partition kinds
+	List* PlPartitionKinds(Oid oid);
 
 	// parts of a partitioned table
 	PartitionNode *PpnParts(Oid relid, int2 level, Oid parent, bool inctemplate, bool includesubparts);

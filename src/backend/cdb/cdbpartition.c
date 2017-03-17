@@ -373,16 +373,14 @@ rel_partition_key_attrs(Oid relid)
  *       parts of partitioned tables.  Key attributes are attribute
  *       numbers in the partitioned table.
  */
-PartitionKeyKind
-rel_partition_keys_kinds_ordered(Oid relid)
+List *
+rel_partition_keys_ordered(Oid relid)
 {
 	Relation	partrel;
 	ScanKeyData scankey;
 	SysScanDesc sscan;
-	PartitionKeyKind partKeyKind;
 	List *levels = NIL;
 	List *keysUnordered = NIL;
-	List *kindsUnordered = NIL;
 	int nlevels = 0;
 	HeapTuple tuple = NULL;
 
@@ -413,6 +411,67 @@ rel_partition_keys_kinds_ordered(Oid relid)
 		nlevels++;
 		levels = lappend_int(levels, p->parlevel);
 		keysUnordered = lappend(keysUnordered, levelkeys);
+	}
+	systable_endscan(sscan);
+	heap_close(partrel, AccessShareLock);
+
+	if (1 == nlevels)
+	{
+		list_free(levels);
+		return keysUnordered;
+	}
+
+	// now order the keys by level
+	List *pkeys = NIL;
+	for (int i = 0; i< nlevels; i++)
+	{
+		int pos = list_find_int(levels, i);
+		Assert (0 <= pos);
+
+		pkeys = lappend(pkeys, list_nth(keysUnordered, pos));
+	}
+	list_free(levels);
+	list_free(keysUnordered);
+
+	return pkeys;
+}
+
+
+/*
+ * Return a list of partition kinds identified by the argument or NIL. The kinds
+ * are in the order of partitioning levels.
+ */
+List*
+rel_partition_kinds_ordered(Oid relid)
+{
+	Relation	partrel;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
+	List *levels = NIL;
+	List *kindsUnordered = NIL;
+	int nlevels = 0;
+	HeapTuple tuple = NULL;
+
+	partrel = heap_open(PartitionRelationId, AccessShareLock);
+
+	/* SELECT * FROM pg_partition WHERE parrelid = :1 */
+	ScanKeyInit(&scankey, Anum_pg_partition_parrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+
+	sscan = systable_beginscan(partrel, PartitionParrelidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
+	{
+		Form_pg_partition p = (Form_pg_partition) GETSTRUCT(tuple);
+
+		if (p->paristemplate)
+		{
+			continue;
+		}
+
+		nlevels++;
+		levels = lappend_int(levels, p->parlevel);
 		kindsUnordered = lappend_int(kindsUnordered, p->parkind);
 	}
 	systable_endscan(sscan);
@@ -421,50 +480,21 @@ rel_partition_keys_kinds_ordered(Oid relid)
 	if (1 == nlevels)
 	{
 		list_free(levels);
-		partKeyKind.partitionkeys = keysUnordered;
-		partKeyKind.partitionkinds = kindsUnordered;
-		return partKeyKind;
+		return kindsUnordered;
 	}
 
-	// now order the keys and kinds by level
-	List *pkeys = NIL;
+	// now order the kinds by level
 	List *pkinds = NIL;
 	for (int i = 0; i< nlevels; i++)
 	{
 		int pos = list_find_int(levels, i);
 		Assert (0 <= pos);
-
-		pkeys = lappend(pkeys, list_nth(keysUnordered, pos));
 		pkinds = lappend_int(pkinds, list_nth_int(kindsUnordered, pos));
 	}
 	list_free(levels);
-	list_free(keysUnordered);
 	list_free(kindsUnordered);
 
-	partKeyKind.partitionkeys = pkeys;
-	partKeyKind.partitionkinds = pkinds;
-	return partKeyKind;
-}
-
-/*
- * Return a list of lists representing the partitioning keys of the partitioned
- * table identified by the argument or NIL. The keys are in the order of
- * partitioning levels. Each of the lists inside the main list correspond to one
- * level, and may have one or more attribute numbers depending on whether the
- * part key for that level is composite or not.
- *
- * Note: Only returns a non-empty list of keys for partitioned table
- *       as a whole.  Returns empty for non-partitioned tables or for
- *       parts of partitioned tables.  Key attributes are attribute
- *       numbers in the partitioned table.
- */
-List *
-rel_partition_keys_ordered(Oid relid)
-{
-	PartitionKeyKind partKeyKind = rel_partition_keys_kinds_ordered(relid);
-	list_free(partKeyKind.partitionkinds);
-
-	return partKeyKind.partitionkeys;
+	return pkinds;
 }
 
  /*

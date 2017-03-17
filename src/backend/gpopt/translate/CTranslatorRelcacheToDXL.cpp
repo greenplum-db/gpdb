@@ -2988,9 +2988,8 @@ CTranslatorRelcacheToDXL::PdrgpulPartKeys
 		GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported, GPOS_WSZ_LIT("Hash partitioning"));
 	}
 	
-	PartitionKeyKind partKeyKind = gpdb::PartitionKeyKindAttr(oid);
-	List *plPartKeys = partKeyKind.partitionkeys;
-	List *plPartKinds = partKeyKind.partitionkinds;
+	List *plPartKeys = gpdb::PlPartitionAttrs(oid);
+	List *plPartKinds = gpdb::PlPartitionKinds(oid);
 
 	ListCell *plcKey = NULL;
 	ListCell *plcKind = NULL;
