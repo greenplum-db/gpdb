@@ -38,6 +38,8 @@ const char *
 copyAndUpdateFile(migratorContext *ctx, pageCnvCtx *pageConverter,
 				  const char *src, const char *dst, bool force)
 {
+	report_progress(ctx, NONE, FILE_COPY, "Copy \"%s\" to \"%s\"", src, dst);
+
 	if (pageConverter == NULL)
 	{
 		if (pg_copy_file(src, dst, force) == -1)

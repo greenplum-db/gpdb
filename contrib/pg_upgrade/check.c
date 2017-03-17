@@ -95,6 +95,7 @@ check_old_cluster(migratorContext *ctx, bool live_check,
 	 * Check for various failure cases
 	 */
 
+	report_progress(ctx, CLUSTER_OLD, CHECK, "Failure checks");
 	check_proper_datallowconn(ctx, CLUSTER_OLD);
 	check_for_reg_data_type_usage(ctx, CLUSTER_OLD);
 	check_for_isn_and_int8_passing_mismatch(ctx, CLUSTER_OLD);
@@ -151,6 +152,7 @@ check_old_cluster(migratorContext *ctx, bool live_check,
 	 */
 	if (!ctx->check)
 	{
+		report_progress(ctx, CLUSTER_OLD, SCHEMA_DUMP, "Creating catalog dump");
 		generate_old_dump(ctx);
 		split_old_dump(ctx);
 	}

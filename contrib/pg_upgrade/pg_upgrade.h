@@ -69,7 +69,7 @@
 #define DEVTTY	"/dev/tty"
 #endif
 
-#define CLUSTERNAME(cluster)	((cluster) == CLUSTER_OLD ? "old" : "new")
+#define CLUSTERNAME(cluster)	((cluster) == NONE ? "none" : ((cluster) == CLUSTER_OLD ? "old" : "new"))
 
 #define atooid(x)  ((Oid) strtoul((x), NULL, 10))
 
@@ -270,6 +270,20 @@ typedef enum
 
 typedef long pgpid_t;
 
+/*
+ * Enumeration for operations in the progress report
+ */
+typedef enum
+{
+	CHECK,
+	SCHEMA_DUMP,
+	SCHEMA_RESTORE,
+	FILE_MAP,
+	FILE_COPY,
+	FIXUP,
+	ABORT,
+	DONE
+} progress_type;
 
 /*
  * cluster
@@ -318,6 +332,7 @@ typedef struct
 	bool		check;			/* TRUE -> ask user for permission to make
 								 * changes */
 	bool		verbose;		/* TRUE -> be verbose in messages */
+	bool		progress;		/* TRUE -> file based progress queue */
 	bool		debug;			/* TRUE -> log more information */
 	transferMode transfer_mode; /* copy files or link them? */
 } migratorContext;
@@ -489,6 +504,8 @@ void	   *pg_malloc(migratorContext *ctx, int size);
 void		pg_free(void *ptr);
 const char *getErrorText(int errNum);
 unsigned int str2uint(const char *str);
+void 		report_progress(migratorContext *ctx, Cluster cluster, progress_type op, char *fmt,...);
+void		close_progress(migratorContext *ctx);
 
 
 /* version.c */
