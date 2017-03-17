@@ -166,28 +166,35 @@ SELECT * FROM test_in_out_params('test_in');
 SELECT * FROM test_in_out_params_multi('test_in');
 SELECT * FROM test_inout_params('test_in');
 
-SELECT * FROM test_type_conversion_bool(true);
-SELECT * FROM test_type_conversion_bool(false);
-SELECT * FROM test_type_conversion_bool(null);
-SELECT * FROM test_type_conversion_char('a');
-SELECT * FROM test_type_conversion_char(null);
-SELECT * FROM test_type_conversion_int2(100::int2);
-SELECT * FROM test_type_conversion_int2(null);
-SELECT * FROM test_type_conversion_int4(100);
-SELECT * FROM test_type_conversion_int4(null);
-SELECT * FROM test_type_conversion_int8(100);
-SELECT * FROM test_type_conversion_int8(null);
-SELECT * FROM test_type_conversion_float4(100);
-SELECT * FROM test_type_conversion_float4(null);
-SELECT * FROM test_type_conversion_float8(100);
-SELECT * FROM test_type_conversion_float8(null);
-SELECT * FROM test_type_conversion_numeric(100);
-SELECT * FROM test_type_conversion_numeric(null);
-SELECT * FROM test_type_conversion_text('hello world');
-SELECT * FROM test_type_conversion_text(null);
-SELECT * FROM test_type_conversion_bytea('hello world');
-SELECT * FROM test_type_conversion_bytea(null);
-SELECT test_type_unmarshal(x) FROM test_type_marshal() x;
+-- 1-dimensional arrays
+SELECT * FROM test_type_conversion_array_numeric(array[null,1.23,2.34,3.45,null]::numeric[]);
+-- Multi-dimensional arrays
+SELECT a, array_dims(a) FROM test_type_conversion_array_int4(array[
+        array[1,2,3,4], array[5,null,7,8], array[null,null,11,12]
+    ]::int4[]) as a;
+SELECT a, array_dims(a) FROM test_type_conversion_array_int4(array[
+    array[ array[1,2,3,4], array[5,null,7,8], array[null,null,11,12] ],
+    array[ array[13,null,15,16], array[17,18,19,20], array[null,null,23,null] ],
+    array[ array[25,26,27,null], array[29,null,null,32], array[null,null,null,null] ]
+    ]::int4[]) as a;
+SELECT a, array_dims(a) FROM test_type_conversion_array_numeric(array[
+        array[null,1.23,2.34,3.45,null],
+        array[4.56,5.67,null,null,6.78]
+    ]::numeric[]) as a;
+SELECT a, array_dims(a) FROM test_type_conversion_array_text(array[
+        array['abc','def','ghij',null],
+        array[null,'kl','mnopq','rst'],
+        array['uvw','',null,'xyz']
+    ]::text[]) as a;
+SELECT a, array_dims(a) FROM test_type_conversion_array_text(array[
+        array[ array['abc','def','ghij',null],
+               array[null,'kl','mnopq','rst'],
+               array['uvw','',null,'xyz'] ],
+        array[ array['A','BCD',null,'EFG'],
+               array[null,'HIJK','LMN','OPQR'],
+               array['STUV','WXYZ',null,null] ]
+    ]::text[]) as a;
+
 
 SELECT (split(10)).*; 
 
