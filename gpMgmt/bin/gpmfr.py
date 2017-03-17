@@ -1192,12 +1192,15 @@ class GpMfr(Operation):
 
     def checkDDReachable(self, ddSystem):
         """
-        Raise exception if ping test fails else continue.
+        Try to reach DD three times, raise exception if ping test fails.
         """
-        loss = ddSystem.pingTest()
+        for i in range(3):
+            loss = ddSystem.pingTest()
+            if loss == 0:
+                return
+            time.sleep(2)
         # Non zero packet loss
-        if loss > 0:
-            raise Exception("%s Data Domain not reachable." % ddSystem)
+        raise Exception("%s Data Domain not reachable." % ddSystem)
 
     def execute(self):
         if self.options.remote:
