@@ -1,8 +1,8 @@
-package commands_test
+package ssh_test
+
+import gpssh "gp_upgrade/ssh"
 
 import (
-	"gp_upgrade/commands"
-
 	"golang.org/x/crypto/ssh"
 
 	"io"
@@ -13,10 +13,10 @@ import (
 
 var _ = Describe("SshConnector", func() {
 	var (
-		subject commands.SshConnector
+		subject gpssh.SshConnector
 	)
 	BeforeEach(func() {
-		subject = commands.SshConnector{}
+		subject = gpssh.SshConnector{}
 	})
 
 	Describe("#Connect", func() {
@@ -64,6 +64,6 @@ func (fakeSshClient FakeSshClient) NewSession() (*ssh.Session, error) {
 
 type FakeDialer struct{}
 
-func (dialer FakeDialer) Dial(network, addr string, config *ssh.ClientConfig) (commands.SshClient, error) {
+func (dialer FakeDialer) Dial(network, addr string, config *ssh.ClientConfig) (gpssh.SshClient, error) {
 	return &FakeSshClient{}, nil
 }

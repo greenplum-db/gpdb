@@ -1,7 +1,7 @@
 package commands_test
 
 import (
-	. "gp_upgrade/common"
+	. "gp_upgrade/utils"
 
 	"bytes"
 	"encoding/binary"

@@ -1,17 +1,10 @@
-package common
+package utils
 
 import (
 	"bufio"
 	"encoding/gob"
-	"fmt"
 	"os"
 )
-
-func Check(msg string, e error) {
-	if e != nil {
-		panic(fmt.Sprintf("%s: %s\n", msg, e.Error()))
-	}
-}
 
 // These commands will be the way to interact with the ssh server
 type CheatSheet struct {

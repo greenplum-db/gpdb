@@ -1,8 +1,8 @@
-package commands_test
+package ssh_test
+
+import gpssh "gp_upgrade/ssh"
 
 import (
-	"gp_upgrade/commands"
-
 	"os"
 
 	. "github.com/onsi/ginkgo"
@@ -11,11 +11,11 @@ import (
 
 var _ = Describe("PrivateKeyGuarantor", func() {
 	var (
-		subject *commands.PrivateKeyGuarantor
+		subject *gpssh.PrivateKeyGuarantor
 	)
 
 	BeforeEach(func() {
-		subject = commands.NewPrivateKeyGuarantor()
+		subject = gpssh.NewPrivateKeyGuarantor()
 	})
 
 	Describe("#Check", func() {
