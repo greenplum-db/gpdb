@@ -9,10 +9,15 @@ import (
 )
 
 type SshConnector struct {
+	SshDialer    Dialer
+	SshKeyParser KeyParser
 }
 
 func NewSshConnector() *SshConnector {
-	conn := new(SshConnector)
+	conn := &SshConnector{
+		SshKeyParser: RealKeyParser{},
+		SshDialer:    RealDialer{},
+	}
 	return conn
 }
 
@@ -21,7 +26,7 @@ func (ssh_connector SshConnector) Connect(Host string, Port int, user string, pr
 	if err != nil {
 		return nil, err
 	}
-	signer, err := ssh.ParsePrivateKey(pemBytes)
+	signer, err := ssh_connector.SshKeyParser.ParsePrivateKey(pemBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +35,7 @@ func (ssh_connector SshConnector) Connect(Host string, Port int, user string, pr
 		Auth: []ssh.AuthMethod{ssh.PublicKeys(signer)},
 	}
 	hostAndPort := fmt.Sprintf("%s:%v", Host, Port)
-	client, err := ssh.Dial("tcp", hostAndPort, config)
+	client, err := ssh_connector.SshDialer.Dial("tcp", hostAndPort, config)
 	if err != nil {
 		return nil, err
 	}
@@ -39,4 +44,16 @@ func (ssh_connector SshConnector) Connect(Host string, Port int, user string, pr
 		return nil, err
 	}
 	return session, nil
+}
+
+type RealKeyParser struct{}
+
+func (parser RealKeyParser) ParsePrivateKey(pemBytes []byte) (ssh.Signer, error) {
+	return ssh.ParsePrivateKey(pemBytes)
+}
+
+type RealDialer struct{}
+
+func (dial RealDialer) Dial(network, addr string, config *ssh.ClientConfig) (SshClient, error) {
+	return ssh.Dial(network, addr, config)
 }
