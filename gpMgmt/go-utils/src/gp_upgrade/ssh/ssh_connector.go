@@ -14,11 +14,10 @@ type SshConnector struct {
 }
 
 func NewSshConnector() *SshConnector {
-	conn := &SshConnector{
+	return &SshConnector{
 		SshKeyParser: RealKeyParser{},
 		SshDialer:    RealDialer{},
 	}
-	return conn
 }
 
 func (ssh_connector SshConnector) Connect(Host string, Port int, user string, private_key string) (*ssh.Session, error) {
