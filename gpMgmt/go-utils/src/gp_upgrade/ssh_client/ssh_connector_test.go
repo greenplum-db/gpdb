@@ -20,8 +20,9 @@ import (
 )
 
 var (
-	param_network, param_addr string
-	param_config              *ssh.ClientConfig
+	param_network string
+	param_addr    string
+	param_config  *ssh.ClientConfig
 )
 
 var _ = Describe("SshConnector", func() {

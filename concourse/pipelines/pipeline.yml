@@ -826,6 +826,22 @@ jobs:
     params:
       TEST_OS: centos
 
+- name: MM_gp_upgrade
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_centos6]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: MM_gp_upgrade
+    file: gpdb_src/concourse/tasks/gpMgmt_gp_upgrade.yml
+    image: centos-gpdb-dev-6
+    params:
+      TEST_OS: centos
+
 - name: regression_tests_gpcloud_centos
   plan:
   - aggregate:
