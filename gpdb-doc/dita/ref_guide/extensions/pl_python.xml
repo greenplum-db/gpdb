@@ -32,6 +32,9 @@
       <p>PL/Python is a loadable procedural language. With the Greenplum Database PL/Python
         extension, you can write a Greenplum Database user-defined functions in Python that take
         advantage of Python features and modules to quickly build robust database applications. </p>
+      <p>You can run PL/Python code blocks as anonymous code blocks. See the <codeph><xref
+            href="../sql_commands/DO.xml#topic1">DO</xref></codeph> command in the <cite>Greenplum
+          Database Reference Guide</cite>.</p>
       <p>The Greenplum Database PL/Python extension is installed by default with Greenplum Database.
         Greenplum Database installs a version of Python and PL/Python. This is location of the
         Python installation that Greenplum Database uses:</p>
@@ -43,6 +46,8 @@
         <ul id="ul_qhg_33m_zt">
           <li>Greenplum Database does not support PL/Python triggers.</li>
           <li>PL/Python is available only as a Greenplum Database untrusted language.</li>
+          <li>Updatable cursors (<codeph>UPDATE...WHERE CURRENT OF</codeph> and
+              <codeph>DELETE...WHERE CURRENT OF</codeph>) are not supported.</li>
         </ul>
       </body>
     </topic>
@@ -59,9 +64,10 @@
       <body>
         <p>For each database that requires its use, register the PL/Python language with the SQL
           command <codeph>CREATE LANGUAGE</codeph> or the Greenplum Database utility
-            <codeph>createlang</codeph>. Because PL/Python is an untrusted language, only superusers can register PL/Python with a
-          database. For example, running this command as the <codeph>gpadmin</codeph> system user
-          registers PL/Python with the database named <codeph>testdb</codeph>:</p>
+            <codeph>createlang</codeph>. Because PL/Python is an untrusted language, only superusers
+          can register PL/Python with a database. For example, running this command as the
+            <codeph>gpadmin</codeph> system user registers PL/Python with the database named
+            <codeph>testdb</codeph>:</p>
         <codeblock>$ createlang plpythonu -d testdb</codeblock>
         <p>PL/Python is registered as an untrusted language.</p>
       </body>
@@ -71,10 +77,10 @@
       <body>
         <p>For a database that no longer requires the PL/Python language, remove support for
           PL/Python with the SQL command <codeph>DROP LANGUAGE</codeph> or the Greenplum Database
-            <codeph>droplang</codeph> utility. Because PL/Python is an untrusted language, only superusers can remove support for the PL/Python
-          language from a database. For example, running this command as the
-            <codeph>gpadmin</codeph> system user removes support for PL/Python from the database
-          named <codeph>testdb</codeph>:</p>
+            <codeph>droplang</codeph> utility. Because PL/Python is an untrusted language, only
+          superusers can remove support for the PL/Python language from a database. For example,
+          running this command as the <codeph>gpadmin</codeph> system user removes support for
+          PL/Python from the database named <codeph>testdb</codeph>:</p>
         <codeblock>$ droplang plpythonu -d testdb</codeblock>
         <p>When you remove support for PL/Python, the PL/Python user-defined functions that you
           created in the database will no longer work. </p>
@@ -567,6 +573,18 @@ $$ language plpythonu;</codeblock>
       <codeblock>SELECT mypytest(2) ;</codeblock>
       <p>This command deletes the UDF from the database.</p>
       <codeblock>DROP FUNCTION mypytest(integer) ;</codeblock>
+      <p>This example executes the PL/Python function in the previous example as an anonymous block
+        with the <codeph>DO</codeph> command. In the example, the anonymous block retrieves the
+        input value from a temporary table.</p>
+      <codeblock>CREATE TEMP TABLE mytemp AS VALUES (2) DISTRIBUTED RANDOMLY;
+
+DO $$ 
+  temprow = plpy.execute("SELECT * FROM mytemp", 1)
+  myval = temprow[0]["column1"]
+  rv = plpy.execute("SELECT * FROM sales ORDER BY id", 5)
+  region = rv[myval]["region"]
+  plpy.notice("region is %s" % region)
+$$ language plpythonu;</codeblock>
     </body>
   </topic>
   <topic id="topic12" xml:lang="en">

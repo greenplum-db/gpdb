@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map title="Server Configuration Parameters">
-    <!--  msk - added chunk attribute to fix error in Oxygen HTML transform -->
-    <topicref href="guc_config.xml" navtitle="Server Configuration Parameters">
+    <!--  msk - added no linking -->
+    <topicref href="guc_config.xml" navtitle="Server Configuration Parameters" linking="none">
+        <topicref href="guc_config.xml#topic_vsn_22l_z4"/>
+        <topicref href="guc_config.xml#topic_cyz_p2l_z4"/>
         <topicref href="guc_category-list.xml"/>
         <topicref href="guc-list.xml">
             <topicref href="guc-list.xml#add_missing_from"/>

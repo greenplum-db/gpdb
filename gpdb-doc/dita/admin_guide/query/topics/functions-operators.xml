@@ -118,6 +118,11 @@ SELECT foo();
             <p>In Greenplum Database, the shared library files for user-created functions must
                 reside in the same library path location on every host in the Greenplum Database
                 array (masters, segments, and mirrors).</p>
+        <p>You can also create and execute anonymous code blocks that are written in a Greenplum
+                Database procedural language such as PL/pgSQL. The anonymous blocks run as transient
+                anonymous functions. For information about creating and executing anonymous blocks,
+                see the <xref href="../../../ref_guide/sql_commands/DO.xml#topic1"
+                        ><codeph>DO</codeph></xref> command.</p>
         </body>
     </topic>
     <topic id="topic29" xml:lang="en">
@@ -581,7 +586,7 @@ SELECT foo();
                                 each row.</entry>
                         </row>
                         <row>
-                            <entry colname="col1"><codeph>percent_rank(</codeph>)</entry>
+                            <entry colname="col1"><codeph>percent_rank()</codeph></entry>
                             <entry colname="col2">
                                 <codeph>double precision</codeph>
                             </entry>
@@ -609,7 +614,7 @@ SELECT foo();
                                 numbers in this case.</entry>
                         </row>
                         <row>
-                            <entry colname="col1"><codeph>row_number(</codeph>)</entry>
+                            <entry colname="col1"><codeph>row_number()</codeph></entry>
                             <entry colname="col2">
                                 <codeph>bigint</codeph>
                             </entry>
@@ -700,7 +705,7 @@ FROM employees GROUP BY department_id;</codeblock>
                         </row>
                         <row>
                             <entry colname="col1"><codeph>PERCENTILE_DISC (<i>expr</i>) WITHIN GROUP
-                                    (ORDER BY <i>expr</i> [DESC/ASC]</codeph>)</entry>
+                                    (ORDER BY <i>expr</i> [DESC/ASC])</codeph></entry>
                             <entry colname="col2">
                                 <codeph>timestamp, timestampz, interval, float</codeph>
                             </entry>

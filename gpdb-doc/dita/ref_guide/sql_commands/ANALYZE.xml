@@ -24,8 +24,8 @@
       <note type="important">If you intend to execute queries on partitioned tables with the Pivotal
         Query Optimizer enabled, you must collect statistics on the root partition of the
         partitioned table with the <codeph>ANALYZE ROOTPARTITION</codeph> command. For information
-        about GPORCA, see "Querying Data" in the <cite>Greenplum Database
-          Administrator Guide</cite>.</note>
+        about GPORCA, see "Querying Data" in the <cite>Greenplum Database Administrator
+        Guide</cite>.</note>
       <note>You can also use the Greenplum Database utility <codeph>analyzedb</codeph> to update
         table statistics. The <codeph>analyzedb</codeph> utility can update statistics for multiple
         tables concurrently. The utility can also check table statistics and update statistics only
@@ -37,8 +37,9 @@
       <parml>
         <plentry>
           <pt>ROOTPARTITION [ALL]</pt>
-          <pd>Collect statistics only on the root partition of partitioned tables. When you specify
-              <codeph>ROOTPARTITION</codeph>, you must specify either <codeph>ALL</codeph> or the
+          <pd>Collect statistics only on the root partition of partitioned tables based on the data
+            in the partitioned table. Statistics are not collected on the leaf child partitions, the
+            data is only sampled. When you specify <codeph>ROOTPARTITION</codeph>, you must specify either <codeph>ALL</codeph> or the
             name of a partitioned table. </pd>
           <pd>If you specify <codeph>ALL</codeph> with <codeph>ROOTPARTITION</codeph>, Greenplum
             Database collects statistics for the root partition of all partitioned tables in the
@@ -51,8 +52,9 @@
           <pd>The <codeph>ROOTPARTITION</codeph> clause is not valid with <codeph>VACUUM
               ANALYZE</codeph>. The command <codeph>VACUUM ANALYZE ROOTPARTITION</codeph> returns an
             error. </pd>
-          <pd>The cost of refreshing the root level statistics is comparable to analyzing one leaf
-            partition. </pd>
+          <pd>The time to run <codeph>ANALYZE ROOTPARTITION</codeph> is similar to the time to
+            analyze a non-partitioned table with the same data since <codeph>ANALYZE
+              ROOTPARTITION</codeph> only samples the leaf child partition data. </pd>
           <pd>For the partitioned table <i>sales_curr_yr</i>, this example command collects
             statistics only on the root partition of the partitioned table. <codeph>ANALYZE
               ROOTPARTITION sales_curr_yr; </codeph></pd>
@@ -126,14 +128,14 @@
         table partition:</p>
       <ul id="ol_x5n_2ff_ss">
         <li>If <codeph>ANALYZE [ROOTPARTITION]</codeph> is run, external table partitions are not
-          analyzed and root table statistics do not include external table partition. </li>
+          sampled and root table statistics do not include external table partition. </li>
         <li>If <codeph>ANALYZE</codeph> is run on an external table partition, the partition is not
           analyzed.</li>
         <li>If the <codeph>VERBOSE</codeph> clause is specified, an informational message is
           displayed: <codeph>skipping external table</codeph>.</li>
       </ul>
       <p>The Greenplum Database server configuration parameter <codeph><xref
-            href="../config_params/guc_category-list.xml#optimizer_analyze_root_partition"
+            href="../config_params/guc-list.xml#optimizer_analyze_root_partition"
             >optimizer_analyze_root_partition</xref></codeph> affects when statistics are collected
         on the root partition of a partitioned table. If the parameter is enabled, statistics are
         also collected on the root partition when you run <codeph>ANALYZE</codeph> (without the
@@ -175,7 +177,7 @@
         removes the empty pages and allows an <codeph>ANALYZE</codeph> operation to collect accurate
         statistics. </p>
       <p>If there are no statistics for the table, the server configuration parameter <codeph><xref
-            href="../config_params/guc_category-list.xml#gp_enable_relsize_collection"/></codeph>
+            href="../config_params/guc-list.xml#gp_enable_relsize_collection"/></codeph>
         controls whether the legacy query optimizer uses a default statistics file or estimates the
         size of a table using the <codeph>pg_relation_size</codeph> function. By default, the legacy
         optimizer uses the default statistics file to estimate the number of rows if statistics are

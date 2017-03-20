@@ -33,6 +33,7 @@ resources:
 
 jobs:
   - name: compile_and_test_gpdb
+    max_in_flight: 4
     plan:
     - aggregate:
       - get: gpdb_pr

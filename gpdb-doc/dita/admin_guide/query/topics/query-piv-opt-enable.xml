@@ -27,16 +27,16 @@
       Query Optimizer enabled, you must collect statistics on the partitioned table root partition
       with the <cmdname>ANALYZE ROOTPARTITION</cmdname> command. The command <codeph>ANALYZE
         ROOTPARTITION</codeph> collects statistics on the root partition of a partitioned table
-      without collecting statistics on the leaf partitions. If you specify a list of column names
-      for a partitioned table, the statistics for the columns and the root partition are collected.
-      For information on the <cmdname>ANALYZE</cmdname> command, see the <cite>Greenplum Database Reference Guide</cite>.<p>You can also use the Greenplum Database utility <codeph>analyzedb</codeph> to update table statistics. The
+      based on the data in the table. Statistics are not collected on the leaf partitions, leaf
+      partition data is only sampled. If you specify a list of column names for a partitioned table,
+      the statistics for the columns and the root partition are collected. For information on the
+        <cmdname>ANALYZE</cmdname> command, see the <cite>Greenplum Database Reference Guide</cite>.<p>You can also use the Greenplum Database utility <codeph>analyzedb</codeph> to update table statistics. The
           Greenplum Database utility <codeph>analyzedb</codeph> can update statistics
         for multiple tables in parallel. The utility can also check table statistics and update
         statistics only if the statistics are not current or do not exist. For information about the
           <codeph>analyzedb</codeph> utility, see the <cite>Greenplum Database Utility
-          Guide</cite>.</p><p>As part of routine database maintenance, Refresh
-        statistics on the root partition when there are significant changes to child leaf partition
-        data.</p></note>
+          Guide</cite>.</p><p>As part of routine database maintenance, Refresh statistics on
+        the root partition when there are significant changes to leaf partition data.</p></note>
   </body>
   <topic id="topic_r5d_hv1_kr">
     <title>Setting the optimizer_analyze_root_partition Parameter</title>
