@@ -57,7 +57,7 @@ eval_propagation_expression(PartitionSelectorState *node, Oid part_oid)
  *
  *		Evaluate a qualification expression that consists of
  *		PartDefaultExpr, PartBoundExpr, PartBoundInclusionExpr, PartBoundOpenExpr,
- *		PartListRuleExpr
+ *		PartListRuleExpr and PartListNullTestExpr.
  *
  *		Return true is passed, otherwise false.
  *
@@ -127,7 +127,7 @@ partition_selection(PartitionNode *pn, PartitionAccessMethods *accessMethods, Oi
 /* ----------------------------------------------------------------
  *		partition_rules_for_general_predicate
  *
- *		Return list of PartitionRule for the general predicate
+ *		Returns a list of PartitionRule for the general predicate
  *		of current partition level
  *
  * ----------------------------------------------------------------

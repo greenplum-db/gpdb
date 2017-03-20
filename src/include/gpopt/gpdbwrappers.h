@@ -295,7 +295,7 @@ namespace gpdb {
 	List *PlPartitionAttrs(Oid oid);
 
 	// partition kinds
-	List* PlPartitionKinds(Oid oid);
+	List *PlPartitionKinds(Oid oid);
 
 	// parts of a partitioned table
 	PartitionNode *PpnParts(Oid relid, int2 level, Oid parent, bool inctemplate, bool includesubparts);

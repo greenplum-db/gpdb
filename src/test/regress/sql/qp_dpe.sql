@@ -195,5 +195,4 @@ select count_operator('explain select count(*) from foo1,foo2 where foo1.j =foo2
 select count_operator('explain select count(*) from foo1,foo2 where foo1.j =foo2.j and foo2.i <= ALL(select 1 UNION select 2);', 'Dynamic Table Scan') > 0;
 
 select count(*) from foo1,foo2 where foo1.j =foo2.j and foo2.i <= ALL(select 1 UNION select 2);
-
 RESET ALL;
