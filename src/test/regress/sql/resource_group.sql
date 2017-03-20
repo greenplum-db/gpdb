@@ -27,3 +27,52 @@ CREATE ROLE rg_test_role RESOURCE GROUP non_exist_group;
 
 -- nonsuper user should not be assigned to admin group
 CREATE ROLE rg_test_role RESOURCE GROUP admin_group;
+
+
+-- ----------------------------------------------------------------------
+-- Test: create/drop a resource group
+-- ----------------------------------------------------------------------
+
+--start_ignore
+DROP RESOURCE GROUP rg_test_group;
+--end_ignore
+
+-- can't drop non-exist resource group
+DROP RESOURCE GROUP rg_test_group;
+
+-- can't create the reserved resource groups
+CREATE RESOURCE GROUP default_group WITH (concurrency=1, cpu_rate_limit=.5, memory_limit=.5, memory_redzone_limit=.7);
+CREATE RESOURCE GROUP admin_group WITH (concurrency=1, cpu_rate_limit=.5, memory_limit=.5, memory_redzone_limit=.7);
+CREATE RESOURCE GROUP none WITH (concurrency=1, cpu_rate_limit=.5, memory_limit=.5, memory_redzone_limit=.7);
+
+-- must specify both memory_limit and cpu_rate_limit
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, memory_limit=.5, memory_redzone_limit=.7);
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=.5, memory_redzone_limit=.7);
+
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=.5, memory_limit=.6, memory_redzone_limit=.7);
+SELECT groupname,concurrency,proposed_concurrency,cpu_rate_limit,memory_limit,proposed_memory_limit,memory_redzone_limit FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
+
+-- multiple resource groups can't share the same name
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=.05, memory_limit=.05, memory_redzone_limit=.7);
+
+-- cpu_rate_limit/memory_limit range is (0.01, 1)
+CREATE RESOURCE GROUP rg2_test_group WITH (cpu_rate_limit=.5, memory_limit=.05);
+CREATE RESOURCE GROUP rg2_test_group WITH (cpu_rate_limit=.05, memory_limit=.5);
+CREATE RESOURCE GROUP rg2_test_group WITH (cpu_rate_limit=.01, memory_limit=.05);
+CREATE RESOURCE GROUP rg2_test_group WITH (cpu_rate_limit=.05, memory_limit=.01);
+
+-- can't specify the resource limit type multiple times
+CREATE RESOURCE GROUP rg2_test_group WITH (concurrency=1, cpu_rate_limit=.05, memory_limit=.05, memory_redzone_limit=.7, concurrency=1);
+CREATE RESOURCE GROUP rg2_test_group WITH (concurrency=1, cpu_rate_limit=.05, memory_limit=.05, memory_redzone_limit=.7, cpu_rate_limit=.05);
+CREATE RESOURCE GROUP rg2_test_group WITH (concurrency=1, cpu_rate_limit=.05, memory_limit=.05, memory_redzone_limit=.7, memory_limit=.05);
+CREATE RESOURCE GROUP rg2_test_group WITH (concurrency=1, cpu_rate_limit=.05, memory_limit=.05, memory_redzone_limit=.7, memory_redzone_limit=.8);
+
+DROP RESOURCE GROUP rg_test_group;
+
+-- can't drop reserved resource groups
+DROP RESOURCE GROUP default_group;
+DROP RESOURCE GROUP admin_group;
+DROP RESOURCE GROUP none;
+
+-- can't drop non-exist resource group
+DROP RESOURCE GROUP rg_non_exist_group;

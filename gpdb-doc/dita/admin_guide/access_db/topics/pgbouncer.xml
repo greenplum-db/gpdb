@@ -124,7 +124,7 @@ admin_users = gpadmin</codeblock><p>The
               can use the Linux <codeph>md5sum</codeph> command to calculate the MD5 string. For
               example, if the <codeph>gpadmin</codeph> password is <codeph>admin1234</codeph> the
               following command prints the string for the password
-              field:<codeblock>$ user=gpadmin; passw=admin1234; echo -n md5; echo $passwd$user | md5sum
+              field:<codeblock>$ user=gpadmin; passwd=admin1234; echo -n md5; echo $passwd$user | md5sum
 md53ce96652dedd8226c498e09ae2d26220</codeblock></p><p>And
               here is the MD5-encoded entry for the <codeph>gpadmin</codeph> user in the PgBouncer
               authentication file:</p><p>
@@ -287,7 +287,7 @@ ignore_startup_parameters=options
       <body>
         <p>PgBouncer does not have SSL support, so connections between database clients and
           PgBouncer are not encrypted. To encrypt these connections, you can use <xref
-            href="https://stunnel.org" format="html" scope="external">stunnel</xref>, a free
+            href="https://www.stunnel.org/index.html" format="html" scope="external">stunnel</xref>, a free
           software utility. stunnel is a proxy that uses the OpenSSL cryptographic library to add
           TLS encryption to network services. Newer versions of stunnel support the PostgreSQL libpq
           protocol, so Greenplum and PostgreSQL clients can use libpq SSL support to connect
@@ -295,8 +295,8 @@ ignore_startup_parameters=options
           use a version of stunnel without libpq support, you need to set up a stunnel instance on
           both the client and PgBouncer host to create a secure tunnel over the network.</p>
         <p>On most platforms, you can install stunnel using the system package manager. For Windows,
-          you can download an installer from <xref href="https://stunnel.org" format="html"
-            scope="external">https://stunnel.org</xref>. You can also download and install stunnel
+          you can download an installer from <xref href="https://www.stunnel.org/index.html" format="html"
+            scope="external">https://www.stunnel.org/index.html</xref>. You can also download and install stunnel
           from source if a packaged version is unavailable, if you want to upgrade to a newer
           version, or if you want to upgrade to a newer OpenSSL version. The next section provides
           steps to download, compile, and install OpenSSL and stunnel. </p>
@@ -308,9 +308,9 @@ ignore_startup_parameters=options
           <p>stunnel requires a version of the OpenSSL development package greater than 1.0. The
             following instructions download and build OpenSSL and stunnel for Red Hat or CentOS. Be
             sure to check <xref
-              href="http://www.postgresql.org/docs/9.4/static/auth-pg-hba-conf.html" format="html"
-              scope="external">https://stunnel.org</xref> and <xref
-              href="http://www.postgresql.org/docs/9.4/static/auth-pg-hba-conf.html" format="html"
+              href="https://www.postgresql.org/docs/9.4/static/auth-pg-hba-conf.html" format="html"
+              scope="external">https://www.stunnel.org/index.html</xref> and <xref
+              href="https://www.postgresql.org/docs/9.4/static/auth-pg-hba-conf.html" format="html"
               scope="external">http://openssl.org</xref> for the latest versions. </p>
           <ol id="ol_flk_5y3_bt">
             <li>Set the <codeph>PREFIX</codeph> environment variable to the directory where you want

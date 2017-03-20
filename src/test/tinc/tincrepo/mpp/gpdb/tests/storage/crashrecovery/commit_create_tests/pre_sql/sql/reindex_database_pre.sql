@@ -1,4 +1,4 @@
-Create database airline_booking_db;
+create database airline_booking_db template template0;
 \c airline_booking_db
 set statement_mem = '200MB';
 drop table if exists airline_booking_test1;

@@ -1,4 +1,4 @@
-Create database airline_booking_db;
+create database airline_booking_db template template0;
 CREATE DATABASE
 \c airline_booking_db
 You are now connected to database "airline_booking_db" as user "prabaa1".

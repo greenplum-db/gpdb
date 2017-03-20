@@ -99,16 +99,11 @@
 
 #include "postgres.h"
 
-#include "access/genam.h"
 #include "access/heapam.h"
 #include "access/nbtree.h"
 #include "catalog/pg_amop.h"
 #include "catalog/pg_operator.h"
 #include "commands/tablespace.h"
-#include "executor/execWorkfile.h"
-#include "executor/instrument.h"        /* Instrumentation */
-#include "executor/nodeSort.h"  		/* Gpmon */ 
-#include "lib/stringinfo.h"             /* StringInfo */
 #include "miscadmin.h"
 #include "utils/datum.h"
 #include "utils/logtape.h"
@@ -118,10 +113,14 @@
 #include "utils/syscache.h"
 #include "utils/tuplesort.h"
 
+#include "access/genam.h"
 #include "cdb/cdbvars.h"
-
-
-#include "utils/dynahash.h" /* my_log2 */
+#include "executor/execWorkfile.h"
+#include "executor/instrument.h"        /* Instrumentation */
+#include "executor/nodeSort.h"          /* Gpmon */
+#include "lib/stringinfo.h"             /* StringInfo */
+#include "utils/dynahash.h"             /* my_log2 */
+#include "utils/tuplesort_gp.h"
 
 /* GUC variables */
 #ifdef TRACE_SORT
@@ -192,6 +191,7 @@ typedef enum
  * tape during a preread cycle (see discussion at top of file).
  */
 #define MINORDER		6		/* minimum merge order */
+#define MAXORDER		250		/* maximum merge order */
 #define TAPE_BUFFER_OVERHEAD		(BLCKSZ * 3)
 #define MERGE_BUFFER_SIZE			(BLCKSZ * 32)
 
@@ -413,19 +413,12 @@ struct Tuplesortstate
 	int *gpmon_sort_tick;
 };
 
-static bool is_sortstate_rwfile(Tuplesortstate *state)
-{
-	return state->pfile_rwfile_state != NULL;
-}
-
 #define COMPARETUP(state,a,b)	((*(state)->comparetup) (a, b, state))
 #define COPYTUP(state,stup,tup) ((*(state)->copytup) (state, stup, tup))
 #define WRITETUP(state,tape,stup)	((*(state)->writetup) (state, tape, stup))
 #define READTUP(state,pos,stup,tape,len) ((*(state)->readtup) (state, pos, stup, tape, len))
 #define REVERSEDIRECTION(state) ((*(state)->reversedirection) (state))
 #define LACKMEM(state)		((state)->availMem < 0)
-
-static void tuplesort_get_stats(Tuplesortstate *state, const char **sortMethod, const char **spaceType, long *spaceUsed);
 
 static inline void USEMEM(Tuplesortstate *state, int amt)
 {
@@ -434,12 +427,11 @@ static inline void USEMEM(Tuplesortstate *state, int amt)
 		Gpmon_M_Add(state->gpmon_pkt, GPMON_SORT_MEMORY_BYTE, amt);
 }
 
-static inline void
-FREEMEM(Tuplesortstate *state, int amt)
+static inline void FREEMEM(Tuplesortstate *state, int amt)
 {
-    if (state->availMemMin > state->availMem)
-        state->availMemMin = state->availMem;
-    state->availMem += amt;
+	if (state->availMemMin > state->availMem)
+		state->availMemMin = state->availMem;
+	state->availMem += amt;
 	if(state->gpmon_pkt)
 		Gpmon_M_Add(state->gpmon_pkt, GPMON_SORT_MEMORY_BYTE, -amt);
 }
@@ -496,8 +488,6 @@ static void beginmerge(Tuplesortstate *state);
 static void mergepreread(Tuplesortstate *state);
 static void mergeprereadone(Tuplesortstate *state, int srcTape);
 static void dumptuples(Tuplesortstate *state, bool alltuples);
-static void tuplesort_sorted_insert(Tuplesortstate *state, SortTuple *tuple,
-					  int tupleindex, bool checkIndex);
 static void make_bounded_heap(Tuplesortstate *state);
 static void sort_bounded_heap(Tuplesortstate *state);
 static void tuplesort_heap_insert(Tuplesortstate *state, SortTuple *tuple,
@@ -528,6 +518,8 @@ static void readtup_datum(Tuplesortstate *state, TuplesortPos *pos, SortTuple *s
 static void reversedirection_datum(Tuplesortstate *state);
 static void free_sort_tuple(Tuplesortstate *state, SortTuple *stup);
 
+static void tuplesort_sorted_insert(Tuplesortstate *state, SortTuple *tuple,
+					  int tupleindex, bool checkIndex);
 
 /*
  *		tuplesort_begin_xxx
@@ -630,47 +622,6 @@ tuplesort_begin_common(int workMem, bool randomAccess, bool allocmemtuple)
 	return state;
 }
 
-
-/*
- * Initialize some extra CDB attributes for the sort, including limit
- * and uniqueness.  Should do this after begin_heap.
- */
-void
-cdb_tuplesort_init(Tuplesortstate *state, int unique, int sort_flags,
-				   int64 maxdistinct)
-{
-	if (unique)
-		state->noduplicates = true;
-
-	state->mppsortflags = sort_flags;
-
-	state->gpmaxdistinct = maxdistinct;
-
-	/* do a standard sort unless performing limit or duplicate
-	 * elimination */
-
-	state->standardsort = 
-			(state->mppsortflags == 0) ||
-			((!state->bounded)
-			 && (!state->noduplicates)); 
-}
-
-/* make a copy of current state pos */
-void
-tuplesort_begin_pos(Tuplesortstate *st, TuplesortPos **pos)
-{
-	TuplesortPos *st_pos;
-	Assert(st);
-
-	st_pos = (TuplesortPos *) palloc0(sizeof(TuplesortPos));
-	memcpy(st_pos, &(st->pos), sizeof(TuplesortPos));
-
-	if(st->tapeset)
-		st_pos->cur_work_tape = LogicalTapeSetDuplicateTape(st->tapeset, st->result_tape);
-
-	*pos = st_pos;
-}
-
 Tuplesortstate *
 tuplesort_begin_heap(TupleDesc tupDesc,
 					 int nkeys, AttrNumber *attNums,
@@ -736,88 +687,6 @@ tuplesort_begin_heap(TupleDesc tupDesc,
 	MemoryContextSwitchTo(oldcontext);
 
 	return state;
-}
-
-Tuplesortstate *
-tuplesort_begin_heap_file_readerwriter(
-		const char *rwfile_prefix, bool isWriter,
-		TupleDesc tupDesc,
-		int nkeys, AttrNumber *attNums,
-		Oid *sortOperators, bool *nullsFirstFlags,
-		int workMem, bool randomAccess)
-{
-	Tuplesortstate *state;
-	char statedump[MAXPGPATH];
-	char full_prefix[MAXPGPATH];
-
-	Assert(randomAccess);
-
-	int len = snprintf(statedump, sizeof(statedump), "%s/%s_sortstate", PG_TEMP_FILES_DIR, rwfile_prefix);
-	insist_log(len <= MAXPGPATH - 1, "could not generate temporary file name");
-
-	len = snprintf(full_prefix, sizeof(full_prefix), "%s/%s",
-			PG_TEMP_FILES_DIR,
-			rwfile_prefix);
-	insist_log(len <= MAXPGPATH - 1, "could not generate temporary file name");
-
-	if(isWriter)
-	{
-		/*
-		 * Writer is a oridinary tuplesort, except the underlying buf file are named by
-		 * rwfile_prefix.
-		 */
-		state = tuplesort_begin_heap(tupDesc, nkeys, attNums,
-									 sortOperators, nullsFirstFlags,
-									 workMem, randomAccess);
-
-		state->pfile_rwfile_prefix = MemoryContextStrdup(state->sortcontext, full_prefix);
-		state->pfile_rwfile_state = ExecWorkFile_Create(statedump,
-				BUFFILE,
-				true /* delOnClose */ ,
-				0 /* compressType */ );
-		Assert(state->pfile_rwfile_state != NULL);
-
-		return state;
-	}
-	else
-	{
-
-		/* 
-		 * For reader, we really don't know anything about sort op, attNums, etc.  
-		 * All the readers cares are the data on the logical tape set.  The state
-		 * of the logical tape set has been dumped, so we load it back and that is
-		 * it.
-		 */
-		state = tuplesort_begin_common(workMem, randomAccess, false);
-		state->status = TSS_SORTEDONTAPE;
-		state->randomAccess = true;
-
-		state->readtup = readtup_heap;
-
-		state->pfile_rwfile_prefix = MemoryContextStrdup(state->sortcontext, full_prefix);
-		state->pfile_rwfile_state = ExecWorkFile_Open(statedump,
-				BUFFILE,
-				false /* delOnClose */,
-				0 /* compressType */);
-
-		ExecWorkFile *tapefile = ExecWorkFile_Open(full_prefix,
-				BUFFILE,
-				false /* delOnClose */,
-				0 /* compressType */);
-
-		state->tapeset = LoadLogicalTapeSetState(state->pfile_rwfile_state, tapefile);
-		state->currentRun = 0;
-		state->result_tape = LogicalTapeSetGetTape(state->tapeset, 0);
-
-		state->pos.eof_reached =false;
-		state->pos.markpos.tapepos.blkNum = 0;
-		state->pos.markpos.tapepos.offset = 0; 
-		state->pos.markpos.mempos = 0;
-		state->pos.markpos_eof = false;
-		state->pos.cur_work_tape = NULL;
-
-		return state;
-	}
 }
 
 Tuplesortstate *
@@ -999,64 +868,6 @@ tuplesort_end(Tuplesortstate *state)
 	 * including the Tuplesortstate struct itself.
 	 */
 	MemoryContextDelete(state->sortcontext);
-}
-
-/*
- * tuplesort_finalize_stats
- *
- * Finalize the EXPLAIN ANALYZE stats.
- */
-void
-tuplesort_finalize_stats(Tuplesortstate *state)
-{
-    if (state->instrument && !state->statsFinalized)
-    {
-        double  workmemused;
-
-        /* How close did we come to the work_mem limit? */
-        FREEMEM(state, 0);              /* update low-water mark */
-        workmemused = MemoryContextGetPeakSpace(state->sortcontext);
-        if (state->instrument->workmemused < workmemused)
-            state->instrument->workmemused = workmemused;
-
-        /* Report executor memory used by our memory context. */
-        state->instrument->execmemused +=
-            (double)MemoryContextGetPeakSpace(state->sortcontext);
-
-		state->statsFinalized = true;
-		tuplesort_get_stats(state,
-				&state->instrument->sortMethod,
-				&state->instrument->sortSpaceType,
-				&state->instrument->sortSpaceUsed);
-    }
-}
-
-/*
- * tuplesort_set_instrument
- *
- * May be called after tuplesort_begin_xxx() to enable reporting of
- * statistics and events for EXPLAIN ANALYZE.
- *
- * The 'instr' and 'explainbuf' ptrs are retained in the 'state' object for
- * possible use anytime during the sort, up to and including tuplesort_end().
- * The caller must ensure that the referenced objects remain allocated and
- * valid for the life of the Tuplesortstate object; or if they are to be
- * freed early, disconnect them by calling again with NULL pointers.
- */
-void 
-tuplesort_set_instrument(Tuplesortstate            *state,
-                         struct Instrumentation    *instrument,
-                         struct StringInfoData     *explainbuf)
-{
-    state->instrument = instrument;
-    state->explainbuf = explainbuf;
-}                               /* tuplesort_set_instrument */
-
-void 
-tuplesort_set_gpmon(Tuplesortstate *state, gpmon_packet_t *pkt, int *tick)
-{
-	state->gpmon_pkt = pkt;
-	state->gpmon_sort_tick = tick;
 }
 
 /*
@@ -1287,7 +1098,7 @@ puttuple_common(Tuplesortstate *state, SortTuple *tuple)
 			/*
 			 * Nope; time to switch to tape-based operation.
 			 */
-			inittapes(state, is_sortstate_rwfile(state) ? state->pfile_rwfile_prefix : NULL);
+			inittapes(state, state->pfile_rwfile_state ? state->pfile_rwfile_prefix : NULL);
 
 			/*
 			 * Dump tuples until we are back under the limit.
@@ -1374,7 +1185,7 @@ tuplesort_performsort(Tuplesortstate *state)
 	 * If we the output needs to be shared by other readers, we need to
 	 * materialize it on a tape, even if it fit in memory.
 	 */
-	if (state->status == TSS_INITIAL && is_sortstate_rwfile(state))
+	if (state->status == TSS_INITIAL && NULL != state->pfile_rwfile_state)
 		inittapes(state, state->pfile_rwfile_prefix);
 
 	switch (state->status)
@@ -1468,15 +1279,6 @@ tuplesort_performsort(Tuplesortstate *state)
 	state->availMemMin01 = state->availMemMin;
 
 	MemoryContextSwitchTo(oldcontext);
-}
-
-void tuplesort_flush(Tuplesortstate *state)
-{
-	Assert(state->status == TSS_SORTEDONTAPE);
-	Assert(state->tapeset && state->pfile_rwfile_state);
-	Assert(state->pos.cur_work_tape == NULL);
-	LogicalTapeFlush(state->tapeset, state->result_tape, state->pfile_rwfile_state);
-	ExecWorkFile_Flush(state->pfile_rwfile_state);
 }
 
 /*
@@ -1776,6 +1578,36 @@ tuplesort_getdatum(Tuplesortstate *state, bool forward,
 	MemoryContextSwitchTo(oldcontext);
 
 	return true;
+}
+
+/*
+ * tuplesort_merge_order - report merge order we'll use for given memory
+ * (note: "merge order" just means the number of input tapes in the merge).
+ *
+ * This is exported for use by the planner.  allowedMem is in bytes.
+ */
+int
+tuplesort_merge_order(long allowedMem)
+{
+	int			mOrder;
+
+	/*
+	 * We need one tape for each merge input, plus another one for the output,
+	 * and each of these tapes needs buffer space.  In addition we want
+	 * MERGE_BUFFER_SIZE workspace per input tape (but the output tape doesn't
+	 * count).
+	 *
+	 * Note: you might be thinking we need to account for the memtuples[]
+	 * array in this calculation, but we effectively treat that as part of the
+	 * MERGE_BUFFER_SIZE workspace.
+	 */
+	mOrder = (allowedMem - TAPE_BUFFER_OVERHEAD) /
+		(MERGE_BUFFER_SIZE + TAPE_BUFFER_OVERHEAD);
+
+	mOrder = Max(mOrder, MINORDER);
+	mOrder = Min(mOrder, MAXORDER);
+
+	return mOrder;
 }
 
 /*
@@ -2435,6 +2267,15 @@ dumptuples(Tuplesortstate *state, bool alltuples)
 }
 
 /*
+ * tuplesort_rescan		- rewind and replay the scan
+ */
+void
+tuplesort_rescan(Tuplesortstate *state)
+{
+	tuplesort_rescan_pos(state, &state->pos);
+}
+
+/*
  * Put pos at the begining of the tuplesort.  Create pos->work_tape if necessary
  */
 void
@@ -2481,17 +2322,14 @@ tuplesort_rescan_pos(Tuplesortstate *state, TuplesortPos *pos)
 }
 
 /*
- * tuplesort_rescan		- rewind and replay the scan
- */
-void
-tuplesort_rescan(Tuplesortstate *state)
-{
-	tuplesort_rescan_pos(state, &state->pos);
-}
-
-/*
  * tuplesort_markpos	- saves current position in the merged sort file
  */
+void
+tuplesort_markpos(Tuplesortstate *state)
+{
+	tuplesort_markpos_pos(state, &state->pos);
+}
+
 void
 tuplesort_markpos_pos(Tuplesortstate *state, TuplesortPos *pos)
 {
@@ -2519,16 +2357,17 @@ tuplesort_markpos_pos(Tuplesortstate *state, TuplesortPos *pos)
 
 	MemoryContextSwitchTo(oldcontext);
 }
-void
-tuplesort_markpos(Tuplesortstate *state)
-{
-	tuplesort_markpos_pos(state, &state->pos);
-}
 
 /*
  * tuplesort_restorepos - restores current position in merged sort file to
  *						  last saved position
  */
+void
+tuplesort_restorepos(Tuplesortstate *state)
+{
+	tuplesort_restorepos_pos(state, &state->pos);
+}
+
 void
 tuplesort_restorepos_pos(Tuplesortstate *state, TuplesortPos *pos)
 {
@@ -2559,11 +2398,6 @@ tuplesort_restorepos_pos(Tuplesortstate *state, TuplesortPos *pos)
 	}
 
 	MemoryContextSwitchTo(oldcontext);
-}
-void
-tuplesort_restorepos(Tuplesortstate *state)
-{
-	tuplesort_restorepos_pos(state, &state->pos);
 }
 
 /*
@@ -2770,193 +2604,7 @@ tuplesort_heap_insert(Tuplesortstate *state, SortTuple *tuple,
 		j = i;
 	}
 
-	/* CDB: discard duplicates during run creation */
-/*
-	if (0 && state->noduplicates && (0 == comparestat) && 
-		(state->status == TSS_BUILDRUNS))
-	{
-		HeapTuple	htup = (HeapTuple) tuple->tuple;
-		FREEMEM(state, GetMemoryChunkSpace(htup));
-		heap_freetuple(htup);
-	} 
-	else
-*/
-	{
-		memtuples[j] = *tuple;
-	}
-}
-
-static void
-tuplesort_sorted_insert(Tuplesortstate *state, SortTuple *tuple,
-						int tupleindex, bool checkIndex)
-{
-	SortTuple  *memtuples;
-	SortTuple  *freetup;
-	int			comparestat;
-	int			j;
-	int         searchpoint = 0;
-
-	/*
-	 * Save the tupleindex --- see notes above about writing on *tuple. It's a
-	 * historical artifact that tupleindex is passed as a separate argument
-	 * and not in *tuple, but it's notationally convenient so let's leave it
-	 * that way.
-	 */
-	tuple->tupindex = tupleindex;
-
-	memtuples = state->memtuples;
-	Assert(state->memtupcount < state->memtupsize);
-
-	/* compare to the last value first */
-	comparestat = 
-			HEAPCOMPARE(tuple, &memtuples[state->memtupcount - 1]);
-
-	if (state->memtupblimited) 
-	{
-		/* discard the last tuple if it exceeds the LIMIT */
-		if (comparestat >= 0)
-		{
-			freetup = tuple;
-			goto L_freetup;
-		}
-		else
-		{
-			state->memtupblimited = false;				
-		}
-	}
-
-	if (state->noduplicates && (0 == comparestat))
-	{
-		freetup = tuple;
-		goto L_freetup;
-	}
-
-	/* j is the last array index to memtuples, and memtupcount is the
-	 * number of values 
-	 */
-	j = state->memtupcount++;
-
-	if (comparestat >= 0)
-	{
-		memtuples[j] = *tuple;
-		goto L_checklimit;
-	}
-
-	if (j > 1)
-	{
-		int lefty  = 0;
-		int righty = j-1;
-
-		righty--;
-
-        while (1)
-        {
-			int middle;
-
-			if (lefty > righty)
-					break;
-
-			middle = (lefty + righty) / 2;
-
-			comparestat = 
-					HEAPCOMPARE(tuple, &memtuples[middle]);
-
-            if (comparestat < 0)
-            {
-				/* if key < current entry then keep moving left
-				 * (eliminate the right interval) 
-				 */
-                righty = middle - 1;
-            }
-            else
-            {
-				/* check if can free a duplicate */
-				if (state->noduplicates && (0 == comparestat))
-				{
-					state->memtupcount--;
-					freetup = tuple;
-					goto L_freetup;
-				}
-
-				/* if key >= current entry then keep moving right
-                 (eliminate the left interval).  Note that the return
-                 value for the estimate gets bumped up to the current
-                 position, because we can start a linear scan from
-                 this location */
-
-                searchpoint = middle;
-                lefty  = middle + 1;
-            }
-        } /* end while */
-    
-	}
-
-	/* Note: only go to position j-1, because we haven't filled in
-	 * memtuples[j] yet 
-	 */
-	for (; searchpoint < j; searchpoint++)
-	{
-		comparestat = 
-				HEAPCOMPARE(tuple, &memtuples[searchpoint]);
-		if (comparestat < 0)
-		{
-			break;
-		}
-		if (searchpoint >= (j-1))
-			break;
-	}
-
-	/* 
-	   if only a single tuple, and new tuple < memtuple[0], then
-	   searchpoint = 0, so memtuple[0] is moved to memtuple[1].  
-
-	   If new tuple is less than the last tuple, then searchpoint is
-	   set to j-1, so memtuple[j-1] is moved to memtuple[j], which is
-	   correct 
-	*/
-
-	/* check if can free a duplicate */
-	if (state->noduplicates && (0 == comparestat))
-	{
-		state->memtupcount--;
-		freetup = tuple;
-		goto L_freetup;
-	}
-
-	/* move the other elements over by one */
-	{
-		void	*src = &memtuples[searchpoint];
-		void	*dst = &memtuples[searchpoint+1];
-		size_t	len = (j-searchpoint) * sizeof(SortTuple);
-		memmove(dst, src, len);
-
-		memtuples[searchpoint] = *tuple;		
-	}
-
- L_checklimit:
-	/* CDB: always add new value if never dumped or no limit, else
-	 * drop the last value if it exceeds the limit 
-	 */
-	if ((state->bounded)
-		&& (state->memtupcount > state->bound))
-	{
-		/* set blimited true if have limit and memtuples are sorted */
-		state->memtupblimited = true;			
-
-		freetup = &memtuples[--state->memtupcount];
-		goto L_freetup;
-	}
-	return;
-
-	/* free up tuples if necessary */
- L_freetup:
-	if (freetup->tuple != NULL)
-	{
-		FREEMEM(state, GetMemoryChunkSpace(freetup->tuple));
-		pfree(freetup->tuple);
-	}
-
-	state->discardcount++;
+	memtuples[j] = *tuple;
 }
 
 /*
@@ -3594,20 +3242,6 @@ readtup_datum(Tuplesortstate *state, TuplesortPos *pos, SortTuple *stup,
 	}
 }
 
-void tuplesort_checksend_gpmonpkt(gpmon_packet_t *pkt, int *tick)
-{
-	if(!pkt)
-		return;
-
-	if(gp_enable_gpperfmon)
-	{
-		if(*tick != gpmon_tick)
-			gpmon_send(pkt);
-
-		*tick = gpmon_tick;
-	}
-}
-
 static void
 reversedirection_datum(Tuplesortstate *state)
 {
@@ -3623,3 +3257,390 @@ free_sort_tuple(Tuplesortstate *state, SortTuple *stup)
 	FREEMEM(state, GetMemoryChunkSpace(stup->tuple));
 	pfree(stup->tuple);
 }
+
+
+/*-------------------------------------------------------------------------
+ * GPDB specific method implementations
+ *-------------------------------------------------------------------------
+ */
+
+
+/*
+ * Initialize some extra CDB attributes for the sort, including limit
+ * and uniqueness.  Should do this after begin_heap.
+ */
+void
+cdb_tuplesort_init(Tuplesortstate *state, int unique, int sort_flags,
+				   int64 maxdistinct)
+{
+	if (unique)
+		state->noduplicates = true;
+
+	state->mppsortflags = sort_flags;
+
+	state->gpmaxdistinct = maxdistinct;
+
+	/* do a standard sort unless performing limit or duplicate
+	 * elimination */
+
+	state->standardsort =
+			(state->mppsortflags == 0) ||
+			((!state->bounded)
+			 && (!state->noduplicates)); 
+}
+
+
+/* make a copy of current state pos - used by SharedInputScan */
+void
+tuplesort_begin_pos(Tuplesortstate *st, TuplesortPos **pos)
+{
+	TuplesortPos *st_pos;
+	Assert(st);
+
+	st_pos = (TuplesortPos *) palloc0(sizeof(TuplesortPos));
+	memcpy(st_pos, &(st->pos), sizeof(TuplesortPos));
+
+	if(st->tapeset)
+		st_pos->cur_work_tape = LogicalTapeSetDuplicateTape(st->tapeset, st->result_tape);
+
+	*pos = st_pos;
+}
+
+
+Tuplesortstate *
+tuplesort_begin_heap_file_readerwriter(
+		const char *rwfile_prefix, bool isWriter,
+		TupleDesc tupDesc,
+		int nkeys, AttrNumber *attNums,
+		Oid *sortOperators, bool *nullsFirstFlags,
+		int workMem, bool randomAccess)
+{
+	Tuplesortstate *state;
+	char statedump[MAXPGPATH];
+	char full_prefix[MAXPGPATH];
+
+	Assert(randomAccess);
+
+	int len = snprintf(statedump, sizeof(statedump), "%s/%s_sortstate", PG_TEMP_FILES_DIR, rwfile_prefix);
+	insist_log(len <= MAXPGPATH - 1, "could not generate temporary file name");
+
+	len = snprintf(full_prefix, sizeof(full_prefix), "%s/%s",
+			PG_TEMP_FILES_DIR,
+			rwfile_prefix);
+	insist_log(len <= MAXPGPATH - 1, "could not generate temporary file name");
+
+	if(isWriter)
+	{
+		/*
+		 * Writer is a oridinary tuplesort, except the underlying buf file are named by
+		 * rwfile_prefix.
+		 */
+		state = tuplesort_begin_heap(tupDesc, nkeys, attNums,
+									 sortOperators, nullsFirstFlags,
+									 workMem, randomAccess);
+
+		state->pfile_rwfile_prefix = MemoryContextStrdup(state->sortcontext, full_prefix);
+		state->pfile_rwfile_state = ExecWorkFile_Create(statedump,
+				BUFFILE,
+				true /* delOnClose */ ,
+				0 /* compressType */ );
+		Assert(state->pfile_rwfile_state != NULL);
+
+		return state;
+	}
+	else
+	{
+
+		/*
+		 * For reader, we really don't know anything about sort op, attNums, etc.
+		 * All the readers cares are the data on the logical tape set.  The state
+		 * of the logical tape set has been dumped, so we load it back and that is
+		 * it.
+		 */
+		state = tuplesort_begin_common(workMem, randomAccess, false);
+		state->status = TSS_SORTEDONTAPE;
+		state->randomAccess = true;
+
+		state->readtup = readtup_heap;
+
+		state->pfile_rwfile_prefix = MemoryContextStrdup(state->sortcontext, full_prefix);
+		state->pfile_rwfile_state = ExecWorkFile_Open(statedump,
+				BUFFILE,
+				false /* delOnClose */,
+				0 /* compressType */);
+
+		ExecWorkFile *tapefile = ExecWorkFile_Open(full_prefix,
+				BUFFILE,
+				false /* delOnClose */,
+				0 /* compressType */);
+
+		state->tapeset = LoadLogicalTapeSetState(state->pfile_rwfile_state, tapefile);
+		state->currentRun = 0;
+		state->result_tape = LogicalTapeSetGetTape(state->tapeset, 0);
+
+		state->pos.eof_reached =false;
+		state->pos.markpos.tapepos.blkNum = 0;
+		state->pos.markpos.tapepos.offset = 0;
+		state->pos.markpos.mempos = 0;
+		state->pos.markpos_eof = false;
+		state->pos.cur_work_tape = NULL;
+
+		return state;
+	}
+}
+
+void tuplesort_flush(Tuplesortstate *state)
+{
+	Assert(state->status == TSS_SORTEDONTAPE);
+	Assert(state->tapeset && state->pfile_rwfile_state);
+	Assert(state->pos.cur_work_tape == NULL);
+	LogicalTapeFlush(state->tapeset, state->result_tape, state->pfile_rwfile_state);
+	ExecWorkFile_Flush(state->pfile_rwfile_state);
+}
+
+static void
+tuplesort_sorted_insert(Tuplesortstate *state, SortTuple *tuple,
+						int tupleindex, bool checkIndex)
+{
+	SortTuple  *memtuples;
+	SortTuple  *freetup;
+	int			comparestat;
+	int			j;
+	int         searchpoint = 0;
+
+	/*
+	 * Save the tupleindex --- see notes above about writing on *tuple. It's a
+	 * historical artifact that tupleindex is passed as a separate argument
+	 * and not in *tuple, but it's notationally convenient so let's leave it
+	 * that way.
+	 */
+	tuple->tupindex = tupleindex;
+
+	memtuples = state->memtuples;
+	Assert(state->memtupcount < state->memtupsize);
+
+	/* compare to the last value first */
+	comparestat =
+			HEAPCOMPARE(tuple, &memtuples[state->memtupcount - 1]);
+
+	if (state->memtupblimited)
+	{
+		/* discard the last tuple if it exceeds the LIMIT */
+		if (comparestat >= 0)
+		{
+			freetup = tuple;
+			goto L_freetup;
+		}
+		else
+		{
+			state->memtupblimited = false;
+		}
+	}
+
+	if (state->noduplicates && (0 == comparestat))
+	{
+		freetup = tuple;
+		goto L_freetup;
+	}
+
+	/* j is the last array index to memtuples, and memtupcount is the
+	 * number of values
+	 */
+	j = state->memtupcount++;
+
+	if (comparestat >= 0)
+	{
+		memtuples[j] = *tuple;
+		goto L_checklimit;
+	}
+
+	if (j > 1)
+	{
+		int lefty  = 0;
+		int righty = j-1;
+
+		righty--;
+
+        while (1)
+        {
+			int middle;
+
+			if (lefty > righty)
+					break;
+
+			middle = (lefty + righty) / 2;
+
+			comparestat =
+					HEAPCOMPARE(tuple, &memtuples[middle]);
+
+            if (comparestat < 0)
+            {
+				/* if key < current entry then keep moving left
+				 * (eliminate the right interval)
+				 */
+                righty = middle - 1;
+            }
+            else
+            {
+				/* check if can free a duplicate */
+				if (state->noduplicates && (0 == comparestat))
+				{
+					state->memtupcount--;
+					freetup = tuple;
+					goto L_freetup;
+				}
+
+				/* if key >= current entry then keep moving right
+                 (eliminate the left interval).  Note that the return
+                 value for the estimate gets bumped up to the current
+                 position, because we can start a linear scan from
+                 this location */
+
+                searchpoint = middle;
+                lefty  = middle + 1;
+            }
+        } /* end while */
+	}
+
+	/* Note: only go to position j-1, because we haven't filled in
+	 * memtuples[j] yet
+	 */
+	for (; searchpoint < j; searchpoint++)
+	{
+		comparestat =
+				HEAPCOMPARE(tuple, &memtuples[searchpoint]);
+		if (comparestat < 0)
+		{
+			break;
+		}
+		if (searchpoint >= (j-1))
+			break;
+	}
+
+	/*
+	   if only a single tuple, and new tuple < memtuple[0], then
+	   searchpoint = 0, so memtuple[0] is moved to memtuple[1].
+
+	   If new tuple is less than the last tuple, then searchpoint is
+	   set to j-1, so memtuple[j-1] is moved to memtuple[j], which is
+	   correct
+	*/
+
+	/* check if can free a duplicate */
+	if (state->noduplicates && (0 == comparestat))
+	{
+		state->memtupcount--;
+		freetup = tuple;
+		goto L_freetup;
+	}
+
+	/* move the other elements over by one */
+	{
+		void	*src = &memtuples[searchpoint];
+		void	*dst = &memtuples[searchpoint+1];
+		size_t	len = (j-searchpoint) * sizeof(SortTuple);
+		memmove(dst, src, len);
+
+		memtuples[searchpoint] = *tuple;
+	}
+
+ L_checklimit:
+	/* CDB: always add new value if never dumped or no limit, else
+	 * drop the last value if it exceeds the limit 
+	 */
+	if ((state->bounded)
+		&& (state->memtupcount > state->bound))
+	{
+		/* set blimited true if have limit and memtuples are sorted */
+		state->memtupblimited = true;
+
+		freetup = &memtuples[--state->memtupcount];
+		goto L_freetup;
+	}
+	return;
+
+	/* free up tuples if necessary */
+ L_freetup:
+	if (freetup->tuple != NULL)
+	{
+		FREEMEM(state, GetMemoryChunkSpace(freetup->tuple));
+		pfree(freetup->tuple);
+	}
+
+	state->discardcount++;
+}
+
+
+/*
+ * tuplesort_finalize_stats
+ *
+ * Finalize the EXPLAIN ANALYZE stats.
+ */
+void
+tuplesort_finalize_stats(Tuplesortstate *state)
+{
+    if (state->instrument && !state->statsFinalized)
+    {
+        double  workmemused;
+
+        /* How close did we come to the work_mem limit? */
+        FREEMEM(state, 0);              /* update low-water mark */
+        workmemused = MemoryContextGetPeakSpace(state->sortcontext);
+        if (state->instrument->workmemused < workmemused)
+            state->instrument->workmemused = workmemused;
+
+        /* Report executor memory used by our memory context. */
+        state->instrument->execmemused +=
+            (double)MemoryContextGetPeakSpace(state->sortcontext);
+
+		state->statsFinalized = true;
+		tuplesort_get_stats(state,
+				&state->instrument->sortMethod,
+				&state->instrument->sortSpaceType,
+				&state->instrument->sortSpaceUsed);
+    }
+}
+
+/*
+ * tuplesort_set_instrument
+ *
+ * May be called after tuplesort_begin_xxx() to enable reporting of
+ * statistics and events for EXPLAIN ANALYZE.
+ *
+ * The 'instr' and 'explainbuf' ptrs are retained in the 'state' object for
+ * possible use anytime during the sort, up to and including tuplesort_end().
+ * The caller must ensure that the referenced objects remain allocated and
+ * valid for the life of the Tuplesortstate object; or if they are to be
+ * freed early, disconnect them by calling again with NULL pointers.
+ */
+void
+tuplesort_set_instrument(Tuplesortstate            *state,
+                         struct Instrumentation    *instrument,
+                         struct StringInfoData     *explainbuf)
+{
+    state->instrument = instrument;
+    state->explainbuf = explainbuf;
+}                               /* tuplesort_set_instrument */
+
+void
+tuplesort_set_gpmon(Tuplesortstate *state, gpmon_packet_t *pkt, int *tick)
+{
+	state->gpmon_pkt = pkt;
+	state->gpmon_sort_tick = tick;
+}
+
+void tuplesort_checksend_gpmonpkt(gpmon_packet_t *pkt, int *tick)
+{
+	if(!pkt)
+		return;
+
+	if(gp_enable_gpperfmon)
+	{
+		if(*tick != gpmon_tick)
+			gpmon_send(pkt);
+
+		*tick = gpmon_tick;
+	}
+}
+
+

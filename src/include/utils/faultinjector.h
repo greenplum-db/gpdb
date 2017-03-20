@@ -221,6 +221,7 @@ typedef enum FaultInjectorIdentifier_e {
 	FsyncCounter,
 	BgBufferSyncDefaultLogic,
 
+	FinishPreparedAfterRecordCommitPrepared,
 	/* INSERT has to be done before that line */
 	FaultInjectorIdMax,
 	

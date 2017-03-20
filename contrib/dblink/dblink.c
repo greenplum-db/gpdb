@@ -195,6 +195,7 @@ typedef struct remoteConnHashEnt
 			else \
 			{ \
 				connstr = conname_or_str; \
+				dblink_connstr_check(connstr); \
 				conn = PQconnectdb(connstr); \
 				if (PQstatus(conn) == CONNECTION_BAD) \
 				{ \
@@ -251,13 +252,15 @@ dblink_connect(PG_FUNCTION_ARGS)
 		connstr = GET_STR(PG_GETARG_TEXT_P(1));
 		connname = GET_STR(PG_GETARG_TEXT_P(0));
 	}
-	else if (PG_NARGS() == 1)
+	else
 		connstr = GET_STR(PG_GETARG_TEXT_P(0));
 
 	if (connname)
 		rconn = (remoteConn *) MemoryContextAlloc(TopMemoryContext,
 												  sizeof(remoteConn));
 
+	/* check password in connection string if not superuser */
+	dblink_connstr_check(connstr);
 	conn = PQconnectdb(connstr);
 
 	if (PQstatus(conn) == CONNECTION_BAD)
@@ -273,7 +276,7 @@ dblink_connect(PG_FUNCTION_ARGS)
 				 errdetail("%s", msg)));
 	}
 
-	/* check password used if not superuser */
+	/* check password actually used if not superuser */
 	dblink_security_check(conn, rconn);
 
 	if (connname)

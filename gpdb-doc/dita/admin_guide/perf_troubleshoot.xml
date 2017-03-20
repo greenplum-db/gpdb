@@ -179,7 +179,7 @@ con6 /gpdata/*/pg_log/gpdb*.csv' &gt; seglog.out
                     core files, previously run queries, and database schema information. The utility
                     can perform some diagnostics tests on the database catalog the database network. </p>
                 <p>The <codeph>gpsupport</codeph> utility is available from <xref
-                        href="https://network.pivotal.io/products" scope="external" format="html"
+                        href="https://network.pivotal.io" scope="external" format="html"
                         class="- topic/xref ">Pivotal Network</xref> and the documentation is
                     available from the <xref href="http://gpdb.docs.pivotal.io/" scope="external"
                         format="html" class="- topic/xref ">Pivotal Documentation</xref> site.</p>

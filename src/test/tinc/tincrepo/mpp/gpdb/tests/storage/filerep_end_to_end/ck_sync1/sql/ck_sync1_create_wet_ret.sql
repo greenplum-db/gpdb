@@ -31,7 +31,7 @@ insert into ck_sync1_region select * from ck_sync1_e_region;
 --
 -- create WET with similiar schema def as the original heap table
 --
-CREATE WRITABLE EXTERNAL TABLE sync1_wet_region2 ( like sync1_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region2.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
+CREATE WRITABLE EXTERNAL TABLE sync1_wet_region2 ( like sync1_region) LOCATION ('gpfdist://10.0.0.6:8088/wet_region2.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
 
 --
 -- insert data into the WET selecting from original table
@@ -40,7 +40,7 @@ INSERT INTO sync1_wet_region2 SELECT * FROM sync1_region;
 --
 -- create a RET reading data from the file created by WET
 --
-CREATE EXTERNAL TABLE sync1_ret_region2 ( like sync1_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region2.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
+CREATE EXTERNAL TABLE sync1_ret_region2 ( like sync1_region) LOCATION ('gpfdist://10.0.0.6:8088/wet_region2.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
 --
 -- create second table with same schema def
 --
@@ -63,7 +63,7 @@ select * from sync1_new_region2 order by r_regionkey;
 --
 -- create WET with similiar schema def as the original heap table
 --
-CREATE WRITABLE EXTERNAL TABLE ck_sync1_wet_region1 ( like ck_sync1_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region1.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
+CREATE WRITABLE EXTERNAL TABLE ck_sync1_wet_region1 ( like ck_sync1_region) LOCATION ('gpfdist://10.0.0.6:8088/wet_region1.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
 
 --
 -- insert data into the WET selecting from original table
@@ -72,7 +72,7 @@ INSERT INTO ck_sync1_wet_region1 SELECT * FROM ck_sync1_region;
 --
 -- create a RET reading data from the file created by WET
 --
-CREATE EXTERNAL TABLE ck_sync1_ret_region1 ( like ck_sync1_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region1.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
+CREATE EXTERNAL TABLE ck_sync1_ret_region1 ( like ck_sync1_region) LOCATION ('gpfdist://10.0.0.6:8088/wet_region1.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
 --
 -- create second table with same schema def
 --

@@ -273,53 +273,25 @@ def do_change(options):
         enable_verbose_logging()
 
     try:
-        dburl = dbconn.DbURL()
-
-        gparray = GpArray.initFromCatalog(dburl, utility=True)
+        gp_array = GpArray.initFromCatalog(dbconn.DbURL(), utility=True)
 
         if not options.skipvalidation:
+            validate_options(options)
 
-            conn = dbconn.connect(dburl, True)
-
-            rows = dbconn.execSQL(conn, GucQuery(options.entry).query)
-
-            guc = None
-
-            for row in rows:
-                if guc:
-                    logger.fatal("more than 1 GUC matches: " + options.entry)
-                    sys.exit(1)
-
-                guc = Guc(row)
-
-            if not guc:
-                logger.fatal("not a valid GUC: " + options.entry)
-                sys.exit(1)
-
-            conn.close()
-
-            if options.entry in prohibitedGucs:
-                logger.fatal("The parameter '%s' is not modifiable with this tool" % options.entry)
-                sys.exit(1)
-
-            if options.value:
-                msg = guc.validate(options.value, options.mastervalue, options)
-                if msg != "ok":
-                    logger.fatal("new GUC value failed validation: " + msg)
-                    sys.exit(1)
-    except DatabaseError, ex:
+    except DatabaseError as ex:
         logger.error(ex.__str__())
-        logger.error(
-            'Failed to connect to database, exiting without action. This script can only be run when the database is up.')
-        sys.exit(1)
+        msg = 'Failed to connect to database, exiting without action. ' \
+              'This script can only be run when the database is up.'
+        logger.error(msg)
+        raise Exception(msg)
 
     pool = WorkerPool()
 
-    hostCache = GpHostCache(gparray, pool)
-    failedPings = hostCache.ping_hosts(pool)
+    host_cache = GpHostCache(gp_array, pool)
+    failed_pings = host_cache.ping_hosts(pool)
 
-    if len(failedPings):
-        for i in failedPings:
+    if len(failed_pings):
+        for i in failed_pings:
             logger.warning('unreachable host: ' + i.hostname)
         confirm_user()
 
@@ -327,7 +299,7 @@ def do_change(options):
     try:
         # do the segments
         if not options.masteronly:
-            for h in hostCache.get_hosts():
+            for h in host_cache.get_hosts():
 
                 if options.primaryvalue:
                     do_add_config_script(pool, h.hostname, [seg for seg in h.dbs if seg.isSegmentPrimary()],
@@ -342,18 +314,18 @@ def do_change(options):
 
         # do the master
         if options.mastervalue or options.remove:
-            print_verbosely(options, gparray.master.hostname, gparray.master.hostname, gparray.master.datadir)
-            cmd = GpAddConfigScript("master", gparray.master.datadir, options.entry, options.mastervalue,
-                                    options.remove, ctxt=REMOTE, remoteHost=gparray.master.hostname)
+            print_verbosely(options, gp_array.master.hostname, gp_array.master.hostname, gp_array.master.datadir)
+            cmd = GpAddConfigScript("master", gp_array.master.datadir, options.entry, options.mastervalue,
+                                    options.remove, ctxt=REMOTE, remoteHost=gp_array.master.hostname)
             pool.addCommand(cmd)
 
             # do the standby master
-            if gparray.standbyMaster:
-                print_verbosely(options, gparray.standbyMaster.hostname, gparray.standbyMaster.hostname,
-                                gparray.standbyMaster.datadir)
-                cmd = GpAddConfigScript("standbymaster", gparray.standbyMaster.datadir, options.entry,
+            if gp_array.standbyMaster:
+                print_verbosely(options, gp_array.standbyMaster.hostname, gp_array.standbyMaster.hostname,
+                                gp_array.standbyMaster.datadir)
+                cmd = GpAddConfigScript("standbymaster", gp_array.standbyMaster.datadir, options.entry,
                                         options.mastervalue, options.remove, ctxt=REMOTE,
-                                        remoteHost=gparray.standbyMaster.hostname)
+                                        remoteHost=gp_array.standbyMaster.hostname)
                 pool.addCommand(cmd)
 
         pool.join()
@@ -365,6 +337,7 @@ def do_change(options):
 
         pool.check_results()
     except Exception, e:
+        failure = True
         logger.error('errors in job:')
         logger.error(e.__str__())
         logger.error('exiting early')
@@ -376,6 +349,50 @@ def do_change(options):
         logger.error('finished with errors')
     else:
         logger.info("completed successfully")
+
+
+def validate_options(options):
+    conn = dbconn.connect(dbconn.DbURL(), True)
+    guc = get_normal_guc(conn, options)
+    if not guc:
+        # Hidden gucs: a guc is considered hidden if both:
+        #     1. It is not present with normal gucs in pg_settings
+        #     2. It has a valid return from SHOW <guc_name>;
+        try:
+            dbconn.execSQLForSingleton(conn, "SHOW %s" % options.entry)
+        except DatabaseError:
+            msg = "not a valid GUC: " + options.entry
+            logger.fatal(msg)
+            raise Exception(msg)
+
+        msg = "GUC Validation Failed: %s cannot be changed under normal conditions. " \
+              "Please refer to gpconfig documentation." % options.entry
+        logger.fatal(msg)
+        raise Exception(msg)
+    conn.close()
+    if options.entry in prohibitedGucs:
+        msg = "The parameter '%s' is not modifiable with this tool" % options.entry
+        logger.fatal(msg)
+        raise Exception(msg)
+    if options.value:
+        msg = guc.validate(options.value, options.mastervalue, options)
+        if msg != "ok":
+            msg = "new GUC value failed validation: " + msg
+            logger.fatal(msg)
+            raise Exception(msg)
+
+
+def get_normal_guc(conn, options):
+    cursor = dbconn.execSQL(conn, GucQuery(options.entry).query)
+    rows = cursor.fetchall()
+    guc = None
+    if len(rows) > 1:
+        msg = "more than 1 GUC matches: " + options.entry
+        logger.fatal(msg)
+        raise Exception(msg)
+    elif len(rows) == 1:
+        guc = Guc(rows[0])
+    return guc
 
 
 def log_and_raise(err_str):

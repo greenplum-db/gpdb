@@ -5,7 +5,9 @@
   <title id="ii20941">Greenplum MapReduce Specification</title>
   <body>
     <p>This specification describes the document format and schema for defining Greenplum MapReduce
-      jobs.</p>
+      jobs. <note>Both the MapReduce tool (<codeph>gpmapreduce</codeph>) and its associated YAML
+        specification are deprecated and will be removed in the next major release (6.x) of
+        Greenplum Database. Use other query formats, such as SQL or a procedural language extension, instead.</note></p>
     <p><xref href="http://en.wikipedia.org/wiki/MapReduce" scope="external" format="html"
         >MapReduce</xref> is a programming model developed by Google for processing and generating
       large data sets on an array of commodity servers. Greenplum MapReduce allows programmers who

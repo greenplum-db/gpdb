@@ -576,13 +576,15 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col3"><b>Unsupported Clauses /
                   Options:</b><p><codeph>SCROLL</codeph></p><p><codeph>FOR UPDATE [ OF column [,
                     ...] ]</codeph></p><p><b>Limitations:</b></p><p>Cursors cannot be
-                  backward-scrolled. Forward scrolling is supported.</p></entry>
+                  backward-scrolled. Forward scrolling is supported.</p><p>PL/pgSQL does
+                  not have support for updatable cursors. </p></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>DELETE</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3"><b>Unsupported Clauses /
-                    Options:</b><p><codeph>RETURNING</codeph></p></entry>
+                    Options:</b><p><codeph>RETURNING</codeph></p><p><b>Limitations:</b></p><p><codeph>WHERE
+                    CURRENT OF</codeph> clause is not supported in PL/pgSQL.</p></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>DO</codeph></entry>
@@ -910,7 +912,8 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col2">YES</entry>
               <entry colname="col3"><b>Unsupported
                     Clauses:</b><p><codeph>RETURNING</codeph></p><p><b>Limitations:</b></p><p><codeph>SET</codeph>
-                  not allowed for Greenplum distribution key columns.</p></entry>
+                  not allowed for Greenplum distribution key columns.</p><p><codeph>WHERE CURRENT
+                    OF</codeph> clause is not supported in PL/pgSQL.</p></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>VACUUM</codeph></entry>

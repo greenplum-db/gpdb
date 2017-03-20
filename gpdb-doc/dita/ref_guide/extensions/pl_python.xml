@@ -621,13 +621,13 @@ $$ language plpythonu;</codeblock>
     <topic id="topic14" xml:lang="en">
       <title>Useful Reading</title>
       <body>
-        <p>For information about the Python language, see <xref href="http://www.python.org/"
-            scope="external" format="html">http://www.python.org/</xref>.</p>
+        <p>For information about the Python language, see <xref href="https://www.python.org/"
+            scope="external" format="html">https://www.python.org/</xref>.</p>
         <p>A set of slides that were used in a talk about how the Pivotal data science team uses the
           PyData stack in the Pivotal MPP databases and on Pivotal Cloud Foundry <xref
-            href="http://www.slideshare.net/SrivatsanRamanujam/all-thingspythonpivotal"
+            href="https://www.slideshare.net/SrivatsanRamanujam/all-thingspythonpivotal"
             format="html" scope="external"
-            >http://www.slideshare.net/SrivatsanRamanujam/all-thingspythonpivotal</xref>.</p>
+            >https://www.slideshare.net/SrivatsanRamanujam/all-thingspythonpivotal</xref>.</p>
       </body>
     </topic>
   </topic>

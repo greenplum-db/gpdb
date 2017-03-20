@@ -1061,7 +1061,7 @@
     <body>
       <p>Sets the client-side encoding (character set). The default is to use the same as the
         database encoding. See <xref
-          href="http://www.postgresql.org/docs/8.1/static/multibyte.html#MULTIBYTE-CHARSET-SUPPORTED"
+          href="https://www.postgresql.org/docs/8.3/static/multibyte.html#MULTIBYTE-CHARSET-SUPPORTED"
           scope="external" format="html">Supported Character Sets</xref> in the PostgreSQL
         documentation.</p>
       <table id="client_encoding_table">
@@ -5491,7 +5491,7 @@
         when the <xref href="#DateStyle" format="dita"/> parameter was set to non-ISO output. </p>
       <p>The value <i>iso_8601</i> will produce output matching the time interval <i>format with
           designators</i> defined in section 4.4.3.2 of ISO 8601. See the <xref
-          href="http://www.postgresql.org/docs/8.4/static/datatype-datetime.html" scope="external"
+          href="https://www.postgresql.org/docs/8.4/static/datatype-datetime.html" scope="external"
           format="html"><ph>PostgreSQL 8.4 documentation</ph></xref> for more information. </p>
       <table id="IntervalStyle_table">
         <tgroup cols="3">
@@ -7274,8 +7274,8 @@
     <title>pgcrypto.fips</title>
     <body>
       <p>Enables support for <cite>Federal Information Processing Standard</cite> (FIPS) 140-2. For
-        information about FIPS, see <xref href="http://www.nist.gov/itl/fips.cfm" format="html"
-          scope="external">http://www.nist.gov/itl/fips.cfm</xref></p>
+        information about FIPS, see <xref href="https://www.nist.gov/itl/popular-links/federal-information-processing-standards-fips" format="html"
+          scope="external">https://www.nist.gov/itl/popular-links/federal-information-processing-standards-fips</xref></p>
       <p>To enable FIPS 140-2 support for Greenplum Database, the following are required.<ul
           id="ul_flj_nyl_zp">
           <li>The Greenplum Database pgcrypto package version 1.2 or later must be installed.</li>

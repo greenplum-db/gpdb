@@ -68,6 +68,12 @@ ALTER RESOURCE QUEUE regressq2 IGNORE THRESHOLD 1 IGNORE THRESHOLD 1 ;
 ALTER RESOURCE QUEUE none IGNORE THRESHOLD 1 ;
 DROP RESOURCE QUEUE regressq2;
 
+-- Create resource queue with cost_overcommit=true
+create resource queue t3_test_q with (active_statements = 6,max_cost=5e+06 ,cost_overcommit=true, min_cost=50000);
+select * from pg_resqueue where rsqname='t3_test_q';
+drop resource queue t3_test_q;
+
+
 -- Resource Queue should not be created inside Transaction block the error is the expected behavior
 begin;
 CREATE RESOURCE QUEUE db_resque_new1 ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;

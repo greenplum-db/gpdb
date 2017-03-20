@@ -1,4 +1,4 @@
-create database cr_newdb;
+create database cr_newdb template template0;
 CREATE DATABASE
 drop database cr_newdb;
 DROP DATABASE

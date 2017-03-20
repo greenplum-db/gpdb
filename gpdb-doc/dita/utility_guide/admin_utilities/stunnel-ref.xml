@@ -889,7 +889,7 @@
                 <li>
                   <i>pgsql</i>
                   <p>Based on
-                      <i>http://www.postgresql.org/docs/8.3/static/protocol-flow.html#AEN73982</i>.</p>
+                      <i>https://www.postgresql.org/docs/8.3/static/protocol-flow.html#AEN73982</i>.</p>
                 </li>
                 <li>
                   <i>pop3</i>

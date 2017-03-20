@@ -2617,7 +2617,11 @@ class GpTransfer(object):
         self._pool.addCommand(cmd)
 
         self._pool.join()
-        self._pool.check_results()
+        try:
+            self._pool.check_results()
+        except ExecutionError, e:
+            logger.fatal("Unable to create work directory: %s" % e)
+            os._exit(2)
 
         # if transferring entire system, dumpall and execute on destination
         if self._options.full:
@@ -2815,6 +2819,7 @@ class GpTransfer(object):
                 logger.warn('manually cleaned up.')
 
         logger.info("Finished.")
+        os._exit(0)
 
     def _dry_run(self):
         """

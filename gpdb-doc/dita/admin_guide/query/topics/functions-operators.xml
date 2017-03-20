@@ -136,6 +136,9 @@ SELECT foo();
                     href="https://www.postgresql.org/docs/8.3/static/functions.html"
                     scope="external">Functions and Operators</xref> section of the PostgreSQL
                 documentation for more information about these built-in functions and operators.</p>
+            <p>Greenplum Database includes JSON processing functions that manipulate values the
+                    <codeph>json</codeph> data type. For information about JSON data, see <xref
+                    href="json-data.xml#topic1"/>.</p>
             <table id="in204913">
                 <title>Built-in functions and operators</title>
                 <tgroup cols="4">
@@ -225,7 +228,7 @@ SELECT foo();
                         <row>
                             <entry colname="col1">
                                 <xref format="html"
-                                    href="http://www.postgresql.org/docs/8.3/static/functions-matching.html"
+                                    href="https://www.postgresql.org/docs/8.3/static/functions-matching.html"
                                     scope="external">
                                     <ph>Pattern Matching</ph>
                                 </xref>
@@ -414,7 +417,7 @@ SELECT foo();
                         <row>
                             <entry colname="col1">
                                 <xref format="html"
-                                    href="http://www.postgresql.org/docs/9.1/interactive/functions-xml.html"
+                                    href="https://www.postgresql.org/docs/9.1/static/functions-xml.html"
                                     scope="external">XML Functions</xref>
                             </entry>
                             <entry colname="col2"/>

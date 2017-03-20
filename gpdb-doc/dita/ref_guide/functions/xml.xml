@@ -125,7 +125,7 @@ SELECT xmlelement(name test, xmlattributes(func(a, b))) FROM test;
           particular that the characters &lt;, &gt;, and &amp; will be converted to entities. Binary
           data (data type <codeph>bytea</codeph>) will be represented in base64 or hex encoding,
           depending on the setting of the configuration parameter <xref
-            href="http://www.postgresql.org/docs/9.0/static/runtime-config-client.html#GUC-XMLBINARY"
+            href="https://www.postgresql.org/docs/9.0/static/runtime-config-client.html#GUC-XMLBINARY"
             format="html" scope="external">xmlbinary</xref>. The particular behavior for individual
           data types is expected to evolve in order to align the SQL and PostgreSQL data types with
           the XML Schema specification, at which point a more precise description will appear.</p>
@@ -210,7 +210,7 @@ WHERE table_schema = 'pg_catalog';
           aggregate function. It concatenates the input values to the aggregate function call, much
           like <codeph>xmlconcat</codeph> does, except that concatenation occurs across rows rather
           than across expressions in a single row. See <xref
-            href="http://www.postgresql.org/docs/9.0/static/functions-aggregate.html" format="html"
+            href="https://www.postgresql.org/docs/9.0/static/functions-aggregate.html" format="html"
             scope="external">Section 9.18</xref> for additional information about aggregate
           functions.</p>
         <p>Example:<codeblock>CREATE TABLE test (y int, x xml);
@@ -223,7 +223,7 @@ SELECT xmlagg(x) FROM test;
 </codeblock></p>
         <p>To determine the order of the concatenation, an ORDER BY clause may be added to the
           aggregate call as described in <xref
-            href="http://www.postgresql.org/docs/9.0/static/sql-expressions.html#SYNTAX-AGGREGATES"
+            href="https://www.postgresql.org/docs/9.0/static/sql-expressions.html#SYNTAX-AGGREGATES"
             format="html" scope="external">Section 4.2.7</xref>. For
           example:<codeblock>SELECT xmlagg(x ORDER BY y DESC) FROM test;
         xmlagg
@@ -253,7 +253,7 @@ SELECT xmlagg(x) FROM test;
         <p>The expression <codeph>IS DOCUMENT</codeph> returns true if the argument XML value is a
           proper XML document, false if it is not (that is, it is a content fragment), or null if
           the argument is null. See <xref
-            href="http://www.postgresql.org/docs/9.0/static/datatype-xml.html" format="html"
+            href="https://www.postgresql.org/docs/9.0/static/datatype-xml.html" format="html"
             scope="external">Section 8.13</xref> about the difference between documents and content
           fragments.</p>
       </body>
@@ -510,7 +510,7 @@ table2-mapping
 </codeblock></p>
       <p>where the schema mapping is as above.</p>
       <p>As an example of using the output produced by these functions, <xref
-          href="http://www.postgresql.org/docs/9.0/static/functions-xml.html#XSLT-XML-HTML"
+          href="https://www.postgresql.org/docs/9.0/static/functions-xml.html#XSLT-XML-HTML"
           format="html" scope="external">Figure 9-1</xref> shows an XSLT stylesheet that converts
         the output of <codeph>table_to_xml_and_xmlschema</codeph> to an HTML document containing a
         tabular rendition of the table data. In a similar manner, the results from these functions

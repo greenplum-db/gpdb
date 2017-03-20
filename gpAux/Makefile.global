@@ -79,47 +79,36 @@ endif
 export BLD_LD_LIBRARY_PATH_FIXED=true
 
 # specify python version to use for build-time and run-time
-aix5_ppc_32_PYTHON=/opt/pware
-aix5_ppc_64_PYTHON=/opt/pware64
-hpux_ia64_PYTHON=$(BLD_THIRDPARTY_DIR)/python-2.5.6
-osx106_x86_PYTHON=$(BLD_THIRDPARTY_DIR)/python-2.6.2
-rhel5_x86_32_PYTHON=$(BLD_THIRDPARTY_DIR)/python-2.6.2
-rhel5_x86_64_PYTHON=$(BLD_THIRDPARTY_DIR)/python-2.6.2
-rhel6_x86_64_PYTHON=$(BLD_THIRDPARTY_DIR)/python-2.6.2
-rhel7_x86_64_PYTHON=$(BLD_THIRDPARTY_DIR)/python-2.6.2
-sol10_x86_64_PYTHON=$(BLD_THIRDPARTY_DIR)/python-2.6.2
-sol10_x86_32_PYTHON=/opt/python32-2.5.1
-sol10_sparc_64_PYTHON=$(BLD_THIRDPARTY_DIR)/python-2.6.2
-sol10_sparc_32_PYTHON=/opt/python32-2.5.1
-suse10_x86_64_PYTHON=$(BLD_THIRDPARTY_DIR)/python-2.6.2
-suse11_x86_64_PYTHON=$(BLD_THIRDPARTY_DIR)/python-2.6.2
-BLD_PYTHON=$($(BLD_ARCH)_PYTHON)
+aix5_ppc_32_PYTHONHOME=/opt/pware
+aix5_ppc_64_PYTHONHOME=/opt/pware64
+hpux_ia64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.5.6
+osx106_x86_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.6.2
+rhel5_x86_32_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.6.2
+rhel5_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.6.2
+rhel6_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.6.2
+rhel7_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.6.2
+sol10_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.6.2
+sol10_x86_32_PYTHONHOME=/opt/python32-2.5.1
+sol10_sparc_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.6.2
+sol10_sparc_32_PYTHONHOME=/opt/python32-2.5.1
+suse10_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.6.2
+suse11_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.6.2
+export PYTHONHOME=$($(BLD_ARCH)_PYTHONHOME)
 
-# perfmon version of python since at some point
-# it may diverge from the GPDB version
-aix5_ppc_32_PYTHON_PERFMON=/opt/pware
-aix5_ppc_64_PYTHON_PERFMON=/opt/pware64
-osx106_x86_PYTHON_PERFMON=$(BLD_THIRDPARTY_DIR)/python-2.6.2
-rhel5_x86_32_PYTHON_PERFMON=$(BLD_THIRDPARTY_DIR)/python-2.6.2
-rhel5_x86_64_PYTHON_PERFMON=$(BLD_THIRDPARTY_DIR)/python-2.6.2
-rhel6_x86_64_PYTHON_PERFMON=$(BLD_THIRDPARTY_DIR)/python-2.6.2
-rhel7_x86_64_PYTHON_PERFMON=$(BLD_THIRDPARTY_DIR)/python-2.6.2
-sol10_x86_64_PYTHON_PERFMON=$(BLD_THIRDPARTY_DIR)/python-2.6.2
-sol10_x86_32_PYTHON_PERFMON=/opt/python32-2.5.1
-sol10_sparc_64_PYTHON_PERFMON=$(BLD_THIRDPARTY_DIR)/python-2.6.2
-sol10_sparc_32_PYTHON_PERFMON=/opt/python32-2.5.1
-suse10_x86_64_PYTHON_PERFMON=$(BLD_THIRDPARTY_DIR)/python-2.6.2
-suse11_x86_64_PYTHON_PERFMON=$(BLD_THIRDPARTY_DIR)/python-2.6.2
-BLD_PYTHON_PERFMON=$($(BLD_ARCH)_PYTHON_PERFMON)
+PYTHON=$(PYTHONHOME)/bin/python
+aix5_ppc_32_PYTHON=$(PYTHONHOME)/bin/python2.7
+aix5_ppc_64_PYTHON=$(PYTHONHOME)/bin/python2.7_64
+ifneq "$($(BLD_ARCH)_PYTHON)" ""
+export PYTHON=$($(BLD_ARCH)_PYTHON)
+endif
 
-# if PYTHON was specified above, use it for the build
-ifneq "$(BLD_PYTHON)" ""
+# if PYTHONHOME was specified above, use it for the build
+ifneq "$(PYTHONHOME)" ""
 ifeq "$(findstring $(BLD_ARCH),aix5_ppc_32 aix5_ppc_64)" ""
-tmpPATH=$(BLD_PYTHON)/bin:$(PATH)
+tmpPATH=$(PYTHONHOME)/bin:$(PATH)
 export PATH:=$(tmpPATH)
-tmpLD_LIBRARY_PATH=$(BLD_PYTHON)/lib:$($(BLD_WHERE_THE_LIBRARY_THINGS_ARE))
+tmpLD_LIBRARY_PATH=$(PYTHONHOME)/lib:$($(BLD_WHERE_THE_LIBRARY_THINGS_ARE))
 export $(BLD_WHERE_THE_LIBRARY_THINGS_ARE):=$(tmpLD_LIBRARY_PATH)
-export PYTHONHOME=$(BLD_PYTHON)
 endif
 endif
 

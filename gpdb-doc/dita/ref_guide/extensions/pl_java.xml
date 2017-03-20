@@ -104,7 +104,7 @@
     <title id="pv158223">Installing PL/Java</title>
     <body>
       <p>For Greenplum Database, the PL/Java extension is available as a package. Download the
-        package from <xref href="https://network.pivotal.io/products" scope="external" format="html"
+        package from <xref href="https://network.pivotal.io" scope="external" format="html"
           class="- topic/xref ">Pivotal Network</xref> and then install it with the Greenplum
         Package Manager (<codeph>gppkg</codeph>). </p>
       <p>The <codeph>gppkg</codeph> utility installs Greenplum Database extensions, along with any
@@ -134,7 +134,7 @@
             $MASTER_DATA_DIRECTORY</codeph> and <codeph>$GPHOME</codeph> variables are set.</p>
         <ol>
           <li id="pv158485">Download the PL/Java extension package from <xref
-              href="https://network.pivotal.io/products" scope="external" format="html"
+              href="https://network.pivotal.io" scope="external" format="html"
               class="- topic/xref ">Pivotal Network</xref> then copy it to the master host. </li>
           <li id="pv160918">Install the software extension package by running the
               <codeph>gppkg</codeph> command. This example installs the PL/Java extension package on

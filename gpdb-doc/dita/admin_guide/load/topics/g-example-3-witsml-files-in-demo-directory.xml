@@ -11,7 +11,7 @@
                         oil industry initiative to provide open, non-proprietary, standard
                         interfaces for technology and software to share information among oil
                         companies, service companies, drilling contractors, application vendors, and
-                        regulatory agencies. For more information about WITSML™, see <xref href="http://www.witsml.org" scope="external" format="html">http://www.witsml.org</xref>.</p>
+                        regulatory agencies. For more information about WITSML™, see <xref href="http://www.energistics.org/" scope="external" format="html">http://www.energistics.org/</xref>.</p>
       <p>The oil rig information consists of a top level <codeph>&lt;rigs&gt;</codeph>
                         element with multiple child elements such as <codeph>&lt;documentInfo&gt;,
                             &lt;rig&gt;</codeph>, and so on. The following excerpt from the file
@@ -19,9 +19,9 @@
       <codeblock>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
 &lt;?xml-stylesheet href="../stylesheets/rig.xsl" type="text/xsl" media="screen"?&gt;
 &lt;rigs 
- xmlns="http://www.witsml.org/schemas/131" 
+ xmlns="http://www.energistics.org/schemas/131" 
  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
- xsi:schemaLocation="http://www.witsml.org/schemas/131 ../obj_rig.xsd" 
+ xsi:schemaLocation="http://www.energistics.org/schemas/131 ../obj_rig.xsd" 
  version="1.3.1.1"&gt;
  &lt;documentInfo&gt;
  ... misc data ...

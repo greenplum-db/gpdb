@@ -171,7 +171,7 @@ static struct
 	const char* ssl; /* path to certificates in case we use gpfdist with ssl */
 	int 		sslclean; /* Defines the time to wait [sec] until cleanup the SSL resources (internal, not documented) */
 	int			w; /* The time used for session timeout in seconds */
-} opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, 5, 0 };
+} opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, 0, 0 };
 
 
 typedef union address
@@ -567,7 +567,7 @@ static void parse_command_line(int argc, const char* const argv[],
 	{ NULL, 'S', 0, "use O_SYNC when opening files for write" },
 	{ NULL, 'z', 1, "internal - queue size for listen call" },
 	{ "ssl", 257, 1, "ssl - certificates files under this directory" },
-	{ "sslclean", 258, 1, "Defines the time to wait [sec] untill cleanup the SSL resources" },
+	{ "sslclean", 258, 1, "Defines the time to wait [sec] until cleanup of the SSL resources" },
 #ifdef GPFXDIST
 	{ NULL, 'c', 1, "transform configuration file" },
 #endif
@@ -795,7 +795,7 @@ static void parse_command_line(int argc, const char* const argv[],
 
 	/* Validate opt.sslclean*/
 	if ( (opt.sslclean < 0) || (opt.sslclean > 300) )
-		usage_error("Error: -sslclean timeout must be between 0 and 300 [sec] (default is 5[sec])", 0);
+		usage_error("Error: -sslclean timeout must be between 0 and 300 [sec] (default is 0[sec])", 0);
 #endif
 
 #ifdef GPFXDIST
@@ -4075,10 +4075,10 @@ static void flush_ssl_buffer(int fd, short event, void* arg)
 	}
 	else
 	{
-		// Prepare and start a 5 seconds timer.
+		// Prepare and start a timer.
 		// While working with BIO_SSL, we are working with 3 buffers:
 		// [1] BIO layer buffer [2] SSL buffer [3] Socket buffer
-		// Sometimes we have a delay somewhere between these buffers (MPP-16402)
+		// Sometimes we have a 5 sec delay somewhere between these buffers on Solaris (MPP-16402)
 		// So, even if the BIO_wpending() shows that there is no more pending data in the BIO_SSL buffer,
 		// we might still have data in the socket's buffer that wasn't sent yet.
 
@@ -4096,7 +4096,7 @@ static void flush_ssl_buffer(int fd, short event, void* arg)
 /*
  * setup_flush_ssl_buffer
  *
- * Create event that will call to 'flush_ssl_buffer', with 5 seconds timeout
+ * Create event that will call to 'flush_ssl_buffer', with opt.sslclean seconds timeout
  */
 static void setup_flush_ssl_buffer(request_t* r)
 {

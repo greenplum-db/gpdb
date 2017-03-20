@@ -30,6 +30,7 @@
 #include "utils/faultinjector.h"
 #include "utils/gp_alloc.h"
 #include "utils/tuplesort.h"
+#include "utils/tuplesort_mk.h"
 #include "utils/tuplestorenew.h"
 
 typedef struct ShareInput_Lk_Context

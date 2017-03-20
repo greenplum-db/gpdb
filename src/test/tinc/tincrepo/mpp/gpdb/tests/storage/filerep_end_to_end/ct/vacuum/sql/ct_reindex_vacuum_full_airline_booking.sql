@@ -4,14 +4,13 @@ SET gp_create_table_random_default_distribution=off;
 reindex database gptest;
 vacuum full;
 
-create table ct_reindex_vacuum_full_test1 (i int) partition by range(i) (start(1) end(1000) every(1));
-create table ct_reindex_vacuum_full_test2 (i int) partition by range(i) (start(1) end(1000) every(1));
-alter table ct_reindex_vacuum_full_test2 drop partition for (100);
-alter table ct_reindex_vacuum_full_test2 drop partition for (101);
-alter table ct_reindex_vacuum_full_test2 drop partition for (102);
-alter table ct_reindex_vacuum_full_test2 drop partition for (103);
-alter table ct_reindex_vacuum_full_test2 drop partition for (104);
-alter table ct_reindex_vacuum_full_test2 drop partition for (105);
+create table ct_reindex_vacuum_full_test1 (i int) partition by range(i) (start(1) end(10) every(1));
+create table ct_reindex_vacuum_full_test2 (i int) partition by range(i) (start(1) end(10) every(1));
+alter table ct_reindex_vacuum_full_test2 drop partition for (1);
+alter table ct_reindex_vacuum_full_test2 drop partition for (2);
+alter table ct_reindex_vacuum_full_test2 drop partition for (3);
+alter table ct_reindex_vacuum_full_test2 drop partition for (4);
+alter table ct_reindex_vacuum_full_test2 drop partition for (5);
 drop table ct_reindex_vacuum_full_test1;
 create table ct_reindex_vacuum_full_test3(i int);
 

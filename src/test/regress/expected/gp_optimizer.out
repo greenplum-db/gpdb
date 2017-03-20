@@ -37,9 +37,11 @@ insert into orca.s select i, i/2 from generate_series(1,30) i;
 set optimizer_log=on;
 set optimizer=on;
 set optimizer_enable_indexjoin=on;
+set optimizer_trace_fallback = on;
 ----------------------------------------------------------------------
 -- expected fall back to the planner
 select sum(distinct a), count(distinct b) from orca.r;
+INFO:  GPORCA failed to produce a plan, falling back to planner
  sum | count 
 -----+-------
  210 |     7
@@ -6623,6 +6625,7 @@ select * from orca.r where a in (select count(*)+1 as v from orca.foo full join 
 (1 row)
 
 select * from orca.r where r.a in (select d+r.b+1 as v from orca.foo full join orca.bar on (foo.d = bar.a) group by d+r.b) order by r.a, r.b;
+INFO:  GPORCA failed to produce a plan, falling back to planner
  a  | b 
 ----+---
   3 | 0
@@ -8055,7 +8058,9 @@ NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_2_2_prt_sp2_2
 NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_2_2_prt_sp2_3" for table "multilevel_p_1_prt_bb_2"
 NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_2_2_prt_sp2_4" for table "multilevel_p_1_prt_bb_2"
 insert into orca.multilevel_p values (1,1), (100,200);
+INFO:  GPORCA failed to produce a plan, falling back to planner
 select * from orca.multilevel_p;
+INFO:  GPORCA failed to produce a plan, falling back to planner
   a  |  b  
 -----+-----
    1 |   1
@@ -8825,6 +8830,8 @@ CREATE FUNCTION sum_sfunc(anyelement,anyelement) returns anyelement AS 'select $
 CREATE FUNCTION sum_prefunc(anyelement,anyelement) returns anyelement AS 'select $1+$2' LANGUAGE SQL STRICT;
 CREATE AGGREGATE myagg1(anyelement) (SFUNC = sum_sfunc, PREFUNC = sum_prefunc, STYPE = anyelement, INITCOND = '0');
 SELECT myagg1(i) FROM orca.tab1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+CONTEXT:  SQL function "sum_sfunc" during startup
  myagg1 
 --------
      55
@@ -8833,6 +8840,8 @@ SELECT myagg1(i) FROM orca.tab1;
 CREATE FUNCTION sum_sfunc2(anyelement,anyelement,anyelement) returns anyelement AS 'select $1+$2+$3' LANGUAGE SQL STRICT;
 CREATE AGGREGATE myagg2(anyelement,anyelement) (SFUNC = sum_sfunc2, STYPE = anyelement, INITCOND = '0');
 SELECT myagg2(i,j) FROM orca.tab1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+CONTEXT:  SQL function "sum_sfunc2" during startup
  myagg2 
 --------
      60
@@ -8853,6 +8862,10 @@ INSERT INTO array_table values(6,array[222],'c');
 INSERT INTO array_table values(7,array[3],'a');
 INSERT INTO array_table values(8,array[3],'b');
 SELECT f3, myagg3(f1) from (select * from array_table order by f1 limit 10) as foo GROUP BY f3 ORDER BY f3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+CONTEXT:  SQL function "gptfp" during startup
+INFO:  GPORCA failed to produce a plan, falling back to planner
+CONTEXT:  SQL function "gpffp" during startup
  f3 | myagg3  
 ----+---------
  a  | {1,4,7}
@@ -9279,6 +9292,7 @@ select disable_xform('CXformDynamicGet2DynamicTableScan');
 
 -- gather on 1 segment because of direct dispatch
 explain select * from orca.bm_dyn_test_onepart where i=2 and t='2';
+INFO:  GPORCA failed to produce a plan, falling back to planner
                                                            QUERY PLAN                                                            
 ---------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..48.03 rows=6 width=40)
@@ -9300,6 +9314,7 @@ explain select * from orca.bm_dyn_test_onepart where i=2 and t='2';
 (16 rows)
 
 select * from orca.bm_dyn_test_onepart where i=2 and t='2';
+INFO:  GPORCA failed to produce a plan, falling back to planner
  i | j | t 
 ---+---+---
  2 | 2 | 2
@@ -10040,6 +10055,7 @@ drop table canSetTag_input_data;
 CREATE TABLE btree_test as SELECT * FROM generate_series(1,100) as a distributed randomly;
 CREATE INDEX btree_test_index ON btree_test(a);
 EXPLAIN SELECT * FROM btree_test WHERE a in (1, 47);
+INFO:  GPORCA failed to produce a plan, falling back to planner
                                  QUERY PLAN                                 
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=2 width=4)
@@ -10050,6 +10066,7 @@ EXPLAIN SELECT * FROM btree_test WHERE a in (1, 47);
 (5 rows)
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('2', 47);
+INFO:  GPORCA failed to produce a plan, falling back to planner
                                  QUERY PLAN                                 
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=2 width=4)
@@ -10060,6 +10077,7 @@ EXPLAIN SELECT * FROM btree_test WHERE a in ('2', 47);
 (5 rows)
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2');
+INFO:  GPORCA failed to produce a plan, falling back to planner
                                  QUERY PLAN                                 
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=2 width=4)
@@ -10070,6 +10088,7 @@ EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2');
 (5 rows)
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2', 47);
+INFO:  GPORCA failed to produce a plan, falling back to planner
                                  QUERY PLAN                                 
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.38 rows=3 width=4)
@@ -10150,24 +10169,31 @@ drop table if exists foo;
 NOTICE:  table "foo" does not exist, skipping
 -- end_ignore
 create table foo(a int, b int);
+-- The amount of log messages you get depends on a lot of options, but any
+-- difference in the output will make the test fail. Disable log_statement
+-- and log_min_duration_statement, they are the most obvious ones.
+set log_statement='none';
+set log_min_duration_statement=-1;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 set client_min_messages='log';
 select count(*) from foo group by cube(a,b);
-LOG:  statement: select count(*) from foo group by cube(a,b);
 LOG:  2016-08-19 10:46:53:360703 PDT,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: Cube",
+INFO:  GPORCA failed to produce a plan, falling back to planner
 LOG:  Planner produced plan :0
  count 
 -------
 (0 rows)
 
 reset client_min_messages;
-LOG:  statement: reset client_min_messages;
+reset log_statement;
+reset log_min_duration_statement;
 -- TVF accepts ANYENUM, ANYELEMENT returns ANYENUM, ANYARRAY
 CREATE TYPE rainbow AS ENUM('red','yellow','blue');
 CREATE FUNCTION func_enum_element(ANYENUM, ANYELEMENT) RETURNS TABLE(a ANYENUM, b ANYARRAY)
 AS $$ SELECT $1, ARRAY[$2] $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_enum_element('red'::rainbow, 'blue'::rainbow::anyelement);
+INFO:  GPORCA failed to produce a plan, falling back to planner
   a  |   b
 -----+--------
  red | {blue}
@@ -10178,6 +10204,7 @@ DROP FUNCTION IF EXISTS func_enum_element(ANYENUM, ANYELEMENT);
 CREATE FUNCTION func_element_array(ANYELEMENT, ANYARRAY) RETURNS TABLE(a ANYELEMENT, b ANYENUM)
 AS $$ SELECT $1, $2[1]$$ LANGUAGE SQL STABLE;
 SELECT * FROM func_element_array('red'::rainbow, ARRAY['blue'::rainbow]);
+INFO:  GPORCA failed to produce a plan, falling back to planner
   a  |  b
 -----+------
  red | blue
@@ -10188,6 +10215,7 @@ DROP FUNCTION IF EXISTS func_element_array(ANYELEMENT, ANYARRAY);
 CREATE FUNCTION func_element_array(ANYARRAY, ANYENUM) RETURNS TABLE(a ANYELEMENT, b ANYELEMENT)
 AS $$ SELECT $1[1], $2 $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_element_array(ARRAY['blue'::rainbow], 'blue'::rainbow);
+INFO:  GPORCA failed to produce a plan, falling back to planner
   a   |  b
 ------+------
  blue | blue
@@ -10198,6 +10226,7 @@ DROP FUNCTION IF EXISTS func_element_array(ANYARRAY, ANYENUM);
 CREATE FUNCTION func_array(ANYARRAY) RETURNS TABLE(a ANYELEMENT, b ANYENUM)
 AS $$ SELECT $1[1], $1[2] $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_array(ARRAY['blue'::rainbow, 'yellow'::rainbow]);
+INFO:  GPORCA failed to produce a plan, falling back to planner
   a   |   b
 ------+--------
  blue | yellow
@@ -10208,6 +10237,7 @@ DROP FUNCTION IF EXISTS func_array(ANYARRAY);
 CREATE FUNCTION func_element_variadic(ANYELEMENT, VARIADIC ANYARRAY) RETURNS TABLE(a ANYARRAY)
 AS $$ SELECT array_prepend($1, $2); $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_element_variadic(1.1, 1.1, 2.2, 3.3);
+INFO:  GPORCA failed to produce a plan, falling back to planner
          a
 -------------------
  {1.1,1.1,2.2,3.3}
@@ -10218,6 +10248,7 @@ DROP FUNCTION IF EXISTS func_element_variadic(ANYELEMENT, VARIADIC ANYARRAY);
 CREATE FUNCTION func_nonarray(ANYNONARRAY) RETURNS TABLE(a ANYNONARRAY)
 AS $$ SELECT $1; $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_nonarray(5);
+INFO:  GPORCA failed to produce a plan, falling back to planner
  a
 ---
  5
@@ -10228,6 +10259,7 @@ DROP FUNCTION IF EXISTS func_nonarray(ANYNONARRAY);
 CREATE FUNCTION func_nonarray_enum(ANYNONARRAY, ANYENUM) RETURNS TABLE(a ANYARRAY)
 AS $$ SELECT ARRAY[$1, $2]; $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_nonarray_enum('blue'::rainbow, 'red'::rainbow);
+INFO:  GPORCA failed to produce a plan, falling back to planner
      a
 ------------
  {blue,red}
@@ -10238,6 +10270,7 @@ DROP FUNCTION IF EXISTS func_nonarray_enum(ANYNONARRAY, ANYENUM);
 CREATE FUNCTION func_array_nonarray_enum(ANYARRAY, ANYNONARRAY, ANYENUM) RETURNS TABLE(a ANYNONARRAY)
 AS $$ SELECT $1[1]; $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_array_nonarray_enum(ARRAY['blue'::rainbow, 'red'::rainbow], 'red'::rainbow, 'yellow'::rainbow);
+INFO:  GPORCA failed to produce a plan, falling back to planner
   a
 ------
  blue

@@ -987,6 +987,18 @@ DATA(insert OID = 3693 (  "@>"	   PGNSP PGUID b f f 3615	 3615	 16 3694	0	 tsq_m
 DATA(insert OID = 3694 (  "<@"	   PGNSP PGUID b f f 3615	 3615	 16 3693	0	 tsq_mcontained contsel    contjoinsel	 ));
 DATA(insert OID = 3762 (  "@@"	   PGNSP PGUID b f f 25		 25		 16    0	0	 ts_match_tt	contsel    contjoinsel	 ));
 DATA(insert OID = 3763 (  "@@"	   PGNSP PGUID b f f 25		 3615	 16    0	0	 ts_match_tq	contsel    contjoinsel	 ));
+DATA(insert OID = 3962 (  "->"	   PGNSP PGUID b f f 114 25 114 0 0 json_object_field - - ));
+DESCR("get json object field");
+DATA(insert OID = 3963 (  "->>"    PGNSP PGUID b f f 114 25 25 0 0 json_object_field_text - - ));
+DESCR("get json object field as text");
+DATA(insert OID = 3964 (  "->"	   PGNSP PGUID b f f 114 23 114 0 0 json_array_element - - ));
+DESCR("get json array element");
+DATA(insert OID = 3965 (  "->>"    PGNSP PGUID b f f 114 23 25 0 0 json_array_element_text - - ));
+DESCR("get json array element as text");
+DATA(insert OID = 3966 (  "#>"     PGNSP PGUID b f f 114 1009 114 0 0 json_extract_path_op - - ));
+DESCR("get value from json with path elements");
+DATA(insert OID = 3967 (  "#>>"    PGNSP PGUID b f f 114 1009 25 0 0 json_extract_path_text_op - - ));
+DESCR("get value from json as text with path elements");
 
 
 

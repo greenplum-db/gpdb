@@ -3,17 +3,16 @@ include $(top_builddir)/src/Makefile.global
 
 default: installcheck
 
-REGRESS = exttab1 custom_format
+REGRESS = exttab1 custom_format gpfdist2
 PSQLDIR = $(prefix)/bin
+REGRESS_OPTS = --init-file=init_file
 
 installcheck:
-	$(top_builddir)/src/test/regress/pg_regress --psqldir=$(PSQLDIR) $(REGRESS)
+	$(top_builddir)/src/test/regress/pg_regress --psqldir=$(PSQLDIR) --dbname=gpfdist_regression $(REGRESS) $(REGRESS_OPTS)
 
 clean:
 	rm -rf regression.* sql results expected
 
 distclean: clean
 
-.PHONY: clean distclean
-
-
+.PHONY: installcheck clean distclean

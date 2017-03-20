@@ -1,6 +1,6 @@
-CREATE DATABASE sync2_db1;
+create database sync2_db1 template template0;
 CREATE DATABASE
-CREATE DATABASE sync2_db2;
+create database sync2_db2 template template0;
 CREATE DATABASE
 DROP DATABASE sync1_db7;
 DROP DATABASE

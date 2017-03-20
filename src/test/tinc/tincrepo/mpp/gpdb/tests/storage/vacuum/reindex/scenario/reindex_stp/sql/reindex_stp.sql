@@ -2,7 +2,7 @@
 SET gp_create_table_random_default_distribution=off;
 -- end_ignore
 drop database if exists gpreindextest;
-create database gpreindextest;
+create database gpreindextest template template0;
 \c gpreindextest;
 
 --Heap tables with indexes

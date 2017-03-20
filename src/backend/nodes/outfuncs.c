@@ -4155,6 +4155,25 @@ _outDropQueueStmt(StringInfo str, DropQueueStmt *node)
 	WRITE_STRING_FIELD(queue);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
+static void
+_outCreateResourceGroupStmt(StringInfo str, CreateResourceGroupStmt *node)
+{
+	WRITE_NODE_TYPE("CREATERESOURCEGROUPSTMT");
+
+	WRITE_STRING_FIELD(name);
+	WRITE_NODE_FIELD(options); /* List of DefElem nodes */
+}
+#endif /* COMPILING_BINARY_FUNCS */
+
+static void
+_outDropResourceGroupStmt(StringInfo str, DropResourceGroupStmt *node)
+{
+	WRITE_NODE_TYPE("DROPRESOURCEGROUPSTMT");
+
+	WRITE_STRING_FIELD(name);
+}
+
 
 static void
 _outCommentStmt(StringInfo str, CommentStmt *node)
@@ -5094,6 +5113,13 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_DropQueueStmt:
 				_outDropQueueStmt(str, obj);
+				break;
+
+			case T_CreateResourceGroupStmt:
+				_outCreateResourceGroupStmt(str, obj);
+				break;
+			case T_DropResourceGroupStmt:
+				_outDropResourceGroupStmt(str, obj);
 				break;
 
 			case T_CommentStmt:

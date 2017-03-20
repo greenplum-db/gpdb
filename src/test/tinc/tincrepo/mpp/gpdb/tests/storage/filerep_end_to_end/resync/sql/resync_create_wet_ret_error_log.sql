@@ -4,21 +4,21 @@
 DROP EXTERNAL TABLE IF EXISTS resync_exttab_error_log_1 cascade;
 
 CREATE EXTERNAL TABLE resync_exttab_error_log_1( i int, j text )
-LOCATION ('gpfdist://10.110.120.144:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
+LOCATION ('gpfdist://10.0.0.6:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 50;
 
 -- RESYNC: TABLE 2
 DROP EXTERNAL TABLE IF EXISTS resync_exttab_error_log_2 cascade;
 
 CREATE EXTERNAL TABLE resync_exttab_error_log_2( i int, j text )
-LOCATION ('gpfdist://10.110.120.144:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
+LOCATION ('gpfdist://10.0.0.6:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 50;
 
 -- RESYNC: TABLE 3
 DROP EXTERNAL TABLE IF EXISTS resync_exttab_error_log_3 cascade;
 
 CREATE EXTERNAL TABLE resync_exttab_error_log_3( i int, j text )
-LOCATION ('gpfdist://10.110.120.144:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
+LOCATION ('gpfdist://10.0.0.6:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 50;
 
 -- Generate error logs on tables created in SYNC1

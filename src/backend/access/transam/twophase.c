@@ -1646,6 +1646,8 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 
 	END_CRIT_SECTION();
 
+	SIMPLE_FAULT_INJECTOR(FinishPreparedAfterRecordCommitPrepared);
+
 	/* Need to figure out the memory allocation and deallocationfor "buffer". For now, just let it leak. */
 
 	return true;

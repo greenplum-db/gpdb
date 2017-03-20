@@ -30,10 +30,13 @@
                 <topicref href="ldap.xml"/>
                 <topicref href="kerberos.xml" navtitle="Setting up Kerberos Authentication"
                     id="kerberos"/>
+                <topicref href="kerberos-win-client.xml" navtitle="Configuring Kerberos For Windows Clients"
+                    id="kerberos-win"/>
             </topicref>
             <topicref href="roles_privs.xml" navtitle="Managing Roles and Privileges"
                 id="roles_privs"/>
-            <topicref href="topics/ipsec.xml" navtitle="Configuring IPsec for a Greenplum Database
+            <topicref href="topics/ipsec.xml"
+                navtitle="Configuring IPsec for a Greenplum Database
                 System"/>
         </topicref>
         <topicref href="partIV.xml" navtitle="Working with Databases" id="partIV">
@@ -52,5 +55,6 @@
                 id="perf_troubleshoot"/>
         </topicref>
     </topicref>
-    <topicref href="../../index.html" scope="external" navtitle="Greenplum Database Docs Home" format="html" otherprops="pivotal"/>
+    <topicref href="../../index.html" scope="external" navtitle="Greenplum Database Docs Home"
+        format="html" otherprops="pivotal"/>
 </map>

@@ -331,6 +331,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault to 'skip' in order to flush all buffers in BgBufferSync() */
 	_("bg_buffer_sync_default_logic"),
 		/* inject fault to count buffers fsync'ed by checkpoint process */
+	_("finish_prepared_after_record_commit_prepared"),
+		/* inject fault in FinishPreparedTransaction() after recording the commit prepared record */
 	_("not recognized"),
 };
 
