@@ -36,8 +36,6 @@
           Database master</li>
         <li id="nr166917">Java 1.7.0_17 or later is required to use Kerberos-authenticated JDBC on
           Red Hat Enterprise Linux 6.x</li>
-        <li id="nr166760">Java 1.6.0_21 or later is required to use Kerberos-authenticated JDBC on
-          Red Hat Enterprise Linux 4.x or 5.x</li>
       </ul>
     </section>
     <section id="nr166539">
