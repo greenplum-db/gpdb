@@ -215,15 +215,13 @@ static void destroyGpcloudResHandle(gpcloudResHandle *resHandle) {
 
     if (resHandle->gpreader != NULL) {
         if (!reader_cleanup(&resHandle->gpreader)) {
-            ereport(ERROR, (0, errmsg("Failed to cleanup gpcloud extension: %s",
-                                      s3extErrorMessage.c_str())));
+            elog(WARNING, "Failed to cleanup gpcloud extension: %s", s3extErrorMessage.c_str());
         }
     }
 
     if (resHandle->gpwriter != NULL) {
         if (!writer_cleanup(&resHandle->gpwriter)) {
-            ereport(ERROR, (0, errmsg("Failed to cleanup gpcloud extension: %s",
-                                      s3extErrorMessage.c_str())));
+            elog(WARNING, "Failed to cleanup gpcloud extension: %s", s3extErrorMessage.c_str());
         }
     }
 
