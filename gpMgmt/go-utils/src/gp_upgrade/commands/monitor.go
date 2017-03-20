@@ -3,7 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"gp_upgrade/ssh"
+	"gp_upgrade/ssh_client"
 	"io"
 )
 
@@ -17,12 +17,12 @@ type MonitorCommand struct {
 
 func (cmd MonitorCommand) Execute([]string) error {
 	var err error
-	cmd.PrivateKey, err = ssh.NewPrivateKeyGuarantor().Check(cmd.PrivateKey)
+	cmd.PrivateKey, err = ssh_client.NewPrivateKeyGuarantor().Check(cmd.PrivateKey)
 	if err != nil {
 		return err
 	}
 
-	connector := ssh.NewSshConnector()
+	connector := ssh_client.NewSshConnector()
 	session, err := connector.Connect(cmd.Host, cmd.Port, cmd.User, cmd.PrivateKey)
 	if err != nil {
 		return err

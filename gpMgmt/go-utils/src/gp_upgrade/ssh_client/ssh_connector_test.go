@@ -1,6 +1,4 @@
-package ssh_test
-
-import gpssh "gp_upgrade/ssh"
+package ssh_client_test
 
 import (
 	"golang.org/x/crypto/ssh"
@@ -15,6 +13,8 @@ import (
 
 	"errors"
 
+	"gp_upgrade/ssh_client"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -26,11 +26,11 @@ var (
 
 var _ = Describe("SshConnector", func() {
 	var (
-		subject       gpssh.SshConnector
+		subject       ssh_client.SshConnector
 		test_key_path string
 	)
 	BeforeEach(func() {
-		subject = gpssh.SshConnector{
+		subject = ssh_client.SshConnector{
 			SshDialer:    FakeDialer{},
 			SshKeyParser: FakeKeyParser{},
 		}
@@ -132,7 +132,7 @@ func (fakeSshClient FakeSshClient) NewSession() (*ssh.Session, error) {
 
 type FakeDialer struct{}
 
-func (dialer FakeDialer) Dial(network, addr string, config *ssh.ClientConfig) (gpssh.SshClient, error) {
+func (dialer FakeDialer) Dial(network, addr string, config *ssh.ClientConfig) (ssh_client.SshClient, error) {
 	param_network = network
 	param_addr = addr
 	param_config = config
@@ -147,7 +147,7 @@ func (parser ThrowingKeyParser) ParsePrivateKey(pemBytes []byte) (ssh.Signer, er
 
 type ThrowingDialer struct{}
 
-func (dialer ThrowingDialer) Dial(network, addr string, config *ssh.ClientConfig) (gpssh.SshClient, error) {
+func (dialer ThrowingDialer) Dial(network, addr string, config *ssh.ClientConfig) (ssh_client.SshClient, error) {
 	return nil, errors.New("test dialing failure")
 }
 
@@ -159,6 +159,6 @@ func (fakeSshClient ThrowingClient) NewSession() (*ssh.Session, error) {
 	return nil, errors.New("test newsession failure")
 }
 
-func (badClientDialer ThrowingBadClientDialer) Dial(network, addr string, config *ssh.ClientConfig) (gpssh.SshClient, error) {
+func (badClientDialer ThrowingBadClientDialer) Dial(network, addr string, config *ssh.ClientConfig) (ssh_client.SshClient, error) {
 	return new(ThrowingClient), nil
 }

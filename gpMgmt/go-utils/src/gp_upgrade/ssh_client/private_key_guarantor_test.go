@@ -1,9 +1,9 @@
-package ssh_test
-
-import gpssh "gp_upgrade/ssh"
+package ssh_client_test
 
 import (
 	"os"
+
+	"gp_upgrade/ssh_client"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -11,11 +11,11 @@ import (
 
 var _ = Describe("PrivateKeyGuarantor", func() {
 	var (
-		subject *gpssh.PrivateKeyGuarantor
+		subject *ssh_client.PrivateKeyGuarantor
 	)
 
 	BeforeEach(func() {
-		subject = gpssh.NewPrivateKeyGuarantor()
+		subject = ssh_client.NewPrivateKeyGuarantor()
 	})
 
 	Describe("#Check", func() {
