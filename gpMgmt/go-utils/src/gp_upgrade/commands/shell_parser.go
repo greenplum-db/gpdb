@@ -16,6 +16,7 @@ func (parser ShellParser) IsPgUpgradeRunning() bool {
 	if len(parser.Output) == 0 {
 		return false
 	}
+	// todo can this regexp be compiled statically?
 	var segmentPortRegexp = regexp.MustCompile(`--old-port (\d+)`)
 	segmentPorts := segmentPortRegexp.FindStringSubmatch(parser.Output)
 
