@@ -36,4 +36,14 @@ extern AttrNumber *varattnos_map(TupleDesc oldtd, TupleDesc newtd);
 extern void change_varattnos_of_a_node(Node *node, const AttrNumber *newattno);
 extern void change_varattnos_of_a_varno(Node *node, const AttrNumber *newattno, Index varno);
 
+#define ASSERT_RANGE_PART(selector, level) \
+						  AssertImply(0 == level, selector->rootPartitionNode->part->parkind == 'r'); \
+						  AssertImply(0 < level, selector->levelPartRules[level - 1] != NULL && \
+								  selector->levelPartRules[level - 1]->children->part->parkind == 'r'); \
+
+#define ASSERT_LIST_PART(selector, level) \
+						  AssertImply(0 == level, selector->rootPartitionNode->part->parkind == 'l'); \
+						  AssertImply(0 < level, selector->levelPartRules[level - 1] != NULL && \
+								  selector->levelPartRules[level - 1]->children->part->parkind == 'l'); \
+
 #endif   /* PARTITIONSELECTION_H */

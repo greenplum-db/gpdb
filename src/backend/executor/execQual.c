@@ -212,6 +212,9 @@ static Datum ExecEvalPartBoundOpenExpr(PartBoundOpenExprState *exprstate,
 static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
 								ExprContext *econtext,
 								bool *isNull, ExprDoneCond *isDone);
+static Datum ExecEvalPartListNullTestExpr(PartListNullTestExprState *exprstate,
+							ExprContext *econtext,
+							bool *isNull, ExprDoneCond *isDone);
 
 static bool ExecIsExprUnsafeToConst_walker(Node *node, void *context);
 static bool ExecIsExprUnsafeToConst(Node *node);
@@ -4710,9 +4713,7 @@ static Datum ExecEvalPartBoundExpr(PartBoundExprState *exprstate,
 	PartitionSelectorState *selector = exprstate->selector;
 	PartitionRule *rule = selector->levelPartRules[expr->level];
 	Assert (NULL != rule);
-	AssertImply(0 == expr->level, selector->rootPartitionNode->part->parkind == 'r');
-	AssertImply(0 < expr->level, selector->levelPartRules[expr->level - 1] != NULL &&
-			selector->levelPartRules[expr->level - 1]->children->part->parkind == 'r');
+	ASSERT_RANGE_PART(selector, expr->level);
 
 	List *parBoundary = NULL;
 
@@ -4762,9 +4763,7 @@ static Datum ExecEvalPartBoundInclusionExpr(PartBoundInclusionExprState *exprsta
 	PartitionSelectorState *selector = exprstate->selector;
 	PartitionRule *rule = selector->levelPartRules[expr->level];
 	Assert (NULL != rule);
-	AssertImply(0 == expr->level, selector->rootPartitionNode->part->parkind == 'r');
-	AssertImply(0 < expr->level, selector->levelPartRules[expr->level - 1] != NULL &&
-			selector->levelPartRules[expr->level - 1]->children->part->parkind == 'r');
+	ASSERT_RANGE_PART(selector, expr->level);
 
 	bool isIncluded = rule->parrangeendincl;
 
@@ -4799,9 +4798,7 @@ static Datum ExecEvalPartBoundOpenExpr(PartBoundOpenExprState *exprstate,
 	PartitionSelectorState *selector = exprstate->selector;
 	PartitionRule *rule = selector->levelPartRules[expr->level];
 	Assert (NULL != rule);
-	AssertImply(0 == expr->level, selector->rootPartitionNode->part->parkind == 'r');
-	AssertImply(0 < expr->level, selector->levelPartRules[expr->level - 1] != NULL &&
-			selector->levelPartRules[expr->level - 1]->children->part->parkind == 'r');
+	ASSERT_RANGE_PART(selector, expr->level);
 
 	bool isOpen = (rule->parrangeend == NULL);
 
@@ -4836,9 +4833,7 @@ static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
 	PartitionSelectorState *selector = exprstate->selector;
 	PartitionRule *rule = selector->levelPartRules[expr->level];
 	Assert (NULL != rule);
-	AssertImply(0 == expr->level, selector->rootPartitionNode->part->parkind == 'l');
-	AssertImply(0 < expr->level, selector->levelPartRules[expr->level - 1] != NULL &&
-			selector->levelPartRules[expr->level - 1]->children->part->parkind == 'l');
+	ASSERT_LIST_PART(selector, expr->level);
 
 	ListCell *lc = NULL;
 	size_t numVal = rule->parlistvalues ? rule->parlistvalues->length : 0;
@@ -4850,8 +4845,6 @@ static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
 	char typalign = 'i';
 	bool *is_null = NULL;
 
-	// TODO: Can we ever have 0 list values? Currently it gives parser error.
-	// But a default part might be interesting.
 	if (numVal > 0)
 	{
 		is_null = palloc0(sizeof(bool) * numVal);
@@ -4869,7 +4862,10 @@ static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
 		foreach (lc, rule->parlistvalues)
 		{
 			List *values = (List *) lfirst(lc);
-			/* make sure it is single-column partition */
+			/*
+			 * Make sure it is single-column partition.
+			 * Optimizer currently doesn't support multi-column partitions.
+			 */
 			Assert (1 == list_length(values));
 			Node *value = (Node *) lfirst(list_nth_cell(values, 0));
 			Assert (IsA(value, Const));
@@ -4899,7 +4895,6 @@ static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
 
 	ArrayType *array = construct_md_array(array_values, is_null, 1, dims, lbs,
 			consttype, typlen, typbyval, typalign);
-			//construct_array(array_values, numVal, consttype, typlen, typbyval, typalign);
 
 	if (array_values)
 	{
@@ -4937,19 +4932,13 @@ static Datum ExecEvalPartListNullTestExpr(PartListNullTestExprState *exprstate,
 	PartitionSelectorState *selector = exprstate->selector;
 	PartitionRule *rule = selector->levelPartRules[expr->level];
 	Assert (NULL != rule);
-	AssertImply(0 == expr->level, selector->rootPartitionNode->part->parkind == 'l');
-	AssertImply(0 < expr->level, selector->levelPartRules[expr->level - 1] != NULL &&
-			selector->levelPartRules[expr->level - 1]->children->part->parkind == 'l');
+	ASSERT_LIST_PART(selector, expr->level);
 
 	ListCell *lc = NULL;
 	size_t numVal = rule->parlistvalues ? rule->parlistvalues->length : 0;
 
 	*isNull = false;
 
-	/*
-	 * TODO: Can we ever have 0 list values? Currently it gives parser error.
-	 * But a default part might be interesting.
-	 */
 	if (numVal > 0)
 	{
 		Const *con = NULL;
