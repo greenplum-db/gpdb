@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"testing"
 
+	"os"
+
 	"golang.org/x/crypto/ssh"
 )
 
@@ -26,7 +28,8 @@ var (
 )
 
 var _ = BeforeEach(func() {
-	sshd = exec.Command("../../../bin/test/sshd") //TODO refer to GOPATH
+	path := os.Getenv("GOPATH")
+	sshd = exec.Command(path + "/bin/test/sshd")
 	stdout, _ = sshd.StdoutPipe()
 	stderr, _ = sshd.StderrPipe()
 

@@ -33,14 +33,16 @@ func startShell(channel ssh.Channel, requests <-chan *ssh.Request) {
 			payload := string(req.Payload)
 			switch req.Type {
 			case "exec":
-				// todo handle error
-				cmdName, _ := parsePayload(payload)
+				cmdName, err := parsePayload(payload)
+				Check("Cannot parse payload", err)
+
 				cmd := exec.Command("bash", "-c", fmt.Sprintf("%s", cmdName))
 
 				stdout, err := cmd.StdoutPipe()
 				Check("Cannot get stdoutpipe", err)
 
 				var cheatSheet CheatSheet
+				//TODO: Currently reading from a file; possibly passing through ssh server instead?
 				err = cheatSheet.ReadFromFile()
 				Check("Cannot read from file", err)
 
@@ -48,10 +50,6 @@ func startShell(channel ssh.Channel, requests <-chan *ssh.Request) {
 				// Probably not necessary to actually run the command anymore...
 				stdout = ioutil.NopCloser(strings.NewReader(cheatSheet.Response))
 				exitcode := cheatSheet.ReturnCode
-
-				//TODO: Currently reading from a file; possibly passing through ssh server instead?
-
-				//TODO: Check if read is empty
 
 				if err != nil && err != io.EOF {
 					panic("cannot get stdout")
@@ -139,8 +137,6 @@ func listenerForever() {
 }
 
 func startSshServer() {
-	// todo use local file
-
 	authorizedKeysBytes, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/gp_upgrade/commands/sshd/authorized_keys")
 	if err != nil {
 		log.Fatalf("Failed to load authorized_keys, err: %v", err)
@@ -169,7 +165,6 @@ func startSshServer() {
 		},
 	}
 
-	// todo change to find via being next to this file
 	pBytes, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/gp_upgrade/commands/sshd/private_key.pem")
 	if err != nil {
 		panic(err)
@@ -201,5 +196,9 @@ func parsePayload(payload string) (string, error) {
 }
 
 func main() {
+	if os.Getenv("GOPATH") == "" {
+		fmt.Println("GOPATH is not set. Cannot start sshd server.")
+		os.Exit(1)
+	}
 	startSshServer()
 }

@@ -30,7 +30,8 @@ func (cmd MonitorCommand) Execute([]string) error {
 
 	defer session.Close()
 
-	// todo use pgrep instead
+	// pgrep could be used, but it was messy because of exit code 1 when not found;
+	// seems nicer with ps to have 0 exit when not found (but not error)
 	result, err := session.Output("ps auxx | grep pg_upgrade")
 
 	output := string(result)
