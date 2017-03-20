@@ -405,12 +405,36 @@ SELECT foo();
                   scope="external">XML Functions</xref>
               </entry>
               <entry colname="col2"/>
-              <entry colname="col3">xmlagg(xml)<p>xmlexists(text,
-                  xml)</p><p>xml_is_well_formed(text)</p><p>xml_is_well_formed_document(text)</p><p>xml_is_well_formed_content(text)</p><p>xpath(text,
-                  xml)</p><p>xpath(text, xml, text[])</p><p>xpath_exists(text,
-                  xml)</p><p>xpath_exists(text, xml,
-                  text[])</p><p>xml(text)</p><p>text(xml)</p><p>xmlcomment(xml)</p><p>xmlconcat2(xml,
-                  xml)</p></entry>
+              <entry colname="col3">
+                <p>cursor_to_xml(cursor refcursor, count int, nulls boolean, tableforest boolean, targetns text)</p>
+                <p>cursor_to_xmlschema(cursor refcursor, nulls boolean, tableforest boolean, targetns text)</p>
+                <p>database_to_xml(nulls boolean, tableforest boolean, targetns text)</p>
+                <p>database_to_xmlschema(nulls boolean, tableforest boolean, targetns text)</p>
+                <p>database_to_xml_and_xmlschema(nulls boolean, tableforest boolean, targetns text)</p>
+                <p>query_to_xml(query text, nulls boolean, tableforest boolean, targetns text)</p>
+                <p>query_to_xmlschema(query text, nulls boolean, tableforest boolean, targetns text)</p>
+                <p>query_to_xml_and_xmlschema(query text, nulls boolean, tableforest boolean, targetns text)</p>
+                <p>schema_to_xml(schema name, nulls boolean, tableforest boolean, targetns text)</p>
+                <p>schema_to_xmlschema(schema name, nulls boolean, tableforest boolean, targetns text)</p>
+                <p>schema_to_xml_and_xmlschema(schema name, nulls boolean, tableforest boolean, targetns text)</p>
+                <p>table_to_xml(tbl regclass, nulls boolean, tableforest boolean, targetns text)</p>
+                <p>table_to_xmlschema(tbl regclass, nulls boolean, tableforest boolean, targetns
+                  text)</p>
+                <p>table_to_xml_and_xmlschema(tbl regclass, nulls boolean, tableforest boolean, targetns text)</p>
+                <p>xmlagg(xml)</p>
+                <p>xmlexists(text, xml)</p>
+                <p>xml_is_well_formed(text)</p>
+                <p>xml_is_well_formed_document(text)</p>
+                <p>xml_is_well_formed_content(text)</p>
+                <p>xpath(text, xml)</p>
+                <p>xpath(text, xml, text[])</p>
+                <p>xpath_exists(text, xml)</p>
+                <p>xpath_exists(text, xml, text[])</p>
+                <p>xml(text)</p>
+                <p>text(xml)</p>
+                <p>xmlcomment(xml)</p>
+                <p>xmlconcat2(xml, xml)</p>
+              </entry>
               <entry colname="col4"/>
             </row>
           </tbody>
