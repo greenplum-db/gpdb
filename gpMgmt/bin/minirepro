@@ -144,7 +144,59 @@ def dump_query(connectionInfo, query_file):
     if errormsg:
         sys.stderr.writelines('\nError when executing function gp_dump_query_oids.\n\n' + errormsg + '\n\n')
         sys.exit(1)
-    return outmsg
+    
+    outmsg_phase2 = pg_add_partition_table_oids(connectionInfo, outmsg)
+
+    return outmsg_phase2
+
+# find if tables have partition table and append oids if exit
+def pg_add_partition_table_oids(connectionInfo, json_parent_oids):
+    (host, port, user, db) = connectionInfo
+    parent_oids_array = json.loads(json_parent_oids)['relids'].split(',')
+    oid_str = ''
+    print parent_oids_array
+    for parent_oid in parent_oids_array:
+        oid_str = oid_str + "'%s'," % (parent_oid)
+    oid_str = oid_str[:-1]
+    query = "select array(select sopaidpartitionoid " \
+	    "from gp_toolkit.gp_size_of_partition_and_indexes_disk " \
+            "where sopaidparentoid in (%s))" % (oid_str)
+
+    toolkit_statistics_sql = PATH_PREFIX + 'toolkit_statistics.sql'
+    with open(toolkit_statistics_sql, 'w') as toolkit_f:
+        toolkit_f.write(query)
+
+    # disable .psqlrc to prevent unexpected timing and format output
+    query_cmd = "psql %s --pset footer --no-psqlrc -Atq -h %s -p %s -U %s -f %s" % (db, host, port, user, toolkit_statistics_sql)
+    print query_cmd
+
+    p = subprocess.Popen(query_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ)
+
+    if p.wait() is not 0:
+        errormsg = p.communicate()[1]
+        sys.stderr.writelines('\nError when executing function gp_toolkit.gp_size_of_partition_and_indexes_disk.\n\n' + errormsg + '\n\n')
+        sys.exit(1)
+
+    table_oids, errormsg = p.communicate()
+    if errormsg:
+        sys.stderr.writelines('\nError when executing function gp_toolkit.gp_size_of_partition_and_indexes_disk.\n\n' + errormsg + '\n\n')
+        sys.exit(1)
+
+    # if no partition table found,there will be only one character '\n' return original oids
+    if len(table_oids) == 1:
+        return json_parent_oids
+
+    partition_oid_array = table_oids.split('{')[1].split('}')[0].split(',')
+    oid_str = ''
+    for partition_oid in partition_oid_array:
+        oid_str = oid_str + "%s," % (partition_oid)
+    oid_str = oid_str[:-1]
+
+    jsonAll = json.loads(json_parent_oids)
+    jsonAll[str('relids')] = jsonAll['relids'] + ',' + oid_str
+    json_all_oids = json.dumps(jsonAll)
+
+    return json_all_oids
 
 # relation and function oids will be extracted from the dump string
 def parse_oids(cursor, json_oids):
