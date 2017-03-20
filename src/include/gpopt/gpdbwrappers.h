@@ -54,7 +54,6 @@ struct Motion;
 struct Var;
 struct Const;
 struct ArrayExpr;
-struct PartitionKeyKind;
 
 namespace gpdb {
 

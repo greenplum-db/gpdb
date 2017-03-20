@@ -59,12 +59,6 @@ typedef struct LogicalIndexes
 	LogicalIndexInfo	**logicalIndexInfo;
 } LogicalIndexes;
 
-typedef struct PartitionKeyKind
-{
-	List		*partitionkeys;
-	List		*partitionkinds;
-} PartitionKeyKind;
-
 extern bool rel_is_default_partition(Oid relid);
 
 extern bool rel_is_partitioned(Oid relid);
