@@ -2035,6 +2035,13 @@ explain analyze SELECT * FROM multiset_5( TABLE( SELECT count(*)::integer, 'hell
  Total runtime: 5.296 ms
 (23 rows)
 
+-- Test for an old bug in aggregate planning - this used to crash.
+select count(*) from multiset_5(table(select * from example)) s ;
+ count 
+-------
+    10
+(1 row)
+
 -- ===========================================
 -- Test invalid use of table value expressions
 -- ===========================================

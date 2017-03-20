@@ -21,6 +21,7 @@
 #include "lib/stringinfo.h"             /* StringInfo */
 #include "miscadmin.h"
 #include "utils/tuplesort.h"
+#include "utils/tuplesort_mk.h"
 #include "cdb/cdbvars.h" /* CDB *//* gp_sort_flags */
 #include "utils/workfile_mgr.h"
 #include "executor/instrument.h"

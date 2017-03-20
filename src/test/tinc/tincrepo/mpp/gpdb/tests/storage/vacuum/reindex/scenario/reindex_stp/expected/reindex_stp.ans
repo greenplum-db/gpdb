@@ -1,7 +1,7 @@
 drop database if exists gpreindextest;
 psql:/path/sql_file:1: NOTICE:  database "gpreindextest" does not exist, skipping
 DROP DATABASE
-create database gpreindextest;
+create database gpreindextest template template0;
 CREATE DATABASE
 \c gpreindextest;
 You are now connected to database "gpreindextest" as user "gpadmin".

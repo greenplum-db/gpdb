@@ -1119,21 +1119,6 @@ class CursorSideEffect:
         self.second_values[key] = value
         self.counters[key] = 0
 
-class FakeCursor:
-    def __init__(self, my_list):
-        self.list = []
-        if my_list:
-            self.list = my_list
-        self.rowcount = len(self.list)
-
-    def __iter__(self):
-        return iter(self.list)
-
-    def close(self):
-        pass
-
-    def fetchall(self):
-        return self.list
 
 class SingletonSideEffect:
     """

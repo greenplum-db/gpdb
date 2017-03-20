@@ -63,6 +63,7 @@
 			<topicref href="sql_commands/DEALLOCATE.xml"/>
 			<topicref href="sql_commands/DECLARE.xml"/>
 			<topicref href="sql_commands/DELETE.xml"/>
+			<topicref href="sql_commands/DO.xml"/>
 			<topicref href="sql_commands/DROP_AGGREGATE.xml"/>
 			<topicref href="sql_commands/DROP_CAST.xml"/>
 			<topicref href="sql_commands/DROP_CONVERSION.xml"/>
@@ -168,7 +169,7 @@
 				<topicref href="system_catalogs/pg_database.xml"/>
 				<topicref href="system_catalogs/pg_depend.xml"/>
 				<topicref href="system_catalogs/pg_description.xml"/>
-        <topicref href="system_catalogs/pg_enum.xml"/>
+				<topicref href="system_catalogs/pg_enum.xml"/>
 				<topicref href="system_catalogs/pg_exttable.xml"/>
 				<topicref href="system_catalogs/pg_filespace.xml"/>
 				<topicref href="system_catalogs/pg_filespace_entry.xml"/>

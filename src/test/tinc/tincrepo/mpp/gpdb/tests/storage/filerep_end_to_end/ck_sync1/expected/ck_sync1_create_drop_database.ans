@@ -1,16 +1,16 @@
-CREATE DATABASE ck_sync1_db1;
+create database ck_sync1_db1 template template0;
 CREATE DATABASE
-CREATE DATABASE ck_sync1_db2;
+create database ck_sync1_db2 template template0;
 CREATE DATABASE
-CREATE DATABASE ck_sync1_db3;
+create database ck_sync1_db3 template template0;
 CREATE DATABASE
-CREATE DATABASE ck_sync1_db4;
+create database ck_sync1_db4 template template0;
 CREATE DATABASE
-CREATE DATABASE ck_sync1_db5;
+create database ck_sync1_db5 template template0;
 CREATE DATABASE
-CREATE DATABASE ck_sync1_db6;
+create database ck_sync1_db6 template template0;
 CREATE DATABASE
-CREATE DATABASE ck_sync1_db7;
+create database ck_sync1_db7 template template0;
 CREATE DATABASE
 DROP DATABASE sync1_db2;
 DROP DATABASE

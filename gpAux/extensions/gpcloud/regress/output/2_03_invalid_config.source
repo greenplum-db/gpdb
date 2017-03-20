@@ -1,6 +1,6 @@
 CREATE READABLE EXTERNAL TABLE s3regress_invalid_config (date text, time text, open float, high float,
 	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/') format 'csv';
 SELECT count(*) FROM s3regress_invalid_config;
-ERROR:  Failed to init S3 extension (segid = -1, segnum = -1), please check your configurations and network connection: reader_init caught a S3RuntimeError exception: Unexpected error: Failed to parse config file "s3/s3.conf", or it doesn't exist, Function: InitConfig, File: src/s3conf.cpp(28). (gpcloud.cpp:95)  (seg1 slice1 88daf7ed-1555-4d4c-5fca-62b98eea93ce:40001 pid=13622) (cdbdisp.c:1326)
+ERROR:  Failed to init gpcloud extension (segid = -1, segnum = -1), please check your configurations and network connection: reader_init caught a S3RuntimeError exception: Unexpected error: Failed to parse config file "s3/s3.conf", or it doesn't exist, Function: InitConfig, File: src/s3conf.cpp(28). (gpcloud.cpp:95)  (seg1 slice1 88daf7ed-1555-4d4c-5fca-62b98eea93ce:40001 pid=13622) (cdbdisp.c:1326)
 DETAIL:  External table s3regress_invalid_config, file s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/
 DROP EXTERNAL TABLE s3regress_invalid_config;

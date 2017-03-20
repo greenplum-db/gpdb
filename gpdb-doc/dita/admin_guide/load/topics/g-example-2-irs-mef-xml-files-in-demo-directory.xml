@@ -14,7 +14,7 @@
       <p>XML, XML Schema and stylesheets play a role in their data representation and business
       workflow. The actual XML data is extracted from a ZIP file attached to a MIME "transmission
       file" message. For more information about MeF, see <xref
-        href="http://www.irs.gov/uac/Modernized-e-File-Overview" scope="external" format="html"
+        href="https://www.irs.gov/uac/modernized-e-file-overview" scope="external" format="html"
         >Modernized e-File (Overview)</xref> on the IRS web site.</p>
       <p>The sample XML document, <i>RET990EZ_2006.xml</i>, is about 350KB in size
                         with two elements:</p>
@@ -29,9 +29,9 @@
       <p>The following is an abridged sample of the XML file.</p>
       <codeblock>&lt;?xml version="1.0" encoding="UTF-8"?&gt; 
 &lt;Return returnVersion="2006v2.0"
-   xmlns="http://www.irs.gov/efile" 
-   xmlns:efile="http://www.irs.gov/efile"
-   xsi:schemaLocation="http://www.irs.gov/efile"
+   xmlns="https://www.irs.gov/efile" 
+   xmlns:efile="https://www.irs.gov/efile"
+   xsi:schemaLocation="https://www.irs.gov/efile"
    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"&gt; 
    &lt;ReturnHeader binaryAttachmentCount="1"&gt;
      &lt;ReturnId&gt;AAAAAAAAAAAAAAAAAAAA&lt;/ReturnId&gt;

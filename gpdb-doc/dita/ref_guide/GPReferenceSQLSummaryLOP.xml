@@ -403,6 +403,12 @@
 		<codeblock conref="sql_commands/DROP_AGGREGATE.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/DROP_AGGREGATE.xml"/> for more
 			information.</p>
+		<section>
+			<title>DO</title>
+		</section>
+		<p conref="sql_commands/DO.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/DO.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/DO.xml"/> for more information.</p>
 		<section id="ae1904821">
 			<title>DROP CAST</title>
 		</section>

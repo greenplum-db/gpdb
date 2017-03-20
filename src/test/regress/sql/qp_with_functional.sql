@@ -776,3 +776,108 @@ WITH v AS (SELECT c, d FROM bar, v WHERE c = v.a AND c < 2) SELECT v1.c, v1.d FR
 WITH w AS (SELECT a, b from foo where b < 5)
 SELECT a, sum(b) FROM foo WHERE b > 1 GROUP BY a HAVING sum(b) < (SELECT d FROM bar, w WHERE c = w.a AND c > 2) ORDER BY 1;
 
+
+
+-- @description MPP-15087: Executor: Nested loops in subquery scan for a CTE returns incorrect results
+
+set enable_nestloop=on;
+set enable_hashjoin=off;
+set enable_mergejoin=off;
+create table testtab(code char(3), n numeric);
+insert into testtab values ('abc',1);
+insert into testtab values ('xyz',2);
+insert into testtab values ('def',3);
+
+with cte as (
+  select code, n, x 
+  from testtab, (select 100 as x) d
+)
+select code from testtab t where 1= (select count(*) from cte where cte.code::text=t.code::text or cte.code::text = t.code::text);
+
+with cte as (
+  select count(*) from (
+    select code, n, x
+    from testtab, (select 100 as x) d
+  ) FOO
+)
+select code from testtab t where 1= (select * from cte);
+
+with cte as (
+  select count(*) from (
+    select code, n, x
+    from testtab, (select 100 as x) d
+  ) FOO
+)
+select code from testtab t where 1= (select count(*) from cte);
+
+reset enable_nestloop;
+reset enable_hashjoin;
+reset enable_mergejoin;
+
+-- @description MPP-19271: Unexpected internal error when we issue CTE with CSQ when we disable inlining of CTE
+WITH cte AS (
+    SELECT code, n, x from testtab t , (SELECT 100 as x) d ) 
+SELECT code FROM testtab t WHERE (
+    SELECT count(*) FROM cte WHERE cte.code::text=t.code::text
+) = 1 ORDER BY 1;
+
+-- @description MPP-19436
+WITH t AS (
+ SELECT e.*,f.*
+ FROM (SELECT * FROM foo WHERE a < 10) e
+ LEFT OUTER JOIN (SELECT * FROM bar WHERE c < 10) f ON e.a = f.d ) 
+SELECT t.a,t.d, count(*) over () AS window
+FROM t 
+GROUP BY t.a,t.d ORDER BY t.a,t.d LIMIT 2;
+
+WITH t(a,b,d) AS (
+  SELECT foo.a,foo.b,bar.d FROM foo,bar WHERE foo.a = bar.d
+)
+SELECT t.b,avg(t.a), rank() OVER (PARTITION BY t.a ORDER BY t.a) FROM foo,t GROUP BY foo.a,foo.b,t.b,t.a ORDER BY 1,2,3 LIMIT 5;
+
+WITH t(a,b,d) AS (
+  SELECT foo.a,foo.b,bar.d FROM foo,bar WHERE foo.a = bar.d
+)
+SELECT cup.*, SUM(t.d) OVER(PARTITION BY t.b)
+FROM (
+  SELECT bar.*, AVG(t.b) OVER(PARTITION BY t.a ORDER BY t.b desc) AS e FROM t,bar
+) AS cup, t
+WHERE cup.e < 10
+GROUP BY cup.c,cup.d, cup.e ,t.d, t.b
+ORDER BY 1,2,3,4
+LIMIT 10;
+
+WITH t(a,b,d) AS (
+  SELECT foo.a,foo.b,bar.d FROM foo,bar WHERE foo.a = bar.d
+)
+SELECT cup.*, SUM(t.d) FROM ( 
+  SELECT bar.*, count(*) OVER() AS e FROM t,bar WHERE t.a = bar.c
+) AS cup, t
+GROUP BY cup.c,cup.d, cup.e,t.a
+HAVING AVG(t.d) < 10 ORDER BY 1,2,3,4 LIMIT 10;
+
+WITH t(a,b,d) AS (
+  SELECT foo.a,foo.b,bar.d FROM foo,bar WHERE foo.a = bar.d
+)
+SELECT cup.*, SUM(t.d) OVER(PARTITION BY t.b) FROM ( 
+  SELECT bar.c as e,r.d
+  FROM (
+    SELECT t.d, avg(t.a) over() FROM t
+  ) r, bar
+) AS cup,
+t WHERE cup.e < 10
+GROUP BY cup.d, cup.e, t.d, t.b
+ORDER BY 1,2,3 
+LIMIT 10;
+
+-- @description MPP-19696
+CREATE TABLE r(a int, b int);
+INSERT INTO r SELECT i,i FROM generate_series(1,5)i;
+
+WITH v1 AS (SELECT b FROM r), v2 as (SELECT b FROM v1) SELECT * FROM v2 WHERE b < 5 ORDER BY 1;
+
+-- @description Mpp-19991
+CREATE TABLE x AS SELECT generate_series(1,10);
+CREATE TABLE y AS SELECT generate_series(1,10);
+
+with v1 as (select * from x), v2 as (select * from y) select * from v1;

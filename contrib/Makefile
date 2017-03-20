@@ -19,6 +19,8 @@ WANTED_DIRS = \
 		dict_xsyn \
 		intarray \
 		pageinspect \
+		pg_upgrade \
+		pg_upgrade_support \
 		test_parser
 
 ifeq ($(with_openssl),yes)

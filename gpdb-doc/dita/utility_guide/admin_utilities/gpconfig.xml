@@ -11,7 +11,7 @@
        | <b>-r</b> <varname>param_name</varname> [<b>--masteronly</b> | <b>-l</b>
        [<b>--skipvalidation</b>] [<b>--verbose</b>] [<b>--debug</b>]
 
-<b>gpconfig</b> <b>-s</b> <varname>param_name</varname> [<b>--verbose</b>] [<b>--debug</b>]
+<b>gpconfig</b> <b>-s</b> <varname>param_name</varname> [<b>--file</b>] [<b>--verbose</b>] [<b>--debug</b>]
 
 <b>gpconfig</b> <b>--help</b></codeblock>
     </section>
@@ -19,11 +19,11 @@
       <title>Description</title>
       <p>The <codeph>gpconfig</codeph> utility allows you to set, unset, or view configuration
         parameters from the <codeph>postgresql.conf</codeph> files of all instances (master,
-        segments, and mirrors) in your Greenplum Database system. When setting a
-        parameter, you can also specify a different value for the master if necessary. For example,
-        parameters such as <codeph>max_connections</codeph> require a different setting on the
-        master than what is used for the segments. If you want to set or unset a global or master
-        only parameter, use the <codeph>--masteronly</codeph> option.</p>
+        segments, and mirrors) in your Greenplum Database system. When setting a parameter, you can
+        also specify a different value for the master if necessary. For example, parameters such as
+          <codeph>max_connections</codeph> require a different setting on the master than what is
+        used for the segments. If you want to set or unset a global or master only parameter, use
+        the <codeph>--masteronly</codeph> option.</p>
       <p><codeph>gpconfig</codeph> can only be used to manage certain parameters. For example, you
         cannot use it to set parameters such as <codeph>port</codeph>, which is required to be
         distinct for every segment instance. Use the <codeph>-l</codeph> (list) option to see a
@@ -37,16 +37,15 @@
         add it back (set a new value), there will be two instances of the parameter; one that is
         commented out, and one that is enabled and inserted at the bottom of the
           <codeph>postgresql.conf</codeph> file.</p>
-      <p>After setting a parameter, you must restart your Greenplum Database system or
-        reload the <codeph>postgresql.conf</codeph> files in order for the change to take effect.
-        Whether you require a restart or a reload depends on the parameter. </p>
-      <p>For more information about the server configuration parameters, see the
-          <i>Greenplum Database Reference Guide</i>.</p>
+      <p>After setting a parameter, you must restart your Greenplum Database system or reload the
+          <codeph>postgresql.conf</codeph> files in order for the change to take effect. Whether you
+        require a restart or a reload depends on the parameter. </p>
+      <p>For more information about the server configuration parameters, see the <i>Greenplum
+          Database Reference Guide</i>.</p>
       <p>To show the currently set values for a parameter across the system, use the
           <codeph>-s</codeph> option.</p>
       <p><codeph>gpconfig</codeph> uses the following environment variables to connect to the
-          Greenplum Database master instance and obtain system configuration
-        information: </p>
+        Greenplum Database master instance and obtain system configuration information: </p>
       <ul>
         <li id="kq141888">
           <codeph>PGHOST</codeph>
@@ -103,15 +102,28 @@
         <plentry>
           <pt>-s | --show <varname>param_name</varname></pt>
           <pd>Shows the value for a configuration parameter used on all instances (master and
-            segments) in the Greenplum Database system. If there is a discrepancy in a
-            parameter value between segment instances, the <codeph>gpconfig</codeph> utility
-            displays an error message. Note that the <codeph>gpconfig</codeph> utility reads
-            parameter values directly from the database, and not the
-              <codeph>postgresql.conf</codeph> file. If you are using <codeph>gpconfig</codeph> to
-            set configuration parameters across all segments, then running <codeph>gpconfig
-              -s</codeph> to verify the changes, you might still see the previous (old) values. You
-            must reload the configuration files (<codeph>gpstop -u</codeph>) or restart the system
-              (<codeph>gpstop -r</codeph>) for changes to take effect.</pd>
+            segments) in the Greenplum Database system. If there is a difference in a parameter
+            value among the instances, the utility displays an error message. Running
+              <codeph>gpconfig</codeph> with the <codeph>-s</codeph> option reads parameter values
+            directly from the database, and not the <codeph>postgresql.conf</codeph> file. If you
+            are using <codeph>gpconfig</codeph> to set configuration parameters across all segments,
+            then running <codeph>gpconfig -s</codeph> to verify the changes, you might still see the
+            previous (old) values. You must reload the configuration files (<codeph>gpstop
+              -u</codeph>) or restart the system (<codeph>gpstop -r</codeph>) for changes to take
+            effect.</pd>
+        </plentry>
+        <plentry>
+          <pt>--file</pt>
+          <pd>For a configuration parameter, shows the value from the
+              <codeph>postgresql.conf</codeph> file on all instances (master and segments) in the
+            Greenplum Database system. If there is a difference in a parameter value among the
+            instances, the utility displays a message. Must be specified with the
+              <codeph>-s</codeph> option.</pd>
+          <pd>For example, the configuration parameter <codeph>statement_mem</codeph> is set to 64MB
+            for a user with the <codeph>ALTER ROLE</codeph> command, and the value in the
+              <codeph>postgresql.conf</codeph> file is 128MB. Running the command <codeph>gpconfig
+              -s statement_mem --file</codeph> displays 128MB. The command <codeph>gpconfig -s
+              statement_mem</codeph> run by the user displays 64MB. </pd>
         </plentry>
         <plentry>
           <pt>--skipvalidation</pt>
@@ -139,8 +151,8 @@
     </section>
     <section id="section5">
       <title>Examples</title>
-      <p>Set the <codeph>gp_snmp_community</codeph> parameter to
-          <codeph>testenv</codeph> in the master host file
+      <p>Set the <codeph>gp_snmp_community</codeph> parameter to <codeph>testenv</codeph> in the
+        master host file
         only:<codeblock>gpconfig -c gp_snmp_community -v testenv --masteronly</codeblock></p>
       <p>Set the <codeph>max_connections</codeph> setting to 100 on all segments and 10 on the
         master:</p>
@@ -150,8 +162,8 @@
         When you specify the values for the parameters, enclose the values with double quotes
           (<codeph>"</codeph>).<codeblock>$ gpconfig -c gp_email_from -v "'gpdb-server@example.com'"
 $ gpconfig -c gp_email_to -v "'gpdb-admin@example.com'"</codeblock></p>
-      <p>In the <codeph>postgresql.conf</codeph> file, the parameters are set
-        correctly, with single quotes around the
+      <p>In the <codeph>postgresql.conf</codeph> file, the parameters are set correctly, with single
+        quotes around the
         values:<codeblock>gp_email_from='gpdb-server@example.com'
 gp_email_to='gpdb-admin@example.com'</codeblock></p>
       <p>Comment out all instances of the <codeph>default_statistics_target</codeph> configuration

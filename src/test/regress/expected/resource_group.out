@@ -22,7 +22,7 @@ SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role';
 (1 row)
 
 ALTER ROLE rg_test_role RESOURCE GROUP admin_group;
-ERROR:  only super user can be assigned to admin resgroup
+ERROR:  only superuser can be assigned to admin resgroup
 SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role';
  rolresgroup 
 -------------
@@ -67,4 +67,65 @@ ERROR:  resource group "non_exist_group" does not exist
 -- nonsuper user should not be assigned to admin group
 CREATE ROLE rg_test_role RESOURCE GROUP admin_group;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
-ERROR:  only super user can be assigned to admin resgroup
+ERROR:  only superuser can be assigned to admin resgroup
+-- ----------------------------------------------------------------------
+-- Test: create/drop a resource group
+-- ----------------------------------------------------------------------
+--start_ignore
+DROP RESOURCE GROUP rg_test_group;
+ERROR:  resource group "rg_test_group" does not exist
+--end_ignore
+-- can't drop non-exist resource group
+DROP RESOURCE GROUP rg_test_group;
+ERROR:  resource group "rg_test_group" does not exist
+-- can't create the reserved resource groups
+CREATE RESOURCE GROUP default_group WITH (concurrency=1, cpu_rate_limit=.5, memory_limit=.5, memory_redzone_limit=.7);
+ERROR:  resource group "default_group" already exists
+CREATE RESOURCE GROUP admin_group WITH (concurrency=1, cpu_rate_limit=.5, memory_limit=.5, memory_redzone_limit=.7);
+ERROR:  resource group "admin_group" already exists
+CREATE RESOURCE GROUP none WITH (concurrency=1, cpu_rate_limit=.5, memory_limit=.5, memory_redzone_limit=.7);
+ERROR:  resource group name "none" is reserved
+-- must specify both memory_limit and cpu_rate_limit
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, memory_limit=.5, memory_redzone_limit=.7);
+ERROR:  must specify both memory_limit and cpu_rate_limit
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=.5, memory_redzone_limit=.7);
+ERROR:  must specify both memory_limit and cpu_rate_limit
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=.5, memory_limit=.6, memory_redzone_limit=.7);
+SELECT groupname,concurrency,proposed_concurrency,cpu_rate_limit,memory_limit,proposed_memory_limit,memory_redzone_limit FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
+   groupname   | concurrency | proposed_concurrency | cpu_rate_limit | memory_limit | proposed_memory_limit | memory_redzone_limit 
+---------------+-------------+----------------------+----------------+--------------+-----------------------+----------------------
+ rg_test_group | 1           | 1                    | 0.50           | 0.60         | 0.60                  | 0.70
+(1 row)
+
+-- multiple resource groups can't share the same name
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=.05, memory_limit=.05, memory_redzone_limit=.7);
+ERROR:  resource group "rg_test_group" already exists
+-- cpu_rate_limit/memory_limit range is (0.01, 1)
+CREATE RESOURCE GROUP rg2_test_group WITH (cpu_rate_limit=.5, memory_limit=.05);
+ERROR:  total cpu_rate_limit exceeded the limit of 1.0
+CREATE RESOURCE GROUP rg2_test_group WITH (cpu_rate_limit=.05, memory_limit=.5);
+ERROR:  total memory_limit exceeded the limit of 1.0
+CREATE RESOURCE GROUP rg2_test_group WITH (cpu_rate_limit=.01, memory_limit=.05);
+ERROR:  cpu_rate_limit range is (.01, 1)
+CREATE RESOURCE GROUP rg2_test_group WITH (cpu_rate_limit=.05, memory_limit=.01);
+ERROR:  memory_limit range is (.01, 1)
+-- can't specify the resource limit type multiple times
+CREATE RESOURCE GROUP rg2_test_group WITH (concurrency=1, cpu_rate_limit=.05, memory_limit=.05, memory_redzone_limit=.7, concurrency=1);
+ERROR:  Find duplicate resoure group resource type: concurrency
+CREATE RESOURCE GROUP rg2_test_group WITH (concurrency=1, cpu_rate_limit=.05, memory_limit=.05, memory_redzone_limit=.7, cpu_rate_limit=.05);
+ERROR:  Find duplicate resoure group resource type: cpu_rate_limit
+CREATE RESOURCE GROUP rg2_test_group WITH (concurrency=1, cpu_rate_limit=.05, memory_limit=.05, memory_redzone_limit=.7, memory_limit=.05);
+ERROR:  Find duplicate resoure group resource type: memory_limit
+CREATE RESOURCE GROUP rg2_test_group WITH (concurrency=1, cpu_rate_limit=.05, memory_limit=.05, memory_redzone_limit=.7, memory_redzone_limit=.8);
+ERROR:  Find duplicate resoure group resource type: memory_redzone_limit
+DROP RESOURCE GROUP rg_test_group;
+-- can't drop reserved resource groups
+DROP RESOURCE GROUP default_group;
+ERROR:  cannot drop default resource group "default_group"
+DROP RESOURCE GROUP admin_group;
+ERROR:  cannot drop default resource group "admin_group"
+DROP RESOURCE GROUP none;
+ERROR:  resource group "none" does not exist
+-- can't drop non-exist resource group
+DROP RESOURCE GROUP rg_non_exist_group;
+ERROR:  resource group "rg_non_exist_group" does not exist

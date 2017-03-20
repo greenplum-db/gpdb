@@ -58,7 +58,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-db-(.*)-build-1-rhel6-x86_64.zip
+    regexp: deliverables/software_only_installer/greenplum-db-(.*)-build-1-rhel6-x86_64.zip
 
 - name: installer_rhel6_gpdb_rc_md5
   type: s3
@@ -67,7 +67,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-db-(.*)-build-1-rhel6-x86_64.zip.md5
+    regexp: deliverables/software_only_installer/greenplum-db-(.*)-build-1-rhel6-x86_64.zip.md5
 
 - name: installer_rhel7_gpdb_rc
   type: s3
@@ -76,7 +76,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-db-(.*)-build-1-rhel7-x86_64.zip
+    regexp: deliverables/software_only_installer/greenplum-db-(.*)-build-1-rhel7-x86_64.zip
 
 - name: installer_rhel7_gpdb_rc_md5
   type: s3
@@ -85,7 +85,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-db-(.*)-build-1-rhel7-x86_64.zip.md5
+    regexp: deliverables/software_only_installer/greenplum-db-(.*)-build-1-rhel7-x86_64.zip.md5
 
 - name: installer_appliance_rhel6_gpdb_rc
   type: s3
@@ -94,7 +94,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-db-appliance-(.*)-build-1-rhel6-x86_64.zip
+    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-build-1-rhel6-x86_64.zip
 
 - name: installer_appliance_rhel6_gpdb_rc_md5
   type: s3
@@ -103,7 +103,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-db-appliance-(.*)-build-1-rhel6-x86_64.zip.md5
+    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-build-1-rhel6-x86_64.zip.md5
 
 - name: installer_appliance_rhel7_gpdb_rc
   type: s3
@@ -112,7 +112,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-db-appliance-(.*)-build-1-rhel7-x86_64.zip
+    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-build-1-rhel7-x86_64.zip
 
 - name: installer_appliance_rhel7_gpdb_rc_md5
   type: s3
@@ -121,7 +121,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-db-appliance-(.*)-build-1-rhel7-x86_64.zip.md5
+    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-build-1-rhel7-x86_64.zip.md5
 
 - name: qautils_rhel6_tarball
   type: s3
@@ -931,6 +931,44 @@ jobs:
     params:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "cs-walrepl-multinode"
+
+- name: cs-filerep-schema-topology-crashrecov
+  plan:
+  - aggregate: *post_packaging_gets_trigger_true
+  - task: trigger_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
+    input_mapping: *input_mappings
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "cs-filerep-schema-topology-crashrecov"
+  - task: monitor_pulse
+    attempts: 2
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "cs-filerep-schema-topology-crashrecov"
+
+- name: cs-filerep-end-to-end
+  plan:
+  - get: nightly-trigger
+    trigger: true
+  - aggregate: *post_packaging_gets_trigger_false
+  - task: trigger_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
+    input_mapping: *input_mappings
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "cs-filerep-end-to-end"
+  - task: monitor_pulse
+    attempts: 2
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "cs-filerep-end-to-end"
 
 - name: cs-aoco-compression
   plan:

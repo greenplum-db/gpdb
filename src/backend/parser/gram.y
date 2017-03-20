@@ -183,12 +183,12 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 		CreateDomainStmt CreateExtensionStmt CreateExternalStmt CreateFileSpaceStmt CreateGroupStmt
 		CreateOpClassStmt
 		CreateOpFamilyStmt AlterOpFamilyStmt CreatePLangStmt
-		CreateQueueStmt CreateSchemaStmt CreateSeqStmt CreateStmt 
+		CreateQueueStmt CreateResourceGroupStmt CreateSchemaStmt CreateSeqStmt CreateStmt
 		CreateTableSpaceStmt
 		CreateAssertStmt CreateTrigStmt 
 		CreateUserStmt CreateRoleStmt
 		CreatedbStmt DeclareCursorStmt DefineStmt DeleteStmt DiscardStmt DoStmt
-		DropGroupStmt DropOpClassStmt DropOpFamilyStmt DropPLangStmt DropQueueStmt DropStmt
+		DropGroupStmt DropOpClassStmt DropOpFamilyStmt DropPLangStmt DropQueueStmt DropResourceGroupStmt DropStmt
 		DropAssertStmt DropTrigStmt DropRuleStmt DropCastStmt DropRoleStmt
 		DropUserStmt DropdbStmt
 		ExplainStmt
@@ -1058,6 +1058,7 @@ stmt :
 			| AlterOpFamilyStmt
 			| CreatePLangStmt
 			| CreateQueueStmt
+			| CreateResourceGroupStmt
 			| CreateSchemaStmt
 			| CreateSeqStmt
 			| CreateStmt
@@ -1080,6 +1081,7 @@ stmt :
 			| DropOwnedStmt
 			| DropPLangStmt
 			| DropQueueStmt
+			| DropResourceGroupStmt
 			| DropRuleStmt
 			| DropStmt
 			| DropTrigStmt
@@ -1256,6 +1258,37 @@ DropQueueStmt:
 				 {
 					DropQueueStmt *n = makeNode(DropQueueStmt);
 					n->queue = $4;
+					$$ = (Node *)n;
+				 }
+		;
+
+/*****************************************************************************
+ *
+ * Create a new GPDB Resource Group
+ *
+ *****************************************************************************/
+
+CreateResourceGroupStmt:
+			CREATE RESOURCE GROUP_P name WITH definition
+				{
+					CreateResourceGroupStmt *n = makeNode(CreateResourceGroupStmt);
+					n->name = $4;
+					n->options = $6;
+					$$ = (Node *)n;
+				}
+		;
+
+/*****************************************************************************
+ *
+ * Drop a GPDB Resource Group
+ *
+ *****************************************************************************/
+
+DropResourceGroupStmt:
+			DROP RESOURCE GROUP_P name
+				 {
+					DropResourceGroupStmt *n = makeNode(DropResourceGroupStmt);
+					n->name = $4;
 					$$ = (Node *)n;
 				 }
 		;

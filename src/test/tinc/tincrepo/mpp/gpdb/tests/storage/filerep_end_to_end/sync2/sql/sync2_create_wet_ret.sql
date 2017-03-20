@@ -31,7 +31,7 @@ insert into sync2_region select * from sync2_e_region;
 --
 -- create WET with similiar schema def as the original heap table
 --
-CREATE WRITABLE EXTERNAL TABLE sync1_wet_region7 ( like sync1_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region7.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
+CREATE WRITABLE EXTERNAL TABLE sync1_wet_region7 ( like sync1_region) LOCATION ('gpfdist://10.0.0.6:8088/wet_region7.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
 
 --
 -- insert data into the WET selecting from original table
@@ -40,7 +40,7 @@ INSERT INTO sync1_wet_region7 SELECT * FROM sync1_region;
 --
 -- create a RET reading data from the file created by WET
 --
-CREATE EXTERNAL TABLE sync1_ret_region7 ( like sync1_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region7.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
+CREATE EXTERNAL TABLE sync1_ret_region7 ( like sync1_region) LOCATION ('gpfdist://10.0.0.6:8088/wet_region7.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
 --
 -- create second table with same schema def
 --
@@ -62,7 +62,7 @@ select * from sync1_new_region7 order by r_regionkey;
 --
 -- create WET with similiar schema def as the original heap table
 --
-CREATE WRITABLE EXTERNAL TABLE ck_sync1_wet_region6 ( like ck_sync1_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region6.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
+CREATE WRITABLE EXTERNAL TABLE ck_sync1_wet_region6 ( like ck_sync1_region) LOCATION ('gpfdist://10.0.0.6:8088/wet_region6.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
 
 --
 -- insert data into the WET selecting from original table
@@ -71,7 +71,7 @@ INSERT INTO ck_sync1_wet_region6 SELECT * FROM ck_sync1_region;
 --
 -- create a RET reading data from the file created by WET
 --
-CREATE EXTERNAL TABLE ck_sync1_ret_region6 ( like ck_sync1_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region6.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
+CREATE EXTERNAL TABLE ck_sync1_ret_region6 ( like ck_sync1_region) LOCATION ('gpfdist://10.0.0.6:8088/wet_region6.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
 --
 -- create second table with same schema def
 --
@@ -93,7 +93,7 @@ select * from ck_sync1_new_region6 order by r_regionkey;
 --
 -- create WET with similiar schema def as the original heap table
 --
-CREATE WRITABLE EXTERNAL TABLE ct_wet_region4 ( like ct_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region4.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
+CREATE WRITABLE EXTERNAL TABLE ct_wet_region4 ( like ct_region) LOCATION ('gpfdist://10.0.0.6:8088/wet_region4.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
 
 --
 -- insert data into the WET selecting from original table
@@ -102,7 +102,7 @@ INSERT INTO ct_wet_region4 SELECT * FROM ct_region;
 --
 -- create a RET reading data from the file created by WET
 --
-CREATE EXTERNAL TABLE ct_ret_region4 ( like ct_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region4.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
+CREATE EXTERNAL TABLE ct_ret_region4 ( like ct_region) LOCATION ('gpfdist://10.0.0.6:8088/wet_region4.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
 --
 -- create second table with same schema def
 --
@@ -124,7 +124,7 @@ select * from ct_new_region4 order by r_regionkey;
 --
 -- create WET with similiar schema def as the original heap table
 --
-CREATE WRITABLE EXTERNAL TABLE resync_wet_region2 ( like resync_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region2.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
+CREATE WRITABLE EXTERNAL TABLE resync_wet_region2 ( like resync_region) LOCATION ('gpfdist://10.0.0.6:8088/wet_region2.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
 --
 -- insert data into the WET selecting from original table
 --
@@ -132,7 +132,7 @@ INSERT INTO resync_wet_region2 SELECT * FROM resync_region;
 --
 -- create a RET reading data from the file created by WET
 --
-CREATE EXTERNAL TABLE resync_ret_region2 ( like resync_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region2.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
+CREATE EXTERNAL TABLE resync_ret_region2 ( like resync_region) LOCATION ('gpfdist://10.0.0.6:8088/wet_region2.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
 --
 -- create second table with same schema def
 --
@@ -154,7 +154,7 @@ select * from resync_new_region2 order by r_regionkey;
 --
 -- create WET with similiar schema def as the original heap table
 --
-CREATE WRITABLE EXTERNAL TABLE sync2_wet_region1 ( like sync2_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region1.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
+CREATE WRITABLE EXTERNAL TABLE sync2_wet_region1 ( like sync2_region) LOCATION ('gpfdist://10.0.0.6:8088/wet_region1.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
 
 --
 -- insert data into the WET selecting from original table
@@ -163,7 +163,7 @@ INSERT INTO sync2_wet_region1 SELECT * FROM sync2_region;
 --
 -- create a RET reading data from the file created by WET
 --
-CREATE EXTERNAL TABLE sync2_ret_region1 ( like sync2_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region1.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
+CREATE EXTERNAL TABLE sync2_ret_region1 ( like sync2_region) LOCATION ('gpfdist://10.0.0.6:8088/wet_region1.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
 --
 -- create second table with same schema def
 --

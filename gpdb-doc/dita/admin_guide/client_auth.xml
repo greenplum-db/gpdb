@@ -28,7 +28,7 @@
           <filepath>pg_hba.conf</filepath> files that are configured to allow only client
         connections from the master host and never accept client connections. Do not alter the
           <filepath>pg_hba.conf</filepath> file on your segments.</p>
-      <p>See <xref href="http://www.postgresql.org/docs/9.0/interactive/auth-pg-hba-conf.html"
+      <p>See <xref href="https://www.postgresql.org/docs/9.0/static/auth-pg-hba-conf.html"
           scope="external" format="html"><ph>The pg_hba.conf File</ph></xref> in the PostgreSQL
         documentation for more information. </p>
       <p>The general format of the <filepath>pg_hba.conf</filepath> file is a set of records, one
@@ -99,22 +99,22 @@
                 address that must match. Bits to the right of this must be zero in the given IP
                 address. There must not be any white space between the IP address, the /, and the
                 CIDR mask length. <p>Typical examples of a CIDR-address are 192.0.2.89/32 for a
-                  single host, or 192.0.2.0/24 for a small network, or 10.6.0.0/16 for a larger
-                  one. To specify a single host, use a CIDR mask of 32 for IPv4 or 128 for IPv6. In
-                  a network address, do not omit trailing zeroes.</p></entry>
+                  single host, or 192.0.2.0/24 for a small network, or 10.6.0.0/16 for a larger one.
+                  To specify a single host, use a CIDR mask of 32 for IPv4 or 128 for IPv6. In a
+                  network address, do not omit trailing zeroes.</p></entry>
             </row>
             <row>
               <entry colname="col1">IP-address<p>IP-mask</p></entry>
               <entry colname="col2">These fields can be used as an alternative to the CIDR-address
                 notation. Instead of specifying the mask length, the actual mask is specified in a
-                separate column. For example, 255.255.255.255 represents a CIDR mask length of 32. These fields only apply to
-                host, hostssl, and hostnossl records. </entry>
+                separate column. For example, 255.255.255.255 represents a CIDR mask length of 32.
+                These fields only apply to host, hostssl, and hostnossl records. </entry>
             </row>
             <row>
               <entry colname="col1">authentication-method</entry>
               <entry colname="col2">Specifies the authentication method to use when connecting.
-                  Greenplum supports the <xref
-                  href="http://www.postgresql.org/docs/9.0/static/auth-methods.html"
+                Greenplum supports the <xref
+                  href="https://www.postgresql.org/docs/9.0/static/auth-methods.html"
                   scope="external" format="html"><ph>authentication methods</ph></xref> supported by
                 PostgreSQL 9.0.</entry>
             </row>
@@ -166,10 +166,10 @@ ldapsuffix=",ou=People,dc=company,dc=com"</codeblock></li>
                 <codeblock>$ gpstop -u</codeblock>
               </p></li>
           </ol>
-          <note type="note">Note that you can also control database access by
-            setting object privileges as described in <xref href="roles_privs.xml#topic6"
-              type="topic" format="dita"/>. The <filepath>pg_hba.conf</filepath> file just controls
-            who can initiate a database session and how those connections are authenticated.</note>
+          <note type="note">Note that you can also control database access by setting object
+            privileges as described in <xref href="roles_privs.xml#topic6" type="topic"
+              format="dita"/>. The <filepath>pg_hba.conf</filepath> file just controls who can
+            initiate a database session and how those connections are authenticated.</note>
         </section>
       </body>
     </topic>
@@ -183,8 +183,8 @@ ldapsuffix=",ou=People,dc=company,dc=com"</codeblock></li>
         can configure the <codeph>max_connections</codeph> server configuration parameter. This is a
           <i>local</i> parameter, meaning that you must set it in the
           <codeph>postgresql.conf</codeph> file of the master, the standby master, and each segment
-        instance (primary and mirror). The value of
-          <codeph>max_connections</codeph> on segments should be 5-10 times the value on the master.</p>
+        instance (primary and mirror). The value of <codeph>max_connections</codeph> on segments
+        should be 5-10 times the value on the master.</p>
       <p>When you set <codeph>max_connections</codeph>, you must also set the dependent parameter
           <codeph>max_prepared_transactions</codeph>. This value must be at least as large as the
         value of <codeph>max_connections</codeph> on the master, and segment instances should be set
@@ -212,8 +212,8 @@ max_prepared_transactions=100
       </ul>
       <p>The following steps set the parameter values with the Greenplum Database utility
           <codeph>gpconfig</codeph>. </p>
-      <p>For information about <codeph>gpconfig</codeph>, see the <i>Greenplum
-          Database Utility Guide</i>.</p>
+      <p>For information about <codeph>gpconfig</codeph>, see the <i>Greenplum Database Utility
+          Guide</i>.</p>
       <section id="ip142411">
         <title>To change the number of allowed connections</title>
         <ol id="ol_sty_r15_jp">
@@ -224,8 +224,9 @@ max_prepared_transactions=100
             on the master to 200.<p>
               <codeblock>$ gpconfig -c max_connections -v 1000 -m 200
 </codeblock>
-            </p><p>The value on the segments must be greater than the value on the master. The value of <codeph>max_connections</codeph> on segments should be 5-10
-              times the value on the master. </p></li>
+            </p><p>The value on the segments must be greater than the value on the master. The value
+              of <codeph>max_connections</codeph> on segments should be 5-10 times the value on the
+              master. </p></li>
           <li id="ip146502">Set the value of the <codeph>max_prepared_transactions</codeph>
             parameter. This <codeph>gpconfig</codeph> command sets the value to 200 on the master
             and all segments.<p>

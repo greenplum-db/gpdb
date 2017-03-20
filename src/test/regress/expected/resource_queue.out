@@ -155,6 +155,15 @@ ERROR:  conflicting or redundant options
 ALTER RESOURCE QUEUE none IGNORE THRESHOLD 1 ;
 ERROR:  resource queue "none" does not exist
 DROP RESOURCE QUEUE regressq2;
+-- Create resource queue with cost_overcommit=true
+create resource queue t3_test_q with (active_statements = 6,max_cost=5e+06 ,cost_overcommit=true, min_cost=50000);
+select * from pg_resqueue where rsqname='t3_test_q';
+  rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+-----------+---------------+--------------+---------------+--------------------
+ t3_test_q |             6 |        5e+06 | t             |              50000
+(1 row)
+
+drop resource queue t3_test_q;
 -- Resource Queue should not be created inside Transaction block the error is the expected behavior
 begin;
 CREATE RESOURCE QUEUE db_resque_new1 ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;

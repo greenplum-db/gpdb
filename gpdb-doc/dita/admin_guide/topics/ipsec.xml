@@ -67,20 +67,20 @@
         exposed. The tunnel mode is preferred for greater security.</p>
       <p>The following resources are recommended for additional information about IPsec and
           Openswan:<ul id="ul_qd4_pgc_wr">
-          <li><xref href="http://en.wikipedia.org/wiki/Internet_Key_Exchange" format="html"
+          <li><xref href="https://en.wikipedia.org/wiki/Internet_Key_Exchange" format="html"
               scope="external">Internet Key Exchange</xref> (IKE) - Wikipedia article that describes
             the IKE protocol used to set up a security association.</li>
-          <li><xref href="http://en.wikipedia.org/wiki/Security_association" format="html"
+          <li><xref href="https://en.wikipedia.org/wiki/Security_association" format="html"
               scope="external">Security Association</xref> - Wikipedia article that describes the
             attributes and purpose of a security association. </li>
-          <li><xref href="http://en.wikipedia.org/wiki/AES_instruction_set" format="html"
+          <li><xref href="https://en.wikipedia.org/wiki/AES_instruction_set" format="html"
               scope="external">AES instruction set</xref> - Wikipedia article that provides an
             overview of the Intel Advanced Encryption Standard (AES) instruction set and lists the
             CPU families that support it. </li>
-          <li><xref href="http://linux.die.net/man/5/ipsec.conf" format="html" scope="external"
+          <li><xref href="https://linux.die.net/man/5/ipsec.conf" format="html" scope="external"
               >ipsec.conf(5)</xref> - man page for the <filepath>ipsec.conf</filepath> configuration
             file.</li>
-          <li><xref href="http://linux.die.net/man/8/setkeyhost-to-host" format="html"
+          <li><xref href="https://linux.die.net/man/8/setkey" format="html"
               scope="external">setkey(8)</xref> - man page for the <codeph>setkey</codeph> utility
             used to manage the Security Association Database (SAD) and Security Policy Database
             (SPD) in the Linux kernel. </li>
@@ -350,7 +350,7 @@ Checking 'iptables' command                              [OK]
     phase2alg=aes_gcm_c-160-null    
     auto=start
 </codeblock><p>See
-                the <xref href="http://linux.die.net/man/5/ipsec.conf" format="html"
+                the <xref href="https://linux.die.net/man/5/ipsec.conf" format="html"
                   scope="external"><filepath>ipsec.conf</filepath></xref> man page for the complete
                 list of available parameters and their default values. </p><p>The connection name in
                 the example is <codeph>mdw-sdw1</codeph>. </p><p>For the
@@ -403,7 +403,7 @@ Checking 'iptables' command                              [OK]
       keysizemax=288
 000 algorithm ESP encrypt: id=20, name=ESP_AES_GCM_C, ivlen=16, keysizemin=160,
       keysizemax=288</codeblock>See
-                            <xref href="http://en.wikipedia.org/wiki/SHA-2" format="html"
+                            <xref href="https://en.wikipedia.org/wiki/SHA-2" format="html"
                             scope="external"/> for information about SHA2.</li>
                         <li><codeph><varname>modpgroup</varname></codeph> is the Diffie-Hellman
                           group. The peers negotiate a shared secret using the Diffie-Hellman
@@ -434,7 +434,7 @@ Checking 'iptables' command                              [OK]
                       communication channels, the AES_GCM algorithm is currently the recommended
                       best option. To use AES_GCM, verify that the CPU supports the AES_NI
                       instruction set. See <xref
-                        href="http://en.wikipedia.org/wiki/AES_instruction_set" format="html"
+                        href="https://en.wikipedia.org/wiki/AES_instruction_set" format="html"
                         scope="external">AES instruction set</xref> for a list of CPUs that support
                       AES_NI.</pd>
                     <pd>To see if the CPU supports AES-NI, see if the <codeph>aes</codeph> flag is

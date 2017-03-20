@@ -2,7 +2,7 @@
 DROP
 1: DROP DATABASE IF EXISTS reindexdb2;
 DROP
-1: CREATE DATABASE reindexdb;
+1: create database reindexdb template template0;
 CREATE
 2:@db_name reindexdb: DROP TABLE IF EXISTS reindex_alter_ao_btree;
 DROP

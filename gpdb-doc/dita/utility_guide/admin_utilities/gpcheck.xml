@@ -10,7 +10,7 @@
             removed in a future release.<p>The <codeph>gpcheck</codeph> functionality is available
                 with the Greenplum Database utility <codeph>gpsupport</codeph>. The
                     <codeph>gpsupport</codeph> utility is available on <xref
-                    href="https://network.pivotal.io/products" scope="external" format="html"
+                    href="https://network.pivotal.io" scope="external" format="html"
                     class="- topic/xref ">Pivotal Network</xref>. The <codeph>gpsupport</codeph>
                 documentation is available on the <xref href="http://gpdb.docs.pivotal.io/"
                     scope="external" format="html" class="- topic/xref ">Greenplum Database

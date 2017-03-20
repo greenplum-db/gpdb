@@ -4,7 +4,7 @@ DROP EXTERNAL TABLE IF EXISTS ck_sync1_exttab_error_log_1 cascade;
 psql:/path/sql_file:1: NOTICE:  table "ck_sync1_exttab_error_log_1" does not exist, skipping
 DROP EXTERNAL TABLE
 CREATE EXTERNAL TABLE ck_sync1_exttab_error_log_1( i int, j text )
-LOCATION ('gpfdist://10.110.120.144:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
+LOCATION ('gpfdist://10.0.0.6:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 50;
 CREATE EXTERNAL TABLE
 -- CK_SYNC1: TABLE 2
@@ -12,7 +12,7 @@ DROP EXTERNAL TABLE IF EXISTS ck_sync1_exttab_error_log_2 cascade;
 psql:/path/sql_file:1: NOTICE:  table "ck_sync1_exttab_error_log_2" does not exist, skipping
 DROP EXTERNAL TABLE
 CREATE EXTERNAL TABLE ck_sync1_exttab_error_log_2( i int, j text )
-LOCATION ('gpfdist://10.110.120.144:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
+LOCATION ('gpfdist://10.0.0.6:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 50;
 CREATE EXTERNAL TABLE
 -- CK_SYNC1: TABLE 3
@@ -20,7 +20,7 @@ DROP EXTERNAL TABLE IF EXISTS ck_sync1_exttab_error_log_3 cascade;
 psql:/path/sql_file:1: NOTICE:  table "ck_sync1_exttab_error_log_3" does not exist, skipping
 DROP EXTERNAL TABLE
 CREATE EXTERNAL TABLE ck_sync1_exttab_error_log_3( i int, j text )
-LOCATION ('gpfdist://10.110.120.144:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
+LOCATION ('gpfdist://10.0.0.6:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 50;
 CREATE EXTERNAL TABLE
 -- CK_SYNC1: TABLE 4
@@ -28,7 +28,7 @@ DROP EXTERNAL TABLE IF EXISTS ck_sync1_exttab_error_log_4 cascade;
 psql:/path/sql_file:1: NOTICE:  table "ck_sync1_exttab_error_log_4" does not exist, skipping
 DROP EXTERNAL TABLE
 CREATE EXTERNAL TABLE ck_sync1_exttab_error_log_4( i int, j text )
-LOCATION ('gpfdist://10.110.120.144:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
+LOCATION ('gpfdist://10.0.0.6:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 50;
 CREATE EXTERNAL TABLE
 -- CK_SYNC1: TABLE 5
@@ -36,7 +36,7 @@ DROP EXTERNAL TABLE IF EXISTS ck_sync1_exttab_error_log_5 cascade;
 psql:/path/sql_file:1: NOTICE:  table "ck_sync1_exttab_error_log_5" does not exist, skipping
 DROP EXTERNAL TABLE
 CREATE EXTERNAL TABLE ck_sync1_exttab_error_log_5( i int, j text )
-LOCATION ('gpfdist://10.110.120.144:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
+LOCATION ('gpfdist://10.0.0.6:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 50;
 CREATE EXTERNAL TABLE
 -- CK_SYNC1: TABLE 6
@@ -44,7 +44,7 @@ DROP EXTERNAL TABLE IF EXISTS ck_sync1_exttab_error_log_6 cascade;
 psql:/path/sql_file:1: NOTICE:  table "ck_sync1_exttab_error_log_6" does not exist, skipping
 DROP EXTERNAL TABLE
 CREATE EXTERNAL TABLE ck_sync1_exttab_error_log_6( i int, j text )
-LOCATION ('gpfdist://10.110.120.144:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
+LOCATION ('gpfdist://10.0.0.6:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 50;
 CREATE EXTERNAL TABLE
 -- CK_SYNC1: TABLE 7
@@ -52,7 +52,7 @@ DROP EXTERNAL TABLE IF EXISTS ck_sync1_exttab_error_log_7 cascade;
 psql:/path/sql_file:1: NOTICE:  table "ck_sync1_exttab_error_log_7" does not exist, skipping
 DROP EXTERNAL TABLE
 CREATE EXTERNAL TABLE ck_sync1_exttab_error_log_7( i int, j text )
-LOCATION ('gpfdist://10.110.120.144:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
+LOCATION ('gpfdist://10.0.0.6:8088/read/table_with_errors.tbl') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 50;
 CREATE EXTERNAL TABLE
 -- Generate error logs on tables created in SYNC1

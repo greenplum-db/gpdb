@@ -1118,6 +1118,15 @@ _outAlterQueueStmt(StringInfo str, AlterQueueStmt *node)
 }
 
 static void
+_outCreateResourceGroupStmt(StringInfo str, CreateResourceGroupStmt *node)
+{
+	WRITE_NODE_TYPE("CREATERESOURCEGROUPSTMT");
+
+	WRITE_STRING_FIELD(name);
+	WRITE_NODE_FIELD(options); /* List of DefElem nodes */
+}
+
+static void
 _outTupleDescNode(StringInfo str, TupleDescNode *node)
 {
 	int			i;
@@ -1960,6 +1969,13 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_DropQueueStmt:
 				_outDropQueueStmt(str, obj);
+				break;
+
+			case T_CreateResourceGroupStmt:
+				_outCreateResourceGroupStmt(str, obj);
+				break;
+			case T_DropResourceGroupStmt:
+				_outDropResourceGroupStmt(str, obj);
 				break;
 
             case T_CommentStmt:

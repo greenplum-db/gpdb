@@ -3047,16 +3047,7 @@ def checkTableInconsistentEntry(cat):
     pkey = cat.getPrimaryKey()
     master = cat.isMasterOnly()
     isShared = cat.isShared()
-
-    # Skip the indcheckxmin column in pg_index for now as that can be
-    # different between master and segment due to HOT feature.
-
-    if catname == 'pg_index':
-        columnsToBeExcluded = ['indcheckxmin']
-    else:
-        columnsToBeExcluded = None
-
-    columns = cat.getTableColumns(with_acl=False, excluding=columnsToBeExcluded)
+    columns = cat.getTableColumns(with_acl=False)
     coltypes = cat.getTableColtypes()
 
     # Skip master only tables

@@ -6,6 +6,7 @@
   <abstract>Descriptions of the Greenplum Database server configuration parameters listed
     alphabetically.</abstract>
   <body>
+    <!--Table is HTML only op-help-->
     <simpletable frame="all" relcolwidth="1.0* 1.09* 1.13*" id="simpletable_c53_rlx_wp"
       otherprops="op-help">
       <strow>
@@ -1061,7 +1062,7 @@
     <body>
       <p>Sets the client-side encoding (character set). The default is to use the same as the
         database encoding. See <xref
-          href="http://www.postgresql.org/docs/8.1/static/multibyte.html#MULTIBYTE-CHARSET-SUPPORTED"
+          href="https://www.postgresql.org/docs/8.3/static/multibyte.html#MULTIBYTE-CHARSET-SUPPORTED"
           scope="external" format="html">Supported Character Sets</xref> in the PostgreSQL
         documentation.</p>
       <table id="client_encoding_table">
@@ -3926,10 +3927,10 @@
   <topic id="gp_hadoop_home">
     <title>gp_hadoop_home</title>
     <body>
-      <p>When using Pivotal HD, specify the installation directory for Hadoop. For example, the
-        default installation directory is <codeph>/usr/lib/gphd</codeph>.</p>
-      <p>When using Greenplum HD 1.2 or earlier, specify the same value as the HADOOP_HOME
-        environment variable.</p>
+      <p>When using Pivotal HD (not supported), specify the installation directory for Hadoop. For
+        example, the default installation directory is <codeph>/usr/lib/gphd</codeph>.</p>
+      <p>When using Greenplum HD 1.2 or earlier (not supported), specify the same value as the
+        HADOOP_HOME environment variable.</p>
       <table id="gp_hadoop_home_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -5491,7 +5492,7 @@
         when the <xref href="#DateStyle" format="dita"/> parameter was set to non-ISO output. </p>
       <p>The value <i>iso_8601</i> will produce output matching the time interval <i>format with
           designators</i> defined in section 4.4.3.2 of ISO 8601. See the <xref
-          href="http://www.postgresql.org/docs/8.4/static/datatype-datetime.html" scope="external"
+          href="https://www.postgresql.org/docs/8.4/static/datatype-datetime.html" scope="external"
           format="html"><ph>PostgreSQL 8.4 documentation</ph></xref> for more information. </p>
       <table id="IntervalStyle_table">
         <tgroup cols="3">
@@ -7274,8 +7275,8 @@
     <title>pgcrypto.fips</title>
     <body>
       <p>Enables support for <cite>Federal Information Processing Standard</cite> (FIPS) 140-2. For
-        information about FIPS, see <xref href="http://www.nist.gov/itl/fips.cfm" format="html"
-          scope="external">http://www.nist.gov/itl/fips.cfm</xref></p>
+        information about FIPS, see <xref href="https://www.nist.gov/itl/popular-links/federal-information-processing-standards-fips" format="html"
+          scope="external">https://www.nist.gov/itl/popular-links/federal-information-processing-standards-fips</xref></p>
       <p>To enable FIPS 140-2 support for Greenplum Database, the following are required.<ul
           id="ul_flj_nyl_zp">
           <li>The Greenplum Database pgcrypto package version 1.2 or later must be installed.</li>

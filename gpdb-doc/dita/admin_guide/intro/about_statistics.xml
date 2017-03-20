@@ -302,9 +302,10 @@
           both the <codeph>optimizer</codeph> and <codeph>optimizer_analyze_root_partition</codeph>
           system configuration parameters to on. The root level statistics are then updated when you
           run <codeph>ANALYZE</codeph> or <codeph>ANALYZE ROOTPARTITION</codeph>. The time to run
-            <codeph>ANALYZE ROOTPARTITION</codeph> is similar to the time to analyze a single
-          partition since <codeph>ANALYZE ROOTPARTITION</codeph>. The <codeph>analyzedb</codeph>
-          utility updates root partition statistics by default but you can add the the
+            <codeph>ANALYZE ROOTPARTITION</codeph> is similar to the time to analyze a non-partitioned table with
+          the same data since <codeph>ANALYZE ROOTPARTITION</codeph> does not collect statistics on
+          the leaf partitions, the data is only sampled. The <codeph>analyzedb</codeph> utility
+          updates root partition statistics by default but you can add the
             <codeph>--skip_root_stats</codeph> option to leave root partition statistics empty if
           you do not use GPORCA.</p>
       </section>

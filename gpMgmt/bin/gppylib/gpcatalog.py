@@ -334,7 +334,7 @@ class GPCatalog():
         # MPP-12015: Inconsistent oids for operator sort/cmp operators
         self._tables['pg_operator']._setKnownDifferences(
             "oid oprcom oprnegate oprlsortop oprrsortop oprltcmpop oprgtcmpop")
-        self._tables['pg_amop']._setKnownDifferences("amopopr")
+
         self._tables['pg_aggregate']._setKnownDifferences("aggsortop")
 
         # MPP-11281 : Inconsistent oids for views
@@ -344,30 +344,16 @@ class GPCatalog():
         self._tables['pg_trigger']._setKnownDifferences("oid")
 
         # MPP-11575 : Inconsistent handling of indpred for partial indexes
-        self._tables['pg_index']._setKnownDifferences("indpred")
+        # indcheckxmin column related to HOT feature in pg_index is calculated
+        # independently for master and segment based on individual nodes
+        # transaction state, hence it can be different so skip it from checks.
+        self._tables['pg_index']._setKnownDifferences("indpred, indcheckxmin")
 
-        # -------------
-        # Historical Issues that have been fixed
-        #
-        # These issues are patched during upgrade, but we must exclude them 
-        # from checks when we are checking older versions of the catalog.
-        # -------------
-        if self._version < '4.1':
-
-            # MPP-12057 : roleresqueue is only set on the master:
-            self._tables['pg_authid']._setKnownDifferences("rolresqueue")
-
-            # MPP-10286 : inconsistent oids for temporary schemas
-            self._tables['pg_namespace']._setKnownDifferences("oid")
-            
-            # MPP-11858: pg_resqueue/pg_resqueuecapability oid inconsistencies
-            self._tables['pg_resqueue']._setKnownDifferences("oid")
-            self._tables['pg_resqueuecapability']._setKnownDifferences("oid")
-
-            # pg_resqueue is master only in 4.0
-            self._tables['pg_resqueue']._setMasterOnly()
-            self._tables['pg_resqueuecapability']._setMasterOnly()
-
+        # This section should have exceptions for tables for which OIDs are not
+        # synchronized between master and segments, refer function
+        # RelationNeedsSynchronizedOIDs() in catalog.c
+        self._tables['pg_amop']._setKnownDifferences("oid, amopopr")
+        self._tables['pg_amproc']._setKnownDifferences("oid");
 
     def _validate(self):
         """

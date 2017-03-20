@@ -1,27 +1,27 @@
 [submodule "gpAux/client"]
 	path = gpAux/client
-	url = git@github.com:greenplum-db/gpclients.git
+	url = https://github.com/greenplum-db/gpclients.git
 	branch = master
 [submodule "gpAux/extensions/plr/source"]
 	path = gpAux/extensions/plr/source
-	url = git@github.com:greenplum-db/plr.git
+	url = https://github.com/greenplum-db/plr.git
 	branch = master
 [submodule "gpAux/extensions/pgbouncer/source"]
 	path = gpAux/extensions/pgbouncer/source
-	url = git@github.com:greenplum-db/pgbouncer.git
+	url = https://github.com/greenplum-db/pgbouncer.git
 	branch = master
 [submodule "gpAux/extensions/postgis-2.0.3/source"]
 	path = gpAux/extensions/postgis-2.0.3/source
-	url = git@github.com:greenplum-db/postgis.git
+	url = https://github.com/greenplum-db/postgis.git
 	branch = master
 [submodule "gpMgmt/bin/pythonSrc/ext"]
 	path = gpMgmt/bin/pythonSrc/ext
-	url = git@github.com:greenplum-db/pythonsrc-ext.git
+	url = https://github.com/greenplum-db/pythonsrc-ext.git
 	branch = master
 [submodule "src/bin/gpfdist/ext"]
 	path = src/bin/gpfdist/ext
-	url = git@github.com:greenplum-db/gpfdist-ext.git
+	url = https://github.com/greenplum-db/gpfdist-ext.git
 	branch = master
 [submodule "gpAux/extensions/googletest"]
 	path = gpAux/extensions/googletest
-	url = git@github.com:google/googletest.git
+	url = https://github.com/google/googletest.git

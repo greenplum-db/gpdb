@@ -96,6 +96,7 @@
 #include "catalog/pg_partition_rule.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_resqueue.h"
+#include "catalog/pg_resgroup.h"
 #include "catalog/pg_rewrite.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_trigger.h"
@@ -364,6 +365,22 @@ CreateKeyFromCatalogTuple(Relation catalogrel, HeapTuple tuple,
 				break;
 			}
 
+		case ResGroupRelationId:
+			{
+				Form_pg_resgroup rsgForm = (Form_pg_resgroup) GETSTRUCT(tuple);
+
+				key.objname = NameStr(rsgForm->rsgname);
+				break;
+			}
+		case ResGroupCapabilityRelationId:
+			{
+				Form_pg_resgroupcapability rsgCapForm = (Form_pg_resgroupcapability) GETSTRUCT(tuple);
+
+				key.keyOid1 = rsgCapForm->resgroupid;
+				key.keyOid2 = (Oid) rsgCapForm->reslimittype;
+				break;
+			}
+
 		/* These tables don't need to have their OIDs synchronized. */
 		case AccessMethodProcedureRelationId:
 		case PartitionRelationId:
@@ -625,6 +642,9 @@ AddPreassignedOidFromBinaryUpgrade(Oid oid, Oid catalog, char *objname,
 	if (!IsBinaryUpgrade)
 		elog(ERROR, "AddPreassignedOidFromBinaryUpgrade called, but not in binary upgrade mode");
 
+	if (catalog == InvalidOid)
+		elog(ERROR, "AddPreassignedOidFromBinaryUpgrade called with Invalid catalog relation Oid");
+
 	if (Gp_role != GP_ROLE_UTILITY)
 	{
 		/* Perhaps we should error out and shut down here? */
@@ -639,8 +659,7 @@ AddPreassignedOidFromBinaryUpgrade(Oid oid, Oid catalog, char *objname,
 	 * the members directly from the binary_upgrade function
 	 */
 	assignment.oid = oid;
-	if (catalog != InvalidOid)
-		assignment.catalog = catalog;
+	assignment.catalog = catalog;
 	if (objname != NULL)
 		assignment.objname = objname;
 	if (namespaceOid != InvalidOid)

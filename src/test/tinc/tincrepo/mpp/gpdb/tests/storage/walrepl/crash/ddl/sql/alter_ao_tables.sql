@@ -16,13 +16,12 @@ CREATE TABLE sto_alt_ao1(
           before_rename_col int4,
           change_datatype_col numeric,
           a_ts_without timestamp without time zone,
-          b_ts_with timestamp with time zone,
           date_column date,
           col_set_default numeric) with(appendonly=true) DISTRIBUTED RANDOMLY;
 
-insert into sto_alt_ao1 values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}', 0, 0, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',0);
-insert into sto_alt_ao1 values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}', 1, 1, '2005-10-19 10:23:54', '2005-10-19 10:23:54+02', '1-1-2001',1);
-insert into sto_alt_ao1 values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, 2, '2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',2);
+insert into sto_alt_ao1 values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}', 0, 0, '2004-10-19 10:23:54', '1-1-2000',0);
+insert into sto_alt_ao1 values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}', 1, 1, '2005-10-19 10:23:54', '1-1-2001',1);
+insert into sto_alt_ao1 values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, 2, '2006-10-19 10:23:54', '1-1-2002',2);
 
 select * from sto_alt_ao1 order by bigint_col;
 
@@ -34,12 +33,12 @@ Create table sto_alt_ao3 with(appendonly=true) as select * from sto_alt_ao1;
 
 -- Alter table add column
 Alter Table sto_alt_ao1  ADD COLUMN added_col character varying(30) default 'default';
-insert into sto_alt_ao1 values ('3_zero', 3, '3_zero', 3, 3, 3, '{3}', 3, 3, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',3, 'newcol');
+insert into sto_alt_ao1 values ('3_zero', 3, '3_zero', 3, 3, 3, '{3}', 3, 3, '2004-10-19 10:23:54', '1-1-2000',3, 'newcol');
 select * from sto_alt_ao1 order by bigint_col;
 
 -- Alter table Drop column
 Alter table sto_alt_ao1 Drop column float_col;
-insert into sto_alt_ao1 values ('4_zero', 4, '4_zero', 4, 4, '{4}', 4, 4, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',4, 'newcol');
+insert into sto_alt_ao1 values ('4_zero', 4, '4_zero', 4, 4, '{4}', 4, 4, '2004-10-19 10:23:54', '1-1-2000',4, 'newcol');
 select * from sto_alt_ao1 order by bigint_col;
 
 -- Alter table rename column
@@ -48,7 +47,7 @@ select * from sto_alt_ao1 order by bigint_col;
 
 -- Alter table column type
 Alter Table sto_alt_ao1 ALTER COLUMN change_datatype_col TYPE int4;
-insert into sto_alt_ao1 values ('5_zero', 5, '5_zero', 5, 5, '{5}', 5, 5, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',5, 'newcol');
+insert into sto_alt_ao1 values ('5_zero', 5, '5_zero', 5, 5, '{5}', 5, 5, '2004-10-19 10:23:54', '1-1-2000',5, 'newcol');
 select * from sto_alt_ao1 order by bigint_col;
 
 -- Alter column set default expression
@@ -69,7 +68,7 @@ select * from sto_alt_ao1 order by bigint_col;
 
 -- Alter table SET STORAGE
 Alter Table sto_alt_ao1 ALTER char_vary_col SET STORAGE PLAIN;
-insert into sto_alt_ao1 values ('6_zero', 6, '6_zero', 6, 6, '{6}', 6, 6, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',6, 'newcol');
+insert into sto_alt_ao1 values ('6_zero', 6, '6_zero', 6, 6, '{6}', 6, 6, '2004-10-19 10:23:54', '1-1-2000',6, 'newcol');
 select * from sto_alt_ao1 order by bigint_col;
 
 

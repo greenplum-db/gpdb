@@ -38,6 +38,9 @@
         the creating functions and function attributes, see the <codeph><xref
             href="../sql_commands/CREATE_FUNCTION.xml#topic1"/></codeph> command in the
           <cite>Greenplum Database Reference Guide</cite>.</p>
+      <p>You can run PL/SQL code blocks as anonymous code blocks. See the <codeph><xref
+            href="../sql_commands/DO.xml#topic1"/></codeph> command in the <cite>Greenplum Database
+          Reference Guide</cite>.</p>
     </body>
     <topic id="topic3" xml:lang="en">
       <title>Greenplum Database SQL Limitations</title>
@@ -142,10 +145,10 @@ $$ LANGUAGE plpgsql;</codeblock>
     <topic id="topic7" xml:lang="en">
       <title>Example: Aliases for Function Parameters</title>
       <body>
-        <p>Parameters passed to functions are named with the identifiers such asa
-            <codeph>$1</codeph>, <codeph>$2</codeph>. Optionally, aliases can be declared for
-            <codeph>$n</codeph> parameter names for increased readability. Either the alias or the
-          numeric identifier can then be used to refer to the parameter value.</p>
+        <p>Parameters passed to functions are named with identifiers such as <codeph>$1</codeph>,
+            <codeph>$2</codeph>. Optionally, aliases can be declared for <codeph>$n</codeph>
+          parameter names for increased readability. Either the alias or the numeric identifier can
+          then be used to refer to the parameter value.</p>
         <p>There are two ways to create an alias. The preferred way is to give a name to the
           parameter in the <codeph>CREATE FUNCTION</codeph> command, for example:</p>
         <codeblock>CREATE FUNCTION sales_tax(subtotal real) RETURNS real AS $$
@@ -243,7 +246,7 @@ $$ LANGUAGE plpgsql VOLATILE;</codeblock>
             >Greenplum Database Data Types</xref> for additional information on polymorphic type
           support in Greenplum Database.</p>
         <p>A special parameter named <codeph>$0</codeph> is created when the return type of
-          PL/pgSQL function is declared as a polymorphic type. The data type of <codeph>$0</codeph>
+          a PL/pgSQL function is declared as a polymorphic type. The data type of <codeph>$0</codeph>
           identifies the return type of the function as deduced from the actual input types.</p>
         <p>In this example, you create a polymorphic function that returns the sum of two
           values:</p>
@@ -275,6 +278,25 @@ $$ LANGUAGE plpgsql;</codeblock>
             3.3
 (1 row)</codeblock>
         <p>The return type of <codeph>add_two_values()</codeph> in this case is float.</p>
+    </body>
+  </topic>
+  <topic id="topic_isw_3sx_cz">
+      <title>Example: Anonymous Block</title>
+      <body>
+        <p>This example executes the function in the previous example as an anonymous block with the
+            <codeph>DO</codeph> command. In the example, the anonymous block retrieves the input
+          value from a temporary
+          table.<codeblock>CREATE TEMP TABLE list AS VALUES ('test1') DISTRIBUTED RANDOMLY;
+
+DO $$ 
+DECLARE
+    t1_row   table1%ROWTYPE;
+    calc_int table1.f3%TYPE;
+BEGIN
+    SELECT * INTO t1_row FROM table1, list WHERE table1.f1 = list.column1 ;
+    calc_int = (t1_row.f2 * t1_row.f3)::integer ;
+    RAISE NOTICE 'calculated value is %', calc_int ;
+END $$ LANGUAGE plpgsql ;</codeblock></p>
       </body>
     </topic>
   </topic>

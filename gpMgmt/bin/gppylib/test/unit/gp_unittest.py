@@ -49,8 +49,30 @@ def add_setup(setup=None, teardown=None):
         return wrapper
     return decorate_function
 
+
 # hide unittest dependencies here
 def run_tests():
     unittest.main(verbosity=2, buffer=True)
 
 skip = unittest.skip
+
+
+class FakeCursor:
+    def __init__(self, my_list=None):
+        self.list = []
+        self.rowcount = 0
+        if my_list:
+            self.set_result_for_testing(my_list)
+
+    def __iter__(self):
+        return iter(self.list)
+
+    def close(self):
+        pass
+
+    def fetchall(self):
+        return self.list
+
+    def set_result_for_testing(self, result_list):
+        self.list = result_list
+        self.rowcount = len(result_list)

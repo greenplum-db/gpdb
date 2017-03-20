@@ -3943,6 +3943,60 @@ Feature: Validate command line arguments
         Then verify the metadata dump file does contain "SESSION AUTHORIZATION"
         Then verify the metadata dump file does not contain "ALTER TABLE * OWNER TO"
 
+    Scenario: Backup and restore CAST, with associated function in restored schema 
+        Given the test is initialized
+        And there is a "heap" table "public.heap_table" in "bkdb" with data
+        And there is schema "testschema" exists in "bkdb"
+        And there is a "heap" table "testschema.heap_table" in "bkdb" with data
+        And a cast is created in "bkdb"
+        Then verify that a cast exists in "bkdb" in schema "public"
+        When the user runs "gpcrondump -a -x bkdb"
+        And gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        # No filter
+        And the user runs gpdbrestore with the stored timestamp
+        And gpdbrestore should return a return code of 0
+        Then verify that a cast exists in "bkdb" in schema "public"
+        # Table filter
+        And the user runs gpdbrestore with the stored timestamp and options "-T public.heap_table"
+        And gpdbrestore should return a return code of 0
+        Then verify that a cast exists in "bkdb" in schema "public"
+        # Schema filter
+        And the user runs gpdbrestore with the stored timestamp and options "-S public"
+        And gpdbrestore should return a return code of 0
+        Then verify that a cast exists in "bkdb" in schema "public"
+        # Change schema filter
+        And database "bkdb" is dropped and recreated
+        And there is schema "newschema" exists in "bkdb"
+        When the user runs gpdbrestore with the stored timestamp and options "-T public.heap_table --change-schema newschema" without -e option
+        And gpdbrestore should return a return code of 0
+        Then verify that a cast exists in "bkdb" in schema "newschema"
+
+    Scenario: Backup and restore CAST, with associated function in non-restored schema 
+        Given the test is initialized
+        And there is a "heap" table "public.heap_table" in "bkdb" with data
+        And there is schema "testschema" exists in "bkdb"
+        And there is a "heap" table "testschema.heap_table" in "bkdb" with data
+        And a cast is created in "bkdb"
+        Then verify that a cast exists in "bkdb" in schema "public"
+        When the user runs "gpcrondump -a -x bkdb"
+        And gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        # Table filter
+        And the user runs gpdbrestore with the stored timestamp and options "-T testschema.heap_table"
+        And gpdbrestore should return a return code of 0
+        Then verify that a cast does not exist in "bkdb" in schema "testschema"
+        # Schema filter
+        And the user runs gpdbrestore with the stored timestamp and options "-S testschema"
+        And gpdbrestore should return a return code of 0
+        Then verify that a cast does not exist in "bkdb" in schema "testschema"
+        # Change schema filter
+        And database "bkdb" is dropped and recreated
+        Given there is schema "newschema" exists in "bkdb"
+        When the user runs gpdbrestore with the stored timestamp and options "-T testschema.heap_table --change-schema newschema" without -e option
+        And gpdbrestore should return a return code of 0
+        Then verify that a cast does not exist in "bkdb" in schema "newschema"
+
     # THIS SHOULD BE THE LAST TEST
     @backupfire
     Scenario: cleanup for backup feature

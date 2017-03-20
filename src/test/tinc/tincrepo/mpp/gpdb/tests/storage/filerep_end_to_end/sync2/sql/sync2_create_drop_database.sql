@@ -1,8 +1,8 @@
 -- start_ignore
 SET gp_create_table_random_default_distribution=off;
 -- end_ignore
-CREATE DATABASE sync2_db1;
-CREATE DATABASE sync2_db2;
+create database sync2_db1 template template0;
+create database sync2_db2 template template0;
 
 DROP DATABASE sync1_db7;
 DROP DATABASE ck_sync1_db6;

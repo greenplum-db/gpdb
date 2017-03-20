@@ -41,6 +41,7 @@ insert into orca.s select i, i/2 from generate_series(1,30) i;
 set optimizer_log=on;
 set optimizer=on;
 set optimizer_enable_indexjoin=on;
+set optimizer_trace_fallback = on;
 ----------------------------------------------------------------------
 -- expected fall back to the planner
 select sum(distinct a), count(distinct b) from orca.r;
@@ -1377,9 +1378,17 @@ drop table if exists foo;
 -- end_ignore
 
 create table foo(a int, b int);
+
+-- The amount of log messages you get depends on a lot of options, but any
+-- difference in the output will make the test fail. Disable log_statement
+-- and log_min_duration_statement, they are the most obvious ones.
+set log_statement='none';
+set log_min_duration_statement=-1;
 set client_min_messages='log';
 select count(*) from foo group by cube(a,b);
 reset client_min_messages;
+reset log_statement;
+reset log_min_duration_statement;
 
 -- TVF accepts ANYENUM, ANYELEMENT returns ANYENUM, ANYARRAY
 CREATE TYPE rainbow AS ENUM('red','yellow','blue');
