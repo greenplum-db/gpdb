@@ -18,8 +18,7 @@
           information. </li>
         <li>Network communications between hosts in the Greenplum Database cluster can be encrypted
           using IPsec. An authenticated, encrypted VPN is established between every pair of hosts in
-          the cluster. See "Configuring IPsec for Greenplum Database" in the <i>Greenplum Database
-            Adminitrator Guide</i>. </li>
+          the cluster. Check your operating system documentation for IPsec support.</li>
         <li>The <codeph>pgcrypto</codeph> package of encryption/decryption functions protects data
           at rest in the database. Encryption at the column level protects sensitive information,
           such as passwords, Social Security numbers, or credit card numbers. See <xref

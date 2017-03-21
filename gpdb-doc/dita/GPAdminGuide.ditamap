@@ -102,8 +102,6 @@
     </chapter>
     <chapter href="admin_guide/roles_privs.xml" navtitle="Managing Roles and Privileges"
       id="roles_privs"/>
-    <chapter href="admin_guide/topics/ipsec.xml" navtitle="Configuring IPsec for Greenplum Database"
-      id="ipsec"/>
   </part>
   <part href="admin_guide/partIV.xml" navtitle="Working with Databases" id="partIV">
     <chapter href="admin_guide/ddl/ddl.ditamap" format="ditamap"/>

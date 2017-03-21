@@ -35,9 +35,6 @@
             </topicref>
             <topicref href="roles_privs.xml" navtitle="Managing Roles and Privileges"
                 id="roles_privs"/>
-            <topicref href="topics/ipsec.xml"
-                navtitle="Configuring IPsec for a Greenplum Database
-                System"/>
         </topicref>
         <topicref href="partIV.xml" navtitle="Working with Databases" id="partIV">
             <topicref href="ddl/ddl.ditamap" format="ditamap"/>
