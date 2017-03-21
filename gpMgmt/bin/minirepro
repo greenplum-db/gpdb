@@ -154,7 +154,6 @@ def pg_add_partition_table_oids(connectionInfo, json_parent_oids):
     (host, port, user, db) = connectionInfo
     parent_oids_array = json.loads(json_parent_oids)['relids'].split(',')
     oid_str = ''
-    print parent_oids_array
     for parent_oid in parent_oids_array:
         oid_str = oid_str + "'%s'," % (parent_oid)
     oid_str = oid_str[:-1]
@@ -162,12 +161,8 @@ def pg_add_partition_table_oids(connectionInfo, json_parent_oids):
 	    "from gp_toolkit.gp_size_of_partition_and_indexes_disk " \
             "where sopaidparentoid in (%s))" % (oid_str)
 
-    toolkit_statistics_sql = PATH_PREFIX + 'toolkit_statistics.sql'
-    with open(toolkit_statistics_sql, 'w') as toolkit_f:
-        toolkit_f.write(query)
-
     # disable .psqlrc to prevent unexpected timing and format output
-    query_cmd = "psql %s --pset footer --no-psqlrc -Atq -h %s -p %s -U %s -f %s" % (db, host, port, user, toolkit_statistics_sql)
+    query_cmd = "psql %s --pset footer --no-psqlrc -Atq -h %s -p %s -U %s -c '%s'" % (db, host, port, user, query)
     print query_cmd
 
     p = subprocess.Popen(query_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ)
