@@ -1238,15 +1238,10 @@ gccVersionCheck :
 
 ## ----------------------------------------------------------------------
 
-ifeq ($(BLD_ARCH),$(filter $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64))
+ifeq ($(BLD_ARCH),$(filter $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64 sles11_x86_64 suse11_x86_64))
 GPPKG_SOURCES = \
 	$(NULL)
 else
-# Removed filtering logic for building gppkg as on suse11. It was only building
-# pl/perl package and essentially since gpdb-server is now being built for suse11
-# we should build the gppkg for suse11.
-# As of now we build for centos5 / rhel5 and suse 11
-# TODO: As we build for centos6 we can add filtering logic if necessary
 GPPKG_SOURCES = \
 	../contrib/pgcrypto \
 	../src/bin/pg_dump/cdb/ddboost \
