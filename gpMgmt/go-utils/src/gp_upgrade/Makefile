@@ -8,6 +8,8 @@ DEST = bin/gp_upgrade
 
 GOFLAGS := -o $(DEST)
 
+export PATH := $(PATH):$(GOPATH)/bin
+
 dependencies :
 		go get github.com/onsi/ginkgo/ginkgo
 		go get golang.org/x/tools/cmd/goimports

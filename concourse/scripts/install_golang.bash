@@ -48,7 +48,7 @@ if [ $? -ne 0 ]; then
 fi
 echo "Extracting ..."
 tar -C "$HOME" -xzf /tmp/go.tar.gz
-#mv "$HOME/go" "$HOME/go"
+mv "$HOME/go" "$HOME/.go"
 
 base_path=$(pwd)
 export GOPATH=${base_path}/gpdb_src/gpMgmt/go-utils
@@ -56,7 +56,7 @@ touch "$HOME/.bashrc"
 {
     echo '# GoLang'
     echo "export GOPATH=$GOPATH"
-    echo 'export GOROOT=$HOME/go'
+    echo 'export GOROOT=$HOME/.go'
     echo 'export PATH=$PATH:$GOROOT/bin'
     echo 'export PATH=$PATH:$GOPATH/bin'
 } >> "$HOME/.bashrc"

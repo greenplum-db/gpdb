@@ -35,8 +35,8 @@ var _ = Describe("SshConnector", func() {
 			SshDialer:    FakeDialer{},
 			SshKeyParser: FakeKeyParser{},
 		}
-		home := os.Getenv("HOME")
-		test_key_path = home + "/workspace/gpdb/gpMgmt/go-utils/src/gp_upgrade/commands/sshd/private_key.pem"
+		gopath := os.Getenv("GOPATH")
+		test_key_path = gopath + "/src/gp_upgrade/commands/sshd/private_key.pem"
 	})
 
 	Describe("#Connect", func() {

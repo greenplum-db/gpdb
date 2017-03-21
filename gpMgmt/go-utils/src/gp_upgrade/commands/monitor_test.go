@@ -9,6 +9,12 @@ import (
 
 	"os"
 
+	"crypto/rand"
+	"crypto/rsa"
+
+	"crypto/x509"
+	"encoding/pem"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
@@ -60,6 +66,22 @@ pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bin
 
 	Describe("if a test run tries to use the default ssh key", func() {
 		It("complains", func() {
+			//TODO: only do this if there doesn't exist a key at ~/.ssh/id_rsa
+			//because it overwrites the key that's there... eeek
+			throwaway_key, _ := rsa.GenerateKey(rand.Reader, 16)
+			home := os.Getenv("HOME")
+			os.Mkdir(home+"/.ssh", 0600)
+			key_file, _ := os.Create(home + "/.ssh/id_rsa")
+			os.Chmod(home+"/.ssh/id_rsa", 0600)
+			pem_data := pem.EncodeToMemory(
+				&pem.Block{
+					Type:  "RSA PRIVATE KEY",
+					Bytes: x509.MarshalPKCS1PrivateKey(throwaway_key),
+				},
+			)
+			key_file.Write(pem_data)
+			//TODO: we should clean this up afterwards if we did create a new one
+
 			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42")
 
 			Eventually(session).Should(Exit(1))
@@ -94,16 +116,22 @@ pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bin
 			Eventually(session.Err).Should(Say(expectedMsg))
 		})
 	})
-	Describe("if the private key cannot be ascertained", func() {
-		It("complains", func() {
-			save := os.Getenv("HOME")
-			os.Setenv("HOME", "")
+	Describe("if the default private key cannot be found", func() {
+		Describe("because HOME is not set", func() {
+			It("complains", func() {
+				save := os.Getenv("HOME")
+				os.Setenv("HOME", "")
 
-			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "", "--user", "pivotal")
-			os.Setenv("HOME", save)
+				session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "", "--user", "pivotal")
+				os.Setenv("HOME", save)
 
-			Eventually(session).Should(Exit(1))
-			Eventually(session.Err).Should(Say("user has not specified a HOME environment value"))
+				Eventually(session).Should(Exit(1))
+				Eventually(session.Err).Should(Say("user has not specified a HOME environment value"))
+			})
+		})
+
+		XDescribe("because there is no file at the default ssh location", func() {
+
 		})
 	})
 })
