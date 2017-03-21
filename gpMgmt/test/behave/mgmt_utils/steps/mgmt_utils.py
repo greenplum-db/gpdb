@@ -4248,3 +4248,14 @@ def store_timestamp_in_old_format(context, directory = None, prefix = ""):
 def impl(context):
     context.is_timestamp_stored_as_json = True
 
+@given('the gptransfer test is initialized')
+def impl(context):
+    context.execute_steps(u'''
+        Given the database is running
+        And the database "gptest" does not exist
+        And the database "gptransfer_destdb" does not exist
+        And the database "gptransfer_testdb1" does not exist
+        And the database "gptransfer_testdb3" does not exist
+        And the database "gptransfer_testdb4" does not exist
+        And the database "gptransfer_testdb5" does not exist
+    ''')
