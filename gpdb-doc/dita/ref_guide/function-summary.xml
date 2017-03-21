@@ -402,8 +402,7 @@ SELECT foo();
               <entry colname="col1">
                 <xref format="html"
                   href="http://www.postgresql.org/docs/9.1/interactive/functions-xml.html"
-                  scope="external">XML Functions</xref>
-              </entry>
+                  scope="external">XML Functions</xref> and function-like expressions </entry>
               <entry colname="col2"/>
               <entry colname="col3">
                 <p>cursor_to_xml(cursor refcursor, count int, nulls boolean, tableforest boolean, targetns text)</p>
@@ -422,14 +421,21 @@ SELECT foo();
                   text)</p>
                 <p>table_to_xml_and_xmlschema(tbl regclass, nulls boolean, tableforest boolean, targetns text)</p>
                 <p>xmlagg(xml)</p>
+                <p>xmlconcat(xml[, ...])</p>
+                <p>xmlelement(name name [, xmlattributes(value [AS attname] [, ... ])] [, content, ...])</p>
                 <p>xmlexists(text, xml)</p>
+                <p>xmlforest(content [AS name] [, ...])</p>
                 <p>xml_is_well_formed(text)</p>
                 <p>xml_is_well_formed_document(text)</p>
                 <p>xml_is_well_formed_content(text)</p>
+                <p>xmlparse ( { DOCUMENT | CONTENT } value)</p>
                 <p>xpath(text, xml)</p>
                 <p>xpath(text, xml, text[])</p>
                 <p>xpath_exists(text, xml)</p>
                 <p>xpath_exists(text, xml, text[])</p>
+                <p>xmlpi(name target [, content])</p>
+                <p>xmlroot(xml, version text | no value [, standalone yes|no|no value])</p>
+                <p>xmlserialize ( { DOCUMENT | CONTENT } value AS type )</p>
                 <p>xml(text)</p>
                 <p>text(xml)</p>
                 <p>xmlcomment(xml)</p>
