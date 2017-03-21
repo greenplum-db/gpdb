@@ -50,6 +50,7 @@ echo "Extracting ..."
 tar -C "$HOME" -xzf /tmp/go.tar.gz
 #mv "$HOME/go" "$HOME/go"
 
+base_path=$(pwd)
 export GOPATH=${base_path}/gpdb_src/gpMgmt/go-utils
 touch "$HOME/.bashrc"
 {
