@@ -45,7 +45,7 @@ function setup_gpadmin_user() {
 
 function install_golang() {
 # todo change to container or AMI
-    ./gpdb_src/concourse/scripts/install_golang.bash
+    ./gpdb_src/concourse/scripts/install_golang.bash --64
 }
 
 function _main() {
