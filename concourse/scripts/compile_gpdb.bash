@@ -7,6 +7,12 @@ GPDB_ARTIFACTS_DIR=$(pwd)/$OUTPUT_ARTIFACT_DIR
 
 CWDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+function expand_glob_ensure_exists() {
+  local -a glob=($*)
+  [ -e "${glob[0]}" ]
+  echo "${glob[0]}"
+}
+
 function prep_env_for_centos() {
   case "$TARGET_OS_VERSION" in
     5)
@@ -43,7 +49,7 @@ function prep_env_for_centos() {
 }
 
 function prep_env_for_sles() {
-  export JAVA_HOME="$(ls -1d /usr/java/jdk1.7* | tail -1)"
+  export JAVA_HOME=$(expand_glob_ensure_exists /usr/java/jdk1.7*)
   export PATH=${JAVA_HOME}/bin:${PATH}
   source /opt/gcc_env.sh
 }
@@ -71,9 +77,7 @@ function make_sync_tools() {
 }
 
 function link_tools_for_sles() {
-  local -a python_dirs=( "$(pwd)"/gpdb_src/gpAux/ext/*/python-2.7.12 )
-  [ -d "${python_dirs[0]}" ]
-  ln -sf "${python_dirs[0]}" /opt
+  ln -sf "$(expand_glob_ensure_exists "$(pwd)"/gpdb_src/gpAux/ext/*/python-2.7.12 )" /opt
 }
 
 function build_gpdb() {
