@@ -1,62 +1,65 @@
-#!/bin/bash -l
-
-set -eox pipefail
-
-CWDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "${CWDIR}/common.bash"
-
-function gen_env(){
-  cat > /opt/run_test.sh <<-EOF
-		trap look4results ERR
-
-		function look4results() {
-
-		    results_files="../gpMgmt/gpMgmt_testunit_results.log"
-
-		    for results_file in \${results_files}; do
-			if [ -f "\${results_file}" ]; then
-			    cat <<-FEOF
-
-						======================================================================
-						RESULTS FILE: \${results_file}
-						----------------------------------------------------------------------
-
-						\$(cat "\${results_file}")
-
-					FEOF
-			fi
-		    done
-		    exit 1
-		}
-		base_path=\${1}
-		source /usr/local/greenplum-db-devel/greenplum_path.sh
-		source /opt/gcc_env.sh
-		source \${base_path}/gpdb_src/gpAux/gpdemo/gpdemo-env.sh
-		cd \${base_path}/gpdb_src/gpMgmt/go-utils/src/gp_upgrade
-		make test
-	EOF
-
-	chmod a+x /opt/run_test.sh
-}
-
-function setup_gpadmin_user() {
-    ./gpdb_src/concourse/scripts/setup_gpadmin_user.bash "$TEST_OS"
-}
-
-function install_golang() {
+#!/bin/bash
+# temporary install by script
 # todo change to container or AMI
-    ./gpdb_src/concourse/scripts/install_golang.bash
+
+set -e
+
+VERSION="1.7.5"
+
+print_help() {
+    echo "Usage: bash goinstall.sh OPTION"
+    echo -e "\nOPTIONS:"
+    echo -e "  --32\t\tInstall 32-bit version"
+    echo -e "  --64\t\tInstall 64-bit version"
+    echo -e "  --remove\tTo remove currently installed version"
 }
 
-function _main() {
+if [ "$1" == "--32" ]; then
+    DFILE="go$VERSION.linux-386.tar.gz"
+elif [ "$1" == "--64" ]; then
+    DFILE="go$VERSION.linux-amd64.tar.gz"
+elif [ "$1" == "--remove" ]; then
+    rm -rf "$HOME/.go/"
+    rm -rf "$HOME/go/"
+    sed -i '/# GoLang/d' "$HOME/.bashrc"
+    sed -i '/export GOROOT/d' "$HOME/.bashrc"
+    sed -i '/:$GOROOT/d' "$HOME/.bashrc"
+    sed -i '/export GOPATH/d' "$HOME/.bashrc"
+    sed -i '/:$GOPATH/d' "$HOME/.bashrc"
+    echo "Go removed."
+    exit 0
+elif [ "$1" == "--help" ]; then
+    print_help
+    exit 0
+else
+    print_help
+    exit 1
+fi
 
-    configure
-    install_gpdb
-    setup_gpadmin_user
-    make_cluster
-    gen_env
-    install_golang
-    run_test
-}
+if [ -d "$HOME/.go" ] || [ -d "$HOME/go" ]; then
+    echo "Installation directories already exist. Exiting."
+    exit 1
+fi
+echo "Downloading $DFILE ..."
+wget https://storage.googleapis.com/golang/$DFILE -O /tmp/go.tar.gz
+if [ $? -ne 0 ]; then
+    echo "Download failed! Exiting."
+    exit 1
+fi
+echo "Extracting ..."
+tar -C "$HOME" -xzf /tmp/go.tar.gz
+mv "$HOME/go" "$HOME/.go"
 
-_main "$@"
+export GOPATH=${base_path}/gpdb_src/gpMgmt/go-utils
+touch "$HOME/.bashrc"
+{
+    echo '# GoLang'
+    echo 'export GOROOT=$HOME/.go'
+    echo 'export PATH=$PATH:$GOROOT/bin'
+    echo "export GOPATH=$GOPATH"
+    echo 'export PATH=$PATH:$GOPATH/bin'
+} >> "$HOME/.bashrc"
+
+mkdir -p $HOME/go/{src,pkg,bin}
+rm -f /tmp/go.tar.gz
+source $HOME/.bashrc
