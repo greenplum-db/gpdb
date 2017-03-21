@@ -41,7 +41,7 @@ class GpRecoverseg():
         cmd = Command(name='Run gprecoverseg', cmdStr='source %s/greenplum_path.sh;%s' % (self.gphome, rcvr_cmd))
         tinctest.logger.info("Running gprecoverseg : %s" % cmd)
 
-        pool = WorkerPool()
+        pool = WorkerPool(numWorkers=1, daemonize=True)
         pool.addCommand(cmd)
 
     def run(self,option=' ', validate=True, results=True):

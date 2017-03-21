@@ -1135,6 +1135,7 @@ class AnalyzeWorkerPool(WorkerPool):
         self.completed_queue=Queue()
         self.should_stop=False
         self.num_assigned=0
+        self.daemonize=False
         if items is not None:
             for item in items:
                 self.work_queue.put(item)
@@ -1154,8 +1155,8 @@ class AnalyzeWorker(Worker):
     """
     def __init__(self,name,pool):
         Worker.__init__(self, name, pool)
-    
-    
+
+
     def run(self):
         while True:
             try:
@@ -1163,7 +1164,7 @@ class AnalyzeWorker(Worker):
                     self.cmd = self.pool.getNextWorkItem()
                 except TypeError:
                     # misleading exception raised during interpreter shutdown
-                    return 
+                    return
 
                 # we must have got a command to run here
                 if self.cmd is None:
@@ -1198,7 +1199,7 @@ class AnalyzeWorker(Worker):
                     self.logger.debug("[%s] finished cmd with exception: %s" % (self.name, self.cmd))
                     self.pool.addFinishedWorkItem(self.cmd)
                     self.cmd=None
-    
+
 if __name__ == '__main__':
     sys.argv[0] = EXECNAME
     simple_main(create_parser, AnalyzeDb)
