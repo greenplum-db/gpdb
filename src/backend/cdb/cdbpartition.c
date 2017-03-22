@@ -377,11 +377,7 @@ List *
 rel_partition_keys_ordered(Oid relid)
 {
 	List *pkeys = NIL;
-	List *pkinds = NIL;
-	rel_partition_keys_kinds_ordered(relid, &pkeys, &pkinds);
-
-	// we don't want partition kinds here.
-	list_free(pkinds);
+	rel_partition_keys_kinds_ordered(relid, &pkeys, NULL);
 	return pkeys;
 }
 
@@ -393,8 +389,6 @@ rel_partition_keys_ordered(Oid relid)
 void
 rel_partition_keys_kinds_ordered(Oid relid, List **pkeys, List **pkinds)
 {
-	Assert(pkeys != NULL && pkinds != NULL);
-
 	Relation	partrel;
 	ScanKeyData scankey;
 	SysScanDesc sscan;
@@ -430,8 +424,12 @@ rel_partition_keys_kinds_ordered(Oid relid, List **pkeys, List **pkinds)
 
 		nlevels++;
 		levels = lappend_int(levels, p->parlevel);
-		keysUnordered = lappend(keysUnordered, levelkeys);
-		kindsUnordered = lappend_int(kindsUnordered, p->parkind);
+
+		if (pkeys != NULL)
+			keysUnordered = lappend(keysUnordered, levelkeys);
+
+		if (pkinds != NULL)
+			kindsUnordered = lappend_int(kindsUnordered, p->parkind);
 	}
 	systable_endscan(sscan);
 	heap_close(partrel, AccessShareLock);
@@ -439,8 +437,13 @@ rel_partition_keys_kinds_ordered(Oid relid, List **pkeys, List **pkinds)
 	if (1 == nlevels)
 	{
 		list_free(levels);
-		*pkeys = keysUnordered;
-		*pkinds = kindsUnordered;
+
+		if (pkeys != NULL)
+			*pkeys = keysUnordered;
+
+		if (pkinds != NULL)
+			*pkinds = kindsUnordered;
+
 		return;
 	}
 
@@ -450,8 +453,11 @@ rel_partition_keys_kinds_ordered(Oid relid, List **pkeys, List **pkinds)
 		int pos = list_find_int(levels, i);
 		Assert (0 <= pos);
 
-		*pkeys = lappend(*pkeys, list_nth(keysUnordered, pos));
-		*pkinds = lappend_int(*pkinds, list_nth_int(kindsUnordered, pos));
+		if (pkeys != NULL)
+			*pkeys = lappend(*pkeys, list_nth(keysUnordered, pos));
+
+		if (pkinds != NULL)
+			*pkinds = lappend_int(*pkinds, list_nth_int(kindsUnordered, pos));
 	}
 	list_free(levels);
 	list_free(keysUnordered);
