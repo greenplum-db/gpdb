@@ -67,7 +67,7 @@ extern List *rel_partition_key_attrs(Oid relid);
 
 extern List *rel_partition_keys_ordered(Oid relid);
 
-extern List *rel_partition_kinds_ordered(Oid relid);
+extern void rel_partition_keys_kinds_ordered(Oid relid, List **pkeys, List **pkinds);
 
 extern bool rel_has_external_partition(Oid relid);
 

@@ -376,11 +376,31 @@ rel_partition_key_attrs(Oid relid)
 List *
 rel_partition_keys_ordered(Oid relid)
 {
+	List *pkeys = NIL;
+	List *pkinds = NIL;
+	rel_partition_keys_kinds_ordered(relid, &pkeys, &pkinds);
+
+	// we don't want partition kinds here.
+	list_free(pkinds);
+	return pkeys;
+}
+
+/*
+ * Output a list of lists representing the partitioning keys and a list representing
+ * the partitioning kinds of the partitioned table identified by the relid or NIL.
+ * The keys and kinds are in the order of partitioning levels.
+ */
+void
+rel_partition_keys_kinds_ordered(Oid relid, List **pkeys, List **pkinds)
+{
+	Assert(pkeys != NULL && pkinds != NULL);
+
 	Relation	partrel;
 	ScanKeyData scankey;
 	SysScanDesc sscan;
 	List *levels = NIL;
 	List *keysUnordered = NIL;
+	List *kindsUnordered = NIL;
 	int nlevels = 0;
 	HeapTuple tuple = NULL;
 
@@ -411,67 +431,6 @@ rel_partition_keys_ordered(Oid relid)
 		nlevels++;
 		levels = lappend_int(levels, p->parlevel);
 		keysUnordered = lappend(keysUnordered, levelkeys);
-	}
-	systable_endscan(sscan);
-	heap_close(partrel, AccessShareLock);
-
-	if (1 == nlevels)
-	{
-		list_free(levels);
-		return keysUnordered;
-	}
-
-	// now order the keys by level
-	List *pkeys = NIL;
-	for (int i = 0; i< nlevels; i++)
-	{
-		int pos = list_find_int(levels, i);
-		Assert (0 <= pos);
-
-		pkeys = lappend(pkeys, list_nth(keysUnordered, pos));
-	}
-	list_free(levels);
-	list_free(keysUnordered);
-
-	return pkeys;
-}
-
-
-/*
- * Return a list of partition kinds identified by the argument or NIL. The kinds
- * are in the order of partitioning levels.
- */
-List*
-rel_partition_kinds_ordered(Oid relid)
-{
-	Relation	partrel;
-	ScanKeyData scankey;
-	SysScanDesc sscan;
-	List *levels = NIL;
-	List *kindsUnordered = NIL;
-	int nlevels = 0;
-	HeapTuple tuple = NULL;
-
-	partrel = heap_open(PartitionRelationId, AccessShareLock);
-
-	/* SELECT * FROM pg_partition WHERE parrelid = :1 */
-	ScanKeyInit(&scankey, Anum_pg_partition_parrelid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(relid));
-
-	sscan = systable_beginscan(partrel, PartitionParrelidIndexId, true,
-							   SnapshotNow, 1, &scankey);
-	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
-	{
-		Form_pg_partition p = (Form_pg_partition) GETSTRUCT(tuple);
-
-		if (p->paristemplate)
-		{
-			continue;
-		}
-
-		nlevels++;
-		levels = lappend_int(levels, p->parlevel);
 		kindsUnordered = lappend_int(kindsUnordered, p->parkind);
 	}
 	systable_endscan(sscan);
@@ -480,21 +439,23 @@ rel_partition_kinds_ordered(Oid relid)
 	if (1 == nlevels)
 	{
 		list_free(levels);
-		return kindsUnordered;
+		*pkeys = keysUnordered;
+		*pkinds = kindsUnordered;
+		return;
 	}
 
-	// now order the kinds by level
-	List *pkinds = NIL;
+	// now order the keys and kinds by level
 	for (int i = 0; i< nlevels; i++)
 	{
 		int pos = list_find_int(levels, i);
 		Assert (0 <= pos);
-		pkinds = lappend_int(pkinds, list_nth_int(kindsUnordered, pos));
+
+		*pkeys = lappend(*pkeys, list_nth(keysUnordered, pos));
+		*pkinds = lappend_int(*pkinds, list_nth_int(kindsUnordered, pos));
 	}
 	list_free(levels);
+	list_free(keysUnordered);
 	list_free(kindsUnordered);
-
-	return pkinds;
 }
 
  /*
