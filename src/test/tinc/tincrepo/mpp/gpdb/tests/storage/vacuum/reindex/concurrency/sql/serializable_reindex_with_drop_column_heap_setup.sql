@@ -15,4 +15,3 @@ create index idxd_reindex_serialize_tab_heap on reindex_serialize_tab_heap(d);
 create index idxe_reindex_serialize_tab_heap on reindex_serialize_tab_heap(e);
 create index idxf_reindex_serialize_tab_heap on reindex_serialize_tab_heap(f);
 create index idxg_reindex_serialize_tab_heap on reindex_serialize_tab_heap(g);
-select 1 as relfilenode_same_on_all_segs from gp_dist_random('pg_class')   where relname = 'idxa_reindex_serialize_tab_heap' group by relfilenode having count(*) = (select count(*) from gp_segment_configuration where role='p' and content > -1);

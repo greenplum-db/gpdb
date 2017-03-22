@@ -2,22 +2,22 @@
 -- @Description Ensures that a reindex table during reindex index operations is ok
 -- 
 
-DELETE FROM reindex_crtab_part_ao_btree  WHERE id < 128;
+DELETE FROM reindex_dropindex_crtab_part_ao_btree  WHERE id < 128;
 DELETE 254
 1: BEGIN;
 BEGIN
 2: BEGIN;
 BEGIN
-1: REINDEX TABLE  reindex_crtab_part_ao_btree;
+1: REINDEX TABLE  reindex_dropindex_crtab_part_ao_btree;
 REINDEX
-2&: DROP INDEX idx_reindex_crtab_part_owner_ao_btree;  <waiting ...>
+2&: DROP INDEX idx_reindex_dropindex_crtab_part_owner_ao_btree;  <waiting ...>
 1: COMMIT;
 COMMIT
 2<:  <... completed>
 DROP
 2: COMMIT;
 COMMIT
-3: select count(*) from reindex_crtab_part_ao_btree where id = 998;
+3: select count(*) from reindex_dropindex_crtab_part_ao_btree where id = 998;
 count
 -----
 2    
@@ -26,52 +26,23 @@ count
 SET
 3: set enable_indexscan=true;
 SET
-3: select count(*) from reindex_crtab_part_ao_btree where id = 999;
+3: select count(*) from reindex_dropindex_crtab_part_ao_btree where id = 999;
 count
 -----
 2    
 (1 row)
-3: SELECT 1 AS relfilenode_same_on_all_segs_maintable from gp_dist_random('pg_class') WHERE relname = 'reindex_crtab_part_ao_btree' and relfilenode = oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
-relfilenode_same_on_all_segs_maintable
---------------------------------------
-1                                     
-(1 row)
 
-3: select 1 AS relfilenode_same_on_all_segs_mainidx from gp_dist_random('pg_class') WHERE relname = 'idx_reindex_crtab_part_ao_btree' and relfilenode != oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
-relfilenode_same_on_all_segs_mainidx
-------------------------------------
-1                                   
-(1 row)
+3: select c_relname, 1 as different_relfilenode from before_reindex_dropindex_crtab_part_ao_btree b where exists (select oid, gp_segment_id, relfilenode from gp_dist_random('pg_class') where relname like 'idx_reindex_dropindex_crtab_part_ao_btree%' and b.c_oid = oid and b.c_gp_segment_id = gp_segment_id and b.c_relfilenode != relfilenode) group by b.c_oid, b.c_relname;
+c_relname                                               |different_relfilenode
+--------------------------------------------------------+---------------------
+idx_reindex_dropindex_crtab_part_ao_btree               |1                    
+idx_reindex_dropindex_crtab_part_ao_btree_1_prt_de_fault|1                    
+idx_reindex_dropindex_crtab_part_ao_btree_1_prt_p_one   |1                    
+(3 rows)
 
-3: select 1 AS relfilenode_same_on_all_segs_mainidx from gp_dist_random('pg_class') WHERE relname = 'idx_reindex_crtab_part_owner_ao_btree' and relfilenode != oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
-relfilenode_same_on_all_segs_mainidx
-------------------------------------
-(0 rows)
-3: select  1 AS relfilenode_same_on_all_segs_partition_default_data from gp_dist_random('pg_class') WHERE relname = 'reindex_crtab_part_ao_btree_1_prt_de_fault' and relfilenode = oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
-relfilenode_same_on_all_segs_partition_default_data
----------------------------------------------------
-1                                                  
-(1 row)
-
-3: select  1 AS relfilenode_same_on_all_segs_partition_default_idx from gp_dist_random('pg_class') WHERE relname = 'idx_reindex_crtab_part_ao_btree_1_prt_de_fault' and relfilenode != oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
-relfilenode_same_on_all_segs_partition_default_idx
---------------------------------------------------
-1                                                 
-(1 row)
-
-3: select 1 AS relfilenode_same_on_all_segs_partition_1_data from gp_dist_random('pg_class') WHERE relname = 'reindex_crtab_part_ao_btree_1_prt_p_one' and relfilenode = oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
-relfilenode_same_on_all_segs_partition_1_data
----------------------------------------------
-1                                            
-(1 row)
-
-3: select 1 AS relfilenode_same_on_all_segs_partition_1_idx from gp_dist_random('pg_class') WHERE relname = 'idx_reindex_crtab_part_ao_btree_1_prt_p_one' and relfilenode != oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
-relfilenode_same_on_all_segs_partition_1_idx
---------------------------------------------
-1                                           
-(1 row)
-3: select 1 AS relfilenode_same_on_all_segs_partition_default_idx from gp_dist_random('pg_class') WHERE relname = 'idx_reindex_crtab_part_owner_ao_btree_1_prt_de_fault' and relfilenode != oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
-relfilenode_same_on_all_segs_partition_default_idx
---------------------------------------------------
-1                                                 
+-- expect only the index on parent table to be dropped; drop index will not drop indexes on child partitions
+3: select 1-count(1) as index_dropped from (select * from pg_class union all select * from gp_dist_random('pg_class')) t where t.relname = 'idx_reindex_dropindex_crtab_part_owner_ao_btree';
+index_dropped
+-------------
+1            
 (1 row)
