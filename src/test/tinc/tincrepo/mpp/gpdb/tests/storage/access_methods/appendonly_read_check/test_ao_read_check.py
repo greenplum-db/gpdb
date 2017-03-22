@@ -52,23 +52,23 @@ class AppendOnlyReadCheckTests(MPPTestCase):
         if not Gpdiff.are_files_equal(out_file, ans_file):
             raise Exception('Unable to create tables')
 
-    def get_relfilenode_oid(self, tablename):
-        RELFILENODE_OID_QUERY = """ SELECT relfilenode
+    def get_oid(self, tablename):
+        OID_QUERY = """ SELECT oid
                                     FROM pg_class
                                     WHERE relname='%s'
                                 """ % tablename
         with dbconn.connect(dbconn.DbURL()) as conn:
-            relfilenode_oid = dbconn.execSQLForSingleton(conn, RELFILENODE_OID_QUERY)
-        return relfilenode_oid
+            oid = dbconn.execSQLForSingleton(conn, OID_QUERY)
+        return oid
 
     def transform_sql_file(self, sql_file, tablename):
-        relfilenode_oid = self.get_relfilenode_oid(tablename)
+        oid = self.get_oid(tablename)
         new_sql_file = sql_file.strip('.t')
         with open(new_sql_file, 'w') as fp1:
             with open(sql_file, 'r') as fp2:
                 for line in fp2:
-                    if '<relfilenode_oid>' in line:
-                        line = line.replace('<relfilenode_oid>', str(relfilenode_oid))
+                    if '<oid>' in line:
+                        line = line.replace('<oid>', str(oid))
                     fp1.write(line)
 
     def test_pg_aoseg_corruption(self):

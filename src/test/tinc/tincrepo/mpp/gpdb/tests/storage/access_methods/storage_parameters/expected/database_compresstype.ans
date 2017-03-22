@@ -360,7 +360,7 @@ Has OIDs: no
 Options: orientation=column, compresslevel=1, checksum=true, appendonly=true
 Distributed by: (i)
 
-select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.relfilenode=a.relid and c.relname='ao_db_ct_t5';
+select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.oid=a.relid and c.relname='ao_db_ct_t5';
  relstorage |                             reloptions                             | checksum 
 ------------+--------------------------------------------------------------------+----------
  c          | {orientation=column,compresslevel=1,checksum=true,appendonly=true} | t

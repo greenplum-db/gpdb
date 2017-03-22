@@ -95,7 +95,7 @@ Drop table ao_db_ap_t5;
 Create temp table temp_ds_t1 ( i int, j int);
 
 \d+ temp_ds_t1
-select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.relfilenode=a.relid and c.relname='temp_ds_t1';
+select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.oid=a.relid and c.relname='temp_ds_t1';
 
 Drop table temp_ds_t1;
 

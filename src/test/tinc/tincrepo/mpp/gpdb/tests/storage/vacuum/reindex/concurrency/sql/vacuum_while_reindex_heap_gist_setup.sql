@@ -30,7 +30,4 @@ insert into reindex_heap_gist (id, owner, description, property, poli, target) s
 insert into reindex_heap_gist (id, owner, description, property, poli, target) select i, 'user' || i, 'Testing GiST Index', '((3, 1300), (33, 1330))','( (22,660), (57, 650), (68, 660) )', '( (76, 76), 76)' from  generate_series(1,1000) i ;
 insert into reindex_heap_gist (id, owner, description, property, poli, target) select i, 'user' || i, 'Testing GiST Index', '((3, 1300), (33, 1330))','( (22,660), (57, 650), (68, 660) )', '( (76, 76), 76)' from  generate_series(1,1000) i ;
 
-create index idx_gist_reindex_heap on reindex_heap_gist USING Gist(target);
-
--- Verify relfilenode is same on all the segments
-SELECT 1 AS relfilenode_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'idx_gist_reindex_heap' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+create index idx_gist_reindex_vacuum_heap on reindex_heap_gist USING Gist(target);

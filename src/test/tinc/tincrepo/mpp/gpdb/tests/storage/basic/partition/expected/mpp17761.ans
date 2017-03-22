@@ -173,7 +173,7 @@ Alter table mpp17761.split_tab1 split partition FOR (RANK(2)) at(1050) into (par
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab1_1_prt_splitc" for table "split_tab1"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab1_1_prt_splitd" for table "split_tab1"
 ALTER TABLE
- select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'split_tab1_1_prt_splitc','split_tab1_1_prt_splitd','split_tab1','split_tab1_1_prt_1'));
+ select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'split_tab1_1_prt_splitc','split_tab1_1_prt_splitd','split_tab1','split_tab1_1_prt_1'));
                oid                | relkind | relstorage |              reloptions              
 ----------------------------------+---------+------------+--------------------------------------
  mpp17761.split_tab1_1_prt_1      | r       | c          | {appendonly=true,orientation=column}
@@ -201,7 +201,7 @@ Alter table mpp17761.split_tab6 split partition FOR (RANK(2)) at(1050) into (par
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab6_1_prt_splitc" for table "split_tab6"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab6_1_prt_splitd" for table "split_tab6"
 ALTER TABLE
-select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'split_tab6_1_prt_splitc','split_tab6_1_prt_splitd','split_tab6','split_tab6_1_prt_1'));
+select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'split_tab6_1_prt_splitc','split_tab6_1_prt_splitd','split_tab6','split_tab6_1_prt_1'));
                oid                | relkind | relstorage |                       reloptions                       
 ----------------------------------+---------+------------+--------------------------------------------------------
  mpp17761.split_tab6_1_prt_1      | r       | a          | {appendonly=true,compresstype=quicklz,compresslevel=1}
@@ -229,7 +229,7 @@ Alter table mpp17761.split_tab7 split partition FOR (RANK(2)) at(1050) into (par
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab7_1_prt_splitc" for table "split_tab7"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab7_1_prt_splitd" for table "split_tab7"
 ALTER TABLE
-select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'split_tab7_1_prt_splitc','split_tab7_1_prt_splitd','split_tab7','split_tab7_1_prt_1'));
+select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'split_tab7_1_prt_splitc','split_tab7_1_prt_splitd','split_tab7','split_tab7_1_prt_1'));
                oid                | relkind | relstorage |     reloptions     
 ----------------------------------+---------+------------+--------------------
  mpp17761.split_tab7_1_prt_1      | r       | h          | {appendonly=false}
@@ -256,7 +256,7 @@ psql:/path/sql_file:1: NOTICE:  dropped partition "a" for relation "split_tab2"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab2_1_prt_one" for table "split_tab2"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab2_1_prt_two" for table "split_tab2"
 ALTER TABLE
-select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'split_tab2_1_prt_one','split_tab2_1_prt_two','split_tab2_1_prt_b','split_tab2'));
+select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'split_tab2_1_prt_one','split_tab2_1_prt_two','split_tab2_1_prt_b','split_tab2'));
               oid              | relkind | relstorage |              reloptions              
 -------------------------------+---------+------------+--------------------------------------
  mpp17761.split_tab2_1_prt_b   | r       | c          | {appendonly=true,orientation=column}
@@ -286,7 +286,7 @@ psql:/path/sql_file:1: NOTICE:  dropped partition "c" for relation "split_tab8"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab8_1_prt_one" for table "split_tab8"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab8_1_prt_two" for table "split_tab8"
 ALTER TABLE
-select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select relfilenode from pg_class where relname in  ( 'split_tab8_1_prt_one','split_tab8_1_prt_two','split_tab8_1_prt_b','split_tab8'));
+select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where relname in  ( 'split_tab8_1_prt_one','split_tab8_1_prt_two','split_tab8_1_prt_b','split_tab8'));
               oid              | relkind | relstorage |              reloptions              
 -------------------------------+---------+------------+--------------------------------------
  mpp17761.split_tab8_1_prt_b   | r       | c          | {appendonly=true,orientation=column}
@@ -313,7 +313,7 @@ psql:/path/sql_file:1: NOTICE:  dropped partition "a" for relation "split_tab9"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab9_1_prt_one" for table "split_tab9"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab9_1_prt_two" for table "split_tab9"
 ALTER TABLE
-select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'split_tab9_1_prt_one','split_tab9_1_prt_two','split_tab9_1_prt_b','split_tab9'));
+select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'split_tab9_1_prt_one','split_tab9_1_prt_two','split_tab9_1_prt_b','split_tab9'));
               oid              | relkind | relstorage |     reloptions     
 -------------------------------+---------+------------+--------------------
  mpp17761.split_tab9_1_prt_b   | r       | h          | {appendonly=false}
@@ -344,7 +344,7 @@ psql:/path/sql_file:1: NOTICE:  dropped partition "co" for relation "split_tab3"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab3_1_prt_co1" for table "split_tab3"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab3_1_prt_co2" for table "split_tab3"
 ALTER TABLE
- select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'split_tab3_1_prt_1','split_tab3_1_prt_co1','split_tab3'));
+ select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'split_tab3_1_prt_1','split_tab3_1_prt_co1','split_tab3'));
               oid              | relkind | relstorage |                                reloptions                                 
 -------------------------------+---------+------------+---------------------------------------------------------------------------
  mpp17761.split_tab3_1_prt_1   | r       | c          | {appendonly=true,orientation=column,compresstype=quicklz,compresslevel=1}
@@ -370,7 +370,7 @@ psql:/path/sql_file:1: NOTICE:  dropped partition "a" for relation "split_tab10"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab10_1_prt_one" for table "split_tab10"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab10_1_prt_two" for table "split_tab10"
 ALTER TABLE
-select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'split_tab10_1_prt_one','split_tab10_1_prt_two','split_tab10_1_prt_b','split_tab10'));
+select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'split_tab10_1_prt_one','split_tab10_1_prt_two','split_tab10_1_prt_b','split_tab10'));
               oid               | relkind | relstorage |              reloptions              
 --------------------------------+---------+------------+--------------------------------------
  mpp17761.split_tab10_1_prt_b   | r       | a          | {appendonly=true}
@@ -397,7 +397,7 @@ psql:/path/sql_file:1: NOTICE:  dropped partition "a" for relation "split_tab11"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab11_1_prt_one" for table "split_tab11"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab11_1_prt_two" for table "split_tab11"
 ALTER TABLE
-select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'split_tab11_1_prt_one','split_tab11_1_prt_two','split_tab11_1_prt_b','split_tab11'));
+select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'split_tab11_1_prt_one','split_tab11_1_prt_two','split_tab11_1_prt_b','split_tab11'));
               oid               | relkind | relstorage |              reloptions              
 --------------------------------+---------+------------+--------------------------------------
  mpp17761.split_tab11_1_prt_b   | r       | h          | {appendonly=false}
@@ -424,7 +424,7 @@ psql:/path/sql_file:1: NOTICE:  dropped partition "a" for relation "split_tab12"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab12_1_prt_one" for table "split_tab12"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab12_1_prt_two" for table "split_tab12"
 ALTER TABLE
-select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'split_tab12_1_prt_one','split_tab12_1_prt_two','split_tab12_1_prt_b','split_tab12'));
+select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'split_tab12_1_prt_one','split_tab12_1_prt_two','split_tab12_1_prt_b','split_tab12'));
               oid               | relkind | relstorage |              reloptions              
 --------------------------------+---------+------------+--------------------------------------
  mpp17761.split_tab12_1_prt_b   | r       | h          | {appendonly=false}
@@ -451,7 +451,7 @@ psql:/path/sql_file:1: NOTICE:  dropped partition "a" for relation "split_tab13"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab13_1_prt_one" for table "split_tab13"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab13_1_prt_two" for table "split_tab13"
 ALTER TABLE
-select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'split_tab13_1_prt_one','split_tab13_1_prt_two','split_tab13_1_prt_b','split_tab13'));
+select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'split_tab13_1_prt_one','split_tab13_1_prt_two','split_tab13_1_prt_b','split_tab13'));
               oid               | relkind | relstorage |                       reloptions                       
 --------------------------------+---------+------------+--------------------------------------------------------
  mpp17761.split_tab13_1_prt_b   | r       | h          | {appendonly=false}
@@ -482,7 +482,7 @@ psql:/path/sql_file:1: NOTICE:  dropped partition "co" for relation "split_tab14
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab14_1_prt_co1" for table "split_tab14"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab14_1_prt_co2" for table "split_tab14"
 ALTER TABLE
-select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'split_tab14_1_prt_1','split_tab14_1_prt_co1','split_tab14_1_prt_co1','split_tab14'));
+select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'split_tab14_1_prt_1','split_tab14_1_prt_co1','split_tab14_1_prt_co1','split_tab14'));
               oid               | relkind | relstorage |     reloptions     
 --------------------------------+---------+------------+--------------------
  mpp17761.split_tab14_1_prt_1   | r       | h          | {appendonly=false}
@@ -506,7 +506,7 @@ psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab4_1
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab4_1_prt_b" for table "split_tab4"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab4_1_prt_dft" for table "split_tab4"
 CREATE TABLE
-select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'split_tab4_1_prt_a','split_tab4','split_tab4_1_prt_dft'));
+select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'split_tab4_1_prt_a','split_tab4','split_tab4_1_prt_dft'));
               oid              | relkind | relstorage |              reloptions              
 -------------------------------+---------+------------+--------------------------------------
  mpp17761.split_tab4_1_prt_a   | r       | c          | {appendonly=true,orientation=column}
@@ -520,7 +520,7 @@ psql:/path/sql_file:1: NOTICE:  dropped partition "dft" for relation "split_tab4
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab4_1_prt_c" for table "split_tab4"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab4_1_prt_dft" for table "split_tab4"
 ALTER TABLE
-select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'split_tab4_1_prt_a','split_tab4','split_tab4_1_prt_dft','split_tab4_1_prt_c'));
+select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'split_tab4_1_prt_a','split_tab4','split_tab4_1_prt_dft','split_tab4_1_prt_c'));
               oid              | relkind | relstorage |              reloptions              
 -------------------------------+---------+------------+--------------------------------------
  mpp17761.split_tab4_1_prt_a   | r       | c          | {appendonly=true,orientation=column}
@@ -545,7 +545,7 @@ CREATE TABLE
 alter table mpp17761.split_tab5 add partition c values (10,11,12,13) with (appendonly = false); 
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab5_1_prt_c" for table "split_tab5"
 ALTER TABLE
-select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'split_tab5_1_prt_a','split_tab5_1_prt_b','split_tab5_1_prt_c','split_tab5'));
+select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'split_tab5_1_prt_a','split_tab5_1_prt_b','split_tab5_1_prt_c','split_tab5'));
              oid             | relkind | relstorage |              reloptions              
 -----------------------------+---------+------------+--------------------------------------
  mpp17761.split_tab5_1_prt_a | r       | a          | {appendonly=true}
@@ -560,7 +560,7 @@ psql:/path/sql_file:1: NOTICE:  dropped partition "c" for relation "split_tab5"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab5_1_prt_d" for table "split_tab5"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab5_1_prt_e" for table "split_tab5"
 ALTER TABLE
-select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'split_tab5_1_prt_a','split_tab5_1_prt_b','split_tab5_1_prt_d','split_tab5'));
+select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'split_tab5_1_prt_a','split_tab5_1_prt_b','split_tab5_1_prt_d','split_tab5'));
              oid             | relkind | relstorage |              reloptions              
 -----------------------------+---------+------------+--------------------------------------
  mpp17761.split_tab5_1_prt_a | r       | a          | {appendonly=true}
@@ -583,7 +583,7 @@ CREATE TABLE
 alter table mpp17761.split_tab15 add partition c start(25) end(30) with (appendonly = false); 
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab15_1_prt_c" for table "split_tab15"
 ALTER TABLE
-select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'split_tab15_1_prt_1','split_tab15_1_prt_2','split_tab15_1_prt_c','split_tab15'));
+select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'split_tab15_1_prt_1','split_tab15_1_prt_2','split_tab15_1_prt_c','split_tab15'));
              oid              | relkind | relstorage |     reloptions     
 ------------------------------+---------+------------+--------------------
  mpp17761.split_tab15_1_prt_1 | r       | a          | {appendonly=true}
@@ -599,7 +599,7 @@ psql:/path/sql_file:1: NOTICE:  dropped partition "c" for relation "split_tab15"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab15_1_prt_d" for table "split_tab15"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "split_tab15_1_prt_e" for table "split_tab15"
 ALTER TABLE
-select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'split_tab15_1_prt_1','split_tab15_1_prt_2','split_tab15','split_tab15_1_prt_e'));
+select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'split_tab15_1_prt_1','split_tab15_1_prt_2','split_tab15','split_tab15_1_prt_e'));
              oid              | relkind | relstorage |     reloptions     
 ------------------------------+---------+------------+--------------------
  mpp17761.split_tab15_1_prt_1 | r       | a          | {appendonly=true}

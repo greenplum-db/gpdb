@@ -7,4 +7,3 @@ CREATE TABLE reindex_heap (a INT);
 insert into reindex_heap select generate_series(1,1000);
 insert into reindex_heap select generate_series(1,1000);
 create index idx_bitmap_reindex_heap on reindex_heap USING bitmap(a);
-SELECT 1 AS relfilenode_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'idx_bitmap_reindex_heap' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);

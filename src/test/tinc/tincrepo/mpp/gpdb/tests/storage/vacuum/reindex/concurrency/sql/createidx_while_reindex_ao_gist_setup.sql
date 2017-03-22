@@ -29,12 +29,12 @@ insert into reindex_ao_gist (id, owner, description, property, poli, target) sel
 
 create index idx_gist_reindex_ao on reindex_ao_gist USING Gist(target);
 
--- Verify relfilenode is same on all the segments
-SELECT 1 AS idx_relfilenode_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'idx_gist_reindex_ao' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+-- Verify oid is same on all the segments
+SELECT 1 AS idx_oid_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'idx_gist_reindex_ao' GROUP BY oid having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
 
-SELECT 1 AS table_relfilenode_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'reindex_ao_gist' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+SELECT 1 AS table_oid_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'reindex_ao_gist' GROUP BY oid having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
 
-SELECT 1 AS table_relfilenode_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'reindex_ao_gist_1_prt_p_one' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+SELECT 1 AS table_oid_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'reindex_ao_gist_1_prt_p_one' GROUP BY oid having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
 
-SELECT 1 AS table_relfilenode_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'reindex_ao_gist_1_prt_de_fault' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+SELECT 1 AS table_oid_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'reindex_ao_gist_1_prt_de_fault' GROUP BY oid having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
 

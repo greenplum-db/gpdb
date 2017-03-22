@@ -1,32 +1,24 @@
-DROP TABLE IF EXISTS reindex_serialize_tab_heap;
-DROP
-
-CREATE TABLE reindex_serialize_tab_heap (a INT, b text, c date, d numeric, e bigint, f char(10), g float) distributed by (a);
+CREATE TABLE reindex_dropindex_serialize_tab_heap (a INT, b text, c date, d numeric, e bigint, f char(10), g float) distributed by (a);
 CREATE
-insert into reindex_serialize_tab_heap select 1, 'abc'||i, now(),i*100.43, i*-187, 'a'|| i*-1, i*2.23 from generate_series(1,1000) i;
+insert into reindex_dropindex_serialize_tab_heap select 1, 'abc'||i, now(),i*100.43, i*-187, 'a'|| i*-1, i*2.23 from generate_series(1,1000) i;
 INSERT 1000
-insert into reindex_serialize_tab_heap select 1, 'abc'||i, now(),i*100.43, i*-187, 'a'|| i*-1, i*2.23 from generate_series(1,1000) i;
+insert into reindex_dropindex_serialize_tab_heap select 1, 'abc'||i, now(),i*100.43, i*-187, 'a'|| i*-1, i*2.23 from generate_series(1,1000) i;
 INSERT 1000
-insert into reindex_serialize_tab_heap select 1, 'abc'||i, now(),i*100.43, i*-187, 'a'|| i*-1, i*2.23 from generate_series(1,1000) i;
+insert into reindex_dropindex_serialize_tab_heap select 1, 'abc'||i, now(),i*100.43, i*-187, 'a'|| i*-1, i*2.23 from generate_series(1,1000) i;
 INSERT 1000
-insert into reindex_serialize_tab_heap select 1, 'abc'||i, now(),i*100.43, i*-187, 'a'|| i*-1, i*2.23 from generate_series(1,1000) i;
+insert into reindex_dropindex_serialize_tab_heap select 1, 'abc'||i, now(),i*100.43, i*-187, 'a'|| i*-1, i*2.23 from generate_series(1,1000) i;
 INSERT 1000
-create index idxa_reindex_serialize_tab_heap on reindex_serialize_tab_heap(a);
+create index idxa_reindex_dropindex_serialize_tab_heap on reindex_dropindex_serialize_tab_heap(a);
 CREATE
-create index idxb_reindex_serialize_tab_heap on reindex_serialize_tab_heap(b);
+create index idxb_reindex_dropindex_serialize_tab_heap on reindex_dropindex_serialize_tab_heap(b);
 CREATE
-create index idxc_reindex_serialize_tab_heap on reindex_serialize_tab_heap(c);
+create index idxc_reindex_dropindex_serialize_tab_heap on reindex_dropindex_serialize_tab_heap(c);
 CREATE
-create index idxd_reindex_serialize_tab_heap on reindex_serialize_tab_heap(d);
+create index idxd_reindex_dropindex_serialize_tab_heap on reindex_dropindex_serialize_tab_heap(d);
 CREATE
-create index idxe_reindex_serialize_tab_heap on reindex_serialize_tab_heap(e);
+create index idxe_reindex_dropindex_serialize_tab_heap on reindex_dropindex_serialize_tab_heap(e);
 CREATE
-create index idxf_reindex_serialize_tab_heap on reindex_serialize_tab_heap(f);
+create index idxf_reindex_dropindex_serialize_tab_heap on reindex_dropindex_serialize_tab_heap(f);
 CREATE
-create index idxg_reindex_serialize_tab_heap on reindex_serialize_tab_heap(g);
+create index idxg_reindex_dropindex_serialize_tab_heap on reindex_dropindex_serialize_tab_heap(g);
 CREATE
-select 1 as relfilenode_same_on_all_segs from gp_dist_random('pg_class')   where relname = 'idxa_reindex_serialize_tab_heap' group by relfilenode having count(*) = (select count(*) from gp_segment_configuration where role='p' and content > -1);
-relfilenode_same_on_all_segs
-----------------------------
-1                           
-(1 row)

@@ -152,7 +152,7 @@ Select count(*) from  ao_ss_ck_t3;
 
 \d+  ao_ss_ck_t3;
 
-select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.relfilenode=a.relid and c.relname='ao_ss_ck_t3';
+select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.oid=a.relid and c.relname='ao_ss_ck_t3';
 
 Drop table  ao_ss_ck_t3;
 
@@ -179,7 +179,7 @@ Insert into  ao_ss_ck_t6 select i, i+1 from generate_series(1,10) i;
 Select count(*) from  ao_ss_ck_t6;
 
 \d+  ao_ss_ck_t6;
-select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.relfilenode=a.relid and c.relname='ao_ss_ck_t6';
+select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.oid=a.relid and c.relname='ao_ss_ck_t6';
 
 Alter table ao_ss_ck_t6 add column k int default 2 encoding(compresstype=quicklz,blocksize=8192);
 

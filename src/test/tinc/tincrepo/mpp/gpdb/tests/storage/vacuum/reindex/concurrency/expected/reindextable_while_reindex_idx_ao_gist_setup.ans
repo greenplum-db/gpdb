@@ -11,9 +11,3 @@ insert into reindex_crtab_ao_gist (id, box1) VALUES (304, '( (2, 2), (4, 4) )');
 INSERT 1
 create index idx_reindex_crtab_ao_gist on reindex_crtab_ao_gist USING Gist(box1);
 CREATE
-select 1 as relfilenode_same_on_all_segs from gp_dist_random('pg_class')   where relname = 'idx_reindex_crtab_ao_gist' group by relfilenode having count(*) = (select count(*) from gp_segment_configuration where role='p' and content > -1);
-relfilenode_same_on_all_segs
-----------------------------
-1                           
-(1 row)
-

@@ -8,7 +8,7 @@ create index ao_i1 on ao_t1(a);
 create index co_i1 on co_t1(a);
 
 --Verify that the indexes have unique and primary key constraints on them
-select indisunique, indisprimary from pg_index where indexrelid = (select oid from pg_class where relname = 'pg_aovisimap_' || (select relfilenode from pg_class where relname = 'ao_t1') || '_index');
-select indisunique, indisprimary from pg_index where indexrelid = (select oid from pg_class where relname = 'pg_aoblkdir_' || (select relfilenode from pg_class where relname = 'ao_t1') || '_index');
-select indisunique, indisprimary from pg_index where indexrelid = (select oid from pg_class where relname = 'pg_aovisimap_' || (select relfilenode from pg_class where relname = 'co_t1') || '_index');
-select indisunique, indisprimary from pg_index where indexrelid = (select oid from pg_class where relname = 'pg_aoblkdir_' || (select relfilenode from pg_class where relname = 'co_t1') || '_index');
+select indisunique, indisprimary from pg_index where indexrelid = (select oid from pg_class where relname = 'pg_aovisimap_' || (select oid from pg_class where relname = 'ao_t1') || '_index');
+select indisunique, indisprimary from pg_index where indexrelid = (select oid from pg_class where relname = 'pg_aoblkdir_' || (select oid from pg_class where relname = 'ao_t1') || '_index');
+select indisunique, indisprimary from pg_index where indexrelid = (select oid from pg_class where relname = 'pg_aovisimap_' || (select oid from pg_class where relname = 'co_t1') || '_index');
+select indisunique, indisprimary from pg_index where indexrelid = (select oid from pg_class where relname = 'pg_aoblkdir_' || (select oid from pg_class where relname = 'co_t1') || '_index');

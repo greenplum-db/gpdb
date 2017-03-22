@@ -75,7 +75,7 @@ Select count(*) from  ao_rl_ck_t3;
 
 \d+  ao_rl_ck_t3;
 
-select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.relfilenode=a.relid and c.relname='ao_rl_ck_t3';
+select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.oid=a.relid and c.relname='ao_rl_ck_t3';
 
 Drop table  ao_rl_ck_t3;
 

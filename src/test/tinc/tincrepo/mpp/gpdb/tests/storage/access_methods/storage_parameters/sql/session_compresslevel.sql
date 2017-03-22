@@ -122,7 +122,7 @@ Select count(*) from ao_ss_cl_t5;
 
 \d+ ao_ss_cl_t5
 
-select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.relfilenode=a.relid and c.relname='ao_ss_cl_t5';
+select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.oid=a.relid and c.relname='ao_ss_cl_t5';
 select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly where relid = (select oid from pg_class where relname='ao_ss_cl_t5');
 
 Drop table ao_ss_cl_t5;

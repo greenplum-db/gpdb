@@ -57,7 +57,7 @@ ALTER TABLE
  alter table pt_heap_tab_rng add partition co start(31) end(35) with (appendonly=true,orientation=column);
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_heap_tab_rng_1_prt_co" for table "pt_heap_tab_rng"
 ALTER TABLE
- select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'pt_heap_tab_rng_1_prt_heap', 'pt_heap_tab_rng_1_prt_ao','pt_heap_tab_rng_1_prt_co'));
+ select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'pt_heap_tab_rng_1_prt_heap', 'pt_heap_tab_rng_1_prt_ao','pt_heap_tab_rng_1_prt_co'));
             oid             | relkind | relstorage |              reloptions              
 ----------------------------+---------+------------+--------------------------------------
  pt_heap_tab_rng_1_prt_heap | r       | h          | {appendonly=false}
@@ -84,7 +84,7 @@ psql:/path/sql_file:1: NOTICE:  dropped partition "co" for relation "pt_heap_tab
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_heap_tab_rng_1_prt_co1" for table "pt_heap_tab_rng"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_heap_tab_rng_1_prt_co2" for table "pt_heap_tab_rng"
 ALTER TABLE
- select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in ( 'pt_heap_tab_rng_1_prt_heap1' ,'pt_heap_tab_rng_1_prt_heap2' ,'pt_heap_tab_rng_1_prt_ao1', 'pt_heap_tab_rng_1_prt_ao2', 'pt_heap_tab_rng_1_prt_co1', 'pt_heap_tab_rng_1_prt_co2'));
+ select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in ( 'pt_heap_tab_rng_1_prt_heap1' ,'pt_heap_tab_rng_1_prt_heap2' ,'pt_heap_tab_rng_1_prt_ao1', 'pt_heap_tab_rng_1_prt_ao2', 'pt_heap_tab_rng_1_prt_co1', 'pt_heap_tab_rng_1_prt_co2'));
              oid             | relkind | relstorage |              reloptions              
 -----------------------------+---------+------------+--------------------------------------
  pt_heap_tab_rng_1_prt_heap1 | r       | h          | {appendonly=false}

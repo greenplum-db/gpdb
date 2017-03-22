@@ -153,7 +153,7 @@ Select count(*) from ao_db_ct_t5;
 
 \d+ ao_db_ct_t5
 
-select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.relfilenode=a.relid and c.relname='ao_db_ct_t5';
+select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.oid=a.relid and c.relname='ao_db_ct_t5';
 
 Drop table ao_db_ct_t5;
 

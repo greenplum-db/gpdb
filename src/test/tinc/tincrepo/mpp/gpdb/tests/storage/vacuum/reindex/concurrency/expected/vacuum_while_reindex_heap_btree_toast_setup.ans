@@ -7,14 +7,3 @@ insert into reindex_toast_heap select repeat('123456789',10000), i from generate
 INSERT 100
 create index idx_btree_reindex_toast_heap on reindex_toast_heap(b);
 CREATE
-SELECT 1 AS relfilenode_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'idx_btree_reindex_toast_heap' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
-relfilenode_same_on_all_segs
-----------------------------
-1                           
-(1 row)
--- check relfilenode of toast
-SELECT 1 AS relfilenode_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname =  (select relname from pg_class where oid=(select reltoastrelid from pg_class where relname ='reindex_toast_heap')) GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
-relfilenode_same_on_all_segs
-----------------------------
-1                           
-(1 row)

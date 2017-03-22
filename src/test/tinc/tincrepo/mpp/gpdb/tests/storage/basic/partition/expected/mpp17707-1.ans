@@ -57,7 +57,7 @@ ALTER TABLE
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_heap_tab_1_prt_mno" for table "pt_heap_tab"
 ALTER TABLE
 --Check properties of the added partition tables
- select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'pt_heap_tab_1_prt_xyz', 'pt_heap_tab_1_prt_jkl','pt_heap_tab_1_prt_mno'));
+ select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'pt_heap_tab_1_prt_xyz', 'pt_heap_tab_1_prt_jkl','pt_heap_tab_1_prt_mno'));
           oid          | relkind | relstorage |                      reloptions                      
 -----------------------+---------+------------+------------------------------------------------------
  pt_heap_tab_1_prt_xyz | r       | c          | {appendonly=true,orientation=column,compresslevel=5}
@@ -98,7 +98,7 @@ psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_heap_tab_
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_heap_tab_1_prt_xyz2" for table "pt_heap_tab"
 ALTER TABLE
 --Check the storage type and properties of the split partition
-  select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select relfilenode from pg_class where   relname in ('pt_heap_tab_1_prt_xyz1','pt_heap_tab_1_prt_xyz2','pt_heap_tab_1_prt_ghi1','pt_heap_tab_1_prt_ghi2','pt_heap_tab_1_prt_abc1','pt_heap_tab_1_prt_abc2'));         
+ select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in ('pt_heap_tab_1_prt_xyz1','pt_heap_tab_1_prt_xyz2','pt_heap_tab_1_prt_ghi1','pt_heap_tab_1_prt_ghi2','pt_heap_tab_1_prt_abc1','pt_heap_tab_1_prt_abc2'));
           oid           | relkind | relstorage |                      reloptions                      
 ------------------------+---------+------------+------------------------------------------------------
  pt_heap_tab_1_prt_abc1 | r       | h          | {appendonly=false}

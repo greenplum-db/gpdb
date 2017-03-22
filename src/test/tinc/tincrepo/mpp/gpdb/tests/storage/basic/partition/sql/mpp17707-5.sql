@@ -31,13 +31,13 @@ drop index if exists ao_rng_idx2 cascade;
  alter table pt_ao_tab_rng add partition ao start(25) end(30) with (appendonly=true);
  alter table pt_ao_tab_rng add partition co start(31) end(35) with (appendonly=true,orientation=column);
 
- select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'pt_ao_tab_rng_1_prt_heap', 'pt_ao_tab_rng_1_prt_ao','pt_ao_tab_rng_1_prt_co'));
+ select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'pt_ao_tab_rng_1_prt_heap', 'pt_ao_tab_rng_1_prt_ao','pt_ao_tab_rng_1_prt_co'));
 
 --Split partition
  alter table pt_ao_tab_rng split partition heap at (23) into (partition heap1,partition heap2);
  alter table pt_ao_tab_rng split partition ao at (27) into (partition ao1,partition ao2);
  alter table pt_ao_tab_rng split partition co  at (33) into (partition co1,partition co2);
- select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in ( 'pt_ao_tab_rng_1_prt_heap1' ,'pt_ao_tab_rng_1_prt_heap2' ,'pt_ao_tab_rng_1_prt_ao1', 'pt_ao_tab_rng_1_prt_ao2', 'pt_ao_tab_rng_1_prt_co1', 'pt_ao_tab_rng_1_prt_co2'));
+ select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in ( 'pt_ao_tab_rng_1_prt_heap1' ,'pt_ao_tab_rng_1_prt_heap2' ,'pt_ao_tab_rng_1_prt_ao1', 'pt_ao_tab_rng_1_prt_ao2', 'pt_ao_tab_rng_1_prt_co1', 'pt_ao_tab_rng_1_prt_co2'));
 
 --Exchange
  -- Create candidate table

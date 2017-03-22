@@ -217,7 +217,7 @@ Has OIDs: no
 Options: appendonly=true
 Distributed by: (i)
 
-select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.relfilenode=a.relid and c.relname='temp_ds_t1';
+select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.oid=a.relid and c.relname='temp_ds_t1';
  relstorage |    reloptions     | checksum 
 ------------+-------------------+----------
  a          | {appendonly=true} | t

@@ -34,7 +34,7 @@ drop index if exists heap_idx2 cascade;
  alter table pt_heap_tab add partition mno values ('mno','mno1','mno2') WITH (appendonly=false); --Heap
 
 --Check properties of the added partition tables
- select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select  relfilenode from pg_class where   relname in  ( 'pt_heap_tab_1_prt_xyz', 'pt_heap_tab_1_prt_jkl','pt_heap_tab_1_prt_mno'));
+ select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in  ( 'pt_heap_tab_1_prt_xyz', 'pt_heap_tab_1_prt_jkl','pt_heap_tab_1_prt_mno'));
 
 --Insert Data
  insert into pt_heap_tab select 1, 'xyz', 1, 1, 1.0 , true from generate_series(1, 100);
@@ -50,7 +50,7 @@ drop index if exists heap_idx2 cascade;
  alter table pt_heap_tab split partition xyz at ('xyz1') into ( partition xyz1,partition xyz2); --CO
 
 --Check the storage type and properties of the split partition
-  select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select relfilenode from pg_class where   relname in ('pt_heap_tab_1_prt_xyz1','pt_heap_tab_1_prt_xyz2','pt_heap_tab_1_prt_ghi1','pt_heap_tab_1_prt_ghi2','pt_heap_tab_1_prt_abc1','pt_heap_tab_1_prt_abc2'));         
+ select oid::regclass, relkind, relstorage, reloptions from pg_class where oid in ( select oid from pg_class where   relname in ('pt_heap_tab_1_prt_xyz1','pt_heap_tab_1_prt_xyz2','pt_heap_tab_1_prt_ghi1','pt_heap_tab_1_prt_ghi2','pt_heap_tab_1_prt_abc1','pt_heap_tab_1_prt_abc2'));
 
 --Exchange partition
  -- Create candidate table

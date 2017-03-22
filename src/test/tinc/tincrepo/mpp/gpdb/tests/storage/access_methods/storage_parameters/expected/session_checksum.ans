@@ -390,7 +390,7 @@ Has OIDs: no
 Options: checksum=false, appendonly=true
 Distributed by: (i)
 
-select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.relfilenode=a.relid and c.relname='ao_ss_ck_t3';
+select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.oid=a.relid and c.relname='ao_ss_ck_t3';
  relstorage |            reloptions            | checksum 
 ------------+----------------------------------+----------
  a          | {checksum=false,appendonly=true} | f
@@ -449,7 +449,7 @@ Has OIDs: no
 Options: orientation=column, appendonly=true, checksum=false
 Distributed by: (i)
 
-select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.relfilenode=a.relid and c.relname='ao_ss_ck_t6';
+select relstorage, reloptions,checksum from pg_class c , pg_appendonly a where c.oid=a.relid and c.relname='ao_ss_ck_t6';
  relstorage |                     reloptions                      | checksum 
 ------------+-----------------------------------------------------+----------
  c          | {orientation=column,appendonly=true,checksum=false} | f
