@@ -8,20 +8,20 @@ CREATE TABLE REG_REGION (R_REGIONKEY INT, R_NAME CHAR(25), R_COMMENT VARCHAR(152
 -- --------------------------------------
 -- check platform
 -- --------------------------------------
-drop external web table if exists check_ps;
-CREATE EXTERNAL WEB TABLE check_ps (x text)
-execute E'( (ps -ef || ps -aux) | grep gpfdist | grep -v grep)'
-on SEGMENT 0
-format 'text';
+-- drop external web table if exists check_ps;
+-- CREATE EXTERNAL WEB TABLE check_ps (x text)
+-- execute E'( (ps -ef || ps -aux) | grep gpfdist | grep -v grep)'
+-- on SEGMENT 0
+-- format 'text';
 
-drop external web table if exists check_env;
-CREATE EXTERNAL WEB TABLE check_env (x text)
-execute E'( env | sort)'
-on SEGMENT 0
-format 'text';
+-- drop external web table if exists check_env;
+-- CREATE EXTERNAL WEB TABLE check_env (x text)
+-- execute E'( env | sort)'
+-- on SEGMENT 0
+-- format 'text';
 
-select * from check_ps;
-select * from check_env;
+-- select * from check_ps;
+-- select * from check_env;
 
 -- end_ignore
 
@@ -30,12 +30,12 @@ select * from check_env;
 -- 'gpfdist' protocol
 -- --------------------------------------
 CREATE EXTERNAL WEB TABLE gpfdist2_start (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 2; echo "starting...") '
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 1; echo "starting...") '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 
 CREATE EXTERNAL WEB TABLE gpfdist2_stop (x text)
-execute E'(/bin/pkill gpfdist || killall gpfdist) > /dev/null 2>&1; echo "stopping..."'
+execute E'(ps -A |grep [g]pfdist |awk \'{print $1;}\' |xargs kill) > /dev/null 2>&1; echo "stopping..."'
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 

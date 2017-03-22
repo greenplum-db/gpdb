@@ -6,26 +6,27 @@
 -- check platform and start 'gpfdist'
 -- --------------------------------------
 set optimizer_disable_missing_stats_collection = on;
-CREATE EXTERNAL WEB TABLE gpfdist_status (x text)
-execute E'( python @bindir@/gppinggpfdist.py @hostname@:7575 2>&1 || echo) '
-on SEGMENT 0
-FORMAT 'text' (delimiter '|');
 
 CREATE EXTERNAL WEB TABLE gpfdist_start (x text)
-execute E'((@bindir@/gpfdist -p 7575 -d @abs_srcdir@/data/fixedwidth/  </dev/null >/dev/null 2>&1 &); sleep 2; echo "starting...") '
+execute E'((@bindir@/gpfdist -p 7575 -d @abs_srcdir@/data/fixedwidth/  </dev/null >/dev/null 2>&1 &); sleep 1; echo "starting...") '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 
 CREATE EXTERNAL WEB TABLE gpfdist_stop (x text)
-execute E'(/bin/pkill gpfdist || killall gpfdist) > /dev/null 2>&1; echo "stopping..."'
+execute E'(ps -A |grep [g]pfdist |awk \'{print $1;}\' |xargs kill) > /dev/null 2>&1; echo "stopping..."'
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 
 -- start_ignore
+-- CREATE EXTERNAL WEB TABLE gpfdist_status (x text)
+-- execute E'( python @bindir@/gppinggpfdist.py @hostname@:7575 2>&1 || echo) '
+-- on SEGMENT 0
+-- FORMAT 'text' (delimiter '|');
+
 SELECT * FROM gpfdist_stop;
-SELECT * FROM gpfdist_status;
+-- SELECT * FROM gpfdist_status;
 SELECT * FROM gpfdist_start;
-SELECT * FROM gpfdist_status;
+-- SELECT * FROM gpfdist_status;
 -- end_ignore
 
 -- --------------------------------------
@@ -369,21 +370,18 @@ SELECT * FROM clean_out_file;
 -- --------------------------------------
 
 -- start_ignore
-SELECT * FROM gpfdist_status;
+-- SELECT * FROM gpfdist_status;
 SELECT * FROM gpfdist_stop;
-SELECT * FROM gpfdist_status;
+-- SELECT * FROM gpfdist_status;
 -- end_ignore
 
 -- --------------------------------------
 -- clean the database
 -- --------------------------------------
 
-DROP EXTERNAL TABLE IF EXISTS gpfdist_status;
 DROP EXTERNAL TABLE IF EXISTS gpfdist_start;
 DROP EXTERNAL TABLE IF EXISTS gpfdist_stop;
 DROP EXTERNAL WEB TABLE IF EXISTS clean_out_file;
  
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
 DROP EXTERNAL TABLE IF EXISTS tbl_out_fixedwidth;
-
-

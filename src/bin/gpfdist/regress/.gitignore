@@ -4,3 +4,5 @@ data/wet_region.out
 sql
 expected
 results
+data/gpfdist_ssl/tbl2.tbl
+data/gpfdist_ssl/certs_matching

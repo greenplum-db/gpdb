@@ -9,45 +9,15 @@ CREATE TABLE REG_REGION (R_REGIONKEY INT, R_NAME CHAR(25), R_COMMENT VARCHAR(152
 -- --------------------------------------
 -- 'gpfdist' protocol
 -- --------------------------------------
-CREATE EXTERNAL WEB TABLE exttab1_gpfdist_status (x text)
-execute E'( python @bindir@/gppinggpfdist.py @hostname@:7070 2>&1 || echo) '
-on SEGMENT 0
-FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL WEB TABLE exttab1_gpfdist_start (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 2; echo "starting...") '
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 1; echo "starting...") '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL WEB TABLE exttab1_gpfdist_stop (x text)
-execute E'(/bin/pkill gpfdist || killall gpfdist) > /dev/null 2>&1; echo "stopping..."'
+execute E'(ps -A |grep [g]pfdist |awk \'{print $1;}\' |xargs kill) > /dev/null 2>&1; echo "stopping..."'
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 -- start_ignore
-select * from exttab1_gpfdist_stop;
-      x      
--------------
- stopping...
-(1 row)
-
-select * from exttab1_gpfdist_status;
-                          x                           
-------------------------------------------------------
- Error: gpfdist is not running (reason: socket error)
- Exit: 1
- 
-(3 rows)
-
-select * from exttab1_gpfdist_start;
-      x      
--------------
- starting...
-(1 row)
-
-select * from exttab1_gpfdist_status;
-                                     x                                     
----------------------------------------------------------------------------
- Okay, gpfdist version "main build dev" is running on @hostname@:7070.
-(1 row)
-
 -- end_ignore
 CREATE EXTERNAL TABLE EXT_NATION  ( N_NATIONKEY  INTEGER ,
                             N_NAME       CHAR(25) ,
@@ -177,26 +147,6 @@ SELECT * FROM EXT_REGION as r, EXT_NATION as n WHERE n.N_REGIONKEY = r.R_REGIONK
 (25 rows)
 
 -- start_ignore
-select * from exttab1_gpfdist_status;
-                                     x                                     
----------------------------------------------------------------------------
- Okay, gpfdist version "main build dev" is running on @hostname@:7070.
-(1 row)
-
-select * from exttab1_gpfdist_stop;
-      x      
--------------
- stopping...
-(1 row)
-
-select * from exttab1_gpfdist_status;
-                          x                           
-------------------------------------------------------
- Error: gpfdist is not running (reason: socket error)
- Exit: 1
- 
-(3 rows)
-
 -- end_ignore
 -- drop tables
 DROP EXTERNAL TABLE EXT_NATION;
@@ -207,7 +157,7 @@ DROP EXTERNAL TABLE EXT_REGION;
 -- gpfdist in csv (mpp-1519, etc)
 --
 CREATE EXTERNAL WEB TABLE gpfdist_csv_start (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 2; echo "starting...") '
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 1; echo "starting...") '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 -- 
@@ -215,40 +165,6 @@ FORMAT 'text' (delimiter '|');
 -- (end the double quote so emacs highlighting works correctly)
 --
 -- start_ignore
-select * from exttab1_gpfdist_status;
-                          x                           
-------------------------------------------------------
- Error: gpfdist is not running (reason: socket error)
- Exit: 1
- 
-(3 rows)
-
-select * from exttab1_gpfdist_stop;
-      x      
--------------
- stopping...
-(1 row)
-
-select * from exttab1_gpfdist_status;
-                          x                           
-------------------------------------------------------
- Error: gpfdist is not running (reason: socket error)
- Exit: 1
- 
-(3 rows)
-
-select * from gpfdist_csv_start;
-      x      
--------------
- starting...
-(1 row)
-
-select * from exttab1_gpfdist_status;
-                                     x                                     
----------------------------------------------------------------------------
- Okay, gpfdist version "main build dev" is running on @hostname@:7070.
-(1 row)
-
 -- end_ignore
 create external table ext_whois (
 source_lineno			int,
@@ -566,26 +482,6 @@ INSERT INTO ext_table_multi_locations SELECT * FROM table_multi_locations;
 DROP TABLE IF EXISTS table_multi_locations;
 DROP EXTERNAL TABLE IF EXISTS ext_table_multi_locations;
 -- start_ignore
-select * from exttab1_gpfdist_status;
-                                     x                                     
----------------------------------------------------------------------------
- Okay, gpfdist version "main build dev" is running on @hostname@:7070.
-(1 row)
-
-select * from exttab1_gpfdist_stop;
-      x      
--------------
- stopping...
-(1 row)
-
-select * from exttab1_gpfdist_status;
-                          x                           
-------------------------------------------------------
- Error: gpfdist is not running (reason: socket error)
- Exit: 1
- 
-(3 rows)
-
 -- end_ignore
 --
 -- get an error for missing gpfdist
@@ -593,12 +489,9 @@ select * from exttab1_gpfdist_status;
 select count(*) from ext_whois;
 ERROR:  connection with gpfdist failed for gpfdist://@hostname@:7070/whois.csv. effective url: http://127.0.0.1:7070/whois.csv. error code = 61 (Connection refused)  (seg1 slice1 @hostname@:50001 pid=64820)
 drop external table ext_whois;
-drop external table exttab1_gpfdist_status;
 drop external table exttab1_gpfdist_start;
 drop external table gpfdist_csv_start;
 drop external table exttab1_gpfdist_stop;
-drop external table check_ps;
-drop external table check_env;
 drop external table wet_pos1;
 drop external table wet_pos2;
 drop external table wet_pos3;

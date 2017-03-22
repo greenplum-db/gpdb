@@ -9,20 +9,20 @@ CREATE TABLE REG_REGION (R_REGIONKEY INT, R_NAME CHAR(25), R_COMMENT VARCHAR(152
 -- --------------------------------------
 -- check platform
 -- --------------------------------------
-drop external web table if exists check_ps;
-CREATE EXTERNAL WEB TABLE check_ps (x text)
-execute E'( (ps -ef || ps -aux) | grep gpfdist | grep -v grep)'
-on SEGMENT 0
-format 'text';
+-- drop external web table if exists check_ps;
+-- CREATE EXTERNAL WEB TABLE check_ps (x text)
+-- execute E'( (ps -ef || ps -aux) | grep gpfdist | grep -v grep)'
+-- on SEGMENT 0
+-- format 'text';
 
-drop external web table if exists check_env;
-CREATE EXTERNAL WEB TABLE check_env (x text)
-execute E'( env | sort)'
-on SEGMENT 0
-format 'text';
+-- drop external web table if exists check_env;
+-- CREATE EXTERNAL WEB TABLE check_env (x text)
+-- execute E'( env | sort)'
+-- on SEGMENT 0
+-- format 'text';
 
-select * from check_ps;
-select * from check_env;
+-- select * from check_ps;
+-- select * from check_env;
 
 -- end_ignore
 
@@ -31,26 +31,19 @@ select * from check_env;
 -- 'gpfdist' protocol
 -- --------------------------------------
 
-CREATE EXTERNAL WEB TABLE exttab1_gpfdist_status (x text)
-execute E'( python @bindir@/gppinggpfdist.py @hostname@:7070 2>&1 || echo) '
-on SEGMENT 0
-FORMAT 'text' (delimiter '|');
-
 CREATE EXTERNAL WEB TABLE exttab1_gpfdist_start (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 2; echo "starting...") '
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 1; echo "starting...") '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 
 CREATE EXTERNAL WEB TABLE exttab1_gpfdist_stop (x text)
-execute E'(/bin/pkill gpfdist || killall gpfdist) > /dev/null 2>&1; echo "stopping..."'
+execute E'(ps -A |grep [g]pfdist |awk \'{print $1;}\' |xargs kill) > /dev/null 2>&1; echo "stopping..."'
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 
 -- start_ignore
 select * from exttab1_gpfdist_stop;
-select * from exttab1_gpfdist_status;
 select * from exttab1_gpfdist_start;
-select * from exttab1_gpfdist_status;
 -- end_ignore
 
 CREATE EXTERNAL TABLE EXT_NATION  ( N_NATIONKEY  INTEGER ,
@@ -85,9 +78,7 @@ SELECT * FROM EXT_REGION;
 SELECT * FROM EXT_REGION as r, EXT_NATION as n WHERE n.N_REGIONKEY = r.R_REGIONKEY;
 
 -- start_ignore
-select * from exttab1_gpfdist_status;
 select * from exttab1_gpfdist_stop;
-select * from exttab1_gpfdist_status;
 -- end_ignore
 
 -- drop tables
@@ -100,7 +91,7 @@ DROP EXTERNAL TABLE EXT_REGION;
 -- gpfdist in csv (mpp-1519, etc)
 --
 CREATE EXTERNAL WEB TABLE gpfdist_csv_start (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 2; echo "starting...") '
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 1; echo "starting...") '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 -- 
@@ -108,11 +99,8 @@ FORMAT 'text' (delimiter '|');
 -- (end the double quote so emacs highlighting works correctly)
 --
 -- start_ignore
-select * from exttab1_gpfdist_status;
 select * from exttab1_gpfdist_stop;
-select * from exttab1_gpfdist_status;
 select * from gpfdist_csv_start;
-select * from exttab1_gpfdist_status;
 -- end_ignore
 
 create external table ext_whois (
@@ -239,6 +227,11 @@ drop external table ext_fill1;
 drop external table ext_fill2;
 drop external table ext_fill3_fnn;
 drop external table ext_fill4_fnn;
+
+-- start_ignore
+drop external table if exists ext_newline1;
+drop external table if exists ext_newline2;
+-- end_ignore
 
 -- test NEWLINE
 create external table ext_newline1(N_NATIONKEY INT, N_NAME text, N_REGIONKEY INT, N_COMMENT text)
@@ -373,9 +366,7 @@ DROP TABLE IF EXISTS table_multi_locations;
 DROP EXTERNAL TABLE IF EXISTS ext_table_multi_locations;
 
 -- start_ignore
-select * from exttab1_gpfdist_status;
 select * from exttab1_gpfdist_stop;
-select * from exttab1_gpfdist_status;
 -- end_ignore
 
 --
@@ -384,12 +375,9 @@ select * from exttab1_gpfdist_status;
 select count(*) from ext_whois;
 
 drop external table ext_whois;
-drop external table exttab1_gpfdist_status;
 drop external table exttab1_gpfdist_start;
 drop external table gpfdist_csv_start;
 drop external table exttab1_gpfdist_stop;
-drop external table check_ps;
-drop external table check_env;
 drop external table wet_pos1;
 drop external table wet_pos2;
 drop external table wet_pos3;
