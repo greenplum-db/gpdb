@@ -16,6 +16,16 @@ class GpTestCase(unittest.TestCase):
         self.mock_objs = [p.start() for p in self.patches]
         self.__class__.apply_patches_counter += 1
 
+    def get_mock_obj(self, mock_name):
+        ''' Return None if there is no existing object
+            mock name prints out the last "namespace"
+            for example "os.path.exists", mock_name will be "exists"
+        '''
+        for mock_obj in self.mock_objs:
+            if mock_name == mock_obj._mock_name:
+                return mock_obj
+        return None
+
     # if you have a tearDown() in your test class,
     # be sure to call this using super(<child class name>, self).tearDown()
     def tearDown(self):
