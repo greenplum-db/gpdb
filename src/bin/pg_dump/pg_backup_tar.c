@@ -33,6 +33,7 @@
 #include "pg_backup_tar.h"
 #include "pg_backup_utils.h"
 #include "pgtar.h"
+#include "dumputils.h"
 
 #include <sys/stat.h>
 #include <ctype.h>
@@ -1016,6 +1017,10 @@ _CloseArchive(ArchiveHandle *AH)
 			if (fputc(0, ctx->tarFH) == EOF)
 				WRITE_ERROR_EXIT;
 		}
+
+		/* Sync the output file if one is defined */
+		if (AH->dosync && AH->fSpec)
+			(void) fsync_fname(AH->fSpec, false, progname);
 	}
 
 	AH->FH = NULL;

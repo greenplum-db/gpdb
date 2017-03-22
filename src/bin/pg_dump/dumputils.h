@@ -130,4 +130,7 @@ extern void buildACLQueries(PQExpBuffer acl_subquery, PQExpBuffer racl_subquery,
 				const char *acl_column, const char *acl_owner,
 				const char *obj_kind, bool binary_upgrade);
 
+extern void fsync_dir_recurse(const char *dir, const char *progname);
+extern int fsync_fname(const char *fname, bool isdir,
+					   const char *progname);
 #endif   /* DUMPUTILS_H */

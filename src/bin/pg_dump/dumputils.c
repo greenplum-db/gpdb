@@ -13,8 +13,11 @@
  *-------------------------------------------------------------------------
  */
 #include "postgres_fe.h"
-
 #include <ctype.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "dumputils.h"
 
@@ -35,6 +38,10 @@ static char *copyAclUserName(PQExpBuffer output, char *input);
 static void AddAcl(PQExpBuffer aclbuf, const char *keyword,
 	   const char *subname);
 static PQExpBuffer defaultGetLocalPQExpBuffer(void);
+
+static void walkdir(const char *path,
+		int (*action) (const char *fname, bool isdir, const char *progname),
+		bool process_symlinks, const char *progname);
 
 /* Globals exported by this file */
 int			quote_all_identifiers = 0;
@@ -2046,4 +2053,157 @@ buildACLQueries(PQExpBuffer acl_subquery, PQExpBuffer racl_subquery,
 		printfPQExpBuffer(init_acl_subquery, "NULL");
 		printfPQExpBuffer(init_racl_subquery, "NULL");
 	}
+}
+
+/*
+ * fsync_fname -- Try to fsync a file or directory
+ *
+ * Ignores errors trying to open unreadable files, or trying to fsync
+ * directories on systems where that isn't allowed/required.  Reports
+ * other errors non-fatally.
+ */
+int
+fsync_fname(const char *fname, bool isdir, const char *progname)
+{
+	int			fd;
+	int			flags;
+	int			returncode;
+
+	/*
+	 * Some OSs require directories to be opened read-only whereas other
+	 * systems don't allow us to fsync files opened read-only; so we need both
+	 * cases here.  Using O_RDWR will cause us to fail to fsync files that are
+	 * not writable by our userid, but we assume that's OK.
+	 */
+	flags = PG_BINARY;
+	if (!isdir)
+		flags |= O_RDWR;
+	else
+		flags |= O_RDONLY;
+
+	/*
+	 * Open the file, silently ignoring errors about unreadable files (or
+	 * unsupported operations, e.g. opening a directory under Windows), and
+	 * logging others.
+	 */
+	fd = open(fname, flags);
+	if (fd < 0)
+	{
+		if (errno == EACCES || (isdir && errno == EISDIR))
+			return 0;
+		fprintf(stderr, _("%s: could not open file \"%s\": %s\n"),
+				progname, fname, strerror(errno));
+		return -1;
+	}
+
+	returncode = fsync(fd);
+
+	/*
+	 * Some OSes don't allow us to fsync directories at all, so we can ignore
+	 * those errors. Anything else needs to be reported.
+	 */
+	if (returncode != 0 && !(isdir && errno == EBADF))
+	{
+		fprintf(stderr, _("%s: could not fsync file \"%s\": %s\n"),
+				progname, fname, strerror(errno));
+		(void) close(fd);
+		return -1;
+	}
+
+	(void) close(fd);
+	return 0;
+}
+
+/*
+ * Issue fsync recursively on the given directory and all its contents.
+ *
+ * This is a convenient wrapper on top of walkdir().
+ */
+void
+fsync_dir_recurse(const char *dir, const char *progname)
+{
+	/*
+	 * If possible, hint to the kernel that we're soon going to fsync the data
+	 * directory and its contents.
+	 */
+#ifdef PG_FLUSH_DATA_WORKS
+	walkdir(dir, pre_sync_fname, false, progname);
+#endif
+
+	walkdir(dir, fsync_fname, false, progname);
+}
+
+/*
+ * walkdir: recursively walk a directory, applying the action to each
+ * regular file and directory (including the named directory itself).
+ *
+ * If process_symlinks is true, the action and recursion are also applied
+ * to regular files and directories that are pointed to by symlinks in the
+ * given directory; otherwise symlinks are ignored.  Symlinks are always
+ * ignored in subdirectories, ie we intentionally don't pass down the
+ * process_symlinks flag to recursive calls.
+ *
+ * Errors are reported but not considered fatal.
+ *
+ * See also walkdir in fd.c, which is a backend version of this logic.
+ */
+static void
+walkdir(const char *path,
+		int (*action) (const char *fname, bool isdir, const char *progname),
+		bool process_symlinks, const char *progname)
+{
+	DIR		   *dir;
+	struct dirent *de;
+
+	dir = opendir(path);
+	if (dir == NULL)
+	{
+		fprintf(stderr, _("%s: could not open directory \"%s\": %s\n"),
+				progname, path, strerror(errno));
+		return;
+	}
+
+	while (errno = 0, (de = readdir(dir)) != NULL)
+	{
+		char		subpath[MAXPGPATH];
+		struct stat fst;
+		int			sret;
+
+		if (strcmp(de->d_name, ".") == 0 ||
+			strcmp(de->d_name, "..") == 0)
+			continue;
+
+		snprintf(subpath, MAXPGPATH, "%s/%s", path, de->d_name);
+
+		if (process_symlinks)
+			sret = stat(subpath, &fst);
+		else
+			sret = lstat(subpath, &fst);
+
+		if (sret < 0)
+		{
+			fprintf(stderr, _("%s: could not stat file \"%s\": %s\n"),
+					progname, subpath, strerror(errno));
+			continue;
+		}
+
+		if (S_ISREG(fst.st_mode))
+			(*action) (subpath, false, progname);
+		else if (S_ISDIR(fst.st_mode))
+			walkdir(subpath, action, false, progname);
+	}
+
+	if (errno)
+		fprintf(stderr, _("%s: could not read directory \"%s\": %s\n"),
+				progname, path, strerror(errno));
+
+	(void) closedir(dir);
+
+	/*
+	 * It's important to fsync the destination directory itself as individual
+	 * file fsyncs don't guarantee that the directory entry for the file is
+	 * synced.  Recent versions of ext4 have made the window much wider but
+	 * it's been an issue for ext3 and other filesystems in the past.
+	 */
+	(*action) (path, true, progname);
 }

@@ -30,6 +30,7 @@
 #include "pg_backup.h"
 #include "fe_utils/connect.h"
 #include "catalog/gp_segment_config.h"
+#include "dumputils.h"
 
 /* version string we expect back from pg_dump */
 #define PGDUMP_VERSIONSTR "pg_dump (PostgreSQL) " PG_VERSION "\n"
@@ -75,6 +76,7 @@ static PQExpBuffer pgdumpopts;
 static char *connstr = "";
 static bool skip_acls = false;
 static bool verbose = false;
+static bool dosync = true;
 
 static int	resource_queues = 0;
 static int	resource_groups = 0;
@@ -144,6 +146,7 @@ main(int argc, char *argv[])
 		{"role", required_argument, NULL, 3},
 		{"use-set-session-authorization", no_argument, &use_setsessauth, 1},
 		{"no-security-labels", no_argument, &no_security_labels, 1},
+		{"no-sync", no_argument, NULL, 4},
 		{"no-unlogged-table-data", no_argument, &no_unlogged_table_data, 1},
 		{"no-role-passwords", no_argument, &no_role_passwords, 1},
 
@@ -331,6 +334,11 @@ main(int argc, char *argv[])
 				appendShellString(pgdumpopts, use_role);
 				break;
 
+			case 4:
+				dosync = false;
+				appendPQExpBufferStr(pgdumpopts, " --no-sync");
+				break;
+
 				/* START MPP ADDITION */
 			case 1000:
 				/* gp-format */
@@ -346,6 +354,7 @@ main(int argc, char *argv[])
 				break;
 
 				/* END MPP ADDITION */
+
 
 			default:
 				fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
@@ -631,7 +640,13 @@ main(int argc, char *argv[])
 	fprintf(OPF, "--\n-- PostgreSQL database cluster dump complete\n--\n\n");
 
 	if (filename)
+	{
 		fclose(OPF);
+
+		/* sync the resulting file, errors are not fatal */
+		if (dosync)
+			(void) fsync_fname(filename, false, progname);
+	}
 
 	exit_nicely(0);
 }
@@ -670,6 +685,7 @@ help(void)
 	printf(_("  --if-exists                  use IF EXISTS when dropping objects\n"));
 	printf(_("  --inserts                    dump data as INSERT commands, rather than COPY\n"));
 	printf(_("  --no-security-labels         do not dump security label assignments\n"));
+	printf(_("  --no-sync                    do not wait for changes to be written safely to disk\n"));
 	printf(_("  --no-tablespaces             do not dump tablespace assignments\n"));
 	printf(_("  --no-unlogged-table-data     do not dump unlogged table data\n"));
 	printf(_("  --no-role-passwords          do not dump passwords for roles\n"));

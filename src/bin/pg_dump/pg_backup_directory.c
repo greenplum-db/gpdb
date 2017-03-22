@@ -37,6 +37,7 @@
 #include "compress_io.h"
 #include "parallel.h"
 #include "pg_backup_utils.h"
+#include "dumputils.h"
 
 #include <dirent.h>
 #include <sys/stat.h>
@@ -597,6 +598,13 @@ _CloseArchive(ArchiveHandle *AH)
 		WriteDataChunks(AH, ctx->pstate);
 
 		ParallelBackupEnd(AH, ctx->pstate);
+
+		/*
+		 * In directory mode, there is no need to sync all the entries
+		 * individually. Just recurse once through all the files generated.
+		 */
+		if (AH->dosync)
+			fsync_dir_recurse(ctx->directory, progname);
 	}
 	AH->FH = NULL;
 }
