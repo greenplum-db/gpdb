@@ -1405,7 +1405,6 @@ def verify_restored_table_is_analyzed(context, table_name, dbname):
             schema_name = escape_string(schema_name, conn=conn)
             table_name = escape_string(table_name, conn=conn)
         else:
-            return False
             schema_name = pg.escape_string(schema_name)
             table_name = pg.escape_string(table_name)
 
