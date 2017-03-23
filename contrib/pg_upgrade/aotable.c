@@ -118,7 +118,14 @@ restore_aosegment_tables(migratorContext *ctx)
 	int			dbnum;
 
 	prep_status(ctx, "Restoring append-only auxiliary tables in new cluster");
+
+	/*
+	 * Rebuilding gp_relation_node can potentially take some time in a large
+	 * cluster so swap out the current progress file before starting so that
+	 * the user can see what's going on.
+	 */
 	report_progress(ctx, CLUSTER_NEW, FIXUP, "Rebuilding AO auxiliary tables");
+	close_progress(ctx);
 
 	for (dbnum = 0; dbnum < ctx->old.dbarr.ndbs; dbnum++)
 	{

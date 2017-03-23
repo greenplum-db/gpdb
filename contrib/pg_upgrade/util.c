@@ -322,7 +322,7 @@ opname(progress_type op)
 }
 
 static unsigned long
-epoch_ms(void)
+epoch_us(void)
 {
 	struct timeval	tv;
 
@@ -342,7 +342,7 @@ report_progress(migratorContext *ctx, Cluster cluster, progress_type op, char *f
 	if (!ctx->progress)
 		return;
 
-	ts = epoch_ms();
+	ts = epoch_us();
 
 	va_start(args, fmt);
 	vsnprintf(message, sizeof(message), fmt, args);
@@ -358,7 +358,7 @@ report_progress(migratorContext *ctx, Cluster cluster, progress_type op, char *f
 	}
 
 	fprintf(progress_file, "%lu;%s;%s;%s;\n",
-			epoch_ms(), CLUSTERNAME(cluster), opname(op), message);
+			epoch_us(), CLUSTERNAME(cluster), opname(op), message);
 	progress_counter++;
 
 	/*
@@ -388,5 +388,5 @@ close_progress(migratorContext *ctx)
 
 	rename(old, new);
 	progress_counter = 0;
-	progress_prev = epoch_ms();
+	progress_prev = epoch_us();
 }
