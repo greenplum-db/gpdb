@@ -1536,11 +1536,12 @@ static int session_attach(request_t* r)
 		{
 			int quote = 0;
 			int escape = 0;
-
-			sscanf(r->csvopt, "m%dx%dq%dh%d", &fstream_options.is_csv, &escape,
-					&quote, &fstream_options.header);
+			int eol_type = 0;
+			sscanf(r->csvopt, "m%dx%dq%dn%dh%d", &fstream_options.is_csv, &escape,
+					&quote, &eol_type, &fstream_options.header);
 			fstream_options.quote = quote;
 			fstream_options.escape = escape;
+			fstream_options.eol_type = eol_type;
 		}
 
 		/* set fstream for read (GET) or write (PUT) */

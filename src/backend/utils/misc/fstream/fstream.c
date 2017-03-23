@@ -10,6 +10,8 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #endif
+#include <postgres.h>
+#include <commands/copy.h>
 #include <fstream/fstream.h>
 #include <assert.h>
 #include <glob.h>
@@ -180,22 +182,22 @@ fstream_get_error(fstream_t*fs)
  * the data from the start in order to find the last unquoted newline.
  *
  */
+
 static char*
-scan_csv_records(char *p, char *q, int one, fstream_t *fs)
+scan_csv_records_crlf(char *p, char* q, int one, fstream_t* fs)
 {
 	int 	in_quote = 0;
 	int 	last_was_esc = 0;
 	int 	qc = fs->options.quote;
 	int 	xc = fs->options.escape;
 	char*	last_record_loc = 0;
-	int64_t line_number = fs->line_number;
+	int 	ch = 0;
+	int 	lastch = 0;
 
 	while (p < q)
 	{
-		int ch = *p++;
-
-		if (ch == '\n')
-			line_number++;
+		lastch = ch;
+		ch = *p++;
 
 		if (in_quote)
 		{
@@ -209,10 +211,10 @@ scan_csv_records(char *p, char *q, int one, fstream_t *fs)
 			else
 				last_was_esc = 0;
 		}
-		else if (ch == '\n')
+		else if (ch == '\n' && lastch == '\r')
 		{
 			last_record_loc = p;
-			fs->line_number = line_number;
+			fs->line_number++;
 			if (one)
 				break;
 		}
@@ -223,6 +225,59 @@ scan_csv_records(char *p, char *q, int one, fstream_t *fs)
 	return last_record_loc;
 }
 
+static char*
+scan_csv_records_cr_or_lf(char *p, char *q, int one, fstream_t *fs, int nc)
+{
+	int 	in_quote = 0;
+	int 	last_was_esc = 0;
+	int 	qc = fs->options.quote;
+	int 	xc = fs->options.escape;
+	char*	last_record_loc = 0;
+
+	while (p < q)
+	{
+		int ch = *p++;
+
+		if (in_quote)
+		{
+			if (!last_was_esc)
+			{
+				if (ch == qc)
+					in_quote = 0;
+				else if (ch == xc)
+					last_was_esc = 1;
+			}
+			else
+				last_was_esc = 0;
+		}
+		else if (ch == nc)
+		{
+			last_record_loc = p;
+			fs->line_number++;
+			if (one)
+				break;
+		}
+		else if (ch == qc)
+			in_quote = 1;
+	}
+
+	return last_record_loc;
+}
+
+static char*
+scan_csv_records(char *p, char *q, int one, fstream_t *fs)
+{
+	switch(fs->options.eol_type)
+	{
+		case EOL_CRLF:
+		   return scan_csv_records_crlf(p, q, one, fs);
+		case EOL_CR:
+		   return scan_csv_records_cr_or_lf(p, q, one, fs, '\r');
+		case EOL_LF:
+		default:
+		   return scan_csv_records_cr_or_lf(p, q, one, fs, '\n');
+	}
+}
 /* close the file stream */
 void fstream_close(fstream_t* fs)
 {
