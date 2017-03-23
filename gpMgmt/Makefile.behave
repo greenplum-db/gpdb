@@ -3,7 +3,7 @@ PYLIB_SRC=$(GPMGMT_SRC)/bin/pythonSrc
 PYLIB_SRC_EXT=$(PYLIB_SRC)/ext
 PYTHONSRC_INSTALL=$(PYLIB_SRC_EXT)/install
 BEHAVE_BIN=$(PYTHONSRC_INSTALL)/bin/behave
-PYTHONSRC_INSTALL_SITE=$(PYLIB_SRC_EXT)/install/lib/python2.7/site-packages
+PYTHONSRC_INSTALL_SITE=$(shell find $(PYLIB_SRC_EXT)/install/lib -name "site-packages")
 PYTHONSRC_INSTALL_PYTHON_PATH=$(PYTHONPATH):$(PYTHONSRC_INSTALL_SITE)
 TAR?=$(shell which tar)
 
