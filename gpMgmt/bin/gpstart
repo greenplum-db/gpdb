@@ -58,7 +58,7 @@ class GpStart:
                  timeout=SEGMENT_TIMEOUT_DEFAULT,
                  logfileDirectory=False
                  ):
-        assert(specialMode in [None, 'upgrade', 'maintenance'])
+        assert(specialMode in [None, 'maintenance'])
         self.specialMode=specialMode
         self.restricted=restricted
         self.start_standby=start_standby
@@ -236,9 +236,7 @@ class GpStart:
 
         dir_catversion = gp.GpCatVersionDirectory.local('local GP directory catalog version check', self.master_datadir)
 
-        # If it's in upgrade mode, we don't need to check the cat version because gpmigrator have checked
-        # it already.
-        if (self.specialMode != 'upgrade' and bin_catversion != dir_catversion):
+        if bin_catversion != dir_catversion:
             logger.info("MASTER_DIRECTORY Catalog Version: '%s'" % dir_catversion)
             logger.info("Catalog Version of master directory incompatible with binaries")
             raise ExceptionNoStackTraceNeeded("Catalog Versions are incompatible")
@@ -683,11 +681,6 @@ class GpStart:
 
             logger.info("----------------------------------------------------")
 
-        # MPP-14014
-        # don't confuse the user with warning about intentionally invalid segments during upgrade
-        if self.specialMode == 'upgrade':
-            return
-
         if len(invalidSegments) > 0:
             logger.warning("****************************************************************************")
             logger.warning("There are %d segment(s) marked down in the database" % len(invalidSegments))
@@ -732,10 +725,6 @@ class GpStart:
         if self.restricted:
             restrict_txt = "in RESTRICTED mode"
 
-        is_upgrade_mode = False
-        if self.specialMode == 'upgrade':
-            is_upgrade_mode = True
-
         standby_dbid = 0
         if self.gparray.standbyMaster:
             standby_dbid = self.gparray.standbyMaster.getSegmentDbId()
@@ -761,22 +750,13 @@ class GpStart:
 
         logger.info("Command pg_ctl reports Master %s instance active" % self.gparray.master.hostname)
 
-        # verify we can connect to the master
-        # MPP-15604 - use bootstrap user during upgrade
-        msg = None
-        testurl = self.dburl
-        if is_upgrade_mode:
-            testurl = copy.copy(testurl)
-            testurl.pguser = gp.get_user()
-            logger.info("Testing connection as user %s" % testurl.pguser)
-
         try:
-            masterconn = dbconn.connect(testurl, upgrade=is_upgrade_mode)
+            masterconn = dbconn.connect(testurl)
             masterconn.close()
 
         except Exception, e:
             # MPP-14016.  While certain fts scenarios will trigger initial connection failures
-            # we still need watch for PANIC events, especially during upgrades.
+            # we still need watch for PANIC events.
             msg = str(e)
             if 'PANIC' in msg:
                 logger.critical(msg)
@@ -832,8 +812,8 @@ class GpStart:
 
         addTo = OptionGroup(parser, 'Database startup options: ')
         parser.add_option_group(addTo)
-        addTo.add_option('-U', '--specialMode', type='choice', choices=['upgrade', 'maintenance'],
-                           metavar='upgrade|maintenance', action='store', default=None,
+        addTo.add_option('-U', '--specialMode', type='choice', choices=['maintenance'],
+                           metavar='maintenance', action='store', default=None,
                            help=SUPPRESS_HELP)
         addTo.add_option('-m', '--master_only', action='store_true',
                             help='start master instance only in maintenance mode')

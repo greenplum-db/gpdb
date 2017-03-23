@@ -152,8 +152,7 @@ class DbURL:
 
 
 def connect(dburl, utility=False, verbose=False,
-            encoding=None, allowSystemTableMods=None, upgrade=False,
-            logConn=True):
+            encoding=None, allowSystemTableMods=None, logConn=True):
 
     if utility:
         options = '-c gp_session_role=utility'
@@ -165,10 +164,6 @@ def connect(dburl, utility=False, verbose=False,
         options += ' -c allow_system_table_mods=' + allowSystemTableMods
     elif allowSystemTableMods is not None:
         raise Exception('allowSystemTableMods invalid: %s' % allowSystemTableMods)
-
-    # gpmigrator needs gpstart to make master connection in maintenance mode
-    if upgrade:
-        options += ' -c gp_maintenance_conn=true'
 
     # bypass pgdb.connect() and instead call pgdb._connect_
     # to avoid silly issues with : in ipv6 address names and the url string
