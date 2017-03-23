@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
+# Copyright (c) Greenplum Inc 2008. All Rights Reserved.
 #
 """
 TODO: module docs
@@ -9,7 +9,7 @@ import sys
 import os
 import stat
 
-try: 
+try:
     from pygresql import pgdb
     from gppylib.commands.unix import UserId
 
@@ -28,22 +28,22 @@ class Pgpass():
     """
     entries = []
     valid_pgpass = True
-    
+
     def __init__(self):
         HOME = os.getenv('HOME')
         PGPASSFILE = os.getenv('PGPASSFILE', '%s/.pgpass' % HOME)
-        
+
         if not os.path.exists(PGPASSFILE):
             return
-        
+
         st_info = os.stat(PGPASSFILE)
         mode = str(oct(st_info[stat.ST_MODE] & 0777))
-        
+
         if mode != "0600":
             print 'WARNING: password file "%s" has group or world access; permissions should be u=rw (0600) or less' % PGPASSFILE
             self.valid_pgpass = False
             return
-        
+
         try:
             fp = open(PGPASSFILE, 'r')
             try:
@@ -61,7 +61,7 @@ class Pgpass():
                                  'password': password }
                         self.entries.append(entry)
                     except:
-                        print 'Invalid line in .pgpass file.  Line number %d' % lineno 
+                        print 'Invalid line in .pgpass file.  Line number %d' % lineno
                     lineno += 1
             except IOError:
                 pass
@@ -70,7 +70,7 @@ class Pgpass():
         except OSError:
             pass
 
-    
+
     def get_password(self, username, hostname, port, database):
         for entry in self.entries:
             if ((entry['hostname'] == hostname or entry['hostname'] == '*') and
@@ -79,42 +79,42 @@ class Pgpass():
                (entry['username'] == username or entry['username'] == '*')):
                 return entry['password']
         return None
-    
+
     def pgpass_valid(self):
         return self.valid_pgpass
-        
+
 class DbURL:
-    """ DbURL is used to store all of the data required to get at a PG 
+    """ DbURL is used to store all of the data required to get at a PG
         or GP database.
-    
+
     """
     pghost='foo'
     pgport=5432
     pgdb='template1'
     pguser='username'
-    pgpass='pass'    
+    pgpass='pass'
     timeout=None
-    retries=None 
+    retries=None
 
     def __init__(self,hostname=None,port=0,dbname=None,username=None,password=None,timeout=None,retries=None):
-        
+
         if hostname is None:
             self.pghost = os.environ.get('PGHOST', 'localhost')
         else:
             self.pghost = hostname
-            
+
         if port is 0:
             self.pgport = int(os.environ.get('PGPORT', '5432'))
         else:
             self.pgport = int(port)
-                    
+
         if dbname is None:
             self.pgdb = os.environ.get('PGDATABASE', 'template1')
         else:
             self.pgdb = dbname
 
         if username is None:
-            self.pguser = os.environ.get('PGUSER', os.environ.get('USER', UserId.local('Get uid')))             
+            self.pguser = os.environ.get('PGUSER', os.environ.get('USER', UserId.local('Get uid')))
             if self.pguser is None or self.pguser == '':
                 raise Exception('Both $PGUSER and $USER env variables are not set!')
         else:
@@ -130,7 +130,7 @@ class DbURL:
                     self.pgpass = os.environ.get('PGPASSWORD', None)
         else:
             self.pgpass = password
-    
+
         if timeout is not None:
             self.timeout = int(timeout)
 
@@ -148,7 +148,7 @@ class DbURL:
             return '[' + s + ']'
 
         return "%s:%d:%s:%s:%s" % \
-            (canonicalize(self.pghost),self.pgport,self.pgdb,self.pguser,self.pgpass)    
+            (canonicalize(self.pghost),self.pgport,self.pgdb,self.pguser,self.pgpass)
 
 
 def connect(dburl, utility=False, verbose=False,
@@ -156,7 +156,7 @@ def connect(dburl, utility=False, verbose=False,
             logConn=True):
 
     if utility:
-        options = '-c gp_session_role=utility' 
+        options = '-c gp_session_role=utility'
     else:
         options = ''
 
@@ -169,7 +169,7 @@ def connect(dburl, utility=False, verbose=False,
     # gpmigrator needs gpstart to make master connection in maintenance mode
     if upgrade:
         options += ' -c gp_maintenance_conn=true'
-    
+
     # bypass pgdb.connect() and instead call pgdb._connect_
     # to avoid silly issues with : in ipv6 address names and the url string
     #
@@ -220,7 +220,7 @@ def connect(dburl, utility=False, verbose=False,
         raise ConnectionError('Failed to connect to %s' % dbbase)
 
     conn = pgdb.pgdbCnx(cnx)
-    
+
     #by default, libpq will print WARNINGS to stdout
     if not verbose:
         cursor=conn.cursor()
@@ -233,18 +233,18 @@ def connect(dburl, utility=False, verbose=False,
         cursor=conn.cursor()
         cursor.execute("SET CLIENT_ENCODING='%s'" % encoding)
         conn.commit()
-        cursor.close()   
-        
-    def __enter__(self): 
+        cursor.close()
+
+    def __enter__(self):
         return self
     def __exit__(self, type, value, traceback):
         self.close()
     conn.__class__.__enter__, conn.__class__.__exit__ = __enter__, __exit__
-    return conn 
+    return conn
 
 
-def execSQL(conn,sql):    
-    """ 
+def execSQL(conn,sql):
+    """
     If necessary, user must invoke conn.commit().
     Do *NOT* violate that API here without considering
     the existing callers of this function.
@@ -293,7 +293,7 @@ def execSQLForSingleton(conn, sql):
 def executeUpdateOrInsert(conn, sql, expectedRowUpdatesOrInserts):
     cursor=conn.cursor()
     cursor.execute(sql)
-    
+
     if cursor.rowcount != expectedRowUpdatesOrInserts :
         raise Exception("SQL affected %s rows but %s were expected:\n%s" % \
                         (cursor.rowcount, expectedRowUpdatesOrInserts, sql))
