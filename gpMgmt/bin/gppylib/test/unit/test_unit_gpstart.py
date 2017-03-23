@@ -9,17 +9,14 @@ from gppylib.test.unit.gp_unittest import GpTestCase, run_tests
 
 class GpStart(GpTestCase):
     def setUp(self):
-        # because gpconfig does not have a .py extension,
+        # because gpstart does not have a .py extension,
         # we have to use imp to import it
-        # if we had a gpconfig.py, this is equivalent to:
-        #   import gpconfig
-        #   self.subject = gpconfig
-        gpstop_file = os.path.abspath(os.path.dirname(__file__) + "/../../../gpstart")
-        self.subject = imp.load_source('gpstart', gpstop_file)
+        # if we had a gpstart.py, this is equivalent to:
+        #   import gpstart
+        #   self.subject = gpstart
+        gpstart_file = os.path.abspath(os.path.dirname(__file__) + "/../../../gpstart")
+        self.subject = imp.load_source('gpstart', gpstart_file)
         self.subject.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
-
-        self.mock_gp = Mock()
-        self.mock_pgconf = Mock()
 
         self.gparray = self.createGpArrayWith2Primary2Mirrors()
 
@@ -37,10 +34,10 @@ class GpStart(GpTestCase):
             patch('gpstart.userinput'),
         ])
 
-        self.mock_os = self.get_mock_obj('exists')
-        self.mock_gp = self.get_mock_obj('gp')
-        self.mock_pgconf = self.get_mock_obj('pgconf')
-        self.mock_userinput = self.get_mock_obj('userinput')
+        self.mock_os_path_exists = self.get_mock_from_apply_patch('exists')
+        self.mock_gp = self.get_mock_from_apply_patch('gp')
+        self.mock_pgconf = self.get_mock_from_apply_patch('pgconf')
+        self.mock_userinput = self.get_mock_from_apply_patch('userinput')
 
         self.mock_pgconf.readfile.return_value = Mock()
 
@@ -70,7 +67,7 @@ class GpStart(GpTestCase):
         self.mock_userinput.ask_yesno.return_value = True
         self.subject.unix.PgPortIsActive.local.return_value = False
 
-        self.mock_os.side_effect = os_exists_check
+        self.mock_os_path_exists.side_effect = os_exists_check
 
         parser = self.subject.GpStart.createParser()
         options, args = parser.parse_args()
@@ -89,7 +86,7 @@ class GpStart(GpTestCase):
         self.mock_userinput.ask_yesno.return_value = True
         self.subject.unix.PgPortIsActive.local.return_value = False
 
-        self.mock_os.side_effect = os_exists_check
+        self.mock_os_path_exists.side_effect = os_exists_check
 
         parser = self.subject.GpStart.createParser()
         options, args = parser.parse_args()

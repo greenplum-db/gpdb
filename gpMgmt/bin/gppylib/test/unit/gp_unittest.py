@@ -16,7 +16,7 @@ class GpTestCase(unittest.TestCase):
         self.mock_objs = [p.start() for p in self.patches]
         self.__class__.apply_patches_counter += 1
 
-    def get_mock_obj(self, mock_name):
+    def get_mock_from_apply_patch(self, mock_name):
         ''' Return None if there is no existing object
             mock name prints out the last "namespace"
             for example "os.path.exists", mock_name will be "exists"
