@@ -889,8 +889,6 @@ SET_VERSION_SCRIPTS = \
 	bin/gpinitsystem \
 	bin/gpload.py \
 	bin/gplogfilter \
-	bin/gpmigrator \
-	bin/gpmigrator_mirror \
 	bin/gpmovemirrors \
 	bin/gprecoverseg \
 	bin/gpreload \

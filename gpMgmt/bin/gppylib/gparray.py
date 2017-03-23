@@ -1494,7 +1494,6 @@ class GpArray:
         (called by gpexpand.)
 
         Note: Currently this is only used by the gpexpand rollback facility,
-        and by gpmigrator utility,
         there is currently NO expectation that this file format is saved
         on disk in any long term fashion.
 

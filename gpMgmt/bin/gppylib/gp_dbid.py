@@ -19,8 +19,8 @@ STANDBY_DBID_RE = re.compile(r"standby_dbid\s*=\s*(\d+)")
 
 class GpDbidFile:
     """
-    Used by gpstart, gpinitstandby, gpactivatestandby and indirectly
-    by gpmigrator via gpsetdbid.py to manage the gp_dbid file.
+    Used by gpstart, gpinitstandby, and gpactivatestandby
+    via gpsetdbid.py to manage the gp_dbid file.
     """
 
     def __init__(self, datadir, do_read=False, logger=None):
