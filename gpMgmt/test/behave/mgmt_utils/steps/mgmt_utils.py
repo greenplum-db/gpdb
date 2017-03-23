@@ -383,6 +383,7 @@ def impl(context, HOST, PORT, USER, transition):
         run_command(context, trigger_transition)
         wait_till_change_tracking_transition(host,port,user)
     if transition == 'resync':
+        command = 'gpfaultinjector -f filerep_consumer -m async -y fault -r primary -H ALL'
         run_command_remote(context,command, host, source_file, export_mdd)
         run_command(context, trigger_transition)
         wait_till_change_tracking_transition(host,port,user)
