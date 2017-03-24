@@ -53,11 +53,9 @@ set_limits() {
 }
 
 setup_gpadmin_user() {
-  /usr/sbin/useradd gpadmin
-  echo -e "password\npassword" | passwd gpadmin
   groupadd supergroup
-  usermod -a -G supergroup gpadmin
-  usermod -a -G tty gpadmin
+  /usr/sbin/useradd -G supergroup,tty gpadmin
+  echo -e "password\npassword" | passwd gpadmin
   setup_ssh_for_user gpadmin
   transfer_ownership
   set_limits
