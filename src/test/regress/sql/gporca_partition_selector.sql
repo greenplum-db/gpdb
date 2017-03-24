@@ -1,9 +1,6 @@
 -- ----------------------------------------------------------------------
 -- Test: DPE: Various partition selection predicates
 -- ----------------------------------------------------------------------
-
-RESET ALL;
-
 create schema gporca_partition_selector;
 set search_path to gporca_partition_selector;
 

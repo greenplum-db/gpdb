@@ -4839,20 +4839,26 @@ static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
 	size_t numVal = rule->parlistvalues ? rule->parlistvalues->length : 0;
 	Datum *array_values = NULL;
 
-	Oid	consttype = InvalidOid;
+	/*
+	 * Optimizer supports only a single attribute partitioning key.
+	 * We can only check for non-leaf, as for leaf part we don't have cheap
+	 * access to number of partitioning columns
+	 */
+	AssertImply(rule->children != NULL, rule->children->part->parnatts == 1);
+
 	int16	typlen = 0;
 	bool typbyval = false;
 	char typalign = 'i';
+	Oid	consttype = get_atttype(rule->parchildrelid, rule->children->part->paratts[0]);
+	get_typlenbyvalalign(consttype, &typlen, &typbyval, &typalign);
+
 	bool *is_null = NULL;
 
 	if (numVal > 0)
 	{
 		is_null = palloc0(sizeof(bool) * numVal);
-		List *headOfValues = lfirst(rule->parlistvalues->head);
-		Const *firstValue = (Const *) lfirst(list_nth_cell(headOfValues, 0));
-		consttype = firstValue->consttype;
-		get_typlenbyvalalign(consttype, &typlen, &typbyval,
-				 &typalign);
+		/* The type of the first attribute should match the underlying table col's type */
+		Assert(((Const *) linitial(lfirst(rule->parlistvalues->head)))->consttype == consttype);
 
 		array_values = palloc0(numVal * sizeof(Datum));
 		int datumIdx = 0;
