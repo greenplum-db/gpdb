@@ -16,6 +16,7 @@ dependencies :
 		go get github.com/maxbrunsfeld/counterfeiter
 		go get github.com/onsi/gomega
 		go get github.com/jessevdk/go-flags
+		go get github.com/mattn/go-sqlite3
 		go get
 
 format : dependencies
