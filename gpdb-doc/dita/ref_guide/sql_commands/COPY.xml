@@ -90,7 +90,7 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
           </pt>
           <pd>An optional list of columns to be copied. If no column list is specified, all columns
             of the table will be copied. </pd>
-          <pd>When copying in text format, the default, a row of data in column of type
+          <pd>When copying in text format, the default, a row of data in a column of type
               <codeph>bytea</codeph> can be up to 256MB. </pd>
         </plentry>
         <plentry>
@@ -470,7 +470,7 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
               BINARY file are assumed to be in binary format (format code one). It is anticipated
               that a future extension may add a header field that allows per-column format codes to
               be specified. </p><p>If OIDs are included in the file, the OID field immediately
-              follows the field-count word. It is a normal field except that it's not included in
+              follows the field-count word. It is a normal field except that it is not included in
               the field-count. In particular it has a length word — this will allow handling of
               4-byte vs. 8-byte OIDs without too much pain, and will allow OIDs to be shown as null
               if that ever proves desirable. </p></li>
