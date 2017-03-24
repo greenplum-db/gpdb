@@ -43,7 +43,7 @@ export KRB5_KDC_PROFILE=${KDC_PATH}/test-kdc-db/kdc.conf
 # Create KDC database, with no password
 LD_LIBRARY_PATH= kdb5_util create -P"" -r GPDB.EXAMPLE -s
 
-# Create a service principal for the PostgreSQL serer, running at "localhost",
+# Create a service principal for the PostgreSQL server, running at "localhost",
 # and a keytab file for it
 LD_LIBRARY_PATH= kadmin.local -q "addprinc -randkey postgres/localhost"
 LD_LIBRARY_PATH= kadmin.local -q "ktadd -k ./server.keytab postgres/localhost"

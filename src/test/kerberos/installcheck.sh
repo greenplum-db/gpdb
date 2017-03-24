@@ -35,11 +35,12 @@ cp ${MASTER_DATA_DIRECTORY}/pg_hba.conf ./pg_hba.conf.orig
 cp ${MASTER_DATA_DIRECTORY}/postgresql.conf ./postgresql.conf.orig
 
 ###
-which krb5kdc > /dev/null 2>&1
-if [ $? -ne 0 ]; then
-    error "Kerberos utility 'krb5kdc' not found. Is /usr/sbin or /usr/local/sbin in your PATH?"
+# Check that krb5kdc is in $PATH.
+if ! command -v krb5kdc > /dev/null; then
+    echo "Kerberos utility 'krb5kdc' not found. Is /usr/sbin or /usr/local/sbin in your PATH?"
     exit 1
 fi
+
 # Set up KDC database, with a service principal for the server, and a user
 # principal for "krbtestuser"
 echo "Setting up test KDC..."
@@ -64,7 +65,7 @@ trap kill_kdc_pid EXIT
 
 ###
 # test KDC without exiting make, to ensure that server is stopped
-./test-kdc.sh
+./test-gpdb-auth-with-kdc.sh
 SUCCESS=$?
 
 exit $SUCCESS
