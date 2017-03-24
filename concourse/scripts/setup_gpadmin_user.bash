@@ -54,7 +54,16 @@ set_limits() {
 
 setup_gpadmin_user() {
   groupadd supergroup
-  /usr/sbin/useradd -G supergroup,tty gpadmin
+  case "$TEST_OS" in
+    sles)
+      groupadd gpadmin
+      /usr/sbin/useradd -G gpadmin,supergroup,tty gpadmin
+      ;;
+    centos)
+      /usr/sbin/useradd -G supergroup,tty gpadmin
+      ;;
+    *) echo "Unknown OS: $TEST_OS"; exit 1 ;;
+  esac
   echo -e "password\npassword" | passwd gpadmin
   setup_ssh_for_user gpadmin
   transfer_ownership
