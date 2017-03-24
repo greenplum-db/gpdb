@@ -9,12 +9,6 @@ import (
 
 	"os"
 
-	"crypto/rand"
-	"crypto/rsa"
-
-	"crypto/x509"
-	"encoding/pem"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
@@ -45,6 +39,20 @@ pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bin
 		})
 	})
 
+	Describe("if ssh responds to ps with no pg_upgrade process", func() {
+		It("connects and reports not running", func() {
+			only_grep_itself := "gpadmin            7520   0.0  0.0  2432772    676 s004  S+    3:56PM   0:00.00 grep pg_upgrade"
+			cheatSheet := CheatSheet{Response: only_grep_itself, ReturnCode: intToBytes(0)}
+			cheatSheet.WriteToFile()
+
+			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
+			Eventually(session).Should(Exit(0))
+
+			expectedMsg := "pg_upgrade is not running on host localhost"
+			Eventually(session.Out).Should(Say(expectedMsg))
+		})
+	})
+
 	Describe("if SSH is not running at the remote end", func() {
 		It("complains with standard ssh error phrasing", func() {
 			ShutDownSshdServer()
@@ -66,43 +74,34 @@ pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bin
 	})
 
 	Describe("if a test run tries to use the default ssh key", func() {
-		It("complains", func() {
-			//TODO: only do this if there doesn't exist a key at ~/.ssh/id_rsa
-			//because it overwrites the key that's there... eeek
-			throwaway_key, _ := rsa.GenerateKey(rand.Reader, 16)
-			home := os.Getenv("HOME")
-			os.Mkdir(home+"/.ssh", 0600)
-			key_file, _ := os.Create(home + "/.ssh/id_rsa")
-			os.Chmod(home+"/.ssh/id_rsa", 0600)
-			pem_data := pem.EncodeToMemory(
-				&pem.Block{
-					Type:  "RSA PRIVATE KEY",
-					Bytes: x509.MarshalPKCS1PrivateKey(throwaway_key),
-				},
-			)
-			key_file.Write(pem_data)
-			//TODO: we should clean this up afterwards if we did create a new one
+		// todo fixme
+		// this seems destructive, and could cause problems on the workstation if a dev didn't
+		// know what was going on.
+		// at a minimum, we should check and put aside any existing key, and replace it afterwards  --LAH 24 Mar 2017
 
-			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42")
-
-			Eventually(session).Should(Exit(1))
-			Eventually(session.Err).Should(Say("handshake failed"))
-			Eventually(session.Err).Should(Say("unable to authenticate"))
-		})
-	})
-
-	Describe("if ssh responds to ps with no pg_upgrade process", func() {
-		It("connects and reports not running", func() {
-			only_grep_itself := "gpadmin            7520   0.0  0.0  2432772    676 s004  S+    3:56PM   0:00.00 grep pg_upgrade"
-			cheatSheet := CheatSheet{Response: only_grep_itself, ReturnCode: intToBytes(0)}
-			cheatSheet.WriteToFile()
-
-			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
-			Eventually(session).Should(Exit(0))
-
-			expectedMsg := "pg_upgrade is not running on host localhost"
-			Eventually(session.Out).Should(Say(expectedMsg))
-		})
+		//It("complains", func() {
+		//	//TODO: only do this if there doesn't exist a key at ~/.ssh/id_rsa
+		//	//because it overwrites the key that's there... eeek
+		//	throwaway_key, _ := rsa.GenerateKey(rand.Reader, 16)
+		//	home := os.Getenv("HOME")
+		//	os.Mkdir(home + "/.ssh", 0600)
+		//	key_file, _ := os.Create(home + "/.ssh/id_rsa")
+		//	os.Chmod(home + "/.ssh/id_rsa", 0600)
+		//	pem_data := pem.EncodeToMemory(
+		//		&pem.Block{
+		//			Type:  "RSA PRIVATE KEY",
+		//			Bytes: x509.MarshalPKCS1PrivateKey(throwaway_key),
+		//		},
+		//	)
+		//	key_file.Write(pem_data)
+		//	//TODO: we should clean this up afterwards if we did create a new one
+		//
+		//	session := runCommand("monitor", "--host", "localhost", "--segment_id", "42")
+		//
+		//	Eventually(session).Should(Exit(1))
+		//	Eventually(session.Err).Should(Say("handshake failed"))
+		//	Eventually(session.Err).Should(Say("unable to authenticate"))
+		//})
 	})
 
 	Describe("if the remote ssh command fails", func() {

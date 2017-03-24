@@ -45,7 +45,7 @@ func (cmd MonitorCommand) Execute([]string) error {
 	if !shellParser.IsPgUpgradeRunning() {
 		addNot = "not "
 	}
-	fmt.Printf("pg_upgrade is %srunning on host %s", addNot, cmd.Host)
+	fmt.Printf("pg_upgrade is %srunning on host %s\n", addNot, cmd.Host)
 
 	return nil
 }

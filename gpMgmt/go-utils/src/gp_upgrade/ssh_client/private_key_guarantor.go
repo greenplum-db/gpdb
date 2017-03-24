@@ -3,6 +3,7 @@ package ssh_client
 import (
 	"errors"
 	"os"
+	"path/filepath"
 )
 
 type PrivateKeyGuarantor struct {
@@ -20,6 +21,9 @@ func (guarantor PrivateKeyGuarantor) Check(private_key string) (string, error) {
 			return "", errors.New("user has not specified a HOME environment value")
 		}
 		return path + "/.ssh/id_rsa", nil
+	} else if private_key[:2] == "~/" {
+		dir := os.Getenv("HOME")
+		return filepath.Join(dir, private_key[2:]), nil
 	}
 	return private_key, nil
 }

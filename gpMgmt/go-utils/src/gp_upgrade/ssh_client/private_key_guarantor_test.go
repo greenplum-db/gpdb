@@ -26,6 +26,15 @@ var _ = Describe("PrivateKeyGuarantor", func() {
 			})
 		})
 
+		Context("user has specified a private key option with tilde", func() {
+			It("returns that expanded key path", func() {
+				value, _ := subject.Check("~/foo")
+				home := os.Getenv("HOME")
+
+				Expect(value).To(Equal(home + "/foo"))
+			})
+		})
+
 		Context("user has not specified a key", func() {
 			It("returns the path to user's home dir + /.ssh/id_rsa", func() {
 				save := os.Getenv("HOME")

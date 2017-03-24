@@ -10,17 +10,17 @@ import (
 	"bytes"
 
 	// must have sqlite3 for testing
-	_ "github.com/mattn/go-sqlite3"
 	_ "github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type CheckCommand struct {
 	Master_host string `long:"master_host" required:"yes" description:"Domain name or IP of host"`
 	Master_port int    `long:"master_port" required:"no" default:"5432" description:"Port for master database"`
 
-	// for testing only
-	Database_type   string `long:"database_type" default:"postgres"`
-	Database_config string `long:"database_config_file"`
+	// for testing only, so using hidden:"true"
+	Database_type   string `long:"database_type" default:"postgres" hidden:"true"`
+	Database_config string `long:"database_config_file" hidden:"true"`
 }
 
 const (
@@ -59,10 +59,12 @@ func (cmd CheckCommand) Execute([]string) error {
 		return err
 	}
 
-	path := os.Getenv("HOME") + "/.gp_upgrade"
-	os.MkdirAll(path, 0700)
-	f, _ := os.Create(path + "/cluster_config.json")
-	defer f.Close()
+	upgrade_config_dir := os.Getenv("HOME") + "/.gp_upgrade"
+	err = os.MkdirAll(upgrade_config_dir, 0700)
+	if err != nil {
+		return err
+	}
+	f, err := os.Create(upgrade_config_dir + "/cluster_config.json")
 	if err != nil {
 		return err
 	}
