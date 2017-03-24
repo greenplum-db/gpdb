@@ -11,10 +11,10 @@ all : devel
 
 # Targets for building GPDB with various options
 # (development builds)
-.PHONY : devel devel_faultinj 
+.PHONY : devel devel_faultinj
 
 # (release builds)
-.PHONY : dist dist_prof 
+.PHONY : dist dist_prof
 
 # Targets recognized by the PostgreSQL makefile (GNUmakefile)
 .PHONY : all install installdirs uninstall distprep
@@ -184,7 +184,7 @@ PG_LANG=false
 endif
 
 ifneq (false, ${PG_LANG})
-CONFIGFLAGS+= --with-perl --with-python 
+CONFIGFLAGS+= --with-perl --with-python
 ifdef TCL_CFG
 CONFIGFLAGS+= --with-tcl-config=${TCL_CFG}
 endif
@@ -254,7 +254,7 @@ BLD_CONFIG_SHELL=$($(BLD_ARCH)_CONFIG_SHELL)
 
 $(GPPGDIR)/GNUmakefile : $(GPPGDIR)/configure  env.sh
 	rm -rf $(INSTLOC)
-	mkdir -p $(GPPGDIR) 
+	mkdir -p $(GPPGDIR)
 	if [ "$(BLD_ARCH)" = "win32" ]; then \
 		$(MAKE) -C $(GPPGDIR)/src/bin/gpfdist/ext BLD_TOP=$(BLD_TOP); \
 	fi
@@ -267,7 +267,7 @@ $(GPPGDIR)/GNUmakefile : $(GPPGDIR)/configure  env.sh
 
 Debug/GNUmakefile : $(GPPGDIR)/configure  env.sh
 	rm -rf $(INSTLOC)
-	mkdir -p Debug 
+	mkdir -p Debug
 	cd Debug && CC="$(strip $(BLD_CC) $(BLD_CFLAGS))"        \
                 CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL)     \
                 ./configure $(CONFIGFLAGS)                   \
@@ -277,7 +277,7 @@ Debug/GNUmakefile : $(GPPGDIR)/configure  env.sh
 
 Release/GNUmakefile : $(GPPGDIR)/configure  env.sh
 	rm -rf $(INSTLOC)
-	mkdir -p Release 
+	mkdir -p Release
 	cd Release && CC="$(strip $(BLD_CC) $(BLD_CFLAGS))"     \
                   CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL)  \
                   ./configure $(CONFIGFLAGS)                \
@@ -474,7 +474,7 @@ dist_prof : CLIENTINSTLOC=$(CLIENTDISTPATH)
 dist_prof : CONNECTIVITYINSTLOC=$(CONNECTIVITYDISTPATH)
 dist_prof : LOADERSINSTLOC=$(LOADERSDISTPATH)
 dist_prof : GPPERFMONINSTLOC=$(GPPERFMONDISTPATH)
-dist_prof : CONFIGFLAGS+= --enable-testutils 
+dist_prof : CONFIGFLAGS+= --enable-testutils
 ifdef ENABLE_VPATH_BUILD
 dist_prof : BUILDDIR=Release
 dist_prof : ISCONFIG=$(BUILDDIR)/GNUmakefile
@@ -680,18 +680,9 @@ else
 
 	# ---- updating the version in required packages ----
 	@$(MAKE) set_scripts_version INSTLOC=$(CONNECTIVITYINSTLOC)
+  cd client/install/src/unix/ && \
+     $(MAKE) TAR=$(TAR) PRODUCT=Connectivity PACKAGE=greenplum-connectivity README=GPConnectUnix VERSION=$(VERSION) INSTALL_SRC=$(CONNECTIVITYINSTLOC) INSTALL_DIR=../../../..
 
-	if [ "$(BLD_PACKAGING_PID)" = "" ]; then \
-	    echo "ERROR: BLD_PACKAGING_PID must have a value for Windows packaging operations; check your Makefile"; \
-	    exit 1; \
-	fi
-	ssh build@harpy 'if [ -d $(BLD_PACKAGING_PID) ]; then rm -rf $(BLD_PACKAGING_PID); fi'
-	ssh build@harpy 'mkdir -p $(BLD_PACKAGING_PID)/packaging/src/windows'
-	scp -r $(CONNECTIVITYINSTLOC) build@harpy:$(BLD_PACKAGING_PID)/packaging/
-	ssh build@harpy 'cd $(BLD_PACKAGING_PID)/packaging/src/windows/ && make PACKAGE=greenplum-$@ VERSION=$(VERSION) SRCDIR=../../$(notdir $(CONNECTIVITYINSTLOC))'
-	scp build@harpy:$(BLD_PACKAGING_PID)/packaging/greenplum-$@-$(VERSION)-WinXP-x86_32.msi .
-	chmod 755 greenplum-$@-$(VERSION)-WinXP-x86_32.msi
-	ssh build@harpy 'rm -rf $(BLD_PACKAGING_PID)'
 endif
 
 clients :
@@ -719,18 +710,9 @@ endif
 
 	# ---- Updating the version in required packages ----
 	@$(MAKE) set_scripts_version INSTLOC=$(CLIENTINSTLOC)
+  cd client/install/src/unix/ && \
+      $(MAKE) TAR=$(TAR) PRODUCT=Clients PACKAGE=greenplum-clients README=GPClientToolsUnix VERSION=`perl -pe 's, ,-,g' ../../../../../VERSION` INSTALL_SRC=$(CLIENTINSTLOC) INSTALL_DIR=../../../..
 
-	if [ "$(BLD_PACKAGING_PID)" = "" ]; then \
-	    echo "ERROR: BLD_PACKAGING_PID must have a value for Windows packaging operations; check your Makefile"; \
-	    exit 1; \
-	fi
-	ssh build@harpy 'if [ -d $(BLD_PACKAGING_PID) ]; then rm -rf $(BLD_PACKAGING_PID); fi'
-	ssh build@harpy 'mkdir -p $(BLD_PACKAGING_PID)/packaging/src/windows'
-	scp -r $(CLIENTINSTLOC) build@harpy:$(BLD_PACKAGING_PID)/packaging/
-	ssh build@harpy 'cd $(BLD_PACKAGING_PID)/packaging/src/windows/ && make PACKAGE=greenplum-$@ VERSION=$(VERSION) SRCDIR=../../$(notdir $(CLIENTINSTLOC))'
-	scp build@harpy:$(BLD_PACKAGING_PID)/packaging/greenplum-$@-$(VERSION)-WinXP-x86_32.msi .
-	chmod 755 greenplum-$@-$(VERSION)-WinXP-x86_32.msi
-	ssh build@harpy 'rm -rf $(BLD_PACKAGING_PID)'
 endif
 
 loaders :
@@ -781,19 +763,9 @@ endif
 
 	# ---- updating the version in required packages ----
 	@$(MAKE) set_scripts_version INSTLOC=$(LOADERSINSTLOC)
+  cd client/install/src/unix/ && \
+      $(MAKE) TAR=$(TAR) PRODUCT=Loaders PACKAGE=greenplum-loaders README=GPLoadToolsUnix VERSION=`perl -pe 's, ,-,g' ../../../../../VERSION` INSTALL_SRC=$(LOADERSINSTLOC) INSTALL_DIR=../../../..
 
-	if [ "$(BLD_PACKAGING_PID)" = "" ]; then \
-	    echo "ERROR: BLD_PACKAGING_PID must have a value for Windows packaging operations; check your Makefile"; \
-	    exit 1; \
-	fi
-	ssh build@harpy 'if [ -d $(BLD_PACKAGING_PID) ]; then rm -rf $(BLD_PACKAGING_PID); fi'
-	ssh build@harpy 'mkdir -p $(BLD_PACKAGING_PID)/packaging/src/windows'
-	scp -r $(LOADERSINSTLOC) build@harpy:$(BLD_PACKAGING_PID)/packaging/
-	ssh build@harpy 'cd $(BLD_PACKAGING_PID)/packaging/src/windows/ && make PACKAGE=greenplum-$@ VERSION=$(VERSION) SRCDIR=../../$(notdir $(LOADERSINSTLOC))'
-	scp build@harpy:$(BLD_PACKAGING_PID)/packaging/greenplum-$@-$(VERSION)-WinXP-x86_32.msi .
-	chmod 755 greenplum-$@-$(VERSION)-WinXP-x86_32.msi
-	ssh build@harpy 'rm -rf $(BLD_PACKAGING_PID)'
-endif
 endif
 
 #---------------------------------------------------------------------
@@ -885,7 +857,7 @@ SET_VERSION_SCRIPTS = \
 	lib/python/gppylib/mainUtils.py \
 	$(NULL)
 
-set_scripts_version : 
+set_scripts_version :
 	@for file in $(SET_VERSION_SCRIPTS); do \
 	    if [ -f $(INSTLOC)/$${file} ]; then \
 	        perl $(BLD_TOP)/../putversion $(INSTLOC)/$${file} ; \
@@ -912,7 +884,7 @@ mkorafce:
 mkpgbench:
 	@cd $(BUILDDIR)/contrib/pgbench && $(MAKE) install
 
-mkpgbouncer: 
+mkpgbouncer:
 ifeq "$(shell uname -s)" "Darwin"
 	echo "pgbouncer can't build on Mac"
 else
@@ -959,7 +931,7 @@ mgmtcopy :
 	#Copy the management utilities
 	mkdir -p $(INSTLOC)/bin
 	mkdir -p $(INSTLOC)/lib
-	mkdir -p $(INSTLOC)/lib/python	
+	mkdir -p $(INSTLOC)/lib/python
 	mkdir -p $(INSTLOC)/sbin
 	#Setup /lib/python contents
 	cp -rp $(GPMGMT)/bin/gppylib $(INSTLOC)/lib/python
