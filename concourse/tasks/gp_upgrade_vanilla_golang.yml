@@ -1,0 +1,13 @@
+platform: linux
+image_resource:
+  type: docker-image
+  source:
+    repository: golang
+    tag: '1.7'
+inputs:
+  - name: gpdb_src
+params:
+  GOPATH: "/tmp/abc123/gpdb_src/gpMgmt/go-utils"
+run:
+  dir: gpdb_src/gpMgmt/go-utils/src/gp_upgrade
+  path: make

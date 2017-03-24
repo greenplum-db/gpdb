@@ -29,17 +29,6 @@ var _ = Describe("monitor", func() {
 		cheatSheet.RemoveFile()
 	})
 
-	Describe("if SSH is not running at the remote end", func() {
-		It("complains with standard ssh error phrasing", func() {
-			ShutDownSshdServer()
-
-			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
-
-			Eventually(session).Should(Exit(1))
-			Eventually(session.Err).Should(Say("getsockopt: connection refused"))
-		})
-	})
-
 	Describe("if ssh responds to ps with evidence of pg_upgrade running", func() {
 		It("reports that pg_upgrade is running on a host if it is", func() {
 			grep_pg_upgrade := `
@@ -55,6 +44,18 @@ pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bin
 			Eventually(session.Out).Should(Say("pg_upgrade is running on host localhost"))
 		})
 	})
+
+	Describe("if SSH is not running at the remote end", func() {
+		It("complains with standard ssh error phrasing", func() {
+			ShutDownSshdServer()
+
+			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
+
+			Eventually(session).Should(Exit(1))
+			Eventually(session.Err).Should(Say("getsockopt: connection refused"))
+		})
+	})
+
 	Describe("if it lacks host and segment ID", func() {
 		It("complains", func() {
 			session := runCommand("monitor")
