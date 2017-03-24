@@ -1,0 +1,40 @@
+-- The field name in "Field Locations" (after the formatter key) must match the column name.
+-- The sequence order of fields determines how the data will be loaded.
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
+    col_a varchar(5), col_b varchar(5), col_c text, col_d char(5), 
+    n1 smallint, n2 integer, n3 bigint)                                                              
+LOCATION ('file://@hostname@@abs_srcdir@/data/fixedwidth_field_sequence.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in',
+    col_b='5', col_a='5', 
+    col_d='5', col_c='5',
+    n3='5', n1='5', n2='5');
+\d tbl_ext_fixedwidth
+External table "public.tbl_ext_fixedwidth"
+ Column |     Type         | Modifiers 
+--------+----------------------+-----------
+ col_a  | character varying(5) | 
+ col_b  | character varying(5) | 
+ col_c  | text             | 
+ col_d  | character(5)     | 
+ n1 | smallint             | 
+ n2 | integer              | 
+ n3 | bigint               | 
+Type: readable
+Encoding: UTF8
+Format type: custom
+Format options: formatter 'fixedwidth_in' col_b '5' col_a '5' col_d '5' col_c '5' n3 '5' n1 '5' n2 '5' 
+External options: {}
+External location: file://@hostname@@abs_srcdir@/data/fixedwidth_field_sequence.tbl
+Execute on: all segments
+
+-- Can successfully query the ext table, as long as the different column data types are compatible.
+-- However notice the switch between col_a and col_b, col_c and col_d, and n1, n2, and n3.
+select * from tbl_ext_fixedwidth  order by col_a;
+ col_a | col_b | col_c | col_d | n1 | n2 | n3 
+-------+-------+-------+-------+----+----+----
+ b     | a     | d     | c     |  2 |  3 |  1
+  b3   |  a3   |  d3   |  c3   | 20 | 30 | 10
+ bb    | aa    | dd    | cc    | 22 | 33 | 11
+(3 rows)
+

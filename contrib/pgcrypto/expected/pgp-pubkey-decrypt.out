@@ -621,11 +621,11 @@ ERROR:  Wrong key
 -- sign-only key
 select pgp_pub_decrypt(dearmor(data), dearmor(seckey))
 from keytbl, encdata where keytbl.id=4 and encdata.id=1;
-ERROR:  No encryption key found
+ERROR:  No encryption key found  
 -- rsa: password-protected secret key, wrong password
 select pgp_pub_decrypt(dearmor(data), dearmor(seckey), '123')
 from keytbl, encdata where keytbl.id=7 and encdata.id=4;
-ERROR:  Wrong key or corrupt data
+ERROR:  Wrong key or corrupt data  
 -- rsa: password-protected secret key, right password
 select pgp_pub_decrypt(dearmor(data), dearmor(seckey), 'parool')
 from keytbl, encdata where keytbl.id=7 and encdata.id=4;
@@ -637,11 +637,11 @@ from keytbl, encdata where keytbl.id=7 and encdata.id=4;
 -- password-protected secret key, no password
 select pgp_pub_decrypt(dearmor(data), dearmor(seckey))
 from keytbl, encdata where keytbl.id=5 and encdata.id=1;
-ERROR:  Need password for secret key
+ERROR:  Need password for secret key  
 -- password-protected secret key, wrong password
 select pgp_pub_decrypt(dearmor(data), dearmor(seckey), 'foo')
 from keytbl, encdata where keytbl.id=5 and encdata.id=1;
-ERROR:  Wrong key or corrupt data
+ERROR:  Wrong key or corrupt data 
 -- password-protected secret key, right password
 select pgp_pub_decrypt(dearmor(data), dearmor(seckey), 'parool')
 from keytbl, encdata where keytbl.id=5 and encdata.id=1;

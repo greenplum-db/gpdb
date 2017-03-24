@@ -31,7 +31,7 @@ INSERT 0 5
 --
 -- create WET with similiar schema def as the original heap table
 --
-CREATE WRITABLE EXTERNAL TABLE sync1_wet_region1 ( like sync1_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region1.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
+CREATE WRITABLE EXTERNAL TABLE sync1_wet_region1 ( like sync1_region) LOCATION ('gpfdist://10.0.0.6:8088/wet_region1.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
 psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE EXTERNAL TABLE
 --
@@ -42,7 +42,7 @@ INSERT 0 5
 --
 -- create a RET reading data from the file created by WET
 --
-CREATE EXTERNAL TABLE sync1_ret_region1 ( like sync1_region) LOCATION ('gpfdist://10.110.120.92:8088/wet_region1.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
+CREATE EXTERNAL TABLE sync1_ret_region1 ( like sync1_region) LOCATION ('gpfdist://10.0.0.6:8088/wet_region1.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
 CREATE EXTERNAL TABLE
 --
 -- create second table with same schema def
@@ -60,8 +60,8 @@ INSERT 0 5
 --
 select * from sync1_region order by r_regionkey;
  r_regionkey |          r_name           |                                                      r_comment                                                      
--------------+---------------------------+---------------------------------------------------------------------------------------------------------------------
-           0 | AFRICA                    | lar deposits. blithely final packages cajole. regular waters are final requests. regular accounts are according to 
+-------------+---------------------------+--------------------------------------------------------------------------------------------------------------------
+           0 | AFRICA                    | lar deposits. blithely final packages cajole. regular waters are final requests. regular accounts are according to
            1 | AMERICA                   | hs use ironic, even requests. s
            2 | ASIA                      | ges. thinly even pinto beans ca
            3 | EUROPE                    | ly final courts cajole furiously final excuse
@@ -70,8 +70,8 @@ select * from sync1_region order by r_regionkey;
 
 select * from sync1_new_region1 order by r_regionkey;
  r_regionkey |          r_name           |                                                      r_comment                                                      
--------------+---------------------------+---------------------------------------------------------------------------------------------------------------------
-           0 | AFRICA                    | lar deposits. blithely final packages cajole. regular waters are final requests. regular accounts are according to 
+-------------+---------------------------+--------------------------------------------------------------------------------------------------------------------
+           0 | AFRICA                    | lar deposits. blithely final packages cajole. regular waters are final requests. regular accounts are according to
            1 | AMERICA                   | hs use ironic, even requests. s
            2 | ASIA                      | ges. thinly even pinto beans ca
            3 | EUROPE                    | ly final courts cajole furiously final excuse

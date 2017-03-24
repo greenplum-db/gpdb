@@ -1756,6 +1756,9 @@ select tablename,partitiontablename, partitionname from pg_partitions where tabl
 alter table mpp14613_list alter partition others split partition subothers at (10) into (partition b1, partition b2);
 alter table mpp14613_range alter partition others split partition subothers at (10) into (partition b1, partition b2);
 
+-- Drop table as gpcheckcat will complaint of not having constraint for newly
+-- created tables due to split.
+drop table mpp14613_list;
 
 --
 -- Drop index on a partitioned table. The indexes on the partitions remain.

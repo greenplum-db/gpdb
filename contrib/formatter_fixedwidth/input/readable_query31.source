@@ -1,0 +1,49 @@
+ -- 1. Null is defined as nothing (ZERO length string)
+ DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+ CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
+     s1 char(10), s2 varchar(10), s3 text,
+     col_empty character(5),col_null character varying(5)   
+ )                                                              
+ LOCATION ('file://@hostname@@abs_srcdir@/data/fixedwidth_null.tbl')       
+ FORMAT 'CUSTOM' (formatter='fixedwidth_in', null='', preserve_blanks='on', 
+     s1='10',s2='10', s3='10', col_empty='5', col_null='5');
+
+ -- When NULL is defined as nothing (ZERO characters)
+ -- and field "col_empty" only contains blanks, 
+ -- then a NULL will be loaded into the table,
+ -- even with preseve_blanks = on
+ select * from tbl_ext_fixedwidth where col_empty is null order by s1;
+
+ -- 2. Define null = 'vara'
+ DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+ CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
+     s1 char(10), s2 varchar(10), s3 text,
+     col_empty character(5),col_null character varying(5) )
+ LOCATION ('file://@hostname@@abs_srcdir@/data/fixedwidth_null.tbl')       
+ FORMAT 'CUSTOM' (formatter='fixedwidth_in', preserve_blanks=on, null='vara',
+     s1='10',s2='10', s3='10', col_empty='5', col_null='5');
+
+ -- When NULL is defined as some value 'vara', 
+ -- and field "col_empty" only contains blanks, 
+ -- then an empty string will be loaded into the table
+ -- only word 'vara' will be replaced as null
+ select * from tbl_ext_fixedwidth where col_empty is not null order by s1;
+
+ select * from tbl_ext_fixedwidth where s2 is null and col_empty is not null;
+
+ -- 3. Define null = 'NULL'
+ DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+ CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
+     s1 char(10), s2 varchar(10), s3 text,
+     col_empty character(5),col_null character varying(5) )
+ LOCATION ('file://@hostname@@abs_srcdir@/data/fixedwidth_null.tbl')       
+ FORMAT 'CUSTOM' (formatter='fixedwidth_in', null='NULL',
+     s1='10',s2='10', s3='10', col_empty='5', col_null='5');
+
+ -- When NULL is defined as some value 'NULL',
+ -- and field "col_empty" only contains blanks, 
+ -- then an empty string will be loaded into the table
+ -- only word 'NULL' will be replaced as null
+ select * from tbl_ext_fixedwidth where col_empty is not null order by s1;
+
+ select * from tbl_ext_fixedwidth where col_null is null and col_empty is not null;

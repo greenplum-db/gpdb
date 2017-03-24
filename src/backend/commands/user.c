@@ -41,6 +41,7 @@
 
 #include "executor/execdesc.h"
 #include "utils/resscheduler.h"
+#include "utils/resgroup.h"
 #include "utils/syscache.h"
 
 #include "cdb/cdbdisp_query.h"
@@ -148,9 +149,11 @@ CreateRole(CreateRoleStmt *stmt)
 	List	   *exttabnocreate = NIL;	/* external table create privileges being removed */
 	char	   *validUntil = NULL;		/* time the login is valid until */
 	char	   *resqueue = NULL;		/* resource queue for this role */
+	char	   *resgroup = NULL;		/* resource group for this role */
 	List	   *addintervals = NIL;	/* list of time intervals for which login should be denied */
 	DefElem    *dpassword = NULL;
 	DefElem    *dresqueue = NULL;
+	DefElem    *dresgroup = NULL;
 	DefElem    *dissuper = NULL;
 	DefElem    *dinherit = NULL;
 	DefElem    *dcreaterole = NULL;
@@ -288,6 +291,14 @@ CreateRole(CreateRoleStmt *stmt)
 						 errmsg("conflicting or redundant options")));
 			dresqueue = defel;
 		}
+		else if (strcmp(defel->defname, "resourceGroup") == 0)
+		{
+			if (dresgroup)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			dresgroup = defel;
+		}
 		else if (strcmp(defel->defname, "exttabauth") == 0)
 		{
 			extAuthPair *extauth = (extAuthPair *) palloc0 (2 * sizeof(char *));
@@ -361,6 +372,8 @@ CreateRole(CreateRoleStmt *stmt)
 
 		resqueue = pstrdup(GP_DEFAULT_RESOURCE_QUEUE_NAME);
 	}
+	if (dresgroup)
+		resgroup = strVal(linitial((List *) dresgroup->arg));
 
 	/* Check some permissions first */
 	if (issuper)
@@ -495,11 +508,51 @@ CreateRole(CreateRoleStmt *stmt)
 	else
 		new_record_nulls[Anum_pg_authid_rolresqueue - 1] = true;
 
-	/* hard code the resource group of the user now */
-	if (issuper)
+	if (resgroup)
+	{
+		Oid rsgid;
+
+		rsgid = GetResGroupIdForName(resgroup, ShareLock);
+		if (rsgid == InvalidOid)
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					 errmsg("resource group \"%s\" does not exist",
+						 resgroup)));
+		else if (rsgid == ADMINRESGROUP_OID && !issuper)
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+					 errmsg("only superuser can be assigned to admin resgroup")));
+
+		new_record[Anum_pg_authid_rolresgroup - 1] = ObjectIdGetDatum(rsgid);
+	}
+	else if (issuper)
+	{
+		/* FIXME: below notice is disabled for now to prevent updating
+		 *        all the "CREATE ROLE" related test cases. */
+#if 0
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			ereport(NOTICE,
+					(errmsg("resource group required -- using admin resource group \"admin_group\"")));
+		}
+#endif
+
 		new_record[Anum_pg_authid_rolresgroup - 1] = ObjectIdGetDatum(ADMINRESGROUP_OID);
+	}
 	else
+	{
+		/* FIXME: below notice is disabled for now to prevent updating
+		 *        all the "CREATE ROLE" related test cases. */
+#if 0
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			ereport(NOTICE,
+					(errmsg("resource group required -- using default resource group \"default_group\"")));
+		}
+#endif
+
 		new_record[Anum_pg_authid_rolresgroup - 1] = ObjectIdGetDatum(DEFAULTRESGROUP_OID);
+	}
 
 	new_record_nulls[Anum_pg_authid_rolresgroup - 1] = false;
 
@@ -618,12 +671,14 @@ AlterRole(AlterRoleStmt *stmt)
 	int			canlogin = -1;	/* Can this user login? */
 	int			connlimit = -1; /* maximum connections allowed */
 	char	   *resqueue = NULL;	/* resource queue for this role */
+	char	   *resgroup = NULL;	/* resource group for this role */
 	List	   *rolemembers = NIL;	/* roles to be added/removed */
 	List	   *exttabcreate = NIL;	/* external table create privileges being added  */
 	List	   *exttabnocreate = NIL;	/* external table create privileges being removed */
 	char	   *validUntil = NULL;		/* time the login is valid until */
 	DefElem    *dpassword = NULL;
 	DefElem    *dresqueue = NULL;
+	DefElem    *dresgroup = NULL;
 	DefElem    *dissuper = NULL;
 	DefElem    *dinherit = NULL;
 	DefElem    *dcreaterole = NULL;
@@ -763,6 +818,16 @@ AlterRole(AlterRoleStmt *stmt)
 			dresqueue = defel;
 			if (1 == numopts) alter_subtype = "RESOURCE QUEUE";
 		}
+		else if (strcmp(defel->defname, "resourceGroup") == 0)
+		{
+			if (dresgroup)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			dresgroup = defel;
+			if (1 == numopts)
+				alter_subtype = "RESOURCE GROUP";
+		}
 		else if (strcmp(defel->defname, "exttabauth") == 0)
 		{
 			extAuthPair *extauth = (extAuthPair *) palloc0 (2 * sizeof(char *));
@@ -826,6 +891,8 @@ AlterRole(AlterRoleStmt *stmt)
 		validUntil = strVal(dvalidUntil->arg);
 	if (dresqueue)
 		resqueue = strVal(linitial((List *) dresqueue->arg));
+	if (dresgroup)
+		resgroup = strVal(linitial((List *) dresgroup->arg));
 
 	/*
 	 * Scan the pg_authid relation to be certain the user exists.
@@ -1060,6 +1127,49 @@ AlterRole(AlterRoleStmt *stmt)
 			if (!bWas_super)
 				ereport(WARNING,
 						(errmsg("resource scheduling is disabled"),
+						 errhint("To enable set resource_scheduler=on")));
+		}
+	}
+
+	/* resource group */
+	if (resgroup)
+	{
+		Oid			rsgid;
+
+		if (!strcmp(resgroup, "none"))
+		{
+			if (bWas_super)
+				resgroup = pstrdup("admin_group");
+			else
+				resgroup = pstrdup("default_group");
+
+			if (Gp_role == GP_ROLE_DISPATCH)
+				ereport(NOTICE,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("resource group required -- "
+								"using default resource group \"%s\"",
+								resgroup)));
+		}
+
+		rsgid = GetResGroupIdForName(resgroup, ShareLock);
+		if (rsgid == InvalidOid)
+			ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("resource group \"%s\" does not exist",
+						resgroup)));
+		else if (rsgid == ADMINRESGROUP_OID && !bWas_super)
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+					 errmsg("only superuser can be assigned to admin resgroup")));
+		new_record[Anum_pg_authid_rolresgroup - 1] =
+			ObjectIdGetDatum(rsgid);
+		new_record_repl[Anum_pg_authid_rolresgroup - 1] = true;
+
+		if (!ResourceScheduler)
+		{
+			if (!bWas_super)
+				ereport(WARNING,
+						(errmsg("resource group is disabled"),
 						 errhint("To enable set resource_scheduler=on")));
 		}
 	}

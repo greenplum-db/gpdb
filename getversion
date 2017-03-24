@@ -1,8 +1,14 @@
 #!/bin/bash
 
+# Call git describe, and convert it to a semi-semantic version, like
+# 5.0.0-alpha.0+dev.52.g123abc
+generate_dev_version() {
+    git describe | perl -pe 's/(.*)-([0-9]*)-(g[0-9a-f]*)/\1+dev.\2.\3/'
+}
+
 # Make sure we're running from the root git repository, not whatever submodule
 # we could have been called from.
-GP_VERSION=$(cd "$(dirname "$0")"; git describe)
+GP_VERSION=$(cd "$(dirname "$0")"; generate_dev_version)
 
 GP_BUILDNUMBER=dev
 if [ -f BUILD_NUMBER ] ; then

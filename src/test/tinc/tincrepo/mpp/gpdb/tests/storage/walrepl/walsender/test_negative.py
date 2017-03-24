@@ -127,8 +127,14 @@ class neg_test(StandbyRunMixin, MPPTestCase):
         # Stop the standby as its of no use anymore
         self.standby.stop()
 
-        # Verify that the wal sender died
-        num_walsender = self.count_walsender()
+        # Verify that the wal sender died, max within 1 min
+        for retry in range(1,30):
+            num_walsender = self.count_walsender()
+            if num_walsender == 0:
+                break;
+            logger.info('Wal sender still exists, retrying ...' + str(retry))
+            time.sleep(2);
+
         self.assertEqual(num_walsender, 0, "WAL sender has not gone")
 
         logger.info('Wal sender is now dead...')

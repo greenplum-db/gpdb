@@ -1,0 +1,18 @@
+ -- Note: the leading white space will always NOT be trimmed.
+ -- Note: trailing space is insignificant in column with data type char(n), therefore will NOT be reserved.
+ -- Explicitly set preserve_blanks='on', null='NULL'
+ DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+ CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
+     s1 char(10), s2 varchar(10), s3 text)                                                              
+ LOCATION ('file://@hostname@@abs_srcdir@/data/fixedwidth_small_correct_whitespace.tbl')       
+ FORMAT 'CUSTOM' (formatter='fixedwidth_in', preserve_blanks='on', null='NULL',
+     s1='10',s2='10', s3='10');
+
+ -- Confirm the trailing while spaces will be reserved for vary-length data types: varchar(n) and text
+ -- Trailing space is NOT reserved for char(n) data type. This is correct.
+ -- The leading white spaces will be always reserved.
+ select * from tbl_ext_fixedwidth order by s1;
+
+ select * from tbl_ext_fixedwidth where s1='cha' and s2='vara      ' and s3='texta     ';
+
+ select * from tbl_ext_fixedwidth where s1='  chc' and s2='  varc    ' and s3='  textc   ';

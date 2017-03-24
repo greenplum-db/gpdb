@@ -181,19 +181,17 @@ class mpp23395(MPPTestCase):
         SET debug_dtm_action = "fail_begin_command";
         CREATE TABLE mpp23395(a int);
         '''
-        self.run_sequence(sql, 'twophase_transaction_commit_prepared', 'error', 2, False);
+        self.run_sequence(sql, 'finish_prepared_after_record_commit_prepared', 'error', 2, False);
 
-        # QE panics after writing prepare xlog record.  This should cause
-        # master to broadcast abort but QEs handle the abort in
+        # Scenario 8: QE panics after writing prepare xlog record.  This should
+        # cause master to broadcast abort but QEs handle the abort in
         # DTX_CONTEXT_LOCAL_ONLY context.
         sql = '''
         DROP TABLE IF EXISTS mpp23395;
         CREATE TABLE mpp23395(a int);
         INSERT INTO mpp23395 VALUES(1), (2), (3);
-        BEGIN;
         SET debug_abort_after_segment_prepared = true;
         DELETE FROM mpp23395;
-        COMMIT;
         '''
 
         # No prepared transactions should remain lingering

@@ -1,34 +1,10 @@
 --
 -- One purpose of these tests is to make sure that ORCA can handle all these
 -- queries, and not fall back to the Postgres planner. To detect that,
--- turn optimizer_log on, and watch for "Planner produced plan" messages.
+-- turn optimizer_trace_fallback on, and watch for "falling back to planner"
+-- messages.
 --
-set client_min_messages='log';
-set optimizer_log='on';
-
---
--- We want to ignore other LOG messages, except "Planner produced plan".
--- For that, prepend "Planner produced plan" messags with FALLBACK:,
--- so that they don't begin with LOG: anymore, and have an ignore rule to
--- ignore everything beginning wit LOG:. This depends on the fact that
--- atmsort.pm processes matchsubs rules before matchignore rules.
---
--- start_matchsubs
--- m/^LOG:.*Planner produced plan/
--- s/^LOG:(.*Planner produced plan.*)/FALLBACK:$1/
--- end_matchsubs
--- start_matchignore
--- m/^LOG:/
--- m/^\[OPT\]/
--- end_matchignore
-
--- To check that the matchsubs mechanism above works, echo a synthetic
--- Planner produced plan line to the test output. In the expected output,
--- we have it directly prepended with FALLBACK:. If the above mechanism
--- doesn't work, the expected output will contain FALLBACK, while the
--- actual output will not.
-\echo LOG: Planner produced plan test
-
+set optimizer_trace_fallback='on';
 
 -- Query 1
 SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1;

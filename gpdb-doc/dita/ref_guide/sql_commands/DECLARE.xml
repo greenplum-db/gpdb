@@ -39,8 +39,11 @@
       </note>
       <p>A cursor can be specified in the <codeph>WHERE CURRENT OF</codeph> clause of the
             <codeph><xref href="./UPDATE.xml#topic1" type="topic" format="dita"/></codeph> or
-            <codeph><xref href="./DELETE.xml#topic1" type="topic" format="dita"/></codeph> command
-        to update or delete table data.</p>
+            <codeph><xref href="./DELETE.xml#topic1" type="topic" format="dita"/></codeph> statement
+        to update or delete table data. The <codeph>UPDATE</codeph> or <codeph>DELETE</codeph>
+        statement can only be executed on the server, for example in an interactive psql session or
+        a script. Language extensions such as PL/pgSQL do not have support for updatable cursors.
+      </p>
     </section>
     <section id="section4">
       <title>Parameters</title>

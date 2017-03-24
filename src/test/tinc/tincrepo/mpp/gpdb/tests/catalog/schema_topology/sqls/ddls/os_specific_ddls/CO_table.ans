@@ -8,6 +8,8 @@ create database co_db;
 CREATE DATABASE
 \c co_db
 You are now connected to database "co_db" as user "reng3".
+set time zone PST8PDT;
+SET
 -- create all types CO table and insert values
 CREATE TABLE all_types( bit1 bit(1), bit2 bit varying(50), boolean1 boolean, char1 char(50), charvar1 character varying(50), char2 character(50),
 varchar1 varchar(50),date1 date,dp1 double precision,int1 integer,interval1 interval,numeric1 numeric,real1 real,smallint1 smallint,time1 time,bigint1 bigint,

@@ -38,6 +38,7 @@
 #include "utils/memutils.h"             /* AllocSetContextCreate() */
 #include "utils/resscheduler.h"
 #include "utils/tuplesort.h"
+#include "utils/tuplesort_mk.h"
 #include "cdb/cdbdisp.h"                /* CheckDispatchResult() */
 #include "cdb/cdbexplain.h"             /* cdbexplain_recvExecStats */
 #include "cdb/cdbpartition.h"

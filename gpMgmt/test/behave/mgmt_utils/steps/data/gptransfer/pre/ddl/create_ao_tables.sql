@@ -6,6 +6,7 @@
 -- Create heap tables 
 --start_ignore
 DROP TABLE if exists sto_ao1;
+set time zone PST8PDT;
 --end_ignore
 CREATE TABLE sto_ao1(
           col_text text,

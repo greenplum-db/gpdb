@@ -205,14 +205,14 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
   <topic id="topic8" xml:lang="en">
     <title id="ik264019">Greenplum and PostgreSQL Compatibility</title>
     <body>
-      <p>Greenplum Database is based on PostgreSQL 8.2 with a few features added in from the 8.3
-        release. To support the distributed nature and typical workload of a Greenplum Database
-        system, some SQL commands have been added or modified, and there are a few PostgreSQL
-        features that are not supported. Greenplum has also added features not found in PostgreSQL,
-        such as physical data distribution, parallel query optimization, external tables, resource
-        queues for workload management and enhanced table partitioning. For full SQL syntax and
-        references, see the <xref href="sql_commands/sql_ref.xml#topic1" type="topic" format="dita"
-        />.</p>
+      <p>Greenplum Database is based on PostgreSQL 8.3 with additional features from newer
+        PostgreSQL releases. To support the distributed nature and typical workload of a Greenplum
+        Database system, some SQL commands have been added or modified, and there are a few
+        PostgreSQL features that are not supported. Greenplum has also added features not found in
+        PostgreSQL, such as physical data distribution, parallel query optimization, external
+        tables, resource queues for workload management and enhanced table partitioning. For full
+        SQL syntax and references, see the <xref href="sql_commands/sql_ref.xml#topic1" type="topic"
+          format="dita"/>.</p>
       <table id="ik213423">
         <title>SQL Support in Greenplum Database</title>
         <tgroup cols="3">
@@ -251,7 +251,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col1"><codeph>ALTER FILESPACE</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3">Greenplum Database parallel tablespace feature - not in
-                PostgreSQL 8.2.15.</entry>
+                PostgreSQL 8.3.</entry>
             </row>
             <row>
               <entry colname="col1"><codeph>ALTER FUNCTION</codeph></entry>
@@ -282,6 +282,11 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             <row>
               <entry colname="col1"><codeph>ALTER OPERATOR CLASS</codeph></entry>
               <entry colname="col2"><b>NO</b></entry>
+              <entry colname="col3"/>
+            </row>
+            <row>
+              <entry colname="col1"><codeph>ALTER PROTOCOL</codeph></entry>
+              <entry colname="col2">YES</entry>
               <entry colname="col3"/>
             </row>
             <row>
@@ -423,7 +428,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col1"><codeph>CREATE EXTERNAL TABLE</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3">Greenplum Database parallel ETL feature - not in PostgreSQL
-                8.2.15.</entry>
+                8.3.</entry>
             </row>
             <row>
               <entry colname="col1"><codeph>CREATE FUNCTION</codeph></entry>
@@ -474,10 +479,15 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col3"/>
             </row>
             <row>
+              <entry colname="col1"><codeph>CREATE PROTOCOL</codeph></entry>
+              <entry colname="col2">YES</entry>
+              <entry colname="col3"/>
+            </row>
+            <row>
               <entry colname="col1"><codeph>CREATE RESOURCE QUEUE</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3">Greenplum Database workload management feature - not in
-                PostgreSQL 8.2.15.</entry>
+                PostgreSQL 8.3.</entry>
             </row>
             <row>
               <entry colname="col1"><codeph>CREATE ROLE</codeph></entry>
@@ -565,14 +575,21 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col2">YES</entry>
               <entry colname="col3"><b>Unsupported Clauses /
                   Options:</b><p><codeph>SCROLL</codeph></p><p><codeph>FOR UPDATE [ OF column [,
-                    ...] ]</codeph></p><p><b>Limitations:</b></p><p>Cursors are non-updatable, and
-                  cannot be backward-scrolled. Forward scrolling is supported.</p></entry>
+                    ...] ]</codeph></p><p><b>Limitations:</b></p><p>Cursors cannot be
+                  backward-scrolled. Forward scrolling is supported.</p><p>PL/pgSQL does
+                  not have support for updatable cursors. </p></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>DELETE</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3"><b>Unsupported Clauses /
-                    Options:</b><p><codeph>RETURNING</codeph></p></entry>
+                    Options:</b><p><codeph>RETURNING</codeph></p><p><b>Limitations:</b></p><p><codeph>WHERE
+                    CURRENT OF</codeph> clause is not supported in PL/pgSQL.</p></entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeph>DO</codeph></entry>
+              <entry colname="col2">YES</entry>
+              <entry colname="col3">PostgreSQL 9.0 feature</entry>
             </row>
             <row>
               <entry colname="col1"><codeph>DROP AGGREGATE</codeph></entry>
@@ -603,13 +620,13 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col1"><codeph>DROP EXTERNAL TABLE</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3">Greenplum Database parallel ETL feature - not in PostgreSQL
-                8.2.15.</entry>
+                8.3.</entry>
             </row>
             <row>
               <entry colname="col1"><codeph>DROP FILESPACE</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3">Greenplum Database parallel tablespace feature - not in
-                PostgreSQL 8.2.15.</entry>
+                PostgreSQL 8.3.</entry>
             </row>
             <row>
               <entry colname="col1"><codeph>DROP FUNCTION</codeph></entry>
@@ -648,10 +665,15 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col3"/>
             </row>
             <row>
+              <entry colname="col1"><codeph>DROP PROTOCOL</codeph></entry>
+              <entry colname="col2">YES</entry>
+              <entry colname="col3"/>
+            </row>
+            <row>
               <entry colname="col1"><codeph>DROP RESOURCE QUEUE</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3">Greenplum Database workload management feature - not in
-                PostgreSQL 8.2.15.</entry>
+                PostgreSQL 8.3.</entry>
             </row>
             <row>
               <entry colname="col1"><codeph>DROP ROLE</codeph></entry>
@@ -890,7 +912,8 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col2">YES</entry>
               <entry colname="col3"><b>Unsupported
                     Clauses:</b><p><codeph>RETURNING</codeph></p><p><b>Limitations:</b></p><p><codeph>SET</codeph>
-                  not allowed for Greenplum distribution key columns.</p></entry>
+                  not allowed for Greenplum distribution key columns.</p><p><codeph>WHERE CURRENT
+                    OF</codeph> clause is not supported in PL/pgSQL.</p></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>VACUUM</codeph></entry>

@@ -175,7 +175,7 @@ class UserAbortedException(Exception):
 def simple_main( createOptionParserFn, createCommandFn, mainOptions=None) :
     """
      createOptionParserFn : a function that takes no arguments and returns an OptParser
-     createCommandFn : a function that takes two argument (the options and the args (those that are not processed into
+     createCommandFn : a function that takes two arguments (the options and the args (those that are not processed into
                        options) and returns an object that has "run" and "cleanup" functions.  Its "run" function must
                        run and return an exit code.  "cleanup" will be called to clean up before the program exits;
                        this can be used to clean up, for example, to clean up a worker pool

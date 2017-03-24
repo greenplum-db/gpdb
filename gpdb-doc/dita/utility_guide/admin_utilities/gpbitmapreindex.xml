@@ -4,9 +4,8 @@
 <topic id="topic1"><title id="oq141610">gpbitmapreindex</title><body><p>Rebuilds bitmap indexes after a 3.3.x to 4.0.x upgrade.</p><section id="section2"><title>Synopsis</title><codeblock><b>gpbitmapreindex</b> <b>-m</b> { <b>r</b> | <b>d</b> | {<b>l</b> [<b>-o</b> <varname>output_sql_file</varname>]} }
    [<b>-h</b> <varname>master_host</varname>] [<b>-p</b> <varname>master_port</varname>] [<b>-n</b> <varname>number_of_processes</varname>] [<b>-v</b>]
 
-<b>gpmigrator</b> <b>--version</b> 
 
-<b>gpmigrator</b> <b>--help</b> | <b>-?</b></codeblock></section><section id="section3"><title>Description</title><p>The on-disk format of bitmap indexes has changed from release 3.3.x to 4.0.x. Users who upgrade
+</codeblock></section><section id="section3"><title>Description</title><p>The on-disk format of bitmap indexes has changed from release 3.3.x to 4.0.x. Users who upgrade
         must rebuild all bitmap indexes after upgrading to 4.0. The <codeph>gpbitmapreindex</codeph>
         utility facilitates the upgrade of bitmap indexes by either running the
           <codeph>REINDEX</codeph> command to reindex them, or running the <codeph>DROP

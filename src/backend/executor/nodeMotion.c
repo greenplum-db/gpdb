@@ -26,6 +26,7 @@
 #include "utils/lsyscache.h"
 #include "utils/tuplesort.h"
 #include "utils/tuplesort_mk.h"
+#include "utils/tuplesort_mk_details.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "utils/memutils.h"

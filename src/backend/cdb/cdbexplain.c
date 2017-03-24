@@ -50,7 +50,7 @@
  */
 typedef enum
 {
-	UNINITALIZED_SORT = 0,
+	UNINITIALIZED_SORT = 0,
 	TOP_N_HEAP_SORT = 1,
 	QUICK_SORT = 2,
 	EXTERNAL_SORT = 3,
@@ -336,9 +336,10 @@ static int
  * in tuplesort.c / tuplesort_mk.c
  */
 static ExplainSortMethod
-String2ExplainSortMethod(const char* sortMethod) {
+String2ExplainSortMethod(const char* sortMethod)
+{
 	if (sortMethod == NULL) {
-		return UNINITALIZED_SORT;
+		return UNINITIALIZED_SORT;
 	}
 	else if (strcmp(TOP_N_HEAP_SORT_STR, sortMethod) == 0) {
 		return TOP_N_HEAP_SORT;
@@ -355,7 +356,23 @@ String2ExplainSortMethod(const char* sortMethod) {
 	else if (strcmp(IN_PROGRESS_SORT_STR, sortMethod) == 0) {
 		return IN_PROGRESS_SORT;
 	}
-	return UNINITALIZED_SORT;
+	return UNINITIALIZED_SORT;
+}
+
+static ExplainSortSpaceType
+String2ExplainSortSpaceType(const char* sortSpaceType, ExplainSortMethod sortMethod)
+{
+	if (sortSpaceType == NULL ||
+		sortMethod == UNINITIALIZED_SORT) {
+		return UNINITIALIZED_SORT_SPACE_TYPE;
+	}
+	else if (strcmp(MEMORY_STR_SORT_SPACE_TYPE, sortSpaceType) == 0) {
+		return MEMORY_SORT_SPACE_TYPE;
+	}
+	else {
+		Assert(strcmp(DISK_STR_SORT_SPACE_TYPE, sortSpaceType) == 0);
+		return DISK_SORT_SPACE_TYPE;
+	}
 }
 
 /*
@@ -925,15 +942,7 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
 	si->firststart = instr->firststart;
 	si->numPartScanned = instr->numPartScanned;
 	si->sortMethod = String2ExplainSortMethod(instr->sortMethod);
-	if (MEMORY_STR_SORT_SPACE_TYPE == instr->sortSpaceType)
-	{
-		si->sortSpaceType = MEMORY_SORT_SPACE_TYPE;
-	}
-	else
-	{
-		AssertImply(si->sortMethod != UNINITALIZED_SORT, strcmp(DISK_STR_SORT_SPACE_TYPE, instr->sortSpaceType) == 0);
-		si->sortSpaceType = DISK_SORT_SPACE_TYPE;
-	}
+	si->sortSpaceType = String2ExplainSortSpaceType(instr->sortSpaceType, si->sortMethod);
 	si->sortSpaceUsed = instr->sortSpaceUsed;
 }	/* cdbexplain_collectStatsFromNode */
 
@@ -1136,7 +1145,7 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		cdbexplain_depStatAcc_upd(&totalWorkfileCreated, (rsi->workfileCreated ? 1 : 0), rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&peakMemBalance, rsi->peakMemBalance, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&totalPartTableScanned, rsi->numPartScanned, rsh, rsi, nsi);
-		if (rsi->sortMethod < NUM_SORT_METHOD && rsi->sortMethod != UNINITALIZED_SORT && rsi->sortSpaceType != UNINITIALIZED_SORT_SPACE_TYPE) {
+		if (rsi->sortMethod < NUM_SORT_METHOD && rsi->sortMethod != UNINITIALIZED_SORT && rsi->sortSpaceType != UNINITIALIZED_SORT_SPACE_TYPE) {
 			Assert(rsi->sortSpaceType <= NUM_SORT_SPACE_TYPE);
 			cdbexplain_depStatAcc_upd(&sortSpaceUsed[rsi->sortSpaceType-1][rsi->sortMethod - 1], (double)rsi->sortSpaceUsed, rsh, rsi, nsi);
 		}

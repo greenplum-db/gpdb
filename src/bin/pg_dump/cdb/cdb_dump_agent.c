@@ -1465,12 +1465,13 @@ exit_nicely(void)
 
 	pszErrorMsg = MakeString("*** aborted because of error: %s\n", lastMsg);
 
-	mpp_err_msg(logError, progname, pszErrorMsg);
-
 	makeSureMonitorThreadEnds(TASK_RC_FAILURE, pszErrorMsg);
 
-	if (pszErrorMsg)
+	if (pszErrorMsg != NULL)
+	{
+		mpp_err_msg(logError, progname, pszErrorMsg);
 		free(pszErrorMsg);
+	}
 
 	PQfinish(g_conn);
 	g_conn = NULL;

@@ -17,3 +17,8 @@ pgbouncer.pid
 /tmp_check/
 /results/
 /log/
+
+data/wet_csv?.tbl
+data/wet_text?.tbl
+data/wet_syntax?.tbl
+data/wet_execute.tbl

@@ -442,14 +442,25 @@ length_in_encoding(PG_FUNCTION_ARGS)
 char *
 pg_client_to_server(const char *s, int len)
 {
+	Assert(ClientEncoding);
+
+	return pg_any_to_server(s, len, ClientEncoding->encoding);
+}
+
+/*
+ * convert any encoding to server encoding.
+ */
+char *
+pg_any_to_server(const char *s, int len, int encoding)
+{
 	Assert(DatabaseEncoding);
 	Assert(ClientEncoding);
 
 	if (len <= 0)
 		return (char *) s;
 
-	if (ClientEncoding->encoding == DatabaseEncoding->encoding ||
-		ClientEncoding->encoding == PG_SQL_ASCII)
+	if (encoding == DatabaseEncoding->encoding ||
+		encoding == PG_SQL_ASCII)
 	{
 		/*
 		 * No conversion is needed, but we must still validate the data.
@@ -469,8 +480,8 @@ pg_client_to_server(const char *s, int len)
 		 * to the parser but we have no way to convert it.	We compromise by
 		 * rejecting the data if it contains any non-ASCII characters.
 		 */
-		if (PG_VALID_BE_ENCODING(ClientEncoding->encoding))
-			(void) pg_verify_mbstr(ClientEncoding->encoding, s, len, false);
+		if (PG_VALID_BE_ENCODING(encoding))
+			(void) pg_verify_mbstr(encoding, s, len, false);
 		else
 		{
 			int			i;
@@ -497,18 +508,33 @@ pg_client_to_server(const char *s, int len)
 char *
 pg_server_to_client(const char *s, int len)
 {
+	Assert(ClientEncoding);
+
+	return pg_any_to_server(s, len, ClientEncoding->encoding);
+}
+
+/*
+ * convert server encoding to any encoding.
+ */
+char *
+pg_server_to_any(const char *s, int len, int encoding)
+{
 	Assert(DatabaseEncoding);
 	Assert(ClientEncoding);
 
 	if (len <= 0)
 		return (char *) s;
 
-	if (ClientEncoding->encoding == DatabaseEncoding->encoding ||
-		ClientEncoding->encoding == PG_SQL_ASCII ||
+	if (encoding == DatabaseEncoding->encoding ||
+		encoding == PG_SQL_ASCII ||
 		DatabaseEncoding->encoding == PG_SQL_ASCII)
 		return (char *) s;		/* assume data is valid */
 
-	return perform_default_encoding_conversion(s, len, false, -1, NULL);
+	if (ClientEncoding->encoding == encoding)
+		return perform_default_encoding_conversion(s, len, false, -1, NULL);
+	else
+		return (char *) pg_do_encoding_conversion(
+			(unsigned char *) s, len, DatabaseEncoding->encoding, encoding);
 }
 
 /*

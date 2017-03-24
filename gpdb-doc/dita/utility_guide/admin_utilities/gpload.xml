@@ -26,8 +26,8 @@
                     installation, so if you have Greenplum Database installed on the machine where
                         <codeph>gpload</codeph> is running, you do not need a separate Python
                         installation.<note>Greenplum Database Loaders for Windows supports only
-                        Python 2.5 (available from <xref href="http://python.org" scope="external"
-                            format="html">www.python.org</xref>).</note></li>
+                        Python 2.5 (available from <xref href="https://www.python.org" scope="external"
+                            format="html">https://www.python.org</xref>).</note></li>
                 <li id="ke147925">The <codeph><xref href="gpfdist.xml#topic1" type="topic"
                             format="dita"/></codeph> parallel file distribution program installed
                     and in your <codeph>$PATH</codeph>. This program is located in

@@ -19,7 +19,8 @@
 
 /*
  * 64 bit atomics on arm are implemented using kernel fallbacks and might be
- * slow, so disable entirely for now.
- * XXX: We might want to change that at some point for AARCH64
+ * slow, so disable entirely for now, unless we're on ARM64.
  */
+#if !defined(__aarch64__) && !defined(__aarch64)
 #define PG_DISABLE_64_BIT_ATOMICS
+#endif  /* __aarch64__ || __aarch64 */

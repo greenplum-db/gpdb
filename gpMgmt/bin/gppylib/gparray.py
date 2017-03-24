@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
+# Copyright (c) Greenplum Inc 2008. All Rights Reserved.
 #
 """
   gparray.py:
@@ -50,7 +50,7 @@ VALID_STATUS = [STATUS_UP, STATUS_DOWN]
 MODE_NOT_INITIALIZED = ''               # no mirroring
 MODE_CHANGELOGGING = 'c'                # filerep logging
 MODE_SYNCHRONIZED = 's'                 # filerep synchronized
-MODE_RESYNCHRONIZATION = 'r'            # 
+MODE_RESYNCHRONIZATION = 'r'            #
 
 # Map gp_segment_configuration mode values to values retured from gp_primarymirror.
 MODE_TO_DATA_STATE_MAP = {}
@@ -67,7 +67,7 @@ MODE_TO_DATA_STATE_MAP[MODE_RESYNCHRONIZATION] = SEG_DATA_STATE_IN_RESYNC
 SEGMENT_STATE_NOT_INITIALIZED               = "NotInitialized"
 SEGMENT_STATE_INITIALIZATION                = "Initialization"
 SEGMENT_STATE_IN_CHANGE_TRACKING_TRANSITION = "InChangeTrackingTransition"
-SEGMENT_STATE_IN_RESYNCTRANSITION           = "InResyncTransition"                       
+SEGMENT_STATE_IN_RESYNCTRANSITION           = "InResyncTransition"
 SEGMENT_STATE_IN_SYNC_TRANSITION            = "InSyncTransition"
 SEGMENT_STATE_READY                         = "Ready"
 SEGMENT_STATE_CHANGE_TRACKING_DISABLED      = "ChangeTrackingDisabled"
@@ -79,7 +79,7 @@ SEGMENT_STATE_IMMEDIATE_SHUTDOWN            = "ImmediateShutdown"
 
 VALID_MODE = [
     MODE_SYNCHRONIZED,
-    MODE_CHANGELOGGING, 
+    MODE_CHANGELOGGING,
     MODE_RESYNCHRONIZATION,
 ]
 MODE_LABELS = {
@@ -113,8 +113,8 @@ FAULT_STRATEGY_SAN = 's'                # valid for versions 4.0+
 FAULT_STRATEGY_READONLY = 'r'           # valid for versions 3.x
 FAULT_STRATEGY_CONTINUE = 'c'           # valid for versions 3.x
 FAULT_STRATEGY_LABELS = {
-    FAULT_STRATEGY_NONE:               "none", 
-    FAULT_STRATEGY_FILE_REPLICATION:   "physical mirroring", 
+    FAULT_STRATEGY_NONE:               "none",
+    FAULT_STRATEGY_FILE_REPLICATION:   "physical mirroring",
     FAULT_STRATEGY_SAN:                "SAN failover",
     FAULT_STRATEGY_READONLY:           "readonly",
     FAULT_STRATEGY_CONTINUE:           "continue",
@@ -128,11 +128,11 @@ def getFaultStrategyLabel(strategy):
 
 class InvalidSegmentConfiguration(Exception):
     """Exception raised when an invalid gparray configuration is
-    read from gp_segment_configuration or an attempt to save an 
+    read from gp_segment_configuration or an attempt to save an
     invalid gparray configuration is made."""
     def __init__(self, array):
         self.array = array
-        
+
     def __str__(self):
         return "Invalid GpArray: %s" % self.array
 
@@ -140,7 +140,7 @@ class InvalidSegmentConfiguration(Exception):
 # ============================================================================
 class GpDB:
     """
-    GpDB class representing configuration information for a single dbid 
+    GpDB class representing configuration information for a single dbid
     within a Greenplum Array.
     """
 
@@ -175,10 +175,10 @@ class GpDB:
 
         # Catalog directory for each database in this segment
         self.catdirs = None
-        
+
         # Todo: Remove old dead code
         self.valid = (status == 'u')
-        
+
     # --------------------------------------------------------------------
     def __str__(self):
         """
@@ -209,7 +209,7 @@ class GpDB:
     #
     def equalIgnoringModeAndStatusAndReplicationPort(self, other):
         """
-        Return true if none of the "core" attributes (e.g. filespace) 
+        Return true if none of the "core" attributes (e.g. filespace)
           of two segments differ, false otherwise.
 
         This method is used by updateSystemConfig() to know when a catalog
@@ -228,7 +228,7 @@ class GpDB:
             return self == other
         finally:
             #
-            # restore mode and status after comaprison 
+            # restore mode and status after comaprison
             #
             self.setSegmentMode(firstMode)
             self.setSegmentStatus(firstStatus)
@@ -242,7 +242,7 @@ class GpDB:
         information to call initFromString on the result and deterministic
         so it can be used for __cmp__ comparison
         """
-        
+
         # Note: this doesn't currently handle "pending filespaces", but
         # this is not currently required since gpfilespace is the only code
         # that generates pending filespaces and it never serializes a gparray
@@ -279,7 +279,7 @@ class GpDB:
           - TODO: Should be compatable with repr() formatting.
         """
         tup = s.strip().split('|')
-        
+
         # Old format: 8 fields
         #    Todo: remove the need for this, or rework it to be cleaner
         if len(tup) == 8:
@@ -344,16 +344,16 @@ class GpDB:
             raise Exception("GpDB unknown input format: %s" % s)
 
         # Initialize segment without filespace information
-        gpdb = GpDB(content         = content, 
-                    preferred_role  = preferred_role, 
-                    dbid            = dbid, 
-                    role            = role, 
-                    mode            = mode, 
+        gpdb = GpDB(content         = content,
+                    preferred_role  = preferred_role,
+                    dbid            = dbid,
+                    role            = role,
+                    mode            = mode,
                     status          = status,
-                    hostname        = hostname, 
+                    hostname        = hostname,
                     address         = address,
-                    port            = port, 
-                    datadir         = datadir, 
+                    port            = port,
+                    datadir         = datadir,
                     replicationPort = replicationPort)
 
         # Add in filespace information, if present
@@ -362,7 +362,7 @@ class GpDB:
                 continue
             (fsoid, fselocation) = fs.split(":")
             gpdb.addSegmentFilespace(fsoid, fselocation)
-            
+
         # Add Catalog Dir, if present
         gpdb.catdirs = []
         for d in catdirs.split(","):
@@ -423,7 +423,7 @@ class GpDB:
         """
         Create a tempate given the information in this GpDB.
         """
-        
+
         # Make sure we have enough room in the dstDir to fit the segment and its filespaces.
         duCmd = DiskUsage( name = "srcDir"
                            , directory = dstDir
@@ -438,7 +438,7 @@ class GpDB:
             duCmd = DiskUsage(name, dir)
             duCmd.run(validateAfter=True)
             size = duCmd.get_bytes_used()
-            requiredSize = requiredSize + size 
+            requiredSize = requiredSize + size
 
         dstBytesAvail = DiskFree.get_size_local(name = "Check for available free space for segment template", directory = dstDir)
         if dstBytesAvail <= requiredSize:
@@ -449,7 +449,7 @@ class GpDB:
         cpCmd = LocalDirCopy("Copy system data directory", self.getSegmentDataDirectory(), dstDir)
         cpCmd.run(validateAfter = True)
         res = cpCmd.get_results()
-            
+
         if len(self.__filespaces) > 1:
             """ Make directory to hold file spaces """
             fullPathFsDir = dstDir + "/" +  DESTINATION_FILE_SPACES_DIRECTORY
@@ -467,7 +467,7 @@ class GpDB:
                 cpCmd = LocalDirCopy(name, dir, destDir)
                 cpCmd.run(validateAfter = True)
                 res = cpCmd.get_results()
-        
+
             # Remove the gp_dbid file from the data dir
             RemoveFiles.local('Remove gp_dbid file', os.path.normpath(dstDir + '/gp_dbid'))
             logger.info("Cleaning up catalog for schema only copy on destination")
@@ -483,7 +483,7 @@ class GpDB:
     #  + QE (Query Executor)
     #     + primary
     #     + mirror
-    # --------------------------------------------------------------------    
+    # --------------------------------------------------------------------
     def isSegmentQD(self):
         return self.content < 0
 
@@ -581,7 +581,7 @@ class GpDB:
         Return the primary datadirectory location for the segment.
 
         Note: the datadirectory is just one of the filespace locations
-        associated with the segment, calling code should be carefull not 
+        associated with the segment, calling code should be carefull not
         to assume that this is the only directory location for this segment.
 
         Todo: evaluate callers of this function to see if they should really
@@ -593,7 +593,7 @@ class GpDB:
         """
         Returns the filespace dictionary of oid->path pairs
         """
-        return self.__filespaces        
+        return self.__filespaces
 
 
     # --------------------------------------------------------------------
@@ -667,8 +667,8 @@ class GpDB:
     def addSegmentFilespace(self, oid, path):
         """
         Add a filespace path for this segment.
-        
-        Throws: 
+
+        Throws:
            Exception - if a path has already been specified for this segment.
         """
 
@@ -677,16 +677,16 @@ class GpDB:
         # does not yet exist there is no valid value that could be used.
         if oid == None:
             if self.__pending_filespace:
-                raise Exception("Duplicate filespace path for dbid %d" % 
+                raise Exception("Duplicate filespace path for dbid %d" %
                                 self.dbid)
             self.__pending_filespace = path
             return
-        
+
         # oids should always be integer values > 0
         oid = int(oid)
         assert(oid > 0)
 
-        # The more usual case just sets the filespace in the filespace 
+        # The more usual case just sets the filespace in the filespace
         # dictionary
         if oid in self.__filespaces:
             raise Exception("Duplicate filespace path for "
@@ -700,7 +700,7 @@ class GpDB:
         (called by gpfilespace)
         """
         return self.__pending_filespace
-        
+
 
 
 
@@ -716,7 +716,7 @@ class Segment:
     """
     primaryDB=None
     mirrorDBs=None
-    
+
     # --------------------------------------------------------------------
     def __init__(self):
         self.mirrorDBs=[]
@@ -724,17 +724,17 @@ class Segment:
 
     # --------------------------------------------------------------------
     def __str__(self):
-        return "(Primary: %s, Mirrors: [%s])" % (str(self.primaryDB), 
-                                                 ','.join([str(segdb) for segdb in self.mirrorDBs])) 
+        return "(Primary: %s, Mirrors: [%s])" % (str(self.primaryDB),
+                                                 ','.join([str(segdb) for segdb in self.mirrorDBs]))
 
     # --------------------------------------------------------------------
     def addPrimary(self,segDB):
         self.primaryDB=segDB
-    
+
     def addMirror(self,segDB):
         self.mirrorDBs.append(segDB)
 
-    # --------------------------------------------------------------------    
+    # --------------------------------------------------------------------
     def get_dbs(self):
         dbs=[]
         if self.primaryDB is not None: # MPP-10886 don't add None to result list
@@ -750,7 +750,7 @@ class Segment:
         for m in self.mirrorDBs:
             hosts.append(m.hostname)
         return hosts
-    
+
     def is_segment_pair_valid(self):
         """Validates that the primary/mirror pair are in a valid state"""
         for mirror_db in self.mirrorDBs:
@@ -765,7 +765,7 @@ class Segment:
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
 class SegmentRow():
-    
+
     def __init__(self, content, isprimary, dbid, host, address, port, fulldir, prPort, fileSpaceDictionary = None):
         self.content         = content
         self.isprimary       = isprimary
@@ -776,7 +776,7 @@ class SegmentRow():
         self.fulldir         = fulldir
         self.prPort          = prPort
         self.fileSpaceDictionary   = fileSpaceDictionary
-    
+
     def __str__(self):
         retVal = "" + \
         "content = "          + str(self.content)   + "\n" + \
@@ -787,7 +787,7 @@ class SegmentRow():
         "port = "             + str(self.port)            + "\n" + \
         "fulldir = "          + str(self.fulldir)         + "\n" + \
         "prPort = "           + str(self.prPort)          + "\n" + \
-        "fileSpaceDictionary = " + str(self.fileSpaceDictionary)  + "\n"  + "\n"  
+        "fileSpaceDictionary = " + str(self.fileSpaceDictionary)  + "\n"  + "\n"
 
 
 def createSegmentRows( hostlist
@@ -809,7 +809,7 @@ def createSegmentRows( hostlist
     a result of expansion.
     """
 
-    rows    =[]    
+    rows    =[]
     dbid    = 0
     content = 0
 
@@ -847,7 +847,7 @@ def createSegmentRows( hostlist
             content += 1
             dbid += 1
             index = index + 1
-    
+
     #mirrors
     if mirror_type is None or mirror_type == 'none':
         return rows
@@ -861,7 +861,7 @@ def createSegmentRows( hostlist
         num_dirs=len(primary_list)
         if num_hosts <= num_dirs:
             raise Exception("Not enough hosts for spread mirroring.  You must have more hosts than primary segments per host")
-        
+
         mirror_port = {}
         mirror_replication_port = {}
 
@@ -888,12 +888,12 @@ def createSegmentRows( hostlist
                     address = mirror_host + '-' + str(interfaceNumber)
                 else:
                     address = mirror_host
-                    
+
                 if not mirror_port.has_key(mirror_host):
                     mirror_port[mirror_host] = mirror_portbase
                 if not mirror_replication_port.has_key(mirror_host):
                     mirror_replication_port[mirror_host] = mirror_replication_portbase
-                    
+
                 rows.append( SegmentRow( content = content
                                        , isprimary = isprimary
                                        , dbid = dbid
@@ -911,20 +911,20 @@ def createSegmentRows( hostlist
                 dbid += 1
                 mirror_host_offset += 1
                 index = index + 1
-                
-        
+
+
     elif mirror_type.lower().strip() == 'grouped':
         content = 0
         num_hosts = len(hostlist)
-        
+
         if num_hosts < 2:
             raise Exception("Not enough hosts for grouped mirroring.  You must have at least 2")
-        
+
         #we'll pick our mirror host to be 1 host "ahead" of the primary.
         mirror_host_offset = 1
-        
+
         isprimary='f'
-        for host in hostlist:            
+        for host in hostlist:
             mirror_host = hostlist[mirror_host_offset % num_hosts]
             mirror_host_offset += 1
             port = mirror_portbase
@@ -958,10 +958,10 @@ def createSegmentRows( hostlist
                 content += 1
                 dbid += 1
                 index = index + 1
-        
+
     else:
         raise Exception("Invalid mirror type specified: %s" % mirror_type)
-    
+
     return rows
 
 #========================================================================
@@ -978,7 +978,7 @@ def createSegmentRowsFromSegmentList( newHostlist
                                     ):
     """
     This method will return a list of SegmentRow objects that represent an expansion of existing
-    segments on new hosts. 
+    segments on new hosts.
     """
     rows    = []
     dbid    = 0
@@ -1015,7 +1015,7 @@ def createSegmentRowsFromSegmentList( newHostlist
             content += 1
             dbid += 1
             index += 1
-    
+
     #mirrors
     if mirror_type is None or mirror_type == 'none':
         return rows
@@ -1026,7 +1026,7 @@ def createSegmentRowsFromSegmentList( newHostlist
         num_dirs=len(primary_segment_list)
         if num_hosts <= num_dirs:
             raise Exception("Not enough hosts for spread mirroring.  You must have more hosts than primary segments per host")
-        
+
         mirror_port = {}
         mirror_replication_port = {}
 
@@ -1047,12 +1047,12 @@ def createSegmentRowsFromSegmentList( newHostlist
                     address = mirror_host + '-' + str(interfaceNumber)
                 else:
                     address = mirror_host
-    
+
                 if not mirror_port.has_key(mirror_host):
                     mirror_port[mirror_host] = mirror_portbase
                 if not mirror_replication_port.has_key(mirror_host):
                     mirror_replication_port[mirror_host] = mirror_replication_portbase
-                    
+
                 rows.append( SegmentRow( content = content
                                        , isprimary = isprimary
                                        , dbid = dbid
@@ -1069,20 +1069,20 @@ def createSegmentRowsFromSegmentList( newHostlist
                 content += 1
                 dbid += 1
                 mirror_host_offset += 1
-                
-        
+
+
     elif mirror_type.lower().strip() == 'grouped':
         content = 0
         num_hosts = len(newHostlist)
-        
+
         if num_hosts < 2:
             raise Exception("Not enough hosts for grouped mirroring.  You must have at least 2")
-        
+
         #we'll pick our mirror host to be 1 host "ahead" of the primary.
         mirror_host_offset = 1
-        
+
         isprimary='f'
-        for host in newHostlist:            
+        for host in newHostlist:
             mirror_host = newHostlist[mirror_host_offset % num_hosts]
             mirror_host_offset += 1
             port = mirror_portbase
@@ -1095,7 +1095,7 @@ def createSegmentRowsFromSegmentList( newHostlist
                 else:
                     address = mirror_host
                 newFulldir = "%s/%s%d" % (GpDB.getDataDirPrefix(mSeg.getSegmentDataDirectory()), dir_prefix, content)
-                newFileSpaceDictionary = GpDB.getFileSpaceDirsWithNewSuffix(mSeg.getSegmentFilespaces(), dir_prefix + str(content), includeSystemFilespace = False)                
+                newFileSpaceDictionary = GpDB.getFileSpaceDirsWithNewSuffix(mSeg.getSegmentFilespaces(), dir_prefix + str(content), includeSystemFilespace = False)
                 rows.append( SegmentRow( content = content
                                        , isprimary = isprimary
                                        , dbid = dbid
@@ -1111,10 +1111,10 @@ def createSegmentRowsFromSegmentList( newHostlist
                 content += 1
                 dbid += 1
                 index = index + 1
-        
+
     else:
         raise Exception("Invalid mirror type specified: %s" % mirror_type)
-    
+
     return rows
 
 #========================================================================
@@ -1158,7 +1158,7 @@ class GpFilespaceObj:
 
 # ============================================================================
 class GpArray:
-    """ 
+    """
     GpArray is a python class that describes a Greenplum array.
 
     A Greenplum array consists of:
@@ -1260,7 +1260,7 @@ class GpArray:
         """
 
         try:
-            # Do all the segments contain the same number of primary and mirrors.                                                                 
+            # Do all the segments contain the same number of primary and mirrors.
             firstNumPrimaries = 0
             firstNumMirrors   = 0
             firstHost         = ""
@@ -1344,7 +1344,7 @@ class GpArray:
 
         if version.getVersionRelease() in ("3.0", "3.1", "3.2", "3.3"):
 
-            # In older releases we get the fault strategy using the 
+            # In older releases we get the fault strategy using the
             # gp_fault_action guc.
             strategy_rows = dbconn.execSQL(conn, "show gp_fault_action")
 
@@ -1356,18 +1356,18 @@ class GpArray:
             # contain this information.  Initializing a hostcache using the
             # resulting gparray will automatically fill in a value for hostname.
             #
-            # Note: this should be kept in sync with the code in 
+            # Note: this should be kept in sync with the code in
             # GpDB.InitFromString() code for initializing old catalog formats.
             config_rows = dbconn.execSQL(conn, '''
-                SELECT dbid, content, 
-                       case when isprimary then 'p' else 'm' end as role, 
+                SELECT dbid, content,
+                       case when isprimary then 'p' else 'm' end as role,
                        case when definedprimary then 'p' else 'm' end as preferred_role,
-                       's' as mode, 
-                       case when valid then 'u' else 'd' end as status, 
+                       's' as mode,
+                       case when valid then 'u' else 'd' end as status,
                        null as hostname,
-                       hostname as address, 
-                       port, 
-                       null as replication_port, 
+                       hostname as address,
+                       port,
+                       null as replication_port,
                        %s as fsoid,
                        datadir as fselocation
                 FROM pg_catalog.gp_configuration
@@ -1388,8 +1388,8 @@ class GpArray:
             ''')
 
             config_rows = dbconn.execSQL(conn, '''
-                SELECT dbid, content, role, preferred_role, mode, status, 
-                       hostname, address, port, replication_port, fs.oid, 
+                SELECT dbid, content, role, preferred_role, mode, status,
+                       hostname, address, port, replication_port, fs.oid,
                        fselocation
                 FROM pg_catalog.gp_segment_configuration
                 JOIN pg_catalog.pg_filespace_entry on (dbid = fsedbid)
@@ -1427,14 +1427,14 @@ class GpArray:
         for row in config_rows:
 
             # Extract fields from the row
-            (dbid, content, role, preferred_role, mode, status, hostname, 
+            (dbid, content, role, preferred_role, mode, status, hostname,
              address, port, replicationPort, fsoid, fslocation) = row
 
             # If we have segments which have recovered, record them.
             if preferred_role != role and content >= 0:
                 if mode == MODE_SYNCHRONIZED and status == STATUS_UP:
                     recoveredSegmentDbids.append(dbid)
-            
+
             # The query returns all the filespaces for a segment on separate
             # rows.  If this row is the same dbid as the previous row simply
             # add this filespace to the existing list, otherwise create a
@@ -1442,10 +1442,10 @@ class GpArray:
             if seg and seg.getSegmentDbId() == dbid:
                 seg.addSegmentFilespace(fsoid, fslocation)
             else:
-                seg = GpDB(content, preferred_role, dbid, role, mode, status, 
+                seg = GpDB(content, preferred_role, dbid, role, mode, status,
                            hostname, address, port, fslocation, replicationPort)
                 segments.append(seg)
-        
+
         datcatloc = dbconn.execSQL(conn, '''
             select fsloc.dbid, fsloc.fselocation || '/' ||
                    case when db.dattablespace = 1663
@@ -1470,7 +1470,7 @@ class GpArray:
             seg.catdirs = catlocmap[seg.dbid]
 
         origSegments = [seg.copy() for seg in segments]
-        
+
         if strategy_rows.rowcount == 0:
             raise Exception("Database does not contain gp_fault_strategy entry")
         if strategy_rows.rowcount > 1:
@@ -1483,25 +1483,24 @@ class GpArray:
         array.setFaultStrategy(strategy)
         array.setSanConfig(san_rows, san_segs_rows)
         array.setFilespaces(filespaceArr)
-        
+
         return array
 
     # --------------------------------------------------------------------
     @staticmethod
     def initFromFile(filename):
         """
-        Factory method: creates a GpArray from an input file 
+        Factory method: creates a GpArray from an input file
         (called by gpexpand.)
 
         Note: Currently this is only used by the gpexpand rollback facility,
-        and by gpmigrator utility,
         there is currently NO expectation that this file format is saved
-        on disk in any long term fashion.  
+        on disk in any long term fashion.
 
-        Format changes of the file are acceptable until this assumption is 
+        Format changes of the file are acceptable until this assumption is
         changed, but initFromFile and dumpToFile must be kept in parity.
         """
-        segdbs=[]    
+        segdbs=[]
         fp = open(filename, 'r')
         for line in fp:
             segdbs.append(GpDB.initFromString(line))
@@ -1511,7 +1510,7 @@ class GpArray:
 
     # --------------------------------------------------------------------
     def is_array_valid(self):
-        """Checks that each primary/mirror pair is in a valid state""" 
+        """Checks that each primary/mirror pair is in a valid state"""
         for seg in self.segments:
             if not seg.is_segment_pair_valid():
                 return False
@@ -1542,7 +1541,7 @@ class GpArray:
         These are raw results sets. We build two maps:
           Map1: from dbid to a list of san-mounts.
           Map2: from mount-id to the san_config attributes.
-          
+
         The code below has to match the SQL inside initFromCatalog()
         """
         # First collect the "unnested" mount-ids into a list.
@@ -1594,7 +1593,7 @@ class GpArray:
         """
 
         checkNotNone("strategy", strategy)
-        
+
         # Try to lookup the strategy as a label
         for (key, value) in FAULT_STRATEGY_LABELS.iteritems():
             if value == strategy:
@@ -1611,7 +1610,7 @@ class GpArray:
         """
 
         if self.__strategy not in VALID_FAULT_STRATEGY:
-            raise Exception("Fault strategy is not set correctly: '%s'" % 
+            raise Exception("Fault strategy is not set correctly: '%s'" %
                             self.__strategy)
 
         return self.__strategy
@@ -1634,7 +1633,7 @@ class GpArray:
     # --------------------------------------------------------------
     def getFileSpaceName(self, filespaceOid):
         retValue = None
-        
+
         if self.__filespaceArr != None:
             for entry in self.__filespaceArr:
                 if entry.getOid() == filespaceOid:
@@ -1645,7 +1644,7 @@ class GpArray:
     # --------------------------------------------------------------
     def getFileSpaceOid(self, filespaceName):
         retValue = None
-        
+
         if self.__filespaceArr != None:
             for entry in self.__filespaceArr:
                 if entry.getName() == filespaceName:
@@ -1678,7 +1677,7 @@ class GpArray:
         hostList.append(self.master.getSegmentHostName())
         if self.standbyMaster:
             hostList.append(self.standbyMaster.getSegmentHostName())
-            
+
         dbList = self.getDbList(includeExpansionSegs = includeExpansionSegs)
         for db in dbList:
             if db.getSegmentHostName() in hostList:
@@ -1686,7 +1685,7 @@ class GpArray:
             else:
                 hostList.append(db.getSegmentHostName())
         return hostList
-           
+
 
     def getDbIdToPeerMap(self):
         """
@@ -1712,7 +1711,7 @@ class GpArray:
         return result
 
 
-    # --------------------------------------------------------------------    
+    # --------------------------------------------------------------------
     def getSegDbList(self, includeExpansionSegs=False):
         """Return a list of all GpDb objects for all segments in the array"""
         dbs=[]
@@ -1720,7 +1719,7 @@ class GpArray:
             dbs.extend(seg.get_dbs())
         if includeExpansionSegs:
             for seg in self.expansionSegments:
-                dbs.extend(seg.get_dbs()) 
+                dbs.extend(seg.get_dbs())
         return dbs
 
     # --------------------------------------------------------------------
@@ -1751,7 +1750,7 @@ class GpArray:
             dbs.extend(seg.get_dbs())
         return dbs
 
-    # --------------------------------------------------------------------    
+    # --------------------------------------------------------------------
     def getSegmentContainingDb(self, db):
         for seg in self.segments:
             for segDb in seg.get_dbs():
@@ -1759,7 +1758,7 @@ class GpArray:
                     return seg
         return None
 
-    # --------------------------------------------------------------------    
+    # --------------------------------------------------------------------
     def getExpansionSegmentContainingDb(self, db):
         for seg in self.expansionSegments:
             for segDb in seg.get_dbs():
@@ -1788,7 +1787,7 @@ class GpArray:
             for segdb in seg.mirrorDBs:
                 if segdb.mode == MODE_SYNCHRONIZED:
                     dbs.append(segdb)
-        return dbs        
+        return dbs
 
     # --------------------------------------------------------------------
     def get_unbalanced_segdbs(self):
@@ -1798,7 +1797,7 @@ class GpArray:
                 if segdb.preferred_role != segdb.role:
                     dbs.append(segdb)
         return dbs
-    
+
     # --------------------------------------------------------------------
     def get_unbalanced_primary_segdbs(self):
         dbs = [seg for seg in self.get_unbalanced_segdbs() if seg.role == ROLE_PRIMARY]
@@ -1816,7 +1815,7 @@ class GpArray:
                 dbs.append(db)
         return dbs
 
-    # --------------------------------------------------------------------    
+    # --------------------------------------------------------------------
     def get_valid_segdbs(self):
         dbs=[]
         for seg in self.segments:
@@ -1826,7 +1825,7 @@ class GpArray:
             for db in seg.mirrorDBs:
                 if db.valid:
                     dbs.append(db)
-        return dbs        
+        return dbs
 
     # --------------------------------------------------------------------
     def get_hostlist(self, includeMaster=True):
@@ -1834,12 +1833,12 @@ class GpArray:
         if includeMaster:
             hosts.append(self.master.hostname)
             if self.standbyMaster is not None:
-                hosts.append(self.standbyMaster.hostname)        
+                hosts.append(self.standbyMaster.hostname)
         for seg in self.segments:
             hosts.extend(seg.get_hosts())
         return hosts
 
-    # --------------------------------------------------------------------   
+    # --------------------------------------------------------------------
     def get_max_dbid(self,includeExpansionSegs=False):
         """Returns the maximum dbid in the array.  If includeExpansionSegs
         is True, this includes the expansion segment array in the search"""
@@ -1848,68 +1847,68 @@ class GpArray:
         for db in self.getDbList(includeExpansionSegs):
             if db.getSegmentDbId() > dbid:
                 dbid = db.getSegmentDbId()
-        
+
         return dbid
 
-    # --------------------------------------------------------------------    
+    # --------------------------------------------------------------------
     def get_max_contentid(self, includeExpansionSegs=False):
         """Returns the maximum contentid in the array.  If includeExpansionSegs
         is True, this includes the expansion segment array in the search"""
         content = 0
-        
+
         for db in self.getDbList(includeExpansionSegs):
             if db.content > content:
                 content = db.content
-                
+
         return content
 
-    # --------------------------------------------------------------------   
+    # --------------------------------------------------------------------
     def get_segment_count(self):
         return len(self.segments)
 
-    # --------------------------------------------------------------------    
+    # --------------------------------------------------------------------
     def get_min_primary_port(self):
         """Returns the minimum primary segment db port"""
         min_primary_port = self.segments[0].primaryDB.port
         for seg in self.segments:
             if seg.primaryDB.port < min_primary_port:
                 min_primary_port = seg.primaryDB.port
-        
+
         return min_primary_port
-    
-    # --------------------------------------------------------------------    
+
+    # --------------------------------------------------------------------
     def get_max_primary_port(self):
         """Returns the maximum primary segment db port"""
         max_primary_port = self.segments[0].primaryDB.port
         for seg in self.segments:
             if seg.primaryDB.port > max_primary_port:
                 max_primary_port = seg.primaryDB.port
-        
+
         return max_primary_port
-    
-    # --------------------------------------------------------------------    
+
+    # --------------------------------------------------------------------
     def get_min_mirror_port(self):
         """Returns the minimum mirror segment db port"""
         if self.get_mirroring_enabled() is False:
             raise Exception('Mirroring is not enabled')
-        
+
         min_mirror_port = self.segments[0].mirrorDBs[0].port
-        
+
         for seg in self.segments:
             for db in seg.mirrorDBs:
                 if db.port < min_mirror_port:
                     min_mirror_port = db.port
-        
+
         return min_mirror_port
-    
-    # --------------------------------------------------------------------    
+
+    # --------------------------------------------------------------------
     def get_max_mirror_port(self):
         """Returns the maximum mirror segment db port"""
         if self.get_mirroring_enabled() is False:
             raise Exception('Mirroring is not enabled')
-        
+
         max_mirror_port = self.segments[0].mirrorDBs[0].port
-        
+
         for seg in self.segments:
             for db in seg.mirrorDBs:
                 if db.port > max_mirror_port:
@@ -1973,12 +1972,12 @@ class GpArray:
 
         return max_mirror_replication_port
 
-    # --------------------------------------------------------------------    
+    # --------------------------------------------------------------------
     def get_interface_numbers(self):
         """Returns interface numbers in the array.  Assumes that addresses are named
         <hostname>-<int_num>.  If the nodes just have <hostname> then an empty
         array is returned."""
-        
+
         interface_nums = []
         primary_hostname = self.segments[0].primaryDB.hostname
         primary_address_list = []
@@ -2000,10 +1999,10 @@ class GpArray:
 
         return interface_nums
 
-    # --------------------------------------------------------------------    
+    # --------------------------------------------------------------------
     def get_primary_count(self):
         return self.numPrimarySegments
-        
+
     # --------------------------------------------------------------------
     def get_mirroring_enabled(self):
         """Returns True if mirrors are defined"""
@@ -2013,7 +2012,7 @@ class GpArray:
     # --------------------------------------------------------------------
     def get_list_of_primary_segments_on_host(self, hostname):
         retValue = []
-        
+
         for db in self.getDbList():
             if db.isSegmentPrimary(False) == True and db.getSegmentHostName() == hostname:
                 retValue.append(db)
@@ -2022,22 +2021,22 @@ class GpArray:
     # --------------------------------------------------------------------
     def get_list_of_mirror_segments_on_host(self, hostname):
         retValue = []
-        
+
         for db in self.getDbList():
             if db.isSegmentMirror(False) == True and db.getSegmentHostName() == hostname:
                 retValue.append(db)
         return retValue
-               
+
     # --------------------------------------------------------------------
     def get_primary_root_datadirs(self):
         """
         Returns a list of primary data directories minus the <prefix><contentid>
 
-        NOTE 1: 
+        NOTE 1:
            This currently assumes that all segments are configured the same
            and gets the results only from the host of segment 0
 
-        NOTE 2: 
+        NOTE 2:
            The determination of hostname is based on faulty logic
         """
 
@@ -2045,14 +2044,14 @@ class GpArray:
 
         seg0_hostname = self.segments[0].primaryDB.getSegmentAddress()
         (seg0_hostname, inf_num) = get_host_interface(seg0_hostname)
-        
+
         for db in self.getDbList():
             if db.isSegmentPrimary(False) and db.getSegmentAddress().startswith(seg0_hostname):
                 primary_datadirs.append(db.datadir[:db.datadir.rfind('/')])
-        
+
         return primary_datadirs
 
-    # --------------------------------------------------------------------    
+    # --------------------------------------------------------------------
     def get_mirror_root_datadirs(self):
         """
         Returns a list of mirror data directories minus the <prefix><contentid>
@@ -2066,10 +2065,10 @@ class GpArray:
         for db in self.getDbList():
             if db.isSegmentMirror(False) and db.getSegmentAddress().startswith(seg0_hostname):
                 mirror_datadirs.append(db.datadir[:db.datadir.rfind('/')])
-        
+
         return mirror_datadirs
 
-    # --------------------------------------------------------------------    
+    # --------------------------------------------------------------------
     def get_datadir_prefix(self):
         """
         Returns the prefix portion of <prefix><contentid>
@@ -2080,7 +2079,7 @@ class GpArray:
         prefix = self.master.datadir[start_last_dir:start_dir_content]
         return prefix
 
-    # --------------------------------------------------------------------    
+    # --------------------------------------------------------------------
     # If we've got recovered segments, and we have a matched-pair, we
     # can update the catalog to "rebalance" back to our original primary.
     def updateRoleForRecoveredSegs(self, dbURL):
@@ -2116,10 +2115,10 @@ class GpArray:
         dbconn.execSQL(conn, "COMMIT")
         conn.close()
 
-    # --------------------------------------------------------------------    
-    def addExpansionSeg(self, content, preferred_role, dbid, role, 
+    # --------------------------------------------------------------------
+    def addExpansionSeg(self, content, preferred_role, dbid, role,
                         hostname, address, port, datadir, replication_port, fileSpaces = None):
-        """ 
+        """
         Adds a segment to the gparray as an expansion segment.
 
         Note: may work better to construct the new GpDB in gpexpand and
@@ -2128,26 +2127,26 @@ class GpArray:
 
         if (content <= self.segments[-1].get_dbs()[0].content):
             raise Exception('Invalid content ID for expansion segment')
-        
-        segdb = GpDB(content = content, 
-                     preferred_role = preferred_role, 
-                     dbid = dbid, 
+
+        segdb = GpDB(content = content,
+                     preferred_role = preferred_role,
+                     dbid = dbid,
                      role = role,
                      mode = MODE_SYNCHRONIZED,
                      status = STATUS_UP,
-                     hostname = hostname, 
+                     hostname = hostname,
                      address = address,
-                     port = port, 
-                     datadir = datadir, 
+                     port = port,
+                     datadir = datadir,
                      replicationPort = replication_port)  # todo: add to parameters
-        
+
         if fileSpaces != None:
             for fsOid in fileSpaces:
                 segdb.addSegmentFilespace(oid = fsOid, path = fileSpaces[fsOid])
-        
+
         seglen = len(self.segments)
         expseglen = len(self.expansionSegments)
-        
+
         expseg_index = content - seglen
         logger.debug('New segment index is %d' % expseg_index)
         if expseglen < expseg_index + 1:
@@ -2162,20 +2161,20 @@ class GpArray:
             if seg.primaryDB:
                 raise Exception('Duplicate content id for primary segment')
             seg.addPrimary(segdb)
-        else:             
+        else:
             seg.addMirror(segdb)
 
-    # -------------------------------------------------------------------- 
+    # --------------------------------------------------------------------
     def reOrderExpansionSegs(self):
         """
-        The expansion segments content ID may have changed during the expansion. 
+        The expansion segments content ID may have changed during the expansion.
         This method will re-order the the segments into their proper positions.
         Since there can be no gaps in the content id (see validateExpansionSegs),
         the seg.expansionSegments list is the same length.
         """
         seglen = len(self.segments)
         expseglen = len(self.expansionSegments)
-        
+
         newExpansionSegments = []
         newExpansionSegments.extend([None] * expseglen)
         for seg in self.expansionSegments:
@@ -2192,21 +2191,21 @@ class GpArray:
         dbids = []
         content = []
         expansion_seg_count = 0
-        
+
         # make sure we have added at least one segment
         if len(self.expansionSegments) == 0:
             raise Exception('No expansion segments defined')
-        
+
         # how many mirrors?
         mirrors_per_segment = len(self.segments[0].mirrorDBs)
-            
+
         for seg in self.expansionSegments:
             # If a segment is 'None' that means we have a gap in the content ids
             if seg is None:
                 raise Exception('Expansion segments do not have contiguous content ids.')
-            
+
             expansion_seg_count += 1
-            
+
             for segdb in seg.get_dbs():
                 dbids.append(segdb.getSegmentDbId())
                 if segdb.getSegmentRole() == ROLE_PRIMARY:
@@ -2214,7 +2213,7 @@ class GpArray:
                 else:
                     isprimary = False
                 content.append((segdb.getSegmentContentId(), isprimary))
-            
+
             # mirror count correct for this content id?
             if mirrors_per_segment > 0:
                 if len(seg.mirrorDBs) != mirrors_per_segment:
@@ -2223,7 +2222,7 @@ class GpArray:
                 #shouldn't have any mirrors
                 if len(seg.mirrorDBs) != 0:
                     raise Exception('Expansion segment has a mirror segment defined but mirroring is not enabled.')
-        
+
         # check that the dbids are what they should be
         dbids.sort()
 
@@ -2237,18 +2236,18 @@ class GpArray:
 
         # check that content ids are ok
         valid_content = []
-        for i in range(self.segments[-1].primaryDB.content + 1, 
+        for i in range(self.segments[-1].primaryDB.content + 1,
                        self.segments[-1].primaryDB.content + 1 + len(self.expansionSegments)):
             valid_content.append((i, True))
             for j in range(0, mirrors_per_segment):
                 valid_content.append((i, False))
-        
+
         valid_content.sort(lambda x,y: cmp(x[0], y[0]) or cmp(x[1], y[1]))
         content.sort(lambda x,y: cmp(x[0], y[0]) or cmp(x[1], y[1]))
-        
+
         if valid_content != content:
             raise Exception('Invalid content ids')
-        
+
         # Check for redefinition data dirs and ports
         datadirs = {}
         used_ports = {}
@@ -2277,7 +2276,7 @@ class GpArray:
             else:
                 used_ports[hostname] = []
                 used_ports[hostname].append(db.port)
-    
+
             # Check replication ports
             if replication_port != None:
                 if used_replication_ports.has_key(hostname):
@@ -2303,7 +2302,7 @@ class GpArray:
                     else:
                         dirList.append(dirDict[oid])
 
-    # --------------------------------------------------------------------    
+    # --------------------------------------------------------------------
     def addExpansionHosts(self, hosts, mirror_type):
         """ Adds a list of hosts to the array, using the same data
         directories as the original hosts.  Also adds the mirrors
@@ -2312,11 +2311,11 @@ class GpArray:
         # remove interface numbers if they exist
         existing_hosts = []
         for host in self.get_hostlist(True):
-            if host not in existing_hosts:        
+            if host not in existing_hosts:
                 existing_hosts.append(host)
-        
+
         new_hosts = []
-        
+
         for host in hosts:
             # see if we already have the host
             if host in existing_hosts or host in new_hosts:
@@ -2324,12 +2323,12 @@ class GpArray:
             else:
                 new_hosts.append(host)
 
-        if len(new_hosts) == 0:        
+        if len(new_hosts) == 0:
             raise Exception('No new hosts to add')
-        
+
         """ Get the first segment's host name, and use this host's configuration as a prototype """
         seg0_hostname = self.segments[0].primaryDB.getSegmentHostName()
-        
+
         primary_list = self.get_list_of_primary_segments_on_host(seg0_hostname)
         mirror_list = self.get_list_of_mirror_segments_on_host(seg0_hostname)
         interface_list = self.get_interface_numbers()
@@ -2341,11 +2340,11 @@ class GpArray:
             base_mirror_port = self.get_min_mirror_port()
             base_primary_replication_port = self.get_min_primary_replication_port()
             base_mirror_replication_port = self.get_min_mirror_replication_port()
-        
+
         prefix = self.get_datadir_prefix()
         interface_list = self.get_interface_numbers()
         interface_list.sort()
-        
+
         rows = createSegmentRowsFromSegmentList( newHostlist = new_hosts
                                                , interface_list = interface_list
                                                , primary_segment_list = primary_list
@@ -2357,10 +2356,10 @@ class GpArray:
                                                , primary_replication_portbase = base_primary_replication_port
                                                , mirror_replication_portbase = base_mirror_replication_port
                                                )
-        
+
         self._fixup_and_add_expansion_segments(rows, interface_list)
-        
-    # --------------------------------------------------------------------    
+
+    # --------------------------------------------------------------------
     def addExpansionDatadirs(self, datadirs, mirrordirs, mirror_type, fs_dirs = None, fs_mirror_dirs = None):
         """ Adds new segments based on new data directories to both original
         hosts and hosts that were added by addExpansionHosts.
@@ -2376,16 +2375,16 @@ class GpArray:
 
         interface_list = self.get_interface_numbers()
         interface_list.sort()
-            
+
         prefix = self.get_datadir_prefix()
-          
+
         hosts = []
         # Get all the hosts to add the data dirs to
         for seg in self.getSegDbList(includeExpansionSegs = True):
             host = seg.getSegmentHostName()
             if host not in hosts:
                 hosts.append(host)
-                
+
         # Create the rows
         tempPrimaryRP = None
         tempMirrorRP = None
@@ -2405,14 +2404,14 @@ class GpArray:
                                 , primary_fs_list = fs_dirs
                                 , mirror_fs_list = fs_mirror_dirs
                                 )
-        
-        self._fixup_and_add_expansion_segments(rows, interface_list)
-        
 
-    # --------------------------------------------------------------------    
+        self._fixup_and_add_expansion_segments(rows, interface_list)
+
+
+    # --------------------------------------------------------------------
     def _fixup_and_add_expansion_segments(self, rows, interface_list):
-        """Fixes up expansion segments added to be after the original segdbs 
-        This includes fixing up the dbids, content ids, data directories, 
+        """Fixes up expansion segments added to be after the original segdbs
+        This includes fixing up the dbids, content ids, data directories,
         interface part of the hostnames and mirrors.  After this is done, it
         adds them to the expansion array."""
         interface_count = len(interface_list)
@@ -2437,7 +2436,7 @@ class GpArray:
                                                           , oldContent = row.content
                                                           , newContent = curr_content
                                                           )
-                self.addExpansionSeg(curr_content, ROLE_PRIMARY, curr_dbid, 
+                self.addExpansionSeg(curr_content, ROLE_PRIMARY, curr_dbid,
                                         ROLE_PRIMARY, hostname, address, int(row.port), new_datadir, row.prPort, fileSpaces = new_filespaces)
                 # The content id was adjusted, so we need to save it for the mirror
                 mirror_dict[int(row.content)] = int(curr_content)
@@ -2448,10 +2447,10 @@ class GpArray:
                 new_filespaces = GpDB.replaceFileSpaceContentID( fileSpaceDictionary = row.fileSpaceDictionary
                                                           , oldContent = row.content
                                                           , newContent = new_content
-                                                          )                
-                self.addExpansionSeg(new_content, ROLE_MIRROR, curr_dbid, 
+                                                          )
+                self.addExpansionSeg(new_content, ROLE_MIRROR, curr_dbid,
                                      ROLE_MIRROR, hostname, address, int(row.port), new_datadir, row.prPort, fileSpaces = new_filespaces)
-            curr_dbid += 1           
+            curr_dbid += 1
 
 
     def guessIsMultiHome(self):
@@ -2495,7 +2494,7 @@ class GpArray:
                 return False
 
         """
-        Fall-through -- note that for a 2 host system with 1 segment per host, this will cause the guess to be 'spread' 
+        Fall-through -- note that for a 2 host system with 1 segment per host, this will cause the guess to be 'spread'
         """
         return True
 
@@ -2532,7 +2531,7 @@ class GpArray:
         To be called by the configuration providers only
         """
         return self.__segmentsAsLoadedFromDb
-        
+
     def setSegmentsAsLoadedFromDb(self, segments):
         """
             To be called by the configuration providers only

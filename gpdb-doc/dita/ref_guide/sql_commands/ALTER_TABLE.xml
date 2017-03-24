@@ -180,9 +180,9 @@ ALTER TABLE <varname>name</varname>
                                         it takes so long. It is better to recreate the table with
                                                   <codeph><xref href="./CREATE_TABLE_AS.xml#topic1"
                                                   type="topic" format="dita"/></codeph> and order it
-                                        by the index column(s).
-                                        <note><codeph>CLUSTER ON</codeph> is not supported on
-                                        append-optimized tables.</note></li>
+                                        by the index column(s). <note><codeph>CLUSTER ON</codeph> is
+                                                not supported on append-optimized
+                                        tables.</note></li>
                                 <li id="ay137152"><b>SET WITHOUT OIDS</b> — Removes the OID system
                                         column from the table. Note that there is no variant of
                                                 <codeph>ALTER TABLE</codeph> that allows OIDs to be
@@ -573,8 +573,8 @@ ALTER TABLE <varname>name</varname>
                                                   child partitions of the partitioned table.
                                                   Otherwise, queries against the partitioned table
                                                   with the exchanged default partition that are
-                                                  executed by GPORCA might
-                                                  return incorrect results.</note></pd>
+                                                  executed by GPORCA might return incorrect
+                                                  results.</note></pd>
                                         <pd><b>WITH TABLE</b>
                                                 <varname>table_name</varname> - The name of the
                                                 table you are swapping into the partition design.

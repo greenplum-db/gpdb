@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
  *
  * resgroup.c
- *	  Greenplum internals code for resource groups.
+ *	  GPDB resource group management code.
  *
  *
  * Copyright (c) 2006-2017, Greenplum inc.
@@ -11,27 +11,54 @@
  */
 #include "postgres.h"
 
-#include <time.h>
-
-#include "pgstat.h"
-#include "access/heapam.h"
-#include "access/twophase.h"
-#include "access/twophase_rmgr.h"
-#include "access/xact.h"
-#include "catalog/pg_type.h"
-#include "cdb/cdbgang.h"
 #include "funcapi.h"
-#include "miscadmin.h"
 #include "pgstat.h"
-#include "storage/lock.h"
-#include "storage/lmgr.h"
+#include "access/genam.h"
+#include "access/heapam.h"
+#include "catalog/indexing.h"
+#include "catalog/pg_resgroup.h"
+#include "catalog/pg_type.h"
 #include "utils/builtins.h"
-#include "utils/memutils.h"
-#include "utils/portal.h"
-#include "utils/ps_status.h"
-#include "utils/resowner.h"
-#include "utils/resscheduler.h"
-#include "cdb/memquota.h"
+#include "utils/fmgroids.h"
+#include "utils/resgroup.h"
+
+/*
+ * GetResGroupIdForName -- Return the Oid for a resource group name
+ *
+ * Notes:
+ *	Used by the various admin commands to convert a user supplied group name
+ *	to Oid.
+ */
+Oid
+GetResGroupIdForName(char *name, LOCKMODE lockmode)
+{
+	Relation	rel;
+	ScanKeyData scankey;
+	SysScanDesc scan;
+	HeapTuple	tuple;
+	Oid			rsgid;
+
+	rel = heap_open(ResGroupRelationId, lockmode);
+
+	/* SELECT oid FROM pg_resgroup WHERE rsgname = :1 */
+	ScanKeyInit(&scankey,
+				Anum_pg_resgroup_rsgname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				CStringGetDatum(name));
+	scan = systable_beginscan(rel, ResGroupRsgnameIndexId, true,
+							  SnapshotNow, 1, &scankey);
+
+	tuple = systable_getnext(scan);
+	if (HeapTupleIsValid(tuple))
+		rsgid = HeapTupleGetOid(tuple);
+	else
+		rsgid = InvalidOid;
+
+	systable_endscan(scan);
+	heap_close(rel, lockmode);
+
+	return rsgid;
+}
 
 Datum
 pg_resgroup_get_status_kv(PG_FUNCTION_ARGS)

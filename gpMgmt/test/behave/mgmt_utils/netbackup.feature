@@ -643,8 +643,6 @@ Feature: NetBackup Integration with GPDB
         And there is a "ao" table "public.ao_table" in "bkdb" with data
         And there is a "co" table "public.co_table_ex" in "bkdb" with data
         And there is an external table "ext_tab" in "bkdb" with data for file "/tmp/ext_tab"
-        And the user runs "psql -c 'CREATE LANGUAGE plpythonu' bkdb"
-        And there is a function "pymax" in "bkdb"
         And the user runs "psql -c 'CREATE VIEW vista AS SELECT text 'Hello World' AS hello' bkdb"
         And the user runs "psql -c 'COMMENT ON TABLE public.ao_table IS 'Hello World' bkdb"
         And the user runs "psql -c 'CREATE ROLE foo_user' bkdb"
@@ -664,11 +662,8 @@ Feature: NetBackup Integration with GPDB
         And verify that there is no table "public.heap_table" in "bkdb"
         And verify that there is no table "public.co_table_ex" in "bkdb"
         And verify that there is no view "vista" in "bkdb"
-        And verify that there is no procedural language "plpythonu" in "bkdb"
         And the user runs "psql -c '\z' bkdb"
         And psql should print foo_user=a/ to stdout
-        And the user runs "psql -c '\df' bkdb"
-        And psql should not print pymax to stdout
         And verify that the data of "2" tables in "bkdb" is validated after restore
 
     @nbupartI

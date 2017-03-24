@@ -1,0 +1,37 @@
+ -- Note field "col_null" is not in field location list
+-- NULL value is NOT defined
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
+  s1 char(10), s2 varchar(10), s3 text,
+  col_empty character(5),col_null character varying(5) )
+LOCATION ('file://@hostname@@abs_srcdir@/data/fixedwidth_miss_col_null.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_in',
+  s1='10',s2='10', s3='10', col_empty='5');
+
+-- Note field "col_null" is always loaded with null value
+-- regardless null string and preserve_blanks settings.
+select * from tbl_ext_fixedwidth where col_null is null order by s1;
+
+-- This is true even using "LIKE other table" syntax when creating ext table
+-- Create heap table "missing_col_null", which has default value 'NULL' for column "col_null"
+DROP TABLE IF EXISTS heap_col_null;
+CREATE TABLE heap_col_null (
+    s1 char(10), s2 varchar(10), s3 text,
+    col_empty character(5),col_null character varying(5) default 'NULL' );
+
+\d heap_col_null
+
+-- Create ext table like "heap_col_null"
+-- Note field "col_null" is not in field location list
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (LIKE heap_col_null)
+LOCATION ('file://@hostname@@abs_srcdir@/data/fixedwidth_miss_col_null.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_in',
+    s1='10',s2='10', s3='10', col_empty='5');
+
+-- Describe ext table, notice column "col_null" does not have default value
+\d tbl_ext_fixedwidth
+
+-- Note field "col_null" is loaded with null value
+select * from tbl_ext_fixedwidth where col_null is null order by s1;
+

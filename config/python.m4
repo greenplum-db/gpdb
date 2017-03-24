@@ -68,7 +68,7 @@ then
 	# special for greenplum... python was built in /opt/, but resides in the ext directory
 	if test ! -d "${python_libdir}"
 	then
-		python_libdir=`echo "${python_configdir}" | sed "s/\/python2.6\/config//"`
+		python_libdir=`echo "${python_configdir}" | sed "s/\/python2.7\/config//"`
 	fi
 	python_libspec="-L${python_libdir} -l${ldlibrary}"
 else

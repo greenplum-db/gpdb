@@ -69,7 +69,7 @@ psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hyb
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hybrid_part1_1_prt_p2_2_prt_sp4_3_prt_3" for table "ck_sync1_hybrid_part1_1_prt_p2_2_prt_sp4"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hybrid_part1_1_prt_p2_2_prt_sp4_3_prt_4" for table "ck_sync1_hybrid_part1_1_prt_p2_2_prt_sp4"
 CREATE TABLE
-COPY ck_sync1_hybrid_part1 FROM '/data/tangp3/tincrepo/private/tangp3/main/storage/filerep_end_to_end/hybrid_part.data' delimiter as '|';
+COPY ck_sync1_hybrid_part1 FROM '/Users/aagrawal/workspace/5.0/gpdb/src/test/tinc/tincrepo/mpp/gpdb/tests/storage/filerep_end_to_end/hybrid_part.data' delimiter as '|';
 COPY 10000
 CREATE TABLE ck_sync1_hybrid_part2 (
                 PS_PARTKEY INTEGER,
@@ -142,7 +142,7 @@ psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hyb
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hybrid_part2_1_prt_p2_2_prt_sp4_3_prt_3" for table "ck_sync1_hybrid_part2_1_prt_p2_2_prt_sp4"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hybrid_part2_1_prt_p2_2_prt_sp4_3_prt_4" for table "ck_sync1_hybrid_part2_1_prt_p2_2_prt_sp4"
 CREATE TABLE
-COPY ck_sync1_hybrid_part2 FROM '/data/tangp3/tincrepo/private/tangp3/main/storage/filerep_end_to_end/hybrid_part.data' delimiter as '|';
+COPY ck_sync1_hybrid_part2 FROM '/Users/aagrawal/workspace/5.0/gpdb/src/test/tinc/tincrepo/mpp/gpdb/tests/storage/filerep_end_to_end/hybrid_part.data' delimiter as '|';
 COPY 10000
 CREATE TABLE ck_sync1_hybrid_part3 (
                 PS_PARTKEY INTEGER,
@@ -215,7 +215,7 @@ psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hyb
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hybrid_part3_1_prt_p2_2_prt_sp4_3_prt_3" for table "ck_sync1_hybrid_part3_1_prt_p2_2_prt_sp4"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hybrid_part3_1_prt_p2_2_prt_sp4_3_prt_4" for table "ck_sync1_hybrid_part3_1_prt_p2_2_prt_sp4"
 CREATE TABLE
-COPY ck_sync1_hybrid_part3 FROM '/data/tangp3/tincrepo/private/tangp3/main/storage/filerep_end_to_end/hybrid_part.data' delimiter as '|';
+COPY ck_sync1_hybrid_part3 FROM '/Users/aagrawal/workspace/5.0/gpdb/src/test/tinc/tincrepo/mpp/gpdb/tests/storage/filerep_end_to_end/hybrid_part.data' delimiter as '|';
 COPY 10000
 CREATE TABLE ck_sync1_hybrid_part4 (
                 PS_PARTKEY INTEGER,
@@ -288,7 +288,7 @@ psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hyb
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hybrid_part4_1_prt_p2_2_prt_sp4_3_prt_3" for table "ck_sync1_hybrid_part4_1_prt_p2_2_prt_sp4"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hybrid_part4_1_prt_p2_2_prt_sp4_3_prt_4" for table "ck_sync1_hybrid_part4_1_prt_p2_2_prt_sp4"
 CREATE TABLE
-COPY ck_sync1_hybrid_part4 FROM '/data/tangp3/tincrepo/private/tangp3/main/storage/filerep_end_to_end/hybrid_part.data' delimiter as '|';
+COPY ck_sync1_hybrid_part4 FROM '/Users/aagrawal/workspace/5.0/gpdb/src/test/tinc/tincrepo/mpp/gpdb/tests/storage/filerep_end_to_end/hybrid_part.data' delimiter as '|';
 COPY 10000
 CREATE TABLE ck_sync1_hybrid_part5 (
                 PS_PARTKEY INTEGER,
@@ -361,7 +361,7 @@ psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hyb
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hybrid_part5_1_prt_p2_2_prt_sp4_3_prt_3" for table "ck_sync1_hybrid_part5_1_prt_p2_2_prt_sp4"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hybrid_part5_1_prt_p2_2_prt_sp4_3_prt_4" for table "ck_sync1_hybrid_part5_1_prt_p2_2_prt_sp4"
 CREATE TABLE
-COPY ck_sync1_hybrid_part5 FROM '/data/tangp3/tincrepo/private/tangp3/main/storage/filerep_end_to_end/hybrid_part.data' delimiter as '|';
+COPY ck_sync1_hybrid_part5 FROM '/Users/aagrawal/workspace/5.0/gpdb/src/test/tinc/tincrepo/mpp/gpdb/tests/storage/filerep_end_to_end/hybrid_part.data' delimiter as '|';
 COPY 10000
 CREATE TABLE ck_sync1_hybrid_part6 (
                 PS_PARTKEY INTEGER,
@@ -434,7 +434,7 @@ psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hyb
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hybrid_part6_1_prt_p2_2_prt_sp4_3_prt_3" for table "ck_sync1_hybrid_part6_1_prt_p2_2_prt_sp4"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hybrid_part6_1_prt_p2_2_prt_sp4_3_prt_4" for table "ck_sync1_hybrid_part6_1_prt_p2_2_prt_sp4"
 CREATE TABLE
-COPY ck_sync1_hybrid_part6 FROM '/data/tangp3/tincrepo/private/tangp3/main/storage/filerep_end_to_end/hybrid_part.data' delimiter as '|';
+COPY ck_sync1_hybrid_part6 FROM '/Users/aagrawal/workspace/5.0/gpdb/src/test/tinc/tincrepo/mpp/gpdb/tests/storage/filerep_end_to_end/hybrid_part.data' delimiter as '|';
 COPY 10000
 CREATE TABLE ck_sync1_hybrid_part7 (
                 PS_PARTKEY INTEGER,
@@ -507,7 +507,7 @@ psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hyb
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hybrid_part7_1_prt_p2_2_prt_sp4_3_prt_3" for table "ck_sync1_hybrid_part7_1_prt_p2_2_prt_sp4"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_hybrid_part7_1_prt_p2_2_prt_sp4_3_prt_4" for table "ck_sync1_hybrid_part7_1_prt_p2_2_prt_sp4"
 CREATE TABLE
-COPY ck_sync1_hybrid_part7 FROM '/data/tangp3/tincrepo/private/tangp3/main/storage/filerep_end_to_end/hybrid_part.data' delimiter as '|';
+COPY ck_sync1_hybrid_part7 FROM '/Users/aagrawal/workspace/5.0/gpdb/src/test/tinc/tincrepo/mpp/gpdb/tests/storage/filerep_end_to_end/hybrid_part.data' delimiter as '|';
 COPY 10000
 DROP TABLE sync1_hybrid_part2;
 DROP TABLE

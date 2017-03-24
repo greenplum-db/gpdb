@@ -3,6 +3,7 @@
 -- @modified 2013-06-24 17:00:00
 -- @tags ddl schema_topology
 -- @description Create Index on heap table
+set time zone PST8PDT;
    
 -- Btree Index
    CREATE TABLE fsts_heap_btree(text_col text,bigint_col bigint,char_vary_col character varying(30),numeric_col numeric,int_col int4,float_col float4,int_array_col int[],drop_col numeric,before_rename_col int4,change_datatype_col numeric,a_ts_without timestamp without time zone,b_ts_with timestamp with time zone,date_column date) tablespace ts_sch1 DISTRIBUTED RANDOMLY ;

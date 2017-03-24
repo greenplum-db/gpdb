@@ -753,30 +753,7 @@
 
  CREATE FUNCTION generate_series("timestamptz", "timestamptz", "interval") RETURNS SETOF "timestamptz" LANGUAGE internal VOLATILE STRICT AS 'generate_series_timestamptz' WITH (OID=6114, DESCRIPTION="non-persistent series generator");
 
-
 -- Greenplum Analytic functions
- CREATE FUNCTION matrix_transpose(anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE STRICT AS 'matrix_transpose' WITH (OID=3200, DESCRIPTION="transpose a two dimensional matrix");
-
- CREATE FUNCTION matrix_multiply(_int2, _int2) RETURNS _int8 LANGUAGE internal IMMUTABLE STRICT AS 'matrix_multiply' WITH (OID=3201, DESCRIPTION="perform matrix multiplication on two matrices");
-
- CREATE FUNCTION matrix_multiply(_int4, _int4) RETURNS _int8 LANGUAGE internal IMMUTABLE STRICT AS 'matrix_multiply' WITH (OID=3202, DESCRIPTION="perform matrix multiplication on two matrices");
-
- CREATE FUNCTION matrix_multiply(_int8, _int8) RETURNS _int8 LANGUAGE internal IMMUTABLE STRICT AS 'matrix_multiply' WITH (OID=3203, DESCRIPTION="perform matrix multiplication on two matrices");
-
- CREATE FUNCTION matrix_multiply(_float8, _float8) RETURNS _float8 LANGUAGE internal IMMUTABLE STRICT AS 'matrix_multiply' WITH (OID=3204, DESCRIPTION="perform matrix multiplication on two matrices");
-
- CREATE FUNCTION matrix_multiply(_int8, int8) RETURNS _int8 LANGUAGE internal IMMUTABLE STRICT AS 'int8_matrix_smultiply' WITH (OID=3205, DESCRIPTION="multiply a matrix by a scalar value");
-
- CREATE FUNCTION matrix_multiply(_float8, float8) RETURNS _float8 LANGUAGE internal IMMUTABLE STRICT AS 'float8_matrix_smultiply' WITH (OID=3206, DESCRIPTION="multiply a matrix by a scalar value");
-
- CREATE FUNCTION matrix_add(_int2, _int2) RETURNS _int2 LANGUAGE internal IMMUTABLE STRICT AS 'matrix_add' WITH (OID=3208, DESCRIPTION="perform matrix addition on two conformable matrices");
-
- CREATE FUNCTION matrix_add(_int4, _int4) RETURNS _int4 LANGUAGE internal IMMUTABLE STRICT AS 'matrix_add' WITH (OID=3209, DESCRIPTION="perform matrix addition on two conformable matrices");
-
- CREATE FUNCTION matrix_add(_int8, _int8) RETURNS _int8 LANGUAGE internal IMMUTABLE STRICT AS 'matrix_add' WITH (OID=3210, DESCRIPTION="perform matrix addition on two conformable matrices");
-
- CREATE FUNCTION matrix_add(_float8, _float8) RETURNS _float8 LANGUAGE internal IMMUTABLE STRICT AS 'matrix_add' WITH (OID=3211, DESCRIPTION="perform matrix addition on two conformable matrices");
-
  CREATE FUNCTION int2_matrix_accum(_int8, _int2) RETURNS _int8 LANGUAGE internal IMMUTABLE AS 'matrix_add' WITH (OID=3212, DESCRIPTION="perform matrix addition on two conformable matrices");
 
  CREATE FUNCTION int4_matrix_accum(_int8, _int4) RETURNS _int8 LANGUAGE internal IMMUTABLE AS 'matrix_add' WITH (OID=3213, DESCRIPTION="perform matrix addition on two conformable matrices");
@@ -809,43 +786,6 @@
  CREATE FUNCTION unnest(anyarray) RETURNS SETOF anyelement LANGUAGE internal IMMUTABLE STRICT AS 'unnest' WITH (OID=3240);
 
 -- 3241-324? reserved for unpivot, see pivot.c 
-
--- 3250 = nb_classification class 
--- 3251 = nb_classification type 
-
- CREATE FUNCTION nb_classify_accum(nb_classification, _text, int8, _int8, _int8) RETURNS nb_classification LANGUAGE internal IMMUTABLE AS 'nb_classify_accum' WITH (OID=3252);
-
- CREATE FUNCTION nb_classify_combine(nb_classification, nb_classification) RETURNS nb_classification LANGUAGE internal IMMUTABLE AS 'nb_classify_combine' WITH (OID=3253);
-
- CREATE FUNCTION nb_classify_final(nb_classification) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'nb_classify_final' WITH (OID=3254);
-
- CREATE FUNCTION nb_classify(_text, int8, _int8, _int8) RETURNS text LANGUAGE internal IMMUTABLE AS 'aggregate_dummy' WITH (OID=3255, proisagg="t");
-
- CREATE FUNCTION nb_classify_probabilities(nb_classification) RETURNS _float8 LANGUAGE internal IMMUTABLE STRICT AS 'nb_classify_probabilities' WITH (OID=3267);
-
- CREATE FUNCTION nb_probabilities(_text, int8, _int8, _int8) RETURNS _float8 LANGUAGE internal IMMUTABLE AS 'aggregate_dummy' WITH (OID=3268, proisagg="t");
-
- CREATE FUNCTION pinv(_float8) RETURNS _float8 LANGUAGE internal IMMUTABLE STRICT AS 'pseudoinverse' WITH (OID=3256);
-
- CREATE FUNCTION float8_mregr_accum(_float8, float8, _float8) RETURNS _float8 LANGUAGE internal IMMUTABLE STRICT AS 'float8_mregr_accum' WITH (OID=3257);
-
- CREATE FUNCTION float8_mregr_combine(_float8, _float8) RETURNS _float8 LANGUAGE internal IMMUTABLE STRICT AS 'float8_mregr_combine' WITH (OID=3258);
-
- CREATE FUNCTION float8_mregr_coef(_float8) RETURNS _float8 LANGUAGE internal IMMUTABLE STRICT AS 'float8_mregr_coef' WITH (OID=3259);
-
- CREATE FUNCTION float8_mregr_r2(_float8) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'float8_mregr_r2' WITH (OID=3260);
-
- CREATE FUNCTION mregr_coef(float8, _float8) RETURNS _float8 LANGUAGE internal IMMUTABLE STRICT AS 'aggregate_dummy' WITH (OID=3261, proisagg="t");
-
- CREATE FUNCTION mregr_r2(float8, _float8) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'aggregate_dummy' WITH (OID=3262, proisagg="t");
-
- CREATE FUNCTION float8_mregr_tstats(_float8) RETURNS _float8 LANGUAGE internal IMMUTABLE STRICT AS 'float8_mregr_tstats' WITH (OID=3263);
-
- CREATE FUNCTION mregr_tstats(float8, _float8) RETURNS _float8 LANGUAGE internal IMMUTABLE AS 'aggregate_dummy' WITH (OID=3264, proisagg="t");
-
- CREATE FUNCTION float8_mregr_pvalues(_float8) RETURNS _float8 LANGUAGE internal IMMUTABLE STRICT AS 'float8_mregr_pvalues' WITH (OID=3265);
-
- CREATE FUNCTION mregr_pvalues(float8, _float8) RETURNS _float8 LANGUAGE internal IMMUTABLE AS 'aggregate_dummy' WITH (OID=3266, proisagg="t");
 
  CREATE FUNCTION gpaotidin(cstring) RETURNS gpaotid LANGUAGE internal IMMUTABLE STRICT AS 'gpaotidin' WITH (OID=3302, DESCRIPTION="I/O");
 

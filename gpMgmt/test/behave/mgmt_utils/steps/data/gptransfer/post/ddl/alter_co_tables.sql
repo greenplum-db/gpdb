@@ -1,5 +1,7 @@
 \c gptest;
 
+set time zone PST8PDT;
+
 select * from sto_alt_co1 order by bigint_col;
 
 -- Alter table add column

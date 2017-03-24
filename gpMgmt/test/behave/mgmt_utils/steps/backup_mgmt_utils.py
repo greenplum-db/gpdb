@@ -475,3 +475,50 @@ def impl(context, configString, dbname):
         datconfig = dbconn.execSQLForSingleton(conn, query)
     if not datconfig or configString not in datconfig:
         raise Exception("%s is not in the datconfig for database '%s':\n %s" % (configString, dbname, datconfig))
+
+@given('a cast is created in "{dbname}"')
+def impl(context, dbname):
+    function_sql = """CREATE FUNCTION castToInt(text) RETURNS integer STRICT IMMUTABLE LANGUAGE SQL AS 'SELECT cast($1 as integer);'"""
+    execute_sql(dbname, function_sql)
+    cast_sql = """CREATE CAST (text AS integer) WITH FUNCTION castToInt(text) AS ASSIGNMENT"""
+    execute_sql(dbname, cast_sql)
+
+def check_cast_function_exists(dbname, schema):
+    func_sql = """SELECT
+                    n.nspname, p.proname, pg_catalog.pg_get_function_result(p.oid), pg_catalog.pg_get_function_arguments(p.oid)
+                FROM
+                    pg_catalog.pg_proc p
+                    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+                WHERE p.proname = 'casttoint';""" # Simplified version of query behind psql's "\df" to show functions
+    func_result =  getRow(dbname, func_sql)
+    return [schema, "casttoint", "integer", "text"] == func_result
+
+def check_cast_exists(dbname, schema):
+    cast_sql = """SELECT
+                    pg_catalog.format_type(castsource, NULL), pg_catalog.format_type(casttarget, NULL), p.proname, c.castcontext
+                FROM
+                    pg_catalog.pg_cast c
+                    LEFT JOIN pg_catalog.pg_proc p ON c.castfunc = p.oid
+                    LEFT JOIN pg_catalog.pg_type ts ON c.castsource = ts.oid
+                    LEFT JOIN pg_catalog.pg_namespace ns ON ns.oid = ts.typnamespace
+                    LEFT JOIN pg_catalog.pg_type tt ON c.casttarget = tt.oid
+                    LEFT JOIN pg_catalog.pg_namespace nt ON nt.oid = tt.typnamespace
+                WHERE p.proname = 'casttoint';""" # Simplified version of query behind psql's "\dC" to show casts
+    cast_result =  getRow(dbname, cast_sql)
+    return ["text", "integer", "casttoint", "a"] == cast_result
+
+@then('verify that a cast exists in "{dbname}" in schema "{schema}"')
+def impl(context, dbname, schema):
+    if not check_cast_function_exists(dbname, schema):
+        raise Exception('Could not find text-to-integer cast in %s in schema %s' % (dbname, schema))
+
+    if not check_cast_exists(dbname, schema):
+        raise Exception('Could not find function "casttoint" in %s in schema %s' % (dbname, schema))
+
+@then('verify that a cast does not exist in "{dbname}" in schema "{schema}"')
+def impl(context, dbname, schema):
+    if check_cast_function_exists(dbname, schema):
+        raise Exception('A text-to-integer cast exists in %s in schema %s when it should not' % (dbname, schema))
+
+    if check_cast_exists(dbname, schema):
+        raise Exception('A function "casttoint" exists in %s in schema %s when it should not' % (dbname, schema))

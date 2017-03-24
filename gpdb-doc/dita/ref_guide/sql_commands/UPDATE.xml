@@ -111,6 +111,11 @@
             for more information about creating cursors. </pd>
           <pd><codeph>WHERE CURRENT OF</codeph> cannot be specified together with a Boolean
             condition. </pd>
+          <pd>The <codeph>UPDATE...WHERE CURRENT OF</codeph> statement can only be executed on the
+            server, for example in an interactive psql session or a script. Language extensions such
+            as PL/pgSQL do not have support for updatable cursors.</pd>
+          <pd>See <codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph> for
+            more information about creating cursors.</pd>
         </plentry>
         <plentry>
           <pt>
@@ -141,10 +146,10 @@
         will be used is not readily predictable.</p>
       <p>Because of this indeterminacy, referencing other tables only within sub-selects is safer,
         though often harder to read and slower than using a join.</p>
-      <p>Execution of  <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> commands directly on a
-        specific partition (child table) of a partitioned table is not supported. Instead, these
-        commands must be executed on the root partitioned table, the table created with the
-          <codeph>CREATE TABLE</codeph> command.</p>
+      <p>Executing <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> commands directly on a
+        specific partition (child table) of a partitioned table is not supported. Instead, execute
+        these commands on the root partitioned table, the table created with the <codeph>CREATE
+          TABLE</codeph> command.</p>
     </section>
     <section id="section7">
       <title>Examples</title>

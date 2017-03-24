@@ -40,7 +40,11 @@
             <parml>
                 <plentry>
                     <pt>-d <varname>data_directory</varname></pt>
-                    <pd>Required. The master host data directory.</pd>
+                    <pd>Specifies the master host data directory. If this option is not specified,
+                        the setting for the environment variable
+                            <codeph>MASTER_DATA_DIRECTORY</codeph> is used. If
+                            <varname>data_directory</varname> cannot be determined, the utility
+                        returns an error. </pd>
                 </plentry>
                 <plentry>
                     <pt>-B <varname>parallel_processes</varname></pt>

@@ -1,4 +1,5 @@
 You are now connected to database "gptest" as user "tangp3".
+SET
 ALTER TABLE
 INSERT 0 1
 ALTER TABLE

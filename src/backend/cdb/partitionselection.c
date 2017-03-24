@@ -711,7 +711,7 @@ static_part_selection(PartitionSelector *ps)
  *
  * This function, and change_varattnos_of_a_varno below, used to be in
  * tablecmds.c, but were removed in upstream commit 188a0a00. But we still need
- * this for dynamic partition selection in GDPB, so copied them here.
+ * this for dynamic partition selection in GPDB, so copied them here.
  */
 AttrNumber *
 varattnos_map(TupleDesc old, TupleDesc new)

@@ -1,5 +1,7 @@
 \c gptest;
 
+set time zone PST8PDT;
+
 -- Alter table add column
 Alter Table sto_alt_heap1  ADD COLUMN added_col character varying(30) default 'default';
 insert into sto_alt_heap1 values ('3_zero', 3, '3_zero', 3, 3, 3, '{3}', 3, 3, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',3, 'newcol');

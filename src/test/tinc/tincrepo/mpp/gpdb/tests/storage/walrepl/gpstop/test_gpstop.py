@@ -60,7 +60,7 @@ class GpstopTestCase(MPPTestCase):
 
    def test_gpstop_master_only(self):
        self.assertTrue(self.gputil.gpstop_and_verify(option = '-m'))
-       self.gputil.run('gpstart -a -m')
+       self.gputil.run('gpstart -a')
 
    def test_gpstop_fast(self):
        #run transactions, and stop fast, check if transaction aborted, and the cluster was stopped

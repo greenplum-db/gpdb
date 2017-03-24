@@ -1,32 +1,10 @@
 --
 -- One purpose of these tests is to make sure that ORCA can handle all these
 -- queries, and not fall back to the Postgres planner. To detect that,
--- turn optimizer_log on, and watch for "Planner produced plan" messages.
+-- turn optimizer_trace_fallback on, and watch for "falling back to planner"
+-- messages.
 --
-set client_min_messages='log';
-set optimizer_log='on';
---
--- We want to ignore other LOG messages, except "Planner produced plan".
--- For that, prepend "Planner produced plan" messags with FALLBACK:,
--- so that they don't begin with LOG: anymore, and have an ignore rule to
--- ignore everything beginning wit LOG:. This depends on the fact that
--- atmsort.pm processes matchsubs rules before matchignore rules.
---
--- start_matchsubs
--- m/^LOG:.*Planner produced plan/
--- s/^LOG:(.*Planner produced plan.*)/FALLBACK:$1/
--- end_matchsubs
--- start_matchignore
--- m/^LOG:/
--- m/^\[OPT\]/
--- end_matchignore
--- To check that the matchsubs mechanism above works, echo a synthetic
--- Planner produced plan line to the test output. In the expected output,
--- we have it directly prepended with FALLBACK:. If the above mechanism
--- doesn't work, the expected output will contain FALLBACK, while the
--- actual output will not.
-\echo LOG: Planner produced plan test
-FALLBACK: Planner produced plan test
+set optimizer_trace_fallback='on';
 -- Query 1
 SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1;
  g1 
@@ -3599,15 +3577,6 @@ select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHE
 -- Query 174
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT sale.pn FROM sale) )a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT sale.pn FROM sale) )a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:04:05:043349 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 31KB
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2812_5_0  (seg1 slice3 rh55-qavm63:40500 pid=10285)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2812_5_0  (seg0 slice3 rh55-qavm19:40500 pid=26138)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=10289)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=26142)
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -3625,11 +3594,6 @@ LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:405
 -- Query 175
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale) )a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale) )a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:04:08:333987 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 20KB
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -3647,16 +3611,6 @@ LOG:  Query plan size to dispatch: 20KB
 -- Query 176
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT sale.pn FROM sale) )a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT sale.pn FROM sale) )a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:04:11:563317 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 33KB
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT sale.pn FROM sale) )a;  (entry db rh55-qavm20:5432 pid=25327)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2820_5_0  (seg1 slice4 rh55-qavm63:40500 pid=10367)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2820_5_0  (seg0 slice4 rh55-qavm19:40500 pid=26220)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=26224)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=10371)
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -3674,16 +3628,6 @@ LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:405
 -- Query 177
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:04:14:792237 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 33KB
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;  (entry db rh55-qavm20:5432 pid=25390)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2825_5_0  (seg1 slice4 rh55-qavm63:40500 pid=10409)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2825_5_0  (seg0 slice4 rh55-qavm19:40500 pid=26262)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=10413)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=26266)
  ?column? | g1  
 ----------+-----
  a        | 800
@@ -3701,16 +3645,6 @@ LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:405
 -- Query 178
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:04:18:044419 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 44KB
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;  (entry db rh55-qavm20:5432 pid=25453)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2830_5_0  (seg1 slice4 rh55-qavm63:40500 pid=10452)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2830_5_0  (seg0 slice4 rh55-qavm19:40500 pid=26304)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=10456)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=26308)
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -3728,15 +3662,6 @@ LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:405
 -- Query 179
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:04:21:376574 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 27KB
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2835_5_0  (seg0 slice3 rh55-qavm19:40500 pid=26346)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=26350)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2835_5_0  (seg1 slice3 rh55-qavm63:40500 pid=10494)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=10498)
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -3754,15 +3679,6 @@ LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:405
 -- Query 180
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:04:25:048481 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 31KB
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2842_5_0  (seg1 slice3 rh55-qavm63:40500 pid=10542)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2842_5_0  (seg0 slice3 rh55-qavm19:40500 pid=26394)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=26398)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=10546)
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -3780,11 +3696,6 @@ LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:405
 -- Query 181
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:04:28:303851 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 20KB
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -3801,16 +3712,6 @@ LOG:  Query plan size to dispatch: 20KB
 -- Query 182
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:04:31:549309 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 33KB
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;  (entry db rh55-qavm20:5432 pid=25719)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2850_5_0  (seg0 slice4 rh55-qavm19:40500 pid=26477)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2850_5_0  (seg1 slice4 rh55-qavm63:40500 pid=10624)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=26481)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=10628)
  ?column? | g1  
 ----------+-----
  a        | 800
@@ -3828,16 +3729,6 @@ LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:405
 -- Query 183
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:04:34:792039 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 33KB
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;  (entry db rh55-qavm20:5432 pid=25782)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2855_5_0  (seg0 slice4 rh55-qavm19:40500 pid=26519)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=26523)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2855_5_0  (seg1 slice4 rh55-qavm63:40500 pid=10666)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=10670)
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -3855,16 +3746,6 @@ LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:405
 -- Query 184
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:04:38:116743 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 44KB
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;  (entry db rh55-qavm20:5432 pid=25845)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2860_5_0  (seg0 slice4 rh55-qavm19:40500 pid=26561)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2860_5_0  (seg1 slice4 rh55-qavm63:40500 pid=10708)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=26565)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=10712)
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -3882,15 +3763,6 @@ LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:405
 -- Query 185
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:04:41:428386 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 27KB
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2865_5_0  (seg1 slice3 rh55-qavm63:40500 pid=10751)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2865_5_0  (seg0 slice3 rh55-qavm19:40500 pid=26604)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=10755)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=26608)
  ?column? | g1  
 ----------+-----
  a        | 400
@@ -3908,15 +3780,6 @@ LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:405
 -- Query 186
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:04:44:672178 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 32KB
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2869_5_0  (seg1 slice3 rh55-qavm63:40500 pid=10793)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=10797)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2869_5_0  (seg0 slice3 rh55-qavm19:40500 pid=26646)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=26650)
  ?column? | g1  
 ----------+-----
  a        | 400
@@ -3934,11 +3797,6 @@ LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:405
 -- Query 187
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:04:47:986419 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 20KB
  ?column? | g1  
 ----------+-----
  a        | 400
@@ -3955,16 +3813,6 @@ LOG:  Query plan size to dispatch: 20KB
 -- Query 188
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:04:51:221284 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 33KB
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;  (entry db rh55-qavm20:5432 pid=26100)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2877_5_0  (seg1 slice4 rh55-qavm63:40500 pid=10875)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=10880)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2877_5_0  (seg0 slice4 rh55-qavm19:40500 pid=26728)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=26732)
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -3982,16 +3830,6 @@ LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:405
 -- Query 189
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:04:54:461735 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 33KB
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;  (entry db rh55-qavm20:5432 pid=26163)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2882_5_0  (seg0 slice4 rh55-qavm19:40500 pid=26770)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2882_5_0  (seg1 slice4 rh55-qavm63:40500 pid=10919)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=26774)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=10923)
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -4009,16 +3847,6 @@ LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:405
 -- Query 190
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:04:58:226538 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 45KB
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;  (entry db rh55-qavm20:5432 pid=26250)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2889_5_0  (seg1 slice4 rh55-qavm63:40500 pid=10967)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2889_5_0  (seg0 slice4 rh55-qavm19:40500 pid=26818)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=26822)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=10971)
  ?column? | g1  
 ----------+-----
  a        | 200
@@ -4036,15 +3864,6 @@ LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:405
 -- Query 191
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:05:01:463905 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 27KB
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2894_5_0  (seg0 slice3 rh55-qavm19:40500 pid=26860)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2894_5_0  (seg1 slice3 rh55-qavm63:40500 pid=11009)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=26864)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=11013)
  ?column? |  g1  
 ----------+------
  a        |  400
@@ -4062,15 +3881,6 @@ LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:405
 -- Query 192
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:05:04:827272 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 32KB
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2898_5_0  (seg0 slice3 rh55-qavm19:40500 pid=26902)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2898_5_0  (seg1 slice3 rh55-qavm63:40500 pid=11051)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=26906)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=11055)
  ?column? |  g1  
 ----------+------
  a        |  400
@@ -4088,11 +3898,6 @@ LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:405
 -- Query 193
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:05:08:158734 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 20KB
  ?column? |  g1  
 ----------+------
  a        |  400
@@ -4109,16 +3914,6 @@ LOG:  Query plan size to dispatch: 20KB
 -- Query 194
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:05:11:437872 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 33KB
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;  (entry db rh55-qavm20:5432 pid=26495)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2906_5_0  (seg0 slice4 rh55-qavm19:40500 pid=26984)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2906_5_0  (seg1 slice4 rh55-qavm63:40500 pid=11133)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=11137)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=26988)
  ?column? |  g1  
 ----------+------
  a        |  800
@@ -4136,16 +3931,6 @@ LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:405
 -- Query 195
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:05:14:654331 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 33KB
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;  (entry db rh55-qavm20:5432 pid=26558)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2911_5_0  (seg0 slice4 rh55-qavm19:40500 pid=27026)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=27030)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2911_5_0  (seg1 slice4 rh55-qavm63:40500 pid=11175)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=11179)
  ?column? |  g1  
 ----------+------
  a        |  200
@@ -4163,15 +3948,6 @@ LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:405
 -- Query 196
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:05:17:959182 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 44KB
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT sale.pn FROM sale))a;  (entry db rh55-qavm20:5432 pid=26621)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2916_5_0  (seg0 slice4 rh55-qavm19:40500 pid=27068)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=27072)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2916_5_0  (seg1 slice4 rh55-qavm63:40500 pid=11217)
  ?column? |  g1  
 ----------+------
  a        |  200
@@ -4189,19 +3965,6 @@ LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2916_5_0  (seg1 sli
 -- Query 197
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:05:21:295638 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 63KB
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2921_5_0  (seg1 slice5 rh55-qavm63:40500 pid=11259)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=11263)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2921_5_0  (seg0 slice5 rh55-qavm19:40500 pid=27110)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=27114)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2921_5_1  (seg1 slice5 rh55-qavm63:40500 pid=11259)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2921_5_1  (seg0 slice5 rh55-qavm19:40500 pid=27110)
-LOG:  Material Exec on CrossSlice, current slice 3  (seg0 slice3 rh55-qavm19:40500 pid=27118)
-LOG:  Material Exec on CrossSlice, current slice 3  (seg1 slice3 rh55-qavm63:40500 pid=11267)
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4211,19 +3974,6 @@ LOG:  Material Exec on CrossSlice, current slice 3  (seg1 slice3 rh55-qavm63:405
 -- Query 198
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:05:24:652297 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 75KB
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2925_5_0  (seg0 slice5 rh55-qavm19:40500 pid=27156)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2925_5_0  (seg1 slice5 rh55-qavm63:40500 pid=11305)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=27160)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=11309)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2925_5_1  (seg1 slice5 rh55-qavm63:40500 pid=11305)
-LOG:  Material Exec on CrossSlice, current slice 3  (seg1 slice3 rh55-qavm63:40500 pid=11313)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2925_5_1  (seg0 slice5 rh55-qavm19:40500 pid=27156)
-LOG:  Material Exec on CrossSlice, current slice 3  (seg0 slice3 rh55-qavm19:40500 pid=27164)
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4233,11 +3983,6 @@ LOG:  Material Exec on CrossSlice, current slice 3  (seg0 slice3 rh55-qavm19:405
 -- Query 199
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:05:28:070385 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 41KB
  ?column? | g1 
 ----------+----
  a        |  0
@@ -4247,21 +3992,6 @@ LOG:  Query plan size to dispatch: 41KB
 -- Query 200
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:05:32:255492 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 83KB
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=26922)
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=26919)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2937_5_0  (seg0 slice7 rh55-qavm19:40500 pid=27256)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2937_5_0  (seg1 slice7 rh55-qavm63:40500 pid=11406)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=27260)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=11410)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2937_5_1  (seg0 slice7 rh55-qavm19:40500 pid=27256)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2937_5_1  (seg1 slice7 rh55-qavm63:40500 pid=11406)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg0 slice4 rh55-qavm19:40500 pid=27264)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg1 slice4 rh55-qavm63:40500 pid=11414)
  ?column? | g1 
 ----------+----
  a        |  0
@@ -4271,21 +4001,6 @@ LOG:  Material Exec on CrossSlice, current slice 4  (seg1 slice4 rh55-qavm63:405
 -- Query 201
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:05:35:632506 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 83KB
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=26993)
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=26990)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2943_5_0  (seg0 slice7 rh55-qavm19:40500 pid=27302)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2943_5_0  (seg1 slice7 rh55-qavm63:40500 pid=11452)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=27306)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=11456)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2943_5_1  (seg0 slice7 rh55-qavm19:40500 pid=27302)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2943_5_1  (seg1 slice7 rh55-qavm63:40500 pid=11452)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg0 slice4 rh55-qavm19:40500 pid=27310)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg1 slice4 rh55-qavm63:40500 pid=11460)
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4295,21 +4010,6 @@ LOG:  Material Exec on CrossSlice, current slice 4  (seg1 slice4 rh55-qavm63:405
 -- Query 202
 -- order 1
 select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:05:39:026525 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 117KB
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=27061)
-LOG:  statement: select 'a', * from ((SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(product.pname) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=27064)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2949_5_0  (seg1 slice7 rh55-qavm63:40500 pid=11498)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=11502)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2949_5_0  (seg0 slice7 rh55-qavm19:40500 pid=27348)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=27352)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2949_5_1  (seg1 slice7 rh55-qavm63:40500 pid=11498)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg1 slice4 rh55-qavm63:40500 pid=11506)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2949_5_1  (seg0 slice7 rh55-qavm19:40500 pid=27348)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg0 slice4 rh55-qavm19:40500 pid=27356)
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4319,18 +4019,6 @@ LOG:  Material Exec on CrossSlice, current slice 4  (seg0 slice4 rh55-qavm19:405
 -- Query 203
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:05:42:437127 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 63KB
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2955_5_0  (seg0 slice5 rh55-qavm19:40500 pid=27395)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2955_5_0  (seg1 slice5 rh55-qavm63:40500 pid=11545)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=11549)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=27399)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2955_5_1  (seg0 slice5 rh55-qavm19:40500 pid=27395)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2955_5_1  (seg1 slice5 rh55-qavm63:40500 pid=11545)
-LOG:  Material Exec on CrossSlice, current slice 3  (seg1 slice3 rh55-qavm63:40500 pid=11553)
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4340,19 +4028,6 @@ LOG:  Material Exec on CrossSlice, current slice 3  (seg1 slice3 rh55-qavm63:405
 -- Query 204
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:05:45:810339 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 75KB
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2959_5_0  (seg0 slice5 rh55-qavm19:40500 pid=27442)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2959_5_0  (seg1 slice5 rh55-qavm63:40500 pid=11591)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=27446)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=11595)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2959_5_1  (seg1 slice5 rh55-qavm63:40500 pid=11591)
-LOG:  Material Exec on CrossSlice, current slice 3  (seg1 slice3 rh55-qavm63:40500 pid=11599)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2959_5_1  (seg0 slice5 rh55-qavm19:40500 pid=27442)
-LOG:  Material Exec on CrossSlice, current slice 3  (seg0 slice3 rh55-qavm19:40500 pid=27450)
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4362,11 +4037,6 @@ LOG:  Material Exec on CrossSlice, current slice 3  (seg0 slice3 rh55-qavm19:405
 -- Query 205
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:05:49:217871 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 41KB
  ?column? | g1 
 ----------+----
  a        |  0
@@ -4375,21 +4045,6 @@ LOG:  Query plan size to dispatch: 41KB
 -- Query 206
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:05:52:544532 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 83KB
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=27336)
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=27333)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2967_5_0  (seg1 slice7 rh55-qavm63:40500 pid=11679)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2967_5_0  (seg0 slice7 rh55-qavm19:40500 pid=27530)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=27534)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=11683)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2967_5_1  (seg1 slice7 rh55-qavm63:40500 pid=11679)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2967_5_1  (seg0 slice7 rh55-qavm19:40500 pid=27530)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg0 slice4 rh55-qavm19:40500 pid=27538)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg1 slice4 rh55-qavm63:40500 pid=11687)
  ?column? | g1 
 ----------+----
  a        |  0
@@ -4399,21 +4054,6 @@ LOG:  Material Exec on CrossSlice, current slice 4  (seg1 slice4 rh55-qavm63:405
 -- Query 207
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:05:55:959535 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 83KB
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=27407)
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=27404)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2973_5_0  (seg0 slice7 rh55-qavm19:40500 pid=27576)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=27580)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2973_5_0  (seg1 slice7 rh55-qavm63:40500 pid=11725)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=11729)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2973_5_1  (seg0 slice7 rh55-qavm19:40500 pid=27576)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2973_5_1  (seg1 slice7 rh55-qavm63:40500 pid=11725)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg0 slice4 rh55-qavm19:40500 pid=27584)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg1 slice4 rh55-qavm63:40500 pid=11733)
  ?column? | g1 
 ----------+----
  a        |  0
@@ -4423,21 +4063,6 @@ LOG:  Material Exec on CrossSlice, current slice 4  (seg1 slice4 rh55-qavm63:405
 -- Query 208
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:05:59:396920 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 117KB
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=27478)
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=27475)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2979_5_0  (seg1 slice7 rh55-qavm63:40500 pid=11771)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=11775)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2979_5_0  (seg0 slice7 rh55-qavm19:40500 pid=27622)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=27626)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2979_5_1  (seg1 slice7 rh55-qavm63:40500 pid=11771)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2979_5_1  (seg0 slice7 rh55-qavm19:40500 pid=27622)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg1 slice4 rh55-qavm63:40500 pid=11779)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg0 slice4 rh55-qavm19:40500 pid=27630)
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4447,19 +4072,6 @@ LOG:  Material Exec on CrossSlice, current slice 4  (seg0 slice4 rh55-qavm19:405
 -- Query 209
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:06:02:812201 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 64KB
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2985_5_0  (seg0 slice5 rh55-qavm19:40500 pid=27668)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2985_5_0  (seg1 slice5 rh55-qavm63:40500 pid=11817)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=27672)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=11821)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2985_5_1  (seg0 slice5 rh55-qavm19:40500 pid=27668)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2985_5_1  (seg1 slice5 rh55-qavm63:40500 pid=11817)
-LOG:  Material Exec on CrossSlice, current slice 3  (seg0 slice3 rh55-qavm19:40500 pid=27676)
-LOG:  Material Exec on CrossSlice, current slice 3  (seg1 slice3 rh55-qavm63:40500 pid=11825)
  ?column? | g1 
 ----------+----
  a        |  2
@@ -4469,19 +4081,6 @@ LOG:  Material Exec on CrossSlice, current slice 3  (seg1 slice3 rh55-qavm63:405
 -- Query 210
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:06:06:634432 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 77KB
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2991_5_0  (seg0 slice5 rh55-qavm19:40500 pid=27718)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2991_5_0  (seg1 slice5 rh55-qavm63:40500 pid=11867)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=27722)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=11871)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2991_5_1  (seg0 slice5 rh55-qavm19:40500 pid=27718)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2991_5_1  (seg1 slice5 rh55-qavm63:40500 pid=11867)
-LOG:  Material Exec on CrossSlice, current slice 3  (seg0 slice3 rh55-qavm19:40500 pid=27726)
-LOG:  Material Exec on CrossSlice, current slice 3  (seg1 slice3 rh55-qavm63:40500 pid=11875)
  ?column? | g1 
 ----------+----
  a        |  2
@@ -4491,11 +4090,6 @@ LOG:  Material Exec on CrossSlice, current slice 3  (seg1 slice3 rh55-qavm63:405
 -- Query 211
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:06:10:020226 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 42KB
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4504,21 +4098,6 @@ LOG:  Query plan size to dispatch: 42KB
 -- Query 212
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:06:55:972645 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 84KB
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=29986)
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=29983)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3211_5_0  (seg1 slice7 rh55-qavm63:40500 pid=12471)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=28327)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3211_5_0  (seg0 slice7 rh55-qavm19:40500 pid=28323)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=12475)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg0 slice4 rh55-qavm19:40500 pid=28331)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3211_5_1  (seg1 slice7 rh55-qavm63:40500 pid=12471)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3211_5_1  (seg0 slice7 rh55-qavm19:40500 pid=28323)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg1 slice4 rh55-qavm63:40500 pid=12479)
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4528,21 +4107,6 @@ LOG:  Material Exec on CrossSlice, current slice 4  (seg1 slice4 rh55-qavm63:405
 -- Query 213
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:06:59:368703 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 84KB
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=30057)
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=30054)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3217_5_0  (seg0 slice7 rh55-qavm19:40500 pid=28370)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=28374)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3217_5_0  (seg1 slice7 rh55-qavm63:40500 pid=12517)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=12521)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3217_5_1  (seg1 slice7 rh55-qavm63:40500 pid=12517)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg0 slice4 rh55-qavm19:40500 pid=28378)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg1 slice4 rh55-qavm63:40500 pid=12525)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3217_5_1  (seg0 slice7 rh55-qavm19:40500 pid=28370)
  ?column? | g1 
 ----------+----
  a        |  2
@@ -4552,21 +4116,6 @@ LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3217_5_1  (seg0 sli
 -- Query 214
 -- order 1
 select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:06:13:370499 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 119KB
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=27756)
-LOG:  statement: select 'a', * from ((SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT GROUPING(sale.pn) + 1 as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=27753)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2999_5_0  (seg0 slice7 rh55-qavm19:40500 pid=27806)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2999_5_0  (seg1 slice7 rh55-qavm63:40500 pid=11955)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=11959)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=27810)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2999_5_1  (seg1 slice7 rh55-qavm63:40500 pid=11955)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_2999_5_1  (seg0 slice7 rh55-qavm19:40500 pid=27806)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg1 slice4 rh55-qavm63:40500 pid=11963)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg0 slice4 rh55-qavm19:40500 pid=27814)
  ?column? | g1 
 ----------+----
  a        |  1
@@ -4576,19 +4125,6 @@ LOG:  Material Exec on CrossSlice, current slice 4  (seg0 slice4 rh55-qavm19:405
 -- Query 215
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:07:02:803899 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 64KB
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3223_5_0  (seg0 slice5 rh55-qavm19:40500 pid=28416)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3223_5_0  (seg1 slice5 rh55-qavm63:40500 pid=12563)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=28420)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=12567)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3223_5_1  (seg0 slice5 rh55-qavm19:40500 pid=28416)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3223_5_1  (seg1 slice5 rh55-qavm63:40500 pid=12563)
-LOG:  Material Exec on CrossSlice, current slice 3  (seg0 slice3 rh55-qavm19:40500 pid=28424)
-LOG:  Material Exec on CrossSlice, current slice 3  (seg1 slice3 rh55-qavm63:40500 pid=12571)
  ?column? |  g1  
 ----------+------
  a        |  200
@@ -4604,19 +4140,6 @@ LOG:  Material Exec on CrossSlice, current slice 3  (seg1 slice3 rh55-qavm63:405
 -- Query 216
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS (sale.pn, product.pname, sale.pn) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:07:06:216193 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 78KB
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3227_5_0  (seg0 slice5 rh55-qavm19:40500 pid=28462)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3227_5_0  (seg1 slice5 rh55-qavm63:40500 pid=12609)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=28466)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=12613)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3227_5_1  (seg0 slice5 rh55-qavm19:40500 pid=28462)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3227_5_1  (seg1 slice5 rh55-qavm63:40500 pid=12609)
-LOG:  Material Exec on CrossSlice, current slice 3  (seg0 slice3 rh55-qavm19:40500 pid=28470)
-LOG:  Material Exec on CrossSlice, current slice 3  (seg1 slice3 rh55-qavm63:40500 pid=12617)
  ?column? |  g1  
 ----------+------
  a        |  200
@@ -4632,11 +4155,6 @@ LOG:  Material Exec on CrossSlice, current slice 3  (seg1 slice3 rh55-qavm63:405
 -- Query 217
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY GROUPING SETS ((sale.pn) ,(product.pname, sale.pn)) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:07:09:652118 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 41KB
  ?column? |  g1  
 ----------+------
  a        |  400
@@ -4651,21 +4169,6 @@ LOG:  Query plan size to dispatch: 41KB
 -- Query 218
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:07:13:079804 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 84KB
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=30313)
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=30310)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3235_5_0  (seg0 slice7 rh55-qavm19:40500 pid=28550)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3235_5_0  (seg1 slice7 rh55-qavm63:40500 pid=12697)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=28554)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=12701)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3235_5_1  (seg0 slice7 rh55-qavm19:40500 pid=28550)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3235_5_1  (seg1 slice7 rh55-qavm63:40500 pid=12697)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg1 slice4 rh55-qavm63:40500 pid=12705)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg0 slice4 rh55-qavm19:40500 pid=28558)
  ?column? |  g1  
 ----------+------
  a        |  200
@@ -4681,21 +4184,6 @@ LOG:  Material Exec on CrossSlice, current slice 4  (seg0 slice4 rh55-qavm19:405
 -- Query 219
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1)) a;
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1)) a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:18:14:278803 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 84KB
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1)) a;  (entry db rh55-qavm20:5432 pid=1687)
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn,product.pname,sale.pn)) ORDER BY g1)) a;  (entry db rh55-qavm20:5432 pid=1690)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3562_5_0  (seg1 slice7 rh55-qavm63:40500 pid=13727)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3562_5_0  (seg0 slice7 rh55-qavm19:40500 pid=29864)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=29868)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=13731)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3562_5_1  (seg0 slice7 rh55-qavm19:40500 pid=29864)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3562_5_1  (seg1 slice7 rh55-qavm63:40500 pid=13727)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg0 slice4 rh55-qavm19:40500 pid=29872)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg1 slice4 rh55-qavm63:40500 pid=13735)
  ?column? |  g1  
 ----------+------
  a        |  400
@@ -4711,20 +4199,6 @@ LOG:  Material Exec on CrossSlice, current slice 4  (seg1 slice4 rh55-qavm63:405
 -- Query 220
 -- order 1
 select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;
-LOG:  
-[OPT]: Using default search strategy
-LOG:  2013-11-08 10:07:19:685806 PST,THD000,TRACE,"CAutoTrace.cpp:53: [OPT]: Search terminated at stage 1/1",
-LOG:  Query plan size to dispatch: 116KB
-LOG:  statement: select 'a', * from ((SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1) UNION (SELECT SUM(sale.pn) as g1 FROM product, sale WHERE product.pn=sale.pn GROUP BY ROLLUP((sale.pn),(product.pname),(sale.pn)) ORDER BY g1))a;  (entry db rh55-qavm20:5432 pid=30433)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3245_5_0  (seg0 slice7 rh55-qavm19:40500 pid=28632)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3245_5_0  (seg1 slice7 rh55-qavm63:40500 pid=12779)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg0 slice1 rh55-qavm19:40500 pid=28636)
-LOG:  Material Exec on CrossSlice, current slice 1  (seg1 slice1 rh55-qavm63:40500 pid=12783)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3245_5_1  (seg0 slice7 rh55-qavm19:40500 pid=28632)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg0 slice4 rh55-qavm19:40500 pid=28640)
-LOG:  Material node creates shareinput rwfile pgsql_tmp_SIRW_3245_5_1  (seg1 slice7 rh55-qavm63:40500 pid=12779)
-LOG:  Material Exec on CrossSlice, current slice 4  (seg1 slice4 rh55-qavm63:40500 pid=12787)
  ?column? |  g1  
 ----------+------
  a        |  200

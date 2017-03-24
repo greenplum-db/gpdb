@@ -1385,7 +1385,7 @@ def start_standbymaster(host, datadir, port, dbid, ncontents, era=None,
         return False
 
     # Wait for the standby to start recovery.  Ideally this means the
-    # standby connection is recoginized by the primary, but locally this
+    # standby connection is recognized by the primary, but locally in this
     # function it is better to work with only standby.  If recovery has
     # started, this means now postmaster is responsive to signals, which
     # allows shutdown etc.  If we exit earlier, there is a big chance
@@ -1424,7 +1424,7 @@ def get_pid_from_remotehost(host, datadir):
 
 def is_pid_postmaster(datadir, pid, remoteHost=None):
     """
-    This function returns true on any uncertancy: if it cannot execute pgrep, pwdx or just connect to the standby host
+    This function returns true on any uncertainty: if it cannot execute pgrep, pwdx or just connect to the standby host
     it will return true
     """
     def validate_command (commandName, datadir, ctxt, remoteHost):
@@ -1684,7 +1684,6 @@ def createTempDirectoryName(masterDataDirectory, tempDirPrefix):
 
 #-------------------------------------------------------------------------
 # gp_dbid methods moved to gp_dbid.py, but this class was left here
-# to avoid changing gpmigrator and gpmigrator_mirror (which is the only caller).
 #
 
 class GpCreateDBIdFile(Command):

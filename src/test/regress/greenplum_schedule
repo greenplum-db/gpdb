@@ -18,7 +18,7 @@
 test: variadic_parameters default_parameters function_extensions
 test: spi xpath
 
-test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile naivebayes join_gp union_gp gpcopy gp_create_table
+test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy gp_create_table
 test: filter gpctas gpdist matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var gp_explain
 test: bitmap_index gp_dump_query_oids analyze gp_owner_permission
 test: indexjoin as_alias regex_gp gpparams with_clause transient_types gp_rules
@@ -71,13 +71,15 @@ test: vacuum_gp
 # ERROR:  parameter "gp_interconnect_type" cannot be set after connection start
 
 ignore: gp_portal_error
-test: external_table column_compression eagerfree mapred gpdtm_plpgsql alter_table_aocs alter_table_aocs2 alter_distribution_policy ic aoco_privileges aocs
+test: external_table external_table_create_privs column_compression eagerfree mapred gpdtm_plpgsql alter_table_aocs alter_table_aocs2 alter_distribution_policy ic aoco_privileges aocs
 test: alter_table_gp alter_table_ao ao_create_alter_valid_table subtransaction_limit oid_consistency udf_exception_blocks
 ignore: icudp_full
 
 test: resource_queue
 test: resource_queue_function
 test: wrkloadadmin
+
+test: resource_group
 
 # gp_toolkit performs a vacuum and checks that it truncated the relation. That
 # might not happen if other backends are holding transactions open, preventing
@@ -178,7 +180,7 @@ test: vacuum_full_freeze_heap
 test: vacuum_full_heap
 test: vacuum_full_heap_bitmapindex
 
-test: AOCO_Compression2 schema_topology table_statistics
+test: ao_checksum_corruption AOCO_Compression2 schema_topology table_statistics
 test: metadata_track
 
 # Test psql \du output

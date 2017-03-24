@@ -3731,6 +3731,18 @@ def impl(context, filename, output):
     print contents
     check_stdout_msg(context, output)
 
+@then('verify that the last line of the master postgres configuration file contains the string "{output}"')
+def impl(context, output):
+    contents = ''
+    filename = master_data_dir + "/postgresql.conf"
+    with open(filename) as fr:
+        for line in fr:
+            contents = line.strip()
+    pat = re.compile(output)
+    if not pat.search(contents):
+        err_str = "Expected stdout string '%s' and found: '%s'" % (msg, contents)
+        raise Exception(err_str)
+
 @then('the user waits for "{process_name}" to finish running')
 def impl(context, process_name):
      run_command(context, "ps ux | grep `which %s` | grep -v grep | awk '{print $2}' | xargs" % process_name)

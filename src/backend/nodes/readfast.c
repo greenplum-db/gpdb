@@ -2477,6 +2477,27 @@ _readDropQueueStmt(void)
 	READ_DONE();
 }
 
+static CreateResourceGroupStmt *
+_readCreateResourceGroupStmt(void)
+{
+	READ_LOCALS(CreateResourceGroupStmt);
+
+	READ_STRING_FIELD(name);
+	READ_NODE_FIELD(options);
+
+	READ_DONE();
+}
+
+static DropResourceGroupStmt *
+_readDropResourceGroupStmt(void)
+{
+	READ_LOCALS(DropResourceGroupStmt);
+
+	READ_STRING_FIELD(name);
+
+	READ_DONE();
+}
+
 static CommentStmt *
 _readCommentStmt(void)
 {
@@ -3380,6 +3401,13 @@ readNodeBinary(void)
 				break;
 			case T_DropQueueStmt:
 				return_value = _readDropQueueStmt();
+				break;
+
+			case T_CreateResourceGroupStmt:
+				return_value = _readCreateResourceGroupStmt();
+				break;
+			case T_DropResourceGroupStmt:
+				return_value = _readDropResourceGroupStmt();
 				break;
 
 			case T_CommentStmt:

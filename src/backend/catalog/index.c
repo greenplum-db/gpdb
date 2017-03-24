@@ -64,6 +64,7 @@
 #include "utils/relcache.h"
 #include "utils/syscache.h"
 #include "utils/tuplesort.h"
+#include "utils/tuplesort_mk.h"
 #include "utils/faultinjector.h"
 
 #include "cdb/cdbappendonlyam.h"

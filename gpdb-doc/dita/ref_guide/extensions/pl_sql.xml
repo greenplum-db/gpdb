@@ -8,7 +8,7 @@
     <ul>
       <li id="pt222286">
         <xref href="#topic2" type="topic" format="dita"/>
-       </li>
+      </li>
       <li id="pt222315">
         <xref href="#topic6" type="topic" format="dita"/>
       </li>
@@ -38,6 +38,9 @@
         the creating functions and function attributes, see the <codeph><xref
             href="../sql_commands/CREATE_FUNCTION.xml#topic1"/></codeph> command in the
           <cite>Greenplum Database Reference Guide</cite>.</p>
+      <p>You can run PL/SQL code blocks as anonymous code blocks. See the <codeph><xref
+            href="../sql_commands/DO.xml#topic1"/></codeph> command in the <cite>Greenplum Database
+          Reference Guide</cite>.</p>
     </body>
     <topic id="topic3" xml:lang="en">
       <title>Greenplum Database SQL Limitations</title>
@@ -45,7 +48,9 @@
         <p>When using Greenplum Database PL/pgSQL, limitations include</p>
         <ul>
           <li id="pt219857">Triggers are not supported</li>
-          <li id="pt222490">Cursors are forward moving only (not scrollable) </li>
+          <li id="pt222490">Cursors are forward moving only (not scrollable)</li>
+          <li>Updatable cursors (<codeph>UPDATE...WHERE CURRENT OF</codeph> and
+              <codeph>DELETE...WHERE CURRENT OF</codeph>) are not supported.</li>
         </ul>
         <p>For information about Greenplum Database SQL conformance, see <xref
             href="../feature_summary.xml#topic1"/> in the <cite>Greenplum Database Reference
@@ -140,10 +145,10 @@ $$ LANGUAGE plpgsql;</codeblock>
     <topic id="topic7" xml:lang="en">
       <title>Example: Aliases for Function Parameters</title>
       <body>
-        <p>Parameters passed to functions are named with the identifiers such asa
-            <codeph>$1</codeph>, <codeph>$2</codeph>. Optionally, aliases can be declared for
-            <codeph>$n</codeph> parameter names for increased readability. Either the alias or the
-          numeric identifier can then be used to refer to the parameter value.</p>
+        <p>Parameters passed to functions are named with identifiers such as <codeph>$1</codeph>,
+            <codeph>$2</codeph>. Optionally, aliases can be declared for <codeph>$n</codeph>
+          parameter names for increased readability. Either the alias or the numeric identifier can
+          then be used to refer to the parameter value.</p>
         <p>There are two ways to create an alias. The preferred way is to give a name to the
           parameter in the <codeph>CREATE FUNCTION</codeph> command, for example:</p>
         <codeblock>CREATE FUNCTION sales_tax(subtotal real) RETURNS real AS $$
@@ -230,6 +235,68 @@ $$ LANGUAGE plpgsql VOLATILE;</codeblock>
             <codeph>INTO</codeph> clause. It is different from the SQL command <codeph>SELECT
             INTO</codeph>. If you want to create a table from a <codeph>SELECT</codeph> result
           inside a PL/pgSQL function, use the SQL command <codeph>CREATE TABLE AS</codeph>.</note>
+      </body>
+    </topic>
+    <topic xml:lang="en" id="topic_lsh_5n5_2z">
+      <title>Example: Using Polymorphic Data Types </title>
+      <body>
+        <p>PL/pgSQL supports the polymorphic <i>anyelement</i>, <i>anyarray</i>, <i>anyenum</i>, and
+            <i>anynonarray</i> types. Using these types, you can create a single PL/pgSQL function
+          that operates on multiple data types. Refer to <xref href="../data_types.xml#topic1"
+            >Greenplum Database Data Types</xref> for additional information on polymorphic type
+          support in Greenplum Database.</p>
+        <p>A special parameter named <codeph>$0</codeph> is created when the return type of
+          a PL/pgSQL function is declared as a polymorphic type. The data type of <codeph>$0</codeph>
+          identifies the return type of the function as deduced from the actual input types.</p>
+        <p>In this example, you create a polymorphic function that returns the sum of two
+          values:</p>
+        <p>
+          <codeblock>CREATE FUNCTION add_two_values(v1 anyelement,v2 anyelement)
+    RETURNS anyelement AS $$ 
+DECLARE 
+    sum ALIAS FOR $0;
+BEGIN
+    sum := v1 + v2;
+    RETURN sum;
+END;
+$$ LANGUAGE plpgsql;</codeblock>
+        </p>
+        <p>Execute  <codeph>add_two_values()</codeph> providing integer input values:</p>
+        <p>
+          <codeblock>SELECT add_two_values(1, 2);
+ add_two_values
+----------------
+              3
+(1 row)</codeblock>
+        </p>
+        <p>The return type of <codeph>add_two_values()</codeph> is integer, the type of the input
+          arguments. Now execute  <codeph>add_two_values()</codeph> providing float input
+          values:</p>
+        <codeblock>SELECT add_two_values (1.1, 2.2);
+ add_two_values
+----------------
+            3.3
+(1 row)</codeblock>
+        <p>The return type of <codeph>add_two_values()</codeph> in this case is float.</p>
+    </body>
+  </topic>
+  <topic id="topic_isw_3sx_cz">
+      <title>Example: Anonymous Block</title>
+      <body>
+        <p>This example executes the function in the previous example as an anonymous block with the
+            <codeph>DO</codeph> command. In the example, the anonymous block retrieves the input
+          value from a temporary
+          table.<codeblock>CREATE TEMP TABLE list AS VALUES ('test1') DISTRIBUTED RANDOMLY;
+
+DO $$ 
+DECLARE
+    t1_row   table1%ROWTYPE;
+    calc_int table1.f3%TYPE;
+BEGIN
+    SELECT * INTO t1_row FROM table1, list WHERE table1.f1 = list.column1 ;
+    calc_int = (t1_row.f2 * t1_row.f3)::integer ;
+    RAISE NOTICE 'calculated value is %', calc_int ;
+END $$ LANGUAGE plpgsql ;</codeblock></p>
       </body>
     </topic>
   </topic>

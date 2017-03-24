@@ -1306,6 +1306,79 @@ DROP INDEX idx1;
 DROP INDEX idx5;
 DROP INDEX idx6;
 --
+-- Test a more complicated partitioning scheme, with subpartitions.
+--
+CREATE TABLE pt_complex (i int, j int, k int, l int, m int) DISTRIBUTED BY (i)
+PARTITION BY list(k)
+  SUBPARTITION BY list(j) SUBPARTITION TEMPLATE (subpartition p11 values (1), subpartition p12 values(2))
+  SUBPARTITION BY list(l, m) SUBPARTITION TEMPLATE (subpartition p11 values ((1,1)), subpartition p12 values((2,2)))
+( partition p1 values(1), partition p2 values(2));
+NOTICE:  CREATE TABLE will create partition "pt_complex_1_prt_p1" for table "pt_complex"
+NOTICE:  CREATE TABLE will create partition "pt_complex_1_prt_p1_2_prt_p11" for table "pt_complex_1_prt_p1"
+NOTICE:  CREATE TABLE will create partition "pt_complex_1_prt_p1_2_prt_p11_3_prt_p11" for table "pt_complex_1_prt_p1_2_prt_p11"
+NOTICE:  CREATE TABLE will create partition "pt_complex_1_prt_p1_2_prt_p11_3_prt_p12" for table "pt_complex_1_prt_p1_2_prt_p11"
+NOTICE:  CREATE TABLE will create partition "pt_complex_1_prt_p1_2_prt_p12" for table "pt_complex_1_prt_p1"
+NOTICE:  CREATE TABLE will create partition "pt_complex_1_prt_p1_2_prt_p12_3_prt_p11" for table "pt_complex_1_prt_p1_2_prt_p12"
+NOTICE:  CREATE TABLE will create partition "pt_complex_1_prt_p1_2_prt_p12_3_prt_p12" for table "pt_complex_1_prt_p1_2_prt_p12"
+NOTICE:  CREATE TABLE will create partition "pt_complex_1_prt_p2" for table "pt_complex"
+NOTICE:  CREATE TABLE will create partition "pt_complex_1_prt_p2_2_prt_p11" for table "pt_complex_1_prt_p2"
+NOTICE:  CREATE TABLE will create partition "pt_complex_1_prt_p2_2_prt_p11_3_prt_p11" for table "pt_complex_1_prt_p2_2_prt_p11"
+NOTICE:  CREATE TABLE will create partition "pt_complex_1_prt_p2_2_prt_p11_3_prt_p12" for table "pt_complex_1_prt_p2_2_prt_p11"
+NOTICE:  CREATE TABLE will create partition "pt_complex_1_prt_p2_2_prt_p12" for table "pt_complex_1_prt_p2"
+NOTICE:  CREATE TABLE will create partition "pt_complex_1_prt_p2_2_prt_p12_3_prt_p11" for table "pt_complex_1_prt_p2_2_prt_p12"
+NOTICE:  CREATE TABLE will create partition "pt_complex_1_prt_p2_2_prt_p12_3_prt_p12" for table "pt_complex_1_prt_p2_2_prt_p12"
+INSERT INTO pt_complex VALUES (1, 1, 1, 1, 1), (2, 2, 2, 2, 2);
+CREATE INDEX i_pt_complex ON pt_complex (i);
+NOTICE:  building index for child partition "pt_complex_1_prt_p1"
+NOTICE:  building index for child partition "pt_complex_1_prt_p1_2_prt_p11"
+NOTICE:  building index for child partition "pt_complex_1_prt_p1_2_prt_p11_3_prt_p11"
+NOTICE:  building index for child partition "pt_complex_1_prt_p1_2_prt_p11_3_prt_p12"
+NOTICE:  building index for child partition "pt_complex_1_prt_p1_2_prt_p12"
+NOTICE:  building index for child partition "pt_complex_1_prt_p1_2_prt_p12_3_prt_p11"
+NOTICE:  building index for child partition "pt_complex_1_prt_p1_2_prt_p12_3_prt_p12"
+NOTICE:  building index for child partition "pt_complex_1_prt_p2"
+NOTICE:  building index for child partition "pt_complex_1_prt_p2_2_prt_p11"
+NOTICE:  building index for child partition "pt_complex_1_prt_p2_2_prt_p11_3_prt_p11"
+NOTICE:  building index for child partition "pt_complex_1_prt_p2_2_prt_p11_3_prt_p12"
+NOTICE:  building index for child partition "pt_complex_1_prt_p2_2_prt_p12"
+NOTICE:  building index for child partition "pt_complex_1_prt_p2_2_prt_p12_3_prt_p11"
+NOTICE:  building index for child partition "pt_complex_1_prt_p2_2_prt_p12_3_prt_p12"
+SELECT * FROM pt_complex WHERE i = 1 AND j = 1;
+ i | j | k | l | m 
+---+---+---+---+---
+ 1 | 1 | 1 | 1 | 1
+(1 row)
+
+EXPLAIN SELECT * FROM pt_complex WHERE i = 1 AND j = 1;
+                                                         QUERY PLAN                                                         
+----------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=100.84..6406.56 rows=9 width=20)
+   ->  Append  (cost=100.84..6406.56 rows=3 width=20)
+         ->  Bitmap Heap Scan on pt_complex_1_prt_p1_2_prt_p11_3_prt_p11 pt_complex  (cost=100.84..1601.64 rows=1 width=20)
+               Recheck Cond: i = 1
+               Filter: j = 1
+               ->  Bitmap Index Scan on i_pt_complex_1_prt_p1_2_prt_p11_3_prt_p11  (cost=0.00..100.84 rows=22 width=0)
+                     Index Cond: i = 1
+         ->  Bitmap Heap Scan on pt_complex_1_prt_p1_2_prt_p11_3_prt_p12 pt_complex  (cost=100.84..1601.64 rows=1 width=20)
+               Recheck Cond: i = 1
+               Filter: j = 1
+               ->  Bitmap Index Scan on i_pt_complex_1_prt_p1_2_prt_p11_3_prt_p12  (cost=0.00..100.84 rows=22 width=0)
+                     Index Cond: i = 1
+         ->  Bitmap Heap Scan on pt_complex_1_prt_p2_2_prt_p11_3_prt_p11 pt_complex  (cost=100.84..1601.64 rows=1 width=20)
+               Recheck Cond: i = 1
+               Filter: j = 1
+               ->  Bitmap Index Scan on i_pt_complex_1_prt_p2_2_prt_p11_3_prt_p11  (cost=0.00..100.84 rows=22 width=0)
+                     Index Cond: i = 1
+         ->  Bitmap Heap Scan on pt_complex_1_prt_p2_2_prt_p11_3_prt_p12 pt_complex  (cost=100.84..1601.64 rows=1 width=20)
+               Recheck Cond: i = 1
+               Filter: j = 1
+               ->  Bitmap Index Scan on i_pt_complex_1_prt_p2_2_prt_p11_3_prt_p12  (cost=0.00..100.84 rows=22 width=0)
+                     Index Cond: i = 1
+ Settings:  enable_bitmapscan=on; enable_indexscan=on; enable_seqscan=off; optimizer=on
+ Optimizer status: legacy query optimizer
+(24 rows)
+
+--
 -- See MPP-6861
 --
 CREATE TABLE ds_4

@@ -3200,7 +3200,7 @@
           <row>
             <entry colname="col1">X020</entry>
             <entry colname="col2">XMLConcat</entry>
-            <entry colname="col3">NO</entry>
+            <entry colname="col3">YES</entry>
             <entry colname="col4">xmlconcat2() supported</entry>
           </row>
           <row>
@@ -3218,13 +3218,13 @@
           <row>
             <entry colname="col1">X031</entry>
             <entry colname="col2">XMLElement</entry>
-            <entry colname="col3">NO</entry>
+            <entry colname="col3">YES</entry>
             <entry colname="col4"/>
           </row>
           <row>
             <entry colname="col1">X032</entry>
             <entry colname="col2">XMLForest</entry>
-            <entry colname="col3">NO</entry>
+            <entry colname="col3">YES</entry>
             <entry colname="col4"/>
           </row>
           <row>
@@ -3248,7 +3248,7 @@
           <row>
             <entry colname="col1">X037</entry>
             <entry colname="col2">XMLPI</entry>
-            <entry colname="col3">NO</entry>
+            <entry colname="col3">YES</entry>
             <entry colname="col4"/>
           </row>
           <row>
@@ -3374,14 +3374,14 @@
           <row>
             <entry colname="col1">X060</entry>
             <entry colname="col2">XMLParse: Character string input and CONTENT option</entry>
-            <entry colname="col3">NO</entry>
-            <entry colname="col4">xml() supported</entry>
+            <entry colname="col3">YES</entry>
+            <entry colname="col4"/>
           </row>
           <row>
             <entry colname="col1">X061</entry>
             <entry colname="col2">XMLParse: Character string input and DOCUMENT option</entry>
-            <entry colname="col3">NO</entry>
-            <entry colname="col4">xml() supported</entry>
+            <entry colname="col3">YES</entry>
+            <entry colname="col4"/>
           </row>
           <row>
             <entry colname="col1">X065</entry>
@@ -3411,21 +3411,21 @@
             <entry colname="col1">X070</entry>
             <entry colname="col2">XMLSerialize: Character string serialization and CONTENT
               option</entry>
-            <entry colname="col3">NO</entry>
-            <entry colname="col4">text(xml) supported</entry>
+            <entry colname="col3">YES</entry>
+            <entry colname="col4"/>
           </row>
           <row>
             <entry colname="col1">X071</entry>
             <entry colname="col2">XMLSerialize: Character string serialization and DOCUMENT
               option</entry>
-            <entry colname="col3">NO</entry>
-            <entry colname="col4">text(xml) supported</entry>
+            <entry colname="col3">YES</entry>
+            <entry colname="col4"/>
           </row>
           <row>
             <entry colname="col1">X072</entry>
             <entry colname="col2">XMLSerialize: Character string serialization</entry>
-            <entry colname="col3">NO</entry>
-            <entry colname="col4">text(xml) supported</entry>
+            <entry colname="col3">YES</entry>
+            <entry colname="col4"/>
           </row>
           <row>
             <entry colname="col1">X073</entry>

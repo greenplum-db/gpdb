@@ -2,6 +2,7 @@
 
 -- start_ignore
 DROP TABLE if exists sto_alt_co1;
+set time zone PST8PDT;
 -- end_ignore
 
 CREATE TABLE sto_alt_co1(

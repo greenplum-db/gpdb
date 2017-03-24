@@ -8,6 +8,8 @@
 
 \c db_tobe_vacuum
 
+set time zone PST8PDT;
+
 CREATE TABLE test_add_drop_rename_column_change_datatype(
 text_col text,
 bigint_col bigint,

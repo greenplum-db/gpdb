@@ -302,90 +302,6 @@ ERROR:  ON clause may not be used with a writable external table
 select * from wet_pos4;
 ERROR:  cannot read from a WRITABLE external table
 HINT:  Create the table as READABLE instead.
---
--- test CREATE EXTERNAL TABLE privileges
---
-CREATE ROLE exttab1_su SUPERUSER; -- SU with no privs in pg_auth
-CREATE ROLE exttab1_u1 CREATEEXTTABLE(protocol='gpfdist', type='readable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
-CREATE ROLE exttab1_u2 CREATEEXTTABLE(protocol='gpfdist', type='writable'); 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
-CREATE ROLE exttab1_u3 CREATEEXTTABLE(protocol='gpfdist') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); -- fail due to conflict 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
-ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
-CREATE ROLE exttab1_u4 CREATEEXTTABLE(protocol='gphdfs', type='readable'); 
-WARNING:  GRANT/REVOKE on gphdfs is deprecated
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-NOTICE:  resource queue required -- using default resource queue "pg_default"
-WARNING:  GRANT/REVOKE on gphdfs is deprecated  (seg1 @hostname@:50001 pid=64820)
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-WARNING:  GRANT/REVOKE on gphdfs is deprecated  (seg0 @hostname@:50000 pid=64819)
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-CREATE ROLE exttab1_u5 CREATEEXTTABLE(protocol='gphdfs', type='writable'); 
-WARNING:  GRANT/REVOKE on gphdfs is deprecated
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-NOTICE:  resource queue required -- using default resource queue "pg_default"
-WARNING:  GRANT/REVOKE on gphdfs is deprecated  (seg0 @hostname@:50000 pid=64819)
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-WARNING:  GRANT/REVOKE on gphdfs is deprecated  (seg1 @hostname@:50001 pid=64820)
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-CREATE ROLE exttab1_u6 NOCREATEEXTTABLE(protocol='gphdfs', type='readable') NOCREATEEXTTABLE(protocol='gphdfs', type='writable');
-WARNING:  GRANT/REVOKE on gphdfs is deprecated
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-WARNING:  GRANT/REVOKE on gphdfs is deprecated
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-NOTICE:  resource queue required -- using default resource queue "pg_default"
-WARNING:  GRANT/REVOKE on gphdfs is deprecated  (seg1 @hostname@:50001 pid=64820)
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-WARNING:  GRANT/REVOKE on gphdfs is deprecated  (seg0 @hostname@:50000 pid=64819)
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-WARNING:  GRANT/REVOKE on gphdfs is deprecated  (seg0 @hostname@:50000 pid=64819)
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-WARNING:  GRANT/REVOKE on gphdfs is deprecated  (seg1 @hostname@:50001 pid=64820)
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-CREATE ROLE exttab1_u7 CREATEEXTTABLE(protocol='gphdfs') NOCREATEEXTTABLE(protocol='gphdfs', type='readable'); -- fail due to conflict 
-WARNING:  GRANT/REVOKE on gphdfs is deprecated
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-WARNING:  GRANT/REVOKE on gphdfs is deprecated
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-NOTICE:  resource queue required -- using default resource queue "pg_default"
-ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
-CREATE ROLE exttab1_u7 CREATEEXTTABLE(protocol='gphdfs', type='writable') NOCREATEEXTTABLE(protocol='gphdfs', type='writable'); -- fail due to conflict 
-WARNING:  GRANT/REVOKE on gphdfs is deprecated
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-WARNING:  GRANT/REVOKE on gphdfs is deprecated
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-NOTICE:  resource queue required -- using default resource queue "pg_default"
-ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
-SET SESSION AUTHORIZATION exttab1_su;
-create readable external table auth_ext_test1(a int) location ('gpfdist://host:8000/file') format 'text';
-SET SESSION AUTHORIZATION exttab1_u1;
-create readable external table auth_ext_test2(a int) location ('gpfdist://host:8000/file') format 'text';
-create writable external table auth_ext_test3(a int) location ('gpfdist://host:8000/file') format 'text'; -- fail
-ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
-SET SESSION AUTHORIZATION exttab1_u2;
-create writable external table auth_ext_test3(a int) location ('gpfdist://host:8000/file') format 'text';
-create readable external table auth_ext_test3b(a int) location ('gpfdist://host:8000/file') format 'text'; -- fail
-ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
-RESET SESSION AUTHORIZATION;
-ALTER ROLE exttab1_u2 NOCREATEEXTTABLE(protocol='gpfdist', type='writable');
-SET SESSION AUTHORIZATION exttab1_u2;
-create writable external table auth_ext_test4(a int) location ('gpfdist://host:8000/file') format 'text'; -- fail
-ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
-RESET SESSION AUTHORIZATION;
-drop external table auth_ext_test1;
-drop external table auth_ext_test2;
-drop external table auth_ext_test3;
-drop external table auth_ext_test5;
-ERROR:  table "auth_ext_test5" does not exist
-drop external table auth_ext_test7;
-ERROR:  table "auth_ext_test7" does not exist
-DROP ROLE exttab1_su;
-DROP ROLE exttab1_u1;
-DROP ROLE exttab1_u2;
-DROP ROLE exttab1_u4;
-DROP ROLE exttab1_u5;
-DROP ROLE exttab1_u6;
 drop external table check_ps;
 drop external table check_env;
 drop external table wet_pos4;
@@ -2800,6 +2716,10 @@ SELECT COUNT(*) FROM gp_read_error_log('exttab_heap_join_1');
 (1 row)
 
 \! rm @abs_srcdir@/data/tableless.csv
+-- start_ignore
+DROP EXTERNAL TABLE IF EXISTS exttab_with_on_master;
+NOTICE:  table "exttab_with_on_master" does not exist, skipping
+-- end_ignore
 -- Create external table with on clause
 CREATE EXTERNAL TABLE exttab_with_on_master( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') ON MASTER FORMAT 'TEXT' (DELIMITER '|');
@@ -2818,6 +2738,14 @@ External location: file://@hostname@@abs_srcdir@/data/exttab_few_errors.data
 Execute on: master segment
 
 DROP EXTERNAL TABLE IF EXISTS exttab_with_on_master;
+-- start_ignore
+DROP EXTERNAL TABLE IF EXISTS exttab_with_option_empty;
+NOTICE:  table "exttab_with_option_empty" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS exttab_with_option_1;
+NOTICE:  table "exttab_with_option_1" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS exttab_with_options;
+NOTICE:  table "exttab_with_options" does not exist, skipping
+-- end_ignore
 -- Create external table with 'OPTIONS'
 CREATE EXTERNAL TABLE exttab_with_option_empty( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
@@ -2859,6 +2787,98 @@ Execute on: all segments
 DROP EXTERNAL TABLE IF EXISTS exttab_with_option_empty;
 DROP EXTERNAL TABLE IF EXISTS exttab_with_option_1;
 DROP EXTERNAL TABLE IF EXISTS exttab_with_options;
+-- start_ignore
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv1;
+NOTICE:  table "tbl_wet_csv1" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv2;
+NOTICE:  table "tbl_wet_csv2" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv3;
+NOTICE:  table "tbl_wet_csv3" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv4;
+NOTICE:  table "tbl_wet_csv4" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv5;
+NOTICE:  table "tbl_wet_csv5" does not exist, skipping
+-- end_ignore
+-- Create writable external table with AS for DELIMITER , NULL, ESCAPE
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_csv1 (a int, b text) EXECUTE 'cat > @abs_srcdir@/data/wet_csv1.tbl' FORMAT 'CSV' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ');
+-- Create writable external table without AS for DELIMITER , NULL, ESCAPE
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_csv2 (a int, b text) EXECUTE 'cat > @abs_srcdir@/data/wet_csv2.tbl' FORMAT 'CSV' (DELIMITER AS ',' NULL 'null' ESCAPE ' ');
+-- Create writable external table with double quotes
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_csv3 (a int, b text) EXECUTE 'cat > @abs_srcdir@/data/wet_csv3.tbl' FORMAT 'CSV' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' '  QUOTE AS '"');
+-- Create writable external table with single quotes
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_csv4 (a int, b text) EXECUTE 'cat > @abs_srcdir@/data/wet_csv4.tbl' FORMAT 'CSV' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' '  QUOTE AS '''');
+-- Create writable external table with force quote
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_csv5 (a int, b text) EXECUTE 'cat > @abs_srcdir@/data/wet_csv5.tbl' FORMAT 'CSV' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' '  QUOTE AS '"' FORCE QUOTE b);
+INSERT INTO tbl_wet_csv1 VALUES (generate_series(1,256), 'test_1');
+INSERT INTO tbl_wet_csv2 VALUES (generate_series(1,256), 'test_2');
+INSERT INTO tbl_wet_csv3 VALUES (generate_series(1,256), 'test_3');
+INSERT INTO tbl_wet_csv4 VALUES (generate_series(1,256), 'test_4');
+INSERT INTO tbl_wet_csv5 VALUES (generate_series(1,256), 'test_5');
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv1;
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv2;
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv3;
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv4;
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv5;
+-- start_ignore
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_text1;
+NOTICE:  table "tbl_wet_text1" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_text2;
+NOTICE:  table "tbl_wet_text2" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_text3;
+NOTICE:  table "tbl_wet_text3" does not exist, skipping
+-- end_ignore
+-- Create writable external table with AS for DELIMITER , NULL, ESCAPE
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_text1 (a int, b text) EXECUTE 'cat > @abs_srcdir@/data/wet_text1.tbl' FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ');
+-- Create writable external table without AS for DELIMITER , NULL, ESCAPE
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_text2 (a int, b text) EXECUTE 'cat > @abs_srcdir@/data/wet_text2.tbl' FORMAT 'TEXT' (DELIMITER AS ',' NULL 'null' ESCAPE ' ');
+-- Create writable external table with ESCAPE OFF
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_text3 (a int, b text) EXECUTE 'cat > @abs_srcdir@/data/wet_text3.tbl' FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null' ESCAPE 'OFF');
+INSERT INTO tbl_wet_text1 VALUES (generate_series(1,256), 'test_1');
+INSERT INTO tbl_wet_text2 VALUES (generate_series(1,256), 'test_2');
+INSERT INTO tbl_wet_text3 VALUES (generate_series(1,256), 'test_3');
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_text1;
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_text2;
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_text3;
+-- start_ignore
+DROP TABLE IF EXISTS test_dp1;
+NOTICE:  table "test_dp1" does not exist, skipping
+DROP TABLE IF EXISTS test_dp2;
+NOTICE:  table "test_dp2" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_syntax1;
+NOTICE:  table "tbl_wet_syntax1" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_syntax2;
+NOTICE:  table "tbl_wet_syntax2" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_syntax3;
+NOTICE:  table "tbl_wet_syntax3" does not exist, skipping
+-- end_ignore
+CREATE TABLE test_dp1 (a int, b text) DISTRIBUTED RANDOMLY;
+CREATE TABLE test_dp2 (a int, b text) DISTRIBUTED BY (b);
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_syntax1 (like test_dp1) EXECUTE 'cat > @abs_srcdir@/data/wet_syntax1.tbl' FORMAT 'TEXT' (DELIMITER '|' ) DISTRIBUTED BY (a);
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_syntax2 (like test_dp2) EXECUTE 'cat > @abs_srcdir@/data/wet_syntax2.tbl' FORMAT 'TEXT' (DELIMITER '|' ) DISTRIBUTED BY (a);
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_syntax3 (like test_dp2) EXECUTE 'cat > @abs_srcdir@/data/wet_syntax3.tbl' FORMAT 'TEXT' (DELIMITER '|' ) DISTRIBUTED RANDOMLY;
+INSERT INTO tbl_wet_syntax1 VALUES (generate_series(1,256), 'test_1');
+INSERT INTO tbl_wet_syntax2 VALUES (generate_series(1,256), 'test_2');
+INSERT INTO tbl_wet_syntax3 VALUES (generate_series(1,256), 'test_3');
+DROP TABLE IF EXISTS test_dp1;
+DROP TABLE IF EXISTS test_dp2;
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_syntax1;
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_syntax2;
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_syntax3;
+-- start_ignore
+DROP TABLE IF EXISTS table_execute;
+NOTICE:  table "table_execute" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_execute;
+NOTICE:  table "tbl_wet_execute" does not exist, skipping
+-- end_ignore
+CREATE TABLE table_execute (id integer, name varchar(40)) DISTRIBUTED RANDOMLY;
+INSERT INTO table_execute VALUES (100, 'name_1');
+INSERT INTO table_execute VALUES (200, 'name_2');
+INSERT INTO table_execute VALUES (300, 'name_3');
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_execute (like table_execute) EXECUTE 'cat > @abs_srcdir@/data/wet_execute.tbl' FORMAT 'TEXT' (DELIMITER '|' );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+INSERT INTO tbl_wet_execute SELECT * from table_execute ;
+DROP TABLE IF EXISTS table_execute;
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_execute;
 -- start_ignore
 -- drop temp external protocols
 DROP PROTOCOL if exists demoprot;

@@ -5,9 +5,9 @@
   <body>
     <p>Table partitioning enables supporting very large tables, such as fact tables, by logically
       dividing them into smaller, more manageable pieces. Partitioned tables can improve query
-      performance by allowing the Greenplum Database query optimizer to scan only the
-      data needed to satisfy a given query instead of scanning all the contents of a large table.
-        <ul id="ul_szj_5sz_bt">
+      performance by allowing the Greenplum Database query optimizer to scan only the data needed to
+      satisfy a given query instead of scanning all the contents of a large table. <ul
+        id="ul_szj_5sz_bt">
         <li><xref href="#topic_tvx_nsz_bt" format="dita"/></li>
         <li><xref href="#topic65" format="dita"/></li>
         <li><xref href="#topic66" format="dita"/></li>
@@ -21,11 +21,11 @@
     <title>About Table Partitioning</title>
     <body>
       <p>Partitioning does not change the physical distribution of table data across the segments.
-        Table distribution is physical: Greenplum Database physically divides
-        partitioned tables and non-partitioned tables across segments to enable parallel query
-        processing. Table <i>partitioning</i> is logical: Greenplum Database logically
-        divides big tables to improve query performance and facilitate data warehouse maintenance
-        tasks, such as rolling old data out of the data warehouse. </p>
+        Table distribution is physical: Greenplum Database physically divides partitioned tables and
+        non-partitioned tables across segments to enable parallel query processing. Table
+          <i>partitioning</i> is logical: Greenplum Database logically divides big tables to improve
+        query performance and facilitate data warehouse maintenance tasks, such as rolling old data
+        out of the data warehouse. </p>
       <p>Greenplum Database supports:</p>
       <ul id="ul_ohc_2wy_sp">
         <li id="im204035"><i>range partitioning</i>: division of data based on a numerical range,
@@ -44,22 +44,21 @@
   <topic id="topic64" xml:lang="en">
     <title>Table Partitioning in Greenplum Database</title>
     <body>
-      <p>Greenplum Database divides tables into parts (also known as partitions) to
-        enable massively parallel processing. Tables are partitioned during <codeph>CREATE
-          TABLE</codeph> using the <codeph>PARTITION BY</codeph> (and optionally the
-          <codeph>SUBPARTITION BY</codeph>) clause. Partitioning creates a top-level (or parent)
-        table with one or more levels of sub-tables (or child tables). Internally, Greenplum Database creates an inheritance relationship between the top-level table
-        and its underlying partitions, similar to the functionality of the <codeph>INHERITS</codeph>
-        clause of PostgreSQL.</p>
-      <p>Greenplum uses the partition criteria defined during table
-        creation to create each partition with a distinct <codeph>CHECK</codeph> constraint, which
-        limits the data that table can contain. The query optimizer uses <codeph>CHECK</codeph>
-        constraints to determine which table partitions to scan to satisfy a given query
-        predicate.</p>
-      <p>The Greenplum system catalog stores partition hierarchy
-        information so that rows inserted into the top-level parent table propagate correctly to the
-        child table partitions. To change the partition design or table structure, alter the parent
-        table using <codeph>ALTER TABLE</codeph> with the <codeph>PARTITION</codeph> clause.</p>
+      <p>Greenplum Database divides tables into parts (also known as partitions) to enable massively
+        parallel processing. Tables are partitioned during <codeph>CREATE TABLE</codeph> using the
+          <codeph>PARTITION BY</codeph> (and optionally the <codeph>SUBPARTITION BY</codeph>)
+        clause. Partitioning creates a top-level (or parent) table with one or more levels of
+        sub-tables (or child tables). Internally, Greenplum Database creates an inheritance
+        relationship between the top-level table and its underlying partitions, similar to the
+        functionality of the <codeph>INHERITS</codeph> clause of PostgreSQL.</p>
+      <p>Greenplum uses the partition criteria defined during table creation to create each
+        partition with a distinct <codeph>CHECK</codeph> constraint, which limits the data that
+        table can contain. The query optimizer uses <codeph>CHECK</codeph> constraints to determine
+        which table partitions to scan to satisfy a given query predicate.</p>
+      <p>The Greenplum system catalog stores partition hierarchy information so that rows inserted
+        into the top-level parent table propagate correctly to the child table partitions. To change
+        the partition design or table structure, alter the parent table using <codeph>ALTER
+          TABLE</codeph> with the <codeph>PARTITION</codeph> clause.</p>
       <p>To insert data into a partitioned table, you specify the root partitioned table, the table
         created with the <codeph>CREATE TABLE</codeph> command. You also can specify a leaf child
         table of the partitioned table in an <codeph>INSERT</codeph> command. An error is returned
@@ -166,8 +165,8 @@
           partitions, rather than partition by year then subpartition by month then subpartition by
           day. A multi-level design can reduce query planning time, but a flat partition design runs
           faster.</p>
-        <p>You can have Greenplum Database automatically generate partitions by giving
-          a <codeph>START</codeph> value, an <codeph>END</codeph> value, and an
+        <p>You can have Greenplum Database automatically generate partitions by giving a
+            <codeph>START</codeph> value, an <codeph>END</codeph> value, and an
             <codeph>EVERY</codeph> clause that defines the partition increment value. By default,
             <codeph>START</codeph> values are always inclusive and <codeph>END</codeph> values are
           always exclusive. For example:</p>
@@ -241,10 +240,10 @@ PARTITION BY LIST (gender)
   DEFAULT PARTITION other );
 </codeblock>
         </p>
-        <note>The current Greenplum Database legacy optimizer allows list partitions
-          with multi-column (composite) partition keys. A range partition only allows a single
-          column as the partition key. The Greenplum Query Optimizer does not support composite keys,
-          so you should not use composite partition keys.</note>
+        <note>The current Greenplum Database legacy optimizer allows list partitions with
+          multi-column (composite) partition keys. A range partition only allows a single column as
+          the partition key. The Greenplum Query Optimizer does not support composite keys, so you
+          should not use composite partition keys.</note>
         <p>For more information about default partitions, see <xref href="#topic80" type="topic"
             format="dita"/>.</p>
       </body>
@@ -336,7 +335,9 @@ GRANT SELECT ON sales TO guest;
           partitioning columns. A unique index can omit the partitioning columns; however, it is
           enforced only on the parts of the partitioned table, not on the partitioned table as a
           whole.</p>
-        <p>GPORCA, the Greenplum next generation query optimizer, supports uniform multi-level partitioned tables. If GPORCA is enabled and the multi-level partitioned table is not uniform, Greenplum Database executes queries against the table with the legacy query
+        <p>GPORCA, the Greenplum next generation query optimizer, supports uniform multi-level
+          partitioned tables. If GPORCA is enabled and the multi-level partitioned table is not
+          uniform, Greenplum Database executes queries against the table with the legacy query
           optimizer. For information about uniform multi-level partitioned tables, see <xref
             href="../query/topics/query-piv-uniform-part-tbl.xml#topic1"/>.</p>
         <p>Exchanging a leaf child partition with an external table is not supported if the
@@ -494,8 +495,8 @@ WHERE tablename='sales';
         <li id="im156103"><i>pg_partition_columns</i> - Shows the partition key columns used in a
           partition design.</li>
       </ul>
-      <p>For information about Greenplum Database system catalog tables and views,
-        see the <i>Greenplum Database Reference Guide</i>. </p>
+      <p>For information about Greenplum Database system catalog tables and views, see the
+          <i>Greenplum Database Reference Guide</i>. </p>
     </body>
   </topic>
   <topic id="topic77" xml:lang="en">
@@ -634,8 +635,8 @@ WHERE tablename='sales';
           <codeblock>ALTER TABLE sales ADD DEFAULT PARTITION other;
 </codeblock>
         </p>
-        <p>If your partition design is multi-level, each level in the hierarchy
-          must have a default partition. For example:</p>
+        <p>If your partition design is multi-level, each level in the hierarchy must have a default
+          partition. For example:</p>
         <p>
           <codeblock>ALTER TABLE sales ALTER PARTITION FOR (RANK(1)) ADD DEFAULT 
 PARTITION other;
@@ -705,17 +706,16 @@ WITH TABLE jan12;
         <p>The Greenplum Database server configuration parameter
             <codeph>gp_enable_exchange_default_partition</codeph> controls availability of the
             <codeph>EXCHANGE DEFAULT PARTITION</codeph> clause. The default value for the parameter
-          is <codeph>off</codeph>, the clause is not available and Greenplum Database
-          returns an error if the clause is specified in an <codeph>ALTER TABLE</codeph>
-          command.</p>
+          is <codeph>off</codeph>, the clause is not available and Greenplum Database returns an
+          error if the clause is specified in an <codeph>ALTER TABLE</codeph> command.</p>
         <p>For information about the parameter, see "Server Configuration Parameters" in the
-              <cite>Greenplum Database Reference Guide</cite>.<note type="warning"
-            >Before you exchange the default partition, you must ensure the data in the table to be
-            exchanged, the new default partition, is valid for the default partition. For example,
-            the data in the new default partition must not contain data that would be valid in other
-            leaf child partitions of the partitioned table. Otherwise, queries against the
-            partitioned table with the exchanged default partition that are executed by the Pivotal
-            Query Optimizer might return incorrect results.</note></p>
+            <cite>Greenplum Database Reference Guide</cite>.<note type="warning">Before you exchange
+            the default partition, you must ensure the data in the table to be exchanged, the new
+            default partition, is valid for the default partition. For example, the data in the new
+            default partition must not contain data that would be valid in other leaf child
+            partitions of the partitioned table. Otherwise, queries against the partitioned table
+            with the exchanged default partition that are executed by the Pivotal Query Optimizer
+            might return incorrect results.</note></p>
       </body>
     </topic>
     <topic id="topic84" xml:lang="en">
@@ -813,8 +813,8 @@ INTO (PARTITION jan09, default partition);
                 NULL</codeph> constraint.</li>
           </ul></p>
         <p>For information about exchanging and altering a leaf child partition, see the
-            <codeph>ALTER TABLE</codeph> command in the<cite>
-            Greenplum Database Command Reference</cite>.</p>
+            <codeph>ALTER TABLE</codeph> command in the<cite> Greenplum Database Command
+            Reference</cite>.</p>
         <p>For information about limitations of partitioned tables that contain a external table
           partition, see <xref href="#topic72" format="dita"/>.</p>
       </body>
