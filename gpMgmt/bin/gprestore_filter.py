@@ -32,6 +32,10 @@ schema_expr = '; Schema: '
 owner_expr = '; Owner: '
 comment_data_expr_a = '-- Data: '
 comment_data_expr_b = '-- Data for Name: '
+begin_start = 'B'
+begin_expr = 'BEGIN'
+end_start = 'E'
+end_expr = 'END'
 
 
 def get_table_info(line, cur_comment_expr):
@@ -124,10 +128,20 @@ def process_schema(dump_schemas, dump_tables, fdin, fdout, change_schema=None, s
     cast_func_schema = None
     change_cast_func_schema = False
 
+    in_block = False
+
     for line in fdin:
         # NOTE: We are checking the first character before actually verifying
         # the line with "startswith" due to the performance gain.
-        if search_path and (line[0] == set_start) and line.startswith(search_path_expr):
+        if in_block:
+            output = True
+        elif (line[0] == begin_start) and line.startswith(begin_expr):
+            in_block = True
+            output = True
+        elif (line[0] == end_start) and line.startswith(end_expr):
+            in_block = False
+            output = True
+        elif search_path and (line[0] == set_start) and line.startswith(search_path_expr):
             # NOTE: The goal is to output the correct mapping to the search path
             # for the schema
 

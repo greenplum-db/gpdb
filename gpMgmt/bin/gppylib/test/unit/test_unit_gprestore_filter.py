@@ -2039,7 +2039,14 @@ CREATE TABLE ao_part_table (
     column1 integer,
     column2 character varying(20),
     column3 date
-) DISTRIBUTED BY (column1); with (appendonly=true)"""
+) DISTRIBUTED BY (column1); with (appendonly=true)
+
+BEGIN
+DROP TABLE IF EXISTS footab;
+SELECT version() INTO ver;
+RETURN ver;
+END;
+$$ LANGUAGE plpgsql;"""
 
         with open(outfile, 'r') as fd:
             results = fd.read().strip()
