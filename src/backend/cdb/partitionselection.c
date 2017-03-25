@@ -259,7 +259,7 @@ processLevel(PartitionSelectorState *node, int level, TupleTableSlot *inputTuple
 	}
 
 	/* list of PartitionRule that satisfied the predicates */
-	List *satisfiedRules = NULL;
+	List *satisfiedRules = NIL;
 
 	/* If equalityPredicate exists */
 	if (NULL != equalityPredicate)
