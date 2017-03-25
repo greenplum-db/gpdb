@@ -4839,17 +4839,10 @@ static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
 	size_t numVal = rule->parlistvalues ? rule->parlistvalues->length : 0;
 	Datum *array_values = NULL;
 
-	/*
-	 * Optimizer supports only a single attribute partitioning key.
-	 * We can only check for non-leaf, as for leaf part we don't have cheap
-	 * access to number of partitioning columns
-	 */
-	AssertImply(rule->children != NULL, rule->children->part->parnatts == 1);
-
 	int16	typlen = 0;
 	bool typbyval = false;
 	char typalign = 'i';
-	Oid	consttype = get_atttype(rule->parchildrelid, rule->children->part->paratts[0]);
+	Oid	consttype = expr->resulttype;
 	get_typlenbyvalalign(consttype, &typlen, &typbyval, &typalign);
 
 	bool *is_null = NULL;
@@ -4857,9 +4850,15 @@ static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
 	if (numVal > 0)
 	{
 		is_null = palloc0(sizeof(bool) * numVal);
+#ifdef USE_ASSERT_CHECKING
 		/* The type of the first attribute should match the underlying table col's type */
-		Assert(((Const *) linitial(lfirst(rule->parlistvalues->head)))->consttype == consttype);
-
+		Oid valOid = ((Const *) linitial(lfirst(rule->parlistvalues->head)))->consttype;
+		/*
+		 *  If the part key type is varchar, the result type is always text
+		 *  as we can't compare varchar with varchar
+		 */
+		Assert(valOid == consttype || (valOid == VARCHAROID && consttype == TEXTOID));
+#endif
 		array_values = palloc0(numVal * sizeof(Datum));
 		int datumIdx = 0;
 
