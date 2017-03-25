@@ -1,22 +1,31 @@
-The Greenplum pg_upgrade code is based on pg_upgrade from 9.0.23 and has
-been extended to work with Greenplum. This README is intended to document the
-changes that have been done.
+The Greenplum Database pg_upgrade code is based on pg_upgrade from PostgreSQL
+9.0.23 and has been extended to work with Greenplum. This README is intended to
+document the changes that have been done and the Greenplum Database specific
+handling which is required to upgrade a Greenplum Database cluster.
 
-Operation of pg_upgrade remains unchanged as are the available command line
-parameters. Upgrading a Greenplum cluster with pg_upgrade is done by first
-upgrading the QD and then the QEs.
+The user-facing operation of pg_upgrade remains unchanged, as are the available
+command line parameters. The internals of pg_upgrade are however extended to
+support Greenplum Database. Upgrading a Greenplum Database cluster with
+pg_upgrade is done by first upgrading the QD and then the QEs. All QEs can be
+upgraded in parallel to save time.
 
 
 Extensions to upstream pg_upgrade
 ---------------------------------
 
-pg_upgrade is in PostgreSQL only maintaning the Oids of types, Greenplum
-however requires all Oids to be maintained such that they are synchronized
-between QD and QEs after upgrade. The binary-upgrade option in pg_dump has
-been extended to inject Oid preservation calls for all required object types
-in the dump. Technically, the Oids needn't be preserved during upgrade as
-long as they are synchronized between QD/QEs after the upgrade. The current
-implementation preserves the Oids rather than allocate new ones.
+pg_upgrade is in PostgreSQL only maintaining the Oids of types across an
+upgrade, Greenplum Database however requires all Oids to be maintained such
+that they are synchronized between QD and QEs after the upgrade. The
+binary-upgrade option in pg_dump has been extended to inject Oid preservation
+calls for all required object types in the dump. Technically, the Oids needn't
+be preserved during upgrade as long as they are synchronized between QD/QEs
+after the upgrade. The current implementation preserves the Oids rather than
+allocate new ones. When objects require Oid synchronization, pg_upgrade will on
+the QD dump the synchronization commands in a special dump file called
+pg_upgrade_dump_oid_dispatch.sql.  This file must then be placed in the working
+directory on the QEs during upgrade to incorporate the Oid synchronization.
+There is no automated process for putting this file on the QEs, it needs to be
+done manually (or automated via third party scripts).
 
 Functionality for restoring the append-only catalog relations is in
 aotable.c, Greenplum specific checks for upgrading from GPDB 4 are added to
@@ -31,7 +40,7 @@ upgraded. This is because new Oids are allocated during the QD upgrade and
 these needs to be distributed to the QEs in order to preserve the QD/QE Oid
 synchronization.
 
-* Each base relation type is in 5.0 defined as an array type, something which
+* Each base relation type is defined as an array type in 5.0, something which
   is not supported in 4.3. The arraytypes for base relations will be created
   during upgrade and thier Oids recorded. To be able to distribute the Oids to
   the QEs, the upgrade will leave a dump file in the working directory named
@@ -52,3 +61,168 @@ synchronization.
   - AO table segment files will be rewritten when a segment containing numeric
     attributes are written to from database operations.
 
+* Any external partitions must be re-exchanged into their partition hierarchies
+  after the upgrade as a post-processing step. The temporary placeholder
+  partitions will be Oid synchronized via the pg_upgrade_dump_oid_dispatch.sql
+  dump file.
+
+
+External tables as partitions
+-----------------------------
+
+Partitioned tables which contain external tables in their partition hierarchy
+requires special attention during upgrades.
+
+First some background on how Greenplum Database handles external partitions.
+Partitions using external tables cannot be created when partitioned table is
+defined, instead they need to be added once the relation is created using the
+ALTER TABLE .. EXCHANGE PARTITION command.
+
+Below is a working example of defining a partitioned table with an external
+partition. The table, t, is defined without reference to the external table,
+t_x, which is then swapped into the partition hierarchy using a partition
+exchange.  First the tables are created.
+
+    CREATE TABLE t (a int, b int)
+      DISTRIBUTED BY (a)
+      PARTITION BY RANGE (b) (
+        START (1) END (2) EVERY (1) WITH (appendonly=false),
+        START (2) END (4) EVERY (1) WITH (appendonly=false)
+      );
+
+    CREATE EXTERNAL TABLE t_x (a int, b int)
+      LOCATION ('gpfdist://foo:123/bar')
+      FORMAT 'csv' (delimiter E',' null E'' escape E'"' quote E'"')
+      ENCODING 'UTF8';
+
+The pg_class entries for the partitioned table t and the external table t_x now
+look like the following:
+
+      oid  |  relname  | relstorage
+    -------+-----------+------------
+     89387 | t         | h
+     89390 | t_1_prt_1 | h
+     89407 | t_1_prt_2 | h
+     89423 | t_1_prt_3 | h
+     89450 | t_x       | x
+
+Next we exchange t_1_prt_1 for the external table t_x using the EXCHANGE
+PARTITION FOR (rank()) command.
+
+    ALTER TABLE t EXCHANGE PARTITION
+      FOR (rank(1))
+      WITH TABLE t_x WITHOUT VALIDATION;
+
+Inspecting tables t, t_x and t_1_prt_1 after the exchange operation shows that
+t_x and t_1_prt_1 have traded places in the partition hierarchy.
+
+                       Table "public.t"
+     Column |  Type   | Modifiers | Storage | Description
+    --------+---------+-----------+---------+-------------
+     a      | integer |           | plain   |
+     b      | integer |           | plain   |
+    Child tables: t_1_prt_1,
+                  t_1_prt_2,
+                  t_1_prt_3
+    Has OIDs: no
+    Distributed by: (a)
+    Partition by: (b)
+
+                    Table "public.t_x"
+     Column |  Type   | Modifiers | Storage | Description
+    --------+---------+-----------+---------+-------------
+     a      | integer |           | plain   |
+     b      | integer |           | plain   |
+    Check constraints:
+        "t_1_prt_1_check" CHECK (b >= 1 AND b < 2)
+    Has OIDs: no
+    Options: appendonly=false
+    Distributed by: (a)
+
+              External table "public.t_1_prt_1"
+     Column |  Type   | Modifiers | Storage | Description
+    --------+---------+-----------+---------+-------------
+     a      | integer |           | plain   |
+     b      | integer |           | plain   |
+    Type: readable
+    Encoding: UTF8
+    Format type: csv
+    Format options: delimiter ',' null '' escape '"' quote '"'
+    External options: {}
+    External location: gpfdist://foo:123/bar
+    Execute on: all segments
+    Check constraints:
+        "t_1_prt_1_check" CHECK (b >= 1 AND b < 2)
+
+The query from earlier on pg_class shows that they have kept their individual
+Oids during the exchange.
+
+      oid  |  relname  | relstorage
+    -------+-----------+------------
+     89387 | t         | h
+     89390 | t_x       | h
+     89407 | t_1_prt_2 | h
+     89423 | t_1_prt_3 | h
+     89450 | t_1_prt_1 | x
+
+At this point, t_x is a superfluous table and will in most cases be dropped.
+
+pg_dump will dump the above table t as the following set of instructions.
+
+    CREATE EXTERNAL TABLE t_1_prt_1_external_partition__ (..) ..;
+    CREATE TABLE t (..) PARTITION ..;
+    ALTER TABLE t EXCHANGE PARTITION ..
+	  WITH TABLE t_1_prt_1_external_partition__;
+    DROP TABLE t_1_prt_1_external_partition__;
+
+The external table is first created as a normal external table using a postfix
+appended to the target partition name to generate a unique name (while there is
+no guarantee that it actually doesn't collide with an existing name). The
+partitioned table t is created without any reference to the external table,
+immediately following the definition is an ALTER TABLE EXCHANGE command to
+replace normal partition t_1_prt_1 with the external table.
+
+t_1_prt_1_external_partition__ will at this point contain the normal partition
+and can be safely dropped.
+
+For pg_dump this process poses a set of challenges when upgrading a database
+containing external partitions.
+
+* The system catalogs for table partitioning are not distributed to the
+  segments. This means that ALTER TABLE .. EXCHANGE is not allowed in utility
+  mode and on the segments we need to use the pg_inherits system catalog
+  instead of partitioning catalogs.
+
+* pg_dump cannot use the original name t_x for the external table since there
+  is no record of the exchange, so the original name is unknown at this point.
+  If t_x wasn't dropped as part of the original table definition, it will be
+  dumped/restored as a normal table disconnected from this partition hierarchy.
+
+This means that pg_upgrade must: a) create a new table object for the partition
+as a placeholder and; b) post-pone the partition exchange until the cluster is
+running in normal mode again. For the different servers, this translates to:
+
+* On the QD, the partitioned table is created with a single CREATE TABLE ..
+  PARTITION .. command which will create all the partitions, including the one
+  which will be exchanged for the external table later. The external partition
+  is created as a stand-alone external table.
+
+* On the QEs, there is no concept of partitions due to the catalogs not being
+  distributed. The partition parent, as well as the partitions, need to be
+  individually created with CREATE TABLE .. commands. The partition to be
+  exchanged needs to be created as a brand new table during the dump. The
+  external partition is created as a stand-alone external table.
+
+* On the QD, a separate dump file containing the partition exchange commands is
+  created as a post-processing step to the upgrade.
+
+For pg_upgrade, creating new relation objects means that an additional Oid
+synchronization step is required to ensure that the object is intact across the
+cluster after the upgrade. Since the external table retains its Oid during the
+exchange pg_upgrade will preassign the original Oid from the target partition
+on the new external table definition in the dump.
+
+In the example above, pg_upgrade will preassign Oid 89390 to the new external
+table t_1_prt_1_external_partition__, and will preassign Oid 0 to t_1_prt_1 to
+signal that a new Oid must be allocated. This new Oid will be included in the
+Oid distribution file such that it can be used for QE upgrades.

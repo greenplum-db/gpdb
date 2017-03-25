@@ -220,6 +220,8 @@ get_db_infos(migratorContext *ctx, DbInfoArr *dbinfs_arr, Cluster whichCluster)
 				 PQgetvalue(res, tupnum, i_datname));
 		snprintf(dbinfos[tupnum].db_tblspace, sizeof(dbinfos[tupnum].db_tblspace), "%s",
 				 PQgetvalue(res, tupnum, i_spclocation));
+
+		dbinfos[tupnum].dispatch_arr.ndispatch = 0;
 	}
 	PQclear(res);
 
@@ -354,6 +356,7 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 	int			numeric_rel_num = 0;
 	char		typestr[QUERY_ALLOC];
 	int			i;
+	char 	   *exclude = NULL;
 
 	/*
 	 * We need to extract extra information on all relations which contain
@@ -402,6 +405,9 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 
 	PQclear(res);
 
+	if (whichCluster == CLUSTER_NEW)
+		exclude = exclude_oid_for_dispatch(ctx, dbinfo);
+
 	/*
 	 * pg_largeobject contains user data that does not appear the pg_dumpall
 	 * --schema-only output, so we have to migrate that system table heap and
@@ -439,6 +445,11 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 			 /* GPDB 4.3 (based on PostgreSQL 8.2), however, doesn't have indisvalid
 			  * nor indisready. */
 			 " %s "
+			 /* 
+			  * If we have relations created in the new cluster which aren't
+			  * in the old cluster we need to exclude them here
+			  */
+			 " %s "
 			 "GROUP BY  c.oid, n.nspname, c.relname, c.relfilenode, c.relstorage, c.relkind, "
 			 "			c.reltoastrelid, c.reltablespace, t.spclocation, "
 			 "			n.nspname "
@@ -452,7 +463,8 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 			 (GET_MAJOR_VERSION(ctx->old.major_version) <= 803) ?
 			 "" : ", 'S'",
 			 (GET_MAJOR_VERSION(ctx->old.major_version) <= 802) ?
-			 "" : " AND i.indisvalid IS DISTINCT FROM false AND i.indisready IS DISTINCT FROM false "
+			 "" : " AND i.indisvalid IS DISTINCT FROM false AND i.indisready IS DISTINCT FROM false ",
+			 exclude ? exclude : ""
 		);
 
 	res = executeQueryOrDie(ctx, conn, query);

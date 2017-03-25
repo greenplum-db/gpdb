@@ -336,6 +336,7 @@ typedef struct _tableInfo
 	struct _tableInfo **parents;	/* TableInfos of immediate parents */
 	struct _tableDataInfo *dataObj;		/* TableDataInfo, if dumping its data */
 	Oid			parrelid;			/* external partition's parent oid */
+	char	   *placeholder;	/* The name of the placeholder table to create */
 } TableInfo;
 
 typedef struct _attrDefInfo

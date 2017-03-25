@@ -80,6 +80,10 @@ static int	binary_upgrade = 0;
 static FILE *OPF;
 static char *filename = NULL;
 
+static FILE *BOPF;
+#define BINARY_OUTPUT_POSTPROCESSING "binary_output.dump"
+static char *bu_filename = BINARY_OUTPUT_POSTPROCESSING;
+
 int
 main(int argc, char *argv[])
 {
@@ -138,6 +142,7 @@ main(int argc, char *argv[])
 		/* START MPP ADDITION */
 		{"gp-syntax", no_argument, NULL, 1},
 		{"no-gp-syntax", no_argument, NULL, 2},
+		{"binary-upgrade-filename", required_argument, NULL, 3},
 		/* END MPP ADDITION */
 
 		{NULL, 0, NULL, 0}
@@ -350,6 +355,11 @@ main(int argc, char *argv[])
 				no_gp_syntax = true;
 				break;
 
+			case 3:
+				bu_filename = strdup(optarg);
+				appendPQExpBuffer(pgdumpopts, " --binary-upgrade-filename='%s'", bu_filename);
+				break;
+
 				/* END MPP ADDITION */
 
 			default:
@@ -469,6 +479,22 @@ main(int argc, char *argv[])
 		OPF = stdout;
 
 	/*
+	 * Open the binary upgrade post processing file if running in binary
+	 * upgrade mode.
+	 */
+	if (binary_upgrade)
+	{
+		BOPF = fopen(bu_filename, PG_BINARY_W);
+		if (!BOPF)
+		{
+			fclose(OPF);
+			fprintf(stderr, _("%s: could not open binary upgrade file \"%s\": %s\n"),
+					progname, bu_filename, strerror(errno));
+			exit(1);
+		}
+	}
+
+	/*
 	 * Get the active encoding and the standard_conforming_strings setting, so
 	 * we know how to escape strings.
 	 */
@@ -482,6 +508,8 @@ main(int argc, char *argv[])
 		dumpTimestamp("Started on");
 
 	fprintf(OPF, "\\connect postgres\n\n");
+
+	fprintf(BOPF, "--\n-- Greenplum Database cluster dump - Binary Upgrade post-processing steps\n--\n\n");
 
 	if (!data_only)
 	{
@@ -1550,6 +1578,9 @@ dumpDatabases(PGconn *conn)
 		if (filename)
 			fclose(OPF);
 
+		fprintf(BOPF, "\\connect %s\n\n", fmtId(dbname));
+		fclose(BOPF);
+
 		ret = runPgDump(dbname);
 		if (ret != 0)
 		{
@@ -1568,6 +1599,14 @@ dumpDatabases(PGconn *conn)
 			}
 		}
 
+		BOPF = fopen(bu_filename, PG_BINARY_A);
+		if (!BOPF)
+		{
+			fclose(OPF);
+			fprintf(stderr, _("%s: could not re-open the binary upgrade output file \"%s\": %s\n"),
+					progname, bu_filename, strerror(errno));
+			exit(1);
+		}
 	}
 
 	PQclear(res);
