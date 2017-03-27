@@ -9,10 +9,20 @@ import (
 
 	"os"
 
+	"io/ioutil"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gexec"
+)
+
+const (
+	grep_pg_upgrade = `
+gpadmin            7520   0.0  0.0  2432772    676 s004  S+    3:56PM   0:00.00 grep pg_upgrade
+pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bindir  /usr/local/greenplum-db-5/bin --old-datadir /data/gpdata/master/gpseg-1 --new-datadir /data/gp5data/master/gpseg-1 --old-port 5432 --new-port 6543 --link
+`
+	temp_home_dir = "/tmp/gp_upgrade_test_temp_home_dir"
 )
 
 var _ = Describe("monitor", func() {
@@ -21,39 +31,38 @@ var _ = Describe("monitor", func() {
 		// remove any leftover cheatsheet (sshd fake reply)
 		cheatSheet := CheatSheet{}
 		cheatSheet.RemoveFile()
+
+		err := os.RemoveAll(temp_home_dir)
+		Check("cannot remote temp home dir", err)
 	})
 
-	Describe("if ssh responds to ps with evidence of pg_upgrade running", func() {
-		It("reports that pg_upgrade is running on a host if it is", func() {
-			grep_pg_upgrade := `
-gpadmin            7520   0.0  0.0  2432772    676 s004  S+    3:56PM   0:00.00 grep pg_upgrade
-pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bindir  /usr/local/greenplum-db-5/bin --old-datadir /data/gpdata/master/gpseg-1 --new-datadir /data/gp5data/master/gpseg-1 --old-port 5432 --new-port 6543 --link
-`
+	Describe("when pg_upgrade is running on the target host", func() {
+		It("reports that pg_upgrade is running", func() {
 			cheatSheet := CheatSheet{Response: grep_pg_upgrade, ReturnCode: intToBytes(0)}
 			cheatSheet.WriteToFile()
 
 			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
-			Eventually(session).Should(Exit(0))
 
+			Eventually(session).Should(Exit(0))
 			Eventually(session.Out).Should(Say("pg_upgrade is running on host localhost"))
 		})
 	})
 
-	Describe("if ssh responds to ps with no pg_upgrade process", func() {
-		It("connects and reports not running", func() {
+	Describe("when pg_upgrade process is NOT running", func() {
+		It("reports that pg_upgrade is not running", func() {
 			only_grep_itself := "gpadmin            7520   0.0  0.0  2432772    676 s004  S+    3:56PM   0:00.00 grep pg_upgrade"
 			cheatSheet := CheatSheet{Response: only_grep_itself, ReturnCode: intToBytes(0)}
 			cheatSheet.WriteToFile()
 
 			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
-			Eventually(session).Should(Exit(0))
 
+			Eventually(session).Should(Exit(0))
 			expectedMsg := "pg_upgrade is not running on host localhost"
 			Eventually(session.Out).Should(Say(expectedMsg))
 		})
 	})
 
-	Describe("if SSH is not running at the remote end", func() {
+	Describe("when SSH is not running at the remote end", func() {
 		It("complains with standard ssh error phrasing", func() {
 			ShutDownSshdServer()
 
@@ -64,7 +73,7 @@ pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bin
 		})
 	})
 
-	Describe("if it lacks host and segment ID", func() {
+	Describe("when host and segment ID are not provided", func() {
 		It("complains", func() {
 			session := runCommand("monitor")
 
@@ -73,70 +82,92 @@ pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bin
 		})
 	})
 
-	Describe("if a test run tries to use the default ssh key", func() {
-		// we could separate this out into two cases:
-		//   one that tests a mismatching key-pair
-		//   one that asserts about ~/.ssh/id_rsa being the default
-		//     for this one: probably swap HOME to a different dir
+	XDescribe("when the private key is found but does not succeed", func() {
 
-		// todo fixme
-		// this seems destructive, and could cause problems on the workstation if a dev didn't
-		// know what was going on.
-		// at a minimum, we should check and put aside any existing key, and replace it afterwards  --LAH 24 Mar 2017
-
-		//It("complains", func() {
-		//	//TODO: only do this if there doesn't exist a key at ~/.ssh/id_rsa
-		//	//because it overwrites the key that's there... eeek
-		//	throwaway_key, _ := rsa.GenerateKey(rand.Reader, 16)
-		//	home := os.Getenv("HOME")
-		//	os.Mkdir(home + "/.ssh", 0600)
-		//	key_file, _ := os.Create(home + "/.ssh/id_rsa")
-		//	os.Chmod(home + "/.ssh/id_rsa", 0600)
-		//	pem_data := pem.EncodeToMemory(
-		//		&pem.Block{
-		//			Type:  "RSA PRIVATE KEY",
-		//			Bytes: x509.MarshalPKCS1PrivateKey(throwaway_key),
-		//		},
-		//	)
-		//	key_file.Write(pem_data)
-		//	//TODO: we should clean this up afterwards if we did create a new one
-		//
-		//	session := runCommand("monitor", "--host", "localhost", "--segment_id", "42")
-		//
-		//	Eventually(session).Should(Exit(1))
-		//	Eventually(session.Err).Should(Say("handshake failed"))
-		//	Eventually(session.Err).Should(Say("unable to authenticate"))
-		//})
 	})
 
-	Describe("if the remote ssh command fails", func() {
+	Describe("when --private_key option is not provided", func() {
+		Describe("when the default private key is found", func() {
+			Describe("and the key works", func() {
+				It("works", func() {
+					save := SetHomeDir(temp_home_dir)
+					cheatSheet := CheatSheet{Response: grep_pg_upgrade, ReturnCode: intToBytes(0)}
+					cheatSheet.WriteToFile()
+					path := os.Getenv("GOPATH")
+					content, err := ioutil.ReadFile(path + "/src/gp_upgrade/commands/sshd/registered.priv")
+					Check("cannot read private key file", err)
+					err = os.MkdirAll(temp_home_dir+"/.ssh", 0700)
+					Check("cannot create .ssh", err)
+					ioutil.WriteFile(temp_home_dir+"/.ssh/id_rsa", content, 0500)
+					Check("cannot write private key file", err)
+
+					session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--user", "pivotal")
+
+					os.Setenv("HOME", save)
+					Eventually(session).Should(Exit(0))
+					Eventually(session.Out).Should(Say("pg_upgrade is running on host localhost"))
+				})
+			})
+			Describe("and the key does not work", func() {
+				It("complains", func() {
+					save := SetHomeDir(temp_home_dir)
+					cheatSheet := CheatSheet{Response: grep_pg_upgrade, ReturnCode: intToBytes(0)}
+					cheatSheet.WriteToFile()
+					path := os.Getenv("GOPATH")
+					content, err := ioutil.ReadFile(path + "/src/gp_upgrade/commands/sshd/unregistered.priv")
+					Check("cannot read private key file", err)
+					err = os.MkdirAll(temp_home_dir+"/.ssh", 0700)
+					Check("cannot create .ssh", err)
+					ioutil.WriteFile(temp_home_dir+"/.ssh/id_rsa", content, 0500)
+					Check("cannot write private key file", err)
+
+					session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--user", "pivotal")
+
+					os.Setenv("HOME", save)
+					Eventually(session).Should(Exit(1))
+					Eventually(session.Err).Should(Say("ssh: handshake failed: ssh: unable to authenticate, attempted methods \\[none publickey\\], no supported methods remain"))
+				})
+			})
+		})
+
+		Describe("when the default private key cannot be found", func() {
+			Describe("because HOME is not set", func() {
+				It("complains", func() {
+					save := os.Getenv("HOME")
+					os.Setenv("HOME", "")
+
+					session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--user", "pivotal")
+
+					os.Setenv("HOME", save)
+					Eventually(session).Should(Exit(1))
+					Eventually(session.Err).Should(Say("user has not specified a HOME environment value"))
+				})
+			})
+
+			Describe("because there is no file at the default ssh location", func() {
+				It("complains", func() {
+					save := SetHomeDir("/tmp/gp_upgrade_test_temp_home_dir")
+
+					session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--user", "pivotal")
+
+					os.Setenv("HOME", save)
+					Eventually(session).Should(Exit(1))
+					Eventually(session.Err).Should(Say("open /tmp/gp_upgrade_test_temp_home_dir/.ssh/id_rsa: no such file or directory"))
+				})
+			})
+		})
+	})
+
+	Describe("when the remote ssh command fails", func() {
 		It("complains", func() {
 			cheatSheet := CheatSheet{Response: "foo output", ReturnCode: intToBytes(1)}
 			cheatSheet.WriteToFile()
 
 			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
-			Eventually(session).Should(Exit(1))
 
+			Eventually(session).Should(Exit(1))
 			expectedMsg := "cannot run pgrep command on remote host, output: foo output\nError: Process exited with status 1"
 			Eventually(session.Err).Should(Say(expectedMsg))
-		})
-	})
-	Describe("if the default private key cannot be found", func() {
-		Describe("because HOME is not set", func() {
-			It("complains", func() {
-				save := os.Getenv("HOME")
-				os.Setenv("HOME", "")
-
-				session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "", "--user", "pivotal")
-				os.Setenv("HOME", save)
-
-				Eventually(session).Should(Exit(1))
-				Eventually(session.Err).Should(Say("user has not specified a HOME environment value"))
-			})
-		})
-
-		XDescribe("because there is no file at the default ssh location", func() {
-
 		})
 	})
 })

@@ -26,7 +26,7 @@ var _ = Describe("check", func() {
 		err := os.RemoveAll(sqlite3_database_path)
 		utils.Check("Cannot remove sqllite database file", err)
 	})
-	Describe("the database is running, master_host is provided, and connection is successful", func() {
+	Describe("happy: the database is running, master_host is provided, and connection is successful", func() {
 		It("writes a file to ~/.gp_upgrade/cluster_config.json with correct json", func() {
 			path := os.Getenv("GOPATH") + "/src/gp_upgrade/commands/fixtures/segment_config.sql"
 			setupSqlite3Database(getFileContents(path))

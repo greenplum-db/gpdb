@@ -5,7 +5,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gexec"
 
-	"io"
 	"os/exec"
 	"testing"
 
@@ -14,6 +13,8 @@ import (
 	"fmt"
 
 	"strings"
+
+	"gp_upgrade/utils"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -27,17 +28,17 @@ var (
 	commandPath string
 	gConfig     *ssh.ServerConfig
 	sshd        *exec.Cmd
-	stdout      io.ReadCloser
-	stderr      io.ReadCloser
 )
 
 var _ = BeforeEach(func() {
 	path := os.Getenv("GOPATH")
 	sshd = exec.Command(path + "/bin/test/sshd")
-	stdout, _ = sshd.StdoutPipe()
-	stderr, _ = sshd.StderrPipe()
+	_, err := sshd.StdoutPipe()
+	utils.Check("cannot get stdout", err)
+	_, err = sshd.StderrPipe()
+	utils.Check("cannot get stderr", err)
 
-	err := sshd.Start()
+	err = sshd.Start()
 	Expect(err).ToNot(HaveOccurred())
 })
 
