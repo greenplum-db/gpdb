@@ -1,6 +1,7 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := test
 MODULE_NAME=$(shell basename `pwd`)
+DIR_PATH=$(shell dirname `pwd`)
 
 .PHONY : build
 
@@ -8,6 +9,7 @@ DEST = bin/gp_upgrade
 
 GOFLAGS := -o $(DEST)
 
+export GOPATH := $(DIR_PATH)/..
 export PATH := $(PATH):$(GOPATH)/bin
 
 dependencies :
