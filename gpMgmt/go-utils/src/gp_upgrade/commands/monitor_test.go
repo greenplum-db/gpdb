@@ -74,6 +74,11 @@ pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bin
 	})
 
 	Describe("if a test run tries to use the default ssh key", func() {
+		// we could separate this out into two cases:
+		//   one that tests a mismatching key-pair
+		//   one that asserts about ~/.ssh/id_rsa being the default
+		//     for this one: probably swap HOME to a different dir
+
 		// todo fixme
 		// this seems destructive, and could cause problems on the workstation if a dev didn't
 		// know what was going on.

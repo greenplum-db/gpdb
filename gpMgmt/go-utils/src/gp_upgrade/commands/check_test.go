@@ -62,6 +62,8 @@ var _ = Describe("check", func() {
 				Expect(string(session.Err.Contents())).To(ContainSubstring(`no such table: gp_segment_configuration`))
 			})
 		})
+
+		// todo move to test of ConfigWriter
 		//Describe("the home path is not writable", func() {
 		//	It("returns error", func() {
 		//		fixture_path := os.Getenv("GOPATH") + "/src/gp_upgrade/commands/fixtures/segment_config.sql"
