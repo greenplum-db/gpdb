@@ -141,12 +141,6 @@ def impl(context, backup_pg, dbname):
     if row_count != 0:
         raise Exception("Found a ExclusiveLock on pg_class")
 
-@given('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data and {rowcount} rows')
-@when('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data and {rowcount} rows')
-@then('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data and {rowcount} rows')
-def impl(context, tabletype, table_name, compression_type, dbname, rowcount):
-    populate_regular_table_data(context, tabletype, table_name, compression_type, dbname, int(rowcount))
-
 @given('verify the metadata dump file syntax under "{directory}" for comments and types')
 @when('verify the metadata dump file syntax under "{directory}" for comments and types')
 @then('verify the metadata dump file syntax under "{directory}" for comments and types')

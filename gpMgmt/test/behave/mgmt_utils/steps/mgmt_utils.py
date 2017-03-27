@@ -1114,8 +1114,9 @@ def impl(context, path):
     if context.exception:
         raise context.exception
 
-@when('there are no backup files')
 @given('there are no backup files')
+@then('there are no backup files')
+@when('there are no backup files')
 def impl(context):
     cleanup_backup_files(context, 'template1')
 
@@ -1788,10 +1789,10 @@ def validate_segment_config_backup_files(context, dir=None):
         seg_data_dir = dir if dir is not None else ps.getSegmentDataDirectory()
         dump_dir = os.path.join(seg_data_dir, 'db_dumps', context.backup_timestamp[0:8])
         dump_files = ListRemoteFilesByPattern(dump_dir,
-                                              '%sgp_segment_config_files_*_%d_*.tar' % (context.dump_prefix, ps.getSegmentDbId()),
+                                              '%sgp_segment_config_files_*_%d_%s.tar' % (context.dump_prefix, ps.getSegmentDbId(), context.backup_timestamp),
                                               ps.getSegmentHostName()).run()
         if len(dump_files) != 1:
-            raise Exception('Error in finding config files "%s" for segment %s' % (dump_files, seg_data_dir))
+            raise Exception('Found too many config files for segment %s: %s' % (dump_files, seg_data_dir))
 
 @then('config files should be backed up on all segments')
 def impl(context):
@@ -2147,6 +2148,13 @@ def impl(context, dirname):
         os.mkdir(dirname)
         if not os.path.isdir(dirname):
             raise Exception("directory '%s' not created" % dirname)
+
+@then('the directory "{dirname}" does not exist')
+def impl(context, dirname):
+    if os.path.isdir(dirname):
+        shutil.rmtree(dirname, ignore_errors=True)
+    if os.path.isdir(dirname):
+        raise Exception("directory '%s' not removed" % dirname)
 
 @given('the directory "{dirname}" exists in current working directory')
 def impl(context, dirname):
@@ -3911,23 +3919,21 @@ def execute_sql_until_stopped(context, dbname, query):
 def impl(context):
     context.background_query_lock = True
 
-@given('the test is initialized')
+@given('the backup test is initialized')
 def impl(context):
     context.execute_steps(u'''
         Given the database is running
         And database "bkdb" is dropped and recreated
-        And there are no backup files
-        And the backup files in "/tmp" are deleted
     ''')
 
-@given('the test is initialized with database "{dbname}"')
+@given('the backup test is initialized with database "{dbname}"')
 def impl(context, dbname):
     context.execute_steps(u'''
         Given the database is running
         And database "%s" is dropped and recreated
     ''' % dbname)
 
-@given('the test is initialized for special characters')
+@given('the backup test is initialized for special characters')
 def impl(context):
     context.execute_steps(u'''
         Given the database is running
@@ -3951,6 +3957,12 @@ def impl(context):
 @when('there is a "{tabletype}" table "{tablename}" in "{dbname}" with data')
 def impl(context, tabletype, tablename, dbname):
     populate_regular_table_data(context, tabletype, tablename, 'None', dbname, with_data=True)
+
+@given('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data and {rowcount} rows')
+@when('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data and {rowcount} rows')
+@then('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data and {rowcount} rows')
+def impl(context, tabletype, table_name, compression_type, dbname, rowcount):
+    populate_regular_table_data(context, tabletype, table_name, compression_type, dbname, int(rowcount))
 
 @given('there is a "{tabletype}" partition table "{table_name}" in "{dbname}" with data')
 @then('there is a "{tabletype}" partition table "{table_name}" in "{dbname}" with data')
@@ -4245,3 +4257,4 @@ def store_timestamp_in_old_format(context, directory = None, prefix = ""):
 @when('the timestamp will be stored in json format')
 def impl(context):
     context.is_timestamp_stored_as_json = True
+
