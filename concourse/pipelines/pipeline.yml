@@ -859,14 +859,14 @@ jobs:
     input_mapping: *input_mappings
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore"
+      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore_Harmonize"
   - task: monitor_pulse
     attempts: 2
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore"
+      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore_Harmonize"
 
 - name: MU_backup_43_restore_5
   plan:
@@ -879,14 +879,14 @@ jobs:
     input_mapping: *input_mappings
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveBackup-43_to_5"
+      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore-43_to_5"
   - task: monitor_pulse
     attempts: 2
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveBackup-43_to_5"
+      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore-43_to_5"
 
 - name: MU_gpcheckcat
   plan:
