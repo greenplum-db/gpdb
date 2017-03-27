@@ -2,7 +2,6 @@ all: gppkg
 
 BLD_TOP=../../../
 GPMGMT=$(BLD_TOP)/gpMgmt
-include $(BLD_TOP)/releng/tools.mk
 include $(BLD_TOP)/Makefile.global
 
 OS=$(word 1,$(subst _, ,$(BLD_ARCH)))

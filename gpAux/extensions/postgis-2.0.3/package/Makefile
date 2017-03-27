@@ -2,11 +2,13 @@ all: gppkg
 
 BLD_TOP=../../../
 GPMGMT=$(BLD_TOP)/gpMgmt
-include $(BLD_TOP)/releng/tools.mk
 include $(BLD_TOP)/Makefile.global
 
 OS=$(word 1,$(subst _, ,$(BLD_ARCH)))
 ARCH=$(shell uname -p)
+
+# Set to path of libs downloaded from Ivy repo
+RELENG_TOOLS=$(shell cd $(BLD_TOP)/ext/$(BLD_ARCH) && pwd)
 
 GEOS_VER=3.3.8
 GEOS_REL=1
