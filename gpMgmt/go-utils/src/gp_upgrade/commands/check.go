@@ -46,8 +46,12 @@ func (cmd CheckCommand) Execute([]string) error {
 	}
 	defer rows.Close()
 
-	configWriter := config.ConfigWriter{}
-	err = configWriter.ParseAndWriteConfig(rows)
+	configWriter, err := config.NewConfigWriter(rows)
+	if err != nil {
+		return err
+	}
+
+	err = configWriter.ParseAndWriteConfig()
 	if err != nil {
 		return err
 	}

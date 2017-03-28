@@ -9,15 +9,22 @@ import (
 )
 
 type ConfigWriter struct {
+	tableJsonData []map[string]interface{}
 }
 
-func (cmd ConfigWriter) ParseAndWriteConfig(rows *sql.Rows) error {
+// todo all of this file's error paths are not unit tested. There are 3 stories in backlog to do them.  LAH 28 Mar 2017
+func NewConfigWriter(rows *sql.Rows) (*ConfigWriter, error) {
 	tableData, err := translateColumnsIntoGenericListStructureForJson(rows)
+
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	jsonData, err := json.Marshal(tableData)
+	return &ConfigWriter{tableJsonData: tableData}, nil
+}
+
+func (cmd ConfigWriter) ParseAndWriteConfig() error {
+	jsonData, err := json.Marshal(cmd.tableJsonData)
 	if err != nil {
 		return err
 	}
