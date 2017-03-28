@@ -33,6 +33,14 @@ resources:
     username: {{docker_username}}
     password: {{docker_password}}
 
+- name: sles-gpdb-dev-11-beta
+  type: docker-image
+  source:
+    repository: pivotaldata/sles-gpdb-dev
+    tag: 11-beta
+    username: {{docker_username}}
+    password: {{docker_password}}
+
 - name: bin_gpdb_centos6
   type: s3
   source:
@@ -50,6 +58,15 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{bin_gpdb_centos7_versioned_file}}
+
+- name: bin_gpdb_sles11
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{bin_gpdb_sles11_versioned_file}}
 
 - name: installer_rhel6_gpdb_rc
   type: s3
@@ -86,6 +103,24 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     regexp: deliverables/software_only_installer/greenplum-db-(.*)-build-1-rhel7-x86_64.zip.md5
+
+- name: installer_sles11_gpdb_rc
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/software_only_installer/greenplum-db-(.*)-build-1-sles11-x86_64.zip
+
+- name: installer_sles11_gpdb_rc_md5
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/software_only_installer/greenplum-db-(.*)-build-1-sles11-x86_64.zip.md5
 
 - name: installer_appliance_rhel6_gpdb_rc
   type: s3
@@ -140,6 +175,16 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: deliverables/QAUtils-rhel7-x86_64.tar.gz
+
+- name: qautils_sles11_tarball
+  type: s3
+  source:
+    private: true
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: deliverables/QAUtils-sles11-x86_64.tar.gz
 
 - name: gpdb_src_tinc_tarball
   type: s3
@@ -251,6 +296,28 @@ jobs:
       params:
         file: gpdb_artifacts/bin_gpdb.tar.gz
 
+- name: compile_gpdb_sles11
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+    - get: gpaddon_src
+    - get: sles-gpdb-dev-11-beta
+  - task: compile_gpdb
+    file: gpdb_src/concourse/tasks/compile_gpdb.yml
+    image: sles-gpdb-dev-11-beta
+    params:
+      IVYREPO_HOST: {{ivyrepo_host}}
+      IVYREPO_REALM: {{ivyrepo_realm}}
+      IVYREPO_USER: {{ivyrepo_user}}
+      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+      TARGET_OS: sles
+      TARGET_OS_VERSION:
+      BLD_TARGETS: ""
+  - put: bin_gpdb_sles11
+    params:
+      file: gpdb_artifacts/bin_gpdb.tar.gz
+
 - name: coverity_scan
   plan:
   - get: coverity_twice_weekly
@@ -325,6 +392,25 @@ jobs:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on -c codegen=off' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
       TEST_OS: centos
+
+- name: icw_gporca_sles11
+  serial: true
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      #passed: [compile_gpdb_sles11]
+    - get: bin_gpdb
+      resource: bin_gpdb_sles11
+      #passed: [compile_gpdb_sles11]
+      trigger: true
+    - get: sles-gpdb-dev-11-beta
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: sles-gpdb-dev-11-beta
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on -c codegen=off' installcheck-world
+      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
+      TEST_OS: sles
 
 - name: icw_planner_codegen_centos6
   plan:
@@ -705,6 +791,46 @@ jobs:
     - put: gpdb_src_behave_tarball
       params:
         file: packaged_gpdb_src_behave/greenplum-db-*-behave.tar.gz
+
+- name: gpdb_rc_packaging_sles
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      #passed: [icw_planner_sles11]
+      passed: [compile_gpdb_sles11]
+    - get: gpaddon_src
+      passed: [compile_gpdb_sles11]
+    - get: bin_gpdb
+      resource: bin_gpdb_sles11
+      # passed:
+      # - icw_gporca_sles11
+      # - icw_planner_sles11
+      passed: [compile_gpdb_sles11]
+      trigger: true
+    - get: sles-gpdb-dev-11-beta
+  - task: separate_qautils_files_for_rc
+    file: gpdb_src/concourse/tasks/separate_qautils_files_for_rc.yml
+    image: sles-gpdb-dev-11-beta
+    params:
+      QAUTILS_TARBALL: rc_bin_gpdb/QAUtils-sles11-x86_64.tar.gz
+  - task: gpdb_rc_packaging_sles
+    file: gpdb_src/concourse/tasks/gpdb_packaging.yml
+    image: sles-gpdb-dev-11-beta
+    input_mapping:
+      bin_gpdb: rc_bin_gpdb
+    params:
+      INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-header-sles-gpdb.sh
+      INSTALLER_ZIP: packaged_gpdb/greenplum-db-@GP_VERSION@-sles11-x86_64.zip
+      ADD_README_INSTALL: true
+  - put: installer_sles11_gpdb_rc
+    params:
+      file: packaged_gpdb/greenplum-db-*-sles11-x86_64.zip
+  - put: installer_sles11_gpdb_rc_md5
+    params:
+      file: packaged_gpdb/greenplum-db-*-sles11-x86_64.zip.md5
+  - put: qautils_sles11_tarball
+    params:
+      file: rc_bin_gpdb/QAUtils-sles11-x86_64.tar.gz
 
 # Stage 3: Trigger jobs that rely on packaging
 
