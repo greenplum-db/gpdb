@@ -3,6 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"gp_upgrade/shell_parsers"
 	"gp_upgrade/ssh_client"
 	"io"
 )
@@ -40,7 +41,7 @@ func (cmd MonitorCommand) Execute([]string) error {
 		return errors.New(msg)
 	}
 
-	shellParser := ShellParser{Output: output}
+	shellParser := shell_parsers.ShellParser{Output: output}
 	addNot := ""
 	if !shellParser.IsPgUpgradeRunning() {
 		addNot = "not "
