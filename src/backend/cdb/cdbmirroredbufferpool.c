@@ -253,7 +253,7 @@ static void MirroredBufferPool_DoOpen(
 	*mirrorDataLossOccurred = false;
 
 	if (create)
-		fileFlags = O_CREAT | O_RDWR | PG_BINARY;
+		fileFlags = O_CREAT | O_RDWR | O_EXCL | PG_BINARY;
 
 	PersistentTablespace_GetPrimaryAndMirrorFilespaces(
 										relFileNode->spcNode,
