@@ -140,7 +140,14 @@ make cluster
 source gpdemo-env.sh
 ```
 
-The directory and the TCP ports for the demo cluster can be changed on the fly:
+Compilation can be sped up with parallelization. Instead of `make`, consider:
+
+```
+make -j8
+```
+
+The directory and the TCP ports for the demo cluster can be changed on the fly.
+Instead of `make cluster`, consider:
 
 ```
 DATADIRS=/tmp/gpdb-cluster MASTER_PORT=15432 PORT_BASE=25432 make cluster
@@ -277,8 +284,8 @@ Known issues:
     docker images -aq --filter dangling=true | xargs -n 1 docker rmi
     ```
 
-    Alternatively you can use the (beta) Native macOS docker client now available
-    in docker 1.12.
+* The Native macOS docker client available with docker 1.12+ (beta) or
+  Community Edition 17+ may also work
 
 ## Contributing
 
