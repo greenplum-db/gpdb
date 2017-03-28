@@ -1,9 +1,0 @@
-SELECT * FROM tabfunc_non( TABLE(select * from t1) );
-ERROR:  function tabfunc_non(anytable) does not exist
-LINE 1: SELECT * FROM tabfunc_non( TABLE(select * from t1) );
-                      ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
-SELECT * FROM transform( TABLE_non(select * from t1) );
-ERROR:  syntax error at or near "select"
-LINE 1: SELECT * FROM transform( TABLE_non(select * from t1) );
-                                           ^

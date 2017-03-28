@@ -1,5 +1,0 @@
-CREATE OR REPLACE FUNCTION transform3(a anytable, b anytable)
-      RETURNS TABLE (b text, a int)
-      AS '$libdir/tabfunc_gppc_demo', 'mytransform'
-      LANGUAGE C;
-ERROR:  functions cannot have multiple "anytable" arguments

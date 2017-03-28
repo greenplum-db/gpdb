@@ -1,0 +1,295 @@
+set timezone=UTC;
+CREATE FUNCTION oidcheckfunc(text) RETURNS int4 AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION boolfunc(bool) RETURNS bool AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION charfunc("char") RETURNS "char" AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION int2mulfunc(int2, int2) RETURNS int2 AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION int4func1(int) RETURNS int AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION int8plusfunc(int8, int8) RETURNS int8 AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION float4func1(float4) RETURNS float4 AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION float8func1(float8) RETURNS float8 AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION textdoublefunc(text) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION textgenfunc() RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION textcopyfunc(text, bool) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION varchardoublefunc(varchar) RETURNS varchar AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION varchargenfunc() RETURNS varchar AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION varcharcopyfunc(text, bool) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION bpchardoublefunc(char) RETURNS char AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION bpchargenfunc() RETURNS char AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION bpcharcopyfunc(text, bool) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION errfunc1(text) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION argisnullfunc(int) RETURNS bool AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE;
+CREATE FUNCTION byteafunc1(bytea) RETURNS bytea AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION numericfunc1(numeric) RETURNS numeric AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION numericfunc2(numeric) RETURNS float8 AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION numericfunc3(float8) RETURNS numeric AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION numericdef1(int4) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION datefunc1(date) RETURNS date AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION timefunc1(time) RETURNS time AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION timetzfunc1(timetz) RETURNS timetz AS '$libdir/gppc_test' LANGUAGE c STABLE STRICT;
+CREATE FUNCTION timestampfunc1(timestamp) RETURNS timestamp AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE FUNCTION timestamptzfunc1(timestamptz) RETURNS timestamptz AS '$libdir/gppc_test' LANGUAGE c STABLE STRICT;
+CREATE FUNCTION spifunc1(text, int) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
+CREATE FUNCTION spifunc2(text, text) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
+CREATE FUNCTION spifunc3(text, int) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
+CREATE FUNCTION spifunc4(text, text) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
+CREATE FUNCTION errorcallbackfunc1(text) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
+CREATE FUNCTION test_encoding_name() RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE;
+CREATE FUNCTION test_reset_current_memory() RETURNS bool AS '$libdir/gppc_test' LANGUAGE c;
+CREATE FUNCTION test_reset_child_memory() RETURNS bool AS '$libdir/gppc_test' LANGUAGE c;
+CREATE FUNCTION test_interrupt(bool) RETURNS void AS '$libdir/gppc_test' LANGUAGE c;
+CREATE TABLE numerictable(
+	a numeric(5, 2),
+	b numeric(3),
+	c numeric
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT oidcheckfunc('bool'),
+	oidcheckfunc('char'),
+	oidcheckfunc('int2'),
+	oidcheckfunc('int4'),
+	oidcheckfunc('int8'),
+	oidcheckfunc('float4'),
+	oidcheckfunc('float8'),
+	oidcheckfunc('text'),
+	oidcheckfunc('varchar'),
+	oidcheckfunc('bpchar'),
+	oidcheckfunc('bytea'),
+	oidcheckfunc('numeric'),
+	oidcheckfunc('time'),
+	oidcheckfunc('timetz'),
+	oidcheckfunc('timestamp'),
+	oidcheckfunc('timestamptz');
+ oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc 
+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------
+           16 |           18 |           21 |           23 |           20 |          700 |          701 |           25 |         1043 |         1042 |           17 |         1700 |         1083 |         1266 |         1114 |         1184
+(1 row)
+
+SELECT boolfunc(true and true);
+ boolfunc 
+----------
+ t
+(1 row)
+
+SELECT charfunc('a');
+ charfunc 
+----------
+ a
+(1 row)
+
+SELECT int2mulfunc(2::int2, 3::int2);
+ int2mulfunc 
+-------------
+           6
+(1 row)
+
+SELECT int4func1(10);
+ int4func1 
+-----------
+        10
+(1 row)
+
+SELECT int8plusfunc(10000000000, 1);
+ int8plusfunc 
+--------------
+  10000000001
+(1 row)
+
+SELECT float4func1(4.2);
+ float4func1 
+-------------
+         5.7
+(1 row)
+
+SELECT float8func1(0.0000001);
+ float8func1 
+-------------
+       5e-08
+(1 row)
+
+SELECT textdoublefunc('bla');
+ textdoublefunc 
+----------------
+ blabla
+(1 row)
+
+SELECT textgenfunc();
+  textgenfunc   
+----------------
+ cstring result
+(1 row)
+
+SELECT textcopyfunc('white', true), textcopyfunc('white', false);
+ textcopyfunc | textcopyfunc 
+--------------+--------------
+ !hite        | white
+(1 row)
+
+SELECT varchardoublefunc('bla');
+ varchardoublefunc 
+-------------------
+ blabla
+(1 row)
+
+SELECT varchargenfunc();
+ varchargenfunc 
+----------------
+ cstring result
+(1 row)
+
+SELECT varcharcopyfunc('white', true), varcharcopyfunc('white', false);
+ varcharcopyfunc | varcharcopyfunc 
+-----------------+-----------------
+ !hite           | white
+(1 row)
+
+SELECT bpchardoublefunc('bla');
+ bpchardoublefunc 
+------------------
+ blabla
+(1 row)
+
+SELECT bpchargenfunc();
+ bpchargenfunc  
+----------------
+ cstring result
+(1 row)
+
+SELECT bpcharcopyfunc('white', true), bpcharcopyfunc('white', false);
+ bpcharcopyfunc | bpcharcopyfunc 
+----------------+----------------
+ !hite          | white
+(1 row)
+
+SELECT errfunc1('The quick brown fox jumps over the lazy dog');
+NOTICE:  The quick brown fox jumps over the lazy dog
+ errfunc1 
+----------
+ 
+(1 row)
+
+SELECT argisnullfunc(0), argisnullfunc(NULL);
+ argisnullfunc | argisnullfunc 
+---------------+---------------
+ f             | t
+(1 row)
+
+SELECT byteafunc1(E'\\244\\233abc');
+ byteafunc1  
+-------------
+ \245\233abc
+(1 row)
+
+SELECT numericfunc1(1000);
+ numericfunc1 
+--------------
+         2000
+(1 row)
+
+SELECT numericfunc2(1000.00001);
+ numericfunc2 
+--------------
+   1000.00001
+(1 row)
+
+SELECT numericfunc3(1000.00001);
+ numericfunc3 
+--------------
+   1000.00001
+(1 row)
+
+SELECT attname, numericdef1(atttypmod) FROM pg_attribute
+	WHERE attrelid = 'numerictable'::regclass and atttypid = 'numeric'::regtype;
+ attname |  numericdef1  
+---------+---------------
+ a       | NUMERIC(5, 2)
+ b       | NUMERIC(3, 0)
+ c       | NUMERIC()
+(3 rows)
+
+SELECT datefunc1('2011-02-24');
+ datefunc1  
+------------
+ 03-25-2012
+(1 row)
+
+SELECT timefunc1('15:00:01');
+ timefunc1 
+-----------
+ 16:01:02
+(1 row)
+
+SELECT timetzfunc1('15:00:01 UTC');
+ timetzfunc1 
+-------------
+ 16:01:02+00
+(1 row)
+
+SELECT timestampfunc1('2011-02-24 15:00:01');
+      timestampfunc1      
+--------------------------
+ Sun Mar 25 16:01:02 2012
+(1 row)
+
+SELECT timestamptzfunc1('2011-02-24 15:00:01 UTC');
+       timestamptzfunc1       
+------------------------------
+ Sun Mar 25 16:01:02 2012 UTC
+(1 row)
+
+SELECT spifunc1($$select i, i * 2 from generate_series(1, 10)i order by 1$$, 2);
+ spifunc1 
+----------
+ 20
+(1 row)
+
+SELECT spifunc2($$select i, i * 2 as val from generate_series(1, 10)i order by 1$$, 'val');
+ spifunc2 
+----------
+ 20
+(1 row)
+
+SELECT spifunc3($$select i, 'foo' || i as val from generate_series(1, 10)i order by 1$$, 2);
+ spifunc3 
+----------
+ foo10
+(1 row)
+
+SELECT spifunc4($$select i, 'foo' || i as val from generate_series(1, 10)i order by 1$$, 'val');
+ spifunc4 
+----------
+ foo10
+(1 row)
+
+SELECT errorcallbackfunc1('warning');
+WARNING:  warning emit
+ errorcallbackfunc1 
+--------------------
+ xxxxxxx
+(1 row)
+
+SELECT errorcallbackfunc1('error');
+INFO:  inside callback: error
+ERROR:  error emit (gppc.c:1340)
+SELECT test_encoding_name();
+ test_encoding_name 
+--------------------
+ UTF8
+(1 row)
+
+SELECT test_reset_current_memory();
+ test_reset_current_memory 
+---------------------------
+ t
+(1 row)
+
+SELECT test_reset_child_memory();
+ test_reset_child_memory 
+-------------------------
+ t
+(1 row)
+
+SELECT test_interrupt(NULL);
+ERROR:  GppcCheckForInterrupts did not catch error (gppc.c:1340)
+SELECT test_interrupt(pg_cancel_backend(pg_backend_pid()));
+ERROR:  canceling statement due to user request
