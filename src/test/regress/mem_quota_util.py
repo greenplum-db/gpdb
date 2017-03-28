@@ -26,10 +26,10 @@ def parseargs( help=False ):
     parser.add_option( '-h', '--help', '-?', action='help', help='show this message and exit')
     # --complexity
     parser.add_option( '--complexity', metavar="<Number>", type=int, default=1,
-        help='The complextiy number determines the number of operators in the query. With complexity 1, you get ~10 memory guzzling operators. With 2, the number of operators ~20 and so on.')
+        help='The complexity number determines the number of operators in the query. With complexity 1, you get ~10 memory guzzling operators. With 2, the number of operators ~20 and so on.')
     # --concurrency
     parser.add_option( '--concurrency', metavar='<Number>', type=int, default=1,
-        help='Number of concurrent session from which to execute the queries')
+        help='Number of concurrent sessions from which to execute the queries')
     # --dbname
     parser.add_option( '--dbname', metavar='<dbname>', default='gptest',
         help='Database where mpph heap_ tables are created and data loaded.')
@@ -41,13 +41,13 @@ def parseargs( help=False ):
     try:
         if sys.argv[1:].__len__() == 0:
             parser.print_help()
-            raise Exception( "\nERROR: You did not provide any arguments \n\n" )
+            raise Exception( "\nERROR: You did not provide any arguments\n\n" )
         if options.complexity <= 0:
             parser.print_help()
-            raise Exception("\nERROR: You must provide positive value for complexity ! \n\n")
+            raise Exception("\nERROR: You must provide a positive integer for complexity\n\n")
         if options.concurrency <= 0:
             parser.print_help()
-            raise Exception("\nERROR: You must provide positive value for concurrency ! \n\n")
+            raise Exception("\nERROR: You must provide a positive integer for concurrency\n\n")
     except Exception, e:
         print e
         sys.exit(-1)
