@@ -10,7 +10,7 @@ CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, proper
  )
  DISTRIBUTED BY (id);
 COPY GistTable1 FROM
-'@abs_srcdir@/bugbuster/data/PropertyInfo.txt'
+'@abs_srcdir@/data/PropertyInfo.txt'
  CSV
  ;
 -- ----------------------------------------------------------------------
@@ -711,7 +711,7 @@ CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, proper
  WITH (APPENDONLY=True, COMPRESSTYPE=ZLIB, COMPRESSLEVEL=1)
  DISTRIBUTED BY (id);
 COPY GistTable1 FROM
-'@abs_srcdir@/bugbuster/data/PropertyInfo.txt'
+'@abs_srcdir@/data/PropertyInfo.txt'
  CSV
  ;
 -- ----------------------------------------------------------------------
@@ -1331,7 +1331,7 @@ CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, proper
  WITH (APPENDONLY=True)
  DISTRIBUTED BY (id);
 COPY GistTable1 FROM
-'@abs_srcdir@/bugbuster/data/PropertyInfo.txt'
+'@abs_srcdir@/data/PropertyInfo.txt'
  CSV
  ;
 -- ----------------------------------------------------------------------
@@ -1951,7 +1951,7 @@ CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, proper
  WITH (APPENDONLY=True, ORIENTATION='column', COMPRESSTYPE=ZLIB, COMPRESSLEVEL=1)
  DISTRIBUTED BY (id);
 COPY GistTable1 FROM
-'@abs_srcdir@/bugbuster/data/PropertyInfo.txt'
+'@abs_srcdir@/data/PropertyInfo.txt'
  CSV
  ;
 -- ----------------------------------------------------------------------
@@ -2571,7 +2571,7 @@ CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, proper
  WITH (APPENDONLY=True, ORIENTATION='column')
  DISTRIBUTED BY (id);
 COPY GistTable1 FROM
-'@abs_srcdir@/bugbuster/data/PropertyInfo.txt'
+'@abs_srcdir@/data/PropertyInfo.txt'
  CSV
  ;
 -- ----------------------------------------------------------------------

@@ -1,8 +1,0 @@
-##
-## TODO: list test sequence and test dependencies.
-##
-ignore: jdbc
-ignore: failover
-#mpp23872: Disabling gpcheckmirrorseg as it is erroring out bugbuster on some platforms.
-ignore: gpcheckmirrorseg
-# end of tests

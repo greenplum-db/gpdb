@@ -15,7 +15,7 @@ CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, proper
  DISTRIBUTED BY (id);
 
 COPY GistTable1 FROM
-'@abs_srcdir@/bugbuster/data/PropertyInfo.txt'
+'@abs_srcdir@/data/PropertyInfo.txt'
  CSV
  ;
 -- ----------------------------------------------------------------------
@@ -450,7 +450,7 @@ CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, proper
  DISTRIBUTED BY (id);
 
 COPY GistTable1 FROM
-'@abs_srcdir@/bugbuster/data/PropertyInfo.txt'
+'@abs_srcdir@/data/PropertyInfo.txt'
  CSV
  ;
 -- ----------------------------------------------------------------------
@@ -849,7 +849,7 @@ CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, proper
  DISTRIBUTED BY (id);
 
 COPY GistTable1 FROM
-'@abs_srcdir@/bugbuster/data/PropertyInfo.txt'
+'@abs_srcdir@/data/PropertyInfo.txt'
  CSV
  ;
 -- ----------------------------------------------------------------------
@@ -1249,7 +1249,7 @@ CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, proper
  DISTRIBUTED BY (id);
 
 COPY GistTable1 FROM
-'@abs_srcdir@/bugbuster/data/PropertyInfo.txt'
+'@abs_srcdir@/data/PropertyInfo.txt'
  CSV
  ;
 -- ----------------------------------------------------------------------
@@ -1650,7 +1650,7 @@ CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, proper
  DISTRIBUTED BY (id);
 
 COPY GistTable1 FROM
-'@abs_srcdir@/bugbuster/data/PropertyInfo.txt'
+'@abs_srcdir@/data/PropertyInfo.txt'
  CSV
  ;
 -- ----------------------------------------------------------------------

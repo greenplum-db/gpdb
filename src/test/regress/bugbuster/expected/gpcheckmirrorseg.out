@@ -1,6 +1,0 @@
-\! gpcheckmirrorseg.pl -connect '-p $PGPORT -d regression' -ignore '_data' -ignore 'wet_execute.tbl' -ignore 'gp_dump' -ignore 'core' -ignore pg_changetracking -ignore 'pg_xlog' -parallel=true > bugbuster/data/integrity_outfile.txt 2>&1
-\! grep -i 'no differences found' bugbuster/data/integrity_outfile.txt 
-no differences found
-\! gpcheckmirrorseg.pl -mastermirror=true -connect '-p $PGPORT -d regression' -exclude recovery.conf -ignore 'gp_restore' -ignore 'gp_cdatabase' -ignore 'gp_dump' -ignore '_data' -ignore 'pg_xlog' -ignore 'wet_execute.tbl' -ignore 'pg_subtrans' > bugbuster/data/integrity_master_outfile.txt 2>&1
-\! grep -i 'no differences found' bugbuster/data/integrity_master_outfile.txt 
-no differences found

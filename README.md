@@ -206,12 +206,6 @@ your system.
 make installcheck-good
 ```
 
-* optional extra/heavier regression tests
-
-```
-make installcheck-bugbuster
-```
-
 * The PostgreSQL __check__ target does not work. Setting up a
   Greenplum cluster is more complicated than a single-node PostgreSQL
   installation, and no-one's done the work to have __make check__

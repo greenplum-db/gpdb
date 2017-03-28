@@ -120,7 +120,6 @@ distclean maintainer-clean:
 # a running server. This is what the CI pipeline runs.
 installcheck-world:
 	$(MAKE) -C src/test installcheck-good
-	$(MAKE) -C src/test installcheck-bugbuster
 	$(MAKE) -C src/test/fsync install && $(MAKE) -C src/test/fsync installcheck
 	$(MAKE) -C src/test/isolation installcheck
 	$(MAKE) -C src/test/isolation2 installcheck

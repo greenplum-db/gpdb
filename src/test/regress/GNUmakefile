@@ -111,12 +111,8 @@ all: all-lib
 # don't have a rule to create them.  We do need rules to clean them however.
 ifile_list := $(subst .source,, $(notdir $(wildcard $(top_srcdir)/$(subdir)/input/*.source)))
 input_files  := $(foreach file, $(ifile_list), sql/$(file).sql)
-bb_ifile_list := $(subst .source,, $(notdir $(wildcard $(top_srcdir)/$(subdir)/bugbuster/input/*.source)))
-bb_input_files := $(foreach file, $(bb_ifile_list), bugbuster/sql/$(file).sql)
 ofile_list := $(subst .source,, $(notdir $(wildcard $(top_srcdir)/$(subdir)/output/*.source)))
 output_files := $(foreach file, $(ofile_list), expected/$(file).out)
-bb_ofile_list := $(subst .source,, $(notdir $(wildcard $(top_srcdir)/$(subdir)/bugbuster/output/*.source)))
-bb_output_files := $(foreach file, $(bb_ofile_list), bugbuster/expected/$(file).out)
 
 
 ifneq ($(PORTNAME),win32)
@@ -167,7 +163,6 @@ includecheck:
 ##
 
 pg_regress_call = ./pg_regress --inputdir=$(srcdir) --multibyte=$(MULTIBYTE) $(MAXCONNOPT) $(NOLOCALE) --init-file=$(srcdir)/init_file
-pg_regress_call_bb = ./pg_regress --inputdir=$(srcdir)/bugbuster --outputdir=$(srcdir)/bugbuster --multibyte=$(MULTIBYTE) $(MAXCONNOPT) $(NOLOCALE) --init-file=$(srcdir)/init_file
 
 check: all
 	$(pg_regress_call) --temp-install=./tmp_check --top-builddir=$(top_builddir) --srcdir=$(abs_srcdir) --temp-port=$(TEMP_PORT) --schedule=$(srcdir)/parallel_schedule 
@@ -187,15 +182,6 @@ testbouncer: all
 	bash -c "bouncer/setup.sh"
 	$(pg_regress_call)  --port=65432 --psqldir=$(PSQLDIR) --schedule=./minimal_schedule --srcdir=$(abs_srcdir) --host=`hostname`;
 	bash -c "bouncer/stop.sh"
-
-installcheck-bugbuster: all
-	@echo "================================"
-	@echo "BugBuster starting ... " 
-	@echo "================================"
-	@grep memory_quota ./bugbuster/known_good_schedule > /dev/null; \
-	echo $(abs_srcdir)
-	$(pg_regress_call_bb)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/bugbuster/known_good_schedule --srcdir=$(abs_srcdir)/bugbuster --dbname=bugbuster
-	@grep memory_quota ./bugbuster/known_good_schedule > /dev/null; \
 
 # old interfaces follow...
 
@@ -221,18 +207,13 @@ clean distclean maintainer-clean: clean-lib
 	rm -f $(NAME)$(DLSUFFIX) $(OBJS)
 	$(MAKE) -C $(contribdir)/spi clean
 	rm -f $(output_files) $(input_files) pg_regress_main.o pg_regress.o pg_regress$(X) twophase_pqexecparams
-	rm -f $(bb_output_files) $(bb_input_files)
 # things created by dynamic configs
 	find sql -type l | xargs rm -f
-	find bugbuster/sql -type l | xargs rm -f
 	find expected -type l | xargs rm -f
-	find bugbuster/expected -type l | xargs rm -f 
 # things created by various check targets
 	rm -rf testtablespace
 	rm -rf results tmp_check log
-	rm -rf bugbuster/results
 	rm -f regression.diffs regression.out regress.out run_check.out
-	rm -f bugbuster/regression.diffs bugbuster/regression.out
 	rm -f data/pg_class32.data
 	rm -f gmon.out
 	rm -f $(srcdir)/sql/cppudf.sql
