@@ -5,5 +5,4 @@ ignore: jdbc
 ignore: failover
 #mpp23872: Disabling gpcheckmirrorseg as it is erroring out bugbuster on some platforms.
 ignore: gpcheckmirrorseg
-test: memory_quota
 # end of tests

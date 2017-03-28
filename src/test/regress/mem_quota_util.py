@@ -7,7 +7,7 @@ MYD = os.path.abspath(os.path.dirname(__file__))
 mkpath = lambda *x: os.path.join(MYD, *x)
 
 #globals
-SAMPLE_QUERY="(select count(*) from (select o0.o_orderkey from (orders o0 left outer join orders o1 on o0.o_orderkey = o1.o_orderkey left outer join orders o2 on o2.o_orderkey = o1.o_orderkey left outer join orders o3 on o3.o_orderkey = o2.o_orderkey left outer join orders o4 on o4.o_orderkey = o3.o_orderkey) order by o0.o_orderkey) as foo);"
+SAMPLE_QUERY="(select count(*) from (select o0.o_orderkey from (heap_orders o0 left outer join heap_orders o1 on o0.o_orderkey = o1.o_orderkey left outer join heap_orders o2 on o2.o_orderkey = o1.o_orderkey left outer join heap_orders o3 on o3.o_orderkey = o2.o_orderkey left outer join heap_orders o4 on o4.o_orderkey = o3.o_orderkey) order by o0.o_orderkey) as foo);"
 
 import subprocess, shutil, time, re
 from optparse import OptionParser, OptionGroup
@@ -32,7 +32,7 @@ def parseargs( help=False ):
         help='Number of concurrent session from which to execute the queries')
     # --dbname
     parser.add_option( '--dbname', metavar='<dbname>', default='gptest',
-        help='Database where mpph tables are created and data loaded.')
+        help='Database where mpph heap_ tables are created and data loaded.')
     # --username
     parser.add_option( '--username', metavar='<username>', default='gpadmin',
         help='Database username to use while executing the query')
