@@ -94,7 +94,7 @@ var _ = Describe("monitor", func() {
 					cheatSheet := CheatSheet{Response: grep_pg_upgrade, ReturnCode: intToBytes(0)}
 					cheatSheet.WriteToFile()
 					path := os.Getenv("GOPATH")
-					content, err := ioutil.ReadFile(path + "/src/gp_upgrade/commands/sshd/registered.priv")
+					content, err := ioutil.ReadFile(path + "/src/gp_upgrade/commands/fixtures/registered_private_key.pem")
 					Check("cannot read private key file", err)
 					err = os.MkdirAll(temp_home_dir+"/.ssh", 0700)
 					Check("cannot create .ssh", err)
@@ -114,7 +114,7 @@ var _ = Describe("monitor", func() {
 					cheatSheet := CheatSheet{Response: grep_pg_upgrade, ReturnCode: intToBytes(0)}
 					cheatSheet.WriteToFile()
 					path := os.Getenv("GOPATH")
-					content, err := ioutil.ReadFile(path + "/src/gp_upgrade/commands/sshd/unregistered.priv")
+					content, err := ioutil.ReadFile(path + "/src/gp_upgrade/commands/fixtures/unregistered_private_key.pem")
 					Check("cannot read private key file", err)
 					err = os.MkdirAll(temp_home_dir+"/.ssh", 0700)
 					Check("cannot create .ssh", err)
