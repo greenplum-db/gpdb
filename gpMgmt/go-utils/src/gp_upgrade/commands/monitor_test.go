@@ -125,7 +125,8 @@ var _ = Describe("monitor", func() {
 
 					os.Setenv("HOME", save)
 					Eventually(session).Should(Exit(1))
-					Eventually(session.Err).Should(Say("ssh: handshake failed: ssh: unable to authenticate, attempted methods \\[none publickey\\], no supported methods remain"))
+					Eventually(session.Err).Should(Say("ssh: handshake failed: ssh: unable to authenticate, attempted methods"))
+					Eventually(session.Err).Should(Say(" no supported methods remain"))
 				})
 			})
 		})
