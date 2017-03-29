@@ -1832,7 +1832,8 @@ CTranslatorDXLToScalar::PexprPartListValues
 
 	PartListRuleExpr *pexpr = MakeNode(PartListRuleExpr);
 	pexpr->level = pdxlop->UlLevel();
-	pexpr->resulttype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidType())->OidObjectId();
+	pexpr->resulttype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidResult())->OidObjectId();
+	pexpr->elementtype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidElement())->OidObjectId();
 
 	return (Expr *) pexpr;
 }

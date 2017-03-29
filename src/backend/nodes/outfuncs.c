@@ -3276,6 +3276,7 @@ _outPartListRuleExpr(StringInfo str, PartListRuleExpr *node)
 
 	WRITE_INT_FIELD(level);
 	WRITE_OID_FIELD(resulttype);
+	WRITE_OID_FIELD(elementtype);
 }
 
 static void

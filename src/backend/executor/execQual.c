@@ -4842,7 +4842,7 @@ static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
 	int16	typlen = 0;
 	bool typbyval = false;
 	char typalign = 'i';
-	Oid	consttype = expr->resulttype;
+	Oid	consttype = expr->elementtype;
 	get_typlenbyvalalign(consttype, &typlen, &typbyval, &typalign);
 
 	bool *is_null = NULL;
@@ -4853,11 +4853,7 @@ static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
 #ifdef USE_ASSERT_CHECKING
 		/* The type of the first attribute should match the underlying table col's type */
 		Oid valOid = ((Const *) linitial(lfirst(rule->parlistvalues->head)))->consttype;
-		/*
-		 *  If the part key type is varchar, the result type is always text
-		 *  as we can't compare varchar with varchar
-		 */
-		Assert(valOid == consttype || (valOid == VARCHAROID && consttype == TEXTOID));
+		Assert(valOid == consttype);
 #endif
 		array_values = palloc0(numVal * sizeof(Datum));
 		int datumIdx = 0;

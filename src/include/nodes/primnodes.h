@@ -1546,13 +1546,16 @@ typedef struct PartBoundOpenExpr
 /*
  * PartListRuleExpr
  * Represents the expression that converts the current rule for
- * level "level" to a list of constants
+ * level "level" to a list of constants. It only appears in
+ * levelExpressions (which is non-equality predicates) for
+ * the partition selector.
  */
 typedef struct PartListRuleExpr
 {
 	Expr		xpr;
 	int			level;			/* partitioning level */
 	Oid 		resulttype;		/* the result type of expr - array type of part key */
+	Oid 		elementtype; 	/* the element type of partition list values */
 } PartListRuleExpr;
 
 /*

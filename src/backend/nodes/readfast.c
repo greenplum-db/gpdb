@@ -350,6 +350,7 @@ _readPartListRuleExpr(void)
 
 	READ_INT_FIELD(level);
 	READ_OID_FIELD(resulttype);
+	READ_OID_FIELD(elementtype);
 
 	READ_DONE();
 }

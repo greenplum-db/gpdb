@@ -2748,6 +2748,7 @@ _copyPartListRuleExpr(const PartListRuleExpr *from)
 	PartListRuleExpr *newnode = makeNode(PartListRuleExpr);
 	COPY_SCALAR_FIELD(level);
 	COPY_SCALAR_FIELD(resulttype);
+	COPY_SCALAR_FIELD(elementtype);
 
 	return newnode;
 }
