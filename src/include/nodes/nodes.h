@@ -221,6 +221,7 @@ typedef enum NodeTag
 	T_PartBoundInclusionExpr,
 	T_PartBoundOpenExpr,
 	T_TableOidInfo,
+	T_PrintableFilterCol,
 
 	/*
 	 * TAGS FOR EXPRESSION STATE NODES (execnodes.h)

@@ -1833,8 +1833,25 @@ CTranslatorDXLToScalar::PexprFromDXLNodeScId
 	Expr *pexprResult = NULL;
 	if (NULL == pmapcidvarplstmt || NULL == pmapcidvarplstmt->PpdxltrctxOut()->Pmecolidparamid(pdxlop->Pdxlcr()->UlID()))
 	{
-		// not an outer ref -> create var node
-		pexprResult = (Expr *) pmapcidvar->PvarFromDXLNodeScId(pdxlop);
+
+		if(!pmapcidvarplstmt->FuseInnerOuter())
+		{
+			const ULONG ulColId = pdxlop->Pdxlcr()->UlID();
+			CWStringConst *aliasName = pmapcidvarplstmt->PhmColIdAliasPrintableFilter()->PtLookup(&ulColId);
+			if (aliasName)
+			{
+				char *alias = CTranslatorUtils::SzFromWsz(aliasName->Wsz());
+				IMDId *pmdid = (m_pmda->Pmdtype(pdxlop->PmdidType()))->Pmdid();
+				Oid aliasOid = CMDIdGPDB::PmdidConvert(pmdid)->OidObjectId();
+				if(alias)
+					pexprResult = (Expr *) gpdb::PMakePrintableFilter(alias, aliasOid);
+			}
+		}
+		if (pexprResult == NULL)
+		{
+			// not an outer ref -> create var node
+			pexprResult = (Expr *) pmapcidvar->PvarFromDXLNodeScId(pdxlop);
+		}
 	}
 	else
 	{

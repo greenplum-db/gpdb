@@ -96,7 +96,7 @@ static double elapsed_time(instr_time *starttime);
 static ErrorData *explain_defer_error(ExplainState *es);
 static void explain_outNode(StringInfo str,
 				Plan *plan, PlanState *planstate,
-				Plan *outer_plan, Plan *parentPlan,
+				Plan *outer_plan,
 				int indent, ExplainState *es);
 static void show_scan_qual(List *qual, const char *qlabel,
 			   int scanrelid, Plan *outer_plan, Plan *inner_plan,
@@ -120,7 +120,7 @@ show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
                  StringInfo str, int indent, ExplainState *es);
 
 static void
-explain_partition_selector(PartitionSelector *ps, Plan *parent,
+explain_partition_selector(PartitionSelector *ps,
 						   StringInfo str, int indent, ExplainState *es);
 
 /*
@@ -606,7 +606,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 			indent = 3;
 		}
 	    explain_outNode(&buf, childPlan, queryDesc->planstate,
-					    NULL, NULL, indent, es);
+					    NULL, indent, es);
     }
     PG_CATCH();
     {
@@ -889,7 +889,7 @@ appendGangAndDirectDispatchInfo(StringInfo str, PlanState *planstate, int sliceI
 static void
 explain_outNode(StringInfo str,
 				Plan *plan, PlanState *planstate,
-				Plan *outer_plan, Plan *parentPlan,
+				Plan *outer_plan,
 				int indent, ExplainState *es)
 {
 	const char	   *pname = NULL;
@@ -1684,7 +1684,7 @@ explain_outNode(StringInfo str,
 			break;
 		case T_PartitionSelector:
 			{
-				explain_partition_selector((PartitionSelector *) plan, parentPlan,
+				explain_partition_selector((PartitionSelector *) plan,
 						str, indent, es);
 			}
 			break;
@@ -1739,7 +1739,7 @@ explain_outNode(StringInfo str,
 			explain_outNode(str,
 							exec_subplan_get_plan(es->pstmt, sp),
 							sps->planstate,
-							NULL, plan,
+							plan,
 							indent + 4, es);
 		}
         es->currentSlice = saved_slice;
@@ -1762,7 +1762,6 @@ explain_outNode(StringInfo str,
 						(IsA(plan, BitmapHeapScan) |
 						 IsA(plan, BitmapAppendOnlyScan) |
 						 IsA(plan, BitmapTableScan)) ? outer_plan : NULL,
-						plan,
 						indent + 3, es);
 	}
     else if (skip_outer)
@@ -1783,7 +1782,6 @@ explain_outNode(StringInfo str,
 		explain_outNode(str, innerPlan(plan),
 						innerPlanState(planstate),
 						outerPlan(plan),
-						plan,
 						indent + 3, es);
 	}
 
@@ -1812,7 +1810,6 @@ explain_outNode(StringInfo str,
 			explain_outNode(str, subnode,
 							appendstate->appendplans[j],
 							outer_plan,
-							(Plan *) appendplan,
 							indent + 3, es);
 			j++;
 		}
@@ -1836,7 +1833,6 @@ explain_outNode(StringInfo str,
 			explain_outNode(str, subnode,
 							sequenceState->subplans[j],
 							outer_plan,
-							plan,
 							indent + 3, es);
 			j++;
 		}
@@ -1861,7 +1857,6 @@ explain_outNode(StringInfo str,
 			explain_outNode(str, subnode,
 							bitmapandstate->bitmapplans[j],
 							outer_plan, /* pass down same outer plan */
-							plan,
 							indent + 3, es);
 			j++;
 		}
@@ -1886,7 +1881,6 @@ explain_outNode(StringInfo str,
 			explain_outNode(str, subnode,
 							bitmaporstate->bitmapplans[j],
 							outer_plan, /* pass down same outer plan */
-							plan,
 							indent + 3, es);
 			j++;
 		}
@@ -1905,7 +1899,6 @@ explain_outNode(StringInfo str,
 		explain_outNode(str, subnode,
 						subquerystate->subplan,
 						NULL,
-						plan,
 						indent + 3, es);
 	}
 
@@ -1930,7 +1923,6 @@ explain_outNode(StringInfo str,
 							exec_subplan_get_plan(es->pstmt, sp),
 							sps->planstate,
 							NULL,
-							plan,
 							indent + 4, es);
 		}
 	}
@@ -2225,7 +2217,7 @@ show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
  * and number of statically selected partitions, if available.
  */
 static void
-explain_partition_selector(PartitionSelector *ps, Plan *parent,
+explain_partition_selector(PartitionSelector *ps,
 						   StringInfo str, int indent, ExplainState *es)
 {
 	if (ps->printablePredicate)
@@ -2236,9 +2228,10 @@ explain_partition_selector(PartitionSelector *ps, Plan *parent,
 		int			i;
 
 		/* Set up deparsing context */
-		context = deparse_context_for_plan((Node *) parent,
-										   (Node *) parent,
+		context = deparse_context_for_plan((Node *) NULL,
+										   (Node *) NULL,
 										   es->rtable);
+
 		useprefix = list_length(es->rtable) > 1;
 
 		/* Deparse the expression */

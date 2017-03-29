@@ -3760,6 +3760,7 @@ isSimpleNode(Node *node, Node *parentNode, int prettyFlags)
 		case T_CoerceToDomainValue:
 		case T_SetToDefault:
 		case T_CurrentOfExpr:
+		case T_PrintableFilterCol:
 			/* single words: always simple */
 			return true;
 
@@ -4928,6 +4929,12 @@ get_rule_expr(Node *node, deparse_context *context,
 					get_rule_expr((Node *) lfirst(l), context, showimplicit);
 					sep = ", ";
 				}
+			}
+			break;
+
+		case T_PrintableFilterCol:
+			{
+				appendStringInfoString(buf, ((PrintableFilterCol *) node)->columnname);
 			}
 			break;
 

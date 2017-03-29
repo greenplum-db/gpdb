@@ -2019,6 +2019,16 @@ _copyFlow(Flow *from)
 	return newnode;
 }
 
+static  PrintableFilterCol *
+_copyPrintableFilterCol(PrintableFilterCol *from)
+{
+	PrintableFilterCol *newnode = makeNode(PrintableFilterCol);
+
+	COPY_STRING_FIELD(columnname);
+	COPY_SCALAR_FIELD(type);
+	return newnode;
+}
+
 
 /* ****************************************************************
  *						relation.h copy functions
@@ -4744,6 +4754,9 @@ copyObject(void *from)
 			break;
 		case T_Flow:
 			retval = _copyFlow(from);
+			break;
+		case T_PrintableFilterCol:
+			retval = _copyPrintableFilterCol(from);
 			break;
 
 			/*

@@ -151,6 +151,16 @@ typedef struct Var
 } Var;
 
 /*
+ * Printable Filter Column Aliases
+ */
+typedef struct PrintableFilterCol
+{
+	Expr		xpr;
+	char		*columnname;
+	Oid			type;
+} PrintableFilterCol;
+
+/*
  * Const
  */
 typedef struct Const

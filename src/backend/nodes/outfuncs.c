@@ -4246,6 +4246,15 @@ _outAlterTSDictionaryStmt(StringInfo str, AlterTSDictionaryStmt *node)
 	WRITE_NODE_FIELD(options);
 }
 
+static void
+_outPrintableFilterCol(StringInfo str, PrintableFilterCol *node)
+{
+	WRITE_NODE_TYPE("PRINTABLEFILTERCOLUMN");
+
+	WRITE_STRING_FIELD(columnname);
+	WRITE_OID_FIELD(type);
+}
+
 #ifndef COMPILING_BINARY_FUNCS
 static void
 _outTupleDescNode(StringInfo str, TupleDescNode *node)
@@ -5156,6 +5165,9 @@ _outNode(StringInfo str, void *obj)
 				_outAlterTSDictionaryStmt(str, obj);
 				break;
 
+			case T_PrintableFilterCol:
+				_outPrintableFilterCol(str, obj);
+				break;
 			default:
 
 				/*

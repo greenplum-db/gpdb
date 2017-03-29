@@ -624,6 +624,8 @@ namespace gpdb {
 	// table has been changed?)
 	bool FMDCacheNeedsReset(void);
 
+	PrintableFilterCol *PMakePrintableFilter(char *str, Oid oid);
+
 } //namespace gpdb
 
 #define ForEach(cell, l)	\
