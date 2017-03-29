@@ -198,7 +198,7 @@ static void dumpNamespace(Archive *fout, NamespaceInfo *nspinfo);
 static void dumpExtension(Archive *fout, ExtensionInfo *extinfo);
 static void dumpType(Archive *fout, TypeInfo *tyinfo);
 static void dumpBaseType(Archive *fout, TypeInfo *tyinfo);
-static void dumpTypeStorageOptions(Archive *fout, TypeStorageOptions *tstorageoptions);
+static void dumpTypeStorageOptions(Archive *fout, TypeInfo *tyinfo);
 static void dumpEnumType(Archive *fout, TypeInfo *tyinfo);
 static void dumpRangeType(Archive *fout, TypeInfo *tyinfo);
 static void dumpUndefinedType(Archive *fout, TypeInfo *tyinfo);
@@ -4298,6 +4298,7 @@ getTypes(Archive *fout, int *numTypes)
 	int			i_typtype;
 	int			i_typisdefined;
 	int			i_isarray;
+	int			i_typstorage;
 
 	/*
 	 * we include even the built-in types because those may be used as array
@@ -4338,8 +4339,10 @@ getTypes(Archive *fout, int *numTypes)
 						  "ELSE (SELECT relkind FROM pg_class WHERE oid = t.typrelid) END AS typrelkind, "
 						  "t.typtype, t.typisdefined, "
 						  "t.typname[0] = '_' AND t.typelem != 0 AND "
-						  "(SELECT typarray FROM pg_type te WHERE oid = t.typelem) = t.oid AS isarray "
+						  "(SELECT typarray FROM pg_type te WHERE oid = t.typelem) = t.oid AS isarray, "
+							"coalesce(array_to_string(e.typoptions, ', '), '') AS typstorage "
 						  "FROM pg_type t "
+							"LEFT JOIN pg_type_encoding e ON t.oid = e.typid "
 						  "LEFT JOIN pg_init_privs pip ON "
 						  "(t.oid = pip.objoid "
 						  "AND pip.classoid = 'pg_type'::regclass "
@@ -4357,32 +4360,36 @@ getTypes(Archive *fout, int *numTypes)
 	}
 	else if (fout->remoteVersion >= 90200)
 	{
-		appendPQExpBuffer(query, "SELECT tableoid, oid, typname, "
-						  "typnamespace, typacl, NULL as rtypacl, "
+		appendPQExpBuffer(query, "SELECT t.tableoid, t.oid, t.typname, "
+						  "t.typnamespace, typacl, NULL as rtypacl, "
 						  "NULL AS inittypacl, NULL AS initrtypacl, "
 						  "(%s typowner) AS rolname, "
-						  "typelem, typrelid, "
-						  "CASE WHEN typrelid = 0 THEN ' '::\"char\" "
-						  "ELSE (SELECT relkind FROM pg_class WHERE oid = typrelid) END AS typrelkind, "
-						  "typtype, typisdefined, "
-						  "typname[0] = '_' AND typelem != 0 AND "
-						  "(SELECT typarray FROM pg_type te WHERE oid = pg_type.typelem) = oid AS isarray "
-						  "FROM pg_type",
+						  "t.typelem, t.typrelid, "
+						  "CASE WHEN t.typrelid = 0 THEN ' '::\"char\" "
+						  "ELSE (SELECT relkind FROM pg_class WHERE oid = t.typrelid) END AS typrelkind, "
+						  "t.typtype, t.typisdefined, "
+						  "t.typname[0] = '_' AND t.typelem != 0 AND "
+						  "(SELECT typarray FROM pg_type te WHERE oid = t.typelem) = t.oid AS isarray, "
+							"coalesce(array_to_string(e.typoptions, ', '), '') AS typstorage "
+						  "FROM pg_type t "
+							"LEFT JOIN pg_type_encoding e ON t.oid = e.typid ",
 						  username_subquery);
 	}
 	else if (fout->remoteVersion >= 80300)
 	{
-		appendPQExpBuffer(query, "SELECT tableoid, oid, typname, "
-						  "typnamespace, NULL AS typacl, NULL as rtypacl, "
+		appendPQExpBuffer(query, "SELECT t.tableoid, t.oid, t.typname, "
+						  "t.typnamespace, NULL as typacl, NULL as rtypacl, "
 						  "NULL AS inittypacl, NULL AS initrtypacl, "
 						  "(%s typowner) AS rolname, "
-						  "typelem, typrelid, "
-						  "CASE WHEN typrelid = 0 THEN ' '::\"char\" "
-						  "ELSE (SELECT relkind FROM pg_class WHERE oid = typrelid) END AS typrelkind, "
-						  "typtype, typisdefined, "
-						  "typname[0] = '_' AND typelem != 0 AND "
-						  "(SELECT typarray FROM pg_type te WHERE oid = pg_type.typelem) = oid AS isarray "
-						  "FROM pg_type",
+						  "t.typelem, t.typrelid, "
+						  "CASE WHEN t.typrelid = 0 THEN ' '::\"char\" "
+						  "ELSE (SELECT relkind FROM pg_class WHERE oid = t.typrelid) END AS typrelkind, "
+						  "t.typtype, t.typisdefined, "
+						  "t.typname[0] = '_' AND t.typelem != 0 AND "
+						  "(SELECT typarray FROM pg_type te WHERE oid = pg_type.typelem) = oid AS isarray, "
+							"coalesce(array_to_string(e.typoptions, ', '), '') AS typstorage "
+						  "FROM pg_type t "
+							"LEFT JOIN pg_type_encoding e ON t.oid = e.typid ",
 						  username_subquery);
 	}
 	else if (fout->remoteVersion >= 70300)
@@ -4391,12 +4398,14 @@ getTypes(Archive *fout, int *numTypes)
 						  "t.typnamespace, NULL as typacl, NULL as rtypacl, "
 						  "NULL AS inittypacl, NULL AS initrtypacl, "
 						  "(%s typowner) AS rolname, "
-						  "typelem, typrelid, "
-						  "CASE WHEN typrelid = 0 THEN ' '::\"char\" "
-						  "ELSE (SELECT relkind FROM pg_class WHERE oid = typrelid) END AS typrelkind, "
-						  "typtype, typisdefined, "
-						  "typname[0] = '_' AND typelem != 0 AS isarray "
-						  "FROM pg_type",
+						  "t.typelem, t.typrelid, "
+						  "CASE WHEN t.typrelid = 0 THEN ' '::\"char\" "
+						  "ELSE (SELECT relkind FROM pg_class WHERE oid = t.typrelid) END AS typrelkind, "
+						  "t.typtype, t.typisdefined, "
+						  "t.typname[0] = '_' AND t.typelem != 0 AND "
+							"coalesce(array_to_string(e.typoptions, ', '), '') AS typstorage "
+						  "FROM pg_type t "
+							"LEFT JOIN pg_type_encoding e ON t.oid = e.typid ",
 						  username_subquery);
 	}
 
@@ -4421,6 +4430,7 @@ getTypes(Archive *fout, int *numTypes)
 	i_typtype = PQfnumber(res, "typtype");
 	i_typisdefined = PQfnumber(res, "typisdefined");
 	i_isarray = PQfnumber(res, "isarray");
+	i_typstorage = PQfnumber(res, "typstorage");
 
 	for (i = 0; i < ntups; i++)
 	{
@@ -4453,6 +4463,8 @@ getTypes(Archive *fout, int *numTypes)
 			tyinfo[i].isArray = true;
 		else
 			tyinfo[i].isArray = false;
+
+		tyinfo[i].typstorage = pg_strdup(PQgetvalue(res, i, i_typstorage));
 
 		/* Decide whether we want to dump it */
 		selectDumpableType(&tyinfo[i], fout);
@@ -4516,95 +4528,6 @@ getTypes(Archive *fout, int *numTypes)
 
 	return tyinfo;
 }
-
-
-
-/*
- * getTypeStorageOptions:
- *	  read all types with storage options in the system catalogs and return them in the
- * TypeStorageOptions* structure
- *
- *	numTypes is set to the number of types with storage options read in
- *
- */
-TypeStorageOptions *
-getTypeStorageOptions(Archive *fout, int *numTypes)
-{
-	PGresult   *res;
-	int			ntups;
-	int			i;
-	PQExpBuffer query = createPQExpBuffer();
-	TypeStorageOptions   *tstorageoptions;
-	int			i_oid;
-	int			i_typname;
-	int			i_typnamespace;
-	int			i_typoptions;
-	int			i_rolname;
-
-	if (gp_attribute_encoding_available == false)
-	{
-		numTypes = 0;
-		tstorageoptions = (TypeStorageOptions *) pg_malloc(0);
-		destroyPQExpBuffer(query);
-		return tstorageoptions;
-	}
-
-
-	/*
-	 * The following statement used format_type to resolve an internal name to its equivalent sql name.
-	 * The format_type seems to do two things, it translates an internal type name (e.g. bpchar) into its
-	 * sql equivalent (e.g. character), and it puts trailing "[]" on a type if it is an array.
-	 * For any user defined type (ie. oid > 10000) or any type that might be an array (ie. starts with '_'),
-	 * then we will call quote_ident. If the type is a system defined type (i.e. oid <= 10000)
-	 * and can not possibly be an array (i.e. does not start with '_'), then call format_type to get the name. The
-	 * reason we do not call format_type for arrays is that it will return a '[]' on the end, which can not be used
-	 * when dumping the type.
-	 */
-	appendPQExpBuffer(query, "SELECT "
-      " CASE WHEN t.oid > 10000 OR substring(t.typname from 1 for 1) = '_' "
-      " THEN  quote_ident(t.typname) "
-      " ELSE  pg_catalog.format_type(t.oid, NULL) "
-      " END   as typname "
-			", t.oid AS oid"
-			", t.typnamespace AS typnamespace"
-			", (%s typowner) as rolname"
-			", array_to_string(a.typoptions, ', ') AS typoptions "
-			" FROM pg_type AS t "
-			" INNER JOIN pg_catalog.pg_type_encoding a ON a.typid = t.oid"
-			" WHERE t.typisdefined = 't'", username_subquery);
-
-	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
-
-	ntups = PQntuples(res);
-
-	tstorageoptions = (TypeStorageOptions *) pg_malloc(ntups * sizeof(TypeStorageOptions));
-
-	i_typname = PQfnumber(res, "typname");
-	i_oid = PQfnumber(res, "oid");
-	i_typnamespace = PQfnumber(res, "typnamespace");
-	i_typoptions = PQfnumber(res, "typoptions");
-	i_rolname = PQfnumber(res, "rolname");
-
-	for (i = 0; i < ntups; i++)
-	{
-		tstorageoptions[i].dobj.objType = DO_TYPE_STORAGE_OPTIONS;
-		AssignDumpId(&tstorageoptions[i].dobj);
-		tstorageoptions[i].dobj.name = pg_strdup(PQgetvalue(res, i, i_typname));
-		tstorageoptions[i].dobj.catId.oid = atooid(PQgetvalue(res, i, i_oid));
-		tstorageoptions[i].dobj.namespace = findNamespace(fout, atooid(PQgetvalue(res, i, i_typnamespace)),tstorageoptions[i].dobj.catId.oid);
-		tstorageoptions[i].typoptions = pg_strdup(PQgetvalue(res, i, i_typoptions));
-		tstorageoptions[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
-	}
-
-	*numTypes = ntups;
-
-	PQclear(res);
-
-	destroyPQExpBuffer(query);
-
-	return tstorageoptions;
-}
-
 
 
 /*
@@ -9330,10 +9253,6 @@ dumpDumpableObject(Archive *fout, DumpableObject *dobj)
 			if (!postDataSchemaOnly)
 			dumpType(fout, (TypeInfo *) dobj);
 			break;
-		case DO_TYPE_STORAGE_OPTIONS:
-			if (!postDataSchemaOnly)
-			dumpTypeStorageOptions(fout, (TypeStorageOptions *) dobj);
-			break;
 		case DO_SHELL_TYPE:
 			if (!postDataSchemaOnly)
 			dumpShellType(fout, (ShellTypeInfo *) dobj);
@@ -9685,6 +9604,9 @@ dumpType(Archive *fout, TypeInfo *tyinfo)
 	else
 		write_msg(NULL, "WARNING: typtype of data type \"%s\" appears to be invalid\n",
 				  tyinfo->dobj.name);
+
+	if (tyinfo->typstorage && *tyinfo->typstorage != '\0')
+		dumpTypeStorageOptions(fout, tyinfo);
 }
 
 /*
@@ -10413,7 +10335,7 @@ dumpBaseType(Archive *fout, TypeInfo *tyinfo)
  *     writes out to fout the ALTER TYPE queries to set default storage options for type
  */
 static void
-dumpTypeStorageOptions(Archive *fout, TypeStorageOptions *tstorageoptions)
+dumpTypeStorageOptions(Archive *fout, TypeInfo *tyinfo)
 {
 	PQExpBuffer q;
 	PQExpBuffer delq;
@@ -10426,29 +10348,29 @@ dumpTypeStorageOptions(Archive *fout, TypeStorageOptions *tstorageoptions)
 	 * directly here.
 	 */
 	appendPQExpBuffer(q, "ALTER TYPE %s.",
-					  fmtId(tstorageoptions->dobj.namespace->dobj.name));
+					  fmtId(tyinfo->dobj.namespace->dobj.name));
 	appendPQExpBuffer(q, "%s SET DEFAULT ENCODING (%s);\n",
-					  tstorageoptions->dobj.name,
-					  tstorageoptions->typoptions);
+					  fmtId(tyinfo->dobj.name),
+					  tyinfo->typstorage);
 
 	ArchiveEntry(	fout
-	            , tstorageoptions->dobj.catId                 /* catalog ID  */
-	            , tstorageoptions->dobj.dumpId                /* dump ID     */
-	            , tstorageoptions->dobj.name                  /* type name   */
-	            , tstorageoptions->dobj.namespace->dobj.name  /* name space  */
-	            , NULL                                        /* table space */
-	            , tstorageoptions->rolname                    /* owner name  */
-	            , false                                       /* with oids   */
-	            , "TYPE STORAGE OPTIONS"                      /* Desc        */
-				, SECTION_PRE_DATA
-	            , q->data                                     /* ALTER...    */
-	            , ""                                          /* Del         */
-	            , NULL                                        /* Copy        */
-	            , NULL                                        /* Deps        */
-	            , 0                                           /* num Deps    */
-	            , NULL                                        /* Dumper      */
-	            , NULL                                        /* Dumper Arg  */
-	            );
+					  , tyinfo->dobj.catId                 /* catalog ID  */
+					  , tyinfo->dobj.dumpId                /* dump ID     */
+					  , tyinfo->dobj.name                  /* type name   */
+					  , tyinfo->dobj.namespace->dobj.name  /* name space  */
+					  , NULL                                        /* table space */
+					  , tyinfo->rolname                    /* owner name  */
+					  , false                                       /* with oids   */
+					  , "TYPE STORAGE OPTIONS"                      /* Desc        */
+					  , SECTION_PRE_DATA
+					  , q->data                                     /* ALTER...    */
+					  , ""                                          /* Del         */
+					  , NULL                                        /* Copy        */
+					  , NULL                                        /* Deps        */
+					  , 0                                           /* num Deps    */
+					  , NULL                                        /* Dumper      */
+					  , NULL                                        /* Dumper Arg  */
+					  );
 
 	destroyPQExpBuffer(q);
 	destroyPQExpBuffer(delq);
@@ -13667,6 +13589,7 @@ dumpExtProtocol(Archive *fout, ExtProtInfo *ptcinfo)
 			namecopy, NULL, NULL,
 			ptcinfo->ptcowner,
 			ptcinfo->ptcacl, "\0", "\0", "\0");
+
 	free(namecopy);
 
 	destroyPQExpBuffer(q);
@@ -16956,6 +16879,9 @@ dumpSequence(Archive *fout, TableInfo *tbinfo)
 	if (OidIsValid(tbinfo->owning_tab))
 	{
 		TableInfo  *owning_tab = findTableByOid(tbinfo->owning_tab);
+		
+		if (owning_tab == NULL)
+			return;
 
 		if (owning_tab == NULL)
 			exit_horribly(NULL, "failed sanity check, parent table OID %u of sequence OID %u not found\n",
@@ -17521,8 +17447,6 @@ dumpRule(Archive *fout, RuleInfo *rinfo)
 					tbinfo->rolname,
 					rinfo->dobj.catId, 0, rinfo->dobj.dumpId);
 
-	PQclear(res);
-
 	free(tag);
 	destroyPQExpBuffer(query);
 	destroyPQExpBuffer(cmd);
@@ -18053,7 +17977,6 @@ addBoundaryDependencies(DumpableObject **dobjs, int numObjs,
 			case DO_FOREIGN_SERVER:
 			case DO_BLOB:
 			case DO_EXTPROTOCOL:
-			case DO_TYPE_STORAGE_OPTIONS:
 			case DO_BINARY_UPGRADE:
 				/* Pre-data objects: must come before the pre-data boundary */
 				addObjectDependency(preDataBound, dobj->dumpId);

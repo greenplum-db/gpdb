@@ -61,7 +61,6 @@ static int	numOperators;
 static int	numCollations;
 static int	numNamespaces;
 static int	numExtensions;
-static int  numTypeStorageOptions;
 
 /* This is an array of object identities, not actual DumpableObjects */
 static ExtensionMemberId *extmembers;
@@ -168,11 +167,6 @@ getSchemaData(Archive *fout, int *numTablesPtr)
 		write_msg(NULL, "reading user-defined types\n");
 	typinfo = getTypes(fout, &numTypes);
 	typinfoindex = buildIndexArray(typinfo, numTypes, sizeof(TypeInfo));
-
-	/* this must be after getFuncs */
-	if (g_verbose)
-		write_msg(NULL, "reading type storage options\n");
-	getTypeStorageOptions(fout, &numTypeStorageOptions);
 
 	/* this must be after getFuncs, too */
 	if (g_verbose)
