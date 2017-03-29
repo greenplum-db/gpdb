@@ -398,10 +398,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      #passed: [compile_gpdb_sles11]
+      passed: [compile_gpdb_sles11]
     - get: bin_gpdb
       resource: bin_gpdb_sles11
-      #passed: [compile_gpdb_sles11]
+      passed: [compile_gpdb_sles11]
       trigger: true
     - get: sles-gpdb-dev-11-beta
   - task: ic_gpdb
@@ -796,15 +796,11 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      #passed: [icw_planner_sles11]
       passed: [compile_gpdb_sles11]
     - get: gpaddon_src
       passed: [compile_gpdb_sles11]
     - get: bin_gpdb
       resource: bin_gpdb_sles11
-      # passed:
-      # - icw_gporca_sles11
-      # - icw_planner_sles11
       passed: [compile_gpdb_sles11]
       trigger: true
     - get: sles-gpdb-dev-11-beta
@@ -820,14 +816,14 @@ jobs:
       bin_gpdb: rc_bin_gpdb
     params:
       INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-header-sles-gpdb.sh
-      INSTALLER_ZIP: packaged_gpdb/greenplum-db-@GP_VERSION@-sles11-x86_64.zip
+      INSTALLER_ZIP: packaged_gpdb/greenplum-db-@GP_VERSION@-build-1-sles11-x86_64.zip
       ADD_README_INSTALL: true
   - put: installer_sles11_gpdb_rc
     params:
-      file: packaged_gpdb/greenplum-db-*-sles11-x86_64.zip
+      file: packaged_gpdb/greenplum-db-*-build-1-sles11-x86_64.zip
   - put: installer_sles11_gpdb_rc_md5
     params:
-      file: packaged_gpdb/greenplum-db-*-sles11-x86_64.zip.md5
+      file: packaged_gpdb/greenplum-db-*-build-1-sles11-x86_64.zip.md5
   - put: qautils_sles11_tarball
     params:
       file: rc_bin_gpdb/QAUtils-sles11-x86_64.tar.gz
