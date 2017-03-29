@@ -38,6 +38,7 @@
 #include "utils/guc_tables.h"
 #include "utils/inval.h"
 #include "utils/resscheduler.h"
+#include "utils/resgroup.h"
 #include "utils/vmem_tracker.h"
 
 #ifdef USE_CONNECTEMC
@@ -3628,6 +3629,15 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&MaxResourceQueues,
 		9, 0, INT_MAX, NULL, NULL
+	},
+
+	{
+		{"max_resource_groups", PGC_POSTMASTER, RESOURCES_MGM,
+			gettext_noop("Maximum number of resource groups."),
+			NULL
+		},
+		&MaxResourceGroups,
+		9, 0, INT_MAX, gpvars_assign_max_resource_groups, NULL
 	},
 
 	{

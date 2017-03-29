@@ -73,6 +73,7 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 	Datum		new_record[Natts_pg_resgroup];
 	bool		new_record_nulls[Natts_pg_resgroup];
 	ResourceGroupOptions options;
+	int			nResGroups;
 
 	/* Permission check - only superuser can create groups. */
 	if (!superuser())
@@ -93,12 +94,28 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 	parseStmtOptions(stmt, &options);
 
 	/*
+	 * Grant ExclusiveLock to serialize concurrent 'CREATE RESOURCE GROUP'
+	 */
+	pg_resgroup_rel = heap_open(ResGroupRelationId, ExclusiveLock);
+
+	/* Check if max_resource_group limit is reached */
+	sscan = systable_beginscan(pg_resgroup_rel, InvalidOid, false,
+							   SnapshotNow, 0, NULL);
+	nResGroups = 0;
+	while (systable_getnext(sscan) != NULL)
+		nResGroups++;
+	systable_endscan(sscan);
+
+	if (nResGroups >= MaxResourceGroups)
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
+				 errmsg("insufficient resource groups available"),
+				 errhint("Increase max_resource_groups")));
+
+	/*
 	 * Check the pg_resgroup relation to be certain the group doesn't already
 	 * exist.
 	 */
-	pg_resgroup_rel = heap_open(ResGroupRelationId, RowExclusiveLock);
-	pg_resgroup_dsc = RelationGetDescr(pg_resgroup_rel);
-
 	ScanKeyInit(&scankey,
 				Anum_pg_resgroup_rsgname,
 				BTEqualStrategyNumber, F_NAMEEQ,
@@ -126,6 +143,7 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 
 	new_record[Anum_pg_resgroup_parent - 1] = Int64GetDatum(0);
 
+	pg_resgroup_dsc = RelationGetDescr(pg_resgroup_rel);
 	tuple = heap_form_tuple(pg_resgroup_dsc, new_record, new_record_nulls);
 
 	/*
