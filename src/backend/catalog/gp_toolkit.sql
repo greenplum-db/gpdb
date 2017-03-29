@@ -1959,6 +1959,7 @@ CREATE TYPE gp_toolkit.__gp_aoseg_return_type AS (
        varblockcount bigint,
        eof_uncompressed bigint,
        modcount bigint,
+       formatversion smallint,
        state smallint);
 
 CREATE or replace FUNCTION gp_toolkit.__gp_aoseg_name(relid regclass)

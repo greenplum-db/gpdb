@@ -186,9 +186,9 @@ SetSegnoInternal(Relation rel, List *avoid_segnos, bool for_compaction)
 											  pg_aoseg_dsc, &isNull));
 			Assert(!isNull);
 
-			tupcount = (int64) DatumGetFloat8(fastgetattr(tuple,
-														  Anum_pg_aoseg_tupcount,
-														  pg_aoseg_dsc, &isNull));
+			tupcount = DatumGetInt64(fastgetattr(tuple,
+												 Anum_pg_aoseg_tupcount,
+												 pg_aoseg_dsc, &isNull));
 			Assert(!isNull);
 
 			state = fastgetattr(tuple, Anum_pg_aoseg_state, pg_aoseg_dsc, &isNull);
@@ -228,6 +228,10 @@ SetSegnoInternal(Relation rel, List *avoid_segnos, bool for_compaction)
 
 		/* If the ao segment is full, skip it */
 		if (tupcount > segfileMaxRowThreshold())
+			continue;
+
+		/* If the ao segment is empty, do not choose it for compaction */
+		if (tupcount == 0 && for_compaction)
 			continue;
 
 		if (list_member_int(avoid_segnos, segno))

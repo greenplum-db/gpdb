@@ -72,33 +72,17 @@ AppendOnlyCompaction_DropSegmentFile(Relation aorel, int segno)
 		return;
 	}
 
-	/*
-	 * Segment 0 is special, in that it always has a gp_relation_node entry,
-	 * and the segment file is always present, as a zero-length file, if nothing
-	 * else.
-	 */
-	if (segno == 0)
-	{
-		elogif(Debug_appendonly_print_compaction, LOG,
-			   "Truncate segment file: segno %d", segno);
+	elogif(Debug_appendonly_print_compaction, LOG,
+		   "Drop segment file: segno %d", segno);
 
-		AppendOnlySegmentFileTruncateToEOF(aorel, segno, 0);
-	}
-	else
-	{
-		elogif(Debug_appendonly_print_compaction, LOG,
-			   "Drop segment file: segno %d", segno);
-
-		MirroredFileSysObj_ScheduleDropAppendOnlyFile(
+	MirroredFileSysObj_ScheduleDropAppendOnlyFile(
 			&aorel->rd_node,
 			segno,
 			RelationGetRelationName(aorel),
 			&persistentTid,
 			persistentSerialNum);
 
-		if (segno != 0)
-			DeleteGpRelationNodeTuple(aorel, segno);
-	}
+	DeleteGpRelationNodeTuple(aorel, segno);
 }
 
 /*
