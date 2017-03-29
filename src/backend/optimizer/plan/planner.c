@@ -32,7 +32,6 @@
 #include "optimizer/planner.h"
 #include "optimizer/prep.h"
 #include "optimizer/subselect.h"
-#include "optimizer/planpartition.h"
 #include "optimizer/transform.h"
 #include "optimizer/tlist.h"
 #include "optimizer/var.h"
@@ -615,6 +614,18 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	result->queryPartsMetadata = NIL;
 	result->numSelectorsPerScanId = NIL;
 
+	{
+		ListCell *lc;
+
+		foreach(lc, glob->relationOids)
+		{
+			Oid reloid = lfirst_oid(lc);
+
+			if (rel_is_partitioned(reloid))
+				result->queryPartOids = lappend_oid(result->queryPartOids, reloid);
+		}
+	}
+
 	Assert(result->utilityStmt == NULL || IsA(result->utilityStmt, DeclareCursorStmt));
 
 	if (Gp_role == GP_ROLE_DISPATCH)
@@ -920,15 +931,6 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 		plan = inheritance_planner(root);
 	else
 		plan = grouping_planner(root, tuple_fraction);
-
-	if (Gp_role == GP_ROLE_DISPATCH
-		&& root->config->gp_dynamic_partition_pruning)
-	{
-		/**
-		 * Apply transformation for dynamic partition elimination.
-		 */
-		plan = apply_dyn_partition_transforms(root, plan);
-	}
 
 	/*
 	 * Deal with explicit redistribution requirements for TableValueExpr

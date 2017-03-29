@@ -253,8 +253,36 @@ typedef struct PlannerInfo
 
 	PlannerConfig *config;		/* Planner configuration */
 
+	List	   *dynamicScans;	/* DynamicScanInfos */
 } PlannerInfo;
 
+/*----------
+ * DynamicScanInfo
+ *		Information about scans on partitioned tables.
+ *
+ * Scans on partitioned tables are expanded into Append paths early
+ * in the planning. For each such expansion, we create a DynamicScanInfo
+ * struct.
+ *----------
+ */
+typedef struct
+{
+	/*
+	 * The scans are numbered, so that a Partition Selector can
+	 * refer to the scan.
+	 */
+	int			dynamicScanId;
+
+	/* Parent relation this is for */
+	int			rtindex;
+	Oid			parentOid;
+
+	/* Partitioning key information */
+	List	   *partKeyAttnos;
+
+	/* Set to true, if a PartitionSelector has been created for this scan */
+	bool		hasSelector;
+} DynamicScanInfo;
 
 /*
  * In places where it's known that simple_rte_array[] must have been prepared

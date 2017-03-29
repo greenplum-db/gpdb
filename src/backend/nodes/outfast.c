@@ -1929,6 +1929,10 @@ _outNode(StringInfo str, void *obj)
 				_outPartOidExpr(str, obj);
 				break;
 
+			case T_PartSelectedExpr:
+				_outPartSelectedExpr(str, obj);
+				break;
+
 			case T_PartDefaultExpr:
 				_outPartDefaultExpr(str, obj);
 				break;

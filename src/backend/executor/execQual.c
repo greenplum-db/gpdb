@@ -41,6 +41,7 @@
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbvars.h"
+#include "cdb/cdbpartition.h"
 #include "cdb/partitionselection.h"
 #include "commands/typecmds.h"
 #include "executor/execdebug.h"
@@ -195,6 +196,9 @@ static Datum ExecEvalCurrentOfExpr(ExprState *exprstate, ExprContext *econtext,
 					  bool *isNull, ExprDoneCond *isDone);
 
 static Datum ExecEvalPartOidExpr(PartOidExprState *exprstate,
+						ExprContext *econtext,
+						bool *isNull, ExprDoneCond *isDone);
+static Datum ExecEvalPartSelectedExpr(PartSelectedExprState *exprstate,
 						ExprContext *econtext,
 						bool *isNull, ExprDoneCond *isDone);
 static Datum ExecEvalPartDefaultExpr(PartDefaultExprState *exprstate,
@@ -4665,6 +4669,31 @@ static Datum ExecEvalPartOidExpr(PartOidExprState *exprstate,
 }
 
 /* ----------------------------------------------------------------
+ *		ExecEvalPartSelectedExpr
+ *
+ *		Evaluate a PartSelectedExpr
+ * ----------------------------------------------------------------
+ */
+static Datum
+ExecEvalPartSelectedExpr(PartSelectedExprState *exprstate,
+						 ExprContext *econtext,
+						 bool *isNull, ExprDoneCond *isDone)
+{
+	Assert(NULL != exprstate);
+	Assert(NULL != isNull);
+
+	PartSelectedExpr *expr = (PartSelectedExpr *) exprstate->xprstate.expr;
+
+	if (isDone)
+		*isDone = ExprSingleResult;
+
+	*isNull = false;
+	return BoolGetDatum(isPartitionSelected(econtext->ecxt_estate,
+											expr->dynamicScanId,
+											expr->partOid));
+}
+
+/* ----------------------------------------------------------------
  *		ExecEvalPartDefaultExpr
  *
  *		Evaluate a PartDefaultExpr
@@ -5751,6 +5780,14 @@ ExecInitExpr(Expr *node, PlanState *parent)
 				 * computed for each tuple.
 				 */
 				exprstate->acceptedLeafPart = psstate->acceptedLeafPart;
+
+				state = (ExprState *) exprstate;
+			}
+			break;
+		case T_PartSelectedExpr:
+			{
+				PartSelectedExprState *exprstate = makeNode(PartSelectedExprState);
+				exprstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalPartSelectedExpr;
 
 				state = (ExprState *) exprstate;
 			}

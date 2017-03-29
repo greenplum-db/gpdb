@@ -1166,9 +1166,6 @@ extern Datum gp_delete_relation_node_entry(PG_FUNCTION_ARGS);
 
 extern Datum gp_persistent_relation_node_check(PG_FUNCTION_ARGS);
 
-extern Datum pg_partition_oid_transfn(PG_FUNCTION_ARGS);
-extern Datum pg_partition_oid_finalfn(PG_FUNCTION_ARGS);
-
 /* storage/compress.c */
 extern Datum quicklz_constructor(PG_FUNCTION_ARGS);
 extern Datum quicklz_destructor(PG_FUNCTION_ARGS);

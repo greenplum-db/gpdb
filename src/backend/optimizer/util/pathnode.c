@@ -2415,7 +2415,7 @@ cdb_jointype_to_join_in(RelOptInfo *joinrel, JoinType jointype, Path *inner_path
     return jointype;
 }                               /* cdb_jointype_to_join_in */
 
-static bool
+bool
 path_contains_inner_index(Path *path)
 {
     if (IsA(path, IndexPath) &&

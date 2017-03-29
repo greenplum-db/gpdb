@@ -28,6 +28,7 @@
 #include "optimizer/pathnode.h"
 #include "optimizer/plancat.h"
 #include "optimizer/planmain.h"
+#include "optimizer/planpartition.h"
 #include "optimizer/planshare.h"
 #include "optimizer/predtest.h"
 #include "optimizer/restrictinfo.h"
@@ -600,12 +601,22 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 	Plan	   *outer_plan;
 	Plan	   *inner_plan;
 	Plan	   *plan;
+	bool		partition_selector_created;
 
 	Assert(best_path->outerjoinpath);
 	Assert(best_path->innerjoinpath);
 
-	outer_plan = create_subplan(root, best_path->outerjoinpath);
 	inner_plan = create_subplan(root, best_path->innerjoinpath);
+
+	/*
+	 * Try to inject Partition Selectors.
+	 */
+	partition_selector_created =
+		inject_partition_selectors_for_join(root,
+												best_path,
+												&inner_plan);
+
+	outer_plan = create_subplan(root, best_path->outerjoinpath);
 
 	switch (best_path->path.pathtype)
 	{
@@ -633,6 +644,15 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 			plan = NULL;		/* keep compiler quiet */
 			break;
 	}
+
+	/*
+	 * If we injected a partition selector to the inner side, we must evaluate
+	 * the inner side before the outer side, so that the partition selector
+	 * can influence the execution of the outer side.
+	 */
+	Assert(plan->type == best_path->path.pathtype);
+	if (partition_selector_created)
+		((Join *) plan)->prefetch_inner = true;
 
 	plan->flow = cdbpathtoplan_create_flow(root,
 			best_path->path.locus,

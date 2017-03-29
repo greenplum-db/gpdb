@@ -37,6 +37,7 @@
 #include "commands/tablecmds.h"
 #include "nodes/makefuncs.h"
 #include "optimizer/clauses.h"
+#include "optimizer/paths.h"
 #include "optimizer/plancat.h"
 #include "optimizer/planmain.h"
 #include "optimizer/planner.h"
@@ -826,6 +827,7 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 	List	   *inhOIDs;
 	List	   *appinfos;
 	ListCell   *l;
+	bool		parent_is_partitioned;
 
 	/* Does RT entry allow inheritance? */
 	if (!rte->inh)
@@ -885,6 +887,22 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 	else
 		lockmode = AccessShareLock;
 
+	parent_is_partitioned = rel_is_partitioned(parentOID);
+	if (parent_is_partitioned)
+	{
+		DynamicScanInfo *dsinfo;
+
+		dsinfo = palloc(sizeof(DynamicScanInfo));
+		dsinfo->parentOid = parentOID;
+		dsinfo->rtindex = rti;
+		dsinfo->hasSelector = false;
+
+		dsinfo->partKeyAttnos = rel_partition_key_attrs(parentOID);
+
+		root->dynamicScans = lappend(root->dynamicScans, dsinfo);
+		dsinfo->dynamicScanId = list_length(root->dynamicScans);
+	}
+
 	/* Scan the inheritance set and expand it */
 	appinfos = NIL;
 	foreach(l, inhOIDs)
@@ -908,7 +926,7 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 		/*
 		 * show root and leaf partitions
 		 */
-		if (rel_is_partitioned(parentOID) && !rel_is_leaf_partition(childOID))
+		if (parent_is_partitioned && !rel_is_leaf_partition(childOID))
 		{
 			continue;
 		}

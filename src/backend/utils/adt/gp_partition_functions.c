@@ -177,3 +177,30 @@ dumpDynamicTableScanPidIndex(EState *estate, int index)
 	elog(LOG, "Dynamic Table Scan %d pids: %s", index, pids.data);
 	pfree(pids.data);
 }
+
+bool
+isPartitionSelected(EState *estate, int index, Oid partOid)
+{
+	DynamicTableScanInfo *dynamicTableScanInfo = estate->dynamicTableScanInfo;
+	bool		found = false;
+
+	Assert(dynamicTableScanInfo != NULL);
+
+	/* It's 1 based indexing */
+	Assert(index > 0);
+
+	if (index > dynamicTableScanInfo->numScans)
+		elog(ERROR, "cannot execute PartSelectedExpr before PartitionSelector");
+
+	if ((dynamicTableScanInfo->pidIndexes)[index - 1] == NULL)
+	{
+		dynamicTableScanInfo->pidIndexes[index - 1] = createPidIndex(estate, index);
+	}
+
+	Assert(dynamicTableScanInfo->pidIndexes[index - 1] != NULL);
+	
+	(void) hash_search(dynamicTableScanInfo->pidIndexes[index - 1],
+					   &partOid, HASH_FIND, &found);
+
+	return found;
+}

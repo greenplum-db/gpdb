@@ -1104,6 +1104,7 @@ _outPartitionSelector(StringInfo str, PartitionSelector *node)
 	WRITE_BOOL_FIELD(staticSelection);
 	WRITE_NODE_FIELD(staticPartOids);
 	WRITE_NODE_FIELD(staticScanIds);
+	WRITE_NODE_FIELD(multiExpressions);
 
 	_outPlanInfo(str, (Plan *) node);
 }
@@ -3235,6 +3236,15 @@ _outPartOidExpr(StringInfo str, PartOidExpr *node)
 }
 
 static void
+_outPartSelectedExpr(StringInfo str, PartSelectedExpr *node)
+{
+	WRITE_NODE_TYPE("PARTSELECTEDEXPR");
+
+	WRITE_INT_FIELD(dynamicScanId);
+	WRITE_OID_FIELD(partOid);
+}
+
+static void
 _outPartDefaultExpr(StringInfo str, PartDefaultExpr *node)
 {
 	WRITE_NODE_TYPE("PARTDEFAULTEXPR");
@@ -5071,6 +5081,10 @@ _outNode(StringInfo str, void *obj)
 
 			case T_PartOidExpr:
 				_outPartOidExpr(str, obj);
+				break;
+
+			case T_PartSelectedExpr:
+				_outPartSelectedExpr(str, obj);
 				break;
 
 			case T_PartDefaultExpr:

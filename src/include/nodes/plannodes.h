@@ -21,8 +21,6 @@
 #include "nodes/primnodes.h"
 #include "storage/itemptr.h"
 
-typedef struct PartitionSelector PartitionSelector;
-
 typedef struct DirectDispatchInfo
 {
      /**
@@ -785,7 +783,7 @@ typedef struct HashJoin
 } HashJoin;
 
 /*
- * Share type of sharing a node.
+ * Share type of sharing a node.pe
  */
 typedef enum ShareType
 {
@@ -1173,8 +1171,7 @@ typedef struct PlanInvalItem
 	ItemPointerData tupleId;	/* TID of the object's catalog tuple */
 } PlanInvalItem;
 
-/*
- * ----------------
+/* ----------------
  * PartitionSelector node
  *
  * PartitionSelector finds a set of leaf partition OIDs given the root table
@@ -1184,24 +1181,43 @@ typedef struct PlanInvalItem
  * polluting the plan with it to make a plan look consistent and easy to
  * understand. It will be easy to locate where partition selection happens
  * in a plan.
+ *
+ * A PartitionSelection can work in three different ways:
+ *
+ * 1. Dynamic selection, based on tuples that pass through it.
+ * 2. Dynamic selection, with a projected tuple.
+ * 3. Static selection, performed at beginning of execution.
+ *
  * ----------------
  */
-struct PartitionSelector
+typedef struct PartitionSelector
 {
 	Plan		plan;
 	Oid 		relid;  				/* OID of target relation */
 	int 		nLevels;				/* number of partition levels */
 	int32 		scanId; 				/* id of the corresponding dynamic scan */
 	int32		selectorId;				/* id of this partition selector */
+
+	/* Fields for dynamic selection */
 	List		*levelEqExpressions;	/* equality expressions used for individual levels */
 	List		*levelExpressions;  	/* predicates used for individual levels */
 	Node		*residualPredicate; 	/* residual predicate (to be applied at the end) */
 	Node		*propagationExpression; /* propagation expression */
 	Node		*printablePredicate;	/* printable predicate (for explain purposes) */
+
+	/*
+	 * Fields for dynamic selection, by projecting input tuples to partitioning keys
+	 *
+	 * (The name 'multiExpression' comes from the fact that the projected tuples are
+	 * evaluated by the selectPartitionMulti() function.)
+	 */
+	List	    *multiExpressions;
+
+	/* Fields for static selection */
 	bool		staticSelection;    	/* static selection performed? */
 	List		*staticPartOids;    	/* list of statically selected parts */
 	List		*staticScanIds;     	/* scan ids used to propagate statically selected part oids */
 
-};
+} PartitionSelector;
 
 #endif   /* PLANNODES_H */

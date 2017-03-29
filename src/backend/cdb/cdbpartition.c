@@ -8973,6 +8973,9 @@ static List *PartitionChildren(PartitionNode *p)
  * big difference around nulls. If there is a null value corresponding to a partitioning attribute,
  * then all children are considered matches.
  *
+ * The input values/isnull should match the layout of tuples in the
+ * partitioned table.
+ *
  * Output:
  *	leafPartitionOids - list of leaf partition oids, null if there are no matches
  */
