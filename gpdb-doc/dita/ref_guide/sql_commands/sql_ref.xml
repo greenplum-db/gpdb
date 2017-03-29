@@ -185,6 +185,8 @@
       <li id="ad139940">
         <xref href="./DELETE.xml#topic1" type="topic" format="dita"/>
       </li>
+      <li>
+        <xref href="./DO.xml#topic1" type="topic" format="dita"/></li>
       <li id="ad140599">
         <xref href="./DROP_AGGREGATE.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -355,6 +357,6 @@
         <xref href="./VALUES.xml#topic1" type="topic" format="dita"/>
       </li>
     </ul>
-    <p otherprops="op-print">* <i>Not implemented in 4.3</i></p>
+    <p otherprops="op-print">* <i>Not implemented in 5.0</i></p>
   </body>
 </topic>
