@@ -277,6 +277,9 @@ typedef struct
 	int			rtindex;
 	Oid			parentOid;
 
+	/* RTindexes of the leaf relations */
+	Relids		children;
+
 	/* Partitioning key information */
 	List	   *partKeyAttnos;
 
@@ -821,6 +824,19 @@ typedef struct Path
                                  */
 	List	   *pathkeys;		/* sort ordering of path's output */
 	/* pathkeys is a List of PathKey nodes; see above */
+
+	/*
+	 * sameslice_relids indicates which (base) relations will be executed in
+	 * the same slice, if this path is chosen. It is used in partition planning,
+	 * to decide if it's safe to create a PartitionSelector node that affects
+	 * other nodes at a distance. That can only be done if the PartitionSelector
+	 * would be executed in the same slice.
+	 *
+	 * This is a conservative estimate, it's always safe to set it to NULL if
+	 * unsure, and the worst that will happen is that you lose out on potential
+	 * optimizations.
+	 */
+	Relids		sameslice_relids;
 } Path;
 
 /* 

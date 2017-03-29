@@ -24,7 +24,7 @@ static Expr *FindEqKey(PlannerInfo *root, Bitmapset *inner_relids, DynamicScanIn
 
 static PartitionSelector *create_partition_selector(PlannerInfo *root, DynamicScanInfo *dsinfo, Plan *subplan, List *multiExprs, Expr *printablePredicate);
 
-static void add_restrictinfos(PlannerInfo *root, DynamicScanInfo *dsinfo);
+static void add_restrictinfos(PlannerInfo *root, DynamicScanInfo *dsinfo, Bitmapset *childrelids);
 
 static bool IsPartKeyVar(Expr *expr, int partVarno, int partKeyAttno);
 
@@ -88,7 +88,6 @@ inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path, Plan
 	ListCell   *lc;
 	Path	   *outerpath = join_path->outerjoinpath;
 	Path	   *innerpath = join_path->innerjoinpath;
-	Bitmapset  *outer_relids = outerpath->parent->relids;
 	Bitmapset  *inner_relids = innerpath->parent->relids;
 	bool		any_selectors_created = false;
 	bool		good_type;
@@ -151,16 +150,9 @@ inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path, Plan
 		return false;
 
 	/*
-	 * Cannot do it, if there inner and outer sides are not in the same slice
-	 *
-	 * FIXME: this isn't the whole truth. It's theoretically possible that
-	 * even though the sides of the join are in same locus now, there are
-	 * Motion nodes between here and the base relations.
+	 * Cannot do it, if there inner and outer sides are not in the same slice.
 	 */
-	if (!(CdbPathLocus_IsReplicated(innerpath->locus) ||
-		  cdbpathlocus_compare(CdbPathLocus_Comparison_Equal,
-							   innerpath->locus,
-							   outerpath->locus)))
+	if (bms_is_empty(outerpath->sameslice_relids))
 		return false;
 
 	/*
@@ -175,9 +167,14 @@ inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path, Plan
 		Expr	  **partKeyExprs = NULL;
 		int			max_attr = -1;
 		List	   *printablePredicate = NIL;
+		Bitmapset  *childrelids;
 
-		/* Does the outer side contain this dynamic scan? */
-		if (!bms_is_member(dyninfo->rtindex, outer_relids))
+		/*
+		 * Does the outer side contain this dynamic scan? And it must be in the same
+		 * slice as the join!
+		 */
+		childrelids = bms_intersect(dyninfo->children, outerpath->sameslice_relids);
+		if (bms_is_empty(childrelids))
 			continue;
 
 		foreach(lpk, dyninfo->partKeyAttnos)
@@ -233,7 +230,7 @@ inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path, Plan
 			{
 				dyninfo->hasSelector = true;
 
-				add_restrictinfos(root, dyninfo);
+				add_restrictinfos(root, dyninfo, childrelids);
 			}
 			any_selectors_created = true;
 		}
@@ -345,7 +342,7 @@ create_partition_selector(PlannerInfo *root, DynamicScanInfo *dsinfo, Plan *subp
 }
 
 static void
-add_restrictinfos(PlannerInfo *root, DynamicScanInfo *dsinfo)
+add_restrictinfos(PlannerInfo *root, DynamicScanInfo *dsinfo, Bitmapset *childrelids)
 {
 	ListCell   *lc;
 
@@ -358,7 +355,7 @@ add_restrictinfos(PlannerInfo *root, DynamicScanInfo *dsinfo)
 		PartSelectedExpr *selectedExpr;
 		Oid			childOid;
 
-		if (appinfo->parent_relid != dsinfo->rtindex)
+		if (!bms_is_member(appinfo->child_relid, childrelids))
 			continue;
 
 		relinfo = find_base_rel(root, appinfo->child_relid);

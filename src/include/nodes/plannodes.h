@@ -783,7 +783,7 @@ typedef struct HashJoin
 } HashJoin;
 
 /*
- * Share type of sharing a node.pe
+ * Share type of sharing a node.
  */
 typedef enum ShareType
 {

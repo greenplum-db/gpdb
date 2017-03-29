@@ -1051,6 +1051,7 @@ create_seqscan_path(PlannerInfo *root, RelOptInfo *rel)
     pathnode->locus = cdbpathlocus_from_baserel(root, rel);
     pathnode->motionHazard = false;
 	pathnode->rescannable = true;
+	pathnode->sameslice_relids = rel->relids;
 
 	cost_seqscan(pathnode, root, rel);
 
@@ -1072,6 +1073,7 @@ create_appendonly_path(PlannerInfo *root, RelOptInfo *rel)
     pathnode->path.locus = cdbpathlocus_from_baserel(root, rel);
     pathnode->path.motionHazard = false;
 	pathnode->path.rescannable = true;
+	pathnode->path.sameslice_relids = rel->relids;
 
 	cost_appendonlyscan(pathnode, root, rel);
 
@@ -1090,9 +1092,10 @@ create_aocs_path(PlannerInfo *root, RelOptInfo *rel)
 	pathnode->path.parent = rel;
 	pathnode->path.pathkeys = NIL;	/* seqscan has unordered result */
 	
-        pathnode->path.locus = cdbpathlocus_from_baserel(root, rel);
-        pathnode->path.motionHazard = false;
+	pathnode->path.locus = cdbpathlocus_from_baserel(root, rel);
+	pathnode->path.motionHazard = false;
 	pathnode->path.rescannable = true;
+	pathnode->path.sameslice_relids = rel->relids;
 	
 	cost_aocsscan(pathnode, root, rel);
 	return pathnode;
@@ -1118,6 +1121,7 @@ create_external_path(PlannerInfo *root, RelOptInfo *rel)
 	 * different results when invoked twice.
 	 */
 	pathnode->path.rescannable = false;
+	pathnode->path.sameslice_relids = rel->relids;
 
 	cost_externalscan(pathnode, root, rel);
 	
@@ -1226,6 +1230,7 @@ create_index_path(PlannerInfo *root,
 	pathnode->path.locus = cdbpathlocus_from_baserel(root, rel);
 	pathnode->path.motionHazard = false;
 	pathnode->path.rescannable = true;
+	pathnode->path.sameslice_relids = rel->relids;
 
 	cost_index(pathnode, root, index, indexquals, outer_rel);
 
@@ -1257,6 +1262,7 @@ create_bitmap_heap_path(PlannerInfo *root,
     pathnode->path.locus = cdbpathlocus_from_baserel(root, rel);
     pathnode->path.motionHazard = false;
     pathnode->path.rescannable = true;
+	pathnode->path.sameslice_relids = rel->relids;
 
 	pathnode->bitmapqual = bitmapqual;
 	pathnode->isjoininner = (outer_rel != NULL);
@@ -1323,6 +1329,7 @@ create_bitmap_appendonly_path(PlannerInfo *root,
     pathnode->path.locus = cdbpathlocus_from_baserel(root, rel);
     pathnode->path.motionHazard = false;
     pathnode->path.rescannable = true;
+	pathnode->path.sameslice_relids = rel->relids;
 
 	pathnode->bitmapqual = bitmapqual;
 	pathnode->isjoininner = (outer_rel != NULL);
@@ -1427,6 +1434,7 @@ create_tidscan_path(PlannerInfo *root, RelOptInfo *rel, List *tidquals)
     pathnode->path.locus = cdbpathlocus_from_baserel(root, rel);
     pathnode->path.motionHazard = false;
     pathnode->path.rescannable = true;
+	pathnode->path.sameslice_relids = rel->relids;
 
 	cost_tidscan(&pathnode->path, root, rel, tidquals);
 
@@ -1529,6 +1537,7 @@ create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths)
 				subpath->parent->reloptkind != RELOPT_OTHER_MEMBER_REL)
 				projectedlocus = subpath->locus;
 			else
+			{
 				projectedlocus =
 					cdbpathlocus_pull_above_projection(root,
 													   subpath->locus,
@@ -1536,6 +1545,7 @@ create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths)
 													   subpath->parent->reltargetlist,
 													   rel->reltargetlist,
 													   rel->relid);
+			}
 
 			if (l == list_head(subpaths))	/* first node? */
 				pathnode->path.startup_cost = subpath->startup_cost;
@@ -1556,14 +1566,19 @@ create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths)
 				pathnode->path.locus = projectedlocus;
 			else if (cdbpathlocus_compare(CdbPathLocus_Comparison_Equal,
 										  pathnode->path.locus, projectedlocus))
-			{}
+			{
+			}
 			else if (CdbPathLocus_IsPartitioned(pathnode->path.locus) &&
 					 CdbPathLocus_IsPartitioned(projectedlocus))
+			{
 				CdbPathLocus_MakeStrewn(&pathnode->path.locus);
+			}
 			else
 				ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
 								errmsg_internal("Cannot append paths with "
 												"incompatible distribution")));
+
+			pathnode->path.sameslice_relids = bms_union(pathnode->path.sameslice_relids, subpath->sameslice_relids);
 
 			if (subpath->motionHazard)
 				pathnode->path.motionHazard = true;
@@ -1637,6 +1652,7 @@ create_material_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath)
     pathnode->path.motionHazard = subpath->motionHazard;
     pathnode->cdb_strict = false;
     pathnode->path.rescannable = true; /* Independent of sub-path */
+	pathnode->path.sameslice_relids = subpath->sameslice_relids;
 
 	pathnode->subpath = subpath;
 
@@ -1918,6 +1934,7 @@ create_unique_rowid_path(PlannerInfo *root,
 
         /* Set a fake locus.  Repartitioning key won't be built until later. */
         CdbPathLocus_MakeStrewn(&uniquepath->path.locus);
+		uniquepath->path.sameslice_relids = NULL;
 
         /* Estimate repartitioning cost. */
         memset(&motionpath, 0, sizeof(motionpath));
@@ -2245,6 +2262,7 @@ create_subqueryscan_path(PlannerInfo *root, RelOptInfo *rel, List *pathkeys)
     pathnode->locus = cdbpathlocus_from_subquery(root, rel->subplan, rel->relid);
     pathnode->motionHazard = true;          /* better safe than sorry */
     pathnode->rescannable = false;
+	pathnode->sameslice_relids = NULL;
 
 	cost_subqueryscan(pathnode, rel);
 
@@ -2286,6 +2304,7 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	
 	/* For now, be conservative. */
 	pathnode->rescannable = false;
+	pathnode->sameslice_relids = NULL;
 
 	cost_functionscan(pathnode, root, rel);
 
@@ -2324,6 +2343,7 @@ create_tablefunction_path(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte
 	/* Mark the output as random if the input is partitioned */
 	if (CdbPathLocus_IsPartitioned(pathnode->locus))
 		CdbPathLocus_MakeStrewn(&pathnode->locus);
+	pathnode->sameslice_relids = NULL;
 
 	cost_tablefunction(pathnode, root, rel);
 
@@ -2356,6 +2376,7 @@ create_valuesscan_path(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 
     pathnode->motionHazard = false;
 	pathnode->rescannable = true;
+	pathnode->sameslice_relids = NULL;
 
 	cost_valuesscan(pathnode, root, rel);
 
@@ -2384,6 +2405,7 @@ create_ctescan_path(PlannerInfo *root, RelOptInfo *rel, List *pathkeys)
 	 */
 	pathnode->motionHazard = true;
 	pathnode->rescannable = false;
+	pathnode->sameslice_relids = NULL;
 
 	cost_ctescan(pathnode, root, rel);
 
@@ -2540,6 +2562,8 @@ create_nestloop_path(PlannerInfo *root,
 
 	/* we're only as rescannable as our child plans */
     pathnode->path.rescannable = outer_path->rescannable && inner_path->rescannable;
+
+	pathnode->path.sameslice_relids = bms_union(inner_path->sameslice_relids, outer_path->sameslice_relids);
 
 	cost_nestloop(pathnode, root);
 
@@ -2707,6 +2731,7 @@ create_mergejoin_path(PlannerInfo *root,
 
 	pathnode->jpath.path.motionHazard = outer_path->motionHazard || inner_path->motionHazard;
 	pathnode->jpath.path.rescannable = outer_path->rescannable && inner_path->rescannable;
+	pathnode->jpath.path.sameslice_relids = bms_union(inner_path->sameslice_relids, outer_path->sameslice_relids);
 
 	pathnode->path_mergeclauses = mergeclauses;
 	pathnode->outersortkeys = outersortkeys;
@@ -2786,6 +2811,7 @@ create_hashjoin_path(PlannerInfo *root,
 		pathnode->jpath.path.motionHazard = outer_path->motionHazard;
 	else
 		pathnode->jpath.path.motionHazard = outer_path->motionHazard || inner_path->motionHazard;
+	pathnode->jpath.path.sameslice_relids = bms_union(inner_path->sameslice_relids, outer_path->sameslice_relids);
 
 	cost_hashjoin(pathnode, root);
 
