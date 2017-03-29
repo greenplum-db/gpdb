@@ -785,7 +785,9 @@ jobs:
 
 - name: MU_backup_43_restore_5
   plan:
-  - aggregate: *post_packaging_gets_trigger_true
+  - get: nightly-trigger
+    trigger: true
+  - aggregate: *post_packaging_gets_trigger_false
   - task: trigger_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/trigger_pulse.yml
