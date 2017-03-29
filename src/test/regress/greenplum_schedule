@@ -180,7 +180,7 @@ test: vacuum_full_freeze_heap
 test: vacuum_full_heap
 test: vacuum_full_heap_bitmapindex
 
-test: ao_checksum_corruption AOCO_Compression2 schema_topology table_statistics
+test: ao_checksum_corruption AOCO_Compression2 table_statistics
 test: metadata_track
 
 # Test psql \du output
