@@ -3201,7 +3201,7 @@ RelationBuildLocalRelation(const char *relname,
 	else
 	{
 		rel->rd_rel->relfilenode = GetNewSegRelfilenode();
-		AdvanceObjectId(relid);
+		AdvanceObjectId(relid); /* will be noop in utility mode */
 	}
 
 	rel->rd_rel->reltablespace = reltablespace;
