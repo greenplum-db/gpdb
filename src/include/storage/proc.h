@@ -129,6 +129,8 @@ struct PGPROC
 	LOCKMASK	heldLocks;		/* bitmask for lock types already held on this
 								 * lock object by this backend */
 
+	bool		resWaiting;		/* true if waiting for an Resource Group lock */
+
 	/*
 	 * Info to allow us to wait for synchronous replication, if needed.
 	 * waitLSN is InvalidXLogRecPtr if not waiting; set only by user backend.

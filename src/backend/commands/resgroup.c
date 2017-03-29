@@ -14,6 +14,7 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
+#include "access/xact.h"
 #include "catalog/heap.h"
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_authid.h"
@@ -26,12 +27,15 @@
 #include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
+#include "utils/resgroup.h"
+#include "utils/resource_manager.h"
+#include "utils/syscache.h"
 
 #define RESGROUP_DEFAULT_CONCURRENCY (20)
 #define RESGROUP_DEFAULT_REDZONE_LIMIT (0.8)
 
 
-/**
+/*
  * Internal struct to store the group settings.
  */
 typedef struct ResourceGroupOptions
@@ -42,12 +46,17 @@ typedef struct ResourceGroupOptions
 	float redzoneLimit;
 } ResourceGroupOptions;
 
-static float floatFromText(const text* text, const char * prop);
+static float text2Float(const text *text, const char *prop);
+static int text2int(const text *value);
 static void updateResgroupCapability(Oid groupid, ResourceGroupOptions *options);
 static void deleteResgroupCapability(Oid groupid);
 static int getResgroupOptionType(const char* defname);
 static void parseStmtOptions(CreateResourceGroupStmt *stmt, ResourceGroupOptions *options);
 static void validateCapabilities(Relation rel, Oid groupid, ResourceGroupOptions *options);
+static text getCapabilityForGroup(int groupId, int type);
+static void insertTupleIntoResCapability(Relation rel, Oid groupid, uint16 type, char *value);
+static void createResGroupAbortCallback(ResourceReleasePhase phase, bool isCommit, bool isTopLevel, void *arg);
+static void dropResGroupAbortCallback(ResourceReleasePhase phase, bool isCommit, bool isTopLevel, void *arg);
 
 /*
  * CREATE RESOURCE GROUP
@@ -128,8 +137,6 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 	/* process the WITH (...) list items */
 	updateResgroupCapability(groupid, &options);
 
-	/* TODO: create the actual objects in shared memory */
-
 	/* Dispatch the statement to segments */
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -146,6 +153,23 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 	}
 
 	heap_close(pg_resgroup_rel, NoLock);
+
+	/* Add this group into shared memory */
+	if (IsResGroupEnabled())
+	{
+		Oid			*callbackArg;
+
+		AllocResGroupEntry(groupid);
+
+		/* Argument of callback function should be allocated in heap region */
+		callbackArg = (Oid *)MemoryContextAlloc(TopMemoryContext, sizeof(Oid));
+		*callbackArg = groupid;
+		RegisterResourceReleaseCallback(createResGroupAbortCallback, (void *)callbackArg);
+	}
+	else if (Gp_role == GP_ROLE_DISPATCH)
+		ereport(WARNING,
+				(errmsg("resource group is disabled"),
+				 errhint("To enable set resource_scheduler=on and gp_resource_manager=group")));
 }
 
 /*
@@ -162,14 +186,13 @@ DropResourceGroup(DropResourceGroupStmt *stmt)
 	ScanKeyData	 authid_scankey;
 	SysScanDesc	 authid_scan;
 	Oid			 groupid;
-
+	Oid			*callbackArg;
 
 	/* Permission check - only superuser can drop resource groups. */
 	if (!superuser())
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("must be superuser to drop resource groups")));
-
 
 	/*
 	 * Check the pg_resgroup relation to be certain the resource group already
@@ -226,19 +249,24 @@ DropResourceGroup(DropResourceGroupStmt *stmt)
 	systable_endscan(authid_scan);
 	heap_close(authIdRel, RowExclusiveLock);
 
+
 	/*
 	 * Delete the resource group from the catalog.
 	 */
 	simple_heap_delete(pg_resgroup_rel, &tuple->t_self);
-
 	systable_endscan(sscan);
+	heap_close(pg_resgroup_rel, NoLock);
 
-	/* TODO: delete the actual objects in shared memory */
+	/* drop the extended attributes for this resource group */
+	deleteResgroupCapability(groupid);
 
 	/*
 	 * Remove any comments on this resource group
 	 */
 	DeleteSharedComments(groupid, ResGroupRelationId);
+
+	/* metadata tracking */
+	MetaTrackDropObject(ResGroupRelationId, groupid);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -250,137 +278,104 @@ DropResourceGroup(DropResourceGroupStmt *stmt)
 									NULL);
 	}
 
-	/* metadata tracking */
-	MetaTrackDropObject(ResGroupRelationId, groupid);
+	if (IsResGroupEnabled())
+	{
+		/*
+		 * Remove the group from shared memory, this should be performed before
+		 * modifying catalog, since the check of no exiting running transaction may
+		 * fail
+		 */
+		FreeResGroupEntry(groupid);
 
-	/* drop the extended attributes for this resource group */
-	deleteResgroupCapability(groupid);
-
-	heap_close(pg_resgroup_rel, NoLock);
+		/* Argument of callback function should be allocated in heap region */
+		callbackArg = (Oid *)MemoryContextAlloc(TopMemoryContext, sizeof(Oid));
+		*callbackArg = groupid;
+		RegisterResourceReleaseCallback(dropResGroupAbortCallback, (void *)callbackArg);
+	}
 }
 
-/**
- * Convert a text to a float value.
- *
- * @param text  the text
- * @param prop  the property name
+/*
+ * Get 'concurrency' of on resource group in pg_resgroupcapability.
  */
-static float
-floatFromText(const text* text, const char* prop)
+int
+GetConcurrencyForGroup(int groupId)
 {
-	char * str = DatumGetCString(DirectFunctionCall1(textout,
-								 PointerGetDatum(text)));
-	char * end = NULL;
-	double val = strtod(str, &end);
-
-	/* both the property name and value are already checked
-	 * by the syntax parser, but we'll check it again anyway for safe. */
-	if (end == NULL || end == str || *end != 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("%s requires a numeric value", prop)));
-
-	return (float) val;
+	text value = getCapabilityForGroup(groupId, RESGROUP_LIMIT_TYPE_CONCURRENCY);
+	return text2int(&value);
 }
 
-/**
- * Insert one capability to the capability table.
- *
- * 'value' and 'proposed' are both used to describe a resource,
- * in this routine we assume 'proposed' has the same value as 'value'.
- *
- * @param rel      the relation
- * @param groupid  oid of the resource group
- * @param type     the resource limit type
- * @param value    the limit value
+/*
+ * Get resource group id for a role in pg_authid
  */
-static void
-insertTupleIntoResCapability(Relation rel,
-							 Oid groupid,
-							 uint16 type,
-							 char *value)
+Oid
+GetResGroupIdForRole(Oid roleid)
 {
-	Datum new_record[Natts_pg_resgroupcapability];
-	bool new_record_nulls[Natts_pg_resgroupcapability];
-	HeapTuple tuple;
-	TupleDesc tupleDesc = RelationGetDescr(rel);
-
-	MemSet(new_record, 0, sizeof(new_record));
-	MemSet(new_record_nulls, false, sizeof(new_record_nulls));
-
-	new_record[Anum_pg_resgroupcapability_resgroupid - 1] = ObjectIdGetDatum(groupid);
-	new_record[Anum_pg_resgroupcapability_reslimittype - 1] = UInt16GetDatum(type);
-	new_record[Anum_pg_resgroupcapability_value - 1] = CStringGetTextDatum(value);
-	new_record[Anum_pg_resgroupcapability_proposed - 1] = CStringGetTextDatum(value);
-
-	tuple = heap_form_tuple(tupleDesc, new_record, new_record_nulls);
-	simple_heap_insert(rel, tuple);
-	CatalogUpdateIndexes(rel, tuple);
-}
-
-/**
- * Insert all the capabilities to the capability table.
- *
- * We store the capabilities in multiple lines for one group,
- * so we have to insert them one by one. This function will
- * handle the type conversion etc..
- *
- * @param groupid  oid of the resource group
- * @param options  the capabilities
- */
-static void
-updateResgroupCapability(Oid groupid,
-						 ResourceGroupOptions *options)
-{
-	char value[64];
-	Relation resgroup_capability_rel = heap_open(ResGroupCapabilityRelationId, RowExclusiveLock);
-
-	validateCapabilities(resgroup_capability_rel, groupid, options);
-
-	sprintf(value, "%d", options->concurrency);
-	insertTupleIntoResCapability(resgroup_capability_rel, groupid, RESGROUP_LIMIT_TYPE_CONCURRENCY, value);
-
-	sprintf(value, "%.2f", options->cpuRateLimit);
-	insertTupleIntoResCapability(resgroup_capability_rel, groupid, RESGROUP_LIMIT_TYPE_CPU, value);
-
-	sprintf(value, "%.2f", options->memoryLimit);
-	insertTupleIntoResCapability(resgroup_capability_rel, groupid, RESGROUP_LIMIT_TYPE_MEMORY, value);
-
-	sprintf(value, "%.2f", options->redzoneLimit);
-	insertTupleIntoResCapability(resgroup_capability_rel, groupid, RESGROUP_LIMIT_TYPE_MEMORY_REDZONE, value);
-
-	heap_close(resgroup_capability_rel, NoLock);
-}
-
-static void
-deleteResgroupCapability(Oid groupid)
-{
-	Relation	 resgroup_capability_rel;
-	HeapTuple	 tuple;
-	ScanKeyData	 scankey;
+	HeapTuple	tuple;
+	ResourceOwner owner;
+	Oid			groupId;
+	Relation	rel;
+	ScanKeyData	key;
 	SysScanDesc	 sscan;
 
-	resgroup_capability_rel = heap_open(ResGroupCapabilityRelationId,
-										RowExclusiveLock);
+	/*
+	 * to cave the code of cache part, we provide a resource owner here if no
+	 * existing
+	 */
+	if (CurrentResourceOwner == NULL)
+	{
+		owner = ResourceOwnerCreate(NULL, "GetResGroupIdForRole");
+		CurrentResourceOwner = owner;
+	}
 
-	ScanKeyInit(&scankey,
-				Anum_pg_resgroupcapability_resgroupid,
+	rel = heap_open(AuthIdRelationId, AccessShareLock);
+
+	ScanKeyInit(&key,
+				ObjectIdAttributeNumber,
 				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(groupid));
+				ObjectIdGetDatum(roleid));
 
-	sscan = systable_beginscan(resgroup_capability_rel,
-							   ResGroupCapabilityResgroupidIndexId,
-							   true, SnapshotNow, 1, &scankey);
+	sscan = systable_beginscan(rel, AuthIdOidIndexId, true, SnapshotNow, 1, &key);
 
-	while ((tuple = systable_getnext(sscan)) != NULL)
-		simple_heap_delete(resgroup_capability_rel, &tuple->t_self);
+	tuple = systable_getnext(sscan);
+	if (!HeapTupleIsValid(tuple))
+	{
+		systable_endscan(sscan);
+		heap_close(rel, AccessShareLock);
+
+		/*
+		 * Role should have been dropped by other backends in this case, so this
+		 * session cannot execute any command anymore
+		 */
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				errmsg("Role with Oid %d was dropped", roleid),
+				errhint("Cannot execute commands anymore, please terminate this session.")));
+	}
+
+	/* must access tuple before systable_endscan */
+	groupId = heap_getattr(tuple, Anum_pg_authid_rolresgroup, rel->rd_att, NULL);
 
 	systable_endscan(sscan);
 
-	heap_close(resgroup_capability_rel, NoLock);
+	/*
+	 * release lock here to guarantee we have no lock held when acquiring
+	 * resource group slot
+	 */
+	heap_close(rel, AccessShareLock);
+
+	if (!OidIsValid(groupId))
+		groupId = InvalidOid;
+
+	if (owner)
+	{
+		CurrentResourceOwner = NULL;
+		ResourceOwnerDelete(owner);
+	}
+
+	return groupId;
 }
 
-/**
+/*
  * Get the option type from a name string.
  *
  * @param defname  the name string
@@ -402,7 +397,7 @@ getResgroupOptionType(const char* defname)
 		return RESGROUP_LIMIT_TYPE_UNKNOWN;
 }
 
-/**
+/*
  * Parse a statement and store the settings in options.
  *
  * @param stmt     the statement
@@ -484,7 +479,106 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResourceGroupOptions *options)
 		options->redzoneLimit = RESGROUP_DEFAULT_REDZONE_LIMIT;
 }
 
-/**
+/*
+ * Resource owner call back function
+ *
+ * Remove resource group entry in shared memory when abort transaction which
+ * creates resource groups
+ */
+static void
+createResGroupAbortCallback(ResourceReleasePhase phase,
+							bool isCommit, bool isTopLevel, void *arg)
+{
+	Oid groupId;
+
+	if (!isTopLevel ||
+		IsTransactionPreparing() ||
+		phase != RESOURCE_RELEASE_BEFORE_LOCKS)
+		return;
+
+	if (!isCommit)
+	{
+		groupId = *(Oid *)arg;
+
+		/*
+		 * FreeResGroupEntry would acquire LWLock, since this callback is called
+		 * after LWLockReleaseAll in AbortTransaction, it is safe here
+		 */
+		FreeResGroupEntry(groupId);
+	}
+
+	UnregisterResourceReleaseCallback(createResGroupAbortCallback, arg);
+}
+
+/*
+ * Resource owner call back function
+ *
+ * Restore resource group entry in shared memory when abort transaction which
+ * drops resource groups
+ */
+static void
+dropResGroupAbortCallback(ResourceReleasePhase phase,
+						  bool isCommit, bool isTopLevel, void *arg)
+{
+	Oid groupId;
+
+	if (!isTopLevel ||
+		IsTransactionPreparing() ||
+		phase != RESOURCE_RELEASE_BEFORE_LOCKS)
+		return;
+
+	if (!isCommit)
+	{
+		groupId = *(Oid *)arg;
+
+		/*
+		 * AllocResGroupEntry would acquire LWLock, since this callback is called
+		 * after LWLockReleaseAll in AbortTransaction, it is safe here
+		 */
+		AllocResGroupEntry(groupId);
+	}
+
+	UnregisterResourceReleaseCallback(dropResGroupAbortCallback, arg);
+}
+
+/*
+ * Catalog access functions
+ */
+
+/*
+ * Insert all the capabilities to the capability table.
+ *
+ * We store the capabilities in multiple lines for one group,
+ * so we have to insert them one by one. This function will
+ * handle the type conversion etc..
+ *
+ * @param groupid  oid of the resource group
+ * @param options  the capabilities
+ */
+static void
+updateResgroupCapability(Oid groupid,
+						 ResourceGroupOptions *options)
+{
+	char value[64];
+	Relation resgroup_capability_rel = heap_open(ResGroupCapabilityRelationId, RowExclusiveLock);
+
+	validateCapabilities(resgroup_capability_rel, groupid, options);
+
+	sprintf(value, "%d", options->concurrency);
+	insertTupleIntoResCapability(resgroup_capability_rel, groupid, RESGROUP_LIMIT_TYPE_CONCURRENCY, value);
+
+	sprintf(value, "%.2f", options->cpuRateLimit);
+	insertTupleIntoResCapability(resgroup_capability_rel, groupid, RESGROUP_LIMIT_TYPE_CPU, value);
+
+	sprintf(value, "%.2f", options->memoryLimit);
+	insertTupleIntoResCapability(resgroup_capability_rel, groupid, RESGROUP_LIMIT_TYPE_MEMORY, value);
+
+	sprintf(value, "%.2f", options->redzoneLimit);
+	insertTupleIntoResCapability(resgroup_capability_rel, groupid, RESGROUP_LIMIT_TYPE_MEMORY_REDZONE, value);
+
+	heap_close(resgroup_capability_rel, NoLock);
+}
+/*
  * Validate the capabilities.
  *
  * The policy is resouces can't be over used, take memory for example,
@@ -520,7 +614,7 @@ validateCapabilities(Relation rel,
 
 		if (resgCapability->reslimittype == RESGROUP_LIMIT_TYPE_CPU)
 		{
-			totalCpu += floatFromText(&resgCapability->value, "cpu_rate_limit");
+			totalCpu += text2Float(&resgCapability->value, "cpu_rate_limit");
 			if (totalCpu > 1.0)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
@@ -528,7 +622,7 @@ validateCapabilities(Relation rel,
 		}
 		else if (resgCapability->reslimittype == RESGROUP_LIMIT_TYPE_MEMORY)
 		{
-			totalMem += floatFromText(&resgCapability->value, "memory_limit");
+			totalMem += text2Float(&resgCapability->value, "memory_limit");
 			if (totalMem > 1.0)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
@@ -537,4 +631,214 @@ validateCapabilities(Relation rel,
 	}
 
 	systable_endscan(sscan);
+}
+
+/*
+ * Insert one capability to the capability table.
+ *
+ * 'value' and 'proposed' are both used to describe a resource,
+ * in this routine we assume 'proposed' has the same value as 'value'.
+ *
+ * @param rel      the relation
+ * @param groupid  oid of the resource group
+ * @param type     the resource limit type
+ * @param value    the limit value
+ */
+static void
+insertTupleIntoResCapability(Relation rel,
+							 Oid groupid,
+							 uint16 type,
+							 char *value)
+{
+	Datum new_record[Natts_pg_resgroupcapability];
+	bool new_record_nulls[Natts_pg_resgroupcapability];
+	HeapTuple tuple;
+	TupleDesc tupleDesc = RelationGetDescr(rel);
+
+	MemSet(new_record, 0, sizeof(new_record));
+	MemSet(new_record_nulls, false, sizeof(new_record_nulls));
+
+	new_record[Anum_pg_resgroupcapability_resgroupid - 1] = ObjectIdGetDatum(groupid);
+	new_record[Anum_pg_resgroupcapability_reslimittype - 1] = UInt16GetDatum(type);
+	new_record[Anum_pg_resgroupcapability_value - 1] = CStringGetTextDatum(value);
+	new_record[Anum_pg_resgroupcapability_proposed - 1] = CStringGetTextDatum(value);
+
+	tuple = heap_form_tuple(tupleDesc, new_record, new_record_nulls);
+	simple_heap_insert(rel, tuple);
+	CatalogUpdateIndexes(rel, tuple);
+}
+
+/*
+ * Retrive capability value from pg_resgroupcapability
+ */
+static text
+getCapabilityForGroup(int groupId, int type)
+{
+	SysScanDesc	sscan;
+	ScanKeyData	key[2];
+	HeapTuple	tuple;
+	Relation	relResGroupCapability;
+	Form_pg_resgroupcapability	capability;
+	ResourceOwner owner = NULL;
+
+	if (CurrentResourceOwner == NULL)
+	{
+		owner = ResourceOwnerCreate(NULL, "getCapabilityForGroup");
+		CurrentResourceOwner = owner;
+	}
+
+	relResGroupCapability = heap_open(ResGroupCapabilityRelationId, AccessShareLock);
+
+	ScanKeyInit(&key[0],
+				Anum_pg_resgroupcapability_resgroupid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(groupId));
+	ScanKeyInit(&key[1],
+				Anum_pg_resgroupcapability_reslimittype,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(type));
+
+	sscan = systable_beginscan(relResGroupCapability,
+							   ResGroupCapabilityResgroupidResLimittypeIndexId,
+							   true,
+							   SnapshotNow, 2, key);
+
+	tuple = systable_getnext(sscan);
+	if (!HeapTupleIsValid(tuple))
+	{
+		systable_endscan(sscan);
+		heap_close(relResGroupCapability, AccessShareLock);
+
+		if (owner)
+		{
+			CurrentResourceOwner = NULL;
+			ResourceOwnerDelete(owner);
+		}
+
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("Cannot find capability for group: %d and type: %d", groupId, type)));
+	}
+
+	capability = (Form_pg_resgroupcapability) GETSTRUCT(tuple);
+	systable_endscan(sscan);
+
+	/*
+	 * release lock here to guarantee we have no lock held when acquiring
+	 * resource group slot
+	 */
+	heap_close(relResGroupCapability, AccessShareLock);
+
+	if (owner)
+	{
+		CurrentResourceOwner = NULL;
+		ResourceOwnerDelete(owner);
+	}
+
+	return capability->value;
+}
+
+/* 
+ * Delete capability entries of one resource group.
+ */
+static void
+deleteResgroupCapability(Oid groupid)
+{
+	Relation	 resgroup_capability_rel;
+	HeapTuple	 tuple;
+	ScanKeyData	 scankey;
+	SysScanDesc	 sscan;
+
+	resgroup_capability_rel = heap_open(ResGroupCapabilityRelationId,
+										RowExclusiveLock);
+
+	ScanKeyInit(&scankey,
+				Anum_pg_resgroupcapability_resgroupid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(groupid));
+
+	sscan = systable_beginscan(resgroup_capability_rel,
+							   ResGroupCapabilityResgroupidIndexId,
+							   true, SnapshotNow, 1, &scankey);
+
+	while ((tuple = systable_getnext(sscan)) != NULL)
+		simple_heap_delete(resgroup_capability_rel, &tuple->t_self);
+
+	systable_endscan(sscan);
+
+	heap_close(resgroup_capability_rel, NoLock);
+}
+
+/*
+ * GetResGroupIdForName -- Return the Oid for a resource group name
+ *
+ * Notes:
+ *	Used by the various admin commands to convert a user supplied group name
+ *	to Oid.
+ */
+Oid
+GetResGroupIdForName(char *name, LOCKMODE lockmode)
+{
+	Relation	rel;
+	ScanKeyData scankey;
+	SysScanDesc scan;
+	HeapTuple	tuple;
+	Oid			rsgid;
+
+	rel = heap_open(ResGroupRelationId, lockmode);
+
+	/* SELECT oid FROM pg_resgroup WHERE rsgname = :1 */
+	ScanKeyInit(&scankey,
+				Anum_pg_resgroup_rsgname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				CStringGetDatum(name));
+	scan = systable_beginscan(rel, ResGroupRsgnameIndexId, true,
+							  SnapshotNow, 1, &scankey);
+
+	tuple = systable_getnext(scan);
+	if (HeapTupleIsValid(tuple))
+		rsgid = HeapTupleGetOid(tuple);
+	else
+		rsgid = InvalidOid;
+
+	systable_endscan(scan);
+	heap_close(rel, lockmode);
+
+	return rsgid;
+}
+
+/*
+ * Convert a text to a float value.
+ *
+ * @param text  the text
+ * @param prop  the property name
+ */
+static float
+text2Float(const text *text, const char *prop)
+{
+	char *str = DatumGetCString(DirectFunctionCall1(textout,
+								 PointerGetDatum(text)));
+	char *end = NULL;
+	double val = strtod(str, &end);
+
+	/* both the property name and value are already checked
+	 * by the syntax parser, but we'll check it again anyway for safe. */
+	if (end == NULL || end == str || *end != 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				errmsg("%s requires a numeric value", prop)));
+
+	return (float) val;
+}
+
+/*
+ * Convert a 'text' value to integer
+ */
+static int
+text2int(const text *value)
+{
+	char *valueStr = DatumGetCString(DirectFunctionCall1(
+									textout,
+									PointerGetDatum(value)));
+	return pg_atoi(valueStr, sizeof(int32), 0);
 }

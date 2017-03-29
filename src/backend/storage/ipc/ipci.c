@@ -55,6 +55,7 @@
 #include "storage/sinvaladt.h"
 #include "storage/spin.h"
 #include "utils/resscheduler.h"
+#include "utils/resgroup.h"
 #include "utils/faultinjector.h"
 #include "utils/sharedsnapshot.h"
 #include "utils/simex.h"
@@ -144,6 +145,9 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 			size = add_size(size, ResSchedulerShmemSize());
 			size = add_size(size, ResPortalIncrementShmemSize());
 		}
+		else if (IsResGroupEnabled())
+			size = add_size(size, ResGroupShmemSize());
+
 		size = add_size(size, ProcGlobalShmemSize());
 		size = add_size(size, XLOGShmemSize());
 		size = add_size(size, DistributedLog_ShmemSize());
@@ -326,7 +330,8 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 		InitResScheduler();
 		InitResPortalIncrementHash();
 	}
-
+	else if (IsResGroupEnabled() && !IsUnderPostmaster)
+		ResGroupControlInit();
 
 	if (!IsUnderPostmaster)
 	{

@@ -241,6 +241,7 @@ extern bool Debug_filerep_print;
 extern bool Debug_filerep_gcov;
 extern bool Debug_filerep_config_print;
 extern bool Debug_filerep_memory_log_flush;
+extern bool Debug_resource_group;
 extern bool filerep_mirrorvalidation_during_resync;
 extern bool log_filerep_to_syslogger;
 extern bool gp_crash_recovery_suppress_ao_eof;

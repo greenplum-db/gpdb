@@ -165,6 +165,7 @@ int			Debug_appendonly_bad_header_print_level = ERROR;
 bool		Debug_appendonly_print_datumstream = false;
 bool		Debug_appendonly_print_visimap = false;
 bool		Debug_appendonly_print_compaction = false;
+bool		Debug_resource_group = false;
 bool		gp_crash_recovery_abort_suppress_fatal = false;
 bool		gp_persistent_statechange_suppress_error = false;
 bool		Debug_bitmap_print_insert = false;
@@ -1305,7 +1306,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"resource_scheduler", PGC_POSTMASTER, RESOURCES_MGM,
 			gettext_noop("Enable resource scheduling."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&ResourceScheduler,
 		true, NULL, NULL
@@ -2135,6 +2136,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&Debug_filerep_memory_log_flush,
+		false, NULL, NULL
+	},
+
+	{
+		{"debug_resource_group", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Prints resource groups debug logs."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&Debug_resource_group,
 		false, NULL, NULL
 	},
 

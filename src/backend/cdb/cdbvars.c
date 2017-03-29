@@ -66,6 +66,8 @@ bool		Debug_print_prelim_plan;	/* Shall we log argument of
 
 bool		Debug_print_slice_table;	/* Shall we log the slice table? */
 
+bool		Debug_resource_group;	/* Shall we log the resource group? */
+
 bool		gp_backup_directIO = false; /* disable\enable direct I/O dump */
 
 int			gp_backup_directIO_read_chunk_mb = 20;		/* size of readChunk

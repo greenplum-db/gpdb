@@ -205,7 +205,7 @@ ResourceOwnerReleaseInternal(ResourceOwner owner,
 {
 	ResourceOwner child;
 	ResourceOwner save;
-	ResourceReleaseCallbackItem *item;
+	ResourceReleaseCallbackItem *item, *next;
 
 	/* Recurse to handle descendants */
 	for (child = owner->firstchild; child != NULL; child = child->nextchild)
@@ -339,8 +339,11 @@ ResourceOwnerReleaseInternal(ResourceOwner owner,
 	}
 
 	/* Let add-on modules get a chance too */
-	for (item = ResourceRelease_callbacks; item; item = item->next)
+	for (item = ResourceRelease_callbacks; item; item = next)
+	{
+		next = item->next;
 		(*item->callback) (phase, isCommit, isTopLevel, item->arg);
+	}
 
 	CurrentResourceOwner = save;
 }

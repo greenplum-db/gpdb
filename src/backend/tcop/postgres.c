@@ -4624,6 +4624,8 @@ PostgresMain(int argc, char *argv[],
 	 */
 	if (IsResQueueEnabled() && Gp_role == GP_ROLE_DISPATCH && !am_walsender)
 		InitResQueues();
+	else if (IsResGroupEnabled() && (Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE) && !am_walsender)
+		InitResGroups();
 
 	/*
 	 * Now all GUC states are fully set up.  Report them to client if

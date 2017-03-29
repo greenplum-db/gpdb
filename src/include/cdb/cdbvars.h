@@ -232,6 +232,8 @@ extern bool Debug_print_prelim_plan;
  */
 extern bool Debug_print_slice_table;
 
+extern bool Debug_resource_group;
+
 /*
  * gp_backup_directIO
  *

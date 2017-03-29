@@ -18,4 +18,9 @@
 extern void CreateResourceGroup(CreateResourceGroupStmt *stmt);
 extern void DropResourceGroup(DropResourceGroupStmt *stmt);
 
+/* catalog access function */
+extern Oid GetResGroupIdForName(char *name, LOCKMODE lockmode);
+extern int GetConcurrencyForGroup(int groupId);
+extern Oid GetResGroupIdForRole(Oid roleid);
+
 #endif   /* RESGROUP_H */
