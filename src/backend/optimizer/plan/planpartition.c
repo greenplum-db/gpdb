@@ -22,7 +22,7 @@
 
 static Expr *FindEqKey(PlannerInfo *root, Bitmapset *inner_relids, DynamicScanInfo *dyninfo, int partKeyAttno);
 
-static PartitionSelector *create_partition_selector(PlannerInfo *root, DynamicScanInfo *dsinfo, Plan *subplan, List *multiExprs, Expr *printablePredicate);
+static PartitionSelector *create_partition_selector(PlannerInfo *root, DynamicScanInfo *dsinfo, Plan *subplan, List *partTabTargetlist, Expr *printablePredicate);
 
 static void add_restrictinfos(PlannerInfo *root, DynamicScanInfo *dsinfo, Bitmapset *childrelids);
 
@@ -83,7 +83,8 @@ static bool IsPartKeyVar(Expr *expr, int partVarno, int partKeyAttno);
  * If any partition selectors were created, returns 'true'.
  */
 bool
-inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path, Plan **inner_plan_p)
+inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path,
+									Plan **inner_plan_p)
 {
 	ListCell   *lc;
 	Path	   *outerpath = join_path->outerjoinpath;
@@ -128,13 +129,7 @@ inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path, Plan
 	else if ((join_path->path.pathtype == T_NestLoop && !path_contains_inner_index(innerpath)) ||
 			 join_path->path.pathtype == T_MergeJoin)
 	{
-		if (IsA(*inner_plan_p, Material))
-		{
-			good_type = true;
-			inner_parent = *inner_plan_p;
-			inner_child = inner_parent->lefttree;
-		}
-		else if (IsA(*inner_plan_p, Sort))
+		if (IsA(*inner_plan_p, Material) || IsA(*inner_plan_p, Sort))
 		{
 			good_type = true;
 			inner_parent = *inner_plan_p;
@@ -170,10 +165,11 @@ inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path, Plan
 		Bitmapset  *childrelids;
 
 		/*
-		 * Does the outer side contain this dynamic scan? And it must be in the same
-		 * slice as the join!
+		 * Does the outer side contain this dynamic scan? And it must be in
+		 * the same slice as the join!
 		 */
-		childrelids = bms_intersect(dyninfo->children, outerpath->sameslice_relids);
+		childrelids = bms_intersect(dyninfo->children,
+									outerpath->sameslice_relids);
 		if (bms_is_empty(childrelids))
 			continue;
 
@@ -208,22 +204,31 @@ inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path, Plan
 			 * Build a partition selector and put it on the inner side.
 			 * Add RestrictInfos on the partition scans.
 			 */
-			List	   *partKeyExprList = NIL;
+			List	   *partTabTargetlist = NIL;
 			int			attno;
 			PartitionSelector *partSelector;
 
 			for (attno = 1; attno <= max_attr; attno++)
 			{
-				if (!partKeyExprs[attno])
-					partKeyExprs[attno] = (Expr *) makeBoolConst(false, true);
+				Expr	   *expr = partKeyExprs[attno];
+				char		attname[20];
 
-				partKeyExprList = lappend(partKeyExprList, partKeyExprs[attno]);
+				if (!expr)
+					expr = (Expr *) makeBoolConst(false, true);
+
+				snprintf(attname, sizeof(attname), "partcol_%d", attno);
+
+				partTabTargetlist = lappend(partTabTargetlist,
+											makeTargetEntry(expr,
+															attno,
+															pstrdup(attname),
+															false));
 			}
 
 			partSelector = create_partition_selector(root,
 													 dyninfo,
 													 inner_child,
-													 partKeyExprList,
+													 partTabTargetlist,
 													 (Expr *) printablePredicate);
 			inner_child = (Plan *) partSelector;
 			if (!dyninfo->hasSelector)
@@ -249,7 +254,8 @@ inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path, Plan
 }
 
 static Expr *
-FindEqKey(PlannerInfo *root, Bitmapset *inner_relids, DynamicScanInfo *dyninfo, int partKeyAttno)
+FindEqKey(PlannerInfo *root, Bitmapset *inner_relids,
+		  DynamicScanInfo *dyninfo, int partKeyAttno)
 {
 	ListCell   *lem;
 	ListCell   *lem2;
@@ -312,8 +318,9 @@ FindEqKey(PlannerInfo *root, Bitmapset *inner_relids, DynamicScanInfo *dyninfo, 
 }
 
 static PartitionSelector *
-create_partition_selector(PlannerInfo *root, DynamicScanInfo *dsinfo, Plan *subplan,
-						  List *multiExprs, Expr *printablePredicate)
+create_partition_selector(PlannerInfo *root, DynamicScanInfo *dsinfo,
+						  Plan *subplan, List *partTabTargetlist,
+						  Expr *printablePredicate)
 {
 	PartitionSelector *ps;
 
@@ -327,16 +334,16 @@ create_partition_selector(PlannerInfo *root, DynamicScanInfo *dsinfo, Plan *subp
 	ps->nLevels = 1;
 	ps->scanId = dsinfo->dynamicScanId;
 	ps->selectorId = -1;
-	ps->multiExpressions = multiExprs;
+	ps->partTabTargetlist = partTabTargetlist;
 	ps->levelExpressions = NIL;
 	ps->residualPredicate = NULL;
-	ps->propagationExpression = NULL;
 	ps->printablePredicate = (Node *) printablePredicate;
 	ps->staticSelection = false;
 	ps->staticPartOids = NIL;
 	ps->staticScanIds = NIL;
 
-	ps->propagationExpression = (Node *) makeConst(INT4OID, -1, 4, Int32GetDatum(ps->scanId), false, true);
+	ps->propagationExpression = (Node *)
+		makeConst(INT4OID, -1, 4, Int32GetDatum(ps->scanId), false, true);
 
 	return ps;
 }
@@ -402,17 +409,15 @@ make_mergeclause(Node *outer, Node *inner)
 	return rinfo;
 }
 
-/**
- * Does the given expression correspond to a var on partitioned relation. This method
- * ignores relabeling wrappers
+/*
+ * Does the given expression correspond to a var on partitioned relation.
+ * This function ignores relabeling wrappers
  */
 static bool
 IsPartKeyVar(Expr *expr, int partVarno, int partKeyAttno)
 {
-	if (IsA(expr, RelabelType))
-	{
+	while (IsA(expr, RelabelType))
 		expr = ((RelabelType *) expr)->arg;
-	}
 
 	if (IsA(expr, Var))
 	{

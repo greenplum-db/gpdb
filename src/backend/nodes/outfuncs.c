@@ -1104,7 +1104,7 @@ _outPartitionSelector(StringInfo str, PartitionSelector *node)
 	WRITE_BOOL_FIELD(staticSelection);
 	WRITE_NODE_FIELD(staticPartOids);
 	WRITE_NODE_FIELD(staticScanIds);
-	WRITE_NODE_FIELD(multiExpressions);
+	WRITE_NODE_FIELD(partTabTargetlist);
 
 	_outPlanInfo(str, (Plan *) node);
 }

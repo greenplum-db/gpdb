@@ -81,32 +81,19 @@ ExecInitPartitionSelector(PartitionSelector *node, EState *estate, int eflags)
 	 * Initialize projection, to produce a tuple that has the partitioning key
 	 * columns at the same positions as in the partitioned table.
 	 */
-	if (node->multiExpressions)
+	if (node->partTabTargetlist)
 	{
-		List	   *tlist = NIL;
-		ListCell   *lc;
-		int			resno;
+		List	   *exprStates;
 
-		resno = 1;
-		foreach(lc, node->multiExpressions)
-		{
-			Expr	   *e = (Expr *) lfirst(lc);
-			char		resname[15];
+		exprStates = (List *) ExecInitExpr((Expr *) node->partTabTargetlist,
+										   (PlanState *) psstate);
 
-			snprintf(resname, sizeof(resname), "f%d", resno);
-
-			tlist = lappend(tlist, makeTargetEntry(e, resno++, pstrdup(resname), false));
-		}
-		psstate->multiExprStates = (List *)
-			ExecInitExpr((Expr *) tlist,
-						 (PlanState *) psstate);
-
-		psstate->multiTupDesc = ExecTypeFromExprList(node->multiExpressions);
-		psstate->multiSlot = MakeSingleTupleTableSlot(psstate->multiTupDesc);
-		psstate->multiProjInfo = ExecBuildProjectionInfo(psstate->multiExprStates,
-														 psstate->ps.ps_ExprContext,
-														 psstate->multiSlot,
-														 ExecGetResultType(&psstate->ps));
+		psstate->partTabDesc = ExecTypeFromTL(node->partTabTargetlist, false);
+		psstate->partTabSlot = MakeSingleTupleTableSlot(psstate->partTabDesc);
+		psstate->partTabProj = ExecBuildProjectionInfo(exprStates,
+													   psstate->ps.ps_ExprContext,
+													   psstate->partTabSlot,
+													   ExecGetResultType(&psstate->ps));
 	}
 
 	initGpmonPktForPartitionSelector((Plan *)node, &psstate->ps.gpmon_pkt, estate);
@@ -215,13 +202,13 @@ ExecPartitionSelector(PartitionSelectorState *node)
 	 * selectPartitionMulti() to select the partitions. (The traditional
 	 * Postgres planner uses this method.)
 	 */
-	if (ps->multiExpressions)
+	if (ps->partTabTargetlist)
 	{
 		TupleTableSlot *slot;
 		List	   *oids;
 		ListCell   *lc;
 
-		slot = ExecProject(node->multiProjInfo, NULL);
+		slot = ExecProject(node->partTabProj, NULL);
 		slot_getallattrs(slot);
 
 		oids = selectPartitionMulti(node->rootPartitionNode,

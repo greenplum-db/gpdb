@@ -761,8 +761,8 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 					fix_upper_expr(glob, ps->propagationExpression, childplan_itlist, rtoffset);
 				ps->printablePredicate =
 					fix_upper_expr(glob, ps->printablePredicate, childplan_itlist, rtoffset);
-				ps->multiExpressions = (List *)
-					fix_upper_expr(glob, (Node *) ps->multiExpressions, childplan_itlist, rtoffset);
+				ps->partTabTargetlist = (List *)
+					fix_upper_expr(glob, (Node *) ps->partTabTargetlist, childplan_itlist, rtoffset);
 			}
 			break;
 			

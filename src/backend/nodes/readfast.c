@@ -2290,7 +2290,7 @@ _readPartitionSelector(void)
 	READ_BOOL_FIELD(staticSelection);
 	READ_NODE_FIELD(staticPartOids);
 	READ_NODE_FIELD(staticScanIds);
-	READ_NODE_FIELD(multiExpressions);
+	READ_NODE_FIELD(partTabTargetlist);
 
 	readPlanInfo((Plan *)local_node);
 

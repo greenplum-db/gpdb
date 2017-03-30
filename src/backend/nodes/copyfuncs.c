@@ -1225,7 +1225,7 @@ _copyPartitionSelector(const PartitionSelector *from)
 	COPY_SCALAR_FIELD(staticSelection);
 	COPY_NODE_FIELD(staticPartOids);
 	COPY_NODE_FIELD(staticScanIds);
-	COPY_NODE_FIELD(multiExpressions);
+	COPY_NODE_FIELD(partTabTargetlist);
 
 	return newnode;
 }

@@ -1614,7 +1614,7 @@ finalize_plan(PlannerInfo *root, Plan *plan, Bitmapset *valid_params)
 							  &context);
 			finalize_primnode(((PartitionSelector *) plan)->printablePredicate,
 							  &context);
-			finalize_primnode((Node *) ((PartitionSelector *) plan)->multiExpressions,
+			finalize_primnode((Node *) ((PartitionSelector *) plan)->partTabTargetlist,
 							  &context);
 			break;
 			

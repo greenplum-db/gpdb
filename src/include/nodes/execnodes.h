@@ -2645,10 +2645,9 @@ typedef struct PartitionSelectorState
 	ExprState *residualPredicateExprState;              /* ExprState for evaluating residual predicate */
 	ExprState *propagationExprState;                    /* ExprState for evaluating propagation expression */
 
-	List *multiExprStates;
-	TupleDesc multiTupDesc;
-	TupleTableSlot *multiSlot;
-	ProjectionInfo *multiProjInfo;
+	TupleDesc	partTabDesc;
+	TupleTableSlot *partTabSlot;
+	ProjectionInfo *partTabProj;
 } PartitionSelectorState;
 
 extern void initGpmonPktForResult(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);

@@ -1206,12 +1206,11 @@ typedef struct PartitionSelector
 	Node		*printablePredicate;	/* printable predicate (for explain purposes) */
 
 	/*
-	 * Fields for dynamic selection, by projecting input tuples to partitioning keys
-	 *
-	 * (The name 'multiExpression' comes from the fact that the projected tuples are
-	 * evaluated by the selectPartitionMulti() function.)
+	 * Fields for dynamic selection, by projecting input tuples to a tuple
+	 * that has the partitioning key values in the same positions as in the
+	 * partitioned table.
 	 */
-	List	    *multiExpressions;
+	List	    *partTabTargetlist;
 
 	/* Fields for static selection */
 	bool		staticSelection;    	/* static selection performed? */
