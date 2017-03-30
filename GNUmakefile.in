@@ -134,6 +134,7 @@ installcheck-world:
 	$(MAKE) -C src/bin/gpfdist installcheck
 	$(MAKE) -C src/interfaces/gppc installcheck
 	$(MAKE) -C src/test/kerberos installcheck
+	$(MAKE) -C gpMgmt/bin installcheck
 	gpcheckcat -A
 
 

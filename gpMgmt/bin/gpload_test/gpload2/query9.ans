@@ -1,0 +1,27 @@
+2017-04-10 07:02:23|INFO|gpload session started 2017-04-10 07:02:23
+2017-04-10 07:02:23|INFO|setting schema 'public' for table 'texttable'
+2017-04-10 07:02:23|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/gpload/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2017-04-10 07:02:23|INFO|running time: 0.07 seconds
+2017-04-10 07:02:23|INFO|rows Inserted          = 0
+2017-04-10 07:02:23|INFO|rows Updated           = 32
+2017-04-10 07:02:23|INFO|data formatting errors = 0
+2017-04-10 07:02:23|INFO|gpload succeeded
+2017-04-10 07:02:23|INFO|gpload session started 2017-04-10 07:02:23
+2017-04-10 07:02:23|INFO|setting schema 'public' for table 'texttable'
+2017-04-10 07:02:23|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/gpload/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2017-04-10 07:02:23|INFO|running time: 0.07 seconds
+2017-04-10 07:02:23|INFO|rows Inserted          = 0
+2017-04-10 07:02:23|INFO|rows Updated           = 32
+2017-04-10 07:02:23|INFO|data formatting errors = 0
+2017-04-10 07:02:23|INFO|gpload succeeded
+ count 
+-------
+    32
+(1 row)
+
+ s1  |  s2  |   s3   |         dt          | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+-----+------+--------+---------------------+----+-----+--------+-------+---------+---------+------------
+ bbb | twob | shpits | 2011-06-01 12:30:30 |  2 | 222 | 834567 | 45.67 | 789.123 | 7.12345 | 987.654321
+ bbb | twob | shpits | 2011-06-01 12:30:30 |  2 | 222 | 834567 | 45.67 | 789.123 | 7.12345 | 987.654321
+(2 rows)
+

@@ -1,0 +1,16 @@
+2017-04-10 07:02:23|INFO|gpload session started 2017-04-10 07:02:23
+2017-04-10 07:02:23|INFO|setting schema 'public' for table 'texttable'
+2017-04-10 07:02:23|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/gpload/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2017-04-10 07:02:24|INFO|running time: 0.08 seconds
+2017-04-10 07:02:24|INFO|rows Inserted          = 1
+2017-04-10 07:02:24|INFO|rows Updated           = 33
+2017-04-10 07:02:24|INFO|data formatting errors = 0
+2017-04-10 07:02:24|INFO|gpload succeeded
+2017-04-10 07:02:24|INFO|gpload session started 2017-04-10 07:02:24
+2017-04-10 07:02:24|INFO|setting schema 'public' for table 'texttable'
+2017-04-10 07:02:24|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/gpload/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2017-04-10 07:02:24|INFO|running time: 0.08 seconds
+2017-04-10 07:02:24|INFO|rows Inserted          = 0
+2017-04-10 07:02:24|INFO|rows Updated           = 34
+2017-04-10 07:02:24|INFO|data formatting errors = 0
+2017-04-10 07:02:24|INFO|gpload succeeded

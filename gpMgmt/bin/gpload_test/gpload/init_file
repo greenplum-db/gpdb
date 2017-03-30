@@ -1,0 +1,114 @@
+-- start_matchsubs
+# IP: (172.28.8.5/32)
+m/\(*[\d+\.\d+\.\d+\.\d+\.\/\d+]*\)/
+s/\(*[\d+\.\d+\.\d+\.\d+\.\/\d+]*\)//g
+-- m/|/
+-- s/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})\.(\d+)-(\d+)/TODAYS_DATE/
+-- m/|/
+-- s/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/TODAYS_DATE1/
+-- m/|/
+-- s/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/TODAYS_DATE2/
+-- m/running time:/
+-- s/(\d+)\.(\d+)/RUNNING_TIME/
+-- m/, line/
+-- s/ (\d+)/ LINE_NUMBER/
+-- m/ext_gpload/
+-- s/ext_gpload(\d+)_(\d+)_(\d+)/EXTERNAL_TABLE/
+-- m/temp_gpload/
+-- s/temp_gpload(\d+)_(\d+)_(\d+)/TEMP_TABLE/
+-- m/|/
+-- s/\/Users\/awinn/PATH/
+-- m/|/
+-- s/C:/\/PATH/
+-- m/|/
+-- s/, directory.+/ directory DIRECTORY/
+-- m/|/
+-- s/ does not exist on host .+/ does not exist on host HOST/
+-- m/|/
+-- s/gpfdist:\/\/.+?:/gpfdist:\/\/HOST:/
+-- m/|/
+-- s/','gpfdist:\/\/.+?:/','gpfdist:\/\/HOST:/
+-- m/|/
+-- s/(\d+) URLs/COUNT_URLS/
+-- m/|/
+-- s/(\d+) primary segments/COUNT_SEGMENTS/
+-- m/could not connect to server/
+-- s/\(0x.+//
+-- m/transferred/
+-- s/ (\d+)\.?(\d+)?/ SIZE/
+-- m/transferred SIZE /
+-- m/ /
+-- s/could not connect to database.+/COULDNT_CONNECT/
+-- m/could not translate host name \"blah\" to address/
+-- s/to address.+/ERROR_MESSAGE/
+-- m/gpload version/
+-- s/gpload version.+/gpload version VERSION_NUMBER/
+-- s/ (\d+)\.?(\d+)?/ TOTAL_SIZE/
+-- m/Is the server running on host/
+-- s/\".+\"/HOST/
+-- m/could not run gpfdist.+:/
+-- s/could not run gpfdist.+:.+/could not run gpfdist: ERROR/
+-- m/ /
+-- s/\s+\(.*\.[ch]:\d+\)/ (SOMEFILE:SOMEFUNC)/
+-- m/ /
+-- s/ at byte \d+:/ at byte BYTE:/
+-- m/ /
+-- s/select/ SELECT/
+-- m/ /
+-- s/from/ FROM/g
+-- m/ /
+-- s/insert into/INSERT INTO/
+-- m/ /
+-- s/update/UPDATE/
+-- m/ /
+-- s/error code = \d+/ERROR_CODE/
+-- m/started gpfdist/
+-- s/(started gpfdist.*)/GP_IGNORE: $1/
+-- m/trying to run gpfdist/
+-- s/(trying to run gpfdist.*)/GP_IGNORE: $1/
+-- m/ /
+-- s/failed to start gpfdist.*/FAILED_GPFDIST/
+-- m/Is the Greenplum Database running on port /
+-- s/Is the Greenplum Database running on port.+/Is the Greenplum Database running on port PORT_NUMBER?/
+-- m/ /
+-- s/\w+\.c:\d+\]/FILE:LINE]/
+-- m/temp_staging_gpload/
+-- s/temp_staging_gpload\d*_\d*_\d*/temp_staging_gpload/
+
+# Hai: change "temp_staging_gpload_56400" to "temp_staging_gpload"
+-- m/temp_staging_gpload/
+-- s/temp_staging_gpload_\d+/temp_staging_gpload/
+
+# Ngoc: change "Serving HTTP on port 8000" into "Serving HTTP on port PORT"
+m/Serving HTTP on port \d+/
+s/Serving HTTP on port \d+/Serving HTTP on port PORT/
+
+# Ngoc: change "gpfdist is running on port 8000" into "gpfdist is running on port PORT"
+m/gpfdist is running on port \d+/
+s/gpfdist is running on port \d+/gpfdist is running on port PORT/
+
+# Ngoc: change "gpfdist://HOST:8000" into "gpfdist://HOST:PORT"
+m/gpfdist:\/\/HOST:\d+/
+s/gpfdist:\/\/HOST:\d+/gpfdist:\/\/HOST:PORT/
+
+# Hai: change "gpfdist://HOST:PORT//data/home/gpadmin/pulse2-agent/agents/agent1/work/GPDB-main-opt-4xrhel57/rhel57_x86_64-1/cdbunit/cdbfast/gpload2/data/lineitem.tbl.small" into "gpfdist://HOST:PORT/PATH_TO_FILE"
+m/gpfdist:\/\/HOST:PORT\//
+s/gpfdist:\/\/HOST:PORT\/.+/gpfdist:\/\/HOST:PORT\/PATH_TO_FILE/
+
+# Hai: change "started gpfdist -p 8000 -P 9000 -f "/data/home/gpadmin/pulse2-agent/agents/agent1/work/GPDB-main-opt-4xrhel57/rhel57_x86_64-1/cdbunit/cdbfast/gpload2/data/lineitem.tbl.small" -t 30" to "started gpfdist -p 8000 -P 9000 -f CONFIG_FILE"
+m/\-f /
+s/\-f .+/-f CONFIG_FILE/
+
+# Hai: ignore "gpfdist says: ..."
+m/gpfdist says:/
+s/(gpfdist says:.*)/GP_IGNORE: $1/
+
+# Hai: to ignore the line like "2011-08-11 12:17:57|INFO|setting schema 'public' for table 'lineitem'"
+# which is added as fix of MPP-12916
+-- m/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})|INFO|setting schema/
+-- s/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})|INFO|setting schema*/GP_IGNORE: /
+
+-- m/public.\"lineitem\"/
+-- s/public.\"lineitem\"/lineitem/g
+
+-- end_matchsubs
