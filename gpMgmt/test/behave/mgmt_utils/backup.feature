@@ -3741,7 +3741,7 @@ Feature: Validate command line arguments
             """
             select relstorage,
             reloptions,compresstype,columnstore,compresslevel,checksum from
-            pg_class c , pg_appendonly a where c.relfilenode=a.relid and
+            pg_class c , pg_appendonly a where c.oid=a.relid and
             c.relname='default_guc'
             """
         Then validate that following rows are in the stored rows
@@ -3753,7 +3753,7 @@ Feature: Validate command line arguments
             """
             select relstorage,
             reloptions,compresstype,columnstore,compresslevel,checksum from
-            pg_class c , pg_appendonly a where c.relfilenode=a.relid and
+            pg_class c , pg_appendonly a where c.oid=a.relid and
             c.relname='role_guc_table'
             """
         Then validate that following rows are in the stored rows
@@ -3765,7 +3765,7 @@ Feature: Validate command line arguments
             """
             select relstorage,
             reloptions,compresstype,columnstore,compresslevel,checksum from
-            pg_class c , pg_appendonly a where c.relfilenode=a.relid and
+            pg_class c , pg_appendonly a where c.oid=a.relid and
             c.relname='session_guc_table'
             """
         Then validate that following rows are in the stored rows
