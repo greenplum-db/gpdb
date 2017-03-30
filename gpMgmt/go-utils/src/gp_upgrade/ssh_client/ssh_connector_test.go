@@ -56,6 +56,9 @@ var _ = Describe("SshConnector", func() {
 				Expect(param_network).To(Equal("tcp"))
 				Expect(param_addr).To(Equal("localhost:22"))
 				Expect(param_config.User).To(Equal("gpadmin"))
+				// docker container has ssh client library that requires a callback
+				Expect(param_config.HostKeyCallback).ToNot(Equal(nil))
+				Expect(len(param_config.Auth)).To(Equal(1))
 			})
 		})
 
