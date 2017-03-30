@@ -103,19 +103,20 @@ class S3PartialResponseError : public S3Exception {
 // User press control + C or transaction is aborted.
 class S3QueryAbort : public S3Exception {
    public:
-    S3QueryAbort() {
+    S3QueryAbort() : message("Query is aborted") {
     }
-    S3QueryAbort(const string& msg) {
+    S3QueryAbort(const string& msg) : message(msg) {
     }
     virtual ~S3QueryAbort() {
     }
     virtual string getMessage() {
-        return "Query is aborted";
+        return message;
     }
 
     virtual string getType() {
         return "S3QueryAbort";
     }
+    string message;
 };
 
 // Used for AWS S3 errors (e.g. 403, 404)
