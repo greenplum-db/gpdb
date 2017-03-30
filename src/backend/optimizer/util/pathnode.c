@@ -1537,7 +1537,6 @@ create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths)
 				subpath->parent->reloptkind != RELOPT_OTHER_MEMBER_REL)
 				projectedlocus = subpath->locus;
 			else
-			{
 				projectedlocus =
 					cdbpathlocus_pull_above_projection(root,
 													   subpath->locus,
@@ -1545,7 +1544,6 @@ create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths)
 													   subpath->parent->reltargetlist,
 													   rel->reltargetlist,
 													   rel->relid);
-			}
 
 			if (l == list_head(subpaths))	/* first node? */
 				pathnode->path.startup_cost = subpath->startup_cost;
@@ -1566,13 +1564,10 @@ create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths)
 				pathnode->path.locus = projectedlocus;
 			else if (cdbpathlocus_compare(CdbPathLocus_Comparison_Equal,
 										  pathnode->path.locus, projectedlocus))
-			{
-			}
+			{}
 			else if (CdbPathLocus_IsPartitioned(pathnode->path.locus) &&
 					 CdbPathLocus_IsPartitioned(projectedlocus))
-			{
 				CdbPathLocus_MakeStrewn(&pathnode->path.locus);
-			}
 			else
 				ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
 								errmsg_internal("Cannot append paths with "
