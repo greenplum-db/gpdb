@@ -58,6 +58,15 @@ typedef struct VacAttrStats *VacAttrStatsP;
 typedef Datum (*AnalyzeAttrFetchFunc) (VacAttrStatsP stats, int rownum,
 												   bool *isNull);
 
+/*
+ * Maintain the row index for large datums which must not be considered for
+ * samples while calculating statistcs
+ */
+typedef struct RowIndexes
+{
+	List* rows;
+} RowIndexes;
+
 typedef struct VacAttrStats
 {
 	/*
@@ -76,7 +85,7 @@ typedef struct VacAttrStats
 	void		(*compute_stats) (VacAttrStatsP stats,
 											  AnalyzeAttrFetchFunc fetchfunc,
 											  int samplerows,
-											  double totalrows);
+											  double totalrows, RowIndexes colLargeRowIndexes);
 	int			minrows;		/* Minimum # of rows wanted for stats */
 	void	   *extra_data;		/* for extra type-specific data */
 
