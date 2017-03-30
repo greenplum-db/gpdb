@@ -979,46 +979,6 @@ Feature: Validate command line arguments
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb101" with data
         And verify that there is no table "testschema.heap_table" in "bkdb101"
 
-    @wip
-    Scenario: 102 Incremental Backup and Restore with -s filter for Full
-        Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--prefix=foo"
-        Then gpdbrestore should return a return code of 0
-        And verify that there is no table "testschema.heap_table" in "bkdb102"
-        And verify that there is a "ao" table "schema_ao.ao_index_table" in "bkdb102" with data
-        And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb102" with data
-        And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb102" with data
-
-    @wip
-    Scenario: 103 Incremental Backup and Restore with --schema-file filter for Full
-        Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--prefix=foo"
-        Then gpdbrestore should return a return code of 0
-        And verify that there is no table "testschema.heap_table" in "bkdb103"
-        And verify that there is a "ao" table "schema_ao.ao_index_table" in "bkdb103" with data
-        And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb103" with data
-        And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb103" with data
-
-    @wip
-    Scenario: 104 Incremental Backup and Restore with --exclude-schema-file filter for Full
-        Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--prefix=foo"
-        Then gpdbrestore should return a return code of 0
-        And verify that there is no table "testschema.heap_table" in "bkdb104"
-        And verify that there is no table "schema_ao.ao_index_table" in "bkdb104"
-        And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb104" with data
-        And verify that there is no table "schema_ao.ao_part_table" in "bkdb104"
-
-    @wip
-    Scenario: 105 Incremental Backup and Restore with -S filter for Full
-        Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--prefix=foo"
-        Then gpdbrestore should return a return code of 0
-        And verify that there is no table "testschema.heap_table" in "bkdb105"
-        And verify that there is a "ao" table "schema_ao.ao_index_table" in "bkdb105" with data
-        And verify that there is no table "schema_heap.heap_table" in "bkdb105"
-        And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb105" with data
-
     Scenario: 106 Full Backup and Restore with option --change-schema
         Given the old timestamps are read from json
         And the test is initialized with database "bkdb106"
