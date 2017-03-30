@@ -70,7 +70,7 @@ m/^WARNING:  could not close temporary file .*: No such file or directory/
 -- end_matchignore
 
 -- start_matchsubs
-#entry db matches
+# entry db matches
 m/\s+\(entry db(.*)+\spid=\d+\)/
 s/\s+\(entry db(.*)+\spid=\d+\)//
 
@@ -85,4 +85,8 @@ s/Table "pg_temp_\d+.temp/Table "pg_temp_#####/
 # Mask out timestamp and whoami message for gpfaultinjector
 m/^\d+.*gpfaultinjector.*-\[INFO\]:-/
 s/^\d+.*gpfaultinjector.*-\[INFO\]:-//
+
+# Mask out line numbers
+m/ERROR:  <SEGID> is required for file name.*/
+s/ERROR:  <SEGID> is required for file name.*/ERROR:  <SEGID> is required for file name/
 -- end_matchsubs
