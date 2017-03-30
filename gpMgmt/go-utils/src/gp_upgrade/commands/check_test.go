@@ -2,6 +2,7 @@ package commands_test
 
 import (
 	"database/sql"
+	"fmt"
 	"os"
 
 	"gp_upgrade/utils"
@@ -84,7 +85,8 @@ var _ = Describe("check", func() {
 		//		session := runCommandWithEnv(additionalKeypairs, "check", "--master_host", "localhost", "--database_type", "sqlite3", "--database_config_file", sqlite3_database_path)
 		//
 		//		Eventually(session).Should(Exit(1))
-		//		Expect(string(session.Err.Contents())).To(ContainSubstring(`open /Users/pivotal/.gp_upgrade/cluster_config.json: permission denied`))
+		//		homeDir := os.Getenv("HOME")
+		//		Expect(string(session.Err.Contents())).To(ContainSubstring(fmt.Sprintf("open %v/.gp_upgrade/cluster_config.json: permission denied", homeDir)))
 		//		err = os.RemoveAll(tempHome)
 		//		Expect(err).NotTo(HaveOccurred())
 		//	})
@@ -103,7 +105,8 @@ var _ = Describe("check", func() {
 				Eventually(session).Should(Exit(1))
 				err = os.RemoveAll(upgrade_config_dir)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(string(session.Err.Contents())).To(ContainSubstring(`open /Users/pivotal/.gp_upgrade/cluster_config.json: permission denied`))
+				homeDir := os.Getenv("HOME")
+				Expect(string(session.Err.Contents())).To(ContainSubstring(fmt.Sprintf("open %v/.gp_upgrade/cluster_config.json: permission denied", homeDir)))
 			})
 		})
 	})

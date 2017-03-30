@@ -5,6 +5,8 @@ import (
 
 	"io/ioutil"
 
+	"net"
+
 	"golang.org/x/crypto/ssh"
 )
 
@@ -30,8 +32,9 @@ func (ssh_connector SshConnector) Connect(Host string, Port int, user string, pr
 		return nil, err
 	}
 	config := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		User:            user,
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error { return nil },
 	}
 	hostAndPort := fmt.Sprintf("%s:%v", Host, Port)
 	client, err := ssh_connector.SshDialer.Dial("tcp", hostAndPort, config)
