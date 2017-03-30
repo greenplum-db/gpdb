@@ -1,17 +1,17 @@
 /*-------------------------------------------------------------------------
  *
- * resgroup.h
+ * resgroupcmds.h
  *	  Commands for manipulating resource group.
  *
  * Copyright (c) 2006-2017, Greenplum inc.
  *
  * IDENTIFICATION
- * 		src/include/commands/resgroup.h
+ * 		src/include/commands/resgroupcmds.h
  *
  *-------------------------------------------------------------------------
  */
-#ifndef RESGROUP_H
-#define RESGROUP_H
+#ifndef RESGROUPCMDS_H
+#define RESGROUPCMDS_H
 
 #include "nodes/parsenodes.h"
 
@@ -23,4 +23,4 @@ extern Oid GetResGroupIdForName(char *name, LOCKMODE lockmode);
 extern int GetConcurrencyForGroup(int groupId);
 extern Oid GetResGroupIdForRole(Oid roleid);
 
-#endif   /* RESGROUP_H */
+#endif   /* RESGROUPCMDS_H */

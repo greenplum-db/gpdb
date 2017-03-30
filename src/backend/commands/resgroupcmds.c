@@ -23,7 +23,7 @@
 #include "cdb/cdbvars.h"
 #include "commands/comment.h"
 #include "commands/defrem.h"
-#include "commands/resgroup.h"
+#include "commands/resgroupcmds.h"
 #include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"

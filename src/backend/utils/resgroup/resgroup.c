@@ -16,7 +16,7 @@
 #include "catalog/pg_resgroup.h"
 #include "cdb/cdbvars.h"
 #include "cdb/memquota.h"
-#include "commands/resgroup.h"
+#include "commands/resgroupcmds.h"
 #include "funcapi.h"
 #include "miscadmin.h"
 #include "storage/ipc.h"

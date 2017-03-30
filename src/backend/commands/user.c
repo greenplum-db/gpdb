@@ -26,7 +26,7 @@
 #include "catalog/pg_resgroup.h"
 #include "catalog/pg_resqueue.h"
 #include "commands/comment.h"
-#include "commands/resgroup.h"
+#include "commands/resgroupcmds.h"
 #include "commands/user.h"
 #include "libpq/auth.h"
 #include "libpq/password_hash.h"
