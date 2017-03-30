@@ -2219,6 +2219,110 @@ select * from dim inner join malp on (dim.i = malp.i and dim.j = malp.j); -- onl
 (3 rows)
 
 --
+-- Plan where the Append that the PartitionSelector affects is not the immediate child
+-- of the join.
+--
+create table apart (id int4, t text) partition by range (id) (start (1) end (1000) every (200));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "apart_1_prt_1" for table "apart"
+NOTICE:  CREATE TABLE will create partition "apart_1_prt_2" for table "apart"
+NOTICE:  CREATE TABLE will create partition "apart_1_prt_3" for table "apart"
+NOTICE:  CREATE TABLE will create partition "apart_1_prt_4" for table "apart"
+NOTICE:  CREATE TABLE will create partition "apart_1_prt_5" for table "apart"
+create table b (id int4, t text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table c (id int4, t text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into apart select g, g from generate_series(1, 999) g;
+insert into b select g, g from generate_series(1, 5) g;
+insert into c select g, g from generate_series(1, 20) g;
+analyze apart;
+analyze b;
+analyze c;
+set gp_dynamic_partition_pruning = off;
+explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
+                                                                                                         QUERY PLAN                                                                                                          
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=5.78..33.46 rows=5 width=19)
+   ->  Hash Join  (cost=5.78..33.46 rows=2 width=19)
+         Hash Cond: a.id = c.id
+         ->  Hash Join  (cost=2.32..29.94 rows=4 width=13)
+               Hash Cond: a.t = b.t
+               ->  Append  (cost=0.00..24.99 rows=333 width=8)
+                     ->  Seq Scan on apart_1_prt_1 a  (cost=0.00..5.00 rows=67 width=7)
+                     ->  Seq Scan on apart_1_prt_2 a  (cost=0.00..5.00 rows=67 width=8)
+                     ->  Seq Scan on apart_1_prt_3 a  (cost=0.00..5.00 rows=67 width=8)
+                     ->  Seq Scan on apart_1_prt_4 a  (cost=0.00..5.00 rows=67 width=8)
+                     ->  Seq Scan on apart_1_prt_5 a  (cost=0.00..4.99 rows=67 width=8)
+               ->  Hash  (cost=2.20..2.20 rows=4 width=6)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.20 rows=4 width=6)
+                           ->  Seq Scan on b  (cost=0.00..2.05 rows=2 width=6)
+         ->  Hash  (cost=3.20..3.20 rows=7 width=6)
+               ->  Seq Scan on c  (cost=0.00..3.20 rows=7 width=6)
+ Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer_segments=2
+ Optimizer status: legacy query optimizer
+(18 rows)
+
+select * from apart as a, b, c where a.t = b.t and a.id = c.id;
+ id | t | id | t | id | t 
+----+---+----+---+----+---
+  3 | 3 |  3 | 3 |  3 | 3
+  4 | 4 |  4 | 4 |  4 | 4
+  5 | 5 |  5 | 5 |  5 | 5
+  1 | 1 |  1 | 1 |  1 | 1
+  2 | 2 |  2 | 2 |  2 | 2
+(5 rows)
+
+set gp_dynamic_partition_pruning = on;
+explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
+                                                                                                         QUERY PLAN                                                                                                         
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=5.78..33.46 rows=5 width=19)
+   ->  Hash Join  (cost=5.78..33.46 rows=2 width=19)
+         Hash Cond: a.id = c.id
+         ->  Hash Join  (cost=2.32..29.94 rows=4 width=13)
+               Hash Cond: a.t = b.t
+               ->  Append  (cost=0.00..24.99 rows=333 width=8)
+                     ->  Result  (cost=0.00..5.00 rows=67 width=7)
+                           One-Time Filter: PartSelected
+                           ->  Seq Scan on apart_1_prt_1 a  (cost=0.00..5.00 rows=67 width=7)
+                     ->  Result  (cost=0.00..5.00 rows=67 width=8)
+                           One-Time Filter: PartSelected
+                           ->  Seq Scan on apart_1_prt_2 a  (cost=0.00..5.00 rows=67 width=8)
+                     ->  Result  (cost=0.00..5.00 rows=67 width=8)
+                           One-Time Filter: PartSelected
+                           ->  Seq Scan on apart_1_prt_3 a  (cost=0.00..5.00 rows=67 width=8)
+                     ->  Result  (cost=0.00..5.00 rows=67 width=8)
+                           One-Time Filter: PartSelected
+                           ->  Seq Scan on apart_1_prt_4 a  (cost=0.00..5.00 rows=67 width=8)
+                     ->  Result  (cost=0.00..4.99 rows=67 width=8)
+                           One-Time Filter: PartSelected
+                           ->  Seq Scan on apart_1_prt_5 a  (cost=0.00..4.99 rows=67 width=8)
+               ->  Hash  (cost=2.20..2.20 rows=4 width=6)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.20 rows=4 width=6)
+                           ->  Seq Scan on b  (cost=0.00..2.05 rows=2 width=6)
+         ->  Hash  (cost=0.00..0.00 rows=0 width=0)
+               ->  Partition Selector for apart (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+                     Filter: c.id
+                     ->  Seq Scan on c  (cost=0.00..3.20 rows=7 width=6)
+ Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer_segments=2
+ Optimizer status: legacy query optimizer
+(30 rows)
+
+select * from apart as a, b, c where a.t = b.t and a.id = c.id;
+ id | t | id | t | id | t 
+----+---+----+---+----+---
+  3 | 3 |  3 | 3 |  3 | 3
+  4 | 4 |  4 | 4 |  4 | 4
+  5 | 5 |  5 | 5 |  5 | 5
+  1 | 1 |  1 | 1 |  1 | 1
+  2 | 2 |  2 | 2 |  2 | 2
+(5 rows)
+
+--
 -- DPE: assertion failed with window function
 --
 drop schema if exists dpe_bugs cascade;
