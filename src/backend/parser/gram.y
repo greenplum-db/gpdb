@@ -303,6 +303,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 				execute_param_clause using_clause returning_clause
 				enum_val_list
 				table_func_column_list scatter_clause dostmt_opt_list
+				columnListUnique
 
 %type <node>    table_value_select_clause
 
@@ -3832,6 +3833,18 @@ columnList:
 			| columnList ',' columnElem				{ $$ = lappend($1, $3); }
 		;
 
+columnListUnique:
+			columnElem								{ $$ = list_make1($1); }
+			| columnList ',' columnElem
+				{
+					if (list_member($1, $3))
+						ereport(ERROR,
+								(errcode(ERRCODE_DUPLICATE_COLUMN),
+								 errmsg("duplicate column in DISTRIBUTED BY clause"),
+								 scanner_errposition(@3)));
+					$$ = lappend($1, $3);
+				}
+
 columnElem: ColId
 				{
 					$$ = (Node *) makeString($1);
@@ -3919,7 +3932,7 @@ OptConsTableSpace:   USING INDEX TABLESPACE name	{ $$ = $4; }
 			| /*EMPTY*/								{ $$ = NULL; }
 		;
 
-DistributedBy:   DISTRIBUTED BY  '(' columnList ')'			{ $$ = $4; }
+DistributedBy:   DISTRIBUTED BY  '(' columnListUnique ')'		{ $$ = $4; }
 			| DISTRIBUTED RANDOMLY			{ $$ = list_make1(NULL); }
 		;
 

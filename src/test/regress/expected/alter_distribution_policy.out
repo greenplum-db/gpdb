@@ -13,8 +13,9 @@ LINE 1: alter table atsdb set distributed by ();
 alter table atsdb set distributed by (m);
 ERROR:  column "m" of relation "atsdb" does not exist
 alter table atsdb set distributed by (i, i);
-ERROR:  distribution policy must be a unique set of columns
-HINT:  Column "i" appears more than once
+ERROR:  duplicate column in DISTRIBUTED BY clause
+LINE 1: alter table atsdb set distributed by (i, i);
+                                                 ^
 alter table atsdb set distributed by (i, m);
 ERROR:  column "m" of relation "atsdb" does not exist
 alter table atsdb set distributed by (i);

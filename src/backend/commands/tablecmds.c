@@ -11767,13 +11767,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 
 					tuple = SearchSysCacheAttName(RelationGetRelid(rel), colName);
 
-					if (list_member(cols, lfirst(lc)))
-							ereport(ERROR,
-								(errcode(ERRCODE_DUPLICATE_OBJECT),
-								errmsg("distribution policy must be a "
-									"unique set of columns"),
-								errhint("Column \"%s\" appears "
-									"more than once", colName)));
 					if (!HeapTupleIsValid(tuple))
 							ereport(ERROR,
 								(errcode(ERRCODE_UNDEFINED_COLUMN),

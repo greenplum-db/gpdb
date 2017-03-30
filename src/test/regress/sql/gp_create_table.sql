@@ -118,14 +118,16 @@ select attrnums from gp_distribution_policy where localoid='bar'::regclass;
 drop table if exists foo;
 drop table if exists bar;
 
--- MPP-14770: check for duplicate columns in DISTRIBUTED BY clause
+-- check for duplicate columns in DISTRIBUTED BY clause
 create table foo (a int, b text) distributed by (b,B);
 create table foo (a int, b int) distributed by (a,aA,A);
+create table foo (a int, b int) distributed by (a,aA);
 create table foo (a int, b int) distributed by (b,a,aabb);
 create table foo (a int, b int) distributed by (c,C);
 create table foo ("I" int, i int) distributed by ("I",I);
 select attrnums from gp_distribution_policy where localoid='foo'::regclass;
-drop table if exists foo;
+create table fooctas as select * from foo distributed by (i,i);
+drop table foo;
 
 -- check if number of DISTRIBUTED BY clause exceed the limitation (1600)
 create table foo (
