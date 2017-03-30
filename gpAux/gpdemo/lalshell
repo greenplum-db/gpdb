@@ -1,12 +1,7 @@
 #!/bin/bash
 
 shift
-#CMD=$1
-#shift
+
 bash -c "$*"
 
-RETVAL=$?
-
-if [ $RETVAL -ne 0 ]; then
-  exit $RETVAL
-fi
+exit $?

@@ -1111,10 +1111,6 @@ ExecutorEnd(QueryDesc *queryDesc)
 	}
 	END_MEMORY_ACCOUNT();
 
-	if (gp_dump_memory_usage)
-	{
-		MemoryAccounting_SaveToFile(currentSliceId);
-	}
 	ReportOOMConsumption();
 }
 

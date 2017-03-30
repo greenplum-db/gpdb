@@ -100,7 +100,18 @@ class GpStop:
         self._prepare()
         
         if self.masteronly:
-            self._stop_master()                                 
+            if self.interactive:
+                if not userinput.ask_yesno(None, "\nContinue with master-only shutdown", 'N'):
+                    raise UserAbortedException()
+            try:
+                # Disable Ctrl-C
+                signal.signal(signal.SIGINT,signal.SIG_IGN)
+
+                self._stop_master()
+            finally:
+                # Reenable Ctrl-C
+                self.cleanup()
+                signal.signal(signal.SIGINT,signal.default_int_handler)
         else:
             if self.sighup:
                 return self._sighup_cluster()

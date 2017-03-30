@@ -43,41 +43,41 @@ set gp_enable_mk_sort=on;
 -- the particular plan
 set optimizer=off;
 
-select count(*) from (with ctesisc as
-  (select count(i1) as c1,i3 as c2 from testsiscm group by i3)
-select *
-from ctesisc as t1, ctesisc as t2
-where t1.c1 = t2.c2) foo;
+select count(*) from (with ctesisc as 
+	(select count(i1) as c1, i2 as c2, i3 as c3 from testsiscm group by i2, i3) 
+select * 
+from ctesisc as t1, ctesisc as t2 
+where t1.c1 = t2.c1 and t1.c3 = t2.c3) foo;
 select * from sisc_mat_sort.is_workfile_created('explain analyze
-with ctesisc as
-  (select count(i1) as c1,i3 as c2 from testsiscm group by i3)
-select *
-from ctesisc as t1, ctesisc as t2
-where t1.c1 = t2.c2;');
+with ctesisc as 
+	(select count(i1) as c1, i2 as c2, i3 as c3 from testsiscm group by i2, i3) 
+select * 
+from ctesisc as t1, ctesisc as t2 
+where t1.c1 = t2.c1 and t1.c3 = t2.c3;');
 select * from sisc_mat_sort.is_workfile_created('explain analyze
-with ctesisc as
-  (select count(i1) as c1,i3 as c2 from testsiscm group by i3)
-select *
-from ctesisc as t1, ctesisc as t2
-where t1.c1 = t2.c2 limit 50000;');
+with ctesisc as 
+	(select count(i1) as c1, i2 as c2, i3 as c3 from testsiscm group by i2, i3) 
+select * 
+from ctesisc as t1, ctesisc as t2 
+where t1.c1 = t2.c1 and t1.c3 = t2.c3 limit 50000;');
 
 set gp_enable_mk_sort=off;
-select count(*) from (with ctesisc as
-  (select count(i1) as c1,i3 as c2 from testsiscm group by i3)
-select *
-from ctesisc as t1, ctesisc as t2
-where t1.c1 = t2.c2) foo;
+select count(*) from (with ctesisc as 
+	(select count(i1) as c1, i2 as c2, i3 as c3 from testsiscm group by i2, i3) 
+select * 
+from ctesisc as t1, ctesisc as t2 
+where t1.c1 = t2.c1 and t1.c3 = t2.c3) foo;
 select * from sisc_mat_sort.is_workfile_created('explain analyze
-with ctesisc as
-  (select count(i1) as c1,i3 as c2 from testsiscm group by i3)
-select *
-from ctesisc as t1, ctesisc as t2
-where t1.c1 = t2.c2;');
+with ctesisc as 
+	(select count(i1) as c1, i2 as c2, i3 as c3 from testsiscm group by i2, i3) 
+select * 
+from ctesisc as t1, ctesisc as t2 
+where t1.c1 = t2.c1 and t1.c3 = t2.c3;');
 select * from sisc_mat_sort.is_workfile_created('explain analyze
-with ctesisc as
-  (select count(i1) as c1,i3 as c2 from testsiscm group by i3)
-select *
-from ctesisc as t1, ctesisc as t2
-where t1.c1 = t2.c2 limit 50000;');
+with ctesisc as 
+	(select count(i1) as c1, i2 as c2, i3 as c3 from testsiscm group by i2, i3) 
+select * 
+from ctesisc as t1, ctesisc as t2 
+where t1.c1 = t2.c1 and t1.c3 = t2.c3 limit 50000;');
 
 drop schema sisc_mat_sort cascade;

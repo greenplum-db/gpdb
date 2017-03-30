@@ -207,7 +207,7 @@ _APP_NAME_FOR_DEFAULT_FORMAT=os.path.split(sys.argv[0])[-1]
 
 def _set_file_logging(filename): 
     """
-    Establishes a file output HANDLER for the default formater.
+    Establishes a file output HANDLER for the default formatter.
     
     NOTE: internal use only
     """

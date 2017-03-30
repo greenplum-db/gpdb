@@ -384,6 +384,9 @@ reset gp_enable_exchange_default_partition;
 -- Exchange a non-default sub-partition of a default partition, should fail
 alter table sto_ao_ao alter default partition exchange partition for ('one') with table exh_ao_ao;
 
+-- Exchange a partition that has sub partitions, should fail.
+alter table sto_ao_ao exchange partition for ('2008-01-01') with table exh_ao_ao;
+
 drop table sto_ao_ao;
 drop table exh_ao_ao;
 -- XXX: not yet: VALIDATE parameter

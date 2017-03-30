@@ -1,4 +1,0 @@
--- start_matchignore
- m/WARNING\:  warning emit/
- m/ERROR\:  error emit*/
--- end_matchignore

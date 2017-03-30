@@ -1,6 +1,6 @@
 CREATE READABLE EXTERNAL TABLE s3regress_invalid_region (date text, time text, open float, high float,
 	low float, volume int) LOCATION('s3://neverland.amazonaws.com/wherever/whatever/ config=@config_file@') format 'csv';
 SELECT count(*) FROM s3regress_invalid_region;
-ERROR:  Failed to init S3 extension (segid = 5, segnum = 6), please check your configurations and net connection: Failed to list bucket for URL: s3://neverland.amazonaws.com/wherever/whatever/, Function: open, File: src/s3bucket_reader.cpp(55). (gpcloud.cpp:88)  (seg5 slice1 ip-172-31-2-195.us-west-2.compute.internal:40001 pid=2338) (cdbdisp.c:1326)
+ERROR:  Failed to init gpcloud extension (segid = 5, segnum = 6), please check your configurations and net connection: Failed to list bucket for URL: s3://neverland.amazonaws.com/wherever/whatever/, Function: open, File: src/s3bucket_reader.cpp(55). (gpcloud.cpp:88)  (seg5 slice1 ip-172-31-2-195.us-west-2.compute.internal:40001 pid=2338) (cdbdisp.c:1326)
 DETAIL:  External table s3regress_invalid_region, file s3://neverland.amazonaws.com/wherever/whatever/ config=@config_file@
 DROP EXTERNAL TABLE s3regress_invalid_region;

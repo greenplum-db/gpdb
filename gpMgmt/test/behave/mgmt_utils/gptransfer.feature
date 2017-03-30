@@ -1049,7 +1049,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
         And database "gptransfer_testdb1" exists
-        And there is schema "test_schema" exists in "gptransfer_testdb1"
+        And schema "test_schema" exists in "gptransfer_testdb1"
         And the user runs "gptransfer --schema-only -t gptransfer_testdb1.public.t0 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 0
         And verify that the schema "test_schema" exists in "gptransfer_testdb1"
@@ -1174,7 +1174,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
         And database "gptransfer_testdb1" exists
-        And there is schema "public" exists in "gptransfer_testdb1"
+        And schema "public" exists in "gptransfer_testdb1"
         And the user runs "gptransfer -t gptransfer_testdb1.public.t0 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a --batch-size=10"
         Then gptransfer should return a return code of 0
         And verify that there is a "heap" table "public.t0" in "gptransfer_testdb1"

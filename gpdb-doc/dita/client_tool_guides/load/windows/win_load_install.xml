@@ -28,8 +28,8 @@
     <body>
       <p>The Greenplum loader program (<codeph>gpload.py</codeph>) for Windows requires Python 2.5
         (32-bit version) to also be installed on your machine. If you do not have an installation of
-        Python, you can get one from <xref href="http://www.python.org" scope="external"
-          format="html"><ph>www.python.org</ph></xref>. </p>
+        Python, you can get one from <xref href="https://www.python.org" scope="external"
+          format="html">https://www.python.org</xref>. </p>
       <note>The 64-bit version of Python is not compatible with the Greenplum loader program for
         Windows.</note>
       <section id="nw149727">

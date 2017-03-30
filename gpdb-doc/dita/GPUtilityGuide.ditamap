@@ -88,8 +88,6 @@
         <topicref href="utility_guide/admin_utilities/gplogfilter.xml"/>
         <topicref href="utility_guide/admin_utilities/gpmapreduce.xml"/>
         <topicref href="utility_guide/admin_utilities/gpmfr.xml"/>
-        <topicref href="utility_guide/admin_utilities/gpmigrator.xml"/>
-        <topicref href="utility_guide/admin_utilities/gpmigrator_mirror.xml"/>
         <!-- hidden until testing is complete -msk
             <topicref href="utility_guide/admin_utilities/gpmovemirrors.xml"/>
 -->

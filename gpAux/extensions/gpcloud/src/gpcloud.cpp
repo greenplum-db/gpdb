@@ -164,6 +164,95 @@ static void parseFormatOpts(FunctionCallInfo fcinfo) {
     }
 }
 
+typedef struct gpcloudResHandle {
+    GPReader *gpreader;
+    GPWriter *gpwriter;
+
+    ResourceOwner owner; /* owner of this handle */
+
+    struct gpcloudResHandle *next;
+    struct gpcloudResHandle *prev;
+} gpcloudResHandle;
+
+// Linked list of opened "handles", which are allocated in TopMemoryContext, and tracked by resource
+// owners.
+static gpcloudResHandle *openedResHandles;
+
+static bool isGpcloudResReleaseCallbackRegistered;
+
+static gpcloudResHandle *createGpcloudResHandle(void) {
+    gpcloudResHandle *resHandle;
+
+    resHandle = (gpcloudResHandle *)MemoryContextAlloc(TopMemoryContext, sizeof(gpcloudResHandle));
+    resHandle->gpreader = NULL;
+    resHandle->gpwriter = NULL;
+
+    resHandle->owner = CurrentResourceOwner;
+    resHandle->next = openedResHandles;
+    resHandle->prev = NULL;
+
+    if (openedResHandles) {
+        openedResHandles->prev = resHandle;
+    }
+
+    openedResHandles = resHandle;
+
+    return resHandle;
+}
+
+static void destroyGpcloudResHandle(gpcloudResHandle *resHandle) {
+    if (resHandle == NULL) return;
+
+    /* unlink from linked list first */
+    if (resHandle->prev)
+        resHandle->prev->next = resHandle->next;
+    else
+        openedResHandles = resHandle->next;
+
+    if (resHandle->next) {
+        resHandle->next->prev = resHandle->prev;
+    }
+
+    if (resHandle->gpreader != NULL) {
+        if (!reader_cleanup(&resHandle->gpreader)) {
+            elog(WARNING, "Failed to cleanup gpcloud extension: %s", s3extErrorMessage.c_str());
+        }
+    }
+
+    if (resHandle->gpwriter != NULL) {
+        if (!writer_cleanup(&resHandle->gpwriter)) {
+            elog(WARNING, "Failed to cleanup gpcloud extension: %s", s3extErrorMessage.c_str());
+        }
+    }
+
+    thread_cleanup();
+    pfree(resHandle);
+}
+
+/*
+ * Close any open handles on abort.
+ */
+static void gpcloudAbortCallback(ResourceReleasePhase phase, bool isCommit, bool isTopLevel,
+                                 void *arg) {
+    gpcloudResHandle *curr;
+    gpcloudResHandle *next;
+
+    if (phase != RESOURCE_RELEASE_AFTER_LOCKS) return;
+
+    next = openedResHandles;
+    while (next) {
+        curr = next;
+        next = curr->next;
+
+        if (curr->owner == CurrentResourceOwner) {
+            if (isCommit)
+                elog(WARNING, "gpcloud external table reference leak: %p still referenced", curr);
+
+            destroyGpcloudResHandle(curr);
+        }
+    }
+}
+
 /*
  * Import data into GPDB.
  * invoked by GPDB, be careful with C++ exceptions.
@@ -174,23 +263,24 @@ Datum s3_import(PG_FUNCTION_ARGS) {
         elog(ERROR, "extprotocol_import: not called by external protocol manager");
 
     /* Get our internal description of the protocol */
-    GPReader *gpreader = (GPReader *)EXTPROTOCOL_GET_USER_CTX(fcinfo);
+    gpcloudResHandle *resHandle = (gpcloudResHandle *)EXTPROTOCOL_GET_USER_CTX(fcinfo);
 
     /* last call. destroy reader */
     if (EXTPROTOCOL_IS_LAST_CALL(fcinfo)) {
-        if (!reader_cleanup(&gpreader)) {
-            ereport(ERROR,
-                    (0, errmsg("Failed to cleanup S3 extension: %s", s3extErrorMessage.c_str())));
-        }
-
-        thread_cleanup();
+        destroyGpcloudResHandle(resHandle);
 
         EXTPROTOCOL_SET_USER_CTX(fcinfo, NULL);
         PG_RETURN_INT32(0);
     }
 
     /* first call. do any desired init */
-    if (gpreader == NULL) {
+    if (resHandle == NULL) {
+        if (!isGpcloudResReleaseCallbackRegistered) {
+            RegisterResourceReleaseCallback(gpcloudAbortCallback, NULL);
+            isGpcloudResReleaseCallbackRegistered = true;
+        }
+        resHandle = createGpcloudResHandle();
+
         queryCancelFlag = false;
         const char *url_with_options = EXTPROTOCOL_GET_URL(fcinfo);
 
@@ -199,21 +289,21 @@ Datum s3_import(PG_FUNCTION_ARGS) {
 
         thread_setup();
 
-        gpreader = reader_init(url_with_options);
-        if (!gpreader) {
-            ereport(ERROR, (0, errmsg("Failed to init S3 extension (segid = %d, "
+        resHandle->gpreader = reader_init(url_with_options);
+        if (!resHandle->gpreader) {
+            ereport(ERROR, (0, errmsg("Failed to init gpcloud extension (segid = %d, "
                                       "segnum = %d), please check your "
                                       "configurations and network connection: %s",
                                       s3ext_segid, s3ext_segnum, s3extErrorMessage.c_str())));
         }
 
-        EXTPROTOCOL_SET_USER_CTX(fcinfo, gpreader);
+        EXTPROTOCOL_SET_USER_CTX(fcinfo, resHandle);
     }
 
     char *data_buf = EXTPROTOCOL_GET_DATABUF(fcinfo);
     int32 data_len = EXTPROTOCOL_GET_DATALEN(fcinfo);
 
-    if (!reader_transfer_data(gpreader, data_buf, data_len)) {
+    if (!reader_transfer_data(resHandle->gpreader, data_buf, data_len)) {
         ereport(ERROR,
                 (0, errmsg("s3_import: could not read data: %s", s3extErrorMessage.c_str())));
     }
@@ -230,44 +320,45 @@ Datum s3_export(PG_FUNCTION_ARGS) {
         elog(ERROR, "extprotocol_import: not called by external protocol manager");
 
     /* Get our internal description of the protocol */
-    GPWriter *gpwriter = (GPWriter *)EXTPROTOCOL_GET_USER_CTX(fcinfo);
+    gpcloudResHandle *resHandle = (gpcloudResHandle *)EXTPROTOCOL_GET_USER_CTX(fcinfo);
 
     /* last call. destroy writer */
     if (EXTPROTOCOL_IS_LAST_CALL(fcinfo)) {
-        if (!writer_cleanup(&gpwriter)) {
-            ereport(ERROR,
-                    (0, errmsg("Failed to cleanup S3 extension: %s", s3extErrorMessage.c_str())));
-        }
-
-        thread_cleanup();
+        destroyGpcloudResHandle(resHandle);
 
         EXTPROTOCOL_SET_USER_CTX(fcinfo, NULL);
         PG_RETURN_INT32(0);
     }
 
     /* first call. do any desired init */
-    if (gpwriter == NULL) {
+    if (resHandle == NULL) {
+        if (!isGpcloudResReleaseCallbackRegistered) {
+            RegisterResourceReleaseCallback(gpcloudAbortCallback, NULL);
+            isGpcloudResReleaseCallbackRegistered = true;
+        }
+        resHandle = createGpcloudResHandle();
+
         queryCancelFlag = false;
         const char *url_with_options = EXTPROTOCOL_GET_URL(fcinfo);
         const char *format = getFormatStr(fcinfo);
 
         thread_setup();
 
-        gpwriter = writer_init(url_with_options, format);
-        if (!gpwriter) {
-            ereport(ERROR, (0, errmsg("Failed to init S3 extension (segid = %d, "
+        resHandle->gpwriter = writer_init(url_with_options, format);
+        if (!resHandle->gpwriter) {
+            ereport(ERROR, (0, errmsg("Failed to init gpcloud extension (segid = %d, "
                                       "segnum = %d), please check your "
                                       "configurations and network connection: %s",
                                       s3ext_segid, s3ext_segnum, s3extErrorMessage.c_str())));
         }
 
-        EXTPROTOCOL_SET_USER_CTX(fcinfo, gpwriter);
+        EXTPROTOCOL_SET_USER_CTX(fcinfo, resHandle);
     }
 
     char *data_buf = EXTPROTOCOL_GET_DATABUF(fcinfo);
     int32 data_len = EXTPROTOCOL_GET_DATALEN(fcinfo);
 
-    if (!writer_transfer_data(gpwriter, data_buf, data_len)) {
+    if (!writer_transfer_data(resHandle->gpwriter, data_buf, data_len)) {
         ereport(ERROR,
                 (0, errmsg("s3_export: could not write data: %s", s3extErrorMessage.c_str())));
     }

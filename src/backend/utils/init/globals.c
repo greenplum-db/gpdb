@@ -147,6 +147,7 @@ char*	pljava_classpath = NULL;
 int		pljava_statement_cache_size 	= 512;
 bool	pljava_release_lingering_savepoints = false;
 bool	pljava_debug = false;
+bool	pljava_classpath_insecure = false;
 
 
 /* Memory protection GUCs*/

@@ -1128,7 +1128,7 @@ SELECT foo();
               <row>
                 <entry colname="col1">
                   <xref format="html"
-                    href="http://www.postgresql.org/docs/8.3/static/functions-matching.html"
+                    href="https://www.postgresql.org/docs/8.3/static/functions-matching.html"
                     scope="external">
                     <ph>Pattern Matching</ph>
                   </xref>
@@ -1371,7 +1371,7 @@ SELECT foo();
               <row>
                 <entry colname="col1">
                   <xref format="html"
-                    href="http://www.postgresql.org/docs/9.1/interactive/functions-xml.html"
+                    href="https://www.postgresql.org/docs/9.1/static/functions-xml.html"
                     scope="external">XML Functions</xref>
                 </entry>
 

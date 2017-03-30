@@ -42,6 +42,7 @@
 #include "commands/prepare.h"
 #include "commands/queue.h"
 #include "commands/proclang.h"
+#include "commands/resgroup.h"
 #include "commands/schemacmds.h"
 #include "commands/sequence.h"
 #include "commands/tablecmds.h"
@@ -445,6 +446,7 @@ check_xact_readonly(Node *parsetree)
 		case T_CreateDomainStmt:
 		case T_CreateFunctionStmt:
 		case T_CreateQueueStmt:
+		case T_CreateResourceGroupStmt:
 		case T_CreateRoleStmt:
 		case T_IndexStmt:
 		case T_CreateExtensionStmt:
@@ -468,6 +470,7 @@ check_xact_readonly(Node *parsetree)
 		case T_DropdbStmt:
 		case T_RemoveFuncStmt:
 		case T_DropQueueStmt:
+		case T_DropResourceGroupStmt:
 		case T_DropRoleStmt:
 		case T_DropPLangStmt:
 		case T_RemoveOpClassStmt:
@@ -1736,6 +1739,16 @@ ProcessUtility(Node *parsetree,
 			break;
 
 			/*
+			 * ********************* RESOURCE GROUP statements ****
+			 */
+		case T_CreateResourceGroupStmt:
+			CreateResourceGroup((CreateResourceGroupStmt *) parsetree);
+			break;
+		case T_DropResourceGroupStmt:
+			DropResourceGroup((DropResourceGroupStmt *) parsetree);
+			break;
+
+			/*
 			 * ******************************** ROLE statements ****
 			 */
 		case T_CreateRoleStmt:
@@ -2615,6 +2628,14 @@ CreateCommandTag(Node *parsetree)
 
 		case T_DropQueueStmt:
 			tag = "DROP QUEUE";
+			break;
+
+		case T_CreateResourceGroupStmt:
+			tag = "CREATE RESOURCE GROUP";
+			break;
+
+		case T_DropResourceGroupStmt:
+			tag = "DROP RESOURCE GROUP";
 			break;
 
 		case T_CreateRoleStmt:

@@ -1,0 +1,5 @@
+-- start_matchignore
+ m/NOTICE:  .*does not exist, skipping/
+ m/NOTICE:  Table doesn\'t have \'DISTRIBUTED BY\' clause.*/
+ m/HINT:  The \'DISTRIBUTED BY\' clause determines the distribution of data.*/
+-- end_matchignore

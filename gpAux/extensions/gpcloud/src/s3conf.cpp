@@ -73,12 +73,10 @@ S3Params InitConfig(const string& urlWithOptions) {
     string content = s3Cfg.Get(configSection, "loglevel", "WARNING");
     s3ext_loglevel = getLogLevel(content.c_str());
 
-#ifndef S3_STANDALONE_CHECKCLOUD
     content = s3Cfg.Get(configSection, "logtype", "INTERNAL");
     s3ext_logtype = getLogType(content.c_str());
 
     params.setDebugCurl(s3Cfg.GetBool(configSection, "debug_curl", "false"));
-#endif
 
     params.setCred(s3Cfg.Get(configSection, "accessid", ""), s3Cfg.Get(configSection, "secret", ""),
                    s3Cfg.Get(configSection, "token", ""));

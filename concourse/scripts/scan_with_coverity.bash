@@ -15,7 +15,7 @@ function prep_env_for_centos() {
   ln -sf /usr/bin/xsubpp /usr/share/perl5/ExtUtils/xsubpp
   source /opt/gcc_env.sh
 
-  ln -sf "$BASE_DIR"/gpdb_src/gpAux/ext/${BLDARCH}/python-2.6.2 /opt/python-2.6.2
+  ln -sf "$BASE_DIR"/gpdb_src/gpAux/ext/${BLDARCH}/python-2.7.12 /opt/python-2.7.12
   export PATH=${JAVA_HOME}/bin:${PATH}
 }
 

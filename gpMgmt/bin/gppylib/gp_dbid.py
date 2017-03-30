@@ -4,7 +4,7 @@
 
 """
   gp_dbid.py
-  Copyright (c) EMC/Greenplum Inc 2011. All Rights Reserved. 
+  Copyright (c) EMC/Greenplum Inc 2011. All Rights Reserved.
 """
 
 import re
@@ -19,8 +19,8 @@ STANDBY_DBID_RE = re.compile(r"standby_dbid\s*=\s*(\d+)")
 
 class GpDbidFile:
     """
-    Used by gpstart, gpinitstandby, gpactivatestandby and indirectly
-    by gpmigrator via gpsetdbid.py to manage the gp_dbid file.
+    Used by gpstart, gpinitstandby, and gpactivatestandby
+    via gpsetdbid.py to manage the gp_dbid file.
     """
 
     def __init__(self, datadir, do_read=False, logger=None):
@@ -53,8 +53,8 @@ class GpDbidFile:
     def parse(self, f):
         """
         Parse f, looking for matching dbid and standby_dbid expressions and
-        ignoring all other lines.  Assigns dbid and/or standby_dbid to observed 
-        values, converting matched values from strings to integers.  
+        ignoring all other lines.  Assigns dbid and/or standby_dbid to observed
+        values, converting matched values from strings to integers.
         """
         INFO  = self.logger.info
         DEBUG = self.logger.debug
@@ -93,7 +93,7 @@ class GpDbidFile:
             f.write('standby_dbid = %d\n' % self.standby_dbid)
             INFO('Wrote standby_dbid: %d to the file.' % self.standby_dbid)
 
- 
+
     def write_gp_dbid(self):
         """
         Create or replace gp_dbid file with current values, changing
@@ -152,7 +152,7 @@ if __name__ == '__main__':
             d2.read_gp_dbid()
             assert d.dbid == d2.dbid
             assert d.standby_dbid == d2.standby_dbid
-       
+
     if os.path.exists(TESTDIR): shutil.rmtree(TESTDIR)
     os.mkdir(TESTDIR)
     unittest.main()

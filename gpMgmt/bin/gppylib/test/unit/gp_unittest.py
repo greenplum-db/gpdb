@@ -16,6 +16,16 @@ class GpTestCase(unittest.TestCase):
         self.mock_objs = [p.start() for p in self.patches]
         self.__class__.apply_patches_counter += 1
 
+    def get_mock_from_apply_patch(self, mock_name):
+        ''' Return None if there is no existing object
+            mock name prints out the last "namespace"
+            for example "os.path.exists", mock_name will be "exists"
+        '''
+        for mock_obj in self.mock_objs:
+            if mock_name == mock_obj._mock_name:
+                return mock_obj
+        return None
+
     # if you have a tearDown() in your test class,
     # be sure to call this using super(<child class name>, self).tearDown()
     def tearDown(self):
@@ -49,8 +59,30 @@ def add_setup(setup=None, teardown=None):
         return wrapper
     return decorate_function
 
+
 # hide unittest dependencies here
 def run_tests():
     unittest.main(verbosity=2, buffer=True)
 
 skip = unittest.skip
+
+
+class FakeCursor:
+    def __init__(self, my_list=None):
+        self.list = []
+        self.rowcount = 0
+        if my_list:
+            self.set_result_for_testing(my_list)
+
+    def __iter__(self):
+        return iter(self.list)
+
+    def close(self):
+        pass
+
+    def fetchall(self):
+        return self.list
+
+    def set_result_for_testing(self, result_list):
+        self.list = result_list
+        self.rowcount = len(result_list)

@@ -10,14 +10,13 @@
             <codeblock id="sql_command_synopsis">CREATE [PROCEDURAL] LANGUAGE <varname>name</varname>
 
 CREATE [TRUSTED] [PROCEDURAL] LANGUAGE <varname>name</varname>
-       HANDLER <varname>call_handler</varname> [VALIDATOR <varname>valfunction</varname>]</codeblock>
+       HANDLER <varname>call_handler</varname> [ INLINE <varname>inline_handler</varname> ] [VALIDATOR <varname>valfunction</varname>]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
             <p><codeph>CREATE LANGUAGE</codeph> registers a new procedural language with a Greenplum
                 database. Subsequently, functions and trigger procedures can be defined in this new
-                language. The PL/pgSQL language is already registered in all databases by
-                default.</p>
+                language. </p>
             <p>Superusers can register a new language with a Greenplum database. A database owner
                 can also register within that database any language listed in the
                     <codeph>pg_pltemplate</codeph> catalog in which the
@@ -44,11 +43,11 @@ CREATE [TRUSTED] [PROCEDURAL] LANGUAGE <varname>name</varname>
             <p>The PL/Perl, PL/Java, and PL/R libraries require the correct versions of Perl, Java,
                 and R to be installed, respectively. </p>
             <p>On RHEL and SUSE platforms, download the appropriate extensions from <xref
-                    href="https://network.pivotal.io" scope="external" format="html"
-                    >Pivotal Network</xref>, then install the extensions using the Greenplum Package
-                Manager (<codeph>gppkg</codeph>) utility to ensure that all dependencies are
-                installed as well as the extensions. See the Greenplum Database Utility Guide for
-                details about <codeph>gppkg</codeph>. </p>
+                    href="https://network.pivotal.io" scope="external" format="html">Pivotal
+                    Network</xref>, then install the extensions using the Greenplum Package Manager
+                    (<codeph>gppkg</codeph>) utility to ensure that all dependencies are installed
+                as well as the extensions. See the Greenplum Database Utility Guide for details
+                about <codeph>gppkg</codeph>. </p>
             <p>There are two forms of the <codeph>CREATE LANGUAGE</codeph> command. In the first
                 form, the user specifies the name of the desired language and the Greenplum Database
                 server uses the <codeph>pg_pltemplate</codeph> system catalog to determine the
@@ -66,11 +65,11 @@ CREATE [TRUSTED] [PROCEDURAL] LANGUAGE <varname>name</varname>
                 <plentry>
                     <pt>TRUSTED</pt>
                     <pd>Ignored if the server has an entry for the specified language name in
-                            <varname>pg_pltemplate</varname>. Specifies that the call handler for
-                        the language is safe and does not offer an unprivileged user any
-                        functionality to bypass access restrictions. If this key word is omitted
-                        when registering the language, only users with the superuser privilege can
-                        use this language to create new functions.</pd>
+                            <codeph>pg_pltemplate</codeph>. Specifies that the call handler for the
+                        language is safe and does not offer an unprivileged user any functionality
+                        to bypass access restrictions. If this key word is omitted when registering
+                        the language, only users with the superuser privilege can use this language
+                        to create new functions.</pd>
                 </plentry>
                 <plentry>
                     <pt>PROCEDURAL</pt>
@@ -100,28 +99,34 @@ CREATE [TRUSTED] [PROCEDURAL] LANGUAGE <varname>name</varname>
                         simply used to identify the function as a call handler.</pd>
                 </plentry>
                 <plentry>
+                    <pt>INLINE <varname>inline_handler</varname></pt>
+                    <pd>The name of a previously registered function that is called to execute an
+                        anonymous code block in this language that is created with the <codeph><xref
+                                href="DO.xml#topic1"/></codeph> command. If an
+                            <codeph>inline_handler</codeph> function is not specified, the language
+                        does not support anonymous code blocks. The handler function must take one
+                        argument of type <codeph>internal</codeph>, which is the <codeph><xref
+                                href="DO.xml#topic1"/></codeph> command internal representation. The
+                        function typically return <codeph>void</codeph>. The return value of the
+                        handler is ignored. </pd>
+                </plentry>
+                <plentry>
                     <pt>VALIDATOR <varname>valfunction</varname></pt>
                     <pd>Ignored if the server has an entry for the specified language name in
-                            <codeph>pg_pltemplate</codeph>. <varname>valfunction</varname> is the
-                        name of a previously registered function that will be called when a new
-                        function in the language is created, to validate the new function. If no
-                        validator function is specified, then a new function will not be checked
-                        when it is created. The validator function must take one argument of type
-                            <codeph>oid</codeph>, which will be the OID of the to-be-created
-                        function, and will typically return <codeph>void</codeph>. </pd>
-                    <pd>A validator function would typically inspect the function body for
-                        syntactical correctness, but it can also look at other properties of the
-                        function, for example if the language cannot handle certain argument types.
-                        To signal an error, the validator function should use the
-                            <codeph>ereport()</codeph> function. The return value of the function is
-                        ignored.</pd>
+                            <codeph>pg_pltemplate</codeph>. The name of a previously registered
+                        function that will be called to execute the procedural language functions.
+                        The call handler for a procedural language must be written in a compiled
+                        language such as C with version 1 call convention and registered with
+                        Greenplum Database as a function taking no arguments and returning the
+                            <codeph>language_handler</codeph> type, a placeholder type that is
+                        simply used to identify the function as a call handler.</pd>
                 </plentry>
             </parml>
         </section>
         <section id="section5">
             <title>Notes</title>
-            <p>The PL/pgSQL and PL/Python language extensions are installed by default in Greenplum
-                Database.</p>
+            <p>The PL/pgSQL language is already registered in all databases by default. The
+                PL/Python language extension is installed but not registered.</p>
             <p>The system catalog <codeph>pg_language</codeph> records information about the
                 currently installed languages.</p>
             <p>To create functions in a procedural language, a user must have the
@@ -160,7 +165,8 @@ CREATE LANGUAGE plsample
             <p><codeph><xref href="ALTER_LANGUAGE.xml#topic1" type="topic" format="dita"/></codeph>,
                         <codeph><xref href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"
                     /></codeph>, <codeph><xref href="./DROP_LANGUAGE.xml#topic1" type="topic"
-                        format="dita"/></codeph></p>
+                        format="dita"/></codeph>
+                <codeph><xref href="DO.xml#topic1"/></codeph></p>
         </section>
     </body>
 </topic>

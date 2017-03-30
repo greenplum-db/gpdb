@@ -15,7 +15,15 @@ from gppylib.commands.base import Command, ExecutionError, REMOTE
 from gppylib.commands.gp import chk_local_db_running
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray, MODE_SYNCHRONIZED, MODE_RESYNCHRONIZATION
-from gppylib.operations.backup_utils import pg, escapeDoubleQuoteInSQLString, escape_string
+from gppylib.operations.backup_utils import pg, escapeDoubleQuoteInSQLString
+
+# We do this to allow behave to use 4.3 or 5.0 source code
+# 4.3 does not have the escape_string function
+have_escape_string = True
+try:
+    from gppylib.operations.backup_utils import escape_string
+except ImportError:
+    have_escape_string = False
 
 PARTITION_START_DATE = '2010-01-01'
 PARTITION_END_DATE = '2013-01-01'
@@ -256,7 +264,7 @@ def get_table_data_to_file(filename, tablename, dbname):
     filename = os.path.join(current_dir, './test/data', filename)
     conn = dbconn.connect(dbconn.DbURL(dbname=dbname))
     try:
-        query= """
+        query_format = """
                     select string_agg(a::text, ',')
                         from (
                             select generate_series(1,c.relnatts+1) as a
@@ -266,7 +274,11 @@ def get_table_data_to_file(filename, tablename, dbname):
                                 where (n.nspname || '.' || c.relname = '%s')
                                     or c.relname = '%s'
                         ) as q;
-                """ % (escape_string(tablename, conn=conn), escape_string(tablename, conn=conn))
+                """
+        if have_escape_string:
+            query = query_format % (escape_string(tablename, conn=conn), escape_string(tablename, conn=conn))
+        else:
+            query = query_format % (pg.escape_string(tablename), pg.escape_string(tablename))
         res = dbconn.execSQLForSingleton(conn, query)
         # check if tablename is fully qualified <schema_name>.<table_name>
         if '.' in tablename:
@@ -290,9 +302,10 @@ def diff_backup_restore_data(context, backup_file, restore_file):
 def validate_restore_data(context, new_table, dbname, backedup_table=None, backedup_dbname=None):
     if new_table == "public.gpcrondump_history":
         return
-    table_filename = dbname + "_" + new_table.strip() + "_restore"
-    get_table_data_to_file(table_filename, new_table, dbname)
-
+    dbname = dbname.strip()
+    new_table = new_table.strip()
+    filename = dbname + "_" + new_table + "_restore"
+    get_table_data_to_file(filename, new_table, dbname)
     current_dir = os.getcwd()
 
     if backedup_table != None:
@@ -341,7 +354,7 @@ def backup_db_data(context, dbname):
         backup_data(context, nm, dbname)
 
 def backup_data(context, tablename, dbname):
-    filename = dbname + "_" + tablename + "_backup"
+    filename = dbname.strip() + "_" + tablename.strip() + "_backup"
     get_table_data_to_file(filename, tablename, dbname)
 
 def backup_data_to_file(context, tablename, dbname, filename):
@@ -358,17 +371,25 @@ def check_table_exists(context, dbname, table_name, table_type=None, host=None, 
     with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname)) as conn:
         if '.' in table_name:
             schemaname, tablename = table_name.split('.')
-            SQL = """
-                  select c.oid, c.relkind, c.relstorage, c.reloptions
-                  from pg_class c, pg_namespace n
-                  where c.relname = '%s' and n.nspname = '%s' and c.relnamespace = n.oid;
-                  """ % (escape_string(tablename, conn=conn), escape_string(schemaname, conn=conn))
+            SQL_format = """
+                select c.oid, c.relkind, c.relstorage, c.reloptions
+                from pg_class c, pg_namespace n
+                where c.relname = '%s' and n.nspname = '%s' and c.relnamespace = n.oid;
+                """
+            if have_escape_string:
+                SQL = SQL_format % (escape_string(tablename, conn=conn), escape_string(schemaname, conn=conn))
+            else:
+                SQL = SQL_format % (pg.escape_string(tablename), pg.escape_string(schemaname))
         else:
-            SQL = """
-                  select oid, relkind, relstorage, reloptions \
-                  from pg_class \
-                  where relname = E'%s'; \
-                  """ % escape_string(table_name, conn=conn)
+            SQL_format = """
+                select oid, relkind, relstorage, reloptions \
+                from pg_class \
+                where relname = E'%s';\
+                """
+            if have_escape_string:
+                SQL = SQL_format % (escape_string(table_name, conn=conn))
+            else:
+                SQL = SQL_format % (pg.escape_string(table_name))
 
         table_row = None
         try:
@@ -1380,8 +1401,13 @@ def verify_restored_table_is_analyzed(context, table_name, dbname):
     else:
         schema_name = 'public'
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
-        schema_name = escape_string(schema_name, conn=conn)
-        table_name = escape_string(table_name, conn=conn) 
+        if have_escape_string:
+            schema_name = escape_string(schema_name, conn=conn)
+            table_name = escape_string(table_name, conn=conn)
+        else:
+            schema_name = pg.escape_string(schema_name)
+            table_name = pg.escape_string(table_name)
+
         ROW_COUNT_PG_CLASS_SQL = """SELECT reltuples FROM pg_class WHERE relname = '%s'
                                     AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = '%s')""" % (table_name, schema_name)
         curs = dbconn.execSQL(conn, ROW_COUNT_SQL)

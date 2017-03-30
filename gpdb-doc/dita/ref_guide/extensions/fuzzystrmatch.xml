@@ -62,7 +62,7 @@ SELECT * FROM s WHERE soundex(nm) = soundex('john');
 
 SELECT * FROM s WHERE difference(s.nm, 'john') > 2;</codeblock>
         <p>For information about the Soundex indexing system see <xref
-            href="http://www.archives.gov/research/census/soundex.html" format="html"
+            href="https://www.archives.gov/research/census/soundex.html" format="html"
             scope="external"/>. </p>
       </body>
     </topic>
@@ -130,7 +130,7 @@ test=# SELECT levenshtein_less_equal('extensive', 'exhaustive',4);
  KM
 (1 row)</codeblock>
         <p>For information about the Metaphone algorithm, see <xref
-            href="http://en.wikipedia.org/wiki/Metaphone" format="html" scope="external"/>.</p>
+            href="https://en.wikipedia.org/wiki/Metaphone" format="html" scope="external"/>.</p>
       </body>
     </topic>
     <topic id="d_metaphone">
@@ -149,7 +149,7 @@ dmetaphone_alt(text <varname>source</varname>) returns text</codeblock>
  KMP
 (1 row)</codeblock>
         <p>For information about the Double Metaphone algorithm, see <xref
-            href="http://en.wikipedia.org/wiki/Metaphone#Double_Metaphone" format="html"
+            href="https://en.wikipedia.org/wiki/Metaphone#Double_Metaphone" format="html"
             scope="external"/>.</p>
       </body>
     </topic>

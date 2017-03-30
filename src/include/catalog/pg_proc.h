@@ -4150,6 +4150,37 @@ DESCR("map row to json");
 DATA(insert OID = 3156 (  row_to_json	   PGNSP PGUID 12 1 0 f f t f s 2 114 "2249 16" _null_ _null_ _null_ row_to_json_pretty - _null_ _null_ ));
 DESCR("map row to json with optional pretty printing");
 
+DATA(insert OID = 3947 (  json_object_field         PGNSP PGUID 12 1 0  f f f f i  2 114 "114 25" _null_ _null_ "{from_json,field_name}" json_object_field - _null_ _null_ ));
+DESCR("get json object field");
+DATA(insert OID = 3948 (  json_object_field_text    PGNSP PGUID 12 1 0  f f f f i  2 25  "114 25" _null_ _null_ "{from_json,field_name}" json_object_field_text - _null_ _null_ ));
+DESCR("get json object field as text");
+DATA(insert OID = 3949 (  json_array_element        PGNSP PGUID 12 1 0  f f f f i  2 114 "114 23" _null_ _null_ "{from_json,element_index}" json_array_element - _null_ _null_ ));
+DESCR("get json array element");
+DATA(insert OID = 3950 (  json_array_element_text   PGNSP PGUID 12 1 0  f f f f i  2 25  "114 23" _null_ _null_ "{from_json,element_index}" json_array_element_text - _null_ _null_ ));
+DESCR("get json array element as text");
+DATA(insert OID = 3951 (  json_extract_path	        PGNSP PGUID 12 1 0 25 f f t f i  2 0 114 f "114 1009" "{114,1009}" "{i,v}" "{from_json,path_elems}" _null_ json_extract_path - _null_ _null_ n ));
+DESCR("get value from json with path elements");
+DATA(insert OID = 3952 (  json_extract_path_op      PGNSP PGUID 12 1 0 f f t f i  2 114 "114 1009" _null_ _null_  "{from_json,path_elems}" json_extract_path - _null_ _null_ ));
+DESCR("get value from json with path elements");
+DATA(insert OID = 3953 (  json_extract_path_text	PGNSP PGUID 12 1 0 25 f f t f i  2 0 25 f "114 1009" "{114,1009}" "{i,v}" "{from_json,path_elems}" _null_ json_extract_path_text - _null_ _null_ n ));
+DESCR("get value from json as text with path elements");
+DATA(insert OID = 3954 (  json_extract_path_text_op PGNSP PGUID 12 1 0  f f t f i  2 25 "114 1009" _null_ _null_  "{from_json,path_elems}" json_extract_path_text - _null_ _null_ ));
+DESCR("get value from json as text with path elements");
+DATA(insert OID = 3955 (  json_array_elements       PGNSP PGUID 12 1 100  f f f t i  1 114 "114" "{114,114}" "{i,o}" "{from_json,value}" json_array_elements - _null_ _null_ ));
+DESCR("key value pairs of a json object");
+DATA(insert OID = 3956 (  json_array_length         PGNSP PGUID 12 1 0 f f f f i  1 23 "114" _null_ _null_ _null_ json_array_length - _null_ _null_ ));
+DESCR("length of json array");
+DATA(insert OID = 3957 (  json_object_keys          PGNSP PGUID 12 1 100 f f f t i  1 25 "114" _null_ _null_ _null_ json_object_keys - _null_ _null_ ));
+DESCR("get json object keys");
+DATA(insert OID = 3958 (  json_each                PGNSP PGUID 12 1 100 f f t t i  1 2249 "114" "{114,25,114}" "{i,o,o}" "{from_json,key,value}" json_each - _null_ _null_ ));
+DESCR("key value pairs of a json object");
+DATA(insert OID = 3959 (  json_each_text           PGNSP PGUID 12 1 100 f f t t i  1 2249 "114" "{114,25,114}" "{i,o,o}" "{from_json,key,value}" json_each_text - _null_ _null_ ));
+DESCR("key value pairs of a json object");
+DATA(insert OID = 3960 (  json_populate_record     PGNSP PGUID 12 1 0 f f f f s  3 2283 "2283 114 16" _null_ _null_ _null_ json_populate_record - _null_ _null_  ));
+DESCR("get record fields from a json object");
+DATA(insert OID = 3961 (  json_populate_recordset  PGNSP PGUID 12 1 100 f f f t s  3 2283 "2283 114 16" _null_ _null_ _null_ json_populate_recordset - _null_ _null_ ));
+DESCR("get set of records with fields from a json array of objects");
+
 /* uuid */
 DATA(insert OID = 2952 (  uuid_in		   PGNSP PGUID 12 1 0 f f t f i 1 2950 "2275" _null_ _null_ _null_ uuid_in - _null_ _null_ ));
 DESCR("I/O");

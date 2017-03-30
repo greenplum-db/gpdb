@@ -151,11 +151,11 @@ Feature: Incrementally analyze the database
       When the user runs command "printf 'public.t1_ao\npublic.t3_ao -i b' > config_file"
       And the user runs "analyzedb -l -d incr_analyze -f config_file"
       Then output should contain both "-public.t1_ao" and "-public.t3_ao\(b\)"
-      
+
      @analyzedb_UI
      Scenario: Mixed case inputs
      Given no state files exist for database "incr_analyze"
-     And there is schema ""MySchema"" exists in "incr_analyze"
+     And schema ""MySchema"" exists in "incr_analyze"
      And there is a regular "ao" table ""My_ao"" with column name list ""y","Y",z" and column type list "int,text,real" in schema ""MySchema""
      And there is a regular "heap" table ""T2_heap_UPPERCASE"" with column name list "x,y,z" and column type list "int,text,real" in schema "public"
      When the user runs "analyzedb -l -d incr_analyze -s MySchema"
@@ -172,7 +172,7 @@ Feature: Incrementally analyze the database
      @analyzedb_UI
      Scenario: Table and schema name with a space
      Given no state files exist for database "incr_analyze"
-     And there is schema ""my schema"" exists in "incr_analyze"
+     And schema ""my schema"" exists in "incr_analyze"
      And there is a regular "ao" table ""my ao"" with column name list ""my col","My Col",z" and column type list "int,text,real" in schema ""my schema""
      And there is a regular "heap" table ""my heap"" with column name list ""my col","My Col",z" and column type list "int,text,real" in schema "public"
      When the user runs "analyzedb -l -d incr_analyze -s 'my schema'"
@@ -1722,7 +1722,7 @@ Feature: Incrementally analyze the database
       And "public.sales_1_prt_2" should appear in the latest state files
       And "public.sales_1_prt_4" should appear in the latest state files
       And "public.sales_1_prt_3" should appear in the latest state files
-      
+
      @analyzedb_core @catalog_tables
     Scenario: Catalog tables
      Given no state files exist for database "incr_analyze"

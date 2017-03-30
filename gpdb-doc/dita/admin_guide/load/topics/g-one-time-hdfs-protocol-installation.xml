@@ -6,102 +6,12 @@
    <body>
       <p>Install and configure Hadoop for use with <codeph>gphdfs</codeph> as follows:<ol
             id="ol_whb_fxz_h4">
-            <li id="du188617">Install Java 1.6 or later on <b>all</b> Greenplum Database hosts:
+            <li id="du188617">Install Java 1.7 or later on <b>all</b> Greenplum Database hosts:
                master, segment, and standby master.</li>
-            <li id="du225465">Install a supported Hadoop distribution on all hosts. The distribution
-               must be the same on all hosts. For Hadoop installation information, see the Hadoop
-               distribution documentation.<p>Greenplum Database supports the following Hadoop
-                  distributions: <table frame="all" id="table_g35_npv_hp">
-                     <title>Hadoop Distributions</title>
-                     <tgroup cols="3">
-                        <colspec colname="c1" colnum="1" colwidth="1.0*" rowsep="0"/>
-                        <colspec colname="c2" colnum="2" colwidth="1.0*" rowsep="0"/>
-                        <colspec colname="c3" colnum="3" colwidth="1.0*" rowsep="0"/>
-                        <thead>
-                           <row>
-                              <entry>Hadoop Distribution </entry>
-                              <entry>Version</entry>
-                              <entry>gp_hadoop_ target_version</entry>
-                           </row>
-                        </thead>
-                        <tbody>
-                           <row>
-                              <entry morerows="1">Pivotal HD</entry>
-                              <entry>Pivotal HD 3.0, 3.0.1</entry>
-                              <entry>
-                                 <codeph>gphd-3.0</codeph></entry>
-                           </row>
-                           <row>
-                              <entry>Pivotal HD 2.0, 2.1<p>Pivotal HD 1.0<sup>1</sup>
-                                 </p></entry>
-                              <entry>
-                                 <codeph>gphd-2.0</codeph>
-                              </entry>
-                           </row>
-                           <row>
-                              <entry morerows="1">Greenplum HD</entry>
-                              <entry>Greenplum HD 1.2</entry>
-                              <entry>
-                                 <codeph>gphd-1.2</codeph>
-                              </entry>
-                           </row>
-                           <row>
-                              <entry>Greenplum HD 1.1</entry>
-                              <entry>
-                                 <codeph>gphd-1.1</codeph> (default)</entry>
-                           </row>
-                           <row>
-                              <entry morerows="2">Cloudera</entry>
-                              <entry>CDH 5.2, 5.3, 5.4.x - 5.8.x</entry>
-                              <entry>
-                                 <codeph>cdh5</codeph>
-                              </entry>
-                           </row>
-                           <row>
-                              <entry>CDH 5.0, 5.1</entry>
-                              <entry><codeph>cdh4.1</codeph></entry>
-                           </row>
-                           <row>
-                              <entry>CDH 4.1<sup>2</sup> - CDH 4.7</entry>
-                              <entry>
-                                 <codeph>cdh4.1</codeph>
-                              </entry>
-                           </row>
-                           <row>
-                              <entry>Hortonworks Data Platform</entry>
-                              <entry>HDP 2.1, 2.2, 2.3</entry>
-                              <entry>
-                                 <codeph>hdp2</codeph>
-                              </entry>
-                           </row>
-                           <row>
-                              <entry morerows="1">MapR<sup>3</sup>
-                              </entry>
-                              <entry>MapR 4.x, MapR 5.x</entry>
-                              <entry>
-                                 <codeph>gpmr-1.2</codeph>
-                              </entry>
-                           </row>
-                           <row>
-                              <entry>MapR 1.x, 2.x, 3.x</entry>
-                              <entry>
-                                 <codeph>gpmr-1.0</codeph>
-                              </entry>
-                           </row>
-                           <row>
-                              <entry>Apache Hadoop</entry>
-                              <entry>2.x</entry>
-                              <entry>
-                                 <codeph>hadoop2</codeph>
-                              </entry>
-                           </row>
-                        </tbody>
-                     </tgroup>
-                  </table><note><p> 1. Pivotal HD 1.0 is a distribution of Hadoop 2.0.</p> 2. For
-                     CDH 4.1, only CDH4 with MRv1 is supported.<p> 3. MapR requires the MapR client
-                        software.</p></note>For the latest information regarding supported Hadoop
-                  distributions, see the <i>Greenplum Database Release Notes</i> for your
-                  release.</p>
+            <li id="du225465">Install a compatible Hadoop distribution on all hosts. The
+               distribution must be the same on all hosts. For Hadoop installation information, see
+               the Hadoop distribution documentation.<p>See the <i>Greenplum Database Release
+                     Notes</i> for information about compatible Hadoop distributions.</p>
             </li>
             <li id="du191308">After installation, ensure that the Greenplum system user
                   (<codeph>gpadmin</codeph>) has read and execute access to the Hadoop libraries or
@@ -142,23 +52,15 @@ export HADOOP_HOME=/usr/lib/gphd</codeblock><p>The
                               <codeph>gp_hadoop_target_version</codeph>
                            </entry>
                            <entry colname="col2">The Hadoop target. Choose one of the following. <p>
-                                 <codeph>gphd-1.0</codeph>
+                                 <codeph>cdh5</codeph>
                               </p><p>
-                                 <codeph>gphd-1.1</codeph>
-                              </p><p>
-                                 <codeph>gphd-1.2</codeph>
-                              </p><p>
-                                 <codeph>gphd-2.0</codeph>
-                              </p><p>
-                                 <codeph>gpmr-1.0</codeph>
-                              </p><p>
-                                 <codeph>gpmr-1.2</codeph>
+                                 <codeph>cdh4.1</codeph>
                               </p><p>
                                  <codeph>hdp2</codeph>
                               </p><p>
-                                 <codeph>cdh3u2</codeph>
+                                 <codeph>gpmr-1.2</codeph>
                               </p><p>
-                                 <codeph>cdh4.1</codeph>
+                                 <codeph>hadoop2</codeph>
                               </p></entry>
                            <entry colname="col3">
                               <codeph>gphd-1.1</codeph>
@@ -169,11 +71,12 @@ export HADOOP_HOME=/usr/lib/gphd</codeblock><p>The
                            <entry colname="col1">
                               <codeph>gp_hadoop_home</codeph>
                            </entry>
-                           <entry colname="col2">When using Pivotal HD, specify the installation
-                              directory for Hadoop. For example, the default installation directory
-                              is <filepath>/usr/lib/gphd</filepath>.<p>When using Greenplum HD 1.2
-                                 or earlier, specify the same value as the
-                                    <codeph>HADOOP_HOME</codeph> environment variable.</p></entry>
+                           <entry colname="col2">With Pivotal HD (not supported) this parameter
+                              specifies the installation directory for Hadoop. For example, the
+                              default installation directory is
+                                 <filepath>/usr/lib/gphd</filepath>.<p>When using Greenplum HD 1.2
+                                 or earlier (not supported), specify the same value as the
+                                 HADOOP_HOME environment variable.</p></entry>
                            <entry colname="col3">
                               <codeph>NULL</codeph>
                            </entry>
@@ -184,8 +87,7 @@ export HADOOP_HOME=/usr/lib/gphd</codeblock><p>The
                </table> For example, the following commands use the Greenplum Database utilities
                   <codeph>gpconfig</codeph> and <codeph>gpstop</codeph> to set the server
                configuration parameters and restart Greenplum
-               Database:<codeblock>gpconfig -c gp_hadoop_target_version -v "'gphd-2.0'"
-gpconfig -c gp_hadoop_home -v "'/usr/lib/gphd'"
+               Database:<codeblock>gpconfig -c gp_hadoop_target_version -v "'hdb2'"
 gpstop -u</codeblock>
                For information about the Greenplum Database utilities <codeph>gpconfig</codeph> and
                   <codeph>gpstop</codeph>, see the <cite>Greenplum Database Utility Guide</cite>. </li>

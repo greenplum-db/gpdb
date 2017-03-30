@@ -434,6 +434,11 @@ static const SchemaQuery Query_for_list_of_views = {
 "  UNION ALL SELECT 'all') ss "\
 " WHERE substring(name,1,%d)='%s'"
 
+#define Query_for_list_of_resgroups \
+" SELECT pg_catalog.quote_ident(rsgname) "\
+"   FROM pg_catalog.pg_resgroup "\
+"  WHERE substring(pg_catalog.quote_ident(rsgname),1,%d)='%s'"
+
 #define Query_for_list_of_roles \
 " SELECT pg_catalog.quote_ident(rolname) "\
 "   FROM pg_catalog.pg_roles "\
@@ -545,6 +550,7 @@ static const pgsql_thing_t words_after_create[] = {
 	{"OPERATOR", NULL, NULL},	/* Querying for this is probably not such a
 								 * good idea. */
 	{"PARSER", Query_for_list_of_ts_parsers, NULL, true},
+	{"RESOURCE", NULL},
 	{"ROLE", Query_for_list_of_roles},
 	{"RULE", "SELECT pg_catalog.quote_ident(rulename) FROM pg_catalog.pg_rules WHERE substring(pg_catalog.quote_ident(rulename),1,%d)='%s'"},
 	{"SCHEMA", Query_for_list_of_schemas},
@@ -1648,6 +1654,39 @@ psql_completion(char *text, int start, int end)
 		"UNENCRYPTED", NULL};
 
 		COMPLETE_WITH_LIST(list_CREATEROLE);
+	}
+
+/* CREATE/DROP RESOURCE GROUP/QUEUE */
+	else if ((pg_strcasecmp(prev2_wd, "CREATE") == 0 || pg_strcasecmp(prev2_wd, "DROP") == 0) &&
+			 pg_strcasecmp(prev_wd, "RESOURCE") == 0)
+	 {
+		static const char *const list_CREATERESOURCEGROUP[] =
+		{"GROUP", "QUEUE", NULL};
+
+		COMPLETE_WITH_LIST(list_CREATERESOURCEGROUP);
+	 }
+
+/* DROP RESOURCE GROUP */
+	else if (pg_strcasecmp(prev3_wd, "DROP") == 0 &&
+			 pg_strcasecmp(prev2_wd, "RESOURCE") == 0 &&
+			 pg_strcasecmp(prev_wd, "GROUP") == 0)
+		COMPLETE_WITH_QUERY(Query_for_list_of_resgroups);
+
+/* CREATE RESOURCE GROUP */
+	else if (pg_strcasecmp(prev4_wd, "CREATE") == 0 &&
+			 pg_strcasecmp(prev3_wd, "RESOURCE") == 0 &&
+			 pg_strcasecmp(prev2_wd, "GROUP") == 0)
+		COMPLETE_WITH_CONST("WITH (");
+
+	else if (pg_strcasecmp(prev5_wd, "RESOURCE") == 0 &&
+			 pg_strcasecmp(prev4_wd, "GROUP") == 0 &&
+			 pg_strcasecmp(prev2_wd, "WITH") == 0 &&
+			 pg_strcasecmp(prev_wd, "(") == 0)
+	{
+		static const char *const list_CREATERESOURCEGROUP[] =
+		{"CONCURRENCY", "CPU_RATE_LIMIT", "MEMORY_LIMIT", "MEMORY_REDZONE_LIMIT", NULL};
+
+		COMPLETE_WITH_LIST(list_CREATERESOURCEGROUP);
 	}
 
 	/*

@@ -78,9 +78,9 @@ total 8
         <li>View the contents of the <filepath>_pipes</filepath> file.
           <codeblock>$ cat /backups/db_dumps/20150519/gp_dump_20150519160000_pipes 
 sdw1:/backups/db_dumps/20150519/gp_dump_0_2_20150519160000.gz
-sdw2:/backups/db_dumps/20150519/gp_dump_0_3_20150519160000.gz
-mdw:/backups/db_dumps/20150519/gp_dump_1_1_20150519160000.gz
-mdw:/backups/db_dumps/20150519/gp_dump_1_1_20150519160000_post_data.gz
+sdw2:/backups/db_dumps/20150519/gp_dump_1_3_20150519160000.gz
+mdw:/backups/db_dumps/20150519/gp_dump_-1_1_20150519160000.gz
+mdw:/backups/db_dumps/20150519/gp_dump_-1_1_20150519160000_post_data.gz
 </codeblock></li>
         <li>Create the specified named pipes on the Greenplum Database segments. Also set up a
           reader for the named pipe.

@@ -15,7 +15,7 @@
         popular management tool pgAdmin III. Since version 1.10.0, the pgAdmin III client available
         from PostgreSQL Tools includes support for Greenplum-specific
         features. Installation packages are available for download from the <xref
-          href="http://www.pgadmin.org/download/" scope="external" format="html"> pgAdmin download
+          href="https://www.pgadmin.org/download/" scope="external" format="html"> pgAdmin download
           site </xref>.</li>
       <li id="io141985">Using standard <xref href="g-database-application-interfaces.xml#topic12"/>,
         such as ODBC and JDBC, users can create their own client applications that interface to

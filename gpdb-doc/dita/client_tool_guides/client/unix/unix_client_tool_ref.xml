@@ -5,5 +5,8 @@
 They all require certain connection information such as the Greenplum
 Database master host name, port, database name, and role name. These
 can be configured using environment variables. See <xref href="unix_client_install.xml#topic4" type="topic" format="dita"/>.</p><p>The following tools are provided:</p><ul><li id="mi142496"><codeph><xref href="./gpmapreduce.xml#topic1" type="topic" format="dita"
-          /></codeph> (submits Greenplum MapReduce specifications for execution)</li><li id="mi139484"><codeph><xref href="./psql.xml#topic1" type="topic" format="dita"/></codeph>
+          /></codeph> (submits Greenplum MapReduce specifications for execution). The
+          <codeph>gpmapreduce</codeph> tool and the associated YAML specification will be removed in
+        the next major release (6.x) of Greenplum Database. It is still included to support existing
+          <codeph>gpmapreduce</codeph> YAML files. </li><li id="mi139484"><codeph><xref href="./psql.xml#topic1" type="topic" format="dita"/></codeph>
         (PostgreSQL interactive terminal)</li></ul></body></topic>

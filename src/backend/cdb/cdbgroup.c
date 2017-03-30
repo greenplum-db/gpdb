@@ -3996,7 +3996,13 @@ add_second_stage_agg(PlannerInfo *root,
 			}
 		}
 	}
-	
+
+	/*
+	 * Ensure that the plan we're going to attach to the subquery scan has
+	 * all the parameter fields figured out.
+	 */
+	SS_finalize_plan(root, result_plan, false);
+
 	/* Construct a range table entry referring to it. */
 	newrte = addRangeTableEntryForSubquery(NULL,
 										   subquery,
@@ -4027,12 +4033,6 @@ add_second_stage_agg(PlannerInfo *root,
 		}
 		parse->targetList = copyObject(upper_tlist); /* Match range. */
 	}
-
-	/*
-	 * Ensure that the plan we're going to attach to the subquery scan has all the
-	 * parameter fields figured out.
-	 */
-	SS_finalize_plan(root, result_plan, false);
 
 	result_plan = add_subqueryscan(root, p_current_pathkeys, 
 								   1, subquery, result_plan);

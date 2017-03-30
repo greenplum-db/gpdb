@@ -5,133 +5,37 @@
 set optimizer_disable_missing_stats_collection = on;
 CREATE TABLE REG_REGION (R_REGIONKEY INT, R_NAME CHAR(25), R_COMMENT VARCHAR(152)) DISTRIBUTED BY (R_REGIONKEY);
 -- start_ignore
--- --------------------------------------
--- check platform
--- --------------------------------------
-drop external web table if exists check_ps;
-NOTICE:  table "check_ps" does not exist, skipping
-CREATE EXTERNAL WEB TABLE check_ps (x text)
-execute E'( (ps -ef || ps -aux) | grep gpfdist | grep -v grep)'
-on SEGMENT 0
-format 'text';
-drop external web table if exists check_env;
-NOTICE:  table "check_env" does not exist, skipping
-CREATE EXTERNAL WEB TABLE check_env (x text)
-execute E'( env | sort)'
-on SEGMENT 0
-format 'text';
-select * from check_ps;
-ERROR:  external table check_ps command ended with error.  (seg0 slice1 @hostname@:50000 pid=64819)
-DETAIL:  Command: execute:( (ps -ef || ps -aux) | grep gpfdist | grep -v grep)
-select * from check_env;
-                                                                                                                                                                                                                                      x                                                                                                                                                                                                                                      
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- CLICOLOR=1
- DYLD_LIBRARY_PATH=/Users/@gpcurusername@/greenplum-db-devel/lib:/Users/@gpcurusername@/greenplum-db-devel/ext/python/lib:/opt/gcc_infrastructure/lib:/Users/@gpcurusername@/greenplum-perfmon-web-4.0.1.0/lib:/Users/@gpcurusername@/greenplum-db-devel/lib:/Users/@gpcurusername@/greenplum-db-devel/ext/python/lib:
- GPHOME=/Users/@gpcurusername@/greenplum-db-devel
- GPPERFMONHOME=/Users/@gpcurusername@/greenplum-perfmon-web-4.0.1.0
- GPROOT=/Users/@gpcurusername@
- GP_CID=0
- GP_DATABASE=regression
- GP_DATE=20110816
- GP_HADOOP_CONN_JARDIR=lib//hadoop
- GP_HADOOP_CONN_VERSION=CE_1.0.0.0
- GP_MASTER_HOST=127.0.0.1
- GP_MASTER_PORT=5432
- GP_SEGMENT_COUNT=2
- GP_SEGMENT_ID=0
- GP_SEG_DATADIR=/Users/@gpcurusername@/greenplum-db-data/dbfast1/gpseg0
- GP_SEG_PG_CONF=/Users/@gpcurusername@/greenplum-db-data/dbfast1/gpseg0/postgresql.conf
- GP_SEG_PORT=50000
- GP_SESSION_ID=438
- GP_SN=1
- GP_TIME=132701
- GP_USER=@gpcurusername@
- GP_XID=1313526180-0000006772
- HADOOP_HOME=/Users/@gpcurusername@/WorkDir/hadoop-0.20.1-dev
- HADOOP_VERSION=0.21.0
- HOME=/Users/@gpcurusername@
- JAVA_HOME=/System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/Home
- LC_COLLATE=en_US.utf-8
- LC_CTYPE=en_US.utf-8
- LC_MESSAGES=C
- LC_MONETARY=C
- LC_NUMERIC=C
- LC_TIME=C
- LOGNAME=@gpcurusername@
- MAIL=/var/mail/@gpcurusername@
- MASTER_DATA_DIRECTORY=//Users/@gpcurusername@/greenplum-master/gpseg-1
- OPENSSL_CONF=/Users/@gpcurusername@/greenplum-db-devel/etc/openssl.cnf
- P4CONFIG=.p4config
- PATH=/Users/@gpcurusername@/greenplum-db-devel/bin:/Users/@gpcurusername@/greenplum-db-devel/ext/python/bin:/Users/@gpcurusername@/greenplum-db-devel/bin:/Users/@gpcurusername@/greenplum-db-devel/ext/python/bin:/opt/gcc-4.4.2/bin:/Users/@gpcurusername@/Workdir/mybin:/Users/@gpcurusername@/greenplum-perfmon-web-4.0.1.0/bin:/Users/@gpcurusername@/greenplum-db-devel/bin:/Users/@gpcurusername@/greenplum-db-devel/ext/python/bin:/Users/@gpcurusername@/greenplum-db-devel/bin:/Users/@gpcurusername@/greenplum-db-devel/ext/python/bin:/usr/bin:/bin:/usr/sbin:/sbin
- PGDATA=/Users/@gpcurusername@/greenplum-db-data/dbfast1/gpseg0
- PGHOST=127.0.0.1
- PGSYSCONFDIR=/Users/@gpcurusername@/greenplum-db-devel/etc/postgresql
- PWD=/Users/@gpcurusername@/greenplum-db-data/dbfast1/gpseg0
- PYTHONHOME=/Users/@gpcurusername@/greenplum-db-devel/ext/python
- PYTHONPATH=/Users/@gpcurusername@/greenplum-db-devel/lib/python
- SHELL=/bin/bash
- SHLVL=4
- SSH_CLIENT=127.0.0.1 50658 22
- SSH_CONNECTION=127.0.0.1 50658 127.0.0.1 22
- TERM=xterm-color
- USER=@gpcurusername@
- VERSIONER_PERL_PREFER_32_BIT=yes
- VERSIONER_PERL_VERSION=5.8.9
- ZK_HOME=/Users/@gpcurusername@/WorkDir/zookeeper-3.3.3
- _=/usr/bin/env
- __CF_USER_TEXT_ENCODING=0x1F7:0:0
-(55 rows)
-
 -- end_ignore
 -- --------------------------------------
 -- 'gpfdist' protocol
 -- --------------------------------------
-CREATE EXTERNAL WEB TABLE exttab1_gpfdist_status (x text)
-execute E'( python @bindir@/gppinggpfdist.py @hostname@:7070 2>&1 || echo) '
-on SEGMENT 0
-FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL WEB TABLE exttab1_gpfdist_start (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 2; echo "starting...") '
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 1; echo "starting...") '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL WEB TABLE exttab1_gpfdist_stop (x text)
-execute E'(/bin/pkill gpfdist || killall gpfdist) > /dev/null 2>&1; echo "stopping..."'
+execute E'(ps -A |grep [g]pfdist |awk \'{print $1;}\' |xargs kill) > /dev/null 2>&1; echo "stopping..."'
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 -- start_ignore
-select * from exttab1_gpfdist_stop;
-      x      
--------------
- stopping...
-(1 row)
-
-select * from exttab1_gpfdist_status;
-                          x                           
-------------------------------------------------------
- Error: gpfdist is not running (reason: socket error)
- Exit: 1
- 
-(3 rows)
-
-select * from exttab1_gpfdist_start;
-      x      
--------------
- starting...
-(1 row)
-
-select * from exttab1_gpfdist_status;
-                                     x                                     
----------------------------------------------------------------------------
- Okay, gpfdist version "main build dev" is running on @hostname@:7070.
-(1 row)
-
 -- end_ignore
 CREATE EXTERNAL TABLE EXT_NATION  ( N_NATIONKEY  INTEGER ,
                             N_NAME       CHAR(25) ,
                             N_REGIONKEY  INTEGER ,
                             N_COMMENT    VARCHAR(152))
 location ('gpfdist://@hostname@:7070/exttab1/nation.tbl' )
+FORMAT 'text' (delimiter '|');
+CREATE EXTERNAL TABLE EXT_NATION_GZ  ( N_NATIONKEY  INTEGER ,
+                            N_NAME       CHAR(25) ,
+                            N_REGIONKEY  INTEGER ,
+                            N_COMMENT    VARCHAR(152))
+location ('gpfdist://@hostname@:7070/exttab1/nation.tbl.gz' )
+FORMAT 'text' (delimiter '|');
+CREATE EXTERNAL TABLE EXT_NATION_MATCH  ( N_NATIONKEY  INTEGER ,
+                            N_NAME       CHAR(25) ,
+                            N_REGIONKEY  INTEGER ,
+                            N_COMMENT    VARCHAR(152))
+location ('gpfdist://@hostname@:7070/exttab1/nation.tbl*' )
 FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL TABLE EXT_REGION  (LIKE REG_REGION)
 location ('gpfdist://@hostname@:7070/exttab1/region.tbl' )
@@ -165,6 +69,42 @@ SELECT * FROM EXT_NATION;
           23 | UNITED KINGDOM            |           3 | eans boost carefully special requests. accounts are. carefull
           24 | UNITED STATES             |           1 | y final packages. slow foxes cajole quickly. quickly silent platelets breach ironic accounts. unusual pinto be
 (25 rows)
+
+SELECT * FROM EXT_NATION_GZ;
+ n_nationkey |          n_name           | n_regionkey |                                                     n_comment                                                      
+-------------+---------------------------+-------------+--------------------------------------------------------------------------------------------------------------------
+           0 | ALGERIA                   |           0 |  haggle. carefully final deposits detect slyly agai
+           1 | ARGENTINA                 |           1 | al foxes promise slyly according to the regular accounts. bold requests alon
+           2 | BRAZIL                    |           1 | y alongside of the pending deposits. carefully special packages are about the ironic forges. slyly special 
+           3 | CANADA                    |           1 | eas hang ironic, silent packages. slyly regular packages are furiously over the tithes. fluffily bold
+           4 | EGYPT                     |           4 | y above the carefully unusual theodolites. final dugouts are quickly across the furiously regular d
+           5 | ETHIOPIA                  |           0 | ven packages wake quickly. regu
+           6 | FRANCE                    |           3 | refully final requests. regular, ironi
+           7 | GERMANY                   |           3 | l platelets. regular accounts x-ray: unusual, regular acco
+           8 | INDIA                     |           2 | ss excuses cajole slyly across the packages. deposits print aroun
+           9 | INDONESIA                 |           2 |  slyly express asymptotes. regular deposits haggle slyly. carefully ironic hockey players sleep blithely. carefull
+          10 | IRAN                      |           4 | efully alongside of the slyly final dependencies. 
+          11 | IRAQ                      |           4 | nic deposits boost atop the quickly final requests? quickly regula
+          12 | JAPAN                     |           2 | ously. final, express gifts cajole a
+          13 | JORDAN                    |           4 | ic deposits are blithely about the carefully regular pa
+          14 | KENYA                     |           0 |  pending excuses haggle furiously deposits. pending, express pinto beans wake fluffily past t
+          15 | MOROCCO                   |           0 | rns. blithely bold courts among the closely regular packages use furiously bold platelets?
+          16 | MOZAMBIQUE                |           0 | s. ironic, unusual asymptotes wake blithely r
+          17 | PERU                      |           1 | platelets. blithely pending dependencies use fluffily across the even pinto beans. carefully silent accoun
+          18 | CHINA                     |           2 | c dependencies. furiously express notornis sleep slyly regular accounts. ideas sleep. depos
+          19 | ROMANIA                   |           3 | ular asymptotes are about the furious multipliers. express dependencies nag above the ironically ironic account
+          20 | SAUDI ARABIA              |           4 | ts. silent requests haggle. closely express packages sleep across the blithely
+          21 | VIETNAM                   |           2 | hely enticingly express accounts. even, final 
+          22 | RUSSIA                    |           3 |  requests against the platelets use never according to the quickly regular pint
+          23 | UNITED KINGDOM            |           3 | eans boost carefully special requests. accounts are. carefull
+          24 | UNITED STATES             |           1 | y final packages. slow foxes cajole quickly. quickly silent platelets breach ironic accounts. unusual pinto be
+(25 rows)
+
+SELECT count(*) FROM EXT_NATION_MATCH;
+ count 
+-------
+    50
+(1 row)
 
 SELECT * FROM EXT_REGION;
  r_regionkey |          r_name           |                                                      r_comment                                                      
@@ -207,35 +147,17 @@ SELECT * FROM EXT_REGION as r, EXT_NATION as n WHERE n.N_REGIONKEY = r.R_REGIONK
 (25 rows)
 
 -- start_ignore
-select * from exttab1_gpfdist_status;
-                                     x                                     
----------------------------------------------------------------------------
- Okay, gpfdist version "main build dev" is running on @hostname@:7070.
-(1 row)
-
-select * from exttab1_gpfdist_stop;
-      x      
--------------
- stopping...
-(1 row)
-
-select * from exttab1_gpfdist_status;
-                          x                           
-------------------------------------------------------
- Error: gpfdist is not running (reason: socket error)
- Exit: 1
- 
-(3 rows)
-
 -- end_ignore
 -- drop tables
 DROP EXTERNAL TABLE EXT_NATION;
+DROP EXTERNAL TABLE EXT_NATION_GZ;
+DROP EXTERNAL TABLE EXT_NATION_MATCH;
 DROP EXTERNAL TABLE EXT_REGION;
 --
 -- gpfdist in csv (mpp-1519, etc)
 --
 CREATE EXTERNAL WEB TABLE gpfdist_csv_start (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 2; echo "starting...") '
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 1; echo "starting...") '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 -- 
@@ -243,40 +165,6 @@ FORMAT 'text' (delimiter '|');
 -- (end the double quote so emacs highlighting works correctly)
 --
 -- start_ignore
-select * from exttab1_gpfdist_status;
-                          x                           
-------------------------------------------------------
- Error: gpfdist is not running (reason: socket error)
- Exit: 1
- 
-(3 rows)
-
-select * from exttab1_gpfdist_stop;
-      x      
--------------
- stopping...
-(1 row)
-
-select * from exttab1_gpfdist_status;
-                          x                           
-------------------------------------------------------
- Error: gpfdist is not running (reason: socket error)
- Exit: 1
- 
-(3 rows)
-
-select * from gpfdist_csv_start;
-      x      
--------------
- starting...
-(1 row)
-
-select * from exttab1_gpfdist_status;
-                                     x                                     
----------------------------------------------------------------------------
- Okay, gpfdist version "main build dev" is running on @hostname@:7070.
-(1 row)
-
 -- end_ignore
 create external table ext_whois (
 source_lineno			int,
@@ -377,6 +265,141 @@ select count(*) from ext_whois;
 -------
     23
 (1 row)
+
+create table v_w as select * from ext_whois;
+-- sort distinct spill to disk/external sort
+select count(*) from (select * from v_w union select * from ext_whois) as foo;
+ count
+-------
+    23
+(1 row)
+
+select count(*) from (select * from v_w union all select * from ext_whois) as foo;
+ count
+-------
+    46
+(1 row)
+
+select count(*) from (select distinct * from ext_whois) as foo;
+ count
+-------
+    23
+(1 row)
+
+select count(*) from (select * from ext_whois order by 1 limit 300000 offset 30000) as foo;
+ count
+-------
+     0
+(1 row)
+
+select count(*) from (select * from ext_whois order by 1 limit 300000 offset 10) as foo;
+ count
+-------
+    13
+(1 row)
+
+select source_lineno, domain_name from ext_whois order by
+source_lineno,
+domain_name,
+subdomain,
+tld,
+ip_address,
+ip_address_int,
+reverse_dns,
+reverse_domain,
+registrar,
+registrar_referral,
+whois_server,
+harvest_date,
+created_on,
+update_date,
+expire_date,
+rank,
+status,
+update_status,
+nameserver1,
+nameserver1_domain_name,
+nameserver1_subdomain,
+nameserver1_tld,
+nameserver2,
+nameserver2_domain_name,
+nameserver2_subdomain,
+nameserver2_tld,
+nameserver3,
+nameserver3_domain_name,
+nameserver3_subdomain,
+nameserver3_tld,
+nameserver4,
+nameserver4_domain_name ,
+nameserver4_subdomain,
+nameserver4_tld,
+nameserver5,
+nameserver5_domain_name,
+nameserver5_subdomain,
+nameserver5_tld,
+registrant_name,
+registrant_organization ,
+registrant_email,
+registrant_email_domain,
+registrant_email_subdomain,
+registrant_email_tld,
+registrant_phone,
+registrant_fax,
+registrant_addrall,
+registrant_street1,
+registrant_street2,
+registrant_street3,
+registrant_city,
+registrant_state_province,
+registrant_postal_code,
+registrant_country,
+tech_name,
+tech_organization,
+tech_email,
+tech_email_domain,
+tech_email_subdomain,
+tech_email_tld,
+tech_phone,
+tech_fax,
+tech_addrall,
+tech_street1,
+tech_street2,
+tech_street3,
+tech_city,
+tech_state_province,
+tech_postal_code,
+tech_country,
+admin_name,
+admin_organization,
+admin_email,
+admin_email_domain ,
+admin_email_subdomain,
+admin_email_tld,
+admin_phone,
+admin_fax,
+admin_addrall,
+admin_street1,
+admin_street2,
+admin_street3,
+admin_city,
+admin_state_province,
+admin_postal_code,
+admin_country,
+rec_path,
+raw_record limit 10 offset 10;
+ source_lineno |   domain_name
+---------------+-----------------
+           596 | 007dy.net
+           650 | 00163.net
+           725 | 0-sexyteens.net
+           782 | 0000ff.net
+           839 | 0041.net
+           903 | 0086-595.net
+           967 | 000gps.net
+          1019 | 0086-534.net
+          1083 | 0-l.net
+          1137 | 0049165.net
+(10 rows)
 
 -- test FILL EMPTY FIELDS
 create external table ext_fill1(a int, b int, c int)
@@ -581,26 +604,19 @@ SELECT DISTINCT(R_NAME) FROM ret_region ORDER BY R_NAME;
 (5 rows)
 
 -- start_ignore
-select * from exttab1_gpfdist_status;
-                                     x                                     
----------------------------------------------------------------------------
- Okay, gpfdist version "main build dev" is running on @hostname@:7070.
-(1 row)
-
-select * from exttab1_gpfdist_stop;
-      x      
--------------
- stopping...
-(1 row)
-
-select * from exttab1_gpfdist_status;
-                          x                           
-------------------------------------------------------
- Error: gpfdist is not running (reason: socket error)
- Exit: 1
- 
-(3 rows)
-
+DROP TABLE IF EXISTS table_multi_locations;
+NOTICE:  table "table_multi_locations" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS ext_table_multi_locations;
+NOTICE:  table "ext_table_multi_locations" does not exist, skipping
+-- end_ignore
+-- The use of more than one gpfdist. Each gpfdist points to a different file to write into
+CREATE TABLE table_multi_locations (a int, b text) DISTRIBUTED BY (a);
+INSERT INTO table_multi_locations VALUES (generate_series(1,256), 'test_1');
+CREATE WRITABLE EXTERNAL TABLE ext_table_multi_locations (a int, b text) LOCATION ('gpfdist://@hostname@:7070/wet_multi_locations_1.tbl', 'gpfdist://@hostname@:7070/wet_multi_locations_2.tbl') FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null');
+INSERT INTO ext_table_multi_locations SELECT * FROM table_multi_locations;
+DROP TABLE IF EXISTS table_multi_locations;
+DROP EXTERNAL TABLE IF EXISTS ext_table_multi_locations;
+-- start_ignore
 -- end_ignore
 --
 -- get an error for missing gpfdist
@@ -608,12 +624,9 @@ select * from exttab1_gpfdist_status;
 select count(*) from ext_whois;
 ERROR:  connection with gpfdist failed for gpfdist://@hostname@:7070/whois.csv. effective url: http://127.0.0.1:7070/whois.csv. error code = 61 (Connection refused)  (seg1 slice1 @hostname@:50001 pid=64820)
 drop external table ext_whois;
-drop external table exttab1_gpfdist_status;
 drop external table exttab1_gpfdist_start;
 drop external table gpfdist_csv_start;
 drop external table exttab1_gpfdist_stop;
-drop external table check_ps;
-drop external table check_env;
 drop external table wet_pos1;
 drop external table wet_pos2;
 drop external table wet_pos3;

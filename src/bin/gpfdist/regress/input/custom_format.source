@@ -6,26 +6,27 @@
 -- check platform and start 'gpfdist'
 -- --------------------------------------
 set optimizer_disable_missing_stats_collection = on;
-CREATE EXTERNAL WEB TABLE gpfdist_status (x text)
-execute E'( python @bindir@/gppinggpfdist.py @hostname@:7575 2>&1 || echo) '
-on SEGMENT 0
-FORMAT 'text' (delimiter '|');
 
 CREATE EXTERNAL WEB TABLE gpfdist_start (x text)
-execute E'((@bindir@/gpfdist -p 7575 -d @abs_srcdir@/data/fixedwidth/  </dev/null >/dev/null 2>&1 &); sleep 2; echo "starting...") '
+execute E'((@bindir@/gpfdist -p 7575 -d @abs_srcdir@/data/fixedwidth/  </dev/null >/dev/null 2>&1 &); sleep 1; echo "starting...") '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 
 CREATE EXTERNAL WEB TABLE gpfdist_stop (x text)
-execute E'(/bin/pkill gpfdist || killall gpfdist) > /dev/null 2>&1; echo "stopping..."'
+execute E'(ps -A |grep [g]pfdist |awk \'{print $1;}\' |xargs kill) > /dev/null 2>&1; echo "stopping..."'
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 
 -- start_ignore
+-- CREATE EXTERNAL WEB TABLE gpfdist_status (x text)
+-- execute E'( python @bindir@/gppinggpfdist.py @hostname@:7575 2>&1 || echo) '
+-- on SEGMENT 0
+-- FORMAT 'text' (delimiter '|');
+
 SELECT * FROM gpfdist_stop;
-SELECT * FROM gpfdist_status;
+-- SELECT * FROM gpfdist_status;
 SELECT * FROM gpfdist_start;
-SELECT * FROM gpfdist_status;
+-- SELECT * FROM gpfdist_status;
 -- end_ignore
 
 -- --------------------------------------
@@ -315,6 +316,26 @@ INSERT INTO tbl_out_fixedwidth SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
 SELECT * FROM clean_out_file;
 
 
+-- Create WET with line_delim='qwertyuiopasdfghjklzxcvbnm'
+DROP EXTERNAL TABLE IF EXISTS tbl_out_fixedwidth;
+CREATE WRITABLE EXTERNAL TABLE tbl_out_fixedwidth (
+    s1 char(10), s2 varchar(10), s3 text, dt timestamp,
+    n1 smallint, n2 integer, n3 bigint, n4 decimal,
+    n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_out.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_out', s1='10',
+    s2='10', s3='10', dt='25', n1='5', n2='10',
+    n3='10', n4='10', n5='10', n6='10', n7='15',line_delim='qwertyuiopasdfghjklzxcvbnm');
+
+-- Output data
+INSERT INTO tbl_out_fixedwidth SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+\! cat @abs_srcdir@/data/fixedwidth/fixedwidth_out.tbl | wc
+
+-- Clean out the output file
+SELECT * FROM clean_out_file;
+
+
 -- Create a RET
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
 CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
@@ -349,21 +370,18 @@ SELECT * FROM clean_out_file;
 -- --------------------------------------
 
 -- start_ignore
-SELECT * FROM gpfdist_status;
+-- SELECT * FROM gpfdist_status;
 SELECT * FROM gpfdist_stop;
-SELECT * FROM gpfdist_status;
+-- SELECT * FROM gpfdist_status;
 -- end_ignore
 
 -- --------------------------------------
 -- clean the database
 -- --------------------------------------
 
-DROP EXTERNAL TABLE IF EXISTS gpfdist_status;
 DROP EXTERNAL TABLE IF EXISTS gpfdist_start;
 DROP EXTERNAL TABLE IF EXISTS gpfdist_stop;
 DROP EXTERNAL WEB TABLE IF EXISTS clean_out_file;
  
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
 DROP EXTERNAL TABLE IF EXISTS tbl_out_fixedwidth;
-
-

@@ -92,7 +92,7 @@ class GpactivateStandby(object):
         return self.gpinit.run(option='-r')
 
     def failback_to_original_master(self):
-        # Check if mater is running.
+        # Check if master is running.
         bashCmd = (self.gphome)+'/bin/pg_ctl status -D $MASTER_DATA_DIRECTORY | grep \'pg_ctl: server is running\''
         cmd = Command(name='Running cmd %s'%bashCmd, cmdStr="source %s/greenplum_path.sh; %s" % (self.gphome,bashCmd))
         try:

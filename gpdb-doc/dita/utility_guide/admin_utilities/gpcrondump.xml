@@ -91,6 +91,15 @@
           <codeph>" ` $ \</codeph> .</p><p>When the name is specified in an input file, the name
         must <i>not</i> be enclosed in double quotes. Special characters do not require escaping.
       </p></section>
+    <section>
+      <title>Backup Filenames</title>
+      <p>The utility creates backup files with this file name format.</p>
+      <p><codeblock><varname>prefix_</varname>gp_dump_<varname>content</varname>_<varname>dbid</varname>_<varname>timestamp</varname></codeblock>The
+          <codeph>content</codeph> and <codeph>dbid</codeph> are identifiers for the Greenplum
+        Database segment instances that are assigned by Greenplum Database. For information about
+        the identifiers, see the Greenplum Database system catalog table <i>gp_id</i> in the
+          <cite>Greenplum Database Reference Guide</cite>. </p>
+    </section>
     <section id="ddboost"><b>Using Data Domain Boost</b><p>The <codeph>gpcrondump</codeph> utility
         is used to schedule Data Domain Boost (DD Boost) backup operations. The utility is also used
         to set, change, or remove one-time credentials and storage unit ID for DD Boost. The
@@ -164,8 +173,8 @@
         </p><note>The UNIX mail utility must be running on Greenplum Database host and must be
         configured to allow the Greenplum superuser (<codeph>gpadmin</codeph>) to send
       email.</note></section>
-    <section><b>Limitations</b><p>Dell EMC DD Boost is integrated with Pivotal Greenplum Database and
-        requires a DD Boost license. Open source Greenplum Database cannot use the DD Boost
+    <section><b>Limitations</b><p>Dell EMC DD Boost is integrated with Pivotal Greenplum Database
+        and requires a DD Boost license. Open source Greenplum Database cannot use the DD Boost
         software, but can back up to a Dell EMC Data Domain system mounted as an NFS share on the
         Greenplum master and segment hosts.</p><p>NetBackup is not compatible with DD Boost. Both
         NetBackup and DD Boost cannot be used in a single back up operation.</p><p>For incremental
@@ -386,7 +395,7 @@
           <pd>Specify this option to back up database statistics. The data is written to an SQL file
             and can be restored manually or with <codeph>gpdbrestore</codeph> utility. </pd>
           <pd>The statistics are written in the master data directory to
-              <codeph>db_dumps/</codeph><varname>YYYYMMDD</varname><codeph>/<varname>prefix_string_</varname>gp_statistics_1_1_</codeph><varname>timestamp</varname>. </pd>
+              <codeph>db_dumps/</codeph><varname>YYYYMMDD</varname><codeph>/<varname>prefix_string_</varname>gp_statistics_-1_1_</codeph><varname>timestamp</varname>. </pd>
           <pd>If this option is specified with options that include or exclude tables or schemas,
             the utility backs up only the statistics for the tables that are backed up.</pd>
         </plentry>
@@ -427,7 +436,7 @@
           <pd>Back up database metadata information that is not associated with any particular
             schema or table such as roles and tablespaces. Global objects are dumped in the master
             data directory to
-                <codeph>db_dumps/</codeph><varname>YYYYMMDD</varname><codeph>/<varname>prefix_string_</varname>gp_global_1_1_</codeph><varname>timestamp</varname>. </pd>
+                <codeph>db_dumps/</codeph><varname>YYYYMMDD</varname><codeph>/<varname>prefix_string_</varname>gp_global_-1_1_</codeph><varname>timestamp</varname>. </pd>
           <pd>If <codeph>--ddboost</codeph> is specified, the backup is located on the default
             storage unit in the directory specified by <codeph>--ddboost-backupdir</codeph> when the
             Data Domain Boost credentials were set.</pd>
@@ -535,7 +544,8 @@ gp_dump_20130514093000_regular_files</codeblock>
             files listed in the <codeph>_regular_files</codeph> file must also be backed up after
             the completion of the backup job.</pd>
           <pd>To use named pipes for a backup, you need to create the named pipes on all the
-            Greenplum Database and make them writable before running <codeph>gpcrondump</codeph>. </pd>
+            Greenplum Database hosts and make them writable before running
+              <codeph>gpcrondump</codeph>. </pd>
           <pd>If <codeph>--ddboost</codeph> is specified, <codeph>-K <varname>timestamp</varname>
               [--list-backup-files]</codeph> is not supported.</pd>
         </plentry>
@@ -768,8 +778,7 @@ gp_dump_20130514093000_regular_files</codeblock>
           <pt>-z (no compression)</pt>
           <pd>Do not use compression. Default is to compress the dump files using
               <codeph>gzip</codeph>.</pd>
-          <pd>Use this option (<codeph>-z</codeph>) for NFS and Data Domain
-            Boost backups.</pd>
+          <pd>Use this option (<codeph>-z</codeph>) for NFS and Data Domain Boost backups.</pd>
         </plentry>
         <plentry>
           <pt>-? (help)</pt>

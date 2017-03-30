@@ -119,6 +119,14 @@ restore_aosegment_tables(migratorContext *ctx)
 
 	prep_status(ctx, "Restoring append-only auxiliary tables in new cluster");
 
+	/*
+	 * Rebuilding gp_relation_node can potentially take some time in a large
+	 * cluster so swap out the current progress file before starting so that
+	 * the user can see what's going on.
+	 */
+	report_progress(ctx, CLUSTER_NEW, FIXUP, "Rebuilding AO auxiliary tables");
+	close_progress(ctx);
+
 	for (dbnum = 0; dbnum < ctx->old.dbarr.ndbs; dbnum++)
 	{
 		DbInfo	   *olddb = &ctx->old.dbarr.dbs[dbnum];
@@ -153,6 +161,7 @@ restore_persistent_tables(migratorContext *ctx)
 	PGconn	   *conn = connectToServer(ctx, "template1", CLUSTER_NEW);
 
 	prep_status(ctx, "Rebuild gp_relation_node in new cluster");
+	report_progress(ctx, CLUSTER_NEW, FIXUP, "Rebuild gp_relation_node");
 
 	PQclear(executeQueryOrDie(ctx, conn, "checkpoint"));
 	PQclear(executeQueryOrDie(ctx, conn, "select gp_persistent_reset_all()"));

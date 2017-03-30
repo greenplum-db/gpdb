@@ -110,11 +110,45 @@ static bool std_typanalyze(VacAttrStats *stats);
 static void analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples, float4 *relPages, bool rootonly);
 static void analyzeEstimateIndexpages(Relation onerel, Relation indrel, BlockNumber *indexPages);
 
+static void analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
+			BufferAccessStrategy bstrategy);
+
 /*
  *	analyze_rel() -- analyze one relation
  */
 void
 analyze_rel(Oid relid, VacuumStmt *vacstmt,
+			BufferAccessStrategy bstrategy)
+{
+	bool		optimizerBackup;
+
+	/*
+	 * Temporarily disable ORCA because it's slow to start up, and it
+	 * wouldn't come up with any better plan for the simple queries that
+	 * we run.
+	 */
+	optimizerBackup = optimizer;
+	optimizer = false;
+
+	PG_TRY();
+	{
+		analyze_rel_internal(relid, vacstmt, bstrategy);
+	}
+	/* Clean up in case of error. */
+	PG_CATCH();
+	{
+		optimizer = optimizerBackup;
+
+		/* Carry on with error handling. */
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
+
+	optimizer = optimizerBackup;
+}
+
+static void
+analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 			BufferAccessStrategy bstrategy)
 {
 	Relation	onerel;
@@ -1324,181 +1358,154 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 	Datum	   *vals;
 	bool	   *nulls;
 	MemoryContext oldcxt;
-	bool		optimizerBackup;
+
+	Assert(targrows > 0.0);
+
+	analyzeEstimateReltuplesRelpages(RelationGetRelid(onerel), &relTuples, &relPages,
+									 rootonly);
+	*totalrows = relTuples;
+	*totaldeadrows = 0;
+	*totalblocks = relPages;
+	if (relTuples == 0.0)
+		return 0;
 
 	/*
-	 * Temporarily disable ORCA because it's slow to start up, and it
-	 * wouldn't come up with any better plan for the simple queries that
-	 * we run.
+	 * Calculate probability for a row to be selected in the sample, and
+	 * construct a clause like "WHERE random() < [threshold]" for that.
+	 * If the threshold is >= 1.0, we want to select all rows, and
+	 * thresholdStr is left empty.
 	 */
-	optimizerBackup = optimizer;
-	optimizer = false;
+	randomThreshold = targrows / relTuples;
+	initStringInfo(&thresholdStr);
+	if (randomThreshold < 1.0)
+		appendStringInfo(&thresholdStr, "where random() < %.38f", randomThreshold);
 
-	PG_TRY();
+	schemaName = get_namespace_name(RelationGetNamespace(onerel));
+	tableName = RelationGetRelationName(onerel);
+
+	initStringInfo(&columnStr);
+
+	if (nattrs > 0)
 	{
-		Assert(targrows > 0.0);
-
-		analyzeEstimateReltuplesRelpages(RelationGetRelid(onerel), &relTuples, &relPages,
-										 rootonly);
-		*totalrows = relTuples;
-		*totaldeadrows = 0;
-		*totalblocks = relPages;
-		if (relTuples == 0.0)
+		for (i = 0; i < nattrs; i++)
 		{
-			optimizer = optimizerBackup;
-			return 0;
+			if (i != 0)
+				appendStringInfo(&columnStr, ", ");
+			appendStringInfo(&columnStr, "Ta.%s", quote_identifier(NameStr(attrstats[i]->attr->attname)));
 		}
+	}
+	else
+		appendStringInfo(&columnStr, "NULL");
 
-		/*
-		 * Calculate probability for a row to be selected in the sample, and
-		 * construct a clause like "WHERE random() < [threshold]" for that.
-		 * If the threshold is >= 1.0, we want to select all rows, and
-		 * thresholdStr is left empty.
-		 */
-		randomThreshold = targrows / relTuples;
-		initStringInfo(&thresholdStr);
-		if (randomThreshold < 1.0)
-			appendStringInfo(&thresholdStr, "where random() < %.38f", randomThreshold);
-
-		schemaName = get_namespace_name(RelationGetNamespace(onerel));
-		tableName = RelationGetRelationName(onerel);
-
-		initStringInfo(&columnStr);
-
-		if (nattrs > 0)
-		{
-			for (i = 0; i < nattrs; i++)
-			{
-				if (i != 0)
-					appendStringInfo(&columnStr, ", ");
-				appendStringInfo(&columnStr, "Ta.%s", quote_identifier(NameStr(attrstats[i]->attr->attname)));
-			}
-		}
-		else
-			appendStringInfo(&columnStr, "NULL");
-
-		/*
-		 * If table is partitioned, we create a sample over all parts.
-		 * The external partitions are skipped.
-		 */
-		initStringInfo(&str);
-		if (rel_has_external_partition(RelationGetRelid(onerel)))
-		{
-			PartitionNode *pn = get_parts(RelationGetRelid(onerel), 0 /*level*/ ,
+	/*
+	 * If table is partitioned, we create a sample over all parts.
+	 * The external partitions are skipped.
+	 */
+	initStringInfo(&str);
+	if (rel_has_external_partition(RelationGetRelid(onerel)))
+	{
+		PartitionNode *pn = get_parts(RelationGetRelid(onerel), 0 /*level*/ ,
 								0 /*parent*/, false /* inctemplate */, false /*includesubparts*/);
 
-			ListCell *lc = NULL;
-			bool isFirst = true;
-			foreach(lc, pn->rules)
+		ListCell *lc = NULL;
+		bool isFirst = true;
+		foreach(lc, pn->rules)
+		{
+			PartitionRule *rule = lfirst(lc);
+			Relation rel = heap_open(rule->parchildrelid, NoLock);
+
+			if (RelationIsExternal(rel))
 			{
-				PartitionRule *rule = lfirst(lc);
-				Relation rel = heap_open(rule->parchildrelid, NoLock);
-
-				if (RelationIsExternal(rel))
-				{
-					heap_close(rel, NoLock);
-					continue;
-				}
-
-				if (isFirst)
-				{
-					isFirst = false;
-				}
-				else
-				{
-					appendStringInfo(&str, " UNION ALL ");
-				}
-
-				appendStringInfo(&str, "select %s from %s.%s as Ta ",
-								 columnStr.data,
-								 quote_identifier(schemaName),
-								 quote_identifier(RelationGetRelationName(rel)));
-
 				heap_close(rel, NoLock);
+				continue;
 			}
 
-			appendStringInfo(&str, " %s limit %lu ",
-							 thresholdStr.data, (unsigned long) targrows);
-		}
-		else
-		{
-			appendStringInfo(&str, "select %s from %s.%s as Ta %s limit %lu ",
+			if (isFirst)
+			{
+				isFirst = false;
+			}
+			else
+			{
+				appendStringInfo(&str, " UNION ALL ");
+			}
+
+			appendStringInfo(&str, "select %s from %s.%s as Ta ",
 							 columnStr.data,
 							 quote_identifier(schemaName),
-							 quote_identifier(tableName), thresholdStr.data, (unsigned long) targrows);
+							 quote_identifier(RelationGetRelationName(rel)));
+
+			heap_close(rel, NoLock);
 		}
 
-		oldcxt = CurrentMemoryContext;
-
-		if (SPI_OK_CONNECT != SPI_connect())
-			ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
-							errmsg("Unable to connect to execute internal query.")));
-
-		elog(elevel, "Executing SQL: %s", str.data);
-
-		/*
-		 * Do the query. We pass readonly==false, to force SPI to take a new
-		 * snapshot. That ensures that we see all changes by our own transaction.
-		 */
-		ret = SPI_execute(str.data, false, 0);
-		Assert(ret > 0);
-		sampleTuples = SPI_processed;
-
-		/* Ok, read in the tuples to *rows */
-		MemoryContextSwitchTo(oldcxt);
-		vals = (Datum *) palloc(RelationGetNumberOfAttributes(onerel) * sizeof(Datum));
-		nulls = (bool *) palloc(RelationGetNumberOfAttributes(onerel) * sizeof(bool));
-		for (i = 0; i < RelationGetNumberOfAttributes(onerel); i++)
-		{
-			vals[i] = (Datum) 0;
-			nulls[i] = true;
-		}
-
-		*rows = (HeapTuple *) palloc(sampleTuples * sizeof(HeapTuple));
-		for (i = 0; i < sampleTuples; i++)
-		{
-			HeapTuple	sampletup = SPI_tuptable->vals[i];
-			int			j;
-
-			for (j = 0; j < nattrs; j++)
-			{
-				int			tupattnum = attrstats[j]->tupattnum;
-
-				Assert(tupattnum >= 1 && tupattnum <= RelationGetNumberOfAttributes(onerel));
-
-				vals[tupattnum - 1] = heap_getattr(sampletup, j + 1,
-												   SPI_tuptable->tupdesc,
-												   &nulls[tupattnum - 1]);
-			}
-			(*rows)[i] = heap_form_tuple(onerel->rd_att, vals, nulls);
-		}
-
-		/**
-		 * MPP-10723: Very rarely, we may be unlucky and get an empty sample. We
-		 * error out in this case rather than generate bad statistics.
-		 */
-		if (relTuples > gp_statistics_sampling_threshold &&
-			sampleTuples == 0)
-		{
-			elog(ERROR, "ANALYZE unable to generate accurate statistics on table %s.%s. Try lowering gp_analyze_relative_error",
-				 quote_identifier(schemaName),
-				 quote_identifier(tableName));
-		}
-
-		SPI_finish();
-
-		optimizer = optimizerBackup;
+		appendStringInfo(&str, " %s limit %lu ",
+						 thresholdStr.data, (unsigned long) targrows);
 	}
-	/* Clean up in case of error. */
-	PG_CATCH();
+	else
 	{
-		optimizer = optimizerBackup;
-
-		/* Carry on with error handling. */
-		PG_RE_THROW();
+		appendStringInfo(&str, "select %s from %s.%s as Ta %s limit %lu ",
+						 columnStr.data,
+						 quote_identifier(schemaName),
+						 quote_identifier(tableName), thresholdStr.data, (unsigned long) targrows);
 	}
-	PG_END_TRY();
-	Assert(optimizer == optimizerBackup);
+
+	oldcxt = CurrentMemoryContext;
+
+	if (SPI_OK_CONNECT != SPI_connect())
+		ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+						errmsg("Unable to connect to execute internal query.")));
+
+	elog(elevel, "Executing SQL: %s", str.data);
+
+	/*
+	 * Do the query. We pass readonly==false, to force SPI to take a new
+	 * snapshot. That ensures that we see all changes by our own transaction.
+	 */
+	ret = SPI_execute(str.data, false, 0);
+	Assert(ret > 0);
+	sampleTuples = SPI_processed;
+
+	/* Ok, read in the tuples to *rows */
+	MemoryContextSwitchTo(oldcxt);
+	vals = (Datum *) palloc(RelationGetNumberOfAttributes(onerel) * sizeof(Datum));
+	nulls = (bool *) palloc(RelationGetNumberOfAttributes(onerel) * sizeof(bool));
+	for (i = 0; i < RelationGetNumberOfAttributes(onerel); i++)
+	{
+		vals[i] = (Datum) 0;
+		nulls[i] = true;
+	}
+
+	*rows = (HeapTuple *) palloc(sampleTuples * sizeof(HeapTuple));
+	for (i = 0; i < sampleTuples; i++)
+	{
+		HeapTuple	sampletup = SPI_tuptable->vals[i];
+		int			j;
+
+		for (j = 0; j < nattrs; j++)
+		{
+			int			tupattnum = attrstats[j]->tupattnum;
+
+			Assert(tupattnum >= 1 && tupattnum <= RelationGetNumberOfAttributes(onerel));
+
+			vals[tupattnum - 1] = heap_getattr(sampletup, j + 1,
+											   SPI_tuptable->tupdesc,
+											   &nulls[tupattnum - 1]);
+		}
+		(*rows)[i] = heap_form_tuple(onerel->rd_att, vals, nulls);
+	}
+
+	/**
+	 * MPP-10723: Very rarely, we may be unlucky and get an empty sample. We
+	 * error out in this case rather than generate bad statistics.
+	 */
+	if (relTuples > gp_statistics_sampling_threshold &&
+		sampleTuples == 0)
+	{
+		elog(ERROR, "ANALYZE unable to generate accurate statistics on table %s.%s. Try lowering gp_analyze_relative_error",
+			 quote_identifier(schemaName),
+			 quote_identifier(tableName));
+	}
+
+	SPI_finish();
 
 	return sampleTuples;
 }

@@ -1,6 +1,6 @@
 MODULES = indexscan
 DATA_built = indexscan.sql
-REGRESS = create_function read_heap_index read_ao_index read_co_index
+REGRESS = create_function read_heap_index read_ao_index read_co_index drop_function
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

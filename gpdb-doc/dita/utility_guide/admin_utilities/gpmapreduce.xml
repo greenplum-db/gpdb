@@ -5,7 +5,11 @@
   <title id="kx20941">gpmapreduce</title>
   <!-- This file is the target of a conref from client_tool_guides/client/unix/gpmapreduce.xml. -->
   <body>
-    <p>Runs Greenplum MapReduce jobs as defined in a YAML specification document.</p>
+    <p>Runs Greenplum MapReduce jobs as defined in a YAML specification document.
+          <note><codeph>gpmapreduce</codeph> is deprecated. Both <codeph>gpmapreduce</codeph> and
+        the associated YAML specification will be removed in the next major release (6.x) of
+        Greenplum Database. Use other query formats, such as SQL or a procedural language extension,
+        instead.</note></p>
     <section id="section2">
       <title>Synopsis</title>
       <codeblock><b>gpmapreduce</b> <b>-f</b> <varname>yaml_file</varname> [<varname>dbname</varname> [<varname>username</varname>]] 
@@ -39,7 +43,7 @@
     </section>
     <section id="section4">
       <title>Description</title>
-      <p><xref href="http://en.wikipedia.org/wiki/MapReduce" scope="external" format="html"
+      <p><xref href="https://en.wikipedia.org/wiki/MapReduce" scope="external" format="html"
           >MapReduce</xref> is a programming model developed by Google for processing and generating
         large data sets on an array of commodity servers. Greenplum MapReduce allows programmers who
         are familiar with the MapReduce paradigm to write map and reduce functions and submit them

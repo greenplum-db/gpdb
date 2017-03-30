@@ -83,12 +83,6 @@
           <p>
             <xref href="gpmfr.xml#topic1" type="topic" format="dita"/>
           </p>
-          <p>
-            <xref href="gpmigrator.xml#topic1" type="topic" format="dita"/>
-          </p>
-          <p>
-            <xref href="gpmigrator_mirror.xml#topic1" type="topic" format="dita"/>
-          </p>
           <!-- hidden until testing is complete -msk
             <p>
             <xref href="gpmovemirrors.xml#topic1"/>

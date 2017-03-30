@@ -1,6 +1,6 @@
 Docs
 --------
-http://gpdb.docs.pivotal.io/4360/utility_guide/admin_utilities/gpfdist.html
+See gpdb-doc/dita/utility_guide/admin_utilities/gpfdist.xml
 
 Compiling
 -------------

@@ -14,8 +14,8 @@
          Greenplum Database can access the EMR instance. If your Greenplum Database system is
          running on an Amazon Elastic Compute Cloud (EC2) instance, you configure the Greenplum
          Database system and the EMR security group. </p>
-      <p>For information about Amazon EMR, see <xref href="https://aws.amazon.com/elasticmapreduce/"
-            format="html" scope="external">https://aws.amazon.com/elasticmapreduce/</xref>. For
+      <p>For information about Amazon EMR, see <xref href="https://aws.amazon.com/emr/"
+            format="html" scope="external">https://aws.amazon.com/emr/</xref>. For
          information about Amazon EC2, see <xref href="https://aws.amazon.com/ec2/" format="html"
             scope="external">https://aws.amazon.com/ec2/</xref></p>
       <section>
@@ -26,7 +26,7 @@
             <li>Ensure that the appropriate Java (including JDK) and Hadoop environments are
                correctly installed on all Greenplum Database segment hosts.<p>For example, Amazon
                   EMR Release 4.0.0 includes Apache Hadoop 2.6.0. This Amazon page describes <xref
-                     href="http://aws.amazon.com/about-aws/whats-new/2015/07/amazon-emr-release-4-0-0-with-new-versions-of-apache-hadoop-hive-and-spark-now-available/"
+                     href="https://aws.amazon.com/about-aws/whats-new/2015/07/amazon-emr-release-4-0-0-with-new-versions-of-apache-hadoop-hive-and-spark-now-available/"
                      format="html" scope="external">Amazon EMR Release 4.0.0</xref>. </p><p>For
                   information about Hadoop versions used by EMR and Greenplum Database, see <xref
                      href="#amazon-emr/table_at3_czf_ht" format="dita"/>.</p></li>

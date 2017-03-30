@@ -20,8 +20,8 @@
 <body>
 <p id="oj998324">The PostgreSQL JDB interface is the official PostgreSQL JDBC driver. The driver is
         currently maintained by a number of contributors to the PostgreSQL project at <xref
-          href="http://jdbc.postgresql.org" scope="external" format="html"
-          >http://jdbc.postgresql.org</xref>. JDBC is a core API of Java 1.1 and later. It provides
+          href="https://jdbc.postgresql.org" scope="external" format="html"
+          >https://jdbc.postgresql.org</xref>. JDBC is a core API of Java 1.1 and later. It provides
         a standard set of interfaces to SQL-compliant databases. PostgreSQL provides a type 4 JDBC
         driver. Type 4 indicates that the driver is written in Pure Java, and communicates in the
         database system's own network protocol. Because of this, the driver is platform independent;
