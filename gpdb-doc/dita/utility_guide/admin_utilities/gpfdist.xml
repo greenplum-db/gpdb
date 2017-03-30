@@ -2,13 +2,15 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
-    <title id="ku137116">gpfdist</title>
-    <body>
-        <p>Serves data files to or writes data files out from Greenplum Database segments.</p>
-        <section id="section2">
-            <title>Synopsis</title>
-            <codeblock><b>gpfdist</b> [<b>-d</b> <varname>directory</varname>] [<b>-p</b> <varname>http_port</varname>] [<b>-l</b> <varname>log_file</varname>] [<b>-t</b> <varname>timeout</varname>] 
-   [<b>-S</b>] [<b>-w</b> <varname>time</varname>] [<b>-v</b> | <b>-V</b>] [<b>-s</b>] [<b>-m</b> <varname>max_length</varname>] [<b>--ssl</b> <varname>certificate_path</varname>]
+  <title id="ku137116">gpfdist</title>
+  <body>
+    <p>Serves data files to or writes data files out from Greenplum Database segments.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock><b>gpfdist</b> [<b>-d</b> <varname>directory</varname>] [<b>-p</b> <varname>http_port</varname>] [<b>-l</b> <varname>log_file</varname>] [<b>-t</b> <varname>timeout</varname>] 
+   [<b>-S</b>] [<b>-w</b> <varname>time</varname>] [<b>-v</b> | <b>-V</b>] [<b>-s</b>] [<b>-m</b> <varname>max_length</varname>]
+   [<b>--ssl</b> <varname>certificate_path</varname> [<b>--sslclean</b> <varname>wait_time</varname>] ]
+   [<b>-c</b> <varname>config.yml</varname>]
 
 <b>gpfdist -?</b> | <b>--help</b> 
 
@@ -121,9 +123,9 @@
           <pd>Adds SSL encryption to data transferred with <codeph>gpfdist</codeph>. After executing
               <codeph>gpfdist</codeph> with the <codeph>--ssl
               <varname>certificate_path</varname></codeph> option, the only way to load data from
-            this file server is with the <codeph>gpfdist://</codeph> protocol. <ph
-              >For information on the <codeph>gpfdist://</codeph> protocol, see "Loading and
-              Unloading Data" in the <i>Greenplum Database Administrator Guide</i>.</ph></pd>
+            this file server is with the <codeph>gpfdist://</codeph> protocol. <ph>For information
+              on the <codeph>gpfdist://</codeph> protocol, see "Loading and Unloading Data" in the
+                <i>Greenplum Database Administrator Guide</i>.</ph></pd>
           <pd>The location specified in <varname>certificate_path</varname> must contain the
             following files:<ul id="ul_dyp_eqt_mo">
               <li id="ku140282">The server certificate file, <codeph>server.crt</codeph></li>
@@ -131,6 +133,31 @@
               <li id="ku140284">The trusted certificate authorities, <codeph>root.crt</codeph></li>
             </ul><p>The root directory (<codeph>/</codeph>) cannot be specified as
                 <varname>certificate_path</varname>.</p></pd>
+        </plentry>
+        <plentry>
+          <pt>--sslclean <varname>wait_time</varname></pt>
+          <pd>When the utility is run with the <codeph>--ssl</codeph> option, sets the number of
+            seconds that the utility delays before closing an SSL session and cleaning up the SSL
+            resources after it completes writing data to or from a Greenplum Database segment. The
+            default value is 0, no delay. The maximum value is 500 seconds. If the delay is
+            increased, the transfer speed decreases.</pd>
+          <pd>In some cases, this error might occur when copying large amounts of data:
+              <codeph>gpfdist server closed connection</codeph>. To avoid the error, you can add a
+            delay, for example <codeph>--sslclean 5</codeph>. </pd>
+        </plentry>
+        <plentry>
+          <pt>-c <varname>config.yaml</varname></pt>
+          <pd>Specifies rules that <codeph>gpfdist</codeph> uses to select a transform to apply when
+            loading or extracting data. The <codeph>gpfdist</codeph> configuration file is a YAML
+            1.1 document. </pd>
+          <pd>For information about the file format, see <xref
+              href="../../admin_guide/load/topics/g-configuration-file-format.xml#topic83"
+              >Configuration File Format</xref> in the <cite>Greenplum Database Administrator
+              Guide</cite>. For information about configuring data transformation with
+              <codeph>gpfdist</codeph>, see <xref
+              href="../../admin_guide/load/topics/g-transforming-xml-data.xml#topic75">Transforming
+              XML Data</xref> in the <cite>Greenplum Database Administrator Guide</cite>.</pd>
+          <pd>This option is not available on Windows platforms.</pd>
         </plentry>
         <plentry>
           <pt>-v (verbose)</pt>
@@ -157,8 +184,8 @@
         as a service: </p>
       <ol>
         <li id="ku139499">Update your Greenplum Database Loader package to the latest version. This
-          package is available from <xref href="https://network.pivotal.io"
-            scope="external" format="html">Pivotal Network</xref>. </li>
+          package is available from <xref href="https://network.pivotal.io" scope="external"
+            format="html">Pivotal Network</xref>. </li>
         <li id="ku139444">Register <codeph>gpfdist</codeph> as a Windows service:<ol>
             <li id="ku139445">Open a Windows command window</li>
             <li id="ku139446">Run the following
@@ -200,8 +227,8 @@
     <section id="section7">
       <title>See Also</title>
       <p><codeph><xref href="./gpload.xml#topic1" type="topic" format="dita"/></codeph>,
-          <codeph>CREATE EXTERNAL TABLE</codeph><ph> in the <i>Greenplum Database
-            Reference Guide</i></ph></p>
+          <codeph>CREATE EXTERNAL TABLE</codeph><ph> in the <i>Greenplum Database Reference
+            Guide</i></ph></p>
     </section>
   </body>
 </topic>

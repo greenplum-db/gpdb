@@ -120,6 +120,7 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
             specify the <codeph>DELIMITER</codeph>, <codeph>NULL</codeph>, or <codeph>CSV</codeph>
             options in binary mode. See <xref href="#topic1/section10" format="dita">Binary
               Format</xref>.</pd>
+          <pd>When copying in binary format, a row of data can be up to 1GB. </pd>
         </plentry>
         <plentry>
           <pt>OIDS</pt>

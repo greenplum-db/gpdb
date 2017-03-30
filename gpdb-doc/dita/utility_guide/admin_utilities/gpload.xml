@@ -26,8 +26,9 @@
                     installation, so if you have Greenplum Database installed on the machine where
                         <codeph>gpload</codeph> is running, you do not need a separate Python
                         installation.<note>Greenplum Database Loaders for Windows supports only
-                        Python 2.5 (available from <xref href="https://www.python.org" scope="external"
-                            format="html">https://www.python.org</xref>).</note></li>
+                        Python 2.5 (available from <xref href="https://www.python.org"
+                            scope="external" format="html"
+                    >https://www.python.org</xref>).</note></li>
                 <li id="ke147925">The <codeph><xref href="gpfdist.xml#topic1" type="topic"
                             format="dita"/></codeph> parallel file distribution program installed
                     and in your <codeph>$PATH</codeph>. This program is located in
@@ -426,15 +427,16 @@
                                         </plentry>
                                         <plentry>
                                             <pt id="cftransform">TRANSFORM</pt>
-                                            <pd>Optional. Specifies the name of the input XML
+                                            <pd>Optional. Specifies the name of the input
                                                 transformation passed to <codeph>gpload</codeph>.
-                                                For more information about XML transformations, see
+                                                For information about XML transformations, see
                                                 "Loading and Unloading Data" in the <cite>Greenplum
                                                   Database Administrator Guide</cite>.</pd>
                                         </plentry>
                                         <plentry>
                                             <pt id="cftransformconfig">TRANSFORM_CONFIG</pt>
-                                            <pd>Optional. Specifies the location of the XML
+                                            <pd>Required when <codeph>TRANSFORM</codeph> is
+                                                specified. Specifies the location of the
                                                 transformation configuration file that is specified
                                                 in the <codeph>TRANSFORM</codeph> parameter,
                                                 above.</pd>
@@ -539,8 +541,9 @@
                                                 number, or <codeph>'DEFAULT'</codeph> to use the
                                                 default client encoding. If not specified, the
                                                 default client encoding is used. For information
-                                                about supported character sets, see the <i>Greenplum
-                                                  Database Reference Guide</i>.</pd>
+                                                about supported character sets, see the
+                                                  <cite>Greenplum Database Reference
+                                                Guide</cite>.</pd>
                                         </plentry>
                                         <plentry>
                                             <pt id="cferrorlimit">ERROR_LIMIT</pt>
@@ -843,8 +846,8 @@ GPLOAD:
         <section id="section11">
             <title>See Also</title>
             <p><codeph><xref href="gpfdist.xml#topic1" type="topic" format="dita"/></codeph>,
-                    <codeph>CREATE EXTERNAL TABLE</codeph> in the <i>Greenplum Database Reference
-                    Guide</i></p>
+                    <codeph>CREATE EXTERNAL TABLE</codeph> in the <cite>Greenplum Database Reference
+                    Guide</cite></p>
         </section>
     </body>
 </topic>

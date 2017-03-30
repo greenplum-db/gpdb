@@ -9,37 +9,37 @@
       <title>Synopsis</title>
       <codeblock id="sql_command_synopsis">CREATE [READABLE] EXTERNAL TABLE <varname>table_name</varname>     
     ( <varname>column_name</varname> <varname>data_type</varname> [, ...] | LIKE <varname>other_table </varname>)
-      LOCATION ('file://<varname>seghost</varname>[:<varname>port</varname>]/<varname>path</varname>/<varname>file</varname>' [, ...])
-        | ('gpfdist://<varname>filehost</varname>[:<varname>port</varname>]/<varname>file_pattern[#transform]</varname>' [, ...]
-        | ('gpfdists://<varname>filehost</varname>[:<varname>port</varname>]/<varname>file_pattern[#transform]</varname>'
-            [, ...])
-        | ('gphdfs://<varname>hdfs_host</varname>[:port]/<varname>path</varname>/<varname>file</varname>')
-        | ('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>]
+     LOCATION ('file://<varname>seghost</varname>[:<varname>port</varname>]/<varname>path</varname>/<varname>file</varname>' [, ...])
+       | ('gpfdist://<varname>filehost</varname>[:<varname>port</varname>]/<varname>file_pattern</varname>[#transform=<varname>trans_name</varname>]'
+           [, ...]
+       | ('gpfdists://<varname>filehost</varname>[:<varname>port</varname>]/<varname>file_pattern</varname>[#transform=<varname>trans_name</varname>]'
+           [, ...])
+       | ('gphdfs://<varname>hdfs_host</varname>[:port]/<varname>path</varname>/<varname>file</varname>')
+       | ('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>]
              [region=<varname>S3-region</varname>]
             [config=<varname>config_file</varname>]')
-      FORMAT 'TEXT' 
-            [( [HEADER]
-               [DELIMITER [AS] '<varname>delimiter</varname>' | 'OFF']
-               [NULL [AS] '<varname>null string</varname>']
-               [ESCAPE [AS] '<varname>escape</varname>' | 'OFF']
-               [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
-               [FILL MISSING FIELDS] )]
-           | 'CSV'
-            [( [HEADER]
-               [QUOTE [AS] '<varname>quote</varname>'] 
-               [DELIMITER [AS] '<varname>delimiter</varname>']
-               [NULL [AS] '<varname>null string</varname>']
-               [FORCE NOT NULL <varname>column</varname> [, ...]]
-               [ESCAPE [AS] '<varname>escape</varname>']
-               [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
-               [FILL MISSING FIELDS] )]
-           | 'AVRO' 
-           | 'PARQUET'
-
-           | 'CUSTOM' (Formatter=<varname>&lt;formatter specifications&gt;</varname>)
-     [ ENCODING '<varname>encoding</varname>' ]
-     [ [LOG ERRORS] SEGMENT REJECT LIMIT <varname>count</varname>
-       [ROWS | PERCENT] ]
+     FORMAT 'TEXT' 
+           [( [HEADER]
+              [DELIMITER [AS] '<varname>delimiter</varname>' | 'OFF']
+              [NULL [AS] '<varname>null string</varname>']
+              [ESCAPE [AS] '<varname>escape</varname>' | 'OFF']
+              [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
+              [FILL MISSING FIELDS] )]
+          | 'CSV'
+           [( [HEADER]
+              [QUOTE [AS] '<varname>quote</varname>'] 
+              [DELIMITER [AS] '<varname>delimiter</varname>']
+              [NULL [AS] '<varname>null string</varname>']
+              [FORCE NOT NULL <varname>column</varname> [, ...]]
+              [ESCAPE [AS] '<varname>escape</varname>']
+              [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
+              [FILL MISSING FIELDS] )]
+          | 'AVRO' 
+          | 'PARQUET'
+          | 'CUSTOM' (Formatter=<varname>&lt;formatter_specifications&gt;</varname>)
+    [ ENCODING '<varname>encoding</varname>' ]
+      [ [LOG ERRORS] SEGMENT REJECT LIMIT <varname>count</varname>
+      [ROWS | PERCENT] ]
 
 CREATE [READABLE] EXTERNAL WEB TABLE <varname>table_name</varname>     
    ( <varname>column_name</varname> <varname>data_type</varname> [, ...] | LIKE <varname>other_table </varname>)
@@ -72,8 +72,9 @@ CREATE [READABLE] EXTERNAL WEB TABLE <varname>table_name</varname>     
 
 CREATE WRITABLE EXTERNAL TABLE <varname>table_name</varname>
     ( <varname>column_name</varname> <varname>data_type</varname> [, ...] | LIKE <varname>other_table </varname>)
-     LOCATION('gpfdist://<varname>outputhost</varname>[:<varname>port</varname>]/<varname>filename[#transform]</varname>'
-      | ('gpfdists://<varname>outputhost</varname>[:<varname>port</varname>]/<varname>file_pattern[#transform]</varname>'
+     LOCATION('gpfdist://<varname>outputhost</varname>[:<varname>port</varname>]/<varname>filename</varname>[#transform=<varname>trans_name</varname>]'
+          [, ...])
+      | ('gpfdists://<varname>outputhost</varname>[:<varname>port</varname>]/<varname>file_pattern</varname>[#transform=<varname>trans_name</varname>]'
           [, ...])
       | ('gphdfs://<varname>hdfs_host</varname>[:port]/<varname>path</varname>')
       FORMAT 'TEXT' 
@@ -269,6 +270,13 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
           <pd>With two <codeph>gpfdist</codeph> locations listed as in the above example, half of
             the segments would send their output data to the <codeph>data1.out</codeph> file and the
             other half to the <codeph>data2.out</codeph> file.</pd>
+          <pd>With the option <codeph>#transform=<varname>trans_name</varname></codeph>, you can
+            specify a transform to apply when loading or extracting data. The
+              <varname>trans_name</varname> is the name of the transform in the YAML configuration
+            file you specify with the you run the <codeph>gpfdist</codeph> utility. For information
+            about specifying a transform, see <xref
+              href="../../utility_guide/admin_utilities/gpfdist.xml#topic1"
+              ><codeph>gpfdist</codeph></xref> in the <cite>Greenplum Utility Guide</cite>. </pd>
           <pd>If you specify <codeph>gphdfs</codeph> protocol to read or write a file to a Hadoop
             file system (HDFS), you can read or write an Avro or Parquet format file by specifying
             the <codeph>FORMAT</codeph> clause with either <codeph>AVRO</codeph> or
