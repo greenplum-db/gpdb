@@ -52,11 +52,24 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	return []byte(executable_path)
 }, func(data []byte) {
 	commandPath = string(data)
+	setPrivateKeyPermissions()
 })
 
 var _ = SynchronizedAfterSuite(func() {}, func() {
 	CleanupBuildArtifacts()
 })
+
+func setPrivateKeyPermissions() {
+	command_path := os.Getenv("GOPATH") + "/src/gp_upgrade/commands/"
+	priv_keys := []string{
+		"fixtures/registered_private_key.pem",
+		"fixtures/unregistered_private_key.pem",
+		"sshd/private_key.pem",
+	}
+	for _, path := range priv_keys {
+		os.Chmod(command_path+path, 0400)
+	}
+}
 
 func runCommand(args ...string) *Session {
 
