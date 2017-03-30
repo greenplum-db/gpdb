@@ -18,7 +18,11 @@ Datum gp_dump_query_oids(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(gp_dump_query_oids);
 
-static void getAllRelidsForChildParitions(StringInfoData *relbuf, Oid relid)
+
+/*
+ * Get all child partition tables including interior and leaf partitions.
+ */
+static void getAllRelidsForChildPartitions(StringInfoData *relbuf, Oid relid)
 {
 	List *prels = NIL;
 	if (rel_is_partitioned(relid))
@@ -47,10 +51,8 @@ static void getAllRelidsForChildParitions(StringInfoData *relbuf, Oid relid)
 		Oid 	   temp_oid;
 		foreach(lc, prels)
 		{
-			temp_oid = (Oid)lfirst_oid(lc);
-			if (relbuf->len != 0)
-				appendStringInfo(relbuf, "%s", ",");
-			appendStringInfo(relbuf, "%u", temp_oid);
+			temp_oid = lfirst_oid(lc);
+			appendStringInfo(relbuf, ",%u", temp_oid);
 		}
 	}
 }
@@ -84,7 +86,7 @@ traverseQueryOids
 					if (relbuf->len != 0)
 						appendStringInfo(relbuf, "%s", ",");
 					appendStringInfo(relbuf, "%u", relid);
-					getAllRelidsForChildParitions(relbuf,relid);
+					getAllRelidsForChildPartitions(relbuf,relid);
 				}
 			}
 		}
