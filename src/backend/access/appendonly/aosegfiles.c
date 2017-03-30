@@ -100,6 +100,10 @@ InsertInitialSegnoEntry(Relation parentrel, int segno)
 	Relation	pg_aoseg_rel;
 	TupleDesc	pg_aoseg_dsc;
 	HeapTuple	pg_aoseg_tuple;
+	Buffer		buf = InvalidBuffer;
+	ItemPointerData update_ctid;
+	TransactionId update_xmax;
+	HTSU_Result result;
 	int			natts;
 	bool	   *nulls;
 	Datum	   *values;
@@ -138,8 +142,19 @@ InsertInitialSegnoEntry(Relation parentrel, int segno)
 
 	frozen_heap_insert(pg_aoseg_rel, pg_aoseg_tuple);
 
-	heap_freetuple(pg_aoseg_tuple);
+	/*
+	 * Lock the tuple so that concurrent insert transaction will not
+	 * consider this segfile for insertion.
+	 */
+	result = heap_lock_tuple(pg_aoseg_rel, pg_aoseg_tuple, &buf,
+							 &update_ctid, &update_xmax,
+							 GetCurrentCommandId(true),
+							 LockTupleExclusive, LockTupleIfNotLocked);
+	Assert(result == HeapTupleMayBeUpdated);
+	if (BufferIsValid(buf))
+		ReleaseBuffer(buf);
 
+	heap_freetuple(pg_aoseg_tuple);
 	heap_close(pg_aoseg_rel, RowExclusiveLock);
 }
 

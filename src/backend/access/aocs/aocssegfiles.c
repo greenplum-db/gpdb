@@ -90,6 +90,10 @@ InsertInitialAOCSFileSegInfo(Relation prel, int4 segno, int4 nvp)
 	AOCSVPInfo *vpinfo = create_aocs_vpinfo(nvp);
 	HeapTuple	segtup;
 	Relation	segrel;
+	Buffer		buf = InvalidBuffer;
+	ItemPointerData update_ctid;
+	TransactionId update_xmax;
+	HTSU_Result result;
 	int16		formatVersion;
 
 	/* New segments are always created in the latest format */
@@ -112,6 +116,18 @@ InsertInitialAOCSFileSegInfo(Relation prel, int4 segno, int4 nvp)
 
 	frozen_heap_insert(segrel, segtup);
 	CatalogUpdateIndexes(segrel, segtup);
+
+	/*
+	 * Lock the tuple so that concurrent insert transaction will not
+	 * consider this segfile for insertion.
+	 */
+	result = heap_lock_tuple(segrel, segtup, &buf,
+							 &update_ctid, &update_xmax,
+							 GetCurrentCommandId(true),
+							 LockTupleExclusive, LockTupleIfNotLocked);
+	Assert(result == HeapTupleMayBeUpdated);
+	if (BufferIsValid(buf))
+		ReleaseBuffer(buf);
 
 	heap_freetuple(segtup);
 	heap_close(segrel, RowExclusiveLock);
