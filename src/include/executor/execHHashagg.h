@@ -184,7 +184,6 @@ typedef struct HashAggTable
 	 * The space to buffer the free hash entries and AggStatePerGroups. Using this,
 	 * we can reduce palloc/pfree calls.
 	 */
-	CdbCellBuf entry_buf;
 	MPool *group_buf;
 
 	/* Shared temporary structure */

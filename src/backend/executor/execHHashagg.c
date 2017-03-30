@@ -34,7 +34,6 @@
 
 #include "access/hash.h"
 
-#include "cdb/cdbcellbuf.h"
 #include "cdb/cdbexplain.h"
 #include "cdb/cdbvars.h"
 #include "postmaster/primary_mirror_mode.h"
@@ -69,12 +68,10 @@ typedef enum InputRecordType
 } InputRecordType;
 
 #define GET_BUFFER_SIZE(hashtable) \
-	((hashtable)->entry_buf.nfull_total * (hashtable)->entry_buf.cellbytes + \
-	 mpool_total_bytes_allocated((hashtable)->group_buf))
+	(mpool_total_bytes_allocated((hashtable)->group_buf))
 
 #define GET_USED_BUFFER_SIZE(hashtable) \
-   ((hashtable)->entry_buf.nfull_total * (hashtable)->entry_buf.cellbytes + \
-    mpool_bytes_used((hashtable)->group_buf))
+	(mpool_bytes_used((hashtable)->group_buf))
 
 #define SANITY_CHECK_METADATA_SIZE(hashtable) \
     do { \
@@ -209,12 +206,7 @@ adjustInputGroup(AggState *aggstate,
 static inline HashAggEntry *
 getEmptyHashAggEntry(AggState *aggstate)
 {
-	HashAggEntry *entry;
-	CdbCellBuf *entry_buf = &(aggstate->hhashtable->entry_buf);
-	
-	entry = (HashAggEntry *)CdbCellBuf_AppendCell(entry_buf);
-	
-	return entry;
+	return mpool_alloc(aggstate->hhashtable->group_buf, sizeof(HashAggEntry));
 }
 
 /* Function: makeHashAggEntryForInput
@@ -705,7 +697,6 @@ create_agg_hash_table(AggState *aggstate)
 	MemoryContextSwitchTo(hashtable->entry_cxt);
 	
 	/* Initialize buffer for hash entries */
-	CdbCellBuf_InitEasy(&(hashtable->entry_buf), sizeof(HashAggEntry));
 	hashtable->group_buf = mpool_create(hashtable->entry_cxt,
 										"GroupsAndAggs Context");
 	hashtable->groupaggs = (GroupKeysAndAggs *)palloc0(sizeof(GroupKeysAndAggs));
@@ -1269,7 +1260,6 @@ spill_hash_table(AggState *aggstate)
 	}
 
 	/* Reset the buffer */
-	CdbCellBuf_Reset(&(hashtable->entry_buf));
 	mpool_reset(hashtable->group_buf);
 
 	elog(HHA_MSG_LVL, "HashAgg: spill " INT64_FORMAT " groups",
@@ -1958,7 +1948,6 @@ void reset_agg_hash_table(AggState *aggstate)
 	MemSet(hashtable->bloom, 0, hashtable->nbuckets * sizeof(uint64));
 	hashtable->num_ht_groups = 0;
 
-	CdbCellBuf_Reset(&(hashtable->entry_buf));
 	mpool_reset(hashtable->group_buf);
 
 	init_agg_hash_iter(hashtable);
@@ -1983,7 +1972,6 @@ void destroy_agg_hash_table(AggState *aggstate)
 			aggstate->hhashtable->num_tuples);
 		
 		Gpmon_ResetAggHashTable(aggstate);
-		CdbCellBuf_Reset(&(aggstate->hhashtable->entry_buf));
 
 		/* destroy_batches(aggstate->hhashtable); */
 		pfree(aggstate->hhashtable->buckets);
