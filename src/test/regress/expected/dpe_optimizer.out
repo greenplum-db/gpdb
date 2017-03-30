@@ -1649,31 +1649,30 @@ insert into dim values(1, 10);
 analyze malp;
 analyze dim;
 explain select * from dim inner join malp on (dim.i = malp.i);
-                                                                                                     QUERY PLAN                                                                                                     
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice3; segments: 2)  (cost=2.07..5.22 rows=3 width=23)
-   ->  Hash Join  (cost=2.07..5.22 rows=3 width=23)
-         Hash Cond: dpe_malp.malp.i = dpe_malp.dim.i
-         InitPlan  (slice4)
-           ->  Aggregate  (cost=1.01..1.02 rows=1 width=32)
-                 ->  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..1.01 rows=1 width=8)
-                       ->  Seq Scan on dim  (cost=0.00..1.01 rows=1 width=8)
-         ->  Append  (cost=0.00..3.06 rows=3 width=15)
-               ->  Result  (cost=0.00..1.03 rows=2 width=15)
-                     One-Time Filter: 446508::oid = ANY ($0)
-                     ->  Seq Scan on malp_1_prt_p1 malp  (cost=0.00..1.03 rows=2 width=15)
+                                                                                                                QUERY PLAN                                                                                                                
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=1.04..4.19 rows=6 width=23)
+   ->  Hash Join  (cost=1.04..4.19 rows=2 width=23)
+         Hash Cond: dpe_malp.malp.i = dim.i
+         ->  Append  (cost=0.00..3.06 rows=2 width=15)
+               ->  Result  (cost=0.00..1.03 rows=1 width=15)
+                     One-Time Filter: PartSelected
+                     ->  Seq Scan on malp_1_prt_p1 malp  (cost=0.00..1.03 rows=1 width=15)
                ->  Result  (cost=0.00..1.02 rows=1 width=15)
-                     One-Time Filter: 446534::oid = ANY ($0)
+                     One-Time Filter: PartSelected
                      ->  Seq Scan on malp_1_prt_p2 malp  (cost=0.00..1.02 rows=1 width=15)
                ->  Result  (cost=0.00..1.01 rows=1 width=15)
-                     One-Time Filter: 446560::oid = ANY ($0)
+                     One-Time Filter: PartSelected
                      ->  Seq Scan on malp_1_prt_p3 malp  (cost=0.00..1.01 rows=1 width=15)
-         ->  Hash  (cost=1.03..1.03 rows=1 width=8)
-               ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.03 rows=1 width=8)
-                     Hash Key: dpe_malp.dim.i
-                     ->  Seq Scan on dim  (cost=0.00..1.01 rows=1 width=8)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on
-(22 rows)
+         ->  Hash  (cost=0.00..0.00 rows=0 width=0)
+               ->  Partition Selector for malp (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+                     Filter: dim.i
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
+                           Hash Key: dim.i
+                           ->  Seq Scan on dim  (cost=0.00..1.01 rows=1 width=8)
+ Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: legacy query optimizer
+(21 rows)
 
 set gp_dynamic_partition_pruning = off;
 select * from dim inner join malp on (dim.i = malp.i);
