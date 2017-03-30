@@ -161,6 +161,7 @@ IdleTracker_DeactivateProcess()
 		/* No atomic update necessary as the update is protected by spin lock */
 		MySessionState->activeProcessCount -= 1;
 		Assert(0 <= MySessionState->activeProcessCount);
+		MySessionState->last_idle_time = GetCurrentTimestamp();
 		isProcessActive = false;
 
 		/* Save the point where we reduced the activeProcessCount */
