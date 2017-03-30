@@ -218,7 +218,10 @@
               <entry colname="col1">
                 <codeph id="km164320">pg_resetxlog</codeph>
               </entry>
-              <entry colname="col2">Not used in Greenplum Database</entry>
+              <entry colname="col2">DO NOT USE<p><b>Warning:</b> This program might cause data loss
+                  or cause data to become unavailable. If this program is used, the Pivotal
+                  Greenplum Database cluster is not supported. The cluster must be reinitialized and
+                  restored by the customer.</p></entry>
               <entry colname="col3">N/A</entry>
             </row>
             <row>

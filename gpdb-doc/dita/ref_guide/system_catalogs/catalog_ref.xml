@@ -10,6 +10,10 @@
       standard PostgreSQL system catalog tables supported in Greenplum Database, or
       are related to features Greenplum that provides to enhance
       PostgreSQL for data warehousing workloads. Note that the global system catalog for Greenplum Database resides on the master instance.</p>
+    <note type="warning"> Changes to Pivotal Greenplum Database system catalog tables or views are
+      not supported. If a catalog table or view is changed by the customer, the Pivotal Greenplum
+      Database cluster is not supported. The cluster must be reinitialized and restored by the
+      customer.</note>
     <!--links are print-only-->
     <ul id="ul_lyl_np1_1q" otherprops="op-print">
       <li>

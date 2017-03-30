@@ -14,10 +14,11 @@
         Greenplum Database, respectively. These utilities are located in the
         <filepath>$GPHOME/bin</filepath> directory on your Greenplum Database master
       host.</p>
-    <note type="important">
-      <p>Do not issue a <codeph>KILL</codeph> command to end any Postgres process. Instead, use the
-        database command <codeph>pg_cancel_backend()</codeph>.</p>
-    </note>
+    <note type="important">Do not issue a <codeph>kill</codeph> command to end any Postgres process.
+      Instead, use the database command <codeph>pg_cancel_backend()</codeph>. <p>Issuing a
+          <codeph>kill -9</codeph> or <codeph>kill -11</codeph> might introduce database corruption.
+        If Pivotal Greenplum Database corruption occurs, Pivotal will make best efforts to restore a
+        cluster. A root cause analysis cannot be performed.</p></note>
     <p>For information about <codeph>gpstart</codeph> and <codeph>gpstop</codeph>, see the <cite
        >Greenplum Database Utility Guide</cite>.</p>
   </body>
