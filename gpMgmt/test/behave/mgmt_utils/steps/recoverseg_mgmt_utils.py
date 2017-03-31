@@ -3,7 +3,7 @@ from gppylib.commands.base import Command, ExecutionError, REMOTE, WorkerPool
 from gppylib.db import dbconn
 from gppylib.commands import gp
 from gppylib.gparray import GpArray
-from test.behave_utils.utils import run_gpcommand, getRows, getRow
+from test.behave_utils.utils import *
 import platform
 
 @given('the information of a "{seg}" segment on a remote host is saved')

@@ -5,10 +5,9 @@ import socket
 import gzip
 from gppylib.commands.base import Command, REMOTE, WorkerPool, CommandResult
 from gppylib.db import dbconn
-from test.behave_utils.utils import getRows, validate_parse_email_file
 from gppylib.gparray import GpArray
 from gppylib.operations.unix import CheckFile
-from test.behave_utils.utils import backup_data_to_file, check_table_exists, validate_restore_data_in_file
+from test.behave_utils.utils import *
 
 master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
 

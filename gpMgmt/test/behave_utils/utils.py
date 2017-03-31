@@ -1482,3 +1482,13 @@ def remove_local_path(dirname):
 def validate_local_path(path):
     list = glob.glob(os.path.join(os.path.curdir, path))
     return len(list)
+
+def populate_regular_table_data(context, tabletype, table_name, compression_type, dbname, rowcount=1094, with_data=False, host=None, port=0, user=None):
+    create_database_if_not_exists(context, dbname, host=host, port=port, user=user)
+    drop_table_if_exists(context, table_name=table_name, dbname=dbname, host=host, port=port, user=user)
+    if compression_type == "None":
+        create_partition(context, table_name, tabletype, dbname, compression_type=None, partition=False,
+                         rowcount=rowcount, with_data=with_data, host=host, port=port, user=user)
+    else:
+        create_partition(context, table_name, tabletype, dbname, compression_type, partition=False,
+                         rowcount=rowcount, with_data=with_data, host=host, port=port, user=user)

@@ -10,7 +10,6 @@ import shutil
 import socket
 import tarfile
 import thread
-import yaml
 import json
 import csv
 import glob
@@ -246,16 +245,6 @@ def impl(context, table_list, dbname):
     for t in tables:
         truncate_table(dbname, t.strip())
 
-def populate_regular_table_data(context, tabletype, table_name, compression_type, dbname, rowcount=1094, with_data=False, host=None, port=0, user=None):
-    create_database_if_not_exists(context, dbname, host=host, port=port, user=user)
-    drop_table_if_exists(context, table_name=table_name, dbname=dbname, host=host, port=port, user=user)
-    if compression_type == "None":
-        create_partition(context, table_name, tabletype, dbname, compression_type=None, partition=False,
-                         rowcount=rowcount, with_data=with_data, host=host, port=port, user=user)
-    else:
-        create_partition(context, table_name, tabletype, dbname, compression_type, partition=False,
-                         rowcount=rowcount, with_data=with_data, host=host, port=port, user=user)
-
 @given('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data')
 @when('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data')
 @then('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data')
@@ -456,27 +445,6 @@ def impl(context, HOST, port, dir, ctxt):
     gp_source_file = os.path.join(remote_gphome, 'greenplum_path.sh')
     gpfdist = Gpfdist('gpfdist on host %s'%host, dir, port, os.path.join(dir,'gpfdist.pid'), int(ctxt), host, gp_source_file)
     gpfdist.cleanupGpfdist()
-
-def parse_netbackup_params():
-    current_path = os.path.realpath(__file__)
-    current_dir = os.path.dirname(current_path)
-    netbackup_yaml_file_path = os.path.join(current_dir, 'data/netbackup_behave_config.yaml')
-    try:
-        nbufile = open(netbackup_yaml_file_path, 'r')
-    except IOError,e:
-        raise Exception("Unable to open file %s: %s" % (netbackup_yaml_file_path, e))
-    try:
-        nbudata = yaml.load(nbufile.read())
-    except yaml.YAMLError, exc:
-        raise Exception("Error reading file %s: %s" % (netbackup_yaml_file_path, exc))
-    finally:
-        nbufile.close()
-
-    if len(nbudata) == 0:
-        raise Exception("The load of the config file %s failed.\
-         No configuration information to continue testing operation." % netbackup_yaml_file_path)
-    else:
-        return nbudata
 
 def run_valgrind_command(context, command, suppressions_file):
     current_path = os.path.realpath(__file__)
