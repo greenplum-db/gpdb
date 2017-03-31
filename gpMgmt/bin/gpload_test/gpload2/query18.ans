@@ -1,0 +1,18 @@
+2017-04-11 04:39:07|INFO|gpload session started 2017-04-11 04:39:07
+2017-04-11 04:39:07|INFO|setting schema 'public' for table 'csvtable'
+2017-04-11 04:39:07|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/gpload/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.csv" -t 30
+2017-04-11 04:39:07|INFO|reusing external table ext_gpload_reusable_cc6f8986_1e70_11e7_b7fc_0242ac110005
+2017-04-11 04:39:07|INFO|running time: 0.06 seconds
+2017-04-11 04:39:07|INFO|rows Inserted          = 4
+2017-04-11 04:39:07|INFO|rows Updated           = 0
+2017-04-11 04:39:07|INFO|data formatting errors = 0
+2017-04-11 04:39:07|INFO|gpload succeeded
+2017-04-11 04:39:07|INFO|gpload session started 2017-04-11 04:39:07
+2017-04-11 04:39:07|INFO|setting schema 'public' for table 'csvtable'
+2017-04-11 04:39:07|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/gpload/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.csv" -t 30
+2017-04-11 04:39:07|INFO|reusing external table ext_gpload_reusable_cc6f8986_1e70_11e7_b7fc_0242ac110005
+2017-04-11 04:39:07|INFO|running time: 0.06 seconds
+2017-04-11 04:39:07|INFO|rows Inserted          = 4
+2017-04-11 04:39:07|INFO|rows Updated           = 0
+2017-04-11 04:39:07|INFO|data formatting errors = 0
+2017-04-11 04:39:07|INFO|gpload succeeded

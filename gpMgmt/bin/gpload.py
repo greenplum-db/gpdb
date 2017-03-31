@@ -1131,6 +1131,7 @@ class gpload:
         self.options.l = None
         self.lastcmdtime = ''
         self.cmdtime = ''
+        self.formatOpts = "" 
         seenv = False
         seenq = False
 
@@ -2105,6 +2106,53 @@ class gpload:
             schemaTable = "%s.%s" % (schemaName, tableName)
             return schemaTable
 
+    def get_external_table_formatOpts(self, option, specify=''):
+
+        formatType = self.getconfig('gpload:input:format', unicode, 'text').lower()
+        if formatType == 'text':
+            valid_token = ['delimiter','escape']
+        elif formatType == 'csv':
+            valid_token = ['delimiter', 'quote', 'escape']
+        else:
+            valid_token = []
+
+        if not option in valid_token: 
+            self.control_file_error("The option you specified doesn't support now")
+            return
+       
+        if option == 'delimiter':
+            defval = ',' if formatType == 'csv' else '\t'
+            val = self.getconfig('gpload:input:delimiter', unicode, defval)
+        elif option == 'escape':
+            defval = self.getconfig('gpload:input:quote', unicode, '"')
+            val = self.getconfig('gpload:input:escape', unicode, defval)
+        elif option == 'quote':
+            val = self.getconfig('gpload:input:quote', unicode, '"')
+        else:
+            self.control_file_error("unexpected error -- backtrace " +
+                             "written to log file")
+            sys.exit(2)
+
+        specify_str = str(specify) if specify else option
+        if val.startswith("E'") and val.endswith("'") and len(val[2:-1].decode('unicode-escape')) == 1:
+            subval = val[2:-1]
+            if subval == "\\'":
+                val = val
+                self.formatOpts += "%s %s " % (specify_str, val)
+            else:
+                val = subval.decode('unicode-escape')
+                self.formatOpts += "%s '%s' " % (specify_str, val)
+        elif len(val.decode('unicode-escape')) == 1:
+            val = val.decode('unicode-escape')
+            self.formatOpts += "%s '%s' " % (specify_str, val)
+            
+        else:
+            self.control_file_warning(option +''' must be single ASCII charactor, you can also use unprintable characters(for example: '\\x1c' / E'\\x1c' or '\\u001c' / E'\\u001c' ''')
+            self.control_file_error("Invalid option, gpload quit immediately")
+            sys.exit(2);	
+   
+
+
     # 
     # Create a new external table or find a reusable external table to use for this operation
     #    
@@ -2115,37 +2163,19 @@ class gpload:
         # needed later on
         
         formatType = self.getconfig('gpload:input:format', unicode, 'text').lower()
-        formatOpts = ""
         locationStr = ','.join(map(quote,self.locations))
 
-        delimiterValue = self.getconfig('gpload:input:delimiter', unicode, False)
-        if isinstance(delimiterValue, bool) and delimiterValue == False:
-            """ implies the DELIMITER option has no value in the yaml file, so use default """
-            if formatType=='csv':
-                formatOpts += "delimiter ',' "
-        elif len(delimiterValue) != 1:
-            # is a escape sequence character like '\x1B' or '\u001B'?
-            if len(delimiterValue.decode('unicode-escape')) == 1:
-                formatOpts += "delimiter '%s' " % delimiterValue.decode('unicode-escape')
-            # is a escape string syntax support by gpdb like E'\x1B' or E'\x\u001B'
-            elif len(delimiterValue.lstrip("E'").rstrip("'").decode('unicode-escape')) ==1:
-                formatOpts += "delimiter '%s' " % delimiterValue.lstrip("E'").rstrip("'").decode('unicode-escape')
-            else:
-                self.control_file_warning('''A delimiter must be single ASCII charactor, you can also use unprintable characters(for example: '\\x1c' / E'\\x1c' or '\\u001c' / E'\\u001c' ''')
-                self.control_file_error("Invalid delimiter, gpload quit immediately")
-                sys.exit(2);
-        else:
-            formatOpts += "delimiter %s " % \
-                quote(self.getconfig('gpload:input:delimiter', unicode))
+        self.get_external_table_formatOpts('delimiter')
 
         nullas = self.getconfig('gpload:input:null_as', unicode, False)
         self.log(self.DEBUG, "null " + unicode(nullas))
         if nullas != False: # could be empty string
-            formatOpts += "null %s " % quote(nullas)
+            self.formatOpts += "null %s " % quote(nullas)
         elif formatType=='csv':
-            formatOpts += "null '' "
+            self.formatOpts += "null '' "
         else:
-            formatOpts += "null %s " % quote("\N")
+            self.formatOpts += "null %s " % quote("\N")
+
 
         esc = self.getconfig('gpload:input:escape', None, None)
         if esc:
@@ -2154,29 +2184,27 @@ class gpload:
             if esc.lower() == 'off':
                 if formatType == 'csv':
                     self.control_file_error("ESCAPE cannot be set to OFF in CSV mode")
-                formatOpts += "escape 'off' "
+                self.formatOpts += "escape 'off' "
             else:
-                formatOpts += "escape %s " % quote(esc)
+                self.get_external_table_formatOpts('escape')
         else:
             if formatType=='csv':
-                formatOpts += "escape %s " % quote(self.getconfig('gpload:input:quote', 
-                    unicode, extraStuff='for csv formatted data'))
+                self.get_external_table_formatOpts('quote','escape')
             else:
-                formatOpts += "escape '\\'"
+                self.formatOpts += "escape '\\'"
 
         if formatType=='csv':
-            formatOpts += "quote %s " % quote(self.getconfig('gpload:input:quote', 
-                    unicode, extraStuff='for csv formatted data'))
+            self.get_external_table_formatOpts('quote') 
 
         if self.getconfig('gpload:input:header',bool,False):
-            formatOpts += "header "
+            self.formatOpts += "header "
 
         force_not_null_columns = self.getconfig('gpload:input:force_not_null',list,[])
         if force_not_null_columns:
             for i in force_not_null_columns:
                 if type(i) != unicode and type(i) != str:
                     self.control_file_error("gpload:input:force_not_null must be a YAML sequence of strings")
-            formatOpts += "force not null %s " % ','.join(force_not_null_columns)
+            self.formatOpts += "force not null %s " % ','.join(force_not_null_columns)
 
         encodingStr = self.getconfig('gpload:input:encoding', unicode, None)
 
@@ -2202,7 +2230,9 @@ class gpload:
         # the one that we need to use. It must have identical attributes,
         # external location, format, and encoding specifications.
         if self.reuse_tables == True:
-            sql = self.get_reuse_exttable_query(formatType, formatOpts,
+            # process the single quotes in order to successfully find an existing external table to reuse.
+            self.formatOpts = self.formatOpts.replace("E'\\''","'\''") 
+            sql = self.get_reuse_exttable_query(formatType, self.formatOpts,
                     limitStr, from_cols, self.extSchemaName, self.log_errors)
             resultList = self.db.query(sql.encode('utf-8')).getresult()
             if len(resultList) > 0:
@@ -2219,6 +2249,9 @@ class gpload:
             self.extTableName = "ext_gpload_reusable_%s" % self.unique_suffix
             self.log(self.INFO, "did not find an external table to reuse. creating %s" % self.extTableName)
         
+        # process the single quotes in order to successfully create an external table.
+        self.formatOpts = self.formatOpts.replace("'\''","E'\\''")
+
         # construct a CREATE EXTERNAL TABLE statement and execute it
         self.extSchemaTable = self.get_ext_schematable(self.extSchemaName, self.extTableName)
         sql = "create external table %s" % self.extSchemaTable
@@ -2226,8 +2259,8 @@ class gpload:
 
         sql += "location(%s) "%locationStr
         sql += "format%s "% quote(formatType)
-        if len(formatOpts) > 0:
-            sql += "(%s) "% formatOpts
+        if len(self.formatOpts) > 0:
+            sql += "(%s) "% self.formatOpts
         if encodingStr:
             sql += "encoding%s "%quote(encodingStr)
         if self.log_errors:

@@ -95,7 +95,7 @@ d = mkpath('config')
 if not os.path.exists(d):
     os.mkdir(d)
 
-def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',delimiter="'|'",escape='',quote='',truncate='False'):
+def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False'):
 
     f = open(mkpath('config/config_file'),'w')
     f.write("VERSION: 1.0.0.1")
@@ -128,6 +128,8 @@ def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',
         f.write("\n           - s_n7: double precision")
         f.write("\n           - s_n8: text")
         f.write("\n           - s_n9: text")
+    if format:
+        f.write("\n    - FORMAT: "+format)
     if delimiter:
         f.write("\n    - DELIMITER: "+delimiter)
     if escape:
@@ -420,8 +422,45 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         runfile(file)
         self.check_result(file)
 
+    def test_01_gpload_formatOpts_delimiter(self):
+        "1  gpload formatOpts delimiter '|' with reuse "
+        copy_data('external_file_01.txt','data_file.txt')
+        write_config_file(reuse_flag='true',formatOpts='text',file='data_file.txt',table='texttable',delimiter="'|'")
+        self.doTest(1)
+
+    def test_02_gpload_formatOpts_delimiter(self):
+        "2  gpload formatOpts delimiter '\t' with reuse"
+        copy_data('external_file_02.txt','data_file.txt')
+        write_config_file(reuse_flag='true',formatOpts='text',file='data_file.txt',table='texttable',delimiter="'\t'")
+        self.doTest(2)
+
+    def test_03_gpload_formatOpts_delimiter(self):
+        "3  gpload formatOpts delimiter E'\t' with reuse"
+        copy_data('external_file_02.txt','data_file.txt')
+        write_config_file(reuse_flag='true',formatOpts='text',file='data_file.txt',table='texttable',delimiter="E'\\t'")
+        self.doTest(3)
+
+    def test_04_gpload_formatOpts_delimiter(self):
+        "4  gpload formatOpts delimiter E'\u0009' with reuse"
+        copy_data('external_file_02.txt','data_file.txt')
+        write_config_file(reuse_flag='true',formatOpts='text',file='data_file.txt',table='texttable',delimiter="E'\u0009'")
+        self.doTest(4)
+
+    def test_05_gpload_formatOpts_delimiter(self):
+        "5  gpload formatOpts delimiter E'\\'' with reuse"
+        copy_data('external_file_03.txt','data_file.txt')
+        write_config_file(reuse_flag='true',formatOpts='text',file='data_file.txt',table='texttable',delimiter="E'\''")
+        self.doTest(5)
+
+    def test_06_gpload_formatOpts_delimiter(self):
+        "6  gpload formatOpts delimiter \"'\" with reuse"
+        copy_data('external_file_03.txt','data_file.txt')
+        write_config_file(reuse_flag='true',formatOpts='text',file='data_file.txt',table='texttable',delimiter="\"'\"")
+        self.doTest(6)
+
     def test_07_gpload_reuse_table_insert_mode_without_reuse(self):
         "7  gpload insert mode without reuse"
+        runfile(mkpath('setup.sql'))
         f = open(mkpath('query7.sql'),'a')
         f.write("\! psql -d reuse_gptest -c 'select count(*) from texttable;'")
         f.close()
@@ -482,6 +521,24 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         copy_data('external_file_10.txt','data/data_file.tbl')
         write_config_file('merge','true',file='data/data_file.tbl',columns_flag='1',mapping='1')
         self.doTest(15)
+
+    def test_16_gpload_formatOpts_quote(self):
+        "16  gpload formatOpts quote unspecified in CSV with reuse "
+        copy_data('external_file_11.csv','data_file.csv')
+        write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='csvtable',format='csv',delimiter="','")
+        self.doTest(16)
+
+    def test_17_gpload_formatOpts_quote(self):
+        "17  gpload formatOpts quote '\\x26'(&) with reuse"
+        copy_data('external_file_12.csv','data_file.csv')
+        write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='csvtable',format='csv',delimiter="','",quote="'\x26'")
+        self.doTest(17)
+
+    def test_18_gpload_formatOpts_quote(self):
+        "18  gpload formatOpts quote E'\\x26'(&) with reuse"
+        copy_data('external_file_12.csv','data_file.csv')
+        write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='csvtable',format='csv',delimiter="','",quote="E'\x26'")
+        self.doTest(18)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(GPLoad_FormatOpts_TestCase)
