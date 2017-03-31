@@ -31,7 +31,7 @@ PYLIB_DIR=$(SRC)/ext
 core: pygresql subprocess32
 
 ifneq "$(wildcard $(CURDIR)/pythonSrc/ext/*.tar.gz)" ""
-all: core lockfile paramiko pycrypto stream pychecker psutil unittest2
+all: core lockfile paramiko stream psutil unittest2
 else
 all: core stream
 endif
@@ -110,18 +110,6 @@ subprocess32:
 	  fi
 
 #
-# PYCRYPTO
-#
-PYCRYPTO_VERSION=2.0.1
-PYCRYPTO_DIR=pycrypto-$(PYCRYPTO_VERSION)
-
-pycrypto:
-	@echo "--- pycrypto"
-	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PYCRYPTO_DIR).tar.gz
-	cd $(PYLIB_SRC_EXT)/$(PYCRYPTO_DIR)/ && CC="$(CC)" python setup.py build
-	cp -r $(PYLIB_SRC_EXT)/$(PYCRYPTO_DIR)/build/lib.*/Crypto $(PYLIB_DIR)
-
-#
 # PSUTIL
 #
 PSUTIL_VERSION=4.0.0
@@ -132,19 +120,6 @@ psutil:
 	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PSUTIL_DIR).tar.gz
 	cd $(PYLIB_SRC_EXT)/$(PSUTIL_DIR)/ && CC="$(CC)" python setup.py build
 	cp -r $(PYLIB_SRC_EXT)/$(PSUTIL_DIR)/build/lib.*/psutil $(PYLIB_DIR)
-
-
-#
-# PYCHECKER
-#
-PYCHECKER_VERSION=0.8.18
-PYCHECKER_DIR=pychecker-$(PYCHECKER_VERSION)
-
-pychecker:
-	@echo "--- pychecker"
-	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PYCHECKER_DIR).tar.gz
-	cd $(PYLIB_SRC_EXT)/$(PYCHECKER_DIR)/ && python setup.py build
-	cp -r $(PYLIB_SRC_EXT)/$(PYCHECKER_DIR)/build/lib/pychecker  $(PYLIB_DIR)/
 
 
 #
@@ -257,7 +232,6 @@ solarisTest:
 clean :
 	@rm -rf $(PYLIB_SRC_EXT)/$(LOCKFILE_DIR)
 	@rm -rf $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)
-	@rm -rf $(PYLIB_SRC_EXT)/$(PYCRYPTO_DIR)
 	@rm -rf $(PYLIB_SRC_EXT)/$(PYLINT_DIR)
 	@rm -rf $(PYLIB_SRC_EXT)/$(LOGILAB_COMMON_DIR)
 	@rm -rf $(PYLIB_SRC_EXT)/$(LOGILAB_ASTNG_DIR)
