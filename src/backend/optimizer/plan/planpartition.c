@@ -330,6 +330,11 @@ create_partition_selector(PlannerInfo *root, DynamicScanInfo *dsinfo,
 	ps->plan.lefttree = subplan;
 	ps->plan.righttree = NULL;
 
+	ps->plan.startup_cost = subplan->startup_cost;
+	ps->plan.total_cost = subplan->total_cost;
+	ps->plan.plan_rows = subplan->plan_rows;
+	ps->plan.plan_width = subplan->plan_width;
+
 	ps->relid = dsinfo->parentOid;
 	ps->nLevels = 1;
 	ps->scanId = dsinfo->dynamicScanId;

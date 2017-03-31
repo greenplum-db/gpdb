@@ -95,8 +95,8 @@ explain select * from t, pt where tid = ptid;
                ->  Result  (cost=0.00..3.09 rows=3 width=31)
                      One-Time Filter: PartSelected
                      ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
-         ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+         ->  Hash  (cost=1.08..1.08 rows=2 width=19)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.08 rows=2 width=19)
                      Filter: t.tid
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
                            ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
@@ -152,8 +152,8 @@ explain select * from t, pt where tid + 1 = ptid;
                ->  Result  (cost=0.00..3.09 rows=3 width=31)
                      One-Time Filter: PartSelected
                      ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
-         ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+         ->  Hash  (cost=1.08..1.08 rows=2 width=19)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.08 rows=2 width=19)
                      Filter: t.tid + 1
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
                            ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
@@ -209,8 +209,8 @@ explain select * from t, pt where tid = ptid and t1 = 'hello' || tid;
                ->  Result  (cost=0.00..3.09 rows=3 width=31)
                      One-Time Filter: PartSelected
                      ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
-         ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+         ->  Hash  (cost=1.07..1.07 rows=1 width=19)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.07 rows=1 width=19)
                      Filter: t.tid
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.07 rows=1 width=19)
                            ->  Seq Scan on t  (cost=0.00..1.04 rows=1 width=19)
@@ -267,8 +267,8 @@ explain select * from t, pt where t1 = pt1 and ptid = tid;
                ->  Result  (cost=0.00..3.09 rows=3 width=31)
                      One-Time Filter: PartSelected
                      ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
-         ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+         ->  Hash  (cost=1.08..1.08 rows=2 width=19)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.08 rows=2 width=19)
                      Filter: t.tid
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
                            ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
@@ -311,8 +311,8 @@ explain select * from pt where ptid in (select tid from t where t1 = 'hello' || 
                ->  Result  (cost=0.00..3.09 rows=3 width=31)
                      One-Time Filter: PartSelected
                      ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
-         ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+         ->  Hash  (cost=1.09..1.09 rows=1 width=11)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=1.06..1.09 rows=1 width=11)
                      Filter: t.tid
                      ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=1.06..1.09 rows=1 width=11)
                            ->  HashAggregate  (cost=1.06..1.07 rows=1 width=36)
@@ -373,8 +373,8 @@ explain select * from pt where exists (select 1 from t where tid = ptid and t1 =
                ->  Result  (cost=0.00..3.09 rows=3 width=31)
                      One-Time Filter: PartSelected
                      ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
-         ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+         ->  Hash  (cost=1.07..1.07 rows=1 width=11)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.07 rows=1 width=11)
                      Filter: t.tid
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.07 rows=1 width=11)
                            ->  Seq Scan on t  (cost=0.00..1.04 rows=1 width=11)
@@ -436,8 +436,8 @@ explain select count(*) from t, pt where tid = ptid;
                            ->  Result  (cost=0.00..3.09 rows=3 width=4)
                                  One-Time Filter: PartSelected
                                  ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=4)
-                     ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-                           ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+                     ->  Hash  (cost=1.08..1.08 rows=2 width=4)
+                           ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.08 rows=2 width=4)
                                  Filter: t.tid
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=4)
                                        ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=4)
@@ -484,8 +484,8 @@ explain select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
                            ->  Result  (cost=0.00..3.09 rows=3 width=31)
                                  One-Time Filter: PartSelected
                                  ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
-                     ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-                           ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+                     ->  Hash  (cost=1.08..1.08 rows=2 width=19)
+                           ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.08 rows=2 width=19)
                                  Filter: t.tid
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
                                        ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
@@ -547,8 +547,8 @@ explain select * from t, pt where tid = ptid
                      ->  Result  (cost=0.00..3.09 rows=3 width=31)
                            One-Time Filter: PartSelected
                            ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
-               ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-                     ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+               ->  Hash  (cost=1.08..1.08 rows=2 width=19)
+                     ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.08 rows=2 width=19)
                            Filter: dpe_single.t.tid
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
                                  ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
@@ -573,8 +573,8 @@ explain select * from t, pt where tid = ptid
                      ->  Result  (cost=0.00..3.09 rows=3 width=31)
                            One-Time Filter: PartSelected
                            ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
-               ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-                     ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+               ->  Hash  (cost=1.08..1.08 rows=2 width=19)
+                     ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.08 rows=2 width=19)
                            Filter: dpe_single.t.tid + 2
                            ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
                                  ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
@@ -661,8 +661,8 @@ explain select count(*) from
                                        ->  Result  (cost=0.00..3.09 rows=3 width=31)
                                              One-Time Filter: PartSelected
                                              ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
-                                 ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-                                       ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+                                 ->  Hash  (cost=1.08..1.08 rows=2 width=19)
+                                       ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.08 rows=2 width=19)
                                              Filter: dpe_single.t.tid
                                              ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
                                                    ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
@@ -687,8 +687,8 @@ explain select count(*) from
                                        ->  Result  (cost=0.00..3.09 rows=3 width=31)
                                              One-Time Filter: PartSelected
                                              ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
-                                 ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-                                       ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+                                 ->  Hash  (cost=1.08..1.08 rows=2 width=19)
+                                       ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.08 rows=2 width=19)
                                              Filter: dpe_single.t.tid + 2
                                              ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
                                                    ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
@@ -738,7 +738,7 @@ explain select * from t, pt where tid = ptid;
                      One-Time Filter: PartSelected
                      ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
          ->  Materialize  (cost=1.08..1.12 rows=2 width=19)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.08 rows=2 width=19)
                      Filter: t.tid
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
                            ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
@@ -811,7 +811,7 @@ explain select * from t, pt where tid = ptid and pt1 = 'hello0';
                      ->  Index Scan using pt1_idx_1_prt_6 on pt_1_prt_6 pt  (cost=0.00..200.27 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
          ->  Materialize  (cost=1.08..1.12 rows=2 width=19)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.08 rows=2 width=19)
                      Filter: t.tid
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
                            ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
@@ -858,7 +858,7 @@ explain select * from t, pt where tid = ptid;
                      One-Time Filter: PartSelected
                      ->  Index Scan using ptid_idx_1_prt_6 on pt_1_prt_6 pt  (cost=0.00..706.33 rows=3 width=31)
          ->  Materialize  (cost=1.08..1.12 rows=2 width=19)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.08 rows=2 width=19)
                      Filter: t.tid
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
                            ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
@@ -1055,8 +1055,8 @@ explain select * from t, t1, pt where t1.t2 = t.t2 and t1.tid = ptid;
                ->  Result  (cost=0.00..3.09 rows=3 width=31)
                      One-Time Filter: PartSelected
                      ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
-         ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+         ->  Hash  (cost=2.33..2.33 rows=3 width=38)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=1.13..2.33 rows=3 width=38)
                      Filter: t1.tid
                      ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=1.13..2.33 rows=3 width=38)
                            ->  Hash Join  (cost=1.13..2.21 rows=2 width=38)
@@ -1156,9 +1156,9 @@ explain analyze select * from t, pt where tid = ptid;
                      Rows out:  0 rows (seg0) with 0.002 ms to end, start offset by 21 ms.
                      ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
                            Rows out:  (No row requested) 0 rows (seg0) with 0 ms to end.
-         ->  Hash  (cost=0.00..0.00 rows=0 width=0)
+         ->  Hash  (cost=1.08..1.08 rows=2 width=19)
                Rows in:  Avg 2.0 rows x 3 workers.  Max 2 rows (seg0) with 0.137 ms to end, start offset by 21 ms.
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.08 rows=2 width=19)
                      Filter: t.tid
                      Rows out:  Avg 2.0 rows x 3 workers.  Max 2 rows (seg0) with 0.111 ms to first row, 0.126 ms to end, start offset by 21 ms.
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
@@ -1208,8 +1208,8 @@ explain select * from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0' ord
                      ->  Result  (cost=0.00..3.09 rows=3 width=31)
                            One-Time Filter: PartSelected
                            ->  Seq Scan on pt1_1_prt_6 pt1  (cost=0.00..3.09 rows=3 width=31)
-               ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-                     ->  Partition Selector for pt1 (dynamic scan id: 2)  (cost=0.00..0.00 rows=0 width=0)
+               ->  Hash  (cost=18.86..18.86 rows=4 width=31)
+                     ->  Partition Selector for pt1 (dynamic scan id: 2)  (cost=0.00..18.86 rows=4 width=31)
                            Filter: dpe_single.pt.ptid
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..18.86 rows=4 width=31)
                                  ->  Append  (cost=0.00..18.68 rows=2 width=31)
@@ -1270,8 +1270,8 @@ explain select count(*) from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hell
                            ->  Result  (cost=0.00..3.09 rows=3 width=4)
                                  One-Time Filter: PartSelected
                                  ->  Seq Scan on pt1_1_prt_6 pt1  (cost=0.00..3.09 rows=3 width=4)
-                     ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-                           ->  Partition Selector for pt1 (dynamic scan id: 2)  (cost=0.00..0.00 rows=0 width=0)
+                     ->  Hash  (cost=18.86..18.86 rows=4 width=4)
+                           ->  Partition Selector for pt1 (dynamic scan id: 2)  (cost=0.00..18.86 rows=4 width=4)
                                  Filter: dpe_single.pt.ptid
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..18.86 rows=4 width=4)
                                        ->  Append  (cost=0.00..18.68 rows=2 width=4)
@@ -1480,8 +1480,8 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code
                      ->  Result  (cost=0.00..542.00 rows=14734 width=44)
                            One-Time Filter: PartSelected
                            ->  Seq Scan on fact1_1_prt_4_2_prt_wa fact1  (cost=0.00..542.00 rows=14734 width=44)
-               ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-                     ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+               ->  Hash  (cost=1.04..1.04 rows=1 width=18)
+                     ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=0.00..1.04 rows=1 width=18)
                            Filter: dim1.code, dim1.pid
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=18)
                                  ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
@@ -1728,8 +1728,8 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fac
                      ->  Result  (cost=0.00..542.00 rows=14734 width=44)
                            One-Time Filter: PartSelected
                            ->  Seq Scan on fact1_1_prt_4_2_prt_wa fact1  (cost=0.00..542.00 rows=14734 width=44)
-               ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-                     ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+               ->  Hash  (cost=1.04..1.04 rows=1 width=18)
+                     ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=0.00..1.04 rows=1 width=18)
                            Filter: dim1.pid
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=18)
                                  ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
@@ -1952,8 +1952,8 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.co
                            One-Time Filter: PartSelected
                            ->  Seq Scan on fact1_1_prt_4_2_prt_oh fact1  (cost=0.00..652.50 rows=15 width=44)
                                  Filter: code = 'OH'::text
-               ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-                     ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+               ->  Hash  (cost=1.04..1.04 rows=1 width=18)
+                     ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=0.00..1.04 rows=1 width=18)
                            Filter: dim1.pid
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=18)
                                  ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
@@ -2118,8 +2118,8 @@ explain select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact
                                              ->  Result  (cost=0.00..542.00 rows=14734 width=36)
                                                    One-Time Filter: PartSelected
                                                    ->  Seq Scan on fact1_1_prt_4_2_prt_wa fact1  (cost=0.00..542.00 rows=14734 width=36)
-                                       ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-                                             ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+                                       ->  Hash  (cost=1.04..1.04 rows=1 width=4)
+                                             ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=0.00..1.04 rows=1 width=4)
                                                    Filter: dim1.pid
                                                    ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=4)
                                                          ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=4)
@@ -2181,8 +2181,8 @@ explain select * from dim inner join malp on (dim.i = malp.i);
                ->  Result  (cost=0.00..1.01 rows=1 width=15)
                      One-Time Filter: PartSelected
                      ->  Seq Scan on malp_1_prt_p3 malp  (cost=0.00..1.01 rows=1 width=15)
-         ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-               ->  Partition Selector for malp (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+         ->  Hash  (cost=1.03..1.03 rows=1 width=8)
+               ->  Partition Selector for malp (dynamic scan id: 1)  (cost=0.00..1.03 rows=1 width=8)
                      Filter: dim.i
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
                            Hash Key: dim.i
@@ -2304,8 +2304,8 @@ explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
                ->  Hash  (cost=2.20..2.20 rows=4 width=6)
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.20 rows=4 width=6)
                            ->  Seq Scan on b  (cost=0.00..2.05 rows=2 width=6)
-         ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-               ->  Partition Selector for apart (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+         ->  Hash  (cost=3.20..3.20 rows=7 width=6)
+               ->  Partition Selector for apart (dynamic scan id: 1)  (cost=0.00..3.20 rows=7 width=6)
                      Filter: c.id
                      ->  Seq Scan on c  (cost=0.00..3.20 rows=7 width=6)
  Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer_segments=2
@@ -2366,8 +2366,8 @@ explain select * from (select count(*) over (order by a rows between 1 preceding
                ->  Result  (cost=0.00..961.00 rows=28700 width=8)
                      One-Time Filter: PartSelected
                      ->  Seq Scan on pat_1_prt_5 pat  (cost=0.00..961.00 rows=28700 width=8)
-         ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-               ->  Partition Selector for pat (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+         ->  Hash  (cost=1.09..1.09 rows=1 width=16)
+               ->  Partition Selector for pat (dynamic scan id: 1)  (cost=1.02..1.09 rows=1 width=16)
                      Filter: jpat.b
                      ->  Broadcast Motion 1:3  (slice2; segments: 1)  (cost=1.02..1.09 rows=2 width=16)
                            ->  Subquery Scan jpat  (cost=1.02..1.06 rows=1 width=16)

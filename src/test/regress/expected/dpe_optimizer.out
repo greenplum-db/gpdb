@@ -1664,8 +1664,8 @@ explain select * from dim inner join malp on (dim.i = malp.i);
                ->  Result  (cost=0.00..1.01 rows=1 width=15)
                      One-Time Filter: PartSelected
                      ->  Seq Scan on malp_1_prt_p3 malp  (cost=0.00..1.01 rows=1 width=15)
-         ->  Hash  (cost=0.00..0.00 rows=0 width=0)
-               ->  Partition Selector for malp (dynamic scan id: 1)  (cost=0.00..0.00 rows=0 width=0)
+         ->  Hash  (cost=1.03..1.03 rows=1 width=8)
+               ->  Partition Selector for malp (dynamic scan id: 1)  (cost=0.00..1.03 rows=1 width=8)
                      Filter: dim.i
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
                            Hash Key: dim.i
