@@ -658,6 +658,10 @@ OSSP_UUID_LIBS
 CURL_LIBS
 CURL_CFLAGS
 CURL_CONFIG
+with_libsigar
+apu_link_ld_libs
+apu_includes
+APU_1_CONFIG
 have_yaml
 apr_cppflags
 apr_cflags
@@ -703,6 +707,7 @@ LDFLAGS_EX
 ELF_SYS
 EGREP
 GREP
+with_apu_config
 with_apr_config
 with_libcurl
 with_rt
@@ -759,6 +764,7 @@ LCOV
 GCOV
 enable_profiling
 enable_debug
+enable_gpperfmon
 enable_gpfdist
 enable_rpath
 enable_shared
@@ -828,6 +834,7 @@ enable_rpath
 enable_spinlocks
 enable_atomics
 enable_gpfdist
+enable_gpperfmon
 enable_debug
 enable_profiling
 enable_coverage
@@ -869,6 +876,7 @@ with_zlib
 with_rt
 with_libcurl
 with_apr_config
+with_apu_config
 with_gnu_ld
 enable_largefile
 '
@@ -1507,6 +1515,7 @@ Optional Features:
   --disable-spinlocks     do not use spinlocks
   --disable-atomics       do not use atomic operations
   --disable-gpfdist       do not use gpfdist
+  --enable-gpperfmon      build with gpperfmon
   --enable-debug          build with debugging symbols (-g)
   --enable-profiling      build with profiling enabled
   --enable-coverage       build with coverage testing instrumentation
@@ -1559,6 +1568,7 @@ Optional Packages:
   --without-rt            do not use Realtime Library
   --without-libcurl       do not use libcurl
   --with-apr-config=PATH  path to apr-1-config utility
+  --with-apu-config=PATH  path to apu-1-config utility
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
 
 Some influential environment variables:
@@ -3312,6 +3322,35 @@ if test "${enable_gpfdist+set}" = set; then :
 
 else
   enable_gpfdist=yes
+
+fi
+
+
+
+
+#
+# --enable-gpperfmon
+#
+
+pgac_args="$pgac_args enable_gpperfmon"
+
+# Check whether --enable-gpperfmon was given.
+if test "${enable_gpperfmon+set}" = set; then :
+  enableval=$enable_gpperfmon;
+  case $enableval in
+    yes)
+      :
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --enable-gpperfmon option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  enable_gpperfmon=no
 
 fi
 
@@ -6822,7 +6861,7 @@ fi
 
 
 #
-# libapr. Used for gpfdist.
+# libapr. Used for gpfdist and gpperfmon
 #
 
 pgac_args="$pgac_args with_apr_config"
@@ -6837,6 +6876,33 @@ if test "${with_apr_config+set}" = set; then :
       ;;
     no)
       as_fn_error $? "argument required for --with-apr-config option" "$LINENO" 5
+      ;;
+    *)
+
+      ;;
+  esac
+
+fi
+
+
+
+
+#
+# libapu. Used for gpperfmon.
+#
+
+pgac_args="$pgac_args with_apu_config"
+
+
+# Check whether --with-apu-config was given.
+if test "${with_apu_config+set}" = set; then :
+  withval=$with_apu_config;
+  case $withval in
+    yes)
+      as_fn_error $? "argument required for --with-apu-config option" "$LINENO" 5
+      ;;
+    no)
+      as_fn_error $? "argument required for --with-apu-config option" "$LINENO" 5
       ;;
     *)
 
@@ -9367,7 +9433,10 @@ fi
   fi
 fi
 
+
+
 if test "$enable_gpfdist" = yes ; then
+
 
 if test x"$with_apr_config" != x; then
   APR_1_CONFIG=$with_apr_config
@@ -9500,8 +9569,9 @@ if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
 else
-  as_fn_error $? "libapr-1 is required for gpfdist" "$LINENO" 5
+  as_fn_error $? "libapr-1 is required by gpfdist and gpperfmon" "$LINENO" 5
 fi
+
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing event_add" >&5
 $as_echo_n "checking for library containing event_add... " >&6; }
@@ -9624,6 +9694,392 @@ fi
   LIBS="$_LIBS"
 
 fi
+
+if test "$enable_gpperfmon" = yes; then
+
+
+if test x"$with_apr_config" != x; then
+  APR_1_CONFIG=$with_apr_config
+fi
+if test -z "$APR_1_CONFIG"; then
+  for ac_prog in apr-1-config
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_APR_1_CONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $APR_1_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_APR_1_CONFIG="$APR_1_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_APR_1_CONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+APR_1_CONFIG=$ac_cv_path_APR_1_CONFIG
+if test -n "$APR_1_CONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $APR_1_CONFIG" >&5
+$as_echo "$APR_1_CONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$APR_1_CONFIG" && break
+done
+
+fi
+
+if test -n "$APR_1_CONFIG"; then
+  gpac_apr_1_config_version=`$APR_1_CONFIG --version 2>/dev/null | sed q`
+  if test -z "$gpac_apr_1_config_version"; then
+    as_fn_error $? "apr-1-config is required for gpfdist, unable to identify version" "$LINENO" 5
+  fi
+  { $as_echo "$as_me:${as_lineno-$LINENO}: using apr-1-config $gpac_apr_1_config_version" >&5
+$as_echo "$as_me: using apr-1-config $gpac_apr_1_config_version" >&6;}
+  apr_includes=`"$APR_1_CONFIG" --includes`
+  apr_link_ld_libs=`"$APR_1_CONFIG" --link-ld --libs`
+  apr_cflags=`"$APR_1_CONFIG" --cflags`
+  apr_cppflags=`"$APR_1_CONFIG" --cppflags`
+
+
+
+
+else
+  as_fn_error $? "apr-1-config is required for gpfdist, unable to find binary" "$LINENO" 5
+fi
+
+  # If the 'apr-1-config --link-ld' produced correct output, -lapr-1 is already
+  # in LIBS, hence AC_SEARCH_LIBS rather than AC_CHECK_LIB. (and the autoconf
+  # manual recommends always using AC_SEARCH_LIBS rather than AC_CHECK_LIB
+  # anyway)
+  _LIBS="$LIBS"
+  LIBS="$LIBS $apr_link_ld_libs"
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing apr_getopt_long" >&5
+$as_echo_n "checking for library containing apr_getopt_long... " >&6; }
+if ${ac_cv_search_apr_getopt_long+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char apr_getopt_long ();
+int
+main ()
+{
+return apr_getopt_long ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' apr-1; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_apr_getopt_long=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_apr_getopt_long+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_apr_getopt_long+:} false; then :
+
+else
+  ac_cv_search_apr_getopt_long=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_apr_getopt_long" >&5
+$as_echo "$ac_cv_search_apr_getopt_long" >&6; }
+ac_res=$ac_cv_search_apr_getopt_long
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+else
+  as_fn_error $? "libapr-1 is required by gpfdist and gpperfmon" "$LINENO" 5
+fi
+
+
+
+if test x"$with_apu_config" != x; then
+  APU_1_CONFIG=$with_apu_config
+fi
+if test -z "$APU_1_CONFIG"; then
+  for ac_prog in apu-1-config
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_APU_1_CONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $APU_1_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_APU_1_CONFIG="$APU_1_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_APU_1_CONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+APU_1_CONFIG=$ac_cv_path_APU_1_CONFIG
+if test -n "$APU_1_CONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $APU_1_CONFIG" >&5
+$as_echo "$APU_1_CONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$APU_1_CONFIG" && break
+done
+
+fi
+
+if test -n "$APU_1_CONFIG"; then
+  gpac_apu_1_config_version=`$APU_1_CONFIG --version 2>/dev/null | sed q`
+  if test -z "$gpac_apu_1_config_version"; then
+    as_fn_error $? "apu-1-config is required for gpperfmon, unable to identify version" "$LINENO" 5
+  fi
+  { $as_echo "$as_me:${as_lineno-$LINENO}: using apu-1-config $gpac_apu_1_config_version" >&5
+$as_echo "$as_me: using apu-1-config $gpac_apu_1_config_version" >&6;}
+  apu_includes=`"$APU_1_CONFIG" --includes`
+  apu_link_ld_libs=`"$APU_1_CONFIG" --link-ld --libs`
+
+
+else
+  as_fn_error $? "apu-1-config is required for gpperfmon, unable to find binary" "$LINENO" 5
+fi
+
+  LIBS="$LIBS $apu_link_ld_libs"
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing event_add" >&5
+$as_echo_n "checking for library containing event_add... " >&6; }
+if ${ac_cv_search_event_add+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char event_add ();
+int
+main ()
+{
+return event_add ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' event; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_event_add=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_event_add+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_event_add+:} false; then :
+
+else
+  ac_cv_search_event_add=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_event_add" >&5
+$as_echo "$ac_cv_search_event_add" >&6; }
+ac_res=$ac_cv_search_event_add
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+else
+  as_fn_error $? "libevent is required for gpperfrmon" "$LINENO" 5
+fi
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing apr_queue_push" >&5
+$as_echo_n "checking for library containing apr_queue_push... " >&6; }
+if ${ac_cv_search_apr_queue_push+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char apr_queue_push ();
+int
+main ()
+{
+return apr_queue_push ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' aprutil-1; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_apr_queue_push=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_apr_queue_push+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_apr_queue_push+:} false; then :
+
+else
+  ac_cv_search_apr_queue_push=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_apr_queue_push" >&5
+$as_echo "$ac_cv_search_apr_queue_push" >&6; }
+ac_res=$ac_cv_search_apr_queue_push
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+else
+  as_fn_error $? "libaprutil-1 is required for gpperfmon" "$LINENO" 5
+fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing sigar_open" >&5
+$as_echo_n "checking for library containing sigar_open... " >&6; }
+if ${ac_cv_search_sigar_open+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char sigar_open ();
+int
+main ()
+{
+return sigar_open ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' sigar; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_sigar_open=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_sigar_open+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_sigar_open+:} false; then :
+
+else
+  ac_cv_search_sigar_open=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_sigar_open" >&5
+$as_echo "$ac_cv_search_sigar_open" >&6; }
+ac_res=$ac_cv_search_sigar_open
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+  with_libsigar=yes
+else
+  as_fn_error $? "libsigar is required for gpperfmon" "$LINENO" 5
+fi
+
+  LIBS="$_LIBS"
+
+fi
+
 
 if test "$with_openssl" = yes ; then
     if test "$PORTNAME" != "win32"; then
@@ -10888,6 +11344,23 @@ fi
 done
 
   CPPFLAGS=$ac_save_CPPFLAGS
+fi
+
+if test "enable_gpperfmon" = yes; then
+  for ac_header in event.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "event.h" "ac_cv_header_event_h" "$ac_includes_default"
+if test "x$ac_cv_header_event_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_EVENT_H 1
+_ACEOF
+
+else
+  as_fn_error $? "header file <event.h> is required for gpperfmon" "$LINENO" 5
+fi
+
+done
+
 fi
 
 if test "$with_zlib" = yes; then

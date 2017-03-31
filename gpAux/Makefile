@@ -28,7 +28,7 @@ all : devel
 .PHONY : autoconf
 
 # Internal functions which are invoked by other rules within this makefile
-.PHONY : mkgpfdist mkgpperfmon copydocs mgmtcopy copylibs
+.PHONY : mkgpfdist copydocs mgmtcopy copylibs
 .PHONY : greenplum_path RECONFIG HOMEDEP GPROOTDEP GPROOTDEP GPROOTFAIL
 .PHONY : gccVersionCheck clients loaders gppkg
 
@@ -82,20 +82,17 @@ GPDOCDIR=$(CURDIR)/docs/release
 DISTPATH=$(GPROOT)/$(GPDIR)
 CLIENTDISTPATH=$(GPROOT)/$(CLIENTDIR)
 LOADERSDISTPATH=$(GPROOT)/$(LOADERSDIR)
-GPPERFMONDISTPATH=$(GPROOT)
 GPPKGDISTPATH=$(GPROOT)
 
 ifeq "$(DEVPATH)" ""
 BLD_HOME=$(HOME)
 DEVPATH=$(BLD_HOME)/$(GPDIR)
-GPPERFMONDEVPATH=$(BLD_HOME)
 GPPKGDEVPATH=$(BLD_HOME)
 CLIENTDEVPATH=$(BLD_HOME)/$(CLIENTDIR)
 LOADERSDEVPATH=$(BLD_HOME)/$(LOADERSDIR)
 else
 # DEVPATH has been passed in as by the build scripts
 GPROOT_DEV=$(dir $(DEVPATH))
-GPPERFMONDEVPATH=$(GPROOT_DEV)
 GPPKGDEVPATH=$(GPROOT_DEV)
 CLIENTDEVPATH=$(GPROOT_DEV)$(CLIENTDIR)
 LOADERSDEVPATH=$(GPROOT_DEV)$(LOADERSDIR)
@@ -157,16 +154,18 @@ else
 APR_CONFIG=--with-apr-config=$(BLD_THIRDPARTY_BIN_DIR)/apr-1-config
 endif
 
+APU_CONFIG=--with-apu-config=$(BLD_THIRDPARTY_BIN_DIR)/apu-1-config
+
 CODEGEN_CONFIG=--enable-codegen --with-codegen-prefix=/opt/llvm-3.7.1
 
 win32_CONFIGFLAGS=--with-gssapi --without-libcurl $(APR_CONFIG)
 sol10_x86_64_CONFIGFLAGS=--enable-snmp --with-libxml $(APR_CONFIG)
 rhel5_x86_32_CONFIGFLAGS=--host=i686-pc-linux-gnu --enable-snmp --enable-ddboost --with-gssapi --enable-netbackup --with-libxml $(APR_CONFIG)
-rhel5_x86_64_CONFIGFLAGS=--enable-snmp --enable-connectemc --enable-ddboost --with-gssapi --enable-netbackup ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG)
-rhel6_x86_64_CONFIGFLAGS=--enable-snmp --enable-connectemc --enable-ddboost --with-gssapi --enable-netbackup ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG)
-rhel7_x86_64_CONFIGFLAGS=--enable-snmp --enable-connectemc --enable-ddboost --with-gssapi --enable-netbackup ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG)
-suse10_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG)
-suse11_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG)
+rhel5_x86_64_CONFIGFLAGS=--enable-snmp --enable-connectemc --enable-gpperfmon --enable-ddboost --with-gssapi --enable-netbackup ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+rhel6_x86_64_CONFIGFLAGS=--enable-snmp --enable-connectemc --enable-gpperfmon --enable-ddboost --with-gssapi --enable-netbackup ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+rhel7_x86_64_CONFIGFLAGS=--enable-snmp --enable-connectemc --enable-gpperfmon --enable-ddboost --with-gssapi --enable-netbackup ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+suse10_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost --enable-gpperfmon ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+suse11_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost --enable-gpperfmon ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 linux_x86_64_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG)
 osx106_x86_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG)
 
@@ -323,7 +322,6 @@ define BUILD_STEPS
 	#@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) mkpgbouncer INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
 	@$(MAKE) mkpgbench INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
-	@$(MAKE) mkgpperfmon INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
 	@$(MAKE) mkplatform INSTLOC=$(INSTLOC)
 	if [ "$(findstring $(BLD_ARCH),$(SERVER_PLATFORMS))" != "" ]; then \
 	  $(MAKE) mkgpcloud INSTLOC=$(INSTLOC) && \
@@ -422,7 +420,6 @@ devel : INSTCFLAGS=$(DEBUGFLAGS)
 devel : INSTLOC=$(DEVPATH)
 devel : CLIENTINSTLOC=$(CLIENTDEVPATH)
 devel : LOADERSINSTLOC=$(LOADERSDEVPATH)
-devel : GPPERFMONINSTLOC=$(GPPERFMONDEVPATH)
 devel : GPPKGINSTLOC=$(GPPKGDEVPATH)
 devel : CONFIGFLAGS+= --enable-cassert --enable-debug --enable-testutils --enable-debugbreak --enable-depend
 ifdef ENABLE_VPATH_BUILD
@@ -442,7 +439,6 @@ dist : INSTCFLAGS=$(OPTFLAGS)
 dist : INSTLOC=$(DISTPATH)
 dist : CLIENTINSTLOC=$(CLIENTDISTPATH)
 dist : LOADERSINSTLOC=$(LOADERSDISTPATH)
-dist : GPPERFMONINSTLOC=$(GPPERFMONDISTPATH)
 dist : GPPKGINSTLOC=$(GPPKGDISTPATH)
 ifdef ENABLE_VPATH_BUILD
 dist : BUILDDIR=Release
@@ -460,7 +456,6 @@ dist_prof : INSTCFLAGS=$(PROFFLAGS)
 dist_prof : INSTLOC=$(DISTPATH)
 dist_prof : CLIENTINSTLOC=$(CLIENTDISTPATH)
 dist_prof : LOADERSINSTLOC=$(LOADERSDISTPATH)
-dist_prof : GPPERFMONINSTLOC=$(GPPERFMONDISTPATH)
 dist_prof : CONFIGFLAGS+= --enable-testutils
 ifdef ENABLE_VPATH_BUILD
 dist_prof : BUILDDIR=Release
@@ -836,19 +831,6 @@ else
 	$(MAKE) -C extensions/pgbouncer/source install
 endif
 
-mkgpperfmon:
-	@cd $(GPPERFMON) && $(MAKE) BUILDDIR=$(BUILDDIR)
-	cp -p gpperfmon/src/gpmon/gpmmon gpperfmon/src/gpmon/gpsmon $(INSTLOC)/bin
-	cp -p gpperfmon/src/gpmon/gpperfmoncat.sh $(INSTLOC)/bin
-	cp -p gpperfmon/src/gpmon/gpmon_catqrynow.py $(INSTLOC)/sbin
-	cp -p gpperfmon/src/gpmon/gpperfmon_install $(INSTLOC)/bin
-	mkdir -p $(INSTLOC)/lib/gpperfmon
-	cp -p gpperfmon/src/gpmon/gpperfmon3.sql $(INSTLOC)/lib/gpperfmon
-	cp -p gpperfmon/src/gpmon/gpperfmon4.sql $(INSTLOC)/lib/gpperfmon
-	cp -p gpperfmon/src/gpmon/gpperfmon41.sql $(INSTLOC)/lib/gpperfmon
-	cp -p gpperfmon/src/gpmon/gpperfmon42.sql $(INSTLOC)/lib/gpperfmon
-	cp -p gpperfmon/src/gpmon/gpperfmonC.sql $(INSTLOC)/lib/gpperfmon
-
 mkplatform:
 	@cd $(PLATFORM) && $(MAKE)
 	cp -p platform/gpnetbench/gpnetbenchServer $(INSTLOC)/bin/lib
@@ -1000,7 +982,6 @@ copylibs : thirdparty-dist copy-nbu-libs
 ifeq "$(findstring $(BLD_ARCH),aix5_ppc_32 aix5_ppc_64 win32 win64)" ""
 	# Copy curl header file
 	cp -rp $(BLD_THIRDPARTY_INCLUDE_DIR)/curl $(INSTLOC)/include/
-	# Copy in openssl files needed by gpperfmon
 endif
 ifeq "$(findstring $(BLD_ARCH),aix5_ppc_32 win32 win64)" ""
 ifneq "$(BLD_ARCH)" "osx104_x86"

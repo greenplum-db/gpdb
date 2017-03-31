@@ -940,9 +940,6 @@ static void gpmmon_main(void)
 	apr_status_t retCode;
 	apr_threadattr_t* ta;
 	time_t this_cycle_ts = 0;
-#ifdef USE_CONNECTEMC
-	int healthmon_running_separately;
-#endif
 	/* log check is not exact. do it every X loops */
 	int ticks_since_last_log_check = 0;
 	const unsigned int log_check_interval = 60;
