@@ -1189,18 +1189,18 @@ cdb_exchange_part_constraints(Relation table,
 static char *
 constraint_names(List *cons)
 {
-	HeapTuple tuple;
-	Form_pg_constraint con;
-	ListCell *lc;
+	ListCell   *lc;
 	StringInfoData str;
+	char	   *p;
 
 	initStringInfo(&str);
 
-	char *p = "";
+	p = "";
 	foreach (lc, cons)
 	{
-		tuple = linitial(cons);
-		con = (Form_pg_constraint) GETSTRUCT(tuple);
+		HeapTuple tuple = lfirst(lc);
+		Form_pg_constraint con = (Form_pg_constraint) GETSTRUCT(tuple);
+
 		appendStringInfo(&str, "%s\"%s\"", p, NameStr(con->conname));
 		p = ", ";
 	}
