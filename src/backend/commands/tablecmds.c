@@ -9981,8 +9981,7 @@ ATExecSetTableSpace_Relation(Oid tableOid, Oid newTableSpace)
 	 * a new one in the new tablespace.
 	 */
 	newrelfilenode = GetNewRelFileNode(newTableSpace,
-									   rel->rd_rel->relisshared,
-									   NULL);
+									   rel->rd_rel->relisshared);
 
 	gp_relation_node = heap_open(GpRelationNodeRelationId, RowExclusiveLock);
 

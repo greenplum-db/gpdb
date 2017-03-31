@@ -59,8 +59,6 @@
 		(dest)--; \
 	} while ((dest) < FirstNormalTransactionId)
 
-#define NUM_RECENT_RELFILENODES		100
-
 /*
  * VariableCache is a data structure in shared memory that is used to track
  * OID and XID assignment state.  For largely historical reasons, there is
@@ -79,9 +77,11 @@ typedef struct VariableCacheData
 	Oid			nextOid;		/* next OID to assign */
 	uint32		oidCount;		/* OIDs available before must do XLOG work */
 
-	/* cache of recently used relfilenodes, for UseOidForRelFileNode() */
-	Oid			recentRelfilenodes[NUM_RECENT_RELFILENODES];
-	int			nextRecentRelfilenode;
+	/*
+	 * These fields are protected by RelfilenodeGenLock.
+	 */
+	Oid			nextRelfilenode;	/* next relfilenode to assign */
+	uint32		relfilenodeCount;	/* relfilenodes available before we must do XLOG work */
 
 	/*
 	 * These fields are protected by XidGenLock.
@@ -143,6 +143,7 @@ extern TransactionId ReadNewTransactionId(void);
 extern void SetTransactionIdLimit(TransactionId oldest_datfrozenxid,
 					  Name oldest_datname);
 extern Oid	GetNewObjectId(void);
-extern bool UseOidForRelFileNode(Oid oid);
-
+extern void AdvanceObjectId(Oid newOid);
+extern Oid	GetNewSegRelfilenode(void);
+extern Oid	GetSequenceRelationOid(void);
 #endif   /* TRAMSAM_H */

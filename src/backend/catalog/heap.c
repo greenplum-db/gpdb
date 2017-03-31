@@ -1596,9 +1596,10 @@ heap_create_with_catalog(const char *relname,
 	if (!OidIsValid(relid) && (Gp_role == GP_ROLE_EXECUTE || IsBinaryUpgrade))
 		relid = GetPreassignedOidForRelation(relnamespace, relname);
 
-	if (!OidIsValid(relid))
-		relid = GetNewRelFileNode(reltablespace, shared_relation,
-								  pg_class_desc);
+	if (Gp_role != GP_ROLE_EXECUTE && relkind == RELKIND_SEQUENCE)
+		relid = GetSequenceRelationOid();
+	else if (!OidIsValid(relid))
+		relid = GetNewOid(pg_class_desc);
 
 	/*
 	 * Create the relcache entry (mostly dummy at this point) and the physical

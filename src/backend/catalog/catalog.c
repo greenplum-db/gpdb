@@ -900,19 +900,11 @@ GetNewOidWithIndex(Relation relation, Relation indexrel)
  *		Generate a new relfilenode number that is unique within the given
  *		tablespace.
  *
- * If the relfilenode will also be used as the relation's OID, pass the
- * opened pg_class catalog, and this routine will guarantee that the result
- * is also an unused OID within pg_class.  If the result is to be used only
- * as a relfilenode for an existing relation, pass NULL for pg_class.
- *
- * As with GetNewOid, there is some theoretical risk of a race condition,
- * but it doesn't seem worth worrying about.
- *
  * Note: we don't support using this in bootstrap mode.  All relations
  * created by bootstrap have preassigned OIDs, so there's no need.
  */
 Oid
-GetNewRelFileNode(Oid reltablespace, bool relisshared, Relation pg_class)
+GetNewRelFileNode(Oid reltablespace, bool relisshared)
 {
 	RelFileNode rnode;
 	char	   *rpath;
@@ -927,14 +919,8 @@ GetNewRelFileNode(Oid reltablespace, bool relisshared, Relation pg_class)
 	{
 		CHECK_FOR_INTERRUPTS();
 
-		/* Generate the OID */
-		if (pg_class)
-			rnode.relNode = GetNewOid(pg_class);
-		else
-			rnode.relNode = GetNewObjectId();
-
-		if (!UseOidForRelFileNode(rnode.relNode))
-			continue;
+		/* Generate the Relfilenode */
+		rnode.relNode = GetNewSegRelfilenode();
 
 		/* Check for existing file of same name */
 		rpath = relpath(rnode);
@@ -964,81 +950,8 @@ GetNewRelFileNode(Oid reltablespace, bool relisshared, Relation pg_class)
 
 		pfree(rpath);
 	} while (collides);
-	
-	if (Gp_role == GP_ROLE_EXECUTE)
-		Insist(!PointerIsValid(pg_class));
 
-	elog(DEBUG1, "Calling GetNewRelFileNode in %s mode %s pg_class. New relOid = %d",
-		 (Gp_role == GP_ROLE_EXECUTE ? "execute" :
-		  Gp_role == GP_ROLE_UTILITY ? "utility" :
-		  "dispatch"), pg_class ? "with" : "without",
-		 rnode.relNode);
+	elog(DEBUG1, "Calling GetNewRelFileNode returns new relfilenode = %d", rnode.relNode);
 
 	return rnode.relNode;
 }
-
-/*
- * Can the given OID be used as pg_class.relfilenode?
- *
- * As a side-effect, advances OID counter to the given OID and remembers
- * that the OID has been used as a relfilenode, so that the same value
- * doesn't get chosen again.
- */
-bool
-CheckNewRelFileNodeIsOk(Oid newOid, Oid reltablespace, bool relisshared)
-{
-	RelFileNode rnode;
-	char	   *rpath;
-	int			fd;
-	bool		collides;
-	SnapshotData SnapshotDirty;
-
-	/*
-	 * Advance our current OID counter with the given value, to keep
-	 * the counter roughly in sync across all nodes. This ensures
-	 * that a GetNewRelFileNode() call after this will not choose the
-	 * same OID, and won't have to loop excessively to retry. That
-	 * still leaves a race condition, if GetNewRelFileNode() is called
-	 * just before CheckNewRelFileNodeIsOk() - UseOidForRelFileNode()
-	 * is called to plug that.
-	 *
-	 * FIXME: handle OID wraparound gracefully.
-	 */
-	while(GetNewObjectId() < newOid);
-
-	if (!UseOidForRelFileNode(newOid))
-		return false;
-
-	InitDirtySnapshot(SnapshotDirty);
-
-	/* This should match RelationInitPhysicalAddr */
-	rnode.spcNode = reltablespace ? reltablespace : MyDatabaseTableSpace;
-	rnode.dbNode = relisshared ? InvalidOid : MyDatabaseId;
-
-	rnode.relNode = newOid;
-
-	/* Check for existing file of same name */
-	rpath = relpath(rnode);
-	fd = BasicOpenFile(rpath, O_RDONLY | PG_BINARY, 0);
-
-	if (fd >= 0)
-	{
-		/* definite collision */
-		gp_retry_close(fd);
-		collides = true;
-	}
-	else
-		collides = false;
-
-	pfree(rpath);
-
-	elog(DEBUG1, "Called CheckNewRelFileNodeIsOk in %s mode for %u / %u / %u. "
-		 "collides = %s",
-		 (Gp_role == GP_ROLE_EXECUTE ? "execute" :
-		  Gp_role == GP_ROLE_UTILITY ? "utility" :
-		  "dispatch"), newOid, reltablespace, relisshared,
-		 collides ? "true" : "false");
-
-	return !collides;
-}
-

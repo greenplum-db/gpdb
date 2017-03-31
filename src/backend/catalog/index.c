@@ -638,8 +638,7 @@ index_create(Oid heapRelationId,
 		if (Gp_role == GP_ROLE_EXECUTE || IsBinaryUpgrade)
 			indexRelationId = GetPreassignedOidForRelation(namespaceId, indexRelationName);
 		else
-			indexRelationId = GetNewRelFileNode(tableSpaceId, shared_relation,
-												pg_class);
+			indexRelationId = GetNewOid(pg_class);
 	}
 
 	/*
@@ -1444,8 +1443,7 @@ setNewRelfilenode(Relation relation, TransactionId freezeXid)
 
 	/* Allocate a new relfilenode */
 	newrelfilenode = GetNewRelFileNode(relation->rd_rel->reltablespace,
-									   relation->rd_rel->relisshared,
-									   NULL);
+									   relation->rd_rel->relisshared);
 
 	/*
 	 * Find the pg_class tuple for the given relation.	This is not used

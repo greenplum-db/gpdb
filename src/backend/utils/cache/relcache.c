@@ -3050,7 +3050,6 @@ RelationBuildLocalRelation(const char *relname,
 	int			i;
 	bool		has_not_null;
 	bool		nailit;
-	Oid			relfilenode;
 
 	AssertArg(natts >= 0);
 
@@ -3197,17 +3196,15 @@ RelationBuildLocalRelation(const char *relname,
 	for (i = 0; i < natts; i++)
 		rel->rd_att->attrs[i]->attrelid = relid;
 
-	if (Gp_role != GP_ROLE_EXECUTE ||
-		CheckNewRelFileNodeIsOk(relid, reltablespace, shared_relation))
-	{
-		relfilenode = relid;
-	}
+	if (relid < FirstNormalObjectId /* bootstrap only */
+		|| (Gp_role != GP_ROLE_EXECUTE && relkind == RELKIND_SEQUENCE))
+		rel->rd_rel->relfilenode = relid;
 	else
 	{
-		/* FIXME: should we pass pg_class here? */
-		relfilenode = GetNewRelFileNode(reltablespace, shared_relation, NULL);
+		rel->rd_rel->relfilenode = GetNewRelFileNode(reltablespace, shared_relation);
+		if (Gp_role == GP_ROLE_EXECUTE)
+			AdvanceObjectId(relid);
 	}
-	rel->rd_rel->relfilenode = relfilenode;
 
 	rel->rd_rel->reltablespace = reltablespace;
 
