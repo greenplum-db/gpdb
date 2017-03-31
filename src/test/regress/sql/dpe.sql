@@ -330,6 +330,8 @@ insert into dim values(1, 10);
 analyze malp;
 analyze dim;
 
+-- ORCA doesn't do multi-attribute partitioning currently,so this falls
+-- back to the Postgres planner
 explain select * from dim inner join malp on (dim.i = malp.i);
 
 set gp_dynamic_partition_pruning = off;
