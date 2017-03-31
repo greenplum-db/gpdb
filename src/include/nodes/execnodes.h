@@ -41,8 +41,6 @@ struct FileScanDescData;
 struct MirroredBufferPoolBulkLoadInfo;
 struct SliceTable;
 
-typedef struct PartitionSelectorState PartitionSelectorState;
-
 /* ----------------
  *	  IndexInfo information
  *
@@ -1004,6 +1002,15 @@ typedef struct PartOidExprState
 	/* accepted leaf PartitionConstraints for current tuple */
 	struct PartitionConstraints **acceptedLeafPart;
 } PartOidExprState;
+
+/* ----------------
+ *		PartSelectedExprState node
+ * ----------------
+ */
+typedef struct PartSelectedExprState
+{
+	ExprState	xprstate;
+} PartSelectedExprState;
 
 /* ----------------
  *		PartDefaultExprState node
@@ -2626,7 +2633,7 @@ typedef struct MotionState
  * ExecNode for PartitionSelector.
  * This operator contains a Plannode in PlanState.
  */
-struct PartitionSelectorState
+typedef struct PartitionSelectorState
 {
 	PlanState ps;                                       /* its first field is NodeTag */
 	PartitionNode *rootPartitionNode;                   /* PartitionNode for root table */
@@ -2638,7 +2645,10 @@ struct PartitionSelectorState
 	ExprState *residualPredicateExprState;              /* ExprState for evaluating residual predicate */
 	ExprState *propagationExprState;                    /* ExprState for evaluating propagation expression */
 
-};
+	TupleDesc	partTabDesc;
+	TupleTableSlot *partTabSlot;
+	ProjectionInfo *partTabProj;
+} PartitionSelectorState;
 
 extern void initGpmonPktForResult(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
 extern void initGpmonPktForAppend(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);

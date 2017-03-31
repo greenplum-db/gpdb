@@ -330,6 +330,8 @@ insert into dim values(1, 10);
 analyze malp;
 analyze dim;
 
+-- ORCA doesn't do multi-attribute partitioning currently,so this falls
+-- back to the Postgres planner
 explain select * from dim inner join malp on (dim.i = malp.i);
 
 set gp_dynamic_partition_pruning = off;
@@ -340,6 +342,32 @@ select * from dim inner join malp on (dim.i = malp.i);
 
 set gp_dynamic_partition_pruning = on;
 select * from dim inner join malp on (dim.i = malp.i and dim.j = malp.j); -- only one partition should be chosen
+
+
+--
+-- Plan where the Append that the PartitionSelector affects is not the immediate child
+-- of the join.
+--
+create table apart (id int4, t text) partition by range (id) (start (1) end (1000) every (200));
+create table b (id int4, t text);
+create table c (id int4, t text);
+
+insert into apart select g, g from generate_series(1, 999) g;
+insert into b select g, g from generate_series(1, 5) g;
+insert into c select g, g from generate_series(1, 20) g;
+
+analyze apart;
+analyze b;
+analyze c;
+
+set gp_dynamic_partition_pruning = off;
+explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
+select * from apart as a, b, c where a.t = b.t and a.id = c.id;
+
+set gp_dynamic_partition_pruning = on;
+explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
+select * from apart as a, b, c where a.t = b.t and a.id = c.id;
+
 
 --
 -- DPE: assertion failed with window function

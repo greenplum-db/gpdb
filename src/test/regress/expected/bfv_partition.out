@@ -1673,7 +1673,7 @@ select * from ds_4 a1,ds_4 a2 where a1.month_id = a2.month_id and a1.month_id > 
 select count_operator('explain select * from ds_4 a1,ds_4 a2 where a1.month_id = a2.month_id and a1.month_id > E''200800'';','Partition Selector');
  count_operator 
 ----------------
-              0
+              1
 (1 row)
 
 -- CLEANUP

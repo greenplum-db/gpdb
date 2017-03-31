@@ -109,14 +109,6 @@
 
  CREATE FUNCTION int8_avg_decum(bytea, int8) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'int8_avg_decum' WITH (OID=3101, DESCRIPTION="AVG(int8) transition function");
 
-
- CREATE FUNCTION pg_partition_oid_transfn(internal, oid, record) RETURNS internal LANGUAGE internal IMMUTABLE AS 'pg_partition_oid_transfn' WITH (OID=6099, DESCRIPTION="pg_partition_oid transition function");
-
- CREATE FUNCTION pg_partition_oid_finalfn(internal) RETURNS _oid LANGUAGE internal IMMUTABLE AS 'pg_partition_oid_finalfn' WITH (OID=6100, DESCRIPTION="pg_partition_oid final function");
-
- CREATE FUNCTION pg_partition_oid(oid, record) RETURNS _oid LANGUAGE internal IMMUTABLE AS 'aggregate_dummy' WITH (OID=6112, proisagg="t");
--- #define PG_PARTITION_OID_OID 6112
-
  CREATE FUNCTION pg_stat_get_backend_waiting_reason(int4) RETURNS text LANGUAGE internal STABLE STRICT AS 'pg_stat_get_backend_waiting_reason' WITH (OID=2897, DESCRIPTION="Statistics: Reason backend is waiting for");
 
  CREATE FUNCTION pg_stat_get_queue_num_exec(oid) RETURNS int8 LANGUAGE internal STABLE STRICT AS 'pg_stat_get_queue_num_exec' WITH (OID=6031, DESCRIPTION="Statistics: Number of queries that executed in queue");

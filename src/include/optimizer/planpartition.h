@@ -4,7 +4,6 @@
  *	  Transforms to produce plans that achieve dynamic partition elimination.
  *
  * Portions Copyright (c) 2011-2013, EMC Corporation
- * Author: Siva
  *-------------------------------------------------------------------------
  */
 
@@ -14,11 +13,7 @@
 #include "nodes/plannodes.h"
 #include "nodes/relation.h"
 
-/**
- * Transform a plan to take advantage of dynamic partition elimination, if possible.
- * TODO siva - improve comments.
- */
-extern Plan *apply_dyn_partition_transforms(PlannerInfo *root, Plan *plan);
+extern bool inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path, Plan **inner_plan_p);
 
 extern RestrictInfo *make_mergeclause(Node *outer, Node *inner);
 

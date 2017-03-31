@@ -225,6 +225,8 @@ extern LogicalIndexInfo *logicalIndexInfoForIndexOid(Oid rootOid, Oid indexOid);
 
 extern void InsertPidIntoDynamicTableScanInfo(EState *estate, int32 index, Oid partOid, int32 selectorId);
 
+extern bool isPartitionSelected(EState *estate, int index, Oid partOid);
+
 extern char *
 DebugPartitionOid(Datum *elements, int n);
 
