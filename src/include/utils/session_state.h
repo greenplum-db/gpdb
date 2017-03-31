@@ -58,7 +58,7 @@ typedef struct SessionState
 	int activeProcessCount;
 
 	/* The last seen time that a QE from this session became idle */
-	TimestampTz last_idle_time;
+	TimestampTz idle_start;
 
 	/*
 	 * At the time of a runaway event, we set this to the activeQECount and

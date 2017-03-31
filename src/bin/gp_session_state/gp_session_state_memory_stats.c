@@ -76,7 +76,7 @@ gp_session_state_memory_entries(PG_FUNCTION_ARGS)
 		TupleDescInitEntry(tupdesc, (AttrNumber) 9, "runaway_command_cnt",
 				INT4OID, -1 /* typmod */, 0 /* attdim */);
 
-		TupleDescInitEntry(tupdesc, (AttrNumber) 10, "last_idle_time",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 10, "idle_start",
 				TIMESTAMPTZOID, -1 /* typmod */, 0 /* attdim */);
 
 		Assert(NUM_SESSION_STATE_MEMORY_ELEM == 10);
@@ -120,7 +120,7 @@ gp_session_state_memory_entries(PG_FUNCTION_ARGS)
 			values[6] = Int32GetDatum(sessionState.cleanupCountdown);
 			values[7] = Int32GetDatum(sessionState.sessionVmemRunaway);
 			values[8] = Int32GetDatum(sessionState.commandCountRunaway);
-			values[9] = TimestampTzGetDatum(sessionState.last_idle_time);
+			values[9] = TimestampTzGetDatum(sessionState.idle_start);
 
 			HeapTuple tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
 			Datum result = HeapTupleGetDatum(tuple);
