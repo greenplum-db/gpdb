@@ -1,0 +1,551 @@
+## ======================================================================
+## resources
+## ======================================================================
+
+
+resources:
+
+- name: gpdb_src
+  type: git
+  source:
+    branch: {{gpdb-git-branch}}
+    private_key: {{gpdb-git-key}}
+    uri: {{gpdb-git-remote}}
+    tag_filter: 5.*
+
+- name: gpaddon_src
+  type: git
+  source:
+    branch: {{gpaddon-git-branch}}
+    private_key: {{gpdb-git-key}}
+    uri: {{gpaddon-git-remote}}
+
+## RHEL6 Resources
+
+- name: build-gpdb-centos6
+  type: docker-image
+  source:
+    repository: pivotaldata/centos-gpdb-dev
+    tag: '6-gcc6.2-llvm3.7'
+    username: {{docker_username}}
+    password: {{docker_password}}
+
+- name: bin_gpdb_centos6
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: bin_gpdb_centos6/bin_gpdb.tar.gz
+
+- name: installer_rhel6_gpdb_clients
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-clients-5.(.*)-rhel6-x86_64.zip
+
+- name: installer_rhel6_gpdb_clients_md5
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-clients-5.(.*)-rhel6-x86_64.zip.md5
+
+- name: installer_rhel6_gpdb_loaders
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-loaders-5.(.*)-rhel6-x86_64.zip
+
+- name: installer_rhel6_gpdb_loaders_md5
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-loaders-5.(.*)-rhel6-x86_64.zip.md5
+
+- name: installer_rhel6_gpdb_rc
+  type: s3
+  source:
+    private: true
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-db-5.(.*)-rhel6-x86_64.zip
+
+- name: installer_rhel6_gpdb_rc_md5
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-db-5.(.*)-rhel6-x86_64.zip.md5
+
+- name: installer_appliance_rhel6_gpdb_rc
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-db-appliance-5.(.*)-rhel6-x86_64.zip
+
+- name: installer_appliance_rhel6_gpdb_rc_md5
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-db-appliance-5.(.*)-rhel6-x86_64.zip.md5
+
+## RHEL7 Resources
+
+- name: build-gpdb-centos7
+  type: docker-image
+  source:
+    repository: pivotaldata/centos-gpdb-dev
+    tag: '7-gcc6.2-llvm3.7'
+    username: {{docker_username}}
+    password: {{docker_password}}
+
+- name: bin_gpdb_centos7
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: bin_gpdb_centos7/bin_gpdb.tar.gz
+
+- name: installer_rhel7_gpdb_clients
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-clients-5.(.*)-rhel7-x86_64.zip
+
+- name: installer_rhel7_gpdb_clients_md5
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-clients-5.(.*)-rhel7-x86_64.zip.md5
+
+- name: installer_rhel7_gpdb_loaders
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-loaders-5.(.*)-rhel7-x86_64.zip
+
+- name: installer_rhel7_gpdb_loaders_md5
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-loaders-5.(.*)-rhel7-x86_64.zip.md5
+
+- name: installer_rhel7_gpdb_rc
+  type: s3
+  source:
+    private: true
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-db-5.(.*)-rhel7-x86_64.zip
+
+- name: installer_rhel7_gpdb_rc_md5
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-db-5.(.*)-rhel7-x86_64.zip.md5
+
+## SLES11 Resources
+
+- name: build-gpdb-sles11
+  type: docker-image
+  source:
+    repository: pivotaldata/sles-gpdb-dev
+    tag: '11-beta'
+    username: {{docker_username}}
+    password: {{docker_password}}
+
+- name: bin_gpdb_sles11
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: bin_gpdb_sles11/bin_gpdb.tar.gz
+
+- name: installer_sles11_gpdb_clients
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-clients-5.(.*)-suse11_x86_64.zip
+
+- name: installer_sles11_gpdb_clients_md5
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-clients-5.(.*)-suse11_x86_64.zip.md5
+
+- name: installer_sles11_gpdb_loaders
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-loaders-5.(.*)-suse11_x86_64.zip
+
+- name: installer_sles11_gpdb_loaders_md5
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-loaders-5.(.*)-suse11_x86_64.zip.md5
+
+- name: installer_sles11_gpdb_rc
+  type: s3
+  source:
+    private: true
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-db-5.(.*)-sles11-x86_64.zip
+
+- name: installer_sles11_gpdb_rc_md5
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-db-5.(.*)-sles11-x86_64.zip.md5
+
+
+# ## Windows
+
+# - name: centos-mingw
+#   type: docker-image
+#   source:
+#     repository: pivotaldata/centos-mingw
+#     username: {{docker_username}}
+#     password: {{docker_password}}
+
+# - name: bin_gpdb_windows_clients
+#   type: s3
+#   source:
+#     access_key_id: {{bucket-access-key-id}}
+#     bucket: {{bucket-name}}
+#     region_name: {{aws-region}}
+#     secret_access_key: {{bucket-secret-access-key}}
+#     regexp: deliverables/greenplum-clients-5.(.*)-WinXP-x86_32.msi
+
+# - name: bin_gpdb_windows_loaders
+#   type: s3
+#   source:
+#     access_key_id: {{bucket-access-key-id}}
+#     bucket: {{bucket-name}}
+#     region_name: {{aws-region}}
+#     secret_access_key: {{bucket-secret-access-key}}
+#     regexp: deliverables/greenplum-loaders-5.(.*)-WinXP-x86_32.msi
+
+## PL/Java resources
+# - name: extern_pljava_rhel6_gppkg
+#   type: s3
+#   source:
+#     access_key_id: {{pljava-aws_access_key_id}}
+#     bucket: {{pljava-aws_release_bucket_name}}
+#     region_name: {{pljava-aws_region_name}}
+#     secret_access_key: {{pljava-aws_secret_access_key}}
+#     versioned_file: gpdb_centos6/pljava-ossv1.5.0_pv1.4.0_gpdb4.3orca-rhel5-x86_64.gppkg
+
+
+# - name: delivered_pljava_rhel6
+#   type: s3
+#   source:
+#     access_key_id: {{bucket-access-key-id}}
+#     bucket: {{bucket-name}}
+#     region_name: {{aws-region}}
+#     secret_access_key: {{bucket-secret-access-key}}
+#     regexp: deliverables/pljava-(.*)-rhel6-x86_64.gppkg
+
+
+## ======================================================================
+## resources
+## ======================================================================
+
+jobs:
+
+# - name: stage_external_packages
+#   plan:
+#   - aggregate:
+#     - get: bin_gpdb_centos6
+#       passed: [compile_gpdb_centos6]
+#       trigger: true
+#     - get: extern_pljava_rhel6_gppkg
+#     - aggregate:
+#       - put: delivered_pljava_rhel6
+#         params:
+#           file: pljava-(.*)-rhel5-x86_64.gppkg
+
+
+- name: compile_gpdb_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+    - get: gpaddon_src
+    - get: build-gpdb-centos6
+  - task: compile_gpdb
+    file: gpdb_src/concourse/tasks/compile_gpdb.yml
+    image: build-gpdb-centos6
+    params:
+      IVYREPO_HOST: {{ivyrepo_host}}
+      IVYREPO_REALM: {{ivyrepo_realm}}
+      IVYREPO_USER: {{ivyrepo_user}}
+      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+      BLD_TARGETS: "clients loaders"
+  - aggregate:
+    - put: bin_gpdb_centos6
+      params:
+        file: gpdb_artifacts/bin_gpdb.tar.gz
+    - put: installer_rhel6_gpdb_clients
+      params:
+        file: gpdb_artifacts/greenplum-clients-*-rhel6-x86_64.zip
+    - put: installer_rhel6_gpdb_clients_md5
+      params:
+        file: gpdb_artifacts/greenplum-clients-*-rhel6-x86_64.zip.md5
+    - put: installer_rhel6_gpdb_loaders
+      params:
+        file: gpdb_artifacts/greenplum-loaders-*-rhel6-x86_64.zip
+    - put: installer_rhel6_gpdb_loaders_md5
+      params:
+        file: gpdb_artifacts/greenplum-loaders-*-rhel6-x86_64.zip.md5
+
+- name: compile_gpdb_centos7
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+    - get: gpaddon_src
+    - get: build-gpdb-centos7
+  - task: compile_gpdb
+    file: gpdb_src/concourse/tasks/compile_gpdb.yml
+    image: build-gpdb-centos7
+    params:
+      IVYREPO_HOST: {{ivyrepo_host}}
+      IVYREPO_REALM: {{ivyrepo_realm}}
+      IVYREPO_USER: {{ivyrepo_user}}
+      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 7
+      BLD_TARGETS: "clients loaders"
+  - aggregate:
+    - put: bin_gpdb_centos7
+      params:
+        file: gpdb_artifacts/bin_gpdb.tar.gz
+    - put: installer_rhel7_gpdb_clients
+      params:
+        file: gpdb_artifacts/greenplum-clients-*-rhel7-x86_64.zip
+    - put: installer_rhel7_gpdb_clients_md5
+      params:
+        file: gpdb_artifacts/greenplum-clients-*-rhel7-x86_64.zip.md5
+    - put: installer_rhel7_gpdb_loaders
+      params:
+        file: gpdb_artifacts/greenplum-loaders-*-rhel7-x86_64.zip
+    - put: installer_rhel7_gpdb_loaders_md5
+      params:
+        file: gpdb_artifacts/greenplum-loaders-*-rhel7-x86_64.zip.md5
+
+
+- name: compile_gpdb_sles11
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+    - get: gpaddon_src
+    - get: build-gpdb-sles11
+  - task: compile_gpdb
+    file: gpdb_src/concourse/tasks/compile_gpdb.yml
+    image: build-gpdb-sles11
+    params:
+      IVYREPO_HOST: {{ivyrepo_host}}
+      IVYREPO_REALM: {{ivyrepo_realm}}
+      IVYREPO_USER: {{ivyrepo_user}}
+      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+      TARGET_OS: sles
+      TARGET_OS_VERSION: 11
+      BLD_TARGETS: "clients loaders"
+  - aggregate:
+    - put: bin_gpdb_sles11
+      params:
+        file: gpdb_artifacts/bin_gpdb.tar.gz
+    - put: installer_sles11_gpdb_clients
+      params:
+        file: gpdb_artifacts/greenplum-clients-*-suse11_x86_64.zip
+    - put: installer_sles11_gpdb_clients_md5
+      params:
+        file: gpdb_artifacts/greenplum-clients-*-suse11_x86_64.zip.md5
+    - put: installer_sles11_gpdb_loaders
+      params:
+        file: gpdb_artifacts/greenplum-loaders-*-suse11_x86_64.zip
+    - put: installer_sles11_gpdb_loaders_md5
+      params:
+        file: gpdb_artifacts/greenplum-loaders-*-suse11_x86_64.zip.md5
+
+
+
+# - name: compile_gpdb_windows_ccl
+#   plan:
+#   - aggregate:
+#     - get: gpdb_src
+#     - get: centos-mingw
+#     - get: gpaddon_src
+#   - task: compile_gpdb
+#     file: gpdb_src/concourse/tasks/compile_gpdb.yml
+#     image: centos-mingw
+#     params:
+#       TARGET_OS: win32
+#       TARGET_OS_VERSION:
+#       BLD_TARGETS: clients loaders
+#       IVYREPO_HOST: {{ivyrepo_host}}
+#       IVYREPO_REALM: {{ivyrepo_realm}}
+#       IVYREPO_USER: {{ivyrepo_user}}
+#       IVYREPO_PASSWD: {{ivyrepo_passwd}}
+#   - aggregate:
+#     - put: bin_gpdb_windows_clients
+#       params:
+#         file: gpdb_artifacts/greenplum-clients-*-WinXP-x86_32.msi
+#     - put: bin_gpdb_windows_loaders
+#       params:
+#         file: gpdb_artifacts/greenplum-loaders-*-WinXP-x86_32.msi
+
+
+- name: gpdb_server_packaging
+  plan:
+  - aggregate:
+    - get: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+      trigger: true
+    - get: bin_gpdb_centos7
+      passed: [compile_gpdb_centos7]
+      trigger: true
+    - get: bin_gpdb_sles11
+      passed: [compile_gpdb_sles11]
+      trigger: true
+    - get: gpdb_src
+      passed: [compile_gpdb_centos6, compile_gpdb_centos7, compile_gpdb_sles11]
+    - get: build-gpdb-centos6
+    - get: build-gpdb-centos7
+    - get: build-gpdb-sles11
+    - get: gpaddon_src
+  - aggregate:
+    - task: gpdb_appliance_centos6
+      file: gpdb_src/concourse/tasks/gpdb_packaging.yml
+      image: build-gpdb-centos6
+      input_mapping:
+        bin_gpdb: bin_gpdb_centos6
+      output_mapping:
+        packaged_gpdb: packaged_gpdb_appliance_rc
+      params:
+        INSTALL_SCRIPT_SRC: gpdb_src/gpAux/releng/bin/installer-appliance-header-rhel6-gpdb.sh
+        INSTALLER_ZIP: packaged_gpdb/greenplum-db-appliance-@GP_VERSION@-rhel6-x86_64.zip
+    - task: gpdb_rc_packaging_centos6
+      file: gpdb_src/concourse/tasks/gpdb_packaging.yml
+      image: build-gpdb-centos6
+      input_mapping:
+        bin_gpdb: bin_gpdb_centos6
+      output_mapping:
+        packaged_gpdb: packaged_gpdb_centos6
+      params:
+        INSTALL_SCRIPT_SRC: gpdb_src/gpAux/releng/bin/installer-header-rhel6-gpdb.sh
+        INSTALLER_ZIP: packaged_gpdb/greenplum-db-@GP_VERSION@-rhel6-x86_64.zip
+        ADD_README_INSTALL: true
+    - task: gpdb_rc_packaging_centos7
+      file: gpdb_src/concourse/tasks/gpdb_packaging.yml
+      image: build-gpdb-centos7
+      input_mapping:
+        bin_gpdb: bin_gpdb_centos7
+      output_mapping:
+        packaged_gpdb: packaged_gpdb_centos7
+      params:
+        INSTALL_SCRIPT_SRC: gpdb_src/gpAux/releng/bin/installer-header-rhel7-gpdb.sh
+        INSTALLER_ZIP: packaged_gpdb/greenplum-db-@GP_VERSION@-rhel7-x86_64.zip
+        ADD_README_INSTALL: true
+    - task: gpdb_rc_packaging_sles11
+      file: gpdb_src/concourse/tasks/gpdb_packaging.yml
+      image: build-gpdb-sles11
+      input_mapping:
+        bin_gpdb: bin_gpdb_sles11
+      output_mapping:
+        packaged_gpdb: packaged_gpdb_sles11
+      params:
+        INSTALL_SCRIPT_SRC: gpdb_src/gpAux/releng/bin/installer-header-sles11-gpdb.sh
+        INSTALLER_ZIP: packaged_gpdb/greenplum-db-@GP_VERSION@-sles11-x86_64.zip
+        ADD_README_INSTALL: true
+  - aggregate:
+    - put: installer_appliance_rhel6_gpdb_rc
+      params:
+        file: packaged_gpdb_appliance_rc/greenplum-db-appliance-*-rhel6-x86_64.zip
+    - put: installer_appliance_rhel6_gpdb_rc_md5
+      params:
+        file: packaged_gpdb_appliance_rc/greenplum-db-appliance-*-rhel6-x86_64.zip.md5
+    - put: installer_rhel6_gpdb_rc
+      params:
+        file: packaged_gpdb_centos6/greenplum-db-*-rhel6-x86_64.zip
+    - put: installer_rhel6_gpdb_rc_md5
+      params:
+        file: packaged_gpdb_centos6/greenplum-db-*-rhel6-x86_64.zip.md5
+    - put: installer_rhel7_gpdb_rc
+      params:
+        file: packaged_gpdb_centos7/greenplum-db-*-rhel7-x86_64.zip
+    - put: installer_rhel7_gpdb_rc_md5
+      params:
+        file: packaged_gpdb_centos7/greenplum-db-*-rhel7-x86_64.zip.md5
+    - put: installer_sles11_gpdb_rc
+      params:
+        file: packaged_gpdb_sles11/greenplum-db-*-sles11-x86_64.zip
+    - put: installer_sles11_gpdb_rc_md5
+      params:
+        file: packaged_gpdb_sles11/greenplum-db-*-sles11-x86_64.zip.md5
