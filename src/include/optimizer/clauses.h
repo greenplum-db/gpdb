@@ -21,11 +21,6 @@
 #define is_funcclause(clause)	((clause) != NULL && IsA(clause, FuncExpr))
 #define is_subplan(clause)		((clause) != NULL && IsA(clause, SubPlan))
 
-// max size of a folded constant when optimizing queries in Orca
-// Note: this is to prevent OOM issues when trying to serialize very large constants
-// Current limit: 100KB
-#define GPOPT_MAX_FOLDED_CONSTANT_SIZE (100*1024)
-
 typedef struct
 {
 	int			numAggs;		/* total number of aggregate calls */
@@ -99,9 +94,7 @@ extern void set_coercionform_dontcare(Node *node);
 
 extern Node *eval_const_expressions(PlannerInfo *root, Node *node);
 
-extern Query *fold_constants(PlannerGlobal *glob, Query *q, ParamListInfo boundParams, Size max_size);
-
-extern Node *fold_arrayexpr_constants(ArrayExpr *arrayexpr);
+extern Query *fold_constants(PlannerGlobal *glob, Query *q, ParamListInfo boundParams);
 
 extern Node *estimate_expression_value(PlannerInfo *root, Node *node);
 

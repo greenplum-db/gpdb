@@ -2851,20 +2851,6 @@ gpdb::SzDefGetString
 	return NULL;
 }
 
-Node *
-gpdb::PnodeFoldArrayexprConstants
-	(
-	ArrayExpr *arrayexpr
-	)
-{
-	GP_WRAP_START;
-	{
-		return fold_arrayexpr_constants(arrayexpr);
-	}
-	GP_WRAP_END;
-	return NULL;
-}
-
 SelectedParts *
 gpdb::SpStaticPartitionSelection
 	(
