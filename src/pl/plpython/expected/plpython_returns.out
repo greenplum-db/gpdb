@@ -13,7 +13,7 @@
 -- the SELECT clause and the FROM clause since these are different
 -- execution paths.
 --
--- Greenplum has another distinction regarding weather the function
+-- Greenplum has another distinction regarding whether the function
 -- is run on the master or the segment.  So we additionally run
 -- every function as a SELECT clause function over a table with
 -- a single row.
