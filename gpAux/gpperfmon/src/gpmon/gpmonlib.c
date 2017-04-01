@@ -1181,20 +1181,6 @@ void advance_connection_hostname(host_t* host)
 	}
 }
 
-void advance_snmp_hostname(host_t* host)
-{
-	if (host->snmp_hostname.current->next)
-	{
-		// try the next hostname
-		host->snmp_hostname.current = host->snmp_hostname.current->next;
-	}
-	else
-	{
-		// restart at the head of address list
-		host->snmp_hostname.current = host->addressinfo_head;
-	}
-}
-
 char* get_connection_hostname(host_t* host)
 {
 	return host->connection_hostname.current->address;
@@ -1208,11 +1194,6 @@ char* get_connection_ip(host_t* host)
 bool get_connection_ipv6_status(host_t* host)
 {
 	return host->connection_hostname.current->ipv6;
-}
-
-char* get_snmp_hostname(host_t* host)
-{
-	return host->snmp_hostname.current->address;
 }
 
 double subtractTimeOfDay(struct timeval* begin, struct timeval* end)

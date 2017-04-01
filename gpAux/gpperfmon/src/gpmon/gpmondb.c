@@ -817,7 +817,6 @@ void gpdb_get_hostlist(int* hostcnt, host_t** host_table, apr_pool_t* global_poo
 			hosts[hostcounter].addressinfo_tail = hostinfo_holder->addressinfo_tail;
 			hosts[hostcounter].address_count = hostinfo_holder->address_count;
 			hosts[hostcounter].connection_hostname.current = hosts[hostcounter].addressinfo_head;
-			hosts[hostcounter].snmp_hostname.current = hosts[hostcounter].addressinfo_head;
 
 			if (hostinfo_holder->is_hdm)
 				hosts[hostcounter].is_hdm = 1;
