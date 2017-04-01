@@ -72,6 +72,7 @@
 #include "access/distributedlog.h"
 #include "gp-libpq-fe.h"
 #include "gp-libpq-int.h"
+#include "nodes/makefuncs.h"
 #include "pgstat.h"
 
 
@@ -1419,8 +1420,14 @@ vacuum_rel(Oid relid, VacuumStmt *vacstmt, char expected_relkind,
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH && doDispatch)
 	{
+		char	   *relname = RelationGetRelationName(onerel);
+		char	   *schemaname = get_namespace_name(RelationGetNamespace(onerel));
+		VacuumStmt *vacstmt_dispatch;
+
 		stats_context.updated_stats = NIL;
-		dispatchVacuum(vacstmt, &stats_context);
+		vacstmt_dispatch = copyObject(vacstmt);
+		vacstmt_dispatch->relation = makeRangeVar(schemaname, relname, -1);
+		dispatchVacuum(vacstmt_dispatch, &stats_context);
 	}
 
 	/*
