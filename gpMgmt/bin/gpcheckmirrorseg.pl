@@ -1130,15 +1130,28 @@ sub get_relation_info_query_txt
 	# for this case.
 
 	my $bigstr = <<'EOF_bigstr';
-select pt.spcname, prn.tablespace_oid, pd.datname, prn.database_oid, pc.relname,
-pc.oid as relid, prn.relfilenode_oid, pc.relfilenode, pc.relisshared, 
-pc.relstorage, pc.reltablespace, pc.relkind, pc.relam
-from gp_persistent_relation_node as prn, pg_class as pc, 
-pg_tablespace as pt, pg_database as pd 
-where prn.tablespace_oid = pt.oid and (prn.database_oid = pd.oid
-  or (prn.database_oid = 0 and pd.datname = $q$template1$q$))
-and prn.relfilenode_oid = pc.relfilenode
-and pc.relfilenode in (
+with prn as (
+  select gp_segment_id, * from gp_persistent_relation_node
+  union all select gp_segment_id, * from gp_dist_random($q$gp_persistent_relation_node$q$)
+),
+pc as (
+  select gp_segment_id, oid, * from pg_class
+  union all select gp_segment_id, oid, * from gp_dist_random($q$pg_class$q$)
+),
+pt as (
+  select gp_segment_id, oid, * from pg_tablespace
+  union all select gp_segment_id, oid, * from gp_dist_random($q$pg_tablespace$q$)
+),
+pd as (
+  select gp_segment_id, oid, * from pg_database
+  union all select gp_segment_id, oid, * from gp_dist_random($q$pg_database$q$)
+)
+select distinct pt.spcname, prn.tablespace_oid, pd.datname, prn.database_oid, pc.relname, pc.oid as relid,
+  prn.relfilenode_oid, pc.relfilenode, pc.relisshared, pc.relstorage, pc.reltablespace, pc.relkind, pc.relam
+from prn, pc, pt, pd
+where prn.tablespace_oid = pt.oid and prn.gp_segment_id = pt.gp_segment_id
+  and (prn.database_oid = pd.oid or (prn.database_oid = 0 and pd.datname = $q$template1$q$)) and prn.gp_segment_id = pd.gp_segment_id
+  and prn.relfilenode_oid = pc.relfilenode and prn.gp_segment_id = pc.gp_segment_id and pc.relfilenode in (
 EOF_bigstr
 
 	return $bigstr;
@@ -1464,7 +1477,7 @@ sub get_relfilenode_func
 		$psql_str .= "-p $glob_port " . $dbs{$dbkey}->{dbname};
 		# select from gp_persistent_relation_node, pg_class, etc
 		$psql_str .= " -c \' ". get_relation_info_query_txt()
-			. join (", ", @relfnods) . ") \'";
+			. join (", ", @relfnods) . ") and pc.gp_segment_id = " . $row->{content} . " \'";
 
 		print "Fetching the details from pg_class and gp_relation_node for $dbs{$dbkey}->{dbname} \n";
 		debug_print($psql_str);

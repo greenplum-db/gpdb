@@ -1443,9 +1443,12 @@ setNewRelfilenode(Relation relation, TransactionId freezeXid)
 		   TransactionIdIsNormal(freezeXid));
 
 	/* Allocate a new relfilenode */
-	newrelfilenode = GetNewRelFileNode(relation->rd_rel->reltablespace,
-									   relation->rd_rel->relisshared,
-									   NULL);
+	if (Gp_role == GP_ROLE_DISPATCH)
+		newrelfilenode = GetNewRelFileNode(relation->rd_rel->reltablespace,
+										   relation->rd_rel->relisshared,
+										   NULL);
+	else
+		newrelfilenode = GetNewSegRelfilenode();
 
 	/*
 	 * Find the pg_class tuple for the given relation.	This is not used

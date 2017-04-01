@@ -13,19 +13,3 @@ create index idxe_reindex_serialize_tab_ao_part on reindex_serialize_tab_ao_part
 create index idxf_reindex_serialize_tab_ao_part on reindex_serialize_tab_ao_part USING BITMAP(v);
 create index idxh_reindex_serialize_tab_ao_part on reindex_serialize_tab_ao_part USING GIST(c);
 create index idxi_reindex_serialize_tab_ao_part on reindex_serialize_tab_ao_part(f);
-
-SELECT 1 AS relfilenode_same_on_all_segs_maintable from gp_dist_random('pg_class') WHERE relname = 'reindex_serialize_tab_ao_part' and relfilenode = oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
-
-select 1 AS relfilenode_same_on_all_segs_mainidx from gp_dist_random('pg_class') WHERE relname = 'idxi_reindex_serialize_tab_ao_part' and relfilenode = oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
-
-select  1 AS relfilenode_same_on_all_segs_partition_default_data from gp_dist_random('pg_class') WHERE relname = 'reindex_serialize_tab_ao_part_1_prt_de_fault' and relfilenode = oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
-
-
-select  1 AS relfilenode_same_on_all_segs_partition_default_idx from gp_dist_random('pg_class') WHERE relname = 'idxi_reindex_serialize_tab_ao_part_1_prt_de_fault' and relfilenode = oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
-
-
-select 1 AS relfilenode_same_on_all_segs_partition_1_data from gp_dist_random('pg_class') WHERE relname = 'reindex_serialize_tab_ao_part_1_prt_p_one' and relfilenode = oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
-
-select 1 AS relfilenode_same_on_all_segs_partition_1_idx from gp_dist_random('pg_class') WHERE relname = 'idxi_reindex_serialize_tab_ao_part_1_prt_p_one' and relfilenode = oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
-
-select 1 AS relfilenode_same_on_all_segs_partition_1_idx from gp_dist_random('pg_class') WHERE relname = 'idxa_reindex_serialize_tab_ao_part_1_prt_p_one' and relfilenode = oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);

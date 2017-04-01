@@ -5592,6 +5592,7 @@ BootStrapXLOG(void)
 	checkPoint.nextXidEpoch = 0;
 	checkPoint.nextXid = FirstNormalTransactionId;
 	checkPoint.nextOid = FirstBootstrapObjectId;
+	checkPoint.nextRelfilenode = FirstNormalObjectId;
 	checkPoint.nextMulti = FirstMultiXactId;
 	checkPoint.nextMultiOffset = 0;
 	checkPoint.time = time(NULL);
@@ -5599,6 +5600,8 @@ BootStrapXLOG(void)
 	ShmemVariableCache->nextXid = checkPoint.nextXid;
 	ShmemVariableCache->nextOid = checkPoint.nextOid;
 	ShmemVariableCache->oidCount = 0;
+	ShmemVariableCache->nextRelfilenode = checkPoint.nextRelfilenode;
+	ShmemVariableCache->relfilenodeCount = 0;
 	MultiXactSetNextMXact(checkPoint.nextMulti, checkPoint.nextMultiOffset);
 
 	/* Set up the XLOG page header */
@@ -6715,9 +6718,9 @@ StartupXLOG(void)
 					checkPoint.redo.xlogid, checkPoint.redo.xrecoff,
 					wasShutdown ? "TRUE" : "FALSE")));
 	ereport(DEBUG1,
-			(errmsg("next transaction ID: %u/%u; next OID: %u",
+			(errmsg("next transaction ID: %u/%u; next OID: %u; next relfilenode: %u",
 					checkPoint.nextXidEpoch, checkPoint.nextXid,
-					checkPoint.nextOid)));
+					checkPoint.nextOid, checkPoint.nextRelfilenode)));
 	ereport(DEBUG1,
 			(errmsg("next MultiXactId: %u; next MultiXactOffset: %u",
 					checkPoint.nextMulti, checkPoint.nextMultiOffset)));
@@ -6730,6 +6733,8 @@ StartupXLOG(void)
 	ShmemVariableCache->nextXid = checkPoint.nextXid;
 	ShmemVariableCache->nextOid = checkPoint.nextOid;
 	ShmemVariableCache->oidCount = 0;
+	ShmemVariableCache->nextRelfilenode = checkPoint.nextRelfilenode;
+	ShmemVariableCache->relfilenodeCount = 0;
 	MultiXactSetNextMXact(checkPoint.nextMulti, checkPoint.nextMultiOffset);
 	XLogCtl->ckptXidEpoch = checkPoint.nextXidEpoch;
 	XLogCtl->ckptXid = checkPoint.nextXid;
@@ -9076,6 +9081,12 @@ CreateCheckPoint(int flags)
 	checkPoint.nextOid = ShmemVariableCache->nextOid;
 	if (!shutdown)
 		checkPoint.nextOid += ShmemVariableCache->oidCount;
+
+	LWLockAcquire(RelfilenodeGenLock, LW_SHARED);
+	checkPoint.nextRelfilenode = ShmemVariableCache->nextRelfilenode;
+	if (!shutdown)
+		checkPoint.nextRelfilenode += ShmemVariableCache->relfilenodeCount;
+	LWLockRelease(RelfilenodeGenLock);
 	LWLockRelease(OidGenLock);
 
 	MultiXactGetCheckptMulti(shutdown,
@@ -9565,6 +9576,21 @@ XLogPutNextOid(Oid nextOid)
 }
 
 /*
+ * Write a NEXTRELFILENODE log record similar to XLogPutNextOid
+ */
+void
+XLogPutNextRelfilenode(Oid nextRelfilenode)
+{
+	XLogRecData rdata;
+
+	rdata.data = (char *) (&nextRelfilenode);
+	rdata.len = sizeof(Oid);
+	rdata.buffer = InvalidBuffer;
+	rdata.next = NULL;
+	(void) XLogInsert(RM_XLOG_ID, XLOG_NEXTRELFILENODE, &rdata);
+}
+
+/*
  * Write an XLOG SWITCH record.
  *
  * Here we just blindly issue an XLogInsert request for the record.
@@ -9679,6 +9705,14 @@ xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 		ShmemVariableCache->nextOid = nextOid;
 		ShmemVariableCache->oidCount = 0;
 	}
+	if (info == XLOG_NEXTRELFILENODE)
+	{
+		Oid			nextRelfilenode;
+
+		memcpy(&nextRelfilenode, XLogRecGetData(record), sizeof(Oid));
+		ShmemVariableCache->nextRelfilenode = nextRelfilenode;
+		ShmemVariableCache->relfilenodeCount = 0;
+	}
 	else if (info == XLOG_CHECKPOINT_SHUTDOWN)
 	{
 		CheckPoint	checkPoint;
@@ -9688,6 +9722,8 @@ xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 		ShmemVariableCache->nextXid = checkPoint.nextXid;
 		ShmemVariableCache->nextOid = checkPoint.nextOid;
 		ShmemVariableCache->oidCount = 0;
+		ShmemVariableCache->nextRelfilenode = checkPoint.nextRelfilenode;
+		ShmemVariableCache->relfilenodeCount = 0;
 		MultiXactSetNextMXact(checkPoint.nextMulti,
 							  checkPoint.nextMultiOffset);
 
@@ -9751,6 +9787,8 @@ xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 		/* ... but still treat OID counter as exact */
 		ShmemVariableCache->nextOid = checkPoint.nextOid;
 		ShmemVariableCache->oidCount = 0;
+		ShmemVariableCache->nextRelfilenode = checkPoint.nextRelfilenode;
+		ShmemVariableCache->relfilenodeCount = 0;
 		MultiXactAdvanceNextMXact(checkPoint.nextMulti,
 								  checkPoint.nextMultiOffset);
 
@@ -9839,11 +9877,12 @@ xlog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 		prepared_transaction_agg_state  *ptas;
 
 		appendStringInfo(buf, "checkpoint: redo %X/%X; "
-						 "tli %u; xid %u/%u; oid %u; multi %u; offset %u; %s",
+						 "tli %u; xid %u/%u; oid %u; relfilenode %u; multi %u; offset %u; %s",
 						 checkpoint->redo.xlogid, checkpoint->redo.xrecoff,
 						 checkpoint->ThisTimeLineID,
 						 checkpoint->nextXidEpoch, checkpoint->nextXid,
 						 checkpoint->nextOid,
+						 checkpoint->nextRelfilenode,
 						 checkpoint->nextMulti,
 						 checkpoint->nextMultiOffset,
 				 (info == XLOG_CHECKPOINT_SHUTDOWN) ? "shutdown" : "online");
@@ -9911,6 +9950,13 @@ xlog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 
 		memcpy(&nextOid, rec, sizeof(Oid));
 		appendStringInfo(buf, "nextOid: %u", nextOid);
+	}
+	else if (info == XLOG_NEXTRELFILENODE)
+	{
+		Oid			nextRelfilenode;
+
+		memcpy(&nextRelfilenode, rec, sizeof(Oid));
+		appendStringInfo(buf, "nextRelfilenode: %u", nextRelfilenode);
 	}
 	else if (info == XLOG_SWITCH)
 	{

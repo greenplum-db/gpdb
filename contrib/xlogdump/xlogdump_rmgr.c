@@ -184,10 +184,10 @@ print_rmgr_xlog(XLogRecPtr cur, XLogRecord *record, uint8 info, bool hideTimesta
 		CheckPoint	*checkpoint = (CheckPoint*) XLogRecGetData(record);
 		if(!hideTimestamps)
 			snprintf(buf, sizeof(buf), "checkpoint: redo %u/%08X; tli %u; nextxid %u;"
-			       "  nextoid %u; nextmulti %u; nextoffset %u; %s at %s",
+			       "  nextoid %u; nextrelfilenode %u; nextmulti %u; nextoffset %u; %s at %s",
 			       checkpoint->redo.xlogid, checkpoint->redo.xrecoff,
-			       checkpoint->ThisTimeLineID, checkpoint->nextXid, 
-			       checkpoint->nextOid,
+			       checkpoint->ThisTimeLineID, checkpoint->nextXid,
+			       checkpoint->nextOid, checkpoint->nextRelfilenode,
 			       checkpoint->nextMulti,
 			       checkpoint->nextMultiOffset,
 			       (info == XLOG_CHECKPOINT_SHUTDOWN) ?
@@ -195,10 +195,10 @@ print_rmgr_xlog(XLogRecPtr cur, XLogRecord *record, uint8 info, bool hideTimesta
 			       str_time(checkpoint->time));
 		else
 			snprintf(buf, sizeof(buf), "checkpoint: redo %u/%08X; tli %u; nextxid %u;"
-			       "  nextoid %u; nextmulti %u; nextoffset %u; %s",
+			       "  nextoid %u; nextrelfilenode %u; nextmulti %u; nextoffset %u; %s",
 			       checkpoint->redo.xlogid, checkpoint->redo.xrecoff,
-			       checkpoint->ThisTimeLineID, checkpoint->nextXid, 
-			       checkpoint->nextOid,
+			       checkpoint->ThisTimeLineID, checkpoint->nextXid,
+			       checkpoint->nextOid, checkpoint->nextRelfilenode,
 			       checkpoint->nextMulti,
 			       checkpoint->nextMultiOffset,
 			       (info == XLOG_CHECKPOINT_SHUTDOWN) ?
@@ -222,6 +222,15 @@ print_rmgr_xlog(XLogRecPtr cur, XLogRecord *record, uint8 info, bool hideTimesta
 		
 		memcpy(&nextOid, XLogRecGetData(record), sizeof(Oid));
 		snprintf(buf, sizeof(buf), "nextOid: %u", nextOid);
+		break;
+	}
+
+	case XLOG_NEXTRELFILENODE:
+	{
+		Oid		nextRelfilenode;
+
+		memcpy(&nextRelfilenode, XLogRecGetData(record), sizeof(Oid));
+		snprintf(buf, sizeof(buf), "nextRelfilenode: %u", nextRelfilenode);
 		break;
 	}
 

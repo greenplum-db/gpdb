@@ -92,6 +92,7 @@ main(int argc, char *argv[])
 	uint32		set_xid_epoch = (uint32) -1;
 	TransactionId set_xid = 0;
 	Oid			set_oid = 0;
+	Oid			set_relfilenode = 0;
 	MultiXactId set_mxid = 0;
 	MultiXactOffset set_mxoff = (MultiXactOffset) -1;
 	uint32		minXlogTli = 0,
@@ -180,6 +181,21 @@ main(int argc, char *argv[])
 				if (set_oid == 0)
 				{
 					fprintf(stderr, _("%s: OID (-o) must not be 0\n"), progname);
+					exit(1);
+				}
+				break;
+
+			case 'r':
+				set_relfilenode = strtoul(optarg, &endptr, 0);
+				if (endptr == optarg || *endptr != '\0')
+				{
+					fprintf(stderr, _("%s: invalid argument for option -r\n"), progname);
+					fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
+					exit(1);
+				}
+				if (set_relfilenode == 0)
+				{
+					fprintf(stderr, _("%s: relfilenode (-r) must not be 0\n"), progname);
 					exit(1);
 				}
 				break;
@@ -321,6 +337,9 @@ main(int argc, char *argv[])
 
 	if (set_oid != 0)
 		ControlFile.checkPointCopy.nextOid = set_oid;
+
+	if (set_relfilenode != 0)
+		ControlFile.checkPointCopy.nextRelfilenode = set_relfilenode;
 
 	if (set_mxid != 0)
 		ControlFile.checkPointCopy.nextMulti = set_mxid;
@@ -487,6 +506,7 @@ GuessControlValues(void)
 	ControlFile.checkPointCopy.nextXidEpoch = 0;
 	ControlFile.checkPointCopy.nextXid = (TransactionId) 514;	/* XXX */
 	ControlFile.checkPointCopy.nextOid = FirstBootstrapObjectId;
+	ControlFile.checkPointCopy.nextRelfilenode = FirstNormalObjectId;
 	ControlFile.checkPointCopy.nextMulti = FirstMultiXactId;
 	ControlFile.checkPointCopy.nextMultiOffset = 0;
 	ControlFile.checkPointCopy.time = (pg_time_t) time(NULL);
@@ -573,6 +593,8 @@ PrintControlValues(bool guessed)
 		   ControlFile.checkPointCopy.nextXid);
 	printf(_("Latest checkpoint's NextOID:          %u\n"),
 		   ControlFile.checkPointCopy.nextOid);
+	printf(_("Latest checkpoint's NextRelfilenode:  %u\n"),
+		   ControlFile.checkPointCopy.nextRelfilenode);
 	printf(_("Latest checkpoint's NextMultiXactId:  %u\n"),
 		   ControlFile.checkPointCopy.nextMulti);
 	printf(_("Latest checkpoint's NextMultiOffset:  %u\n"),

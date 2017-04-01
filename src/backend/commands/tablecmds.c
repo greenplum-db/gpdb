@@ -9980,9 +9980,12 @@ ATExecSetTableSpace_Relation(Oid tableOid, Oid newTableSpace)
 	 * Relfilenodes are not unique across tablespaces, so we need to allocate
 	 * a new one in the new tablespace.
 	 */
-	newrelfilenode = GetNewRelFileNode(newTableSpace,
-									   rel->rd_rel->relisshared,
-									   NULL);
+	if (Gp_role == GP_ROLE_DISPATCH)
+		newrelfilenode = GetNewRelFileNode(newTableSpace,
+										   rel->rd_rel->relisshared,
+										   NULL);
+	else
+		newrelfilenode = GetNewSegRelfilenode();
 
 	gp_relation_node = heap_open(GpRelationNodeRelationId, RowExclusiveLock);
 

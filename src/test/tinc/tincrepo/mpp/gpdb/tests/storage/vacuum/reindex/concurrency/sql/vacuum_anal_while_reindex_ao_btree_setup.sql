@@ -8,5 +8,4 @@ insert into reindex_ao select generate_series(1,1000);
 select 1 as reltuples_same_as_count from pg_class where relname = 'reindex_ao'  and reltuples = (select count(*) from reindex_ao);
 insert into reindex_ao select generate_series(1,1000);
 select 1 as reltuples_same_as_count from pg_class where relname = 'reindex_ao'  and reltuples = (select count(*) from reindex_ao);
-create index idx_btree_reindex_ao on reindex_ao(a);
-SELECT 1 AS relfilenode_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'idx_btree_reindex_ao' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+create index idx_btree_reindex_vacuum_analyze_ao on reindex_ao(a);

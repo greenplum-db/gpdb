@@ -13,16 +13,20 @@
 --   * Verify that at least two files were fsync'ed by checkpointer.
 --
 begin;
-create function num_dirty(relfilenode oid) returns bigint as
+create function num_dirty(relid oid) returns bigint as
 $$
    select count(*) from dirty_buffers()
      as (tablespace oid, database oid, relfilenode oid, block int)
-     where relfilenode = $1;
+     where relfilenode in
+           (select relfilenode from pg_class
+            where oid=$1
+            union select relfilenode from gp_dist_random('pg_class')
+            where oid=$1);
 $$ language sql;
 -- Wait until number of dirty buffers for the specified relfiles drops
 -- to 0 or timeout occurs.  Returns false if timeout occured.
 create function wait_for_bgwriter(
-   relfilenode oid,
+   relid oid,
    timeout int)
 returns boolean as
 $$

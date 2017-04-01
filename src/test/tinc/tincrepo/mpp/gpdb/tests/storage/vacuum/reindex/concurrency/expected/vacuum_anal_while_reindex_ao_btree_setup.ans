@@ -16,10 +16,5 @@ select 1 as reltuples_same_as_count from pg_class where relname = 'reindex_ao'  
 reltuples_same_as_count
 -----------------------
 (0 rows)
-create index idx_btree_reindex_ao on reindex_ao(a);
+create index idx_btree_reindex_vacuum_analyze_ao on reindex_ao(a);
 CREATE
-SELECT 1 AS relfilenode_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'idx_btree_reindex_ao' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
-relfilenode_same_on_all_segs
-----------------------------
-1                           
-(1 row)
