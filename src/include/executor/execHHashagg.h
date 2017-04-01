@@ -17,7 +17,7 @@
 #define EXECHYBRIDHASHAGG_H
 
 #include "executor/nodeAgg.h" /* Must see AggStatePerGroupData. */
-#include "cdb/cdbpublic.h"    /* CdbExplain_Agg / CdbCellBuf */
+#include "cdb/cdbpublic.h"    /* CdbExplain_Agg */
 #include "utils/memutils.h"
 #include "executor/execWorkfile.h"
 #include "utils/workfile_mgr.h"

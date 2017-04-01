@@ -23,7 +23,6 @@
 /* Things defined in this header */
 typedef struct TMGXACT_LOG           TMGXACT_LOG;
 typedef struct CdbExplain_Agg        CdbExplain_Agg;
-typedef struct CdbCellBuf            CdbCellBuf;
 
 /* From "cdb/cdbtm.h" */
 struct TMGXACT_LOG
