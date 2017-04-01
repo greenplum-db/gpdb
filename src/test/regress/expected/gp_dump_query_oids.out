@@ -43,9 +43,14 @@ LINE 1: SELECT with syntax error
                ^
 QUERY:  SELECT with syntax error
 
--- Test partition tables 
-gpadmin=# CREATE TABLE p3_sales (id int, year int, a int, b int, c int, d int, region text)
- DISTRIBUTED BY (id)
+-- Test partition tables
+CREATE TABLE minirepro_partition_test (id int, info json);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+
+CREATE TABLE p3_sales (id int, year int, a int, b int, c int, d int, region text)
+  DISTRIBUTED BY (id)
   PARTITION BY RANGE (year)
       SUBPARTITION BY RANGE (a)
          SUBPARTITION TEMPLATE (
@@ -201,36 +206,37 @@ NOTICE:  CREATE TABLE will create partition "p3_sales_1_prt_11_2_prt_3_3_prt_oth
 NOTICE:  CREATE TABLE will create partition "p3_sales_1_prt_11_2_prt_3_3_prt_2" for table "p3_sales_1_prt_11_2_prt_3"
 NOTICE:  CREATE TABLE will create partition "p3_sales_1_prt_11_2_prt_3_3_prt_3" for table "p3_sales_1_prt_11_2_prt_3"
 CREATE TABLE
-gpadmin=#
-
-SELECT gp_dump_query_oids('SELECT * FROM p3_sales_1_prt_11_2_prt_3');
-                  gp_dump_query_oids
-------------------------------------------------------
- {"relids": "29359,29380,29401,29423", "funcids": ""}
+ 
+INSERT INTO minirepro_partition_test VALUES (1, (select gp_dump_query_oids('SELECT * FROM p3_sales') ) :: json);
+INSERT 0 1
+ 
+INSERT INTO minirepro_partition_test VALUES (2, (select gp_dump_query_oids('SELECT * FROM p3_sales_1_prt_11_2_prt_3') ) :: json);
+INSERT 0 1
+ 
+INSERT INTO minirepro_partition_test VALUES (3, (select gp_dump_query_oids('SELECT * FROM pg_class') ) :: json);
+INSERT 0 1
+ 
+SELECT array_length((SELECT string_to_array((SELECT info->>'relids' FROM minirepro_partition_test WHERE id = 1),',')),1);
+ array_length
+--------------
+          144
 (1 row)
 
-SELECT gp_dump_query_oids('SELECT * FROM p3_sales_1_prt_11_2_prt_3; SELECT * FROM pg_class');
-                    gp_dump_query_oids
------------------------------------------------------------
- {"relids": "29359,29380,29401,29423,1259", "funcids": ""}
+SELECT array_length((SELECT string_to_array((SELECT info->>'relids' FROM minirepro_partition_test WHERE id = 2),',')),1);
+ array_length
+--------------
+            4
 (1 row)
 
-SELECT gp_dump_query_oids('SELECT * FROM p3_sales');
-
-
-          gp_dump_query_oids
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
---------------------------------------
- {"relids": "26427,26705,26807,26849,26871,26828,26893,26935,26957,26914,26725,26765,26786,26745,26979,27081,27123,27145,27102,27167,27209,27231,27188,26999,27039,27060,27019,27253,27355,27397,27419,27376,27441,274
-83,27505,27462,27273,27313,27334,27293,27527,27629,27671,27693,27650,27715,27757,27779,27736,27547,27587,27608,27567,27801,27903,27945,27967,27924,27989,28031,28053,28010,27821,27861,27882,27841,28075,28177,28219,2
-8241,28198,28263,28305,28327,28284,28095,28135,28156,28115,28349,28451,28493,28515,28472,28537,28579,28601,28558,28369,28409,28430,28389,28623,28725,28767,28789,28746,28811,28853,28875,28832,28643,28683,28704,28663
-,28897,28999,29041,29063,29020,29085,29127,29149,29106,28917,28957,28978,28937,29171,29273,29315,29337,29294,29359,29401,29423,29380,29191,29231,29252,29211,26433,26539,26580,26601,26560,26622,26663,26684,26643,264
-53,26497,26518,26475", "funcids": ""}
+SELECT array_length((SELECT string_to_array((SELECT info->>'relids' FROM minirepro_partition_test WHERE id = 3),',')),1);
+ array_length
+--------------
+            1
 (1 row)
 
+DROP TABLE p3_sales;
+DROP TABLE
+ 
+DROP TABLE minirepro_partition_test;
+DROP TABLE
 
