@@ -21,6 +21,7 @@
 -- Because Greenplum is slow at reporting errors from segments
 -- we only execute against gp_single_row for the statements that
 -- should succeed, or where we expect different results (executing SQL)
+\set VERBOSITY terse
 CREATE TABLE gp_single_row(a int) distributed by (a);
 insert into gp_single_row values(1);
 

@@ -21,6 +21,7 @@
 -- Because Greenplum is slow at reporting errors from segments
 -- we only execute against gp_single_row for the statements that
 -- should succeed, or where we expect different results (executing SQL)
+\set VERBOSITY terse
 CREATE TABLE gp_single_row(a int) distributed by (a);
 insert into gp_single_row values(1);
 -- =============================================
@@ -58,30 +59,18 @@ FROM gp_single_row;
 -- [ERROR] From Python empty string
 SELECT test_return_void('""');
 ERROR:  PL/Python function with return type "void" did not return None
-CONTEXT:  while creating return value
-PL/Python function "test_return_void"
 SELECT * FROM test_return_void('""');
 ERROR:  PL/Python function with return type "void" did not return None
-CONTEXT:  while creating return value
-PL/Python function "test_return_void"
 -- [ERROR] From Python empty list
 SELECT test_return_void('[]');
 ERROR:  PL/Python function with return type "void" did not return None
-CONTEXT:  while creating return value
-PL/Python function "test_return_void"
 SELECT * FROM test_return_void('[]');
 ERROR:  PL/Python function with return type "void" did not return None
-CONTEXT:  while creating return value
-PL/Python function "test_return_void"
 -- [ERROR] From Python empty dict
 SELECT test_return_void('{}');
 ERROR:  PL/Python function with return type "void" did not return None
-CONTEXT:  while creating return value
-PL/Python function "test_return_void"
 SELECT * FROM test_return_void('{}');
 ERROR:  PL/Python function with return type "void" did not return None
-CONTEXT:  while creating return value
-PL/Python function "test_return_void"
 --
 -- Case 2: Return Bool
 --
@@ -473,27 +462,17 @@ SELECT test_return_text(
 -- [ERROR] From Python String with null characters
 SELECT test_return_text(E'"test\\0"');
 ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
-CONTEXT:  while creating return value
-PL/Python function "test_return_text"
 SELECT * FROM test_return_text(E'"test\\0"');
 ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
-CONTEXT:  while creating return value
-PL/Python function "test_return_text"
 -- [ERROR] From Python Object with bad str() function
 SELECT test_return_text(
     E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
 );
-ERROR:  could not create string representation of Python object (plpython.c:4928)
-DETAIL:  TypeError: __str__ returned non-string (type NoneType)
-CONTEXT:  while creating return value
-PL/Python function "test_return_text"
+ERROR:  could not create string representation of Python object (plpython.c:4957)
 SELECT * FROM test_return_text(
     E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
 );
-ERROR:  could not create string representation of Python object (plpython.c:4928)
-DETAIL:  TypeError: __str__ returned non-string (type NoneType)
-CONTEXT:  while creating return value
-PL/Python function "test_return_text"
+ERROR:  could not create string representation of Python object (plpython.c:4957)
 --
 -- Case 4: Return Bytea
 --
@@ -710,25 +689,15 @@ FROM gp_single_row;
 SELECT test_return_bytea(
     E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
 );
-ERROR:  could not create bytes representation of Python object (plpython.c:4928)
-DETAIL:  TypeError: __str__ returned non-string (type NoneType)
-CONTEXT:  while creating return value
-PL/Python function "test_return_bytea"
+ERROR:  could not create bytes representation of Python object (plpython.c:4957)
 SELECT * FROM test_return_bytea(
     E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
 );
-ERROR:  could not create bytes representation of Python object (plpython.c:4928)
-DETAIL:  TypeError: __str__ returned non-string (type NoneType)
-CONTEXT:  while creating return value
-PL/Python function "test_return_bytea"
+ERROR:  could not create bytes representation of Python object (plpython.c:4957)
 SELECT test_return_bytea(
     E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
 ) FROM gp_single_row;
-ERROR:  could not create bytes representation of Python object (plpython.c:4928)  (seg0 slice1 192.168.1.138:25432 pid=43982)
-DETAIL:  
-TypeError: __str__ returned non-string (type NoneType)
-while creating return value
-PL/Python function "test_return_bytea"
+ERROR:  could not create bytes representation of Python object (plpython.c:4957)  (seg0 slice1 192.168.1.64:25432 pid=13796)
 --
 -- Case 5: Return Circle
 --
@@ -799,85 +768,49 @@ FROM gp_single_row;
 -- [ERROR] From Python Tuple
 SELECT test_return_circle('[[3,1],4]');
 ERROR:  invalid input syntax for type circle: "[[3, 1], 4]"
-CONTEXT:  while creating return value
-PL/Python function "test_return_circle"
 SELECT * FROM test_return_circle('[[3,1],4]');
 ERROR:  invalid input syntax for type circle: "[[3, 1], 4]"
-CONTEXT:  while creating return value
-PL/Python function "test_return_circle"
 -- Error conditions
 -- [ERROR] From Python bool
 SELECT test_return_circle('True');
 ERROR:  invalid input syntax for type circle: "True"
-CONTEXT:  while creating return value
-PL/Python function "test_return_circle"
 SELECT * FROM test_return_circle('True');
 ERROR:  invalid input syntax for type circle: "True"
-CONTEXT:  while creating return value
-PL/Python function "test_return_circle"
 -- [ERROR] From Python empty string
 SELECT test_return_circle('""');
 ERROR:  invalid input syntax for type circle: ""
-CONTEXT:  while creating return value
-PL/Python function "test_return_circle"
 SELECT * FROM test_return_circle('""');
 ERROR:  invalid input syntax for type circle: ""
-CONTEXT:  while creating return value
-PL/Python function "test_return_circle"
 -- [ERROR] From Python string
 SELECT test_return_circle('"value"');
 ERROR:  invalid input syntax for type circle: "value"
-CONTEXT:  while creating return value
-PL/Python function "test_return_circle"
 SELECT * FROM test_return_circle('"value"');
 ERROR:  invalid input syntax for type circle: "value"
-CONTEXT:  while creating return value
-PL/Python function "test_return_circle"
 -- [ERROR] From Python empty list
 SELECT test_return_circle('[]');
 ERROR:  invalid input syntax for type circle: "[]"
-CONTEXT:  while creating return value
-PL/Python function "test_return_circle"
 SELECT * FROM test_return_circle('[]');
 ERROR:  invalid input syntax for type circle: "[]"
-CONTEXT:  while creating return value
-PL/Python function "test_return_circle"
 -- [ERROR] From Python non-empty list
 SELECT test_return_circle('[False]');
 ERROR:  invalid input syntax for type circle: "[False]"
-CONTEXT:  while creating return value
-PL/Python function "test_return_circle"
 SELECT * FROM test_return_circle('[False]');
 ERROR:  invalid input syntax for type circle: "[False]"
-CONTEXT:  while creating return value
-PL/Python function "test_return_circle"
 -- [ERROR] From Python empty dict
 SELECT test_return_circle('{}');
 ERROR:  invalid input syntax for type circle: "{}"
-CONTEXT:  while creating return value
-PL/Python function "test_return_circle"
 SELECT * FROM test_return_circle('{}');
 ERROR:  invalid input syntax for type circle: "{}"
-CONTEXT:  while creating return value
-PL/Python function "test_return_circle"
 -- [ERROR] From Python non-empty dict
 SELECT test_return_circle('{None: None}');
 ERROR:  invalid input syntax for type circle: "{None: None}"
-CONTEXT:  while creating return value
-PL/Python function "test_return_circle"
 SELECT * FROM test_return_circle('{None: None}');
 ERROR:  invalid input syntax for type circle: "{None: None}"
-CONTEXT:  while creating return value
-PL/Python function "test_return_circle"
 -- [ERROR] From Python String with null characters
 SELECT test_return_circle(E'"test\\0"');
 ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
-CONTEXT:  while creating return value
-PL/Python function "test_return_circle"
 SELECT * FROM test_return_circle(E'"test\\0"');
 ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
-CONTEXT:  while creating return value
-PL/Python function "test_return_circle"
 --
 -- Case 5: Return array of integers
 --
@@ -938,33 +871,19 @@ SELECT * FROM test_return_array_int('[[1,2,3],[4,5,6]]');
 -- Error conditions
 -- Multi-dimensional array with non-fixed dimension sizes
 SELECT test_return_array_int('[[1,2,3],[1,2]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 3 (plpython.c:4928)
-CONTEXT:  while creating return value
-PL/Python function "test_return_array_int"
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 3 (plpython.c:4957)
 SELECT * FROM test_return_array_int('[[1,2,3],[1,2]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 3 (plpython.c:4928)
-CONTEXT:  while creating return value
-PL/Python function "test_return_array_int"
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 3 (plpython.c:4957)
 -- Multi-dimensional array with mix of arrays and atomic elements
 SELECT test_return_array_int('[[1,2,3],[1,[2,3],[4,5]]]');
 ERROR:  invalid input syntax for integer: "[2, 3]"
-CONTEXT:  while creating return value
-PL/Python function "test_return_array_int"
 SELECT * FROM test_return_array_int('[[1,2,3],[1,[2,3],[4,5]]]');
 ERROR:  invalid input syntax for integer: "[2, 3]"
-CONTEXT:  while creating return value
-PL/Python function "test_return_array_int"
 -- Multi-dimensional array with missing dimensions
 SELECT test_return_array_int('[[1,2,3],None,[4,5,6]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 3 (plpython.c:4928)
-DETAIL:  TypeError: object of type 'NoneType' has no len()
-CONTEXT:  while creating return value
-PL/Python function "test_return_array_int"
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 3 (plpython.c:4957)
 SELECT * FROM test_return_array_int('[[1,2,3],None,[4,5,6]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 3 (plpython.c:4928)
-DETAIL:  TypeError: object of type 'NoneType' has no len()
-CONTEXT:  while creating return value
-PL/Python function "test_return_array_int"
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 3 (plpython.c:4957)
 --
 -- Case 5: Return array of texts
 --
@@ -1025,33 +944,19 @@ SELECT * FROM test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm"]]');
 -- Error conditions
 -- Multi-dimensional array with non-fixed dimension sizes
 SELECT test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm","ERROR"]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 4 while expected 3 (plpython.c:4928)
-CONTEXT:  while creating return value
-PL/Python function "test_return_array_text"
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 4 while expected 3 (plpython.c:4957)
 SELECT * FROM test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm","ERROR"]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 4 while expected 3 (plpython.c:4928)
-CONTEXT:  while creating return value
-PL/Python function "test_return_array_text"
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 4 while expected 3 (plpython.c:4957)
 -- Multi-dimensional array with mix of arrays and atomic elements
 SELECT test_return_array_text('[[["a"],"b"],["c",["d","e"]]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 1 (plpython.c:4928)
-CONTEXT:  while creating return value
-PL/Python function "test_return_array_text"
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 1 (plpython.c:4957)
 SELECT * FROM test_return_array_text('[[["a"],"b"],["c",["d","e"]]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 1 (plpython.c:4928)
-CONTEXT:  while creating return value
-PL/Python function "test_return_array_text"
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 1 (plpython.c:4957)
 -- Multi-dimensional array with missing dimensions
 SELECT test_return_array_text('[["abc","def"],None,["ghij","k"]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 2 (plpython.c:4928)
-DETAIL:  TypeError: object of type 'NoneType' has no len()
-CONTEXT:  while creating return value
-PL/Python function "test_return_array_text"
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 2 (plpython.c:4957)
 SELECT * FROM test_return_array_text('[["abc","def"],None,["ghij","k"]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 2 (plpython.c:4928)
-DETAIL:  TypeError: object of type 'NoneType' has no len()
-CONTEXT:  while creating return value
-PL/Python function "test_return_array_text"
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 2 (plpython.c:4957)
 -- ===================================================
 -- TEST 2:  RETURN VALUE TESTING - SETOF scalar values
 -- ===================================================
@@ -1115,39 +1020,23 @@ FROM gp_single_row;
 -- [ERROR] From Python None
 SELECT test_return_setof_void('None');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_setof_void"
 SELECT * FROM test_return_setof_void('None');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_setof_void"
 -- [ERROR] From Python string
 SELECT test_return_setof_void('"value"');
 ERROR:  PL/Python function with return type "void" did not return None
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_void"
 SELECT * FROM test_return_setof_void('"value"');
 ERROR:  PL/Python function with return type "void" did not return None
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_void"
 -- [ERROR] From Python List of values
 SELECT test_return_setof_void('["value"]');
 ERROR:  PL/Python function with return type "void" did not return None
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_void"
 SELECT * FROM test_return_setof_void('["value"]');
 ERROR:  PL/Python function with return type "void" did not return None
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_void"
 -- [ERROR] From Python Dict with keys other than "None"
 SELECT test_return_setof_void('{"value": None}');
 ERROR:  PL/Python function with return type "void" did not return None
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_void"
 SELECT * FROM test_return_setof_void('{"value": None}');
 ERROR:  PL/Python function with return type "void" did not return None
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_void"
 -- Questionable Success conditions
 -- From Python empty string
 SELECT test_return_setof_void('""');
@@ -1241,21 +1130,13 @@ FROM gp_single_row;
 -- [ERROR] From Python None
 SELECT test_return_setof_bool('None');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_setof_bool"
 SELECT * FROM test_return_setof_bool('None');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_setof_bool"
 -- [ERROR] From Python Bool
 SELECT test_return_setof_bool('True');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_setof_bool"
 SELECT * FROM test_return_setof_bool('True');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_setof_bool"
 -- Questionable Success conditions
 -- From Python empty string
 SELECT test_return_setof_bool('""');
@@ -1392,30 +1273,18 @@ FROM gp_single_row;
 -- [ERROR] From Python None
 SELECT test_return_setof_text('None');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_setof_text"
 SELECT * FROM test_return_setof_text('None');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_setof_text"
 -- [ERROR] From Python Bool
 SELECT test_return_setof_text('True');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_setof_text"
 SELECT * FROM test_return_setof_text('True');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_setof_text"
 -- [ERROR] From Python string with null values
 SELECT test_return_setof_text(E'"test\\0"');
 ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_text"
 SELECT * FROM test_return_setof_text(E'"test\\0"');
 ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_text"
 -- Questionable Success conditions
 -- From Python empty string
 SELECT test_return_setof_text('""');
@@ -1531,21 +1400,13 @@ FROM gp_single_row;
 -- [ERROR] From Python None
 SELECT test_return_setof_bytea('None');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_setof_bytea"
 SELECT * FROM test_return_setof_bytea('None');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_setof_bytea"
 -- [ERROR] From Python Bool
 SELECT test_return_setof_bytea('True');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_setof_bytea"
 SELECT * FROM test_return_setof_bytea('True');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_setof_bytea"
 -- Questionable Success conditions
 -- From Python empty string
 SELECT test_return_setof_bytea('""');
@@ -1676,49 +1537,29 @@ FROM gp_single_row;
 -- [ERROR] From Python List of tuples
 SELECT test_return_setof_circle('[ [[3,1],4] ]');
 ERROR:  invalid input syntax for type circle: "[[3, 1], 4]"
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_circle"
 SELECT * FROM test_return_setof_circle('[ [[3,1],4] ]');
 ERROR:  invalid input syntax for type circle: "[[3, 1], 4]"
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_circle"
 -- Error conditions
 -- [ERROR] From Python None
 SELECT test_return_setof_circle('None');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_setof_circle"
 SELECT * FROM test_return_setof_circle('None');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_setof_circle"
 -- [ERROR] From Python Bool
 SELECT test_return_setof_circle('True');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_setof_circle"
 SELECT * FROM test_return_setof_circle('True');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_setof_circle"
 -- [ERROR] From Python string
 SELECT test_return_setof_circle('"value"');
 ERROR:  invalid input syntax for type circle: "v"
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_circle"
 SELECT * FROM test_return_setof_circle('"value"');
 ERROR:  invalid input syntax for type circle: "v"
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_circle"
 -- [ERROR] From Python List of incompatable values
 SELECT test_return_setof_circle('[None, "value"]');
 ERROR:  invalid input syntax for type circle: "value"
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_circle"
 SELECT * FROM test_return_setof_circle('[None, "value"]');
 ERROR:  invalid input syntax for type circle: "value"
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_circle"
 -- Questionable Success conditions
 -- From Python empty string
 SELECT test_return_setof_circle('""');
@@ -1904,72 +1745,38 @@ FROM gp_single_row;
 -- [ERROR] From Python bool
 SELECT test_return_type_record('True');
 ERROR:  attribute "first" does not exist in Python object
-HINT:  To return null in a column, let the returned object have an attribute named after column with value None.
-CONTEXT:  while creating return value
-PL/Python function "test_return_type_record"
 SELECT * FROM test_return_type_record('True');
 ERROR:  attribute "first" does not exist in Python object
-HINT:  To return null in a column, let the returned object have an attribute named after column with value None.
-CONTEXT:  while creating return value
-PL/Python function "test_return_type_record"
 -- [ERROR] From Python empty string
 SELECT test_return_type_record('""');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_type_record"
 SELECT * FROM test_return_type_record('""');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_type_record"
 -- [ERROR] From Python string
 SELECT test_return_type_record('"value"');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_type_record"
 SELECT * FROM test_return_type_record('"value"');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_type_record"
 -- [ERROR] From Python non-empty list, wrong number of columns
 SELECT test_return_type_record('[False]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_type_record"
 SELECT * FROM test_return_type_record('[False]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_type_record"
 -- [ERROR] From Python non-empty list, wrong datatypes
 SELECT test_return_type_record('[4, "value"]');
 ERROR:  invalid input syntax for integer: "value"
-CONTEXT:  while creating return value
-PL/Python function "test_return_type_record"
 SELECT * FROM test_return_type_record('[4, "value"]');
 ERROR:  invalid input syntax for integer: "value"
-CONTEXT:  while creating return value
-PL/Python function "test_return_type_record"
 -- [ERROR] From Python empty dict
 SELECT test_return_type_record('{}');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_type_record"
 SELECT * FROM test_return_type_record('{}');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_type_record"
 -- [ERROR] From Python without the needed columns
 SELECT test_return_type_record('{None: None}');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_type_record"
 SELECT * FROM test_return_type_record('{None: None}');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_type_record"
 -- Questionable Success conditions
 --  From Python String (one character per column)
 SELECT test_return_type_record('"a4"');
@@ -2136,72 +1943,38 @@ FROM gp_single_row;
 -- [ERROR] From Python bool
 SELECT test_return_table_record('True');
 ERROR:  attribute "first" does not exist in Python object
-HINT:  To return null in a column, let the returned object have an attribute named after column with value None.
-CONTEXT:  while creating return value
-PL/Python function "test_return_table_record"
 SELECT * FROM test_return_table_record('True');
 ERROR:  attribute "first" does not exist in Python object
-HINT:  To return null in a column, let the returned object have an attribute named after column with value None.
-CONTEXT:  while creating return value
-PL/Python function "test_return_table_record"
 -- [ERROR] From Python empty string
 SELECT test_return_table_record('""');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_table_record"
 SELECT * FROM test_return_table_record('""');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_table_record"
 -- [ERROR] From Python string
 SELECT test_return_table_record('"value"');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_table_record"
 SELECT * FROM test_return_table_record('"value"');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_table_record"
 -- [ERROR] From Python non-empty list, wrong number of columns
 SELECT test_return_table_record('[False]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_table_record"
 SELECT * FROM test_return_table_record('[False]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_table_record"
 -- [ERROR] From Python non-empty list, wrong datatypes
 SELECT test_return_table_record('[4, "value"]');
 ERROR:  invalid input syntax for integer: "value"
-CONTEXT:  while creating return value
-PL/Python function "test_return_table_record"
 SELECT * FROM test_return_table_record('[4, "value"]');
 ERROR:  invalid input syntax for integer: "value"
-CONTEXT:  while creating return value
-PL/Python function "test_return_table_record"
 -- [ERROR] From Python empty dict
 SELECT test_return_table_record('{}');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_table_record"
 SELECT * FROM test_return_table_record('{}');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_table_record"
 -- [ERROR] From Python without the needed columns
 SELECT test_return_table_record('{None: None}');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_table_record"
 SELECT * FROM test_return_table_record('{None: None}');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_table_record"
 -- Questionable Success conditions
 --  From Python String (one character per column)
 SELECT test_return_table_record('"a4"');
@@ -2224,11 +1997,7 @@ SELECT test_return_table_record('{"first": "value", "second": 4, "third": "ignor
 (1 row)
 
 SELECT * FROM test_return_table_record('{"first": "value", "second": 4}, "third": "ignored"}');
-ERROR:  SyntaxError: invalid syntax (<string>, line 1) (plpython.c:4928)
-CONTEXT:  Traceback (most recent call last):
-  PL/Python function "test_return_table_record", line 2, in <module>
-    exec('y = ' + s)
-PL/Python function "test_return_table_record"
+ERROR:  SyntaxError: invalid syntax (<string>, line 1) (plpython.c:4957)
 -- =====================================================
 -- TEST 4:  RETURN VALUE TESTING - SETOF Compound values
 -- =====================================================
@@ -2244,53 +2013,29 @@ PL/Python function "test_return_table_record"
 -- From Python empty list
 SELECT test_return_setof_type_record('[]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 SELECT * FROM test_return_setof_type_record('[]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 SELECT test_return_setof_type_record('[]')
 FROM gp_single_row;
-ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 192.168.1.138:25432 pid=43982)
-DETAIL:  
-while creating return value
-PL/Python function "test_return_setof_type_record"
+ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 192.168.1.64:25432 pid=13796)
 SELECT (test_return_setof_type_record('[]')).*;
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 SELECT (test_return_setof_type_record('[]')).*
 FROM gp_single_row;
-ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 192.168.1.138:25432 pid=43982)
-DETAIL:  
-while creating return value
-PL/Python function "test_return_setof_type_record"
+ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 192.168.1.64:25432 pid=13796)
 -- From Python List
 SELECT test_return_setof_type_record('[ ("value", 4), {"first": "test", "second": 2} ]');
 ERROR:  invalid input syntax for integer: "{'second': 2, 'first': 'test'}"
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 SELECT * FROM test_return_setof_type_record('[ None, ("value", 4), {"first": "test", "second": 2} ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 SELECT test_return_setof_type_record('[ ("value", 4), {"first": "test", "second": 2} ]')
 FROM gp_single_row;
-ERROR:  invalid input syntax for integer: "{'second': 2, 'first': 'test'}"  (seg0 slice1 192.168.1.138:25432 pid=43982)
-DETAIL:  
-while creating return value
-PL/Python function "test_return_setof_type_record"
+ERROR:  invalid input syntax for integer: "{'second': 2, 'first': 'test'}"  (seg0 slice1 192.168.1.64:25432 pid=13796)
 SELECT (test_return_setof_type_record('[ ("value", 4), {"first": "test", "second": 2} ]')).*;
 ERROR:  invalid input syntax for integer: "{'second': 2, 'first': 'test'}"
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 SELECT (test_return_setof_type_record('[ ("value", 4), {"first": "test", "second": 2} ]')).*
 FROM gp_single_row;
-ERROR:  invalid input syntax for integer: "{'second': 2, 'first': 'test'}"  (seg0 slice1 192.168.1.138:25432 pid=43982)
-DETAIL:  
-while creating return value
-PL/Python function "test_return_setof_type_record"
+ERROR:  invalid input syntax for integer: "{'second': 2, 'first': 'test'}"  (seg0 slice1 192.168.1.64:25432 pid=13796)
 -- Error conditions
 -- [ERROR] From Python None
 SELECT test_return_setof_type_record('None');
@@ -2308,23 +2053,13 @@ SELECT * FROM test_return_setof_type_record('None');
 -- [ERROR] From Python bool
 SELECT test_return_setof_type_record('True');
 ERROR:  attribute "first" does not exist in Python object
-HINT:  To return null in a column, let the returned object have an attribute named after column with value None.
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 SELECT * FROM test_return_setof_type_record('True');
 ERROR:  attribute "first" does not exist in Python object
-HINT:  To return null in a column, let the returned object have an attribute named after column with value None.
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 -- [ERROR] From Python string
 SELECT test_return_setof_type_record('"value"');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 SELECT * FROM test_return_setof_type_record('"value"');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 -- [ERROR] From Python List
 SELECT test_return_setof_type_record('("value", 4)');
  test_return_setof_type_record 
@@ -2341,133 +2076,73 @@ SELECT * FROM test_return_setof_type_record('("value", 4)');
 -- [ERROR] From Python non-empty list, wrong number of columns
 SELECT test_return_setof_type_record('[ [False] ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 SELECT * FROM test_return_setof_type_record('[ [False] ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 -- [ERROR] From Python non-empty list, wrong datatypes
 SELECT test_return_setof_type_record('[ [4, "value"] ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 SELECT * FROM test_return_setof_type_record('[ [4, "value"] ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 -- [ERROR] From Python non-empty list, cointaining None
 SELECT test_return_setof_type_record('[None]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 SELECT * FROM test_return_setof_type_record('[None]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 -- [ERROR] From Python dict without the needed columns
 SELECT test_return_setof_type_record('[ {None: None} ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 SELECT * FROM test_return_setof_type_record('[ {None: None} ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 -- [ERROR] From Python List of String (one character per column)
 SELECT test_return_setof_type_record('["a4"]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 SELECT * FROM test_return_setof_type_record('["a4"]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 -- Questionable Success conditions
 -- From Python empty string
 SELECT test_return_setof_type_record('""');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 SELECT * FROM test_return_setof_type_record('""');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 -- From Python empty dict
 SELECT test_return_setof_type_record('{}');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 SELECT * FROM test_return_setof_type_record('{}');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 -- From Python Dictionary, with extra fields
 SELECT test_return_setof_type_record('[{"first": "value", "second": 4, "third": "ignored"}]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_type_record"
 SELECT * FROM test_return_setof_type_record('[{"first": "value", "second": 4}, "third": "ignored"}]');
-ERROR:  SyntaxError: invalid syntax (<string>, line 1) (plpython.c:4928)
-CONTEXT:  Traceback (most recent call last):
-  PL/Python function "test_return_setof_type_record", line 2, in <module>
-    exec('y = ' + s)
-PL/Python function "test_return_setof_type_record"
+ERROR:  SyntaxError: invalid syntax (<string>, line 1) (plpython.c:4957)
 --
 -- Case 2: From a setof Table Type
 --
 -- From Python empty list
 SELECT test_return_setof_table_record('[]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 SELECT * FROM test_return_setof_table_record('[]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 SELECT test_return_setof_table_record('[]')
 FROM gp_single_row;
-ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 192.168.1.138:25432 pid=43982)
-DETAIL:  
-while creating return value
-PL/Python function "test_return_setof_table_record"
+ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 192.168.1.64:25432 pid=13796)
 SELECT (test_return_setof_table_record('[]')).*;
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 SELECT (test_return_setof_table_record('[]')).*
 FROM gp_single_row;
-ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 192.168.1.138:25432 pid=43982)
-DETAIL:  
-while creating return value
-PL/Python function "test_return_setof_table_record"
+ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 192.168.1.64:25432 pid=13796)
 -- From Python List
 SELECT test_return_setof_table_record('[ None, ("value", 4), {"first": "test", "second": 2} ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 SELECT * FROM test_return_setof_table_record('[ None, ("value", 4), {"first": "test", "second": 2} ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 SELECT test_return_setof_table_record('[ None, ("value", 4), {"first": "test", "second": 2} ]')
 FROM gp_single_row;
-ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 192.168.1.138:25432 pid=43982)
-DETAIL:  
-while creating return value
-PL/Python function "test_return_setof_table_record"
+ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 192.168.1.64:25432 pid=13796)
 SELECT (test_return_setof_table_record('[ None, ("value", 4), {"first": "test", "second": 2} ]')).*;
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 SELECT (test_return_setof_table_record('[ None, ("value", 4), {"first": "test", "second": 2} ]')).*
 FROM gp_single_row;
-ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 192.168.1.138:25432 pid=43982)
-DETAIL:  
-while creating return value
-PL/Python function "test_return_setof_table_record"
+ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 192.168.1.64:25432 pid=13796)
 -- Error conditions
 -- [ERROR] From Python None
 SELECT test_return_setof_table_record('None');
@@ -2485,23 +2160,13 @@ SELECT * FROM test_return_setof_table_record('None');
 -- [ERROR] From Python bool
 SELECT test_return_setof_table_record('True');
 ERROR:  attribute "first" does not exist in Python object
-HINT:  To return null in a column, let the returned object have an attribute named after column with value None.
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 SELECT * FROM test_return_setof_table_record('True');
 ERROR:  attribute "first" does not exist in Python object
-HINT:  To return null in a column, let the returned object have an attribute named after column with value None.
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 -- [ERROR] From Python string
 SELECT test_return_setof_table_record('"value"');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 SELECT * FROM test_return_setof_table_record('"value"');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 -- [ERROR] From Python List
 SELECT test_return_setof_table_record('("value", 4)');
  test_return_setof_table_record 
@@ -2518,80 +2183,44 @@ SELECT * FROM test_return_setof_table_record('("value", 4)');
 -- [ERROR] From Python non-empty list, wrong number of columns
 SELECT test_return_setof_table_record('[ [False] ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 SELECT * FROM test_return_setof_table_record('[ [False] ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 -- [ERROR] From Python non-empty list, wrong datatypes
 SELECT test_return_setof_table_record('[ [4, "value"] ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 SELECT * FROM test_return_setof_table_record('[ [4, "value"] ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 -- [ERROR] From Python non-empty list, cointaining None
 SELECT test_return_setof_table_record('[None]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 SELECT * FROM test_return_setof_table_record('[None]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 -- [ERROR] From Python dict without the needed columns
 SELECT test_return_setof_table_record('[ {None: None} ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 SELECT * FROM test_return_setof_table_record('[ {None: None} ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 -- [ERROR] From Python List of String (one character per column)
 SELECT test_return_setof_table_record('["a4"]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 SELECT * FROM test_return_setof_table_record('["a4"]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 -- Questionable Success conditions
 -- From Python empty string
 SELECT test_return_setof_table_record('""');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 SELECT * FROM test_return_setof_table_record('""');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 -- From Python empty dict
 SELECT test_return_setof_table_record('{}');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 SELECT * FROM test_return_setof_table_record('{}');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 -- From Python Dictionary, with extra fields
 SELECT test_return_setof_table_record('[{"first": "value", "second": 4, "third": "ignored"}]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_setof_table_record"
 SELECT * FROM test_return_setof_table_record('[{"first": "value", "second": 4}, "third": "ignored"}]');
-ERROR:  SyntaxError: invalid syntax (<string>, line 1) (plpython.c:4928)
-CONTEXT:  Traceback (most recent call last):
-  PL/Python function "test_return_setof_table_record", line 2, in <module>
-    exec('y = ' + s)
-PL/Python function "test_return_setof_table_record"
+ERROR:  SyntaxError: invalid syntax (<string>, line 1) (plpython.c:4957)
 -- =====================================================
 -- TEST 5:  RETURN VALUE TESTING - OUT Parameters
 -- =====================================================
@@ -2790,27 +2419,17 @@ SELECT test_return_out_text(
 -- [ERROR] From Python String with null characters
 SELECT test_return_out_text(E'"test\\0"');
 ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_text"
 SELECT * FROM test_return_out_text(E'"test\\0"');
 ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_text"
 -- [ERROR] From Python Object with bad str() function
 SELECT test_return_out_text(
     E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
 );
-ERROR:  could not create string representation of Python object (plpython.c:4928)
-DETAIL:  TypeError: __str__ returned non-string (type NoneType)
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_text"
+ERROR:  could not create string representation of Python object (plpython.c:4957)
 SELECT * FROM test_return_out_text(
     E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
 );
-ERROR:  could not create string representation of Python object (plpython.c:4928)
-DETAIL:  TypeError: __str__ returned non-string (type NoneType)
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_text"
+ERROR:  could not create string representation of Python object (plpython.c:4957)
 --
 -- Case 2: RETURNS RECORD
 --
@@ -2950,72 +2569,38 @@ FROM gp_single_row;
 -- [ERROR] From Python bool
 SELECT test_return_out_record('True');
 ERROR:  attribute "first" does not exist in Python object
-HINT:  To return null in a column, let the returned object have an attribute named after column with value None.
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_record"
 SELECT * FROM test_return_out_record('True');
 ERROR:  attribute "first" does not exist in Python object
-HINT:  To return null in a column, let the returned object have an attribute named after column with value None.
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_record"
 -- [ERROR] From Python empty string
 SELECT test_return_out_record('""');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_record"
 SELECT * FROM test_return_out_record('""');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_record"
 -- [ERROR] From Python string
 SELECT test_return_out_record('"value"');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_record"
 SELECT * FROM test_return_out_record('"value"');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_record"
 -- [ERROR] From Python non-empty list, wrong number of columns
 SELECT test_return_out_record('[False]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_record"
 SELECT * FROM test_return_out_record('[False]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_record"
 -- [ERROR] From Python non-empty list, wrong datatypes
 SELECT test_return_out_record('[4, "value"]');
 ERROR:  invalid input syntax for integer: "value"
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_record"
 SELECT * FROM test_return_out_record('[4, "value"]');
 ERROR:  invalid input syntax for integer: "value"
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_record"
 -- [ERROR] From Python empty dict
 SELECT test_return_out_record('{}');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_record"
 SELECT * FROM test_return_out_record('{}');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_record"
 -- [ERROR] From Python without the needed columns
 SELECT test_return_out_record('{None: None}');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_record"
 SELECT * FROM test_return_out_record('{None: None}');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_record"
 -- Questionable Success conditions
 --  From Python String (one character per column)
 SELECT test_return_out_record('"a4"');
@@ -3099,30 +2684,18 @@ FROM gp_single_row;
 -- [ERROR] From Python None
 SELECT test_return_out_setof_text('None');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_out_setof_text"
 SELECT * FROM test_return_out_setof_text('None');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_out_setof_text"
 -- [ERROR] From Python Bool
 SELECT test_return_out_setof_text('True');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_out_setof_text"
 SELECT * FROM test_return_out_setof_text('True');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_out_setof_text"
 -- [ERROR] From Python string with null values
 SELECT test_return_out_setof_text(E'"test\\0"');
 ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_setof_text"
 SELECT * FROM test_return_out_setof_text(E'"test\\0"');
 ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_setof_text"
 -- Questionable Success conditions
 -- From Python empty string
 SELECT test_return_out_setof_text('""');
@@ -3255,57 +2828,33 @@ FROM gp_single_row;
 -- [ERROR] From Python None
 SELECT test_return_out_setof_record('None');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_out_setof_record"
 SELECT * FROM test_return_out_setof_record('None');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_out_setof_record"
 -- [ERROR] From Python bool
 SELECT test_return_out_setof_record('True');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_out_setof_record"
 SELECT * FROM test_return_out_setof_record('True');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_out_setof_record"
 -- [ERROR] From Python string
 SELECT test_return_out_setof_record('"value"');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_setof_record"
 SELECT * FROM test_return_out_setof_record('"value"');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_setof_record"
 -- [ERROR] From Python List
 SELECT test_return_out_setof_record('("value", 4)');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_setof_record"
 SELECT * FROM test_return_out_setof_record('("value", 4)');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_setof_record"
 -- [ERROR] From Python non-empty list, wrong number of columns
 SELECT test_return_out_setof_record('[ [False] ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_setof_record"
 SELECT * FROM test_return_out_setof_record('[ [False] ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_setof_record"
 -- [ERROR] From Python non-empty list, wrong datatypes
 SELECT test_return_out_setof_record('[ [4, "value"] ]');
 ERROR:  invalid input syntax for integer: "value"
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_setof_record"
 SELECT * FROM test_return_out_setof_record('[ [4, "value"] ]');
 ERROR:  invalid input syntax for integer: "value"
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_setof_record"
 -- [ERROR] From Python non-empty list, containing None
 SELECT test_return_out_setof_record('[ None ]');
  test_return_out_setof_record 
@@ -3318,14 +2867,8 @@ ERROR:  function returning set of rows cannot return null value
 -- [ERROR] From Python dict without the needed columns
 SELECT test_return_out_setof_record('[ {None: None} ]');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_setof_record"
 SELECT * FROM test_return_out_setof_record('[ {None: None} ]');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_out_setof_record"
 -- Questionable Success conditions
 -- From Python empty string
 SELECT test_return_out_setof_record('""');
@@ -3357,11 +2900,7 @@ SELECT test_return_out_setof_record('[{"first": "value", "second": 4, "third": "
 (1 row)
 
 SELECT * FROM test_return_out_setof_record('[{"first": "value", "second": 4}, "third": "ignored"}]');
-ERROR:  SyntaxError: invalid syntax (<string>, line 1) (plpython.c:4928)
-CONTEXT:  Traceback (most recent call last):
-  PL/Python function "test_return_out_setof_record", line 2, in <module>
-    exec('y = ' + s)
-PL/Python function "test_return_out_setof_record"
+ERROR:  SyntaxError: invalid syntax (<string>, line 1) (plpython.c:4957)
 -- From Python List of String (one character per column)
 SELECT test_return_out_setof_record('["a4"]');
  test_return_out_setof_record 
@@ -3449,57 +2988,33 @@ FROM gp_single_row;
 -- [ERROR] From Python None
 SELECT test_return_table('None');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_table"
 SELECT * FROM test_return_table('None');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_table"
 -- [ERROR] From Python bool
 SELECT test_return_table('True');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_table"
 SELECT * FROM test_return_table('True');
 ERROR:  returned object cannot be iterated
-DETAIL:  PL/Python set-returning functions must return an iterable object.
-CONTEXT:  PL/Python function "test_return_table"
 -- [ERROR] From Python string
 SELECT test_return_table('"value"');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_table"
 SELECT * FROM test_return_table('"value"');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_table"
 -- [ERROR] From Python List
 SELECT test_return_table('("value", 4)');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_table"
 SELECT * FROM test_return_table('("value", 4)');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_table"
 -- [ERROR] From Python non-empty list, wrong number of columns
 SELECT test_return_table('[ [False] ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_table"
 SELECT * FROM test_return_table('[ [False] ]');
 ERROR:  length of returned sequence did not match number of columns in row
-CONTEXT:  while creating return value
-PL/Python function "test_return_table"
 -- [ERROR] From Python non-empty list, wrong datatypes
 SELECT test_return_table('[ [4, "value"] ]');
 ERROR:  invalid input syntax for integer: "value"
-CONTEXT:  while creating return value
-PL/Python function "test_return_table"
 SELECT * FROM test_return_table('[ [4, "value"] ]');
 ERROR:  invalid input syntax for integer: "value"
-CONTEXT:  while creating return value
-PL/Python function "test_return_table"
 -- [ERROR] From Python non-empty list, containing None
 SELECT test_return_table('[ None, ["value", 4] ]');
  test_return_table 
@@ -3513,14 +3028,8 @@ ERROR:  function returning set of rows cannot return null value
 -- [ERROR] From Python dict without the needed columns
 SELECT test_return_table('[ {None: None} ]');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_table"
 SELECT * FROM test_return_table('[ {None: None} ]');
 ERROR:  key "first" not found in mapping
-HINT:  To return null in a column, add the value None to the mapping with the key named after the column.
-CONTEXT:  while creating return value
-PL/Python function "test_return_table"
 -- [ERROR] From Python List of String (one character per column)
 SELECT test_return_table('["a4"]');
  test_return_table 
