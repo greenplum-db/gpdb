@@ -42,13 +42,10 @@ ERROR:  syntax error at or near "with syntax"
 LINE 1: SELECT with syntax error
                ^
 QUERY:  SELECT with syntax error
-
 -- Test partition tables
 CREATE TABLE minirepro_partition_test (id int, info json);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-CREATE TABLE
-
 CREATE TABLE p3_sales (id int, year int, a int, b int, c int, d int, region text)
   DISTRIBUTED BY (id)
   PARTITION BY RANGE (year)
@@ -205,38 +202,26 @@ NOTICE:  CREATE TABLE will create partition "p3_sales_1_prt_11_2_prt_3" for tabl
 NOTICE:  CREATE TABLE will create partition "p3_sales_1_prt_11_2_prt_3_3_prt_other_b" for table "p3_sales_1_prt_11_2_prt_3"
 NOTICE:  CREATE TABLE will create partition "p3_sales_1_prt_11_2_prt_3_3_prt_2" for table "p3_sales_1_prt_11_2_prt_3"
 NOTICE:  CREATE TABLE will create partition "p3_sales_1_prt_11_2_prt_3_3_prt_3" for table "p3_sales_1_prt_11_2_prt_3"
-CREATE TABLE
- 
 INSERT INTO minirepro_partition_test VALUES (1, (select gp_dump_query_oids('SELECT * FROM p3_sales') ) :: json);
-INSERT 0 1
- 
 INSERT INTO minirepro_partition_test VALUES (2, (select gp_dump_query_oids('SELECT * FROM p3_sales_1_prt_11_2_prt_3') ) :: json);
-INSERT 0 1
- 
 INSERT INTO minirepro_partition_test VALUES (3, (select gp_dump_query_oids('SELECT * FROM pg_class') ) :: json);
-INSERT 0 1
- 
 SELECT array_length((SELECT string_to_array((SELECT info->>'relids' FROM minirepro_partition_test WHERE id = 1),',')),1);
  array_length
 --------------
-          144
+ 144
 (1 row)
 
 SELECT array_length((SELECT string_to_array((SELECT info->>'relids' FROM minirepro_partition_test WHERE id = 2),',')),1);
  array_length
 --------------
-            4
+ 4
 (1 row)
 
 SELECT array_length((SELECT string_to_array((SELECT info->>'relids' FROM minirepro_partition_test WHERE id = 3),',')),1);
  array_length
 --------------
-            1
+ 1
 (1 row)
 
 DROP TABLE p3_sales;
-DROP TABLE
- 
 DROP TABLE minirepro_partition_test;
-DROP TABLE
-
