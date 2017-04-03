@@ -9,7 +9,7 @@ DEST = .
 
 GOFLAGS := -o $(DEST)
 
-dependencies :
+depend :
 		go get github.com/jmoiron/sqlx
 		go get github.com/maxbrunsfeld/counterfeiter
 		go get github.com/onsi/ginkgo/ginkgo
@@ -29,8 +29,6 @@ ginkgo : depend
 test : ginkgo
 
 ci : ginkgo
-
-depend : dependencies
 
 build : 
 		go build $(GOFLAGS) -o $(MODULE_NAME)

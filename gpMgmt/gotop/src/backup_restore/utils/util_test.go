@@ -11,12 +11,12 @@ import (
 
 func TestUtil(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "util.go unit tests")
+	RunSpecs(t, "utils tests")
 }
 
 var _ = Describe("utils/util tests", func() {
 	Context("CurrentTimestamp", func() {
-		It("Should return the current timestamp", func() {
+		It("returns the current timestamp", func() {
 			utils.FPTimeNow = func() time.Time { return time.Date(2017, time.January, 1, 1, 1, 1, 1, time.Local) }
 			expected := "20170101010101"
 			actual := utils.CurrentTimestamp()
