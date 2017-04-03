@@ -62,9 +62,6 @@
  */
 #define WIDTH_THRESHOLD  1024
 
-/* User Defined Type Starting Oid */
-#define UDT_START_OID 10000
-
 /* Enum representing if the column value exceeded WIDTH THRESHOLD */
 typedef enum
 {
@@ -453,8 +450,12 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	 * responsible to make sure that whatever they store into the VacAttrStats
 	 * structure is allocated in anl_context.
 	 */
+
+
+
 	if (numrows > 0)
 	{
+		HeapTuple *validRows = (HeapTuple *) palloc(numrows * sizeof(HeapTuple));
 		MemoryContext col_context,
 					old_context;
 
@@ -469,41 +470,32 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 		{
 			VacAttrStats *stats = vacattrstats[i];
 			RowIndexes rowIndexes = colLargeRowIndexes[i];
-			int validRowsLength = numrows - list_length(rowIndexes.rows);
-			HeapTuple *validRows = NULL;
-			int j =0;
-			int rowMapIdx = 0;
-			if (list_length(rowIndexes.rows) > 0)
+			int validRowsLength = numrows - rowIndexes.toowide_cnt;
+			int validRowsIdx = 0;
+			stats->rows = rows;
+
+			/* If there are toowide rows in the sample, remove them
+			 * from the sample being sent for stats collection
+			 */
+			if (rowIndexes.toowide_cnt > 0)
 			{
-				for (int allrows=0; allrows < numrows; allrows++)
+				for (int rownum=0; rownum < numrows; rownum++)
 				{
-					if (rowMapIdx < list_length(rowIndexes.rows))
+					if (rowIndexes.rows[rownum]) // If row is too wide
 					{
-						int rowIndex = list_nth_int(rowIndexes.rows, rowMapIdx);
-						if (allrows == rowIndex)
-						{
-							continue;
-							rowMapIdx++;
-						}
+						continue;
 					}
-					(*validRows)[j] = (*rows)[allrows];
-					j++;
+					validRows[validRowsIdx] = rows[rownum];
+					validRowsIdx++;
 
 				}
 				stats->rows = validRows;
 			}
-			else
-			{
-				stats->rows = rows;
-			}
 
-
-			numrows = numrows - list_length(rowIndexes.rows);
-			stats->rows = rows;
 			stats->tupDesc = onerel->rd_att;
 			(*stats->compute_stats) (stats,
 									 std_fetch_func,
-									 validRowsLength,
+									 validRowsLength, // Numbers of rows in sample excluding toowide if any.
 									 totalrows);
 			MemoryContextResetAndDeleteChildren(col_context);
 		}
@@ -757,10 +749,20 @@ compute_index_stats(Relation onerel, double totalrows,
 				 */
 				for (i = 0; i < attr_cnt; i++)
 				{
+
 					VacAttrStats *stats = thisdata->vacattrstats[i];
 					int			attnum = stats->attr->attnum;
 
-					if (isnull[attnum - 1])
+					bool *indexLargeRows = idxLargeRowIndexes[i].rows;
+
+					/* If the value at the row is too wide, mark it
+					 to ignore it in compute_scalar_stats */
+					if (indexLargeRows[rowno])
+					{
+						exprvals[tcnt] = (Datum) 0;
+						exprnulls[tcnt] = false;
+					}
+					else if (isnull[attnum - 1])
 					{
 						exprvals[tcnt] = (Datum) 0;
 						exprnulls[tcnt] = true;
@@ -1446,16 +1448,16 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 		for (i = 0; i < nattrs; i++)
 		{
 			isVarlenaCol[i] = false;
-			colLargeRowIndexes[i].rows = NIL;
-			Oid atttypid = attrstats[i]->attr->atttypid;
 			NameData attname = attrstats[i]->attr->attname;
+			bool is_varlena = (!attrstats[i]->attr->attbyval &&
+									  attrstats[i]->attr->attlen == -1);
+			bool is_varwidth = (!attrstats[i]->attr->attbyval &&
+									   attrstats[i]->attr->attlen < 0);
 
-			if (atttypid == TEXTOID  ||
-				atttypid == BYTEAOID ||
-				atttypid == VARCHAROID)
+			if (is_varlena || is_varwidth)
 			{
 				appendStringInfo(&columnStr,
-								 "(case when octet_length(Ta.%s) > %d then NULL else Ta.%s  end) as %s, ",
+								 "(case when pg_column_size(Ta.%s) > %d then NULL else Ta.%s  end) as %s, ",
 								 quote_identifier(NameStr(attname)),
 								 WIDTH_THRESHOLD,
 								 quote_identifier(NameStr(attname)),
@@ -1466,30 +1468,6 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 								 WIDTH_THRESHOLD_NOT_EXCEEDED,
 								 WIDTH_THRESHOLD_EXCEEDED);
 				isVarlenaCol[i] = true;
-			}
-			else if (atttypid > UDT_START_OID)
-			{
-				HeapTuple typtuple = SearchSysCacheCopy(TYPEOID,
-														ObjectIdGetDatum(atttypid),
-														0, 0, 0);
-				if (!HeapTupleIsValid(typtuple))
-					elog(ERROR, "cache lookup failed for type %u", atttypid);
-				Form_pg_type attrtype = (Form_pg_type) GETSTRUCT(typtuple);
-
-				if (attrtype->typlen < 0)
-				{
-					appendStringInfo(&columnStr,
-									 "(case when pg_column_size(Ta.%s) > %d then NULL else Ta.%s  end) as %s, ",
-									 quote_identifier(NameStr(attname)),
-									 WIDTH_THRESHOLD,
-									 quote_identifier(NameStr(attname)),
-									 quote_identifier(NameStr(attname)));
-					appendStringInfo(&columnStr,
-									 "(case when Ta.%s is NULL then 1 else 2 end)",
-									 quote_identifier(NameStr(attname)));
-
-					isVarlenaCol[i] = true;
-				}
 			}
 
 			if (!isVarlenaCol[i])
@@ -1583,9 +1561,12 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 	{
 		vals[i] = (Datum) 0;
 		nulls[i] = true;
+		colLargeRowIndexes[i].rows = (bool *) palloc(sampleTuples * sizeof(bool));
+		colLargeRowIndexes[i].toowide_cnt = 0;
 	}
 
 	*rows = (HeapTuple *) palloc(sampleTuples * sizeof(HeapTuple));
+
 	for (i = 0; i < sampleTuples; i++)
 	{
 		HeapTuple	sampletup = SPI_tuptable->vals[i];
@@ -1594,6 +1575,7 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 
 		for (j = 0; j < nattrs; j++)
 		{
+			colLargeRowIndexes[j].rows[i] = false;
 			int	tupattnum = attrstats[j]->tupattnum;
 			Assert(tupattnum >= 1 && tupattnum <= RelationGetNumberOfAttributes(onerel));
 
@@ -1613,7 +1595,8 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 					/* If Datum is too large, set stats_valid to false to ensure no stats are collected on it */
 					if (DatumGetInt32(dummyVal) == WIDTH_THRESHOLD_EXCEEDED)
 					{
-						colLargeRowIndexes[j].rows = lappend_int(colLargeRowIndexes[j].rows, i);
+						colLargeRowIndexes[j].rows[i] = true;
+						colLargeRowIndexes[j].toowide_cnt++;
 					}
 				}
 			}
@@ -2605,6 +2588,10 @@ compute_scalar_stats(VacAttrStatsP stats,
 		 */
 		if (is_varlena)
 		{
+			// Ignore too wide index column value marked in compute_index_stats
+			if (value == (Datum) 0 && !isnull)
+				continue;
+
 			total_width += VARSIZE_ANY(DatumGetPointer(value));
 
 			/*

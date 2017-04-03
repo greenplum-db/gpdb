@@ -61,7 +61,8 @@ typedef struct VacAttrStats *VacAttrStatsP;
  */
 typedef struct RowIndexes
 {
-	List* rows;
+	bool* rows;
+	int toowide_cnt;
 } RowIndexes;
 
 
