@@ -1585,21 +1585,27 @@ heap_create_with_catalog(const char *relname,
 	}
 
 	/*
-	 * Allocate an OID for the relation, unless we were told what to use.
-	 *
-	 * The OID will be the relfilenode as well, so make sure it doesn't
-	 * collide with either pg_class OIDs or existing physical files.
-	 *
-	 * (In GPDB, heap_create can choose a different relfilenode, in a QE node,
-	 * if the one we choose is already in use.)
+	 * Get preassigned OID for GP_ROLE_EXECUTE or binary upgrade
 	 */
 	if (!OidIsValid(relid) && (Gp_role == GP_ROLE_EXECUTE || IsBinaryUpgrade))
 		relid = GetPreassignedOidForRelation(relnamespace, relname);
 
-	if (Gp_role != GP_ROLE_EXECUTE && relkind == RELKIND_SEQUENCE)
-		relid = GetSequenceRelationOid();
-	else if (!OidIsValid(relid))
-		relid = GetNewOid(pg_class_desc);
+	/*
+	 * GP_ROLE_DISPATCH and GP_ROLE_UTILITY do not have preassigned OIDs.
+	 * Allocate new OIDs here.
+	 *
+	 * For sequence relations, the relfilenode has to be the same as OID.
+	 * To accomplish this, we have a special function GetSequenceRelationOid
+	 * which locks both the Oid and relfilenode counter, syncs them, and
+	 * allocates the synced value to here.
+	 */
+	if (!OidIsValid(relid) && Gp_role != GP_ROLE_EXECUTE)
+	{
+		if (relkind == RELKIND_SEQUENCE)
+			relid = GetSequenceRelationOid();
+		else
+			relid = GetNewOid(pg_class_desc);
+	}
 
 	/*
 	 * Create the relcache entry (mostly dummy at this point) and the physical

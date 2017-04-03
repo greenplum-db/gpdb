@@ -9081,13 +9081,13 @@ CreateCheckPoint(int flags)
 	checkPoint.nextOid = ShmemVariableCache->nextOid;
 	if (!shutdown)
 		checkPoint.nextOid += ShmemVariableCache->oidCount;
+	LWLockRelease(OidGenLock);
 
 	LWLockAcquire(RelfilenodeGenLock, LW_SHARED);
 	checkPoint.nextRelfilenode = ShmemVariableCache->nextRelfilenode;
 	if (!shutdown)
 		checkPoint.nextRelfilenode += ShmemVariableCache->relfilenodeCount;
 	LWLockRelease(RelfilenodeGenLock);
-	LWLockRelease(OidGenLock);
 
 	MultiXactGetCheckptMulti(shutdown,
 							 &checkPoint.nextMulti,

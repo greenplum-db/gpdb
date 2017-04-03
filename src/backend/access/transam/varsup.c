@@ -458,10 +458,10 @@ GetNewSegRelfilenodeUnderLock(void)
 /*
  * GetNewSegRelfilenode -- allocate a new relfilenode value
  *
- * Similar to GetNewObjectId but for relfilenodes. This function has
- * its own counter and is used by QE nodes to allocate relfilenode
- * values instead of trying to use the preassigned OIDs provided by
- * QD.
+ * Similar to GetNewObjectId but for relfilenodes. This function has its own
+ * separate counter and is used to allocate relfilenode values instead of
+ * trying to use the newly generated OIDs (QD) or preassigned OIDs (QE) as the
+ * relfilenode.
  */
 Oid
 GetNewSegRelfilenode(void)
