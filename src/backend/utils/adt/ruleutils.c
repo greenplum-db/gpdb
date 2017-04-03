@@ -7903,15 +7903,16 @@ pg_get_partition_def_ext(PG_FUNCTION_ARGS)
 	bool		pretty = PG_GETARG_BOOL(1);
 	int			prettyFlags;
 	char	   *str;
+	bool		bLeafTablename = FALSE;
 
 	prettyFlags = pretty ? PRETTYFLAG_PAREN | PRETTYFLAG_INDENT : 0;
 
-	/* MPP-6297: don't dump by tablename here 
-	 * NOTE: may need to backport fix to 3.3.x, and changing
-	 * bLeafTablename = TRUE here should only affect
-	 * pg_dump/cdb_dump_agent (and partition.sql test) 
+	/*
+	 * MPP-6297: don't dump by tablename here. NOTE: changing bLeafTablename to
+	 * TRUE here should only affect pg_dump/cdb_dump_agent (and partition.sql
+	 * test)
 	 */ 
-	str = pg_get_partition_def_worker(relid, prettyFlags, FALSE); 
+	str = pg_get_partition_def_worker(relid, prettyFlags, bLeafTablename);
 	
 	if (!str)
 		PG_RETURN_NULL();
