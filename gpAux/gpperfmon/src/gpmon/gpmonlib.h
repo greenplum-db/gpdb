@@ -292,10 +292,10 @@ unsigned int gpdb_getnode_number_metrics(PerfmonNodeType type);
 const char* gpdb_getnodename(PerfmonNodeType type);
 const char* gpdb_getnodestatus(PerfmonNodeStatus status);
 apr_status_t gpdb_getnode_metricinfo(PerfmonNodeType type, apr_byte_t metricnum, const char** name, const char** unit);
-apr_status_t gpdb_debug_string_lookup_table();
+apr_status_t gpdb_debug_string_lookup_table(void);
 apr_status_t apr_pool_create_alloc(apr_pool_t ** newpool, apr_pool_t *parent);
 void gpdb_get_single_string_from_query(const char* QUERY, char** resultstring, apr_pool_t* pool);
 int snmp_report(host_t* tab, int tabsz);
 apr_status_t gpmmon_init_snmp(snmp_module_params_t* params);
-bool is_healthmon_running_separately();
+bool is_healthmon_running_separately(void);
 #endif /* GPMONLIB_H */

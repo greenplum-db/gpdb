@@ -32,6 +32,14 @@
 #include "libpq-fe.h"
 #include <time.h>
 
+void update_mmonlog_filename(void);
+int gpmmon_quantum(void);
+void incremement_tail_bytes(apr_uint64_t);
+int is_gpdb_appliance(void);
+time_t compute_next_dump_to_file(void);
+void populate_smdw_aliases(host_t*);
+char* get_ip_for_host(char*, bool*);
+
 #define YES_TEXT "yes"
 #define NO_TEXT "no"
 
@@ -1007,6 +1015,7 @@ static void* message_main(apr_thread_t* thread_, void* arg_)
 	}
 	return APR_SUCCESS;
 }
+
 int is_gpdb_appliance()
 {
 	FILE* fd = fopen(PATH_TO_APPLIANCE_VERSION_FILE, "r");
