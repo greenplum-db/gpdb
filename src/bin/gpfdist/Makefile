@@ -31,7 +31,7 @@ endif
 
 LDLIBS += $(LIBS) $(GPFDIST_LIBS) $(apr_link_ld_libs)
 
-all: gpfdist$(EXE_EXT)
+all: gpfdist$(X)
 
 fstream.c: $(top_builddir)/src/backend/utils/misc/fstream/fstream.c
 	ln -s $< $@
@@ -39,18 +39,18 @@ fstream.c: $(top_builddir)/src/backend/utils/misc/fstream/fstream.c
 gfile.c: $(top_builddir)/src/backend/utils/misc/fstream/gfile.c
 	ln -s $< $@
 
-gpfdist$(EXE_EXT): $(OBJS)
+gpfdist$(X): $(OBJS)
 	$(CC) $(LDFLAGS) $(CFLAGS) $(OBJS) $(LDLIBS) -o $@
 
 install: all
-	$(INSTALL) gpfdist$(EXE_EXT) $(DESTDIR)$(prefix)/bin
+	$(INSTALL) gpfdist$(X) $(DESTDIR)$(prefix)/bin
 
 installcheck:
 	$(MAKE) -C regress installcheck
 
 .PHONY: clean distclean
 clean:
-	rm -f $(OBJS) gpfdist$(EXE_EXT)
+	rm -f $(OBJS) gpfdist$(X)
 
 distclean: clean
 	rm -f fstream.c gfile.c GNUmakefile config.log config.status
