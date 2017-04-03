@@ -896,6 +896,59 @@ GetNewOidWithIndex(Relation relation, Relation indexrel)
 }
 
 /*
+ * GetSequenceRelationOid
+ *		Get a sequence relation Oid and verify it is valid against
+ *		the pg_class relation by doing an index lookup.
+ */
+Oid
+GetNewSequenceRelationOid(Relation relation)
+{
+	Oid			newOid;
+	Oid			oidIndex;
+	Relation	indexrel;
+	SnapshotData SnapshotDirty;
+	IndexScanDesc scan;
+	ScanKeyData key;
+	bool		collides;
+
+	/* We should only be using pg_class */
+	Assert(RelationGetRelid(relation) == RelationRelationId);
+
+	/* The relcache will cache the identity of the OID index for us */
+	oidIndex = RelationGetOidIndex(relation);
+
+	/* Otherwise, use the index to find a nonconflicting OID */
+	indexrel = index_open(oidIndex, AccessShareLock);
+
+	InitDirtySnapshot(SnapshotDirty);
+
+	/* Generate new sequence relation OIDs until we find one not in the table */
+	do
+	{
+		CHECK_FOR_INTERRUPTS();
+
+		newOid = GetNewSequenceRelationObjectId();
+
+		ScanKeyInit(&key,
+					(AttrNumber) 1,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(newOid));
+
+		/* see notes above about using SnapshotDirty */
+		scan = index_beginscan(relation, indexrel,
+							   &SnapshotDirty, 1, &key);
+
+		collides = HeapTupleIsValid(index_getnext(scan, ForwardScanDirection));
+
+		index_endscan(scan);
+	} while (collides);
+
+	index_close(indexrel, AccessShareLock);
+
+	return newOid;
+}
+
+/*
  * GetNewRelFileNode
  *		Generate a new relfilenode number that is unique within the given
  *		tablespace.

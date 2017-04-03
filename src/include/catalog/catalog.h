@@ -43,6 +43,7 @@ extern bool IsSharedRelation(Oid relationId);
 
 extern Oid	GetNewOid(Relation relation);
 extern Oid	GetNewOidWithIndex(Relation relation, Relation indexrel);
+extern Oid	GetNewSequenceRelationOid(Relation relation);
 extern Oid GetNewRelFileNode(Oid reltablespace, bool relisshared);
 
 #endif   /* CATALOG_H */

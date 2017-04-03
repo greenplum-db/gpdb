@@ -1602,7 +1602,7 @@ heap_create_with_catalog(const char *relname,
 	if (!OidIsValid(relid) && Gp_role != GP_ROLE_EXECUTE)
 	{
 		if (relkind == RELKIND_SEQUENCE)
-			relid = GetSequenceRelationOid();
+			relid = GetNewSequenceRelationOid(pg_class_desc);
 		else
 			relid = GetNewOid(pg_class_desc);
 	}

@@ -145,5 +145,5 @@ extern void SetTransactionIdLimit(TransactionId oldest_datfrozenxid,
 extern Oid	GetNewObjectId(void);
 extern void AdvanceObjectId(Oid newOid);
 extern Oid	GetNewSegRelfilenode(void);
-extern Oid	GetSequenceRelationOid(void);
+extern Oid	GetNewSequenceRelationObjectId(void);
 #endif   /* TRAMSAM_H */

@@ -488,7 +488,7 @@ GetNewSegRelfilenode(void)
  * as OID.
  */
 Oid
-GetSequenceRelationOid(void)
+GetNewSequenceRelationObjectId(void)
 {
 	Oid currentOidCount;
 	Oid currentRelfilenodeCount;
