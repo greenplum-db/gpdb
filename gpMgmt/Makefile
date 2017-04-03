@@ -9,7 +9,6 @@ include $(top_builddir)/gpMgmt/Makefile.behave
 SET_VERSION_SCRIPTS = \
 	bin/gpactivatestandby \
 	bin/gpaddmirrors \
-	bin/gpbitmapreindex \
 	bin/gpcheckperf \
 	bin/gpcrondump \
 	bin/gpdbrestore \

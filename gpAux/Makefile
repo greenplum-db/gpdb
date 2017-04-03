@@ -810,7 +810,6 @@ pvk : gccVersionCheck version GPROOTDEP
 SET_VERSION_SCRIPTS = \
 	bin/gpactivatestandby \
 	bin/gpaddmirrors \
-	bin/gpbitmapreindex \
 	bin/gpcheckperf \
 	bin/gpcrondump \
 	bin/gpdbrestore \

@@ -71,7 +71,6 @@
         <topicref href="utility_guide/admin_utilities/analyzedb.xml"/>
         <topicref href="utility_guide/admin_utilities/gpactivatestandby.xml"/>
         <topicref href="utility_guide/admin_utilities/gpaddmirrors.xml"/>
-        <topicref href="utility_guide/admin_utilities/gpbitmapreindex.xml"/>
         <topicref href="utility_guide/admin_utilities/gpcheck.xml"/>
         <topicref href="utility_guide/admin_utilities/gpcheckcat.xml"/>
         <topicref href="utility_guide/admin_utilities/gpcheckperf.xml"/>
