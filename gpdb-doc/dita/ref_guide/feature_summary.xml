@@ -281,7 +281,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             </row>
             <row>
               <entry colname="col1"><codeph>ALTER OPERATOR CLASS</codeph></entry>
-              <entry colname="col2"><b>NO</b></entry>
+              <entry colname="col2">YES</entry>
               <entry colname="col3"/>
             </row>
             <row>
@@ -470,7 +470,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             </row>
             <row>
               <entry colname="col1"><codeph>CREATE OPERATOR CLASS</codeph></entry>
-              <entry colname="col2"><b>NO</b></entry>
+              <entry colname="col2">YES</entry>
               <entry colname="col3"/>
             </row>
             <row>
@@ -576,8 +576,8 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col3"><b>Unsupported Clauses /
                   Options:</b><p><codeph>SCROLL</codeph></p><p><codeph>FOR UPDATE [ OF column [,
                     ...] ]</codeph></p><p><b>Limitations:</b></p><p>Cursors cannot be
-                  backward-scrolled. Forward scrolling is supported.</p><p>PL/pgSQL does
-                  not have support for updatable cursors. </p></entry>
+                  backward-scrolled. Forward scrolling is supported.</p><p>PL/pgSQL does not have
+                  support for updatable cursors. </p></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>DELETE</codeph></entry>
@@ -656,7 +656,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             </row>
             <row>
               <entry colname="col1"><codeph>DROP OPERATOR CLASS</codeph></entry>
-              <entry colname="col2"><b otherprops="red">NO</b></entry>
+              <entry colname="col2">YES</entry>
               <entry colname="col3"/>
             </row>
             <row>

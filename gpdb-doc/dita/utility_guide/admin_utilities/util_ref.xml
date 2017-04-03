@@ -4,10 +4,11 @@
 <topic id="topic1">
   <title id="km135496">Management Utility Reference</title>
   <body>
-    <p>This reference describes the command-line management utilities provided with Greenplum Database. Greenplum Database uses the standard PostgreSQL
-      client and server programs and provides additional management utilities for administering a
-      distributed Greenplum Database DBMS. Greenplum Database management
-      utilities reside in <codeph>$GPHOME/bin</codeph>.<note>When referencing IPv6 addresses in
+    <p>This reference describes the command-line management utilities provided with Greenplum
+      Database. Greenplum Database uses the standard PostgreSQL client and server programs and
+      provides additional management utilities for administering a distributed Greenplum Database
+      DBMS. Greenplum Database management utilities reside in
+        <codeph>$GPHOME/bin</codeph>.<note>When referencing IPv6 addresses in
           <codeph>gpfdist</codeph> URLs or when using numeric IP addresses instead of hostnames in
         any management utility, always enclose the IP address in brackets. For command prompt use,
         the best practice is to escape any brackets or put them inside quotation marks. For example,
@@ -140,10 +141,10 @@
   <topic id="topic_zqp_5xm_cp">
     <title>Backend Server Programs</title>
     <body>
-      <p>The following standard PostgreSQL server management programs are provided with Greenplum Database and reside in <codeph>$GPHOME/bin</codeph>. They are modified to
-        handle the parallelism and distribution of a Greenplum Database system. You
-        access these programs only through the Greenplum Database management tools and
-        utilities.</p>
+      <p>The following standard PostgreSQL server management programs are provided with Greenplum
+        Database and reside in <codeph>$GPHOME/bin</codeph>. They are modified to handle the
+        parallelism and distribution of a Greenplum Database system. You access these programs only
+        through the Greenplum Database management tools and utilities.</p>
       <table id="km164231">
         <title>Greenplum Database Backend Server Programs</title>
         <tgroup cols="3">
@@ -163,8 +164,8 @@
                 <codeph id="km164249">initdb</codeph>
               </entry>
               <entry colname="col2">This program is called by <codeph>gpinitsystem</codeph> when
-                initializing a Greenplum Database array. It is used internally to
-                create the individual segment instances and the master instance.</entry>
+                initializing a Greenplum Database array. It is used internally to create the
+                individual segment instances and the master instance.</entry>
               <entry colname="col3">
                 <codeph>
                   <xref href="gpinitsystem.xml#topic1" type="topic" format="dita"/>
@@ -182,12 +183,12 @@
               <entry colname="col1">
                 <codeph id="km164272">gpsyncmaster</codeph>
               </entry>
-              <entry colname="col2">This is the Greenplum program that
-                starts the <codeph>gpsyncagent</codeph> process on the standby master host.
-                Administrators do not call this program directly, but do so through the management
-                scripts that initialize and/or activate a standby master for a Greenplum Database system. This process is responsible for keeping the
-                standby master up to date with the primary master via a transaction log replication
-                process.</entry>
+              <entry colname="col2">This is the Greenplum program that starts the
+                  <codeph>gpsyncagent</codeph> process on the standby master host. Administrators do
+                not call this program directly, but do so through the management scripts that
+                initialize and/or activate a standby master for a Greenplum Database system. This
+                process is responsible for keeping the standby master up to date with the primary
+                master via a transaction log replication process.</entry>
               <entry colname="col3"><codeph><xref href="gpinitstandby.xml#topic1" type="topic"
                     format="dita"/></codeph>, <codeph><xref href="gpactivatestandby.xml#topic1"
                     type="topic" format="dita"/></codeph></entry>
@@ -208,8 +209,9 @@
                 <codeph id="km164304">pg_ctl</codeph>
               </entry>
               <entry colname="col2">This program is called by <codeph>gpstart</codeph> and
-                  <codeph>gpstop</codeph> when starting or stopping a Greenplum Database array. It is used internally to stop and start the individual segment instances
-                and the master instance in parallel and with the correct options.</entry>
+                  <codeph>gpstop</codeph> when starting or stopping a Greenplum Database array. It
+                is used internally to stop and start the individual segment instances and the master
+                instance in parallel and with the correct options.</entry>
               <entry colname="col3"><codeph><xref href="gpstart.xml#topic1" type="topic"
                     format="dita"/></codeph>, <codeph><xref href="gpstop.xml#topic1" type="topic"
                     format="dita"/></codeph></entry>
@@ -219,9 +221,10 @@
                 <codeph id="km164320">pg_resetxlog</codeph>
               </entry>
               <entry colname="col2">DO NOT USE<p><b>Warning:</b> This program might cause data loss
-                  or cause data to become unavailable. If this program is used, the Pivotal
-                  Greenplum Database cluster is not supported. The cluster must be reinitialized and
-                  restored by the customer.</p></entry>
+                  or cause data to become unavailable. If this program is used, the <ph
+                    otherprops="pivotal">Pivotal Greenplum Database cluster is not supported. The
+                  </ph>cluster must be reinitialized and restored<ph otherprops="pivotal"> by the
+                    customer</ph>.</p></entry>
               <entry colname="col3">N/A</entry>
             </row>
             <row>
@@ -239,9 +242,9 @@
                 <codeph id="km164337">postmaster</codeph>
               </entry>
               <entry colname="col2"><codeph>postmaster</codeph> starts the <codeph>postgres</codeph>
-                database server listener process that accepts client connections. In Greenplum Database, a <codeph>postgres</codeph> database listener process
-                runs on the Greenplum master Instance and on each
-                Segment Instance.</entry>
+                database server listener process that accepts client connections. In Greenplum
+                Database, a <codeph>postgres</codeph> database listener process runs on the
+                Greenplum master Instance and on each Segment Instance.</entry>
               <entry colname="col3">In Greenplum Database, you use <codeph><xref
                     href="gpstart.xml#topic1" type="topic" format="dita"/></codeph> and
                     <codeph><xref href="gpstop.xml#topic1" type="topic" format="dita"/></codeph> to

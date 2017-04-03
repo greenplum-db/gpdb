@@ -4,16 +4,17 @@
 <topic id="topic1" xml:lang="en">
   <title id="eu135496">System Catalog Reference</title>
   <body>
-    <p>This reference describes the Greenplum Database system catalog tables and
-      views. System tables prefixed with <codeph>gp_</codeph> relate to the parallel features of
-        Greenplum Database. Tables prefixed with <codeph>pg_</codeph> are either
-      standard PostgreSQL system catalog tables supported in Greenplum Database, or
-      are related to features Greenplum that provides to enhance
-      PostgreSQL for data warehousing workloads. Note that the global system catalog for Greenplum Database resides on the master instance.</p>
-    <note type="warning"> Changes to Pivotal Greenplum Database system catalog tables or views are
-      not supported. If a catalog table or view is changed by the customer, the Pivotal Greenplum
-      Database cluster is not supported. The cluster must be reinitialized and restored by the
-      customer.</note>
+    <p>This reference describes the Greenplum Database system catalog tables and views. System
+      tables prefixed with <codeph>gp_</codeph> relate to the parallel features of Greenplum
+      Database. Tables prefixed with <codeph>pg_</codeph> are either standard PostgreSQL system
+      catalog tables supported in Greenplum Database, or are related to features Greenplum that
+      provides to enhance PostgreSQL for data warehousing workloads. Note that the global system
+      catalog for Greenplum Database resides on the master instance.</p>
+    <note type="warning"> Changes to <ph otherprops="pivotal">Pivotal </ph>Greenplum Database system
+      catalog tables or views are not supported. If a catalog table or view is changed<ph
+        otherprops="pivotal"> by the customer</ph>, the <ph otherprops="pivotal">Pivotal Greenplum
+        Database cluster is not supported. The </ph>cluster must be reinitialized and restored<ph
+        otherprops="pivotal"> by the customer</ph>.</note>
     <!--links are print-only-->
     <ul id="ul_lyl_np1_1q" otherprops="op-print">
       <li>

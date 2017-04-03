@@ -3,37 +3,36 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
   <title id="kg138244">Starting and Stopping Greenplum Database</title>
-  <shortdesc>In a Greenplum Database DBMS, the database server instances (the master
-    and all segments) are started or stopped across all of the hosts in the system in such a way
-    that they can work together as a unified DBMS. </shortdesc>
+  <shortdesc>In a Greenplum Database DBMS, the database server instances (the master and all
+    segments) are started or stopped across all of the hosts in the system in such a way that they
+    can work together as a unified DBMS. </shortdesc>
   <body>
-    <p>Because a Greenplum Database system is distributed across many machines, the
-      process for starting and stopping a Greenplum Database system is different than
-      the process for starting and stopping a regular PostgreSQL DBMS.</p>
+    <p>Because a Greenplum Database system is distributed across many machines, the process for
+      starting and stopping a Greenplum Database system is different than the process for starting
+      and stopping a regular PostgreSQL DBMS.</p>
     <p>Use the <codeph>gpstart</codeph> and <codeph>gpstop</codeph> utilities to start and stop
-        Greenplum Database, respectively. These utilities are located in the
-        <filepath>$GPHOME/bin</filepath> directory on your Greenplum Database master
-      host.</p>
+      Greenplum Database, respectively. These utilities are located in the
+        <filepath>$GPHOME/bin</filepath> directory on your Greenplum Database master host.</p>
     <note type="important">Do not issue a <codeph>kill</codeph> command to end any Postgres process.
       Instead, use the database command <codeph>pg_cancel_backend()</codeph>. <p>Issuing a
-          <codeph>kill -9</codeph> or <codeph>kill -11</codeph> might introduce database corruption.
-        If Pivotal Greenplum Database corruption occurs, Pivotal will make best efforts to restore a
-        cluster. A root cause analysis cannot be performed.</p></note>
-    <p>For information about <codeph>gpstart</codeph> and <codeph>gpstop</codeph>, see the <cite
-       >Greenplum Database Utility Guide</cite>.</p>
+          <codeph>kill -9</codeph> or <codeph>kill -11</codeph> might introduce database
+          corruption.<ph otherprops="pivotal"> If Pivotal Greenplum Database corruption occurs,
+          Pivotal will make best efforts to restore a cluster. A root cause analysis cannot be
+          performed.</ph></p></note>
+    <p>For information about <codeph>gpstart</codeph> and <codeph>gpstop</codeph>, see the
+        <cite>Greenplum Database Utility Guide</cite>.</p>
   </body>
   <task id="task_hkd_gzv_fp">
     <title>Starting Greenplum Database</title>
     <shortdesc>Start an initialized Greenplum Database system by running the
         <codeph>gpstart</codeph> utility on the master instance.</shortdesc>
-
     <taskbody>
-      <context>Use the <codeph>gpstart</codeph> utility to start a Greenplum Database
-        system that has already been initialized by the <codeph>gpinitsystem</codeph> utility, but
-        has been stopped by the <codeph>gpstop</codeph> utility. The <codeph>gpstart</codeph>
-        utility starts Greenplum Database by starting all the Postgres database
-        instances on the Greenplum Database cluster. <codeph>gpstart</codeph>
-        orchestrates this process and performs the process in parallel.</context>
+      <context>Use the <codeph>gpstart</codeph> utility to start a Greenplum Database system that
+        has already been initialized by the <codeph>gpinitsystem</codeph> utility, but has been
+        stopped by the <codeph>gpstop</codeph> utility. The <codeph>gpstart</codeph> utility starts
+        Greenplum Database by starting all the Postgres database instances on the Greenplum Database
+        cluster. <codeph>gpstart</codeph> orchestrates this process and performs the process in
+        parallel.</context>
       <steps-unordered id="steps-unordered_ot5_ntk_gp">
         <step>
           <cmd>Run <codeph>gpstart</codeph> on the master host to start Greenplum Database:</cmd>
@@ -52,8 +51,7 @@
         then restart Greenplum Database after the shutdown completes. </context>
       <steps-unordered id="steps-unordered_c51_ntk_gp">
         <step>
-          <cmd>To restart Greenplum Database, enter the following command on the
-            master host:</cmd>
+          <cmd>To restart Greenplum Database, enter the following command on the master host:</cmd>
           <stepxmp>
             <codeblock>$ gpstop -r</codeblock>
           </stepxmp>
@@ -63,8 +61,8 @@
   </task>
   <task id="task_upload_config">
     <title>Reloading Configuration File Changes Only</title>
-    <shortdesc>Reload changes to Greenplum Database configuration files without
-      interrupting the system.</shortdesc>
+    <shortdesc>Reload changes to Greenplum Database configuration files without interrupting the
+      system.</shortdesc>
     <taskbody>
       <context>The <codeph>gpstop</codeph> utility can reload changes to the
           <filepath>pg_hba.conf</filepath> configuration file and to <i>runtime</i> parameters in
@@ -126,13 +124,13 @@
   <task id="task_gpdb_stop">
     <title id="kg156168">Stopping Greenplum Database</title>
     <taskbody>
-      <context>The <codeph>gpstop</codeph> utility stops or restarts your Greenplum Database system and always runs on the master host. When activated,
-          <codeph>gpstop</codeph> stops all <codeph>postgres</codeph> processes in the system,
-        including the master and all segment instances. The <codeph>gpstop</codeph> utility uses a
-        default of up to 64 parallel worker threads to bring down the Postgres instances that make
-        up the Greenplum Database cluster. The system waits for any active
-        transactions to finish before shutting down. To stop Greenplum Database
-        immediately, use fast mode.</context>
+      <context>The <codeph>gpstop</codeph> utility stops or restarts your Greenplum Database system
+        and always runs on the master host. When activated, <codeph>gpstop</codeph> stops all
+          <codeph>postgres</codeph> processes in the system, including the master and all segment
+        instances. The <codeph>gpstop</codeph> utility uses a default of up to 64 parallel worker
+        threads to bring down the Postgres instances that make up the Greenplum Database cluster.
+        The system waits for any active transactions to finish before shutting down. To stop
+        Greenplum Database immediately, use fast mode.</context>
       <steps-unordered>
         <step>
           <cmd>To stop Greenplum Database:</cmd>
