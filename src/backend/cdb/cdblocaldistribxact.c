@@ -38,14 +38,8 @@ LocalDistribXactStateToString(LocalDistribXactState	state)
 	case LOCALDISTRIBXACT_STATE_ACTIVE:
 		return "Active";
 
-	case LOCALDISTRIBXACT_STATE_COMMITDELIVERY:
-		return "Commit Delivery";
-
 	case LOCALDISTRIBXACT_STATE_COMMITTED:
 		return "Committed";
-
-	case LOCALDISTRIBXACT_STATE_ABORTDELIVERY:
-		return "Abort Delivery";
 
 	case LOCALDISTRIBXACT_STATE_ABORTED:
 		return "Aborted";
@@ -53,80 +47,12 @@ LocalDistribXactStateToString(LocalDistribXactState	state)
 	case LOCALDISTRIBXACT_STATE_PREPARED:
 		return "Prepared";
 
-	case LOCALDISTRIBXACT_STATE_COMMITPREPARED:
-		return "Commit Prepared";
-
-	case LOCALDISTRIBXACT_STATE_ABORTPREPARED:
-		return "Abort Prepared";
-
 	default:
 		return "Unknown";
 	}
 }
 
 // *****************************************************************************
-
-/*
- * NOTE: The ProcArrayLock must already be held.
- */
-void
-LocalDistribXact_StartOnMaster(
-	DistributedTransactionTimeStamp	newDistribTimeStamp,
-	DistributedTransactionId 		newDistribXid,
-	TransactionId					*newLocalXid,
-	LocalDistribXactData			*masterLocalDistribXactRef)
-{
-	LocalDistribXactData *ele = masterLocalDistribXactRef;
-	TransactionId	localXid;
-
-	Assert(newDistribTimeStamp != 0);
-	Assert(newDistribXid != InvalidDistributedTransactionId);
-	Assert(newLocalXid != NULL);
-	Assert(masterLocalDistribXactRef != NULL);
-
-	localXid = GetNewTransactionId(false, false);
-								// NOT subtrans, DO NOT Set PROC struct xid;
-
-	ele->distribTimeStamp = newDistribTimeStamp;
-	ele->distribXid = newDistribXid;
-	ele->state = LOCALDISTRIBXACT_STATE_ACTIVE;
-
-	MyProc->xid = localXid;
-	*newLocalXid = localXid;
-}
-
-void
-LocalDistribXact_StartOnSegment(
-	DistributedTransactionTimeStamp	newDistribTimeStamp,
-	DistributedTransactionId 		newDistribXid,
-	TransactionId					*newLocalXid)
-{
-	LocalDistribXactData *ele = &MyProc->localDistribXactData;
-	TransactionId	localXid;
-
-	MIRRORED_LOCK_DECLARE;
-
-	Assert(newDistribTimeStamp != 0);
-	Assert(newDistribXid != InvalidDistributedTransactionId);
-	Assert(newLocalXid != NULL);
-
-	MIRRORED_LOCK;
-	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
-
-	localXid = GetNewTransactionId(false, false);
-								// NOT subtrans, DO NOT Set PROC struct xid;
-
-	ele->distribTimeStamp = newDistribTimeStamp;
-	ele->distribXid = newDistribXid;
-	ele->state = LOCALDISTRIBXACT_STATE_ACTIVE;
-
-	MyProc->xid = localXid;
-	*newLocalXid = localXid;
-
-	LWLockRelease(ProcArrayLock);
-	MIRRORED_UNLOCK;
-}
-
 void
 LocalDistribXact_ChangeState(PGPROC *proc,
 							 LocalDistribXactState newState)
@@ -144,8 +70,6 @@ LocalDistribXact_ChangeState(PGPROC *proc,
 	 */
 	switch (newState)
 	{
-	case LOCALDISTRIBXACT_STATE_COMMITDELIVERY:
-	case LOCALDISTRIBXACT_STATE_ABORTDELIVERY:
 	case LOCALDISTRIBXACT_STATE_PREPARED:
 		if (oldState != LOCALDISTRIBXACT_STATE_ACTIVE)
 			elog(PANIC,
@@ -155,19 +79,8 @@ LocalDistribXact_ChangeState(PGPROC *proc,
 			     LocalDistribXactStateToString(oldState));
 		break;
 
-	case LOCALDISTRIBXACT_STATE_COMMITPREPARED:
-	case LOCALDISTRIBXACT_STATE_ABORTPREPARED:
-		if (oldState != LOCALDISTRIBXACT_STATE_PREPARED)
-			elog(PANIC,
-			     "Expected distributed transaction xid = %u to local element to be in state \"Prepared\" and "
-			     "found state \"%s\"",
-			     distribXid,
-			     LocalDistribXactStateToString(oldState));
-		break;
-
 	case LOCALDISTRIBXACT_STATE_COMMITTED:
-		if (oldState != LOCALDISTRIBXACT_STATE_ACTIVE &&
-			oldState != LOCALDISTRIBXACT_STATE_COMMITDELIVERY)
+		if (oldState != LOCALDISTRIBXACT_STATE_ACTIVE)
 			elog(PANIC,
 			     "Expected distributed transaction xid = %u to local element to be in state \"Active\" or \"Commit Delivery\" and "
 			     "found state \"%s\"",
@@ -176,8 +89,7 @@ LocalDistribXact_ChangeState(PGPROC *proc,
 		break;
 
 	case LOCALDISTRIBXACT_STATE_ABORTED:
-		if (oldState != LOCALDISTRIBXACT_STATE_ACTIVE &&
-			oldState != LOCALDISTRIBXACT_STATE_ABORTDELIVERY)
+		if (oldState != LOCALDISTRIBXACT_STATE_ACTIVE)
 			elog(PANIC,
 			     "Expected distributed transaction xid = %u to local element to be in state \"Active\" or \"Abort Delivery\" and "
 			     "found state \"%s\"",

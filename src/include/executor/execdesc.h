@@ -165,12 +165,6 @@ typedef struct QueryDispatchDesc
 	NodeTag		type;
 
 	/*
-	 * List of TupleDescNodes, one for each transient record type currently
-	 * assigned.
-	 */
-	List	   *transientTypeRecords;
-
-	/*
 	 * For a SELECT INTO statement, this stores the tablespace to use for the
 	 * new table and related auxiliary tables.
 	 */

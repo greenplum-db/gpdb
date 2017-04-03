@@ -82,3 +82,9 @@ UPDATE altable SET c = -10;
 SELECT * FROM altable ORDER BY 1;
 UPDATE altable SET c = 1;
 SELECT * FROM altable ORDER BY 1;
+
+
+-- Verify that changing the datatype of a funnily-named column works.
+-- (There used to be a quoting bug in the internal query this issues.)
+create table "foo'bar" (id int4, t text);
+alter table "foo'bar" alter column t type integer using length(t);

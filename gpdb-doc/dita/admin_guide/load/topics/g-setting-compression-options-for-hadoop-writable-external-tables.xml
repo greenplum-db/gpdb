@@ -7,7 +7,7 @@
       <p>Compression options for Hadoop Writable External Tables use the form of a URI query and
          begin with a question mark. Specify multiple compression options with an ampersand
             (<codeph>&amp;</codeph>).</p>
-      <table otherprops="op-hidden" id="table_rl5_2yv_vs">
+      <table id="table_rl5_2yv_vs">
          <title>Compression Options</title>
          <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>

@@ -147,13 +147,18 @@ btxidcmp(PG_FUNCTION_ARGS)
 
 
 /*
- *		xid_age			- compute age of an XID (relative to current xact)
+ * xid_age - compute age of an XID (relative to latest transaction id
+ * allocated in system)
+ *
+ * ReadNewTransactionId() is used here instead of GetTopTransactionId(), as
+ * this function may be called on QE Reader and with laxy XID try to allocate
+ * XID as QE Reader which is not allowed.
  */
 Datum
 xid_age(PG_FUNCTION_ARGS)
 {
 	TransactionId xid = PG_GETARG_TRANSACTIONID(0);
-	TransactionId now = GetTopTransactionId();
+	TransactionId now = ReadNewTransactionId();
 
 	/* Permanent XIDs are always infinitely old */
 	if (!TransactionIdIsNormal(xid))

@@ -38,6 +38,7 @@ set optimizer_log=on;
 set optimizer=on;
 ERROR:  ORCA is not supported by this build
 set optimizer_enable_indexjoin=on;
+set optimizer_trace_fallback = on;
 ----------------------------------------------------------------------
 -- expected fall back to the planner
 select sum(distinct a), count(distinct b) from orca.r;

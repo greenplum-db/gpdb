@@ -1684,7 +1684,6 @@ def createTempDirectoryName(masterDataDirectory, tempDirPrefix):
 
 #-------------------------------------------------------------------------
 # gp_dbid methods moved to gp_dbid.py, but this class was left here
-# to avoid changing gpmigrator and gpmigrator_mirror (which is the only caller).
 #
 
 class GpCreateDBIdFile(Command):

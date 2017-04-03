@@ -156,6 +156,8 @@ map_rel_by_id(migratorContext *ctx, Oid oldid, Oid newid,
 		snprintf(map->new_file, sizeof(map->new_file), "%s%s/%u", new_tablespace,
 				 ctx->new.tablespace_suffix, new_db->db_oid);
 	}
+
+	report_progress(ctx, NONE, FILE_MAP, "Map \"%s\" to \"%s\"", map->old_file, map->new_file);
 }
 
 

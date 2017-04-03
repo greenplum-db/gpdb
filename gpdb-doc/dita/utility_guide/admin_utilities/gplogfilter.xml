@@ -35,9 +35,9 @@ proceeded by the <codeph>--case=ignore</codeph> option.</pd></plentry><plentry><
                 Files" in the <i>Greenplum Database Administrator Guide</i> for details about the
                 log file format and for a list of the available columns and their associated
                 number.</ph></pd></plentry><plentry><pt>-f '<varname>string</varname>' | --find='<varname>string</varname>'</pt><pd>Finds the log entries containing the specified string.</pd></plentry><plentry><pt>-F '<varname>string</varname>' | --nofind='<varname>string</varname>'</pt><pd>Rejects the log entries containing the specified string.</pd></plentry><plentry><pt>-m <varname>regex</varname> | --match=<varname>regex</varname></pt><pd>Finds log entries that match the specified Python regular expression.
-See <xref href="http://docs.python.org/library/re.html" scope="external" format="html">http://docs.python.org/library/re.html</xref>
+See <xref href="https://docs.python.org/library/re.html" scope="external" format="html">https://docs.python.org/library/re.html</xref>
 for Python regular expression syntax.</pd></plentry><plentry><pt>-M <varname>regex</varname> | --nomatch=<varname>regex</varname></pt><pd>Rejects log entries that match the specified Python regular expression.
-See <xref href="http://docs.python.org/library/re.html" scope="external" format="html">http://docs.python.org/library/re.html</xref>
+See <xref href="https://docs.python.org/library/re.html" scope="external" format="html">https://docs.python.org/library/re.html</xref>
 for Python regular expression syntax.</pd></plentry><plentry><pt>-t | --trouble</pt><pd>Finds only the log entries that have <codeph>ERROR:</codeph>, <codeph>FATAL:</codeph>,
 or <codeph>PANIC:</codeph> in the first line.</pd></plentry></parml></sectiondiv><sectiondiv id="section7"><b>Output Options</b><parml><plentry><pt>-n <varname>integer</varname> | --tail=<varname>integer</varname></pt><pd>Limits the output to the last <varname>integer</varname> of qualifying log entries
 found.</pd></plentry><plentry><pt>-s <varname>offset</varname> [limit] | --slice=<varname>offset</varname> [limit]</pt><pd>From the list of qualifying log entries, returns the <varname>limit</varname>

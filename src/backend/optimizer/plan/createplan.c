@@ -28,12 +28,11 @@
 #include "optimizer/pathnode.h"
 #include "optimizer/plancat.h"
 #include "optimizer/planmain.h"
-#include "optimizer/planshare.h"
+#include "optimizer/planpartition.h"
 #include "optimizer/predtest.h"
 #include "optimizer/restrictinfo.h"
 #include "optimizer/tlist.h"
 #include "optimizer/var.h"
-#include "optimizer/subselect.h"
 #include "parser/parse_clause.h"
 #include "parser/parse_expr.h"
 #include "parser/parsetree.h"
@@ -94,7 +93,7 @@ static ValuesScan *create_valuesscan_plan(PlannerInfo *root, Path *best_path,
 static BitmapAppendOnlyScan *create_bitmap_appendonly_scan_plan(PlannerInfo *root,
 								   BitmapAppendOnlyPath *best_path,
 								   List *tlist, List *scan_clauses);
-static Plan *create_nestloop_plan(PlannerInfo *root, NestPath *best_path,
+static NestLoop *create_nestloop_plan(PlannerInfo *root, NestPath *best_path,
 					 Plan *outer_plan, Plan *inner_plan);
 static MergeJoin *create_mergejoin_plan(PlannerInfo *root, MergePath *best_path,
 					  Plan *outer_plan, Plan *inner_plan);
@@ -600,12 +599,22 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 	Plan	   *outer_plan;
 	Plan	   *inner_plan;
 	Plan	   *plan;
+	bool		partition_selector_created;
 
 	Assert(best_path->outerjoinpath);
 	Assert(best_path->innerjoinpath);
 
-	outer_plan = create_subplan(root, best_path->outerjoinpath);
 	inner_plan = create_subplan(root, best_path->innerjoinpath);
+
+	/*
+	 * Try to inject Partition Selectors.
+	 */
+	partition_selector_created =
+		inject_partition_selectors_for_join(root,
+												best_path,
+												&inner_plan);
+
+	outer_plan = create_subplan(root, best_path->outerjoinpath);
 
 	switch (best_path->path.pathtype)
 	{
@@ -634,6 +643,15 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 			break;
 	}
 
+	/*
+	 * If we injected a partition selector to the inner side, we must evaluate
+	 * the inner side before the outer side, so that the partition selector
+	 * can influence the execution of the outer side.
+	 */
+	Assert(plan->type == best_path->path.pathtype);
+	if (partition_selector_created)
+		((Join *) plan)->prefetch_inner = true;
+
 	plan->flow = cdbpathtoplan_create_flow(root,
 			best_path->path.locus,
 			best_path->path.parent ? best_path->path.parent->relids
@@ -656,14 +674,7 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 	 * quals.
 	 */
 	if (root->hasPseudoConstantQuals)
-	{
-		/*
-		 * MPP-2328: don't create a gating plan for the hash-child of a
-		 * NL-join
-		 */
-		if (!IsA(plan, HashJoin) ||outer_plan != NULL)
-			plan = create_gating_plan(root, plan, best_path->joinrestrictinfo);
-	}
+		plan = create_gating_plan(root, plan, best_path->joinrestrictinfo);
 
 #ifdef NOT_USED
 
@@ -2700,7 +2711,7 @@ remove_isnotfalse(List *clauses)
  *
  *****************************************************************************/
 
-static Plan *
+static NestLoop *
 create_nestloop_plan(PlannerInfo *root,
 					 NestPath *best_path,
 					 Plan *outer_plan,
@@ -2885,7 +2896,7 @@ create_nestloop_plan(PlannerInfo *root,
 	if (prefetch)
 		join_plan->join.prefetch_inner = true;
 
-	return (Plan *) join_plan;
+	return join_plan;
 }
 
 static MergeJoin *
@@ -4126,7 +4137,6 @@ make_append(List *appendplans, bool isTarget, List *tlist)
 	node->appendplans = appendplans;
 	node->isTarget = isTarget;
 	node->isZapped = false;
-	node->hasXslice = false;
 
 	return node;
 }

@@ -497,6 +497,7 @@ CTranslatorRelcacheToDXL::Pmdrel
 	DrgPmdid *pdrgpmdidIndexes = NULL;
 	DrgPmdid *pdrgpmdidTriggers = NULL;
 	DrgPul *pdrgpulPartKeys = NULL;
+	DrgPsz *pdrgpszPartTypes = NULL;
 	ULONG ulLeafPartitions = 0;
 	BOOL fConvertHashToRandom = false;
 	DrgPdrgPul *pdrgpdrgpulKeys = NULL;
@@ -540,7 +541,7 @@ CTranslatorRelcacheToDXL::Pmdrel
 		// get partition keys
 		if (IMDRelation::ErelstorageExternal != erelstorage)
 		{
-			 pdrgpulPartKeys = PdrgpulPartKeys(pmp, rel, oid);
+			GetPartKeysAndTypes(pmp, rel, oid, &pdrgpulPartKeys, &pdrgpszPartTypes);
 		}
 		BOOL fPartitioned = (NULL != pdrgpulPartKeys && 0 < pdrgpulPartKeys->UlLength());
 
@@ -629,6 +630,7 @@ CTranslatorRelcacheToDXL::Pmdrel
 							pdrgpmdcol,
 							pdrpulDistrCols,
 							pdrgpulPartKeys,
+							pdrgpszPartTypes,
 							ulLeafPartitions,
 							fConvertHashToRandom,
 							pdrgpdrgpulKeys,
@@ -2947,19 +2949,21 @@ CTranslatorRelcacheToDXL::Erelstorage
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorRelcacheToDXL::PdrgpulPartKeys
+//		CTranslatorRelcacheToDXL::GetPartKeysAndTypes
 //
 //	@doc:
-//		Get partition keys for relation or NULL if relation not partitioned.
+//		Get partition keys and types for relation or NULL if relation not partitioned.
 //		Caller responsible for closing the relation if an exception is raised
 //
 //---------------------------------------------------------------------------
-DrgPul *
-CTranslatorRelcacheToDXL::PdrgpulPartKeys
+void
+CTranslatorRelcacheToDXL::GetPartKeysAndTypes
 	(
 	IMemoryPool *pmp,
 	Relation rel,
-	OID oid
+	OID oid,
+	DrgPul **pdrgpulPartKeys,
+	DrgPsz **pdrgpszPartTypes
 	)
 {
 	GPOS_ASSERT(NULL != rel);
@@ -2967,12 +2971,15 @@ CTranslatorRelcacheToDXL::PdrgpulPartKeys
 	if (!gpdb::FRelPartIsRoot(oid))
 	{
 		// not a partitioned table
-		return NULL;
+		*pdrgpulPartKeys = NULL;
+		*pdrgpszPartTypes = NULL;
+		return;
 	}
 
 	// TODO: Feb 23, 2012; support intermediate levels
 
-	DrgPul *pdrgpulPartKeys = GPOS_NEW(pmp) DrgPul(pmp);
+	*pdrgpulPartKeys = GPOS_NEW(pmp) DrgPul(pmp);
+	*pdrgpszPartTypes = GPOS_NEW(pmp) DrgPsz(pmp);
 
 	PartitionNode *pn = gpdb::PpnParts(oid, 0 /*level*/, 0 /*parent*/, false /*inctemplate*/, true /*includesubparts*/);
 	GPOS_ASSERT(NULL != pn);
@@ -2982,12 +2989,15 @@ CTranslatorRelcacheToDXL::PdrgpulPartKeys
 		GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported, GPOS_WSZ_LIT("Hash partitioning"));
 	}
 	
-	List *plPartKeys = gpdb::PlPartitionAttrs(oid);
+	List *plPartKeys = NIL;
+	List *plPartTypes = NIL;
+	gpdb::GetOrderedPartKeysAndKinds(oid, &plPartKeys, &plPartTypes);
 
-	ListCell *plc = NULL;
-	ForEach (plc, plPartKeys)
+	ListCell *plcKey = NULL;
+	ListCell *plcType = NULL;
+	ForBoth (plcKey, plPartKeys, plcType, plPartTypes)
 	{
-		List *plPartKey = (List *) lfirst(plc);
+		List *plPartKey = (List *) lfirst(plcKey);
 
 		if (1 < gpdb::UlListLength(plPartKey))
 		{
@@ -2995,11 +3005,14 @@ CTranslatorRelcacheToDXL::PdrgpulPartKeys
 		}
 
 		INT iAttno = linitial_int(plPartKey);
+		CHAR partType = (CHAR) lfirst_int(plcType);
 		GPOS_ASSERT(0 < iAttno);
-		pdrgpulPartKeys->Append(GPOS_NEW(pmp) ULONG(iAttno - 1));
+		(*pdrgpulPartKeys)->Append(GPOS_NEW(pmp) ULONG(iAttno - 1));
+		(*pdrgpszPartTypes)->Append(GPOS_NEW(pmp) CHAR(partType));
 	}
 
-	return pdrgpulPartKeys;
+	gpdb::FreeList(plPartKeys);
+	gpdb::FreeList(plPartTypes);
 }
 
 

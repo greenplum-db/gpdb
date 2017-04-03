@@ -79,6 +79,8 @@ class mpp23395(MPPTestCase):
 	if "PANIC" in results.stderr and not should_panic:
             raise Exception("Fault %s type %s (on segid: %d) caused a PANIC. dtx two phase retry failed" % (fault, fault_type, segid))
 
+        PSQL.wait_for_database_up()
+
     def test_mpp23395(self):
         """
         

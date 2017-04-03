@@ -56,6 +56,7 @@ url_file_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 	fo.is_csv = pstate->csv_mode;
 	fo.quote = pstate->quote ? *pstate->quote : 0;
 	fo.escape = pstate->escape ? *pstate->escape : 0;
+	fo.eol_type = pstate->eol_type;
 	fo.header = pstate->header_line;
 	fo.bufsize = 32 * 1024;
 	pstate->header_line = 0;

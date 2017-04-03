@@ -582,8 +582,6 @@ define tmpLOADERS_FILESET_BINEXT
 endef
 LOADERS_FILESET_BINEXT = $(strip $(tmpLOADERS_FILESET_BINEXT))
 
-# moved BLD_PYTHON definition and inclusion in path and library path to Makefile.global
-
 # define python file subset to ship by platform, as desired
 BLD_PYTHON_FILESET=.
 aix5_ppc_32_PYTHON_FILESET=bin/python* lib/python* include/python*
@@ -730,9 +728,9 @@ ifeq "$(findstring win,$(BLD_ARCH))" "win"
 	# ---- copy pygresql from ext/win32 ----
 	(cd $(BLD_THIRDPARTY)/win32 && $(TAR) cf - pygresql) | (cd $(LOADERSINSTLOC_BINEXT)/ && $(TAR) xpf -)$(check_pipe_for_errors)
 endif
-ifneq "$($(BLD_ARCH)_PYTHON)" ""
+ifneq "$(PYTHONHOME)" ""
 	mkdir -p $(LOADERSINSTLOC_EXT)/python
-	(cd $($(BLD_ARCH)_PYTHON) && $(TAR) cf - $(BLD_PYTHON_FILESET)) | (cd $(LOADERSINSTLOC_EXT)/python/ && $(TAR) xpf -)$(check_pipe_for_errors)
+	(cd $(PYTHONHOME) && $(TAR) cf - $(BLD_PYTHON_FILESET)) | (cd $(LOADERSINSTLOC_EXT)/python/ && $(TAR) xpf -)$(check_pipe_for_errors)
 endif
 	mkdir -p $(LOADERSINSTLOC_LIB)
 ifneq "$(LOADERS_FILESET_LIB)" ""
@@ -749,7 +747,7 @@ endif
 ifneq "$(LOADERS_FILESET_LIB_PWARE)" ""
 	# include libraries from pware needed by the pware Python-2.6.1 build
 	mkdir -p $(LOADERSINSTLOC_LIB_PWARE)
-	($(TAR) cf - -C $($(BLD_ARCH)_PYTHON)/lib $(LOADERS_FILESET_LIB_PWARE)) | ($(TAR) xpf - -C $(LOADERSINSTLOC_LIB_PWARE))$(check_pipe_for_errors)
+	($(TAR) cf - -C $(PYTHONHOME)/lib $(LOADERS_FILESET_LIB_PWARE)) | ($(TAR) xpf - -C $(LOADERSINSTLOC_LIB_PWARE))$(check_pipe_for_errors)
 endif
 ifneq "$(findstring $(BLD_ARCH),sol10_sparc_32)" ""
 	(cd /usr/local/lib/ && $(TAR) cf - libiconv.so* libexpat.so*) | (cd $(LOADERSINSTLOC_LIB)/ && $(TAR) xpf -)$(check_pipe_for_errors)
@@ -823,8 +821,6 @@ SET_VERSION_SCRIPTS = \
 	bin/gpinitsystem \
 	bin/gpload.py \
 	bin/gplogfilter \
-	bin/gpmigrator \
-	bin/gpmigrator_mirror \
 	bin/gpmovemirrors \
 	bin/gprecoverseg \
 	bin/gpreload \
@@ -1045,9 +1041,9 @@ copylibs : thirdparty-dist copy-nbu-libs
 	fi
 	# Create the python directory to flag to build scripts that python has been handled
 	mkdir -p $(INSTLOC)/ext/python
-	@if [ ! -z "$(BLD_PYTHON)" ]; then \
-	    echo "Copying python, $(BLD_PYTHON_FILESET), from $(BLD_PYTHON) into $(INSTLOC)/ext/python..."; \
-	    (cd $(BLD_PYTHON) && $(TAR) cf - $(BLD_PYTHON_FILESET)) | (cd $(INSTLOC)/ext/python/ && $(TAR) xpf -); \
+	@if [ ! -z "$(PYTHONHOME)" ]; then \
+	    echo "Copying python, $(BLD_PYTHON_FILESET), from $(PYTHONHOME) into $(INSTLOC)/ext/python..."; \
+	    (cd $(PYTHONHOME) && $(TAR) cf - $(BLD_PYTHON_FILESET)) | (cd $(INSTLOC)/ext/python/ && $(TAR) xpf -); \
 		echo "...DONE"; \
 	else \
 	    echo "INFO: Python not found on this platform, $(BLD_ARCH), not copying it into the GPDB package."; \
@@ -1170,15 +1166,10 @@ gccVersionCheck :
 
 ## ----------------------------------------------------------------------
 
-ifeq ($(BLD_ARCH),$(filter $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64))
+ifeq ($(BLD_ARCH),$(filter $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64 sles11_x86_64 suse11_x86_64))
 GPPKG_SOURCES = \
 	$(NULL)
 else
-# Removed filtering logic for building gppkg as on suse11. It was only building
-# pl/perl package and essentially since gpdb-server is now being built for suse11
-# we should build the gppkg for suse11.
-# As of now we build for centos5 / rhel5 and suse 11
-# TODO: As we build for centos6 we can add filtering logic if necessary
 GPPKG_SOURCES = \
 	../contrib/pgcrypto \
 	../src/bin/pg_dump/cdb/ddboost \

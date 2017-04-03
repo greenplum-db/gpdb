@@ -8,8 +8,6 @@
  */
 #include "postgres.h"
 
-#include <math.h>
-
 #include "utils/lsyscache.h"
 #include "utils/relcache.h"
 #include "utils/syscache.h"
@@ -37,26 +35,16 @@ cdbRelMaxSegSize(Relation rel)
 	CdbPgResults cdb_pgresults = {NULL, 0};
 	StringInfoData buffer;
 
-	char *schemaName;
-	char *relName;
-
 	/*
 	 * Let's ask the QEs for the size of the relation
 	 */
 	initStringInfo(&buffer);
 
-	schemaName = get_namespace_name(RelationGetNamespace(rel));
-	if (schemaName == NULL)
-		elog(ERROR, "cache lookup failed for namespace %d",
-			 RelationGetNamespace(rel));
-	relName = RelationGetRelationName(rel);
-
 	/*
-	 * Safer to pass names than oids, just in case they get out of sync between QD and QE,
-	 * which might happen with a toast table or index, I think (but maybe not)
+	 * Relation Oids are assumed to be in sync in all nodes.
 	 */
-	appendStringInfo(&buffer, "select pg_relation_size('%s.%s')",
-					 quote_identifier(schemaName), quote_identifier(relName));
+	appendStringInfo(&buffer, "select pg_relation_size(%u)",
+					 RelationGetRelid(rel));
 
 	CdbDispatchCommand(buffer.data, DF_WITH_SNAPSHOT, &cdb_pgresults);
 

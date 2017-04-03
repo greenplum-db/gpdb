@@ -100,22 +100,27 @@
             </stentry>
             <stentry>
               <p>
-                <xref href="guc-list.xml#tcp_keepalives_count" type="section">tcp_keepalives_count</xref>
+                <xref href="guc-list.xml#tcp_keepalives_count" type="section"
+                  >tcp_keepalives_count</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#tcp_keepalives_idle" type="section">tcp_keepalives_idle</xref>
+                <xref href="guc-list.xml#tcp_keepalives_idle" type="section"
+                  >tcp_keepalives_idle</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#tcp_keepalives_interval" type="section">tcp_keepalives_interval</xref>
+                <xref href="guc-list.xml#tcp_keepalives_interval" type="section"
+                  >tcp_keepalives_interval</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#unix_socket_directory" type="section">unix_socket_directory</xref>
+                <xref href="guc-list.xml#unix_socket_directory" type="section"
+                  >unix_socket_directory</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#unix_socket_group" type="section">unix_socket_group</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#unix_socket_permissions" type="section">unix_socket_permissions</xref>
+                <xref href="guc-list.xml#unix_socket_permissions" type="section"
+                  >unix_socket_permissions</xref>
               </p>
             </stentry>
           </strow>
@@ -129,7 +134,8 @@
           <strow>
             <stentry>
               <p>
-                <xref href="guc-list.xml#authentication_timeout" type="section">authentication_timeout</xref>
+                <xref href="guc-list.xml#authentication_timeout" type="section"
+                  >authentication_timeout</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#db_user_namespace" type="section">db_user_namespace</xref>
@@ -138,7 +144,8 @@
                 <xref href="guc-list.xml#krb_caseins_users" type="section">krb_caseins_users</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#krb_server_keyfile" type="section">krb_server_keyfile</xref>
+                <xref href="guc-list.xml#krb_server_keyfile" type="section"
+                  >krb_server_keyfile</xref>
               </p>
             </stentry>
             <stentry>
@@ -146,10 +153,12 @@
                 <xref href="guc-list.xml#krb_srvname" type="section">krb_srvname</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#password_encryption" type="section">password_encryption</xref>
+                <xref href="guc-list.xml#password_encryption" type="section"
+                  >password_encryption</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#password_hash_algorithm" type="section">password_hash_algorithm</xref>
+                <xref href="guc-list.xml#password_hash_algorithm" type="section"
+                  >password_hash_algorithm</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#ssl" type="section">ssl</xref>
@@ -181,7 +190,8 @@
                   >gp_vmem_idle_resource_timeout</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_vmem_protect_limit" type="section">gp_vmem_protect_limit</xref>
+                <xref href="guc-list.xml#gp_vmem_protect_limit" type="section"
+                  >gp_vmem_protect_limit</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#gp_vmem_protect_segworker_cache_limit" type="section"
@@ -230,7 +240,6 @@
                 <xref href="guc-list.xml#max_fsm_relations" type="section">max_fsm_relations</xref>
               </p>
             </stentry>
-            <stentry/>
           </strow>
         </simpletable>
       </body>
@@ -242,14 +251,14 @@
           <strow>
             <stentry>
               <p>
-                <xref href="guc-list.xml#max_files_per_process" type="section">max_files_per_process</xref>
+                <xref href="guc-list.xml#max_files_per_process" type="section"
+                  >max_files_per_process</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#shared_preload_libraries" type="section"
                   >shared_preload_libraries</xref>
               </p>
             </stentry>
-            <stentry/>
           </strow>
         </simpletable>
       </body>
@@ -276,15 +285,18 @@
                 <xref href="guc-list.xml#vacuum_cost_limit" type="section">vacuum_cost_limit</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#vacuum_cost_page_dirty" type="section">vacuum_cost_page_dirty</xref>
+                <xref href="guc-list.xml#vacuum_cost_page_dirty" type="section"
+                  >vacuum_cost_page_dirty</xref>
               </p>
             </stentry>
             <stentry>
               <p>
-                <xref href="guc-list.xml#vacuum_cost_page_hit" type="section">vacuum_cost_page_hit</xref>
+                <xref href="guc-list.xml#vacuum_cost_page_hit" type="section"
+                  >vacuum_cost_page_hit</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#vacuum_cost_page_miss" type="section">vacuum_cost_page_miss</xref>
+                <xref href="guc-list.xml#vacuum_cost_page_miss" type="section"
+                  >vacuum_cost_page_miss</xref>
               </p>
             </stentry>
           </strow>
@@ -304,7 +316,6 @@
                 <xref href="guc-list.xml#xid_warn_limit" type="section">xid_warn_limit</xref>
               </p>
             </stentry>
-            <stentry/>
           </strow>
         </simpletable>
       </body>
@@ -338,8 +349,9 @@
             <p><xref href="guc-list.xml#optimizer_join_order_threshold" format="dita"
                 >optimizer_join_order_threshold</xref></p>
             <p><xref href="guc-list.xml#optimizer_parallel_union" type="section"
-              >optimizer_parallel_union</xref></p>
-            <p><xref href="guc-list.xml#optimizer_sort_factor" format="dita">optimizer_sort_factor</xref></p>
+                >optimizer_parallel_union</xref></p>
+            <p><xref href="guc-list.xml#optimizer_sort_factor" format="dita"
+                >optimizer_sort_factor</xref></p>
           </stentry>
         </strow>
       </simpletable>
@@ -394,7 +406,8 @@
                   >gp_enable_adaptive_nestloop</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_enable_agg_distinct" type="section">gp_enable_agg_distinct</xref>
+                <xref href="guc-list.xml#gp_enable_agg_distinct" type="section"
+                  >gp_enable_agg_distinct</xref>
               </p>
             </stentry>
             <stentry>
@@ -407,10 +420,12 @@
                   >gp_enable_direct_dispatch</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_enable_fallback_plan" type="section">gp_enable_fallback_plan</xref>
+                <xref href="guc-list.xml#gp_enable_fallback_plan" type="section"
+                  >gp_enable_fallback_plan</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_enable_fast_sri" type="section">gp_enable_fast_sri</xref>
+                <xref href="guc-list.xml#gp_enable_fast_sri" type="section"
+                  >gp_enable_fast_sri</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#gp_enable_groupext_distinct_gather" type="section"
@@ -429,7 +444,8 @@
                   >gp_enable_predicate_propagation</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_enable_preunique" type="section">gp_enable_preunique</xref></p>
+                <xref href="guc-list.xml#gp_enable_preunique" type="section"
+                  >gp_enable_preunique</xref></p>
               <p>
                 <xref href="guc-list.xml#gp_enable_relsize_collection" format="dita"
                   >gp_enable_relsize_collection</xref></p>
@@ -438,10 +454,12 @@
                   >gp_enable_sequential_window_plans</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_enable_sort_distinct" type="section">gp_enable_sort_distinct</xref>
+                <xref href="guc-list.xml#gp_enable_sort_distinct" type="section"
+                  >gp_enable_sort_distinct</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_enable_sort_limit" type="section">gp_enable_sort_limit</xref>
+                <xref href="guc-list.xml#gp_enable_sort_limit" type="section"
+                  >gp_enable_sort_limit</xref>
               </p>
             </stentry>
           </strow>
@@ -459,7 +477,8 @@
           <strow>
             <stentry>
               <p>
-                <xref href="guc-list.xml#cpu_index_tuple_cost" type="section">cpu_index_tuple_cost</xref>
+                <xref href="guc-list.xml#cpu_index_tuple_cost" type="section"
+                  >cpu_index_tuple_cost</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#cpu_operator_cost" type="section">cpu_operator_cost</xref>
@@ -468,18 +487,22 @@
                 <xref href="guc-list.xml#cpu_tuple_cost" type="section">cpu_tuple_cost</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#cursor_tuple_fraction" type="section">cursor_tuple_fraction</xref>
+                <xref href="guc-list.xml#cursor_tuple_fraction" type="section"
+                  >cursor_tuple_fraction</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#effective_cache_size" type="section">effective_cache_size</xref>
+                <xref href="guc-list.xml#effective_cache_size" type="section"
+                  >effective_cache_size</xref>
               </p>
             </stentry>
             <stentry>
               <p>
-                <xref href="guc-list.xml#gp_motion_cost_per_row" type="section">gp_motion_cost_per_row</xref>
+                <xref href="guc-list.xml#gp_motion_cost_per_row" type="section"
+                  >gp_motion_cost_per_row</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_segments_for_planner" type="section">gp_segments_for_planner</xref>
+                <xref href="guc-list.xml#gp_segments_for_planner" type="section"
+                  >gp_segments_for_planner</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#random_page_cost" type="section">random_page_cost</xref>
@@ -503,15 +526,14 @@
           <strow>
             <stentry>
               <p>
-                <xref href="guc-list.xml#default_statistics_target" type="section">default_statistics_target
-                </xref>
+                <xref href="guc-list.xml#default_statistics_target" type="section"
+                  >default_statistics_target </xref>
               </p>
               <p>
                 <xref href="guc-list.xml#gp_analyze_relative_error" type="section"
                   >gp_analyze_relative_error</xref>
               </p>
             </stentry>
-            <stentry/>
           </strow>
         </simpletable>
       </body>
@@ -523,13 +545,14 @@
           <strow>
             <stentry>
               <p>
-                <xref href="guc-list.xml#gp_enable_sort_distinct" type="section">gp_enable_sort_distinct</xref>
+                <xref href="guc-list.xml#gp_enable_sort_distinct" type="section"
+                  >gp_enable_sort_distinct</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_enable_sort_limit" type="section">gp_enable_sort_limit</xref>
+                <xref href="guc-list.xml#gp_enable_sort_limit" type="section"
+                  >gp_enable_sort_limit</xref>
               </p>
             </stentry>
-            <stentry/>
           </strow>
         </simpletable>
       </body>
@@ -541,7 +564,8 @@
           <strow>
             <stentry>
               <p>
-                <xref href="guc-list.xml#gp_enable_agg_distinct" type="section">gp_enable_agg_distinct</xref>
+                <xref href="guc-list.xml#gp_enable_agg_distinct" type="section"
+                  >gp_enable_agg_distinct</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#gp_enable_agg_distinct_pruning" type="section"
@@ -552,7 +576,8 @@
                   >gp_enable_multiphase_agg</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_enable_preunique" type="section">gp_enable_preunique</xref>
+                <xref href="guc-list.xml#gp_enable_preunique" type="section"
+                  >gp_enable_preunique</xref>
               </p>
             </stentry>
             <stentry>
@@ -580,7 +605,8 @@
           <strow>
             <stentry>
               <p>
-                <xref href="guc-list.xml#join_collapse_limit" type="section">join_collapse_limit</xref>
+                <xref href="guc-list.xml#join_collapse_limit" type="section"
+                  >join_collapse_limit</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#gp_adjust_selectivity_for_outerjoins" type="section"
@@ -593,7 +619,8 @@
             </stentry>
             <stentry>
               <p>
-                <xref href="guc-list.xml#gp_statistics_use_fkeys" type="section">gp_statistics_use_fkeys</xref>
+                <xref href="guc-list.xml#gp_statistics_use_fkeys" type="section"
+                  >gp_statistics_use_fkeys</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#gp_workfile_compress_algorithm" type="section"
@@ -611,7 +638,8 @@
           <strow>
             <stentry>
               <p>
-                <xref href="guc-list.xml#from_collapse_limit" type="section">from_collapse_limit</xref>
+                <xref href="guc-list.xml#from_collapse_limit" type="section"
+                  >from_collapse_limit</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#gp_enable_predicate_propagation" type="section"
@@ -625,7 +653,6 @@
                   >gp_statistics_pullup_from_child_partition</xref>
               </p>
             </stentry>
-            <stentry/>
           </strow>
         </simpletable>
       </body>
@@ -664,10 +691,12 @@
           <strow>
             <stentry>
               <p>
-                <xref href="guc-list.xml#client_min_messages" type="section">client_min_messages</xref>
+                <xref href="guc-list.xml#client_min_messages" type="section"
+                  >client_min_messages</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#log_error_verbosity" type="section">log_error_verbosity</xref>
+                <xref href="guc-list.xml#log_error_verbosity" type="section"
+                  >log_error_verbosity</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#log_min_duration_statement" type="section"
@@ -676,13 +705,15 @@
             </stentry>
             <stentry>
               <p>
-                <xref href="guc-list.xml#log_min_error_statement" type="section">log_min_error_statement</xref>
+                <xref href="guc-list.xml#log_min_error_statement" type="section"
+                  >log_min_error_statement</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#log_min_messages" type="section">log_min_messages</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#optimizer_minidump" type="section">optimizer_minidump</xref>
+                <xref href="guc-list.xml#optimizer_minidump" type="section"
+                  >optimizer_minidump</xref>
               </p>
             </stentry>
           </strow>
@@ -696,7 +727,8 @@
           <strow>
             <stentry>
               <p>
-                <xref href="guc-list.xml#debug_pretty_print" type="section">debug_pretty_print</xref>
+                <xref href="guc-list.xml#debug_pretty_print" type="section"
+                  >debug_pretty_print</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#debug_print_parse" type="section">debug_print_parse</xref>
@@ -705,13 +737,16 @@
                 <xref href="guc-list.xml#debug_print_plan" type="section">debug_print_plan</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#debug_print_prelim_plan" type="section">debug_print_prelim_plan</xref>
+                <xref href="guc-list.xml#debug_print_prelim_plan" type="section"
+                  >debug_print_prelim_plan</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#debug_print_rewritten" type="section">debug_print_rewritten</xref>
+                <xref href="guc-list.xml#debug_print_rewritten" type="section"
+                  >debug_print_rewritten</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#debug_print_slice_table" type="section">debug_print_slice_table</xref>
+                <xref href="guc-list.xml#debug_print_slice_table" type="section"
+                  >debug_print_slice_table</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#log_autostats" type="section">log_autostats</xref>
@@ -720,10 +755,12 @@
                 <xref href="guc-list.xml#log_connections" type="section">log_connections</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#log_disconnections" type="section">log_disconnections</xref>
+                <xref href="guc-list.xml#log_disconnections" type="section"
+                  >log_disconnections</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#log_dispatch_stats" type="section">log_dispatch_stats</xref>
+                <xref href="guc-list.xml#log_dispatch_stats" type="section"
+                  >log_dispatch_stats</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#log_duration" type="section">log_duration</xref>
@@ -731,7 +768,8 @@
             </stentry>
             <stentry>
               <p>
-                <xref href="guc-list.xml#log_executor_stats" type="section">log_executor_stats</xref>
+                <xref href="guc-list.xml#log_executor_stats" type="section"
+                  >log_executor_stats</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#log_hostname" type="section">log_hostname</xref>
@@ -746,7 +784,8 @@
                 <xref href="guc-list.xml#log_statement" type="section">log_statement</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#log_statement_stats" type="section">log_statement_stats</xref>
+                <xref href="guc-list.xml#log_statement_stats" type="section"
+                  >log_statement_stats</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#log_timezone" type="section">log_timezone</xref>
@@ -758,7 +797,8 @@
                 <xref href="guc-list.xml#gp_log_format" type="section">gp_log_format</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_max_csv_line_length" type="section">gp_max_csv_line_length</xref>
+                <xref href="guc-list.xml#gp_max_csv_line_length" type="section"
+                  >gp_max_csv_line_length</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#gp_reraise_signal" type="section">gp_reraise_signal</xref>
@@ -784,7 +824,8 @@
                 <xref href="guc-list.xml#gp_snmp_community" type="section">gp_snmp_community</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_snmp_monitor_address" type="section">gp_snmp_monitor_address</xref>
+                <xref href="guc-list.xml#gp_snmp_monitor_address" type="section"
+                  >gp_snmp_monitor_address</xref>
               </p>
             </stentry>
             <stentry>
@@ -809,15 +850,18 @@
                 <xref href="guc-list.xml#gp_email_from" type="section">gp_email_from</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_email_smtp_password" type="section">gp_email_smtp_password</xref>
+                <xref href="guc-list.xml#gp_email_smtp_password" type="section"
+                  >gp_email_smtp_password</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_email_smtp_server" type="section">gp_email_smtp_server</xref>
+                <xref href="guc-list.xml#gp_email_smtp_server" type="section"
+                  >gp_email_smtp_server</xref>
               </p>
             </stentry>
             <stentry>
               <p>
-                <xref href="guc-list.xml#gp_email_smtp_userid" type="section">gp_email_smtp_userid</xref>
+                <xref href="guc-list.xml#gp_email_smtp_userid" type="section"
+                  >gp_email_smtp_userid</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#gp_email_to" type="section">gp_email_to</xref>
@@ -836,7 +880,8 @@
           <strow>
             <stentry>
               <p>
-                <xref href="guc-list.xml#gp_enable_gpperfmon" type="section">gp_enable_gpperfmon</xref>
+                <xref href="guc-list.xml#gp_enable_gpperfmon" type="section"
+                  >gp_enable_gpperfmon</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#gp_gpperfmon_send_interval" type="section"
@@ -878,7 +923,8 @@
               <xref href="guc-list.xml#track_counts" type="section">track_counts</xref>
             </p>
             <p>
-              <xref href="guc-list.xml#update_process_title" type="section">update_process_title</xref>
+              <xref href="guc-list.xml#update_process_title" type="section"
+                >update_process_title</xref>
             </p>
           </stentry>
         </strow>
@@ -914,7 +960,6 @@
               <xref href="guc-list.xml#log_autostats" type="section">log_autostats</xref>
             </p>
           </stentry>
-          <stentry/>
         </strow>
       </simpletable>
       <note type="warning">Depending on the specific nature of your database operations, automatic
@@ -933,10 +978,12 @@
           <strow>
             <stentry>
               <p>
-                <xref href="guc-list.xml#check_function_bodies" type="section">check_function_bodies</xref>
+                <xref href="guc-list.xml#check_function_bodies" type="section"
+                  >check_function_bodies</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#default_tablespace" type="section">default_tablespace</xref>
+                <xref href="guc-list.xml#default_tablespace" type="section"
+                  >default_tablespace</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#default_transaction_isolation" type="section"
@@ -955,7 +1002,8 @@
                 <xref href="guc-list.xml#statement_timeout" type="section">statement_timeout</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#vacuum_freeze_min_age" type="section">vacuum_freeze_min_age</xref>
+                <xref href="guc-list.xml#vacuum_freeze_min_age" type="section"
+                  >vacuum_freeze_min_age</xref>
               </p>
             </stentry>
           </strow>
@@ -975,7 +1023,8 @@
                 <xref href="guc-list.xml#DateStyle" type="section">DateStyle</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#extra_float_digits" type="section">extra_float_digits</xref>
+                <xref href="guc-list.xml#extra_float_digits" type="section"
+                  >extra_float_digits</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#IntervalStyle" type="section">IntervalStyle</xref>
@@ -1015,15 +1064,18 @@
           <strow>
             <stentry>
               <p>
-                <xref href="guc-list.xml#dynamic_library_path" type="section">dynamic_library_path</xref>
+                <xref href="guc-list.xml#dynamic_library_path" type="section"
+                  >dynamic_library_path</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#explain_pretty_print" type="section">explain_pretty_print</xref>
+                <xref href="guc-list.xml#explain_pretty_print" type="section"
+                  >explain_pretty_print</xref>
               </p>
             </stentry>
             <stentry>
               <p>
-                <xref href="guc-list.xml#local_preload_libraries" type="section">local_preload_libraries</xref>
+                <xref href="guc-list.xml#local_preload_libraries" type="section"
+                  >local_preload_libraries</xref>
               </p>
             </stentry>
           </strow>
@@ -1046,7 +1098,6 @@
                 >max_locks_per_transaction</xref>
             </p>
           </stentry>
-          <stentry/>
         </strow>
       </simpletable>
     </body>
@@ -1060,7 +1111,8 @@
         <strow>
           <stentry>
             <p>
-              <xref href="guc-list.xml#gp_resqueue_priority" type="section">gp_resqueue_priority</xref>
+              <xref href="guc-list.xml#gp_resqueue_priority" type="section"
+                >gp_resqueue_priority</xref>
             </p>
             <p>
               <xref href="guc-list.xml#gp_resqueue_priority_cpucores_per_segment" type="section"
@@ -1075,7 +1127,8 @@
                 >gp_vmem_idle_resource_timeout</xref>
             </p>
             <p>
-              <xref href="guc-list.xml#gp_vmem_protect_limit" type="section">gp_vmem_protect_limit</xref>
+              <xref href="guc-list.xml#gp_vmem_protect_limit" type="section"
+                >gp_vmem_protect_limit</xref>
             </p>
             <p>
               <xref href="guc-list.xml#gp_vmem_protect_segworker_cache_limit" type="section"
@@ -1084,7 +1137,8 @@
           </stentry>
           <stentry>
             <p>
-              <xref href="guc-list.xml#max_resource_queues" type="section">max_resource_queues</xref>
+              <xref href="guc-list.xml#max_resource_queues" type="section"
+                >max_resource_queues</xref>
             </p>
             <p>
               <xref href="guc-list.xml#max_resource_portals_per_transaction" type="section"
@@ -1095,7 +1149,8 @@
                 >resource_cleanup_gangs_on_wait</xref>
             </p>
             <p>
-              <xref href="guc-list.xml#resource_select_only" type="section">resource_select_only</xref>
+              <xref href="guc-list.xml#resource_select_only" type="section"
+                >resource_select_only</xref>
             </p>
             <p>
               <xref href="guc-list.xml#runaway_detector_activation_percent" type="section"
@@ -1104,7 +1159,8 @@
             <p>
               <xref href="guc-list.xml#stats_queue_level" type="section">stats_queue_level</xref>
             </p>
-            <p><xref href="guc-list.xml#vmem_process_interrupt" type="section">vmem_process_interrupt</xref></p>
+            <p><xref href="guc-list.xml#vmem_process_interrupt" type="section"
+                >vmem_process_interrupt</xref></p>
           </stentry>
         </strow>
       </simpletable>
@@ -1118,15 +1174,18 @@
         <strow>
           <stentry>
             <p>
-              <xref href="guc-list.xml#gp_external_enable_exec" type="section">gp_external_enable_exec</xref>
+              <xref href="guc-list.xml#gp_external_enable_exec" type="section"
+                >gp_external_enable_exec</xref>
             </p>
             <p>
-              <xref href="guc-list.xml#gp_external_max_segs" type="section">gp_external_max_segs</xref>
+              <xref href="guc-list.xml#gp_external_max_segs" type="section"
+                >gp_external_max_segs</xref>
             </p>
           </stentry>
           <stentry>
             <p>
-              <xref href="guc-list.xml#topic_lvm_ttc_3p" type="section">gp_initial_bad_row_limit</xref>
+              <xref href="guc-list.xml#topic_lvm_ttc_3p" type="section"
+                >gp_initial_bad_row_limit</xref>
             </p>
             <p>
               <xref href="guc-list.xml#gp_reject_percent_threshold" type="section"
@@ -1164,7 +1223,6 @@
                 >gp_enable_exchange_default_partition</xref>
             </p>
           </stentry>
-          <stentry/>
         </strow>
       </simpletable>
     </body>
@@ -1177,7 +1235,8 @@
           <strow>
             <stentry>
               <p>
-                <xref href="guc-list.xml#max_appendonly_tables" type="section">max_appendonly_tables</xref>
+                <xref href="guc-list.xml#max_appendonly_tables" type="section"
+                  >max_appendonly_tables</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#gp_appendonly_compaction" type="section"
@@ -1188,7 +1247,6 @@
               <p><xref href="guc-list.xml#validate_previous_free_tid"/>
               </p>
             </stentry>
-            <stentry/>
           </strow>
         </simpletable>
       </body>
@@ -1212,7 +1270,6 @@
               <xref href="guc-list.xml#gp_max_databases" type="section">gp_max_databases</xref>
             </p>
           </stentry>
-          <stentry/>
         </strow>
       </simpletable>
     </body>
@@ -1235,7 +1292,8 @@
               <xref href="guc-list.xml#backslash_quote" type="section">backslash_quote</xref>
             </p>
             <p>
-              <xref href="guc-list.xml#escape_string_warning" type="section">escape_string_warning</xref>
+              <xref href="guc-list.xml#escape_string_warning" type="section"
+                >escape_string_warning</xref>
             </p>
           </stentry>
           <stentry>
@@ -1247,7 +1305,8 @@
                 >standard_conforming_strings</xref>
             </p>
             <p>
-              <xref href="guc-list.xml#transform_null_equals" type="section">transform_null_equals</xref>
+              <xref href="guc-list.xml#transform_null_equals" type="section"
+                >transform_null_equals</xref>
             </p>
           </stentry>
         </strow>
@@ -1290,18 +1349,20 @@
                   >gp_interconnect_snd_queue_depth</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_interconnect_type" type="section">gp_interconnect_type</xref>
+                <xref href="guc-list.xml#gp_interconnect_type" type="section"
+                  >gp_interconnect_type</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_max_packet_size" type="section">gp_max_packet_size</xref>
+                <xref href="guc-list.xml#gp_max_packet_size" type="section"
+                  >gp_max_packet_size</xref>
               </p>
             </stentry>
           </strow>
         </simpletable>
         <note>The Greenplum Database interconnect types TCP and UDP are deprecated. In the next
           major release, only the UDPIFC interconnect type will be supported by Greenplum Database.
-          The server configuration parameter <xref href="guc-list.xml#gp_interconnect_type" type="section"
-            >gp_interconnect_type</xref> controls the interconnect type.</note>
+          The server configuration parameter <xref href="guc-list.xml#gp_interconnect_type"
+            type="section">gp_interconnect_type</xref> controls the interconnect type.</note>
       </body>
     </topic>
     <topic id="topic51" xml:lang="en">
@@ -1329,7 +1390,8 @@
                   >gp_segment_connect_timeout</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_set_proc_affinity" type="section">gp_set_proc_affinity</xref>
+                <xref href="guc-list.xml#gp_set_proc_affinity" type="section"
+                  >gp_set_proc_affinity</xref>
               </p>
             </stentry>
           </strow>
@@ -1346,10 +1408,12 @@
                 <xref href="guc-list.xml#gp_set_read_only" type="section">gp_set_read_only</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_fts_probe_interval" type="section">gp_fts_probe_interval</xref>
+                <xref href="guc-list.xml#gp_fts_probe_interval" type="section"
+                  >gp_fts_probe_interval</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_fts_probe_retries" type="section">gp_fts_probe_retries</xref>
+                <xref href="guc-list.xml#gp_fts_probe_retries" type="section"
+                  >gp_fts_probe_retries</xref>
               </p>
             </stentry>
             <stentry>
@@ -1379,7 +1443,6 @@
                   >gp_max_local_distributed_cache</xref>
               </p>
             </stentry>
-            <stentry/>
           </strow>
         </simpletable>
       </body>
@@ -1415,7 +1478,8 @@
                 <xref href="guc-list.xml#gp_server_version" type="section">gp_server_version</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_server_version_num" type="section">gp_server_version_num</xref>
+                <xref href="guc-list.xml#gp_server_version_num" type="section"
+                  >gp_server_version_num</xref>
               </p>
             </stentry>
           </strow>
@@ -1439,7 +1503,8 @@
                 >repl_catchup_within_range</xref>
             </p>
             <p>
-              <xref href="guc-list.xml#replication_timeout" type="section">replication_timeout</xref>
+              <xref href="guc-list.xml#replication_timeout" type="section"
+                >replication_timeout</xref>
             </p>
             <p>
               <xref href="guc-list.xml#wal_receiver_status_interval" type="section"
@@ -1458,7 +1523,6 @@
                 >filerep_mirrorvalidation_during_resync</xref>
             </p>
           </stentry>
-          <stentry/>
         </strow>
       </simpletable>
     </body>
@@ -1487,7 +1551,6 @@
               <xref href="guc-list.xml#pljava_vmoptions"/>
             </p>
           </stentry>
-          <stentry/>
         </strow>
       </simpletable>
     </body>

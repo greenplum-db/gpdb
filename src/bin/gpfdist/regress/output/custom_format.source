@@ -5,45 +5,15 @@
 -- check platform and start 'gpfdist'
 -- --------------------------------------
 set optimizer_disable_missing_stats_collection = on;
-CREATE EXTERNAL WEB TABLE gpfdist_status (x text)
-execute E'( python @bindir@/gppinggpfdist.py @hostname@:7575 2>&1 || echo) '
-on SEGMENT 0
-FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL WEB TABLE gpfdist_start (x text)
-execute E'((@bindir@/gpfdist -p 7575 -d @abs_srcdir@/data/fixedwidth/  </dev/null >/dev/null 2>&1 &); sleep 2; echo "starting...") '
+execute E'((@bindir@/gpfdist -p 7575 -d @abs_srcdir@/data/fixedwidth/  </dev/null >/dev/null 2>&1 &); sleep 1; echo "starting...") '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL WEB TABLE gpfdist_stop (x text)
-execute E'(/bin/pkill gpfdist || killall gpfdist) > /dev/null 2>&1; echo "stopping..."'
+execute E'(ps -A |grep [g]pfdist |awk \'{print $1;}\' |xargs kill) > /dev/null 2>&1; echo "stopping..."'
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 -- start_ignore
-SELECT * FROM gpfdist_stop;
-      x      
--------------
- stopping...
-(1 row)
-@abs_srcdir@
-SELECT * FROM gpfdist_status;
-                          x                           
-------------------------------------------------------
- Error: gpfdist is not running (reason: socket error)
- Exit: 1
- 
-(3 rows)
-
-SELECT * FROM gpfdist_start;
-      x      
--------------
- starting...
-(1 row)
-
-SELECT * FROM gpfdist_status;
-                                       x                                       
--------------------------------------------------------------------------------
- Okay, gpfdist version "main build dev" is running on @hostname@:7575.
-(1 row)
-
 -- end_ignore
 -- --------------------------------------
 -- the tests
@@ -10534,31 +10504,10 @@ SELECT * FROM clean_out_file;
 -- stop 'gpfdist'
 -- --------------------------------------
 -- start_ignore
-SELECT * FROM gpfdist_status;
-                                       x                                       
--------------------------------------------------------------------------------
- Okay, gpfdist version "main build dev" is running on @hostname@:7575.
-(1 row)
-
-SELECT * FROM gpfdist_stop;
-      x      
--------------
- stopping...
-(1 row)
-
-SELECT * FROM gpfdist_status;
-                          x                           
-------------------------------------------------------
- Error: gpfdist is not running (reason: socket error)
- Exit: 1
- 
-(3 rows)
-
 -- end_ignore
 -- --------------------------------------
 -- clean the database
 -- --------------------------------------
-DROP EXTERNAL TABLE IF EXISTS gpfdist_status;
 DROP EXTERNAL TABLE IF EXISTS gpfdist_start;
 DROP EXTERNAL TABLE IF EXISTS gpfdist_stop;
 DROP EXTERNAL WEB TABLE IF EXISTS clean_out_file;

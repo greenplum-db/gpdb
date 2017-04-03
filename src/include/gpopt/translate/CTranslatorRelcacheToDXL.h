@@ -256,9 +256,9 @@ namespace gpdxl
 								ULONG ulNumHistValues
 								);
 
-			// get partition keys for a relation
+			// get partition keys and types for a relation
 			static
-			DrgPul *PdrgpulPartKeys(IMemoryPool *pmp, Relation rel, OID oid);
+			void GetPartKeysAndTypes(IMemoryPool *pmp, Relation rel, OID oid, DrgPul **pdrgpulPartKeys, DrgPsz **pdrgpszPartTypes);
 
 			// get keysets for relation
 			static

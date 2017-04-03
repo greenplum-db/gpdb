@@ -139,7 +139,7 @@ extern TupleHashEntry FindTupleHashEntry(TupleHashTable hashtable,
 /*
  * prototypes from functions in execJunk.c
  */
-extern JunkFilter *ExecInitJunkFilter(List *targetList, TupleDesc cleanTupType,
+extern JunkFilter *ExecInitJunkFilter(List *targetList, bool hasoid,
 				   TupleTableSlot *slot);
 extern JunkFilter *ExecInitJunkFilterConversion(List *targetList,
 							 TupleDesc cleanTupType,

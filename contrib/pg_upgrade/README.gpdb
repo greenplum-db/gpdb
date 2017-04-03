@@ -23,6 +23,35 @@ aotable.c, Greenplum specific checks for upgrading from GPDB 4 are added to
 version_old_gpdb4.c.
 
 
+Adding a new object type
+------------------------
+
+When a new object type is added to Greenplum Database, it may need to be added
+to pg_upgrade as well. Below are the bottom-up steps for adding a new object to
+pg_upgrade. This assumes that the object already has Oid dispatch handling and
+is supported in pg_dump.
+
+* In contrib/pg_upgrade_support/pg_upgrade_support.c, add a new function for
+  calling the oid dispatch code with the details required for the new object.
+  To ensure the all required details are included, make sure it matches the
+  object entry in CreateKeyFromCatalogTuple() in the oid dispatcher code
+  (src/backend/catalog/oid_dispatch.c).
+
+* Implement a dump function for the new dumpable object in the binary upgrade
+  code in src/bin/pg_dump/binary_upgrade.c. This function should result in a
+  SQL call to the previously created function added as an ArchiveEntry. See the
+  already existing dump functions for examples on what to do. If additional
+  information on top of what already exist in the Info object is required, SQL
+  calls to the running server can be performed via libpq here.
+
+* In src/bin/pg_dump/pg_dump.c, add the dumpable object type to the list in
+  dumpBinaryUpgrade() with a call to the dump function.
+
+* In case any special handling is required during the upgrade, or any special
+  checks are warranted, add these to the appropriate places in pg_upgrade.
+  The variety of what may be needed is too big to do into detail here.
+
+
 Upgrading from 4.3 to 5.0
 -------------------------
 
@@ -52,3 +81,7 @@ synchronization.
   - AO table segment files will be rewritten when a segment containing numeric
     attributes are written to from database operations.
 
+* External partitions are not supported since management of external partitions
+  is not allowed in utility mode. All external partitions must be either moved
+  out of the partition hierarchy with ALTER TABLE EXCHANGE, or dropped, prior
+  to the upgrade.

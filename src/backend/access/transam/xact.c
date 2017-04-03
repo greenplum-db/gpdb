@@ -1131,6 +1131,34 @@ RecordTransactionCommit(void)
 		/* Can't have child XIDs either; AssignTransactionId enforces this */
 		Assert(nchildren == 0);
 
+		/* add global transaction information */
+		if (isDtxPrepared)
+		{
+			XLogRecData rdata[2];
+			xl_xact_commit xlrec;
+
+			SetCurrentTransactionStopTimestamp();
+			xlrec.xact_time = xactStopTimestamp;
+			xlrec.persistentCommitObjectCount = 0;
+			xlrec.nsubxacts = 0;
+			rdata[0].data = (char *) (&xlrec);
+			rdata[0].len = MinSizeOfXactCommit;
+			rdata[0].buffer = InvalidBuffer;
+
+			getDtxLogInfo(&gxact_log);
+
+			rdata[0].next = &(rdata[1]);
+			rdata[1].data = (char *) &gxact_log;
+			rdata[1].len = sizeof(gxact_log);
+			rdata[1].buffer = InvalidBuffer;
+
+			rdata[1].next = NULL;
+
+			insertingDistributedCommitted();
+			recptr = XLogInsert(RM_XACT_ID, XLOG_XACT_DISTRIBUTED_COMMIT, rdata);
+			insertedDistributedCommitted();
+		}
+
 		/*
 		 * If we didn't create XLOG entries, we're done here; otherwise we
 		 * should flush those entries the same as a commit record.	(An
@@ -1138,7 +1166,7 @@ RecordTransactionCommit(void)
 		 * assigned is a sequence advance record due to nextval() --- we want
 		 * to flush that to disk before reporting commit.)
 		 */
-		if (XactLastRecEnd.xrecoff == 0)
+		if (!isDtxPrepared && XactLastRecEnd.xrecoff == 0)
 			goto cleanup;
 	}
 	else
@@ -2916,16 +2944,8 @@ StartTransaction(void)
 	/*
 	 * MPP Modification
 	 *
-	 * only the writer should get an xid the normal way.
-	 *
-	 * Don't take out this lock if we are in MPP EXECUTE mode AND we aren't the
-	 * "writer".  Actually this is only safe if we only have one writer since
-	 * writers need to hold a lock on their own XID so that others can wait
-	 * for them to be finished.
-	 *
 	 * If we're an executor and don't have a valid QDSentXID, then we're starting
 	 * a purely-local transaction.
-	 *
 	 */
 	switch (DistributedTransactionContext)
 	{
@@ -2938,16 +2958,6 @@ StartTransaction(void)
 			 * transaction without any synchronization to segmates!
 			 * (e.g. CatchupInterruptHandler)
 			 */
-			PG_TRACE1(transaction__start, InvalidTransactionId);
-
-			/*
-		 	 * set transaction_timestamp() (a/k/a now()).  We want this to be the
-		 	 * same as the first command's statement_timestamp(), so don't do a
-		 	 * fresh GetCurrentTimestamp() call (which'd be expensive anyway).
-		  	 */
-		  	xactStartTimestamp = stmtStartTimestamp;
-		  	xactStopTimestamp = 0;
-			pgstat_report_xact_timestamp(xactStartTimestamp);
 		}
 		break;
 
@@ -2955,34 +2965,20 @@ StartTransaction(void)
 		{
 			/*
 			 * MPP: we're the dispatcher.
-			 */
-
-			/*
+			 *
 			 * Create distributed transaction which will map the
 			 * distributed transaction to a local transaction id for the
 			 * master database.
 			 */
-			createDtx(&s->distribXid, &s->transactionId);
+			createDtx(&s->distribXid);
 
-			XactLockTableInsert(s->transactionId);
-			
-			PG_TRACE1(transaction__start, s->transactionId);
-
-			/*
-		 	 * set transaction_timestamp() (a/k/a now()).  We want this to be the
-		 	 * same as the first command's statement_timestamp(), so don't do a
-		 	 * fresh GetCurrentTimestamp() call (which'd be expensive anyway).
-		  	 */
-		  	xactStartTimestamp = stmtStartTimestamp;
-		  	xactStopTimestamp = 0;
-			pgstat_report_xact_timestamp(xactStartTimestamp);
 			if (SharedLocalSnapshotSlot != NULL)
 			{
 				elog((Debug_print_full_dtm ? LOG : DEBUG5),
 					 "setting SharedLocalSnapshotSlot->startTimestamp = " INT64_FORMAT "[cur=" INT64_FORMAT "])", 
-					xactStartTimestamp, SharedLocalSnapshotSlot->startTimestamp);
+					 stmtStartTimestamp, SharedLocalSnapshotSlot->startTimestamp);
 
-				SharedLocalSnapshotSlot->startTimestamp = xactStartTimestamp;
+				SharedLocalSnapshotSlot->startTimestamp = stmtStartTimestamp;
 			}
 		}
 		break;
@@ -2995,6 +2991,12 @@ StartTransaction(void)
 			if (gp_enable_slow_writer_testmode)
 				pg_usleep(500000);
 
+			if (QEDtxContextInfo.distributedXid == InvalidDistributedTransactionId)
+			{
+				elog(ERROR,
+					 "not tied to distributed transaction id, but still coordinated as a distributed transaction.");
+			}
+
 			if (SharedLocalSnapshotSlot != NULL)
 			{
 				SharedLocalSnapshotSlot->ready = false;
@@ -3002,78 +3004,50 @@ StartTransaction(void)
 
 			/*
 			 * MPP: we're a QE Writer.
+			 *
+			 * For DTX_CONTEXT_QE_AUTO_COMMIT_IMPLICIT don't use the
+			 * distributed xid map since this may be one of funny distributed
+			 * queries the executor uses behind the scenes for estimation
+			 * work. We also don't need a local XID right now - we let it be
+			 * assigned lazily, as on a local transaction. This transaction
+			 * will auto-commit, and then we will follow it with the real user
+			 * command.
 			 */
-			if (QEDtxContextInfo.distributedXid != InvalidDistributedTransactionId)
+			if (DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER ||
+				DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER)
 			{
-				if (DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER ||
-					DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER)
-				{
-					/*
-					 * Use local xid that is mapped to distributed xid.
-					 */
-					LocalDistribXact_StartOnSegment(
-						QEDtxContextInfo.distributedTimeStamp,
-						QEDtxContextInfo.distributedXid,
-						&s->transactionId);
-					XactLockTableInsert(s->transactionId);
+				s->distribXid = QEDtxContextInfo.distributedXid;
 
-					s->distribXid = QEDtxContextInfo.distributedXid;
+				Assert(QEDtxContextInfo.distributedTimeStamp != 0);
+				Assert(QEDtxContextInfo.distributedXid != InvalidDistributedTransactionId);
 
-					elog((Debug_print_full_dtm ? LOG : DEBUG5),
-						 "LocalDistribXact_StartOnSegment returned %s",
-					     LocalDistribXact_DisplayString(MyProc));
-				}
-				else
-				{
-					/*
-					 * We don't use the distributed xid map since this may be one of funny
-					 * distributed queries the executor uses behind the scenes for estimation
-					 * work.  We also don't need a local XID right now - we let it be assigned
-					 * lazily, as on a local transaction. This transaction will auto-commit, and
-					 * then we will follow it with the real user command.
-					 */
-					Assert(DistributedTransactionContext == DTX_CONTEXT_QE_AUTO_COMMIT_IMPLICIT);
-				}
-
-			  	/*
-			 	 * now() and statement_timestamp() should be the same time
-			  	 */
-			  	xactStartTimestamp = stmtStartTimestamp;
-			  	xactStopTimestamp = 0;
-				pgstat_report_xact_timestamp(xactStartTimestamp);
-
-				if (SharedLocalSnapshotSlot != NULL)
-				{
-					elog((Debug_print_full_dtm ? LOG : DEBUG5),
-						 "qExec writer setting distributedXid: %d sharedQDxid %d (shared xid %u -> %u) ready %s (shared timeStamp = " INT64_FORMAT " -> " INT64_FORMAT ")",
-						 QEDtxContextInfo.distributedXid, SharedLocalSnapshotSlot->QDxid, SharedLocalSnapshotSlot->xid, s->transactionId,
-						 SharedLocalSnapshotSlot->ready ? "true" : "false", SharedLocalSnapshotSlot->startTimestamp, xactStartTimestamp);
-
-					SharedLocalSnapshotSlot->xid = s->transactionId;
-					SharedLocalSnapshotSlot->startTimestamp = xactStartTimestamp;
-					SharedLocalSnapshotSlot->QDxid = QEDtxContextInfo.distributedXid;
-
-					SharedLocalSnapshotSlot->pid = MyProc->pid;
-				}
-			}
-			else
-			{
 				/*
-				 * Not tied to distributed transaction id, but still coordinated
-				 * as a distributed transaction with the 2 phase protocol.
-				 *
-				 * Generate a new transaction id
+				 * Update distributed XID info, this is only used for
+				 * debugging.
 				 */
-				AssignTransactionId(s);
-
-				elog((Debug_print_full_dtm ? LOG : DEBUG5),
-					 "Not tied to distributed transaction id, but still coordinated "
-				     "as a distributed transaction with the 2 phase protocol... local xid %u", 
-					 s->transactionId);
+				LocalDistribXactData *ele = &MyProc->localDistribXactData;
+				ele->distribTimeStamp = QEDtxContextInfo.distributedTimeStamp;
+				ele->distribXid = QEDtxContextInfo.distributedXid;
+				ele->state = LOCALDISTRIBXACT_STATE_ACTIVE;
 			}
 
-			PG_TRACE1(transaction__start, s->transactionId);
+			if (SharedLocalSnapshotSlot != NULL)
+			{
+				elog((Debug_print_full_dtm ? LOG : DEBUG5),
+					 "qExec writer setting distributedXid: %d sharedQDxid %d (shared xid %u -> %u) ready %s (shared timeStamp = " INT64_FORMAT " -> " INT64_FORMAT ")",
+					 QEDtxContextInfo.distributedXid,
+					 SharedLocalSnapshotSlot->QDxid,
+					 SharedLocalSnapshotSlot->xid,
+					 s->transactionId,
+					 SharedLocalSnapshotSlot->ready ? "true" : "false",
+					 SharedLocalSnapshotSlot->startTimestamp,
+					 xactStartTimestamp);
 
+				SharedLocalSnapshotSlot->xid = s->transactionId;
+				SharedLocalSnapshotSlot->startTimestamp = stmtStartTimestamp;
+				SharedLocalSnapshotSlot->QDxid = QEDtxContextInfo.distributedXid;
+				SharedLocalSnapshotSlot->pid = MyProc->pid;
+			}
 		}
 		break;
 
@@ -3081,147 +3055,17 @@ StartTransaction(void)
 		case DTX_CONTEXT_QE_READER:
 		{
 			/*
-			 * the pg_usleep() call below is in units of us
-			 * (microseconds), interconnect timeout is in seconds.
-			 * Start with 1 millisecond.
-			 */
-			uint64		segmate_timeout_us;
-			uint64		sleep_per_check_us = 1 * 1000;
-			uint64		total_sleep_time_us = 0;
-			uint64		warning_sleep_time_us = 0;
-
-			segmate_timeout_us = (3 * (uint64)Max(interconnect_setup_timeout, 1) * 1000 * 1000) / 4;
-
-			/*
 			 * MPP: we're a QE Reader.
 			 */
 			Assert (SharedLocalSnapshotSlot != NULL);
-
-			/*
-			 * we want to get our XID from the shared snapshot and not
-			 * generate one ourselves
-			 */
-			elog((Debug_print_full_dtm ? LOG : DEBUG5), "qExec reader: distributedXid %d sharedlocalsnapshot->QDxid %d sharedsnapshots: %s",
-				 QEDtxContextInfo.distributedXid, SharedLocalSnapshotSlot->QDxid, 
-				 SharedSnapshotDump());
-
-			/*
-			 * NOTE: it is important to notice that we *do not check*
-			 * for QEDtxContextInfo.cursorContext here. This means
-			 * that we'll be pulling some information from the
-			 * SharedLocalSnapshotSlot even in the cursor case!
-			 *
-			 * In particular, we're getting the local-xid, the
-			 * local transaction-start-timestamp.
-			 */
-			for (;;)
-			{
-				Assert(SharedLocalSnapshotSlot != NULL);
-
-				elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
-					 "[Distributed Snapshot #%u] *Reader Match?* gxid %u == %u allow currcid %d ~~ %d (StartTransaction, gxid = %u, slot #%d, '%s')", 
-					 QEDtxContextInfo.distributedSnapshot.header.distribSnapshotId,
-					 QEDtxContextInfo.distributedXid,
-					 SharedLocalSnapshotSlot->QDxid,
-					 QEDtxContextInfo.curcid,
-					 SharedLocalSnapshotSlot->QDcid,
-					 getDistributedTransactionId(),
-					 SharedLocalSnapshotSlot->slotid,
-					 DtxContextToString(DistributedTransactionContext));
-				
-				/*
-				 * If the QDxid in the SharedLocalSnapshotSlot is the
-				 * same one that the QD sent us... then we know we are
-				 * both on the same page.
-				 *
-				 * NOTE: The xid we end up getting here may be changed
-				 * later on if we wind up needing a snapshot. There is
-				 * a reason we have a two-phase wait (first phase
-				 * here, second phase in GetSnapshotData()): Some
-				 * statements call StartTransaction, but *don't* ever
-				 * get a snapshot. "SET" statements are a simple
-				 * example. For that case, we just need *some*
-				 * relevant xid, that we may update the xid when we do
-				 * a full sync with our writer shouldn't matter (since
-				 * we will do that before ever using a snapshot).
-				 *
-				 * This should match a similar check in procarray.c.
-				 */
-				if (QEDtxContextInfo.distributedXid == SharedLocalSnapshotSlot->QDxid)
-				{
-					elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
-						 "qExec reader: shared-xid to xid %u (%u %u) (%u %u) xactStartTimestamp (" INT64_FORMAT " -> " INT64_FORMAT ")",
-						 SharedLocalSnapshotSlot->xid,
-						 QEDtxContextInfo.distributedXid, SharedLocalSnapshotSlot->QDxid,
-						 QEDtxContextInfo.segmateSync, SharedLocalSnapshotSlot->segmateSync,
-						 xactStartTimestamp,
-						 SharedLocalSnapshotSlot->startTimestamp);
-
-					/*
-					 * We set TopTransactionStateData.transactionId to the same top-level
-					 * XID as the QE writer, so that visibility checks consider that
-					 * XID as "current transaction". But we don't advertise it in the
-					 * proc array, nor write a commit record for it, as the QE writer will
-					 * do that.
-					 */
-					s->transactionId = SharedLocalSnapshotSlot->xid;
-					xactStartTimestamp = SharedLocalSnapshotSlot->startTimestamp;
-					xactStopTimestamp = 0;
-					pgstat_report_xact_timestamp(xactStartTimestamp);
-
-					break; /* done with for (;;) waitloop */
-				}
-				else
-				{
-					/*
-					 * didn't find it.  we'll sleep for a small amount of
-					 * time and then try again.
-					 *
-					 * TODO: is there a semaphore or something better we can
-					 * do here.
-					 */
-					elog(DEBUG1,"Sleeping while waiting for shared snapshot");
-					pg_usleep(sleep_per_check_us);
-					elog(DEBUG1,"waking while waiting for shared snapshot");
-
-					CHECK_FOR_INTERRUPTS();
-
-					warning_sleep_time_us += sleep_per_check_us;
-					total_sleep_time_us += sleep_per_check_us;
-
-					if (total_sleep_time_us >= segmate_timeout_us)
-					{
-						ereport(ERROR,
-								(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-								 errmsg("StartTransaction timed out waiting for Writer to set the shared snapshot."),
-								 errdetail("We are waiting for the shared snapshot to have XID: %d/%u but the value "
-										   "is currently: %d/%u. Our slotindex is: %d our writer-pid %d\n"
-										   "DistributedTransactionContext = %s."
-										   "Dump of all sharedsnapshots in shmem: %s",
-										   QEDtxContextInfo.distributedXid, QEDtxContextInfo.segmateSync,
-										   SharedLocalSnapshotSlot->QDxid, SharedLocalSnapshotSlot->segmateSync,
-										   SharedLocalSnapshotSlot->slotindex, (int)SharedLocalSnapshotSlot->pid,
-										   DtxContextToString(DistributedTransactionContext),
-										   SharedSnapshotDump())));
-					}
-					else if (warning_sleep_time_us > 1000 * 1000)
-					{
-						/*
-						 * Every second issue warning.
-						 */
-						elog(LOG,"StartTransaction did not find shared local snapshot information. "
-							 "We are waiting for the shared snapshot to have XID: %d/%u but the value "
-							 "is currently: %d/%u. Our slotindex is: %d. our writer-pid %d"
-							 "DistributedTransactionContext = %s.",
-							 QEDtxContextInfo.distributedXid, QEDtxContextInfo.segmateSync,
-							 SharedLocalSnapshotSlot->QDxid, SharedLocalSnapshotSlot->segmateSync,
-							 SharedLocalSnapshotSlot->slotindex, (int)SharedLocalSnapshotSlot->pid,
-							 DtxContextToString(DistributedTransactionContext));
-						warning_sleep_time_us = 0;
-					}
-				}
-			}
 			s->distribXid = QEDtxContextInfo.distributedXid;
+
+			elog((Debug_print_full_dtm ? LOG : DEBUG5), "qExec reader: distributedXid %d currcid %d gxid = %u DtxContext '%s' sharedsnapshots: %s",
+				 QEDtxContextInfo.distributedXid,
+				 QEDtxContextInfo.curcid,
+				 getDistributedTransactionId(),
+				 DtxContextToString(DistributedTransactionContext),
+				 SharedSnapshotDump());
 		}
 		break;
 	
@@ -3325,7 +3169,6 @@ CommitTransaction(void)
 	TransactionId latestXid;
 
 	TransactionId localXid;
-	bool needStateChangeFromDistributed = false;
 	bool needNotifyCommittedDtxTransaction = false;
 	bool willHaveObjectsFromSmgr;
 
@@ -3484,7 +3327,6 @@ CommitTransaction(void)
 	 */
 	ProcArrayEndTransaction(MyProc, latestXid,
 							true,
-							&needStateChangeFromDistributed,
 							&needNotifyCommittedDtxTransaction);
 	/*
 	 * Note that in GPDB, ProcArrayEndTransaction does *not* clear the PGPROC
@@ -3580,7 +3422,6 @@ CommitTransaction(void)
 						 RESOURCE_RELEASE_AFTER_LOCKS,
 						 true, true);
 
-
 	/* Check we've released all catcache entries */
 	AtEOXact_CatCache(true);
 
@@ -3608,17 +3449,6 @@ CommitTransaction(void)
 	ResetSharedSnapshotSubxids(SharedLocalSnapshotSlot);
 
 	finishDistributedTransactionContext("CommitTransaction", false);
-
-	if (MyProc->localDistribXactData.state != LOCALDISTRIBXACT_STATE_NONE)
-	{
-		LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
-
-		if (needStateChangeFromDistributed)
-			LocalDistribXact_ChangeState(MyProc,
-										 LOCALDISTRIBXACT_STATE_COMMITTED);
-
-		LWLockRelease(ProcArrayLock);
-	}
 
 	if (gp_local_distributed_cache_stats)
 	{
@@ -4064,9 +3894,7 @@ AbortTransaction(void)
 	 * must be done _before_ releasing locks we hold and _after_
 	 * RecordTransactionAbort.
 	 */
-	ProcArrayEndTransaction(MyProc, latestXid, false,
-							NULL,
-							NULL);
+	ProcArrayEndTransaction(MyProc, latestXid, false, NULL);
 
 	/*
 	 * Post-abort cleanup.	See notes in CommitTransaction() concerning
@@ -6736,16 +6564,6 @@ xact_redo_distributed_commit(xl_xact_commit *xlrec, TransactionId xid)
 	TransactionId max_xid;
 	int			i;
 
-	/*
-	 * Make room in the DistributedLog, if necessary.
-	 */
-	if (TransactionIdFollowsOrEquals(xid,
-									 ShmemVariableCache->nextXid))
-	{
-		ShmemVariableCache->nextXid = xid;
-		TransactionIdAdvance(ShmemVariableCache->nextXid);
-	}
-
 	/* 
 	 * Get the global transaction information first.
 	 */
@@ -6763,64 +6581,75 @@ xact_redo_distributed_commit(xl_xact_commit *xlrec, TransactionId xid)
 		elog(ERROR, 
 		     "Distributed xid %u does not match %u in distributed commit redo record",
 		     gxact_log->gxid, distribXid);
-	/* 
-	 * Mark the distributed transaction committed before we
-	 * update the CLOG in xact_redo_commit. 
-	 */
-	 
-	/* UNDONE: What are the locking issues here? */
 
-	DistributedLog_SetCommitted(
-							xid,
-							distribTimeStamp,
-							gxact_log->gxid,
-							/* isRedo */ true);
-
-	/*
-	 * Now update the CLOG and do local commit actions.  
-	 *
-	 * NOTE: The following logic is a copy of xact_redo_commit, with the
-	 * only addition being redo of DistributeLog updates to subtransaction
-	 * log.
-	 */
-	TransactionIdCommit(xid);
-
-	data = xlrec->data;
-	PersistentEndXactRec_Deserialize(
-								data,
-								xlrec->persistentCommitObjectCount,
-								&persistentCommitObjects,
-								&data);
-	
-	if (Debug_persistent_print)
-		PersistentEndXactRec_Print("xact_redo_distributed_commit", &persistentCommitObjects);
-
-	sub_xids = (TransactionId *)data; 
-
-	/* Mark committed subtransactions as committed */
-	TransactionIdCommitTree(xlrec->nsubxacts, sub_xids);
-
-	/* Make sure nextXid is beyond any XID mentioned in the record */
-	max_xid = xid;
-	for (i = 0; i < xlrec->nsubxacts; i++)
+	if (TransactionIdIsValid(xid))
 	{
 		/*
-		 * Add the committed subtransactions to the DistributedLog, too.
+		 * Mark the distributed transaction committed before we
+		 * update the CLOG in xact_redo_commit.
 		 */
+		/*
+		 * Make room in the DistributedLog, if necessary.
+		 */
+		if (TransactionIdFollowsOrEquals(xid,
+										 ShmemVariableCache->nextXid))
+		{
+			ShmemVariableCache->nextXid = xid;
+			TransactionIdAdvance(ShmemVariableCache->nextXid);
+		}
+
 		DistributedLog_SetCommitted(
-								sub_xids[i],
-								distribTimeStamp,
-								gxact_log->gxid,
-								/* isRedo */ true);
+			xid,
+			distribTimeStamp,
+			gxact_log->gxid,
+			/* isRedo */ true);
+
+		/*
+		 * Now update the CLOG and do local commit actions.
+		 *
+		 * NOTE: The following logic is a copy of xact_redo_commit, with the
+		 * only addition being redo of DistributeLog updates to subtransaction
+		 * log.
+		 */
+		TransactionIdCommit(xid);
+
+		data = xlrec->data;
+		PersistentEndXactRec_Deserialize(
+			data,
+			xlrec->persistentCommitObjectCount,
+			&persistentCommitObjects,
+			&data);
+	
+		if (Debug_persistent_print)
+			PersistentEndXactRec_Print("xact_redo_distributed_commit", &persistentCommitObjects);
+
+		sub_xids = (TransactionId *)data;
+
+		/* Mark committed subtransactions as committed */
+		TransactionIdCommitTree(xlrec->nsubxacts, sub_xids);
+
+		/* Make sure nextXid is beyond any XID mentioned in the record */
+		max_xid = xid;
+		for (i = 0; i < xlrec->nsubxacts; i++)
+		{
+			/*
+			 * Add the committed subtransactions to the DistributedLog, too.
+			 */
+			DistributedLog_SetCommitted(
+				sub_xids[i],
+				distribTimeStamp,
+				gxact_log->gxid,
+				/* isRedo */ true);
 		
-		if (TransactionIdPrecedes(max_xid, sub_xids[i]))
-			max_xid = sub_xids[i];
-	}
-	if (TransactionIdFollowsOrEquals(max_xid,
-									 ShmemVariableCache->nextXid))
-	{
-		ShmemVariableCache->nextXid = max_xid;
-		TransactionIdAdvance(ShmemVariableCache->nextXid);
+			if (TransactionIdPrecedes(max_xid, sub_xids[i]))
+				max_xid = sub_xids[i];
+		}
+		if (TransactionIdFollowsOrEquals(max_xid,
+										 ShmemVariableCache->nextXid))
+		{
+			ShmemVariableCache->nextXid = max_xid;
+			TransactionIdAdvance(ShmemVariableCache->nextXid);
+		}
 	}
 
 	/*

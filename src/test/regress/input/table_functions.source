@@ -462,6 +462,9 @@ explain SELECT x.* FROM multiset_5( TABLE ( SELECT 1 ) ) x right join (SELECT 1)
 -- Do an explain analyze while we are at it:
 explain analyze SELECT * FROM multiset_5( TABLE( SELECT count(*)::integer, 'hello'::text from example_r scatter randomly) );
 
+-- Test for an old bug in aggregate planning - this used to crash.
+select count(*) from multiset_5(table(select * from example)) s ;
+
 -- ===========================================
 -- Test invalid use of table value expressions
 -- ===========================================

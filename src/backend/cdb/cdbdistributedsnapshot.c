@@ -154,14 +154,22 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 		if (distribXid == inProgressEntryArray[i].distribXid)
 		{
 			/*
-			 * Save the relationship to the local xid so we may avoid
-			 * checking the distributed committed log in a subsequent check.
+			 * Save the relationship to the local xid so we may avoid checking
+			 * the distributed committed log in a subsequent check.
 			 */
 			if (inProgressEntryArray[i].localXid == InvalidTransactionId)
 				inProgressEntryArray[i].localXid = localXid;
-			
 			return DISTRIBUTEDSNAPSHOT_COMMITTED_INPROGRESS;
 		}
+
+		/*
+		 * Leverage the fact that inProgressEntryArray is sorted in ascending
+		 * order based on distribXid while creating the snapshot in
+		 * createDtxSnapshot. So, can fail fast once known are lower than
+		 * rest of them.
+		 */
+		if (distribXid < inProgressEntryArray[i].distribXid)
+			break;
 	}
 
 	/*

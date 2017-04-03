@@ -15,13 +15,9 @@ typedef enum
 {
 	LOCALDISTRIBXACT_STATE_NONE = 0,
 	LOCALDISTRIBXACT_STATE_ACTIVE,
-	LOCALDISTRIBXACT_STATE_COMMITDELIVERY,
 	LOCALDISTRIBXACT_STATE_COMMITTED,
-	LOCALDISTRIBXACT_STATE_ABORTDELIVERY,
 	LOCALDISTRIBXACT_STATE_ABORTED,
-	LOCALDISTRIBXACT_STATE_PREPARED,
-	LOCALDISTRIBXACT_STATE_COMMITPREPARED,
-	LOCALDISTRIBXACT_STATE_ABORTPREPARED
+	LOCALDISTRIBXACT_STATE_PREPARED
 } LocalDistribXactState;
 
 /*
@@ -42,17 +38,6 @@ typedef struct LocalDistribXactData
 	DistributedTransactionId 		distribXid;
 
 } LocalDistribXactData;
-
-extern void LocalDistribXact_StartOnMaster(
-	DistributedTransactionTimeStamp	newDistribTimeStamp,
-	DistributedTransactionId 		newDistribXid,
-	TransactionId					*newLocalXid,
-	LocalDistribXactData			*masterLocalDistribXactRef);
-
-extern void LocalDistribXact_StartOnSegment(
-	DistributedTransactionTimeStamp	newDistribTimeStamp,
-	DistributedTransactionId 		newDistribXid,
-	TransactionId					*newLocalXid);
 
 extern void LocalDistribXact_ChangeState(PGPROC *proc,
 	LocalDistribXactState		newState);

@@ -739,6 +739,33 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 				set_dummy_tlist_references(plan, rtoffset);
 			}
 			break;
+
+		case T_PartitionSelector:
+			{
+				PartitionSelector *ps = (PartitionSelector *) plan;
+				indexed_tlist *childplan_itlist =
+					build_tlist_index(plan->lefttree->targetlist);
+
+				set_upper_references(glob, plan, rtoffset);
+
+				//set_dummy_tlist_references(plan, rtoffset);
+				Assert(ps->plan.qual == NIL);
+
+				ps->levelEqExpressions = (List *)
+					fix_upper_expr(glob, (Node *) ps->levelEqExpressions, childplan_itlist, rtoffset);
+				ps->levelExpressions = (List *)
+					fix_upper_expr(glob, (Node *) ps->levelExpressions, childplan_itlist, rtoffset);
+				ps->residualPredicate =
+					fix_upper_expr(glob, ps->residualPredicate, childplan_itlist, rtoffset);
+				ps->propagationExpression =
+					fix_upper_expr(glob, ps->propagationExpression, childplan_itlist, rtoffset);
+				ps->printablePredicate =
+					fix_upper_expr(glob, ps->printablePredicate, childplan_itlist, rtoffset);
+				ps->partTabTargetlist = (List *)
+					fix_upper_expr(glob, (Node *) ps->partTabTargetlist, childplan_itlist, rtoffset);
+			}
+			break;
+			
 		case T_Limit:
 			{
 				Limit	   *splan = (Limit *) plan;

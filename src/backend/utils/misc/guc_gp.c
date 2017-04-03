@@ -124,6 +124,10 @@ static const char *assign_password_hash_algorithm(const char *newval,
 static const char *assign_gp_default_storage_options(
 							const char *newval, bool doit, GucSource source);
 
+static bool assign_pljava_classpath_insecure(bool newval, bool doit, GucSource source);
+
+extern struct config_generic *find_option(const char *name, bool create_placeholders, int elevel);
+
 extern bool enable_partition_rules;
 
 /* GUC lists for gp_guc_list_show().  (List of struct config_generic) */
@@ -3228,7 +3232,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&vmem_process_interrupt,
 		false, NULL, NULL
 	},
-
+	{
+		{"pljava_classpath_insecure", PGC_POSTMASTER, CUSTOM_OPTIONS,
+			gettext_noop("Allow pljava_classpath to be set by user per session"),
+			NULL,
+			GUC_SUPERUSER_ONLY | GUC_NOT_IN_SAMPLE
+		},
+		&pljava_classpath_insecure,
+		false, assign_pljava_classpath_insecure, NULL
+	},
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
@@ -5562,6 +5574,17 @@ assign_optimizer_log_failure(const char *val, bool assign, GucSource source)
 	}
 
 	return val;
+}
+
+static bool
+assign_pljava_classpath_insecure(bool newval, bool doit, GucSource source)
+{
+	if ( newval == true )
+	{
+		struct config_generic *pljava_cp = find_option("pljava_classpath", false, ERROR);
+		pljava_cp->context = PGC_USERSET;
+	}
+	return true;
 }
 
 static const char*

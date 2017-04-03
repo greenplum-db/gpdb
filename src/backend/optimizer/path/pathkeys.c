@@ -31,11 +31,9 @@
 #include "optimizer/restrictinfo.h"
 #include "parser/parsetree.h"
 #include "parser/parse_expr.h"
-#include "parser/parse_func.h"
 #include "parser/parse_oper.h"	/* for compatible_oper_opid() */
 #include "utils/lsyscache.h"
 
-#include "cdb/cdbdef.h"			/* CdbSwap() */
 #include "cdb/cdbpullup.h"		/* cdbpullup_expr(), cdbpullup_make_var() */
 
 static PathKey *make_canonical_pathkey(PlannerInfo *root,

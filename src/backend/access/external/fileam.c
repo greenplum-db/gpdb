@@ -85,7 +85,7 @@ static void justifyDatabuf(StringInfo buf);
 static void base16_encode(char *raw, int len, char *encoded);
 static char *get_eol_delimiter(List *params);
 static void external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape,
-				 char *quote, bool header, uint32 scancounter, List *params);
+				 char *quote, int eol_type, bool header, uint32 scancounter, List *params);
 
 /* ----------------------------------------------------------------
 *				   external_ interface functions
@@ -397,15 +397,8 @@ external_endscan(FileScanDesc scan)
 	 */
 	if (!scan->fs_noop && scan->fs_file)
 	{
-		URL_FILE *f = scan->fs_file;
-
-		/*
-		 * Mark the handle as NULL before closing it, so that if something
-		 * goes wrong while closing, and we get called again during abort
-		 * processing, we will not try to close the source twice.
-		 */
+		url_fclose(scan->fs_file, true, relname);
 		scan->fs_file = NULL;
-		url_fclose(f, true, relname);
 	}
 
 	pfree(relname);
@@ -424,15 +417,8 @@ external_stopscan(FileScanDesc scan)
 	 */
 	if (!scan->fs_noop && scan->fs_file)
 	{
-		URL_FILE *f = scan->fs_file;
-
-		/*
-		 * Mark the handle as NULL before closing it, so that if something
-		 * goes wrong while closing, and we get called again during abort
-		 * processing, we will not try to close the source twice.
-		 */
+		url_fclose(scan->fs_file, false, RelationGetRelationName(scan->fs_rd));
 		scan->fs_file = NULL;
-		url_fclose(f, false, RelationGetRelationName(scan->fs_rd));
 	}
 }
 
@@ -702,18 +688,10 @@ external_insert_finish(ExternalInsertDesc extInsertDesc)
 	 */
 	if (extInsertDesc->ext_file)
 	{
-		char	   *relname = pstrdup(RelationGetRelationName(extInsertDesc->ext_rel));
-		URL_FILE   *f = extInsertDesc->ext_file;
+		char	   *relname = RelationGetRelationName(extInsertDesc->ext_rel);
 
-		/*
-		 * Mark the handle as NULL before closing it, so that if something
-		 * goes wrong while closing, and we get called again during abort
-		 * processing, we will not try to close the source twice.
-		 */
-		extInsertDesc->ext_file = NULL;
-		url_fflush(f, extInsertDesc->ext_pstate);
-		url_fclose(f, true, relname);
-		pfree(relname);
+		url_fflush(extInsertDesc->ext_file, extInsertDesc->ext_pstate);
+		url_fclose(extInsertDesc->ext_file, true, relname);
 	}
 
 	if (extInsertDesc->ext_formatter_data)
@@ -1571,6 +1549,7 @@ open_external_readable_source(FileScanDesc scan)
 							  scan->fs_pstate->csv_mode,
 							  scan->fs_pstate->escape,
 							  scan->fs_pstate->quote,
+							  scan->fs_pstate->eol_type,
 							  scan->fs_pstate->header_line,
 							  scan->fs_scancounter,
 							  scan->fs_pstate->custom_formatter_params);
@@ -1601,6 +1580,7 @@ open_external_writable_source(ExternalInsertDesc extInsertDesc)
 							  extInsertDesc->ext_pstate->csv_mode,
 							  extInsertDesc->ext_pstate->escape,
 							  extInsertDesc->ext_pstate->quote,
+							  extInsertDesc->ext_pstate->eol_type,
 							  extInsertDesc->ext_pstate->header_line,
 							  0,
 						 extInsertDesc->ext_pstate->custom_formatter_params);
@@ -2433,11 +2413,11 @@ base16_encode(char *raw, int len, char *encoded)
 void
 external_set_env_vars(extvar_t *extvar, char *uri, bool csv, char *escape, char *quote, bool header, uint32 scancounter)
 {
-	external_set_env_vars_ext(extvar, uri, csv, escape, quote, header, scancounter, NULL);
+	external_set_env_vars_ext(extvar, uri, csv, escape, quote, EOL_UNKNOWN, header, scancounter, NULL);
 }
 
 static void
-external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, char *quote, bool header,
+external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, char *quote, int eol_type, bool header,
 						  uint32 scancounter, List *params)
 {
 	time_t		now = time(0);
@@ -2448,10 +2428,11 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	int			line_delim_len;
 
 	sprintf(extvar->GP_CSVOPT,
-			"m%dx%dq%dh%d",
+			"m%dx%dq%dn%dh%d",
 			csv ? 1 : 0,
 			escape ? 255 & *escape : 0,
 			quote ? 255 & *quote : 0,
+			eol_type,
 			header ? 1 : 0);
 
 	if (Gp_role != GP_ROLE_DISPATCH)
@@ -2535,8 +2516,25 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	}
 	else
 	{
-		encoded_delim = "";
-		line_delim_len = -1;
+		switch(eol_type)
+		{
+			case EOL_CR:
+				encoded_delim = "0D";
+				line_delim_len = 1;
+				break;
+			case EOL_LF:
+				encoded_delim = "0A";
+				line_delim_len = 1;
+				break;
+			case EOL_CRLF:
+				encoded_delim = "0D0A";
+				line_delim_len = 2;
+				break;
+			default:
+				encoded_delim = "";
+				line_delim_len = -1;
+				break;
+		}
 	}
 	extvar->GP_LINE_DELIM_STR = pstrdup(encoded_delim);
 	sprintf(extvar->GP_LINE_DELIM_LENGTH, "%d", line_delim_len);

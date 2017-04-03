@@ -18,6 +18,7 @@ static void check_proper_datallowconn(migratorContext *ctx, Cluster whichCluster
 static void check_for_isn_and_int8_passing_mismatch(migratorContext *ctx,
 												Cluster whichCluster);
 static void check_for_reg_data_type_usage(migratorContext *ctx, Cluster whichCluster);
+static void check_external_partition(migratorContext *ctx);
 
 
 /*
@@ -95,9 +96,11 @@ check_old_cluster(migratorContext *ctx, bool live_check,
 	 * Check for various failure cases
 	 */
 
+	report_progress(ctx, CLUSTER_OLD, CHECK, "Failure checks");
 	check_proper_datallowconn(ctx, CLUSTER_OLD);
 	check_for_reg_data_type_usage(ctx, CLUSTER_OLD);
 	check_for_isn_and_int8_passing_mismatch(ctx, CLUSTER_OLD);
+	check_external_partition(ctx);
 
 	/* old = PG 8.3 checks? */
 	/*
@@ -151,6 +154,7 @@ check_old_cluster(migratorContext *ctx, bool live_check,
 	 */
 	if (!ctx->check)
 	{
+		report_progress(ctx, CLUSTER_OLD, SCHEMA_DUMP, "Creating catalog dump");
 		generate_old_dump(ctx);
 		split_old_dump(ctx);
 	}
@@ -768,4 +772,92 @@ check_for_reg_data_type_usage(migratorContext *ctx, Cluster whichCluster)
 	}
 	else
 		check_ok(ctx);
+}
+
+/*
+ *	check_external_partition
+ *
+ *	External tables cannot be included in the partitioning hierarchy during the
+ *	initial definition with CREATE TABLE, they must be defined separately and
+ *	injected via ALTER TABLE EXCHANGE. The partitioning system catalogs are
+ *	however not replicated onto the segments which means ALTER TABLE EXCHANGE
+ *	is prohibited in utility mode. This means that pg_upgrade cannot upgrade a
+ *	cluster containing external partitions, they must be handled manually
+ *	before/after the upgrade.
+ *
+ *	Check for the existence of external partitions and refuse the upgrade if
+ *	found.
+ */
+static void
+check_external_partition(migratorContext *ctx)
+{
+	ClusterInfo *old_cluster = &ctx->old;
+	char		query[QUERY_ALLOC];
+	char		output_path[MAXPGPATH];
+	FILE	   *script = NULL;
+	bool		found = false;
+	int			dbnum;
+
+	prep_status(ctx, "Checking for external tables used in partitioning");
+
+	snprintf(output_path, sizeof(output_path), "%s/external_partitions.txt",
+			 ctx->cwd);
+	/*
+	 * We need to query the inheritance catalog rather than the partitioning
+	 * catalogs since they are not available on the segments.
+	 */
+	snprintf(query, sizeof(query),
+			 "SELECT cc.relname, c.relname AS partname, c.relnamespace "
+			 "FROM   pg_inherits i "
+			 "       JOIN pg_class c ON (i.inhrelid = c.oid AND c.relstorage = '%c') "
+			 "       JOIN pg_class cc ON (i.inhparent = cc.oid);",
+			 RELSTORAGE_EXTERNAL);
+
+	for (dbnum = 0; dbnum < old_cluster->dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		int			ntups;
+		int			rowno;
+		DbInfo	   *active_db = &old_cluster->dbarr.dbs[dbnum];
+		PGconn	   *conn;
+
+		conn = connectToServer(ctx, active_db->db_name, CLUSTER_OLD);
+		res = executeQueryOrDie(ctx, conn, query);
+
+		ntups = PQntuples(res);
+
+		if (ntups > 0)
+		{
+			found = true;
+
+			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
+				pg_log(ctx, PG_FATAL, "Could not create necessary file:  %s\n",
+					   output_path);
+
+			for (rowno = 0; rowno < ntups; rowno++)
+			{
+				fprintf(script, "External partition \"%s\" in relation \"%s\"\n",
+						PQgetvalue(res, rowno, PQfnumber(res, "partname")),
+						PQgetvalue(res, rowno, PQfnumber(res, "relname")));
+			}
+		}
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+	if (found)
+	{
+		fclose(script);
+		pg_log(ctx, PG_REPORT, "fatal\n");
+		pg_log(ctx, PG_FATAL,
+			   "| Your installation contains partitioned tables with external\n"
+			   "| tables as partitions.  These partitions need to be removed\n"
+			   "| from the partition hierarchy before the upgrade.  A list of\n"
+			   "| external partitions to remove is in the file:\n"
+			   "| \t%s\n\n", output_path);
+	}
+	else
+	{
+		check_ok(ctx);
+	}
 }

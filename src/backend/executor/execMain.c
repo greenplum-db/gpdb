@@ -392,17 +392,6 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	/* Initialize per-query resource (diskspace) tracking */
 	WorkfileQueryspace_InitEntry(gp_session_id, gp_command_count);
 
-	if (Gp_role != GP_ROLE_DISPATCH && queryDesc->ddesc &&
-		queryDesc->ddesc->transientTypeRecords != NULL)
-	{
-		ListCell   *cell;
-
-		foreach(cell, queryDesc->ddesc->transientTypeRecords)
-		{
-			TupleDescNode *tmp = lfirst(cell);
-			assign_record_type_typmod(tmp->tuple);
-		}
-	}
 	/*
 	 * Handling of the Slice table depends on context.
 	 */
@@ -643,8 +632,6 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 						  needDtxTwoPhase, true /* wantSnapshot */, queryDesc->extended_query );
 
 			queryDesc->ddesc->sliceTable = estate->es_sliceTable;
-
-			build_tuple_node_list(&queryDesc->ddesc->transientTypeRecords);
 
 			queryDesc->ddesc->oidAssignments = GetAssignedOidsForDispatch();
 
@@ -1111,10 +1098,6 @@ ExecutorEnd(QueryDesc *queryDesc)
 	}
 	END_MEMORY_ACCOUNT();
 
-	if (gp_dump_memory_usage)
-	{
-		MemoryAccounting_SaveToFile(currentSliceId);
-	}
 	ReportOOMConsumption();
 }
 
@@ -1926,10 +1909,8 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 						ExecCheckPlanOutput(resultRelInfo->ri_RelationDesc,
 											subplan->targetlist);
 
-					TupleDesc cleanTupType = ExecCleanTypeFromTL(subplan->targetlist, 
-										     resultRelInfo->ri_RelationDesc->rd_att->tdhasoid);
 					j = ExecInitJunkFilter(subplan->targetlist,
-							       cleanTupType,
+								   resultRelInfo->ri_RelationDesc->rd_att->tdhasoid,
 							       ExecInitExtraTupleSlot(estate));
 					/*
 					 * Since it must be UPDATE/DELETE, there had better be a
@@ -1972,11 +1953,8 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 					ExecCheckPlanOutput(estate->es_result_relation_info->ri_RelationDesc,
 										planstate->plan->targetlist);
 
-				TupleDesc cleanTupType = ExecCleanTypeFromTL(planstate->plan->targetlist, 
-									     tupType->tdhasoid);
-
 				j = ExecInitJunkFilter(planstate->plan->targetlist,
-						       cleanTupType,
+						       tupType->tdhasoid,
 						       ExecInitExtraTupleSlot(estate));
 				estate->es_junkFilter = j;
 				if (estate->es_result_relation_info)

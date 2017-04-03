@@ -516,6 +516,7 @@ AssignContentIdsToPlanData_Walker(Node *node, void *context)
 			case T_Hash:
 			case T_SetOp:
 			case T_Limit:
+			case T_PartitionSelector:
 				break;
 			case T_Motion:
 				/* receiving end knows nothing (since we don't analyze the distribution key right now) */

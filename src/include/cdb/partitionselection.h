@@ -15,24 +15,6 @@
 #include "nodes/execnodes.h"
 
 /* ----------------
- * PartitionConstraints node
- * used during PartitionSelector
- * ----------------
- */
-typedef struct PartitionConstraints
-{
-	NodeTag type;
-	PartitionRule * pRule;
-	bool defaultPart;
-	Const *lowerBound;
-	Const *upperBound;
-	bool lbInclusive;
-	bool upInclusive;
-	bool lbOpen;
-	bool upOpen;
-} PartitionConstraints;
-
-/* ----------------
  * SelectedParts node
  * This is the result of partition selection. It has a list of leaf part oids
  * and the corresponding ScanIds to which they should be propagated
@@ -53,5 +35,15 @@ extern SelectedParts *static_part_selection(PartitionSelector *ps);
 extern AttrNumber *varattnos_map(TupleDesc oldtd, TupleDesc newtd);
 extern void change_varattnos_of_a_node(Node *node, const AttrNumber *newattno);
 extern void change_varattnos_of_a_varno(Node *node, const AttrNumber *newattno, Index varno);
+
+#define ASSERT_RANGE_PART(selector, level) \
+						  AssertImply(0 == level, selector->rootPartitionNode->part->parkind == 'r'); \
+						  AssertImply(0 < level, selector->levelPartRules[level - 1] != NULL && \
+								  selector->levelPartRules[level - 1]->children->part->parkind == 'r'); \
+
+#define ASSERT_LIST_PART(selector, level) \
+						  AssertImply(0 == level, selector->rootPartitionNode->part->parkind == 'l'); \
+						  AssertImply(0 < level, selector->levelPartRules[level - 1] != NULL && \
+								  selector->levelPartRules[level - 1]->children->part->parkind == 'l'); \
 
 #endif   /* PARTITIONSELECTION_H */

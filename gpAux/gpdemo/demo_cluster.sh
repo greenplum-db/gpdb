@@ -362,6 +362,24 @@ echo "gpinitsystem returned: ${RETURN}"
 echo "========================================"
 echo ""
 
+if [ "$enable_gpfdist" = "yes" ] && [ "$with_openssl" = "yes" ]; then
+	echo "======================================================================"
+	echo "Generating SSL certificates for gpfdists:"
+	echo "======================================================================"
+	echo ""
+
+	./generate_certs.sh >> generate_certs.log
+
+	cp -r certificate/gpfdists $QDDIR/$SEG_PREFIX-1/
+
+	for (( i=1; i<=$NUM_PRIMARY_MIRROR_PAIRS; i++ ))
+	do
+		cp -r certificate/gpfdists $DATADIRS/dbfast$i/${SEG_PREFIX}$((i-1))/
+		cp -r certificate/gpfdists $DATADIRS/dbfast_mirror$i/${SEG_PREFIX}$((i-1))/
+	done
+	echo ""
+fi
+
 OPTIMIZER=$(psql -t -p ${MASTER_DEMO_PORT} -d template1 -c "show optimizer"   2>&1)
 
 echo "======================================================================" 2>&1 | tee -a optimizer-state.log

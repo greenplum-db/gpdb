@@ -1498,6 +1498,18 @@ typedef struct PartOidExpr
 } PartOidExpr;
 
 /*
+ * PartSelectedExpr
+ *
+ * Returns true, if the PartitionSelector has selected this partition.
+ */
+typedef struct PartSelectedExpr
+{
+	Expr		xpr;
+	int			dynamicScanId;
+	Oid			partOid;
+} PartSelectedExpr;
+
+/*
  * PartDefaultExpr
  * Represents the expression which determines whether this a part is a default part
  */
@@ -1539,8 +1551,38 @@ typedef struct PartBoundInclusionExpr
 typedef struct PartBoundOpenExpr
 {
 	Expr		xpr;
-	int			level;			/* partitioning level */
+	int		level;			/* partitioning level */
 	bool		isLowerBound;	/* lower (min) or upper (max) bound */
 } PartBoundOpenExpr;
+
+/*
+ * PartListRuleExpr
+ * Represents the expression that converts the current rule for
+ * level "level" to a list of constants. It only appears in
+ * levelExpressions (which is non-equality predicates) for
+ * the partition selector.
+ */
+typedef struct PartListRuleExpr
+{
+	Expr		xpr;
+	int			level;			/* partitioning level */
+	Oid 		resulttype;		/* the result type of expr - array type of part key */
+	Oid 		elementtype; 	/* the element type of partition list values */
+} PartListRuleExpr;
+
+/*
+ * PartListNullTestExpr
+ *
+ * Represents whether the list values of a partition for the specified level
+ * contains NULL or not, if nulltesttype is IS_NULL.
+ *
+ * NOTE: This expr only works for list partition.
+ */
+typedef struct PartListNullTestExpr
+{
+	Expr		xpr;
+	int			level;			/* partitioning level */
+	NullTestType nulltesttype;	/* IS NULL, IS NOT NULL */
+} PartListNullTestExpr;
 
 #endif   /* PRIMNODES_H */

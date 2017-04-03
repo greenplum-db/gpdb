@@ -57,6 +57,9 @@ typedef struct SessionState
 	/* How many QEs are not blocked in ReadCommand */
 	int activeProcessCount;
 
+	/* The last seen time that a QE from this session became idle */
+	TimestampTz idle_start;
+
 	/*
 	 * At the time of a runaway event, we set this to the activeQECount and
 	 * as each QE cleans up, it decrements this counter. Once the counter

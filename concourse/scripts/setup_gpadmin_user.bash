@@ -53,11 +53,18 @@ set_limits() {
 }
 
 setup_gpadmin_user() {
-  /usr/sbin/useradd gpadmin
-  echo -e "password\npassword" | passwd gpadmin
   groupadd supergroup
-  usermod -a -G supergroup gpadmin
-  usermod -a -G tty gpadmin
+  case "$TEST_OS" in
+    sles)
+      groupadd gpadmin
+      /usr/sbin/useradd -G gpadmin,supergroup,tty gpadmin
+      ;;
+    centos)
+      /usr/sbin/useradd -G supergroup,tty gpadmin
+      ;;
+    *) echo "Unknown OS: $TEST_OS"; exit 1 ;;
+  esac
+  echo -e "password\npassword" | passwd gpadmin
   setup_ssh_for_user gpadmin
   transfer_ownership
   set_limits
@@ -85,7 +92,21 @@ setup_sshd() {
   ssh_keyscan_for_user gpadmin
 }
 
+determine_os() {
+  if [ -f /etc/redhat-release ] ; then
+    echo "centos"
+    return
+  fi
+  if [ -f /etc/os-release ] && grep -q '^NAME=.*SLES' /etc/os-release ; then
+    echo "sles"
+    return
+  fi
+  echo "Could not determine operating system type" >/dev/stderr
+  exit 1
+}
+
 _main() {
+  TEST_OS=$(determine_os)
   setup_gpadmin_user
   setup_sshd
 }

@@ -16,6 +16,12 @@
 /*
  * Combine global and local information captured while scanning the
  * distributed transactions so they can be sorted as a unit.
+ *
+ * For sub-transaction same distribXid can be associated with multiple
+ * localXid, but currently we cache only one localXid for distribXid, for
+ * others we will consult the distributed_log. Opportunity exist though to
+ * improve performance by caching every localXid corresponding to distribXid,
+ * in inProgressEntryArray.
  */
 typedef struct DistributedSnapshotMapEntry
 {

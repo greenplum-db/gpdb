@@ -462,6 +462,7 @@ void PersistentDatabase_MarkCreatePending(
 	SharedOidSearchAddResult addResult;
 
 	PersistentFileSysObjName fsObjName;
+	TransactionId topXid;
 
 	if (Persistent_BeforePersistenceWork())
 	{	
@@ -484,6 +485,8 @@ void PersistentDatabase_MarkCreatePending(
 									&fsObjName,
 									dbDirNode->tablespace,
 									dbDirNode->database);
+
+	topXid = GetTopTransactionId();
 
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 
@@ -526,7 +529,7 @@ void PersistentDatabase_MarkCreatePending(
 							/* createMirrorDataLossTrackingSessionNum */ 0,
 							mirrorExistenceState,
 							/* reserved */ 0,
-							/* parentXid */ GetTopTransactionId(),
+							/* parentXid */ topXid,
 							flushToXLog);
 
 	*persistentTid = databaseDirEntry->persistentTid;

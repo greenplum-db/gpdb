@@ -19,9 +19,11 @@
 #include "executor/executor.h"
 #include "executor/instrument.h"
 #include "executor/nodePartitionSelector.h"
+#include "nodes/makefuncs.h"
 #include "utils/memutils.h"
 
-static void partition_propagation(EState *estate, List *partOids, List *scanIds, int32 selectorId);
+static void 
+partition_propagation(EState *estate, List *partOids, List *scanIds, int32 selectorId);
 
 /* PartitionSelector Slots */
 #define PARTITIONSELECTOR_NSLOTS 1
@@ -76,6 +78,25 @@ ExecInitPartitionSelector(PartitionSelector *node, EState *estate, int eflags)
 		outerPlanState(psstate) = ExecInitNode(outerPlan(node), estate, eflags);
 	}
 
+	/*
+	 * Initialize projection, to produce a tuple that has the partitioning key
+	 * columns at the same positions as in the partitioned table.
+	 */
+	if (node->partTabTargetlist)
+	{
+		List	   *exprStates;
+
+		exprStates = (List *) ExecInitExpr((Expr *) node->partTabTargetlist,
+										   (PlanState *) psstate);
+
+		psstate->partTabDesc = ExecTypeFromTL(node->partTabTargetlist, false);
+		psstate->partTabSlot = MakeSingleTupleTableSlot(psstate->partTabDesc);
+		psstate->partTabProj = ExecBuildProjectionInfo(exprStates,
+													   psstate->ps.ps_ExprContext,
+													   psstate->partTabSlot,
+													   ExecGetResultType(&psstate->ps));
+	}
+
 	initGpmonPktForPartitionSelector((Plan *)node, &psstate->ps.gpmon_pkt, estate);
 
 	return psstate;
@@ -110,6 +131,13 @@ ExecInitPartitionSelector(PartitionSelector *node, EState *estate, int eflags)
  *		It evaluates partition constraints with the input tuple and
  *		propagate matched partition table Oids.
  *
+ *
+ * Instead of a Dynamic Table Scan, there can be other nodes that use
+ * a PartSelected qual to filter rows, based on which partitions are
+ * selected. Currently, ORCA uses Dynamic Table Scans, while plans
+ * produced by the non-ORCA planner use gating Result nodes with
+ * PartSelected quals, to exclude unwanted partitions.
+ *
  * ----------------------------------------------------------------
  */
 TupleTableSlot *
@@ -117,11 +145,15 @@ ExecPartitionSelector(PartitionSelectorState *node)
 {
 	PartitionSelector *ps = (PartitionSelector *) node->ps.plan;
 	EState	   *estate = node->ps.state;
+	ExprContext *econtext = node->ps.ps_ExprContext;
+	TupleTableSlot *inputSlot;
+	TupleTableSlot *candidateOutputSlot;
+
 	if (ps->staticSelection)
 	{
 		/* propagate the part oids obtained via static partition selection */
 		partition_propagation(estate, ps->staticPartOids, ps->staticScanIds, ps->selectorId);
-		*node->acceptedLeafPart = NULL;
+		node->acceptedLeafOid = InvalidOid;
 		return NULL;
 	}
 
@@ -142,7 +174,6 @@ ExecPartitionSelector(PartitionSelectorState *node)
 									);
 	}
 
-	TupleTableSlot *inputSlot = NULL;
 	if (NULL != outerPlanState(node))
 	{
 		/* Join partition elimination */
@@ -159,38 +190,65 @@ ExecPartitionSelector(PartitionSelectorState *node)
 	}
 
 	/* partition elimination with the given input tuple */
-	SelectedParts *selparts = processLevel(node, 0 /* level */, inputSlot);
+	ResetExprContext(econtext);
+	node->ps.ps_OuterTupleSlot = inputSlot;
+	econtext->ecxt_outertuple = inputSlot;
+	econtext->ecxt_scantuple = inputSlot;
 
-	/* partition propagation */
-	if (NULL != ps->propagationExpression)
+	candidateOutputSlot = ExecProject(node->ps.ps_ProjInfo, NULL);
+
+	/*
+	 * If we have a partitioning projection, project the input tuple
+	 * into a tuple that looks like tuples from the partitioned table, and use
+	 * selectPartitionMulti() to select the partitions. (The traditional
+	 * Postgres planner uses this method.)
+	 */
+	if (ps->partTabTargetlist)
 	{
-		partition_propagation(estate, selparts->partOids, selparts->scanIds, ps->selectorId);
+		TupleTableSlot *slot;
+		List	   *oids;
+		ListCell   *lc;
+
+		slot = ExecProject(node->partTabProj, NULL);
+		slot_getallattrs(slot);
+
+		oids = selectPartitionMulti(node->rootPartitionNode,
+									slot_get_values(slot),
+									slot_get_isnull(slot),
+									slot->tts_tupleDescriptor,
+									node->accessMethods);
+		if (oids != NIL)
+		{
+			foreach (lc, oids)
+			{
+				InsertPidIntoDynamicTableScanInfo(estate, ps->scanId, lfirst_oid(lc), ps->selectorId);
+			}
+		}
+		else
+		{
+			/* no partitions matched. */
+			InsertPidIntoDynamicTableScanInfo(estate, ps->scanId, InvalidOid, ps->selectorId);
+		}
+	}
+	else
+	{
+		/*
+		 * Select the partitions based on levelEqExpressions and
+		 * levelExpressions. (ORCA uses this method)
+		 */
+		SelectedParts *selparts = processLevel(node, 0 /* level */, inputSlot);
+
+		/* partition propagation */
+		if (NULL != ps->propagationExpression)
+		{
+			partition_propagation(estate, selparts->partOids, selparts->scanIds, ps->selectorId);
+		}
+		list_free(selparts->partOids);
+		list_free(selparts->scanIds);
+		pfree(selparts);
 	}
 
-	list_free(selparts->partOids);
-	list_free(selparts->scanIds);
-	pfree(selparts);
-
-	TupleTableSlot *candidateOutputSlot = NULL;
-	if (NULL != inputSlot)
-	{
-		ExprContext *econtext = node->ps.ps_ExprContext;
-		ResetExprContext(econtext);
-		node->ps.ps_OuterTupleSlot = inputSlot;
-		econtext->ecxt_outertuple = inputSlot;
-		econtext->ecxt_scantuple = inputSlot;
-
-		ExprDoneCond isDone = ExprSingleResult;
-		candidateOutputSlot = ExecProject(node->ps.ps_ProjInfo, &isDone);
-		Assert (ExprSingleResult == isDone);
-	}
-
-	/* reset acceptedLeafPart */
-	if (NULL != *node->acceptedLeafPart)
-	{
-		pfree(*node->acceptedLeafPart);
-		*node->acceptedLeafPart = NULL;
-	}
+	node->acceptedLeafOid = InvalidOid;
 	return candidateOutputSlot;
 }
 
@@ -206,11 +264,11 @@ ExecReScanPartitionSelector(PartitionSelectorState *node, ExprContext *exprCtxt)
 	/* reset PartitionSelectorState */
 	PartitionSelector *ps = (PartitionSelector *) node->ps.plan;
 	
-	Assert (NULL == *node->acceptedLeafPart);
+	Assert (InvalidOid == node->acceptedLeafOid);
 	
 	for(int iter = 0; iter < ps->nLevels; iter++)
 	{
-		node->levelPartConstraints[iter] = NULL;
+		node->levelPartRules[iter] = NULL;
 	}
 
 	/* free result tuple slot */

@@ -244,16 +244,56 @@ ProcArrayRemove(PGPROC *proc, TransactionId latestXid)
  */
 void
 ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid, bool isCommit,
-						bool *needStateChangeFromDistributed,
 						bool *needNotifyCommittedDtxTransaction)
 {
-	if (needStateChangeFromDistributed)
-		*needStateChangeFromDistributed = false;
 	if (needNotifyCommittedDtxTransaction)
 		*needNotifyCommittedDtxTransaction = false;
 
+	/*
+	 * MyProc->localDistribXactData is only used for debugging purpose by
+	 * backend itself on segments only hence okay to modify without holding
+	 * the lock.
+	 */
+	if (MyProc->localDistribXactData.state != LOCALDISTRIBXACT_STATE_NONE)
+	{
+		switch (DistributedTransactionContext)
+		{
+			case DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER:
+			case DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER:
+			case DTX_CONTEXT_QE_AUTO_COMMIT_IMPLICIT:
+				LocalDistribXact_ChangeState(MyProc,
+											 isCommit ?
+											 LOCALDISTRIBXACT_STATE_COMMITTED :
+											 LOCALDISTRIBXACT_STATE_ABORTED);
+				break;
+
+			case DTX_CONTEXT_QE_READER:
+			case DTX_CONTEXT_QE_ENTRY_DB_SINGLETON:
+				// QD or QE Writer will handle it.
+				break;
+
+			case DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE:
+			case DTX_CONTEXT_QD_RETRY_PHASE_2:
+			case DTX_CONTEXT_QE_PREPARED:
+			case DTX_CONTEXT_QE_FINISH_PREPARED:
+				elog(PANIC, "Unexpected distribute transaction context: '%s'",
+					 DtxContextToString(DistributedTransactionContext));
+
+			default:
+				elog(PANIC, "Unrecognized DTX transaction context: %d",
+					 (int) DistributedTransactionContext);
+		}
+	}
+
+	if (isCommit && notifyCommittedDtxTransactionIsNeeded())
+	{
+		Assert(needNotifyCommittedDtxTransaction);
+		*needNotifyCommittedDtxTransaction = true;
+	}
+	
 	if (TransactionIdIsValid(latestXid))
 	{
+		LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
 		/*
 		 * We must lock ProcArrayLock while clearing proc->xid, so that we do
 		 * not exit the set of "running" transactions while someone else is
@@ -263,53 +303,8 @@ ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid, bool isCommit,
 		Assert(TransactionIdIsValid(proc->xid) ||
 			   (IsBootstrapProcessingMode() && latestXid == BootstrapTransactionId));
 
-		LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
-
-		if (MyProc->localDistribXactData.state != LOCALDISTRIBXACT_STATE_NONE)
-		{
-			switch (DistributedTransactionContext)
-			{
-				case DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE:
-					LocalDistribXact_ChangeState(MyProc,
-						isCommit ? 
-							LOCALDISTRIBXACT_STATE_COMMITDELIVERY :
-							LOCALDISTRIBXACT_STATE_ABORTDELIVERY);
-					if (needStateChangeFromDistributed)
-						*needStateChangeFromDistributed = true;
-					break;
-				
-				case DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER:
-				case DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER:
-				case DTX_CONTEXT_QE_AUTO_COMMIT_IMPLICIT:
-					LocalDistribXact_ChangeState(MyProc,
-						isCommit ?
-							LOCALDISTRIBXACT_STATE_COMMITTED :
-							LOCALDISTRIBXACT_STATE_ABORTED);
-					break;
-				
-				case DTX_CONTEXT_QE_READER:
-				case DTX_CONTEXT_QE_ENTRY_DB_SINGLETON:
-					// QD or QE Writer will handle it.
-					break;
-
-				case DTX_CONTEXT_QD_RETRY_PHASE_2:
-				case DTX_CONTEXT_QE_PREPARED:
-				case DTX_CONTEXT_QE_FINISH_PREPARED:
-					elog(PANIC, "Unexpected distribute transaction context: '%s'",
-						 DtxContextToString(DistributedTransactionContext));
-
-				default:
-					elog(PANIC, "Unrecognized DTX transaction context: %d",
-						 (int) DistributedTransactionContext);
-			}
-		}
-
-		if (isCommit && notifyCommittedDtxTransactionIsNeeded())
-		{
-			Assert(needNotifyCommittedDtxTransaction);
-			*needNotifyCommittedDtxTransaction = true;
-		}
-		else
+		if ((needNotifyCommittedDtxTransaction == NULL) ||
+			(! *needNotifyCommittedDtxTransaction))
 		{
 			proc->xid = InvalidTransactionId;
 			proc->lxid = InvalidLocalTransactionId;
@@ -998,7 +993,7 @@ FillInDistributedSnapshot(Snapshot snapshot)
 				{
 					dslm->inProgressEntryArray[i].distribXid = ds->inProgressXidArray[i];
 
-					/* UNDONE: Lookup in distributed cache. */
+					/* Lookup in distributed cache. */
 					dslm->inProgressEntryArray[i].localXid = InvalidTransactionId;
 				}
 			}

@@ -266,16 +266,6 @@ DATA(insert ( 3226  int4_pivot_accum      - int8_matrix_accum     - -   0   1007
 DATA(insert ( 3228  int8_pivot_accum      - int8_matrix_accum     - -   0   1016    _null_  f));
 DATA(insert ( 3230  float8_pivot_accum    - float8_matrix_accum   - -   0   1022    _null_  f));
 
-/* naive bayes classification */
-DATA(insert ( 3255  nb_classify_accum     - nb_classify_combine   - nb_classify_final   0   3251    _null_  f));
-DATA(insert ( 3268  nb_classify_accum     - nb_classify_combine   - nb_classify_probabilities   0   3251    _null_  f));
-
-/* multiple linear regression */
-DATA(insert ( 3261  float8_mregr_accum    - float8_mregr_combine  - float8_mregr_coef   0   1022    "{0}"  f));
-DATA(insert ( 3262  float8_mregr_accum    - float8_mregr_combine  - float8_mregr_r2     0   1022    "{0}"  f));
-DATA(insert ( 3264  float8_mregr_accum    - float8_mregr_combine  - float8_mregr_tstats 0   1022    "{0}"  f));
-DATA(insert ( 3266  float8_mregr_accum    - float8_mregr_combine  - float8_mregr_pvalues 0   1022    "{0}"  f));
-
 /* xml */
 DATA(insert ( 2901  xmlconcat2	             - - - - 				  0	142  _null_ t));
 
@@ -285,9 +275,6 @@ DATA(insert ( 6098	array_agg_transfn        - - - array_agg_finalfn  0 2281 _nul
 /* text */
 DATA(insert ( 3537	string_agg_transfn       - - - string_agg_finalfn 0 2281 _null_ t));
 DATA(insert ( 3538	string_agg_delim_transfn - - - string_agg_finalfn 0 2281 _null_ t));
-
-DATA(insert ( 6112	pg_partition_oid_transfn      - - - pg_partition_oid_finalfn 0 2281 _null_ f));
-
 
 
 /*

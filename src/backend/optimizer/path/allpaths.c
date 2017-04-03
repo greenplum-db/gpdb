@@ -16,10 +16,6 @@
 
 #include "postgres.h"
 
-#include "catalog/gp_policy.h"	/* GpPolicy */
-#include "catalog/pg_type.h"	/* INT4OID, INT8OID */
-#include "nodes/makefuncs.h"
-#include "nodes/relation.h"
 #ifdef OPTIMIZER_DEBUG
 #include "nodes/print.h"
 #endif
@@ -38,12 +34,9 @@
 #include "parser/parsetree.h"
 #include "rewrite/rewriteManip.h"
 #include "utils/guc.h"
-#include "utils/lsyscache.h"
 
-#include "cdb/cdbllize.h"		/* repartitionPlan */
 #include "cdb/cdbmutate.h"		/* cdbmutate_warn_ctid_without_segid */
 #include "cdb/cdbpath.h"		/* cdbpath_rows() */
-#include "cdb/cdbsetop.h"		/* make_motion... routines */
 
 // TODO: these planner/executor gucs need to be refactored into PlannerConfig.
 bool		gp_enable_sort_limit = FALSE;

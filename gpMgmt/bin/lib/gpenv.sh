@@ -1,9 +1,5 @@
 #!/bin/bash
 #
-# gpmigrator requires calling itself on individual hosts, but it is a python script
-# so it needs certain environment variables to be setup before it can successfully
-# execute itself.
-#
 # This is a bash script (since /bin/bash is guaranteed) that sets up the environment
 # needed to execute a python script.  It uses the path to itself as the basis from
 # which it determines GPHOME.

@@ -82,6 +82,8 @@ DistributedLog_SetCommitted(
 	DistributedTransactionId 			distribXid,
 	bool								isRedo)
 {
+	Assert(TransactionIdIsValid(localXid));
+
 	MIRRORED_LOCK_DECLARE;
 
 	int			page = TransactionIdToPage(localXid);

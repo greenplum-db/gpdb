@@ -21,7 +21,7 @@ include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk
 endif
 
-majorversion=`echo $(VERSION) | sed -e 's/^\([0-9]*\)\.\([0-9]*\).*/\1\2/g'`
+majorversion=`echo $(PG_VERSION) | sed -e 's/^\([0-9]*\)\.\([0-9]*\).*/\1\2/g'`
 
 xlogdump_oid2name.o: oid2name.txt
 

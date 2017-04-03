@@ -214,10 +214,6 @@ typedef struct TMGXACT
 
 	int							sessionId;
 	
-	TransactionId				localXid;
-
-	LocalDistribXactData		localDistribXactData;
-	
 	bool						explicitBeginRemembered;
 
 	DistributedTransactionId	xminDistributedSnapshot;
@@ -296,8 +292,7 @@ extern void dtxCrackOpenGid(const char	*gid,
 extern DistributedTransactionId getDistributedTransactionId(void);
 extern bool getDistributedTransactionIdentifier(char *id);
 
-extern void createDtx(DistributedTransactionId	*distribXid,
-					  TransactionId				*localXid);
+extern void createDtx(DistributedTransactionId	*distribXid);
 extern bool createDtxSnapshot(DistributedSnapshotWithLocalMapping *distribSnapshotWithLocalMapping);
 extern void	prepareDtxTransaction(void);
 extern bool isPreparedDtxTransaction(void);

@@ -19,6 +19,7 @@ struct fstream_options{
     int verbose;
     char quote;		/* quote char */
     char escape;	/* escape char */
+    int eol_type;
     int bufsize;
     int forwrite;   /* true for write, false for read */
 	int usesync;    /* true if writes use O_SYNC */

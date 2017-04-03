@@ -41,8 +41,6 @@
 extern char *savedSeqServerHost;
 extern int savedSeqServerPort;
 
-static void PortalCleanupHelper(Portal portal, volatile int *cleanupstate);
-
 /*
  * PerformCursorOpen
  *		Execute SQL DECLARE CURSOR command.
@@ -286,104 +284,69 @@ PerformPortalClose(const char *name)
  *
  * Clean up a portal when it's dropped.  This is the standard cleanup hook
  * for portals.
- *
- * CDB: If anything goes wrong in here, try to just log it and keep going.
- * Likely we're cleaning up after some earlier error.  Don't confuse the
- * user with additional fallout secondary to the original error.  Caller
- * isn't interested in any further chatter from this portal, so pipe down.
  */
 void
 PortalCleanup(Portal portal)
 {
-	ResourceOwner	saveResourceOwner = CurrentResourceOwner;   /* save */
-	MemoryContext	saveContext = CurrentMemoryContext;         /* save */
-	volatile int	cleanupstate = 0;
+	QueryDesc  *queryDesc;
 
-	Assert(portal);
-
-	/* We must make the portal's resource owner current */
-	if (portal->resowner)
-		CurrentResourceOwner = portal->resowner;
-
-	PG_TRY();
-	{
-		/* My helper does all the work. */
-		PortalCleanupHelper(portal, &cleanupstate);
-	}
-	/* Log and dismiss an error, then loop to do next step of cleanup. */
-	PG_CATCH();
-	{
-		CurrentResourceOwner = saveResourceOwner;           /* restore */
-		MemoryContextSwitchTo(saveContext);                 /* restore */
-
-		/*
-		 * If PortalCleanupHelper() threw an error -- it means that
-		 * ExecutorEnd() threw and error, which means that our gangs
-		 * may be sitting on the allocated-list without having been
-		 * properly free()ed.
-		 *
-		 * For cursor-queries with large numbers of slices, this
-		 * can "leak" a lot of resources on the segments.
-		 */
-		if (cleanupstate < 1 && Gp_role == GP_ROLE_DISPATCH)
-		{
-			cleanupstate = 1;
-			freeGangsForPortal((char *)portal->name);
-			cleanupPortalGangs(portal);
-		}
-
-		/* Sorry, can't dismiss this error. */
-		portal->status = PORTAL_FAILED;
-
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
-
-	CurrentResourceOwner = saveResourceOwner;                   /* restore */
-	MemoryContextSwitchTo(saveContext);                         /* restore */
-}                               /* PortalCleanup */
-
-/*
- * PortalCleanupHelper
- *
- * This could be called more than once.  Each step should guard itself
- * so that it will be executed only once even if called more than once.
- * The *cleanupstate arg can be used to remember what has been done.
- */
-static void
-PortalCleanupHelper(Portal portal, volatile int *cleanupstate)
-{
-	QueryDesc      *queryDesc = PortalGetQueryDesc(portal);
+	/*
+	 * sanity checks
+	 */
+	AssertArg(PortalIsValid(portal));
+	AssertArg(portal->cleanup == PortalCleanup);
 
 	/*
 	 * Shut down executor, if still running.  We skip this during error abort,
 	 * since other mechanisms will take care of releasing executor resources,
 	 * and we can't be sure that ExecutorEnd itself wouldn't fail.
 	 */
-	portal->queryDesc = NULL;
+	queryDesc = PortalGetQueryDesc(portal);
 	if (queryDesc)
 	{
-		if (queryDesc->estate)
+		portal->queryDesc = NULL;
+		if (portal->status != PORTAL_FAILED)
 		{
-			/*
-			 * If we still have an estate -- then we need to cancel any
-			 * unfinished work.
-			 */
-			queryDesc->estate->cancelUnfinished = true;
+			ResourceOwner saveResourceOwner;
 
-			/* we do not need AfterTriggerEndQuery() here */
-			ExecutorEnd(queryDesc);
+			/* We must make the portal's resource owner current */
+			saveResourceOwner = CurrentResourceOwner;
+			PG_TRY();
+			{
+				CurrentResourceOwner = portal->resowner;
+				/* we do not need AfterTriggerEndQuery() here */
+				ExecutorEnd(queryDesc);
+			}
+			PG_CATCH();
+			{
+				/* Ensure CurrentResourceOwner is restored on error */
+				CurrentResourceOwner = saveResourceOwner;
+
+				/*
+				 * If ExecutorEnd() threw an error, our gangs might be sitting
+				 * on the allocated-list without having been properly free()ed.
+				 *
+				 * For cursor-queries with large numbers of slices, this
+				 * can "leak" a lot of resources on the segments.
+				 */
+				if (Gp_role == GP_ROLE_DISPATCH)
+				{
+					freeGangsForPortal((char *) portal->name);
+					cleanupPortalGangs(portal);
+				}
+
+				PG_RE_THROW();
+			}
+			PG_END_TRY();
+			CurrentResourceOwner = saveResourceOwner;
 		}
 	}
 
 	/*
 	 * Terminate unneeded QE processes.
 	 */
-	if (*cleanupstate < 1 && Gp_role == GP_ROLE_DISPATCH)
-	{
-		*cleanupstate = 1;
+	if (Gp_role == GP_ROLE_DISPATCH)
 		cleanupPortalGangs(portal);
-	}
 
 	/* 
 	 * If resource scheduling is enabled, release the resource lock. 
@@ -403,9 +366,7 @@ PortalCleanupHelper(Portal portal, volatile int *cleanupstate)
 	{
 		BackoffBackendEntryExit();
 	}
-
-}                               /* PortalCleanupHelper */
-
+}
 
 /*
  * PersistHoldablePortal

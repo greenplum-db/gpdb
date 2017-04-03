@@ -1,23 +1,42 @@
 #!/bin/bash
 
+# Make sure we're running from the root git repository, not whatever submodule
+# we could have been called from.
+pushd $(dirname "$0") > /dev/null
+
+VERSION=$(perl -e 'while(<>){print $1 if (/^PACKAGE_VERSION='\''(.+)'\''$/)}' < configure)
+BUILDNUMBER=dev
+
 # Call git describe, and convert it to a semi-semantic version, like
 # 5.0.0-alpha.0+dev.52.g123abc
 generate_dev_version() {
     git describe | perl -pe 's/(.*)-([0-9]*)-(g[0-9a-f]*)/\1+dev.\2.\3/'
 }
 
-# Make sure we're running from the root git repository, not whatever submodule
-# we could have been called from.
-GP_VERSION=$(cd "$(dirname "$0")"; generate_dev_version)
+# If we are in a Git repository and have git installed, build the version
+# string using the latest tag in case it's reachable
+if type git >/dev/null 2>&1 && [ -d '.git' ] ; then
 
-GP_BUILDNUMBER=dev
-if [ -f BUILD_NUMBER ] ; then
-    GP_BUILDNUMBER=`cat BUILD_NUMBER`
+	# Check for tag reachability, in case of shallow clones we might not
+	# be able to use git describe since the commit which was tagged is
+	# unreachable even if we have pulled the tags. If we can reach it,
+	# overwrite the VERSION from autoconf with the output, else append
+	# HEAD commit info
+	if git describe >/dev/null 2>&1 ; then
+		VERSION=$(generate_dev_version)
+	else
+		VERSION+=+
+		VERSION+=$(git rev-parse --short HEAD)
+	fi
 fi
 
 FLAG="${1:-noflag}"
 if [ "$FLAG" = '--short' ] ; then
-    echo "${GP_VERSION}"
+    echo "${VERSION}"
 else
-    echo "${GP_VERSION} build ${GP_BUILDNUMBER}"
+    if [ -f BUILD_NUMBER ] ; then
+        BUILDNUMBER=`cat BUILD_NUMBER`
+    fi
+    echo "${VERSION} build ${BUILDNUMBER}"
 fi
+popd > /dev/null

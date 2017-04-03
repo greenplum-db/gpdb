@@ -1,7 +1,7 @@
 -- 
--- @description Add/split/exchange partition to a partition table after the gp_defualt_operations changed with GUC value
+-- @description Add/split/exchange partition to a partition table after the gp_default_operations changed with GUC value
 
--- Parent table with (appendonly=true, orientation=row), set guc to orinetation column, Add a partition
+-- Parent table with (appendonly=true, orientation=row), set guc to orientation column, Add a partition
 \c dsp_db1
 
 show gp_default_storage_options;

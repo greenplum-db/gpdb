@@ -36,8 +36,6 @@
           Database master</li>
         <li id="nr166917">Java 1.7.0_17 or later is required to use Kerberos-authenticated JDBC on
           Red Hat Enterprise Linux 6.x</li>
-        <li id="nr166760">Java 1.6.0_21 or later is required to use Kerberos-authenticated JDBC on
-          Red Hat Enterprise Linux 4.x or 5.x</li>
       </ul>
     </section>
     <section id="nr166539">
@@ -336,7 +334,7 @@ Valid starting     Expires            Service principal
               <codeblock>host all all 0.0.0.0/0 gss include_realm=0 krb_realm=KRB.GREENPLUM.COM</codeblock>
             </stepxmp>
             <info>For information about the <codeph>pg_hba.conf</codeph> file, see <xref
-                href="http://www.postgresql.org/docs/8.4/static/auth-pg-hba-conf.html"
+                href="https://www.postgresql.org/docs/8.4/static/auth-pg-hba-conf.html"
                 scope="external" format="html">The pg_hba.conf file</xref> in the Postgres
               documentation.</info>
           </step>
@@ -378,7 +376,7 @@ mymap       /^(.*)mdw\.proddb$     adminuser</codeblock>
                 <codeblock>host all all 0.0.0.0/0 krb5 include_realm=0 krb_realm=proddb map=mymap</codeblock>
               </p>
               <p>For more information about specifying username maps see <xref
-                  href="http://www.postgresql.org/docs/8.4/static/auth-username-maps.html"
+                  href="https://www.postgresql.org/docs/8.4/static/auth-username-maps.html"
                   scope="external" format="html">Username maps</xref> in the Postgres
                 documentation.</p>
             </info>

@@ -499,27 +499,6 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 	subparse->havingQual = NULL;
 	subparse->distinctClause = NIL;
 	subroot.hasHavingQual = false;
-	
-	/* TODO Should we also generate a "temporary" root as in,
-	 *       e.g., inheritance planning?
-	 *
-	 * Generate modified query with this rel as target.  We have to be
-	 * prepared to translate varnos in in_info_list as well as in the
-	 * Query proper.
-	 *
-	memcpy(&subroot, root, sizeof(PlannerInfo));
-	subroot.parse = (Query *)
-	adjust_appendrel_attrs((Node *) parse,
-						   appinfo);
-	subroot.in_info_list = (List *)
-	adjust_appendrel_attrs((Node *) root->in_info_list,
-						   appinfo);
-	// There shouldn't be any OJ info to translate, as yet
-	Assert(subroot.oj_info_list == NIL);
-	
-	subroot->resultRelations = NIL;
-	subroot->returningLists = NIL;
-	 */
 
 	/* single tlist entry that is the aggregate target */
 	tle = makeTargetEntry(copyObject(info->target),

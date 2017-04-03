@@ -259,6 +259,7 @@ class XidlimitsTests(MPPTestCase):
             # necessary for iterating the while loop.  And template0 becomes the
             # oldest database aka the only culprit to violate the specified
             # limit.
+            PSQL(sql_cmd='VACUUM FREEZE', dbname='postgres', out_file='vacuum_postgres.out').run(validateAfter=True)
             for datname in databases:
                 logger.info('vacuum freeze %s' % datname)
                 PSQL(sql_cmd='VACUUM FREEZE',
@@ -341,17 +342,6 @@ class XidlimitsTests(MPPTestCase):
         """
         dburl = dbconn.DbURL()
         with dbconn.connect(dburl) as conn:
-            teardown_next_xid = int(dbconn.execSQLForSingleton(conn, 'select get_next_xid()'))
-            teardown_next_xid = xid_sum(teardown_next_xid, 1)         # we burned a xid when trying to ascertain nextXid
-            logger.info('Intending to return master to xid %d' % teardown_next_xid)
-            def cleanup():
-                with dbconn.connect(dburl) as myconn:
-                    dbconn.execSQLForSingleton(myconn, "select spoof_next_xid('%d'::xid)" % teardown_next_xid)
-                    dbconn.execSQL(myconn, "checkpoint")
-                self._basic_sanity_check('clean')
-                logger.info('Returned master to xid %d' % teardown_next_xid)
-            self.addCleanup(cleanup)
-
             oldest_xid = int(dbconn.execSQLForSingleton(conn, 'select get_oldest_xid()'))
             autovacuum_freeze_max_age = int(dbconn.execSQLForSingleton(conn, 'show autovacuum_freeze_max_age'))
             autovacuum_xid_limit = xid_sum(oldest_xid, autovacuum_freeze_max_age)
@@ -381,17 +371,6 @@ class XidlimitsTests(MPPTestCase):
         dburl = dbconn.DbURL(hostname=primary.hostname, port=primary.port)
 
         with dbconn.connect(dburl, utility=True) as conn:
-            teardown_next_xid = int(dbconn.execSQLForSingleton(conn, 'select get_next_xid()'))
-            teardown_next_xid = xid_sum(teardown_next_xid, 1)         # we burned a xid when trying to ascertain nextXid
-            logger.info('Intending to return segment to xid %d' % teardown_next_xid)
-            def cleanup():
-                with dbconn.connect(dburl, utility=True) as myconn:
-                    dbconn.execSQLForSingleton(myconn, "select spoof_next_xid('%d'::xid) "% teardown_next_xid)
-                    dbconn.execSQL(myconn, "checkpoint")
-                self._basic_sanity_check('clean')
-                logger.info('Returned segment to xid %d' % teardown_next_xid)
-            self.addCleanup(cleanup)
-
             oldest_xid = int(dbconn.execSQLForSingleton(conn, 'select get_oldest_xid()'))
             autovacuum_freeze_max_age = int(dbconn.execSQLForSingleton(conn, 'show autovacuum_freeze_max_age'))
             autovacuum_xid_limit = xid_sum(oldest_xid, autovacuum_freeze_max_age)

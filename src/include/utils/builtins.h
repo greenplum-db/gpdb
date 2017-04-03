@@ -1103,34 +1103,13 @@ extern Datum pg_resqueue_status_kv(PG_FUNCTION_ARGS);
 extern Datum pg_resgroup_get_status_kv(PG_FUNCTION_ARGS);
 
 /* utils/adt/matrix.c */
-extern Datum matrix_transpose(PG_FUNCTION_ARGS);
-extern Datum matrix_multiply(PG_FUNCTION_ARGS);
 extern Datum matrix_add(PG_FUNCTION_ARGS);
-extern Datum int8_matrix_smultiply(PG_FUNCTION_ARGS);
-extern Datum float8_matrix_smultiply(PG_FUNCTION_ARGS);
 
 /* utils/adt/pivot.c */
 Datum int4_pivot_accum(PG_FUNCTION_ARGS);
 Datum int8_pivot_accum(PG_FUNCTION_ARGS);
 Datum float8_pivot_accum(PG_FUNCTION_ARGS);
 Datum unnest(PG_FUNCTION_ARGS);
-
-/* utils/stat/bayes.c */
-extern Datum nb_classify_accum(PG_FUNCTION_ARGS);
-extern Datum nb_classify_combine(PG_FUNCTION_ARGS);
-extern Datum nb_classify_final(PG_FUNCTION_ARGS);
-extern Datum nb_classify_probabilities(PG_FUNCTION_ARGS);
-
-/* utils/stat/regress.c */
-extern Datum float8_mregr_accum(PG_FUNCTION_ARGS);
-extern Datum float8_mregr_combine(PG_FUNCTION_ARGS);
-extern Datum float8_mregr_coef(PG_FUNCTION_ARGS);
-extern Datum float8_mregr_r2(PG_FUNCTION_ARGS);
-extern Datum float8_mregr_tstats(PG_FUNCTION_ARGS);
-extern Datum float8_mregr_pvalues(PG_FUNCTION_ARGS);
-
-/* utils/stat/pinv.c */
-Datum pseudoinverse(PG_FUNCTION_ARGS);
 
 /* cdb/cdbpersistentbuild.c */
 Datum gp_persistent_build_db(PG_FUNCTION_ARGS);
@@ -1186,9 +1165,6 @@ extern Datum gp_delete_global_sequence_entry(PG_FUNCTION_ARGS);
 extern Datum gp_delete_relation_node_entry(PG_FUNCTION_ARGS);
 
 extern Datum gp_persistent_relation_node_check(PG_FUNCTION_ARGS);
-
-extern Datum pg_partition_oid_transfn(PG_FUNCTION_ARGS);
-extern Datum pg_partition_oid_finalfn(PG_FUNCTION_ARGS);
 
 /* storage/compress.c */
 extern Datum quicklz_constructor(PG_FUNCTION_ARGS);

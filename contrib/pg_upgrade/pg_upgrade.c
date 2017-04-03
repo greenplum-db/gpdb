@@ -55,6 +55,7 @@ main(int argc, char **argv)
 
 	setup(&ctx, argv[0], live_check);
 
+	report_progress(&ctx, NONE, CHECK, "Checking cluster compatability");
 	check_cluster_versions(&ctx);
 	check_cluster_compatibility(&ctx, live_check);
 
@@ -111,6 +112,9 @@ main(int argc, char **argv)
 
 	pg_log(&ctx, PG_REPORT, "\nUpgrade complete\n");
 	pg_log(&ctx, PG_REPORT, "----------------\n");
+
+	report_progress(&ctx, NONE, DONE, "Upgrade complete");
+	close_progress(&ctx);
 
 	output_completion_banner(&ctx, deletion_script_file_name);
 

@@ -75,6 +75,7 @@ Feature: gpcheckcat tests
         And gpcheckcat should print Table miss_attr_db1.public.ao_table.-1 to stdout
         And gpcheckcat should print Table miss_attr_db1.public.ao_part_table.-1 to stdout
         And gpcheckcat should print Table miss_attr_db1.public.ao_part_table_1_prt_p1_2_prt_1.-1 to stdout
+        And gpcheckcat should print on content -1 to stdout
         Examples:
           | attrname   | tablename     |
           | attrelid   | pg_attribute  |

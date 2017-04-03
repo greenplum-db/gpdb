@@ -248,6 +248,7 @@ void PersistentRelation_AddCreatePending(
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
 
 	PersistentFileSysObjName fsObjName;
+	TransactionId topXid;
 
 	XLogRecPtr mirrorBufpoolResyncCkptLoc;
 
@@ -280,6 +281,8 @@ void PersistentRelation_AddCreatePending(
 										relFileNode,
 										segmentFileNum);
 
+	topXid = GetTopTransactionId();
+
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 
 	/* Create a values array which will be used to create a 'gp_persistent_relation_node' tuple */
@@ -303,7 +306,7 @@ void PersistentRelation_AddCreatePending(
 										/* mirrorAppendOnlyLossEof */ 0,
 										/* mirrorAppendOnlyNewEof */ 0,
 										relBufpoolKind,
-										GetTopTransactionId(),
+										topXid,
 										/* persistentSerialNum */ 0);	// This will be set by PersistentFileSysObj_AddTuple.
 
 	/* Add a new tuple to 'gp_persistent_relation_node' table for the new relation/segment file

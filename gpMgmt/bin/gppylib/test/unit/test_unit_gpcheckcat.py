@@ -321,6 +321,9 @@ class GpCheckCatTestCase(GpTestCase):
         self.assertEquals(aTable.getPrimaryKey.call_count, 1)
         self.subject.setError.assert_called_once_with(self.subject.ERROR_REMOVE)
 
+    def test_getReportConfiguration_uses_contentid(self):
+        report_cfg = self.subject.getReportConfiguration()
+        self.assertEqual("content -1", report_cfg[-1]['segname'])
 
     ####################### PRIVATE METHODS #######################
 

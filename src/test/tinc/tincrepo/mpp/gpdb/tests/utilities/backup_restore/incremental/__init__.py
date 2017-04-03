@@ -608,9 +608,15 @@ class BackupTestCase(TINCTestCase):
             dump_dirty_list = self.sort_file_contents(os.path.join(dump_dir, 'db_dumps', '%s' % self.backup_timestamp[0:8] ,'%sgp_dump_%s_dirty_list' % (prefix, self.backup_timestamp)))
             tinctest.logger.info("output dump_dirty_list_file: %s" % (os.path.join(dump_dir, 'db_dumps', '%s' % self.backup_timestamp[0:8] ,'%sgp_dump_%s_dirty_list' % (prefix, self.backup_timestamp))))
         if dirty_list != dump_dirty_list :
+            ans_set = set(dirty_list)
+            out_set = set(dump_dirty_list)
+            if ans_set > out_set:
+                msg = "The following tables are present in the answer file but not the output: " + ','.join(ans_set - out_set)
+            else:
+                msg = "The following tables are present in the output but not the answer file: " + ','.join(out_set - ans_set)
             tinctest.logger.info("dirty_list:\n%s" % dirty_list)
             tinctest.logger.info("dump_dirty_list:\n%s" % dump_dirty_list)
-            raise Exception("Incremental backup validation failed with diff")
+            raise Exception("Incremental backup validation failed with diff: %s" % msg)
         else:
             tinctest.logger.info("The tablelist for the incremental backup is validated")
 

@@ -1,8 +1,0 @@
-select * from transform( TABLE(intable));
-ERROR:  syntax error at or near "intable"
-LINE 1: select * from transform( TABLE(intable));
-                                       ^
-select * from transform( TABLE(t1_view order by id scatter by id));
-ERROR:  syntax error at or near "t1_view"
-LINE 1: select * from transform( TABLE(t1_view order by id scatter b...
-                                       ^

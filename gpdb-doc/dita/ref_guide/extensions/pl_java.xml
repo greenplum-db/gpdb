@@ -52,7 +52,7 @@
       <p>Greenplum Database PL/Java package is based on the open source PL/Java 1.4.0. Greenplum
         Database PL/Java provides the following features.</p>
       <ul>
-        <li id="pv161029">Ability to execute PL/Java functions with Java 1.6 or higher.</li>
+        <li id="pv161029">Ability to execute PL/Java functions with Java 1.7 or higher.</li>
         <li id="pv161030">Standardized utilities (modeled after the SQL 2003 proposal) to install
           and maintain Java code in the database.</li>
         <li id="pv161031">Standardized mappings of parameters and result. Complex types as well as
@@ -74,9 +74,9 @@
           transaction or savepoint is committed or rolled back.</li>
         <li id="pv161039">Integration with GNU GCJ on selected platforms.</li>
       </ul>
-      <p>The Greenplum Database PL/Java extension package ships with embedded Java Runtime 6u32 that
-        is installed in the directory <codeph>$GPHOME/ext/jre-1.6.0_32</codeph> on each of the
-        Greenplum Database hosts.</p>
+      <p>The Greenplum Database PL/Java extension package ships with an embedded Java Runtime that
+        is installed in the <codeph>$GPHOME/ext/</codeph> directory on each of the Greenplum
+        Database hosts.</p>
       <p>A function in SQL will appoint a static method in a Java class. In order for the function
         to execute, the appointed class must available on the class path specified by the Greenplum
         Database sever configuration parameter <codeph>pljava_classpath</codeph>. The PL/Java
@@ -104,7 +104,7 @@
     <title id="pv158223">Installing PL/Java</title>
     <body>
       <p>For Greenplum Database, the PL/Java extension is available as a package. Download the
-        package from <xref href="https://network.pivotal.io/products" scope="external" format="html"
+        package from <xref href="https://network.pivotal.io" scope="external" format="html"
           class="- topic/xref ">Pivotal Network</xref> and then install it with the Greenplum
         Package Manager (<codeph>gppkg</codeph>). </p>
       <p>The <codeph>gppkg</codeph> utility installs Greenplum Database extensions, along with any
@@ -134,12 +134,12 @@
             $MASTER_DATA_DIRECTORY</codeph> and <codeph>$GPHOME</codeph> variables are set.</p>
         <ol>
           <li id="pv158485">Download the PL/Java extension package from <xref
-              href="https://network.pivotal.io/products" scope="external" format="html"
+              href="https://network.pivotal.io" scope="external" format="html"
               class="- topic/xref ">Pivotal Network</xref> then copy it to the master host. </li>
           <li id="pv160918">Install the software extension package by running the
               <codeph>gppkg</codeph> command. This example installs the PL/Java extension package on
             a Linux
-            system:<codeblock>$ gppkg -i pljava-ossv1.4.0_pv1.2_gpdb4.3orca-rhel5-x86_64.gppkg</codeblock></li>
+            system:<codeblock>$ gppkg -i pljava-ossv1.4.0_pv1.2_gpdb5.0orca-rhel7-x86_64.gppkg</codeblock></li>
           <li dir="ltr">Reload
             <codeph>greenplum_path.sh</codeph>.<codeblock dir="ltr">$ source $GPHOME/greenplum_path.sh</codeblock></li>
           <li id="pv162228">Restart Greenplum Database.<codeblock>$ gpstop -r</codeblock></li>

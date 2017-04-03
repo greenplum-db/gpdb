@@ -8899,7 +8899,7 @@ dumpExtProtocol(Archive *fout, ExtProtInfo *ptcinfo)
 
 	if (prev_ns)
 	{
-		appendPQExpBuffer(q, "-- Set the search_path required to look up the functions\n");
+		appendPQExpBufferStr(q, "-- Set the search_path required to look up the functions\n");
 		appendPQExpBuffer(q, "SET search_path = %s%s;\n\n",
 						  nsq->data, (has_internal ? ", public" : ""));
 	}
@@ -8928,7 +8928,7 @@ dumpExtProtocol(Archive *fout, ExtProtInfo *ptcinfo)
 		appendPQExpBuffer(q, " validatorfunc = '%s'",
 						  protoFuncs[VALIDFN_IDX].name);
 	}
-	appendPQExpBuffer(q, ");\n");
+	appendPQExpBufferStr(q, ");\n");
 
 	appendPQExpBuffer(delq, "DROP PROTOCOL %s;\n",
 					  fmtId(ptcinfo->dobj.name));
@@ -9554,22 +9554,20 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 			{
 				/* Format properly if not first attr */
 				if (actual_atts > 0)
-					appendPQExpBuffer(q, ",");
-				appendPQExpBuffer(q, "\n    ");
+					appendPQExpBufferChar(q, ',');
+				appendPQExpBufferStr(q, "\n    ");
 
 				/* Attribute name */
-				appendPQExpBuffer(q, "%s ",
-								  fmtId(tbinfo->attnames[j]));
+				appendPQExpBuffer(q, "%s ", fmtId(tbinfo->attnames[j]));
 
 				/* Attribute type */
-				appendPQExpBuffer(q, "%s",
-								  tbinfo->atttypnames[j]);
+				appendPQExpBufferStr(q, tbinfo->atttypnames[j]);
 
 				actual_atts++;
 			}
 		}
 
-		appendPQExpBuffer(q, "\n)");
+		appendPQExpBufferStr(q, "\n)");
 
 		if (command && strlen(command) > 0)
 		{
@@ -9693,35 +9691,25 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 			/* add Single Row Error Handling clause (if any) */
 			if (rejlim && strlen(rejlim) > 0)
 			{
-				appendPQExpBuffer(q, "\n");
+				appendPQExpBufferChar(q, '\n');
 
 				/*
-				 * NOTE: error tables get automatically generated if don't
-				 * exist. therefore we must be sure that this statment will be
-				 * dumped after the error relation CREATE is dumped, so that
-				 * we won't try to create it twice. For now we rely on the
-				 * fact that we pick dumpable objects sorted by OID, and error
-				 * table oid *should* always be less than its external table
-				 * oid (could that not be true sometimes?)
+				 * Error tables were removed in 5.0 and replaced with file
+				 * error logging. The catalog syntax for identifying error
+				 * logging is however still using the pg_exttable.fmterrtbl
+				 * attribute so we use the errtblname for emitting LOG ERRORS.
 				 */
 				if (errtblname && strlen(errtblname) > 0)
-				{
-					appendPQExpBuffer(q, "LOG ERRORS ");
-					if(strcmp(fmtId(errtblname), fmtId(tbinfo->dobj.name)))
-					{
-						appendPQExpBuffer(q, "INTO %s.", fmtId(errnspname));
-						appendPQExpBuffer(q, "%s ", fmtId(errtblname));
-					}
-				}
+					appendPQExpBufferStr(q, "LOG ERRORS ");
 
 				/* reject limit */
 				appendPQExpBuffer(q, "SEGMENT REJECT LIMIT %s", rejlim);
 
 				/* reject limit type */
 				if (rejlimtype[0] == 'r')
-					appendPQExpBuffer(q, " ROWS");
+					appendPQExpBufferStr(q, " ROWS");
 				else
-					appendPQExpBuffer(q, " PERCENT");
+					appendPQExpBufferStr(q, " PERCENT");
 			}
 		}
 
@@ -9729,7 +9717,7 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		if (iswritable)
 			addDistributedBy(q, tbinfo, actual_atts);
 
-		appendPQExpBuffer(q, ";\n");
+		appendPQExpBufferStr(q, ";\n");
 
 		PQclear(res);
 }
@@ -11723,12 +11711,12 @@ addDistributedBy(PQExpBuffer q, TableInfo *tbinfo, int actual_atts)
 				appendPQExpBuffer(q, " ,%s",
 							   fmtId(tbinfo->attnames[atoi(policycol) - 1]));
 			}
-			appendPQExpBuffer(q, ")");
+			appendPQExpBufferChar(q, ')');
 		}
 		else
 		{
 			/* policy has an empty policy - distribute randomly */
-			appendPQExpBuffer(q, " DISTRIBUTED RANDOMLY");
+			appendPQExpBufferStr(q, " DISTRIBUTED RANDOMLY");
 		}
 
 	}

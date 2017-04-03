@@ -49,6 +49,7 @@ extern Datum int44in(PG_FUNCTION_ARGS);
 extern Datum int44out(PG_FUNCTION_ARGS);
 extern Datum gp_str2bytea(PG_FUNCTION_ARGS);
 extern Datum check_auth_time_constraints(PG_FUNCTION_ARGS);
+extern Datum assign_new_record(PG_FUNCTION_ARGS);
 
 /* table_functions test */
 extern Datum multiset_example(PG_FUNCTION_ARGS);
@@ -2768,4 +2769,61 @@ udf_unsetenv(PG_FUNCTION_ARGS)
 	const char *name = (const char *) PG_GETARG_CSTRING(0);
 	int ret = unsetenv(name);
 	PG_RETURN_BOOL(ret == 0);
+}
+
+
+PG_FUNCTION_INFO_V1(assign_new_record);
+Datum
+assign_new_record(PG_FUNCTION_ARGS)
+{
+	FuncCallContext *funcctx = NULL;
+
+	if (SRF_IS_FIRSTCALL())
+	{
+		funcctx = SRF_FIRSTCALL_INIT();
+		TupleDesc	tupdesc;
+
+		tupdesc = CreateTemplateTupleDesc(1, false);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "c", INT4OID, -1, 0);
+
+		BlessTupleDesc(tupdesc);
+		funcctx->tuple_desc = tupdesc;
+
+		/* dummy output */
+		funcctx->max_calls = 10;
+	}
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+		SRF_RETURN_DONE(funcctx);
+
+	/* stuff done on every call of the function */
+	funcctx = SRF_PERCALL_SETUP();
+
+	if (funcctx->call_cntr < funcctx->max_calls)
+	{
+		TupleDesc	tupdesc;
+		HeapTuple	tuple;
+		Datum		dummy_values[1];
+		bool		dummy_nulls[1];
+		int			i;
+
+		tupdesc = CreateTemplateTupleDesc(funcctx->call_cntr, false);
+
+		dummy_values[0] = Int32GetDatum(1);
+		dummy_nulls[0] = false;
+
+		for (i = 1; i <= funcctx->call_cntr; i++)
+			TupleDescInitEntry(tupdesc, (AttrNumber) i, "c", INT4OID, -1, 0);
+
+		BlessTupleDesc(tupdesc);
+
+		tuple = heap_form_tuple(funcctx->tuple_desc, dummy_values, dummy_nulls);
+
+		SRF_RETURN_NEXT(funcctx, HeapTupleGetDatum(tuple));
+	}
+	else
+	{
+		/* nothing left */
+		SRF_RETURN_DONE(funcctx);
+	}
 }

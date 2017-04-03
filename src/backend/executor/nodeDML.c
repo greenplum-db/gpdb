@@ -168,9 +168,8 @@ ExecInitDML(DML *node, EState *estate, int eflags)
 	 * Both input and output of the junk filter include dropped attributes, so
 	 * the junk filter doesn't need to do anything special there about them
 	 */
-	TupleDesc cleanTupType = CreateTupleDescCopy(dmlstate->ps.state->es_result_relation_info->ri_RelationDesc->rd_att); 
 	dmlstate->junkfilter = ExecInitJunkFilter(node->plan.targetlist,
-			cleanTupType,
+			false,
 			dmlstate->cleanedUpSlot);
 
 	if (estate->es_instrument)

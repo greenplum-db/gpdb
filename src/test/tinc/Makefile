@@ -66,8 +66,7 @@ non_discover_targets: aoco_compression filerep_end_to_end fts
 
 storage_vacuum_xidlimits:
 	$(TESTER) $(DISCOVER) \
-	-s tincrepo/mpp/gpdb/tests/storage/vacuum \
-	-q "class=XidlimitsTests"
+	-s tincrepo/mpp/gpdb/tests/storage/vacuum/xidlimits
 
 aocoalter_catalog_loaders:
 	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests \

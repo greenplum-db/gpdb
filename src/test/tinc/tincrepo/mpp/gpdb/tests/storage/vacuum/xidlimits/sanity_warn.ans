@@ -9,8 +9,6 @@ psql:/path/sql_file:1: WARNING:  database "kumara64" must be vacuumed within 149
 HINT:  To avoid a database shutdown, execute a full-database VACUUM in "kumara64".
 INSERT 0 1
 SELECT * FROM foo;
-psql:/path/sql_file:1: WARNING:  database "kumara64" must be vacuumed within 1499999997 transactions
-HINT:  To avoid a database shutdown, execute a full-database VACUUM in "kumara64".
  x 
 ---
  1

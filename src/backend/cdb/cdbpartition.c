@@ -376,11 +376,25 @@ rel_partition_key_attrs(Oid relid)
 List *
 rel_partition_keys_ordered(Oid relid)
 {
+	List *pkeys = NIL;
+	rel_partition_keys_kinds_ordered(relid, &pkeys, NULL);
+	return pkeys;
+}
+
+/*
+ * Output a list of lists representing the partitioning keys and a list representing
+ * the partitioning kinds of the partitioned table identified by the relid or NIL.
+ * The keys and kinds are in the order of partitioning levels.
+ */
+void
+rel_partition_keys_kinds_ordered(Oid relid, List **pkeys, List **pkinds)
+{
 	Relation	partrel;
 	ScanKeyData scankey;
 	SysScanDesc sscan;
 	List *levels = NIL;
 	List *keysUnordered = NIL;
+	List *kindsUnordered = NIL;
 	int nlevels = 0;
 	HeapTuple tuple = NULL;
 
@@ -410,7 +424,12 @@ rel_partition_keys_ordered(Oid relid)
 
 		nlevels++;
 		levels = lappend_int(levels, p->parlevel);
-		keysUnordered = lappend(keysUnordered, levelkeys);
+
+		if (pkeys != NULL)
+			keysUnordered = lappend(keysUnordered, levelkeys);
+
+		if (pkinds != NULL)
+			kindsUnordered = lappend_int(kindsUnordered, p->parkind);
 	}
 	systable_endscan(sscan);
 	heap_close(partrel, AccessShareLock);
@@ -418,22 +437,31 @@ rel_partition_keys_ordered(Oid relid)
 	if (1 == nlevels)
 	{
 		list_free(levels);
-		return keysUnordered;
+
+		if (pkeys != NULL)
+			*pkeys = keysUnordered;
+
+		if (pkinds != NULL)
+			*pkinds = kindsUnordered;
+
+		return;
 	}
 
-	// now order the keys by level
-	List *pkeys = NIL;
+	// now order the keys and kinds by level
 	for (int i = 0; i< nlevels; i++)
 	{
 		int pos = list_find_int(levels, i);
 		Assert (0 <= pos);
 
-		pkeys = lappend(pkeys, list_nth(keysUnordered, pos));
+		if (pkeys != NULL)
+			*pkeys = lappend(*pkeys, list_nth(keysUnordered, pos));
+
+		if (pkinds != NULL)
+			*pkinds = lappend_int(*pkinds, list_nth_int(kindsUnordered, pos));
 	}
 	list_free(levels);
 	list_free(keysUnordered);
-
-	return pkeys;
+	list_free(kindsUnordered);
 }
 
  /*
@@ -1161,18 +1189,18 @@ cdb_exchange_part_constraints(Relation table,
 static char *
 constraint_names(List *cons)
 {
-	HeapTuple tuple;
-	Form_pg_constraint con;
-	ListCell *lc;
+	ListCell   *lc;
 	StringInfoData str;
+	char	   *p;
 
 	initStringInfo(&str);
 
-	char *p = "";
+	p = "";
 	foreach (lc, cons)
 	{
-		tuple = linitial(cons);
-		con = (Form_pg_constraint) GETSTRUCT(tuple);
+		HeapTuple tuple = lfirst(lc);
+		Form_pg_constraint con = (Form_pg_constraint) GETSTRUCT(tuple);
+
 		appendStringInfo(&str, "%s\"%s\"", p, NameStr(con->conname));
 		p = ", ";
 	}
@@ -8972,6 +9000,9 @@ static List *PartitionChildren(PartitionNode *p)
  * find matching leaf partitions. This is similar to selectPartition() with one
  * big difference around nulls. If there is a null value corresponding to a partitioning attribute,
  * then all children are considered matches.
+ *
+ * The input values/isnull should match the layout of tuples in the
+ * partitioned table.
  *
  * Output:
  *	leafPartitionOids - list of leaf partition oids, null if there are no matches

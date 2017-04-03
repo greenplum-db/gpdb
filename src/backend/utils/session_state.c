@@ -102,6 +102,7 @@ SessionState_Acquire(int sessionId)
 		acquired->sessionVmem = 0;
 		acquired->cleanupCountdown = CLEANUP_COUNTDOWN_BEFORE_RUNAWAY;
 		acquired->activeProcessCount = 0;
+		acquired->idle_start = 0;
 
 #ifdef USE_ASSERT_CHECKING
 		acquired->isModifiedSessionId = false;
@@ -174,6 +175,7 @@ SessionState_Release(SessionState *acquired)
 		acquired->commandCountRunaway = 0;
 		acquired->cleanupCountdown = CLEANUP_COUNTDOWN_BEFORE_RUNAWAY;
 		acquired->activeProcessCount = 0;
+		acquired->idle_start = 0;
 
 #ifdef USE_ASSERT_CHECKING
 		acquired->isModifiedSessionId = false;

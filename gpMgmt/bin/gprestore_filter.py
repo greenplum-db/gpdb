@@ -32,6 +32,10 @@ schema_expr = '; Schema: '
 owner_expr = '; Owner: '
 comment_data_expr_a = '-- Data: '
 comment_data_expr_b = '-- Data for Name: '
+begin_start = 'B'
+begin_expr = 'BEGIN'
+end_start = 'E'
+end_expr = 'END'
 
 
 def get_table_info(line, cur_comment_expr):
@@ -121,10 +125,23 @@ def process_schema(dump_schemas, dump_tables, fdin, fdout, change_schema=None, s
     search_path = True
     passedDropSchemaSection = False
 
+    cast_func_schema = None
+    change_cast_func_schema = False
+
+    in_block = False
+
     for line in fdin:
         # NOTE: We are checking the first character before actually verifying
         # the line with "startswith" due to the performance gain.
-        if search_path and (line[0] == set_start) and line.startswith(search_path_expr):
+        if in_block:
+            output = True
+        elif (line[0] == begin_start) and line.startswith(begin_expr):
+            in_block = True
+            output = True
+        elif (line[0] == end_start) and line.startswith(end_expr):
+            in_block = False
+            output = True
+        elif search_path and (line[0] == set_start) and line.startswith(search_path_expr):
             # NOTE: The goal is to output the correct mapping to the search path
             # for the schema
 
@@ -132,7 +149,9 @@ def process_schema(dump_schemas, dump_tables, fdin, fdout, change_schema=None, s
             # schema in set search_path line is already escaped in dump file
             schema = extract_schema(line)
             schema_wo_escaping = removeEscapingDoubleQuoteInSQLString(schema, False)
-            if (dump_schemas and schema_wo_escaping in dump_schemas or
+            if schema == "pg_catalog":
+                output = True
+            elif (dump_schemas and schema_wo_escaping in dump_schemas or
                 schema_level_restore_list and schema_wo_escaping in schema_level_restore_list):
                 if change_schema and len(change_schema) > 0:
                     # change schema name can contain special chars including white space, double quote that.
@@ -142,6 +161,7 @@ def process_schema(dump_schemas, dump_tables, fdin, fdout, change_schema=None, s
                         line = line.replace(quoted_schema, escapeDoubleQuoteInSQLString(change_schema))
                     else:
                         line = line.replace(schema, escapeDoubleQuoteInSQLString(change_schema))
+                cast_func_schema = schema # Save the schema in case we need to replace a cast's function's schema later
                 output = True
                 search_path = False
             else:
@@ -183,7 +203,10 @@ def process_schema(dump_schemas, dump_tables, fdin, fdout, change_schema=None, s
                 output = check_valid_relname(schema, name, dump_tables, schema_level_restore_list)
             elif type in ['FUNCTION']:
                 function_ddl = True
-                output = check_valid_relname(schema, name, dump_tables, schema_level_restore_list)
+                output = check_valid_schema(schema, dump_schemas, schema_level_restore_list)
+            elif type in ['CAST', 'PROCEDURAL LANGUAGE']: # Restored to pg_catalog, so always filtered in
+                output = True
+                change_cast_func_schema = True # When changing schemas, we need to ensure that functions used in casts reference the new schema
 
             if output:
                 search_path = True
@@ -220,6 +243,16 @@ def process_schema(dump_schemas, dump_tables, fdin, fdout, change_schema=None, s
                         fdout.write(line_buff)
                         line_buff = ''
                     search_path = True
+        elif change_cast_func_schema:
+            if "CREATE CAST" in line and "WITH FUNCTION" in line:
+                change_cast_func_schema = False
+                if change_schema and len(change_schema) > 0:
+                    quoted_schema = '"' + cast_func_schema + '"'
+                    if quoted_schema in line:
+                        line = line.replace(quoted_schema, escapeDoubleQuoteInSQLString(change_schema))
+                    else:
+                        line = line.replace(cast_func_schema, escapeDoubleQuoteInSQLString(change_schema))
+                cast_func_schema = None
         else:
             further_investigation_required = False
 
@@ -270,8 +303,12 @@ def extract_schema(line):
     temp = line[len_search_path_expr:]
     idx = temp.rfind(", pg_catalog;")
     if idx == -1:
-        raise Exception('Failed to extract schema name from line %s' % line)
-    schema = temp[:idx]
+        if "SET search_path = pg_catalog;" == line.strip(): # search_path may just be pg_catalog, as in the case of CASTs
+            schema = "pg_catalog"
+        else:
+            raise Exception('Failed to extract schema name from line %s' % line)
+    else:
+        schema = temp[:idx]
     return checkAndRemoveEnclosingDoubleQuote(schema)
 
 def extract_table(line):

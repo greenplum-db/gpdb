@@ -11,9 +11,6 @@ gpbitmapreindex -m { r | d | {l [-o <output_sql_file>]} }
                 [-h <master_host>] [-p <master_port>] 
                 [-n <number_of_processes>] [-v]
 
-gpmigrator --version
-
-gpmigrator --help | -?
 
 
 *****************************************************

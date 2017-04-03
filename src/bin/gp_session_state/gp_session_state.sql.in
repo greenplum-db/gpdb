@@ -24,6 +24,7 @@ BEGIN;
 --        int - number of QEs that already freed their memory,
 --        int - amount of vmem allocated at the time it was flagged as runaway
 --        int - command count running at the time it was flagged as runaway
+--        TimeStampTz - last time a QE of this session became idle
 --
 -- @doc:
 --        UDF to retrieve memory usage entries for sessions
@@ -58,7 +59,8 @@ WITH all_entries AS (
             active_qe_count int, 
             dirty_qe_count int,
             runaway_vmem_mb int, 
-            runaway_command_cnt int
+            runaway_command_cnt int,
+            idle_start timestamp with time zone
           )
     UNION ALL
     SELECT C.*
@@ -71,7 +73,8 @@ WITH all_entries AS (
             active_qe_count int, 
             dirty_qe_count int,
             runaway_vmem_mb int, 
-            runaway_command_cnt int      
+            runaway_command_cnt int,
+            idle_start timestamp with time zone
           ))
 SELECT S.datname, 
        M.sessionid as sess_id, 
@@ -84,7 +87,8 @@ SELECT S.datname,
        M.active_qe_count,
        M.dirty_qe_count,
        M.runaway_vmem_mb, 
-       M.runaway_command_cnt
+       M.runaway_command_cnt,
+       idle_start
 FROM all_entries M LEFT OUTER JOIN 
 pg_stat_activity as S
 ON M.sessionid = S.sess_id;

@@ -1744,6 +1744,8 @@ hasTuplesInFrame(WindowStatePerLevel level_state,
 
 			has_entry = getCurrentValue(level_state->lead_reader, level_state, entry);
 			Assert(has_entry);
+			Assert(level_state->numSortCols <= 1);
+
 			is_less = cmp_deformed_tuple(entry->keys, entry->nulls,
 										 &trail_edge_value,
 										 &trail_edge_value_isnull,
@@ -3687,6 +3689,8 @@ forwardEdgeForRange(WindowStatePerLevel level_state,
 		if (!has_entry)
 			break;
 
+		Assert(level_state->numSortCols <= 1);
+
 		is_less = cmp_deformed_tuple(entry->keys, entry->nulls,
 									 &new_edge_value,
 									 &new_edge_value_isnull,
@@ -4080,6 +4084,7 @@ checkLastRowForEdge(WindowStatePerLevel level_state,
 						level_state->numSortCols, level_state->sortColIdx,
 						entry->keys, entry->nulls,
 						wstate);
+	Assert(level_state->numSortCols <= 1);
 
 	is_less = cmp_deformed_tuple(entry->keys, entry->nulls,
 								 &new_edge_value, &new_edge_value_isnull,
@@ -4186,6 +4191,8 @@ advanceEdgeForRange(WindowStatePerLevel level_state,
 
 			if (!has_entry)
 				break;
+
+			Assert(level_state->numSortCols <= 1);
 
 			is_less = cmp_deformed_tuple(entry->keys, entry->nulls,
 										 &new_edge_value,

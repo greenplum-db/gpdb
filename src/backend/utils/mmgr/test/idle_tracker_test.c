@@ -128,6 +128,8 @@ CheckForDeactivationWithoutCleanup(void (*testFunc)(void))
 	 * possible
 	 */
 	will_be_called(RunawayCleaner_StartCleanup);
+	TimestampTz lastTime = GetCurrentTimestamp();
+	MySessionState->idle_start = 0;
 
 #ifdef USE_ASSERT_CHECKING
 	will_return(RunawayCleaner_IsCleanupInProgress, true);
@@ -155,6 +157,7 @@ CheckForDeactivationWithoutCleanup(void (*testFunc)(void))
 	assert_true(deactivationVersion == *CurrentVersion);
 	assert_true(isProcessActive == false);
 	assert_true(MySessionState->activeProcessCount == 0);
+	assert_true(lastTime > 0 && MySessionState->idle_start >= lastTime);
 }
 
 /*
@@ -199,7 +202,8 @@ CheckForDeactivationWithProperCleanup(void (*testFunc)(void))
 	 * site
 	 */
 	will_be_called_with_sideeffect(RunawayCleaner_StartCleanup, &_ExceptionalCondition, NULL);
-
+	TimestampTz lastTime = GetCurrentTimestamp();
+	MySessionState->idle_start = 0;
 	PG_TRY();
 	{
 		testFunc();
@@ -215,6 +219,7 @@ CheckForDeactivationWithProperCleanup(void (*testFunc)(void))
 	assert_true(deactivationVersion == *CurrentVersion);
 	assert_true(isProcessActive == false);
 	assert_true(MySessionState->activeProcessCount == 0);
+	assert_true(lastTime > 0 && MySessionState->idle_start >= lastTime);
 }
 
 /*
@@ -255,6 +260,7 @@ PreventDuplicateDeactivationDuringProcExit(void (*testFunc)(void))
 	proc_exit_inprogress = true;
 	/* Interrupts should be held off during proc_exit_inprogress*/
 	InterruptHoldoffCount = 1;
+	MySessionState->idle_start = 0;
 	/* Now the deactivation should succeed as we have held off interrupts */
 	testFunc();
 	InterruptHoldoffCount = 0;
@@ -264,6 +270,8 @@ PreventDuplicateDeactivationDuringProcExit(void (*testFunc)(void))
 	assert_true(isProcessActive == false);
 	/* We haven't reduced the activeProcessCount */
 	assert_true(MySessionState->activeProcessCount == 1);
+	/* idle_start shouldn't change as we were already idle */
+	assert_true(MySessionState->idle_start == 0);
 
 #ifdef USE_ASSERT_CHECKING
 	/*

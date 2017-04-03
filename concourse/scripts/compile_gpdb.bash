@@ -7,6 +7,12 @@ GPDB_ARTIFACTS_DIR=$(pwd)/$OUTPUT_ARTIFACT_DIR
 
 CWDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+function expand_glob_ensure_exists() {
+  local -a glob=($*)
+  [ -e "${glob[0]}" ]
+  echo "${glob[0]}"
+}
+
 function prep_env_for_centos() {
   case "$TARGET_OS_VERSION" in
     5)
@@ -38,13 +44,12 @@ function prep_env_for_centos() {
     ;;
   esac
 
-  ln -sf /$(pwd)/gpdb_src/gpAux/ext/${BLDARCH}/python-2.6.2 /opt/python-2.6.2
+  ln -sf $(pwd)/gpdb_src/gpAux/ext/${BLDARCH}/python-2.7.12 /opt/python-2.7.12
   export PATH=${JAVA_HOME}/bin:${PATH}
 }
 
 function prep_env_for_sles() {
-  ln -sf "$(pwd)/gpdb_src/gpAux/ext/sles11_x86_64/python-2.6.2" /opt
-  export JAVA_HOME=/usr/lib64/jvm/java-1.6.0-openjdk-1.6.0
+  export JAVA_HOME=$(expand_glob_ensure_exists /usr/java/jdk1.7*)
   export PATH=${JAVA_HOME}/bin:${PATH}
   source /opt/gcc_env.sh
 }
@@ -69,6 +74,10 @@ function make_sync_tools() {
     # downloaded from artifacts in order to use the native zlib.
     find ext -name 'libz.*' -exec rm -f {} \;
   popd
+}
+
+function link_tools_for_sles() {
+  ln -sf "$(expand_glob_ensure_exists "$(pwd)"/gpdb_src/gpAux/ext/*/python-2.7.12 )" /opt
 }
 
 function build_gpdb() {
@@ -122,12 +131,8 @@ function export_gpdb_extensions() {
 
 function _main() {
   case "$TARGET_OS" in
-    centos)
-      prep_env_for_centos
-      ;;
-    sles)
-      prep_env_for_sles
-      ;;
+    centos) prep_env_for_centos ;;
+    sles)   prep_env_for_sles ;;
     *)
       echo "only centos and sles are supported TARGET_OS'es"
       false
@@ -136,6 +141,10 @@ function _main() {
 
   generate_build_number
   make_sync_tools
+  case "$TARGET_OS" in
+    sles) link_tools_for_sles ;;
+  esac
+
   # By default, only GPDB Server binary is build.
   # Use BLD_TARGETS flag with appropriate value string to generate client, loaders
   # connectors binaries

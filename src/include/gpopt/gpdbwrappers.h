@@ -294,6 +294,9 @@ namespace gpdb {
 	// partition attributes
 	List *PlPartitionAttrs(Oid oid);
 
+	// get partition keys and kinds ordered by partition level
+	void GetOrderedPartKeysAndKinds(Oid oid, List **pkeys, List **pkinds);
+
 	// parts of a partitioned table
 	PartitionNode *PpnParts(Oid relid, int2 level, Oid parent, bool inctemplate, bool includesubparts);
 

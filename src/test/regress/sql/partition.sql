@@ -191,37 +191,34 @@ drop table foo_p, bar_p, baz_p;
 -- partitioning rule". 
 create table foo_p (i int, j int) distributed by (i)
 partition by range(j)
-(start(1) end(10) every(1));
+(start(1) end(5) every(1));
 
-create table bar_p(i int, j int check (j > 1000)) distributed by (i);
-alter table foo_p exchange partition for(rank(2)) with table bar_p;
-drop table foo_p, bar_p;
+create table bar_a(i int, j int check (j > 1000)) distributed by (i);
+alter table foo_p exchange partition for(rank(2)) with table bar_a;
 
 -- Should fail: A constraint on bar_p isn't shared by all the parts.
 -- Allowing this would make an inconsistent partitioned table. 
 -- Prior versions allowed this, so parts could have differing constraints
 -- as long as they avoided the partition columns.
-create table foo_p (i int, j int) distributed by (i)
-partition by range(j)
-(start(1) end(10) every(1));
-create table bar_p(i int check (i > 1000), j int) distributed by (i);
-alter table foo_p exchange partition for(rank(2)) with table bar_p;
-drop table foo_p, bar_p;
+create table bar_b(i int check (i > 1000), j int) distributed by (i);
+alter table foo_p exchange partition for(rank(2)) with table bar_b;
+
+-- like above, but with two contraints, just to check that the error
+-- message can print that correctly.
+create table bar_c(i int check (i > 1000), j int check (j > 1000)) distributed by (i);
+alter table foo_p exchange partition for(rank(2)) with table bar_c;
 
 -- Shouldn't fail: check constraint matches partition rule.
 -- Note this test is slightly different from prior versions to get
 -- in line with constraint consistency requirement.
-create table foo_p (i int, j int) distributed by (i)
-partition by range(j)
-(start(1) end(10) every(1));
-
-create table bar_p(i int, j int check (j >= 2 and j < 3 ))
+create table bar_d(i int, j int check (j >= 2 and j < 3 ))
 distributed by (i);
-insert into bar_p values(100000, 2);
-alter table foo_p exchange partition for(rank(2)) with table bar_p;
-insert into bar_p values(200000, 2);
-select * from bar_p;
-drop table foo_p, bar_p;
+insert into bar_d values(100000, 2);
+alter table foo_p exchange partition for(rank(2)) with table bar_d;
+insert into bar_d values(200000, 2);
+select * from bar_d;
+
+drop table foo_p, bar_a, bar_b, bar_c, bar_d;
 
 -- permissions
 create role part_role;
@@ -3698,9 +3695,6 @@ select * from deep_part_1_prt_female_2_prt_5_3_prt_5;
 -- Out of range partition
 insert into deep_part values (9, 9, 10, 'F');
 select * from deep_part;
-
--- Incorrect relation OID in pg_partition_oid()
-select pg_partition_oid(1, deep_part.*) from deep_part;
 
 drop table input2;
 drop table input1;

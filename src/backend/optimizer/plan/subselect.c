@@ -1603,6 +1603,21 @@ finalize_plan(PlannerInfo *root, Plan *plan, Bitmapset *valid_params)
 							  &context);
 			break;
 
+		case T_PartitionSelector:
+			finalize_primnode((Node *) ((PartitionSelector *) plan)->levelEqExpressions,
+							  &context);
+			finalize_primnode((Node *) ((PartitionSelector *) plan)->levelExpressions,
+							  &context);
+			finalize_primnode(((PartitionSelector *) plan)->residualPredicate,
+							  &context);	
+			finalize_primnode(((PartitionSelector *) plan)->propagationExpression,
+							  &context);
+			finalize_primnode(((PartitionSelector *) plan)->printablePredicate,
+							  &context);
+			finalize_primnode((Node *) ((PartitionSelector *) plan)->partTabTargetlist,
+							  &context);
+			break;
+			
 		case T_Hash:
 		case T_Agg:
 		case T_Window:

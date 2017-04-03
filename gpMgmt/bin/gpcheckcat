@@ -3047,16 +3047,7 @@ def checkTableInconsistentEntry(cat):
     pkey = cat.getPrimaryKey()
     master = cat.isMasterOnly()
     isShared = cat.isShared()
-
-    # Skip the indcheckxmin column in pg_index for now as that can be
-    # different between master and segment due to HOT feature.
-
-    if catname == 'pg_index':
-        columnsToBeExcluded = ['indcheckxmin']
-    else:
-        columnsToBeExcluded = None
-
-    columns = cat.getTableColumns(with_acl=False, excluding=columnsToBeExcluded)
+    columns = cat.getTableColumns(with_acl=False)
     coltypes = cat.getTableColtypes()
 
     # Skip master only tables
@@ -3776,12 +3767,8 @@ def getCatalog():
 # -------------------------------------------------------------------------------
 def getReportConfiguration():
     cfg = {}
-    for dbid, each in GV.cfg.iteritems():
-        if each['content'] == -1:
-            segname = 'master'
-        else:
-            segname = 'seg' + str(each['content'] + 1)
-        cfg[each['content']] = {'segname': segname,
+    for _, each in GV.cfg.iteritems():
+        cfg[each['content']] = {'segname': "content " + str(each['content']),
                                 'hostname': each['hostname'],
                                 'port': each['port']}
     return cfg

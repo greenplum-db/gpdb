@@ -913,7 +913,8 @@ ComputeIndexAttrs(IndexInfo *indexInfo,
 			atttype = attform->atttypid;
 			ReleaseSysCache(atttuple);
 		}
-		else if (attribute->expr && IsA(attribute->expr, Var))
+		else if (attribute->expr && IsA(attribute->expr, Var) &&
+				 ((Var *) attribute->expr)->varattno != InvalidAttrNumber)
 		{
 			/* Tricky tricky, he wrote (column) ... treat as simple attr */
 			Var		   *var = (Var *) attribute->expr;

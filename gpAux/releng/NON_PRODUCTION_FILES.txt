@@ -12,7 +12,6 @@ bin/gprecoverseg.py
 bin/gptorment.pl
 bin/gpugcluster
 bin/lib/gpgetconfig.py
-bin/lib/gpsnap.py
 bin/lib/gptest.py
 bin/pgbench
 bin/postgresql_conf_gp_additions

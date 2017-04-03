@@ -23,8 +23,6 @@
             <topicref href="admin_utilities/gplogfilter.xml"/>
             <topicref href="admin_utilities/gpmapreduce.xml"/>
             <topicref href="admin_utilities/gpmfr.xml"/>
-            <topicref href="admin_utilities/gpmigrator.xml"/>
-            <topicref href="admin_utilities/gpmigrator_mirror.xml"/>
 <!-- hidden until testing is complete -msk
             <topicref href="admin_utilities/gpmovemirrors.xml"/>
 -->

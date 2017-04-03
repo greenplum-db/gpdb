@@ -632,6 +632,7 @@ void PersistentTablespace_MarkCreatePending(
 	PersistentFileSysObjName fsObjName;
 
 	TablespaceDirEntry tablespaceDirEntry;
+	TransactionId topXid;
 
 	if (Persistent_BeforePersistenceWork())
 	{	
@@ -646,6 +647,8 @@ void PersistentTablespace_MarkCreatePending(
 	PersistentTablespace_VerifyInitScan();
 
 	PersistentFileSysObjName_SetTablespaceDir(&fsObjName,tablespaceOid);
+
+	topXid = GetTopTransactionId();
 
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 
@@ -662,7 +665,7 @@ void PersistentTablespace_MarkCreatePending(
 							/* createMirrorDataLossTrackingSessionNum */ 0,
 							mirrorExistenceState,
 							/* reserved */ 0,
-							/* parentXid */ GetTopTransactionId(),
+							/* parentXid */ topXid,
 							flushToXLog);
 
 	*persistentTid = tablespaceDirEntry->persistentTid;

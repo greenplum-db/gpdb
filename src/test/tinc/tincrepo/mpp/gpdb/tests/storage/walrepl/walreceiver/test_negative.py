@@ -204,7 +204,7 @@ class neg_test(StandbyRunMixin, MPPTestCase):
             os.remove(os.path.join(orig_master.datadir ,'wal_rcv.pid'))
 
         logger.info('Stop the original master...')
-        cmd = Command("gpstop", "gpstop -im")
+        cmd = Command("gpstop", "gpstop -aim")
         cmd.run()
         self.assertEqual(cmd.get_results().rc, 0, str(cmd))
 

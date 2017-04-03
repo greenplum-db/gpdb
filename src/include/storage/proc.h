@@ -95,10 +95,12 @@ struct PGPROC
 								 * xid >= xmin ! */
 
 	/*
-	 * Distributed transaction information. This is only accessed by the backend
-	 * itself, so this doesn't need to be protected by any lock. In fact, it
-	 * could be just a global variable in backend-private memory, but it seems
-	 * useful to have this information available for debugging purposes.
+	 * Distributed transaction information. This is only maintained on QE's
+	 * and accessed by the backend itself, so this doesn't need to be
+	 * protected by any lock. On QD currentGXact provides this info, hence
+	 * redundant info is not maintained here for QD. In fact, it could be just
+	 * a global variable in backend-private memory, but it seems useful to
+	 * have this information available for debugging purposes.
 	 */
 	LocalDistribXactData localDistribXactData;
 

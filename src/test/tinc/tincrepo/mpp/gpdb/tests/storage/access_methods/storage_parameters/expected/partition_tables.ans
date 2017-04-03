@@ -1,6 +1,6 @@
 -- 
--- @description Add/split/exchange partition to a partition table after the gp_defualt_operations changed with GUC value
--- Parent table with (appendonly=true, orientation=row), set guc to orinetation column, Add a partition
+-- @description Add/split/exchange partition to a partition table after the gp_default_operations changed with GUC value
+-- Parent table with (appendonly=true, orientation=row), set guc to orientation column, Add a partition
 \c dsp_db1
 You are now connected to database "dsp_db1" as user "sivand".
 show gp_default_storage_options;

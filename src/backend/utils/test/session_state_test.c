@@ -316,6 +316,7 @@ test__SessionState_ShmemInit__InitializesWhenPostmaster(void **state)
 			assert_true(cur->runawayStatus == RunawayStatus_NotRunaway);
 			assert_true(cur->pinCount == 0);
 			assert_true(cur->activeProcessCount == 0);
+			assert_true(cur->idle_start == 0);
 			assert_true(cur->sessionVmem == 0);
 			assert_true(cur->spinLock == 0);
 
@@ -364,6 +365,7 @@ test__SessionState_Init__AcquiresAndInitializes(void **state)
 	SessionState *theEntry = AllSessionStateEntries->freeList;
 
 	theEntry->activeProcessCount = 1234;
+	theEntry->idle_start = 1234;
 	theEntry->cleanupCountdown = 1234;
 	theEntry->runawayStatus = RunawayStatus_PrimaryRunawaySession;
 	theEntry->pinCount = 1234;
@@ -382,6 +384,7 @@ test__SessionState_Init__AcquiresAndInitializes(void **state)
 	assert_true(first == theEntry);
 
 	assert_true(theEntry->activeProcessCount == 0);
+	assert_true(theEntry->idle_start == 0);
 	assert_true(theEntry->cleanupCountdown == CLEANUP_COUNTDOWN_BEFORE_RUNAWAY);
 	assert_true(theEntry->runawayStatus == RunawayStatus_NotRunaway);
 	assert_true(theEntry->pinCount == 1);

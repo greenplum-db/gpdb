@@ -1765,26 +1765,8 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 									key)));
 
 				policy->attrs[policy->nattrs++] = colindex;
-
-			}
-
-			/* MPP-14770: we should check for duplicate column usage */
-			foreach(keys, distributedBy)
-			{
-				char *key = strVal(lfirst(keys));
-
-				ListCell *lkeys = NULL;
-				for_each_cell (lkeys, keys->next)
-				{
-					char *lkey = strVal(lfirst(lkeys));
-					if (strcmp(key,lkey) == 0)
-						ereport(ERROR,
-								(errcode(ERRCODE_DUPLICATE_COLUMN),
-								 errmsg("duplicate column \"%s\" in DISTRIBUTED BY clause", key)));
-				}
 			}
 		}
-
 	}
 
 

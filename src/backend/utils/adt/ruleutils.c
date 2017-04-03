@@ -4931,6 +4931,12 @@ get_rule_expr(Node *node, deparse_context *context,
 			}
 			break;
 
+		case T_PartSelectedExpr:
+			{
+				appendStringInfo(buf, "PartSelected");
+			}
+			break;
+
 		default:
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
 			break;
@@ -6996,19 +7002,16 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 			{
 				if (!reloptions)
 				{
-					appendStringInfo(&sid1, ", %s ", 
-									 "appendonly=false");
+					appendStringInfoString(&sid1, ", appendonly=false ");
 				}
 				else
 				{
 					if (!strstr(reloptions, "appendonly="))
-						appendStringInfo(&sid1, ", %s ", 
-										 "appendonly=false");
+						appendStringInfoString(&sid1, ", appendonly=false ");
 
 					if ((!strstr(reloptions, "orientation=")) &&
 						strstr(reloptions, "appendonly=true"))
-						appendStringInfo(&sid1, ", %s ", 
-										 "orientation=row");
+						appendStringInfoString(&sid1, ", orientation=row ");
 				}
 			}
 
@@ -7158,7 +7161,7 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 				int2		 nkeys  = part->parnatts;
 				int2		 parcol = 0;
 
-				appendStringInfo(&str, "VALUES(");
+				appendStringInfoString(&str, "VALUES(");
 
 				l1 = (List *)rule->parlistvalues;
 
@@ -7341,7 +7344,7 @@ get_partition_recursive(PartitionNode *pn, deparse_context *head,
 													 pn->part->paratts[i]);
 	
 			if (i)
-				appendStringInfo(head->buf, ", ");
+				appendStringInfoString(head->buf, ", ");
 	
 			appendStringInfoString(head->buf, quote_identifier(attname));
 			pfree(attname);
@@ -7710,7 +7713,7 @@ pg_get_partition_template_def_worker(Oid relid, int prettyFlags,
 
 					truncateStringInfo(&partidsid, 0);
 
-					appendStringInfo(&partidsid, "FOR (");
+					appendStringInfoString(&partidsid, "FOR (");
 
 					l1 = (List *)prule->parlistvalues;
 
@@ -7748,16 +7751,17 @@ pg_get_partition_template_def_worker(Oid relid, int prettyFlags,
 		if (pnt)
 		{
 			/* move the prior statements to sid2 */
-			appendStringInfo(&sid2, "%s", sid1.data);
+			appendStringInfoString(&sid2, sid1.data);
 			truncateStringInfo(&sid1, 0);
 
-			/* build the new statement in sid1, then append the
-			 * previous (shallower) statements 
+			/*
+			 * Build the new statement in sid1 and append the previous
+			 * (shallower) statements
 			 */
-			appendStringInfo(&sid1, "%s\nSET SUBPARTITION TEMPLATE %s%s",
+			appendStringInfo(&sid1, "%s\nSET SUBPARTITION TEMPLATE %s%s\n",
 							 altr.data, body.data,
 							 bFirstOne ? "" : ";\n" );
-			appendStringInfo(&sid1, "\n%s", sid2.data);
+			appendStringInfoString(&sid1, sid2.data);
 
 			/* no trailing semicolon on end of statement -- dumper
 			 * will add it 
@@ -7899,15 +7903,16 @@ pg_get_partition_def_ext(PG_FUNCTION_ARGS)
 	bool		pretty = PG_GETARG_BOOL(1);
 	int			prettyFlags;
 	char	   *str;
+	bool		bLeafTablename = FALSE;
 
 	prettyFlags = pretty ? PRETTYFLAG_PAREN | PRETTYFLAG_INDENT : 0;
 
-	/* MPP-6297: don't dump by tablename here 
-	 * NOTE: may need to backport fix to 3.3.x, and changing
-	 * bLeafTablename = TRUE here should only affect
-	 * pg_dump/cdb_dump_agent (and partition.sql test) 
+	/*
+	 * MPP-6297: don't dump by tablename here. NOTE: changing bLeafTablename to
+	 * TRUE here should only affect pg_dump/cdb_dump_agent (and partition.sql
+	 * test)
 	 */ 
-	str = pg_get_partition_def_worker(relid, prettyFlags, FALSE); 
+	str = pg_get_partition_def_worker(relid, prettyFlags, bLeafTablename);
 	
 	if (!str)
 		PG_RETURN_NULL();

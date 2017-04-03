@@ -216,10 +216,13 @@ typedef enum NodeTag
 	T_PercentileExpr,
 	T_DMLActionExpr,
 	T_PartOidExpr,
+	T_PartSelectedExpr,
 	T_PartDefaultExpr,
 	T_PartBoundExpr,
 	T_PartBoundInclusionExpr,
 	T_PartBoundOpenExpr,
+	T_PartListRuleExpr,
+	T_PartListNullTestExpr,
 	T_TableOidInfo,
 
 	/*
@@ -257,10 +260,13 @@ typedef enum NodeTag
 	T_GroupingFuncExprState,
 	T_PercentileExprState,
 	T_PartOidExprState,
+	T_PartSelectedExprState,
 	T_PartDefaultExprState,
 	T_PartBoundExprState,
 	T_PartBoundInclusionExprState,
 	T_PartBoundOpenExprState,
+	T_PartListRuleExprState,
+	T_PartListNullTestExprState,
 
 	/*
 	 * TAGS FOR PLANNER NODES (relation.h)
@@ -392,6 +398,8 @@ typedef enum NodeTag
 	T_CreateQueueStmt,
 	T_AlterQueueStmt,
 	T_DropQueueStmt,
+	T_CreateResourceGroupStmt,
+	T_DropResourceGroupStmt,
 	T_LockStmt,
 	T_ConstraintsSetStmt,
 	T_ReindexStmt,
@@ -507,7 +515,6 @@ typedef enum NodeTag
 	T_FormatterData,            /* in access/formatter.h */
 	T_ExtProtocolData,          /* in access/extprotocol.h */
 	T_ExtProtocolValidatorData, /* in access/extprotocol.h */
-	T_PartitionConstraints,     /* in executor/nodePartitionSelector.h */
 	T_SelectedParts,            /* in executor/nodePartitionSelector.h */
 	
     /* CDB: tags for random other stuff */

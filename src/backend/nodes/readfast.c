@@ -299,6 +299,17 @@ _readPartOidExpr(void)
 	READ_DONE();
 }
 
+static PartSelectedExpr *
+_readPartSelectedExpr(void)
+{
+	READ_LOCALS(PartSelectedExpr);
+
+	READ_INT_FIELD(dynamicScanId);
+	READ_OID_FIELD(partOid);
+
+	READ_DONE();
+}
+
 static PartDefaultExpr *
 _readPartDefaultExpr(void)
 {
@@ -339,6 +350,29 @@ _readPartBoundOpenExpr(void)
 
 	READ_INT_FIELD(level);
 	READ_BOOL_FIELD(isLowerBound);
+
+	READ_DONE();
+}
+
+static PartListRuleExpr *
+_readPartListRuleExpr(void)
+{
+	READ_LOCALS(PartListRuleExpr);
+
+	READ_INT_FIELD(level);
+	READ_OID_FIELD(resulttype);
+	READ_OID_FIELD(elementtype);
+
+	READ_DONE();
+}
+
+static PartListNullTestExpr *
+_readPartListNullTestExpr(void)
+{
+	READ_LOCALS(PartListNullTestExpr);
+
+	READ_INT_FIELD(level);
+	READ_ENUM_FIELD(nulltesttype, NullTestType);
 
 	READ_DONE();
 }
@@ -1467,7 +1501,6 @@ _readQueryDispatchDesc(void)
 {
 	READ_LOCALS(QueryDispatchDesc);
 
-	READ_NODE_FIELD(transientTypeRecords);
 	READ_STRING_FIELD(intoTableSpaceName);
 	READ_NODE_FIELD(oidAssignments);
 	READ_NODE_FIELD(sliceTable);
@@ -1549,7 +1582,6 @@ _readAppend(void)
 	READ_NODE_FIELD(appendplans);
 	READ_BOOL_FIELD(isTarget);
 	READ_BOOL_FIELD(isZapped);
-	READ_BOOL_FIELD(hasXslice);
 
 	READ_DONE();
 }
@@ -2279,6 +2311,7 @@ _readPartitionSelector(void)
 	READ_BOOL_FIELD(staticSelection);
 	READ_NODE_FIELD(staticPartOids);
 	READ_NODE_FIELD(staticScanIds);
+	READ_NODE_FIELD(partTabTargetlist);
 
 	readPlanInfo((Plan *)local_node);
 
@@ -2477,6 +2510,27 @@ _readDropQueueStmt(void)
 	READ_DONE();
 }
 
+static CreateResourceGroupStmt *
+_readCreateResourceGroupStmt(void)
+{
+	READ_LOCALS(CreateResourceGroupStmt);
+
+	READ_STRING_FIELD(name);
+	READ_NODE_FIELD(options);
+
+	READ_DONE();
+}
+
+static DropResourceGroupStmt *
+_readDropResourceGroupStmt(void)
+{
+	READ_LOCALS(DropResourceGroupStmt);
+
+	READ_STRING_FIELD(name);
+
+	READ_DONE();
+}
+
 static CommentStmt *
 _readCommentStmt(void)
 {
@@ -2512,7 +2566,6 @@ _readTupleDescNode(void)
 
 	READ_OID_FIELD(tuple->tdtypeid);
 	READ_INT_FIELD(tuple->tdtypmod);
-	READ_INT_FIELD(tuple->tdqdtypmod);
 	READ_BOOL_FIELD(tuple->tdhasoid);
 	READ_INT_FIELD(tuple->tdrefcount);
 
@@ -3272,6 +3325,9 @@ readNodeBinary(void)
 			case T_PartOidExpr:
 				return_value = _readPartOidExpr();
 				break;
+			case T_PartSelectedExpr:
+				return_value = _readPartSelectedExpr();
+				break;
 			case T_PartDefaultExpr:
 				return_value = _readPartDefaultExpr();
 				break;
@@ -3283,6 +3339,12 @@ readNodeBinary(void)
 				break;
 			case T_PartBoundOpenExpr:
 				return_value = _readPartBoundOpenExpr();
+				break;
+			case T_PartListRuleExpr:
+				return_value = _readPartListRuleExpr();
+				break;
+			case T_PartListNullTestExpr:
+				return_value = _readPartListNullTestExpr();
 				break;
 			case T_RowMarkClause:
 				return_value = _readRowMarkClause();
@@ -3380,6 +3442,13 @@ readNodeBinary(void)
 				break;
 			case T_DropQueueStmt:
 				return_value = _readDropQueueStmt();
+				break;
+
+			case T_CreateResourceGroupStmt:
+				return_value = _readCreateResourceGroupStmt();
+				break;
+			case T_DropResourceGroupStmt:
+				return_value = _readDropResourceGroupStmt();
 				break;
 
 			case T_CommentStmt:

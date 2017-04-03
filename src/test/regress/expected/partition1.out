@@ -1012,7 +1012,7 @@ insert into ggg values (7, 7);
 insert into ggg values (8, 8);
 insert into ggg values (9, 9);
 insert into ggg values (10, 10);
-ERROR:  no partition for partitioning key  (seg1 xzhangmac:40001 pid=94564)
+ERROR:  no partition for partitioning key  (seg2 127.0.0.1:25434 pid=6805)
 select * from ggg order by 1, 2;
  id | a 
 ----+---
@@ -1311,12 +1311,12 @@ select * from ggg_1_prt_2;
 select * from ggg_1_prt_3;
  a | b | d 
 ---+---+---
+ 1 | 5 | 6
+ 1 | a | b
  2 | 2 | 1
  2 | 2 | 3
  2 | 2 | 4
  2 | c | c
- 1 | 5 | 6
- 1 | a | b
 (6 rows)
 
 drop table ggg cascade;
@@ -1424,8 +1424,8 @@ COPY foz FROM stdin DELIMITER '|';
 select * from foz_1_prt_1;
  i |     d      
 ---+------------
- 2 | 10-10-2001
  1 | 01-02-2001
+ 2 | 10-10-2001
 (2 rows)
 
 select * from foz_1_prt_2;
@@ -1525,7 +1525,7 @@ alter table hhh add partition cc end ('2010-01-01');
 NOTICE:  CREATE TABLE will create partition "hhh_1_prt_cc" for table "hhh"
 -- works - anonymous partition MPP-3350
 alter table hhh add partition end ('2010-02-01');
-NOTICE:  CREATE TABLE will create partition "hhh_1_prt_r1244790963" for table "hhh"
+NOTICE:  CREATE TABLE will create partition "hhh_1_prt_r270615893" for table "hhh"
 -- MPP-3607 - ADD PARTITION with open intervals
 create table no_end1 (aa int, bb int) partition by range (bb)
 (partition foo start(3));
@@ -1788,16 +1788,16 @@ insert into rank values (10, 1, date '2005-05-15', 'F');
 select * from rank ;
  id | rank |    year    | gender 
 ----+------+------------+--------
-  1 |    1 | 01-15-2001 | M
   3 |    1 | 03-15-2003 | M
-  4 |    1 | 04-15-2004 | M
+  5 |    1 | 05-15-2005 | M
   6 |    1 | 01-15-2001 | F
+  7 |    1 | 02-15-2002 | F
   8 |    1 | 03-15-2003 | F
   9 |    1 | 04-15-2004 | F
-  2 |    1 | 02-15-2002 | M
-  5 |    1 | 05-15-2005 | M
-  7 |    1 | 02-15-2002 | F
  10 |    1 | 05-15-2005 | F
+  2 |    1 | 02-15-2002 | M
+  1 |    1 | 01-15-2001 | M
+  4 |    1 | 04-15-2004 | M
 (10 rows)
 
 alter table rank DROP partition boys restrict;
@@ -1806,9 +1806,9 @@ select * from rank ;
  id | rank |    year    | gender 
 ----+------+------------+--------
   6 |    1 | 01-15-2001 | F
+  7 |    1 | 02-15-2002 | F
   8 |    1 | 03-15-2003 | F
   9 |    1 | 04-15-2004 | F
-  7 |    1 | 02-15-2002 | F
  10 |    1 | 05-15-2005 | F
 (5 rows)
 
@@ -2166,8 +2166,8 @@ insert into foz values(2, '2010-04-01');
 select * from foz;
  i |     d      
 ---+------------
- 1 | 04-01-2003
  2 | 04-01-2010
+ 1 | 04-01-2003
 (2 rows)
 
 select * from foz_1_prt_dsf;
@@ -2189,7 +2189,7 @@ insert into d values(1, 10);
 insert into d values(1, 11);
 insert into d values(1, 55);
 insert into d values(1, 70);
-ERROR:  no partition for partitioning key  (seg0 xzhangmac:40000 pid=94563)
+ERROR:  no partition for partitioning key  (seg0 127.0.0.1:25432 pid=6803)
 select * from d;
  i | j  
 ---+----
@@ -2272,7 +2272,7 @@ NOTICE:  CREATE TABLE will create partition "d_1_prt_b" for table "d"
 insert into d values (1, 1);
 insert into d values (1, 2);
 insert into d values (1, NULL);
-ERROR:  no partition for partitioning key  (seg0 xzhangmac:40000 pid=94563)
+ERROR:  no partition for partitioning key  (seg0 127.0.0.1:25432 pid=6803)
 drop table  d cascade;
 -- allow NULLs into the default partition
 create table d (i int,  j int) partition by range(j)
@@ -2306,10 +2306,10 @@ insert into d values(1, 1, 2);
 insert into d values(1, 3, 4);
 insert into d values(1, 100, 20);
 insert into d values(1, 100, 2000);
-ERROR:  no partition for partitioning key  (seg0 xzhangmac:40000 pid=94563)
+ERROR:  no partition for partitioning key  (seg0 127.0.0.1:25432 pid=6803)
 insert into d values(1, '1000', '1001'), (1, '1001', '1002'), (1, '1003', '1004');
 insert into d values(1, 100, NULL);
-ERROR:  no partition for partitioning key  (seg0 xzhangmac:40000 pid=94563)
+ERROR:  no partition for partitioning key  (seg0 127.0.0.1:25432 pid=6803)
 select * from d_1_prt_a;
  a | b | c 
 ---+---+---
@@ -3244,7 +3244,7 @@ alter table dcl_messaging_test drop default partition;
 NOTICE:  dropped partition "outlying_dates" for relation "dcl_messaging_test"
 -- ADD case
 alter table dcl_messaging_test add partition start (timestamp '2011-09-15') inclusive end (timestamp '2011-09-16') exclusive;
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_r923551027" for table "dcl_messaging_test"
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_r1571743545" for table "dcl_messaging_test"
 -- EXCHANGE case
 create table dcl_candidate(like dcl_messaging_test) with (appendonly=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
@@ -3438,14 +3438,17 @@ select tablename,partitiontablename, partitionname from pg_partitions where tabl
 
 -- SPLIT partition
 alter table mpp14613_list alter partition others split partition subothers at (10) into (partition b1, partition b2);
-NOTICE:  exchanged partition "subothers" of partition "others" of relation "mpp14613_list" with relation "pg_temp_581997"
+NOTICE:  exchanged partition "subothers" of partition "others" of relation "mpp14613_list" with relation "pg_temp_291985"
 NOTICE:  dropped partition "subothers" for partition "others" of relation "mpp14613_list"
 NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_others_2_prt_b1" for table "mpp14613_list_1_prt_others"
 NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_others_2_prt_b2" for table "mpp14613_list_1_prt_others"
 alter table mpp14613_range alter partition others split partition subothers at (10) into (partition b1, partition b2);
-NOTICE:  exchanged partition "subothers" of partition "others" of relation "mpp14613_range" with relation "pg_temp_582752"
+NOTICE:  exchanged partition "subothers" of partition "others" of relation "mpp14613_range" with relation "pg_temp_292320"
 NOTICE:  dropped partition "subothers" for partition "others" of relation "mpp14613_range"
 ERROR:  invalid partition range specification.
+-- Drop table as gpcheckcat will complaint of not having constraint for newly
+-- created tables due to split.
+drop table mpp14613_list;
 --
 -- Drop index on a partitioned table. The indexes on the partitions remain.
 --
@@ -3618,10 +3621,10 @@ NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_2"
 select * from pg_indexes where tablename like 'mpp7635%';
  schemaname |         tablename          |      indexname       | tablespace |                                     indexdef                                     
 ------------+----------------------------+----------------------+------------+----------------------------------------------------------------------------------
- public     | mpp7635_aoi_table2         | mpp7635_ix3          |            | CREATE INDEX mpp7635_ix3 ON mpp7635_aoi_table2 USING btree (id)
  public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_ix3_1_prt_1  |            | CREATE INDEX mpp7635_ix3_1_prt_1 ON mpp7635_aoi_table2_1_prt_1 USING bitmap (id)
- public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_ix3_1_prt_11 |            | CREATE INDEX mpp7635_ix3_1_prt_11 ON mpp7635_aoi_table2_1_prt_1 USING btree (id)
  public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_ix3_1_prt_2  |            | CREATE INDEX mpp7635_ix3_1_prt_2 ON mpp7635_aoi_table2_1_prt_2 USING bitmap (id)
+ public     | mpp7635_aoi_table2         | mpp7635_ix3          |            | CREATE INDEX mpp7635_ix3 ON mpp7635_aoi_table2 USING btree (id)
+ public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_ix3_1_prt_11 |            | CREATE INDEX mpp7635_ix3_1_prt_11 ON mpp7635_aoi_table2_1_prt_1 USING btree (id)
  public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_ix3_1_prt_21 |            | CREATE INDEX mpp7635_ix3_1_prt_21 ON mpp7635_aoi_table2_1_prt_2 USING btree (id)
 (5 rows)
 
@@ -3670,12 +3673,9 @@ select count(*) from mpp7863;
 (1 row)
 
 alter table mpp7863 split default partition start (201001) inclusive end (201002) exclusive into (partition jan10,default partition);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
-NOTICE:  exchanged partition "extra" of relation "mpp7863" with relation "pg_temp_17362"
+NOTICE:  exchanged partition "extra" of relation "mpp7863" with relation "pg_temp_293486"
 NOTICE:  dropped partition "extra" for relation "mpp7863"
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_jan10" for table "mpp7863"
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_extra" for table "mpp7863"
 select count(*) from mpp7863_1_prt_extra where dat is null;
  count 

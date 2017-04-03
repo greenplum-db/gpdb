@@ -89,7 +89,7 @@ postgres_bki_srcs: process_col_defaults.pl $(POSTGRES_BKI_SRCS)
 	cat $(POSTGRES_BKI_SRCS) $(top_srcdir)/src/include/catalog/catversion.h | $(PERL) process_foreign_keys.pl > 5.0.json
 
 postgres.bki: genbki.sh postgres_bki_srcs $(top_srcdir)/src/include/pg_config_manual.h
-	AWK='$(AWK)' $(SHELL) $< $(pg_includes) --set-version=$(VERSION) -o postgres postgres_bki_srcs
+	AWK='$(AWK)' $(SHELL) $< $(pg_includes) --set-version=$(PG_VERSION) -o postgres postgres_bki_srcs
 
 .PHONY: install-data
 install-data: $(BKIFILES) installdirs

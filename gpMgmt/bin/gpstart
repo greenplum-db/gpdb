@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
+# Copyright (c) Greenplum Inc 2008. All Rights Reserved.
 #
 #
 # THIS IMPORT MUST COME FIRST
@@ -15,7 +15,7 @@ from optparse import Option, OptionGroup, OptionParser, OptionValueError, SUPPRE
 
 try:
     import pickle
-    
+
     from gppylib.db import dbconn
     from gppylib.gpparseopts import OptParser, OptChecker
     from gppylib.gparray import *
@@ -58,7 +58,7 @@ class GpStart:
                  timeout=SEGMENT_TIMEOUT_DEFAULT,
                  logfileDirectory=False
                  ):
-        assert(specialMode in [None, 'upgrade', 'maintenance'])
+        assert(specialMode in [None, 'maintenance'])
         self.specialMode=specialMode
         self.restricted=restricted
         self.start_standby=start_standby
@@ -74,7 +74,7 @@ class GpStart:
         self.wrapper_args=wrapper_args;
         self.skip_standby_check=skip_standby_check;
         self.logfileDirectory=logfileDirectory
-        
+
         #
         # Some variables that are set during execution
         #
@@ -109,8 +109,9 @@ class GpStart:
                     logger.warning("****************************************************************************")
                 else:
                     logger.info('Master-only start requested in configuration without a standby master.')
-                if not userinput.ask_yesno(None, "\nContinue with master-only startup", 'N'):
-                    raise UserAbortedException()
+                if self.interactive:
+                    if not userinput.ask_yesno(None, "\nContinue with master-only startup", 'N'):
+                        raise UserAbortedException()
 
         try:
             # Disable Ctrl-C
@@ -152,7 +153,7 @@ class GpStart:
             cmd.run()
             logger.debug("results of forcing master shutdown: %s" % cmd)
             #TODO: check results of command.
-  
+
             # in order to fail out here we must have filespace configured and also
             # have failed the consistency check
             if filespace_configured and inconsistent_filespace:
@@ -226,22 +227,20 @@ class GpStart:
     def _check_version(self):
         self.gpversion=gp.GpVersion.local('local GP software version check',self.gphome)
         logger.info("Greenplum Binary Version: '%s'" % self.gpversion)
-        
+
         # It would be nice to work out the catalog version => greenplum version
         # calculation so that we can print out nicer error messages when
-        # version doesn't match.  
+        # version doesn't match.
         bin_catversion = gp.GpCatVersion.local('local GP software catalag version check', self.gphome)
         logger.info("Greenplum Catalog Version: '%s'" % bin_catversion)
 
         dir_catversion = gp.GpCatVersionDirectory.local('local GP directory catalog version check', self.master_datadir)
-        
-        # If it's in upgrade mode, we don't need to check the cat version because gpmigrator have checked
-        # it already.
-        if (self.specialMode != 'upgrade' and bin_catversion != dir_catversion):
+
+        if bin_catversion != dir_catversion:
             logger.info("MASTER_DIRECTORY Catalog Version: '%s'" % dir_catversion)
             logger.info("Catalog Version of master directory incompatible with binaries")
             raise ExceptionNoStackTraceNeeded("Catalog Versions are incompatible")
-            
+
 
     ######
     def _check_master_running(self):
@@ -275,7 +274,7 @@ class GpStart:
 
             if primary_tli < standby_tli:
                 # stop the master we've started up.
-                cmd=gp.GpStop("Shutting down master", masterOnly=True, 
+                cmd=gp.GpStop("Shutting down master", masterOnly=True,
                               fast=True, quiet=logging_is_quiet(),
                               verbose=logging_is_verbose(),
                               datadir=self.master_datadir)
@@ -394,7 +393,7 @@ class GpStart:
         cmd=gp.MasterStart('master in utility mode', self.master_datadir,
                            self.port, d.dbid, d.standby_dbid or 0,
                            numContentsInCluster, self.era,
-                           wrapper=self.wrapper, wrapper_args=self.wrapper_args, 
+                           wrapper=self.wrapper, wrapper_args=self.wrapper_args,
                            specialMode=self.specialMode, timeout=self.timeout, utilityMode=True
                            );
         cmd.run()
@@ -423,7 +422,7 @@ class GpStart:
     ######
     def _start(self, segmentsToStart, invalidSegments, inactiveSegments):
         """ starts all of the segments, the master and the standby master
-            
+
             returns whether all segments that should be started were started successfully
 
             note that the parameters do not list master/standby, they only list data segments
@@ -447,7 +446,7 @@ class GpStart:
         localeData = ":".join([self.lc_collate,self.lc_monetary,self.lc_numeric])
         # this will eventually start gpsegstart.py
         segmentStartOp = StartSegmentsOperation(self.pool,self.quiet, localeData, self.gpversion,
-                                                self.gphome, self.master_datadir, self.timeout, 
+                                                self.gphome, self.master_datadir, self.timeout,
                                                 self.specialMode, self.wrapper, self.wrapper_args,
                                                 logfileDirectory=self.logfileDirectory)
         segmentStartResult = segmentStartOp.startSegments(self.gparray, segmentsToStart, startMode, self.era)
@@ -519,7 +518,7 @@ class GpStart:
         toStart = [seg for seg in segs if dbIdsToNotStart.get(seg.getSegmentDbId()) is None]
         return (toStart, invalid_segs, inactive_mirrors)
 
-    ####    
+    ####
     def _verify_enough_segments(self,startResult,gparray):
         successfulSegments = startResult.getSuccessfulSegments()
         mirroringFailures = [f.getSegment() for f in startResult.getFailedSegmentObjs() \
@@ -571,7 +570,7 @@ class GpStart:
             return False
         return True
 
-    ######  
+    ######
     def _shutdown_segments(self,segmentStartResult):
 
         logger.info("Commencing parallel segment instance shutdown, please wait...")
@@ -630,7 +629,7 @@ class GpStart:
         started = len(segmentStartResult.getSuccessfulSegments())
         failedFromMirroring = len(mirroringFailures)
         failedNotFromMirroring = len(nonMirroringFailures)
-        totalTriedToStart = started + failedFromMirroring + failedNotFromMirroring 
+        totalTriedToStart = started + failedFromMirroring + failedNotFromMirroring
 
         if failedFromMirroring > 0 or failedNotFromMirroring > 0 or logging_is_verbose():
             logger.info("----------------------------------------------------")
@@ -682,11 +681,6 @@ class GpStart:
 
             logger.info("----------------------------------------------------")
 
-        # MPP-14014
-        # don't confuse the user with warning about intentionally invalid segments during upgrade
-        if self.specialMode == 'upgrade':
-            return
-
         if len(invalidSegments) > 0:
             logger.warning("****************************************************************************")
             logger.warning("There are %d segment(s) marked down in the database" % len(invalidSegments))
@@ -719,9 +713,9 @@ class GpStart:
 
     ######
     def _start_final_master(self):
-        ''' Last item in the startup sequence is to start the master. 
+        ''' Last item in the startup sequence is to start the master.
 
-            After starting the master we connect to it.  This is done both as a check that the system is 
+            After starting the master we connect to it.  This is done both as a check that the system is
             actually started but its also done because certain backend processes don't get kickstarted
             until the first connection.  The DTM is an example of this and it allows those initialization
             messages to end up in the gpstart log as opposed to the user's psql session.
@@ -730,10 +724,6 @@ class GpStart:
         restrict_txt = ""
         if self.restricted:
             restrict_txt = "in RESTRICTED mode"
-
-        is_upgrade_mode = False
-        if self.specialMode == 'upgrade':
-            is_upgrade_mode = True
 
         standby_dbid = 0
         if self.gparray.standbyMaster:
@@ -748,7 +738,7 @@ class GpStart:
                              self.master_datadir, self.port, self.gparray.master.dbid, standby_dbid,
                              numContentsInCluster, self.era,
                              wrapper=self.wrapper, wrapper_args=self.wrapper_args,
-                             specialMode=self.specialMode, restrictedMode=self.restricted, timeout=self.timeout, 
+                             specialMode=self.specialMode, restrictedMode=self.restricted, timeout=self.timeout,
                              max_connections=self.max_connections, disableMasterMirror=(not self.start_standby)
                              )
 
@@ -760,22 +750,13 @@ class GpStart:
 
         logger.info("Command pg_ctl reports Master %s instance active" % self.gparray.master.hostname)
 
-        # verify we can connect to the master
-        # MPP-15604 - use bootstrap user during upgrade
-        msg = None
-        testurl = self.dburl
-        if is_upgrade_mode:
-            testurl = copy.copy(testurl)
-            testurl.pguser = gp.get_user()
-            logger.info("Testing connection as user %s" % testurl.pguser)
-
         try:
-            masterconn = dbconn.connect(testurl, upgrade=is_upgrade_mode)
+            masterconn = dbconn.connect(testurl)
             masterconn.close()
 
         except Exception, e:
             # MPP-14016.  While certain fts scenarios will trigger initial connection failures
-            # we still need watch for PANIC events, especially during upgrades.
+            # we still need watch for PANIC events.
             msg = str(e)
             if 'PANIC' in msg:
                 logger.critical(msg)
@@ -792,8 +773,8 @@ class GpStart:
 
     ######
     def _start_standby(self):
-        ''' used to start the standbymaster if necessary.  
-                
+        ''' used to start the standbymaster if necessary.
+
             returns if the standby master was started or not
         '''
         if self.start_standby and self.gparray.standbyMaster is not None:
@@ -831,8 +812,8 @@ class GpStart:
 
         addTo = OptionGroup(parser, 'Database startup options: ')
         parser.add_option_group(addTo)
-        addTo.add_option('-U', '--specialMode', type='choice', choices=['upgrade', 'maintenance'],
-                           metavar='upgrade|maintenance', action='store', default=None,
+        addTo.add_option('-U', '--specialMode', type='choice', choices=['maintenance'],
+                           metavar='maintenance', action='store', default=None,
                            help=SUPPRESS_HELP)
         addTo.add_option('-m', '--master_only', action='store_true',
                             help='start master instance only in maintenance mode')

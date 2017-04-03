@@ -35,6 +35,13 @@ end;
 $$
 language plpgsql;
 
+-- The GUC max_stack_depth sometimes gets set to a very low value so
+-- that the recurse() below fails.  This is because getrlimit() system
+-- call returning -1 for stack limit on SLES "occasionally".
+-- Explicitly setting the stack depth to 2MB works.  2MB is safe
+-- because the default stack limit on SLES, CentOS and OSX is 8MB.
+set max_stack_depth = "2MB";
+
 -- Recurse to a depth greater than MaxGpSavePoints.  Recursion
 -- increases depth (nesting level) of the subtransaction tree on every
 -- call.

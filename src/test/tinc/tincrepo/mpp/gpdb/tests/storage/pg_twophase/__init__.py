@@ -238,10 +238,13 @@ class PgtwoPhaseClass(MPPTestCase):
             self.invoke_fault('checkpoint', 'skip', role='primary', port= self.port, occurence='0')
         self.inject_fault(fault_type)
 
+        # Can't do it after filerep_resync resume as gets stuck due to
+        # filerep_transition_to_sync_before_checkpoint suspend above for
+        # MirroedLock
+        PSQL.wait_for_database_up()
+
         if cluster_state == 'resync':
             self.filereputil.inject_fault(f='filerep_resync', y='resume', r='primary')
-
-        PSQL.wait_for_database_up()
 
     def run_crash_and_recover(self, crash_type, fault_type, test_dir, cluster_state='sync', checkpoint='noskip'):
         '''

@@ -87,19 +87,3 @@ Feature: Validate command line arguments
         And all the segments are running
         and the segments are synchronized
 
-    @wip
-    @dca
-    Scenario: Standby syncmaster is running with no pgrep command on standby
-        Given the database is running
-        and all the segments are running
-        and the segments are synchronized
-        When the user initializes standby master on "smdw"
-        Then gpinitstandby should return a return code of 0
-        And the user runs "gpstop -am" 
-        And gpstop should return a return code of 0
-        When the user removes the "pgrep" command on standby
-        And the user runs "gpstart -a" 
-        Then gpstart should return a return code of 0
-        And gpstart should print command "pgrep" is not found to stdout
-        And the user restores the "pgrep" command on the standby
-

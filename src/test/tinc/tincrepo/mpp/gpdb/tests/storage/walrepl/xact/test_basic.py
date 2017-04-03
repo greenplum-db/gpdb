@@ -63,9 +63,9 @@ class xansrep(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTestCase):
         The flow of this test is as follows.
         1. Initiate the Standby using the Master (primary) postmaster
            paramerters.
-        2. B: Inject the fault to suspend Mater after Commit done.
+        2. B: Inject the fault to suspend Master after Commit done.
         3. B: Now execute a transaction and commit it. This master will be blocked.
-        4. A: Inject the fault to suspend Mater after Prepare done.
+        4. A: Inject the fault to suspend Master after Prepare done.
         5. A: Now execute a transaction and commit it. This transaction will be blocked.
         6. Promote the standby.
         7. Verify the result, transaction A results should not be visible and
@@ -98,7 +98,7 @@ class xansrep(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTestCase):
         self.assertEqual(result.rc, 0, result.stdout)
 
         # 3. Now execute a transaction and commit it. The backend is expected
-        #    be blocked.
+        #    to be blocked.
         logger.info('Create table xansrep_commit...')
 
         # Due to the suspend, we don't wait for the result
@@ -116,7 +116,7 @@ class xansrep(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTestCase):
         self.assertEqual(result.rc, 0, result.stdout)
 
         # 5. Now execute a transaction and commit it. The backend is expected
-        #    be blocked.
+        #    to be blocked.
         logger.info('Create table xansrep_prepare...')
 
         # Due to the suspend, we don't wait for the result

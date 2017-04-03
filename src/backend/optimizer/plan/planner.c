@@ -32,7 +32,6 @@
 #include "optimizer/planner.h"
 #include "optimizer/prep.h"
 #include "optimizer/subselect.h"
-#include "optimizer/planpartition.h"
 #include "optimizer/transform.h"
 #include "optimizer/tlist.h"
 #include "optimizer/var.h"
@@ -51,7 +50,6 @@
 #include "cdb/cdbpath.h"		/* cdbpath_segments */
 #include "cdb/cdbpathtoplan.h"	/* cdbpathtoplan_create_flow() */
 #include "cdb/cdbpartition.h"	/* query_has_external_partition() */
-#include "cdb/cdbplan.h"
 #include "cdb/cdbgroup.h"		/* grouping_planner extensions */
 #include "cdb/cdbsetop.h"		/* motion utilities */
 #include "cdb/cdbsubselect.h"	/* cdbsubselect_flatten_sublinks() */
@@ -536,8 +534,6 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		XsliceInAppendContext append_context;
-
 		top_plan = cdbparallelize(root, top_plan, parse,
 								  cursorOptions,
 								  boundParams);
@@ -557,18 +553,6 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		 * slices.
 		 */
 		top_plan = apply_shareinput_xslice(top_plan, glob);
-
-		/*
-		 * Walk the plan tree to set hasXslice field in each Append node to
-		 * true if the subnodes of the Append node contain cross-slice shared
-		 * node, and one of these subnodes running in the same slice as the
-		 * Append node.
-		 */
-		planner_init_plan_tree_base(&append_context.base, root);
-		append_context.currentSliceNo = 0;
-		append_context.slices = NULL;
-		plan_tree_walker((Node *) top_plan, set_hasxslice_in_append_walker, &append_context);
-		bms_free(append_context.slices);
 	}
 
 	top_plan = zap_trivial_result(root, top_plan);
@@ -614,6 +598,18 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	result->queryPartOids = NIL;
 	result->queryPartsMetadata = NIL;
 	result->numSelectorsPerScanId = NIL;
+
+	{
+		ListCell *lc;
+
+		foreach(lc, glob->relationOids)
+		{
+			Oid reloid = lfirst_oid(lc);
+
+			if (rel_is_partitioned(reloid))
+				result->queryPartOids = lappend_oid(result->queryPartOids, reloid);
+		}
+	}
 
 	Assert(result->utilityStmt == NULL || IsA(result->utilityStmt, DeclareCursorStmt));
 
@@ -920,15 +916,6 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 		plan = inheritance_planner(root);
 	else
 		plan = grouping_planner(root, tuple_fraction);
-
-	if (Gp_role == GP_ROLE_DISPATCH
-		&& root->config->gp_dynamic_partition_pruning)
-	{
-		/**
-		 * Apply transformation for dynamic partition elimination.
-		 */
-		plan = apply_dyn_partition_transforms(root, plan);
-	}
 
 	/*
 	 * Deal with explicit redistribution requirements for TableValueExpr

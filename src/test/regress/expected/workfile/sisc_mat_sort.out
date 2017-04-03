@@ -39,22 +39,22 @@ set gp_enable_mk_sort=on;
 -- We're testing the executor, not the planner, so force ORCA off, to get
 -- the particular plan
 set optimizer=off;
-select count(*) from (with ctesisc as
-  (select count(i1) as c1,i3 as c2 from testsiscm group by i3)
-select *
-from ctesisc as t1, ctesisc as t2
-where t1.c1 = t2.c2) foo;
+select count(*) from (with ctesisc as 
+	(select count(i1) as c1, i2 as c2, i3 as c3 from testsiscm group by i2, i3) 
+select * 
+from ctesisc as t1, ctesisc as t2 
+where t1.c1 = t2.c1 and t1.c3 = t2.c3) foo;
  count  
 --------
  100000
 (1 row)
 
 select * from sisc_mat_sort.is_workfile_created('explain analyze
-with ctesisc as
-  (select count(i1) as c1,i3 as c2 from testsiscm group by i3)
-select *
-from ctesisc as t1, ctesisc as t2
-where t1.c1 = t2.c2;');
+with ctesisc as 
+	(select count(i1) as c1, i2 as c2, i3 as c3 from testsiscm group by i2, i3) 
+select * 
+from ctesisc as t1, ctesisc as t2 
+where t1.c1 = t2.c1 and t1.c3 = t2.c3;');
  is_workfile_created 
 ---------------------
                    1
@@ -63,11 +63,11 @@ where t1.c1 = t2.c2;');
 (3 rows)
 
 select * from sisc_mat_sort.is_workfile_created('explain analyze
-with ctesisc as
-  (select count(i1) as c1,i3 as c2 from testsiscm group by i3)
-select *
-from ctesisc as t1, ctesisc as t2
-where t1.c1 = t2.c2 limit 50000;');
+with ctesisc as 
+	(select count(i1) as c1, i2 as c2, i3 as c3 from testsiscm group by i2, i3) 
+select * 
+from ctesisc as t1, ctesisc as t2 
+where t1.c1 = t2.c1 and t1.c3 = t2.c3 limit 50000;');
  is_workfile_created 
 ---------------------
                    1
@@ -76,22 +76,22 @@ where t1.c1 = t2.c2 limit 50000;');
 (3 rows)
 
 set gp_enable_mk_sort=off;
-select count(*) from (with ctesisc as
-  (select count(i1) as c1,i3 as c2 from testsiscm group by i3)
-select *
-from ctesisc as t1, ctesisc as t2
-where t1.c1 = t2.c2) foo;
+select count(*) from (with ctesisc as 
+	(select count(i1) as c1, i2 as c2, i3 as c3 from testsiscm group by i2, i3) 
+select * 
+from ctesisc as t1, ctesisc as t2 
+where t1.c1 = t2.c1 and t1.c3 = t2.c3) foo;
  count  
 --------
  100000
 (1 row)
 
 select * from sisc_mat_sort.is_workfile_created('explain analyze
-with ctesisc as
-  (select count(i1) as c1,i3 as c2 from testsiscm group by i3)
-select *
-from ctesisc as t1, ctesisc as t2
-where t1.c1 = t2.c2;');
+with ctesisc as 
+	(select count(i1) as c1, i2 as c2, i3 as c3 from testsiscm group by i2, i3) 
+select * 
+from ctesisc as t1, ctesisc as t2 
+where t1.c1 = t2.c1 and t1.c3 = t2.c3;');
  is_workfile_created 
 ---------------------
                    1
@@ -100,11 +100,11 @@ where t1.c1 = t2.c2;');
 (3 rows)
 
 select * from sisc_mat_sort.is_workfile_created('explain analyze
-with ctesisc as
-  (select count(i1) as c1,i3 as c2 from testsiscm group by i3)
-select *
-from ctesisc as t1, ctesisc as t2
-where t1.c1 = t2.c2 limit 50000;');
+with ctesisc as 
+	(select count(i1) as c1, i2 as c2, i3 as c3 from testsiscm group by i2, i3) 
+select * 
+from ctesisc as t1, ctesisc as t2 
+where t1.c1 = t2.c1 and t1.c3 = t2.c3 limit 50000;');
  is_workfile_created 
 ---------------------
                    1

@@ -95,7 +95,6 @@ script:
   - initdb --version
   - createdb --version
   - psql --version
-  - gpmigrator --version
   - gpssh --version
   - gpmapreduce --version
   - gpfdist --version

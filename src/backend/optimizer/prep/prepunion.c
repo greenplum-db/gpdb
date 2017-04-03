@@ -826,6 +826,8 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 	List	   *inhOIDs;
 	List	   *appinfos;
 	ListCell   *l;
+	bool		parent_is_partitioned;
+	Relids		child_relids = NULL;
 
 	/* Does RT entry allow inheritance? */
 	if (!rte->inh)
@@ -885,6 +887,8 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 	else
 		lockmode = AccessShareLock;
 
+	parent_is_partitioned = rel_is_partitioned(parentOID);
+
 	/* Scan the inheritance set and expand it */
 	appinfos = NIL;
 	foreach(l, inhOIDs)
@@ -908,7 +912,7 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 		/*
 		 * show root and leaf partitions
 		 */
-		if (rel_is_partitioned(parentOID) && !rel_is_leaf_partition(childOID))
+		if (parent_is_partitioned && !rel_is_leaf_partition(childOID))
 		{
 			continue;
 		}
@@ -930,6 +934,8 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 		parse->rtable = lappend(parse->rtable, childrte);
 		childRTindex = list_length(parse->rtable);
 
+		child_relids = bms_add_member(child_relids, childRTindex);
+
 		/*
 		 * Build an AppendRelInfo for this parent and child.
 		 */
@@ -950,6 +956,23 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 	}
 
 	heap_close(oldrelation, NoLock);
+
+	if (parent_is_partitioned)
+	{
+		DynamicScanInfo *dsinfo;
+
+		dsinfo = palloc(sizeof(DynamicScanInfo));
+		dsinfo->parentOid = parentOID;
+		dsinfo->rtindex = rti;
+		dsinfo->hasSelector = false;
+
+		dsinfo->children = child_relids;
+
+		dsinfo->partKeyAttnos = rel_partition_key_attrs(parentOID);
+
+		root->dynamicScans = lappend(root->dynamicScans, dsinfo);
+		dsinfo->dynamicScanId = list_length(root->dynamicScans);
+	}
 
 	/*
 	 * If all the children were temp tables, pretend it's a non-inheritance

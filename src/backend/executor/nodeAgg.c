@@ -752,60 +752,43 @@ process_ordered_aggregate_multi(AggState *aggstate,
 	TupleTableSlot *slot = peraggstate->evalslot;
 	int			numArguments = peraggstate->numArguments;
 	int			i;
-	
-	if(gp_enable_mk_sort)
+
+	if (gp_enable_mk_sort)
 		tuplesort_performsort_mk((Tuplesortstate_mk *) peraggstate->sortstate);
 	else
 		tuplesort_performsort((Tuplesortstate *) peraggstate->sortstate);
-	
-	ExecClearTuple(slot);
-	
-	PG_TRY();
-	{
-		while (
-			gp_enable_mk_sort ? 
-			tuplesort_gettupleslot_mk((Tuplesortstate_mk *)peraggstate->sortstate, true, slot)
-			:
-			tuplesort_gettupleslot((Tuplesortstate *)peraggstate->sortstate, true, slot)
-			)
-		{
-			/*
-			 * Extract the first numArguments as datums to pass to the transfn.
-			 * (This will help execTuplesMatch too, so do it immediately.)
-			 */
-			slot_getsomeattrs(slot, numArguments);
-			
-			/* Load values into fcinfo */
-			/* Start from 1, since the 0th arg will be the transition value */
-			for (i = 0; i < numArguments; i++)
-			{
-				fcinfo.arg[i + 1] = slot_get_values(slot)[i];
-				fcinfo.argnull[i + 1] = slot_get_isnull(slot)[i];
-			}
-		
-			advance_transition_function(aggstate, peraggstate, pergroupstate,
-										&fcinfo, &(aggstate->mem_manager));
-		
-			/* Reset context each time */
-			MemoryContextReset(workcontext);
-		
-			ExecClearTuple(slot);
-		}
-	}
-	PG_CATCH();
-	{
-		/* 
-		 * The tuple is stored in a memory context that will be released during 
-		 * the error handling.  If we don't clear it here we will attempt to 
-		 * clear it later after the memory context has been released which would
-		 * be a memory context error.
-		 */
-		ExecClearTuple(slot);
 
-		/* Carry on with error handling. */
-		PG_RE_THROW();
+	ExecClearTuple(slot);
+
+	while (
+		gp_enable_mk_sort ?
+		tuplesort_gettupleslot_mk((Tuplesortstate_mk *)peraggstate->sortstate, true, slot)
+		:
+		tuplesort_gettupleslot((Tuplesortstate *)peraggstate->sortstate, true, slot)
+		)
+	{
+		/*
+		 * Extract the first numArguments as datums to pass to the transfn.
+		 * (This will help execTuplesMatch too, so do it immediately.)
+		 */
+		slot_getsomeattrs(slot, numArguments);
+
+		/* Load values into fcinfo */
+		/* Start from 1, since the 0th arg will be the transition value */
+		for (i = 0; i < numArguments; i++)
+		{
+			fcinfo.arg[i + 1] = slot_get_values(slot)[i];
+			fcinfo.argnull[i + 1] = slot_get_isnull(slot)[i];
+		}
+
+		advance_transition_function(aggstate, peraggstate, pergroupstate,
+									&fcinfo, &(aggstate->mem_manager));
+
+		/* Reset context each time */
+		MemoryContextReset(workcontext);
+
+		ExecClearTuple(slot);
 	}
-	PG_END_TRY();
 
 	if (gp_enable_mk_sort)
 		tuplesort_end_mk((Tuplesortstate_mk *) peraggstate->sortstate);

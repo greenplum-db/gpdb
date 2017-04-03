@@ -557,11 +557,11 @@ class PSQL(Command):
         down = True
         results = {'rc':0, 'stdout':'', 'stderr':''}
         for i in range(60):
+            time.sleep(1)
             res = PSQL.run_sql_command('select count(*) from gp_dist_random(\'gp_id\');', results=results)
             if results['rc'] == 0:
                 down = False
                 break
-            time.sleep(1)
 
         if down:
             raise PSQLException('database has not come up')

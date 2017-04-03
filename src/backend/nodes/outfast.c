@@ -1118,6 +1118,15 @@ _outAlterQueueStmt(StringInfo str, AlterQueueStmt *node)
 }
 
 static void
+_outCreateResourceGroupStmt(StringInfo str, CreateResourceGroupStmt *node)
+{
+	WRITE_NODE_TYPE("CREATERESOURCEGROUPSTMT");
+
+	WRITE_STRING_FIELD(name);
+	WRITE_NODE_FIELD(options); /* List of DefElem nodes */
+}
+
+static void
 _outTupleDescNode(StringInfo str, TupleDescNode *node)
 {
 	int			i;
@@ -1135,7 +1144,6 @@ _outTupleDescNode(StringInfo str, TupleDescNode *node)
 
 	WRITE_OID_FIELD(tuple->tdtypeid);
 	WRITE_INT_FIELD(tuple->tdtypmod);
-	WRITE_INT_FIELD(tuple->tdqdtypmod);
 	WRITE_BOOL_FIELD(tuple->tdhasoid);
 	WRITE_INT_FIELD(tuple->tdrefcount);
 }
@@ -1920,6 +1928,10 @@ _outNode(StringInfo str, void *obj)
 				_outPartOidExpr(str, obj);
 				break;
 
+			case T_PartSelectedExpr:
+				_outPartSelectedExpr(str, obj);
+				break;
+
 			case T_PartDefaultExpr:
 				_outPartDefaultExpr(str, obj);
 				break;
@@ -1934,6 +1946,14 @@ _outNode(StringInfo str, void *obj)
 
 			case T_PartBoundOpenExpr:
 				_outPartBoundOpenExpr(str, obj);
+				break;
+
+			case T_PartListRuleExpr:
+				_outPartListRuleExpr(str, obj);
+				break;
+
+			case T_PartListNullTestExpr:
+				_outPartListNullTestExpr(str, obj);
 				break;
 
 			case T_CreateTrigStmt:
@@ -1960,6 +1980,13 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_DropQueueStmt:
 				_outDropQueueStmt(str, obj);
+				break;
+
+			case T_CreateResourceGroupStmt:
+				_outCreateResourceGroupStmt(str, obj);
+				break;
+			case T_DropResourceGroupStmt:
+				_outDropResourceGroupStmt(str, obj);
 				break;
 
             case T_CommentStmt:

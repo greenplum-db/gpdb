@@ -41,8 +41,6 @@ struct FileScanDescData;
 struct MirroredBufferPoolBulkLoadInfo;
 struct SliceTable;
 
-typedef struct PartitionSelectorState PartitionSelectorState;
-
 /* ----------------
  *	  IndexInfo information
  *
@@ -1001,9 +999,26 @@ typedef struct PartOidExprState
 {
 	ExprState	xprstate;
 
-	/* accepted leaf PartitionConstraints for current tuple */
-	struct PartitionConstraints **acceptedLeafPart;
+	/*
+	 * Pointer to the accepted leaf OID stored in PartitionSelectorState.
+	 * Note: the other partition selector expressions refer to
+	 * PartitionSelectorState directly to extract information from the currently
+	 * selected rule. However, a PartOidExpr is different from those as this one
+	 * is used after the selection is done and rules list are freed to project
+	 * a partition oid output. Therefore, we cannot rely on reading part oid
+	 * from the currently selected leaf rule, stored inside levelPartRules.
+	 */
+	Oid *acceptedLeafOid;
 } PartOidExprState;
+
+/* ----------------
+ *		PartSelectedExprState node
+ * ----------------
+ */
+typedef struct PartSelectedExprState
+{
+	ExprState	xprstate;
+} PartSelectedExprState;
 
 /* ----------------
  *		PartDefaultExprState node
@@ -1013,8 +1028,8 @@ typedef struct PartDefaultExprState
 {
 	ExprState	xprstate;
 
-	/* accepted partitions for all levels */
-	struct PartitionConstraints **levelPartConstraints;
+	/* PartitionSelectorState where expression evaluator can look for rules */
+	struct PartitionSelectorState *selector;
 } PartDefaultExprState;
 
 /* ----------------
@@ -1025,8 +1040,8 @@ typedef struct PartBoundExprState
 {
 	ExprState	xprstate;
 
-	/* accepted partitions for all levels */
-	struct PartitionConstraints **levelPartConstraints;
+	/* PartitionSelectorState where expression evaluator can look for rules */
+	struct PartitionSelectorState *selector;
 } PartBoundExprState;
 
 /* ----------------
@@ -1037,8 +1052,8 @@ typedef struct PartBoundInclusionExprState
 {
 	ExprState	xprstate;
 
-	/* accepted partitions for all levels */
-	struct PartitionConstraints **levelPartConstraints;
+	/* PartitionSelectorState where expression evaluator can look for rules */
+	struct PartitionSelectorState *selector;
 } PartBoundInclusionExprState;
 
 /* ----------------
@@ -1049,9 +1064,33 @@ typedef struct PartBoundOpenExprState
 {
 	ExprState	xprstate;
 
-	/* accepted partitions for all levels */
-	struct PartitionConstraints **levelPartConstraints;
+	/* PartitionSelectorState where expression evaluator can look for rules */
+	struct PartitionSelectorState *selector;
 } PartBoundOpenExprState;
+
+/* ----------------
+ *		PartListRuleExprState node
+ * ----------------
+ */
+typedef struct PartListRuleExprState
+{
+	ExprState	xprstate;
+
+	/* PartitionSelectorState where expression evaluator can look for rules */
+	struct PartitionSelectorState *selector;
+} PartListRuleExprState;
+
+/* ----------------
+ *		PartListNullTestExprState node
+ * ----------------
+ */
+typedef struct PartListNullTestExprState
+{
+	ExprState	xprstate;
+
+	/* PartitionSelectorState where expression evaluator can look for rules */
+	struct PartitionSelectorState *selector;
+} PartListNullTestExprState;
 
 /* ----------------
  *		SubPlanState node
@@ -2626,19 +2665,22 @@ typedef struct MotionState
  * ExecNode for PartitionSelector.
  * This operator contains a Plannode in PlanState.
  */
-struct PartitionSelectorState
+typedef struct PartitionSelectorState
 {
 	PlanState ps;                                       /* its first field is NodeTag */
 	PartitionNode *rootPartitionNode;                   /* PartitionNode for root table */
 	PartitionAccessMethods *accessMethods;              /* Access method for partition */
-	struct PartitionConstraints **levelPartConstraints; /* accepted partitions for all levels */
-	struct PartitionConstraints **acceptedLeafPart;     /* accepted leaf PartitionConstraints for current tuple */
+	struct PartitionRule **levelPartRules; 				/* accepted partitions for all levels */
+	Oid acceptedLeafOid;     							/* accepted leaf OID for current tuple */
 	List *levelEqExprStates;                            /* ExprState for equality expressions for all levels */
 	List *levelExprStates;                              /* ExprState for general expressions for all levels */
 	ExprState *residualPredicateExprState;              /* ExprState for evaluating residual predicate */
 	ExprState *propagationExprState;                    /* ExprState for evaluating propagation expression */
 
-};
+	TupleDesc	partTabDesc;
+	TupleTableSlot *partTabSlot;
+	ProjectionInfo *partTabProj;
+} PartitionSelectorState;
 
 extern void initGpmonPktForResult(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
 extern void initGpmonPktForAppend(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);

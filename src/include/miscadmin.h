@@ -230,6 +230,7 @@ extern PGDLLIMPORT char* pljava_classpath;
 extern PGDLLIMPORT int   pljava_statement_cache_size;
 extern PGDLLIMPORT bool  pljava_debug;
 extern PGDLLIMPORT bool  pljava_release_lingering_savepoints;
+extern PGDLLIMPORT bool  pljava_classpath_insecure;
 
 /*
  * done in storage/backendid.h for now.

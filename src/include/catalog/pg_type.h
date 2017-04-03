@@ -637,14 +637,10 @@ DATA(insert OID = 3311 (	_gpxlogloc	   PGNSP PGUID -1 f b t \054 0	3310 0 array_
  * but there is now support for it in records and arrays.  Perhaps we should
  * just treat it as a regular base type?
  */
-DATA(insert OID = 2249 ( record			PGNSP PGUID -1 f p t \054 0 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 2249 ( record			PGNSP PGUID -1 f p t \054 0 0 2287 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
 #define RECORDOID		2249
-/* FIXME: RECORDARRAYOID's original oid was 2287, replaced by 3287
- * due to conflict with pg_proc.h's pg_total_relation_size
- * while importing json code
- */
-DATA(insert OID = 3287 ( _record		PGNSP PGUID -1 f p t \054 0 2249 0 array_in array_out array_recv array_send - - - d x f 0 -1 0 _null_ _null_ ));
-#define RECORDARRAYOID	3287
+DATA(insert OID = 2287 ( _record		PGNSP PGUID -1 f p t \054 0 2249 0 array_in array_out array_recv array_send - - - d x f 0 -1 0 _null_ _null_ ));
+#define RECORDARRAYOID	2287
 DATA(insert OID = 2275 ( cstring		PGNSP PGUID -2 f p t \054 0 0 1263 cstring_in cstring_out cstring_recv cstring_send - - - c p f 0 -1 0 _null_ _null_ ));
 #define CSTRINGOID		2275
 DATA(insert OID = 2276 ( any			PGNSP PGUID  4 t p t \054 0 0 0 any_in any_out - - - - - i p f 0 -1 0 _null_ _null_ ));

@@ -28,31 +28,6 @@ Feature: Miscellaneous tests which do not belong to mgmt utilities
         When the user runs "psql -c 'show pgstat_track_activity_query_size' template1"
         Then psql should print 1024 to stdout 
 
-    @wip
-    Scenario: Large query with number of chars greater than current_query size in pgstat_activity in CT mode
-        Given the database is running
-        And the database "testdb" does not exist
-        And database "testdb" exists
-        And user kills a primary postmaster process
-        And user can start transactions
-        And the user runs "gpconfig -c pgstat_track_activity_query_size -v 10000"
-        And gpconfig should return a return code of 0
-        And the user runs "gpstop -ar"
-        And gpstart should return a return code of 0
-        When the user runs command "PGOPTIONS=' -c gp_session_role=utility' psql -c 'show pgstat_track_activity_query_size' template1" on the "Change Tracking" segment
-        Then psql should print 10000 to stdout 
-        When the user runs "gprecoverseg -a"
-        Then gprecoverseg should return a return code of 0
-        And the segments are synchronized
-        And user can start transactions
-        And the user runs "gprecoverseg -r -a"
-        And gprecoverseg should return a return code of 0
-        And the segments are synchronized
-        And user can start transactions
-        When the user runs command "PGOPTIONS=' -c gp_session_role=utility' psql -c 'show pgstat_track_activity_query_size' template1" on the "Original" segment
-        Then psql should print 10000 to stdout 
-        And the segments are synchronized
-
     Scenario: Large query with number of chars greater than current_query size in pgstat_activity
         Given the database is running
         And the database "testdb" does not exist

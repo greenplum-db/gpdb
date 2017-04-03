@@ -107,20 +107,12 @@ WHERE p1.oid < p2.oid AND
 	  NOT IN (select winfunc from pg_window)));
  oid  |      proname      | oid  |       proname       
 ------+-------------------+------+---------------------
- 3211 | matrix_add        | 3212 | int2_matrix_accum
- 3210 | matrix_add        | 3212 | int2_matrix_accum
- 3209 | matrix_add        | 3212 | int2_matrix_accum
- 3208 | matrix_add        | 3212 | int2_matrix_accum
- 3211 | matrix_add        | 3213 | int4_matrix_accum
- 3210 | matrix_add        | 3213 | int4_matrix_accum
- 3209 | matrix_add        | 3213 | int4_matrix_accum
- 3208 | matrix_add        | 3213 | int4_matrix_accum
  3213 | int4_matrix_accum | 3214 | int8_matrix_accum
  3212 | int2_matrix_accum | 3214 | int8_matrix_accum
  3213 | int4_matrix_accum | 3215 | float8_matrix_accum
  3212 | int2_matrix_accum | 3215 | float8_matrix_accum
  5044 | gp_elog           | 5045 | gp_elog
-(13 rows)
+(5 rows)
 
 -- Look for uses of different type OIDs in the argument/result type fields
 -- for different aliases of the same built-in function.
@@ -148,14 +140,9 @@ WHERE p1.oid != p2.oid AND
          prorettype          |        prorettype        
 -----------------------------+--------------------------
  text                        | character varying
- smallint[]                  | integer[]
- smallint[]                  | bigint[]
- smallint[]                  | double precision[]
- integer[]                   | bigint[]
- integer[]                   | double precision[]
  bigint[]                    | double precision[]
  timestamp without time zone | timestamp with time zone
-(8 rows)
+(3 rows)
 
 SELECT DISTINCT p1.proargtypes[0]::regtype, p2.proargtypes[0]::regtype
 FROM pg_proc AS p1, pg_proc AS p2
@@ -170,16 +157,11 @@ WHERE p1.oid != p2.oid AND
 -----------------------------+--------------------------
  text                        | character
  text                        | character varying
- smallint[]                  | integer[]
- smallint[]                  | bigint[]
- smallint[]                  | double precision[]
- integer[]                   | bigint[]
- integer[]                   | double precision[]
  bigint[]                    | double precision[]
  timestamp without time zone | timestamp with time zone
  bit                         | bit varying
  anyarray                    | anyelement
-(11 rows)
+(6 rows)
 
 SELECT DISTINCT p1.proargtypes[1]::regtype, p2.proargtypes[1]::regtype
 FROM pg_proc AS p1, pg_proc AS p2

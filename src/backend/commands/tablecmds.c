@@ -11761,34 +11761,27 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			{
 				foreach(lc, ldistro)
 				{
-					char *colName = strVal((Value *)lfirst(lc));
-					HeapTuple tuple;
+					char	   *colName = strVal((Value *)lfirst(lc));
+					HeapTuple	tuple;
 					AttrNumber	attnum;
 
 					tuple = SearchSysCacheAttName(RelationGetRelid(rel), colName);
 
-					if (list_member(cols, lfirst(lc)))
-							ereport(ERROR,
-								(errcode(ERRCODE_DUPLICATE_OBJECT),
-								errmsg("distribution policy must be a "
-									"unique set of columns"),
-								errhint("Column \"%s\" appears "
-									"more than once", colName)));
 					if (!HeapTupleIsValid(tuple))
-							ereport(ERROR,
+						ereport(ERROR,
 								(errcode(ERRCODE_UNDEFINED_COLUMN),
-								errmsg("column \"%s\" of "
-									"relation \"%s\" does not exist",
-									colName,
-									RelationGetRelationName(rel))));
+								 errmsg("column \"%s\" of relation \"%s\" does not exist",
+										colName,
+										RelationGetRelationName(rel))));
 
 					attnum = ((Form_pg_attribute) GETSTRUCT(tuple))->attnum;
 
 					/* Prevent them from altering a system attribute */
 					if (attnum <= 0)
-					ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						errmsg("cannot distribute by system column \"%s\"", colName)));
+						ereport(ERROR,
+								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								 errmsg("cannot distribute by system column \"%s\"",
+										colName)));
 
 					policy->attrs[policy->nattrs++] = attnum;
 
@@ -11819,6 +11812,12 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 					}
 					if (!diff)
 					{
+						/*
+						 * This string length calculation relies on that we add
+						 * a comma after each column entry except the last one,
+						 * at which point the string should be NULL terminated
+						 * instead.
+						 */
 						char *dist = palloc(list_length(ldistro) * (NAMEDATALEN + 1));
 
 						dist[0] = '\0';
@@ -11858,8 +11857,11 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		if (!ldistro)
 			ldistro = make_dist_clause(rel);
 
-		/* force the use of legacy query optimizer, since PQO will not redistribute the tuples if the current and required
-		   distributions are both RANDOM even when reorganize is set to "true"*/
+		/*
+		 * Force the use of legacy query optimizer, since PQO will not
+		 * redistribute the tuples if the current and required distributions
+		 * are both RANDOM even when reorganize is set to "true"
+		 */
 		bool saveOptimizerGucValue = optimizer;
 		optimizer = false;
 

@@ -327,7 +327,6 @@ _outQueryDispatchDesc(StringInfo str, QueryDispatchDesc *node)
 {
 	WRITE_NODE_TYPE("QUERYDISPATCHDESC");
 
-	WRITE_NODE_FIELD(transientTypeRecords);
 	WRITE_STRING_FIELD(intoTableSpaceName);
 	WRITE_NODE_FIELD(oidAssignments);
 	WRITE_NODE_FIELD(sliceTable);
@@ -452,7 +451,6 @@ _outAppend(StringInfo str, Append *node)
 	WRITE_NODE_FIELD(appendplans);
 	WRITE_BOOL_FIELD(isTarget);
 	WRITE_BOOL_FIELD(isZapped);
-	WRITE_BOOL_FIELD(hasXslice);
 }
 
 static void
@@ -1104,6 +1102,7 @@ _outPartitionSelector(StringInfo str, PartitionSelector *node)
 	WRITE_BOOL_FIELD(staticSelection);
 	WRITE_NODE_FIELD(staticPartOids);
 	WRITE_NODE_FIELD(staticScanIds);
+	WRITE_NODE_FIELD(partTabTargetlist);
 
 	_outPlanInfo(str, (Plan *) node);
 }
@@ -3235,6 +3234,15 @@ _outPartOidExpr(StringInfo str, PartOidExpr *node)
 }
 
 static void
+_outPartSelectedExpr(StringInfo str, PartSelectedExpr *node)
+{
+	WRITE_NODE_TYPE("PARTSELECTEDEXPR");
+
+	WRITE_INT_FIELD(dynamicScanId);
+	WRITE_OID_FIELD(partOid);
+}
+
+static void
 _outPartDefaultExpr(StringInfo str, PartDefaultExpr *node)
 {
 	WRITE_NODE_TYPE("PARTDEFAULTEXPR");
@@ -3268,6 +3276,25 @@ _outPartBoundOpenExpr(StringInfo str, PartBoundOpenExpr *node)
 
 	WRITE_INT_FIELD(level);
 	WRITE_BOOL_FIELD(isLowerBound);
+}
+
+static void
+_outPartListRuleExpr(StringInfo str, PartListRuleExpr *node)
+{
+	WRITE_NODE_TYPE("PARTLISTRULEEXPR");
+
+	WRITE_INT_FIELD(level);
+	WRITE_OID_FIELD(resulttype);
+	WRITE_OID_FIELD(elementtype);
+}
+
+static void
+_outPartListNullTestExpr(StringInfo str, PartListNullTestExpr *node)
+{
+	WRITE_NODE_TYPE("PARTLISTNULLTESTEXPR");
+
+	WRITE_INT_FIELD(level);
+	WRITE_ENUM_FIELD(nulltesttype, NullTestType);
 }
 
 #ifndef COMPILING_BINARY_FUNCS
@@ -4155,6 +4182,25 @@ _outDropQueueStmt(StringInfo str, DropQueueStmt *node)
 	WRITE_STRING_FIELD(queue);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
+static void
+_outCreateResourceGroupStmt(StringInfo str, CreateResourceGroupStmt *node)
+{
+	WRITE_NODE_TYPE("CREATERESOURCEGROUPSTMT");
+
+	WRITE_STRING_FIELD(name);
+	WRITE_NODE_FIELD(options); /* List of DefElem nodes */
+}
+#endif /* COMPILING_BINARY_FUNCS */
+
+static void
+_outDropResourceGroupStmt(StringInfo str, DropResourceGroupStmt *node)
+{
+	WRITE_NODE_TYPE("DROPRESOURCEGROUPSTMT");
+
+	WRITE_STRING_FIELD(name);
+}
+
 
 static void
 _outCommentStmt(StringInfo str, CommentStmt *node)
@@ -4246,7 +4292,6 @@ _outTupleDescNode(StringInfo str, TupleDescNode *node)
 
 	WRITE_OID_FIELD(tuple->tdtypeid);
 	WRITE_INT_FIELD(tuple->tdtypmod);
-	WRITE_INT_FIELD(tuple->tdqdtypmod);
 	WRITE_BOOL_FIELD(tuple->tdhasoid);
 	WRITE_INT_FIELD(tuple->tdrefcount);
 }
@@ -5054,6 +5099,10 @@ _outNode(StringInfo str, void *obj)
 				_outPartOidExpr(str, obj);
 				break;
 
+			case T_PartSelectedExpr:
+				_outPartSelectedExpr(str, obj);
+				break;
+
 			case T_PartDefaultExpr:
 				_outPartDefaultExpr(str, obj);
 				break;
@@ -5068,6 +5117,14 @@ _outNode(StringInfo str, void *obj)
 
 			case T_PartBoundOpenExpr:
 				_outPartBoundOpenExpr(str, obj);
+				break;
+
+			case T_PartListRuleExpr:
+				_outPartListRuleExpr(str, obj);
+				break;
+
+			case T_PartListNullTestExpr:
+				_outPartListNullTestExpr(str, obj);
 				break;
 
 			case T_CreateTrigStmt:
@@ -5094,6 +5151,13 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_DropQueueStmt:
 				_outDropQueueStmt(str, obj);
+				break;
+
+			case T_CreateResourceGroupStmt:
+				_outCreateResourceGroupStmt(str, obj);
+				break;
+			case T_DropResourceGroupStmt:
+				_outDropResourceGroupStmt(str, obj);
 				break;
 
 			case T_CommentStmt:

@@ -87,7 +87,6 @@ CreateTemplateTupleDesc(int natts, bool hasoid)
 	desc->constr = NULL;
 	desc->tdtypeid = RECORDOID;
 	desc->tdtypmod = -1;
-	desc->tdqdtypmod = -1;
 	desc->tdhasoid = hasoid;
 	desc->tdrefcount = -1;		/* assume not reference-counted */
 
@@ -121,7 +120,6 @@ CreateTupleDesc(int natts, bool hasoid, Form_pg_attribute *attrs)
 	desc->constr = NULL;
 	desc->tdtypeid = RECORDOID;
 	desc->tdtypmod = -1;
-	desc->tdqdtypmod = -1;
 	desc->tdhasoid = hasoid;
 	desc->tdrefcount = -1;		/* assume not reference-counted */
 
@@ -152,7 +150,6 @@ CreateTupleDescCopy(TupleDesc tupdesc)
 
 	desc->tdtypeid = tupdesc->tdtypeid;
 	desc->tdtypmod = tupdesc->tdtypmod;
-	desc->tdqdtypmod = tupdesc->tdqdtypmod;
 
 	return desc;
 }
@@ -211,7 +208,6 @@ CreateTupleDescCopyConstr(TupleDesc tupdesc)
 
 	desc->tdtypeid = tupdesc->tdtypeid;
 	desc->tdtypmod = tupdesc->tdtypmod;
-	desc->tdqdtypmod = tupdesc->tdqdtypmod;
 
 	return desc;
 }

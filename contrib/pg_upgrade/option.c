@@ -47,6 +47,7 @@ parseCommandLine(migratorContext *ctx, int argc, char *argv[])
 		{"link", no_argument, NULL, 'k'},
 		{"logfile", required_argument, NULL, 'l'},
 		{"verbose", no_argument, NULL, 'v'},
+		{"progress", no_argument, NULL, 'X'},
 		{NULL, 0, NULL, 0}
 	};
 	int			option;			/* Command line option */
@@ -161,6 +162,11 @@ parseCommandLine(migratorContext *ctx, int argc, char *argv[])
 				ctx->verbose = true;
 				break;
 
+			case 'X':
+				pg_log(ctx, PG_REPORT, "Running in progress report mode\n");
+				ctx->progress = true;
+				break;
+
 			default:
 				pg_log(ctx, PG_FATAL,
 					   "Try \"%s --help\" for more information.\n",
@@ -227,6 +233,7 @@ Options:\n\
  -P, --new-port=new_portnum       new cluster port number (default %d)\n\
  -u, --user=username              clusters superuser (default \"%s\")\n\
  -v, --verbose                    enable verbose output\n\
+ -X, --progress                   enable progress reporting\n\
  -V, --version                    display version information, then exit\n\
  -h, --help                       show this help, then exit\n\
 \n\

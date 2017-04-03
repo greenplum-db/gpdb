@@ -183,12 +183,12 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 		CreateDomainStmt CreateExtensionStmt CreateExternalStmt CreateFileSpaceStmt CreateGroupStmt
 		CreateOpClassStmt
 		CreateOpFamilyStmt AlterOpFamilyStmt CreatePLangStmt
-		CreateQueueStmt CreateSchemaStmt CreateSeqStmt CreateStmt 
+		CreateQueueStmt CreateResourceGroupStmt CreateSchemaStmt CreateSeqStmt CreateStmt
 		CreateTableSpaceStmt
 		CreateAssertStmt CreateTrigStmt 
 		CreateUserStmt CreateRoleStmt
 		CreatedbStmt DeclareCursorStmt DefineStmt DeleteStmt DiscardStmt DoStmt
-		DropGroupStmt DropOpClassStmt DropOpFamilyStmt DropPLangStmt DropQueueStmt DropStmt
+		DropGroupStmt DropOpClassStmt DropOpFamilyStmt DropPLangStmt DropQueueStmt DropResourceGroupStmt DropStmt
 		DropAssertStmt DropTrigStmt DropRuleStmt DropCastStmt DropRoleStmt
 		DropUserStmt DropdbStmt
 		ExplainStmt
@@ -303,6 +303,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 				execute_param_clause using_clause returning_clause
 				enum_val_list
 				table_func_column_list scatter_clause dostmt_opt_list
+				columnListUnique
 
 %type <node>    table_value_select_clause
 
@@ -1058,6 +1059,7 @@ stmt :
 			| AlterOpFamilyStmt
 			| CreatePLangStmt
 			| CreateQueueStmt
+			| CreateResourceGroupStmt
 			| CreateSchemaStmt
 			| CreateSeqStmt
 			| CreateStmt
@@ -1080,6 +1082,7 @@ stmt :
 			| DropOwnedStmt
 			| DropPLangStmt
 			| DropQueueStmt
+			| DropResourceGroupStmt
 			| DropRuleStmt
 			| DropStmt
 			| DropTrigStmt
@@ -1256,6 +1259,37 @@ DropQueueStmt:
 				 {
 					DropQueueStmt *n = makeNode(DropQueueStmt);
 					n->queue = $4;
+					$$ = (Node *)n;
+				 }
+		;
+
+/*****************************************************************************
+ *
+ * Create a new GPDB Resource Group
+ *
+ *****************************************************************************/
+
+CreateResourceGroupStmt:
+			CREATE RESOURCE GROUP_P name WITH definition
+				{
+					CreateResourceGroupStmt *n = makeNode(CreateResourceGroupStmt);
+					n->name = $4;
+					n->options = $6;
+					$$ = (Node *)n;
+				}
+		;
+
+/*****************************************************************************
+ *
+ * Drop a GPDB Resource Group
+ *
+ *****************************************************************************/
+
+DropResourceGroupStmt:
+			DROP RESOURCE GROUP_P name
+				 {
+					DropResourceGroupStmt *n = makeNode(DropResourceGroupStmt);
+					n->name = $4;
 					$$ = (Node *)n;
 				 }
 		;
@@ -3799,6 +3833,18 @@ columnList:
 			| columnList ',' columnElem				{ $$ = lappend($1, $3); }
 		;
 
+columnListUnique:
+			columnElem								{ $$ = list_make1($1); }
+			| columnList ',' columnElem
+				{
+					if (list_member($1, $3))
+						ereport(ERROR,
+								(errcode(ERRCODE_DUPLICATE_COLUMN),
+								 errmsg("duplicate column in DISTRIBUTED BY clause"),
+								 scanner_errposition(@3)));
+					$$ = lappend($1, $3);
+				}
+
 columnElem: ColId
 				{
 					$$ = (Node *) makeString($1);
@@ -3886,7 +3932,7 @@ OptConsTableSpace:   USING INDEX TABLESPACE name	{ $$ = $4; }
 			| /*EMPTY*/								{ $$ = NULL; }
 		;
 
-DistributedBy:   DISTRIBUTED BY  '(' columnList ')'			{ $$ = $4; }
+DistributedBy:   DISTRIBUTED BY  '(' columnListUnique ')'		{ $$ = $4; }
 			| DISTRIBUTED RANDOMLY			{ $$ = list_make1(NULL); }
 		;
 

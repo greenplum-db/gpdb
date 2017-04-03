@@ -1252,6 +1252,22 @@ gpdb::PlPartitionAttrs
 	return NIL;
 }
 
+void
+gpdb::GetOrderedPartKeysAndKinds
+	(
+	Oid oid,
+	List **pkeys,
+	List **pkinds
+	)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_partition */
+		rel_partition_keys_kinds_ordered(oid, pkeys, pkinds);
+	}
+	GP_WRAP_END;
+}
+
 PartitionNode *
 gpdb::PpnParts
 	(
