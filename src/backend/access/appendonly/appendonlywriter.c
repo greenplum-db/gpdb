@@ -705,7 +705,7 @@ DeregisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList)
 	{
 		AOSegfileStatus *segfilestat = &aoentry->relsegfiles[i];
 
-		if (list_find_int(compactedSegmentFileList, i) >= 0)
+		if (list_member_int(compactedSegmentFileList, i))
 		{
 			ereportif(Debug_appendonly_print_segfile_choice, LOG,
 				(errmsg("Deregister segno %d for drop "
@@ -751,7 +751,7 @@ RegisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList)
 	{
 		AOSegfileStatus *segfilestat = &aoentry->relsegfiles[i];
 
-		if (list_find_int(compactedSegmentFileList, i) >= 0)
+		if (list_member_int(compactedSegmentFileList, i))
 		{
 			ereportif(Debug_appendonly_print_segfile_choice, LOG,
 				(errmsg("Register segno %d for drop "
@@ -878,8 +878,8 @@ SetSegnoForCompaction(Relation rel,
 		for (i = 0; i < MAX_AOREL_CONCURRENCY ; i++)
 		{
 			AOSegfileStatus *segfilestat = &aoentry->relsegfiles[i];
-			bool in_compaction_list = list_find_int(compactedSegmentFileList, i) >= 0;
-			bool in_inserted_list = list_find_int(insertedSegmentFileList, i) >= 0;
+			bool in_compaction_list = list_member_int(compactedSegmentFileList, i);
+			bool in_inserted_list = list_member_int(insertedSegmentFileList, i);
 			
 			ereportif(Debug_appendonly_print_segfile_choice, LOG,
 				(errmsg("SetSegnoForCompaction: "
@@ -1005,8 +1005,8 @@ SetSegnoForCompactionInsert(Relation rel,
 	for (i = 1; i < MAX_AOREL_CONCURRENCY ; i++)
 	{
 		AOSegfileStatus *segfilestat = &aoentry->relsegfiles[i];
-		bool in_compaction_list = list_find_int(compacted_segno, i) >= 0 ||
-			list_find_int(compactedSegmentFileList, i) >= 0;
+		bool in_compaction_list = list_member_int(compacted_segno, i) ||
+			list_member_int(compactedSegmentFileList, i);
 
 		if (segfilestat->total_tupcount < min_tupcount &&
 			segfilestat->state == AVAILABLE &&

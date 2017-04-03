@@ -12026,7 +12026,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			goto l_distro_fini;			
 		}
 
-		if (list_find_oid(qe_data->relids, tarrelid) < 0)
+		if (!list_member_oid(qe_data->relids, tarrelid))
 		{
 			heap_close(rel, NoLock);
 			goto l_distro_fini;			

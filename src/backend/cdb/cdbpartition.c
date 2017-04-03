@@ -450,8 +450,17 @@ rel_partition_keys_kinds_ordered(Oid relid, List **pkeys, List **pkinds)
 	// now order the keys and kinds by level
 	for (int i = 0; i< nlevels; i++)
 	{
-		int pos = list_find_int(levels, i);
-		Assert (0 <= pos);
+		ListCell   *cell;
+		int			pos = 0;
+
+		/* Find i's position in the 'levels' list. */
+		foreach(cell, levels)
+		{
+			if (lfirst_int(cell) == i)
+				break;
+			++pos;
+		}
+		Assert (cell != NULL);
 
 		if (pkeys != NULL)
 			*pkeys = lappend(*pkeys, list_nth(keysUnordered, pos));
@@ -2648,7 +2657,7 @@ getPartConstraintsContainsKeys(Oid partOid, Oid rootOid, List *partKey)
 		for (int i = 0; i < numKeys; i++)
 		{
 			int16 key_elem =  DatumGetInt16(dats[i]);
-			if (list_find_int(partKey, key_elem) >= 0)
+			if (list_member_int(partKey, key_elem))
 			{
 				found = true;
 				break;

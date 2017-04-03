@@ -879,7 +879,7 @@ getPartConstraints(Oid partOid, Oid rootOid, List *partKey)
 	{
 		int partKeyCol = lfirst_int(lc);
 
-		if (list_find_int(keys, partKeyCol) < 0)
+		if (!list_member_int(keys, partKeyCol))
 		{
 			// passed in key is not found in the constraint. return NULL
 			if (NULL != result)

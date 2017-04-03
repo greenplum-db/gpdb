@@ -224,11 +224,6 @@ extern void *list_nth(List *list, int n);
 extern int	list_nth_int(List *list, int n);
 extern Oid	list_nth_oid(List *list, int n);
 
-extern int list_find(List *list, void *datum);
-extern int list_find_ptr(List *list, void *datum);
-extern int list_find_int(List *list, int datum);
-extern int list_find_oid(List *list, Oid datum);
-
 extern bool list_member(List *list, void *datum);
 extern bool list_member_ptr(List *list, void *datum);
 extern bool list_member_int(List *list, int datum);
