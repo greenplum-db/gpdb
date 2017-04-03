@@ -128,7 +128,7 @@ main(int argc, char *argv[])
 	}
 
 
-	while ((c = getopt(argc, argv, "fl:m:no:O:x:e:")) != -1)
+	while ((c = getopt(argc, argv, "fl:m:no:r:O:x:e:")) != -1)
 	{
 		switch (c)
 		{

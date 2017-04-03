@@ -407,7 +407,7 @@ GetNewObjectId(void)
 /*
  * AdvanceObjectId -- advance object id counter for QE nodes
  *
- * The QD provides the preassinged OID to the QE nodes which will be
+ * The QD provides the preassigned OID to the QE nodes which will be
  * used as the relation's OID. QE nodes do not use this OID as the
  * relfilenode value anymore so the OID counter is not
  * incremented. This function forcefully increments the QE node's OID

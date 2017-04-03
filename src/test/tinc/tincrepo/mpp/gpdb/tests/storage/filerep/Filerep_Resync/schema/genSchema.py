@@ -41,7 +41,6 @@ class Schema(Command):
     def check_duplicate_entries_in_PT(self):
         '''Checking duplicate entries in the Persistent table'''
         cmd_str = "select count(*) from gp_dist_random('gp_persistent_relation_node') where segment_file_num = 1 and relfilenode_oid in (select relfilenode from gp_dist_random('pg_class') where relname = 'ta') group by relfilenode_oid, gp_segment_id;"
-        #cmd_str = "select count(*) from gp_dist_random('gp_persistent_relation_node') where segment_file_num = 1 and relfilenode_oid = 'ta'::regclass group by relfilenode_oid, gp_segment_id;"
         out = PSQL.run_sql_command(cmd_str).split('\n')[3:-3]
         if len(out) == 0:
             exception_msg = "ERROR!! No values returned for the duplicate entries query. " \

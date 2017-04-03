@@ -20,8 +20,6 @@ $$
      as (tablespace oid, database oid, relfilenode oid, block int)
      where relfilenode in
            (select relfilenode from pg_class
-            where oid=$1
-            union select relfilenode from gp_dist_random('pg_class')
             where oid=$1);
 $$ language sql;
 
