@@ -469,13 +469,42 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 		{
 			VacAttrStats *stats = vacattrstats[i];
 			RowIndexes rowIndexes = colLargeRowIndexes[i];
+			int validRowsLength = numrows - list_length(rowIndexes.rows);
+			HeapTuple *validRows = NULL;
+			int j =0;
+			int rowMapIdx = 0;
+			if (list_length(rowIndexes.rows) > 0)
+			{
+				for (int allrows=0; allrows < numrows; allrows++)
+				{
+					if (rowMapIdx < list_length(rowIndexes.rows))
+					{
+						int rowIndex = list_nth_int(rowIndexes.rows, rowMapIdx);
+						if (allrows == rowIndex)
+						{
+							continue;
+							rowMapIdx++;
+						}
+					}
+					(*validRows)[j] = (*rows)[allrows];
+					j++;
 
+				}
+				stats->rows = validRows;
+			}
+			else
+			{
+				stats->rows = rows;
+			}
+
+
+			numrows = numrows - list_length(rowIndexes.rows);
 			stats->rows = rows;
 			stats->tupDesc = onerel->rd_att;
 			(*stats->compute_stats) (stats,
 									 std_fetch_func,
-									 numrows,
-									 totalrows, rowIndexes);
+									 validRowsLength,
+									 totalrows);
 			MemoryContextResetAndDeleteChildren(col_context);
 		}
 
@@ -771,7 +800,7 @@ compute_index_stats(Relation onerel, double totalrows,
 				(*stats->compute_stats) (stats,
 										 ind_fetch_func,
 										 numindexrows,
-										 totalindexrows, idxLargeRowIndexes[i]);
+										 totalindexrows);
 				MemoryContextResetAndDeleteChildren(col_context);
 			}
 		}
@@ -1991,15 +2020,15 @@ typedef struct
 static void compute_minimal_stats(VacAttrStatsP stats,
 					  AnalyzeAttrFetchFunc fetchfunc,
 					  int samplerows,
-					  double totalrows, RowIndexes rowIndexes);
+					  double totalrows);
 static void compute_very_minimal_stats(VacAttrStatsP stats,
 					  AnalyzeAttrFetchFunc fetchfunc,
 					  int samplerows,
-					  double totalrows, RowIndexes rowIndexes);
+					  double totalrows);
 static void compute_scalar_stats(VacAttrStatsP stats,
 					 AnalyzeAttrFetchFunc fetchfunc,
 					 int samplerows,
-					 double totalrows, RowIndexes rowIndexes);
+					 double totalrows);
 static int	compare_scalars(const void *a, const void *b, void *arg);
 static int	compare_mcvs(const void *a, const void *b);
 
@@ -2112,7 +2141,7 @@ static void
 compute_minimal_stats(VacAttrStatsP stats,
 					  AnalyzeAttrFetchFunc fetchfunc,
 					  int samplerows,
-					  double totalrows, RowIndexes rowIndexes)
+					  double totalrows)
 {
 	int			i;
 	int			null_cnt = 0;
@@ -2133,7 +2162,6 @@ compute_minimal_stats(VacAttrStatsP stats,
 	int			track_cnt,
 				track_max;
 	int			num_mcv = stats->attr->attstattarget;
-	int			rowMapIdx = 0;
 	StdAnalyzeData *mystats = (StdAnalyzeData *) stats->extra_data;
 
 	/*
@@ -2158,19 +2186,6 @@ compute_minimal_stats(VacAttrStatsP stats,
 		vacuum_delay_point();
 
 		value = fetchfunc(stats, i, &isnull);
-		
-		/* Ignore large datum values in the sample */
-		if (rowMapIdx < list_length(rowIndexes.rows))
-		{
-			int rowIndex = list_nth_int(rowIndexes.rows, rowMapIdx);
-			if (rowIndex == i)
-			{
-				rowMapIdx++;
-				nonnull_cnt++;
-				toowide_cnt++;
-				continue;
-			}
-		}
 
 		/* Check for null/nonnull */
 		if (isnull)
@@ -2442,7 +2457,7 @@ static void
 compute_very_minimal_stats(VacAttrStatsP stats,
 						   AnalyzeAttrFetchFunc fetchfunc,
 						   int samplerows,
-						   double totalrows, RowIndexes rowIndexes)
+						   double totalrows)
 {
 	int			i;
 	int			null_cnt = 0;
@@ -2452,8 +2467,7 @@ compute_very_minimal_stats(VacAttrStatsP stats,
 							  stats->attr->attlen == -1);
 	bool		is_varwidth = (!stats->attr->attbyval &&
 							   stats->attr->attlen < 0);
-	int			rowMapIdx = 0;
-	
+
 	for (i = 0; i < samplerows; i++)
 	{
 		Datum		value;
@@ -2462,18 +2476,6 @@ compute_very_minimal_stats(VacAttrStatsP stats,
 		vacuum_delay_point();
 
 		value = fetchfunc(stats, i, &isnull);
-		
-		/* Ignore large datum values in the sample */
-		if (rowMapIdx < list_length(rowIndexes.rows))
-		{
-			int rowIndex = list_nth_int(rowIndexes.rows, rowMapIdx);
-			if (rowIndex == i)
-			{
-				rowMapIdx++;
-				nonnull_cnt++;
-				continue;
-			}
-		}
 
 		/* Check for null/nonnull */
 		if (isnull)
@@ -2546,7 +2548,7 @@ static void
 compute_scalar_stats(VacAttrStatsP stats,
 					 AnalyzeAttrFetchFunc fetchfunc,
 					 int samplerows,
-					 double totalrows, RowIndexes rowIndexes)
+					 double totalrows)
 {
 	int			i;
 	int			null_cnt = 0;
@@ -2569,7 +2571,6 @@ compute_scalar_stats(VacAttrStatsP stats,
 	int			num_mcv = stats->attr->attstattarget;
 	int			num_bins = stats->attr->attstattarget;
 	StdAnalyzeData *mystats = (StdAnalyzeData *) stats->extra_data;
-	int			rowMapIdx = 0;
 
 	values = (ScalarItem *) palloc(samplerows * sizeof(ScalarItem));
 	tupnoLink = (int *) palloc(samplerows * sizeof(int));
@@ -2587,19 +2588,6 @@ compute_scalar_stats(VacAttrStatsP stats,
 		vacuum_delay_point();
 
 		value = fetchfunc(stats, i, &isnull);
-		
-		/* Ignore large datum values in the sample */
-		if (rowMapIdx < list_length(rowIndexes.rows))
-		{
-			int rowIndex = list_nth_int(rowIndexes.rows, rowMapIdx);
-			if (rowIndex == i)
-			{
-				rowMapIdx++;
-				nonnull_cnt++;
-				toowide_cnt++;
-				continue;
-			}
-		}
 
 		/* Check for null/nonnull */
 		if (isnull)
