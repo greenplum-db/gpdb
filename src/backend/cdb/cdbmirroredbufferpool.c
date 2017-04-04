@@ -252,6 +252,7 @@ static void MirroredBufferPool_DoOpen(
 	*primaryError = 0;
 	*mirrorDataLossOccurred = false;
 
+	/* Using O_EXCL to make it atomic operation to avoid overwriting an existing file. */
 	if (create)
 		fileFlags = O_CREAT | O_RDWR | O_EXCL | PG_BINARY;
 
