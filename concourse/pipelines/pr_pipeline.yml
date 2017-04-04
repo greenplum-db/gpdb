@@ -33,6 +33,7 @@ resources:
 
 jobs:
   - name: compile_and_test_gpdb
+    public: true
     max_in_flight: 4
     plan:
     - aggregate:
