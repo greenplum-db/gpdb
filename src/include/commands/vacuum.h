@@ -69,7 +69,6 @@ typedef struct RowIndexes
 typedef Datum (*AnalyzeAttrFetchFunc) (VacAttrStatsP stats, int rownum,
 												   bool *isNull);
 
-
 typedef struct VacAttrStats
 {
 	/*

@@ -62,13 +62,6 @@
  */
 #define WIDTH_THRESHOLD  1024
 
-/* Enum representing if the column value exceeded WIDTH THRESHOLD */
-typedef enum
-{
-	WIDTH_THRESHOLD_EXCEEDED,
-	WIDTH_THRESHOLD_NOT_EXCEEDED
-} WidthThreshold;
-
 /* Data structure for Algorithm S from Knuth 3.4.2 */
 typedef struct
 {
@@ -450,9 +443,6 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	 * responsible to make sure that whatever they store into the VacAttrStats
 	 * structure is allocated in anl_context.
 	 */
-
-
-
 	if (numrows > 0)
 	{
 		HeapTuple *validRows = (HeapTuple *) palloc(numrows * sizeof(HeapTuple));
@@ -482,16 +472,13 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 				for (int rownum=0; rownum < numrows; rownum++)
 				{
 					if (rowIndexes.rows[rownum]) // If row is too wide
-					{
 						continue;
-					}
 					validRows[validRowsIdx] = rows[rownum];
 					validRowsIdx++;
-
 				}
 				stats->rows = validRows;
 			}
-
+			int *RowOffsetArray = {0, 1, 3};
 			stats->tupDesc = onerel->rd_att;
 			(*stats->compute_stats) (stats,
 									 std_fetch_func,
@@ -1463,10 +1450,10 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 								 quote_identifier(NameStr(attname)),
 								 quote_identifier(NameStr(attname)));
 				appendStringInfo(&columnStr,
-								 "(case when Ta.%s is NULL then %d else %d end)",
+								 "(case when Ta.%s is NULL then %s else %s end)",
 								 quote_identifier(NameStr(attname)),
-								 WIDTH_THRESHOLD_NOT_EXCEEDED,
-								 WIDTH_THRESHOLD_EXCEEDED);
+								 "false", // Less than WIDTH_THRESHOLD
+								 "true"); // Greater than WIDTH_THRESHOLD
 				isVarlenaCol[i] = true;
 			}
 
@@ -1593,7 +1580,7 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 												  &dummyNull);
 
 					/* If Datum is too large, set stats_valid to false to ensure no stats are collected on it */
-					if (DatumGetInt32(dummyVal) == WIDTH_THRESHOLD_EXCEEDED)
+					if (DatumGetInt32(dummyVal))
 					{
 						colLargeRowIndexes[j].rows[i] = true;
 						colLargeRowIndexes[j].toowide_cnt++;
@@ -1824,6 +1811,9 @@ update_attstats(Oid relid, int natts, VacAttrStats **vacattrstats)
 		bool		nulls[Natts_pg_statistic];
 		char		replaces[Natts_pg_statistic];
 
+		/* Ignore attr if we weren't able to collect stats */
+		if (!stats->stats_valid)
+			continue;
 		/*
 		 * Construct a new pg_statistic tuple
 		 */
@@ -2580,6 +2570,9 @@ compute_scalar_stats(VacAttrStatsP stats,
 		}
 		nonnull_cnt++;
 
+		// Ignore too wide index column values marked in compute_index_stats
+		if ((is_varlena || is_varwidth) && value == (Datum) 0 && !isnull)
+			continue;
 		/*
 		 * If it's a variable-width field, add up widths for average width
 		 * calculation.  Note that if the value is toasted, we use the toasted
@@ -2588,10 +2581,6 @@ compute_scalar_stats(VacAttrStatsP stats,
 		 */
 		if (is_varlena)
 		{
-			// Ignore too wide index column value marked in compute_index_stats
-			if (value == (Datum) 0 && !isnull)
-				continue;
-
 			total_width += VARSIZE_ANY(DatumGetPointer(value));
 
 			/*
