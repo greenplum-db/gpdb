@@ -55,6 +55,17 @@
  */
 typedef struct VacAttrStats *VacAttrStatsP;
 
+/*
+ * Maintain the row index for large datums which must not be considered for
+ * samples while calculating statistcs
+ */
+typedef struct RowIndexes
+{
+	bool* rows;
+	int toowide_cnt;
+} RowIndexes;
+
+
 typedef Datum (*AnalyzeAttrFetchFunc) (VacAttrStatsP stats, int rownum,
 												   bool *isNull);
 

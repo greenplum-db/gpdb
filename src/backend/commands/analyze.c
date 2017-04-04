@@ -51,6 +51,16 @@
 #include "utils/tuplesort.h"
 #include "utils/tuplesort_mk.h"
 
+/*
+ * To avoid consuming too much memory during analysis and/or too much space
+ * in the resulting pg_statistic rows, we ignore varlena datums that are wider
+ * than WIDTH_THRESHOLD (after detoasting!).  This is legitimate for MCV
+ * and distinct-value calculations since a wide value is unlikely to be
+ * duplicated at all, much less be a most-common value.  For the same reason,
+ * ignoring wide values will not affect our estimates of histogram bin
+ * boundaries very much.
+ */
+#define WIDTH_THRESHOLD  1024
 
 /* Data structure for Algorithm S from Knuth 3.4.2 */
 typedef struct
@@ -91,12 +101,12 @@ static BlockNumber BlockSampler_Next(BlockSampler bs);
 static void compute_index_stats(Relation onerel, double totalrows,
 					AnlIndexData *indexdata, int nindexes,
 					HeapTuple *rows, int numrows,
-					MemoryContext col_context);
+					MemoryContext col_context, RowIndexes *colLargeRowIndexes);
 static VacAttrStats *examine_attribute(Relation onerel, int attnum);
 static int acquire_sample_rows(Relation onerel, HeapTuple *rows,
 					int targrows, double *totalrows, double *totaldeadrows);
 static int acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrstats, HeapTuple **rows,
-										int targrows, double *totalrows, double *totaldeadrows, BlockNumber *totalpages, bool rootonly);
+										int targrows, double *totalrows, double *totaldeadrows, BlockNumber *totalpages, bool rootonly,  RowIndexes *colLargeRowIndexes);
 static double random_fract(void);
 static double init_selection_state(int n);
 static double get_next_S(double t, int n, double *stateptr);
@@ -392,7 +402,7 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 			}
 		}
 	}
-
+	RowIndexes colLargeRowIndexes[attr_cnt];
 	/*
 	 * Quit if no analyzable columns and no pg_class update needed.
 	 */
@@ -425,7 +435,7 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	 * Acquire the sample rows
 	 */
 	numrows = acquire_sample_rows_by_query(onerel, attr_cnt, vacattrstats, &rows, targrows,
-										   &totalrows, &totaldeadrows, &totalpages, vacstmt->rootonly);
+										   &totalrows, &totaldeadrows, &totalpages, vacstmt->rootonly, colLargeRowIndexes);
 
 	/*
 	 * Compute the statistics.	Temporary results during the calculations for
@@ -435,6 +445,7 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	 */
 	if (numrows > 0)
 	{
+		HeapTuple *validRows = (HeapTuple *) palloc(numrows * sizeof(HeapTuple));
 		MemoryContext col_context,
 					old_context;
 
@@ -448,12 +459,30 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 		for (i = 0; i < attr_cnt; i++)
 		{
 			VacAttrStats *stats = vacattrstats[i];
-
+			RowIndexes rowIndexes = colLargeRowIndexes[i];
+			int validRowsLength = numrows - rowIndexes.toowide_cnt;
+			int validRowsIdx = 0;
 			stats->rows = rows;
+
+			/* If there are toowide rows in the sample, remove them
+			 * from the sample being sent for stats collection
+			 */
+			if (rowIndexes.toowide_cnt > 0)
+			{
+				for (int rownum=0; rownum < numrows; rownum++)
+				{
+					if (rowIndexes.rows[rownum]) // If row is too wide
+						continue;
+					validRows[validRowsIdx] = rows[rownum];
+					validRowsIdx++;
+				}
+				stats->rows = validRows;
+			}
+			int *RowOffsetArray = {0, 1, 3};
 			stats->tupDesc = onerel->rd_att;
 			(*stats->compute_stats) (stats,
 									 std_fetch_func,
-									 numrows,
+									 validRowsLength, // Numbers of rows in sample excluding toowide if any.
 									 totalrows);
 			MemoryContextResetAndDeleteChildren(col_context);
 		}
@@ -462,7 +491,7 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 			compute_index_stats(onerel, totalrows,
 								indexdata, nindexes,
 								rows, numrows,
-								col_context);
+								col_context, colLargeRowIndexes);
 
 		MemoryContextSwitchTo(old_context);
 		MemoryContextDelete(col_context);
@@ -603,7 +632,7 @@ static void
 compute_index_stats(Relation onerel, double totalrows,
 					AnlIndexData *indexdata, int nindexes,
 					HeapTuple *rows, int numrows,
-					MemoryContext col_context)
+					MemoryContext col_context, RowIndexes *colLargeRowIndexes)
 {
 	MemoryContext ind_context,
 				old_context;
@@ -662,6 +691,12 @@ compute_index_stats(Relation onerel, double totalrows,
 		exprnulls = (bool *) palloc(numrows * attr_cnt * sizeof(bool));
 		numindexrows = 0;
 		tcnt = 0;
+		RowIndexes idxLargeRowIndexes[attr_cnt];
+		for (i = 0; i < attr_cnt; i++)
+		{
+			/* Map pg_attribute attnum to derive position of index column in array */
+			idxLargeRowIndexes[i] = colLargeRowIndexes[thisdata->vacattrstats[i]->attr->attnum - 1];
+		}
 		for (rowno = 0; rowno < numrows; rowno++)
 		{
 			HeapTuple	heapTuple = rows[rowno];
@@ -701,10 +736,20 @@ compute_index_stats(Relation onerel, double totalrows,
 				 */
 				for (i = 0; i < attr_cnt; i++)
 				{
+
 					VacAttrStats *stats = thisdata->vacattrstats[i];
 					int			attnum = stats->attr->attnum;
 
-					if (isnull[attnum - 1])
+					bool *indexLargeRows = idxLargeRowIndexes[i].rows;
+
+					/* If the value at the row is too wide, mark it
+					 to ignore it in compute_scalar_stats */
+					if (indexLargeRows[rowno])
+					{
+						exprvals[tcnt] = (Datum) 0;
+						exprnulls[tcnt] = false;
+					}
+					else if (isnull[attnum - 1])
 					{
 						exprvals[tcnt] = (Datum) 0;
 						exprnulls[tcnt] = true;
@@ -1326,7 +1371,6 @@ compare_rows(const void *a, const void *b)
 }
 
 
-
 /*
  * This performs the same job as acquire_sample_rows() in PostgreSQL, but
  * uses an SQL query to get the rows instead of a low-level block sampler.
@@ -1342,7 +1386,7 @@ compare_rows(const void *a, const void *b)
 static int
 acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrstats,
 							 HeapTuple **rows, int targrows,
-							 double *totalrows, double *totaldeadrows, BlockNumber *totalblocks, bool rootonly)
+							 double *totalrows, double *totaldeadrows, BlockNumber *totalblocks, bool rootonly, RowIndexes *colLargeRowIndexes)
 {
 	StringInfoData str;
 	StringInfoData columnStr;
@@ -1358,6 +1402,7 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 	Datum	   *vals;
 	bool	   *nulls;
 	MemoryContext oldcxt;
+	bool	   *isVarlenaCol = (bool *) palloc(sizeof(bool)*nattrs);
 
 	Assert(targrows > 0.0);
 
@@ -1389,13 +1434,44 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 	{
 		for (i = 0; i < nattrs; i++)
 		{
-			if (i != 0)
+			isVarlenaCol[i] = false;
+			NameData attname = attrstats[i]->attr->attname;
+			bool is_varlena = (!attrstats[i]->attr->attbyval &&
+									  attrstats[i]->attr->attlen == -1);
+			bool is_varwidth = (!attrstats[i]->attr->attbyval &&
+									   attrstats[i]->attr->attlen < 0);
+
+			if (is_varlena || is_varwidth)
+			{
+				appendStringInfo(&columnStr,
+								 "(case when pg_column_size(Ta.%s) > %d then NULL else Ta.%s  end) as %s, ",
+								 quote_identifier(NameStr(attname)),
+								 WIDTH_THRESHOLD,
+								 quote_identifier(NameStr(attname)),
+								 quote_identifier(NameStr(attname)));
+				appendStringInfo(&columnStr,
+								 "(case when Ta.%s is NULL then %s else %s end)",
+								 quote_identifier(NameStr(attname)),
+								 "false", // Less than WIDTH_THRESHOLD
+								 "true"); // Greater than WIDTH_THRESHOLD
+				isVarlenaCol[i] = true;
+			}
+
+			if (!isVarlenaCol[i])
+			{
+				appendStringInfo(&columnStr, "Ta.%s", quote_identifier(NameStr(attname)));
+			}
+
+			if (i != nattrs - 1 )
+			{
 				appendStringInfo(&columnStr, ", ");
-			appendStringInfo(&columnStr, "Ta.%s", quote_identifier(NameStr(attrstats[i]->attr->attname)));
+			}
 		}
 	}
 	else
+	{
 		appendStringInfo(&columnStr, "NULL");
+	}
 
 	/*
 	 * If table is partitioned, we create a sample over all parts.
@@ -1472,23 +1548,46 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 	{
 		vals[i] = (Datum) 0;
 		nulls[i] = true;
+		colLargeRowIndexes[i].rows = (bool *) palloc(sampleTuples * sizeof(bool));
+		colLargeRowIndexes[i].toowide_cnt = 0;
 	}
 
 	*rows = (HeapTuple *) palloc(sampleTuples * sizeof(HeapTuple));
+
 	for (i = 0; i < sampleTuples; i++)
 	{
 		HeapTuple	sampletup = SPI_tuptable->vals[i];
 		int			j;
+		int			index = 0;
 
 		for (j = 0; j < nattrs; j++)
 		{
-			int			tupattnum = attrstats[j]->tupattnum;
-
+			colLargeRowIndexes[j].rows[i] = false;
+			int	tupattnum = attrstats[j]->tupattnum;
 			Assert(tupattnum >= 1 && tupattnum <= RelationGetNumberOfAttributes(onerel));
 
-			vals[tupattnum - 1] = heap_getattr(sampletup, j + 1,
+			vals[tupattnum - 1] = heap_getattr(sampletup, index + 1,
 											   SPI_tuptable->tupdesc,
 											   &nulls[tupattnum - 1]);
+			if (isVarlenaCol[j])
+			{
+				index++; /* Move the index to the supplementary column*/
+				if (nulls[tupattnum - 1])
+				{
+					bool dummyNull = false;
+					Datum dummyVal = heap_getattr(sampletup, index + 1,
+												  SPI_tuptable->tupdesc,
+												  &dummyNull);
+
+					/* If Datum is too large, set stats_valid to false to ensure no stats are collected on it */
+					if (DatumGetInt32(dummyVal))
+					{
+						colLargeRowIndexes[j].rows[i] = true;
+						colLargeRowIndexes[j].toowide_cnt++;
+					}
+				}
+			}
+			index++; /* Move index to the next table attribute */
 		}
 		(*rows)[i] = heap_form_tuple(onerel->rd_att, vals, nulls);
 	}
@@ -1715,7 +1814,6 @@ update_attstats(Oid relid, int natts, VacAttrStats **vacattrstats)
 		/* Ignore attr if we weren't able to collect stats */
 		if (!stats->stats_valid)
 			continue;
-
 		/*
 		 * Construct a new pg_statistic tuple
 		 */
@@ -1858,18 +1956,6 @@ ind_fetch_func(VacAttrStatsP stats, int rownum, bool *isNull)
  *
  *==========================================================================
  */
-
-
-/*
- * To avoid consuming too much memory during analysis and/or too much space
- * in the resulting pg_statistic rows, we ignore varlena datums that are wider
- * than WIDTH_THRESHOLD (after detoasting!).  This is legitimate for MCV
- * and distinct-value calculations since a wide value is unlikely to be
- * duplicated at all, much less be a most-common value.  For the same reason,
- * ignoring wide values will not affect our estimates of histogram bin
- * boundaries very much.
- */
-#define WIDTH_THRESHOLD  1024
 
 #define swapInt(a,b)	do {int _tmp; _tmp=a; a=b; b=_tmp;} while(0)
 #define swapDatum(a,b)	do {Datum _tmp; _tmp=a; a=b; b=_tmp;} while(0)
@@ -2484,6 +2570,9 @@ compute_scalar_stats(VacAttrStatsP stats,
 		}
 		nonnull_cnt++;
 
+		// Ignore too wide index column values marked in compute_index_stats
+		if ((is_varlena || is_varwidth) && value == (Datum) 0 && !isnull)
+			continue;
 		/*
 		 * If it's a variable-width field, add up widths for average width
 		 * calculation.  Note that if the value is toasted, we use the toasted
