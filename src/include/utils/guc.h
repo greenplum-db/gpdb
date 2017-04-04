@@ -650,6 +650,9 @@ extern int  gp_guc_list_show(struct StringInfoData    *buf,
                 /* This extension allows gcc to check the format string */
                 __attribute__((__format__(__printf__, 3, 0)));
 
+extern struct config_generic *find_option(const char *name,
+				bool create_placeholders, int elevel);
+
 #ifdef EXEC_BACKEND
 extern void write_nondefault_variables(GucContext context);
 extern void read_nondefault_variables(void);
