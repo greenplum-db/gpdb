@@ -364,6 +364,26 @@ analyze rootpartition p3_sales;
 select relname, reltuples, relpages from pg_class where relname like 'p3_sales%' order by relname;
 select * from pg_stats where tablename like 'p3_sales%' order by tablename, attname;
 
+---
+--- Test statistics collection on very large datums. In the current implementation,
+--- they are left out of the sample, to avoid running out of memory for the main relation 
+--- statistics. In case of indexes on the relation, large datums are masked as NULLs in the sample
+--- and are evaluated as NULL in index stats collection. 
+--- Expression / partial indexes are not commonly used, and its rare to have them on wide columns, so the
+--- effect of considering them as NULL is minimal.
+---
+CREATE TABLE foo_stats (a text, b bytea, c varchar, d int) DISTRIBUTED RANDOMLY;
+CREATE INDEX expression_idx_foo_stats ON foo_stats (upper(a));
+INSERT INTO foo_stats values ('aaa', 'bbbbb', 'cccc', 2);
+INSERT INTO foo_stats values ('aaa', 'bbbbb', 'cccc', 2);
+--- Insert large datum values
+INSERT INTO foo_stats values (repeat('a', 3000), 'bbbbb2', 'cccc2', 3);
+INSERT INTO foo_stats values (repeat('a', 3000), 'bbbbb2', 'cccc2', 3);
+ANALYZE foo_stats;
+SELECT schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename='foo_stats' ORDER BY attname;
+SELECT schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename='expression_idx_foo_stats' ORDER BY attname;
+DROP TABLE IF EXISTS foo_stats;
+
 -- start_ignore
 DROP TABLE IF EXISTS p3_sales;
 -- end_ignore
