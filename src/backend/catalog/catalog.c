@@ -896,7 +896,7 @@ GetNewOidWithIndex(Relation relation, Relation indexrel)
 }
 
 /*
- * GetSequenceRelationOid
+ * GetNewSequenceRelationOid
  *		Get a sequence relation Oid and verify it is valid against
  *		the pg_class relation by doing an index lookup. The caller
  *		should have a suitable lock on pg_class.
