@@ -107,34 +107,3 @@ class StackTraceHandlerTests(unittest.TestCase):
         hash1 = thread.hash(10)
         hash2 = thread.hash(3)
         self.assertEqual(hash1, hash2)
-
-    def test_get_owner(self):
-        frame = OptStackFrame.parse("4    0x00000000003544ca COptTasks::PvOptimizeTask + 122")
-        self.assertEqual(frame.function, 'COptTasks::PvOptimizeTask')
-        self.assertEqual(frame.number, 4)
-        self.assertEqual(frame.address, '0x00000000003544ca')
-        self.assertEqual(frame.line, 122)
-        self.assertEqual(frame.file, None)
-        self.assertEqual(frame.text, '4    0x00000000003544ca COptTasks::PvOptimizeTask + 122')
-        owner = frame.get_owner(lookup_file = os.path.join(os.path.dirname(sys.modules[self.__class__.__module__].__file__), "function_owners.csv"))
-        self.assertEqual(owner, 'raghav')
-        self.assertTrue(frame.function in frame._owner_cache)
-
-    def test_get_owner_invalid_file(self):
-        frame = OptStackFrame.parse("4    0x00000000003544ca COptTasks::PvOptimizeTask + 122")
-        owner = frame.get_owner(lookup_file = "foo_lookup.csv")
-        self.assertEqual(owner, '')
-        self.assertFalse(frame.function in frame._owner_cache)
-
-    def test_get_owner_invalid_function(self):
-        frame = OptStackFrame.parse("4    0x00000000003544ca PvOptimizeTask + 122")
-        owner = frame.get_owner(lookup_file = os.path.join(os.path.dirname(sys.modules[self.__class__.__module__].__file__), "function_owners.csv"))
-        self.assertEqual(owner, '')
-        self.assertFalse(frame.function in frame._owner_cache)
-
-    def test_get_owner_with_namespace_check(self):
-        frame = OptStackFrame.parse("2    0x0000000001daa0ea gpopt::CXformImplementUnionAll::Transform + 858")
-        owner = frame.get_owner(lookup_file = os.path.join(os.path.dirname(sys.modules[self.__class__.__module__].__file__), "function_owners.csv"))
-        print "Owner: " + owner
-        self.assertEqual(owner, 'raghav')
-        self.assertTrue(frame.function in frame._owner_cache)        

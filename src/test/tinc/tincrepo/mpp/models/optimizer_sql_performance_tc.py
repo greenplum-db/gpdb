@@ -34,8 +34,6 @@ import sys
 
 from xml.dom import minidom
 
-_DEFAULT_LOOKUP_FILE = os.path.join(os.environ["TINCHOME"], 'function_owners.csv')
-
 @tinctest.skipLoading("Test model. No tests loaded.")
 class OptimizerSQLPerformanceTestCase(SQLPerformanceTestCase):
     """
@@ -239,8 +237,6 @@ class OptStackFrame(object):
         self.line = -1
         self.text = None
 
-        self._owner_cache = {}
-
     @classmethod
     def parse(cls, text):
         """
@@ -260,33 +256,6 @@ class OptStackFrame(object):
 
     def __str__(self):
         return self.text
-
-    def get_owner(self, lookup_file = _DEFAULT_LOOKUP_FILE):
-        """
-        By default, find the owner from a lookup file at function_owners.csv in $GPHOME/bin
-        """
-        if self.function in self._owner_cache:
-            return self._owner_cache[self.function]
-
-        if not os.path.exists(lookup_file):
-            tinctest.logger.warning("Lookup file does not exist - " + lookup_file)
-            return ''
-
-        with open(lookup_file, 'r') as f:
-            for line in f:
-                fields = line.split(',')
-                owner = fields[2].strip()
-                function = fields[1].strip()
-                # Note that we also add the default namespace 'gpopt::' while looking up function_owners.csv
-                # because complexity.csv does not include namespace for functions in .cpp files.
-                if self.function == function or self.function == 'gpopt::' + function or self.function == 'gpdxl::' + function:
-                    self._owner_cache[self.function] = owner
-                    return owner.strip()
-
-
-
-        tinctest.logger.warning("Did not find function %s in the lookup file %s " %(self.function, lookup_file))
-        return ''
 
 class OptimizerTestResult(_SQLTestCaseResult):
     """
@@ -308,6 +277,4 @@ class OptimizerTestResult(_SQLTestCaseResult):
         if stack is not None:
             stack_hash = stack.get_thread(0).hash(stack_frames)
             stack_trace = stack.get_thread(0).text
-            stack_owner = stack.get_thread(0).get_first_relevant_frame().get_owner()
-        return (stack_trace, stack_hash, stack_owner)
-
+        return (stack_trace, stack_hash)
