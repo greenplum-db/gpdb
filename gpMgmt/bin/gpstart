@@ -750,8 +750,9 @@ class GpStart:
 
         logger.info("Command pg_ctl reports Master %s instance active" % self.gparray.master.hostname)
 
+        msg = None
         try:
-            masterconn = dbconn.connect(testurl)
+            masterconn = dbconn.connect(self.dburl)
             masterconn.close()
 
         except Exception, e:
