@@ -37,7 +37,7 @@ Feature: Validate command line arguments
         And data for partition table "part_external" with partition level "0" is distributed across all segments on "bkdb2"
         When the user runs "gpcrondump -a -x bkdb2"
         Then gpcrondump should return a return code of 0
-        And gpcrondump should print Validating disk space to stdout
+        And gpcrondump should print "Validating disk space" to stdout
         And the full backup timestamp from gpcrondump is stored
         And the state files are generated under " " for stored "full" timestamp
         And the "last_operation" files are generated under " " for stored "full" timestamp
@@ -48,7 +48,7 @@ Feature: Validate command line arguments
         And the user runs "gpcrondump -a --incremental -x bkdb2"
         Then gpcrondump should return a return code of 0
         And the temp files "dirty_backup_list" are not created in the system
-        And gpcrondump should not print Validating disk space to stdout
+        And gpcrondump should not print "Validating disk space" to stdout
         And the timestamp from gpcrondump is stored
         And verify that the incremental file has the stored timestamp
         And the state files are generated under " " for stored "incr" timestamp
@@ -849,9 +849,9 @@ Feature: Validate command line arguments
         And the directory "/tmp/custom_timestamps" exists
         When the user runs "gpcrondump -a -x bkdb60 --list-backup-files -K 20120101010101 -u /tmp/custom_timestamps"
         Then gpcrondump should return a return code of 0
-        And gpcrondump should print Added the list of pipe names to the file to stdout
-        And gpcrondump should print Added the list of file names to the file to stdout
-        And gpcrondump should print Successfully listed the names of backup files and pipes to stdout
+        And gpcrondump should print "Added the list of pipe names to the file" to stdout
+        And gpcrondump should print "Added the list of file names to the file" to stdout
+        And gpcrondump should print "Successfully listed the names of backup files and pipes" to stdout
         And the timestamp key "20120101010101" for gpcrondump is stored
         And "pipes" file should be created under "/tmp/custom_timestamps"
         And "regular_files" file should be created under "/tmp/custom_timestamps"
@@ -895,16 +895,16 @@ Feature: Validate command line arguments
         And table "public.ao_index_table" is assumed to be in dirty state in "bkdb61"
         When the user runs "gpcrondump -x bkdb61 --prefix=foo --incremental  < test/behave/mgmt_utils/steps/data/yes.txt"
         Then gpcrondump should return a return code of 0
-        And gpcrondump should print Filtering tables using: to stdout
-        And gpcrondump should print Prefix                        = foo to stdout
-        And gpcrondump should print Full dump timestamp           = [0-9]{14} to stdout
+        And gpcrondump should print "Filtering tables using:" to stdout
+        And gpcrondump should print "Prefix                        = foo" to stdout
+        And gpcrondump should print "Full dump timestamp           = [0-9]{14}" to stdout
         And the timestamp from gpcrondump is stored
         And the timestamp from gpcrondump is stored in a list
         And the user runs "gpcrondump -x bkdb61 --incremental --prefix=foo -a --list-filter-tables"
         And gpcrondump should return a return code of 0
-        And gpcrondump should print Filtering bkdb61 for the following tables: to stdout
-        And gpcrondump should print public.ao_index_table to stdout
-        And gpcrondump should print public.heap_table to stdout
+        And gpcrondump should print "Filtering bkdb61 for the following tables:" to stdout
+        And gpcrondump should print "public.ao_index_table" to stdout
+        And gpcrondump should print "public.heap_table" to stdout
         And all the data from "bkdb61" is saved for verification
 
     Scenario: 62 Incremental Backup and Restore with -T filter for Full
@@ -927,8 +927,8 @@ Feature: Validate command line arguments
         And the timestamp from gpcrondump is stored in a list
         And the user runs "gpcrondump -x bkdb62 --incremental --prefix=foo -a --list-filter-tables"
         And gpcrondump should return a return code of 0
-        And gpcrondump should print Filtering bkdb62 for the following tables: to stdout
-        And gpcrondump should print public.ao_index_table to stdout
+        And gpcrondump should print "Filtering bkdb62 for the following tables:" to stdout
+        And gpcrondump should print "public.ao_index_table" to stdout
         And all the data from "bkdb62" is saved for verification
 
     Scenario: 63 Incremental Backup and Restore with --table-file filter for Full
@@ -954,9 +954,9 @@ Feature: Validate command line arguments
         And the timestamp from gpcrondump is stored in a list
         And the user runs "gpcrondump -x bkdb63 --incremental --prefix=foo -a --list-filter-tables"
         And gpcrondump should return a return code of 0
-        And gpcrondump should print Filtering bkdb63 for the following tables: to stdout
-        And gpcrondump should print public.ao_index_table to stdout
-        And gpcrondump should print public.heap_table to stdout
+        And gpcrondump should print "Filtering bkdb63 for the following tables:" to stdout
+        And gpcrondump should print "public.ao_index_table" to stdout
+        And gpcrondump should print "public.heap_table" to stdout
         And all the data from "bkdb63" is saved for verification
 
     Scenario: 64 Incremental Backup and Restore with --exclude-table-file filter for Full
@@ -981,8 +981,8 @@ Feature: Validate command line arguments
         And the timestamp from gpcrondump is stored in a list
         And the user runs "gpcrondump -x bkdb64 --incremental --prefix=foo -a --list-filter-tables"
         And gpcrondump should return a return code of 0
-        And gpcrondump should print Filtering bkdb64 for the following tables: to stdout
-        And gpcrondump should print public.ao_index_table to stdout
+        And gpcrondump should print "Filtering bkdb64 for the following tables:" to stdout
+        And gpcrondump should print "public.ao_index_table" to stdout
         And all the data from "bkdb64" is saved for verification
 
     Scenario: 65 Full Backup with option -T and non-existant table
@@ -992,7 +992,7 @@ Feature: Validate command line arguments
         And a backup file of tables "public.heap_table, public.ao_part_table" in "bkdb65" exists for validation
         When the user runs "gpcrondump -a -x bkdb65 -T public.heap_table -T cool.dude"
         Then gpcrondump should return a return code of 0
-        And gpcrondump should print does not exist in to stdout
+        And gpcrondump should print "does not exist in" to stdout
         And the timestamp from gpcrondump is stored
 
     Scenario: 66 Negative test gpdbrestore -G with incremental timestamp

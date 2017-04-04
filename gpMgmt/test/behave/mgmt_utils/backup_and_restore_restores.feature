@@ -3,33 +3,33 @@ Feature: Validate command line arguments
 
     Scenario: 1 Dirty table list check on recreating a table with same data and contents
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that plan file has latest timestamp for "public.ao_table"
 
     Scenario: 2 Simple Incremental Backup
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-L"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-L"
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should print Table public.ao_index_table to stdout
-        And gpdbrestore should print Table public.ao_index_table_comp to stdout
-        And gpdbrestore should print Table public.ao_part_table to stdout
-        And gpdbrestore should print Table public.ao_part_table_comp to stdout
-        And gpdbrestore should print Table public.part_external to stdout
-        And gpdbrestore should print Table public.ao_table to stdout
-        And gpdbrestore should print Table public.ao_table_comp to stdout
-        And gpdbrestore should print Table public.co_index_table to stdout
-        And gpdbrestore should print Table public.co_index_table_comp to stdout
-        And gpdbrestore should print Table public.co_part_table to stdout
-        And gpdbrestore should print Table public.co_part_table_comp to stdout
-        And gpdbrestore should print Table public.co_table to stdout
-        And gpdbrestore should print Table public.co_table_comp to stdout
-        And gpdbrestore should print Table public.heap_index_table to stdout
-        And gpdbrestore should print Table public.heap_part_table to stdout
-        And gpdbrestore should print Table public.heap_table to stdout
-        And gpdbrestore should print Table public.part_mixed_1 to stdout
+        And gpdbrestore should print "Table public.ao_index_table" to stdout
+        And gpdbrestore should print "Table public.ao_index_table_comp" to stdout
+        And gpdbrestore should print "Table public.ao_part_table" to stdout
+        And gpdbrestore should print "Table public.ao_part_table_comp" to stdout
+        And gpdbrestore should print "Table public.part_external" to stdout
+        And gpdbrestore should print "Table public.ao_table" to stdout
+        And gpdbrestore should print "Table public.ao_table_comp" to stdout
+        And gpdbrestore should print "Table public.co_index_table" to stdout
+        And gpdbrestore should print "Table public.co_index_table_comp" to stdout
+        And gpdbrestore should print "Table public.co_part_table" to stdout
+        And gpdbrestore should print "Table public.co_part_table_comp" to stdout
+        And gpdbrestore should print "Table public.co_table" to stdout
+        And gpdbrestore should print "Table public.co_table_comp" to stdout
+        And gpdbrestore should print "Table public.heap_index_table" to stdout
+        And gpdbrestore should print "Table public.heap_part_table" to stdout
+        And gpdbrestore should print "Table public.heap_table" to stdout
+        And gpdbrestore should print "Table public.part_mixed_1" to stdout
         And database "bkdb2" is dropped and recreated
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that partitioned tables "ao_part_table, co_part_table, heap_part_table" in "bkdb2" have 6 partitions
         And verify that partitioned tables "ao_part_table_comp, co_part_table_comp" in "bkdb2" have 6 partitions
@@ -70,11 +70,11 @@ Feature: Validate command line arguments
     Scenario: 5 gpdbrestore with -R for incremental dump
         Given the old timestamps are read from json
         Then the user runs gpdbrestore with "-R" option in path "/tmp/5"
-        And gpdbrestore should print -R is not supported for restore with incremental timestamp to stdout
+        And gpdbrestore should print "-R is not supported for restore with incremental timestamp" to stdout
 
     Scenario: 5a Full Backup and Restore
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that there is a "heap" table "public.heap_table" in "bkdb5a" with data
         And verify that there is a "ao" table "public.ao_part_table" in "bkdb5a" with data
@@ -90,7 +90,7 @@ Feature: Validate command line arguments
 
     Scenario: 6 Metadata-only restore
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-m"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-m"
         Then gpdbrestore should return a return code of 0
         And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb6"
         And the table names in "bkdb6" is stored
@@ -98,7 +98,7 @@ Feature: Validate command line arguments
 
     Scenario: 7 Metadata-only restore with global objects (-G)
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-m -G"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-m -G"
         Then gpdbrestore should return a return code of 0
         And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb7"
         And the table names in "bkdb7" is stored
@@ -108,14 +108,14 @@ Feature: Validate command line arguments
 
     Scenario: 8 gpdbrestore -L with Full Backup
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-L"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-L"
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should print Table public.ao_part_table to stdout
-        And gpdbrestore should print Table public.heap_table to stdout
+        And gpdbrestore should print "Table public.ao_part_table" to stdout
+        And gpdbrestore should print "Table public.heap_table" to stdout
 
     Scenario: 11 Backup and restore with -G only
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-G only"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-G only"
         Then gpdbrestore should return a return code of 0
         And verify that a role "foo_user" exists in database "bkdb11"
         And verify that there is no table "public.heap_table" in "bkdb11"
@@ -133,14 +133,14 @@ Feature: Validate command line arguments
 
     Scenario: 14 Full Backup with option -t and Restore
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that there is a "heap" table "public.heap_table" in "bkdb14" with data
         And verify that there is no table "public.ao_part_table" in "bkdb14"
 
     Scenario: 15 Full Backup with option -T and Restore
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then verify that the "report" file in " " dir contains "Backup Type: Full"
         Then gpdbrestore should return a return code of 0
         And verify that there is a "ao" table "public.ao_part_table" in "bkdb15" with data
@@ -148,7 +148,7 @@ Feature: Validate command line arguments
 
     Scenario: 16 Full Backup with option --exclude-table-file and Restore
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that there is a "co" table "public.co_part_table" in "bkdb16" with data
         And verify that there is no table "public.ao_part_table" in "bkdb16"
@@ -156,7 +156,7 @@ Feature: Validate command line arguments
 
     Scenario: 17 Full Backup with option --table-file and Restore
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that there is a "ao" table "public.ao_part_table" in "bkdb17" with data
         And verify that there is a "heap" table "public.heap_table" in "bkdb17" with data
@@ -164,59 +164,59 @@ Feature: Validate command line arguments
 
     Scenario: 18 plan file creation in directory
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         Then "plan" file should be created under " "
 
     Scenario: 19 Simple Plan File Test
         Given the old timestamps are read from json
         And the timestamp labels for scenario "19" are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         Then "plan" file should be created under " "
         And the plan file for scenario "19" is validated against "data/bar_plan1"
 
     Scenario: 20 No plan file generated
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         Then "plan" file should not be created under " "
 
     Scenario: 21 Schema only restore of incremental backup
         Given the old timestamps are read from json
         And the backup test is initialized with database "bkdb21"
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And tables names in database "bkdb21" should be identical to stored table names in file "part_table_names"
 
     Scenario: 22 Simple Incremental Backup with AO/CO statistics w/ filter
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--noaostats"
+        When the user runs gpdbrestore -e with the stored timestamp and options "--noaostats"
         Then gpdbrestore should return a return code of 0
         And verify that there are "0" tuples in "bkdb22" for table "public.ao_index_table"
         And verify that there are "0" tuples in "bkdb22" for table "public.ao_table"
-        When the user runs gpdbrestore with the stored timestamp and options "-T public.ao_table" without -e option
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T public.ao_table"
         Then gpdbrestore should return a return code of 0
         And verify that there are "0" tuples in "bkdb22" for table "public.ao_index_table"
         And verify that there are "8760" tuples in "bkdb22" for table "public.ao_table"
 
     Scenario: 23 Simple Incremental Backup with TRUNCATE
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that the data of "21" tables in "bkdb23" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb23"
 
     Scenario: 24 Simple Incremental Backup to test ADD COLUMN
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that the data of "23" tables in "bkdb24" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb24"
 
     Scenario: 25 Non compressed incremental backup
         Given the old timestamps are read from json
-        Then the user runs gpdbrestore with the stored timestamp
+        Then the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that there is no table "testschema.heap_table" in "bkdb25"
         And verify that the data of "11" tables in "bkdb25" is validated after restore
@@ -226,7 +226,7 @@ Feature: Validate command line arguments
     Scenario: 26 Rollback Insert
         Given the old timestamps are read from json
         And the timestamp labels for scenario "26" are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And the plan file for scenario "26" is validated against "data/bar_plan2"
         And verify that the data of "3" tables in "bkdb26" is validated after restore
@@ -235,7 +235,7 @@ Feature: Validate command line arguments
     Scenario: 27 Rollback Truncate Table
         Given the old timestamps are read from json
         And the timestamp labels for scenario "27" are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And the plan file for scenario "27" is validated against "data/bar_plan2"
         And verify that the data of "3" tables in "bkdb27" is validated after restore
@@ -244,7 +244,7 @@ Feature: Validate command line arguments
     Scenario: 28 Rollback Alter table
         Given the old timestamps are read from json
         And the timestamp labels for scenario "28" are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And the plan file for scenario "28" is validated against "data/bar_plan2"
         And verify that the data of "3" tables in "bkdb28" is validated after restore
@@ -268,14 +268,14 @@ Feature: Validate command line arguments
 
     Scenario: 31 gpdbrestore -u option with full backup
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-u /tmp"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-u /tmp"
         Then gpdbrestore should return a return code of 0
         Then verify that the data of "2" tables in "bkdb31" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb31"
 
     Scenario: 32 gpdbrestore -u option with incremental backup
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-u /tmp"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-u /tmp"
         Then gpdbrestore should return a return code of 0
         Then verify that the data of "3" tables in "bkdb32" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb32"
@@ -293,7 +293,7 @@ Feature: Validate command line arguments
 
     Scenario: 34 gpdbrestore with --table-file option
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--table-file /tmp/table_file_foo"
+        When the user runs gpdbrestore -e with the stored timestamp and options "--table-file /tmp/table_file_foo"
         Then gpdbrestore should return a return code of 0
         And verify that the data of "2" tables in "bkdb34" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb34"
@@ -303,14 +303,14 @@ Feature: Validate command line arguments
 
     Scenario: 35 Incremental restore with extra full backup
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that the data of "3" tables in "bkdb35" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb35"
 
     Scenario: 36 gpcrondump should not track external tables
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that the data of "4" tables in "bkdb36" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb36"
@@ -320,7 +320,7 @@ Feature: Validate command line arguments
 
     Scenario: 37 Full backup with -T option
         Given the old timestamps are read from json
-        When the user runs "gpdbrestore -e -T public.ao_index_table -a" with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "-T public.ao_index_table"
         Then gpdbrestore should return a return code of 0
         Then verify that there is no table "public.ao_part_table" in "fullbkdb37"
         And verify that there is no table "public.heap_table" in "fullbkdb37"
@@ -328,7 +328,7 @@ Feature: Validate command line arguments
 
     Scenario: 38 gpdbrestore with -T option
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-T public.ao_index_table -a"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-T public.ao_index_table -a"
         Then gpdbrestore should return a return code of 0
         Then verify that there is no table "public.ao_part_table" in "bkdb38"
         And verify that there is no table "public.heap_table" in "bkdb38"
@@ -338,21 +338,21 @@ Feature: Validate command line arguments
         Given the old timestamps are read from json
         And the backup test is initialized with database "bkdb39"
         And there is a "ao" table "public.ao_index_table" in "bkdb39" with data
-        When the user runs "gpdbrestore -T public.ao_index_table -a --truncate" with the stored timestamp
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T public.ao_index_table --truncate"
         Then gpdbrestore should return a return code of 0
         And verify that there is a "ao" table "public.ao_index_table" in "bkdb39" with data
         And verify that the restored table "public.ao_index_table" in database "bkdb39" is analyzed
-        When the user runs "gpdbrestore -T public.ao_part_table -a" with the stored timestamp
-        And the user runs "gpdbrestore -T public.ao_part_table_1_prt_p1_2_prt_1 -a --truncate" with the stored timestamp
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T public.ao_part_table"
+        And the user runs gpdbrestore without -e with the stored timestamp and options "-T public.ao_part_table_1_prt_p1_2_prt_1 --truncate"
         Then gpdbrestore should return a return code of 0
         And verify that there is a "ao" table "public.ao_part_table" in "bkdb39" with data
 
     Scenario: 40 Full backup and restore with -T and --truncate with dropped table
         Given the old timestamps are read from json
         And the backup test is initialized with database "bkdb40"
-        When the user runs "gpdbrestore -T public.heap_table -a --truncate" with the stored timestamp
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T public.heap_table --truncate"
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should print Skipping truncate of bkdb40.public.heap_table because the relation does not exist to stdout
+        And gpdbrestore should print "Skipping truncate of bkdb40.public.heap_table because the relation does not exist" to stdout
         And verify that there is a "heap" table "public.heap_table" in "bkdb40" with data
 
     Scenario: 41 Full backup -T with truncated table
@@ -360,7 +360,7 @@ Feature: Validate command line arguments
         And the backup test is initialized with database "bkdb41"
         And there is a "ao" partition table "public.ao_part_table" in "bkdb41" with data
         When the user truncates "public.ao_part_table_1_prt_p2_2_prt_3" tables in "bkdb41"
-        And the user runs "gpdbrestore -T public.ao_part_table_1_prt_p2_2_prt_3 -a" with the stored timestamp
+        And the user runs gpdbrestore without -e with the stored timestamp and options "-T public.ao_part_table_1_prt_p2_2_prt_3"
         Then gpdbrestore should return a return code of 0
         And verify that there is a "ao" table "public.ao_part_table_1_prt_p2_2_prt_3" in "bkdb41" with data
         And verify that the restored table "public.ao_part_table_1_prt_p2_2_prt_3" in database "bkdb41" is analyzed
@@ -368,35 +368,35 @@ Feature: Validate command line arguments
     Scenario: 42 Full backup -T with no schema name supplied
         Given the old timestamps are read from json
         And the backup test is initialized with database "bkdb42"
-        When the user runs "gpdbrestore -T ao_index_table -a" with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "-T ao_index_table -a"
         Then gpdbrestore should return a return code of 2
-        Then gpdbrestore should print No schema name supplied to stdout
+        Then gpdbrestore should print "No schema name supplied" to stdout
 
     Scenario: 43 Full backup with gpdbrestore -T for DB with FUNCTION having DROP SQL
         Given the old timestamps are read from json
         And the backup test is initialized with database "bkdb43"
-        When the user runs "gpdbrestore -T public.ao_index_table -a" with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "-T public.ao_index_table -a"
         Then gpdbrestore should return a return code of 0
         And verify that there is a "ao" table "public.ao_index_table" in "bkdb43" with data
 
     Scenario: 44 Incremental restore with table filter
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-T public.ao_table -T public.co_table"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-T public.ao_table -T public.co_table"
         Then gpdbrestore should return a return code of 0
         And verify that exactly "2" tables in "bkdb44" have been restored
 
     Scenario: 45 Incremental restore with invalid table filter
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-T public.heap_table -T public.invalid -q"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-T public.heap_table -T public.invalid -q"
         Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print Tables \[\'public.invalid\'\] not found in backup to stdout
+        And gpdbrestore should print "Tables \[\'public.invalid\'\] not found in backup" to stdout
 
     Scenario: 46 gpdbrestore -L with -u option
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-L -u /tmp"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-L -u /tmp"
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should print Table public.ao_part_table to stdout
-        And gpdbrestore should print Table public.heap_table to stdout
+        And gpdbrestore should print "Table public.ao_part_table" to stdout
+        And gpdbrestore should print "Table public.heap_table" to stdout
 
     Scenario: 47 gpdbrestore -b with -u option for Full timestamp
         Given the old timestamps are read from json
@@ -421,7 +421,7 @@ Feature: Validate command line arguments
 
     Scenario: 50 gpdbrestore -b option should display the timestamps in sorted order
         Given the old timestamps are read from json
-        Then the user runs gpdbrestore with the stored timestamp and options "-b"
+        Then the user runs gpdbrestore -e with the date directory
         And the timestamps should be printed in sorted order
 
     Scenario: 51 gpdbrestore -R option should display the timestamps in sorted order
@@ -435,7 +435,7 @@ Feature: Validate command line arguments
         Then database "bkdb52" is dropped and recreated
         When the user runs gp_restore with the the stored timestamp and subdir for metadata only in "bkdb52"
         Then gp_restore should return a return code of 0
-        When the user runs gpdbrestore with the stored timestamp and options "--noplan" without -e option
+        When the user runs gpdbrestore without -e with the stored timestamp and options "--noplan"
         Then gpdbrestore should return a return code of 0
         And verify that tables "public.ao_table_3, public.ao_table_4, public.ao_table_5, public.ao_table_6" in "bkdb52" has no rows
         And verify that tables "public.ao_table_7, public.ao_table_8, public.ao_table_9, public.ao_table_10" in "bkdb52" has no rows
@@ -447,7 +447,7 @@ Feature: Validate command line arguments
         Then database "bkdb53" is dropped and recreated
         When the user runs gp_restore with the the stored timestamp and subdir for metadata only in "bkdb53"
         Then gp_restore should return a return code of 0
-        When the user runs gpdbrestore with the stored timestamp and options "--noplan" without -e option
+        When the user runs gpdbrestore without -e with the stored timestamp and options "--noplan"
         Then gpdbrestore should return a return code of 0
         And verify that tables "public.ao_table_1_prt_p1_2_prt_3, public.ao_table_1_prt_p2_2_prt_1" in "bkdb53" has no rows
         And verify that tables "public.ao_table_1_prt_p2_2_prt_2, public.ao_table_1_prt_p2_2_prt_3" in "bkdb53" has no rows
@@ -455,14 +455,14 @@ Feature: Validate command line arguments
 
     Scenario: 54 Test gpcrondump and gpdbrestore verbose option
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--verbose"
+        When the user runs gpdbrestore -e with the stored timestamp and options "--verbose"
         Then gpdbrestore should return a return code of 0
         And verify that the data of "2" tables in "bkdb54" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb54"
 
     Scenario: 55 Incremental table filter gpdbrestore with different schema for same tablenames
         Given the old timestamps are read from json
-        When the user runs "gpdbrestore -e -T public.ao_part_table -T testschema.ao_part_table -a" with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "-T public.ao_part_table -T testschema.ao_part_table"
         Then gpdbrestore should return a return code of 0
         And verify that there is no table "public.ao_part_table1_1_prt_p1_2_prt_3" in "bkdb55"
         And verify that there is no table "public.ao_part_table1_1_prt_p2_2_prt_3" in "bkdb55"
@@ -482,7 +482,7 @@ Feature: Validate command line arguments
         And database "bkdb56" is dropped and recreated
         When the user runs gp_restore with the the stored timestamp and subdir for metadata only in "bkdb56"
         Then gp_restore should return a return code of 0
-        And the user runs "gpdbrestore -T public.ao_part_table -a --noplan" with the stored timestamp
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T public.ao_part_table --noplan"
         Then gpdbrestore should return a return code of 0
         And verify that tables "public.ao_part_table_1_prt_p1_2_prt_3, public.ao_part_table_1_prt_p2_2_prt_3" in "bkdb56" has no rows
         And verify that tables "public.ao_part_table_1_prt_p1_2_prt_2, public.ao_part_table_1_prt_p2_2_prt_2" in "bkdb56" has no rows
@@ -494,28 +494,28 @@ Feature: Validate command line arguments
     Scenario: 57 gpdbrestore list_backup option
         Given the old timestamps are read from json
         And the backup test is initialized with database "bkdb57"
-        When the user runs gpdbrestore with the stored timestamp to print the backup set with options " "
+        When the user runs gpdbrestore without -e with the stored timestamp and options "--list-backup"
         Then gpdbrestore should return a return code of 0
         Then "plan" file should be created under " "
         And verify that the list of stored timestamps is printed to stdout
         Then "plan" file is removed under " "
-        When the user runs gpdbrestore with the stored timestamp to print the backup set with options "-a"
+        When the user runs gpdbrestore without -e with the stored timestamp and options "--list-backup -a"
         Then gpdbrestore should return a return code of 0
         Then "plan" file should be created under " "
         And verify that the list of stored timestamps is printed to stdout
 
     Scenario: 58 gpdbrestore list_backup option with -T table filter
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp to print the backup set with options "-T public.heap_table"
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T public.heap_table --list-backup"
         Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print Cannot specify -T and --list-backup together to stdout
+        And gpdbrestore should print "Cannot specify -T and --list-backup together" to stdout
 
     Scenario: 59 gpdbrestore list_backup option with full timestamp
         Given the old timestamps are read from json
         And the backup test is initialized with database "bkdb59"
-        When the user runs gpdbrestore with the stored timestamp to print the backup set with options " "
+        When the user runs gpdbrestore without -e with the stored timestamp and options "--list-backup"
         Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print --list-backup is not supported for restore with full timestamps to stdout
+        And gpdbrestore should print "--list-backup is not supported for restore with full timestamps" to stdout
 
     Scenario: 60 Incremental Backup and Restore with named pipes
         Given the old timestamps are read from json
@@ -528,13 +528,13 @@ Feature: Validate command line arguments
         Then gpdbrestore should return a return code of 0
         And verify that the data of "10" tables in "bkdb60" is validated after restore
         When the named pipe script for the "restore" is run for the files under "/tmp/custom_timestamps"
-        And the user runs gpdbrestore with the stored timestamp and options "-T public.ao_part_table -u /tmp/custom_timestamps"
-        Then gpdbrestore should print \[WARNING\]:-Skipping validation of tables in dump file due to the use of named pipes to stdout
+        And the user runs gpdbrestore -e with the stored timestamp and options "-T public.ao_part_table -u /tmp/custom_timestamps"
+        Then gpdbrestore should print "\[WARNING\]:-Skipping validation of tables in dump file due to the use of named pipes" to stdout
         And close all opened pipes
 
     Scenario: 61 Incremental Backup and Restore with -t filter for Full
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--prefix=foo"
+        When the user runs gpdbrestore -e with the stored timestamp and options "--prefix=foo"
         Then gpdbrestore should return a return code of 0
         And verify that there is a "heap" table "public.heap_table" in "bkdb61" with data
         And verify that there is a "ao" table "public.ao_index_table" in "bkdb61" with data
@@ -542,7 +542,7 @@ Feature: Validate command line arguments
 
     Scenario: 62 Incremental Backup and Restore with -T filter for Full
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--prefix=foo"
+        When the user runs gpdbrestore -e with the stored timestamp and options "--prefix=foo"
         Then gpdbrestore should return a return code of 0
         And verify that there is a "ao" table "public.ao_index_table" in "bkdb62" with data
         And verify that there is no table "public.ao_part_table" in "bkdb62"
@@ -550,7 +550,7 @@ Feature: Validate command line arguments
 
     Scenario: 63 Incremental Backup and Restore with --table-file filter for Full
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--prefix=foo"
+        When the user runs gpdbrestore -e with the stored timestamp and options "--prefix=foo"
         Then gpdbrestore should return a return code of 0
         And verify that there is a "heap" table "public.heap_table" in "bkdb63" with data
         And verify that there is a "ao" table "public.ao_index_table" in "bkdb63" with data
@@ -558,7 +558,7 @@ Feature: Validate command line arguments
 
     Scenario: 64 Incremental Backup and Restore with --exclude-table-file filter for Full
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--prefix=foo"
+        When the user runs gpdbrestore -e with the stored timestamp and options "--prefix=foo"
         Then gpdbrestore should return a return code of 0
         And verify that there is a "ao" table "public.ao_index_table" in "bkdb64" with data
         And verify that there is no table "public.ao_part_table" in "bkdb64"
@@ -566,7 +566,7 @@ Feature: Validate command line arguments
 
     Scenario: 65 Full Backup with option -T and non-existant table
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then verify that the "report" file in " " dir contains "Backup Type: Full"
         Then gpdbrestore should return a return code of 0
         And verify that there is a "ao" table "public.ao_part_table" in "bkdb65" with data
@@ -574,9 +574,9 @@ Feature: Validate command line arguments
 
     Scenario: 66 Negative test gpdbrestore -G with incremental timestamp
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-G"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-G"
         Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print Unable to locate global file to stdout
+        And gpdbrestore should print "Unable to locate global file" to stdout
 
     Scenario: 67 Dump and Restore metadata
         Given the old timestamps are read from json
@@ -591,10 +591,10 @@ Feature: Validate command line arguments
     Scenario: 68 Restore -T for incremental dump should restore metadata/postdata objects for tablenames with English and multibyte (chinese) characters
         Given the old timestamps are read from json
         And the backup test is initialized with database "bkdb68"
-        When the user runs "gpdbrestore --table-file test/behave/mgmt_utils/steps/data/include_tables_with_metadata_postdata -a" with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "--table-file test/behave/mgmt_utils/steps/data/include_tables_with_metadata_postdata"
         Then gpdbrestore should return a return code of 0
         When the user runs "psql -f test/behave/mgmt_utils/steps/data/select_multi_byte_char_tables.sql bkdb68"
-        Then psql should print 2000 to stdout 4 times
+        Then psql should print "2000" to stdout 4 times
         And verify that there is a "ao" table "public.ao_index_table" in "bkdb68" with data
         When the user runs "psql -f test/behave/mgmt_utils/steps/data/describe_multi_byte_char.sql bkdb68 > /tmp/describe_multi_byte_char_after"
         And the user runs "psql -c '\d public.ao_index_table' bkdb68 > /tmp/describe_ao_index_table_after"
@@ -608,10 +608,10 @@ Feature: Validate command line arguments
     Scenario: 69 Restore -T for full dump should restore metadata/postdata objects for tablenames with English and multibyte (chinese) characters
         Given the old timestamps are read from json
         And the backup test is initialized with database "bkdb69"
-        When the user runs "gpdbrestore --table-file test/behave/mgmt_utils/steps/data/include_tables_with_metadata_postdata -a" with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "--table-file test/behave/mgmt_utils/steps/data/include_tables_with_metadata_postdata"
         Then gpdbrestore should return a return code of 0
         When the user runs "psql -f test/behave/mgmt_utils/steps/data/select_multi_byte_char_tables.sql bkdb69"
-        Then psql should print 1000 to stdout 4 times
+        Then psql should print "1000" to stdout 4 times
         And verify that there is a "ao" table "public.ao_index_table" in "bkdb69" with data
         When the user runs "psql -f test/behave/mgmt_utils/steps/data/describe_multi_byte_char.sql bkdb69 > /tmp/describe_multi_byte_char_after"
         And the user runs "psql -c '\d public.ao_index_table' bkdb69 > /tmp/describe_ao_index_table_after"
@@ -631,10 +631,10 @@ Feature: Validate command line arguments
         And the user runs """psql -c "CREATE ROLE select_group NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE RESOURCE QUEUE pg_default;" bkdb70"""
         And the user runs """psql -c "CREATE ROLE test_group NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE RESOURCE QUEUE pg_default;" bkdb70"""
         And the user runs "psql -c 'CREATE ROLE foo_user' bkdb70"
-        When the user runs "gpdbrestore --table-file test/behave/mgmt_utils/steps/data/include_tables_with_grant_permissions -u /tmp -a --noanalyze" with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "--table-file test/behave/mgmt_utils/steps/data/include_tables_with_grant_permissions -u /tmp --noanalyze"
         Then gpdbrestore should return a return code of 0
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/select_multi_byte_char_tables.sql bkdb70"
-        Then psql should print 1000 to stdout 4 times
+        Then psql should print "1000" to stdout 4 times
         And verify that there is a "heap" table "customer.heap_index_table_1" in "bkdb70" with data
         And verify that there is a "heap" table "customer.heap_index_table_2" in "bkdb70" with data
         When the user runs "psql -c '\d customer.heap_index_table_1' bkdb70 > /tmp/describe_heap_index_table_1_after"
@@ -667,10 +667,10 @@ Feature: Validate command line arguments
         And the user runs """psql -c "CREATE ROLE select_group NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE RESOURCE QUEUE pg_default;" bkdb71"""
         And the user runs """psql -c "CREATE ROLE test_group NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE RESOURCE QUEUE pg_default;" bkdb71"""
         When the user runs "psql -c 'CREATE ROLE foo_user' bkdb71"
-        When the user runs "gpdbrestore --table-file test/behave/mgmt_utils/steps/data/include_tables_with_grant_permissions -u /tmp -a --noanalyze" with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "--table-file test/behave/mgmt_utils/steps/data/include_tables_with_grant_permissions -u /tmp --noanalyze"
         Then gpdbrestore should return a return code of 0
         When the user runs "psql -f test/behave/mgmt_utils/steps/data/select_multi_byte_char_tables.sql bkdb71"
-        Then psql should print 2000 to stdout 4 times
+        Then psql should print "2000" to stdout 4 times
         And verify that there is a "heap" table "customer.heap_index_table_1" in "bkdb71" with data
         And verify that there is a "heap" table "customer.heap_index_table_2" in "bkdb71" with data
         When the user runs "psql -c '\d customer.heap_index_table_1' bkdb71 > /tmp/71_describe_heap_index_table_1_after"
@@ -696,78 +696,78 @@ Feature: Validate command line arguments
 
     Scenario: 72 Redirected Restore Full Backup and Restore without -e option
         Given the old timestamps are read from json
-        When the user runs "gpdbrestore --redirect=bkdb72-2 -a" with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "--redirect=bkdb72-2"
         Then gpdbrestore should return a return code of 0
         And check that there is a "heap" table "public.heap_table" in "bkdb72-2" with same data from "bkdb72"
         And check that there is a "ao" table "public.ao_part_table" in "bkdb72-2" with same data from "bkdb72"
 
     Scenario: 73 Full Backup and Restore with -e option
         Given the old timestamps are read from json
-        When the user runs "gpdbrestore --redirect=bkdb73-2 -e -a" with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "--redirect=bkdb73-2"
         Then gpdbrestore should return a return code of 0
         And check that there is a "heap" table "public.heap_table" in "bkdb73-2" with same data from "bkdb73"
         And check that there is a "ao" table "public.ao_part_table" in "bkdb73-2" with same data from "bkdb73"
 
     Scenario: 74 Incremental Backup and Redirected Restore
         Given the old timestamps are read from json
-        When the user runs "gpdbrestore --redirect=bkdb74-2 -e -a" with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "--redirect=bkdb74-2"
         Then gpdbrestore should return a return code of 0
         And verify that the data of "11" tables in "bkdb74-2" is validated after restore from "bkdb74"
 
     Scenario: 75 Full backup and redirected restore with -T
         Given the old timestamps are read from json
-        When the user runs "gpdbrestore -T public.ao_index_table --redirect=bkdb75-2 -a" with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "-T public.ao_index_table --redirect=bkdb75-2"
         Then gpdbrestore should return a return code of 0
         And check that there is a "ao" table "public.ao_index_table" in "bkdb75-2" with same data from "bkdb75"
 
     Scenario: 76 Full backup and redirected restore with -T and --truncate
         Given the old timestamps are read from json
         And the database "bkdb76-2" does not exist
-        When the user runs "gpdbrestore -T public.ao_index_table --redirect=bkdb76-2 --truncate -a" with the stored timestamp
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T public.ao_index_table --redirect=bkdb76-2 --truncate"
         Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print Failure from truncating tables, FATAL:  database "bkdb76-2" does not exist to stdout
+        And gpdbrestore should print "Failure from truncating tables, FATAL:  database "bkdb76-2" does not exist" to stdout
         And there is a "ao" table "public.ao_index_table" in "bkdb76-2" with data
-        And the user runs "gpdbrestore -T public.ao_index_table --redirect=bkdb76-2 --truncate -a" with the stored timestamp
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T public.ao_index_table --redirect=bkdb76-2 --truncate"
         Then gpdbrestore should return a return code of 0
         And check that there is a "ao" table "public.ao_index_table" in "bkdb76-2" with same data from "bkdb76"
 
     Scenario: 77 Incremental redirected restore with table filter
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-T public.ao_table -T public.co_table --redirect=bkdb77-2"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-T public.ao_table -T public.co_table --redirect=bkdb77-2"
         Then gpdbrestore should return a return code of 0
         And verify that exactly "2" tables in "bkdb77-2" have been restored from "bkdb77"
 
     Scenario: 78 Full Backup and Redirected Restore with --prefix option
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--prefix=foo --redirect=bkdb78-2"
+        When the user runs gpdbrestore -e with the stored timestamp and options "--prefix=foo --redirect=bkdb78-2"
         Then gpdbrestore should return a return code of 0
         And check that there is a "heap" table "public.heap_table" in "bkdb78-2" with same data from "bkdb78"
         And check that there is a "ao" table "public.ao_part_table" in "bkdb78-2" with same data from "bkdb78"
 
     Scenario: 79 Full Backup and Redirected Restore with --prefix option for multiple databases
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--prefix=foo --redirect=bkdb79-3"
+        When the user runs gpdbrestore -e with the stored timestamp and options "--prefix=foo --redirect=bkdb79-3"
         Then gpdbrestore should return a return code of 0
         And check that there is a "heap" table "public.heap_table" in "bkdb79-3" with same data from "bkdb79-2"
         And check that there is a "ao" table "public.ao_part_table" in "bkdb79-3" with same data from "bkdb79"
 
     Scenario: 80 Full Backup and Restore with the master dump file missing
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print Unable to find .*. Skipping restore. to stdout
+        And gpdbrestore should print "Unable to find .*. Skipping restore." to stdout
 
     Scenario: 81 Incremental Backup and Restore with the master dump file missing
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print Unable to find .*. Skipping restore. to stdout
+        And gpdbrestore should print "Unable to find .*. Skipping restore." to stdout
 
     Scenario: 82 Uppercase Database Name Full Backup and Restore
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should not print Issue with analyze of to stdout
+        And gpdbrestore should not print "Issue with analyze of" to stdout
         And verify that there is a "heap" table "public.heap_table" in "82TESTING" with data
         And verify that there is a "ao" table "public.ao_part_table" in "82TESTING" with data
 
@@ -775,43 +775,43 @@ Feature: Validate command line arguments
         Given the old timestamps are read from json
         When the user runs "gpdbrestore -s 83TESTING -e -a"
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should not print Issue with analyze of to stdout
+        And gpdbrestore should not print "Issue with analyze of" to stdout
         And verify that there is a "heap" table "public.heap_table" in "83TESTING" with data
         And verify that there is a "ao" table "public.ao_part_table" in "83TESTING" with data
         And the user runs "gpdbrestore -s "83TESTING" -e -a"
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should not print Issue with analyze of to stdout
+        And gpdbrestore should not print "Issue with analyze of" to stdout
         And verify that there is a "heap" table "public.heap_table" in "83TESTING" with data
         And verify that there is a "ao" table "public.ao_part_table" in "83TESTING" with data
 
     Scenario: 84 Uppercase Database Name Incremental Backup and Restore
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should not print Issue with analyze of to stdout
+        And gpdbrestore should not print "Issue with analyze of" to stdout
         And verify that the data of "11" tables in "84TESTING" is validated after restore
 
     Scenario: 85 Full backup and Restore should create the gp_toolkit schema with -e option
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that the data of "10" tables in "bkdb85" is validated after restore
         And verify that the schema "gp_toolkit" exists in "bkdb85"
 
     Scenario: 86 Incremental backup and Restore should create the gp_toolkit schema with -e option
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that the data of "11" tables in "bkdb86" is validated after restore
         And verify that the schema "gp_toolkit" exists in "bkdb86"
 
     Scenario: 87 Redirected Restore should create the gp_toolkit schema with or without -e option
         Given the old timestamps are read from json
-        When the user runs "gpdbrestore --redirect=bkdb87-2 -a" with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "--redirect=bkdb87-2"
         Then gpdbrestore should return a return code of 0
         Then verify that the data of "10" tables in "bkdb87-2" is validated after restore from "bkdb87"
         And verify that the schema "gp_toolkit" exists in "bkdb87-2"
-        And the user runs "gpdbrestore --redirect=bkdb87-2 -e -a" with the stored timestamp
+        And the user runs gpdbrestore -e with the stored timestamp and options "--redirect=bkdb87-2"
         Then gpdbrestore should return a return code of 0
         And verify that the data of "10" tables in "bkdb87-2" is validated after restore from "bkdb87"
         And verify that the schema "gp_toolkit" exists in "bkdb87-2"
@@ -819,27 +819,27 @@ Feature: Validate command line arguments
     Scenario: 88 gpdbrestore with noanalyze
         Given the old timestamps are read from json
         And the backup test is initialized with database "bkdb88"
-        When the user runs "gpdbrestore --noanalyze -a" with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "--noanalyze -a"
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should print Analyze bypassed on request to stdout
+        And gpdbrestore should print "Analyze bypassed on request" to stdout
         And verify that the data of "10" tables in "bkdb88" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb88"
 
     Scenario: 89 gpdbrestore without noanalyze
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should print Commencing analyze of bkdb89 database to stdout
-        And gpdbrestore should print Analyze of bkdb89 completed without error to stdout
+        And gpdbrestore should print "Commencing analyze of bkdb89 database" to stdout
+        And gpdbrestore should print "Analyze of bkdb89 completed without error" to stdout
         And verify that the data of "10" tables in "bkdb89" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb89"
 
     Scenario: 90 Writable Report/Status Directory Full Backup and Restore without --report-status-dir option
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should not print gp-r to stdout
-        And gpdbrestore should not print status to stdout
+        And gpdbrestore should not print "gp-r" to stdout
+        And gpdbrestore should not print "status" to stdout
         And verify that there is a "heap" table "public.heap_table" in "bkdb90" with data
         And verify that there is a "ao" table "public.ao_part_table" in "bkdb90" with data
         And verify that report file is generated in master_data_directory
@@ -849,10 +849,10 @@ Feature: Validate command line arguments
 
     Scenario: 91 Writable Report/Status Directory Full Backup and Restore with --report-status-dir option
         Given the old timestamps are read from json
-        When the user runs "gpdbrestore --report-status-dir=/tmp -e -a" with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "--report-status-dir=/tmp"
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should print gp-r to stdout
-        And gpdbrestore should print status to stdout
+        And gpdbrestore should print "gp-r" to stdout
+        And gpdbrestore should print "status" to stdout
         And verify that there is a "heap" table "public.heap_table" in "bkdb91" with data
         And verify that there is a "ao" table "public.ao_part_table" in "bkdb91" with data
         And verify that report file is generated in /tmp
@@ -864,8 +864,8 @@ Feature: Validate command line arguments
         Given the old timestamps are read from json
         When the user runs "gpdbrestore -u /tmp/92_custom_timestamps -e -a -t 20150101010101"
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should print gp-r to stdout
-        And gpdbrestore should print status to stdout
+        And gpdbrestore should print "gp-r" to stdout
+        And gpdbrestore should print "status" to stdout
         And verify that there is a "heap" table "public.heap_table" in "bkdb92" with data
         And verify that there is a "ao" table "public.ao_part_table" in "bkdb92" with data
         And verify that report file is generated in /tmp/92_custom_timestamps/db_dumps/20150101
@@ -875,8 +875,8 @@ Feature: Validate command line arguments
         Given the old timestamps are read from json
         When the user runs "gpdbrestore -u /tmp/custom_timestamps -e -a -t 20160101010101"
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should not print gp-r to stdout
-        And gpdbrestore should not print --status= to stdout
+        And gpdbrestore should not print "gp-r" to stdout
+        And gpdbrestore should not print "--status=" to stdout
         And verify that there is a "heap" table "public.heap_table" in "bkdb93" with data
         And verify that there is a "ao" table "public.ao_part_table" in "bkdb93" with data
         And verify that report file is generated in master_data_directory
@@ -887,7 +887,7 @@ Feature: Validate command line arguments
 
     Scenario: 94 Filtered Full Backup with Partition Table
         Given the old timestamps are read from json
-        When the user runs "gpdbrestore -e -T public.ao_part_table -a" with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "-T public.ao_part_table"
         Then gpdbrestore should return a return code of 0
         And verify that there is no table "public.heap_table" in "bkdb94"
         And verify that there is a "ao" table "public.ao_part_table" in "bkdb94" with data
@@ -895,7 +895,7 @@ Feature: Validate command line arguments
 
     Scenario: 95 Filtered Incremental Backup with Partition Table
         Given the old timestamps are read from json
-        When the user runs "gpdbrestore -e -T public.ao_part_table -a" with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "-T public.ao_part_table"
         Then gpdbrestore should return a return code of 0
         And verify that there is no table "public.heap_table" in "bkdb95"
         And verify that there is a "ao" table "public.ao_part_table" in "bkdb95" with data
@@ -905,7 +905,7 @@ Feature: Validate command line arguments
         Given the old timestamps are read from json
         And the backup test is initialized with database "bkdb96"
         And there is a "heap" table "public.heap_table" in "bkdb96" with data
-        When the user runs "gpdbrestore -T public.ao_index_table -a" with the stored timestamp
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T public.ao_index_table"
         Then gpdbrestore should return a return code of 0
         And verify that there is a "ao" table "public.ao_index_table" in "bkdb96" with data
         And verify that the restored table "public.ao_index_table" in database "bkdb96" is analyzed
@@ -913,7 +913,7 @@ Feature: Validate command line arguments
 
     Scenario: 97 Full Backup with multiple -S option and Restore
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that there is no table "schema_heap.heap_table" in "bkdb97"
         And verify that there is no table "testschema.heap_table" in "bkdb97"
@@ -921,21 +921,21 @@ Feature: Validate command line arguments
 
     Scenario: 98 Full Backup with option -S and Restore
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that there is no table "schema_heap.heap_table" in "bkdb98"
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb98" with data
 
     Scenario: 99 Full Backup with option -s and Restore
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb99" with data
         And verify that there is no table "schema_ao.ao_part_table" in "bkdb99"
 
     Scenario: 100 Full Backup with option --exclude-schema-file and Restore
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb100" with data
         And verify that there is no table "schema_ao.ao_part_table" in "bkdb100"
@@ -943,7 +943,7 @@ Feature: Validate command line arguments
 
     Scenario: 101 Full Backup with option --schema-file and Restore
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb101" with data
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb101" with data
@@ -954,7 +954,7 @@ Feature: Validate command line arguments
         And the backup test is initialized with database "bkdb106"
         And schema "schema_ao, schema_new" exists in "bkdb106"
         And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb106" with data
-        When the user runs "gpdbrestore --change-schema=schema_new -a --table-file 106_include_file" with the stored timestamp
+        When the user runs gpdbrestore without -e with the stored timestamp and options "--change-schema=schema_new --table-file 106_include_file"
         Then gpdbrestore should return a return code of 0
         And verify that there is a table "schema_new.heap_table" of "heap" type in "bkdb106" with same data as table "schema_heap.heap_table"
         And verify that there is a table "schema_new.ao_part_table" of "ao" type in "bkdb106" with same data as table "schema_ao.ao_part_table"
@@ -964,46 +964,46 @@ Feature: Validate command line arguments
         And the backup test is initialized with database "bkdb107"
         And schema "schema_ao, schema_new" exists in "bkdb107"
         And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb107" with data
-        When the user runs "gpdbrestore --change-schema=schema_new -a --table-file 107_include_file" with the stored timestamp
+        When the user runs gpdbrestore without -e with the stored timestamp and options "--change-schema=schema_new --table-file 107_include_file"
         Then gpdbrestore should return a return code of 0
         And verify that there is a table "schema_new.heap_table" of "heap" type in "bkdb107" with same data as table "schema_heap.heap_table"
         And verify that there is a table "schema_new.ao_part_table" of "ao" type in "bkdb107" with same data as table "schema_ao.ao_part_table"
 
     Scenario: 108 Full backup and restore with statistics
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--restore-stats"
+        When the user runs gpdbrestore -e with the stored timestamp and options "--restore-stats"
         Then gpdbrestore should return a return code of 0
         And verify that the restored table "public.heap_table" in database "bkdb108" is analyzed
         And verify that the restored table "public.ao_part_table" in database "bkdb108" is analyzed
         And database "bkdb108" is dropped and recreated
         And there is a "heap" table "public.heap_table" in "bkdb108" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb108" with data
-        When the user runs gpdbrestore with the stored timestamp and options "--restore-stats only"
+        When the user runs gpdbrestore -e with the stored timestamp and options "--restore-stats only"
         Then gpdbrestore should return a return code of 2
-        When the user runs gpdbrestore with the stored timestamp and options "--restore-stats only" without -e option
+        When the user runs gpdbrestore without -e with the stored timestamp and options "--restore-stats only"
         Then gpdbrestore should return a return code of 0
         And verify that the restored table "public.heap_table" in database "bkdb108" is analyzed
         And verify that the restored table "public.ao_part_table" in database "bkdb108" is analyzed
 
     Scenario: 109 Backup and restore with statistics and table filters
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-T public.heap_index_table --noanalyze"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-T public.heap_index_table --noanalyze"
         Then gpdbrestore should return a return code of 0
-        When the user runs gpdbrestore with the stored timestamp and options "--restore-stats -T public.heap_table" without -e option
+        When the user runs gpdbrestore without -e with the stored timestamp and options "--restore-stats -T public.heap_table"
         Then gpdbrestore should return a return code of 0
         And verify that the table "public.heap_index_table" in database "bkdb109" is not analyzed
         And verify that the restored table "public.heap_table" in database "bkdb109" is analyzed
 
     Scenario: 110 Restoring a nonexistent table should fail with clear error message
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-T public.heap_table2 -q"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-T public.heap_table2 -q"
         Then gpdbrestore should return a return code of 2
-        Then gpdbrestore should print Tables \[\'public.heap_table2\'\] to stdout
-        Then gpdbrestore should not print Issue with 'ANALYZE' of restored table 'public.heap_table2' in 'bkdb110' database to stdout
+        Then gpdbrestore should print "Tables \[\'public.heap_table2\'\]" to stdout
+        Then gpdbrestore should not print "Issue with 'ANALYZE' of restored table 'public.heap_table2' in 'bkdb110' database" to stdout
 
     Scenario: 111 Full Backup with option --schema-file with prefix option and Restore
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--prefix=foo"
+        When the user runs gpdbrestore -e with the stored timestamp and options "--prefix=foo"
         Then gpdbrestore should return a return code of 0
         And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb111" with data
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb111" with data
@@ -1011,25 +1011,25 @@ Feature: Validate command line arguments
 
     Scenario: 112 Simple Full Backup with AO/CO statistics w/ filter
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--noaostats"
+        When the user runs gpdbrestore -e with the stored timestamp and options "--noaostats"
         Then gpdbrestore should return a return code of 0
         And verify that there are "0" tuples in "bkdb112" for table "public.ao_index_table"
         And verify that there are "0" tuples in "bkdb112" for table "public.ao_table"
-        When the user runs gpdbrestore with the stored timestamp and options "-T public.ao_table" without -e option
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T public.ao_table"
         Then gpdbrestore should return a return code of 0
         And verify that there are "0" tuples in "bkdb112" for table "public.ao_index_table"
         And verify that there are "4380" tuples in "bkdb112" for table "public.ao_table"
 
     Scenario: 113 Simple Full Backup with AO/CO statistics w/ filter schema
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--noaostats"
+        When the user runs gpdbrestore -e with the stored timestamp and options "--noaostats"
         Then gpdbrestore should return a return code of 0
         And verify that there are "0" tuples in "bkdb113" for table "public.ao_index_table"
         And verify that there are "0" tuples in "bkdb113" for table "public.ao_table"
         And verify that there are "0" tuples in "bkdb113" for table "schema_ao.ao_index_table"
         And verify that there are "0" tuples in "bkdb113" for table "schema_ao.ao_part_table"
         And verify that there are "0" tuples in "bkdb113" for table "testschema.ao_foo"
-        When the user runs gpdbrestore with the stored timestamp and options "-S schema_ao -S testschema" without -e option
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-S schema_ao -S testschema"
         Then gpdbrestore should return a return code of 0
         And verify that there are "0" tuples in "bkdb113" for table "public.ao_index_table"
         And verify that there are "0" tuples in "bkdb113" for table "public.ao_table"
@@ -1041,7 +1041,7 @@ Feature: Validate command line arguments
         And verify that there are "730" tuples in "bkdb113" for table "testschema.ao_foo_1_prt_p2_2_prt_3"
         And verify that there are "4380" tuples in "bkdb113" for table "schema_ao.ao_index_table"
         And verify that there are "0" tuples in "bkdb113" for table "schema_ao.ao_part_table"
-        When the user runs gpdbrestore with the stored timestamp and options "-S schema_ao -S testschema --truncate" without -e option
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-S schema_ao -S testschema --truncate"
         Then gpdbrestore should return a return code of 0
         And verify that there are "0" tuples in "bkdb113" for table "public.ao_index_table"
         And verify that there are "0" tuples in "bkdb113" for table "public.ao_table"
@@ -1056,7 +1056,7 @@ Feature: Validate command line arguments
 
     Scenario: 114 Restore with --redirect option should not rely on existance of dumped database
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--redirect=bkdb114"
+        When the user runs gpdbrestore -e with the stored timestamp and options "--redirect=bkdb114"
         Then gpdbrestore should return a return code of 0
         And the database "bkdb114" does not exist
 
@@ -1064,7 +1064,7 @@ Feature: Validate command line arguments
         Given the old timestamps are read from json
         And the backup test is initialized with database "bkdb115"
         When the user runs "psql -c 'CREATE ROLE "Foo%user"' -d bkdb115"
-        And the user runs gpdbrestore with the stored timestamp
+        And the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that the owner of "bkdb115" is "Foo%user"
         And database "bkdb115" is dropped and recreated
@@ -1074,13 +1074,13 @@ Feature: Validate command line arguments
     @ignore_pg_temp
     Scenario: 116 pg_temp should be ignored from gpcrondump --table_file option and -t option when given
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that there are "2190" tuples in "bkdb116" for table "public.foo4"
 
     Scenario: 117 Schema level restore with gpdbrestore -S option for views, sequences, and functions
         Given the old timestamps are read from json
-        When the user runs "gpdbrestore -S s1 -a -e" with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "-S s1"
         Then gpdbrestore should return a return code of 0
         And verify that sequence "id_seq" exists in schema "s1" and database "schema_level_test_db"
         And verify that view "v1" exists in schema "s1" and database "schema_level_test_db"
@@ -1090,7 +1090,7 @@ Feature: Validate command line arguments
 
     Scenario: 118 Backup a database with database-specific configuration
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify that "search_path=daisy" appears in the datconfig for database "bkdb118"
         And verify that "appendonly=true" appears in the datconfig for database "bkdb118"
@@ -1098,14 +1098,14 @@ Feature: Validate command line arguments
 
     Scenario: 120 Simple full backup and restore with special character
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.out"
         And the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
 
     Scenario: 121 gpcrondump with -T option where table name, schema name and database name contains special character
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify with backedup file "121_ao" that there is a "ao" table " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " with data
         And verify with backedup file "121_heap" that there is a "heap" table " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . heap_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " with data
@@ -1116,7 +1116,7 @@ Feature: Validate command line arguments
         Given the old timestamps are read from json
         Given the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_database.sql template1"
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_schema.sql template1"
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And verify with backedup file "122_ao" that there is a "ao" table " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " with data
         And verify with backedup file "122_heap" that there is a "heap" table " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . heap_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " with data
@@ -1127,7 +1127,7 @@ Feature: Validate command line arguments
         Given the old timestamps are read from json
         Given the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_database.sql template1"
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_schema.sql template1"
-        When the user runs gpdbrestore with the stored timestamp and options " " without -e option
+        When the user runs gpdbrestore without -e with the stored timestamp and options " "
         Then gpdbrestore should return a return code of 0
         And verify with backedup file "123_ao" that there is a "ao" table " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " with data
         And verify with backedup file "123_heap" that there is a "heap" table " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . heap_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " with data
@@ -1138,7 +1138,7 @@ Feature: Validate command line arguments
         Given the old timestamps are read from json
         Given the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_database.sql template1"
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_schema.sql template1"
-        When the user runs gpdbrestore with the stored timestamp and options " " without -e option
+        When the user runs gpdbrestore without -e with the stored timestamp and options " "
         Then gpdbrestore should return a return code of 0
         And verify with backedup file "124_ao" that there is a "ao" table " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " with data
         And verify that there is no table " co_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 "
@@ -1146,21 +1146,21 @@ Feature: Validate command line arguments
 
     Scenario: 125 gpcrondump with --schema-file option when schema name and database name contains special character
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.out"
         And verify that the contents of the files "/tmp/special_table_data.out" and "/tmp/125_special_table_data.ans" are identical
         When the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
 
     Scenario: 126 gpcrondump with -s option when schema name and database name contains special character
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.out"
         And verify that the contents of the files "/tmp/special_table_data.out" and "/tmp/126_special_table_data.ans" are identical
         When the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
 
     Scenario: 127 gpcrondump with --exclude-schema-file option when schema name and database name contains special character
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then verify that there is no table " ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 "
         And verify that there is no table " co_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 "
         And verify that there is no table " heap_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 "
@@ -1168,7 +1168,7 @@ Feature: Validate command line arguments
 
     Scenario: 128 gpcrondump with -S option when schema name and database name contains special character
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then verify that there is no table " ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 "
         And verify that there is no table " co_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 "
         And verify that there is no table " heap_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 "
@@ -1176,7 +1176,7 @@ Feature: Validate command line arguments
 
     Scenario: 129 Gpdbrestore with --table-file option when table name, schema name and database name contains special character
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--table-file test/behave/mgmt_utils/steps/data/special_chars/table-file.txt"
+        When the user runs gpdbrestore -e with the stored timestamp and options "--table-file test/behave/mgmt_utils/steps/data/special_chars/table-file.txt"
         Then gpdbrestore should return a return code of 0
         And verify with backedup file "129_ao" that there is a "ao" table " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " with data
         And verify with backedup file "129_heap" that there is a "heap" table " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . heap_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " with data
@@ -1188,14 +1188,14 @@ Feature: Validate command line arguments
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_schema.sql template1"
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/add_schema.sql template1"
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_table.sql template1"
-        When the user runs "gpdbrestore -T " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 "." ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 " --change-schema=" S\`~@#\$%^&*()_-+[{]}|\\;: \\'\"/?><1 " -S " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><2 " " with the stored timestamp
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 "." ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 " --change-schema=" S\`~@#\$%^&*()_-+[{]}|\\;: \\'\"/?><1 " -S " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><2 " "
         Then gpdbrestore should return a return code of 2
-        And gpcrondump should print -S option cannot be used with --change-schema option to stdout
-        When the user runs "gpdbrestore -T " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 "." ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 " --change-schema=" S\`~@#\$%^&*()_-+[{]}|\\;: \\'\"/?><2 " -a --truncate" with the stored timestamp
+        And gpcrondump should print "-S option cannot be used with --change-schema option" to stdout
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 "." ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 " --change-schema=" S\`~@#\$%^&*()_-+[{]}|\\;: \\'\"/?><2 " --truncate"
         Then gpdbrestore should return a return code of 0
         And the user runs command "psql -f  psql -c """select * from \" S\`~@#\$%^&*()_-+[{]}|\\;: \\'\"\"/?><2 \".\" ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"\"/?><1 \" order by 1""" -d " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 "  > /tmp/table_data.out"
         And verify that the contents of the files "/tmp/130_table_data.ans" and "/tmp/table_data.out" are identical
-        When the user runs "gpdbrestore -T " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 "." ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 " -a --truncate" with the stored timestamp
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 "." ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 " --truncate"
         Then gpdbrestore should return a return code of 0
         And the user runs command "psql -f  psql -c """select * from \" S\`~@#\$%^&*()-+[{]}|\\;: \\'\"\"/?><1 \".\" ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"\"/?><1 \" order by 1""" -d " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 "  > /tmp/table_data.out"
         Then verify that the contents of the files "/tmp/130_table_data.ans" and "/tmp/table_data.out" are identical
@@ -1203,7 +1203,7 @@ Feature: Validate command line arguments
 
     Scenario: 131 gpcrondump with --incremental option when table name, schema name and database name contains special character
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.out"
         Then verify that the contents of the files "/tmp/special_table_data.out" and "/tmp/131_special_table_data.ans" are identical
         When the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
@@ -1211,17 +1211,17 @@ Feature: Validate command line arguments
     Scenario: 132 gpdbrestore with --redirect option with special db name, and all table name, schema name and database name contain special character
         Given the old timestamps are read from json
         When the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/drop_special_database.sql template1"
-        When the user runs gpdbrestore with the stored timestamp and options "--redirect " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;2 "" without -e option
+        When the user runs gpdbrestore without -e with the stored timestamp and options "--redirect " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;2 ""
         And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;2 " > /tmp/special_table_data.out"
         Then verify that the contents of the files "/tmp/special_table_data.out" and "/tmp/132_special_table_data.ans" are identical
         When the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;2 ""
 
     Scenario: 133 gpdbrestore, -S option, -S truncate option schema level restore with special chars in schema name
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-S " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 ""
+        When the user runs gpdbrestore -e with the stored timestamp and options "-S " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 ""
         And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.out"
         Then verify that the contents of the files "/tmp/special_table_data.out" and "/tmp/133_special_table_data.ans" are identical
-        When the user runs "gpdbrestore -S " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 " -a --truncate" with the stored timestamp
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-S " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 " --truncate"
         Then gpdbrestore should return a return code of 0
         And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.out"
         Then verify that the contents of the files "/tmp/special_table_data.out" and "/tmp/133_special_table_data.ans" are identical
@@ -1229,35 +1229,35 @@ Feature: Validate command line arguments
     Scenario: 134 gpdbrestore, --noplan option with special chars in database name, schema name, and table name
         Given the old timestamps are read from json
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/truncate_special_ao_table.sql template1"
-        When the user runs gpdbrestore with the stored timestamp and options "--noplan" without -e option
+        When the user runs gpdbrestore without -e with the stored timestamp and options "--noplan"
         And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_ao_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_ao_table_data.out"
         Then verify that the contents of the files "/tmp/special_ao_table_data.out" and "/tmp/134_special_ao_table_data.ans" are identical
 
     Scenario: 135 Gpdbrestore, --change-schema option does not work with -S schema level restore option
         Given the old timestamps are read from json
-        When the user runs "gpdbrestore -T " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 "." ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 " --change-schema=" S\`~@#\$%^&*()_-+[{]}|\\;: \\'\"/?><1 " -S " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><2 " " with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp and options "-T " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 "." ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 " --change-schema=" S\`~@#\$%^&*()_-+[{]}|\\;: \\'\"/?><1 " -S " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><2 " "
         Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print -S option cannot be used with --change-schema option to stdout
+        And gpdbrestore should print "-S option cannot be used with --change-schema option" to stdout
 
     @skip_for_gpdb_43
     Scenario: 136 Backup and restore CAST, with associated function in restored schema, base_file_name=dump_func_name
         Given the old timestamps are read from json
         # No filter
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         And gpdbrestore should return a return code of 0
         Then verify that a cast exists in "bkdb136" in schema "public"
         # Table filter
-        And the user runs gpdbrestore with the stored timestamp and options "-T public.heap_table"
+        And the user runs gpdbrestore -e with the stored timestamp and options "-T public.heap_table"
         And gpdbrestore should return a return code of 0
         Then verify that a cast exists in "bkdb136" in schema "public"
         # Schema filter
-        And the user runs gpdbrestore with the stored timestamp and options "-S public"
+        And the user runs gpdbrestore -e with the stored timestamp and options "-S public"
         And gpdbrestore should return a return code of 0
         Then verify that a cast exists in "bkdb136" in schema "public"
         # Change schema filter
         And database "bkdb136" is dropped and recreated
         And schema "newschema" exists in "bkdb136"
-        When the user runs gpdbrestore with the stored timestamp and options "-T public.heap_table --change-schema newschema" without -e option
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T public.heap_table --change-schema newschema"
         And gpdbrestore should return a return code of 0
         Then verify that a cast exists in "bkdb136" in schema "newschema"
 
@@ -1265,17 +1265,17 @@ Feature: Validate command line arguments
     Scenario: 137 Backup and restore CAST, with associated function in non-restored schema
         Given the old timestamps are read from json
         # Table filter
-        When the user runs gpdbrestore with the stored timestamp and options "-T testschema.heap_table"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-T testschema.heap_table"
         Then gpdbrestore should return a return code of 0
         Then verify that a cast does not exist in "bkdb137" in schema "testschema"
         # Schema filter
-        And the user runs gpdbrestore with the stored timestamp and options "-S testschema"
+        And the user runs gpdbrestore -e with the stored timestamp and options "-S testschema"
         And gpdbrestore should return a return code of 0
         Then verify that a cast does not exist in "bkdb137" in schema "testschema"
         # Change schema filter
         And database "bkdb137" is dropped and recreated
         Given schema "newschema" exists in "bkdb137"
-        When the user runs gpdbrestore with the stored timestamp and options "-T testschema.heap_table --change-schema newschema" without -e option
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T testschema.heap_table --change-schema newschema"
         And gpdbrestore should return a return code of 0
         Then verify that a cast does not exist in "bkdb137" in schema "newschema"
 
@@ -1304,7 +1304,7 @@ Feature: Validate command line arguments
 
     Scenario: 141 Backup with all GUC (system settings) set to defaults will succeed
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp
+        When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
 
         # verify that gucs are set to previous defaults
@@ -1354,28 +1354,28 @@ Feature: Validate command line arguments
 
     Scenario: 142 gpcrondump -u option with include table filtering
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-u /tmp"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-u /tmp"
         And gpdbrestore should return a return code of 0
         Then verify that the data of "2" tables in "bkdb142" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb142"
 
     Scenario: 143 gpcrondump -u option with exclude table filtering
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-u /tmp"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-u /tmp"
         And gpdbrestore should return a return code of 0
         Then verify that the data of "1" tables in "bkdb143" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb143"
 
     Scenario: 144 gpdbrestore -u option with include table filtering
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "-u /tmp -T public.ao_table"
+        When the user runs gpdbrestore -e with the stored timestamp and options "-u /tmp -T public.ao_table"
         And gpdbrestore should return a return code of 0
         Then verify that the data of "1" tables in "bkdb144" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb144"
 
     Scenario: 145 gpcrondump with -u and --prefix option
         Given the old timestamps are read from json
-        When the user runs gpdbrestore with the stored timestamp and options "--prefix=foo --redirect=bkdb145-2 -u /tmp"
+        When the user runs gpdbrestore -e with the stored timestamp and options "--prefix=foo --redirect=bkdb145-2 -u /tmp"
         Then gpdbrestore should return a return code of 0
         And there should be dump files under "/tmp" with prefix "foo"
         And check that there is a "heap" table "public.heap_table" in "bkdb145-2" with same data from "bkdb145"

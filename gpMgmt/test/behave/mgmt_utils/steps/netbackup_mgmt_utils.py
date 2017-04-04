@@ -121,40 +121,8 @@ def impl(context, cmd):
 
     command_str = cmd + " --netbackup-service-host " + netbackup_service_host
     run_command(context, command_str)
-@when('the user runs gpdbrestore with the stored json timestamp using netbackup')
-@then('the user runs gpdbrestore with the stored json timestamp using netbackup')
-def impl(context):
-    if hasattr(context, 'backup_timestamp'):
-        ts = context.backup_timestamp
-    #context.backup_timestamp = _read_timestamp_from_json(context)[-1]
-    if hasattr(context, 'netbackup_service_host'):
-        netbackup_service_host = context.netbackup_service_host
-    command = 'gpdbrestore -e -t %s -a --netbackup-service-host %s' % (context.backup_timestamp, netbackup_service_host)
-    run_gpcommand(context, command)
 
-@when('the user runs gpdbrestore with the stored json timestamp and options "{options}" using netbackup')
-@then('the user runs gpdbrestore with the stored json timestamp and options "{options}" using netbackup')
-def impl(context, options):
-    if hasattr(context, 'backup_timestamp'):
-        ts = context.backup_timestamp
-    #context.backup_timestamp = _read_timestamp_from_json(context)[-1]
-    if hasattr(context, 'netbackup_service_host'):
-        netbackup_service_host = context.netbackup_service_host
-    command = 'gpdbrestore -e -t %s -a %s --netbackup-service-host %s' % (context.backup_timestamp, options, netbackup_service_host)
-    run_gpcommand(context, command)
-
-@when('the user runs gpdbrestore with the stored json timestamp and options "{options}" without -e option using netbackup')
-@then('the user runs gpdbrestore with the stored json timestamp and options "{options}" without -e option using netbackup')
-def impl(context, options):
-    if hasattr(context, 'backup_timestamp'):
-        ts = context.backup_timestamp
-    #context.backup_timestamp = _read_timestamp_from_json(context)[-1]
-    if hasattr(context, 'netbackup_service_host'):
-        netbackup_service_host = context.netbackup_service_host
-    command = 'gpdbrestore -t %s -a %s --netbackup-service-host %s' % (context.backup_timestamp, options, netbackup_service_host)
-    run_gpcommand(context, command)
-
-@when('the user runs gpdbrestore with the stored timestamp using netbackup')
+@when('the user runs gpdbrestore -e with the stored timestamp using netbackup')
 def impl(context):
     if hasattr(context, 'backup_timestamp'):
         ts = context.backup_timestamp
@@ -163,7 +131,7 @@ def impl(context):
     command = 'gpdbrestore -e -a -t ' + ts + " --netbackup-service-host " + netbackup_service_host
     run_gpcommand(context, command)
 
-@when('the user runs gpdbrestore with the stored timestamp and options "{options}" using netbackup')
+@when('the user runs gpdbrestore -e with the stored timestamp and options "{options}" using netbackup')
 def impl(context, options):
     if hasattr(context, 'backup_timestamp'):
         ts = context.backup_timestamp
@@ -175,7 +143,7 @@ def impl(context, options):
         command = 'gpdbrestore -e -t %s %s -a --netbackup-service-host %s' % (ts, options, netbackup_service_host)
     run_gpcommand(context, command)
 
-@when('the user runs gpdbrestore with the stored timestamp and options "{options}" without -e option using netbackup')
+@when('the user runs gpdbrestore without -e with the stored timestamp and options "{options}" using netbackup')
 def impl(context, options):
     if hasattr(context, 'backup_timestamp'):
         ts = context.backup_timestamp
@@ -187,7 +155,7 @@ def impl(context, options):
         command = 'gpdbrestore -t %s %s -a --netbackup-service-host %s' % (context.backup_timestamp, options, netbackup_service_host)
     run_gpcommand(context, command)
 
-@when('the user runs gpdbrestore with "{opt}" option in path "{path}" using netbackup')
+@when('the user runs gpdbrestore -e with "{opt}" option in path "{path}" using netbackup')
 def impl(context, opt, path):
     if hasattr(context, 'netbackup_service_host'):
         netbackup_service_host = context.netbackup_service_host
@@ -361,7 +329,7 @@ def get_timestamps_from_output(context):
     else:
         raise Exception('Timestamp not found %s' % stdout)
 
-@when('the user runs gpdbrestore for the database "{dbname}" with the stored timestamp using netbackup')
+@when('the user runs gpdbrestore -e for the database "{dbname}" with the stored timestamp using netbackup')
 def impl(context, dbname):
     if hasattr(context, 'db_timestamps'):
         db_timestamps = context.db_timestamps

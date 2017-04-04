@@ -3,174 +3,169 @@ Feature: Validate command line arguments
 
     Scenario: Entering an invalid argument
         When the user runs "gpcrondump -X"
-        Then gpcrondump should print no such option: -X error message
+        Then gpcrondump should print "no such option: -X" error message
         And gpcrondump should return a return code of 2
 
     Scenario: Valid option combinations for incremental backup
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         When the user runs "gpcrondump -a --incremental -t public.bkdb -x bkdb"
-        Then gpcrondump should print include table list can not be selected with incremental backup to stdout
+        Then gpcrondump should print "include table list can not be selected with incremental backup" to stdout
         And gpcrondump should return a return code of 2
         And the user runs "gpcrondump -a --incremental -T public.bkdb -x bkdb"
-        And gpcrondump should print exclude table list can not be selected with incremental backup to stdout
+        And gpcrondump should print "exclude table list can not be selected with incremental backup" to stdout
         And gpcrondump should return a return code of 2
         And the user runs "gpcrondump -a --incremental --exclude-table-file /tmp/foo -x bkdb"
-        And gpcrondump should print exclude table file can not be selected with incremental backup to stdout
+        And gpcrondump should print "exclude table file can not be selected with incremental backup" to stdout
         And gpcrondump should return a return code of 2
         And the user runs "gpcrondump -a --incremental --table-file /tmp/foo -x bkdb"
-        And gpcrondump should print include table file can not be selected with incremental backup to stdout
+        And gpcrondump should print "include table file can not be selected with incremental backup" to stdout
         And gpcrondump should return a return code of 2
         And the user runs "gpcrondump -a --incremental -s foo -x bkdb"
-        And gpcrondump should print -s option can not be selected with incremental backup to stdout
+        And gpcrondump should print "-s option can not be selected with incremental backup" to stdout
         And gpcrondump should return a return code of 2
         And the user runs "gpcrondump -a --incremental -c -x bkdb"
-        And gpcrondump should print -c option can not be selected with incremental backup to stdout
+        And gpcrondump should print "-c option can not be selected with incremental backup" to stdout
         And gpcrondump should return a return code of 2
         And the user runs "gpcrondump -a --incremental -f 10 -x bkdb"
-        And gpcrondump should print -f option cannot be selected with incremental backup to stdout
+        And gpcrondump should print "-f option cannot be selected with incremental backup" to stdout
         And gpcrondump should return a return code of 2
         And the user runs "gpcrondump -a --incremental -o -x bkdb"
-        And gpcrondump should print -o option cannot be selected with incremental backup to stdout
+        And gpcrondump should print "-o option cannot be selected with incremental backup" to stdout
         And gpcrondump should return a return code of 2
         And the user runs "gpcrondump --incremental"
-        And gpcrondump should print Must supply -x <database name> with incremental option to stdout
+        And gpcrondump should print "Must supply -x <database name> with incremental option" to stdout
         And gpcrondump should return a return code of 2
         When the user runs "gpcrondump --list-backup-files"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print Must supply -K option when listing backup files to stdout
+        And gpcrondump should print "Must supply -K option when listing backup files" to stdout
         When the user runs "gpcrondump -K 20140101010101 -x bkdb -x fulldb -a"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print multi-database backup is not supported with -K option to stdout
+        And gpcrondump should print "multi-database backup is not supported with -K option" to stdout
         When the user runs "gpcrondump -a --incremental -x bkdb -x fulldb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print multi-database backup is not supported with incremental backup to stdout
+        And gpcrondump should print "multi-database backup is not supported with incremental backup" to stdout
         When the user runs "gpcrondump -a --list-backup-files -K 20130101010101 --ddboost -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print list backup files not supported with ddboost option to stdout
+        And gpcrondump should print "list backup files not supported with ddboost option" to stdout
         When the user runs "gpcrondump -a --list-filter-tables -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print list filter tables option requires --prefix and --incremental to stdout
+        And gpcrondump should print "list filter tables option requires --prefix and --incremental" to stdout
         When the user runs "gpcrondump -a --list-filter-tables -x bkdb --incremental"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print list filter tables option requires --prefix and --incremental to stdout
+        And gpcrondump should print "list filter tables option requires --prefix and --incremental" to stdout
         When the user runs "gpdbrestore --help"
         Then gpcrondump should return a return code of 0
-        And gpcrondump should print noanalyze to stdout
+        And gpcrondump should print "noanalyze" to stdout
 
     Scenario: Valid option combinations for schema level backup
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And schema "schema_heap" exists in "bkdb"
         And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -s schema_heap -t schema_heap.heap_table -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print -t and -T can not be selected with -s option to stdout
+        And gpcrondump should print "-t and -T can not be selected with -s option" to stdout
         When the user runs "gpcrondump -a -S schema_heap -t schema_heap.heap_table -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print -t and -T can not be selected with -S option to stdout
+        And gpcrondump should print "-t and -T can not be selected with -S option" to stdout
         When the user runs "gpcrondump -a --schema-file /tmp/foo -t schema_heap.heap_table -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print -t and -T can not be selected with --schema-file option to stdout
+        And gpcrondump should print "-t and -T can not be selected with --schema-file option" to stdout
         When the user runs "gpcrondump -a --exclude-schema-file /tmp/foo -t schema_heap.heap_table -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print -t and -T can not be selected with --exclude-schema-file option to stdout
+        And gpcrondump should print "-t and -T can not be selected with --exclude-schema-file option" to stdout
         When the user runs "gpcrondump -a -s schema_heap -T schema_heap.heap_table -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print -t and -T can not be selected with -s option to stdout
+        And gpcrondump should print "-t and -T can not be selected with -s option" to stdout
         When the user runs "gpcrondump -a -S schema_heap -T schema_heap.heap_table -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print -t and -T can not be selected with -S option to stdout
+        And gpcrondump should print "-t and -T can not be selected with -S option" to stdout
         When the user runs "gpcrondump -a --schema-file /tmp/foo -T schema_heap.heap_table -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print -t and -T can not be selected with --schema-file option to stdout
+        And gpcrondump should print "-t and -T can not be selected with --schema-file option" to stdout
         When the user runs "gpcrondump -a --exclude-schema-file /tmp/foo -T schema_heap.heap_table -x bkdb"
         Then gpcrondump should return a return code of 2
         When the user runs "gpcrondump -a -s schema_heap --table-file /tmp/foo -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print --table-file and --exclude-table-file can not be selected with -s option to stdout
+        And gpcrondump should print "--table-file and --exclude-table-file can not be selected with -s option" to stdout
         When the user runs "gpcrondump -a -S schema_heap --table-file /tmp/foo -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print --table-file and --exclude-table-file can not be selected with -S option to stdout
+        And gpcrondump should print "--table-file and --exclude-table-file can not be selected with -S option" to stdout
         When the user runs "gpcrondump -a --schema-file /tmp/foo --table-file /tmp/foo -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print --table-file and --exclude-table-file can not be selected with --schema-file option to stdout
+        And gpcrondump should print "--table-file and --exclude-table-file can not be selected with --schema-file option" to stdout
         When the user runs "gpcrondump -a --exclude-schema-file /tmp/foo --table-file /tmp/foo -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print --table-file and --exclude-table-file can not be selected with --exclude-schema-file option to stdout
+        And gpcrondump should print "--table-file and --exclude-table-file can not be selected with --exclude-schema-file option" to stdout
         When the user runs "gpcrondump -a -s schema_heap --exclude-table-file /tmp/foo -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print --table-file and --exclude-table-file can not be selected with -s option to stdout
+        And gpcrondump should print "--table-file and --exclude-table-file can not be selected with -s option" to stdout
         When the user runs "gpcrondump -a -S schema_heap --exclude-table-file /tmp/foo -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print --table-file and --exclude-table-file can not be selected with -S option to stdout
+        And gpcrondump should print "--table-file and --exclude-table-file can not be selected with -S option" to stdout
         When the user runs "gpcrondump -a --schema-file /tmp/foo --exclude-table-file /tmp/foo -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print --table-file and --exclude-table-file can not be selected with --schema-file option to stdout
+        And gpcrondump should print "--table-file and --exclude-table-file can not be selected with --schema-file option" to stdout
         When the user runs "gpcrondump -a --exclude-schema-file /tmp/foo --exclude-table-file /tmp/foo -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print --table-file and --exclude-table-file can not be selected with --exclude-schema-file option to stdout
+        And gpcrondump should print "--table-file and --exclude-table-file can not be selected with --exclude-schema-file option" to stdout
         When the user runs "gpcrondump -a --exclude-schema-file /tmp/foo --schema-file /tmp/foo -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print --exclude-schema-file can not be selected with --schema-file option to stdout
+        And gpcrondump should print "--exclude-schema-file can not be selected with --schema-file option" to stdout
         When the user runs "gpcrondump -a --exclude-schema-file /tmp/foo -s schema_heap.heap_table -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print -s can not be selected with --exclude-schema-file option to stdout
+        And gpcrondump should print "-s can not be selected with --exclude-schema-file option" to stdout
         When the user runs "gpcrondump -a --schema-file /tmp/foo -s schema_heap.heap_table -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print -s can not be selected with --schema-file option to stdout
+        And gpcrondump should print "-s can not be selected with --schema-file option" to stdout
         When the user runs "gpcrondump -a --exclude-schema-file /tmp/foo -S schema_heap.heap_table -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print -S can not be selected with --exclude-schema-file option to stdout
+        And gpcrondump should print "-S can not be selected with --exclude-schema-file option" to stdout
         When the user runs "gpcrondump -a --schema-file /tmp/foo -S schema_heap.heap_table -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print -S can not be selected with --schema-file option to stdout
+        And gpcrondump should print "-S can not be selected with --schema-file option" to stdout
         When the user runs "gpcrondump -a -s schema_heap -S schema_heap -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print -s can not be selected with -S option to stdout
+        And gpcrondump should print "-s can not be selected with -S option" to stdout
         When the user runs "gpcrondump -a --schema-file /tmp/foo --exclude-schema-file /tmp/bar -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print --exclude-schema-file can not be selected with --schema-file option to stdout
+        And gpcrondump should print "--exclude-schema-file can not be selected with --schema-file option" to stdout
         And the user runs "psql -c 'drop schema schema_heap cascade;' bkdb"
 
     Scenario: Valid option combinations for gpdbrestore
         When the user runs "gpdbrestore -t 20140101010101 --truncate -a"
         Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print --truncate can be specified only with -S, -T, or --table-file option to stdout
+        And gpdbrestore should print "--truncate can be specified only with -S, -T, or --table-file option" to stdout
         When the user runs "gpdbrestore -t 20140101010101 --truncate -e -T public.foo -a"
         Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print Cannot specify --truncate and -e together to stdout
+        And gpdbrestore should print "Cannot specify --truncate and -e together" to stdout
         And there is a table-file "/tmp/table_file_foo" with tables "public.ao_table, public.co_table"
         And the user runs "gpdbrestore -t 20140101010101 -T public.ao_table --table-file /tmp/table_file_foo"
         Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print Cannot specify -T and --table-file together to stdout
+        And gpdbrestore should print "Cannot specify -T and --table-file together" to stdout
         Then the file "/tmp/table_file_foo" is removed from the system
         When the user runs "gpdbrestore -u /tmp --ddboost -s bkdb"
         Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print -u cannot be used with DDBoost parameters to stdout
+        And gpdbrestore should print "-u cannot be used with DDBoost parameters" to stdout
 
     Scenario: Negative test for Incremental Backup
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         When the user runs "gpcrondump -a --incremental -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print No full backup found for incremental to stdout
+        And gpcrondump should print "No full backup found for incremental" to stdout
 
     Scenario: Negative test for Incremental Backup - Incremental with -u after a full backup to default directory
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And the directory "/tmp/backup_test" exists
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the user runs "gpcrondump -a --incremental -x bkdb -u /tmp/backup_test"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print No full backup found for incremental to stdout
+        And gpcrondump should print "No full backup found for incremental" to stdout
         And the directory "/tmp/backup_test" does not exist
 
     Scenario: Negative test for Incremental Backup - Incremental to default directory after a full backup with -u option
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And the directory "/tmp/full_test" exists
         And the directory "/tmp/incr_test" exists
         And there is a "heap" table "public.heap_table" in "bkdb" with data
@@ -178,24 +173,22 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And the user runs "gpcrondump -a --incremental -x bkdb -u /tmp/incr_test"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print No full backup found for incremental to stdout
+        And gpcrondump should print "No full backup found for incremental" to stdout
         And the directory "/tmp/full_test" does not exist
         And the directory "/tmp/incr_test" does not exist
 
     Scenario: Negative test for Incremental Backup - Incremental after a full backup of different database
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And database "bkdb2" is dropped and recreated
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the user runs "gpcrondump -a --incremental -x bkdb2"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print No full backup found for incremental to stdout
+        And gpcrondump should print "No full backup found for incremental" to stdout
 
     Scenario: Negative test for missing state file
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the full backup timestamp from gpcrondump is stored
@@ -204,11 +197,10 @@ Feature: Validate command line arguments
         And the saved state file is deleted
         When the user runs "gpcrondump -a --incremental -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print state file does not exist to stdout
+        And gpcrondump should print "state file does not exist" to stdout
 
     Scenario: Negative test for invalid state file format
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "ao" table "public.ao_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
@@ -218,11 +210,10 @@ Feature: Validate command line arguments
         And the saved state file is corrupted
         When the user runs "gpcrondump -a --incremental -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print Invalid state file format to stdout
+        And gpcrondump should print "Invalid state file format" to stdout
 
     Scenario: Increments File Check With Complicated Scenario
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And database "bkdb2" is dropped and recreated
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
         And there is a "heap" table "public.heap_table" in "bkdb2" with data
@@ -240,8 +231,7 @@ Feature: Validate command line arguments
         And verify that the incremental file has all the stored timestamps
 
     Scenario: Incremental File Check With Different Directory
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And database "bkdb2" is dropped and recreated
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
         And there is a "heap" table "public.heap_table" in "bkdb2" with data
@@ -263,36 +253,33 @@ Feature: Validate command line arguments
         And verify that the incremental file in "/tmp" has all the stored timestamps
 
     Scenario: gpcrondump -b with Full and Incremental backup
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "ao" table "public.ao_index_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -b"
         Then gpcrondump should return a return code of 0
-        And gpcrondump should print Bypassing disk space check to stdout
-        And gpcrondump should not print Validating disk space to stdout
+        And gpcrondump should print "Bypassing disk space check" to stdout
+        And gpcrondump should not print "Validating disk space" to stdout
         And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
         When the user runs "gpcrondump -a -x bkdb -b --incremental"
         Then gpcrondump should return a return code of 0
-        And gpcrondump should print Bypassing disk space checks for incremental backup to stdout
-        And gpcrondump should not print Validating disk space to stdout
+        And gpcrondump should print "Bypassing disk space checks for incremental backup" to stdout
+        And gpcrondump should not print "Validating disk space" to stdout
 
     Scenario: Output info gpcrondump
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" table "public.ao_index_table" in "bkdb" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
-        And gpcrondump should print Dump type                                = Full to stdout
+        And gpcrondump should print "Dump type                                = Full" to stdout
         And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
         When the user runs "gpcrondump -a -x bkdb --incremental"
         Then gpcrondump should return a return code of 0
-        And gpcrondump should print Dump type                                = Incremental to stdout
+        And gpcrondump should print "Dump type                                = Incremental" to stdout
 
     Scenario: gpcrondump -G with Full timestamp
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" table "public.ao_index_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -G"
@@ -307,8 +294,7 @@ Feature: Validate command line arguments
 
     @valgrind
     Scenario: Valgrind test of gp_dump incremental
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
         And a backup file of tables "public.heap_table, public.ao_part_table" in "bkdb" exists for validation
@@ -318,8 +304,7 @@ Feature: Validate command line arguments
 
     @valgrind
     Scenario: Valgrind test of gp_dump incremental with table file
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" table "public.ao_table" in "bkdb" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
@@ -332,8 +317,7 @@ Feature: Validate command line arguments
 
     @valgrind
     Scenario: Valgrind test of gp_dump full with table file
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" table "public.ao_table" in "bkdb" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
@@ -346,8 +330,7 @@ Feature: Validate command line arguments
 
     @valgrind
     Scenario: Valgrind test of gp_dump_agent incremental with table file
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" table "public.ao_table" in "bkdb" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
@@ -360,8 +343,7 @@ Feature: Validate command line arguments
 
     @valgrind
     Scenario: Valgrind test of gp_dump_agent full with table file
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" table "public.ao_table" in "bkdb" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
@@ -374,8 +356,7 @@ Feature: Validate command line arguments
 
     @valgrind
     Scenario: Valgrind test of gp_dump_agent incremental
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
         And a backup file of tables "public.heap_table, public.ao_part_table" in "bkdb" exists for validation
@@ -384,8 +365,7 @@ Feature: Validate command line arguments
         And the user runs valgrind with "gp_dump_agent --gp-k 11111111111111_-1_1_ --gp-d /tmp --pre-data-schema-only bkdb --incremental" and options " "
 
     Scenario: Test gpcrondump dump deletion only (-o option)
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And the user runs "gpcrondump -a -x bkdb"
         And the full backup timestamp from gpcrondump is stored
@@ -407,32 +387,30 @@ Feature: Validate command line arguments
         And the dump directory for the stored timestamp should exist
 
     Scenario: Negative test gpcrondump dump deletion only (-o option)
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" with compression "None" in "bkdb" with data
         And the user runs "gpcrondump -a -x bkdb"
         And the full backup timestamp from gpcrondump is stored
         And gpcrondump should return a return code of 0
         When the user runs "gpcrondump -o"
         Then gpcrondump should return a return code of 0
-        And gpcrondump should print No old backup sets to remove to stdout
+        And gpcrondump should print "No old backup sets to remove" to stdout
         And older backup directories "20130101" exists
         When the user runs "gpcrondump -o --cleanup-date=20130100"
         Then gpcrondump should return a return code of 0
-        And gpcrondump should print Timestamp dump 20130100 does not exist. to stdout
+        And gpcrondump should print "Timestamp dump 20130100 does not exist." to stdout
         When the user runs "gpcrondump -o --cleanup-total=2"
         Then gpcrondump should return a return code of 0
-        And gpcrondump should print Unable to delete 2 backups.  Only have 1 backups. to stdout
+        And gpcrondump should print "Unable to delete 2 backups.  Only have 1 backups." to stdout
         When the user runs "gpcrondump --cleanup-date=20130100"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print Must supply -c or -o with --cleanup-date option to stdout
+        And gpcrondump should print "Must supply -c or -o with --cleanup-date option" to stdout
         When the user runs "gpcrondump --cleanup-total=2"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print Must supply -c or -o with --cleanup-total option to stdout
+        And gpcrondump should print "Must supply -c or -o with --cleanup-total option" to stdout
 
     Scenario: Test gpcrondump dump deletion (-c option)
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" with compression "None" in "bkdb" with data
         And the user runs "gpcrondump -a -x bkdb"
         And the full backup timestamp from gpcrondump is stored
@@ -456,16 +434,14 @@ Feature: Validate command line arguments
         And the dump directory for the stored timestamp should exist
 
     Scenario: Verify the gpcrondump -g option works with full backup
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         When the user runs "gpcrondump -a -x bkdb -g"
         And the timestamp from gpcrondump is stored
         Then gpcrondump should return a return code of 0
         And config files should be backed up on all segments
 
     Scenario: Verify the gpcrondump -g option works with incremental backup
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         When the user runs "gpcrondump -a -x bkdb -g --incremental"
@@ -474,8 +450,7 @@ Feature: Validate command line arguments
         And config files should be backed up on all segments
 
     Scenario: Verify the gpcrondump history table works by default with full and incremental backups
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And schema "testschema" exists in "bkdb"
         And there is a "ao" table "testschema.ao_table" in "bkdb" with data
         And there is a "co" table "testschema.co_table" in "bkdb" with data
@@ -492,8 +467,7 @@ Feature: Validate command line arguments
         And verify that the table "gpcrondump_history" in "bkdb" has dump info for the stored timestamp
 
     Scenario: Verify the gpcrondump -H option should not create history table
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And schema "testschema" exists in "bkdb"
         And there is a "ao" table "testschema.ao_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -H"
@@ -501,15 +475,13 @@ Feature: Validate command line arguments
         Then verify that there is no table "public.gpcrondump_history" in "bkdb"
 
     Scenario: Verify the gpcrondump -H and -h option can not be specified together with DDBoost
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         When the user runs "gpcrondump -a -x bkdb -H -h --ddboost"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print -H option cannot be selected with -h option to stdout
+        And gpcrondump should print "-H option cannot be selected with -h option" to stdout
 
     Scenario: Config files have the same timestamp as the backup set
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And a backup file of tables "public.heap_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb -g"
@@ -518,10 +490,9 @@ Feature: Validate command line arguments
         And verify that the config files are backed up with the stored timestamp
 
     Scenario Outline: Incremental Backup With column-inserts, inserts and oids options
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         When the user runs "gpcrondump -a --incremental -x bkdb <options>"
-        Then gpcrondump should print --inserts, --column-inserts, --oids cannot be selected with incremental backup to stdout
+        Then gpcrondump should print "--inserts, --column-inserts, --oids cannot be selected with incremental backup" to stdout
         And gpcrondump should return a return code of 2
         Examples:
         | options         |
@@ -530,16 +501,15 @@ Feature: Validate command line arguments
         | --column-inserts |
 
     Scenario: Full and Incremental Backup with -g option using named pipes
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" with compression "None" in "bkdb" with data
         And there is a "ao" partition table "public.ao_part_table" with compression "None" in "bkdb" with data
         And a backup file of tables "public.heap_table, public.ao_part_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb --list-backup-files -K 20130101010101 -g"
         Then gpcrondump should return a return code of 0
-        And gpcrondump should print Added the list of pipe names to the file to stdout
-        And gpcrondump should print Added the list of file names to the file to stdout
-        And gpcrondump should print Successfully listed the names of backup files and pipes to stdout
+        And gpcrondump should print "Added the list of pipe names to the file" to stdout
+        And gpcrondump should print "Added the list of file names to the file" to stdout
+        And gpcrondump should print "Successfully listed the names of backup files and pipes" to stdout
         And the timestamp key "20130101010101" for gpcrondump is stored
         And "pipes" file should be created under " "
         And "regular_files" file should be created under " "
@@ -554,18 +524,16 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
 
     Scenario: Full Backup with option -t and non-existant table
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
         And a backup file of tables "public.heap_table, public.ao_part_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb -t cool.dude -t public.heap_table"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print does not exist in to stdout
+        And gpcrondump should print "does not exist in" to stdout
 
     Scenario: Full Backup and Restore using gp_dump with no-lock
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" with compression "None" in "bkdb" with data and 1000000 rows
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
         And a backup file of tables "public.heap_table, public.ao_part_table" in "bkdb" exists for validation
@@ -575,8 +543,7 @@ Feature: Validate command line arguments
         Then gp_dump should return a return code of 0
 
     Scenario: Gpcrondump with --email-file option
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And database "testdb1" is dropped and recreated
         And database "testdb2" is dropped and recreated
         And there is a "heap" table "public.heap_table" in "testdb1" with data
@@ -590,45 +557,42 @@ Feature: Validate command line arguments
         And the mail_contacts file does not exist
 
     Scenario: Gpcrondump without mail_contacts
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And the mail_contacts file does not exist
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
-        And gpcrondump should print unable to send dump email notification to stdout as warning
+        And gpcrondump should print "Unable to send dump email notification" to stdout
 
     Scenario: Negative case for gpcrondump with --email-file option
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And the mail_contacts file does not exist
         And the mail_contacts file exists
         And the yaml file "test/behave/mgmt_utils/steps/data/test_email_details_wrong_format.yaml" stores email details is not in proper format
         When the user runs "gpcrondump -a -x bkdb --email-file test/behave/mgmt_utils/steps/data/test_email_details_wrong_format.yaml --verbose"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print file is not formatted properly to stdout
+        And gpcrondump should print "file is not formatted properly" to stdout
         And the mail_contacts file does not exist
 
     Scenario: Gpcrondump, --table-file, --exclude-table-file, --schema-file and --exclude-schema-file if file contains double quoted table and schema name then gpcrondump should error out finding table does not exists
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_database.sql template1"
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_schema.sql template1"
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_table.sql template1"
         # --table-file=<filename> option
         When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " --table-file test/behave/mgmt_utils/steps/data/special_chars/table-file-double-quote.txt"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print does not exist to stdout
+        And gpcrondump should print "does not exist" to stdout
         # --exclude-table-file=<filename> option
         When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " --exclude-table-file test/behave/mgmt_utils/steps/data/special_chars/table-file-double-quote.txt"
         Then gpcrondump should return a return code of 0
-        And gpcrondump should print does not exist to stdout
-        And gpcrondump should print All exclude table names have been removed due to issues to stdout
+        And gpcrondump should print "does not exist" to stdout
+        And gpcrondump should print "All exclude table names have been removed due to issues" to stdout
         # --schema-file
         When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " --schema-file test/behave/mgmt_utils/steps/data/special_chars/schema-file-double-quote.txt"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print does not exist to stdout
+        And gpcrondump should print "does not exist" to stdout
         # --exclude-schema-file
         When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " --exclude-schema-file test/behave/mgmt_utils/steps/data/special_chars/schema-file-double-quote.txt"
         Then gpcrondump should return a return code of 0
@@ -636,16 +600,14 @@ Feature: Validate command line arguments
 
 
     Scenario: Absolute path should be provided with -u option for gpcrondump
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -u foo/db"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print is not an absolute path to stdout
+        And gpcrondump should print "is not an absolute path" to stdout
 
     Scenario: Tables with same name but different partitioning should not pollute one another's dump during backup
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And schema "withpartition" exists in "bkdb"
         And schema "withoutpartition" exists in "bkdb"
         And schema "aaa" exists in "bkdb"
@@ -665,8 +627,7 @@ Feature: Validate command line arguments
         Then verify the metadata dump file does contain "ALTER TABLE rank_1_prt_p2 SET SCHEMA aaa"
 
     Scenario: Exclude schema (-S) should not dump pg_temp schemas
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And the user runs the command "psql bkdb -f 'test/behave/mgmt_utils/steps/data/gpcrondump/create_temp_schema_in_transaction.sql'" in the background without sleep
         When the user runs "gpcrondump -a -S good_schema -x bkdb"
         Then gpcrondump should return a return code of 0
@@ -678,42 +639,40 @@ Feature: Validate command line arguments
         And the user runs command "dropdb bkdb"
 
     Scenario: Funny characters in the table name or schema name for gpcrondump
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And the database "testdb" does not exist
         And database "testdb" exists
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/funny_char.sql testdb"
         When the user runs command "gpcrondump -a -x testdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print Name has an invalid character "\\t" "\\n" "!" "," "." to stdout
+        And gpcrondump should print "Name has an invalid character "\\t" "\\n" "!" "," "."" to stdout
         When the user runs command "gpcrondump -a -x testdb -t Schema\\t,1.Table\\n\!1"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print Name has an invalid character "\\t" "\\n" "!" "," "." to stdout
+        And gpcrondump should print "Name has an invalid character "\\t" "\\n" "!" "," "."" to stdout
         When the user runs command "gpcrondump -a -x testdb -T Schema\\t,1.Table\\n\!1"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print Name has an invalid character "\\t" "\\n" "!" "," "." to stdout
+        And gpcrondump should print "Name has an invalid character "\\t" "\\n" "!" "," "."" to stdout
         When the user runs command "gpcrondump -a -x testdb -s Schema\\t,1"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print Name has an invalid character "\\t" "\\n" "!" "," "." to stdout
+        And gpcrondump should print "Name has an invalid character "\\t" "\\n" "!" "," "."" to stdout
         When the user runs command "gpcrondump -a -x testdb -S Schema\\t,1"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print Name has an invalid character "\\t" "\\n" "!" "," "." to stdout
+        And gpcrondump should print "Name has an invalid character "\\t" "\\n" "!" "," "."" to stdout
         When the user runs command "gpcrondump -a -x testdb --table-file test/behave/mgmt_utils/steps/data/special_chars/funny_char_table.txt"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print Name has an invalid character "\\t" "\\n" "!" "," "." to stdout
+        And gpcrondump should print "Name has an invalid character "\\t" "\\n" "!" "," "."" to stdout
         When the user runs command "gpcrondump -a -x testdb --exclude-table-file test/behave/mgmt_utils/steps/data/special_chars/funny_char_table.txt"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print Name has an invalid character "\\t" "\\n" "!" "," "." to stdout
+        And gpcrondump should print "Name has an invalid character "\\t" "\\n" "!" "," "."" to stdout
         When the user runs command "gpcrondump -a -x testdb --schema-file test/behave/mgmt_utils/steps/data/special_chars/funny_char_schema.txt"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print Name has an invalid character "\\t" "\\n" "!" "," "." to stdout
+        And gpcrondump should print "Name has an invalid character "\\t" "\\n" "!" "," "."" to stdout
         When the user runs command "gpcrondump -a -x testdb --exclude-schema-file test/behave/mgmt_utils/steps/data/special_chars/funny_char_schema.txt"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print Name has an invalid character "\\t" "\\n" "!" "," "." to stdout
+        And gpcrondump should print "Name has an invalid character "\\t" "\\n" "!" "," "."" to stdout
 
     Scenario: Incremental backup with no-privileges
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And the user runs "psql -c 'DROP ROLE IF EXISTS temprole; CREATE ROLE temprole; GRANT ALL ON public.heap_table TO temprole;' bkdb"
         Then psql should return a return code of 0
@@ -725,8 +684,7 @@ Feature: Validate command line arguments
         And the user runs "psql -c 'DROP ROLE temprole;' bkdb"
 
     Scenario: Incremental backup with use-set-session-authorization
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb --use-set-session-authorization"
         Then gpcrondump should return a return code of 0
@@ -735,8 +693,7 @@ Feature: Validate command line arguments
         Then verify the metadata dump file does not contain "ALTER TABLE * OWNER TO"
 
     Scenario: gpcrondump with -u, -G, and -g
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" table "public.ao_index_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -G -g -u /tmp"
@@ -746,16 +703,14 @@ Feature: Validate command line arguments
         And config files should be backed up on all segments in directory "/tmp"
 
     Scenario: Out of Sync timestamp
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files
         And there is a "ao" table "public.ao_table" in "bkdb" with data
         And there is a "co" table "public.co_table" in "bkdb" with data
         And there is a list to store the incremental backup timestamps
         And there is a fake timestamp for "30160101010101"
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print There is a future dated backup on the system preventing new backups to stdout
+        And gpcrondump should print "There is a future dated backup on the system preventing new backups" to stdout
 
     Scenario: The test suite is torn down
-        Given the backup test is initialized
-        And there are no backup files
+        Given the backup test is initialized with no backup files

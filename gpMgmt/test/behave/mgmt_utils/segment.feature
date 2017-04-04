@@ -11,7 +11,7 @@ Feature: behave test for gpdb segment
         When the user runs client program "fake_gpfdist.py -p 8088 -m NoResponse &" from "test/behave/mgmt_utils/steps/data" under CWD
         And a "writable" external table "wrt" is created on file "test" in "testdb"
         And the user runs command "psql -d testdb -c 'insert into wrt values(1)'"
-        Then the client program should print failed to send request error message
+        Then the client program should print "failed to send request" error message
         And the "-f python.*fake_gpfdist.py.*-p.*8088" process is killed
 
     @gpsegment_consective_sequence_number
@@ -27,7 +27,7 @@ Feature: behave test for gpdb segment
         And a "writable" external table "wrt" is created on file "test" in "testdb"
         And the user runs command "psql -d testdb -c 'insert into wrt values(1)'"
         And the user runs command "cat ./extdata/fake_gpfdist.log"
-        Then the client program should print TestSequence succeeded to stdout
+        Then the client program should print "TestSequence succeeded" to stdout
      
     @gpsegment_resend_sequence_number
     Scenario: Validate gpdb segment should resend with same sequence number if 408 
@@ -42,7 +42,7 @@ Feature: behave test for gpdb segment
         And a "writable" external table "wrt" is created on file "test" in "testdb"
         And the user runs command "psql -d testdb -c 'insert into wrt values(1)'"
         And the user runs command "cat ./extdata/fake_gpfdist.log"
-        Then the client program should print TestBadResponse succeeded to stdout
+        Then the client program should print "TestBadResponse succeeded" to stdout
     
     Scenario: Validate gpdb segment should timeout when set readable_external_table_timeout if gpfdist doesn't response
         Given the database is running
@@ -59,7 +59,7 @@ Feature: behave test for gpdb segment
         And the user runs command "psql -d testdb -c 'select * from ret' & echo $! > extdata/psql.pid"
         And the user runs command "sleep 70"
         And the user runs command "ps -ef|grep psql|grep -v grep|awk '{print $2}'|grep `cat extdata/psql.pid`|wc -l"
-        Then the client program should print 0 to stdout
+        Then the client program should print "0" to stdout
         And the "-f python.*fake_gpfdist.py.*-p.*8088" process is killed
 
     Scenario: Validate gpdb segment should not timeout when not set readable_external_table_timeout if gpfdist doesn't response
@@ -77,6 +77,6 @@ Feature: behave test for gpdb segment
         And the user runs command "psql -d testdb -c 'select * from ret' & echo $! > extdata/psql.pid"
         And the user runs command "sleep 70"
         And the user runs command "ps -ef|grep psql|grep -v grep|awk '{print $2}'|grep `cat extdata/psql.pid`|wc -l"
-        Then the client program should print 1 to stdout
+        Then the client program should print "1" to stdout
         And the "-f python.*fake_gpfdist.py.*-p.*8088" process is killed
         And the "-f psql.*-d.*testdb.*-c" process is killed

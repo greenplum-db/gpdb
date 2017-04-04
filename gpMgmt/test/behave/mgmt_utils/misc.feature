@@ -8,7 +8,7 @@ Feature: Miscellaneous tests which do not belong to mgmt utilities
         And the user runs "gpstop -ar"
         And gpstart should return a return code of 0
         When the user runs "psql -c 'show pgstat_track_activity_query_size' template1"
-        Then psql should print 1050 to stdout 
+        Then psql should print "1050" to stdout 
         
     Scenario: Set size of current_query in pg_stat_activity table to invalid value 
         Given the database is running
@@ -17,7 +17,7 @@ Feature: Miscellaneous tests which do not belong to mgmt utilities
         And the user runs "gpstop -ar"
         And gpstart should return a return code of 0
         When the user runs "psql -c 'show pgstat_track_activity_query_size' template1"
-        Then psql should print 1024 to stdout 
+        Then psql should print "1024" to stdout 
 
     Scenario: Set size of current_query in pg_stat_activity table to large invalid value 
         Given the database is running
@@ -26,7 +26,7 @@ Feature: Miscellaneous tests which do not belong to mgmt utilities
         And the user runs "gpstop -ar"
         And gpstart should return a return code of 0
         When the user runs "psql -c 'show pgstat_track_activity_query_size' template1"
-        Then psql should print 1024 to stdout 
+        Then psql should print "1024" to stdout 
 
     Scenario: Large query with number of chars greater than current_query size in pgstat_activity
         Given the database is running
@@ -37,7 +37,7 @@ Feature: Miscellaneous tests which do not belong to mgmt utilities
         And the user runs "gpstop -ar"
         And gpstart should return a return code of 0
         When the user runs "psql -c 'show pgstat_track_activity_query_size' template1"
-        Then psql should print 10000 to stdout 
+        Then psql should print "10000" to stdout 
         When the user runs the query "create table aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa (i int)" on "testdb"
         And the user runs the query "insert into aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa select * from generate_series(1, 1000)" on "testdb"
         And the user runs query from the file "test/behave/mgmt_utils/steps/data/long_query1.sql" on "testdb" without fetching results 
@@ -54,7 +54,7 @@ Feature: Miscellaneous tests which do not belong to mgmt utilities
         And the user runs "gpstop -ar"
         And gpstart should return a return code of 0
         When the user runs "psql -c 'show pgstat_track_activity_query_size' template1"
-        Then psql should print 10000 to stdout 
+        Then psql should print "10000" to stdout 
         When the user runs the query "create table aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa (i int)" on "testdb"
         And the user runs the query "insert into aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa select * from generate_series(1, 1000)" on "testdb"
         And the user runs the following query on "testdb" without fetching results """select count(*) from aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa b, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa c, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa d, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa e, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa f, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa g, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa h, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa i, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa j, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa k, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa l, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa m, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa n, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa o, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa p, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa q, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa r, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa s, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa t, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa u"""

@@ -517,19 +517,26 @@ def impl(context):
             context.timestamp_key = m.group(1)
             return
 
-@then('{command} should print {err_msg} error message')
+@then('{command} should print "{err_msg}" error message')
 def impl(context, command, err_msg):
     check_err_msg(context, err_msg)
 
-@then('{command} should print {out_msg} to stdout')
+@then('{command} should print "{out_msg}" to stdout')
 def impl(context, command, out_msg):
     check_stdout_msg(context, out_msg)
 
-@given('{command} should not print {out_msg} to stdout')
-@when('{command} should not print {out_msg} to stdout')
-@then('{command} should not print {out_msg} to stdout')
+@then('{command} should not print "{out_msg}" to stdout')
 def impl(context, command, out_msg):
     check_string_not_present_stdout(context, out_msg)
+
+@then('{command} should print "{out_msg}" to stdout {num} times')
+def impl(context, command, out_msg, num):
+    msg_list = context.stdout_message.split('\n')
+    msg_list = [x.strip() for x in msg_list]
+
+    count = msg_list.count(out_msg)
+    if count != int(num):
+        raise Exception("Expected %s to occur %s times. Found %d" % (out_msg, num, count))
 
 @given('{command} should return a return code of {ret_code}')
 @when('{command} should return a return code of {ret_code}')
@@ -920,45 +927,27 @@ def impl(context, dbname):
                             (context.backup_timestamp, context.backup_subdir, context.backup_subdir, dbname, context.backup_subdir, context.backup_timestamp)
     run_gpcommand(context, command)
 
-@when('the user runs gpdbrestore with the stored timestamp')
-@then('the user runs gpdbrestore with the stored timestamp')
+@when('the user runs gpdbrestore -e with the stored timestamp')
+@then('the user runs gpdbrestore -e with the stored timestamp')
 def impl(context):
     command = 'gpdbrestore -e -t %s -a' % context.backup_timestamp
     run_gpcommand(context, command)
 
-@when('the user runs gpdbrestore with the stored json timestamp')
-@then('the user runs gpdbrestore with the stored json timestamp')
+@then('the user runs gpdbrestore -e with the stored timestamp and options "{options}"')
+@when('the user runs gpdbrestore -e with the stored timestamp and options "{options}"')
+def impl(context, options):
+    command = 'gpdbrestore -e -t %s %s -a' % (context.backup_timestamp, options)
+    run_gpcommand(context, command)
+
+@then('the user runs gpdbrestore -e with the date directory')
+@when('the user runs gpdbrestore -e with the date directory')
 def impl(context):
-    timestamp = _read_timestamp_from_json(context)[0]
-    command = 'gpdbrestore -e -t %s -a' % timestamp
+    command = 'gpdbrestore -e -b %s -a' % (context.backup_timestamp[0:8])
     run_gpcommand(context, command)
 
-@when('the user runs gpdbrestore with the stored timestamp to print the backup set with options "{options}"')
+@when('the user runs gpdbrestore without -e with the stored timestamp and options "{options}"')
 def impl(context, options):
-    command = 'gpdbrestore -t %s %s --list-backup' % (context.backup_timestamp, options)
-    run_gpcommand(context, command)
-
-@then('the user runs gpdbrestore with the stored timestamp and options "{options}"')
-@when('the user runs gpdbrestore with the stored timestamp and options "{options}"')
-def impl(context, options):
-    if options == '-b':
-        command = 'gpdbrestore -e -b %s -a' % (context.backup_timestamp[0:8])
-    else:
-        command = 'gpdbrestore -e -t %s %s -a' % (context.backup_timestamp, options)
-    run_gpcommand(context, command)
-
-@when('the user runs gpdbrestore with the stored timestamp and options "{options}" without -e option')
-def impl(context, options):
-    if options == '-b':
-        command = 'gpdbrestore -b %s -a' % (context.backup_timestamp[0:8])
-    else:
-        command = 'gpdbrestore -t %s %s -a' % (context.backup_timestamp, options)
-    run_gpcommand(context, command)
-
-@when('the user runs "{cmd}" with the stored timestamp')
-@then('the user runs "{cmd}" with the stored timestamp')
-def impl(context, cmd):
-    command = '%s -t %s' % (cmd, context.backup_timestamp)
+    command = 'gpdbrestore -t %s %s -a' % (context.backup_timestamp, options)
     run_gpcommand(context, command)
 
 @then('verify that there is no table "{tablename}" in "{dbname}"')
@@ -2127,7 +2116,7 @@ def impl(context, msg, filename, parent_dir):
 def impl(context, process_name):
     run_command(context, 'pkill %s' % process_name)
 
-@then('the client program should print {msg} to stdout with value in range {min_val} to {max_val}')
+@then('the client program should print "{msg}" to stdout with value in range {min_val} to {max_val}')
 def impl(context, msg, min_val, max_val):
     stdout = context.stdout_message
 
@@ -3919,11 +3908,12 @@ def execute_sql_until_stopped(context, dbname, query):
 def impl(context):
     context.background_query_lock = True
 
-@given('the backup test is initialized')
+@given('the backup test is initialized with no backup files')
 def impl(context):
     context.execute_steps(u'''
         Given the database is running
         And database "bkdb" is dropped and recreated
+        And there are no backup files
     ''')
 
 @given('the backup test is initialized with database "{dbname}"')
@@ -3946,7 +3936,7 @@ def impl(context):
 @then('validate and run gpcheckcat repair')
 def impl(context):
     context.execute_steps(u'''
-        Then gpcheckcat should print repair script\(s\) generated in dir gpcheckcat.repair.* to stdout
+        Then gpcheckcat should print "repair script\(s\) generated in dir gpcheckcat.repair.*" to stdout
         Then the path "gpcheckcat.repair.*" is found in cwd "1" times
         Then run all the repair scripts in the dir "gpcheckcat.repair.*"
         And the path "gpcheckcat.repair.*" is removed from current working directory
