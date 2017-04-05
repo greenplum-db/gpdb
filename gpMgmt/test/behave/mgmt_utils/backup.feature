@@ -1196,23 +1196,6 @@ Feature: Validate command line arguments
         And verify that table "gpcrondump_history" in "bkdb" has "2" rows
         And verify that the table "gpcrondump_history" in "bkdb" has dump info for the stored timestamp
 
-    Scenario: Verify the gpcrondump history ensures table exists or is created on multi database backup
-        Given the test is initialized
-        And database "bkdb2" is dropped and recreated
-        Then verify that there is no table "public.gpcrondump_history" in "bkdb"
-        Then verify that there is no table "public.gpcrondump_history" in "bkdb2"
-        When the user runs "gpcrondump -a -x bkdb -x bkdb2"
-        And the timestamp for database dumps "bkdb, bkdb2" are stored
-        Then gpcrondump should return a return code of 0
-        And verify that the table "gpcrondump_history" in "bkdb" has dump info for the stored timestamp
-        And verify that the table "gpcrondump_history" in "bkdb2" has dump info for the stored timestamp
-        When table "gpcrondump_history" is dropped in "bkdb"
-        And the user runs "gpcrondump -a -x bkdb -x bkdb2"
-        And the timestamp for database dumps "bkdb, bkdb2" are stored
-        Then gpcrondump should return a return code of 0
-        And verify that the table "gpcrondump_history" in "bkdb" has dump info for the stored timestamp
-        And verify that the table "gpcrondump_history" in "bkdb2" has dump info for the stored timestamp
-
     Scenario: Verify the gpcrondump -H option should not create history table
         Given the test is initialized
         And schema "testschema" exists in "bkdb"
