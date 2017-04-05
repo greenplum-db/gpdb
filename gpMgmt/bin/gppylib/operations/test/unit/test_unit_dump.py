@@ -1023,6 +1023,14 @@ class DumpTestCase(unittest.TestCase):
         m = MailEvent(subject="test", message="Hello", to_addrs="example@pivotal.io")
         m.execute()
 
+    @patch('gppylib.operations.dump.execute_sql', side_effect=[[['public', 'test'], ['public', 'foo']], [['public', 'foo']]])
+    def test_check_table_exists_table_list_changes(self, mock):
+        self.context.target_db = "gptest"
+        exists = CheckTableExists(self.context, "public", "test").run()
+        self.assertTrue(exists)
+        exists = CheckTableExists(self.context, "public", "test").run()
+        self.assertFalse(exists)
+
     @patch('gppylib.operations.dump.dbconn.DbURL')
     @patch('gppylib.operations.dump.dbconn.connect')
     @patch('gppylib.operations.dump.CheckTableExists.run', return_value=True)
