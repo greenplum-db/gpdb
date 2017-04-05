@@ -29,9 +29,6 @@
 
 PG_MODULE_MAGIC;
 
-/* The number of columns as defined in gp_workfile_mgr_cache_stats view */
-#define NUM_CACHE_STATS_ELEM 15
-
 /* The number of columns as defined in gp_workfile_mgr_cache_entries view */
 #define NUM_CACHE_ENTRIES_ELEM 12
 
@@ -40,67 +37,12 @@ PG_MODULE_MAGIC;
 
 static char *gp_workfile_operator_name(NodeTag node_type);
 
-Datum gp_workfile_mgr_cache_stats(PG_FUNCTION_ARGS);
 Datum gp_workfile_mgr_cache_entries(PG_FUNCTION_ARGS);
 Datum gp_workfile_mgr_used_diskspace(PG_FUNCTION_ARGS);
 
 /* Helper functions */
 static CacheEntry *next_entry_to_list(Cache *cache, int32 *crtIndex);
 static bool should_list_entry(CacheEntry *entry);
-
-PG_FUNCTION_INFO_V1(gp_workfile_mgr_cache_stats);
-
-/*
- * Function returning workfile cache statistics on one segment
- */
-Datum
-gp_workfile_mgr_cache_stats(PG_FUNCTION_ARGS)
-{
-	/* Build a tuple descriptor for our result type */
-	TupleDesc tupledesc;
-	if (get_call_result_type(fcinfo, NULL, &tupledesc) != TYPEFUNC_COMPOSITE)
-		elog(ERROR, "return type must be a row type");
-
-	/* Locate the appropriate Cache header in shared memory and get stats */
-	Cache *cache = workfile_mgr_get_cache();
-	CacheHdr *cacheHdr = cache->cacheHdr;
-	Cache_Stats *cacheStats = &cacheHdr->cacheStats;
-
-	Datum		values[NUM_CACHE_STATS_ELEM];
-	bool		nulls[NUM_CACHE_STATS_ELEM];
-	MemSet(nulls, 0, sizeof(nulls));
-
-	/*
-	 * Build a tuple descriptor for our result type
-	 * The number and type of attributes have to match the definition of the
-	 * view gp_workfile_mgr_cache_stats
-	 */
-	values[0] = CStringGetTextDatum(cache->cacheName);
-	values[1] = Int32GetDatum(Gp_segment);
-	values[2] = UInt32GetDatum(cacheStats->noLookups);
-	values[3] = UInt32GetDatum(cacheStats->noInserts);
-	values[4] = UInt32GetDatum(cacheStats->noEvicts);
-	values[5] = UInt32GetDatum(cacheStats->noCacheHits);
-	values[6] = UInt32GetDatum(cacheStats->noCompares);
-	values[7] = UInt32GetDatum(cacheStats->noPinnedEntries);
-	values[8] = UInt32GetDatum(cacheStats->noCachedEntries);
-	values[9] = UInt32GetDatum(cacheStats->noDeletedEntries);
-	values[10] = UInt32GetDatum(cacheStats->noAcquiredEntries);
-	values[11] = UInt32GetDatum(cacheStats->noFreeEntries);
-	values[12] = Int64GetDatum(cacheStats->totalEntrySize);
-
-	values[13] = UInt64GetDatum(INSTR_TIME_GET_MICROSEC(cacheStats->timeInserts));
-	values[14] = UInt64GetDatum(INSTR_TIME_GET_MICROSEC(cacheStats->maxTimeInsert));
-
-	Assert(NUM_CACHE_STATS_ELEM == 15);
-
-	HeapTuple tuple = heap_form_tuple(tupledesc, values, nulls);
-
-	Datum result = HeapTupleGetDatum(tuple);
-
-	PG_RETURN_DATUM(result);
-}
-
 
 PG_FUNCTION_INFO_V1(gp_workfile_mgr_cache_entries);
 
