@@ -56,9 +56,9 @@ def get_table_info(line, cur_comment_expr):
     if len(type_start) != 1 or len(schema_start) != 1 or len(owner_start) != 1:
         return (None, None, None)
     name = temp[len(cur_comment_expr) : type_start[0]]
-    type = temp[type_start[0] + len(type_expr) : schema_start[0]]
+    data_type = temp[type_start[0] + len(type_expr) : schema_start[0]]
     schema = temp[schema_start[0] + len(schema_expr) : owner_start[0]]
-    return (name, type, schema)
+    return (name, data_type, schema)
 
 def get_table_from_alter_table(line, alter_expr):
     """
@@ -99,179 +99,204 @@ def find_all_expr_start(line, expr):
     """
     return [m.start() for m in re.finditer('(?=%s)' % expr, line)]
 
-def process_schema(dump_schemas, dump_tables, fdin, fdout, change_schema=None, schema_level_restore_list=None):
-    """
-    Filter the dump file line by line from restore
-    dump_schemas: set of schemas to restore
-    dump_tables: set of (schema, table) tuple to restore
-    fdin: stdin from dump file
-    fdout: to write filtered content to stdout
-    change_schema_name: different schema name to restore
-    schema_level_restore_list: list of schemas to restore all tables under them
-    """
+class ParserState:
 
-    schema, table = None, None
-    line_buff = ''
+    def __init__(self):
+        self.output = False # to help decide whether or not to filter out
+        self.function_ddl = False  # to help exclude SET clause within a function's ddl statement
+        self.further_investigation_required = False
+        # we need to set search_path to true after every ddl change due to the
+        # fact that the schema "set search_path" may change on the next ddl command
+        self.cast_func_schema = None
+        self.change_cast_func_schema = False
+        self.in_block = False
+        self.line_buff = ''
+        self.schema = None
 
-    # to help decide whether or not to filter out
-    output = False
+def _handle_begin_end_block(state, line, _):
 
-    # to help exclude SET clause within a function's ddl statement
-    function_ddl = False
+    if (line[0] == begin_start) and line.startswith(begin_expr):
+        state.in_block = True
+        state.output = True
+    elif (line[0] == end_start) and line.startswith(end_expr):
+        state.in_block = False
+        state.output = True
+    elif state.in_block:
+        state.output = True
+    else:
+        return False, state, line
+    return True, state, line
 
-    further_investigation_required = False
-    # we need to set search_path to true after every ddl change due to the
-    # fact that the schema "set search_path" may change on the next ddl command
-    search_path = True
-    passedDropSchemaSection = False
-
-    cast_func_schema = None
-    change_cast_func_schema = False
-
-    in_block = False
-
-    for line in fdin:
-        # NOTE: We are checking the first character before actually verifying
-        # the line with "startswith" due to the performance gain.
-        if in_block:
-            output = True
-        elif (line[0] == begin_start) and line.startswith(begin_expr):
-            in_block = True
-            output = True
-        elif (line[0] == end_start) and line.startswith(end_expr):
-            in_block = False
-            output = True
-        elif search_path and (line[0] == set_start) and line.startswith(search_path_expr):
-            # NOTE: The goal is to output the correct mapping to the search path
-            # for the schema
-
-            further_investigation_required = False
-            # schema in set search_path line is already escaped in dump file
-            schema = extract_schema(line)
-            schema_wo_escaping = removeEscapingDoubleQuoteInSQLString(schema, False)
-            if schema == "pg_catalog":
-                output = True
-            elif (dump_schemas and schema_wo_escaping in dump_schemas or
-                schema_level_restore_list and schema_wo_escaping in schema_level_restore_list):
-                if change_schema and len(change_schema) > 0:
-                    # change schema name can contain special chars including white space, double quote that.
-                    # if original schema name is already quoted, replaced it with quoted change schema name
-                    quoted_schema = '"' + schema + '"'
-                    if quoted_schema in line:
-                        line = line.replace(quoted_schema, escapeDoubleQuoteInSQLString(change_schema))
-                    else:
-                        line = line.replace(schema, escapeDoubleQuoteInSQLString(change_schema))
-                cast_func_schema = schema # Save the schema in case we need to replace a cast's function's schema later
-                output = True
-                search_path = False
-            else:
-                output = False
-        # set_assignment must be in the line to filter out dump line: SET SUBPARTITION TEMPLATE
-        elif (line[0] == set_start) and line.startswith(set_expr) and set_assignment in line and not function_ddl:
-            output = True
-        elif (line[0] == drop_start) and line.startswith(drop_expr):
-            if line.startswith(drop_table_expr) or line.startswith(drop_external_table_expr):
-                if passedDropSchemaSection:
-                    output = False
-                else:
-                    if line.startswith(drop_table_expr):
-                        output = check_dropped_table(line, dump_tables, schema_level_restore_list, drop_table_expr)
-                    else:
-                        output = check_dropped_table(line, dump_tables, schema_level_restore_list,
-                                                     drop_external_table_expr)
-            else:
-                output = False
-        elif line[:2] == comment_start_expr and line.startswith(comment_expr):
-            # Parse the line using get_table_info for SCHEMA relation type as well,
-            # if type is SCHEMA, then the value of name returned is schema's name, and returned schema is represented by '-'
-            name, type, schema = get_table_info(line, comment_expr)
-            output = False
-            function_ddl = False
-            passedDropSchemaSection = True
-
-            if type in ['SCHEMA']:
-                # Make sure that schemas are created before restoring the desired tables.
-                output = check_valid_schema(name, dump_schemas, schema_level_restore_list)
-            elif type in ['TABLE', 'EXTERNAL TABLE', 'VIEW', 'SEQUENCE']:
-                further_investigation_required = False
-                output = check_valid_relname(schema, name, dump_tables, schema_level_restore_list)
-            elif type in ['CONSTRAINT']:
-                further_investigation_required = True
-                if check_valid_schema(schema, dump_schemas, schema_level_restore_list):
-                    line_buff = line
-            elif type in ['ACL']:
-                output = check_valid_relname(schema, name, dump_tables, schema_level_restore_list)
-            elif type in ['FUNCTION']:
-                function_ddl = True
-                output = check_valid_schema(schema, dump_schemas, schema_level_restore_list)
-            elif type in ['CAST', 'PROCEDURAL LANGUAGE']: # Restored to pg_catalog, so always filtered in
-                output = True
-                change_cast_func_schema = True # When changing schemas, we need to ensure that functions used in casts reference the new schema
-
-            if output:
-                search_path = True
-
-        elif (line[:2] == comment_start_expr) and (line.startswith(comment_data_expr_a) or line.startswith(comment_data_expr_b)):
-            passedDropSchemaSection = True
-            further_investigation_required = False
-            if line.startswith(comment_data_expr_a):
-                name, type, schema = get_table_info(line, comment_data_expr_a)
-            else:
-                name, type, schema = get_table_info(line, comment_data_expr_b)
-            if type == 'TABLE DATA':
-                output = check_valid_relname(schema, name, dump_tables, schema_level_restore_list)
-                if output:
-                    search_path = True
-            else:
-                output = False
-        elif further_investigation_required:
-            if line.startswith(alter_table_only_expr) or line.startswith(alter_table_expr):
-                further_investigation_required = False
-
-                # Get the full qualified table name with the correct split
-                if line.startswith(alter_table_only_expr):
-                    tablename = get_table_from_alter_table(line, alter_table_only_expr)
-                else:
-                    tablename = get_table_from_alter_table(line, alter_table_expr)
-
-                tablename = checkAndRemoveEnclosingDoubleQuote(tablename)
-                tablename = removeEscapingDoubleQuoteInSQLString(tablename, False)
-                output = check_valid_relname(schema, tablename, dump_tables, schema_level_restore_list)
-
-                if output:
-                    if line_buff:
-                        fdout.write(line_buff)
-                        line_buff = ''
-                    search_path = True
-        elif change_cast_func_schema:
-            if "CREATE CAST" in line and "WITH FUNCTION" in line:
-                change_cast_func_schema = False
-                if change_schema and len(change_schema) > 0:
-                    quoted_schema = '"' + cast_func_schema + '"'
-                    if quoted_schema in line:
-                        line = line.replace(quoted_schema, escapeDoubleQuoteInSQLString(change_schema))
-                    else:
-                        line = line.replace(cast_func_schema, escapeDoubleQuoteInSQLString(change_schema))
-                cast_func_schema = None
+def _handle_change_schema(schema_to_replace, change_schema, line):
+    if change_schema and len(change_schema) > 0:
+        # change schema name can contain special chars including white space, double quote that.
+        # if original schema name is already quoted, replaced it with quoted change schema name
+        quoted_schema = '"' + schema_to_replace + '"'
+        if quoted_schema in line:
+            line = line.replace(quoted_schema, escapeDoubleQuoteInSQLString(change_schema))
         else:
-            further_investigation_required = False
+            line = line.replace(schema_to_replace, escapeDoubleQuoteInSQLString(change_schema))
+    return line
 
-        if output:
-            fdout.write(line)
+def _handle_set_statement(state, line, arguments):
+    schemas_in_table_file = arguments.schemas
+    change_schema = arguments.change_schema_name
+    schemas_in_schema_file = arguments.schemas_in_schema_file
 
-def check_valid_schema(schema, dump_schemas, schema_level_restore_list=None):
-    if ((schema_level_restore_list and schema in schema_level_restore_list) or
-        (dump_schemas and schema in dump_schemas)):
+    if (line[0] == set_start) and line.startswith(search_path_expr):
+
+        # NOTE: The goal is to output the correct mapping to the search path
+        # for the schema
+
+        state.further_investigation_required = False
+        # schema in set state.search_path line is already escaped in dump file
+        state.schema = extract_schema(line)
+        schema_wo_escaping = removeEscapingDoubleQuoteInSQLString(state.schema, False)
+        if state.schema == "pg_catalog":
+            state.output = True
+        elif (schemas_in_table_file and schema_wo_escaping in schemas_in_table_file or
+                      schemas_in_schema_file and schema_wo_escaping in schemas_in_schema_file):
+            line = _handle_change_schema(state.schema, change_schema, line)
+            state.cast_func_schema = state.schema # Save the schema in case we need to replace a cast's function's schema later
+            state.output = True
+        else:
+            state.output = False
+        return True, state, line
+    return False, state, line
+
+def _handle_set_assignment(state, line, _):
+    # set_assignment must be in the line to filter out dump line: SET SUBPARTITION TEMPLATE
+    if (line[0] == set_start) and line.startswith(set_expr) and set_assignment in line and not state.function_ddl:
+        state.output = True
+        return True, state, line
+    return False, state, line
+
+def _handle_expressions_in_comments(state, line, arguments):
+    schemas_in_table_file = arguments.schemas
+    tables_in_table_file = arguments.tables
+    schemas_in_schema_file = arguments.schemas_in_schema_file
+
+    if line[:2] == comment_start_expr and line.startswith(comment_expr):
+        # Parse the line using get_table_info for SCHEMA relation type as well,
+        # if type is SCHEMA, then the value of name returned is schema's name, and returned schema is represented by '-'
+        name, data_type, state.schema = get_table_info(line, comment_expr)
+        state.output = False
+        state.function_ddl = False
+
+        if data_type in ['SCHEMA']:
+            # Make sure that schemas are created before restoring the desired tables.
+            state.output = check_valid_schema(name, schemas_in_table_file, schemas_in_schema_file)
+        elif data_type in ['TABLE', 'EXTERNAL TABLE', 'VIEW', 'SEQUENCE']:
+            state.further_investigation_required = False
+            state.output = check_valid_relname(state.schema, name, tables_in_table_file, schemas_in_schema_file)
+        elif data_type in ['CONSTRAINT']:
+            state.further_investigation_required = True
+            if check_valid_schema(state.schema, schemas_in_table_file, schemas_in_schema_file):
+                state.line_buff = line
+        elif data_type in ['ACL']:
+            state.output = check_valid_relname(state.schema, name, tables_in_table_file, schemas_in_schema_file)
+        elif data_type in ['FUNCTION']:
+            state.function_ddl = True
+            state.output = check_valid_schema(state.schema, schemas_in_table_file, schemas_in_schema_file)
+        elif data_type in ['CAST', 'PROCEDURAL LANGUAGE']:  # Restored to pg_catalog, so always filtered in
+            state.output = True
+            state.change_cast_func_schema = True  # When changing schemas, we need to ensure that functions used in casts reference the new schema
+        return True, state, line
+    return False, state, line
+
+def _handle_data_expressions_in_comments(state, line, arguments):
+    tables_in_table_file = arguments.tables
+    schemas_in_schema_file = arguments.schemas_in_schema_file
+
+    if (line[:2] == comment_start_expr) and (line.startswith(comment_data_expr_a) or line.startswith(comment_data_expr_b)):
+        state.further_investigation_required = False
+        if line.startswith(comment_data_expr_a):
+            name, data_type, state.schema = get_table_info(line, comment_data_expr_a)
+        else:
+            name, data_type, state.schema = get_table_info(line, comment_data_expr_b)
+        if data_type == 'TABLE DATA':
+            state.output = check_valid_relname(state.schema, name, tables_in_table_file, schemas_in_schema_file)
+        else:
+            state.output = False
+        return True, state, line
+    return False, state, line
+
+def _handle_further_investigation(state, line, arguments):
+    tables_in_table_file = arguments.tables
+    schemas_in_schema_file = arguments.schemas_in_schema_file
+
+    if state.further_investigation_required:
+        if line.startswith(alter_table_expr):
+            state.further_investigation_required = False
+
+            # Get the full qualified table name with the correct split
+            if line.startswith(alter_table_only_expr):
+                tablename = get_table_from_alter_table(line, alter_table_only_expr)
+            else:
+                tablename = get_table_from_alter_table(line, alter_table_expr)
+
+            tablename = checkAndRemoveEnclosingDoubleQuote(tablename)
+            tablename = removeEscapingDoubleQuoteInSQLString(tablename, False)
+            state.output = check_valid_relname(state.schema, tablename, tables_in_table_file, schemas_in_schema_file)
+            if state.output:
+                if state.line_buff:
+                    line = state.line_buff + line
+                    state.line_buff = ''
+        return True, state, line
+    return False, state, line
+
+
+def _handle_cast_function_schema(state, line, arguments):
+    change_schema = arguments.change_schema_name
+
+    if state.change_cast_func_schema:
+        if "CREATE CAST" in line and "WITH FUNCTION" in line:
+            state.change_cast_func_schema = False
+            line = _handle_change_schema(state.cast_func_schema, change_schema, line)
+            state.cast_func_schema = None
+        return True, state, line
+    return False, state, line
+
+def process_line(state, line, arguments):
+    # NOTE: We are checking the first character before actually verifying
+    # the line with "startswith" due to the performance gain.
+
+    fns = [ _handle_begin_end_block,
+            _handle_set_statement,
+            _handle_set_assignment,
+            _handle_expressions_in_comments,
+            _handle_data_expressions_in_comments,
+            _handle_further_investigation,
+            _handle_cast_function_schema ]
+    for fn in fns:
+        result, state , line= fn(state, line, arguments)
+        if result:
+            return state, line
+
+    state.further_investigation_required = False
+    return state, line
+
+
+def process_schema(arguments, fdin, fdout):
+    state = ParserState()
+    for line in fdin:
+        state, output_line = process_line(state, line, arguments)
+        if state.output:
+            fdout.write(output_line)
+
+def check_valid_schema(schema, schemas_in_table_file, schemas_in_schema_file=None):
+    if ((schemas_in_schema_file and schema in schemas_in_schema_file) or
+        (schemas_in_table_file and schema in schemas_in_table_file)):
         return True
     return False
 
-def check_valid_relname(schema, relname, dump_tables, schema_level_restore_list=None):
+def check_valid_relname(schema, relname, tables_in_table_file, schemas_in_schema_file=None):
     """
     check if relation is valid (can be from schema level restore)
     """
 
-    if ((schema_level_restore_list and schema in schema_level_restore_list) or
-       (dump_tables and (schema, relname) in dump_tables)):
+    if ((schemas_in_schema_file and schema in schemas_in_schema_file) or
+       (tables_in_table_file and (schema, relname) in tables_in_table_file)):
         return True
     return False
 
@@ -280,17 +305,17 @@ def get_table_schema_set(filename):
     filename: file with true schema and table name (none escaped), don't strip white space
     on schema and table name in case it's part of the name
     """
-    dump_schemas = set()
-    dump_tables = set()
+    schemas_in_table_file = set()
+    tables_in_table_file = set()
 
     with open(filename) as fd:
         contents = fd.read()
         tables = contents.splitlines()
         for t in tables:
             schema, table = split_fqn(t)
-            dump_tables.add((schema, table))
-            dump_schemas.add(schema)
-    return (dump_schemas, dump_tables)
+            tables_in_table_file.add((schema, table))
+            schemas_in_table_file.add(schema)
+    return (schemas_in_table_file, tables_in_table_file)
 
 def extract_schema(line):
     """
@@ -333,7 +358,7 @@ def extract_table(line):
     else:
         raise Exception('Failed to extract table name from line %s' % line)
 
-def check_dropped_table(line, dump_tables, schema_level_restore_list, drop_table_expr):
+def check_dropped_table(line, tables_in_table_file, schemas_in_schema_file, drop_table_expr):
     """
     check if table to drop is valid (can be dropped from schema level restore)
     """
@@ -341,11 +366,16 @@ def check_dropped_table(line, dump_tables, schema_level_restore_list, drop_table
     (schema, table) = split_fqn(temp)
     schema = removeEscapingDoubleQuoteInSQLString(checkAndRemoveEnclosingDoubleQuote(schema), False)
     table = removeEscapingDoubleQuoteInSQLString(checkAndRemoveEnclosingDoubleQuote(table), False)
-    if (schema_level_restore_list and schema in schema_level_restore_list) or ((schema, table) in dump_tables):
+    if (schemas_in_schema_file and schema in schemas_in_schema_file) or ((schema, table) in tables_in_table_file):
         return True
     return False
 
-def process_data(dump_schemas, dump_tables, fdin, fdout, change_schema=None, schema_level_restore_list=None):
+def process_data(arguments, fdin, fdout):
+    schemas_in_table_file = arguments.schemas
+    tables_in_table_file = arguments.tables
+    change_schema = arguments.change_schema_name
+    schemas_in_schema_file = arguments.schemas_in_schema_file
+
     schema, table, schema_wo_escaping = None, None, None
     output = False
     #PYTHON PERFORMANCE IS TRICKY .... THIS CODE IS LIKE THIS BECAUSE ITS FAST
@@ -353,8 +383,8 @@ def process_data(dump_schemas, dump_tables, fdin, fdout, change_schema=None, sch
         if (line[0] == set_start) and line.startswith(search_path_expr):
             schema = extract_schema(line)
             schema_wo_escaping = removeEscapingDoubleQuoteInSQLString(schema, False)
-            if ((dump_schemas and schema_wo_escaping in dump_schemas) or
-                (schema_level_restore_list and schema_wo_escaping in schema_level_restore_list)):
+            if ((schemas_in_table_file and schema_wo_escaping in schemas_in_table_file) or
+                (schemas_in_schema_file and schema_wo_escaping in schemas_in_schema_file)):
                 if change_schema:
                     # change schema name can contain special chars including white space, double quote that.
                     # if original schema name is already quoted, replaced it with quoted change schema name
@@ -369,7 +399,7 @@ def process_data(dump_schemas, dump_tables, fdin, fdout, change_schema=None, sch
         elif (line[0] == copy_start) and line.startswith(copy_expr) and line.endswith(copy_expr_end):
             table = extract_table(line)
             table = removeEscapingDoubleQuoteInSQLString(table, False)
-            if (schema_level_restore_list and schema_wo_escaping in schema_level_restore_list) or (dump_tables and (schema_wo_escaping, table) in dump_tables):
+            if (schemas_in_schema_file and schema_wo_escaping in schemas_in_schema_file) or (tables_in_table_file and (schema_wo_escaping, table) in tables_in_table_file):
                 output = True
         elif output and (line[0] == copy_end_start) and line.startswith(copy_end_expr):
             table = None
@@ -379,17 +409,17 @@ def process_data(dump_schemas, dump_tables, fdin, fdout, change_schema=None, sch
         if output:
             fdout.write(line)
 
-def get_schema_level_restore_list(schema_level_restore_file=None):
+def get_schemas_in_schema_file(schema_level_restore_file=None):
     """
     Note: white space in schema and table name is supported now, don't do strip on them
     """
     if not os.path.exists(schema_level_restore_file):
         raise Exception('schema level restore file path %s does not exist' % schema_level_restore_file)
-    schema_level_restore_list = []
+    schemas_in_schema_file = []
     with open(schema_level_restore_file) as fr:
         schema_entries = fr.read()
-        schema_level_restore_list = schema_entries.splitlines()
-    return schema_level_restore_list
+        schemas_in_schema_file = schema_entries.splitlines()
+    return schemas_in_schema_file
 
 def get_change_schema_name(change_schema_file):
     """
@@ -403,6 +433,19 @@ def get_change_schema_name(change_schema_file):
         line = fr.read()
         change_schema_name = line.strip('\n')
     return change_schema_name
+
+class Arguments:
+    """
+    schemas_in_table_file: set of schemas to restore
+    tables_in_table_file: set of (schema, table) tuple to restore
+    change_schema_name: different schema name to restore
+    schemas_in_schema_file: list of schemas to restore all tables under them
+    """
+    def __init__(self, schemas_in_table_file=None, tables_in_table_file=None):
+        self.schemas = schemas_in_table_file
+        self.tables = tables_in_table_file
+        self.change_schema_name = None
+        self.schemas_in_schema_file = None
 
 if __name__ == "__main__":
     parser = OptParser(option_class=OptChecker)
@@ -422,16 +465,16 @@ if __name__ == "__main__":
     if options.tablefile:
         (schemas, tables) = get_table_schema_set(options.tablefile)
 
-    change_schema_name = None
-    if options.change_schema_file:
-        change_schema_name = get_change_schema_name(options.change_schema_file)
+    args = Arguments(schemas, tables)
 
-    schema_level_restore_list = None
+    if options.change_schema_file:
+        args.change_schema_name = get_change_schema_name(options.change_schema_file)
+
     if options.schema_level_file:
-        schema_level_restore_list = get_schema_level_restore_list(options.schema_level_file)
+        args.schemas_in_schema_file = get_schemas_in_schema_file(options.schema_level_file)
 
     if options.master_only:
-        process_schema(schemas, tables, sys.stdin, sys.stdout, change_schema_name, schema_level_restore_list)
+        process_schema(args, sys.stdin, sys.stdout)
     else:
-        process_data(schemas, tables, sys.stdin, sys.stdout, change_schema_name, schema_level_restore_list)
+        process_data(args, sys.stdin, sys.stdout)
 
