@@ -1815,7 +1815,12 @@ def impl(context, table_name, dbname):
     dump_history_sql = 'select dump_key,options from public.%s' % table_name
     dump_history =  getRows(dbname, dump_history_sql)
     for (dump_key,options) in dump_history:
-        if context.backup_timestamp == dump_key.strip() and dbname in options:
+        test_timestamp = None
+        if hasattr(context, 'db_timestamps'):
+            test_timestamp = context.db_timestamps.get(dbname)
+        if not test_timestamp:
+            test_timestamp = context.backup_timestamp
+        if test_timestamp == dump_key.strip() and dbname in options:
             return
 
     raise Exception('Could not find dump info for timestamp %s in %s table' % (context.backup_timestamp, table_name))
