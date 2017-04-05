@@ -412,7 +412,7 @@ psql -h prod1.example.local -U dev1</codeblock>
         </p>
         <p>Also, when you reconnect to the database, pgAdmin III prompts for a password. When
           prompted, leave the field blank and click OK. </p>
-        <p>This example configures Aginity Workbench for Pivotal Greenplum. When using single
+        <p>This example configures Aginity Workbench for Greenplum Database. When using single
           sign-on, you enable Use Integrated Security.</p>
         <p>
           <image href="graphics/kerb-aginity-config.png" placement="break" width="351px"

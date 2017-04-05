@@ -87,10 +87,11 @@
     <shortdesc>Start only the master to perform maintenance or administrative tasks without
       affecting data on the segments. </shortdesc>
     <taskbody>
-      <context>Maintenance mode should only be used with direction from Pivotal Technical Support.
-        For example, you could connect to a database only on the master instance in maintenance mode
-        and edit system catalog settings. For more information about system catalog tables, see the
-          <cite>Greenplum Database Reference Guide</cite>.</context>
+      <context><ph otherprops="pivotal">Maintenance mode should only be used with direction from
+          Pivotal Technical Support. </ph>For example, you could connect to a database only on the
+        master instance in maintenance mode and edit system catalog settings. For more information
+        about system catalog tables, see the <cite>Greenplum Database Reference
+        Guide</cite>.</context>
       <steps id="steps_gnq_3rk_gp">
         <step>
           <cmd>Run <codeph>gpstart</codeph> using the <option>-m</option> option:</cmd>

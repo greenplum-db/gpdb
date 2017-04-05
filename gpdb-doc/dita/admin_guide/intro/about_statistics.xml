@@ -296,8 +296,7 @@
           each table with the saved state and skips analyzing a table or partition if it is
           unchanged. Heap tables are always analyzed. </p>
         <p>If GPORCA is enabled, you also need to run <codeph>ANALYZE
-            ROOTPARTITION</codeph> to refresh the root partition statistics. The Pivotal Query
-          Optimizer requires statistics at the root level for partitioned tables. The legacy
+            ROOTPARTITION</codeph> to refresh the root partition statistics. GPORCA requires statistics at the root level for partitioned tables. The legacy
           optimizer does not use these statistics. Enable GPORCA by setting
           both the <codeph>optimizer</codeph> and <codeph>optimizer_analyze_root_partition</codeph>
           system configuration parameters to on. The root level statistics are then updated when you

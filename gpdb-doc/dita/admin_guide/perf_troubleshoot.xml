@@ -165,13 +165,14 @@ con6 /gpdata/*/pg_log/gpdb*.csv' &gt; seglog.out
 </codeblock>
             </p>
         </body>
-        <topic id="topic9" xml:lang="en">
+        <topic id="topic9" xml:lang="en" otherprops="pivotal">
             <title id="jc155267">Gathering Information for Pivotal Support</title>
             <body>
-                <p>The Greenplum Database
-                    <codeph>gpsupport</codeph> utility can collect information from a Greenplum Database system. You can then send the information file to
-                    Pivotal Customer Support to aid the diagnosis of Greenplum Database errors or system failures. For example, this <cmdname>gpsupport</cmdname>
-                    command collects all logs from the listed segment hosts in a Greenplum Database cluster:</p>
+                <p>The Greenplum Database <codeph>gpsupport</codeph> utility can collect information
+                    from a Greenplum Database system. You can then send the information file to
+                    Pivotal Customer Support to aid the diagnosis of Greenplum Database errors or
+                    system failures. For example, this <cmdname>gpsupport</cmdname> command collects
+                    all logs from the listed segment hosts in a Greenplum Database cluster:</p>
                 <p>
                     <codeblock>$ gpsupport collect logs segs sdw1,sdw2,sdw3-1</codeblock>
                 </p>

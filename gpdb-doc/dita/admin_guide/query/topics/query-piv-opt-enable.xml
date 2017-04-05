@@ -23,8 +23,7 @@
       server configuration parameter <cmdname>optimizer_control</cmdname>. For information about the
       server configuration parameters, see the <cite>Greenplum Database Reference
         Guide</cite>.</note>
-    <note type="important">If you intend to execute queries on partitioned tables with the Pivotal
-      Query Optimizer enabled, you must collect statistics on the partitioned table root partition
+    <note type="important">If you intend to execute queries on partitioned tables with GPORCA enabled, you must collect statistics on the partitioned table root partition
       with the <cmdname>ANALYZE ROOTPARTITION</cmdname> command. The command <codeph>ANALYZE
         ROOTPARTITION</codeph> collects statistics on the root partition of a partitioned table
       based on the data in the table. Statistics are not collected on the leaf partitions, leaf
@@ -89,8 +88,7 @@
       <p>You can use the <cmdname>SET</cmdname> command to set <cmdname>optimizer</cmdname> server
         configuration parameter for a session. For example, after you use the
           <cmdname>psql</cmdname> utility to connect to Greenplum Database, this
-          <cmdname>SET</cmdname> command enables the Pivotal Query
-        Optimizer:<codeblock>> set optimizer = on ;</codeblock></p>
+          <cmdname>SET</cmdname> command enables GPORCA:<codeblock>> set optimizer = on ;</codeblock></p>
       <p>To set the parameter for a specific query, include the <cmdname>SET</cmdname> command prior
         to running the query.</p>
     </body>

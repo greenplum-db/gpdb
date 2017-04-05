@@ -27,7 +27,7 @@
       <title>Prerequisites</title>
       <ul id="ul_wkb_xqd_cp">
         <li>The <codeph>gptransfer</codeph> utility can only be used with Greenplum Database,
-          including the Dell EMC DCA appliance. Pivotal HAWQ is not supported as a source or destination. </li>
+          including the Dell EMC DCA appliance. Pivotal HDB is not supported as a source or destination. </li>
         <li>The source and destination Greenplum clusters must both be version 4.2 or higher.</li>
         <li>At least one Greenplum instance must include the <codeph>gptransfer</codeph> utility in
           its distribution. The utility is included with Greenplum Database version 4.2.8.1 and

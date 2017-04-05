@@ -6,8 +6,9 @@
    <body>
       <p id="io140183">Most third-party extract-transform-load (ETL) and business intelligence (BI)
          tools use standard database interfaces, such as ODBC and JDBC, and can be configured to
-         connect to Greenplum Database. Pivotal has worked with the following tools on previous
-         customer engagements and is in the process of becoming officially certified:</p>
+         connect to Greenplum Database<ph otherprops="pivotal">. Pivotal has worked with the
+            following tools on previous customer engagements and is in the process of becoming
+            officially certified</ph>:</p>
       <ul>
          <li id="io142400">Business Objects</li>
          <li id="io142404">Microstrategy</li>

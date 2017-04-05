@@ -714,7 +714,7 @@ WITH TABLE jan12;
             default partition, is valid for the default partition. For example, the data in the new
             default partition must not contain data that would be valid in other leaf child
             partitions of the partitioned table. Otherwise, queries against the partitioned table
-            with the exchanged default partition that are executed by the Pivotal Query Optimizer
+            with the exchanged default partition that are executed by GPORCA
             might return incorrect results.</note></p>
       </body>
     </topic>

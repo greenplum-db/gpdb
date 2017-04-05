@@ -4,8 +4,7 @@
   <title>GPORCA Limitations</title>
   <abstract>
     <shortdesc>There are limitations in Greenplum Database<ph>
-        4.3.5.0 and later</ph> when GPORCA is enabled. The Pivotal Query
-      Optimizer and the legacy query optimizer currently coexist in Greenplum Database<ph> 4.3.5.0 and later</ph> because GPORCA does not
+        4.3.5.0 and later</ph> when GPORCA is enabled. GPORCA and the legacy query optimizer currently coexist in Greenplum Database<ph> 4.3.5.0 and later</ph> because GPORCA does not
       support all Greenplum Database features. </shortdesc>
   </abstract>
   <body>

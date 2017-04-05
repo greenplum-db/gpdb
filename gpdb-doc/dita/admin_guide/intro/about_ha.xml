@@ -21,8 +21,8 @@
       <title id="iw157552">About Segment Mirroring</title>
       <p>When you deploy your Greenplum Database system, you can configure <i>mirror</i> segments.
         Mirror segments allow database queries to fail over to a backup segment if the primary
-        segment becomes unavailable. Mirroring is strongly recommended for production systems and
-        required for Pivotal support. </p>
+        segment becomes unavailable. Mirroring is strongly recommended for production systems<ph
+          otherprops="pivotal"> and required for Pivotal support</ph>. </p>
       <p>The secondary (mirror) segment must always reside on a different host than its primary
         segment to protect against a single host failure. Mirror segments can be arranged over the
         remaining hosts in the cluster in configurations designed to maximize availability or

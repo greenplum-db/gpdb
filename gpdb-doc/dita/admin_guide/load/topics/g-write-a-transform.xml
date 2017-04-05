@@ -6,7 +6,7 @@
    <body>
       <p>The transform specifies what to extract from the data.You can use any authoring
                     environment and language appropriate for your project. For XML transformations
-                    Pivotal suggests choosing a technology such as XSLT, Joost (STX), Java, Python,
+                    choose a technology such as XSLT, Joost (STX), Java, Python,
                     or Perl, based on the goals and scope of the project.</p>
       <p>In the price example, the next step is to transform the XML data into a simple
                     two-column delimited format.</p>

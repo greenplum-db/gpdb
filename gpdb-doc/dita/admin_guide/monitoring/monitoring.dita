@@ -328,9 +328,8 @@ WHERE logseverity in ('FATAL', 'ERROR')
                                 </entry>
                             </row>
                             <row>
-                                <entry>Run the Greenplum
-                                    <codeph>gpcheck</codeph> utility to test that the configuration
-                                    of the cluster complies with Pivotal
+                                <entry>Run the Greenplum <codeph>gpcheck</codeph> utility to test
+                                    that the configuration of the cluster complies with current
                                         recommendations.<p>Recommended frequency: when creating a
                                         cluster or adding new machines to the cluster
                                         </p><p>Severity: IMPORTANT</p></entry>
@@ -399,8 +398,9 @@ WHERE logseverity in ('FATAL', 'ERROR')
                                         Greenplum
                                     <codeph>gpcheckcat</codeph> utility in each
                                     database:<codeblock>gpcheckcat -R persistent</codeblock></entry>
-                                <entry>If any problems are identified, contact Pivotal support for
-                                    assistance.</entry>
+                                <entry>Run repair scripts for any issues detected. <ph
+                                        otherprops="pivotal">If any problems are identified, contact
+                                        Pivotal support for assistance.</ph></entry>
                             </row>
                             <row>
                                 <entry>Check for <codeph>pg_class</codeph> entries that have no

@@ -43,7 +43,7 @@
     <body>
       <p>Using Data Domain Boost requires the following.</p>
       <ul>
-        <li>Data Domain Boost is included only with Pivotal Greenplum Database. </li>
+        <li>Data Domain Boost is included only with the commercial release of Pivotal Greenplum Database. </li>
         <li id="kk169399">Purchase and install Dell EMC Data Domain Boost and Replicator licenses on the
           Data Domain systems.</li>
         <li id="kk169390">Obtain sizing recommendations for Data Domain Boost. Make sure the Data
