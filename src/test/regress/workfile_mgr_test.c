@@ -753,7 +753,7 @@ syncrefhashtable_test_full_table(void)
 	snprintf(key, TEST_NAME_LENGTH, "PID=%d key no. %d", MyProcPid, TEST_HT_NUM_ELEMENTS);
 	elements[TEST_HT_NUM_ELEMENTS] = SyncHTInsert(syncHT, key, &existing);
 
-	/* Insertion should has failed */
+	/* Insertion should have failed */
 	unit_test_result(elements[TEST_HT_NUM_ELEMENTS] == NULL && !existing);
 
 
@@ -804,20 +804,20 @@ bfz_test_reopen(void)
 
 	elog(LOG, "Running sub-test: Creating file %s", filename->data);
 
-	/*Write data to file.*/
+	/* Write data to file */
 	bfz_t * fileWrite = bfz_create(filename->data, false, TRUE);
 	fileWrite->del_on_close=false;
 	bfz_append(fileWrite, text->data, text->len);
-	/*Flush data*/
+	/* Flush data */
 	bfz_append_end(fileWrite);
 
-	/*Read data back from file.*/
+	/* Read data back from file */
 	char result[TEST_NAME_LENGTH];
 	int result_size = 0;
 
 	elog(LOG, "Running sub-test: Reading file %s", filename->data);
 	bfz_t * fileRead = bfz_open(filename->data, true, TRUE);
-	/*Seek 0*/
+	/* Seek 0 */
 	bfz_scan_begin(fileRead);
 	result_size = bfz_scan_next(fileRead,result,text->len);
 
@@ -1219,8 +1219,10 @@ execworkfile_bfz_uncompressed_test(void)
 	elog(LOG, "Running sub-test: Closing EWF/BFZ");
 	final_size = ExecWorkFile_Close(ewf);
 
-	/* For uncompressed files, final file may contain checksums, which makes it
-	 * larger than expected */
+	/*
+	 * For uncompressed files, final file may contain checksums, which makes it
+	 * larger than expected
+	 */
 	unit_test_result(final_size >= expected_size);
 
 	elog(LOG, "Running sub-test: Opening existing EWF/BFZ and checking size");
@@ -1572,7 +1574,7 @@ buffile_large_file_test(void)
 
 /*
  * Unit test for logical tape's support for large spill files.
- * */
+ */
 static bool
 logicaltape_test(void)
 {
