@@ -1,4 +1,4 @@
-MODULES    = gp_ao_co_diagnostics
+MODULES    = gp_ao_co_diagnostics gp_workfile_mgr
 
 PG_CPPFLAGS = -I$(libpq_srcdir)
 

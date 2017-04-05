@@ -27,6 +27,8 @@
 #include "utils/sharedcache.h"
 #include "miscadmin.h"
 
+PG_MODULE_MAGIC;
+
 /* The number of columns as defined in gp_workfile_mgr_cache_stats view */
 #define NUM_CACHE_STATS_ELEM 15
 
