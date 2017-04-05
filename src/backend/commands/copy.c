@@ -5791,8 +5791,9 @@ CopyReadAttributesText(CopyState cstate, bool * __restrict nulls,
 			/* check if this is a NULL value or data value (assumed NULL) */
 			if (attr_pre_len == cstate->null_print_len
 				&&
-				strncmp(cstate->line_buf.data + cstate->line_buf.len - attr_pre_len - 1, cstate->null_print, attr_pre_len)
-				== 0)
+				strncmp(cstate->line_buf.data + cstate->line_buf.len
+					- attr_pre_len - (cstate->eol_type == EOL_CRLF ? 2 : 1),
+					cstate->null_print, attr_pre_len) == 0)
 				nulls[m] = true;
 			else
 				nulls[m] = false;
