@@ -180,7 +180,6 @@ typedef enum WorkfileError
 extern WorkfileError workfileError;
 void workfile_mgr_report_error(void);
 
-
 #endif /* __WORKFILE_MGR_H__ */
 
 /* EOF */

@@ -101,7 +101,7 @@ uninstall:
 # Build dynamically-loaded object file for CREATE FUNCTION ... LANGUAGE C.
 
 NAME = regress
-OBJS = regress.o partindex.o mapred/mapred.o
+OBJS = regress.o partindex.o workfile_mgr_test.o mapred/mapred.o
 
 include $(top_srcdir)/src/Makefile.shlib
 

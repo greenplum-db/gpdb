@@ -93,6 +93,8 @@ static void unit_test_result(bool result);
 static void unit_test_reset(void);
 static bool unit_test_summary(void);
 
+extern Datum gp_workfile_mgr_test_harness(PG_FUNCTION_ARGS);
+extern Datum gp_workfile_mgr_reset_segspace(PG_FUNCTION_ARGS);
 
 #define GET_STR(textp) DatumGetCString(DirectFunctionCall1(textout, PointerGetDatum(textp)))
 
@@ -131,7 +133,7 @@ static test_def test_defns[] = {
 		{NULL, NULL}, /* This has to be the last element of the array */
 };
 
-
+PG_FUNCTION_INFO_V1(gp_workfile_mgr_test_harness);
 Datum
 gp_workfile_mgr_test_harness(PG_FUNCTION_ARGS)
 {
@@ -160,6 +162,22 @@ gp_workfile_mgr_test_harness(PG_FUNCTION_ARGS)
 	}
 
 	PG_RETURN_BOOL(ran_any_tests && result);
+}
+
+/*
+ * gp_workfile_mgr_reset_segspace
+ *    Function to reset the used segspace on a segment
+ *    This directly manipulates the segspace counter and
+ *    should be used for testing purposes only
+ *  Returns the size before the reset
+ */
+PG_FUNCTION_INFO_V1(gp_workfile_mgr_reset_segspace);
+Datum
+gp_workfile_mgr_reset_segspace(PG_FUNCTION_ARGS)
+{
+	int64 size = WorkfileSegspace_GetSize();
+	WorkfileSegspace_Commit(0, size);
+	return Int64GetDatum(size);
 }
 
 /*

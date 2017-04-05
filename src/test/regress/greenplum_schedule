@@ -182,6 +182,7 @@ test: vacuum_full_heap_bitmapindex
 
 test: ao_checksum_corruption AOCO_Compression2 table_statistics
 test: metadata_track
+test: workfile_mgr_test
 
 # Test psql \du output
 test: psql_gpdb_du

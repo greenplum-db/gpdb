@@ -31,3 +31,4 @@ qp_regexp.out
 gang_mgmt.out
 guc_env_var.out
 dispatch.out
+workfile_mgr_test.out

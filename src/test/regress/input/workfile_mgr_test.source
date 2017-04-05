@@ -1,0 +1,15 @@
+CREATE OR REPLACE FUNCTION gp_workfile_mgr_test(testname text)
+RETURNS setof bool
+LANGUAGE C IMMUTABLE NO SQL AS '@abs_builddir@/regress@DLSUFFIX@', 'gp_workfile_mgr_test_harness';
+
+CREATE FUNCTION gp_workfile_mgr_test_allsegs(testname text)
+RETURNS SETOF BOOL
+AS
+$$
+	SELECT C.* FROM gp_toolkit.__gp_localid, gp_workfile_mgr_test($1) as C
+		UNION ALL
+	SELECT C.* FROM gp_toolkit.__gp_masterid, gp_workfile_mgr_test($1) as C;
+$$
+LANGUAGE SQL;
+
+SELECT gp_workfile_mgr_test_allsegs('workfile_queryspace');
