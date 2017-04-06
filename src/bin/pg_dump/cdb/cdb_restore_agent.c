@@ -1316,6 +1316,8 @@ formPsqlCommandLine(PQExpBuffer buf, const char *argv0, bool post_data, int role
 		exit(1);
 	}
 
+	appendPQExpBuffer(buf, "set -o pipefail && ");
+
 	if (netbackupServiceHost)
 	{
 		if (find_other_exec(argv0, "gp_bsa_restore_agent", NULL, gpNBURestorePg) < 0)

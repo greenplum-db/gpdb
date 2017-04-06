@@ -59,12 +59,22 @@ class GpRestoreFilterTestCase(unittest.TestCase):
         with self.assertRaisesRegexp(Exception, "Failed to extract schema name"):
             schema = extract_schema(line)
 
-    def test_extract_table00(self):
-        line = 'COPY ao_table (column1, column2, column3) FROM stdin;'
+    def test_extract_table_with_no_columns(self):
+        line = 'COPY nocolumn  FROM stdin;'
         table = extract_table(line)
-        self.assertEqual(table, 'ao_table')
+        self.assertEquals(table, 'nocolumn')
 
-    def test_extract_table01(self):
+    def test_extract_table_with_one_column(self):
+        line = 'COPY onecolumn (a) FROM stdin;'
+        table = extract_table(line)
+        self.assertEquals(table, 'onecolumn')
+
+    def test_extract_table_with_two_columns(self):
+        line = 'COPY twocolumns (a,b) FROM stdin;'
+        table = extract_table(line)
+        self.assertEquals(table, 'twocolumns')
+
+    def test_extract_table_fails(self):
         line = 'COPYao_table(column1column2column3)FROMstdin;'
         with self.assertRaisesRegexp(Exception, "Failed to extract table name"):
             table = extract_table(line)

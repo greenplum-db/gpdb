@@ -320,11 +320,18 @@ def extract_table(line):
     Removing the enclosing double quote only, don't do strip('"') in case table name has double quote
     """
     temp = line[len_copy_expr:]
+
     idx = temp.rfind(" (")
-    if idx == -1:
+    if idx != -1:
+        table = temp[:idx]
+        return checkAndRemoveEnclosingDoubleQuote(table)
+
+    idx = temp.rfind("  FROM")
+    if idx != -1:
+        table = temp[:idx]
+        return checkAndRemoveEnclosingDoubleQuote(table)
+    else:
         raise Exception('Failed to extract table name from line %s' % line)
-    table = temp[:idx]
-    return checkAndRemoveEnclosingDoubleQuote(table)
 
 def check_dropped_table(line, dump_tables, schema_level_restore_list, drop_table_expr):
     """
