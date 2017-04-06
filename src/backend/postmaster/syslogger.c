@@ -103,7 +103,7 @@ static char *alert_last_file_name = NULL;
 static bool alert_log_level_opened = false;
 static bool write_to_alert_log = false;
 
-/* An err msg may break into sever pipe chunks, so we need a buffer to assemble them.
+/* An err msg may break into several pipe chunks, so we need a buffer to assemble them.
  * We fix the number of buffers.  Generally a relative small number should suffice.
  * If we run out, we will flush partial message.  The assemble code will make sure we
  * may log partial msg, but we never garble msg.  We also make sure the output is valid
