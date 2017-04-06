@@ -445,4 +445,7 @@ just commit to the repository directly.
 For Greenplum Database documentation, please check online docs:
 http://gpdb.docs.pivotal.io
 
+For further information beyond the scope of this README, please see
+[our wiki](https://github.com/greenplum-db/gpdb/wiki)
+
 There is also a Vagrant-based quickstart guide for developers in `src/tools/vagrant/README.md`.
