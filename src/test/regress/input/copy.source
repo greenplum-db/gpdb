@@ -119,3 +119,14 @@ insert into copytest4 values (1,4);
 copy (select * from copytest4) to stdout csv delimiter ',' force quote id, id1, id2;
 copy (select * from copytest4) to stdout csv delimiter ',' force quote id, id1;
 
+-- test null string with CRLF for text mode
+
+CREATE TEMP TABLE venue(
+    venueid smallint not null,
+    venuename varchar(100),
+    venuecity varchar(30),
+    venuestate char(2),
+    venueseats integer) DISTRIBUTED BY (venueid);
+
+COPY venue FROM '@abs_srcdir@/data/venue_pipe.txt' WITH DELIMITER AS '|';
+SELECT count(*) FROM venue;
