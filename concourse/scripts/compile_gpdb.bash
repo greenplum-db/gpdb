@@ -129,14 +129,29 @@ function export_gpdb_extensions() {
   popd
 }
 
+function export_gpdb_win32_ccl() {
+    pushd gpdb_src/gpAux
+    if [ -f "$(find . -maxdepth 1 -name 'greenplum-*.msi' -print -quit)" ] ; then
+        cp greenplum-*.msi "$GPDB_ARTIFACTS_DIR"/
+    fi
+    popd
+}
+
 function _main() {
   case "$TARGET_OS" in
-    centos) prep_env_for_centos ;;
-    sles)   prep_env_for_sles ;;
-    *)
-      echo "only centos and sles are supported TARGET_OS'es"
-      false
+   centos)
+      prep_env_for_centos
       ;;
+    sles)
+      prep_env_for_sles
+      ;;
+    win32)
+        export BLD_ARCH=win32
+        ;;
+    *)
+        echo "only centos, sles and win32 are supported TARGET_OS'es"
+        false
+        ;;
   esac
 
   generate_build_number
@@ -165,9 +180,15 @@ function _main() {
   cp -R gpaddon_src gpdb_src/gpAux/$ADDON_DIR
   build_gpdb "${BLD_TARGET_OPTION[@]}"
   build_gppkg
+  if [ "$TARGET_OS" != "win32" ] ; then
+      # Don't unit test when cross compiling. Tests don't build because they
+      # require `./configure --with-zlib`.
+      unittest_check_gpdb
+  fi
   unittest_check_gpdb
   export_gpdb
   export_gpdb_extensions
+  export_gpdb_win32_ccl
 }
 
 _main "$@"
