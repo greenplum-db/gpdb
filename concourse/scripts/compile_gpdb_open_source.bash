@@ -60,7 +60,7 @@ function build_gpdb() {
 
 function unittest_check_gpdb() {
   pushd gpdb_src/src/backend
-    make -s unittest-check
+    make unittest-check
   popd
 }
 
