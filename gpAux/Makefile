@@ -57,9 +57,12 @@ endif
 
 BLD_CXX_LIB_DIR=$($(BLD_ARCH)_CXX_LIB_DIR)
 
-# help Windows builds find the cross-compiler and a pre-built curl
 ifeq ($(BLD_ARCH),win32)
+  # help Windows builds find the cross-compiler and a pre-built curl
   include Makefile.windows
+
+  # Host used for Windows packaging (only accessible from the gpdb5 concourse pipeline)
+  WIX_PACKAGER=build@wix-packaging.gpdb5-pipeline-vpc.pivotal.io
 endif
 
 #---------------------------------------------------------------------
@@ -620,9 +623,10 @@ INSTLOC=$(GPDIR)
 endif
 
 VERSION:=$(shell [ -f ../VERSION ] && perl -pe 's, ,-,g' ../VERSION)
+VERSION_SHORT:=$(shell [ -f ../VERSION ] && perl -pe 's, .*,,g' ../VERSION)
 
 ifeq "$(findstring win,$(BLD_ARCH))" "win"
-BLD_PACKAGING_PID:=$(shell ssh build@harpy 'echo $$$$')
+BLD_PACKAGING_PID:=$(shell ssh $(WIX_PACKAGER) 'echo $$$$')
 endif
 
 clients :
@@ -661,14 +665,14 @@ else
 	    echo "ERROR: BLD_PACKAGING_PID must have a value for Windows packaging operations; check your Makefile"; \
 	    exit 1; \
 	fi
-	ssh build@harpy 'if [ -d $(BLD_PACKAGING_PID) ]; then rm -rf $(BLD_PACKAGING_PID); fi'
-	ssh build@harpy 'mkdir -p $(BLD_PACKAGING_PID)/packaging/src/windows'
-	scp -r client/install/src/windows/* build@harpy:$(BLD_PACKAGING_PID)/packaging/src/windows/
-	scp -r $(CLIENTINSTLOC) build@harpy:$(BLD_PACKAGING_PID)/packaging/
-	ssh build@harpy 'cd $(BLD_PACKAGING_PID)/packaging/src/windows/ && make PACKAGE=greenplum-$@ VERSION=$(VERSION) SRCDIR=../../$(notdir $(CLIENTINSTLOC))'
-	scp build@harpy:$(BLD_PACKAGING_PID)/packaging/greenplum-$@-$(VERSION)-WinXP-x86_32.msi .
-	chmod 755 greenplum-$@-$(VERSION)-WinXP-x86_32.msi
-	ssh build@harpy 'rm -rf $(BLD_PACKAGING_PID)'
+	ssh $(WIX_PACKAGER) 'if [ -d $(BLD_PACKAGING_PID) ]; then rm -rf $(BLD_PACKAGING_PID); fi'
+	ssh $(WIX_PACKAGER) 'mkdir -p $(BLD_PACKAGING_PID)/packaging/src/windows'
+	scp -r client/install/src/windows/* $(WIX_PACKAGER):$(BLD_PACKAGING_PID)/packaging/src/windows/
+	scp -r $(CLIENTINSTLOC) $(WIX_PACKAGER):$(BLD_PACKAGING_PID)/packaging/
+	ssh $(WIX_PACKAGER) 'cd $(BLD_PACKAGING_PID)/packaging/src/windows/ && make PACKAGE=greenplum-$@ VERSION=$(VERSION_SHORT) SRCDIR=../../$(notdir $(CLIENTINSTLOC))'
+	scp $(WIX_PACKAGER):$(BLD_PACKAGING_PID)/packaging/greenplum-$@-$(VERSION_SHORT)-WinXP-x86_32.msi .
+	chmod 755 greenplum-$@-$(VERSION_SHORT)-WinXP-x86_32.msi
+	ssh $(WIX_PACKAGER) 'rm -rf $(BLD_PACKAGING_PID)'
 endif
 endif
 
@@ -731,14 +735,14 @@ else
 	    echo "ERROR: BLD_PACKAGING_PID must have a value for Windows packaging operations; check your Makefile"; \
 	    exit 1; \
 	fi
-	ssh build@harpy 'if [ -d $(BLD_PACKAGING_PID) ]; then rm -rf $(BLD_PACKAGING_PID); fi'
-	ssh build@harpy 'mkdir -p $(BLD_PACKAGING_PID)/packaging/src/windows'
-	scp -r client/install/src/windows/* build@harpy:$(BLD_PACKAGING_PID)/packaging/src/windows/
-	scp -r $(LOADERSINSTLOC) build@harpy:$(BLD_PACKAGING_PID)/packaging/
-	ssh build@harpy 'cd $(BLD_PACKAGING_PID)/packaging/src/windows/ && make PACKAGE=greenplum-$@ VERSION=$(VERSION) SRCDIR=../../$(notdir $(LOADERSINSTLOC))'
-	scp build@harpy:$(BLD_PACKAGING_PID)/packaging/greenplum-$@-$(VERSION)-WinXP-x86_32.msi .
-	chmod 755 greenplum-$@-$(VERSION)-WinXP-x86_32.msi
-	ssh build@harpy 'rm -rf $(BLD_PACKAGING_PID)'
+	ssh $(WIX_PACKAGER) 'if [ -d $(BLD_PACKAGING_PID) ]; then rm -rf $(BLD_PACKAGING_PID); fi'
+	ssh $(WIX_PACKAGER) 'mkdir -p $(BLD_PACKAGING_PID)/packaging/src/windows'
+	scp -r client/install/src/windows/* $(WIX_PACKAGER):$(BLD_PACKAGING_PID)/packaging/src/windows/
+	scp -r $(LOADERSINSTLOC) $(WIX_PACKAGER):$(BLD_PACKAGING_PID)/packaging/
+	ssh $(WIX_PACKAGER) 'cd $(BLD_PACKAGING_PID)/packaging/src/windows/ && make PACKAGE=greenplum-$@ VERSION=$(VERSION_SHORT) SRCDIR=../../$(notdir $(LOADERSINSTLOC))'
+	scp $(WIX_PACKAGER):$(BLD_PACKAGING_PID)/packaging/greenplum-$@-$(VERSION_SHORT)-WinXP-x86_32.msi .
+	chmod 755 greenplum-$@-$(VERSION_SHORT)-WinXP-x86_32.msi
+	ssh $(WIX_PACKAGER) 'rm -rf $(BLD_PACKAGING_PID)'
 endif
 endif
 
