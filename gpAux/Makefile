@@ -625,7 +625,6 @@ ifeq "$(findstring win,$(BLD_ARCH))" "win"
 BLD_PACKAGING_PID:=$(shell ssh build@harpy 'echo $$$$')
 endif
 
-
 clients :
 	if [ ! -z "$(CLIENTINSTLOC)" ] && [ "$(CLIENTINSTLOC)" != "/" ]; then rm -rf $(CLIENTINSTLOC); fi
 ifeq "$(findstring clients,$(BLD_TARGETS))" ""
@@ -654,6 +653,23 @@ endif
 	cd client/install/src/unix/ && \
 	$(MAKE) TAR=$(TAR) PRODUCT=Clients PACKAGE=greenplum-clients README=GPClientToolsUnix VERSION=`perl -pe 's, ,-,g' ../../../../../VERSION` INSTALL_SRC=$(CLIENTINSTLOC) INSTALL_DIR=../../../..
 
+ifneq "$(findstring win,$(BLD_ARCH))" "win"
+	cd client/install/src/unix/ && \
+	  $(MAKE) TAR=$(TAR) PRODUCT=Clients PACKAGE=greenplum-clients README=GPClientToolsUnix VERSION=`perl -pe 's, ,-,g' ../../../../../VERSION` INSTALL_SRC=$(CLIENTINSTLOC) INSTALL_DIR=../../../..
+else
+	if [ "$(BLD_PACKAGING_PID)" = "" ]; then \
+	    echo "ERROR: BLD_PACKAGING_PID must have a value for Windows packaging operations; check your Makefile"; \
+	    exit 1; \
+	fi
+	ssh build@harpy 'if [ -d $(BLD_PACKAGING_PID) ]; then rm -rf $(BLD_PACKAGING_PID); fi'
+	ssh build@harpy 'mkdir -p $(BLD_PACKAGING_PID)/packaging/src/windows'
+	scp -r client/install/src/windows/* build@harpy:$(BLD_PACKAGING_PID)/packaging/src/windows/
+	scp -r $(CLIENTINSTLOC) build@harpy:$(BLD_PACKAGING_PID)/packaging/
+	ssh build@harpy 'cd $(BLD_PACKAGING_PID)/packaging/src/windows/ && make PACKAGE=greenplum-$@ VERSION=$(VERSION) SRCDIR=../../$(notdir $(CLIENTINSTLOC))'
+	scp build@harpy:$(BLD_PACKAGING_PID)/packaging/greenplum-$@-$(VERSION)-WinXP-x86_32.msi .
+	chmod 755 greenplum-$@-$(VERSION)-WinXP-x86_32.msi
+	ssh build@harpy 'rm -rf $(BLD_PACKAGING_PID)'
+endif
 endif
 
 loaders :
@@ -707,6 +723,23 @@ endif
 	cd client/install/src/unix/ && \
 	$(MAKE) TAR=$(TAR) PRODUCT=Loaders PACKAGE=greenplum-loaders README=GPLoadToolsUnix VERSION=`perl -pe 's, ,-,g' ../../../../../VERSION` INSTALL_SRC=$(LOADERSINSTLOC) INSTALL_DIR=../../../..
 
+ifneq "$(findstring win,$(BLD_ARCH))" "win"
+	cd client/install/src/unix/ && \
+	  $(MAKE) TAR=$(TAR) PRODUCT=Loaders PACKAGE=greenplum-loaders README=GPLoadToolsUnix VERSION=`perl -pe 's, ,-,g' ../../../../../VERSION` INSTALL_SRC=$(LOADERSINSTLOC) INSTALL_DIR=../../../..
+else
+	if [ "$(BLD_PACKAGING_PID)" = "" ]; then \
+	    echo "ERROR: BLD_PACKAGING_PID must have a value for Windows packaging operations; check your Makefile"; \
+	    exit 1; \
+	fi
+	ssh build@harpy 'if [ -d $(BLD_PACKAGING_PID) ]; then rm -rf $(BLD_PACKAGING_PID); fi'
+	ssh build@harpy 'mkdir -p $(BLD_PACKAGING_PID)/packaging/src/windows'
+	scp -r client/install/src/windows/* build@harpy:$(BLD_PACKAGING_PID)/packaging/src/windows/
+	scp -r $(LOADERSINSTLOC) build@harpy:$(BLD_PACKAGING_PID)/packaging/
+	ssh build@harpy 'cd $(BLD_PACKAGING_PID)/packaging/src/windows/ && make PACKAGE=greenplum-$@ VERSION=$(VERSION) SRCDIR=../../$(notdir $(LOADERSINSTLOC))'
+	scp build@harpy:$(BLD_PACKAGING_PID)/packaging/greenplum-$@-$(VERSION)-WinXP-x86_32.msi .
+	chmod 755 greenplum-$@-$(VERSION)-WinXP-x86_32.msi
+	ssh build@harpy 'rm -rf $(BLD_PACKAGING_PID)'
+endif
 endif
 
 #---------------------------------------------------------------------
