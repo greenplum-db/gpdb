@@ -96,8 +96,6 @@ struct HashBitmap
 typedef struct HashStreamOpaque
 {
 	HashBitmap *tbm;
-	bool		tofree;			/* flag to indicate whether this opaque owns
-								 * the tbm, later used in tbm_stream_free() */
 	PagetableEntry *entry;
 }	HashStreamOpaque;
 
@@ -1200,27 +1198,11 @@ tbm_create_stream_node(HashBitmap *tbm)
 	is->upd_instrument = tbm_stream_upd_instrument;
 
 	op->tbm = tbm;
-	op->tofree = true;
 	op->entry = NULL;
 
 	is->opaque = (void *) op;
 
 	return is;
-}
-
-StreamNode *
-tbm_create_stream_node_ref(HashBitmap *tbm)
-{
-	IndexStream *sn = tbm_create_stream_node(tbm);
-
-	/*
-	 * Do not take ownership of the HashBitmap.
-	 */
-	HashStreamOpaque *op = (HashStreamOpaque *) sn->opaque;
-
-	op->tofree = false;
-
-	return sn;
 }
 
 /*
@@ -1275,12 +1257,10 @@ tbm_stream_free(StreamNode *self)
 	}
 
 	/*
-	 * Only free the bitmap if we actually own it.
+	 * A reference to the plan is kept in the BitmapIndexScanState
+	 * so this is a no-op for now.
 	 */
-	if (op->tofree)
-	{
-		tbm_free(tbm);
-	}
+	tbm_free(tbm);
 	pfree(op);
 	pfree(self);
 }
