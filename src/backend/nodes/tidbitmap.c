@@ -95,7 +95,7 @@ struct HashBitmap
 /* A struct to hide away HashBitmap state for a streaming bitmap */
 typedef struct HashStreamOpaque
 {
-	HashBitmap *tbm;
+	HashBitmap *tbm;  /* HashStreamOpaque will not take the ownership of freeing HashBitmap */
 	PagetableEntry *entry;
 }	HashStreamOpaque;
 
@@ -1247,20 +1247,11 @@ static void
 tbm_stream_free(StreamNode *self)
 {
 	HashStreamOpaque *op = (HashStreamOpaque *) self->opaque;
-	HashBitmap *tbm = op->tbm;
-
-	/* CDB: Report statistics for EXPLAIN ANALYZE */
-	if (tbm->instrument)
-	{
-		tbm_upd_instrument(tbm);
-		tbm_set_instrument(tbm, NULL);
-	}
-
 	/*
-	 * A reference to the plan is kept in the BitmapIndexScanState
-	 * so this is a no-op for now.
+	 * op->tbm is actually a reference to node->bitmap from BitmapIndexScanState
+	 * BitmapIndexScanState would have freed the op->tbm already so we shouldn't
+	 * access now.
 	 */
-	tbm_free(tbm);
 	pfree(op);
 	pfree(self);
 }
