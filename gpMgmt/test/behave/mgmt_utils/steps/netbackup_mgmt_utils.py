@@ -70,28 +70,6 @@ def impl(context, ver):
 def impl(context, ver, gphome):
     _copy_nbu_lib_files(context=context, ver=ver, gphome=gphome)
 
-@when('the user runs "{cmd_str}" using netbackup with long params')
-def impl(context, cmd_str):
-    netbackup_service_host = ""
-    netbackup_policy = ""
-    netbackup_schedule = ""
-    if "--netbackup-service-host" not in cmd_str:
-        netbackup_service_host = " --netbackup-service-host netbackup-service-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa127 "
-    if "--netbackup-policy" not in cmd_str:
-        netbackup_policy = " --netbackup-policy netbackup-policy-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa127 "
-    if "--netbackup-schedule" not in cmd_str:
-        netbackup_schedule = " --netbackup-schedule netbackup-schedule-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa127 "
-    bnr_tool = cmd_str.split()[0].strip()
-    if bnr_tool == 'gpcrondump':
-        command_str = cmd_str + netbackup_service_host + netbackup_policy + netbackup_schedule
-    elif bnr_tool == 'gpdbrestore':
-        command_str = cmd_str + netbackup_service_host
-    elif bnr_tool == 'gp_dump':
-        command_str = cmd_str + netbackup_service_host + netbackup_policy + netbackup_schedule
-    elif bnr_tool == 'gp_restore':
-        command_str = cmd_str + netbackup_service_host
-    run_gpcommand(context, command_str)
-
 @when('the user runs gpcrondump with -k option on database "{dbname}" using netbackup')
 def impl(context, dbname):
     datetime_fmt = datetime.now().strftime("%Y%m%d%H%M%S")
