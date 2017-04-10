@@ -169,10 +169,12 @@ test__destroy_agg_hash_table__check_for_leaks(void **state)
 	ht->group_buf = mpool_create(ht->entry_cxt,
 			"GroupsAndAggs Context");
 
+#define NUM_BUCKETS_PER_SEGMENT (1 << 10)
 #define NUM_SPILL_FILES 3
-#define NUM_BUCKETS 1024
+#define NUM_SEGMENTS (2)
+#define NUM_BUCKETS (NUM_BUCKETS_PER_SEGMENT * NUM_SEGMENTS)
 
-	ht->buckets = MemoryContextAllocZero(testContext, sizeof(HashAggEntry) * NUM_BUCKETS);
+	ht->dir = MemoryContextAllocZero(testContext, sizeof(HashAggSegment) * NUM_SEGMENTS);
 	ht->bloom = MemoryContextAllocZero(testContext, NUM_BUCKETS / (sizeof(uint64) * 8 /* bits */));
 
 	SpillSet *spill_set = createSpillSet(NUM_SPILL_FILES, 0 /* parent_hash_bit */);

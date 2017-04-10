@@ -25,6 +25,8 @@
 typedef uint32 HashKey;
 typedef struct BatchFileInfo BatchFileInfo;
 
+#define MINIMUM_SEGSIZE (1 << 10)
+
 /* An entry in an Agg hash table.
  * 
  * Each such entry corresponds to a single group and includes the grouping
@@ -119,13 +121,16 @@ typedef struct SpillSet
 
 typedef struct HashAggTableSizes
 {
-    unsigned             nbuckets;   /* Calculated # of hash buckets. */
-    unsigned             nentries;   /* Calculated # of hash entries. */
-    unsigned             nbatches;   /* Calculated # of passes. */
-	double               hashentry_width; /* Estimated hash entry size */
-    unsigned             workmem_initial;    /* Estimated work_mem bytes at #entries=0 */
-    unsigned             workmem_per_entry;  /* Additional work_mem bytes per entry */
-    bool                 spill;      /* Do we expect to spill ? */
+	unsigned             nbuckets;          /* Calculated # of hash buckets */
+	unsigned             nsegments;         /* Calculated # of segments */
+	unsigned             ssize;             /* Calculated # of buckets per segment */
+	unsigned             sshift;            /* Segment sshift = log2(ssize) */
+	unsigned             nentries;          /* Calculated # of hash entries */
+	unsigned             nbatches;          /* Calculated # of passes */
+	double               hashentry_width;   /* Estimated hash entry size */
+	unsigned             workmem_initial;   /* Estimated work_mem bytes at #entries=0 */
+	unsigned             workmem_per_entry; /* Additional work_mem bytes per entry */
+	bool                 spill;             /* Do we expect to spill ? */
 } HashAggTableSizes;
 
 /*
@@ -147,6 +152,9 @@ typedef enum HashAggState
 	HASHAGG_END_OF_PASSES
 } HashAggState;
 
+typedef HashAggEntry** HashAggSegment;
+
+
 /* An Agg hash table with associated overflow batches and processing
  * state.  
  * 
@@ -155,6 +163,15 @@ typedef enum HashAggState
  * e.g., description of input and output tuples, tuple slots, expression 
  * and memory contexts, grouping key information (including hash and 
  * equality functions), etc. Thus it is very tightly coupled with them.
+ *
+ * The internal structure of the hash table consists of a number of hash
+ * buckets which are physically split into a number of hash segment, but
+ * maintains an illusion of a large array of buckets. Hash collision is handled
+ * by chaining entries in the hashed bucket.
+ * To improve performance in the common case when the number of entries is much
+ * less than the number of buckets, each segment (of buckets) is lazily
+ * allocated. Since the number of buckets does not change, there is no need to
+ * move data around.
  */
 typedef struct HashAggTable
 {
@@ -162,7 +179,11 @@ typedef struct HashAggTable
 	MemoryContext   entry_cxt;	/* memory context for hash table entries */
 
 	unsigned nbuckets;
-	HashAggEntry  **buckets;
+	unsigned nsegments;   /* ssize * nsegments = nbuckets */
+	unsigned ssize;       /* number of buckets per segment - must be power of 2 */
+	unsigned sshift;      /* segment shift = log2(ssize) */
+
+	HashAggSegment *dir;
 	uint64 *bloom;
 
 	/* Overflow batches */

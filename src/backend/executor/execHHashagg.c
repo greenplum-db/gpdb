@@ -41,6 +41,14 @@
 
 #define HHA_MSG_LVL DEBUG2
 
+/* Compute a mod when b is a power of 2 */
+#define MOD(a, b) ((a) & (b-1))
+
+/* Easy compute segnum and segidx from bucketno */
+#define SEGNUM(ht, bucketno) ((bucketno) >> (ht->sshift))
+#define SEGIDX(ht, bucketno) MOD(bucketno, ht->ssize)
+
+#define IS_POW2(x) (0 == (((unsigned)x) & ((unsigned)x - 1)))
 
 /* Encapture data related to a batch file. */
 struct BatchFileInfo
@@ -384,7 +392,7 @@ lookup_agg_hash_entry(AggState *aggstate,
 	ExprContext *tmpcontext = aggstate->tmpcontext; /* per input tuple context */
 	Agg *agg = (Agg*)aggstate->ss.ps.plan;
 	MemoryContext oldcxt;
-	unsigned int bucket_idx;
+	unsigned int bucket_idx, segnum, segidx;
 	uint64 bloomval;			/* bloom filter value */
    
 	Assert(mt_bind != NULL);
@@ -394,9 +402,12 @@ lookup_agg_hash_entry(AggState *aggstate,
 
 	oldcxt = MemoryContextSwitchTo(tmpcontext->ecxt_per_tuple_memory);
 	bucket_idx = (hashkey >> parent_hash_bit) % (hashtable->nbuckets);
+	segnum = SEGNUM(hashtable, bucket_idx);
+	segidx = SEGIDX(hashtable, bucket_idx);
 	bloomval = ((uint64)1) << ((hashkey >> 23) & 0x3f);
+
 	entry = (0 == (hashtable->bloom[bucket_idx] & bloomval) ? NULL :
-			 hashtable->buckets[bucket_idx]);
+			hashtable->dir[segnum][segidx]);
 
 	/*
 	 * Search entry chain for the bucket. If such an entry found in the
@@ -470,8 +481,20 @@ lookup_agg_hash_entry(AggState *aggstate,
 			
 		if (entry != NULL)
 		{
-			entry->next = hashtable->buckets[bucket_idx];
-			hashtable->buckets[bucket_idx] = entry;
+			if (NULL == hashtable->dir[segnum])
+			{
+				/* allocate the segment of buckets that we need */
+				hashtable->dir[segnum] = (HashAggSegment) MemoryContextAllocZero(
+						aggstate->aggcontext, sizeof(HashAggEntry**) * hashtable->ssize);
+				/*
+				 * The memory needed for these buckets was already accounted for in
+				 * hashtable->mem_for_metadata when the hash table was created - the
+				 * segment is just being lazily allocated here.
+				 */
+			}
+
+			entry->next = hashtable->dir[segnum][segidx];
+			hashtable->dir[segnum][segidx] = entry;
 			hashtable->bloom[bucket_idx] |= bloomval;
 			
 			hashtable->num_ht_groups++;
@@ -512,6 +535,7 @@ calcHashAggTableSizes(double memquota,	/* Memory quota in bytes. */
 		+ transpace;
 	
 	double nbuckets;
+	double nsegments, ssize, sshift;
 
 	/* Hash Entries */
 	double nentries;
@@ -549,13 +573,34 @@ calcHashAggTableSizes(double memquota,	/* Memory quota in bytes. */
 
 	nentries = floor((memquota - nbatches * batchfile_buffer_size) / entrysize);
 	
-    /* Allocate at least a few hash entries regardless of memquota. */
-    nentries = Max(nentries, gp_hashagg_groups_per_bucket);
+	/* Allocate at least a few hash entries regardless of memquota. */
+	nentries = Max(nentries, gp_hashagg_groups_per_bucket);
 
 	nbuckets = ceil(nentries/gp_hashagg_groups_per_bucket);
 
 	/* Set nbuckets to the power of 2. */
 	nbuckets = (((unsigned)1) << ((unsigned)ceil(log(nbuckets) / log(2))));
+
+	/* Calculate the number of segments & segment size based on nbuckets */
+	ssize = (((unsigned)1) << ((unsigned)ceil(log(nbuckets) / log(2)) / 2));
+
+	ssize = Max(ssize, MINIMUM_SEGSIZE);
+
+	nsegments = 1;
+	if (nbuckets >= 2 * ssize)
+	{
+		nsegments = nbuckets / ssize;
+	}
+
+	sshift = ((unsigned)ceil(log(ssize) / log(2)));
+
+	/* assert that nbuckets, nsegments etc are powers of 2 */
+	Assert(IS_POW2(nbuckets));
+	Assert(IS_POW2(nsegments));
+	Assert(IS_POW2(ssize));
+	/* other sanity asserts */
+	Assert((1 << (unsigned) sshift) == ssize);
+	Assert(nsegments <= nbuckets);
 
 	/*
 	 * Always set nbuckets greater than gp_hashagg_default_nbatches since
@@ -565,35 +610,42 @@ calcHashAggTableSizes(double memquota,	/* Memory quota in bytes. */
 	if (nbuckets < gp_hashagg_default_nbatches)
 		nbuckets = gp_hashagg_default_nbatches;
 
-	if (nbatches > UINT_MAX || nentries > UINT_MAX || nbuckets > UINT_MAX)
+	if (nbatches > UINT_MAX || nentries > UINT_MAX || nbuckets > UINT_MAX ||
+			nsegments > UINT_MAX || ssize > UINT_MAX || sshift > UINT_MAX)
 	{
 		if (force)
 		{
-			insist_log(false, "too many passes or hash entries");
+			insist_log(false, "too many passes or hash entries or hash buckets");
 		}
 		else
 		{
-			elog(HHA_MSG_LVL, "HashAgg: number of passes or hash entries bigger than int type!");
+			elog(HHA_MSG_LVL, "HashAgg: number of passes or hash entries or hash buckets "
+					"bigger than int type!");
 			return false; /* Too many groups. */
 		}
 	}
 
-    if (out_hats)
-    {
-        out_hats->nbuckets = (unsigned)nbuckets;
-        out_hats->nentries = (unsigned)nentries;
+	if (out_hats)
+	{
+		out_hats->nbuckets = (unsigned)nbuckets;
+		out_hats->nsegments = (unsigned)nsegments;
+		out_hats->ssize = (unsigned)ssize;
+		out_hats->sshift = (unsigned)sshift;
+		out_hats->nentries = (unsigned)nentries;
 		out_hats->nbatches = (unsigned)nbatches;
 		out_hats->hashentry_width = entrysize;
 		out_hats->spill = expectSpill;
-        out_hats->workmem_initial = (unsigned)(nbatches * batchfile_buffer_size);
-        out_hats->workmem_per_entry = (unsigned)entrysize;
-    }
+		out_hats->workmem_initial = (unsigned)(nbatches * batchfile_buffer_size);
+		out_hats->workmem_per_entry = (unsigned)entrysize;
+	}
 	
 	elog(HHA_MSG_LVL, "HashAgg: nbuckets = %d, nentries = %d, nbatches = %d",
-		 (int)nbuckets, (int)nentries, (int)nbatches);
+		(int)nbuckets, (int)nentries, (int)nbatches);
+	elog(HHA_MSG_LVL, "HashAgg: nsegments = %ud, segsize = %ud, sshift = %ud",
+		(unsigned)nsegments, (unsigned)ssize, (unsigned)sshift);
 	elog(HHA_MSG_LVL, "HashAgg: expected memory footprint = %d",
 		(int)( nentries*entrywidth + nbuckets*sizeof(HashAggEntry*) + nbatches*batchfile_buffer_size));
-	
+
 	return true;
 }
 
@@ -690,9 +742,12 @@ create_agg_hash_table(AggState *aggstate)
 
 	/* Initialize the hash buckets */
 	hashtable->nbuckets = hashtable->hats.nbuckets;
+	hashtable->nsegments = hashtable->hats.nsegments;
+	hashtable->ssize = hashtable->hats.ssize;
+	hashtable->sshift = hashtable->hats.sshift;
 	hashtable->total_buckets = hashtable->nbuckets;
-	hashtable->buckets = (HashAggEntry **)palloc0(hashtable->nbuckets * sizeof(HashAggEntry *));
-	hashtable->bloom = (uint64 *)palloc0(hashtable->nbuckets * sizeof(uint64));
+	hashtable->dir = (HashAggSegment *) palloc0(hashtable->nsegments * sizeof(HashAggSegment));
+	hashtable->bloom = (uint64 *) palloc0(hashtable->nbuckets * sizeof(uint64));
 
 	MemoryContextSwitchTo(hashtable->entry_cxt);
 	
@@ -710,8 +765,13 @@ create_agg_hash_table(AggState *aggstate)
 	MemoryContextSwitchTo(oldcxt);
 
 	hashtable->max_mem = 1024.0 * operatorMemKB;
+	/*
+	 * calculate all the memory needed for metadata even though we will lazily
+	 * allocate the bucket segments later on
+	 */
 	hashtable->mem_for_metadata = sizeof(HashAggTable)
 		+ hashtable->nbuckets * sizeof(HashAggEntry *)
+		+ hashtable->nsegments * sizeof(HashAggSegment)
 		+ hashtable->nbuckets * sizeof(uint64)
 		+ sizeof(GroupKeysAndAggs);
 	hashtable->mem_wanted = hashtable->mem_for_metadata;
@@ -1177,7 +1237,8 @@ spill_hash_table(AggState *aggstate)
 	HashAggTable *hashtable = aggstate->hhashtable;
 	SpillSet *spill_set;
 	SpillFile *spill_file;
-	int bucket_no;
+	unsigned bucket_no;
+	unsigned segnum, segidx;
 	int file_no;
 	MemoryContext oldcxt;
 	uint64 old_num_spill_groups = hashtable->num_spill_groups;
@@ -1226,7 +1287,11 @@ spill_hash_table(AggState *aggstate)
 		for (bucket_no = file_no; bucket_no < hashtable->nbuckets;
 			 bucket_no += spill_set->num_spill_files)
 		{
-			HashAggEntry *entry = hashtable->buckets[bucket_no];
+			segnum = SEGNUM(hashtable, bucket_no);
+			segidx = SEGIDX(hashtable, bucket_no);
+
+			HashAggEntry *entry = (NULL == hashtable->dir[segnum]) ?
+					NULL : hashtable->dir[segnum][segidx];
 			
 			/* Ignore empty chains. */
 			if (entry == NULL) continue;
@@ -1255,7 +1320,7 @@ spill_hash_table(AggState *aggstate)
 				}
 			}
 
-			hashtable->buckets[bucket_no] = NULL;
+			hashtable->dir[segnum][segidx] = NULL;
 		}
 	}
 
@@ -1354,28 +1419,36 @@ writeHashEntry(AggState *aggstate, BatchFileInfo *file_info,
 static void
 agg_hash_table_stat_upd(HashAggTable *ht)
 {
-    unsigned int	i;
-
-    for (i = 0; i < ht->nbuckets; i++)
-    {
-        HashAggEntry   *entry = ht->buckets[i];
-        int             chainlength = 0;
-
-        if (entry)
-        {
-            for (chainlength = 0; entry; chainlength++)
-                entry = entry->next;
-            cdbexplain_agg_upd(&ht->chainlength, chainlength, i);
-        }
+		unsigned bucketno, segnum, segidx;
+		int chainlength;
+		for (bucketno = 0; bucketno < ht->nbuckets; ++bucketno)
+		{
+			segnum = SEGNUM(ht, bucketno);
+			segidx = SEGIDX(ht, bucketno);
+			if (NULL == ht->dir[segnum])
+			{
+				/* Skip empty segments entirely */
+				bucketno += (ht->ssize - 1);
+			}
+			else
+			{
+				HashAggEntry *entry = ht->dir[segnum][segidx];
+				if (entry)
+				{
+					for (chainlength = 0; entry; chainlength++)
+						entry = entry->next;
+					cdbexplain_agg_upd(&ht->chainlength, chainlength, bucketno);
+				}
+			}
     }
-}                               /* agg_hash_table_stat_upd */
+}
 
 /* Function: init_agg_hash_iter
  *
  * Initialize the HashAggTable's (one and only) entry iterator. */
 void init_agg_hash_iter(HashAggTable* hashtable)
 {
-	Assert( hashtable != NULL && hashtable->buckets != NULL && hashtable->nbuckets > 0 );
+	Assert( hashtable != NULL && hashtable->dir != NULL && hashtable->nbuckets > 0 );
 	
 	hashtable->curr_bucket_idx = -1;
 	hashtable->next_entry = NULL;
@@ -1397,34 +1470,41 @@ agg_hash_iter(AggState *aggstate)
 	HashAggEntry *entry = hashtable->next_entry;
 	SpillSet *spill_set = hashtable->spill_set;
 	MemoryContext oldcxt;
+	unsigned segnum, segidx;
 
-	Assert( hashtable != NULL && hashtable->buckets != NULL && hashtable->nbuckets > 0 );
+	Assert( hashtable != NULL && hashtable->dir != NULL && hashtable->nbuckets > 0 );
 
 	if (hashtable->curr_spill_file != NULL)
 		spill_set = hashtable->curr_spill_file->spill_set;
-	
+
 	oldcxt = MemoryContextSwitchTo(hashtable->entry_cxt);
 
 	while (entry == NULL &&
-		   hashtable->nbuckets > ++ hashtable->curr_bucket_idx)
+			++hashtable->curr_bucket_idx < hashtable->nbuckets)
 	{
-		entry = hashtable->buckets[hashtable->curr_bucket_idx];
-		if (entry != NULL)
+		segnum = SEGNUM(hashtable, hashtable->curr_bucket_idx);
+		segidx = SEGIDX(hashtable, hashtable->curr_bucket_idx);
+
+		if (NULL == hashtable->dir[segnum])
 		{
-			Assert(entry->is_primodial);
-			break;
+			/* Skip empty segments entirely */
+			hashtable->curr_bucket_idx += (hashtable->ssize - 1);
+		}
+		else
+		{
+			entry = hashtable->dir[segnum][segidx];
 		}
 	}
 
 	if (entry != NULL)
 	{
+		Assert(entry->is_primodial);
 		hashtable->num_output_groups++;
 		hashtable->next_entry = entry->next;
 		entry->next = NULL;
 	}
 
 	MemoryContextSwitchTo(oldcxt);
-
 	return entry;
 }
 
@@ -1938,13 +2018,21 @@ Gpmon_ResetAggHashTable(AggState* aggstate)
  */
 void reset_agg_hash_table(AggState *aggstate)
 {
+	unsigned segnum;
 	HashAggTable *hashtable = aggstate->hhashtable;
 	
 	elog(HHA_MSG_LVL,
 		"HashAgg: resetting " INT64_FORMAT "-entry hash table",
 		hashtable->num_ht_groups);
 	
-	MemSet(hashtable->buckets, 0, hashtable->nbuckets * sizeof(HashAggEntry*));
+	for (segnum = 0; segnum < hashtable->nsegments; ++segnum)
+	{
+		if (NULL != hashtable->dir[segnum])
+		{
+			/* Zero instead of free-ing because it'll probably be used again */
+			MemSet(hashtable->dir[segnum], 0, hashtable->ssize * sizeof(HashAggEntry**));
+		}
+	}
 	MemSet(hashtable->bloom, 0, hashtable->nbuckets * sizeof(uint64));
 	hashtable->num_ht_groups = 0;
 
@@ -1963,6 +2051,7 @@ void reset_agg_hash_table(AggState *aggstate)
 void destroy_agg_hash_table(AggState *aggstate)
 {
 	Agg *agg = (Agg*)aggstate->ss.ps.plan;
+	unsigned segnum;
 	
 	if ( agg->aggstrategy == AGG_HASHED && aggstate->hhashtable != NULL )
 	{
@@ -1974,7 +2063,14 @@ void destroy_agg_hash_table(AggState *aggstate)
 		Gpmon_ResetAggHashTable(aggstate);
 
 		/* destroy_batches(aggstate->hhashtable); */
-		pfree(aggstate->hhashtable->buckets);
+		for (segnum = 0; segnum < aggstate->hhashtable->nsegments; ++segnum)
+		{
+			if (NULL != aggstate->hhashtable->dir[segnum])
+			{
+				pfree(aggstate->hhashtable->dir[segnum]);
+			}
+		}
+		pfree(aggstate->hhashtable->dir);
 		pfree(aggstate->hhashtable->bloom);
 		if (aggstate->hhashtable->hashkey_buf)
 			pfree(aggstate->hhashtable->hashkey_buf);
