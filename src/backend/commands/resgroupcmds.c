@@ -329,7 +329,7 @@ Oid
 GetResGroupIdForRole(Oid roleid)
 {
 	HeapTuple	tuple;
-	ResourceOwner owner;
+	ResourceOwner owner = NULL;
 	Oid			groupId;
 	Relation	rel;
 	ScanKeyData	key;

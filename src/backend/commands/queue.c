@@ -585,7 +585,7 @@ AlterResqueueCapabilityEntry(Oid queueid,
 												  resTypeInt,
 												  pResSetting,
 												  rel,
-												  InvalidOid);
+												  NULL /* InvalidOid */);
 		}
 
 	} /* end foreach elem */
