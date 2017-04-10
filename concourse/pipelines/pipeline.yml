@@ -464,6 +464,26 @@ jobs:
       MAKE_TEST_COMMAND: sub_transaction_limit_removal
       TEST_OS: centos
 
+- name: gpperfmon
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [compile_gpdb_centos6]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: gpperfmon
+    file: gpdb_src/concourse/tasks/behave_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_TAGS: gpperfmon
+      BLDWRAP_POSTGRES_CONF_ADDONS: ""
+
 - name: pt-rebuild
   plan:
   - aggregate:
