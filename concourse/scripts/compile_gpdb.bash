@@ -177,7 +177,7 @@ function _main() {
   # symlink and `cd`s to the actual directory. Currently the Makefile in the
   # addon directory assumes that it is located in a particular location under
   # the source tree and hence needs to be copied over.
-  cp -R gpaddon_src gpdb_src/gpAux/$ADDON_DIR
+  rsync -auv gpaddon_src/ gpdb_src/gpAux/$ADDON_DIR
   build_gpdb "${BLD_TARGET_OPTION[@]}"
   build_gppkg
   if [ "$TARGET_OS" != "win32" ] ; then
