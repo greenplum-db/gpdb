@@ -1,0 +1,1 @@
+INSERT INTO ao_bs32768 SELECT * FROM base_table;
