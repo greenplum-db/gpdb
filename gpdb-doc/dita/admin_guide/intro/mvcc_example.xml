@@ -31,6 +31,8 @@
                      assigned XIDs below (2<sup>32</sup>).</li>
                </ul></li>
          </ul></p>
+      <note>Greenplum Database assigns XID values only to transactions that involve DDL or DML
+         operations, which are typically the only transactions that require an XID.</note>
    </body>
    <topic id="topic_zsw_yck_wv">
       <title>Simple MVCC Example</title>
