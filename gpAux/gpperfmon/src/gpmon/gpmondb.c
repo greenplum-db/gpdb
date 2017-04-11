@@ -222,7 +222,7 @@ int gpdb_gpperfmon_db_exists(void)
 	else
 	{
 		char *errmsg = PQerrorMessage(conn);
-		fprintf(stderr, "Perfmonance Monitor - failed to connect to gpperfmon database: %s",
+		fprintf(stderr, "Performance Monitor - failed to connect to gpperfmon database: %s",
 						(errmsg == NULL ? "unknown reason" : errmsg));
 	}
 
