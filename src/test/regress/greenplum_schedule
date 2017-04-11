@@ -118,7 +118,7 @@ test: bfv_cte bfv_joins bfv_subquery bfv_planner bfv_legacy bfv_temp
 
 test: qp_olap_mdqa qp_misc
 
-test: qp_misc_jiras qp_with_clause qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan
+test: qp_misc_jiras qp_with_clause qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan session_level_memory_consumption
 test: qp_with_functional_inlining qp_with_functional_noinlining
 test: qp_functions qp_misc_rio_join_small qp_misc_rio qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution
 
