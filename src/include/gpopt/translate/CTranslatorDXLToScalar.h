@@ -211,12 +211,6 @@ namespace gpdxl
 				CMappingColIdVar *pmapcidvar
 				);
 
-			Expr *PparamFromDXLNodeScInitPlan
-				(
-				const CDXLNode *pdxlnInitPlan,
-				CMappingColIdVar *pmapcidvar
-				);
-
 			// return a GPDB subplan from a DXL subplan
 			Expr *PsubplanFromDXLNodeScSubPlan
 				(
