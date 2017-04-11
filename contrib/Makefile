@@ -18,6 +18,7 @@ WANTED_DIRS = \
 		dict_int \
 		dict_xsyn \
 		intarray \
+		orafce \
 		pageinspect \
 		pg_upgrade \
 		pg_upgrade_support \
