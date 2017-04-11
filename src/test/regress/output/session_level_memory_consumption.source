@@ -1,7 +1,7 @@
 --
 -- Checks the session_level_memory_consumption view installation/uninstallation and population
 --
-\i /usr/local/gpdb/bin/../share/postgresql/contrib/gp_session_state.sql
+\i @bindir@/../share/postgresql/contrib/gp_session_state.sql
 -- Adjust this setting to control where the objects get created.
 CREATE SCHEMA session_state;
 SET search_path = session_state;
@@ -103,7 +103,7 @@ having count(1) = (select count(1) from gp_segment_configuration where preferred
                    1
 (1 row)
 
-\i /usr/local/gpdb/bin/../share/postgresql/contrib/uninstall_gp_session_state.sql
+\i @bindir@/../share/postgresql/contrib/uninstall_gp_session_state.sql
 SET search_path = session_state;
 BEGIN;
 DROP VIEW session_level_memory_consumption; 
