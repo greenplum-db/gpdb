@@ -44,13 +44,13 @@ SIGTEST_LIBS+= -lsigar
 all: gpsmon gpmmon
 
 gpsmon: $(GPSMON_OBJS)
-	$(CC) -o gpsmon $(COPT) $(GPSMON_OBJS) $(LDLIBS) $(GPSMON_LIBS)
+	$(CC) -o gpsmon $(CFLAGS) $(COPT) $(GPSMON_OBJS) $(LDLIBS) $(GPSMON_LIBS)
 
 gpmmon: $(GPMMON_OBJS)
-	$(CC) -o gpmmon $(COPT) $(GPMMON_OBJS) $(LDLIBS) $(GPMMON_LIBS)
+	$(CC) -o gpmmon $(CFLAGS) $(COPT) $(GPMMON_OBJS) $(LDLIBS) $(GPMMON_LIBS)
 
 sigartest: $(SIGTEST_OBJS)
-	$(CC) -o sigartest $(COPT) $(SIGTEST_OBJS) $(LDLIBS) $(GPSMON_LIBS)
+	$(CC) -o sigartest $(CFLAGS) $(COPT) $(SIGTEST_OBJS) $(LDLIBS) $(GPSMON_LIBS)
 
 %.o: %.c
 ifeq ($(enable_gpperfmon),no)
