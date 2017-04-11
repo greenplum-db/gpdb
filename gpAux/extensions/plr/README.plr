@@ -1,0 +1,59 @@
+/*
+ * PL/R - PostgreSQL support for R as a
+ *	      procedural language (PL)
+ *
+ * Copyright (c) 2003-2013 by Joseph E. Conway
+ * ALL RIGHTS RESERVED
+ * 
+ * Joe Conway <mail@joeconway.com>
+ * 
+ * Based on pltcl by Jan Wieck
+ * and inspired by REmbeddedPostgres by
+ * Duncan Temple Lang <duncan@research.bell-labs.com>
+ * http://www.omegahat.org/RSPostgres/
+ *
+ * License: GPL version 2 or newer. http://www.gnu.org/copyleft/gpl.html
+ * 
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * 
+ */
+
+See http://www.joeconway.com/plr/ for release notes and latest docs
+
+Notes:
+    - R headers are required. Download and install R prior to building
+      PL/R.
+
+    - R must have been built with the --enable-R-shlib option when it was
+      configured, in order for the libR shared object library to be available.
+
+    - R_HOME must be defined in the environment of the user under which
+      PostgreSQL is started, before the postmaster is started. Otherwise
+      PL/R will refuse to load.
+
+Installation:
+  See http://www.joeconway.com/plr/doc/plr-install.html
+  for the most up-to-date instructions.
+
+Documentation:
+
+  See the following:
+     See http://www.joeconway.com/plr/doc/
+     doc/plr.sgml    - PL/R documentation source
+     doc/*.html      - Preprocessed html version of the documentation
+
+======================================================================
+-- Joe Conway
+
