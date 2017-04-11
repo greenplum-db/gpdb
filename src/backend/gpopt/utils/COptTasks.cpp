@@ -448,7 +448,7 @@ COptTasks::PvMDCast
 		CWStringDynamic str(pmp);
 		COstreamString oss(&str);
 
-		CDXLUtils::PstrSerializeMetadata(pmp, pdrgpmdobj, oss, true /*fSerializeHeaderFooter*/, true /*fIndent*/);
+		CDXLUtils::SerializeMetadata(pmp, pdrgpmdobj, oss, true /*fSerializeHeaderFooter*/, true /*fIndent*/);
 		CHAR *sz = SzFromWsz(str.Wsz());
 		GPOS_ASSERT(NULL != sz);
 
@@ -508,7 +508,7 @@ COptTasks::PvMDScCmp
 		CWStringDynamic str(pmp);
 		COstreamString oss(&str);
 
-		CDXLUtils::PstrSerializeMetadata(pmp, pdrgpmdobj, oss, true /*fSerializeHeaderFooter*/, true /*fIndent*/);
+		CDXLUtils::SerializeMetadata(pmp, pdrgpmdobj, oss, true /*fSerializeHeaderFooter*/, true /*fIndent*/);
 		CHAR *sz = SzFromWsz(str.Wsz());
 		GPOS_ASSERT(NULL != sz);
 
@@ -642,21 +642,20 @@ COptTasks::PvDXLFromQueryTask
 		CWStringDynamic str(pmp);
 		COstreamString oss(&str);
 
-		CWStringDynamic *pstrDXL = 
-				CDXLUtils::PstrSerializeQuery
-							(
-							pmp, 
-							pdxlnQuery, 
-							pdrgpdxlnQueryOutput, 
-							pdrgpdxlnCTE, 
-							true, // fSerializeHeaderFooter
-							true // fIndent
-							);
-		poctx->m_szQueryDXL = SzFromWsz(pstrDXL->Wsz());
+		CDXLUtils::SerializeQuery
+						(
+						pmp,
+						oss,
+						pdxlnQuery,
+						pdrgpdxlnQueryOutput,
+						pdrgpdxlnCTE,
+						true, // fSerializeHeaderFooter
+						true // fIndent
+						);
+		poctx->m_szQueryDXL = SzFromWsz(str.Wsz());
 
 		// clean up
 		pdxlnQuery->Release();
-		GPOS_DELETE(pstrDXL);
 	}
 
 	return NULL;
@@ -1090,9 +1089,10 @@ COptTasks::PvOptimizeTask
 			if (poctx->m_fSerializePlanDXL)
 			{
 				// serialize DXL to xml
-				CWStringDynamic *pstrPlan = CDXLUtils::PstrSerializePlan(pmp, pdxlnPlan, pocconf->Pec()->UllPlanId(), pocconf->Pec()->UllPlanSpaceSize(), true /*fSerializeHeaderFooter*/, true /*fIndent*/);
-				poctx->m_szPlanDXL = SzFromWsz(pstrPlan->Wsz());
-				GPOS_DELETE(pstrPlan);
+				CWStringDynamic strPlan(pmp);
+				COstreamString oss(&strPlan);
+				CDXLUtils::SerializePlan(pmp, oss, pdxlnPlan, pocconf->Pec()->UllPlanId(), pocconf->Pec()->UllPlanSpaceSize(), true /*fSerializeHeaderFooter*/, true /*fIndent*/);
+				poctx->m_szPlanDXL = SzFromWsz(strPlan.Wsz());
 			}
 
 			// translate DXL->PlStmt only when needed
@@ -1273,18 +1273,20 @@ COptTasks::PvOptimizeMinidumpTask
 		GPOS_RETHROW(ex);
 	}
 	GPOS_CATCH_END;
-	CWStringDynamic *pstrDXL =
-			CDXLUtils::PstrSerializePlan
-						(
-						pmp,
-						pdxlnResult,
-						0,  // ullPlanId
-						0,  // ullPlanSpaceSize
-						true, // fSerializeHeaderFooter
-						true // fIndent
-						);
-	poptmdpctxt->m_szDXLResult = SzFromWsz(pstrDXL->Wsz());
-	GPOS_DELETE(pstrDXL);
+
+	CWStringDynamic strDXL(pmp);
+	COstreamString oss(&strDXL);
+	CDXLUtils::SerializePlan
+					(
+					pmp,
+					oss,
+					pdxlnResult,
+					0,  // ullPlanId
+					0,  // ullPlanSpaceSize
+					true, // fSerializeHeaderFooter
+					true // fIndent
+					);
+	poptmdpctxt->m_szDXLResult = SzFromWsz(strDXL.Wsz());
 	CRefCount::SafeRelease(pdxlnResult);
 	pocconf->Release();
 
@@ -1412,14 +1414,14 @@ COptTasks::PvDXLFromMDObjsTask
 		{
 			COstreamFile cofs(pctxrelcache->m_szFilename);
 
-			CDXLUtils::PstrSerializeMetadata(pmp, pdrgpmdobj, cofs, true /*fSerializeHeaderFooter*/, true /*fIndent*/);
+			CDXLUtils::SerializeMetadata(pmp, pdrgpmdobj, cofs, true /*fSerializeHeaderFooter*/, true /*fIndent*/);
 		}
 		else
 		{
 			CWStringDynamic str(pmp);
 			COstreamString oss(&str);
 
-			CDXLUtils::PstrSerializeMetadata(pmp, pdrgpmdobj, oss, true /*fSerializeHeaderFooter*/, true /*fIndent*/);
+			CDXLUtils::SerializeMetadata(pmp, pdrgpmdobj, oss, true /*fSerializeHeaderFooter*/, true /*fIndent*/);
 
 			CHAR *sz = SzFromWsz(str.Wsz());
 
@@ -1501,14 +1503,14 @@ COptTasks::PvDXLFromRelStatsTask
 	{
 		COstreamFile cofs(pctxrelcache->m_szFilename);
 
-		CDXLUtils::PstrSerializeMetadata(pmp, pdrgpmdobj, cofs, true /*fSerializeHeaderFooter*/, true /*fIndent*/);
+		CDXLUtils::SerializeMetadata(pmp, pdrgpmdobj, cofs, true /*fSerializeHeaderFooter*/, true /*fIndent*/);
 	}
 	else
 	{
 		CWStringDynamic str(pmp);
 		COstreamString oss(&str);
 
-		CDXLUtils::PstrSerializeMetadata(pmp, pdrgpmdobj, oss, true /*fSerializeHeaderFooter*/, true /*fIndent*/);
+		CDXLUtils::SerializeMetadata(pmp, pdrgpmdobj, oss, true /*fSerializeHeaderFooter*/, true /*fIndent*/);
 
 		CHAR *sz = SzFromWsz(str.Wsz());
 
