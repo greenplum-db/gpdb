@@ -1579,7 +1579,7 @@ select * from pp where b=2 and c=2;
 select count_operator('explain select * from pp where b=2 and c=2;','Partition Selector');
  count_operator 
 ----------------
-              1
+              0
 (1 row)
 
 -- CLEANUP
