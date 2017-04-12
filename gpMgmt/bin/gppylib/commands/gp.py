@@ -275,7 +275,7 @@ class PgCtlStartArgs(CmdArgs):
         """
 
         CmdArgs.__init__(self, [
-            "env",			# variables examined by gpdebug/etc
+            "env",
             "GPSESSID=0000000000", 	# <- overwritten with gp_session_id to help identify orphans
             "GPERA=%s" % str(era),	# <- master era used to help identify orphans
             "$GPHOME/bin/pg_ctl",

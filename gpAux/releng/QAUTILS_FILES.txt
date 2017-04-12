@@ -1,6 +1,5 @@
 bin/explain.pl
 bin/gpcheckmirrorseg.pl
-bin/gpdebug
 bin/gpfaultinjector
 bin/gptorment.pl
 bin/lib/gpgetconfig.py

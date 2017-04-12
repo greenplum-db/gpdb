@@ -1,10 +1,10 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python
 # -*- indent-tabs-mode: nil; tab-width:4 -*-
 # vim:set tabstop=4 expandtab:
 '''
 gpssh-exkeys -- exchange ssh public keys among friends
 
-Usage: gpssh-exkeys [--version] [-?v] 
+Usage: gpssh-exkeys [--version] [-?v]
                     { -f hostfile |
                       -h host ... |
                       -e hostfile -x hostfile }
@@ -16,19 +16,19 @@ Usage: gpssh-exkeys [--version] [-?v]
              -f hostfile   : a file listing all new hosts to connect to
              -e hostfile   : a file listing all existing hosts for expansion
              -x hostfile   : a file listing all new hosts for expansion
-             
+
     Each line in a hostfile is expected to contain a single host name.  Blank
     lines and comment lines (beginning with #) are ignored.  The name of the
-    local host (as provided by hostname) is included automatically and need not 
-    be specified unless it is the only host to process.  During cluster expansion, 
+    local host (as provided by hostname) is included automatically and need not
+    be specified unless it is the only host to process.  During cluster expansion,
     the local host is always considered an existing host and should not be specified
-    in the "new host" list.  Duplicate host names in either the new host list (-h, 
-    -f, -x options) or the existing host list (-e option) are ignored. The same host 
-    name cannot appear in the both the new and existing host lists. Host names 
+    in the "new host" list.  Duplicate host names in either the new host list (-h,
+    -f, -x options) or the existing host list (-e option) are ignored. The same host
+    name cannot appear in the both the new and existing host lists. Host names
     including a user name or port (username@hostname:port) are not accepted.
 '''
 
-from __future__ import with_statement 
+from __future__ import with_statement
 import os, sys
 
 progname = os.path.split(sys.argv[0])[-1]
@@ -98,7 +98,7 @@ def print_version():
     sys.exit(0)
 
 
-class Host: 
+class Host:
     def __init__(self, host, localhost=False):
         self.m_host = host
         self.m_popen = None
@@ -107,17 +107,17 @@ class Host:
         self.m_isLocalhost = localhost
         self.m_inetAddrs = None
         self.m_inet6Addrs = None
-        
+
     def __repr__(self):
-        return ('(%s, { "popen" : %s, "remoteId" : %s, "popen_cmd" : "%s" })' 
+        return ('(%s, { "popen" : %s, "remoteId" : %s, "popen_cmd" : "%s" })'
                 % (self.m_host, (True if self.m_popen else False), self.m_remoteID, self.m_popen_cmd))
 
     def host(self): return self.m_host
     def remoteID(self): return self.m_remoteID
     def popen_cmd(self): return self.m_popen_cmd;
     def isPclosed(self): return self.m_popen == None;
-    
-    
+
+
     def getAddrs(self):
         '''
         Gets the INET and INET6 addresses for this host.
@@ -127,13 +127,13 @@ class Host:
             self.m_inet6Addrs = []
             try:
                 hostAddrs = socket.getaddrinfo(self.m_host, 0, socket.AF_UNSPEC, socket.SOCK_STREAM, socket.IPPROTO_TCP, 0)
-                
+
                 if self.m_isLocalhost:
                     try:
                         hostAddrs.extend(socket.getaddrinfo('localhost', 0, socket.AF_UNSPEC, socket.SOCK_STREAM, socket.IPPROTO_TCP, 0))
                     except:
                         pass
-                
+
                 for (family, socktype, proto, canonname, sockaddr) in hostAddrs:
                     if family == socket.AF_INET:
                         (addr, port) = sockaddr
@@ -145,24 +145,24 @@ class Host:
                 pass
             self.m_inetAddrs = tuple(self.m_inetAddrs)
             self.m_inet6Addrs = tuple(self.m_inet6Addrs)
-            
+
         return (self.m_inetAddrs, self.m_inet6Addrs)
-    
-    
+
+
     def isSameHost(self, host):
         '''
         Compares <host> with this host by published address
         '''
         (thisInetAddrs, thisInet6Addrs) = self.getAddrs()
         (thatInetAddrs, thatInet6Addrs) = host.getAddrs()
-        
+
         for addr in thisInetAddrs:
             if addr in thatInetAddrs:
                 return True
         for addr in thisInet6Addrs:
             if addr in thatInet6Addrs:
                 return True
-            
+
         return False
 
 
@@ -200,7 +200,7 @@ class Host:
                 if pwd: ok = self.tryParamikoConnect(p, pwd)
                 if ok: passwd.append(pwd)
 
-            # Create .ssh directory and ensure content meets permission requirements 
+            # Create .ssh directory and ensure content meets permission requirements
             # for password-less SSH
             #
             # note: we touch .ssh/iddummy.pub just before the chmod operations to
@@ -229,7 +229,7 @@ class Host:
                         print '    ', line.rstrip()
                 print
             cout.close(); cerr.close()
-            
+
             # If tempDir is specified, obtain a copy of the ssh
             # files that should be preserved for existing hosts.
             if tempDir:
@@ -237,7 +237,7 @@ class Host:
                 if GV.opt['-v']: print '[INFO %s]: %s' % (self.m_host, cmd)
                 (cin, cout, cerr) = p.exec_command(cmd)
                 cin.close()
-                
+
                 # Grab the tar stream from stdout
                 tarfile = open(os.path.join(tempDir, '%s.tar' % self.m_host), 'wb')
                 buf = array.array('B')
@@ -257,21 +257,21 @@ class Host:
                 exitStatus = cout.channel.recv_exit_status()
                 cout.close()
                 if exitStatus != 0:
-                    print >> sys.stderr, ('[WARNING %s] cannot fetch existing authentication files: tar rc=%s;' 
+                    print >> sys.stderr, ('[WARNING %s] cannot fetch existing authentication files: tar rc=%s;'
                                           % (self.m_host, exitStatus))
                     for line in cerr:
                         print >> sys.stderr, '    ', line.rstrip()
                     print >> sys.stderr, '    One or more existing authentication files may be replaced on %s' % self.m_host
-                    
+
                 cerr.close()
-                
+
                 # The tar file content is expected to be extacted by the caller.  Doing it
                 # here causes Paramiko Transport grief on Linux systems.  (The Event.wait()
                 # used can be interrupted by the SIGCHLD signal popped by destruction of the
                 # process spawned to run the tar command -- Paramiko isn't ready for that to
                 # happen.
-            
-            # Append the ID to authorized_keys; this is *temporary* -- 
+
+            # Append the ID to authorized_keys; this is *temporary* --
             # authorized_keys is expected to be replaced when the master
             # .ssh content is shipped to the host.
             cmd = 'echo \"%s\" >> .ssh/authorized_keys && echo ok ok ok' % ID
@@ -286,9 +286,9 @@ class Host:
                     print >> sys.stderr, '    ', line.rstrip()
                 print >> sys.stderr
             cout.close(); cerr.close()
-            
+
             return ok
-        
+
         finally:
             if cin: cin.close()
             if cout: cout.close()
@@ -298,7 +298,7 @@ class Host:
 
     def popen(self, cmd):
         'Run a command and save popen handle in this Host instance.'
-        if self.m_popen: 
+        if self.m_popen:
             self.m_popen.close()
             self.m_popen = None
         if GV.opt['-v']: print '[INFO %s]: %s' % (self.m_host, cmd)
@@ -377,10 +377,10 @@ def createLocalID():
                 print >> sys.stderr, '    ' + line.rstrip()
             sys.exit(rc)
 
-    f = None; 
+    f = None;
     try:
-        try: 
-            f = open(GV.id_rsa_pub_fname, 'r'); 
+        try:
+            f = open(GV.id_rsa_pub_fname, 'r');
             return f.readline().strip()
         except IOError:
             sys.exit('[ERROR] ssh-keygen failed - unable to read the generated file ' + GV.id_rsa_pub_fname)
@@ -421,7 +421,7 @@ def testAccess(hostname):
             for line in efile:
                 print >> sys.stderr, '    ', line.rstrip()
         return False
-    
+
     return True
 
 
@@ -447,7 +447,7 @@ def readAuthorizedKeys(tab=None, keysFile=None):
 def writeAuthorizedKeys(tab, keysFile=None):
     if not keysFile: keysFile = GV.authorized_keys_fname
     f = None
-    try: 
+    try:
         f = open(keysFile, 'w')
         for IDKey in tab: f.write(tab[IDKey])
     finally:
@@ -473,7 +473,7 @@ def readKnownHosts(tab=None, hostsFile=None):
 def writeKnownHosts(tab, hostsFile=None):
     if not hostsFile: hostsFile = GV.known_hosts_fname
     f = None
-    try: 
+    try:
         f = open(hostsFile, 'w')
         for key in tab: f.write(tab[key])
     finally:
@@ -500,19 +500,11 @@ coverage = GpCoverage()
 coverage.start()
 
 try:
-    if os.environ.has_key('_GPDEBUG'):
-        debugLog = logging.StreamHandler()
-        debugLog.setLevel(logging.DEBUG)
-        debugLog.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(module)s:%(funcName)s:%(lineno)d - %(levelname)s - %(message)s"))
-        paramiko_logger = logging.getLogger('paramiko.transport')
-        paramiko_logger.addHandler(debugLog)
-        paramiko_logger.setLevel(logging.DEBUG)
-    else:
-        nullFile = logging.FileHandler('/dev/null')
-        logging.getLogger('paramiko.transport').addHandler(nullFile)
+    nullFile = logging.FileHandler('/dev/null')
+    logging.getLogger('paramiko.transport').addHandler(nullFile)
 
     parseCommandLine()
-    
+
     # Assemble a list of names used by the current host.  SSH is sensitive to both name
     # and address so recognizing each name can prevent an SSH authenticitiy challenge.
     #
@@ -531,13 +523,13 @@ try:
             for alias in aliases:
                 addHost(alias, localhosts, True)
     localhosts = tuple(localhosts)
-    
+
     # hostlist is the collection of "new" hosts; it is composed of hosts
     # identified by the -h or -f options for initial exchange processing
     # or by the -x option for expansion processing.  (Only one of the -h,
     # -f, or -x options is expected to have values.)
     hostlist = ssh_utils.HostList()
-    
+
     if len(GV.opt['-h']):
         for h in GV.opt['-h']:
             try:
@@ -567,11 +559,11 @@ try:
                 break
         else:
             GV.newHosts.append(host)
-            
+
     if not GV.newHosts:
         print >> sys.stderr, '[ERROR] no valid new hosts specified; at least one new host must be specified for key exchange'
         sys.exit(1)
-    
+
     GV.allHosts.extend( GV.newHosts )
 
     # hostlist is now used for the collection of existing hosts.
@@ -579,9 +571,9 @@ try:
     # for new hosts.)
     localhostInOld = False
     hostlist = ssh_utils.HostList()
-    if GV.opt['-e']: 
+    if GV.opt['-e']:
         collectHosts(hostlist, GV.opt['-e'])
-        
+
         for host in hostlist.get():
             host = Host(host)
             for localhost in localhosts:
@@ -594,13 +586,13 @@ try:
                     break
             else:
                 GV.existingHosts.append(host)
-                
+
         if not GV.existingHosts:
             print >> sys.stderr, '[ERROR] no valid existing hosts specified; at least one existing host must be specified for expansion'
             sys.exit(1)
 
         GV.allHosts.extend( GV.existingHosts )
-        
+
         # Ensure there's no overlap between the new and existing hosts
         haveError = False
         for existingHost in GV.existingHosts:
@@ -611,7 +603,7 @@ try:
                     break
         if haveError:
             sys.exit(1)
-            
+
     # Ensure the local host is in the "proper" host list -- old for expansion, new otherwise
     if GV.opt['-e']:
         if localhostInOld:
@@ -636,9 +628,9 @@ try:
         tempDir = tempfile.mkdtemp('.tmp', 'gp_', os.path.expanduser('~'))
     else:
         tempDir = tempfile.mkdtemp()
-    if GV.opt['-v'] or os.environ.has_key('KEEPTEMP'): 
+    if GV.opt['-v'] or os.environ.has_key('KEEPTEMP'):
         print '[INFO] tempDir=%s' % tempDir
-    
+
     discovered_authorized_keys_file = os.path.join(tempDir, 'authorized_keys')
 
     ######################
@@ -650,7 +642,7 @@ try:
     print '[STEP 1 of 5] create local ID and authorize on local host'
     localID = createLocalID()
     authorizeLocalID(localID)
-    
+
     # Ensure the local host's .ssh directory is prepared for password-less SSH login
     #
     # note: we touch .ssh/iddummy.pub just before the chmod operations to
@@ -665,7 +657,7 @@ try:
            'chmod 0644 .ssh/id*.pub .ssh/config')
     if GV.opt['-v']: print '[INFO]: %s' % cmd
     os.system(cmd)
-    
+
     # Ensure the host key(s) for the local host are in known_hosts.  Using ssh-keyscan
     # takes care of part of it; testAccess takes care of the rest.
     errfile = os.path.join(tempDir, "keyscan.err")
@@ -706,7 +698,7 @@ try:
         if rc != 0:
             # If ssh-keyscan failed, it's typically because the host doesn't exist;
             # remove the host from further processing and inform the user
-            print >> sys.stderr, ('[ERROR] error %s obtaining RSA host key for %s host %s' 
+            print >> sys.stderr, ('[ERROR] error %s obtaining RSA host key for %s host %s'
                                   % (rc,
                                      'existing' if h in GV.existingHosts else 'new',
                                      h.host()))
@@ -723,11 +715,11 @@ try:
     ######################
     #  step 3
     #
-    #    Temporarily append the localID to the authorized_keys file of 
+    #    Temporarily append the localID to the authorized_keys file of
     #    each host to allow password-less SSH.  This is a temporary measure --
     #    the authorized_keys file on each host is replaced in a later step.
     #
-    #    This step also obtains a copy of any existing authorized_keys, 
+    #    This step also obtains a copy of any existing authorized_keys,
     #    known_hosts, and id_rsa.pub files for existing hosts so they
     #    may be updated rather than replaced (as is done for new hosts).
     #
@@ -751,8 +743,8 @@ try:
                 send_local_id = h.sendLocalID(localID, GV.passwd, tempDir if isExistingHost else None)
             except socket.error, e:
                 errmsg = '[ERROR %s] %s' % (h.host(), e)
-                print >> sys.stderr, errmsg 
-            if not send_local_id: 
+                print >> sys.stderr, errmsg
+            if not send_local_id:
                 errmsg = '[ERROR %s] skipping key exchange for %s' % (h.host(), h.host())
                 print >> sys.stderr, errmsg
                 errmsg = '[ERROR %s] unable to authorize current user' % h.host()
@@ -783,7 +775,7 @@ try:
                             for line in hostPub:
                                 newKeys.write(line)
                             newKeys.flush()
-                
+
                 # Ensure the proper password-less access to the remote host.
                 if not testAccess(h.host()):
                     errmsg = '*'        # message already issued
@@ -797,19 +789,19 @@ try:
     ######################
     #  step 4
     #
-    #    At this point, 
-    #        (1) the local known_hosts file has at least one 
+    #    At this point,
+    #        (1) the local known_hosts file has at least one
     #            host key for each new and existing host.
     #        (2) the local authorized_keys file has an entry
     #            for the current user on the local system AND
     #            the public key from the current user on every
     #            existing host.
-    #        (3) a copy of any existing authorized_keys, known_hosts, 
-    #            and id_rsa.pub file from each existing host file, 
+    #        (3) a copy of any existing authorized_keys, known_hosts,
+    #            and id_rsa.pub file from each existing host file,
     #            exists in the <tempDir>/<host> directory.
     #
     #    Determine SSH authentication file content for each host.
-    #    For new hosts, the authorized_keys, known_hosts, and 
+    #    For new hosts, the authorized_keys, known_hosts, and
     #    id_rsa{,.pub} files are copied from this host.  For
     #    existing hosts, the existing authorized_keys and known_hosts
     #    files from the existing host is merged with the files from
@@ -833,7 +825,7 @@ try:
         if os.path.exists(discovered_authorized_keys_file):
             print '  ... merging discovered remote IDs into local authorized_keys'
             tab = readAuthorizedKeys(tab, discovered_authorized_keys_file)
-    except IOError: 
+    except IOError:
         sys.exit('[ERROR] cannot read authorized_keys file')
 
     try:
@@ -854,7 +846,7 @@ try:
     #
     print; print '[STEP 5 of 5] copy authentication files to all remote hosts'
     errmsg = None
-    
+
     try:
 
         # MPP-13617
@@ -864,21 +856,21 @@ try:
 
         for h in GV.newHosts:
 
-            cmd = ('scp -q -o "BatchMode yes" -o "NumberOfPasswordPrompts 0" ' + 
-                   '%s %s %s %s %s:.ssh/ 2>&1' 
-                   % (GV.authorized_keys_fname, 
-                      GV.known_hosts_fname, 
-                      GV.id_rsa_fname, 
-                      GV.id_rsa_pub_fname, 
+            cmd = ('scp -q -o "BatchMode yes" -o "NumberOfPasswordPrompts 0" ' +
+                   '%s %s %s %s %s:.ssh/ 2>&1'
+                   % (GV.authorized_keys_fname,
+                      GV.known_hosts_fname,
+                      GV.id_rsa_fname,
+                      GV.id_rsa_pub_fname,
                       canonicalize( h.host() )))
             h.popen(cmd)
-    
+
         if len(GV.existingHosts):
             localAuthKeys = readAuthorizedKeys()
             localKnownHosts = readKnownHosts()
-            
+
             for h in GV.existingHosts:
-                
+
                 remoteAuthKeysFile = os.path.join(tempDir, h.host(), 'authorized_keys')
                 if os.path.exists(remoteAuthKeysFile) and os.path.getsize(remoteAuthKeysFile):
                     if GV.opt['-v']: print '  ... merging authorized_keys for %s' % h.host()
@@ -886,7 +878,7 @@ try:
                     writeAuthorizedKeys(remoteAuthKeys, remoteAuthKeysFile)
                 else:
                     remoteAuthKeysFile = GV.authorized_keys_fname
-                
+
                 remoteKnownHostsFile = os.path.join(tempDir, h.host(), 'known_hosts')
                 if os.path.exists(remoteKnownHostsFile) and os.path.getsize(remoteKnownHostsFile):
                     if GV.opt['-v']: print '  ... merging known_hosts for %s' % h.host()
@@ -894,7 +886,7 @@ try:
                     writeKnownHosts(remoteKnownHosts, remoteKnownHostsFile)
                 else:
                     remoteKnownHostsFile = GV.known_hosts_fname
-                
+
                 remoteIdentityPubFile = os.path.join(tempDir, h.host(), 'id_rsa.pub')
                 if os.path.exists(remoteIdentityPubFile):
                     if not filecmp.cmp(GV.id_rsa_pub_fname, remoteIdentityPubFile):
@@ -904,33 +896,33 @@ try:
                 else:
                     remoteIdentity = GV.id_rsa_fname
                     remoteIdentityPub = GV.id_rsa_pub_fname
-                
+
                 cmd = ('scp -q -o "BatchMode yes" -o "NumberOfPasswordPrompts 0" ' +
-                       '%s %s %s %s %s:.ssh/ 2>&1' 
-                       % (remoteAuthKeysFile, 
-                          remoteKnownHostsFile, 
-                          remoteIdentity, 
-                          remoteIdentityPub, 
+                       '%s %s %s %s %s:.ssh/ 2>&1'
+                       % (remoteAuthKeysFile,
+                          remoteKnownHostsFile,
+                          remoteIdentity,
+                          remoteIdentityPub,
                           canonicalize( h.host() )))
                 h.popen(cmd)
-                
+
     except:
         errmsg = '[ERROR] cannot complete key exchange: %s' % sys.exc_info()[0]
         print >> sys.stderr, errmsg
         raise
-    
+
     finally:
         for h in GV.allHosts:
             if not h.isPclosed():
                 (ok, content) = h.pclose()
-                if ok: 
+                if ok:
                     print '  ... finished key exchange with', h.host()
                 else:
                     errmsg = "[ERROR] unable to copy authentication files to %s" % h.host()
                     print >> sys.stderr, errmsg
                     for line in content.splitlines():
                         print >> sys.stderr, '    ', line
-    
+
     if errmsg: sys.exit(1)
 
     print; print '[INFO] completed successfully'
@@ -940,7 +932,7 @@ except KeyboardInterrupt:
     sys.exit('\n\nInterrupted...')
 
 finally:
-    # Discard the temporary working directory (borrowed from Python 
+    # Discard the temporary working directory (borrowed from Python
     # doc for os.walk).
     if tempDir and not os.environ.has_key('KEEPTEMP'):
         if GV.opt['-v']: print '[INFO] deleting tempDir %s' % tempDir
@@ -950,7 +942,7 @@ finally:
             for name in dirs:
                 os.rmdir(os.path.join(root, name))
         os.rmdir(tempDir)
-        
+
     coverage.stop()
     coverage.generate_report()
 
