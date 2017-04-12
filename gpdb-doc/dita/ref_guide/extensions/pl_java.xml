@@ -53,6 +53,7 @@
         Database PL/Java provides the following features.</p>
       <ul>
         <li id="pv161029">Ability to execute PL/Java functions with Java 1.7 or higher.</li>
+        <li>Ability to specify Java runtime.</li>
         <li id="pv161030">Standardized utilities (modeled after the SQL 2003 proposal) to install
           and maintain Java code in the database.</li>
         <li id="pv161031">Standardized mappings of parameters and result. Complex types as well as
@@ -74,9 +75,6 @@
           transaction or savepoint is committed or rolled back.</li>
         <li id="pv161039">Integration with GNU GCJ on selected platforms.</li>
       </ul>
-      <p>The Greenplum Database PL/Java extension package ships with an embedded Java Runtime that
-        is installed in the <codeph>$GPHOME/ext/</codeph> directory on each of the Greenplum
-        Database hosts.</p>
       <p>A function in SQL will appoint a static method in a Java class. In order for the function
         to execute, the appointed class must available on the class path specified by the Greenplum
         Database sever configuration parameter <codeph>pljava_classpath</codeph>. The PL/Java
@@ -104,7 +102,7 @@
     <title id="pv158223">Installing PL/Java</title>
     <body>
       <p>For Greenplum Database, the PL/Java extension is available as a package. Download the
-        package from <xref href="https://network.pivotal.io" scope="external" format="html"
+        package from <xref href="https://network.pivotal.io/products" scope="external" format="html"
           class="- topic/xref ">Pivotal Network</xref> and then install it with the Greenplum
         Package Manager (<codeph>gppkg</codeph>). </p>
       <p>The <codeph>gppkg</codeph> utility installs Greenplum Database extensions, along with any
@@ -112,10 +110,15 @@
         new hosts in the case of system expansion and segment recovery.</p>
       <p>For information about <codeph>gppkg,</codeph>see the <cite>Greenplum Database Utility
           Guide</cite>.</p>
+      <note type="important">PL/Java requires a Java environment on each Greenplum Database host.
+        Ensure that the same Java environment is at the same location on all hosts: masters and
+        segments.</note>
       <p>To install and use PL/Java:</p>
       <ol>
+        <li>Specify the Java version used by PL/Java. Set the environment variables
+            <codeph>JAVA_HOME</codeph> and <codeph>LD_LIBRARY_PATH</codeph> in the
+            <codeph>greenplum_path.sh</codeph>.</li>
         <li id="pv158542">Install the Greenplum Database PL/Java extension. </li>
-        <li><i>Optional</i>. Change the Java version used by PL/Java.</li>
         <li id="pv158366">Enable the language for each database where you intend to use
           PL/Java.</li>
         <li id="pv158382">Install user-created JAR files containing Java methods into the same
@@ -130,39 +133,21 @@
       <title>Installing the Greenplum PL/Java Extension</title>
       <body>
         <p>Before you install the PL/Java extension, make sure that your Greenplum database is
-          running, you have sourced <codeph>greenplum_path.sh</codeph>, and that the<codeph>
-            $MASTER_DATA_DIRECTORY</codeph> and <codeph>$GPHOME</codeph> variables are set.</p>
+          running, you have sourced <codeph>greenplum_path.sh</codeph>, and that the
+            <codeph>$MASTER_DATA_DIRECTORY</codeph> and <codeph>$GPHOME</codeph> variables are
+          set.</p>
         <ol>
           <li id="pv158485">Download the PL/Java extension package from <xref
-              href="https://network.pivotal.io" scope="external" format="html"
+              href="https://network.pivotal.io/products" scope="external" format="html"
               class="- topic/xref ">Pivotal Network</xref> then copy it to the master host. </li>
           <li id="pv160918">Install the software extension package by running the
               <codeph>gppkg</codeph> command. This example installs the PL/Java extension package on
             a Linux
-            system:<codeblock>$ gppkg -i pljava-ossv1.4.0_pv1.2_gpdb5.0orca-rhel7-x86_64.gppkg</codeblock></li>
-          <li dir="ltr">Reload
-            <codeph>greenplum_path.sh</codeph>.<codeblock dir="ltr">$ source $GPHOME/greenplum_path.sh</codeblock></li>
-          <li id="pv162228">Restart Greenplum Database.<codeblock>$ gpstop -r</codeblock></li>
-        </ol>
-      </body>
-    </topic>
-    <topic id="topic_r3p_jf5_lv">
-      <title>Changing Java version used by PL/Java (Optional)</title>
-      <body>
-        <p dir="ltr">The PL/Java extension package ships with Java JRE 6u32. When the package is
-          installed, the JRE is installed on each host of your Greenplum Database cluster. To use
-          newer version of Java with PL/Java, perform these steps to specify the location of the
-          Java version. For information about supported Java versions, see the <cite>Greenplum
-            Database Release Notes</cite> for your release.</p>
-        <p>
-          <note>The newer Java must be installed in the same location on all Greenplum Database
-            hosts and must be accessible to the system user of the Greenplum Database administrator
-              (<codeph>gpadmin</codeph>).</note>
-        </p>
-        <ol id="ol_rf3_kf5_lv">
-          <li dir="ltr"> In the <codeph>$GPHOME/greenplum_path.sh</codeph> file, modify the
-              <codeph>JAVA_HOME</codeph> and <codeph>LD_LIBRARY_PATH</codeph> environment
-              variables.<ul id="ol_dy5_5f5_lv">
+            system:<codeblock>$ gppkg -i pljava-ossv1.4.0_pv1.2_gpdb4.3orca-rhel5-x86_64.gppkg</codeblock></li>
+          <li>Ensure the environment variables <codeph>JAVA_HOME</codeph> and
+              <codeph>LD_LIBRARY_PATH</codeph> are set properly in
+              <codeph>$GPHOME/greenplum_path.sh</codeph> on all Greenplum Database hosts.<ul
+              id="ul_mgq_wgh_qw">
               <li>Set the <codeph>JAVA_HOME</codeph> variable to the directory where your Java
                 Runtime is installed. For example, for Oracle JRE this directory would be
                   <codeph>/usr/java/latest</codeph>. For OpenJDK, the directory is
@@ -176,15 +161,13 @@
                   <codeph>$JAVA_HOME/lib/amd64/server</codeph>. This example adds the directory to
                 the environment
                 variable.<codeblock>LD_LIBRARY_PATH=$GPHOME/lib:$GPHOME/ext/python/lib:<b>$JAVA_HOME/lib/amd64/server</b>:$LD_LIBRARY_PATH</codeblock></li>
-            </ul></li>
-          <li dir="ltr">Copy the uppdated <codeph>greenplum_path.sh</codeph> file to all the
-            Greenplum Database hosts. This example <codeph>gpscp</codeph> command copies the file to
-            all hosts specified in the file
+            </ul>This example <codeph>gpscp</codeph> command copies the file to all hosts specified
+            in the file
             <codeph>gphosts_file</codeph>.<codeblock>$ gpscp -f gphosts_file $GPHOME/greenplum_path.sh 
 =:$GPHOME/greenplum_path.sh</codeblock></li>
           <li dir="ltr">Reload
             <codeph>greenplum_path.sh</codeph>.<codeblock dir="ltr">$ source $GPHOME/greenplum_path.sh</codeblock></li>
-          <li dir="ltr">Restart Greenplum Database.<codeblock>$ gpstop -r</codeblock></li>
+          <li id="pv162228">Restart Greenplum Database.<codeblock>$ gpstop -r</codeblock></li>
         </ol>
       </body>
     </topic>
@@ -197,7 +180,7 @@
           <li id="pv162268">Enable PL/Java by running the SQL script
               <codeph>$GPHOME/share/postgresql/pljava/install.sql</codeph> in the databases that
             will use PL/Java. For example, this example enables PL/Java on the database
-              <codeph>mytestdb</codeph>:<codeblock>$ psql -d mytestdb 
+              <codeph>mytestdb</codeph>:<codeblock>$ psql -d mytestdb \
   -f $GPHOME/share/postgresql/pljava/install.sql</codeblock><p>The
               script <codeph>install.sql</codeph> registers both the trusted and untrusted PL/Java
               language.</p></li>
@@ -340,7 +323,8 @@
           </li>
           <li id="pv159859">
             <codeph>pljava_vmoptions</codeph>
-            <p>Defines the start up options for the Greenplum Database Java VM. </p></li>
+            <p>Defines the start up options for the Greenplum Database Java VM. </p>
+          </li>
         </ul>
         <p>See the <cite>Greenplum Database Reference Guide</cite> for information about the
           Greenplum Database server configuration parameters.</p>
