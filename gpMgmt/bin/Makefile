@@ -31,7 +31,7 @@ PYLIB_DIR=$(SRC)/ext
 core: pygresql subprocess32
 
 ifneq "$(wildcard $(CURDIR)/pythonSrc/ext/*.tar.gz)" ""
-all: core lockfile paramiko pycrypto stream psutil unittest2
+all: core lockfile paramiko pycrypto stream psutil
 else
 all: core stream
 endif
