@@ -325,7 +325,8 @@ define BUILD_STEPS
 	@$(MAKE) mkplatform INSTLOC=$(INSTLOC)
 	if [ "$(findstring $(BLD_ARCH),$(SERVER_PLATFORMS))" != "" ]; then \
 	  $(MAKE) mkgpcloud INSTLOC=$(INSTLOC) && \
-	  $(MAKE) mkgphdfs INSTLOC=$(INSTLOC);  \
+	  $(MAKE) mkgphdfs INSTLOC=$(INSTLOC) &&
+	  $(MAKE) mkorafce INSTLOC=$(INSTLOC);  \
 	fi
 	cd extensions/gpmapreduce/ && $(MAKE) install
 	@$(MAKE) copydocs INSTLOC=$(INSTLOC)
@@ -814,6 +815,9 @@ mkgphdfs:
 
 mkgpcloud:
 	@cd extensions && $(MAKE) mkgpcloud OPT="$(INSTCFLAGS)" INSTLOC=$(INSTLOC)
+
+mkorafce:
+	@cd extensions && $(MAKE) mkorafce OPT="$(INSTCFLAGS)" INSTLOC=$(INSTLOC)
 
 mkpgbench:
 	@cd $(BUILDDIR)/contrib/pgbench && $(MAKE) install
