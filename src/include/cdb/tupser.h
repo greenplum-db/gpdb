@@ -13,6 +13,7 @@
 #include "cdb/tupchunklist.h"
 #include "lib/stringinfo.h"
 #include "utils/lsyscache.h"
+#include "cdb/tupleremap.h"
 
 
 /* Define this to pack the NULLs-mask into the minimum number of bytes
@@ -78,6 +79,9 @@ typedef struct SerTupInfo
 	/* Preallocated space for deformtuple and formtuple. */
 	Datum	   *values;
 	bool	   *nulls;
+
+	/* true if tupdesc contains record types */
+	bool		has_record_types;
 }	SerTupInfo;
 
 /*
@@ -94,6 +98,11 @@ extern void InitSerTupInfo(TupleDesc tupdesc, SerTupInfo *pSerInfo);
 /* Free up storage in a previously initialized SerTupInfo struct. */
 extern void CleanupSerTupInfo(SerTupInfo *pSerInfo);
 
+/* Convert RecordCache into chunks ready to send out, in one pass */
+extern void SerializeRecordCacheIntoChunks(SerTupInfo *pSerInfo,
+										   TupleChunkList tcList,
+										   MotionConn *conn);
+
 /* Convert a HeapTuple into chunks ready to send out, in one pass */
 extern void SerializeTupleIntoChunks(HeapTuple tuple, SerTupInfo *pSerInfo, TupleChunkList tcList);
 
@@ -106,6 +115,6 @@ extern HeapTuple DeserializeTuple(SerTupInfo * pSerInfo, StringInfo serialTup);
 /* Convert a sequence of chunks containing serialized tuple data into a
  * HeapTuple.
  */
-extern HeapTuple CvtChunksToHeapTup(TupleChunkList tclist, SerTupInfo * pSerInfo);
+extern HeapTuple CvtChunksToHeapTup(TupleChunkList tclist, SerTupInfo * pSerInfo, TupleRemapper *remapper);
 
 #endif   /* TUPSER_H */

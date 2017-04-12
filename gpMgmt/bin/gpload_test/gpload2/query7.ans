@@ -1,0 +1,21 @@
+2017-04-10 07:07:08|INFO|gpload session started 2017-04-10 07:07:08
+2017-04-10 07:07:08|INFO|setting schema 'public' for table 'texttable'
+2017-04-10 07:07:08|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/gpload/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2017-04-10 07:07:08|INFO|running time: 0.05 seconds
+2017-04-10 07:07:08|INFO|rows Inserted          = 16
+2017-04-10 07:07:08|INFO|rows Updated           = 0
+2017-04-10 07:07:08|INFO|data formatting errors = 0
+2017-04-10 07:07:08|INFO|gpload succeeded
+2017-04-10 07:07:08|INFO|gpload session started 2017-04-10 07:07:08
+2017-04-10 07:07:08|INFO|setting schema 'public' for table 'texttable'
+2017-04-10 07:07:08|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/gpload/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
+2017-04-10 07:07:08|INFO|running time: 0.05 seconds
+2017-04-10 07:07:08|INFO|rows Inserted          = 16
+2017-04-10 07:07:08|INFO|rows Updated           = 0
+2017-04-10 07:07:08|INFO|data formatting errors = 0
+2017-04-10 07:07:08|INFO|gpload succeeded
+ count 
+-------
+    32
+(1 row)
+

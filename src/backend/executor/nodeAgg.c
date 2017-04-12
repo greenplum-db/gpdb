@@ -1011,17 +1011,18 @@ ExecAgg(AggState *node)
 			bool		tupremain;
 
 			node->hhashtable = create_agg_hash_table(node);
+			node->hashaggstatus = HASHAGG_BEFORE_FIRST_PASS;
 			tupremain = agg_hash_initial_pass(node);
 
 			if (streaming)
 			{
 				if (tupremain)
-					node->hhashtable->state = HASHAGG_STREAMING;
+					node->hashaggstatus = HASHAGG_STREAMING;
 				else
-					node->hhashtable->state = HASHAGG_END_OF_PASSES;
+					node->hashaggstatus = HASHAGG_END_OF_PASSES;
 			}
 			else
-				node->hhashtable->state = HASHAGG_BETWEEN_PASSES;
+				node->hashaggstatus = HASHAGG_BETWEEN_PASSES;
 		}
 
 		/*
@@ -1042,16 +1043,16 @@ ExecAgg(AggState *node)
 					return tuple;
 			}
 
-			switch (node->hhashtable->state)
+			switch (node->hashaggstatus)
 			{
 				case HASHAGG_BETWEEN_PASSES:
 					Assert(!streaming);
 					if (agg_hash_next_pass(node))
 					{
-						node->hhashtable->state = HASHAGG_BETWEEN_PASSES;
+						node->hashaggstatus = HASHAGG_BETWEEN_PASSES;
 						continue;
 					}
-					node->hhashtable->state = HASHAGG_END_OF_PASSES;
+					node->hashaggstatus = HASHAGG_END_OF_PASSES;
 					/*
 					 * pass through. Be sure that the next case statement
 					 * is HASHAGG_END_OF_PASSES.
@@ -1059,13 +1060,18 @@ ExecAgg(AggState *node)
 
 				case HASHAGG_END_OF_PASSES:
 					node->agg_done = true;
+					/* Append stats before destroying the htable for EXPLAIN ANALYZE */
+					if (node->ss.ps.instrument)
+					{
+						agg_hash_explain(node);
+					}
 					ExecEagerFreeAgg(node);
 					return NULL;
 
 				case HASHAGG_STREAMING:
 					Assert(streaming);
 					if (!agg_hash_stream(node))
-						node->hhashtable->state = HASHAGG_END_OF_PASSES;
+						node->hashaggstatus = HASHAGG_END_OF_PASSES;
 					continue;
 
 				case HASHAGG_BEFORE_FIRST_PASS:
@@ -1074,20 +1080,8 @@ ExecAgg(AggState *node)
 			}
 		}
 	}
-#if 1
 	else
 		return agg_retrieve_direct(node);
-#else
-	else {
-		/* debugging */
-		TupleTableSlot *out = agg_retrieve_direct(node);
-		Agg *agg_node = (Agg *) ((AggState *)node)->ss.ps.plan;
-		if (!TupIsNull(out))
-		elog(LOG, "nodeAgg: numNullCols=%d, inputHasGrouping=%d, output tuple: %s",
-			 agg_node->numNullCols, agg_node->inputHasGrouping, tup2str(out));
-		return out;
-	}
-#endif
 }
 
 /*

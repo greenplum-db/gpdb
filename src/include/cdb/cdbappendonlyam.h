@@ -206,10 +206,10 @@ typedef struct AppendOnlyScanDescData
 	/*
 	 * The block directory info.
 	 *
-	 * For AO tables that are upgraded from pre-3.4 release, the block directory 
-	 * built during the first index creation.
+	 * For AO tables, the block directory is built during the first index
+	 * creation. If set indicates whether to build block directory while
+	 * scanning.
 	 */
-	bool buildBlockDirectory; /* Indicate whether to build block directory while scanning */
 	AppendOnlyBlockDirectory *blockDirectory;
 
 	/**

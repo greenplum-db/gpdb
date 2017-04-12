@@ -1,0 +1,20 @@
+2017-04-10 07:07:11|INFO|gpload session started 2017-04-10 07:07:11
+2017-04-10 07:07:11|INFO|setting schema 'public' for table 'texttable'
+2017-04-10 07:07:11|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/gpload/gpdb/gpMgmt/bin/gpload_test/gpload2/data/data_file.tbl" -t 30
+2017-04-10 07:07:11|INFO|reusing staging table staging_gpload_reusable_94d9ffba644dc6ed11f49b74844f842f
+2017-04-10 07:07:11|INFO|did not find an external table to reuse. creating ext_gpload_reusable_519611c6_1dbc_11e7_ba26_0242ac110005
+2017-04-10 07:07:11|INFO|running time: 0.08 seconds
+2017-04-10 07:07:11|INFO|rows Inserted          = 0
+2017-04-10 07:07:11|INFO|rows Updated           = 36
+2017-04-10 07:07:11|INFO|data formatting errors = 0
+2017-04-10 07:07:11|INFO|gpload succeeded
+2017-04-10 07:07:12|INFO|gpload session started 2017-04-10 07:07:12
+2017-04-10 07:07:12|INFO|setting schema 'public' for table 'texttable'
+2017-04-10 07:07:12|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/gpload/gpdb/gpMgmt/bin/gpload_test/gpload2/data/data_file.tbl" -t 30
+2017-04-10 07:07:12|INFO|reusing staging table staging_gpload_reusable_94d9ffba644dc6ed11f49b74844f842f
+2017-04-10 07:07:12|INFO|reusing external table ext_gpload_reusable_519611c6_1dbc_11e7_ba26_0242ac110005
+2017-04-10 07:07:12|INFO|running time: 0.08 seconds
+2017-04-10 07:07:12|INFO|rows Inserted          = 0
+2017-04-10 07:07:12|INFO|rows Updated           = 36
+2017-04-10 07:07:12|INFO|data formatting errors = 0
+2017-04-10 07:07:12|INFO|gpload succeeded

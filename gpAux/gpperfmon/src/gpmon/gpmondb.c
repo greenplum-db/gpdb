@@ -8,6 +8,11 @@
 #include "apr_file_io.h"
 #include "time.h"
 
+int gpdb_exec_search_for_at_least_one_row(const char*, PGconn*);
+apr_status_t empty_harvest_file(const char*, apr_pool_t*, PGconn*);
+apr_status_t truncate_tail_file(const char*, apr_pool_t*, PGconn*);
+void upgrade_log_alert_table_distributed_key(PGconn*);
+
 #define GPMON_HOSTTTYPE_HDW 1
 #define GPMON_HOSTTTYPE_HDM 2
 #define GPMON_HOSTTTYPE_ETL 3
@@ -19,14 +24,10 @@
 
 #define GPDB_CONNECTION_STRING "dbname='" GPMON_DB "' user='" GPMON_DBUSER "' connect_timeout='30'"
 
-#ifdef USE_CONNECTEMC
-int find_token_in_config_string(char* buffer, char**result, const char* token);
-#else
 int find_token_in_config_string(char* buffer, char**result, const char* token)
 {
 	return 1;
 }
-#endif
 
 // assumes a valid connection already exists
 static const char* gpdb_exec_only(PGconn* conn, PGresult** pres, const char* query)
@@ -296,7 +297,8 @@ struct hostinfo_holder_t
 	int is_etl;
 };
 
-
+void initializeHostInfoDataWithAddress(struct hostinfo_holder_t*, char*, int);
+void initializeHostInfoDataFromFileEntry(apr_pool_t*, struct hostinfo_holder_t*,char*, char*, int, char*, char*);
 
 
 void initializeHostInfoDataWithAddress(struct hostinfo_holder_t* holder, char* address, int firstAddress)
@@ -811,7 +813,6 @@ void gpdb_get_hostlist(int* hostcnt, host_t** host_table, apr_pool_t* global_poo
 			hosts[hostcounter].addressinfo_tail = hostinfo_holder->addressinfo_tail;
 			hosts[hostcounter].address_count = hostinfo_holder->address_count;
 			hosts[hostcounter].connection_hostname.current = hosts[hostcounter].addressinfo_head;
-			hosts[hostcounter].snmp_hostname.current = hosts[hostcounter].addressinfo_head;
 
 			if (hostinfo_holder->is_hdm)
 				hosts[hostcounter].is_hdm = 1;
@@ -1255,6 +1256,10 @@ static apr_status_t append_to_harvest(const char* tbl, apr_pool_t* pool, PGconn*
 
 typedef apr_status_t eachtablefunc(const char* tbl, apr_pool_t*, PGconn*);
 typedef apr_status_t eachtablefuncwithopt(const char* tbl, apr_pool_t*, PGconn*, mmon_options_t*);
+
+apr_status_t call_for_each_table(eachtablefunc, apr_pool_t*, PGconn*);
+apr_status_t call_for_each_table_with_opt(eachtablefuncwithopt, apr_pool_t*, PGconn*, mmon_options_t*);
+
 
 char* all_tables[] = { "system", "queries", "iterators", "database", "segment", "filerep", "diskspace" };
 

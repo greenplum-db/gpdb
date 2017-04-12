@@ -312,7 +312,7 @@ InitLocks(void)
 	max_table_size = NLOCKENTS();
 	
 		/* Allow for extra entries if resource locking is enabled. */
-	if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler)
+	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
 	{
 		add_size(max_table_size, NRESLOCKENTS() );
 		//add_size(max_plock_table_size, NRESPROCLOCKENTS() );
@@ -2311,14 +2311,14 @@ LockShmemSize(void)
 	/* lock hash table */
 	max_table_size = NLOCKENTS();
 
-	if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler)
+	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
 	{
 		add_size(max_table_size, NRESLOCKENTS() );
 	}
 
 	size = add_size(size, hash_estimate_size(max_table_size, sizeof(LOCK)));
 	
-	if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler)
+	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
 	{
 		add_size(max_table_size, NRESPROCLOCKENTS() );
 	}

@@ -18,7 +18,7 @@ function gen_env(){
 	if [ "$overwrite_gpcloud" = "true" ]
 	then
 		cd "\${1}/gpdb_src/gpAux/extensions/gpcloud"
-		make -B install
+		make install
 	fi
 
 	cd "\${1}/gpdb_src/gpAux/extensions/gpcloud/regress"
@@ -59,7 +59,7 @@ function _main() {
 	time make_cluster
 	time gen_env
 
-	echo -n "$s3conf" | base64 -d > /home/gpadmin/s3.conf
+	set +x && echo -n "$s3conf" | base64 -d > /home/gpadmin/s3.conf && set -x
 	chown gpadmin:gpadmin /home/gpadmin/s3.conf
 
 	time run_regression_test

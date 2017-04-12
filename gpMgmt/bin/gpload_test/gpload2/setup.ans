@@ -1,0 +1,13 @@
+DROP DATABASE IF EXISTS reuse_gptest;
+DROP DATABASE
+CREATE DATABASE reuse_gptest;
+CREATE DATABASE
+You are now connected to database "reuse_gptest" as user "gpadmin".
+DROP TABLE IF EXISTS texttable;
+NOTICE:  table "texttable" does not exist, skipping
+DROP TABLE
+CREATE TABLE texttable (
+            s1 text, s2 text, s3 text, dt timestamp,
+            n1 smallint, n2 integer, n3 bigint, n4 decimal,
+            n5 numeric, n6 real, n7 double precision) DISTRIBUTED BY (n1);
+CREATE TABLE

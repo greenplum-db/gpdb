@@ -324,14 +324,8 @@ group by f1,f2,fs;
 -- Check that whole-row Vars reading the result of a subselect don't include
 -- any junk columns therein
 --
--- This test works in upstream PostgreSQL but triggers a problem in GPDB; in
--- Greenplum the typmods must be the same between all segments and the master
--- but PostgreSQL executor defers typmod assignment to ExecEvalWholeRowVar()
--- which is too late for Greenplum since the plan has already been dispatched.
--- This should be fixed but requires new infrastructure.
---
 
-select q from (select max(f1) from int4_tbl group by f1 order by f1) q;
+select q from (select max(f1) as max from int4_tbl group by f1 order by f1) q order by max;
 
 --
 -- Test case for sublinks pushed down into subselects via join alias expansion

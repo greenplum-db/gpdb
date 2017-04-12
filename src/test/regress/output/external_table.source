@@ -74,7 +74,6 @@ select * from check_env;
  CLICOLOR=1
  DYLD_LIBRARY_PATH=/Users/@gpcurusername@/greenplum-db-devel/lib:/Users/@gpcurusername@/greenplum-db-devel/ext/python/lib:/opt/gcc_infrastructure/lib:/Users/@gpcurusername@/greenplum-perfmon-web-4.0.1.0/lib:/Users/@gpcurusername@/greenplum-db-devel/lib:/Users/@gpcurusername@/greenplum-db-devel/ext/python/lib:
  GPHOME=/Users/@gpcurusername@/greenplum-db-devel
- GPPERFMONHOME=/Users/@gpcurusername@/greenplum-perfmon-web-4.0.1.0
  GPROOT=/Users/@gpcurusername@
  GP_CID=0
  GP_DATABASE=regression

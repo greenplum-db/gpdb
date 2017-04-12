@@ -926,6 +926,9 @@ datumstreamwrite_block_orig(DatumStreamWrite * acc)
 										  &acc->blockWrite,
 										  buffer);
 
+	acc->ao_write.logicalBlockStartOffset =
+		BufferedAppendNextBufferPosition(&(acc->ao_write.bufferedAppend));
+
 	/* Write it out */
 	AppendOnlyStorageWrite_FinishBuffer(
 										&acc->ao_write,
@@ -977,6 +980,9 @@ datumstreamwrite_block_dense(DatumStreamWrite * acc)
 										  &acc->blockWrite,
 										  buffer);
 
+	acc->ao_write.logicalBlockStartOffset =
+		BufferedAppendNextBufferPosition(&(acc->ao_write.bufferedAppend));
+
 	/* Write it out */
 	AppendOnlyStorageWrite_FinishBuffer(
 										&acc->ao_write,
@@ -991,10 +997,16 @@ datumstreamwrite_block_dense(DatumStreamWrite * acc)
 }
 
 int64
-datumstreamwrite_block(DatumStreamWrite * acc)
+datumstreamwrite_block(DatumStreamWrite *acc,
+					   AppendOnlyBlockDirectory *blockDirectory,
+					   int columnGroupNo,
+					   bool addColAction)
 {
+	int64 writesz;
+	int itemCount = DatumStreamBlockWrite_Nth(&acc->blockWrite);
+
 	/* Nothing to write, this is just no op */
-	if (DatumStreamBlockWrite_Nth(&acc->blockWrite) == 0)
+	if (itemCount == 0)
 	{
 		return 0;
 	}
@@ -1002,11 +1014,13 @@ datumstreamwrite_block(DatumStreamWrite * acc)
 	switch (acc->datumStreamVersion)
 	{
 		case DatumStreamVersion_Original:
-			return datumstreamwrite_block_orig(acc);
+			writesz = datumstreamwrite_block_orig(acc);
+			break;
 
 		case DatumStreamVersion_Dense:
 		case DatumStreamVersion_Dense_Enhanced:
-			return datumstreamwrite_block_dense(acc);
+			writesz = datumstreamwrite_block_dense(acc);
+			break;
 
 		default:
 			elog(ERROR, "Unexpected datum stream version %d",
@@ -1014,6 +1028,17 @@ datumstreamwrite_block(DatumStreamWrite * acc)
 			return 0;
 			/* Never reaches here. */
 	}
+
+	/* Insert an entry to the block directory */
+	AppendOnlyBlockDirectory_InsertEntry(
+		blockDirectory,
+		columnGroupNo,
+		acc->blockFirstRowNum,
+		AppendOnlyStorageWrite_LogicalBlockStartOffset(&acc->ao_write),
+		itemCount,
+		addColAction);
+
+	return writesz;
 }
 
 static void
@@ -1026,7 +1051,11 @@ datumstreamwrite_print_large_varlena_info(
 }
 
 int64
-datumstreamwrite_lob(DatumStreamWrite * acc, Datum d)
+datumstreamwrite_lob(DatumStreamWrite * acc,
+					 Datum d,
+					 AppendOnlyBlockDirectory *blockDirectory,
+					 int colGroupNo,
+					 bool addColAction)
 {
 	uint8	   *p;
 	int32		varLen;
@@ -1076,6 +1105,15 @@ datumstreamwrite_lob(DatumStreamWrite * acc, Datum d)
 								   varLen,
 								   AOCSBK_BLOB,
 									/* rowCount */ 1);
+
+	/* Insert an entry to the block directory */
+	AppendOnlyBlockDirectory_InsertEntry(
+		blockDirectory,
+		colGroupNo,
+		acc->blockFirstRowNum,
+		AppendOnlyStorageWrite_LogicalBlockStartOffset(&acc->ao_write),
+		1, /*itemCount -- always just the lob just inserted */
+		addColAction);
 
 	return varLen;
 }
@@ -1284,7 +1322,9 @@ datumstreamread_block_content(DatumStreamRead * acc)
 
 
 int
-datumstreamread_block(DatumStreamRead * acc)
+datumstreamread_block(DatumStreamRead * acc,
+					  AppendOnlyBlockDirectory *blockDirectory,
+					  int colGroupNo)
 {
 	bool		readOK = false;
 
@@ -1343,6 +1383,16 @@ datumstreamread_block(DatumStreamRead * acc)
 			 acc->blockRowCount);
 
 	datumstreamread_block_content(acc);
+
+	if (blockDirectory)
+	{
+		AppendOnlyBlockDirectory_InsertEntry(blockDirectory,
+											 colGroupNo,
+											 acc->blockFirstRowNum,
+											 acc->blockFileOffset,
+											 acc->blockRowCount,
+											 false);
+	}
 
 	return 0;
 }

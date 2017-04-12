@@ -297,4 +297,107 @@ select foo();
 -- cleanup
 drop function foo();
 drop table t;
+-- This test case use UDF assign_new_record() to generate a new record type in cache
+-- for each tuple, these types should be sync to receiver. 
+-- test function
+create or replace function assign_new_record()
+returns SETOF record as '@abs_builddir@/regress@DLSUFFIX@',
+'assign_new_record' LANGUAGE C VOLATILE;
+-- transfer record types via motion incrementally
+select assign_new_record() from gp_dist_random('gp_id');
+ assign_new_record 
+-------------------
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+ (1)
+(30 rows)
+
+-- cleanup
+drop function assign_new_record();
+-- Test cases for record type nested in array 
+drop table if exists t_array_record;
+NOTICE:  table "t_array_record" does not exist, skipping
+create table t_array_record as select i as c1, i * 2 as c2 from generate_series(1,10) i;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select c1, array[row(c1,array[row(2,3),row(c2,5,array[c1],'abc')])] from t_array_record order by c1;
+ c1 |                        array                         
+----+------------------------------------------------------
+  1 | {"(1,\"{\"\"(2,3)\"\",\"\"(2,5,{1},abc)\"\"}\")"}
+  2 | {"(2,\"{\"\"(2,3)\"\",\"\"(4,5,{2},abc)\"\"}\")"}
+  3 | {"(3,\"{\"\"(2,3)\"\",\"\"(6,5,{3},abc)\"\"}\")"}
+  4 | {"(4,\"{\"\"(2,3)\"\",\"\"(8,5,{4},abc)\"\"}\")"}
+  5 | {"(5,\"{\"\"(2,3)\"\",\"\"(10,5,{5},abc)\"\"}\")"}
+  6 | {"(6,\"{\"\"(2,3)\"\",\"\"(12,5,{6},abc)\"\"}\")"}
+  7 | {"(7,\"{\"\"(2,3)\"\",\"\"(14,5,{7},abc)\"\"}\")"}
+  8 | {"(8,\"{\"\"(2,3)\"\",\"\"(16,5,{8},abc)\"\"}\")"}
+  9 | {"(9,\"{\"\"(2,3)\"\",\"\"(18,5,{9},abc)\"\"}\")"}
+ 10 | {"(10,\"{\"\"(2,3)\"\",\"\"(20,5,{10},abc)\"\"}\")"}
+(10 rows)
+
+drop table t_array_record;
+-- Test the case that new record type is created during execution stage, which makes
+-- QE have more transient types than QD.
+drop table if exists t_record_qe;
+NOTICE:  table "t_record_qe" does not exist, skipping
+create table t_record_qe as select f1 from generate_series(1,10) f1;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select q from (select max(f1) as max from t_record_qe group by f1 order by f1) q order by max;
+  q   
+------
+ (1)
+ (2)
+ (3)
+ (4)
+ (5)
+ (6)
+ (7)
+ (8)
+ (9)
+ (10)
+(10 rows)
+
+drop table t_record_qe;
+-- Customer reported case which used to segment fault.
+DROP TABLE IF EXISTS typemod_init ;
+NOTICE:  table "typemod_init" does not exist, skipping
+CREATE TABLE typemod_init ( varchar_col character varying(7)); 
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'varchar_col' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO typemod_init VALUES ('A');
+SELECT C FROM ( SELECT B.varchar_col FROM ( SELECT A.varchar_col FROM typemod_init A) B GROUP BY B.varchar_col) C;
+  c  
+-----
+ (A)
+(1 row)
+
+DROP TABLE typemod_init ;
 drop schema transient_types;

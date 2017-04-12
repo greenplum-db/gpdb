@@ -18,6 +18,7 @@
 #include "cdb/tupser.h"
 #include "cdb/tupchunk.h"
 #include "cdb/tupchunklist.h"
+#include "cdb/tupleremap.h"
 
 struct CdbProcess;                          /* #include "nodes/execnodes.h" */
 struct Slice;                               /* #include "nodes/execnodes.h" */
@@ -269,6 +270,21 @@ struct MotionConn
 	/* Indicate whether an EOS is received and acked. */
 	bool eosAcked;
 
+	/*
+	 * used by the sender.
+	 *
+	 * the typmod of last sent record type in current connection,
+	 * if the connection is for broadcasting then we only check
+	 * and update this attribute on connection 0.
+	 */
+	int32		 sent_record_typmod;
+
+	/*
+	 * used by the receiver.
+	 *
+	 * all the remap information.
+	 */
+	TupleRemapper	*remapper;
 };
 
 /*

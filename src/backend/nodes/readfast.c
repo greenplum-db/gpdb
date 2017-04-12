@@ -1501,7 +1501,6 @@ _readQueryDispatchDesc(void)
 {
 	READ_LOCALS(QueryDispatchDesc);
 
-	READ_NODE_FIELD(transientTypeRecords);
 	READ_STRING_FIELD(intoTableSpaceName);
 	READ_NODE_FIELD(oidAssignments);
 	READ_NODE_FIELD(sliceTable);
@@ -2567,7 +2566,6 @@ _readTupleDescNode(void)
 
 	READ_OID_FIELD(tuple->tdtypeid);
 	READ_INT_FIELD(tuple->tdtypmod);
-	READ_INT_FIELD(tuple->tdqdtypmod);
 	READ_BOOL_FIELD(tuple->tdhasoid);
 	READ_INT_FIELD(tuple->tdrefcount);
 

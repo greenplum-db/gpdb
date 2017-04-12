@@ -293,7 +293,7 @@ SetNextFileSegForRead(AppendOnlyScanDesc scan)
 		if(eof > 0 && fsinfo->state != AOSEG_STATE_AWAITING_DROP)
 		{
 			/* Initialize the block directory for inserts if needed. */
-			if (scan->buildBlockDirectory)
+			if (scan->blockDirectory)
 			{
 				/*
 				 * if building the block directory, we need to make sure the
@@ -1371,9 +1371,8 @@ getNextBlock(
 									&scan->storageRead,
 									&scan->executorReadBlock))
 	{
-		if (scan->buildBlockDirectory)
+		if (scan->blockDirectory)
 		{
-			Assert(scan->blockDirectory != NULL);
 			AppendOnlyBlockDirectory_End_forInsert(scan->blockDirectory);
 		}
 
@@ -1383,14 +1382,14 @@ getNextBlock(
 		return false;
 	}
 
-	if (scan->buildBlockDirectory)
+	if (scan->blockDirectory)
 	{
-		Assert(scan->blockDirectory != NULL);
 		AppendOnlyBlockDirectory_InsertEntry(
 			scan->blockDirectory, 0,
 			scan->executorReadBlock.blockFirstRowNum,
 			scan->executorReadBlock.headerOffsetInFile,
-			scan->executorReadBlock.rowCount);
+			scan->executorReadBlock.rowCount,
+			false);
 	}
 
 	AppendOnlyExecutorReadBlock_GetContents(
@@ -1571,6 +1570,9 @@ finishWriteBlock(AppendOnlyInsertDesc aoInsertDesc)
 			executorBlockKind = AoExecutorBlockKind_SingleRow;
 		}
 
+		aoInsertDesc->storageWrite.logicalBlockStartOffset =
+			BufferedAppendNextBufferPosition(&(aoInsertDesc->storageWrite.bufferedAppend));
+
 		AppendOnlyStorageWrite_FinishBuffer(
 							&aoInsertDesc->storageWrite,
 							dataLen,
@@ -1635,8 +1637,9 @@ finishWriteBlock(AppendOnlyInsertDesc aoInsertDesc)
 		&aoInsertDesc->blockDirectory,
 		0,
 		aoInsertDesc->blockFirstRowNum,
-		AppendOnlyStorageWrite_LastWriteBeginPosition(&aoInsertDesc->storageWrite),
-		itemCount);
+		AppendOnlyStorageWrite_LogicalBlockStartOffset(&aoInsertDesc->storageWrite),
+		itemCount,
+		false);
 
 	Assert(aoInsertDesc->nonCompressedData == NULL);
 	Assert(!AppendOnlyStorageWrite_IsBufferAllocated(&aoInsertDesc->storageWrite));
@@ -1764,7 +1767,6 @@ appendonly_beginrangescan_internal(Relation relation,
 	//pgstat_initstats(relation);
 	initscan(scan, key);
 
-	scan->buildBlockDirectory = false;
 	scan->blockDirectory = NULL;
 
 	AppendOnlyVisimap_Init(&scan->visibilityMap,

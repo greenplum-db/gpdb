@@ -171,33 +171,6 @@ Feature: NetBackup Integration with GPDB
         Then gpdbrestore should return a return code of 0
         And verify that the data of "2" tables in "bkdb" is validated after restore
 
-    @nbupartI
-    Scenario: Test netbackup parameter lengths for full backup and restore (<=127 and >127)
-        Given the test is initialized
-        And the netbackup params have been parsed
-        And there is a "ao" table "public.ao_table" in "bkdb" with data
-        And there is a "co" table "public.co_table" in "bkdb" with data
-        When the user runs "gpcrondump -a -x bkdb --netbackup-keyword aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa127" using netbackup with long params
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        When the user runs "gpcrondump -a -x bkdb --netbackup-service-host aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa128" using netbackup with long params
-        Then gpcrondump should return a return code of 2
-        And gpcrondump should print Netbackup Service Hostname \(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa128\) exceeds the maximum length of 127 characters to stdout
-        When the user runs "gpcrondump -a -x bkdb --netbackup-policy aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa128" using netbackup with long params
-        Then gpcrondump should return a return code of 2
-        And gpcrondump should print Netbackup Policy Name \(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa128\) exceeds the maximum length of 127 characters to stdout
-        When the user runs "gpcrondump -a -x bkdb --netbackup-schedule aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa128" using netbackup with long params
-        Then gpcrondump should return a return code of 2
-        And gpcrondump should print Netbackup Schedule Name \(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa128\) exceeds the maximum length of 127 characters to stdout
-        When the user runs "gpcrondump -a -x bkdb --netbackup-keyword aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa128" using netbackup with long params
-        Then gpcrondump should return a return code of 2
-        And gpcrondump should print Netbackup Keyword \(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa128\) exceeds the maximum length of 127 characters to stdout
-        When the user runs gpdbrestore with the stored timestamp and options "--netbackup-service-host netbackup-service-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa127"
-        Then gpdbrestore should return a return code of 0
-        When the user runs gpdbrestore with the stored timestamp and options "--netbackup-service-host netbackup-service-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa128"
-        Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print Netbackup Service Hostname \(netbackup-service-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa128\) exceeds the maximum length of 127 characters to stdout
-
     @nbusmoke
     @nbupartI
     Scenario: Full Backup and Restore with -u option

@@ -1,8 +1,6 @@
 -- @Description The locks held after different operations
-DROP TABLE IF EXISTS ao;
-
-CREATE TABLE ao (a INT, b INT) WITH (appendonly=true);
-INSERT INTO ao SELECT i as a, i as b FROM generate_series(1, 100) AS i;
+CREATE TABLE ao_locks_table (a INT, b INT) WITH (appendonly=true) distributed by (a);
+INSERT INTO ao_locks_table SELECT i as a, i as b FROM generate_series(1, 100) AS i;
 
 create or replace view locktest_master as
 select coalesce(
@@ -59,19 +57,25 @@ SELECT coalesce(
 
 -- Actual test begins
 BEGIN;
-INSERT INTO ao VALUES (200, 200);
-SELECT * FROM locktest_master;
-SELECT * FROM locktest_segments;
+INSERT INTO ao_locks_table VALUES (200, 200);
+SELECT * FROM locktest_master where coalesce = 'ao_locks_table' or
+ coalesce like 'aovisimap%' or coalesce like 'aoseg%';
+SELECT * FROM locktest_segments where coalesce = 'ao_locks_table' or
+ coalesce like 'aovisimap%' or coalesce like 'aoseg%';
 COMMIT;
 
 BEGIN;
-DELETE FROM ao WHERE a = 1;
-SELECT * FROM locktest_master;
-SELECT * FROM locktest_segments;
+DELETE FROM ao_locks_table WHERE a = 1;
+SELECT * FROM locktest_master where coalesce = 'ao_locks_table' or
+ coalesce like 'aovisimap%' or coalesce like 'aoseg%';
+SELECT * FROM locktest_segments where coalesce = 'ao_locks_table' or
+ coalesce like 'aovisimap%' or coalesce like 'aoseg%';
 COMMIT;
 
 BEGIN;
-UPDATE ao SET b = -1 WHERE a = 2;
-SELECT * FROM locktest_master;
-SELECT * FROM locktest_segments;
+UPDATE ao_locks_table SET b = -1 WHERE a = 2;
+SELECT * FROM locktest_master where coalesce = 'ao_locks_table' or
+ coalesce like 'aovisimap%' or coalesce like 'aoseg%';
+SELECT * FROM locktest_segments where coalesce = 'ao_locks_table' or
+ coalesce like 'aovisimap%' or coalesce like 'aoseg%';
 COMMIT;

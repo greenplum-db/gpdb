@@ -26,4 +26,10 @@ typedef enum
 extern bool	ResourceScheduler;
 extern ResourceManagerPolicy Gp_resource_manager_policy;
 
+#define IsResQueueEnabled() \
+	(bool)(ResourceScheduler && Gp_resource_manager_policy == RESOURCE_MANAGER_POLICY_QUEUE)
+#define IsResGroupEnabled() \
+	(bool)(ResourceScheduler && Gp_resource_manager_policy == RESOURCE_MANAGER_POLICY_GROUP)
+
+
 #endif   /* RESOURCEMANAGER_H */

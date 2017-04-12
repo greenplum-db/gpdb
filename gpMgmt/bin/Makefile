@@ -253,6 +253,10 @@ solarisTest:
 		echo "SOLARIS" ; \
 	fi
 
+.PHONY: installcheck
+installcheck:
+	$(MAKE) -C gpload_test $@
+
 .PHONY: clean
 clean :
 	@rm -rf $(PYLIB_SRC_EXT)/$(LOCKFILE_DIR)

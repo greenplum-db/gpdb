@@ -1,30 +1,49 @@
 CREATE TABLE stock (date text, time text, open float, high float, low float, volume int) DISTRIBUTED BY (date) PARTITION BY RANGE (volume)
 (
-	PARTITION stock10000 START (10000) INCLUSIVE,
-	PARTITION stock20000 START (20000) INCLUSIVE,
-	PARTITION stock30000 START (30000) INCLUSIVE
+        PARTITION stock10000 START (10000) INCLUSIVE,
+        PARTITION stock20000 START (20000) INCLUSIVE,
+        PARTITION stock30000 START (30000) INCLUSIVE
 );
 NOTICE:  CREATE TABLE will create partition "stock_1_prt_stock10000" for table "stock"
 NOTICE:  CREATE TABLE will create partition "stock_1_prt_stock20000" for table "stock"
 NOTICE:  CREATE TABLE will create partition "stock_1_prt_stock30000" for table "stock"
-INSERT INTO stock (date, time, open, high, low, volume) VALUES (03/08/2011, 094022, 35.25, 35.24, 35.29, 20001);
+INSERT INTO stock (date, time, open, high, low, volume) VALUES (03/08/2011, 094022, 35.25, 35.24, 35.29, 30001);
 CREATE READABLE EXTERNAL TABLE ext_stock000 (date text, time text, open float, high float,
-	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xao config=@config_file@') FORMAT 'csv';
-ALTER TABLE stock ADD PARTITION stock000 START (0) INCLUSIVE END (10000) EXCLUSIVE;
-NOTICE:  CREATE TABLE will create partition "stock_1_prt_stock000" for table "stock"
-ALTER TABLE stock EXCHANGE PARTITION FOR (0) WITH TABLE ext_stock000 WITHOUT VALIDATION;
-NOTICE:  exchanged partition "stock000" of relation "stock" with relation "ext_stock000"
-SELECT count(*) FROM stock_1_prt_stock000;
+        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xao config=@config_file@') FORMAT 'csv';
+CREATE READABLE EXTERNAL TABLE ext_stock001 (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xao config=@config_file@') FORMAT 'csv';
+CREATE READABLE EXTERNAL TABLE ext_stock002 (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xao config=@config_file@') FORMAT 'csv';
+ALTER TABLE stock ADD PARTITION stock00000 START (0) INCLUSIVE END (10000) EXCLUSIVE;
+NOTICE:  CREATE TABLE will create partition "stock_1_prt_stock00000" for table "stock"
+ALTER TABLE stock EXCHANGE PARTITION stock00000 WITH TABLE ext_stock000 WITHOUT VALIDATION;
+ALTER TABLE stock EXCHANGE PARTITION stock10000 WITH TABLE ext_stock001 WITHOUT VALIDATION;
+ALTER TABLE stock EXCHANGE PARTITION stock20000 WITH TABLE ext_stock002 WITHOUT VALIDATION;
+SELECT count(*) FROM stock_1_prt_stock00000;
   count  
 ---------
  1938855
 (1 row)
 
+SELECT count(*) FROM stock_1_prt_stock10000;
+ count 
+-------
+   278
+(1 row)
+
+SELECT count(*) FROM stock_1_prt_stock20000;
+ count 
+-------
+   130
+(1 row)
+
 SELECT count(*) FROM stock;
   count  
 ---------
- 1938856
+ 1939264
 (1 row)
 
 DROP TABLE ext_stock000;
+DROP TABLE ext_stock001;
+DROP TABLE ext_stock002;
 DROP TABLE stock;

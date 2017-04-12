@@ -28,6 +28,7 @@ all:
 	$(MAKE) -C contrib/pg_upgrade_support all
 	$(MAKE) -C contrib/pg_upgrade all
 	$(MAKE) -C gpAux/extensions mapreduce
+	$(MAKE) -C gpAux/gpperfmon all
 	@echo "All of Greenplum Database successfully made. Ready to install."
 
 install:
@@ -50,7 +51,7 @@ install:
 	$(MAKE) -C contrib/pg_upgrade $@
 	$(MAKE) -C gpMgmt $@
 	$(MAKE) -C gpAux/extensions $@
-
+	$(MAKE) -C gpAux/gpperfmon $@
 	@echo "Greenplum Database installation complete."
 
 installdirs uninstall:
@@ -100,6 +101,7 @@ clean:
 	$(MAKE) -C contrib/pg_upgrade_support $@
 	$(MAKE) -C contrib/pg_upgrade $@
 	$(MAKE) -C gpAux/extensions $@
+	$(MAKE) -C gpAux/gpperfmon $@
 	$(MAKE) -C gpMgmt $@
 # Garbage from autoconf:
 	@rm -rf autom4te.cache/
@@ -134,6 +136,7 @@ installcheck-world:
 	$(MAKE) -C src/bin/gpfdist installcheck
 	$(MAKE) -C src/interfaces/gppc installcheck
 	$(MAKE) -C src/test/kerberos installcheck
+	$(MAKE) -C gpMgmt/bin installcheck
 	gpcheckcat -A
 
 

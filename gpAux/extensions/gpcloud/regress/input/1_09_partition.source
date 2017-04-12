@@ -5,17 +5,31 @@ CREATE TABLE stock (date text, time text, open float, high float, low float, vol
 	PARTITION stock30000 START (30000) INCLUSIVE
 );
 
-INSERT INTO stock (date, time, open, high, low, volume) VALUES (03/08/2011, 094022, 35.25, 35.24, 35.29, 20001);
+INSERT INTO stock (date, time, open, high, low, volume) VALUES (03/08/2011, 094022, 35.25, 35.24, 35.29, 30001);
 
 CREATE READABLE EXTERNAL TABLE ext_stock000 (date text, time text, open float, high float,
 	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xao config=@config_file@') FORMAT 'csv';
 
-ALTER TABLE stock ADD PARTITION stock000 START (0) INCLUSIVE END (10000) EXCLUSIVE;
+CREATE READABLE EXTERNAL TABLE ext_stock001 (date text, time text, open float, high float,
+	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xao config=@config_file@') FORMAT 'csv';
 
-ALTER TABLE stock EXCHANGE PARTITION FOR (0) WITH TABLE ext_stock000 WITHOUT VALIDATION;
+CREATE READABLE EXTERNAL TABLE ext_stock002 (date text, time text, open float, high float,
+	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xao config=@config_file@') FORMAT 'csv';
 
-SELECT count(*) FROM stock_1_prt_stock000;
+ALTER TABLE stock ADD PARTITION stock00000 START (0) INCLUSIVE END (10000) EXCLUSIVE;
+
+ALTER TABLE stock EXCHANGE PARTITION stock00000 WITH TABLE ext_stock000 WITHOUT VALIDATION;
+
+ALTER TABLE stock EXCHANGE PARTITION stock10000 WITH TABLE ext_stock001 WITHOUT VALIDATION;
+
+ALTER TABLE stock EXCHANGE PARTITION stock20000 WITH TABLE ext_stock002 WITHOUT VALIDATION;
+
+SELECT count(*) FROM stock_1_prt_stock00000;
+SELECT count(*) FROM stock_1_prt_stock10000;
+SELECT count(*) FROM stock_1_prt_stock20000;
 SELECT count(*) FROM stock;
 
 DROP TABLE ext_stock000;
+DROP TABLE ext_stock001;
+DROP TABLE ext_stock002;
 DROP TABLE stock;

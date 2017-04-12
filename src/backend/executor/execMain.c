@@ -392,17 +392,6 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	/* Initialize per-query resource (diskspace) tracking */
 	WorkfileQueryspace_InitEntry(gp_session_id, gp_command_count);
 
-	if (Gp_role != GP_ROLE_DISPATCH && queryDesc->ddesc &&
-		queryDesc->ddesc->transientTypeRecords != NULL)
-	{
-		ListCell   *cell;
-
-		foreach(cell, queryDesc->ddesc->transientTypeRecords)
-		{
-			TupleDescNode *tmp = lfirst(cell);
-			assign_record_type_typmod(tmp->tuple);
-		}
-	}
 	/*
 	 * Handling of the Slice table depends on context.
 	 */
@@ -643,8 +632,6 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 						  needDtxTwoPhase, true /* wantSnapshot */, queryDesc->extended_query );
 
 			queryDesc->ddesc->sliceTable = estate->es_sliceTable;
-
-			build_tuple_node_list(&queryDesc->ddesc->transientTypeRecords);
 
 			queryDesc->ddesc->oidAssignments = GetAssignedOidsForDispatch();
 

@@ -1,9 +1,0 @@
-Pkgname: plr 
-Architecture: #arch
-OS: #os
-Version: ossv8.3.0.15_pv2.1_gpdb4.3orca
-GPDBVersion: 4.3
-Description: Provides a procedural language implementation of R for the Greenplum Database. 
-PostInstall:
-- Master: "echo 'Please source your $GPHOME/greenplum_path.sh file and restart the database.';
-          echo 'You can enable PL/R by running createlang plr -d mydatabase.';"

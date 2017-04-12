@@ -1,0 +1,20 @@
+-- start_matchsubs
+-- m/|/
+-- s/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})\.(\d+)-(\d+)/TODAYS_DATE/
+-- m/|/
+-- s/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/TODAYS_DATE1/
+-- m/|/
+-- s/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/TODAYS_DATE2/
+-- m/running time:/
+-- s/(\d+)\.(\d+)/RUNNING_TIME/
+-- m/ext_gpload_reusable_db/
+-- s/ext_gpload_reusable_db\d*b\d_created_\d*_\d*_\d*/EXT_GPLOAD_REUSABLE/
+-- m/ext_gpload_reusable/
+-- s/ext_gpload_reusable_\w*_\w*_\w*_\w*_\w*/EXT_GPLOAD_REUSABLE/
+-- m/staging_gpload_reusable/
+-- s/staging_gpload_reusable_\w+/STAGING_GPLOAD_REUSABLE/
+-- m/started gpfdist/
+-- s/started gpfdist -p \d* -P \d* -f .*/ports/
+-- m/data_file.tbl/
+-- s/(").*data_file.tbl(")/data/
+-- end_matchsubs

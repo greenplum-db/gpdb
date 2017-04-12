@@ -143,4 +143,38 @@ select foo();
 drop function foo();
 drop table t;
 
+-- This test case use UDF assign_new_record() to generate a new record type in cache
+-- for each tuple, these types should be sync to receiver. 
+-- test function
+create or replace function assign_new_record()
+returns SETOF record as '@abs_builddir@/regress@DLSUFFIX@',
+'assign_new_record' LANGUAGE C VOLATILE;
+
+-- transfer record types via motion incrementally
+select assign_new_record() from gp_dist_random('gp_id');
+
+-- cleanup
+drop function assign_new_record();
+
+-- Test cases for record type nested in array 
+drop table if exists t_array_record;
+create table t_array_record as select i as c1, i * 2 as c2 from generate_series(1,10) i;
+select c1, array[row(c1,array[row(2,3),row(c2,5,array[c1],'abc')])] from t_array_record order by c1;
+drop table t_array_record;
+
+-- Test the case that new record type is created during execution stage, which makes
+-- QE have more transient types than QD.
+drop table if exists t_record_qe;
+create table t_record_qe as select f1 from generate_series(1,10) f1;
+select q from (select max(f1) as max from t_record_qe group by f1 order by f1) q order by max;
+drop table t_record_qe;
+
+-- Customer reported case which used to segment fault.
+DROP TABLE IF EXISTS typemod_init ;
+CREATE TABLE typemod_init ( varchar_col character varying(7)); 
+INSERT INTO typemod_init VALUES ('A');
+SELECT C FROM ( SELECT B.varchar_col FROM ( SELECT A.varchar_col FROM typemod_init A) B GROUP BY B.varchar_col) C;
+DROP TABLE typemod_init ;
+
+
 drop schema transient_types;

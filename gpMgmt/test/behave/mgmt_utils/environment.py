@@ -12,13 +12,6 @@ def before_feature(context, feature):
     drop_database_if_exists(context, 'fullbkdb')
     drop_database_if_exists(context, 'schematestdb')
 
-    if 'gpperfmon' in feature.tags:
-        drop_database_if_exists(context, 'gpperfmon')
-        pgport = os.getenv('PGPORT', 5432)
-        command = "gpperfmon_install --enable --password changeme --port %s" % pgport
-        run_gpcommand(context, command)
-        run_gpcommand(context, "gpstop -ar")
-
     if 'analyzedb' in feature.tags:
         start_database_if_not_started(context)
         drop_database_if_exists(context, 'incr_analyze')

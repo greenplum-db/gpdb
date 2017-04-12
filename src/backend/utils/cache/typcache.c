@@ -85,7 +85,7 @@ static HTAB *RecordCacheHash = NULL;
 
 static TupleDesc *RecordCacheArray = NULL;
 static int32 RecordCacheArrayLen = 0;	/* allocated length of array */
-static int32 NextRecordTypmod = 0;		/* number of entries used */
+int32 NextRecordTypmod = 0;		/* number of entries used */
 
 static void TypeCacheRelCallback(Datum arg, Oid relid);
 
@@ -466,19 +466,6 @@ assign_record_type_typmod(TupleDesc tupDesc)
 		{
 			tupDesc->tdtypmod = entDesc->tdtypmod;
 
-			if (entDesc->tdqdtypmod != -1 && tupDesc->tdqdtypmod != -1)
-			{
-				Assert(tupDesc->tdqdtypmod == entDesc->tdqdtypmod);
-			}
-			else if (entDesc->tdqdtypmod != -1)
-			{
-				tupDesc->tdqdtypmod = entDesc->tdqdtypmod;
-			}
-			else if (tupDesc->tdqdtypmod != -1)
-			{
-				entDesc->tdqdtypmod = tupDesc->tdqdtypmod;
-			}
-
 			return;
 		}
 	}
@@ -572,13 +559,14 @@ TypeCacheRelCallback(Datum arg, Oid relid)
  *
  * Wrap TupleDesc with TupleDescNode. Return all record type in record cache.
  */
-void
-build_tuple_node_list(List **transientTypeList)
+List *
+build_tuple_node_list(int start)
 {
-	int i = 0;
+	List *transientTypeList = NIL;
+	int i = start;
 
 	if (NextRecordTypmod == 0)
-		return;
+		return transientTypeList;
 
 	for (; i < NextRecordTypmod; i++)
 	{
@@ -588,7 +576,8 @@ build_tuple_node_list(List **transientTypeList)
 		node->type = T_TupleDescNode;
 		node->natts = tmp->natts;
 		node->tuple = CreateTupleDescCopy(tmp);
-		node->tuple->tdqdtypmod = tmp->tdtypmod;
-		*transientTypeList = lappend(*transientTypeList, node);
+		transientTypeList = lappend(transientTypeList, node);
 	}
+
+	return transientTypeList;
 }

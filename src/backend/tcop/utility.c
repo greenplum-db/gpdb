@@ -42,7 +42,7 @@
 #include "commands/prepare.h"
 #include "commands/queue.h"
 #include "commands/proclang.h"
-#include "commands/resgroup.h"
+#include "commands/resgroupcmds.h"
 #include "commands/schemacmds.h"
 #include "commands/sequence.h"
 #include "commands/tablecmds.h"

@@ -13,8 +13,8 @@ function gen_env(){
 	source /usr/local/greenplum-db-devel/greenplum_path.sh
 
 	cd "\${1}/gpdb_src/gpAux/extensions/gpcloud"
-	make -B
-	make -B gpcheckcloud
+	make
+	make gpcheckcloud
 	EOF
 
 	chown -R gpadmin:gpadmin $(pwd)
@@ -31,7 +31,7 @@ function build_gpcloud_components() {
 }
 
 function push_to_staging_server() {
-	echo -n "$EC2_PRIVATE_KEY" | base64 -d > /home/gpadmin/ec2_private_key
+	set +x && echo -n "$EC2_PRIVATE_KEY" | base64 -d > /home/gpadmin/ec2_private_key && set -x
 	chmod 600 /home/gpadmin/ec2_private_key
 
 	ssh -i /home/gpadmin/ec2_private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null gpadmin@$EC2_INSTANCE_IP "source /home/gpadmin/greenplum-db-data/env/env.sh; source /home/gpadmin/greenplum-db/greenplum_path.sh; if gpstate &> /dev/null; then gpstop -a; fi"

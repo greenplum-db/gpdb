@@ -273,9 +273,18 @@ extern void destroy_datumstreamwrite(DatumStreamWrite * ds);
 extern void destroy_datumstreamread(DatumStreamRead * ds);
 
 /* Read and Write op */
-extern int64 datumstreamwrite_block(DatumStreamWrite * ds);
-extern int64 datumstreamwrite_lob(DatumStreamWrite * ds, Datum d);
-extern int	datumstreamread_block(DatumStreamRead * ds);
+extern int64 datumstreamwrite_block(DatumStreamWrite *ds,
+									AppendOnlyBlockDirectory *blockDirectory,
+									int columnGroupNo,
+									bool addColAction);
+extern int64 datumstreamwrite_lob(DatumStreamWrite *ds,
+								  Datum d,
+								  AppendOnlyBlockDirectory *blockDirectory,
+								  int columnGroupNo,
+								  bool addColAction);
+extern int	datumstreamread_block(DatumStreamRead * ds,
+								  AppendOnlyBlockDirectory *blockDirectory,
+								  int colGroupNo);
 extern void datumstreamread_find(DatumStreamRead * datumStream,
 					 int32 rowNumInBlock);
 extern void datumstreamread_rewind_block(DatumStreamRead * datumStream);

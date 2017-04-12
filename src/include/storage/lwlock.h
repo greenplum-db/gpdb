@@ -89,6 +89,7 @@ typedef enum LWLockId
 	ChangeTrackingCompactLock,
 	MirroredLock,
 	ResQueueLock,
+	ResGroupLock,
 	FileRepAppendOnlyCommitCountLock,
 	SyncRepLock,
 	ErrorLogLock,

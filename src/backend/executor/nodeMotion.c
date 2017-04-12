@@ -160,17 +160,6 @@ bool isMotionGather(const Motion *m)
 			&& m->numOutputSegs == 1);
 }
 
-/**
- * Is it a gather motion to master?
- */
-static bool
-isMotionGatherToMaster(const Motion *m)
-{
-	return (m->motionType == MOTIONTYPE_FIXED 
-			&& m->numOutputSegs == 1
-			&& m->outputSegIdx[0] == -1);
-}
-
 /*
  * Set the statistic info in gpmon packet.
  */
@@ -1420,55 +1409,6 @@ doSendEndOfStream(Motion * motion, MotionState * node)
 	node->sentEndOfStream = true;
 }
 
-
-/*
- * Change segment typemod to qd typmod for transient type.
- */
-static void mapTransientTypeMod(TupleTableSlot *slot)
-{
-	TupleDesc	typeinfo = slot->tts_tupleDescriptor;
-	int			natts = typeinfo->natts;
-	int			i = 0;
-
-	for (i = 0; i < natts; ++i)
-	{
-		bool		orignull;
-		Datum		origattr;
-		Datum 		attr;
-		Form_pg_attribute attrData = typeinfo->attrs[i];
-		HeapTupleHeader rec;
-		TupleDesc	tupleDesc;
-
-		if (attrData->atttypid != RECORDOID)
-		{
-			continue;
-		}
-
-		origattr = slot_getattr(slot, i+1, &orignull);
-		if (orignull)
-		{
-			continue;
-		}
-
-		attr = PointerGetDatum(PG_DETOAST_DATUM(origattr));
-
-		rec = DatumGetHeapTupleHeader(attr);
-		tupleDesc = lookup_rowtype_tupdesc_noerror(RECORDOID,
-												   HeapTupleHeaderGetTypMod(rec),
-												   true);
-		if (tupleDesc->tdqdtypmod == -1 ||
-			tupleDesc->tdqdtypmod == tupleDesc->tdtypmod)
-		{
-			ReleaseTupleDesc(tupleDesc);
-			continue;
-		}
-
-		HeapTupleHeaderSetTypMod(rec, tupleDesc->tdqdtypmod);
-		ReleaseTupleDesc(tupleDesc);
-	}
-}
-
-
 /*
  * A crufty confusing part of the current code is how contentId is used within
  * the motion structures and then how that gets translated to targetRoutes by
@@ -1565,15 +1505,13 @@ doSendTuple(Motion * motion, MotionState * node, TupleTableSlot *outerTupleSlot)
 		Assert(!is_null);
 	}
 
-	/* If it's a gather motion sending tuple to master, need to change segment typmod to
-	 * qd typmod for transient type */
-	if (isMotionGatherToMaster(motion))
-	{
-		mapTransientTypeMod(outerTupleSlot);
-	}
-
 	tuple = ExecFetchSlotGenericTuple(outerTupleSlot, true);
-	
+
+	CheckAndSendRecordCache(node->ps.state->motionlayer_context,
+							node->ps.state->interconnect_context,
+							motion->motionID,
+							targetRoute);
+
 	/* send the tuple out. */
 	sendRC = SendTuple(node->ps.state->motionlayer_context,
 			node->ps.state->interconnect_context,

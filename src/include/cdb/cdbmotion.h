@@ -71,6 +71,10 @@ extern void EndMotionLayerNode(MotionLayerState *mlStates, int16 motNodeID, bool
  * or error-cleanup). */
 extern void RemoveMotionLayer(MotionLayerState *ml_states, bool flushCommLayer  __attribute__((unused)) );
 
+extern void CheckAndSendRecordCache(MotionLayerState *mlStates,
+									ChunkTransportState *transportStates,
+									int16 motNodeID,
+									int16 targetRoute);
 
 /* non-blocking operation that may perform only part (or none) of the
  * send before returning.  The TupleSendContext is used to help keep track

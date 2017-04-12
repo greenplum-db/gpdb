@@ -56,7 +56,7 @@ insert_new_entry(AppendOnlyBlockDirectory *blockDirectory,
 				 int64 firstRowNum,
 				 int64 fileOffset,
 				 int64 rowCount,
-				 MinipagePerColumnGroup *minipageInfo);
+				 bool addColAction);
 
 void 
 AppendOnlyBlockDirectoryEntry_GetBeginRange(
@@ -660,13 +660,11 @@ AppendOnlyBlockDirectory_InsertEntry(
 	int columnGroupNo,
 	int64 firstRowNum,
 	int64 fileOffset,
-	int64 rowCount)
+	int64 rowCount,
+	bool addColAction)
 {
-	MinipagePerColumnGroup *minipageInfo =
-		&blockDirectory->minipages[columnGroupNo];
-
 	return insert_new_entry(blockDirectory, columnGroupNo, firstRowNum,
-							fileOffset, rowCount, minipageInfo);
+							fileOffset, rowCount, addColAction);
 }
 
 /*
@@ -681,9 +679,11 @@ insert_new_entry(
 		int64 firstRowNum,
 		int64 fileOffset,
 		int64 rowCount,
-		MinipagePerColumnGroup *minipageInfo)
+		bool addColAction)
 {
 	MinipageEntry *entry = NULL;
+	MinipagePerColumnGroup *minipageInfo;
+	int minipageIndex;
 	int lastEntryNo;
 
 	if (rowCount == 0)
@@ -693,6 +693,25 @@ insert_new_entry(
 		blockDirectory->blkdirIdx == NULL)
 		return false;
 
+	if (addColAction)
+	{
+		/*
+		 * columnGroupNo is attribute number of the new column for
+		 * addColAction. We need to map it to the right index in the minipage
+		 * array.
+		 */
+		int numExistingCols = blockDirectory->aoRel->rd_att->natts -
+			blockDirectory->numColumnGroups;
+
+		Assert((numExistingCols >= 0) && (numExistingCols - 1 < columnGroupNo));
+		minipageIndex = columnGroupNo-numExistingCols;
+	}
+	else
+	{
+		minipageIndex = columnGroupNo;
+	}
+
+	minipageInfo = &blockDirectory->minipages[minipageIndex];
 	Assert(minipageInfo->numMinipageEntries <= (uint32)NUM_MINIPAGE_ENTRIES);
 
 	lastEntryNo = minipageInfo->numMinipageEntries - 1;
@@ -756,35 +775,6 @@ insert_new_entry(
 						minipageInfo->numMinipageEntries - 1)));
 
 	return true;
-}
-
-bool
-AppendOnlyBlockDirectory_addCol_InsertEntry(
-	AppendOnlyBlockDirectory *blockDirectory,
-	int columnGroupNo,
-	int64 firstRowNum,
-	int64 fileOffset,
-	int64 rowCount)
-{
-	if (rowCount == 0)
-		return false;
-
-	if (blockDirectory->blkdirRel == NULL ||
-		blockDirectory->blkdirIdx == NULL)
-		return false;
-
-	/*
-	 * columnGroupNo is attribute number of the new column.  We need
-	 * to map it to the right index in the minipage array.
-	 */
-	int numExistingCols = blockDirectory->aoRel->rd_att->natts -
-			blockDirectory->numColumnGroups;
-
-	Assert((numExistingCols >= 0) && (numExistingCols - 1 < columnGroupNo));
-	MinipagePerColumnGroup *minipageInfo =
-		&blockDirectory->minipages[columnGroupNo-numExistingCols];
-	return insert_new_entry(blockDirectory, columnGroupNo, firstRowNum,
-							fileOffset,	rowCount, minipageInfo);
 }
 
 /*

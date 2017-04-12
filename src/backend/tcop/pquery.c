@@ -250,7 +250,7 @@ ProcessQuery(Portal portal,
 	 * we are superuser.
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH && 
-		ResourceScheduler && 
+		IsResQueueEnabled() &&
 		(!ResourceSelectOnly || portal->sourceTag == T_SelectStmt) && 
 		stmt->canSetTag
 		&& !superuser())
@@ -677,7 +677,7 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 				 * Skip this if we are superuser!
 				 */
 				if (Gp_role == GP_ROLE_DISPATCH
-						&& ResourceScheduler
+						&& IsResQueueEnabled()
 						&& !superuser() )
 				{
 					/* 

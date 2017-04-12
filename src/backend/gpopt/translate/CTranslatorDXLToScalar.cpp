@@ -108,7 +108,6 @@ CTranslatorDXLToScalar::PexprFromDXLNodeScalar
 		{EdxlopScalarCoerceToDomain, &CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerceToDomain},
 		{EdxlopScalarCoerceViaIO, &CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerceViaIO},
 		{EdxlopScalarArrayCoerceExpr, &CTranslatorDXLToScalar::PcoerceFromDXLNodeScArrayCoerceExpr},
-		{EdxlopScalarInitPlan, &CTranslatorDXLToScalar::PparamFromDXLNodeScInitPlan},
 		{EdxlopScalarSubPlan, &CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan},
 		{EdxlopScalarArray, &CTranslatorDXLToScalar::PexprArray},
 		{EdxlopScalarArrayRef, &CTranslatorDXLToScalar::PexprArrayRef},
@@ -575,80 +574,6 @@ CTranslatorDXLToScalar::PfuncexprFromDXLNodeScFuncExpr
 	pfuncexpr->args = PlistTranslateScalarChildren(pfuncexpr->args, pdxlnFuncExpr, pmapcidvar);
 
 	return (Expr *)pfuncexpr;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorDXLToScalar::PparamFromDXLNodeScInitPlan
-//
-//	@doc:
-//		Translates a DXL scalar InitPlan into a GPDB PARAM node
-//
-//---------------------------------------------------------------------------
-Expr *
-CTranslatorDXLToScalar::PparamFromDXLNodeScInitPlan
-	(
-	const CDXLNode *pdxlnInitPlan,
-	CMappingColIdVar *pmapcidvar
-	)
-{
-	CDXLTranslateContext *pdxltrctxOut = (dynamic_cast<CMappingColIdVarPlStmt*>(pmapcidvar))->PpdxltrctxOut();
-
-	Plan *pplan = ((CMappingColIdVarPlStmt*) pmapcidvar)->Pplan();
-
-	if(NULL == pplan)
-	{
-		GPOS_RAISE
-			(
-			gpdxl::ExmaDXL,
-			ExmiDXL2PlStmtMissingPlanForInitPlanTranslation
-			);
-	}
-
-	GPOS_ASSERT(NULL != pdxlnInitPlan);
-	GPOS_ASSERT(EdxlopScalarInitPlan == pdxlnInitPlan->Pdxlop()->Edxlop());
-	GPOS_ASSERT(1 == pdxlnInitPlan->UlArity());
-
-	CDXLNode *pdxlnChild = (*pdxlnInitPlan)[0];
-	GPOS_ASSERT(EdxloptypePhysical == pdxlnChild->Pdxlop()->Edxloperatortype());
-
-	// Step 1: Generate the child plan
-
-	// Since an init plan is not a scalar node, we create a new DXLTranslator to handle its translation
-	CContextDXLToPlStmt *pctxdxltoplstmt = (dynamic_cast<CMappingColIdVarPlStmt*>(pmapcidvar))->Pctxdxltoplstmt();
-	CTranslatorDXLToPlStmt trdxltoplstmt(m_pmp, m_pmda, pctxdxltoplstmt, m_ulSegments);
-	DrgPdxltrctx *pdrgpdxltrctxPrevSiblings = GPOS_NEW(m_pmp) DrgPdxltrctx(m_pmp);
-	Plan *pplanChild = trdxltoplstmt.PplFromDXL(pdxlnChild, pdxltrctxOut, pplan, pdrgpdxltrctxPrevSiblings);
-	pdrgpdxltrctxPrevSiblings->Release();
-
-	// Step 2: Add the generated child to the root plan's subplan list
-	pctxdxltoplstmt->AddSubplan(pplanChild);
-
-	// Step 3: Generate a SubPlan node and insert into the initPlan (which is a list) of the pplan node.
-
-	SubPlan *psubplan = MakeNode(SubPlan);
-	psubplan->plan_id = gpdb::UlListLength(pctxdxltoplstmt->PlPplanSubplan());
-	psubplan->is_initplan = true;
-
-	GPOS_ASSERT(NULL != pplanChild->targetlist && 1 <= gpdb::UlListLength(pplanChild->targetlist));
-
-	psubplan->firstColType = gpdb::OidExprType( (Node*) ((TargetEntry*) gpdb::PvListNth(pplanChild->targetlist, 0))->expr);
-	psubplan->firstColTypmod = -1;
-	psubplan->subLinkType = EXPR_SUBLINK;
-	pplan->initPlan = gpdb::PlAppendElement(pplan->initPlan, psubplan);
-
-	// Step 4: Create the PARAM node
-
-	Param *pparam = MakeNode(Param);
-	pparam->paramkind = PARAM_EXEC;
-	pparam->paramid = pctxdxltoplstmt->UlNextParamId();
-	pparam->paramtype = psubplan->firstColType;
-
-	// Step 5: Link Param to the SubPlan node
-
-	psubplan->setParam = ListMake1Int(pparam->paramid);
-
-	return (Expr *)pparam;
 }
 
 //---------------------------------------------------------------------------

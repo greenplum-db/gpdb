@@ -50,26 +50,27 @@ Please do not create any more exceptions, and remove these as the occasion arise
 
 ### The Concourse Deployment
 There is a `gpdb` team in the [Concourse instance](http://gpdb.ci.pivotalci.info/).
-This team should only have the `gpdb_master`, `gpdb_pr`, `gpdb_master_tinc_native`, and `concourse_upgrade` pipelines.
-
-There is a `dev` team which is where developer pipelines should live.
-This team should have one permanent template pipeline `gpdb_master_dev` which should remain paused.
+Use this team to create any pipelines instead of the `main` team.
 
 ### Creating Your Own Pipeline
 Many developers want to create their own copies of the master pipeline.
 To accommodate this without naming confusion, workload instability, and artifact collision we have the following solution:
 
-1. All developer pipelines should live in the `dev` team.
-1. Duplicate and update the `gpdb_master_dev` so that the artifacts are placed in a safe bucket.
-
-To duplicate the pipeline do something like the following:
+1. Fork or branch the gpdb git repo
+1. Create an s3 bucket for your pipeline to use
+1. Edit `concourse/pipelines/pipeline.yml` to point at your git branch and s3 bucket
+1. Commit and push your branch
+1. Set the pipeline using a unique pipeline name. Example:
 
 ```bash
-fly -t gpdb login -n dev
-fly -t gpdb get-pipeline -p gpdb_master_dev > /tmp/pipeline.yml
-# update gpdb_src with your desired source
-fly -t gpdb set-pipeline -c /tmp/pipeline.yml -p NEW_PIPELINE_NAME
+fly -t gpdb login
+fly -t gpdb set-pipeline -c concourse/pipelines/pipeline.yml -p NEW_PIPELINE_NAME
 ```
+#### Notes and warnings
+
+* Clean up your dev pipelines when you are finished with them. (Use `fly destroy-pipeline`)
+* Be sure to use a unique name for your pipeline. Don't blow away the master pipeline by using `gpdb_master` when setting your dev pipeline.
+* Please pause the pulse jobs (the rightmost column of builds). If you are working on one, that's fine, but pause all of the others. We've had issues with too many pulse jobs running at once.
 
 ### Updating This README
 Changes should be proposed to this contract with a PR.

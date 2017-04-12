@@ -42,7 +42,7 @@ function _main() {
 	time setup_gpadmin_user
 	time gen_env
 
-	echo -n "$s3conf" | base64 -d > /home/gpadmin/s3.conf
+	set +x && echo -n "$s3conf" | base64 -d > /home/gpadmin/s3.conf && set -x
 	chown gpadmin:gpadmin /home/gpadmin/s3.conf
 
 	time run_regression_gpcheckcloud

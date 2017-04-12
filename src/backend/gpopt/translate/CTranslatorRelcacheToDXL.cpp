@@ -1056,7 +1056,6 @@ CTranslatorRelcacheToDXL::Pmdindex
 										pmp,
 										pmdidIndex,
 										pmdname,
-										GPOS_NEW(pmp) CMDIdGPDB(pgIndex->indrelid),
 										pgIndex->indisclustered,
 										emdindt,
 										pmdidItemType,
@@ -1243,7 +1242,6 @@ CTranslatorRelcacheToDXL::PmdindexPartTable
 	CMDPartConstraintGPDB *pmdpartcnstr = PmdpartcnstrIndex(pmp, pmda, pmdrel, pnodePartCnstr, pdrgpulDefaultLevels, fUnbounded);
 
 	pdrgpulDefaultLevels->Release();
-	pmdrel->Pmdid()->AddRef();
 	pmdidIndex->AddRef();
 	
 	GPOS_ASSERT(INDTYPE_BITMAP == pidxinfo->indType || INDTYPE_BTREE == pidxinfo->indType);
@@ -1263,7 +1261,6 @@ CTranslatorRelcacheToDXL::PmdindexPartTable
 										pmp,
 										pmdidIndex,
 										pmdname,
-										pmdrel->Pmdid(),
 										pgIndex->indisclustered,
 										emdindt,
 										pmdidItemType,

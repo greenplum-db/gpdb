@@ -13,6 +13,7 @@
 #include "access/htup.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbmotion.h"
+#include "cdb/cdbsrlz.h"
 #include "cdb/tupser.h"
 #include "cdb/cdbvars.h"
 #include "libpq/pqformat.h"
@@ -23,8 +24,21 @@
 #include "utils/memutils.h"
 #include "utils/builtins.h"
 #include "utils/syscache.h"
+#include "utils/typcache.h"
 
 #include "access/memtup.h"
+
+/*
+ * Transient record types table is sent to upsteam via a specially constructed
+ * tuple, on receiving side it can distinguish it from real tuples by checking
+ * below magic attributes in the header:
+ *
+ * - tuplen has MEMTUP_LEAD_BIT unset, so it's considered as a heap tuple;
+ * - natts is set to RECORD_CACHE_MAGIC_NATTS;
+ * - infomask is set to RECORD_CACHE_MAGIC_INFOMASK.
+ */
+#define RECORD_CACHE_MAGIC_NATTS	0xffff
+#define RECORD_CACHE_MAGIC_INFOMASK	0xffff
 
 /* A MemoryContext used within the tuple serialize code, so that freeing of
  * space is SUPAFAST.  It is initialized in the first call to InitSerTupInfo()
@@ -137,6 +151,8 @@ InitSerTupInfo(TupleDesc tupdesc, SerTupInfo * pSerInfo)
 	pSerInfo->chunkCache.len = 0;
 	pSerInfo->chunkCache.items = NULL;
 
+	pSerInfo->has_record_types = false;
+
 	/*
 	 * If we have some attributes, go ahead and prepare the information for
 	 * each attribute in the descriptor.  Otherwise, we can return right away.
@@ -179,6 +195,10 @@ InitSerTupInfo(TupleDesc tupdesc, SerTupInfo * pSerInfo)
 				elog(ERROR, "cache lookup failed for type %u", attrInfo->atttypid);
 			pt = (Form_pg_type) GETSTRUCT(typeTuple);
 		
+			/* Consider any non-basic types as potential containers of record types */
+			if (pt->typtype != TYPTYPE_BASE)
+				pSerInfo->has_record_types = true;
+
 			if (!pt->typisdefined)
 				ereport(ERROR,
 						(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -345,6 +365,104 @@ typedef struct TupSerHeader
 	uint16		natts;			/* number of attributes */
 	uint16		infomask;		/* various flag bits */
 } TupSerHeader;
+
+/*
+ * Convert RecordCache into a byte-sequence, and store it directly
+ * into a chunklist for transmission.
+ *
+ * This code is based on the printtup_internal_20() function in printtup.c.
+ */
+void
+SerializeRecordCacheIntoChunks(SerTupInfo *pSerInfo,
+							   TupleChunkList tcList,
+							   MotionConn *conn)
+{
+	TupleChunkListItem tcItem = NULL;
+	MemoryContext oldCtxt;
+	TupSerHeader tsh;
+	List *typelist = NULL;
+	int size = -1;
+	char * buf = NULL;
+
+	AssertArg(tcList != NULL);
+	AssertArg(pSerInfo != NULL);
+
+	/* get ready to go */
+	tcList->p_first = NULL;
+	tcList->p_last = NULL;
+	tcList->num_chunks = 0;
+	tcList->serialized_data_length = 0;
+	tcList->max_chunk_length = Gp_max_tuple_chunk_size;
+
+	tcItem = getChunkFromCache(&pSerInfo->chunkCache);
+	if (tcItem == NULL)
+	{
+		ereport(FATAL, (errcode(ERRCODE_OUT_OF_MEMORY),
+						errmsg("Could not allocate space for first chunk item in new chunk list.")));
+	}
+
+	/* assume that we'll take a single chunk */
+	SetChunkType(tcItem->chunk_data, TC_WHOLE);
+	tcItem->chunk_length = TUPLE_CHUNK_HEADER_SIZE;
+	appendChunkToTCList(tcList, tcItem);
+
+	AssertState(s_tupSerMemCtxt != NULL);
+
+	/*
+	 * To avoid inconsistency of record cache between sender and receiver in
+	 * the same motion, send the serialized record cache to receiver before the
+	 * first tuple is sent, the receiver is responsible for registering the
+	 * records to its own local cache and remapping the typmod of tuples sent
+	 * by sender.
+	 */
+	oldCtxt = MemoryContextSwitchTo(s_tupSerMemCtxt);
+	typelist = build_tuple_node_list(conn->sent_record_typmod);
+	buf = serializeNode((Node *) typelist, &size, NULL);
+	MemoryContextSwitchTo(oldCtxt);
+
+	tsh.tuplen = sizeof(TupSerHeader) + size;
+
+	/*
+	 * we use natts==0xffff and infomask==0xffff to identify this special
+	 * tuple which actually carry the serialized record cache table.
+	 */
+	tsh.natts = RECORD_CACHE_MAGIC_NATTS;
+	tsh.infomask = RECORD_CACHE_MAGIC_INFOMASK;
+
+	addByteStringToChunkList(tcList,
+							 (char *)&tsh,
+							 sizeof(TupSerHeader),
+							 &pSerInfo->chunkCache);
+	addByteStringToChunkList(tcList, buf, size, &pSerInfo->chunkCache);
+	addPadding(tcList, &pSerInfo->chunkCache, size);
+
+	/*
+	 * if we have more than 1 chunk we have to set the chunk types on our
+	 * first chunk and last chunk
+	 */
+	if (tcList->num_chunks > 1)
+	{
+		TupleChunkListItem first,
+			last;
+
+		first = tcList->p_first;
+		last = tcList->p_last;
+
+		Assert(first != NULL);
+		Assert(first != last);
+		Assert(last != NULL);
+
+		SetChunkType(first->chunk_data, TC_PARTIAL_START);
+		SetChunkType(last->chunk_data, TC_PARTIAL_END);
+
+		/*
+		 * any intervening chunks are already set to TC_PARTIAL_MID when
+		 * allocated
+		 */
+	}
+
+	return;
+}
 
 /*
  * Convert a HeapTuple into a byte-sequence, and store it directly
@@ -1016,7 +1134,7 @@ DeserializeTuple(SerTupInfo * pSerInfo, StringInfo serialTup)
 }
 
 HeapTuple
-CvtChunksToHeapTup(TupleChunkList tcList, SerTupInfo * pSerInfo)
+CvtChunksToHeapTup(TupleChunkList tcList, SerTupInfo * pSerInfo, TupleRemapper *remapper)
 {
 	StringInfoData serData;
 	TupleChunkListItem tcItem;
@@ -1132,6 +1250,23 @@ CvtChunksToHeapTup(TupleChunkList tcList, SerTupInfo * pSerInfo)
 		char *pos = (char *)serData.data;
 
 		tshp = (TupSerHeader *)pos;
+
+		if (!(tshp->tuplen & MEMTUP_LEAD_BIT) &&
+			tshp->natts == RECORD_CACHE_MAGIC_NATTS &&
+			tshp->infomask == RECORD_CACHE_MAGIC_INFOMASK)
+		{
+			uint32		tuplen = tshp->tuplen & ~MEMTUP_LEAD_BIT;
+			/* a special tuple with record type cache */
+			List * typelist = (List *) deserializeNode(pos + sizeof(TupSerHeader),
+													   tuplen - sizeof(TupSerHeader));
+
+			TRHandleTypeLists(remapper, typelist);
+
+			/* Free up memory we used. */
+			pfree(serData.data);
+
+			return NULL;
+		}
 
 		if ((tshp->tuplen & MEMTUP_LEAD_BIT) != 0)
 		{

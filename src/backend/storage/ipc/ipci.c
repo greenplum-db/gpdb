@@ -55,6 +55,7 @@
 #include "storage/sinvaladt.h"
 #include "storage/spin.h"
 #include "utils/resscheduler.h"
+#include "utils/resgroup.h"
 #include "utils/faultinjector.h"
 #include "utils/sharedsnapshot.h"
 #include "utils/simex.h"
@@ -137,15 +138,16 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 		size = add_size(size, LockShmemSize());
 		size = add_size(size, workfile_mgr_shmem_size());
 		if (Gp_role == GP_ROLE_DISPATCH)
-		{
 			size = add_size(size, AppendOnlyWriterShmemSize());
-			
-			if(ResourceScheduler)
-			{
-				size = add_size(size, ResSchedulerShmemSize());
-				size = add_size(size, ResPortalIncrementShmemSize());				
-			}
+
+		if (IsResQueueEnabled() && Gp_role == GP_ROLE_DISPATCH)
+		{
+			size = add_size(size, ResSchedulerShmemSize());
+			size = add_size(size, ResPortalIncrementShmemSize());
 		}
+		else if (IsResGroupEnabled())
+			size = add_size(size, ResGroupShmemSize());
+
 		size = add_size(size, ProcGlobalShmemSize());
 		size = add_size(size, XLOGShmemSize());
 		size = add_size(size, DistributedLog_ShmemSize());
@@ -323,12 +325,13 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	/*
 	 * Set up resource schedular
 	 */
-	if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler)
+	if (IsResQueueEnabled() && Gp_role == GP_ROLE_DISPATCH)
 	{
 		InitResScheduler();
 		InitResPortalIncrementHash();
 	}
-
+	else if (IsResGroupEnabled() && !IsUnderPostmaster)
+		ResGroupControlInit();
 
 	if (!IsUnderPostmaster)
 	{
