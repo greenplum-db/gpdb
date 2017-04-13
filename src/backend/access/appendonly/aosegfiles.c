@@ -382,8 +382,11 @@ FileSegCanBeDropped(Relation parentrel, int segno)
 						"does not exist", RelationGetRelationName(parentrel),
 						segno)));
 
+	/*FIXME: The following two lines seem to be unnecessary. Remove them? */
+	/*
 	tuple = heap_copytuple(tuple);
 	Assert(HeapTupleIsValid(tuple));
+	 */
 
 	/* get the state */
 	state = DatumGetInt16(fastgetattr(tuple, Anum_pg_aoseg_state, pg_aoseg_dsc, &isNull));
@@ -395,6 +398,7 @@ FileSegCanBeDropped(Relation parentrel, int segno)
 
 	if (state != AOSEG_STATE_AWAITING_DROP)
 	{
+		heap_endscan(aoscan);
 		heap_close(pg_aoseg_rel, AccessShareLock);
 		return false;
 	}
@@ -417,11 +421,13 @@ FileSegCanBeDropped(Relation parentrel, int segno)
 
 	if (HeapTupleHeaderGetXmin(tuple->t_data) != FrozenTransactionId)
 	{
+		heap_endscan(aoscan);
 		heap_close(pg_aoseg_rel, AccessShareLock);
 		return false;
 	}
 
 	/* Finish up scan and close appendonly catalog. */
+	heap_endscan(aoscan);
 	heap_close(pg_aoseg_rel, AccessShareLock);
 
 	return true;

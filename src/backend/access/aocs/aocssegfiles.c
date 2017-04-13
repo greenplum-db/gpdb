@@ -168,17 +168,8 @@ GetAOCSFileSegInfo(Relation prel,
 
 		if (segno == tuple_segno)
 		{
-			/* Check for duplicate aoseg entries with the same segno */
-			if (fssegtup != NULL)
-				ereport(ERROR,
-						(errcode(ERRCODE_INTERNAL_ERROR),
-						 errmsg("found two entries in pg_aoseg.%s with segno %d: ctid %s and ctid %s",
-								segrel->rd_rel->relname.data,
-								segno,
-								ItemPointerToString(&fssegtup->t_self),
-								ItemPointerToString2(&segtup->t_self))));
-			else
-				fssegtup = heap_copytuple(segtup);
+			fssegtup = heap_copytuple(segtup);
+			break;
 		}
 	}
 
@@ -312,10 +303,9 @@ AOCSFileSegCanBeDropped(Relation parentrel, int segno)
 	state = DatumGetInt16(fastgetattr(segtup, Anum_pg_aocs_state, segdsc, &isNull));
 	Assert(!isNull);
 
-	heap_endscan(scan);
-
 	if (state != AOSEG_STATE_AWAITING_DROP)
 	{
+		heap_endscan(scan);
 		heap_close(segrel, AccessShareLock);
 		return false;
 	}
@@ -338,10 +328,12 @@ AOCSFileSegCanBeDropped(Relation parentrel, int segno)
 
 	if (HeapTupleHeaderGetXmin(segtup->t_data) != FrozenTransactionId)
 	{
+		heap_endscan(scan);
 		heap_close(segrel, AccessShareLock);
 		return false;
 	}
 
+	heap_endscan(scan);
 	heap_close(segrel, AccessShareLock);
 
 	return true;
