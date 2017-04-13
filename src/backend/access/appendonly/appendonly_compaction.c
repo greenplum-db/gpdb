@@ -522,7 +522,6 @@ AppendOnlyDrop(Relation aorel, int compacted_segno)
 	FileSegInfo **segfile_array;
 	int			i,
 				segno;
-	FileSegInfo *fsinfo;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 	Assert(RelationIsAoRows(aorel));
@@ -556,16 +555,13 @@ AppendOnlyDrop(Relation aorel, int compacted_segno)
 										  false);
 
 		/* Re-fetch under the write lock to get latest committed eof. */
-		fsinfo = GetFileSegInfo(aorel, SnapshotNow, segno);
-
-		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP)
+		if (FileSegCanBeDropped(aorel, segno))
 		{
 			Assert(HasLockForSegmentFileDrop(aorel));
 			AppendOnlyCompaction_DropSegmentFile(aorel, segno);
 			ClearFileSegInfo(aorel, segno,
 							 AOSEG_STATE_DEFAULT);
 		}
-		pfree(fsinfo);
 	}
 
 	if (segfile_array)

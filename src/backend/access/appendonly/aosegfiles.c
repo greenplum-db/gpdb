@@ -25,6 +25,7 @@
 #include "access/aocssegfiles.h"
 #include "access/aosegfiles.h"
 #include "access/appendonlytid.h"
+#include "access/transam.h"
 #include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_proc.h"
@@ -35,6 +36,7 @@
 #include "cdb/cdbvars.h"
 #include "executor/spi.h"
 #include "nodes/makefuncs.h"
+#include "storage/procarray.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/int8.h"
@@ -334,6 +336,97 @@ GetAllFileSegInfo(Relation parentrel,
 
 	return result;
 }
+
+
+/*
+ * FileSegCanBeDropped
+ *
+ * Is the given file segment ready to be dropped? It must be in AWAITING_DROP
+ * state, and the AOSeg tuple, with the awaiting-drop state, must be visible to
+ * everyone.
+ */
+bool
+FileSegCanBeDropped(Relation parentrel, int segno)
+{
+	Relation	pg_aoseg_rel;
+	TupleDesc	pg_aoseg_dsc;
+	HeapTuple	tuple;
+	HeapScanDesc aoscan;
+	Datum		state;
+	bool		isNull;
+	int			tuple_segno = InvalidFileSegNumber;
+	TransactionId cutoff_xid;
+
+	/*
+	 * Check the pg_aoseg relation to be certain the ao table segment file
+	 * is there.
+	 */
+	pg_aoseg_rel = heap_open(parentrel->rd_appendonly->segrelid, AccessShareLock);
+	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
+
+	aoscan = heap_beginscan(pg_aoseg_rel, SnapshotNow, 0, NULL);
+	while (segno != tuple_segno && (tuple = heap_getnext(aoscan, ForwardScanDirection)) != NULL)
+	{
+		tuple_segno = DatumGetInt32(fastgetattr(tuple, Anum_pg_aoseg_segno, pg_aoseg_dsc, &isNull));
+		if (isNull)
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					 errmsg("got invalid segno value NULL for tid %s",
+							ItemPointerToString(&tuple->t_self))));
+	}
+
+	if (!HeapTupleIsValid(tuple))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				errmsg("append-only table \"%s\" file segment \"%d\" entry "
+						"does not exist", RelationGetRelationName(parentrel),
+						segno)));
+
+	tuple = heap_copytuple(tuple);
+	Assert(HeapTupleIsValid(tuple));
+
+	/* get the state */
+	state = fastgetattr(tuple, Anum_pg_aoseg_state, pg_aoseg_dsc, &isNull);
+
+	if(isNull)
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				errmsg("got invalid state value: NULL")));
+
+	if (state != AOSEG_STATE_AWAITING_DROP)
+	{
+		heap_close(pg_aoseg_rel, AccessShareLock);
+		return false;
+	}
+
+	/*
+	 * It's in awaiting-drop state, but does everyone see it that way?
+	 *
+	 * We abuse heap_freeze_tuple() here, to determine that for us. If the tuple's
+	 * xmin can be frozen, then it's visible to everyone. We don't bother checking
+	 * the xmax; we never update or lock awaiting-drop tuples, so that shouldn't
+	 * happen. Even if it did, presumably an AO segment that's in awaiting-drop state
+	 * won't be resurrected, so even if someone updates or locks the tuple, it's
+	 * presumably still safe to drop.
+	 *
+	 * Note that we call heap_freeze_tuple() on a copy of the tuple, so this doesn't
+	 * modify the tuple on disk.
+	 */
+	cutoff_xid = GetOldestXmin(false, true);
+	(void) heap_freeze_tuple(tuple->t_data, &cutoff_xid, InvalidBuffer, false);
+
+	if (HeapTupleHeaderGetXmin(tuple->t_data) != FrozenTransactionId)
+	{
+		heap_close(pg_aoseg_rel, AccessShareLock);
+		return false;
+	}
+
+	/* Finish up scan and close appendonly catalog. */
+	heap_close(pg_aoseg_rel, AccessShareLock);
+
+	return true;
+}
+
 
 /*
  * The comparison routine that sorts an array of FileSegInfos

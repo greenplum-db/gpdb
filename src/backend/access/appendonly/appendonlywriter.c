@@ -279,6 +279,9 @@ SetSegnoInternal(Relation rel, List *avoid_segnos, bool for_compaction)
 
 		used[segno] = true;
 
+		if (state != AOSEG_STATE_DEFAULT)
+			continue;
+
 		/* If the ao segment is full, skip it */
 		if (tupcount > segfileMaxRowThreshold())
 			continue;
