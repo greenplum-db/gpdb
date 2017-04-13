@@ -99,13 +99,13 @@ class BackupTestCase(TINCTestCase):
         file = os.path.join(os.getenv('MASTER_DATA_DIRECTORY'),
                                       'ddboost_config.yml')
         tinctest.logger.info("==========================================================================")
-        tinctest.logger.info("STARTING MFR Testing SUITE")
+        tinctest.logger.info("STARTING TEST SUITE")
         tinctest.logger.info("==========================================================================")
         BackupTestCase.TSTINFO = read_config_yaml(file)
 
         #If a DDBOOST Directory wasn't specify create one
         if 'DDBOOST_DIR' not in BackupTestCase.TSTINFO:
-            dir = 'MFR_TINC'
+            dir = os.getenv('PULSE_PROJECT') + '_DIR'
         BackupTestCase.TSTINFO['DDBOOST_DIR'] = dir
 
         tinctest.logger.info("Using %s as the DDBoost directory to store backups" % BackupTestCase.TSTINFO['DDBOOST_DIR'])

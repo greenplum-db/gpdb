@@ -34,6 +34,7 @@ from gppylib.db import dbconn
 from tinctest.case import TINCTestCase
 from tinctest.lib import local_path, Gpdiff
 from tinctest.runner import TINCTextTestResult
+from mpp.gpdb.tests.utilities.backup_restore import read_config_yaml
 
 from mpp.lib.PSQL import PSQL
 from mpp.lib.gpstop import GpStop
@@ -43,6 +44,8 @@ DDBOOST_BACKUP_DIR = 'backup/DCA-35'
 DEFAULT_DUMP_LOC = 'db_dumps'
 
 class BackupTestCase(TINCTestCase):
+    TSTINFO = None
+    do_setup = True
     """
         Base class for backup restore test case
     """
@@ -58,9 +61,27 @@ class BackupTestCase(TINCTestCase):
         self.incre_timestamp_2 = ''
         self.incre_timestamp_3 = ''
         self.incre_timestamp_4 = ''
+        super(BackupTestCase,self).__init__(methodName)
+        self.setup_once()
         self.dump_file_prefix = 'gp_dump'
         self.restore_file_prefix = 'gp_restore'
-        super(BackupTestCase,self).__init__(methodName)
+
+    def setup_once(self):
+        if BackupTestCase.do_setup:
+            file = os.path.join(os.getenv('MASTER_DATA_DIRECTORY'),
+                                          'ddboost_config.yml')
+            tinctest.logger.info("==========================================================================")
+            tinctest.logger.info("STARTING TEST SUITE")
+            tinctest.logger.info("==========================================================================")
+            BackupTestCase.TSTINFO = read_config_yaml(file)
+
+            #If a DDBOOST Directory wasn't specify create one
+            if 'DDBOOST_DIR' not in BackupTestCase.TSTINFO:
+                dir = os.getenv('PULSE_PROJECT') + '_DIR'
+            BackupTestCase.TSTINFO['DDBOOST_DIR'] = dir
+
+            tinctest.logger.info("Using %s as the DDBoost directory to store backups" % BackupTestCase.TSTINFO['DDBOOST_DIR'])
+            BackupTestCase.do_setup = False
 
     def run_full_backup(self, dbname = None, option = None, value = None, location=None, func_name=None):
         tinctest.logger.info("Running Full Backup ...")
