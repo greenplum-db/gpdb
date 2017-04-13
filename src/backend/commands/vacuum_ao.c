@@ -115,9 +115,8 @@ ao_vacuum_rel(Relation onerel, VacuumStmt *vacstmt, List *updated_stats)
 	BlockNumber	relpages;
 	double		reltuples;
 	bool		relhasindex;
-	bool		is_drop;
-	List	   *compactedSegmentFileList = NIL;
-	List	   *insertedSegmentFileList = NIL;
+	List	   *compacted_segments = NIL;
+	List	   *compacted_and_inserted_segments = NIL;
 	int			compaction_segno;
 	MemoryContext oldcxt;
 
@@ -155,40 +154,36 @@ ao_vacuum_rel(Relation onerel, VacuumStmt *vacstmt, List *updated_stats)
 	/*
 	 * Compaction and drop phases. Repeat as many times as required.
 	 */
-	while ((compaction_segno = SetSegnoForCompaction(onerel,
-													 compactedSegmentFileList,
-													 insertedSegmentFileList,
-													 &is_drop)) != -1)
+	while ((compaction_segno = SetSegnoForCompaction(onerel, compacted_and_inserted_segments)) != -1)
 	{
 		/*
-		 * Compact this segment (unless it was compacted earlier already, and is only
-		 * awaiting to be dropped).
+		 * Compact this segment. (If it was compacted earlier already, and is only
+		 * awaiting to be dropped, vacuum_appendonly_rel_compact() will fall through
+		 * quickly).
 		 */
-		if (!is_drop)
-		{
-			int			insert_segno;
+		int			insert_segno;
 
-			insert_segno = SetSegnoForCompactionInsert(onerel,
-													   compaction_segno,
-													   compactedSegmentFileList,
-													   insertedSegmentFileList);
+		oldcxt = MemoryContextSwitchTo(vac_context);
+		compacted_segments = lappend_int(compacted_segments, compaction_segno);
+		compacted_and_inserted_segments = lappend_int(compacted_and_inserted_segments, compaction_segno);
+		MemoryContextSwitchTo(oldcxt);
 
-			vacuum_appendonly_rel_compact(onerel, vacstmt->full, elevel,
-										  compaction_segno,
-										  insert_segno);
+		insert_segno = SetSegnoForWrite(onerel, compacted_segments);
 
-			relation_close(onerel, NoLock);
-			onerel = NULL;
-			CommitTransactionCommand();
+		oldcxt = MemoryContextSwitchTo(vac_context);
+		compacted_and_inserted_segments = lappend_int(compacted_and_inserted_segments, insert_segno);
+		MemoryContextSwitchTo(oldcxt);
 
-			StartTransactionCommand();
-			onerel = relation_open(relid, NoLock);
+		vacuum_appendonly_rel_compact(onerel, vacstmt->full, elevel,
+									  compaction_segno,
+									  insert_segno);
 
-			oldcxt = MemoryContextSwitchTo(vac_context);
-			compactedSegmentFileList = lappend_int(compactedSegmentFileList, compaction_segno);
-			insertedSegmentFileList = lappend_int(insertedSegmentFileList, insert_segno);
-			MemoryContextSwitchTo(oldcxt);
-		}
+		relation_close(onerel, NoLock);
+		onerel = NULL;
+		CommitTransactionCommand();
+
+		StartTransactionCommand();
+		onerel = relation_open(relid, NoLock);
 
 		/* Drop */
 		if (Debug_appendonly_print_compaction)
@@ -203,8 +198,6 @@ ao_vacuum_rel(Relation onerel, VacuumStmt *vacstmt, List *updated_stats)
 		 */
 		if (ConditionalLockRelationOid(relid, AccessExclusiveLock))
 		{
-			RegisterSegnoForCompactionDrop(relid, compaction_segno);
-
 			vacuum_appendonly_rel_drop(onerel, elevel, compaction_segno);
 
 			/*

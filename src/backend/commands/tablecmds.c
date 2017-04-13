@@ -4897,24 +4897,6 @@ ATAocsNoRewrite(AlteredTableInfo *tab)
 		ExecDropSingleTupleTableSlot(slot);
 	}
 
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		/*
-		 * We remove the hash entry for this relation even though
-		 * there is no rewrite because we may have dropped some
-		 * segfiles that were in AOSEG_STATE_AWAITING_DROP state in
-		 * column_to_scan(). The cost of recreating the entry later on
-		 * is cheap so this should be fine. If we don't remove the
-		 * hash entry and we had done any segfile drops, master will
-		 * continue to see those segfiles as unavailable for use.
-		 *
-		 * Note that ALTER already took an exclusive lock on the
-		 * relation so we are guaranteed to not drop the hash
-		 * entry from under any concurrent operation.
-		 */
-		AORelRemoveHashEntry(RelationGetRelid(rel));
-	}
-
 	FreeExecutorState(estate);
 	heap_close(rel, NoLock);
 	return true;
@@ -5195,16 +5177,17 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap)
 		}
 		else if(relstorage == RELSTORAGE_AOROWS && Gp_role != GP_ROLE_DISPATCH)
 		{
-			/*
-			 * When rewriting an appendonly table we choose to always insert
-			 * into the segfile reserved for special purposes (segno #0).
-			 */
-			int 					segno = RESERVED_SEGNO;
 			AppendOnlyInsertDesc 	aoInsertDesc = NULL;
 			MemTupleBinding*		mt_bind;
 
-			if(newrel)
-				aoInsertDesc = appendonly_insert_init(newrel, segno, false);
+			if (newrel)
+			{
+				/*
+				 * When rewriting an appendonly table we choose to always insert
+				 * into the segfile 0.
+				 */
+				aoInsertDesc = appendonly_insert_init(newrel, 0, false);
+			}
 
 			mt_bind = (newrel ? aoInsertDesc->mt_bind : create_memtuple_binding(newTupDesc));
 
@@ -5324,7 +5307,6 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap)
 		}
 		else if(relstorage == RELSTORAGE_AOCOLS && Gp_role != GP_ROLE_DISPATCH)
 		{
-			int segno = RESERVED_SEGNO;
 			AOCSInsertDesc idesc = NULL;
 			AOCSScanDesc sdesc = NULL;
 			int nvp = oldrel->rd_att->natts;
@@ -5343,7 +5325,13 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap)
 				memset(proj, true, nvp);
 
 			if(newrel)
-				idesc = aocs_insert_init(newrel, segno, false);
+			{
+				/*
+				 * When rewriting an appendonly table we choose to always insert
+				 * into the segfile 0.
+				 */
+				idesc = aocs_insert_init(newrel, 0, false);
+			}
 
 			sdesc = aocs_beginscan(oldrel, SnapshotNow, SnapshotNow, oldTupDesc, proj);
 
@@ -5451,24 +5439,7 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap)
 		}
 		else if(relstorage_is_ao(relstorage) && Gp_role == GP_ROLE_DISPATCH)
 		{
-			/*
-			 * All we want to do on the QD during an AO table rewrite
-			 * is to drop the shared memory hash table entry for this
-			 * table if it exists. We must do so since before the
-			 * rewrite we probably have few non-zero segfile entries
-			 * for this table while after the rewrite only segno zero
-			 * will be full and the others will be empty. By dropping
-			 * the hash entry we force refreshing the entry from the
-			 * catalog the next time a write into this AO table comes
-			 * along.
-			 *
-			 * Note that ALTER already took an exclusive lock on the
-			 * old relation so we are guaranteed to not drop the hash
-			 * entry from under any concurrent operation.
-			 */
-			LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
-			AORelRemoveHashEntry(RelationGetRelid(oldrel));
-			LWLockRelease(AOSegFileLock);
+			/* Nothing to do in the dispatcher */
 		}
 		else
 		{
@@ -14291,7 +14262,7 @@ split_rows(Relation intoa, Relation intob, Relation temprel)
 			{
 				MemoryContextSwitchTo(oldCxt);
 				*targetAODescPtr = appendonly_insert_init(targetRelation,
-														  RESERVED_SEGNO, false);
+														  0, false);
 				MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
 			}
 
@@ -14307,7 +14278,7 @@ split_rows(Relation intoa, Relation intob, Relation temprel)
 			{
 				MemoryContextSwitchTo(oldCxt);
 				*targetAOCSDescPtr = aocs_insert_init(targetRelation,
-													  RESERVED_SEGNO, false);
+													  0, false);
 				MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
 			}
 

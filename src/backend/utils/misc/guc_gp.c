@@ -3768,15 +3768,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"max_appendonly_tables", PGC_POSTMASTER, APPENDONLY_TABLES,
-			gettext_noop("Maximum number of different (unrelated) append only tables that can participate in writing data concurrently."),
-			NULL
-		},
-		&MaxAppendOnlyTables,
-		2048, 0, INT_MAX, NULL, NULL
-	},
-
-	{
 		{"gp_external_max_segs", PGC_USERSET, EXTERNAL_TABLES,
 			gettext_noop("Maximum number of segments that connect to a single gpfdist URL."),
 			NULL

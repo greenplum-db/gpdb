@@ -42,9 +42,8 @@ static void insert_or_update_fastsequence(
  * yield wrong results for index scans. Also, entries in gp_fastsequence must
  * only exist for lifespan of the corresponding table.
  *
- * Given those special needs, this function inserts 2 initial rows to
- * fastsequence for segfile 0 (used for special cases like CTAS and ALTER) and
- * segfile 1. Only segfile 0 or segfile 1 can be used to insert tuples within
+ * Given those special needs, this function inserts 1 initial rows to
+ * fastsequence for segfile 1. Only segfile 1 can be used to insert tuples within
  * same transaction creating the table hence initial entry is only created for
  * these. Entries for rest of segfiles will get created with frozenXids during
  * inserts. These entries are inserted while creating the AO/CO table to
@@ -72,13 +71,6 @@ InsertInitialFastSequenceEntries(Oid objid)
 
 	values[Anum_gp_fastsequence_objid - 1] = ObjectIdGetDatum(objid);
 	values[Anum_gp_fastsequence_last_sequence - 1] = Int64GetDatum(0);
-
-	/* Insert enrty for segfile 0 */
-	values[Anum_gp_fastsequence_objmod - 1] = Int64GetDatum(RESERVED_SEGNO);
-	tuple = heaptuple_form_to(tupleDesc, values, nulls, NULL, NULL);
-	simple_heap_insert(gp_fastsequence_rel, tuple);
-	CatalogUpdateIndexes(gp_fastsequence_rel, tuple);
-	heap_freetuple(tuple);
 
 	/* Insert entry for segfile 1 */
 	values[Anum_gp_fastsequence_objmod - 1] = Int64GetDatum(1);

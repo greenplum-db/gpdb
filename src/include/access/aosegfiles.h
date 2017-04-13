@@ -91,11 +91,14 @@ typedef enum FileSegInfoState
 
 
 /*
+<<<<<<< HEAD
  * GUC variables
  */
 extern int	MaxAppendOnlyTables;	/* Max # of tables */
 
 /*
+=======
+>>>>>>> Get rid of the in-memory hash table.
  * Descriptor of a single AO relation file segment.
  */
 typedef struct FileSegInfo

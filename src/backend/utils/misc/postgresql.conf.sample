@@ -497,8 +497,6 @@ gp_resqueue_memory_policy = 'eager_free'	# memory request based queueing.
 # APPEND ONLY TABLES
 #---------------------------------------------------------------------------
 #gp_safefswritesize = 0   # minimum size for safe AO writes in a non-mature fs
-max_appendonly_tables = 10000 # Maximum number of append only tables that can 
-							  # participate in writing data concurrently.
 #------------------------------------------------------------------------------
 # VERSION/PLATFORM COMPATIBILITY
 #------------------------------------------------------------------------------

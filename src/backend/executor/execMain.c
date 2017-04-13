@@ -2289,7 +2289,7 @@ ResultRelInfoSetSegno(ResultRelInfo *resultRelInfo)
 
 	Assert(resultRelInfo->ri_RelationDesc);
 
-	resultRelInfo->ri_aosegno = SetSegnoForWrite(resultRelInfo->ri_RelationDesc);
+	resultRelInfo->ri_aosegno = SetSegnoForWrite(resultRelInfo->ri_RelationDesc, NIL);
 
 	Assert(resultRelInfo->ri_aosegno != InvalidFileSegNumber);
 }
@@ -4986,7 +4986,7 @@ intorel_receive(TupleTableSlot *slot, DestReceiver *self)
 		{
 			int			aosegno;
 
-			aosegno = SetSegnoForWrite(into_rel);
+			aosegno = SetSegnoForWrite(into_rel, NIL);
 			myState->ao_insertDesc = appendonly_insert_init(into_rel,
 															aosegno, false);
 		}
@@ -5000,7 +5000,7 @@ intorel_receive(TupleTableSlot *slot, DestReceiver *self)
 		{
 			int			aosegno;
 
-			aosegno = SetSegnoForWrite(into_rel);
+			aosegno = SetSegnoForWrite(into_rel, NIL);
 
 			myState->aocs_ins = aocs_insert_init(into_rel, aosegno, false);
 		}

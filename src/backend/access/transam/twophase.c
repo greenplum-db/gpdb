@@ -1627,13 +1627,6 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 	else
 		ProcessRecords(bufptr, xid, twophase_postabort_callbacks);
 
-	/* XXX these should perhaps be registered as a callback */
-	if (isCommit)
-		AtCommit_AppendOnly(xid);
-	else
-		AtAbort_AppendOnly(xid);
-	AtEOXact_AppendOnly(xid);
-
 	/* Count the prepared xact as committed or aborted */
 	AtEOXact_PgStat(isCommit);
 
