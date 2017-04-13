@@ -107,14 +107,6 @@ typedef struct VacAttrStats
 	int			rowstride;
 } VacAttrStats;
 
-typedef struct VacuumStatsContext
-{
-	MemoryContext ctx;
-	Relation onerel;
-	List *updated_stats;
-	VacAttrStats **vac_stats;
-} VacuumStatsContext;
-
 /*
  * VPgClassStats is used to hold the stats information that are stored in
  * pg_class. It is sent from QE to QD in a special libpq message , when a

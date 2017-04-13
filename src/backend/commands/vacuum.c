@@ -188,6 +188,11 @@ typedef struct ExecContextData
 
 typedef ExecContextData *ExecContext;
 
+typedef struct VacuumStatsContext
+{
+	List *updated_stats;
+} VacuumStatsContext;
+
 /*
  * State information used during the (full)
  * vacuum of indexes on append-only tables
@@ -1266,10 +1271,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 			bool 		has_bitmap = false;
 			Relation   *i_rel = NULL;
 
-			stats_context.ctx = vac_context;
-			stats_context.onerel = onerel;
 			stats_context.updated_stats = NIL;
-			stats_context.vac_stats = NULL;
 
 			vac_open_indexes(onerel, AccessShareLock, &nindexes, &i_rel);
 			if (i_rel != NULL)
