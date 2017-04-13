@@ -278,6 +278,18 @@ class DumpTestCase(unittest.TestCase):
             for i in range(len(part_list)):
                 self.assertEqual(call(part_list[i]+'\n'), result.write.call_args_list[i])
 
+    @patch('gppylib.operations.dump.get_filename_from_filetype', return_value='/tmp/db_dumps/20170413/gp_dump_20170413224743_ao_state_file')
+    def test_write_state_file_empty(self, mock1):
+        table_type = 'ao'
+        part_list = ['']
+        m = mock_open()
+        with patch('__builtin__.open', m, create=True):
+            write_state_file(self.context, table_type, part_list)
+            result = m()
+            self.assertEqual(1, len(result.write.call_args_list))
+            for i in range(len(part_list)):
+                self.assertEqual(call('\n'), result.write.call_args_list[i])
+
     @patch('gppylib.operations.dump.execute_sql', return_value=[['public', 'ao_table', 123, 'CREATE', 'table', '2012: 1'], ['testschema', 'co_table', 333, 'TRUNCATE', '', '2033 :1 - 111']])
     def test_get_last_operation_data_default(self, mock):
         output = get_last_operation_data(self.context)
@@ -367,7 +379,7 @@ class DumpTestCase(unittest.TestCase):
         self.assertEqual(result, expected_output)
 
     def test_create_partition_dict_empty(self):
-        partition_list = []
+        partition_list = ['']
         expected_output = {}
         result = create_partition_dict(partition_list)
         self.assertEqual(result, expected_output)
@@ -438,7 +450,7 @@ class DumpTestCase(unittest.TestCase):
         self.assertEqual(last_operations_dict, expected_output)
 
     def test_get_pgstatlastoperations_dict_empty(self):
-        last_operations = []
+        last_operations = ['']
         last_operations_dict = get_pgstatlastoperations_dict(last_operations)
         expected_output = {}
         self.assertEqual(last_operations_dict, expected_output)
