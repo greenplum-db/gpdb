@@ -69,10 +69,6 @@ function make_sync_tools() {
     # Requires these variables in the env:
     # IVYREPO_HOST IVYREPO_REALM IVYREPO_USER IVYREPO_PASSWD
     make sync_tools
-    # We have compiled LLVM with native zlib on CentOS6 and not from
-    # the zlib downloaded from artifacts.  Therefore, remove the zlib
-    # downloaded from artifacts in order to use the native zlib.
-    find ext -name 'libz.*' -exec rm -f {} \;
   popd
 }
 
