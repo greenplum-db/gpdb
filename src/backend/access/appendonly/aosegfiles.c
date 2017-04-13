@@ -2139,23 +2139,20 @@ CheckAOConsistencyWithGpRelationNode(Snapshot snapshot, Relation rel, int totals
 	int			segmentFileNum = 0;
 	ItemPointerData persistentTid;
 	int64		persistentSerialNum = 0;
-	int			segmentCount = 0;
 	Relation	gp_relation_node;
+	bool	   *gprelnodeMap;
+	FileSegInfo **aosegMap;
+	int			i;
 
 	if (!gp_appendonly_verify_eof)
 	{
 		return;
 	}
 
-	/*
-	 * gp_relation_node always has a zero. Hence we use Max segment file
-	 * number plus 1 in order to accomodate the zero
-	 */
-	const int	num_gp_relation_node_entries = AOTupleId_MaxSegmentFileNum + 1;
-	bool	   *segmentFileNumMap = (bool *) palloc0(sizeof(bool) * num_gp_relation_node_entries);
-	int			i = 0;
-	int			j = 0;
+	aosegMap = (FileSegInfo **) palloc0((AOTupleId_MaxSegmentFileNum + 1) * sizeof(FileSegInfo *));
+	gprelnodeMap = (bool *) palloc0((AOTupleId_MaxSegmentFileNum + 1) * sizeof(bool));
 
+	/* Build gprelnodeMap */
 	gp_relation_node = heap_open(GpRelationNodeRelationId, AccessShareLock);
 	GpRelationNodeBeginScan(
 							snapshot,
@@ -2170,79 +2167,46 @@ CheckAOConsistencyWithGpRelationNode(Snapshot snapshot, Relation rel, int totals
 										  &persistentTid,
 										  &persistentSerialNum)))
 	{
-		if (segmentFileNumMap[segmentFileNum] != true)
-		{
-			segmentFileNumMap[segmentFileNum] = true;
-			segmentCount++;
-		}
-
-		if (segmentCount > totalsegs + 1)
-		{
-			PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, segmentFileNumMap);
-			elog(ERROR, "gp_relation_node (%d) has more entries than pg_aoseg (%d) for relation %s",
-				 segmentCount,
-				 totalsegs,
-				 RelationGetRelationName(rel));
-		}
+		if (gprelnodeMap[segmentFileNum] != true)
+			gprelnodeMap[segmentFileNum] = true;
 	}
-
 	GpRelationNodeEndScan(&gpRelationNodeScan);
 	heap_close(gp_relation_node, AccessShareLock);
 
-	if (totalsegs > 0)
+	/* Build aosegMap. */
+	for (i = 0; i < totalsegs; i++)
 	{
-		if (allseginfo[0]->segno == 0)
-		{
-			i++;
-		}
+		FileSegInfo *fsinfo = allseginfo[i];
+
+		if (fsinfo->segno < 0 || fsinfo->segno > AOTupleId_MaxSegmentFileNum)
+			elog(ERROR, "invalid segno on pg_aoseg row: %d", fsinfo->segno);
+		aosegMap[fsinfo->segno] = fsinfo;
 	}
 
-	for (j = 1; j < num_gp_relation_node_entries; j++)
+	/* Check that there is a one-to-one correspondence between the two maps */
+	for (i = 0; i <= AOTupleId_MaxSegmentFileNum; i++)
 	{
-		if (segmentFileNumMap[j] == true)
+		if (aosegMap[i] && !gprelnodeMap[i] && aosegMap[i]->eof != 0)
 		{
-			while (i < totalsegs && allseginfo[i]->segno != j)
-			{
-
-				if (allseginfo[i]->eof != 0 && segmentFileNumMap[allseginfo[i]->segno] == false)
-				{
-					PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, segmentFileNumMap);
-					elog(ERROR, "Missing pg_aoseg entry %d in gp_relation_node for %s",
-						 allseginfo[i]->segno, RelationGetRelationName(rel));
-				}
-				i++;
-			}
-
-			if (i < totalsegs && allseginfo[i]->segno == j)
-			{
-				i++;
-				continue;
-			}
-
-			if (i == totalsegs)
-			{
-				PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, segmentFileNumMap);
-				elog(ERROR, "Missing gp_relation_node entry %d in pg_aoseg for %s",
-					 j, RelationGetRelationName(rel));
-			}
-		}
-	}
-
-	/*
-	 * Check for any extra entries in pg_aoseg which are not present in
-	 * gp_relation_node
-	 */
-	while (i < totalsegs)
-	{
-		Assert(segmentFileNumMap[allseginfo[i]->segno] == false);
-		if (allseginfo[i]->eof != 0)
-		{
-			PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, segmentFileNumMap);
+			PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, gprelnodeMap);
 			elog(ERROR, "Missing pg_aoseg entry %d in gp_relation_node for %s",
-				 allseginfo[i]->segno, RelationGetRelationName(rel));
+				 aosegMap[i]->segno, RelationGetRelationName(rel));
 		}
-		i++;
+
+		/*
+		 * Special case for segment 0: It's ok if the pg_aoseg entry doesn't exist.
+		 * When a new table is created, we create a gp_relation_node entry for
+		 * segment 0, and the underlying empry file, but we don't insert a row in
+		 * the AO segment table for it yet.
+		* */
+		if (!aosegMap[i] && gprelnodeMap[i] && i != 0)
+		{
+			PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, gprelnodeMap);
+			elog(ERROR, "Missing gp_relation_node entry %d in pg_aoseg for %s",
+				 i, RelationGetRelationName(rel));
+		}
 	}
 
-	pfree(segmentFileNumMap);
+	pfree(aosegMap);
+	pfree(gprelnodeMap);
 }
