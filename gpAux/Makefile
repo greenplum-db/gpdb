@@ -894,16 +894,6 @@ endif
 	rm -rf $(INSTLOC)/bin/gppylib
 	find $(INSTLOC)/lib/python/gppylib -name test -type d | xargs rm -rf
 
-BLD_LDD=ldd
-ifneq "$($(BLD_ARCH)_LDD)" ""
-BLD_LDD=$($(BLD_ARCH)_LDD)
-endif
-
-BLD_LDD_FILTER=|awk '{print $$3}' | sort -u | perl -p -i -e 's,^(.*\.so.*),\1\*,'
-ifneq "$($(BLD_ARCH)_LDD_FILTER)" ""
-BLD_LDD_FILTER=$($(BLD_ARCH)_LDD_FILTER)
-endif
-
 libcopy=(cd $(1) && $(TAR) cf - $(2)) | (cd $(3) && $(TAR) xvf -)$(check_pipe_for_errors)
 
 .PHONY: copy-nbu-libs
@@ -955,18 +945,6 @@ copylibs : thirdparty-dist copy-nbu-libs
 	        echo "cp -p $$lib $(INSTLOC)/lib" ; \
 	        cp -p $$lib $(INSTLOC)/lib ; \
 	    done ; \
-	fi
-	if [ `uname -s` != 'AIX' -a `uname -s` != 'Darwin' ] ; then \
-	    lib_wildcards=`$(BLD_LDD) $(INSTLOC)/bin/lib/gpcheckdb | egrep 'libstdc\+\+' $(BLD_LDD_FILTER)` export lib_wildcards; \
-	    if [ -z "$${lib_wildcards}" ]; then exit 0; fi; \
-	    lib_list=`ls $${lib_wildcards}` export lib_list; \
-	    for lib in $${lib_list}; do \
-	        echo -n "Copying $$lib to $(subst $(CURDIR)/,,$(INSTLOC)/lib)..."; \
-	        if [ x"`dirname $$lib`" = x"$(INSTLOC)/lib" ]; then echo "already there."; continue; fi; \
-	        if [ -f $(INSTLOC)/lib/`basename $$lib` -a ! -w $(INSTLOC)/lib/`basename $$lib` ]; then chmod u+w $(INSTLOC)/lib/`basename $$lib`; fi; \
-	        (cd `dirname $$lib` && $(TAR) cf - `basename $$lib`) | (cd $(INSTLOC)/lib/ && $(TAR) xpf -)$(check_pipe_for_errors); \
-	        echo "done."; \
-	    done; \
 	fi
 	# Create the python directory to flag to build scripts that python has been handled
 	mkdir -p $(INSTLOC)/ext/python
