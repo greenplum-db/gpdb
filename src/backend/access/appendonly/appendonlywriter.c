@@ -55,90 +55,9 @@ int64  segfileMaxRowThreshold(void)
 	return 	(SEGFILE_CAPACITY_THRESHOLD * maxallowed);
 }
 
-/*
- * usedByConcurrentTransaction
- *
- * Return true if segno has been used by any transactions
- * that are running concurrently with the current transaction.
- */
-static bool
-usedByConcurrentTransaction(TransactionId latestWriteXid, int segno)
-{
-	Snapshot	snapshot;
-	int			i;
-
-	/*
-	 * Obtain the snapshot that is taken at the beginning of the
-	 * transaction. We can't simply call GetTransactionSnapshot() here because
-	 * it will create a new distributed snapshot for non-serializable
-	 * transaction isolation level, and it may be too late.
-	 */
-	if (SerializableSnapshot == NULL)
-	{
-		Assert(LatestSnapshot == NULL);
-		(void) GetTransactionSnapshot();
-		Assert(SerializableSnapshot);
-	}
-	snapshot = SerializableSnapshot;
-
-	if (Debug_appendonly_print_segfile_choice)
-	{
-		elog(LOG, "usedByConcurrentTransaction: TransactionXmin = %u, xmin = %u, xmax = %u, myxid = %u latestWriteXid that uses segno %d is %u",
-			 TransactionXmin, snapshot->xmin, snapshot->xmax, GetCurrentTransactionIdIfAny(), segno, latestWriteXid);
-		LogDistributedSnapshotInfo(snapshot, "Used snapshot: ");
-	}
-
-	/*
-	 * Like in XidInSnapshot(), make a quick range check with the xmin and xmax first.
-	 */
-	if (TransactionIdPrecedes(latestWriteXid, snapshot->xmin))
-	{
-		if (Debug_appendonly_print_segfile_choice)
-			ereport(LOG,
-					(errmsg("usedByConcurrentTransaction: latestWriterXid %u of segno %d precedes xmin %u, so it is not considered concurrent",
-							latestWriteXid,
-							segno,
-							snapshot->xmin)));
-		return false;
-	}
-	if (TransactionIdFollowsOrEquals(latestWriteXid, snapshot->xmax))
-	{
-		if (Debug_appendonly_print_segfile_choice)
-			ereport(LOG,
-					(errmsg("usedByConcurrentTransaction: latestWriterXid %u of segno %d follows or is equal toxmax %u, so it is considered concurrent",
-							latestWriteXid,
-							segno,
-							snapshot->xmax)));
-		return true;
-	}
-
-	/* Check the XID array in the snapshot */
-	for (i = 0; i < snapshot->xcnt; i++)
-	{
-		if (TransactionIdEquals(latestWriteXid, snapshot->xip[i]))
-		{
-			if (Debug_appendonly_print_segfile_choice)
-				ereport(LOG,
-						(errmsg("usedByConcurrentTransaction: latestWriterXid %u of segno %d was found in snapshot, so it is considered concurrent",
-								latestWriteXid,
-								segno)));
-
-			return true;
-		}
-	}
-
-	if (Debug_appendonly_print_segfile_choice)
-		ereport(LOG,
-				(errmsg("usedByConcurrentTransaction: latestWriterXid %u of segno %d is not considered concurrent",
-						latestWriteXid,
-						segno)));
-       return false;
-}
-
 typedef struct
 {
 	int32		segno;
-	TransactionId xmin;
 	ItemPointerData ctid;
 	float8		tupcount;
 } candidate_segment;
@@ -210,6 +129,7 @@ SetSegnoInternal(Relation rel, List *avoid_segnos, bool for_compaction)
 	HeapScanDesc aoscan;
 	HeapTuple	tuple;
 	int16	formatversion;
+	Snapshot	snapshot;
 
 	memset(used, 0, sizeof(used));
 
@@ -232,7 +152,31 @@ SetSegnoInternal(Relation rel, List *avoid_segnos, bool for_compaction)
 	pg_aoseg_rel = heap_open(rel->rd_appendonly->segrelid, AccessShareLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
 
-	aoscan = heap_beginscan(pg_aoseg_rel, SnapshotNow, 0, NULL);
+	/*
+	 * Obtain the snapshot that is taken at the beginning of the transaction.
+	 * If a tuple is visible to this snapshot, and it hasn't been updated since
+	 * (that's checked implicitly by heap_lock_tuple()), it's visible to any
+	 * snapshot in this backend, and can be used as insertion target. We can't
+	 * simply call GetTransactionSnapshot() here because it will create a new
+	 * distributed snapshot for non-serializable transaction isolation level,
+	 * and it may be too late.
+	 */
+	if (SerializableSnapshot == NULL)
+	{
+		Assert(LatestSnapshot == NULL);
+		(void) GetTransactionSnapshot();
+		Assert(SerializableSnapshot);
+	}
+	snapshot = SerializableSnapshot;
+
+	if (Debug_appendonly_print_segfile_choice)
+	{
+		elog(LOG, "usedByConcurrentTransaction: TransactionXmin = %u, xmin = %u, xmax = %u, myxid = %u",
+			 TransactionXmin, snapshot->xmin, snapshot->xmax, GetCurrentTransactionIdIfAny());
+		LogDistributedSnapshotInfo(snapshot, "Used snapshot: ");
+	}
+
+	aoscan = heap_beginscan(pg_aoseg_rel, snapshot, 0, NULL);
 	while ((tuple = heap_getnext(aoscan, ForwardScanDirection)) != NULL)
 	{
 		if (RelationIsAoRows(rel))
@@ -308,7 +252,6 @@ SetSegnoInternal(Relation rel, List *avoid_segnos, bool for_compaction)
 		}
 
 		candidates[ncandidates].segno = segno;
-		candidates[ncandidates].xmin = HeapTupleHeaderGetXmin(tuple->t_data);
 		candidates[ncandidates].ctid = tuple->t_self;
 		candidates[ncandidates].tupcount = tupcount;
 		ncandidates++;
@@ -327,27 +270,24 @@ SetSegnoInternal(Relation rel, List *avoid_segnos, bool for_compaction)
 
 		for (i = 0; i < ncandidates; i++)
 		{
-			if (!usedByConcurrentTransaction(candidates[i].xmin, candidates[i].segno))
-			{
-				/* this segno is available and not full. Try to lock it. */
-				HeapTupleData locktup;
-				Buffer		buf = InvalidBuffer;
-				ItemPointerData update_ctid;
-				TransactionId update_xmax;
-				HTSU_Result result;
+			/* this segno is available and not full. Try to lock it. */
+			HeapTupleData locktup;
+			Buffer		buf = InvalidBuffer;
+			ItemPointerData update_ctid;
+			TransactionId update_xmax;
+			HTSU_Result result;
 
-				locktup.t_self = candidates[i].ctid;
-				result = heap_lock_tuple(pg_aoseg_rel, &locktup, &buf,
-										 &update_ctid, &update_xmax,
-										 GetCurrentCommandId(true),
-										 LockTupleExclusive, LockTupleIfNotLocked);
-				if (BufferIsValid(buf))
-					ReleaseBuffer(buf);
-				if (result == HeapTupleMayBeUpdated)
-				{
-					chosen_segno = candidates[i].segno;
-					break;
-				}
+			locktup.t_self = candidates[i].ctid;
+			result = heap_lock_tuple(pg_aoseg_rel, &locktup, &buf,
+									 &update_ctid, &update_xmax,
+									 GetCurrentCommandId(true),
+									 LockTupleExclusive, LockTupleIfNotLocked);
+			if (BufferIsValid(buf))
+				ReleaseBuffer(buf);
+			if (result == HeapTupleMayBeUpdated)
+			{
+				chosen_segno = candidates[i].segno;
+				break;
 			}
 		}
 	}
