@@ -352,7 +352,7 @@ FileSegCanBeDropped(Relation parentrel, int segno)
 	TupleDesc	pg_aoseg_dsc;
 	HeapTuple	tuple;
 	HeapScanDesc aoscan;
-	Datum		state;
+	int16		state;
 	bool		isNull;
 	int			tuple_segno = InvalidFileSegNumber;
 	TransactionId cutoff_xid;
@@ -386,7 +386,7 @@ FileSegCanBeDropped(Relation parentrel, int segno)
 	Assert(HeapTupleIsValid(tuple));
 
 	/* get the state */
-	state = fastgetattr(tuple, Anum_pg_aoseg_state, pg_aoseg_dsc, &isNull);
+	state = DatumGetInt16(fastgetattr(tuple, Anum_pg_aoseg_state, pg_aoseg_dsc, &isNull));
 
 	if(isNull)
 		ereport(ERROR,

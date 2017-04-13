@@ -435,7 +435,6 @@ AOCSDrop(Relation aorel, int compacted_segno)
 	int			i,
 				segno;
 	LockAcquireResult acquireResult;
-	AOCSFileSegInfo *fsinfo;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 	Assert(RelationIsAoCols(aorel));
@@ -475,11 +474,7 @@ AOCSDrop(Relation aorel, int compacted_segno)
 			continue;
 		}
 
-		/* Re-fetch under the write lock to get latest committed eof. */
-		fsinfo = GetAOCSFileSegInfo(aorel, SnapshotNow, segno);
-
-		/* drop not planned, try at least eof truncation */
-		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP)
+		if (AOCSFileSegCanBeDropped(aorel, segno))
 		{
 			Assert(HasLockForSegmentFileDrop(aorel));
 			AOCSCompaction_DropSegmentFile(aorel, segno);
@@ -487,9 +482,13 @@ AOCSDrop(Relation aorel, int compacted_segno)
 		}
 		else
 		{
+			/* drop not planned, try at least eof truncation */
+			AOCSFileSegInfo *fsinfo;
+
+			fsinfo = GetAOCSFileSegInfo(aorel, SnapshotNow, segno);
 			AOCSSegmentFileTruncateToEOF(aorel, fsinfo);
+			pfree(fsinfo);
 		}
-		pfree(fsinfo);
 	}
 
 	if (segfile_array)
