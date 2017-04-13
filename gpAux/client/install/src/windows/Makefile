@@ -13,10 +13,10 @@ MSI=../../${NAME}-WinXP-x86_32.msi
 SRCDIR=../../${PACKAGE}-devel
 DATESTAMP=$(shell datestamp.pl)
 
-#Wix related 
-CANDLE="C:/Program Files/WixEdit/wix-3.0.2211.0/candle.exe"
+#Wix related
+CANDLE="C:/Program Files (x86)/WiX Toolset v3.10/bin/candle.exe"
 CANDLE_OPTS=-nologo
-LIGHT="C:/Program Files/WixEdit/wix-3.0.2211.0/light.exe"
+LIGHT="C:/Program Files (x86)/WiX Toolset v3.10/bin/light.exe"
 LIGHT_OPTS=-nologo -sval
 WXS_TEMPLATE=${PACKAGE}.wxs
 WXS=${NAME}.wxs
@@ -46,7 +46,7 @@ msi:
 	@echo Creating ${MSI}
 	${LIGHT} ${LIGHT_OPTS} ${WIXOBJ} -out ${MSI} 
 
-sign: 
+sign:
 	@echo Signing ${MSI}
 	@echo "`date` -- WARNING: signing disabled while we acquire a new certificate"
 	#signtool sign /a /t ${TIMESTAMP_SERVER} ${MSI}
