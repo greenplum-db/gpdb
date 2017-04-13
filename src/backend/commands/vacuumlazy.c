@@ -396,7 +396,13 @@ lazy_vacuum_aorel(Relation onerel, VacuumStmt *vacstmt, List *updated_stats)
 	}
 	else if (!vacummStatement_IsInAppendOnlyCleanupPhase(vacstmt))
 	{
-		vacuum_appendonly_rel(onerel, vacstmt);
+		Assert(list_length(vacstmt->appendonly_compaction_insert_segno) <= 1);
+		if (vacstmt->appendonly_compaction_insert_segno == NIL)
+			vacuum_appendonly_rel_drop(onerel, vacstmt->appendonly_compaction_segno);
+		else
+			vacuum_appendonly_rel_compact(onerel, vacstmt->full,
+										  vacstmt->appendonly_compaction_segno,
+										  linitial_int(vacstmt->appendonly_compaction_insert_segno));
 		update_relstats = false;
 	}
 	else
@@ -1257,13 +1263,12 @@ vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot,
  *
  */
 void
-vacuum_appendonly_rel(Relation aorel, VacuumStmt *vacstmt)
+vacuum_appendonly_rel_compact(Relation aorel, bool full, List *compaction_segnos, int insert_segno)
 {
 	char	   *relname;
 	PGRUsage	ru0;
 
 	Assert(RelationIsAoRows(aorel) || RelationIsAoCols(aorel));
-	Assert(!vacummStatement_IsInAppendOnlyCleanupPhase(vacstmt));
 
 	pg_rusage_init(&ru0);
 	relname = RelationGetRelationName(aorel);
@@ -1273,51 +1278,53 @@ vacuum_appendonly_rel(Relation aorel, VacuumStmt *vacstmt)
 					relname)));
 
 	if (Gp_role == GP_ROLE_DISPATCH)
-	{
 		return;
-	}
-	Assert(list_length(vacstmt->appendonly_compaction_insert_segno) <= 1);
-	if (vacstmt->appendonly_compaction_insert_segno == NULL)
+
+	if (insert_segno == APPENDONLY_COMPACTION_SEGNO_INVALID)
 	{
 		elogif(Debug_appendonly_print_compaction, LOG,
-			"Vacuum drop phase %s", RelationGetRelationName(aorel));
-
-		if (RelationIsAoRows(aorel))
-		{
-			AppendOnlyDrop(aorel, vacstmt->appendonly_compaction_segno);
-		}
-		else
-		{
-			Assert(RelationIsAoCols(aorel));
-			AOCSDrop(aorel, vacstmt->appendonly_compaction_segno);
-		}
+			   "Vacuum pseudo-compaction phase %s", RelationGetRelationName(aorel));
 	}
 	else
 	{
-		int insert_segno = linitial_int(vacstmt->appendonly_compaction_insert_segno);
-		if (insert_segno == APPENDONLY_COMPACTION_SEGNO_INVALID)
-		{
-			elogif(Debug_appendonly_print_compaction, LOG,
-			"Vacuum pseudo-compaction phase %s", RelationGetRelationName(aorel));
-		}
+		elogif(Debug_appendonly_print_compaction, LOG,
+			   "Vacuum compaction phase %s", RelationGetRelationName(aorel));
+		if (RelationIsAoRows(aorel))
+			AppendOnlyCompact(aorel, compaction_segnos, insert_segno, full);
 		else
 		{
-			elogif(Debug_appendonly_print_compaction, LOG,
-				"Vacuum compaction phase %s", RelationGetRelationName(aorel));
-			if (RelationIsAoRows(aorel))
-			{
-				AppendOnlyCompact(aorel,
-					vacstmt->appendonly_compaction_segno,
-					insert_segno, vacstmt->full);
-			}
-			else
-			{
-				Assert(RelationIsAoCols(aorel));
-				AOCSCompact(aorel,
-					vacstmt->appendonly_compaction_segno,
-					insert_segno, vacstmt->full);
-			}
+			Assert(RelationIsAoCols(aorel));
+			AOCSCompact(aorel, compaction_segnos, insert_segno, full);
 		}
+	}
+}
+void
+vacuum_appendonly_rel_drop(Relation aorel, List *compaction_segnos )
+{
+	char	   *relname;
+	PGRUsage	ru0;
+
+	Assert(RelationIsAoRows(aorel) || RelationIsAoCols(aorel));
+
+	pg_rusage_init(&ru0);
+	relname = RelationGetRelationName(aorel);
+	ereport(elevel,
+			(errmsg("vacuuming \"%s.%s\"",
+					get_namespace_name(RelationGetNamespace(aorel)),
+					relname)));
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+		return;
+
+	elogif(Debug_appendonly_print_compaction, LOG,
+		   "Vacuum drop phase %s", RelationGetRelationName(aorel));
+
+	if (RelationIsAoRows(aorel))
+		AppendOnlyDrop(aorel, compaction_segnos);
+	else
+	{
+		Assert(RelationIsAoCols(aorel));
+		AOCSDrop(aorel, compaction_segnos);
 	}
 }
 

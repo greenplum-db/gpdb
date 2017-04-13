@@ -2605,7 +2605,13 @@ full_vacuum_rel(Relation onerel, VacuumStmt *vacstmt, List *updated_stats)
 		}
 		else if(!vacummStatement_IsInAppendOnlyCleanupPhase(vacstmt))
 		{
-			vacuum_appendonly_rel(onerel, vacstmt);
+			Assert(list_length(vacstmt->appendonly_compaction_insert_segno) <= 1);
+			if (vacstmt->appendonly_compaction_insert_segno == NIL)
+				vacuum_appendonly_rel_drop(onerel, vacstmt->appendonly_compaction_segno);
+			else
+				vacuum_appendonly_rel_compact(onerel, vacstmt->full,
+											  vacstmt->appendonly_compaction_segno,
+											  linitial_int(vacstmt->appendonly_compaction_insert_segno));
 			update_relstats = false;
 		}
 		else

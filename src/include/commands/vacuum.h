@@ -168,7 +168,8 @@ extern bool vacuumStatement_IsInAppendOnlyPseudoCompactionPhase(VacuumStmt* vacs
 /* in commands/vacuumlazy.c */
 extern bool lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 				BufferAccessStrategy bstrategy, List *updated_stats);
-extern void vacuum_appendonly_rel(Relation aorel, VacuumStmt *vacstmt);
+extern void vacuum_appendonly_rel_compact(Relation aorel, bool full, List *compaction_segnos, int insert_segno);
+extern void vacuum_appendonly_rel_drop(Relation aorel, List *compaction_segnos);
 extern void vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot,
 										 BlockNumber *rel_pages, double *rel_tuples,
 										 bool *relhasindex);
