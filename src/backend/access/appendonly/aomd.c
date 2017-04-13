@@ -224,6 +224,4 @@ TruncateAOSegmentFile(MirroredAppendOnlyOpen *mirroredOpen, Relation rel, int64 
 				(errmsg("\"%s\": failed to truncate data after eof: %s", 
 					    relname,
 					    strerror(primaryError))));
-	
 }
-
