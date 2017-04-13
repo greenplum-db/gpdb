@@ -312,6 +312,8 @@ AOCSFileSegCanBeDropped(Relation parentrel, int segno)
 	state = DatumGetInt16(fastgetattr(segtup, Anum_pg_aocs_state, segdsc, &isNull));
 	Assert(!isNull);
 
+	heap_endscan(scan);
+
 	if (state != AOSEG_STATE_AWAITING_DROP)
 	{
 		heap_close(segrel, AccessShareLock);
