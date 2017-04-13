@@ -9,6 +9,7 @@ SYNOPSIS
 
 gpfdist [-d <directory>] [-p <http_port>] [-l <log_file>] [-t <timeout>] 
 [-S] [-w <time>] [-v | -V] [-m <max_length>] [--ssl <certificate_path>]
+[--sslclean wait_time]
 
 gpfdist [-? | --help] | --version
 
@@ -137,6 +138,15 @@ OPTIONS
  * The trusted certificate authorities, root.crt 
 
  The root directory (/) cannot be specified as certificate_path. 
+
+
+--sslclean <wait_time>
+
+ When the utility is run with the --ssl option, sets the number of seconds
+ that the utility delays before closing an SSL session and cleaning up the
+ SSL resources after it completes writing data to or from a Greenplum Database
+ segment. The default value is 0, no delay. The maximum value is 300 seconds.
+ If the delay is increased, the transfer speed decreases.
 
 
 -v (verbose) 
