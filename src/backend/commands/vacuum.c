@@ -231,7 +231,7 @@ static BufferAccessStrategy vac_strategy;
 static List *get_rel_oids(List *relids, VacuumStmt *vacstmt, bool isVacuum);
 static void vac_truncate_clog(TransactionId frozenXID);
 static void vacuum_rel(Oid relid, VacuumStmt *vacstmt, char expected_relkind,
-		   bool for_wraparound);
+		   bool for_wraparound, bool doDispatch);
 static bool full_vacuum_rel(Relation onerel, VacuumStmt *vacstmt, List *updated_stats);
 static void scan_heap(VRelStats *vacrelstats, Relation onerel,
 		  VacPageList vacuum_pages, VacPageList fraged_pages);
@@ -466,7 +466,7 @@ vacuum(VacuumStmt *vacstmt, List *relids,
 			foreach(cur, vacuum_relations)
 			{
 				Oid			relid = lfirst_oid(cur);
-				vacuum_rel(relid, vacstmt, RELKIND_RELATION, for_wraparound);
+				vacuum_rel(relid, vacstmt, RELKIND_RELATION, for_wraparound, true);
 			}
 		}
 
@@ -1238,7 +1238,7 @@ vac_truncate_clog(TransactionId frozenXID)
  */
 static void
 vacuum_rel(Oid relid, VacuumStmt *vacstmt, char expected_relkind,
-		   bool for_wraparound)
+		   bool for_wraparound, bool doDispatch)
 {
 	LOCKMODE	lmode;
 	Relation	onerel;
@@ -1417,7 +1417,7 @@ vacuum_rel(Oid relid, VacuumStmt *vacstmt, char expected_relkind,
 	/*
 	 * Dispatch the VACUUM to all the segments first.
 	 */
-	if (Gp_role == GP_ROLE_DISPATCH)
+	if (Gp_role == GP_ROLE_DISPATCH && doDispatch)
 	{
 		stats_context.updated_stats = NIL;
 		dispatchVacuum(vacstmt, &stats_context);
@@ -1517,19 +1517,19 @@ vacuum_rel(Oid relid, VacuumStmt *vacstmt, char expected_relkind,
 	 * totally unimportant for toast relations.
 	 */
 	if (toast_relid != InvalidOid)
-		vacuum_rel(toast_relid, vacstmt, RELKIND_TOASTVALUE, for_wraparound);
+		vacuum_rel(toast_relid, vacstmt, RELKIND_TOASTVALUE, for_wraparound, false);
 
 	/* do the same for an AO segments table, if any */
 	if (aoseg_relid != InvalidOid)
-		vacuum_rel(aoseg_relid, vacstmt, RELKIND_AOSEGMENTS, for_wraparound);
+		vacuum_rel(aoseg_relid, vacstmt, RELKIND_AOSEGMENTS, for_wraparound, false);
 
 	/* do the same for an AO block directory table, if any */
 	if (aoblkdir_relid != InvalidOid)
-		vacuum_rel(aoblkdir_relid, vacstmt, RELKIND_AOBLOCKDIR, for_wraparound);
+		vacuum_rel(aoblkdir_relid, vacstmt, RELKIND_AOBLOCKDIR, for_wraparound, false);
 
 	/* do the same for an AO visimap, if any */
 	if (aovisimap_relid != InvalidOid)
-		vacuum_rel(aovisimap_relid, vacstmt, RELKIND_AOVISIMAP, for_wraparound);
+		vacuum_rel(aovisimap_relid, vacstmt, RELKIND_AOVISIMAP, for_wraparound, false);
 
 	UnlockRelationIdForSession(&onerelid, lmode);
 }
