@@ -42,7 +42,7 @@
  *
  * The state AOSEG_STATE_USECURRENT is a pseudo-state that is used
  * when a state parameter in a function should not change the
- * current state.
+ * current state. It should not appear on disk.
  * AOSEG_STATE_DEFAULT is the default state. The segment file can be used for
  * insertions and compactions. The contents if the segment file
  * is visible under the limitations  of the visimap and the eof.
