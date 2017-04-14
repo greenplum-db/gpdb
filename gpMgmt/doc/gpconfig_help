@@ -135,6 +135,17 @@ postgresql.conf file is 128MB. Running the command
 gpconfig -s statement_mem --file displays 128MB. The command
 gpconfig -s statement_mem run by the user displays 64MB.
 
+--file-compare
+
+Like the --file option, the --file-compare option will read the
+postgresql.conf files on all instances (master and segments). It
+then compares these file values with the corresponding database values,
+where the database values represent current running settings, and
+the file values represent what will be used upon the next restart
+of Greenplum. In the case where all segments have consistent values,
+the report from --file-compare will summarize results. In the case
+where any inconsistencies are found, --file-compare will detail the
+values from all segments.
 
 --skipvalidation
 

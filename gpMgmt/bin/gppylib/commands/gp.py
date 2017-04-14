@@ -1732,6 +1732,7 @@ class GpReadConfig(Command):
         self.seg_db_id = seg.getSegmentDbId()
         self.seg_content_id = seg.getSegmentContentId()
         self.guc_name = guc_name
+        self.role = seg.getSegmentRole()
         cat_path = findCmdInPath('cat')
 
         cmdStr = "%s %s/postgresql.conf" % (cat_path, seg.getSegmentDataDirectory())
@@ -1755,6 +1756,12 @@ class GpReadConfig(Command):
 
     def get_seg_content_id(self):
         return self.seg_content_id
+
+    def get_seg_role(self):
+        return self.role
+
+    def get_seg_dbid(self):
+        return self.seg_db_id
 
 
 if __name__ == '__main__':
