@@ -16,7 +16,7 @@ func TestMetadata(t *testing.T) {
 	RegisterFailHandler(Fail)
 }
 
-var _ = Describe("backup/metadata tests", func() {
+var _ = Describe("backup/predata tests", func() {
 	Describe("PrintCreateTableStatement", func() {
 		buffer := gbytes.NewBuffer()
 		testTable := utils.Table{0, "public", "tablename"}

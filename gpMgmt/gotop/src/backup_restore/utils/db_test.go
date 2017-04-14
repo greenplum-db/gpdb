@@ -20,6 +20,9 @@ func TestDB(t *testing.T) {
 }
 
 var _ = Describe("utils/db tests", func() {
+	BeforeSuite(func() {
+		testutils.SetupTestLogger()
+	})
 	Describe("NewDBConn", func() {
 		Context("Database given with -dbname flag", func() {
 			It("gets the DBName from dbname argument", func() {

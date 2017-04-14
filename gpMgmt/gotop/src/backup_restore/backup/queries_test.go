@@ -23,6 +23,7 @@ func TestQueries(t *testing.T) {
 var _ = Describe("backup/queries tests", func() {
 	BeforeSuite(func() {
 		connection, mock = testutils.CreateAndConnectMockDB()
+		testutils.SetupTestLogger()
 	})
 	Describe("GetTableAttributes", func() {
 		header := []string{"attname", "attnotnull", "atthasdef", "attisdropped", "atttypname", "attencoding"}

@@ -3,8 +3,6 @@ package utils
 import (
 	"database/sql"
 	"fmt"
-	"os"
-	"os/user"
 	"sort"
 	"strconv"
 	"strings"
@@ -53,16 +51,15 @@ func NewDBConn(dbname string) *DBConn {
 	host := ""
 	port := 0
 
-	default_user, _ := user.Current()
-	default_host, _ := os.Hostname()
-	username = TryEnv("PGUSER", default_user.Username)
+	currentUser, _, currentHost := GetUserAndHostInfo()
+	username = TryEnv("PGUSER", currentUser)
 	if dbname == "" {
 		dbname = TryEnv("PGDATABASE", "")
 	}
 	if dbname == "" {
-		Abort("No database provided and PGDATABASE not set")
+		logger.Fatal("No database provided and PGDATABASE not set")
 	}
-	host = TryEnv("PGHOST", default_host)
+	host = TryEnv("PGHOST", currentHost)
 	port, _ = strconv.Atoi(TryEnv("PGPORT", "5432"))
 
 	return &DBConn{
@@ -78,7 +75,7 @@ func NewDBConn(dbname string) *DBConn {
 
 func (dbconn *DBConn) Begin() {
 	if dbconn.Tx != nil {
-		Abort("Cannot begin transaction; there is already a transaction in progress")
+		logger.Fatal("Cannot begin transaction; there is already a transaction in progress")
 	}
 	var err error
 	dbconn.Tx, err = dbconn.Conn.Beginx()
@@ -95,7 +92,7 @@ func (dbconn *DBConn) Close() {
 
 func (dbconn *DBConn) Commit() {
 	if dbconn.Tx == nil {
-		Abort("Cannot commit transation; there is no transaction in progress")
+		logger.Fatal("Cannot commit transaction; there is no transaction in progress")
 	}
 	var err error
 	err = dbconn.Tx.Commit()
@@ -107,8 +104,15 @@ func (dbconn *DBConn) Connect() {
 	connStr := fmt.Sprintf("user=%s dbname=%s host=%s port=%d sslmode=disable", dbconn.User, dbconn.DBName, dbconn.Host, dbconn.Port)
 	var err error
 	dbconn.Conn, err = dbconn.Driver.Connect("postgres", connStr)
-	if err != nil && strings.Contains(err.Error(), "does not exist") {
-		Abort("Database %s does not exist, exiting", dbconn.DBName)
+	if err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			logger.Fatal("Database %s does not exist, exiting", dbconn.DBName)
+		}
+		if strings.Contains(err.Error(), "connection refused") {
+			logger.Fatal(`could not connect to server: Connection refused
+	Is the server running on host "%s" and accepting
+	TCP/IP connections on port %d?`, dbconn.Host, dbconn.Port)
+		}
 	}
 	CheckError(err)
 }
