@@ -77,7 +77,6 @@ class GpdbSegmentConfig:
         out = self.psql.run_sql_command(sql_cmd='%s' % (cmd), out_file='-', flags='-t -q')
 
         #if not ok:
-        #    raise GPTestError( 'Errors when try to retrieve information of standby mastser.' )
 
         if out and out[0].strip() == 'True':
             return True

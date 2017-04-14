@@ -56,7 +56,7 @@ def getPortMasterOnly(host = 'localhost',master_value = None,
 
     (ok,out) = run(cmd)
     if not ok:
-        raise GPTestError("Unable to connect to segment server %s as user %s" % (host, user))
+        raise Exception("Unable to connect to segment server %s as user %s" % (host, user))
 
     for line in out:
         out = line.split('\n')
@@ -66,7 +66,7 @@ def getPortMasterOnly(host = 'localhost',master_value = None,
 
     if master_value == None:
         error_msg = "".join(out)
-        raise GPTestError(error_msg)
+        raise Exception(error_msg)
 
     return str(master_value)
 
@@ -283,9 +283,9 @@ def isFileEqual( f1, f2, optionalFlags = "", outputPath = "", myinitfile = ""):
 
     LMYD = os.path.abspath(os.path.dirname(__file__))
     if not os.access( f1, os.R_OK ):
-        raise GPTestError( 'Error: cannot find file %s' % f1 )
+        raise Exception( 'Error: cannot find file %s' % f1 )
     if not os.access( f2, os.R_OK ):
-        raise GPTestError( 'Error: cannot find file %s' % f2 )
+        raise Exception( 'Error: cannot find file %s' % f2 )
     dfile = diffFile( f1, outputPath = outputPath )
     # Gets the suitePath name to add init_file
     suitePath = f1[0:f1.rindex( "/" )]

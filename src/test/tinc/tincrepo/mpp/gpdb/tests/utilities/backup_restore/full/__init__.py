@@ -1186,7 +1186,6 @@ class BackupTestCase(TINCTestCase):
         #Get the database info
         DBINFO[DBNAME] = self.get_db_info(DBNAME)
 
-        #raise GPTestError(msg)
         return GPDmpKey, msg
 
     def do_incr_bkup_test(self, name, DBNAME, bu_options):
@@ -1242,7 +1241,6 @@ class BackupTestCase(TINCTestCase):
         #Get the database info
         DBINFO[DBNAME] = self.get_db_info(DBNAME)
 
-        #raise GPTestError(msg)
         return GPDmpKey, msg
 
 class CancelReplicateThreader(threading.Thread):

@@ -173,9 +173,9 @@ def isFileEqual( f1, f2, optionalFlags = "", outputPath = "", myinitfile = ""):
 
     LMYD = os.path.abspath(os.path.dirname(__file__))
     if not os.access( f1, os.R_OK ):
-        raise GPTestError( 'Error: cannot find file %s' % f1 )
+        raise Exception( 'Error: cannot find file %s' % f1 )
     if not os.access( f2, os.R_OK ):
-        raise GPTestError( 'Error: cannot find file %s' % f2 )
+        raise Exception( 'Error: cannot find file %s' % f2 )
     dfile = diffFile( f1, outputPath = outputPath )
     # Gets the suitePath name to add init_file
     suitePath = f1[0:f1.rindex( "/" )]
@@ -242,7 +242,7 @@ def initialize():
         user = os.environ.get('USER')
 
     if not get_port():
-        raise GPTestError('Could not get port')
+        raise Exception('Could not get port')
 
     os.environ['PGPORT'] = get_port()
     os.environ['PGHOST'] = get_hostname()
@@ -345,9 +345,9 @@ def get_port():
                 if match1:
                     return match1.group()
         f.close()
-        raise GPTestError('Could not get port from '+file)
+        raise Exception('Could not get port from '+file)
     else:
-        raise GPTestError(file+' does not exist.  Cannot get port.')
+        raise Exception(file+' does not exist.  Cannot get port.')
 
 class GPLoad_Env_TestCase(unittest.TestCase):
 
