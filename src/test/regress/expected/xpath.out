@@ -1,7 +1,7 @@
 set xmloption='document';
 set optimizer_disable_missing_stats_collection = on;
 --start_ignore
-drop table table if exists readxml;
+drop table if exists readxml;
 NOTICE:  table "readxml" does not exist, skipping
 --end_ignore
 create table readxml (text xml);
@@ -12,11 +12,11 @@ select xml_in('<a></a>');
  <a></a>
 (1 row)
 
+\set verbosity terse
 select xml_in('<a></>');
 ERROR:  invalid XML document
 DETAIL:  Entity: line 1: parser error : Opening and ending tag mismatch: a line 1 and unparseable
-<a></>
-      ^
+\set verbosity default
 select xml_out((select xml_in('<a></a>')));
  xml_out 
 ---------
@@ -272,14 +272,12 @@ select xml_out((select * from readxml));
 (1 row)
 
 --negative test
+\set verbosity terse
 select xml_out((select xml_in('<a>hello<a>')));
 ERROR:  invalid XML document
 DETAIL:  Entity: line 1: parser error : Premature end of data in tag a line 1
-<a>hello<a>
-           ^
 Entity: line 1: parser error : Premature end of data in tag a line 1
-<a>hello<a>
-           ^
+\set verbosity default
 select xmlcomment(E'<a>hello<\a>');
      xmlcomment     
 --------------------
