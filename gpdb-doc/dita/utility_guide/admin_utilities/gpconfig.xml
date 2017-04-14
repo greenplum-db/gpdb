@@ -11,7 +11,7 @@
        | <b>-r</b> <varname>param_name</varname> [<b>--masteronly</b> | <b>-l</b>
        [<b>--skipvalidation</b>] [<b>--verbose</b>] [<b>--debug</b>]
 
-<b>gpconfig</b> <b>-s</b> <varname>param_name</varname> [<b>--file</b>] [<b>--verbose</b>] [<b>--debug</b>]
+<b>gpconfig</b> <b>-s</b> <varname>param_name</varname> [<b>--file</b> | <b>--file-compare</b>] [<b>--verbose</b>] [<b>--debug</b>]
 
 <b>gpconfig</b> <b>--help</b></codeblock>
     </section>
@@ -124,6 +124,17 @@
               <codeph>postgresql.conf</codeph> file is 128MB. Running the command <codeph>gpconfig
               -s statement_mem --file</codeph> displays 128MB. The command <codeph>gpconfig -s
               statement_mem</codeph> run by the user displays 64MB. </pd>
+          <pd>Not valid with the <codeph>--file-compare</codeph> option.</pd>
+        </plentry>
+        <plentry>
+          <pt>--file-compare</pt>
+          <pd>For a configuration parameter, compares the current Greenplum Database value with the
+            value in the <codeph>postgresql.conf</codeph> files on hosts (master and segments). The
+            values in the <codeph>postgresql.conf files</codeph> represent the value when Greenplum
+            Database is restarted. </pd>
+          <pd>If the values are not the same, the utility displays the values from all hosts. If all
+            hosts have the same value, the utility displays a summary report.</pd>
+          <pd>Not valid with the <codeph>--file</codeph> option.</pd>
         </plentry>
         <plentry>
           <pt>--skipvalidation</pt>
