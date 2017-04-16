@@ -613,9 +613,6 @@ namespace gpdb {
 	// extract string value from defelem's value
 	char *SzDefGetString(DefElem *pdefelem);
 
-	// fold array expression constant values
-	Node *PnodeFoldArrayexprConstants(ArrayExpr *parrayexpr);
-
 	// static partition selection given a PartitionSelector node
 	SelectedParts *SpStaticPartitionSelection(PartitionSelector *ps);
 

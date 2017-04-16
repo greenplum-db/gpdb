@@ -60,8 +60,6 @@ typedef struct
 	bool		recurse_queries; /* recurse into query structures */
 	bool		recurse_sublink_testexpr; /* recurse into sublink test expressions */
 	bool		transform_functions_returning_composite_values; /* transform functions returning constants of composite values */
-	bool		transform_saop; /* transform scalar array ops */
-	Size        max_size; /* max constant binary size in bytes, 0: no restrictions */
 } eval_const_expressions_context;
 
 typedef struct
@@ -96,7 +94,6 @@ static Expr *simplify_function(Oid funcid,
 				  Oid result_type, int32 result_typmod, List **args,
 				  bool allow_inline,
 				  eval_const_expressions_context *context);
-static bool large_const(Expr *expr, Size max_size);
 static List *add_function_defaults(List *args, Oid result_type,
 								   HeapTuple func_tuple);
 static Expr *evaluate_function(Oid funcid,
@@ -1787,7 +1784,7 @@ rowtype_field_matches(Oid rowtypeid, int fieldnum,
  * Recurses into query tree and folds all constant expressions.
  */
 Query *
-fold_constants(PlannerGlobal *glob, Query *q, ParamListInfo boundParams, Size max_size)
+fold_constants(PlannerGlobal *glob, Query *q, ParamListInfo boundParams)
 {
 	eval_const_expressions_context context;
 
@@ -1798,14 +1795,11 @@ fold_constants(PlannerGlobal *glob, Query *q, ParamListInfo boundParams, Size ma
 	context.transform_stable_funcs = true;	/* safe transformations only */
 	context.recurse_queries = true; /* recurse into query structures */
 	context.recurse_sublink_testexpr = false; /* do not recurse into sublink test expressions */
-	context.transform_saop = false; /* do not transform scalar array ops */
 	context.transform_functions_returning_composite_values = true;
 
 	/* when optimizer is on then do not fold functions that return a constant of composite values */
 	context.transform_functions_returning_composite_values = false;
 
-	context.max_size = max_size;
-	
 	return (Query *) query_or_expression_tree_mutator
 						(
 						(Node *) q,
@@ -1813,33 +1807,6 @@ fold_constants(PlannerGlobal *glob, Query *q, ParamListInfo boundParams, Size ma
 						&context,
 						0
 						);
-}
-
-/**
- * fold_arrayexpr_constants
- *
- * Fold array expression for optimizer
- */
-Node *
-fold_arrayexpr_constants(ArrayExpr *arrayexpr)
-{
-	eval_const_expressions_context context;
-
-	context.boundParams = NULL;
-	context.active_fns = NIL;	/* nothing being recursively simplified */
-	context.case_val = NULL;	/* no CASE being examined */
-	context.transform_stable_funcs = true;	/* safe transformations only */
-	context.recurse_queries = false; /* do not recurse into query structures */
-	context.recurse_sublink_testexpr = false; /* do not recurse into sublink test expressions */
-	context.transform_saop = true; /* transform scalar array ops */
-	context.transform_functions_returning_composite_values = true;
-
-	/* when optimizer is on then do not fold functions that return a constant of composite values */
-	context.transform_functions_returning_composite_values = false;
-
-	context.max_size = GPOPT_MAX_FOLDED_CONSTANT_SIZE;
-
-	return eval_const_expressions_mutator((Node *) arrayexpr, &context);
 }
 
 /*--------------------
@@ -1893,8 +1860,6 @@ eval_const_expressions(PlannerInfo *root, Node *node)
 	context.transform_stable_funcs = true;	/* safe transformations only */
 	context.recurse_queries = false; /* do not recurse into query structures */
 	context.recurse_sublink_testexpr = true;
-	context.transform_saop = true; 	/* transform scalar array ops */
-	context.max_size = 0;
 	context.transform_functions_returning_composite_values = true;
 
 	return eval_const_expressions_mutator(node, &context);
@@ -1929,8 +1894,6 @@ estimate_expression_value(PlannerInfo *root, Node *node)
 	context.transform_stable_funcs = true;	/* unsafe transformations OK */
 	context.recurse_queries = false; /* do not recurse into query structures */
 	context.recurse_sublink_testexpr = true;
-	context.transform_saop = true; 	/* transform scalar array ops */
-	context.max_size = 0;
 	context.transform_functions_returning_composite_values = true;
 
 	return eval_const_expressions_mutator(node, &context);
@@ -2599,7 +2562,7 @@ eval_const_expressions_mutator(Node *node,
 
         return (Node *) saop; /* this has been walked and is a new one */
 	}
-	if (IsA(node, ArrayExpr) && context->transform_saop)
+	if (IsA(node, ArrayExpr))
 	{
 		ArrayExpr  *arrayexpr = (ArrayExpr *) node;
 		ArrayExpr  *newarray;
@@ -3203,12 +3166,6 @@ simplify_function(Oid funcid, Oid result_type, int32 result_typmod,
 	newexpr = evaluate_function(funcid, result_type, result_typmod, *args,
 								func_tuple, context);
 
-	if (large_const(newexpr, context->max_size))
-	{
-		// folded expression prohibitively large
-		newexpr = NULL;
-	}
-
 	if (!newexpr && allow_inline)
 		newexpr = inline_function(funcid, result_type, *args,
 								  func_tuple, context);
@@ -3289,35 +3246,6 @@ add_function_defaults(List *args, Oid result_type, HeapTuple func_tuple)
 	make_fn_arguments(NULL, args, actual_arg_types, declared_arg_types);
 
 	return args;
-}
-
-/*
- * large_const: check if given expression is a Const expression larger than
- * the given size
- *
- */
-static bool
-large_const(Expr *expr, Size max_size)
-{
-	if (NULL == expr || 0 == max_size)
-	{
-		return false;
-	}
-	
-	if (!IsA(expr, Const))
-	{
-		return false;
-	}
-	
-	Const *const_expr = (Const *) expr;
-	
-	if (const_expr->constisnull)
-	{
-		return false;
-	}
-	
-	Size size = datumGetSize(const_expr->constvalue, const_expr->constbyval, const_expr->constlen);
-	return size > max_size;
 }
 
 /*
