@@ -1523,7 +1523,7 @@ Optional Features:
   --enable-debugbreak     enable debug_break and debug_break_n (for debugging)
   --enable-ntuplestore    enable debug_ntuplestore (for debugging)
   --enable-testutils      enable testing utilities
-  --enable-orca           enable ORCA optimizer
+  --disable-orca          disable ORCA optimizer
   --enable-codegen        enable code generation
   --enable-snmp           enable snmp for MIB and alerts via TRAP/INFORM
   --enable-ddboost        enable DD Boost support
@@ -5709,7 +5709,9 @@ $as_echo "#define USE_ORCA 1" >>confdefs.h
   esac
 
 else
-  enable_orca=no
+  enable_orca=yes
+
+$as_echo "#define USE_ORCA 1" >>confdefs.h
 
 fi
 
