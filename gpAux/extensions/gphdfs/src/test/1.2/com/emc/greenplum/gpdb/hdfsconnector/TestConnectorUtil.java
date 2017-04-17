@@ -152,6 +152,32 @@ public class TestConnectorUtil  {
 	}
 
 	/*
+	 * test avro insert null (smallint, bytea)
+	 */
+	@Test
+	public void test_avro_null(){
+		AvroFileWriter aWriter = new AvroFileWriter();
+		GPDBWritable gWritable = new GPDBWritable(new int[]{GPDBWritable.SMALLINT, GPDBWritable.BYTEA});
+		try {
+			String avroSchema = "{\"type\":\"record\",\"name\":\"test\",\"fields\":["
+					+ "{\"name\":\"c1\",\"type\":[\"int\",\"null\"]},"
+							+ "{\"name\":\"c2\",\"type\":[\"bytes\",\"null\"]}]}";
+			Schema schema = new Schema.Parser().parse(avroSchema);
+			GenericRecord record = new GenericData.Record(schema);
+			gWritable.setShort(0, null);
+			gWritable.setBytes(1, null);
+			aWriter.fillRecord(record, gWritable, schema);
+
+			assertEquals(record.get(0), null);
+			assertEquals(record.get(1), null);
+		} catch (TypeMismatchException e) {
+			fail(e.getMessage());
+		} catch (IOException e) {
+			fail(e.getMessage());
+		}
+	}
+
+	/*
 	 * test parquet insert null
 	 */
 	@Test
