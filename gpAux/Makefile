@@ -983,6 +983,19 @@ ifeq "$(findstring $(BLD_ARCH),aix5_ppc_32 aix5_ppc_64 win32 win64)" ""
 	# Copy curl header file
 	cp -rp $(BLD_THIRDPARTY_INCLUDE_DIR)/curl $(INSTLOC)/include/
 endif
+
+# Copy curl binary file into bin directory (only for server builds).
+ifneq "$(BLD_GPDB_BUILDSET)" "partial"
+	@if [ -f $(BLD_THIRDPARTY_BIN_DIR)/curl ]; then \
+		echo "Copying $(BLD_THIRDPARTY_BIN_DIR)/curl into $(INSTLOC)/bin/"; \
+		cp -p $(BLD_THIRDPARTY_BIN_DIR)/curl $(INSTLOC)/bin/; \
+	else \
+	    echo "INFO: curl binary not found on this platform: $(BLD_ARCH)"; \
+	    exit 1; \
+	fi
+endif
+
+	# Copy in openssl files needed by gpperfmon
 ifeq "$(findstring $(BLD_ARCH),aix5_ppc_32 win32 win64)" ""
 ifneq "$(BLD_ARCH)" "osx104_x86"
 	cp -rp $(BLD_THIRDPARTY_BIN_DIR)/openssl $(INSTLOC)/bin/
