@@ -10,14 +10,18 @@ create table readxml (text xml);
 \copy readxml from 'data/CD.xml' with escape 'off' newline as 'CRLF';
 
 select xml_in('<a></a>');
+\set verbosity terse
 select xml_in('<a></>');
+\set verbosity default
 select xml_out((select xml_in('<a></a>')));
 select xml_out((select xml_in('<a>hello</a>')));
 select xml_out((select * from readxml));
 
 --negative test
 
+\set verbosity terse
 select xml_out((select xml_in('<a>hello<a>')));
+\set verbosity default
 
 select xmlcomment(E'<a>hello<\a>');
 select xmlcomment('adsfasdfasdfsadf');
