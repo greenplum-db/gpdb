@@ -56,10 +56,7 @@ test: partition partition1 partition_indexing parruleord
 test: partition_locking
 test: vacuum_gp
 
-# FIXME: Temporarily disabled, because it trips an assertion. It's probably
-# harmless, but need to investigate and fix. Also, the number of errors put
-# in the error table, and hence the output, varies between runs.
-#test: sreh
+test: sreh
 
 # Disabled tests. XXX: Why are these disabled?
 #test: olap_window
