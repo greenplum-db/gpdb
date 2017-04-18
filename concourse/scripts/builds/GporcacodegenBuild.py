@@ -9,7 +9,6 @@ class GporcacodegenBuild(GpdbBuildBase):
 
     def configure(self):
         return subprocess.call(' '.join(["./configure",
-                                         "--enable-orca",
                                          "--enable-codegen",
                                          "--enable-mapreduce",
                                          "--with-perl",

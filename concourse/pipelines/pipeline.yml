@@ -561,6 +561,7 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       MAKE_TEST_COMMAND: sub_transaction_limit_removal
+      BLDWRAP_POSTGRES_CONF_ADDONS: fsync=off
       TEST_OS: centos
 
 - name: gpperfmon
