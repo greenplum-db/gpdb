@@ -3042,17 +3042,4 @@ gpdb::FMDCacheNeedsReset
 	return true;
 }
 
-bool
-gpdb::FPartialLogicalIndex
-		(
-			const LogicalIndexInfo *logicalIndexInfo
-		)
-{
-	// A logical index is complete when it's on all leaf partitions
-	// A partial logical index will have part constraints or default levels
-	// set
-	// c.f. BuildLogicalIndexInfo in cdbpartindex.c
-	return logicalIndexInfo->partCons || logicalIndexInfo->defaultLevels;
-}
-
 // EOF

@@ -343,10 +343,7 @@ CTranslatorRelcacheToDXL::PlIndexOidsPartTable
 	for (ULONG ul = 0; ul < ulIndexes; ul++)
 	{
 		LogicalIndexInfo *pidxinfo = (plgidx->logicalIndexInfo)[ul];
-		if (!gpdb::FPartialLogicalIndex(pidxinfo))
-		{
-			plOids = gpdb::PlAppendOid(plOids, pidxinfo->logicalIndexOid);
-		}
+		plOids = gpdb::PlAppendOid(plOids, pidxinfo->logicalIndexOid);
 	}
 	
 	gpdb::GPDBFree(plgidx);
@@ -1227,7 +1224,7 @@ CTranslatorRelcacheToDXL::PmdindexPartTable
 		}
 	}
 
-	BOOL fPartial = gpdb::FPartialLogicalIndex(pidxinfo);
+	BOOL fPartial = (NULL != pnodePartCnstr || NIL != plDefaultLevels);
 
 	if (NULL == pnodePartCnstr)
 	{
