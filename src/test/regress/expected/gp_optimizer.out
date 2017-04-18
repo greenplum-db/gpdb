@@ -8228,21 +8228,27 @@ insert into orca.t_date values('01-03-2012'::date,6,'tag1','tag2');
 insert into orca.t_date values('01-03-2012'::date,7,'tag1','tag2');
 insert into orca.t_date values('01-03-2012'::date,8,'tag1','tag2');
 insert into orca.t_date values('01-03-2012'::date,9,'tag1','tag2');
+set optimizer_enable_partial_index=on;
 set optimizer_enable_space_pruning=off;
 set optimizer_enable_constant_expression_evaluation=on;
 set optimizer_enumerate_plans=on;
+set optimizer_plan_id = 2;
 explain select * from orca.t_date where user_id=9;
-                                              QUERY PLAN                                              
-------------------------------------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=28)
-   ->  Sequence  (cost=0.00..431.00 rows=1 width=28)
-         ->  Partition Selector for t_date (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
-               Partitions selected: 6 (out of 6)
-         ->  Dynamic Table Scan on t_date (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=28)
-               Filter: user_id = 9::numeric
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..437.00 rows=1 width=28)
+   ->  Sequence  (cost=0.00..437.00 rows=1 width=28)
+         ->  Partition Selector for t_date (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
+               Partitions selected:  6 (out of 6)
+         ->  Result  (cost=0.00..437.00 rows=1 width=28)
+               ->  Append  (cost=0.00..437.00 rows=1 width=28)
+                     ->  Dynamic Index Scan on t_date (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=58)
+                           Index Cond: user_id = 9::numeric
+                     ->  Dynamic Table Scan on t_date (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=58)
+                           Filter: user_id = 9::numeric
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 2.22.0
-(8 rows)
+ Optimizer status: PQO version 1.602
+(12 rows)
 
 select * from orca.t_date where user_id=9;
    timest   | user_id | tag1  | tag2  
@@ -8281,18 +8287,23 @@ insert into orca.t_text values('01-03-2012'::date,9,'ugly','tag2');
 set optimizer_enable_space_pruning=off;
 set optimizer_enable_constant_expression_evaluation=on;
 set optimizer_enumerate_plans=on;
+set optimizer_plan_id = 2;
 explain select * from orca.t_text where user_id=9;
-                                              QUERY PLAN                                              
-------------------------------------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=28)
-   ->  Sequence  (cost=0.00..431.00 rows=1 width=28)
-         ->  Partition Selector for t_text (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
-               Partitions selected: 3 (out of 3)
-         ->  Dynamic Table Scan on t_text (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=28)
-               Filter: user_id = 9::numeric
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..437.00 rows=1 width=28)
+   ->  Sequence  (cost=0.00..437.00 rows=1 width=28)
+         ->  Partition Selector for t_text (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
+               Partitions selected:  3 (out of 3)
+         ->  Result  (cost=0.00..437.00 rows=1 width=28)
+               ->  Append  (cost=0.00..437.00 rows=1 width=28)
+                     ->  Dynamic Index Scan on t_text (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=58)
+                           Index Cond: user_id = 9::numeric
+                     ->  Dynamic Table Scan on t_text (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=58)
+                           Filter: user_id = 9::numeric
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 2.22.0
-(8 rows)
+ Optimizer status: PQO version 1.602
+(12 rows)
 
 select * from orca.t_text where user_id=9;
    timest   | user_id | tag1  | tag2  
@@ -8374,6 +8385,7 @@ select enable_xform('CXformDynamicGet2DynamicTableScan');
 (1 row)
 
 reset optimizer_enable_constant_expression_evaluation;
+reset optimizer_enable_partial_index;
 -- test that constant expression evaluation works with integers
 drop table if exists orca.t_ceeval_ints;
 NOTICE:  table "t_ceeval_ints" does not exist, skipping
@@ -8390,22 +8402,28 @@ insert into orca.t_ceeval_ints values(2, 100, 'tag1', 'tag2');
 insert into orca.t_ceeval_ints values(3, 100, 'tag1', 'tag2');
 insert into orca.t_ceeval_ints values(4, 101, 'tag1', 'tag2');
 insert into orca.t_ceeval_ints values(5, 102, 'tag1', 'tag2');
+set optimizer_enable_partial_index=on;
 set optimizer_enable_space_pruning=off;
 set optimizer_enable_constant_expression_evaluation=on;
 set optimizer_use_external_constant_expression_evaluation_for_ints = on;
 set optimizer_enumerate_plans=on;
+set optimizer_plan_id = 2;
 explain select * from orca.t_ceeval_ints where user_id=4;
-                                                 QUERY PLAN                                                  
--------------------------------------------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=28)
-   ->  Sequence  (cost=0.00..431.00 rows=1 width=28)
-         ->  Partition Selector for t_ceeval_ints (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
-               Partitions selected: 3 (out of 3)
-         ->  Dynamic Table Scan on t_ceeval_ints (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=28)
-               Filter: user_id = 4::numeric
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..437.00 rows=1 width=28)
+   ->  Sequence  (cost=0.00..437.00 rows=1 width=28)
+         ->  Partition Selector for t_ceeval_ints (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
+               Partitions selected:  3 (out of 3)
+         ->  Result  (cost=0.00..437.00 rows=1 width=28)
+               ->  Append  (cost=0.00..437.00 rows=1 width=28)
+                     ->  Dynamic Index Scan on t_ceeval_ints (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=58)
+                           Index Cond: user_id = 4::numeric
+                     ->  Dynamic Table Scan on t_ceeval_ints (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=58)
+                           Filter: user_id = 4::numeric
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 2.22.0
-(8 rows)
+ Optimizer status: PQO version 1.602
+(12 rows)
 
 select * from orca.t_ceeval_ints where user_id=4;
  user_id | category_id | tag1  | tag2  
@@ -8417,6 +8435,7 @@ reset optimizer_enable_space_pruning;
 reset optimizer_enumerate_plans;
 reset optimizer_use_external_constant_expression_evaluation_for_ints;
 reset optimizer_enable_constant_expression_evaluation;
+reset optimizer_enable_partial_index;
 -- test project elements in TVF
 CREATE FUNCTION orca.csq_f(a int) RETURNS int AS $$ select $1 $$ LANGUAGE SQL;
 CREATE TABLE orca.csq_r(a int);
@@ -9721,6 +9740,7 @@ select disable_xform('CXformInnerJoin2NLJoin');
  CXformInnerJoin2NLJoin is disabled
 (1 row)
 
+set optimizer_enable_partial_index=on;
 set optimizer_enable_indexjoin=on;
 -- force_explain
 set optimizer_segments = 3;
@@ -9733,36 +9753,49 @@ WHERE tq.sym = tt.symbol AND
       tt.event_ts <  tq.end_ts
 GROUP BY 1
 ORDER BY 1 asc ;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-                                                                QUERY PLAN                                                                 
--------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=240615.63..240618.13 rows=1000 width=16)
-   Merge Key: (tt.event_ts / 100000 / 5 * 5)
-   ->  Sort  (cost=240615.63..240618.13 rows=334 width=16)
-         Sort Key: (tt.event_ts / 100000 / 5 * 5)
-         ->  HashAggregate  (cost=240553.30..240565.80 rows=334 width=16)
-               Group By: (tt.event_ts / 100000 / 5 * 5)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=240510.80..240538.30 rows=334 width=16)
-                     Hash Key: (tt.event_ts / 100000 / 5 * 5)
-                     ->  HashAggregate  (cost=240510.80..240518.30 rows=334 width=16)
-                           Group By: tt.event_ts / 100000 / 5 * 5
-                           ->  Hash Join  (cost=604.00..240341.56 rows=11283 width=8)
-                                 Hash Cond: tq.sym::bpchar = tt.symbol
-                                 Join Filter: tt.event_ts >= tq.ets AND tt.event_ts < tq.end_ts AND plusone(tq.bid_price) < tt.trade_price
-                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1424.00 rows=13600 width=98)
-                                       Hash Key: tq.sym
-                                       ->  Append  (cost=0.00..608.00 rows=13600 width=98)
-                                             ->  Seq Scan on my_tq_agg_opt_part_1_prt_p1 tq  (cost=0.00..304.00 rows=6800 width=98)
-                                             ->  Seq Scan on my_tq_agg_opt_part_1_prt_p2 tq  (cost=0.00..304.00 rows=6800 width=98)
-                                 ->  Hash  (cost=324.00..324.00 rows=7467 width=108)
-                                       ->  Seq Scan on my_tt_agg_opt tt  (cost=0.00..324.00 rows=7467 width=108)
+                                                                                                                            QUERY PLAN                                                                                                                             
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ GroupAggregate  (cost=0.00..1305.01 rows=1 width=16)
+   Group By: fivemin
+   ->  Gather Motion 2:1  (slice3; segments: 2)  (cost=0.00..1305.01 rows=1 width=16)
+         Merge Key: fivemin
+         ->  Result  (cost=0.00..1305.01 rows=1 width=16)
+               ->  GroupAggregate  (cost=0.00..1305.01 rows=1 width=16)
+                     Group By: fivemin
+                     ->  Sort  (cost=0.00..1305.01 rows=1 width=8)
+                           Sort Key: fivemin
+                           ->  Result  (cost=0.00..1305.01 rows=1 width=8)
+                                 ->  Sequence  (cost=0.00..1305.01 rows=1 width=8)
+                                       ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=1 width=1)
+                                             ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
+                                                   ->  Table Scan on my_tt_agg_opt  (cost=0.00..431.00 rows=1 width=62)
+                                       ->  Sequence  (cost=0.00..874.01 rows=1 width=8)
+                                             ->  Partition Selector for my_tq_agg_opt_part (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
+                                                   Partitions selected:  2 (out of 2)
+                                             ->  Result  (cost=0.00..874.01 rows=1 width=8)
+                                                   ->  Append  (cost=0.00..874.01 rows=1 width=8)
+                                                         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=132)
+                                                               Join Filter: true
+                                                               ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..431.00 rows=2 width=62)
+                                                                     ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=1 width=62)
+                                                               ->  Dynamic Index Scan on my_tq_agg_opt_part (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=70)
+                                                                     Index Cond: public.my_tq_agg_opt_part.ets <= "outer".event_ts AND public.my_tq_agg_opt_part.end_ts > "outer".event_ts
+                                                                     Filter: public.my_tq_agg_opt_part.sym::bpchar = "outer".symbol AND plusone(public.my_tq_agg_opt_part.bid_price) < "outer".trade_price
+                                                         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=132)
+                                                               Join Filter: true
+                                                               ->  Broadcast Motion 2:2  (slice2; segments: 2)  (cost=0.00..431.00 rows=2 width=62)
+                                                                     ->  Shared Scan (share slice:id 2:0)  (cost=0.00..431.00 rows=1 width=62)
+                                                               ->  Dynamic Index Scan on my_tq_agg_opt_part (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=70)
+                                                                     Index Cond: public.my_tq_agg_opt_part.ets <= "outer".event_ts
+                                                                     Filter: public.my_tq_agg_opt_part.sym::bpchar = "outer".symbol AND plusone(public.my_tq_agg_opt_part.bid_price) < "outer".trade_price AND "outer".event_ts < public.my_tq_agg_opt_part.end_ts
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: legacy query optimizer
-(22 rows)
+ Optimizer status: PQO version 1.602
+(35 rows)
 
 reset optimizer_segments;
 reset optimizer_enable_constant_expression_evaluation;
 reset optimizer_enable_indexjoin;
+reset optimizer_enable_partial_index;
 select enable_xform('CXformInnerJoin2DynamicIndexGetApply');
                   enable_xform                   
 -------------------------------------------------

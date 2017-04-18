@@ -522,9 +522,11 @@ insert into orca.t_date values('01-03-2012'::date,7,'tag1','tag2');
 insert into orca.t_date values('01-03-2012'::date,8,'tag1','tag2');
 insert into orca.t_date values('01-03-2012'::date,9,'tag1','tag2');
 
+set optimizer_enable_partial_index=on;
 set optimizer_enable_space_pruning=off;
 set optimizer_enable_constant_expression_evaluation=on;
 set optimizer_enumerate_plans=on;
+set optimizer_plan_id = 2;
 explain select * from orca.t_date where user_id=9;
 select * from orca.t_date where user_id=9;
 
@@ -560,6 +562,7 @@ insert into orca.t_text values('01-03-2012'::date,9,'ugly','tag2');
 set optimizer_enable_space_pruning=off;
 set optimizer_enable_constant_expression_evaluation=on;
 set optimizer_enumerate_plans=on;
+set optimizer_plan_id = 2;
 
 explain select * from orca.t_text where user_id=9;
 select * from orca.t_text where user_id=9;
@@ -612,6 +615,7 @@ select * from orca.t_employee where user_id = 2;
 select enable_xform('CXformDynamicGet2DynamicTableScan');
 
 reset optimizer_enable_constant_expression_evaluation;
+reset optimizer_enable_partial_index;
 
 -- test that constant expression evaluation works with integers
 drop table if exists orca.t_ceeval_ints;
@@ -628,10 +632,12 @@ insert into orca.t_ceeval_ints values(3, 100, 'tag1', 'tag2');
 insert into orca.t_ceeval_ints values(4, 101, 'tag1', 'tag2');
 insert into orca.t_ceeval_ints values(5, 102, 'tag1', 'tag2');
 
+set optimizer_enable_partial_index=on;
 set optimizer_enable_space_pruning=off;
 set optimizer_enable_constant_expression_evaluation=on;
 set optimizer_use_external_constant_expression_evaluation_for_ints = on;
 set optimizer_enumerate_plans=on;
+set optimizer_plan_id = 2;
 
 explain select * from orca.t_ceeval_ints where user_id=4;
 select * from orca.t_ceeval_ints where user_id=4;
@@ -640,6 +646,7 @@ reset optimizer_enable_space_pruning;
 reset optimizer_enumerate_plans;
 reset optimizer_use_external_constant_expression_evaluation_for_ints;
 reset optimizer_enable_constant_expression_evaluation;
+reset optimizer_enable_partial_index;
 
 -- test project elements in TVF
 
@@ -1178,6 +1185,7 @@ select disable_xform('CXformInnerJoin2HashJoin');
 select disable_xform('CXformInnerJoin2IndexGetApply');
 select disable_xform('CXformInnerJoin2NLJoin');
 
+set optimizer_enable_partial_index=on;
 set optimizer_enable_indexjoin=on;
 
 -- force_explain
@@ -1194,6 +1202,7 @@ ORDER BY 1 asc ;
 reset optimizer_segments;
 reset optimizer_enable_constant_expression_evaluation;
 reset optimizer_enable_indexjoin;
+reset optimizer_enable_partial_index;
 
 select enable_xform('CXformInnerJoin2DynamicIndexGetApply');
 select enable_xform('CXformInnerJoin2HashJoin');

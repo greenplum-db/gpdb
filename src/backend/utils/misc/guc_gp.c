@@ -548,6 +548,7 @@ bool		optimizer_apply_left_outer_to_union_all_disregarding_stats;
 bool		optimizer_enable_ctas;
 bool		optimizer_remove_order_below_dml;
 bool		optimizer_static_partition_selection;
+bool		optimizer_enable_partial_index;
 bool		optimizer_dml_triggers;
 bool		optimizer_dml_constraints;
 bool		optimizer_enable_master_only_queries;
@@ -3011,6 +3012,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_static_partition_selection,
+		true, NULL, NULL
+	},
+
+	{
+		{"optimizer_enable_partial_index", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enable heterogeneous index plans."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_partial_index,
 		true, NULL, NULL
 	},
 
