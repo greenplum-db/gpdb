@@ -24,6 +24,7 @@ test: bitmap_index gp_dump_query_oids analyze gp_owner_permission
 test: indexjoin as_alias regex_gp gpparams with_clause transient_types gp_rules
 # dispatch should always run seperately from other cases.
 test: dispatch
+test: lc_numeric_check
 
 # deadlock tests run separately - because we don't know which one gets stuck.
 test: deadlock
