@@ -81,6 +81,11 @@ throughout the codebase, but a few larger additions worth noting:
 
   Contains configuration files for the GPDB continuous integration system.
 
+* __ci/__
+
+  Contains configuration files for the GPDB continuous integration system.
+ 
+
 * __src/backend/cdb/__
 
   Contains larger Greenplum-specific backend modules. For example,
