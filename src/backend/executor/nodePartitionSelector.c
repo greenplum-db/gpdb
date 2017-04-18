@@ -146,8 +146,8 @@ ExecPartitionSelector(PartitionSelectorState *node)
 	PartitionSelector *ps = (PartitionSelector *) node->ps.plan;
 	EState	   *estate = node->ps.state;
 	ExprContext *econtext = node->ps.ps_ExprContext;
-	TupleTableSlot *inputSlot;
-	TupleTableSlot *candidateOutputSlot;
+	TupleTableSlot *inputSlot = NULL;
+	TupleTableSlot *candidateOutputSlot = NULL;
 
 	if (ps->staticSelection)
 	{
@@ -195,7 +195,10 @@ ExecPartitionSelector(PartitionSelectorState *node)
 	econtext->ecxt_outertuple = inputSlot;
 	econtext->ecxt_scantuple = inputSlot;
 
-	candidateOutputSlot = ExecProject(node->ps.ps_ProjInfo, NULL);
+	if (NULL != inputSlot)
+	{
+		candidateOutputSlot = ExecProject(node->ps.ps_ProjInfo, NULL);
+	}
 
 	/*
 	 * If we have a partitioning projection, project the input tuple
