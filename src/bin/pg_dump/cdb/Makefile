@@ -27,12 +27,13 @@ DDBOOSTLIB += -lDDBoost
 endif
 
 ifeq ($(enable_netbackup), yes)
+NETBACKUPLIB77 += -L$(top_srcdir)/gpAux/ext/$(BLD_ARCH)/Netbackup/nbu77/lib -lxbsa64
 NETBACKUPLIB76 += -L$(top_srcdir)/gpAux/ext/$(BLD_ARCH)/Netbackup/nbu76/lib -lxbsa64
 NETBACKUPLIB75 += -L$(top_srcdir)/gpAux/ext/$(BLD_ARCH)/Netbackup/nbu75/lib -lxbsa64 -lnbclientcST -lnbbasecST -lvxcPBXST
 NETBACKUPLIB71 += -L$(top_srcdir)/gpAux/ext/$(BLD_ARCH)/Netbackup/nbu71/lib -lxbsa64 -lnbclientcST -lnbbasecST -lvxcPBXST
-GPBSALIB += -L$(top_builddir)/src/bin/pg_dump/cdb -lgpbsa -Wl,-rpath-link,'$(top_builddir)/gpAux/ext/$(BLD_ARCH)/Netbackup/nbu76/lib'
-override CFLAGS += -I$(top_builddir)/gpAux/ext/$(BLD_ARCH)/Netbackup/nbu76/include
-override CPPFLAGS += -I$(top_builddir)/gpAux/ext/$(BLD_ARCH)/Netbackup/nbu76/include
+GPBSALIB += -L$(top_builddir)/src/bin/pg_dump/cdb -lgpbsa -Wl,-rpath-link,'$(top_builddir)/gpAux/ext/$(BLD_ARCH)/Netbackup/nbu77/lib'
+override CFLAGS += -I$(top_builddir)/gpAux/ext/$(BLD_ARCH)/Netbackup/nbu77/include
+override CPPFLAGS += -I$(top_builddir)/gpAux/ext/$(BLD_ARCH)/Netbackup/nbu77/include
 endif
 
 PGDUMP_SRCDIR= $(top_srcdir)/src/bin/pg_dump
@@ -59,7 +60,7 @@ $(PGDUMP_SRC): % : $(PGDUMP_DIR)/%
 all: submake-libpq submake-libpgport cdb_dump cdb_dump_agent cdb_restore \
 	cdb_restore_agent gpddboost cdb_bsa_dump_agent cdb_bsa_restore_agent \
 	cdb_bsa_query_agent cdb_bsa_delete_agent \
-	libgpbsa.so libgpbsa76.so libgpbsa75.so libgpbsa71.so
+	libgpbsa.so libgpbsa77.so libgpbsa76.so libgpbsa75.so libgpbsa71.so
 
 ifeq ($(enable_netbackup), yes)
 cdb_bsa_dump_agent cdb_bsa_restore_agent cdb_bsa_query_agent cdb_bsa_delete_agent: libgpbsa.so
@@ -80,6 +81,9 @@ cdb_restore_agent: cdb_restore_agent.o cdb_backup_archiver.o cdb_backup_status.o
 gpddboost: cdb_ddboost_util.o cdb_backup_status.o cdb_seginst.o cdb_backup_state.o cdb_table.o cdb_dump_util.o cdb_lockbox.o dumputils.o | $(libpq_builddir)/libpq.a $(KEYWRDOBJS)
 	$(CC) $(CFLAGS) $^ $(KEYWRDOBJS) $(libpq) $(LDFLAGS) $(DDBOOSTLIB) $(LIBS) -o $@$(X)
 
+libgpbsa77.so: cdb_bsa_util.c $(libpq_builddir)/libpq.a
+	$(CC) $(CFLAGS_SL) $(CPPFLAGS) cdb_bsa_util.c $(libpq) $(LDFLAGS) -shared $(DDBOOSTLIB) $(NETBACKUPLIB77) $(LIBS) -o $@
+
 libgpbsa76.so: cdb_bsa_util.c $(libpq_builddir)/libpq.a
 	$(CC) $(CFLAGS_SL) $(CPPFLAGS) cdb_bsa_util.c $(libpq) $(LDFLAGS) -shared $(DDBOOSTLIB) $(NETBACKUPLIB76) $(LIBS) -o $@
 
@@ -89,8 +93,8 @@ libgpbsa75.so: cdb_bsa_util.c $(libpq_builddir)/libpq.a
 libgpbsa71.so: cdb_bsa_util.o $(libpq_builddir)/libpq.a
 	$(CC) $(CFLAGS_SL) $(CPPFLAGS) cdb_bsa_util.c $(libpq) $(LDFLAGS) -shared $(DDBOOSTLIB) $(NETBACKUPLIB71) $(LIBS) -o $@
 
-libgpbsa.so: libgpbsa76.so
-	cp libgpbsa76.so libgpbsa.so
+libgpbsa.so: libgpbsa77.so
+	cp libgpbsa77.so libgpbsa.so
 
 cdb_bsa_dump_agent: cdb_bsa_dump_agent.o cdb_dump_util.o cdb_lockbox.o dumputils.o | $(libpq_builddir)/libpq.a $(KEYWRDOBJS)
 	$(CC) $(CFLAGS) $^ $(KEYWRDOBJS) $(libpq) $(LDFLAGS) $(DDBOOSTLIB) $(GPBSALIB) $(LIBS) -o $@$(X)
@@ -110,6 +114,7 @@ install: all installdirs
 	$(INSTALL_PROGRAM) cdb_dump_agent$(X) $(DESTDIR)$(bindir)/gp_dump_agent$(X)
 	$(INSTALL_PROGRAM) cdb_restore_agent$(X) $(DESTDIR)$(bindir)/gp_restore_agent$(X)
 	$(INSTALL_PROGRAM) gpddboost$(X) $(DESTDIR)$(bindir)/gpddboost$(X)
+	$(INSTALL_PROGRAM) libgpbsa77.so $(DESTDIR)$(libdir)/nbu77/lib/libgpbsa.so
 	$(INSTALL_PROGRAM) libgpbsa76.so $(DESTDIR)$(libdir)/nbu76/lib/libgpbsa.so
 	$(INSTALL_PROGRAM) libgpbsa75.so $(DESTDIR)$(libdir)/nbu75/lib/libgpbsa.so
 	$(INSTALL_PROGRAM) libgpbsa71.so $(DESTDIR)$(libdir)/nbu71/lib/libgpbsa.so
