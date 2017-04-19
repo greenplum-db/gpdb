@@ -68,7 +68,7 @@ rijndael.tbl:
 
 installcheck: prepare_pgcrypto_sql
 
-prepare_dblink_sql:
-       cp $(GPHOME)/share/postgresql/contrib/pgcrypto.sql ./pgcrypto.sql
+prepare_pgcrypto_sql:
+	cp $(GPHOME)/share/postgresql/contrib/pgcrypto.sql ./pgcrypto.sql
 
 .PHONY: prepare_pgcrypto_sql
