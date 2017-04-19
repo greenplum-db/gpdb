@@ -1448,34 +1448,35 @@ static char *formDDBoostFileName(char *pszBackupKey, bool isPostData, char *dd_b
 	else
 		snprintf(szFileNamePrefix, 1 + MAXPGPATH, "%s/%sgp_dump_%d_%d_", dir_name, DUMP_PREFIX, instid, segid);
 
-		/* Now add up the length of the pieces */
-		len += strlen(szFileNamePrefix);
-		len += strlen(pszBackupKey);
+	/* Now add up the length of the pieces */
+	len += strlen(szFileNamePrefix);
+	len += strlen(pszBackupKey);
 
 	if (isPostData)
 		len += strlen("_post_data");
-		if (len > MAXPGPATH)
-		{
-			   mpp_err_msg(logInfo, progname, "Length > MAX for filename\n");
-			   return NULL;
-		}
 
-		pszBackupFileName = (char *) malloc(sizeof(char) * (1 + len));
-		if (pszBackupFileName == NULL)
-		{
-			  mpp_err_msg(logInfo, progname, "Error out of memory\n");
-			  return NULL;
-		}
+	if (len > MAXPGPATH)
+	{
+		mpp_err_msg(logInfo, progname, "Length > MAX for filename\n");
+		return NULL;
+	}
 
-	   	memset(pszBackupFileName, 0, len + 1 );
+	pszBackupFileName = (char *) malloc(sizeof(char) * (1 + len));
+	if (pszBackupFileName == NULL)
+	{
+		mpp_err_msg(logInfo, progname, "Error out of memory\n");
+		return NULL;
+	}
 
-		strcat(pszBackupFileName, szFileNamePrefix);
-		strcat(pszBackupFileName, pszBackupKey);
+	memset(pszBackupFileName, 0, len + 1 );
 
-		if (isPostData)
-				strcat(pszBackupFileName, "_post_data");
+	strcat(pszBackupFileName, szFileNamePrefix);
+	strcat(pszBackupFileName, pszBackupKey);
 
-		return pszBackupFileName;
+	if (isPostData)
+		strcat(pszBackupFileName, "_post_data");
+
+	return pszBackupFileName;
 }
 
 int
