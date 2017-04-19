@@ -489,8 +489,11 @@ pg_resgroup_get_status_kv(PG_FUNCTION_ARGS)
 			/* unknown property name */
 			nulls[2] = true;
 
-		snprintf(statValStr, sizeof(statValStr), "%d", statVal);
-		values[2] = CStringGetTextDatum(statValStr);
+		if (!nulls[2])
+		{
+			snprintf(statValStr, sizeof(statValStr), "%d", statVal);
+			values[2] = CStringGetTextDatum(statValStr);
+		}
 
 		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
 
