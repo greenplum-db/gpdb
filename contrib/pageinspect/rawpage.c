@@ -24,6 +24,8 @@
 #include "utils/builtins.h"
 #include "miscadmin.h"
 
+#include "cdb/cdbfilerepprimary.h"
+
 PG_MODULE_MAGIC;
 
 Datum		get_raw_page(PG_FUNCTION_ARGS);
