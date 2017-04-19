@@ -1741,6 +1741,7 @@ bool GangsExist(void)
 			availableReaderGangs1 != NIL);
 }
 
+#ifdef USE_ASSERT_CHECKING
 static bool
 readerGangsExist(void)
 {
@@ -1749,6 +1750,7 @@ readerGangsExist(void)
 			allocatedReaderGangs1 != NIL ||
 			availableReaderGangs1 != NIL);
 }
+#endif
 
 int largestGangsize(void)
 {

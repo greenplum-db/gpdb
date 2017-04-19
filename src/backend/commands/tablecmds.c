@@ -981,6 +981,7 @@ RelationToRemoveIsTemp(const RangeVar *relation, DropBehavior behavior)
 	return isTemp;
 }
 
+#ifdef USE_ASSERT_CHECKING
 static bool
 CheckExclusiveAccess(Relation rel)
 {
@@ -992,6 +993,7 @@ CheckExclusiveAccess(Relation rel)
 	}
 	return true;
 }
+#endif
 
 /*
  * Allocate new relfiles for the specified relation and schedule old
