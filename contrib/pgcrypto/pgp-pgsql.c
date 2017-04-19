@@ -17,7 +17,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.	IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -89,11 +89,11 @@ add_block_entropy(PX_MD *md, text *data)
 
 	px_add_entropy(sha1, 20);
 
-	memset(sha1, 0, 20);
+	px_memset(sha1, 0, 20);
 }
 
 /*
- * Mix user data into RNG.	It is for user own interests to have
+ * Mix user data into RNG.  It is for user own interests to have
  * RNG state shuffled.
  */
 static void
@@ -131,7 +131,7 @@ add_entropy(text *data1, text *data2, text *data3)
 		add_block_entropy(md, data3);
 
 	px_md_free(md);
-	memset(rnd, 0, sizeof(rnd));
+	px_memset(rnd, 0, sizeof(rnd));
 }
 
 /*
@@ -169,7 +169,7 @@ convert_to_utf8(text *src)
 static void
 clear_and_pfree(text *p)
 {
-	memset(p, 0, VARSIZE(p));
+	px_memset(p, 0, VARSIZE(p));
 	pfree(p);
 }
 
@@ -310,7 +310,7 @@ set_arg(PGP_Context *ctx, char *key, char *val,
 }
 
 /*
- * Find next word.	Handle ',' and '=' as words.  Skip whitespace.
+ * Find next word.  Handle ',' and '=' as words.  Skip whitespace.
  * Put word info into res_p, res_len.
  * Returns ptr to next word.
  */

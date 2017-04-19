@@ -20,7 +20,7 @@
   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-  NONINFRINGEMENT.	IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+  NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
   BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
@@ -118,10 +118,10 @@ mp_result	mp_int_mul_pow2(mp_int a, int p2, mp_int c);
 mp_result	mp_int_sqr(mp_int a, mp_int c);		/* c = a * a */
 
 mp_result
-mp_int_div(mp_int a, mp_int b,			/* q = a / b */
+mp_int_div(mp_int a, mp_int b,	/* q = a / b */
 		   mp_int q, mp_int r); /* r = a % b */
 mp_result
-mp_int_div_value(mp_int a, int value,			/* q = a / value */
+mp_int_div_value(mp_int a, int value,	/* q = a / value */
 				 mp_int q, int *r);		/* r = a % value */
 mp_result
 mp_int_div_pow2(mp_int a, int p2,		/* q = a / 2^p2  */

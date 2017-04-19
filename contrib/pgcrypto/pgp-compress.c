@@ -17,7 +17,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.	IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -175,7 +175,7 @@ compress_free(void *priv)
 	struct ZipStat *st = priv;
 
 	deflateEnd(&st->stream);
-	memset(st, 0, sizeof(*st));
+	px_memset(st, 0, sizeof(*st));
 	px_free(st);
 }
 
@@ -298,7 +298,7 @@ decompress_free(void *priv)
 	struct DecomprData *dec = priv;
 
 	inflateEnd(&dec->stream);
-	memset(dec, 0, sizeof(*dec));
+	px_memset(dec, 0, sizeof(*dec));
 	px_free(dec);
 }
 

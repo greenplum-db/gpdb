@@ -14,7 +14,7 @@ RESET client_min_messages;
 
 -- check for encoding fn's
 SELECT encode('foo', 'hex');
-SELECT pg_catalog.decode('666f6f', 'hex');
+SELECT decode('666f6f', 'hex');
 
 -- check error handling
 select gen_salt('foo');
