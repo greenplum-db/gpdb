@@ -21,7 +21,8 @@ WANTED_DIRS = \
 		pageinspect \
 		pg_upgrade \
 		pg_upgrade_support \
-		test_parser
+		test_parser \
+		pgcrypto
 
 ifeq ($(with_openssl),yes)
 WANTED_DIRS += sslinfo

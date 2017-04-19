@@ -27,6 +27,7 @@ all:
 	$(MAKE) -C contrib/indexscan all
 	$(MAKE) -C contrib/pg_upgrade_support all
 	$(MAKE) -C contrib/pg_upgrade all
+	$(MAKE) -C contrib/pgcrypto all
 	$(MAKE) -C gpAux/extensions mapreduce
 	$(MAKE) -C gpAux/gpperfmon all
 	@echo "All of Greenplum Database successfully made. Ready to install."
@@ -49,6 +50,7 @@ install:
 	$(MAKE) -C contrib/indexscan $@ 
 	$(MAKE) -C contrib/pg_upgrade_support $@
 	$(MAKE) -C contrib/pg_upgrade $@
+	$(MAKE) -C contrib/pgcrypto $@
 	$(MAKE) -C gpMgmt $@
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
@@ -72,6 +74,7 @@ installdirs uninstall:
 	$(MAKE) -C contrib/indexscan $@ 
 	$(MAKE) -C contrib/pg_upgrade_support $@
 	$(MAKE) -C contrib/pg_upgrade $@
+	$(MAKE) -C contrib/pgcrypto $@
 
 distprep:
 #	$(MAKE) -C doc $@
@@ -100,6 +103,7 @@ clean:
 	$(MAKE) -C contrib/indexscan $@
 	$(MAKE) -C contrib/pg_upgrade_support $@
 	$(MAKE) -C contrib/pg_upgrade $@
+	$(MAKE) -C contrib/pgcrypto $@
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
 	$(MAKE) -C gpMgmt $@
@@ -132,6 +136,7 @@ installcheck-world:
 	$(MAKE) -C contrib/extprotocol installcheck
 	$(MAKE) -C contrib/dblink installcheck
 	$(MAKE) -C contrib/indexscan installcheck
+	$(MAKE) -C contrib/pgcrypto installcheck
 	$(MAKE) -C gpAux/extensions installcheck
 	$(MAKE) -C src/bin/gpfdist installcheck
 	$(MAKE) -C src/interfaces/gppc installcheck
