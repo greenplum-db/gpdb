@@ -352,7 +352,7 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 	char		query[QUERY_ALLOC];
 	bool		bitmaphack_created = false;
 	Oid		   *numeric_types;
-	Oid		   *numeric_rels;
+	Oid		   *numeric_rels = NULL;
 	int			numeric_rel_num = 0;
 	char		typestr[QUERY_ALLOC];
 	int			i;
@@ -723,7 +723,7 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 			 * Find out if the curr->reloid in the list of numeric attribute
 			 * relations and only if found perform the below extra query
 			 */
-			if (numeric_rel_num > 0
+			if (numeric_rel_num > 0 && numeric_rels
 				&& curr->reloid >= numeric_rels[0] && curr->reloid <= numeric_rels[numeric_rel_num - 1])
 			{
 				for (j = 0; j < numeric_rel_num; j++)
