@@ -20,6 +20,10 @@
 os:
   - linux
 
+env:
+  - CODEGEN="--enable-codegen"
+  - CODEGEN=""
+
 language: c
 sudo: false
 
@@ -71,6 +75,8 @@ before_script:
   - cd ${TRAVIS_BUILD_DIR}/${APR_UTIL}
   - ./configure --prefix=${TRAVIS_BUILD_DIR}/tools --with-apr=${TRAVIS_BUILD_DIR}/${APR}
   - make install
+  - cd ${TRAVIS_BUILD_DIR}
+  - find ${TRAVIS_BUILD_DIR}/src/backend/codegen -name '*.cc' -or -name '*.h' | xargs ${TRAVIS_BUILD_DIR}/concourse/scripts/cpplint.py
 
 ## ----------------------------------------------------------------------
 ## Perform build:
