@@ -2612,22 +2612,12 @@
   <topic id="gp_connections_per_thread">
     <title>gp_connections_per_thread</title>
     <body>
-      <p>Controls the number of asynchronous threads (worker threads) that a Greenplum Database
-        query dispatcher (QD) generates when dispatching work to query executor processes on segment
-        instances when processing SQL queries. The value sets the number of primary segment
-        instances that a worker thread connects to when processing a query. For example, when the
-        value is 2 and there are 64 segment instances, a QD generates 32 worker threads to dispatch
-        a query plan work. Each thread is assigned to two segments.</p>
-      <p>For the default value, 0, a query dispatcher generates two types of threads: a main thread
-        that manages the dispatch of query plan work, and an interconnect thread. The main thread
-        also acts as a worker thread.</p>
-      <p>For a value greater than 0, a QD generates three types of threads: a main thread, one or
-        more worker threads, and an interconnect thread. When the value is equal to or greater than
-        the number of segment instances, a QD generates three threads: a main thread, a single
-        worker thread, and an interconnect thread.</p>
-      <p>The value does not need to be changed from the default unless there are known throughput
-        performance issues.</p>
-      <p>This parameter is master only and changing it requires a server restart.</p>
+      <p>A value larger than or equal to the number of primary segments means that each slice in a
+        query plan will get its own thread when dispatching to the segments. A value of 0 indicates
+        that the dispatcher should use a single thread when dispatching all query plan slices to a
+        segment. Lower values will use more threads, which utilizes more resources on the master.
+        Typically, the default does not need to be changed unless there is a known throughput
+        performance problem.</p>
       <table id="gp_connections_per_thread_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -2642,9 +2632,9 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">integer >= 0</entry>
-              <entry colname="col2">0</entry>
-              <entry colname="col3">master<p>restart</p></entry>
+              <entry colname="col1">integer</entry>
+              <entry colname="col2">64</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>

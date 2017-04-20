@@ -7,7 +7,8 @@
     <p>This specification describes the document format and schema for defining Greenplum MapReduce
       jobs. <note>Both the MapReduce tool (<codeph>gpmapreduce</codeph>) and its associated YAML
         specification are deprecated and will be removed in the next major release (6.x) of
-        Greenplum Database. Use other query formats, such as SQL or a procedural language extension, instead.</note></p>
+        Greenplum Database. Use other query formats, such as SQL or a procedural language extension,
+        instead.</note></p>
     <p><xref href="http://en.wikipedia.org/wiki/MapReduce" scope="external" format="html"
         >MapReduce</xref> is a programming model developed by Google for processing and generating
       large data sets on an array of commodity servers. Greenplum MapReduce allows programmers who
@@ -139,7 +140,7 @@ date: 1865
 <i>       - name</i><i>type</i>
      <xref href="#topic3/OPTIMIZE" format="dita">OPTIMIZE</xref>: STRICT IMMUTABLE
      <xref href="#topic3/MODE" format="dita">MODE</xref>: SINGLE | MULTI</codeblock>
-      <codeblock>  - <xref href="#/topic3/TRANSITION" format="dita">TRANSITION | CONSOLIDATE | FINALIZE</xref>:
+      <codeblock>  - <xref href="#topic3/TCF" format="dita">TRANSITION | CONSOLIDATE | FINALIZE</xref>:
      <xref href="#topic3/TCFNAME" format="dita">NAME</xref>: <i>function_name</i>
      <xref href="#topic3/FUNCTION" format="dita">FUNCTION</xref>: <i>function_definition</i>
      <xref href="#topic3/LANGUAGE" format="dita">LANGUAGE</xref>: perl | python | c

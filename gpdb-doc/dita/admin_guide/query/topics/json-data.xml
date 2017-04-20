@@ -392,7 +392,7 @@ SELECT '{"foo": [true, "bar"], "tags": {"a": 1, "b": null}}'::json;</pre>
                 <entry><codeph>anyelement</codeph>
                 </entry>
                 <entry>Expands the object in <codeph>from_json</codeph> to a row whose columns match
-                  the record type defined by base. See <xref href="#topic_gn4_x3w_mq/json-note"
+                  the record type defined by base. See <xref href="#topic_z5d_snw_2z/json-note"
                     format="dita">Note</xref>.</entry>
                 <entry>
                   <codeph>select * from json_populate_record(null::myrowtype,
@@ -412,7 +412,7 @@ SELECT '{"foo": [true, "bar"], "tags": {"a": 1, "b": null}}'::json;</pre>
                 </entry>
                 <entry>Expands the outermost array of objects in <codeph>from_json</codeph> to a set
                   of rows whose columns match the record type defined by <codeph>base</codeph>. See
-                    <xref href="#topic_gn4_x3w_mq/json-note" format="dita">Note</xref>.</entry>
+                    <xref href="#topic_z5d_snw_2z/json-note" format="dita">Note</xref>.</entry>
                 <entry>
                   <codeph>select * from json_populate_recordset(null::myrowtype,
                     '[{"a":1,"b":2},{"a":3,"b":4}]')</codeph>

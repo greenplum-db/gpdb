@@ -205,8 +205,8 @@
             <varname>data_type</varname>
           </pt>
           <pd>The data type of the column. This may include array specifiers.</pd>
-          <pd>For table columns that contain textual data, Specify the data
-            type <codeph>VARCHAR</codeph> or <codeph>TEXT</codeph>. Specifying the data type
+          <pd>For table columns that contain textual data, Specify the data type
+              <codeph>VARCHAR</codeph> or <codeph>TEXT</codeph>. Specifying the data type
               <codeph>CHAR</codeph> is not recommended. In Greenplum Database, the data types
               <codeph>VARCHAR</codeph> or <codeph>TEXT</codeph> handles padding added to the data
             (space characters added after the last non-space character) as significant characters,
@@ -642,13 +642,11 @@
             </li>
           </ul><p>The defaults can be set for a database, schema, and user. For information about
             setting storage options, see the server configuration parameter
-              <codeph>gp_default_storage_options</codeph><xref otherprops="op-hidden"
-              href="../config_params/guc_category-list.xml#gp_default_storage_options"
-                ><codeph>gp_default_storage_options</codeph></xref>.</p></li>
+              <codeph>gp_default_storage_options</codeph>.</p></li>
       </ul>
       <note type="important">The current Greenplum Database legacy optimizer allows list partitions
-        with multi-column (composite) partition keys. GPORCA does not support
-        composite keys, so Pivotal does not recommend using composite partition keys.</note>
+        with multi-column (composite) partition keys. GPORCA does not support composite keys, so
+        Pivotal does not recommend using composite partition keys.</note>
     </section>
     <section id="section6">
       <title>Examples</title>
