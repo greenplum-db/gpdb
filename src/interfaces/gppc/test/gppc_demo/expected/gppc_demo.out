@@ -239,12 +239,6 @@ SELECT byteafunc1(E'\\244\\233abc');
  \244\233abc
 (1 row)
 
-SELECT byteafunc2(E'\\244\\233abc');
- byteafunc2  
--------------
- \245\233abc
-(1 row)
-
 -- Numeric type
 DROP FUNCTION IF EXISTS numericfunc1(numeric);
 DROP FUNCTION IF EXISTS numericfunc2(numeric);
