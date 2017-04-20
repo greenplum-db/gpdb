@@ -137,9 +137,10 @@
             <codeph>$MASTER_DATA_DIRECTORY</codeph> and <codeph>$GPHOME</codeph> variables are
           set.</p>
         <ol>
-          <li id="pv158485">Download the PL/Java extension package from <xref
-              href="https://network.pivotal.io/products" scope="external" format="html"
-              class="- topic/xref ">Pivotal Network</xref> then copy it to the master host. </li>
+          <li id="pv158485">Download the PL/Java extension package from the Greenplum Database page
+            on <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
+              format="html" class="- topic/xref ">Pivotal Network</xref> then copy it to the master
+            host. </li>
           <li id="pv160918">Install the software extension package by running the
               <codeph>gppkg</codeph> command. This example installs the PL/Java extension package on
             a Linux
