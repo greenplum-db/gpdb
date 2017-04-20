@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planagg.c,v 1.36.2.2 2008/07/10 01:17:36 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planagg.c,v 1.41 2008/07/10 02:14:03 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -488,7 +488,6 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 	 */
 	memcpy(&subroot, root, sizeof(PlannerInfo));
 	subroot.parse = subparse = (Query *) copyObject(root->parse);
-	subroot.init_plans = NIL;
 	subparse->commandType = CMD_SELECT;
 	subparse->resultRelation = 0;
 	subparse->returningList = NIL;
@@ -570,11 +569,9 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 											 -1);
 
 	/*
-	 * Make sure the InitPlan gets into the outer list.  It has to appear
-	 * after any other InitPlans it might depend on, too (see comments in
-	 * ExecReScan).
+	 * Put the updated list of InitPlans back into the outer PlannerInfo.
 	 */
-	root->init_plans = list_concat(root->init_plans, subroot.init_plans);
+	root->init_plans = subroot.init_plans;
 }
 
 /*

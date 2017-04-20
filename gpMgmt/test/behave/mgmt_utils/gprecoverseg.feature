@@ -13,11 +13,11 @@ Feature: gprecoverseg tests
         And user can start transactions
         When the user runs "gprecoverseg -a"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should not print Unhandled exception in thread started by <bound method Worker.__bootstrap to stdout
+        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And the segments are synchronized
         When the user runs "gprecoverseg -ra"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should not print Unhandled exception in thread started by <bound method Worker.__bootstrap to stdout
+        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
 
     Scenario: Pid corresponds to a non postgres process
         Given the database is running
@@ -32,13 +32,13 @@ Feature: gprecoverseg tests
         And we generate the postmaster.pid file with the background pid on "primary" segment
         And the user runs "gprecoverseg -a"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should not print Unhandled exception in thread started by <bound method Worker.__bootstrap to stdout
-        And gprecoverseg should print Skipping to stop segment.* on host.* since it is not a postgres process to stdout
+        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
+        And gprecoverseg should print "Skipping to stop segment.* on host.* since it is not a postgres process" to stdout
         And all the segments are running
         And the segments are synchronized
         When the user runs "gprecoverseg -ra"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should not print Unhandled exception in thread started by <bound method Worker.__bootstrap to stdout
+        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And the segments are synchronized
         And the backup pid file is deleted on "primary" segment
         And the background pid is killed on "primary" segment
@@ -54,12 +54,12 @@ Feature: gprecoverseg tests
         And we generate the postmaster.pid file with a non running pid on the same "primary" segment
         And the user runs "gprecoverseg -a"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should not print Unhandled exception in thread started by <bound method Worker.__bootstrap to stdout
+        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And all the segments are running
         And the segments are synchronized
         When the user runs "gprecoverseg -ra"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should not print Unhandled exception in thread started by <bound method Worker.__bootstrap to stdout
+        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And the segments are synchronized
         And the backup pid file is deleted on "primary" segment
 
@@ -91,10 +91,10 @@ Feature: gprecoverseg tests
         And user can start transactions
         When the user runs "gprecoverseg -o failedSegmentFile"
         Then gprecoverseg should return a return code of 0
-        Then gprecoverseg should print Configuration file output to failedSegmentFile successfully to stdout
+        Then gprecoverseg should print "Configuration file output to failedSegmentFile successfully" to stdout
         When the user runs "gprecoverseg -i failedSegmentFile -a"
         Then gprecoverseg should return a return code of 0
-        Then gprecoverseg should print 1 segment\(s\) to recover to stdout
+        Then gprecoverseg should print "1 segment\(s\) to recover" to stdout
 
     @multinode
     Scenario: gprecoverseg fails on corrupted change tracking logs, must run full recovery
@@ -114,7 +114,7 @@ Feature: gprecoverseg tests
         Then wait until the segment state of the corresponding primary goes in ChangeTrackingDisabled
 
         When the user runs "gprecoverseg -a"
-        Then gprecoverseg should print in change tracking disabled state, need to run recoverseg with -F option to stdout
+        Then gprecoverseg should print "in change tracking disabled state, need to run recoverseg with -F option" to stdout
         And the saved mirror segment is marked down in config
 
         When the user runs "gprecoverseg -a -F"
@@ -135,7 +135,7 @@ Feature: gprecoverseg tests
         When the user runs command "touch /tmp/empty_file"
         When the user runs "gprecoverseg -i /tmp/empty_file -a"
         Then gprecoverseg should return a return code of 0
-        Then gprecoverseg should print No segments to recover to stdout
+        Then gprecoverseg should print "No segments to recover" to stdout
         When the user runs "gprecoverseg -a -F"
         Then all the segments are running
         And the segments are synchronized
@@ -170,7 +170,7 @@ Feature: gprecoverseg tests
         Then gprecoverseg should return a return code of 0
         Given at least one segment is resynchronized
         When the user runs "gprecoverseg -r -a"
-        Then gprecoverseg should print Some segments are not yet synchronized to stdout
+        Then gprecoverseg should print "Some segments are not yet synchronized" to stdout
         Then gprecoverseg should return a return code of 2
         And the segments are synchronized
         When the user runs "gprecoverseg -r -a"

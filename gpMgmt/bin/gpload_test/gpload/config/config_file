@@ -1,0 +1,17 @@
+version:     1.0.0.1
+database:  gptest
+user:  gpadmin
+host:      172.17.0.5
+
+gpload:
+
+    input:
+          - source:
+              local_hostname:
+                    -  172.17.0.5
+              file: [ /home/gpadmin/gpload/gpdb/gpMgmt/bin/gpload_test/gpload/data/lineitem.tbl.small ]
+
+          - delimiter: '|'
+
+    output:
+          - table: lineitem

@@ -15,6 +15,10 @@ try:
     from gppylib.db import dbconn
     from gppylib.userinput import *
     from pygresql.pg import DatabaseError
+    from gpconfig_modules.segment_guc import SegmentGuc
+    from gpconfig_modules.database_segment_guc import DatabaseSegmentGuc
+    from gpconfig_modules.file_segment_guc import FileSegmentGuc
+    from gpconfig_modules.guc_collection import GucCollection
 except ImportError, e:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
@@ -22,7 +26,6 @@ EXECNAME = os.path.split(__file__)[-1]
 
 prohibitedGucs = set(["port", "listen_addresses"])
 sameValueGucs = set(["gp_default_storage_options"])
-longShow = set(["port"])
 logger = get_default_logger()
 setup_tool_logging(EXECNAME, getLocalHostname(), getUserName())
 
@@ -44,6 +47,8 @@ def parseargs():
     parser.add_option('-P', '--primaryvalue', type='string')
     parser.add_option('-M', '--mirrorvalue', type='string')
     parser.add_option('-f', '--file', action='store_true')
+    parser.add_option('--file-compare', dest='file_compare', action='store_true')
+
     (options, args) = parser.parse_args()
 
     options.entry = None
@@ -55,7 +60,6 @@ def parseargs():
 def validate_four_verbs(options):
     if options.change:
         options.entry = options.change
-
     elif options.remove:
         options.entry = options.remove
         options.remove = True
@@ -70,6 +74,8 @@ def validate_mutual_options(options):
 
     if options.file and not options.show:
         log_and_raise("'--file' option must accompany '--show' option")
+    if options.file and options.file_compare and options.show:
+        log_and_raise("'--file' option and '--file-compare' option cannot be used together")
     if options.file and "MASTER_DATA_DIRECTORY" not in os.environ:
         log_and_raise("--file option requires that MASTER_DATA_DIRECTORY be set")
     if options.remove and (options.value or options.primaryvalue or options.mirrorvalue or options.mastervalue):
@@ -88,19 +94,9 @@ def validate_mutual_options(options):
         options.mastervalue = options.value
 
 
-class JetPackQuery:
+class ToolkitQuery:
     def __init__(self, name):
         self.query = "select * from gp_toolkit.gp_param_setting('%s')" % name
-
-
-class JetPackGuc:
-    def __init__(self, row):
-        self.context = row[0]
-        self.name = row[1]
-        self.value = row[2]
-
-    def print_info(self):
-        print "[context: %s] [name: %s] [value: %s]" % (self.context, self.name, self.value)
 
 
 class GucQuery:
@@ -134,6 +130,13 @@ class Guc:
             except:
                 return "invalid value for max_connections"
 
+        elif self.name == "gp_resource_manager":
+            if newval == "group":
+                logger.warn(
+                        "Managing queries with resource groups is an experimental feature. A work-in-progress version is enabled.")
+            elif newval != "queue":
+                return "the value of gp_resource_manager must be 'group' or 'queue'"
+
         elif self.name == 'unix_socket_permissions':
             if newval[0] != '0':
                 logger.warn(
@@ -166,10 +169,10 @@ class Guc:
             self.name, self.unit, self.context, self.vartype, self.min_val, self.max_val)
 
 
-def confirm_user():
+def confirm_user_wants_to_continue():
     if not ask_yesno('', "Are you sure you want to ignore unreachable hosts?", 'N'):
         logger.info("User Aborted. Exiting...")
-        sys.exit(0)
+        raise Exception("User Aborted. Exiting.")
 
 
 def print_verbosely(options, normalized_hostname, hostname, directory):
@@ -195,15 +198,16 @@ def do_list(skipvalidation):
         logger.error('Failed to connect to database, this script can only be run when the database is up.')
 
 
-def do_show_from_psql(gucname, longform):
+def get_gucs_from_database(gucname):
     try:
         dburl = dbconn.DbURL()
         conn = dbconn.connect(dburl, False)
-        query = JetPackQuery(gucname).query
-        rows = dbconn.execSQL(conn, query)
-        gucs = [JetPackGuc(r) for r in rows]
-        _print_gucs(gucname, gucs, longform)
+        query = ToolkitQuery(gucname).query
+        cursor = dbconn.execSQL(conn, query)
+        # we assume that all roles are primary due to the query.
+        gucs = [DatabaseSegmentGuc(row) for row in cursor]
         conn.close()
+        return gucs
 
     except DatabaseError as ex:
 
@@ -215,40 +219,26 @@ def do_show_from_psql(gucname, longform):
             logger.error('Failed to retrieve GUC information: ' + ex.__str__())
 
 
-def _print_gucs(gucname, gucs, longform):
-    mastervalue = None
-    value = None
-    valid = True
-    if longform:
+def _print_gucs(gucname, gucs, options):
+    collection = GucCollection()
+    collection.update_list(gucs)
+
+    if _show_all_segment_values_always(options):
         print "GUC                 : %s" % gucname
-        for guc in gucs:
+        for guc in collection.values():
             print "Context: %5s Value: %s" % (guc.context, guc.value)
     else:
-        for guc in gucs:
-
-            if guc.context == -1:
-                mastervalue = guc.value
-
-            elif not value:
-                value = guc.value
-
-            elif value == guc.value:
-                pass
-
-            else:
-                valid = False
-                break
-
-        if valid:
+        if collection.are_segments_consistent():
             print "Values on all segments are consistent"
             print "GUC          : %s" % gucname
-            print "Master  value: %s" % mastervalue
-            print "Segment value: %s" % value
-
+            print collection.report()
         else:
             print "WARNING: GUCS ARE OUT OF SYNC: "
-            for guc in gucs:
-                guc.print_info()
+            print collection.report()
+
+
+def _show_all_segment_values_always(options):
+    return options.show == "port"
 
 
 def do_add_config_script(pool, hostname, segs, value, options):
@@ -293,7 +283,7 @@ def do_change(options):
     if len(failed_pings):
         for i in failed_pings:
             logger.warning('unreachable host: ' + i.hostname)
-        confirm_user()
+        confirm_user_wants_to_continue()
 
     failure = False
     try:
@@ -400,21 +390,10 @@ def log_and_raise(err_str):
     raise Exception(err_str)
 
 
-def do_show_from_file(gucname, long_format):
-    dburl = dbconn.DbURL()
-    gparray = GpArray.initFromCatalog(dburl, utility=True)
-
-    pool = WorkerPool()
-    host_cache = GpHostCache(gparray, pool, withMasters=True)
-    failed_pings = host_cache.ping_hosts(pool)
-
-    if len(failed_pings):
-        for i in failed_pings:
-            logger.warning('unreachable host: ' + i.hostname)
-        confirm_user()
-
+def get_gucs_from_files(gucname):
+    hosts, pool = _get_hosts()
     commands = []
-    for h in host_cache.get_hosts():
+    for h in hosts:
         for seg in h.dbs:
             command = GpReadConfig("readConfig", h, seg, gucname)
             commands.append(command)
@@ -425,14 +404,46 @@ def do_show_from_file(gucname, long_format):
     gucs = []
     for cmd in pool.getCompletedItems():
         value = cmd.get_guc_value()
-        if not value:
-            value = "not set in postgresql.conf"
-        gucs.append(JetPackGuc([cmd.get_seg_content_id(), gucname, value]))
-    _print_gucs(gucname, gucs, long_format)
+        gucs.append(
+            FileSegmentGuc([cmd.get_seg_content_id(), gucname, value, cmd.get_seg_dbid()]))
 
     pool.check_results()
     pool.haltWork()
     pool.joinWorkers()
+    return gucs
+
+
+def _get_hosts():
+    dburl = dbconn.DbURL()
+    gparray = GpArray.initFromCatalog(dburl, utility=True)
+    pool = WorkerPool()
+    host_cache = GpHostCache(gparray, pool, withMasters=True)
+    failed_pings = host_cache.ping_hosts(pool)
+    if len(failed_pings):
+        for i in failed_pings:
+            logger.warning('unreachable host: ' + i.hostname)
+        confirm_user_wants_to_continue()  # todo test me
+    hosts = host_cache.get_hosts()
+    return hosts, pool
+
+
+def do_show(options):
+    if options.skipvalidation:
+        log_and_raise('--skipvalidation can not be combined with --show')
+        return
+
+    gucname = options.show
+    gucs = []
+
+    if options.file:
+        gucs.extend(get_gucs_from_files(gucname))
+    elif options.file_compare:
+        gucs.extend(get_gucs_from_database(gucname))
+        gucs.extend(get_gucs_from_files(gucname))
+    else:
+        gucs.extend(get_gucs_from_database(gucname))
+
+    _print_gucs(gucname, gucs, options)
 
 
 def do_main():
@@ -441,15 +452,7 @@ def do_main():
         do_list(options.skipvalidation)
 
     elif options.show:
-        # TODO looks like the following line is supposed to be ... options.value in longShow
-        # therefore, this long format has NEVER been used and can be removed.
-        long_format = options.show in longShow
-        if options.skipvalidation:
-            log_and_raise('--skipvalidation can not be combined with --show')
-        elif options.file:
-            do_show_from_file(options.show, long_format)
-        else:
-            do_show_from_psql(options.show, long_format)
+        do_show(options)
 
     elif options.remove or options.change:
         do_change(options)

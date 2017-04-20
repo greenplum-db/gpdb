@@ -11696,13 +11696,11 @@ int XLogFillZero(
 	}
 
 exit:
-	if (fd > 0) {
-		if (close(fd)) {
-			ereport(WARNING,
-					(errcode_for_file_access(),
-					 errmsg("could not close file \"%s\": %m", path)));
-			status = STATUS_ERROR;
-		}
+	if (close(fd)) {
+		ereport(WARNING,
+				(errcode_for_file_access(),
+				 errmsg("could not close file \"%s\": %m", path)));
+		status = STATUS_ERROR;
 	}
 
 	return status;
@@ -12028,9 +12026,11 @@ int XLogAddRecordsToChangeTracking(
 	 */
 	if (lastChangeTrackingEndLoc == NULL)
 	{
-		/* read xlog till the end to get last lsn on disk (EndRecPtr) */
-		while(record != NULL)
-			record = XLogReadRecord(NULL, false, LOG);
+		/*
+		 * Xlog must have been read till the end to get last lsn on
+		 * disk (EndRecPtr).
+		 */
+		Assert (record == NULL);
 
 		if (! (lastChangeTrackingLogEndLoc.xlogid == 0 && lastChangeTrackingLogEndLoc.xrecoff == 0) &&
 			XLByteLT(EndRecPtr, lastChangeTrackingLogEndLoc))

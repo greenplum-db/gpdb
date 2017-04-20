@@ -3099,6 +3099,7 @@ SetupUDPIFCInterconnect_Internal(EState *estate)
 
 				conn->conn_info.seq = 1;
 				conn->stillActive = true;
+				conn->remapper = CreateTupleRemapper();
 
 				incoming_count++;
 
@@ -3487,6 +3488,10 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 					/* free up the packet queue */
 					pfree(conn->pkt_q);
 					conn->pkt_q = NULL;
+
+					/* free up the tuple remapper */
+					if (conn->remapper)
+						DestroyTupleRemapper(conn->remapper);
 				}
 				pfree(pEntry->conns);
 				pEntry->conns = NULL;

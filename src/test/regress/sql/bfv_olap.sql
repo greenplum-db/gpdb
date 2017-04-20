@@ -1,6 +1,6 @@
----
---- Test case errors out when we define aggregates without preliminary functions and use it as an aggregate derived window function.
----
+--
+-- Test case errors out when we define aggregates without preliminary functions and use it as an aggregate derived window function.
+--
 
 create schema bfv_olap;
 set search_path=bfv_olap;
@@ -25,9 +25,9 @@ drop aggregate if exists mysum2(int4);
 drop table if exists toy;
 -- end_ignore
 
----
---- Test case errors out when we define aggregates without preliminary functions and use it as an aggregate derived window function.
----
+--
+-- Test case errors out when we define aggregates without preliminary functions and use it as an aggregate derived window function.
+--
 
 -- SETUP
 -- start_ignore
@@ -85,9 +85,9 @@ drop function if exists ema_adv(t ema_type, v float, x float) cascade;
 drop type if exists ema_type cascade;
 -- end_ignore
 
----
---- Test case errors out when we define aggregates without preliminary functions and use it as an aggregate derived window function.
----
+--
+-- Test case errors out when we define aggregates without preliminary functions and use it as an aggregate derived window function.
+--
 
 -- SETUP
 -- start_ignore
@@ -151,9 +151,9 @@ drop type if exists ema_type cascade;
 
 
 
----
---- Test with/without group by
----
+--
+-- Test with/without group by
+--
 
 -- SETUP
 -- start_ignore
@@ -180,9 +180,9 @@ DROP TABLE IF EXISTS r;
 -- end_ignore
 
 
----
---- ORDER BY clause includes some grouping column or not
----
+--
+-- ORDER BY clause includes some grouping column or not
+--
 
 -- SETUP
 -- start_ignore
@@ -209,9 +209,9 @@ DROP TABLE IF EXISTS r;
 -- end_ignore
 
 
----
---- ORDER BY 1 or more columns
----
+--
+-- ORDER BY 1 or more columns
+--
 
 -- SETUP
 -- start_ignore
@@ -240,9 +240,9 @@ DROP TABLE IF EXISTS r;
 -- end_ignore
 
 
----
---- ORDER BY clause includes some grouping column or not
----
+--
+-- ORDER BY clause includes some grouping column or not
+--
 
 -- SETUP
 -- start_ignore
@@ -293,9 +293,9 @@ DROP TABLE IF EXISTS dm_calendar;
 -- end_ignore
 
 
----
---- Test with/without group by with primary key as dist key
----
+--
+-- Test with/without group by with primary key as dist key
+--
 
 -- SETUP
 -- start_ignore
@@ -322,9 +322,9 @@ drop table if exists t;
 
 
 
----
---- Passing through distribution matching type in default implementation
----
+--
+-- Passing through distribution matching type in default implementation
+--
 
 -- SETUP
 -- start_ignore
@@ -391,9 +391,9 @@ drop table if exists sale;
 -- end_ignore
 
 
----
---- Optimzier query crashing for logical window with no window functions
----
+--
+-- Optimzier query crashing for logical window with no window functions
+--
 
 -- SETUP
 create table mpp23240(a int, b int, c int, d int, e int, f int);

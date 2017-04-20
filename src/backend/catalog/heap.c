@@ -3273,9 +3273,6 @@ heap_truncate(List *relids)
 		Oid			rid = lfirst_oid(cell);
 		Relation	rel;
 		Oid			toastrelid;
-		Oid			aosegrelid;
-		Oid         aoblkdirrelid;
-		Oid         aovisimaprelid;
 
 		rel = heap_open(rid, AccessExclusiveLock);
 		relations = lappend(relations, rel);

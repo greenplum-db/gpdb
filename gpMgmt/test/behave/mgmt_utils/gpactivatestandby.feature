@@ -14,5 +14,5 @@ Feature: gpactivatestandby stop segments
         And the user runs the command "rm /tmp/.s.PGSQL.$PGPORT*" from standby
         And the user runs "gpstart -a"
         Then gpstart should return a return code of 1
-        And gpstart should print Standby Master could not be started to stdout
+        And gpstart should print "Standby Master could not be started" to stdout
         And the user stops the syncmaster

@@ -243,7 +243,7 @@ CreatePortal(const char *name, bool allowDup, bool dupSilent)
 	portal->creation_time = GetCurrentStatementStartTimestamp();
 
 	/* set portal id and queue id if have enabled resource scheduling */
-	if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler)
+	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
 	{
 		portal->portalId = ResCreatePortalId(name);
 		portal->queueId = GetResQueueId();

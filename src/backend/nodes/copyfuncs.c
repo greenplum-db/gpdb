@@ -765,7 +765,6 @@ _copyNestLoop(NestLoop *from)
 	 */
 	CopyJoinFields((Join *) from, (Join *) newnode);
 
-    COPY_SCALAR_FIELD(outernotreferencedbyinner);   /*CDB*/
     COPY_SCALAR_FIELD(shared_outer);
     COPY_SCALAR_FIELD(singleton_outer); /*CDB-OLAP*/
 

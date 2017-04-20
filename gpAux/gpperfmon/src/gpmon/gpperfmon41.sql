@@ -8,37 +8,15 @@
 -- Violate the above and you _will_ break upgrade.
 --
 
--- TABLE: emcconnect_history
---   ctime                      time of event
---   hostname                   hostname of system this metric belongs to
---   symptom_code               code for this type of event
---   detailed_symptom_code      finer grain symptom code
---   snmp_oid                   snmp oid of event type
---   displayname                description of field
---   severity                   event severity
---   status                   	event status
---   attempted_transport        is emcconnect transport enabled
---   message                    text message associated with this event
-create table public.emcconnect_history (ctime timestamp(0) not null, hostname varchar(64) not null, symptom_code int not null, detailed_symptom_code int, description text not null, snmp_oid text, severity text not null, status text not null, attempted_transport boolean not null, message text not null) distributed by (ctime) partition by range (ctime)(start (date '2010-01-01') end (date '2010-02-01') EVERY (interval '1 month'));
-
--- TABLE: _emcconnect_tail
---   (like emcconnect_history)
-create external web table public._emcconnect_tail (like public.emcconnect_history) execute 'cat gpperfmon/data/_emcconnect_tail.dat 2> /dev/null || true' on master format 'text' (delimiter '|' NULL as 'null');
-
 -- TABLE: health_history
 --   ctime                      event time
 --   hostname                   hostname of system this metric belongs to
 --   symptom_code               code for this type of event
 --   detailed_symptom_code      finer grain symptom code
 --   description                text description of event type
---   snmp_oid                   snmp oid of event type
 --   status                     indication of status at time of event
 --   message                    text message associated with this event
-create table public.health_history (ctime timestamp(0) not null, hostname varchar(64) not null, symptom_code int not null, detailed_symptom_code int not null, description text not null, snmp_oid text not null, status text not null, message text not null) distributed by (ctime) partition by range (ctime)(start (date '2010-01-01') end (date '2010-02-01') EVERY (interval '1 month'));
-
--- TABLE: health_now
---   (like health_history)
-create external web table public.health_now (like public.health_history) execute 'cat gpperfmon/data/snmp/snmp.host.*.txt 2> /dev/null || true' on master format 'text' (delimiter '|' NULL as 'null');
+create table public.health_history (ctime timestamp(0) not null, hostname varchar(64) not null, symptom_code int not null, detailed_symptom_code int not null, description text not null, status text not null, message text not null) distributed by (ctime) partition by range (ctime)(start (date '2010-01-01') end (date '2010-02-01') EVERY (interval '1 month'));
 
 -- TABLE: filerep_history
 --   ctime                      		time of measurement

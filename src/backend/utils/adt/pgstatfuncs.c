@@ -14,6 +14,8 @@
  */
 #include "postgres.h"
 
+#include "storage/lock.h"
+#include "commands/resgroupcmds.h"
 #include "funcapi.h"
 #include "miscadmin.h"
 #include "pgstat.h"
@@ -100,6 +102,8 @@ pgstat_waiting_string(char reason)
 			return "lock";
 		case PGBE_WAITING_REPLICATION:
 			return "replication";
+		case PGBE_WAITING_RESGROUP:
+			return "resgroup";
 		default:
 			return NULL;
 	}
@@ -526,7 +530,6 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 		if (superuser() || beentry->st_userid == GetUserId())
 		{
 			SockAddr	zero_clientaddr;
-			bool		waiting;
 
 			if (*(beentry->st_activity) == '\0')
 			{
@@ -537,7 +540,6 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 				values[4] = CStringGetTextDatum(beentry->st_activity);
 			}
 
-			waiting = beentry->st_waiting != PGBE_WAITING_NONE;
 			values[5] = BoolGetDatum(beentry->st_waiting);
 
 			if (beentry->st_xact_start_timestamp != 0)
@@ -630,15 +632,26 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 
 			if (funcctx->tuple_desc->natts > 13)
 			{
-				Interval	interval;
+				if (beentry->st_waiting == PGBE_WAITING_RESGROUP)
+				{
+					Datum now = TimestampTzGetDatum(GetCurrentTimestamp());
+					char *groupName = GetResGroupNameForId(beentry->st_rsgid, AccessShareLock);
 
-				MemSet(&interval, 0, sizeof(interval));
-
-				values[13] = ObjectIdGetDatum(0);
-				values[14] = CStringGetTextDatum("default");
-				values[15] = IntervalPGetDatum(&interval);
+					values[13] = ObjectIdGetDatum(beentry->st_rsgid);
+					if (groupName != NULL)
+						values[14] = CStringGetTextDatum(groupName);
+					else
+						nulls[14] = true;
+					values[15] = DirectFunctionCall2(timestamptz_age, now,
+													 TimestampTzGetDatum(beentry->st_resgroup_queue_start_timestamp));
+				}
+				else
+				{
+					nulls[13] = true;
+					nulls[14] = true;
+					nulls[15] = true;
+				}
 			}
-
 		}
 		else
 		{

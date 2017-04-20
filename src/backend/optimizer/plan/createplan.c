@@ -4192,7 +4192,6 @@ make_nestloop(List *tlist,
 	node->join.jointype = jointype;
 	node->join.joinqual = joinclauses;
 
-	node->outernotreferencedbyinner = false;	/* CDB */
 
 	return node;
 }

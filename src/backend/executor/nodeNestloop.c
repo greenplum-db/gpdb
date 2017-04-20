@@ -132,13 +132,6 @@ ExecNestLoop(NestLoopState *node)
 			 * iterations.
 			 */
 			node->nl_innerSideScanned = true;
-            /* CDB: Quit if empty inner implies no outer rows can match. */
-			/* See MPP-1146 and MPP-1694 */
-			if (node->nl_QuitIfEmptyInner)
-            {
-                ExecSquelchNode(outerPlan);
-                return NULL;
-            }
 		}
 
 		if ((node->js.jointype == JOIN_LASJ_NOTIN) &&
@@ -294,20 +287,12 @@ ExecNestLoop(NestLoopState *node)
 				}
 			}
 
-            /* CDB: Quit if empty inner implies no outer rows can match. */
-            if (node->nl_QuitIfEmptyInner)
-            {
-                ExecSquelchNode(outerPlan);
-                return NULL;
-            }
-
 			/*
 			 * Otherwise just return to top of loop for a new outer tuple.
 			 */
 			continue;
 		}
 
-        node->nl_QuitIfEmptyInner = false;  /*CDB*/
 
 		if ((node->js.jointype == JOIN_LASJ_NOTIN) &&
 				(!node->nl_innerSideScanned) &&
@@ -507,13 +492,6 @@ ExecInitNestLoop(NestLoop *node, EState *estate, int eflags)
 	nlstate->nl_MatchedOuter = false;
 	nlstate->nl_innerSquelchNeeded = true;		/*CDB*/
 
-    /* CDB: Set flag if empty inner implies empty join result. */
-    nlstate->nl_QuitIfEmptyInner = false;
-    if (node->outernotreferencedbyinner &&
-        (node->join.jointype == JOIN_INNER ||
-		 node->join.jointype == JOIN_RIGHT ||
-		 node->join.jointype == JOIN_IN))
-        nlstate->nl_QuitIfEmptyInner = true;
 
     if (node->join.jointype == JOIN_LASJ_NOTIN)
     {

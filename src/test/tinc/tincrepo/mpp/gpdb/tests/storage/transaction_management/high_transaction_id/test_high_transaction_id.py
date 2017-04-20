@@ -59,16 +59,13 @@ class high_transaction_id(MPPTestCase):
         
         for segment in segments:
             cmd = Command(name="reset xlog",
-                    cmdStr="pg_resetxlog -x 100000000 %s" % segment[0])
-            cmd.run()
+                    cmdStr="echo yes | pg_resetxlog -f -x 100000000 %s" % segment[0])
+            cmd.run(validateAfter=True)
     
             xlogfile = local_path('xlog_file')
             # @todo: able to copy the xlogfile remotely
             shutil.copyfile(xlogfile, "%s/pg_clog/0017" % segment[0])
             shutil.copyfile(xlogfile, "%s/pg_distributedlog/02FA" % segment[0])
 
-        # @note: workaround the issue with tinc and 4.1 gppylib
-        cmd = Command(name='run gpstop',
-            cmdStr='source %s/greenplum_path.sh;\
-            gpstart -a' % os.environ['GPHOME'])
+        cmd = GpStart("gpstart")
         cmd.run(validateAfter=True)

@@ -11,10 +11,11 @@
     </section>
     <section id="section3">
       <title>Description</title>
-      <p><codeph>psql</codeph> is a terminal-based front-end to Greenplum Database. It
-        enables you to type in queries interactively, issue them to Greenplum Database, and see the query results. Alternatively, input can be from a file. In addition, it
-        provides a number of meta-commands and various shell-like features to facilitate writing
-        scripts and automating a wide variety of tasks.</p>
+      <p><codeph>psql</codeph> is a terminal-based front-end to Greenplum Database. It enables you
+        to type in queries interactively, issue them to Greenplum Database, and see the query
+        results. Alternatively, input can be from a file. In addition, it provides a number of
+        meta-commands and various shell-like features to facilitate writing scripts and automating a
+        wide variety of tasks.</p>
     </section>
     <section id="section4">
       <title>Options</title>
@@ -174,15 +175,15 @@
         <parml>
           <plentry>
             <pt>-h <varname>host</varname> | --host <varname>host</varname></pt>
-            <pd>The host name of the machine on which the Greenplum
-              master database server is running. If not specified, reads from the environment
-              variable <codeph>PGHOST</codeph> or defaults to localhost.</pd>
+            <pd>The host name of the machine on which the Greenplum master database server is
+              running. If not specified, reads from the environment variable <codeph>PGHOST</codeph>
+              or defaults to localhost.</pd>
           </plentry>
           <plentry>
             <pt>-p <varname>port</varname> | --port <varname>port</varname></pt>
-            <pd>The TCP port on which the Greenplum master database
-              server is listening for connections. If not specified, reads from the environment
-              variable <codeph>PGPORT</codeph> or defaults to 5432.</pd>
+            <pd>The TCP port on which the Greenplum master database server is listening for
+              connections. If not specified, reads from the environment variable
+                <codeph>PGPORT</codeph> or defaults to 5432.</pd>
           </plentry>
           <plentry>
             <pt>-U <varname>username</varname> | --username <varname>username</varname></pt>
@@ -221,21 +222,21 @@
       <title>Usage</title>
       <sectiondiv id="section8">
         <b>Connecting to a Database</b>
-        <p><codeph>psql</codeph> is a client application for Greenplum Database. In
-          order to connect to a database you need to know the name of your target database, the host
-          name and port number of the Greenplum master server and what
-          database user name you want to connect as. <codeph>psql</codeph> can be told about those
-          parameters via command line options, namely <codeph>-d</codeph>, <codeph>-h</codeph>,
-            <codeph>-p</codeph>, and <codeph>-U</codeph> respectively. If an argument is found that
-          does not belong to any option it will be interpreted as the database name (or the user
-          name, if the database name is already given). Not all these options are required; there
-          are useful defaults. If you omit the host name, <codeph>psql</codeph> will connect via a
-          UNIX-domain socket to a master server on the local host, or via TCP/IP to
-            <codeph>localhost</codeph> on machines that do not have UNIX-domain sockets. The default
-          master port number is 5432. If you use a different port for the master, you must specify
-          the port. The default database user name is your UNIX user name, as is the default
-          database name. Note that you cannot just connect to any database under any user name. Your
-          database administrator should have informed you about your access rights.</p>
+        <p><codeph>psql</codeph> is a client application for Greenplum Database. In order to connect
+          to a database you need to know the name of your target database, the host name and port
+          number of the Greenplum master server and what database user name you want to connect as.
+            <codeph>psql</codeph> can be told about those parameters via command line options,
+          namely <codeph>-d</codeph>, <codeph>-h</codeph>, <codeph>-p</codeph>, and
+            <codeph>-U</codeph> respectively. If an argument is found that does not belong to any
+          option it will be interpreted as the database name (or the user name, if the database name
+          is already given). Not all these options are required; there are useful defaults. If you
+          omit the host name, <codeph>psql</codeph> will connect via a UNIX-domain socket to a
+          master server on the local host, or via TCP/IP to <codeph>localhost</codeph> on machines
+          that do not have UNIX-domain sockets. The default master port number is 5432. If you use a
+          different port for the master, you must specify the port. The default database user name
+          is your UNIX user name, as is the default database name. Note that you cannot just connect
+          to any database under any user name. Your database administrator should have informed you
+          about your access rights.</p>
         <p>When the defaults are not right, you can save yourself some typing by setting any or all
           of the environment variables <codeph>PGAPPNAME</codeph>, <codeph>PGDATABASE</codeph>,
             <codeph>PGHOST</codeph>, <codeph>PGPORT</codeph>, and <codeph>PGUSER</codeph> to
@@ -362,7 +363,8 @@ testdb=#</codeblock>
         </plentry>
         <plentry>
           <pt>\copyright</pt>
-          <pd>Shows the copyright and distribution terms of PostgreSQL on which Greenplum Database is based. </pd>
+          <pd>Shows the copyright and distribution terms of PostgreSQL on which Greenplum Database
+            is based. </pd>
         </plentry>
         <plentry>
           <pt>\d [<varname>relation_pattern</varname>]  | \d+ [<varname>relation_pattern</varname>]
@@ -371,26 +373,28 @@ testdb=#</codeblock>
             relation pattern, show all columns, their types, the tablespace (if not the default) and
             any special attributes such as <codeph>NOT NULL</codeph> or defaults, if any. Associated
             indexes, constraints, rules, and triggers are also shown, as is the view definition if
-            the relation is a view.<ul id="ul_qda_zxh_no"><li id="kb143931">The command form
-                  <codeph>\d+</codeph> is identical, except that more information is displayed: any
-                comments associated with the columns of the table are shown, as is the presence of
-                OIDs in the table.<p>For partitioned tables, the command <codeph>\d</codeph> or
-                    <codeph>\d+</codeph> specified with the root partition table or child partition
-                  table displays information about the table including partition keys on the current
-                  level of the partition table. The command <codeph>\d+</codeph> also displays the
-                  immediate child partitions of the table and whether the child partition is an
-                  external table or regular table. </p><p>For append-optimized tables and
-                  column-oriented tables, <codeph>\d+</codeph> displays the storage options for a
-                  table. For append-optimized tables, the options are displayed for the table. For
-                  column-oriented tables, storage options are displayed for each column.
-                </p></li><li id="kb151095">The command form <codeph>\dS</codeph> is identical,
-                except that system information is displayed as well as user information.For example,
+            the relation is a view.<ul id="ul_qda_zxh_no">
+              <li id="kb143931">The command form <codeph>\d+</codeph> is identical, except that more
+                information is displayed: any comments associated with the columns of the table are
+                shown, as is the presence of OIDs in the table.<p>For partitioned tables, the
+                  command <codeph>\d</codeph> or <codeph>\d+</codeph> specified with the root
+                  partition table or child partition table displays information about the table
+                  including partition keys on the current level of the partition table. The command
+                    <codeph>\d+</codeph> also displays the immediate child partitions of the table
+                  and whether the child partition is an external table or regular table. </p><p>For
+                  append-optimized tables and column-oriented tables, <codeph>\d+</codeph> displays
+                  the storage options for a table. For append-optimized tables, the options are
+                  displayed for the table. For column-oriented tables, storage options are displayed
+                  for each column. </p></li>
+              <li id="kb151095">The command form <codeph>\dS</codeph> is identical, except that
+                system information is displayed as well as user information. For example,
                   <codeph>\dt</codeph> displays user tables, but not system tables;
-                  <codeph>\dtS</codeph> displays both user and system tables.Both these commands can
-                take the <codeph>+</codeph> parameter to display additional information, as in
+                  <codeph>\dtS</codeph> displays both user and system tables. Both these commands
+                can take the <codeph>+</codeph> parameter to display additional information, as in
                   <codeph>\dt+</codeph> and <codeph>\dtS+</codeph>.<p>If <codeph>\d</codeph> is used
                   without a pattern argument, it is equivalent to <codeph>\dtvs</codeph> which will
-                  show a list of all tables, views, and sequences.</p></li></ul></pd>
+                  show a list of all tables, views, and sequences.</p></li>
+            </ul></pd>
         </plentry>
         <plentry>
           <pt>\da [<varname>aggregate_pattern</varname>]</pt>
@@ -441,11 +445,11 @@ testdb=#</codeblock>
             the pattern are listed.</pd>
         </plentry>
         <plentry>
-          <pt>\distPvxS [<varname>index | sequence | table | parent table | view | external_table |
+          <pt>\distPvES [<varname>index | sequence | table | parent table | view | external_table |
               system_object</varname>] </pt>
           <pd>This is not the actual command name: the letters <codeph>i</codeph>,
               <codeph>s</codeph>, <codeph>t</codeph>, <codeph>P</codeph>, <codeph>v</codeph>,
-              <codeph>x</codeph>, <codeph>S</codeph> stand for index, sequence, table, parent table,
+              <codeph>E</codeph>, <codeph>S</codeph> stand for index, sequence, table, parent table,
             view, external table, and system table, respectively. You can specify any or all of
             these letters, in any order, to obtain a listing of all the matching objects. The letter
               <codeph>S</codeph> restricts the listing to system objects; without
@@ -489,6 +493,10 @@ testdb=#</codeblock>
           <pd>Lists all database roles, or only those that match pattern.</pd>
         </plentry>
         <plentry>
+          <pt>\dx [<varname>extension_pattern</varname>]</pt>
+          <pd>Lists all installed extensions, or only those that match the pattern.</pd>
+        </plentry>
+        <plentry>
           <pt>\e | \edit [<varname>filename</varname>]</pt>
           <pd>If a file name is specified, the file is edited; after the editor exits, its content
             is copied back to the query buffer. If no argument is given, the current query buffer is
@@ -504,11 +512,11 @@ testdb=#</codeblock>
               <codeph>notepad.exe</codeph> on Windows systems.</pd>
         </plentry>
         <plentry>
-          <pt>\echotext [ ... ]</pt>
+          <pt>\echo <varname>text</varname> [ ... ]</pt>
           <pd>Prints the arguments to the standard output, separated by one space and followed by a
             newline. This can be useful to intersperse information in the output of scripts.</pd>
           <pd>If you use the <codeph>\o</codeph> command to redirect your query output you may wish
-            to use<codeph> 'echo</codeph> instead of this command.</pd>
+            to use <codeph>\qecho</codeph> instead of this command.</pd>
         </plentry>
         <plentry>
           <pt>\encoding [<varname>encoding</varname>]</pt>
@@ -533,7 +541,7 @@ testdb=#</codeblock>
           <pd>Gives syntax help on the specified SQL command. If a command is not specified, then
               <codeph>psql</codeph> will list all the commands for which syntax help is available.
             Use an asterisk (*) to show syntax help on all SQL commands. To simplify typing,
-            commands that consists of several words do not have to be quoted.</pd>
+            commands that consist of several words do not have to be quoted.</pd>
         </plentry>
         <plentry>
           <pt>\H</pt>
@@ -619,8 +627,8 @@ lo_import 152801</codeblock>
           <pt>\pset <varname>print_option</varname> [<varname>value</varname>]</pt>
           <pd>This command sets options affecting the output of query result tables.
               <varname>print_option</varname> describes which option is to be set. Adjustable
-            printing options are: <ul id="ul_f3k_1vl_44"><li id="kb144082"
-                    ><b><codeph>format</codeph></b> – Sets the output format to one of
+            printing options are: <ul id="ul_f3k_1vl_44">
+              <li id="kb144082"><b><codeph>format</codeph></b> – Sets the output format to one of
                   <b>u</b><codeph>naligned</codeph>, <b>a</b><codeph>ligned</codeph>,
                   <b>h</b><codeph>tml</codeph>, <b>l</b><codeph>atex</codeph>,
                   <b>t</b><codeph>roff-ms</codeph>, or <b>w</b><codeph>rapped</codeph>. First letter
@@ -639,14 +647,14 @@ lo_import 152801</codeblock>
                   commands <codeph>\pset columns 72</codeph> and then <codeph>\pset format
                     wrapped</codeph>.</p><note>Since <codeph>psql</codeph> does not attempt to wrap
                   column header titles, the wrapped format behaves the same as aligned if the total
-                  width needed for column headers exceeds the target. </note></li><li id="kb144087"
-                    ><b><codeph>border</codeph></b> – The second argument must be a number. In
-                general, the higher the number the more borders and lines the tables will have, but
-                this depends on the particular format. In HTML mode, this will translate directly
-                into the <codeph>border=...</codeph> attribute, in the others only values
+                  width needed for column headers exceeds the target. </note></li>
+              <li id="kb144087"><b><codeph>border</codeph></b> – The second argument must be a
+                number. In general, the higher the number the more borders and lines the tables will
+                have, but this depends on the particular format. In HTML mode, this will translate
+                directly into the <codeph>border=...</codeph> attribute, in the others only values
                   <codeph>0</codeph> (no border), <codeph>1</codeph> (internal dividing lines), and
-                  <codeph>2</codeph> (table frame) make sense.</li><li id="kb151382"
-                    ><b><codeph>columns</codeph></b> – Sets the target width for the
+                  <codeph>2</codeph> (table frame) make sense.</li>
+              <li id="kb151382"><b><codeph>columns</codeph></b> – Sets the target width for the
                   <codeph>wrapped</codeph> format, and also the width limit for determining whether
                 output is wide enough to require the pager. The default is <varname>zero</varname>.
                 Zero causes the target width to be controlled by the environment variable
@@ -654,19 +662,19 @@ lo_import 152801</codeblock>
                 is not set. In addition, if <codeph>columns</codeph> is zero then the wrapped format
                 affects screen output only. If columns is nonzero then file and pipe output is
                 wrapped to that width as well. <p>After setting the target width, use the command
-                    <codeph>\pset format wrapped</codeph> to enable the wrapped format.</p></li><li
-                id="kb144090"><b><codeph>expanded</codeph></b> | <b><codeph>x)</codeph></b> –
+                    <codeph>\pset format wrapped</codeph> to enable the wrapped format.</p></li>
+              <li id="kb144090"><b><codeph>expanded</codeph></b> | <b><codeph>x</codeph></b> –
                 Toggles between regular and expanded format. When expanded format is enabled, query
                 results are displayed in two columns, with the column name on the left and the data
                 on the right. This mode is useful if the data would not fit on the screen in the
-                normal horizontal mode. Expanded mode is supported by all four output
-                formats.</li><li id="kb151434"><b><codeph>linestyle</codeph></b>
-                    [<b><codeph>unicode</codeph></b> | <b><codeph>ascii</codeph></b> |
-                    <b><codeph>old-ascii</codeph></b>] – Sets the border line drawing style to one
-                of unicode, ascii, or old-ascii. Unique abbreviations, including one letter, are
-                allowed for the three styles. The default setting is <codeph>ascii</codeph>. This
-                option only affects the <codeph>aligned</codeph> and <codeph>wrapped</codeph> output
-                formats. <p><b><codeph>ascii</codeph></b> – uses plain ASCII characters. Newlines in
+                normal horizontal mode. Expanded mode is supported by all four output formats.</li>
+              <li id="kb151434"><b><codeph>linestyle</codeph></b> [<b><codeph>unicode</codeph></b> |
+                    <b><codeph>ascii</codeph></b> | <b><codeph>old-ascii</codeph></b>] – Sets the
+                border line drawing style to one of unicode, ascii, or old-ascii. Unique
+                abbreviations, including one letter, are allowed for the three styles. The default
+                setting is <codeph>ascii</codeph>. This option only affects the
+                  <codeph>aligned</codeph> and <codeph>wrapped</codeph> output formats.
+                      <p><b><codeph>ascii</codeph></b> – uses plain ASCII characters. Newlines in
                   data are shown using a + symbol in the right-hand margin. When the wrapped format
                   wraps data from one line to the next without a newline character, a dot (.) is
                   shown in the right-hand margin of the first line, and again in the left-hand
@@ -683,32 +691,33 @@ lo_import 152801</codeblock>
                   the <codeph>border</codeph> setting is greater than zero, this option also
                   determines the characters with which the border lines are drawn. Plain ASCII
                   characters work everywhere, but Unicode characters look nicer on displays that
-                  recognize them. </p></li><li id="kb144095"><b><codeph>null 'string'</codeph></b> –
-                The second argument is a string to print whenever a column is null. The default is
-                not to print anything, which can easily be mistaken for an empty string. For
-                example, the command <codeph>\pset</codeph><codeph>null '(empty)' </codeph>displays
-                  <varname>(empty)</varname> in null columns.</li><li id="kb147007"
-                    ><b><codeph>fieldsep</codeph></b> – Specifies the field separator to be used in
-                unaligned output mode. That way one can create, for example, tab- or comma-separated
-                output, which other programs might prefer. To set a tab as field separator, type
-                  <codeph>\pset fieldsep '\t'</codeph>. The default field separator is
-                  <codeph>'|'</codeph> (a vertical bar). </li><li id="kb147023"
-                    ><b><codeph>footer</codeph></b> – Toggles the display of the default footer
-                  (<varname>x</varname> rows). </li><li id="kb147036"
-                    ><b><codeph>numericlocale</codeph></b> – Toggles the display of a locale-aware
-                character to separate groups of digits to the left of the decimal marker. It also
-                enables a locale-aware decimal marker. </li><li id="kb147046"
-                    ><b><codeph>recordsep</codeph></b> – Specifies the record (line) separator to
-                use in unaligned output mode. The default is a newline character. </li><li
-                id="kb147069"><b><codeph>title</codeph></b> [<varname>text</varname>] – Sets the
+                  recognize them. </p></li>
+              <li id="kb144095"><b><codeph>null 'string'</codeph></b> – The second argument is a
+                string to print whenever a column is null. The default is not to print anything,
+                which can easily be mistaken for an empty string. For example, the command
+                  <codeph>\pset</codeph><codeph>null '(empty)' </codeph>displays
+                  <varname>(empty)</varname> in null columns.</li>
+              <li id="kb147007"><b><codeph>fieldsep</codeph></b> – Specifies the field separator to
+                be used in unaligned output mode. That way one can create, for example, tab- or
+                comma-separated output, which other programs might prefer. To set a tab as field
+                separator, type <codeph>\pset fieldsep '\t'</codeph>. The default field separator is
+                  <codeph>'|'</codeph> (a vertical bar). </li>
+              <li id="kb147023"><b><codeph>footer</codeph></b> – Toggles the display of the default
+                footer (<varname>x</varname> rows). </li>
+              <li id="kb147036"><b><codeph>numericlocale</codeph></b> – Toggles the display of a
+                locale-aware character to separate groups of digits to the left of the decimal
+                marker. It also enables a locale-aware decimal marker. </li>
+              <li id="kb147046"><b><codeph>recordsep</codeph></b> – Specifies the record (line)
+                separator to use in unaligned output mode. The default is a newline character. </li>
+              <li id="kb147069"><b><codeph>title</codeph></b> [<varname>text</varname>] – Sets the
                 table title for any subsequently printed tables. This can be used to give your
-                output descriptive tags. If no argument is given, the title is unset.</li><li
-                id="kb147082"><b><codeph>tableattr</codeph></b> | <b><codeph>T</codeph></b>
+                output descriptive tags. If no argument is given, the title is unset.</li>
+              <li id="kb147082"><b><codeph>tableattr</codeph></b> | <b><codeph>T</codeph></b>
                   [<varname>text</varname>] – Allows you to specify any attributes to be placed
                 inside the HTML table tag. This could for example be <codeph>cellpadding</codeph> or
                   <codeph>bgcolor</codeph>. Note that you probably don't want to specify border
-                here, as that is already taken care of by <codeph>\pset border</codeph>. </li><li
-                id="kb151808"><b><codeph>tuples_only</codeph></b> | <b><codeph>t </codeph></b>
+                here, as that is already taken care of by <codeph>\pset border</codeph>. </li>
+              <li id="kb151808"><b><codeph>tuples_only</codeph></b> | <b><codeph>t </codeph></b>
                   [<varname>novalue</varname> | <varname>on</varname> | <varname>off</varname>] –
                 The <codeph>\pset tuples_only</codeph> command by itselt toggles between tuples only
                 and full display. The values <varname>on</varname> and <varname>off</varname> set
@@ -716,21 +725,22 @@ lo_import 152801</codeblock>
                 information such as column headers, titles, and various footers. In tuples only
                 mode, only actual table data is shown The <codeph>\t</codeph> command is equivalent
                 to <codeph>\pset</codeph><codeph>tuples_only</codeph> and is provided for
-                convenience.</li><li id="kb147128"><b><codeph>pager</codeph></b> – Controls the use
-                of a pager for query and <codeph>psql</codeph> help output. When
-                <codeph>on</codeph>, if the environment variable <codeph>PAGER</codeph> is set, the
-                output is piped to the specified program. Otherwise a platform-dependent default
-                (such as <codeph>more</codeph>) is used. When <codeph>off</codeph>, the pager is not
-                used. When <codeph>on</codeph>, the pager is used only when appropriate. Pager can
-                also be set to <codeph>always</codeph>, which causes the pager to be always
-                used.</li></ul></pd>
+                convenience.</li>
+              <li id="kb147128"><b><codeph>pager</codeph></b> – Controls the use of a pager for
+                query and <codeph>psql</codeph> help output. When <codeph>on</codeph>, if the
+                environment variable <codeph>PAGER</codeph> is set, the output is piped to the
+                specified program. Otherwise a platform-dependent default (such as
+                  <codeph>more</codeph>) is used. When <codeph>off</codeph>, the pager is not used.
+                When <codeph>on</codeph>, the pager is used only when appropriate. Pager can also be
+                set to <codeph>always</codeph>, which causes the pager to be always used.</li>
+            </ul></pd>
         </plentry>
         <plentry>
           <pt>\q</pt>
           <pd>Quits the <codeph>psql</codeph> program. </pd>
         </plentry>
         <plentry>
-          <pt>\qechotext [ ... ] </pt>
+          <pt>\qecho <varname>text</varname> [ ... ] </pt>
           <pd>This command is identical to <codeph>\echo</codeph> except that the output will be
             written to the query output channel, as set by <codeph>\o</codeph>.</pd>
         </plentry>
@@ -913,11 +923,11 @@ bar</codeblock>
           <plentry>
             <pt>ECHO_HIDDEN</pt>
             <pd>When this variable is set and a backslash command queries the database, the query is
-              first shown. This way you can study the Greenplum Database internals and
-              provide similar functionality in your own programs. (To select this behavior on
-              program start-up, use the switch <codeph>-E</codeph>.) If you set the variable to the
-              value <codeph>noexec</codeph>, the queries are just shown but are not actually sent to
-              the server and executed.</pd>
+              first shown. This way you can study the Greenplum Database internals and provide
+              similar functionality in your own programs. (To select this behavior on program
+              start-up, use the switch <codeph>-E</codeph>.) If you set the variable to the value
+                <codeph>noexec</codeph>, the queries are just shown but are not actually sent to the
+              server and executed.</pd>
           </plentry>
           <plentry>
             <pt>ENCODING</pt>

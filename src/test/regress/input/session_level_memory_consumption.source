@@ -1,0 +1,17 @@
+--
+-- Checks the session_level_memory_consumption view installation/uninstallation and population
+--
+
+\i @bindir@/../share/postgresql/contrib/gp_session_state.sql
+
+select * from session_state.session_level_memory_consumption limit 0;
+
+-- Verify that we have 1 entry per segment, as we are only considering our current session.
+select 1 as session_entry_count from session_state.session_level_memory_consumption, pg_stat_activity where procpid = pg_backend_pid() 
+and session_state.session_level_memory_consumption.sess_id = pg_stat_activity.sess_id 
+having count(1) = (select count(1) from gp_segment_configuration where preferred_role = 'p');
+
+\i @bindir@/../share/postgresql/contrib/uninstall_gp_session_state.sql
+
+-- Should error out as we uninstalled
+select * from session_state.session_level_memory_consumption limit 0;

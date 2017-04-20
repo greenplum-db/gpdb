@@ -1,6 +1,7 @@
 BEGIN; 
 
 DROP FUNCTION gp_allocate_palloc_test_all_segs(content int, size int, sleep int, crit_section bool);
+DROP FUNCTION gp_allocate_palloc_test_one_seg(content int, size int, sleep int, crit_section bool);
 DROP FUNCTION gp_allocate_palloc_test_f(content int, size int, sleep int, crit_section bool);
 
 DROP FUNCTION gp_allocate_top_memory_ctxt_test_all_segs(content int, size int, sleep int);

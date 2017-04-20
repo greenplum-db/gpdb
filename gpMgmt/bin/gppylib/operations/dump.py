@@ -230,6 +230,8 @@ def compare_metadata(old_pgstatoperations, cur_pgstatoperations):
 def get_pgstatlastoperations_dict(last_operations):
     last_operations_dict = {}
     for operation in last_operations:
+        if operation == '':
+            continue
         toks = operation.split(',')
         if len(toks) != 6:
             raise Exception('Wrong number of tokens in last_operation data for last backup: "%s"' % operation)
@@ -262,6 +264,8 @@ def get_last_dump_timestamp(context):
 def create_partition_dict(partition_list):
     table_dict = dict()
     for partition in partition_list:
+        if partition == '':
+            continue
         # As of version 4.3.8.0, gpcrondump supports spaces in schema name (field[0]) and table name (field[1])
         # so we explicitly split on "comma followed by space" instead of just commas since we can't strip() the string
         fields = partition.split(', ')
@@ -293,6 +297,8 @@ def get_filename_from_filetype(context, table_type, timestamp=None):
 def write_state_file(context, table_type, partition_list):
     filename = get_filename_from_filetype(context, table_type, None)
 
+    if not partition_list:
+        partition_list = ['\n']
     write_lines_to_file(filename, partition_list)
 
     if context.ddboost:
@@ -398,6 +404,8 @@ def write_partition_list_file(context, timestamp=None):
 
 def write_last_operation_file(context, rows):
     filename = context.generate_filename("last_operation")
+    if not rows:
+        rows = ['\n']
     write_lines_to_file(filename, rows)
 
     if context.ddboost:

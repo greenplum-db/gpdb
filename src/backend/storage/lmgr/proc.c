@@ -372,6 +372,7 @@ InitProcess(void)
 	MyProc->lwWaitLink = NULL;
 	MyProc->waitLock = NULL;
 	MyProc->waitProcLock = NULL;
+	MyProc->resWaiting = false;
 	for (i = 0; i < NUM_LOCK_PARTITIONS; i++)
 		SHMQueueInit(&(MyProc->myProcLocks[i]));
 
@@ -618,7 +619,7 @@ LockWaitCancel(void)
 		return;
 
 	/* Don't try to cancel resource locks.*/
-	if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler &&
+	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled() &&
 		LOCALLOCK_LOCKMETHOD(*lockAwaited) == RESOURCE_LOCKMETHOD)
 		return;
 
@@ -738,7 +739,7 @@ ProcKill(int code, Datum arg)
 	 * Cleanup for any resource locks on portals - from holdable cursors or
 	 * unclean process abort (assertion failures).
 	 */
-	if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler)
+	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
 		AtExitCleanup_ResPortals();
 
 	/*
@@ -1437,7 +1438,7 @@ CheckDeadLock(void)
 		 * handler.
 		 */
 		Assert(MyProc->waitLock != NULL);
-		if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler && 
+		if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled() &&
 			LOCK_LOCKMETHOD(*(MyProc->waitLock)) == RESOURCE_LOCKMETHOD)
 		{
 			ResRemoveFromWaitQueue(MyProc, 

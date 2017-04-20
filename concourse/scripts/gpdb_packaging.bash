@@ -34,7 +34,7 @@ function _main() {
   cat "$INSTALL_SCRIPT_SRC" "$GPDB_TARGZ" > "$installer_bin"
   chmod a+x "$installer_bin"
   zip "$INSTALLER_ZIP" "$installer_bin"
-  openssl dgst -md5 "$INSTALLER_ZIP" > "$INSTALLER_ZIP".md5
+  openssl dgst -sha256 "$INSTALLER_ZIP" > "$INSTALLER_ZIP".sha256
 }
 
 _main "$@"

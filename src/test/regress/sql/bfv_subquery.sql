@@ -3,9 +3,9 @@
 create language plpythonu;
 -- end_ignore
 
-create or replace function count_operator(explain_query text, operator text) returns int as
+create or replace function count_operator(query text, operator text) returns int as
 $$
-rv = plpy.execute(explain_query)
+rv = plpy.execute('EXPLAIN ' + query)
 search_text = operator
 result = 0
 for i in range(len(rv)):
@@ -79,8 +79,8 @@ create table  bfv_subquery_t2(i int, j int);
 insert into  bfv_subquery_t1 select i, i%5 from generate_series(1,10)i;
 insert into  bfv_subquery_t2 values (1, 10);
 
-select count_operator('explain select bfv_subquery_t1.i, (select bfv_subquery_t1.i from bfv_subquery_t2) from bfv_subquery_t1;', 'Table Scan') > 0;
-select count_operator('explain select bfv_subquery_t1.i, (select bfv_subquery_t1.i from bfv_subquery_t2) from bfv_subquery_t1;', 'Seq Scan') > 0;
+select count_operator('select bfv_subquery_t1.i, (select bfv_subquery_t1.i from bfv_subquery_t2) from bfv_subquery_t1;', 'Table Scan') > 0;
+select count_operator('select bfv_subquery_t1.i, (select bfv_subquery_t1.i from bfv_subquery_t2) from bfv_subquery_t1;', 'Seq Scan') > 0;
 
 select bfv_subquery_t1.i, (select bfv_subquery_t1.i from bfv_subquery_t2) from bfv_subquery_t1 order by 1, 2;
 

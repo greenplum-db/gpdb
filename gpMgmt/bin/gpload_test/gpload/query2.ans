@@ -1,0 +1,7 @@
+2009-11-24 13:11:22|INFO|gpload session started 2009-11-24 13:11:22
+2009-11-24 13:11:22|INFO|started gpfdist -p 8000 -P 9000 -f "gpload2/data/lineitem.tbl.small" -t 30
+2009-11-24 13:11:23|INFO|running time: 1.11 seconds
+2009-11-24 13:11:23|INFO|rows Inserted          = 1
+2009-11-24 13:11:23|INFO|rows Updated           = 0
+2009-11-24 13:11:23|INFO|data formatting errors = 0
+2009-11-24 13:11:23|INFO|gpload succeeded

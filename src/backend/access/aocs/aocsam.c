@@ -104,16 +104,7 @@ static void open_all_datumstreamread_segfiles(Relation rel,
         if (proj[i])
 		{
 			open_datumstreamread_segfile(basepath, rel->rd_node, segInfo, ds[i], i);
-			datumstreamread_block(ds[i]);
-
-			if (blockDirectory != NULL)
-			{
-				AppendOnlyBlockDirectory_InsertEntry(blockDirectory,
-													 i,
-													 ds[i]->blockFirstRowNum,
-													 ds[i]->blockFileOffset,
-													 ds[i]->blockRowCount);
-			}
+			datumstreamread_block(ds[i], blockDirectory, i);
 		}
     }
 
@@ -297,10 +288,8 @@ static int open_next_scan_seg(AOCSScanDesc scan)
             {
 
 				/* If the scan also builds the block directory, initialize it here. */
-				if (scan->buildBlockDirectory)
+				if (scan->blockDirectory)
 				{
-					Assert(scan->blockDirectory != NULL);
-
                     /*
                      * if building the block directory, we need to make sure the sequence
                      *   starts higher than our highest tuple's rownum.  In the case of upgraded blocks,
@@ -361,9 +350,8 @@ static void close_cur_scan_seg(AOCSScanDesc scan)
         }
     }
 
-	if (scan->buildBlockDirectory)
+	if (scan->blockDirectory)
 	{
-		Assert(scan->blockDirectory != NULL);
 		AppendOnlyBlockDirectory_End_forInsert(scan->blockDirectory);
 	}
 }
@@ -469,7 +457,6 @@ aocs_beginscan_internal(Relation relation,
 
     aocs_initscan(scan);
 
-	scan->buildBlockDirectory = false;
 	scan->blockDirectory = NULL;
 
 	AppendOnlyVisimap_Init(&scan->visibilityMap,
@@ -560,7 +547,7 @@ ReadNext:
 				Assert(err >= 0);
 				if(err == 0)
 				{
-					err = datumstreamread_block(scan->ds[i]);
+					err = datumstreamread_block(scan->ds[i], scan->blockDirectory, i);
 					if(err < 0)
 					{
 						/* Ha, cannot read next block,
@@ -568,17 +555,6 @@ ReadNext:
 						 */
 						close_cur_scan_seg(scan);
 						goto ReadNext;
-					}
-
-					if (scan->buildBlockDirectory)
-					{
-						Assert(scan->blockDirectory != NULL);
-
-						AppendOnlyBlockDirectory_InsertEntry(scan->blockDirectory,
-															 i,
-															 scan->ds[i]->blockFirstRowNum,
-															 scan->ds[i]->blockFileOffset,
-															 scan->ds[i]->blockRowCount);
 					}
 
 					err = datumstreamread_advance(scan->ds[i]);
@@ -851,17 +827,9 @@ Oid aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool * null, AOTupleId *a
 			void *toFree2;
 
 			/* write the block up to this one */
-			datumstreamwrite_block(idesc->ds[i]);
+			datumstreamwrite_block(idesc->ds[i], &idesc->blockDirectory, i, false);
 			if (itemCount > 0)
 			{
-				/* Insert an entry to the block directory */
-				AppendOnlyBlockDirectory_InsertEntry(
-					&idesc->blockDirectory,
-					i,
-					idesc->ds[i]->blockFirstRowNum,
-					AppendOnlyStorageWrite_LastWriteBeginPosition(&idesc->ds[i]->ao_write),
-					itemCount);
-
 				/* since we have written all up to the new tuple,
 				 * the new blockFirstRowNum is the inserted tuple's row number
 				 */
@@ -886,18 +854,12 @@ Oid aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool * null, AOTupleId *a
 					idesc->ds[i]->ao_write.storageAttributes.compress = FALSE;
 				}
 
-				err = datumstreamwrite_lob(idesc->ds[i], datum);
+				err = datumstreamwrite_lob(idesc->ds[i],
+										   datum,
+										   &idesc->blockDirectory,
+										   i,
+										   false);
 				Assert(err >= 0);
-
-				/* Insert an entry to the block directory */
-				AppendOnlyBlockDirectory_InsertEntry(
-					&idesc->blockDirectory,
-					i,
-					idesc->ds[i]->blockFirstRowNum,
-					AppendOnlyStorageWrite_LastWriteBeginPosition(&idesc->ds[i]->ao_write),
-					1 /*itemCount -- always just the lob just inserted */
-				);
-
 
 				/*
 				 * A lob will live by itself in the block so
@@ -953,17 +915,7 @@ void aocs_insert_finish(AOCSInsertDesc idesc)
 
 	for(i=0; i<rel->rd_att->natts; ++i)
 	{
-		int itemCount = datumstreamwrite_nth(idesc->ds[i]);
-
-		datumstreamwrite_block(idesc->ds[i]);
-
-		AppendOnlyBlockDirectory_InsertEntry(
-			&idesc->blockDirectory,
-			i,
-			idesc->ds[i]->blockFirstRowNum,
-			AppendOnlyStorageWrite_LastWriteBeginPosition(&idesc->ds[i]->ao_write),
-			itemCount);
-
+		datumstreamwrite_block(idesc->ds[i], &idesc->blockDirectory, i, false);
 		datumstreamwrite_close_file(idesc->ds[i]);
 	}
 
@@ -1845,18 +1797,9 @@ void aocs_addcol_closefiles(AOCSAddColumnDesc desc)
 {
 	int i;
 	AttrNumber colno = desc->rel->rd_att->natts - desc->num_newcols;
-	int itemCount;
 	for (i = 0; i < desc->num_newcols; ++i)
 	{
-		itemCount = datumstreamwrite_nth(desc->dsw[i]);
-		datumstreamwrite_block(desc->dsw[i]);
-		AppendOnlyBlockDirectory_addCol_InsertEntry(
-			&desc->blockDirectory,
-			i + colno,
-			desc->dsw[i]->blockFirstRowNum,
-			AppendOnlyStorageWrite_LastWriteBeginPosition(
-					&desc->dsw[i]->ao_write),
-			itemCount);
+		datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, i + colno,true);
 		datumstreamwrite_close_file(desc->dsw[i]);
 	}
 	/* Update pg_aocsseg_* with eof of each segfile we just closed. */
@@ -1871,18 +1814,9 @@ void aocs_addcol_endblock(AOCSAddColumnDesc desc, int64 firstRowNum)
 {
 	int i;
 	AttrNumber colno = desc->rel->rd_att->natts - desc->num_newcols;
-	int itemCount;
 	for (i = 0; i < desc->num_newcols; ++i)
 	{
-		itemCount = datumstreamwrite_nth(desc->dsw[i]);
-		datumstreamwrite_block(desc->dsw[i]);
-		AppendOnlyBlockDirectory_addCol_InsertEntry(
-			&desc->blockDirectory,
-			i + colno,
-			desc->dsw[i]->blockFirstRowNum,
-			AppendOnlyStorageWrite_LastWriteBeginPosition(
-					&desc->dsw[i]->ao_write),
-			itemCount);
+		datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, i + colno, true);
 		/*
 		 * Next block's first row number.  In this case, the block
 		 * being ended has less number of rows than its capacity.
@@ -1926,16 +1860,9 @@ void aocs_addcol_insert_datum(AOCSAddColumnDesc desc, Datum *d, bool *isnull)
 			 */
 			itemCount = datumstreamwrite_nth(desc->dsw[i]);
 			/* write the block up to this one */
-			datumstreamwrite_block(desc->dsw[i]);
+			datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, i + colno, true);
 			if (itemCount > 0)
 			{
-				AppendOnlyBlockDirectory_addCol_InsertEntry(
-						&desc->blockDirectory,
-						i + colno,
-						desc->dsw[i]->blockFirstRowNum,
-						AppendOnlyStorageWrite_LastWriteBeginPosition(
-								&desc->dsw[i]->ao_write),
-						itemCount);
 				/* Next block's first row number */
 				desc->dsw[i]->blockFirstRowNum += itemCount;
 			}
@@ -1956,8 +1883,18 @@ void aocs_addcol_insert_datum(AOCSAddColumnDesc desc, Datum *d, bool *isnull)
 				{
 					desc->dsw[i]->ao_write.storageAttributes.compress = FALSE;
 				}
-				err = datumstreamwrite_lob(desc->dsw[i], datum);
+				err = datumstreamwrite_lob(desc->dsw[i],
+										   datum,
+										   &desc->blockDirectory,
+										   i + colno,
+										   true);
 				Assert(err >= 0);
+				/*
+				 * Have written the block above with column value
+				 * corresponding to a row, so now update the first row number
+				 * to correctly reflect for next block.
+				 */
+				desc->dsw[i]->blockFirstRowNum++;
 			}
 		}
 		if (toFree1 != NULL)

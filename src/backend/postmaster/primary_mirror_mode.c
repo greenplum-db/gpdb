@@ -373,7 +373,10 @@ getFaultTypeLabel(FaultType_e faultType)
 	};
 	COMPILE_ASSERT(ARRAY_SIZE(labels) == FaultType__EnumerationCount);
 
-	return labels[faultType];
+	if (faultType < ARRAY_SIZE(labels))
+		return labels[faultType];
+	else
+		return "UnrecognizedFaultType";
 }
 
 /**

@@ -1,9 +1,9 @@
 create schema bfv_aggregate;
 set search_path=bfv_aggregate;
 
----
---- Window function with outer references in PARTITION BY/ORDER BY clause
----
+--
+-- Window function with outer references in PARTITION BY/ORDER BY clause
+--
 
 -- SETUP
 create table x_outer (a int, b int, c int);
@@ -26,9 +26,9 @@ select * from x_outer where not exists (select rank() over(order by a) from y_in
 
 select * from x_outer where a in (select last_value(d) over(partition by b order by e rows between e preceding and e+1 following) from y_inner) order by 1, 2;
 
----
---- Testing aggregation in a query
----
+--
+-- Testing aggregation in a query
+--
 
 -- SETUP
 create table d (col1 timestamp, col2 int);
@@ -37,9 +37,9 @@ insert into d select to_date('2014-01-01', 'YYYY-DD-MM'), generate_series(1,100)
 -- TEST
 select 1, to_char(col1, 'YYYY'), median(col2) from d group by 1, 2;
 
----
---- Testing if aggregate derived window function produces incorrect results
----
+--
+-- Testing if aggregate derived window function produces incorrect results
+--
 
 -- SETUP
 create table toy(id,val) as select i,i from generate_series(1,5) i;
@@ -55,9 +55,9 @@ select
 from toy
 window w as (order by id rows 2 preceding);
 
----
---- Error executing for aggregate with anyarry as return type
----
+--
+-- Error executing for aggregate with anyarray as return type
+--
 
 -- SETUP
 CREATE OR REPLACE FUNCTION tfp(anyarray,anyelement) RETURNS anyarray AS
@@ -93,9 +93,9 @@ select f3, array_sort(myaggp20a(f1)) from t group by f3 order by f3;
 -- start_ignore
 create language plpythonu;
 -- end_ignore
-create or replace function count_operator(explain_query text, operator text) returns int as
+create or replace function count_operator(query text, operator text) returns int as
 $$
-rv = plpy.execute(explain_query)
+rv = plpy.execute('EXPLAIN ' + query)
 search_text = operator
 result = 0
 for i in range(len(rv)):
@@ -106,9 +106,9 @@ return result
 $$
 language plpythonu;
 
----
---- Testing adding a traceflag to favor multi-stage aggregation
----
+--
+-- Testing adding a traceflag to favor multi-stage aggregation
+--
 
 -- SETUP
 create table multi_stage_test(a int, b int);
@@ -118,18 +118,18 @@ analyze multi_stage_test;
 -- TEST
 set optimizer_segments=2;
 set optimizer_prefer_multistage_agg = on;
-select count_operator('explain select count(*) from multi_stage_test group by b;','GroupAggregate');
+select count_operator('select count(*) from multi_stage_test group by b;','GroupAggregate');
 
 set optimizer_prefer_multistage_agg = off;
-select count_operator('explain select count(*) from multi_stage_test group by b;','GroupAggregate');
+select count_operator('select count(*) from multi_stage_test group by b;','GroupAggregate');
 
 --CLEANUP
 reset optimizer_segments;
 set optimizer_prefer_multistage_agg = off;
 
----
---- Testing not picking HashAgg for aggregates without preliminary functions
----
+--
+-- Testing not picking HashAgg for aggregates without preliminary functions
+--
 
 -- SETUP
 SET optimizer_disable_missing_stats_collection=on;
@@ -156,15 +156,15 @@ CREATE AGGREGATE concat(text) (
 -- cook some stats
 set allow_system_table_mods='DML';
 UPDATE pg_class set reltuples=524592::real, relpages=2708::integer where oid = 'attribute_table'::regclass;
-select count_operator('explain select product_id,concat(E''#attribute_''||attribute_id::varchar||E'':''||attribute) as attr FROM attribute_table GROUP BY product_id;','HashAggregate');
+select count_operator('select product_id,concat(E''#attribute_''||attribute_id::varchar||E'':''||attribute) as attr FROM attribute_table GROUP BY product_id;','HashAggregate');
 
 -- CLEANUP
 SET optimizer_disable_missing_stats_collection=off;
 
 
----
---- Testing fallback to planner when the agg used in window does not have either prelim or inverse prelim function.
----
+--
+-- Testing fallback to planner when the agg used in window does not have either prelim or inverse prelim function.
+--
 
 -- SETUP
 create table foo(a int, b text) distributed by (a);
@@ -176,7 +176,7 @@ select string_agg(b) over (partition by a) from foo order by 1;
 select string_agg(b) over (partition by a,b) from foo order by 1;
 -- should not fall back
 select max(b) over (partition by a) from foo order by 1;
-select count_operator('explain select max(b) over (partition by a) from foo order by 1;', 'Table Scan');
+select count_operator('select max(b) over (partition by a) from foo order by 1;', 'Table Scan');
 -- fall back
 select string_agg(b) over (partition by a+1) from foo order by 1;
 select string_agg(b || 'txt') over (partition by a) from foo order by 1;

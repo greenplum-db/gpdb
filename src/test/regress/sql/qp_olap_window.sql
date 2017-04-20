@@ -5,9 +5,9 @@
 -- start_ignore
 -- count number of certain operators in a given plan
 create language plpythonu;
-create or replace function ow_count_operator(explain_query text, operator text) returns int as
+create or replace function ow_count_operator(query text, operator text) returns int as
 $$
-rv = plpy.execute(explain_query)
+rv = plpy.execute('EXPLAIN '+ query)
 search_text = operator
 result = 0
 for i in range(len(rv)):
@@ -23888,7 +23888,7 @@ select cn,vn,ntile(qty) over(partition by cn order by vn) from ow_sale;
 select cn,vn,ntile(cn) over(partition by cn+vn order by vn) from ow_sale;
 select cn,vn,ntile(cn+vn) over(partition by cn+vn order by vn) from ow_sale; --mvd 1,2->3
 
-select ow_count_operator('explain select * from ow_sale order by first_value(NULL) over (partition by cn order by case when 1=1 then pn else vn end);', 'Window') > 0;
+select ow_count_operator('select * from ow_sale order by first_value(NULL) over (partition by cn order by case when 1=1 then pn else vn end);', 'Window') > 0;
 
 drop table if exists tab12773_test;
 

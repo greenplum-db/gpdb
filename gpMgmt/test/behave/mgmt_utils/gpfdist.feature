@@ -8,7 +8,7 @@ Feature: gpfdist configure timeout value
         And the performance timer is started
         And the user runs client program "gpfdist_client.py" from "test/behave_utils/gpfdist_utils" under CWD
         Then the performance timer should be less then "64" seconds
-        And the client program should print TIMEOUT PERIOD: to stdout with value in range 60 to 62
+        And the client program should print "TIMEOUT PERIOD:" to stdout with value in range 60 to 62
         And the file "./gpfdist.log" is removed from the system
         And the "gpfdist" process is killed
 
@@ -20,23 +20,23 @@ Feature: gpfdist configure timeout value
         And the performance timer is started
         And the user runs client program "gpfdist_client.py" from "test/behave_utils/gpfdist_utils" under CWD
         Then the performance timer should be less then "605" seconds
-        And the client program should print TIMEOUT PERIOD: to stdout with value in range 600 to 601
+        And the client program should print "TIMEOUT PERIOD:" to stdout with value in range 600 to 601
         And the file "./gpfdist.log" is removed from the system
         And the "gpfdist" process is killed
 
     @fire
     Scenario: Validate timeout command line option - debug case 5
         When the user runs "gpfdist -p 8088 -V -t 601"
-        Then the client program should print Error: -t timeout must be between 2 and 600, or 0 for no timeout error message
+        Then the client program should print "Error: -t timeout must be between 2 and 600, or 0 for no timeout" error message
         And gpfdist should return a return code of 1
 
     @fire
     Scenario: Validate timeout command line option - debug case 5
         When the user runs "gpfdist -p 8088 -V -t 5 -z 15"
-        Then the client program should print Error: -z listen queue size must be between 16 and 512 \(default is 256\) error message
+        Then the client program should print "Error: -z listen queue size must be between 16 and 512 \(default is 256\)" error message
         And gpfdist should return a return code of 1
         When the user runs "gpfdist -p 8088 -V -t 5 -z 513"
-        Then the client program should print Error: -z listen queue size must be between 16 and 512 \(default is 256\) error message
+        Then the client program should print "Error: -z listen queue size must be between 16 and 512 \(default is 256\)" error message
         And gpfdist should return a return code of 1
 
     @gpfdist_wait_before_close
@@ -137,9 +137,9 @@ Feature: gpfdist configure timeout value
         Given waiting "4" seconds
         When the user runs command "wc -l ./extdata/data.txt"
         Then the file "extdata/data.txt" by process "extdata/gpfdist.pid" is closed
-        Then the client program should print 1 ./extdata/data.txt to stdout
+        Then the client program should print "1 ./extdata/data.txt" to stdout
         When the user runs command "cat ./extdata/data.txt"
-        Then the client program should print 1234 to stdout
+        Then the client program should print "1234" to stdout
 
     @gpfdist_without_sequence_number
     Scenario: gpfdist works when using sequence_number and avoid duplicated writes
@@ -152,9 +152,9 @@ Feature: gpfdist configure timeout value
         Given waiting "4" seconds
         When the user runs command "wc -l ./extdata/data.txt"
         Then the file "extdata/data.txt" by process "extdata/gpfdist.pid" is closed
-        Then the client program should print 1 ./extdata/data.txt to stdout
+        Then the client program should print "1 ./extdata/data.txt" to stdout
         When the user runs command "cat ./extdata/data.txt"
-        Then the client program should print 1234 to stdout
+        Then the client program should print "1234" to stdout
 
 
     @gpfdist_bad_sequence_number
@@ -164,7 +164,7 @@ Feature: gpfdist configure timeout value
         Given the directory "extdata" exists in current working directory
         When the user runs "gpfdist -p 8088 -V -l gpfdist.log -d extdata -w 3 & echo $! > extdata/gpfdist.pid &"
         When the user runs client program "gpfdist_httpclient.py --url=localhost:8088 --path=/data.txt --segment_count=2 --segment_index=0 --session_id=1 --sequence_num=2" from "test/behave_utils/gpfdist_utils" under CWD
-        Then the client program should print 400 invalid request due to wrong sequence number to stdout
+        Then the client program should print "400 invalid request due to wrong sequence number" to stdout
 
     @gpfdist_non_consective_sequence_number
     Scenario: gpfdist should reject if first sequence number != 1
@@ -174,7 +174,7 @@ Feature: gpfdist configure timeout value
         When the user runs "gpfdist -p 8088 -V -l gpfdist.log -d extdata -w 3 & echo $! > extdata/gpfdist.pid &"
         When the user runs client program "gpfdist_httpclient.py --url=localhost:8088 --path=/data.txt --segment_count=2 --segment_index=0 --session_id=1 --sequence_num=1" from "test/behave_utils/gpfdist_utils" under CWD
         When the user runs client program "gpfdist_httpclient.py --url=localhost:8088 --path=/data.txt --segment_count=2 --segment_index=0 --session_id=1 --sequence_num=3" from "test/behave_utils/gpfdist_utils" under CWD
-        Then the client program should print 400 invalid request due to wrong sequence number to stdout
+        Then the client program should print "400 invalid request due to wrong sequence number" to stdout
 
 
     @gpfdist_negative_sequence_number
@@ -184,7 +184,7 @@ Feature: gpfdist configure timeout value
         Given the directory "extdata" exists in current working directory
         When the user runs "gpfdist -p 8088 -V -l gpfdist.log -d extdata -w 3 & echo $! > extdata/gpfdist.pid &"
         When the user runs client program "gpfdist_httpclient.py --url=localhost:8088 --path=/data.txt --segment_count=2 --segment_index=0 --session_id=1 --sequence_num=-1" from "test/behave_utils/gpfdist_utils" under CWD
-        Then the client program should print 400 invalid sequence number to stdout
+        Then the client program should print "400 invalid sequence number" to stdout
 
     @gpfdist_eol_encoding
     Scenario: gpfdist should reject bad encoded EOL
@@ -197,7 +197,7 @@ Feature: gpfdist configure timeout value
         Given waiting "2" seconds
         When the "gpfdist" process is killed
         And the user runs command "cat ./gpfdist.log"
-        Then the client program should print invalid EOL to stdout
+        Then the client program should print "invalid EOL" to stdout
 
     @gpfdist_empty_http_request
     Scenario: gpfdist should reject bad encoded EOL
@@ -209,7 +209,7 @@ Feature: gpfdist configure timeout value
         Given waiting "2" seconds
         When the "gpfdist" process is killed
         And the user runs command "cat ./gpfdist.log"
-        Then the client program should print 400 invalid request to stdout
+        Then the client program should print "400 invalid request" to stdout
 
     @writable_external_table_encoding_conversion
     Scenario: guarantee right encoding conversion when write into external table
@@ -237,6 +237,6 @@ Feature: gpfdist configure timeout value
         And the user runs "gpfdist -p 8091 -V -d extdata & "
         And the user runs "psql gpfdistdb -f test/behave/mgmt_utils/steps/data/gpfdist_encoding_conversion.sql"
         And the user runs command "wc -l extdata/wet_encoding_conversion.txt"
-        Then the client program should print 1 to stdout
+        Then the client program should print "1" to stdout
         And the "gpfdist" process is killed
         And the file "extdata/wet_encoding_conversion.txt" is removed from the system

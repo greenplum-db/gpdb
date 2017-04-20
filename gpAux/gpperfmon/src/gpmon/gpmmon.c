@@ -32,6 +32,14 @@
 #include "libpq-fe.h"
 #include <time.h>
 
+void update_mmonlog_filename(void);
+int gpmmon_quantum(void);
+void incremement_tail_bytes(apr_uint64_t);
+int is_gpdb_appliance(void);
+time_t compute_next_dump_to_file(void);
+void populate_smdw_aliases(host_t*);
+char* get_ip_for_host(char*, bool*);
+
 #define YES_TEXT "yes"
 #define NO_TEXT "no"
 
@@ -77,8 +85,6 @@ static struct
 	apr_uint64_t _tail_buffer_bytes;
 } ax = { 0 };
 
-snmp_module_params_t snmp_module_params;
-
 void interuptable_sleep(unsigned int seconds);
 
 // lock when accessing the debug log file
@@ -96,7 +102,6 @@ int min_detailed_query_time = 60; /* == opt.d */
 static apr_thread_t* conm_th = NULL;
 static apr_thread_t* event_th = NULL;
 static apr_thread_t* harvest_th = NULL;
-static apr_thread_t* snmp_th = NULL;
 static apr_thread_t* message_th = NULL;
 apr_queue_t* message_queue = NULL;
 
@@ -179,8 +184,6 @@ static void cleanup()
 		apr_thread_join(&tstatus, conm_th);
 	if (harvest_th)
 		apr_thread_join(&tstatus, harvest_th);
-	if (snmp_th)
-		apr_thread_join(&tstatus, snmp_th);
 	if (message_th)
 		apr_thread_join(&tstatus, message_th);
 
@@ -752,111 +755,6 @@ static void* conm_main(apr_thread_t* thread_, void* arg_)
 	return 0;
 }
 
-#ifdef USE_CONNECTEMC
-/* seperate thread for snmp */
-static void* snmp_main(apr_thread_t* thread_, void* arg_)
-{
-	unsigned int loop;
-	int ticks_since_last_snmp_report = 0;
-	int retVal = 0;
-	int sleep_interval;
-
-	snprintf(snmp_module_params.configfile, PATH_MAX, "%s/gpperfmon/conf/snmp.conf", ax.master_data_directory);
-	snprintf(snmp_module_params.outdir, PATH_MAX, "%s/gpperfmon/data/snmp", ax.master_data_directory);
-	snprintf(snmp_module_params.externaltable_dir, PATH_MAX, "%s/gpperfmon/data", ax.master_data_directory);
-	snmp_module_params.health_harvest_interval = opt.health_harvest_interval;
-	snmp_module_params.warning_disk_space_percentage = opt.warning_disk_space_percentage;
-	if (snmp_module_params.warning_disk_space_percentage == 0)
-	{
-		snmp_module_params.warning_disk_space_percentage = 90;
-	}
-	snmp_module_params.error_disk_space_percentage = opt.error_disk_space_percentage;
-	if (snmp_module_params.error_disk_space_percentage == 0)
-	{
-		snmp_module_params.error_disk_space_percentage = 95;
-	}
-	if (arg_ && *((int*)arg_) == 1)
-	{
-		snmp_module_params.healthmon_running_separately = 1;
-		TR0(("healthmond will do healthmonitoring, not doing snmp....\n"));
-	}
-	else
-	{
-		snmp_module_params.healthmon_running_separately = 0;
-	}
-
-	if (snmp_module_params.healthmon_running_separately &&
-			snmp_module_params.health_harvest_interval < 30)
-	{
-		snmp_module_params.health_harvest_interval = 30;
-	}
-
-	// if explicitly turned off in gpperfmon.conf or guc then disable
-	// if set to local only in guc, then set local only
-	// else it is on
-	if (!opt.emcconnect)
-	{
-		snmp_module_params.emcconnect_mode = EMCCONNECT_MODE_TYPE_OFF;
-	}
-	else if (!ax.guc_emcconnect_allowed)
-	{
-		snmp_module_params.emcconnect_mode = EMCCONNECT_MODE_TYPE_OFF;
-	}
-	else if (ax.guc_emcconnect_localonly)
-	{
-		snmp_module_params.emcconnect_mode = EMCCONNECT_MODE_TYPE_LOCAL;
-		TR0(("Connect EMC enabled in 'local' mode\n"));
-	}
-	else
-	{
-		snmp_module_params.emcconnect_mode = EMCCONNECT_MODE_TYPE_ON;
-		TR0(("Connect EMC enabled\n"));
-	}
-
-	if (gpmmon_init_snmp(&snmp_module_params) != APR_SUCCESS)
-	{
-		gpmon_warningx(FLINE, 0, "performance monitor snmp module not initialized successfully");
-		return NULL;
-	}
-
-	snmp_report(ax.hosttab, ax.hosttabsz);
-
-	if (snmp_module_params.healthmon_running_separately)
-	{
-		sleep_interval = snmp_module_params.health_harvest_interval;
-	}
-	else
-	{
-		sleep_interval = opt.snmp_interval;
-	}
-
-	for (loop = 1; !ax.exit; loop++)
-	{
-		apr_sleep(apr_time_from_sec(1));
-		ticks_since_last_snmp_report++;
-
-		if (ticks_since_last_snmp_report >= sleep_interval)
-		{
-			retVal = snmp_report(ax.hosttab, ax.hosttabsz);
-			if (retVal)
-			{
-				gpmon_warningx(FLINE, 0, "failure collecting snmp data from cluster code %d", retVal);
-				fflush(stdout);
-
-				// wait a while before trying to do the report again
-				ticks_since_last_snmp_report = -60;
-			}
-			else
-			{
-				ticks_since_last_snmp_report = 0;
-			}
-		}
-	}
-
-	return NULL;
-}
-#endif
-
 /* seperate thread for harvest */
 static void* harvest_main(apr_thread_t* thread_, void* arg_)
 {
@@ -1007,6 +905,7 @@ static void* message_main(apr_thread_t* thread_, void* arg_)
 	}
 	return APR_SUCCESS;
 }
+
 int is_gpdb_appliance()
 {
 	FILE* fd = fopen(PATH_TO_APPLIANCE_VERSION_FILE, "r");
@@ -1041,9 +940,6 @@ static void gpmmon_main(void)
 	apr_status_t retCode;
 	apr_threadattr_t* ta;
 	time_t this_cycle_ts = 0;
-#ifdef USE_CONNECTEMC
-	int healthmon_running_separately;
-#endif
 	/* log check is not exact. do it every X loops */
 	int ticks_since_last_log_check = 0;
 	const unsigned int log_check_interval = 60;
@@ -1183,26 +1079,6 @@ static void gpmmon_main(void)
 		interuptable_sleep(30); // sleep to prevent loop of forking process and failing
 		gpmon_fatalx(FLINE, e, "apr_thread_create failed");
 	}
-
-#ifdef USE_CONNECTEMC
-	healthmon_running_separately = is_healthmon_running_separately();
-	/* spawn snmp thread if enabled */
-	if (opt.snmp_interval || healthmon_running_separately)
-	{
-		if (is_gpdb_appliance())
-		{
-			if (0 != (e = apr_thread_create(&snmp_th, ta, snmp_main, &healthmon_running_separately, ax.pool)))
-			{
-				interuptable_sleep(30); // sleep to prevent loop of forking process and failing
-				gpmon_fatalx(FLINE, e, "apr_thread_create failed");
-			}
-		}
-		else
-		{
-			gpmon_warningx(FLINE, e, "snmp_inteval but this host is not detected as part of Greenplum Appliance.  snmp monitoring is only enabled on the Greenplum Appliance.");
-		}
-	}
-#endif
 
 	/* main loop */
 	while (!ax.exit)
@@ -1447,10 +1323,6 @@ static int read_conf_file(char *conffile)
 			{
 				opt.max_log_size = apr_atoi64(pVal);
 			}
-			else if (apr_strnatcasecmp(pName, "snmp_interval") == 0)
-			{
-				opt.snmp_interval = atoi(pVal);
-			}
 			else if (apr_strnatcasecmp(pName, "warning_disk_space_percentage") == 0)
 			{
 				opt.warning_disk_space_percentage = atoi(pVal);
@@ -1544,13 +1416,6 @@ static int read_conf_file(char *conffile)
 		fprintf(stderr, "Performance Monitor - harvest_interval must be greater than 30.  Using "
 				"default value 120\n");
 		opt.harvest_interval = 120;
-	}
-
-	if (opt.snmp_interval && opt.snmp_interval < 0)
-	{
-		fprintf(stderr, "Performance Monitor - snmp_interval must be either 0 or greater than 0.  Using "
-				"default value 10\n");
-		opt.snmp_interval = 10;
 	}
 
 	if (opt.warning_disk_space_percentage < 0 || opt.warning_disk_space_percentage >= 100)

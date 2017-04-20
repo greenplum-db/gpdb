@@ -238,16 +238,15 @@ ProcArrayRemove(PGPROC *proc, TransactionId latestXid)
  * incomplete.)
  *
  * GPDB: If this is a global transaction, we might need to do this action
- * later, rather than now. In that case, this function sets *needNotifyCommittedDtxTransaction,
- * and does *not* change the state of the PGPROC entry. This can only happen
- * for commit; when !isCommit, this always clears the PGPROC entry.
+ * later, rather than now. In that case, this function returns true for
+ * needNotifyCommittedDtxTransaction, and does *not* change the state of the
+ * PGPROC entry. This can only happen for commit; when !isCommit, this always
+ * clears the PGPROC entry.
  */
-void
-ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid, bool isCommit,
-						bool *needNotifyCommittedDtxTransaction)
+bool
+ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid, bool isCommit)
 {
-	if (needNotifyCommittedDtxTransaction)
-		*needNotifyCommittedDtxTransaction = false;
+	bool needNotifyCommittedDtxTransaction;
 
 	/*
 	 * MyProc->localDistribXactData is only used for debugging purpose by
@@ -286,10 +285,9 @@ ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid, bool isCommit,
 	}
 
 	if (isCommit && notifyCommittedDtxTransactionIsNeeded())
-	{
-		Assert(needNotifyCommittedDtxTransaction);
-		*needNotifyCommittedDtxTransaction = true;
-	}
+		needNotifyCommittedDtxTransaction = true;
+	else
+		needNotifyCommittedDtxTransaction = false;
 	
 	if (TransactionIdIsValid(latestXid))
 	{
@@ -303,8 +301,7 @@ ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid, bool isCommit,
 		Assert(TransactionIdIsValid(proc->xid) ||
 			   (IsBootstrapProcessingMode() && latestXid == BootstrapTransactionId));
 
-		if ((needNotifyCommittedDtxTransaction == NULL) ||
-			(! *needNotifyCommittedDtxTransaction))
+		if (! needNotifyCommittedDtxTransaction)
 		{
 			proc->xid = InvalidTransactionId;
 			proc->lxid = InvalidLocalTransactionId;
@@ -354,6 +351,8 @@ ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid, bool isCommit,
 		Assert(proc->subxids.nxids == 0);
 		Assert(proc->subxids.overflowed == false);
 	}
+
+	return needNotifyCommittedDtxTransaction;
 }
 
 

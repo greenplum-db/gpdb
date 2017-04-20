@@ -39,7 +39,7 @@ try:
 except Exception, e:
     from struct import calcsize
     sysWordSize = calcsize("P") * 8
-    if (platform.system()) in ['Windows', 'Microsoft'] and (sysWordSize == 64): 
+    if (platform.system()) in ['Windows', 'Microsoft'] and (sysWordSize == 64):
         errorMsg = "gpload appears to be running in 64-bit Python under Windows.\n"
         errorMsg = errorMsg + "Currently only 32-bit Python is supported. Please \n"
         errorMsg = errorMsg + "reinstall a 32-bit Python interpreter.\n"
@@ -68,8 +68,8 @@ EXECNAME = 'gpload'
 NUM_WARN_ROWS = 0
 
 # Mapping for validing our configuration file. We're only concerned with
-# keys -- stuff left of ':'. It gets complex in two cases: firstly when 
-# we handle blocks which have keys which are not keywords -- such as under 
+# keys -- stuff left of ':'. It gets complex in two cases: firstly when
+# we handle blocks which have keys which are not keywords -- such as under
 # COLUMNS:. Secondly, we want to detect when users put keywords in the wrong
 # place. To that end, the mapping is structured such that:
 #
@@ -78,12 +78,12 @@ NUM_WARN_ROWS = 0
 #
 # Each key is a keyword in the configuration file. parse_children tells us
 # whether children are expected to be keywords. parent tells us the parent
-# keyword or None 
+# keyword or None
 valid_tokens = {
     "version": {'parse_children': True, 'parent': None},
-    "database": {'parse_children': True, 'parent': None}, 
-    "user": {'parse_children': True, 'parent': None}, 
-    "host": {'parse_children': True, 'parent': None}, 
+    "database": {'parse_children': True, 'parent': None},
+    "user": {'parse_children': True, 'parent': None},
+    "host": {'parse_children': True, 'parent': None},
     "port": {'parse_children': True, 'parent': [None, "source"]},
     "password": {'parse_children': True, 'parent': None},
     "gpload": {'parse_children': True, 'parent': None},
@@ -99,24 +99,24 @@ valid_tokens = {
     "transform_config": {'parse_children': True, 'parent': "input"},
     "max_line_length": {'parse_children': True, 'parent': "input"},
     "format": {'parse_children': True, 'parent': "input"},
-    "delimiter": {'parse_children': True, 'parent': "input"}, 
+    "delimiter": {'parse_children': True, 'parent': "input"},
     "escape": {'parse_children': True, 'parent': "input"},
     "null_as": {'parse_children': True, 'parent': "input"},
-    "quote": {'parse_children': True, 'parent': "input"}, 
+    "quote": {'parse_children': True, 'parent': "input"},
     "encoding": {'parse_children': True, 'parent': "input"},
     "force_not_null": {'parse_children': False, 'parent': "input"},
-    "error_limit": {'parse_children': True, 'parent': "input"}, 
+    "error_limit": {'parse_children': True, 'parent': "input"},
     "error_percent": {'parse_children': True, 'parent': "input"},
     "error_table": {'parse_children': True, 'parent': "input"},
     "log_errors": {'parse_children': False, 'parent': "input"},
     "header": {'parse_children': True, 'parent': "input"},
     "fully_qualified_domain_name": {'parse_children': False, 'parent': 'input'},
     "output": {'parse_children': True, 'parent': "gpload"},
-    "table": {'parse_children': True, 'parent': "output"}, 
+    "table": {'parse_children': True, 'parent': "output"},
     "mode": {'parse_children': True, 'parent': "output"},
     "match_columns": {'parse_children': False, 'parent': "output"},
     "update_columns": {'parse_children': False, 'parent': "output"},
-    "update_condition": {'parse_children': True, 'parent': "output"}, 
+    "update_condition": {'parse_children': True, 'parent': "output"},
     "mapping": {'parse_children': False, 'parent': "output"},
     "including_defaults": {'parse_children': False, 'parent': 'output'},
     "preload": {'parse_children': True, 'parent': 'gpload'},
@@ -545,7 +545,7 @@ def is_keyword(tab):
 def caseInsensitiveDictLookup(key, dictionary):
     """
     Do a case insensitive dictionary lookup. Return the dictionary value if found,
-    or None if not found.                                                                                                               
+    or None if not found.
     """
     for entry in dictionary:
         if entry.lower() == key.lower():
@@ -555,7 +555,7 @@ def caseInsensitiveDictLookup(key, dictionary):
 
 
 def sqlIdentifierCompare(x, y):
-    """                                                                                                            
+    """
     Compare x and y as SQL identifiers. Use SQL rules for comparing delimited
     and non-delimited identifiers. Return True if they are equivalent or False
     if they are not equivalent.
@@ -594,7 +594,7 @@ def isDelimited(value):
 def convertListToDelimited(identifiers):
     """
     This method will convert a list of identifiers, which may be a mix of
-    delimited and non-delimited identifiers, and return a list of 
+    delimited and non-delimited identifiers, and return a list of
     delimited identifiers.
     """
     returnList = []
@@ -633,7 +633,7 @@ def splitUpMultipartIdentifier(id):
                if se != '':
                   returnList.append(se)
 
-    return returnList    
+    return returnList
 
 
 def splitIntoLiteralsAndNonLiterals(str1, quoteValue="'"):
@@ -688,9 +688,9 @@ def quote_unident(val):
     """
     if val != None and len(val) > 0:
        val = val.replace('""', '"')
-       if val != None and len(val) > 1 and val[0] == '"' and val[-1] == '"':  
+       if val != None and len(val) > 1 and val[0] == '"' and val[-1] == '"':
            val = val[1:-1]
-    
+
     return val
 
 
@@ -748,7 +748,7 @@ class CatThread(threading.Thread):
     in the log file.
 
     The fd is assumed to be stdout and stderr from gpfdist. We must use select.select
-    and locks to ensure both threads are not read at the same time. A dead lock 
+    and locks to ensure both threads are not read at the same time. A dead lock
     situation could happen if they did. communicate() is not used since it blocks.
     We will wait 1 second between read attempts.
 
@@ -864,7 +864,7 @@ class Progress(threading.Thread):
                 break
             time.sleep(1)
 def cli_help():
-    help_path = os.path.join(sys.path[0], '..', 'docs', 'cli_help', EXECNAME + 
+    help_path = os.path.join(sys.path[0], '..', 'docs', 'cli_help', EXECNAME +
                              '_help');
     f = None
     try:
@@ -884,7 +884,7 @@ def usage(error = None):
         sys.stderr.write('ERROR: ' + error + '\n')
         sys.stderr.write('\n')
         sys.stderr.flush()
-  
+
     sys.exit(2)
 
 def quote(a):
@@ -925,7 +925,7 @@ def test_key(gp, key, crumb):
     val = valid_tokens.get(key)
     if val == None:
         gp.log(gp.ERROR, 'unrecognized key: "%s"' % key)
-    
+
     p = val['parent']
 
     # simplify for when the same keyword can appear in multiple places
@@ -988,7 +988,7 @@ def changeToUnicode(a):
         b = dict()
         for key,value in a.iteritems():
             if type(key) == str:
-                key = unicode(key)                                                                  
+                key = unicode(key)
             b[key] = changeToUnicode(value)
         return b
     if type(a) == str:
@@ -1067,11 +1067,11 @@ def jenkins(data, initval = 0):
 # Not sure if it is used by other components, just leave it here.
 def shortname(name):
     """
-    Returns a 10 character string formed by concatenating the first two characters 
-    of the name with another 8 character string computed using the Jenkins hash 
+    Returns a 10 character string formed by concatenating the first two characters
+    of the name with another 8 character string computed using the Jenkins hash
     function of the table name. When the original name has only a single non-space
     ascii character, we return '00' followed by 8 char hash.
-    
+
     For example:
 
     >>> shortname('mytable')
@@ -1080,26 +1080,26 @@ def shortname(name):
     'so9068664a'
     >>> shortname('t')
     '006742be70'
-    
+
     @param name: the input tablename
     @returns:    a string 10 characters or less built from the table name
     """
-    
+
     # Remove spaces from original name
     name = re.sub(r' ', '', name)
-    
-    # Run the hash function 
+
+    # Run the hash function
     j = jenkins(name)
-    
+
     # Now also remove non ascii chars from original name.
-    # We do this after jenkins so that we exclude the 
+    # We do this after jenkins so that we exclude the
     # (very rare) case of passing an empty string to jenkins
     name = "".join(i for i in name if ord(i) < 128)
-    
+
     if len(name) > 1:
         return '%2s%08x' % (name[0:2], j)
     else:
-        return '00%08x' % (j) # could be len 0 or 1    
+        return '00%08x' % (j) # could be len 0 or 1
 
 class options:
     pass
@@ -1119,7 +1119,7 @@ class gpload:
         self.options.U = None
         self.options.W = False
         self.options.D = False
-        self.options.no_auto_trans = False 
+        self.options.no_auto_trans = False
         self.options.password = None
         self.options.d = None
         self.DEBUG = 5
@@ -1131,11 +1131,12 @@ class gpload:
         self.options.l = None
         self.lastcmdtime = ''
         self.cmdtime = ''
+        self.formatOpts = ""
         seenv = False
         seenq = False
 
-        # Create Temp and External table names. However external table name could 
-        # get overwritten with another name later on (see create_external_table_name). 
+        # Create Temp and External table names. However external table name could
+        # get overwritten with another name later on (see create_external_table_name).
         # MPP-20927 Citibank: gpload external table name problem. We use uuid to avoid
         # external table name confliction.
         self.unique_suffix = str(uuid.uuid1()).replace('-', '_')
@@ -1192,7 +1193,7 @@ class gpload:
                         configFilename = argv[1]
                         argv = argv[2:]
                     elif argv[0]=='--no_auto_trans':
-                        self.options.no_auto_trans = True 
+                        self.options.no_auto_trans = True
                         argv = argv[1:]
                     elif argv[0]=='-?':
                         usage()
@@ -1327,14 +1328,14 @@ class gpload:
     def getconfig(self, a, typ=None, default='error', extraStuff='', returnOriginal=False):
         """
         Look for a config entry, via a column delimited string. a:b:c points to
-        
+
         a:
             b:
                 c
 
         Make sure that end point is of type 'typ' when not set to None.
- 
-        If returnOriginal is False, the return value will be in lower case, 
+
+        If returnOriginal is False, the return value will be in lower case,
         else the return value will be in its original form (i.e. the case that
         the user specified in their yaml file).
         """
@@ -1466,7 +1467,7 @@ class gpload:
         Raises errors if options are invalid or ports are unavailable.
 
         @param name: input source name from YAML file.
-        @param availablePorts: current set of available ports 
+        @param availablePorts: current set of available ports
         @param popenList: gpfdist options (updated)
         """
         port = self.getconfig(name + ':port', int, None)
@@ -1681,9 +1682,9 @@ class gpload:
                 self.log(self.ERROR, "could not run %s: %s" % \
                                 (' '.join(popenList), str(e)))
 
-            """ 
+            """
             Reading from stderr and stdout on a Popen object can result in a dead lock if done at the same time.
-            Create a lock to share when reading stderr and stdout from gpfdist. 
+            Create a lock to share when reading stderr and stdout from gpfdist.
             """
             readLock = threading.Lock()
 
@@ -1766,7 +1767,7 @@ class gpload:
         """
         Connect to the backend
         """
-        if self.db != None: 
+        if self.db != None:
             self.db.close()
             self.db = None
         if self.options.W:
@@ -1782,13 +1783,13 @@ class gpload:
                 self.readPgpass(os.environ.get('PGPASSFILE',
                                 os.environ.get('HOME','.')+'/.pgpass'))
         try:
-            self.log(self.DEBUG, "connection string:" + 
+            self.log(self.DEBUG, "connection string:" +
                      " user=" + str(self.options.U) +
                      " host=" + str(self.options.h) +
                      " port=" + str(self.options.p) +
                      " database=" + str(self.options.d))
             self.db = pg.DB( dbname=self.options.d
-                           , host=self.options.h 
+                           , host=self.options.h
                            , port=self.options.p
                            , user=self.options.U
                            , passwd=self.options.password
@@ -1821,7 +1822,7 @@ class gpload:
                 d = { tempkey.strip() : value }
                 key = d.keys()[0]
                 if d[key] == None:
-                    self.log(self.DEBUG, 
+                    self.log(self.DEBUG,
                              'getting source column data type from target')
                     for name, typ, mapto, hasseq in self.into_columns:
                         if sqlIdentifierCompare(name, key):
@@ -1856,39 +1857,39 @@ class gpload:
 
     def read_table_metadata(self):
         # KAS Note to self. If schema is specified, then probably should use PostgreSQL rules for defining it.
-        
+
         # find the shema name for this table (according to search_path)
         # if it was not explicitly specified in the configuration file.
         if self.schema == None:
             queryString = """SELECT n.nspname
-                             FROM pg_catalog.pg_class c 
-                             LEFT JOIN pg_catalog.pg_namespace n 
+                             FROM pg_catalog.pg_class c
+                             LEFT JOIN pg_catalog.pg_namespace n
                              ON n.oid = c.relnamespace
-                             WHERE c.relname = '%s' 
+                             WHERE c.relname = '%s'
                              AND pg_catalog.pg_table_is_visible(c.oid);""" % quote_unident(self.table)
-            
+
             resultList = self.db.query(queryString.encode('utf-8')).getresult()
-            
-            if len(resultList) > 0: 
+
+            if len(resultList) > 0:
                 self.schema = (resultList[0])[0]
                 self.log(self.INFO, "setting schema '%s' for table '%s'" % (self.schema, quote_unident(self.table)))
             else:
                 self.log(self.ERROR, "table %s not found in any database schema" % self.table)
 
-                   
+
         queryString = """select nt.nspname as table_schema,
          c.relname as table_name,
          a.attname as column_name,
-         a.attnum as ordinal_position, 
+         a.attnum as ordinal_position,
          format_type(a.atttypid, a.atttypmod) as data_type,
          c.relkind = 'r' AS is_updatable,
-         a.atttypid in (23, 20) and a.atthasdef and 
-             (select position ( 'nextval(' in pg_catalog.pg_get_expr(adbin,adrelid) ) > 0 and 
-                          position ( '::regclass)' in pg_catalog.pg_get_expr(adbin,adrelid) ) > 0  
+         a.atttypid in (23, 20) and a.atthasdef and
+             (select position ( 'nextval(' in pg_catalog.pg_get_expr(adbin,adrelid) ) > 0 and
+                          position ( '::regclass)' in pg_catalog.pg_get_expr(adbin,adrelid) ) > 0
               FROM pg_catalog.pg_attrdef d
-              WHERE d.adrelid = a.attrelid AND d.adnum = a.attnum AND a.atthasdef) as has_sequence 
-          from pg_catalog.pg_class c join pg_catalog.pg_namespace nt on (c.relnamespace = nt.oid) 
-             join pg_attribute a on (a.attrelid = c.oid) 
+              WHERE d.adrelid = a.attrelid AND d.adnum = a.attnum AND a.atthasdef) as has_sequence
+          from pg_catalog.pg_class c join pg_catalog.pg_namespace nt on (c.relnamespace = nt.oid)
+             join pg_attribute a on (a.attrelid = c.oid)
          where c.relname = '%s' and nt.nspname = '%s'
          and a.attnum > 0 and a.attisdropped = 'f'
          order by a.attnum """ % (quote_unident(self.table), quote_unident(self.schema))
@@ -1920,8 +1921,8 @@ class gpload:
             tableName = quote_unident(self.table)
             tableSchema = quote_unident(self.schema)
             sql = """select 1 from pg_class c, pg_namespace n
-                        where c.relname = '%s' and 
-                        n.nspname = '%s' and 
+                        where c.relname = '%s' and
+                        n.nspname = '%s' and
                         n.oid = c.relnamespace""" % (tableName, tableSchema)
             resultList = self.db.query(sql.encode('utf-8')).getresult()
             if len(resultList) > 0:
@@ -1966,43 +1967,43 @@ class gpload:
                                  '"%s" to output table' % x[0])
         for name,typ,mapto,seq in self.into_columns:
             self.log(self.DEBUG,'%s: %s = %s'%(name,typ,mapto))
-       
-    # In order to find out whether we have an existing external table in the 
+
+    # In order to find out whether we have an existing external table in the
     # catalog which could be reused for this operation we need to make sure
     # that it has the same column names and types, the same data format, and
     # location specification, and single row error handling specs.
     #
     # This function will return the SQL to run in order to find out whether
     # such a table exists.
-    # 
+    #
     def get_reuse_exttable_query(self, formatType, formatOpts, limitStr, from_cols, schemaName, log_errors):
         sqlFormat = """select attrelid::regclass
                  from (
-                        select 
-                            attrelid, 
-                            row_number() over (partition by attrelid order by attnum) as attord, 
+                        select
+                            attrelid,
+                            row_number() over (partition by attrelid order by attnum) as attord,
                             attnum,
                             attname,
-                            atttypid::regtype 
-                        from 
+                            atttypid::regtype
+                        from
                             pg_attribute
                             join
                             pg_class
                             on (pg_class.oid = attrelid)
                             %s
-                        where 
+                        where
                             relstorage = 'x' and
                             relname like 'ext_gpload_reusable_%%' and
                             attnum > 0 and
                             not attisdropped and %s
-                    ) pgattr 
-                    join 
-                    pg_exttable pgext 
-                    on(pgattr.attrelid = pgext.reloid) 
+                    ) pgattr
+                    join
+                    pg_exttable pgext
+                    on(pgattr.attrelid = pgext.reloid)
                     """
         joinStr = ""
         conditionStr = ""
-       
+
         # if schemaName is None, find the resuable ext table which is visible to
         # current search path. Else find the resuable ext table under the specific
         # schema, and this needs to join pg_namespace.
@@ -2021,35 +2022,35 @@ class gpload:
         if log_errors:
             sql += " WHERE pgext.fmterrtbl = pgext.reloid "
         else:
-            sql += " WHERE pgext.fmterrtbl IS NULL " 
+            sql += " WHERE pgext.fmterrtbl IS NULL "
 
         for i, l in enumerate(self.locations):
             sql += " and pgext.urilocation[%s] = %s\n" % (i + 1, quote(l))
-             
+
         sql+= """and pgext.fmttype = %s
                  and pgext.writable = false
                  and pgext.fmtopts like %s """ % (quote(formatType[0]),quote("%" + quote_unident(formatOpts.rstrip()) +"%"))
 
         if limitStr:
-            sql += "and pgext.rejectlimit = %s " % limitStr         
+            sql += "and pgext.rejectlimit = %s " % limitStr
         else:
             sql += "and pgext.rejectlimit IS NULL "
 
-        sql+= "group by attrelid " 
+        sql+= "group by attrelid "
 
-        sql+= """having 
-                    count(*) = %s and 
+        sql+= """having
+                    count(*) = %s and
                     bool_and(case """ % len(from_cols)
-        
+
         for i, c in enumerate(from_cols):
             name = c[0]
             typ = c[1]
             sql+= "when attord = %s then atttypid = %s::regtype and attname = %s\n" % (i+1, quote(typ), quote(quote_unident(name)))
 
-        sql+= """else true 
+        sql+= """else true
                  end)
                  limit 1;"""
-        
+
         self.log(self.DEBUG, "query used to identify reusable external relations: %s" % sql)
         return sql
 
@@ -2073,7 +2074,7 @@ class gpload:
 		
     #
     # This function will return the SQL to run in order to find out whether
-    # we have an existing staging table in the catalog which could be reused for this 
+    # we have an existing staging table in the catalog which could be reused for this
     # operation, according to the mathod and the encoding conditions.
     #
     def get_reuse_staging_table_query(self, encoding_conditions):
@@ -2081,11 +2082,11 @@ class gpload:
         sql = """SELECT oid::regclass
                  FROM pg_class
                  WHERE relname = 'staging_gpload_reusable_%s';""" % (encoding_conditions)
-	    
+
         self.log(self.DEBUG, "query used to identify reusable temporary relations: %s" % sql)
         return sql
 
-    # 
+    #
     # get oid for table from pg_class, None if not exist
     #
     def get_table_oid(self, tableName):
@@ -2096,8 +2097,8 @@ class gpload:
                 return resultList[0][0]
             except Exception, e:
                 pass
-        return None 
-    
+        return None
+
     def get_ext_schematable(self, schemaName, tableName):
         if schemaName == None:
             return tableName
@@ -2105,47 +2106,76 @@ class gpload:
             schemaTable = "%s.%s" % (schemaName, tableName)
             return schemaTable
 
-    # 
+    def get_external_table_formatOpts(self, option, specify=''):
+
+        formatType = self.getconfig('gpload:input:format', unicode, 'text').lower()
+        if formatType == 'text':
+            valid_token = ['delimiter','escape']
+        elif formatType == 'csv':
+            valid_token = ['delimiter', 'quote', 'escape']
+        else:
+            valid_token = []
+
+        if not option in valid_token:
+            self.control_file_error("The option you specified doesn't support now")
+            return
+
+        if option == 'delimiter':
+            defval = ',' if formatType == 'csv' else '\t'
+            val = self.getconfig('gpload:input:delimiter', unicode, defval)
+        elif option == 'escape':
+            defval = self.getconfig('gpload:input:quote', unicode, '"')
+            val = self.getconfig('gpload:input:escape', unicode, defval)
+        elif option == 'quote':
+            val = self.getconfig('gpload:input:quote', unicode, '"')
+        else:
+            self.control_file_error("unexpected error -- backtrace " +
+                             "written to log file")
+            sys.exit(2)
+
+        specify_str = str(specify) if specify else option
+        if val.startswith("E'") and val.endswith("'") and len(val[2:-1].decode('unicode-escape')) == 1:
+            subval = val[2:-1]
+            if subval == "\\'":
+                val = val
+                self.formatOpts += "%s %s " % (specify_str, val)
+            else:
+                val = subval.decode('unicode-escape')
+                self.formatOpts += "%s '%s' " % (specify_str, val)
+        elif len(val.decode('unicode-escape')) == 1:
+            val = val.decode('unicode-escape')
+            self.formatOpts += "%s '%s' " % (specify_str, val)
+
+        else:
+            self.control_file_warning(option +''' must be single ASCII charactor, you can also use unprintable characters(for example: '\\x1c' / E'\\x1c' or '\\u001c' / E'\\u001c' ''')
+            self.control_file_error("Invalid option, gpload quit immediately")
+            sys.exit(2);	
+
+
+
+    #
     # Create a new external table or find a reusable external table to use for this operation
-    #    
+    #
     def create_external_table(self):
 
         # extract all control file information and transform it accordingly
         # in order to construct a CREATE EXTERNAL TABLE statement if will be
         # needed later on
-        
+
         formatType = self.getconfig('gpload:input:format', unicode, 'text').lower()
-        formatOpts = ""
         locationStr = ','.join(map(quote,self.locations))
 
-        delimiterValue = self.getconfig('gpload:input:delimiter', unicode, False)
-        if isinstance(delimiterValue, bool) and delimiterValue == False:
-            """ implies the DELIMITER option has no value in the yaml file, so use default """
-            if formatType=='csv':
-                formatOpts += "delimiter ',' "
-        elif len(delimiterValue) != 1:
-            # is a escape sequence character like '\x1B' or '\u001B'?
-            if len(delimiterValue.decode('unicode-escape')) == 1:
-                formatOpts += "delimiter '%s' " % delimiterValue.decode('unicode-escape')
-            # is a escape string syntax support by gpdb like E'\x1B' or E'\x\u001B'
-            elif len(delimiterValue.lstrip("E'").rstrip("'").decode('unicode-escape')) ==1:
-                formatOpts += "delimiter '%s' " % delimiterValue.lstrip("E'").rstrip("'").decode('unicode-escape')
-            else:
-                self.control_file_warning('''A delimiter must be single ASCII charactor, you can also use unprintable characters(for example: '\\x1c' / E'\\x1c' or '\\u001c' / E'\\u001c' ''')
-                self.control_file_error("Invalid delimiter, gpload quit immediately")
-                sys.exit(2);
-        else:
-            formatOpts += "delimiter %s " % \
-                quote(self.getconfig('gpload:input:delimiter', unicode))
+        self.get_external_table_formatOpts('delimiter')
 
         nullas = self.getconfig('gpload:input:null_as', unicode, False)
         self.log(self.DEBUG, "null " + unicode(nullas))
         if nullas != False: # could be empty string
-            formatOpts += "null %s " % quote(nullas)
+            self.formatOpts += "null %s " % quote(nullas)
         elif formatType=='csv':
-            formatOpts += "null '' "
+            self.formatOpts += "null '' "
         else:
-            formatOpts += "null %s " % quote("\N")
+            self.formatOpts += "null %s " % quote("\N")
+
 
         esc = self.getconfig('gpload:input:escape', None, None)
         if esc:
@@ -2154,29 +2184,27 @@ class gpload:
             if esc.lower() == 'off':
                 if formatType == 'csv':
                     self.control_file_error("ESCAPE cannot be set to OFF in CSV mode")
-                formatOpts += "escape 'off' "
+                self.formatOpts += "escape 'off' "
             else:
-                formatOpts += "escape %s " % quote(esc)
+                self.get_external_table_formatOpts('escape')
         else:
             if formatType=='csv':
-                formatOpts += "escape %s " % quote(self.getconfig('gpload:input:quote', 
-                    unicode, extraStuff='for csv formatted data'))
+                self.get_external_table_formatOpts('quote','escape')
             else:
-                formatOpts += "escape '\\'"
+                self.formatOpts += "escape '\\'"
 
         if formatType=='csv':
-            formatOpts += "quote %s " % quote(self.getconfig('gpload:input:quote', 
-                    unicode, extraStuff='for csv formatted data'))
+            self.get_external_table_formatOpts('quote')
 
         if self.getconfig('gpload:input:header',bool,False):
-            formatOpts += "header "
+            self.formatOpts += "header "
 
         force_not_null_columns = self.getconfig('gpload:input:force_not_null',list,[])
         if force_not_null_columns:
             for i in force_not_null_columns:
                 if type(i) != unicode and type(i) != str:
                     self.control_file_error("gpload:input:force_not_null must be a YAML sequence of strings")
-            formatOpts += "force not null %s " % ','.join(force_not_null_columns)
+            self.formatOpts += "force not null %s " % ','.join(force_not_null_columns)
 
         encodingStr = self.getconfig('gpload:input:encoding', unicode, None)
 
@@ -2202,7 +2230,9 @@ class gpload:
         # the one that we need to use. It must have identical attributes,
         # external location, format, and encoding specifications.
         if self.reuse_tables == True:
-            sql = self.get_reuse_exttable_query(formatType, formatOpts,
+            # process the single quotes in order to successfully find an existing external table to reuse.
+            self.formatOpts = self.formatOpts.replace("E'\\''","'\''")
+            sql = self.get_reuse_exttable_query(formatType, self.formatOpts,
                     limitStr, from_cols, self.extSchemaName, self.log_errors)
             resultList = self.db.query(sql.encode('utf-8')).getresult()
             if len(resultList) > 0:
@@ -2218,7 +2248,10 @@ class gpload:
 
             self.extTableName = "ext_gpload_reusable_%s" % self.unique_suffix
             self.log(self.INFO, "did not find an external table to reuse. creating %s" % self.extTableName)
-        
+
+        # process the single quotes in order to successfully create an external table.
+        self.formatOpts = self.formatOpts.replace("'\''","E'\\''")
+
         # construct a CREATE EXTERNAL TABLE statement and execute it
         self.extSchemaTable = self.get_ext_schematable(self.extSchemaName, self.extTableName)
         sql = "create external table %s" % self.extSchemaTable
@@ -2226,8 +2259,8 @@ class gpload:
 
         sql += "location(%s) "%locationStr
         sql += "format%s "% quote(formatType)
-        if len(formatOpts) > 0:
-            sql += "(%s) "% formatOpts
+        if len(self.formatOpts) > 0:
+            sql += "(%s) "% self.formatOpts
         if encodingStr:
             sql += "encoding%s "%quote(encodingStr)
         if self.log_errors:
@@ -2237,7 +2270,7 @@ class gpload:
             if limitStr < 2:
                 self.control_file_error("error_limit must be 2 or higher")
             sql += "segment reject limit %s "%limitStr
-        
+
         try:
             self.db.query(sql.encode('utf-8'))
         except Exception, e:
@@ -2249,14 +2282,14 @@ class gpload:
             self.cleanupSql.append('drop external table if exists %s'%self.extSchemaTable)
 
 		
-    # 
+    #
     # Create a new staging table or find a reusable staging table to use for this operation
     # (only valid for update/merge operations).
-    #    
+    #
     def create_staging_table(self):
-                
+
         # Do some initial work to extract the update_columns and metadata
-        # that may be needed in order to create or reuse a temp table            
+        # that may be needed in order to create or reuse a temp table
         if not self.from_cols_from_user:
             # don't put values serial columns
             from_cols = filter(lambda a: a[3] != True, self.from_columns)
@@ -2284,32 +2317,32 @@ class gpload:
         target_columns = []
         for column in self.into_columns:
             if column[2]:
-                target_columns.append([quote_unident(column[0]), column[1]])        
+                target_columns.append([quote_unident(column[0]), column[1]])
 
         if self.reuse_tables == True:
             is_temp_table = ''
             target_table_name = quote_unident(self.table)
 
-            # create a string from all reuse conditions for staging tables and ancode it 
+            # create a string from all reuse conditions for staging tables and ancode it
             conditions_str = self.get_staging_conditions_string(target_table_name, target_columns, distcols)
             encoding_conditions = hashlib.md5(conditions_str).hexdigest()
 					
             sql = self.get_reuse_staging_table_query(encoding_conditions)
             resultList = self.db.query(sql.encode('utf-8')).getresult()
-           
+
             if len(resultList) > 0:
-                
+
                 # found a temp table to reuse. no need to create one. we're done here.
                 self.staging_table_name = (resultList[0])[0]
                 self.log(self.INFO, "reusing staging table %s" % self.staging_table_name)
-                
+
                 # truncate it so we don't use old data
                 self.do_truncate(self.staging_table_name)
-                
+
                 return
-        
+
             # didn't find an existing staging table suitable for reuse. Format a reusable
-            # name and issue a CREATE TABLE on it (without TEMP!). Hopefully we can use it 
+            # name and issue a CREATE TABLE on it (without TEMP!). Hopefully we can use it
             # next time around
             # we no longer need the timestamp, since we will never want to create few
             # tables with same encoding_conditions
@@ -2352,7 +2385,7 @@ class gpload:
                     NUM_WARN_ROWS = (results[0])[1]
                     return (results[0])[1];
         return 0
-    
+
     def report_errors(self):
         errors = self.count_errors()
         if errors==1:
@@ -2361,7 +2394,7 @@ class gpload:
             self.log(self.WARN, '%d bad rows'%errors)
 
         # error message is also deleted if external table is dropped.
-        # if reuse_table is set, error message is not deleted. 
+        # if reuse_table is set, error message is not deleted.
         if errors and self.log_errors and self.reuse_tables:
             self.log(self.WARN, "Please use following query to access the detailed error")
             self.log(self.WARN, "select * from gp_read_error_log('{0}') where cmdtime = '{1}'".format(pg.escape_string(self.extTableName), self.lastcmdtime))
@@ -2380,8 +2413,8 @@ class gpload:
 
         self.log(self.DEBUG, "into columns " + str(self.into_columns))
         cols = filter(lambda a:a[2]!=None, self.into_columns)
-        
-        # only insert non-serial columns, unless the user told us to 
+
+        # only insert non-serial columns, unless the user told us to
         # insert the serials explicitly
         if not self.from_cols_from_user:
             cols = filter(lambda a:a[3] == False, cols)
@@ -2453,7 +2486,7 @@ class gpload:
             # Place the table alias infront of column references.
             #
             # The following logic is not bullet proof. It may not work
-            # correctly if the user uses an identifier in both its 
+            # correctly if the user uses an identifier in both its
             # delimited and un-delimited format (e.g. where c1 < 7 and "c1" > 2)
             # Better lexing and parsing needs to be done here to fix all cases.
             #
@@ -2470,7 +2503,7 @@ class gpload:
                     if skip == False:
                        uc = re.sub(regexp, self.fix_update_cond, uc)
                        skip = True
-                    update_condition = update_condition + uc 
+                    update_condition = update_condition + uc
                 if update_condition == temp_update_condition:
                    # see if column can be undelimited, and try again.
                    if len(name) > 2 and name[1:-1] == name[1:-1].lower():
@@ -2495,12 +2528,12 @@ class gpload:
                 self.log(self.ERROR, strE + ' encountered while running ' + strF)
 				
     def get_qualified_tablename(self):
-    
-        tblname = "%s.%s" % (self.schema, self.table)        
+
+        tblname = "%s.%s" % (self.schema, self.table)
         return tblname
-    
+
     def get_table_dist_key(self):
-                
+
         # NOTE: this query should be re-written better. the problem is that it is
         # not possible to perform a cast on a table name with spaces...
         sql = "select attname from pg_attribute a, gp_distribution_policy p , pg_class c, pg_namespace n "+\
@@ -2509,8 +2542,8 @@ class gpload:
               "a.attnum = any (p.attrnums) and " + \
               "c.relnamespace = n.oid and " + \
               "n.nspname = '%s' and c.relname = '%s'; " % (quote_unident(self.schema), quote_unident(self.table))
-              
-              
+
+
         resultList = self.db.query(sql.encode('utf-8')).getresult()
         attrs = []
         count = 0
@@ -2525,7 +2558,7 @@ class gpload:
         distKeyList = self.get_table_dist_key()
         distkey = set()
         for dk in distKeyList:
-            distkey.add(quote_ident(dk)) 
+            distkey.add(quote_ident(dk))
 
         self.distkey = distkey
         if len(distkey) != 0:
@@ -2537,13 +2570,13 @@ class gpload:
             update_columns = set(update_columns)
             a = distkey.intersection(update_columns)
             if len(a):
-                self.control_file_error('update_columns cannot reference column(s) in distribution key (%s)' % ', '.join(list(distkey)))        
+                self.control_file_error('update_columns cannot reference column(s) in distribution key (%s)' % ', '.join(list(distkey)))
 
     def do_method_update(self):
         """Load the data in and update an existing table based upon it"""
 
         self.table_supports_update()
-        self.create_staging_table()            
+        self.create_staging_table()
 
         self.create_external_table()
         self.do_insert(self.staging_table_name)
@@ -2553,9 +2586,9 @@ class gpload:
 
     def do_method_merge(self):
         """insert data not already in the table, update remaining items"""
-        
+
         self.table_supports_update()
-        self.create_staging_table()        
+        self.create_staging_table()
         self.create_external_table()
         self.do_insert(self.staging_table_name)
         self.rowsInserted = 0 # MPP-13024. No rows inserted yet (only to temp table).
@@ -2612,12 +2645,12 @@ class gpload:
             truncate = self.getconfig('gpload:preload:truncate',bool,False)
             self.reuse_tables = self.getconfig('gpload:preload:reuse_tables',bool,False)
         if truncate == True:
-            if method=='insert':      
+            if method=='insert':
                 self.do_truncate(self.schemaTable)
             else:
                 self.log(self.ERROR, 'preload truncate operation should be used with insert ' +
                                      'operation only. used with %s' % method)
-              
+
         # sql pre or post processing?
         sql = self.getconfig('gpload:sql', list, default=None)
         before   = None
@@ -2634,7 +2667,7 @@ class gpload:
                     self.log(self.ERROR, 'could not execute SQL in sql:before "%s": %s' %
                              (before, str(e)))
 
-        
+
         if method=='insert':
             self.do_method_insert()
         elif method=='update':
@@ -2717,7 +2750,7 @@ class gpload:
                             # to install, so we use the crude method
                             subprocess.Popen("taskkill /F /T /PID %i" % a.pid,
                                              shell=True, stdout=subprocess.PIPE,
-                                             stderr=subprocess.PIPE) 
+                                             stderr=subprocess.PIPE)
 
                         else:
                             os.kill(a.pid, signal.SIGTERM)

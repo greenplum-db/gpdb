@@ -78,6 +78,7 @@ static void KillExistingXLOG(void);
 static void KillExistingArchiveStatus(void);
 static void WriteEmptyXLOG(void);
 static void usage(void);
+static bool AcceptWarning(void);
 
 #ifndef BUFFER_LEN
 #define BUFFER_LEN (2 * (MAXPGPATH))
@@ -386,6 +387,15 @@ main(int argc, char *argv[])
 	}
 
 	/*
+	 * Warn user of using pg_resetxlog with GPDB
+	 */
+	if(!AcceptWarning())
+	{
+		printf(_("Abort %s!\n"), progname);
+		exit(1);
+	}
+
+	/*
 	 * Else, do the dirty deed.
 	 */
 	RewriteControlFile();
@@ -397,6 +407,43 @@ main(int argc, char *argv[])
 	return 0;
 }
 
+/*
+ * Before making actual changes to xlog, warn user doing so might corrupt
+ * GPDB cluster.
+ *
+ * Return true if user accept the risk described in the warning.
+ */
+static bool
+AcceptWarning(void)
+{
+	int		ret;
+	char	response[5];
+
+	/* initialize response to empty string. */
+	response[0] = 0;
+
+	printf(_("WARNING: Do not use this on Greenplum. %s might cause data loss\n"
+			"and render system irrecoverable. Do you wish to proceed? [yes/no] "), progname);
+
+	/* Reading up to 4 letters instead of just 3 to ensure something like
+	 * "yesterday" won't be counted as "yes". Then discard anything after
+	 * the 4th character.
+	 */
+	ret = scanf("%4[^\n]%*[^\n]", response);
+
+	/* Protection against failed scanf result in uninitialized response.*/
+	if (ret == EOF || ret != 1)
+	{
+		return false;
+	}
+
+	if (strcmp(response, "yes") == 0 || strcmp(response, "Y") == 0)
+	{
+		return true;
+	}
+
+	return false;
+}
 
 /*
  * Try to read the existing pg_control file.

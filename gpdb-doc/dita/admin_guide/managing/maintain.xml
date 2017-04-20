@@ -3,27 +3,27 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
   <title id="np160185">Routine System Maintenance Tasks</title>
-  <shortdesc>To keep a Greenplum Database system running efficiently, the database
-    must be regularly cleared of expired data and the table statistics must be updated so that the
-    query optimizer has accurate information. </shortdesc>
+  <shortdesc>To keep a Greenplum Database system running efficiently, the database must be regularly
+    cleared of expired data and the table statistics must be updated so that the query optimizer has
+    accurate information. </shortdesc>
   <body>
-    <p>Greenplum Database requires that certain tasks be performed regularly to
-      achieve optimal performance. The tasks discussed here are required, but database
-      administrators can automate them using standard UNIX tools such as <codeph>cron</codeph>
-      scripts. An administrator sets up the appropriate scripts and checks that they execute
-      successfully. See <xref href="../monitoring/monitoring.dita#topic_kmz_lbg_rp"/> for additional
-      suggested maintenance activities you can implement to keep your Greenplum system running optimally.</p>
+    <p>Greenplum Database requires that certain tasks be performed regularly to achieve optimal
+      performance. The tasks discussed here are required, but database administrators can automate
+      them using standard UNIX tools such as <codeph>cron</codeph> scripts. An administrator sets up
+      the appropriate scripts and checks that they execute successfully. See <xref
+        href="../monitoring/monitoring.dita#topic_kmz_lbg_rp"/> for additional suggested maintenance
+      activities you can implement to keep your Greenplum system running optimally.</p>
   </body>
   <topic id="topic2" xml:lang="en">
     <title id="np157166">Routine Vacuum and Analyze</title>
     <body>
-      <p>The design of the MVCC transaction concurrency model used in Greenplum Database means that deleted or updated data rows still occupy physical space on disk even though
-        they are not visible to new transactions. If your database has many updates and deletes,
-        many expired rows exist and the space they use must be reclaimed with the
-          <codeph>VACUUM</codeph> command. The <codeph>VACUUM</codeph> command also collects
-        table-level statistics, such as numbers of rows and pages, so it is also necessary to vacuum
-        append-optimized tables, even when there is no space to reclaim from updated or deleted
-        rows. </p>
+      <p>The design of the MVCC transaction concurrency model used in Greenplum Database means that
+        deleted or updated data rows still occupy physical space on disk even though they are not
+        visible to new transactions. If your database has many updates and deletes, many expired
+        rows exist and the space they use must be reclaimed with the <codeph>VACUUM</codeph>
+        command. The <codeph>VACUUM</codeph> command also collects table-level statistics, such as
+        numbers of rows and pages, so it is also necessary to vacuum append-optimized tables, even
+        when there is no space to reclaim from updated or deleted rows. </p>
       <p>Vacuuming an append-optimized table follows a different process than vacuuming heap tables.
         On each segment, a new segment file is created and visible rows are copied into it from the
         current segment. When the segment file has been copied, the original is scheduled to be
@@ -38,58 +38,55 @@
       <p>You can use the <codeph>__gp_aovisimap_compaction_info()</codeph> function in the the
           <i>gp_toolkit</i> schema to investigate the effectiveness of a <cmdname>VACUUM</cmdname>
         operation on append-optimized tables. </p>
-      <p>For information about the
-          <codeph>__gp_aovisimap_compaction_info()</codeph> function see, "Checking Append-Optimized
-        Tables" in the <cite>Greenplum Database Reference Guide</cite>.</p>
+      <p>For information about the <codeph>__gp_aovisimap_compaction_info()</codeph> function see,
+        "Checking Append-Optimized Tables" in the <cite>Greenplum Database Reference
+        Guide</cite>.</p>
       <p><codeph>VACUUM</codeph> can be disabled for append-optimized tables using the
           <codeph>gp_appendonly_compaction</codeph> server configuration parameter. </p>
       <p>For details about vacuuming a database, see <xref href="../dml.xml#topic9" type="topic"
           format="dita"/>. </p>
-      <p>For information about the
-          <codeph>gp_appendonly_compaction_threshold</codeph> server configuration parameter and the
-          <codeph>VACUUM</codeph> command, see the <cite>Greenplum Database Reference
-        Guide</cite>.</p>
+      <p>For information about the <codeph>gp_appendonly_compaction_threshold</codeph> server
+        configuration parameter and the <codeph>VACUUM</codeph> command, see the <cite>Greenplum
+          Database Reference Guide</cite>.</p>
     </body>
     <topic id="topic3" xml:lang="en">
       <title>Transaction ID Management</title>
       <body>
-        <p>Greenplum's MVCC transaction semantics depend on comparing
-          transaction ID (XID) numbers to determine visibility to other transactions. Transaction ID
-          numbers are compared using modulo 2<sup>32</sup> arithmetic, so a Greenplum system that runs more than about two billion transactions
-          can experience transaction ID wraparound, where past transactions appear to be in the
-          future. This means past transactions' outputs become invisible. Therefore, it is necessary
-          to <codeph>VACUUM</codeph> every table in every database at least once per two billion
-          transactions.</p>
-        <note type="important">Greenplum Database monitors transaction IDs. If you do
-          not vacuum the database regularly, Greenplum Database will generate a
-          warning and error.</note>
-        <p>Greenplum Database issues the following warning when a significant portion
-          of the transaction IDs are no longer available and before transaction ID wraparound
-          occurs: </p>
+        <p>Greenplum's MVCC transaction semantics depend on comparing transaction ID (XID) numbers
+          to determine visibility to other transactions. Transaction ID numbers are compared using
+          modulo 2<sup>32</sup> arithmetic, so a Greenplum system that runs more than about two
+          billion transactions can experience transaction ID wraparound, where past transactions
+          appear to be in the future. This means past transactions' outputs become invisible.
+          Therefore, it is necessary to <codeph>VACUUM</codeph> every table in every database at
+          least once per two billion transactions. </p>
+        <p>Greenplum Database assigns XID values only to transactions that involve DDL or DML
+          operations, which are typically the only transactions that require an XID.</p>
+        <note type="important">Greenplum Database monitors transaction IDs. If you do not vacuum the
+          database regularly, Greenplum Database will generate a warning and error.</note>
+        <p>Greenplum Database issues the following warning when a significant portion of the
+          transaction IDs are no longer available and before transaction ID wraparound occurs: </p>
         <p>
           <codeph>WARNING: database "database_name" must be vacuumed within
               <i>number_of_transactions</i> transactions</codeph>
         </p>
         <p>When the warning is issued, a <codeph>VACUUM</codeph> operation is required. If a
-            <codeph>VACUUM</codeph> operation is not performed, Greenplum Database
-          stops creating transactions when it reaches a limit prior to when transaction ID
-          wraparound occurs. Greenplum Database issues this error when it stops
-          creating transactions to avoid possible data loss: </p>
+            <codeph>VACUUM</codeph> operation is not performed, Greenplum Database stops creating
+          transactions when it reaches a limit prior to when transaction ID wraparound occurs.
+          Greenplum Database issues this error when it stops creating transactions to avoid possible
+          data loss: </p>
         <p>
           <codeblock>FATAL: database is not accepting commands to avoid 
 wraparound data loss in database "database_name"
 </codeblock>
         </p>
-        <p>The Greenplum Database configuration parameter
-            <codeph>xid_warn_limit</codeph> controls when the warning is displayed. The parameter
-            <codeph>xid_stop_limit</codeph> controls when Greenplum Database stops
-          creating transactions. </p>
+        <p>The Greenplum Database configuration parameter <codeph>xid_warn_limit</codeph> controls
+          when the warning is displayed. The parameter <codeph>xid_stop_limit</codeph> controls when
+          Greenplum Database stops creating transactions. </p>
         <section id="np160654">
           <title>Recovering from a Transaction ID Limit Error</title>
-          <p>When Greenplum Database reaches the <codeph>xid_stop_limit</codeph>
-            transaction ID limit due to infrequent <codeph>VACUUM</codeph> maintenance, it becomes
-            unresponsive. To recover from this situation, perform the following steps as database
-            administrator:</p>
+          <p>When Greenplum Database reaches the <codeph>xid_stop_limit</codeph> transaction ID
+            limit due to infrequent <codeph>VACUUM</codeph> maintenance, it becomes unresponsive. To
+            recover from this situation, perform the following steps as database administrator:</p>
           <ol>
             <li id="np160540">Shut down Greenplum Database.</li>
             <li id="np160541">Temporarily lower the <codeph>xid_stop_limit</codeph> by
@@ -99,8 +96,8 @@ wraparound data loss in database "database_name"
             <li id="np160517">Reset the <codeph>xid_stop_limit</codeph> to its original value.</li>
             <li id="np160622">Restart Greenplum Database.</li>
           </ol>
-          <p>For information about the configuration parameters, see the
-              <i>Greenplum Database Reference Guide</i>. </p>
+          <p>For information about the configuration parameters, see the <i>Greenplum Database
+              Reference Guide</i>. </p>
           <p>For information about transaction ID wraparound see the <xref
               href="https://www.postgresql.org/docs/8.3/static/index.html" scope="external"
               format="html"><ph>PostgreSQL documentation</ph></xref>.</p>
@@ -116,10 +113,10 @@ wraparound data loss in database "database_name"
           excessive data scanning during metadata operations on catalog tables. The performance loss
           occurs between thousands to tens of thousands of <codeph>DROP TABLE</codeph> statements,
           depending on the system.</p>
-        <p>You should run a system catalog maintenance procedure regularly to reclaim
-          the space occupied by deleted objects. If a regular procedure has not been run for a long
-          time, you may need to run a more intensive procedure to clear the system catalog. This
-          topic describes both procedures.</p>
+        <p>You should run a system catalog maintenance procedure regularly to reclaim the space
+          occupied by deleted objects. If a regular procedure has not been run for a long time, you
+          may need to run a more intensive procedure to clear the system catalog. This topic
+          describes both procedures.</p>
       </body>
       <topic id="topic5" xml:lang="en">
         <title>Regular System Catalog Maintenance</title>
@@ -131,7 +128,8 @@ wraparound data loss in database "database_name"
             maintenance procedure with <codeph>VACUUM</codeph> daily at off-peak hours. You can do
             this while the system is available.</p>
           <p>The following example script performs a <codeph>VACUUM</codeph>,
-              <codeph>REINDEX</codeph>, and <codeph>ANALYZE</codeph> of the Greenplum Database system catalog:</p>
+              <codeph>REINDEX</codeph>, and <codeph>ANALYZE</codeph> of the Greenplum Database
+            system catalog:</p>
           <codeblock>#!/bin/bash
 DBNAME="<varname>&lt;database-name></varname>"
 SYSTABLES="' pg_catalog.' || relname || ';' from pg_class a, pg_namespace b 
@@ -195,10 +193,10 @@ analyzedb -s pg_catalog -d $DBNAME
           This example runs <cmdname>ANALYZE</cmdname> and then <cmdname>VACUUM</cmdname> on the
             <i>cust_info</i> table.<codeblock>ANALYZE cust_info;
 VACUUM cust_info;</codeblock></p>
-        <note type="important">If you intend to execute queries on partitioned tables with GPORCA enabled, you must collect statistics on the partitioned table root
-          partition with the <cmdname>ANALYZE ROOTPARTITION</cmdname> command. For information about
-          GPORCA, see <xref href="../query/topics/query-piv-opt-overview.xml"
-          />. </note>
+        <note type="important">If you intend to execute queries on partitioned tables with GPORCA
+          enabled, you must collect statistics on the partitioned table root partition with the
+            <cmdname>ANALYZE ROOTPARTITION</cmdname> command. For information about GPORCA, see
+            <xref href="../query/topics/query-piv-opt-overview.xml"/>. </note>
         <note>You can use the Greenplum Database utility <cmdname>analyzedb</cmdname> to update
           table statistics. Tables can be analyzed concurrently. For append optimized tables,
             <cmdname>analyzedb</cmdname> updates statistics only if the statistics are not current.
@@ -214,9 +212,10 @@ VACUUM cust_info;</codeblock></p>
         has been updated many times because logically adjacent pages are usually also physically
         adjacent in a newly built index. Reindexing older indexes periodically can improve access
         speed. If all but a few index keys on a page have been deleted, there will be wasted space
-        on the index page. A reindex will reclaim that wasted space. In Greenplum Database it is often faster to drop an index (<codeph>DROP INDEX</codeph>)
-        and then recreate it (<codeph>CREATE INDEX</codeph>) than it is to use the
-          <codeph>REINDEX</codeph> command.</p>
+        on the index page. A reindex will reclaim that wasted space. In Greenplum Database it is
+        often faster to drop an index (<codeph>DROP INDEX</codeph>) and then recreate it
+          (<codeph>CREATE INDEX</codeph>) than it is to use the <codeph>REINDEX</codeph>
+        command.</p>
       <p>For table columns with indexes, some operations such as bulk updates or inserts to the
         table might perform more slowly because of the updates to the indexes. To enhance
         performance of bulk operations on tables with indexes, you can drop the indexes, perform the
@@ -238,12 +237,12 @@ VACUUM cust_info;</codeblock></p>
     <topic id="topic10" xml:lang="en">
       <title id="np157220">Database Server Log Files</title>
       <body>
-        <p>Greenplum Database log output tends to be voluminous, especially at higher
-          debug levels, and you do not need to save it indefinitely. Administrators rotate the log
-          files periodically so new log files are started and old ones are removed.</p>
-        <p>Greenplum Database has log file rotation enabled on the master and all
-          segment instances. Daily log files are created in the <codeph>pg_log</codeph> subdirectory
-          of the master and each segment data directory using the following naming convention:
+        <p>Greenplum Database log output tends to be voluminous, especially at higher debug levels,
+          and you do not need to save it indefinitely. Administrators rotate the log files
+          periodically so new log files are started and old ones are removed.</p>
+        <p>Greenplum Database has log file rotation enabled on the master and all segment instances.
+          Daily log files are created in the <codeph>pg_log</codeph> subdirectory of the master and
+          each segment data directory using the following naming convention:
               <codeph>gpdb-<i>YYYY</i>-<i>MM</i>-<i>DD_hhmmss</i>.csv</codeph>. Although log files
           are rolled over daily, they are not automatically truncated or deleted. Administrators
           need to implement scripts or programs to periodically clean up old log files in the

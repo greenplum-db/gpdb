@@ -15,8 +15,7 @@
 #   hitting max_connections limit on segments.
 #
 
-test: variadic_parameters default_parameters function_extensions
-test: spi xpath
+test: variadic_parameters default_parameters function_extensions spi
 
 test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy gp_create_table
 test: filter gpctas gpdist matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var gp_explain
@@ -79,7 +78,10 @@ test: resource_queue
 test: resource_queue_function
 test: wrkloadadmin
 
+# set gp_resource_manager and restart cluster to enable resource group
+test: resource_group_setup
 test: resource_group
+test: resource_group_cleanup
 
 # gp_toolkit performs a vacuum and checks that it truncated the relation. That
 # might not happen if other backends are holding transactions open, preventing
@@ -118,7 +120,7 @@ test: bfv_cte bfv_joins bfv_subquery bfv_planner bfv_legacy bfv_temp
 
 test: qp_olap_mdqa qp_misc
 
-test: qp_misc_jiras qp_with_clause qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan
+test: qp_misc_jiras qp_with_clause qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan session_level_memory_consumption
 test: qp_with_functional_inlining qp_with_functional_noinlining
 test: qp_functions qp_misc_rio_join_small qp_misc_rio qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution
 

@@ -676,7 +676,7 @@ probeTimeout(ProbeConnectionInfo *probeInfo, const char* calledFrom)
 	}
 
 	/* If connection takes more than the gp_fts_probe_timeout, we fail. */
-	if (elapsed_ms > gp_fts_probe_timeout * 1000)
+	if (elapsed_ms > (uint64)gp_fts_probe_timeout * 1000)
 	{
 		write_log("FTS: failed to probe segment (content=%d, dbid=%d) due to timeout expiration, "
 				  "probe elapsed time: " UINT64_FORMAT " ms.",

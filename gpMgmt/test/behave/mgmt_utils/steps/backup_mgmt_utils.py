@@ -141,12 +141,6 @@ def impl(context, backup_pg, dbname):
     if row_count != 0:
         raise Exception("Found a ExclusiveLock on pg_class")
 
-@given('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data and {rowcount} rows')
-@when('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data and {rowcount} rows')
-@then('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data and {rowcount} rows')
-def impl(context, tabletype, table_name, compression_type, dbname, rowcount):
-    populate_regular_table_data(context, tabletype, table_name, compression_type, dbname, int(rowcount))
-
 @given('verify the metadata dump file syntax under "{directory}" for comments and types')
 @when('verify the metadata dump file syntax under "{directory}" for comments and types')
 @then('verify the metadata dump file syntax under "{directory}" for comments and types')
@@ -243,17 +237,6 @@ def get_comment_values(line):
     except:
         return (None, None, None)
     return (name, type, schema)
-
-@given('{command} should print {out_msg} to stdout {num} times')
-@when('{command} should print {out_msg} to stdout {num} times')
-@then('{command} should print {out_msg} to stdout {num} times')
-def impl(context, command, out_msg, num):
-    msg_list = context.stdout_message.split('\n')
-    msg_list = [x.strip() for x in msg_list]
-
-    count = msg_list.count(out_msg)
-    if count != int(num):
-        raise Exception("Expected %s to occur %s times. Found %d" % (out_msg, num, count))
 
 @given('verify that {filetype} file is generated in {dir}')
 @when('verify that {filetype} file is generated in {dir}')
@@ -399,16 +382,6 @@ def impl(context, dblist):
                 raise Exception("ef : RF", expected_from, result_from, count)
                 #raise Exception("Sender of the sent email is not correct")
         count += 1
-
-@then('gpcrondump should print unable to send dump email notification to stdout as warning')
-def impl(context):
-    stdout = context.stdout_message
-    found = False
-    for line in stdout.splitlines():
-        if "Unable to send dump email notification" in line:
-           found = True
-    if found is False:
-        raise Exception("'Unable to send dump email notification' exception is not raised")
 
 @then('verify that function is backedup correctly in "{dumpfile}"')
 def impl(context, dumpfile):

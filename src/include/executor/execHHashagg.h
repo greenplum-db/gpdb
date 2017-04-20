@@ -40,12 +40,10 @@ typedef struct BatchFileInfo BatchFileInfo;
  */
 typedef struct HashAggEntry
 {
-	struct HashAggEntry	   *next; /* Next entry in chain. */
-	void *tuple_and_aggs; /* point to a chunk that contains both grouping keys
-						   * and aggregate values.
-						   */
-	HashKey	hashvalue;
-	bool is_primodial; /* indicate if this entry is there before spilling. */
+	struct HashAggEntry *next; /* Next entry in chain. */
+	void *tuple_and_aggs; /* grouping keys and aggregate values.*/
+	HashKey hashvalue;
+	bool is_primodial; /* indicates if this entry is there before spilling. */
 } HashAggEntry;
 
 /* A SpillFile controls access to a temporary file used to hold  
@@ -119,13 +117,13 @@ typedef struct SpillSet
 
 typedef struct HashAggTableSizes
 {
-    unsigned             nbuckets;   /* Calculated # of hash buckets. */
-    unsigned             nentries;   /* Calculated # of hash entries. */
-    unsigned             nbatches;   /* Calculated # of passes. */
-	double               hashentry_width; /* Estimated hash entry size */
-    unsigned             workmem_initial;    /* Estimated work_mem bytes at #entries=0 */
-    unsigned             workmem_per_entry;  /* Additional work_mem bytes per entry */
-    bool                 spill;      /* Do we expect to spill ? */
+	unsigned  nbuckets;   /* Calculated # of hash buckets. */
+	unsigned  nentries;   /* Calculated # of hash entries. */
+	unsigned  nbatches;   /* Calculated # of passes. */
+	double    hashentry_width; /* Estimated hash entry size */
+	unsigned  workmem_initial;    /* Estimated work_mem bytes at #entries=0 */
+	unsigned  workmem_per_entry;  /* Additional work_mem bytes per entry */
+	bool      spill;      /* Do we expect to spill ? */
 } HashAggTableSizes;
 
 /*
@@ -137,15 +135,6 @@ typedef struct GroupKeysAndAggs
 	struct MemTupleData *tuple; /* tuple that contains grouping keys */
 	AggStatePerGroup aggs; /* the location for the first aggregate values. */
 } GroupKeysAndAggs;
-
-typedef enum HashAggState
-{
-	HASHAGG_BEFORE_FIRST_PASS,
-	HASHAGG_IN_A_PASS,
-	HASHAGG_BETWEEN_PASSES,
-	HASHAGG_STREAMING,
-	HASHAGG_END_OF_PASSES
-} HashAggState;
 
 /* An Agg hash table with associated overflow batches and processing
  * state.  
@@ -165,6 +154,9 @@ typedef struct HashAggTable
 	HashAggEntry  **buckets;
 	uint64 *bloom;
 
+	/* hashkey bitshift amount to determine bucket - used when spilling */
+	unsigned pshift;
+
 	/* Overflow batches */
 	SpillSet       *spill_set;
 	/* Representation of all workfile names, used by the workfile manager */
@@ -176,9 +168,6 @@ typedef struct HashAggTable
 	/* The batch file is currently being processed. */
 	SpillFile *curr_spill_file;
 	int curr_spill_level;
-
-	HashAggState		state;	/* state of processing */
-	unsigned			pass;	/* current pass (0 is initial) */
 
 	/*
 	 * The space to buffer the free hash entries and AggStatePerGroups. Using this,
@@ -202,7 +191,7 @@ typedef struct HashAggTable
 	double max_mem; /* Maximum available memory */
 	double mem_for_metadata; /* Current memory usage for metadata */
 	double mem_wanted; /* The desirable work_mem */
-	double mem_used; /* The maxinum amount of used memory. */
+	double mem_used; /* The maximum amount of used memory. */
 	
 	uint32 num_reloads; /* number of times reloading a batch file */
 	uint32 num_batches; /* number of batch files */
@@ -214,7 +203,8 @@ typedef struct HashAggTable
 	uint64 total_buckets; /* total number of buckets allocated */
 	bool is_spilling; /* indicate that spilling happened for this batch. */
 	struct TupleTableSlot *prev_slot; /* a slot that is read previously. */
-    CdbExplain_Agg      chainlength;
+
+	CdbExplain_Agg      chainlength;
 } HashAggTable;
 
 extern HashAggTable *create_agg_hash_table(AggState *aggstate);
@@ -224,6 +214,7 @@ extern bool agg_hash_next_pass(AggState *aggstate);
 extern bool agg_hash_continue_pass(AggState *aggstate);
 extern void destroy_agg_hash_table(AggState *aggstate);
 
+extern void agg_hash_explain(AggState *aggstate);
 extern HashAggEntry *agg_hash_iter(AggState *aggstate);
 
 extern bool 
@@ -232,6 +223,6 @@ calcHashAggTableSizes(double memquota,	/* Memory quota in bytes. */
 					   int numaggs,		/* Est # of aggregate functions */
 					   int keywidth,	/* Est per entry size of hash key. */
 					   int transpace,	/* Est per entry size of by-ref values. */
-                       bool force,      /* true => succeed even if work_mem too small */
-                       HashAggTableSizes   *out_hats);
+					   bool force,	/* true => succeed even if work_mem too small */
+					   HashAggTableSizes	*out_hats);
 #endif

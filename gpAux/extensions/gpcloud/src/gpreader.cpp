@@ -12,9 +12,6 @@
 /* This array will store all of the mutexes available to OpenSSL. */
 static MUTEX_TYPE* mutex_buf = NULL;
 
-// Hold memory context to avoid it being destructed before GPReader or GPWriter
-S3MemoryContext* memoryContextHolder;
-
 static void locking_function(int mode, int n, const char* file, int line) {
     if (mode & CRYPTO_LOCK) {
         MUTEX_LOCK(mutex_buf[n]);
@@ -102,14 +99,11 @@ GPReader* reader_init(const char* url_with_options) {
             return NULL;
         }
 
-        memoryContextHolder = new S3MemoryContext(params.getMemoryContext());
-
         reader->open(params);
         return reader;
     } catch (S3Exception& e) {
         if (reader != NULL) {
             delete reader;
-            delete memoryContextHolder;
         }
         s3extErrorMessage =
             "reader_init caught a " + e.getType() + " exception: " + e.getFullMessage();
@@ -118,7 +112,6 @@ GPReader* reader_init(const char* url_with_options) {
     } catch (...) {
         if (reader != NULL) {
             delete reader;
-            delete memoryContextHolder;
         }
         S3ERROR("Caught an unexpected exception.");
         s3extErrorMessage = "Caught an unexpected exception.";
@@ -159,7 +152,6 @@ bool reader_cleanup(GPReader** reader) {
         if (*reader) {
             (*reader)->close();
             delete *reader;
-            delete memoryContextHolder;
             *reader = NULL;
         } else {
             result = false;

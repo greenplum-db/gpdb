@@ -20,14 +20,14 @@ Feature: gpcheckcat tests
         Then gpstart should return a return code of 0
         When the user runs "psql leak_db -f test/behave/mgmt_utils/steps/data/gpcheckcat/leaked_schema.sql"
         Then psql should return a return code of 0
-        And psql should print pg_temp_ to stdout
-        And psql should print (1 row) to stdout
+        And psql should print "pg_temp_" to stdout
+        And psql should print "(1 row)" to stdout
         When the user runs "gpcheckcat leak_db"
         Then gpchekcat should return a return code of 0
-        Then gpcheckcat should print Found and dropped 1 unbound temporary schemas to stdout
+        Then gpcheckcat should print "Found and dropped 1 unbound temporary schemas" to stdout
         And the user runs "psql leak_db -f test/behave/mgmt_utils/steps/data/gpcheckcat/leaked_schema.sql"
         Then psql should return a return code of 0
-        And psql should print (0 rows) to stdout
+        And psql should print "(0 rows)" to stdout
         And verify that the schema "good_schema" exists in "leak_db"
         And the user runs "dropdb leak_db"
         And verify that a log was created by gpcheckcat in the user's "gpAdminLogs" directory
@@ -37,10 +37,10 @@ Feature: gpcheckcat tests
         Given database "unique_index_db" is dropped and recreated
         And the user runs "psql unique_index_db -f 'test/behave/mgmt_utils/steps/data/gpcheckcat/create_unique_index_violation.sql'"
         Then psql should return a return code of 0
-        And psql should not print (0 rows) to stdout
+        And psql should not print "(0 rows)" to stdout
         When the user runs "gpcheckcat unique_index_db"
         Then gpcheckcat should return a return code of 3
-        And gpcheckcat should print Table pg_compression has a violated unique index: pg_compression_compname_index to stdout
+        And gpcheckcat should print "Table pg_compression has a violated unique index: pg_compression_compname_index" to stdout
         And the user runs "dropdb unique_index_db"
         And verify that a log was created by gpcheckcat in the user's "gpAdminLogs" directory
 
@@ -61,21 +61,21 @@ Feature: gpcheckcat tests
         And the user runs "psql miss_attr_db1 -c "CREATE RULE notify_me AS ON UPDATE TO ao_part_table DO ALSO NOTIFY heap_part_table;""
         When the user runs "gpcheckcat miss_attr_db1"
         And gpcheckcat should return a return code of 0
-        Then gpcheckcat should not print Missing to stdout
+        Then gpcheckcat should not print "Missing" to stdout
         And the user runs "psql miss_attr_db1 -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='heap_table'::regclass::oid;""
         And the user runs "psql miss_attr_db1 -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='heap_part_table'::regclass::oid;""
         And the user runs "psql miss_attr_db1 -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='ao_table'::regclass::oid;""
         And the user runs "psql miss_attr_db1 -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='ao_part_table'::regclass::oid;""
         Then psql should return a return code of 0
         When the user runs "gpcheckcat miss_attr_db1"
-        Then gpcheckcat should print Missing to stdout
-        And gpcheckcat should print Table miss_attr_db1.public.heap_table.-1 to stdout
-        And gpcheckcat should print Table miss_attr_db1.public.heap_part_table.-1 to stdout
-        And gpcheckcat should print Table miss_attr_db1.public.heap_part_table_1_prt_p1_2_prt_1.-1 to stdout
-        And gpcheckcat should print Table miss_attr_db1.public.ao_table.-1 to stdout
-        And gpcheckcat should print Table miss_attr_db1.public.ao_part_table.-1 to stdout
-        And gpcheckcat should print Table miss_attr_db1.public.ao_part_table_1_prt_p1_2_prt_1.-1 to stdout
-        And gpcheckcat should print on content -1 to stdout
+        Then gpcheckcat should print "Missing" to stdout
+        And gpcheckcat should print "Table miss_attr_db1.public.heap_table.-1" to stdout
+        And gpcheckcat should print "Table miss_attr_db1.public.heap_part_table.-1" to stdout
+        And gpcheckcat should print "Table miss_attr_db1.public.heap_part_table_1_prt_p1_2_prt_1.-1" to stdout
+        And gpcheckcat should print "Table miss_attr_db1.public.ao_table.-1" to stdout
+        And gpcheckcat should print "Table miss_attr_db1.public.ao_part_table.-1" to stdout
+        And gpcheckcat should print "Table miss_attr_db1.public.ao_part_table_1_prt_p1_2_prt_1.-1" to stdout
+        And gpcheckcat should print "on content -1" to stdout
         Examples:
           | attrname   | tablename     |
           | attrelid   | pg_attribute  |
@@ -96,18 +96,18 @@ Feature: gpcheckcat tests
         And the user runs "psql miss_attr_db2 -c "CREATE INDEX ao_part_table_idx on ao_part_table (column1);""
         When the user runs "gpcheckcat miss_attr_db2"
         And gpcheckcat should return a return code of 0
-        Then gpcheckcat should not print Missing to stdout
+        Then gpcheckcat should not print "Missing" to stdout
         And the user runs "psql miss_attr_db2 -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='heap_table_idx'::regclass::oid;""
         And the user runs "psql miss_attr_db2 -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='heap_part_table_idx'::regclass::oid;""
         And the user runs "psql miss_attr_db2 -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='ao_table_idx'::regclass::oid;""
         And the user runs "psql miss_attr_db2 -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='ao_part_table_idx'::regclass::oid;""
         Then psql should return a return code of 0
         When the user runs "gpcheckcat miss_attr_db2"
-        Then gpcheckcat should print Missing to stdout
-        And gpcheckcat should print Table miss_attr_db2.public.heap_table_idx.-1 to stdout
-        And gpcheckcat should print Table miss_attr_db2.public.heap_part_table_idx.-1 to stdout
-        And gpcheckcat should print Table miss_attr_db2.public.ao_table_idx.-1 to stdout
-        And gpcheckcat should print Table miss_attr_db2.public.ao_part_table_idx.-1 to stdout
+        Then gpcheckcat should print "Missing" to stdout
+        And gpcheckcat should print "Table miss_attr_db2.public.heap_table_idx.-1" to stdout
+        And gpcheckcat should print "Table miss_attr_db2.public.heap_part_table_idx.-1" to stdout
+        And gpcheckcat should print "Table miss_attr_db2.public.ao_table_idx.-1" to stdout
+        And gpcheckcat should print "Table miss_attr_db2.public.ao_part_table_idx.-1" to stdout
         Examples:
           | attrname   | tablename    |
           | indexrelid | pg_index     |
@@ -121,12 +121,12 @@ Feature: gpcheckcat tests
         Then data for partition table "part_external" with partition level "0" is distributed across all segments on "miss_attr_db3"
         When the user runs "gpcheckcat miss_attr_db3"
         And gpcheckcat should return a return code of 0
-        Then gpcheckcat should not print Missing to stdout
+        Then gpcheckcat should not print "Missing" to stdout
         And the user runs "psql miss_attr_db3 -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='part_external_1_prt_p_2'::regclass::oid;""
         Then psql should return a return code of 0
         When the user runs "gpcheckcat miss_attr_db3"
-        Then gpcheckcat should print Missing to stdout
-        And gpcheckcat should print Table miss_attr_db3.public.part_external_1_prt_p_2.-1 to stdout
+        Then gpcheckcat should print "Missing" to stdout
+        And gpcheckcat should print "Table miss_attr_db3.public.part_external_1_prt_p_2.-1" to stdout
         Examples:
           | attrname   | tablename     |
           | reloid     | pg_exttable   |
@@ -140,17 +140,17 @@ Feature: gpcheckcat tests
         And there is a "ao" table "public.ao_table" in "miss_attr_db4" with data
         When the user runs "gpcheckcat miss_attr_db4"
         And gpcheckcat should return a return code of 0
-        Then gpcheckcat should not print Missing to stdout
+        Then gpcheckcat should not print "Missing" to stdout
         And an attribute of table "heap_table" in database "miss_attr_db4" is deleted on segment with content id "0"
         And psql should return a return code of 0
         When the user runs "gpcheckcat miss_attr_db4"
-        Then gpcheckcat should print Missing to stdout
-        And gpcheckcat should print Table miss_attr_db4.public.heap_table.0 to stdout
+        Then gpcheckcat should print "Missing" to stdout
+        And gpcheckcat should print "Table miss_attr_db4.public.heap_table.0" to stdout
         And the user runs "psql miss_attr_db4 -c "SET allow_system_table_mods='dml'; DELETE FROM pg_attribute where attrelid='heap_table'::regclass::oid;""
         Then psql should return a return code of 0
         When the user runs "gpcheckcat miss_attr_db4"
-        Then gpcheckcat should print Extra to stdout
-        And gpcheckcat should print Table miss_attr_db4.public.heap_table.1 to stdout
+        Then gpcheckcat should print "Extra" to stdout
+        And gpcheckcat should print "Table miss_attr_db4.public.heap_table.1" to stdout
 
     @owner
     Scenario: gpcheckcat should report and repair owner errors and produce timestamped repair scripts
@@ -165,12 +165,12 @@ Feature: gpcheckcat tests
         When the user runs "gpcheckcat -R owner owner_db1"
         Then gpcheckcat should return a return code of 3
         Then the path "gpcheckcat.repair.*" is found in cwd "1" times
-        Then gpcheckcat should print reported here: owner to stdout
+        Then gpcheckcat should print "reported here: owner" to stdout
         And waiting "1" seconds
         When the user runs "gpcheckcat -R owner owner_db1"
         Then gpcheckcat should return a return code of 3
         Then the path "gpcheckcat.repair.*" is found in cwd "2" times
-        Then gpcheckcat should print reported here: owner to stdout
+        Then gpcheckcat should print "reported here: owner" to stdout
         Then run all the repair scripts in the dir "gpcheckcat.repair.*"
         And the path "gpcheckcat.repair.*" is removed from current working directory
         When the user runs "gpcheckcat -R owner owner_db1"
@@ -216,13 +216,13 @@ Feature: gpcheckcat tests
         And there is a "heap" table "gpadmin_tbl" in "fkey_db" with data
         When the entry for the table "gpadmin_tbl" is removed from "pg_catalog.pg_class" with key "oid" in the database "fkey_db"
         Then the user runs "gpcheckcat -E -R missing_extraneous fkey_db"
-        And gpcheckcat should print Name of test which found this issue: missing_extraneous_pg_class to stdout
+        And gpcheckcat should print "Name of test which found this issue: missing_extraneous_pg_class" to stdout
         Then gpcheckcat should return a return code of 1
         Then validate and run gpcheckcat repair
         Then the user runs "gpcheckcat -E -R foreign_key fkey_db"
-        Then gpcheckcat should print No pg_class {.*} entry for pg_attribute {.*} to stdout
-        Then gpcheckcat should print No pg_class {.*} entry for pg_type {.*} to stdout
-        Then gpcheckcat should print No pg_class {.*} entry for gp_distribution_policy {.*} to stdout
+        Then gpcheckcat should print "No pg_class {.*} entry for pg_attribute {.*}" to stdout
+        Then gpcheckcat should print "No pg_class {.*} entry for pg_type {.*}" to stdout
+        Then gpcheckcat should print "No pg_class {.*} entry for gp_distribution_policy {.*}" to stdout
         Then gpcheckcat should return a return code of 3
         Then the user runs "gpcheckcat -E -R missing_extraneous fkey_db"
         Then gpcheckcat should return a return code of 0
@@ -237,7 +237,7 @@ Feature: gpcheckcat tests
         And there is a "ao" table "ao_table" in "fkey_ta" with data
         When the entry for the table "<table_name>" is removed from "pg_catalog.<catalog_name>" with key "<catalog_oid_key>" in the database "fkey_ta" on the first primary segment
         Then the user runs "gpcheckcat -E -R foreign_key fkey_ta"
-        Then gpcheckcat should print No <catalog_name> {.*} entry for pg_class {.*} to stdout
+        Then gpcheckcat should print "No <catalog_name> {.*} entry for pg_class {.*}" to stdout
         Then gpcheckcat should return a return code of 3
         And the user runs "dropdb fkey_ta"
         Examples:
@@ -254,7 +254,7 @@ Feature: gpcheckcat tests
         And there is a "ao" table "ao_table" in "fkey_ta" with data
         When the entry for the table "<table_name>" is removed from "pg_catalog.<catalog_name>" with key "<catalog_oid_key>" in the database "fkey_ta"
         Then the user runs "gpcheckcat -E -R foreign_key fkey_ta"
-        Then gpcheckcat should print No <catalog_name> {.*} entry for pg_class {.*} to stdout
+        Then gpcheckcat should print "No <catalog_name> {.*} entry for pg_class {.*}" to stdout
         Then gpcheckcat should return a return code of 3
         And the user runs "dropdb fkey_ta"
         Examples:
@@ -270,7 +270,7 @@ Feature: gpcheckcat tests
         And there is a "heap" table "gpadmin_tbl" in "fkey_ta" with data
         When the entry for the table "gpadmin_tbl" is removed from "pg_catalog.pg_type" with key "typrelid" in the database "fkey_ta"
         Then the user runs "gpcheckcat -E -R foreign_key fkey_ta"
-        Then gpcheckcat should print No pg_type {.*} entry for pg_class {.*} to stdout
+        Then gpcheckcat should print "No pg_type {.*} entry for pg_class {.*}" to stdout
         Then gpcheckcat should return a return code of 3
         And the user runs "dropdb fkey_ta"
 
@@ -323,10 +323,10 @@ Feature: gpcheckcat tests
         And the user runs sql file "test/behave/mgmt_utils/steps/data/gpcheckcat/create_inconsistent_gpfastsequence.sql" in "fkey2_db" on all the segments
         Then the user runs "gpcheckcat fkey2_db"
         Then gpcheckcat should return a return code of 3
-        Then gpcheckcat should print No pg_class {.*} entry for gp_fastsequence {.*} to stdout
+        Then gpcheckcat should print "No pg_class {.*} entry for gp_fastsequence {.*}" to stdout
         Then validate and run gpcheckcat repair
         Then the user runs "gpcheckcat -R foreign_key fkey2_db"
-        Then gpcheckcat should not print No pg_class {.*} entry for gp_fastsequence {.*} to stdout
+        Then gpcheckcat should not print "No pg_class {.*} entry for gp_fastsequence {.*}" to stdout
         Then gpcheckcat should return a return code of 3
         And the user runs "dropdb fkey2_db"
         And the path "gpcheckcat.repair.*" is removed from current working directory
@@ -340,7 +340,7 @@ Feature: gpcheckcat tests
         And the user runs "psql extra_gr_db -c "drop table if exists foo""
         Then the user runs "gpcheckcat -R missing_extraneous -E -g repair_dir extra_gr_db"
         Then gpcheckcat should return a return code of 1
-        Then gpcheckcat should print repair script\(s\) generated in dir repair_dir to stdout
+        Then gpcheckcat should print "repair script\(s\) generated in dir repair_dir" to stdout
         Then the path "repair_dir" is found in cwd "1" times
         Then run all the repair scripts in the dir "repair_dir"
         And the path "repair_dir" is removed from current working directory
@@ -357,7 +357,7 @@ Feature: gpcheckcat tests
         Then psql should return a return code of 0
         When the user runs "gpcheckcat -g repair_dir constraint_g_db"
         Then gpcheckcat should return a return code of 3
-        Then gpcheckcat should print repair script\(s\) generated in dir repair_dir to stdout
+        Then gpcheckcat should print "repair script\(s\) generated in dir repair_dir" to stdout
         Then the path "repair_dir" is found in cwd "1" times
         Then run all the repair scripts in the dir "repair_dir"
         And the path "repair_dir" is removed from current working directory
@@ -394,4 +394,4 @@ Feature: gpcheckcat tests
         And the user runs "psql persistent_db -c "select gp_delete_persistent_relation_node_entry(ctid) from (select ctid from gp_persistent_relation_node where relfilenode_oid=(select relfilenode from pg_class where relname = 'myheaptable2')) as unwanted;""
         And the user runs "psql persistent_db -c "select gp_delete_persistent_relation_node_entry(ctid) from (select ctid from gp_persistent_relation_node where relfilenode_oid=(select relfilenode from pg_class where relname = 'myheaptable3')) as unwanted;""
         When the user runs "gpcheckcat -R persistent persistent_db"
-        Then gpcheckcat should print Failed test\(s\) that are not reported here: persistent to stdout
+        Then gpcheckcat should print "Failed test\(s\) that are not reported here: persistent" to stdout

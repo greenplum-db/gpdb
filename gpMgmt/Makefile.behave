@@ -12,7 +12,9 @@ $(BEHAVE_BIN):
 
 behave: $(BEHAVE_BIN)
 	@echo "Running behave on management scripts..."
-	if [ -n ""$(tags)"" ]; then \
+	if [ -n ""$(tags)"" ] && [ -n ""$(skip_tags)"" ]; then \
+	        PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH):$(GPMGMT_SRC) python $(BEHAVE_BIN) $(GPMGMT_SRC)/test/behave/* --no-color -s -k --tags=$(tags) --tags=$(skip_tags) 2>&1 ; \
+	elif [ -n ""$(tags)"" ]; then \
 	        PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH):$(GPMGMT_SRC) python $(BEHAVE_BIN) $(GPMGMT_SRC)/test/behave/* --no-color -s -k --tags=$(tags) 2>&1 ; \
 	else \
 	        PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH):$(GPMGMT_SRC) python $(BEHAVE_BIN) $(GPMGMT_SRC)/test/behave/* --no-color -s 2>&1; \

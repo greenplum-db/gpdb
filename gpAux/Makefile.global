@@ -198,28 +198,6 @@ ifneq "$($(BLD_ARCH)_GREP)" ""
 GREP=$($(BLD_ARCH)_GREP)
 endif
 
-# ldd by platform
-LDD=ldd
-osx106_x86_LDD=otool -L
-ifneq "$($(BLD_ARCH)_LDD)" ""
-LDD=$($(BLD_ARCH)_LDD)
-endif
-
-LDD_FILTER_NULL=cat
-LDD_FILTER=$(GREP) '\=>' | awk '{print $$3}' | perl -p -i -e 's,\.so.*$$,\.so,'
-aix5_ppc_32_LDD_FILTER=$(GREP) -v 'needs:' | $(AWK) -F\( '{print $$1}' | $(AWK) '{print $$1}' | $(GREP) -E -v '^/unix$$'
-aix5_ppc_64_LDD_FILTER=$(GREP) -v 'needs:' | $(AWK) -F\( '{print $$1}' | $(AWK) '{print $$1}' | $(GREP) -E -v '^/unix$$'
-osx106_x86_LDD_FILTER=awk '{print $$1}' | perl -p -i -e 's,\.[0-9\.]*\.$(LDD_LIB_SUFFIX)$$,\.,'
-ifneq "$($(BLD_ARCH)_LDD_FILTER)" ""
-LDD_FILTER=$($(BLD_ARCH)_LDD_FILTER)
-endif
-
-LDD_LIB_SUFFIX=
-osx106_x86_LDD_LIB_SUFFIX=dylib
-ifneq "$($(BLD_ARCH)_LDD_LIB_SUFFIX)" ""
-LDD_LIB_SUFFIX=$($(BLD_ARCH)_LDD_LIB_SUFFIX)
-endif
-
 # tar by platform
 TAR=tar
 aix5_ppc_32_TAR=gtar

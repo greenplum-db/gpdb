@@ -2195,6 +2195,12 @@ sub diff_again
 
 	return undef unless ($numfiles);
 	print "\nGoing for 2nd Phase enhanced diff (using storage-specific techniques) $numfiles files for $floc\n";
+	# checkpoint the database to flush pending writes
+	my $psql_str = $glob_psql_str;
+	$psql_str .= $glob_connect
+	if (defined($glob_connect));
+	$psql_str .= " -c \' checkpoint \'" ;
+	my $tabdef = `$psql_str`;
 
 	$primsh .= "_deux";
 	$mirrsh .= "_deux";

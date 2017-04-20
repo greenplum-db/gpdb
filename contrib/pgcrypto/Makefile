@@ -65,3 +65,10 @@ rijndael.o: rijndael.tbl
 rijndael.tbl:
 	$(CC) $(CPPFLAGS) $(CFLAGS) -DPRINT_TABS rijndael.c -o gen-rtab
 	./gen-rtab > rijndael.tbl
+
+installcheck: prepare_pgcrypto_sql
+
+prepare_pgcrypto_sql:
+	cp $(GPHOME)/share/postgresql/contrib/pgcrypto.sql ./pgcrypto.sql
+
+.PHONY: prepare_pgcrypto_sql

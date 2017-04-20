@@ -2124,7 +2124,6 @@ typedef struct NestLoopState
 	bool		nl_NeedNewOuter;
 	bool		nl_MatchedOuter;
 	bool		nl_innerSquelchNeeded;	/*CDB*/
-	bool		nl_QuitIfEmptyInner;    /*CDB*/
 	bool		shared_outer;
 	bool		prefetch_inner;
 	bool		reset_inner; /*CDB-OLAP*/
@@ -2354,6 +2353,15 @@ typedef struct AdvanceAggregatesCodegenInfo
 typedef struct AggStatePerAggData *AggStatePerAgg;
 typedef struct AggStatePerGroupData *AggStatePerGroup;
 
+typedef enum HashAggStatus
+{
+	HASHAGG_BEFORE_FIRST_PASS,
+	HASHAGG_IN_A_PASS,
+	HASHAGG_BETWEEN_PASSES,
+	HASHAGG_STREAMING,
+	HASHAGG_END_OF_PASSES
+} HashAggStatus;
+
 typedef struct AggState
 {
 	ScanState	ss;				/* its first field is NodeTag */
@@ -2380,6 +2388,7 @@ typedef struct AggState
 
 	/* MPP */
 	struct HashAggTable *hhashtable;
+	HashAggStatus hashaggstatus;
 	MemoryManagerContainer mem_manager;
 
 	/* ROLLUP */

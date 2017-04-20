@@ -32,11 +32,6 @@ to the segments, and collects the results.
 
 ## Requirements
 
-* From the GPDB doc set, review [Configuring Your Systems and
-  Installing
-  Greenplum](http://gpdb.docs.pivotal.io/4360/prep_os-overview.html#topic1)
-  and perform appropriate updates to your system for GPDB use.
-
 * **gpMgmt** utilities - command line tools for managing the cluster.
 
   You will need to add the following Python modules (2.7 & 2.6 are
@@ -73,13 +68,18 @@ throughout the codebase, but a few larger additions worth noting:
 * __doc/__
 
   In PostgreSQL, the user manual lives here. In Greenplum, the user
-  manual is distributed separately (see http://gpdb.docs.pivotal.io),
-  and only the reference pages used to build man pages are here.
+  manual is maintained separately and only the reference pages used
+  to build man pages are here.
+
+* __gpdb-doc/__
+
+  Constains the Greenplum documentation in DITA XML format. Refer to
+  `gpdb-doc/README.md` for information on how to build, and work with
+  the documentation.
 
 * __ci/__
 
   Contains configuration files for the GPDB continuous integration system.
- 
 
 * __src/backend/cdb/__
 
@@ -443,6 +443,9 @@ just commit to the repository directly.
 ## Documentation
 
 For Greenplum Database documentation, please check online docs:
-http://gpdb.docs.pivotal.io
+http://greenplum.org/docs/
+
+For further information beyond the scope of this README, please see
+[our wiki](https://github.com/greenplum-db/gpdb/wiki)
 
 There is also a Vagrant-based quickstart guide for developers in `src/tools/vagrant/README.md`.

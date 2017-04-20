@@ -46,7 +46,7 @@ CREATE [READABLE] EXTERNAL TABLE table_name
                [FILL MISSING FIELDS] )]
            | 'CUSTOM' (Formatter=<formatter specifications>)
      [ ENCODING 'encoding' ]
-     [ [LOG ERRORS INTO error_table] SEGMENT REJECT LIMIT count 
+     [ [LOG ERRORS] SEGMENT REJECT LIMIT count
        [ROWS | PERCENT] ]
 CREATE [READABLE] EXTERNAL WEB TABLE table_name 
      ( column_name data_type [, ...] | LIKE other_table )
@@ -74,7 +74,7 @@ CREATE [READABLE] EXTERNAL WEB TABLE table_name
                [FILL MISSING FIELDS] )]
            | 'CUSTOM' (Formatter=<formatter specifications>)
      [ ENCODING 'encoding' ]
-     [ [LOG ERRORS INTO error_table] SEGMENT REJECT LIMIT count 
+     [ [LOG ERRORS] SEGMENT REJECT LIMIT count
        [ROWS | PERCENT] ]
 CREATE WRITABLE EXTERNAL TABLE table_name
     ( column_name data_type [, ...] | LIKE other_table )

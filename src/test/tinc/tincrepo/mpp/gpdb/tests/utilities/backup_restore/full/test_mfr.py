@@ -139,7 +139,7 @@ class test_mfr(BackupTestCase):
 
         cmdOutFile = 'test05_replicate_backup_replicate_'+time.strftime("_%d%m%Y-%H%M%S", time.gmtime())+'.out'
         cmdOut = mkpath(cmdOutFile)
-        cmdRepl = "gpmfr.py --replicate=\"%s\" --max-streams=80 --master-port=%s" % (backup_set, port)
+        cmdRepl = "gpmfr.py --replicate=\"%s\" --max-streams=15 --master-port=%s" % (backup_set, port)
         #(ok,out) = shell.run(cmdRepl,cmdOut,'w')
         (rc, out) = self.run_command(cmdRepl)
         if rc!=0:
@@ -155,7 +155,7 @@ class test_mfr(BackupTestCase):
 
         cmdOutFile = 'test05_replicate_backup_replicate_'+time.strftime("_%d%m%Y-%H%M%S", time.gmtime())+'.out'
         cmdOut = mkpath(cmdOutFile)
-        cmdRepl = "gpmfr.py --replicate=\"%s\" --max-streams=80 --master-port=%s" % (backup_set, port)
+        cmdRepl = "gpmfr.py --replicate=\"%s\" --max-streams=15 --master-port=%s" % (backup_set, port)
         #(ok,out) = shell.run(cmdRepl,cmdOut,'w')
         (rc, out) = self.run_command(cmdRepl)
         if rc!=0:
@@ -263,7 +263,7 @@ class test_mfr(BackupTestCase):
 
         cmdOutFile = 'test12__recover_backup_set_from_secondary_ddr_'+time.strftime("_%d%m%Y-%H%M%S", time.gmtime())+'.out'
         cmdOut = mkpath(cmdOutFile)
-        cmdRepl = "gpmfr.py --recover=\"%s\" --max-streams=80 --master-port=%s" % (backup_set, port)
+        cmdRepl = "gpmfr.py --recover=\"%s\" --max-streams=15 --master-port=%s" % (backup_set, port)
         #(ok,out) = shell.run(cmdRepl,cmdOut,'w')
         (rc, out) = self.run_command(cmdRepl)
         if rc!=0:
@@ -280,7 +280,7 @@ class test_mfr(BackupTestCase):
 
         cmdOutFile = 'test12__recover_backup_set_from_secondary_ddr_'+time.strftime("_%d%m%Y-%H%M%S", time.gmtime())+'.out'
         cmdOut = mkpath(cmdOutFile)
-        cmdRepl = "gpmfr.py --recover=\"%s\" --max-streams=80 --master-port=%s" % (backup_set, port)
+        cmdRepl = "gpmfr.py --recover=\"%s\" --max-streams=15 --master-port=%s" % (backup_set, port)
         #(ok,out) = shell.run(cmdRepl,cmdOut,'w')
         (rc, out) = self.run_command(cmdRepl)
         if rc!=0:
@@ -337,7 +337,7 @@ class test_mfr(BackupTestCase):
 
         cmdOutFile = 'test_replicate_backup_set_15'+time.strftime("_%d%m%Y-%H%M%S", time.gmtime())+'.out'
         cmdOut = mkpath(cmdOutFile)
-        cmdRepl = "gpmfr.py --replicate=\"%s\" --max-streams=80 --master-port=%s" % (backup_set, port)
+        cmdRepl = "gpmfr.py --replicate=\"%s\" --max-streams=15 --master-port=%s" % (backup_set, port)
         #(ok,out) = shell.run(cmdRepl,cmdOut,'w')
         (rc, out) = self.run_command(cmdRepl)
         if rc!=0:
@@ -384,7 +384,7 @@ class test_mfr(BackupTestCase):
         self.populate_simple_tables_data(default_dbname)
 
         # run full dump using the ALTERNATIVE_STORAGE_UNIT: TEMP
-        dump_to_dd_storage_unit_option = '--ddboost --ddboost-storage-unit %s --replicate --max-streams 80' % ALTERNATIVE_STORAGE_UNIT
+        dump_to_dd_storage_unit_option = '--ddboost --ddboost-storage-unit %s --replicate --max-streams 15' % ALTERNATIVE_STORAGE_UNIT
         self.run_gpcrondump(dbname='gptest', option = dump_to_dd_storage_unit_option)
 
         # get list of dumped files on primary DD server
@@ -406,7 +406,7 @@ class test_mfr(BackupTestCase):
         # remove the primary dump directory
         self.delete_ddboost_files(os.path.join(BackupTestCase.TSTINFO['DDBOOST_DIR'], self.full_backup_timestamp[:8]),
                                   primary_dumped_files, ALTERNATIVE_STORAGE_UNIT, 'local')
-        dd_recover_cmd = 'gpmfr --recover %s --ddboost-storage-unit %s --max-streams 80 -a' % (self.full_backup_timestamp, ALTERNATIVE_STORAGE_UNIT)
+        dd_recover_cmd = 'gpmfr --recover %s --ddboost-storage-unit %s --max-streams 15 -a' % (self.full_backup_timestamp, ALTERNATIVE_STORAGE_UNIT)
         self.run_command(dd_recover_cmd)
 
         # get list of dumped files on primary DD server

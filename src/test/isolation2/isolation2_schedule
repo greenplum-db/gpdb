@@ -1,5 +1,6 @@
 test: commit_transaction_block_checkpoint
 test: pg_views_concurrent_drop
+test: resource_group
 
 test: setup
 # Tests on Append-Optimized tables (row-oriented).

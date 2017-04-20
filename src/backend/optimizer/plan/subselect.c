@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/subselect.c,v 1.129.2.3 2009/04/25 16:45:02 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/subselect.c,v 1.132 2008/07/10 02:14:03 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1317,14 +1317,45 @@ SS_finalize_plan(PlannerInfo *root, Plan *plan, bool attach_initplans)
 	ListCell   *l;
 
 	/*
-	 * First, scan the param list to discover the sets of params that are
-	 * available from outer query levels and my own query level. We do this
-	 * once to save time in the per-plan recursion steps.  (This calculation
-	 * is overly generous: it can include a lot of params that actually
-	 * shouldn't be referenced here.  However, valid_params is just used as
-	 * a debugging crosscheck, so it's not worth trying to be exact.)
+	 * Examine any initPlans to determine the set of external params they
+	 * reference, the set of output params they supply, and their total cost.
+	 * We'll use at least some of this info below.  (Note we are assuming that
+	 * finalize_plan doesn't touch the initPlans.)
+	 *
+	 * In the case where attach_initplans is false, we are assuming that the
+	 * existing initPlans are siblings that might supply params needed by the
+	 * current plan.
 	 */
-	valid_params = NULL;
+	initExtParam = initSetParam = NULL;
+	initplan_cost = 0;
+	foreach(l, root->init_plans)
+	{
+		SubPlan    *initsubplan = (SubPlan *) lfirst(l);
+		Plan	   *initplan = planner_subplan_get_plan(root, initsubplan);
+		ListCell   *l2;
+
+		initExtParam = bms_add_members(initExtParam, initplan->extParam);
+		foreach(l2, initsubplan->setParam)
+		{
+			initSetParam = bms_add_member(initSetParam, lfirst_int(l2));
+		}
+		initplan_cost += get_initplan_cost(root, initsubplan);
+	}
+
+	/*
+	 * Now determine the set of params that are validly referenceable in this
+	 * query level; to wit, those available from outer query levels plus the
+	 * output parameters of any initPlans.  (We do not include output
+	 * parameters of regular subplans.  Those should only appear within the
+	 * testexpr of SubPlan nodes, and are taken care of locally within
+	 * finalize_primnode.)
+	 *
+	 * Note: this is a bit overly generous since some parameters of upper
+	 * query levels might belong to query subtrees that don't include this
+	 * query.  However, valid_params is only a debugging crosscheck, so it
+	 * doesn't seem worth expending lots of cycles to try to be exact.
+	 */
+	valid_params = bms_copy(initSetParam);
 	paramid = 0;
 	foreach(l, root->glob->paramlist)
 	{
@@ -1333,12 +1364,6 @@ SS_finalize_plan(PlannerInfo *root, Plan *plan, bool attach_initplans)
 		if (pitem->abslevel < root->query_level)
 		{
 			/* valid outer-level parameter */
-			valid_params = bms_add_member(valid_params, paramid);
-		}
-		else if (pitem->abslevel == root->query_level &&
-				 IsA(pitem->item, Param))
-		{
-			/* valid local parameter (i.e., a setParam of my child) */
 			valid_params = bms_add_member(valid_params, paramid);
 		}
 
@@ -1366,35 +1391,11 @@ SS_finalize_plan(PlannerInfo *root, Plan *plan, bool attach_initplans)
 	 */
 	if (attach_initplans)
 	{
+
 		Insist(!plan->initPlan);
 		plan->initPlan = root->init_plans;
-		root->init_plans = NIL; /* make sure they're not attached twice */
+		root->init_plans = NIL;		/* make sure they're not attached twice */
 
-		initExtParam = initSetParam = NULL;
-		initplan_cost = 0;
-
-		foreach(l, plan->initPlan)
-		{
-			SubPlan    *initsubplan = (SubPlan *) lfirst(l);
-			Plan	   *initplan = planner_subplan_get_plan(root, initsubplan);
-			ListCell   *l2;
-
-			initExtParam = bms_add_members(initExtParam, initplan->extParam);
-			foreach(l2, initsubplan->setParam)
-			{
-				SubPlan    *initplan = (SubPlan *) lfirst(l);
-				Plan	   *subplan_plan = planner_subplan_get_plan(root, initplan);
-				ListCell   *l2;
-
-				initExtParam = bms_add_members(initExtParam, subplan_plan->extParam);
-				foreach(l2, initplan->setParam)
-				{
-					initSetParam = bms_add_member(initSetParam, lfirst_int(l2));
-				}
-				initplan_cost += subplan_plan->total_cost;
-			}
-			initplan_cost += get_initplan_cost(root, initsubplan);
-		}
 		/* allParam must include all these params */
 		plan->allParam = bms_add_members(plan->allParam, initExtParam);
 		plan->allParam = bms_add_members(plan->allParam, initSetParam);
@@ -1789,6 +1790,8 @@ SS_make_initplan_from_plan(PlannerInfo *root, Plan *plan,
 
 	/*
 	 * Create a SubPlan node and add it to the outer list of InitPlans.
+	 * Note it has to appear after any other InitPlans it might depend on
+	 * (see comments in ExecReScan).
 	 */
 	node = makeNode(SubPlan);
 	node->subLinkType = EXPR_SUBLINK;

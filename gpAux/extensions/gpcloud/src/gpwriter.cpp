@@ -1,9 +1,6 @@
 #include "gpwriter.h"
 #include "s3memory_mgmt.h"
 
-// Hold memory context to avoid it being destructed before GPReader or GPWriter
-extern S3MemoryContext* memoryContextHolder;
-
 GPWriter::GPWriter(const S3Params& params, string fmt)
     : format(fmt), params(params), restfulService(this->params), s3InterfaceService(this->params) {
     restfulServicePtr = &restfulService;
@@ -89,14 +86,11 @@ GPWriter* writer_init(const char* url_with_options, const char* format) {
             return NULL;
         }
 
-        memoryContextHolder = new S3MemoryContext(params.getMemoryContext());
-
         writer->open(params);
         return writer;
     } catch (S3Exception& e) {
         if (writer != NULL) {
             delete writer;
-            delete memoryContextHolder;
         }
         s3extErrorMessage =
             "writer_init caught a " + e.getType() + " exception: " + e.getFullMessage();
@@ -105,7 +99,6 @@ GPWriter* writer_init(const char* url_with_options, const char* format) {
     } catch (...) {
         if (writer != NULL) {
             delete writer;
-            delete memoryContextHolder;
         }
         S3ERROR("Caught an unexpected exception.");
         s3extErrorMessage = "Caught an unexpected exception.";
@@ -146,7 +139,6 @@ bool writer_cleanup(GPWriter** writer) {
         if (*writer) {
             (*writer)->close();
             delete *writer;
-            delete memoryContextHolder;
             *writer = NULL;
         } else {
             result = false;

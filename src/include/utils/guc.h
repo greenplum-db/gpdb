@@ -241,6 +241,7 @@ extern bool Debug_filerep_print;
 extern bool Debug_filerep_gcov;
 extern bool Debug_filerep_config_print;
 extern bool Debug_filerep_memory_log_flush;
+extern bool Debug_resource_group;
 extern bool filerep_mirrorvalidation_during_resync;
 extern bool log_filerep_to_syslogger;
 extern bool gp_crash_recovery_suppress_ao_eof;
@@ -468,7 +469,6 @@ extern bool optimizer_control;	/* controls whether the user can change the setti
 extern bool optimizer_enable_master_only_queries;
 extern bool optimizer_multilevel_partitioning;
 extern bool optimizer_enable_derive_stats_all_groups;
-extern bool optimizer_explain_show_status;
 extern bool optimizer_prefer_scalar_dqa_multistage_agg;
 extern bool optimizer_parallel_union;
 extern bool optimizer_array_constraints;
@@ -491,15 +491,6 @@ extern int codegen_optimization_level;
  * Enable logging of DPE match in optimizer.
  */
 extern bool	optimizer_partition_selection_log;
-
-/*
- * During insertion in a table with parquet partitions,
- * require tuples to be sorted by partition key.
- *
- * This reduces the amount of memory required during execution by
- * keeping only one partition open at a time.
- */
-extern bool gp_parquet_insert_sort;
 
 extern char  *gp_email_smtp_server;
 extern char  *gp_email_smtp_userid;
@@ -649,6 +640,9 @@ extern int  gp_guc_list_show(struct StringInfoData    *buf,
                               List                     *guclist)
                 /* This extension allows gcc to check the format string */
                 __attribute__((__format__(__printf__, 3, 0)));
+
+extern struct config_generic *find_option(const char *name,
+				bool create_placeholders, int elevel);
 
 #ifdef EXEC_BACKEND
 extern void write_nondefault_variables(GucContext context);

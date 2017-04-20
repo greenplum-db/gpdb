@@ -1,0 +1,10 @@
+250|Sahara Hotel|Las Vegas|NV|\N
+251|Paris Hotel|Las Vegas|NV|\N
+252|Hilton Hotel|Las Vegas|NV|\N
+253|Mirage Hotel|Las Vegas|NV|\N
+254|Caesars Palace|Las Vegas|NV|\N
+255|Venetian Hotel|Las Vegas|NV|\N
+256|Paris MGM Grand|Las Vegas|NV|\N
+257|Luxor Hotel|Las Vegas|NV|\N
+258|Tropicana Hotel|Las Vegas|NV|\N
+264|New York New York|Las Vegas|NV|\N

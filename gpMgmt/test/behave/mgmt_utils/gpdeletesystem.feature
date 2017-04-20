@@ -26,7 +26,7 @@ Feature: gpdeletesystem tests
         And the environment variable "PGPORT" is set to "1234567890"
         When the user runs "gpdeletesystem -d $MASTER_DATA_DIRECTORY < test/behave/mgmt_utils/steps/data/yes.txt"
         Then gpdeletesystem should return a return code of 1
-        And gpdeletesystem should print PGPORT value in .*/postgresql.conf does not match PGPORT environment variable error message 
+        And gpdeletesystem should print "PGPORT value in .*/postgresql.conf does not match PGPORT environment variable" error message 
         And the environment variable "PGPORT" is reset
 
     Scenario: gpdeletesystem with PGPORT set

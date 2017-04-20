@@ -153,7 +153,6 @@ typedef struct mmon_options_t
 	int qamode;
 	int emcconnect; 		// config entry in gpperfmon.conf
 	int harvest_interval;
-	int snmp_interval;
 	apr_uint64_t tail_buffer_max;
 	int console;
 	int health_harvest_interval;
@@ -207,7 +206,6 @@ typedef struct host_t
 
 	// there are 2 of these so we don't need to mutex
 	multi_interface_holder_t connection_hostname;	
-	multi_interface_holder_t snmp_hostname;	
 
 	apr_uint32_t address_count; 
 	char* smon_bin_location;
@@ -265,25 +263,9 @@ typedef struct gp_smon_to_mmon_packet_t {
 char* get_connection_hostname(host_t* host);
 char* get_connection_ip(host_t* host);
 bool get_connection_ipv6_status(host_t* host);
-char* get_snmp_hostname(host_t* host);
 void advance_connection_hostname(host_t* host);
-void advance_snmp_hostname(host_t* host);
-
-typedef struct snmp_module_params_t snmp_module_params_t;
-struct snmp_module_params_t
-{
-	char configfile[PATH_MAX];
-	char outdir[PATH_MAX];
-	char externaltable_dir[PATH_MAX];
-	EmcConnectModeType_t emcconnect_mode;
-	int health_harvest_interval;
-	int warning_disk_space_percentage;
-	int error_disk_space_percentage;
-	int healthmon_running_separately;
-};
 
 double subtractTimeOfDay(struct timeval* begin, struct timeval* end);
-
 
 /* Set header*/
 extern void gp_smon_to_mmon_set_header(gp_smon_to_mmon_packet_t* pkt, apr_int16_t pkttype);
@@ -292,10 +274,8 @@ unsigned int gpdb_getnode_number_metrics(PerfmonNodeType type);
 const char* gpdb_getnodename(PerfmonNodeType type);
 const char* gpdb_getnodestatus(PerfmonNodeStatus status);
 apr_status_t gpdb_getnode_metricinfo(PerfmonNodeType type, apr_byte_t metricnum, const char** name, const char** unit);
-apr_status_t gpdb_debug_string_lookup_table();
+apr_status_t gpdb_debug_string_lookup_table(void);
 apr_status_t apr_pool_create_alloc(apr_pool_t ** newpool, apr_pool_t *parent);
 void gpdb_get_single_string_from_query(const char* QUERY, char** resultstring, apr_pool_t* pool);
-int snmp_report(host_t* tab, int tabsz);
-apr_status_t gpmmon_init_snmp(snmp_module_params_t* params);
-bool is_healthmon_running_separately();
+bool is_healthmon_running_separately(void);
 #endif /* GPMONLIB_H */

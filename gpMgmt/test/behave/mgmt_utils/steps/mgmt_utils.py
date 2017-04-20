@@ -517,19 +517,26 @@ def impl(context):
             context.timestamp_key = m.group(1)
             return
 
-@then('{command} should print {err_msg} error message')
+@then('{command} should print "{err_msg}" error message')
 def impl(context, command, err_msg):
     check_err_msg(context, err_msg)
 
-@then('{command} should print {out_msg} to stdout')
+@then('{command} should print "{out_msg}" to stdout')
 def impl(context, command, out_msg):
     check_stdout_msg(context, out_msg)
 
-@given('{command} should not print {out_msg} to stdout')
-@when('{command} should not print {out_msg} to stdout')
-@then('{command} should not print {out_msg} to stdout')
+@then('{command} should not print "{out_msg}" to stdout')
 def impl(context, command, out_msg):
     check_string_not_present_stdout(context, out_msg)
+
+@then('{command} should print "{out_msg}" to stdout {num} times')
+def impl(context, command, out_msg, num):
+    msg_list = context.stdout_message.split('\n')
+    msg_list = [x.strip() for x in msg_list]
+
+    count = msg_list.count(out_msg)
+    if count != int(num):
+        raise Exception("Expected %s to occur %s times. Found %d" % (out_msg, num, count))
 
 @given('{command} should return a return code of {ret_code}')
 @when('{command} should return a return code of {ret_code}')
@@ -920,45 +927,27 @@ def impl(context, dbname):
                             (context.backup_timestamp, context.backup_subdir, context.backup_subdir, dbname, context.backup_subdir, context.backup_timestamp)
     run_gpcommand(context, command)
 
-@when('the user runs gpdbrestore with the stored timestamp')
-@then('the user runs gpdbrestore with the stored timestamp')
+@when('the user runs gpdbrestore -e with the stored timestamp')
+@then('the user runs gpdbrestore -e with the stored timestamp')
 def impl(context):
     command = 'gpdbrestore -e -t %s -a' % context.backup_timestamp
     run_gpcommand(context, command)
 
-@when('the user runs gpdbrestore with the stored json timestamp')
-@then('the user runs gpdbrestore with the stored json timestamp')
+@then('the user runs gpdbrestore -e with the stored timestamp and options "{options}"')
+@when('the user runs gpdbrestore -e with the stored timestamp and options "{options}"')
+def impl(context, options):
+    command = 'gpdbrestore -e -t %s %s -a' % (context.backup_timestamp, options)
+    run_gpcommand(context, command)
+
+@then('the user runs gpdbrestore -e with the date directory')
+@when('the user runs gpdbrestore -e with the date directory')
 def impl(context):
-    timestamp = _read_timestamp_from_json(context)[0]
-    command = 'gpdbrestore -e -t %s -a' % timestamp
+    command = 'gpdbrestore -e -b %s -a' % (context.backup_timestamp[0:8])
     run_gpcommand(context, command)
 
-@when('the user runs gpdbrestore with the stored timestamp to print the backup set with options "{options}"')
+@when('the user runs gpdbrestore without -e with the stored timestamp and options "{options}"')
 def impl(context, options):
-    command = 'gpdbrestore -t %s %s --list-backup' % (context.backup_timestamp, options)
-    run_gpcommand(context, command)
-
-@then('the user runs gpdbrestore with the stored timestamp and options "{options}"')
-@when('the user runs gpdbrestore with the stored timestamp and options "{options}"')
-def impl(context, options):
-    if options == '-b':
-        command = 'gpdbrestore -e -b %s -a' % (context.backup_timestamp[0:8])
-    else:
-        command = 'gpdbrestore -e -t %s %s -a' % (context.backup_timestamp, options)
-    run_gpcommand(context, command)
-
-@when('the user runs gpdbrestore with the stored timestamp and options "{options}" without -e option')
-def impl(context, options):
-    if options == '-b':
-        command = 'gpdbrestore -b %s -a' % (context.backup_timestamp[0:8])
-    else:
-        command = 'gpdbrestore -t %s %s -a' % (context.backup_timestamp, options)
-    run_gpcommand(context, command)
-
-@when('the user runs "{cmd}" with the stored timestamp')
-@then('the user runs "{cmd}" with the stored timestamp')
-def impl(context, cmd):
-    command = '%s -t %s' % (cmd, context.backup_timestamp)
+    command = 'gpdbrestore -t %s %s -a' % (context.backup_timestamp, options)
     run_gpcommand(context, command)
 
 @then('verify that there is no table "{tablename}" in "{dbname}"')
@@ -1114,8 +1103,9 @@ def impl(context, path):
     if context.exception:
         raise context.exception
 
-@when('there are no backup files')
 @given('there are no backup files')
+@then('there are no backup files')
+@when('there are no backup files')
 def impl(context):
     cleanup_backup_files(context, 'template1')
 
@@ -1788,10 +1778,10 @@ def validate_segment_config_backup_files(context, dir=None):
         seg_data_dir = dir if dir is not None else ps.getSegmentDataDirectory()
         dump_dir = os.path.join(seg_data_dir, 'db_dumps', context.backup_timestamp[0:8])
         dump_files = ListRemoteFilesByPattern(dump_dir,
-                                              '%sgp_segment_config_files_*_%d_*.tar' % (context.dump_prefix, ps.getSegmentDbId()),
+                                              '%sgp_segment_config_files_*_%d_%s.tar' % (context.dump_prefix, ps.getSegmentDbId(), context.backup_timestamp),
                                               ps.getSegmentHostName()).run()
         if len(dump_files) != 1:
-            raise Exception('Error in finding config files "%s" for segment %s' % (dump_files, seg_data_dir))
+            raise Exception('Found too many config files for segment %s: %s' % (dump_files, seg_data_dir))
 
 @then('config files should be backed up on all segments')
 def impl(context):
@@ -2126,7 +2116,7 @@ def impl(context, msg, filename, parent_dir):
 def impl(context, process_name):
     run_command(context, 'pkill %s' % process_name)
 
-@then('the client program should print {msg} to stdout with value in range {min_val} to {max_val}')
+@then('the client program should print "{msg}" to stdout with value in range {min_val} to {max_val}')
 def impl(context, msg, min_val, max_val):
     stdout = context.stdout_message
 
@@ -2147,6 +2137,13 @@ def impl(context, dirname):
         os.mkdir(dirname)
         if not os.path.isdir(dirname):
             raise Exception("directory '%s' not created" % dirname)
+
+@then('the directory "{dirname}" does not exist')
+def impl(context, dirname):
+    if os.path.isdir(dirname):
+        shutil.rmtree(dirname, ignore_errors=True)
+    if os.path.isdir(dirname):
+        raise Exception("directory '%s' not removed" % dirname)
 
 @given('the directory "{dirname}" exists in current working directory')
 def impl(context, dirname):
@@ -3911,7 +3908,7 @@ def execute_sql_until_stopped(context, dbname, query):
 def impl(context):
     context.background_query_lock = True
 
-@given('the test is initialized')
+@given('the backup test is initialized with no backup files')
 def impl(context):
     context.execute_steps(u'''
         Given the database is running
@@ -3920,14 +3917,14 @@ def impl(context):
         And the backup files in "/tmp" are deleted
     ''')
 
-@given('the test is initialized with database "{dbname}"')
+@given('the backup test is initialized with database "{dbname}"')
 def impl(context, dbname):
     context.execute_steps(u'''
         Given the database is running
         And database "%s" is dropped and recreated
     ''' % dbname)
 
-@given('the test is initialized for special characters')
+@given('the backup test is initialized for special characters')
 def impl(context):
     context.execute_steps(u'''
         Given the database is running
@@ -3940,7 +3937,7 @@ def impl(context):
 @then('validate and run gpcheckcat repair')
 def impl(context):
     context.execute_steps(u'''
-        Then gpcheckcat should print repair script\(s\) generated in dir gpcheckcat.repair.* to stdout
+        Then gpcheckcat should print "repair script\(s\) generated in dir gpcheckcat.repair.*" to stdout
         Then the path "gpcheckcat.repair.*" is found in cwd "1" times
         Then run all the repair scripts in the dir "gpcheckcat.repair.*"
         And the path "gpcheckcat.repair.*" is removed from current working directory
@@ -3951,6 +3948,12 @@ def impl(context):
 @when('there is a "{tabletype}" table "{tablename}" in "{dbname}" with data')
 def impl(context, tabletype, tablename, dbname):
     populate_regular_table_data(context, tabletype, tablename, 'None', dbname, with_data=True)
+
+@given('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data and {rowcount} rows')
+@when('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data and {rowcount} rows')
+@then('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data and {rowcount} rows')
+def impl(context, tabletype, table_name, compression_type, dbname, rowcount):
+    populate_regular_table_data(context, tabletype, table_name, compression_type, dbname, int(rowcount))
 
 @given('there is a "{tabletype}" partition table "{table_name}" in "{dbname}" with data')
 @then('there is a "{tabletype}" partition table "{table_name}" in "{dbname}" with data')
@@ -4102,6 +4105,42 @@ def impl(context):
         time.sleep(5)
         current_time = datetime.now()
 
+@when('wait until the process "{proc}" goes down')
+@then('wait until the process "{proc}" goes down')
+@given('wait until the process "{proc}" goes down')
+def impl(context, proc):
+    cmd = Command(name='pgrep for %s' % proc, cmdStr="pgrep %s" % proc)
+    start_time = current_time = datetime.now()
+    while (current_time - start_time).seconds < 120:
+        cmd.run()
+        if cmd.get_results().rc != 0: # 1 is a good outcome; 2 or 3 we should fail fast because they're errors
+            break
+        time.sleep(2)
+        current_time = datetime.now()
+    context.ret_code = cmd.get_results().rc
+    context.error_message = ''
+    if context.ret_code > 1:
+        context.error_message = 'pgrep internal error'
+    check_return_code(context, 1) # 1 means no processes matched, but search was successful
+
+@when('wait until the process "{proc}" is up')
+@then('wait until the process "{proc}" is up')
+@given('wait until the process "{proc}" is up')
+def impl(context, proc):
+    cmd = Command(name='pgrep for %s' % proc, cmdStr="pgrep %s" % proc)
+    start_time = current_time = datetime.now()
+    while (current_time - start_time).seconds < 120:
+        cmd.run()
+        if cmd.get_results().rc != 1: # 0 is a good outcome; 2 or 3 we should fail fast because they're errors
+            break
+        time.sleep(2)
+        current_time = datetime.now()
+    context.ret_code = cmd.get_results().rc
+    context.error_message = ''
+    if context.ret_code > 1:
+        context.error_message = 'pgrep internal error'
+    check_return_code(context, 0) # 0 means one or more processes were matched
+
 @when('run gppersistent_rebuild with the saved content id')
 @then('run gppersistent_rebuild with the saved content id')
 def impl(context):
@@ -4245,3 +4284,15 @@ def store_timestamp_in_old_format(context, directory = None, prefix = ""):
 @when('the timestamp will be stored in json format')
 def impl(context):
     context.is_timestamp_stored_as_json = True
+
+@given('the gptransfer test is initialized')
+def impl(context):
+    context.execute_steps(u'''
+        Given the database is running
+        And the database "gptest" does not exist
+        And the database "gptransfer_destdb" does not exist
+        And the database "gptransfer_testdb1" does not exist
+        And the database "gptransfer_testdb3" does not exist
+        And the database "gptransfer_testdb4" does not exist
+        And the database "gptransfer_testdb5" does not exist
+    ''')

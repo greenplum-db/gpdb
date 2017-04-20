@@ -53,10 +53,10 @@ enum filerep_segment_pair_state_e
 
  /* we always assume that primary is up */
 #define IS_VALID_OLD_STATE_FILEREP(state) \
-	(state >= FILEREP_PUS_MUS && state <= FILEREP_PUC_MDX)
+	((unsigned int)(state) <= FILEREP_PUC_MDX)
 
 #define IS_VALID_NEW_STATE_FILEREP(state) \
-	(state >= FILEREP_PUS_MUS && state < FILEREP_SENTINEL)
+	((unsigned int)(state) < FILEREP_SENTINEL)
 
 /*
  * state machine matrix for filerep;
@@ -171,14 +171,16 @@ FtsGetPairStateFilerep(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseIn
 
 
 /*
- *  get new state for primary and mirror using filerep state machine
+ * Get new state for primary and mirror using filerep state machine.
+ * In case of an invalid old state, log the old state and do not transition.
  */
 uint32
 FtsTransitionFilerep(uint32 stateOld, uint32 trans)
 {
-	Assert(IS_VALID_OLD_STATE_FILEREP(stateOld));
-
 	int i = 0;
+
+	if (!(IS_VALID_OLD_STATE_FILEREP(stateOld)))
+		elog(ERROR, "FTS: invalid old state for transition: %d", stateOld);
 
 	/* check state machine for transition */
 	for (i = 0; i < FILEREP_SENTINEL; i++)
@@ -253,6 +255,8 @@ FtsResolveStateFilerep(FtsSegmentPairState *pairState)
 		case (FILEREP_PUS_MUS):
 		case (FILEREP_PUR_MUR):
 			Assert(!"FTS is not responsible for bringing segments back to life");
+			break;
+
 		default:
 			Assert(!"Invalid transition in filerep state machine");
 	}

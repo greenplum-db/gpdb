@@ -2256,6 +2256,7 @@ pgstat_bestart(void)
 	beentry->st_proc_start_timestamp = proc_start_timestamp;
 	beentry->st_activity_start_timestamp = 0;
 	beentry->st_xact_start_timestamp = 0;
+	beentry->st_resgroup_queue_start_timestamp = 0;
 	beentry->st_databaseid = MyDatabaseId;
 	beentry->st_userid = userid;
 	beentry->st_session_id = gp_session_id;  /* GPDB only */
@@ -2266,6 +2267,7 @@ pgstat_bestart(void)
 	/* Also make sure the last byte in each string area is always 0 */
 	beentry->st_appname[NAMEDATALEN - 1] = '\0';
 	beentry->st_activity[pgstat_track_activity_query_size - 1] = '\0';
+	beentry->st_rsgid = InvalidOid;
 
 	beentry->st_changecount++;
 	Assert((beentry->st_changecount & 1) == 0);
@@ -2414,6 +2416,44 @@ pgstat_report_xact_timestamp(TimestampTz tstamp)
 	Assert((beentry->st_changecount & 1) == 0);
 }
 
+/*
+ * Report the timestamp of transaction start queueing on the resource group.
+ */
+void
+pgstat_report_resgroup_wait(TimestampTz tstamp, Oid groupid)
+{
+	volatile PgBackendStatus *beentry = MyBEEntry;
+
+	if (!beentry)
+		return;
+
+	/*
+	 * Update my status entry, following the protocol of bumping
+	 * st_changecount before and after.  We use a volatile pointer here to
+	 * ensure the compiler doesn't try to get cute.
+	 */
+	beentry->st_changecount++;
+	beentry->st_resgroup_queue_start_timestamp = tstamp;
+	beentry->st_rsgid = groupid;
+	beentry->st_waiting = PGBE_WAITING_RESGROUP;
+	beentry->st_changecount++;
+	Assert((beentry->st_changecount & 1) == 0);
+}
+
+/*
+ * Fetch the timestamp of transaction start queueing on the resource group.
+ */
+TimestampTz
+pgstat_fetch_resgroup_queue_timestamp(void)
+{
+	volatile PgBackendStatus *beentry = MyBEEntry;
+
+	if (!beentry)
+		return 0;
+
+	return beentry->st_resgroup_queue_start_timestamp;
+}
+
 /* ----------
  * pgstat_report_waiting() -
  *
@@ -2438,7 +2478,6 @@ pgstat_report_waiting(char waiting)
 	 */
 	beentry->st_waiting = waiting;
 }
-
 
 /* ----------
  * pgstat_read_current_status() -

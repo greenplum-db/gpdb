@@ -30,10 +30,12 @@
         ensures the query has a consistent and valid view of the database for the duration of its
         execution. </p>
       <p>Each transaction is assigned a unique <i>transaction ID</i> (XID), an incrementing 32-bit
-        value. When a new transaction starts, it is assigned the next XID. A SQL statement that is
+        value. When a new transaction starts, it is assigned the next XID. An SQL statement that is
         not enclosed in a transaction is treated as a single-statement transaction—the
           <codeph>BEGIN</codeph> and <codeph>COMMIT</codeph> are added implicitly. This is similar
         to autocommit in some database systems. </p>
+      <note>Greenplum Database assigns XID values only to transactions that involve DDL or DML
+        operations, which are typically the only transactions that require an XID.</note>
       <p>When a transaction inserts a row, the XID is saved with the row in the
           <codeph>xmin</codeph> system column. When a transaction deletes a row, the XID is saved in
         the <codeph>xmax</codeph> system column. Updating a row is treated as a delete and an

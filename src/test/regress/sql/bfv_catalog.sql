@@ -6,9 +6,9 @@ set search_path=bfv_catalog;
 create language plpythonu;
 -- end_ignore
 
-create or replace function count_operator(explain_query text, operator text) returns int as
+create or replace function count_operator(query text, operator text) returns int as
 $$
-rv = plpy.execute(explain_query)
+rv = plpy.execute('EXPLAIN ' + query)
 search_text = operator
 result = 0
 for i in range(len(rv)):
@@ -54,7 +54,7 @@ CREATE TABLE t2 (a int, b int) DISTRIBUTED BY (a);
 CREATE TABLE x (a int) DISTRIBUTED BY (a);
 
 -- intent is to: expect to have 'table scan' operator in query plan
-select count_operator('explain select * from x where a=  (select sum(t1.a)  from t1 inner join (select x.a as outer_ref, * from t2) as foo on (foo.a=t1.a+ outer_ref)  group by foo.a);', 'Table Scan') > 0;
+select count_operator('select * from x where a=  (select sum(t1.a)  from t1 inner join (select x.a as outer_ref, * from t2) as foo on (foo.a=t1.a+ outer_ref)  group by foo.a);', 'Table Scan') > 0;
 
 reset optimizer;
 
@@ -530,19 +530,19 @@ set optimizer_enable_master_only_queries = on;
 -- end_ignore
 
 -- query that mentions no tables should have no motions
-select count_operator('explain select substr(''abc'', 2)', 'Motion');
+select count_operator('select substr(''abc'', 2)', 'Motion');
 
 -- queries that mention only master only tables (such as catalog tables)
 -- should have no motions
-select count_operator('explain select relname from pg_class where relname = ''pg_class''', 'Motion');
+select count_operator('select relname from pg_class where relname = ''pg_class''', 'Motion');
 
-select count_operator('explain select attname from pg_attribute where attname = ''attstorage''', 'Motion');
+select count_operator('select attname from pg_attribute where attname = ''attstorage''', 'Motion');
 
 -- queries with master-only TVFs and no distributed trabes have no motions
-select count_operator('explain select * from generate_series(1,10)', 'Motion');
+select count_operator('select * from generate_series(1,10)', 'Motion');
 
 -- queries over distributed tables should have motions
-select count_operator('explain select col2 from mpp_bfv_1;', 'Motion');
+select count_operator('select col2 from mpp_bfv_1;', 'Motion');
 
 -- this cannot go to the _teardown file, because it is not propagated here
 -- start_ignore

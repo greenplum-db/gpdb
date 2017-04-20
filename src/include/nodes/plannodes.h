@@ -731,7 +731,6 @@ typedef struct NestLoop
 {
 	Join		join;
 
-	bool		outernotreferencedbyinner;  /* true => inner has no OUTER Var */
 	bool		shared_outer;
 	bool		singleton_outer; /*CDB-OLAP true => outer is plain Agg */
 } NestLoop;

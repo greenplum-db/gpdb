@@ -1,0 +1,4 @@
+query*.out
+query*.sql
+gpload2/config
+gpload2/setup.out

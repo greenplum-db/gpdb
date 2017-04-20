@@ -146,7 +146,7 @@ ExecPartitionSelector(PartitionSelectorState *node)
 	PartitionSelector *ps = (PartitionSelector *) node->ps.plan;
 	EState	   *estate = node->ps.state;
 	ExprContext *econtext = node->ps.ps_ExprContext;
-	TupleTableSlot *inputSlot;
+	TupleTableSlot *inputSlot = NULL;
 	TupleTableSlot *candidateOutputSlot;
 
 	if (ps->staticSelection)
@@ -181,12 +181,12 @@ ExecPartitionSelector(PartitionSelectorState *node)
 		PlanState *outerPlan = outerPlanState(node);
 		Assert(outerPlan);
 		inputSlot = ExecProcNode(outerPlan);
+	}
 
-		if (TupIsNull(inputSlot))
-		{
-			/* no more tuples from outerPlan */
-			return NULL;
-		}
+	if (TupIsNull(inputSlot))
+	{
+		/* no more tuples from outerPlan */
+		return NULL;
 	}
 
 	/* partition elimination with the given input tuple */

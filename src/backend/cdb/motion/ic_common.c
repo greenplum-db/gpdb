@@ -706,6 +706,8 @@ createChunkTransportState(ChunkTransportState *transportStates,
         conn->stillActive = false;
         conn->stopRequested = false;
         conn->cdbProc = NULL;
+        conn->sent_record_typmod = 0;
+        conn->remapper = NULL;
     }
 
 	return pEntry;

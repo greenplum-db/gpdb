@@ -1,3 +1,4 @@
+set time zone PST8PDT;
 -- @gucs gp_create_table_random_default_distribution=off
 select * from uco_table1 order by bigint_col;
 

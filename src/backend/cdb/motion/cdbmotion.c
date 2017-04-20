@@ -22,6 +22,7 @@
 #include "cdb/tupser.h"
 #include "libpq/pqformat.h"
 #include "utils/memutils.h"
+#include "utils/typcache.h"
 
 
 /*
@@ -46,7 +47,7 @@ static TupleChunkListItem s_eos_chunk_data = (TupleChunkListItem)s_eos_buffer;
 static ChunkSorterEntry *getChunkSorterEntry(MotionLayerState *mlStates,
 											 MotionNodeEntry * motNodeEntry,
 											 int16 srcRoute);
-static bool addChunkToSorter(MotionLayerState *mlStates,
+static void addChunkToSorter(MotionLayerState *mlStates,
 							 ChunkTransportState *transportStates,
 							 MotionNodeEntry * pMNEntry,
 							 TupleChunkListItem tcItem,
@@ -59,7 +60,7 @@ static void processIncomingChunks(MotionLayerState *mlStates,
 								  int16 motNodeID,
 								  int16 srcRoute);
 
-static inline void reconstructTuple(MotionNodeEntry * pMNEntry, ChunkSorterEntry * pCSEntry);
+static inline void reconstructTuple(MotionNodeEntry * pMNEntry, ChunkSorterEntry * pCSEntry, TupleRemapper *remapper);
 
 /* Stats-function declarations. */
 static void statSendTuple(MotionLayerState *mlStates, MotionNodeEntry * pMNEntry, TupleChunkList tcList);
@@ -69,6 +70,8 @@ static void statNewTupleArrived(MotionNodeEntry * pMNEntry, ChunkSorterEntry * p
 static void statRecvTuple(MotionNodeEntry * pMNEntry,
 						  ChunkSorterEntry * pCSEntry,
 						  ReceiveReturnCode recvRC);
+static bool ShouldSendRecordCache(MotionConn *conn, SerTupInfo *pSerInfo);
+static void UpdateSentRecordCache(MotionConn *conn);
 
 
 
@@ -78,15 +81,21 @@ static void statRecvTuple(MotionNodeEntry * pMNEntry,
  * tuple-chunk list, and recording statistics about the newly formed tuple.
  */
 static inline void
-reconstructTuple(MotionNodeEntry * pMNEntry, ChunkSorterEntry * pCSEntry)
+reconstructTuple(MotionNodeEntry * pMNEntry, ChunkSorterEntry * pCSEntry, TupleRemapper *remapper)
 {
 	HeapTuple	htup;
+	SerTupInfo *pSerInfo = &pMNEntry->ser_tup_info;
 
 	/*
 	 * Convert the list of chunks into a tuple, then stow it away. This frees
 	 * our TCList as a side-effect
 	 */
-	htup = CvtChunksToHeapTup(&pCSEntry->chunk_list, &pMNEntry->ser_tup_info);
+	htup = CvtChunksToHeapTup(&pCSEntry->chunk_list, pSerInfo, remapper);
+
+	if (!htup)
+		return;
+
+	htup = TRCheckAndRemap(remapper, pSerInfo->tupdesc, htup);
 
 	htfifo_addtuple(pCSEntry->ready_tuples, htup);
 
@@ -380,6 +389,83 @@ SendStopMessage(MotionLayerState *mlStates,
 	pEntry->stopped = true;
 	if (transportStates != NULL && transportStates->doSendStopMessage != NULL)
 		transportStates->doSendStopMessage(transportStates, motNodeID);
+}
+
+void
+CheckAndSendRecordCache(MotionLayerState *mlStates,
+						ChunkTransportState *transportStates,
+						int16 motNodeID,
+						int16 targetRoute)
+{
+	MotionNodeEntry *pMNEntry;
+	TupleChunkListData tcList;
+	MemoryContext oldCtxt;
+	ChunkTransportStateEntry *pEntry = NULL;
+	MotionConn *conn;
+
+	getChunkTransportState(transportStates, motNodeID, &pEntry);
+
+	/*
+	 * for broadcast we only mark sent_record_typmod for connection 0
+	 * for efficiency and convenience
+	 */
+	if (targetRoute == BROADCAST_SEGIDX)
+		conn = &pEntry->conns[0];
+	else
+		conn = &pEntry->conns[targetRoute];
+
+	/*
+	 * Analyze tools.  Do not send any thing if this slice is in the bit mask
+	 */
+	if (gp_motion_slice_noop != 0 && (gp_motion_slice_noop & (1 << currentSliceId)) != 0)
+		return;
+
+	/*
+	 * Pull up the motion node entry with the node's details.  This includes
+	 * details that affect sending, such as whether the motion node needs to
+	 * include backup segment-dbs.
+	 */
+	pMNEntry = getMotionNodeEntry(mlStates, motNodeID, "SendRecordCache");
+
+	if (!ShouldSendRecordCache(conn, &pMNEntry->ser_tup_info))
+		return;
+
+#ifdef AMS_VERBOSE_LOGGING
+	elog(DEBUG5, "Serializing RecordCache for sending.");
+#endif
+
+	/* Create and store the serialized form, and some stats about it. */
+	oldCtxt = MemoryContextSwitchTo(mlStates->motion_layer_mctx);
+
+	SerializeRecordCacheIntoChunks(&pMNEntry->ser_tup_info, &tcList, conn);
+
+	MemoryContextSwitchTo(oldCtxt);
+
+#ifdef AMS_VERBOSE_LOGGING
+	elog(DEBUG5, "Serialized RecordCache for sending:\n"
+		 "\ttarget-route %d \n"
+		 "\t%d bytes in serial form\n"
+		 "\tbroken into %d chunks",
+		 targetRoute,
+		 tcList.serialized_data_length,
+		 tcList.num_chunks);
+#endif
+
+	/* do the send. */
+	if (!SendTupleChunkToAMS(mlStates, transportStates, motNodeID, targetRoute, tcList.p_first))
+	{
+		pMNEntry->stopped = true;
+	}
+	else
+	{
+		/* update stats */
+		statSendTuple(mlStates, pMNEntry, &tcList);
+	}
+
+	/* cleanup */
+	clearTCList(&pMNEntry->ser_tup_info.chunkCache, &tcList);
+
+	UpdateSentRecordCache(conn);
 }
 
 /*
@@ -979,7 +1065,7 @@ materializeChunk(TupleChunkListItem * tcItem)
  *	 true  - if another HeapTuple is completed by this chunk.
  *	 false - if the chunk does not complete a HeapTuple.
  */
-static bool
+static void
 addChunkToSorter(MotionLayerState *mlStates,
 				 ChunkTransportState *transportStates,
 				 MotionNodeEntry * pMNEntry,
@@ -989,14 +1075,18 @@ addChunkToSorter(MotionLayerState *mlStates,
 {
 	MemoryContext oldCtxt;
 	ChunkSorterEntry *chunkSorterEntry;
-	bool		tupleCompleted = false;
 	TupleChunkType tcType;
+	ChunkTransportStateEntry *pEntry = NULL;
+	MotionConn *conn = NULL;
 
 	AssertArg(tcItem != NULL);
 
 	oldCtxt = MemoryContextSwitchTo(mlStates->motion_layer_mctx);
 
 	chunkSorterEntry = getChunkSorterEntry(mlStates, pMNEntry, srcRoute);
+
+	getChunkTransportState(transportStates, motNodeID, &pEntry);
+	conn = pEntry->conns + srcRoute;
 
 	/* Look at the chunk's type, to figure out what to do with it. */
 
@@ -1016,8 +1106,7 @@ addChunkToSorter(MotionLayerState *mlStates,
 
 			/* Put this chunk into the list, then turn it into a HeapTuple! */
 			appendChunkToTCList(&chunkSorterEntry->chunk_list, tcItem);
-			reconstructTuple(pMNEntry, chunkSorterEntry);
-			tupleCompleted = true;
+			reconstructTuple(pMNEntry, chunkSorterEntry, conn->remapper);
 
 			break;
 
@@ -1075,8 +1164,7 @@ addChunkToSorter(MotionLayerState *mlStates,
 
 			/* Put this chunk into the list, then turn it into a HeapTuple! */
 			appendChunkToTCList(&chunkSorterEntry->chunk_list, tcItem);
-			reconstructTuple(pMNEntry, chunkSorterEntry);
-			tupleCompleted = true;
+			reconstructTuple(pMNEntry, chunkSorterEntry, conn->remapper);
 
 			break;
 
@@ -1125,8 +1213,6 @@ addChunkToSorter(MotionLayerState *mlStates,
 	}
 
 	MemoryContextSwitchTo(oldCtxt);
-
-	return tupleCompleted;
 }
 
 
@@ -1248,5 +1334,25 @@ statRecvTuple(MotionNodeEntry * pMNEntry, ChunkSorterEntry * pCSEntry,
 		if (pMNEntry->preserve_order)
 			pCSEntry->stat_tuples_available--;
 	}
+}
+
+/*
+ * Return true if the record cache should be sent to master
+ */
+static bool
+ShouldSendRecordCache(MotionConn *conn, SerTupInfo *pSerInfo)
+{
+	return pSerInfo->has_record_types &&
+		   NextRecordTypmod > 0 &&
+		   NextRecordTypmod > conn->sent_record_typmod;
+}
+
+/*
+ * Update the number of sent record types.
+ */
+static void
+UpdateSentRecordCache(MotionConn *conn)
+{
+	conn->sent_record_typmod = NextRecordTypmod;
 }
 

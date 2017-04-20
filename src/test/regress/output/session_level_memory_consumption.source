@@ -1,0 +1,117 @@
+--
+-- Checks the session_level_memory_consumption view installation/uninstallation and population
+--
+\i @bindir@/../share/postgresql/contrib/gp_session_state.sql
+-- Adjust this setting to control where the objects get created.
+CREATE SCHEMA session_state;
+SET search_path = session_state;
+BEGIN;
+-- SessionState views
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- @function: 
+--        gp_session_state_memory_entries_f
+--
+-- @in:
+--
+-- @out:
+--        int - segment id,
+--        int - session id, 
+--        int - vmem in MB, 
+--        int - the runaway status of the session, 
+--        int - number of QEs, 
+--        int - number of QEs that already freed their memory,
+--        int - amount of vmem allocated at the time it was flagged as runaway
+--        int - command count running at the time it was flagged as runaway
+--        TimeStampTz - last time a QE of this session became idle
+--
+-- @doc:
+--        UDF to retrieve memory usage entries for sessions
+--        
+--------------------------------------------------------------------------------
+CREATE FUNCTION session_state_memory_entries_f()
+RETURNS SETOF record
+AS '$libdir/gp_session_state', 'gp_session_state_memory_entries'
+LANGUAGE C IMMUTABLE;
+GRANT EXECUTE ON FUNCTION session_state_memory_entries_f() TO public;
+--------------------------------------------------------------------------------
+-- @view: 
+--        session_level_memory_consumption
+--
+-- @doc:
+--        List of memory usage entries for sessions
+--        
+--------------------------------------------------------------------------------
+CREATE VIEW session_level_memory_consumption AS
+WITH all_entries AS (
+   SELECT C.*
+          FROM gp_toolkit.__gp_localid, session_state_memory_entries_f() AS C (
+            segid int,
+            sessionid int,
+            vmem_mb int,
+            runaway_status int,
+            qe_count int, 
+            active_qe_count int, 
+            dirty_qe_count int,
+            runaway_vmem_mb int, 
+            runaway_command_cnt int,
+            idle_start timestamp with time zone
+          )
+    UNION ALL
+    SELECT C.*
+          FROM gp_toolkit.__gp_masterid, session_state_memory_entries_f() AS C (
+            segid int,
+            sessionid int,
+            vmem_mb int,
+            runaway_status int,
+            qe_count int, 
+            active_qe_count int, 
+            dirty_qe_count int,
+            runaway_vmem_mb int, 
+            runaway_command_cnt int,
+            idle_start timestamp with time zone
+          ))
+SELECT S.datname, 
+       M.sessionid as sess_id, 
+       S.usename, 
+       S.current_query as current_query, 
+       M.segid, 
+       M.vmem_mb,
+       case when M.runaway_status = 0 then false else true end as is_runaway,
+       M.qe_count,
+       M.active_qe_count,
+       M.dirty_qe_count,
+       M.runaway_vmem_mb, 
+       M.runaway_command_cnt,
+       idle_start
+FROM all_entries M LEFT OUTER JOIN 
+pg_stat_activity as S
+ON M.sessionid = S.sess_id;
+GRANT SELECT ON session_level_memory_consumption TO public;
+COMMIT;
+select * from session_state.session_level_memory_consumption limit 0;
+ datname | sess_id | usename | current_query | segid | vmem_mb | is_runaway | qe_count | active_qe_count | dirty_qe_count | runaway_vmem_mb | runaway_command_cnt | idle_start 
+---------+---------+---------+---------------+-------+---------+------------+----------+-----------------+----------------+-----------------+---------------------+------------
+(0 rows)
+
+-- Verify that we have 1 entry per segment, as we are only considering our current session.
+select 1 as session_entry_count from session_state.session_level_memory_consumption, pg_stat_activity where procpid = pg_backend_pid() 
+and session_state.session_level_memory_consumption.sess_id = pg_stat_activity.sess_id 
+having count(1) = (select count(1) from gp_segment_configuration where preferred_role = 'p');
+ session_entry_count 
+---------------------
+                   1
+(1 row)
+
+\i @bindir@/../share/postgresql/contrib/uninstall_gp_session_state.sql
+SET search_path = session_state;
+BEGIN;
+DROP VIEW session_level_memory_consumption; 
+DROP FUNCTION session_state_memory_entries_f();
+DROP SCHEMA session_state;
+COMMIT; 
+-- Should error out as we uninstalled
+select * from session_state.session_level_memory_consumption limit 0;
+ERROR:  schema "session_state" does not exist
+LINE 1: select * from session_state.session_level_memory_consumption...
+                      ^

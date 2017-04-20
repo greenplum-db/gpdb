@@ -1,4 +1,5 @@
 -- @gucs gp_create_table_random_default_distribution=off
+set time zone PST8PDT;
 select * from uao_table1_1 order by bigint_col;
 
 select * from uao_table2_1 order by col_numeric;

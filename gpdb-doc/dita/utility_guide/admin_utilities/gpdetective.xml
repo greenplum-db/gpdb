@@ -35,7 +35,7 @@
             /></codeph> to check the system status</li>
         <li id="ks138051"><codeph><xref href="gpcheck.xml#topic1" type="topic" format="dita"
             /></codeph> to make sure the recommended OS settings are set on all hosts</li>
-        <li id="ks139151"><codeph>gpcheckcat</codeph> and <codeph>gpcheckdb</codeph> to check the
+        <li id="ks139151"><codeph>gpcheckcat</codeph> to check the
           system catalog tables for inconsistencies</li>
       </ul>
       <p><codeph>gpdetective</codeph> captures the following files and Greenplum system

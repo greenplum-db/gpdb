@@ -54,6 +54,30 @@ LANGUAGE SQL;
 
 --------------------------------------------------------------------------------
 -- @function: 
+--        gp_allocate_palloc_test_one_seg
+-- @in:
+--		content - segment on which to allocate; master is not supported.
+--		size - amount of memory to allocate (in bytes)
+--		sleep - sleep for a number of seconds after allocation. 0 is disable
+--		crit_section - allocate in critical section if true
+-- @out:
+-- 		int - amount allocated
+--
+-- @doc:
+--		Allocates a specified amount of memory using a single palloc call on
+--		the specified segment.
+--        
+--------------------------------------------------------------------------------
+CREATE FUNCTION gp_allocate_palloc_test_one_seg(content int, size int, sleep int, crit_section bool)
+RETURNS SETOF int
+AS
+$$
+ SELECT gp_allocate_palloc_test_f($1, $2, $3, $4) from gp_dist_random('gp_id');
+$$
+LANGUAGE SQL;
+
+--------------------------------------------------------------------------------
+-- @function: 
 --        gp_allocate_top_memory_ctxt_test_f
 -- @in:
 --		content - segment on which to allocate. -1 is master. -2 is all.

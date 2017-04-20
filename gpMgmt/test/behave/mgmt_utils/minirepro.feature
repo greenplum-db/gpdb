@@ -4,26 +4,26 @@ Feature: Dump minimum database objects that is related to the query
     @minirepro_UI
     Scenario: Invalid arguments entered
       When the user runs "minirepro -w"
-      Then minirepro should print error: no such option error message
+      Then minirepro should print "error: no such option" error message
       When the user runs "minirepro minireprodb -w"
-      Then minirepro should print error: no such option error message
+      Then minirepro should print "error: no such option" error message
 
     @minirepro_UI
     Scenario: Missing required parameters
       When the user runs "minirepro"
-      Then minirepro should print error: No database specified error message
+      Then minirepro should print "error: No database specified" error message
       When the user runs "minirepro minireprodb -q"
-      Then minirepro should print error: -q option requires an argument error message
+      Then minirepro should print "error: -q option requires an argument" error message
       When the user runs "minirepro minireprodb -q ~/in.sql"
-      Then minirepro should print error: No output file specified error message
+      Then minirepro should print "error: No output file specified" error message
       When the user runs "minirepro minireprodb -q ~/in.sql -f"
-      Then minirepro should print error: -f option requires an argument error message
+      Then minirepro should print "error: -f option requires an argument" error message
 
     @minirepro_UI
     Scenario: Query file does not exist
       Given the file "/tmp/nonefolder/in.sql" does not exist
       When the user runs "minirepro minireprodb -q /tmp/nonefolder/in.sql -f ~/out.sql"
-      Then minirepro should print error: Query file /tmp/nonefolder/in.sql does not exist error message
+      Then minirepro should print "error: Query file /tmp/nonefolder/in.sql does not exist" error message
 
     @minirepro_UI
     Scenario: Database does not exist

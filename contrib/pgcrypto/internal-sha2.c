@@ -17,7 +17,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.	IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -84,7 +84,7 @@ int_sha224_free(PX_MD *h)
 {
 	SHA224_CTX *ctx = (SHA224_CTX *) h->p.ptr;
 
-	memset(ctx, 0, sizeof(*ctx));
+	px_memset(ctx, 0, sizeof(*ctx));
 	px_free(ctx);
 	px_free(h);
 }
@@ -132,7 +132,7 @@ int_sha256_free(PX_MD *h)
 {
 	SHA256_CTX *ctx = (SHA256_CTX *) h->p.ptr;
 
-	memset(ctx, 0, sizeof(*ctx));
+	px_memset(ctx, 0, sizeof(*ctx));
 	px_free(ctx);
 	px_free(h);
 }
@@ -180,7 +180,7 @@ int_sha384_free(PX_MD *h)
 {
 	SHA384_CTX *ctx = (SHA384_CTX *) h->p.ptr;
 
-	memset(ctx, 0, sizeof(*ctx));
+	px_memset(ctx, 0, sizeof(*ctx));
 	px_free(ctx);
 	px_free(h);
 }
@@ -228,7 +228,7 @@ int_sha512_free(PX_MD *h)
 {
 	SHA512_CTX *ctx = (SHA512_CTX *) h->p.ptr;
 
-	memset(ctx, 0, sizeof(*ctx));
+	px_memset(ctx, 0, sizeof(*ctx));
 	px_free(ctx);
 	px_free(h);
 }

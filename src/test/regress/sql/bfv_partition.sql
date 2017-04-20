@@ -1,16 +1,16 @@
 create schema bfv_partition;
 set search_path=bfv_partition;
 
----
---- Initial setup for all the partitioning test for this suite
----
+--
+-- Initial setup for all the partitioning test for this suite
+--
 -- start_ignore
 create language plpythonu;
 -- end_ignore
 
-create or replace function count_operator(explain_query text, operator text) returns int as
+create or replace function count_operator(query text, operator text) returns int as
 $$
-rv = plpy.execute(explain_query)
+rv = plpy.execute('EXPLAIN ' + query)
 search_text = operator
 result = 0
 for i in range(len(rv)):
@@ -23,7 +23,7 @@ language plpythonu;
 
 create or replace function find_operator(query text, operator_name text) returns text as
 $$
-rv = plpy.execute(query)
+rv = plpy.execute('EXPLAIN ' + query)
 search_text = operator_name
 result = ['false']
 for i in range(len(rv)):
@@ -35,9 +35,9 @@ return result
 $$
 language plpythonu;
 
----
---- Tests if it produces SIGSEGV from "select from partition_table group by rollup or cube function"
----
+--
+-- Tests if it produces SIGSEGV from "select from partition_table group by rollup or cube function"
+--
 
 -- SETUP
 -- start_ignore
@@ -60,7 +60,7 @@ distributed by (subscription_id, bill_stmt_id)
     );
     
 -- TEST
-select count_operator('explain select cust_type, subscription_status,count(distinct subscription_id),sum(voice_call_min),sum(minute_per_call) from mpp7980 where month_id =E''2009-04-01'' group by rollup(1,2);','SIGSEGV');
+select count_operator('select cust_type, subscription_status,count(distinct subscription_id),sum(voice_call_min),sum(minute_per_call) from mpp7980 where month_id =E''2009-04-01'' group by rollup(1,2);','SIGSEGV');
 
 insert into mpp7980 values('2009-04-01','xyz','zyz','1',1,1,'1');
 insert into mpp7980 values('2009-04-01','zxyz','zyz','2',2,1,'1');
@@ -74,9 +74,9 @@ drop table mpp7980;
 
 
 
----
---- Tests if it is using casting comparator for partition selector with compatible types
----
+--
+-- Tests if it is using casting comparator for partition selector with compatible types
+--
 
 -- SETUP
 CREATE TABLE TIMESTAMP_MONTH_rangep_STARTINCL (i1 int, f2 timestamp)
@@ -179,9 +179,9 @@ DROP TABLE TIMESTAMP_MONTH_rangep_STARTINCL;
 -- end_ignore
 
 
----
---- Data Engineer can see partition key in psql
----
+--
+-- Data Engineer can see partition key in psql
+--
 
 -- SETUP
 -- start_ignore
@@ -259,7 +259,7 @@ insert into mpp23195_t1 values (generate_series(1,19));
 insert into mpp23195_t2 values (1);
 
 -- TEST
-select find_operator('explain select * from mpp23195_t1,mpp23195_t2 where mpp23195_t1.i < mpp23195_t2.i;', 'Dynamic Index Scan');
+select find_operator('select * from mpp23195_t1,mpp23195_t2 where mpp23195_t1.i < mpp23195_t2.i;', 'Dynamic Index Scan');
 select * from mpp23195_t1,mpp23195_t2 where mpp23195_t1.i < mpp23195_t2.i;
 
 -- CLEANUP
@@ -271,9 +271,9 @@ set optimizer_enable_indexjoin=off;
 -- end_ignore
 
 
----
---- Check we have Dynamic Index Scan operator and check we have Nest loop operator
----
+--
+-- Check we have Dynamic Index Scan operator and check we have Nest loop operator
+--
 
 -- SETUP
 -- start_ignore
@@ -293,8 +293,8 @@ create table mpp21834_t2(i int, j int);
 -- start_ignore
 select disable_xform('CXformInnerJoin2HashJoin');
 -- end_ignore
-select find_operator('explain analyze select * from mpp21834_t2,mpp21834_t1 where mpp21834_t2.i < mpp21834_t1.i;','Dynamic Index Scan');
-select find_operator('explain analyze select * from mpp21834_t2,mpp21834_t1 where mpp21834_t2.i < mpp21834_t1.i;','Nested Loop');
+select find_operator('analyze select * from mpp21834_t2,mpp21834_t1 where mpp21834_t2.i < mpp21834_t1.i;','Dynamic Index Scan');
+select find_operator('analyze select * from mpp21834_t2,mpp21834_t1 where mpp21834_t2.i < mpp21834_t1.i;','Nested Loop');
 
 -- CLEANUP
 -- start_ignore
@@ -306,9 +306,9 @@ select enable_xform('CXformInnerJoin2HashJoin');
 -- end_ignore
 
 
----
---- A rescanning of DTS with its own partition selector (under sequence node)
----
+--
+-- A rescanning of DTS with its own partition selector (under sequence node)
+--
 
 -- SETUP
 -- start_ignore
@@ -329,13 +329,13 @@ insert into mpp23288(a) select generate_series(1,20);
 analyze mpp23288;
 
 -- TEST
-select count_operator('explain select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and t2.a =10) order by t2.a, t1.a;','Dynamic Table Scan');
+select count_operator('select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and t2.a =10) order by t2.a, t1.a;','Dynamic Table Scan');
 select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and t2.a =10) order by t2.a, t1.a;
 
-select count_operator('explain select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and (t2.a = 10 or t2.a = 5 or t2.a = 12)) order by t2.a, t1.a;','Dynamic Table Scan');
+select count_operator('select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and (t2.a = 10 or t2.a = 5 or t2.a = 12)) order by t2.a, t1.a;','Dynamic Table Scan');
 select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and (t2.a = 10 or t2.a = 5 or t2.a = 12)) order by t2.a, t1.a;
 
-select count_operator('explain select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on t1.a < t2.a and t2.a = 1 or t2.a < 10 order by t2.a, t1.a;','Dynamic Table Scan');
+select count_operator('select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on t1.a < t2.a and t2.a = 1 or t2.a < 10 order by t2.a, t1.a;','Dynamic Table Scan');
 select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on t1.a < t2.a and t2.a = 1 or t2.a < 10 order by t2.a, t1.a;
 
 -- CLEANUP
@@ -345,9 +345,9 @@ set optimizer_enable_broadcast_nestloop_outer_child=off;
 -- end_ignore
 
 
----
---- Testing whether test gives wrong results with partition tables when sub-partitions are distributed differently than the parent partition.
----
+--
+-- Testing whether test gives wrong results with partition tables when sub-partitions are distributed differently than the parent partition.
+--
 
 -- SETUP
 -- start_ignore
@@ -384,9 +384,9 @@ drop table if exists t;
 -- end_ignore
 
 
----
---- Tests if DynamicIndexScan sets tuple descriptor of the planstate->ps_ResultTupleSlot
----
+--
+-- Tests if DynamicIndexScan sets tuple descriptor of the planstate->ps_ResultTupleSlot
+--
 
 -- SETUP
 -- start_ignore
@@ -417,7 +417,7 @@ analyze mpp24151_t;
 select disable_xform('CXformDynamicGet2DynamicTableScan');
 -- end_ignore
 
-select count_operator('explain select * from mpp24151_t, mpp24151_pt where tid = ptid and pt1 = E''hello0'';','Result');
+select count_operator('select * from mpp24151_t, mpp24151_pt where tid = ptid and pt1 = E''hello0'';','Result');
 select * from mpp24151_t, mpp24151_pt where tid = ptid and pt1 = 'hello0';
 
 -- CLEANUP
@@ -430,9 +430,9 @@ select enable_xform('CXformDynamicGet2DynamicTableScan');
 -- end_ignore
 
 
----
---- No DPE (Dynamic Partition Elimination) on second child of a union under a join
----
+--
+-- No DPE (Dynamic Partition Elimination) on second child of a union under a join
+--
 
 -- SETUP
 -- start_ignore
@@ -466,25 +466,25 @@ analyze p3;
 analyze p;
 
 -- TEST
-select count_operator('explain select * from (select * from p1 union all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+select count_operator('select * from (select * from p1 union all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
 
-select count_operator('explain select * from (select * from p1 union select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+select count_operator('select * from (select * from p1 union select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
 
-select count_operator('explain select * from (select * from p1 except all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+select count_operator('select * from (select * from p1 except all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
 
-select count_operator('explain select * from (select * from p1 except select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+select count_operator('select * from (select * from p1 except select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
 
-select count_operator('explain select * from (select * from p1 intersect all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+select count_operator('select * from (select * from p1 intersect all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
 
-select count_operator('explain select * from (select * from p1 union select * from p2 union all select * from p3) as p_all, t where p_all.b=t.b;','Partition Selector');
+select count_operator('select * from (select * from p1 union select * from p2 union all select * from p3) as p_all, t where p_all.b=t.b;','Partition Selector');
 
-select count_operator('explain select * from (select * from p1 union select * from p2 union all select * from p) as p_all, t where p_all.b=t.b;','Partition Selector');
+select count_operator('select * from (select * from p1 union select * from p2 union all select * from p) as p_all, t where p_all.b=t.b;','Partition Selector');
 
-select count_operator('explain select * from (select * from p1 union select * from p union all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+select count_operator('select * from (select * from p1 union select * from p union all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
 
-select count_operator('explain select * from (select * from p1 union select * from p2 intersect all select * from p3) as p_all, t where p_all.b=t.b;','Partition Selector');
+select count_operator('select * from (select * from p1 union select * from p2 intersect all select * from p3) as p_all, t where p_all.b=t.b;','Partition Selector');
 
-select count_operator('explain select * from (select * from p1 union select * from p intersect all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+select count_operator('select * from (select * from p1 union select * from p intersect all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
 
 -- CLEANUP
 -- start_ignore
@@ -496,9 +496,9 @@ drop table p;
 -- end_ignore
 
 
----
---- Gracefully handle NULL partition set from BitmapTableScan, DynamicTableScan and DynamicIndexScan
----
+--
+-- Gracefully handle NULL partition set from BitmapTableScan, DynamicTableScan and DynamicIndexScan
+--
 
 -- SETUP
 -- start_ignore
@@ -515,7 +515,7 @@ create index dbs_index on dbs using bitmap(c3);
 
 
 -- TEST
-select find_operator('explain (select * from dts where c2 = 1) union (select * from dts where c2 = 2) union (select * from dts where c2 = 3) union (select * from dts where c2 = 4) union (select * from dts where c2 = 5) union (select * from dts where c2 = 6) union (select * from dts where c2 = 7) union (select * from dts where c2 = 8) union (select * from dts where c2 = 9) union (select * from dts where c2 = 10);', 'Dynamic Table Scan');
+select find_operator('(select * from dts where c2 = 1) union (select * from dts where c2 = 2) union (select * from dts where c2 = 3) union (select * from dts where c2 = 4) union (select * from dts where c2 = 5) union (select * from dts where c2 = 6) union (select * from dts where c2 = 7) union (select * from dts where c2 = 8) union (select * from dts where c2 = 9) union (select * from dts where c2 = 10);', 'Dynamic Table Scan');
 
 (select * from dts where c2 = 1) union
 (select * from dts where c2 = 2) union
@@ -532,7 +532,7 @@ select find_operator('explain (select * from dts where c2 = 1) union (select * f
 select disable_xform('CXformDynamicGet2DynamicTableScan');
 -- end_ignore
 
-select find_operator('explain (select * from dis where c3 = 1) union (select * from dis where c3 = 2) union (select * from dis where c3 = 3) union (select * from dis where c3 = 4) union (select * from dis where c3 = 5) union (select * from dis where c3 = 6) union (select * from dis where c3 = 7) union (select * from dis where c3 = 8) union (select * from dis where c3 = 9) union (select * from dis where c3 = 10);', 'Dynamic Index Scan');
+select find_operator('(select * from dis where c3 = 1) union (select * from dis where c3 = 2) union (select * from dis where c3 = 3) union (select * from dis where c3 = 4) union (select * from dis where c3 = 5) union (select * from dis where c3 = 6) union (select * from dis where c3 = 7) union (select * from dis where c3 = 8) union (select * from dis where c3 = 9) union (select * from dis where c3 = 10);', 'Dynamic Index Scan');
 
 (select * from dis where c3 = 1) union
 (select * from dis where c3 = 2) union
@@ -545,7 +545,7 @@ select find_operator('explain (select * from dis where c3 = 1) union (select * f
 (select * from dis where c3 = 9) union
 (select * from dis where c3 = 10);
 
-select find_operator('explain select * from dbs where c2= 15 and c3 = 5;', 'Bitmap Table Scan');
+select find_operator('select * from dbs where c2= 15 and c3 = 5;', 'Bitmap Table Scan');
 
 select * from dbs where c2= 15 and c3 = 5;
 
@@ -559,9 +559,9 @@ drop table if exists dts;
 select enable_xform('CXformDynamicGet2DynamicTableScan');
 -- end_ignore
 
----
---- Partition elimination for heterogenous DynamicIndexScans
----
+--
+-- Partition elimination for heterogenous DynamicIndexScans
+--
 
 -- SETUP
 -- start_ignore
@@ -585,7 +585,7 @@ select disable_xform('CXformDynamicGet2DynamicTableScan') ;
 -- end_ignore
 
 select * from pp where b=2 and c=2;
-select count_operator('explain select * from pp where b=2 and c=2;','Partition Selector');
+select count_operator('select * from pp where b=2 and c=2;','Partition Selector');
 
 -- CLEANUP
 -- start_ignore
@@ -600,9 +600,9 @@ select enable_xform('CXformDynamicGet2DynamicTableScan') ;
 -- end_ignore
 
 
----
---- Partition elimination with implicit CAST on the partitioning key
----
+--
+-- Partition elimination with implicit CAST on the partitioning key
+--
 
 -- SETUP
 -- start_ignore
@@ -628,16 +628,16 @@ PARTITION BY LIST(month_id)
 
 -- TEST
 select * from ds_4 where month_id = '200800';
-select count_operator('explain select * from ds_4 where month_id = E''200800'';','Partition Selector');
+select count_operator('select * from ds_4 where month_id = E''200800'';','Partition Selector');
 
 select * from ds_4 where month_id > '200800';
-select count_operator('explain select * from ds_4 where month_id > E''200800'';','Partition Selector');
+select count_operator('select * from ds_4 where month_id > E''200800'';','Partition Selector');
 
 select * from ds_4 where month_id <= '200800';
-select count_operator('explain select * from ds_4 where month_id <= E''200800'';','Partition Selector');
+select count_operator('select * from ds_4 where month_id <= E''200800'';','Partition Selector');
 
 select * from ds_4 a1,ds_4 a2 where a1.month_id = a2.month_id and a1.month_id > '200800';
-select count_operator('explain select * from ds_4 a1,ds_4 a2 where a1.month_id = a2.month_id and a1.month_id > E''200800'';','Partition Selector');
+select count_operator('select * from ds_4 a1,ds_4 a2 where a1.month_id = a2.month_id and a1.month_id > E''200800'';','Partition Selector');
 
 -- CLEANUP
 -- start_ignore
@@ -649,9 +649,9 @@ drop function if exists find_operator(query text, operator_name text);
 drop function if exists count_operator(query text, operator_name text);
 -- end_ignore
 
----
---- Partition table with appendonly leaf, full join
----
+--
+-- Partition table with appendonly leaf, full join
+--
 
 -- SETUP
 -- start_ignore
@@ -683,9 +683,9 @@ DROP TABLE IF EXISTS foo;
 DROP TABLE IF EXISTS bar;
 -- end_ignore
 
----
---- Partition table with appendonly set at middlevel partition, full join
----
+--
+-- Partition table with appendonly set at middlevel partition, full join
+--
 
 -- SETUP
 -- start_ignore
@@ -717,9 +717,9 @@ DROP TABLE IF EXISTS foo;
 DROP TABLE IF EXISTS bar;
 -- end_ignore
 
----
---- Partition table with appendonly set at root partition, full join
----
+--
+-- Partition table with appendonly set at root partition, full join
+--
 
 -- SETUP
 -- start_ignore
@@ -746,9 +746,9 @@ INSERT INTO bar VALUES (2,3);
 SELECT * FROM foo FULL JOIN bar ON foo.a = bar.b;
 
 
----
---- Test EXPLAIN on a hash agg that has a Sequence + Partition Selector below it.
----
+--
+-- Test a hash agg that has a Sequence + Partition Selector below it.
+--
 
 -- SETUP
 -- start_ignore

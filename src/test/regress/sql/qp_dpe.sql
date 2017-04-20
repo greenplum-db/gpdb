@@ -24,9 +24,9 @@ RESET ALL;
 create language plpythonu;
 -- end_ignore
 
-create or replace function count_operator(explain_query text, operator text) returns int as
+create or replace function count_operator(query text, operator text) returns int as
 $$
-rv = plpy.execute(explain_query)
+rv = plpy.execute('EXPLAIN '+ query)
 search_text = operator
 result = 0
 for i in range(len(rv)):
@@ -61,8 +61,8 @@ analyze foo1;
 analyze foo2;
 -- end_ignore
 
-select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
-select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Table Scan') > 0;
+select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
+select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Table Scan') > 0;
 
 select count(*) from foo1,foo2 where foo1.j = foo2.j;
 
@@ -86,8 +86,8 @@ analyze foo1;
 analyze foo2;
 -- end_ignore
 
-select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
-select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Table Scan') > 0;
+select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
+select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Table Scan') > 0;
 
 select count(*) from foo1,foo2 where foo1.j = foo2.j;
 
@@ -111,8 +111,8 @@ analyze foo1;
 analyze foo2;
 -- end_ignore
 
-select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
-select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Table Scan') > 0;
+select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
+select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Table Scan') > 0;
 
 select count(*) from foo1,foo2 where foo1.j = foo2.j;
 
@@ -136,8 +136,8 @@ analyze foo1;
 analyze foo2;
 -- end_ignore
 
-select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
-select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Table Scan') > 0;
+select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
+select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Table Scan') > 0;
 
 select count(*) from foo1,foo2 where foo1.j = foo2.j;
 
@@ -161,8 +161,8 @@ analyze foo1;
 analyze foo2;
 -- end_ignore
 
-select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
-select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Table Scan') > 0;
+select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
+select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Table Scan') > 0;
 
 select count(*) from foo1,foo2 where foo1.j = foo2.j;
 
@@ -189,10 +189,10 @@ analyze foo2;
 -- Should not apply DPE when the inner side has a subplan
 -- ----------------------------------------------------------------------
 
-select count_operator('explain select count(*) from foo1,foo2 where foo1.j =foo2.j;', 'Append') > 0;
-select count_operator('explain select count(*) from foo1,foo2 where foo1.j =foo2.j;', 'Dynamic Table Scan') > 0;
+select count_operator('select count(*) from foo1,foo2 where foo1.j =foo2.j;', 'Append') > 0;
+select count_operator('select count(*) from foo1,foo2 where foo1.j =foo2.j;', 'Dynamic Table Scan') > 0;
 
-select count_operator('explain select count(*) from foo1,foo2 where foo1.j =foo2.j and foo2.i <= ALL(select 1 UNION select 2);', 'Dynamic Table Scan') > 0;
+select count_operator('select count(*) from foo1,foo2 where foo1.j =foo2.j and foo2.i <= ALL(select 1 UNION select 2);', 'Dynamic Table Scan') > 0;
 
 select count(*) from foo1,foo2 where foo1.j =foo2.j and foo2.i <= ALL(select 1 UNION select 2);
 RESET ALL;

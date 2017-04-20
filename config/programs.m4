@@ -287,3 +287,30 @@ else
   AC_MSG_ERROR([apr-1-config is required for gpfdist, unable to find binary])
 fi
 ]) # GPAC_PATH_APR_1_CONFIG
+
+# GPAC_PATH_APU_1_CONFIG
+# ----------------------
+# Check for apu-1-config, used by gpperfmon
+AC_DEFUN([GPAC_PATH_APU_1_CONFIG],
+[
+if test x"$with_apu_config" != x; then
+  APU_1_CONFIG=$with_apu_config
+fi
+if test -z "$APU_1_CONFIG"; then
+  AC_PATH_PROGS(APU_1_CONFIG, apu-1-config)
+fi
+
+if test -n "$APU_1_CONFIG"; then
+  gpac_apu_1_config_version=`$APU_1_CONFIG --version 2>/dev/null | sed q`
+  if test -z "$gpac_apu_1_config_version"; then
+    AC_MSG_ERROR([apu-1-config is required for gpperfmon, unable to identify version])
+  fi
+  AC_MSG_NOTICE([using apu-1-config $gpac_apu_1_config_version])
+  apu_includes=`"$APU_1_CONFIG" --includes`
+  apu_link_ld_libs=`"$APU_1_CONFIG" --link-ld --libs`
+  AC_SUBST(apu_includes)
+  AC_SUBST(apu_link_ld_libs)
+else
+  AC_MSG_ERROR([apu-1-config is required for gpperfmon, unable to find binary])
+fi
+]) # GPAC_PATH_APU_1_CONFIG

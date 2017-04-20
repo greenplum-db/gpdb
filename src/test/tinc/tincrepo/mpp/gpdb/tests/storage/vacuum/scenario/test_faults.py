@@ -59,18 +59,10 @@ class scenario_fault(MPPTestCase):
 
     def check_connection(self):
         '''
-        Wait till the system is up, as master may take some time
+        Wait till the system is up, as master/segments may take some time
         to come back after FI crash.
         '''
-        up = False
-        for i in range(60):
-            res = PSQL.run_sql_command('select 1', flags='-A -t')
-            if res.strip() == '1':
-                up = True
-                break
-            time.sleep(1)
-
-        self.assertTrue(up, 'database has not come up')
+        PSQL.wait_for_database_up()
 
 class vacuumFaultsTest(MPPTestCase, ScenarioTestCase):
     '''

@@ -4,9 +4,9 @@ set search_path=bfv_catalog;
 -- start_ignore
 create language plpythonu;
 -- end_ignore
-create or replace function count_operator(explain_query text, operator text) returns int as
+create or replace function count_operator(query text, operator text) returns int as
 $$
-rv = plpy.execute(explain_query)
+rv = plpy.execute('EXPLAIN ' + query)
 search_text = operator
 result = 0
 for i in range(len(rv)):
@@ -124,7 +124,7 @@ CREATE TABLE t1 (a int, b int) DISTRIBUTED BY (a);
 CREATE TABLE t2 (a int, b int) DISTRIBUTED BY (a);
 CREATE TABLE x (a int) DISTRIBUTED BY (a);
 -- intent is to: expect to have 'table scan' operator in query plan
-select count_operator('explain select * from x where a=  (select sum(t1.a)  from t1 inner join (select x.a as outer_ref, * from t2) as foo on (foo.a=t1.a+ outer_ref)  group by foo.a);', 'Table Scan') > 0;
+select count_operator('select * from x where a=  (select sum(t1.a)  from t1 inner join (select x.a as outer_ref, * from t2) as foo on (foo.a=t1.a+ outer_ref)  group by foo.a);', 'Table Scan') > 0;
  ?column? 
 ----------
  t
@@ -231,7 +231,7 @@ select disable_xform('CXformIndexGet2IndexScan');
 set optimizer_enable_master_only_queries = on;
 -- end_ignore
 -- query that mentions no tables should have no motions
-select count_operator('explain select substr(''abc'', 2)', 'Motion');
+select count_operator('select substr(''abc'', 2)', 'Motion');
  count_operator 
 ----------------
               0
@@ -239,27 +239,27 @@ select count_operator('explain select substr(''abc'', 2)', 'Motion');
 
 -- queries that mention only master only tables (such as catalog tables)
 -- should have no motions
-select count_operator('explain select relname from pg_class where relname = ''pg_class''', 'Motion');
+select count_operator('select relname from pg_class where relname = ''pg_class''', 'Motion');
  count_operator 
 ----------------
               0
 (1 row)
 
-select count_operator('explain select attname from pg_attribute where attname = ''attstorage''', 'Motion');
+select count_operator('select attname from pg_attribute where attname = ''attstorage''', 'Motion');
  count_operator 
 ----------------
               0
 (1 row)
 
 -- queries with master-only TVFs and no distributed trabes have no motions
-select count_operator('explain select * from generate_series(1,10)', 'Motion');
+select count_operator('select * from generate_series(1,10)', 'Motion');
  count_operator 
 ----------------
               0
 (1 row)
 
 -- queries over distributed tables should have motions
-select count_operator('explain select col2 from mpp_bfv_1;', 'Motion');
+select count_operator('select col2 from mpp_bfv_1;', 'Motion');
  count_operator 
 ----------------
               1
@@ -280,15 +280,17 @@ explain select pg_column_size('mpp_bfv_2');
                 QUERY PLAN                
 ------------------------------------------
  Result  (cost=0.00..0.01 rows=1 width=0)
+ Settings:  optimizer=off
  Optimizer status: legacy query optimizer
-(2 rows)
+(3 rows)
 
 explain select pg_lock_status();
                 QUERY PLAN                
 ------------------------------------------
  Result  (cost=0.00..0.01 rows=1 width=0)
+ Settings:  optimizer=off
  Optimizer status: legacy query optimizer
-(2 rows)
+(3 rows)
 
 select pg_get_constraintdef(pg_constraint.oid) from pg_constraint, pg_class where conrelid=pg_class.oid and pg_class.relname='mpp_bfv_2';
  pg_get_constraintdef 

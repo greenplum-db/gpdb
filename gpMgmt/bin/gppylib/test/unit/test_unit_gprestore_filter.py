@@ -8,10 +8,635 @@ from mock import patch
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 from gprestore_filter import get_table_schema_set, extract_schema, extract_table, \
                             process_data, get_table_info, process_schema, check_valid_schema, check_valid_relname, \
-                            check_dropped_table, get_table_from_alter_table
+                            check_dropped_table, get_table_from_alter_table, process_line, Arguments, ParserState
 
 
 logger = gplog.get_unittest_logger()
+
+class GpRestoreFilterProcessLineTestCase(unittest.TestCase):
+
+    def test_begin_block(self):
+        arguments = Arguments(set(['schema']), set([('schema', 'table')]))
+        state = ParserState()
+        input_line = "BEGIN"
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.in_block)
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+
+    def test_end_block(self):
+        arguments = Arguments(set(['schema']), set([('schema', 'table')]))
+        state = ParserState()
+        state.in_block = True
+        input_line = "END"
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.in_block)
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+
+    def test_within_block(self):
+        arguments = Arguments(set(['schema']), set([('schema', 'table')]))
+        state = ParserState()
+        state.in_block = True
+        input_line = "SOMETHING"
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.in_block)
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+
+    def test_set_search_path_for_pg_catalog(self):
+        arguments = Arguments(set(['schema']), set([('schema', 'table')]))
+        state = ParserState()
+        input_line = "SET search_path = pg_catalog;"
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(newState.schema, 'pg_catalog')
+        self.assertEquals(newState.cast_func_schema, None)
+        self.assertEquals(line, input_line)
+
+    def test_set_search_path_schema_in_table_file(self):
+        arguments = Arguments(set(['schemaIcareAbout']), set([('schemaIcareAbout', 'table')]))
+        state = ParserState()
+        input_line = "SET search_path = schemaIcareAbout, pg_catalog;"
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(newState.schema, 'schemaIcareAbout')
+        self.assertEquals(newState.cast_func_schema, 'schemaIcareAbout')
+        self.assertEquals(line, input_line)
+
+    def test_set_search_path_schema_in_schema_file(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = ['schemaIcareAbout']
+        state = ParserState()
+        input_line = "SET search_path = schemaIcareAbout, pg_catalog;"
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(newState.schema, 'schemaIcareAbout')
+        self.assertEquals(newState.cast_func_schema, 'schemaIcareAbout')
+        self.assertEquals(line, input_line)
+
+    def test_set_search_path_change_schema_in_table_file(self):
+        arguments = Arguments(set(['schemaIcareAbout']), set([('schemaIcareAbout', 'table')]))
+        arguments.change_schema_name = 'newSchema'
+        state = ParserState()
+        input_line = "SET search_path = schemaIcareAbout, pg_catalog;"
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(newState.schema, 'schemaIcareAbout')
+        self.assertEquals(newState.cast_func_schema, 'schemaIcareAbout')
+        self.assertEquals(line, 'SET search_path = "newSchema", pg_catalog;')
+
+    def test_set_search_path_change_quoted_schema_in_table_file_(self):
+        arguments = Arguments(set(['schemaIcareAbout']), set([('schemaIcareAbout', 'table')]))
+        arguments.change_schema_name = 'newSchema'
+        state = ParserState()
+        input_line = 'SET search_path = "schemaIcareAbout", pg_catalog;'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(newState.schema, 'schemaIcareAbout')
+        self.assertEquals(newState.cast_func_schema, 'schemaIcareAbout')
+        self.assertEquals(line, 'SET search_path = "newSchema", pg_catalog;')
+
+    def test_set_search_path_ignores_unineresting_schemas(self):
+        arguments = Arguments(set(['schemaIcareAbout']), set([('schemaIcareAbout', 'table')]))
+        state = ParserState()
+        input_line = "SET search_path = someOtherSchema, pg_catalog;"
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(newState.schema, 'someOtherSchema')
+        self.assertEquals(newState.cast_func_schema, None)
+        self.assertEquals(line, input_line)
+
+    def test_set_assignment_outputs(self):
+        arguments = Arguments(set(['schema']), set([('schema', 'table')]))
+        state = ParserState()
+        input_line = "SET SOMETHING=SOMETHING"
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+
+    def test_drop_table_statement_drop_schema_section_passed(self):
+        arguments = Arguments(set(['schema']), set([('schema', 'table')]))
+        state = ParserState()
+        state.passedDropSchemaSection=True
+        input_line = "DROP TABLE mytable"
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+
+    def test_drop_external_table_statement_drop_schema_section_passed(self):
+        arguments = Arguments(set(['schema']), set([('schema', 'table')]))
+        state = ParserState()
+        state.passedDropSchemaSection=True
+        input_line = "DROP EXTERNAL TABLE mytable"
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+
+    def test_drop_table_statement_drop_schema_section_passed(self):
+        arguments = Arguments(set(['schema']), set([('schema', 'table')]))
+        state = ParserState()
+        state.passedDropSchemaSection=True
+        input_line = "DROP EXTERNAL TABLE mytable"
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+
+    def test_drop_not_table(self):
+        arguments = Arguments(set(['schema']), set([('schema', 'table')]))
+        state = ParserState()
+        state.passedDropSchemaSection=True
+        input_line = "DROP SOME_RANDOM_THING"
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+
+    def test_cast_function_schema_with_function(self):
+        arguments = Arguments()
+        arguments.change_schema_name = 'newSchema'
+        state = ParserState()
+        state.change_cast_func_schema = True
+        state.cast_func_schema = 'schemaToReplace'
+        input_line = "CREATE CAST castName WITH FUNCTION schemaToReplace.castToInt(text) AS ASSIGNMENT"
+
+        newState, line = process_line(state, input_line, arguments)
+
+        output_line = 'CREATE CAST castName WITH FUNCTION "newSchema".castToInt(text) AS ASSIGNMENT'
+        self.assertFalse(newState.output)
+        self.assertEquals(line, output_line)
+        self.assertFalse(newState.change_cast_func_schema)
+        self.assertEquals(newState.cast_func_schema, None)
+
+    def test_cast_function_schema_with_function_with_quotes(self):
+        arguments = Arguments()
+        arguments.change_schema_name = 'newSchema'
+        state = ParserState()
+        state.change_cast_func_schema = True
+        state.cast_func_schema = 'schemaToReplace'
+        input_line = 'CREATE CAST castName WITH FUNCTION "schemaToReplace".castToInt(text) AS ASSIGNMENT'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        output_line = 'CREATE CAST castName WITH FUNCTION "newSchema".castToInt(text) AS ASSIGNMENT'
+        self.assertFalse(newState.output)
+        self.assertEquals(line, output_line)
+        self.assertFalse(newState.change_cast_func_schema)
+        self.assertEquals(newState.cast_func_schema, None)
+
+    def test_schema_expression_in_comments_exists_in_table_file(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'table')]))
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: schemaICareAbout; Type: SCHEMA; Schema: schemaICareAbout; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.function_ddl)
+        self.assertEqual(newState.schema, 'schemaICareAbout')
+
+    def test_schema_expression_in_comments_exists_in_schema_file(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = 'schemaICareAbout'
+        state = ParserState()
+        input_line = '-- Name: schemaICareAbout; Type: SCHEMA; Schema: schemaICareAbout; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.function_ddl)
+        self.assertEqual(newState.schema, 'schemaICareAbout')
+
+    def test_schema_expression_in_comments_does_not_exist(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: schemaICareAbout; Type: SCHEMA; Schema: schemaICareAbout; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.function_ddl)
+        self.assertEqual(newState.schema, 'schemaICareAbout')
+
+    def test_non_existent_type_expression_in_comments(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: arbitrary; Type: RANDOM; Schema: schema; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.function_ddl)
+        self.assertEqual(newState.schema, 'schema')
+
+    def test_table_expression_in_comments_exists_in_table_file(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'some_table')]))
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: some_table; Type: TABLE; Schema: schemaICareAbout; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.function_ddl)
+        self.assertFalse(newState.further_investigation_required)
+        self.assertEqual(newState.schema, 'schemaICareAbout')
+
+    def test_table_expression_in_comments_does_not_exist_in_table_file(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'some_other_table')]))
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: some_table; Type: TABLE; Schema: schemaICareAbout; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.function_ddl)
+        self.assertFalse(newState.further_investigation_required)
+        self.assertEqual(newState.schema, 'schemaICareAbout')
+
+    def test_external_table_expression_in_comments_exists_in_table_file(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'some_table')]))
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: some_table; Type: EXTERNAL TABLE; Schema: schemaICareAbout; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.function_ddl)
+        self.assertFalse(newState.further_investigation_required)
+        self.assertEqual(newState.schema, 'schemaICareAbout')
+
+    def test_external_table_expression_in_comments_does_not_exist_in_table_file(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'some_other_external_table')]))
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: some_external_table; Type: EXTERNAL TABLE; Schema: schemaICareAbout; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.function_ddl)
+        self.assertFalse(newState.further_investigation_required)
+        self.assertEqual(newState.schema, 'schemaICareAbout')
+
+    def test_view_expression_in_comments_exists_in_table_file(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'some_table')]))
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: some_table; Type: VIEW; Schema: schemaICareAbout; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.function_ddl)
+        self.assertFalse(newState.further_investigation_required)
+        self.assertEqual(newState.schema, 'schemaICareAbout')
+
+    def test_view_expression_in_comments_does_not_exist_in_table_file(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'some_other_view')]))
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: some_view; Type: VIEW; Schema: schemaICareAbout; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.function_ddl)
+        self.assertFalse(newState.further_investigation_required)
+        self.assertEqual(newState.schema, 'schemaICareAbout')
+
+    def test_sequence_expression_in_comments_exists_in_table_file(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'some_table')]))
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: some_table; Type: SEQUENCE; Schema: schemaICareAbout; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.function_ddl)
+        self.assertFalse(newState.further_investigation_required)
+        self.assertEqual(newState.schema, 'schemaICareAbout')
+
+    def test_sequence_expression_in_comments_does_not_exist_in_table_file(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'some_other_sequence')]))
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: some_sequence; Type: SEQUENCE; Schema: schemaICareAbout; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.function_ddl)
+        self.assertFalse(newState.further_investigation_required)
+        self.assertEqual(newState.schema, 'schemaICareAbout')
+
+    def test_constraint_expression_in_comments_exists_in_table_file(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'table')]))
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: some_constraint; Type: CONSTRAINT; Schema: schemaICareAbout; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertEquals(state.line_buff, input_line)
+        self.assertFalse(newState.function_ddl)
+        self.assertTrue(newState.further_investigation_required)
+        self.assertEqual(newState.schema, 'schemaICareAbout')
+
+    def test_constraint_expression_in_comments_schema_does_not_exist_in_table_file(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'table')]))
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: some_constraint; Type: CONSTRAINT; Schema: other_schema; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertEquals(state.line_buff, '')
+        self.assertFalse(newState.function_ddl)
+        self.assertTrue(newState.further_investigation_required)
+        self.assertEqual(newState.schema, 'other_schema')
+
+    def test_ACL_expression_in_comments_exists_in_table_file(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'some_ACL')]))
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: some_ACL; Type: ACL; Schema: schemaICareAbout; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.function_ddl)
+        self.assertEqual(newState.schema, 'schemaICareAbout')
+
+    def test_ACL_expression_in_comments_schema_does_not_exist_in_table_file(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'table')]))
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: public; Type: ACL; Schema: other_schema; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.function_ddl)
+        self.assertEqual(newState.schema, 'other_schema')
+
+    def test_function_expression_in_comments_exists_in_schema_file(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'table')]))
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: some_function; Type: FUNCTION; Schema: schemaICareAbout; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertTrue(newState.function_ddl)
+        self.assertEqual(newState.schema, 'schemaICareAbout')
+
+    def test_function_expression_in_comments_schema_does_not_exist_in_schema_file(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'table')]))
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: some_function; Type: FUNCTION; Schema: other_schema; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertTrue(newState.function_ddl)
+        self.assertEqual(newState.schema, 'other_schema')
+
+    def test_cast_expression_in_comments(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'table')]))
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: some_cast; Type: CAST; Schema: schemaICareAbout; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertTrue(newState.change_cast_func_schema)
+
+    def test_procedural_language_expression_in_comments(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'table')]))
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Name: some_proc_lang; Type: PROCEDURAL LANGUAGE; Schema: schemaICareAbout; Owner: user_role_b; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertTrue(newState.change_cast_func_schema)
+
+    def test_data_expression_in_comments_type_a_without_table_data(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'table')]))
+        state = ParserState()
+        input_line = '-- Data: ao_part_table; Type: SOMETHING; Schema: some_other_schema; Owner: dcddev; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertEquals(state.schema, 'some_other_schema')
+        self.assertFalse(newState.further_investigation_required)
+
+    def test_data_expression_in_comments_type_b_without_table_data(self):
+        arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'table')]))
+        state = ParserState()
+        input_line = '-- Data for Name: ao_table; Type: SOMETHING; Schema: some_other_schema; Owner: dcddev'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertEquals(state.schema, 'some_other_schema')
+        self.assertFalse(newState.further_investigation_required)
+
+    def test_data_expression_in_comments_type_a_with_table_data_in_schema_file(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = ['schemaICareAbout']
+        state = ParserState()
+        input_line = '-- Data: ao_part_table; Type: TABLE DATA; Schema: schemaICareAbout; Owner: dcddev; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertEquals(state.schema, 'schemaICareAbout')
+        self.assertFalse(newState.further_investigation_required)
+
+    def test_data_expression_in_comments_type_a_with_table_data_not_in_schema_file(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Data: ao_part_table; Type: TABLE DATA; Schema: some_other_schema; Owner: dcddev; Tablespace:'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertEquals(state.schema, 'some_other_schema')
+        self.assertFalse(newState.further_investigation_required)
+
+    def test_data_expression_in_comments_type_b_with_table_data_in_schema_file(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = ['schemaICareAbout']
+        state = ParserState()
+        input_line = '-- Data for Name: ao_table; Type: TABLE DATA; Schema: schemaICareAbout; Owner: dcddev'
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertEquals(state.schema, 'schemaICareAbout')
+        self.assertFalse(newState.further_investigation_required)
+
+    def test_data_expression_in_comments_type_b_with_table_data_not_in_schema_file(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        input_line = '-- Data for Name: ao_table; Type: TABLE DATA; Schema: some_other_schema; Owner: dcddev'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertEquals(state.schema, 'some_other_schema')
+        self.assertFalse(newState.further_investigation_required)
+
+    def test_further_investigation_without_alter_expression(self):
+        arguments = Arguments()
+        state = ParserState()
+        state.further_investigation_required = True
+        input_line = 'RANDOM ARBITRARY EXPRESSION'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertTrue(newState.further_investigation_required)
+
+    def test_further_investigation_with_alter_table_expression_not_in_schema_file(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        state.further_investigation_required = True
+        input_line = 'ALTER TABLE schema1.table1 OWNER TO gpadmin;'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.further_investigation_required)
+
+    def test_further_investigation_with_alter_table_only_expression_not_in_schema_file(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = None
+        state = ParserState()
+        state.further_investigation_required = True
+        state.schema = 'SchemaICareAbout'
+        input_line = 'ALTER TABLE ONLY schema.table1 OWNER TO gpadmin;'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.further_investigation_required)
+
+    def test_further_investigation_with_alter_table_expression_in_schema_file(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = ['SchemaICareAbout']
+        state = ParserState()
+        state.schema = 'SchemaICareAbout'
+        state.further_investigation_required = True
+        input_line = 'ALTER TABLE SchemaICareAbout.table1 OWNER TO gpadmin;'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.further_investigation_required)
+
+    def test_further_investigation_with_alter_table_expression_in_schema_file_with_line_buff(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = ['SchemaICareAbout']
+        state = ParserState()
+        state.schema = 'SchemaICareAbout'
+        state.line_buff = 'some previously saved text'
+        state.further_investigation_required = True
+        input_line = 'ALTER TABLE SchemaICareAbout.table1 OWNER TO gpadmin;'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(line, 'some previously saved text' + input_line)
+        self.assertFalse(newState.further_investigation_required)
+
+    def test_further_investigation_with_alter_table_expression_in_schema_file_with_quotes(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = ['SchemaICareAbout']
+        state = ParserState()
+        state.schema = 'SchemaICareAbout'
+        state.further_investigation_required = True
+        input_line = 'ALTER TABLE SchemaICareAbout."""table1""" OWNER TO gpadmin;'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.further_investigation_required)
 
 class GpRestoreFilterTestCase(unittest.TestCase):
 
@@ -170,9 +795,11 @@ COPY ao_table (column1, column2, column3) FROM stdin;
 
         dump_schemas = set(['pepper'])
         dump_tables = set([('pepper', 'ao_table')])
+        arguments = Arguments(dump_schemas, dump_tables)
+
         with open(out_name, 'w') as fdout:
             with open(in_name, 'r') as fdin:
-                process_data(dump_schemas, dump_tables, fdin, fdout, None)
+                process_data(arguments, fdin, fdout)
 
         with open(out_name, 'r') as fd:
             results = fd.read()
@@ -339,9 +966,10 @@ COPY ao_part_table_comp_1_prt_p1_2_prt_1 (column1, column2, column3) FROM stdin;
 
         dump_schemas = set(['public'])
         dump_tables = set([('public', 'ao_part_table_comp_1_prt_p1_2_prt_1'), ('public', 'ao_part_table_1_prt_p1_2_prt_1')])
+        arguments = Arguments(dump_schemas, dump_tables)
         with open(out_name, 'w') as fdout:
             with open(in_name, 'r') as fdin:
-                process_data(dump_schemas, dump_tables, fdin, fdout, None)
+                process_data(arguments, fdin, fdout)
 
         with open(out_name, 'r') as fd:
             results = fd.read()
@@ -372,9 +1000,10 @@ COPY ao_table (column1, column2, column3) FROM stdin;
 
         dump_schemas = set(['public'])
         dump_tables = set([('public', 'ao_table')])
+        arguments = Arguments(dump_schemas, dump_tables)
         with open(out_name, 'w') as fdout:
             with open(in_name, 'r') as fdin:
-                process_data(dump_schemas, dump_tables, fdin, fdout, None)
+                process_data(arguments, fdin, fdout)
 
         with open(out_name, 'r') as fd:
             results = fd.read()
@@ -422,6 +1051,7 @@ SET search_path = pepper, pg_catalog;
 
         dump_schemas = set(['pepper'])
         dump_tables = set([('pepper', 'ao_table')])
+        arguments = Arguments(dump_schemas, dump_tables)
         with open(out_name, 'w') as fdout:
             with open(in_name, 'r') as fdin:
                 process_data(dump_schemas, dump_tables, fdin, fdout)
@@ -471,9 +1101,10 @@ SET search_path = pepper, pg_catalog;
 
         dump_schemas = set(['pepper'])
         dump_tables = set([('pepper', 'ao_table')])
+        arguments = Arguments(dump_schemas, dump_tables)
         with open(out_name, 'w') as fdout:
             with open(in_name, 'r') as fdin:
-                process_data(dump_schemas, dump_tables, fdin, fdout, None)
+                process_data(arguments, fdin, fdout)
 
         with open(out_name, 'r') as fd:
             results = fd.read()
@@ -516,9 +1147,10 @@ COPY "测试" (column1, column2, column3) FROM stdin;
 
         dump_schemas = set(['public'])
         dump_tables = set([('public', '测试')])
+        arguments = Arguments(dump_schemas, dump_tables)
         with open(out_name, 'w') as fdout:
             with open(in_name, 'r') as fdin:
-                process_data(dump_schemas, dump_tables, fdin, fdout, None)
+                process_data(arguments, fdin, fdout)
 
         with open(out_name, 'r') as fd:
             results = fd.read()
@@ -580,6 +1212,7 @@ CREATE TABLE heap_table1 (
 
         dump_schemas = ['public']
         dump_tables = [('public', 'heap_table1')]
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -588,7 +1221,7 @@ CREATE TABLE heap_table1 (
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -659,6 +1292,7 @@ CREATE TABLE heap_table (
 
         dump_schemas = ['public']
         dump_tables = [('public', 'heap_table')]
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -667,7 +1301,7 @@ CREATE TABLE heap_table (
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -740,6 +1374,7 @@ CREATE TABLE heap_table1 (
 
         dump_schemas = ['public']
         dump_tables = [('pepper', 'heap_table1')]
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -748,7 +1383,7 @@ CREATE TABLE heap_table1 (
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -813,6 +1448,7 @@ CREATE TABLE heap_table1 (
 
         dump_schemas = ['public']
         dump_tables = [('public', 'heap_table1'), ('pepper','ao_part_table')]
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -821,7 +1457,7 @@ CREATE TABLE heap_table1 (
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -894,6 +1530,7 @@ CREATE TABLE heap_table1 (
 
         dump_schemas = ['public']
         dump_tables = [('public', 'heap_table1'), ('pepper','ao_part_table')]
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -902,7 +1539,7 @@ CREATE TABLE heap_table1 (
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -978,6 +1615,7 @@ CREATE TABLE heap_table1 (
 
         dump_schemas = ['public']
         dump_tables = [('public', 'heap_table1'), ('public','ao_part_table')]
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -986,7 +1624,7 @@ CREATE TABLE heap_table1 (
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1067,6 +1705,7 @@ CREATE TABLE heap_table1 (
 
         dump_schemas = ['public']
         dump_tables = [('public', 'heap_table1')]
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -1075,7 +1714,7 @@ CREATE TABLE heap_table1 (
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1155,6 +1794,7 @@ COPY ao_part_table from stdin;
 
         dump_schemas = ['public']
         dump_tables = [('public', 'ao_part_table')]
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -1163,7 +1803,7 @@ COPY ao_part_table from stdin;
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1252,6 +1892,7 @@ COPY ao_part_table from stdin;
 
         dump_schemas = ['public']
         dump_tables = [('public', 'ao_part_table')]
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -1260,7 +1901,7 @@ COPY ao_part_table from stdin;
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1345,6 +1986,7 @@ CREATE TABLE ao_part_table (
 
         dump_schemas = ['public']
         dump_tables = [('public', 'ao_part_table')]
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -1353,7 +1995,7 @@ CREATE TABLE ao_part_table (
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1486,13 +2128,16 @@ ALTER TABLE s1.id_seq OWNER TO gpadmin;"""
 
         in_name = '/tmp/infile'
         out_name = '/tmp/outfile'
+        arguments = Arguments()
+        arguments.schemas_in_schema_file=['s1']
+
         with open(in_name, 'w') as fd:
             fd.write(test_case_buf)
 
-        schema_level_restore_list=['s1']
+        schemas_in_schema_file=['s1']
         with open(out_name, 'w') as fdout:
             with open(in_name, 'r') as fdin:
-                process_schema(None, None, fdin, fdout, schema_level_restore_list=['s1'])
+                process_schema(arguments, fdin, fdout)
 
         with open(out_name, 'r') as fd:
             results = fd.read()
@@ -1621,6 +2266,7 @@ CREATE TABLE ao_part_table (
 
         dump_schemas = []
         dump_tables = []
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -1629,7 +2275,7 @@ CREATE TABLE ao_part_table (
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1696,6 +2342,7 @@ CREATE TABLE ao_part_table (
 
         dump_schemas = ['no_match_schema']
         dump_tables = [('no_match_schema', 'no_match_table')]
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -1704,7 +2351,7 @@ CREATE TABLE ao_part_table (
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1774,6 +2421,7 @@ CREATE TABLE ao_part_table (
 
         dump_schemas = ['public']
         dump_tables = [('public', 'ao_part_table')]
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -1782,7 +2430,7 @@ CREATE TABLE ao_part_table (
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1860,297 +2508,6 @@ CREATE TABLE ao_part_table (
         schema = 'public'
         output = check_valid_relname(schema, name, dump_tables)
         self.assertEquals(output, False)
-
-    def test_process_schema_function_drop_table(self):
-        test_case_buf = """--
--- Greenplum Database database dump
---
-
-SET statement_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = off;
-SET check_function_bodies = false;
-SET client_min_messages = warning;
-SET escape_string_warning = off;
-DROP TABLE public.heap_table;
-DROP TABLE public.ao_part_table;
-DROP PROCEDURAL LANGUAGE plpgsql;
-DROP SCHEMA public;
-
-SET default_with_oids = false;
-
---
--- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: dcddev
---
-
-COMMENT ON SCHEMA public IS 'Standard public schema';
-
-SET search_path = some_schema, pg_catalog;
-
---
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: some_schema; Owner: dcddev; Tablespace:
---
-
-ALTER TABLE ONLY some_schema.ao_part_table
-    ADD CONSTRAINT constraint_name PRIMARY KEY (name);
-
-
-SET search_path = public, pg_catalog;
-
-SET default_tablespace = '';
-
---
--- Name: ao_part_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
---
-
-CREATE TABLE ao_part_table (
-    column1 integer,
-    column2 character varying(20),
-    column3 date
-) DISTRIBUTED BY (column1); with (appendonly=true)"""
-
-        dump_schemas = ['public']
-        dump_tables = [('public', 'ao_part_table')]
-
-        infile = '/tmp/test_schema.in'
-        outfile = '/tmp/test_schema.out'
-        with open(infile, 'w') as fd:
-            fd.write(test_case_buf)
-
-        with open(infile, 'r') as fdin:
-            with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
-
-        expected_out = """SET statement_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = off;
-SET check_function_bodies = false;
-SET client_min_messages = warning;
-SET escape_string_warning = off;
-DROP TABLE public.ao_part_table;
-SET default_with_oids = false;
-
---
-SET search_path = public, pg_catalog;
-
-SET default_tablespace = '';
-
---
--- Name: ao_part_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
---
-
-CREATE TABLE ao_part_table (
-    column1 integer,
-    column2 character varying(20),
-    column3 date
-) DISTRIBUTED BY (column1); with (appendonly=true)"""
-
-
-        with open(outfile, 'r') as fd:
-            results = fd.read()
-        self.assertEquals(results, expected_out)
-
-
-    def test_process_schema_user_function_having_drop_table(self):
-        test_case_buf = """--
--- Greenplum Database database dump
---
-
-SET statement_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = off;
-SET check_function_bodies = false;
-SET client_min_messages = warning;
-SET escape_string_warning = off;
-DROP TABLE public.heap_table;
-DROP TABLE public.ao_part_table;
-DROP PROCEDURAL LANGUAGE plpgsql;
-DROP SCHEMA public;
-
-SET default_with_oids = false;
-
---
--- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: dcddev
---
-
-COMMENT ON SCHEMA public IS 'Standard public schema';
-
-SET search_path = some_schema, pg_catalog;
-
---
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: some_schema; Owner: dcddev; Tablespace:
---
-
-ALTER TABLE ONLY some_schema.ao_part_table
-    ADD CONSTRAINT constraint_name PRIMARY KEY (name);
-
-
-SET search_path = public, pg_catalog;
-
-SET default_tablespace = '';
-
---
--- Name: ao_part_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
---
-
-CREATE TABLE ao_part_table (
-    column1 integer,
-    column2 character varying(20),
-    column3 date
-) DISTRIBUTED BY (column1); with (appendonly=true)
-
-SET search_path = foo, pg_catalog;
-
----
---- Name: foofunc(); Type: FUNCTION; Schema: foo; Owner: foo
----
-
-CREATE OR REPLACE FUNCTION foofunc()
-RETURNS TEXT AS $$
-DECLARE ver TEXT;
-BEGIN
-DROP TABLE IF EXISTS footab;
-SELECT version() INTO ver;
-RETURN ver;
-END;
-$$ LANGUAGE plpgsql;"""
-
-        dump_schemas = ['public']
-        dump_tables = [('public', 'ao_part_table')]
-
-        infile = '/tmp/test_schema.in'
-        outfile = '/tmp/test_schema.out'
-        with open(infile, 'w') as fd:
-            fd.write(test_case_buf)
-
-        with open(infile, 'r') as fdin:
-            with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
-
-        expected_out = """SET statement_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = off;
-SET check_function_bodies = false;
-SET client_min_messages = warning;
-SET escape_string_warning = off;
-DROP TABLE public.ao_part_table;
-SET default_with_oids = false;
-
---
-SET search_path = public, pg_catalog;
-
-SET default_tablespace = '';
-
---
--- Name: ao_part_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
---
-
-CREATE TABLE ao_part_table (
-    column1 integer,
-    column2 character varying(20),
-    column3 date
-) DISTRIBUTED BY (column1); with (appendonly=true)
-
-BEGIN
-DROP TABLE IF EXISTS footab;
-SELECT version() INTO ver;
-RETURN ver;
-END;
-$$ LANGUAGE plpgsql;"""
-
-        with open(outfile, 'r') as fd:
-            results = fd.read().strip()
-        self.assertEquals(results, expected_out)
-
-    def test_process_schema_function_drop_external_table(self):
-        test_case_buf = """--
--- Greenplum Database database dump
---
-
-SET statement_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = off;
-SET check_function_bodies = false;
-SET client_min_messages = warning;
-SET escape_string_warning = off;
-DROP TABLE public.heap_table;
-DROP EXTERNAL TABLE public.ao_part_table;
-DROP PROCEDURAL LANGUAGE plpgsql;
-DROP SCHEMA public;
-
-SET default_with_oids = false;
-
---
--- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: dcddev
---
-
-COMMENT ON SCHEMA public IS 'Standard public schema';
-
-SET search_path = some_schema, pg_catalog;
-
---
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: some_schema; Owner: dcddev; Tablespace:
---
-
-ALTER TABLE ONLY some_schema.ao_part_table
-    ADD CONSTRAINT constraint_name PRIMARY KEY (name);
-
-
-SET search_path = public, pg_catalog;
-
-SET default_tablespace = '';
-
---
--- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace:
---
-
-CREATE TABLE ao_part_table (
-    column1 integer,
-    column2 character varying(20),
-    column3 date
-) DISTRIBUTED BY (column1); with (appendonly=true)"""
-
-        dump_schemas = ['public']
-        dump_tables = [('public', 'ao_part_table')]
-
-        infile = '/tmp/test_schema.in'
-        outfile = '/tmp/test_schema.out'
-        with open(infile, 'w') as fd:
-            fd.write(test_case_buf)
-
-        with open(infile, 'r') as fdin:
-            with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
-
-        expected_out = """SET statement_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = off;
-SET check_function_bodies = false;
-SET client_min_messages = warning;
-SET escape_string_warning = off;
-DROP EXTERNAL TABLE public.ao_part_table;
-SET default_with_oids = false;
-
---
-SET search_path = public, pg_catalog;
-
-SET default_tablespace = '';
-
---
--- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace:
---
-
-CREATE TABLE ao_part_table (
-    column1 integer,
-    column2 character varying(20),
-    column3 date
-) DISTRIBUTED BY (column1); with (appendonly=true)"""
-
-
-        with open(outfile, 'r') as fd:
-            results = fd.read()
-        self.assertEquals(results, expected_out)
-
 
     def test_process_schema_single_table(self):
         test_case_buf = """--
@@ -2390,6 +2747,7 @@ GRANT ALL ON TABLE user_table TO user_role_b;
 
         dump_schemas = ['user_schema_a', 'user_schema_e']
         dump_tables = [('user_schema_a', 'user_table'), ('user_schema_e', 'test_table')]
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -2398,7 +2756,7 @@ GRANT ALL ON TABLE user_table TO user_role_b;
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -2551,6 +2909,7 @@ CREATE FOREIGN TABLE ao_part_table (
 
         dump_schemas = ['public']
         dump_tables = [('public', 'ao_part_table')]
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -2559,7 +2918,7 @@ CREATE FOREIGN TABLE ao_part_table (
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET search_path = public, pg_catalog;
 
@@ -2715,6 +3074,7 @@ GRANT ALL ON TABLE user_table TO user_role_b;
 
         dump_schemas = ['user_schema_a']
         dump_tables = [('user_schema_a', 'user_table')]
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -2723,7 +3083,7 @@ GRANT ALL ON TABLE user_table TO user_role_b;
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -2888,6 +3248,7 @@ GRANT ALL ON TABLE "测试" TO user_role_b;
 """
         dump_schemas = ['测试_schema']
         dump_tables = [('测试_schema', '测试')]
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -2896,7 +3257,7 @@ GRANT ALL ON TABLE "测试" TO user_role_b;
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -3058,6 +3419,7 @@ GRANT ALL ON TABLE "Áá" TO user_role_b;
 """
         dump_schemas = ['Áá_schema']
         dump_tables = [('Áá_schema', 'Áá')]
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -3066,7 +3428,7 @@ GRANT ALL ON TABLE "Áá" TO user_role_b;
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -3228,6 +3590,7 @@ GRANT ALL ON TABLE "Ж" TO user_role_b;
 """
         dump_schemas = ['Ж_schema']
         dump_tables = [('Ж_schema', 'Ж')]
+        arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
@@ -3236,7 +3599,7 @@ GRANT ALL ON TABLE "Ж" TO user_role_b;
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
+                process_schema(arguments, fdin, fdout)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';

@@ -327,7 +327,6 @@ _outQueryDispatchDesc(StringInfo str, QueryDispatchDesc *node)
 {
 	WRITE_NODE_TYPE("QUERYDISPATCHDESC");
 
-	WRITE_NODE_FIELD(transientTypeRecords);
 	WRITE_STRING_FIELD(intoTableSpaceName);
 	WRITE_NODE_FIELD(oidAssignments);
 	WRITE_NODE_FIELD(sliceTable);
@@ -707,7 +706,6 @@ _outNestLoop(StringInfo str, NestLoop *node)
 
 	_outJoinPlanInfo(str, (Join *) node);
 
-    WRITE_BOOL_FIELD(outernotreferencedbyinner);    /*CDB*/
 	WRITE_BOOL_FIELD(shared_outer);
 	WRITE_BOOL_FIELD(singleton_outer); /*CDB-OLAP*/
 }
@@ -4293,7 +4291,6 @@ _outTupleDescNode(StringInfo str, TupleDescNode *node)
 
 	WRITE_OID_FIELD(tuple->tdtypeid);
 	WRITE_INT_FIELD(tuple->tdtypmod);
-	WRITE_INT_FIELD(tuple->tdqdtypmod);
 	WRITE_BOOL_FIELD(tuple->tdhasoid);
 	WRITE_INT_FIELD(tuple->tdrefcount);
 }

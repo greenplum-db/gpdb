@@ -2052,7 +2052,7 @@ static void
 _SPI_assign_query_mem(QueryDesc * queryDesc)
 {
 	if (Gp_role == GP_ROLE_DISPATCH &&
-			ResourceScheduler &&
+			IsResQueueEnabled() &&
 			!superuser() &&
 			ActivePortal &&
 			(gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE))
@@ -2098,9 +2098,7 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, long tcount)
 			 * If the Active portal already hold a lock on the queue, we cannot
 			 * acquire it again.
 			 */
-			if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler &&
-					!superuser()
-			   )
+			if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled() && !superuser())
 			{
 				/*
 				 * This is SELECT, so we should have planTree anyway.

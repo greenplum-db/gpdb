@@ -192,7 +192,8 @@ extern bool AppendOnlyBlockDirectory_InsertEntry(
 	int columnGroupNo,
 	int64 firstRowNum,
 	int64 fileOffset,
-	int64 rowCount);
+	int64 rowCount,
+	bool addColAction);
 extern bool AppendOnlyBlockDirectory_addCol_InsertEntry(
 	AppendOnlyBlockDirectory *blockDirectory,
 	int columnGroupNo,

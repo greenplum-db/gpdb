@@ -82,9 +82,9 @@ INSERT INTO T_random SELECT i, i%5 from generate_series(1,30) i;
 
 create language plpythonu;
 
-create or replace function count_operator(explain_query text, operator text) returns int as
+create or replace function count_operator(query text, operator text) returns int as
 $$
-rv = plpy.execute(explain_query)
+rv = plpy.execute('EXPLAIN ' + query)
 search_text = operator
 result = 0
 for i in range(len(rv)):
@@ -389,19 +389,19 @@ UNION ALL SELECT 300, 300)
 -- Binary UNION ALL explain
 --
 
-select count_operator('explain (select a1 from T_a1) UNION ALL (select b1 from T_b2) order by 1;', 'APPEND');
+select count_operator('(select a1 from T_a1) UNION ALL (select b1 from T_b2) order by 1;', 'APPEND');
 
-select count_operator('explain (select b1 from T_b2) UNION ALL (select a1 from T_a1) order by 1;', 'APPEND');
+select count_operator('(select b1 from T_b2) UNION ALL (select a1 from T_a1) order by 1;', 'APPEND');
 
-select count_operator('explain (select a1 from T_a1) UNION ALL (select c1 from T_random) order by 1;', 'APPEND');
+select count_operator('(select a1 from T_a1) UNION ALL (select c1 from T_random) order by 1;', 'APPEND');
 
-select count_operator('explain (select c1 from T_random) UNION ALL (select a1 from T_a1) order by 1;', 'APPEND');
+select count_operator('(select c1 from T_random) UNION ALL (select a1 from T_a1) order by 1;', 'APPEND');
 
-select count_operator('explain (select * from T_a1) UNION ALL (select * from T_b2) order by 1;', 'APPEND');
+select count_operator('(select * from T_a1) UNION ALL (select * from T_b2) order by 1;', 'APPEND');
 
-select count_operator('explain (select * from T_a1) UNION ALL (select * from T_random) order by 1;', 'APPEND');
+select count_operator('(select * from T_a1) UNION ALL (select * from T_random) order by 1;', 'APPEND');
 
-select count_operator('explain (select * from T_b2) UNION ALL (select * from T_random) order by 1;', 'APPEND');
+select count_operator('(select * from T_b2) UNION ALL (select * from T_random) order by 1;', 'APPEND');
 
 select count_operator('explain
 with T_constant (d1, d2) as(
@@ -424,7 +424,7 @@ UNION ALL SELECT 200, 200
 UNION ALL SELECT 300, 300)
 (select c1 from T_random) UNION ALL (select d1 from T_constant) order by 1;', 'APPEND');
 
-select count_operator('explain with T_constant (d1, d2) as(
+select count_operator('with T_constant (d1, d2) as(
 SELECT 100, 100
 UNION ALL SELECT 200, 200
 UNION ALL SELECT 300, 300)
@@ -476,19 +476,19 @@ UNION SELECT 300, 300)
 -- Binary UNION explain
 --
 
-select count_operator('explain (select a1 from T_a1) UNION (select b1 from T_b2) order by 1;', 'APPEND');
+select count_operator('(select a1 from T_a1) UNION (select b1 from T_b2) order by 1;', 'APPEND');
 
-select count_operator('explain (select b1 from T_b2) UNION (select a1 from T_a1) order by 1;', 'APPEND');
+select count_operator('(select b1 from T_b2) UNION (select a1 from T_a1) order by 1;', 'APPEND');
 
-select count_operator('explain (select a1 from T_a1) UNION (select c1 from T_random) order by 1;', 'APPEND');
+select count_operator('(select a1 from T_a1) UNION (select c1 from T_random) order by 1;', 'APPEND');
 
-select count_operator('explain (select c1 from T_random) UNION (select a1 from T_a1) order by 1;', 'APPEND');
+select count_operator('(select c1 from T_random) UNION (select a1 from T_a1) order by 1;', 'APPEND');
 
-select count_operator('explain (select * from T_a1) UNION (select * from T_b2) order by 1;', 'APPEND');
+select count_operator('(select * from T_a1) UNION (select * from T_b2) order by 1;', 'APPEND');
 
-select count_operator('explain (select * from T_a1) UNION (select * from T_random) order by 1;', 'APPEND');
+select count_operator('(select * from T_a1) UNION (select * from T_random) order by 1;', 'APPEND');
 
-select count_operator('explain (select * from T_b2) UNION (select * from T_random) order by 1;', 'APPEND');
+select count_operator('(select * from T_b2) UNION (select * from T_random) order by 1;', 'APPEND');
 
 select count_operator('explain
 with T_constant (d1, d2) as(
@@ -511,7 +511,7 @@ UNION SELECT 200, 200
 UNION SELECT 300, 300)
 (select c1 from T_random) UNION (select d1 from T_constant) order by 1;', 'APPEND');
 
-select count_operator('explain with T_constant (d1, d2) as(
+select count_operator('with T_constant (d1, d2) as(
 SELECT 100, 100
 UNION SELECT 200, 200
 UNION SELECT 300, 300)

@@ -32,6 +32,11 @@
 #define	MIN(a,b) (((a)<(b))?(a):(b))
 #endif /* MIN */
 
+void update_log_filename(void);
+int is_appliance(void);
+char* get_dca_hostname(char*, size_t);
+void gx_main(int, apr_int64_t);
+
 /* Temporary global memory to store the qexec line for a send*/
 char	qexec_smon_temp_line[QEXEC_MAX_ROW_BUF_SIZE];
 

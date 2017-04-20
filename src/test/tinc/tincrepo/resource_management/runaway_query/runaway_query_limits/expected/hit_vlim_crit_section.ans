@@ -1,17 +1,13 @@
 -- start_ignore
-SET optimizer=off;
-SET
 -- end_ignore
 -- @Description One session allocating > VLIM in critical section, can proceed
 -- @author George Caragea
--- @vlimMB 900 
+-- @vlimMB 900
 -- @slimMB 0
 -- content/segment = 0; size = 901MB; sleep = 0 sec; crit_section = true
-select gp_allocate_palloc_test_all_segs(0, 901 * 1024 * 1024, 0, true);
- gp_allocate_palloc_test_all_segs 
-----------------------------------
-                                0
-                        944766976
-                                0
-(3 rows)
-
+select gp_allocate_palloc_test_one_seg(0, 901 * 1024 * 1024, 0, true);
+ gp_allocate_palloc_test_one_seg
+---------------------------------
+                               0
+                       944766976
+(2 rows)

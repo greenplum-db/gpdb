@@ -11,6 +11,6 @@ Feature: gpconfig integration tests
         Then verify that the last line of the master postgres configuration file contains the string "129MB"
         Given the user runs "gpconfig -s statement_mem --file"
         Then gpconfig should return a return code of 0
-        Then gpconfig should print Master[\s]*value: 129MB to stdout
+        Then gpconfig should print "Master[\s]*value: 129MB" to stdout
         # TODO verify all segments also have this string
 

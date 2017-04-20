@@ -99,13 +99,13 @@ class BackupTestCase(TINCTestCase):
         file = os.path.join(os.getenv('MASTER_DATA_DIRECTORY'),
                                       'ddboost_config.yml')
         tinctest.logger.info("==========================================================================")
-        tinctest.logger.info("STARTING MFR Testing SUITE")
+        tinctest.logger.info("STARTING TEST SUITE")
         tinctest.logger.info("==========================================================================")
         BackupTestCase.TSTINFO = read_config_yaml(file)
 
         #If a DDBOOST Directory wasn't specify create one
         if 'DDBOOST_DIR' not in BackupTestCase.TSTINFO:
-            dir = 'MFR_TINC'
+            dir = os.getenv('PULSE_PROJECT') + '_DIR'
         BackupTestCase.TSTINFO['DDBOOST_DIR'] = dir
 
         tinctest.logger.info("Using %s as the DDBoost directory to store backups" % BackupTestCase.TSTINFO['DDBOOST_DIR'])
@@ -1150,7 +1150,7 @@ class BackupTestCase(TINCTestCase):
         if bu_options == None:
             cmdBackup = gpc + DBNAME +' -a -G --ddboost'
         else:
-            cmdBackup = gpc + DBNAME +' -a -G --ddboost --max-streams=80 ' + bu_options
+            cmdBackup = gpc + DBNAME +' -a -G --ddboost --max-streams=15 ' + bu_options
 
         tinctest.logger.info("[%s]" % name)
         tinctest.logger.info("Executing gpcrondump of database %s to DD via ddboost using command" % (DBNAME))
@@ -1186,7 +1186,6 @@ class BackupTestCase(TINCTestCase):
         #Get the database info
         DBINFO[DBNAME] = self.get_db_info(DBNAME)
 
-        #raise GPTestError(msg)
         return GPDmpKey, msg
 
     def do_incr_bkup_test(self, name, DBNAME, bu_options):
@@ -1206,7 +1205,7 @@ class BackupTestCase(TINCTestCase):
         if bu_options == None:
             cmdBackup = gpc + DBNAME +' -a -G --ddboost --incremental'
         else:
-            cmdBackup = gpc + DBNAME +' -a -G --ddboost --max-streams=80 --incremental' + bu_options
+            cmdBackup = gpc + DBNAME +' -a -G --ddboost --max-streams=15 --incremental' + bu_options
 
         tinctest.logger.info("[%s]" % name)
         tinctest.logger.info("Executing gpcrondump of database %s to DD via ddboost using command" % (DBNAME))
@@ -1242,7 +1241,6 @@ class BackupTestCase(TINCTestCase):
         #Get the database info
         DBINFO[DBNAME] = self.get_db_info(DBNAME)
 
-        #raise GPTestError(msg)
         return GPDmpKey, msg
 
 class CancelReplicateThreader(threading.Thread):
@@ -1273,7 +1271,7 @@ class CancelReplicateThreader(threading.Thread):
             msg = "Replication of backup set %s was terminated as expected\n" % self.bu_set
             tinctest.logger.info(msg)
         '''
-        cmdRepl = "gpmfr.py --replicate=\"%s\" --max-streams=80 --master-port=%s" % (self.bu_set, port)
+        cmdRepl = "gpmfr.py --replicate=\"%s\" --max-streams=15 --master-port=%s" % (self.bu_set, port)
         #self.cmd = subprocess.Popen(cmdRepl,shell=True)
         self.cmd = subprocess.Popen(cmdRepl)
 

@@ -24,7 +24,9 @@
 #include "catalog/pg_auth_members.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_resgroup.h"
+#include "catalog/pg_resqueue.h"
 #include "commands/comment.h"
+#include "commands/resgroupcmds.h"
 #include "commands/user.h"
 #include "libpq/auth.h"
 #include "libpq/password_hash.h"
@@ -354,24 +356,6 @@ CreateRole(CreateRoleStmt *stmt)
 		validUntil = strVal(dvalidUntil->arg);
 	if (dresqueue)
 		resqueue = strVal(linitial((List *) dresqueue->arg));
-	else
-	{
-		/* MPP-6926: resource queue required -- use default queue  */
-		if (Gp_role == GP_ROLE_DISPATCH)
-		{
-			/* MPP-7587: don't complain if you CREATE a superuser,
-			 * who doesn't use the queue 
-			 */
-			if (!issuper)
-				ereport(NOTICE,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("resource queue required -- "
-								"using default resource queue \"%s\"",
-								GP_DEFAULT_RESOURCE_QUEUE_NAME)));
-		}
-
-		resqueue = pstrdup(GP_DEFAULT_RESOURCE_QUEUE_NAME);
-	}
 	if (dresgroup)
 		resgroup = strVal(linitial((List *) dresgroup->arg));
 
@@ -494,19 +478,30 @@ CreateRole(CreateRoleStmt *stmt)
 		new_record[Anum_pg_authid_rolresqueue - 1] = 
 		ObjectIdGetDatum(queueid);
 
-		if (!ResourceScheduler)
-		{
-			/* MPP-7587: don't complain if you CREATE a superuser,
-			 * who doesn't use the queue 
-			 */
-			if (!issuper)
-				ereport(WARNING,
-						(errmsg("resource scheduling is disabled"),
-						 errhint("To enable set resource_scheduler=on")));
-		}
+		/*
+		 * Don't complain if you CREATE a superuser,
+		 * who doesn't use the queue
+		 */
+		if (!IsResQueueEnabled() && !issuper)
+			ereport(WARNING,
+					(errmsg("resource scheduling is disabled"),
+					 errhint("To enable set resource_scheduler=on and gp_resource_manager=queue")));
 	}
 	else
-		new_record_nulls[Anum_pg_authid_rolresqueue - 1] = true;
+	{
+		/*
+		 * Resource queue required -- use default queue
+		 * Don't complain if you CREATE a superuser, who doesn't use the queue
+		 */
+		new_record[Anum_pg_authid_rolresqueue - 1] = ObjectIdGetDatum(DEFAULTRESQUEUE_OID);
+
+		if (IsResQueueEnabled() && Gp_role == GP_ROLE_DISPATCH && !issuper)
+			ereport(NOTICE,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("resource queue required -- "
+							"using default resource queue \"%s\"",
+							GP_DEFAULT_RESOURCE_QUEUE_NAME)));
+	}
 
 	if (resgroup)
 	{
@@ -524,32 +519,28 @@ CreateRole(CreateRoleStmt *stmt)
 					 errmsg("only superuser can be assigned to admin resgroup")));
 
 		new_record[Anum_pg_authid_rolresgroup - 1] = ObjectIdGetDatum(rsgid);
+		if (!IsResGroupEnabled() && Gp_role == GP_ROLE_DISPATCH)
+			ereport(WARNING,
+					(errmsg("resource group is disabled"),
+					 errhint("To enable set resource_scheduler=on and gp_resource_manager=group")));
 	}
 	else if (issuper)
 	{
-		/* FIXME: below notice is disabled for now to prevent updating
-		 *        all the "CREATE ROLE" related test cases. */
-#if 0
-		if (Gp_role == GP_ROLE_DISPATCH)
+		if (IsResGroupEnabled() && Gp_role == GP_ROLE_DISPATCH)
 		{
 			ereport(NOTICE,
 					(errmsg("resource group required -- using admin resource group \"admin_group\"")));
 		}
-#endif
 
 		new_record[Anum_pg_authid_rolresgroup - 1] = ObjectIdGetDatum(ADMINRESGROUP_OID);
 	}
 	else
 	{
-		/* FIXME: below notice is disabled for now to prevent updating
-		 *        all the "CREATE ROLE" related test cases. */
-#if 0
-		if (Gp_role == GP_ROLE_DISPATCH)
+		if (IsResGroupEnabled() && Gp_role == GP_ROLE_DISPATCH)
 		{
 			ereport(NOTICE,
 					(errmsg("resource group required -- using default resource group \"default_group\"")));
 		}
-#endif
 
 		new_record[Anum_pg_authid_rolresgroup - 1] = ObjectIdGetDatum(DEFAULTRESGROUP_OID);
 	}
@@ -1079,22 +1070,22 @@ AlterRole(AlterRoleStmt *stmt)
 	/* resource queue */
 	if (resqueue)
 	{
-		/* MPP-6926: NONE not supported -- use default queue  */
+		/* NONE not supported -- use default queue  */
 		if (
 /*			( 0 == pg_strcasecmp(resqueue,"none"))) */
 			( 0 == strcmp(resqueue,"none")))
 		{
-			/* MPP-7587: don't complain if you ALTER a superuser,
+			/*
+			 * Don't complain if you ALTER a superuser,
 			 * who doesn't use the queue 
 			 */
-			if (Gp_role == GP_ROLE_DISPATCH)
+			if (!bWas_super && IsResQueueEnabled() && Gp_role == GP_ROLE_DISPATCH)
 			{
-				if (!bWas_super)
-						ereport(NOTICE,
-								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-								 errmsg("resource queue required -- "
-										"using default resource queue \"%s\"",
-										GP_DEFAULT_RESOURCE_QUEUE_NAME)));
+				ereport(NOTICE,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("resource queue required -- "
+								"using default resource queue \"%s\"",
+								GP_DEFAULT_RESOURCE_QUEUE_NAME)));
 			}
 			
 			resqueue = pstrdup(GP_DEFAULT_RESOURCE_QUEUE_NAME);
@@ -1119,15 +1110,15 @@ AlterRole(AlterRoleStmt *stmt)
 		}
 		new_record_repl[Anum_pg_authid_rolresqueue - 1] = true;
 
-		if (!ResourceScheduler)
+		if (!IsResQueueEnabled() && !bWas_super)
 		{
-			/* MPP-7587: don't complain if you ALTER a superuser,
+			/*
+			 * Don't complain if you ALTER a superuser,
 			 * who doesn't use the queue 
 			 */
-			if (!bWas_super)
-				ereport(WARNING,
-						(errmsg("resource scheduling is disabled"),
-						 errhint("To enable set resource_scheduler=on")));
+			ereport(WARNING,
+					(errmsg("resource scheduling is disabled"),
+					 errhint("To enable set resource_scheduler=on and gp_resource_manager=queue")));
 		}
 	}
 
@@ -1136,14 +1127,14 @@ AlterRole(AlterRoleStmt *stmt)
 	{
 		Oid			rsgid;
 
-		if (!strcmp(resgroup, "none"))
+		if (strcmp(resgroup, "none") == 0)
 		{
 			if (bWas_super)
 				resgroup = pstrdup("admin_group");
 			else
 				resgroup = pstrdup("default_group");
 
-			if (Gp_role == GP_ROLE_DISPATCH)
+			if (IsResGroupEnabled() && Gp_role == GP_ROLE_DISPATCH)
 				ereport(NOTICE,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						 errmsg("resource group required -- "
@@ -1165,12 +1156,11 @@ AlterRole(AlterRoleStmt *stmt)
 			ObjectIdGetDatum(rsgid);
 		new_record_repl[Anum_pg_authid_rolresgroup - 1] = true;
 
-		if (!ResourceScheduler)
+		if (!IsResGroupEnabled() && Gp_role == GP_ROLE_DISPATCH)
 		{
-			if (!bWas_super)
-				ereport(WARNING,
-						(errmsg("resource group is disabled"),
-						 errhint("To enable set resource_scheduler=on")));
+			ereport(WARNING,
+					(errmsg("resource group is disabled"),
+					 errhint("To enable set resource_scheduler=on and gp_resource_manager=group")));
 		}
 	}
 

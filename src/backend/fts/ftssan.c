@@ -33,6 +33,9 @@
 #include <sys/poll.h>
 #endif
 
+#include <unistd.h>
+
+
 /*
  * CONSTANTS
  */
@@ -67,10 +70,10 @@ enum san_segment_pair_state_e
 };
 
 #define IS_VALID_OLD_STATE_SAN(state) \
-	(state >= SAN_PU_MU && state <= SAN_PU_MD)
+	((unsigned int)(state) <= SAN_PU_MD)
 
 #define IS_VALID_NEW_STATE_SAN(state) \
-	(state >= SAN_PU_MU && state < SAN_SENTINEL)
+	((unsigned int)(state) < SAN_SENTINEL)
 
 /*
  * state machine matrix for SAN;
@@ -201,6 +204,8 @@ FtsResolveStateSAN(FtsSegmentPairState *pairState)
 
 		case (SAN_PU_MU):
 			Assert(!"FTS is not responsible for bringing segments back to life");
+			break;
+
 		default:
 			Assert(!"Invalid transition in filerep state machine");
 	}
@@ -555,6 +560,7 @@ mountMaintenanceForMpid(int mpid)
 		{
 			char	*gphome_env=NULL;
 			char	cmd[1024];
+			char	args[8][256];
 			int		cmd_status;
 
 			/*
@@ -569,19 +575,26 @@ mountMaintenanceForMpid(int mpid)
 			gphome_env = getenv("GPHOME");
 
 			if (gphome_env == NULL)
-			{
-				snprintf(cmd, sizeof(cmd), "gp_mount_agent --agent -t %c -a %c -p %s -d %s -m %s -q %s -e %s -n %s",
-						 san_type, active_host, p_host, p_dev, p_mp, m_host, m_dev, m_mp);
-			}
+				snprintf(cmd, sizeof(cmd), "gp_mount_agent");
 			else
-			{
-				snprintf(cmd, sizeof(cmd), "%s/bin/gp_mount_agent --agent -t %c -a %c -p %s -d %s -m %s -q %s -e %s -n %s",
-						 gphome_env, san_type, active_host, p_host, p_dev, p_mp, m_host, m_dev, m_mp);
-			}
+				snprintf(cmd, sizeof(cmd), "%s/bin/gp_mount_agent", gphome_env);
 
-			elog(LOG, "Mount agent command is [%s]", cmd);
+			snprintf(args[0], sizeof(args[0]), "--agent -t %c", san_type);
+			snprintf(args[1], sizeof(args[1]), "-a %c", active_host);
+			snprintf(args[2], sizeof(args[2]), "-p %s", p_host);
+			snprintf(args[3], sizeof(args[3]), "-d %s", p_dev);
+			snprintf(args[4], sizeof(args[4]), "-m %s", p_mp);
+			snprintf(args[5], sizeof(args[5]), "-q %s", m_host);
+			snprintf(args[6], sizeof(args[6]), "-e %s", m_dev);
+			snprintf(args[7], sizeof(args[7]), "-n %s", m_mp);
 
-			cmd_status = system(cmd);
+			elog(LOG, "Mount agent command is [%s %s %s %s %s %s %s %s %s]",
+				 cmd, args[0], args[1], args[2], args[3], args[4], args[5],
+				 args[6], args[7]);
+
+			cmd_status = execlp(cmd, "gp_mount_agent", args[0], args[1],
+								args[2], args[3], args[4], args[5],  args[6],
+								args[7], NULL);
 
 			if (cmd_status == -1)
 			{

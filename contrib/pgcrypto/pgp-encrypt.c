@@ -17,7 +17,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.	IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -128,7 +128,7 @@ mdc_flush(PushFilter *dst, void *priv)
 	px_md_finish(md, pkt + 2);
 
 	res = pushf_write(dst, pkt, 2 + MDC_DIGEST_LEN);
-	memset(pkt, 0, 2 + MDC_DIGEST_LEN);
+	px_memset(pkt, 0, 2 + MDC_DIGEST_LEN);
 	return res;
 }
 
@@ -217,7 +217,7 @@ encrypt_free(void *priv)
 {
 	struct EncStat *st = priv;
 
-	memset(st, 0, sizeof(*st));
+	px_memset(st, 0, sizeof(*st));
 	px_free(st);
 }
 
@@ -299,7 +299,7 @@ pkt_stream_free(void *priv)
 {
 	struct PktStreamStat *st = priv;
 
-	memset(st, 0, sizeof(*st));
+	px_memset(st, 0, sizeof(*st));
 	px_free(st);
 }
 
@@ -490,7 +490,7 @@ write_prefix(PGP_Context *ctx, PushFilter *dst)
 	prefix[bs + 1] = prefix[bs - 1];
 
 	res = pushf_write(dst, prefix, bs + 2);
-	memset(prefix, 0, bs + 2);
+	px_memset(prefix, 0, bs + 2);
 	return res < 0 ? res : 0;
 }
 
@@ -552,7 +552,7 @@ write_symenc_sesskey(PGP_Context *ctx, PushFilter *dst)
 	if (res >= 0)
 		res = pushf_write(dst, pkt, pktlen);
 
-	memset(pkt, 0, pktlen);
+	px_memset(pkt, 0, pktlen);
 	return res;
 }
 
