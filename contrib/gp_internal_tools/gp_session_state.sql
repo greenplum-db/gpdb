@@ -10,17 +10,17 @@ BEGIN;
 --------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------
--- @function: 
+-- @function:
 --        gp_session_state_memory_entries_f
 --
 -- @in:
 --
 -- @out:
 --        int - segment id,
---        int - session id, 
---        int - vmem in MB, 
---        int - the runaway status of the session, 
---        int - number of QEs, 
+--        int - session id,
+--        int - vmem in MB,
+--        int - the runaway status of the session,
+--        int - number of QEs,
 --        int - number of QEs that already freed their memory,
 --        int - amount of vmem allocated at the time it was flagged as runaway
 --        int - command count running at the time it was flagged as runaway
@@ -28,7 +28,7 @@ BEGIN;
 --
 -- @doc:
 --        UDF to retrieve memory usage entries for sessions
---        
+--
 --------------------------------------------------------------------------------
 
 CREATE FUNCTION session_state_memory_entries_f()
@@ -39,12 +39,12 @@ LANGUAGE C IMMUTABLE;
 GRANT EXECUTE ON FUNCTION session_state_memory_entries_f() TO public;
 
 --------------------------------------------------------------------------------
--- @view: 
+-- @view:
 --        session_level_memory_consumption
 --
 -- @doc:
 --        List of memory usage entries for sessions
---        
+--
 --------------------------------------------------------------------------------
 
 CREATE VIEW session_level_memory_consumption AS
@@ -55,10 +55,10 @@ WITH all_entries AS (
             sessionid int,
             vmem_mb int,
             runaway_status int,
-            qe_count int, 
-            active_qe_count int, 
+            qe_count int,
+            active_qe_count int,
             dirty_qe_count int,
-            runaway_vmem_mb int, 
+            runaway_vmem_mb int,
             runaway_command_cnt int,
             idle_start timestamp with time zone
           )
@@ -69,27 +69,27 @@ WITH all_entries AS (
             sessionid int,
             vmem_mb int,
             runaway_status int,
-            qe_count int, 
-            active_qe_count int, 
+            qe_count int,
+            active_qe_count int,
             dirty_qe_count int,
-            runaway_vmem_mb int, 
+            runaway_vmem_mb int,
             runaway_command_cnt int,
             idle_start timestamp with time zone
           ))
-SELECT S.datname, 
-       M.sessionid as sess_id, 
-       S.usename, 
-       S.current_query as current_query, 
-       M.segid, 
+SELECT S.datname,
+       M.sessionid as sess_id,
+       S.usename,
+       S.current_query as current_query,
+       M.segid,
        M.vmem_mb,
        case when M.runaway_status = 0 then false else true end as is_runaway,
        M.qe_count,
        M.active_qe_count,
        M.dirty_qe_count,
-       M.runaway_vmem_mb, 
+       M.runaway_vmem_mb,
        M.runaway_command_cnt,
        idle_start
-FROM all_entries M LEFT OUTER JOIN 
+FROM all_entries M LEFT OUTER JOIN
 pg_stat_activity as S
 ON M.sessionid = S.sess_id;
 
