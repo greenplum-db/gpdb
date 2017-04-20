@@ -104,6 +104,9 @@ clean:
 	$(MAKE) -C contrib/pg_upgrade_support $@
 	$(MAKE) -C contrib/pg_upgrade $@
 	$(MAKE) -C contrib/pgcrypto $@
+# leap over gpAux/Makefile into subdirectories to avoid circular dependency.
+# gpAux/Makefile is the entry point for the enterprise build, which ends up
+# calling top-level configure and this Makefile
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
 	$(MAKE) -C gpMgmt $@
@@ -115,6 +118,7 @@ clean:
 distclean maintainer-clean:
 #	-$(MAKE) -C doc $@
 	-$(MAKE) -C gpAux/extensions $@
+	-$(MAKE) -C gpAux/gpperfmon $@
 	-$(MAKE) -C contrib $@
 	-$(MAKE) -C config $@
 	-$(MAKE) -C src $@

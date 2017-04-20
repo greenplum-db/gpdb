@@ -45,7 +45,6 @@ function build_gpdb_and_scan_with_coverity() {
   local cov_int_dir="$1"
 
   pushd gpdb_src/gpAux
-    make distclean
     cov-build --dir "$cov_int_dir" make BLD_TARGETS="gpdb" GPROOT=/usr/local
   popd
 }
