@@ -33,7 +33,7 @@ BEGIN;
 
 CREATE FUNCTION session_state_memory_entries_f()
 RETURNS SETOF record
-AS 'MODULE_PATHNAME', 'gp_session_state_memory_entries'
+AS '$libdir/gp_session_state_memory_stats', 'gp_session_state_memory_entries'
 LANGUAGE C IMMUTABLE;
 
 GRANT EXECUTE ON FUNCTION session_state_memory_entries_f() TO public;

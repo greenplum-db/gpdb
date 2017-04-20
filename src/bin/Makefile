@@ -25,8 +25,7 @@ endif
 
 DIRS = initdb ipcclean pg_basebackup pg_ctl pg_dump \
 	psql scripts pg_config pg_controldata pg_resetxlog \
-	gpmirrortransition \
-	gp_session_state
+	gpmirrortransition
 
 ifeq ($(PORTNAME), win32)
 DIRS+=pgevent
