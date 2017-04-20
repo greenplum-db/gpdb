@@ -18,10 +18,6 @@ include $(top_builddir)/src/Makefile.global
 
 REFDOCDIR= $(top_srcdir)/doc/src/sgml/ref
 
-ifneq ($(PORTNAME), win32)
-override CFLAGS += $(PTHREAD_CFLAGS) -pthread
-endif
-
 override CPPFLAGS := -DFRONTEND -I. -I$(srcdir) -I$(libpq_srcdir) -I$(top_srcdir)/src/bin/pg_dump $(CPPFLAGS)
 
 # necessary to get flex to play nice with large files on 32bit solaris sparc
