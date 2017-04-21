@@ -1012,7 +1012,7 @@ insert into ggg values (7, 7);
 insert into ggg values (8, 8);
 insert into ggg values (9, 9);
 insert into ggg values (10, 10);
-ERROR:  no partition for partitioning key  (seg2 127.0.0.1:25434 pid=6805)
+ERROR:  no partition for partitioning key  (seg2 127.0.0.1:40002 pid=6645)
 select * from ggg order by 1, 2;
  id | a 
 ----+---
@@ -1525,7 +1525,7 @@ alter table hhh add partition cc end ('2010-01-01');
 NOTICE:  CREATE TABLE will create partition "hhh_1_prt_cc" for table "hhh"
 -- works - anonymous partition MPP-3350
 alter table hhh add partition end ('2010-02-01');
-NOTICE:  CREATE TABLE will create partition "hhh_1_prt_r270615893" for table "hhh"
+NOTICE:  CREATE TABLE will create partition "hhh_1_prt_r392123821" for table "hhh"
 -- MPP-3607 - ADD PARTITION with open intervals
 create table no_end1 (aa int, bb int) partition by range (bb)
 (partition foo start(3));
@@ -1795,9 +1795,9 @@ select * from rank ;
   8 |    1 | 03-15-2003 | F
   9 |    1 | 04-15-2004 | F
  10 |    1 | 05-15-2005 | F
-  2 |    1 | 02-15-2002 | M
   1 |    1 | 01-15-2001 | M
   4 |    1 | 04-15-2004 | M
+  2 |    1 | 02-15-2002 | M
 (10 rows)
 
 alter table rank DROP partition boys restrict;
@@ -2189,7 +2189,7 @@ insert into d values(1, 10);
 insert into d values(1, 11);
 insert into d values(1, 55);
 insert into d values(1, 70);
-ERROR:  no partition for partitioning key  (seg0 127.0.0.1:25432 pid=6803)
+ERROR:  no partition for partitioning key  (seg0 127.0.0.1:40000 pid=6643)
 select * from d;
  i | j  
 ---+----
@@ -2272,7 +2272,7 @@ NOTICE:  CREATE TABLE will create partition "d_1_prt_b" for table "d"
 insert into d values (1, 1);
 insert into d values (1, 2);
 insert into d values (1, NULL);
-ERROR:  no partition for partitioning key  (seg0 127.0.0.1:25432 pid=6803)
+ERROR:  no partition for partitioning key  (seg0 127.0.0.1:40000 pid=6643)
 drop table  d cascade;
 -- allow NULLs into the default partition
 create table d (i int,  j int) partition by range(j)
@@ -2306,10 +2306,10 @@ insert into d values(1, 1, 2);
 insert into d values(1, 3, 4);
 insert into d values(1, 100, 20);
 insert into d values(1, 100, 2000);
-ERROR:  no partition for partitioning key  (seg0 127.0.0.1:25432 pid=6803)
+ERROR:  no partition for partitioning key  (seg0 127.0.0.1:40000 pid=6643)
 insert into d values(1, '1000', '1001'), (1, '1001', '1002'), (1, '1003', '1004');
 insert into d values(1, 100, NULL);
-ERROR:  no partition for partitioning key  (seg0 127.0.0.1:25432 pid=6803)
+ERROR:  no partition for partitioning key  (seg0 127.0.0.1:40000 pid=6643)
 select * from d_1_prt_a;
  a | b | c 
 ---+---+---
@@ -3244,7 +3244,7 @@ alter table dcl_messaging_test drop default partition;
 NOTICE:  dropped partition "outlying_dates" for relation "dcl_messaging_test"
 -- ADD case
 alter table dcl_messaging_test add partition start (timestamp '2011-09-15') inclusive end (timestamp '2011-09-16') exclusive;
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_r1571743545" for table "dcl_messaging_test"
+NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_r1904439538" for table "dcl_messaging_test"
 -- EXCHANGE case
 create table dcl_candidate(like dcl_messaging_test) with (appendonly=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
@@ -3438,12 +3438,12 @@ select tablename,partitiontablename, partitionname from pg_partitions where tabl
 
 -- SPLIT partition
 alter table mpp14613_list alter partition others split partition subothers at (10) into (partition b1, partition b2);
-NOTICE:  exchanged partition "subothers" of partition "others" of relation "mpp14613_list" with relation "pg_temp_291985"
+NOTICE:  exchanged partition "subothers" of partition "others" of relation "mpp14613_list" with relation "pg_temp_87372"
 NOTICE:  dropped partition "subothers" for partition "others" of relation "mpp14613_list"
 NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_others_2_prt_b1" for table "mpp14613_list_1_prt_others"
 NOTICE:  CREATE TABLE will create partition "mpp14613_list_1_prt_others_2_prt_b2" for table "mpp14613_list_1_prt_others"
 alter table mpp14613_range alter partition others split partition subothers at (10) into (partition b1, partition b2);
-NOTICE:  exchanged partition "subothers" of partition "others" of relation "mpp14613_range" with relation "pg_temp_292320"
+NOTICE:  exchanged partition "subothers" of partition "others" of relation "mpp14613_range" with relation "pg_temp_87707"
 NOTICE:  dropped partition "subothers" for partition "others" of relation "mpp14613_range"
 ERROR:  invalid partition range specification.
 -- Drop table as gpcheckcat will complaint of not having constraint for newly
@@ -3673,7 +3673,7 @@ select count(*) from mpp7863;
 (1 row)
 
 alter table mpp7863 split default partition start (201001) inclusive end (201002) exclusive into (partition jan10,default partition);
-NOTICE:  exchanged partition "extra" of relation "mpp7863" with relation "pg_temp_293486"
+NOTICE:  exchanged partition "extra" of relation "mpp7863" with relation "pg_temp_88895"
 NOTICE:  dropped partition "extra" for relation "mpp7863"
 NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_jan10" for table "mpp7863"
 NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_extra" for table "mpp7863"
@@ -3706,3 +3706,39 @@ select dat, count(*) from mpp7863 group by 1 order by 2,1;
           | 30000
 (6 rows)
 
+-- Test that pg_get_expr() can be used on the pg_partition_rule columns that
+-- store expressions, even by non-superusers. pg_get_expr() is restricted
+-- to specific system catalogs, for security reasons.
+create role part_expr_role;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE TABLE part_expr_test_range (id int) DISTRIBUTED BY (id)
+PARTITION BY RANGE(id) (START (1::int) END (10::int) EVERY (5));
+NOTICE:  CREATE TABLE will create partition "part_expr_test_range_1_prt_1" for table "part_expr_test_range"
+NOTICE:  CREATE TABLE will create partition "part_expr_test_range_1_prt_2" for table "part_expr_test_range"
+CREATE TABLE part_expr_test_list (id int) DISTRIBUTED BY (id)
+PARTITION BY list(id) (partition p1 values(1, 2, 3));
+NOTICE:  CREATE TABLE will create partition "part_expr_test_list_1_prt_p1" for table "part_expr_test_list"
+set session authorization part_expr_role;
+-- This should throw a "not allowed" error.
+select pg_get_expr('bogus', 'pg_class'::regclass);
+ERROR:  argument to pg_get_expr() must come from system catalogs
+-- But this should
+select p.parrelid::regclass, pr.parchildrelid::regclass,
+       pg_get_expr(parrangestart, pr.parchildrelid),
+       pg_get_expr(parrangeend, pr.parchildrelid),
+       pg_get_expr(parrangeevery, pr.parchildrelid),
+       pg_get_expr(parlistvalues, pr.parchildrelid)
+from pg_partition_rule pr, pg_partition p
+where pr.paroid = p.oid
+and p.parrelid in ('part_expr_test_range'::regclass, 'part_expr_test_list'::regclass);
+       parrelid       |        parchildrelid         | pg_get_expr | pg_get_expr | pg_get_expr | pg_get_expr 
+----------------------+------------------------------+-------------+-------------+-------------+-------------
+ part_expr_test_range | part_expr_test_range_1_prt_1 | 1           | 6           | 5           | 
+ part_expr_test_range | part_expr_test_range_1_prt_2 | 6           | 10          | 5           | 
+ part_expr_test_list  | part_expr_test_list_1_prt_p1 |             |             |             | 1, 2, 3
+(3 rows)
+
+reset session authorization;
+DROP TABLE part_expr_test_range;
+DROP TABLE part_expr_test_list;
+DROP ROLE part_expr_role;

@@ -1902,3 +1902,35 @@ select count(*) from mpp7863_1_prt_extra where dat ='';
 select count(*) from mpp7863_1_prt_extra;
 
 select dat, count(*) from mpp7863 group by 1 order by 2,1;
+
+
+-- Test that pg_get_expr() can be used on the pg_partition_rule columns that
+-- store expressions, even by non-superusers. pg_get_expr() is restricted
+-- to specific system catalogs, for security reasons.
+create role part_expr_role;
+
+CREATE TABLE part_expr_test_range (id int) DISTRIBUTED BY (id)
+PARTITION BY RANGE(id) (START (1::int) END (10::int) EVERY (5));
+CREATE TABLE part_expr_test_list (id int) DISTRIBUTED BY (id)
+PARTITION BY list(id) (partition p1 values(1, 2, 3));
+
+set session authorization part_expr_role;
+
+-- This should throw a "not allowed" error.
+select pg_get_expr('bogus', 'pg_class'::regclass);
+
+-- But this should
+select p.parrelid::regclass, pr.parchildrelid::regclass,
+       pg_get_expr(parrangestart, pr.parchildrelid),
+       pg_get_expr(parrangeend, pr.parchildrelid),
+       pg_get_expr(parrangeevery, pr.parchildrelid),
+       pg_get_expr(parlistvalues, pr.parchildrelid)
+from pg_partition_rule pr, pg_partition p
+where pr.paroid = p.oid
+and p.parrelid in ('part_expr_test_range'::regclass, 'part_expr_test_list'::regclass);
+
+reset session authorization;
+
+DROP TABLE part_expr_test_range;
+DROP TABLE part_expr_test_list;
+DROP ROLE part_expr_role;
