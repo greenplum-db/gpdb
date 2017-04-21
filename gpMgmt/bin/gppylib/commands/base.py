@@ -698,14 +698,16 @@ class Command:
             self.validate()
         pass
 
-
-
     def set_results(self,results):
         self.results=results
 
-
     def get_results(self):
         return self.results
+
+    def get_stdout(self, strip=True):
+        if self.results is None:
+            raise Exception("command not run yet")
+        return self.results.stdout if not strip else self.results.stdout.strip()
 
     def get_stdout_lines(self):
         return self.results.stdout.splitlines()
@@ -713,6 +715,15 @@ class Command:
     def get_stderr_lines(self):
         return self.results.stderr.splitlines()
 
+    def get_return_code(self):
+        if self.results is None:
+            raise Exception("command not run yet")
+        return self.results.rc
+
+    def get_stderr(self):
+        if self.results is None:
+            raise Exception("command not run yet")
+        return self.results.stderr
 
     def cancel(self):
         if self.exec_context and isinstance(self.exec_context, ExecutionContext):
@@ -727,7 +738,6 @@ class Command:
             return False
         else:
             return self.results.wasSuccessful()
-
 
     def validate(self,expected_rc=0):
         """Plain vanilla validation which expects a 0 return code."""
