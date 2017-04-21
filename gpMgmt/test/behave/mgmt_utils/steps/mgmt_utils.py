@@ -3,6 +3,7 @@ import getpass
 import glob
 import gzip
 import json
+
 import os
 import platform
 import shutil
@@ -12,9 +13,12 @@ import thread
 import json
 import csv
 import glob
+import subprocess
+import commands
 
-from collections import defaultdict
 from datetime import datetime
+from time import sleep
+from behave import given, when, then
 
 from gppylib.commands.gp import SegmentStart, GpStandbyStart
 from gppylib.commands.unix import findCmdInPath
@@ -25,16 +29,14 @@ from gppylib.operations.unix import ListRemoteFilesByPattern, CheckRemoteFile
 from test.behave_utils.gpfdist_utils.gpfdist_mgmt import Gpfdist
 from test.behave_utils.utils import *
 from test.behave_utils.PgHba import PgHba, Entry
-from gppylib.commands.base import Command
+from gppylib.commands.base import Command, REMOTE
 
-timestamp_json = '/tmp/old_to_new_timestamps.json'
 labels_json = '/tmp/old_to_new_timestamp_labels.json'
-global_timestamps = {}
+timestamp_json = '/tmp/old_to_new_timestamps.json'
 global_labels = {}
+global_timestamps = {}
 
 master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
-timestamp_json = '/tmp/old_to_new_timestamps.json'
-global_timestamps = {}
 if master_data_dir is None:
     raise Exception('Please set MASTER_DATA_DIRECTORY in environment')
 
@@ -1305,9 +1307,8 @@ def impl(context, dbname):
 @then('"{filetype}" file should not be created under "{dir}"')
 def impl(context, filetype, dir):
     if not hasattr(context, 'backup_timestamp'):
-        raise Exception('Unable to find out the %s because backup timestamp has not been stored' % filename)
+        raise Exception('Unable to find out the %s because backup timestamp has not been stored' % filetype)
 
-    filename = ''
     if filetype == "dirty_list":
         filename = 'gp_dump_%s_dirty_list' % context.backup_timestamp
     elif filetype == "plan":
@@ -1762,7 +1763,7 @@ def validate_master_config_backup_files(context, dir=master_data_dir):
     for df in dump_files:
         if df.startswith('%sgp_master_config_files' % context.dump_prefix) and df.endswith('.tar'):
             return
-    raise Exception('Config files not backed up on master "%s"' % master_config_file)
+    raise Exception('Config files not backed up on master "%s"' % master_dump_dir)
 
 def validate_segment_config_backup_files(context, dir=None):
     if not hasattr(context, "dump_prefix"):
@@ -2666,7 +2667,6 @@ def open_named_pipes(context, operation, timestamp, dump_dir):
                           ctxt=REMOTE, remoteHost=host)
             cmd.run(validateAfter=True)
             time.sleep(sleeptime)
-            results = cmd.get_results()
 
 @given('the core dump directory is stored')
 def impl(context):
@@ -3666,17 +3666,17 @@ def impl(context, num):
     num = int(num)
     logdir = "%s/gpAdminLogs" % os.path.expanduser("~")
     if not os.path.exists(logdir):
-        raise Exception('No such directory: %s' % absdirname)
+        raise Exception('No such directory: %s' % logdir)
     logname = get_log_name('gptransfer', logdir)
 
     full_path = os.path.join(logdir, logname)
 
     if not os.path.isfile(full_path):
-        raise Exception ("Can not find %s file: %s" % (file_type, full_path))
+        raise Exception ("Can not find file: %s" % full_path)
 
-    contents = ""
+    # todo why open file if we don't care about contents?
     with open(full_path) as fd:
-        contents = fd.read()
+        fd.read()
 
     for i in range(num):
         worker = "\[DEBUG\]:-\[worker%d\]" % i
@@ -3759,20 +3759,20 @@ def impl(context, output):
             contents = line.strip()
     pat = re.compile(output)
     if not pat.search(contents):
-        err_str = "Expected stdout string '%s' and found: '%s'" % (msg, contents)
+        err_str = "Expected stdout string '%s' and found: '%s'" % (output, contents)
         raise Exception(err_str)
 
 @then('the user waits for "{process_name}" to finish running')
 def impl(context, process_name):
-     run_command(context, "ps ux | grep `which %s` | grep -v grep | awk '{print $2}' | xargs" % process_name)
-     pids = context.stdout_message.split()
-     while len(pids) > 0:
-         for pid in pids:
-             try:
-                 os.kill(int(pid), 0)
-             except OSError, error:
-                 pids.remove(pid)
-         time.sleep(10)
+    run_command(context, "ps ux | grep `which %s` | grep -v grep | awk '{print $2}' | xargs" % process_name)
+    pids = context.stdout_message.split()
+    while len(pids) > 0:
+        for pid in pids:
+            try:
+                os.kill(int(pid), 0)
+            except OSError:
+                pids.remove(pid)
+        time.sleep(10)
 
 @given('the gpfdists occupying port {port} on host "{hostfile}"')
 def impl(context, port, hostfile):
@@ -3781,12 +3781,13 @@ def impl(context, port, hostfile):
     source_map_file = os.environ.get(hostfile)
     dir = '/tmp'
     ctxt = 2
-    with open(source_map_file,'r') as f:
+    with open(source_map_file, 'r') as f:
         for line in f:
             host = line.strip().split(',')[0]
-            if host in ('localhost', '127.0.0.1',socket.gethostname()):
+            if host in ('localhost', '127.0.0.1', socket.gethostname()):
                 ctxt = 1
-            gpfdist = Gpfdist('gpfdist on host %s'%host, dir, port, os.path.join('/tmp','gpfdist.pid'), ctxt, host, gp_source_file)
+            gpfdist = Gpfdist('gpfdist on host %s'%host, dir, port, os.path.join('/tmp','gpfdist.pid'),
+                              ctxt, host, gp_source_file)
             gpfdist.startGpfdist()
 
 @then('the gpfdists running on port {port} get cleaned up from host "{hostfile}"')
@@ -3801,7 +3802,8 @@ def impl(context, port, hostfile):
             host = line.strip().split(',')[0]
             if host in ('localhost', '127.0.0.1',socket.gethostname()):
                 ctxt = 1
-            gpfdist = Gpfdist('gpfdist on host %s'%host, dir, port, os.path.join('/tmp','gpfdist.pid'), ctxt, host, gp_source_file)
+            gpfdist = Gpfdist('gpfdist on host %s'%host, dir, port, os.path.join('/tmp','gpfdist.pid'),
+                              ctxt, host, gp_source_file)
             gpfdist.cleanupGpfdist()
 
 @when('verify that db_dumps directory does not exist in master or segments')
@@ -3846,7 +3848,6 @@ def impl(context, filepath, line):
 
 @then('verify that gptransfer is in order of "{filepath}" when partition transfer is "{is_partition_transfer}"')
 def impl(context, filepath, is_partition_transfer):
-    table = []
     with open(filepath) as f:
         table = f.read().splitlines()
         if is_partition_transfer != "None":
