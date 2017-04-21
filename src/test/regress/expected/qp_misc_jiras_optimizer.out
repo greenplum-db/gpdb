@@ -2122,8 +2122,6 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entr
 insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
 insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
 insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
-insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
-insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
 set gp_enable_agg_distinct_pruning  = off;
 select count(distinct i), count(distinct j) from qp_misc_jiras.tbl6535_table;
  count | count 
