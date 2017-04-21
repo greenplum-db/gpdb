@@ -716,7 +716,7 @@ def validate_index(context, table_name, dbname):
     index_sql = "select count(indexrelid::regclass) from pg_index, pg_class where indrelid = '%s'::regclass group by indexrelid;" % table_name
     rows = getRows(dbname, index_sql)
     if len(rows) != 2:
-        raise Exception('Index creation was not successful. Expected 2 rows does not match %d rows' % result)
+        raise Exception('Index creation was not successful. Expected 2 rows does not match %d rows' % len(rows))
 
 def create_schema(context, schema_name, dbname):
     if not check_schema_exists(context, schema_name, dbname):
@@ -1055,11 +1055,10 @@ def create_large_num_partitions(table_type, table_name, db_name, num_partitions=
 def validate_num_restored_tables(context, num_tables, dbname, backedup_dbname=None):
     tbls = get_table_names(dbname)
 
-    count_query = """select count(*) from %s"""
     num_validate_tables = 0
     for t in tbls:
         name = '%s.%s' % (t[0], t[1])
-        count = getRows(dbname, count_query % name)[0][0]
+        count = getRows(dbname, "SELECT count(*) FROM %S" % name)[0][0]
         if count == 0:
             continue
         else:
@@ -1371,8 +1370,10 @@ def wait_till_resync_transition(host='localhost', port=os.environ.get('PGPORT'),
     num_insync_nodes = 'psql -t -h %s -p %s -U %s -d template1 -c "select count(*) from gp_segment_configuration where mode <>\'s\';"'%(host, port, user)
     (rc1, out1, err1) = run_cmd(num_resync_nodes)
     (rc2, out2, err2) = run_cmd(num_insync_nodes)
-    if rc1 !=0 or rc2 !=0:
-        raise Exception('Exception from executing psql query: %s'%num_unsync_nodes)
+    if rc1 != 0 :
+        raise Exception('Exception from executing psql query: %s' % num_resync_nodes)
+    if rc2 != 0:
+        raise Exception('Exception from executing psql query: %s' % num_insync_nodes)
     else:
         num_resync = int(out1.strip())
         num_insync = int(out2.strip())
@@ -1459,7 +1460,7 @@ def check_count_for_specific_query(dbname, query, nrows):
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
         result = dbconn.execSQLForSingleton(conn, NUM_ROWS_QUERY)
     if result != nrows:
-        raise Exception('%d rows in table %s.%s, expected row count = %d' % (result, dbname, tablename, nrows))
+        raise Exception('%d rows in query: %s. Expected row count = %d' % (result, query, nrows))
 
 def get_primary_segment_host_port():
     """
