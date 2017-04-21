@@ -52,6 +52,7 @@ static void ResGroupWait(ResGroup group);
 static bool ResGroupCreate(Oid groupId);
 static void AtProcExit_ResGroup(int code, Datum arg);
 static void ResGroupWaitCancel(void);
+static void addTotalQueueDuration(ResGroup group);
 
 
 /*
@@ -250,14 +251,13 @@ exit:
 /*
  *  Retrieve statistic information of type from resource group
  */
-int
-ResGroupGetStat(Oid groupId, ResGroupStatType type)
+void
+ResGroupGetStat(Oid groupId, ResGroupStatType type, char *retStr, int retStrLen)
 {
 	ResGroup group;
-	int ret;
 
 	if (!IsResGroupEnabled())
-		return 0;
+		return;
 
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 
@@ -274,20 +274,24 @@ ResGroupGetStat(Oid groupId, ResGroupStatType type)
 	switch (type)
 	{
 		case RES_GROUP_STAT_NRUNNING:
-			ret = group->nRunning;
+			snprintf(retStr, retStrLen, "%d", group->nRunning);
 			break;
 		case RES_GROUP_STAT_NQUEUEING:
-			ret = group->waitProcs.size;
+			snprintf(retStr, retStrLen, "%d", group->waitProcs.size);
 			break;
 		case RES_GROUP_STAT_TOTAL_EXECUTED:
-			ret = group->totalExecuted;
+			snprintf(retStr, retStrLen, "%d", group->totalExecuted);
 			break;
 		case RES_GROUP_STAT_TOTAL_QUEUED:
-			ret = group->totalQueued;
+			snprintf(retStr, retStrLen, "%d", group->totalQueued);
 			break;
 		case RES_GROUP_STAT_TOTAL_QUEUE_TIME:
-			ret = group->totalQueuedTime;
+		{
+			Datum durationDatum = DirectFunctionCall1(interval_out, IntervalPGetDatum(&group->totalQueuedTime));
+			char *durationStr = DatumGetCString(durationDatum);
+			strncpy(retStr, durationStr, retStrLen);
 			break;
+		}
 		default:
 			ereport(ERROR,
 					(errcode(ERRCODE_INTERNAL_ERROR),
@@ -295,8 +299,6 @@ ResGroupGetStat(Oid groupId, ResGroupStatType type)
 	}
 
 	LWLockRelease(ResGroupLock);
-
-	return ret;
 }
 
 /*
@@ -323,7 +325,7 @@ ResGroupCreate(Oid groupId)
 	ProcQueueInit(&group->waitProcs);
 	group->totalExecuted = 0;
 	group->totalQueued = 0;
-	group->totalQueuedTime = 0;
+	memset(&group->totalQueuedTime, 0, sizeof(group->totalQueuedTime));
 
 	return true;
 }
@@ -339,8 +341,6 @@ ResGroupSlotAcquire(void)
 	ResGroup	group;
 	Oid			groupId;
 	int			concurrencyLimit;
-	long		secs;
-	int			usecs;
 
 	groupId = GetResGroupIdForRole(GetUserId());
 	if (groupId == InvalidOid)
@@ -367,6 +367,7 @@ ResGroupSlotAcquire(void)
 		group->nRunning++;
 		group->totalExecuted++;
 		LWLockRelease(ResGroupLock);
+		pgstat_report_resgroup(0, group->groupId);
 		return;
 	}
 
@@ -378,11 +379,21 @@ ResGroupSlotAcquire(void)
 	 */
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 	group->totalExecuted++;
-	TimestampDifference(pgstat_fetch_resgroup_queue_timestamp(),
-						GetCurrentTimestamp(),
-						&secs, &usecs);
-	group->totalQueuedTime += secs;
+	addTotalQueueDuration(group);
 	LWLockRelease(ResGroupLock);
+}
+
+/* Update the total queued time of this group */
+static void
+addTotalQueueDuration(ResGroup group)
+{
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+
+	TimestampTz start = pgstat_fetch_resgroup_queue_timestamp();
+	TimestampTz now = GetCurrentTimestamp();
+	Datum durationDatum = DirectFunctionCall2(timestamptz_age, TimestampTzGetDatum(now), TimestampTzGetDatum(start));
+	Datum sumDatum = DirectFunctionCall2(interval_pl, IntervalPGetDatum(&group->totalQueuedTime), durationDatum);
+	memcpy(&group->totalQueuedTime, DatumGetIntervalP(sumDatum), sizeof(Interval));
 }
 
 /*
@@ -455,7 +466,7 @@ ResGroupWait(ResGroup group)
 
 	group->totalQueued++;
 
-	pgstat_report_resgroup_wait(GetCurrentTimestamp(), group->groupId);
+	pgstat_report_resgroup(GetCurrentTimestamp(), group->groupId);
 
 	LWLockRelease(ResGroupLock);
 
@@ -571,8 +582,6 @@ ResGroupWaitCancel(void)
 	ResGroup group;
 	PROC_QUEUE	*waitQueue;
 	PGPROC		*waitProc;
-	long		secs;
-	int			usecs;
 	bool		granted = false;
 
 	if (CurrentResGroupId == InvalidOid)
@@ -601,10 +610,7 @@ ResGroupWaitCancel(void)
 		granted = true;
 	}
 
-	TimestampDifference(pgstat_fetch_resgroup_queue_timestamp(),
-						GetCurrentTimestamp(),
-						&secs, &usecs);
-	group->totalQueuedTime += secs;
+	addTotalQueueDuration(group);
 
 	waitQueue = &(group->waitProcs);
 	if (granted)

@@ -27,8 +27,7 @@
 DistributedSnapshotCommitted 
 DistributedSnapshotWithLocalMapping_CommittedTest(
 	DistributedSnapshotWithLocalMapping		*dslm,
-	TransactionId 							localXid,
-	bool									isXmax)
+	TransactionId 							localXid)
 {
 	DistributedSnapshotHeader *header = &dslm->header;
 	DistributedSnapshotMapEntry *inProgressEntryArray = dslm->inProgressEntryArray;
@@ -36,6 +35,13 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 	uint32							i;
 	bool							found;
 	DistributedTransactionId		distribXid = InvalidDistributedTransactionId;
+
+	/*
+	 * Return early if local xid is not normal as it cannot have distributed
+	 * xid associated with it.
+	 */
+	if (!TransactionIdIsNormal(localXid))
+		return DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE;
 
 	count = header->count;
 

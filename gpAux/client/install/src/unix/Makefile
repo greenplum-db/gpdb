@@ -9,7 +9,7 @@ VERSION=3.1.1.1-build-2
 
 SHELL:=$(shell which bash)
 WORK_DIR:=$(shell pwd)
-INSTALLER_TEMPLATE=${WORK_DIR}/installer-header-template.txt
+INSTALLER_TEMPLATE=${BLD_TOP}/${ADDON_DIR}/gpAux/client/install/src/unix/installer-header-template.txt
 INSTALLER_HEADER=${WORK_DIR}/installer-header.txt
 PRODUCT=Clients
 PACKAGE=greenplum-clients

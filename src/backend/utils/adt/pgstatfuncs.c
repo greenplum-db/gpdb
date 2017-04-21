@@ -632,25 +632,21 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 
 			if (funcctx->tuple_desc->natts > 13)
 			{
-				if (beentry->st_waiting == PGBE_WAITING_RESGROUP)
-				{
-					Datum now = TimestampTzGetDatum(GetCurrentTimestamp());
-					char *groupName = GetResGroupNameForId(beentry->st_rsgid, AccessShareLock);
+				Datum now = TimestampTzGetDatum(GetCurrentTimestamp());
+				char *groupName = GetResGroupNameForId(beentry->st_rsgid, AccessShareLock);
 
-					values[13] = ObjectIdGetDatum(beentry->st_rsgid);
-					if (groupName != NULL)
-						values[14] = CStringGetTextDatum(groupName);
-					else
-						nulls[14] = true;
+				values[13] = ObjectIdGetDatum(beentry->st_rsgid);
+
+				if (groupName != NULL)
+					values[14] = CStringGetTextDatum(groupName);
+				else
+					nulls[14] = true;
+
+				if (beentry->st_waiting == PGBE_WAITING_RESGROUP)
 					values[15] = DirectFunctionCall2(timestamptz_age, now,
 													 TimestampTzGetDatum(beentry->st_resgroup_queue_start_timestamp));
-				}
 				else
-				{
-					nulls[13] = true;
-					nulls[14] = true;
 					nulls[15] = true;
-				}
 			}
 		}
 		else

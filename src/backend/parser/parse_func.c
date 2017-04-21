@@ -20,6 +20,7 @@
 #include "catalog/pg_attrdef.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_inherits.h"
+#include "catalog/pg_partition_rule.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_proc_callback.h"
 #include "catalog/pg_type.h"
@@ -1965,6 +1966,14 @@ check_pg_get_expr_arg(ParseState *pstate, Node *arg, int netlevelsup)
 
 				case TypeRelationId:
 					if (attnum == Anum_pg_type_typdefaultbin)
+						return true;
+					break;
+
+				case PartitionRuleRelationId:
+					if (attnum == Anum_pg_partition_rule_parrangestart ||
+						attnum == Anum_pg_partition_rule_parrangeend ||
+						attnum == Anum_pg_partition_rule_parrangeevery ||
+						attnum == Anum_pg_partition_rule_parlistvalues)
 						return true;
 					break;
 			}

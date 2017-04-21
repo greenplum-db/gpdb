@@ -41,6 +41,17 @@ resources:
     username: {{docker_username}}
     password: {{docker_password}}
 
+# TODO: Currently the windows clients and loaders are not packaging correctly.
+#       This resource will be used when the team responsible for the CLs is
+#       ready to fix the issues, and integrate the changes into the full CI for
+#       gpdb.
+# - name: centos-mingw
+#   type: docker-image
+#   source:
+#     repository: pivotaldata/centos-mingw
+#     username: {{docker_username}}
+#     password: {{docker_password}}
+
 - name: bin_gpdb_centos6
   type: s3
   source:
@@ -67,6 +78,28 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{bin_gpdb_sles11_versioned_file}}
+
+# TODO: Currently the windows clients and loaders are not packaging correctly.
+#       This resource will be used when the team responsible for the CLs is
+#       ready to fix the issues, and integrate the changes into the full CI for
+#       gpdb.
+# - name: bin_gpdb_windows_clients
+#   type: s3
+#   source:
+#     access_key_id: {{bucket-access-key-id}}
+#     bucket: {{bucket-name}}
+#     region_name: {{aws-region}}
+#     secret_access_key: {{bucket-secret-access-key}}
+#     regexp: windows-cl/greenplum-clients-5.(.*)-WinXP-x86_32.msi
+#
+# - name: bin_gpdb_windows_loaders
+#   type: s3
+#   source:
+#     access_key_id: {{bucket-access-key-id}}
+#     bucket: {{bucket-name}}
+#     region_name: {{aws-region}}
+#     secret_access_key: {{bucket-secret-access-key}}
+#     regexp: windows-cl/greenplum-loaders-5.(.*)-WinXP-x86_32.msi
 
 - name: installer_rhel6_gpdb_rc
   type: s3
@@ -298,6 +331,35 @@ jobs:
   - put: bin_gpdb_sles11
     params:
       file: gpdb_artifacts/bin_gpdb.tar.gz
+
+# TODO: Currently the windows clients and loaders are not packaging correctly.
+#       This task will be used when the team responsible for the CLs is ready
+#       to fix the issues, and integrate the changes into the full CI for gpdb.
+# - name: compile_gpdb_windows_cl
+#   plan:
+#   - aggregate:
+#     - get: gpdb_src
+#       trigger: true
+#     - get: gpaddon_src
+#     - get: centos-mingw
+#   - task: compile_gpdb
+#     file: gpdb_src/concourse/tasks/compile_gpdb.yml
+#     image: centos-mingw
+#     params:
+#       TARGET_OS: win32
+#       TARGET_OS_VERSION:
+#       BLD_TARGETS: clients loaders
+#       IVYREPO_HOST: {{ivyrepo_host}}
+#       IVYREPO_REALM: {{ivyrepo_realm}}
+#       IVYREPO_USER: {{ivyrepo_user}}
+#       IVYREPO_PASSWD: {{ivyrepo_passwd}}
+#   - aggregate:
+#     - put: bin_gpdb_windows_clients
+#       params:
+#         file: gpdb_artifacts/greenplum-clients-*-WinXP-x86_32.msi
+#     - put: bin_gpdb_windows_loaders
+#       params:
+#         file: gpdb_artifacts/greenplum-loaders-*-WinXP-x86_32.msi
 
 # Stage 2a: Run regression tests against binaries (make installcheck-world and similar)
 

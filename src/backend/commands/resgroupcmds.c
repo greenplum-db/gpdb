@@ -27,6 +27,7 @@
 #include "commands/resgroupcmds.h"
 #include "miscadmin.h"
 #include "utils/builtins.h"
+#include "utils/datetime.h"
 #include "utils/fmgroids.h"
 #include "utils/resgroup.h"
 #include "utils/resource_manager.h"
@@ -459,11 +460,11 @@ pg_resgroup_get_status_kv(PG_FUNCTION_ARGS)
 		bool		nulls[3];
 		HeapTuple	tuple;
 		Oid			groupId;
-		int			statVal;
-		char		statValStr[10];
+		char		statVal[MAXDATELEN + 1];
 
 		MemSet(values, 0, sizeof(values));
 		MemSet(nulls, 0, sizeof(nulls));
+		MemSet(statVal, 0, sizeof(statVal));
 
 		values[0] = ((Datum *) funcctx->user_fctx)[funcctx->call_cntr];
 		values[1] = CStringGetTextDatum(prop);
@@ -472,28 +473,25 @@ pg_resgroup_get_status_kv(PG_FUNCTION_ARGS)
 
 		/* Fill with dummy values */
 		if (!strcmp(prop, "num_running"))
-			statVal = ResGroupGetStat(groupId, RES_GROUP_STAT_NRUNNING);
+			ResGroupGetStat(groupId, RES_GROUP_STAT_NRUNNING, statVal, sizeof(statVal));
 		else if (!strcmp(prop, "num_queueing"))
-			statVal = ResGroupGetStat(groupId, RES_GROUP_STAT_NQUEUEING);
+			ResGroupGetStat(groupId, RES_GROUP_STAT_NQUEUEING, statVal, sizeof(statVal));
 		else if (!strcmp(prop, "cpu_usage"))
-			statVal = 0;
+			snprintf(statVal, sizeof(statVal), "%.2f", 0.0);
 		else if (!strcmp(prop, "memory_usage"))
-			statVal = 0;
+			snprintf(statVal, sizeof(statVal), "%.2f", 0.0);
 		else if (!strcmp(prop, "total_queue_duration"))
-			statVal = ResGroupGetStat(groupId, RES_GROUP_STAT_TOTAL_QUEUE_TIME);
+			ResGroupGetStat(groupId, RES_GROUP_STAT_TOTAL_QUEUE_TIME, statVal, sizeof(statVal));
 		else if (!strcmp(prop, "num_queued"))
-			statVal = ResGroupGetStat(groupId, RES_GROUP_STAT_TOTAL_QUEUED);
+			ResGroupGetStat(groupId, RES_GROUP_STAT_TOTAL_QUEUED, statVal, sizeof(statVal));
 		else if (!strcmp(prop, "num_executed"))
-			statVal = ResGroupGetStat(groupId, RES_GROUP_STAT_TOTAL_EXECUTED);
+			ResGroupGetStat(groupId, RES_GROUP_STAT_TOTAL_EXECUTED, statVal, sizeof(statVal));
 		else
 			/* unknown property name */
 			nulls[2] = true;
 
 		if (!nulls[2])
-		{
-			snprintf(statValStr, sizeof(statValStr), "%d", statVal);
-			values[2] = CStringGetTextDatum(statValStr);
-		}
+			values[2] = CStringGetTextDatum(statVal);
 
 		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
 

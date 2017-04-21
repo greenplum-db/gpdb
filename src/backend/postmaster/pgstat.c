@@ -2420,7 +2420,7 @@ pgstat_report_xact_timestamp(TimestampTz tstamp)
  * Report the timestamp of transaction start queueing on the resource group.
  */
 void
-pgstat_report_resgroup_wait(TimestampTz tstamp, Oid groupid)
+pgstat_report_resgroup(TimestampTz queueStart, Oid groupid)
 {
 	volatile PgBackendStatus *beentry = MyBEEntry;
 
@@ -2433,9 +2433,13 @@ pgstat_report_resgroup_wait(TimestampTz tstamp, Oid groupid)
 	 * ensure the compiler doesn't try to get cute.
 	 */
 	beentry->st_changecount++;
-	beentry->st_resgroup_queue_start_timestamp = tstamp;
+	if (queueStart != 0)
+	{
+		beentry->st_resgroup_queue_start_timestamp = queueStart;
+		beentry->st_waiting = PGBE_WAITING_RESGROUP;
+	}
+
 	beentry->st_rsgid = groupid;
-	beentry->st_waiting = PGBE_WAITING_RESGROUP;
 	beentry->st_changecount++;
 	Assert((beentry->st_changecount & 1) == 0);
 }

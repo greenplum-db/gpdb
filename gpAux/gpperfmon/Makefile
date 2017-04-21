@@ -17,7 +17,7 @@ gpsmon:
 gpmmon:
 	$(MAKE) -C src/gpmon gpmmon BUILDDIR=$(BUILDDIR)
 
-clean:
+clean distclean:
 	$(MAKE) -C src/gpmon clean
 
 install:

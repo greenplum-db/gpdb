@@ -728,7 +728,7 @@ extern void pgstat_report_appname(const char *appname);
 extern void pgstat_report_xact_timestamp(TimestampTz tstamp);
 extern const char *pgstat_get_backend_current_activity(int pid, bool checkUser);
 
-extern void pgstat_report_resgroup_wait(TimestampTz tstamp, Oid groupid);
+extern void pgstat_report_resgroup(TimestampTz queueStart, Oid groupid);
 extern TimestampTz pgstat_fetch_resgroup_queue_timestamp(void);
 
 extern void pgstat_initstats(Relation rel);

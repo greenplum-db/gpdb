@@ -4,7 +4,7 @@ CREATE
 0:SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
 rsgname            |num_running|num_queueing|num_queued|num_executed
 -------------------+-----------+------------+----------+------------
-rg_concurrency_test|0          |0           |0         |0           
+rg_concurrency_test|           |            |          |            
 (1 row)
 
 -- enable resource group and restart cluster.

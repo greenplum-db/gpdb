@@ -1287,6 +1287,9 @@ build_exclude_list(char **exclude_list, int num)
 {
 	PQExpBufferData	buf;
 	int				i;
+	char			quoted[MAXPGPATH];
+	int				error;
+	size_t			len;
 
 	if (num == 0)
 		return "";
@@ -1295,7 +1298,15 @@ build_exclude_list(char **exclude_list, int num)
 
 	for (i = 0; i < num; i++)
 	{
-		appendPQExpBuffer(&buf, "EXCLUDE '%s'", exclude_list[i]);
+		error = 1;
+		len = PQescapeStringConn(conn, quoted, exclude_list[i], MAXPGPATH, &error);
+		if (len == 0 || error != 0)
+		{
+			fprintf(stderr, _("%s: could not process exclude \"%s\": %s\n"),
+					progname, exclude_list[i], PQerrorMessage(conn));
+			disconnect_and_exit(1);
+		}
+		appendPQExpBuffer(&buf, "EXCLUDE '%s'", quoted);
 	}
 
 	if (PQExpBufferDataBroken(buf))

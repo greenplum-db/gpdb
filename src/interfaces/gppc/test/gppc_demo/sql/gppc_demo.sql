@@ -101,7 +101,6 @@ SELECT gppc_func_varchar('This function has one argument.');
 SELECT gppc_func_text('This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.');
 SELECT gppc_func_varchar('white', true), gppc_func_varchar('black', false);
 SELECT byteafunc1(E'\\244\\233abc');
-SELECT byteafunc2(E'\\244\\233abc');
 
 -- Numeric type
 

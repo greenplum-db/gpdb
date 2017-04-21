@@ -612,11 +612,10 @@ print_rmgr_standby(XLogRecPtr cur, XLogRecord *record, uint8 info)
 void
 print_rmgr_heap2(XLogRecPtr cur, XLogRecord *record, uint8 info)
 {
-#if PG_VERSION_NUM >= 90000
 	char spaceName[NAMEDATALEN];
 	char dbName[NAMEDATALEN];
 	char relName[NAMEDATALEN];
-#endif
+
 	char buf[1024];
 
 	switch (info)
@@ -650,6 +649,10 @@ print_rmgr_heap2(XLogRecPtr cur, XLogRecord *record, uint8 info)
 			getSpaceName(xlrec.node.spcNode, spaceName, sizeof(spaceName));
 			getDbName(xlrec.node.dbNode, dbName, sizeof(dbName));
 			getRelName(xlrec.node.relNode, relName, sizeof(relName));
+#else
+			getSpaceName(xlrec.heapnode.node.spcNode, spaceName, sizeof(spaceName));
+			getDbName(xlrec.heapnode.node.dbNode, dbName, sizeof(dbName));
+			getRelName(xlrec.heapnode.node.relNode, relName, sizeof(relName));
 #endif
 
 			total_off = (record->xl_len - SizeOfHeapClean) / sizeof(OffsetNumber);
@@ -662,8 +665,9 @@ print_rmgr_heap2(XLogRecPtr cur, XLogRecord *record, uint8 info)
 			       "",
 			       spaceName, dbName, relName,
 #else
-			snprintf(buf, sizeof(buf), "clean%s: block:%u redirected/dead/unused:%d/%d/%d",
+			snprintf(buf, sizeof(buf), "clean%s: s/d/r:%s/%s/%s block:%u redirected/dead/unused:%d/%d/%d",
 			       info == XLOG_HEAP2_CLEAN_MOVE ? "_move" : "",
+					 spaceName, dbName, relName,
 #endif
 			       xlrec.block,
 			       xlrec.nredirected, xlrec.ndead, nunused

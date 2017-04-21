@@ -29,7 +29,7 @@ typedef struct ResGroupData
 	PROC_QUEUE	waitProcs;
 	int			totalExecuted;	/* total number of executed trans */
 	int			totalQueued;	/* total number of queued trans	*/
-	int			totalQueuedTime;/* total queue time */
+	Interval	totalQueuedTime;/* total queue time */
 } ResGroupData;
 typedef ResGroupData *ResGroup;
 
@@ -71,7 +71,7 @@ extern void ResGroupSlotAcquire(void);
 extern void ResGroupSlotRelease(void);
 
 /* Retrieve statistic information of type from resource group */
-extern int ResGroupGetStat(Oid groupId, ResGroupStatType type);
+extern void ResGroupGetStat(Oid groupId, ResGroupStatType type, char *retStr, int retStrLen);
 
 #define LOG_RESGROUP_DEBUG(...) \
 	do {if (Debug_resource_group) elog(__VA_ARGS__); } while(false);
