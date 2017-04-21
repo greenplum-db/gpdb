@@ -151,6 +151,9 @@ host       all           gpmon  127.0.0.1/28   password</codeblock></p>
         <li>Restart the Greenplum Command Center with the Command Center <codeph>gpcmdr</codeph>
           utility. <codeblock> $ gpcmdr --restart</codeblock></li>
       </ol>
+	  <p>This gpperfmon monitoring system requires some initialization after startup,
+		  so expect monitoring information to appear after a few minutes have passed, and not 
+		  immediately after installation and startup of the gpperfmon system.</p>
     </section>
     <section id="section5">
       <title>Examples</title>
