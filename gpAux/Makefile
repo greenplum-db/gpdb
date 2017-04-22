@@ -2,6 +2,8 @@
 # Makefile for Greenplum Database
 #---------------------------------------------------------------------
 
+#This is to test pr resource
+
 # keep the default target above any targets from included makefiles
 all : devel
 
