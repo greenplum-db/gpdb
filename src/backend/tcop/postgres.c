@@ -4322,20 +4322,17 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 
 	if (errs || argc != optind)
 	{
-		if (errs)
-			optind--;			/* complain about the previous argument */
-
 		/* spell the error message a bit differently depending on context */
 		if (IsUnderPostmaster)
-		ereport(FATAL,
+			ereport(FATAL,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("invalid command-line argument for server process: %s", argv[optind]),
+				 errmsg("invalid command-line arguments for server process"),
 			  errhint("Try \"%s --help\" for more information.", progname)));
 		else
 			ereport(FATAL,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("%s: invalid command-line argument: %s",
-							progname, argv[optind]),
+					 errmsg("%s: invalid command-line arguments",
+							progname),
 			  errhint("Try \"%s --help\" for more information.", progname)));
 	}
 
