@@ -105,7 +105,7 @@ class GpdbrestoreTestCase(unittest.TestCase):
 
     @patch('gppylib.commands.unix.Ping.local')
     @patch('gppylib.commands.unix.Scp.run')
-    @patch('gppylib.operations.backup_utils.Context.get_compress_and_dbname_from_report_file')
+    @patch('gppylib.operations.backup_utils.Context.get_compress_and_dbname_from_report_file', return_value=('False', 'gptest'))
     @patch('gppylib.operations.backup_utils.Context.is_timestamp_in_old_format', return_value=False)
     @patch('gppylib.operations.unix.RawRemoteOperation.execute', return_value=True)
     @patch('gppylib.operations.unix.ListFilesByPattern.run', return_value=['gp_dump_20160101010101.rpt'])
@@ -131,18 +131,36 @@ class GpdbrestoreTestCase(unittest.TestCase):
         with self.assertRaisesRegexp(Exception, 'does not contain expected "db_dumps" directory'):
             self.gpdbrestore._validate_db_host_path()
 
-#TODO: Decide whether to keep these tests or not
-    """
-    def test_validate_db_host_path_bad_host(self, mock1):
-        self.context.db_host_path = ['foo.bar.com', '/tmp/db_dumps/20160101']
-        with self.assertRaisesRegexp(Exception, 'Temporary failure in name resolution'):
-            self.gpdbrestore._validate_db_host_path()
+    @patch('gppylib.operations.backup_utils.Context.get_compress_and_dbname_from_report_file',
+            side_effect=[(False, "gptest1"), (False, "gptest2")])
+    @patch('gppylib.operations.backup_utils.Context.get_report_files_and_paths',
+            return_value=[('path','gp_dump_20160101010101.rpt'), ('path', 'gp_dump_20160101010102.rpt')])
+    def test_get_dump_timestamps_for_database_one_matching_file(self, mock1, mock2, mock3):
+        dbname = 'gptest2'
+        expected_timestamps = [20160101010102]
+        actual_timestamps = self.gpdbrestore._get_dump_timestamps_for_database(dbname, "/tmp")
+        self.assertEquals(expected_timestamps, actual_timestamps)
 
-    @patch('gppylib.commands.unix.Ping.local')
-    def test_validate_db_host_path_bad_path(self, mock1, mock2):
-        self.context.db_host_path = ['hostname', '/db_dumps/nonexistent/path']
-        with self.assertRaisesRegexp(Exception, "Could not find path .* on host .*"):
-            self.gpdbrestore._validate_db_host_path()"""
+    @patch('gppylib.operations.backup_utils.Context.get_compress_and_dbname_from_report_file',
+            side_effect=[(False, "gptest2"), (False, "gptest1"), (False, "gptest2")])
+    @patch('gppylib.operations.backup_utils.Context.get_report_files_and_paths',
+            return_value=[('path', 'gp_dump_20160101010101.rpt'),
+                          ('path', 'gp_dump_20160101010102.rpt'),
+                          ('path', 'gp_dump_20160101010103.rpt')])
+    def test_get_dump_timestamps_for_database_two_matching_files(self, mock1, mock2, mock3):
+        dbname = 'gptest2'
+        expected_timestamps = [20160101010101, 20160101010103]
+        actual_timestamps = self.gpdbrestore._get_dump_timestamps_for_database(dbname, "/tmp")
+        self.assertEquals(expected_timestamps, actual_timestamps)
+
+    @patch('gppylib.operations.backup_utils.Context.get_compress_and_dbname_from_report_file',
+            side_effect=[(False, "gptest1"), (False, "gptest2")])
+    @patch('gppylib.operations.backup_utils.Context.get_report_files_and_paths',
+            return_value=[('path','gp_dump_20160101010101.rpt'), ('path', 'gp_dump_20160101010102.rpt')])
+    def test_get_dump_timestamps_for_database_no_report_files_for_dbname(self, mock1, mock2, mock3):
+        dbname = 'gptest'
+        with self.assertRaisesRegexp(ExceptionNoStackTraceNeeded, 'No report files located with database gptest'):
+            self.gpdbrestore._get_dump_timestamps_for_database(dbname, "/tmp")
 
     @patch('gppylib.operations.unix.ListFilesByPattern.run', return_value=[])
     def test_get_timestamp_for_validation_no_timestamps(self, mock1, mock2):

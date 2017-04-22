@@ -832,7 +832,7 @@ class ValidateTimestamp(Operation):
     def validate_metadata_file(self):
         report_file = self.context.generate_filename("report")
         self.context.use_old_filename_format = self.context.is_timestamp_in_old_format()
-        self.context.get_compress_and_dbname_from_report_file(report_file)
+        self.context.compress, self.context.target_db = self.context.get_compress_and_dbname_from_report_file(report_file)
 
         if self.context.ddboost:
             # We pass in segment_dir='' because we don't want it included in our path for ddboost

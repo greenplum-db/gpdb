@@ -407,7 +407,8 @@ class GpdbRestore(Operation):
 
         self._get_timestamp_for_validation(root)
 
-        self.context.get_compress_and_dbname_from_report_file(self.context.generate_filename("report"))
+        report_filename = self.generate_filename("report")
+        self.context.compress, self.context.target_db = self.context.get_compress_and_dbname_from_report_file(report_filename)
 
     def _validate_db_host_path(self):
         # The format of the -R option should be 'hostname:path_to_dumpset', hence the length should be 2 (hostname, path_to_dumpset)
@@ -439,7 +440,8 @@ class GpdbRestore(Operation):
             Scp('Copying report file', srcHost=host, srcFile="%s/%s" % (path, file), dstFile="/tmp").run(validateAfter=True)
 
         self._get_timestamp_for_validation("/tmp")
-        self.context.get_compress_and_dbname_from_report_file(self.context.generate_filename("report", directory="/tmp"))
+        report_filename = self.context.generate_filename("report", directory="/tmp")
+        self.context.compress, self.context.target_db = self.context.get_compress_and_dbname_from_report_file(report_filename)
 
         local_files = ListFilesByPattern("/tmp", report_pattern).run()
         for file in local_files:
@@ -463,31 +465,32 @@ class GpdbRestore(Operation):
             self.context.timestamp = match[-18:-4]
         self.context.use_old_filename_format = self.context.is_timestamp_in_old_format()
 
-    def _search_for_latest(self):
-        logger.info("Scanning Master host for latest dump file set for database %s" % self.search_for_dbname)
-        root = os.path.join(self.context.get_backup_root(), self.context.dump_dir)
-        candidates, timestamps = [], []
-        prefix = "%s*.rpt" % self.context.generate_prefix("report")
-        for path, dirs, files in os.walk(root):
-            matching = fnmatch.filter(files, "%s*" % prefix)
-            candidates.extend([(path, report_file) for report_file in matching])
-        if len(candidates) == 0:
-            raise ExceptionNoStackTraceNeeded("No report files located")
-        for path, report_file in candidates:
-            self.context.get_compress_and_dbname_from_report_file(os.path.join(path, report_file))
-            db_name = self.context.target_db
-            logger.debug("Looking for %s, found %s" % (self.search_for_dbname, db_name))
-            if self.search_for_dbname == db_name:
-                logger.info('Located dump file %s for database %s, adding to list' % (report_file, self.search_for_dbname))
+    def _get_dump_timestamps_for_database(self, search_for_dbname, backup_root):
+        timestamps = []
+        report_files = self.context.get_report_files_and_paths(backup_root)
+        for path, report_file in report_files:
+            _, report_file_dbname = self.context.get_compress_and_dbname_from_report_file(os.path.join(path, report_file))
+            logger.debug("Looking for %s, found %s" % (search_for_dbname, report_file_dbname))
+            if search_for_dbname == report_file_dbname:
+                logger.info('Located report file %s for database %s, adding to list' % (report_file, search_for_dbname))
                 timestamps.append(int(report_file[-18:-4]))
             else:
-                logger.debug("Dump file has incorrect database name of %s, skipping..." % db_name)
+                logger.debug("Report file has incorrect database name of %s, skipping..." % report_file_dbname)
         if len(timestamps) == 0:
-            raise ExceptionNoStackTraceNeeded("No report files located with database %s" % self.search_for_dbname)
+            raise ExceptionNoStackTraceNeeded("No report files located with database %s" % search_for_dbname)
+        return timestamps
+
+    def _search_for_latest(self):
+        logger.info("Scanning Master host for latest dump file set for database %s" % self.search_for_dbname)
+        backup_root = os.path.join(self.context.get_backup_root(), self.context.dump_dir)
+        timestamps = self._get_dump_timestamps_for_database(self.search_for_dbname, backup_root)
         self.context.timestamp = str(max(timestamps))
         logger.info("Identified latest dump timestamp for %s as %s" %  (self.search_for_dbname, self.context.timestamp))
+
+        #Set context variables that we will need for the rest of the restore
         self.context.use_old_filename_format = self.context.is_timestamp_in_old_format()
-        self.context.get_compress_and_dbname_from_report_file(self.context.generate_filename("report", directory=path))
+        report_filename = self.context.generate_filename("report")
+        self.context.compress, self.context.target_db = self.context.get_compress_and_dbname_from_report_file(report_filename)
 
     def _select_multi_file(self, dates_and_times):
         spc = "        "
