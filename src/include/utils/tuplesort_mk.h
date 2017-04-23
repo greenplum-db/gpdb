@@ -26,9 +26,13 @@ extern Tuplesortstate_mk *tuplesort_begin_heap_mk(ScanState * ss,
 					 Oid *sortOperators, bool *nullsFirstFlags,
 					 int workMem, bool randomAccess);
 
-extern Tuplesortstate_mk *tuplesort_begin_index_mk(Relation indexRel,
+extern Tuplesortstate_mk *tuplesort_begin_index_btree_mk(Relation indexRel,
 					  bool enforceUnique,
 					  int workMem, bool randomAccess);
+
+extern Tuplesortstate_mk *tuplesort_begin_index_hash_mk(Relation indexRel,
+							uint32 hash_mask,
+							int workMem, bool randomAccess);
 
 extern Tuplesortstate_mk *tuplesort_begin_datum_mk(ScanState * ss,
 					  Oid datumType,

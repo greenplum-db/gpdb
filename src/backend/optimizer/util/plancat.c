@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/plancat.c,v 1.140.2.1 2008/04/01 00:48:44 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/plancat.c,v 1.141 2008/03/15 20:46:31 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

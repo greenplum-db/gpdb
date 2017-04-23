@@ -1,7 +1,4 @@
-$PostgreSQL: pgsql/src/backend/access/hash/README,v 1.8 2008/03/20 17:55:14 momjian Exp $
-
-Hash Indexing
-=============
+$PostgreSQL: pgsql/src/backend/access/hash/README,v 1.7 2008/03/15 20:46:31 tgl Exp $
 
 This directory contains an implementation of hash indexing for Postgres.  Most
 of the core ideas are taken from Margo Seltzer and Ozan Yigit, A New Hashing

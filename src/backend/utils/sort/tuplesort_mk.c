@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * tuplesort.c
+ * tuplesort_mk.c
  *	  Generalized tuple sorting routines.
  *
  * This module handles sorting of heap tuples, index tuples, or single
@@ -333,7 +333,7 @@ struct Tuplesortstate_mk
 
 	/*
 	 * These variables are specific to the IndexTuple case; they are set by
-	 * tuplesort_begin_index and used only by the IndexTuple routines.
+	 * tuplesort_begin_index_btree and used only by the IndexTuple routines.
 	 */
 	Relation	indexRel;
 
@@ -880,7 +880,7 @@ tuplesort_begin_heap_file_readerwriter_mk(ScanState *ss,
 }
 
 Tuplesortstate_mk *
-tuplesort_begin_index_mk(Relation indexRel,
+tuplesort_begin_index_btree_mk(Relation indexRel,
 						 bool enforceUnique,
 						 int workMem, bool randomAccess)
 {
@@ -918,6 +918,14 @@ tuplesort_begin_index_mk(Relation indexRel,
 	MemoryContextSwitchTo(oldcontext);
 
 	return state;
+}
+
+Tuplesortstate_mk *tuplesort_begin_index_hash_mk(Relation indexRel,
+							uint32 hash_mask,
+							int workMem, bool randomAccess)
+{
+	/* We don't support a hash index mk sort */
+	elog(ERROR, "tuplesort_begin_index_hash_mk is not implemented");
 }
 
 Tuplesortstate_mk *
