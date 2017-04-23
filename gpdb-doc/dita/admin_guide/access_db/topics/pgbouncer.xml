@@ -92,8 +92,7 @@
           the PgBouncer Administration Console. </p>
         <p>Follow these steps to set up PgBouncer.</p>
         <ol id="ol_xyn_qwg_cs">
-          <li>Create a PgBouncer configuration file, for example <codeph>pgbouncer.ini</codeph>.
-            Here is a simple configuration
+          <li>Create a PgBouncer configuration file, for example <codeph>pgbouncer.ini</codeph>.            Here is a simple configuration
               file:<codeblock>[databases]
 template1 = host=127.0.0.1 port=5432 dbname=template1
 mydb = host=127.0.0.1 port=5432 dbname=mydb
