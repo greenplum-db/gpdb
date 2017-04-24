@@ -2,9 +2,9 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic71">
-   <title>Defining a Command-Based Writable External Web Table</title>
+   <title>Defining a Command-Based Writable Web External Table</title>
    <body>
-      <p>You can define writable external web tables to send output rows to an application or
+      <p>You can define writable web external tables to send output rows to an application or
          script. The application must accept an input stream, reside in the same location on all of
          the Greenplum segment hosts, and be executable by the
             <codeph>gpadmin</codeph> user. All segments in the Greenplum system run the application or script, whether or not a segment has output rows to
