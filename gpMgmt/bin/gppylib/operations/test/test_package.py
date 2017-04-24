@@ -7,7 +7,7 @@ import tempfile
 import platform
 import getpass
 import tarfile
- 
+
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray
 from contextlib import closing
@@ -26,71 +26,76 @@ ARCH = platform.machine()
 GPHOME = dereference_symlink(gp.get_gphome())
 
 ARCHIVE_PATH = os.path.join(GPHOME, 'share/packages/archive')
-RPM_DATABASE = os.path.join(GPHOME, 'share/packages/database') 
+RPM_DATABASE = os.path.join(GPHOME, 'share/packages/database')
 GPPKG_EXTENSION = ".gppkg"
 SCRATCH_SPACE = os.path.join(tempfile.gettempdir(), getpass.getuser())
 GPDB_VERSION = "4.2"
 MASTER_PORT = os.getenv("PGPORT")
 
+
 def skipIfNoStandby():
     standby = get_host_list()[0]
     if standby is None:
-        return unittest.skip("requires standby") 
-    return lambda o: o 
+        return unittest.skip("requires standby")
+    return lambda o: o
+
 
 def get_host_list():
-    '''
+    """
         Returns a tuple which consists of the standby
         and segment hosts
-    '''
-    gparr = GpArray.initFromCatalog(dbconn.DbURL(port = MASTER_PORT), utility = True)
+    """
+    gparr = GpArray.initFromCatalog(dbconn.DbURL(port=MASTER_PORT), utility=True)
     segs = gparr.getDbList()
 
     standby_host = None
     segment_host_list = []
 
     for seg in segs:
-        if seg.isSegmentStandby(current_role = True):
+        if seg.isSegmentStandby(current_role=True):
             standby_host = seg.getSegmentHostName()
-        elif not seg.isSegmentMaster(current_role = True):
+        elif not seg.isSegmentMaster(current_role=True):
             segment_host_list.append(seg.getSegmentHostName())
 
-    #Deduplicate the hosts so that we 
-    #dont install multiple times on the same host
+    # Deduplicate the hosts so that we
+    # dont install multiple times on the same host
     segment_host_list = list(set(segment_host_list))
 
     return (standby_host, segment_host_list)
 
+
 def remove_timestamp(result):
     result_without_timestamp = []
     results = result.split('\n')[1:]
-    
+
     for res in results:
         res = res.split(':-')[1].strip()
         res = ''.join(res.split(' '))
         result_without_timestamp.append(res)
 
-    return result_without_timestamp 
+    return result_without_timestamp
+
 
 def run_command(cmd_str):
     cmd = Command("Local Command", cmd_str)
-    cmd.run(validateAfter = True)
+    cmd.run(validateAfter=True)
     results = cmd.get_results()
-    
+
     if results.rc != 0:
         return results.stderr.strip()
     else:
         return results.stdout.strip()
 
+
 class RPMSpec:
-    def __init__(self, name, version, release, depends = []):
+    def __init__(self, name, version, release, depends=[]):
         self.name = name
         self.version = version
         self.release = release
         self.depends = depends
 
     def get_package_name(self):
-        return self.name + '-' + self.version + '-' + self.release 
+        return self.name + '-' + self.version + '-' + self.release
 
     def get_filename(self):
         return self.get_package_name() + '.' + ARCH + ".rpm"
@@ -111,12 +116,12 @@ Prefix:         /temp
 AutoReq:        no
 AutoProv:       no
 BuildArch:      ''' + ARCH + ''' 
-Provides:       temp_test = '''+ self.version +''', /bin/sh
+Provides:       temp_test = ''' + self.version + ''', /bin/sh
 BuildRoot:      %{_topdir}/BUILD '''
 
-        if self.depends != []: 
+        if self.depends != []:
             '''Requires:       ''' + ' '.join(self.depends)
-        
+
         rpm_spec_file += '''
 %description
 Temporary test package for gppkg.
@@ -134,13 +139,14 @@ touch %{buildroot}/temp/temp_file
 '''
         return rpm_spec_file
 
+
 class BuildRPM(Operation):
     def __init__(self, spec):
         self.spec = spec
 
     def execute(self):
         rpm_spec_file = str(self.spec)
-        build_dir = os.path.join(SCRATCH_SPACE, "BUILD") 
+        build_dir = os.path.join(SCRATCH_SPACE, "BUILD")
         os.mkdir(build_dir)
         rpms_dir = os.path.join(SCRATCH_SPACE, "RPMS")
         os.mkdir(rpms_dir)
@@ -149,7 +155,7 @@ class BuildRPM(Operation):
             with tempfile.NamedTemporaryFile() as f:
                 f.write(rpm_spec_file)
                 f.flush()
-            
+
                 os.system("cd " + SCRATCH_SPACE + "; rpmbuild --quiet -bb " + f.name)
 
             shutil.copy(os.path.join(SCRATCH_SPACE, "RPMS", ARCH, self.spec.get_filename()), os.getcwd())
@@ -157,35 +163,37 @@ class BuildRPM(Operation):
             shutil.rmtree(build_dir)
             shutil.rmtree(rpms_dir)
 
-        return self.spec.get_filename() 
+        return self.spec.get_filename()
+
 
 class GppkgSpec:
-    def __init__(self, name, version, gpdbversion = GPDB_VERSION, os = OS, arch = ARCH):
-        self.name = name 
+    def __init__(self, name, version, gpdbversion=GPDB_VERSION, os=OS, arch=ARCH):
+        self.name = name
         self.version = version
         self.gpdbversion = gpdbversion
         self.os = os
         self.arch = arch
 
     def get_package_name(self):
-        return self.name + '-' + self.version       
+        return self.name + '-' + self.version
 
     def get_filename(self):
         return self.get_package_name() + '-' + self.os + '-' + self.arch + GPPKG_EXTENSION
 
-    def __str__(self): 
+    def __str__(self):
         gppkg_spec_file = '''
 PkgName: ''' + self.name + '''
 Version: ''' + self.version + '''
 GPDBVersion: ''' + self.gpdbversion + '''
 Description: Temporary Test Package
 OS: ''' + self.os + '''
-Architecture: ''' + self.arch 
+Architecture: ''' + self.arch
 
         return gppkg_spec_file
 
+
 class BuildGppkg(Operation):
-    def __init__(self, gppkg_spec, main_rpm_spec, dependent_rpm_specs = []):
+    def __init__(self, gppkg_spec, main_rpm_spec, dependent_rpm_specs=[]):
         self.gppkg_spec = gppkg_spec
         self.main_rpm_spec = main_rpm_spec
         self.dependent_rpm_specs = dependent_rpm_specs
@@ -194,14 +202,14 @@ class BuildGppkg(Operation):
 
         if not os.path.exists(SCRATCH_SPACE):
             os.mkdir(SCRATCH_SPACE)
-        
+
         gppkg_spec_file = str(self.gppkg_spec)
-        #create gppkg_dir
+        # create gppkg_dir
         gppkg_dir = os.path.join(SCRATCH_SPACE, "package")
         if not os.path.exists(gppkg_dir):
             os.mkdir(gppkg_dir)
-            
-        rpm_file = BuildRPM(self.main_rpm_spec).run()    
+
+        rpm_file = BuildRPM(self.main_rpm_spec).run()
         shutil.move(rpm_file, gppkg_dir)
 
         try:
@@ -212,8 +220,8 @@ class BuildGppkg(Operation):
                 for spec in self.dependent_rpm_specs:
                     rpm_file = BuildRPM(spec).run()
                     shutil.move(rpm_file, deps_dir)
-        
-            #create gppkg
+
+            # create gppkg
             with open(os.path.join(gppkg_dir, "gppkg_spec.yml"), "w") as f:
                 f.write(gppkg_spec_file)
 
@@ -224,19 +232,20 @@ class BuildGppkg(Operation):
 
         return self.gppkg_spec.get_filename()
 
+
 class GppkgTestCase(unittest.TestCase):
     def setUp(self):
         self.cleanup()
         self.rpm_spec = RPMSpec("test", "1", "1")
         self.gppkg_spec = GppkgSpec("test", "1.0")
 
-    def tearDown(self): 
+    def tearDown(self):
         self.cleanup()
-   
-    @classmethod 
+
+    @classmethod
     def setUpClass(self):
         self.built_packages = set()
-    
+
     @classmethod
     def tearDownClass(self):
         for gppkg in self.built_packages:
@@ -244,30 +253,30 @@ class GppkgTestCase(unittest.TestCase):
 
     def cleanup(self):
         results = run_command("gppkg -q --all")
-        gppkgs = results.split('\n')[1:]   #The first line is 'Starting gppkg with args', which we want to ignore. 
+        gppkgs = results.split('\n')[1:]  # The first line is 'Starting gppkg with args', which we want to ignore.
 
         for gppkg in gppkgs:
             run_command("gppkg --remove " + gppkg)
 
-    def build(self, gppkg_spec, rpm_spec, dep_rpm_specs = []):
+    def build(self, gppkg_spec, rpm_spec, dep_rpm_specs=[]):
         gppkg_file = BuildGppkg(gppkg_spec, rpm_spec, dep_rpm_specs).run()
         self.assertTrue(self._check_build(gppkg_file, gppkg_spec))
         self.built_packages.add(gppkg_file)
         return gppkg_file
-        
+
     def _check_build(self, gppkg_file, gppkg_spec):
         return (gppkg_file == (gppkg_spec.get_filename()))
-        
+
     def install(self, gppkg_filename):
         run_command("gppkg --install %s" % gppkg_filename)
         self.assertTrue(self.check_install(gppkg_filename))
-      
+
     def check_install(self, gppkg_filename):
         cmd = "gppkg -q %s" % gppkg_filename
         results = run_command(cmd)
-        results = results[1:] 
-        test_str = ''.join(gppkg_filename.split('-')[:1]) + " is installed" 
-        is_installed = test_str in results 
+        results = results[1:]
+        test_str = ''.join(gppkg_filename.split('-')[:1]) + " is installed"
+        is_installed = test_str in results
         return is_installed and CheckFile(os.path.join(ARCHIVE_PATH, gppkg_filename)).run()
 
     def remove(self, gppkg_filename):
@@ -279,29 +288,30 @@ class GppkgTestCase(unittest.TestCase):
         run_command("gppkg --update %s" % new_gppkg_filename)
         self.assertTrue(self.check_install(new_gppkg_filename))
 
+
 class SimpleGppkgTestCase(GppkgTestCase):
     def test00_simple_build(self):
         self.build(self.gppkg_spec, self.rpm_spec)
 
     def test01_simple_install(self):
-        gppkg_file = self.gppkg_spec.get_filename() 
+        gppkg_file = self.gppkg_spec.get_filename()
         self.install(gppkg_file)
 
-        #Check RPM database
+        # Check RPM database
         results = run_command("rpm -q %s --dbpath %s" % (self.rpm_spec.get_package_name(), RPM_DATABASE))
         self.assertEquals(results, self.rpm_spec.get_package_name())
 
     def test02_simple_update(self):
-        gppkg_file = self.gppkg_spec.get_filename() 
+        gppkg_file = self.gppkg_spec.get_filename()
         self.install(gppkg_file)
 
         update_rpm_spec = RPMSpec("test", "1", "2")
         update_gppkg_spec = GppkgSpec("test", "1.1")
         update_gppkg_file = self.build(update_gppkg_spec, update_rpm_spec)
-   
+
         self.update(gppkg_file, update_gppkg_file)
 
-        #Check for the packages
+        # Check for the packages
         results = run_command("rpm -q %s --dbpath %s" % (update_rpm_spec.get_package_name(), RPM_DATABASE))
         self.assertEquals(results, update_rpm_spec.get_package_name())
 
@@ -313,11 +323,11 @@ class SimpleGppkgTestCase(GppkgTestCase):
 
         results = run_command("gppkg -q --all")
         results = results.split('\n')[1:]
-        
-        self.assertEquals(results, [])     
-       
+
+        self.assertEquals(results, [])
+
     def test04_help(self):
-        help_options = ["--help", "-h", "-?"] 
+        help_options = ["--help", "-h", "-?"]
 
         for opt in help_options:
             results = run_command("gppkg " + opt)
@@ -327,11 +337,12 @@ class SimpleGppkgTestCase(GppkgTestCase):
         results = run_command("gppkg --version")
         self.assertNotEquals(results, "")
 
+
 class QueryTestCases(GppkgTestCase):
     def setUp(self):
-        self.rpm_spec1 = RPMSpec("test", "1", "1")    
+        self.rpm_spec1 = RPMSpec("test", "1", "1")
         self.gppkg_spec1 = GppkgSpec("test", "1.0")
- 
+
         self.rpm_spec2 = RPMSpec("test1", "1", "1")
         self.gppkg_spec2 = GppkgSpec("test1", "1.0")
 
@@ -347,27 +358,30 @@ class QueryTestCases(GppkgTestCase):
         gppkg_file1 = self.build(self.gppkg_spec1, self.rpm_spec1)
         gppkg_file2 = self.build(self.gppkg_spec2, self.rpm_spec2)
 
-        self.install(gppkg_file1) 
-        self.install(gppkg_file2)       
-  
+        self.install(gppkg_file1)
+        self.install(gppkg_file2)
+
     def test01_query_all(self):
         results = run_command("gppkg -q --all")
-        self.assertEquals(results.split('\n')[1:], [self.gppkg_spec1.get_package_name(), self.gppkg_spec2.get_package_name()])
+        self.assertEquals(results.split('\n')[1:],
+                          [self.gppkg_spec1.get_package_name(), self.gppkg_spec2.get_package_name()])
 
         results = run_command("gppkg --all -q")
-        self.assertEquals(results.split('\n')[1:], [self.gppkg_spec1.get_package_name(), self.gppkg_spec2.get_package_name()])
+        self.assertEquals(results.split('\n')[1:],
+                          [self.gppkg_spec1.get_package_name(), self.gppkg_spec2.get_package_name()])
 
         self.assertRaises(ExecutionError, run_command, "gppkg -qall")
 
     def test02_query_info(self):
-        expected_info_result = ['Nametest', 'Version1.0', 'Architecturex86_64', 'OSLinux', 'GPDBVersionmainbuilddev', 'DescriptionTemporaryTestPackage']
-        #Normal order of the options
+        expected_info_result = ['Nametest', 'Version1.0', 'Architecturex86_64', 'OSLinux', 'GPDBVersionmainbuilddev',
+                                'DescriptionTemporaryTestPackage']
+        # Normal order of the options
         results = run_command("gppkg -q --info %s" % self.gppkg_spec1.get_filename())
         self.assertTrue(len(results.split('\n')) > 1)
         results = remove_timestamp(results)
         self.assertEquals(results, expected_info_result)
 
-        #Reverse order of the options
+        # Reverse order of the options
         results = run_command("gppkg --info -q %s" % self.gppkg_spec1.get_filename())
         self.assertTrue(len(results.split('\n')) > 1)
         results = remove_timestamp(results)
@@ -382,11 +396,12 @@ class QueryTestCases(GppkgTestCase):
         self.assertTrue(len(results.split('\n')) > 1)
         results = results.split('\n')[1:]
         self.assertEquals(results, expected_list_result)
-        
+
         results = run_command("gppkg --list -q %s" % self.gppkg_spec1.get_filename())
         self.assertTrue(len(results.split('\n')) > 1)
-        results = results.split('\n')[1:] 
+        results = results.split('\n')[1:]
         self.assertEquals(results, expected_list_result)
+
 
 class MiscTestCases(GppkgTestCase):
     @unittest.expectedFailure
@@ -410,29 +425,30 @@ class MiscTestCases(GppkgTestCase):
         results = run_command("gppkg -q --all")
         self.assertTrue(''.join(gppkg_file.split('-')[:1]) in results)
 
+
 class SimpleNegativeTestCases(GppkgTestCase):
     @unittest.expectedFailure
     def test00_wrong_os(self):
         os = "abcde"
-        rpm_spec = self.rpm_spec 
+        rpm_spec = self.rpm_spec
         gppkg_spec = GppkgSpec("test", "1.0", GPDB_VERSION, os)
-        gppkg_file = self.build(gppkg_spec, rpm_spec) 
+        gppkg_file = self.build(gppkg_spec, rpm_spec)
 
-        with self.assertRaisesRegexp(ExecutionError , "%s os required. %s os found" % (os, OS)):
+        with self.assertRaisesRegexp(ExecutionError, "%s os required. %s os found" % (os, OS)):
             self.install(gppkg_file)
-       
+
     def test01_wrong_arch(self):
         arch = "abcde"
-        rpm_spec = self.rpm_spec 
+        rpm_spec = self.rpm_spec
         gppkg_spec = GppkgSpec("test", "1.0", GPDB_VERSION, OS, arch)
-        gppkg_file = self.build(gppkg_spec, rpm_spec) 
+        gppkg_file = self.build(gppkg_spec, rpm_spec)
 
         with self.assertRaisesRegexp(ExecutionError, "%s Arch required. %s Arch found" % (arch, ARCH)):
             self.install(gppkg_file)
 
     def test02_wrong_gpdbversion(self):
         gpdb_version = "4.6"
-        rpm_spec = self.rpm_spec 
+        rpm_spec = self.rpm_spec
         gppkg_spec = GppkgSpec("test", "1.0", gpdb_version)
         gppkg_file = self.build(gppkg_spec, rpm_spec)
 
@@ -443,48 +459,50 @@ class SimpleNegativeTestCases(GppkgTestCase):
         gppkg_file = self.build(self.gppkg_spec, self.rpm_spec)
 
         self.install(self.gppkg_spec.get_filename())
- 
+
         with self.assertRaisesRegexp(ExecutionError, "%s is already installed" % gppkg_file):
             self.install(gppkg_file)
 
     @unittest.expectedFailure
     def test04_update_gppkg_lower(self):
-        #Use gppkg from previous test
-        self.install(self.gppkg_spec.get_filname())
+        # Use gppkg from previous test
+        self.install(self.gppkg_spec.get_filename())
 
-        #Use gppkg which has a lower version, but the rpm is > the one installed
+        # Use gppkg which has a lower version, but the rpm is > the one installed
         update_rpm_spec = RPMSpec("test", "1", "2")
         update_gppkg_spec = GppkgSpec("test", "0.1")
         update_gppkg_file = self.build(update_gppkg_spec, update_rpm_spec)
-       
-        with self.assertRaisesRegexp(ExecutionError, "Newer version of %s already installed" % update_gppkg_spec.get_package_name()):
+
+        with self.assertRaisesRegexp(ExecutionError,
+                                     "Newer version of %s already installed" % update_gppkg_spec.get_package_name()):
             self.update(self.gppkg_spec.get_filename(), update_gppkg_file)
-        #Check that the original package is still installed and not updated
+        # Check that the original package is still installed and not updated
         self.assertTrue(self.check_install(self.gppkg_spec.get_filename()))
 
     def test05_update_rpm_lower(self):
-        #Use gppkg from previous test
+        # Use gppkg from previous test
         self.install(self.gppkg_spec.get_filename())
 
-        #Use gppkg with a lower RPM version but gppkg version is > the one installed
+        # Use gppkg with a lower RPM version but gppkg version is > the one installed
         update_rpm_spec = RPMSpec("test", "1", "0")
-        update_gppkg_spec = GppkgSpec("test", "1.1") 
+        update_gppkg_spec = GppkgSpec("test", "1.1")
         update_gppkg_file = self.build(update_gppkg_spec, update_rpm_spec)
-        
+
         with self.assertRaisesRegexp(ExecutionError, self.rpm_spec.get_filename()):
             self.update(self.gppkg_spec.get_filename(), update_gppkg_file)
-        #Check that the original package is still installed and not updated
+        # Check that the original package is still installed and not updated
         self.assertTrue(self.check_install(self.gppkg_spec.get_filename()))
 
     def test06_uninstall_twice(self):
-        #Uses the gppkg from previous test
+        # Uses the gppkg from previous test
         self.install(self.gppkg_spec.get_filename())
 
-        #Uninstall gppkg 
+        # Uninstall gppkg
         self.remove(self.gppkg_spec.get_filename())
 
         with self.assertRaisesRegexp(ExecutionError, "%s has not been installed" % self.gppkg_spec.get_package_name()):
             self.remove(self.gppkg_spec.get_filename())
+
 
 class SingleDependenciesTestCases(GppkgTestCase):
     def setUp(self):
@@ -495,38 +513,40 @@ class SingleDependenciesTestCases(GppkgTestCase):
 
     def test00_build(self):
         self.build(self.gppkg_spec, self.main_rpm_spec, [self.dep_rpm_spec])
-       
+
     def test01_install(self):
         gppkg_file = self.build(self.gppkg_spec, self.main_rpm_spec, [self.dep_rpm_spec])
         self.install(gppkg_file)
 
     def test02_update_gppkg_higher(self):
-        #Use gppkg from previous test
+        # Use gppkg from previous test
         self.install(self.gppkg_spec.get_filename())
-        
-        #New gppkg with higher gppkg, main and deps version
+
+        # New gppkg with higher gppkg, main and deps version
         update_main_rpm_spec = RPMSpec("test", "1", "2")
         update_dep_rpm_spec = RPMSpec("dep", "1", "2")
         update_gppkg_spec = GppkgSpec("test", "1.1")
-        update_gppkg_file = self.build(update_gppkg_spec, update_main_rpm_spec, [update_dep_rpm_spec]) 
-        
-        self.update(self.gppkg_spec.get_filename(), update_gppkg_file) 
-   
-    @unittest.expectedFailure 
+        update_gppkg_file = self.build(update_gppkg_spec, update_main_rpm_spec, [update_dep_rpm_spec])
+
+        self.update(self.gppkg_spec.get_filename(), update_gppkg_file)
+
+    @unittest.expectedFailure
     def test03_update_gppkg_lower(self):
-        #Use the gppkg from previous test
+        # Use the gppkg from previous test
         update_main_rpm_spec = RPMSpec("test", "1", "2")
         update_dep_rpm_spec = RPMSpec("dep", "1", "2")
         update_gppkg_spec = GppkgSpec("test", "1.1")
         self.install(update_gppkg_spec.get_filename())
-    
-        #Original gppkg with a lower gppkg, main and deps version
-        with self.assertRaisesRegexp(ExecutionError, "A newer version of %s is already installed" % self.gppkg_spec.get_filename()):
+
+        # Original gppkg with a lower gppkg, main and deps version
+        with self.assertRaisesRegexp(ExecutionError,
+                                     "A newer version of %s is already installed" % self.gppkg_spec.get_filename()):
             self.update(update_gppkg_spec.get_filename(), self.gppkg_spec.get_filename())
 
     def test04_uninstall(self):
         self.install(self.gppkg_spec.get_filename())
         self.remove(self.gppkg_spec.get_filename())
+
 
 class MuckWithInternalsTestCases(GppkgTestCase):
     '''
@@ -536,23 +556,24 @@ class MuckWithInternalsTestCases(GppkgTestCase):
         cleanup method will not be able to cleanup 
         the packages. 
     '''
+
     def test00_delete_package_from_archive_and_install(self):
         gppkg_file = self.build(self.gppkg_spec, self.rpm_spec)
-        self.install(gppkg_file) 
+        self.install(gppkg_file)
 
-        #Remove the package from archive
+        # Remove the package from archive
         os.remove(os.path.join(ARCHIVE_PATH, gppkg_file))
-       
+
         self.install(gppkg_file)
 
     @unittest.expectedFailure
     def test01_delete_package_from_archive_and_uninstall(self):
-        #Building off of last test case's state
-        #Use gppkg from previous test
+        # Building off of last test case's state
+        # Use gppkg from previous test
         gppkg_file = self.gppkg_spec.get_filename()
         self.install(gppkg_file)
 
-        #Remove the package from archive
+        # Remove the package from archive
         os.remove(os.path.join(ARCHIVE_PATH, gppkg_file))
 
         try:
@@ -562,20 +583,20 @@ class MuckWithInternalsTestCases(GppkgTestCase):
             self.fail("Execution Error %s" % e)
 
     def test02_delete_rpm_and_install(self):
-        #Use gppkg from previous test
+        # Use gppkg from previous test
         gppkg_file = self.gppkg_spec.get_filename()
         self.install(gppkg_file)
-    
-        #Uninstall the RPM
+
+        # Uninstall the RPM
         run_command("rpm -e %s --dbpath %s" % (self.rpm_spec.get_package_name(), RPM_DATABASE))
-        
+
         with self.assertRaisesRegexp(ExecutionError, "%s is not installed" % self.rpm_spec.get_package_name()):
             run_command("rpm -q %s --dbpath %s" % (self.rpm_spec.get_package_name(), RPM_DATABASE))
-        
+
         try:
-            self.install(gppkg_file) 
+            self.install(gppkg_file)
         except ExecutionError, e:
-            #Install the rpm 
+            # Install the rpm
             with closing(tarfile.open(self.gppkg_spec.get_filename())) as tf:
                 tf.extract(self.rpm_spec.get_filename())
             run_command("rpm -i %s --dbpath %s --prefix=%s" % (self.rpm_spec.get_filename(), RPM_DATABASE, GPHOME))
@@ -583,20 +604,20 @@ class MuckWithInternalsTestCases(GppkgTestCase):
             self.fail("ExecutionError %s" % e)
 
     def test03_install_rpm_and_install(self):
-        #Install the rpm 
+        # Install the rpm
         with closing(tarfile.open(self.gppkg_spec.get_filename())) as tf:
             tf.extract(self.rpm_spec.get_filename())
-          
-        #Install rpm 
-        run_command("rpm --install %s --dbpath %s --prefix=%s" % (self.rpm_spec.get_filename(), RPM_DATABASE, GPHOME))  
-        
-        results = run_command("rpm -q %s --dbpath %s" %(self.rpm_spec.get_package_name(), RPM_DATABASE))
+
+        # Install rpm
+        run_command("rpm --install %s --dbpath %s --prefix=%s" % (self.rpm_spec.get_filename(), RPM_DATABASE, GPHOME))
+
+        results = run_command("rpm -q %s --dbpath %s" % (self.rpm_spec.get_package_name(), RPM_DATABASE))
         self.assertRegexpMatches(results, self.rpm_spec.get_package_name())
-        
-        #Use gppkg from previous test
+
+        # Use gppkg from previous test
         gppkg_file = self.gppkg_spec.get_filename()
-      
-        try: 
+
+        try:
             self.install(gppkg_file)
         except ExecutionError, e:
             run_command("rpm -e %s --dbpath %s" % (self.rpm_spec.get_package_name(), RPM_DATABASE))
@@ -612,17 +633,18 @@ class MuckWithInternalsTestCases(GppkgTestCase):
         archive_file = os.path.join(ARCHIVE_PATH, gppkg_file)
         self.install(gppkg_file)
 
-        #Remove package from archive
+        # Remove package from archive
         segment_host_list = get_host_list()[1]
-        self.assertTrue(len(segment_host_list) > 0) 
-        RemoveRemoteFile(archive_file ,segment_host_list[0])
+        self.assertTrue(len(segment_host_list) > 0)
+        RemoveRemoteFile(archive_file, segment_host_list[0])
 
         try:
             self.install(gppkg_file)
         except ExecutionError, e:
-            Scp(name = "copy to segment", srcFile = gppkg_file, dstFile = archive_file, srcHost = None, dstHost = segment_host_list[0]).run(validateAfter = True)
+            Scp(name="copy to segment", srcFile=gppkg_file, dstFile=archive_file, srcHost=None,
+                dstHost=segment_host_list[0]).run(validateAfter=True)
             self.fail("ExecutionError %s" % e)
-            
+
     @skipIfNoStandby()
     @unittest.expectedFailure
     def test05_delete_package_from_archive_on_standby(self):
@@ -633,15 +655,17 @@ class MuckWithInternalsTestCases(GppkgTestCase):
         archive_file = os.path.join(ARCHIVE_PATH, gppkg_file)
         self.install(gppkg_file)
 
-        #Remove package from standby
-        standby = get_host_list()[0] 
+        # Remove package from standby
+        standby = get_host_list()[0]
         RemoveRemoteFile(os.path.join(ARCHIVE_PATH, gppkg_file), standby).run()
 
         try:
             self.install(gppkg_file)
         except ExecutionError, e:
-            Scp(name = "copy to segment", srcFile = gppkg_file, dstFile = archive_file, srcHost = None, dstHost = standby).run(validateAfter = True)
+            Scp(name="copy to segment", srcFile=gppkg_file, dstFile=archive_file, srcHost=None, dstHost=standby).run(
+                validateAfter=True)
             self.fail("ExecutionError %s" % e)
+
 
 if __name__ == "__main__":
     unittest.main()
