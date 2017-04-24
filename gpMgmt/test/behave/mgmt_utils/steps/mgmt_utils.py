@@ -4841,3 +4841,17 @@ def impl(context):
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
     ''')
+
+
+def _gpperfmon_data_directory_is_deleted():
+    pass
+
+
+def _database_does_not_exist(param):
+    pass
+
+
+@given('gpperfmon is configured for fast iteration in qamode')
+def impl(context):
+    _database_does_not_exist("gpperfmon")
+    _user_runs_command()
