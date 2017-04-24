@@ -47,13 +47,13 @@ func DoBackup() {
 	connection.Begin()
 	tables := GetAllUserTables(connection)
 
-	logger.Info("Writing predata to %s", predataFilename)
+	logger.Info("Writing pre-data metadata to %s", predataFilename)
 	backupPredata(predataFilename, tables)
-	logger.Info("Predata dump complete")
+	logger.Info("Pre-data metadata dump complete")
 
-	logger.Info("Writing post-data predata to %s", postdataFilename)
+	logger.Info("Writing post-data metadata to %s", postdataFilename)
 	backupPostdata(postdataFilename, tables)
-	logger.Info("Post-data predata dump complete")
+	logger.Info("Post-data metadata dump complete")
 
 	connection.Commit()
 }
@@ -72,6 +72,13 @@ func backupPredata(filename string, tables []utils.Table) {
 	logger.Verbose("Writing ADD CONSTRAINT statements to predata file")
 	allConstraints, allFkConstraints := ConstructConstraintsForAllTables(connection, tables)
 	PrintConstraintStatements(predataFile, allConstraints, allFkConstraints)
+}
+
+func backupPostdata(filename string, tables []utils.Table) {
+	postdataFile := utils.MustOpenFile(filename)
+	logger.Verbose("Writing CREATE INDEX statements to postdata file")
+	indexes := GetIndexesForAllTables(connection, tables)
+	PrintCreateIndexStatements(postdataFile, indexes)
 }
 
 func DoTeardown() {

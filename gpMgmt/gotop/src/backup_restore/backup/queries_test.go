@@ -13,18 +13,18 @@ import (
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
 )
 
-var connection *utils.DBConn
-var mock sqlmock.Sqlmock
-
 func TestQueries(t *testing.T) {
 	RegisterFailHandler(Fail)
 }
 
 var _ = Describe("backup/queries tests", func() {
-	BeforeSuite(func() {
+	var connection *utils.DBConn
+	var mock sqlmock.Sqlmock
+	BeforeEach(func() {
 		connection, mock = testutils.CreateAndConnectMockDB()
 		testutils.SetupTestLogger()
 	})
+
 	Describe("GetTableAttributes", func() {
 		header := []string{"attname", "attnotnull", "atthasdef", "attisdropped", "atttypname", "attencoding"}
 		rowOne := []driver.Value{"i", "f", "f", "f", "int", nil}
