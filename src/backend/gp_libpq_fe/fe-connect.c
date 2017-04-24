@@ -1711,6 +1711,7 @@ keep_going:						/* We will come back to here until there is
 						int			reuse = 1;
 						int			usekeepalives = useKeepalives(conn);
 						int			err = 0;
+						int			reuse = 1;
 
 						if (usekeepalives < 0)
 						{
@@ -1749,6 +1750,14 @@ keep_going:						/* We will come back to here until there is
 						{
 							appendPQExpBuffer(&conn->errorMessage, 
 									  libpq_gettext("setsockopt(SO_REUSEADDR) failed: %s\n"),
+									  SOCK_STRERROR(SOCK_ERRNO, sebuf, sizeof(sebuf)));
+							err = 1;
+						}
+
+						if (setsockopt(conn->sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int)) == -1)
+						{
+							appendPQExpBuffer(&conn->errorMessage, 
+									  libpq_gettext("setsockopt(SO_REUSEADDR) failed:: %s\n"), 
 									  SOCK_STRERROR(SOCK_ERRNO, sebuf, sizeof(sebuf)));
 							err = 1;
 						}
