@@ -30,7 +30,7 @@ RPM_DATABASE = os.path.join(GPHOME, 'share/packages/database')
 GPPKG_EXTENSION = ".gppkg"
 SCRATCH_SPACE = os.path.join(tempfile.gettempdir(), getpass.getuser())
 GPDB_VERSION = "4.2"
-MASTER_PORT = os.getenv("PGPORT")
+MASTER_PORT = os.getenv("PGPORT", 15432)
 
 
 def skipIfNoStandby():
