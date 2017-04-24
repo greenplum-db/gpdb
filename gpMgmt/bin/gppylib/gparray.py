@@ -109,13 +109,9 @@ def getDataModeLabel(mode):
 
 FAULT_STRATEGY_NONE = 'n'               # mirrorless systems
 FAULT_STRATEGY_FILE_REPLICATION = 'f'   # valid for versions 4.0+
-FAULT_STRATEGY_READONLY = 'r'           # valid for versions 3.x
-FAULT_STRATEGY_CONTINUE = 'c'           # valid for versions 3.x
 FAULT_STRATEGY_LABELS = {
     FAULT_STRATEGY_NONE:               "none",
     FAULT_STRATEGY_FILE_REPLICATION:   "physical mirroring",
-    FAULT_STRATEGY_READONLY:           "readonly",
-    FAULT_STRATEGY_CONTINUE:           "continue",
  }
 VALID_FAULT_STRATEGY = FAULT_STRATEGY_LABELS.keys()
 
