@@ -10,7 +10,8 @@ import (
 func GetAllUserTables(connection *utils.DBConn) []utils.Table {
 	query := `
 SELECT
-	c.oid,
+	n.oid AS schemaoid,
+	c.oid AS tableoid,
 	n.nspname AS schemaname,
 	c.relname AS tablename
 FROM pg_class c
@@ -143,7 +144,7 @@ WHERE a.attrelid = %d;`, oid)
 	} else {
 		distCols := make([]string, 0)
 		for _, dist := range results {
-			distCols = append(distCols, dist.AttName)
+			distCols = append(distCols, utils.QuoteIdent(dist.AttName))
 		}
 		return fmt.Sprintf("DISTRIBUTED BY (%s)", strings.Join(distCols, ", "))
 	}

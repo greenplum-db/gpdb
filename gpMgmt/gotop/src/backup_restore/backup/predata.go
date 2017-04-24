@@ -28,13 +28,13 @@ type TableDefinition struct {
 }
 
 func ConstructDefinitionsForTable(connection *utils.DBConn, table utils.Table) ([]ColumnDefinition, TableDefinition) {
-	tableAttributes := GetTableAttributes(connection, table.Oid)
-	tableDefaults := GetTableDefaults(connection, table.Oid)
+	tableAttributes := GetTableAttributes(connection, table.TableOid)
+	tableDefaults := GetTableDefaults(connection, table.TableOid)
 
-	distPolicy := GetDistributionPolicy(connection, table.Oid)
-	partitionDef := GetPartitionDefinition(connection, table.Oid)
-	partTemplateDef := GetPartitionTemplateDefinition(connection, table.Oid)
-	storageOpts := GetStorageOptions(connection, table.Oid)
+	distPolicy := GetDistributionPolicy(connection, table.TableOid)
+	partitionDef := GetPartitionDefinition(connection, table.TableOid)
+	partTemplateDef := GetPartitionTemplateDefinition(connection, table.TableOid)
+	storageOpts := GetStorageOptions(connection, table.TableOid)
 
 	columnDefs := ConsolidateColumnInfo(tableAttributes, tableDefaults)
 	tableDef := TableDefinition{distPolicy, partitionDef, partTemplateDef, storageOpts}
@@ -45,7 +45,7 @@ func ConstructConstraintsForAllTables(connection *utils.DBConn, tables []utils.T
 	allConstraints := make([]string, 0)
 	allFkConstraints := make([]string, 0) // separate slice for FOREIGN KEY constraints, since they must be printed after PRIMARY KEY constraints
 	for _, table := range tables {
-		conList := GetConstraints(connection, table.Oid)
+		conList := GetConstraints(connection, table.TableOid)
 		tableCons, tableFkCons := ProcessConstraints(table, conList)
 		allConstraints = append(allConstraints, tableCons...)
 		allFkConstraints = append(allFkConstraints, tableFkCons...)
@@ -84,7 +84,7 @@ func ConsolidateColumnInfo(atts []QueryTableAtts, defs []QueryTableDef) []Column
 }
 
 func ProcessConstraints(table utils.Table, constraints []QueryConstraint) ([]string, []string) {
-	alterStr := fmt.Sprintf("\n\nALTER TABLE ONLY %s ADD CONSTRAINT", table.ToFQN())
+	alterStr := fmt.Sprintf("\n\nALTER TABLE ONLY %s ADD CONSTRAINT", table.ToString())
 	cons := make([]string, 0)
 	fkCons := make([]string, 0)
 	for _, constraint := range constraints {
@@ -99,11 +99,11 @@ func ProcessConstraints(table utils.Table, constraints []QueryConstraint) ([]str
 }
 
 func PrintCreateTableStatement(predataFile io.Writer, table utils.Table, columnDefs []ColumnDefinition, tableDef TableDefinition) {
-	fmt.Fprintf(predataFile, "\n\nCREATE TABLE %s (\n", table.ToFQN())
+	fmt.Fprintf(predataFile, "\n\nCREATE TABLE %s (\n", table.ToString())
 	lines := make([]string, 0)
 	for _, col := range columnDefs {
 		if !col.IsDropped {
-			line := fmt.Sprintf("\t%s %s", col.Name, col.TypName)
+			line := fmt.Sprintf("\t%s %s", utils.QuoteIdent(col.Name), col.TypName)
 			if col.HasDef {
 				line += fmt.Sprintf(" DEFAULT %s", col.DefVal)
 			}
@@ -147,6 +147,6 @@ func PrintConstraintStatements(predataFile io.Writer, cons []string, fkCons []st
 func PrintCreateSchemaStatements(predataFile io.Writer, tables []utils.Table) {
 	schemas := utils.GetUniqueSchemas(tables)
 	for _, schema := range schemas {
-		fmt.Fprintf(predataFile, "\n\nCREATE SCHEMA %s;", schema)
+		fmt.Fprintf(predataFile, "\n\nCREATE SCHEMA %s;", schema.ToString())
 	}
 }
