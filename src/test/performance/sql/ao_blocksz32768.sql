@@ -1,1 +1,1 @@
-INSERT INTO ao_bs32768 SELECT * FROM base_table;
+INSERT INTO ao_blocksz32768 SELECT * FROM base_table;

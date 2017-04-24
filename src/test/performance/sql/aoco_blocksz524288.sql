@@ -1,1 +1,1 @@
-INSERT INTO aoco_bs524288 SELECT * FROM base_table;
+INSERT INTO aoco_blocksz524288 SELECT * FROM base_table;

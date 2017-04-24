@@ -1,1 +1,1 @@
-INSERT INTO ao_bs8192 SELECT * FROM base_table;
+INSERT INTO ao_blocksz8192 SELECT * FROM base_table;
