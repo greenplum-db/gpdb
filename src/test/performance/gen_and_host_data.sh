@@ -7,7 +7,9 @@ if [ -d $MASTER_DATA_DIRECTORY/perfdataset ]; then
 fi
 mkdir $MASTER_DATA_DIRECTORY/perfdataset
 
-# Generate dataset (needs refactoring to make it better)
+# Generate dataset
+# TODO: this is very slow to generate big datasets (e.g. 500 million
+# rows)... need to replace with something much faster
 for i in $(seq ${1}); do
   cat dataset/perfdata.csv >> $MASTER_DATA_DIRECTORY/perfdataset/perfdata.csv;
 done
