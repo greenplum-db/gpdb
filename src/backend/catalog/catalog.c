@@ -49,7 +49,7 @@
 #include "catalog/gp_configuration.h"
 #include "catalog/gp_configuration.h"
 #include "catalog/gp_segment_config.h"
-#include "catalog/gp_san_config.h"
+#include "catalog/gp_fault_strategy.h"
 
 #include "catalog/gp_persistent.h"
 #include "catalog/gp_global_sequence.h"

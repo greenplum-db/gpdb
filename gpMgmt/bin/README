@@ -151,7 +151,6 @@ commands/clsInjectFault - binary for filerep fault injection
 commands/gp.py     - Implements lots of subclasses of Command for various tasks
 commands/pg.py     - Like gp.py, not clear what the separation is, if any.
 commands/unix.py   - Platform information + more subclasses of Command
-commands/san.py    - SAN related commands
 commands/test_pg   - some tests for commands/pg.py
   
 db/catalog.py      - Wrappers for executing certain queries
@@ -169,7 +168,6 @@ db/dbconn.py       - Connections to the database
   |
   +- Should have a wrapper class around a pygresql connection object!
 
-util/san_utils.py    - SAN related utility functions that are not Commands
 util/gp_utils.py     - Greenplum related utility functions that are not Commands
 util/ssh_session.py  - SSH and SCP related utility functions brought in from gpmlib.py/gplib.py
                        that are used by gpssh, gpscp and gpssh-exkeys

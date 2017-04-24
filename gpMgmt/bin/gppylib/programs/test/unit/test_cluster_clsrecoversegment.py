@@ -248,14 +248,6 @@ class GpRecoverSegmentProgramTestCase(GpTestCase):
         with self.assertRaisesRegexp(Exception, 'replication is not configured'):
             self.subject.run()
 
-    def test__run__when_fault_strategy_is_SAN__calls_SAN_failback(self):
-        with patch.object(GpRecoverSegmentProgram, 'SanFailback', return_value=None) as san_failback:
-            self.gparray.getSegDbList.return_value = []
-            self.gparray.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_SAN
-
-            self.subject.run()
-            san_failback.assert_called_once_with(self.gparray, self.gp_env)
-
     ############################################################
     # Private
     def _get_mock_segment(self, name, port, address, datadir):

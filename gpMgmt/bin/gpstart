@@ -163,7 +163,7 @@ class GpStart:
             # Reenable Ctrl-C
             signal.signal(signal.SIGINT,signal.default_int_handler)
 
-        (segmentsToStart, invalidSegments, inactiveSegments) = self._prepare_segment_start()
+        (segmentsToStart, invalidSegments) = self._prepare_segment_start()
 
         if self.interactive:
             self._summarize_actions(segmentsToStart)
@@ -174,7 +174,7 @@ class GpStart:
             # Disable Ctrl-C
             signal.signal(signal.SIGINT,signal.SIG_IGN)
 
-            success=self._start(segmentsToStart, invalidSegments, inactiveSegments)
+            success=self._start(segmentsToStart, invalidSegments)
         finally:
             # Reenable Ctrl-C
             signal.signal(signal.SIGINT,signal.default_int_handler)
@@ -420,7 +420,7 @@ class GpStart:
         self.conn.close()
 
     ######
-    def _start(self, segmentsToStart, invalidSegments, inactiveSegments):
+    def _start(self, segmentsToStart, invalidSegments):
         """ starts all of the segments, the master and the standby master
 
             returns whether all segments that should be started were started successfully
@@ -455,7 +455,7 @@ class GpStart:
         willShutdownSegments = not self._verify_enough_segments(segmentStartResult,self.gparray)
 
         # process the result of segment startup
-        self._print_segment_start(segmentStartResult, invalidSegments, inactiveSegments, willShutdownSegments )
+        self._print_segment_start(segmentStartResult, invalidSegments, willShutdownSegments )
 
         if willShutdownSegments :
             # go through and remove any segments that we did start so that we keep everything
@@ -488,12 +488,8 @@ class GpStart:
         # segments marked down
         invalid_segs=self.gparray.get_invalid_segdbs()
 
-        # mirrors that should not be started
-        inactive_mirrors=self.gparray.get_inactive_mirrors_segdbs()
-        if len(inactive_mirrors) > 0:
-            logger.debug("Found %d inactive mirrors, skipping" % len(inactive_mirrors))
         inactiveDbIds = {}
-        for segment in inactive_mirrors:
+        for segment in invalid_segs:
             inactiveDbIds[segment.getSegmentDbId()] = True
         invalid_segs = [segment for segment in invalid_segs if inactiveDbIds.get(segment.getSegmentDbId()) is None]
 
@@ -501,22 +497,17 @@ class GpStart:
         dbIdsToNotStart = {}
         for segment in invalid_segs:
             dbIdsToNotStart[segment.getSegmentDbId()] = True
-        for segment in inactive_mirrors:
-            dbIdsToNotStart[segment.getSegmentDbId()] = True
 
         for seg in invalid_segs:
             logger.warning("Skipping startup of segment marked down in configuration: on %s directory %s <<<<<" % \
                     (seg.getSegmentHostName(), seg.getSegmentDataDirectory()))
-        for seg in inactive_mirrors:
-            logger.warning("Skipping startup of segment marked INACTIVE in configuration: %s directory %s <<<<<" % \
-                    (seg.getSegmentHostName(), seg.getSegmentDataDirectory()))
         logger.debug("dbIdsToNotStart has %d entries" % len(dbIdsToNotStart))
 
-        # we intend to dedup invalid_segs and inactive_mirrors
-        assert len(dbIdsToNotStart) == len(invalid_segs) + len(inactive_mirrors)
+        # we intend to dedup invalid_segs
+        assert len(dbIdsToNotStart) == len(invalid_segs)
 
         toStart = [seg for seg in segs if dbIdsToNotStart.get(seg.getSegmentDbId()) is None]
-        return (toStart, invalid_segs, inactive_mirrors)
+        return (toStart, invalid_segs)
 
     ####
     def _verify_enough_segments(self,startResult,gparray):
@@ -613,7 +604,7 @@ class GpStart:
         pass
 
     ######
-    def _print_segment_start(self, segmentStartResult, invalidSegments, inactiveSegments, willShutdownSegments):
+    def _print_segment_start(self, segmentStartResult, invalidSegments, willShutdownSegments):
         """
         Print the results of segment startup
 

@@ -109,13 +109,11 @@ def getDataModeLabel(mode):
 
 FAULT_STRATEGY_NONE = 'n'               # mirrorless systems
 FAULT_STRATEGY_FILE_REPLICATION = 'f'   # valid for versions 4.0+
-FAULT_STRATEGY_SAN = 's'                # valid for versions 4.0+
 FAULT_STRATEGY_READONLY = 'r'           # valid for versions 3.x
 FAULT_STRATEGY_CONTINUE = 'c'           # valid for versions 3.x
 FAULT_STRATEGY_LABELS = {
     FAULT_STRATEGY_NONE:               "none",
     FAULT_STRATEGY_FILE_REPLICATION:   "physical mirroring",
-    FAULT_STRATEGY_SAN:                "SAN failover",
     FAULT_STRATEGY_READONLY:           "readonly",
     FAULT_STRATEGY_CONTINUE:           "continue",
  }
@@ -1196,9 +1194,6 @@ class GpArray:
         self.__strategyLoadedFromDb = strategyLoadedFromDb
         self.__strategy = FAULT_STRATEGY_NONE
 
-        self.san_mount_by_dbid = {}
-        self.san_mounts = {}
-
         self.setFilespaces([])
 
         for segdb in segments:
@@ -1374,10 +1369,6 @@ class GpArray:
                 ORDER BY content, preferred_role DESC
             ''' % str(SYSTEM_FILESPACE))
 
-            # No SAN support in these older releases.
-            san_segs_rows = []
-            san_rows = []
-
             # no filespace support in older releases.
             filespaceArr = []
 
@@ -1395,21 +1386,6 @@ class GpArray:
                 JOIN pg_catalog.pg_filespace_entry on (dbid = fsedbid)
                 JOIN pg_catalog.pg_filespace fs on (fsefsoid = fs.oid)
                 ORDER BY content, preferred_role DESC, fs.oid
-            ''')
-
-            san_segs_rows = dbconn.execSQL(conn, '''
-                SELECT dbid, content, status, unnest(san_mounts)
-                FROM pg_catalog.gp_segment_configuration
-                WHERE content >= 0
-                ORDER BY content, dbid
-            ''')
-
-            san_rows = dbconn.execSQL(conn, '''
-                SELECT mountid, active_host, san_type,
-                       primary_host, primary_mountpoint, primary_device,
-                       mirror_host, mirror_mountpoint, mirror_device
-                FROM pg_catalog.gp_san_configuration
-                ORDER BY mountid
             ''')
 
             filespaceRows = dbconn.execSQL(conn, '''
@@ -1481,7 +1457,6 @@ class GpArray:
         array.__version = version
         array.recoveredSegmentDbids = recoveredSegmentDbids
         array.setFaultStrategy(strategy)
-        array.setSanConfig(san_rows, san_segs_rows)
         array.setFilespaces(filespaceArr)
 
         return array
@@ -1527,48 +1502,6 @@ class GpArray:
         for gpdb in self.getDbList():
             fp.write(repr(gpdb) + '\n')
         fp.close()
-
-    # --------------------------------------------------------------------
-    def setSanConfig(self, san_row_list, san_segs_list):
-        """
-        Sets up the san-config.
-
-        san_row_list is essentially the contents of gp_san_config (which may be empty)
-
-        san_segs_list is the content of the san_mounts field of gp_segment_configuration
-        (also potentially empty), unnested.
-
-        These are raw results sets. We build two maps:
-          Map1: from dbid to a list of san-mounts.
-          Map2: from mount-id to the san_config attributes.
-
-        The code below has to match the SQL inside initFromCatalog()
-        """
-        # First collect the "unnested" mount-ids into a list.
-        dbid_map = {}
-        for row in san_segs_list:
-            (dbid, content, status, mountid) = row
-            if dbid_map.has_key(dbid):
-                (status, content, mount_list) = dbid_map[dbid]
-                dbid_map[dbid] = (status, content, mount_list.append(mountid))
-            else:
-                dbid_map[dbid] = (status, content, [mountid])
-        # dbid_map now contains a flat mapping from dbid -> (status, list of mountpoints)
-
-        san_map = {}
-        for row in san_row_list:
-            (mountid, active, type, p_host, p_mp, p_dev, m_host, m_mp, m_dev) = row
-            san_map[mountid] = {'active':active, 'type':type,
-                                'primaryhost':p_host, 'primarymountpoint':p_mp, 'primarydevice':p_dev,
-                                'mirrorhost':m_host, 'mirrormountpoint':m_mp, 'mirrordevice':m_dev
-                                }
-
-        self.san_mount_by_dbid = dbid_map
-        self.san_mounts = san_map
-
-    # --------------------------------------------------------------------
-    def getSanConfigMaps(self):
-        return (self.san_mounts, self.san_mount_by_dbid)
 
     # --------------------------------------------------------------------
     def setFaultStrategy(self, strategy):
@@ -1801,18 +1734,6 @@ class GpArray:
     # --------------------------------------------------------------------
     def get_unbalanced_primary_segdbs(self):
         dbs = [seg for seg in self.get_unbalanced_segdbs() if seg.role == ROLE_PRIMARY]
-        return dbs
-
-    # --------------------------------------------------------------------
-    def get_inactive_mirrors_segdbs(self):
-        if self.__strategy != FAULT_STRATEGY_SAN:
-            return []
-
-        dbs=[]
-        for seg in self.segments:
-            segdb = seg.primaryDB
-            for db in seg.mirrorDBs:
-                dbs.append(db)
         return dbs
 
     # --------------------------------------------------------------------

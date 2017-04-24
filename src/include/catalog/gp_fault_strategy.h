@@ -1,14 +1,14 @@
 /*-------------------------------------------------------------------------
  *
- * gp_san_config.h
- *    a san configuration table
+ * gp_fault_strategy.h
+ *    FTS fault strategy configuration
  *
  * Copyright (c) 2009-2011, Greenplum Inc.
  *
  *-------------------------------------------------------------------------
  */
-#ifndef _GP_SAN_CONFIG_H_
-#define _GP_SAN_CONFIG_H_
+#ifndef _GP_FAULT_STRATEGY_H_
+#define _GP_FAULT_STRATEGY_H_
 
 /*
  * Defines for gp_fault_strategy table.
@@ -48,6 +48,9 @@ typedef FormData_gp_fault_strategy *Form_gp_fault_strategy;
  * Defines for gp_san_config table.
  *
  * Stores info for failover using SAN.
+ *
+ * SAN failover has been deprecated and removed in Greenplum 5.0, this table
+ * will be removed from the catalog in 6.0
  */
 #define GpSanConfigRelationName		"gp_san_configuration"
 
@@ -96,4 +99,4 @@ typedef FormData_gp_san_configuration *Form_gp_san_configuration;
 #define Anum_gp_san_configuration_mirror_mountpoint		8
 #define Anum_gp_san_configuration_mirror_device			9
 
-#endif /*_GP_SAN_CONFIG_H_*/
+#endif /* _GP_FAULT_STRATEGY_ */

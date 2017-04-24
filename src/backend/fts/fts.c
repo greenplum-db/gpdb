@@ -45,7 +45,7 @@
 #include "catalog/pg_tablespace.h"
 #include "catalog/catalog.h"
 
-#include "catalog/gp_san_config.h"
+#include "catalog/gp_fault_strategy.h"
 #include "catalog/gp_segment_config.h"
 
 #include "storage/backendid.h"
@@ -61,9 +61,6 @@
 
 /* maximum number of segments */
 #define MAX_NUM_OF_SEGMENTS  32768
-
-/* buffer size for timestamp */
-#define TIMESTAMP_BUF_SIZE   128
 
 /* buffer size for SQL command */
 #define SQL_CMD_BUF_SIZE     1024
@@ -620,7 +617,7 @@ probePublishUpdate(uint8 *probe_results)
 			continue;
 		}
 
-		Assert(failover_strategy == 'f' || failover_strategy == 's');
+		Assert(failover_strategy == 'f');
 		Assert(mirror != NULL);
 
 		/* changes required for primary and mirror */
@@ -647,24 +644,11 @@ probePublishUpdate(uint8 *probe_results)
 			     primary->segindex, primary->dbid, mirror->dbid);
 		}
 
-		if (failover_strategy == 'f')
-		{
 			/* get current state */
-			stateOld = FtsGetPairStateFilerep(primary, mirror);
+		stateOld = FtsGetPairStateFilerep(primary, mirror);
 
-			/* get new state */
-			stateNew = transition(stateOld, trans, primary, mirror, &changes[0], &changes[1]);
-		}
-		else
-		{
-			Assert(failover_strategy == 's');
-
-			/* get current state */
-			stateOld = FtsGetPairStateSAN(primary, mirror);
-
-			/* get new state */
-			stateNew = transition(stateOld, trans, primary, mirror, &changes[0], &changes[1]);
-		}
+		/* get new state */
+		stateNew = transition(stateOld, trans, primary, mirror, &changes[0], &changes[1]);
 
 		/* check if transition is required */
 		if (stateNew != stateOld)
@@ -753,14 +737,7 @@ transition
 	}
 
 	/* get new state for primary and mirror */
-	if (failover_strategy == 'f')
-	{
-		stateNew = FtsTransitionFilerep(stateOld, trans);
-	}
-	else
-	{
-		stateNew = FtsTransitionSAN(stateOld, trans);
-	}
+	stateNew = FtsTransitionFilerep(stateOld, trans);
 
 	/* check if transition is required */
 	if (stateNew != stateOld)
@@ -778,14 +755,7 @@ transition
 			elog(LOG, "FTS: state machine transition from %d to %d.", stateOld, stateNew);
 		}
 
-		if (failover_strategy == 'f')
-		{
-			FtsResolveStateFilerep(&pairState);
-		}
-		else
-		{
-			FtsResolveStateSAN(&pairState);
-		}
+		FtsResolveStateFilerep(&pairState);
 
 		buildSegmentStateChange(primary, changesPrimary, pairState.statePrimary);
 		buildSegmentStateChange(mirror, changesMirror, pairState.stateMirror);
@@ -805,8 +775,6 @@ static void
 updateConfiguration(FtsSegmentStatusChange *changes, int changeEntries)
 {
 	Assert(changes != NULL);
-
-	char timestamp_str[TIMESTAMP_BUF_SIZE];
 
 	CdbComponentDatabaseInfo *entryDB = &cdb_component_dbs->entry_db_info[0];
 
@@ -829,18 +797,7 @@ updateConfiguration(FtsSegmentStatusChange *changes, int changeEntries)
 	bool commit = probeUpdateConfig(changes, changeEntries);
 
 	if (commit)
-	{
-		if (failover_strategy == 'f')
-		{
-			/* FILEREP response */
-			FtsFailoverFilerep(changes, changeEntries);
-		}
-		else if (failover_strategy == 's')
-		{
-			/* SAN response */
-			FtsFailoverSAN(changes, changeEntries, timestamp_str);
-		}
-	}
+		FtsFailoverFilerep(changes, changeEntries);
 
 	if (gp_log_fts >= GPVARS_VERBOSITY_VERBOSE)
 	{

@@ -311,7 +311,6 @@ Tablespace: "pg_global"
         finally:
             if cursor: cursor.close()
 
-# XXX: THIS IS OBVIOUSLY BROKEN IN 4.0 for SAN.                                                                     
     @staticmethod
     def addRows(conn, segments):
         try:

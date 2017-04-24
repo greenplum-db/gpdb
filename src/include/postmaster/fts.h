@@ -124,15 +124,6 @@ extern void FtsFailoverFilerep(FtsSegmentStatusChange *changes, int changeCount)
 
 
 /*
- * Interface for SAN-specific segment state machine and transitions
- */
-extern uint32 FtsGetPairStateSAN(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseInfo *mirror);
-extern uint32 FtsTransitionSAN(uint32 stateOld, uint32 trans);
-extern void FtsResolveStateSAN(FtsSegmentPairState *pairState);
-extern void FtsFailoverSAN(FtsSegmentStatusChange *changes, int changeCount, char *time_str);
-
-
-/*
  * Interface for requesting master to shut down
  */
 extern void FtsRequestPostmasterShutdown(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseInfo *mirror);

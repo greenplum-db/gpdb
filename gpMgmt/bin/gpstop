@@ -572,7 +572,6 @@ class GpStop:
         stopped = len(segs) - len(failed_seg_status)         
         failed = len([x for x in failed_seg_status if x.db.valid])
         invalid = self.gparray.get_invalid_segdbs()
-        inactive = self.gparray.get_inactive_mirrors_segdbs()
         total_segs = len(self.gparray.getSegDbList())
         timed_out = len([x for x in failed_seg_status if x.timedOut])
 
