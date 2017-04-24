@@ -227,17 +227,17 @@ class Gppkg:
             # store the list of all files present in the archive
             archive_list = tarinfo.getnames()
             pkg["file_list"] = archive_list
+            keys = []
+            yamlfile = {}
 
             # The spec file has to be called gppkg_spec
             # so there will only be one such file,
-            # so we dont need to worry about the loop
-            # overwriting the 'specfile' variable with different values
             for cur_file in archive_list:
                 if cur_file.endswith(SPECFILE_NAME):
                     specfile = tarinfo.extractfile(cur_file)
-
-            yamlfile = yaml.load(specfile)
-            keys = yamlfile.keys()
+                    yamlfile = yaml.load(specfile)
+                    keys = yamlfile.keys()
+                    break
 
         # store all the tags
         for key in keys:
