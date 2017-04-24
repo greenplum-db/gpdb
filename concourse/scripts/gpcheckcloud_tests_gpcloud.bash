@@ -28,7 +28,7 @@ function gen_env(){
 }
 
 function run_regression_gpcheckcloud() {
-	su - gpadmin -c "bash /home/gpadmin/run_regression_gpcheckcloud.sh $(pwd)"
+	su gpadmin -c "bash /home/gpadmin/run_regression_gpcheckcloud.sh $(pwd)"
 }
 
 function setup_gpadmin_user() {
@@ -41,9 +41,6 @@ function _main() {
 	time install_gpdb
 	time setup_gpadmin_user
 	time gen_env
-
-	set +x && echo -n "$s3conf" | base64 -d > /home/gpadmin/s3.conf && set -x
-	chown gpadmin:gpadmin /home/gpadmin/s3.conf
 
 	time run_regression_gpcheckcloud
 }

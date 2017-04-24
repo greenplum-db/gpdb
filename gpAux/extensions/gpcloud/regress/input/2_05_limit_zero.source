@@ -1,17 +1,17 @@
 -- one line
 CREATE READABLE EXTERNAL TABLE s3regress_limit_zero_oneline (date text, time text, open float, high float,
-	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/oneline config=@config_file@ section=read') format 'csv';
+	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/oneline config=@config_file@') format 'csv';
 
 -- 84MB
 CREATE READABLE EXTERNAL TABLE s3regress_limit_zero_xac(date text, time text, open float, high float,
-	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xac config=@config_file@ section=read') format 'csv';
+	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xac config=@config_file@') format 'csv';
 
 SELECT count(*) FROM s3regress_limit_zero_oneline LIMIT 0;
 
 SELECT count(*) FROM s3regress_limit_zero_xac LIMIT 0;
 
 CREATE WRITABLE EXTERNAL TABLE s3write_limit_zero_write (date text, time text, open float, high float, low float,
-        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/limitzero/ config=@config_file@ section=write') FORMAT 'csv';
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/limitzero/ config=@config_file@') FORMAT 'csv';
 
 INSERT INTO s3write_limit_zero_write (date, time, open, high, low, volume)
 		SELECT '2016-07-28', '12:00:00', 0.5, 0.5, 0.3, v

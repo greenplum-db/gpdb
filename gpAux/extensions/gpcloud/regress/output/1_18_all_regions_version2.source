@@ -1,5 +1,5 @@
 CREATE READABLE EXTERNAL TABLE s3regress_all_regions_version2 (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3.amazonaws.com/us-east-1.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=us-east-1') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3.amazonaws.com/us-east-1.@read_prefix@/small17/data0000 config=@config_file@ section=default region=us-east-1') FORMAT 'csv';
 \d s3regress_all_regions_version2
 External table "public.s3regress_all_regions_version2"
  Column |       Type       | Modifiers 
@@ -15,7 +15,7 @@ Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
 External options: {}
-External location: "s3://s3.amazonaws.com/us-east-1.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=us-east-1"
+External location: "s3://s3.amazonaws.com/us-east-1.@read_prefix@/small17/data0000 config=@config_file@ section=default region=us-east-1"
 Execute on: all segments
 
 SELECT round(sum(open)) FROM s3regress_all_regions_version2;
@@ -26,7 +26,7 @@ SELECT round(sum(open)) FROM s3regress_all_regions_version2;
 
 DROP EXTERNAL TABLE s3regress_all_regions_version2;
 CREATE READABLE EXTERNAL TABLE s3regress_all_regions_version2 (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-us-east-2.amazonaws.com/us-east-2.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=us-east-2') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-us-east-2.amazonaws.com/us-east-2.@read_prefix@/small17/data0000 config=@config_file@ section=default region=us-east-2') FORMAT 'csv';
 \d s3regress_all_regions_version2
 External table "public.s3regress_all_regions_version2"
  Column |       Type       | Modifiers 
@@ -42,7 +42,7 @@ Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
 External options: {}
-External location: "s3://s3-us-east-2.amazonaws.com/us-east-2.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=us-east-2"
+External location: "s3://s3-us-east-2.amazonaws.com/us-east-2.@read_prefix@/small17/data0000 config=@config_file@ section=default region=us-east-2"
 Execute on: all segments
 
 SELECT round(sum(open)) FROM s3regress_all_regions_version2;
@@ -53,7 +53,7 @@ SELECT round(sum(open)) FROM s3regress_all_regions_version2;
 
 DROP EXTERNAL TABLE s3regress_all_regions_version2;
 CREATE READABLE EXTERNAL TABLE s3regress_all_regions_version2 (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-us-west-1.amazonaws.com/us-west-1.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=us-west-1') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-us-west-1.amazonaws.com/us-west-1.@read_prefix@/small17/data0000 config=@config_file@ section=default region=us-west-1') FORMAT 'csv';
 \d s3regress_all_regions_version2
 External table "public.s3regress_all_regions_version2"
  Column |       Type       | Modifiers 
@@ -69,7 +69,7 @@ Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
 External options: {}
-External location: "s3://s3-us-west-1.amazonaws.com/us-west-1.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=us-west-1"
+External location: "s3://s3-us-west-1.amazonaws.com/us-west-1.@read_prefix@/small17/data0000 config=@config_file@ section=default region=us-west-1"
 Execute on: all segments
 
 SELECT round(sum(open)) FROM s3regress_all_regions_version2;
@@ -80,7 +80,7 @@ SELECT round(sum(open)) FROM s3regress_all_regions_version2;
 
 DROP EXTERNAL TABLE s3regress_all_regions_version2;
 CREATE READABLE EXTERNAL TABLE s3regress_all_regions_version2 (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-ap-south-1.amazonaws.com/ap-south-1.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=ap-south-1') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-ap-south-1.amazonaws.com/ap-south-1.@read_prefix@/small17/data0000 config=@config_file@ section=default region=ap-south-1') FORMAT 'csv';
 \d s3regress_all_regions_version2
 External table "public.s3regress_all_regions_version2"
  Column |       Type       | Modifiers 
@@ -96,7 +96,7 @@ Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
 External options: {}
-External location: "s3://s3-ap-south-1.amazonaws.com/ap-south-1.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=ap-south-1"
+External location: "s3://s3-ap-south-1.amazonaws.com/ap-south-1.@read_prefix@/small17/data0000 config=@config_file@ section=default region=ap-south-1"
 Execute on: all segments
 
 SELECT round(sum(open)) FROM s3regress_all_regions_version2;
@@ -107,7 +107,7 @@ SELECT round(sum(open)) FROM s3regress_all_regions_version2;
 
 DROP EXTERNAL TABLE s3regress_all_regions_version2;
 CREATE READABLE EXTERNAL TABLE s3regress_all_regions_version2 (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-ap-northeast-2.amazonaws.com/ap-northeast-2.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=ap-northeast-2') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-ap-northeast-2.amazonaws.com/ap-northeast-2.@read_prefix@/small17/data0000 config=@config_file@ section=default region=ap-northeast-2') FORMAT 'csv';
 \d s3regress_all_regions_version2
 External table "public.s3regress_all_regions_version2"
  Column |       Type       | Modifiers 
@@ -123,7 +123,7 @@ Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
 External options: {}
-External location: "s3://s3-ap-northeast-2.amazonaws.com/ap-northeast-2.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=ap-northeast-2"
+External location: "s3://s3-ap-northeast-2.amazonaws.com/ap-northeast-2.@read_prefix@/small17/data0000 config=@config_file@ section=default region=ap-northeast-2"
 Execute on: all segments
 
 SELECT round(sum(open)) FROM s3regress_all_regions_version2;
@@ -134,7 +134,7 @@ SELECT round(sum(open)) FROM s3regress_all_regions_version2;
 
 DROP EXTERNAL TABLE s3regress_all_regions_version2;
 CREATE READABLE EXTERNAL TABLE s3regress_all_regions_version2 (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-ap-southeast-1.amazonaws.com/ap-southeast-1.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=ap-southeast-1') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-ap-southeast-1.amazonaws.com/ap-southeast-1.@read_prefix@/small17/data0000 config=@config_file@ section=default region=ap-southeast-1') FORMAT 'csv';
 \d s3regress_all_regions_version2
 External table "public.s3regress_all_regions_version2"
  Column |       Type       | Modifiers 
@@ -150,7 +150,7 @@ Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
 External options: {}
-External location: "s3://s3-ap-southeast-1.amazonaws.com/ap-southeast-1.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=ap-southeast-1"
+External location: "s3://s3-ap-southeast-1.amazonaws.com/ap-southeast-1.@read_prefix@/small17/data0000 config=@config_file@ section=default region=ap-southeast-1"
 Execute on: all segments
 
 SELECT round(sum(open)) FROM s3regress_all_regions_version2;
@@ -161,7 +161,7 @@ SELECT round(sum(open)) FROM s3regress_all_regions_version2;
 
 DROP EXTERNAL TABLE s3regress_all_regions_version2;
 CREATE READABLE EXTERNAL TABLE s3regress_all_regions_version2 (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-ap-southeast-2.amazonaws.com/ap-southeast-2.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=ap-southeast-2') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-ap-southeast-2.amazonaws.com/ap-southeast-2.@read_prefix@/small17/data0000 config=@config_file@ section=default region=ap-southeast-2') FORMAT 'csv';
 \d s3regress_all_regions_version2
 External table "public.s3regress_all_regions_version2"
  Column |       Type       | Modifiers 
@@ -177,7 +177,7 @@ Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
 External options: {}
-External location: "s3://s3-ap-southeast-2.amazonaws.com/ap-southeast-2.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=ap-southeast-2"
+External location: "s3://s3-ap-southeast-2.amazonaws.com/ap-southeast-2.@read_prefix@/small17/data0000 config=@config_file@ section=default region=ap-southeast-2"
 Execute on: all segments
 
 SELECT round(sum(open)) FROM s3regress_all_regions_version2;
@@ -188,7 +188,7 @@ SELECT round(sum(open)) FROM s3regress_all_regions_version2;
 
 DROP EXTERNAL TABLE s3regress_all_regions_version2;
 CREATE READABLE EXTERNAL TABLE s3regress_all_regions_version2 (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-ap-northeast-1.amazonaws.com/ap-northeast-1.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=ap-northeast-1') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-ap-northeast-1.amazonaws.com/ap-northeast-1.@read_prefix@/small17/data0000 config=@config_file@ section=default region=ap-northeast-1') FORMAT 'csv';
 \d s3regress_all_regions_version2
 External table "public.s3regress_all_regions_version2"
  Column |       Type       | Modifiers 
@@ -204,7 +204,7 @@ Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
 External options: {}
-External location: "s3://s3-ap-northeast-1.amazonaws.com/ap-northeast-1.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=ap-northeast-1"
+External location: "s3://s3-ap-northeast-1.amazonaws.com/ap-northeast-1.@read_prefix@/small17/data0000 config=@config_file@ section=default region=ap-northeast-1"
 Execute on: all segments
 
 SELECT round(sum(open)) FROM s3regress_all_regions_version2;
@@ -215,7 +215,7 @@ SELECT round(sum(open)) FROM s3regress_all_regions_version2;
 
 DROP EXTERNAL TABLE s3regress_all_regions_version2;
 CREATE READABLE EXTERNAL TABLE s3regress_all_regions_version2 (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-eu-central-1.amazonaws.com/eu-central-1.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=eu-central-1') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-eu-central-1.amazonaws.com/eu-central-1.@read_prefix@/small17/data0000 config=@config_file@ section=default region=eu-central-1') FORMAT 'csv';
 \d s3regress_all_regions_version2
 External table "public.s3regress_all_regions_version2"
  Column |       Type       | Modifiers 
@@ -231,7 +231,7 @@ Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
 External options: {}
-External location: "s3://s3-eu-central-1.amazonaws.com/eu-central-1.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=eu-central-1"
+External location: "s3://s3-eu-central-1.amazonaws.com/eu-central-1.@read_prefix@/small17/data0000 config=@config_file@ section=default region=eu-central-1"
 Execute on: all segments
 
 SELECT round(sum(open)) FROM s3regress_all_regions_version2;
@@ -242,7 +242,7 @@ SELECT round(sum(open)) FROM s3regress_all_regions_version2;
 
 DROP EXTERNAL TABLE s3regress_all_regions_version2;
 CREATE READABLE EXTERNAL TABLE s3regress_all_regions_version2 (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-eu-west-1.amazonaws.com/eu-west-1.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=eu-west-1') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-eu-west-1.amazonaws.com/eu-west-1.@read_prefix@/small17/data0000 config=@config_file@ section=default region=eu-west-1') FORMAT 'csv';
 \d s3regress_all_regions_version2
 External table "public.s3regress_all_regions_version2"
  Column |       Type       | Modifiers 
@@ -258,7 +258,7 @@ Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
 External options: {}
-External location: "s3://s3-eu-west-1.amazonaws.com/eu-west-1.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=eu-west-1"
+External location: "s3://s3-eu-west-1.amazonaws.com/eu-west-1.@read_prefix@/small17/data0000 config=@config_file@ section=default region=eu-west-1"
 Execute on: all segments
 
 SELECT round(sum(open)) FROM s3regress_all_regions_version2;
@@ -269,7 +269,7 @@ SELECT round(sum(open)) FROM s3regress_all_regions_version2;
 
 DROP EXTERNAL TABLE s3regress_all_regions_version2;
 CREATE READABLE EXTERNAL TABLE s3regress_all_regions_version2 (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-sa-east-1.amazonaws.com/sa-east-1.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=sa-east-1') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-sa-east-1.amazonaws.com/sa-east-1.@read_prefix@/small17/data0000 config=@config_file@ section=default region=sa-east-1') FORMAT 'csv';
 \d s3regress_all_regions_version2
 External table "public.s3regress_all_regions_version2"
  Column |       Type       | Modifiers 
@@ -285,7 +285,7 @@ Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
 External options: {}
-External location: "s3://s3-sa-east-1.amazonaws.com/sa-east-1.@read_prefix@/small17/data0000 config=@config_file@ section=version2 region=sa-east-1"
+External location: "s3://s3-sa-east-1.amazonaws.com/sa-east-1.@read_prefix@/small17/data0000 config=@config_file@ section=default region=sa-east-1"
 Execute on: all segments
 
 SELECT round(sum(open)) FROM s3regress_all_regions_version2;

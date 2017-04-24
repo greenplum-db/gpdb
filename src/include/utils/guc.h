@@ -460,7 +460,6 @@ extern bool optimizer_enable_outerjoin_to_unionall_rewrite;
 extern bool optimizer_apply_left_outer_to_union_all_disregarding_stats;
 extern bool optimizer_enable_ctas;
 extern bool optimizer_remove_order_below_dml;
-extern bool optimizer_static_partition_selection;
 extern bool optimizer_enable_partial_index;
 extern bool optimizer_dml_triggers;
 extern bool	optimizer_dml_constraints;

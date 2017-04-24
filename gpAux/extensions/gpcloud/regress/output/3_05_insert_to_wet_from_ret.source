@@ -1,7 +1,7 @@
 CREATE READABLE EXTERNAL TABLE s3write_ret2wet_read (date text, time text, status bool, sample1 float, sample2 float,
-        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/ret2wet/ config=@config_file@ section=read') FORMAT 'csv';
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/ret2wet/ config=@config_file@') FORMAT 'csv';
 CREATE WRITABLE EXTERNAL TABLE s3write_ret2wet_write (date text, time text, status bool, sample1 float, sample2 float,
-        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/ret2wet/ config=@config_file@ section=write') FORMAT 'csv';
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/ret2wet/ config=@config_file@') FORMAT 'csv';
 INSERT INTO s3write_ret2wet_write (date, time, status, sample1, sample2, volume)
         SELECT current_date, localtime, (random() > 0.5)::bool, trunc(random()::numeric, 8), trunc(random()::numeric, 8), v
         FROM generate_series(1, 2000000) as v;
@@ -10,9 +10,9 @@ NOTICE:  table "s3write_ret2wet_read_new" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS s3write_ret2wet_write_new;
 NOTICE:  table "s3write_ret2wet_write_new" does not exist, skipping
 CREATE READABLE EXTERNAL TABLE s3write_ret2wet_read_new (date text, time text, status bool, sample1 float, sample2 float,
-        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/ret2wet_new/ config=@config_file@ section=read') FORMAT 'csv';
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/ret2wet_new/ config=@config_file@') FORMAT 'csv';
 CREATE WRITABLE EXTERNAL TABLE s3write_ret2wet_write_new (date text, time text, status bool, sample1 float, sample2 float,
-        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/ret2wet_new/ config=@config_file@ section=write') FORMAT 'csv';
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/ret2wet_new/ config=@config_file@') FORMAT 'csv';
 INSERT INTO s3write_ret2wet_write_new SELECT * FROM s3write_ret2wet_read;
 SELECT min(volume), max(volume), count(*) FROM s3write_ret2wet_read_new;
  min |   max   |  count

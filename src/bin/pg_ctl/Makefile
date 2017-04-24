@@ -13,9 +13,6 @@ PGFILEDESC = "pg_ctl - starts/stops/restarts the PostgreSQL server"
 subdir = src/bin/pg_ctl
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
-ifneq ($(PORTNAME), win32)
-override CFLAGS += $(PTHREAD_CFLAGS) -pthread
-endif
 
 # The frontend doesn't need everything that's in LIBS, some are backend only
 LIBS := $(filter-out -lresolv -lbz2, $(LIBS))

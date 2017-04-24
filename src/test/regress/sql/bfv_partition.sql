@@ -187,7 +187,7 @@ DROP TABLE TIMESTAMP_MONTH_rangep_STARTINCL;
 -- start_ignore
 DROP TABLE IF EXISTS T26002_T1;
 DROP TABLE IF EXISTS T26002_T2;
--- end_ignore
+
 
 CREATE TABLE T26002_T1 (empid int, departmentid int, year int, region varchar(20))
 DISTRIBUTED BY (empid)
@@ -200,7 +200,8 @@ DISTRIBUTED BY (empid)
        DEFAULT SUBPARTITION other_regions)
 ( START (2012) END (2015) EVERY (3),
   DEFAULT PARTITION outlying_years);
-  
+-- end_ignore
+
 -- TEST
 -- expected to see the partition key
 \d T26002_T1;
@@ -793,25 +794,6 @@ EVERY ('2 mons'::interval)
 );
 explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
 drop table mpp8031;
-
--- Test Query on Partition table when optimizer_static_partition_selection is OFF.
--- start_ignore
-DROP TABLE IF EXISTS partitioned_table;
--- end_ignore
-
-CREATE TABLE partitioned_table (a int)
-PARTITION BY RANGE(a)
-(
-   END(10),
-   END(20),
-   END(30)
-);
-
-INSERT INTO partitioned_table VALUES(11);
-
-SET optimizer_static_partition_selection = off;
-
-SELECT * FROM partitioned_table;
 
 -- CLEANUP
 -- start_ignore

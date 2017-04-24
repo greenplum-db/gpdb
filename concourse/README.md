@@ -15,7 +15,7 @@ There should be seven pipelines in this directory:
 * `pr_pipeline.yml` which compiles and tests pull requests.
 * `concourse-upgrade.yml` which uses Concourse to upgrade itself.
 * `pipeline_tinc.yml` run TINC tests against gpdb master branch.
-* `pipeline_gpcloud.yml` run gpcloud tests against developers specified branch.
+* `gpcloud_pipeline.yml` run gpcloud tests against developers specified branch.
 
 ##### Tasks Directory
 All task yamls should live in this directory.

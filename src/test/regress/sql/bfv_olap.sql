@@ -413,7 +413,19 @@ from (select * from mpp23240 where f > 10) x;
 -- CLEANUP
 -- start_ignore
 drop table mpp23240;
+-- end_ignore
 
-drop schema if exists bfv_olap;
+-- Test for the bug reported at https://github.com/greenplum-db/gpdb/issues/2236
+create table test1 (x int, y int, z double precision);
+insert into test1 select a, b, a*10 + b from generate_series(1, 5) a, generate_series(1, 5) b;
+
+select sum(z) over (partition by x) as sumx, sum(z) over (partition by y) as sumy from test1;
+
+drop table test1;
+
+
+-- CLEANUP
+-- start_ignore
+drop schema bfv_olap cascade;
 -- end_ignore
 

@@ -4,13 +4,8 @@ image_resource:
   source:
     repository: pivotaldata/centos-gpdb-dev
     tag: '6-gcc6.2-llvm3.7'
-    username:
-    password:
 inputs:
   - name: gpdb_src
   - name: bin_gpdb
-params:
-  s3conf:
-  overwrite_gpcloud:
 run:
   path: gpdb_src/concourse/scripts/regression_tests_gpcloud.bash

@@ -270,7 +270,7 @@ static void plan_windowinfo_coplans(PlannerInfo *root, WindowContext *context, i
 static List * plan_window_rtable(PlannerInfo* root, WindowContext *context);
 static List *make_rowkey_targets(void);
 static Coplan *makeCoplan(CoplanType type, WindowContext *context);
-static Plan *assure_collocation_and_order(PlannerInfo *root, Plan *input_plan, 
+static Plan *assure_collocation_and_order(PlannerInfo *root, Plan *input_plan, List *lower_tlist,
 		int partkey_len, AttrNumber *partkey_attrs, List *sortclause, 
 		CdbPathLocus input_locus, CdbPathLocus *output_locus, List **pathkeys_ptr);
 static AttrNumber addTargetToCoplan(Node *target, Coplan *coplan, WindowContext *context);
@@ -1744,6 +1744,7 @@ static Plan *plan_common_subquery(PlannerInfo *root, List *lower_tlist,
 Plan *assure_collocation_and_order(
 		PlannerInfo *root,
 		Plan *input_plan,
+		List *lower_tlist,
 		int partkey_len,
 		AttrNumber *partkey_attrs,
 		List *sortclause,
@@ -1768,7 +1769,7 @@ Plan *assure_collocation_and_order(
 	
 	if ( sortclause != NIL )
 	{
-		sort_pathkeys = make_pathkeys_for_sortclauses(root, sortclause, input_plan->targetlist, true);
+		sort_pathkeys = make_pathkeys_for_sortclauses(root, sortclause, lower_tlist, true);
 		if ( root != NULL )
 			sort_pathkeys = canonicalize_pathkeys(root, sort_pathkeys);
 	}
@@ -1810,7 +1811,7 @@ Plan *assure_collocation_and_order(
 			if ( 0 >= n-- ) break;
 			dist_keys = lappend(dist_keys, lfirst(lc));
 		}
-		dist_pathkeys = make_pathkeys_for_sortclauses(root, dist_keys, input_plan->targetlist, true);
+		dist_pathkeys = make_pathkeys_for_sortclauses(root, dist_keys, lower_tlist, true);
 		if ( root != NULL )
 			dist_pathkeys = canonicalize_pathkeys(root, dist_pathkeys);
 		
@@ -1924,6 +1925,7 @@ static Plan *plan_trivial_window_query(PlannerInfo *root, WindowContext *context
 	/* Assure needed colocation and order. */
 	result_plan = assure_collocation_and_order(root,
 											   result_plan,
+											   lower_tlist,
 											   winfo->partkey_len,
 											   winfo->partkey_attrs,
 											   winfo->sortclause,
@@ -2244,6 +2246,7 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 	winfo = &context->windowinfos[lo_windex];
 	window_plan = assure_collocation_and_order(root,
 											   input_plan,
+											   context->lower_tlist,
 											   winfo->partkey_len,
 											   winfo->partkey_attrs,
 											   winfo->sortclause,
@@ -3372,6 +3375,7 @@ construct_share_plans(PlannerInfo *root, WindowContext *context)
 			Plan *new_plan =
 				assure_collocation_and_order(root,
 											 share_node,
+											 share_node->targetlist,
 											 winfo->partkey_len, 
 											 winfo->partkey_attrs,
 											 winfo->sortclause,
@@ -3395,6 +3399,7 @@ construct_share_plans(PlannerInfo *root, WindowContext *context)
 			Plan *new_plan =
 				assure_collocation_and_order(root,
 											 share_node,
+											 share_node->targetlist,
 											 winfo->partkey_len, 
 											 winfo->partkey_attrs,
 											 winfo->sortclause,

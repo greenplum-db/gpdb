@@ -1,9 +1,9 @@
-import commands
 import fnmatch
 import getpass
 import glob
 import gzip
 import json
+
 import os
 import platform
 import shutil
@@ -13,9 +13,12 @@ import thread
 import json
 import csv
 import glob
+import subprocess
+import commands
 
-from collections import defaultdict
 from datetime import datetime
+from time import sleep
+from behave import given, when, then
 
 from gppylib.commands.gp import SegmentStart, GpStandbyStart
 from gppylib.commands.unix import findCmdInPath
@@ -26,15 +29,14 @@ from gppylib.operations.unix import ListRemoteFilesByPattern, CheckRemoteFile
 from test.behave_utils.gpfdist_utils.gpfdist_mgmt import Gpfdist
 from test.behave_utils.utils import *
 from test.behave_utils.PgHba import PgHba, Entry
+from gppylib.commands.base import Command, REMOTE
 
-timestamp_json = '/tmp/old_to_new_timestamps.json'
 labels_json = '/tmp/old_to_new_timestamp_labels.json'
-global_timestamps = {}
+timestamp_json = '/tmp/old_to_new_timestamps.json'
 global_labels = {}
+global_timestamps = {}
 
 master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
-timestamp_json = '/tmp/old_to_new_timestamps.json'
-global_timestamps = {}
 if master_data_dir is None:
     raise Exception('Please set MASTER_DATA_DIRECTORY in environment')
 
@@ -87,8 +89,7 @@ def impl(context):
     for i in range (30):
         sleep(10)
         cmd.run()
-        results = cmd.get_results()
-        if results.rc == 0:
+        if cmd.get_return_code() == 0:
             return
     raise Exception("Database did not start up within 5 minutes`")
 
@@ -113,8 +114,7 @@ def impl(context):
     for i in range (30):
         sleep(10)
         cmd.run()
-        results = cmd.get_results()
-        if results.rc == 0:
+        if cmd.get_return_code() == 0:
             return
     raise Exception("Database did not start up within 5 minutes`")
 
@@ -1287,8 +1287,7 @@ def impl(context, dbname):
             for dump_file in master_dump_files:
                 cmd = Command('check for dump files', 'ls -1 %s | wc -l' % (dump_file))
                 cmd.run(validateAfter=True)
-                results = cmd.get_results()
-                if int(results.stdout.strip()) != 1:
+                if int(cmd.get_stdout()) != 1:
                     raise Exception('Dump file %s not found after gp_dump on host %s' % (dump_file, host))
         else:
             if hasattr(context, 'backup_dir'):
@@ -1302,16 +1301,14 @@ def impl(context, dbname):
             for dump_file in segment_dump_files:
                 cmd = Command('check for dump files', 'ls -1 %s | wc -l' % (dump_file), ctxt=REMOTE, remoteHost=host)
                 cmd.run(validateAfter=True)
-                results = cmd.get_results()
-                if int(results.stdout.strip()) != 1:
+                if int(cmd.get_stdout()) != 1:
                     raise Exception('Dump file %s not found after gp_dump on host %s' % (dump_file, host))
 
 @then('"{filetype}" file should not be created under "{dir}"')
 def impl(context, filetype, dir):
     if not hasattr(context, 'backup_timestamp'):
-        raise Exception('Unable to find out the %s because backup timestamp has not been stored' % filename)
+        raise Exception('Unable to find out the %s because backup timestamp has not been stored' % filetype)
 
-    filename = ''
     if filetype == "dirty_list":
         filename = 'gp_dump_%s_dirty_list' % context.backup_timestamp
     elif filetype == "plan":
@@ -1766,7 +1763,7 @@ def validate_master_config_backup_files(context, dir=master_data_dir):
     for df in dump_files:
         if df.startswith('%sgp_master_config_files' % context.dump_prefix) and df.endswith('.tar'):
             return
-    raise Exception('Config files not backed up on master "%s"' % master_config_file)
+    raise Exception('Config files not backed up on master "%s"' % master_dump_dir)
 
 def validate_segment_config_backup_files(context, dir=None):
     if not hasattr(context, "dump_prefix"):
@@ -2359,8 +2356,7 @@ def impl(context, filename_prefix):
                       ctxt=REMOTE,
                       remoteHost=host)
         cmd.run(validateAfter=True)
-        results = cmd.get_results()
-        if int(results.stdout.strip()) > 0:
+        if int(cmd.get_stdout()) > 0:
             raise Exception('Temp files with prefix %s are not cleaned up on host %s after gpcrondump' % (filename_prefix, host))
 
 @when('the user activates standby on the standbyhost')
@@ -2576,7 +2572,7 @@ def get_segment_dump_files(context, dir):
         segment_dump_dir =  dir.strip() if len(dir.strip()) != 0 else seg.getSegmentDataDirectory()
         cmd = Command('check dump files', 'ls %s/db_dumps/%s/*%s*' % (segment_dump_dir, context.backup_timestamp[0:8], context.backup_timestamp), ctxt=REMOTE, remoteHost=seg.getSegmentHostName())
         cmd.run(validateAfter=False) #because we expect ls to fail
-        results.append((seg, [os.path.basename(r) for r in cmd.get_results().stdout.strip().split()]))
+        results.append((seg, [os.path.basename(r) for r in cmd.get_stdout().split()]))
     return results
 
 @then('the named pipes are created for the timestamp "{timestamp_key}" under "{dir}"')
@@ -2590,14 +2586,12 @@ def impl(context, timestamp_key, dir):
             cmd_str = 'mkdir -p %s' % os.path.dirname(filename)
             cmd = Command('create named pipes directory', cmd_str, ctxt=REMOTE, remoteHost=host)
             cmd.run(validateAfter=True)
-            results = cmd.get_results()
-            if int(results.rc) != 0:
+            if int(cmd.get_return_code()) != 0:
                 raise Exception('Non zero return code during makedirs command')
 
             cmd = Command('create named pipes', 'mkfifo %s' % filename, ctxt=REMOTE, remoteHost=host)
             cmd.run(validateAfter=True)
-            results = cmd.get_results()
-            if int(results.rc) != 0:
+            if int(cmd.get_return_code()) != 0:
                 raise Exception('Non zero return code during mkfifo command')
 
 @then('the named pipes are validated against the timestamp "{timestamp_key}" under "{dir}"')
@@ -2610,10 +2604,9 @@ def impl(context, timestamp_key, dir):
             (host, filename) = [t.strip() for t in f.split(':')]
             cmd = Command('create named pipes', 'file %s' % filename, ctxt=REMOTE, remoteHost=host)
             cmd.run(validateAfter=True)
-            results = cmd.get_results()
-            if int(results.rc) != 0:
+            if int(cmd.get_return_code()) != 0:
                 raise Exception('Non zero return code during mkfifo command')
-            if not 'named pipe' in results.stdout:
+            if not 'named pipe' in cmd.get_stdout():
                 raise Exception('Expected %s to be a named pipe' % filename)
 
 @when('the named pipe script for the "{operation}" is run for the files under "{dump_directory}"')
@@ -2637,7 +2630,7 @@ def impl(context):
                       ctxt=REMOTE,
                       remoteHost=h)
         find_cmd.run()
-        results = find_cmd.get_results().stdout.strip().split('\n')
+        results = find_cmd.get_stdout().split('\n')
         for process in results:
             if not process.strip():
                 continue
@@ -2649,9 +2642,8 @@ def impl(context):
                           remoteHost=h)
             cmd.run(validateAfter=True)
 
-        find_cmd.run() # We expecte failure here
-
-        results = find_cmd.get_results().stdout.strip()
+        find_cmd.run()  # We expect failure here
+        results = find_cmd.get_stdout()
         if results:
             raise Exception('Unexpected pipe processes found "%s"' % results)
 
@@ -2675,7 +2667,6 @@ def open_named_pipes(context, operation, timestamp, dump_dir):
                           ctxt=REMOTE, remoteHost=host)
             cmd.run(validateAfter=True)
             time.sleep(sleeptime)
-            results = cmd.get_results()
 
 @given('the core dump directory is stored')
 def impl(context):
@@ -2781,7 +2772,7 @@ def impl(context, directory, prefix):
 
     cmd = Command('check dump files', 'ls %s/db_dumps/%s/*%s*' % (master_dump_dir, context.backup_timestamp[0:8], context.backup_timestamp))
     cmd.run(validateAfter=True)
-    results = cmd.get_results().stdout.strip().split('\n')
+    results = cmd.get_stdout().split('\n')
 
     if len(results) == 0:
         raise Exception('Failed to find dump files %s on the master under %s' % (results, master_dump_dir))
@@ -3216,20 +3207,24 @@ def impl(context, seg):
 
     filename = os.path.join(os.getcwd(), './test/behave/mgmt_utils/steps/data/pid_background_script.py')
 
-    cmd = Command(name="Remove background script on remote host", cmdStr='rm -f /tmp/pid_background_script.py', remoteHost=hostname, ctxt=REMOTE)
+    cmd = Command(name="Remove background script on remote host", cmdStr='rm -f /tmp/pid_background_script.py',
+                  remoteHost=hostname, ctxt=REMOTE)
     cmd.run(validateAfter=True)
 
     cmd = Command(name="Copy background script to remote host", cmdStr='scp %s %s:/tmp' % (filename, hostname))
     cmd.run(validateAfter=True)
 
-    cmd = Command(name="Run Bg process to save pid", cmdStr='sh -c "python /tmp/pid_background_script.py" &>/dev/null &', remoteHost=hostname, ctxt=REMOTE)
+    cmd = Command(name="Run Bg process to save pid",
+                  cmdStr='sh -c "python /tmp/pid_background_script.py" &>/dev/null &', remoteHost=hostname, ctxt=REMOTE)
     cmd.run(validateAfter=True)
 
-    cmd = Command(name="get bg pid", cmdStr="ps ux | grep pid_background_script.py | grep -v grep | awk '{print \$2}'", remoteHost=hostname, ctxt=REMOTE)
+    cmd = Command(name="get bg pid", cmdStr="ps ux | grep pid_background_script.py | grep -v grep | awk '{print \$2}'",
+                  remoteHost=hostname, ctxt=REMOTE)
     cmd.run(validateAfter=True)
-    context.bg_pid = cmd.get_results().stdout.strip()
+    context.bg_pid = cmd.get_stdout()
     if not context.bg_pid:
-        raise Exception("Unable to obtain the pid of the background script. Seg Host: %s, get_results: %s" % (hostname, cmd.get_results().stdout.strip()))
+        raise Exception("Unable to obtain the pid of the background script. Seg Host: %s, get_results: %s" %
+                        (hostname, cmd.get_stdout()))
 
 @when('the background pid is killed on "{seg}" segment')
 @then('the background pid is killed on "{seg}" segment')
@@ -3245,8 +3240,7 @@ def impl(context, seg):
 
     cmd = Command(name="get bg pid", cmdStr="ps ux | grep pid_background_script.py | grep -v grep | awk '{print \$2}'", remoteHost=hostname, ctxt=REMOTE)
     cmd.run(validateAfter=True)
-    pids = cmd.get_results().stdout.strip().splitlines()
-
+    pids = cmd.get_stdout().splitlines()
     for pid in pids:
         cmd = Command(name="killbg pid", cmdStr='kill -9 %s' % pid, remoteHost=hostname, ctxt=REMOTE)
         cmd.run(validateAfter=True)
@@ -3314,9 +3308,10 @@ def impl(context, seg):
         pid = fr.readline().strip()
 
     while True:
-        cmd = Command(name="get non-existing pid", cmdStr="ps ux | grep %s | grep -v grep | awk '{print \$2}'" % pid, remoteHost=hostname, ctxt=REMOTE)
+        cmd = Command(name="get non-existing pid", cmdStr="ps ux | grep %s | grep -v grep | awk '{print \$2}'" % pid,
+                      remoteHost=hostname, ctxt=REMOTE)
         cmd.run(validateAfter=True)
-        if cmd.get_results().stdout.strip():
+        if cmd.get_stdout():
             pid = pid + 1
         else:
             break
@@ -3671,17 +3666,17 @@ def impl(context, num):
     num = int(num)
     logdir = "%s/gpAdminLogs" % os.path.expanduser("~")
     if not os.path.exists(logdir):
-        raise Exception('No such directory: %s' % absdirname)
+        raise Exception('No such directory: %s' % logdir)
     logname = get_log_name('gptransfer', logdir)
 
     full_path = os.path.join(logdir, logname)
 
     if not os.path.isfile(full_path):
-        raise Exception ("Can not find %s file: %s" % (file_type, full_path))
+        raise Exception ("Can not find file: %s" % full_path)
 
-    contents = ""
+    # todo why open file if we don't care about contents?
     with open(full_path) as fd:
-        contents = fd.read()
+        fd.read()
 
     for i in range(num):
         worker = "\[DEBUG\]:-\[worker%d\]" % i
@@ -3764,20 +3759,20 @@ def impl(context, output):
             contents = line.strip()
     pat = re.compile(output)
     if not pat.search(contents):
-        err_str = "Expected stdout string '%s' and found: '%s'" % (msg, contents)
+        err_str = "Expected stdout string '%s' and found: '%s'" % (output, contents)
         raise Exception(err_str)
 
 @then('the user waits for "{process_name}" to finish running')
 def impl(context, process_name):
-     run_command(context, "ps ux | grep `which %s` | grep -v grep | awk '{print $2}' | xargs" % process_name)
-     pids = context.stdout_message.split()
-     while len(pids) > 0:
-         for pid in pids:
-             try:
-                 os.kill(int(pid), 0)
-             except OSError, error:
-                 pids.remove(pid)
-         time.sleep(10)
+    run_command(context, "ps ux | grep `which %s` | grep -v grep | awk '{print $2}' | xargs" % process_name)
+    pids = context.stdout_message.split()
+    while len(pids) > 0:
+        for pid in pids:
+            try:
+                os.kill(int(pid), 0)
+            except OSError:
+                pids.remove(pid)
+        time.sleep(10)
 
 @given('the gpfdists occupying port {port} on host "{hostfile}"')
 def impl(context, port, hostfile):
@@ -3786,12 +3781,13 @@ def impl(context, port, hostfile):
     source_map_file = os.environ.get(hostfile)
     dir = '/tmp'
     ctxt = 2
-    with open(source_map_file,'r') as f:
+    with open(source_map_file, 'r') as f:
         for line in f:
             host = line.strip().split(',')[0]
-            if host in ('localhost', '127.0.0.1',socket.gethostname()):
+            if host in ('localhost', '127.0.0.1', socket.gethostname()):
                 ctxt = 1
-            gpfdist = Gpfdist('gpfdist on host %s'%host, dir, port, os.path.join('/tmp','gpfdist.pid'), ctxt, host, gp_source_file)
+            gpfdist = Gpfdist('gpfdist on host %s'%host, dir, port, os.path.join('/tmp','gpfdist.pid'),
+                              ctxt, host, gp_source_file)
             gpfdist.startGpfdist()
 
 @then('the gpfdists running on port {port} get cleaned up from host "{hostfile}"')
@@ -3806,7 +3802,8 @@ def impl(context, port, hostfile):
             host = line.strip().split(',')[0]
             if host in ('localhost', '127.0.0.1',socket.gethostname()):
                 ctxt = 1
-            gpfdist = Gpfdist('gpfdist on host %s'%host, dir, port, os.path.join('/tmp','gpfdist.pid'), ctxt, host, gp_source_file)
+            gpfdist = Gpfdist('gpfdist on host %s'%host, dir, port, os.path.join('/tmp','gpfdist.pid'),
+                              ctxt, host, gp_source_file)
             gpfdist.cleanupGpfdist()
 
 @when('verify that db_dumps directory does not exist in master or segments')
@@ -3851,7 +3848,6 @@ def impl(context, filepath, line):
 
 @then('verify that gptransfer is in order of "{filepath}" when partition transfer is "{is_partition_transfer}"')
 def impl(context, filepath, is_partition_transfer):
-    table = []
     with open(filepath) as f:
         table = f.read().splitlines()
         if is_partition_transfer != "None":
@@ -4113,11 +4109,13 @@ def impl(context, proc):
     start_time = current_time = datetime.now()
     while (current_time - start_time).seconds < 120:
         cmd.run()
-        if cmd.get_results().rc != 0: # 1 is a good outcome; 2 or 3 we should fail fast because they're errors
+        if cmd.get_return_code() > 1:
+            raise Exception("unexpected problem with gprep, return code: %s" % cmd.get_return_code())
+        if cmd.get_return_code() != 0:  # 1 means no match
             break
         time.sleep(2)
         current_time = datetime.now()
-    context.ret_code = cmd.get_results().rc
+    context.ret_code = cmd.get_return_code()
     context.error_message = ''
     if context.ret_code > 1:
         context.error_message = 'pgrep internal error'
@@ -4131,15 +4129,46 @@ def impl(context, proc):
     start_time = current_time = datetime.now()
     while (current_time - start_time).seconds < 120:
         cmd.run()
-        if cmd.get_results().rc != 1: # 0 is a good outcome; 2 or 3 we should fail fast because they're errors
+        if cmd.get_return_code() > 1:
+            raise Exception("unexpected problem with gprep, return code: %s" % cmd.get_return_code())
+        if cmd.get_return_code() != 1:  # 0 means match
             break
         time.sleep(2)
         current_time = datetime.now()
-    context.ret_code = cmd.get_results().rc
+    context.ret_code = cmd.get_return_code()
     context.error_message = ''
     if context.ret_code > 1:
         context.error_message = 'pgrep internal error'
     check_return_code(context, 0) # 0 means one or more processes were matched
+
+@when('wait until the results from boolean sql "{sql}" is "{boolean}"')
+@then('wait until the results from boolean sql "{sql}" is "{boolean}"')
+@given('wait until the results from boolean sql "{sql}" is "{boolean}"')
+def impl(context, sql, boolean):
+    cmd = Command(name='psql', cmdStr='psql --tuples-only -d gpperfmon -c "%s"' % sql)
+    start_time = current_time = datetime.now()
+    result = None
+    while (current_time - start_time).seconds < 120:
+        cmd.run()
+        if cmd.get_return_code() != 0:
+            break
+        result = cmd.get_stdout()
+        if _str2bool(result) == _str2bool(boolean):
+            break
+        time.sleep(2)
+        current_time = datetime.now()
+
+    if cmd.get_return_code() != 0:
+        context.ret_code = cmd.get_return_code()
+        context.error_message = 'psql internal error: %s' % cmd.get_stderr()
+        check_return_code(context, 0)
+    else:
+        if _str2bool(result) != _str2bool(boolean):
+            raise Exception("sql output '%s' is not same as '%s'" % (result, boolean))
+
+
+def _str2bool(string):
+    return string.lower().strip() in ['t', 'true', '1', 'yes', 'y']
 
 @when('run gppersistent_rebuild with the saved content id')
 @then('run gppersistent_rebuild with the saved content id')
@@ -4147,7 +4176,7 @@ def impl(context):
     cmdStr = "echo -e 'y\ny\n' | $GPHOME/sbin/gppersistentrebuild -c %s" % context.saved_segcid
     cmd=Command(name='Run gppersistentrebuild',cmdStr=cmdStr)
     cmd.run(validateAfter=True)
-    context.ret_code = cmd.get_results().rc
+    context.ret_code = cmd.get_return_code()
 
 @given('the information of a "{seg}" segment on any host is saved')
 @when('the information of a "{seg}" segment on any host is saved')

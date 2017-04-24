@@ -3380,7 +3380,7 @@ CTranslatorDXLToPlStmt::PplanPartitionSelector
 
 	ppartsel->staticPartOids = NIL;
 	ppartsel->staticScanIds = NIL;
-	ppartsel->staticSelection = (optimizer_static_partition_selection && !fHasChild);
+	ppartsel->staticSelection = !fHasChild;
 
 	if (ppartsel->staticSelection)
 	{

@@ -503,7 +503,8 @@ jobs:
     file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
     image: centos-gpdb-dev-6
     params:
-      s3conf: {{s3_configuration_file}}
+      gpcloud_access_key_id: {{gpcloud-access-key-id}}
+      gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
       overwrite_gpcloud: false
       TARGET_OS: centos
       TARGET_OS_VERSION: 6

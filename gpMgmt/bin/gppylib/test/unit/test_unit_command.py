@@ -1,0 +1,49 @@
+from commands.base import Command, CommandResult
+from gp_unittest import *
+
+class CommandTest(GpTestCase):
+    def setUp(self):
+        self.subject = Command("my name", "my command string")
+
+    def test_get_stdout_before_running_raises(self):
+        with self.assertRaisesRegexp(Exception, "command not run yet"):
+            self.subject.get_stdout()
+
+    def test_get_stdout_after_running_returns_stdout(self):
+        self.subject.set_results(CommandResult(0, "my stdout", "", True, False))
+
+        self.assertEqual(self.subject.get_stdout(), "my stdout")
+
+    def test_get_stdout_after_running_returns_stripped_stdout(self):
+        self.subject.set_results(CommandResult(0, "  my stdout\n", "", True, False))
+
+        self.assertEqual(self.subject.get_stdout(), "my stdout")
+
+    def test_get_stdout_after_running_with_no_strip_returns_unstripped_stdout(self):
+        self.subject.set_results(CommandResult(0, "  my stdout\n", "", True, False))
+
+        self.assertEqual(self.subject.get_stdout(strip=False), "  my stdout\n")
+
+    def test_get_return_code_before_running_raises(self):
+        with self.assertRaisesRegexp(Exception, "command not run yet"):
+            self.subject.get_return_code()
+
+    def test_get_stdout_after_running_returns_rc(self):
+        self.subject.set_results(CommandResult(-23, "my stdout", "", True, False))
+
+        self.assertEqual(self.subject.get_return_code(), -23)
+
+    def test_get_stderr_before_running_raises(self):
+        with self.assertRaisesRegexp(Exception, "command not run yet"):
+            self.subject.get_stderr()
+
+    def test_get_stderr_after_running_returns_stderr(self):
+        self.subject.set_results(CommandResult(0, "", "my stderr", True, False))
+
+        self.assertEqual(self.subject.get_stderr(), "my stderr")
+
+    # @patch("gppylib.commands.base.Command.__init__", create=False)
+
+
+if __name__ == '__main__':
+    run_tests()

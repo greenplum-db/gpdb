@@ -376,7 +376,7 @@ DROP TABLE IF EXISTS T26002_T1;
 NOTICE:  table "t26002_t1" does not exist, skipping
 DROP TABLE IF EXISTS T26002_T2;
 NOTICE:  table "t26002_t2" does not exist, skipping
--- end_ignore
+
 CREATE TABLE T26002_T1 (empid int, departmentid int, year int, region varchar(20))
 DISTRIBUTED BY (empid)
   PARTITION BY RANGE (year)
@@ -398,7 +398,7 @@ NOTICE:  CREATE TABLE will create partition "t26002_t1_1_prt_2_2_prt_usa" for ta
 NOTICE:  CREATE TABLE will create partition "t26002_t1_1_prt_2_2_prt_europe" for table "t26002_t1_1_prt_2"
 NOTICE:  CREATE TABLE will create partition "t26002_t1_1_prt_2_2_prt_asia" for table "t26002_t1_1_prt_2"
 NOTICE:  CREATE TABLE will create partition "t26002_t1_1_prt_2_2_prt_other_regions" for table "t26002_t1_1_prt_2"
-  
+-- end_ignore
 -- TEST
 -- expected to see the partition key
 \d T26002_T1;
@@ -1938,31 +1938,6 @@ explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
 (31 rows)
 
 drop table mpp8031;
--- Test Query on Partition table when optimizer_static_partition_selection is OFF.
--- start_ignore
-DROP TABLE IF EXISTS partitioned_table;
-NOTICE:  table "partitioned_table" does not exist, skipping
--- end_ignore
-CREATE TABLE partitioned_table (a int)
-PARTITION BY RANGE(a)
-(
-   END(10),
-   END(20),
-   END(30)
-);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "partitioned_table_1_prt_1" for table "partitioned_table"
-NOTICE:  CREATE TABLE will create partition "partitioned_table_1_prt_2" for table "partitioned_table"
-NOTICE:  CREATE TABLE will create partition "partitioned_table_1_prt_3" for table "partitioned_table"
-INSERT INTO partitioned_table VALUES(11);
-SET optimizer_static_partition_selection = off;
-SELECT * FROM partitioned_table;
- a
-----
- 11
-(1 row)
-
 -- CLEANUP
 -- start_ignore
 drop schema if exists bfv_partition;

@@ -1,8 +1,11 @@
 #!/bin/bash
 
 EXIT_CODE=0
+CONFIG_FILE=/home/gpadmin/s3.conf
 [ -n "`command -v gpcheckcloud`" ] && GPCHECKCLOUD=gpcheckcloud || GPCHECKCLOUD=../bin/gpcheckcloud/gpcheckcloud
 RANDOM_PREFIX=gpcheckcloud-$(date +%Y%m%d)-$(cat /dev/urandom | env LC_CTYPE=C tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
+
+./generate_config_file.sh $CONFIG_FILE
 
 echo "Preparing data to upload..."
 dd if=/dev/urandom of=/tmp/gpcheckcloud.small bs=6 count=1 &> /dev/null
@@ -23,9 +26,9 @@ printTimer() {
 
 startTimer
 echo "Uploading data..."
-$GPCHECKCLOUD -u /tmp/gpcheckcloud.small "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/s3write/$RANDOM_PREFIX/small/ config=/home/gpadmin/s3.conf" \
+$GPCHECKCLOUD -u /tmp/gpcheckcloud.small "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/s3write/$RANDOM_PREFIX/small/ config=$CONFIG_FILE" \
 	&& echo upload small file ... ok `printTimer` || { EXIT_CODE=1; echo upload small file ... failed `printTimer`; }
-$GPCHECKCLOUD -u /tmp/gpcheckcloud.large "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/s3write/$RANDOM_PREFIX/large/ config=/home/gpadmin/s3.conf" \
+$GPCHECKCLOUD -u /tmp/gpcheckcloud.large "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/s3write/$RANDOM_PREFIX/large/ config=$CONFIG_FILE" \
 	&& echo upload large file ... ok `printTimer` || { EXIT_CODE=1; echo upload large file ... failed `printTimer`; }
 
 echo "Downloading and checking hashsum..."
@@ -49,7 +52,7 @@ for ((i=0; i<${#CHECK_CASES[@]}; i++))
 do
 	PREFIX=`echo ${CHECK_CASES[$i]} |cut -d' ' -f 1`
 	DIGEST=`echo ${CHECK_CASES[$i]} |cut -d' ' -f 2`
-	[ `$GPCHECKCLOUD -d "$PREFIX config=/home/gpadmin/s3.conf" 2>/dev/null |openssl md5 |cut -d ' ' -f 2` = "$DIGEST" ] \
+	[ `$GPCHECKCLOUD -d "$PREFIX config=$CONFIG_FILE" 2>/dev/null |openssl md5 |cut -d ' ' -f 2` = "$DIGEST" ] \
 		&& echo test $PREFIX ... ok `printTimer` || { EXIT_CODE=1; echo test $PREFIX ... failed `printTimer`; }
 done
 
@@ -61,7 +64,7 @@ FAILED_CASES=(
 startTimer
 for ((i=0; i<${#FAILED_CASES[@]}; i++))
 do
-	$GPCHECKCLOUD -d "${FAILED_CASES[$i]} config=/home/gpadmin/s3.conf" 2>/dev/null
+	$GPCHECKCLOUD -d "${FAILED_CASES[$i]} config=$CONFIG_FILE" 2>/dev/null
 	[ "$?" -lt "128" ] && echo test ${FAILED_CASES[$i]} ... ok `printTimer` || { EXIT_CODE=1; echo test ${FAILED_CASES[$i]} ... failed `printTimer`; }
 done
 
