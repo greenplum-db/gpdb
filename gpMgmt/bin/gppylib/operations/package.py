@@ -75,10 +75,10 @@ DEPS_DIR = 'deps'
 
 
 class GpdbVersionError(Exception):
-    '''
+    """
         Exception to notify that the gpdb version
         does not match
-    '''
+    """
     pass
 
 
@@ -384,6 +384,7 @@ class IsVersionCompatible(Operation):
     """
 
     def __init__(self, gppkg):
+        super(IsVersionCompatible, self).__init__()
         self.gppkg = gppkg
 
     def execute(self):
@@ -402,15 +403,6 @@ class IsVersionCompatible(Operation):
 
         if not required_gpdb_version.isVersionRelease(gpdb_version):
             logger.error('%s requires Greenplum Database version %s' % (gppkg.pkgname, required_gpdb_version))
-            return False
-
-        # last bumped version (4.3.5.0)
-        orca_compatible_minor_version = 40305
-        gpdb_magic_num = self._convert_to_magic_number_version(gpdb_version)
-
-        if 'orca' not in gppkg.version and \
-                        gpdb_magic_num >= orca_compatible_minor_version:
-            logger.error('Greenplum Database requires orca version of %s' % (gppkg.pkg))
             return False
 
         return True
