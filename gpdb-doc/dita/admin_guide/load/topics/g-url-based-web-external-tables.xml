@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic33">
-   <title>URL-based Web External Tables</title>
+   <title>URL-based External Web Tables</title>
    <body>
       <p>A URL-based web table accesses data from a web server using the HTTP protocol. Web table
          data is dynamic; the data is not rescannable.</p>

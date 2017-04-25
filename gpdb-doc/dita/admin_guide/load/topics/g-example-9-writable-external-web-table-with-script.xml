@@ -2,9 +2,9 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic102">
-  <title>Example 9—Writable Web External Table with Script</title>
+  <title>Example 9—Writable External Web Table with Script</title>
   <body>
-    <p>Creates a writable web external table, <codeph>campaign_out</codeph>, that pipes output data
+    <p>Creates a writable external web table, <codeph>campaign_out</codeph>, that pipes output data
       recieved by the segments to an executable script,
       <codeph>to_adreport_etl.sh</codeph>:<codeblock>=# CREATE WRITABLE EXTERNAL WEB TABLE campaign_out
     (LIKE campaign)

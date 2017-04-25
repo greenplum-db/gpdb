@@ -142,15 +142,15 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
       <p><codeph>CREATE WRITABLE EXTERNAL TABLE</codeph> or <codeph>CREATE WRITABLE EXTERNAL WEB
           TABLE</codeph> creates a new writable external table definition in Greenplum Database.
         Writable external tables are typically used for unloading data from the database into a set
-        of files or named pipes. Writable web external tables can also be used to output data to an
+        of files or named pipes. Writable external web tables can also be used to output data to an
         executable program. Writable external tables can also be used as output targets for
         Greenplum parallel MapReduce calculations. Once a writable external table is defined, data
         can be selected from database tables and inserted into the writable external table. Writable
         external tables only allow <codeph>INSERT</codeph> operations – <codeph>SELECT</codeph>,
           <codeph>UPDATE</codeph>, <codeph>DELETE</codeph> or <codeph>TRUNCATE</codeph> are not
         allowed.</p>
-      <p>The main difference between regular external tables and web external tables is their data
-        sources. Regular readable external tables access static flat files, whereas web external
+      <p>The main difference between regular external tables and external web tables is their data
+        sources. Regular readable external tables access static flat files, whereas external web
         tables access dynamic data sources – either on a web server or by executing OS commands or
         scripts. </p>
       <p>The <codeph>FORMAT</codeph> clause is used to describe how the external table files are
@@ -183,11 +183,11 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
         </plentry>
         <plentry>
           <pt>WEB</pt>
-          <pd>Creates a readable or writable web external table definition in Greenplum Database.
-            There are two forms of readable web external tables – those that access files via the
+          <pd>Creates a readable or writable external web table definition in Greenplum Database.
+            There are two forms of readable external web tables – those that access files via the
               <codeph>http://</codeph> protocol or those that access data by executing OS commands.
-            Writable web external tables output data to an executable program that can accept an
-            input stream of data. Web external tables are not rescannable during query
+            Writable external web tables output data to an executable program that can accept an
+            input stream of data. External web tables are not rescannable during query
             execution.</pd>
         </plentry>
         <plentry>
@@ -221,7 +221,7 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
           <pt>LOCATION <varname>('protocol://host[:port]/path/file' [, ...])</varname></pt>
           <pd>For readable external tables, specifies the URI of the external data source(s) to be
             used to populate the external table or web table. Regular readable external tables allow
-            the <codeph>gpfdist</codeph> or <codeph>file</codeph> protocols. Web external tables
+            the <codeph>gpfdist</codeph> or <codeph>file</codeph> protocols. Eexternal web tables
             allow the <codeph>http</codeph> protocol. If <codeph>port</codeph> is omitted, port
               <codeph>8080</codeph> is assumed for <codeph>http</codeph> and
               <codeph>gpfdist</codeph> protocols, and port 9000 for the <codeph>gphdfs</codeph>
@@ -355,8 +355,8 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
         </plentry>
         <plentry>
           <pt>EXECUTE <varname>'command'</varname> [ON ...]</pt>
-          <pd>Allowed for readable web external tables or writable external tables only. For
-            readable web external tables, specifies the OS command to be executed by the segment
+          <pd>Allowed for readable external web tables or writable external tables only. For
+            readable external web tables, specifies the OS command to be executed by the segment
             instances. The <varname>command</varname> can be a single OS command or a script. The
               <codeph>ON</codeph> clause is used to specify which segment instances will execute the
             given command.<ul id="ul_xd1_wq2_m4">
@@ -366,7 +366,7 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
                 of the segment hosts and be executable by the Greenplum superuser
                   (<codeph>gpadmin</codeph>).</li>
               <li id="br153076">ON MASTER runs the command on the master host only. <note>Logging is
-                  not supported for web external tables when the <codeph>ON MASTER</codeph> clause
+                  not supported for external web tables when the <codeph>ON MASTER</codeph> clause
                   is specified.</note></li>
               <li id="br150832">ON <varname>number</varname> means the command will be executed by
                 the specified number of segments. The particular segments are chosen randomly at
@@ -584,7 +584,7 @@ LOCATION (
 'file://seghost3/dbfast/external/expenses6.csv' 
 )
 FORMAT 'CSV' ( HEADER );</codeblock>
-      <p>Create a readable web external table that executes a script once per segment host:</p>
+      <p>Create a readable external web table that executes a script once per segment host:</p>
       <codeblock>CREATE EXTERNAL WEB TABLE log_output (linenum int, message 
 text)  EXECUTE '/var/load_scripts/get_log_data.sh' ON HOST 
  FORMAT 'TEXT' (DELIMITER '|');</codeblock>
@@ -596,7 +596,7 @@ text)  EXECUTE '/var/load_scripts/get_log_data.sh' ON HOST
    LOCATION ('gpfdist://etl1:8081/sales.out')
    FORMAT 'TEXT' ( DELIMITER '|' NULL ' ')
    DISTRIBUTED BY (txn_id);</codeblock>
-      <p>Create a writable web external table that pipes output data received by the segments to an
+      <p>Create a writable external web table that pipes output data received by the segments to an
         executable script named <codeph>to_adreport_etl.sh</codeph>:</p>
       <codeblock>CREATE WRITABLE EXTERNAL WEB TABLE campaign_out 
 (LIKE campaign) 

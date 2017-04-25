@@ -24,10 +24,10 @@
                 writes data received from the Greenplum segments to the
                 file. To divide the output data among multiple files, list multiple
                     <cmdname>gpfdist</cmdname> URIs in your writable external table definition.</li>
-            <li id="du218710">A writable web external table sends data to an application as a stream
+            <li id="du218710">A writable external web table sends data to an application as a stream
                 of data. For example, unload data from Greenplum Database and send it
                 to an application that connects to another database or ETL tool to load the data
-                elsewhere. Writable web external tables use the <codeph>EXECUTE</codeph> clause to
+                elsewhere. Writable external web tables use the <codeph>EXECUTE</codeph> clause to
                 specify a shell command, script, or application to run on the segment hosts and
                 accept an input stream of data. See <xref
                     href="g-defining-a-command-based-writable-external-web-table.xml#topic71"/> for

@@ -17,7 +17,7 @@
             EXTERNAL TABLE DATA</codeph>, and you can create views for external tables. External
           tables are often used to load external data into a regular database table using a command
           such as <codeph>CREATE TABLE table AS SELECT * FROM ext_table</codeph>. </li>
-        <li>Web external tables provide access to dynamic data. They can be backed with data from
+        <li>External web tables provide access to dynamic data. They can be backed with data from
           URLs accessed using the HTTP protocol or by the output of an OS script running on one or
           more segments.</li>
         <li>The <codeph>gpfdist</codeph> utility is the Greenplum Database parallel file

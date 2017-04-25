@@ -5,10 +5,10 @@
    <title>Moving Data between Tables</title>
    <body>
       <p>You can use <codeph>CREATE TABLE AS</codeph> or
-                            <codeph>INSERT...SELECT</codeph> to load external and web external table
+                            <codeph>INSERT...SELECT</codeph> to load external and external web table
                         data into another (non-external) database table, and the data will be loaded
-                        in parallel according to the external or web external table definition.</p>
-      <p>If an external table file or web external table data source has an error, one
+                        in parallel according to the external or external web table definition.</p>
+      <p>If an external table file or external web table data source has an error, one
                         of the following will happen, depending on the isolation mode used:</p>
       <ul>
          <li id="du223917">
