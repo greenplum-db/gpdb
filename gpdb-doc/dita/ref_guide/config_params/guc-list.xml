@@ -9130,7 +9130,7 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
       <note>An XML document that contains a document type declaration (DTD) is not considered a
         valid XML content fragment. If <codeph>xmloption</codeph> set to <codeph>content</codeph>,
         XML that contains a DTD is not considered valid XML.<p>To cast a character string that
-          contains a DTD to <codeph>xml</codeph> data type, use the <codeph>xmlparse</codeph>
+          contains a DTD to the <codeph>xml</codeph> data type, use the <codeph>xmlparse</codeph>
           function with the <codeph>document</codeph> keyword, or change the
             <codeph>xmloption</codeph> value to <codeph>document</codeph>.</p></note>
       <p>The parameter can be set for a database system, an individual database, or a session. The
