@@ -9092,7 +9092,7 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
       <p>Specifies how binary values are encoded in XML data. For example, when
           <codeph>bytea</codeph> values are converted to XML. The binary data can be converted to
         either base64 encoding or hexadecimal encoding. The default is base64.</p>
-      <p>The parameter can be set for a database system, an individual database or a session.</p>
+      <p>The parameter can be set for a database system, an individual database, or a session.</p>
       <table id="table_ph4_5qk_pz">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -9125,17 +9125,17 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
           <codeph>content</codeph>. </p>
       <p>This parameter affects the validation performed by <codeph>xml_is_well_formed()</codeph>.
         If the value is <codeph>document</codeph>, the function checks for a well-formed XML
-        document, If the value is <codeph>content</codeph>, the function checks for a well-formed
+        document. If the value is <codeph>content</codeph>, the function checks for a well-formed
         XML content fragment.</p>
       <note>An XML document that contains a document type declaration (DTD) is not considered a
         valid XML content fragment. If <codeph>xmloption</codeph> set to <codeph>content</codeph>,
         XML that contains a DTD is not considered valid XML.<p>To cast a character string that
           contains a DTD to <codeph>xml</codeph> data type, use the <codeph>xmlparse</codeph>
-          function with the <codeph>document</codeph> keyword or change the
+          function with the <codeph>document</codeph> keyword, or change the
             <codeph>xmloption</codeph> value to <codeph>document</codeph>.</p></note>
       <p>The parameter can be set for a database system, an individual database, or a session. The
-        SQL command to set this option for a session is also available in Greenplum
-        Database<codeblock>SET XML OPTION { DOCUMENT | CONTENT }</codeblock></p>
+        SQL command to set this option for a session is also available in Greenplum Database.
+        <codeblock>SET XML OPTION { DOCUMENT | CONTENT }</codeblock></p>
       <table id="table_iwq_5qk_pz">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>

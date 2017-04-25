@@ -285,11 +285,11 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
           <codeph>DateStyle</codeph> settings, <codeph>DateStyle</codeph> should be set to ISO
         before using <codeph>COPY TO</codeph>.</p>
       <p>When copying XML data from a file in text mode, the server configuration parameter
-            <codeph><xref href="../config_params/guc-list.xml#xmloption"
-        >xmloption</xref></codeph>affects the validation of the XML data that is copied. If the
-        value is <codeph>content</codeph> (the default), XML data is validated as an XML content
-        fragment. If the parameter value is <codeph>document</codeph>, XML data is validated as an
-        XML document. If the XML data is not valid, <codeph>COPY</codeph> returns an error.</p>
+            <codeph><xref href="../config_params/guc-list.xml#xmloption">xmloption</xref></codeph>
+        affects the validation of the XML data that is copied. If the value is
+          <codeph>content</codeph> (the default), XML data is validated as an XML content fragment.
+        If the parameter value is <codeph>document</codeph>, XML data is validated as an XML
+        document. If the XML data is not valid, <codeph>COPY</codeph> returns an error.</p>
       <p>By default, <codeph>COPY</codeph> stops operation at the first error. This should not lead
         to problems in the event of a <codeph>COPY TO</codeph>, but the target table will already
         have received earlier rows in a <codeph>COPY FROM</codeph>. These rows will not be visible
