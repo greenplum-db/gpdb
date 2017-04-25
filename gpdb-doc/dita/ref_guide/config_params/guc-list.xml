@@ -818,6 +818,10 @@
             <li>
               <xref href="#xid_warn_limit"/>
             </li>
+            <li><xref href="#xmlbinary"/>
+            </li>
+            <li><xref href="#xmloption"/>
+            </li>
           </ul>
         </stentry>
       </strow>
@@ -9076,6 +9080,79 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
               <entry colname="col1">integer 10000000 - 2000000000</entry>
               <entry colname="col2">500000000</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="xmlbinary">
+    <title>xmlbinary</title>
+    <body>
+      <p>Specifies how binary values are encoded in XML data. For example, when
+          <codeph>bytea</codeph> values are converted to XML. The binary data can be converted to
+        either base64 encoding or hexadecimal encoding. The default is base64.</p>
+      <p>The parameter can be set for a database system, an individual database or a session.</p>
+      <table id="table_ph4_5qk_pz">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">base64<p>hex</p></entry>
+              <entry colname="col2">base64</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="xmloption">
+    <title> xmloption</title>
+    <body>
+      <p>Specifies whether XML data is to be considered as an XML document
+          (<codeph>document</codeph>) or XML content fragment (<codeph>content</codeph>) for
+        operations that perform implicit parsing and serialization. The default is
+          <codeph>content</codeph>. </p>
+      <p>This parameter affects the validation performed by <codeph>xml_is_well_formed()</codeph>.
+        If the value is <codeph>document</codeph>, the function checks for a well-formed XML
+        document, If the value is <codeph>content</codeph>, the function checks for a well-formed
+        XML content fragment.</p>
+      <note>An XML document that contains a document type declaration (DTD) is not considered a
+        valid XML content fragment. If <codeph>xmloption</codeph> set to <codeph>content</codeph>,
+        XML that contains a DTD is not considered valid XML.<p>To cast a character string that
+          contains a DTD to <codeph>xml</codeph> data type, use the <codeph>xmlparse</codeph>
+          function with the <codeph>document</codeph> keyword or change the
+            <codeph>xmloption</codeph> value to <codeph>document</codeph>.</p></note>
+      <p>The parameter can be set for a database system, an individual database, or a session. The
+        SQL command to set this option for a session is also available in Greenplum
+        Database<codeblock>SET XML OPTION { DOCUMENT | CONTENT }</codeblock></p>
+      <table id="table_iwq_5qk_pz">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">document<p>content</p></entry>
+              <entry colname="col2">content</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>

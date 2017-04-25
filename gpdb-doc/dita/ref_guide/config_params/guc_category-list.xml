@@ -1554,5 +1554,22 @@
         </strow>
       </simpletable>
     </body>
+    <topic id="topic_t3n_qml_rz">
+      <title>XML Data Parameters</title>
+      <body>
+        <simpletable frame="none" id="simpletable_yyd_tml_rz">
+          <strow>
+            <stentry>
+              <p>
+                <xref href="guc-list.xml#xmlbinary">xmlbinary</xref>
+              </p>
+              <p>
+                <xref href="guc-list.xml#xmloption">xmloption</xref>
+              </p>
+            </stentry>
+          </strow>
+        </simpletable>
+      </body>
+    </topic>
   </topic>
 </topic>

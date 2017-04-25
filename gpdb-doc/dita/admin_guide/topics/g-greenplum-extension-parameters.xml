@@ -26,4 +26,13 @@
          </li>
       </ul>
    </body>
+   <topic id="topic_t3n_qml_rz">
+      <title>XML Data Parameters</title>
+      <body>
+         <ul id="ul_xvr_chs_rz">
+            <li><codeph>xmlbinary</codeph></li>
+            <li><codeph>xmloption</codeph></li>
+         </ul>
+      </body>
+   </topic>
 </topic>
