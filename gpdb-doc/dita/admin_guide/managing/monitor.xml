@@ -597,7 +597,7 @@ Distributed by: (sale_id)
         <title id="ff142493">The session_level_memory_consumption View</title>
         <body>
           <p>The <i>session_level_memory_consumption</i> view provides information about memory
-            consumption for sessions that are running SQL queries. </p>
+            consumption and idle time for sessions that are running SQL queries. </p>
           <p>In the view, the column <codeph>is_runaway</codeph> indicates whether Greenplum
             Database considers the session a runaway session based on the vmem memory consumption of
             the session's queries. When the queries consume an excessive amount of memory, Greenplum
