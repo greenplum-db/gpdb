@@ -952,18 +952,9 @@ typedef struct FileRepOperationDescriptionVerify_u
 
 } FileRepOperationDescriptionVerify_u;
 
-
-typedef struct FileRepVerifyLoggingOptions_s
-{
-	char token[FILEREP_VERIFY_MAX_REQUEST_TOKEN_LEN+1];
-	int  level;
-	char logPath[MAXPGPATH+1];
-	char fixPath[MAXPGPATH+1];
-	char chkpntPath[MAXPGPATH+1];
-
-	char externalTablePath[MAXPGPATH+1];
-	char resultsPath[MAXPGPATH+1];
-} FileRepVerifyLoggingOptions_s;
+typedef struct FileRepOperationDescriptionDefault_s {
+	bool placeholder;
+} FileRepOperationDescriptionDefault_s;
 
 /*
  *
@@ -994,6 +985,7 @@ typedef union FileRepOperationDescription_u
 
 	FileRepOperationDescriptionVerifyDirectoryChecksum_s verifyDirectoryChecksum;
 
+	FileRepOperationDescriptionDefault_s defaultDesc;
 } FileRepOperationDescription_u;
 
 /*

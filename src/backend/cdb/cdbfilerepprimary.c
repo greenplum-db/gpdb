@@ -635,6 +635,9 @@ FileRepPrimary_MirrorFlush(FileRepIdentifier_u		fileRepIdentifier,
 											   ""); // tableName
 			}
 #endif
+			/* Just to make compiler happy */
+			descr.defaultDesc.placeholder = false;
+
 			status = FileRepPrimary_ConstructAndInsertMessage(
 															  fileRepIdentifier,
 															  fileRepRelationType,
@@ -664,7 +667,10 @@ FileRepPrimary_MirrorClose(FileRepIdentifier_u		fileRepIdentifier,
 		if (! (dataState == DataStateInResync &&
 			   fileRepRelationType == FileRepRelationTypeFlatFile &&
 			   segmentState != SegmentStateInSyncTransition))
-		{
+		{				
+			/* Just to make compiler happy */
+			descr.defaultDesc.placeholder = false;
+
 			status = FileRepPrimary_ConstructAndInsertMessage(
 															  fileRepIdentifier,
 															  fileRepRelationType,
@@ -694,7 +700,10 @@ FileRepPrimary_MirrorFlushAndClose(FileRepIdentifier_u		fileRepIdentifier,
 		if (! (dataState == DataStateInResync &&
 			   fileRepRelationType == FileRepRelationTypeFlatFile &&
 			   segmentState != SegmentStateInSyncTransition))
-		{
+		{			
+			/* Just to make compiler happy */
+			descr.defaultDesc.placeholder = false;
+
 			status = FileRepPrimary_ConstructAndInsertMessage(
 															  fileRepIdentifier,
 															  fileRepRelationType,
@@ -1037,7 +1046,10 @@ FileRepPrimary_MirrorDrop(FileRepIdentifier_u	fileRepIdentifier,
 		if (! (dataState == DataStateInResync &&
 			   fileRepRelationType == FileRepRelationTypeFlatFile &&
 			   segmentState != SegmentStateInSyncTransition))
-		{
+		{			
+			/* Just to make compiler happy */
+			descr.defaultDesc.placeholder = false;
+
 			status = FileRepPrimary_ConstructAndInsertMessage(
 															  fileRepIdentifier,
 															  fileRepRelationType,
@@ -1064,6 +1076,9 @@ FileRepPrimary_MirrorDropFilesFromDir(FileRepIdentifier_u	fileRepIdentifier,
 
 	if (FileRepPrimary_IsMirroringRequired(fileRepRelationType, FileRepOperationDropFilesFromDir))
 	{
+		/* Just to make compiler happy */
+		descr.defaultDesc.placeholder = false;
+
 		status = FileRepPrimary_ConstructAndInsertMessage(
 														  fileRepIdentifier,
 														  fileRepRelationType,
@@ -1090,6 +1105,9 @@ FileRepPrimary_MirrorDropTemporaryFiles(
 
 	if (FileRepPrimary_IsMirroringRequired(fileRepRelationType, FileRepOperationDropTemporaryFiles))
 	{
+		/* Just to make compiler happy */
+		descr.defaultDesc.placeholder = false;
+
 		status = FileRepPrimary_ConstructAndInsertMessage(
 														  fileRepIdentifier,
 														  fileRepRelationType,
@@ -1197,6 +1215,9 @@ FileRepPrimary_MirrorShutdown(void)
     /* send graceful shutdown if required */
 	if ( shouldSendShutdownToMirror )
 	{
+		/* Just to make compiler happy */
+		descr.defaultDesc.placeholder = false;
+
         status = FileRepPrimary_ConstructAndInsertMessage(
 														  fileRepIdentifier,
 														  FileRepRelationTypeUnknown,
@@ -1251,6 +1272,9 @@ FileRepPrimary_MirrorInSyncTransition(void)
 
 	if (FileRepPrimary_IsMirroringRequired(FileRepRelationTypeUnknown, FileRepOperationInSyncTransition))
 	{
+		/* Just to make compiler happy */
+		descr.defaultDesc.placeholder = false;
+
 		status = FileRepPrimary_ConstructAndInsertMessage(
 														  fileRepIdentifier,
 														  FileRepRelationTypeUnknown,
@@ -1766,6 +1790,7 @@ FileRepPrimary_MirrorStartChecksum(FileRepIdentifier_u fileRepIdentifier)
 	if (FileRepPrimary_IsMirroringRequired(FileRepRelationTypeFlatFile,
 										   FileRepOperationStartSlruChecksum))
 	{
+		descr.startChecksum.mirrorStatus = FileRepStatusSuccess;
 
 		status = FileRepPrimary_ConstructAndInsertMessage(fileRepIdentifier,
 														  FileRepRelationTypeFlatFile,
