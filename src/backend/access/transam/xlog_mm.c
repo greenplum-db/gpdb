@@ -1627,41 +1627,26 @@ mmxlog_append_checkpoint_data(XLogRecData rdata[6])
 	}
 }
 
-
 /*
- * Return a pointer to the first section following the master/mirror checkpoint information
+ * Populates the pointers to the master/mirror checkpoint information
  */
-char *
-mmxlog_get_checkpoint_record_suffix(XLogRecord *checkpointRecord)
+uint32
+mmxlog_get_checkpoint_record_fields(char *recordStart,
+	MasterMirrorCheckpointInfo *mmckpt)
 {
-  char               *retPtr;
-  TMGXACT_CHECKPOINT *dtxCheckpoint;
-  fspc_agg_state     *f;
-  tspc_agg_state     *t;
-  dbdir_agg_state    *d;
-  int                 dtxCheckpointLen;
-  int                 fLen;
-  int                 tLen;
-  int                 dLen;
+	Assert(recordStart != NULL);
 
-  dtxCheckpoint = (TMGXACT_CHECKPOINT *)(XLogRecGetData(checkpointRecord) + sizeof(CheckPoint));
-  dtxCheckpointLen = TMGXACT_CHECKPOINT_BYTES(dtxCheckpoint->committedCount);
+	mmckpt->fspc = (fspc_agg_state *)recordStart;
+	mmckpt->fspcMapLen = FSPC_CHECKPOINT_BYTES(mmckpt->fspc->count);
 
-  f = (fspc_agg_state *)(((char*)dtxCheckpoint) + dtxCheckpointLen);
-  fLen = FSPC_CHECKPOINT_BYTES(f->count);
+	mmckpt->tspc = (tspc_agg_state *)(((char *)mmckpt->fspc) + mmckpt->fspcMapLen);
+	mmckpt->tspcMapLen = TSPC_CHECKPOINT_BYTES(mmckpt->tspc->count);
 
-  t = (tspc_agg_state *)(((char *)f) + fLen);
-  tLen = TSPC_CHECKPOINT_BYTES(t->count);
+	mmckpt->dbdir = (dbdir_agg_state *)(((char *)mmckpt->tspc) + mmckpt->tspcMapLen);
+	mmckpt->dbdirMapLen = DBDIR_CHECKPOINT_BYTES(mmckpt->dbdir->count);
 
-  d = (dbdir_agg_state *)(((char *)t) + tLen);
-  dLen = DBDIR_CHECKPOINT_BYTES(d->count);
-
-  retPtr = ((char *)d) + dLen;
-
-  return retPtr;
-
-}  /* end mmxlog_get_checkpoint_record_suffix */
-
+	return (mmckpt->fspcMapLen + mmckpt->tspcMapLen + mmckpt->dbdirMapLen);
+}
 
 bool
 mmxlog_get_checkpoint_info(char *cpdata, int masterMirroringLen, int checkpointLen, XLogRecPtr *beginLoc, int errlevel,
@@ -1854,11 +1839,11 @@ mmxlog_get_checkpoint_counts(char *cpdata, int masterMirroringLen, int checkpoin
  * meta data from a checkpoint.
  */
 void
-mmxlog_read_checkpoint_data(char *cpdata, int masterMirroringLen, int checkpointLen, XLogRecPtr *beginLoc)
+mmxlog_read_checkpoint_data(MasterMirrorCheckpointInfo mmckptInfo, XLogRecPtr *beginLoc)
 {
-	fspc_agg_state *f = NULL;
-	tspc_agg_state *t = NULL;
-	dbdir_agg_state *d = NULL;
+	fspc_agg_state *f;
+	tspc_agg_state *t;
+	dbdir_agg_state *d;
 
 	fspc_map *fmap;
 	tspc_map *tmap;
@@ -1866,12 +1851,15 @@ mmxlog_read_checkpoint_data(char *cpdata, int masterMirroringLen, int checkpoint
 
 	int i;
 
-	Assert(cpdata != NULL);
-
 	if (!IsStandbyMode())
 		return;
 
-	mmxlog_get_checkpoint_info(cpdata, masterMirroringLen, checkpointLen, beginLoc, PANIC, &f, &t, &d);
+	f = mmckptInfo.fspc;
+	Assert(f != NULL);
+	t = mmckptInfo.tspc;
+	Assert(t != NULL);
+	d = mmckptInfo.dbdir;
+	Assert(d != NULL);
 
 	/*
 	 * Push the data down into the hash tables. We calculate the array length

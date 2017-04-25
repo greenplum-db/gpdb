@@ -20,7 +20,6 @@
 #include "storage/proc.h"
 #include "utils/timestamp.h"
 
-
 /*
  * Directory where two phase commit files reside within PGDATA
  */
@@ -33,7 +32,7 @@
 typedef struct prpt_map
 {
   TransactionId xid;
-  XLogRecPtr    xlogrecptr;;
+  XLogRecPtr    xlogrecptr;
 } prpt_map;
 
 typedef struct prepared_transaction_agg_state
@@ -48,7 +47,6 @@ typedef struct prepared_transaction_agg_state
 
 #define PREPARED_TRANSACTION_CHECKPOINT_BYTES(count) \
 	(offsetof(prepared_transaction_agg_state, maps) + sizeof(prpt_map) * (count))
-
 
 /*
  * GlobalTransactionData is defined in twophase.c; other places have no
@@ -109,7 +107,7 @@ extern void TwoPhaseAddPreparedTransaction(
 
 extern void getTwoPhasePreparedTransactionData(prepared_transaction_agg_state **ptas, char *caller);
 
-extern void SetupCheckpointPreparedTransactionList(XLogRecord *record);
+extern void SetupCheckpointPreparedTransactionList(prepared_transaction_agg_state *ptas);
 
 extern bool TwoPhaseFindRecoverPostCheckpointPreparedTransactionsMapEntry(TransactionId xid, XLogRecPtr *m, char *caller);
 

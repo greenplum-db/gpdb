@@ -1841,33 +1841,15 @@ PrescanPreparedTransactions(void)
 	return result;
 }
 
-
 /*
- * Retrieve all the prepared transactions on the checkpoint, and add them to our local list.
+ * Retrieve all the prepared transactions on the checkpoint, and add them to
+ * our local list.
  */
 void
-SetupCheckpointPreparedTransactionList(XLogRecord *record)
+SetupCheckpointPreparedTransactionList(prepared_transaction_agg_state *ptas)
 {
-	prepared_transaction_agg_state *ptas = NULL;
-	XLogRecPtr *tfXLogRecPtr = NULL;
-	TransactionId xid;
-	prpt_map *m = NULL;
-
-	/* Under some cercumstances, and old style checkpoint may exist (upgrade switch xlog...).                      */
-	/* Check to see if it looks like an old checkpoin, size of a checkpoint plus size of an empty DTX list or less */
-	if (record->xl_len <= (sizeof(CheckPoint) + TMGXACT_CHECKPOINT_BYTES(0)))
-	{
-		/*
-		 * This is an old checkpoint (pre-removal of two phase) or a bad checkpoint record.
-		 * Assume it is old and return.
-		 */
-		if (Debug_persistent_print)
-			elog(Persistent_DebugPrintLevel(),
-				 "SetupCheckpointPreparedTransactionList: Looks like an old style checkpoint record, so just return");
-		return;
-     }
-
-	ptas = (prepared_transaction_agg_state *)mmxlog_get_checkpoint_record_suffix(record);
+	prpt_map *m;
+	Assert(ptas != NULL);
 
 	if (Debug_persistent_print)
 		elog(Persistent_DebugPrintLevel(),
@@ -1878,13 +1860,14 @@ SetupCheckpointPreparedTransactionList(XLogRecord *record)
 
 	for (int iPrep = 0; iPrep < ptas->count; iPrep++)
     {
+		TransactionId xid;
+		XLogRecPtr *tfXLogRecPtr;
+
 		xid          = m[iPrep].xid;
 		tfXLogRecPtr = &(m[iPrep]).xlogrecptr;
 		add_recover_post_checkpoint_prepared_transactions_map_entry(xid, tfXLogRecPtr, "SetupCheckpointPreparedTransactionList: add entry to hash list");
 	}
-
-}  /* end SetupCheckpointPreparedTransactionList */
-
+}
 
 /*
  * RecoverPreparedTransactions
@@ -2428,7 +2411,8 @@ TwoPhaseAddPreparedTransaction(prepared_transaction_agg_state **ptas,
 
 
 /*
- * Return a pointer to the oldest XLogRecPtr in the list or NULL if the list is empty.
+ * Return a pointer to the oldest XLogRecPtr in the list or NULL if the list
+ * is empty.
  */
 XLogRecPtr *
 getTwoPhaseOldestPreparedTransactionXLogRecPtr(XLogRecData *rdata)

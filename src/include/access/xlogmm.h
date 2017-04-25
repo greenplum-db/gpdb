@@ -122,6 +122,15 @@ typedef struct dbdir_agg_state
 #define DBDIR_CHECKPOINT_BYTES(count) \
 	(offsetof(dbdir_agg_state, maps) + sizeof(dbdir_map) * (count))
 
+typedef struct MasterMirrorCheckpointInfo
+{
+	fspc_agg_state  *fspc;
+	uint32          fspcMapLen;
+	tspc_agg_state  *tspc;
+	uint32          tspcMapLen;
+	dbdir_agg_state *dbdir;
+	uint32          dbdirMapLen;
+} MasterMirrorCheckpointInfo;
 
 extern void mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
 extern void mmxlog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
@@ -146,7 +155,8 @@ extern void mmxlog_log_create_database(Oid tablespace, Oid database);
 extern void mmxlog_log_create_relfilenode(Oid tablespace, Oid database,
 										  Oid relfilenode, uint32 segnum);
 extern void mmxlog_append_checkpoint_data(XLogRecData rdata[5]);
-extern void mmxlog_read_checkpoint_data(char *cpdata, int masterMirroringLen, int checkpointLen, XLogRecPtr *beginLoc);
+extern void mmxlog_read_checkpoint_data(MasterMirrorCheckpointInfo mmckptInfo,
+										XLogRecPtr *beginLoc);
 extern bool mmxlog_filespace_get_path(
 	Oid fspcoid,
 
@@ -177,7 +187,8 @@ extern void mmxlog_add_database(
 		dbdir_agg_state **das, int *maxCount,
 		Oid database, Oid tablespace, char *caller);
 
-extern char *mmxlog_get_checkpoint_record_suffix(XLogRecord *checkpointRecord);
+extern uint32 mmxlog_get_checkpoint_record_fields(char *recordStart,
+	MasterMirrorCheckpointInfo *mmckpt);
 
 extern bool mmxlog_get_checkpoint_info(char *cpdata, int masterMirroringLen, int checkpointLen, XLogRecPtr *beginLoc, int errlevel,
 		fspc_agg_state **f,

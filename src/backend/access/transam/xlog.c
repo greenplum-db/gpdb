@@ -652,16 +652,18 @@ static void UpdateLastRemovedPtr(char *filename);
 static void CleanupBackupHistory(void);
 static XLogRecord *ReadCheckpointRecord(XLogRecPtr RecPtr, int whichChkpt);
 static bool ValidXLOGHeader(XLogPageHeader hdr, int emode, bool segmentonly);
-static void UnpackCheckPointRecord(
-	XLogRecord			*record,
-	XLogRecPtr 			*location,
-	TMGXACT_CHECKPOINT	**dtxCheckpoint,
-	uint32				*dtxCheckpointLen,
-	char				**masterMirroringCheckpoint,
-	uint32				*masterMirroringCheckpointLen,
-	int					errlevelMasterMirroring,
-        prepared_transaction_agg_state  **ptas);
 
+typedef struct CheckpointExtendedRecord
+{
+	TMGXACT_CHECKPOINT	*dtxCheckpoint;
+	uint32				dtxCheckpointLen;
+	MasterMirrorCheckpointInfo	masterMirroringCheckpoint;
+	uint32				masterMirroringCheckpointLen;
+	prepared_transaction_agg_state  *ptas;
+} CheckpointExtendedRecord;
+
+static void UnpackCheckPointRecord(XLogRecord *record,
+								   CheckpointExtendedRecord *ckptExtended);
 static bool existsTimeLineHistory(TimeLineID probeTLI);
 static TimeLineID findNewestTimeLine(TimeLineID startTLI);
 static void writeTimeLineHistory(TimeLineID newTLI, TimeLineID parentTLI,
@@ -753,7 +755,7 @@ static char *XLogContiguousCopy(
 	char *buffer;
 
 	rdt = rdata;
-	len = sizeof(XLogRecord);
+	len = SizeOfXLogRecord;
 	while (rdt != NULL)
 	{
 		if (rdt->data != NULL)
@@ -765,9 +767,9 @@ static char *XLogContiguousCopy(
 
 	buffer = (char*)palloc(len);
 
-	memcpy(buffer, record, sizeof(XLogRecord));
+	memcpy(buffer, record, SizeOfXLogRecord);
 	rdt = rdata;
-	len = sizeof(XLogRecord);
+	len = SizeOfXLogRecord;
 	while (rdt != NULL)
 	{
 		if (rdt->data != NULL)
@@ -6332,93 +6334,30 @@ ApplyStartupRedo(
 static void
 XLogProcessCheckpointRecord(XLogRecord *rec, XLogRecPtr loc)
 {
-	TMGXACT_CHECKPOINT 	*dtxCheckpoint;
-	uint32 				dtxCheckpointLen;
-	char				*masterMirroringCheckpoint;
-	uint32				masterMirroringCheckpointLen;
-	prepared_transaction_agg_state  *ptas = NULL;
+	CheckpointExtendedRecord ckptExtended;
 
-	/* In standby mode, empty all master mirroring related hash tables. */
-	if (IsStandbyMode())
-		mmxlog_empty_hashtables();
-
-	UnpackCheckPointRecord(
-						rec,
-						&loc,
-						&dtxCheckpoint,
-						&dtxCheckpointLen,
-						&masterMirroringCheckpoint,
-						&masterMirroringCheckpointLen,
-						(IsStandbyMode() ? PANIC : LOG),
-						&ptas);
-
-	if (Debug_persistent_recovery_print && dtxCheckpoint != NULL)
-	{
-		elog(PersistentRecovery_DebugPrintLevel(),
-			 "XLogProcessCheckPoint: Checkpoint record data length = %u, DTX "
-			 "committed count %d, DTX data length %u, Master Mirroring "
-			 "information length %u, location %s",
-			 rec->xl_len,
-			 dtxCheckpoint->committedCount,
-			 dtxCheckpointLen,
-			 masterMirroringCheckpointLen,
-			 XLogLocationToString(&loc));
-
-		if (ptas != NULL)
-		{
-			elog(PersistentRecovery_DebugPrintLevel(),
-			"XLogProcessCheckPoint: Checkpoint record prepared transaction "
-			"agg state count = %d",
-			ptas->count);
-		}
-
-		if (masterMirroringCheckpointLen > 0)
-		{
-			int filespaceCount;
-			int tablespaceCount;
-			int databaseCount;
-
-			if (mmxlog_get_checkpoint_counts(
-									masterMirroringCheckpoint,
-									masterMirroringCheckpointLen,
-									rec->xl_len,
-									&loc,
-									/* errlevel */ COMMERROR,
-									&filespaceCount,
-									&tablespaceCount,
-									&databaseCount))
-			{
-				elog(PersistentRecovery_DebugPrintLevel(),
-					 "XLogProcessCheckPoint: master mirroring information: %d "
-					 "filespaces, %d tablespaces, %d databases, location %s",
-					 filespaceCount,
-					 tablespaceCount,
-					 databaseCount,
-					 XLogLocationToString(&loc));
-			}
-		}
-	}
+	UnpackCheckPointRecord(rec, &ckptExtended);
 
 	/*
-	 * Get filespace, tablespace and database info from checkpoint record (master
+	 * In standby mode, empty all master mirroring related hash tables. Get
+	 * filespace, tablespace and database info from checkpoint record (master
 	 * mirroring part) and maintain them in hash tables.
 	 *
-	 * We'll perform this only during standby mode because during normal non-standby
-	 * recovery Persistent Tables do that job.
+	 * We'll perform this only during standby mode because during normal
+	 * non-standby recovery Persistent Tables do that job.
 	 */
-	if (IsStandbyMode() && masterMirroringCheckpoint != NULL)
+	if (IsStandbyMode())
 	{
-		mmxlog_read_checkpoint_data(masterMirroringCheckpoint,
-									masterMirroringCheckpointLen,
-									rec->xl_len,
-									&loc);
+		mmxlog_empty_hashtables();
+		if (ckptExtended.masterMirroringCheckpointLen > 0)
+			mmxlog_read_checkpoint_data(ckptExtended.masterMirroringCheckpoint, &loc);
 	}
 
-	/* Handle the DTX information. */
-	if (dtxCheckpoint != NULL)
+	if (ckptExtended.dtxCheckpoint)
 	{
+		/* Handle the DTX information. */
 		UtilityModeFindOrCreateDtmRedoFile();
-		redoDtxCheckPoint(dtxCheckpoint);
+		redoDtxCheckPoint(ckptExtended.dtxCheckpoint);
 		UtilityModeCloseDtmRedoFile();
 	}
 }
@@ -6715,7 +6654,12 @@ StartupXLOG(void)
 	 * will be only one checkpoint to be analyzed.
 	 */
 	if (GpIdentity.segindex != MASTER_CONTENT_ID)
-		SetupCheckpointPreparedTransactionList(record);
+	{
+		CheckpointExtendedRecord ckptExtended;
+		UnpackCheckPointRecord(record, &ckptExtended);
+		if (ckptExtended.ptas)
+			SetupCheckpointPreparedTransactionList(ckptExtended.ptas);
+	}
 
 	/*
 	 * Find Xacts that are distributed committed from the checkpoint record and
@@ -7475,12 +7419,16 @@ StartupXLOG_Pass2(void)
 
 	if (GpIdentity.segindex != MASTER_CONTENT_ID)
 	{
+		CheckpointExtendedRecord ckptExtended;
 		if (Debug_persistent_recovery_print)
 			elog(PersistentRecovery_DebugPrintLevel(),
 				"Read the checkpoint record location saved from pass1, "
 				"and setup the prepared transaction hash list.");
 		record = XLogReadRecord(&XLogCtl->pass1LastCheckpointLoc, false, PANIC);
-		SetupCheckpointPreparedTransactionList(record);
+
+		UnpackCheckPointRecord(record, &ckptExtended);
+		if (ckptExtended.ptas)
+			SetupCheckpointPreparedTransactionList(ckptExtended.ptas);
 	}
 
 	record = XLogReadRecord(&XLogCtl->pass1StartLoc, false, PANIC);
@@ -7605,8 +7553,12 @@ StartupXLOG_Pass3(void)
 
 	if (GpIdentity.segindex != MASTER_CONTENT_ID)
 	{
+		CheckpointExtendedRecord ckptExtended;
 		record = XLogReadRecord(&XLogCtl->pass1LastCheckpointLoc, false, PANIC);
-		SetupCheckpointPreparedTransactionList(record);
+
+		UnpackCheckPointRecord(record, &ckptExtended);
+		if (ckptExtended.ptas)
+			SetupCheckpointPreparedTransactionList(ckptExtended.ptas);
 	}
 
 	record = XLogReadRecord(&XLogCtl->pass1StartLoc, false, PANIC);
@@ -8371,148 +8323,65 @@ ReadCheckpointRecord(XLogRecPtr RecPtr, int whichChkpt)
 static void
 UnpackCheckPointRecord(
 	XLogRecord			*record,
-
-	XLogRecPtr 			*location,
-
-	TMGXACT_CHECKPOINT	**dtxCheckpoint,
-
-	uint32				*dtxCheckpointLen,
-
-	char				**masterMirroringCheckpoint,
-
-	uint32				*masterMirroringCheckpointLen,
-
-	int					errlevelMasterMirroring,
-
-        prepared_transaction_agg_state  **ptas)
+	CheckpointExtendedRecord *ckptExtended)
 {
+	char *current_record_ptr;
+	int remainderLen;
 
-	*dtxCheckpoint = NULL;
-	*dtxCheckpointLen = 0;
-	*masterMirroringCheckpoint = NULL;
-	*masterMirroringCheckpointLen = 0;
-	*ptas = NULL;
-
-
-	/*********************************************************************************
-	  A checkpoint can have four formats (one special, two 4.0, and one 4.1 and later).
-
-	  Special (for bootstrap, xlog switch, maybe others).
-	    Checkpoint
-
-	  4.0 QD
-	    CheckPoint
-            TMGXACT_CHECKPOINT
-            fspc_agg_state
-            tspc_agg_state
-            dbdir_agg_state
-
-
-	  4.0 QE
-            CheckPoint
-            TMGXACT_CHECKPOINT
-
-	 4.1 and later
-            CheckPoint
-            TMGXACT_CHECKPOINT
-            fspc_agg_state
-            tspc_agg_state
-            dbdir_agg_state
-            prepared_transaction_agg_state
-	**********************************************************************************/
-
-	if (record->xl_len > sizeof(CheckPoint))
+	if (record->xl_len == sizeof(CheckPoint))
 	{
-		uint32 remainderLen;
+		/* Special (for bootstrap, xlog switch, maybe others) */
+		ckptExtended->dtxCheckpoint = NULL;
+		ckptExtended->dtxCheckpointLen = 0;
+		ckptExtended->masterMirroringCheckpointLen = 0;
+		ckptExtended->ptas = NULL;
+		return;
+	}
 
-		remainderLen = record->xl_len - sizeof(CheckPoint);
-		if (remainderLen < TMGXACT_CHECKPOINT_BYTES(0))
-		{
-			SUPPRESS_ERRCONTEXT_DECLARE;
+	/* Normal checkpoint Record */
+	Assert(record->xl_len > sizeof(CheckPoint));
 
-			SUPPRESS_ERRCONTEXT_PUSH();
+	current_record_ptr = ((char*)XLogRecGetData(record)) + sizeof(CheckPoint);
+	remainderLen = record->xl_len - sizeof(CheckPoint);
 
-			ereport(PANIC,
-				 (errmsg("Bad checkpoint record length %u (DTX information header: expected at least length %u, actual length %u) at location %s",
-				 		 record->xl_len,
-				 		 (uint32)TMGXACT_CHECKPOINT_BYTES(0),
-				 		 remainderLen,
-				 		 XLogLocationToString(location))));
+	/* Start of distributed transaction information */
+	ckptExtended->dtxCheckpoint = (TMGXACT_CHECKPOINT *)current_record_ptr;
+	ckptExtended->dtxCheckpointLen =
+		TMGXACT_CHECKPOINT_BYTES((ckptExtended->dtxCheckpoint)->committedCount);
 
-			SUPPRESS_ERRCONTEXT_POP();
-		}
+	Assert (remainderLen > ckptExtended->dtxCheckpointLen);
 
-		*dtxCheckpoint = (TMGXACT_CHECKPOINT *)(XLogRecGetData(record) + sizeof(CheckPoint));
-		*dtxCheckpointLen = TMGXACT_CHECKPOINT_BYTES((*dtxCheckpoint)->committedCount);
-		if (remainderLen < *dtxCheckpointLen)
-		{
-			SUPPRESS_ERRCONTEXT_DECLARE;
+	current_record_ptr = current_record_ptr + ckptExtended->dtxCheckpointLen;
+	remainderLen -= ckptExtended->dtxCheckpointLen;
 
-			SUPPRESS_ERRCONTEXT_PUSH();
+	/* Lets fetch the master mirroring information */
+	ckptExtended->masterMirroringCheckpointLen =
+		mmxlog_get_checkpoint_record_fields(current_record_ptr,
+											&(ckptExtended->masterMirroringCheckpoint));
 
-			ereport(PANIC,
-				 (errmsg("Bad checkpoint record length %u (DTX information: expected at least length %u, actual length %u) at location %s",
-				 		 record->xl_len,
-				 		 *dtxCheckpointLen,
-				 		 remainderLen,
-				 		 XLogLocationToString(location))));
+	Assert(remainderLen > ckptExtended->masterMirroringCheckpointLen);
 
-			SUPPRESS_ERRCONTEXT_POP();
-		}
+	current_record_ptr = current_record_ptr + ckptExtended->masterMirroringCheckpointLen;
+	remainderLen -= ckptExtended->masterMirroringCheckpointLen;
 
-		remainderLen -= *dtxCheckpointLen;
+	/* Finally, point to prepared transaction information */
+	ckptExtended->ptas = (prepared_transaction_agg_state *)current_record_ptr;
 
-		int mmInfoLen = 0;
-
-		if (remainderLen > 0)
-		   {
-			*masterMirroringCheckpoint = ((char*)*dtxCheckpoint) + *dtxCheckpointLen;
-
-			/* TODO, The masterMirrongCheckpointLen actually contains the length of the master/mirroring section, */
-			/* plus the new 4.1 and later prepared transaction section. This value is used else where, and needs  */
-			/* to include the total length of the master/mirror section and anything that follows it.             */
-			/* The code should be re-written to be more understandable.                                           */
-			*masterMirroringCheckpointLen = remainderLen;
-
-			if (!mmxlog_verify_checkpoint_info(
-									*masterMirroringCheckpoint,
-									*masterMirroringCheckpointLen,
-									record->xl_len,
-									location,
-									errlevelMasterMirroring))
-			   {
-			        *masterMirroringCheckpoint = NULL;
-			        *masterMirroringCheckpointLen = 0;
-			   }
-			else
-			  {
-			    /*
-			      This appears to be either a old checkpoint with master/mirror information attached to it,
-			      or it is a new (4.1) checkpoint that has the master/mirror information and the prepared
-			      transaction information. In either case, get the location of the next byte past the
-			      master/mirror section, and use it to determine the section's length.
-			    */
-			    char *nextPos = mmxlog_get_checkpoint_record_suffix(record);
-
-			    mmInfoLen = nextPos - *masterMirroringCheckpoint;
-			  }
-		   }
-
-		remainderLen -= mmInfoLen;
-
-		/* This is a fix for MPP-12738 "Alibaba - upgrade from 4.0.4.0 to 4.1 failure"                                 */
-		/* Under some circumstances, an old style checkpoint may exist (upgrade switch xlog...).                       */
-		/* Check to see if it looks like a new checkpoint. A new checkpoint contains the prepared transaction section. */
-		if (remainderLen > 0)
-		  {
-		    *ptas = (prepared_transaction_agg_state *)mmxlog_get_checkpoint_record_suffix(record);
-		  }
-		else
-		  {
-		    elog(WARNING,"UnpackCheckPointRecord: The checkpoint at %s appears to be a 4.0 checkpoint", XLogLocationToString(location));
-		  }
-
-	}  /* end if (record->xl_len > sizeof(CheckPoint)) */
+	if (Debug_persistent_recovery_print)
+	{
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "UnpackCheckPointRecord: Checkpoint record data length = %u "
+			 "DTX committed count %d, DTX data length %u "
+			 "Master Mirroring length %u, filespaces %d, tablespaces %d, databases %d "
+			 "Prepared Transaction count = %d",
+			 record->xl_len,
+			 ckptExtended->dtxCheckpoint->committedCount, ckptExtended->dtxCheckpointLen,
+			 ckptExtended->masterMirroringCheckpointLen,
+			 ckptExtended->masterMirroringCheckpoint.fspc->count,
+			 ckptExtended->masterMirroringCheckpoint.tspc->count,
+			 ckptExtended->masterMirroringCheckpoint.dbdir->count,
+			 ckptExtended->ptas->count);
+	}
 }
 
 /*
@@ -9627,69 +9496,6 @@ RequestXLogSwitch(void)
 	return RecPtr;
 }
 
-static void
-xlog_redo_print_extended_checkpoint_info(XLogRecPtr beginLoc, XLogRecord *record)
-{
-	TMGXACT_CHECKPOINT	*dtxCheckpoint;
-	uint32				dtxCheckpointLen;
-	char				*masterMirroringCheckpoint;
-	uint32				masterMirroringCheckpointLen;
-	prepared_transaction_agg_state  *ptas;
-
-	/*
-	 * The UnpackCheckPointRecord routine will print under the
-	 * Debug_persistent_recovery_print GUC.
-	 */
-	UnpackCheckPointRecord(
-						record,
-						&beginLoc,
-						&dtxCheckpoint,
-						&dtxCheckpointLen,
-						&masterMirroringCheckpoint,
-						&masterMirroringCheckpointLen,
-						/* errlevel */ -1,		// Suppress elog altogether on master mirroring checkpoint length checking.
-                                                &ptas);
-	if (dtxCheckpointLen > 0)
-	{
-  	        elog(PersistentRecovery_DebugPrintLevel(),
-	             "xlog_redo_print_extended_checkpoint_info: Checkpoint record data length = %u, DTX committed count %d, DTX data length %u, Master Mirroring information length %u, location %s",
-	             record->xl_len,
-	             dtxCheckpoint->committedCount,
-	             dtxCheckpointLen,
-	             masterMirroringCheckpointLen,
-	             XLogLocationToString(&beginLoc));
-	        if (ptas != NULL)
-  	            elog(PersistentRecovery_DebugPrintLevel(),
-		         "xlog_redo_print_extended_checkpoint_info: prepared transaction agg state count = %d",
-                          ptas->count);
-
-		if (masterMirroringCheckpointLen > 0)
-		{
-			int filespaceCount;
-			int tablespaceCount;
-			int databaseCount;
-
-			if (!mmxlog_get_checkpoint_counts(
-									masterMirroringCheckpoint,
-									masterMirroringCheckpointLen,
-									record->xl_len,
-									&beginLoc,
-									/* errlevel */ -1,		// Suppress elog altogether on master mirroring checkpoint length checking.
-									&filespaceCount,
-									&tablespaceCount,
-									&databaseCount))
-			{
-				elog(PersistentRecovery_DebugPrintLevel(),
-					 "xlog_redo_print_extended_checkpoint_info: master mirroring information: %d filespaces, %d tablespaces, %d databases, location %s",
-					 filespaceCount,
-					 tablespaceCount,
-					 databaseCount,
-					 XLogLocationToString(&beginLoc));
-			}
-		}
-	}
-}
-
 /*
  * XLOG resource manager's routines
  *
@@ -9778,12 +9584,6 @@ xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 		}
 
 		RecoveryRestartPoint(&checkPoint);
-
-		// Could run into old format checkpoint redo records...
-		if (Debug_persistent_recovery_print)
-		{
-			xlog_redo_print_extended_checkpoint_info(beginLoc, record);
-		}
 	}
 	else if (info == XLOG_CHECKPOINT_ONLINE)
 	{
@@ -9824,12 +9624,6 @@ xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 							checkPoint.ThisTimeLineID, ThisTimeLineID)));
 
 		RecoveryRestartPoint(&checkPoint);
-
-		// Could run into old format checkpoint redo records...
-		if (Debug_persistent_recovery_print)
-		{
-			xlog_redo_print_extended_checkpoint_info(beginLoc, record);
-		}
 	}
 	else if (info == XLOG_NOOP)
 	{
@@ -9880,11 +9674,7 @@ xlog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 	{
 		CheckPoint *checkpoint = (CheckPoint *) rec;
 
-		TMGXACT_CHECKPOINT	*dtxCheckpoint;
-		uint32				dtxCheckpointLen;
-		char				*masterMirroringCheckpoint;
-		uint32				masterMirroringCheckpointLen;
-		prepared_transaction_agg_state  *ptas;
+		CheckpointExtendedRecord ckptExtended;
 
 		appendStringInfo(buf, "checkpoint: redo %X/%X; "
 						 "tli %u; xid %u/%u; oid %u; relfilenode %u; multi %u; offset %u; %s",
@@ -9897,56 +9687,28 @@ xlog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 						 checkpoint->nextMultiOffset,
 				 (info == XLOG_CHECKPOINT_SHUTDOWN) ? "shutdown" : "online");
 
-		/*
-		 * The UnpackCheckPointRecord routine will print under the
-		 * Debug_persistent_recovery_print GUC.
-		 */
-		UnpackCheckPointRecord(
-							record,
-							&beginLoc,
-							&dtxCheckpoint,
-							&dtxCheckpointLen,
-							&masterMirroringCheckpoint,
-							&masterMirroringCheckpointLen,
-							/* errlevel */ -1, 	// Suppress elog altogether on master mirroring checkpoint length checking.
-                                                        &ptas);
-		if (dtxCheckpointLen > 0)
+		UnpackCheckPointRecord(record, &ckptExtended);
+
+		if (ckptExtended.dtxCheckpointLen > 0)
 		{
 			appendStringInfo(buf,
 				 ", checkpoint record data length = %u, DTX committed count %d, DTX data length %u, Master Mirroring information length %u",
-				 record->xl_len,
-				 dtxCheckpoint->committedCount,
-				 dtxCheckpointLen,
-				 masterMirroringCheckpointLen);
-			if (ptas != NULL)
-                           appendStringInfo(buf,
-                                     ", prepared transaction agg state count = %d",
-				      ptas->count);
+							 record->xl_len,
+							 ckptExtended.dtxCheckpoint->committedCount,
+							 ckptExtended.dtxCheckpointLen,
+							 ckptExtended.masterMirroringCheckpointLen);
+			if (ckptExtended.ptas != NULL)
+				appendStringInfo(buf,
+								 ", prepared transaction agg state count = %d",
+								 ckptExtended.ptas->count);
 
-			if (masterMirroringCheckpointLen > 0)
-			  /* KAS this is probably always true for new twophase. */
+			if (ckptExtended.masterMirroringCheckpointLen > 0)
 			{
-				int filespaceCount;
-				int tablespaceCount;
-				int databaseCount;
-
-				if (mmxlog_get_checkpoint_counts(
-										masterMirroringCheckpoint,
-										masterMirroringCheckpointLen,
-										record->xl_len,
-										&beginLoc,
-										/* errlevel */ -1,	// Suppress elog altogether on master mirroring checkpoint length checking.
-										&filespaceCount,
-										&tablespaceCount,
-										&databaseCount))
-
-				{
-					appendStringInfo(buf,
-						 ", master mirroring information: %d filespaces, %d tablespaces, %d databases",
-						 filespaceCount,
-						 tablespaceCount,
-						 databaseCount);
-				}
+				appendStringInfo(buf,
+								 ", master mirroring information: %d filespaces, %d tablespaces, %d databases",
+								 ckptExtended.masterMirroringCheckpoint.fspc->count,
+								 ckptExtended.masterMirroringCheckpoint.tspc->count,
+								 ckptExtended.masterMirroringCheckpoint.dbdir->count);
 			}
 		}
 	}
