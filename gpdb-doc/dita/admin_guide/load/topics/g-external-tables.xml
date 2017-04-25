@@ -76,10 +76,10 @@
             external tables are rescannable: the data is static while the query runs.</li>
          <li id="du209907">Web (web-based) external tables access dynamic data sources, either on a
             web server with the <codeph>http://</codeph> protocol or by executing OS commands or
-            scripts. Web external tables are not rescannable: the data can change while the query
+            scripts. External web tables are not rescannable: the data can change while the query
             runs. </li>
       </ul>
-      <p>Dump and restore operate only on external and web external table <i>definitions</i>, not on
+      <p>Dump and restore operate only on external and external web table <i>definitions</i>, not on
          the data sources.</p>
    </body>
 </topic>

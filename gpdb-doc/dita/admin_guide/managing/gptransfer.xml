@@ -95,7 +95,7 @@
           <codeph>gpfdist</codeph> per segment host.</p>
       <p>When the destination cluster is smaller than the source cluster, there is one named pipe
         per segment host and all segments on the host send their data through it. The segments on
-        the source host write their data to a writable web external table connected to a
+        the source host write their data to a writable external web table connected to a
           <codeph>gpfdist</codeph> process on the input end of the named pipe. This consolidates the
         table data into a single named pipe. A <codeph>gpfdist</codeph> process on the output of the
         named pipe serves the consolidated data to the destination cluster. The following figure

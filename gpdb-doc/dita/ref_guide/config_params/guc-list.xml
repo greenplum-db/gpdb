@@ -8998,7 +8998,7 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
     <title>writable_external_table_bufsize</title>
     <body>
       <p>Size of the buffer (in KB) that Greenplum Database uses for network communication, such as
-        the <codeph>gpfdist</codeph> utility and web external tables (that use http). Greenplum
+        the <codeph>gpfdist</codeph> utility and external web tables (that use http). Greenplum
         Database stores data in the buffer before writing the data out. For information about
           <codeph>gpfdist</codeph>, see the <cite>Greenplum Database Utility Guide</cite>.</p>
       <table id="table_writable_external_table_bufsize">

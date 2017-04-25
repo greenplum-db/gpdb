@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic32">
-    <title>Command-based Web External Tables</title>
+    <title>Command-based External Web Tables</title>
     <body>
         <p>The output of a shell command or script defines command-based web table data. Specify the
             command in the <codeph>EXECUTE</codeph> clause of <codeph>CREATE EXTERNAL WEB
