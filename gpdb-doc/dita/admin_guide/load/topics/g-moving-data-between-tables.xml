@@ -12,9 +12,9 @@
                         of the following will happen, depending on the isolation mode used:</p>
       <ul>
          <li id="du223917">
-            <b>Tables without error isolation mode</b>: any operation
-                            that reads from that table fails. Loading from external and web external
-                            tables without error isolation mode is an all or nothing operation.</li>
+            <b>Tables without error isolation mode</b>: any operation that reads from that table
+            fails. Loading from external tables without error isolation mode is an all or nothing
+            operation.</li>
          <li id="du223918">
             <b>Tables with error isolation mode</b>: the entire file
                             will be loaded, except for the problematic rows (subject to the

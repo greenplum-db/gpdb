@@ -5,7 +5,7 @@
    <title>Creating and Using External Web Tables</title>
    <body>
       <p>
-         <codeph>CREATE EXTERNAL WEB TABLE</codeph> creates a web table definition. Web external
+         <codeph>CREATE EXTERNAL WEB TABLE</codeph> creates a web table definition. External web
          tables allow Greenplum Database to treat dynamic data sources like regular
          database tables. Because web table data can change as a query runs, the data is not
          rescannable.</p>
