@@ -52,6 +52,7 @@
 using namespace gpdxl;
 using namespace gpopt;
 
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorScalarToDXL::CTranslatorScalarToDXL
@@ -497,6 +498,14 @@ CTranslatorScalarToDXL::PdxlnScArrayCompFromExpr
 	CDXLNode *pdxlnLeft = PdxlnScOpFromExpr(pexprLeft, pmapvarcolid);
 
 	Expr *pexprRight = (Expr*) gpdb::PvListNth(pscarrayopexpr->args, 1);
+
+	// If the argument array is an array Const, try to transform it to an
+	// ArrayExpr, to allow ORCA to optimize it better. (ORCA knows how to
+	// extract elements of an ArrayExpr, but doesn't currently know how
+	// to do it from an array-typed Const.)
+	if (IsA(pexprRight, Const))
+		pexprRight = gpdb::PexprTransformArrayConstToArrayExpr((Const *) pexprRight);
+
 	CDXLNode *pdxlnRight = PdxlnScOpFromExpr(pexprRight, pmapvarcolid);
 
 	GPOS_ASSERT(NULL != pdxlnLeft);

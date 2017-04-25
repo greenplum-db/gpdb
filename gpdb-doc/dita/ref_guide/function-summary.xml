@@ -405,24 +405,33 @@ SELECT foo();
                   scope="external">XML Functions</xref> and function-like expressions </entry>
               <entry colname="col2"/>
               <entry colname="col3">
-                <p>cursor_to_xml(cursor refcursor, count int, nulls boolean, tableforest boolean, targetns text)</p>
-                <p>cursor_to_xmlschema(cursor refcursor, nulls boolean, tableforest boolean, targetns text)</p>
+                <p>cursor_to_xml(cursor refcursor, count int, nulls boolean, tableforest boolean,
+                  targetns text)</p>
+                <p>cursor_to_xmlschema(cursor refcursor, nulls boolean, tableforest boolean,
+                  targetns text)</p>
                 <p>database_to_xml(nulls boolean, tableforest boolean, targetns text)</p>
                 <p>database_to_xmlschema(nulls boolean, tableforest boolean, targetns text)</p>
-                <p>database_to_xml_and_xmlschema(nulls boolean, tableforest boolean, targetns text)</p>
+                <p>database_to_xml_and_xmlschema(nulls boolean, tableforest boolean, targetns
+                  text)</p>
                 <p>query_to_xml(query text, nulls boolean, tableforest boolean, targetns text)</p>
-                <p>query_to_xmlschema(query text, nulls boolean, tableforest boolean, targetns text)</p>
-                <p>query_to_xml_and_xmlschema(query text, nulls boolean, tableforest boolean, targetns text)</p>
+                <p>query_to_xmlschema(query text, nulls boolean, tableforest boolean, targetns
+                  text)</p>
+                <p>query_to_xml_and_xmlschema(query text, nulls boolean, tableforest boolean,
+                  targetns text)</p>
                 <p>schema_to_xml(schema name, nulls boolean, tableforest boolean, targetns text)</p>
-                <p>schema_to_xmlschema(schema name, nulls boolean, tableforest boolean, targetns text)</p>
-                <p>schema_to_xml_and_xmlschema(schema name, nulls boolean, tableforest boolean, targetns text)</p>
+                <p>schema_to_xmlschema(schema name, nulls boolean, tableforest boolean, targetns
+                  text)</p>
+                <p>schema_to_xml_and_xmlschema(schema name, nulls boolean, tableforest boolean,
+                  targetns text)</p>
                 <p>table_to_xml(tbl regclass, nulls boolean, tableforest boolean, targetns text)</p>
                 <p>table_to_xmlschema(tbl regclass, nulls boolean, tableforest boolean, targetns
                   text)</p>
-                <p>table_to_xml_and_xmlschema(tbl regclass, nulls boolean, tableforest boolean, targetns text)</p>
+                <p>table_to_xml_and_xmlschema(tbl regclass, nulls boolean, tableforest boolean,
+                  targetns text)</p>
                 <p>xmlagg(xml)</p>
                 <p>xmlconcat(xml[, ...])</p>
-                <p>xmlelement(name name [, xmlattributes(value [AS attname] [, ... ])] [, content, ...])</p>
+                <p>xmlelement(name name [, xmlattributes(value [AS attname] [, ... ])] [, content,
+                  ...])</p>
                 <p>xmlexists(text, xml)</p>
                 <p>xmlforest(content [AS name] [, ...])</p>
                 <p>xml_is_well_formed(text)</p>
@@ -755,7 +764,7 @@ SELECT foo();
                 <entry><codeph>anyelement</codeph>
                 </entry>
                 <entry>Expands the object in <codeph>from_json</codeph> to a row whose columns match
-                  the record type defined by base. See <xref href="#topic_gn4_x3w_mq/json-note"
+                  the record type defined by base. See <xref href="#topic_z5d_snw_2z/json-note"
                     format="dita">Note</xref>.</entry>
                 <entry>
                   <codeph>select * from json_populate_record(null::myrowtype,
@@ -775,7 +784,7 @@ SELECT foo();
                 </entry>
                 <entry>Expands the outermost array of objects in <codeph>from_json</codeph> to a set
                   of rows whose columns match the record type defined by <codeph>base</codeph>. See
-                    <xref href="#topic_gn4_x3w_mq/json-note" format="dita">Note</xref>.</entry>
+                    <xref href="#topic_z5d_snw_2z/json-note" format="dita">Note</xref>.</entry>
                 <entry>
                   <codeph>select * from json_populate_recordset(null::myrowtype,
                     '[{"a":1,"b":2},{"a":3,"b":4}]')</codeph>

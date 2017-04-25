@@ -197,15 +197,8 @@ initBitmapState(BitmapAppendOnlyScanState *scanstate)
 static inline void
 freeBitmapState(BitmapAppendOnlyScanState *scanstate)
 {
-	if (scanstate->baos_tbm != NULL)
-	{
-		if(IsA(scanstate->baos_tbm, HashBitmap))
-			tbm_free((HashBitmap *)scanstate->baos_tbm);
-		else
-            tbm_bitmap_free(scanstate->baos_tbm);
-
-		scanstate->baos_tbm = NULL;
-	}
+	/* BitmapIndexScan is the owner of the bitmap memory. Don't free it here */
+	scanstate->baos_tbm = NULL;
 	if (scanstate->baos_tbmres != NULL)
 	{
 		pfree(scanstate->baos_tbmres);
@@ -308,13 +301,6 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 		if (tbm != NULL && (!(IsA(tbm, HashBitmap) ||
 							  IsA(tbm, StreamBitmap))))
 			elog(ERROR, "unrecognized result from subplan");
-
-		/* When a HashBitmap is returned, set the returning bitmaps
-		 * in the subplan to NULL, so that the subplan nodes do not
-		 * mistakenly try to release the space during the rescan.
-		 */
-		if (tbm != NULL && IsA(tbm, HashBitmap))
-			tbm_reset_bitmaps(outerPlanState(node));
 
 		node->baos_tbm = tbm;
 	}
@@ -533,7 +519,6 @@ ExecBitmapAppendOnlyReScan(BitmapAppendOnlyScanState *node, ExprContext *exprCtx
 	 */
 
 	freeBitmapState(node);
-	tbm_reset_bitmaps(outerPlanState(node));
 
 	/*
 	 * Always rescan the input immediately, to ensure we can pass down any

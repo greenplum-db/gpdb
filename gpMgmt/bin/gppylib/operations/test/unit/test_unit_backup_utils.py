@@ -1246,33 +1246,51 @@ class BackupUtilsTestCase(GpTestCase):
         self.assertEqual('"MY\'DATE"', escapeDoubleQuoteInSQLString('''MY'DATE'''))
         self.assertEqual('"MY""""DATE"', escapeDoubleQuoteInSQLString('MY""DATE'))
 
+
+    @patch('os.walk', return_value=[('path', ['dir1', 'dir2'], ['gp_dump_20160101010101.rpt', 'file2', 'gp_dump_20160101010102.rpt']),
+                                    ('path2', ['dir3'], ['gp_dump_20160101010103.rpt']),
+                                    ('path3', ['dir4', 'dir5'], ['file5', 'gp_dump_20160101010104.rpt'])])
+    def test_get_report_files_and_paths_default(self, mock):
+        expectedFiles = [('path','gp_dump_20160101010101.rpt'),
+                         ('path', 'gp_dump_20160101010102.rpt'),
+                         ('path2','gp_dump_20160101010103.rpt'),
+                         ('path3','gp_dump_20160101010104.rpt')]
+        reportFiles = self.context.get_report_files_and_paths("/tmp")
+        self.assertEqual(expectedFiles, reportFiles)
+
+    @patch('os.walk', return_value=[('path', ['dir1', 'dir2'], ['file1', 'file2']),
+                                    ('path2', ['dir3'], ['file3']),])
+    def test_get_report_files_and_paths_no_report_files(self, mock):
+        with self.assertRaisesRegexp(Exception, "No report files located"):
+            self.context.get_report_files_and_paths("/dump_dir")
+
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['Compression Program: gzip',
         'segment 0 (dbid 2) Host host Port 5433 Database testdb BackupFile /gp_dump_0_2_20160101010101: Succeeded'])
     def test_get_compress_and_dbname_from_report_file_normal_dbname_compression(self, mock1):
-        self.context.get_compress_and_dbname_from_report_file("report_file_name")
-        self.assertTrue(self.context.compress)
-        self.assertEquals(self.context.target_db, 'testdb')
+        compress, dbname = self.context.get_compress_and_dbname_from_report_file("report_file_name")
+        self.assertTrue(compress)
+        self.assertEquals(dbname, 'testdb')
 
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['Compression Program: gzip',
         'segment 0 (dbid 2) Host host Port 5433 Database "test""db" BackupFile /gp_dump_0_2_20160101010101: Succeeded'])
     def test_get_compress_and_dbname_from_report_file_special_dbname_compression(self, mock1):
-        self.context.get_compress_and_dbname_from_report_file("report_file_name")
-        self.assertTrue(self.context.compress)
-        self.assertEquals(self.context.target_db, '"test""db"')
+        compress, dbname = self.context.get_compress_and_dbname_from_report_file("report_file_name")
+        self.assertTrue(compress)
+        self.assertEquals(dbname, '"test""db"')
 
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['Compression Program: None',
         'segment 0 (dbid 2) Host host Port 5433 Database testdb BackupFile /gp_dump_0_2_20160101010101: Succeeded'])
     def test_get_compress_and_dbname_from_report_file_normal_dbname_no_compression(self, mock1):
-        self.context.get_compress_and_dbname_from_report_file("report_file_name")
-        self.assertFalse(self.context.compress)
-        self.assertEquals(self.context.target_db, 'testdb')
+        compress, dbname = self.context.get_compress_and_dbname_from_report_file("report_file_name")
+        self.assertFalse(compress)
+        self.assertEquals(dbname, 'testdb')
 
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['Compression Program: None',
         'segment 0 (dbid 2) Host host Port 5433 Database "test""db" BackupFile /gp_dump_0_2_20160101010101: Succeeded'])
     def test_get_compress_and_dbname_from_report_file_special_dbname_no_compression(self, mock1):
-        self.context.get_compress_and_dbname_from_report_file("report_file_name")
-        self.assertFalse(self.context.compress)
-        self.assertEquals(self.context.target_db, '"test""db"')
+        compress, dbname = self.context.get_compress_and_dbname_from_report_file("report_file_name")
+        self.assertFalse(compress)
+        self.assertEquals(dbname, '"test""db"')
 
     @patch('gppylib.operations.backup_utils.get_lines_from_file',
         return_value=['segment 0 (dbid 2) Host host Port 5433 Database testdb BackupFile /gp_dump_0_2_20160101010101: Succeeded'])

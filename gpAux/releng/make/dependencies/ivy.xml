@@ -24,7 +24,7 @@
       <dependency org="NetBackup"       name="SDK-7.5"         rev="7.5"            conf="rhel7_x86_64->rhel5_x86_64;rhel6_x86_64->rhel5_x86_64" />
       <dependency org="NetBackup"       name="SDK-7.6"         rev="7.6"            conf="rhel7_x86_64->rhel5_x86_64;rhel6_x86_64->rhel5_x86_64" />
       <dependency org="R-Project"       name="R"               rev="3.1.0"          conf="rhel7_x86_64->rhel6_x86_64;rhel6_x86_64->rhel6_x86_64;suse11_x86_64->suse10_x86_64" />
-      <dependency org="Python"          name="python"          rev="2.7.12"         conf="rhel6_x86_64->rhel6_x86_64;rhel7_x86_64->rhel6_x86_64;suse11_x86_64->rhel6_x86_64;sles11_x86_64->rhel6_x86_64" />
+      <dependency org="Python"          name="python"          rev="2.7.12"         conf="rhel6_x86_64->rhel6_x86_64;rhel7_x86_64->rhel6_x86_64;suse11_x86_64->sles11_x86_64;sles11_x86_64->sles11_x86_64" />
       <dependency org="cURL"            name="curl"            rev="7.44.0"         conf="rhel7_x86_64->rhel5_x86_64;rhel6_x86_64->rhel5_x86_64;suse11_x86_64->suse10_x86_64" />
       <dependency org="Samba"           name="ccache"          rev="3.2.3"          conf="rhel7_x86_64->rhel5_x86_64;rhel6_x86_64->rhel5_x86_64;suse11_x86_64->suse11_x86_64" />
     </dependencies>

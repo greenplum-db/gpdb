@@ -235,6 +235,23 @@ select count(1) from bmcrash where btree_col1 = 'abcdefg999' OR btree_col2 = '20
     23
 (1 row)
 
+set enable_bitmapscan=on; 
+set enable_hashjoin=off; 
+set enable_indexscan=on; 
+set enable_nestloop=on; 
+set enable_seqscan=off;
+select count(1) from bmcrash where btree_col1 = 'abcdefg999' AND bitmap_col = '999' OR bitmap_col = '888' OR btree_col2 = '2015-01-01';
+ count 
+-------
+    33
+(1 row)
+
+select count(1) from bmcrash b1, bmcrash b2 where b1.bitmap_col = b2.bitmap_col or b1.bitmap_col = '999' and b1.btree_col1 = 'abcdefg999';
+ count  
+--------
+ 199900
+(1 row)
+
 -- start_ignore
 drop schema bm_ao cascade;
 NOTICE:  drop cascades to append only table bmcrash

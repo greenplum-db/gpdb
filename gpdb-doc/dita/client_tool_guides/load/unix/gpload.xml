@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="gpload-ux" conref="../../../utility_guide/admin_utilities/gpload.xml">
-    <title id="ke20941">gpload</title>
+<topic id="gpload-ux" conref="../../../utility_guide/admin_utilities/gpload.xml#topic1">
+  <title id="ke20941">gpload</title>
 </topic>

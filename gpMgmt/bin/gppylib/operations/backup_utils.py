@@ -257,21 +257,32 @@ class Context(Values, object):
         dirnames = sorted(dirnames, key=lambda x: int(os.path.basename(x)), reverse=True)
         return dirnames
 
+    def get_report_files_and_paths(self, backup_root):
+        reports = []
+        prefix = "%s*.rpt" % self.generate_prefix("report")
+        for path, dirs, files in os.walk(backup_root):
+            matching = fnmatch.filter(files, "%s*" % prefix)
+            reports.extend([(path, report_file) for report_file in matching])
+        if len(reports) == 0:
+            raise Exception("No report files located")
+        return reports
+
     def get_compress_and_dbname_from_report_file(self, report_file):
         contents = get_lines_from_file(report_file)
-        self.compress = None
-        self.target_db = ""
+        compress = None
+        target_db = ""
         name_pattern = re.compile(r'Port [0-9]+ Database (.*) BackupFile')
         for line in contents:
             if "Compression Program: gzip" in line:
-                self.compress = True
+                compress = True
             elif "Compression Program: None" in line:
-                self.compress = False
+                compress = False
             matching = name_pattern.search(line)
             if matching and matching.group(1):
-                self.target_db = matching.group(1)
-        if self.compress is None or not self.target_db:
+                target_db = matching.group(1)
+        if compress is None or not target_db:
             raise Exception("Could not determine database name and compression type from report file %s" % report_file)
+        return compress, target_db
 
 def get_filename_for_content(context, filetype, content, remote_directory=None, host=None):
     filetype_glob = context.generate_filename(filetype, content=content, directory=remote_directory)

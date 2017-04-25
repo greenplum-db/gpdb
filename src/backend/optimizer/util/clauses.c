@@ -59,7 +59,6 @@ typedef struct
 	bool		transform_stable_funcs;
 	bool		recurse_queries; /* recurse into query structures */
 	bool		recurse_sublink_testexpr; /* recurse into sublink test expressions */
-	bool		transform_saop; /* transform scalar array ops */
 	Size        max_size; /* max constant binary size in bytes, 0: no restrictions */
 } eval_const_expressions_context;
 
@@ -1797,7 +1796,6 @@ fold_constants(PlannerGlobal *glob, Query *q, ParamListInfo boundParams, Size ma
 	context.transform_stable_funcs = true;	/* safe transformations only */
 	context.recurse_queries = true; /* recurse into query structures */
 	context.recurse_sublink_testexpr = false; /* do not recurse into sublink test expressions */
-	context.transform_saop = false; /* do not transform scalar array ops */
 
 	context.max_size = max_size;
 	
@@ -1810,27 +1808,69 @@ fold_constants(PlannerGlobal *glob, Query *q, ParamListInfo boundParams, Size ma
 						);
 }
 
-/**
- * fold_arrayexpr_constants
+/*
+ * Transform a small array constant to an ArrayExpr.
  *
- * Fold array expression for optimizer
+ * This used by ORCA, to transform the array argument of a ScalarArrayExpr
+ * into an ArrayExpr. If a ScalarArrayExpr has an ArrayExpr argument, ORCA
+ * can perform some optimizations - partition pruning at least - based on
+ * the elements in the ArrayExpr. It doesn't currently know how to extract
+ * elements from an Array const, however, so to enable those optimizations
+ * in ORCA, we convert small Array Consts into corresponding ArrayExprs.
+ *
+ * If the argument is not an array constant, returns the original Const
+ * unmodified.
  */
-Node *
-fold_arrayexpr_constants(ArrayExpr *arrayexpr)
+Expr *
+transform_array_Const_to_ArrayExpr(Const *c)
 {
-	eval_const_expressions_context context;
+	Oid			elemtype;
+	int16		elemlen;
+	bool		elembyval;
+	char		elemalign;
+	int			nelems;
+	Datum	   *elems;
+	bool	   *nulls;
+	ArrayType  *ac;
+	ArrayExpr *aexpr;
+	int			i;
 
-	context.boundParams = NULL;
-	context.active_fns = NIL;	/* nothing being recursively simplified */
-	context.case_val = NULL;	/* no CASE being examined */
-	context.transform_stable_funcs = true;	/* safe transformations only */
-	context.recurse_queries = false; /* do not recurse into query structures */
-	context.recurse_sublink_testexpr = false; /* do not recurse into sublink test expressions */
-	context.transform_saop = true; /* transform scalar array ops */
+	Assert(IsA(c, Const));
 
-	context.max_size = GPOPT_MAX_FOLDED_CONSTANT_SIZE;
+	/* Does it look like the right kind of an array Const? */
+	if (c->constisnull)
+		return (Expr *) c;	/* NULL const */
 
-	return eval_const_expressions_mutator((Node *) arrayexpr, &context);
+	elemtype = get_element_type(c->consttype);
+	if (elemtype == InvalidOid)
+		return (Expr *) c;	/* not an array */
+
+	ac = (ArrayType *) c->constvalue;
+	nelems = ArrayGetNItems(ARR_NDIM(ac), ARR_DIMS(ac));
+
+	/* All set, extract the elements, and an ArrayExpr to hold them. */
+	get_typlenbyvalalign(elemtype, &elemlen, &elembyval, &elemalign);
+	deconstruct_array(ac, elemtype, elemlen, elembyval, elemalign,
+					  &elems, &nulls, &nelems);
+
+	aexpr = makeNode(ArrayExpr);
+	aexpr->array_typeid = c->consttype;
+	aexpr->element_typeid = elemtype;
+	aexpr->multidims = false;
+	aexpr->location = c->location;
+
+	for (i = 0; i < nelems; i++)
+	{
+		aexpr->elements = lappend(aexpr->elements,
+								  makeConst(elemtype,
+											-1,
+											elemlen,
+											elems[i],
+											nulls[i],
+											elembyval));
+	}
+
+	return (Expr *) aexpr;
 }
 
 /*--------------------
@@ -1884,7 +1924,6 @@ eval_const_expressions(PlannerInfo *root, Node *node)
 	context.transform_stable_funcs = true;	/* safe transformations only */
 	context.recurse_queries = false; /* do not recurse into query structures */
 	context.recurse_sublink_testexpr = true;
-	context.transform_saop = true; 	/* transform scalar array ops */
 	context.max_size = 0;
 
 	return eval_const_expressions_mutator(node, &context);
@@ -1919,7 +1958,6 @@ estimate_expression_value(PlannerInfo *root, Node *node)
 	context.transform_stable_funcs = true;	/* unsafe transformations OK */
 	context.recurse_queries = false; /* do not recurse into query structures */
 	context.recurse_sublink_testexpr = true;
-	context.transform_saop = true; 	/* transform scalar array ops */
 	context.max_size = 0;
 
 	return eval_const_expressions_mutator(node, &context);
@@ -2583,7 +2621,7 @@ eval_const_expressions_mutator(Node *node,
 
         return (Node *) saop; /* this has been walked and is a new one */
 	}
-	if (IsA(node, ArrayExpr) && context->transform_saop)
+	if (IsA(node, ArrayExpr))
 	{
 		ArrayExpr  *arrayexpr = (ArrayExpr *) node;
 		ArrayExpr  *newarray;

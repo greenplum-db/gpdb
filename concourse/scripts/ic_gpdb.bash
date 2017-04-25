@@ -59,6 +59,13 @@ function _main() {
         exit 1
     fi
 
+    # This ugly block exists since sles11 installs kerberos at a different path that is a test-only dependency
+    if [ "$TEST_OS" == "sles" ]; then
+      zypper addrepo --no-gpgcheck http://download.opensuse.org/distribution/11.4/repo/oss/ ossrepo
+      zypper -n install krb5-server
+      cp /usr/lib/mit/sbin/krb5kdc /usr/sbin/
+    fi
+
     time configure
     time install_gpdb
     time setup_gpadmin_user

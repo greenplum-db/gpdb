@@ -1,0 +1,20 @@
+## Create the necessary tables for the performance testing
+test: setup
+
+## Run Append-Optimized loading sqls
+test: ao_zlib_blocksz8192
+test: ao_blocksz8192
+test: ao_blocksz32768
+test: ao_blocksz524288
+
+## Run Append-Optimized Column-Orientated loading sqls
+test: aoco_zlib_blocksz8192
+test: aoco_blocksz8192
+test: aoco_blocksz32768
+test: aoco_blocksz524288
+
+## Run some concurrency loading
+test: ao_zlib_blocksz8192 ao_zlib_blocksz8192
+test: ao_blocksz32768 ao_blocksz32768
+test: aoco_zlib_blocksz8192 aoco_zlib_blocksz8192
+test: aoco_blocksz32768 aoco_blocksz32768

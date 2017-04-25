@@ -95,9 +95,7 @@ struct HashBitmap
 /* A struct to hide away HashBitmap state for a streaming bitmap */
 typedef struct HashStreamOpaque
 {
-	HashBitmap *tbm;
-	bool		tofree;			/* flag to indicate whether this opaque owns
-								 * the tbm, later used in tbm_stream_free() */
+	HashBitmap *tbm;  /* HashStreamOpaque will not take the ownership of freeing HashBitmap */
 	PagetableEntry *entry;
 }	HashStreamOpaque;
 
@@ -1136,6 +1134,23 @@ make_opstream(StreamType kind, StreamNode *n1, StreamNode *n2)
 }
 
 /*
+ * stream_move_node - move a streamnode from StreamBitMap (source)'s streamnode
+ * to given StreamBitMap(destination). Also transfer the ownership of source streamnode by
+ * resetting to NULL.
+ */
+void
+stream_move_node(StreamBitmap *destination, StreamBitmap *source, StreamType kind)
+{
+	Assert(NULL != destination);
+	Assert(NULL != source);
+	stream_add_node(destination,
+			source->streamNode, kind);
+	/* destination owns the streamNode and hence resetting it to NULL for source->streamNode. */
+	source->streamNode = NULL;
+}
+
+
+/*
  * stream_add_node() - add a new node to a bitmap stream
  * node is a base node -- i.e., an index/external
  * kind is one of BMS_INDEX, BMS_OR or BMS_AND
@@ -1200,27 +1215,11 @@ tbm_create_stream_node(HashBitmap *tbm)
 	is->upd_instrument = tbm_stream_upd_instrument;
 
 	op->tbm = tbm;
-	op->tofree = true;
 	op->entry = NULL;
 
 	is->opaque = (void *) op;
 
 	return is;
-}
-
-StreamNode *
-tbm_create_stream_node_ref(HashBitmap *tbm)
-{
-	IndexStream *sn = tbm_create_stream_node(tbm);
-
-	/*
-	 * Do not take ownership of the HashBitmap.
-	 */
-	HashStreamOpaque *op = (HashStreamOpaque *) sn->opaque;
-
-	op->tofree = false;
-
-	return sn;
 }
 
 /*
@@ -1265,22 +1264,11 @@ static void
 tbm_stream_free(StreamNode *self)
 {
 	HashStreamOpaque *op = (HashStreamOpaque *) self->opaque;
-	HashBitmap *tbm = op->tbm;
-
-	/* CDB: Report statistics for EXPLAIN ANALYZE */
-	if (tbm->instrument)
-	{
-		tbm_upd_instrument(tbm);
-		tbm_set_instrument(tbm, NULL);
-	}
-
 	/*
-	 * Only free the bitmap if we actually own it.
+	 * op->tbm is actually a reference to node->bitmap from BitmapIndexScanState
+	 * BitmapIndexScanState would have freed the op->tbm already so we shouldn't
+	 * access now.
 	 */
-	if (op->tofree)
-	{
-		tbm_free(tbm);
-	}
 	pfree(op);
 	pfree(self);
 }

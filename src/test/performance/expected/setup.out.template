@@ -1,0 +1,20 @@
+--
+-- Create the base table that the other tables will be loading from
+--
+CREATE TABLE base_table (a int, b int, c int, d date, e varchar(10), f varchar(100), g int, h varchar(100), i int, j numeric(6,2), k bigint, l bigint, m double precision[]);
+CREATE EXTERNAL TABLE ext_base_table (like base_table) LOCATION('gpfdist://@hostname@:@gpfdist_port@/perfdata.csv') FORMAT 'text' (DELIMITER '|');
+--
+-- Load the base table so that we can use INSERT INTO SELECT * FROM to do the load performance testing
+--
+INSERT INTO base_table SELECT * FROM ext_base_table;
+--
+-- Create the tables to be used for performance testing
+--
+CREATE TABLE ao_blocksz8192 (like base_table) WITH (appendonly=true, blocksize=8192);
+CREATE TABLE ao_blocksz32768 (like base_table) WITH (appendonly=true, blocksize=32768);
+CREATE TABLE ao_blocksz524288 (like base_table) WITH (appendonly=true, blocksize=524288);
+CREATE TABLE ao_zlib_blocksz8192 (like base_table) WITH (appendonly=true, compresstype=zlib, blocksize=8192);
+CREATE TABLE aoco_blocksz8192 (like base_table) WITH (appendonly=true, orientation=column, blocksize=8192);
+CREATE TABLE aoco_blocksz32768 (like base_table) WITH (appendonly=true, orientation=column, blocksize=32768);
+CREATE TABLE aoco_blocksz524288 (like base_table) WITH (appendonly=true, orientation=column, blocksize=524288);
+CREATE TABLE aoco_zlib_blocksz8192 (like base_table) WITH (appendonly=true, orientation=column, compresstype=zlib, blocksize=8192);

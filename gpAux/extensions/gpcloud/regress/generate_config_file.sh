@@ -1,7 +1,14 @@
 #!/bin/bash
 
-if [ -f "$1" ]; then
-	echo Warning: file $1 already exists
+BASENAME=$(basename "$0")
+
+if [ "$#" != "1" ]; then
+	echo "Usage: $BASENAME /path/to/config_file"
+	exit 1
+fi
+
+if [ -a "$1" ]; then
+	echo "Warning: file $1 already exists."
 	exit 0
 fi
 

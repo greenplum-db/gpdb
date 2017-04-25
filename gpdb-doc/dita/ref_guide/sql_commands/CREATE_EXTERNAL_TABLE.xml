@@ -142,7 +142,7 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
       <p><codeph>CREATE WRITABLE EXTERNAL TABLE</codeph> or <codeph>CREATE WRITABLE EXTERNAL WEB
           TABLE</codeph> creates a new writable external table definition in Greenplum Database.
         Writable external tables are typically used for unloading data from the database into a set
-        of files or named pipes. Writable external web tables can also be used to output data to an
+        of files or named pipes. Writable web external tables can also be used to output data to an
         executable program. Writable external tables can also be used as output targets for
         Greenplum parallel MapReduce calculations. Once a writable external table is defined, data
         can be selected from database tables and inserted into the writable external table. Writable
@@ -596,7 +596,7 @@ text)  EXECUTE '/var/load_scripts/get_log_data.sh' ON HOST
    LOCATION ('gpfdist://etl1:8081/sales.out')
    FORMAT 'TEXT' ( DELIMITER '|' NULL ' ')
    DISTRIBUTED BY (txn_id);</codeblock>
-      <p>Create a writable external web table that pipes output data received by the segments to an
+      <p>Create a writable web external table that pipes output data received by the segments to an
         executable script named <codeph>to_adreport_etl.sh</codeph>:</p>
       <codeblock>CREATE WRITABLE EXTERNAL WEB TABLE campaign_out 
 (LIKE campaign) 

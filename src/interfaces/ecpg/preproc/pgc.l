@@ -1269,7 +1269,7 @@ parse_include(void)
 	{
 		yytext[i] = '\0';
 		memmove(yytext, yytext+1, strlen(yytext));
-	
+
 		strlcpy(inc_file, yytext, sizeof(inc_file));
 		yyin = fopen(inc_file, "r");
 		if (!yyin)

@@ -101,7 +101,7 @@ extern Node *eval_const_expressions(PlannerInfo *root, Node *node);
 
 extern Query *fold_constants(PlannerGlobal *glob, Query *q, ParamListInfo boundParams, Size max_size);
 
-extern Node *fold_arrayexpr_constants(ArrayExpr *arrayexpr);
+extern Expr *transform_array_Const_to_ArrayExpr(Const *c);
 
 extern Node *estimate_expression_value(PlannerInfo *root, Node *node);
 

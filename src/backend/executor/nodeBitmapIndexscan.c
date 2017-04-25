@@ -62,7 +62,7 @@ MultiExecBitmapIndexScan(BitmapIndexScanState *node)
 	Node 		*bitmap = NULL;
 
 	/* Make sure we are not leaking a previous bitmap */
-	AssertImply(node->indexScanState.ss.ps.state->es_plannedstmt->planGen == PLANGEN_OPTIMIZER, NULL == node->bitmap);
+	Assert(NULL == node->bitmap);
 
 	/* must provide our own instrumentation support */
 	if (scanState->ss.ps.instrument)
@@ -153,24 +153,7 @@ ExecBitmapIndexReScan(BitmapIndexScanState *node, ExprContext *exprCtxt)
 
 	if(NULL != node->bitmap)
 	{
-		/* Only for optimizer BitmapIndexScan is in charge to free the bitmap */
-		if (PLANGEN_OPTIMIZER == node->indexScanState.ss.ps.state->es_plannedstmt->planGen)
-		{
-			tbm_bitmap_free(node->bitmap);
-		}
-		else
-		{
-			/* reset hashBitmap */
-			if(node->bitmap && IsA(node->bitmap, HashBitmap))
-			{
-				tbm_bitmap_free(node->bitmap);
-			}
-			else
-			{
-				/* XXX: we leak here */
-				/* XXX: put in own memory context? */
-			}
-		}
+		tbm_bitmap_free(node->bitmap);
 		node->bitmap = NULL;
 	}
 
@@ -190,11 +173,7 @@ ExecEndBitmapIndexScan(BitmapIndexScanState *node)
 	IndexScan_EndIndexScan(scanState);
 	Assert(SCAN_END == scanState->ss.scan_state);
 
-	/* Only for optimizer BitmapIndexScan is in charge to free the bitmap */
-	if(PLANGEN_OPTIMIZER == node->indexScanState.ss.ps.state->es_plannedstmt->planGen)
-	{
-		tbm_bitmap_free(node->bitmap);
-	}
+	tbm_bitmap_free(node->bitmap);
 	node->bitmap = NULL;
 
 	MemoryContextDelete(node->partitionMemoryContext);

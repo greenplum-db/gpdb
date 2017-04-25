@@ -145,12 +145,6 @@ MultiExecBitmapOr(BitmapOrState *node)
 		PlanState  *subnode = bitmapplans[i];
 		Node	   *subresult = NULL;
 
-		if (IsA(subnode, BitmapIndexScanState) &&
-				(PLANGEN_PLANNER == node->ps.state->es_plannedstmt->planGen))
-		{
-			((BitmapIndexScanState *) subnode)->bitmap = node->bitmap;
-		}
-
 		subresult = MultiExecProcNode(subnode);
 
 		if(subresult == NULL)
@@ -167,17 +161,6 @@ MultiExecBitmapOr(BitmapOrState *node)
 			else
 			{
 				tbm_union(hbm, (HashBitmap *)subresult);
-
-				/* For optimizer BitmapIndexScan would free all bitmaps */
-				if (PLANGEN_PLANNER == node->ps.state->es_plannedstmt->planGen)
-				{
-					tbm_free((HashBitmap *)subresult);
-
-					/* Since we release the space for subresult, we want to
-					 * reset the bitmaps in subnode tree to NULL.
-					 */
-					tbm_reset_bitmaps(subnode);
-				}
 			}
 		}
 		else
@@ -187,17 +170,7 @@ MultiExecBitmapOr(BitmapOrState *node)
 				if(node->bitmap != subresult)
 				{
 					StreamBitmap *s = (StreamBitmap *)subresult;
-					stream_add_node((StreamBitmap *)node->bitmap, 
-									s->streamNode, BMS_OR);
-					/* node->bitmap should be the only owner of the newly created OR StreamNode */
-					s->streamNode = NULL;
-
-					/*
-					 * Don't free subresult here, as we are still using the StreamNode inside it.
-					 * For Planner, this would introduce memory leak. For optimizer, however,
-					 * BitmapIndexScan would free the bitmap at the end of the scan of the part
-					 */
-				}
+					stream_move_node((StreamBitmap *)node->bitmap, s, BMS_OR);				}
 			}
 			else
 				node->bitmap = subresult;
@@ -209,7 +182,7 @@ MultiExecBitmapOr(BitmapOrState *node)
 	{
 		if(node->bitmap && IsA(node->bitmap, StreamBitmap))
 			stream_add_node((StreamBitmap *)node->bitmap, 
-						tbm_create_stream_node_ref(hbm), BMS_OR);
+						tbm_create_stream_node(hbm), BMS_OR);
 		else
 			node->bitmap = (Node *)hbm;
 	}
@@ -262,10 +235,7 @@ ExecReScanBitmapOr(BitmapOrState *node, ExprContext *exprCtxt)
 	 * we voluntarily set our bitmap to NULL to ensure that we don't have an out
 	 * of scope pointer
 	 */
-	if (PLANGEN_OPTIMIZER == node->ps.state->es_plannedstmt->planGen)
-	{
-		node->bitmap = NULL;
-	}
+	node->bitmap = NULL;
 
 	int			i;
 

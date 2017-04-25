@@ -1890,7 +1890,15 @@ CTranslatorDXLToScalar::PexprArray
 	pexpr->multidims = pdxlop->FMultiDimensional();
 	pexpr->elements = PlistTranslateScalarChildren(pexpr->elements, pdxlnArray, pmapcidvar);
 
-	return (Expr *) gpdb::PnodeFoldArrayexprConstants(pexpr);
+	/*
+	 * ORCA doesn't know how to construct array constants, so it will
+	 * return any arrays as ArrayExprs. Convert them to array constants,
+	 * for more efficient evaluation at runtime. (This will try to further
+	 * simplify the elements, too, but that is most likely futile, as the
+	 * expressions were already simplified as much as we could before they
+	 * were passed to ORCA. But there's little harm in trying).
+	 */
+	return (Expr *) gpdb::PnodeEvalConstExpressions((Node *) pexpr);
 }
 
 //---------------------------------------------------------------------------

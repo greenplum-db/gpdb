@@ -6048,7 +6048,6 @@ recoveryStopsHere(XLogRecord *record, bool *includeThis)
 								recoveryStopXid,
 								timestamptz_to_str(recoveryStopTime))));
 		}
-
 		if (recoveryStopAfter)
 			recoveryLastXTime = recordXtime;
 	}
@@ -6580,7 +6579,6 @@ StartupXLOG(void)
 				(errmsg("requested timeline %u is not a child of database system timeline %u",
 						recoveryTargetTLI,
 						ControlFile->checkPointCopy.ThisTimeLineID)));
-
 	/*
 	 * Save the selected recovery target timeline ID in shared memory so that
 	 * other processes can see them
