@@ -104,7 +104,7 @@ a.current_query
                     commands on several hosts simultaneously.</p>
                 <p>You can create and use the Greenplum Database
                     <i>session_level_memory_consumption</i> view that provides information about the
-                    current memory utilization for sessions that are running queries on Greenplum Database. For information about the view, see <xref
+                    current memory utilization and idle time for sessions that are running queries on Greenplum Database. For information about the view, see <xref
                         href="managing/monitor.xml#topic_slt_ddv_1q"/>.</p>
                 <p>The Greenplum Command Center collects query and system
                     utilization metrics. See the <i>Greenplum Command Center Administrator Guide</i>

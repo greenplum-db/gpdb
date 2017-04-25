@@ -723,6 +723,14 @@ Distributed by: (sale_id)
                   <entry colname="col4">Command count for the session when it was marked as a
                     runaway session.</entry>
                 </row>
+                <row>
+                  <entry colname="col1">
+                    <codeph>idle_state</codeph>
+                  </entry>
+                  <entry colname="col2">timestamptz</entry>
+                  <entry colname="col3"/>
+                  <entry colname="col4">The last time a query process in this session became idle.</entry>
+                </row>
               </tbody>
             </tgroup>
           </table>
