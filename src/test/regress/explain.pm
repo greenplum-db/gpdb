@@ -25,10 +25,10 @@ use warnings;
 # than changing the parser to handle both cases.
 #
 # Parse_node:
-#   InitPlan entries in greenplum are in separate slices, so explain.pl
-#   prefixes them with an arrow (and adds a fake cost) to make them
-#   look like a top-level execution node.  Again, this technique was
-#   easier than modifying the parser to special case InitPlan.
+#   InitPlan entries in greenplum are in separate slices sometimes, so
+#   explain.pl prefixes them with an arrow (and adds a fake cost) to make them
+#   look like a top-level execution node.  Again, this technique was easier
+#   than modifying the parser to special case InitPlan.
 #
 #  Plan parsing in general:
 #  The original code only dealt with the TPCH formatted output:
@@ -702,7 +702,7 @@ sub parse_node
         # XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
         # make initplan into a fake node so the graphs look nicer (eg
         # tpch query 15).  Prefix it with an arrow and add a fake cost.
-        if ($row =~ m/\|(\s)*InitPlan(.*)slice/)
+        if ($row =~ m/\|(\s)*InitPlan/)
         {
             $row =~ s/InitPlan/\-\>  InitPlan/;
             if ($row !~ m/\(cost=/)
@@ -1577,14 +1577,13 @@ sub human_num
     return $esti;
 }
 
-# label left and right for nest loops
-sub nestedloop_fixup
+# label left and right children
+sub label_fixup
 {
     my ($node, $ctx) = @_;
 
     return
-        unless (exists($node->{short}) &&
-                ($node->{short} =~ m/Nested Loop/));
+        unless (exists($node->{short}));
 
     my @kidlist;
 
@@ -1592,24 +1591,35 @@ sub nestedloop_fixup
     {
         for my $kid (@{$node->{child}})
         {
-            push @kidlist, $kid;
+            # Ignore InitPlans when deciding inner/outer child
+            if ($kid->{txt} !~ /InitPlan/)
+            {
+                push @kidlist, $kid;
+            }
         }
     }
 
-    return
-        unless (2 == scalar(@kidlist));
+    my $nkids;
+    $nkids = scalar(@kidlist);
 
-    if ($kidlist[0]->{id} < $kidlist[1]->{id})
+    return
+        unless ($nkids >= 2);
+
+    # sort kidlist by id for labeling
+    my @sortedkidlist = sort { $a->{id} <=> $b->{id} } @kidlist;
+
+    if ($nkids == 2 && $node->{txt} !~ /Append/)
     {
-        $kidlist[0]->{nested_loop_position} = "left";
-        $kidlist[1]->{nested_loop_position} = "right";
+        $sortedkidlist[0]->{label} = "outer";
+        $sortedkidlist[1]->{label} = "inner";
     }
     else
     {
-        $kidlist[1]->{nested_loop_position} = "left";
-        $kidlist[0]->{nested_loop_position} = "right";
+        for my $i (0 .. $nkids)
+        {
+            $sortedkidlist[$i]->{label} = "child$i"
+        }
     }
-
 }
 
 # find rows out information
@@ -1837,9 +1847,9 @@ sub dodotfile
             undef,
             $ctx);
 
-    # always label the left/right sides of nested loop
+    # always label the left/right sides
     treeMap($plantree,
-            'nestedloop_fixup($node, $ctx); ',
+            'label_fixup($node, $ctx); ',
             undef,
             $ctx);
 
@@ -1907,9 +1917,9 @@ sub dotkid
 
             print $outfh '"' . $kid->{id} . '" -> "' . $node->{id} . '"';
 
-            if (exists($kid->{nested_loop_position}))
+            if (exists($kid->{label}))
             {
-                $edge_label .= $kid->{nested_loop_position};
+                $edge_label .= $kid->{label};
             }
 
             if (exists($kid->{rows_out}))
