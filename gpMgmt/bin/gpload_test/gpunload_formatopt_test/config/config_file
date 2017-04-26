@@ -1,0 +1,20 @@
+VERSION: 1.0.0.1
+DATABASE: reuse_gptest
+USER: gpadmin
+HOST: 172.17.0.5
+PORT: 5432
+GPUNLOAD:
+   INPUT:
+    - TABLE: texttable
+   OUTPUT:
+    - TARGET:
+         LOCAL_HOSTNAME:
+            - 172.17.0.5
+         PORT: 8081
+         FILE:
+            - /home/gpadmin/gpdb5/gpdb/gpMgmt/bin/gpload_test/gpunload_formatopt_test/data/data_file_06.txt
+    - FORMAT: text
+    - DELIMITER: "'"
+   OPTIONS:
+    - REUSE_TABLES: true
+    - APPEND: true

@@ -11,4 +11,4 @@ if [ `uname -s` = "AIX" -a ! -z "$GP_LIBPATH_FOR_PYTHON" ]; then
 fi
 
 
-exec gpload.py $* -r gpload
+exec gpload.py $* -R gpunload
