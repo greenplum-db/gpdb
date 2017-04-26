@@ -36,9 +36,6 @@
         <li id="kd158404">
           <xref href="#topic15" type="topic" format="dita"/>
         </li>
-        <li id="kd158408">
-          <xref href="#topic16" type="topic" format="dita"/>
-        </li>
       </ul>
     </body>
     <topic id="topic14" xml:lang="en">
@@ -80,19 +77,8 @@
             </p></li>
           <li id="kd158450">Java JDK <p>Java JDK 1.7.0_17 is supported on Red Hat Enterprise Linux
               6.x. </p><p>Java JDK 1.6.0_21 is supported on Red Hat Enterprise Linux 5.x. </p></li>
-        </ul>
-      </body>
-    </topic>
-    <topic id="topic16" xml:lang="en">
-      <title id="kd158454">User Environment Variables</title>
-      <body>
-        <ul id="ul_krb_crz_rz">
           <li id="kd158455">Ensure that JAVA_HOME is set to the installation directory of the
             supported Java JDK. </li>
-          <li id="kd158456">Ensure <codeph>greenplum_connectivity_path.sh</codeph> and set
-              <codeph>GP_JDBC_DRIVER</codeph> to the correct JAR file
-              name:<codeblock><b>GP_JDBC_JARFILE</b>=postgresql-8.1-407.jdbc4.jar</codeblock><p>Source
-              the file as the user running the Java application to make the changes active.</p></li>
         </ul>
       </body>
     </topic>

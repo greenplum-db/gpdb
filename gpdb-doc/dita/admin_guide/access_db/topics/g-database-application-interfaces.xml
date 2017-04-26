@@ -26,18 +26,23 @@
             <tbody>
                <row>
                   <entry colname="col1">ODBC</entry>
-                  <entry colname="col2">psqlODBC</entry>
-                  <entry colname="col3">Available in the <i>Greenplum Database Connectivity</i>
-                     package, which can be downloaded from <xref
-                        href="https://network.pivotal.io" scope="external" format="html"
-                     />.</entry>
+                  <entry colname="col2"><ph otherprops="pivotal">Greenplum DataDirect ODBC
+                        Driver</ph><ph otherprops="oss-only">psqlODBC</ph></entry>
+                  <entry colname="col3"><xref
+                        href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
+                        format="html" otherprops="pivotal"/><xref
+                        href="https://odbc.postgresql.org/" scope="external" format="html"
+                        otherprops="oss-only"/>.</entry>
                </row>
                <row>
                   <entry colname="col1">JDBC</entry>
-                  <entry colname="col2">pgjdbc</entry>
-                  <entry colname="col3"><xref href="https://jdbc.postgresql.org/" format="html"
-                        scope="external"/>. Also available in the Pivotal Greenplum Database
-                     connectivity package.</entry>
+                  <entry colname="col2"><ph otherprops="pivotal">Greenplum DataDirect JDBC
+                        Driver</ph><ph otherprops="oss-only">pgjdbc</ph></entry>
+                  <entry colname="col3"><xref
+                        href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
+                        format="html" otherprops="pivotal"/><xref
+                        href="https://jdbc.postgresql.org/" format="html" scope="external"
+                        otherprops="oss-only"/></entry>
                </row>
                <row>
                   <entry colname="col1">Perl DBI</entry>
@@ -67,10 +72,7 @@
             do not include any unsupported SQL syntax. <p otherprops="gpdb">See the <i>Greenplum
                   Database Reference Guide</i> for more information.</p></li>
       </ol>
-      <p>Download the appropriate PostgreSQL driver and configure connectivity to 
-         your Greenplum Database master instance. Greenplum Database provides a client tools package
-         that contains the supported database drivers for Greenplum Database. Download the client
-         tools package from <xref href="https://network.pivotal.io" scope="external"
-            format="html">Pivotal Network</xref>. </p>
+      <p>Download the appropriate driver and configure connectivity to your Greenplum Database
+         master instance. </p>
    </body>
 </topic>

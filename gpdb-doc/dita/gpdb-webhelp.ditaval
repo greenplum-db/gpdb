@@ -5,5 +5,6 @@
 	<prop att="otherprops" val="op-hidden" action="exclude"/>
 	<prop att="otherprops" val="op-print" action="exclude"/>
 	<prop att="otherprops" val="pivotal" action="exclude"/>
+	<prop att="otherprops" val="oss-only" action="include"/>
 	<prop att="otherprops" val="gpdb" action="include"/>
 </val>
