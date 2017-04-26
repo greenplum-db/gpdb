@@ -185,9 +185,6 @@
               <xref href="#gp_command_count"/>
             </li>
             <li>
-              <xref href="#gp_connectemc_mode"/>
-            </li>
-            <li>
               <xref href="#gp_connection_send_timeout"/>
             </li>
             <li>
@@ -2538,41 +2535,6 @@
               <entry colname="col1">integer &gt; 0</entry>
               <entry colname="col2">1</entry>
               <entry colname="col3">read only</entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gp_connectemc_mode">
-    <title>gp_connectemc_mode</title>
-    <body>
-      <p>Controls the ConnectEMC event logging and dial-home capabilities of Greenplum Command
-        Center on the EMC Greenplum Data Computing Appliance (DCA). ConnectEMC must be installed in
-        order to generate events. Allowed values are:</p>
-      <p><codeph>on</codeph> (the default) - log events to the <codeph>gpperfmon</codeph> database
-        and send dial-home notifications to Dell EMC Support</p>
-      <p><codeph>off</codeph> - turns off ConnectEMC event logging and dial-home capabilities</p>
-      <p><codeph>local</codeph> - log events to the <codeph>gpperfmon</codeph> database only</p>
-      <p><codeph>remote</codeph> - sends dial-home notifications to Pivotal Support (does not log
-        events to the <codeph>gpperfmon</codeph> database)</p>
-      <table id="gp_connectemc_mode_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">on, off, local, remote</entry>
-              <entry colname="col2">on</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p><p>superuser</p></entry>
             </row>
           </tbody>
         </tgroup>

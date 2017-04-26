@@ -190,7 +190,6 @@ enable_orca		= @enable_orca@
 enable_codegen		= @enable_codegen@
 enable_gpfdist		= @enable_gpfdist@
 enable_snmp			= @enable_snmp@
-enable_connectemc	= @enable_connectemc@
 enable_ddboost	    = @enable_ddboost@
 enable_netbackup	= @enable_netbackup@
 enable_mapreduce    = @enable_mapreduce@

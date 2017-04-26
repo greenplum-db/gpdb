@@ -732,7 +732,6 @@ INCLUDES
 enable_mapreduce
 enable_netbackup
 enable_ddboost
-enable_connectemc
 enable_snmp
 CMAKE
 enable_codegen
@@ -849,7 +848,6 @@ enable_orca
 enable_codegen
 with_codegen_prefix
 enable_snmp
-enable_connectemc
 enable_ddboost
 enable_netbackup
 enable_mapreduce
@@ -1528,7 +1526,6 @@ Optional Features:
   --enable-orca           enable ORCA optimizer
   --enable-codegen        enable code generation
   --enable-snmp           enable snmp for MIB and alerts via TRAP/INFORM
-  --enable-connectemc     enable connect emc support
   --enable-ddboost        enable DD Boost support
   --enable-netbackup      enable NetBackup support
   --enable-mapreduce      enable Greenplum Mapreduce support
@@ -5889,39 +5886,6 @@ fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with snmp... $enable_snmp" >&5
 $as_echo "checking whether to build with snmp... $enable_snmp" >&6; }
-
-
-#
-# --enable-connectemc enables connect emc support
-#
-
-pgac_args="$pgac_args enable_connectemc"
-
-# Check whether --enable-connectemc was given.
-if test "${enable_connectemc+set}" = set; then :
-  enableval=$enable_connectemc;
-  case $enableval in
-    yes)
-
-$as_echo "#define USE_CONNECTEMC 1" >>confdefs.h
-
-      ;;
-    no)
-      :
-      ;;
-    *)
-      as_fn_error $? "no argument expected for --enable-connectemc option" "$LINENO" 5
-      ;;
-  esac
-
-else
-  enable_connectemc=no
-
-fi
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with connectemc... $enable_connectemc" >&5
-$as_echo "checking whether to build with connectemc... $enable_connectemc" >&6; }
 
 
 #
@@ -10784,53 +10748,6 @@ fi
 
 fi
 
-
-# Check for EMC Connect
-if test "$enable_connectemc" = yes ; then
-  _LIBS="$LIBS"
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lemcconnect" >&5
-$as_echo_n "checking for main in -lemcconnect... " >&6; }
-if ${ac_cv_lib_emcconnect_main+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lemcconnect  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-int
-main ()
-{
-return main ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_emcconnect_main=yes
-else
-  ac_cv_lib_emcconnect_main=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_emcconnect_main" >&5
-$as_echo "$ac_cv_lib_emcconnect_main" >&6; }
-if test "x$ac_cv_lib_emcconnect_main" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBEMCCONNECT 1
-_ACEOF
-
-  LIBS="-lemcconnect $LIBS"
-
-else
-  as_fn_error $? "library 'emcconnect' is required for Connect EMC support" "$LINENO" 5
-fi
-
-  LIBS="$_LIBS"
-fi
 
 # Check for DD Boost
 if test "$enable_ddboost" = yes ; then

@@ -41,10 +41,6 @@
 #include "utils/resgroup.h"
 #include "utils/vmem_tracker.h"
 
-#ifdef USE_CONNECTEMC
-#include "emcconnect/api.h"
-#endif
-
 /*
  * These constants are copied from guc.c. They should not bitrot when we
  * merge guc.c with upstream, as these are natural constants that never
@@ -111,10 +107,6 @@ static const char *assign_debug_dtm_action_protocol(const char *newval,
 								 bool doit, GucSource source);
 static const char *assign_gp_log_format(const char *value, bool doit,
 					 GucSource source);
-
-#ifdef USE_CONNECTEMC
-static const char *assign_connectemc_mode(const char *newval, bool doit, GucSource source);
-#endif
 
 /* Helper function for guc setter */
 extern const char *gpvars_assign_gp_resqueue_priority_default_value(const char *newval,
@@ -329,11 +321,6 @@ char	   *gp_snmp_community;
 char	   *gp_snmp_monitor_address;
 char	   *gp_snmp_use_inform_or_trap;
 char	   *gp_snmp_debug_log;
-#endif
-
-char	   *gp_connectemc_mode;
-#ifdef USE_CONNECTEMC
-EmcConnectModeType_t gp_emcconnect_transport;
 #endif
 
 static char *gp_log_gang_str;
@@ -5217,18 +5204,6 @@ struct config_string ConfigureNamesString_gp[] =
 
 #endif
 
-#ifdef USE_CONNECTEMC
-	{
-		{"gp_connectemc_mode", PGC_POSTMASTER, LOGGING,
-			gettext_noop("control connectemc functionality"),
-			gettext_noop("If 'on' send connectemc messages and log them locally, if 'local' log connectemc message locally only, if 'remote' send connectemc messages only, if 'off', no connectemc messages"),
-			GUC_SUPERUSER_ONLY
-		},
-		&gp_connectemc_mode,
-		"on", assign_connectemc_mode, NULL
-	},
-#endif
-
 	/* for pljava */
 	{
 		{"pljava_vmoptions", PGC_SUSET, CUSTOM_OPTIONS,
@@ -5861,47 +5836,6 @@ assign_gp_hashagg_default_nbatches(int newval, bool doit, GucSource source)
 	}
 	return true; /* OK */
 }
-
-
-
-#ifdef USE_CONNECTEMC
-static const char *
-assign_connectemc_mode(const char *newval, bool doit, GucSource source)
-{
-	if (pg_strcasecmp(newval, "on") == 0)
-	{
-		if (doit)
-		{
-			gp_emcconnect_transport = EMCCONNECT_MODE_TYPE_ON;
-		}
-	}
-	else if (pg_strcasecmp(newval, "local") == 0)
-	{
-		if (doit)
-		{
-			gp_emcconnect_transport = EMCCONNECT_MODE_TYPE_LOCAL;
-		}
-	}
-	else if (pg_strcasecmp(newval, "remote") == 0)
-	{
-		if (doit)
-		{
-			gp_emcconnect_transport = EMCCONNECT_MODE_TYPE_REMOTE;
-		}
-	}
-	else if (pg_strcasecmp(newval, "off") == 0)
-	{
-		if (doit)
-		{
-			gp_emcconnect_transport = EMCCONNECT_MODE_TYPE_OFF;
-		}
-	}
-	else
-		return NULL;			/* fail */
-	return newval;				/* OK */
-}
-#endif
-
 
 static const char *
 assign_debug_dtm_action(const char *newval,

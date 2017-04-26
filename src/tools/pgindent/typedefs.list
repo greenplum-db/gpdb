@@ -685,12 +685,6 @@ EVP_MD
 EVP_MD_CTX
 EVP_PKEY
 Edge
-EmcConnectDetailedSymptom
-EmcConnectModeType_t
-EmcConnectOrigin
-EmcConnectSeverity
-EmcConnectStatus
-EmcConnectSymptom
 EndBlobPtr
 EndBlobsPtr
 EndDataPtr

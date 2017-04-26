@@ -9,25 +9,6 @@
 #include "event.h"
 #include "gpmon/gpmon.h"
 
-#ifdef USE_CONNECTEMC
-#include "emcconnect/api.h"
-#else
-typedef enum EmcConnectSeverity
-{
-	EMC_CONNECT_SEVERITY_UNKNOWN = 0,
-} EmcConnectSeverity;
-
-typedef enum EmcConnectDetailedSymptom
-{
-	EMC_CONNECT_DETAILED_SYMPTOM_NULL = 0,
-} EmcConnectDetailedSymptom;
-typedef enum EmcConnectModeType_t
-{
-    EMCCONNECT_MODE_TYPE_OFF = 0,
-} EmcConnectModeType_t;
-
-#endif
-
 #define BATCH 8
 #define DEFAULT_GPMMON_LOGDIR "gpperfmon/logs"
 
@@ -151,7 +132,6 @@ typedef struct mmon_options_t
 	int m;
 	int d;
 	int qamode;
-	int emcconnect; 		// config entry in gpperfmon.conf
 	int harvest_interval;
 	apr_uint64_t tail_buffer_max;
 	int console;

@@ -315,9 +315,6 @@
 /* Define to 1 if you have the `eay32' library (-leay32). */
 #undef HAVE_LIBEAY32
 
-/* Define to 1 if you have the `emcconnect' library (-lemcconnect). */
-#undef HAVE_LIBEMCCONNECT
-
 /* Define to 1 if you have the `ldap' library (-lldap). */
 #undef HAVE_LIBLDAP
 
@@ -808,10 +805,6 @@
 
 /* Define to 1 to build with Bonjour support. (--with-bonjour) */
 #undef USE_BONJOUR
-
-/* Define to 1 to build with connect emc alert capabilities.
-   (--enable-connectemc) */
-#undef USE_CONNECTEMC
 
 /* Define to 1 to build with libcurl support. (--with-libcurl) */
 #undef USE_CURL

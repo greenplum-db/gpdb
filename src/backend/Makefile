@@ -53,12 +53,8 @@ ifeq ($(PORTNAME), darwin)
 LDOPTS = -Z
 endif
 
-ifeq ($(enable_connectemc), yes)
-CONNECTEMCLIB += -lemcconnect
-endif
-
 # We put libpgport into OBJS, so remove it from LIBS; also add libldap
-LIBS := $(filter-out -lpgport, $(LIBS)) $(LDAP_LIBS_BE) $(CONNECTEMCLIB)
+LIBS := $(filter-out -lpgport, $(LIBS)) $(LDAP_LIBS_BE)
 
 # The backend doesn't need everything that's in LIBS, however
 LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses, $(LIBS))

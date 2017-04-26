@@ -358,14 +358,6 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #gp_snmp_use_inform_or_trap = 'trap'    # Set to 'inform' or 'trap', we will send SNMP v2c inform, or SNMP v2c trap.
 
 #------------------------------------------------------------------------------
-# EMC Connect
-#------------------------------------------------------------------------------
-
-#gp_connectemc_mode = 'on'				# 'on' will send EMC Connect events and store locally, 
-										# 'local' will store events locally, 
-										# 'off' will not store or send events
-
-#------------------------------------------------------------------------------
 # RUNTIME STATISTICS
 #------------------------------------------------------------------------------
 

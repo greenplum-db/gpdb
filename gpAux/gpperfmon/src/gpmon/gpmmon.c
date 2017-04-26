@@ -66,11 +66,6 @@ static struct
 	host_t* hosttab; /* multi-home filtered machines */
 	int hosttabsz; /* # machines */
 
-	// if emcconnect or guc_emcconnect_allowed are 0 dont send any emcconnect
-	// if guc_emcconnect_localonly then only store locally .. do not send
-	int guc_emcconnect_allowed;	// guc set to off
-	int guc_emcconnect_localonly;	// guc set to localonly
-
 	char* master_data_directory;
 	char* standby_master_hostname;
 	apr_thread_mutex_t *agg_mutex; /* lock when accessing the agg data */
@@ -1191,7 +1186,6 @@ static int read_conf_file(char *conffile)
 	opt.harvest_interval = 120;
 	opt.max_log_size = 0;
 	opt.log_dir = strdup(DEFAULT_GPMMON_LOGDIR);
-	opt.emcconnect = 1; // assume enabled unless disabled explicitly
 	opt.max_disk_space_messages_per_interval = MAX_MESSAGES_PER_INTERVAL;
 	opt.disk_space_interval = (60*MINIMUM_MESSAGE_INTERVAL);
 	opt.partition_age = 0;
@@ -1267,11 +1261,6 @@ static int read_conf_file(char *conffile)
 			{
 				/* this will allow QA to make config settings that are normally illegal */
 				opt.qamode = atoi(pVal);
-			}
-			else if (apr_strnatcasecmp(pName, "emcconnect") == 0)
-			{
-				/* this will enable sending health alerts through the emc connect api */
-				opt.emcconnect = atoi(pVal);
 			}
 			else if (apr_strnatcasecmp(pName, "console") == 0)
 			{
@@ -1931,7 +1920,6 @@ static void getconfig(void)
 	char *hostname = NULL;
 	char *master_data_directory = NULL;
 	char *standby_master_hostname = NULL;
-	char *gp_connectemc_mode = NULL;
 	int rc = 0;
 
 	static apr_pool_t *pool = NULL;
@@ -1966,33 +1954,6 @@ static void getconfig(void)
 	else
 	{
 		ax.standby_master_hostname =  NULL;
-	}
-
-	/* fetch mode for emcconnect */
-	gpdb_get_single_string_from_query("select setting from pg_settings where name = 'gp_connectemc_mode'", &gp_connectemc_mode, pool);
-	if (gp_connectemc_mode)
-	{
-		if (strcmp("on", gp_connectemc_mode) == 0)
-		{
-			ax.guc_emcconnect_allowed = true;
-			ax.guc_emcconnect_localonly = false;
-		}
-		else if (strcmp("local", gp_connectemc_mode) == 0)
-		{
-			ax.guc_emcconnect_allowed = true;
-			ax.guc_emcconnect_localonly = true;
-		}
-		else
-		{
-			ax.guc_emcconnect_allowed = false;
-			ax.guc_emcconnect_localonly = false;
-		}
-	}
-	else
-	{
-		gpmon_warningx(FLINE, 0, "cannot obtain value of guc: 'gp_connectemc_mode', emcconnect is disabled");
-		ax.guc_emcconnect_allowed = false;
-		ax.guc_emcconnect_localonly = false;
 	}
 
 	/* clear pool for next call */

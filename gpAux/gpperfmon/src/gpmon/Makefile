@@ -15,11 +15,6 @@ ifneq ($(CUSTOM_COPT),)
 COPT=$(CUSTOM_COPT)
 endif
 
-# only redhat has snmp, EMC related stuff due to DCA"
-ifneq "$(findstring $(BLD_ARCH),rhel5_x86_64 rhel6_x86_64 rhel7_x86_64)" ""
-CONNECTEMCLIB += -lemcconnect
-endif
-
 GPMMON_OBJS=gpmmon.o gpmondb.o gpmonlib.o gpmon_agg.o
 
 GPSMON_OBJS=gpsmon.o gpmonlib.o

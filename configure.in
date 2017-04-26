@@ -694,15 +694,6 @@ AC_MSG_RESULT([checking whether to build with snmp... $enable_snmp])
 AC_SUBST(enable_snmp)
 
 #
-# --enable-connectemc enables connect emc support
-#
-PGAC_ARG_BOOL(enable, connectemc, no,  [  --enable-connectemc     enable connect emc support],
-              [AC_DEFINE([USE_CONNECTEMC], 1,
-                         [Define to 1 to build with connect emc alert capabilities. (--enable-connectemc)])])
-AC_MSG_RESULT([checking whether to build with connectemc... $enable_connectemc])
-AC_SUBST(enable_connectemc)
-
-#
 # --enable-ddboost enables DD Boost support
 #
 PGAC_ARG_BOOL(enable, ddboost, no,  [  --enable-ddboost        enable DD Boost support],
@@ -1284,13 +1275,6 @@ if test "$with_ossp_uuid" = yes ; then
       [AC_MSG_ERROR([library 'ossp-uuid' or 'uuid' is required for OSSP-UUID])])])
 fi
 AC_SUBST(OSSP_UUID_LIBS)
-
-# Check for EMC Connect
-if test "$enable_connectemc" = yes ; then
-  _LIBS="$LIBS"
-  AC_CHECK_LIB(emcconnect, main, [], [AC_MSG_ERROR([library 'emcconnect' is required for Connect EMC support])])
-  LIBS="$_LIBS"
-fi
 
 # Check for DD Boost
 if test "$enable_ddboost" = yes ; then
