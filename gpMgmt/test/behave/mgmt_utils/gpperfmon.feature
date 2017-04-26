@@ -36,9 +36,15 @@ Feature: gpperfmon
     Scenario: gpperfmon adds to query_history table
         Given gpperfmon is configured and running in qamode
         When the user truncates "queries_history" tables in "gpperfmon"
-        And the user runs "psql -c 'select pg_sleep(3);' template1"
+        And the user runs "psql -c 'select 1;' template1"
         Then psql should return a return code of 0
         Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history" is "true"
+
+    @gpperfmon_system_history
+    Scenario: gpperfmon adds to system_history table
+        Given gpperfmon is configured and running in qamode
+        When the user truncates "system_history" tables in "gpperfmon"
+        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM system_history" is "true"
 
 
 #    todo this test may have never run. Is it valid? Worthy of fixing?
