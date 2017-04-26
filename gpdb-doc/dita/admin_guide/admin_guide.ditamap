@@ -30,6 +30,7 @@
                 <topicref href="ldap.xml"/>
                 <topicref href="kerberos.xml" navtitle="Setting up Kerberos Authentication"
                     id="kerberos"/>
+                <topicref href="kerberos-lin-client.xml"/>
                 <topicref href="kerberos-win-client.xml" navtitle="Configuring Kerberos For Windows Clients"
                     id="kerberos-win"/>
             </topicref>
