@@ -1638,3 +1638,11 @@ def populate_regular_table_data(context, tabletype, table_name, compression_type
     else:
         create_partition(context, table_name, tabletype, dbname, compression_type, partition=False,
                          rowcount=rowcount, with_data=with_data, host=host, port=port, user=user)
+
+
+def is_process_running(proc_name):
+    cmd = Command(name='pgrep for %s' % proc_name, cmdStr="pgrep %s" % proc_name)
+    cmd.run()
+    if cmd.get_return_code() > 1:
+        raise Exception("unexpected problem with pgrep, return code: %s" % cmd.get_return_code())
+    return cmd.get_return_code() == 0

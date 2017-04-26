@@ -4604,21 +4604,17 @@ def impl(context):
 @then('wait until the process "{proc}" goes down')
 @given('wait until the process "{proc}" goes down')
 def impl(context, proc):
-    cmd = Command(name='pgrep for %s' % proc, cmdStr="pgrep %s" % proc)
     start_time = current_time = datetime.now()
+    is_running = False
     while (current_time - start_time).seconds < 120:
-        cmd.run()
-        if cmd.get_return_code() > 1:
-            raise Exception("unexpected problem with gprep, return code: %s" % cmd.get_return_code())
-        if cmd.get_return_code() != 0:  # 1 means no match
+        is_running = is_process_running(proc)
+        if not is_running:
             break
         time.sleep(2)
         current_time = datetime.now()
-    context.ret_code = cmd.get_return_code()
+    context.ret_code = 0 if not is_running else 1
     context.error_message = ''
-    if context.ret_code > 1:
-        context.error_message = 'pgrep internal error'
-    check_return_code(context, 1)  # 1 means no processes matched, but search was successful
+    check_return_code(context, 0)
 
 
 @when('wait until the process "{proc}" is up')
@@ -4823,6 +4819,7 @@ def store_timestamp_in_old_format(context, directory=None, prefix=""):
         run_command(context, change_report_file_content)
 
 
+# todo this seems like it can only be a given or a when, not a "then"
 @then('the timestamp will be stored in json format')
 @given('the timestamp will be stored in json format')
 @when('the timestamp will be stored in json format')
@@ -4843,15 +4840,30 @@ def impl(context):
     ''')
 
 
-def _gpperfmon_data_directory_is_deleted():
-    pass
-
-
-def _database_does_not_exist(param):
-    pass
-
-
-@given('gpperfmon is configured for fast iteration in qamode')
+@given('gpperfmon is configured and running in qamode')
+@then('gpperfmon is configured and running in qamode')
 def impl(context):
-    _database_does_not_exist("gpperfmon")
-    _user_runs_command()
+    if not check_db_exists("gpperfmon", "localhost") or not is_process_running("gpsmon"):
+        context.execute_steps(u'''
+            When the user runs "gpperfmon_install --port 15432 --enable --password foo"
+            Then gpperfmon_install should return a return code of 0
+            When the user runs command "echo 'qamode = 1' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
+            Then echo should return a return code of 0
+            When the user runs command "echo 'verbose = 1' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
+            Then echo should return a return code of 0
+            When the user runs command "echo 'min_query_time = 0' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
+            Then echo should return a return code of 0
+            When the user runs command "echo 'quantum = 10' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
+            Then echo should return a return code of 0
+            When the user runs command "echo 'harvest_interval = 5' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
+            Then echo should return a return code of 0
+            When the database is not running
+            Then wait until the process "postgres" goes down
+            When the user runs "gpstart -a"
+            Then gpstart should return a return code of 0
+            And verify that a role "gpmon" exists in database "gpperfmon"
+            And verify that the last line of the master postgres configuration file contains the string "gpperfmon_log_alert_level=warning"
+            And verify that there is a "heap" table "database_history" in "gpperfmon"
+            Then wait until the process "gpmmon" is up
+            And wait until the process "gpsmon" is up
+        ''')
