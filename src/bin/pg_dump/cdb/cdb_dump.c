@@ -1205,6 +1205,8 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 			ddboost_directory = pg_strdup("db_dumps/");
 
 		pInputOpts->pszPassThroughParms = addPassThroughLongParm("dd_boost_dir", ddboost_directory, pInputOpts->pszPassThroughParms);
+		if (ddboost_directory)
+			free(ddboost_directory);
 	}
 #endif
 
@@ -1586,6 +1588,7 @@ reportBackupResults(InputOptions inputopts, ThreadParmArray *pParmAr)
 	{
 		exit_nicely();
 	}
+
 	fRptFile = fopen(pszReportPathName, "w");
 	if (fRptFile == NULL)
 		mpp_err_msg(logWarn, progname, "Cannot open report file %s for writing.  Will use stdout instead.\n",

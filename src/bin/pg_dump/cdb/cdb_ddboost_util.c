@@ -1806,7 +1806,12 @@ createFakeRestoreFile(struct ddboost_options *dd_options, ddp_conn_desc_t ddp_co
 	 * after the file is exhausted
 	 */
 
-	pipe(fd);
+	if (pipe(fd) < 0)
+	{
+		mpp_err_msg(logError, progname, "Creating pipe failed\n");
+		err = -1;
+		goto cleanup;
+	}
 
 	if (fork() == 0)
 	{
@@ -1919,6 +1924,7 @@ createFakeRestoreFile(struct ddboost_options *dd_options, ddp_conn_desc_t ddp_co
 				done = true;
 			}
 		} while (!done);
+		free(endString);
 		close(fd[0]);
 	}
 
@@ -3039,6 +3045,8 @@ syncFilesFromDDBoostTimestamp(struct ddboost_options *dd_options, ddp_conn_desc_
 	}
 
 cleanup:
+	if (fp)
+		free(fp);
 	if (gpdbPath)
 		free(gpdbPath);
 	if (dird != DDP_INVALID_DESCRIPTOR)
@@ -3073,7 +3081,7 @@ int
 renameFile(struct ddboost_options *dd_options, ddp_conn_desc_t ddp_conn)
 {
 	char	   *fromFile = Safe_strdup(dd_options->from_file);
-	char	   *toFile = Safe_strdup(dd_options->to_file);
+	char	   *toFile;
 	int			err = 0;
 	ddp_path_t	path1 = {0};
 	ddp_path_t	path2 = {0};
@@ -3086,6 +3094,7 @@ renameFile(struct ddboost_options *dd_options, ddp_conn_desc_t ddp_conn)
 		return -1;
 	}
 
+	*toFile = Safe_strdup(dd_options->to_file);
 	if (!toFile)
 	{
 		mpp_err_msg(logError, progname, "Destination file on GPDB not specified\n");

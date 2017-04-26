@@ -1120,38 +1120,67 @@ getDDBoostCredential(char **hostname, char **user, char **password,
 
 	*hostname = lb_get_item_or_error(content, "hostname", filepath);
 	if (*hostname == NULL)
+	{
+		free(content);
 		return -1;	/* lb_get_item_or_error() reported an error already */
+	}
 
 	*user = lb_get_item_or_error(content, "user", filepath);
 	if (*user == NULL)
+	{
+		free(content);
 		return -1;	/* lb_get_item_or_error() reported an error already */
+	}
 
 	obfuscated_pw = lb_get_item_or_error(content, "password", filepath);
 	if (obfuscated_pw == NULL)
+	{
+		free(content);
 		return -1;	/* lb_get_item_or_error() reported an error already */
+	}
 
 	*password = lb_deobfuscate(obfuscated_pw);
 	if (*password == NULL)
+	{
+		free(content);
 		return -1;	/* lb_deobfuscate() reported an error already */
+	}
 
 	if (!remote)
 	{
 		*default_backup_directory = lb_get_item_or_error(content, "default_backup_directory", filepath);
 		if (*default_backup_directory == NULL)
+		{
+			free(content);
 			return -1;	/* lb_get_item_or_error() reported an error already */
+		}
 
 		*ddboost_storage_unit = lb_get_item_or_error(content, "ddboost_storage_unit", filepath);
 		if (*ddboost_storage_unit == NULL)
+		{
+			free(content);
 			return -1;	/* lb_get_item_or_error() reported an error already */
+		}
 	}
 
 	*log_level = lb_get_item_or_error(content, "log_level", filepath);
 	if (*log_level == NULL)
+	{
+		free(content);
 		return -1;	/* lb_get_item_or_error() reported an error already */
+	}
 
 	*log_size = lb_get_item_or_error(content, "log_size", filepath);
 	if (*log_size == NULL)
+	{
+		free(content);
 		return -1;	/* lb_get_item_or_error() reported an error already */
+	}
+
+	if (content)
+	{
+		free(content);
+	}
 
 	return 0;
 }
@@ -1310,6 +1339,8 @@ initDDSystem(ddp_inst_desc_t *ddp_inst, ddp_conn_desc_t *ddp_conn, ddp_client_in
 	if (err)
 	{
 		mpp_err_msg("ERROR", "ddboost", "Parsing DDBoost login credentials failed\n");
+		if (dd_boost_passwd)
+			free(dd_boost_passwd);
 		return -1;
 	}
 
@@ -1317,20 +1348,25 @@ initDDSystem(ddp_inst_desc_t *ddp_inst, ddp_conn_desc_t *ddp_conn, ddp_client_in
 	{
 		err = ddp_instance_create(POOL_SIZE, cl_info, ddp_inst);
 		if (err)
-        	{
-                	mpp_err_msg("ERROR", "ddboost", "ddboost instance creation failed. Err = %d\n", err);
-                	return err;
-        	}
+		{
+			mpp_err_msg("ERROR", "ddboost", "ddboost instance creation failed. Err = %d\n", err);
+			if (dd_boost_passwd)
+				free(dd_boost_passwd);
+			return err;
+		}
 
 		ddp_log_init(*ddp_inst, NULL, _ddp_test_log);
 	}
 
 
 	err = ddp_connect_with_user_pwd(*ddp_inst, dd_boost_hostname, NULL, dd_boost_username, dd_boost_passwd, ddp_conn);
-	if (err != DD_ERR_NONE) {
-               mpp_err_msg("ERROR", "ddboost", "ddboost connect failed. Err = %d, remote = %d\n", err, remote);
-               return err;
-        }
+	if (err != DD_ERR_NONE)
+	{
+		mpp_err_msg("ERROR", "ddboost", "ddboost connect failed. Err = %d, remote = %d\n", err, remote);
+		if (dd_boost_passwd)
+			free(dd_boost_passwd);
+		return err;
+	}
 
 	if (createStorageUnit)
 	{

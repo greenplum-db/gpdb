@@ -511,6 +511,8 @@ newTempFile(void)
 			}
 
 			/* Error is considered fatal. */
+			if (tempFileName)
+				free(tempFileName);
 			return NULL;
 		}
 

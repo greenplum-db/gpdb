@@ -794,6 +794,8 @@ dumpResQueues(PGconn *conn)
 
 	PQclear(res);
 
+	destroyPQExpBuffer(buf);
+
 	fprintf(OPF, "\n\n");
 }
 

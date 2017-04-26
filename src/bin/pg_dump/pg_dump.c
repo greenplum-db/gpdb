@@ -10043,6 +10043,8 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				appendPQExpBuffer(q, "DROP TABLE %s; ", fmtId(tmpExtTable));
 
 				appendPQExpBuffer(q, "\n");
+				free(relname);
+				free(parname);
 			}
 
 			PQclear(res);

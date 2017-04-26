@@ -4430,11 +4430,17 @@ dumpOpr(Archive *fout, OprInfo *oprinfo)
 
 	name = convertRegProcReference(oprrest);
 	if (name)
+	{
 		appendPQExpBuffer(details, ",\n    RESTRICT = %s", name);
+		free(name);
+	}
 
 	name = convertRegProcReference(oprjoin);
 	if (name)
+	{
 		appendPQExpBuffer(details, ",\n    JOIN = %s", name);
+		free(name);
+	}
 
 	/*
 	 * DROP must be fully qualified in case same name appears in pg_catalog
@@ -5346,7 +5352,7 @@ dumpAgg(Archive *fout, AggInfo *agginfo)
 	{
 		mpp_err_msg(logWarn, progname, "WARNING: aggregate function %s could not be dumped correctly for this database version; ignored\n",
 					aggsig);
-		return;
+		goto cleanup;
 	}
 
 	/* If using 7.3's regproc or regtype, data is already quoted */
@@ -5423,8 +5429,11 @@ dumpAgg(Archive *fout, AggInfo *agginfo)
 			agginfo->aggfn.dobj.namespace->dobj.name,
 			agginfo->aggfn.rolname, agginfo->aggfn.proacl);
 
-	free(aggsig);
-	free(aggsig_tag);
+cleanup:
+	if (aggsig)
+		free(aggsig);
+	if (aggsig_tag)
+		free(aggsig_tag);
 
 	PQclear(res);
 
@@ -6309,7 +6318,7 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 			case 'p':
 				tabfmt = "parquet";
 				customfmt = custom_fmtopts_string(tmpstring);
-				break;	
+				break;
 			default:
 				tabfmt = "csv";
 		}
@@ -6759,6 +6768,10 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				appendPQExpBuffer(q, "DROP TABLE %s; ", fmtId(tmpExtTable));
 
 				appendPQExpBuffer(q, "\n");
+				if (relname)
+					free(relname);
+				if (parname)
+					free(parname);
 			}
 
 			PQclear(res);

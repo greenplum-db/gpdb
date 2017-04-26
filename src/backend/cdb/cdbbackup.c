@@ -831,9 +831,13 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 				pszDDBoostDirName,
 				pszDDBoostFileName,
 				dd_boost_buffer_size);
+			free(pszDDBoostDirName);
 
 			if (pszDDBoostStorageUnitName)
+			{
 				sprintf(gpDDBoostCmdLine + strlen(gpDDBoostCmdLine), "--ddboost-storage-unit=%s", pszDDBoostStorageUnitName);
+				free(pszDDBoostStorageUnitName);
+			}
 
 			/* if user selected a compression program */
 			if (pszCompressionProgram[0] != '\0')
@@ -2425,7 +2429,7 @@ static char *formDDBoostFileName(char *pszBackupKey, bool isPostData, bool isCom
 	segid = GpIdentity.dbid;
 
 	if (is_old_format)
-	   instid = (instid == -1) ? 1 : 0;   /* dispatch node */	 
+	   instid = (instid == -1) ? 1 : 0;   /* dispatch node */
 
 	memset(szFileNamePrefix, 0, sizeof(szFileNamePrefix));
 	   snprintf(szFileNamePrefix, 1 + MAX_PATH_NAME, "%sgp_dump_%d_%d_", DUMP_PREFIX, instid, segid);

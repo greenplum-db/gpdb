@@ -947,7 +947,7 @@ expand_schema_name_patterns(SimpleStringList *patterns, SimpleOidList *oids)
 	destroyPQExpBuffer(query);
 }
 
-/* 
+/*
  * Loop the table input list in batches
  * convert the table names to oids.
  *
@@ -961,7 +961,7 @@ expand_table_name_patterns_long(SimpleStringList *patterns, SimpleOidList *oids,
 	SimpleStringList partial_list = {0};
 
 	int i = 0;
-    
+
 	if (!patterns)
 		return; /* nothing to do */
 
@@ -1455,6 +1455,7 @@ getTypeStorageOptions(int *numTypes)
 	{
 		numTypes = 0;
 		tstorageoptions = (TypeStorageOptions *) malloc(0);
+		destroyPQExpBuffer(query);
 		return tstorageoptions;
 	}
 
@@ -3119,7 +3120,7 @@ getTableAttrs(TableInfo *tblinfo, int numTables)
 		oid = atoi(PQgetvalue(res, i, 0));
 		typstorage = *(PQgetvalue(res, i, 1));
 		if (insertIntoHashTable(oid, typstorage) < 0)
-		{		
+		{
 			mpp_err_msg(logError, progname, "Unable to insert the following values into hash table Oid: %u, typstorage: %c"
 																									, oid, typstorage);
 			exit_nicely();
@@ -3388,8 +3389,8 @@ getTableAttrs(TableInfo *tblinfo, int numTables)
 				 * split out from the table definition.
 				 */
 			}
-			
-			
+
+
 			PQclear(res);
 		}
 
@@ -3403,7 +3404,7 @@ getTableAttrs(TableInfo *tblinfo, int numTables)
 	}
 
 		mpp_err_msg(logInfo, progname, "last batch of sql commands finished executing\n");
-	
+
 	cleanUpTable();
 
 	destroyPQExpBuffer(q);
@@ -3456,6 +3457,7 @@ getTSParsers(int *numTSParsers)
 	if (!g_gp_supportsFullText)
 	{
 		*numTSParsers = 0;
+		destroyPQExpBuffer(query);
 		return NULL;
 	}
 
@@ -3543,6 +3545,7 @@ getTSDictionaries(int *numTSDicts)
 	if (!g_gp_supportsFullText)
 	{
 		*numTSDicts = 0;
+		destroyPQExpBuffer(query);
 		return NULL;
 	}
 
@@ -3624,6 +3627,7 @@ getTSTemplates(int *numTSTemplates)
 	if (!g_gp_supportsFullText)
 	{
 		*numTSTemplates = 0;
+		destroyPQExpBuffer(query);
 		return NULL;
 	}
 
@@ -3698,6 +3702,7 @@ getTSConfigurations(int *numTSConfigs)
 	if (!g_gp_supportsFullText)
 	{
 		*numTSConfigs = 0;
+		destroyPQExpBuffer(query);
 		return NULL;
 	}
 

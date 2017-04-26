@@ -565,7 +565,11 @@ buildACLCommands(const char *name, const char *type,
 	{
 		if (!parseAclItem(aclitems[i], type, name, remoteVersion,
 						  grantee, grantor, privs, privswgo))
+		{
+			if (aclitems)
+				free(aclitems);
 			return false;
+		}
 
 		if (grantor->len == 0 && owner)
 			printfPQExpBuffer(grantor, "%s", owner);
@@ -709,7 +713,11 @@ parseAclItem(const char *item, const char *type, const char *name,
 		*slpos++ = '\0';
 		slpos = copyAclUserName(grantor, slpos);
 		if (*slpos != '\0')
+		{
+			if (buf)
+				free(buf);
 			return false;
+		}
 	}
 	else
 		resetPQExpBuffer(grantor);
@@ -1158,7 +1166,15 @@ custom_fmtopts_string(const char *src)
 		int        last = 0;
 
 		if(!src || !srcdup || !result)
+		{
+			if (result)
+				free(result);
+			if (srcdup)
+				free(srcdup);
+			if (srcdup_start)
+				free(srcdup_start);
 			return NULL;
+		}
 
 		while (srcdup)
 		{
