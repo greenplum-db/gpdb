@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
-<map>
-   <topicref href="connectivity_tools_windows.xml" navtitle="Connectivity Tools for Windows">
-      <topicref href="drivers/windows/win_connect.xml"
-         navtitle="Greenplum Database 4.3 Connectivity Tools for Windows"/>
-   </topicref>
-</map>

@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
-<map>
-	<topicref href="connectivity_tools_unix.xml" navtitle="Connectivity Tools for UNIX">
-		<topicref href="drivers/unix/unix_connect.xml" type="topic" navtitle="Connectivity Tools for UNIX"/>
-	</topicref>
-</map>

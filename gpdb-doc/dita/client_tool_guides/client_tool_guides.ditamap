@@ -5,11 +5,9 @@
  <topicref href="client-docs-unix.xml">
   <topicref href="client_tools_unix.ditamap" format="ditamap"/>
   <topicref href="load_tools_unix.ditamap" format="ditamap"/>
-  <topicref href="connectivity_unix.ditamap" format="ditamap"/>
  </topicref>
  <topicref href="client-docs-win.xml">
   <topicref href="client_tools_win.ditamap" format="ditamap"/>
   <topicref href="load_tools_win.ditamap" format="ditamap"/>
-  <topicref href="connectivity_win.ditamap" format="ditamap"/>
  </topicref>
  <topicref href="../../homenav.html" scope="external" navtitle="Greenplum Database Docs Home" format="html" otherprops="pivotal"/></map>
