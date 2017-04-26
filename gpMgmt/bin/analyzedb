@@ -46,8 +46,8 @@ STATEFILE_DIR = 'db_analyze'
 logger = gplog.get_default_logger()
 CURR_TIME = None
 
-ANALYZE_SQL = """analyze %s"""
-ANALYZE_ROOT_SQL = """analyze rootpartition %s"""
+ANALYZE_SQL = """set statement_mem=125000; analyze %s"""
+ANALYZE_ROOT_SQL = """set statement_mem=125000; analyze rootpartition %s"""
 
 PG_PARTITIONS_SURROGATE = """
 SELECT n.nspname AS schemaname, cl.relname AS tablename, n2.nspname AS partitionschemaname, cl2.relname AS partitiontablename, cl3.relname AS parentpartitiontablename
