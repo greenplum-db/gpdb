@@ -286,15 +286,15 @@
           leaf-level subpartition, one at a time. You can run <codeph>ANALYZE</codeph> on just new
           or changed partition files to avoid analyzing partitions that have not changed. If a table
           is partitioned, you can analyze just new or changed partitions. </p>
-        <p>The <codeph>analyzedb</codeph> command-line utility, introduced in Greenplum Database
-          4.3.5 skips unchanged partitions automatically. It also runs concurrent sessions so it can
-          analyze several partitions concurrently. It runs five sessions by default, but the number
-          of sessions can be set from 1 to 10 with the <codeph>-p</codeph> command-line option. Each
-          time <codeph>analyzedb</codeph> runs, it saves state information for append-optimized
-          tables and partitions in the <codeph>db_analyze</codeph> directory in the master data
-          directory. The next time it runs, <codeph>analyzedb</codeph> compares the current state of
-          each table with the saved state and skips analyzing a table or partition if it is
-          unchanged. Heap tables are always analyzed. </p>
+        <p>The <codeph>analyzedb</codeph> command-line utility skips unchanged partitions
+          automatically. It also runs concurrent sessions so it can analyze several partitions
+          concurrently. It runs five sessions by default, but the number of sessions can be set from
+          1 to 10 with the <codeph>-p</codeph> command-line option. Each time
+            <codeph>analyzedb</codeph> runs, it saves state information for append-optimized tables
+          and partitions in the <codeph>db_analyze</codeph> directory in the master data directory.
+          The next time it runs, <codeph>analyzedb</codeph> compares the current state of each table
+          with the saved state and skips analyzing a table or partition if it is unchanged. Heap
+          tables are always analyzed. </p>
         <p>If GPORCA is enabled, you also need to run <codeph>ANALYZE
             ROOTPARTITION</codeph> to refresh the root partition statistics. GPORCA requires statistics at the root level for partitioned tables. The legacy
           optimizer does not use these statistics. Enable GPORCA by setting

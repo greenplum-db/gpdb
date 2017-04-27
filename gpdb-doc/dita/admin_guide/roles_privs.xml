@@ -442,12 +442,12 @@
         columns of data in encrypted form. This adds an extra layer of protection for sensitive
         data, as data stored in Greenplum Database in encrypted form cannot be read by
         anyone who does not have the encryption key, nor can it be read directly from the disks. </p>
-      <p>With Greenplum Database 4.3.4 and later, you can enable
-          <codeph>pgcrypto</codeph> support for <cite>Federal Information Processing Standard</cite>
-        (FIPS) 140-2. The Greenplum Database server configuration parameter
-          <codeph>pgcrypto.fips</codeph> controls the <codeph>pgcrypto</codeph> support for FIPS
-        140-2. For information about the parameter, see "Server Configuration Parameters" in the
-          <cite>Greenplum Database Reference Guide</cite>.</p>
+      <p>With Greenplum Database, you can enable <codeph>pgcrypto</codeph> support for <cite>Federal
+          Information Processing Standard</cite> (FIPS) 140-2. The Greenplum Database server
+        configuration parameter <codeph>pgcrypto.fips</codeph> controls the
+          <codeph>pgcrypto</codeph> support for FIPS 140-2. For information about the parameter, see
+        "Server Configuration Parameters" in the <cite>Greenplum Database Reference
+        Guide</cite>.</p>
       <note>The <codeph>pgcrypto</codeph> functions run inside the database server, which means that
         all the data and passwords move between <codeph>pgcrypto</codeph> and the client application
         in clear-text. For optimal security, consider also using SSL connections between the client

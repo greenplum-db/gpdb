@@ -70,8 +70,7 @@
         <li id="kr142590">Allows you to drop the target database before a restore in a single
           operation.</li>
       </ul>
-      <p>If the backups were created with Greenplum Database 4.3.11.2 or later, the backups contain
-        the database-level settings for the server configuration parameters
+      <p>The backups contain the database-level settings for the server configuration parameters
           <codeph>gp_default_storage_options</codeph>, <codeph>optimizer</codeph>, and
           <codeph>search_path</codeph>, the settings are restored when you perform a restore
         operation and specify the <codeph>-e</codeph> option to create an empty target database
@@ -193,7 +192,7 @@
           <pd>Creates the target database and then performs a restore operation. If the target
             database exists, drops the existing database before creating the database and performing
             a restore operation. </pd>
-          <pd>If the backup is created with Greenplum Database 4.3.11.2 or later, the utility
+          <pd>The utility
             restores database-level settings for the server configuration parameters
               <codeph>gp_default_storage_options</codeph>, <codeph>optimizer</codeph>, and
               <codeph>search_path</codeph>.</pd>

@@ -144,7 +144,7 @@
           <li id="pv160918">Install the software extension package by running the
               <codeph>gppkg</codeph> command. This example installs the PL/Java extension package on
             a Linux
-            system:<codeblock>$ gppkg -i pljava-ossv1.4.0_pv1.2_gpdb4.3orca-rhel5-x86_64.gppkg</codeblock></li>
+            system:<codeblock>$ gppkg -i pljava-ossv1.4.0_pv1.2_gpdb&lt;version>orca-rhel5-x86_64.gppkg</codeblock></li>
           <li>Ensure the environment variables <codeph>JAVA_HOME</codeph> and
               <codeph>LD_LIBRARY_PATH</codeph> are set properly in
               <codeph>$GPHOME/greenplum_path.sh</codeph> on all Greenplum Database hosts.<ul
@@ -254,9 +254,9 @@
           <li id="pv160641">Use the Greenplum <codeph>gppkg</codeph> utility with the
               <codeph>-r</codeph> option to uninstall the PL/Java extension. This example uninstalls
             the PL/Java extension on a Linux
-              system:<codeblock>$ gppkg -r pljava-ossv1.4.0_pv1.3_gpdb4.3orca</codeblock><p>You can
-              run the <codeph>gppkg</codeph> utility with the options <codeph>-q --all</codeph> to
-              list the installed extensions and their versions.</p></li>
+              system:<codeblock>$ gppkg -r pljava-ossv1.4.0_pv1.3_gpdb&lt;version>orca</codeblock><p>You
+              can run the <codeph>gppkg</codeph> utility with the options <codeph>-q --all</codeph>
+              to list the installed extensions and their versions.</p></li>
           <li dir="ltr">Reload
             <codeph>greenplum_path.sh</codeph>.<codeblock dir="ltr">$ source $GPHOME/greenplum_path.sh</codeblock></li>
           <li id="pv158621">Restart the database.<codeblock>$ gpstop -r </codeblock></li>

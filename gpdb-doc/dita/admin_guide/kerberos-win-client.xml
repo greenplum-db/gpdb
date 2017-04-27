@@ -81,7 +81,7 @@
         <codeblock>set KRB5CCNAME=%USERPROFILE%\krb5cache
 kinit
 
-"c:\Program Files (x86)\Greenplum\greenplum-clients-4.3.7.3-build-2\greenplum_clients_path.bat"</codeblock>
+"c:\Program Files (x86)\Greenplum\greenplum-clients-&lt;version>\greenplum_clients_path.bat"</codeblock>
       </section>
       <section id="win_psql_kerb">
         <title>Running the psql Utility</title>

@@ -64,17 +64,17 @@
         <title>To install Greenplum loader</title>
         <ol>
           <li id="nw145432">Download the
-              <codeph>greenplum-clients-4.3.<varname>x.x</varname>-WinXP-x86_32.msi</codeph> package
-            from <xref href="https://network.pivotal.io" scope="external" format="html"
+              <codeph>greenplum-clients-<varname>&lt;version></varname>-WinXP-x86_32.msi</codeph>
+            package from <xref href="https://network.pivotal.io" scope="external" format="html"
               >Pivotal Network</xref>.</li>
           <li id="nw150063">Double-click on the
-              <codeph>greenplum-clients-4.3.<varname>x.x</varname>-WinXP-x86_32.msi</codeph> package
-            to launch the installer.</li>
+                <codeph>greenplum-clients-<varname>&lt;version></varname>-WinXP-x86_32.msi</codeph>
+            package to launch the installer.</li>
           <li id="nw145456">Click <b>Next</b> on the Welcome screen.</li>
           <li id="nw145457">Click <b>I Agree</b> on the License Agreement screen.</li>
           <li id="nw145465">By default, Greenplum loader will be installed into
-                <codeph>greenplum-db-4.3.<varname>x.x</varname></codeph>. Click <b>Browse</b> to
-            choose another location.</li>
+                <codeph>greenplum-db-<varname>&lt;version></varname></codeph>. Click <b>Browse</b>
+            to choose another location.</li>
           <li id="nw145480">Click <b>Next</b>.</li>
           <li id="nw145466">Click <b>Install</b> to begin the installation.</li>
           <li id="nw145491">Click <b>Finish</b> to exit the installer.</li>
@@ -101,7 +101,7 @@
     <body>
       <p>Greenplum provides a batch program (<codeph>greenplum_loaders_path.bat</codeph>) to set the
         required environment settings for Greenplum loader (located in
-            <codeph>greenplum-db-4.3.<varname>x.x</varname></codeph> by default).</p>
+            <codeph>greenplum-db-<varname>&lt;version></varname></codeph> by default).</p>
       <section id="nw149899">
         <title>To set the required environment settings</title>
         <ol>
@@ -109,7 +109,7 @@
               <codeph>cmd</codeph>).</li>
           <li id="nw150042">At the command prompt, go to the directory where you installed Greenplum
             loader. For
-            example:<codeblock>cd \"Program Files"\Greenplum\greenplum-loaders-4.3.x.x
+            example:<codeblock>cd \"Program Files"\Greenplum\greenplum-loaders-&lt;version>
 dir</codeblock></li>
           <li id="nw149828">Execute the <codeph>greenplum_loaders_path.bat</codeph>
             program:<codeblock>greenplum_loaders_path.bat</codeblock></li>

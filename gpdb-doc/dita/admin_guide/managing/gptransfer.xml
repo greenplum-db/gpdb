@@ -30,8 +30,7 @@
           including the Dell EMC DCA appliance. Pivotal HDB is not supported as a source or destination. </li>
         <li>The source and destination Greenplum clusters must both be version 4.2 or higher.</li>
         <li>At least one Greenplum instance must include the <codeph>gptransfer</codeph> utility in
-          its distribution. The utility is included with Greenplum Database version 4.2.8.1 and
-          higher and 4.3.2.0 and higher. If neither the source or destination includes
+          its distribution. If neither the source or destination includes
             <codeph>gptransfer</codeph>, you must upgrade one of the clusters to use
             <codeph>gptransfer</codeph>. </li>
         <li>The <codeph>gptransfer</codeph> utility can be run from the cluster with the source or

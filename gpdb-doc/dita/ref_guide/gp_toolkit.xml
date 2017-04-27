@@ -413,14 +413,6 @@
             </tbody>
           </tgroup>
         </table>
-        <note>If you upgraded your cluster to Greenplum Database 4.3.5.0 or later, you can create
-          the <cmdname>__gp_aovisimap_compaction_info</cmdname> function in an existing Greenplum
-          database by running run the script
-            <codeph>$GPHOME/share/postgresql/compaction_info.sql</codeph> once for each database.
-          For example, to install the functions in database <i>testdb</i>, use this
-            command:<codeblock>$ psql -d testdb -f $GPHOME/share/postgresql/compaction_info.sql</codeblock><p>If
-            you created the database with Greenplum Database 4.3.5.0 or later, this function is
-            automatically created in the database.</p></note>
       </body>
     </topic>
     <topic id="topic9" xml:lang="en" ditaarch:DITAArchVersion="1.1"

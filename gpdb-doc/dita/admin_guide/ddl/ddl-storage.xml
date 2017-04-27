@@ -312,30 +312,12 @@
         Greenplum Database, alter the table to have no compression or a compression type supported
         in the earlier version (<codeph>ZLIB</codeph> or <codeph>QUICKLZ</codeph>) before you start
         the backup operation.</p>
-      <p>In Greenplum Database 4.3.3 and later, Greenplum Database combines delta compression with
-        RLE compression for data in columns of type <codeph>BIGINT</codeph>,
-          <codeph>INTEGER</codeph>, <codeph>DATE</codeph>, <codeph>TIME</codeph>, or
-          <codeph>TIMESTAMP</codeph>. The delta compression algorithm is based on the change between
-        consecutive column values and is designed to improve compression when data is loaded in
-        sorted order or when the compression is applied to data in sorted order.</p>
-      <p>When Greenplum Database is upgraded to 4.3.3, these rules apply for data in columns that
-        are compressed with RLE:<ul id="ul_bjj_m35_jp">
-          <li>Existing column data are compressed with only RLE compression.</li>
-          <li>New data are compressed with delta compression combined with RLE compression in the
-            columns of type that support it.</li>
-        </ul></p>
-      <p>If switching the Greenplum Database binary from 4.3.3 to 4.3.2 is required, the following
-        steps are recommended.</p>
-      <ol id="ol_xts_bl5_jp">
-        <li>Alter append-optimized, column oriented tables with RLE compression columns to use
-          either no compression or a compression type <codeph>ZLIB</codeph> or
-            <codeph>QUICKLZ</codeph>.</li>
-        <li>Back up the database.</li>
-      </ol>
-      <note>If you backup a table that uses RLE column compression from a Greenplum Database 4.3.3,
-        you can restore the table in Greenplum Database 4.3.2. However, the compression in the
-        Greenplum Database 4.3.2 is RLE compression, not RLE compression combined with delta
-        compression.</note>
+      <p>Greenplum Database combines delta compression with RLE compression for data in columns of
+        type <codeph>BIGINT</codeph>, <codeph>INTEGER</codeph>, <codeph>DATE</codeph>,
+          <codeph>TIME</codeph>, or <codeph>TIMESTAMP</codeph>. The delta compression algorithm is
+        based on the change between consecutive column values and is designed to improve compression
+        when data is loaded in sorted order or when the compression is applied to data in sorted
+        order.</p>
     </body>
   </topic>
   <topic id="topic43" xml:lang="en">

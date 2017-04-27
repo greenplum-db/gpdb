@@ -23,13 +23,13 @@
           <codeph>--enable</codeph> option, Greenplum Database must be restarted after the utility
         completes.</p>
       <note type="important">Greenplum Command Center does not support the <i>gpperfmon</i> database
-        when GPORCA is enabled for the database. To ensure that the Pivotal
-        Query Optimizer is disabled for the <i>gpperfmon</i> database, run this command on the
-        system where the database is
+        when GPORCA is enabled for the database. To ensure that the Pivotal Query Optimizer is
+        disabled for the <i>gpperfmon</i> database, run this command on the system where the
+        database is
           installed:<codeblock>ALTER DATABASE gpperfmon SET OPTIMIZER = OFF</codeblock><p>In
-          Greenplum Database 4.3.5.0, GPORCA co-exists with the legacy query
-          optimizer. For information about GPORCA, see "Querying Data" in the
-            <cite>Greenplum Database Administrator Guide</cite>.</p></note>
+          Greenplum Database, GPORCA co-exists with the legacy query optimizer. For information
+          about GPORCA, see "Querying Data" in the <cite>Greenplum Database Administrator
+            Guide</cite>.</p></note>
       <p>When run without any options, the utility will just create the <codeph>gpperfmon</codeph>
         database (the database used to store system metrics collected by the data collection
         agents). When run with the <codeph>--enable</codeph> option, the utility will also run the

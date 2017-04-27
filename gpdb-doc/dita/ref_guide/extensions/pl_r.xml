@@ -38,23 +38,13 @@
       <p>PL/R is a procedural language. With the Greenplum Database PL/R extension you can write
         database functions in the R programming language and use R packages that contain R functions
         and data sets. </p>
-      <note type="important">Extension packages for Greenplum Database 4.3.4.x and earlier are not
-        compatible with Greenplum Database 4.3.5.0 due to the introduction of Pivotal Query
-        Optimizer. Also, extension packages for Greenplum Database 4.3.5.0 and later are not
-        compatible with Greenplum Database 4.3.4.x and earlier. <p>To use extension packages with
-          Greenplum Database 4.3.5.0 and later, you must install and use Greenplum Database
-          extension packages (gppkg files and contrib modules) that are built for Greenplum Database
-          4.3.5.0 and later. For custom modules that were used with Greenplum Database 4.3.4.x and
-          earlier, you must rebuild the modules for use with Greenplum Database 4.3.5.0 and
-          later.</p></note>
       <p>For information about supported PL/R versions, see the <cite>Greenplum Database Release
           Notes</cite>. </p>
     </body>
     <topic id="topic3" xml:lang="en">
       <title id="py217167">Installing PL/R</title>
       <body>
-        <p>For Greenplum Database version 4.3 and later, the PL/R extension is available as a
-          package. Download the package from <xref
+        <p>The PL/R extension is available as a package. Download the package from <xref
             href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
             >Pivotal Network</xref> and install it with the Greenplum Package Manager
             (<codeph>gppkg</codeph>). </p>
@@ -77,7 +67,7 @@
                 scope="external">Pivotal Network</xref>, then copy it to the master host. </li>
             <li id="py214844">Install the software extension package by running the
                 <codeph>gppkg</codeph> command. This example installs the PL/R extension on a Linux
-              system:<codeblock>$ gppkg -i plr-ossv8.3.0.12_pv2.0_gpdb4.3-rhel5-x86_64.gppkg
+              system:<codeblock>$ gppkg -i plr-ossv8.3.0.12_pv2.0_gpdb&lt;version>-rhel5-x86_64.gppkg
 </codeblock></li>
             <li id="py215420">Restart the database.<codeblock>$ gpstop -r
 </codeblock></li>
@@ -152,8 +142,7 @@
     <topic id="topic_om3_kbr_lp">
       <title>Migrating the PL/R Extension to use R Language Version 3.3.1</title>
       <body>
-        <p>The PL/R extension package for Greenplum Database 4.3.9.0 and later supports R language
-          version 3.3.1. </p>
+        <p>The PL/R extension package for Greenplum Database supports R language version 3.3.1. </p>
         <p>To migrate the Greenplum Database PL/R extension to the PL/R extension that supports R
           3.3.1, uninstall the old PL/R extension package and install the extension package that
           supports R 3.3.1. </p>

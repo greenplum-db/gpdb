@@ -14,8 +14,7 @@
       <li>Queries against partitioned tables that are altered to use an external table as a leaf
         child partition fall back to the legacy query optimizer.</li>
       <li>Except for <codeph>INSERT</codeph>, DML operations directly on partition (child table) of
-        a partitioned table are not supported (as of Greenplum Database<ph
-         > 4.3.0.0</ph>).<p>For the <codeph>INSERT</codeph> command, you can
+        a partitioned table are not supported.<p>For the <codeph>INSERT</codeph> command, you can
           specify a leaf child table of the partitioned table to insert data into a partitioned
           table. An error is returned if the data is not valid for the specified leaf child table.
           Specifying a child table that is not a leaf child table is not supported. </p></li>

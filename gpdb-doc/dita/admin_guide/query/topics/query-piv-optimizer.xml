@@ -4,7 +4,7 @@
 <topic id="topic_i4y_prl_vp">
   <title>About GPORCA</title>
   <abstract>
-    <shortdesc>In Greenplum Database<ph> 4.3.5.0 and later</ph>, GPORCA co-exists with the legacy query optimizer. </shortdesc>
+    <shortdesc>In Greenplum Database, GPORCA co-exists with the legacy query optimizer. </shortdesc>
   </abstract>
   <body>
     <p>These sections describe GPORCA functionality and usage:<ul

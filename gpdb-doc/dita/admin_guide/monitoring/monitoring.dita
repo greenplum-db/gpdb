@@ -154,9 +154,9 @@ FROM gp_master_mirroring;</codeblock></p>
                                 </entry>
                             </row>
                             <row>
-                                <entry>Test the state of master mirroring on Greenplum Database<ph> 4.3 and
-                                        later</ph>. If the value is not "STREAMING", raise an alert
-                                    or warning.<p>Recommended frequency: run every 5 to 10
+                                <entry>Test the state of master mirroring on Greenplum Database. If
+                                    the value is not "STREAMING", raise an alert or
+                                        warning.<p>Recommended frequency: run every 5 to 10
                                         minutes</p><p>Severity: IMPORTANT</p></entry>
                                 <entry>
                                     <p>Run the following <codeph>psql</codeph>
@@ -594,9 +594,8 @@ WHERE logseverity in ('FATAL', 'ERROR')
                                     fixes, and to avoid difficult future upgrades. </entry>
                             </row>
                             <row>
-                                <entry>Install Greenplum Database minor releases<ph
-                                       >, for example
-                                        4.3.<i>x.y</i></ph>.<p>Recommended frequency:
+                                <entry>Install Greenplum Database minor releases<ph>, for example
+                                            5.0.<i>x.y</i></ph>.<p>Recommended frequency:
                                         quarterly</p><p>Severity: IMPORTANT</p></entry>
                                 <entry>Follow upgrade instructions in the Greenplum Database
                                     <i>Release Notes</i>. Always upgrade to the latest in the

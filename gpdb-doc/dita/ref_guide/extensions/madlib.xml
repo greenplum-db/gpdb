@@ -43,13 +43,6 @@
       <p>The <codeph>gppkg</codeph> utility installs Greenplum Database extensions, along with any
         dependencies, on all hosts across a cluster. It also automatically installs extensions on
         new hosts in the case of system expansion segment recovery. </p>
-      <note>You should upgrade to MADlib 1.9.1 on Greenplum Database <ph otherprops="0_or_x"
-          >4.3.10.0</ph> or later. If you do not upgrade MADlib, the MADlib <codeph>madpack</codeph>
-        utility will not function on Greenplum Database 4.3.10.0 or later. The MADlib analytics
-        functionality will continue to work. <p>If you install or upgrade to the MADlib 1.9.1
-          extension on Greenplum Database 4.3.10.0 or later, you must run a MADlib script that fixes
-          the <codeph>madpack</codeph> MADlib utility to work with Greenplum Database 4.3.10.0 or
-          later. </p></note>
       <p>For information about <codeph>gppkg</codeph>, see the <cite>Greenplum Database Utility
           Guide</cite>.</p>
     </body>
@@ -65,13 +58,7 @@
               >Pivotal Network</xref>, then copy it to the master host.</li>
           <li id="pz216990">Install the software package by running the <codeph>gppkg</codeph>
             command. This example installs the MADlib 1.9.1 package on a Linux
-            system:<codeblock>$ gppkg -i madlib-ossv1.9.1_pv1.9.6_gpdb4.3orca-rhel5-x86_64.gppkg</codeblock></li>
-          <li>For MADlib 1.9.1 on Greenplum Database 4.3.10.0 or later, execute the
-              <codeph>fix_madpack.sh</codeph> script. You can provide the path to the MADlib
-            installation with the <codeph>--prefix</codeph>
-            option.<codeblock>$ fix_madpack.sh --prefix <varname>madlib-installation-path</varname></codeblock>If
-            you do not include the <codeph>--prefix</codeph> option, the script uses the location
-              <codeph>$GPHOME/madlib</codeph>.</li>
+            system:<codeblock>$ gppkg -i madlib-ossv1.9.1_pv1.9.6_gpdb&lt;version>orca-rhel5-x86_64.gppkg</codeblock></li>
         </ol>
       </body>
     </topic>
@@ -113,13 +100,7 @@
         <ol>
           <li> Run the <codeph>gppkg</codeph> utility with the <codeph>-u</codeph> option. This
             command upgrades an installed MADlib package to MADlib
-            1.9.1.<codeblock>gppkg -u madlib-ossv1.9.1_pv1.9.6_gpdb4.3orca-rhel5-x86_64.gppkg</codeblock></li>
-          <li>For MADlib 1.9.1 on Greenplum Database 4.3.10.0 or later, execute the
-              <codeph>fix_madpack.sh</codeph> script. You can provide the path to the MADlib
-            installation with the <codeph>--prefix</codeph>
-            option.<codeblock>$ fix_madpack.sh --prefix <varname>madlib-installation-path</varname></codeblock>If
-            you do not include the <codeph>--prefix</codeph> option, the script uses the location
-              <codeph>$GPHOME/madlib</codeph>.</li>
+            1.9.1.<codeblock>gppkg -u madlib-ossv1.9.1_pv1.9.6_gpdb&lt;version>orca-rhel5-x86_64.gppkg</codeblock></li>
         </ol>
       </body>
     </topic>
@@ -161,7 +142,7 @@
           utility with the <codeph>-r</codeph> option to uninstall the MADlib package. When removing
           the package you must specify the package and version. This example uninstalls MADlib
           package version 1.9.</p>
-        <codeblock>$ gppkg -r madlib-ossv1.9_pv1.9.5_gpdb4.3orca</codeblock>
+        <codeblock>$ gppkg -r madlib-ossv1.9_pv1.9.5_gpdb&lt;version>orca</codeblock>
         <p>You can run the <codeph>gppkg</codeph> utility with the options <codeph>-q --all</codeph>
           to list the installed extensions and their versions.</p>
         <p>After you uninstall the package, restart the database.</p>

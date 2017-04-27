@@ -16,11 +16,10 @@
         <li>Queries that contain a common table expression (CTE)</li>
         <li>Queries that contain subqueries</li>
       </ul></p>
-    <p>In Greenplum Database<ph> 4.3.5.0 and later</ph>, the Pivotal
-      Query Optimizer co-exists with the legacy query optimizer. By default, Greenplum Database uses the legacy query optimizer. When GPORCA is
-      enabled, Greenplum Database uses GPORCA to generate an
-      execution plan for a query when possible. If GPORCA cannot be used, the
-      legacy query optimizer is used. </p>
+    <p>In Greenplum Database, the Pivotal Query Optimizer co-exists with the legacy query optimizer.
+      By default, Greenplum Database uses the legacy query optimizer. When GPORCA is enabled,
+      Greenplum Database uses GPORCA to generate an execution plan for a query when possible. If
+      GPORCA cannot be used, the legacy query optimizer is used. </p>
     <p>The following figure shows how GPORCA fits into the query planning
       architecture.</p>
     <image href="../../graphics/piv-opt.png" id="image_tqw_2bm_vp"/>

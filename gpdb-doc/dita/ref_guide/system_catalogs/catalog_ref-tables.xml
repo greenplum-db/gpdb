@@ -79,8 +79,7 @@
       <li id="eu150689">
         <xref href="./pg_appendonly.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="eu150693">pg_appendonly_alter_column (not supported<ph> in
-        4.3</ph>)</li>
+      <li id="eu150693">pg_appendonly_alter_column (not supported)</li>
       <li id="eu150697">
         <xref href="./pg_attrdef.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -93,8 +92,7 @@
       <li id="eu149870">
         <xref href="./pg_authid.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="eu149878">pg_autovacuum (not supported<ph> in 4.2.5 and
-        later</ph>)</li>
+      <li id="eu149878">pg_autovacuum (not supported)</li>
       <li id="eu149882">
         <xref href="./pg_cast.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -125,10 +123,9 @@
       <li id="eu150515">
         <xref href="./pg_filespace_entry.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="eu150585">pg_foreign_data_wrapper (not supported<ph> in
-        4.3</ph>)</li>
-      <li id="eu150589">pg_foreign_server (not supported<ph> in 4.3</ph>)</li>
-      <li id="eu150593">pg_foreign_table (not supported<ph> in 4.3</ph>)</li>
+      <li id="eu150585">pg_foreign_data_wrapper (not supported)</li>
+      <li id="eu150589">pg_foreign_server (not supported)</li>
+      <li id="eu150593">pg_foreign_table (not supported)</li>
       <li id="eu149914">
         <xref href="./pg_index.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -201,7 +198,7 @@
       <li id="eu151117">
         <xref href="./pg_type.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="eu151122">pg_user_mapping (not supported<ph> in 4.3</ph>)</li>
+      <li id="eu151122">pg_user_mapping (not supported)</li>
       <li id="eu149986">
         <xref href="./pg_window.xml#topic1" type="topic" format="dita"/>
       </li>

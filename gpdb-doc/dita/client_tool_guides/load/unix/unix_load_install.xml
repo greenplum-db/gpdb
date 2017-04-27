@@ -33,20 +33,20 @@
                 <title>To install the Greenplum Database load tools</title>
                 <ol>
                     <li id="on145432">Download the appropriate
-                                <codeph>greenplum-loaders-4.3.<varname>x.x</varname>-<varname>PLATFORM</varname>.bin.zip</codeph>
+                                <codeph>greenplum-loaders-<varname>&lt;version></varname>-<varname>PLATFORM</varname>.bin.zip</codeph>
                         installer package for your platform from <xref
-                            href="https://network.pivotal.io" scope="external"
-                            format="html">Pivotal Network</xref>. </li>
+                            href="https://network.pivotal.io" scope="external" format="html">Pivotal
+                            Network</xref>. </li>
                     <li id="on145444">Unzip the
-                        installer:<codeblock>unzip greenplum-loaders-4.3.<varname>x.x</varname>-<varname>PLATFORM</varname>.bin.zip</codeblock></li>
+                        installer:<codeblock>unzip greenplum-loaders-<varname>&lt;version></varname>-<varname>PLATFORM</varname>.bin.zip</codeblock></li>
                     <li id="on150384">Run the
-                        installer:<codeblock>/bin/bash greenplum-loaders-4.3.<varname>x.x</varname>-<varname>PLATFORM</varname>.bin</codeblock></li>
+                        installer:<codeblock>/bin/bash greenplum-loaders-<varname>&lt;version></varname>-<varname>PLATFORM</varname>.bin</codeblock></li>
                     <li id="on145456">The installer will prompt you to accept the license agreement
                         and to provide an installation path. For the installation path, be sure to
                         enter an absolute path if you choose not to accept the default location (for
                         example, <codeph>/mydir/gp-loader-tools</codeph>). The load tools are
-                        installed into <codeph>greenplum-db-4.3.<varname>x.x</varname></codeph> by
-                        default.</li>
+                        installed into <codeph>greenplum-db-<varname>&lt;version></varname></codeph>
+                        by default.</li>
                 </ol>
             </section>
         </body>
@@ -81,7 +81,7 @@
                     <codeph>.bashrc</codeph> or <codeph>.bash_profile</codeph>). </p>
             <p>For example, you could add a line similar to the following to your chosen profile
                 files (making sure the right install path is used):</p>
-            <codeblock>source greenplum-db-4.3.<varname>x.x</varname>/greenplum_loaders_path.sh</codeblock>
+            <codeblock>source greenplum-db-<varname>&lt;version></varname>/greenplum_loaders_path.sh</codeblock>
             <p>After editing the chosen profile file, source it as the correct user to make the
                 changes active. For example:</p>
             <codeblock>source ~/.bashrc</codeblock>
