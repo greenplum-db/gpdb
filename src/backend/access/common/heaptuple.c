@@ -1192,18 +1192,6 @@ heap_deform_tuple(HeapTuple tuple, TupleDesc tupleDesc,
 
 		values[attnum] = fetchatt(thisatt, tp + off);
 
-#ifdef USE_ASSERT_CHECKING
-		/* Ignore attributes with dropped types */
-		if (thisatt->attlen == -1 && !thisatt->attisdropped)
-		{
-			Assert(VARATT_IS_SHORT(DatumGetPointer(values[attnum])) ||
-				   !VARATT_CAN_MAKE_SHORT(DatumGetPointer(values[attnum])) ||
-				   thisatt->atttypid == OIDVECTOROID ||
-				   thisatt->atttypid == INT2VECTOROID ||
-				   thisatt->atttypid >= FirstNormalObjectId);	
-		}
-#endif
-
 		off = att_addlength_pointer(off, thisatt->attlen, tp + off);
 	}
 
