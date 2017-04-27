@@ -244,7 +244,11 @@ inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path,
 	if (any_selectors_created)
 	{
 		if (inner_parent)
+		{
 			inner_parent->lefttree = inner_child;
+			if (IsA(inner_parent, Material))
+				((Material *)inner_parent)->cdb_strict = true;
+		}
 		else
 			*inner_plan_p = inner_child;
 		return true;

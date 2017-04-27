@@ -215,6 +215,30 @@ explain select count(*) from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hell
 select count(*) from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0';
 
 --
+-- Partition Selector under Material in NestLoopJoin inner side
+--
+
+drop table if exists pt;
+drop table if exists t;
+
+create table t(id int, a int);
+create table pt(id int, b int) DISTRIBUTED BY (id) PARTITION BY RANGE(b) (START (0) END (5) EVERY (1));
+
+insert into t select i, i from generate_series(0,4) i;
+insert into pt select i, i from generate_series(0,4) i;
+analyze t;
+analyze pt;
+
+begin;
+set enable_hashjoin=off;
+set enable_seqscan=on;
+set enable_nestloop=on;
+
+explain select * from t, pt where a = b;
+select * from t, pt where a = b;
+rollback;
+
+--
 -- Multi-level partitions
 --
 
