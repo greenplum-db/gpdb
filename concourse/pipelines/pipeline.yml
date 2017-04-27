@@ -876,7 +876,7 @@ jobs:
 
 # Stage 3: Trigger jobs that rely on packaging
 
-- name: MU_netbackup76
+- name: MU_netbackup77
   plan:
   - get: nightly-trigger
     trigger: true
@@ -907,7 +907,7 @@ jobs:
       gpdb_src_behave_tarball: gpdb_src_behave_tarball
     params: &pulse_properties
       PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "GPDB-BehaveNetBackup76"
+      PULSE_PROJECT_NAME: "GPDB-BehaveNetBackup77"
       PULSE_USERNAME: {{pulse_username}}
       PULSE_PASSWORD: {{pulse_password}}
   - task: monitor_pulse
@@ -915,26 +915,6 @@ jobs:
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params: *pulse_properties
-
-- name: MU_netbackup77
-  plan:
-  - get: nightly-trigger
-    trigger: true
-  - aggregate: *post_packaging_gets_trigger_false
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveNetBackup77"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveNetBackup77"
 
 - name: MU_backup-restore
   plan:
