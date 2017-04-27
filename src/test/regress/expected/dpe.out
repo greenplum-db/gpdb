@@ -1298,6 +1298,70 @@ select count(*) from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0';
 (1 row)
 
 --
+-- Partition Selector under Material in NestLoopJoin inner side
+--
+drop table if exists pt;
+drop table if exists t;
+create table t(id int, a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table pt(id int, b int) DISTRIBUTED BY (id) PARTITION BY RANGE(b) (START (0) END (5) EVERY (1));
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_1" for table "pt"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_2" for table "pt"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_3" for table "pt"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_4" for table "pt"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_5" for table "pt"
+insert into t select i, i from generate_series(0,4) i;
+insert into pt select i, i from generate_series(0,4) i;
+analyze t;
+analyze pt;
+begin;
+set enable_hashjoin=off;
+set enable_seqscan=on;
+set enable_nestloop=on;
+explain select * from t, pt where a = b;
+                                                                                        QUERY PLAN                                                                                         
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=2.21..8.38 rows=5 width=16)
+   ->  Nested Loop  (cost=2.21..8.38 rows=2 width=16)
+         Join Filter: t.a = dpe_single.pt.b
+         ->  Append  (cost=0.00..5.05 rows=2 width=8)
+               ->  Result  (cost=0.00..1.01 rows=1 width=8)
+                     One-Time Filter: PartSelected
+                     ->  Seq Scan on pt_1_prt_1 pt  (cost=0.00..1.01 rows=1 width=8)
+               ->  Result  (cost=0.00..1.01 rows=1 width=8)
+                     One-Time Filter: PartSelected
+                     ->  Seq Scan on pt_1_prt_2 pt  (cost=0.00..1.01 rows=1 width=8)
+               ->  Result  (cost=0.00..1.01 rows=1 width=8)
+                     One-Time Filter: PartSelected
+                     ->  Seq Scan on pt_1_prt_3 pt  (cost=0.00..1.01 rows=1 width=8)
+               ->  Result  (cost=0.00..1.01 rows=1 width=8)
+                     One-Time Filter: PartSelected
+                     ->  Seq Scan on pt_1_prt_4 pt  (cost=0.00..1.01 rows=1 width=8)
+               ->  Result  (cost=0.00..1.01 rows=1 width=8)
+                     One-Time Filter: PartSelected
+                     ->  Seq Scan on pt_1_prt_5 pt  (cost=0.00..1.01 rows=1 width=8)
+         ->  Materialize  (cost=2.21..2.31 rows=4 width=8)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..2.20 rows=4 width=8)
+                     Filter: t.a
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.20 rows=4 width=8)
+                           ->  Seq Scan on t  (cost=0.00..2.05 rows=2 width=8)
+ Settings:  enable_bitmapscan=off; enable_hashjoin=off; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=on; enable_seqscan=on; gp_segments_for_planner=2; optimizer_segments=2
+ Optimizer status: legacy query optimizer
+(26 rows)
+
+select * from t, pt where a = b;
+ id | a | id | b 
+----+---+----+---
+  3 | 3 |  3 | 3
+  4 | 4 |  4 | 4
+  0 | 0 |  0 | 0
+  1 | 1 |  1 | 1
+  2 | 2 |  2 | 2
+(5 rows)
+
+rollback;
+--
 -- Multi-level partitions
 --
 drop schema if exists dpe_multi cascade;
