@@ -231,20 +231,11 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
 		MemoryContext oldContext;
 		List *cursors;
 
-		oldContext = CurrentMemoryContext;
-		if (stmt->qdContext)
-		{
-			oldContext = MemoryContextSwitchTo(stmt->qdContext);
-		}
-		else
 		/*
 		 * memory context of plan tree should not change
 		 */
-		{
-			MemoryContext mc = GetMemoryChunkContext(stmt->planTree);
-
-			oldContext = MemoryContextSwitchTo(mc);
-		}
+		MemoryContext mc = GetMemoryChunkContext(stmt->planTree);
+		oldContext = MemoryContextSwitchTo(mc);
 
 		stmt->planTree = (Plan *) exec_make_plan_constant(stmt, is_SRI, &cursors);
 
