@@ -697,7 +697,6 @@ SELECT COUNT(*) FROM test_first_segment_reject_limit;
 -- start_ignore
 DROP TABLE IF EXISTS test_copy_on_segment;
 DROP EXTERNAL TABLE IF EXISTS check_copy_onsegment_txt1;
-DROP EXTERNAL TABLE IF EXISTS check_copy_onsegment_txt2;
 DROP EXTERNAL TABLE IF EXISTS check_copy_onsegment_csv1;
 DROP EXTERNAL TABLE IF EXISTS rm_copy_onsegment_files;
 -- end_ignore
@@ -710,22 +709,15 @@ INSERT INTO test_copy_on_segment VALUES (4, 'i', 'l');
 INSERT INTO test_copy_on_segment VALUES (5, 'q', 'w');
 
 COPY test_copy_on_segment TO '/tmp/invalid_filename.txt' ON SEGMENT;
-COPY test_copy_on_segment TO '/tmp/<SEG_DATA_DIR>valid_filename<SEGID>.txt' ON SEGMENT;
 COPY test_copy_on_segment TO '/tmp/valid_filename<SEGID>.txt' ON SEGMENT;
 COPY test_copy_on_segment TO '/tmp/valid_filename<SEGID>.bin' ON SEGMENT BINARY;
 COPY test_copy_on_segment TO '/tmp/valid_filename<SEGID>.csv' ON SEGMENT CSV HEADER;
 
 CREATE EXTERNAL WEB TABLE check_copy_onsegment_txt1 (a int, b text, c text)
-EXECUTE E'(cat /tmp/?*valid_filename*.txt)'
-ON SEGMENT 0
-FORMAT 'text';
-SELECT * FROM check_copy_onsegment_txt1 ORDER BY a;
-
-CREATE EXTERNAL WEB TABLE check_copy_onsegment_txt2 (a int, b text, c text)
 EXECUTE E'(cat /tmp/valid_filename*.txt)'
 ON SEGMENT 0
 FORMAT 'text';
-SELECT * FROM check_copy_onsegment_txt2 ORDER BY a;
+SELECT * FROM check_copy_onsegment_txt1 ORDER BY a;
 
 CREATE EXTERNAL WEB TABLE check_copy_onsegment_csv1 (a int, b text, c text)
 EXECUTE E'(tail -q -n +2 /tmp/valid_filename*.csv)'
@@ -769,7 +761,6 @@ SELECT * FROM rm_copy_onsegment_files;
 
 DROP TABLE IF EXISTS test_copy_on_segment;
 DROP EXTERNAL TABLE IF EXISTS check_copy_onsegment_txt1;
-DROP EXTERNAL TABLE IF EXISTS check_copy_onsegment_txt2;
 DROP EXTERNAL TABLE IF EXISTS check_copy_onsegment_csv1;
 DROP EXTERNAL TABLE IF EXISTS check_onek_copy_onsegment;
 DROP EXTERNAL TABLE IF EXISTS rm_copy_onsegment_files;

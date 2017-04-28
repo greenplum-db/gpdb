@@ -244,8 +244,8 @@ typedef struct CopyStateData
 	bool          skip_ext_partition;  /* skip external partition */
 
 	bool		on_segment; /* QE save data files locally */
-	bool		not_count_line; /* Doesn't count CSV header or binary trailer in
-								   "processed" line number for on_segment mode*/
+	bool		ignore_extra_line; /* Don't count CSV header or binary trailer in
+									  "processed" line number for on_segment mode*/
 	/* end Greenplum Database specific variables */
 } CopyStateData;
 

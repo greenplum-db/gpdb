@@ -469,10 +469,11 @@ CopySendEndOfRow(CopyState cstate)
 			/* Send "\n" to QD for "processed" line number counting */
 			if (cstate->on_segment && Gp_role == GP_ROLE_EXECUTE)
 			{
-				if (!cstate->not_count_line) /* not the csv header */
+				if (cstate->ignore_extra_line) /* the csv header */
+					/* ignore the csv header, set the flag */
+					cstate->ignore_extra_line = false;
+				else
 					(void) pq_putmessage('d', "\n", 1);
-				else /* ignore the csv header, set the flag */
-					cstate->not_count_line = false;
 			}
 
 			break;
@@ -1285,7 +1286,7 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 						 "psql's \\copy command also works for anyone.")));
 
 	cstate->copy_dest = COPY_FILE;		/* default */
-    if (Gp_role == GP_ROLE_EXECUTE)
+	if (Gp_role == GP_ROLE_EXECUTE)
 	{
 		if (cstate->on_segment) /* Save data to a local file */
 		{
@@ -1293,7 +1294,7 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 			initStringInfo(&filepath);
 			appendStringInfoString(&filepath, stmt->filename);
 
-			replaceStringInfoString(&filepath, "<SEG_DATA_DIR>", strrchr(DataDir, '/') + 1);
+			replaceStringInfoString(&filepath, "<SEG_DATA_DIR>", DataDir);
 
 			if (strstr(stmt->filename, "<SEGID>") == NULL)
 				ereport(ERROR,
@@ -1334,7 +1335,7 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		{
 			mode_t		oumask; /* Pre-existing umask value */
 			struct stat st;
-			char* filename = cstate->filename;
+			char *filename = cstate->filename;
 
 			/*
 			 * If on_segment, QD receives "\n" for "processed" line number counting, saves
@@ -2161,7 +2162,7 @@ CopyToDispatch(CopyState cstate)
 		}
 
 		/* add a newline and flush the data */
-		cstate->not_count_line = true; /* CSV header line doesn't count in "processed" line numbers */
+		cstate->ignore_extra_line = true; /* CSV header line doesn't count in "processed" line numbers */
 		CopySendEndOfRow(cstate);
 	}
 
@@ -2317,7 +2318,7 @@ CopyTo(CopyState cstate)
 	if (cstate->binary)
 	{
 		/* binary header should not be sent in execute mode. */
-		if (Gp_role != GP_ROLE_EXECUTE || (Gp_role == GP_ROLE_EXECUTE && cstate->on_segment ))
+		if (Gp_role != GP_ROLE_EXECUTE || cstate->on_segment)
 		{
 			/* Generate header for a binary copy */
 			int32		tmp;
@@ -2340,7 +2341,7 @@ CopyTo(CopyState cstate)
 		if (cstate->header_line)
 		{
 			/* header should not be printed in execute mode. */
-			if (Gp_role != GP_ROLE_EXECUTE || (Gp_role == GP_ROLE_EXECUTE && cstate->on_segment ))
+			if (Gp_role != GP_ROLE_EXECUTE || cstate->on_segment)
 			{
 				bool		hdr_delim = false;
 
@@ -2358,7 +2359,7 @@ CopyTo(CopyState cstate)
 					CopyAttributeOutCSV(cstate, colname, false,
 										list_length(cstate->attnumlist) == 1);
 				}
-				cstate->not_count_line = true; /* CSV header line doesn't count in "processed" line numbers */
+				cstate->ignore_extra_line = true; /* CSV header line doesn't count in "processed" line numbers */
 				CopySendEndOfRow(cstate);
 			}
 		}
@@ -2530,7 +2531,7 @@ CopyTo(CopyState cstate)
 
 			/* Trailer doesn't count in "processed" line numbers */
 			if (Gp_role == GP_ROLE_EXECUTE && cstate->on_segment)
-				cstate->not_count_line = true;
+				cstate->ignore_extra_line = true;
 
 			/* Need to flush out the trailer */
 			CopySendEndOfRow(cstate);
