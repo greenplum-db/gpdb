@@ -216,7 +216,6 @@
             <topicref href="guc-list.xml#optimizer_sort_factor"/>
             <topicref href="guc-list.xml#password_encryption"/>
             <topicref href="guc-list.xml#password_hash_algorithm"/>
-            <topicref href="guc-list.xml#pgcrypto.fips"/>
             <topicref href="guc-list.xml#pgstat_track_activity_query_size"/>
             <topicref href="guc-list.xml#pljava_classpath"/>
             <topicref href="guc-list.xml#pljava_classpath_insecure"/>

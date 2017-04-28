@@ -7,9 +7,6 @@
       <p>The parameters in this topic control the configuration of Greenplum Database extensions. </p>
       <ul>
          <li>
-            <codeph>pgcrypto.fips</codeph>
-         </li>
-         <li>
             <codeph>pljava_classpath</codeph>
          </li>
          <li>
