@@ -123,7 +123,7 @@ psql -d mydatabase -f
       <p>If you upgrade from PostGIS extension package version 2.0 (pv2.0) or later, you must run
           <codeph>postgis_upgrade_20_minor.sql</codeph> in your target database. This example
         upgrades the PostGIS extension package and runs the script:</p>
-      <codeblock>gppkg -u postgis-ossv2.0.3_pv2.0.1_gpdb<version></version>-rhel5-x86_64.gppkg
+      <codeblock>gppkg -u postgis-ossv2.0.3_pv2.0.1_gpdb<version></version>-rhel6-x86_64.gppkg
 
 psql -d mydatabase -f $GPHOME/share/postgresql/contrib/postgis-2.0/postgis_upgrade_20_minor.sql</codeblock>
     </body>

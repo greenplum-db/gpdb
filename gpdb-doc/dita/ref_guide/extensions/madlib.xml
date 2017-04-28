@@ -58,7 +58,7 @@
               >Pivotal Network</xref>, then copy it to the master host.</li>
           <li id="pz216990">Install the software package by running the <codeph>gppkg</codeph>
             command. This example installs the MADlib 1.9.1 package on a Linux
-            system:<codeblock>$ gppkg -i madlib-ossv1.9.1_pv1.9.6_gpdb&lt;version>-rhel5-x86_64.gppkg</codeblock></li>
+            system:<codeblock>$ gppkg -i madlib-ossv1.9.1_pv1.9.6_gpdb&lt;version>-rhel6-x86_64.gppkg</codeblock></li>
         </ol>
       </body>
     </topic>
@@ -100,7 +100,7 @@
         <ol>
           <li> Run the <codeph>gppkg</codeph> utility with the <codeph>-u</codeph> option. This
             command upgrades an installed MADlib package to MADlib
-            1.9.1.<codeblock>gppkg -u madlib-ossv1.9.1_pv1.9.6_gpdb&lt;version>-rhel5-x86_64.gppkg</codeblock></li>
+            1.9.1.<codeblock>gppkg -u madlib-ossv1.9.1_pv1.9.6_gpdb&lt;version>-rhel6-x86_64.gppkg</codeblock></li>
         </ol>
       </body>
     </topic>
