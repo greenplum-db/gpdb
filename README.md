@@ -200,6 +200,16 @@ your system.
 ./configure --with-perl --with-python --with-libxml ---enable-mapreduce --enable-codegen --prefix=/usr/local/gpdb --with-codegen-prefix="/path/to/llvm;/path/to/clang"
 ```
 
+### Build GPDB with gpperfmon enabled
+
+gpperfmon tracks a variety of queries, statistics, system properties, and metrics.
+To build with it enabled, change your `configure` to have an additional option
+`--enable-gpperfmon`
+
+See [more information about gpperfmon here](gpAux/gpperfmon/README.md)
+
+gpperfmon is dependent on several libraries like apr, apu, and libsigar
+
 ## Regression tests
 
 * The default regression tests
