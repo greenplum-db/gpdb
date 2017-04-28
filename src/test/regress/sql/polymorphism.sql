@@ -433,7 +433,7 @@ create aggregate build_group(anyelement, integer) (
   STYPE = anyarray
 );
 
-select build_group(q1,3) from (select q1 from int8_tbl order by q1) as t;
+select build_group(q1,3) from (select q1 from int8_tbl order by q1 limit 3) as t;
 
 -- this should fail because stype isn't compatible with arg
 create aggregate build_group(int8, integer) (

@@ -256,8 +256,8 @@ insert into addcol7 values
    ('201203', 202, 5, 'p2', null, null),
    ('201203', 203, 6, 'p2', null, null),
    ('201204', 301, 7, 'p3', 22/7::float, 'newcol2'),
-   ('201204', 301, 8, 'p3', null, null),
-   ('201204', 301, 9, 'p3', null, null);
+   ('201204', 302, 8, 'p3', null, null),
+   ('201204', 303, 9, 'p3', null, null);
 select * from addcol7 where tag2 like 'p%' order by user_id;
 update addcol7 set new1 = 0, tag1 = -1 where tag2 like 'p%';
 delete from addcol7 where new2 is null;
