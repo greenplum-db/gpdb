@@ -46,6 +46,11 @@ Feature: gpperfmon
         When the user truncates "system_history" tables in "gpperfmon"
         Then wait until the results from boolean sql "SELECT count(*) > 0 FROM system_history" is "true"
 
+    @gpperfmon_segment_history
+    Scenario: gpperfmon adds to segment_history table
+        Given gpperfmon is configured and running in qamode
+        When the user truncates "segment_history" tables in "gpperfmon"
+        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM segment_history" is "true"
 
 #    todo this test may have never run. Is it valid? Worthy of fixing?
 #    Scenario: drop old partition
