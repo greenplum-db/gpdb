@@ -595,7 +595,7 @@ WHERE logseverity in ('FATAL', 'ERROR')
                             </row>
                             <row>
                                 <entry>Install Greenplum Database minor releases<ph>, for example
-                                            5.0.<i>x.y</i></ph>.<p>Recommended frequency:
+                                            5.0.<i>x</i></ph>.<p>Recommended frequency:
                                         quarterly</p><p>Severity: IMPORTANT</p></entry>
                                 <entry>Follow upgrade instructions in the Greenplum Database
                                     <i>Release Notes</i>. Always upgrade to the latest in the
