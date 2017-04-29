@@ -97,10 +97,6 @@ class SubTransactionLimitRemovalScenarioTestCase(ScenarioTestCase):
 
         path_to_init="mpp.gpdb.tests.storage.sub_transaction_limit_removal.sub_transaction_limit_scenario.SubTransactionLimitRemovalTestCase."
 
-        cleandb = []
-        cleandb.append(path_to_init+"cleandb")
-        self.test_case_scenario.append(cleandb) 
-        
         check_system = []
         check_system.append(path_to_init+"check_system")
         self.test_case_scenario.append(check_system)
