@@ -613,7 +613,7 @@ create aggregate build_group(anyelement, integer) (
   SFUNC = add_group,
   STYPE = anyarray
 );
-select build_group(q1,3) from (select q1 from int8_tbl order by q1 limit 3) as t;
+select build_group(q1,3) from (select q1 from int8_tbl order by q1 limit 5) as t;
         build_group         
 ----------------------------
  {123,123,4567890123456789}
