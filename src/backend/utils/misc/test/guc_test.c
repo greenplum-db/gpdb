@@ -256,6 +256,20 @@ test__find_option(void **state)
 	assert_not_null(config);
 }
 
+/*
+ * Test verify_lc_numeric_guc_setting
+ */
+void
+test__verify_lc_numeric_guc_setting(void **state)
+{
+	build_guc_variables();
+
+	struct config_generic *config;
+	config = find_option("lc_numeric", LOG);
+	/* Check if the guc config has the GUC_GPDB_ADDOPT enum */
+	assert_true(GUC_GPDB_ADDOPT == (config->flags & GUC_GPDB_ADDOPT));
+}
+
 
 /*
  * Helper function
@@ -322,7 +336,8 @@ main(int argc, char* argv[])
 		unit_test(test__GUCArrayReset__invalid_guc),
 		unit_test(test__GUCArrayReset__md_array),
 		unit_test(test__set_config_option),
-		unit_test(test__find_option)
+		unit_test(test__find_option),
+		unit_test(test__verify_lc_numeric_guc_setting)
 	};
 
 	MemoryContextInit();
