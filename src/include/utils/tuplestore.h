@@ -8,9 +8,11 @@
  * a dumbed-down version of tuplesort.c; it does no sorting of tuples
  * but can only store and regurgitate a sequence of tuples.  However,
  * because no sort is required, it is allowed to start reading the sequence
- * before it has all been written.	This is particularly useful for cursors,
+ * before it has all been written.  This is particularly useful for cursors,
  * because it allows random access within the already-scanned portion of
  * a query without having to process the underlying scan to completion.
+ * Also, it is possible to support multiple independent read pointers.
+ *
  * A temporary file is used to handle the data if it exceeds the
  * space limit specified by the caller.
  *
@@ -19,10 +21,10 @@
  * Also, we have changed the API to return tuples in TupleTableSlots,
  * so that there is a check to prevent attempted access to system columns.
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/tuplestore.h,v 1.22 2008/01/01 19:45:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/tuplestore.h,v 1.30 2009/06/11 14:49:13 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -33,67 +35,55 @@
 
 struct Instrumentation;                 /* #include "executor/instrument.h" */
 
-
-/* Tuplestorestate and tuplestorepos are opaque types whose details are not known outside
+/* Tuplestorestate is an opaque type whose details are not known outside
  * tuplestore.c.
  */
 typedef struct Tuplestorestate Tuplestorestate;
-typedef struct TuplestorePos TuplestorePos;
-
-/*
- * tuplestore_set_instrument
- *
- * May be called after tuplestore_begin_xxx() to enable reporting of
- * statistics and events for EXPLAIN ANALYZE.
- *
- * The 'instr' ptr is retained in the 'state' object.  The caller must
- * ensure that it remains valid for the life of the Tuplestorestate object.
- */
-void 
-tuplestore_set_instrument(Tuplestorestate          *state,
-                          struct Instrumentation   *instrument);
 
 /*
  * Currently we only need to store MinimalTuples, but it would be easy
  * to support the same behavior for IndexTuples and/or bare Datums.
  */
 
-extern Tuplestorestate* tuplestore_begin_heap(bool randomAccess,
+extern Tuplestorestate *tuplestore_begin_heap(bool randomAccess,
 					  bool interXact,
 					  int maxKBytes);
 
 extern void tuplestore_set_eflags(Tuplestorestate *state, int eflags);
 
-extern void tuplestore_puttupleslot_pos(Tuplestorestate *state, TuplestorePos *pos, TupleTableSlot *slot);
-extern void tuplestore_puttupleslot(Tuplestorestate *state, TupleTableSlot *slot);
-
-extern void tuplestore_puttuple_pos(Tuplestorestate *state, TuplestorePos *pos, HeapTuple tuple);
-
+extern void tuplestore_puttupleslot(Tuplestorestate *state,
+						TupleTableSlot *slot);
 extern void tuplestore_puttuple(Tuplestorestate *state, HeapTuple tuple);
 extern void tuplestore_putvalues(Tuplestorestate *state, TupleDesc tdesc,
-                     Datum *values, bool *isnull);
+					 Datum *values, bool *isnull);
 
 /* tuplestore_donestoring() used to be required, but is no longer used */
 #define tuplestore_donestoring(state)	((void) 0)
 
-extern bool tuplestore_gettupleslot_pos(Tuplestorestate *state, TuplestorePos *pos, bool forward,
-						TupleTableSlot *slot);
-extern bool tuplestore_gettupleslot(Tuplestorestate *state, bool forward, TupleTableSlot *slot);
+extern int	tuplestore_alloc_read_pointer(Tuplestorestate *state, int eflags);
 
-extern bool tuplestore_advance_pos(Tuplestorestate *state, TuplestorePos *pos, bool forward);
+extern void tuplestore_select_read_pointer(Tuplestorestate *state, int ptr);
+
+extern void tuplestore_copy_read_pointer(Tuplestorestate *state,
+							 int srcptr, int destptr);
+
+extern void tuplestore_trim(Tuplestorestate *state);
+
+extern bool tuplestore_in_memory(Tuplestorestate *state);
+
+extern bool tuplestore_gettupleslot(Tuplestorestate *state, bool forward,
+						bool copy, TupleTableSlot *slot);
 extern bool tuplestore_advance(Tuplestorestate *state, bool forward);
-
-extern void tuplestore_end(Tuplestorestate *state);
 
 extern bool tuplestore_ateof(Tuplestorestate *state);
 
-extern void tuplestore_rescan_pos(Tuplestorestate *state, TuplestorePos *pos);
 extern void tuplestore_rescan(Tuplestorestate *state);
 
-extern void tuplestore_markpos_pos(Tuplestorestate *state, TuplestorePos *pos);
-extern void tuplestore_markpos(Tuplestorestate *state);
+extern void tuplestore_clear(Tuplestorestate *state);
 
-extern void tuplestore_restorepos_pos(Tuplestorestate *state, TuplestorePos *pos);
-extern void tuplestore_restorepos(Tuplestorestate *state);
+extern void tuplestore_end(Tuplestorestate *state);
+
+extern void tuplestore_set_instrument(Tuplestorestate *state,
+                          struct Instrumentation *instrument);
 
 #endif   /* TUPLESTORE_H */

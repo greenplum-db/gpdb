@@ -781,7 +781,7 @@ dumpSharedLocalSnapshot_forCursor(void)
 		 * our original zero-length. count does not include
 		 * subtransaction ids.
 		 */
-		if (BufFileSeek(f, 0 /* offset */, SEEK_SET) != 0)
+		if (BufFileSeek(f, 0 /* fileno */, 0 /* offset */, SEEK_SET) != 0)
 			break;
 
 		if (!FileWriteOK(f, &count, sizeof(count)))
@@ -857,7 +857,7 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot)
 	 * We're going to read this all in one go, the size
 	 * of this buffer should be more than a few hundred bytes.
 	 */
-	if (BufFileSeek(f, 0 /* offset */, SEEK_SET) != 0)
+	if (BufFileSeek(f, 0 /* fileno */, 0 /* offset */, SEEK_SET) != 0)
 		elog(ERROR, "Cursor snapshot: failed to seek.");
 
 	if (!FileReadOK(f, buffer, count))

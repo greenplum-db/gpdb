@@ -1696,7 +1696,7 @@ restart:
 	{
 		Assert(isDone);				/* it was provided before ... */
 		if (tuplestore_gettupleslot(fcache->funcResultStore, true,
-									fcache->funcResultSlot))
+									false, fcache->funcResultSlot))
 		{
 			*isDone = ExprMultipleResult;
 			if (fcache->funcReturnsTuple)

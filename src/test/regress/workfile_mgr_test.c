@@ -1390,7 +1390,7 @@ buffile_size_test(void)
 	unit_test_result(test_size == expected_size);
 
 	elog(LOG, "Running sub-test: seeking back and writing then testing size");
-	BufFileSeek(testBf, expected_size/2, SEEK_SET);
+	BufFileSeek(testBf, 0 /* fileno */, expected_size/2, SEEK_SET);
 	/* This write should not add to the size */
 	BufFileWrite(testBf, text->data, expected_size / 10);
 	test_size = BufFileGetSize(testBf);
@@ -1414,7 +1414,7 @@ buffile_size_test(void)
 	elog(LOG, "Running sub-test: Seek past end, appending and testing size");
 	int past_end_offset = 100;
 	int past_end_write = 200;
-	BufFileSeek(testBf, expected_size + past_end_offset, SEEK_SET);
+	BufFileSeek(testBf, 0 /* fileno */, expected_size + past_end_offset, SEEK_SET);
 	BufFileWrite(testBf, text->data, past_end_write);
 	expected_size += past_end_offset + past_end_write;
 	test_size = BufFileGetSize(testBf);
@@ -1553,7 +1553,7 @@ buffile_large_file_test(void)
 
 	char *buffer = palloc(nchars * sizeof(char));
 
-	BufFileSeek(bfile,  (int64) ((int64)test_entry * (int64) nchars), SEEK_SET);
+	BufFileSeek(bfile, 0 /* fileno */, (int64) ((int64)test_entry * (int64) nchars), SEEK_SET);
 
 	int nread = BufFileRead(bfile, buffer, nchars*sizeof(char));
 

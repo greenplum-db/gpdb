@@ -506,9 +506,12 @@ BufFileFlush(BufFile *file)
  * impossible seek is attempted.
  */
 int
-BufFileSeek(BufFile *file, int64 offset, int whence)
+BufFileSeek(BufFile *file, int fileno, off_t offset, int whence)
 {
 	int64 newOffset;
+
+	/* GPDB doesn't support multiple files */
+	Assert(fileno == 0);
 
 	switch (whence)
 	{
@@ -557,8 +560,12 @@ BufFileSeek(BufFile *file, int64 offset, int whence)
 }
 
 void
-BufFileTell(BufFile *file, int64 *offset)
+BufFileTell(BufFile *file, int *fileno, off_t *offset)
 {
+	if (fileno != NULL)
+	{
+		*fileno = 0;
+	}
 	*offset = file->offset + file->pos;
 }
 
@@ -576,7 +583,7 @@ BufFileTell(BufFile *file, int64 *offset)
 int
 BufFileSeekBlock(BufFile *file, int64 blknum)
 {
-	return BufFileSeek(file, blknum * BLCKSZ, SEEK_SET);
+	return BufFileSeek(file, 0 /* fileno */, blknum * BLCKSZ, SEEK_SET);
 }
 
 /*

@@ -361,7 +361,7 @@ ExecWorkFile_Rewind(ExecWorkFile *workfile)
 	switch(workfile->fileType)
 	{
 		case BUFFILE:
-			ret = BufFileSeek((BufFile *)workfile->file, 0L  /* offset */, SEEK_SET);
+			ret = BufFileSeek((BufFile *)workfile->file, 0 /* fileno */, 0L  /* offset */, SEEK_SET);
 			/* BufFileSeek returns 0 if everything went OK */
 			return (0 == ret);
 		case BFZ:
@@ -389,7 +389,7 @@ ExecWorkFile_Tell64(ExecWorkFile *workfile)
 	switch(workfile->fileType)
 	{
 		case BUFFILE:
-			BufFileTell((BufFile *)workfile->file, (int64 *) &bytes);
+			BufFileTell((BufFile *)workfile->file, NULL, (int64 *) &bytes);
 			break;
 			
 		case BFZ:
@@ -522,7 +522,7 @@ ExecWorkFile_Seek(ExecWorkFile *workfile, uint64 offset, int whence)
 	switch(workfile->fileType)
 	{
 	case BUFFILE:
-		result = BufFileSeek((BufFile *)workfile->file, offset, whence);
+		result = BufFileSeek((BufFile *)workfile->file, 0 /* fileno */, offset, whence);
 		if (additional_size > 0)
 		{
 			workfile->size = BufFileGetSize((BufFile *)workfile->file);
