@@ -46,10 +46,19 @@ FORMAT 'text' (delimiter '|');
 -- used to be entries created for non custom protocol tables with refobjid=0.
 SELECT * FROM pg_depend WHERE refclassid = 'pg_extprotocol'::regclass and refobjid = 0;
 
+create table nation (n_nationkey integer, n_name char(25), n_regionkey integer, n_comment varchar(152))
+distributed by (n_nationkey)
+partition by range (n_regionkey) (partition nation_1 start (5) inclusive, partition nation_2 start (10) inclusive);
+alter table nation add partition nation_0 start (0) inclusive end (4) exclusive;
+alter table nation exchange partition for (0) with table ext_nation without validation;
+select count(*) from nation;
+
 -- drop tables
 
-DROP EXTERNAL TABLE EXT_NATION;
+DROP TABLE EXT_NATION;
 DROP EXTERNAL TABLE EXT_REGION;
+DROP TABLE nation;
+
 -- start_ignore
 -- --------------------------------------
 -- check platform
