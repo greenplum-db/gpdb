@@ -53,23 +53,7 @@
     <title>System Requirements</title>
     <body>
       <note>Greenplum Database uses the NetBackup API (XBSA) to communicate with NetBackup.</note>
-      <ul id="ul_xw4_51z_3p">
-        <li>Supported NetBackup Master Server software.<ul id="ul_fqs_lrd_px">
-            <li>NetBackup Master Server Version 7.5 and NetBackup Media Server Version 7.5</li>
-            <li>NetBackup Master Server Version 7.6 and NetBackup Media Server Version 7.6</li>
-          </ul></li>
-        <li>Supported NetBackup Client version: 7.1, 7.5, or 7.6.<p>NetBackup client software
-            installed and configured on the Greenplum Database master host and all segment
-            hosts.</p><p>The NetBackup client software must be able to communicate with the
-            NetBackup server software.</p><p>For NetBackup version 7.5 or 7.6, the client version
-            that is installed and configured on the Greenplum Database hosts must match the
-            NetBackup Server version that stores the Greenplum Database backup.</p><p>For NetBackup
-            Client version 7.1, Greenplum Database supports only NetBackup Server Version
-          7.5.</p></li>
-      </ul>
-      <note>Greenplum Database support for NetBackup Client version 7.1 is deprecated. The NetBackup
-        SDK library files for NetBackup version 7.1 will be removed from the Greenplum Database
-        installation in a future release. </note>
+      <p>Greenplum Database is compatible with NetBackup 7.7.3.</p>
     </body>
   </topic>
   <topic id="topic_nq4_m1z_3p">
@@ -127,13 +111,13 @@
             </table><p>See the <cite>Veritas NetBackup Administrator's Guide</cite> for information
               about the <filepath>bp.conf</filepath> file. </p></li>
           <li>Set the <codeph>LD_LIBRARY_PATH</codeph> environment variable for Greenplum Database
-            hosts to use NetBackup client 7.1, 7.5 or 7.6. Greenplum Database installs NetBackup SDK
-            library files that are used with the NetBackup 7.1, 7.5, or 7.6 client. To configure
-            Greenplum Database to use the library files that correspond to the version of the
-            NetBackup client that is installed on the hosts, add the following line to the file
+            hosts to use NetBackup client. Greenplum Database installs NetBackup SDK library files
+            that are used with the NetBackup 7.7.3 client. To configure Greenplum Database to use
+            the library files that correspond to the version of the NetBackup client that is
+            installed on the hosts, add the following line to the file
               <codeph>$GPHOME/greenplum_path.sh</codeph>:<codeblock>LD_LIBRARY_PATH=$GPHOME/lib/nbu<varname>NN</varname>/lib:$LD_LIBRARY_PATH </codeblock><p>Replace
-              the <varname>NN</varname> with, 76, 75, or 71 depending on the NetBackup client that
-              is installed on the host. </p><p>The <codeph>LD_LIBRARY_PATH</codeph> line should be
+              the <varname>NN</varname> with the NetBackup client version that is installed on the
+              host (for example, 77). </p><p>The <codeph>LD_LIBRARY_PATH</codeph> line should be
               added before this line in
             <codeph>$GPHOME/greenplum_path.sh</codeph>:</p><codeblock>export LD_LIBRARY_PATH</codeblock></li>
           <li>Execute this command to remove the current <codeph>LD_LIBRARY_PATH</codeph>
