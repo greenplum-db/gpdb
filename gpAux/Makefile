@@ -109,7 +109,7 @@ ISCONFIG=$(GPPGDIR)/GNUmakefile
 ## On these platforms, we do the full build including the server. On other
 ## platforms, we do a client-only build.
 ##
-SERVER_PLATFORMS=rhel5_x86_32 rhel5_x86_64 rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64 linux_x86_64 osx106_x86
+SERVER_PLATFORMS=rhel5_x86_32 rhel5_x86_64 rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64 sles11_x86_64 linux_x86_64 osx106_x86
 
 #---------------------------------------------------------------------
 # GPPKG
@@ -119,7 +119,7 @@ SERVER_PLATFORMS=rhel5_x86_32 rhel5_x86_64 rhel7_x86_64 rhel6_x86_64 suse10_x86_
 ## Support gppkg platforms
 ##
 
-GPPKG_PLATFORMS=rhel5_x86_64 rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64
+GPPKG_PLATFORMS=rhel5_x86_64 rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64 sles11_x86_64
 
 #---------------------------------------------------------------------
 # Compiler options
@@ -169,6 +169,7 @@ rhel6_x86_64_CONFIGFLAGS=--enable-snmp --enable-gpperfmon --enable-ddboost --wit
 rhel7_x86_64_CONFIGFLAGS=--enable-snmp --enable-gpperfmon --enable-ddboost --with-gssapi --enable-netbackup ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 suse10_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost --enable-gpperfmon ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 suse11_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost --enable-gpperfmon ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+sles11_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost --enable-gpperfmon ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 linux_x86_64_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG)
 osx106_x86_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG)
 
@@ -611,6 +612,7 @@ rhel5_x86_64_MPP_ARCH=RHEL5-x86_64
 rhel6_x86_64_MPP_ARCH=RHEL6-x86_64
 rhel7_x86_64_MPP_ARCH=RHEL7-x86_64
 osx106_x86_MPP_ARCH=OSX-i386
+sles11_x86_64_MPP_ARCH=SLES11-x86_64
 ifneq "$($(BLD_ARCH)_MPP_ARCH)" ""
 export MPP_ARCH=$($(BLD_ARCH)_MPP_ARCH)
 else

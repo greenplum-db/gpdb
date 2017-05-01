@@ -127,7 +127,7 @@ if [ ${PLAT} = "Linux" ]; then
     fi
     if [ -r /etc/SuSE-release ]; then
         OS_RELEASE=`head -1 /etc/SuSE-release`
-        MPP_ARCH_BASE="SuSE"
+        MPP_ARCH_BASE="SLES"
         OS_VERSION_MAJOR=`head -2 /etc/SuSE-release | tail -1 | awk '{print $3}'`
     fi
     CPU=`uname -p`

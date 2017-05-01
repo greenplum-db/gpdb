@@ -74,7 +74,7 @@ jobs:
           IVYREPO_PASSWD: {{ivyrepo_passwd}}
           TARGET_OS: centos
           TARGET_OS_VERSION: 6
-          BLD_TARGETS: ""
+          BLD_TARGETS: "clients loaders"
 
     - aggregate:
       - task: icw_planner_centos6

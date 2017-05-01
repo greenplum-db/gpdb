@@ -19,7 +19,9 @@ case "`uname -s`" in
     if [ -f /etc/SuSE-release ]; then
         case "`cat /etc/SuSE-release`" in
             *)
-            BLD_ARCH_HOST="suse`head -1 /etc/SuSE-release | sed -e 's/SUSE Linux Enterprise Server/SuSE/' | awk '{print $2}'`_`uname -p | sed -e s/i686/x86_32/`"
+                SLES_VERSION="$(grep VERSION /etc/SuSE-release | grep -o '[0-9][0-9]*')"
+                SLES_PLATFORM="$(uname -p | sed -e s/i686/x86_32/)"
+                BLD_ARCH_HOST="sles${SLES_VERSION}_${SLES_PLATFORM}"
             ;;
         esac
     fi

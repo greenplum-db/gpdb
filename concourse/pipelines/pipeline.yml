@@ -173,6 +173,24 @@ resources:
     secret_access_key: {{bucket-secret-access-key}}
     regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-build-1-rhel6-x86_64.zip.sha256
 
+- name: installer_rhel6_gpdb_clients
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-clients-5.(.*)-rhel6-x86_64.zip
+
+- name: installer_rhel6_gpdb_loaders
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-loaders-5.(.*)-rhel6-x86_64.zip
+
 - name: installer_appliance_rhel7_gpdb_rc
   type: s3
   source:
@@ -190,6 +208,24 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-build-1-rhel7-x86_64.zip.sha256
+
+- name: installer_rhel7_gpdb_clients
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-clients-5.(.*)-rhel7-x86_64.zip
+
+- name: installer_rhel7_gpdb_loaders
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-loaders-5.(.*)-rhel7-x86_64.zip
 
 - name: qautils_rhel6_tarball
   type: s3
@@ -218,6 +254,24 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: deliverables/QAUtils-sles11-x86_64.tar.gz
+
+- name: installer_sles11_gpdb_clients
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-clients-5.(.*)-sles11-x86_64.zip
+
+- name: installer_sles11_gpdb_loaders
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-loaders-5.(.*)-sles11-x86_64.zip
 
 - name: gpdb_src_tinc_tarball
   type: s3
@@ -270,11 +324,17 @@ jobs:
       IVYREPO_PASSWD: {{ivyrepo_passwd}}
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
-      BLD_TARGETS: ""
+      BLD_TARGETS: "clients loaders"
   - aggregate:
     - put: bin_gpdb_centos6
       params:
         file: gpdb_artifacts/bin_gpdb.tar.gz
+    - put: installer_rhel6_gpdb_clients
+      params:
+        file: gpdb_artifacts/greenplum-clients-*-rhel6-x86_64.zip
+    - put: installer_rhel6_gpdb_loaders
+      params:
+        file: gpdb_artifacts/greenplum-loaders-*-rhel6-x86_64.zip
 
 - name: compile_gpdb_open_source_centos6
   public: true
@@ -304,11 +364,17 @@ jobs:
       IVYREPO_PASSWD: {{ivyrepo_passwd}}
       TARGET_OS: centos
       TARGET_OS_VERSION: 7
-      BLD_TARGETS: ""
+      BLD_TARGETS: "clients loaders"
   - aggregate:
     - put: bin_gpdb_centos7
       params:
         file: gpdb_artifacts/bin_gpdb.tar.gz
+    - put: installer_rhel7_gpdb_clients
+      params:
+        file: gpdb_artifacts/greenplum-clients-*-rhel7-x86_64.zip
+    - put: installer_rhel7_gpdb_loaders
+      params:
+        file: gpdb_artifacts/greenplum-loaders-*-rhel7-x86_64.zip
 
 - name: compile_gpdb_sles11
   plan:
@@ -327,10 +393,16 @@ jobs:
       IVYREPO_PASSWD: {{ivyrepo_passwd}}
       TARGET_OS: sles
       TARGET_OS_VERSION:
-      BLD_TARGETS: ""
+      BLD_TARGETS: "clients loaders"
   - put: bin_gpdb_sles11
     params:
       file: gpdb_artifacts/bin_gpdb.tar.gz
+  - put: installer_sles11_gpdb_clients
+    params:
+      file: gpdb_artifacts/greenplum-clients-*-sles11-x86_64.zip
+  - put: installer_sles11_gpdb_loaders
+    params:
+      file: gpdb_artifacts/greenplum-loaders-*-sles11-x86_64.zip
 
 # TODO: Currently the windows clients and loaders are not packaging correctly.
 #       This task will be used when the team responsible for the CLs is ready
