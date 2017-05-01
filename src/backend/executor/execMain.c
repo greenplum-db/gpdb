@@ -635,6 +635,8 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 
 			queryDesc->ddesc->oidAssignments = GetAssignedOidsForDispatch();
 
+			queryDesc->ddesc->oidAssignments = GetAssignedOidsForDispatch();
+
 			/*
 			 * First, see whether we need to pre-execute any initPlan subplans.
 			 */
