@@ -57,18 +57,3 @@ Feature: gpperfmon
         Given gpperfmon is configured and running in qamode
         When the user truncates "diskspace_history" tables in "gpperfmon"
         Then wait until the results from boolean sql "SELECT count(*) > 0 FROM diskspace_history" is "true"
-
-
-#    todo this test may have never run. Is it valid? Worthy of fixing?
-#    Scenario: drop old partition
-#        When the user runs command "echo 'partition_age = 4' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
-#        And the user runs command "test/behave/mgmt_utils/steps/data/add_par.sh"
-#        And the user runs command "gpstop -ra"
-#
-#        When execute following sql in db "gpperfmon" and store result in the context
-#            """
-#            SELECT count(*) FROM pg_partitions WHERE tablename = 'diskspace_history';
-#            """
-#        Then validate that following rows are in the stored rows
-#            | count |
-#            | 5     |
