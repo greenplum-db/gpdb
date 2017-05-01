@@ -45,25 +45,25 @@ CREATE TABLE aoschema1.ao_table3(
 insert into aoschema1.ao_table3 values ( 1,'ann');
 insert into aoschema1.ao_table3 values ( 2,'ben');
 
-Create table ao_table4 with(appendonly=true) as select * from ao_table1;
-Create table ao_table5 with(appendonly=true) as select * from ao_table1;
-Create table ao_table6 with(appendonly=true) as select * from ao_table1;
-Create table ao_table7 with(appendonly=true) as select * from ao_table1;
-Create table ao_table8 with(appendonly=true) as select * from ao_table1;
-Create table ao_table9 with(appendonly=true) as select * from ao_table1;
-Create table ao_table10 with(appendonly=true) as select * from ao_table1;
-Create table ao_table11 with(appendonly=true) as select * from ao_table1;
-Create table ao_table12 with(appendonly=true) as select * from ao_table1;
-Create table ao_table13 with(appendonly=true) as select * from ao_table1;
-Create table ao_table14 with(appendonly=true) as select * from ao_table1;
-Create table ao_table15 with(appendonly=true) as select * from ao_table1;
+Create table ao_table4 with(appendonly=true) as select * from ao_table1 DISTRIBUTED BY (text_col);
+Create table ao_table5 with(appendonly=true) as select * from ao_table1 DISTRIBUTED BY (text_col);
+Create table ao_table6 with(appendonly=true) as select * from ao_table1 DISTRIBUTED BY (text_col);
+Create table ao_table7 with(appendonly=true) as select * from ao_table1 DISTRIBUTED BY (text_col);
+Create table ao_table8 with(appendonly=true) as select * from ao_table1 DISTRIBUTED BY (text_col);
+Create table ao_table9 with(appendonly=true) as select * from ao_table1 DISTRIBUTED BY (text_col);
+Create table ao_table10 with(appendonly=true) as select * from ao_table1 DISTRIBUTED BY (text_col);
+Create table ao_table11 with(appendonly=true) as select * from ao_table1 DISTRIBUTED BY (text_col);
+Create table ao_table12 with(appendonly=true) as select * from ao_table1 DISTRIBUTED BY (text_col);
+Create table ao_table13 with(appendonly=true) as select * from ao_table1 DISTRIBUTED BY (text_col);
+Create table ao_table14 with(appendonly=true) as select * from ao_table1 DISTRIBUTED BY (text_col);
+Create table ao_table15 with(appendonly=true) as select * from ao_table1 DISTRIBUTED BY (text_col);
 Create index ao_table15_idx on ao_table15(bigint_col);
-Create table ao_table16 with(appendonly=true) as select * from ao_table1;
+Create table ao_table16 with(appendonly=true) as select * from ao_table1 DISTRIBUTED BY (text_col);
 Create index ao_table16_idx on ao_table16(bigint_col);
-Create table ao_table17 with(appendonly=true, OIDS=TRUE) as select * from ao_table1;
-Create table ao_table18 with(appendonly=true) as select * from ao_table1;
-Create table ao_table19 with(appendonly=true) as select * from ao_table1;
-Create table ao_table20 with(appendonly=true) as select * from ao_table1;
+Create table ao_table17 with(appendonly=true, OIDS=TRUE) as select * from ao_table1 DISTRIBUTED BY (text_col);
+Create table ao_table18 with(appendonly=true) as select * from ao_table1 DISTRIBUTED BY (text_col);
+Create table ao_table19 with(appendonly=true) as select * from ao_table1 DISTRIBUTED BY (text_col);
+Create table ao_table20 with(appendonly=true) as select * from ao_table1 DISTRIBUTED BY (text_col);
 
 CREATE TABLE ao_table21(
           stud_id int,
@@ -107,6 +107,6 @@ insert into ao_table_child values ('3_zero', 3, '3_zero', 3);
 Drop role ao_user1;
 CREATE ROLE ao_user1;
 
-Create table ao_table23 with(appendonly=true) as select * from ao_table2;
-Create table ao_table24 with(appendonly=true) as select * from ao_table2;
-Create table ao_table25 with(appendonly=true) as select * from ao_table2;
+Create table ao_table23 with(appendonly=true) as select * from ao_table2 DISTRIBUTED BY (col_text);
+Create table ao_table24 with(appendonly=true) as select * from ao_table2 DISTRIBUTED BY (col_text);
+Create table ao_table25 with(appendonly=true) as select * from ao_table2 DISTRIBUTED BY (col_text);

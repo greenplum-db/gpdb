@@ -71,4 +71,4 @@ insert into ao_table_child_1 values ('3_zero', 3, '3_zero', 3);
 Drop role ao_user1;
 CREATE ROLE ao_user1;
 
-Create table ao_table4_1 with(appendonly=true) as select * from ao_table2_1;
+Create table ao_table4_1 with(appendonly=true) as select * from ao_table2_1 DISTRIBUTED BY (col_text);

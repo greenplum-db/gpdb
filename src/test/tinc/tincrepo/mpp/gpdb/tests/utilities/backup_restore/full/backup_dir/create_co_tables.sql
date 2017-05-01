@@ -45,25 +45,25 @@ CREATE TABLE coschema1.co_table3(
 insert into coschema1.co_table3 values ( 1,'ann');
 insert into coschema1.co_table3 values ( 2,'ben');
 
-Create table co_table4 with(appendonly=true, orientation=column) as select * from co_table1;
-Create table co_table5 with(appendonly=true, orientation=column) as select * from co_table1;
-Create table co_table6 with(appendonly=true, orientation=column) as select * from co_table1;
-Create table co_table7 with(appendonly=true, orientation=column) as select * from co_table1;
-Create table co_table8 with(appendonly=true, orientation=column) as select * from co_table1;
-Create table co_table9 with(appendonly=true, orientation=column) as select * from co_table1;
-Create table co_table10 with(appendonly=true, orientation=column) as select * from co_table1;
-Create table co_table11 with(appendonly=true, orientation=column) as select * from co_table1;
-Create table co_table12 with(appendonly=true, orientation=column) as select * from co_table1;
-Create table co_table13 with(appendonly=true, orientation=column) as select * from co_table1;
-Create table co_table14 with(appendonly=true, orientation=column) as select * from co_table1;
-Create table co_table15 with(appendonly=true, orientation=column) as select * from co_table1;
+Create table co_table4 with(appendonly=true, orientation=column) as select * from co_table1 DISTRIBUTED BY (text_col);
+Create table co_table5 with(appendonly=true, orientation=column) as select * from co_table1 DISTRIBUTED BY (text_col);
+Create table co_table6 with(appendonly=true, orientation=column) as select * from co_table1 DISTRIBUTED BY (text_col);
+Create table co_table7 with(appendonly=true, orientation=column) as select * from co_table1 DISTRIBUTED BY (text_col);
+Create table co_table8 with(appendonly=true, orientation=column) as select * from co_table1 DISTRIBUTED BY (text_col);
+Create table co_table9 with(appendonly=true, orientation=column) as select * from co_table1 DISTRIBUTED BY (text_col);
+Create table co_table10 with(appendonly=true, orientation=column) as select * from co_table1 DISTRIBUTED BY (text_col);
+Create table co_table11 with(appendonly=true, orientation=column) as select * from co_table1 DISTRIBUTED BY (text_col);
+Create table co_table12 with(appendonly=true, orientation=column) as select * from co_table1 DISTRIBUTED BY (text_col);
+Create table co_table13 with(appendonly=true, orientation=column) as select * from co_table1 DISTRIBUTED BY (text_col);
+Create table co_table14 with(appendonly=true, orientation=column) as select * from co_table1 DISTRIBUTED BY (text_col);
+Create table co_table15 with(appendonly=true, orientation=column) as select * from co_table1 DISTRIBUTED BY (text_col);
 Create index co_table15_idx on co_table15(bigint_col);
-Create table co_table16 with(appendonly=true, orientation=column) as select * from co_table1;
+Create table co_table16 with(appendonly=true, orientation=column) as select * from co_table1 DISTRIBUTED BY (text_col);
 Create index co_table16_idx on co_table16(bigint_col);
-Create table co_table17 with(appendonly=true, orientation=column) as select * from co_table1;
-Create table co_table18 with(appendonly=true, orientation=column) as select * from co_table1;
-Create table co_table19 with(appendonly=true, orientation=column) as select * from co_table1;
-Create table co_table20 with(appendonly=true, orientation=column) as select * from co_table1;
+Create table co_table17 with(appendonly=true, orientation=column) as select * from co_table1 DISTRIBUTED BY (text_col);
+Create table co_table18 with(appendonly=true, orientation=column) as select * from co_table1 DISTRIBUTED BY (text_col);
+Create table co_table19 with(appendonly=true, orientation=column) as select * from co_table1 DISTRIBUTED BY (text_col);
+Create table co_table20 with(appendonly=true, orientation=column) as select * from co_table1 DISTRIBUTED BY (text_col);
 
 CREATE TABLE co_table21(
           stud_id int,
@@ -99,6 +99,6 @@ insert into co_table_child values ('3_zero', 3, '3_zero', 3);
 Drop role co_user1;
 CREATE ROLE co_user1;
 
-Create table co_table23 with(appendonly=true, orientation=column) as select * from co_table2;
-Create table co_table24 with(appendonly=true, orientation=column) as select * from co_table2;
-Create table co_table25 with(appendonly=true, orientation=column) as select * from co_table2;
+Create table co_table23 with(appendonly=true, orientation=column) as select * from co_table2 DISTRIBUTED BY (col_text);
+Create table co_table24 with(appendonly=true, orientation=column) as select * from co_table2 DISTRIBUTED BY (col_text);
+Create table co_table25 with(appendonly=true, orientation=column) as select * from co_table2 DISTRIBUTED BY (col_text);
