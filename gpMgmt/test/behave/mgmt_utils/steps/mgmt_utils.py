@@ -895,13 +895,14 @@ def impl(context, dirname):
             ans_file_path, out_file_path, diff_file_path)
             run_command(context, gpdiff_cmd)
     for filename in os.listdir(dirname):
-        if filename.endswith('.diff') and os.path.getsize(os.path.join(dirname, filename)) > 0:
-            with open(filename, 'r') as diff_file:
+        full_filename_path = os.path.join(dirname, filename)
+        if filename.endswith('.diff') and os.path.getsize(full_filename_path) > 0:
+            with open(full_filename_path, 'r') as diff_file:
                 diff_file_contents = diff_file.read()
                 # if there is some difference generated into the diff file, raise expception
                 raise Exception(
                     "Found difference between source and destination system, see %s. \n Diff contents: \n %s" % (
-                    filename, diff_file_contents))
+                        full_filename_path, diff_file_contents))
 
 
 @then('verify that the incremental file has the stored timestamp')
