@@ -1761,10 +1761,7 @@ static int get_and_print_next_query_file_kvp(FILE* outfd, FILE* queryfd, char* q
                 (*bytes_written)++;
             }
 
-            if ((*p == '\n') || (*p == '\r'))
-                fputc(' ', outfd);
-            else
-                fputc(*p, outfd);
+            fputc(*p, outfd);
 
             (*bytes_written)++;
 
@@ -1779,7 +1776,7 @@ static int get_and_print_next_query_file_kvp(FILE* outfd, FILE* queryfd, char* q
     int n = fread(line, 1, 1, queryfd);
     if (n != 1)
     {
-	    gpmon_warning(FLINE, "missing expeceted newline in file: %s", qfname);
+	    gpmon_warning(FLINE, "missing expected newline in file: %s", qfname);
         return APR_NOTFOUND;
     }
 

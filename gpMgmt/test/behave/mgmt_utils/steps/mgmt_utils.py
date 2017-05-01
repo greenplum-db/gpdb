@@ -2549,6 +2549,14 @@ def impl(context, numlines):
         raise Exception("Found %d of stored query result but expected %d records" % (num_found, numlines))
 
 
+@then('validate that first column of first stored row has "{numlines}" lines of raw output')
+def impl(context, numlines):
+    raw_lines_count = len(context.stored_rows[0][0].splitlines())
+    numlines = int(numlines)
+    if raw_lines_count != numlines:
+        raise Exception("Found %d of stored query result but expected %d records" % (raw_lines_count, numlines))
+
+
 def get_standby_host():
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
     segments = gparray.getDbList()

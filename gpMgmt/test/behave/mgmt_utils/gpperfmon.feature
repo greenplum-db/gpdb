@@ -40,6 +40,23 @@ Feature: gpperfmon
         Then psql should return a return code of 0
         Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history" is "true"
 
+    @gpperfmon_query_history
+    Scenario: gpperfmon adds to query_history table with carriage returns
+        Given gpperfmon is configured and running in qamode
+        When the user truncates "queries_history" tables in "gpperfmon"
+        And execute following sql in db "gpperfmon" and store result in the context
+            """
+            --some comment
+            SELECT 1
+            ;
+            """
+        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where query_text like '--some%'" is "true"
+        When execute following sql in db "gpperfmon" and store result in the context
+            """
+            SELECT query_text FROM queries_history where query_text like '--some%'
+            """
+        Then validate that first column of first stored row has "3" lines of raw output
+
     @gpperfmon_system_history
     Scenario: gpperfmon adds to system_history table
         Given gpperfmon is configured and running in qamode
