@@ -110,11 +110,6 @@
         script.</p>
       <p>When compiled with <codeph>zlib</codeph>, pgcrypto encryption functions are able to
         compress data before encrypting. </p>
-      <p>You can enable support for Federal Information Processing Standards (FIPS) 140-2 in
-        pgcrypto. FIPS 140-2 requires pgcrypto package version 1.2. The Greenplum Database
-          <codeph>pgcrypto.fips</codeph> server configuration parameter controls the FIPS 140-2
-        support in pgcrypto. See "Server Configuration Parameters" in the <i>Greenplum Database
-          Reference Guide</i>.</p>
       <p>Pgcrypto has various levels of encryption ranging from basic to advanced built-in
         functions. The following table shows the supported encryption algorithms.</p>
       <table id="table_wzb_4fd_lr">
@@ -123,13 +118,11 @@
           <colspec colwidth="33*" align="left"/>
           <colspec colwidth="33*" align="left"/>
           <colspec colwidth="33*" align="left"/>
-          <colspec colwidth="33*" align="left"/>
           <thead>
             <row>
               <entry> Value Functionality </entry>
               <entry> Built-in </entry>
               <entry> With OpenSSL </entry>
-              <entry>OpenSSL with FIPS 140-2</entry>
             </row>
           </thead>
           <tbody>
@@ -137,64 +130,54 @@
               <entry> MD5 </entry>
               <entry> yes </entry>
               <entry> yes </entry>
-              <entry>no</entry>
             </row>
             <row>
               <entry> SHA1 </entry>
               <entry> yes </entry>
               <entry> yes </entry>
-              <entry>no</entry>
             </row>
             <row>
               <entry> SHA224/256/384/512 </entry>
               <entry> yes </entry>
               <entry> yes <fn>SHA2 algorithms were added to OpenSSL in version 0.9.8. For older
                   versions, pgcrypto will use built-in code</fn>.</entry>
-              <entry>yes</entry>
             </row>
             <row>
               <entry> Other digest algorithms </entry>
               <entry> no </entry>
               <entry> yes <fn>Any digest algorithm OpenSSL supports is automatically picked up. This
                   is not possible with ciphers, which need to be supported explicitly.</fn></entry>
-              <entry>no</entry>
             </row>
             <row>
               <entry> Blowfish </entry>
               <entry> yes </entry>
               <entry> yes </entry>
-              <entry>no</entry>
             </row>
             <row>
               <entry> AES </entry>
               <entry> yes </entry>
               <entry> yes<fn>AES is included in OpenSSL since version 0.9.7. For older versions,
                   pgcrypto will use built-in code.</fn></entry>
-              <entry>yes</entry>
             </row>
             <row>
               <entry> DES/3DES/CAST5 </entry>
               <entry> no </entry>
               <entry> yes </entry>
-              <entry>yes<fn>3DES is supported, DES and CAST5 are not</fn></entry>
             </row>
             <row>
               <entry> Raw Encryption </entry>
               <entry> yes </entry>
               <entry> yes </entry>
-              <entry>yes</entry>
             </row>
             <row>
               <entry> PGP Symmetric-Key </entry>
               <entry> yes </entry>
               <entry> yes </entry>
-              <entry>yes</entry>
             </row>
             <row>
               <entry> PGP Public Key </entry>
               <entry> yes </entry>
               <entry> yes </entry>
-              <entry>yes</entry>
             </row>
           </tbody>
         </tgroup>
