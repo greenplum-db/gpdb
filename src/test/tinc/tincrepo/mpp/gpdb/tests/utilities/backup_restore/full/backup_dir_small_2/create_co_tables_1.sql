@@ -71,4 +71,4 @@ insert into co_table_child_1 values ('3_zero', 3, '3_zero', 3);
 Drop role co_user1;
 CREATE ROLE co_user1;
 
-Create table co_table4_1 with(appendonly=true, orientation=column) as select * from co_table2_1;
+Create table co_table4_1 with(appendonly=true, orientation=column) as select * from co_table2_1 DISTRIBUTED BY (col_text);
