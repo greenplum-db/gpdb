@@ -46,6 +46,16 @@ Feature: gpperfmon
         When the user truncates "system_history" tables in "gpperfmon"
         Then wait until the results from boolean sql "SELECT count(*) > 0 FROM system_history" is "true"
 
+    @gpperfmon_log_alert_history
+    Scenario: gpperfmon adds to log_alert_history table
+        Given gpperfmon is configured and running in qamode
+        When the user truncates "log_alert_history" tables in "gpperfmon"
+        And the user runs "psql non_existing_database"
+        Then psql should return a return code of 2
+        When the latest gpperfmon gpdb-alert log is copied to a file with a fake (earlier) timestamp
+        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM log_alert_history" is "true"
+        And the file with the fake timestamp no longer exists
+
     @gpperfmon_segment_history
     Scenario: gpperfmon adds to segment_history table
         Given gpperfmon is configured and running in qamode

@@ -12,7 +12,6 @@ import tarfile
 import thread
 import json
 import csv
-import glob
 import subprocess
 import commands
 
@@ -4867,3 +4866,25 @@ def impl(context):
             Then wait until the process "gpmmon" is up
             And wait until the process "gpsmon" is up
         ''')
+
+
+@given('the latest gpperfmon gpdb-alert log is copied to a file with a fake (earlier) timestamp')
+@when('the latest gpperfmon gpdb-alert log is copied to a file with a fake (earlier) timestamp')
+def impl(context):
+    gpdb_alert_file_path_src = sorted(glob.glob(os.path.join(os.getenv("MASTER_DATA_DIRECTORY"),
+                                    "gpperfmon",
+                                       "logs",
+                                       "gpdb-alert*")))[-1]
+    # typical filename would be gpdb-alert-2017-04-26_155335.csv
+    # setting the timestamp to a string that starts with `-` (em-dash)
+    #   will be sorted (based on ascii) before numeric timestamps
+    #   without colliding with a real timestamp
+    dest = re.sub(r"_\d{6}\.csv$", "_-takeme.csv", gpdb_alert_file_path_src)
+    shutil.copy(gpdb_alert_file_path_src, dest)
+    context.fake_timestamp_file = dest
+
+
+@then('the file with the fake timestamp no longer exists')
+def impl(context):
+    if os.path.exists(context.fake_timestamp_file):
+        raise Exception("expected no file at: %s" % context.fake_timestamp_file)
