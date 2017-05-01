@@ -1646,3 +1646,8 @@ def is_process_running(proc_name):
     if cmd.get_return_code() > 1:
         raise Exception("unexpected problem with pgrep, return code: %s" % cmd.get_return_code())
     return cmd.get_return_code() == 0
+
+
+def file_contains_line(filepath, target_line):
+    with open(filepath, 'r') as myfile:
+        return target_line in myfile.read().splitlines()

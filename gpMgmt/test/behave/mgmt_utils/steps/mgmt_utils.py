@@ -4843,7 +4843,11 @@ def impl(context):
 @given('gpperfmon is configured and running in qamode')
 @then('gpperfmon is configured and running in qamode')
 def impl(context):
-    if not check_db_exists("gpperfmon", "localhost") or not is_process_running("gpsmon"):
+    target_line = 'qamode = 1'
+    gpperfmon_config_file = "%s/gpperfmon/conf/gpperfmon.conf" % os.getenv("MASTER_DATA_DIRECTORY")
+    if not check_db_exists("gpperfmon", "localhost") or \
+            not is_process_running("gpsmon") or \
+            not file_contains_line(gpperfmon_config_file, target_line):
         context.execute_steps(u'''
             When the user runs "gpperfmon_install --port 15432 --enable --password foo"
             Then gpperfmon_install should return a return code of 0
