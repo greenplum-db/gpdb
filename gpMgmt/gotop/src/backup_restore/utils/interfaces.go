@@ -36,10 +36,10 @@ func (driver TestDriver) Connect(driverName string, dataSourceName string) (*sql
 	}
 }
 
-func (res TestResult) LastInsertId() (int64, error) {
+func (result TestResult) LastInsertId() (int64, error) {
 	return 0, nil
 }
 
-func (res TestResult) RowsAffected() (int64, error) {
-	return res.Rows, nil
+func (result TestResult) RowsAffected() (int64, error) {
+	return result.Rows, nil
 }

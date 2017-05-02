@@ -23,15 +23,15 @@ var _ = Describe("backup/predata tests", func() {
 		rowOne := backup.ColumnDefinition{1, "i", false, false, false, "int", sql.NullString{String: "", Valid: false}, ""}
 		rowTwo := backup.ColumnDefinition{2, "j", false, false, false, "character varying(20)", sql.NullString{String: "", Valid: false}, ""}
 		rowDropped := backup.ColumnDefinition{2, "j", false, false, true, "character varying(20)", sql.NullString{String: "", Valid: false}, ""}
-		rowOneEnc := backup.ColumnDefinition{1, "i", false, false, false, "int", sql.NullString{String: "compresstype=none,blocksize=32768,compresslevel=0", Valid: true}, ""}
-		rowTwoEnc := backup.ColumnDefinition{2, "j", false, false, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, ""}
+		rowOneEncoding := backup.ColumnDefinition{1, "i", false, false, false, "int", sql.NullString{String: "compresstype=none,blocksize=32768,compresslevel=0", Valid: true}, ""}
+		rowTwoEncoding := backup.ColumnDefinition{2, "j", false, false, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, ""}
 		rowNotNull := backup.ColumnDefinition{2, "j", true, false, false, "character varying(20)", sql.NullString{String: "", Valid: false}, ""}
-		rowEncNotNull := backup.ColumnDefinition{2, "j", true, false, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, ""}
+		rowEncodingNotNull := backup.ColumnDefinition{2, "j", true, false, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, ""}
 		rowOneDef := backup.ColumnDefinition{1, "i", false, true, false, "int", sql.NullString{String: "", Valid: false}, "42"}
 		rowTwoDef := backup.ColumnDefinition{2, "j", false, true, false, "character varying(20)", sql.NullString{String: "", Valid: false}, "'bar'::text"}
-		rowTwoEncDef := backup.ColumnDefinition{2, "j", false, true, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, "'bar'::text"}
+		rowTwoEncodingDef := backup.ColumnDefinition{2, "j", false, true, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, "'bar'::text"}
 		rowNotNullDef := backup.ColumnDefinition{2, "j", true, true, false, "character varying(20)", sql.NullString{String: "", Valid: false}, "'bar'::text"}
-		rowEncNotNullDef := backup.ColumnDefinition{2, "j", true, true, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, "'bar'::text"}
+		rowEncodingNotNullDef := backup.ColumnDefinition{2, "j", true, true, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, "'bar'::text"}
 
 		distRandom := "DISTRIBUTED RANDOMLY"
 		distSingle := "DISTRIBUTED BY (i)"
@@ -99,7 +99,7 @@ SET SUBPARTITION TEMPLATE
 		})
 		Context("One special table attribute", func() {
 			It("prints a CREATE TABLE block where one line has the given ENCODING and the other has the default ENCODING", func() {
-				col := []backup.ColumnDefinition{rowOneEnc, rowTwoEnc}
+				col := []backup.ColumnDefinition{rowOneEncoding, rowTwoEncoding}
 				table := backup.TableDefinition{distRandom, partDefEmpty, partTemplateDefEmpty, heapOpts}
 				backup.PrintCreateTableStatement(buffer, testTable, col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE public.tablename (
@@ -137,7 +137,7 @@ SET SUBPARTITION TEMPLATE
 		})
 		Context("Multiple special table attributes on one column", func() {
 			It("prints a CREATE TABLE block where one line contains both NOT NULL and ENCODING", func() {
-				col := []backup.ColumnDefinition{rowOneEnc, rowEncNotNull}
+				col := []backup.ColumnDefinition{rowOneEncoding, rowEncodingNotNull}
 				table := backup.TableDefinition{distRandom, partDefEmpty, partTemplateDefEmpty, heapOpts}
 				backup.PrintCreateTableStatement(buffer, testTable, col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE public.tablename (
@@ -155,7 +155,7 @@ SET SUBPARTITION TEMPLATE
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block where one line contains both DEFAULT and ENCODING", func() {
-				col := []backup.ColumnDefinition{rowOneEnc, rowTwoEncDef}
+				col := []backup.ColumnDefinition{rowOneEncoding, rowTwoEncodingDef}
 				table := backup.TableDefinition{distRandom, partDefEmpty, partTemplateDefEmpty, heapOpts}
 				backup.PrintCreateTableStatement(buffer, testTable, col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE public.tablename (
@@ -164,7 +164,7 @@ SET SUBPARTITION TEMPLATE
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block where one line contains all three of DEFAULT, NOT NULL, and ENCODING", func() {
-				col := []backup.ColumnDefinition{rowOneEnc, rowEncNotNullDef}
+				col := []backup.ColumnDefinition{rowOneEncoding, rowEncodingNotNullDef}
 				table := backup.TableDefinition{distRandom, partDefEmpty, partTemplateDefEmpty, heapOpts}
 				backup.PrintCreateTableStatement(buffer, testTable, col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE public.tablename (
@@ -568,4 +568,124 @@ SET SUBPARTITION TEMPLATE
 			Expect(info[2].DefVal).To(Equal("3"))
 		})
 	})
+	Describe("PrintCreateSequenceStatements", func() {
+		buffer := gbytes.NewBuffer()
+		seqDefault := backup.QuerySequence{"seq_name", 7, 1, 9223372036854775807, 1, 5, 42, false, true}
+		seqNegIncr := backup.QuerySequence{"seq_name", 7, -1, -1, -9223372036854775807, 5, 42, false, true}
+		seqMaxPos := backup.QuerySequence{"seq_name", 7, 1, 100, 1, 5, 42, false, true}
+		seqMinPos := backup.QuerySequence{"seq_name", 7, 1, 9223372036854775807, 10, 5, 42, false, true}
+		seqMaxNeg := backup.QuerySequence{"seq_name", 7, -1, -10, -9223372036854775807, 5, 42, false, true}
+		seqMinNeg := backup.QuerySequence{"seq_name", 7, -1, -1, -100, 5, 42, false, true}
+		seqCycle := backup.QuerySequence{"seq_name", 7, 1, 9223372036854775807, 1, 5, 42, true, true}
+		seqStart := backup.QuerySequence{"seq_name", 7, 1, 9223372036854775807, 1, 5, 42, false, false}
+
+		It("can print a sequence with all default options", func() {
+			sequences := []backup.QuerySequence{seqDefault}
+			backup.PrintCreateSequenceStatements(buffer, sequences)
+			testutils.ExpectRegexp(buffer, `CREATE SEQUENCE seq_name
+	INCREMENT BY 1
+	NO MAXVALUE
+	NO MINVALUE
+	CACHE 5;
+
+SELECT pg_catalog.setval('seq_name', 7, true);`)
+		})
+		It("can print a decreasing sequence", func() {
+			sequences := []backup.QuerySequence{seqNegIncr}
+			backup.PrintCreateSequenceStatements(buffer, sequences)
+			testutils.ExpectRegexp(buffer, `CREATE SEQUENCE seq_name
+	INCREMENT BY -1
+	NO MAXVALUE
+	NO MINVALUE
+	CACHE 5;
+
+SELECT pg_catalog.setval('seq_name', 7, true);`)
+		})
+		It("can print an increasing sequence with a maximum value", func() {
+			sequences := []backup.QuerySequence{seqMaxPos}
+			backup.PrintCreateSequenceStatements(buffer, sequences)
+			testutils.ExpectRegexp(buffer, `CREATE SEQUENCE seq_name
+	INCREMENT BY 1
+	MAXVALUE 100
+	NO MINVALUE
+	CACHE 5;
+
+SELECT pg_catalog.setval('seq_name', 7, true);`)
+		})
+		It("can print an increasing sequence with a minimum value", func() {
+			sequences := []backup.QuerySequence{seqMinPos}
+			backup.PrintCreateSequenceStatements(buffer, sequences)
+			testutils.ExpectRegexp(buffer, `CREATE SEQUENCE seq_name
+	INCREMENT BY 1
+	NO MAXVALUE
+	MINVALUE 10
+	CACHE 5;
+
+SELECT pg_catalog.setval('seq_name', 7, true);`)
+		})
+		It("can print a decreasing sequence with a maximum value", func() {
+			sequences := []backup.QuerySequence{seqMaxNeg}
+			backup.PrintCreateSequenceStatements(buffer, sequences)
+			testutils.ExpectRegexp(buffer, `CREATE SEQUENCE seq_name
+	INCREMENT BY -1
+	MAXVALUE -10
+	NO MINVALUE
+	CACHE 5;
+
+SELECT pg_catalog.setval('seq_name', 7, true);`)
+		})
+		It("can print a decreasing sequence with a minimum value", func() {
+			sequences := []backup.QuerySequence{seqMinNeg}
+			backup.PrintCreateSequenceStatements(buffer, sequences)
+			testutils.ExpectRegexp(buffer, `CREATE SEQUENCE seq_name
+	INCREMENT BY -1
+	NO MAXVALUE
+	MINVALUE -100
+	CACHE 5;
+
+SELECT pg_catalog.setval('seq_name', 7, true);`)
+		})
+		It("can print a sequence that cycles", func() {
+			sequences := []backup.QuerySequence{seqCycle}
+			backup.PrintCreateSequenceStatements(buffer, sequences)
+			testutils.ExpectRegexp(buffer, `CREATE SEQUENCE seq_name
+	INCREMENT BY 1
+	NO MAXVALUE
+	NO MINVALUE
+	CACHE 5
+	CYCLE;
+
+SELECT pg_catalog.setval('seq_name', 7, true);`)
+		})
+		It("can print a sequence with a start value", func() {
+			sequences := []backup.QuerySequence{seqStart}
+			backup.PrintCreateSequenceStatements(buffer, sequences)
+			testutils.ExpectRegexp(buffer, `CREATE SEQUENCE seq_name
+	START WITH 7
+	INCREMENT BY 1
+	NO MAXVALUE
+	NO MINVALUE
+	CACHE 5;
+
+SELECT pg_catalog.setval('seq_name', 7, false);`)
+		})
+	})
+	Describe("PrintCreateSchemaStatements", func() {
+		buffer := gbytes.NewBuffer()
+
+		It("can print schema with comments", func() {
+			schemas := []utils.DBObject{utils.DBObject{0, "schema_with_comments", sql.NullString{"Comment, not comet", true}}}
+
+			backup.PrintCreateSchemaStatements(buffer, schemas)
+			testutils.ExpectRegexp(buffer, `CREATE SCHEMA schema_with_comments;
+COMMENT ON SCHEMA schema_with_comments IS 'Comment, not comet';`)
+		})
+		It("can print schema with no comments", func() {
+			schemas := []utils.DBObject{utils.DBObject{0, "schema_with_no_comments", sql.NullString{"", false}}}
+
+			backup.PrintCreateSchemaStatements(buffer, schemas)
+			testutils.ExpectRegexp(buffer, `CREATE SCHEMA schema_with_no_comments;`)
+		})
+	})
+
 })

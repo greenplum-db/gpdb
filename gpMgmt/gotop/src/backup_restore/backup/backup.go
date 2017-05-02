@@ -38,10 +38,10 @@ func DoSetup() { // Handles setup that must be done after parsing flags
 
 func DoBackup() {
 	logger.Info("Dump Key = %s", utils.CurrentTimestamp())
-	logger.Info("Dump Database = %s", connection.DBName)
+	logger.Info("Dump Database = %s", utils.QuoteIdent(connection.DBName))
 	logger.Info("Database Size = %s", connection.GetDBSize())
 
-	predataFilename := "/tmp/metadata.sql"
+	predataFilename := "/tmp/predata.sql"
 	postdataFilename := "/tmp/postdata.sql"
 
 	connection.Begin()
@@ -61,8 +61,13 @@ func DoBackup() {
 func backupPredata(filename string, tables []utils.Table) {
 	predataFile := utils.MustOpenFile(filename)
 
+	logger.Verbose("Writing CREATE DATABASE statement to predata file")
+	PrintCreateDatabaseStatement(predataFile)
+
 	logger.Verbose("Writing CREATE SCHEMA statements to predata file")
-	PrintCreateSchemaStatements(predataFile, tables)
+	schemas := GetAllUserSchemas(connection)
+	PrintCreateSchemaStatements(predataFile, schemas)
+
 	logger.Verbose("Writing CREATE TABLE statements to predata file")
 	for _, table := range tables {
 		columnDefs, tableDef := ConstructDefinitionsForTable(connection, table)
@@ -72,6 +77,10 @@ func backupPredata(filename string, tables []utils.Table) {
 	logger.Verbose("Writing ADD CONSTRAINT statements to predata file")
 	allConstraints, allFkConstraints := ConstructConstraintsForAllTables(connection, tables)
 	PrintConstraintStatements(predataFile, allConstraints, allFkConstraints)
+
+	logger.Verbose("Writing CREATE SEQUENCE statements to predata file")
+	sequenceDefs := GetAllSequenceDefinitions(connection)
+	PrintCreateSequenceStatements(predataFile, sequenceDefs)
 }
 
 func backupPostdata(filename string, tables []utils.Table) {
