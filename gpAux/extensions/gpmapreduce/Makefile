@@ -39,9 +39,6 @@ internal:
 	rm -f $(SRCDIR)/mapred.o $(SRCDIR)/main.o
 	$(MAKE) CFLAGS="-DINTERNAL_BUILD $(CFLAGS)" all
 
-check:
-	$(MAKE) -C test
-
 $(SRCDIR)/yaml_scan.c: $(SRCDIR)/yaml_parse.h $(SRCDIR)/yaml_scan.l
 ifdef FLEX
 	cd $(SRCDIR) ; \

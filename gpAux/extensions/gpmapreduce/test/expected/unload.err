@@ -1,9 +1,0 @@
--- start_matchsubs
--- m/mapreduce_\d+/
--- s/mapreduce_\d+/mapreduce_DUMMY/
--- m/\(\w+.\w+:[0-9]+\)$/
--- s/\(\w+.\w+:[0-9]+\)$/\(file:line\)/
--- m|file://([^/]*)/|
--- s|file://([^/]*)/|file://HOSTNAME/|
--- end_matchsubs
-mapreduce_72456_run_1
