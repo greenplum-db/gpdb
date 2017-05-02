@@ -92,6 +92,7 @@ typedef struct CachedPlan
 extern void InitPlanCache(void);
 extern CachedPlanSource *CreateCachedPlan(Node *raw_parse_tree,
 				 const char *query_string,
+				 NodeTag sourceTag,
 				 const char *commandTag,
 				 Oid *param_types,
 				 int num_params,
@@ -101,6 +102,7 @@ extern CachedPlanSource *CreateCachedPlan(Node *raw_parse_tree,
 				 bool fixed_result);
 extern CachedPlanSource *FastCreateCachedPlan(Node *raw_parse_tree,
 					 char *query_string,
+					 NodeTag sourceTag,
 					 const char *commandTag,
 					 Oid *param_types,
 					 int num_params,

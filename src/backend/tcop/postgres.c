@@ -2145,6 +2145,7 @@ exec_parse_message(const char *query_string,	/* string to execute */
 
 		unnamed_stmt_psrc = FastCreateCachedPlan(raw_parse_tree,
 												 pstrdup(query_string),
+												 sourceTag,
 												 commandTag,
 												 newParamTypes,
 												 numParams,
