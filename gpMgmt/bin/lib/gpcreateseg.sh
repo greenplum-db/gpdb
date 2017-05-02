@@ -58,14 +58,6 @@ TMP_PG_HBA=/tmp/pg_hba_conf_master.$$
 #******************************************************************************
 # Functions
 #******************************************************************************
-USAGE () {
-    $ECHO
-    $ECHO "      `basename $0`"
-    $ECHO
-    $ECHO "      Script called by gpinitsystem, this should not"
-    $ECHO "      be run directly"
-    exit $EXIT_STATUS
-}
 
 CHK_CALL () {
 	FILE_PREFIX=`$ECHO $PARALLEL_STATUS_FILE|$CUT -d"." -f1`
@@ -253,16 +245,15 @@ START_QE() {
 # Main Section
 #******************************************************************************
 trap '$ECHO "KILLED:$SEGMENT_LINE" >> $PARALLEL_STATUS_FILE;ERROR_EXIT "[FATAL]:-[$INST_COUNT]-Recieved INT or TERM signal" 2' INT TERM
-while getopts ":v'?'aiqe:c:l:p:m:h:on:s:" opt
+while getopts ":qp:" opt
 do
 	case $opt in
-		v ) VERSION_INFO ;;
-		'?' ) USAGE ;;
 		q ) unset VERBOSE ;;
-	        p ) PG_CONF_ADD_FILE=$OPTARG
+		p ) PG_CONF_ADD_FILE=$OPTARG
 		    shift
 		    shift ;;
-		* ) USAGE 
+		\? ) echo "Invalid option: -$OPTARG"
+			 exit 1 ;;
 	esac
 done
 

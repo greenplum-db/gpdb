@@ -1,8 +1,6 @@
 #!/bin/bash
 #	Filename:-		gp_bash_functions.sh
-#	Version:-		$Revision$
-#	Updated:-		$Date$
-#	Status:-		Released	
+#	Status:-		Released
 #	Author:-		G L Coombe (Greenplum)
 #	Contact:-		gcoombe@greenplum.com
 #	Release date:-		March 2006
@@ -10,17 +8,6 @@
 #                               Copyright (c) Metapa 2005. All Rights Reserved.
 #                               Copyright (c) Greenplum 2005. All Rights Reserved
 #	Brief descn:-		Common functions used by various scripts
-#******************************************************************************
-# Update History
-#******************************************************************************
-# Ver	Date		Who		Update
-#******************************************************************************
-# Detailed Description
-#******************************************************************************
-#
-#******************************************************************************
-# Prep Code
-#
 #***************************************************************
 # Location Functions
 #******************************************************************************
@@ -96,7 +83,6 @@ findMppPath() {
 AWK=`findCmdInPath awk`
 BASENAME=`findCmdInPath basename`
 CAT=`findCmdInPath cat`
-CLEAR=`findCmdInPath clear`
 CKSUM=`findCmdInPath cksum`
 CUT=`findCmdInPath cut`
 DATE=`findCmdInPath date`
@@ -105,28 +91,16 @@ DIRNAME=`findCmdInPath dirname`
 DF=`findCmdInPath df`
 DU=`findCmdInPath du`
 ECHO=`findCmdInPath echo`
-#ETHTOOL=`findCmdInPath ethtool`
-EXPR=`findCmdInPath expr`
 FIND=`findCmdInPath find`
-TABECHO=$ECHO
-PROMPT="$ECHO"
-#TABECHO="$ECHO -e \t"
-#PROMPT="$ECHO -n -e \t"
 GREP=`findCmdInPath grep`
-GZIPCMD=`findCmdInPath gzip`
 EGREP=`findCmdInPath egrep`
 HEAD=`findCmdInPath head`
 HOSTNAME=`findCmdInPath hostname`
-IPCS=`findCmdInPath ipcs`
 IFCONFIG=`findCmdInPath ifconfig`
-KILL=`findCmdInPath kill`
 LESSCMD=`findCmdInPath less`
-LS=`findCmdInPath ls`
 LOCALE=`findCmdInPath locale`
 MV=`findCmdInPath mv`
-MORECMD=`findCmdInPath more`
 MKDIR=`findCmdInPath mkdir`
-MKFIFO=`findCmdInPath mkfifo`
 NETSTAT=`findCmdInPath netstat`
 PING=`findCmdInPath ping`
 PS=`findCmdInPath ps`
@@ -136,17 +110,13 @@ SCP=`findCmdInPath scp`
 SED=`findCmdInPath sed`
 SLEEP=`findCmdInPath sleep`
 SORT=`findCmdInPath sort`
-SPLIT=`findCmdInPath split`
 SSH=`findCmdInPath ssh`
 TAIL=`findCmdInPath tail`
-TAR=`findCmdInPath tar`
 TEE=`findCmdInPath tee`
 TOUCH=`findCmdInPath touch`
-#PTIME=`findCmdInPath ptime`
 TR=`findCmdInPath tr`
 WC=`findCmdInPath wc`
 WHICH=`findCmdInPath which`
-WHOAMI=`findCmdInPath whoami`
 ZCAT=`findCmdInPath zcat`
 #***************#******************************************************************************
 # Script Specific Variables
@@ -175,36 +145,24 @@ SCRIPTDIR="`$DIRNAME $PSQLBIN`/bin"
 #******************************************************************************
 # Greenplum Scripts
 #******************************************************************************
-GPACTIVATEMASTER=$SCRIPTDIR/gpactivatemaster
-GPACTIVATESTANDBY=$SCRIPTDIR/gpactivatestandby
-GPADDMIRRORS=$SCRIPTDIR/gpaddmirrors
 GPINITSYSTEM=$SCRIPTDIR/gpinitsystem
 GPCONFIG=$SCRIPTDIR/gpconfig
 GPCRONDUMP=$SCRIPTDIR/gpcrondump
-GPDELETESYSTEM=$SCRIPTDIR/gpdeletesystem
 GPINITSTANDBY=$SCRIPTDIR/gpinitstandby
-GPREBUILDCLUSTER=$SCRIPTDIR/gprebuildcluster
 GPRECOVERSEG=$SCRIPTDIR/gprecoverseg
 GPSTART=$SCRIPTDIR/gpstart
 GPSTATE=$SCRIPTDIR/gpstate
 GPSTOP=$SCRIPTDIR/gpstop
-MAILFILE=$SCRIPTDIR/mail_contacts
-HMAILFILE=$HOME/mail_contacts
 GPDOCDIR=${GPHOME}/docs/cli_help/
-GPSUBSCRIPTDIR=${SCRIPTDIR}/lib
 #******************************************************************************
 # Greenplum Command Variables
 #******************************************************************************
 INITDB=$PSQLBIN/initdb
-MPPLOADER=$CMDBIN/loader.sh
 PG_CTL=$PSQLBIN/pg_ctl
 PG_DUMP=$PSQLBIN/pg_dump
 PG_DUMPALL=$PSQLBIN/pg_dumpall
 PG_RESTORE=$PSQLBIN/pg_restore
 PSQL=$PSQLBIN/psql
-GP_DUMP=$PSQLBIN/gp_dump
-GP_RESTORE=$PSQLBIN/gp_restore
-GPSYNCMASTER=$PSQLBIN/gpsyncmaster
 
 
 GPLISTDATABASEQTY="SELECT d.datname as \"Name\",
@@ -228,7 +186,6 @@ PG_HBA=pg_hba.conf
 if [ x"$TRUSTED_SHELL" = x"" ]; then TRUSTED_SHELL="$SSH"; fi
 if [ x"$TRUSTED_COPY" = x"" ]; then TRUSTED_COPY="$SCP"; fi
 PG_CONF_ADD_FILE=$WORKDIR/postgresql_conf_gp_additions
-RECOVER_FLAG=/tmp/active_recovery_in_progress
 SCHEMA_FILE=cdb_schema.sql
 DEFAULTDB=template1
 
@@ -243,22 +200,7 @@ CONFIG_TABLE="(SELECT dbid, content, role, preferred_role, mode, status,
 GP_PG_VIEW="(SELECT dbid, role = 'p' as isprimary, content, status = 'u' as valid,
 		preferred_role = 'p' as definedprimary FROM gp_segment_configuration)"
 
-ACTIVITY_TABLE=pg_stat_activity
-GP_INITDB_VER_TABLE=gp_version_at_initdb
-CLASS_TABLE=pg_class
-EXTERNAL_TABLE=pg_exttable
-SCHEMA_TABLE=pg_namespace
-ATTRIBUTE_TABLE=pg_attribute
-INHERIT_TABLE=pg_inherits
-INDEX_TABLE=pg_indexes
-TYPE_TABLE=pg_type
-CONSTRAINT_TABLE=pg_constraint
-RULES_TABLE=pg_rules
-PG_SIZE_FUNC=pg_relation_size
-DISTRIB_TABLE=gp_distribution_policy
-CHILD_TABLE_ID="_c_d_"
 DEFAULT_CHK_PT_SEG=8
-#DEFAULT_IP_ALLOW="0.0.0.0/0"
 DEFAULT_QD_MAX_CONNECT=250
 QE_CONNECT_FACTOR=3
 # DEFAULT_BUFFERS sets the default shared_buffers unless overridden by '-b'.
@@ -270,7 +212,6 @@ DEBUG_LEVEL=0
 BATCH_DEFAULT=60
 WAIT_LIMIT=1800
 WARN_MARK="<<<<<"
-IDX_TYPE_ARRAY=(btree bitmap hash)
 #******************************************************************************
 # Functions
 #******************************************************************************
@@ -282,24 +223,6 @@ IN_ARRAY () {
         fi
     done
     return 0
-}
-
-CHK_DB_QD_SET () {
-		if [ ! $MASTER_DATA_DIRECTORY ]; then
-				ERROR_EXIT "[FATAL]:-MASTER_DATA_DIRECTORY parameter not set, update user start-up file [i.e. .bashrc]." 2
-		fi
-}
-
-VERSION_INFO () {
-		VERSION=`$HEAD -10 $0|$GREP -i Version: | $CUT -d# -f2|$CUT -d- -f2|$TR -d '\t'`
-		STATUS=`$HEAD -10 $0|$GREP -i Status: | $CUT -d# -f2|$CUT -d- -f2|$TR -d '\t'`
-		UPDATE=`$HEAD -10 $0|$GREP -i Updated:| $CUT -d# -f2|$CUT -d- -f2|$TR -d '\t'`
-		CHK_SUM=`$CKSUM $0|$AWK '{print $1" "$2}'`
-		$ECHO "`basename $0` Version   = $VERSION"
-		$ECHO "`basename $0` Status    = $STATUS"
-		$ECHO "`basename $0` Update    = $UPDATE"
-		$ECHO "`basename $0` Check sum = $CHK_SUM"
-		exit 0
 }
 
 LOG_MSG () {
@@ -389,26 +312,6 @@ ERROR_EXIT () {
 				fi
 		fi
 		exit $2
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
-READ_CHK () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	NROWS=`env PGOPTIONS="-c gp_session_role=utility" $PSQL -A -t -p $MASTER_PORT -d "$DEFAULTDB" -c" select * from $CONFIG_TABLE a where port<0;"`
-	RETVAL=$?
-	if [ $RETVAL -ne 0 ];then
-		READ_COUNT=0
-		#Could not connect to database so set read count to zero
-		LOG_MSG "[WARN]:-Could not obtain read count from database"
-		EXIT_STATUS=1
-	else
-		if [ x"" == x"$NROWS" ];then
-			READ_COUNT=0
-		else
-			READ_COUNT=`$ECHO $NROWS|$WC -l`
-		fi
-		LOG_MSG "[INFO]:-Obtained -ve port read count $READ_COUNT"
-	fi
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
@@ -537,206 +440,7 @@ SED_PG_CONF () {
 
 CHK_EXTERNAL () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	EXTERNAL=`$EXPORT_LIB_PATH;$PSQL -A -t -q -p  $MASTER_PORT -d "$QD_DBNAME" -c"select 1 from $EXTERNAL_TABLE where reloid in (select oid from $CLASS_TABLE where relname='$TABLENAME' and relnamespace in (select oid from $SCHEMA_TABLE where nspname='$SCHEMA_NAME'));"|$WC -l`
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
-
-# Specifies the regular expressions used to parse a qualified table name.
-declare -r TABLE_IDENTIFIER_PATTERN='((")((([^"]{1,})|""){1,})")|([^".]{1,})'
-declare -r QUALIFIED_TABLE_IDENTIFIER_PATTERN="^((${TABLE_IDENTIFIER_PATTERN})\\.){0,1}(${TABLE_IDENTIFIER_PATTERN})$"
-
-GET_TABLE_IDENTIFIER () {
-    # -----------------------------------------------------------------
-    # Parses a properly quoted, fully-qualified SQL table name into
-    # the schema and table name parts.  If a part is quoted, the quotes
-    # are removed; if a part is not quoted, the part is lower-cased.
-    #
-    # The schema name, if any, is returned in ${SQL_NAME[0]}, the
-    # "quoted" version in ${SQL_NAME[2]}; the table name is returned 
-    # in ${SQL_NAME[1]}, the "quoted" version in ${SQL_NAME[3]}.
-    # 
-    # Quoted identifiers can contain any character, except the 
-    # character with code zero. (To include a double quote, write two 
-    # double quotes.)
-    # -----------------------------------------------------------------
-    if PARSE_TABLE_IDENTIFIER "${1}" ; then
-        # Get schema name; may be omitted
-        if [ "${BASH_REMATCH[2]}" ] ; then
-            if [ "${BASH_REMATCH[4]}" ] ; then
-                # Quoted name; undouble quotes but otherwise take literally
-                SQL_NAME[0]="${BASH_REMATCH[5]//\"\"/\"}"
-                SQL_NAME[2]="\"${BASH_REMATCH[5]}\""
-            else
-                # Unquoted name; make lower-case
-                if [ "$OS_TYPE" == "sunos" ] ; then
-                	SQL_NAME[0]=$($ECHO "${BASH_REMATCH[2]}" | $MBTR '[:upper:]' '[:lower:]')
-                else
-                	SQL_NAME[0]=$($ECHO "${BASH_REMATCH[2]}" | $TR '[:upper:]' '[:lower:]')
-                fi
-                SQL_NAME[2]="${SQL_NAME[0]}"
-            fi
-        else
-            SQL_NAME[0]=
-        fi
-        # Get table name
-        if [ "${BASH_REMATCH[11]}" ] ; then
-            # Quoted name; undouble quotes but otherwise take literally
-            SQL_NAME[1]="${BASH_REMATCH[12]//\"\"/\"}"
-            SQL_NAME[3]="\"${BASH_REMATCH[12]}\""
-        else
-            # Unquoted name; make lower-case
-            if [ "$OS_TYPE" == "sunos" ] ; then
-                SQL_NAME[1]=$($ECHO "${BASH_REMATCH[9]}" | $MBTR '[:upper:]' '[:lower:]')
-            else
-                SQL_NAME[1]=$($ECHO "${BASH_REMATCH[9]}" | $TR '[:upper:]' '[:lower:]')
-            fi            
-            SQL_NAME[3]="${SQL_NAME[1]}"
-        fi
-    else
-        SQL_NAME=('' '' '' '')
-    fi
-}
-
-# Determine if the bash regular expression operator '=~' is supported.
-# If so, define the version of PARSE_TABLE_IDENTIFER using the operator;
-# otherwise, use the sed-based version.
-if $BASH -c '[[ "string" =~ string ]]' 2>/dev/null ; then
-    eval 'PARSE_TABLE_IDENTIFIER () {
-        [[ "${1}" =~ ${QUALIFIED_TABLE_IDENTIFIER_PATTERN} ]]
-    }'
-else
-    # Determine the option, if any, for sed to enable support of the regular
-    # expression used to parse the qualified table identifier.
-    for reOption in "-r" "-E" ""; do
-        reTest=$($ECHO "\"Mixed Case\".\"TableName\"" | $SED ${reOption} -e "s/${QUALIFIED_TABLE_IDENTIFIER_PATTERN}/\\9/" 2>/dev/null)
-        if [ $? -eq 0 ] && [ "${reTest}" == "\"TableName\"" ] ; then
-            break
-        fi
-        reOption=
-    done
-    unset reTest
-    if [ ! "${reOption}" ] ; then
-        ERROR_EXIT "[FATAL]:-$SED lacks support for the regular expression used to parse qualified table identifiers" 2
-    fi
-
-    # The PARSE_TABLE_IDENTIFIER function provides a functional replacement for a 
-    # [[ "${1}" =~ ${QUALIFIED_TABLE_IDENTIFIER} ]] statement that could be used
-    # in the GET_TABLE_IDENTIFIER function in newer versions of BASH.  Once support
-    # for "old" BASH is dropped, the call to this function should be replaced with
-    # the BASH regular expression pattern matching expression above.  (Attempts to
-    # conditionally use the =~ operator fail BASH syntax checking.)
-    PARSE_TABLE_IDENTIFIER () {
-        local nl=$'\\\n'
-        local nullTag=$'~\t~'
-        names="$($ECHO "${1}" | $SED ${reOption} -n -e "
-            p
-            h
-            # Process the schema portion of the name
-            s/${QUALIFIED_TABLE_IDENTIFIER_PATTERN}/${nl}\\1${nl}\\2${nl}\\3${nl}\\4${nl}\\5${nl}\\6${nl}\\7${nl}\\8/
-            x
-            # Reduce to table portion of the name (must have)
-            s/${QUALIFIED_TABLE_IDENTIFIER_PATTERN}/\\9/
-            t haveTable
-            q
-            :haveTable
-            s/(${TABLE_IDENTIFIER_PATTERN})$/\\1${nl}\\2${nl}\\3${nl}\\4${nl}\\5${nl}\\6${nl}\\7${nl}/
-            H
-            g
-            # Word splitting eliminates adjacent separators; provide a "null" value
-            :setNulls
-            s/\\n\\n/${nl}${nullTag}${nl}/g
-            t setNulls
-            p
-            ")"
-        local oldIFS="${IFS}"
-        IFS=$'\n'
-        BASH_REMATCH=(${names})
-        IFS="${oldIFS}"
-        if [ "${#BASH_REMATCH[@]}" -eq 1 ]
-        then
-            # No table name appeared (only original string is in ${names}
-            BASH_REMATCH=()
-            return 1
-        else
-            # Reduce the "null" value to an actual empty string
-            local i
-            for (( i=0; i <"${#BASH_REMATCH[@]}"; i++ )); do
-                [ "${BASH_REMATCH[$i]}" == "${nullTag}" ] && BASH_REMATCH[$i]=""
-            done
-        fi
-        return 0
-    }
-
-fi
-
-CHK_EXISTS_TABLE () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	TABLENAME="$1"
-	MASTER_PORT=$2
-	QD_DBNAME=$3
-	if [ $# -ne 3 ];then
-		ERROR_EXIT "[FATAL]:-Incorrect number of parameters passed expected 3 got $#" 2;fi
-	DB_THERE=`$EXPORT_LIB_PATH;$PSQL -A -t -q -p  $MASTER_PORT -d "$DEFAULTDB" -c"select 1 from pg_database where datname='$QD_DBNAME';" |$WC -l`
-	if [ $DB_THERE -eq 0 ];then
-		ERROR_EXIT "[FATAL]:-Database $QD_DBNAME does not exist" 2
-	fi
-	LOG_MSG "[INFO]:-Checking for table $TABLENAME in database $QD_DBNAME"
-	GET_TABLE_IDENTIFIER "$TABLENAME"
-	SCHEMA_NAME="${SQL_NAME[0]}"
-	QUOTED_SCHEMA_NAME="${SQL_NAME[2]}"
-	TABLENAME="${SQL_NAME[1]}"
-	QUOTED_TABLENAME="${SQL_NAME[3]}"
-	if [ "${SCHEMA_NAME}" ];then
-		TMP_OUT=`$EXPORT_LIB_PATH;$PSQL -A -t -q -p  $MASTER_PORT -d "$QD_DBNAME" -c"select 1 from pg_class where relname='$TABLENAME' and relnamespace in (select oid from pg_namespace where nspname='$SCHEMA_NAME');"`
-		TAB_COUNT=`$EXPORT_LIB_PATH;$PSQL -A -t -q -p  $MASTER_PORT -d "$QD_DBNAME" -c"select 1 from pg_class where relname='$TABLENAME' and relnamespace in (select oid from pg_namespace where nspname='$SCHEMA_NAME');" |$WC -l`
-		if [ $TAB_COUNT -eq 1 ];then
-			LOG_MSG "[INFO]:-Found table ${QUOTED_SCHEMA_NAME}.${QUOTED_TABLENAME} in database $QD_DBNAME"
-			CHK_EXTERNAL
-			PARTITIONED=`$EXPORT_LIB_PATH;$PSQL -A -t -q -p  $MASTER_PORT -d "$QD_DBNAME" -c"select relhassubclass from pg_class where relname='$TABLENAME' and relnamespace in (select oid from pg_namespace where nspname='$SCHEMA_NAME');"`
-		fi
-	else
-	    TMP_OUT=`$EXPORT_LIB_PATH;$PSQL -A -t -q -p  $MASTER_PORT -d "$QD_DBNAME" -c"select 1 from pg_class where relname='$TABLENAME';"`
-		TAB_COUNT=`$EXPORT_LIB_PATH;$PSQL -A -t -q -p  $MASTER_PORT -d "$QD_DBNAME" -c"select 1 from pg_class where relname='$TABLENAME';" |$WC -l`
-		if [ $TAB_COUNT -eq 1 ];then
-			PARTITIONED=`$EXPORT_LIB_PATH;$PSQL -A -t -q -p  $MASTER_PORT -d "$QD_DBNAME" -c"select relhassubclass from pg_class where relname='$TABLENAME';"`
-			SCHEMA_NAME=`$EXPORT_LIB_PATH;$PSQL -A -t -q -p  $MASTER_PORT -d "$QD_DBNAME" -c"select nspname from pg_namespace where oid in(select relnamespace from pg_class where relname='$TABLENAME');"`
-			CHK_EXTERNAL
-		fi
-	fi
-#		$EXPORT_LIB_PATH;$PSQL -q -p  $MASTER_PORT -d "$QD_DBNAME" -c"\d $TABLENAME;" -o /dev/null
-	if [ $TAB_COUNT -eq 0 ] || [ $TAB_COUNT -gt 1 ];then
-		EXISTS=1
-	else
-		EXISTS=0
-	fi
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
-EVENT_MAIL () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	case $OS_TYPE in
-		sunos ) MAIL=/bin/mailx ;;
-		*) MAIL=`findCmdInPath mail` ;;
-	esac
-	MAIL_SUBJECT=$1;shift
-	MAIL_MESSAGE=$1
-	if [ ! -f $MAILFILE ] && [ ! -f $HMAILFILE ] ;then
-		LOG_MSG "[WARN]:-No $MAILFILE" 1
-		LOG_MSG "[WARN]:-or $HMAILFILE" 1
-		LOG_MSG "[WARN]:-Unable to send email notification" 1
-		LOG_MSG "[INFO]:-To enable email notification, create $MAILFILE" 1
-		LOG_MSG "[INFO]:-or $HMAILFILE containing required email addresses" 1
-		EXIT_STATUS=1
-	else
-		if [ -f $HMAILFILE ];then MAILFILE=$HMAILFILE;fi
-		for MAIL_ADDRESS in `$CAT $MAILFILE | $GREP -v "^#"`
-		do
-			LOG_MSG "[INFO]:-Sending mail to $MAIL_ADDRESS using file $MAILFILE" 1
-			$ECHO "$MAIL_MESSAGE"|$MAIL -s "$MAIL_SUBJECT" $MAIL_ADDRESS
-			ERROR_CHK $? "send email to $MAIL_ADDRESS" 1
-		done
-	fi
+	EXTERNAL=`$EXPORT_LIB_PATH;$PSQL -A -t -q -p  $MASTER_PORT -d "$QD_DBNAME" -c"select 1 from pg_exttable where reloid in (select oid from pg_class where relname='$TABLENAME' and relnamespace in (select oid from pg_namespace where nspname='$SCHEMA_NAME'));"|$WC -l`
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
@@ -836,14 +540,6 @@ CREATE_SPREAD_MIRROR_ARRAY () {
 		((SEGS_PROCESSED=$SEGS_PROCESSED+1))
 	done
 	if [ $DEBUG_LEVEL -eq 0 ] && [ x"" != x"$VERBOSE" ];then $ECHO;fi
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
-GET_MAX_LEN () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	LOG_MSG "[INFO]:-Formatting output, please wait..." 1
-	GET_MASTER_PORT $MASTER_DATA_DIRECTORY
-	LEN_ARRAY=(`$EXPORT_LIB_PATH;env PGOPTIONS="-c gp_session_role=utility" $PSQL -F" " -A -t -q -p  $MASTER_PORT -d "$DEFAULTDB" -c"select max(length(hostname))+1, max(length(port))+1, max(length(datadir))+1, max(length(content))+1, max(length(dbid)) from $CONFIG_TABLE a where content<>-1;"`)
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
@@ -964,46 +660,6 @@ CHK_MULTI_HOME () {
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
-GET_DISTRIB_COLS () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	if [ $# -ne 3 ];then
-		ERROR_EXIT "[FATAL]:-Incorrect # parameters supplied, got $# expected 3" 2;fi
-	T_NAME=$1
-	if [ `$ECHO $1|$GREP -c "\."` -eq 1 ];then
-		T_NAME=`$ECHO $1|$CUT -d"." -f2`
-		S_NAME=`$ECHO $1|$CUT -d"." -f1`
-		DISTRIB_COLS=`${EXPORT_LIB_PATH};$PSQL -p $2 -d "$3" -A -t -c"select attrnums from  $DISTRIB_TABLE  where localoid in (select oid from pg_class where relname='${T_NAME}' and relnamespace in (select oid from pg_namespace where nspname='${S_NAME}'));"`
-		if [ x"" == x"$DISTRIB_COLS" ];then
-			DISTRIB_COLS='';fi
-	else
-		LOG_MSG "[WARN]:-Incorrect table name sent to function, should be schema.tablename" 1
-		ERROR_EXIT "[FATAL]:-Error in $FUNCNAME parameters" 2
-	fi
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
-GET_TABLE_TYPE () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	if [ $# -ne 3 ];then
-		ERROR_EXIT "[FATAL]:-Incorrect # parameters supplied, got $# expected 3" 2;fi
-	T_NAME=$1
-	if [ `$ECHO $1|$GREP -c "\."` -eq 1 ];then
-		T_NAME=`$ECHO $1|$CUT -d"." -f2`
-		S_NAME=`$ECHO $1|$CUT -d"." -f1`
-		TAB_TYPE=`${EXPORT_LIB_PATH};$PSQL -p $2 -d "$3" -A -t -c"select 1 from pg_depend where objid in (select oid from pg_class where relname='${T_NAME}' and relnamespace in (select oid from pg_namespace where nspname='${S_NAME}')) and refobjid not in (select relnamespace from pg_class where relname='${T_NAME}' and relnamespace in (select oid from pg_namespace where nspname='${S_NAME}'));"|$WC -l`
-		if [ $TAB_TYPE -eq 1 ];then
-			TAB_TYPE_TXT="Child table"
-			TAB_PARENT_NAME=(`${EXPORT_LIB_PATH};$PSQL -p $2 -d "$3" -R" " -A -t -c"select relname from pg_class where oid in (select refobjid from pg_depend  where objid in (select oid from pg_class where relname='${T_NAME}' and relnamespace in (select oid from pg_namespace where nspname='${S_NAME}')) and refobjid not in (select relnamespace from pg_class where relname='${T_NAME}' and relnamespace in (select oid from pg_namespace where nspname='${S_NAME}')));"`)
-		else
-			TAB_TYPE_TXT="Not child table"
-		fi
-	else
-		LOG_MSG "[WARN]:-Incorrect table name sent to function, should be schema.tablename" 1
-		ERROR_EXIT "[FATAL]:-Error in $FUNCNAME parameters" 2
-	fi
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-	
 CHK_FILE () {
 		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 		FILENAME=$1
@@ -1050,26 +706,6 @@ CHK_DIR () {
 		fi
 }
 
-CHK_WRITE_DIR () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	DIR_NAME=$1;shift
-	DIR_HOST=$1;shift
-	NOEXIT=$1
-	LOG_MSG "[INFO]:-Checking write access to $DIR_NAME on $DIR_HOST"
-	$TRUSTED_SHELL $DIR_HOST "$TOUCH ${DIR_NAME}/tmp_file_test"
-	RETVAL=$?
-	if [ $RETVAL -ne 0 ];then
-		if [ x"" == x"$NOEXIT" ];then
-			ERROR_EXIT "[FATAL]:-Cannot write to $DIR_NAME on $DIR_HOST" 2
-		else
-			LOG_MSG "[FATAL]:-Cannot write to $DIR_NAME on $DIR_HOST" 1
-		fi
-	else
-		$TRUSTED_SHELL $DIR_HOST "$RM -f ${DIR_NAME}/tmp_file_test"
-	LOG_MSG "[INFO]:-Write test passed on $DIR_HOST $DIR_NAME directory"
-	fi
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
 GET_MASTER_PORT () {
 		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 		MASTER_DATA_DIRECTORY=$1
@@ -1121,30 +757,6 @@ GET_MASTER_PORT_RECUR () {
     else
         ERROR_EXIT "[FATAL]:-Could not open configuration file \"$INCLUDED_FILE\": maximum nesting depth exceeded"
     fi
-}
-
-CHK_ON_PASSIVE_STANDBY () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	GPSYNC_COUNT=0
-	CHK_DB_QD_SET
-	GET_MASTER_PORT $MASTER_DATA_DIRECTORY
-	GET_PG_PID_ACTIVE $MASTER_PORT
-	if [ -f $MASTER_DATA_DIRECTORY/postmaster.opts ];then
-		GPSYNC_COUNT=`$GREP -c gpsync $MASTER_DATA_DIRECTORY/postmaster.opts`
-	fi
-	if [ $PID -ne 0 ] && [ $GPSYNC_COUNT -ne 0 ];then
-		LOG_MSG "[FATAL]:-Cannot run this script on a passive standby instance" 1
-		LOG_MSG "[FATAL]:-where there is a conflict with the current value of" 1
-		LOG_MSG "[FATAL]:-the MASTER_DATA_DIRECTORY environment variable setting." 1
-		ERROR_EXIT "[FATAL]:-Unable to process requested command" 2
-	fi
-	if [ $GPSYNC_COUNT -ne 0 ];then
-		LOG_MSG "[FATAL]:-Cannot run this script on the standby instance" 1
-		LOG_MSG "[FATAL]:-Status indicates that standby instance processs not running" 1
-		LOG_MSG "[FATAL]:-Check standby process status via gpstate -f on Master instance" 1
-		ERROR_EXIT "[FATAL]:-Unable to process requested command" 2
-	fi
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
 GET_CIDRADDR () {
@@ -1359,33 +971,6 @@ GET_QD_DB_NAME () {
 		LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
-GET_STANDBY_COUNT () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	GET_QD_DB_NAME
-	STANDBY_COUNT=`${EXPORT_LIB_PATH};env PGOPTIONS="-c gp_session_role=utility" $PSQL -q -p $MASTER_PORT -d "$QD_DBNAME" -A -t -c"select 1 from $CONFIG_TABLE a where content=-1 and dbid<>1 ;"|$WC -l`
-	ERROR_CHK $? "obtain standby master host count" 1
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
-GET_STANDBY_DETAILS () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	GET_QD_DB_NAME
-	STANDBY_ARRAY=(`${EXPORT_LIB_PATH};env PGOPTIONS="-c gp_session_role=utility" $PSQL -q -p $MASTER_PORT -d "$QD_DBNAME" -A -t -c"select hostname, datadir, port, mode, status, preferred_role, role from $CONFIG_TABLE a where content=-1 and dbid<>1"`) > /dev/null 2>&1
-	RETVAL=$?
-	if [ $RETVAL -ne 0 ]; then
-		LOG_MSG "[INFO]:-Unable to obtain standby master details, error code $RETVAL returned" 1
-		EXIT_STATUS=1
-	fi
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
-GET_TRANS_READ () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	TRANS_STATE=`${EXPORT_LIB_PATH};$PSQL -q -p $MASTER_PORT -d "$QD_DBNAME" -A -t -c"show transaction_read_only;"|$AWK '{print $NF}'`
-	ERROR_CHK $? "obtain transaction state" 1
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
 GET_QE_DETAILS () {
 		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 		GET_QD_DB_NAME
@@ -1409,95 +994,12 @@ GET_QE_DETAILS () {
 		LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
-GET_DB_LIST () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	GET_MASTER_PORT $MASTER_DATA_DIRECTORY
-	DB_ARRAY=(`env PGOPTIONS="-c gp_session_role=utility" $PSQL -q -p $MASTER_PORT -d "$DEFAULTDB" -A -t -c"select datname from pg_database where datname not in ('template1', 'template0', 'postgres');"`)
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
 CHK_MIRRORS_CONFIGURED () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	MIRROR_COUNT=`${EXPORT_LIB_PATH};env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$DEFAULTDB" -A -t -c"select count(dbid)/count(distinct(content)) from $CONFIG_TABLE a where content<>-1;"`
 	ERROR_CHK $? "obtain mirror count from master instance" 2
 	LOG_MSG "[INFO]:-Obtained $MIRROR_COUNT as check value"
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
-GET_MIRROR_TYPE () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	CHK_MIRRORS_CONFIGURED
-	if [ $MIRROR_COUNT -eq 1 ];then
-		MIR_TYPE="No Mirror";MIR_TYPE_NUM=0
-	else
-		SEP_COUNT=`${EXPORT_LIB_PATH};$PSQL -p $MASTER_PORT -d "$DEFAULTDB" -A -t -c"select count(distinct hostname)/(select count(distinct hostname) from $CONFIG_TABLE a where preferred_role = 'p' and content<>-1) from $CONFIG_TABLE a where content<>-1;"`
-		if [ $SEP_COUNT -eq 2 ];then
-			SEP_TEXT="[Separate array]"
-		else
-			SEP_TEXT="[Shared array]"
-		fi
-		#Get number of primary hosts
-		NUM_SEG_HOSTS=`${EXPORT_LIB_PATH};$PSQL -p $MASTER_PORT -d "$DEFAULTDB" -A -t -c"select count(distinct(hostname)) from $CONFIG_TABLE a where content<>-1;"`
-		#Get the primary and mirror hostnames for the first segment instance host
-		FIRST_PRI_MIR_ARRAY=(`${EXPORT_LIB_PATH};$PSQL -p $MASTER_PORT -d "$DEFAULTDB" -A -t -c"select hostname, content from $CONFIG_TABLE a where content>-1 and content<(select max(port)-min(port)+1 from $CONFIG_TABLE a where content<>-1 and preferred_role='p') order by content,dbid;"|$TR '\n' ' '`)
-		((SEG_PER_HOST=${#FIRST_PRI_MIR_ARRAY[@]}/2))
-		CHK_MULTI_HOME
-		if [ $MULTI_HOME -eq 0 ];then
-			if [ `$ECHO ${FIRST_PRI_MIR_ARRAY[@]}|$TR ' ' '\n'|$AWK -F"|" '{print $1}'|$SORT -u|$WC -l` -eq 2 ] || [ $NUM_SEG_HOSTS -eq 1 ];then
-				MIR_TYPE="Group [Single-home] $SEP_TEXT";MIR_TYPE_NUM=1
-			else
-				MIR_TYPE="Spread [Single-home] $SEP_TEXT";MIR_TYPE_NUM=2
-			fi
-		else
-			J=0
-			MIR_H_NAME_ARRAY=()
-			while [ $J -lt $SEG_PER_HOST ]
-			do
-				MIR_HOST=`$ECHO ${FIRST_PRI_MIR_ARRAY[@]}|$TR ' ' '\n'|$GREP "|${J}$"|$AWK -F"|" '{print $1}'|$TAIL -1`
-				PRI_HOST=`$ECHO ${FIRST_PRI_MIR_ARRAY[@]}|$TR ' ' '\n'|$GREP "|${J}$"|$AWK -F"|" '{print $1}'|$HEAD -1`
-				#MIR_H_HOST=`$ECHO ${MULTI_ARRAY[@]}|$TR ' ' '\n'|$GREP "${MIR_HOST}~"|$SORT -u|$AWK -F"~" '{print $2}'`
-				MIR_H_CONFIG_HOST=`${EXPORT_LIB_PATH};$PSQL -p $MASTER_PORT -d "$DEFAULTDB" -A -t -c"select hostname from $CONFIG_TABLE a where hostname<>'${PRI_HOST}' and content=${J};"`
-				MIR_H_HOST=`$TRUSTED_SHELL $MIR_H_CONFIG_HOST "$HOSTNAME"|$AWK '{print $1}'`
-				#MIR_HOST_VAL=`$TRUSTED_SHELL $MIR_HOST "$HOSTNAME"`
-				MIR_H_NAME_ARRAY=(${MIR_H_NAME_ARRAY[@]} $MIR_H_HOST)
-				#MIR_H_NAME_ARRAY=(${MIR_H_NAME_ARRAY[@]} $MIR_HOST_VAL)
-				((J=$J+1))
-			done
-			UNIQ_COUNT=`$ECHO ${MIR_H_NAME_ARRAY[@]}|$TR ' ' '\n'|$SORT -u|$WC -l`
-			if [ $UNIQ_COUNT -eq 1 ];then
-				MIR_TYPE="Group [Multi-home] $SEP_TEXT";MIR_TYPE_NUM=3
-			else
-				MIR_TYPE="Spread [Multi-home] $SEP_TEXT";MIR_TYPE_NUM=4;fi
-		
-		fi	
-	fi
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
-GET_QE_PRIMARY_DETAILS () {
-		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-		GET_QD_DB_NAME
-		QE_PRIMARY_ARRAY=(`${EXPORT_LIB_PATH};env PGOPTIONS="-c gp_session_role=utility" $PSQL -q -p $MASTER_PORT -d "$QD_DBNAME" -A -t -c"select a.hostname, a.datadir, a.port, b.valid, b.isprimary from $CONFIG_TABLE a, $GP_PG_VIEW b where a.dbid=b.dbid and a.content<>-1 and  a.preferred_role = 'p' order by a.content;" 2>/dev/null`) > /dev/null 2>&1
-
-		RETVAL=$?
-		if [ $RETVAL -ne 0 ]; then
-				LOG_MSG "[WARN]:-Unable to obtain segment instance primary host details from Master db, error code $RETVAL returned" 1
-				EXIT_STATUS=1
-		fi
-		LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
-GET_QE_MIRROR_DETAILS () {
-		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-		GET_QD_DB_NAME
-		QE_MIRROR_ARRAY=(`${EXPORT_LIB_PATH};env PGOPTIONS="-c gp_session_role=utility" $PSQL -q -p $MASTER_PORT -d "$QD_DBNAME" -A -t -c"select a.hostname, a.datadir, a.port, b.valid, b.isprimary from $CONFIG_TABLE a, $GP_PG_VIEW b where a.dbid=b.dbid and a.content<>-1 and a.preferred_role='m' order by a.content;" 2>/dev/null`) > /dev/null 2>&1
-
-		RETVAL=$?
-		if [ $RETVAL -ne 0 ]; then
-				LOG_MSG "[WARN]:-Unable to obtain segment instance mirror host details from Master db, error code $RETVAL returned" 1
-				EXIT_STATUS=1
-		fi
-		LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
 GET_PG_PID_ACTIVE () {
@@ -1567,7 +1069,7 @@ GET_PG_PID_ACTIVE () {
 					if [ $P_CHK -eq $PORT ];then  PG_LOCK_NETSTAT=$PORT;fi
 				done
 				#PG_LOCK_NETSTAT=`$TRUSTED_SHELL $HOST "$NETSTAT -an 2>/dev/null |$GREP ".s.PGSQL.${PORT}" 2>/dev/null"|$AWK '{print $NF}'|$HEAD -1`
-				PG_LOCK_TMP=`$TRUSTED_SHELL $HOST "$LS ${PG_LOCK_FILE} 2>/dev/null"|$WC -l`
+				PG_LOCK_TMP=`$TRUSTED_SHELL $HOST "ls ${PG_LOCK_FILE} 2>/dev/null"|$WC -l`
 				if [ x"" == x"$PG_LOCK_NETSTAT" ] && [ $PG_LOCK_TMP -eq 0 ];then
 					PID=0
 					LOG_MSG "[INFO]:-No socket connection or lock file $PG_LOCK_FILE found for port=${PORT}"
@@ -1597,25 +1099,13 @@ GET_PG_PID_ACTIVE () {
 						if [ $CAN_READ -eq 1 ];then
 							PID=`$TRUSTED_SHELL $HOST "$CAT ${PG_LOCK_FILE}|$HEAD -1 2>/dev/null"|$AWK '{print $1}'`
 						else
-							LOG_MSG "[WARN]:-Unable to access ${PG_LOCK_FILE} on $HOST" 1	
+							LOG_MSG "[WARN]:-Unable to access ${PG_LOCK_FILE} on $HOST" 1
 							EXIT_STATUS=1
 						fi
 						LOG_MSG "[INFO]:-Have lock file $PG_LOCK_FILE and a process running on port $PORT on $HOST"
-					fi				
+					fi
 				fi
 			fi
-		fi
-		LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
-RUN_COMMAND () {
-		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-		COMMAND="$1"
-		LOG_MSG "[INFO]:-Commencing local $COMMAND"
-		$COMMAND >> $LOG_FILE 2>&1
-		RETVAL=$?
-		if [ $RETVAL -ne 0 ]; then
-				ERROR_EXIT "[FATAL]:- Command $COMMAND failed with error status $RETVAL, see log file $LOG_FILE for more detail" 2
 		fi
 		LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
@@ -1657,49 +1147,33 @@ PING_HOST () {
 	if [ x"" == x"$PING_EXIT" ];then PING_EXIT=0;fi
 	case $OS_TYPE in
 		darwin )
-			$PING $PING_TIME $TARGET_HOST > /dev/null 2>&1 || $PING6 $PING_TIME $TARGET_HOST > /dev/null 2>&1 
+			$PING $PING_TIME $TARGET_HOST > /dev/null 2>&1 || $PING6 $PING_TIME $TARGET_HOST > /dev/null 2>&1
                         ;;
 		linux )
-			$PING $TARGET_HOST $PING_TIME > /dev/null 2>&1 || $PING6 $TARGET_HOST $PING_TIME > /dev/null 2>&1 
+			$PING $TARGET_HOST $PING_TIME > /dev/null 2>&1 || $PING6 $TARGET_HOST $PING_TIME > /dev/null 2>&1
                         ;;
 		* )
 			$PING $TARGET_HOST $PING_TIME > /dev/null 2>&1
 	esac
 	RETVAL=$?
 	case $RETVAL in
-		0) LOG_MSG "[INFO]:-$TARGET_HOST contact established" 
+		0) LOG_MSG "[INFO]:-$TARGET_HOST contact established"
                    ;;
 		1) if [ $PING_EXIT -eq 0 ];then
 			ERROR_EXIT "[FATAL]:-Unable to contact $TARGET_HOST" 2
 		   else
 		        LOG_MSG "[WARN]:-Unable to contact $TARGET_HOST" 1
-		   fi 
+		   fi
                    ;;
 		2) if [ $PING_EXIT -eq 0 ];then
 		 	ERROR_EXIT "[FATAL]:-Unknown host $TARGET_HOST" 2
 		   else
 			LOG_MSG "[WARN]:-Unknown host $TARGET_HOST" 1
-		   fi 
+		   fi
                    ;;
 	esac
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 	return $RETVAL
-}
-
-STANDBY_CATALOG_UPDATE () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	MASTER_STANDBY_HOSTNAME=$1;shift
-	MASTER_STANDBY_DATA_DIRECTORY=$1;shift
-	MASTER_STANDBY_PORT=$1
-	STANDBY_HOST_COUNT=`${EXPORT_LIB_PATH};env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -A -t -d "$QD_DBNAME" -c"select distinct hostname from $CONFIG_TABLE a where hostname='${MASTER_STANDBY_HOSTNAME}';"|$WC -l`
-	ERROR_CHK $? "obtain standby host count" 2
-    LOG_MSG "[INFO]:-Creating new gp_segment_configuration record for ${MASTER_STANDBY_HOSTNAME}"
-    MAX_DB_ID=`${EXPORT_LIB_PATH};env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -A -t -d "$QD_DBNAME" -c"select max(dbid)+1 from $CONFIG_TABLE a;"`
-	ERROR_CHK $? "obtain max dbid from gp_configuration" 2
-    $EXPORT_LIB_PATH;env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -A -t -d "$QD_DBNAME" -c"insert into gp_segment_configuration (dbid, content, role, preferred_role, mode, status, hostname, address, port) values (${MAX_DB_ID},-1,'m', 'm', 'u', 's', '${MASTER_STANDBY_HOSTNAME}','${MASTER_STANDBY_HOSTNAME}',${MASTER_STANDBY_PORT});"
-    $EXPORT_LIB_PATH;env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -A -t -d "$QD_DBNAME" -c"insert into pg_filespace_entry (fsefsoid, fsedbid, fselocation) values (3052, ${MAX_DB_ID},'${MASTER_STANDBY_DATA_DIRECTORY}');"
-    ERROR_CHK $? "add standby host gp_configuration record" 2
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
 PARALLEL_SETUP () {
@@ -1787,23 +1261,6 @@ PARALLEL_SUMMARY_STATUS_REPORT () {
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
-RESET_BATCH_VALUE () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	LOG_MSG "[INFO]:-Batch value being re-configured from $BATCH_DEFAULT to $BATCH_LIMIT" 1
-	SAVE_BATCH=$BATCH_DEFAULT
-	BATCH_DEFAULT=$BATCH_LIMIT
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
-RESTORE_BATCH_VALUE () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	if [ x"" != x"$SAVE_BATCH" ];then
-		BATCH_DEFAULT=$SAVE_BATCH
-		SAVE_BATCH=""
-	fi
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
 CHK_GPDB_ID () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"	
 	if [ -f ${INITDB} ];then
@@ -1876,62 +1333,6 @@ CHK_GPDB_ID () {
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
-PARSE_PERMISSIONS () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	#Expect 3 parameters schema.tablename port database
-	if [ $# -ne 3 ];then
-		ERROR_EXIT "[FATAL]:-Got $# parameters, expected 3" 2
-	fi
-	T_NAME=$1;shift
-	PORT=$1;shift
-	DB=$1
-	#Check to ensure that we have schema_name.tablename
-	if [ `$ECHO $T_NAME|grep -c "."` -ne 1 ];then
-		ERROR_EXIT "[FATAL]:-Schema name not supplied" 2
-	else
-		SCHEMA_NAME=`$ECHO $T_NAME|$AWK -F"." '{print $1}'`
-		TABLENAME=`$ECHO $T_NAME|$AWK -F"." '{print $2}'`
-	fi
-	#Get relacl information
-	PERM_COUNT=0
-	for PERM_LINE in `$PSQL -p $PORT -d "$DB" -A -t -c "select relacl from pg_class where relname='${TABLENAME}' and relnamespace in (select oid from pg_namespace where nspname='$SCHEMA_NAME');"|$TR -d '{'|$TR -d '}'|$TR ',' '\n'|$GREP -v "${USER}="|$TR '/' '\n'|$GREP -v "${USER}" `
-	do
-		DB_ACCOUNTNAME=`$ECHO $PERM_LINE|$AWK -F"=" '{print $1}'`
-		if [ x"" != x"$DB_ACCOUNTNAME" ];then
-		    PERM_ALLOW=`$ECHO $PERM_LINE|$AWK -F"=" '{print $2}'`
-		    if [ `$ECHO $PERM_ALLOW|$GREP -c "r"` -eq 1 ];then PERM_TEXT="$PERM_TEXT select";fi
-		    if [ `$ECHO $PERM_ALLOW|$GREP -c "w"` -eq 1 ];then PERM_TEXT="$PERM_TEXT update";fi
-		    if [ `$ECHO $PERM_ALLOW|$GREP -c "d"` -eq 1 ];then PERM_TEXT="$PERM_TEXT delete";fi
-		    if [ `$ECHO $PERM_ALLOW|$GREP -c "a"` -eq 1 ];then PERM_TEXT="$PERM_TEXT insert";fi
-		    if [ `$ECHO $PERM_ALLOW|$GREP -c "R"` -eq 1 ];then PERM_TEXT="$PERM_TEXT rule";fi
-		    if [ `$ECHO $PERM_ALLOW|$GREP -c "x"` -eq 1 ];then PERM_TEXT="$PERM_TEXT references";fi
-		    if [ `$ECHO $PERM_ALLOW|$GREP -c "t"` -eq 1 ];then PERM_TEXT="$PERM_TEXT trigger";fi
-		    PERM_TEXT=`$ECHO $PERM_TEXT|$TR ' ' ','`
-		    PERM_ARRAY[$PERM_COUNT]="grant $PERM_TEXT on ~ to $DB_ACCOUNTNAME;"
-		    PERM_TEXT=''
-		    ((PERM_COUNT=$PERM_COUNT+1))
-		fi
-	done
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
-
-CHK_START_ERROR_TXT () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	if [ $DISPLAY_ERROR -eq 1 ];then
-		LOG_MSG "[INFO]:-*********************************************************************************" 1
-		LOG_MSG "[WARN]:-There are $INVALID_COUNT segment(s) marked as invalid" 1
-		LOG_MSG "[INFO]:-The GPDB gp_fault_action parameter is set to continue in the event of failure" 1
-		LOG_MSG "[INFO]:-To recover from this current invalid state, review usage of gprecoverseg" 1
-		LOG_MSG "[INFO]:-management utility, which will recover failed segment instance databases" 1
-		LOG_MSG "[WARN]:-As gp_fault_action is set to continue, recovery will need to shutdown the" 1
-		LOG_MSG "[WARN]:-GPDB database to ensure a consistent recovery can be completed" 1	
-		LOG_MSG "[INFO]:-*********************************************************************************" 1
-		EXIT_STATUS=1 
-	fi
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
 # Make a dbid file at a particular host. The dbid file is used by gpstart
 # to tell the process in question which segment/master it is.
 # Arguments:
@@ -1985,11 +1386,6 @@ if [ ! -d $DEFLOGDIR ]; then
 fi
 LOG_FILE=$DEFLOGDIR/${PROG_NAME}_${CUR_DATE}.log
 
-if [ $# -ne 0 ]; then
-		if [ "$1" == "-v" ]; then
-				VERSION_INFO
-		fi
-fi
 #Set up OS type for scripts to change command lines
 OS_TYPE=`uname -s|tr '[A-Z]' '[a-z]'`
 case $OS_TYPE in
@@ -2051,9 +1447,6 @@ esac
 
 
 GP_LIBRARY_PATH=`$DIRNAME \`$DIRNAME $INITDB\``/lib
-SHARE_PATH=`$DIRNAME \`$DIRNAME $INITDB\``/share
-SCRIPTS_DIR=`$DIRNAME \` $DIRNAME $INITDB\``/bin
-
 
 ##
 # we setup some EXPORT foo='blah' commands for when we dispatch to segments and standby master

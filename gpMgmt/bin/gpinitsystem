@@ -28,6 +28,7 @@ WORKDIR=`dirname $0`
 FUNCTIONS=$WORKDIR/lib/gp_bash_functions.sh
 if [ -f $FUNCTIONS ]; then
     . $FUNCTIONS
+    . $WORKDIR/lib/gp_bash_version.sh
 else
     echo "[FATAL]:-Cannot source $FUNCTIONS file Script Exits!"
     exit 2
@@ -99,7 +100,7 @@ DCA_SEGMENT_RESQUEUE_PRIORITY_SWEEPER_INTERVAL_VAL=1000
 # Functions
 #******************************************************************************
 USAGE () {
-	if [ -f ${GPDOCDIR}/$HELP_DOC_NAME ] && [ x"" == x"$SCRIPT_USAGE" ];then
+	if [ "$1" == "print_doc" ] && [ -f ${GPDOCDIR}/$HELP_DOC_NAME ]; then
 		$LESSCMD ${GPDOCDIR}/$HELP_DOC_NAME
 		exit 0
 	else
@@ -110,7 +111,6 @@ USAGE () {
 		$ECHO "      segment instance hosts."
 		$ECHO
 		$ECHO "      General options:"
-		$ECHO "      -?, display this help message & exit"
 		$ECHO "      -v, display version information & exit"
 		$ECHO
 		$ECHO "      Logging options:"
@@ -136,7 +136,6 @@ USAGE () {
 		$ECHO "      -s, standby_hostname [optional]"
 		$ECHO "      -P, standby_port [optional]"
 		$ECHO "      -F, standby_filespaces [optiona]"
-		$ECHO "      -i, do not initialize standby sync process [default:- start process]"
 		$ECHO "      -m, maximum number of connections for master instance [default ${DEFAULT_QD_MAX_CONNECT}]"
 		$ECHO "      -b, shared_buffers per instance [default $DEFAULT_BUFFERS]"
 		$ECHO "          Specify either the number of database I/O buffers (without suffix) or the"
@@ -845,14 +844,6 @@ CHK_SEG () {
 	if [ $VERSION_MATCH -ne 1 ] ; then
 	   ERROR_EXIT "Postgres version does not match" 2
 	fi
-	
-	# since this is from the input config file we only check our one datadir
-	#CHK_DIR $GP_DIR $QE_ID
-	#if [ $EXISTS -ne 0 ]; then
-	#	ERROR_EXIT "[FATAL]:-No $GP_DIR on segment instance $QE_ID" 2
-	#else
-	#	LOG_MSG "[INFO]:-$QE_ID $GP_DIR checked"
-	#fi
 	
 	#make sure we can write to it.
 	# Check that we can write to the QE directory
@@ -1915,13 +1906,10 @@ SET_DCA_CONFIG_SETTINGS () {
 # Main Section
 #******************************************************************************
 trap 'ERROR_EXIT "[FATAL]:-Received INT or TERM signal" 2' INT TERM
-while getopts ":v'?'aiqe:c:l:-:p:m:h:on:s:P:F:b:!DB:SI:O:" opt
+while getopts ":vaqe:c:l:-:p:m:h:n:s:P:F:b:DB:SI:O:" opt
 		do
 		case $opt in
-				v ) VERSION_INFO ;;
-				'?' ) USAGE ;;
-				! ) SCRIPT_USAGE=1
-				    USAGE ;;
+				v ) print_version ;;
 				a ) unset INTERACTIVE ;;
 				q ) unset VERBOSE ;;
 				c ) CLUSTER_CONFIG=$OPTARG ;;
@@ -1954,13 +1942,15 @@ while getopts ":v'?'aiqe:c:l:-:p:m:h:on:s:P:F:b:!DB:SI:O:" opt
 						"lc-monetary"     ) LCMONETARY=$VAL ;;
 						"lc-numeric"      ) LCNUMERIC=$VAL ;;
 						"lc-time"         ) LCTIME=$VAL ;;
-						* ) LOG_MSG "[ERROR]:-Unknown option $NAME" 1; USAGE ;;
+						"help"            ) USAGE "print_doc" ;;
+						"version"         ) print_version ;;
+						* ) LOG_MSG "[ERROR]:-Unknown option --$NAME" 1; USAGE ;;
 					esac
 
 					# Check if we are missing the long option value.  Currently all
 					# long options require a value so we can just do the check once.
 					if [ x"$NAME" == x"$VAL" ]; then
-						LOG_MSG "[FATAL]:-Missing value for option $NAME" 1;
+						LOG_MSG "[FATAL]:-Missing value for option --$NAME" 1;
 						USAGE;
 					fi
 					;;

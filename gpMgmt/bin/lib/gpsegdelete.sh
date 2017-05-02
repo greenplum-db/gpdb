@@ -45,14 +45,6 @@ EXIT_STATUS=0
 #******************************************************************************
 # Functions
 #******************************************************************************
-USAGE () {
-		$ECHO
-		$ECHO "      `basename $0`"
-		$ECHO
-		$ECHO "      Script called by gpdeletesystem, this should not be run directly"
-		exit $EXIT_STATUS
-}
-
 CHK_CALL () {
 	FILE_PREFIX=`$ECHO $PARALLEL_STATUS_FILE|$CUT -d"." -f1`
 	if [ ! -f ${FILE_PREFIX}.$PARENT_PID ];then
@@ -109,14 +101,6 @@ DEL_SEGMENT () {
 # Main Section
 #******************************************************************************
 trap '$ECHO "KILLED|${QE_LINE}" >> $PARALLEL_STATUS_FILE;ERROR_EXIT "[FATAL]:-[$INST_COUNT]-Recieved INT or TERM signal" 2' INT TERM
-while getopts ":v'?'" opt
-	do
-	case $opt in
-		v ) VERSION_INFO ;;
-		'?' ) USAGE ;;
-		* ) USAGE 
-	esac
-done
 #Now process supplied call parameters
 PARENT_PID=$1;shift		#PID of gpstate process calling this script
 CHK_CALL
