@@ -2,10 +2,11 @@
 #
 # Copyright (c) Greenplum Inc 2009. All Rights Reserved.
 
-import os, sys, re
+import os
+import sys
+import re
 
 try:
-    from optparse import Option, OptionParser
     from gppylib.gpparseopts import OptParser, OptChecker
     from gppylib.gparray import GpArray
     from gppylib.gphostcache import *
@@ -19,14 +20,15 @@ try:
     from gpconfig_modules.database_segment_guc import DatabaseSegmentGuc
     from gpconfig_modules.file_segment_guc import FileSegmentGuc
     from gpconfig_modules.guc_collection import GucCollection
-except ImportError, e:
-    sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
+except ImportError as err:
+    sys.exit('Cannot import modules.  Please check that you have sourced '
+             'greenplum_path.sh.  Detail: ' + str(err))
 
 EXECNAME = os.path.split(__file__)[-1]
 
-prohibitedGucs = set(["port", "listen_addresses"])
-sameValueGucs = set(["gp_default_storage_options"])
-logger = get_default_logger()
+PROHIBITED_GUCS = set(["port", "listen_addresses"])
+SAMEVALUE_GUCS = set(["gp_default_storage_options"])
+LOGGER = get_default_logger()
 setup_tool_logging(EXECNAME, getLocalHostname(), getUserName())
 
 
@@ -49,7 +51,7 @@ def parseargs():
     parser.add_option('-f', '--file', action='store_true')
     parser.add_option('--file-compare', dest='file_compare', action='store_true')
 
-    (options, args) = parser.parse_args()
+    (options, _) = parser.parse_args()
 
     options.entry = None
     validate_four_verbs(options)
@@ -69,7 +71,7 @@ def validate_four_verbs(options):
 
 def validate_mutual_options(options):
     user = os.getenv('USER')
-    if user is None or user is ' ':
+    if user is None or user == ' ':
         log_and_raise("USER environment variable must be set.")
 
     if options.file and not options.show:
@@ -88,7 +90,7 @@ def validate_mutual_options(options):
         log_and_raise("when changing a parameter on the master only specify the --value not --mastervalue")
     if options.change and (options.value and (options.primaryvalue or options.mirrorvalue)):
         log_and_raise("cannot use both value option and primaryvalue/mirrorvalue option")
-    if (options.masteronly or options.mastervalue) and options.entry in sameValueGucs:
+    if (options.masteronly or options.mastervalue) and options.entry in SAMEVALUE_GUCS:
         log_and_raise("%s value cannot be different on master and segments" % options.entry)
     if options.value and (not options.mastervalue):
         options.mastervalue = options.value
@@ -123,23 +125,24 @@ class Guc:
 
         if self.name == "max_connections" and (not options.masteronly):
             try:
-                s = int(newval)
-                m = int(newmasterval)
-                if s <= m:
+                seg = int(newval)
+                master = int(newmasterval)
+                if seg <= master:
                     return "the value of max_connections must be greater on the segments than on the master"
             except:
                 return "invalid value for max_connections"
 
         elif self.name == "gp_resource_manager":
             if newval == "group":
-                logger.warn(
-                        "Managing queries with resource groups is an experimental feature. A work-in-progress version is enabled.")
+                LOGGER.warn("Managing queries with resource groups is an "
+                            "experimental feature. A work-in-progress version is "
+                            "enabled.")
             elif newval != "queue":
                 return "the value of gp_resource_manager must be 'group' or 'queue'"
 
         elif self.name == 'unix_socket_permissions':
             if newval[0] != '0':
-                logger.warn(
+                LOGGER.warn(
                     'Permission not entered in octal format.It was interpreted as Decimal.  %s in Octal = 0%s' % (
                         newval, int(newval, 8)))
         elif self.name == "gp_default_storage_options":
@@ -147,7 +150,7 @@ class Guc:
             # Value must be enclosed in single quotes else postgres
             # will fail to start due to syntax errors in config file.
             if (not newval.startswith("'")) or (not newval.endswith("'")):
-                return ("Value must be enclosed in single quotes: '...'")
+                return "Value must be enclosed in single quotes: '...'"
             newval = newval.strip("'")
             # Ensure that newval is of the form 'name=value,...'.
             for pair in newval.split(","):
@@ -156,12 +159,12 @@ class Guc:
                     name = name.strip()
                     value = value.strip()
                     if re.match("^[a-z][a-z]*$", name) is None:
-                        return ("Invalid option name \"%s\"" % name)
+                        return "Invalid option name \"%s\"" % name
                     if re.match("^[a-z0-9_][a-z0-9_]*$", value) is None:
                         return ("Invalid value \"%s\" for option %s" %
                                 (value, name))
                 except ValueError:
-                    return ("Valid values are of the form 'name=value,...'.")
+                    return "Valid values are of the form 'name=value,...'."
         return "ok"
 
     def print_info(self):
@@ -171,14 +174,14 @@ class Guc:
 
 def confirm_user_wants_to_continue():
     if not ask_yesno('', "Are you sure you want to ignore unreachable hosts?", 'N'):
-        logger.info("User Aborted. Exiting...")
+        LOGGER.info("User Aborted. Exiting...")
         raise Exception("User Aborted. Exiting.")
 
 
 def print_verbosely(options, normalized_hostname, hostname, directory):
     if options.verbose:
         msg = "normalized_host=%s host=%s dir=%s" % (normalized_hostname, hostname, directory)
-        logger.info(msg)
+        LOGGER.info(msg)
 
 
 def do_list(skipvalidation):
@@ -189,13 +192,13 @@ def do_list(skipvalidation):
 
         for row in rows:
             guc = Guc(row)
-            if skipvalidation or (guc.name not in prohibitedGucs):
+            if skipvalidation or (guc.name not in PROHIBITED_GUCS):
                 guc.print_info()
 
         conn.close()
 
-    except DatabaseError, ex:
-        logger.error('Failed to connect to database, this script can only be run when the database is up.')
+    except DatabaseError as _:
+        LOGGER.error('Failed to connect to database, this script can only be run when the database is up.')
 
 
 def get_gucs_from_database(gucname):
@@ -212,11 +215,11 @@ def get_gucs_from_database(gucname):
     except DatabaseError as ex:
 
         if re.search("unrecognized configuration parameter", ex.__str__()):
-            logger.error('Failed to retrieve GUC information, guc does not exist: ' + gucname)
+            LOGGER.error('Failed to retrieve GUC information, guc does not exist: ' + gucname)
         elif re.search("could not connect to server", ex.__str__()):
-            logger.error('Failed to retrieve GUC information, the database is not accessible')
+            LOGGER.error('Failed to retrieve GUC information, the database is not accessible')
         else:
-            logger.error('Failed to retrieve GUC information: ' + ex.__str__())
+            LOGGER.error('Failed to retrieve GUC information: ' + ex.__str__())
 
 
 def _print_gucs(gucname, gucs, options):
@@ -269,10 +272,10 @@ def do_change(options):
             validate_options(options)
 
     except DatabaseError as ex:
-        logger.error(ex.__str__())
+        LOGGER.error(ex.__str__())
         msg = 'Failed to connect to database, exiting without action. ' \
               'This script can only be run when the database is up.'
-        logger.error(msg)
+        LOGGER.error(msg)
         raise Exception(msg)
 
     pool = WorkerPool()
@@ -280,27 +283,27 @@ def do_change(options):
     host_cache = GpHostCache(gp_array, pool)
     failed_pings = host_cache.ping_hosts(pool)
 
-    if len(failed_pings):
+    if failed_pings:
         for i in failed_pings:
-            logger.warning('unreachable host: ' + i.hostname)
+            LOGGER.warning('unreachable host: ' + i.hostname)
         confirm_user_wants_to_continue()
 
     failure = False
     try:
         # do the segments
         if not options.masteronly:
-            for h in host_cache.get_hosts():
+            for host in host_cache.get_hosts():
 
                 if options.primaryvalue:
-                    do_add_config_script(pool, h.hostname, [seg for seg in h.dbs if seg.isSegmentPrimary()],
+                    do_add_config_script(pool, host.hostname, [seg for seg in host.dbs if seg.isSegmentPrimary()],
                                          options.primaryvalue, options)
 
                 if options.mirrorvalue:
-                    do_add_config_script(pool, h.hostname, [seg for seg in h.dbs if seg.isSegmentMirror()],
+                    do_add_config_script(pool, host.hostname, [seg for seg in host.dbs if seg.isSegmentMirror()],
                                          options.mirrorvalue, options)
 
                 if not options.primaryvalue and not options.mirrorvalue:
-                    do_add_config_script(pool, h.hostname, h.dbs, options.value, options)
+                    do_add_config_script(pool, host.hostname, host.dbs, options.value, options)
 
         # do the master
         if options.mastervalue or options.remove:
@@ -322,23 +325,23 @@ def do_change(options):
         items = pool.getCompletedItems()
         for i in items:
             if not i.was_successful():
-                logger.error('failed updating the postgresql.conf files on host: ' + i.remoteHost)
+                LOGGER.error('failed updating the postgresql.conf files on host: ' + i.remoteHost)
                 failure = True
 
         pool.check_results()
-    except Exception, e:
+    except Exception as err:
         failure = True
-        logger.error('errors in job:')
-        logger.error(e.__str__())
-        logger.error('exiting early')
+        LOGGER.error('errors in job:')
+        LOGGER.error(err.__str__())
+        LOGGER.error('exiting early')
 
     pool.haltWork()
     pool.joinWorkers()
 
     if failure:
-        logger.error('finished with errors')
+        LOGGER.error('finished with errors')
     else:
-        logger.info("completed successfully")
+        LOGGER.info("completed successfully")
 
 
 def validate_options(options):
@@ -352,23 +355,23 @@ def validate_options(options):
             dbconn.execSQLForSingleton(conn, "SHOW %s" % options.entry)
         except DatabaseError:
             msg = "not a valid GUC: " + options.entry
-            logger.fatal(msg)
+            LOGGER.fatal(msg)
             raise Exception(msg)
 
         msg = "GUC Validation Failed: %s cannot be changed under normal conditions. " \
               "Please refer to gpconfig documentation." % options.entry
-        logger.fatal(msg)
+        LOGGER.fatal(msg)
         raise Exception(msg)
     conn.close()
-    if options.entry in prohibitedGucs:
+    if options.entry in PROHIBITED_GUCS:
         msg = "The parameter '%s' is not modifiable with this tool" % options.entry
-        logger.fatal(msg)
+        LOGGER.fatal(msg)
         raise Exception(msg)
     if options.value:
         msg = guc.validate(options.value, options.mastervalue, options)
         if msg != "ok":
             msg = "new GUC value failed validation: " + msg
-            logger.fatal(msg)
+            LOGGER.fatal(msg)
             raise Exception(msg)
 
 
@@ -378,7 +381,7 @@ def get_normal_guc(conn, options):
     guc = None
     if len(rows) > 1:
         msg = "more than 1 GUC matches: " + options.entry
-        logger.fatal(msg)
+        LOGGER.fatal(msg)
         raise Exception(msg)
     elif len(rows) == 1:
         guc = Guc(rows[0])
@@ -386,16 +389,16 @@ def get_normal_guc(conn, options):
 
 
 def log_and_raise(err_str):
-    logger.error(err_str)
+    LOGGER.error(err_str)
     raise Exception(err_str)
 
 
 def get_gucs_from_files(gucname):
     hosts, pool = _get_hosts()
     commands = []
-    for h in hosts:
-        for seg in h.dbs:
-            command = GpReadConfig("readConfig", h, seg, gucname)
+    for host in hosts:
+        for seg in host.dbs:
+            command = GpReadConfig("readConfig", host, seg, gucname)
             commands.append(command)
             pool.addCommand(command)
 
@@ -415,13 +418,13 @@ def get_gucs_from_files(gucname):
 
 def _get_hosts():
     dburl = dbconn.DbURL()
-    gparray = GpArray.initFromCatalog(dburl, utility=True)
+    gp_array = GpArray.initFromCatalog(dburl, utility=True)
     pool = WorkerPool()
-    host_cache = GpHostCache(gparray, pool, withMasters=True)
+    host_cache = GpHostCache(gp_array, pool, withMasters=True)
     failed_pings = host_cache.ping_hosts(pool)
-    if len(failed_pings):
+    if failed_pings:
         for i in failed_pings:
-            logger.warning('unreachable host: ' + i.hostname)
+            LOGGER.warning('unreachable host: ' + i.hostname)
         confirm_user_wants_to_continue()  # todo test me
     hosts = host_cache.get_hosts()
     return hosts, pool
@@ -467,6 +470,6 @@ if __name__ == '__main__':
     """
     try:
         do_main()
-    except Exception as e:
-        print (e.message)
+    except Exception as err:
+        print err.message
         sys.exit(1)
