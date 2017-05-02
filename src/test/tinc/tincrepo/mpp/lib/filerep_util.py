@@ -77,7 +77,7 @@ class Filerepe2e_Util():
             fault_cmd = fault_cmd + " -s %s" % seg_id
         if sleeptime :
             fault_cmd = fault_cmd + " -z %s" % sleeptime
-        if o:
+        if o != None:
             fault_cmd = fault_cmd + " -o %s" % o
         if p :
             fault_cmd = fault_cmd + " -p %s" % p

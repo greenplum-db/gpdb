@@ -130,9 +130,6 @@ class FtsTransitions(MPPTestCase):
     def run_fts_test_ddl_dml_ct(self):
         PSQL.run_sql_file(local_path('fts_test_ddl_dml_ct.sql'))
 
-    def run_sql_in_background(self):
-        PSQL.run_sql_command('drop table if exists bar; create table bar(i int);', background=True)
-
     def restart_db(self):
         self.gpstop.run_gpstop_cmd(immediate = True)
         self.gpstart.run_gpstart_cmd()

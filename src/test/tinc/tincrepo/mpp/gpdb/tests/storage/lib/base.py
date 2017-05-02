@@ -63,20 +63,27 @@ class BaseClass(MPPTestCase):
     def wait_till_insync(self):
         self.gprecover.wait_till_insync_transition()
 
-    def set_gpconfig(self, param, value):
+    def set_gpconfig(self, param, value, restart_for_config=True):
         ''' Set the configuration parameter using gpconfig '''
         command = "gpconfig -c %s -v \"\'%s\'\" --skipvalidation" % (param, value)
         rc = run_shell_command(command)
         if not rc:
             raise Exception('Unable to set the configuration parameter %s ' % param)
-        gpstop = GpStop()
-        gpstop.run_gpstop_cmd(restart=True)
 
-    def reset_gpconfig(self,param):
+        gpstop = GpStop()
+        if restart_for_config:
+            gpstop.run_gpstop_cmd(restart=True)
+        else:
+            gpstop.run_gpstop_cmd(reload=True)
+
+    def reset_gpconfig(self,param, restart_for_config=True):
         ''' Reset the configuration parameter '''
         command = "gpconfig -r %s " % (param)
         rc = run_shell_command(command)
         if not rc:
             raise Exception('Unable to reset the configuration parameter %s ' % param)
         gpstop = GpStop()
-        gpstop.run_gpstop_cmd(restart=True)
+        if restart_for_config:
+            gpstop.run_gpstop_cmd(restart=True)
+        else:
+            gpstop.run_gpstop_cmd(reload=True)

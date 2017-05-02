@@ -121,15 +121,22 @@ class FTSTestCase(ScenarioTestCase, MPPTestCase):
         self.check_system()
 
         test_case_list0 = []
-        test_case_list0.append(('mpp.gpdb.tests.storage.fts.fts_transitions.FtsTransitions.set_faults', ['filerep_receiver', 'sleep', 'primary'], {'sleeptime':150}))
-        self.test_case_scenario.append(test_case_list0)
+        test_case_list0.append(('mpp.gpdb.tests.storage.lib.base.BaseClass.set_gpconfig', ['gp_segment_connect_timeout', 20, False]))
+        # Sleep for some time greater than *gp_segment_connect_timeout* which
+        # should trigger no response received from mirror for that much time and
+        # help validate the scenario.
+        test_case_list0.append(('mpp.gpdb.tests.storage.fts.fts_transitions.FtsTransitions.set_faults', ['filerep_receiver', 'sleep', 'primary'], {'occurence':0, 'sleeptime':40}))
+        self.test_case_scenario.append(test_case_list0, serial=True)
 
-        test_case_list1 = []
-        test_case_list1.append('mpp.gpdb.tests.storage.fts.fts_transitions.FtsTransitions.run_sql_in_background')
-        self.test_case_scenario.append(test_case_list1, serial=True)
+        # *heartbeat* between primary and mirror triggers every minute. It will
+        # get blocked due to above fault. As the time it blocks exceeds
+        # gp_segment_connect_timeout, mirror should get marked as down and
+        # primary transition to CT.
 
         test_case_list3 = []
         test_case_list3.append('mpp.gpdb.tests.storage.fts.fts_transitions.FtsTransitions.wait_till_change_tracking')
+        test_case_list3.append(('mpp.gpdb.tests.storage.fts.fts_transitions.FtsTransitions.set_faults', ['filerep_receiver', 'reset', 'primary'], {'occurence':0, 'sleeptime':40}))
+        test_case_list3.append(('mpp.gpdb.tests.storage.lib.base.BaseClass.reset_gpconfig', ['gp_segment_connect_timeout', False]))
         test_case_list3.append('mpp.gpdb.tests.storage.fts.fts_transitions.FtsTransitions.run_fts_test_ddl_dml')
         self.test_case_scenario.append(test_case_list3, serial=True)
 
