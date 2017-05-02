@@ -2134,23 +2134,25 @@ class gpload:
             sys.exit(2)
 
         specify_str = str(specify) if specify else option
-        if val.startswith("E'") and val.endswith("'") and len(val[2:-1].decode('unicode-escape')) == 1:
-            subval = val[2:-1]
-            if subval == "\\'":
-                val = val
-                self.formatOpts += "%s %s " % (specify_str, val)
-            else:
-                val = subval.decode('unicode-escape')
+        if len(val) != 1:
+            if val.startswith("E'") and val.endswith("'") and len(val[2:-1].decode('unicode-escape')) == 1:
+                subval = val[2:-1]
+                if subval == "\\'":
+                    val = val
+                    self.formatOpts += "%s %s " % (specify_str, val)
+                else:
+                    val = subval.decode('unicode-escape')
+                    self.formatOpts += "%s '%s' " % (specify_str, val)
+            elif len(val.decode('unicode-escape')) == 1:
+                val = val.decode('unicode-escape')
                 self.formatOpts += "%s '%s' " % (specify_str, val)
-        elif len(val.decode('unicode-escape')) == 1:
-            val = val.decode('unicode-escape')
-            self.formatOpts += "%s '%s' " % (specify_str, val)
 
+            else:
+                self.control_file_warning(option +''' must be single ASCII charactor, you can also use unprintable characters(for example: '\\x1c' / E'\\x1c' or '\\u001c' / E'\\u001c' ''')
+                self.control_file_error("Invalid option, gpload quit immediately")
+                sys.exit(2);
         else:
-            self.control_file_warning(option +''' must be single ASCII charactor, you can also use unprintable characters(for example: '\\x1c' / E'\\x1c' or '\\u001c' / E'\\u001c' ''')
-            self.control_file_error("Invalid option, gpload quit immediately")
-            sys.exit(2);	
-
+            self.formatOpts += "%s '%s' " % (specify_str, val)
 
 
     #
