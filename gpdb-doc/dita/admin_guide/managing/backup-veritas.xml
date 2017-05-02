@@ -14,9 +14,6 @@
         <xref href="#topic_lpr_bcz_3p" format="dita"/>
       </li>
       <li>
-        <xref href="#topic_lk5_s1z_3p" format="dita"/>
-      </li>
-      <li>
         <xref href="#topic_nq4_m1z_3p" format="dita"/>
       </li>
       <li>
@@ -47,13 +44,8 @@
       </ul>
       <p>See the <cite>Veritas NetBackup Getting Started Guide</cite> for information about
         NetBackup.</p>
-    </body>
-  </topic>
-  <topic id="topic_lk5_s1z_3p">
-    <title>System Requirements</title>
-    <body>
-      <note>Greenplum Database uses the NetBackup API (XBSA) to communicate with NetBackup.</note>
-      <p>Greenplum Database is compatible with NetBackup 7.7.3.</p>
+      <p otherprops="pivotal">See the Release Notes for information about compatible NetBackup
+        versions for this release of Pivotal Greenplum Database.</p>
     </body>
   </topic>
   <topic id="topic_nq4_m1z_3p">
