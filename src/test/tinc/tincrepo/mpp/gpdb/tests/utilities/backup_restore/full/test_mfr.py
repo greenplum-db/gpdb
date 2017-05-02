@@ -423,8 +423,12 @@ class test_mfr(BackupTestCase):
                                   secondary_dumped_files, ALTERNATIVE_STORAGE_UNIT, 'remote')
 
     def test_23_remove_backup_dir(self):
+        cmd_check_dir = "gpddboost --listDirectory --dir=%s" % BackupTestCase.TSTINFO['DDBOOST_DIR']
+        (err, out) = self.run_command(cmd_check_dir)
+        if err:
+            return
         cmd_del_dir = "gpddboost --del-dir=%s" % BackupTestCase.TSTINFO['DDBOOST_DIR']
         (err, out) = self.run_command(cmd_del_dir)
         if err:
-            msg = "Failed to delete backup directory\n" % BackupTestCase.TSTINFO['DDBOOST_DIR']
+            msg = "Failed to delete backup directory %s\n" % BackupTestCase.TSTINFO['DDBOOST_DIR']
             raise Exception('Error: %s\n%s'% (msg,out))
