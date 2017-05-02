@@ -1069,7 +1069,7 @@ copytup_heap(Tuplestorestate *state, TuplestorePos *pos, void *tup)
 	if(!is_heaptuple_memtuple((HeapTuple) tup))
 		return heaptuple_copy_to((HeapTuple) tup, NULL, NULL);
 
-	return memtuple_copy_to((MemTuple) tup, NULL, NULL, NULL);
+	return memtuple_copy_to((MemTuple) tup, NULL, NULL);
 }
 
 static void
@@ -1079,7 +1079,7 @@ writetup_heap(Tuplestorestate *state, TuplestorePos *pos, void *tup)
 	Size         memsize = 0;
 
 	if(is_heaptuple_memtuple((HeapTuple) tup))
-		tuplen = memtuple_get_size((MemTuple) tup, NULL);
+		tuplen = memtuple_get_size((MemTuple) tup);
 	else
 	{
 		Assert(!is_heaptuple_splitter((HeapTuple) tup));
@@ -1123,7 +1123,7 @@ readtup_heap(Tuplestorestate *state, TuplestorePos *pos, uint32 len)
 	if(is_len_memtuplen(len))
 	{
 		/* read in the tuple proper */
-		memtuple_set_mtlen((MemTuple) tup, NULL, len);
+		memtuple_set_mtlen((MemTuple) tup, len);
 
 		if (BufFileRead(state->myfile, (void *) ((char *) tup + sizeof(uint32)), 
 					tuplen - sizeof(uint32)) 

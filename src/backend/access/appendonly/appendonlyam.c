@@ -1064,7 +1064,7 @@ upgrade_tuple(AppendOnlyExecutorReadBlock *executorReadBlock,
 		/*
 		 * make a modifiable copy
 		 */
-		newtuple = memtuple_copy_to(mtup, pbind, NULL, NULL);
+		newtuple = memtuple_copy_to(mtup, NULL, NULL);
 	}
 
 	/*
@@ -1150,7 +1150,7 @@ AppendOnlyExecutorReadBlock_ProcessTuple(
 		     AppendOnlyStorageRead_RelationName(executorReadBlock->storageRead),
 		     AOTupleIdToString(aoTupleId),
 		     tupleLen,
-		     memtuple_get_size(tuple, slot->tts_mt_bind),
+		     memtuple_get_size(tuple),
 		     executorReadBlock->headerOffsetInFile);
 
 	return valid;
@@ -2972,8 +2972,7 @@ appendonly_insert_init(Relation rel, int segno, bool update_mode)
 		need_toast = false;
 	else
 		need_toast = (MemTupleHasExternal(instup, aoInsertDesc->mt_bind) ||
-					  memtuple_get_size(instup, aoInsertDesc->mt_bind) >
-					  aoInsertDesc->toast_tuple_threshold);
+					  memtuple_get_size(instup) > aoInsertDesc->toast_tuple_threshold);
 
 	/*
 	 * If the new tuple is too big for storage or contains already toasted
@@ -2994,7 +2993,7 @@ appendonly_insert_init(Relation rel, int segno, bool update_mode)
 	/*
 	 * get space to insert our next item (tuple)
 	 */
-	itemLen = memtuple_get_size(tup, aoInsertDesc->mt_bind);
+	itemLen = memtuple_get_size(tup);
 	isLargeContent = false;
 
 	/*

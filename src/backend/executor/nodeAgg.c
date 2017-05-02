@@ -1612,8 +1612,7 @@ agg_retrieve_hash_table(AggState *aggstate)
 		 */
 		ExecStoreMinimalTuple((MemTuple)entry->tuple_and_aggs, firstSlot, false);
 		pergroup = (AggStatePerGroup)((char *)entry->tuple_and_aggs + 
-					      MAXALIGN(memtuple_get_size((MemTuple)entry->tuple_and_aggs,
-									 aggstate->hashslot->tts_mt_bind)));
+					      MAXALIGN(memtuple_get_size((MemTuple)entry->tuple_and_aggs)));
 
 		/*
 		 * Finalize each aggregate calculation, and stash results in the

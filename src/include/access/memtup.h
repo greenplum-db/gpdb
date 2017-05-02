@@ -81,78 +81,45 @@ static inline uint32 memtuple_size_from_uint32(uint32 len)
 	Assert ((len & MEMTUP_LEAD_BIT) != 0);
 	return len & MEMTUP_LEN_MASK;
 }
-static inline uint32 memtuple_get_size(MemTuple mtup, MemTupleBinding *pbind)
+static inline uint32 memtuple_get_size(MemTuple mtup)
 {
-	UnusedArg(pbind);
 	Assert(memtuple_lead_bit_set(mtup));
 	return (mtup->PRIVATE_mt_len & MEMTUP_LEN_MASK);
 }
-static inline void memtuple_set_size(MemTuple mtup, MemTupleBinding *pbind, uint32 len)
+static inline void memtuple_set_mtlen(MemTuple mtup, uint32 mtlen)
 {
-	UnusedArg(pbind);
-	Assert((len & (~MEMTUP_LEN_MASK)) == 0); 
-	mtup->PRIVATE_mt_len |= MEMTUP_LEAD_BIT;
-	mtup->PRIVATE_mt_len = (mtup->PRIVATE_mt_len & (~MEMTUP_LEN_MASK)) | len;
-}
-static inline void memtuple_set_mtlen(MemTuple mtup, MemTupleBinding *pbind, uint32 mtlen)
-{
-	UnusedArg(pbind);
 	Assert((mtlen & MEMTUP_LEAD_BIT) != 0);
 	mtup->PRIVATE_mt_len = mtlen;
 }
-static inline bool memtuple_get_hasnull(MemTuple mtup, MemTupleBinding *pbind)
+static inline bool memtuple_get_hasnull(MemTuple mtup)
 {
-	UnusedArg(pbind);
 	Assert(memtuple_lead_bit_set(mtup));
 	return (mtup->PRIVATE_mt_len & MEMTUP_HASNULL) != 0;
 }
-static inline void memtuple_set_hasnull(MemTuple mtup, MemTupleBinding *pbind)
+static inline void memtuple_set_hasnull(MemTuple mtup)
 {
-	UnusedArg(pbind);
 	Assert(memtuple_lead_bit_set(mtup));
 	mtup->PRIVATE_mt_len |= MEMTUP_HASNULL;
 }
-static inline void memtuple_clear_hasnull(MemTuple mtup, MemTupleBinding *pbind)
+static inline bool memtuple_get_islarge(MemTuple mtup)
 {
-	UnusedArg(pbind);
-	Assert(memtuple_lead_bit_set(mtup));
-	mtup->PRIVATE_mt_len &= (~MEMTUP_HASNULL);
-}
-static inline bool memtuple_get_islarge(MemTuple mtup, MemTupleBinding *pbind)
-{
-	UnusedArg(pbind);
 	Assert(memtuple_lead_bit_set(mtup));
 	return (mtup->PRIVATE_mt_len & MEMTUP_LARGETUP) != 0;
 }
-static inline void memtuple_set_islarge(MemTuple mtup, MemTupleBinding *pbind)
+static inline void memtuple_set_islarge(MemTuple mtup)
 {
-	UnusedArg(pbind);
 	Assert(memtuple_lead_bit_set(mtup));
 	mtup->PRIVATE_mt_len |= MEMTUP_LARGETUP; 
 }
-static inline void memtuple_clear_islarge(MemTuple mtup, MemTupleBinding *pbind)
+static inline bool memtuple_get_hasext(MemTuple mtup)
 {
-	UnusedArg(pbind);
-	Assert(memtuple_lead_bit_set(mtup));
-	mtup->PRIVATE_mt_len &= (~MEMTUP_LARGETUP); 
-}
-static inline bool memtuple_get_hasext(MemTuple mtup, MemTupleBinding *pbind)
-{
-	UnusedArg(pbind);
 	Assert(memtuple_lead_bit_set(mtup));
 	return (mtup->PRIVATE_mt_len & MEMTUP_HASEXTERNAL) != 0;
 }
-static inline void memtuple_set_hasext(MemTuple mtup, MemTupleBinding *pbind)
+static inline void memtuple_set_hasext(MemTuple mtup)
 {
-	UnusedArg(pbind);
 	Assert(memtuple_lead_bit_set(mtup));
 	mtup->PRIVATE_mt_len |= MEMTUP_HASEXTERNAL;
-}
-static inline void memtuple_clear_hasext(MemTuple mtup, MemTupleBinding *pbind)
-{
-	UnusedArg(pbind);
-	Assert(memtuple_lead_bit_set(mtup));
-	mtup->PRIVATE_mt_len &= (~MEMTUP_HASEXTERNAL);
 }
 
 
@@ -164,7 +131,7 @@ extern bool memtuple_attisnull(MemTuple mtup, MemTupleBinding *pbind, int attnum
 
 extern uint32 compute_memtuple_size(MemTupleBinding *pbind, Datum *values, bool *isnull, bool hasnull, uint32 *nullsaves);
 
-extern MemTuple memtuple_copy_to(MemTuple mtup, MemTupleBinding *pbind, MemTuple dest, uint32 *destlen);
+extern MemTuple memtuple_copy_to(MemTuple mtup, MemTuple dest, uint32 *destlen);
 extern MemTuple memtuple_form_to(MemTupleBinding *pbind, Datum *values, bool *isnull, MemTuple dest, uint32 *destlen, bool inline_toast);
 extern void memtuple_deform(MemTuple mtup, MemTupleBinding *pbind, Datum *datum, bool *isnull);
 extern void memtuple_deform_misaligned(MemTuple mtup, MemTupleBinding *pbind, Datum *datum, bool *isnull);
@@ -175,6 +142,5 @@ extern void MemTupleSetOid(MemTuple mtup, MemTupleBinding *pbind, Oid oid);
 extern bool MemTupleHasExternal(MemTuple mtup, MemTupleBinding *pbind);
 
 extern bool memtuple_has_misaligned_attribute(MemTuple mtup, MemTupleBinding *pbind);
-extern MemTuple memtuple_aligned_clone(MemTuple mtup, MemTupleBinding *pbind, bool use_null_saves_aligned);
 
 #endif /* MEMTUP_H */

@@ -1045,7 +1045,7 @@ ExecHashJoinSaveTuple(PlanState *ps, MemTuple tuple, uint32 hashvalue,
 		workfile_mgr_report_error();
 	}
 
-	if (!ExecWorkFile_Write(batchside->workfile, (void *) tuple, memtuple_get_size(tuple, NULL)))
+	if (!ExecWorkFile_Write(batchside->workfile, (void *) tuple, memtuple_get_size(tuple)))
 	{
 		workfile_mgr_report_error();
 	}
@@ -1055,7 +1055,7 @@ ExecHashJoinSaveTuple(PlanState *ps, MemTuple tuple, uint32 hashvalue,
 	if (ps)
 	{
 		Gpmon_M_Incr(&ps->gpmon_pkt, GPMON_HASHJOIN_SPILLTUPLE);
-		Gpmon_M_Add(&ps->gpmon_pkt, GPMON_HASHJOIN_SPILLBYTE, memtuple_get_size(tuple, NULL));
+		Gpmon_M_Add(&ps->gpmon_pkt, GPMON_HASHJOIN_SPILLBYTE, memtuple_get_size(tuple));
 		CheckSendPlanStateGpmonPkt(ps);
 	}
 }
@@ -1091,7 +1091,7 @@ ExecHashJoinGetSavedTuple(HashJoinState *hjstate,
 
 	*hashvalue = header[0];
 	tuple = (MemTuple) palloc(memtuple_size_from_uint32(header[1]));
-	memtuple_set_mtlen(tuple, NULL, header[1]);
+	memtuple_set_mtlen(tuple, header[1]);
 
 	nread = ExecWorkFile_Read(batchside->workfile,
 							  (void *) ((char *) tuple + sizeof(uint32)),

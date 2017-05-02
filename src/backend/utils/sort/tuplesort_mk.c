@@ -2769,7 +2769,7 @@ copytup_heap(Tuplesortstate_mk *state, MKEntry *e, void *tup)
 									   NULL, NULL, false
 		);
 
-	state->totalTupleBytes += memtuple_get_size((MemTuple) e->ptr, NULL);
+	state->totalTupleBytes += memtuple_get_size((MemTuple) e->ptr);
 
 	Assert(state->mt_bind);
 }
@@ -2781,7 +2781,7 @@ copytup_heap(Tuplesortstate_mk *state, MKEntry *e, void *tup)
 static long
 writetup_heap(Tuplesortstate_mk *state, LogicalTape *lt, MKEntry *e)
 {
-	uint32		tuplen = memtuple_get_size(e->ptr, NULL);
+	uint32		tuplen = memtuple_get_size(e->ptr);
 	long		ret = tuplen;
 
 	LogicalTapeWrite(state->tapeset, lt, e->ptr, tuplen);
@@ -2824,7 +2824,7 @@ readtup_heap(Tuplesortstate_mk *state, TuplesortPos_mk *pos, MKEntry *e, Logical
 	MemSet(e, 0, sizeof(MKEntry));
 	e->ptr = palloc(memtuple_size_from_uint32(len));
 
-	memtuple_set_mtlen((MemTuple) e->ptr, NULL, len);
+	memtuple_set_mtlen((MemTuple) e->ptr, len);
 
 	Assert(lt);
 	readSize = LogicalTapeRead(state->tapeset, lt,

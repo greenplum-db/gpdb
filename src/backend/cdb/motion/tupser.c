@@ -527,8 +527,8 @@ SerializeTupleIntoChunks(HeapTuple tuple, SerTupInfo * pSerInfo, TupleChunkList 
 
 	if (is_heaptuple_memtuple(tuple))
 	{
-		addByteStringToChunkList(tcList, (char *)tuple, memtuple_get_size((MemTuple)tuple, NULL), &pSerInfo->chunkCache);
-		addPadding(tcList, &pSerInfo->chunkCache, memtuple_get_size((MemTuple)tuple, NULL));
+		addByteStringToChunkList(tcList, (char *)tuple, memtuple_get_size((MemTuple)tuple), &pSerInfo->chunkCache);
+		addPadding(tcList, &pSerInfo->chunkCache, memtuple_get_size((MemTuple)tuple));
 	}
 	else
 	{
@@ -819,7 +819,7 @@ SerializeTupleDirect(HeapTuple tuple, SerTupInfo * pSerInfo, struct directTransp
 			int tupleSize;
 			int paddedSize;
 
-			tupleSize = memtuple_get_size((MemTuple)tuple, NULL);
+			tupleSize = memtuple_get_size((MemTuple)tuple);
 			paddedSize = TYPEALIGN(TUPLE_CHUNK_ALIGN, tupleSize);
 
 			if (paddedSize + TUPLE_CHUNK_HEADER_SIZE > b->prilen)

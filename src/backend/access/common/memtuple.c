@@ -542,7 +542,7 @@ static inline unsigned char *memtuple_get_nullp(MemTuple mtup, MemTupleBinding *
 {
 	return mtup->PRIVATE_mt_bits + (mtbind_has_oid(pbind) ? sizeof(Oid) : 0);
 }
-static inline int memtuple_get_nullp_len(MemTuple mtup __attribute__((unused)), MemTupleBinding *pbind)
+static inline int memtuple_get_nullp_len(MemTupleBinding *pbind)
 {
 	return (pbind->tupdesc->natts + 7) >> 3;
 }
@@ -674,13 +674,13 @@ MemTuple memtuple_form_to(
 	 * because the len returned from compute size is always max aligned
 	 */
 	Assert(len == MEMTUP_ALIGN(len));
-	memtuple_set_mtlen(mtup, pbind, (len | MEMTUP_LEAD_BIT)); 
+	memtuple_set_mtlen(mtup, (len | MEMTUP_LEAD_BIT));
 
 	if(len > MEMTUPLE_LEN_FITSHORT)
-		memtuple_set_islarge(mtup, pbind);
+		memtuple_set_islarge(mtup);
 
 	if(hasext)
-		memtuple_set_hasext(mtup, pbind);
+		memtuple_set_hasext(mtup);
 
 	/* Clear Oid */ 
 	if(mtbind_has_oid(pbind))
@@ -694,14 +694,14 @@ MemTuple memtuple_form_to(
 
 	if(hasnull)
 	{
-		memtuple_set_hasnull(mtup, pbind);
+		memtuple_set_hasnull(mtup);
 
 		/* if null bitmap is more than 4 bytes, add needed space */
 		start += pbind->null_bitmap_extra_size;
 		varlen_start += pbind->null_bitmap_extra_size;
 
 		/* clear null bitmap. */
-		memset(nullp, 0, memtuple_get_nullp_len(mtup, pbind));
+		memset(nullp, 0, memtuple_get_nullp_len(pbind));
 	}
 
 	/* It is very important to setup the null bitmap first before we 
@@ -865,7 +865,7 @@ MemTuple memtuple_form_to(
 
 bool memtuple_attisnull(MemTuple mtup, MemTupleBinding *pbind, int attnum)
 {
-	MemTupleBindingCols *colbind = memtuple_get_islarge(mtup, pbind) ? &pbind->large_bind : &pbind->bind;
+	MemTupleBindingCols *colbind = memtuple_get_islarge(mtup) ? &pbind->large_bind : &pbind->bind;
 	Assert(mtup && pbind && pbind->tupdesc);
 	Assert(attnum > 0);
 	
@@ -883,7 +883,7 @@ bool memtuple_attisnull(MemTuple mtup, MemTupleBinding *pbind, int attnum)
 	/*
 	 * is there a NULL value in any of the attributes?
 	 */
-	if(!memtuple_get_hasnull(mtup, pbind))
+	if(!memtuple_get_hasnull(mtup))
 		return false;
 	
 	return (mtup->PRIVATE_mt_bits[colbind->bindings[attnum-1].null_byte] & colbind->bindings[attnum-1].null_mask);
@@ -891,12 +891,12 @@ bool memtuple_attisnull(MemTuple mtup, MemTupleBinding *pbind, int attnum)
 
 static Datum memtuple_getattr_by_alignment(MemTuple mtup, MemTupleBinding *pbind, int attnum, bool *isnull, bool use_null_saves_aligned)
 {
-	bool hasnull = memtuple_get_hasnull(mtup, pbind);
+	bool hasnull = memtuple_get_hasnull(mtup);
 	unsigned char *nullp = hasnull ? memtuple_get_nullp(mtup, pbind) : NULL; 
 	char *start = (char *) mtup + (hasnull ? pbind->null_bitmap_extra_size : 0);
 
 	Datum ret;
-	MemTupleBindingCols *colbind = memtuple_get_islarge(mtup, pbind) ? &pbind->large_bind : &pbind->bind;
+	MemTupleBindingCols *colbind = memtuple_get_islarge(mtup) ? &pbind->large_bind : &pbind->bind;
 	MemTupleAttrBinding *attrbind;
 
 	Assert(mtup && pbind && pbind->tupdesc);
@@ -931,9 +931,9 @@ Datum memtuple_getattr(MemTuple mtup, MemTupleBinding *pbind, int attnum, bool *
 }
 
 
-MemTuple memtuple_copy_to(MemTuple mtup, MemTupleBinding *pbind, MemTuple dest, uint32 *destlen)
+MemTuple memtuple_copy_to(MemTuple mtup, MemTuple dest, uint32 *destlen)
 {
-	uint32 len = memtuple_get_size(mtup, pbind);
+	uint32 len = memtuple_get_size(mtup);
 
 	if(!destlen)
 		dest = (MemTuple) palloc(len);
@@ -1008,7 +1008,7 @@ void MemTupleSetOid(MemTuple mtup, MemTupleBinding *pbind __attribute__((unused)
 
 bool MemTupleHasExternal(MemTuple mtup, MemTupleBinding *pbind)
 {
-	MemTupleBindingCols *colbind = memtuple_get_islarge(mtup, pbind) ? &pbind->large_bind : &pbind->bind;
+	MemTupleBindingCols *colbind = memtuple_get_islarge(mtup) ? &pbind->large_bind : &pbind->bind;
 	int i;
 
 	for(i=0; i<pbind->tupdesc->natts; ++i)
@@ -1056,7 +1056,7 @@ bool memtuple_has_misaligned_attribute(MemTuple mtup, MemTupleBinding *pbind)
 	}
 
 	/* Check if the memtuple has no null values */
-	if (!(memtuple_get_hasnull(mtup, pbind)))
+	if (!(memtuple_get_hasnull(mtup)))
 	{
 		return false;
 	}

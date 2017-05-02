@@ -646,7 +646,7 @@ MemTuple ExecCopySlotMemTuple(TupleTableSlot *slot)
 	 * tts_mintuple since that's a tad cheaper.
 	 */
 	if (slot->PRIVATE_tts_memtuple)
-		return memtuple_copy_to(slot->PRIVATE_tts_memtuple, slot->tts_mt_bind, NULL, NULL);
+		return memtuple_copy_to(slot->PRIVATE_tts_memtuple, NULL, NULL);
 	
 	slot_getallattrs(slot);
 
@@ -669,12 +669,12 @@ MemTuple ExecCopySlotMemTupleTo(TupleTableSlot *slot, MemoryContext pctxt, char 
 	
 	if (TupHasMemTuple(slot))
 	{
-		mtup = memtuple_copy_to(slot->PRIVATE_tts_memtuple, slot->tts_mt_bind, (MemTuple) dest, len);
+		mtup = memtuple_copy_to(slot->PRIVATE_tts_memtuple, (MemTuple) dest, len);
 		if(mtup || !pctxt)
 			return mtup;
 
 		mtup = (MemTuple) ctxt_alloc(pctxt, *len);
-		mtup = memtuple_copy_to(slot->PRIVATE_tts_memtuple, slot->tts_mt_bind, mtup, len);
+		mtup = memtuple_copy_to(slot->PRIVATE_tts_memtuple, mtup, len);
 		Assert(mtup);
 
 		return mtup;
@@ -774,7 +774,7 @@ MemTuple ExecFetchSlotMemTuple(TupleTableSlot *slot, bool inline_toast)
 
 	if(slot->PRIVATE_tts_memtuple)
 	{
-		if(!inline_toast || !memtuple_get_hasext(slot->PRIVATE_tts_memtuple, slot->tts_mt_bind))
+		if(!inline_toast || !memtuple_get_hasext(slot->PRIVATE_tts_memtuple))
 			return slot->PRIVATE_tts_memtuple;
 
 		oldTuple = slot->PRIVATE_tts_mtup_buf;

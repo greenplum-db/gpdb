@@ -2854,7 +2854,7 @@ copytup_heap(Tuplesortstate *state, SortTuple *stup, void *tup)
 static void
 writetup_heap(Tuplesortstate *state, LogicalTape *lt, SortTuple *stup)
 {
-	uint32 tuplen = memtuple_get_size(stup->tuple, NULL); 
+	uint32 tuplen = memtuple_get_size(stup->tuple);
 
 	LogicalTapeWrite(state->tapeset, lt, (void *) stup->tuple, tuplen);
 
@@ -2882,7 +2882,7 @@ readtup_heap(Tuplesortstate *state, TuplesortPos *pos, SortTuple *stup,
 
 	stup->tuple = (MemTuple) palloc(memtuple_size_from_uint32(len));
 	USEMEM(state, GetMemoryChunkSpace(stup->tuple));
-	memtuple_set_mtlen(stup->tuple, NULL, len);
+	memtuple_set_mtlen(stup->tuple, len);
 
 	Assert(lt);
 	readSize = LogicalTapeRead(state->tapeset, lt,
