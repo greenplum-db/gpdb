@@ -150,7 +150,7 @@ USAGE () {
 		$ECHO "      0 - No problems encountered with requested operation"
 		$ECHO "      1 - Warning generated, but instance operational"
 		$ECHO "      2 - Fatal error, instance not created/started, or in an inconsistent state,"
-	    	$ECHO "            see log file for failure reason."
+		$ECHO "          see log file for failure reason."
 		$ECHO
 		exit $EXIT_STATUS
 	fi
@@ -347,15 +347,15 @@ CHK_PARAMS () {
 			ERROR_EXIT "[FATAL]:-MASTER_DIRECTORY variable not set" 2
 		fi
 		# Check that we have write access to the proposed master data directory
-                W_DIR=$MASTER_DIRECTORY
-                LOG_MSG "[INFO]:-Checking write access to $W_DIR on master host"
-                $TOUCH ${W_DIR}/tmp_file_test
-                RETVAL=$?
-                if [ $RETVAL -ne 0 ];then
-                        ERROR_EXIT "[FATAL]:-Cannot write to $W_DIR on master host " 2
-                else
-                        $RM -f ${W_DIR}/tmp_file_test
-                        LOG_MSG "[INFO]:-Write test passed $W_DIR directory on master host"
+		W_DIR=$MASTER_DIRECTORY
+		LOG_MSG "[INFO]:-Checking write access to $W_DIR on master host"
+		$TOUCH ${W_DIR}/tmp_file_test
+		RETVAL=$?
+		if [ $RETVAL -ne 0 ];then
+			ERROR_EXIT "[FATAL]:-Cannot write to $W_DIR on master host " 2
+		else
+			$RM -f ${W_DIR}/tmp_file_test
+			LOG_MSG "[INFO]:-Write test passed $W_DIR directory on master host"
 		fi	
 		# Check that the master segment directory does not exist
 		if [ -d ${MASTER_DIRECTORY}/${SEG_PREFIX}-1 ];then
@@ -600,9 +600,9 @@ END_PYTHON_CODE
                 ((REMAINDER=$NUM_DATADIR % $NUM_MHOST_NODE))                
                 ((MULTIPLE=$NUM_DATADIR / $NUM_MHOST_NODE))
                 if [ $REMAINDER -ne 0 ] || [ $MULTIPLE -eq 0 ] ;then                        
-		    LOG_MSG "[FATAL]:-Inconsistency between number of multi-home hostnames and number of segments per host" 1
-		    LOG_MSG "[INFO]:-Have $NUM_DATADIR data directories and $NUM_MHOST_NODE multi-home hostnames for each host" 1
-		    LOG_MSG "[INFO]:-For multi-home configuration, number of segment instance data directories per host must be multiple of" 1
+                    LOG_MSG "[FATAL]:-Inconsistency between number of multi-home hostnames and number of segments per host" 1
+                    LOG_MSG "[INFO]:-Have $NUM_DATADIR data directories and $NUM_MHOST_NODE multi-home hostnames for each host" 1
+                    LOG_MSG "[INFO]:-For multi-home configuration, number of segment instance data directories per host must be multiple of" 1
                     LOG_MSG "[INFO]:-the number of multi-home hostnames within the GPDB array" 1
                     ERROR_EXIT "[FATAL]:-Unable to continue" 2
                 fi
@@ -799,8 +799,8 @@ CHK_QES () {
             if [ $EXISTS -eq 0 ]; then
                 ERROR_EXIT "[FATAL]:-Instance directory $GP_DIR exists on segment instance $GP_HOSTADDRESS" 2
             fi
-                            # Check that we can write to the QE directory
-                        W_DIR=`$DIRNAME $GP_DIR`
+            # Check that we can write to the QE directory
+            W_DIR=`$DIRNAME $GP_DIR`
             LOG_MSG "[INFO]:-Checking write access to $W_DIR on $GP_HOSTADDRESS"
             $TRUSTED_SHELL $GP_HOSTADDRESS "$TOUCH ${W_DIR}/tmp_file_test"
             RETVAL=$?
@@ -854,11 +854,10 @@ CHK_SEG () {
     if [ $RETVAL -ne 0 ];then
          ERROR_EXIT "[FATAL]:-Cannot write to $W_DIR on $GP_HOSTADDRESS " 2
     else
-             $TRUSTED_SHELL $GP_HOSTADDRESS "$RM -f ${W_DIR}/tmp_file_test"
-             LOG_MSG "[INFO]:-Write test passed on $GP_HOSTADDRESS $W_DIR directory"
+         $TRUSTED_SHELL $GP_HOSTADDRESS "$RM -f ${W_DIR}/tmp_file_test"
+         LOG_MSG "[INFO]:-Write test passed on $GP_HOSTADDRESS $W_DIR directory"
     fi
     
-	
 	# Check that we have a GP_LIBRARY_PATH directory on the QE
 	CHK_DIR $GP_LIBRARY_PATH $GP_HOSTADDRESS
 	if [ $EXISTS -ne 0 ]; then
@@ -871,43 +870,43 @@ CHK_SEG () {
 }
 
 CHK_QES_FROM_INPUTFILE () {
-		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-		LOG_MSG "[INFO]:-Checking Master host" 1
-		SET_VAR $QD_PRIMARY_ARRAY
-                CHK_DIR $GP_DIR
-                if [ $EXISTS -eq 0 ]; then
-                                ERROR_EXIT "[FATAL]:-Master directory $GP_DIR already exists" 2
-                fi
-		GET_PG_PID_ACTIVE $GP_PORT
-		if [ $PID -ne 0 ];then
-			ERROR_EXIT "[FATAL]:-Found indication of postmaster process on port $GP_PORT on Master host" 2
+	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
+	LOG_MSG "[INFO]:-Checking Master host" 1
+	SET_VAR $QD_PRIMARY_ARRAY
+	CHK_DIR $GP_DIR
+	if [ $EXISTS -eq 0 ]; then
+		ERROR_EXIT "[FATAL]:-Master directory $GP_DIR already exists" 2
+	fi
+	GET_PG_PID_ACTIVE $GP_PORT
+	if [ $PID -ne 0 ];then
+		ERROR_EXIT "[FATAL]:-Found indication of postmaster process on port $GP_PORT on Master host" 2
+	fi
+	LOG_MSG "[INFO]:-Checking new segment hosts, please wait..." 1
+	
+	for QE in ${QE_PRIMARY_ARRAY[@]}
+	do
+		CHK_SEG $QE            
+	done
+	
+	for QE in ${QE_MIRROR_ARRAY[@]}
+	do
+		CHK_SEG $QE            
+	done
+	        
+	if [ x"" != x"$STANDBY_HOSTNAME" ];then
+		PING_HOST $STANDBY_HOSTNAME 
+		CHK_LOCALE_KNOWN $STANDBY_HOSTNAME
+		CHK_OPEN_FILES $GP_HOSTADDRESS
+		#Check standby host directory
+		CHK_DIR $MASTER_DIRECTORY $STANDBY_HOSTNAME
+		if [ $EXISTS -ne 0 ];then
+			ERROR_EXIT "[FATAL]:-Standby host directory $MASTER_DIRECTORY, does not exist" 2
 		fi
-		LOG_MSG "[INFO]:-Checking new segment hosts, please wait..." 1
-
-        for QE in ${QE_PRIMARY_ARRAY[@]}
-        do
-            CHK_SEG $QE            
-        done
-        
-        for QE in ${QE_MIRROR_ARRAY[@]}
-        do
-            CHK_SEG $QE            
-        done
-                
-        if [ x"" != x"$STANDBY_HOSTNAME" ];then
-            PING_HOST $STANDBY_HOSTNAME 
-            CHK_LOCALE_KNOWN $STANDBY_HOSTNAME
-            CHK_OPEN_FILES $GP_HOSTADDRESS
-            #Check standby host directory
-            CHK_DIR $MASTER_DIRECTORY $STANDBY_HOSTNAME
-            if [ $EXISTS -ne 0 ];then
-                ERROR_EXIT "[FATAL]:-Standby host directory $MASTER_DIRECTORY, does not exist" 2
-            fi
-        fi
-
-		if [ $DEBUG_LEVEL -eq 0 ] && [ x"" != x"$VERBOSE" ];then $ECHO;fi
-		LOG_MSG "[INFO]:-Checking new segment hosts, Completed" 1
-		LOG_MSG "[INFO]:-End Function $FUNCNAME"
+	fi
+	
+	if [ $DEBUG_LEVEL -eq 0 ] && [ x"" != x"$VERBOSE" ];then $ECHO;fi
+	LOG_MSG "[INFO]:-Checking new segment hosts, Completed" 1
+	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
 POSTGRES_PORT_CHK () {
