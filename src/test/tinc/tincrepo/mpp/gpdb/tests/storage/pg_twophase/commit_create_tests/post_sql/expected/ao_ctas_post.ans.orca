@@ -43,7 +43,7 @@ Compression Type: None
 Compression Level: 0
 Block Size: 32768
 Checksum: f
-Distributed randomly
+Distributed by: (phase)
 
 select count(*) from cr_ao_ctas;
  count 

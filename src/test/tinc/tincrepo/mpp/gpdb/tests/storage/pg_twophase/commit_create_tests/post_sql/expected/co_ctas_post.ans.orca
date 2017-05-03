@@ -40,7 +40,7 @@
  col039 | time without time zone      | 
  col040 | timestamp without time zone | 
 Checksum: f
-Distributed randomly
+Distributed by: (phase)
 
 select count(*) from cr_co_ctas;
  count 
