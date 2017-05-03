@@ -1,7 +1,0 @@
-#! /usr/bin/env python
-"""
-Output an HTML-ized coverage report.
-"""
-import _lib
-import figleaf.annotate_html
-figleaf.annotate_html.main()
