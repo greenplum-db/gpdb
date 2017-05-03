@@ -1238,22 +1238,6 @@ int
 FileWrite(File file, char *buffer, int amount)
 {
 	int			returnCode;
-	FileRepGpmonRecord_s gpmonRecord;
-	FileRepGpmonStatType_e whichStat =0;
-
-	if (fileRepRole == FileRepPrimaryRole)
-	{
-			whichStat = FileRepGpmonStatType_PrimaryWriteSyscall;
-			FileRepGpmonStat_OpenRecord(whichStat, &gpmonRecord);
-			gpmonRecord.size = amount;
-
-	} else if (fileRepRole == FileRepMirrorRole)
-	{
-			whichStat = FileRepGpmonStatType_MirrorWriteSyscall;
-			FileRepGpmonStat_OpenRecord(whichStat, &gpmonRecord);
-			gpmonRecord.size = amount;
-
-	}
 
 	Assert(FileIsValid(file));
 
@@ -1265,11 +1249,11 @@ FileWrite(File file, char *buffer, int amount)
 	if (returnCode < 0)
 		return returnCode;
 
-#ifdef FAULT_INJECTOR	
+#ifdef FAULT_INJECTOR
 	if (! strcmp(VfdCache[file].fileName, "global/pg_control"))
 	{
 		if (FaultInjector_InjectFaultIfSet(
-										   PgControl, 
+										   PgControl,
 										   DDLNotSpecified,
 										   "" /* databaseName */,
 										   "" /* tableName */) == FaultInjectorTypeDataCorruption)
@@ -1277,11 +1261,11 @@ FileWrite(File file, char *buffer, int amount)
 			MemSet(buffer, 0, amount);
 		}
 	}
-	
+
 	if (strstr(VfdCache[file].fileName, "pg_xlog/"))
 	{
 		if (FaultInjector_InjectFaultIfSet(
-										   PgXlog, 
+										   PgXlog,
 										   DDLNotSpecified,
 										   "" /* databaseName */,
 										   "" /* tableName */) == FaultInjectorTypeDataCorruption)
@@ -1328,15 +1312,6 @@ retry:
 		VfdCache[file].seekPos = FileUnknownPos;
 	}
 
-	if (returnCode >= 0)
-	{
-		//only include stat if successful
-		if ((fileRepRole == FileRepPrimaryRole) ||
-			(fileRepRole == FileRepMirrorRole))
-		{
-			FileRepGpmonStat_CloseRecord(whichStat, &gpmonRecord);
-		}
-	}
 	return returnCode;
 }
 
@@ -1344,18 +1319,6 @@ int
 FileSync(File file)
 {
 	int			returnCode;
-	FileRepGpmonRecord_s gpmonRecord;
-	FileRepGpmonStatType_e whichStat;
-
-	if (fileRepRole == FileRepPrimaryRole)
-	{
-			whichStat = FileRepGpmonStatType_PrimaryFsyncSyscall;
-			FileRepGpmonStat_OpenRecord(whichStat, &gpmonRecord);
-	} else 
-	{
-			whichStat = FileRepGpmonStatType_MirrorFsyncSyscall;
-			FileRepGpmonStat_OpenRecord(whichStat, &gpmonRecord);
-	}
 	Assert(FileIsValid(file));
 
 	DO_DB(elog(LOG, "FileSync: %d (%s)",
@@ -1368,16 +1331,7 @@ FileSync(File file)
 	SIMPLE_FAULT_INJECTOR(FileRepFlush);
 
 	returnCode =  pg_fsync(VfdCache[file].fd);
-	
-	if (returnCode >= 0)
-	{
-			//only include stats if successful
-			if ((fileRepRole == FileRepPrimaryRole) || 
-				(fileRepRole == FileRepMirrorRole))
-			{
-					FileRepGpmonStat_CloseRecord(whichStat, &gpmonRecord);
-			}
-	}
+
 	return returnCode;
 }
 
@@ -1520,10 +1474,10 @@ FileTruncate(File file, int64 offset)
 	 * table data.
 	 */
 	returnCode = ftruncate(VfdCache[file].fd, offset);
-	
+
 	/* Assume we don't know the file position anymore */
 	VfdCache[file].seekPos = FileUnknownPos;
-		
+
 	return returnCode;
 }
 
@@ -2197,7 +2151,7 @@ GetTempFilePrefix(char * buf, size_t buflen, const char * fileName)
 	{
 		return needlen;
 	}
-	
+
 	snprintf(buf, buflen, "%s/%s_%s",
 			PG_TEMP_FILES_DIR,
 			PG_TEMP_FILE_PREFIX,

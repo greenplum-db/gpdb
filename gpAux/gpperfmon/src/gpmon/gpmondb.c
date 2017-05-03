@@ -1067,7 +1067,7 @@ apr_status_t call_for_each_table(eachtablefunc, apr_pool_t*, PGconn*);
 apr_status_t call_for_each_table_with_opt(eachtablefuncwithopt, apr_pool_t*, PGconn*, mmon_options_t*);
 
 
-char* all_tables[] = { "system", "queries", "iterators", "database", "segment", "filerep", "diskspace" };
+char* all_tables[] = { "system", "queries", "iterators", "database", "segment", "diskspace" };
 
 apr_status_t call_for_each_table(eachtablefunc func, apr_pool_t* pool, PGconn* conn)
 {

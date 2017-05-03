@@ -231,7 +231,6 @@ typedef struct gp_smon_to_mmon_packet_t {
 		gpmon_qlog_t    qlog;
 		qexec_packet_t  qexec_packet;
 		gpmon_seginfo_t seginfo;
-		gpmon_filerepinfo_t filerepinfo;
 		gpmon_fsinfo_t fsinfo;
 		gpmon_query_seginfo_t queryseg;
 	} u;

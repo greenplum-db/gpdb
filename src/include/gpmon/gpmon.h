@@ -11,7 +11,6 @@ typedef struct gpmon_qexec_t gpmon_qexec_t;
 typedef struct gpmon_hello_t gpmon_hello_t;
 typedef struct gpmon_metrics_t gpmon_metrics_t;
 typedef struct gpmon_seginfo_t gpmon_seginfo_t;
-typedef struct gpmon_filerepinfo_t gpmon_filerepinfo_t;
 typedef struct gpmon_fsinfokey_t gpmon_fsinfokey_t;
 typedef struct gpmon_fsinfo_t gpmon_fsinfo_t;
 typedef struct gpmon_query_seginfo_key_t gpmon_query_seginfo_key_t;
@@ -245,106 +244,6 @@ struct gpmon_seginfo_t {
 	uint64 dynamic_memory_available;		// available memory in bytes,
 };
 
-/*
-//we could clean up the primary and mirror stats using this basicStat struct
-typedef struct gpmon_filerep_basicStat_s
-{
-		uint32 count;
-		uint32 time_avg;
-		uint32 time_max;
-		uint32 size_avg;
-		uint32 size_max;
-
-} gpmon_filerep_basicStat_s;
-*/
-/*
- * Filerep related statistics
- */
-typedef struct gpmon_filerep_primarystats_s
-{
-
-	//NOTE: 32 bits can store over an hour of microseconds - we will not worry about this
-	// EVENT: write systemcall on primary
-	uint32 write_syscall_size_avg;
-	uint32 write_syscall_size_max;
-	uint32 write_syscall_time_avg; // microseconds;
-	uint32 write_syscall_time_max; // microseconds;
-	uint32 write_syscall_count;
-
-	// EVENT: fsync systemcall on primary
-	uint32 fsync_syscall_time_avg; // microseconds;
-	uint32 fsync_syscall_time_max; // microseconds;
-	uint32 fsync_syscall_count;
-
-	// EVENT: putting write message into shared memory
-	uint32 write_shmem_size_avg;
-	uint32 write_shmem_size_max;
-	uint32 write_shmem_time_avg; // microseconds;
-	uint32 write_shmem_time_max; // microseconds;
-	uint32 write_shmem_count;
-
-	// EVENT: putting fsync message into shared memory
-	uint32 fsync_shmem_time_avg; // microseconds;
-	uint32 fsync_shmem_time_max; // microseconds;
-	uint32 fsync_shmem_count;
-
-	// EVENT: Roundtrip from sending fsync message to mirror to get ack back on primary
-	uint32 roundtrip_fsync_msg_time_avg; // microseconds;
-	uint32 roundtrip_fsync_msg_time_max; // microseconds;
-	uint32 roundtrip_fsync_msg_count;
-
-	// EVENT: Roundtrip from sending test message to mirror to getting back on primary
-	uint32 roundtrip_test_msg_time_avg; // microseconds;
-	uint32 roundtrip_test_msg_time_max; // microseconds;
-	uint32 roundtrip_test_msg_count;
-} gpmon_filerep_primarystats_s;
-
-typedef struct gpmon_filerep_mirrorstats_s
-{
-	// EVENT: write systemcall on mirror
-	uint32 write_syscall_size_avg;
-	uint32 write_syscall_size_max;
-	uint32 write_syscall_time_avg; // microseconds;
-	uint32 write_syscall_time_max; // microseconds;
-	uint32 write_syscall_count;
-
-	// EVENT: fsync systemcall on mirror
-	uint32 fsync_syscall_time_avg; // microseconds;
-	uint32 fsync_syscall_time_max; // microseconds;
-	uint32 fsync_syscall_count;
-} gpmon_filerep_mirrorstats_s;
-
-
-typedef union gpmon_filerep_stats_u {
-    gpmon_filerep_primarystats_s primary;
-    gpmon_filerep_mirrorstats_s mirror;
-} gpmon_filerep_stats_u;
-
-typedef struct gpmmon_filerep_key_t
-{
-	char primary_hostname[NAMEDATALEN];
-	uint16 primary_port;
-	char mirror_hostname[NAMEDATALEN];
-	uint16 mirror_port;
-
-} gpmmon_filerep_key_t;
-
-typedef struct gpsmon_filerep_key_t
-{
-	gpmmon_filerep_key_t dkey;
-	bool isPrimary;
-} gpsmon_filerep_key_t;
-
-
-struct gpmon_filerepinfo_t
-{
-	gpsmon_filerep_key_t key;
-
-	float elapsedTime_secs;
-
-	gpmon_filerep_stats_u stats;
-};
-
 /* ------------------------------------------------------------------
          HELLO
    ------------------------------------------------------------------ */
@@ -373,7 +272,6 @@ enum gpmon_pkttype_t {
     GPMON_PKTTYPE_QLOG = 3,
     GPMON_PKTTYPE_QEXEC = 4,
     GPMON_PKTTYPE_SEGINFO = 5,
-    GPMON_PKTTYPE_FILEREP = 6,
     GPMON_PKTTYPE_QUERY_HOST_METRICS = 7, // query metrics update from a segment such as CPU per query
     GPMON_PKTTYPE_FSINFO = 8,
     GPMON_PKTTYPE_QUERYSEG = 9,
@@ -394,7 +292,6 @@ struct gpmon_packet_t {
 		gpmon_qlog_t    qlog;
 		gpmon_qexec_t   qexec;
 		gpmon_seginfo_t seginfo;
-		gpmon_filerepinfo_t filerepinfo;
 		gpmon_fsinfo_t fsinfo;
     } u;
 };

@@ -54,8 +54,6 @@ inline size_t get_size_by_pkttype_smon_to_mmon(apr_int16_t pkttype)
 			return(sizeof(qexec_packet_t));
 		case GPMON_PKTTYPE_SEGINFO:
 			return(sizeof(gpmon_seginfo_t));
-		case GPMON_PKTTYPE_FILEREP:
-			return(sizeof(gpmon_filerepinfo_t));
 		case GPMON_PKTTYPE_QUERY_HOST_METRICS:
 			return(sizeof(gpmon_qlog_t));
 		case GPMON_PKTTYPE_FSINFO:
