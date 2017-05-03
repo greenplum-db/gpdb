@@ -38,6 +38,7 @@ COPY table [(column [, ...])] FROM {'file' | STDIN}
 
 COPY {table [(column [, ...])] | (query)} TO {'file' | STDOUT}
       [ [WITH] 
+        [ON SEGMENT]
         [BINARY]
         [OIDS]
         [HEADER]

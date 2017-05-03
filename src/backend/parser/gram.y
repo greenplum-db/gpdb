@@ -3373,6 +3373,10 @@ copy_opt_item:
 				{
 					$$ = makeDefElem("newline", (Node *)makeString($3));
 				}	
+			| ON SEGMENT
+				{
+					$$ = makeDefElem("on_segment", (Node *)makeInteger(TRUE));
+				}
 		;
 
 /* The following exist for backward compatibility */

@@ -242,8 +242,11 @@ typedef struct CopyStateData
 	PartitionNode *partitions; /* partitioning meta data from dispatcher */
 	List		  *ao_segnos;  /* AO table meta data from dispatcher */
 	bool          skip_ext_partition;  /* skip external partition */
-	/* end Greenplum Database specific variables */
 
+	bool		on_segment; /* QE save data files locally */
+	bool		ignore_extra_line; /* Don't count CSV header or binary trailer in
+									  "processed" line number for on_segment mode*/
+	/* end Greenplum Database specific variables */
 } CopyStateData;
 
 typedef CopyStateData *CopyState;

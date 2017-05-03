@@ -465,6 +465,17 @@ CopySendEndOfRow(CopyState cstate)
 				ereport(ERROR,
 						(errcode_for_file_access(),
 						 errmsg("could not write to COPY file: %m")));
+
+			/* Send "\n" to QD for "processed" line number counting */
+			if (cstate->on_segment && Gp_role == GP_ROLE_EXECUTE)
+			{
+				if (cstate->ignore_extra_line) /* the csv header */
+					/* ignore the csv header, set the flag */
+					cstate->ignore_extra_line = false;
+				else
+					(void) pq_putmessage('d', "\n", 1);
+			}
+
 			break;
 		case COPY_OLD_FE:
 			/* The FE/BE protocol uses \n as newline for all platforms */
@@ -1134,6 +1145,14 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 						 errmsg("conflicting or redundant options")));
 			cstate->eol_str = strVal(defel->arg);
 		}
+		else if (strcmp(defel->defname, "on_segment") == 0)
+		{
+			if (cstate->on_segment)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			cstate->on_segment = TRUE;
+		}
 		else
 			elog(ERROR, "option \"%s\" not recognized",
 				 defel->defname);
@@ -1267,7 +1286,37 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 						 "psql's \\copy command also works for anyone.")));
 
 	cstate->copy_dest = COPY_FILE;		/* default */
-	cstate->filename = (Gp_role == GP_ROLE_EXECUTE ? NULL : stmt->filename); /* QE COPY always uses STDIN */
+	if (Gp_role == GP_ROLE_EXECUTE)
+	{
+		if (cstate->on_segment) /* Save data to a local file */
+		{
+			StringInfoData filepath;
+			initStringInfo(&filepath);
+			appendStringInfoString(&filepath, stmt->filename);
+
+			replaceStringInfoString(&filepath, "<SEG_DATA_DIR>", DataDir);
+
+			if (strstr(stmt->filename, "<SEGID>") == NULL)
+				ereport(ERROR,
+					(0, errmsg("<SEGID> is required for file name")));
+
+			char segid_buf[8];
+			snprintf(segid_buf, 8, "%d", GpIdentity.segindex);
+			replaceStringInfoString(&filepath, "<SEGID>", segid_buf);
+
+			cstate->filename = filepath.data;
+
+			pipe = false;
+		}
+		else
+		{
+			cstate->filename = NULL; /* QE COPY always uses STDIN */
+		}
+	}
+	else
+	{
+		cstate->filename = stmt->filename; /* Not on_segment, QD saves file to local */
+	}
 	cstate->copy_file = NULL;
 	cstate->fe_msgbuf = NULL;
 	cstate->fe_eof = false;
@@ -1286,25 +1335,32 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		{
 			mode_t		oumask; /* Pre-existing umask value */
 			struct stat st;
+			char *filename = cstate->filename;
+
+			/*
+			 * If on_segment, QD receives "\n" for "processed" line number counting, saves
+			 * them to /dev/null to avoid nonsense file
+			 */
+			if (cstate->on_segment && Gp_role == GP_ROLE_DISPATCH)
+				filename = "/dev/null";
 
 			/*
 			 * Prevent write to relative path ... too easy to shoot oneself in the
 			 * foot by overwriting a database file ...
 			 */
-			if (!is_absolute_path(cstate->filename))
+			if (!is_absolute_path(filename))
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_NAME),
 						 errmsg("relative path not allowed for COPY to file")));
 
 			oumask = umask((mode_t) 022);
-			cstate->copy_file = AllocateFile(cstate->filename, PG_BINARY_W);
+			cstate->copy_file = AllocateFile(filename, PG_BINARY_W);
 			umask(oumask);
 
 			if (cstate->copy_file == NULL)
 				ereport(ERROR,
 						(errcode_for_file_access(),
-						 errmsg("could not open file \"%s\" for writing: %m",
-								cstate->filename)));
+						 errmsg("could not open file \"%s\" for writing: %m", filename)));
 
 			// Increase buffer size to improve performance  (cmcdevitt)
 			setvbuf(cstate->copy_file, NULL, _IOFBF, 393216); // 384 Kbytes
@@ -1313,7 +1369,7 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 			if (S_ISDIR(st.st_mode))
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-						 errmsg("\"%s\" is a directory", cstate->filename)));
+						 errmsg("\"%s\" is a directory", filename)));
 		}
 
 	}
@@ -1813,6 +1869,15 @@ DoCopyTo(CopyState cstate)
 	{
 		if (cstate->fe_copy)
 			SendCopyBegin(cstate);
+		else if	(Gp_role == GP_ROLE_EXECUTE && cstate->on_segment)
+		{
+			SendCopyBegin(cstate);
+			/*
+			 * For COPY ON SEGMENT command, segment writes to file
+			 * instead of front end. Switch to COPY_FILE
+			 */
+			cstate->copy_dest = COPY_FILE;
+		}
 
 		/*
 		 * We want to dispatch COPY TO commands only in the case that
@@ -1829,6 +1894,15 @@ DoCopyTo(CopyState cstate)
 
 		if (cstate->fe_copy)
 			SendCopyEnd(cstate);
+		else if (Gp_role == GP_ROLE_EXECUTE && cstate->on_segment)
+		{
+			/*
+			 * For COPY ON SEGMENT command, switch back to front end
+			 * before sending copy end which is "\."
+			 */
+			cstate->copy_dest = COPY_NEW_FE;
+			SendCopyEnd(cstate);
+		}
 	}
 	PG_CATCH();
 	{
@@ -1897,7 +1971,14 @@ static void CopyToCreateDispatchCommand(CopyState cstate,
 			appendStringInfo(cdbcopy_cmd, ")");
 	}
 
-	appendStringInfo(cdbcopy_cmd, " TO STDOUT WITH");
+	if (cstate->on_segment)
+	{
+		appendStringInfo(cdbcopy_cmd, " TO '%s' WITH ON SEGMENT", cstate->filename);
+	}
+	else
+	{
+		appendStringInfo(cdbcopy_cmd, " TO STDOUT WITH");
+	}
 
 	if (cstate->oids)
 		appendStringInfo(cdbcopy_cmd, " OIDS");
@@ -1916,6 +1997,14 @@ static void CopyToCreateDispatchCommand(CopyState cstate,
 		if (cstate->csv_mode)
 		{
 			appendStringInfo(cdbcopy_cmd, " CSV");
+
+			/*
+			 * If on_segment, QE needs to write their own CSV header. If not,
+			 * only QD needs to, QE doesn't send CSV header to QD
+			 */
+			if (cstate->on_segment && cstate->header_line)
+				appendStringInfo(cdbcopy_cmd, " HEADER");
+
 			appendStringInfo(cdbcopy_cmd, " QUOTE AS E'%s'", escape_quotes(cstate->quote));
 			appendStringInfo(cdbcopy_cmd, " ESCAPE AS E'%s'", escape_quotes(cstate->escape));
 
@@ -2073,6 +2162,7 @@ CopyToDispatch(CopyState cstate)
 		}
 
 		/* add a newline and flush the data */
+		cstate->ignore_extra_line = true; /* CSV header line doesn't count in "processed" line numbers */
 		CopySendEndOfRow(cstate);
 	}
 
@@ -2228,7 +2318,7 @@ CopyTo(CopyState cstate)
 	if (cstate->binary)
 	{
 		/* binary header should not be sent in execute mode. */
-		if (Gp_role != GP_ROLE_EXECUTE)
+		if (Gp_role != GP_ROLE_EXECUTE || cstate->on_segment)
 		{
 			/* Generate header for a binary copy */
 			int32		tmp;
@@ -2251,7 +2341,7 @@ CopyTo(CopyState cstate)
 		if (cstate->header_line)
 		{
 			/* header should not be printed in execute mode. */
-			if (Gp_role != GP_ROLE_EXECUTE)
+			if (Gp_role != GP_ROLE_EXECUTE || cstate->on_segment)
 			{
 				bool		hdr_delim = false;
 
@@ -2269,7 +2359,7 @@ CopyTo(CopyState cstate)
 					CopyAttributeOutCSV(cstate, colname, false,
 										list_length(cstate->attnumlist) == 1);
 				}
-
+				cstate->ignore_extra_line = true; /* CSV header line doesn't count in "processed" line numbers */
 				CopySendEndOfRow(cstate);
 			}
 		}
@@ -2432,12 +2522,20 @@ CopyTo(CopyState cstate)
 	}
 
 	/* binary trailer should not be sent in execute mode. */
-	if (cstate->binary && Gp_role != GP_ROLE_EXECUTE)
+	if (cstate->binary)
 	{
-		/* Generate trailer for a binary copy */
-		CopySendInt16(cstate, -1);
-		/* Need to flush out the trailer */
-		CopySendEndOfRow(cstate);
+		if (Gp_role != GP_ROLE_EXECUTE || (Gp_role == GP_ROLE_EXECUTE && cstate->on_segment))
+		{
+			/* Generate trailer for a binary copy */
+			CopySendInt16(cstate, -1);
+
+			/* Trailer doesn't count in "processed" line numbers */
+			if (Gp_role == GP_ROLE_EXECUTE && cstate->on_segment)
+				cstate->ignore_extra_line = true;
+
+			/* Need to flush out the trailer */
+			CopySendEndOfRow(cstate);
+		}
 	}
 
 	MemoryContextDelete(cstate->rowcontext);
