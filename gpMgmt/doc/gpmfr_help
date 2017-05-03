@@ -80,7 +80,7 @@ Domain system.
 OPTIONS
 *****************************************************
 
--a (do not prompt) 
+-a
 
  Do not prompt the user for confirmation. Progress information is 
  displayed on the output. Specify the option -q or --quiet to write 
@@ -147,7 +147,7 @@ OPTIONS
  systems.
 
 
--q | --quiet (no screen output) 
+-q | --quiet
 
  Runs in quiet mode. File transfer progress information is not displayed 
  on the output, it is written to the log file. If this option is not 

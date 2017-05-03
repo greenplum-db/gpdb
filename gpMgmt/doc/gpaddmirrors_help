@@ -103,7 +103,7 @@ before running gpaddmirrors.
 OPTIONS
 *****************************************************
 
--a (do not prompt)
+-a
 
  Run in quiet mode - do not prompt for information. Must supply 
  a configuration file with either -m or -i if this option is used.
@@ -191,7 +191,7 @@ OPTIONS
  52001, and a primary replication port of 53001 by default.
 
 
--s (spread mirrors)
+-s
 
  Spreads the mirror segments across the available hosts. The 
  default is to group a set of mirror segments together on an 
@@ -202,17 +202,17 @@ OPTIONS
  or equal to the number of segment instances per host).
 
 
--v (verbose)
+-v
 
  Sets logging output to verbose.
 
 
---version (show utility version)
+--version
 
  Displays the version of this utility.
 
 
--? (help)
+-?
 
  Displays the online help.
 

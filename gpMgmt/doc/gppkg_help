@@ -59,7 +59,7 @@ OPTIONS
 *****************************************************
 
 Options
--a (do not prompt)
+-a
 
  Do not prompt the user for confirmation.
 

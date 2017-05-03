@@ -64,7 +64,7 @@
             <title>Options</title>
             <parml>
                 <plentry>
-                    <pt>-a (do not prompt)</pt>
+                    <pt>-a</pt>
                     <pd>Do not prompt the user for confirmation.</pd>
                 </plentry>
                 <plentry>
@@ -80,7 +80,7 @@
                             format="dita"/> for a description of this file.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-D (debug)</pt>
+                    <pt>-D</pt>
                     <pd>Sets log output level to debug.</pd>
                 </plentry>
                 <plentry>
@@ -168,7 +168,7 @@
                             <codeph>gpconfig</codeph> utility.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-q (no screen output)</pt>
+                    <pt>-q</pt>
                     <pd>Run in quiet mode. Command output is not displayed on the screen, but is
                         still written to the log file.</pd>
                 </plentry>
@@ -200,7 +200,7 @@
                         </ul></pd>
                 </plentry>
                 <plentry>
-                    <pt>-S (spread mirror configuration)</pt>
+                    <pt>-S</pt>
                     <pd>If mirroring parameters are specified, spreads the mirror segments across
                         the available hosts. The default is to group the set of mirror segments
                         together on an alternate host from their primary segment set. Mirror

@@ -37,7 +37,7 @@
             <title>Options</title>
             <parml>
                 <plentry>
-                    <pt>-a (do not prompt)</pt>
+                    <pt>-a</pt>
                     <pd>Do not prompt the user for confirmation.</pd>
                 </plentry>
                 <plentry>
@@ -57,7 +57,7 @@
                             <codeph>~/gpAdminLogs</codeph>.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-m (master only)</pt>
+                    <pt>-m</pt>
                     <pd>Optional. Starts the master instance only, which may be useful for
                         maintenance tasks. This mode only allows connections to the master in
                         utility mode. For example:</pd>
@@ -66,12 +66,12 @@
                     </pd>
                 </plentry>
                 <plentry>
-                    <pt>-q (no screen output)</pt>
+                    <pt>-q</pt>
                     <pd>Run in quiet mode. Command output is not displayed on the screen, but is
                         still written to the log file.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-R (restricted mode)</pt>
+                    <pt>-R</pt>
                     <pd>Starts Greenplum Database in restricted mode (only database superusers are
                         allowed to connect).</pd>
                 </plentry>
@@ -85,21 +85,21 @@
                         seconds.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-v (verbose output)</pt>
+                    <pt>-v</pt>
                     <pd>Displays detailed status, progress and error messages output by the
                         utility.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-y (do not start standby master)</pt>
+                    <pt>-y</pt>
                     <pd>Optional. Do not start the standby master host. The default is to start the
                         standby master host and synchronization process.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-? | -h | --help (help)</pt>
+                    <pt>-? | -h | --help</pt>
                     <pd>Displays the online help.</pd>
                 </plentry>
                 <plentry>
-                    <pt>--version (show utility version)</pt>
+                    <pt>--version</pt>
                     <pd>Displays the version of this utility.</pd>
                 </plentry>
             </parml>

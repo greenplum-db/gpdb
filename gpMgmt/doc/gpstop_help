@@ -51,7 +51,7 @@ changes until they reconnect to the database.
 OPTIONS
 *****************************************************
 
--a (do not prompt)
+-a
 
  Do not prompt the user for confirmation.
 
@@ -74,19 +74,19 @@ OPTIONS
  The directory to write the log file. Defaults to ~/gpAdminLogs.
 
 
--m (master only)
+-m
 
  Optional. Shuts down a Greenplum master instance that was 
  started in maintenance mode.
 
 
--M fast (fast shutdown - rollback)
+-M fast
 
  Fast shut down. Any transactions in progress are interrupted 
  and rolled back. 
 
 
--M immediate (immediate shutdown - abort)
+-M immediate
 
  Immediate shut down. Any transactions in progress are aborted. This 
  shutdown mode is not recommended, and in some circumstances can cause 
@@ -97,19 +97,19 @@ OPTIONS
  in-process work files. 
 
 
--M smart (smart shutdown - warn)
+-M smart
  
  Smart shut down. If there are active connections, this command 
  fails with a warning. This is the default shutdown mode.
 
 
--q (no screen output)
+-q
 
  Run in quiet mode. Command output is not displayed on the 
  screen, but is still written to the log file.
 
 
--r (restart)
+-r
 
  Restart after shutdown is complete.
 
@@ -127,7 +127,7 @@ OPTIONS
  and surpass the default timeout period of 600 seconds.
 
 
--u (reload pg_hba.conf and postgresql.conf files only)
+-u
 
  This option reloads the pg_hba.conf files of the master and 
  segments and the runtime parameters of the postgresql.conf files 
@@ -137,24 +137,24 @@ OPTIONS
  configuration parameters that are designated as runtime parameters.
 
 
--v (verbose output)
+-v
 
  Displays detailed status, progress and error messages output 
  by the utility.
 
 
---version (show utility version)
+--version
 
  Displays the version of this utility.
 
 
--y (do not stop standby master)
+-y
 
  Do not stop the standby master process. The default is to stop 
  the standby master.
 
 
--? | -h | --help (help)
+-? | -h | --help
 
  Displays the online help.
 

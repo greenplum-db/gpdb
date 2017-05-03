@@ -43,7 +43,7 @@
             <title>Options</title>
             <parml>
                 <plentry>
-                    <pt>-a (do not prompt)</pt>
+                    <pt>-a</pt>
                     <pd>Do not prompt the user for confirmation.</pd>
                 </plentry>
                 <plentry>
@@ -63,34 +63,34 @@
                             <codeph>~/gpAdminLogs</codeph>.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-m (master only)</pt>
+                    <pt>-m</pt>
                     <pd>Optional. Shuts down a Greenplum master instance that was started in
                         maintenance mode.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-M fast (fast shutdown - rollback)</pt>
+                    <pt>-M fast</pt>
                     <pd>Fast shut down. Any transactions in progress are interrupted and rolled
                         back.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-M immediate (immediate shutdown - abort)</pt>
+                    <pt>-M immediate</pt>
                     <pd>Immediate shut down. Any transactions in progress are aborted. </pd>
                     <pd>This mode kills all <codeph>postgres</codeph> processes without allowing the
                         database server to complete transaction processing or clean up any temporary
                         or in-process work files.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-M smart (smart shutdown - warn)</pt>
+                    <pt>-M smart</pt>
                     <pd>Smart shut down. If there are active connections, this command fails with a
                         warning. This is the default shutdown mode.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-q (no screen output)</pt>
+                    <pt>-q</pt>
                     <pd>Run in quiet mode. Command output is not displayed on the screen, but is
                         still written to the log file.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-r (restart)</pt>
+                    <pt>-r</pt>
                     <pd>Restart after shutdown is complete.</pd>
                 </plentry>
                 <plentry>
@@ -106,8 +106,7 @@
                         timeout period of 600 seconds.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-u (reload <codeph>pg_hba.conf</codeph> and <codeph>postgresql.conf</codeph>
-                        files only)</pt>
+                    <pt>-u</pt>
                     <pd>This option reloads the <codeph>pg_hba.conf</codeph> files of the master and
                         segments and the runtime parameters of the <codeph>postgresql.conf</codeph>
                         files but does not shutdown the Greenplum Database array. Use this option to
@@ -117,21 +116,21 @@
                             <i>runtime</i> parameters.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-v (verbose output)</pt>
+                    <pt>-v</pt>
                     <pd>Displays detailed status, progress and error messages output by the
                         utility.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-y (do not stop standby master)</pt>
+                    <pt>-y</pt>
                     <pd>Do not stop the standby master process. The default is to stop the standby
                         master.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-? | -h | --help (help)</pt>
+                    <pt>-? | -h | --help</pt>
                     <pd>Displays the online help.</pd>
                 </plentry>
                 <plentry>
-                    <pt>--version (show utility version)</pt>
+                    <pt>--version</pt>
                     <pd>Displays the version of this utility.</pd>
                 </plentry>
             </parml>

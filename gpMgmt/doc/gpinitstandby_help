@@ -70,12 +70,12 @@ management.
 OPTIONS
 *****************************************************
 
--a (do not prompt) 
+-a
 
  Do not prompt the user for confirmation. 
 
 
--D (debug) 
+-D
 
  Sets logging level to debug. 
 
@@ -102,7 +102,7 @@ OPTIONS
  The directory to write the log file. Defaults to ~/gpAdminLogs. 
 
 
--n (restart standby master) 
+-n
 
  Specify this option to start a Greenplum Database standby master that 
  has been configured but has stopped for some reason. 
@@ -120,13 +120,13 @@ OPTIONS
  returns an error. 
 
 
--q (no screen output) 
+-q
 
  Run in quiet mode. Command output is not displayed on the screen, but is 
  still written to the log file. 
 
 
--r (remove standby master) 
+-r
 
  Removes the currently configured standby master host from your Greenplum 
  Database system. 
@@ -137,13 +137,13 @@ OPTIONS
  The host name of the standby master host. 
 
 
--v (show utility version) 
+-v
 
  Displays the version, status, last updated date, and check sum of this 
  utility. 
 
 
--? (help) 
+-?
 
  Displays the online help. 
 

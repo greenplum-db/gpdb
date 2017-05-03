@@ -76,7 +76,7 @@
          <title>Options</title>
          <parml>
             <plentry>
-               <pt>-a (do not prompt)</pt>
+               <pt>-a</pt>
                <pd>Do not prompt the user for confirmation. Progress information is displayed on the
                   output. Specify the option <codeph>-q</codeph> or <codeph>--quiet</codeph> to
                   write progress information to the log file.</pd>
@@ -138,7 +138,7 @@
                   copying the backup set between the local and remote Data Domain systems.</pd>
             </plentry>
             <plentry>
-               <pt>-q | --quiet (no screen output)</pt>
+               <pt>-q | --quiet</pt>
                <pd>Runs in quiet mode. File transfer progress information is not displayed on the
                   output, it is written to the log file. If this option is not specified, progress
                   information is only displayed on screen, it is not written to the log file.</pd>

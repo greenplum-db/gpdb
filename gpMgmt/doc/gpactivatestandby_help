@@ -83,7 +83,7 @@ gpinitstandby utility.
 OPTIONS
 *****************************************************
 
--a (do not prompt) 
+-a
 
  Do not prompt the user for confirmation. 
 
@@ -100,7 +100,7 @@ OPTIONS
  If a directory cannot be determined, the utility returns an error. 
 
 
--f (force activation) 
+-f
 
  Use this option to force activation of the backup master host. Use this 
  option only if you are sure that the standby and primary master hosts 
@@ -112,13 +112,13 @@ OPTIONS
  The directory to write the log file. Defaults to ~/gpAdminLogs. 
 
 
--q (no screen output) 
+-q
 
  Run in quiet mode. Command output is not displayed on the screen, but is 
  still written to the log file. 
 
 
--v (show utility version) 
+-v
 
  Displays the version, status, last updated date, and check sum of this 
  utility. 

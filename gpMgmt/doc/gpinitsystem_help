@@ -70,7 +70,7 @@ This utility performs the following tasks:
 OPTIONS
 *****************************************************
 
--a (do not prompt)
+-a
 
  Do not prompt the user for confirmation.
 
@@ -87,7 +87,7 @@ OPTIONS
  contains all of the defined parameters to configure and initialize a 
  new Greenplum system. See INITIALIZATION CONFIGURATION FILE FORMAT below.
 
--D (debug)
+-D
 
  Sets log output level to debug.
 
@@ -178,7 +178,7 @@ OPTIONS
  the gpconfig utility.
 
 
--q (no screen output)
+-q
 
  Run in quiet mode. Command output is not displayed on the screen, 
  but is still written to the log file.
@@ -223,7 +223,7 @@ OPTIONS
  change default passwords immediately after installation.
 
 
--S (spread mirror configuration)
+-S
 
  If mirroring parameters are specified, spreads the mirror segments 
  across the available hosts. The default is to group the set of mirror 
@@ -234,12 +234,12 @@ OPTIONS
  than the number of segment instances).
 
 
--v (show utility version)
+-v
 
  Displays the version of this utility.
 
 
--? (help)
+-?
 
  Displays the online help.
 
