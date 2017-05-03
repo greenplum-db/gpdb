@@ -652,7 +652,6 @@ class GpStart:
         tableLog.outputTable()
 
         attentionFlag = "<<<<<<<<" if started != totalTriedToStart else ""
-        logger.info("")
         if len(invalidSegments) > 0 :
             skippedMsg = ", skipped %s other segments" % len(invalidSegments)
         else:
