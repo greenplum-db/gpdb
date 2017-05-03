@@ -58,7 +58,6 @@ try:
     from pygresql import pg  # Database interaction
     from gppylib.gparray import *  # Greenplum Array datastructures
     from gppylib.gplog import *  # Greenplum logging facility
-    from gppylib.gpcoverage import GpCoverage
     from getpass import getpass
     from gppylib.parseutils import line_reader, parse_fspacename, parse_gpfilespace_line, \
         canonicalize_address
@@ -1149,9 +1148,6 @@ To add this filespace to the database please run the command:
 logger = None
 
 if __name__ == '__main__':
-    coverage = GpCoverage()
-    coverage.start()
-
     opt = ParseOptions()
 
     if opt.verbose:
@@ -1247,6 +1243,3 @@ Once a filespace is created, it can be used by one or more tablespaces.
         except BaseException, e:
             sys.stderr.write("error %s\n" % str(e))
         sys.exit(1)
-    finally:
-        coverage.stop()
-        coverage.generate_report()

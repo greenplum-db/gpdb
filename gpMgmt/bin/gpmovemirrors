@@ -26,7 +26,6 @@ try:
     from gppylib.operations.startSegments import *
     from pygresql.pgdb import DatabaseError
     from pygresql import pg
-    from gppylib.gpcoverage import GpCoverage
     from gppylib import gparray, gplog, pgconf, userinput, utils
     from gppylib.parseutils import line_reader, parse_filespace_order, parse_gpmovemirrors_line, \
         canonicalize_address
@@ -330,9 +329,6 @@ pidfilepid = None  # pid of the process which has the lock
 locktorelease = None
 sml = None  # sml (simple main lock)
 
-coverage = GpCoverage()
-coverage.start()
-
 try:
 
     # setup signal handlers so we can clean up correctly
@@ -476,6 +472,3 @@ except KeyboardInterrupt:
 finally:
     if sml is not None:
         sml.release()
-
-    coverage.stop()
-    coverage.generate_report()

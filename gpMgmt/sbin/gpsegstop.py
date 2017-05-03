@@ -25,7 +25,6 @@ from gppylib.commands.gp import SEGMENT_STOP_TIMEOUT_DEFAULT
 from gppylib.commands import pg
 from gppylib.db import dbconn
 from gppylib import pgconf
-from gppylib.gpcoverage import GpCoverage
 from gppylib.commands.gp import is_pid_postmaster
 
 description = ("""

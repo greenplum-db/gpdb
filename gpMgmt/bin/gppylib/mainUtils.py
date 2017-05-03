@@ -8,9 +8,6 @@ mainUtils.py
 This file provides a rudimentary framework to support top-level option
 parsing, initialization and cleanup logic common to multiple programs.
 
-It also implements workarounds to make other modules we use like
-GpCoverage() work properly.
-
 The primary interface function is 'simple_main'.  For an example of
 how it is expected to be used, see gprecoverseg.
 
@@ -33,7 +30,6 @@ from gppylib.commands.base import ExecutionError
 from gppylib.system import configurationInterface, configurationImplGpdb, fileSystemInterface, \
     fileSystemImplOs, osInterface, osImplNative, faultProberInterface, faultProberImplGpdb
 from optparse import OptionGroup, OptionParser, SUPPRESS_HELP
-from gppylib.gpcoverage import GpCoverage
 from lockfile.pidlockfile import PIDLockFile, LockTimeout
 
 
@@ -188,13 +184,7 @@ def simple_main(createOptionParserFn, createCommandFn, mainOptions=None):
                               parentpidvar (string)
 
     """
-    coverage = GpCoverage()
-    coverage.start()
-    try:
-        simple_main_internal(createOptionParserFn, createCommandFn, mainOptions)
-    finally:
-        coverage.stop()
-        coverage.generate_report()
+    simple_main_internal(createOptionParserFn, createCommandFn, mainOptions)
 
 
 def simple_main_internal(createOptionParserFn, createCommandFn, mainOptions):

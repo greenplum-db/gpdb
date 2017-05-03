@@ -25,7 +25,6 @@ try:
     from gppylib.db import catalog
     from pygresql import pg  # Database interaction
     from gppylib import gplog  # Greenplum logging facility
-    from gppylib.gpcoverage import GpCoverage
     from getpass import getpass
 
 except ImportError, e:

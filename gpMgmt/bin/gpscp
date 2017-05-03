@@ -26,7 +26,6 @@ import getopt
 import popen2
 from gppylib.util import ssh_utils
 from gppylib.gpparseopts import OptParser
-from gppylib.gpcoverage import GpCoverage
 from gppylib.parseutils import canonicalize_address
 
 progname = os.path.split(sys.argv[0])[-1]
@@ -115,9 +114,6 @@ def run(cmd, peer):
 
 
 #############
-coverage = GpCoverage()
-coverage.start()
-
 try:
     parseCommandLine()
     hostlist = ssh_utils.HostList()
@@ -160,6 +156,3 @@ try:
 
 except KeyboardInterrupt:
     sys.exit('\nInterrupted...')
-finally:
-    coverage.stop()
-    coverage.generate_report()

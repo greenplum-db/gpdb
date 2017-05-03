@@ -28,7 +28,6 @@ try:
     from gppylib.commands import base
     from gppylib.commands import pg
     from gppylib.commands import dca
-    from gppylib.gpcoverage import GpCoverage
     from gppylib.utils import TableLogger
     from gppylib.gp_era import GpEraFile
     from gppylib.operations.unix import CleanSharedMem

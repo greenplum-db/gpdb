@@ -16,7 +16,6 @@ try:
     from gppylib.gpparseopts import OptParser, OptChecker
     from gppylib.gparray import *
     from gppylib.gplog import *
-    from gppylib.gpcoverage import GpCoverage
     from gppylib.commands import unix, gp, base
     from gppylib.db import dbconn
     from gppylib import gparray, pgconf
@@ -263,9 +262,6 @@ def delete_cluster(options):
 g_warnings_generated = False
 g_errors_generated = False
 
-coverage = GpCoverage()
-coverage.start()
-
 # setup logging
 logger = get_default_logger()
 setup_tool_logging(EXECNAME, unix.getLocalHostname(), unix.getUserName())
@@ -308,8 +304,6 @@ except Exception, ex:
     if options.verbose:
         logger.exception(ex)
 finally:
-    coverage.stop()
-    coverage.generate_report()
     if g_errors_generated:
         logger.error('Delete system failed')
         sys.exit(2)
