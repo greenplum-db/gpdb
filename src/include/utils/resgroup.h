@@ -73,6 +73,9 @@ extern void ResGroupSlotRelease(void);
 /* Retrieve statistic information of type from resource group */
 extern void ResGroupGetStat(Oid groupId, ResGroupStatType type, char *retStr, int retStrLen);
 
+extern void ResGroupAlterCheckForWakeup(Oid groupId);
+extern int CalcConcurrencyValue(int groupId, int val, int proposed, int newProposed);
+
 #define LOG_RESGROUP_DEBUG(...) \
 	do {if (Debug_resource_group) elog(__VA_ARGS__); } while(false);
 

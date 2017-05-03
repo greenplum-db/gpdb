@@ -431,6 +431,7 @@ check_xact_readonly(Node *parsetree)
 		case T_AlterDomainStmt:
 		case T_AlterFunctionStmt:
 		case T_AlterQueueStmt:
+		case T_AlterResourceGroupStmt:
 		case T_AlterRoleStmt:
 		case T_AlterRoleSetStmt:
 		case T_AlterObjectSchemaStmt:
@@ -1744,6 +1745,11 @@ ProcessUtility(Node *parsetree,
 		case T_CreateResourceGroupStmt:
 			CreateResourceGroup((CreateResourceGroupStmt *) parsetree);
 			break;
+
+		case T_AlterResourceGroupStmt:
+			AlterResourceGroup((AlterResourceGroupStmt *) parsetree);
+			break;
+
 		case T_DropResourceGroupStmt:
 			DropResourceGroup((DropResourceGroupStmt *) parsetree);
 			break;
@@ -2636,6 +2642,10 @@ CreateCommandTag(Node *parsetree)
 
 		case T_DropResourceGroupStmt:
 			tag = "DROP RESOURCE GROUP";
+			break;
+
+		case T_AlterResourceGroupStmt:
+			tag = "ALTER RESOURCE GROUP";
 			break;
 
 		case T_CreateRoleStmt:

@@ -1890,6 +1890,13 @@ typedef struct DropResourceGroupStmt
 	char	   *name;			/* resource group to remove */
 } DropResourceGroupStmt;
 
+typedef struct AlterResourceGroupStmt
+{
+	NodeTag		type;
+	char	   *name;			/* resource group to alter */
+	int			concurrency;
+} AlterResourceGroupStmt;
+
 /* ----------------------
  *	Create/Alter/Drop Role Statements
  *

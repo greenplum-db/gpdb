@@ -17,11 +17,12 @@
 
 extern void CreateResourceGroup(CreateResourceGroupStmt *stmt);
 extern void DropResourceGroup(DropResourceGroupStmt *stmt);
+extern void AlterResourceGroup(AlterResourceGroupStmt *stmt);
 
 /* catalog access function */
 extern Oid GetResGroupIdForName(char *name, LOCKMODE lockmode);
 extern char *GetResGroupNameForId(Oid oid, LOCKMODE lockmode);
-extern int GetConcurrencyForGroup(int groupId);
+extern void GetConcurrencyForResGroup(int groupId, int *value, int *proposed);
 extern Oid GetResGroupIdForRole(Oid roleid);
 
 #endif   /* RESGROUPCMDS_H */

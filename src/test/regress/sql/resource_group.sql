@@ -76,3 +76,24 @@ DROP RESOURCE GROUP none;
 
 -- can't drop non-exist resource group
 DROP RESOURCE GROUP rg_non_exist_group;
+
+-- ----------------------------------------------------------------------
+-- Test: alter a resource group
+-- ----------------------------------------------------------------------
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=.05, memory_limit=.05, memory_redzone_limit=.7);
+
+-- ALTER RESOURCE GROUP SET CONCURRENCY N
+-- negative
+ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY -2;
+ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY -0.5;
+ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 0.5;
+ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY a;
+ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 'abc';
+ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY '1';
+-- positive 
+ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY -1;
+ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 1;
+ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 2;
+ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 1000;
+
+DROP RESOURCE GROUP rg_test_group;

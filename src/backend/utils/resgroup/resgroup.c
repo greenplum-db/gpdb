@@ -249,6 +249,58 @@ exit:
 }
 
 /*
+ * Wake up the backends in the wait queue when 'concurrency' is increased.
+ * This function is called in the callback function of ALTER RESOURCE GROUP.
+ */
+void ResGroupAlterCheckForWakeup(Oid groupId)
+{
+	int	proposed;
+	int wakeNum;
+	PROC_QUEUE	*waitQueue;
+	ResGroup	group;
+
+	GetConcurrencyForResGroup(groupId, NULL, &proposed);
+
+	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
+
+	group = ResGroupHashFind(groupId);
+	if (group == NULL)
+	{
+		LWLockRelease(ResGroupLock);
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_CORRUPTED),
+				errmsg("Cannot find resource group %d in shared memory", groupId)));
+	}
+
+	waitQueue = &(group->waitProcs);
+
+	if (proposed == RESGROUP_CONCURRENCY_UNLIMITED)
+		wakeNum = waitQueue->size;
+	else if (proposed <= group->nRunning)
+		wakeNum = 0;
+	else
+		wakeNum = Min(proposed - group->nRunning, waitQueue->size);
+
+	while(wakeNum > 0)
+	{
+		PGPROC *waitProc;
+
+		/* wake up one process in the wait queue */
+		waitProc = (PGPROC *) MAKE_PTR(waitQueue->links.next);
+		SHMQueueDelete(&(waitProc->links));
+		waitQueue->size--;
+
+		waitProc->resWaiting = false;
+		SetLatch(&waitProc->procLatch);
+
+		group->nRunning++;
+		wakeNum--;
+	}
+
+	LWLockRelease(ResGroupLock);
+}
+
+/*
  *  Retrieve statistic information of type from resource group
  */
 void
@@ -302,6 +354,41 @@ ResGroupGetStat(Oid groupId, ResGroupStatType type, char *retStr, int retStrLen)
 }
 
 /*
+ * Calculate the new concurrency 'value' of pg_resgroupcapability
+ */
+int
+CalcConcurrencyValue(int groupId, int val, int proposed, int newProposed)
+{
+	ResGroup	group;
+	int			ret;
+
+	if (!IsResGroupEnabled())
+		return newProposed;
+
+	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
+
+	group = ResGroupHashFind(groupId);
+	if (group == NULL)
+	{
+		LWLockRelease(ResGroupLock);
+
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_CORRUPTED),
+				 errmsg("Cannot find resource group with Oid %d in shared memory", groupId)));
+	}
+
+	if (newProposed == RESGROUP_CONCURRENCY_UNLIMITED || group->nRunning <= newProposed)
+		ret = newProposed;
+	else if (group->nRunning <= proposed)
+		ret = proposed;
+	else
+		ret = val;
+
+	LWLockRelease(ResGroupLock);
+	return ret;
+}
+
+/*
  * ResGroupCreate -- initialize the elements for a resource group.
  *
  * Notes:
@@ -340,7 +427,7 @@ ResGroupSlotAcquire(void)
 {
 	ResGroup	group;
 	Oid			groupId;
-	int			concurrencyLimit;
+	int			concurrencyProposed;
 
 	groupId = GetResGroupIdForRole(GetUserId());
 	if (groupId == InvalidOid)
@@ -348,7 +435,7 @@ ResGroupSlotAcquire(void)
 
 	CurrentResGroupId = groupId;
 
-	concurrencyLimit = GetConcurrencyForGroup(groupId);
+	GetConcurrencyForResGroup(groupId, NULL, &concurrencyProposed);
 
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 
@@ -362,10 +449,11 @@ ResGroupSlotAcquire(void)
 			 	 errmsg("Cannot find resource group %d in shared memory", groupId)));
 	}
 
-	if (concurrencyLimit == RESGROUP_CONCURRENCY_UNLIMITED || group->nRunning < concurrencyLimit)
+	if (concurrencyProposed == RESGROUP_CONCURRENCY_UNLIMITED || group->nRunning < concurrencyProposed)
 	{
 		group->nRunning++;
 		group->totalExecuted++;
+
 		LWLockRelease(ResGroupLock);
 		pgstat_report_resgroup(0, group->groupId);
 		return;
@@ -407,8 +495,11 @@ ResGroupSlotRelease(void)
 	ResGroup	group;
 	PROC_QUEUE	*waitQueue;
 	PGPROC		*waitProc;
+	int			concurrencyProposed;
 
 	Assert(CurrentResGroupId != InvalidOid);
+
+	GetConcurrencyForResGroup(CurrentResGroupId, NULL, &concurrencyProposed);
 
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 
@@ -424,14 +515,19 @@ ResGroupSlotRelease(void)
 	waitQueue = &(group->waitProcs);
 	
 	/* If the concurrency is RESGROUP_CONCURRENCY_UNLIMITED, the wait queue should also be empty */
-	if (waitQueue->size == 0)
+	if ((RESGROUP_CONCURRENCY_UNLIMITED != concurrencyProposed  && group->nRunning > concurrencyProposed) ||
+		waitQueue->size == 0)
 	{
-		Assert(waitQueue->links.next == MAKE_OFFSET(&waitQueue->links) &&
-			   waitQueue->links.prev == MAKE_OFFSET(&waitQueue->links));
+		AssertImply(waitQueue->size == 0,
+					waitQueue->links.next == MAKE_OFFSET(&waitQueue->links) &&
+					waitQueue->links.prev == MAKE_OFFSET(&waitQueue->links));
 		Assert(group->nRunning > 0);
 
 		group->nRunning--;
+
 		LWLockRelease(ResGroupLock);
+		CurrentResGroupId = InvalidOid;
+
 		return;
 	}
 
@@ -439,7 +535,6 @@ ResGroupSlotRelease(void)
 	waitProc = (PGPROC *) MAKE_PTR(waitQueue->links.next);
 	SHMQueueDelete(&(waitProc->links));
 	waitQueue->size--;
-
 	LWLockRelease(ResGroupLock);
 
 	waitProc->resWaiting = false;

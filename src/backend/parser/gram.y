@@ -177,7 +177,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 		AlterGroupStmt
 		AlterObjectSchemaStmt AlterOwnerStmt AlterQueueStmt AlterSeqStmt AlterTableStmt
 		AlterExtensionStmt AlterExtensionContentsStmt
-		AlterUserStmt AlterUserSetStmt AlterRoleStmt AlterRoleSetStmt
+		AlterUserStmt AlterUserSetStmt AlterResourceGroupStmt AlterRoleStmt AlterRoleSetStmt
 		AnalyzeStmt ClosePortalStmt ClusterStmt CommentStmt
 		ConstraintsSetStmt CopyStmt CreateAsStmt CreateCastStmt
 		CreateDomainStmt CreateExtensionStmt CreateExternalStmt CreateFileSpaceStmt CreateGroupStmt
@@ -492,7 +492,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 	CACHE CALLED CASCADE CASCADED CASE CAST CHAIN CHAR_P
 	CHARACTER CHARACTERISTICS CHECK CHECKPOINT CLASS CLOSE
 	CLUSTER COALESCE COLLATE COLUMN COMMENT COMMIT
-	COMMITTED CONCURRENTLY CONFIGURATION CONNECTION CONSTRAINT CONSTRAINTS
+	COMMITTED CONCURRENCY CONCURRENTLY CONFIGURATION CONNECTION CONSTRAINT CONSTRAINTS
 	CONTENT_P CONVERSION_P COPY COST CREATE CREATEDB
 	CREATEROLE CREATEUSER CROSS CSV CURRENT_P CURRENT_DATE CURRENT_ROLE
 	CURRENT_TIME CURRENT_TIMESTAMP CURRENT_USER CURSOR CYCLE
@@ -687,6 +687,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc COMMENT
 			%nonassoc COMMIT
 			%nonassoc COMMITTED
+			%nonassoc CONCURRENCY
 			%nonassoc CONCURRENTLY
 			%nonassoc CONNECTION
 			%nonassoc CONSTRAINTS
@@ -1028,6 +1029,7 @@ stmt :
 			| AlterObjectSchemaStmt
 			| AlterOwnerStmt
 			| AlterQueueStmt
+			| AlterResourceGroupStmt
 			| AlterRoleSetStmt
 			| AlterRoleStmt
 			| AlterTSConfigurationStmt
@@ -1290,6 +1292,21 @@ DropResourceGroupStmt:
 				 {
 					DropResourceGroupStmt *n = makeNode(DropResourceGroupStmt);
 					n->name = $4;
+					$$ = (Node *)n;
+				 }
+		;
+
+/*****************************************************************************
+ *
+ * Alter a GPDB Resource Group
+ *
+ *****************************************************************************/
+AlterResourceGroupStmt:
+			ALTER RESOURCE GROUP_P name SET CONCURRENCY SignedIconst
+				 {
+					AlterResourceGroupStmt *n = makeNode(AlterResourceGroupStmt);
+					n->name = $4;
+					n->concurrency = $7;
 					$$ = (Node *)n;
 				 }
 		;
@@ -12972,6 +12989,7 @@ unreserved_keyword:
 			| COMMENT
 			| COMMIT
 			| COMMITTED
+			| CONCURRENCY
 			| CONCURRENTLY
 			| CONFIGURATION
 			| CONNECTION
@@ -13281,6 +13299,7 @@ PartitionIdentKeyword: ABORT_P
 			| COMMENT
 			| COMMIT
 			| COMMITTED
+			| CONCURRENCY
 			| CONCURRENTLY
 			| CONNECTION
 			| CONSTRAINTS
