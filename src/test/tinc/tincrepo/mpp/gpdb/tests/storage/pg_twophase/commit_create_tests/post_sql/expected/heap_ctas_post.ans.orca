@@ -39,7 +39,7 @@
  col037 | real                        | 
  col039 | time without time zone      | 
  col040 | timestamp without time zone | 
-Distributed randomly
+Distributed by: (phase)
 
 select count(*) from cr_heap_ctas;
  count 
