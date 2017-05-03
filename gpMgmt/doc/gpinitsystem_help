@@ -21,8 +21,6 @@ gpinitsystem -c <gpinitsystem_config>
             [--lc-time=<locale>] [--su_password=<password>] 
             [-S] [-a] [-q] [-l <logfile_directory>] [-D]
 
-gpinitsystem -? 
-
 gpinitsystem -v
 
 
@@ -234,12 +232,12 @@ OPTIONS
  than the number of segment instances).
 
 
--v (show utility version)
+-v | --version
 
  Displays the version of this utility.
 
 
--? (help)
+--help
 
  Displays the online help.
 

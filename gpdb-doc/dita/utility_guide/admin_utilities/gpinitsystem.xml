@@ -21,8 +21,6 @@
             [<b>--lc-time</b>=<varname>locale</varname>] [<b>--su_password</b>=<varname>password</varname>] 
             [<b>-S</b>] [<b>-a</b>] [<b>-q</b>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-D</b>]
 
-<b>gpinitsystem</b> <b>-?</b>
-
 <b>gpinitsystem</b> <b>-v</b></codeblock>
         </section>
         <section id="section3">
@@ -209,11 +207,11 @@
                         than the number of segment instances.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-v (show utility version)</pt>
+                    <pt>-v | --version</pt>
                     <pd>Displays the version of this utility.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-? (help)</pt>
+                    <pt>--help</pt>
                     <pd>Displays the online help.</pd>
                 </plentry>
             </parml>
