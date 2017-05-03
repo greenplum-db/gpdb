@@ -23,9 +23,6 @@
 #include <time.h>
 
 #define FMT64 APR_INT64_T_FMT
-#define APPLIANCE_FILE "/etc/gpdb-appliance-version"
-#define APPLIANCE_HOSTNAME_FILE "/etc/gpnode"
-
 
 /* Macros for min because solaris doesn't have it. */
 #ifndef MIN
@@ -33,8 +30,6 @@
 #endif /* MIN */
 
 void update_log_filename(void);
-int is_appliance(void);
-char* get_dca_hostname(char*, size_t);
 void gx_main(int, apr_int64_t);
 
 /* Temporary global memory to store the qexec line for a send*/
@@ -87,7 +82,6 @@ struct gx_t
 	apr_int64_t signature;
 	apr_uint64_t tick;
 	time_t now;
-	int is_appliance;
 
 	sigar_t* sigar;
 
@@ -350,18 +344,6 @@ static void get_pid_metrics(apr_int32_t pid, apr_int32_t tmid, apr_int32_t ssid,
 
 	rec->cpu_elapsed = cpu.total;
 }
-
-int is_appliance(){
-	FILE* fp = fopen(APPLIANCE_FILE, "r");
-	if (fp){
-		fclose(fp);
-		return 1;
-	}
-	else{
-		return 0;
-	}
-}
-
 
 #if defined (sun)
 /* Takes a kstat entry and determines if it is
@@ -2146,41 +2128,6 @@ static void setup_udp()
 	}
 }
 
-// return pointer to trimmed hostname
-// pass in an allocated buffer and its size
-// return NULL if fails to get name
-char* get_dca_hostname(char* buffer, size_t buffer_size){
-
-	char* trimmed_hostname;
-
-	FILE* fd = fopen(APPLIANCE_HOSTNAME_FILE, "r");
-	if (!fd){
-		gpmon_warningx(FLINE, 0, "Cannot open file %s", APPLIANCE_HOSTNAME_FILE);
-		return NULL;
-	}
-
-	size_t bytes = fread(buffer, 1, buffer_size, fd);
-	if (bytes < 1){
-		gpmon_warningx(FLINE, 0, "Cannot read hostname from file %s", APPLIANCE_HOSTNAME_FILE);
-		return NULL;
-	}
-
-	if (bytes >= buffer_size){
-		gpmon_warningx(FLINE, 0, "hostname in file %s is too long", APPLIANCE_HOSTNAME_FILE);
-		return NULL;
-	}
-
-	// ensure we have a null terminated string regardless
-	buffer[buffer_size-1] = 0;
-
-	trimmed_hostname = gpmon_trim(buffer);
-
-	fclose(fd);
-
-	return trimmed_hostname;
-}
-
-
 static const char* get_and_allocate_hostname()
 {
 	char hname[256] = { 0 };
@@ -2375,7 +2322,6 @@ void gx_main(int port, apr_int64_t signature)
 	freopen(log_filename, "w", stdout);
 	setlinebuf(stdout);
 
-	gx.is_appliance = is_appliance();
 	if (!get_and_allocate_hostname())
 		gpsmon_fatalx(FLINE, 0, "failed to allocate memory for hostname");
 	TR0(("HOSTNAME = '%s'\n", gx.hostname));

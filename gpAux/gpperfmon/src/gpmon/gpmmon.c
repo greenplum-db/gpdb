@@ -35,7 +35,6 @@
 void update_mmonlog_filename(void);
 int gpmmon_quantum(void);
 void incremement_tail_bytes(apr_uint64_t);
-int is_gpdb_appliance(void);
 time_t compute_next_dump_to_file(void);
 void populate_smdw_aliases(host_t*);
 char* get_ip_for_host(char*, bool*);
@@ -136,8 +135,6 @@ void update_mmonlog_filename()
 			tm->tm_min,
 			tm->tm_sec);
 }
-
-char gpdb_appliance_version[MAXPATHLEN];
 
 /** Gets quantum */
 int gpmmon_quantum(void)
@@ -899,28 +896,6 @@ static void* message_main(apr_thread_t* thread_, void* arg_)
 
 	}
 	return APR_SUCCESS;
-}
-
-int is_gpdb_appliance()
-{
-	FILE* fd = fopen(PATH_TO_APPLIANCE_VERSION_FILE, "r");
-	if (fd)
-	{
-		char buffer[MAXPATHLEN+1];
-		buffer[0] = 0;
-		if (!fgets(buffer, 1024, fd))
-		{
-			strncpy(gpdb_appliance_version, buffer, MAXPATHLEN);
-			buffer[MAXPATHLEN] = 0;
-		}
-
-		fclose(fd);
-		return 1;
-	}
-	else
-	{
-		return 0;
-	}
 }
 
 time_t compute_next_dump_to_file()

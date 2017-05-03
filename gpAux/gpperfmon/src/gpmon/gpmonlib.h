@@ -80,8 +80,6 @@ extern char* gpmon_datetime_rounded(time_t t, char str[GPMON_DATE_BUF_SIZE]);
 extern apr_int32_t get_query_status(apr_int32_t tmid, apr_int32_t ssid, apr_int32_t ccnt);
 extern char *get_query_text(apr_int32_t tmid, apr_int32_t ssid, apr_int32_t ccnt, apr_pool_t *pool);
 
-#define PATH_TO_APPLIANCE_VERSION_FILE "/etc/gpdb-appliance-version"
-#define PATH_TO_APPLAINCE_DEVICES_FILE "/opt/dca/etc/healthmond/devices.cnf"
 #define DEFAULT_PATH_TO_HADOOP_HOST_FILE "/etc/gphd/gphdmgr/conf/clusterinfo.txt"
 #define PATH_TO_HADOOP_SMON_LOGS "/var/log/gphd/smon"
 

@@ -93,9 +93,7 @@ APR_DECLARE (apr_hash_t *) get_active_queries(apr_pool_t* pool);
 APR_DECLARE (void) create_log_alert_table(void);
 
 int find_token_in_config_string(char*, char**, const char*);
-void process_line_in_devices_cnf(apr_pool_t*, apr_hash_t*, char*);
 void process_line_in_hadoop_cluster_info(apr_pool_t*, apr_hash_t*, char*, char*, char*);
-int get_appliance_hosts_and_add_to_hosts(apr_pool_t*, apr_hash_t*);
 int get_hadoop_hosts_and_add_to_hosts(apr_pool_t*, apr_hash_t*, mmon_options_t*);
 apr_status_t truncate_file(char*, apr_pool_t*);
 
