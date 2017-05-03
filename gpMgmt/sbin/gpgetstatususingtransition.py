@@ -9,7 +9,7 @@
 from gppylib.mainUtils import *
 import os, sys
 
-import pickle, base64, figleaf
+import pickle, base64
 
 from optparse import Option, OptionGroup, OptionParser, OptionValueError
 
