@@ -1,10 +1,18 @@
-# Libraries Required
-## libsigar:
+# gpperfmon
+
+gpperfmon tracks a variety of queries, statistics, system properties, and metrics.
+
+Find more information about the architecture on [the wiki page](https://github.com/greenplum-db/gpdb/wiki/Gpperfmon-Overview)
+
+## Libraries Required
+
+### libsigar:
 	https://github.com/hyperic/sigar
 	For macOS:
 		to build:
 	    `mkdir build && cd build && cmake .. && make && make install`
-# Troubleshoot
+
+## Troubleshooting
 	For macOS:
 		You may hit a reverse look up issue when viewing the logs of gpperfmon by default $MASTER_DATA_DIRECTORY/gpperfmon/logs
 ```
