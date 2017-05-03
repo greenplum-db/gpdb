@@ -168,9 +168,7 @@ static ShareInputScan *make_shareinputscan(PlannerInfo *root, Plan *inputplan)
 Plan *
 prepare_plan_for_sharing(PlannerInfo *root, Plan *common)
 {
-	ShareType stype;
 	Plan *shared = common;
-	bool xslice = false;
 
 	if (IsA(common, ShareInputScan))
 	{
@@ -184,18 +182,16 @@ prepare_plan_for_sharing(PlannerInfo *root, Plan *common)
 		Assert(m->share_type == SHARE_NOTSHARED);
 		Assert(m->share_id == SHARE_ID_NOT_SHARED);
 
-		stype = xslice ? SHARE_MATERIAL_XSLICE : SHARE_MATERIAL; 
 		m->share_id = SHARE_ID_NOT_ASSIGNED;
-		m->share_type = stype;
+		m->share_type = SHARE_MATERIAL;
 	}
 	else if (IsA(common, Sort))
 	{
 		Sort *s = (Sort *) common;
 
 		Assert(s->share_type == SHARE_NOTSHARED);
-		stype = xslice ? SHARE_SORT_XSLICE : SHARE_SORT;
 		s->share_id = SHARE_ID_NOT_ASSIGNED;
-		s->share_type = stype;
+		s->share_type = SHARE_SORT;
 	}
 	else
 	{
@@ -211,9 +207,8 @@ prepare_plan_for_sharing(PlannerInfo *root, Plan *common)
 		shared->dispatch = common->dispatch;
 		shared->flow = copyObject(common->flow); 
 
-		stype = xslice ? SHARE_MATERIAL_XSLICE : SHARE_MATERIAL; 
 		m->share_id = SHARE_ID_NOT_ASSIGNED;
-		m->share_type = stype;
+		m->share_type = SHARE_MATERIAL;
 	}
 
 	return shared;
