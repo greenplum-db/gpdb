@@ -7,14 +7,6 @@ include $(top_builddir)/src/Makefile.global
 
 LIBPQ_DIR=$(top_builddir)/src/interfaces/libpq
 
-# TODO: figure out what to do this "enterprise" variable
-osx105_x86_COPT=-Wl,-search_paths_first
-COPT=$($(BLD_ARCH)_COPT)
-OPT=-g -O3 -Wall
-ifneq ($(CUSTOM_COPT),)
-COPT=$(CUSTOM_COPT)
-endif
-
 GPMMON_OBJS=gpmmon.o gpmondb.o gpmonlib.o gpmon_agg.o
 
 GPSMON_OBJS=gpsmon.o gpmonlib.o
@@ -39,19 +31,19 @@ SIGTEST_LIBS+= -lsigar
 all: gpsmon gpmmon
 
 gpsmon: $(GPSMON_OBJS)
-	$(CC) -o gpsmon $(CFLAGS) $(COPT) $(GPSMON_OBJS) $(LDLIBS) $(GPSMON_LIBS)
+	$(CC) -o gpsmon $(CFLAGS) $(GPSMON_OBJS) $(LDLIBS) $(GPSMON_LIBS)
 
 gpmmon: $(GPMMON_OBJS)
-	$(CC) -o gpmmon $(CFLAGS) $(COPT) $(GPMMON_OBJS) $(LDLIBS) $(GPMMON_LIBS)
+	$(CC) -o gpmmon $(CFLAGS) $(GPMMON_OBJS) $(LDLIBS) $(GPMMON_LIBS)
 
 sigartest: $(SIGTEST_OBJS)
-	$(CC) -o sigartest $(CFLAGS) $(COPT) $(SIGTEST_OBJS) $(LDLIBS) $(GPSMON_LIBS)
+	$(CC) -o sigartest $(CFLAGS) $(SIGTEST_OBJS) $(LDLIBS) $(GPSMON_LIBS)
 
 %.o: %.c
 ifeq ($(enable_gpperfmon),no)
 	$(error cannot build without --enable-gpperfmon in global configuration)
 endif
-	$(CC) $(INCS) $(CPPFLAGS) $(CFLAGS) $(COPT) -o $@ -c $<
+	$(CC) $(INCS) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
 
 install: all
 	mkdir -p $(prefix)/bin
