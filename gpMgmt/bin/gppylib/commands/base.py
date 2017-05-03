@@ -374,7 +374,7 @@ class ExecutionContext():
 
     propagate_env_map = {}
     """
-    Dict. mapping environment variables to their values. See gpcoverage.py for example usage.
+    Dict. mapping environment variables to their values. 
     """
 
     def __init__(self):

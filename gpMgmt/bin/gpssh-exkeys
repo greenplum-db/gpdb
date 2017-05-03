@@ -52,7 +52,6 @@ try:
     from gppylib.commands import unix
     from gppylib.util import ssh_utils
     from gppylib.gpparseopts import OptParser
-    from gppylib.gpcoverage import GpCoverage
 except ImportError, e:
     sys.exit('Error: unable to import module: ' + str(e))
 
@@ -516,9 +515,6 @@ def addHost(hostname, hostlist, localhost=False):
 
 tempDir = None
 
-coverage = GpCoverage()
-coverage.start()
-
 try:
     nullFile = logging.FileHandler('/dev/null')
     logging.getLogger('paramiko.transport').addHandler(nullFile)
@@ -966,6 +962,3 @@ finally:
             for name in dirs:
                 os.rmdir(os.path.join(root, name))
         os.rmdir(tempDir)
-
-    coverage.stop()
-    coverage.generate_report()

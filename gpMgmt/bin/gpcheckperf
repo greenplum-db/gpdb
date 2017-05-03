@@ -38,7 +38,6 @@ try:
     import getopt, math, StringIO, stat, subprocess, signal
     from gppylib.gpparseopts import OptParser
     from gppylib.util import ssh_utils
-    from gppylib.gpcoverage import GpCoverage
 except ImportError, e:
     sys.exit('Error: unable to import module: ' + str(e))
 
@@ -922,9 +921,6 @@ def printResult(title, result):
 
 ################
 
-coverage = GpCoverage()
-coverage.start()
-
 try:
     parseCommandLine()
     runSetup()
@@ -972,6 +968,3 @@ try:
 
 except KeyboardInterrupt:
     print '[Abort] Keyboard Interrupt ...'
-finally:
-    coverage.stop()
-    coverage.generate_report()

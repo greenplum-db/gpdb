@@ -31,7 +31,6 @@ try:
     from gppylib.system.environment import GpMasterEnvironment
     from pygresql.pgdb import DatabaseError
     from pygresql import pg
-    from gppylib.gpcoverage import GpCoverage
     from gppylib.gpcatalog import MASTER_ONLY_TABLES
     from gppylib.operations.package import SyncPackages
     from gppylib.operations.utils import ParallelOperation
@@ -2987,9 +2986,6 @@ if __name__ == '__main__':
     remove_pid = True
     table_expand_error = False
 
-    coverage = GpCoverage()
-    coverage.start()
-
     try:
 
         # setup signal handlers so we can clean up correctly
@@ -3162,6 +3158,3 @@ if __name__ == '__main__':
 
         if gp_expand is not None:
             gp_expand.halt_work()
-
-        coverage.stop()
-        coverage.generate_report()

@@ -22,7 +22,6 @@ try:
     from gppylib.gpparseopts import *
     from gppylib.datetimeutils import str_to_datetime, str_to_duration, DatetimeValueError
     from gppylib.logfilter import *
-    from gppylib.gpcoverage import GpCoverage
 except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
@@ -326,9 +325,6 @@ def openOutputFile(ifn, zname, options):
 
 # ------------------------------- Mainline --------------------------------
 
-coverage = GpCoverage()
-coverage.start()
-
 # Use default locale specified by LANG environment variable
 try:
     locale.setlocale(locale.LC_ALL, '')
@@ -489,6 +485,3 @@ except IOError, msg:
     execname = os.path.basename(sys.argv[0])
     print >> sys.stderr, '%s: (IOError) "%s"' % (execname, msg)
     sys.exit(2)
-finally:
-    coverage.stop()
-    coverage.generate_report()

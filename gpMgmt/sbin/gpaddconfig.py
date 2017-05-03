@@ -15,7 +15,6 @@ try:
     from gppylib.gparray import *
     from gppylib.commands.gp import *
     from gppylib.db import dbconn
-    from gppylib.gpcoverage import GpCoverage
 
 except ImportError, e:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
@@ -52,44 +51,37 @@ def parseargs():
 
 
 # ------------------------------- Mainline --------------------------------
-coverage = GpCoverage()
-coverage.start()
+options = parseargs()
 
-try:
-    options = parseargs()
+files = list()
 
-    files = list()
+# get the files to edit from STDIN
+line = sys.stdin.readline()
+while line:
 
-    # get the files to edit from STDIN
+    directory = line.rstrip()
+
+    filename = directory + "/postgresql.conf"
+    if not os.path.exists(filename):
+        raise Exception("path does not exist" + filename)
+
+    files.append(filename)
+
     line = sys.stdin.readline()
-    while line:
 
-        directory = line.rstrip()
+fromString = "(^\s*" + options.entry + "\s*=.*$)"
+toString = "#$1"
+name = "mycmd"
 
-        filename = directory + "/postgresql.conf"
-        if not os.path.exists(filename):
-            raise Exception("path does not exist" + filename)
+# update all the files
+for f in files:
 
-        files.append(filename)
+    # comment out any existing entries for this setting
+    cmd = InlinePerlReplace(name, fromString, toString, f)
+    cmd.run(validateAfter=True)
 
-        line = sys.stdin.readline()
+    if options.removeonly:
+        continue
 
-    fromString = "(^\s*" + options.entry + "\s*=.*$)"
-    toString = "#$1"
-    name = "mycmd"
-
-    # update all the files
-    for f in files:
-
-        # comment out any existing entries for this setting
-        cmd = InlinePerlReplace(name, fromString, toString, f)
-        cmd.run(validateAfter=True)
-
-        if options.removeonly:
-            continue
-
-        cmd = GpAppendGucToFile(name, f, options.entry, options.value)
-        cmd.run(validateAfter=True)
-finally:
-    coverage.stop()
-    coverage.generate_report()
+    cmd = GpAppendGucToFile(name, f, options.entry, options.value)
+    cmd.run(validateAfter=True)

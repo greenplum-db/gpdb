@@ -26,11 +26,6 @@ logger = gplog.get_default_logger()
 
 operation = pickle.load(sys.stdin)
 
-from gppylib.gpcoverage import GpCoverage
-
-coverage = GpCoverage()
-coverage.start()
-
 try:
     ret = operation.run()
 except Exception, e:
@@ -57,9 +52,6 @@ except Exception, e:
         sys.exit(2)  # signal that gpoperation.py has hit unexpected error
 else:
     pickled_ret = pickle.dumps(ret)  # Pickle return data for stdout transmission
-finally:
-    coverage.stop()
-    coverage.generate_report()
 
 sys.stdout = old_stdout
 print pickled_ret

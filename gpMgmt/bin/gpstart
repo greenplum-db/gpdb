@@ -32,7 +32,6 @@ try:
     from gppylib import pgconf
     from gppylib.commands.pg import PgControlData
     from gppylib.operations.startSegments import *
-    from gppylib.gpcoverage import GpCoverage
     from gppylib.utils import TableLogger
     from gppylib.gp_dbid import GpDbidFile
     from gppylib.gp_era import GpEraFile
