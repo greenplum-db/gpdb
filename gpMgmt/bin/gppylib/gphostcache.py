@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
+# Copyright (c) Greenplum Inc 2008. All Rights Reserved.
 #
 '''
 Greenplum hostcache file facilities.
@@ -9,25 +9,24 @@ This Module contains some helper functions for mapping network
 interface names used in gp_configuration to a collapsed set
 of hostnames.
 
-example:  sdw1-1, sdw1-2, sdw1-3, and sdw1-4 are all located 
+example:  sdw1-1, sdw1-2, sdw1-3, and sdw1-4 are all located
           on sdw1.
-          
-The results of this collapsing will be stored in a file: 
+
+The results of this collapsing will be stored in a file:
 ~/.gphostcache with entries of the form:
 
 sdw1-1:sdw1
 sdw1-2:sdw1
 sdw1-3:sdw1
 
-A big complication here is that we want to group all of the 
+A big complication here is that we want to group all of the
 segment databases for sdw1-1 thru sdw1-4 together but we can't
 use the name returned by `hostname` as its not guaranteed to
-have a trusted ssh environment setup for it.  
+have a trusted ssh environment setup for it.
 
 '''
 import os
 
-from gppylib import gparray
 from gppylib.commands import base
 from gppylib.commands import unix
 from gppylib import gplog
@@ -42,7 +41,7 @@ class GpHost:
     def __init__(self, hostname):
         self.hostname = hostname
         self.dbs=[]
-    
+
     def addDB(self,db):
         self.dbs.append(db)
 
@@ -86,7 +85,7 @@ class GpInterfaceToHostNameCache:
             elif hostname is None:
                 # external source did not have a tentative answer, the first
                 # case above should have fired for the first entry on this
-                # interface and will force us to lookup the hostname.  
+                # interface and will force us to lookup the hostname.
                 # Additional hits on the interface can be ignored.
                 pass
             elif self.__hostCache[interface] is None:
@@ -202,7 +201,7 @@ class GpHostCache:
                 continue
             interface = db.getSegmentAddress()
             hostname  = interfaceToHostMap.getHostName(interface)
-            
+
             # If the db didn't have hostname already set, (it was loaded from
             # an old catalog?) set it based on the hostname from the interface
             # lookup.
@@ -214,18 +213,18 @@ class GpHostCache:
 
             self.gphost_map[hostname].addDB(db)
 
-        
+
     ######
     def log_contents(self):
         logger.debug("Construct host-->datadirs mapping:")
-        
+
         entries=[]
         for key in self.gphost_map.keys():
             gphost=self.gphost_map[key]
             entries.append(gphost.__str__())
-        
+
         logger.debug('\n'.join(entries))
-    
+
     ######
     def get_hostnames(self):
         hosts=[]
@@ -233,33 +232,33 @@ class GpHostCache:
             gphost=self.gphost_map[key]
             hosts.append(gphost.hostname)
         return hosts
-    
+
     ######
     def get_hosts(self):
         return self.gphost_map.values()
-    
-    
+
+
     ######
     def get_host(self,hostname):
         if hostname in self.gphost_map:
             return self.gphost_map[hostname]
         else:
             raise Exception("map does not contain host: %s" % hostname)
-   
+
     #####
     def ping_hosts(self, pool):
-        ''' 
-        go through all of the gphosts and try and ping all of the hosts. 
-        If any fail then go back to using the interface names for those 
-        segments.  
-        
-        throws an Exception if still can't ping on the interface names. 
+        '''
+        go through all of the gphosts and try and ping all of the hosts.
+        If any fail then go back to using the interface names for those
+        segments.
+
+        throws an Exception if still can't ping on the interface names.
         '''
         failed_segs=[]
         for key in self.gphost_map.keys():
             p = unix.Ping('ping', key)
             pool.addCommand(p)
-        
+
         pool.join()
         cmds=pool.getCompletedItems()
 
@@ -269,12 +268,12 @@ class GpHostCache:
                 hostname=cmd.hostToPing
                 logger.warning("Ping to host: '%s' FAILED" % hostname)
                 logger.debug("  ping details: %s" % cmd)
-                
+
                 gphost=self.get_host(hostname)
                 dblist=gphost.dbs
-                
+
                 alternateHost=None
-                
+
                 for db in dblist:
                     dbid = db.getSegmentDbId()
                     address = db.getSegmentAddress()
@@ -286,15 +285,15 @@ class GpHostCache:
                     pingCmd.run()
                     if pingCmd.get_results().rc == 0:
                         alternateHost=address
-                        logger.warning("alternate host: '%s' => '%s'" % 
+                        logger.warning("alternate host: '%s' => '%s'" %
                                        (hostname, address))
                         break
                     else:
                         logger.warning("Ping to host: '%s' FAILED" % hostname)
                         logger.debug("  ping details: %s" % pingCmd)
-                
+
                 if alternateHost:
-                    gphost.hostname=alternateHost                    
+                    gphost.hostname=alternateHost
                 else:
                     # no interface to reach any of the segments, append all
                     # segments to the list of failed segments
@@ -307,5 +306,5 @@ class GpHostCache:
                     del self.gphost_map[hostname]
 
         pool.empty_completed_items()
-        
+
         return failed_segs

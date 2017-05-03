@@ -38,7 +38,7 @@ class GpConfig(GpTestCase):
         #   self.subject = gpconfig
         gpconfig_file = os.path.abspath(os.path.dirname(__file__) + "/../../../gpconfig")
         self.subject = imp.load_source('gpconfig', gpconfig_file)
-        self.subject.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
+        self.subject.LOGGER = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
 
         self.conn = Mock()
         self.cursor = FakeCursor()
@@ -89,7 +89,7 @@ class GpConfig(GpTestCase):
     def test_when_no_options_prints_and_raises(self):
         with self.assertRaisesRegexp(Exception, "No action specified.  See the --help info."):
             self.subject.do_main()
-        self.subject.logger.error.assert_called_once_with("No action specified.  See the --help info.")
+        self.subject.LOGGER.error.assert_called_once_with("No action specified.  See the --help info.")
 
     def test_option_list_parses(self):
         sys.argv = ["gpconfig", "--list"]
@@ -101,7 +101,7 @@ class GpConfig(GpTestCase):
         sys.argv = ["gpconfig", "--change", "statement_mem"]
         with self.assertRaisesRegexp(Exception, "change requested but value not specified"):
             self.subject.parseargs()
-        self.subject.logger.error.assert_called_once_with("change requested but value not specified")
+        self.subject.LOGGER.error.assert_called_once_with("change requested but value not specified")
 
     def test_option_show_without_master_data_dir_will_succeed(self):
         sys.argv = ["gpconfig", "--show", "statement_mem"]
@@ -132,26 +132,26 @@ class GpConfig(GpTestCase):
         sys.argv = ["gpconfig", "--file", "--change", "statement_mem"]
         with self.assertRaisesRegexp(Exception, "'--file' option must accompany '--show' option"):
             self.subject.parseargs()
-        self.subject.logger.error.assert_called_once_with("'--file' option must accompany '--show' option")
+        self.subject.LOGGER.error.assert_called_once_with("'--file' option must accompany '--show' option")
 
     def test_option_file_compare_with_file_will_raise(self):
         sys.argv = ["gpconfig", "--file", "--show", "statement_mem", "--file-compare", ]
         with self.assertRaisesRegexp(Exception, "'--file' option and '--file-compare' option cannot be used together"):
             self.subject.parseargs()
-        self.subject.logger.error.assert_called_once_with("'--file' option and '--file-compare' option cannot be used together")
+        self.subject.LOGGER.error.assert_called_once_with("'--file' option and '--file-compare' option cannot be used together")
 
     def test_option_file_with_option_list_will_raise(self):
         sys.argv = ["gpconfig", "--file", "--list", "statement_mem"]
         with self.assertRaisesRegexp(Exception, "'--file' option must accompany '--show' option"):
             self.subject.parseargs()
-        self.subject.logger.error.assert_called_once_with("'--file' option must accompany '--show' option")
+        self.subject.LOGGER.error.assert_called_once_with("'--file' option must accompany '--show' option")
 
     def test_option_file_without_master_data_dir_will_raise(self):
         sys.argv = ["gpconfig", "--file", "--show", "statement_mem"]
         del self.os_env["MASTER_DATA_DIRECTORY"]
         with self.assertRaisesRegexp(Exception, "--file option requires that MASTER_DATA_DIRECTORY be set"):
             self.subject.parseargs()
-        self.subject.logger.error.assert_called_once_with("--file option requires that MASTER_DATA_DIRECTORY be set")
+        self.subject.LOGGER.error.assert_called_once_with("--file option requires that MASTER_DATA_DIRECTORY be set")
 
     @patch('sys.stdout', new_callable=StringIO)
     def test_option_f_will_report_presence_of_setting(self, mock_stdout):
@@ -164,7 +164,7 @@ class GpConfig(GpTestCase):
         self.pool.check_results.assert_called_once_with()
         self.pool.haltWork.assert_called_once_with()
         self.pool.joinWorkers.assert_called_once_with()
-        self.assertEqual(self.subject.logger.error.call_count, 0)
+        self.assertEqual(self.subject.LOGGER.error.call_count, 0)
         self.assertIn("Master  value: foo\nSegment value: foo", mock_stdout.getvalue())
 
     @patch('sys.stdout', new_callable=StringIO)
@@ -175,7 +175,7 @@ class GpConfig(GpTestCase):
 
         self.subject.do_main()
 
-        self.assertEqual(self.subject.logger.error.call_count, 0)
+        self.assertEqual(self.subject.LOGGER.error.call_count, 0)
         self.assertIn("Master  value: -\nSegment value: seg_value", mock_stdout.getvalue())
 
     @patch('sys.stdout', new_callable=StringIO)
@@ -192,7 +192,7 @@ class GpConfig(GpTestCase):
         self.subject.do_main()
 
         self.assertEqual(self.pool.addCommand.call_count, 3)
-        self.assertEqual(self.subject.logger.error.call_count, 0)
+        self.assertEqual(self.subject.LOGGER.error.call_count, 0)
         self.assertIn("WARNING: GUCS ARE OUT OF SYNC", mock_stdout.getvalue())
         self.assertIn("bar", mock_stdout.getvalue())
         self.assertIn("[name: my_property_name] [value: baz]", mock_stdout.getvalue())
@@ -207,7 +207,7 @@ class GpConfig(GpTestCase):
 
         self.subject.do_main()
 
-        self.subject.logger.info.assert_called_with("completed successfully")
+        self.subject.LOGGER.info.assert_called_with("completed successfully")
         self.assertEqual(self.pool.addCommand.call_count, 2)
         segment_command = self.pool.addCommand.call_args_list[0][0][0]
         self.assertTrue("my_property_name" in segment_command.cmdStr)
@@ -228,7 +228,7 @@ class GpConfig(GpTestCase):
 
         self.subject.do_main()
 
-        self.subject.logger.info.assert_called_with("completed successfully")
+        self.subject.LOGGER.info.assert_called_with("completed successfully")
         self.assertEqual(self.pool.addCommand.call_count, 1)
         master_command = self.pool.addCommand.call_args_list[0][0][0]
         self.assertTrue(("my_property_name") in master_command.cmdStr)
@@ -242,13 +242,13 @@ class GpConfig(GpTestCase):
             sys.argv = ["gpconfig", "-c", "my_property_name", "-v", "100", "-m", "20"]
             self.subject.do_main()
 
-        self.assertEqual(self.subject.logger.fatal.call_count, 1)
+        self.assertEqual(self.subject.LOGGER.fatal.call_count, 1)
 
     def test_option_change_value_hidden_guc_with_skipvalidation(self):
         sys.argv = ["gpconfig", "-c", "my_hidden_guc_name", "-v", "100", "--skipvalidation"]
         self.subject.do_main()
 
-        self.subject.logger.info.assert_called_with("completed successfully")
+        self.subject.LOGGER.info.assert_called_with("completed successfully")
         self.assertEqual(self.pool.addCommand.call_count, 2)
         segment_command = self.pool.addCommand.call_args_list[0][0][0]
         self.assertTrue("my_hidden_guc_name" in segment_command.cmdStr)
@@ -265,7 +265,7 @@ class GpConfig(GpTestCase):
             sys.argv = ["gpconfig", "-c", "my_hidden_guc_name", "-v", "100"]
             self.subject.do_main()
 
-        self.subject.logger.fatal.assert_called_once_with("GUC Validation Failed: my_hidden_guc_name cannot be "
+        self.subject.LOGGER.fatal.assert_called_once_with("GUC Validation Failed: my_hidden_guc_name cannot be "
                                                           "changed under normal conditions. "
                                                           "Please refer to gpconfig documentation.")
 
