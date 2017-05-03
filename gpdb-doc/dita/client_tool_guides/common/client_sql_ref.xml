@@ -28,6 +28,11 @@
         </section>
         <p conref="../../ref_guide/sql_commands/ALTER_DOMAIN.xml#topic1/sql_command_desc"/>
         <codeblock conref="../../ref_guide/sql_commands/ALTER_DOMAIN.xml#topic1/sql_command_synopsis"/>
+        <section>
+            <title>ALTER EXTENSION</title>
+        </section>
+        <p conref="../../ref_guide/sql_commands/ALTER_EXTENSION.xml#topic1/sql_command_desc"/>
+        <codeblock conref="../../ref_guide/sql_commands/ALTER_EXTENSION.xml#topic1/sql_command_synopsis"/>
         <section id="ae1903351">
             <title>ALTER EXTERNAL TABLE</title>
         </section>
@@ -178,11 +183,15 @@
         </section>
         <p conref="../../ref_guide/sql_commands/CREATE_DOMAIN.xml#topic1/sql_command_desc"/>
         <codeblock conref="../../ref_guide/sql_commands/CREATE_DOMAIN.xml#topic1/sql_command_synopsis"/>
+        <section>
+            <title>CREATE EXTENSION</title>
+        </section>
+        <p conref="../../ref_guide/sql_commands/CREATE_EXTENSION.xml#topic1/sql_command_desc"/>
+        <codeblock conref="../../ref_guide/sql_commands/CREATE_EXTENSION.xml#topic1/sql_command_synopsis"/>
         <section id="ae1904025">
             <title>CREATE EXTERNAL TABLE</title>
         </section>
-        <p
-            conref="../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.xml#topic1/sql_command_desc"/>
+        <p conref="../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.xml#topic1/sql_command_desc"/>
         <codeblock conref="../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.xml#topic1/sql_command_synopsis"/>
         <section id="ae1904203">
             <title>CREATE FUNCTION</title>
@@ -212,8 +221,7 @@
         <section id="ae1904315">
             <title>CREATE OPERATOR CLASS</title>
         </section>
-        <p
-            conref="../../ref_guide/sql_commands/CREATE_OPERATOR_CLASS.xml#topic1/sql_command_desc"/>
+        <p conref="../../ref_guide/sql_commands/CREATE_OPERATOR_CLASS.xml#topic1/sql_command_desc"/>
         <codeblock conref="../../ref_guide/sql_commands/CREATE_OPERATOR_CLASS.xml#topic1/sql_command_synopsis"/>
         <section>
             <title>CREATE PROTOCOL</title>
@@ -223,8 +231,7 @@
         <section id="ae1904333">
             <title>CREATE RESOURCE QUEUE</title>
         </section>
-        <p
-            conref="../../ref_guide/sql_commands/CREATE_RESOURCE_QUEUE.xml#topic1/sql_command_desc"/>
+        <p conref="../../ref_guide/sql_commands/CREATE_RESOURCE_QUEUE.xml#topic1/sql_command_desc"/>
         <codeblock conref="../../ref_guide/sql_commands/CREATE_RESOURCE_QUEUE.xml#topic1/sql_command_synopsis"/>
         <section id="ae1904361">
             <title>CREATE ROLE</title>
@@ -316,6 +323,11 @@
         </section>
         <p conref="../../ref_guide/sql_commands/DROP_DOMAIN.xml#topic1/sql_command_desc"/>
         <codeblock conref="../../ref_guide/sql_commands/DROP_DOMAIN.xml#topic1/sql_command_synopsis"/>
+        <section>
+            <title>DROP EXTENSION</title>
+        </section>
+        <p conref="../../ref_guide/sql_commands/DROP_EXTENSION.xml#topic1/sql_command_desc"/>
+        <codeblock conref="../../ref_guide/sql_commands/DROP_EXTENSION.xml#topic1/sql_command_synopsis"/>
         <section id="ae1904845">
             <title>DROP EXTERNAL TABLE</title>
         </section>
@@ -499,8 +511,7 @@
         <section id="ae1905235">
             <title>ROLLBACK TO SAVEPOINT</title>
         </section>
-        <p
-            conref="../../ref_guide/sql_commands/ROLLBACK_TO_SAVEPOINT.xml#topic1/sql_command_desc"/>
+        <p conref="../../ref_guide/sql_commands/ROLLBACK_TO_SAVEPOINT.xml#topic1/sql_command_desc"/>
         <codeblock conref="../../ref_guide/sql_commands/ROLLBACK_TO_SAVEPOINT.xml#topic1/sql_command_synopsis"/>
         <section id="ae1905241">
             <title>SAVEPOINT</title>

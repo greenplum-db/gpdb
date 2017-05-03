@@ -9,6 +9,7 @@
 			<topicref href="sql_commands/ALTER_CONVERSION.xml"/>
 			<topicref href="sql_commands/ALTER_DATABASE.xml"/>
 			<topicref href="sql_commands/ALTER_DOMAIN.xml"/>
+			<topicref href="sql_commands/ALTER_EXTENSION.xml"/>
 			<topicref href="sql_commands/ALTER_EXTERNAL_TABLE.xml"/>
 			<topicref href="sql_commands/ALTER_FILESPACE.xml"/>
 			<topicref href="sql_commands/ALTER_FUNCTION.xml"/>
@@ -42,6 +43,7 @@
 			<topicref href="sql_commands/CREATE_CONVERSION.xml"/>
 			<topicref href="sql_commands/CREATE_DATABASE.xml"/>
 			<topicref href="sql_commands/CREATE_DOMAIN.xml"/>
+			<topicref href="sql_commands/CREATE_EXTENSION.xml"/>
 			<topicref href="sql_commands/CREATE_EXTERNAL_TABLE.xml"/>
 			<topicref href="sql_commands/CREATE_FUNCTION.xml"/>
 			<topicref href="sql_commands/CREATE_GROUP.xml"/>
@@ -73,6 +75,7 @@
 			<topicref href="sql_commands/DROP_CONVERSION.xml"/>
 			<topicref href="sql_commands/DROP_DATABASE.xml"/>
 			<topicref href="sql_commands/DROP_DOMAIN.xml"/>
+			<topicref href="sql_commands/DROP_EXTENSION.xml"/>
 			<topicref href="sql_commands/DROP_EXTERNAL_TABLE.xml"/>
 			<topicref href="sql_commands/DROP_FILESPACE.xml"/>
 			<topicref href="sql_commands/DROP_FUNCTION.xml"/>
@@ -166,6 +169,8 @@
 				<topicref href="system_catalogs/pg_attribute_encoding.xml"/>
 				<topicref href="system_catalogs/pg_auth_members.xml"/>
 				<topicref href="system_catalogs/pg_authid.xml"/>
+				<topicref href="system_catalogs/pg_available_extension_versions.xml"/>
+				<topicref href="system_catalogs/pg_available_extensions.xml"/>
 				<topicref href="system_catalogs/pg_cast.xml"/>
 				<topicref href="system_catalogs/pg_class.xml"/>
 				<topicref href="system_catalogs/pg_compression.xml"/>
@@ -175,6 +180,7 @@
 				<topicref href="system_catalogs/pg_depend.xml"/>
 				<topicref href="system_catalogs/pg_description.xml"/>
 				<topicref href="system_catalogs/pg_enum.xml"/>
+				<topicref href="system_catalogs/pg_extension.xml"/>
 				<topicref href="system_catalogs/pg_exttable.xml"/>
 				<topicref href="system_catalogs/pg_filespace.xml"/>
 				<topicref href="system_catalogs/pg_filespace_entry.xml"/>
@@ -184,6 +190,7 @@
 				<topicref href="system_catalogs/pg_largeobject.xml"/>
 				<topicref href="system_catalogs/pg_listener.xml"/>
 				<topicref href="system_catalogs/pg_locks.xml"/>
+				<topicref href="system_catalogs/pg_max_external_files.xml"/>
 				<topicref href="system_catalogs/pg_namespace.xml"/>
 				<topicref href="system_catalogs/pg_opclass.xml"/>
 				<topicref href="system_catalogs/pg_operator.xml"/>
@@ -240,4 +247,6 @@
 		<topicref href="feature_summary.xml" navtitle="Summary of Greenplum Features"
 			id="feature_summary"/>
 	</topicref>
-	<topicref href="../../homenav.html" scope="external" navtitle="Greenplum Database Docs Home" format="html" otherprops="pivotal"/></map>
+	<topicref href="../../homenav.html" scope="external" navtitle="Greenplum Database Docs Home"
+		format="html" otherprops="pivotal"/>
+</map>

@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="cw20941">ALTER EXTENSION</title>
+  <body>
+    <p id="sql_command_desc">Change the definition of an extension that is registered in a Greenplum
+      database.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock id="sql_command_synopsis">ALTER EXTENSION <varname>name</varname> UPDATE [ TO <varname>new_version</varname> ]
+ALTER EXTENSION <varname>name</varname> SET SCHEMA <varname>new_schema</varname>
+ALTER EXTENSION <varname>name</varname> ADD <varname>member_object</varname>
+ALTER EXTENSION <varname>name</varname> DROP <varname>member_object</varname>
+
+where <varname>member_object</varname> is:
+
+  ACCESS METHOD <varname>object_name</varname> |
+  AGGREGATE <varname>aggregate_name</varname> ( <varname>aggregate_signature</varname> ) |
+  CAST (<varname>source_type</varname> AS <varname>target_type</varname>) |
+  COLLATION <varname>object_name</varname> |
+  CONVERSION <varname>object_name</varname> |
+  DOMAIN <varname>object_name</varname> |
+  EVENT TRIGGER <varname>object_name</varname> |
+  FOREIGN DATA WRAPPER <varname>object_name</varname> |
+  FOREIGN TABLE <varname>object_name</varname> |
+  FUNCTION <varname>function_name</varname> ( [ [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [, ...] ] ) |
+  MATERIALIZED VIEW <varname>object_name</varname> |
+  OPERATOR <varname>operator_name</varname> (<varname>left_type</varname>, <varname>right_type</varname>) |
+  OPERATOR CLASS <varname>object_name</varname> USING <varname>index_method</varname> |
+  OPERATOR FAMILY <varname>object_name</varname> USING <varname>index_method</varname> |
+  [ PROCEDURAL ] LANGUAGE <varname>object_name</varname> |
+  SCHEMA <varname>object_name</varname> |
+  SEQUENCE <varname>object_name</varname> |
+  SERVER <varname>object_name</varname> |
+  TABLE <varname>object_name</varname> |
+  TEXT SEARCH CONFIGURATION <varname>object_name</varname> |
+  TEXT SEARCH DICTIONARY <varname>object_name</varname> |
+  TEXT SEARCH PARSER <varname>object_name</varname> |
+  TEXT SEARCH TEMPLATE <varname>object_name</varname> |
+  TRANSFORM FOR <varname>type_name</varname> LANGUAGE <varname>lang_name</varname> |
+  TYPE <varname>object_name</varname> |
+  VIEW <varname>object_name</varname>
+
+and <varname>aggregate_signature</varname> is:
+
+* | [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [ , ... ] |
+  [ [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [ , ... ] ] 
+    ORDER BY [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [ , ... ]</codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p><codeph>ALTER EXTENSION</codeph> changes the definition of an installed extension. These
+        are the subforms:</p>
+      <parml>
+        <plentry>
+          <pt>UPDATE</pt>
+          <pd>
+            <p>This form updates the extension to a newer version. The extension must supply a
+              suitable update script (or series of scripts) that can modify the currently-installed
+              version into the requested version.</p>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt>SET SCHEMA</pt>
+          <pd>
+            <p>This form moves the extension member objects into another schema. The extension must
+              be <i>relocatable</i>.</p>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt>ADD <varname>member_object</varname></pt>
+          <pd>
+            <p>This form adds an existing object to the extension. This is useful in extension
+              update scripts. The added object is treated as a member of the extension. The object
+              can only be dropped by dropping the extension.</p>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt>DROP <varname>member_object</varname></pt>
+          <pd>
+            <p>This form removes a member object from the extension. This is mainly useful in
+              extension update scripts. The object is not dropped, only disassociated from the
+              extension.</p>
+          </pd>
+        </plentry>
+      </parml>
+      <p>See <xref href="https://www.postgresql.org/docs/9.6/static/extend-extensions.html"
+          format="html" scope="external">Packaging Related Objects into an Extension</xref> for more
+        information about these operations. </p>
+      <p>You must own the extension to use <codeph>ALTER EXTENSION</codeph>. The
+          <codeph>ADD</codeph> and <codeph>DROP</codeph> forms also require ownership of the object
+        that is being added or dropped.</p>
+    </section>
+    <section id="section4">
+      <title>Parameters</title>
+      <parml>
+        <plentry>
+          <pt><varname>name</varname></pt>
+          <pd>
+            <p>The name of an installed extension.</p>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>new_version</varname></pt>
+          <pd>
+            <p>The new version of the extension. The <varname>new_version</varname> can be either an
+              identifier or a string literal. If not specified, the command attempts to update to
+              the default version in the extension control file.</p>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>new_schema</varname></pt>
+          <pd>
+            <p>The new schema for the extension.</p>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>object_name</varname></pt>
+          <pt><varname>aggregate_name</varname></pt>
+          <pt><varname>function_name</varname></pt>
+          <pt><varname>operator_name</varname></pt>
+          <pd>
+            <p>The name of an object to be added to or removed from the extension. Names of tables,
+              aggregates, domains, foreign tables, functions, operators, operator classes, operator
+              families, sequences, text search objects, types, and views can be
+              schema-qualified.</p>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>source_type</varname></pt>
+          <pd>
+            <p>The name of the source data type of the cast.</p>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>target_type</varname></pt>
+          <pd>
+            <p>The name of the target data type of the cast.</p>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>argmode</varname></pt>
+          <pd>
+            <p>The mode of a function or aggregate argument: <codeph>IN</codeph>,
+                <codeph>OUT</codeph>, <codeph>INOUT</codeph>, or <codeph>VARIADIC</codeph>. The
+              default is <codeph>IN</codeph>. </p>
+            <p>The command ignores the <codeph>OUT</codeph> arguments. Only the input arguments are
+              required to determine the function identity. It is sufficient to list the
+                <codeph>IN</codeph>, <codeph>INOUT</codeph>, and <codeph>VARIADIC</codeph>
+              arguments.</p>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>argname</varname></pt>
+          <pd>
+            <p>The name of a function or aggregate argument. </p>
+            <p>The command ignores argument names, since only the argument data types are required
+              to determine the function identity.</p>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>argtype</varname></pt>
+          <pd>
+            <p>The data type of a function or aggregate argument.</p>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>left_type</varname></pt>
+          <pt><varname>right_type</varname></pt>
+          <pd>
+            <p>The data types (optionally schema-qualified) of the operator arguments. Specify
+                <codeph>NONE</codeph> for the missing argument of a prefix or postfix operator.</p>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt>PROCEDURAL</pt>
+          <pd>
+            <p>This is a noise word.</p>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>type_name</varname></pt>
+          <pd>
+            <p>The name of the data type of the transform.</p>
+          </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>lang_name</varname></pt>
+          <pd>
+            <p>The name of the language of the transform.</p>
+          </pd>
+        </plentry>
+      </parml>
+    </section>
+    <section id="section5">
+      <title>Examples</title>
+      <p>To update the hstore extension to version 2.0:</p>
+      <codeblock>ALTER EXTENSION hstore UPDATE TO '2.0';</codeblock>
+      <p>To change the schema of the <codeph>hstore</codeph> extension to
+        <codeph>utils</codeph>:</p>
+      <codeblock>ALTER EXTENSION hstore SET SCHEMA utils;</codeblock>
+      <p>To add an existing function to the <codeph>hstore</codeph> extension:</p>
+      <codeblock>ALTER EXTENSION hstore ADD FUNCTION populate_record(anyelement, hstore);</codeblock>
+    </section>
+    <section id="section6">
+      <title>Compatibility</title>
+      <p><codeph>ALTER EXTENSION</codeph> is a Greenplum Database extension. </p>
+    </section>
+    <section id="section7">
+      <title>See Also</title>
+      <p><codeph><xref href="CREATE_EXTENSION.xml#topic1">CREATE EXTENSION</xref></codeph>,
+            <codeph><xref href="DROP_EXTENSION.xml#topic1">DROP EXTENSION</xref></codeph></p>
+    </section>
+  </body>
+</topic>

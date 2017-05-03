@@ -37,13 +37,20 @@
 		<codeblock conref="sql_commands/ALTER_DOMAIN.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/ALTER_DOMAIN.xml"/> for more
 			information.</p>
+		<section>
+			<title>ALTER EXTENSION</title>
+		</section>
+		<p conref="sql_commands/ALTER_EXTENSION.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/ALTER_EXTENSION.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_EXTENSION.xml"/> for more
+			information.</p>
 		<section id="ae1903351">
 			<title>ALTER EXTERNAL TABLE</title>
 		</section>
 		<p conref="sql_commands/ALTER_EXTERNAL_TABLE.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/ALTER_EXTERNAL_TABLE.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/ALTER_EXTERNAL_TABLE.xml"/> for more
-			information.</p>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_EXTERNAL_TABLE.xml"/> for
+			more information.</p>
 		<section id="ae1903373">
 			<title>ALTER FILESPACE</title>
 		</section>
@@ -257,6 +264,13 @@
 		<codeblock conref="sql_commands/CREATE_DOMAIN.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/CREATE_DOMAIN.xml"/> for more
 			information.</p>
+		<section>
+			<title>CREATE EXTENSION</title>
+		</section>
+		<p conref="sql_commands/CREATE_EXTENSION.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/CREATE_EXTENSION.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/CREATE_EXTENSION.xml"/> for more
+			information.</p>
 		<section id="ae1904025">
 			<title>CREATE EXTERNAL TABLE</title>
 		</section>
@@ -463,6 +477,13 @@
 		<p conref="sql_commands/DROP_DOMAIN.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/DROP_DOMAIN.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/DROP_DOMAIN.xml"/> for more
+			information.</p>
+		<section>
+			<title>DROP EXTENSION</title>
+		</section>
+		<p conref="sql_commands/DROP_EXTENSION.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/DROP_EXTENSION.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/DROP_EXTENSION.xml"/> for more
 			information.</p>
 		<section id="ae1904845">
 			<title>DROP EXTERNAL TABLE</title>

@@ -25,8 +25,8 @@
       <li>
         <xref href="./gpexpand_expansion_progress.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li>pg_max_external_files (shows number of external table files allowed per segment host when
-        using the file protocol)</li>
+      <li>
+        <xref href="./pg_max_external_files.xml#topic1" type="topic" format="dita"/></li>
       <li>
         <xref href="./pg_partition_columns.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -37,23 +37,24 @@
         <xref href="./pg_partitions.xml#topic1" type="topic" format="dita"/>
       </li>
       <li>
+        <xref href="./pg_resqueue_attributes.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>pg_resqueue_status (Deprecated. Use <xref href="../gp_toolkit.xml#topic31"
+          >gp_toolkit.gp_resqueue_status</xref>.)</li>
+      <li>
         <xref href="./pg_stat_activity.xml#topic1" type="topic" format="dita"/>
       </li>
       <li>
         <xref href="./pg_stat_replication.xml#topic1" type="topic" format="dita"/>
       </li>
       <li>
-        <xref href="./pg_resqueue_attributes.xml#topic1" type="topic" format="dita"/>
-      </li>
-      <li>pg_resqueue_status (Deprecated. Use gp_toolkit.gp_resqueue_status.)</li>
-      <li>
         <xref href="./pg_stats_resqueue.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li>pg_user_mappings (not supported)</li>
       <li>session_level_memory_consumption (See "Viewing Session Memory Usage Information" in the
-            <cite>Greenplum Database Administrator Guide</cite>.)</li>
+          <cite>Greenplum Database Administrator Guide</cite>.)</li>
     </ul>
-    <p>For more information about the standard system views supported in PostgreSQL and Greenplum Database, see the following sections of the PostgreSQL documentation:</p>
+    <p>For more information about the standard system views supported in PostgreSQL and Greenplum
+      Database, see the following sections of the PostgreSQL documentation:</p>
     <ul id="ul_c5v_3bd_xp">
       <li>
         <xref href="https://www.postgresql.org/docs/8.3/static/views-overview.html" scope="external"
