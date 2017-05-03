@@ -420,4 +420,26 @@ SET SUBPARTITION TEMPLATE
 			Expect(results[1].ObjComment.String).To(Equal("some_comment"))
 		})
 	})
+	Describe("GetSessionGUCs", func() {
+		headerEncoding := []string{"client_encoding"}
+		rowEncoding := []driver.Value{"UTF8"}
+		headerStrings := []string{"standard_conforming_strings"}
+		rowStrings := []driver.Value{"on"}
+		headerOids := []string{"default_with_oids"}
+		rowOids := []driver.Value{"false"}
+
+		It("returns a slice of values for session level GUCs", func() {
+			fakeEncoding := sqlmock.NewRows(headerEncoding).AddRow(rowEncoding...)
+			fakeStrings := sqlmock.NewRows(headerStrings).AddRow(rowStrings...)
+			fakeOids := sqlmock.NewRows(headerOids).AddRow(rowOids...)
+
+			mock.ExpectQuery("SHOW cl.*").WillReturnRows(fakeEncoding)
+			mock.ExpectQuery("SHOW sta.*").WillReturnRows(fakeStrings)
+			mock.ExpectQuery("SHOW def.*").WillReturnRows(fakeOids)
+			results := backup.GetSessionGUCs(connection)
+			Expect(results.ClientEncoding).To(Equal("UTF8"))
+			Expect(results.StdConformingStrings).To(Equal("on"))
+			Expect(results.DefaultWithOids).To(Equal("false"))
+		})
+	})
 })
