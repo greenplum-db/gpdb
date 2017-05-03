@@ -1509,7 +1509,7 @@ apr_status_t gpdb_check_partitions(mmon_options_t *opt)
 {
 	// health is not a full table and needs to be added to the list
 
-	apr_status_t r1, r2, r3, r4;
+	apr_status_t r1, r3, r4;
 
 	// open a connection
 	PGconn* conn = NULL;
