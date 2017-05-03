@@ -76,7 +76,6 @@ before_script:
 ## Perform build:
 ##   GPDB
 ##   gpmapreduce
-##   orafce
 ##   gpfdist
 ## ----------------------------------------------------------------------
 
@@ -87,8 +86,6 @@ script:
   - make
   - make install
   - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
-  - cd ${TRAVIS_BUILD_DIR}/gpAux/extensions/orafce
-  - make install USE_PGXS=1
   - cd ${TRAVIS_BUILD_DIR}/gpAux/extensions/gpmapreduce
   - make install
   - postgres --version
