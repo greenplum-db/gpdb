@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) Greenplum Inc 2010. All Rights Reserved. 
+# Copyright (c) Greenplum Inc 2010. All Rights Reserved.
 #
 
 # System imports
@@ -28,8 +28,8 @@ except ImportError, e:
 
 EXECNAME = os.path.split(__file__)[-1]
 
-DEFAULT_BATCH_SIZE=32
-MAX_BATCH_SIZE=128
+DEFAULT_BATCH_SIZE = 32
+MAX_BATCH_SIZE = 128
 
 _description = """
 
@@ -38,13 +38,15 @@ _description = """
 _usage = """
 """
 
+
 # Generic exception for all things activatestandby
 class GpDeleteSystemException(Exception):
     pass
 
-#-------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------
 # parseargs() - parses and validates command line args
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 def parseargs():
     parser = OptParser(option_class=OptChecker,
                        description=' '.join(_description.split()),
@@ -52,7 +54,7 @@ def parseargs():
     parser.setHelp([])
     parser.remove_option('-h')
     parser.remove_option('--version')
-    
+
     # General options section
     optgrp = OptionGroup(parser, 'General options')
     optgrp.add_option('-?', '--help', dest='help', action='store_true',
@@ -71,7 +73,7 @@ def parseargs():
 
     # Standby activation options section
     optgrp = OptionGroup(parser, 'Delete system options')
-    optgrp.add_option('-d', '--master-data-directory', dest='master_data_dir', 
+    optgrp.add_option('-d', '--master-data-directory', dest='master_data_dir',
                       type='string', help='Master data directory.')
     optgrp.add_option('-f', '--force', action='store_true',
                       help='Force deletion.  Ignore any database backup files.')
@@ -86,7 +88,7 @@ def parseargs():
     if options.help:
         parser.print_help()
         parser.exit(0, None)
-        
+
     if options.version:
         parser.print_version()
         parser.exit(0, None)
@@ -131,13 +133,13 @@ def parseargs():
         for arg in args:
             logger.error('  %s' % args)
         parser.exit(2, None)
-        
+
     return options, args
 
 
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # display_params() - displays delete system parameters.
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 def display_params(options, dburl, standby, segments, dumpDirsExist):
     global g_warnings_generated
     logger.info('Greenplum Instance Deletion Parameters')
@@ -163,7 +165,7 @@ def display_params(options, dburl, standby, segments, dumpDirsExist):
         datadir = segdb.getSegmentDataDirectory()
         port = segdb.getSegmentPort()
         logger.info('%s:%s:%s' % (host, datadir, port))
-        
+
     yn = ask_yesno('', 'Continue with Greenplum instance deletion?', 'N')
     if yn:
         logger.info('FINAL WARNING, you are about to delete the Greenplum instance')
@@ -178,27 +180,28 @@ def display_params(options, dburl, standby, segments, dumpDirsExist):
         raise GpDeleteSystemException('User canceled')
 
 
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # check_for_dump_files() - checks if there are database dump files
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 def check_for_dump_files(options):
     logger.info('Checking for database dump files...')
     return gp.GpDumpDirsExist.local('check for dump dirs', options.master_data_dir)
 
-#-------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------
 # delete_system() - deletes a GPDB system
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 def delete_cluster(options):
     global g_warnings_generated
-    
+
     # check for dumps if needed
     dump_files_exist = check_for_dump_files(options)
     if not options.force and dump_files_exist:
-            logger.fatal('Located possible database dump file on Master instance host')
-            logger.fatal('in directory %s' % options.master_data_dir)
-            logger.fatal('To override database dump file checking use -f option')
-            raise GpDeleteSystemException('Dump files exist')
-        
+        logger.fatal('Located possible database dump file on Master instance host')
+        logger.fatal('in directory %s' % options.master_data_dir)
+        logger.fatal('To override database dump file checking use -f option')
+        raise GpDeleteSystemException('Dump files exist')
+
     # get gparray object
     logger.info('Getting segment information...')
     dburl = dbconn.DbURL(port=options.pgport)
@@ -208,14 +211,14 @@ def delete_cluster(options):
         raise GpDeleteSystemException('Failed to get database configuration: %s' % ex.__str__())
     # get all segdbs
     segments = array.getDbList()
-    
+
     # getSegmentsByHostName(segments)
     segdbs_by_host = gparray.GpArray.getSegmentsByHostName(segments)
     standby = array.standbyMaster
-    
+
     # Display the options
     display_params(options, dburl, standby, segments, dump_files_exist)
-    
+
     # stop database
     logger.info('Stopping database...')
     try:
@@ -226,22 +229,22 @@ def delete_cluster(options):
         if results.rc > 1:
             raise GpDeleteSystemException('Failed to stop database.')
         logger.warn('Warnings were generated while stopping the database.')
-        g_warnings_generated=True
+        g_warnings_generated = True
 
     # From this point on we don't want ctrl-c to happen
-    signal.signal(signal.SIGINT,signal.SIG_IGN)
-    
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
     # create pool
     pool = base.WorkerPool(numWorkers=options.batch_size)
-    
+
     logger.info('Deleting segments and removing data directories...')
     for segdb in segments:
         filespaces = segdb.getSegmentFilespaces().items()
         for (oid, filespace) in filespaces:
-            logger.debug('Queueing up command to remove %s:%s' % (segdb.getSegmentHostName(), 
+            logger.debug('Queueing up command to remove %s:%s' % (segdb.getSegmentHostName(),
                                                                   filespace))
-            cmd = unix.RemoveFiles('remove fs dir', filespace, ctxt=base.REMOTE, 
-                                       remoteHost=segdb.getSegmentHostName())
+            cmd = unix.RemoveFiles('remove fs dir', filespace, ctxt=base.REMOTE,
+                                   remoteHost=segdb.getSegmentHostName())
             pool.addCommand(cmd)
 
     logger.info('Waiting for worker threads to complete...')
@@ -250,12 +253,12 @@ def delete_cluster(options):
     pool.joinWorkers()
 
     # Re-enable ctrl-c
-    signal.signal(signal.SIGINT,signal.default_int_handler)
+    signal.signal(signal.SIGINT, signal.default_int_handler)
 
 
-#-------------------------------------------------------------------------
-# main 
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+# main
+# -------------------------------------------------------------------------
 
 g_warnings_generated = False
 g_errors_generated = False
@@ -265,15 +268,14 @@ coverage.start()
 
 # setup logging
 logger = get_default_logger()
-setup_tool_logging(EXECNAME,unix.getLocalHostname(),unix.getUserName())
+setup_tool_logging(EXECNAME, unix.getLocalHostname(), unix.getUserName())
 
 # parse args and options
 (options, args) = parseargs()
 
 # if we got a new log dir, we can now set it up.
 if options.logfile:
-    setup_tool_logging(EXECNAME,unix.getLocalHostname(),unix.getUserName(),logdir=options.logfile)
-
+    setup_tool_logging(EXECNAME, unix.getLocalHostname(), unix.getUserName(), logdir=options.logfile)
 
 try:
     # save off cwd
@@ -281,17 +283,17 @@ try:
     # chdir to home to prevent from trying to delete a dir while we are in it
     home = os.getenv('USERPROFILE') or os.getenv('HOME')
     os.chdir(home)
-	
+
     # do the delete
     delete_cluster(options)
-    
+
     # now try to go back into the original cwd
     try:
         os.chdir(cwd)
     except:
         # we can ignore this as cwd must no longer exist
         pass
-    
+
 except GpDeleteSystemException, ex:
     g_errors_generated = True
     if ex.__str__() == 'User canceled':

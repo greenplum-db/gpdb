@@ -24,14 +24,14 @@ import os, sys, signal, errno, yaml
 gProgramName = os.path.split(sys.argv[0])[-1]
 if sys.version_info < (2, 5, 0):
     sys.exit(
-'''Error: %s is supported on Python versions 2.5 or greater
-Please upgrade python installed on this machine.''' % gProgramName)
+        '''Error: %s is supported on Python versions 2.5 or greater
+        Please upgrade python installed on this machine.''' % gProgramName)
 
 from gppylib import gplog
 from gppylib.commands import gp, unix
 from gppylib.commands.base import ExecutionError
 from gppylib.system import configurationInterface, configurationImplGpdb, fileSystemInterface, \
-        fileSystemImplOs, osInterface, osImplNative, faultProberInterface, faultProberImplGpdb
+    fileSystemImplOs, osInterface, osImplNative, faultProberInterface, faultProberImplGpdb
 from optparse import OptionGroup, OptionParser, SUPPRESS_HELP
 from gppylib.gpcoverage import GpCoverage
 from lockfile.pidlockfile import PIDLockFile, LockTimeout
@@ -58,22 +58,22 @@ class SimpleMainLock:
     the name of an environment variable holding the pid already acquired by
     the parent process.
     """
+
     def __init__(self, mainOptions):
-        self.pidfilename   = mainOptions.get('pidfilename', None)       # the file we're using for locking
-        self.parentpidvar  = mainOptions.get('parentpidvar', None)      # environment variable holding parent pid
-        self.parentpid     = None                                       # parent pid which already has the lock
-        self.ppath         = None                                       # complete path to the lock file
-        self.pidlockfile   = None                                       # PIDLockFile object
-        self.pidfilepid    = None                                       # pid of the process which has the lock
-        self.locktorelease = None                                       # PIDLockFile object we should release when done
+        self.pidfilename = mainOptions.get('pidfilename', None)  # the file we're using for locking
+        self.parentpidvar = mainOptions.get('parentpidvar', None)  # environment variable holding parent pid
+        self.parentpid = None  # parent pid which already has the lock
+        self.ppath = None  # complete path to the lock file
+        self.pidlockfile = None  # PIDLockFile object
+        self.pidfilepid = None  # pid of the process which has the lock
+        self.locktorelease = None  # PIDLockFile object we should release when done
 
         if self.parentpidvar is not None and self.parentpidvar in os.environ:
             self.parentpid = int(os.environ[self.parentpidvar])
 
         if self.pidfilename is not None:
-            self.ppath       = os.path.join(gp.get_masterdatadir(), self.pidfilename)
-            self.pidlockfile = PIDLockFile( self.ppath )
-
+            self.ppath = os.path.join(gp.get_masterdatadir(), self.pidfilename)
+            self.pidlockfile = PIDLockFile(self.ppath)
 
     def acquire(self):
         """
@@ -115,12 +115,11 @@ class SimpleMainLock:
         # prepare for a later call to release() and take good
         # care of the process environment for the sake of our children
         self.locktorelease = self.pidlockfile
-        self.pidfilepid    = self.pidlockfile.read_pid()
+        self.pidfilepid = self.pidlockfile.read_pid()
         if self.parentpidvar is not None:
             os.environ[self.parentpidvar] = str(self.pidfilepid)
 
         return None
-
 
     def release(self):
         """
@@ -129,7 +128,6 @@ class SimpleMainLock:
         if self.locktorelease is not None:
             self.locktorelease.release()
             self.locktorelease = None
-
 
 
 #
@@ -141,17 +139,18 @@ class ProgramArgumentValidationException(Exception):
     Throw this out to main to have the message possibly
     printed with a help suggestion.
     """
+
     def __init__(self, msg, shouldPrintHelp=False):
         "init"
         Exception.__init__(self, msg)
         self.__shouldPrintHelp = shouldPrintHelp
         self.__msg = msg
 
-    def shouldPrintHelp(self): 
+    def shouldPrintHelp(self):
         "shouldPrintHelp"
         return self.__shouldPrintHelp
 
-    def getMessage(self): 
+    def getMessage(self):
         "getMessage"
         return self.__msg
 
@@ -172,7 +171,7 @@ class UserAbortedException(Exception):
     pass
 
 
-def simple_main( createOptionParserFn, createCommandFn, mainOptions=None) :
+def simple_main(createOptionParserFn, createCommandFn, mainOptions=None):
     """
      createOptionParserFn : a function that takes no arguments and returns an OptParser
      createCommandFn : a function that takes two arguments (the options and the args (those that are not processed into
@@ -207,7 +206,7 @@ def simple_main_internal(createOptionParserFn, createCommandFn, mainOptions):
     """
     sml = None
     if mainOptions is not None and 'pidfilename' in mainOptions:
-        sml      = SimpleMainLock(mainOptions)
+        sml = SimpleMainLock(mainOptions)
         otherpid = sml.acquire()
         if otherpid is not None:
             logger = gplog.get_default_logger()
@@ -228,10 +227,11 @@ def simple_main_locked(createOptionParserFn, createCommandFn, mainOptions):
     """
     logger = gplog.get_default_logger()
 
-    configurationInterface.registerConfigurationProvider( configurationImplGpdb.GpConfigurationProviderUsingGpdbCatalog())
-    fileSystemInterface.registerFileSystemProvider( fileSystemImplOs.GpFileSystemProviderUsingOs())
-    osInterface.registerOsProvider( osImplNative.GpOsProviderUsingNative())
-    faultProberInterface.registerFaultProber( faultProberImplGpdb.GpFaultProberImplGpdb())
+    configurationInterface.registerConfigurationProvider(
+        configurationImplGpdb.GpConfigurationProviderUsingGpdbCatalog())
+    fileSystemInterface.registerFileSystemProvider(fileSystemImplOs.GpFileSystemProviderUsingOs())
+    osInterface.registerOsProvider(osImplNative.GpOsProviderUsingNative())
+    faultProberInterface.registerFaultProber(faultProberImplGpdb.GpFaultProberImplGpdb())
 
     commandObject = None
     parser = None
@@ -247,7 +247,7 @@ def simple_main_locked(createOptionParserFn, createCommandFn, mainOptions):
     useHelperToolLogging = mainOptions is not None and mainOptions.get("useHelperToolLogging")
     nonuser = True if mainOptions is not None and mainOptions.get("setNonuserOnToolLogger") else False
     exit_status = 1
-    
+
     # NOTE: if this logic is changed then also change test_main in testUtils.py
     try:
         execname = getProgramName()
@@ -261,7 +261,7 @@ def simple_main_locked(createOptionParserFn, createCommandFn, mainOptions):
             gplog.setup_helper_tool_logging(execname, hostname, username)
         else:
             gplog.setup_tool_logging(execname, hostname, username,
-                                        logdir=options.ensure_value("logfileDirectory", None), nonuser=nonuser )
+                                     logdir=options.ensure_value("logfileDirectory", None), nonuser=nonuser)
 
         if forceQuiet:
             gplog.quiet_stdout_logging()
@@ -284,19 +284,19 @@ def simple_main_locked(createOptionParserFn, createCommandFn, mainOptions):
     except ProgramArgumentValidationException, e:
         if e.shouldPrintHelp():
             parser.print_help()
-        logger.error("%s: error: %s" %(gProgramName, e.getMessage()))
+        logger.error("%s: error: %s" % (gProgramName, e.getMessage()))
         exit_status = 2
     except ExceptionNoStackTraceNeeded, e:
-        logger.error( "%s error: %s" % (gProgramName, e))
+        logger.error("%s error: %s" % (gProgramName, e))
         exit_status = 2
     except UserAbortedException, e:
         logger.info("User abort requested, Exiting...")
         exit_status = 4
     except ExecutionError, e:
         logger.fatal("Error occurred: %s\n Command was: '%s'\n"
-                     "rc=%d, stdout='%s', stderr='%s'" %\
-                     (e.summary,e.cmd.cmdStr, e.cmd.results.rc, e.cmd.results.stdout,
-                     e.cmd.results.stderr ))
+                     "rc=%d, stdout='%s', stderr='%s'" % \
+                     (e.summary, e.cmd.cmdStr, e.cmd.results.rc, e.cmd.results.stdout,
+                      e.cmd.results.stderr))
         exit_status = 2
     except Exception, e:
         if options is None:
@@ -325,22 +325,22 @@ def addStandardLoggingAndHelpOptions(parser, includeNonInteractiveOption, includ
 
     addTo = parser
     addTo.add_option('-h', '-?', '--help', action='help',
-                      help='show this help message and exit')
+                     help='show this help message and exit')
     if includeUsageOption:
         parser.add_option('--usage', action="briefhelp")
 
     addTo = OptionGroup(parser, "Logging Options")
     parser.add_option_group(addTo)
-    addTo.add_option('-v', '--verbose', action='store_true', 
-                      help='debug output.')
+    addTo.add_option('-v', '--verbose', action='store_true',
+                     help='debug output.')
     addTo.add_option('-q', '--quiet', action='store_true',
-                      help='suppress status messages')
+                     help='suppress status messages')
     addTo.add_option("-l", None, dest="logfileDirectory", metavar="<directory>", type="string",
-                  help="Logfile directory")
+                     help="Logfile directory")
 
     if includeNonInteractiveOption:
-        addTo.add_option('-a', dest="interactive" , action='store_false', default=True,
-                    help="quiet mode, do not require user input for confirmations")
+        addTo.add_option('-a', dest="interactive", action='store_false', default=True,
+                         help="quiet mode, do not require user input for confirmations")
 
 
 def addMasterDirectoryOptionForSingleClusterProgram(addTo):
@@ -352,16 +352,15 @@ def addMasterDirectoryOptionForSingleClusterProgram(addTo):
     is not appropriate.
     """
     addTo.add_option('-d', '--master_data_directory', type='string',
-                        dest="masterDataDirectory",
-                        metavar="<master data directory>",
-                        help="Optional. The master host data directory. If not specified, the value set"\
-                            "for $MASTER_DATA_DIRECTORY will be used.")
-    
+                     dest="masterDataDirectory",
+                     metavar="<master data directory>",
+                     help="Optional. The master host data directory. If not specified, the value set" \
+                          "for $MASTER_DATA_DIRECTORY will be used.")
 
 
 #
 # YamlMain
-# 
+#
 
 def get_yaml(targetclass):
     "get_yaml"
@@ -374,7 +373,7 @@ def get_yaml(targetclass):
         doc = targetclass.__doc__
         pos = doc.find('%YAML')
         assert pos >= 0, "targetclass doc string is missing %YAML plan"
-        ystr  = doc[pos:].replace('\n    ','\n')
+        ystr = doc[pos:].replace('\n    ', '\n')
         targetclass._yaml = yaml.load(ystr)
     return targetclass._yaml
 
@@ -384,18 +383,17 @@ class YamlMain:
 
     def __init__(self):
         "Parse arguments based on yaml docstring"
-        self.current       = None
-        self.plan          = None
+        self.current = None
+        self.plan = None
         self.scenario_name = None
-        self.logger        = None
-        self.logfilename   = None
-        self.errmsg        = None
+        self.logger = None
+        self.logfilename = None
+        self.errmsg = None
 
         self.parser = YamlOptions(self).parser
         self.options, self.args = self.parser.parse_args()
         self.options.quiet = self.options.q
         self.options.verbose = self.options.v
-
 
     #
     # simple_main interface
@@ -412,10 +410,10 @@ class YamlMain:
         "Called by simple_main to execute the program returned by create_program"
         self.plan = Plan(self)
         self.scenario_name = self.plan.name
-        self.logger        = self.plan.logger
-        self.logfilename   = self.plan.logfilename
-        self.errmsg        = self.plan.errmsg
-        self.current       = []
+        self.logger = self.plan.logger
+        self.logfilename = self.plan.logfilename
+        self.errmsg = self.plan.errmsg
+        self.current = []
         self.plan.run()
 
     def cleanup(self):
@@ -443,14 +441,13 @@ class YamlOptions:
         # target - options object (input)
         # gname  - option group name
 
-        self.y      = get_yaml(target.__class__)
-        self.parser = OptionParser( description=self.y['Description'], version='%prog version $Revision$')
+        self.y = get_yaml(target.__class__)
+        self.parser = OptionParser(description=self.y['Description'], version='%prog version $Revision$')
         self.parser.remove_option('-h')
         self.parser.set_usage(self.y['Usage'])
-        self.opty   = self.y['Options']
+        self.opty = self.y['Options']
         for gname in self.opty.get('Groups', []):
             self._register_group(gname)
-            
 
     def _register_group(self, gname):
         """
@@ -468,7 +465,7 @@ class YamlOptions:
         # dictargs - key/value arguments to add_option
 
         gy = self.opty.get(gname, None)
-        if gname.startswith('Help'): 
+        if gname.startswith('Help'):
             grp = None
             tgt = self.parser
         else:
@@ -481,22 +478,21 @@ class YamlOptions:
                 # short form: optval is just a help string
                 dictargs = {
                     'action': 'store_true',
-                    'help':   optval
+                    'help': optval
                 }
             else:
                 # optval is the complete option specification
                 dictargs = optval
 
             # hide hidden options
-            if dictargs.get('help','').startswith('hidden'):
+            if dictargs.get('help', '').startswith('hidden'):
                 dictargs['help'] = SUPPRESS_HELP
 
-            #print 'adding', listargs, dictargs
+            # print 'adding', listargs, dictargs
             tgt.add_option(*listargs, **dictargs)
 
         if grp is not None:
             self.parser.add_option_group(grp)
-
 
 
 #
@@ -507,11 +503,10 @@ class Task:
     "Task"
 
     def __init__(self, key, name, subtasks=None):
-        self.Key      = key    		# task key
-        self.Name     = name    	# task name
-        self.SubTasks = subtasks	# subtasks, if any
-        self.Func     = None            # task function, set by _task
-
+        self.Key = key  # task key
+        self.Name = name  # task name
+        self.SubTasks = subtasks  # subtasks, if any
+        self.Func = None  # task function, set by _task
 
     def _print(self, main, prefix):
         print '%s %s %s:' % (prefix, self.Key, self.Name)
@@ -523,14 +518,14 @@ class Task:
         main.logger.debug(' Now Executing:%s %s %s' % (prefix, self.Key, self.Name))
         if self.Func:
             self.Func()
-        
+
 
 class Exit(Exception):
     def __init__(self, rc, code=None, call_support=False):
         Exception.__init__(self)
-        self.code         = code
-        self.prm          = sys._getframe(1).f_locals
-        self.rc           = rc
+        self.code = code
+        self.prm = sys._getframe(1).f_locals
+        self.rc = rc
         self.call_support = call_support
 
 
@@ -546,18 +541,17 @@ class Plan:
         # main - object with yaml scenarios (input)
         # sy   - Stage yaml
 
-        self.logger      = gplog.get_default_logger()
+        self.logger = gplog.get_default_logger()
         self.logfilename = gplog.get_logfile()
 
-        self.main        = main
-        self.y           = get_yaml(main.__class__)
-        self.name        = main.options.scenario
+        self.main = main
+        self.y = get_yaml(main.__class__)
+        self.name = main.options.scenario
         if not self.name:
-            self.name    = self.y['Default Scenario']
-        self.scenario    = self.y['Scenarios'][self.name]
-        self.errors      = self.y['Errors']
-        self.Tasks       = [ self._task(ty) for ty in self.scenario ]
-
+            self.name = self.y['Default Scenario']
+        self.scenario = self.y['Scenarios'][self.name]
+        self.errors = self.y['Errors']
+        self.Tasks = [self._task(ty) for ty in self.scenario]
 
     def _task(self, ty):
         "Invoked by __init__ to build a top-level task from the YAML"
@@ -570,7 +564,7 @@ class Plan:
 
         for tyk, tyv in ty.items():
             key, workers = tyk.split(None, 1)
-            subtasks = [ self._subtask(sty) for sty in tyv ]
+            subtasks = [self._subtask(sty) for sty in tyv]
             t = Task(key, workers, subtasks)
             return t
 
@@ -582,14 +576,12 @@ class Plan:
 
         key, rest = sty.split(None, 1)
         st = Task(key, rest)
-        fn = st.Name.lower().replace(' ','_')
+        fn = st.Name.lower().replace(' ', '_')
         try:
             st.Func = getattr(self.main, fn)
         except AttributeError, e:
             raise Exception("Failed to lookup '%s' for sub task '%s': %s" % (fn, st.Name, str(e)))
         return st
-
-
 
     def _dotasks(self, subtasks, prefix, action):
         "Apply an action to each subtask recursively"
@@ -599,34 +591,30 @@ class Plan:
         for st in subtasks or []:
             self.main.current.append(st)
             action(st, self.main, prefix)
-            self._dotasks(st.SubTasks, '  '+prefix, action)
+            self._dotasks(st.SubTasks, '  ' + prefix, action)
             self.main.current.pop()
-
 
     def _print(self):
         "Print in YAML form."
 
         print '%s:' % self.name
-        self._dotasks(self.Tasks, ' -', lambda t,m,p:t._print(m,p))
-
+        self._dotasks(self.Tasks, ' -', lambda t, m, p: t._print(m, p))
 
     def run(self):
         "Run the stages and tasks."
 
         self.logger.debug('Execution Plan: %s' % self.name)
-        self._dotasks(self.Tasks, ' -', lambda t,m,p:t._debug(m,p))
-                
+        self._dotasks(self.Tasks, ' -', lambda t, m, p: t._debug(m, p))
+
         self.logger.debug(' Now Executing: %s' % self.name)
         try:
-            self._dotasks(self.Tasks, ' -', lambda t,m,p:t._run(m,p))
+            self._dotasks(self.Tasks, ' -', lambda t, m, p: t._run(m, p))
         except Exit, e:
             self.exit(e.code, e.prm, e.rc, e.call_support)
-
 
     def errmsg(self, code, prm={}):
         "Return a formatted error message"
         return self.errors[code] % prm
-        
 
     def exit(self, code=None, prm={}, rc=1, call_support=False):
         "Terminate the application"
@@ -637,4 +625,3 @@ class Plan:
             self.logger.error('Please send %s to Greenplum support.' % self.logfilename)
         self.logger.debug('exiting with status %(rc)s' % locals())
         sys.exit(rc)
-

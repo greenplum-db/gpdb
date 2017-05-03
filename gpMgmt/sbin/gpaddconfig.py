@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) Greenplum Inc 2009. All Rights Reserved. 
+# Copyright (c) Greenplum Inc 2009. All Rights Reserved.
 #
 # This is a private script to be called by gpaddconfig
 # The script is executed on a single machine and gets a list of data directories to modify from STDIN
@@ -8,7 +8,7 @@
 # or you can do remove only, to comment out all entries of a setting and not add an entry.
 #
 try:
-    
+
     import sys, os
     from optparse import Option, OptionParser
     from gppylib.gpparseopts import OptParser, OptChecker
@@ -17,15 +17,13 @@ try:
     from gppylib.db import dbconn
     from gppylib.gpcoverage import GpCoverage
 
-except ImportError, e:    
+except ImportError, e:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
-_help = [""""""
+_help = [""""""]
 
-]
 
 def parseargs():
-
     parser = OptParser(option_class=OptChecker)
 
     parser.setHelp(_help)
@@ -41,7 +39,7 @@ def parseargs():
     # Parse the command line arguments
     (options, args) = parser.parse_args()
 
-    # sanity check 
+    # sanity check
     if not options.entry:
         print "--entry is required"
         sys.exit(1)
@@ -53,44 +51,43 @@ def parseargs():
     return options
 
 
-#------------------------------- Mainline --------------------------------
+# ------------------------------- Mainline --------------------------------
 coverage = GpCoverage()
 coverage.start()
 
 try:
     options = parseargs()
-     
+
     files = list()
-    
+
     # get the files to edit from STDIN
     line = sys.stdin.readline()
     while line:
-    
+
         directory = line.rstrip()
-        
+
         filename = directory + "/postgresql.conf"
-        if not os.path.exists( filename ):
+        if not os.path.exists(filename):
             raise Exception("path does not exist" + filename)
-    
+
         files.append(filename)
-    
+
         line = sys.stdin.readline()
-    
-    
+
     fromString = "(^\s*" + options.entry + "\s*=.*$)"
-    toString="#$1"
+    toString = "#$1"
     name = "mycmd"
-    
+
     # update all the files
     for f in files:
-    
+
         # comment out any existing entries for this setting
-        cmd=InlinePerlReplace(name, fromString, toString, f)
+        cmd = InlinePerlReplace(name, fromString, toString, f)
         cmd.run(validateAfter=True)
-    
+
         if options.removeonly:
             continue
-    
+
         cmd = GpAppendGucToFile(name, f, options.entry, options.value)
         cmd.run(validateAfter=True)
 finally:
