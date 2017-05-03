@@ -1069,30 +1069,6 @@ static apr_status_t check_partition(const char* tbl, apr_pool_t* pool, PGconn* c
 	return APR_SUCCESS;
 }
 
-apr_status_t gpdb_harvest_healthdata()
-{
-	PGconn* conn = 0;
-	PGresult* result = 0;
-	const char* QRY = "insert into health_history select * from health_now;";
-	const char* errmsg;
-	apr_status_t res = APR_SUCCESS;
-
-	errmsg = gpdb_exec(&conn, &result, QRY);
-	if (errmsg)
-	{
-		res = 1;
-		gpmon_warningx(FLINE, 0, "---- ARCHIVING HISTORICAL HEALTH DATA FAILED ---- on query %s with error %s\n", QRY, errmsg);
-	}
-	else
-	{
-		TR1(("load completed OK: health\n"));
-	}
-
-	PQclear(result);
-	PQfinish(conn);
-	return res;
-}
-
 static apr_status_t harvest(const char* tbl, apr_pool_t* pool, PGconn* conN)
 {
 	PGconn* conn = 0;
@@ -1507,9 +1483,7 @@ void gpdb_import_alert_log(apr_pool_t *pool)
 /* insert _tail data into history table */
 apr_status_t gpdb_check_partitions(mmon_options_t *opt)
 {
-	// health is not a full table and needs to be added to the list
-
-	apr_status_t r1, r3, r4;
+	apr_status_t r3, r4;
 
 	// open a connection
 	PGconn* conn = NULL;
@@ -1526,8 +1500,6 @@ apr_status_t gpdb_check_partitions(mmon_options_t *opt)
 		return APR_EINVAL;
 	}
 
-	r1 = check_partition("health", NULL, conn, opt);
-
 	r3 = call_for_each_table_with_opt(check_partition, NULL, conn, opt);
 
 	r4 = check_partition("log_alert", NULL, conn, opt);
@@ -1535,11 +1507,7 @@ apr_status_t gpdb_check_partitions(mmon_options_t *opt)
 	// close connection
 	PQfinish(conn);
 
-	if (r1 != APR_SUCCESS)
-	{
-		return r1;
-	}
-	else if (r3 != APR_SUCCESS)
+	if (r3 != APR_SUCCESS)
 	{
 		return r3;
 	}

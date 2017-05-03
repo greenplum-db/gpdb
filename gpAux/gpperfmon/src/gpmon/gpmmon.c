@@ -1241,10 +1241,6 @@ static int read_conf_file(char *conffile)
 			{
 				opt.harvest_interval = atoi(pVal);
 			}
-			else if (apr_strnatcasecmp(pName, "health_harvest_interval") == 0)
-			{
-				opt.health_harvest_interval = atoi(pVal);
-			}
 			else if (apr_strnatcasecmp(pName, "min_query_time") == 0)
 			{
 				opt.m = atoi(pVal);
@@ -1446,12 +1442,6 @@ static int read_conf_file(char *conffile)
 	if (opt.tail_buffer_max == 0)
 	{
 		opt.tail_buffer_max = (1LL << 31); /* 2GB */
-	}
-
-	if (opt.health_harvest_interval < 1)
-	{
-		// default 15 minutes
-		opt.health_harvest_interval = 15 * 60;
 	}
 
 	verbose = opt.v;

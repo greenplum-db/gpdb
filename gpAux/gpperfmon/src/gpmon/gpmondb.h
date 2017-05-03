@@ -86,8 +86,6 @@ APR_DECLARE (apr_status_t) gpdb_truncate_tail_files(apr_pool_t* pool);
 
 APR_DECLARE (apr_status_t) gpdb_harvest_one(const char* table);
 
-APR_DECLARE (apr_status_t) gpdb_harvest_healthdata(void);
-
 APR_DECLARE (apr_status_t) remove_segid_constraint(void);
 
 APR_DECLARE (apr_hash_t *) get_active_queries(apr_pool_t* pool);
@@ -99,7 +97,6 @@ void process_line_in_devices_cnf(apr_pool_t*, apr_hash_t*, char*);
 void process_line_in_hadoop_cluster_info(apr_pool_t*, apr_hash_t*, char*, char*, char*);
 int get_appliance_hosts_and_add_to_hosts(apr_pool_t*, apr_hash_t*);
 int get_hadoop_hosts_and_add_to_hosts(apr_pool_t*, apr_hash_t*, mmon_options_t*);
-apr_status_t gpdb_harvest_healthdata(void);
 apr_status_t truncate_file(char*, apr_pool_t*);
 
 #endif /* GPMONDB_H */
