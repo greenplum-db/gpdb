@@ -190,7 +190,6 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 			size = add_size(size, FileRepResync_ShmemSize()); 
 			size = add_size(size, FileRepIpc_ShmemSize());
 			size = add_size(size, FileRepLog_ShmemSize());
-			size = add_size(size, FileRepStats_ShmemSize());
 		}
 		
 #ifdef FAULT_INJECTOR
@@ -387,7 +386,6 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 		FileRepResync_ShmemInit();
 		FileRepIpc_ShmemInit();
 		FileRepLog_ShmemInit();
-		FileRepStats_ShmemInit();
 	}
 	
 #ifdef FAULT_INJECTOR

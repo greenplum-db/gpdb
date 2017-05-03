@@ -1008,12 +1008,6 @@ GpErrorDataFixFields
 GpExecIdentity
 GpGlobalSequence
 GpId
-gpmmon_filerep_key_t
-gpmon_filerepinfo_t
-gpmon_filerep_mirrorstats_s
-gpmon_filerep_primarystats_s
-gpmon_filerep_stats_u
-gpmon_filrep_holder_t
 gpmon_hello_t
 gpmon_metrics_t
 gpmon_packet_t

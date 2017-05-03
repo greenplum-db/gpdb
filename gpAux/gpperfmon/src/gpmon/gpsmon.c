@@ -111,7 +111,6 @@ struct gx_t
 	apr_hash_t* qlogtab; /* stores qlog packets */
 	apr_hash_t* segmenttab; /* stores segment packets */
 	apr_hash_t* pidtab; /* key=pid, value=pidrec_t */
-	apr_hash_t* filereptab; /* stores gpmon_filerepinfo_t packets */
 	apr_hash_t* querysegtab; /* stores gpmon_query_seginfo_t */
 };
 
@@ -175,19 +174,6 @@ void update_log_filename()
 		tm->tm_sec);
 }
 
-typedef struct gpsmon_filerepinfo_t
-{
-	// KEY
-	char primary_hostname[NAMEDATALEN];
-	apr_uint16_t primary_port;
-	char mirror_hostname[NAMEDATALEN];
-	apr_uint16_t mirror_port;
-	bool isPrimary;
-
-} gpsmon_filerepinfo_t;
-
-
-
 static void gx_accept(SOCKET sock, short event, void* arg);
 static void gx_recvfrom(SOCKET sock, short event, void* arg);
 static apr_uint32_t create_qexec_packet(const gpmon_qexec_t* qexec, gp_smon_to_mmon_packet_t* pkt);
@@ -210,9 +196,6 @@ static inline void copy_union_packet_gp_smon_to_mmon(gp_smon_to_mmon_packet_t* p
 			break;
 		case GPMON_PKTTYPE_SEGINFO:
 			memcpy(&pkt->u.seginfo, &pkt_src->u.seginfo, sizeof(gpmon_seginfo_t));
-			break;
-		case GPMON_PKTTYPE_FILEREP:
-			memcpy(&pkt->u.filerepinfo, &pkt_src->u.filerepinfo, sizeof(gpmon_filerepinfo_t));
 			break;
 		case GPMON_PKTTYPE_QUERY_HOST_METRICS:
 			memcpy(&pkt->u.qlog, &pkt_src->u.qlog, sizeof(gpmon_qlog_t));
@@ -1013,7 +996,6 @@ static void gx_gettcpcmd(SOCKET sock, short event, void* arg)
 	apr_hash_t* qdtab;
 	apr_hash_t* pidtab;
 	apr_hash_t* segtab;
-	apr_hash_t* filereptab;
 	if (event & EV_TIMEOUT) // didn't get command from gpmmon, quit
 	{
 		if(gx.tcp_sock)
@@ -1040,7 +1022,6 @@ static void gx_gettcpcmd(SOCKET sock, short event, void* arg)
 	qdtab = gx.qlogtab;
 	pidtab = gx.pidtab;
 	segtab = gx.segmenttab;
-	filereptab = gx.filereptab;
 	querysegtab = gx.querysegtab;
 
 	oldpool = apr_hash_pool_get(qetab);
@@ -1064,10 +1045,6 @@ static void gx_gettcpcmd(SOCKET sock, short event, void* arg)
 		gx.segmenttab = apr_hash_make(newpool);
 		CHECKMEM(gx.segmenttab);
 
-		/* filerep hash table */
-		gx.filereptab = apr_hash_make(newpool);
-		CHECKMEM(gx.filereptab);
-
 		/* queryseg hash table */
 		gx.querysegtab = apr_hash_make(newpool);
 		CHECKMEM(gx.querysegtab);
@@ -1090,18 +1067,6 @@ static void gx_gettcpcmd(SOCKET sock, short event, void* arg)
 		pidrec_t* pidrec;
 		int count = 0;
 		apr_hash_t* query_cpu_table = NULL;
-
-		for (hi = apr_hash_first(0, filereptab); hi; hi = apr_hash_next(hi))
-		{
-			apr_hash_this(hi, 0, 0, &vptr);
-			ppkt = vptr;
-			if (ppkt->header.pkttype != GPMON_PKTTYPE_FILEREP)
-				continue;
-
-			TR2(("sending magic %x, pkttype %d\n", ppkt->header.magic, ppkt->header.pkttype));
-			send_smon_to_mon_pkt(sock, ppkt);
-			count++;
-		}
 
 		for (hi = apr_hash_first(0, querysegtab); hi; hi = apr_hash_next(hi))
 		{
@@ -1398,163 +1363,6 @@ static void update_avg_value(apr_uint32_t totalcount, apr_uint32_t* totalavg, ap
 static void update_count_value(apr_uint32_t* total, apr_uint32_t newdata)
 {
 	*total += newdata;
-}
-
-
-static void accumulate_filerep_primary_data(gpmon_filerep_primarystats_s* total, gpmon_filerep_primarystats_s* newdata)
-{
-	// ALWAYS UPDATE AVERAGES BEFORE COUNTS ... AVERAGE UPDATE USES COUNT
-
-	// write_syscall_size_avg
-	update_avg_value(total->write_syscall_count, &total->write_syscall_size_avg,
-			 newdata->write_syscall_count, newdata->write_syscall_size_avg);
-
-	// write_syscall_size_max
-	update_max_value(&total->write_syscall_size_max, newdata->write_syscall_size_max);
-
-	// write_syscall_time_avg
-	update_avg_value(total->write_syscall_count, &total->write_syscall_time_avg,
-			 newdata->write_syscall_count, newdata->write_syscall_time_avg);
-
-	// write_syscall_time_max
-	update_max_value(&total->write_syscall_time_max, newdata->write_syscall_time_max);
-
-	// write_syscall_count
-	update_count_value(&total->write_syscall_count, newdata->write_syscall_count);
-
-	// fsync_syscall_time_avg
-	update_avg_value(total->fsync_syscall_count, &total->fsync_syscall_time_avg,
-			 newdata->fsync_syscall_count, newdata->fsync_syscall_time_avg);
-
-	// fsync_syscall_time_max
-	update_max_value(&total->fsync_syscall_time_max, newdata->fsync_syscall_time_max);
-
-	// fsync_syscall_count
-	update_count_value(&total->fsync_syscall_count, newdata->fsync_syscall_count);
-
-	// write_shmem_size_avg
-	update_avg_value(total->write_shmem_count, &total->write_shmem_size_avg,
-			 newdata->write_shmem_count, newdata->write_shmem_size_avg);
-
-	// write_shmem_size_max
-	update_max_value(&total->write_shmem_size_max, newdata->write_shmem_size_max);
-
-	// write_shmem_time_avg
-	update_avg_value(total->write_shmem_count, &total->write_shmem_time_avg,
-			 newdata->write_shmem_count, newdata->write_shmem_time_avg);
-
-	// write_shmem_time_max
-	update_max_value(&total->write_shmem_time_max, newdata->write_shmem_time_max);
-
-	// write_shmem_count
-	update_count_value(&total->write_shmem_count, newdata->write_shmem_count);
-
-	// fsync_shmem_time_avg
-	update_avg_value(total->fsync_shmem_count, &total->fsync_shmem_time_avg,
-			 newdata->fsync_shmem_count, newdata->fsync_shmem_time_avg);
-
-	// fsync_shmem_time_max
-	update_max_value(&total->fsync_shmem_time_max, newdata->fsync_shmem_time_max);
-
-	// fsync_shmem_count
-	update_count_value(&total->fsync_shmem_count, newdata->fsync_shmem_count);
-
-	// roundtrip_fsync_msg_time_avg
-	update_avg_value(total->roundtrip_fsync_msg_count, &total->roundtrip_fsync_msg_time_avg,
-			 newdata->roundtrip_fsync_msg_count, newdata->roundtrip_fsync_msg_time_avg);
-
-	// roundtrip_fsync_msg_time_max
-	update_max_value(&total->roundtrip_fsync_msg_time_max, newdata->roundtrip_fsync_msg_time_max);
-
-	// roundtrip_fsync_msg_count
-	update_count_value(&total->roundtrip_fsync_msg_count, newdata->roundtrip_fsync_msg_count);
-
-	// roundtrip_test_msg_time_avg
-	update_avg_value(total->roundtrip_test_msg_count, &total->roundtrip_test_msg_time_avg,
-			 newdata->roundtrip_test_msg_count, newdata->roundtrip_test_msg_time_avg);
-
-	// roundtrip_test_msg_time_max
-	update_max_value(&total->roundtrip_test_msg_time_max, newdata->roundtrip_test_msg_time_max);
-
-	// roundtrip_test_msg_count
-	update_count_value(&total->roundtrip_test_msg_count, newdata->roundtrip_test_msg_count);
-}
-
-static void accumulate_filerep_mirror_data(gpmon_filerep_mirrorstats_s* total, gpmon_filerep_mirrorstats_s* newdata)
-{
-	// ALWAYS UPDATE AVERAGES BEFORE COUNTS ... AVERAGE UPDATE USES COUNT
-
-	// write_syscall_size_avg
-	update_avg_value(total->write_syscall_count, &total->write_syscall_size_avg,
-			 newdata->write_syscall_count, newdata->write_syscall_size_avg);
-
-	// write_syscall_size_max
-	update_max_value(&total->write_syscall_size_max, newdata->write_syscall_size_max);
-
-	// write_syscall_time_avg;
-	update_avg_value(total->write_syscall_count, &total->write_syscall_time_avg,
-			 newdata->write_syscall_count, newdata->write_syscall_time_avg);
-
-	// write_syscall_time_max
-	update_max_value(&total->write_syscall_time_max, newdata->write_syscall_time_max);
-
-	// write_syscall_count
-	update_count_value(&total->write_syscall_count, newdata->write_syscall_count);
-
-	// fsync_syscall_time_avg;
-	update_avg_value(total->fsync_syscall_count, &total->fsync_syscall_time_avg,
-			 newdata->fsync_syscall_count, newdata->fsync_syscall_time_avg);
-
-	// fsync_syscall_time_max
-	update_max_value(&total->fsync_syscall_time_max, newdata->fsync_syscall_time_max);
-
-	// fsync_syscall_count
-	update_count_value(&total->fsync_syscall_count, newdata->fsync_syscall_count);
-}
-
-static void accumulate_filerep_data_in_packet(gpmon_filerepinfo_t* total, gpmon_filerepinfo_t* newdata)
-{
-	if (total->key.isPrimary != newdata->key.isPrimary)
-	{
-		gpmon_warning(FLINE, "filerep unexpected key mismatch");
-		return;
-	}
-
-	total->elapsedTime_secs += newdata->elapsedTime_secs;
-
-	if (total->key.isPrimary)
-	{
-		accumulate_filerep_primary_data(&total->stats.primary, &newdata->stats.primary);
-	}
-	else
-	{
-		accumulate_filerep_mirror_data(&total->stats.mirror, &newdata->stats.mirror);
-	}
-}
-
-static void gx_recvfilerep(gpmon_packet_t* pkt)
-{
-	gpmon_filerepinfo_t* p;
-	gp_smon_to_mmon_packet_t* rec = NULL;
-
-	if (pkt->pkttype != GPMON_PKTTYPE_FILEREP)
-		gpsmon_fatal(FLINE, "assert failed; expected pkttype filerep");
-
-	p = &pkt->u.filerepinfo;
-
-	TR2(("Received filerep packet primary %s:%d mirror %s:%d isPrimary(%d)\n",
-		p->key.dkey.primary_hostname, p->key.dkey.primary_port, p->key.dkey.mirror_hostname, p->key.dkey.mirror_port));
-
-	rec = apr_hash_get(gx.filereptab, &p->key, sizeof(p->key));
-	if (rec)
-	{
-		accumulate_filerep_data_in_packet(&rec->u.filerepinfo, &pkt->u.filerepinfo);
-	}
-	else
-	{
-		rec = gx_pkt_to_smon_to_mmon(apr_hash_pool_get(gx.filereptab), pkt);
-		apr_hash_set(gx.filereptab, &rec->u.filerepinfo.key, sizeof(rec->u.filerepinfo.key), rec);
-	}
 }
 
 static void gx_recvsegment(gpmon_packet_t* pkt)
@@ -1899,9 +1707,6 @@ static void gx_recvfrom(SOCKET sock, short event, void* arg)
 	case GPMON_PKTTYPE_QEXEC:
 		gx_recvqexec(&pkt);
 		break;
-	case GPMON_PKTTYPE_FILEREP:
-		gx_recvfilerep(&pkt);
-		break;
 	default:
 		gpmon_warning(FLINE, "unexpected packet type %d", pkt.pkttype);
 		return;
@@ -2181,10 +1986,6 @@ static void setup_gx(int port, apr_int64_t signature)
 	/* segment hash table */
 	gx.segmenttab = apr_hash_make(subpool);
 	CHECKMEM(gx.segmenttab);
-
-	/* filerep hash table */
-	gx.filereptab = apr_hash_make(subpool);
-	CHECKMEM(gx.filereptab);
 
 	/* queryseg hash table */
 	gx.querysegtab = apr_hash_make(subpool);

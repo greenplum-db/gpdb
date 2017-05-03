@@ -1293,64 +1293,6 @@ extern bool FileRepIsBackendSubProcess(FileRepProcessType_e processType);
 
 extern void FileRep_SetFileRepRetry(void);
 
-
-
-/************* FILEREPGPMON ********************/
-
-#define FILEREP_GPMON_USE_TIMERS 0
-
-typedef struct FileRepGpmonInfo_s {
-		gpmon_packet_t gpmonPacket;
-		int gpsock;
-		struct sockaddr_storage gpaddr;  // Allow for either IPv4 or IPv6
-		int gpaddr_len;					 // And remember the length
-		TimestampTz lastSend;
-
-} FileRepGpmonInfo_s;
-
-typedef enum FileRepGpmonStatType_e {
-		FileRepGpmonStatType_PrimaryRoundtripTestMsg =0, //COUNT, TIME
-		FileRepGpmonStatType_PrimaryFsyncShmem, //COUNT, TIME
-		FileRepGpmonStatType_PrimaryWriteShmem, //COUNT, TIME, SIZE
-		FileRepGpmonStatType_PrimaryRoundtripFsyncMsg,   //COUNT, TIME
-		FileRepGpmonStatType_PrimaryWriteSyscall, //COUNT, TIME, SIZE
-		FileRepGpmonStatType_PrimaryFsyncSyscall, //COUNT, TIME
-
-		FileRepGpmonStatType_MirrorWriteSyscall, //COUNT, TIME, SIZE
-		FileRepGpmonStatType_MirrorFsyncSyscall, //COUNT, TIME
-
-		FileRepGpmonStatType__EnumerationCount
-
-} FileRepGpmonStatType_e;
-
-typedef struct FileRepGpmonRecord_s {
-		FileRepGpmonStatType_e whichStat;
-		/*
-		  could have a union here of different records
-		  for each stat type if we wanted
-		*/
-
-		//should we use gettimeofday and struct timeval instead?
-		TimestampTz startTime;
-		TimestampTz endTime;
-		int32 size;
-
-} FileRepGpmonRecord_s;
-
-void FileRepStats_GpmonInit(void);
-
-void FileRepGpmonStat_OpenRecord(FileRepGpmonStatType_e whichStat,
-								 FileRepGpmonRecord_s *record);
-
-void FileRepGpmonStat_CloseRecord(FileRepGpmonStatType_e whichStat,
-								  FileRepGpmonRecord_s *record);
-
-void
-FileRepStats_ShmemInit(void);
-
-Size
-FileRepStats_ShmemSize(void);
-
 extern void FileRep_resetSpinLocks(void);
 
 #endif   /* CDBFILEREP_H */
