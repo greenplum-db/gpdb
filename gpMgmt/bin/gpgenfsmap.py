@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) Greenplum Inc 2011. All Rights Reserved. 
+# Copyright (c) Greenplum Inc 2011. All Rights Reserved.
 '''
 gpgenfsmap.py     Generates a mapping of Servers, Filesystems, GPDB Filespaces and Storage Pools
 Options: 
@@ -14,23 +14,25 @@ Options:
 '''
 
 import os, sys, subprocess
+
 try:
-    from optparse import Option, OptionParser 
+    from optparse import Option, OptionParser
     from gppylib.gpparseopts import OptParser, OptChecker
     from gppylib.commands.base import WorkerPool, Command, REMOTE
     from gppylib import gphostcache
     from gppylib.commands import unix
     from gppylib.db import dbconn
     from gppylib.db import catalog
-    from pygresql   import pg            # Database interaction
-    from gppylib import gplog          # Greenplum logging facility
+    from pygresql import pg  # Database interaction
+    from gppylib import gplog  # Greenplum logging facility
     from gppylib.gpcoverage import GpCoverage
     from getpass import getpass
 
-except ImportError, e:    
+except ImportError, e:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
-#Data Structures to be populated 
+
+# Data Structures to be populated
 class FSMap:
     def __init__(self):
         self.servers = []
@@ -40,26 +42,25 @@ class FSMap:
         newSvr = Server(name)
         self.servers.append(newSvr)
         return newSvr
-    
+
     def getServer(self, name):
         for server in self.servers:
             if server.name == name:
                 return server
         return None
-    
+
     def getAllServers(self):
         return self.servers
-    
+
     def addFilespace(self, filespace):
         self.filespaces.append(filespace)
-    
+
     def toString(self):
         mapStr = ""
         for svr in self.servers:
             mapStr += svr.toString()
         return mapStr
-            
-        
+
 
 class Server:
     def __init__(self, name):
@@ -71,30 +72,31 @@ class Server:
         self.filesystems.append(newFs)
         return newFs
 
-         
     def getFilesystem(self, name):
         for filesystem in self.filesystems:
             if filesystem.name == name:
                 return filesystem
         return None
-    
+
     def toString(self):
         svrStr = ""
         for fs in self.filesystems:
             fsStrList = fs.toString()
             for fsStr in fsStrList:
-                svrStr += "%s:%s:%s\n" %(self.name, fs.name, fsStr)
+                svrStr += "%s:%s:%s\n" % (self.name, fs.name, fsStr)
         return svrStr
 
-#Global Variables
-systemFSMap  = None
-#Keyed on servername, each value is a list of devices & directories
+
+# Global Variables
+systemFSMap = None
+# Keyed on servername, each value is a list of devices & directories
 serverFSDict = None
 serverFSMap = dict()
 fsDetailsMap = dict()
-dbConn       = None
-logger       = None
-    
+dbConn = None
+logger = None
+
+
 def runPoolCommand(host, commandStr, pool):
     output = ""
 
@@ -110,50 +112,52 @@ def runPoolCommand(host, commandStr, pool):
         output = i.results.stdout
     return output
 
+
 def dbConnect(options):
     global dbConn
-    
+
     if dbConn != None:
         return
     try:
-        user     = options.username
-        host     = options.host 
-        port     = options.port
-        db       = 'template1'
+        user = options.username
+        host = options.host
+        port = options.port
+        db = 'template1'
         password = None
 
-        dburl = dbconn.DbURL(username=user, hostname=host, 
+        dburl = dbconn.DbURL(username=user, hostname=host,
                              port=port, dbname=db, password=password)
-        logger.info("Connecting to DB at: %s " %(str(dburl)) )
-        
+        logger.info("Connecting to DB at: %s " % (str(dburl)))
+
         conn = dbconn.connect(dburl)
-        logger.info( "Connected to DB: %s" %(str(conn)) )
+        logger.info("Connected to DB: %s" % (str(conn)))
         dbConn = conn
     except Exception, e:
-        logger.error ("Error Connecting to Database: %s" % (str(e)) )
+        logger.error("Error Connecting to Database: %s" % (str(e)))
         sys.exit(1)
 
-    
+
 def runQuery(query):
     global dbConn
     if dbConn == None:
-        logger.error ( "Error: Not connected to database.")
+        logger.error("Error: Not connected to database.")
         sys.exit(1)
-    
+
     try:
         rows = catalog.basicSQLExec(dbConn, query)
     except Exception, e:
-        logger.error ("Error: Failed to run query: %s" % (str(e)) )
+        logger.error("Error: Failed to run query: %s" % (str(e)))
         sys.exit(1)
     return rows
 
+
 def parseargs(args):
     global logger
-    
+
     pguser = os.environ.get("PGUSER") or unix.getUserName()
     pghost = os.environ.get("PGHOST") or unix.getLocalHostname()
     pgport = os.environ.get("PGPORT") or 5432
-    
+
     parser = OptParser(option_class=OptChecker)
     parser.remove_option('-h')
     parser.add_option('-?', '--help', '-h', action='store_true', default=False)
@@ -163,9 +167,9 @@ def parseargs(args):
     parser.add_option('-w', '--password', default=False, action='store_true')
     parser.add_option('-v', '--verbose', default=False, action='store_true')
     parser.add_option('-q', '--quiet', default=True, action='store_true')
-    
+
     (options, args) = parser.parse_args()
-    
+
     if options.help:
         print __doc__
         sys.exit(1)
@@ -174,41 +178,42 @@ def parseargs(args):
     except:
         logger.error("Invalid PORT: '%s'" % options.port)
         sys.exit(1)
-        
+
     if options.verbose:
         gplog.enable_verbose_logging()
     elif options.quiet:
         gplog.quiet_stdout_logging()
 
     return options
-            
+
+
 def findFsDetails():
     global serverFSMap
     try:
-        #find the mount points in parallel
+        # find the mount points in parallel
         pool = WorkerPool()
 
         for hname in serverFSMap.keys():
             hname.strip()
-            subCmd = "df -P %s" %(serverFSMap[hname])
+            subCmd = "df -P %s" % (serverFSMap[hname])
             cmdStr = 'ssh -o PasswordAuthentication=no %s "%s"' % (hname, subCmd)
-            pool.addCommand( Command(hname, cmdStr, REMOTE, hname) )
+            pool.addCommand(Command(hname, cmdStr, REMOTE, hname))
         pool.join()
         items = pool.getCompletedItems()
         for i in items:
             if i.results.rc == 0:
                 df_with_header = i.results.stdout.strip()
-                df_list = df_with_header.splitlines() 
+                df_list = df_with_header.splitlines()
                 df_list.pop(0)
                 fsList = serverFSMap[i.remoteHost].split()
                 if len(df_list) != len(fsList):
                     print "Mismatch"
-                    continue  
+                    continue
                 for df_vals in df_list:
                     df_val = df_vals.split()
-                    fsDetailsMap[fsList.pop(0).strip()] = [i.remoteHost, df_val[0], df_val[5]] 
+                    fsDetailsMap[fsList.pop(0).strip()] = [i.remoteHost, df_val[0], df_val[5]]
             else:
-                print("Failure in talking to host %s" %(i.remoteHost))
+                print("Failure in talking to host %s" % (i.remoteHost))
 
         pool.join()
         pool.haltWork()
@@ -229,49 +234,51 @@ def findFsDetails():
         pool.haltWork()
         pool.joinWorkers()
 
+
 def genFSMap():
-    results = runQuery("SELECT pgfs.oid as oid, fsedbid as seg_dbid, fselocation as datadir, hostname \
+    results = runQuery("SELECT pgfs.oid AS oid, fsedbid AS seg_dbid, fselocation AS datadir, hostname \
                         FROM pg_filespace pgfs, pg_filespace_entry pgfse,  gp_segment_configuration gpsec \
                         WHERE pgfse.fsefsoid=pgfs.oid AND pgfse.fsedbid=gpsec.dbid  ORDER BY seg_dbid;")
     if len(results) == 0:
-        logger.error( "No data directories found.  Exiting.")
+        logger.error("No data directories found.  Exiting.")
         sys.exit(1)
-    logger.debug( "Results from query:" + str(results) )
-    #result columns will be: [0] filespace name, [1] dbid, [2] datadir, [3] hostname
+    logger.debug("Results from query:" + str(results))
+    # result columns will be: [0] filespace name, [1] dbid, [2] datadir, [3] hostname
     for result in results:
-        filespaceOid= result[0]
-        datadir=result[2].strip()
-        hostname=result[3]
+        filespaceOid = result[0]
+        datadir = result[2].strip()
+        hostname = result[3]
 
-        if fsDetailsMap.has_key(datadir): 
+        if fsDetailsMap.has_key(datadir):
             print fsDetailsMap[datadir][0], fsDetailsMap[datadir][2], filespaceOid
-    
+
+
 def genServerFsList():
-    results = runQuery("select hostname, array_to_string(array_agg(fselocation), ' ') as fs from pg_filespace_entry a , gp_segment_configuration b where a.fsedbid = b.dbid group by hostname")
+    results = runQuery(
+        "SELECT hostname, array_to_string(array_agg(fselocation), ' ') AS fs FROM pg_filespace_entry a , gp_segment_configuration b WHERE a.fsedbid = b.dbid GROUP BY hostname")
 
     if len(results) == 0:
-        logger.error( "Error: gp_segment_configuration empty" )
+        logger.error("Error: gp_segment_configuration empty")
         sys.exit(1)
 
     for item in results:
         if len(item) == 2:
             serverFSMap[item[0]] = item[1]
 
-def main (argv):
+
+def main(argv):
     global systemFSMap
     global logger
-    
+
     logger = gplog.get_default_logger()
-    
+
     options = parseargs(argv)
     dbConnect(options)
-    genServerFsList() 
+    genServerFsList()
     findFsDetails()
     genFSMap()
     sys.exit(0)
-    
-    
+
+
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
-
-

@@ -17,25 +17,26 @@ from gppylib.operations.unix import ListFiles, ListRemoteFiles, MakeDir
 logger = gplog.get_default_logger()
 COVERAGE_FILENAME = 'cover.out'
 
-#------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
 class GpWriteFigleafCoverageHtml(Command):
     """Command to write out figleaf html reports to disk based on the
     coverage information that has been collected."""
-    
-    def __init__(self,name,filename, directory,ctxt=LOCAL,remoteHost=None):
+
+    def __init__(self, name, filename, directory, ctxt=LOCAL, remoteHost=None):
         gphome = os.getenv("GPHOME", None)
         if not gphome:
             raise Exception('GPHOME environment variable not set.')
-        cmdStr = "%s -d %s %s" % (os.path.normpath(gphome + '/lib/python/figleaf/figleaf2html'), directory, filename)        
-        Command.__init__(self,name,cmdStr,ctxt,remoteHost)
+        cmdStr = "%s -d %s %s" % (os.path.normpath(gphome + '/lib/python/figleaf/figleaf2html'), directory, filename)
+        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
     @staticmethod
     def local(name, coverfile, directory):
         cmd = GpWriteFigleafCoverageHtml(name, coverfile, directory)
         cmd.run(validateAfter=True)
 
-    
-#------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
 # TODO: We should not allow this class to be instantiated. It offers static
 # functionality, and its exposed methods should reflect that.
 class GpFigleafCoverage:
@@ -73,22 +74,23 @@ class GpFigleafCoverage:
     pid_dir := <base>/<pid>
     comp_dir := <base>/<pid>/<comp>
     """
+
     # TODO: change directory structure to something more human-readable
     # How about <base>/<program_name><pid>/<program_name><rand>/*.out,*.html ?
-    
+
     def __init__(self):
         try:
             self.directory = os.getenv('FIGLEAF_DIR', None)
             if self.directory is None:
                 self.directory = os.path.normpath(os.path.expanduser("~") + '/.figleaf')
             self.my_pid = str(os.getpid())
-            self.main_pid = os.getenv('FIGLEAF_PID', self.my_pid) 
+            self.main_pid = os.getenv('FIGLEAF_PID', self.my_pid)
             randstring = ''.join(random.choice('0123456789') for x in range(20))
             self.filename = os.path.join(self.directory, self.main_pid, randstring, COVERAGE_FILENAME)
             self.running = False
         except Exception, e:
             logger.exception('Error initializing code coverage')
-        
+
     def start(self):
         """Starts coverage collection if the environment variable USE_FIGLEAF is set."""
         try:
@@ -98,7 +100,7 @@ class GpFigleafCoverage:
                 self.running = True
                 ExecutionContext.propagate_env_map.update({'FIGLEAF_DIR': os.getenv('FIGLEAF_DIR', self.directory),
                                                            'USE_FIGLEAF': 1,
-                                                           'FIGLEAF_PID': self.main_pid })
+                                                           'FIGLEAF_PID': self.main_pid})
                 figleaf.start()
         except Exception, e:
             logger.error('Error starting code coverage: %s' % e)
@@ -115,7 +117,7 @@ class GpFigleafCoverage:
                     del ExecutionContext.propagate_env_map[k]
         except Exception, e:
             logger.error('Error stopping code coverage: %s' % e)
-        
+
     def generate_report(self):
         """Generates the html reports and puts them in the directory specified."""
         if os.getenv('USE_FIGLEAF', None):
@@ -125,12 +127,12 @@ class GpFigleafCoverage:
                 GpWriteFigleafCoverageHtml.local('Generate HTML', self.filename, directory)
 
                 if self.main_pid == self.my_pid:
-                    FinalizeCoverage(trail = RemoteExecutionContext.trail,
-                                     pid = self.main_pid,
-                                     base_dir = self.directory).run()
+                    FinalizeCoverage(trail=RemoteExecutionContext.trail,
+                                     pid=self.main_pid,
+                                     base_dir=self.directory).run()
             except Exception, e:
                 logger.exception('Error generating HTML code cover reports.')
-                
+
     def delete_files(self):
         """Deletes code coverage files."""
         if os.getenv('USE_FIGLEAF', None):
@@ -141,17 +143,18 @@ class GpFigleafCoverage:
                 RemoveFiles.local('Remove html files', directory + '/*.html')
             except:
                 logger.error('Failed to clean up coverage files')
-        
-                
-                
+
+
 # The coverage tool to use
-#if os.getenv('USE_FIGLEAF', None):
-GP_COVERAGE_CLASS=GpFigleafCoverage
-#else:
+# if os.getenv('USE_FIGLEAF', None):
+GP_COVERAGE_CLASS = GpFigleafCoverage
+
+
+# else:
 #    GP_COVERAGE_CLASS=<some other coverage class>
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 class GpCoverage(GP_COVERAGE_CLASS):
     """Class the controls code coverage.  Right now this inherits from
     GpFigleafCoverage, but in the future we may find a better code coverage
@@ -160,48 +163,52 @@ class GpCoverage(GP_COVERAGE_CLASS):
     pass
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 class FinalizeCoverage(Operation):
     """
     This aggregates coverage data from across the cluster for this current process (which is soon to complete.)
     Then, we update the global coverage data that persists from run to run at <base_dir>/*.out,*.html.
     """
+
     def __init__(self, trail, pid, base_dir):
         self.trail = trail
         self.pid = pid
         self.base_dir = base_dir
+
     def execute(self):
         pid_dir = os.path.join(self.base_dir, self.pid)
 
         # update the pid-level coverage statistics, which reside within pid_dir
         # this requires: collect coverage data, merge data, save, and generate html
-        CollectCoverage(trail = self.trail, pid_dir = pid_dir).run()
-        partial_coverages = LoadPartialCoverages(pid_dir = pid_dir).run()
+        CollectCoverage(trail=self.trail, pid_dir=pid_dir).run()
+        partial_coverages = LoadPartialCoverages(pid_dir=pid_dir).run()
         cumulative_coverage = {}
-        for partial_coverage in partial_coverages:          
-            MergeCoverage(input = partial_coverage, output = cumulative_coverage).run()
-        SaveCoverage(obj = cumulative_coverage,
-                     path = os.path.join(pid_dir, COVERAGE_FILENAME)).run()
-        GpWriteFigleafCoverageHtml.local('Generate HTML', os.path.join(pid_dir, COVERAGE_FILENAME), pid_dir) 
-        
+        for partial_coverage in partial_coverages:
+            MergeCoverage(input=partial_coverage, output=cumulative_coverage).run()
+        SaveCoverage(obj=cumulative_coverage,
+                     path=os.path.join(pid_dir, COVERAGE_FILENAME)).run()
+        GpWriteFigleafCoverageHtml.local('Generate HTML', os.path.join(pid_dir, COVERAGE_FILENAME), pid_dir)
+
         # update the global coverage statistics, which reside within self.base_dir
         overall_coverage = LoadCoverage(os.path.join(self.base_dir, COVERAGE_FILENAME)).run()
-        MergeCoverage(input = cumulative_coverage, output = overall_coverage).run()
-        SaveCoverage(obj = overall_coverage, 
-                     path = os.path.join(self.base_dir, COVERAGE_FILENAME)).run()
-        GpWriteFigleafCoverageHtml.local('Generate HTML', os.path.join(self.base_dir, COVERAGE_FILENAME), self.base_dir) 
+        MergeCoverage(input=cumulative_coverage, output=overall_coverage).run()
+        SaveCoverage(obj=overall_coverage,
+                     path=os.path.join(self.base_dir, COVERAGE_FILENAME)).run()
+        GpWriteFigleafCoverageHtml.local('Generate HTML', os.path.join(self.base_dir, COVERAGE_FILENAME), self.base_dir)
+
+        # ------------------------------------------------------------------------------
 
 
-
-#------------------------------------------------------------------------------
 class CollectCoverage(Operation):
     """ 
     Simply copy over <base>/<pid>/<comp> dirs back to the master. This may 
     be an unnecessary step IF <base> is an NFS mount. 
     """
+
     def __init__(self, trail, pid_dir):
         self.trail = trail
         self.pid_dir = pid_dir
+
     def execute(self):
         pool = WorkerPool()
         given = set(ListFiles(self.pid_dir).run())
@@ -212,21 +219,22 @@ class CollectCoverage(Operation):
                 for dir in to_copy:
                     comp_dir = os.path.join(self.pid_dir, dir)
                     pool.addCommand(Scp('collect coverage',
-                                        srcFile = comp_dir,
-                                        srcHost = host,
-                                        dstFile = comp_dir,
-                                        recursive = True))
+                                        srcFile=comp_dir,
+                                        srcHost=host,
+                                        dstFile=comp_dir,
+                                        recursive=True))
             pool.join()
         finally:
             pool.haltWork()
 
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 class LoadCoverage(Operation):
     """ Unpickles and returns an object residing at a current path """
+
     def __init__(self, path):
         self.path = path
+
     def execute(self):
         try:
             with open(self.path, 'r') as f:
@@ -237,31 +245,32 @@ class LoadCoverage(Operation):
         return {}
 
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 class SaveCoverage(Operation):
     """ Pickles a given object to disk at a designated path """
+
     def __init__(self, path, obj):
         self.path = path
         self.obj = obj
+
     def execute(self):
         with open(self.path, 'w') as f:
             pickle.dump(self.obj, f)
 
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 class LoadPartialCoverages(Operation):
     """ Returns an array of unpickled coverage objects from <base>/<pid>/*/<COVERAGE_FILENAME> """
+
     def __init__(self, pid_dir):
-        self.pid_dir = pid_dir 
+        self.pid_dir = pid_dir
+
     def execute(self):
         coverage_files = glob(os.path.join(self.pid_dir, '*', COVERAGE_FILENAME))
         return [LoadCoverage(path).run() for path in coverage_files]
 
 
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # TODO: Support a parallel merge? Or would there be no point with the Python GIL?
 class MergeCoverage(Operation):
     """
@@ -273,11 +282,13 @@ class MergeCoverage(Operation):
     Here, we merge such an input dict into an output dict. As such, we'll be able to pickle
     the result back to disk and invoke figleaf2html to get consolidated html reports.
     """
+
     def __init__(self, input, output):
         self.input, self.output = input, output
+
     def execute(self):
         for filename in self.input:
             if filename not in self.output:
                 self.output[filename] = self.input[filename]
             else:
-                self.output[filename] |= self.input[filename]         # set union
+                self.output[filename] |= self.input[filename]  # set union

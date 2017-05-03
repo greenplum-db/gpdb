@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 import sys
 import pickle
-import traceback 
+import traceback
+
 
 class NullDevice():
     def write(self, s):
         pass
+
 
 # Prevent use of stdout, as it disrupts pickling mechanism
 old_stdout = sys.stdout
@@ -15,6 +17,7 @@ sys.stdout = NullDevice()
 from gppylib import gplog
 from gppylib.mainUtils import getProgramName
 from gppylib.commands import unix
+
 hostname = unix.getLocalHostname()
 username = unix.getUserName()
 execname = pickle.load(sys.stdin)
@@ -24,6 +27,7 @@ logger = gplog.get_default_logger()
 operation = pickle.load(sys.stdin)
 
 from gppylib.gpcoverage import GpCoverage
+
 coverage = GpCoverage()
 coverage.start()
 
@@ -38,7 +42,7 @@ except Exception, e:
 
         # logger.exception(e)               # logging 'e' could be necessary for traceback
 
-        pickled_ret = pickle.dumps(e)       # Pickle exception for stdout transmission
+        pickled_ret = pickle.dumps(e)  # Pickle exception for stdout transmission
     except Exception, f:
         # logger.exception(f)               # 'f' is not important to us, except for debugging perhaps
 
@@ -50,9 +54,9 @@ except Exception, e:
         pretty_trace += ''.join(traceback.format_list(tb_list))
         logger.critical(pretty_trace)
         print >> sys.stderr, pretty_trace
-        sys.exit(2)                         # signal that gpoperation.py has hit unexpected error
+        sys.exit(2)  # signal that gpoperation.py has hit unexpected error
 else:
-    pickled_ret = pickle.dumps(ret)         # Pickle return data for stdout transmission
+    pickled_ret = pickle.dumps(ret)  # Pickle return data for stdout transmission
 finally:
     coverage.stop()
     coverage.generate_report()

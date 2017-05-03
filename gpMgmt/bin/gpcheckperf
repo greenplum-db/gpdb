@@ -5,16 +5,16 @@ gpcheckperf -- Check the hardware for Greenplum Database
 Usage: gpcheckperf <options>
 
     --version  : print version information
-    -d segdir  : where segdir is a directory on which to test I/O performance. 
+    -d segdir  : where segdir is a directory on which to test I/O performance.
                  Multiple -d flags may be specified for multiple directories
                  on each host. These will typically be your Greenplum primary
-                 (and/or mirror) data directories. 
+                 (and/or mirror) data directories.
                  e.g. -d /dbfast1 -d /dbfast2
     -?         : print this help text
     -v         : enable verbose
     -V         : enable very verbose
     -D         : print per host disk stats on disk read/write tests
-    -r flags   : where flags specifies the tests to run [default=dsn]. 
+    -r flags   : where flags specifies the tests to run [default=dsn].
                  Supported test flags are:
                        d: runs only disk tests
                        s: runs only stream benchmark
@@ -42,14 +42,14 @@ try:
 except ImportError, e:
     sys.exit('Error: unable to import module: ' + str(e))
 
-
-GPHOME=os.getenv('GPHOME')
+GPHOME = os.getenv('GPHOME')
 if GPHOME is None:
     sys.exit('Please set GPHOME environment variable')
 
-USER=os.getenv('USER')
+USER = os.getenv('USER')
 if USER is None or USER is ' ':
     sys.exit('Please set USER environment variable')
+
 
 ################
 def usage(exitarg):
@@ -78,15 +78,19 @@ class Global():
     opt['--netserver'] = 'gpnetbenchServer'
     opt['--netclient'] = 'gpnetbenchClient'
 
+
 GV = Global()
+
 
 #############
 def killall(procname):
     return 'F=%s && (pkill $F || pkill -f $F || killall -9 $F) > /dev/null 2>&1 || true' % procname
 
+
 ###############################
 def strcmd(cmd):
     return reduce(lambda x, y: x + ' ' + y, map(lambda x: x.find(' ') > 0 and "'" + x + "'" or x, cmd))
+
 
 #############
 def gpssh(cmd):
@@ -96,7 +100,7 @@ def gpssh(cmd):
         c.append('-f')
         c.append(GV.opt['-f'])
     else:
-        for h in GV.opt['-h']: 
+        for h in GV.opt['-h']:
             c.append('-h')
             c.append(h)
     c.append(cmd)
@@ -107,6 +111,7 @@ def gpssh(cmd):
     rc = p.wait()
     return (not rc, out)
 
+
 #############
 def gpscp(src, dst):
     c = ['%s/bin/gpscp' % GPHOME]
@@ -115,7 +120,7 @@ def gpscp(src, dst):
         c.append('-f')
         c.append(GV.opt['-f'])
     else:
-	for h in GV.opt['-h']: 
+        for h in GV.opt['-h']:
             c.append('-h')
             c.append(h)
     c.append(src)
@@ -126,12 +131,14 @@ def gpscp(src, dst):
     rc = p.wait()
     return (not rc, out)
 
+
 ################
 def getPlatform():
     if sys.platform.find('linux') >= 0: return 'linux'
     if sys.platform.find('darwin') >= 0: return 'darwin'
     if sys.platform.find('sunos5') >= 0: return 'sunos5'
     return '?'
+
 
 ################
 def getMemory():
@@ -141,7 +148,7 @@ def getMemory():
         list = out.strip().split(' ')
         val = int(list[len(list) - 2])
         factor = list[len(list) - 1]
-        if factor == 'kB': 
+        if factor == 'kB':
             return val * 1024
         return 0
 
@@ -158,27 +165,32 @@ def getMemory():
         list = out.strip().split(' ')
         val = int(list[2])
         factor = list[3]
-        if factor == 'Megabytes': 
+        if factor == 'Megabytes':
             return val * 1024 * 1024
         return 0
 
     return 0
 
+
 ################
 def parseMemorySize(line):
     factor = 1
     try:
-	line = line.strip().upper()
-	if line.endswith('B'): line = line[:-1]
-	if line.endswith('G'): factor = 1024 * 1024 * 1024
-	elif line.endswith('M'): factor = 1024 * 1024
-	elif line.endswith('K'): factor = 1024
-	if factor > 1: line = line[:-1]
-	return int(line) * factor
-    except Exception, err: 
+        line = line.strip().upper()
+        if line.endswith('B'): line = line[:-1]
+        if line.endswith('G'):
+            factor = 1024 * 1024 * 1024
+        elif line.endswith('M'):
+            factor = 1024 * 1024
+        elif line.endswith('K'):
+            factor = 1024
+        if factor > 1: line = line[:-1]
+        return int(line) * factor
+    except Exception, err:
         print 'Error: ' + err
         sys.exit(-1)
         return 0
+
 
 #############
 def parseDuration(val):
@@ -201,23 +213,31 @@ def print_version():
     print '%s version $Revision$' % GV.script_name
     sys.exit(0)
 
+
 #############
 def parseCommandLine():
     global opt
     try:
-	(options, args) = getopt.getopt(sys.argv[1:], '?vVDd:r:B:S:p:h:f:', ['duration=', 'version', 'netperf'])
+        (options, args) = getopt.getopt(sys.argv[1:], '?vVDd:r:B:S:p:h:f:', ['duration=', 'version', 'netperf'])
     except Exception, e:
-	usage('Error: ' + str(e))
+        usage('Error: ' + str(e))
 
     for (switch, val) in options:
-        if (switch == '-?'): usage(0)
-        elif (switch[1] in 'vVD'): GV.opt[switch] = True
-        elif (switch[1] in 'dh'): GV.opt[switch].append(val)
-        elif (switch[1] in 'rf'): GV.opt[switch] = val
-        elif (switch[1] in 'BS'): GV.opt[switch] = parseMemorySize(val)
-        elif (switch == '--duration'): GV.opt[switch] = parseDuration(val)
-        elif (switch == '--version'): print_version()
-        elif (switch == '--netperf'): 
+        if (switch == '-?'):
+            usage(0)
+        elif (switch[1] in 'vVD'):
+            GV.opt[switch] = True
+        elif (switch[1] in 'dh'):
+            GV.opt[switch].append(val)
+        elif (switch[1] in 'rf'):
+            GV.opt[switch] = val
+        elif (switch[1] in 'BS'):
+            GV.opt[switch] = parseMemorySize(val)
+        elif (switch == '--duration'):
+            GV.opt[switch] = parseDuration(val)
+        elif (switch == '--version'):
+            print_version()
+        elif (switch == '--netperf'):
             GV.opt['--netserver'] = 'netserver'
             GV.opt['--netclient'] = 'netperf'
 
@@ -227,7 +247,7 @@ def parseCommandLine():
 
     # parse netperf test type, error if more than one specified
     netcount = 0
-    if GV.opt['-r'].find('n') >= 0: 
+    if GV.opt['-r'].find('n') >= 0:
         GV.opt['--net'] = 'netperf'
         netcount += 1
     if GV.opt['-r'].find('N') >= 0:
@@ -238,21 +258,21 @@ def parseCommandLine():
         netcount += 1
     if netcount > 1:
         usage('Error: please only specify one network test at a time (-r [n|M|N])')
-        
+
     if GV.opt['-V']: GV.opt['-v'] = True
 
-    if (len(GV.opt['-d']) == 0): 
-	usage('Error: please specify at least one segdir (-d switch)')
+    if (len(GV.opt['-d']) == 0):
+        usage('Error: please specify at least one segdir (-d switch)')
 
     if not (0 <= GV.opt['-B'] and 0 <= GV.opt['-S']):
-	usage('Error: please enter valid memory sizes for -B or -S switches')
+        usage('Error: please enter valid memory sizes for -B or -S switches')
 
     hf = (len(GV.opt['-h']) and 1 or 0) + (GV.opt['-f'] and 1 or 0)
     if hf != 1:
-	usage('Error: please specify at least one of -h or -f args, but not both')
+        usage('Error: please specify at least one of -h or -f args, but not both')
 
-    if (GV.opt['-B']) > 1024*1024:
-	usage('Error: maximum size for -B parameter is 1MB')
+    if (GV.opt['-B']) > 1024 * 1024:
+        usage('Error: maximum size for -B parameter is 1MB')
 
     if GV.opt['-S'] == 0:
         GV.opt['-S'] = 2 * getMemory() / len(GV.opt['-d'])
@@ -266,8 +286,8 @@ def parseCommandLine():
     # strip the last '/' from the dir
     dd = []
     for d in GV.opt['-d']:
-	if d and d[-1] == '/': d = d[:-1]
-	dd.append(d)
+        if d and d[-1] == '/': d = d[:-1]
+        dd.append(d)
     GV.opt['-d'] = dd
 
     def strcmd(cmd):
@@ -282,41 +302,44 @@ def run(cmd):
     ok = False
     out = ''
     try:
-	try:
-	    if GV.opt['-v']: print '[Info]', cmd
-	    f = os.popen(cmd)
-	    out = f.read()
-	    ok = not f.close()
-	    f = None
-	except KeyboardInterrupt:
-	    raise
+        try:
+            if GV.opt['-v']: print '[Info]', cmd
+            f = os.popen(cmd)
+            out = f.read()
+            ok = not f.close()
+            f = None
+        except KeyboardInterrupt:
+            raise
     finally:
-	if f: f.close()
+        if f: f.close()
 
     if GV.opt['-v'] and out and out != '': print out
 
-    if out and out.find('Permission denied') >= 0 and out.find('publickey') >= 0 : 
-	if not GV.opt['-v']: print out
-	print 'Please use gpssh-exkeys to exchange keys ...'
-	sys.exit(1)
+    if out and out.find('Permission denied') >= 0 and out.find('publickey') >= 0:
+        if not GV.opt['-v']: print out
+        print 'Please use gpssh-exkeys to exchange keys ...'
+        sys.exit(1)
 
     return (ok, out)
 
+
 #############
 runTeardown_torndown = False
+
+
 def runTeardown():
     global runTeardown_torndown
     if runTeardown_torndown: return
     if GV.opt['-v']:
-	print '--------------------'
-	print '  TEARDOWN'
-	print '--------------------'
+        print '--------------------'
+        print '  TEARDOWN'
+        print '--------------------'
     dirs = ''
     for d in GV.opt['-d']: dirs = '%s %s/gpcheckperf_$USER' % (dirs, d)
     try:
         (ok, out) = gpssh('rm -rf ' + dirs)
     except:
-	pass
+        pass
 
     try:
         if GV.opt['--net']:
@@ -326,41 +349,42 @@ def runTeardown():
 
     runTeardown_torndown = True
 
+
 #############
 def runSetup():
     if GV.opt['-v']:
-	print '--------------------'
-	print '  SETUP'
-	print '--------------------'
+        print '--------------------'
+        print '  SETUP'
+        print '--------------------'
     okCount = 0
     try:
-	#check python reachable
-	if GV.opt['-v']: print '[Info] verify python interpreter exists'
-	(ok, out) = gpssh('python -c print')
-	if not ok:
-	    if not GV.opt['-v']: print out
-	    sys.exit("[Error] unable to find python interpreter on some hosts\n"
-		     +"        verify PATH variables on the hosts")
+        # check python reachable
+        if GV.opt['-v']: print '[Info] verify python interpreter exists'
+        (ok, out) = gpssh('python -c print')
+        if not ok:
+            if not GV.opt['-v']: print out
+            sys.exit("[Error] unable to find python interpreter on some hosts\n"
+                     + "        verify PATH variables on the hosts")
 
-	#mkdir cperf
-	if GV.opt['-v']: print '[Info] making gpcheckperf directory on all hosts ... '
-	dirs = ''
-	for d in GV.opt['-d']: dirs = '%s %s/gpcheckperf_$USER' % (dirs, d)
+            # mkdir cperf
+        if GV.opt['-v']: print '[Info] making gpcheckperf directory on all hosts ... '
+        dirs = ''
+        for d in GV.opt['-d']: dirs = '%s %s/gpcheckperf_$USER' % (dirs, d)
 
         cmd = 'rm -rf %s ; mkdir -p %s' % (dirs, dirs)
-	(ok, out) = gpssh(cmd)
-	if not ok: 
-	    sys.exit("[Error] unable to make gpcheckperf directory. \n"
-		   + "        command failed: " + cmd)
+        (ok, out) = gpssh(cmd)
+        if not ok:
+            sys.exit("[Error] unable to make gpcheckperf directory. \n"
+                     + "        command failed: " + cmd)
 
     except:
-	runTeardown()
-	raise
+        runTeardown()
+        raise
+
 
 ################
 def copyExecOver(fname):
-
-    #copy to this dir
+    # copy to this dir
     d = GV.opt['-d'][0]
     target = '%s/gpcheckperf_$USER/%s' % (d, fname)
     path = '%s/lib/%s' % (sys.path[0], fname)
@@ -371,18 +395,20 @@ def copyExecOver(fname):
 
     if GV.opt['-v']: print '[Info] copy local %s to remote %s' % (path, target)
 
-    try: pathStat = os.stat(path)
-    except: sys.exit('[Error] cannot stat file ' + path)
+    try:
+        pathStat = os.stat(path)
+    except:
+        sys.exit('[Error] cannot stat file ' + path)
     if not stat.S_ISREG(pathStat.st_mode): sys.exit('[Error] invalid file ' + path)
     if not os.access(path, os.X_OK): sys.exit('[Exit] file not executable: ' + path)
 
     (ok, out) = gpscp(path, '=:%s' % target)
     if not ok: sys.exit('[Error] command failed: gpscp %s =:%s' % (path, target))
-    
-    #chmod +x file
+
+    # chmod +x file
     (ok, out) = gpssh('chmod a+rx %s' % target)
     if not ok: sys.exit('[Error] command failed: chmod a+rx %s' % target)
-    
+
     return target
 
 
@@ -393,27 +419,26 @@ def parseMultiDDResult(out):
     result = {}
     bytes = 0
     for line in out:
-	i = line.find(']')
-	if i == -1: continue
-	o = line[i+2:]
+        i = line.find(']')
+        if i == -1: continue
+        o = line[i + 2:]
 
-	if o.startswith('multidd total bytes '):
-	    h = line[1:i]
-	    o = o.split()
-	    bytes = int(o[-1])
-	    continue
-	    
-	if o.startswith('real'):
-	    h = line[1:i]
-	    o = o.split()
-	    time = float(o[1])
-	    if time < 0.1: time = 0.1 		# avoid division by zero
-	    mbps = bytes / time / 1024 / 1024
-	    result[h] = (mbps, time, bytes)
-	    continue
+        if o.startswith('multidd total bytes '):
+            h = line[1:i]
+            o = o.split()
+            bytes = int(o[-1])
+            continue
+
+        if o.startswith('real'):
+            h = line[1:i]
+            o = o.split()
+            time = float(o[1])
+            if time < 0.1: time = 0.1  # avoid division by zero
+            mbps = bytes / time / 1024 / 1024
+            result[h] = (mbps, time, bytes)
+            continue
 
     return result
-
 
 
 #############
@@ -422,15 +447,15 @@ def runDiskWriteTest(multidd):
     print '--------------------'
     print '--  DISK WRITE TEST'
     print '--------------------'
-    
+
     cmd = 'time -p ' + multidd
     for d in GV.opt['-d']:
-	cmd = cmd + (' -i /dev/zero -o %s/gpcheckperf_$USER/ddfile' % d)
+        cmd = cmd + (' -i /dev/zero -o %s/gpcheckperf_$USER/ddfile' % d)
     if GV.opt['-B']: cmd = cmd + (' -B %d' % GV.opt['-B'])
     if GV.opt['-S']: cmd = cmd + (' -S %d' % GV.opt['-S'])
     (ok, out) = gpssh(cmd)
     if not ok:
-	sys.exit('[Error] command failed: ' + cmd)
+        sys.exit('[Error] command failed: ' + cmd)
     return parseMultiDDResult(out)
 
 
@@ -443,12 +468,12 @@ def runDiskReadTest(multidd):
 
     cmd = 'time -p ' + multidd
     for d in GV.opt['-d']:
-	cmd = cmd + (' -o /dev/null -i %s/gpcheckperf_$USER/ddfile' % d)
+        cmd = cmd + (' -o /dev/null -i %s/gpcheckperf_$USER/ddfile' % d)
     if GV.opt['-B']: cmd = cmd + (' -B %d' % GV.opt['-B'])
     if GV.opt['-S']: cmd = cmd + (' -S %d' % GV.opt['-S'])
     (ok, out) = gpssh(cmd)
     if not ok:
-	sys.exit('[Error] command failed: ' + cmd)
+        sys.exit('[Error] command failed: ' + cmd)
     return parseMultiDDResult(out)
 
 
@@ -465,12 +490,12 @@ def runStreamTest():
     out = StringIO.StringIO(out)
     result = {}
     for line in out:
-	i = line.find(']')
-	o = line[i+2:]
-	if o.startswith('Copy:'): 
-	    h = line[1:i]
-	    o = o.split()
-	    result[h] = (float(o[1]), 0, 0)
+        i = line.find(']')
+        o = line[i + 2:]
+        if o.startswith('Copy:'):
+            h = line[1:i]
+            o = o.split()
+            result[h] = (float(o[1]), 0, 0)
     return result
 
 
@@ -491,9 +516,10 @@ def startNetServer():
 
     return 0
 
+
 #############
 def killProc(proc):
-    if proc: 
+    if proc:
         try:
             os.kill(proc.pid, signal.SIGKILL)
         except OSError:
@@ -506,11 +532,11 @@ def killProc(proc):
 def spawnNetperfTestBetween(x, y, netperf_path, netserver_port, sec=5):
     cmd = ('%s -H %s -p %d -t TCP_STREAM -l %s -f M -P 0 '
            % (netperf_path, y, netserver_port, sec))
-    c = ['ssh', '-o', 'BatchMode yes', 
+    c = ['ssh', '-o', 'BatchMode yes',
          '-o', 'StrictHostKeyChecking no',
          x, cmd]
     proc = None
-    try: 
+    try:
         if GV.opt['-v']: print '[Info]', strcmd(c)
         proc = subprocess.Popen(c, stdout=subprocess.PIPE)
     except KeyboardInterrupt:
@@ -539,38 +565,37 @@ def reapNetperfTest(proc, x, y):
             pass
         finally:
             proc = None
-    
-    if GV.opt['-v'] and out and out != '': 
-        print '[Info]',out
-    if out and out.find('Permission denied') >= 0 and out.find('publickey') >= 0 : 
-        if not GV.opt['-v']: 
+
+    if GV.opt['-v'] and out and out != '':
+        print '[Info]', out
+    if out and out.find('Permission denied') >= 0 and out.find('publickey') >= 0:
+        if not GV.opt['-v']:
             print out
         print '[Error] Please use gpssh-exkeys to exchange keys ...'
         sys.exit(1)
 
-    if not ok: 
+    if not ok:
         print '[Warning] netperf failed on %s -> %s' % (x, y)
         return []
 
     for line in StringIO.StringIO(out):
         line = line.split()
         if len(line) != 5: continue
-	l = [x, y]
-	l.extend(map(lambda x: float(x), line))
-        if GV.opt['-v']: 
+        l = [x, y]
+        l.extend(map(lambda x: float(x), line))
+        if GV.opt['-v']:
             print '[Info] %s -> %s : %s' % (x, y, str(line))
-	return l
+        return l
 
     print '[Warning] netperf failed on %s -> %s (invalid result)' % (x, y)
     print '[Info]', out
     return []
 
 
-
 #############
 def runNetperfTestBetween(x, y, netperf_path, netserver_port):
     (proc, x, y) = spawnNetperfTestBetween(x, y, netperf_path, netserver_port, GV.opt['--duration'])
-    if not proc: 
+    if not proc:
         return []
 
     return reapNetperfTest(proc, x, y)
@@ -582,7 +607,7 @@ def setupNetPerfTest():
     print '-------------------'
     print '--  NETPERF TEST'
     print '-------------------'
-    
+
     hostlist = ssh_utils.HostList()
     for h in GV.opt['-h']: hostlist.add(h)
     if GV.opt['-f']: hostlist.parseFile(GV.opt['-f'])
@@ -590,7 +615,7 @@ def setupNetPerfTest():
     h = hostlist.get()
     if len(h) == 0:
         usage('Error: missing hosts in -h and/or -f arguments')
-    
+
     if len(h) == 1:
         print '[Warning] single host only - abandon netperf test'
         return (None, None, None)
@@ -600,10 +625,10 @@ def setupNetPerfTest():
     if netserver_port == 0:
         print '[Error] unable to start netserver ... abort netperf test'
         return (None, None, None)
-    
+
     netperf = copyExecOver(GV.opt['--netclient'])
     return (netperf, h, netserver_port)
-    
+
 
 #############
 def runNetPerfTest():
@@ -615,22 +640,22 @@ def runNetPerfTest():
     odd = None
     h = hostlist[:]
     if len(h) & 1 == 1:
-        odd = h.pop()           #  take one out
+        odd = h.pop()  # take one out
 
     # run netperf test between host[0] & host[1], host[2] & host[3], ...
     result = []
     for i in xrange(len(h)):
         if i & 1 == 0: continue
-        x = h[i-1]
+        x = h[i - 1]
         y = h[i]
         res = runNetperfTestBetween(x, y, netperf, netserver_port)
-	if res and len(res) >= 6: result.append(res)
+        if res and len(res) >= 6: result.append(res)
         res = runNetperfTestBetween(y, x, netperf, netserver_port)
-	if res and len(res) >= 6: result.append(res)
+        if res and len(res) >= 6: result.append(res)
 
     # run netperf test between the odd host and host 0
     if odd:
-        x = odd 
+        x = odd
         y = h[0]
         res = runNetperfTestBetween(x, y, netperf, netserver_port)
         if res and len(res) >= 6: result.append(res)
@@ -656,32 +681,32 @@ def runNetPerfTestParallel():
     procList = []
     for i in xrange(len(h)):
         if i & 1 == 0: continue
-        x = h[i-1]
+        x = h[i - 1]
         y = h[i]
         p = spawnNetperfTestBetween(x, y, netperf, netserver_port, GV.opt['--duration'])
-        if p[0]: 
+        if p[0]:
             procList.append(p)
-    
+
     for (proc, x, y) in procList:
         res = reapNetperfTest(proc, x, y)
-	if res and len(res) >= 6: result.append(res)
+        if res and len(res) >= 6: result.append(res)
 
     # second round: test between host[1] & host[0], host[3] & host[2], ...
     procList = []
     for i in xrange(len(h)):
         if i & 1 == 0: continue
-        x = h[i-1]
+        x = h[i - 1]
         y = h[i]
         p = spawnNetperfTestBetween(y, x, netperf, netserver_port, GV.opt['--duration'])
-        if p[0]: 
+        if p[0]:
             procList.append(p)
-    
+
     for (proc, x, y) in procList:
         res = reapNetperfTest(proc, x, y)
-	if res and len(res) >= 6: result.append(res)
-
+        if res and len(res) >= 6: result.append(res)
 
     return result
+
 
 #############
 def get_host_map(hostlist):
@@ -690,7 +715,7 @@ def get_host_map(hostlist):
         a uniqhosts dictionary that maps each hostname to one segment name.
 
         For example:
-        seglist = 
+        seglist =
             seglist['sdw1-1'] = apollo1
             seglist['sdw1-2'] = apollo1
             seglist['sdw2-1'] = apollo2
@@ -698,10 +723,10 @@ def get_host_map(hostlist):
         uniqhosts =
             uniqhosts['apollo1'] = 'sdw1-1'
             uniqhosts['apollo2'] = 'sdw2-1'
-            
+
     '''
-    seglist   = dict()   # segment list
-    uniqhosts = dict()   # unique host list
+    seglist = dict()  # segment list
+    uniqhosts = dict()  # unique host list
 
     # get list of hostnames
     rc, out = gpssh('hostname')
@@ -711,12 +736,12 @@ def get_host_map(hostlist):
 
     # get unique hostname list
     for line in out.splitlines():
-        seg, host = line.translate(None,'[]').split()
+        seg, host = line.translate(None, '[]').split()
         uniqhosts[host] = seg
 
     # get list of segments associated with each host (can't use gpssh since it de-dupes hosts)
     for host in hostlist:
-        cmd = ['ssh', '-o', 'BatchMode yes', '-o', 'StrictHostKeyChecking no', host, 'hostname' ]
+        cmd = ['ssh', '-o', 'BatchMode yes', '-o', 'StrictHostKeyChecking no', host, 'hostname']
 
         try:
             if GV.opt['-v']: print '[Info]', strcmd(cmd)
@@ -735,11 +760,12 @@ def get_host_map(hostlist):
 
     return seglist, uniqhosts
 
+
 #############
 def runNetPerfTestMatrix():
     '''
         Runs full matrix network test where each host connnects with
-            every link on every other host.  
+            every link on every other host.
         Returns performance results and a dictionary mapping segment_name
             to hostname
     '''
@@ -750,7 +776,7 @@ def runNetPerfTestMatrix():
     # dict() of seglist[segname] = hostname, uniqhosts[hostname] = 1 segment name
     seglist, uniqhosts = get_host_map(hostlist)
 
-    # spawn netperf between all hosts 
+    # spawn netperf between all hosts
     result = []
     procList = []
     for host in uniqhosts:
@@ -758,38 +784,37 @@ def runNetPerfTestMatrix():
             if seglist[segment] == host:
                 pass
             else:
-                p = spawnNetperfTestBetween( host, segment, netperf, netserver_port, GV.opt['--duration'])
+                p = spawnNetperfTestBetween(host, segment, netperf, netserver_port, GV.opt['--duration'])
                 if p[0]:
                     procList.append(p)
 
     for (proc, srcHost, dstHost) in procList:
         res = reapNetperfTest(proc, srcHost, dstHost)
-	if res and len(res) >= 6: result.append(res)
+        if res and len(res) >= 6: result.append(res)
 
     return result, seglist
 
 
 #############
 def printMatrixResult(result, seglist):
-
     print 'Full matrix netperf bandwidth test'
 
     # sum up Rx/Tx rate for each host
     netTx = dict()
     netRx = dict()
     for h in result:
-        if netTx.has_key( h[0] ):
-            netTx[ h[0] ] += float( h[6] )
+        if netTx.has_key(h[0]):
+            netTx[h[0]] += float(h[6])
         else:
-            netTx[ h[0] ] = float( h[6] )
+            netTx[h[0]] = float(h[6])
 
         # netRx requires that we lookup the hostname for a given segment name
-        if netRx.has_key( seglist[ h[1] ] ):
-            netRx[ seglist[ h[1] ] ] += float( h[6] )
+        if netRx.has_key(seglist[h[1]]):
+            netRx[seglist[h[1]]] += float(h[6])
         else:
-            netRx[ seglist[ h[1] ] ] = float( h[6] )
+            netRx[seglist[h[1]]] = float(h[6])
 
-    # print Tx rates 
+    # print Tx rates
     print "\nPer host transfer rates"
     for host in netTx:
         print '%s Tx rate: %.2f' % (host, netTx[host])
@@ -802,7 +827,7 @@ def printMatrixResult(result, seglist):
     print
 
     # print per link results in verbose mode
-    if GV.opt['-v']: 
+    if GV.opt['-v']:
         for h in result:
             print '%s -> %s = %f' % (h[0], h[1], h[6])
 
@@ -812,7 +837,7 @@ def printMatrixResult(result, seglist):
     min = reduce(lambda x, y: x > y and y or x, n, 9999999999)
     max = reduce(lambda x, y: x > y and x or y, n)
     avg = float(sum) / len(result)
-    
+
     copy = n[:]
     copy.sort()
     median = copy[len(copy) / 2]
@@ -829,7 +854,6 @@ def printMatrixResult(result, seglist):
 
 #############
 def printNetResult(result):
-
     print 'Netperf bisection bandwidth test'
     for h in result:
         print '%s -> %s = %f' % (h[0], h[1], h[6])
@@ -840,7 +864,7 @@ def printNetResult(result):
     min = reduce(lambda x, y: x > y and y or x, n, 9999999999)
     max = reduce(lambda x, y: x > y and x or y, n)
     avg = float(sum) / len(result)
-    
+
     copy = n[:]
     copy.sort()
     median = copy[len(copy) / 2]
@@ -860,7 +884,6 @@ def printNetResult(result):
             print '[Warning] connection between %s and %s is no good' % (r[0], r[1])
 
 
-
 ################
 def printResult(title, result):
     totTime = 0
@@ -870,16 +893,16 @@ def printResult(title, result):
     max = 0
     minHost = maxHost = None
     for h in result:
-	(mbps, time, bytes) = result[h]
-	totTime += time
-	totBytes += bytes
-	totMBPS += mbps
-	if min > mbps: 
-	    min = mbps
-	    minHost = h
-	if max < mbps: 
-	    max = mbps
-	    maxHost = h
+        (mbps, time, bytes) = result[h]
+        totTime += time
+        totBytes += bytes
+        totMBPS += mbps
+        if min > mbps:
+            min = mbps
+            minHost = h
+        if max < mbps:
+            max = mbps
+            maxHost = h
 
     avgTime = totTime / len(result)
 
@@ -890,10 +913,10 @@ def printResult(title, result):
     print ' %s min bandwidth (MB/s): %3.2f [%s]' % (title, min, minHost)
     print ' %s max bandwidth (MB/s): %3.2f [%s]' % (title, max, maxHost)
     if GV.opt['-D']:
-	print ' -- per host bandwidth --'
-	for h in result:
-	    (mbps, time, bytes) = result[h]
-	    print '    %s bandwidth (MB/s): %3.2f [%s]' % (title, mbps, h)
+        print ' -- per host bandwidth --'
+        for h in result:
+            (mbps, time, bytes) = result[h]
+            print '    %s bandwidth (MB/s): %3.2f [%s]' % (title, mbps, h)
     print
 
 
@@ -952,4 +975,3 @@ except KeyboardInterrupt:
 finally:
     coverage.stop()
     coverage.generate_report()
-

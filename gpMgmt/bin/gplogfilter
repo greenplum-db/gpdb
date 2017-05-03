@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 #
 # gplogfilter [options] [inputfile]...
-# 
-# Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
-# 
+#
+# Copyright (c) Greenplum Inc 2008. All Rights Reserved.
+#
 
 # import Python standard library modules
 import csv
@@ -23,42 +23,43 @@ try:
     from gppylib.datetimeutils import str_to_datetime, str_to_duration, DatetimeValueError
     from gppylib.logfilter import *
     from gppylib.gpcoverage import GpCoverage
-except ImportError, e:    
+except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
 # These values are from cdb-pg/src/backend/po/*.po
-TROUBLE_VALUES=[
-                'ERROR', 'FATAL', 'PANIC',                                      # EN
-                bytearray(b'\x46\x4F\x55\x54').decode('iso-8859-1'),            # AF "ERROR"
-                bytearray(b'\x46\x41\x54\x41\x41\x4C').decode('iso-8859-1'),    # AF "FATAL"
-                bytearray(b'\x57\x41\x4E\x48\x4F\x4F\x50').decode('iso-8859-1'),# AF "PANIC"
-                bytearray(b'\x46\x45\x48\x4C\x45\x52').decode('ISO-8859-1'),    # DE "ERROR"
-                bytearray(b'\x46\x41\x54\x41\x4C').decode('ISO-8859-1'),        # DE "FATAL"
-                bytearray(b'\x50\x41\x4E\x49\x43').decode('ISO-8859-1'),        # DE "PANIC"
-                bytearray(b'\x45\x52\x52\x45\x55\x52').decode('ISO-8859-15'),   # FR "ERROR"
-                bytearray(b'\x46\x41\x54\x41\x4C').decode('ISO-8859-15'),       # FR "FATAL"
-                bytearray(b'\x50\x41\x4E\x49\x43').decode('ISO-8859-15'),       # FR "PANIC"
-                u'오류', u'치명적오류', u'손상',                                    # KO
-                bytearray(b'\x46\x45\x49\x4C').decode('ISO-8859-1'),            # NB "ERROR"
-                bytearray(b'\x50\x41\x4E\x49\x4B\x4B').decode('ISO-8859-1'),    # NB "PANIC"
-                bytearray(b'\x45\x52\x52\x4F').decode('ISO-8859-1'),            # PT_BR "ERROR"
-                bytearray(b'\x46\x41\x54\x41\x4C').decode('ISO-8859-1'),        # PT_BR "FATAL"
-                bytearray(b'\x50\xC2\x4E\x49\x43\x4F').decode('ISO-8859-1'),    # PT_BR "PANIC"
-                bytearray(b'\x43\x48\x59\x42\x41').decode('ISO-8859-2'),        # SK "ERROR"
-                bytearray(b'\x46\x41\x54\xC1\x4C\x4E\x45').decode('ISO-8859-2'),# SK "FATAL"
-                bytearray(b'\x50\x41\x4E\x49\x4B\x41').decode('ISO-8859-2'),    # SK "PANIC"
-                bytearray(b'\x4E\x41\x50\x41\x4B\x41').decode('ISO-8859-2'),    # SL "ERROR"
-                bytearray(b'\x55\x53\x4F\x44\x4E\x41\x20\x4E\x41\x50\x41\x4B\x41').decode('ISO-8859-2'),    # SL "FATAL"
-                bytearray(b'\x50\x41\x4E\x49\x4B\x41').decode('ISO-8859-2'),    # SL "PANIC"
-                bytearray(b'\x46\x45\x4C').decode('ISO-8859-1'),                # SV "ERROR"
-                bytearray(b'\x46\x41\x54\x41\x4C\x54').decode('ISO-8859-1'),    # SV "FATAL"
-                bytearray(b'\x50\x41\x4E\x49\x4B').decode('ISO-8859-1'),        # SV "PANIC"
-                u'HATA', u'ÖLÜMCÜL', u'KRİTİK',                                 # TR
-                bytearray(b'\xB4\xED\xCE\xF3').decode('gb2312'),                # ZH_CN "ERROR"
-                bytearray(b'\xD6\xC2\xC3\xFC\xB4\xED\xCE\xF3').decode('gb2312'),# ZH_CN "FATAL"
-                bytearray(b'\xB1\xC8\xD6\xC2\xC3\xFC\xB4\xED\xCE\xF3\xBB\xB9\xB9\xFD\xB7\xD6\xB5\xC4\xB4\xED\xCE\xF3').decode('gb2312'),    # ZH_CN "PANIC"
-                u'錯誤', u'嚴重錯誤'                                              # ZH_TW
-                ]
+TROUBLE_VALUES = [
+    'ERROR', 'FATAL', 'PANIC',  # EN
+    bytearray(b'\x46\x4F\x55\x54').decode('iso-8859-1'),  # AF "ERROR"
+    bytearray(b'\x46\x41\x54\x41\x41\x4C').decode('iso-8859-1'),  # AF "FATAL"
+    bytearray(b'\x57\x41\x4E\x48\x4F\x4F\x50').decode('iso-8859-1'),  # AF "PANIC"
+    bytearray(b'\x46\x45\x48\x4C\x45\x52').decode('ISO-8859-1'),  # DE "ERROR"
+    bytearray(b'\x46\x41\x54\x41\x4C').decode('ISO-8859-1'),  # DE "FATAL"
+    bytearray(b'\x50\x41\x4E\x49\x43').decode('ISO-8859-1'),  # DE "PANIC"
+    bytearray(b'\x45\x52\x52\x45\x55\x52').decode('ISO-8859-15'),  # FR "ERROR"
+    bytearray(b'\x46\x41\x54\x41\x4C').decode('ISO-8859-15'),  # FR "FATAL"
+    bytearray(b'\x50\x41\x4E\x49\x43').decode('ISO-8859-15'),  # FR "PANIC"
+    u'오류', u'치명적오류', u'손상',  # KO
+    bytearray(b'\x46\x45\x49\x4C').decode('ISO-8859-1'),  # NB "ERROR"
+    bytearray(b'\x50\x41\x4E\x49\x4B\x4B').decode('ISO-8859-1'),  # NB "PANIC"
+    bytearray(b'\x45\x52\x52\x4F').decode('ISO-8859-1'),  # PT_BR "ERROR"
+    bytearray(b'\x46\x41\x54\x41\x4C').decode('ISO-8859-1'),  # PT_BR "FATAL"
+    bytearray(b'\x50\xC2\x4E\x49\x43\x4F').decode('ISO-8859-1'),  # PT_BR "PANIC"
+    bytearray(b'\x43\x48\x59\x42\x41').decode('ISO-8859-2'),  # SK "ERROR"
+    bytearray(b'\x46\x41\x54\xC1\x4C\x4E\x45').decode('ISO-8859-2'),  # SK "FATAL"
+    bytearray(b'\x50\x41\x4E\x49\x4B\x41').decode('ISO-8859-2'),  # SK "PANIC"
+    bytearray(b'\x4E\x41\x50\x41\x4B\x41').decode('ISO-8859-2'),  # SL "ERROR"
+    bytearray(b'\x55\x53\x4F\x44\x4E\x41\x20\x4E\x41\x50\x41\x4B\x41').decode('ISO-8859-2'),  # SL "FATAL"
+    bytearray(b'\x50\x41\x4E\x49\x4B\x41').decode('ISO-8859-2'),  # SL "PANIC"
+    bytearray(b'\x46\x45\x4C').decode('ISO-8859-1'),  # SV "ERROR"
+    bytearray(b'\x46\x41\x54\x41\x4C\x54').decode('ISO-8859-1'),  # SV "FATAL"
+    bytearray(b'\x50\x41\x4E\x49\x4B').decode('ISO-8859-1'),  # SV "PANIC"
+    u'HATA', u'ÖLÜMCÜL', u'KRİTİK',  # TR
+    bytearray(b'\xB4\xED\xCE\xF3').decode('gb2312'),  # ZH_CN "ERROR"
+    bytearray(b'\xD6\xC2\xC3\xFC\xB4\xED\xCE\xF3').decode('gb2312'),  # ZH_CN "FATAL"
+    bytearray(b'\xB1\xC8\xD6\xC2\xC3\xFC\xB4\xED\xCE\xF3\xBB\xB9\xB9\xFD\xB7\xD6\xB5\xC4\xB4\xED\xCE\xF3').decode(
+        'gb2312'),  # ZH_CN "PANIC"
+    u'錯誤', u'嚴重錯誤'  # ZH_TW
+]
 
 description = ("""
 Reads GPDB log file(s), extracts log entries which meet
@@ -71,40 +72,40 @@ If no input file is specified, the value of the MASTER_DATA_DIRECTORY
 environment variable is used, if defined.  If an input file is a
 directory, the suffix ".log" is appended to obtain the input file name.
 To read from standard input, specify input file "-".
-""","""
+""", """
 To write the extracted log entries to a destination other than stdout,
 use the --out option.  If the destination is a directory, then for each
 input file, a correspondingly named output file is written there;
 otherwise the results from all input files are written to the specified
 --out file or standard output.
-""","""
+""", """
 In the input file, each log entry starts with a timestamp
 "yyyy-mm-dd hh:mm:ss[.fraction]" at the beginning of a line.
 Any following lines are considered to belong to the same entry,
 up to the next line having a different timestamp.
-""","""
+""", """
 --begin and --end timestamp values can be specified as either
 "yyyy-mm-dd[ hh:mm[:ss]]" or "yyyymmdd[ hhmm[ss]]".  Between date
 and time, either a space or the letter "T" is required.  When only
 the date is given, 00:00:00 is used for the time.
 Specify --duration as "[hours][:minutes[:seconds]]";
 it is unused if both --begin and --end are given.
-""","""
+""", """
 The ending date and time can be given by --end, or computed as
 --begin plus --duration.  The beginning date and time can be
 given by --begin, or computed as --end minus --duration, or
 computed as the current date and time minus --duration.
-""","""
+""", """
 Log entries are skipped unless they fulfill all of the conditions
 you specify.  For example, if you specify two occurrences of the
 --find option, log entries must contain both of the strings.
-""","""
+""", """
 If the destination specified by --out is a directory, the output file is
 given the same name as the input file (excluding '.gz' suffix if any).
 When writing compressed output, '.gz' is suffixed to the output file name.
 If you specify an output file name ending in '.gz', the output is
 compressed (-z9) by default.
-""","""
+""", """
 Example:
 gplogfilter -t -d2
 # view trouble messages timestamped within the past two hours
@@ -114,7 +115,7 @@ gplogfilter -t -d2
 def parseargs():
     # Create our OptionParser object
     parser = OptParser(option_class=OptChecker,
-                       description=' '.join(description.split()), 
+                       description=' '.join(description.split()),
                        version='%prog version $Revision$')
     parser.helpStr = _help
     parser.set_usage('%prog [--help] [options] [inputfile]...')
@@ -125,14 +126,14 @@ def parseargs():
                          'Use any two of these options to impose lower and '
                          'upper bounds on timestamps; or use any one option to '
                          'bound the timestamp range on just one side. ')
-    optgrp.add_option('-b', '--begin',    type='datetime', metavar='datetime',
+    optgrp.add_option('-b', '--begin', type='datetime', metavar='datetime',
                       help='beginning date and time: "yyyy-mm-dd[ hh:mm[:ss]"')
-    optgrp.add_option('-e', '--end',      type='datetime', metavar='datetime',
+    optgrp.add_option('-e', '--end', type='datetime', metavar='datetime',
                       help='ending date and time')
     optgrp.add_option('-d', '--duration', type='duration', metavar='[h][:m[:s]]',
                       help='duration from beginning to end')
-    optgrp.add_option('--prunefiles', action='store_true', default=False, 
-                        help="Discard files based on filename of the form gpdb-%Y-%m-%d_%H%M%S.csv")
+    optgrp.add_option('--prunefiles', action='store_true', default=False,
+                      help="Discard files based on filename of the form gpdb-%Y-%m-%d_%H%M%S.csv")
     parser.add_option_group(optgrp)
 
     optgrp = OptionGroup(parser, 'Pattern and string matching',
@@ -144,34 +145,34 @@ def parseargs():
                          'times as needed to apply multiple restrictions. '
                          'Regular expression syntax is documented at '
                          'http://docs.python.org/lib/re-syntax.html')
-    optgrp.add_option('-f', '--find',     type='literal', metavar='string',
+    optgrp.add_option('-f', '--find', type='literal', metavar='string',
                       dest='filters', action='MatchRegex',
                       help='select log entries containing string')
-    optgrp.add_option('-F', '--nofind',    type='literal', metavar='string',
+    optgrp.add_option('-F', '--nofind', type='literal', metavar='string',
                       dest='filters', action='NoMatchRegex',
                       help='reject log entries containing string')
-    optgrp.add_option('-m', '--match',    type='regex', metavar='regex',
+    optgrp.add_option('-m', '--match', type='regex', metavar='regex',
                       dest='filters', action='MatchRegex',
                       help='select log entries where a match for the regex is found')
-    optgrp.add_option('-M', '--nomatch',   type='regex', metavar='regex',
+    optgrp.add_option('-M', '--nomatch', type='regex', metavar='regex',
                       dest='filters', action='NoMatchRegex',
                       help='reject log entries where a match for the regex is found')
-    optgrp.add_option('-t', '--trouble',  action='store_true',
+    optgrp.add_option('-t', '--trouble', action='store_true',
                       help='select log entries having ERROR:, FATAL:, or PANIC: '
-                        'in the first line')
+                           'in the first line')
     optgrp.add_option('-C', '--columns', type='str', metavar='string',
                       dest='filters', action='MatchColumns',
-                      help='select specific log file columns, provided as a '
-                           'comma delimiter string counting from 1')
+                      help='SELECT specific log file columns, provided AS a '
+                           'comma delimiter string counting FROM 1')
     parser.add_option_group(optgrp)
 
     optgrp = OptionGroup(parser, 'Mode flags',
                          'These flags affect the behavior of other options '
                          'specified to their right.  They can be used '
                          'as many times as needed.')
-    optgrp.add_option('-c', '--case',     type='choice', choices=['i', 'ignore', 'r', 'respect'],
+    optgrp.add_option('-c', '--case', type='choice', choices=['i', 'ignore', 'r', 'respect'],
                       metavar='i[gnore]|r[espect]',
-                      action='callback', 
+                      action='callback',
                       callback=OptChecker.regexSetCaseSensitivity,
                       help=('ignore or respect the distinction between '
                             'upper and lower case letters in pattern and '
@@ -182,33 +183,33 @@ def parseargs():
                          'Limit the output to a subsequence of the '
                          'qualifying log entries from each input file. '
                          'Use at most one of these options.')
-    optgrp.add_option('-n', '--tail',     type='int', metavar='N',
+    optgrp.add_option('-n', '--tail', type='int', metavar='N',
                       help=('select the last N qualifying log entries'))
-    optgrp.add_option('-s', '--slice',    type='int', metavar='I [J]',
+    optgrp.add_option('-s', '--slice', type='int', metavar='I [J]',
                       action='optionalSecondArg',
                       help=('select qualifying log entries I <= i < J '
                             '(0 is first; <0 is relative to the end)'))
     parser.add_option_group(optgrp)
 
     optgrp = OptionGroup(parser, 'Input options')
-    optgrp.add_option('-u', '--unzip',    action='store_true',
+    optgrp.add_option('-u', '--unzip', action='store_true',
                       help='read gzip-compressed input; assumed when inputfile suffix is ".gz"')
     parser.add_option_group(optgrp)
 
     optgrp = OptionGroup(parser, 'Output options')
-    optgrp.add_option('-o', '--out',      type='string', metavar='outputfile',
+    optgrp.add_option('-o', '--out', type='string', metavar='outputfile',
                       help='write output to specified file or directory (instead of stdout)')
-    optgrp.add_option('-z', '--zip',      type='choice', choices=list('0123456789'), metavar='0..9',
+    optgrp.add_option('-z', '--zip', type='choice', choices=list('0123456789'), metavar='0..9',
                       help=('compression level (gzip): 0 = no compression; '
                             '9 = maximum compression'))
-    optgrp.add_option('-a', '--append',   action='store_true',
+    optgrp.add_option('-a', '--append', action='store_true',
                       help="when output file already exists, append to it; don't overwrite")
     parser.add_option_group(optgrp)
 
     optgrp = OptionGroup(parser, 'Message options')
-    optgrp.add_option('-q', '--quiet',    dest='verbose', action='store_false',
+    optgrp.add_option('-q', '--quiet', dest='verbose', action='store_false',
                       help='suppress status messages')
-    optgrp.add_option('-h', '-?','--help',     action='help',
+    optgrp.add_option('-h', '-?', '--help', action='help',
                       help='show this help message and exit')
     optgrp.add_option('--usage', action="briefhelp")
     parser.add_option_group(optgrp)
@@ -221,7 +222,7 @@ def parseargs():
     return options, args
 
 
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 
 def openInputFile(ifn, options):
     filesToClose = []
@@ -244,18 +245,18 @@ def openInputFile(ifn, options):
             zname = zname[0:-3]
             if os.path.splitext(zname)[1] == '':
                 zname += '.log'
-        fileIn = open(ifn, (unzip and 'rb') or 'rU')        
+        fileIn = open(ifn, (unzip and 'rb') or 'rU')
         filesToClose.append(fileIn)
-        
+
     # Set up input decompression
     if unzip:
         fileIn = gzip.GzipFile(zname, 'rb', fileobj=fileIn)
         filesToClose.insert(0, fileIn)
 
     if zname.endswith('.csv'):
-        fileIn = csv.reader(fileIn,delimiter=',',quotechar='"')
+        fileIn = csv.reader(fileIn, delimiter=',', quotechar='"')
         fileIn = CsvFlatten(fileIn)
-        
+
     return fileIn, filesToClose, ifn, zname
 
 
@@ -309,9 +310,9 @@ def openOutputFile(ifn, zname, options):
 
         if options.verbose:
             if options.append:
-                print >>sys.stderr, ' append to ', ofn
+                print >> sys.stderr, ' append to ', ofn
             else:
-                print >>sys.stderr, ' output to ', ofn
+                print >> sys.stderr, ' output to ', ofn
 
     # Set up output compression
     if zipout:
@@ -323,7 +324,7 @@ def openOutputFile(ifn, zname, options):
     return fileOut, filesToClose
 
 
-#------------------------------- Mainline --------------------------------
+# ------------------------------- Mainline --------------------------------
 
 coverage = GpCoverage()
 coverage.start()
@@ -347,7 +348,7 @@ if end:
 # Insert trouble message filter ahead of other pattern matching filters
 if options.trouble:
     options.filters.insert(0, filterize(MatchInFirstLine,
-                                        (': |'.join(TROUBLE_VALUES)) + u': ' ))
+                                        (': |'.join(TROUBLE_VALUES)) + u': '))
 
 # Limit output to last N entries if requested.  Let --tail override --slice.
 if options.tail is None:
@@ -359,8 +360,8 @@ else:
 
 # Output suffix .gz implies maximum compression unless overridden by -z
 if (options.zip is None and
-    options.out and
-    options.out.endswith('.gz')):
+        options.out and
+        options.out.endswith('.gz')):
     options.zip = '9'
 
 try:
@@ -368,7 +369,7 @@ try:
     if len(args) == 0:
         s = os.getenv('MASTER_DATA_DIRECTORY')
         if s:
-            #we only support log rotation in pg_log dir.
+            # we only support log rotation in pg_log dir.
             if os.path.exists(s + "/pg_log"):
                 for logfile in os.listdir(s + "/pg_log"):
                     args.append(s + "/pg_log/" + logfile)
@@ -380,6 +381,7 @@ try:
     # In MS Windows, apply shell wildcard expansion to input filename list
     if sys.platform == 'win32':
         import glob
+
         newargs = []
         for a in args:
             names = glob.glob(a)
@@ -400,7 +402,7 @@ try:
         if options.verbose:
             msg = ('requested timestamp range from %s to %s'
                    % (begin or 'beginning of data', end or 'end of data'))
-            print >>sys.stderr, msg
+            print >> sys.stderr, msg
 
         # Loop over input files
         for ifn in args:
@@ -418,34 +420,32 @@ try:
             """
             # Open next input file
             fileIn, inputFilesToClose, ifn, zname = openInputFile(ifn, options)
-            
+
             # if we can skip the whole file, let's do so
             if zname.startswith('gpdb') and zname.endswith('.csv'):
                 goodFormat = True
                 try:
-                   # try format YYYY-MM-DD_HHMMSS
-                   filedate=datetime.strptime(zname[5:-4],'%Y-%m-%d_%H%M%S')      
+                    # try format YYYY-MM-DD_HHMMSS
+                    filedate = datetime.strptime(zname[5:-4], '%Y-%m-%d_%H%M%S')
                 except:
-                   try:
-                      # try format YYYY-MM-DD
-                      filedate=datetime.strptime(zname[5:-4], '%Y-%m-%d')
-                   except:
-                      # the format isn't anything I understand
-                      goodFormat = False
+                    try:
+                        # try format YYYY-MM-DD
+                        filedate = datetime.strptime(zname[5:-4], '%Y-%m-%d')
+                    except:
+                        # the format isn't anything I understand
+                        goodFormat = False
 
                 if goodFormat and begin and filedate < begin:
                     if end and filedate > end:
-                        print >>sys.stderr,"SKIP file: %s" % zname
+                        print >> sys.stderr, "SKIP file: %s" % zname
                         for f in inputFilesToClose:
                             f.close()
                         inputFilesToClose = []
                         continue
 
-            
-
             # Announce each input file *before* its output file if --out is dir
             if options.verbose and outputFilePerInputFile:
-                print >>sys.stderr, '---------- ', ifn, '---------- '
+                print >> sys.stderr, '---------- ', ifn, '---------- '
 
             # Open the output file (once per input file if --out is a directory)
             if fileOut is None:
@@ -453,7 +453,7 @@ try:
 
             # Announce input files *after* single output file
             if options.verbose and not outputFilePerInputFile:
-                print >>sys.stderr, '---------- ', ifn, '---------- '
+                print >> sys.stderr, '---------- ', ifn, '---------- '
 
             # Construct the filtering pipeline
             filteredInput = FilterLogEntries(fileIn,
@@ -467,7 +467,7 @@ try:
             # Write filtered lines to output file.  Don't append \n to
             # each line, because the original line ends are still there.
             for line in filteredInput:
-                print >>fileOut, line,
+                print >> fileOut, line,
 
             # Close input and output files
             for file in inputFilesToClose:
@@ -487,7 +487,7 @@ try:
             file.close()
 except IOError, msg:
     execname = os.path.basename(sys.argv[0])
-    print >>sys.stderr, '%s: (IOError) "%s"' % (execname, msg)
+    print >> sys.stderr, '%s: (IOError) "%s"' % (execname, msg)
     sys.exit(2)
 finally:
     coverage.stop()

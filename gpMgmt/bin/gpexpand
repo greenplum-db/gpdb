@@ -416,7 +416,7 @@ WHERE
   i.indrelid = c.oid
   AND c.relnamespace = n.oid
   AND i.indisunique
-  AND n.nspname not in ('pg_catalog', 'information_schema', 'pg_toast',
+  AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast',
                         'pg_bitmapindex', 'pg_aoseg')
 """
 
@@ -1086,7 +1086,7 @@ class gpexpand:
             """
             with dbconn.connect(dburl, encoding='UTF8', utility=True) as conn:
                 count = dbconn.execSQLForSingleton(conn,
-                                                   "select count(n.nspname) from pg_catalog.pg_namespace n where n.nspname = 'gpexpand'")
+                                                   "SELECT count(n.nspname) FROM pg_catalog.pg_namespace n WHERE n.nspname = 'gpexpand'")
                 if count > 0:
                     raise ExpansionError(
                         "Existing expansion state could not be determined, but a gpexpand schema already exists. Cannot proceed.")
@@ -2165,11 +2165,11 @@ UPDATE gp_distribution_policy
                FROM pg_namespace n, pg_namespace n2, pg_class cl, pg_class cl2, pg_partition pp, pg_partition_rule pr1
           LEFT JOIN pg_partition_rule pr2 ON pr1.parparentrule = pr2.oid
        LEFT JOIN pg_class cl3 ON pr2.parchildrelid = cl3.oid
-      WHERE pp.paristemplate = false AND pp.parrelid = cl.oid AND pr1.paroid = pp.oid AND cl2.oid = pr1.parchildrelid AND cl.relnamespace = n.oid AND cl2.relnamespace = n2.oid
+      WHERE pp.paristemplate = FALSE AND pp.parrelid = cl.oid AND pr1.paroid = pp.oid AND cl2.oid = pr1.parchildrelid AND cl.relnamespace = n.oid AND cl2.relnamespace = n2.oid
     ) p1
     WHERE
     localoid = p1.partitiontableoid
-    AND p1.partitionlevel = (select max(parlevel) FROM pg_partition WHERE parrelid = p1.tableoid);
+    AND p1.partitionlevel = (SELECT max(parlevel) FROM pg_partition WHERE parrelid = p1.tableoid);
 
 """
         self.logger.debug(sql)
