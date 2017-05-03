@@ -80,8 +80,6 @@ extern char* gpmon_datetime_rounded(time_t t, char str[GPMON_DATE_BUF_SIZE]);
 extern apr_int32_t get_query_status(apr_int32_t tmid, apr_int32_t ssid, apr_int32_t ccnt);
 extern char *get_query_text(apr_int32_t tmid, apr_int32_t ssid, apr_int32_t ccnt, apr_pool_t *pool);
 
-#define PATH_TO_APPLIANCE_VERSION_FILE "/etc/gpdb-appliance-version"
-#define PATH_TO_APPLAINCE_DEVICES_FILE "/opt/dca/etc/healthmond/devices.cnf"
 #define DEFAULT_PATH_TO_HADOOP_HOST_FILE "/etc/gphd/gphdmgr/conf/clusterinfo.txt"
 #define PATH_TO_HADOOP_SMON_LOGS "/var/log/gphd/smon"
 
@@ -135,7 +133,6 @@ typedef struct mmon_options_t
 	int harvest_interval;
 	apr_uint64_t tail_buffer_max;
 	int console;
-	int health_harvest_interval;
 	int warning_disk_space_percentage;
 	int error_disk_space_percentage;
 	time_t disk_space_interval; // interval in seconds
@@ -257,5 +254,4 @@ apr_status_t gpdb_getnode_metricinfo(PerfmonNodeType type, apr_byte_t metricnum,
 apr_status_t gpdb_debug_string_lookup_table(void);
 apr_status_t apr_pool_create_alloc(apr_pool_t ** newpool, apr_pool_t *parent);
 void gpdb_get_single_string_from_query(const char* QUERY, char** resultstring, apr_pool_t* pool);
-bool is_healthmon_running_separately(void);
 #endif /* GPMONLIB_H */

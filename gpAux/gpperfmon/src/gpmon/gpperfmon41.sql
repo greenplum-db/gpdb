@@ -8,16 +8,6 @@
 -- Violate the above and you _will_ break upgrade.
 --
 
--- TABLE: health_history
---   ctime                      event time
---   hostname                   hostname of system this metric belongs to
---   symptom_code               code for this type of event
---   detailed_symptom_code      finer grain symptom code
---   description                text description of event type
---   status                     indication of status at time of event
---   message                    text message associated with this event
-create table public.health_history (ctime timestamp(0) not null, hostname varchar(64) not null, symptom_code int not null, detailed_symptom_code int not null, description text not null, status text not null, message text not null) distributed by (ctime) partition by range (ctime)(start (date '2010-01-01') end (date '2010-02-01') EVERY (interval '1 month'));
-
 -- TABLE: filerep_history
 --   ctime                      		time of measurement
 --   primary_measurement_microsec 		elapsed seconds for primary measurements
