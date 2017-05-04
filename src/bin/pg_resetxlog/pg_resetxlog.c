@@ -89,6 +89,7 @@ main(int argc, char *argv[])
 {
 	int			c;
 	bool		force = false;
+	bool		binary_upgrade = false;
 	bool		noupdate = false;
 	uint32		set_xid_epoch = (uint32) -1;
 	TransactionId set_xid = 0;
@@ -129,10 +130,14 @@ main(int argc, char *argv[])
 	}
 
 
-	while ((c = getopt(argc, argv, "fl:m:no:r:O:x:e:")) != -1)
+	while ((c = getopt(argc, argv, "yfl:m:no:r:O:x:e:")) != -1)
 	{
 		switch (c)
 		{
+			case 'y':
+				binary_upgrade = true;
+				break;
+
 			case 'f':
 				force = true;
 				break;
@@ -389,7 +394,7 @@ main(int argc, char *argv[])
 	/*
 	 * Warn user of using pg_resetxlog with GPDB
 	 */
-	if(!AcceptWarning())
+	if(!binary_upgrade && !AcceptWarning())
 	{
 		printf(_("Abort %s!\n"), progname);
 		exit(1);
