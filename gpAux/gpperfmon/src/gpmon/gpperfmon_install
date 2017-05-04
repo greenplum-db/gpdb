@@ -120,7 +120,9 @@ if __name__ == '__main__':
 
     commands = list()
 
-    cmd = Command("PGPORT=%d psql -f %s/lib/gpperfmon/gpperfmon.sql template1" % (options.port, gphome))
+    cmd = Command("createdb gpperfmon")
+    commands.append(cmd)
+    cmd = Command("PGPORT=%d psql -f %s/lib/gpperfmon/gpperfmon.sql gpperfmon" % (options.port, gphome))
     commands.append(cmd)
 
     if options.enable:

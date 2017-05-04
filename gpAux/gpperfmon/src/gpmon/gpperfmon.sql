@@ -9,10 +9,8 @@
 --
 
 --  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
---  system 
+--  system
 --
-create database gpperfmon;
-
 \c gpperfmon;
 
 create table public.system_history (
@@ -76,7 +74,10 @@ create table public.queries_history (
        skew_rows float not null,   -- coefficient of variance for rows_in of iterators across segments for query
        query_hash bigint not null, -- (not implemented)
        query_text text not null default '', -- query text
-       query_plan text not null default ''  -- query plan (not implemented)
+       query_plan text not null default '', -- query plan (not implemented)
+       application_name varchar(64), -- from 4.2 onwards
+       rsqname varchar(64),          -- from 4.2 onwards
+       rqppriority varchar(16)       -- from 4.2 onwards
 )
 with (fillfactor=100)
 distributed by (ctime)
@@ -630,14 +631,6 @@ create external web table public.tcp_extended_tail (like public.tcp_extended_his
 -- TABLE: _tcp_extended_tail
 --   (like tcp_extended_history)
 create external web table public._tcp_extended_tail (like public.tcp_extended_history) execute 'cat gpperfmon/data/_tcp_extended_tail.dat 2> /dev/null || true' on master format 'text' (delimiter '|' NULL as 'null');
-
--------------- MODIFY QUERY TABLE ----------------------------------
-
--- add new columns to queries table
-alter external table public.queries_now add column application_name varchar(64), add column rsqname varchar(64), add column rqppriority varchar(16);
-alter external table public.queries_tail add column application_name varchar(64), add column rsqname varchar(64), add column rqppriority varchar(16);
-alter external table public._queries_tail add column application_name varchar(64), add column rsqname varchar(64), add column rqppriority varchar(16);
-alter table public.queries_history add column application_name varchar(64), add column rsqname varchar(64), add column rqppriority varchar(16);
 
 -- TABLE: gp_log_master_ext 
 --   (like gp_toolkit.__gp_log_master_ext)
