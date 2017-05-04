@@ -95,10 +95,6 @@ install: generate_greenplum_path_file
 	cp $(top_builddir)/src/test/regress/*.pm $(DESTDIR)$(prefix)/bin
 	if [ ! -d ${DESTDIR}${prefix}/docs ] ; then mkdir ${DESTDIR}${prefix}/docs ; fi
 	if [ -d doc ]; then cp -rp doc $(DESTDIR)$(prefix)/docs/cli_help; fi
-	@if [ -d demo/gpmapreduce ]; then \
-	  mkdir -p $(DESTDIR)$(prefix)/demo; \
-	  $(TAR) -C demo -czf $(DESTDIR)$(prefix)/demo/gpmapreduce.tar.gz gpmapreduce; \
-	fi
 
 #	THIS NEEDS TO MOVE
 #	if [ -d demo/gpfdist_transform ]; then \
