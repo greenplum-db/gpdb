@@ -15,7 +15,7 @@
 #   hitting max_connections limit on segments.
 #
 
-test: variadic_parameters default_parameters function_extensions spi
+test: gp_metadata variadic_parameters default_parameters function_extensions spi
 
 test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy gp_create_table
 test: filter gpctas gpdist matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var gp_explain
