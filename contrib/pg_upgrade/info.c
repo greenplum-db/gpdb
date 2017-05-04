@@ -479,6 +479,7 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 		RelInfo    *curr = &relinfos[num_rels++];
 		const char *tblspace;
 
+		curr->gpdb4_heap_conversion_needed = false;
 		curr->reloid = atooid(PQgetvalue(res, relnum, i_oid));
 
 		nspname = PQgetvalue(res, relnum, i_nspname);
@@ -788,9 +789,12 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 
 			/*
 			 * Regardless of if there is a NUMERIC attribute there is a
-			 * conversion needed to fix the headers of heap pages.
+			 * conversion needed to fix the headers of heap pages if the
+			 * old cluster is based on PostgreSQL 8.2 or older (Greenplum
+			 * 4.3 or older).
 			 */
-			curr->gpdb4_heap_conversion_needed = true;
+			if (GET_MAJOR_VERSION(ctx->old.major_version) <= 802)
+				curr->gpdb4_heap_conversion_needed = true;
 		}
 		else
 			curr->gpdb4_heap_conversion_needed = false;
