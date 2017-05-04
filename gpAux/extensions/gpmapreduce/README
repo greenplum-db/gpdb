@@ -1,8 +1,0 @@
-Docs
--------
-http://gpdb.docs.pivotal.io/4360/utility_guide/admin_utilities/gpmapreduce.html
-
-Compiling
--------------
-## Requires top-level configure to have been run.
-make install

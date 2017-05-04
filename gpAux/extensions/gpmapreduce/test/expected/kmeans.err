@@ -1,8 +1,0 @@
--- start_matchsubs
--- m/mapreduce_\d+/
--- s/mapreduce_\d+/mapreduce_DUMMY/
--- m/\(\w+.\w+:[0-9]+\)$/
--- s/\(\w+.\w+:[0-9]+\)$/\(file:line\)/
--- end_matchsubs
-mapreduce_5461_run_1
-DONE

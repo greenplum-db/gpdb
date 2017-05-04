@@ -1,5 +1,0 @@
-hello world 
-this tests the hello world of map reduce word count 
-because of that we want some words to occur 
-more than once words like hello 
-so hello world hello lets do that count thing 
