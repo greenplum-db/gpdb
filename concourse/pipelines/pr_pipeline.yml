@@ -100,7 +100,7 @@ jobs:
           MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
           BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
           TEST_OS: centos
-        timeout: 1h30m
+        timeout: 2h30m
         on_failure: *pr_failure
 
       - task: MU_check_centos
