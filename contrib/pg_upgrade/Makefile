@@ -3,6 +3,8 @@
 #
 # $PostgreSQL: pgsql/contrib/pg_upgrade/Makefile,v 1.4 2010/07/03 14:23:13 momjian Exp $
 
+top_builddir = ../..
+
 PGFILEDESC = "pg_upgrade - an in-place binary upgrade utility"
 PGAPPICON = win32
 
@@ -22,7 +24,12 @@ PGXS := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
 else
 subdir = contrib/pg_upgrade
-top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk
 endif
+
+installcheck: test_gpdb.sh all
+	$(SHELL) $< -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)
+
+check: test_gpdb.sh all
+	$(SHELL) $< -C -s -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)

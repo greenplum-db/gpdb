@@ -78,3 +78,20 @@ synchronization.
   is not allowed in utility mode. All external partitions must be either moved
   out of the partition hierarchy with ALTER TABLE EXCHANGE, or dropped, prior
   to the upgrade.
+
+
+Testing Greenplum pg_upgrade
+----------------------------
+
+There is a testrunner script in contrib/pg_upgrade which runs a full upgrade of
+the gpdemo cluster and it's current contents. The idea is that it can be used
+to test upgrades by running as the final step of ICW. The test can be invoked
+by "make installcheck" in the contrib/pg_upgrade directory.
+
+The testscript also has a "smoketest" option which only tests upgrading a
+single node.  This is *not* a test of an actual Greenplum cluster upgrade,
+but a test of the Oid synchronization required to handle a node upgrade. The
+intention is for this to be a quick test that all objects are handled by
+pg_upgrade; upgrade testing still requires the full run across all
+segments/mirrors. The smoketest can be invoked by "make check" in the
+contrib/pg_upgrade directory.
