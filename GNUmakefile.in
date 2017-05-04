@@ -152,6 +152,7 @@ installcheck-world:
 	$(MAKE) -C src/test/kerberos installcheck
 	$(MAKE) -C gpMgmt/bin installcheck
 	gpcheckcat -A
+	$(MAKE) -C contrib/pg_upgrade check
 
 installcheck-resgroup:
 	$(MAKE) -C src/test/isolation2 $@
