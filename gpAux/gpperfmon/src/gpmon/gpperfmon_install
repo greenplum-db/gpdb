@@ -120,26 +120,9 @@ if __name__ == '__main__':
 
     commands = list()
 
-    # 3.X gpperfmon schema
-    cmd = Command("PGPORT=%d psql -f %s/lib/gpperfmon/gpperfmon3.sql template1" % (options.port, gphome))
-    commands.append(cmd)
-    
-    # 4.x gpperfmon schema additions
-    cmd = Command("PGPORT=%d psql -f %s/lib/gpperfmon/gpperfmon4.sql gpperfmon" % (options.port, gphome))
+    cmd = Command("PGPORT=%d psql -f %s/lib/gpperfmon/gpperfmon.sql template1" % (options.port, gphome))
     commands.append(cmd)
 
-    # 4.1 gpperfmon schema additions
-    cmd = Command("PGPORT=%d psql -f %s/lib/gpperfmon/gpperfmon41.sql gpperfmon" % (options.port, gphome))
-    commands.append(cmd)
-
-    # 4.2 gpperfmon schema additions
-    cmd = Command("PGPORT=%d psql -f %s/lib/gpperfmon/gpperfmon42.sql gpperfmon" % (options.port, gphome))
-    commands.append(cmd)
-    
-    # gpperfmon schema completion tasks
-    cmd = Command("PGPORT=%d psql -f %s/lib/gpperfmon/gpperfmonC.sql template1" % (options.port, gphome))
-    commands.append(cmd)
-    
     if options.enable:
 
         master_data_dir = os.getenv('MASTER_DATA_DIRECTORY')

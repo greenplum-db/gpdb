@@ -53,12 +53,7 @@ install: all
 	cp -p gpmon_catqrynow.py $(prefix)/sbin
 	cp -p gpperfmon_install $(prefix)/bin
 	mkdir -p $(prefix)/lib/gpperfmon
-	cp -p gpperfmon3.sql $(prefix)/lib/gpperfmon
-	cp -p gpperfmon4.sql $(prefix)/lib/gpperfmon
-	cp -p gpperfmon41.sql $(prefix)/lib/gpperfmon
-	cp -p gpperfmon42.sql $(prefix)/lib/gpperfmon
-	cp -p gpperfmonC.sql $(prefix)/lib/gpperfmon
-
+	cp -p gpperfmon.sql $(prefix)/lib/gpperfmon
 
 clean:
 	rm -rf *.o gpmmon gpsmon sigartest
