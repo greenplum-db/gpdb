@@ -108,7 +108,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/software_only_installer/greenplum-db-(.*)-build-1-rhel6-x86_64.zip
+    regexp: deliverables/software_only_installer/greenplum-db-(.*)-rhel6-x86_64.zip
 
 - name: installer_rhel6_gpdb_rc_sha256
   type: s3
@@ -117,7 +117,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/software_only_installer/greenplum-db-(.*)-build-1-rhel6-x86_64.zip.sha256
+    regexp: deliverables/software_only_installer/greenplum-db-(.*)-rhel6-x86_64.zip.sha256
 
 - name: installer_rhel7_gpdb_rc
   type: s3
@@ -126,7 +126,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/software_only_installer/greenplum-db-(.*)-build-1-rhel7-x86_64.zip
+    regexp: deliverables/software_only_installer/greenplum-db-(.*)-rhel7-x86_64.zip
 
 - name: installer_rhel7_gpdb_rc_sha256
   type: s3
@@ -135,7 +135,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/software_only_installer/greenplum-db-(.*)-build-1-rhel7-x86_64.zip.sha256
+    regexp: deliverables/software_only_installer/greenplum-db-(.*)-rhel7-x86_64.zip.sha256
 
 - name: installer_sles11_gpdb_rc
   type: s3
@@ -144,7 +144,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/software_only_installer/greenplum-db-(.*)-build-1-sles11-x86_64.zip
+    regexp: deliverables/software_only_installer/greenplum-db-(.*)-sles11-x86_64.zip
 
 - name: installer_sles11_gpdb_rc_sha256
   type: s3
@@ -153,7 +153,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/software_only_installer/greenplum-db-(.*)-build-1-sles11-x86_64.zip.sha256
+    regexp: deliverables/software_only_installer/greenplum-db-(.*)-sles11-x86_64.zip.sha256
 
 - name: installer_appliance_rhel6_gpdb_rc
   type: s3
@@ -162,7 +162,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-build-1-rhel6-x86_64.zip
+    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-rhel6-x86_64.zip
 
 - name: installer_appliance_rhel6_gpdb_rc_sha256
   type: s3
@@ -171,7 +171,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-build-1-rhel6-x86_64.zip.sha256
+    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-rhel6-x86_64.zip.sha256
 
 - name: installer_rhel6_gpdb_clients
   type: s3
@@ -198,7 +198,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-build-1-rhel7-x86_64.zip
+    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-rhel7-x86_64.zip
 
 - name: installer_appliance_rhel7_gpdb_rc_sha256
   type: s3
@@ -207,7 +207,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-build-1-rhel7-x86_64.zip.sha256
+    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-rhel7-x86_64.zip.sha256
 
 - name: installer_rhel7_gpdb_clients
   type: s3
@@ -797,7 +797,7 @@ jobs:
         packaged_gpdb: packaged_gpdb_rc_centos6
       params:
         INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-header-rhel-gpdb.sh
-        INSTALLER_ZIP: packaged_gpdb/greenplum-db-@GP_VERSION@-build-1-rhel6-x86_64.zip
+        INSTALLER_ZIP: packaged_gpdb/greenplum-db-@GP_VERSION@-rhel6-x86_64.zip
         ADD_README_INSTALL: true
     - task: gpdb_appliance_rhel6_rc_packaging
       file: gpdb_src/concourse/tasks/gpdb_packaging.yml
@@ -808,7 +808,7 @@ jobs:
         packaged_gpdb: packaged_gpdb_appliance_rc_centos6
       params:
         INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-appliance-header-rhel-gpdb.sh
-        INSTALLER_ZIP: packaged_gpdb/greenplum-db-appliance-@GP_VERSION@-build-1-rhel6-x86_64.zip
+        INSTALLER_ZIP: packaged_gpdb/greenplum-db-appliance-@GP_VERSION@-rhel6-x86_64.zip
 
     - task: gpdb_rc_packaging_centos7
       file: gpdb_src/concourse/tasks/gpdb_packaging.yml
@@ -819,7 +819,7 @@ jobs:
         packaged_gpdb: packaged_gpdb_rc_centos7
       params:
         INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-header-rhel-gpdb.sh
-        INSTALLER_ZIP: packaged_gpdb/greenplum-db-@GP_VERSION@-build-1-rhel7-x86_64.zip
+        INSTALLER_ZIP: packaged_gpdb/greenplum-db-@GP_VERSION@-rhel7-x86_64.zip
         ADD_README_INSTALL: true
     - task: gpdb_appliance_rhel7_rc_packaging
       file: gpdb_src/concourse/tasks/gpdb_packaging.yml
@@ -830,21 +830,21 @@ jobs:
         packaged_gpdb: packaged_gpdb_appliance_rc_centos7
       params:
         INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-appliance-header-rhel-gpdb.sh
-        INSTALLER_ZIP: packaged_gpdb/greenplum-db-appliance-@GP_VERSION@-build-1-rhel7-x86_64.zip
+        INSTALLER_ZIP: packaged_gpdb/greenplum-db-appliance-@GP_VERSION@-rhel7-x86_64.zip
   - aggregate:
     # RHEL 6
     - put: installer_rhel6_gpdb_rc
       params:
-        file: packaged_gpdb_rc_centos6/greenplum-db-*-build-1-rhel6-x86_64.zip
+        file: packaged_gpdb_rc_centos6/greenplum-db-*-rhel6-x86_64.zip
     - put: installer_rhel6_gpdb_rc_sha256
       params:
-        file: packaged_gpdb_rc_centos6/greenplum-db-*-build-1-rhel6-x86_64.zip.sha256
+        file: packaged_gpdb_rc_centos6/greenplum-db-*-rhel6-x86_64.zip.sha256
     - put: installer_appliance_rhel6_gpdb_rc
       params:
-        file: packaged_gpdb_appliance_rc_centos6/greenplum-db-appliance-*-build-1-rhel6-x86_64.zip
+        file: packaged_gpdb_appliance_rc_centos6/greenplum-db-appliance-*-rhel6-x86_64.zip
     - put: installer_appliance_rhel6_gpdb_rc_sha256
       params:
-        file: packaged_gpdb_appliance_rc_centos6/greenplum-db-appliance-*-build-1-rhel6-x86_64.zip.sha256
+        file: packaged_gpdb_appliance_rc_centos6/greenplum-db-appliance-*-rhel6-x86_64.zip.sha256
     - put: qautils_rhel6_tarball
       params:
         file: rc_bin_gpdb_rhel6/QAUtils-rhel6-x86_64.tar.gz
@@ -852,16 +852,16 @@ jobs:
     # RHEL 7
     - put: installer_rhel7_gpdb_rc
       params:
-        file: packaged_gpdb_rc_centos7/greenplum-db-*-build-1-rhel7-x86_64.zip
+        file: packaged_gpdb_rc_centos7/greenplum-db-*-rhel7-x86_64.zip
     - put: installer_rhel7_gpdb_rc_sha256
       params:
-        file: packaged_gpdb_rc_centos7/greenplum-db-*-build-1-rhel7-x86_64.zip.sha256
+        file: packaged_gpdb_rc_centos7/greenplum-db-*-rhel7-x86_64.zip.sha256
     - put: installer_appliance_rhel7_gpdb_rc
       params:
-        file: packaged_gpdb_appliance_rc_centos7/greenplum-db-appliance-*-build-1-rhel7-x86_64.zip
+        file: packaged_gpdb_appliance_rc_centos7/greenplum-db-appliance-*-rhel7-x86_64.zip
     - put: installer_appliance_rhel7_gpdb_rc_sha256
       params:
-        file: packaged_gpdb_appliance_rc_centos7/greenplum-db-appliance-*-build-1-rhel7-x86_64.zip.sha256
+        file: packaged_gpdb_appliance_rc_centos7/greenplum-db-appliance-*-rhel7-x86_64.zip.sha256
     - put: qautils_rhel7_tarball
       params:
         file: rc_bin_gpdb_rhel7/QAUtils-rhel7-x86_64.tar.gz
@@ -898,14 +898,14 @@ jobs:
       bin_gpdb: rc_bin_gpdb
     params:
       INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-header-sles-gpdb.sh
-      INSTALLER_ZIP: packaged_gpdb/greenplum-db-@GP_VERSION@-build-1-sles11-x86_64.zip
+      INSTALLER_ZIP: packaged_gpdb/greenplum-db-@GP_VERSION@-sles11-x86_64.zip
       ADD_README_INSTALL: true
   - put: installer_sles11_gpdb_rc
     params:
-      file: packaged_gpdb/greenplum-db-*-build-1-sles11-x86_64.zip
+      file: packaged_gpdb/greenplum-db-*-sles11-x86_64.zip
   - put: installer_sles11_gpdb_rc_sha256
     params:
-      file: packaged_gpdb/greenplum-db-*-build-1-sles11-x86_64.zip.sha256
+      file: packaged_gpdb/greenplum-db-*-sles11-x86_64.zip.sha256
   - put: qautils_sles11_tarball
     params:
       file: rc_bin_gpdb/QAUtils-sles11-x86_64.tar.gz
