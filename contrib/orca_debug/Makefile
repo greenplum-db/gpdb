@@ -18,5 +18,8 @@ endif
 
 override CPPFLAGS := -fPIC $(CPPFLAGS)
 
+CC=${CXX}
+LDFLAGS_SL+=-lgpopt -lnaucrates -lgpdbcost -lgpos  -lxerces-c-3.1
+
 orca_debug.o: orca_debug.cpp
 

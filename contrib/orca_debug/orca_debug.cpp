@@ -40,6 +40,18 @@ PG_MODULE_MAGIC_CPP;
 
 // by value
 
+Datum DumpPlan(PG_FUNCTION_ARGS);
+Datum RestorePlan(PG_FUNCTION_ARGS);
+Datum DumpPlanToFile(PG_FUNCTION_ARGS);
+Datum RestorePlanFromFile(PG_FUNCTION_ARGS);
+Datum RestorePlanDXL(PG_FUNCTION_ARGS);
+Datum RestorePlanFromDXLFile(PG_FUNCTION_ARGS);
+Datum DumpMDObjDXL(PG_FUNCTION_ARGS);
+Datum DumpCatalogDXL(PG_FUNCTION_ARGS);
+Datum DumpRelStatsDXL(PG_FUNCTION_ARGS);
+Datum DumpMDCastDXL(PG_FUNCTION_ARGS);
+Datum DumpMDScCmpDXL(PG_FUNCTION_ARGS);
+
 PG_FUNCTION_INFO_V1(DumpPlan);
 PG_FUNCTION_INFO_V1(RestorePlan);
 PG_FUNCTION_INFO_V1(DumpPlanToFile);
@@ -52,6 +64,14 @@ PG_FUNCTION_INFO_V1(DumpRelStatsDXL);
 PG_FUNCTION_INFO_V1(DumpMDCastDXL);
 PG_FUNCTION_INFO_V1(DumpMDScCmpDXL);
 
+Datum DumpQuery(PG_FUNCTION_ARGS);
+Datum RestoreQuery(PG_FUNCTION_ARGS);
+Datum DumpQueryToFile(PG_FUNCTION_ARGS);
+Datum RestoreQueryFromFile(PG_FUNCTION_ARGS);
+Datum DumpQueryDXL(PG_FUNCTION_ARGS);
+Datum DumpQueryToDXLFile(PG_FUNCTION_ARGS);
+Datum DumpQueryFromFileToDXLFile(PG_FUNCTION_ARGS);
+
 PG_FUNCTION_INFO_V1(DumpQuery);
 PG_FUNCTION_INFO_V1(RestoreQuery);
 PG_FUNCTION_INFO_V1(DumpQueryToFile);
@@ -59,11 +79,14 @@ PG_FUNCTION_INFO_V1(RestoreQueryFromFile);
 PG_FUNCTION_INFO_V1(DumpQueryDXL);
 PG_FUNCTION_INFO_V1(DumpQueryToDXLFile);
 PG_FUNCTION_INFO_V1(DumpQueryFromFileToDXLFile);
-PG_FUNCTION_INFO_V1(DisableXform);
-PG_FUNCTION_INFO_V1(EnableXform);
-PG_FUNCTION_INFO_V1(LibraryVersion);
+
+Datum Optimize(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(Optimize);
+
+Datum EvalExprFromDXLFile(PG_FUNCTION_ARGS);
+Datum OptimizeMinidumpFromFile(PG_FUNCTION_ARGS);
+Datum ExecuteMinidumpFromFile(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(EvalExprFromDXLFile);
 PG_FUNCTION_INFO_V1(OptimizeMinidumpFromFile);
@@ -939,73 +962,6 @@ RestoreQueryFromFile(PG_FUNCTION_ARGS)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		DisableXform
-//
-//	@doc:
-//		Takes transformation name as input, and disables this transformation.
-//
-//---------------------------------------------------------------------------
-
-extern "C" {
-Datum
-DisableXform(PG_FUNCTION_ARGS)
-{
-	char *szXform = text_to_cstring(PG_GETARG_TEXT_P(0));
-	bool fResult = COptTasks::FSetXform(szXform, true /*fDisable*/);
-
-	StringInfoData str;
-	initStringInfo(&str);
-
-	if (fResult)
-	{
-		appendStringInfo(&str, "%s is disabled", szXform);
-	}
-	else
-	{
-		appendStringInfo(&str, "%s is not recognized", szXform);
-	}
-	text *result = cstring_to_text(str.data);
-
-	PG_RETURN_TEXT_P(result);
-}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		EnableXform
-//
-//	@doc:
-//		Takes transformation name as input, and enables this transformation.
-//
-//---------------------------------------------------------------------------
-
-extern "C" {
-Datum
-EnableXform(PG_FUNCTION_ARGS)
-{
-	char *szXform = text_to_cstring(PG_GETARG_TEXT_P(0));
-	bool fResult = COptTasks::FSetXform(szXform, false /*fDisable*/);
-
-	StringInfoData str;
-	initStringInfo(&str);
-
-	if (fResult)
-	{
-		appendStringInfo(&str, "%s is enabled", szXform);
-	}
-	else
-	{
-		appendStringInfo(&str, "%s is not recognized", szXform);
-	}
-	text *result = cstring_to_text(str.data);
-
-	PG_RETURN_TEXT_P(result);
-}
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
 //		DumpPlanToFile
 //
 //	@doc:
@@ -1030,40 +986,6 @@ DumpPlanToFile(PG_FUNCTION_ARGS)
 	fw.Close();
 
 	PG_RETURN_UINT32((ULONG) iBinaryLen);
-}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		LibraryVersion
-//
-//	@doc:
-//		Returns the optimizer and gpos library versions as a message
-//
-//---------------------------------------------------------------------------
-extern "C" {
-Datum
-LibraryVersion()
-{
-	StringInfoData str;
-	initStringInfo(&str);
-	appendStringInfo(&str, "GPOPT version: %d.%d", GPORCA_VERSION_MAJOR, GPORCA_VERSION_MINOR);
-	appendStringInfo(&str, ", GPOS version: %d.%d", GPOS_VERSION_MAJOR, GPOS_VERSION_MINOR);
-	appendStringInfo(&str, ", Xerces version: %s", XERCES_FULLVERSIONDOT);
-	text *result = cstring_to_text(str.data);
-
-	PG_RETURN_TEXT_P(result);
-}
-}
-
-extern "C" {
-StringInfo
-OptVersion()
-{
-	StringInfo str = gpdb::SiMakeStringInfo();
-	appendStringInfo(str, "%d.%d", GPORCA_VERSION_MAJOR, GPORCA_VERSION_MINOR);
-
-	return str;
 }
 }
 
@@ -1145,29 +1067,5 @@ Optimize(PG_FUNCTION_ARGS)
 	}
 
 	PG_RETURN_TEXT_P(cstring_to_text(szOutput));
-}
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		GetCacheEvictionCounter
-//
-//	@doc:
-//		Get the number of times we evicted entries from CMDCache.
-//		This function is called by udfs for testing purposes.
-//
-//---------------------------------------------------------------------------
-extern "C"
-{
-ULLONG
-GetCacheEvictionCounter()
-{
-	if (!CMDCache::FInitialized())
-	{
-		CMDCache::Init();
-		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
-	}
-	return CMDCache::ULLGetCacheEvictionCounter();
 }
 }
