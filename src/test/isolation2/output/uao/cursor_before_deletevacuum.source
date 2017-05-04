@@ -27,7 +27,7 @@ BEGIN
 DELETE 4
 2: COMMIT;
 COMMIT
-2&: VACUUM ao;  <waiting ...>
+2&: VACUUM FULL ao;  <waiting ...>
 1: FETCH NEXT IN cur;
 a
 -
