@@ -6,3 +6,4 @@ paramiko
 stream
 Crypto
 paramiko
+gp_bash_version.sh

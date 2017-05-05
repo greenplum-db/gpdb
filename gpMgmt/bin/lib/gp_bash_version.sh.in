@@ -1,0 +1,8 @@
+gp_version="##version##"
+
+print_version ()
+{
+	progname="$(basename $0)"
+	echo "${progname} ${gp_version}"
+	exit 0
+}
