@@ -14,7 +14,7 @@
             [<b>-B</b> <varname>parallel_processes</varname>] 
             [<b>-p</b> <varname>postgresql_conf_param_file</varname>]
             [<b>-s</b> <varname>standby_master_host</varname>]
-            [<b>--max_connections</b>=<varname>number</varname>] [<b>--shared_buffers</b> <varname>=size</varname>]
+            [<b>--max_connections</b>=<varname>number</varname>] [<b>--shared_buffers</b>=<varname>size</varname>]
             [<b>--locale</b>=<varname>locale</varname>] [<b>--lc-collate</b>=<varname>locale</varname>] 
             [<b>--lc-ctype</b>=<varname>locale</varname>] [<b>--lc-messages</b>=<varname>locale</varname>] 
             [<b>--lc-monetary</b>=<varname>locale</varname>] [<b>--lc-numeric</b>=<varname>locale</varname>] 
