@@ -289,6 +289,26 @@
 	</chapter>
 	<chapter href="ref_guide/gp_toolkit.xml" navtitle="The gp_toolkit Administrative Schema"
 		id="gp_toolkit"/>
+    <chapter href="ref_guide/gpperfmon/dbref.xml" navtitle="Command Center Database Reference">
+  		<topicref href="ref_guide/gpperfmon/db-database.xml" type="topic"/>
+  		<topicref href="ref_guide/gpperfmon/db-emcconnect-history.xml" type="topic"/>
+  		<topicref href="ref_guide/gpperfmon/db-diskspace.xml" type="topic"/>
+  		<topicref href="ref_guide/gpperfmon/db-filerep.xml" type="topic"/>
+  		<topicref href="ref_guide/gpperfmon/db-health.xml" type="topic"/>
+  		<topicref href="ref_guide/gpperfmon/db-interface-stats.xml" type="topic"/>
+  		<topicref href="ref_guide/gpperfmon/db-iterators.xml" type="topic"/>
+  		<topicref href="ref_guide/gpperfmon/db-iterator-metrics.xml" type="topic"/>
+  		<topicref href="ref_guide/gpperfmon/db-log-alert.xml" type="topic"/>
+  		<topicref href="ref_guide/gpperfmon/db-queries.xml" type="topic"/>
+  		<topicref href="ref_guide/gpperfmon/db-segment.xml" type="topic"/>
+  		<topicref href="ref_guide/gpperfmon/db-socket-stats.xml" type="topic"/>
+  		<topicref href="ref_guide/gpperfmon/db-system.xml" type="topic"/>
+  		<topicref href="ref_guide/gpperfmon/db-tcp-stats.xml" type="topic"/>
+  		<topicref href="ref_guide/gpperfmon/db-udp-stats.xml" type="topic"/>
+  		<topicref href="ref_guide/gpperfmon/db-iterators-rollup.xml" type="topic"/>
+  		<topicref href="ref_guide/gpperfmon/db-dynamic-memory-info.xml" type="topic"/>
+  		<topicref href="ref_guide/gpperfmon/db-memory-info.xml" type="topic"/>
+  	</chapter>
 	<chapter href="ref_guide/data_types.xml" navtitle="Greenplum Database Data Types"
 		id="data_types"/>
 	<chapter href="ref_guide/character_sets.xml" navtitle="Character Set Support"

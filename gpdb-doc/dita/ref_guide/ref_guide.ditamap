@@ -220,6 +220,7 @@
 			</topicref>
 		</topicref>
 		<topicref href="gp_toolkit.ditamap" format="ditamap"/>
+    <topicref href="gpperfmon/gpperfmon.ditamap" format="ditamap"/>
 		<topicref href="data_types.xml" navtitle="Greenplum Database Data Types" id="data_types"/>
 		<topicref href="character_sets.xml" navtitle="Character Set Support" id="character_sets"/>
 		<topicref href="config_params/guc_config.ditamap" navtitle="Server Configuration Parameters"

@@ -9,8 +9,8 @@ GEM
     addressable (2.5.1)
       public_suffix (~> 2.0, >= 2.0.2)
     ansi (1.5.0)
-    backports (3.7.0)
-    bookbindery (10.1.2)
+    backports (3.8.0)
+    bookbindery (10.1.4)
       ansi (~> 1.4)
       css_parser
       elasticsearch
@@ -49,15 +49,15 @@ GEM
       sass (>= 3.2, < 3.5)
     concurrent-ruby (1.0.5)
     contracts (0.13.0)
-    css_parser (1.4.10)
+    css_parser (1.5.0)
       addressable
-    dotenv (2.2.0)
-    elasticsearch (5.0.3)
-      elasticsearch-api (= 5.0.3)
-      elasticsearch-transport (= 5.0.3)
-    elasticsearch-api (5.0.3)
+    dotenv (2.2.1)
+    elasticsearch (5.0.4)
+      elasticsearch-api (= 5.0.4)
+      elasticsearch-transport (= 5.0.4)
+    elasticsearch-api (5.0.4)
       multi_json
-    elasticsearch-transport (5.0.3)
+    elasticsearch-transport (5.0.4)
       faraday
       multi_json
     em-websocket (0.5.1)
@@ -67,7 +67,7 @@ GEM
     eventmachine (1.2.3)
     excon (0.55.0)
     execjs (2.7.0)
-    faraday (0.12.0.1)
+    faraday (0.12.1)
       multipart-post (>= 1.2, < 3)
     fast_blank (1.0.0)
     fastimage (2.1.0)
@@ -77,7 +77,7 @@ GEM
       fog-json (~> 1.0)
       fog-xml (~> 0.1)
       ipaddress (~> 0.8)
-    fog-core (1.43.0)
+    fog-core (1.44.1)
       builder
       excon (~> 0.49)
       formatador (~> 0.2)
@@ -91,7 +91,8 @@ GEM
       sass (>= 3.2)
     formatador (0.2.5)
     git (1.2.9.1)
-    haml (4.0.7)
+    haml (5.0.1)
+      temple (>= 0.8.0)
       tilt
     hamster (3.0.0)
       concurrent-ruby (~> 1.0)
@@ -181,6 +182,7 @@ GEM
     sprockets (3.7.1)
       concurrent-ruby (~> 1.0)
       rack (> 1, < 3)
+    temple (0.8.0)
     therubyracer (0.12.2)
       libv8 (~> 3.16.14.0)
       ref
@@ -189,7 +191,7 @@ GEM
     tilt (1.4.1)
     tzinfo (1.2.3)
       thread_safe (~> 0.1)
-    uglifier (3.1.13)
+    uglifier (3.2.0)
       execjs (>= 0.3.0, < 3)
 
 PLATFORMS

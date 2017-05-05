@@ -1,0 +1,1933 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="db-IteratorMetrics">
+   <title>Iterator Metrics</title>
+   <body>
+      <p>The tables in this section list all possible iterators in a query on Greenplum Database
+         instance. The iterator tables include the metric name, the column in the
+            <codeph>iterators_*</codeph> table in the <codeph>gpperfmon</codeph> database where the
+         metric appears, how the metric is measured (unit), and a description of the metric.</p>
+      <note>Deprecated. Iterators will be removed from the Command Center Database in a future
+         release.</note>
+      <p>
+         <b>Metric Terminology</b>
+      </p>
+      <p>The following information explains some of the database terms and concepts that appear in
+         iterator metrics in Greenplum Database:</p>
+      <dl>
+         <dlentry>
+            <dt>Node</dt>
+            <dd>Refers to a step in a query plan. A query plan has sets of operations that Greenplum
+               Database performs to produce the answer to a given query. A node in the plan
+               represents a specific database operation, such as a table scan, join, aggregation,
+               sort, etc.</dd>
+         </dlentry>
+      </dl>
+      <dl>
+         <dlentry>
+            <dt>Iterator</dt>
+            <dd>Represents the actual execution of the node in a query plan. Node and iterator are
+               sometimes used interchangeably.</dd>
+         </dlentry>
+         <dlentry>
+            <dt>Tuple</dt>
+            <dd>Refers to a row returned as part of a result set from a query, as well as a record
+               in a table.</dd>
+         </dlentry>
+         <dlentry>
+            <dt>Spill</dt>
+            <dd>When there is not enough memory to perform a database operation, data must be
+               written (or spilled) to disk.</dd>
+         </dlentry>
+         <dlentry>
+            <dt>Passes</dt>
+            <dd>Occur when an iterator must scan (or pass) over spilled data to obtain a result. A
+               pass represents one pass through all input tuples, or all data in batch files
+               generated after spill, which happens hierarchically. In the first pass, all input
+               tuples are read, and intermediate results are spilled to a specified number of batch
+               files. In the second pass, the data in all batch files is processed. If the results
+               are still too large to store in memory, the intermediate results are spilled to the
+               second level of spill files, and the process repeats again.</dd>
+         </dlentry>
+         <dlentry>
+            <dt>Batches</dt>
+            <dd>Refers to the actual files created when data is spilled to disk. This is most often
+               associated to Hash operations.</dd>
+         </dlentry>
+         <dlentry>
+            <dt>Join</dt>
+            <dd>This clause in a query joins two or more tables. There are three types of Join
+               algorithms in Greenplum Database instance: <ul id="ul_qqv_k4c_zp">
+                  <li>Hash Join</li>
+                  <li>Merge Join</li>
+                  <li>Nested Loop</li>
+               </ul>
+            </dd>
+         </dlentry>
+      </dl>
+      <p>Each of these operations include their own respective Join semantics. The Command Center
+         Console displays iterator metrics for each of these semantics.</p>
+      <p id="db-Append">
+         <b>Append</b>
+      </p>
+      <p>An Append iterator has two or more input sets. Append returns all rows from the first input
+         set, then all rows from the second input set, and so on, until all rows from all input sets
+         are processed. Append is also used when you select from a table involved in an inheritance
+         hierarchy.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Append Current Input Source</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Inputs</entry>
+                  <entry>The number of the current table being scanned.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-Append-OnlyScan">
+         <b>Append-Only Scan</b>
+      </p>
+      <p>This iterator scans append-only type-tables.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <p>Append-only Scan Rescan</p>
+                  </entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Rescans</entry>
+                  <entry>The number of append-only rescans by this iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-Append-onlyColumnarScan">
+         <b>Append-only Columnar Scan</b>
+      </p>
+      <p>This iterator scans append-only columnar-type tables.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <p>Append-Only Columnar Scan Rescan</p>
+                  </entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Rescans</entry>
+                  <entry>The number of append-only columnar rescans by this iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-Aggregate">
+         <b>Aggregate</b>
+      </p>
+      <p>The query planner produces an aggregate iterator whenever the query includes an aggregate
+         function. For example, the following functions are aggregate functions:
+            <codeph>AVG()</codeph>, <codeph>COUNT()</codeph>, <codeph>MAX()</codeph>,
+            <codeph>MIN()</codeph>, <codeph>STDDEV()</codeph>, <codeph>SUM()</codeph>, and
+            <codeph>VARIANCE()</codeph>. Aggregate reads all the rows in the input set and computes
+         the aggregate values. If the input set is not grouped, Aggregate produces a single result
+         row.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <p>Aggregate Total Spill Tuple</p>
+                  </entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Tuples</entry>
+                  <entry>The number of tuples spilled to disk</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Total Spill Bytes</entry>
+                  <entry>
+                     <codeph>m2_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The number of bytes spilled to disk.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Total Spill Batches</entry>
+                  <entry>
+                     <codeph>m3_name</codeph>
+                  </entry>
+                  <entry>Batches</entry>
+                  <entry>The number of spill batches required.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Total Spill Pass</entry>
+                  <entry>
+                     <codeph>m4_name</codeph>
+                  </entry>
+                  <entry>Passes</entry>
+                  <entry>The number of passes across all of the batches.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Current Spill Pass Read Tuples</entry>
+                  <entry>
+                     <codeph>m5_name</codeph>
+                  </entry>
+                  <entry>Tuples</entry>
+                  <entry>The number of bytes read in for this spill batch.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Current Spill Pass Read Bytes</entry>
+                  <entry>
+                     <codeph>m6_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The number of tuples read in for this spill batch.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Current Spill Pass Tuples</entry>
+                  <entry>
+                     <codeph>m7_name</codeph>
+                  </entry>
+                  <entry>Tuples</entry>
+                  <entry>The number of tuples that are in each spill file in the current
+                     pass.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Current Spill Pass Bytes</entry>
+                  <entry>
+                     <codeph>m8_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>
+                     <p>The number of bytes that are in each spill file in the current pass.</p>
+                  </entry>
+               </row>
+               <row>
+                  <entry>Aggregate Current Spill Pass Batches</entry>
+                  <entry>
+                     <codeph>m9_name</codeph>
+                  </entry>
+                  <entry>Batches</entry>
+                  <entry>The number of batches created in the current pass.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-BitmapAnd">
+         <b>BitmapAnd</b>
+      </p>
+      <p>This iterator takes the bitmaps generated from multiple BitmapIndexScan iterators, puts
+         them together with an <codeph>AND</codeph> clause, and generates a new bitmap as its
+         output.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-BitmapOr">
+         <b>BitmapOr</b>
+      </p>
+      <p>This iterator takes the bitmaps generated from multiple BitmapIndexScan iterators, puts
+         them together with an <codeph>OR</codeph> clause, and generates a new bitmap as its
+         output.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-BitmapAppend-OnlyScan">
+         <b>Bitmap Append-Only Scan</b>
+      </p>
+      <p>This iterator retrieves all rows from the bitmap generated by BitmapAnd, BitmapOr, or
+         BitmapIndexScan and accesses the append-only table to retrieve the relevant rows.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-BitmapHeapScan">
+         <b>Bitmap Heap Scan</b>
+      </p>
+      <p>This iterator retrieves all rows from the bitmap generated by BitmapAnd, BitmapOr, or
+         BitmapIndexScan and accesses the heap table to retrieve the relevant rows.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Bitmap Heap Scan Pages</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Pages</entry>
+                  <entry>The number of bitmap heap pages scanned.</entry>
+               </row>
+               <row>
+                  <entry>Bitmap Heap Scan Rescan</entry>
+                  <entry>
+                     <codeph>m2_name</codeph>
+                  </entry>
+                  <entry>Rescans</entry>
+                  <entry>The number of bitmap heap page rescans by this iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-BitmapIndexScan">
+         <b>Bitmap Index Scan</b>
+      </p>
+      <p>This iterator produces a bitmap that corresponds to the rules that satisfy the query
+         plan.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Bitmap Index Scan Rescan</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Rescans</entry>
+                  <entry>The number of bitmap index rescans by this iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-BroadcastMotion">
+         <b>Broadcast Motion</b>
+      </p>
+      <p>Note that the <codeph>Motion</codeph> metrics for the iterator are useful when
+         investigating potential networking issues in the Greenplum Database system. Typically, the
+         "Ack Time" values should be very small (microseconds or milliseconds). However if the "Ack
+         Time" values are one or more seconds (particularly the "Motion Min Ack Time" metric), then
+         a network performance issue likely exists.</p>
+      <p>Also, if there are a large number of packets being dropped because of queue overflow, you
+         can increase the value for the<codeph> gp_interconnect_queue_depth</codeph> system
+         configuration parameter to improve performance. See the <i>Greenplum Database Reference
+            Guide</i> for more in formation about system configuration parameters.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Motion Bytes Sent</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The number of bytes sent by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Motion Total Ack Time</entry>
+                  <entry>
+                     <codeph>m2_name</codeph>
+                  </entry>
+                  <entry>Microseconds</entry>
+                  <entry>The total amount of time that the iterator waited for an acknowledgement
+                     after sending a packet of data.</entry>
+               </row>
+               <row>
+                  <entry>Motion Average Ack Time</entry>
+                  <entry>
+                     <codeph>m3_name</codeph>
+                  </entry>
+                  <entry>Microseconds</entry>
+                  <entry>The average amount of time that the iterator waited for an acknowledgement
+                     after sending a packet of data.</entry>
+               </row>
+               <row>
+                  <entry>Motion Max Ack Time</entry>
+                  <entry>
+                     <codeph>m4_name</codeph>
+                  </entry>
+                  <entry>Microseconds</entry>
+                  <entry>The maximum amount of time that the iterator waited for an acknowledgement
+                     after sending a packet of data.</entry>
+               </row>
+               <row>
+                  <entry>Motion Min Ack Time</entry>
+                  <entry>
+                     <codeph>m5_name</codeph>
+                  </entry>
+                  <entry>Microseconds</entry>
+                  <entry>The minimum amount of time that the iterator waited for an acknowledgement
+                     after sending a packet of data.</entry>
+               </row>
+               <row>
+                  <entry>Motion Count Resent</entry>
+                  <entry>
+                     <codeph>m6_name</codeph>
+                  </entry>
+                  <entry>Packets</entry>
+                  <entry>The total number of packets that the iterator did not acknowledge when they
+                     first arrived in the queue.</entry>
+               </row>
+               <row>
+                  <entry>Motion Max Resent</entry>
+                  <entry>
+                     <codeph>m7_name</codeph>
+                  </entry>
+                  <entry>Packets</entry>
+                  <entry>The maximum number of packets that the iterator did not acknowledge when
+                     they first arrived in the queue. This metric is applied on a per packet basis.
+                     For example, a value of "10" indicates that a particular packet did not get
+                     acknowledged by this iterator 10 times, and that this was the maximum for this
+                     iterator.</entry>
+               </row>
+               <row>
+                  <entry>Motion Bytes Received</entry>
+                  <entry>
+                     <codeph>m8_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The number of bytes received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Motion Count Dropped</entry>
+                  <entry>
+                     <codeph>m9_name</codeph>
+                  </entry>
+                  <entry>Packets</entry>
+                  <entry>
+                     <p>The number of packets dropped by the iterator because of buffer
+                        overruns.</p>
+                  </entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-ExplicitRedistributeMotion">
+         <b>Explicit Redistribute Motion</b>
+      </p>
+      <p>The Explicit Redistribute iterator moves tuples to segments explicitly specified in the
+         segment ID column of the tuples. This differs from a Redistribute Motion iterator, where
+         target segments are indirectly specified through hash expressions. The Explicit
+         Redistribute iterator is used when the query portion of a DML planned statement requires
+         moving tuples across distributed tables.</p>
+      <p>Note that the Motion metrics for the iterator are useful when investigating potential
+         networking issues in the Greenplum Database system. Typically, the "Ack Time" values should
+         be very small (microseconds or milliseconds). However if the "Ack Time" values are one or
+         more seconds (particularly the "Motion Min Ack Time" metric), then a network performance
+         issue likely exists.</p>
+      <p>Also, if there are a large number of packets being dropped because of queue overflow, you
+         can increase the value for the <codeph>gp_interconnect_queue_depth</codeph> system
+         configuration parameter to improve performance. See the <i>Greenplum Database Reference
+            Guide</i> for more in formation about system configuration parameters.</p>
+      <p>.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Motion Bytes Sent</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The number of bytes sent by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Motion Total Ack Time</entry>
+                  <entry>
+                     <codeph>m2_name</codeph>
+                  </entry>
+                  <entry>Microseconds</entry>
+                  <entry>The total amount of time that the iterator waited for an acknowledgement
+                     after sending a packet of data.</entry>
+               </row>
+               <row>
+                  <entry>Motion Average Ack Time</entry>
+                  <entry>
+                     <codeph>m3_name</codeph>
+                  </entry>
+                  <entry>Microseconds</entry>
+                  <entry>The average amount of time that the iterator waited for an acknowledgement
+                     after sending a packet of data.</entry>
+               </row>
+               <row>
+                  <entry>Motion Max Ack Time</entry>
+                  <entry>
+                     <codeph>m4_name</codeph>
+                  </entry>
+                  <entry>Microseconds</entry>
+                  <entry>The maximum amount of time that the iterator waited for an acknowledgement
+                     after sending a packet of data.</entry>
+               </row>
+               <row>
+                  <entry>Motion Min Ack Time</entry>
+                  <entry>
+                     <codeph>m5_name</codeph>
+                  </entry>
+                  <entry>Microseconds</entry>
+                  <entry>The minimum amount of time that the iterator waited for an acknowledgement
+                     after sending a packet of data.</entry>
+               </row>
+               <row>
+                  <entry>Motion Count Resent</entry>
+                  <entry>
+                     <codeph>m6_name</codeph>
+                  </entry>
+                  <entry>Packets</entry>
+                  <entry>The total number of packets that the iterator did not acknowledge when they
+                     first arrived in the queue.</entry>
+               </row>
+               <row>
+                  <entry>Motion Max Resent</entry>
+                  <entry>
+                     <codeph>m7_name</codeph>
+                  </entry>
+                  <entry>Packets</entry>
+                  <entry>The maximum number of packets that the iterator did not acknowledge when
+                     they first arrived in the queue. This metric is applied on a per packet basis.
+                     For example, a value of "10" indicates that a particular packet did not get
+                     acknowledged by this iterator 10 times, and that this was the maximum for this
+                     iterator.</entry>
+               </row>
+               <row>
+                  <entry>Motion Bytes Received</entry>
+                  <entry>
+                     <codeph>m8_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The number of bytes received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Motion Count Dropped</entry>
+                  <entry>
+                     <codeph>m9_name</codeph>
+                  </entry>
+                  <entry>Packets</entry>
+                  <entry>
+                     <p>The number of packets dropped by the iterator because of buffer
+                        overruns.</p>
+                  </entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-ExternalScan">
+         <b>External Scan</b>
+      </p>
+      <p>This iterator scans an external table.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>External Scan Rescan</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Rescans</entry>
+                  <entry>The number of external table rescans by this iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-FunctionScan">
+         <b>Function Scan</b>
+      </p>
+      <p>This iterator returns tuples produced by a function.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-GatherMotion">
+         <b>Gather Motion</b>
+      </p>
+      <p>This iterator gathers streams of tuples that are sent by "sending" motions. If a merge key
+         is specified, it merges many streams into a single order-preserved stream.</p>
+      <p>Note that the Motion metrics for the iterator are useful when investigating potential
+         networking issues in the Greenplum Database system. Typically, the "Ack Time" values should
+         be very small (microseconds or milliseconds). However if the "Ack Time" values are one or
+         more seconds (particularly the "Motion Min Ack Time" metric), then a network performance
+         issue likely exists.</p>
+      <p>Also, if there are a large number of packets being dropped because of queue overflow, you
+         can increase the value for the <codeph>gp_interconnect_queue_depth</codeph> system
+         configuration parameter to improve performance. See the <i>Greenplum Database Reference
+            Guide</i> for more in formation about system configuration parameters.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Motion Bytes Sent</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The number of bytes sent by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Motion Total Ack Time</entry>
+                  <entry>
+                     <codeph>m2_name</codeph>
+                  </entry>
+                  <entry>Microseconds</entry>
+                  <entry>The total amount of time that the iterator waited for an acknowledgement
+                     after sending a packet of data.</entry>
+               </row>
+               <row>
+                  <entry>Motion Average Ack Time</entry>
+                  <entry>
+                     <codeph>m3_name</codeph>
+                  </entry>
+                  <entry>Microseconds</entry>
+                  <entry>The average amount of time that the iterator waited for an acknowledgement
+                     after sending a packet of data.</entry>
+               </row>
+               <row>
+                  <entry>Motion Max Ack Time</entry>
+                  <entry>
+                     <codeph>m4_name</codeph>
+                  </entry>
+                  <entry>Microseconds</entry>
+                  <entry>The maximum amount of time that the iterator waited for an acknowledgement
+                     after sending a packet of data.</entry>
+               </row>
+               <row>
+                  <entry>Motion Min Ack Time</entry>
+                  <entry>
+                     <codeph>m5_name</codeph>
+                  </entry>
+                  <entry>Microseconds</entry>
+                  <entry>The minimum amount of time that the iterator waited for an acknowledgement
+                     after sending a packet of data.</entry>
+               </row>
+               <row>
+                  <entry>Motion Count Resent</entry>
+                  <entry>
+                     <codeph>m6_name</codeph>
+                  </entry>
+                  <entry>Packets</entry>
+                  <entry>The total number of packets that the iterator did not acknowledge when they
+                     first arrived in the queue.</entry>
+               </row>
+               <row>
+                  <entry>Motion Max Resent</entry>
+                  <entry>
+                     <codeph>m7_name</codeph>
+                  </entry>
+                  <entry>Packets</entry>
+                  <entry>The maximum number of packets that the iterator did not acknowledge when
+                     they first arrived in the queue. This metric is applied on a per packet basis.
+                     For example, a value of "10" indicates that a particular packet did not get
+                     acknowledged by this iterator 10 times, and that this was the maximum for this
+                     iterator.</entry>
+               </row>
+               <row>
+                  <entry>Motion Bytes Received</entry>
+                  <entry>
+                     <codeph>m8_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The number of bytes received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Motion Count Dropped</entry>
+                  <entry>
+                     <codeph>m9_name</codeph>
+                  </entry>
+                  <entry>Packets</entry>
+                  <entry>
+                     <p>The number of packets dropped by the iterator because of buffer
+                        overruns.</p>
+                  </entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-GroupAggregate">
+         <b>Group Aggregate</b>
+      </p>
+      <p>The GroupAggregate iterator is a way to compute vector aggregates, and it is used to
+         satisfy a <codeph>GROUP BY</codeph> clause. A single input set is required by the
+         GroupAggregate iterator, and it must be ordered by the grouping column(s). This iterator
+         returns a single row for a unique value of grouping columns.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Total Spill Tuples</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Tuples</entry>
+                  <entry>The number of tuples spilled to disk.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Total Spill Bytes</entry>
+                  <entry>
+                     <codeph>m2_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The number of bytes spilled to disk.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Total Spill Batches</entry>
+                  <entry>
+                     <codeph>m3_name</codeph>
+                  </entry>
+                  <entry>Batches</entry>
+                  <entry>The number of spill batches required.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Total Spill Pass</entry>
+                  <entry>
+                     <codeph>m4_name</codeph>
+                  </entry>
+                  <entry>Passes</entry>
+                  <entry>The number of passes across all of the batches.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Current Spill Pass Read Tuples</entry>
+                  <entry>
+                     <codeph>m5_name</codeph>
+                  </entry>
+                  <entry>Tuples</entry>
+                  <entry>The number of bytes read in for this spill batch</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Current Spill Pass Read Bytes</entry>
+                  <entry>
+                     <codeph>m6_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The number of tuples read in for this spill batch</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Current Spill Pass Tuples</entry>
+                  <entry>
+                     <codeph>m7_name</codeph>
+                  </entry>
+                  <entry>Tuples</entry>
+                  <entry>The number of tuples that are in each spill file in the current
+                     pass.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Current Spill Pass Bytes</entry>
+                  <entry>
+                     <codeph>m8_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The number of bytes that are in each spill file in the current
+                     pass.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Current Spill Pass Batches</entry>
+                  <entry>
+                     <codeph>m9_name</codeph>
+                  </entry>
+                  <entry>Batches</entry>
+                  <entry>
+                     <p>The number of batches created in the current pass.</p>
+                  </entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-HashJoin">
+         <b>Hash Join</b>
+      </p>
+      <p>The Hash Join iterator requires two input sets - the outer and inner tables.</p>
+      <p> The Hash Join iterator starts by creating its inner table using the Hash operator. The
+         Hash operator creates a temporary Hash index that covers the join column in the inner
+         table. When the hash table (that is, the inner table) is created, Hash Join reads each row
+         in the outer table, hashes the join column (from the outer table), and searches the
+         temporary Hash index for a matching value.</p>
+      <p>In a Greenplum Database instance, a Hash Join algorithm can be used with the following join
+         semantics:</p>
+      <ul>
+         <li>Left Join</li>
+         <li>Left Anti Semi Join</li>
+         <li>Full Join</li>
+         <li>Right Join</li>
+         <li>EXISTS Join</li>
+         <li>Reverse In Join</li>
+         <li>Unique Inner Join</li>
+         <li>Unique Outer Join</li>
+      </ul>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Hash Spill Batches</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Batches</entry>
+                  <entry>The current batch being spilled.</entry>
+               </row>
+               <row>
+                  <entry>Hash Spill Tuples</entry>
+                  <entry>
+                     <codeph>m2_name</codeph>
+                  </entry>
+                  <entry>Tuples</entry>
+                  <entry>The current number of spilled tuples.</entry>
+               </row>
+               <row>
+                  <entry>Hash Spill Bytes</entry>
+                  <entry>
+                     <codeph>m3_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The current number of bytes spilled to disk.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-HashAggregate">
+         <b>HashAggregate</b>
+      </p>
+      <p>The HashAggregate iterator is similar to the GroupAggregate iterator. A single input set is
+         required by the HashAggregate iterator and it creates a hash table from the input. However,
+         it does not require its input to be ordered.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Total Spill Tuples</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Tuples</entry>
+                  <entry>The number of tuples spilled to disk.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Total Spill Bytes</entry>
+                  <entry>
+                     <codeph>m2_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The number of bytes spilled to disk.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Total Spill Batches</entry>
+                  <entry>
+                     <codeph>m3_name</codeph>
+                  </entry>
+                  <entry>Batches</entry>
+                  <entry>The number of spill batches required.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Total Spill Pass</entry>
+                  <entry>
+                     <codeph>m4_name</codeph>
+                  </entry>
+                  <entry>Passes</entry>
+                  <entry>The number of passes across all of the batches.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Current Spill Pass Read Tuples</entry>
+                  <entry>
+                     <codeph>m5_name</codeph>
+                  </entry>
+                  <entry>Tuples</entry>
+                  <entry>The number of bytes read in for this spill batch</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Current Spill Pass Read Bytes</entry>
+                  <entry>
+                     <codeph>m6_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The number of tuples read in for this spill batch</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Current Spill Pass Tuples</entry>
+                  <entry>
+                     <codeph>m7_name</codeph>
+                  </entry>
+                  <entry>Tuples</entry>
+                  <entry>The number of tuples that are in each spill file in the current
+                     pass.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Current Spill Pass Bytes</entry>
+                  <entry>
+                     <codeph>m8_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The number of bytes that are in each spill file in the current
+                     pass.</entry>
+               </row>
+               <row>
+                  <entry>Aggregate Current Spill Pass Batches</entry>
+                  <entry>
+                     <codeph>m9_name</codeph>
+                  </entry>
+                  <entry>Batches</entry>
+                  <entry>
+                     <p>The number of batches created in the current pass.</p>
+                  </entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-IndexScan">
+         <b>Index Scan</b>
+      </p>
+      <p>An Index Scan operator traverses an index structure. If you specify a starting value for an
+         indexed column, the Index Scan will begin at the appropriate value. If you specify an
+         ending value, the Index Scan will complete as soon as it finds an index entry greater than
+         the ending value. A query planner uses an Index Scan operator when it can reduce the size
+         of the result set by traversing a range of indexed values, or when it can avoid a sort
+         because of the implicit ordering offered by an index.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Index Scan Restore</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Restores</entry>
+                  <entry>The number of restores.</entry>
+               </row>
+               <row>
+                  <entry>Index Scan Rescan</entry>
+                  <entry>
+                     <codeph>m2_name</codeph>
+                  </entry>
+                  <entry>Rescans</entry>
+                  <entry>The number of rescans.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-Limit">
+         <b>Limit</b>
+      </p>
+      <p>The Limit operator is used to limit the size of a result set. A Greenplum Database instance
+         uses the Limit operator for both Limit and Offset processing. The Limit operator works by
+         discarding the first x rows from its input set, returning the next y rows, and discarding
+         the remainder. If the query includes an OFFSET clause, x represents the offset amount;
+         otherwise, x is zero. If the query includes a LIMIT clause, y represents the Limit amount;
+         otherwise, y is at least as large as the number of rows in the input set.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-Materialize">
+         <b>Materialize</b>
+      </p>
+      <p>The materialize iterator is used for some sub-select operations. The query planner can
+         decide that it is less expensive to materialize a sub-select one time than it is to repeat
+         the work for each top-level row. Materialize is also used for some merge/join
+         operations.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Materialize Rescan</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Rescans</entry>
+                  <entry>The number of times the executor requested to rescan the date for this
+                     iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-MergeJoin">
+         <b>Merge Join</b>
+      </p>
+      <p>The Merge Join iterator joins two tables. Like the Nested Loop iterator, Merge Join
+         requires two input sets: An outer table and an inner table. Each input set must be ordered
+         by the join columns. In a Greenplum Database instance, the Merge Join algorithm can be used
+         with the following join semantics:</p>
+      <ul>
+         <li>Left Join</li>
+         <li>Left Anti Semi Join</li>
+         <li>Full Join</li>
+         <li>Right Join</li>
+         <li>EXISTS Join</li>
+         <li>Reverse In Join</li>
+         <li>Unique Outer joins</li>
+         <li>Unique Inner Join</li>
+      </ul>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Merge Join Inner Tuples</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Tuples</entry>
+                  <entry>The number of rows from the inner part of the query plan.</entry>
+               </row>
+               <row>
+                  <entry>Merge Join Outer Tuples</entry>
+                  <entry>
+                     <codeph>m2_name</codeph>
+                  </entry>
+                  <entry>Tuples</entry>
+                  <entry>
+                     <p>The number of rows from the Outer part of the query plan.</p>
+                  </entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-NestedLoop">
+         <b>Nested Loop</b>
+      </p>
+      <p>The Nested Loop iterator is used to perform a join between two tables, and as a result
+         requires two input sets. It fetches each table from one of the input sets (called the outer
+         table). For each row in the outer table, the other input (called the inner table) is
+         searched for a row that meets the join qualifier. In a Greenplum Database instance, a Merge
+         Join algorithm can be used with the following join semantics:</p>
+      <ul>
+         <li>Left Join</li>
+         <li>Left Anti Semi Join</li>
+         <li>Full Join</li>
+         <li>Right Join</li>
+         <li>EXISTS Join</li>
+         <li>Reverse In Join</li>
+         <li>Unique Outer Join</li>
+         <li>Unique Inner Join</li>
+      </ul>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Nested Loop Inner Tuples</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Tuples</entry>
+                  <entry>The number of rows from the inner part of the query plan.</entry>
+               </row>
+               <row>
+                  <entry>Nested Loop Outer Tuples</entry>
+                  <entry>
+                     <codeph>m2_name</codeph>
+                  </entry>
+                  <entry>Tuples</entry>
+                  <entry>The number of rows from the outer part of the query plan.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-RedistributeMotion">
+         <b>Redistribute Motion</b>
+      </p>
+      <p>This iterator sends an outbound tuple to only one destination based on the value of a
+         hash.</p>
+      <p>Note that the Motion metrics for the iterator are useful when investigating potential
+         networking issues in the Greenplum Database system. Typically, the "Ack Time" values should
+         be very small (microseconds or milliseconds). However if the "Ack Time" values are one or
+         more seconds (particularly the "Motion Min Ack Time" metric), then a network performance
+         issue likely exists.</p>
+      <p>Also, if there are a large number of packets being dropped because of queue overflow, you
+         can increase the value for the <codeph>gp_interconnect_queue_depth</codeph> system
+         configuration parameter to improve performance. See the <i>Greenplum Database Reference
+            Guide</i> for more in formation about system configuration parameters.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Motion Bytes Sent</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The number of bytes sent by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Motion Total Ack Time</entry>
+                  <entry>
+                     <codeph>m2_name</codeph>
+                  </entry>
+                  <entry>Microseconds</entry>
+                  <entry>The total amount of time that the iterator waited for an acknowledgement
+                     after sending a packet of data.</entry>
+               </row>
+               <row>
+                  <entry>Motion Average Ack Time</entry>
+                  <entry>
+                     <codeph>m3_name</codeph>
+                  </entry>
+                  <entry>Microseconds</entry>
+                  <entry>The average amount of time that the iterator waited for an acknowledgement
+                     after sending a packet of data.</entry>
+               </row>
+               <row>
+                  <entry>Motion Max Ack Time</entry>
+                  <entry>
+                     <codeph>m4_name</codeph>
+                  </entry>
+                  <entry>Microseconds</entry>
+                  <entry>The maximum amount of time that the iterator waited for an acknowledgement
+                     after sending a packet of data.</entry>
+               </row>
+               <row>
+                  <entry>Motion Min Ack Time</entry>
+                  <entry>
+                     <codeph>m5_name</codeph>
+                  </entry>
+                  <entry>Microseconds</entry>
+                  <entry>The minimum amount of time that the iterator waited for an acknowledgement
+                     after sending a packet of data.</entry>
+               </row>
+               <row>
+                  <entry>Motion Count Resent</entry>
+                  <entry>
+                     <codeph>m6_name</codeph>
+                  </entry>
+                  <entry>Packets</entry>
+                  <entry>The total number of packets that the iterator did not acknowledge when they
+                     first arrived in the queue.</entry>
+               </row>
+               <row>
+                  <entry>Motion Max Resent</entry>
+                  <entry>
+                     <codeph>m7_name</codeph>
+                  </entry>
+                  <entry>Packets</entry>
+                  <entry>The maximum number of packets that the iterator did not acknowledge when
+                     they first arrived in the queue. This metric is applied on a per packet basis.
+                     For example, a value of "10" indicates that a particular packet did not get
+                     acknowledged by this iterator 10 times, and that this was the maximum for this
+                     iterator.</entry>
+               </row>
+               <row>
+                  <entry>Motion Bytes Received</entry>
+                  <entry>
+                     <codeph>m8_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The number of bytes received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Motion Count Dropped</entry>
+                  <entry>
+                     <codeph>m9_name</codeph>
+                  </entry>
+                  <entry>Packets</entry>
+                  <entry>
+                     <p>The number of packets dropped by the iterator because of buffer
+                        overruns.</p>
+                  </entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-Result">
+         <b>Result</b>
+      </p>
+      <p>The Result iterator is used to either (1) execute a query that does not retrieve data from
+         a table, or evaluate the parts of a WHERE clause that do not depend on data retrieved from
+         a table. It can also be used if the top node in the query plan is an Append iterator.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-Repeat">
+         <b>Repeat</b>
+      </p>
+      <p>This iterator repeats every input operator a certain number of times. This is typically
+         used for certain grouping operations.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-SeqScan">
+         <b>Seq Scan</b>
+      </p>
+      <p>The Seq Scan iterator scans heap tables, and is the most basic query iterator. Any
+         single-table query can be done by using the Seq Scan iterator. Seq Scan starts at the
+         beginning of a heap table and scans to the end of the heap table. For each row in the heap
+         table, Seq Scan evaluates the query constraints (the WHERE clause). If the constraints are
+         satisfied, the required columns are added to the result set.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Seq Scan Page Stats</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Pages</entry>
+                  <entry>The number of pages scanned.</entry>
+               </row>
+               <row>
+                  <entry>Seq Scan Restore Pos</entry>
+                  <entry>
+                     <codeph>m2_name</codeph>
+                  </entry>
+                  <entry>Restores</entry>
+                  <entry>The number of times the executor restored the scan position.</entry>
+               </row>
+               <row>
+                  <entry>Seq Scan Rescan</entry>
+                  <entry>
+                     <codeph>m3_name</codeph>
+                  </entry>
+                  <entry>Rescans</entry>
+                  <entry>The number of times the executor requested to rescan the date for this
+                     iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-SetOp">
+         <b>SetOp</b>
+      </p>
+      <p>There are four SetOp iterators:</p>
+      <ul>
+         <li>Intersect</li>
+         <li>Intersect All</li>
+         <li>Except</li>
+         <li>Except All</li>
+      </ul>
+      <p>These iterators are produced only when the query planner encounters an
+            <codeph>INTERSECT</codeph>, <codeph>INTERSECT ALL</codeph>, <codeph>EXCEPT</codeph>, or
+            <codeph>EXCEPT ALL</codeph> clause, respectively.</p>
+      <p>All SetOp iterators require two input sets. They combine the input sets into a sorted list,
+         and then groups of identical rows are identified. For each group, the SetOp iterators
+         counts the number of rows contributed by each input set, then uses the counts to determine
+         the number of rows to add to the result set.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-SharedScan">
+         <b>Shared Scan</b>
+      </p>
+      <p>This iterator evaluates the common parts of a query plan. It shares the output of the
+         common sub-plans with all other iterators, so that the sub-plan only needs to execute one
+         time.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Seq Scan Page Stats</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Pages</entry>
+                  <entry>The number of pages scanned.</entry>
+               </row>
+               <row>
+                  <entry>Seq Scan Restore Pos</entry>
+                  <entry>
+                     <codeph>m2_name</codeph>
+                  </entry>
+                  <entry>Restores</entry>
+                  <entry>The number of times the executor restored the scan position.</entry>
+               </row>
+               <row>
+                  <entry>Seq Scan Rescan</entry>
+                  <entry>
+                     <codeph>m3_name</codeph>
+                  </entry>
+                  <entry>Rescans</entry>
+                  <entry>The number of times the executor requested to rescan the date for this
+                     iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-Sort">
+         <b>Sort</b>
+      </p>
+      <p>The Sort iterator imposes an ordering on the result set. A Greenplum Database instance uses
+         two different sort strategies: An in-memory sort and an on-disk sort. If the size of the
+         result set exceeds the available memory, the Sort iterator distributes the input set to a
+         collection of sorted work files and then merges the work files back together again. If the
+         result set is less than the available memory, the sort is done in memory.</p>
+      <p>The Sort iterator is used for many purposes. A Sort can be used to satisfy an <codeph>ORDER
+            BY</codeph> clause. Also, some query operators require their input sets to be
+         ordered.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Sort Memory Usage</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The number of bytes used by the sort.</entry>
+               </row>
+               <row>
+                  <entry>Sort Spill Tuples</entry>
+                  <entry>
+                     <codeph>m2_name</codeph>
+                  </entry>
+                  <entry>Tuples</entry>
+                  <entry>The current number of spilled tuples.</entry>
+               </row>
+               <row>
+                  <entry>Sort Spill Bytes</entry>
+                  <entry>
+                     <codeph>m3_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The current number of spilled bytes.</entry>
+               </row>
+               <row>
+                  <entry>Sort Spill Pass</entry>
+                  <entry>
+                     <codeph>m4_name</codeph>
+                  </entry>
+                  <entry>Passes</entry>
+                  <entry>The number of merge passes. Each merge pass merges several sorted runs into
+                     larger runs.</entry>
+               </row>
+               <row>
+                  <entry>Sort Current Spill Pass Tuples</entry>
+                  <entry>
+                     <codeph>m5_name</codeph>
+                  </entry>
+                  <entry>Tuples</entry>
+                  <entry>The number of tuples spilled in the current spill pass.</entry>
+               </row>
+               <row>
+                  <entry>Sort Current Spill Pass Bytes</entry>
+                  <entry>
+                     <codeph>m6_name</codeph>
+                  </entry>
+                  <entry>Bytes</entry>
+                  <entry>The number of bytes spilled in the current spill pass.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-SubqueryScan">
+         <b>Subquery Scan</b>
+      </p>
+      <p>A Subquery Scan iterator is a pass-through iterator. It scans through its input set, adding
+         each row to the result set. This iterator is used for internal purposes and has no affect
+         on the overall query plan.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+               <row>
+                  <entry>Subquery Scan Rescan</entry>
+                  <entry>
+                     <codeph>m1_name</codeph>
+                  </entry>
+                  <entry>Rescans</entry>
+                  <entry>The number of times the executor requested to rescan the date for this
+                     iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-TidScan">
+         <b>Tid Scan</b>
+      </p>
+      <p>The Tid Scan (tuple ID scan) iterator is used whenever the query planner encounters a
+         constraint of the form <codeph>ctid = expression</codeph> or <codeph>expression =
+            ctid</codeph>. This specifies a tuple ID, an identifier that is unique within a table.
+         The tuple ID works like a bookmark, but is valid only within a single transaction. After
+         the transaction completes, the tuple ID is not used again.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-Unique">
+         <b>Unique</b>
+      </p>
+      <p>The Unique iterator eliminates duplicate values from the input set. The input set must be
+         ordered by the columns, and the columns must be unique. The Unique operator removes only
+         rows — it does not remove columns and it does not change the ordering of the result set.
+         Unique can return the first row in the result set before it has finished processing the
+         input set. The query planner uses the Unique operator to satisfy a
+            <codeph>DISTINCT</codeph> clause. Unique is also used to eliminate duplicates in a
+            <codeph>UNION</codeph>.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-ValuesScan">
+         <b>Values Scan</b>
+      </p>
+      <p>The Value Scan iterator is used to iterate over a set of constant tuples.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <p id="db-Window">
+         <b>Window</b>
+      </p>
+      <p>The Window function performs calculations across sets of rows that are related to the
+         current query row. The Window iterator computes Window functions on the input set of
+         rows.</p>
+      <table>
+         <tgroup cols="4">
+            <thead>
+               <row>
+                  <entry>Metric</entry>
+                  <entry>Metric Column</entry>
+                  <entry>Unit</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>Rows in</entry>
+                  <entry>
+                     <codeph>m0_name</codeph>
+                  </entry>
+                  <entry>Rows</entry>
+                  <entry>The number of tuples received by the iterator.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+   </body>
+</topic>

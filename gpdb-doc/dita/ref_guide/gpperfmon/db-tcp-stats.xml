@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="db-tcp_stats">
+   <title>tcp_stats_*</title>
+   <body>
+      <p>The <codeph>tcp_stats_*</codeph> tables store statistical metrics about TCP communications
+         for a Greenplum Database instance.</p>
+      <p>These tables are in place for future use and are not currently populated.</p>
+      <p>There are three system tables, all having the same columns:</p>
+      <ul>
+         <li>
+            <codeph>tcp_stats_now</codeph> is an external table whose data files are stored in
+               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>.</li>
+         <li>
+            <codeph>tcp_stats_tail</codeph> is an external table whose data files are stored in
+               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. This is a transitional table
+            for TCP statistical data that has been cleared from <codeph>tcp_stats_now</codeph> but
+            has not yet been committed to <codeph>tcp_stats_history</codeph>. It typically only
+            contains a few minutes worth of data.</li>
+         <li>
+            <codeph>tcp_stats_history</codeph> is a regular table that stores historical TCP
+            statistical data. It is pre-partitioned into monthly partitions. Partitions are
+            automatically added in two month increments as needed. Administrators must drop old
+            partitions for the months that are no longer needed.</li>
+      </ul>
+      <table>
+         <tgroup cols="2">
+            <thead>
+               <row>
+                  <entry>Column</entry>
+                  <entry>Type</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>
+                     <codeph>segments_received</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Number of TCP segments received.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>segments_sent</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Number of TCP segments sent.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>segments_retransmitted</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Number of TCP segments retransmitted.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>active_connections</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Number of active TCP connections.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>passive_connections</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Number of passive TCP connections.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>failed_connection_attempts</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Number of failed TCP connection attempts.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>connections_established</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Number of TCP connections established.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>connection_resets_received</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Number of TCP connection resets received.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>connection_resets_sent</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Number of TCP connection resets sent.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+   </body>
+</topic>
