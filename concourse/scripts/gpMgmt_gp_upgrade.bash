@@ -22,11 +22,6 @@ function setup_gpadmin_user() {
     ./gpdb_src/concourse/scripts/setup_gpadmin_user.bash "$TEST_OS"
 }
 
-function install_golang() {
-# todo change to container or AMI
-    su -c "./gpdb_src/concourse/scripts/install_golang.bash --64" gpadmin
-}
-
 function _main() {
 
     configure
@@ -34,7 +29,6 @@ function _main() {
     setup_gpadmin_user
     make_cluster
     gen_env
-    install_golang
     run_test
 }
 
