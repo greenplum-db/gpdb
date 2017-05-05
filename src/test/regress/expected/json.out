@@ -837,3 +837,22 @@ select * from json_populate_recordset(row('def',99,null)::jpop,'[{"a":[100,200,3
 ERROR:  cannot call json_populate_recordset on a nested object
 select * from json_populate_recordset(row('def',99,null)::jpop,'[{"c":[100,200,300],"x":43.2},{"a":{"z":true},"b":3,"c":"2012-01-20 10:42:53"}]') q;
 ERROR:  cannot call json_populate_recordset on a nested object
+-- checking proisstrict settings
+select '[{"a":1}]'::json->0->'b';
+ ?column? 
+----------
+ 
+(1 row)
+
+select '[{"a":1}]'::json->1;
+ ?column? 
+----------
+ 
+(1 row)
+
+select '[{"a":1}]'::json->1->'a';
+ ?column? 
+----------
+ 
+(1 row)
+

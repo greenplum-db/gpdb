@@ -265,3 +265,9 @@ select * from json_populate_recordset(null::jpop,'[{"a":"blurfl","x":43.2},{"b":
 select * from json_populate_recordset(row('def',99,null)::jpop,'[{"a":"blurfl","x":43.2},{"b":3,"c":"2012-01-20 10:42:53"}]') q;
 select * from json_populate_recordset(row('def',99,null)::jpop,'[{"a":[100,200,300],"x":43.2},{"a":{"z":true},"b":3,"c":"2012-01-20 10:42:53"}]') q;
 select * from json_populate_recordset(row('def',99,null)::jpop,'[{"c":[100,200,300],"x":43.2},{"a":{"z":true},"b":3,"c":"2012-01-20 10:42:53"}]') q;
+
+-- checking proisstrict settings
+
+select '[{"a":1}]'::json->0->'b';
+select '[{"a":1}]'::json->1;
+select '[{"a":1}]'::json->1->'a';
