@@ -30,7 +30,7 @@ if [ -f $FUNCTIONS ]; then
     . $FUNCTIONS
     . $WORKDIR/lib/gp_bash_version.sh
 else
-    echo "[FATAL]:-Cannot source $FUNCTIONS file Script Exits!"
+    echo "[FATAL]:-Cannot source $FUNCTIONS file, script Exits!"
     exit 2
 fi
 

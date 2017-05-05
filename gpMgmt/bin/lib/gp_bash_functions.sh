@@ -1305,7 +1305,7 @@ CHK_GPDB_ID () {
 			fi
 			if [ x$GPDB_ID_CHK != x$USER_CHK ];then
 				LOG_MSG "[WARN]:-\$USER mismatch, id returns $GPDB_ID, \$USER returns $USER" 1
-				LOG_MSG "[WARN]:-The GPDB super user account that owns the initdb binary should run these utilities" 1
+				LOG_MSG "[WARN]:-The GPDB superuser account that owns the initdb binary should run these utilities" 1
 				LOG_MSG "[WARN]:-This may cause problems when these utilities are run as $USER" 1
 			fi
 		else
@@ -1320,7 +1320,7 @@ CHK_GPDB_ID () {
 			fi
 			if [ x$GPDB_ID_CHK != x$LOGNAME_CHK ];then
 				LOG_MSG "[WARN]:-\$LOGNAME mismatch, id returns $GPDB_ID_CHK, \$LOGNAME returns $LOGNAME_CHK" 1
-				LOG_MSG "[WARN]:-The GPDB super user account that owns the initdb binary should run these utilities" 1
+				LOG_MSG "[WARN]:-The GPDB superuser account that owns the initdb binary should run these utilities" 1
 				LOG_MSG "[WARN]:-This may cause problems when these utilities are run as $LOGNAME" 1
 			fi
 		else
