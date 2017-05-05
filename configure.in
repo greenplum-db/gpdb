@@ -593,7 +593,7 @@ else
   cc_string=$CC
 fi
 AC_DEFINE_UNQUOTED(PG_VERSION_STR,
-                   ["PostgreSQL $PG_VERSION (Greenplum Database $GP_VERSION) on $host, compiled by $cc_string"],
+                   ["PostgreSQL $PG_PACKAGE_VERSION (Greenplum Database $GP_VERSION) on $host, compiled by $cc_string"],
                    [A string containing the version number, platform, and C compiler])
 
 AC_DEFINE_UNQUOTED(GP_VERSION,
