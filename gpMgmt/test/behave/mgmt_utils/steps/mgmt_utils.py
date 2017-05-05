@@ -657,7 +657,7 @@ def impl(context, dbname, tablename):
 @when('the segments are synchronized')
 @then('the segments are synchronized')
 def impl(context):
-    times = 30
+    times = 60
     sleeptime = 10
 
     for i in range(times):
