@@ -7,11 +7,6 @@ Feature: Validate command line arguments
         Then gpdbrestore should return a return code of 2
         And gpdbrestore should print "Cannot specify --list-backup and -e together" to stdout
 
-    Scenario: gpdbrestore, -s option with special chars
-        Given the backup test is initialized with no backup files
-        When the user runs command "gpdbrestore -s " DB\`~@#\$%^&*()_-+[{]}|\\;:.;\n\t \\'/?><;2 ""
-        Then gpdbrestore should print "Name has an invalid character" to stdout
-
     Scenario: Funny characters in the table name or schema name for gpdbrestore
         Given the backup test is initialized with no backup files
         And database "testdb" exists

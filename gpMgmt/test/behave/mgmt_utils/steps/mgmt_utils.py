@@ -1088,6 +1088,8 @@ def impl(context, options):
 
 @then('verify that there is no table "{tablename}" in "{dbname}"')
 def impl(context, tablename, dbname):
+    dbname = replace_special_char_env(dbname)
+    tablename = replace_special_char_env(tablename)
     if check_table_exists(context, dbname=dbname, table_name=tablename):
         raise Exception("Table '%s' still exists when it should not" % tablename)
 
@@ -4404,6 +4406,12 @@ def impl(context, dbname):
 
 @given('the backup test is initialized for special characters')
 def impl(context):
+    os.environ["SP_CHAR_DB"] = """ DB`~@#$%^&*()_-+[{]}|\;: \\'/?><;1 """
+    os.environ["SP_CHAR_SCHEMA"] = """ S`~@#$%^&*()-+[{]}|\;: \\'"/?><1 """
+    os.environ["SP_CHAR_SCHEMA2"] = """ S`~@#$%^&*()_-+[{]}|\;: \\'"/?><2 """
+    os.environ["SP_CHAR_HEAP"] = """ heap_T`~@#$%^&*()-+[{]}|\;: \\'"/?><1 """
+    os.environ["SP_CHAR_AO"] = """ ao_T`~@#$%^&*()-+[{]}|\;: \\'"/?><1 """
+    os.environ["SP_CHAR_CO"] = """ co_T`~@#$%^&*()-+[{]}|\;: \\'"/?><1 """
     context.execute_steps(u'''
         Given the database is running
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_database.sql template1"
