@@ -41,7 +41,7 @@ GP_UNIQUE_COMMAND=gpstart
 
 findCmdInPath() {
 		cmdtofind=$1
-		
+
 		if [ $cmdtofind = 'awk' ] && [ `uname` = SunOS ]; then
 			if [ -f "/usr/xpg4/bin/awk" ]; then
 				CMD=/usr/xpg4/bin/awk
@@ -172,7 +172,7 @@ FROM pg_catalog.pg_database d
   JOIN pg_catalog.pg_authid r ON d.datdba = r.oid
 ORDER BY 1;"
 #******************************************************************************
-# Greenplum OS Settings 
+# Greenplum OS Settings
 #******************************************************************************
 OS_OPENFILES=65535
 #******************************************************************************
@@ -253,12 +253,12 @@ LOG_MSG () {
 		if [ x"" == x"$DEBUG_LEVEL" ];then
 			DEBUG_LEVEL=1
 		fi
-		if [ $# -eq 2 ];then 
+		if [ $# -eq 2 ];then
 			DISPLAY_TXT=1
 		fi
 		if [ $VERBOSE ]; then
 				if [ $DEBUG_LEVEL -eq 1 ] || [ $DISPLAY_TXT -eq 1 ];then
-			        $ECHO "${CUR_DATE}:${TIME}:${PROG_PIDNAME}:${CALL_HOST}:${USER_NAME}-$1" | $TEE -a $LOG_FILE	
+			        $ECHO "${CUR_DATE}:${TIME}:${PROG_PIDNAME}:${CALL_HOST}:${USER_NAME}-$1" | $TEE -a $LOG_FILE
 				else
 				$ECHO "${CUR_DATE}:${TIME}:${PROG_PIDNAME}:${CALL_HOST}:${USER_NAME}-$1" >> $LOG_FILE
 				fi
@@ -290,7 +290,7 @@ POSTGRES_VERSION_CHK() {
     else
 	VERSION_MATCH=1
     fi
-    
+
 
     LOG_MSG "[INFO]:-End Function $FUNCNAME"
 
@@ -339,8 +339,8 @@ ERROR_CHK () {
 			LOG_MSG "[INFO]:-End Function $FUNCNAME"
 			ERROR_EXIT "[FATAL]:-Failed to complete $MSG_TXT " 2
 		fi
-	fi	
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"	
+	fi
+	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
 SED_PG_CONF () {
@@ -363,7 +363,7 @@ SED_PG_CONF () {
 				if [ $RETVAL -ne 0 ]; then
 					LOG_MSG "[WARN]:-Failed to append line $SUB_TXT to $FILENAME" 1
 				else
-					LOG_MSG "[INFO]:-Appended line $SUB_TXT to $FILENAME" 
+					LOG_MSG "[INFO]:-Appended line $SUB_TXT to $FILENAME"
 				fi
 			else
 				if [ $KEEP_PREV -eq 0 ];then
@@ -460,29 +460,29 @@ CREATE_SPREAD_MIRROR_ARRAY () {
 	# Current host and subnet we are working on
 	CURRENT_HOST=0
 	CURRENT_SUBNET=0
-	
+
 	# Destination host and subnet
 	DEST_HOST=0
 	DEST_SUBNET=0
-	
+
 	if [ x"$NUM_MHOST_NODE" != x"" ] && [ $NUM_MHOST_NODE -gt 0 ] ; then
 		((DIRS_PER_SUBNET=$NUM_DATADIR/$NUM_MHOST_NODE))
 	else
 		DIRS_PER_SUBNET=$NUM_DATADIR
 	fi
-	
+
 	((MAX_SUBNET=$NUM_DATADIR/$DIRS_PER_SUBNET))
 	((MAX_HOST=${#QE_PRIMARY_ARRAY[@]}/$NUM_DATADIR))
-	
+
 	SEGS_PROCESSED=0
 	SEGS_PROCESSED_HOST=0
 
 
 	# The following is heavily dependent on sort order of primary array.  This sort
-	# order will be affected by hostnames so something non-standard will cause 
-	# strange behaviour.  This isn't new (just recording this fact for future generations) 
+	# order will be affected by hostnames so something non-standard will cause
+	# strange behaviour.  This isn't new (just recording this fact for future generations)
 	# and can be worked around with a mapping file to gpinitsystem (-I option).
-	# The right way to do this would require us to connect to remote hosts, determine 
+	# The right way to do this would require us to connect to remote hosts, determine
 	# what subnet we are on for that hostname and then build the array that way.  We *will*
 	# do this once this is in python (or anything other than BASH)
 	LOG_MSG "[INFO]:-Building spread mirror array type $MULTI_TXT, please wait..." 1
@@ -514,12 +514,12 @@ CREATE_SPREAD_MIRROR_ARRAY () {
 			if [ $DEST_SUBNET -ge $MAX_SUBNET ] ; then DEST_SUBNET=0; fi
 			# Increment the number of segments we've processed for this host
 			((SEGS_PROCESSED_HOST=$SEGS_PROCESSED_HOST+1))
-		fi			
-        
+		fi
+
         # Handle the case where it's a single hostname (thus a single subnet)
 		# This case will mainly be for QA testing
 		if [ $NUM_DATADIR -eq $DIRS_PER_SUBNET ] ; then DEST_SUBNET=0; fi
-		
+
 		# Handle possible loop
 		if [ $DEST_SUBNET -ge $MAX_SUBNET ] ; then DEST_SUBNET=0; fi
 
@@ -561,7 +561,7 @@ CREATE_GROUP_MIRROR_ARRAY () {
 
 	# Current host we are working on
 	CURRENT_HOST=0
-	
+
 	# Destination host and subnet
 	DEST_HOST=0
 	DEST_SUBNET=0
@@ -579,11 +579,11 @@ CREATE_GROUP_MIRROR_ARRAY () {
 		else
 			if [ $(($PRIMARY_INDEX%$DIRS_PER_SUBNET)) -eq 0 ] ; then
 				((DEST_SUBNET=$DEST_SUBNET+1))
-			fi	
+			fi
 		fi
 
 		# Handle possible loop
-		if [ $DEST_SUBNET -ge $MAX_SUBNET ] ; then DEST_SUBNET=0; fi		
+		if [ $DEST_SUBNET -ge $MAX_SUBNET ] ; then DEST_SUBNET=0; fi
 
 		((MIRROR_INDEX=($DEST_HOST*$NUM_DATADIR)+($DEST_SUBNET*$DIRS_PER_SUBNET)))
 
@@ -597,7 +597,7 @@ CREATE_GROUP_MIRROR_ARRAY () {
 		P_REPL_PORT=`$ECHO $QE_LINE|$AWK -F"~" '{print $6}'`
 		GP_M_PORT=$(($P_PORT+$MIRROR_OFFSET))
 		M_REPL_PORT=$(($P_REPL_PORT+$MIRROR_REPLICATION_PORT_OFFSET))
-		
+
 		QE_MIRROR_ARRAY=(${QE_MIRROR_ARRAY[@]} ${QE_M_NAME}~${GP_M_PORT}~${GP_M_DIR}~${DBID_COUNT}~${M_CONTENT}~${M_REPL_PORT})
 		POSTGRES_PORT_CHK $GP_M_PORT $QE_M_NAME
 
@@ -620,8 +620,8 @@ GET_REPLY () {
 		LOG_MSG "[WARN]:-User abort requested, Script Exits!" 1
 		exit 1
 	fi
-} 
-	
+}
+
 CHK_MULTI_HOME () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	GET_QE_DETAILS
@@ -839,56 +839,56 @@ BUILD_PERFMON() {
 	$MKDIR -p $GP_DIR/gpperfmon/conf $GP_DIR/gpperfmon/logs $GP_DIR/gpperfmon/data
 	$CAT <<_EOF_ >> $GP_DIR/gpperfmon/conf/gpperfmon.conf
 [GPMMON]
-# quantum specifies the time in seconds between updates from 
-# performance monitor agents on all segments. Valid values 
+# quantum specifies the time in seconds between updates from
+# performance monitor agents on all segments. Valid values
 # are 10, 15, 20, 30, or 60
 quantum = 15
 
-# min_query_time specifies the minimum query run time 
-# in seconds for statistics collection. The monitor logs all 
-# queries that run longer than this value in the queries_history 
-# table. For queries with shorter run times, no historical 
+# min_query_time specifies the minimum query run time
+# in seconds for statistics collection. The monitor logs all
+# queries that run longer than this value in the queries_history
+# table. For queries with shorter run times, no historical
 # data is collected.
 min_query_time = 20
 
-# Specifies the minimum iterator run time in seconds for 
-# statistics collection. The monitor logs all iterators that 
-# run longer than this value in the iterators_history table. 
-# For iterators with shorter run times, no data is collected. 
+# Specifies the minimum iterator run time in seconds for
+# statistics collection. The monitor logs all iterators that
+# run longer than this value in the iterators_history table.
+# For iterators with shorter run times, no data is collected.
 # Minimum value is 10 seconds.
 min_detailed_query_time = 60
 
 # This should be a percentage between 0 and 100 and should be
-# less than the error_disk_space_percentage.  If a filesystem’s 
-# disk space used percentage equals or exceeds this value a 
-# warning will be logged and a warning email/snmp trap may be 
-# sent.  If this configuration is set to 0 or not specified, no 
+# less than the error_disk_space_percentage.  If a filesystem’s
+# disk space used percentage equals or exceeds this value a
+# warning will be logged and a warning email/snmp trap may be
+# sent.  If this configuration is set to 0 or not specified, no
 # warnings are sent.
 #warning_disk_space_percentage = 80
 
-# This should be a percentage between 0 and 100 and should be 
-# greater than the warning_disk_space_percentage. If a 
-# filesystem’s disk space used percentage equals or exceeds 
-# this value an error will be logged and a error email/snmp 
-# trap may be sent.  If this configuration is set to 0 or not 
+# This should be a percentage between 0 and 100 and should be
+# greater than the warning_disk_space_percentage. If a
+# filesystem’s disk space used percentage equals or exceeds
+# this value an error will be logged and a error email/snmp
+# trap may be sent.  If this configuration is set to 0 or not
 # specified, no errors are sent.
 #error_disk_space_percentage = 90
 
-#This is the interval in minutes that limits the number of 
-#error/warning messages that are sent. The minimum value for 
-#this configuration is 1.  Setting this to 0 or not specifying 
-#this configuration results in it getting set to the minimum.  
+#This is the interval in minutes that limits the number of
+#error/warning messages that are sent. The minimum value for
+#this configuration is 1.  Setting this to 0 or not specifying
+#this configuration results in it getting set to the minimum.
 disk_space_interval = 60
 
-#This is the maximum number of error/warning messages that 
+#This is the maximum number of error/warning messages that
 #will be sent in the disk_space_interval.  The maximum value
-#for this configuration is 50.  The minimum value for this 
-#configuration is 1.  Setting this configuration to greater 
-#than 50 or not specifying this configuration results in it 
+#for this configuration is 50.  The minimum value for this
+#configuration is 1.  Setting this configuration to greater
+#than 50 or not specifying this configuration results in it
 #getting set to the maximum.
 max_disk_space_messages_per_interval = 10
 
-# The number of partitions for statistics data in month 
+# The number of partitions for statistics data in month
 # will be retained. Older partitions will be dropped.
 #partition_age = 6
 
@@ -910,7 +910,7 @@ CHK_DB_RUNNING () {
 		if [ ! -f $MASTER_DATA_DIRECTORY/$PG_PID ]; then
 			LOG_MSG "[FATAL]:-No $MASTER_DATA_DIRECTORY/$PG_PID file" 1
 			ERROR_EXIT "[FATAL]:-Run gpstart to start the Greenplum database." 2
-		fi		
+		fi
 		GET_MASTER_PORT $MASTER_DATA_DIRECTORY
 		export $EXPORT_LIB_PATH;env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$DEFAULTDB" -A -t -c"SELECT d.datname as \"Name\",
        r.rolname as \"Owner\",
@@ -944,7 +944,7 @@ ORDER BY 1;" >> $LOG_FILE 2>&1
 GET_QD_DB_NAME () {
 		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 		GET_MASTER_PORT $MASTER_DATA_DIRECTORY
-		CHK_DB_RUNNING	
+		CHK_DB_RUNNING
 		#Check if we have PGDATABASE environment variable set, if so see if that database exists
 		if [ x"" != x"$PGDATABASE" ];then
 			LOG_MSG "[INFO]:-PGDATABASE set, checking for this database"
@@ -979,7 +979,7 @@ GET_QE_DETAILS () {
 		else
 		    DBUSER=$PGUSER
 		fi
-		
+
 		if [ $# -eq 0 ];then
 			QE_ARRAY=(`${EXPORT_LIB_PATH};env PGOPTIONS="-c gp_session_role=utility" $PSQL -q -p $MASTER_PORT -U $DBUSER -d "$QD_DBNAME" -A -t -c"select a.hostname, a.datadir, a.port, b.valid, b.definedprimary from $CONFIG_TABLE a, $GP_PG_VIEW b where a.dbid=b.dbid and a.content<>-1 order by b.dbid;"`) > /dev/null 2>&1
 		else
@@ -1062,7 +1062,7 @@ GET_PG_PID_ACTIVE () {
 			if [ $RETVAL -ne 0 ];then
 				PID=0
 				EXIT_STATUS=1
-			else	
+			else
 				PORT_ARRAY=(`$TRUSTED_SHELL $HOST "$NETSTAT -an 2>/dev/null |$GREP ".s.PGSQL.${PORT}" 2>/dev/null"|$AWK '{print $NF}'|$AWK -F"." '{print $NF}'|$SORT -u`)
 				for P_CHK in ${PORT_ARRAY[@]}
 				do
@@ -1230,7 +1230,7 @@ PARALLEL_WAIT () {
 }
 
 PARALLEL_SUMMARY_STATUS_REPORT () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"	
+	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	REPORT_FAIL=0
 	if [ -f $1 ];then
 	        KILLED_COUNT=`$GREP -c "KILLED:" $PARALLEL_STATUS_FILE`
@@ -1262,7 +1262,7 @@ PARALLEL_SUMMARY_STATUS_REPORT () {
 }
 
 CHK_GPDB_ID () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"	
+	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	if [ -f ${INITDB} ];then
 	        PERMISSION=`ls -al ${INITDB}|$AWK '{print $1}'`
 		MASTER_INITDB_ID=`ls -al ${INITDB}|$AWK '{print $3}'`
@@ -1285,9 +1285,9 @@ CHK_GPDB_ID () {
 			GPDB_GROUPID_CHK=`$ECHO $GPDB_GROUPID|$CUT -c1-$GROUP_INIT_CHAR`
 		else
 			GPDB_GROUPID_CHK=$GPDB_GROUPID
-		fi		
+		fi
 
-		if [ x$GPDB_ID_CHK == x$MASTER_INITDB_ID ] && [ x"x" == x"$USER_EXECUTE" ];then		
+		if [ x$GPDB_ID_CHK == x$MASTER_INITDB_ID ] && [ x"x" == x"$USER_EXECUTE" ];then
 		    LOG_MSG "[INFO]:-Current user id of $GPDB_ID, matches initdb id of $MASTER_INITDB_ID"
 		elif [ x$GPDB_GROUPID_CHK == x$MASTER_INITDB_GROUPID ] && [ x"x" == x"$GROUP_EXECUTE" ] ; then
 		    LOG_MSG "[INFO]:-Current group id of $GPDB_GROUPID, matches initdb group id of $MASTER_INITDB_GROUPID"
@@ -1431,7 +1431,7 @@ case $OS_TYPE in
         	PING6=`findCmdInPath ping6`
 		PING_TIME="-c 1"
 		DF="`findCmdInPath df` -P"
-		DU_TXT="-c" ;;	
+		DU_TXT="-c" ;;
 	freebsd ) IPV4_ADDR_LIST_CMD="$IFCONFIG -a inet"
 		IPV6_ADDR_LIST_CMD="$IFCONFIG -a inet6"
 		LIB_TYPE="LD_LIBRARY_PATH"
@@ -1441,10 +1441,9 @@ case $OS_TYPE in
 		DEFAULT_LOCALE_SETTING=en_US.utf8
 		PING_TIME="-c 1"
 		DF="`findCmdInPath df` -P"
-		DU_TXT="-c" ;;	
+		DU_TXT="-c" ;;
 	* ) echo unknown ;;
 esac
-
 
 GP_LIBRARY_PATH=`$DIRNAME \`$DIRNAME $INITDB\``/lib
 
