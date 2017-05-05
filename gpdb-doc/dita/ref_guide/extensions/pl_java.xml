@@ -857,7 +857,7 @@ Date(System.currentTimeMillis()));</codeblock>
     <topic id="topic29" xml:lang="en">
       <title id="pv157625">Installation</title>
       <body>
-        <p>Only a database super user can install PL/Java. The PL/Java utility functions are
+        <p>Only a database superuser can install PL/Java. The PL/Java utility functions are
           installed using SECURITY DEFINER so that they execute with the access permissions that
           where granted to the creator of the functions.</p>
       </body>

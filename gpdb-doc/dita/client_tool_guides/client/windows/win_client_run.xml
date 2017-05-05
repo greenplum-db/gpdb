@@ -85,7 +85,7 @@ $ psql.exe</codeblock>
             <p>After connecting to a database, <codeph>psql</codeph> provides a prompt with the name
                 of the database to which <codeph>psql</codeph> is currently connected, followed by
                 the string <codeph>=&gt;</codeph> (or <codeph>=#</codeph> if you are the database
-                super user). For example:</p>
+                superuser). For example:</p>
             <codeblock>gpdatabase=&gt;</codeblock>
             <p>At the prompt, you may type in SQL commands. A SQL command must end with a
                     <codeph>;</codeph> (semicolon) in order to be sent to the server and executed.

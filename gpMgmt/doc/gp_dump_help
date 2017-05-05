@@ -222,7 +222,7 @@ port number provided at compile time is used.
 -U <username>
 --username=<user>
 
-The database super user account name, for example bgadmin. 
+The database superuser account name, for example bgadmin.
 If not provided, the value of $PGUSER or the current OS 
 user name is used.
 

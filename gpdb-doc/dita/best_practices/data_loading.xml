@@ -52,7 +52,7 @@
         which has a <codeph>LOCATION</codeph> clause to define the location of the data and a
           <codeph>FORMAT</codeph> clause to define the formatting of the source data so that the
         system can parse the input data. Files use the <codeph>file://</codeph> protocol, and must
-        reside on a segment host in a location accessible by the Greenplum super user. The data can
+        reside on a segment host in a location accessible by the Greenplum superuser. The data can
         be spread out among the segment hosts with no more than one file per primary segment on each
         host. The number of files listed in the <codeph>LOCATION</codeph> clause is the number of
         segments that will read the external table in parallel. </p>
