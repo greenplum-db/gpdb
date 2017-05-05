@@ -55,7 +55,7 @@ data.
 OPTIONS
 *****************************************************
 
--a (do not prompt)
+-a
 
  Optional. If specified, the gpreload utility does not prompt the user
  for confirmation. 
@@ -111,12 +111,12 @@ OPTIONS
  ascending order. 
 
 
---version (show utility version)
+--version
 
  Displays the version of this utility.
 
 
--? (help)
+-?
 
  Displays the online help.
 

@@ -143,12 +143,12 @@ Limitations
 OPTIONS
 *****************************************************
 
--a (do not prompt) 
+-a
 
  Do not prompt the user for confirmation. 
 
 
--b (bypass disk space check) 
+-b
 
  Bypass disk space check. The default is to check for available disk 
  space, unless --ddboost is specified. When using Data Domain Boost, this 
@@ -166,7 +166,7 @@ OPTIONS
  processes depending on how many segment instances it needs to dump. 
 
 
--c (clear old dump files first)
+-c
 
  Specify this option to delete old backups before performing a back up. 
  In the db_dumps directory, the directory where the name is the oldest 
@@ -188,7 +188,7 @@ OPTIONS
  This option is not supported with the -u option.
 
  
--C (clean catalog before restore) 
+-C
 
  Clean out the catalog schema prior to restoring database objects. 
  gpcrondump adds the DROP command to the SQL script files when creating 
@@ -423,7 +423,7 @@ OPTIONS
  specified. 
 
 
--g (copy config files) 
+-g
 
  Secure a copy of the master and segment configuration files 
  postgresql.conf, pg_ident.conf, and pg_hba.conf. These configuration 
@@ -435,7 +435,7 @@ OPTIONS
  from cluster's config file, under the default directory configured by
  --ddboost-backupdir when the Data Domain Boost credentials were set.
 
--G (dump global objects) 
+-G
 
  Use pg_dumpall to dump global objects such as roles and tablespaces. 
  Global objects are dumped in the master data directory to 
@@ -446,14 +446,14 @@ OPTIONS
  from cluster's config file, under the default directory configured by
  --ddboost-backupdir when the Data Domain Boost credentials were set.
 
--h (record dump details) 
+-h
 
  Record details of database dump in database table 
  public.gpcrondump_history in database supplied via -x option. Utility 
  will create table if it does not currently exist. 
  This option will be deprecated in a future release.
 
--H (disable recording dump details)
+-H
 
  Disable recording details of database dump in database table
  public.gpcrondump_history in database supplied via -x option.
@@ -461,7 +461,7 @@ OPTIONS
  public.gpcrondump_history table.
  -H option cannot be selected with -h option.
 
---incremental (backup changes to append-optimized tables)
+--incremental
 
  Adds an incremental backup to a backup set. When performing an 
  incremental backup, the complete backup set created prior to the 
@@ -521,7 +521,7 @@ OPTIONS
  If --incremental is specified, this option is not supported. 
 
 
--j (vacuum before dump) 
+-j
 
  Run VACUUM before the dump starts. 
 
@@ -567,7 +567,7 @@ OPTIONS
  supported. 
 
 
--k (vacuum after dump) 
+-k
 
  Run VACUUM after the dump has completed successfully. 
 
@@ -629,7 +629,7 @@ OPTIONS
  Do not output commands to set object privileges (GRANT/REVOKE commands). 
 
 
--o (clear old dump files only)
+-o
 
  Clear out old dump files only, but do not run a dump. This will remove 
  the oldest dump directory except the current date's dump directory. 
@@ -671,13 +671,13 @@ OPTIONS
  is not supported.
 
 
--q (no screen output) 
+-q
 
  Run in quiet mode. Command output is not displayed on the screen, but is 
  still written to the log file. 
 
 
--r (rollback on failure) 
+-r
 
  Rollback the dump files (delete a partial dump) if a failure is 
  detected. The default is to not rollback. 
@@ -822,7 +822,7 @@ OPTIONS
  Specifies verbose mode. 
 
 
---version (show utility version) 
+--version
 
  Displays the version of this utility. 
 
@@ -833,7 +833,7 @@ OPTIONS
  multiple databases. 
 
 
--z (no compression) 
+-z
 
  Do not use compression. Default is to compress the dump files using 
  gzip. 
@@ -842,7 +842,7 @@ OPTIONS
  backups. 
 
 
--? (help) 
+-?
 
  Displays the online help. 
 

@@ -122,7 +122,7 @@ directory by default.
 *****************************************************
 OPTIONS
 *****************************************************
--a (do not prompt) 
+-a
 
  Do not prompt the user for confirmation. 
 
@@ -185,7 +185,7 @@ OPTIONS
  This option is not supported if --netbackup-service-host is specified. 
 
 
--e (drop target database before restore) 
+-e
 
  Drops the target database before doing the restore and then recreates 
  it. 
@@ -217,13 +217,13 @@ OPTIONS
  backup.
 
 
--L (list tablenames in backup set) 
+-L
 
  When used with the -t option, lists the table names that exist in the 
  named backup set and exits. Does not perform a restore. 
 
 
--m (restore metadata only)
+-m
 
  Performs a restore of database metadata (schema and table definitions, SET
  statements, and so forth) without restoring data.  If the --restore-stats or
@@ -286,7 +286,7 @@ OPTIONS
  that were included or excluded for the backup. 
 
 
--q (no screen output) 
+-q
 
  Run in quiet mode. Command output is not displayed on the screen, but is 
  still written to the log file. 
@@ -407,12 +407,12 @@ OPTIONS
  Specifies verbose mode. 
 
 
---version (show utility version) 
+--version
 
  Displays the version of this utility. 
 
 
--? (help) 
+-?
 
  Displays the online help. 
 

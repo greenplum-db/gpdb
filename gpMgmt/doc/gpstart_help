@@ -42,7 +42,7 @@ the system using gpinitsystem first.
 OPTIONS
 *****************************************************
 
--a (do not prompt)
+-a
 
   Do not prompt the user for confirmation.
 
@@ -65,7 +65,7 @@ OPTIONS
   The directory to write the log file. Defaults to ~/gpAdminLogs.
 
 
--m (master only)
+-m
 
   Optional. Starts the master instance only, which may be necessary 
   for maintenance tasks. This mode only allows connections to the master 
@@ -78,13 +78,13 @@ OPTIONS
   may lead to a split-brain condition and possible data loss.
 
 
--q (no screen output)
+-q
 
   Run in quiet mode. Command output is not displayed on the screen, 
   but is still written to the log file.
 
 
--R (restricted mode)
+-R
 
   Starts Greenplum Database in restricted mode (only database superusers 
   are allowed to connect).
@@ -100,23 +100,23 @@ OPTIONS
   is 60 seconds.
 
 
--v (verbose output)
+-v
 
   Displays detailed status, progress and error messages output by the utility.
 
 
--y (do not start standby master)
+-y
 
   Optional. Do not start the standby master host. The default is to start 
   the standby master host and synchronization process.
 
 
--? | -h | --help (help)
+-? | -h | --help
 
   Displays the online help.
 
 
---version (show utility version)
+--version
 
   Displays the version of this utility.
 

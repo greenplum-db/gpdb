@@ -114,7 +114,7 @@ gpstop -r
 OPTIONS
 ******************************************************
 
--a (do not prompt)
+-a
 
 Do not prompt the user for confirmation.
 
@@ -132,7 +132,7 @@ Optional. The master host data directory. If not specified,
 the value set for $MASTER_DATA_DIRECTORY will be used.
 
 
--F (full recovery)
+-F
 
 Optional. Perform a full copy of the active segment instance 
 in order to recover the failed segment. The default is to 
@@ -241,13 +241,13 @@ exchanged, number of network interfaces, network interface naming
 convention, and so on.).
 
 
--q (no screen output)
+-q
 
 Run in quiet mode. Command output is not displayed on 
 the screen, but is still written to the log file.
 
 
--r (rebalance segments)
+-r
 
 After a segment recovery, segment instances may not be returned to the 
 preferred role that they were given at system initialization time. This 
@@ -288,15 +288,15 @@ filespace configuration file in the format that is
 required by the -s option. This file should be edited 
 to supply the correct alternate filespace locations.
 
--v (verbose)
+-v
 
 Sets logging output to verbose.
 
---version (version)
+--version
 
 Displays the version of this utility.
 
--? (help)
+-?
 Displays the online help.
 
 
