@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- *	$PostgreSQL: pgsql/src/backend/executor/execAmi.c,v 1.98 2008/10/01 19:51:49  tgl Exp $
+ *	$PostgreSQL: pgsql/src/backend/executor/execAmi.c,v 1.99 2008/10/04 21:56:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -16,16 +16,10 @@
 #include "executor/instrument.h"
 #include "executor/nodeAgg.h"
 #include "executor/nodeAppend.h"
-#include "executor/nodeAssertOp.h"
-#include "executor/nodeTableScan.h"
-#include "executor/nodeDynamicTableScan.h"
-#include "executor/nodeDynamicIndexscan.h"
 #include "executor/nodeBitmapAnd.h"
 #include "executor/nodeBitmapHeapscan.h"
-#include "executor/nodeBitmapTableScan.h"
 #include "executor/nodeBitmapIndexscan.h"
 #include "executor/nodeBitmapOr.h"
-#include "executor/nodeExternalscan.h"
 #include "executor/nodeFunctionscan.h"
 #include "executor/nodeHash.h"
 #include "executor/nodeHashjoin.h"
@@ -33,23 +27,31 @@
 #include "executor/nodeLimit.h"
 #include "executor/nodeMaterial.h"
 #include "executor/nodeMergejoin.h"
-#include "executor/nodeMotion.h"
 #include "executor/nodeNestloop.h"
-#include "executor/nodePartitionSelector.h"
+#include "executor/nodeRecursiveunion.h"
 #include "executor/nodeResult.h"
 #include "executor/nodeSetOp.h"
 #include "executor/nodeSort.h"
 #include "executor/nodeSubplan.h"
 #include "executor/nodeSubqueryscan.h"
-#include "executor/nodeSequence.h"
-#include "executor/nodeTableFunction.h"
 #include "executor/nodeTidscan.h"
 #include "executor/nodeUnique.h"
 #include "executor/nodeValuesscan.h"
+#include "executor/nodeCtescan.h"
+#include "executor/nodeWorktablescan.h"
+#include "executor/nodeAssertOp.h"
+#include "executor/nodeTableScan.h"
+#include "executor/nodeDynamicTableScan.h"
+#include "executor/nodeDynamicIndexscan.h"
+#include "executor/nodeExternalscan.h"
+#include "executor/nodeBitmapTableScan.h"
+#include "executor/nodeMotion.h"
+#include "executor/nodeSequence.h"
+#include "executor/nodeTableFunction.h"
+#include "executor/nodePartitionSelector.h"
 #include "executor/nodeBitmapAppendOnlyscan.h"
 #include "executor/nodeWindow.h"
 #include "executor/nodeShareInputScan.h"
-
 
 /*
  * ExecReScan
@@ -131,6 +133,10 @@ ExecReScan(PlanState *node, ExprContext *exprCtxt)
 			ExecReScanAppend((AppendState *) node, exprCtxt);
 			break;
 
+		case T_RecursiveUnionState:
+			ExecRecursiveUnionReScan((RecursiveUnionState *) node, exprCtxt);
+			break;
+
 		case T_AssertOpState:
 			ExecReScanAssertOp((AssertOpState *) node, exprCtxt);
 			break;
@@ -152,7 +158,7 @@ ExecReScan(PlanState *node, ExprContext *exprCtxt)
 		case T_IndexScanState:
 			ExecIndexReScan((IndexScanState *) node, exprCtxt);
 			break;
-			
+
 		case T_ExternalScanState:
 			ExecExternalReScan((ExternalScanState *) node, exprCtxt);
 			break;			
@@ -201,6 +207,14 @@ ExecReScan(PlanState *node, ExprContext *exprCtxt)
 			ExecValuesReScan((ValuesScanState *) node, exprCtxt);
 			break;
 
+		case T_CteScanState:
+			ExecCteScanReScan((CteScanState *) node, exprCtxt);
+			break;
+
+		case T_WorkTableScanState:
+			ExecWorkTableScanReScan((WorkTableScanState *) node, exprCtxt);
+			break;
+
 		case T_BitmapAppendOnlyScanState:
 			ExecBitmapAppendOnlyReScan((BitmapAppendOnlyScanState *) node, exprCtxt);
 			break;
@@ -244,7 +258,7 @@ ExecReScan(PlanState *node, ExprContext *exprCtxt)
 		case T_LimitState:
 			ExecReScanLimit((LimitState *) node, exprCtxt);
 			break;
-		
+
 		case T_MotionState:
 			ExecReScanMotion((MotionState *) node, exprCtxt);
 			break;
@@ -298,12 +312,12 @@ ExecMarkPos(PlanState *node)
 		case T_AppendOnlyScanState:
 		case T_AOCSScanState:
 			insist_log(false, "SeqScan/AppendOnlyScan/AOCSScan are defunct");
-			break;			
-			
+			break;
+
 		case T_IndexScanState:
 			ExecIndexMarkPos((IndexScanState *) node);
 			break;
-			
+
 		case T_ExternalScanState:
 			elog(ERROR, "Marking scan position for external relation is not supported");
 			break;			
@@ -327,7 +341,7 @@ ExecMarkPos(PlanState *node)
 		case T_ResultState:
 			ExecResultMarkPos((ResultState *) node);
 			break;
-		
+
 		case T_MotionState:
 			ereport(ERROR, (
 				errcode(ERRCODE_CDB_INTERNAL_ERROR),
@@ -372,12 +386,12 @@ ExecRestrPos(PlanState *node)
 		case T_AppendOnlyScanState:
 		case T_AOCSScanState:
 			insist_log(false, "SeqScan/AppendOnlyScan/AOCSScan are defunct");
-			break;			
+			break;
 
 		case T_IndexScanState:
 			ExecIndexRestrPos((IndexScanState *) node);
 			break;
-			
+
 		case T_ExternalScanState:
 			elog(ERROR, "Restoring scan position is not yet supported for external relation scan");
 			break;			
@@ -401,7 +415,7 @@ ExecRestrPos(PlanState *node)
 		case T_ResultState:
 			ExecResultRestrPos((ResultState *) node);
 			break;
-		
+
 		case T_MotionState:
 			ereport(ERROR, (
 				errcode(ERRCODE_CDB_INTERNAL_ERROR),
@@ -498,6 +512,8 @@ ExecSupportsBackwardScan(Plan *node)
 		case T_TidScan:
 		case T_FunctionScan:
 		case T_ValuesScan:
+		case T_CteScan:
+		case T_WorkTableScan:
 			return true;
 
 		case T_SubqueryScan:

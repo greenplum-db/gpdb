@@ -20,10 +20,11 @@ OBJS = execAmi.o execCurrent.o execGrouping.o execJunk.o execMain.o \
        nodeBitmapAnd.o nodeBitmapOr.o \
        nodeBitmapHeapscan.o nodeBitmapIndexscan.o nodeHash.o \
        nodeHashjoin.o nodeIndexscan.o nodeMaterial.o nodeMergejoin.o \
-       nodeNestloop.o nodeFunctionscan.o nodeResult.o \
+       nodeNestloop.o nodeFunctionscan.o nodeRecursiveunion.o nodeResult.o \
        nodeSetOp.o nodeSort.o nodeUnique.o \
-       nodeValuesscan.o nodeLimit.o \
-       nodeSubplan.o nodeSubqueryscan.o nodeTidscan.o tstoreReceiver.o spi.o \
+       nodeValuesscan.o nodeCtescan.o nodeWorktablescan.o \
+       nodeLimit.o nodeSubplan.o nodeSubqueryscan.o nodeTidscan.o \
+       tstoreReceiver.o spi.o \
        nodeBitmapTableScan.o \
        nodeExternalscan.o \
        nodeDynamicIndexscan.o \
@@ -45,4 +46,5 @@ OBJS = execAmi.o execCurrent.o execGrouping.o execJunk.o execMain.o \
        execIndexscan.o \
        execHHashagg.o execGpmon.o execWorkfile.o execHeapScan.o execAOScan.o \
        execAOCSScan.o nodeBitmapAppendOnlyscan.o
+
 include $(top_srcdir)/src/backend/common.mk
