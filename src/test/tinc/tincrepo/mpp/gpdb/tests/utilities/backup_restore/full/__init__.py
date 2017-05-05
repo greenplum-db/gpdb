@@ -105,7 +105,7 @@ class BackupTestCase(TINCTestCase):
 
         #If a DDBOOST Directory wasn't specify create one
         if 'DDBOOST_DIR' not in BackupTestCase.TSTINFO:
-            dir = os.getenv('PULSE_PROJECT') + '_DIR'
+            dir = os.getenv('PULSE_PROJECT', default='GPDB') + os.getenv('PULSE_BUILD_VERSION', default='') + '_DIR'
         BackupTestCase.TSTINFO['DDBOOST_DIR'] = dir
 
         tinctest.logger.info("Using %s as the DDBoost directory to store backups" % BackupTestCase.TSTINFO['DDBOOST_DIR'])
