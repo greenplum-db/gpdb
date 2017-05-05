@@ -3,7 +3,4 @@ netserver
 stream
 Crypto
 paramiko
-stream
-Crypto
-paramiko
 gp_bash_version.sh
