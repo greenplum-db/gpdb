@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="CommandCenterDatabaseReference-log_alert">
+   <title> log_alert_* </title>
+   <body>
+      <p>The <codeph>log_alert_*</codeph> tables store <codeph>pg_log</codeph> errors and warnings. </p>
+      <p>There are three <codeph>log_alert</codeph> tables, all having the same columns:</p>
+      <ul>
+         <li><codeph>log_alert_now</codeph> is an external table whose data files are stored in
+               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. Current
+               <codeph>pg_log</codeph> errors and warnings data is stored in
+               <codeph>log_alert_now</codeph> during the period between data collection from the
+            Command Center agents and automatic commitment to the <codeph>log_alert_history</codeph>
+            table.</li>
+         <li><codeph>log_alert_tail</codeph> is an external table whose data files are stored in
+               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. This is a transitional table
+            for query workload data that has been cleared from <codeph>log_alert_now</codeph> but
+            has not yet been committed to <codeph>log_alert_history</codeph>. It typically only
+            contains a few minutes worth of data.</li>
+         <li><codeph>log_alert_history</codeph> is a regular table that stores historical
+            database-wide errors and warnings data. It is pre-partitioned into monthly partitions.
+            Partitions are automatically added in two month increments as needed. Administrators
+            must drop old partitions for the months that are no longer needed.</li>
+      </ul>
+      <table>
+         <tgroup cols="2">
+            <thead>
+               <row>
+                  <entry>Column</entry>
+                  <entry>Type</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>
+                     <codeph>logtime</codeph>
+                  </entry>
+                  <entry>timestamp with time zone</entry>
+                  <entry>Timestamp for this log</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>loguser</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>User of the query</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logdatabase</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>The accessed database</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logpid</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Process id</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logthread</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Thread number</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>loghost</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Host name or ip address</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logport</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Port number</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logsessiontime </codeph>
+                  </entry>
+                  <entry>timestamp with time zone</entry>
+                  <entry>Session timestamp</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logtransaction</codeph>
+                  </entry>
+                  <entry>integer</entry>
+                  <entry>Transaction id</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logsession</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Session id</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logcmdcount</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Command count</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logsegment</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Segment number</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logslice</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Slice number</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logdistxact</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Distributed transaction</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>loglocalxact</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Local transaction</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logsubxact</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Subtransaction</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logseverity</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Log severity</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logstate</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>State</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logmessage</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Log message</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logdetail</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Detailed message</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>loghint</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Hint info</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logquery</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Executed query</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logquerypos</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Query position</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logcontext</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Context info</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logdebug</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Debug</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logcursorpos</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Cursor position</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logfunction</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Function info</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logfile</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Source code file</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logline</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Source code line</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>logstack</codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Stack trace</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+      <section id="rotation">
+         <title>Log Processing and Rotation</title>
+         <p>The Greenplum Database system logger writes alert logs in the
+               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/logs</codeph> directory.</p>
+         <p>The agent process (<codeph>gpmmon</codeph>) performs the following steps to consolidate
+            log files and load them into the <codeph>gpperfmon</codeph> database:</p>
+         <ol>
+            <li>Gathers all of the <codeph>gpdb-alert-*</codeph> files in the logs directory (except
+               the latest, which the syslogger has open and is writing to) into a single file,
+                  <codeph>alert_log_stage</codeph>.</li>
+            <li>Loads the <codeph>alert_log_stage</codeph> file into the
+                  <codeph>log_alert_history</codeph> table in the <codeph>gpperfmon</codeph>
+               database.</li>
+            <li>Truncates the <codeph>alert_log_stage</codeph> file.</li>
+            <li>Removes all of the <codeph>gp-alert-*</codeph> files, except the latest.</li>
+         </ol>
+         <p>The syslogger rotates the alert log every 24 hours or when the current log file reaches
+            or exceeds 1MB. A rotated log file can exceed 1MB if a single error message contains a
+            large SQL statement or a large stack trace. Also, the syslogger processes error messages
+            in chunks, with a separate chunk for each logging process. The size of a chunk is
+            OS-dependent; on Red Hat Enterprise Linux, for example, it is 4096 bytes. If many
+            Greenplum Database sessions generate error messages at the same time, the log file can
+            grow significantly before its size is checked and log rotation is triggered.</p>
+      </section>
+   </body>
+</topic>

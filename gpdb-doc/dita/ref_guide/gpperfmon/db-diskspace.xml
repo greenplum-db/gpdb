@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="db-diskspac">
+   <title> diskspace_* </title>
+   <body>
+      <p>The <codeph>diskspace_*</codeph> tables store diskspace metrics.</p>
+      <ul>
+         <li>
+            <codeph>diskspace_now</codeph> is an external table whose data files are stored in
+               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. Current diskspace metrics are
+            stored in <codeph>database_now</codeph> during the period between data collection from
+            the Command Center agents and automatic commitment to the
+               <codeph>diskspace_history</codeph> table.</li>
+         <li>
+            <codeph>diskspace_tail</codeph> is an external table whose data files are stored in
+               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. This is a transitional table
+            for diskspace metrics that have been cleared from <codeph>diskspace_now</codeph> but has
+            not yet been committed to <codeph>diskspace_history</codeph>. It typically only contains
+            a few minutes worth of data.</li>
+         <li>
+            <codeph>diskspace_history</codeph> is a regular table that stores historical diskspace
+            metrics. It is pre-partitioned into monthly partitions. Partitions are automatically
+            added in two month increments as needed. Administrators must drop old partitions for the
+            months that are no longer needed.</li>
+      </ul>
+      <table>
+         <tgroup cols="2">
+            <thead>
+               <row>
+                  <entry>Column</entry>
+                  <entry>Type</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>
+                     <codeph>ctime</codeph>
+                  </entry>
+                  <entry>timestamp(0) without time zone </entry>
+                  <entry>Time of diskspace measurement.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>hostname</codeph>
+                  </entry>
+                  <entry> varchar(64)</entry>
+                  <entry>The hostname associated with the diskspace measurement.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>Filesystem </codeph>
+                  </entry>
+                  <entry>text</entry>
+                  <entry>Name of the filesystem for the diskspace measurement.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>total_bytes</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Total bytes in the file system.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>bytes_used</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Total bytes used in the file system.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>bytes_available</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Total bytes available in file system.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+   </body>
+</topic>

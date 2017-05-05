@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="db-interface_stats">
+   <title> interface_stats_* </title>
+   <body>
+      <p>The <codeph>interface_stats_*</codeph> tables store statistical metrics about
+         communications over each active interface for a Greenplum Database instance.</p>
+      <p>These tables are in place for future use and are not currently populated.</p>
+      <p>There are three <codeph>interface_stats</codeph> tables, all having the same columns:</p>
+      <ul>
+         <li>
+            <codeph>interface_stats_now</codeph> is an external table whose data files are stored in
+               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>.</li>
+         <li>
+            <codeph>interface_stats_tail</codeph> is an external table whose data files are stored
+            in <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. This is a transitional table
+            for statistical interface metrics that has been cleared from
+               <codeph>interface_stats_now</codeph> but has not yet been committed to
+               <codeph>interface_stats_history</codeph>. It typically only contains a few minutes
+            worth of data.</li>
+         <li>
+            <codeph>interface_stats_history</codeph> is a regular table that stores statistical
+            interface metrics. It is pre-partitioned into monthly partitions. Partitions are
+            automatically added in one month increments as needed. Administrators must drop old
+            partitions for the months that are no longer needed.</li>
+      </ul>
+      <table>
+         <tgroup cols="2">
+            <thead>
+               <row>
+                  <entry>Column</entry>
+                  <entry>Type</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>
+                     <codeph>interface_name</codeph>
+                  </entry>
+                  <entry>string</entry>
+                  <entry>Name of the interface. For example: eth0, eth1, lo.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>bytes_received</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Amount of data received in bytes.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>packets_received</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Number of packets received.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>receive_errors</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Number of errors encountered while data was being received.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>receive_drops</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Number of times packets were dropped while data was being received.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>receive_fifo_errors</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Number of times FIFO (first in first out) errors were encountered while
+                     data was being received.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>receive_frame_errors</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Number of frame errors while data was being received.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>receive_compressed_packets</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Number of packets received in compressed format.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>receive_multicast_packets</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Number of multicast packets received.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>bytes_transmitted</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Amount of data transmitted in bytes.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>packets_transmitted</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Amount of data transmitted in bytes.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>packets_transmitted</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Number of packets transmitted.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>transmit_errors</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Number of errors encountered during data transmission.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>transmit_drops</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Number of times packets were dropped during data transmission.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>transmit_fifo_errors</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Number of times fifo errors were encountered during data
+                     transmission.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>transmit_collision_errors</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Number of times collision errors were encountered during data
+                     transmission.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>transmit_carrier_errors</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Number of times carrier errors were encountered during data
+                     transmission.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>transmit_compressed_packets</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Number of packets transmitted in compressed format.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+   </body>
+</topic>

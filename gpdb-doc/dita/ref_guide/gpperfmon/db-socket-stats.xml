@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="db-socket_stats">
+   <title>socket_stats_*</title>
+   <body>
+      <p>The <codeph>socket_stats_*</codeph> tables store statistical metrics about socket usage for
+         a Greenplum Database instance. There are three system tables, all having the same
+         columns:</p>
+      <p>These tables are in place for future use and are not currently populated.</p>
+      <ul>
+         <li>
+            <codeph>socket_stats_now</codeph> is an external table whose data files are stored in
+               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>.</li>
+         <li>
+            <codeph>socket_stats_tail</codeph> is an external table whose data files are stored in
+               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. This is a transitional table
+            for socket statistical metrics that has been cleared from
+               <codeph>socket_stats_now</codeph> but has not yet been committed to
+               <codeph>socket_stats_history</codeph>. It typically only contains a few minutes worth
+            of data.</li>
+         <li>
+            <codeph>socket_stats_history</codeph> is a regular table that stores historical socket
+            statistical metrics. It is pre-partitioned into monthly partitions. Partitions are
+            automatically added in two month increments as needed. Administrators must drop old
+            partitions for the months that are no longer needed.</li>
+      </ul>
+      <table>
+         <tgroup cols="2">
+            <thead>
+               <row>
+                  <entry>Column</entry>
+                  <entry>Type</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>
+                     <codeph>total_sockets_used</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Total sockets used in the system.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>tcp_sockets_inuse</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Number of TCP sockets in use.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>tcp_sockets_orphan</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Number of TCP sockets orphaned.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>tcp_sockets_timewait</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Number of TCP sockets in Time-Wait.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>tcp_sockets_alloc</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Number of TCP sockets allocated.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>tcp_sockets_memusage_inbytes</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Amount of memory consumed by TCP sockets.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>udp_sockets_inuse</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Number of UDP sockets in use.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>udp_sockets_memusage_inbytes</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Amount of memory consumed by UDP sockets.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>raw_sockets_inuse</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Number of RAW sockets in use.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>frag_sockets_inuse</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Number of FRAG sockets in use.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>frag_sockets_memusage_inbytes</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Amount of memory consumed by FRAG sockets.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+   </body>
+</topic>

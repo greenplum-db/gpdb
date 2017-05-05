@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="CommandCenterDatabaseReference-dynamic_memory_info">
+   <title>dynamic_memory_info </title>
+   <body>
+      <p>The <codeph>dynamic_memory_info</codeph> view shows a sum of the used and available dynamic
+         memory for all segment instances on a segment host. Dynamic memory refers to the maximum
+         amount of memory that Greenplum Database instance will allow the query processes of a
+         single segment instance to consume before it starts cancelling processes. This limit is set
+         by the <codeph>gp_vmem_protect_limit</codeph> server configuration parameter, and is
+         evaluated on a per-segment basis.</p>
+      <table>
+         <tgroup cols="2">
+            <thead>
+               <row>
+                  <entry>Column</entry>
+                  <entry>Type</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>
+                     <codeph>ctime</codeph>
+                  </entry>
+                  <entry>timestamp(0) without time zone</entry>
+                  <entry>Time this row was created in the <codeph>segment_history</codeph>
+                     table.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>hostname</codeph>
+                  </entry>
+                  <entry>varchar(64)</entry>
+                  <entry>Segment or master hostname associated with these system memory
+                     metrics.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>dynamic_memory_used_mb</codeph>
+                  </entry>
+                  <entry>numeric</entry>
+                  <entry>The amount of dynamic memory in MB allocated to query processes running on
+                     this segment.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>dynamic_memory_available_mb</codeph>
+                  </entry>
+                  <entry>numeric</entry>
+                  <entry>The amount of additional dynamic memory (in MB) available to the query
+                     processes running on this segment host. Note that this value is a sum of the
+                     available memory for all segments on a host. Even though this value reports
+                     available memory, it is possible that one or more segments on the host have
+                     exceeded their memory limit as set by the
+                        <codeph>gp_vmem_protect_limit</codeph> parameter.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+   </body>
+</topic>

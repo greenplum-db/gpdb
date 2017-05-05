@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="db-database">
+   <title> database_* </title>
+   <body>
+      <p>The <codeph>database_*</codeph> tables store query workload information for a Greenplum
+         Database instance. There are three database tables, all having the same columns:</p>
+      <ul>
+         <li>
+            <codeph>database_now</codeph> is an external table whose data files are stored in
+               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. Current query workload data
+            is stored in <codeph>database_now</codeph> during the period between data collection
+            from the Command Center agents and automatic commitment to the
+               <codeph>database_history</codeph> table.</li>
+         <li>
+            <codeph>database_tail</codeph> is an external table whose data files are stored in
+               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. This is a transitional table
+            for query workload data that has been cleared from <codeph>database_now</codeph> but has
+            not yet been committed to <codeph>database_history</codeph>. It typically only contains
+            a few minutes worth of data.</li>
+         <li>
+            <codeph>database_history</codeph> is a regular table that stores historical
+            database-wide query workload data. It is pre-partitioned into monthly partitions.
+            Partitions are automatically added in two month increments as needed. Administrators
+            must drop old partitions for the months that are no longer needed.</li>
+      </ul>
+      <table>
+         <tgroup cols="2">
+            <thead>
+               <row>
+                  <entry>Column</entry>
+                  <entry>Type</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>
+                     <codeph>ctime</codeph>
+                  </entry>
+                  <entry>timestamp</entry>
+                  <entry>Time this row was created.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>queries_total</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>The total number of queries in Greenplum Database at data collection
+                     time.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>queries_running</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>The number of active queries running at data collection time.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>queries_queued</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>The number of queries waiting in a resource queue at data collection
+                     time.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+   </body>
+</topic>

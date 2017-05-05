@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="overview">
+  <title>Command Center Database Reference</title>
+  <body>
+    <p>The Command Center database (<codeph>gpperfmon</codeph>) is a dedicated database where
+      monitoring agents on Greenplum segment hosts save statistics for use by the Greenplum Command
+      Center management tool. The <codeph>gpperfmon</codeph> database is created using the
+        <codeph>gpperfmon_install</codeph> command-line utility. The utility creates the database
+      and the <codeph>gpmon</codeph> database role and enables monitoring agents on the segment
+      hosts. See the <codeph>gpperfmon_install</codeph> reference in the <cite>Greenplum Database
+        Utility Guide</cite> for information about using the utility.</p>
+    <p>The Command Center database consists of three sets of tables.</p>
+    <ul id="ul_oqn_xsy_tz">
+      <li>
+        <codeph>now</codeph> tables store data on current system metrics such as active
+        queries.</li>
+      <li><codeph>history</codeph> tables store data on historical metrics.</li>
+      <li><codeph>tail</codeph> tables are for data in transition. <codeph>Tail</codeph> tables are
+        for internal use only and should not be queried by users. The <codeph>now</codeph> and
+          <codeph>tail</codeph> data are stored as text files on the master host file system, and
+        accessed by the Command Center database via external tables. The <codeph>history</codeph>
+        tables are regular database tables stored within the Command Center
+          (<codeph>gpperfmon</codeph>) database.</li>
+    </ul>
+    <p>The database contains the following categories of tables:</p>
+    <ul>
+      <li>The <codeph><xref href="db-database.xml#db-database">database_*</xref></codeph> tables
+        store query workload information for a Greenplum Database instance.</li>
+      <li>The <codeph><xref href="db-diskspace.xml#db-diskspac">diskspace_*</xref></codeph> tables
+        store diskspace metrics.</li>
+      <li>The <codeph><xref href="db-filerep.xml#db-filerep">filerep_*</xref></codeph> tables store
+        health and status metrics for the file replication process. This process is how
+        high-availability/mirroring is achieved in Greenplum Database instance. Statistics are
+        maintained for each primary-mirror pair.</li>
+      <li>The <codeph><xref href="db-health.xml#db-health">health_*</xref></codeph> tables store
+        system health metrics for the EMC Data Computing Appliance.</li>
+      <li>The <codeph><xref href="db-interface-stats.xml#db-interface_stats"
+            >interface_stats_*</xref></codeph> tables store statistical metrics for each active
+        interface of a Greenplum Database instance. Note: These tables are in place for future use
+        and are not currently populated.</li>
+      <li>The <codeph><xref href="db-log-alert.xml#CommandCenterDatabaseReference-log_alert"
+            >log_alert_*</xref></codeph> tables store information about pg_log errors and
+        warnings.</li>
+      <li>The <codeph><xref href="db-queries.xml#db-queries">queries_*</xref></codeph> tables store
+        high-level query status information.</li>
+      <li>The <codeph><xref href="db-segment.xml#db-segment">segment_*</xref></codeph> tables store
+        memory allocation statistics for the Greenplum Database segment instances.</li>
+      <li>The <codeph><xref href="db-socket-stats.xml#db-socket_stats"
+          >socket_stats_*</xref></codeph> tables store statistical metrics about socket usage for a
+        Greenplum Database instance. Note: These tables are in place for future use and are not
+        currently populated.</li>
+      <li>The <codeph><xref href="db-system.xml#db-system">system_*</xref></codeph> tables store
+        system utilization metrics.</li>
+      <li>The <codeph><xref href="db-tcp-stats.xml#db-tcp_stats">tcp_stats_*</xref></codeph> tables
+        store statistical metrics about TCP communications for a Greenplum Database instance. Note:
+        These tables are in place for future use and are not currently populated.</li>
+      <li>The <codeph><xref href="db-udp-stats.xml#db-udp_stats">udp_stats_*</xref></codeph> tables
+        store statistical metrics about UDP communications for a Greenplum Database instance. Note:
+        These tables are in place for future use and are not currently populated.</li>
+    </ul>
+    <p>The Command Center database also contains the following views:</p>
+    <ul>
+      <li>The <codeph><xref
+            href="db-dynamic-memory-info.xml#CommandCenterDatabaseReference-dynamic_memory_info"
+            >dynamic_memory_info</xref></codeph> view shows an aggregate of all the segments per
+        host and the amount of dynamic memory used per host.</li>
+      <li>The <codeph><xref href="db-memory-info.xml#CommandCenterDatabaseReference-memory_info"
+            >memory_info</xref></codeph> view shows per-host memory information from the
+          <codeph>system_history</codeph> and <codeph>segment_history</codeph> tables.</li>
+    </ul>
+  </body>
+</topic>

@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="db-system">
+   <title>system_*</title>
+   <body>
+      <p>The <codeph>system_*</codeph> tables store system utilization metrics. There are three
+         system tables, all having the same columns:</p>
+      <ul>
+         <li>
+            <codeph>system_now</codeph> is an external table whose data files are stored in
+               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. Current system utilization
+            data is stored in <codeph>system_now</codeph> during the period between data collection
+            from the Command Center agents and automatic commitment to the
+               <codeph>system_history</codeph> table.</li>
+         <li>
+            <codeph>system_tail</codeph> is an external table whose data files are stored in
+               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. This is a transitional table
+            for system utilization data that has been cleared from <codeph>system_now</codeph> but
+            has not yet been committed to <codeph>system_history</codeph>. It typically only
+            contains a few minutes worth of data.</li>
+         <li>
+            <codeph>system_history</codeph> is a regular table that stores historical system
+            utilization metrics. It is pre-partitioned into monthly partitions. Partitions are
+            automatically added in two month increments as needed. Administrators must drop old
+            partitions for the months that are no longer needed.</li>
+      </ul>
+      <table>
+         <tgroup cols="2">
+            <thead>
+               <row>
+                  <entry>Column</entry>
+                  <entry>Type</entry>
+                  <entry>Description</entry>
+               </row>
+            </thead>
+            <tbody>
+               <row>
+                  <entry>
+                     <codeph>ctime</codeph>
+                  </entry>
+                  <entry>timestamp</entry>
+                  <entry>Time this row was created.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>hostname</codeph>
+                  </entry>
+                  <entry>varchar(64)</entry>
+                  <entry>Segment or master hostname associated with these system metrics.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>mem_total</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Total system memory in Bytes for this host.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>mem_used</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Used system memory in Bytes for this host.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>mem_actual_used</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Used actual memory in Bytes for this host (not including the memory
+                     reserved for cache and buffers).</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>mem_actual_free</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Free actual memory in Bytes for this host (not including the memory
+                     reserved for cache and buffers).</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>swap_total</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Total swap space in Bytes for this host.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>swap_used</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Used swap space in Bytes for this host.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>swap_page_in</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Number of swap pages in.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>swap_page_out</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Number of swap pages out.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>cpu_user</codeph>
+                  </entry>
+                  <entry>float</entry>
+                  <entry>CPU usage by the Greenplum system user.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>cpu_sys</codeph>
+                  </entry>
+                  <entry>float</entry>
+                  <entry>CPU usage for this host.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>cpu_idle</codeph>
+                  </entry>
+                  <entry>float</entry>
+                  <entry>Idle CPU capacity at metric collection time.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>load0</codeph>
+                  </entry>
+                  <entry>float</entry>
+                  <entry>CPU load average for the prior one-minute period.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>load1</codeph>
+                  </entry>
+                  <entry>float</entry>
+                  <entry>CPU load average for the prior five-minute period.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>load2</codeph>
+                  </entry>
+                  <entry>float</entry>
+                  <entry>CPU load average for the prior fifteen-minute period.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>quantum</codeph>
+                  </entry>
+                  <entry>int</entry>
+                  <entry>Interval between metric collection for this metric entry.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>disk_ro_rate</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Disk read operations per second.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>disk_wo_rate</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Disk write operations per second.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>disk_rb_rate</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Bytes per second for disk write operations.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>net_rp_rate</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Packets per second on the system network for read operations.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>net_wp_rate</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Packets per second on the system network for write operations.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>net_rb_rate</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Bytes per second on the system network for read operations.</entry>
+               </row>
+               <row>
+                  <entry>
+                     <codeph>net_wb_rate</codeph>
+                  </entry>
+                  <entry>bigint</entry>
+                  <entry>Bytes per second on the system network for write operations.</entry>
+               </row>
+            </tbody>
+         </tgroup>
+      </table>
+   </body>
+</topic>
