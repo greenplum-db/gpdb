@@ -295,7 +295,6 @@
 		<topicref href="ref_guide/gpperfmon/db-filerep.xml" type="topic"/>
 		<topicref href="ref_guide/gpperfmon/db-health.xml" type="topic"/>
 		<topicref href="ref_guide/gpperfmon/db-interface-stats.xml" type="topic"/>
-		<topicref href="ref_guide/gpperfmon/db-iterator-metrics.xml" type="topic"/>
 		<topicref href="ref_guide/gpperfmon/db-log-alert.xml" type="topic"/>
 		<topicref href="ref_guide/gpperfmon/db-queries.xml" type="topic"/>
 		<topicref href="ref_guide/gpperfmon/db-segment.xml" type="topic"/>
