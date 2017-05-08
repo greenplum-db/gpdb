@@ -1298,6 +1298,7 @@ AS_IF([test "$enable_orca" = yes],
 [ # then
   AC_CHECK_HEADERS(gpopt/init.h,  [], [AC_MSG_ERROR([gpopt/init.h GPOPT header file is required for Greenplum Query Optimizer (orca)])])
   AC_CHECK_HEADERS(gpos/config.h, [], [AC_MSG_ERROR([gpos/config.h GPOS header file is required for Greenplum Query Optimizer (orca)])])
+  PGAC_CHECK_ORCA_XERCES
 ]) # fi
 
 dnl sys/socket.h is required by AC_FUNC_ACCEPT_ARGTYPES

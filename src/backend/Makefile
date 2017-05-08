@@ -65,7 +65,6 @@ LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses, $(LIBS))
 # ORCA libraries.
 ifeq ($(enable_orca),yes)
 LIBS := $(LIBS) -lgpopt -lnaucrates -lgpdbcost -lgpos
-LIBS := $(LIBS) -lxerces-c-3.1
 endif
 
 # adding codegen libraries
