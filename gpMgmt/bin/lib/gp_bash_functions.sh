@@ -343,6 +343,17 @@ ERROR_CHK () {
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
+TRY_AND_RETRY () {
+	eval "$1"
+	RETVAL=$?
+	if [ $RETVAL -ne 0 ]; then
+		LOG_MSG "[WARN]:-Retrying command -- $1"
+		eval "$1"
+		RETVAL=$?
+	fi
+	return $RETVAL
+}
+
 SED_PG_CONF () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	SED_TMP_FILE=/tmp/sed_text.$$
@@ -367,23 +378,21 @@ SED_PG_CONF () {
 				fi
 			else
 				if [ $KEEP_PREV -eq 0 ];then
-					$SED -i'.bak1' -e "s/${SEARCH_TXT}/${SUB_TXT} #${SEARCH_TXT}/g" $FILENAME
+					$SED -i'.bak1' -e "s/${SEARCH_TXT}/${SUB_TXT} #${SEARCH_TXT}/" $FILENAME
 				else
-					$SED -i'.bak1' -e "s/${SEARCH_TXT}.*/${SUB_TXT}/g" $FILENAME
+					$SED -i'.bak1' -e "s/${SEARCH_TXT}.*/${SUB_TXT}/" $FILENAME
 				fi
 				RETVAL=$?
 				if [ $RETVAL -ne 0 ]; then
-					LOG_MSG "[WARN]:-Failed to replace $SEARCH_TXT in $FILENAME"
-					ERROR_EXIT=1
+					ERROR_EXIT "[WARN]:-Failed to replace $SEARCH_TXT in $FILENAME, retrying" 1
 				else
 					LOG_MSG "[INFO]:-Replaced line in $FILENAME"
 					$RM -f ${FILENAME}.bak1
 				fi
-				$SED -i'.bak2' -e "s/^#${SEARCH_TXT}/${SEARCH_TXT}/g" $FILENAME
+				TRY_AND_RETRY "$SED -i'.bak2' -e \"s/^#${SEARCH_TXT}/${SEARCH_TXT}/\" $FILENAME"
 				RETVAL=$?
 				if [ $RETVAL -ne 0 ]; then
-					LOG_MSG "[WARN]:-Failed to replace #$SEARCH_TXT in $FILENAME"
-					ERROR_EXIT=1
+					ERROR_EXIT "[WARN]:-Failed to replace #$SEARCH_TXT in $FILENAME, retrying" 1
 				else
 					LOG_MSG "[INFO]:-Replaced line in $FILENAME"
 					$RM -f ${FILENAME}.bak2
@@ -395,42 +404,39 @@ SED_PG_CONF () {
 			APPEND=1
 		fi
 		if [ `$TRUSTED_SHELL $SED_HOST "$GREP -c \"${SEARCH_TXT}\" $FILENAME"` -eq 0 ] || [ $APPEND -eq 1 ]; then
-			$TRUSTED_SHELL $SED_HOST "$ECHO \"$SUB_TXT\" >> $FILENAME"
+			TRY_AND_RETRY "$TRUSTED_SHELL $SED_HOST \"$ECHO \\\"$SUB_TXT\\\" >> $FILENAME\""
 			RETVAL=$?
 			if [ $RETVAL -ne 0 ]; then
-				LOG_MSG "[WARN]:-Failed to append line $SUB_TXT to $FILENAME on $SED_HOST"
-				ERROR_EXIT=1
+				ERROR_EXIT "[WARN]:-Failed to append line $SUB_TXT to $FILENAME on $SED_HOST, retrying" 1
 			else
 				LOG_MSG "[INFO]:-Appended line $SUB_TXT to $FILENAME on $SED_HOST" 1
 			fi
 		else
 			if [ $KEEP_PREV -eq 0 ];then
-				$ECHO "s/${SEARCH_TXT}/${SUB_TXT} #${SEARCH_TXT}/g" > $SED_TMP_FILE
+				$ECHO "s/${SEARCH_TXT}/${SUB_TXT} #${SEARCH_TXT}/" > $SED_TMP_FILE
 			else
-				$ECHO "s/${SEARCH_TXT}.*/${SUB_TXT}/g" > $SED_TMP_FILE
+				$ECHO "s/${SEARCH_TXT}.*/${SUB_TXT}/" > $SED_TMP_FILE
 			fi
 			$CAT $SED_TMP_FILE | $TRUSTED_SHELL ${SED_HOST} $DD of=$SED_TMP_FILE > /dev/null 2>&1
-			$TRUSTED_SHELL $SED_HOST "sed -i'.bak1' -f $SED_TMP_FILE $FILENAME" > /dev/null 2>&1
+			TRY_AND_RETRY "$TRUSTED_SHELL $SED_HOST \"sed -i'.bak1' -f $SED_TMP_FILE $FILENAME\" > /dev/null 2>&1"
 			RETVAL=$?
 			if [ $RETVAL -ne 0 ]; then
-				LOG_MSG "[WARN]:-Failed to insert $SUB_TXT in $FILENAME on $SED_HOST"
-				ERROR_EXIT=1
+				ERROR_EXIT "[WARN]:-Failed to insert $SUB_TXT in $FILENAME on $SED_HOST, retrying" 1
 			else
 				LOG_MSG "[INFO]:-Replaced line in $FILENAME on $SED_HOST"
 				$TRUSTED_SHELL $SED_HOST "$RM -f ${FILENAME}.bak1" > /dev/null 2>&1
 			fi
-			$ECHO "s/^#${SEARCH_TXT}/${SEARCH_TXT}/g" > $SED_TMP_FILE
+			$ECHO "s/^#${SEARCH_TXT}/${SEARCH_TXT}/" > $SED_TMP_FILE
 			$CAT $SED_TMP_FILE | $TRUSTED_SHELL ${SED_HOST} $DD of=$SED_TMP_FILE > /dev/null 2>&1
-			$TRUSTED_SHELL $SED_HOST "sed -i'.bak2' -f $SED_TMP_FILE $FILENAME" > /dev/null 2>&1
+			TRY_AND_RETRY "$TRUSTED_SHELL $SED_HOST \"sed -i'.bak2' -f $SED_TMP_FILE $FILENAME\" > /dev/null 2>&1"
 			RETVAL=$?
 			if [ $RETVAL -ne 0 ]; then
-				LOG_MSG "[WARN]:-Failed to substitute #${SEARCH_TXT} in $FILENAME on $SED_HOST"
-				ERROR_EXIT=1
+				ERROR_EXIT "[WARN]:-Failed to substitute #${SEARCH_TXT} in $FILENAME on $SED_HOST, retrying" 1
 			else
 				LOG_MSG "[INFO]:-Replaced line in $FILENAME on $SED_HOST"
 				$TRUSTED_SHELL $SED_HOST "$RM -f ${FILENAME}.bak2" > /dev/null 2>&1
 			fi
-			$TRUSTED_SHELL $SED_HOST "$RM -f $SED_TMP_FILE"
+			TRY_AND_RETRY "$TRUSTED_SHELL $SED_HOST \"$RM -f $SED_TMP_FILE\""
 
 			$RM -f $SED_TMP_FILE
 		fi
