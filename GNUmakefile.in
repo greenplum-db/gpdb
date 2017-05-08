@@ -30,6 +30,7 @@ all:
 	$(MAKE) -C contrib/pgcrypto all
 	$(MAKE) -C gpAux/extensions mapreduce
 	$(MAKE) -C gpAux/gpperfmon all
+	$(MAKE) -C gpMgmt/gotop/src/backup_restore all
 	@echo "All of Greenplum Database successfully made. Ready to install."
 
 install:
@@ -54,6 +55,7 @@ install:
 	$(MAKE) -C gpMgmt $@
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
+	$(MAKE) -C gpMgmt/gotop/src/backup_restore $@
 	@echo "Greenplum Database installation complete."
 
 installdirs uninstall:
@@ -110,6 +112,7 @@ clean:
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
 	$(MAKE) -C gpMgmt $@
+	$(MAKE) -C gpMgmt/gotop/src/backup_restore $@
 # Garbage from autoconf:
 	@rm -rf autom4te.cache/
 

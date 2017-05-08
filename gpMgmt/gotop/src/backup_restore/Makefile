@@ -1,5 +1,13 @@
+top_builddir = ../../../..
+include $(top_builddir)/src/Makefile.global
+
+ifeq ($(enable_gpbackup), no)
+all:
+		@echo "Configuration not enabled for gpbackup"
+
+else
 SHELL := /bin/bash
-.DEFAULT_GOAL := test
+.DEFAULT_GOAL := build
 MODULE_NAME=gpbackup
 DIR_PATH=$(shell dirname `pwd`)
 
@@ -8,6 +16,8 @@ DIR_PATH=$(shell dirname `pwd`)
 DEST = .
 
 GOFLAGS := -o $(DEST)
+
+all: build
 
 depend :
 		go get github.com/jmoiron/sqlx
@@ -30,7 +40,7 @@ test : ginkgo
 
 ci : ginkgo
 
-build : 
+build :
 		go build $(GOFLAGS) -o $(MODULE_NAME)
 
 build_rhel:
@@ -39,7 +49,11 @@ build_rhel:
 build_osx:
 		env GOOS=darwin GOARCH=amd64 go build $(GOFLAGS) -o $(MODULE_NAME)
 
+install:
+		mkdir -p $(prefix)/bin
+		cp -p gpbackup $(prefix)/bin
+
 clean :
-		rm $(MODULE_NAME)
-		rm -r /tmp/go-build*
-		rm -r /tmp/ginkgo*
+		rm -f $(MODULE_NAME)
+		rm -rf /tmp/ginkgo*
+endif

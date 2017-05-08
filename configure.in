@@ -727,6 +727,14 @@ AC_MSG_RESULT([checking whether to build with Greenplum Mapreduce... $enable_map
 AC_SUBST(enable_mapreduce)
 
 #
+# --enable-gpbackup enables gpbackup support
+#
+PGAC_ARG_BOOL(enable, gpbackup, no,  [  --enable-gpbackup      enable building gpbackup],
+              [AC_DEFINE([USE_GPBACKUP], 1,
+                         [Define to 1 to build with gpbackup. (--enable-gpbackup)])])
+AC_MSG_RESULT([checking whether to build with gpbackup... $enable_gpbackup])
+AC_SUBST(enable_gpbackup)
+#
 # Include directories
 #
 ac_save_IFS=$IFS
