@@ -1298,6 +1298,7 @@ AS_IF([test "$enable_orca" = yes],
 [ # then
   PGAC_CHECK_ORCA_HEADERS
   PGAC_CHECK_ORCA_XERCES
+  PGAC_CHECK_ORCA_LIBS
 ]) # fi
 
 dnl sys/socket.h is required by AC_FUNC_ACCEPT_ARGTYPES

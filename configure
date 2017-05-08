@@ -11486,6 +11486,203 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
+ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for gpos_init in -lgpos" >&5
+$as_echo_n "checking for gpos_init in -lgpos... " >&6; }
+if ${ac_cv_lib_gpos_gpos_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lgpos  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char gpos_init ();
+int
+main ()
+{
+return gpos_init ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_gpos_gpos_init=yes
+else
+  ac_cv_lib_gpos_gpos_init=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_gpos_gpos_init" >&5
+$as_echo "$ac_cv_lib_gpos_gpos_init" >&6; }
+if test "x$ac_cv_lib_gpos_gpos_init" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBGPOS 1
+_ACEOF
+
+  LIBS="-lgpos $LIBS"
+
+else
+  as_fn_error $? "library 'gpos' is required for Pivotal Query Optimizer (orca)" "$LINENO" 5
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lgpdbcost" >&5
+$as_echo_n "checking for main in -lgpdbcost... " >&6; }
+if ${ac_cv_lib_gpdbcost_main+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lgpdbcost -lgpopt $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+int
+main ()
+{
+return main ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_gpdbcost_main=yes
+else
+  ac_cv_lib_gpdbcost_main=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_gpdbcost_main" >&5
+$as_echo "$ac_cv_lib_gpdbcost_main" >&6; }
+if test "x$ac_cv_lib_gpdbcost_main" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBGPDBCOST 1
+_ACEOF
+
+  LIBS="-lgpdbcost $LIBS"
+
+else
+  as_fn_error $? "library 'gpdbcost' is required for Pivotal Query Optimizer (orca)" "$LINENO" 5
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for InitDXL in -lnaucrates" >&5
+$as_echo_n "checking for InitDXL in -lnaucrates... " >&6; }
+if ${ac_cv_lib_naucrates_InitDXL+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lnaucrates -lgpopt $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char InitDXL ();
+int
+main ()
+{
+return InitDXL ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_naucrates_InitDXL=yes
+else
+  ac_cv_lib_naucrates_InitDXL=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_naucrates_InitDXL" >&5
+$as_echo "$ac_cv_lib_naucrates_InitDXL" >&6; }
+if test "x$ac_cv_lib_naucrates_InitDXL" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBNAUCRATES 1
+_ACEOF
+
+  LIBS="-lnaucrates $LIBS"
+
+else
+  as_fn_error $? "library 'naucrates' is required for Pivotal Query Optimizer (orca)" "$LINENO" 5
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for gpopt_init in -lgpopt" >&5
+$as_echo_n "checking for gpopt_init in -lgpopt... " >&6; }
+if ${ac_cv_lib_gpopt_gpopt_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lgpopt  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char gpopt_init ();
+int
+main ()
+{
+return gpopt_init ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_gpopt_gpopt_init=yes
+else
+  ac_cv_lib_gpopt_gpopt_init=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_gpopt_gpopt_init" >&5
+$as_echo "$ac_cv_lib_gpopt_gpopt_init" >&6; }
+if test "x$ac_cv_lib_gpopt_gpopt_init" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBGPOPT 1
+_ACEOF
+
+  LIBS="-lgpopt $LIBS"
+
+else
+  as_fn_error $? "library 'gpopt' is required for Pivotal Query Optimizer (orca)" "$LINENO" 5
+fi
+
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
+
+
 fi # fi
 
 for ac_header in atomic.h crypt.h dld.h endian.h fp_class.h getopt.h ieeefp.h ifaddrs.h langinfo.h mbarrier.h poll.h pwd.h sys/ioctl.h sys/ipc.h sys/poll.h sys/pstat.h sys/resource.h sys/select.h sys/sem.h sys/shm.h sys/socket.h sys/sockio.h sys/tas.h sys/time.h sys/un.h termios.h ucred.h utime.h wchar.h wctype.h kernel/OS.h kernel/image.h SupportDefs.h
