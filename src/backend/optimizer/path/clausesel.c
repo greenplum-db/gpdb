@@ -117,6 +117,7 @@ clauselist_selectivity(PlannerInfo *root,
 					   List *clauses,
 					   int varRelid,
 					   JoinType jointype,
+					   SpecialJoinInfo *sjinfo,
 					   bool use_damping)
 {
 	Selectivity s1 = 1.0;
@@ -136,7 +137,7 @@ clauselist_selectivity(PlannerInfo *root,
 	 */
 	if (list_length(clauses) == 1)
 		return clause_selectivity(root, (Node *) linitial(clauses),
-								  varRelid, jointype, use_damping);
+								  varRelid, jointype, sjinfo, use_damping);
 
 	/*
 	 * Initial scan over clauses.  Anything that doesn't look like a potential
@@ -150,7 +151,7 @@ clauselist_selectivity(PlannerInfo *root,
 		Selectivity s2;
 
 		/* Always compute the selectivity using clause_selectivity */
-		s2 = clause_selectivity(root, clause, varRelid, jointype, use_damping);
+		s2 = clause_selectivity(root, clause, varRelid, jointype, sjinfo, use_damping);
 
 		/*
 		 * Check for being passed a RestrictInfo.
@@ -257,9 +258,8 @@ clauselist_selectivity(PlannerInfo *root,
 				s2 = rqlist->hibound + rqlist->lobound - 1.0;
 
 				/* Adjust for double-exclusion of NULLs */
-				/* HACK: disable nulltestsel's special outer-join logic */
 				s2 += nulltestsel(root, IS_NULL, rqlist->var,
-								  varRelid, JOIN_INNER);
+								  varRelid, jointype, sjinfo);
 
 				/*
 				 * A zero or slightly negative s2 should be converted into a
@@ -482,13 +482,32 @@ bms_is_subset_singleton(const Bitmapset *s, int x)
  * is appropriate for ordinary join clauses and restriction clauses.
  *
  * jointype is the join type, if the clause is a join clause.  Pass JOIN_INNER
- * if the clause isn't a join clause or the context is uncertain.
+ * if the clause isn't a join clause.
+ *
+ * sjinfo is NULL for a non-join clause, otherwise it provides additional
+ * context information about the join being performed.  There are some
+ * special cases:
+ *	1. For a special (not INNER) join, sjinfo is always a member of
+ *	   root->join_info_list.
+ *	2. For an INNER join, sjinfo is just a transient struct, and only the
+ *	   relids and jointype fields in it can be trusted.
+ *	3. XXX sjinfo might be NULL even though it really is a join.  This case
+ *	   will go away soon, but fixing it requires API changes for oprjoin and
+ *	   amcostestimate functions.
+ * It is possible for jointype to be different from sjinfo->jointype.
+ * This indicates we are considering a variant join: either with
+ * the LHS and RHS switched, or with one input unique-ified.
+ *
+ * Note: when passing nonzero varRelid, it's normally appropriate to set
+ * jointype == JOIN_INNER, sjinfo == NULL, even if the clause is really a
+ * join clause; because we aren't treating it as a join clause.
  */
 Selectivity
 clause_selectivity(PlannerInfo *root,
 				   Node *clause,
 				   int varRelid,
 				   JoinType jointype,
+				   SpecialJoinInfo *sjinfo,
 				   bool use_damping)
 {
 	Selectivity s1 = 0.5;		/* default for any unhandled clause type */
@@ -526,35 +545,15 @@ clause_selectivity(PlannerInfo *root,
 		 * If possible, cache the result of the selectivity calculation for
 		 * the clause.	We can cache if varRelid is zero or the clause
 		 * contains only vars of that relid --- otherwise varRelid will affect
-		 * the result, so mustn't cache.  We also have to be careful about the
-		 * jointype.  It's OK to cache when jointype is JOIN_INNER or one of
-		 * the outer join types (any given outer-join clause should always be
-		 * examined with the same jointype, so result won't change). It's not
-		 * OK to cache when jointype is one of the special types associated
-		 * with IN processing, because the same clause may be examined with
-		 * different jointypes and the result should vary.
+		 * the result, so mustn't cache.
 		 */
 		if (varRelid == 0 ||
 			bms_is_subset_singleton(rinfo->clause_relids, varRelid))
 		{
-			switch (jointype)
-			{
-				case JOIN_INNER:
-				case JOIN_LEFT:
-				case JOIN_LASJ:
-				case JOIN_LASJ_NOTIN:
-				case JOIN_FULL:
-				case JOIN_RIGHT:
-					/* Cacheable --- do we already have the result? */
-					if (rinfo->this_selec >= 0)
-						return rinfo->this_selec;
-					cacheable = true;
-					break;
-
-                default:
-					/* unsafe to cache */
-					break;
-			}
+			/* Cacheable --- do we already have the result? */
+			if (rinfo->this_selec >= 0)
+				return rinfo->this_selec;
+			cacheable = true;
 		}
 
 		/*
@@ -625,6 +624,7 @@ clause_selectivity(PlannerInfo *root,
 								  (Node *) get_notclausearg((Expr *) clause),
 									  varRelid,
 									  jointype,
+									  sjinfo,
 									  use_damping);
 	}
 	else if (and_clause(clause))
@@ -634,6 +634,7 @@ clause_selectivity(PlannerInfo *root,
 									((BoolExpr *) clause)->args,
 									varRelid,
 									jointype,
+									sjinfo,
 									use_damping);
 	}
 	else if (or_clause(clause))
@@ -653,6 +654,7 @@ clause_selectivity(PlannerInfo *root,
 												(Node *) lfirst(arg),
 												varRelid,
 												jointype,
+												sjinfo,
 												use_damping);
 
 			s1 = s1 + s2 - s1 * s2;
@@ -759,7 +761,8 @@ clause_selectivity(PlannerInfo *root,
 							(ScalarArrayOpExpr *) clause,
 							is_join_clause,
 							varRelid,
-							jointype);
+							jointype,
+							sjinfo);
 	}
 	else if (IsA(clause, RowCompareExpr))
 	{
@@ -767,7 +770,8 @@ clause_selectivity(PlannerInfo *root,
 		s1 = rowcomparesel(root,
 						   (RowCompareExpr *) clause,
 						   varRelid,
-						   jointype);
+						   jointype,
+						   sjinfo);
 	}
 	else if (IsA(clause, NullTest))
 	{
@@ -776,7 +780,8 @@ clause_selectivity(PlannerInfo *root,
 						 ((NullTest *) clause)->nulltesttype,
 						 (Node *) ((NullTest *) clause)->arg,
 						 varRelid,
-						 jointype);
+						 jointype,
+						 sjinfo);
 	}
 	else if (IsA(clause, BooleanTest))
 	{
@@ -785,7 +790,8 @@ clause_selectivity(PlannerInfo *root,
 						 ((BooleanTest *) clause)->booltesttype,
 						 (Node *) ((BooleanTest *) clause)->arg,
 						 varRelid,
-						 jointype);
+						 jointype,
+						 sjinfo);
 	}
 	else if (IsA(clause, CurrentOfExpr))
 	{
@@ -803,6 +809,7 @@ clause_selectivity(PlannerInfo *root,
 								(Node *) ((RelabelType *) clause)->arg,
 								varRelid,
 								jointype,
+								sjinfo,
 								use_damping);
 	}
 	else if (IsA(clause, CoerceToDomain))
@@ -812,6 +819,7 @@ clause_selectivity(PlannerInfo *root,
 								(Node *) ((CoerceToDomain *) clause)->arg,
 								varRelid,
 								jointype,
+								sjinfo,
 								use_damping);
 	}
 

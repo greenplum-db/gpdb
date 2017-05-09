@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeNestloop.c,v 1.46 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeNestloop.c,v 1.47 2008/08/14 18:47:58 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -86,15 +86,6 @@ ExecNestLoop(NestLoopState *node)
 	 */
 	outerTupleSlot = node->js.ps.ps_OuterTupleSlot;
 	econtext->ecxt_outertuple = outerTupleSlot;
-
-	/*
-	 * If we're doing an IN join, we want to return at most one row per outer
-	 * tuple; so we can stop scanning the inner scan if we matched on the
-	 * previous try.
-	 */
-	if (node->js.jointype == JOIN_IN &&
-		node->nl_MatchedOuter)
-		node->nl_NeedNewOuter = true;
 
 	/*
 	 * Reset per-tuple memory context to free any expression evaluation
@@ -256,6 +247,7 @@ ExecNestLoop(NestLoopState *node)
 
 			if (!node->nl_MatchedOuter &&
 				(node->js.jointype == JOIN_LEFT ||
+				 node->js.jointype == JOIN_ANTI ||
 				 node->js.jointype == JOIN_LASJ ||
 				 node->js.jointype == JOIN_LASJ_NOTIN))
 			{
@@ -269,7 +261,7 @@ ExecNestLoop(NestLoopState *node)
 
 				ENL1_printf("testing qualification for outer-join tuple");
 
-				if (ExecQual(otherqual, econtext, false))
+				if (otherqual == NIL || ExecQual(otherqual, econtext, false))
 				{
 					/*
 					 * qualification was satisfied so we project and return
@@ -323,28 +315,33 @@ ExecNestLoop(NestLoopState *node)
 			node->nl_MatchedOuter = true;
 
 			/* In an antijoin, we never return a matched tuple */
-			if (node->js.jointype == JOIN_LASJ || node->js.jointype == JOIN_LASJ_NOTIN)
+			if (node->js.jointype == JOIN_LASJ || node->js.jointype == JOIN_LASJ_NOTIN || node->js.jointype == JOIN_ANTI)
 			{
 				node->nl_NeedNewOuter = true;
 				continue;		/* return to top of loop */
 			}
-
-			if (otherqual == NIL || ExecQual(otherqual, econtext, false))
+			else
 			{
 				/*
-				 * qualification was satisfied so we project and return the
-				 * slot containing the result tuple using ExecProject().
+				 * In a semijoin, we'll consider returning the first match,
+				 * but after that we're done with this outer tuple.
 				 */
-				ENL1_printf("qualification succeeded, projecting tuple");
+				if (node->js.jointype == JOIN_SEMI)
+					node->nl_NeedNewOuter = true;
 
-				Gpmon_Incr_Rows_Out(GpmonPktFromNLJState(node));
-                     	CheckSendPlanStateGpmonPkt(&node->js.ps);
-				return ExecProject(node->js.ps.ps_ProjInfo, NULL);
+				if (otherqual == NIL || ExecQual(otherqual, econtext, false))
+				{
+					/*
+					 * qualification was satisfied so we project and return the
+					 * slot containing the result tuple using ExecProject().
+					 */
+					ENL1_printf("qualification succeeded, projecting tuple");
+
+					Gpmon_Incr_Rows_Out(GpmonPktFromNLJState(node));
+					CheckSendPlanStateGpmonPkt(&node->js.ps);
+					return ExecProject(node->js.ps.ps_ProjInfo, NULL);
+				}
 			}
-
-			/* If we didn't return a tuple, may need to set NeedNewOuter */
-			if (node->js.jointype == JOIN_IN)
-				node->nl_NeedNewOuter = true;
 		}
 
 		/*
@@ -461,9 +458,10 @@ ExecInitNestLoop(NestLoop *node, EState *estate, int eflags)
 	switch (node->join.jointype)
 	{
 		case JOIN_INNER:
-		case JOIN_IN:
+		case JOIN_SEMI:
 			break;
 		case JOIN_LEFT:
+		case JOIN_ANTI:
 		case JOIN_LASJ:
 		case JOIN_LASJ_NOTIN:
 			nlstate->nl_NullInnerTupleSlot =

@@ -16,7 +16,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/selfuncs.c,v 1.243.2.1 2008/07/07 20:25:06 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/selfuncs.c,v 1.251 2008/08/14 18:47:59 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1275,7 +1275,7 @@ icnlikesel(PG_FUNCTION_ARGS)
  */
 Selectivity
 booltestsel(PlannerInfo *root, BoolTestType booltesttype, Node *arg,
-			int varRelid, JoinType jointype)
+			int varRelid, JoinType jointype, SpecialJoinInfo *sjinfo)
 {
 	VariableStatData vardata;
 	double		selec;
@@ -1414,12 +1414,14 @@ booltestsel(PlannerInfo *root, BoolTestType booltesttype, Node *arg,
 			case IS_NOT_FALSE:
 				selec = (double) clause_selectivity(root, arg,
 													varRelid, jointype,
+													sjinfo,
 													false /* use_damping */);
 				break;
 			case IS_FALSE:
 			case IS_NOT_TRUE:
 				selec = 1.0 - (double) clause_selectivity(root, arg,
 														  varRelid, jointype,
+														  sjinfo,
 														  false /* use_damping */);
 				break;
 			default:
@@ -1442,13 +1444,16 @@ booltestsel(PlannerInfo *root, BoolTestType booltesttype, Node *arg,
  *		nulltestsel		- Selectivity of NullTest Node.
  */
 Selectivity
-nulltestsel(PlannerInfo *root, NullTestType nulltesttype,
-			Node *arg, int varRelid, JoinType jointype)
+nulltestsel(PlannerInfo *root, NullTestType nulltesttype, Node *arg,
+			int varRelid, JoinType jointype, SpecialJoinInfo *sjinfo)
 {
 	VariableStatData vardata;
 	double		selec;
 
 	/*
+	 * 8.4-9.0-MERGE-NOTE: The following hack is removed in the upstream commit e006a24a.
+	 * However, removing this causes cost differences for some ICG queries.
+	 * Hence, keeping the hack in GPDB
 	 * Special hack: an IS NULL test being applied at an outer join should not
 	 * be taken at face value, since it's very likely being used to select the
 	 * outer-side rows that don't have a match, and thus its selectivity has
@@ -1460,6 +1465,7 @@ nulltestsel(PlannerInfo *root, NullTestType nulltesttype,
 	 */
 	if (IS_OUTER_JOIN(jointype) && nulltesttype == IS_NULL)
 		return (Selectivity) 0.5;
+
 
 	examine_variable(root, arg, varRelid, &vardata);
 
@@ -1559,7 +1565,9 @@ Selectivity
 scalararraysel(PlannerInfo *root,
 			   ScalarArrayOpExpr *clause,
 			   bool is_join_clause,
-			   int varRelid, JoinType jointype)
+			   int varRelid,
+			   JoinType jointype,
+			   SpecialJoinInfo *sjinfo)
 {
 	Oid			operator = clause->opno;
 	bool		useOr = clause->useOr;
@@ -1782,7 +1790,7 @@ estimate_array_length(Node *arrayexpr)
 Selectivity
 rowcomparesel(PlannerInfo *root,
 			  RowCompareExpr *clause,
-			  int varRelid, JoinType jointype)
+			  int varRelid, JoinType jointype, SpecialJoinInfo *sjinfo)
 {
 	Selectivity s1;
 	Oid			opno = linitial_oid(clause->opnos);
@@ -1924,7 +1932,7 @@ eqjoinsel(PG_FUNCTION_ARGS)
 		hasmatch2 = (bool *) palloc0(nvalues2 * sizeof(bool));
 
 		/*
-		 * If we are doing any variant of JOIN_IN, pretend all the values of
+		 * If we are doing any variant of JOIN_SEMI, pretend all the values of
 		 * the righthand relation are unique (ie, act as if it's been
 		 * DISTINCT'd).
 		 *
@@ -1939,7 +1947,7 @@ eqjoinsel(PG_FUNCTION_ARGS)
 		 * determine which var is really on which side of the join. Perhaps
 		 * someday we should pass in more information.
 		 */
-		if (jointype == JOIN_IN)
+		if (jointype == JOIN_SEMI)
 		{
 			float4		oneovern = 1.0 / nd2;
 
@@ -4876,6 +4884,7 @@ genericcostestimate(PlannerInfo *root,
 	*indexSelectivity = clauselist_selectivity(root, selectivityQuals,
 											   index->rel->relid,
 											   JOIN_INNER,
+											   NULL,
 											   false /* use_damping */);
 
 	/*
@@ -5235,6 +5244,7 @@ btcostestimate(PG_FUNCTION_ARGS)
 		btreeSelectivity = clauselist_selectivity(root, indexBoundQuals,
 												  index->rel->relid,
 												  JOIN_INNER,
+												  NULL,
 												  false /* use_damping */);
 		numIndexTuples = btreeSelectivity * index->rel->tuples;
 
@@ -5429,6 +5439,7 @@ bmcostestimate(PG_FUNCTION_ARGS)
 	*indexSelectivity = clauselist_selectivity(root, selectivityQuals,
 											   index->rel->relid,
 											   JOIN_INNER,
+											   NULL,
 											   false /* use_damping */);
 
 	/*

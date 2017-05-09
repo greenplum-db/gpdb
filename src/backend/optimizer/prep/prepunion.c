@@ -1336,19 +1336,22 @@ adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ctx)
 			j->rtindex = appinfo->child_relid;
 		return (Node *) j;
 	}
-	if (IsA(node, InClauseInfo))
+	if (IsA(node, FlattenedSubLink))
 	{
-		/* Copy the InClauseInfo node with correct mutation of subnodes */
-		InClauseInfo *ininfo;
+		/* Copy the FlattenedSubLink node with correct mutation of subnodes */
+		FlattenedSubLink *fslink;
 
-		ininfo = (InClauseInfo *) expression_tree_mutator(node,
-											  adjust_appendrel_attrs_mutator,
-														  (void *) ctx);
-		/* now fix InClauseInfo's relid sets */
-		ininfo->righthand = adjust_relid_set(ininfo->righthand,
+		fslink = (FlattenedSubLink *) expression_tree_mutator(node,
+															  adjust_appendrel_attrs_mutator,
+															  (void *) ctx);
+		/* now fix FlattenedSubLink's relid sets */
+		fslink->lefthand = adjust_relid_set(fslink->lefthand,
+											appinfo->parent_relid,
+											appinfo->child_relid);
+		fslink->righthand = adjust_relid_set(fslink->righthand,
 											 appinfo->parent_relid,
 											 appinfo->child_relid);
-		return (Node *) ininfo;
+		return (Node *) fslink;
 	}
 	/* Shouldn't need to handle OuterJoinInfo or AppendRelInfo here */
 	Assert(!IsA(node, OuterJoinInfo));
@@ -1367,11 +1370,11 @@ adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ctx)
 
 		/* Recursively fix the clause itself */
 		newinfo->clause = (Expr *)
-			adjust_appendrel_attrs_mutator((Node *) oldinfo->clause, ctx);
+				adjust_appendrel_attrs_mutator((Node *) oldinfo->clause, ctx);
 
 		/* and the modified version, if an OR clause */
 		newinfo->orclause = (Expr *)
-			adjust_appendrel_attrs_mutator((Node *) oldinfo->orclause, ctx);
+				adjust_appendrel_attrs_mutator((Node *) oldinfo->orclause, ctx);
 
 		/* adjust relid sets too */
 		newinfo->clause_relids = adjust_relid_set(oldinfo->clause_relids,

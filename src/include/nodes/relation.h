@@ -226,6 +226,8 @@ typedef struct PlannerInfo
 
 	List	   *full_join_clauses;		/* list of RestrictInfos for
 										 * mergejoinable full join clauses */
+	
+	List	   *join_info_list;		/* list of SpecialJoinInfos */
 
 	List	   *oj_info_list;	/* list of OuterJoinInfos */
 
@@ -632,7 +634,7 @@ typedef struct CdbRelDedupInfo
                                          * inputs to this rel but won't be
                                          * referenced again downstream (i.e.,
                                          * are not mentioned in reltargetlist).
-                                         * Can use JOIN_IN when inner relids
+                                         * Can use JOIN_SEMI when inner relids
                                          * are a subset of spent_subq_relids.
                                          */
     bool        try_postjoin_dedup;     /* true => this rel includes all inputs
@@ -1109,6 +1111,8 @@ typedef struct UniquePath
 	Path		path;
 	Path	   *subpath;
 	UniquePathMethod umethod;
+	List	   *in_operators;	/* equality operators of the IN clause */
+	List	   *uniq_exprs;		/* expressions to be made unique */
 	double		rows;			/* estimated number of result tuples */
     List       *distinct_on_exprs;
                                 /* CDB: list of exprs to be uniqueified */
@@ -1449,6 +1453,97 @@ typedef struct InnerIndexscanInfo
 	Path	   *cheapest_startup_innerpath;		/* cheapest startup cost */
 	Path	   *cheapest_total_innerpath;		/* cheapest total cost */
 } InnerIndexscanInfo;
+
+/*
+ * "Flattened SubLinks"
+ *
+ * When we pull an IN or EXISTS SubLink up into the parent query, the
+ * join conditions extracted from the IN/EXISTS clause need to be specially
+ * treated in distribute_qual_to_rels processing.  We handle this by
+ * wrapping such expressions in a FlattenedSubLink node that identifies
+ * the join they come from.  The FlattenedSubLink node is discarded after
+ * distribute_qual_to_rels, having served its purpose.
+ *
+ * Although the planner treats this as an expression node type, it is not
+ * recognized by the parser or executor, so we declare it here rather than
+ * in primnodes.h.
+ */
+
+typedef struct FlattenedSubLink
+{
+	Expr		xpr;
+	JoinType	jointype;		/* must be JOIN_SEMI or JOIN_ANTI */
+	Relids		lefthand;		/* base relids treated as syntactic LHS */
+	Relids		righthand;		/* base relids syntactically within RHS */
+	Expr	   *quals;			/* join quals (in explicit-AND format) */
+} FlattenedSubLink;
+
+/*
+ * "Special join" info.
+ *
+ * One-sided outer joins constrain the order of joining partially but not
+ * completely.	We flatten such joins into the planner's top-level list of
+ * relations to join, but record information about each outer join in a
+ * SpecialJoinInfo struct.  These structs are kept in the PlannerInfo node's
+ * join_info_list.
+ *
+ * Similarly, semijoins and antijoins created by flattening IN (subselect)
+ * and EXISTS(subselect) clauses create partial constraints on join order.
+ * These are likewise recorded in SpecialJoinInfo structs.
+ *
+ * We make SpecialJoinInfos for FULL JOINs even though there is no flexibility
+ * of planning for them, because this simplifies make_join_rel()'s API.
+ *
+ * min_lefthand and min_righthand are the sets of base relids that must be
+ * available on each side when performing the special join.  lhs_strict is
+ * true if the special join's condition cannot succeed when the LHS variables
+ * are all NULL (this means that an outer join can commute with upper-level
+ * outer joins even if it appears in their RHS).  We don't bother to set
+ * lhs_strict for FULL JOINs, however.
+ *
+ * It is not valid for either min_lefthand or min_righthand to be empty sets;
+ * if they were, this would break the logic that enforces join order.
+ *
+ * syn_lefthand and syn_righthand are the sets of base relids that are
+ * syntactically below this special join.  (These are needed to help compute
+ * min_lefthand and min_righthand for higher joins.)
+ *
+ * delay_upper_joins is set TRUE if we detect a pushed-down clause that has
+ * to be evaluated after this join is formed (because it references the RHS).
+ * Any outer joins that have such a clause and this join in their RHS cannot
+ * commute with this join, because that would leave noplace to check the
+ * pushed-down clause.	(We don't track this for FULL JOINs, either.)
+ *
+ * join_quals is an implicit-AND list of the quals syntactically associated
+ * with the join (they may or may not end up being applied at the join level).
+ * This is just a side list and does not drive actual application of quals.
+ * For JOIN_SEMI joins, this is cleared to NIL in create_unique_path() if
+ * the join is found not to be suitable for a uniqueify-the-RHS plan.
+ *
+ * jointype is never JOIN_RIGHT; a RIGHT JOIN is handled by switching
+ * the inputs to make it a LEFT JOIN.  So the allowed values of jointype
+ * in a join_info_list member are only LEFT, FULL, SEMI, or ANTI.
+ *
+ * For purposes of join selectivity estimation, we create transient
+ * SpecialJoinInfo structures for regular inner joins; so it is possible
+ * to have jointype == JOIN_INNER in such a structure, even though this is
+ * not allowed within join_info_list.  Note that lhs_strict, delay_upper_joins,
+ * and join_quals are not set meaningfully for such structs.
+ */
+
+typedef struct SpecialJoinInfo
+{
+	NodeTag		type;
+	Relids		min_lefthand;	/* base relids in minimum LHS for join */
+	Relids		min_righthand;	/* base relids in minimum RHS for join */
+	Relids		syn_lefthand;	/* base relids syntactically within LHS */
+	Relids		syn_righthand;	/* base relids syntactically within RHS */
+	JoinType	jointype;		/* always INNER, LEFT, FULL, SEMI, or ANTI */
+	bool		lhs_strict;		/* joinclause is strict for some LHS rel */
+	bool		delay_upper_joins;		/* can't commute with upper RHS */
+	List	   *join_quals;		/* join quals, in implicit-AND list format */
+} SpecialJoinInfo;
+
 
 /*
  * Outer join info.

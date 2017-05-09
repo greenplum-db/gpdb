@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/indxpath.c,v 1.227.2.2 2009/04/16 20:42:28 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/indxpath.c,v 1.232 2008/08/14 18:47:59 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1738,7 +1738,7 @@ best_inner_indexscan(PlannerInfo *root, RelOptInfo *rel,
 	*cheapest_startup = *cheapest_total = NULL;
 
 	/*
-	 * Nestloop only supports inner and left joins.
+	 * Nestloop only supports inner, left, semi, and anti joins.
 	 */
 	switch (jointype)
 	{
@@ -1746,6 +1746,8 @@ best_inner_indexscan(PlannerInfo *root, RelOptInfo *rel,
 			isouterjoin = false;
 			break;
 		case JOIN_LEFT:
+		case JOIN_SEMI:
+		case JOIN_ANTI:
 			isouterjoin = true;
 			break;
 		default:

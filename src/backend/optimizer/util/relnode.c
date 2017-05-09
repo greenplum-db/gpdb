@@ -307,7 +307,7 @@ find_join_rel(PlannerInfo *root, Relids relids)
  * 'joinrelids' is the Relids set that uniquely identifies the join
  * 'outer_rel' and 'inner_rel' are relation nodes for the relations to be
  *		joined
- * 'jointype': type of join (inner/outer)
+ * 'sjinfo': join context info
  * 'restrictlist_ptr': result variable.  If not NULL, *restrictlist_ptr
  *		receives the list of RestrictInfo nodes that apply to this
  *		particular pair of joinable relations.
@@ -320,7 +320,7 @@ build_join_rel(PlannerInfo *root,
 			   Relids joinrelids,
 			   RelOptInfo *outer_rel,
 			   RelOptInfo *inner_rel,
-			   JoinType jointype,
+			   SpecialJoinInfo *sjinfo,
 			   List **restrictlist_ptr)
 {
 	RelOptInfo *joinrel;
@@ -427,7 +427,7 @@ build_join_rel(PlannerInfo *root,
 	 * Set estimates of the joinrel's size.
 	 */
 	set_joinrel_size_estimates(root, joinrel, outer_rel, inner_rel,
-							   jointype, restrictlist);
+							   sjinfo, restrictlist);
 
 	/*
 	 * Add the joinrel to the query's joinrel list, and store it into the
@@ -880,7 +880,7 @@ cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel)
      *
      * When the columns of the inner rel of a join are not needed by
      * downstream operators, and all tables of the inner rel come from
-     * flattened subqueries, then the JOIN_IN jointype can be used,
+     * flattened subqueries, then the JOIN_SEMI jointype can be used,
      * telling the executor to produce only the first matching inner row
      * for each outer row.
      */

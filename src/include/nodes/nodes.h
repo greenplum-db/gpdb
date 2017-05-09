@@ -232,7 +232,7 @@ typedef enum NodeTag
 	/*
 	 * TAGS FOR EXPRESSION STATE NODES (execnodes.h)
 	 *
-	 * These correspond (not always one-for-one) to primitive nodes derived
+	 * These correspond (not always one-for-one) to primitive nodes derivedO
 	 * from Expr.
 	 */
 	T_ExprState = 400,
@@ -304,6 +304,8 @@ typedef enum NodeTag
 	T_InnerIndexscanInfo,
 	T_OuterJoinInfo,
 	T_InClauseInfo,
+	T_FlattenedSubLink,
+	T_SpecialJoinInfo,
 	T_AppendRelInfo,
 	T_Partition,
 	T_PartitionRule,
@@ -664,8 +666,8 @@ typedef enum CmdType
 typedef enum JoinType
 {
 	/*
-	 * The canonical kinds of joins according to the SQL JOIN syntax. Only
-	 * these codes can appear in parser output (e.g., JoinExpr nodes).
+	 * The canonical kinds of joins according to the SQL JOIN syntax. 
+	 * Only these codes can appear in parser output (e.g., JoinExpr nodes).
 	 */
 	JOIN_INNER,					/* matching tuple pairs only */
 	JOIN_LEFT,					/* pairs + unmatched LHS tuples */
@@ -673,19 +675,28 @@ typedef enum JoinType
 	JOIN_RIGHT,					/* pairs + unmatched RHS tuples */
 
 	/*
-	 * These are used for queries like WHERE foo IN (SELECT bar FROM ...).
-	 * Only JOIN_IN is actually implemented in the executor; the others are
-	 * defined for internal use in the planner.
+	 * Semijoins and anti-semijoins (as defined in relational theory) do
+	 * not appear in the SQL JOIN syntax, but there are standard idioms for
+	 * representing them (e.g., using EXISTS).  The planner recognizes these
+	 * cases and converts them to joins.  So the planner and executor must
+	 * support these codes.  NOTE: in JOIN_SEMI output, it is unspecified
+	 * which matching RHS row is joined to.  In JOIN_ANTI output, the row
+	 * is guaranteed to be null-extended.
      *
      * CDB: We no longer use JOIN_REVERSE_IN, JOIN_UNIQUE_OUTER or
      * JOIN_UNIQUE_INNER.  The definitions are retained in case they 
      * might be referenced in the source code of user-defined 
      * selectivity functions brought over from PostgreSQL.
 	 */
-	JOIN_IN,					/* at most one result per outer row */
+	JOIN_SEMI,					/* 1 copy of each LHS row that has match(es) */
+	JOIN_ANTI,					/* 1 copy of each LHS row that has no match */
 	JOIN_REVERSE_IN,			/* at most one result per inner row */
-	JOIN_UNIQUE_OUTER,			/* outer path must be made unique */
-	JOIN_UNIQUE_INNER,			/* inner path must be made unique */
+	/*
+	 * These codes are used internally in the planner, but are not supported
+	 * by the executor (nor, indeed, by most of the planner).
+	 */
+	JOIN_UNIQUE_OUTER,			/* LHS path must be made unique */
+	JOIN_UNIQUE_INNER,			/* RHS path must be made unique */
 	JOIN_LASJ,					/* Left Anti Semi Join:
 								   one copy of outer row with no match in inner */
 	JOIN_LASJ_NOTIN				/* Left Anti Semi Join with Not-In semantics:
@@ -697,12 +708,18 @@ typedef enum JoinType
 	 */
 } JoinType;
 
+/*
+ * OUTER joins are those for which pushed-down quals must behave differently
+ * from the join's own quals.  This is in fact everything except INNER joins.
+ * However, this macro must also exclude the JOIN_UNIQUE symbols since those
+ * are temporary proxies for what will eventually be an INNER join.
+ *
+ * Note: in some places it is preferable to treat JOIN_SEMI as not being
+ * an outer join, since it doesn't produce null-extended rows.  Be aware
+ * of that distinction when deciding whether to use this macro.
+ */
 #define IS_OUTER_JOIN(jointype) \
-	((jointype) == JOIN_LEFT || \
-	 (jointype) == JOIN_FULL || \
-	 (jointype) == JOIN_RIGHT)
-
-
+((jointype) > JOIN_INNER && (jointype) < JOIN_UNIQUE_OUTER)
 
 /*
  * FlowType - kinds of tuple flows in parallelized plans.

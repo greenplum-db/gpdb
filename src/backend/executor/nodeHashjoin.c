@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeHashjoin.c,v 1.93 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeHashjoin.c,v 1.94 2008/08/14 18:47:58 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -23,6 +23,9 @@
 #include "executor/nodeHashjoin.h"
 #include "utils/faultinjector.h"
 #include "utils/memutils.h"
+
+/* Returns true for JOIN_LEFT and JOIN_ANTI jointypes */
+#define HASHJOIN_IS_OUTER(hjstate)  ((hjstate)->hj_NullInnerTupleSlot != NULL)
 
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"			/* work_mem */
@@ -81,14 +84,6 @@ ExecHashJoin(HashJoinState *node)
 	econtext = node->js.ps.ps_ExprContext;
 
 	/*
-	 * If we're doing an IN join, we want to return at most one row per outer
-	 * tuple; so we can stop scanning the inner scan if we matched on the
-	 * previous try.
-	 */
-	if (node->js.jointype == JOIN_IN && node->hj_MatchedOuter)
-		node->hj_NeedNewOuter = true;
-
-	/*
 	 * Reset per-tuple memory context to free any expression evaluation
 	 * storage allocated in the previous tuple cycle.  Note this can't happen
 	 * until we're done projecting out tuples from a join tuple.
@@ -134,7 +129,7 @@ ExecHashJoin(HashJoinState *node)
 			 * outer plan node.  If we succeed, we have to stash it away for later
 			 * consumption by ExecHashJoinOuterGetTuple.
 			 */
-			if ((node->js.jointype == JOIN_LEFT) ||
+			if ((HASHJOIN_IS_OUTER(node)) ||
 					(node->js.jointype == JOIN_LASJ) ||
 					(node->js.jointype == JOIN_LASJ_NOTIN) ||
 					(outerNode->plan->startup_cost < hashNode->ps.plan->total_cost &&
@@ -236,7 +231,7 @@ ExecHashJoin(HashJoinState *node)
 		 * If the inner relation is completely empty, and we're not doing an
 		 * outer join, we can quit without scanning the outer relation.
 		 */
-		if (node->js.jointype != JOIN_LEFT
+		if (!HASHJOIN_IS_OUTER(node)
 			&& node->js.jointype != JOIN_LASJ
 			&& node->js.jointype != JOIN_LASJ_NOTIN
 			&& node->hj_InnerEmpty)
@@ -372,26 +367,34 @@ ExecHashJoin(HashJoinState *node)
 				node->hj_MatchedOuter = true;
 
 				/* In an antijoin, we never return a matched tuple */
-				if (node->js.jointype == JOIN_LASJ || node->js.jointype == JOIN_LASJ_NOTIN)
+				if (node->js.jointype == JOIN_LASJ || node->js.jointype == JOIN_LASJ_NOTIN ||
+					node->js.jointype == JOIN_ANTI)
 				{
 					node->hj_NeedNewOuter = true;
 					break;		/* out of loop over hash bucket */
 				}
-
-				if (otherqual == NIL || ExecQual(otherqual, econtext, false))
+				else
 				{
-					Gpmon_Incr_Rows_Out(GpmonPktFromHashJoinState(node));
-					CheckSendPlanStateGpmonPkt(&node->js.ps);
-					return ExecProject(node->js.ps.ps_ProjInfo, NULL);
-				}
+					/*
+					 * In a semijoin, we'll consider returning the first match,
+					 * but after that we're done with this outer tuple.
+					 */
+					if (node->js.jointype == JOIN_SEMI)
+						node->hj_NeedNewOuter = true;
 
-				/*
-				 * If we didn't return a tuple, may need to set NeedNewOuter
-				 */
-				if (node->js.jointype == JOIN_IN)
-				{
-					node->hj_NeedNewOuter = true;
-					break;		/* out of loop over hash bucket */
+					if (otherqual == NIL || ExecQual(otherqual, econtext, false))
+					{
+						Gpmon_Incr_Rows_Out(GpmonPktFromHashJoinState(node));
+						CheckSendPlanStateGpmonPkt(&node->js.ps);
+						return ExecProject(node->js.ps.ps_ProjInfo, NULL);
+					}
+
+					/*
+					 * If semijoin and we didn't return the tuple, we're still
+					 * done with this outer tuple.
+					 */
+					if (node->js.jointype == JOIN_SEMI)
+						break;		/* out of loop over hash bucket */
 				}
 			}
 		}
@@ -404,7 +407,7 @@ ExecHashJoin(HashJoinState *node)
 		node->hj_NeedNewOuter = true;
 
 		if (!node->hj_MatchedOuter &&
-			(node->js.jointype == JOIN_LEFT ||
+			(HASHJOIN_IS_OUTER(node) ||
 			 node->js.jointype == JOIN_LASJ ||
 			 node->js.jointype == JOIN_LASJ_NOTIN))
 		{
@@ -536,9 +539,10 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 	switch (node->join.jointype)
 	{
 		case JOIN_INNER:
-		case JOIN_IN:
+		case JOIN_SEMI:
 			break;
 		case JOIN_LEFT:
+		case JOIN_ANTI:
 		case JOIN_LASJ:
 		case JOIN_LASJ_NOTIN:
 			hjstate->hj_NullInnerTupleSlot =
@@ -722,7 +726,7 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 			econtext->ecxt_outertuple = slot;
 
 			bool hashkeys_null = false;
-			bool keep_nulls = (hjstate->js.jointype == JOIN_LEFT) ||
+			bool keep_nulls = (HASHJOIN_IS_OUTER(hjstate)) ||
 					(hjstate->js.jointype == JOIN_LASJ) ||
 					(hjstate->js.jointype == JOIN_LASJ_NOTIN) ||
 					hjstate->hj_nonequijoin;
@@ -849,7 +853,7 @@ start_over:
 	 * sides.  We can sometimes skip over batches that are empty on only one
 	 * side, but there are exceptions:
 	 *
-	 * 1. In a LEFT JOIN, we have to process outer batches even if the inner
+	 * 1. In an outer join, we have to process outer batches even if the inner
 	 * batch is empty.
 	 *
 	 * 2. If we have increased nbatch since the initial estimate, we have to
@@ -868,7 +872,7 @@ start_over:
 	{
 		batch = hashtable->batches[curbatch];
 		if (batch->outerside.workfile != NULL &&
-			((hjstate->js.jointype == JOIN_LEFT) ||
+			((HASHJOIN_IS_OUTER(hjstate)) ||
 			 (hjstate->js.jointype == JOIN_LASJ) ||
 			 (hjstate->js.jointype == JOIN_LASJ_NOTIN)))
 			break;				/* must process due to rule 1 */

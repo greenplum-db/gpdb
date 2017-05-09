@@ -25,6 +25,7 @@
 #include "optimizer/cost.h"
 #include "optimizer/planmain.h"
 #include "optimizer/planner.h"
+#include "optimizer/prep.h"
 #include "optimizer/subselect.h"
 #include "optimizer/var.h"
 #include "parser/parse_expr.h"
@@ -70,6 +71,7 @@ static Node *convert_testexpr_mutator(Node *node,
 static bool subplan_is_hashable(PlannerInfo *root, Plan *plan);
 static bool testexpr_is_hashable(Node *testexpr);
 static bool hash_ok_operator(OpExpr *expr);
+static bool simplify_EXISTS_query(Query *query);
 static Node *replace_correlation_vars_mutator(Node *node, PlannerInfo *root);
 static Node *process_sublinks_mutator(Node *node,
 						 process_sublinks_context *context);
@@ -217,6 +219,7 @@ generate_new_param(PlannerInfo *root, Oid paramtype, int32 paramtypmod)
 
 	return retval;
 }
+
 
 /*
  * Assign a (nonnegative) PARAM_EXEC ID for a recursive query's worktable.
@@ -379,6 +382,11 @@ make_subplan(PlannerInfo *root, Query *orig_subquery, SubLinkType subLinkType,
 	 */
 	subquery = (Query *) copyObject(orig_subquery);
 
+	/*
+ 	 * If it's an EXISTS subplan, we might be able to simplify it.
+ 	 */
+	if (subLinkType == EXISTS_SUBLINK)
+		(void) simplify_EXISTS_query(subquery);
 	/*
 	 * For an EXISTS subplan, tell lower-level planner to expect that only the
 	 * first tuple will be retrieved.  For ALL and ANY subplans, we will be
@@ -1026,103 +1034,54 @@ SS_process_ctes(PlannerInfo *root)
 }
 
 /*
- * convert_IN_to_join: can we convert an IN SubLink to join style?
+ * convert_ANY_sublink_to_join: can we convert an ANY SubLink to a join?
  *
- * The caller has found a SubLink at the top level of WHERE, but has not
- * checked the properties of the SubLink at all.  Decide whether it is
- * appropriate to process this SubLink in join style.  If not, return the
- * original sublink unmodified.
+ * The caller has found an ANY SubLink at the top level of WHERE, but has not
+ * checked the properties of the SubLink further.  Decide whether it is
+ * appropriate to process this SubLink in join style.  If not, return NULL.
  * If so, build the qual clause(s) to replace the SubLink, and return them.
+ * The qual clauses are wrapped in a FlattenedSubLink node to help later
+ * processing place them properly.
  *
  * Side effects of a successful conversion include adding the SubLink's
- * subselect to the query's rangetable and adding an InClauseInfo node to
- * its in_info_list.
- *
- * Upon creating an RTE for a flattened subquery, a corresponding RangeTblRef
- * node is appended to the caller's List referenced by *rtrlist_inout, so the
- * caller can add it to the jointree.
+ * subselect to the query's rangetable.
  */
 Node *
-convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
+convert_ANY_sublink_to_join(PlannerInfo *root, SubLink *sublink)
 {
 	Query	   *parse = root->parse;
 	Query	   *subselect = (Query *) sublink->subselect;
-	List	   *in_operators;
-	List	   *left_exprs = NIL;
-	List	   *right_exprs = NIL;
 	Relids		left_varnos;
 	int			rtindex;
 	RangeTblEntry *rte;
 	RangeTblRef *rtr;
 	List	   *subquery_vars;
-	InClauseInfo *ininfo;
-	bool		correlated;
-	Node	   *result;
+	Expr	   *quals;
+	FlattenedSubLink *fslink;
 
-	Assert(IsA(subselect, Query));
+	Assert(sublink->subLinkType == ANY_SUBLINK);
 
-	cdbsubselect_drop_orderby(subselect);
-	cdbsubselect_drop_distinct(subselect);
+	/*
+	 * The sub-select must not refer to any Vars of the parent query. (Vars of
+	 * higher levels should be okay, though.)
+	 */
+	if (contain_vars_of_level((Node *) subselect, 1))
+		return NULL;
+
+	/*
+	 * The test expression must contain some Vars of the current query,
+	 * else it's not gonna be a join.  (Note that it won't have Vars
+	 * referring to the subquery, rather Params.)
+	 */
+	left_varnos = pull_varnos(sublink->testexpr);
+	if (bms_is_empty(left_varnos))
+		return NULL;
 
 	/*
 	 * The combining operators and left-hand expressions mustn't be volatile.
 	 */
 	if (contain_volatile_functions(sublink->testexpr))
-		return (Node *) sublink;
-
-	/*
-	 * If subquery returns a set-returning function (SRF) in the targetlist, we
-	 * do not attempt to convert the IN to a join.
-	 */
-	
-	if (expression_returns_set((Node *) subselect->targetList))
-		return (Node *) sublink;
-
-	/*
-	 * If deeply correlated, then don't pull it up
-	 */
-	if (IsSubqueryMultiLevelCorrelated(subselect))
-		return (Node *) sublink;
-
-	/*
-	 * If there are CTEs, then the transformation does not work. Don't attempt
-	 * to pullup.
-	 */
-	if (parse->cteList)
-		return (Node *) sublink;
-
-	/*
-	 * If uncorrelated, and no Var nodes on lhs, the subquery will be executed
-	 * only once.  It should become an InitPlan, but make_subplan() doesn't
-	 * handle that case, so just flatten it for now.
-	 * CDB TODO: Let it become an InitPlan, so its QEs can be recycled.
-	 */
-    correlated = contain_vars_of_level_or_above(sublink->subselect, 1);
-
-    if (correlated)
-    {
-		/*
-		 * Under certain conditions, we cannot pull up the subquery as a join.
-		 */
-    	if (subselect->hasAggs
-    			|| (subselect->jointree->fromlist == NULL)
-    			|| subselect->havingQual
-    			|| subselect->groupClause
-    			|| subselect->hasWindFuncs
-    			|| subselect->distinctClause
-    			|| subselect->setOperations)
-    		return (Node *) sublink;
-    	
-		/*
-		 * Do not pull subqueries with correlation in a func expr in the from
-		 * clause of the subselect
-		 */
-    	if (has_correlation_in_funcexpr_rte(subselect->rtable))
-    		return (Node *) sublink;
-
-    	if (contain_subplans(subselect->jointree->quals))
-    		return (Node *) sublink;
-    }
+		return NULL;
 
 	/*
 	 * Okay, pull up the sub-select into top range table and jointree.
@@ -1134,15 +1093,20 @@ convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
 	 */
 	rte = addRangeTableEntryForSubquery(NULL,
 										subselect,
-										makeAlias("IN_subquery", NIL),
+										makeAlias("ANY_subquery", NIL),
 										false);
 	parse->rtable = lappend(parse->rtable, rte);
 	rtindex = list_length(parse->rtable);
 	rtr = makeNode(RangeTblRef);
 	rtr->rtindex = rtindex;
 
-	/* Tell caller to augment the jointree with a reference to the new RTE. */
-	*rtrlist_inout = lappend(*rtrlist_inout, rtr);
+	/*
+	 * We assume it's okay to add the pulled-up subquery to the topmost FROM
+	 * list.  This should be all right for ANY clauses appearing in WHERE
+	 * or in upper-level plain JOIN/ON clauses.  ANYs appearing below any
+	 * outer joins couldn't be placed there, however.
+	 */
+	parse->jointree->fromlist = lappend(parse->jointree->fromlist, rtr);
 
 	/*
 	 * Build a list of Vars representing the subselect outputs.
@@ -1154,100 +1118,231 @@ convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
 	/*
 	 * Build the result qual expression, replacing Params with these Vars.
 	 */
-	result = convert_testexpr(root,
-							  sublink->testexpr,
-							  subquery_vars);
+	quals = (Expr *) convert_testexpr(root,
+									  sublink->testexpr,
+									  subquery_vars);
 
 	/*
-	 * Now build the InClauseInfo node.
+	 * Now build the FlattenedSubLink node.
 	 */
-	ininfo = makeNode(InClauseInfo);
-	ininfo->sub_targetlist = NULL;
-	ininfo->righthand = bms_make_singleton(rtindex);
+	fslink = makeNode(FlattenedSubLink);
+	fslink->jointype = JOIN_SEMI;
+	fslink->lefthand = left_varnos;
+	fslink->righthand = bms_make_singleton(rtindex);
+	fslink->quals = quals;
+
+	return (Node *) fslink;
+}
+
+/*
+ * simplify_EXISTS_query: remove any useless stuff in an EXISTS's subquery
+ *
+ * The only thing that matters about an EXISTS query is whether it returns
+ * zero or more than zero rows.  Therefore, we can remove certain SQL features
+ * that won't affect that.  The only part that is really likely to matter in
+ * typical usage is simplifying the targetlist: it's a common habit to write
+ * "SELECT * FROM" even though there is no need to evaluate any columns.
+ *
+ * Note: by suppressing the targetlist we could cause an observable behavioral
+ * change, namely that any errors that might occur in evaluating the tlist
+ * won't occur, nor will other side-effects of volatile functions.  This seems
+ * unlikely to bother anyone in practice.
+ *
+ * Returns TRUE if was able to discard the targetlist, else FALSE.
+ */
+static bool
+simplify_EXISTS_query(Query *query)
+{
+	/*
+	 * We don't try to simplify at all if the query uses set operations,
+	 * aggregates, HAVING, LIMIT/OFFSET, or FOR UPDATE/SHARE; none of these
+	 * seem likely in normal usage and their possible effects are complex.
+	 */
+	if (query->commandType != CMD_SELECT ||
+		query->intoClause ||
+		query->setOperations ||
+		query->hasAggs ||
+		query->havingQual ||
+		query->limitOffset ||
+		query->limitCount ||
+		query->rowMarks)
+		return false;
 
 	/*
-	 * Uncorrelated "=ANY" subqueries can use JOIN_UNIQUE dedup technique.  We
-	 * expect that the test expression will be either a single OpExpr, or an
-	 * AND-clause containing OpExprs.  (If it's anything else then the parser
-	 * must have determined that the operators have non-equality-like
-	 * semantics.  In the OpExpr case we can't be sure what the operator's
-	 * semantics are like, and must check for ourselves.)
+	 * Mustn't throw away the targetlist if it contains set-returning
+	 * functions; those could affect whether zero rows are returned!
 	 */
-	ininfo->try_join_unique = false;
-	in_operators = NIL;
-	if (!correlated && sublink->testexpr)
+	if (expression_returns_set((Node *) query->targetList))
+		return false;
+
+	/*
+	 * Otherwise, we can throw away the targetlist, as well as any GROUP,
+	 * DISTINCT, and ORDER BY clauses; none of those clauses will change
+	 * a nonzero-rows result to zero rows or vice versa.  (Furthermore,
+	 * since our parsetree representation of these clauses depends on the
+	 * targetlist, we'd better throw them away if we drop the targetlist.)
+	 */
+	query->targetList = NIL;
+	query->groupClause = NIL;
+	query->distinctClause = NIL;
+	query->sortClause = NIL;
+
+	return true;
+}
+
+/*
+ * convert_EXISTS_sublink_to_join: can we convert an EXISTS SubLink to a join?
+ *
+ * The caller has found an EXISTS SubLink at the top level of WHERE, or just
+ * underneath a NOT, but has not checked the properties of the SubLink
+ * further.  Decide whether it is appropriate to process this SubLink in join
+ * style.  If not, return NULL.  If so, build the qual clause(s) to replace
+ * the SubLink, and return them.  (In the NOT case, the returned clauses are
+ * intended to replace the NOT as well.)  The qual clauses are wrapped in a
+ * FlattenedSubLink node to help later processing place them properly.
+ *
+ * Side effects of a successful conversion include adding the SubLink's
+ * subselect to the query's rangetable.
+ */
+Node *
+convert_EXISTS_sublink_to_join(PlannerInfo *root, SubLink *sublink,
+							   bool under_not)
+{
+	Query	   *parse = root->parse;
+	Query	   *subselect = (Query *) sublink->subselect;
+	Node	   *whereClause;
+	int			rtoffset;
+	int			varno;
+	Relids		clause_varnos;
+	Relids		left_varnos;
+	Relids		right_varnos;
+	Relids		subselect_varnos;
+	FlattenedSubLink *fslink;
+
+	Assert(sublink->subLinkType == EXISTS_SUBLINK);
+
+	/*
+	 * Copy the subquery so we can modify it safely (see comments in
+	 * make_subplan).
+	 */
+	subselect = (Query *) copyObject(subselect);
+
+	/*
+	 * See if the subquery can be simplified based on the knowledge that
+	 * it's being used in EXISTS().  If we aren't able to get rid of its
+	 * targetlist, we have to fail, because the pullup operation leaves
+	 * us with noplace to evaluate the targetlist.
+	 */
+	if (!simplify_EXISTS_query(subselect))
+		return NULL;
+
+	/*
+	 * Separate out the WHERE clause.  (We could theoretically also remove
+	 * top-level plain JOIN/ON clauses, but it's probably not worth the
+	 * trouble.)
+	 */
+	whereClause = subselect->jointree->quals;
+	subselect->jointree->quals = NULL;
+
+	/*
+	 * The rest of the sub-select must not refer to any Vars of the parent
+	 * query.  (Vars of higher levels should be okay, though.)
+	 */
+	if (contain_vars_of_level((Node *) subselect, 1))
+		return NULL;
+
+	/*
+	 * On the other hand, the WHERE clause must contain some Vars of the
+	 * parent query, else it's not gonna be a join.
+	 */
+	if (!contain_vars_of_level(whereClause, 1))
+		return NULL;
+
+	/*
+	 * We don't risk optimizing if the WHERE clause is volatile, either.
+	 */
+	if (contain_volatile_functions(whereClause))
+		return NULL;
+
+	/*
+	 * Also disallow SubLinks within the WHERE clause.  (XXX this could
+	 * probably be supported, but it would complicate the transformation
+	 * below, and it doesn't seem worth worrying about in a first pass.)
+	 */
+	if (contain_subplans(whereClause))
+		return NULL;
+
+	/*
+	 * Okay, pull up the sub-select into top range table and jointree.
+	 *
+	 * We rely here on the assumption that the outer query has no references
+	 * to the inner (necessarily true). Therefore this is a lot easier than
+	 * what pull_up_subqueries has to go through.
+	 *
+	 * In fact, it's even easier than what convert_ANY_sublink_to_join has
+	 * to do.  The machinations of simplify_EXISTS_query ensured that there
+	 * is nothing interesting in the subquery except an rtable and jointree,
+	 * and even the jointree FromExpr no longer has quals.  So we can just
+	 * append the rtable to our own and append the fromlist to our own.
+	 * But first, adjust all level-zero varnos in the subquery to account
+	 * for the rtable merger.
+	 */
+	rtoffset = list_length(parse->rtable);
+	OffsetVarNodes((Node *) subselect, rtoffset, 0);
+	OffsetVarNodes(whereClause, rtoffset, 0);
+
+	/*
+	 * Upper-level vars in subquery will now be one level closer to their
+	 * parent than before; in particular, anything that had been level 1
+	 * becomes level zero.
+	 */
+	IncrementVarSublevelsUp((Node *) subselect, -1, 1);
+	IncrementVarSublevelsUp(whereClause, -1, 1);
+
+	/*
+	 * Now that the WHERE clause is adjusted to match the parent query
+	 * environment, we can easily identify all the level-zero rels it uses.
+	 * The ones <= rtoffset are "left rels" of the join we're forming,
+	 * and the ones > rtoffset are "right rels".
+	 */
+	clause_varnos = pull_varnos(whereClause);
+	left_varnos = right_varnos = NULL;
+	while ((varno = bms_first_member(clause_varnos)) >= 0)
 	{
-		ininfo->try_join_unique = true;
-		if (IsA(sublink->testexpr, OpExpr))
-	    {
-			OpExpr 	   *op = (OpExpr *) sublink->testexpr;
-			Oid			opno = op->opno;
-		    List	   *opfamilies;
-		    List	   *opstrats;
-
-		    get_op_btree_interpretation(opno, &opfamilies, &opstrats);
-		    if (!list_member_int(opstrats, ROWCOMPARE_EQ))
-			    ininfo->try_join_unique = false;
-			if (list_length(op->args) != 2)
-				return (Node *) sublink;
-			else
-			{
-				left_exprs = list_make1(linitial(op->args));
-				right_exprs = list_make1(lsecond(op->args));
-			}
-			in_operators = list_make1_oid(opno);
-	    }
-		else if (and_clause(sublink->testexpr))
-		{
-			ListCell   *lc;
-
-			/* OK, but we need to extract the per-column operator OIDs */
-			in_operators = left_exprs = right_exprs = NIL;
-			foreach(lc, ((BoolExpr *) sublink->testexpr)->args)
-			{
-				OpExpr *op = (OpExpr *) lfirst(lc);
-
-				if (!IsA(op, OpExpr))           /* probably shouldn't happen */
-					ininfo->try_join_unique = false;
-				if (list_length(op->args) != 2)
-					return (Node *) sublink;
-				else
-				{
-					left_exprs = lappend(left_exprs, linitial(op->args));
-					right_exprs = lappend(right_exprs, lsecond(op->args));
-				}
-				in_operators = lappend_oid(in_operators, op->opno);
-			}
-		}
+		if (varno <= rtoffset)
+			left_varnos = bms_add_member(left_varnos, varno);
 		else
-			ininfo->try_join_unique = false;
-    }
+			right_varnos = bms_add_member(right_varnos, varno);
+	}
+	bms_free(clause_varnos);
+	Assert(!bms_is_empty(left_varnos));
 
-	ininfo->in_operators = in_operators;
+	/* Also identify all the rels syntactically within the subselect */
+	subselect_varnos = get_relids_in_jointree((Node *) subselect->jointree);
+	Assert(bms_is_subset(right_varnos, subselect_varnos));
+
+	/* Now we can attach the modified subquery rtable to the parent */
+	parse->rtable = list_concat(parse->rtable, subselect->rtable);
 
 	/*
-	 * The left-hand expressions must contain some Vars of the current query,
-	 * else it's not gonna be a join.
+	 * We assume it's okay to add the pulled-up subquery to the topmost FROM
+	 * list.  This should be all right for EXISTS clauses appearing in WHERE
+	 * or in upper-level plain JOIN/ON clauses.  EXISTS appearing below any
+	 * outer joins couldn't be placed there, however.
 	 */
-	left_varnos = pull_varnos((Node *) left_exprs);
-	ininfo->lefthand = left_varnos;
+	parse->jointree->fromlist = list_concat(parse->jointree->fromlist,
+											subselect->jointree->fromlist);
 
 	/*
-	 * ininfo->sub_targetlist must be filled with a list of expressions that
-	 * would need to be unique-ified if we try to implement the IN using a
-	 * regular join to unique-ified subquery output.  This is most easily done
-	 * by applying convert_testexpr to just the RHS inputs of the testexpr
-	 * operators.  That handles cases like type coercions of the subquery
-	 * outputs, clauses dropped due to const-simplification, etc.
+	 * Now build the FlattenedSubLink node.
 	 */
-	ininfo->sub_targetlist = (List *) convert_testexpr(root,
-													   (Node *) right_exprs,
-													   subquery_vars);
+	fslink = makeNode(FlattenedSubLink);
+	fslink->jointype = under_not ? JOIN_ANTI : JOIN_SEMI;
+	fslink->lefthand = left_varnos;
+	fslink->righthand = subselect_varnos;
+	fslink->quals = (Expr *) whereClause;
 
-	/* Add the completed node to the query's list */
-	root->in_info_list = lappend(root->in_info_list, ininfo);
-
-	return result;
+	return (Node *) fslink;
 }
 
 /*
