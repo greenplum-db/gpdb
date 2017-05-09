@@ -643,6 +643,7 @@ typedef struct CdbRelDedupInfo
                                          * of the current query level.
                                          */
     struct InClauseInfo   *join_unique_ininfo;
+    struct SpecialJoinInfo   *join_unique_ininfo;
                                         /* uncorrelated "= ANY" subquery with
                                          * exactly the same relids as this rel.
                                          */
@@ -1103,10 +1104,8 @@ typedef enum
 typedef struct UniquePath
 {
 	Path		path;
-	Path	   *subpath;
+	Path		*subpath;
 	UniquePathMethod umethod;
-	List	   *in_operators;	/* equality operators of the IN clause */
-	List	   *uniq_exprs;		/* expressions to be made unique */
 	double		rows;			/* estimated number of result tuples */
     List       *distinct_on_exprs;
                                 /* CDB: list of exprs to be uniqueified */
@@ -1469,7 +1468,11 @@ typedef struct FlattenedSubLink
 	JoinType	jointype;		/* must be JOIN_SEMI or JOIN_ANTI */
 	Relids		lefthand;		/* base relids treated as syntactic LHS */
 	Relids		righthand;		/* base relids syntactically within RHS */
-	Expr	   *quals;			/* join quals (in explicit-AND format) */
+	Expr		*quals;			/* join quals (in explicit-AND format) */
+	bool		try_join_unique;/* CDB: true => comparison is equality op and
+								 * subquery is not correlated.  Ok to consider
+								 * JOIN_UNIQUE method of duplicate suppression.
+								 */
 } FlattenedSubLink;
 
 /*
@@ -1535,7 +1538,12 @@ typedef struct SpecialJoinInfo
 	JoinType	jointype;		/* always INNER, LEFT, FULL, SEMI, or ANTI */
 	bool		lhs_strict;		/* joinclause is strict for some LHS rel */
 	bool		delay_upper_joins;		/* can't commute with upper RHS */
-	List	   *join_quals;		/* join quals, in implicit-AND list format */
+	List		*join_quals;		/* join quals, in implicit-AND list format */
+	bool		try_join_unique;
+								/* CDB: true => comparison is equality op and
+								 *  subquery is not correlated.  Ok to consider
+								 *  JOIN_UNIQUE method of duplicate suppression.
+								 */
 } SpecialJoinInfo;
 
 
