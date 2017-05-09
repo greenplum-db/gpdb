@@ -157,7 +157,7 @@ join_search_one_level(PlannerInfo *root, int level, List **joinrels)
 			 * to force a bushy join plan.
 			 */
 			if (old_rel->joininfo == NIL && !old_rel->has_eclass_joins &&
-				root->oj_info_list == NIL && !has_join_restriction(root, old_rel))
+				!has_join_restriction(root, old_rel))
 				continue;
 
 			if (k == other_level)
@@ -230,7 +230,7 @@ join_search_one_level(PlannerInfo *root, int level, List **joinrels)
 		}
 
 		/*----------
-		 * When OJs or IN clauses are involved, there may be no legal way
+		 * When special joins are involved, there may be no legal way
 		 * to make an N-way join for some values of N.	For example consider
 		 *
 		 * SELECT ... FROM t1 WHERE
@@ -881,6 +881,25 @@ have_join_order_restriction(PlannerInfo *root,
 			result = true;
 			break;
 		}
+
+		/*
+		 * In CDB, unlike PostgreSQL, flattened subqueries do not restrict the
+		 * join sequence; we aren't in danger of being unable to join all the
+		 * tables.  Still, an early cross-product (clauseless join) might
+		 * sometimes enable the consideration of pre-join duplicate elimination
+		 * (JOIN_SEMI or JOIN_UNIQUE).  Someday we should consider a well-chosen
+		 * set of early cross products.  For now, limit the search space by
+		 * means of a simple heuristic.
+		 */
+
+		if (sjinfo->jointype == JOIN_SEMI && (bms_is_subset(rel1->relids, sjinfo->min_righthand) &&
+			bms_is_subset(rel2->relids, sjinfo->min_righthand) &&
+			bms_num_members(rel1->relids) + bms_num_members(rel2->relids) ==
+			bms_num_members(sjinfo->min_righthand)))
+		{
+			result = true;
+			break;
+		}
 	}
 
 	/*
@@ -891,22 +910,6 @@ have_join_order_restriction(PlannerInfo *root,
 	 * in the join tree (that is, with many rels inside the LHS or RHS),
 	 * we would otherwise expend lots of effort considering very stupid
 	 * join combinations within its LHS or RHS.
-	 */
-	if (result)
-	{
-		if (has_legal_joinclause(root, rel1) ||
-			has_legal_joinclause(root, rel2))
-			result = false;
-	}
-
-	/*
-	 * We do not force the join to occur if either input rel can legally be
-	 * joined to anything else using joinclauses.  This essentially means that
-	 * clauseless bushy joins are put off as long as possible. The reason is
-	 * that when there is a join order restriction high up in the join tree
-	 * (that is, with many rels inside the LHS or RHS), we would otherwise
-	 * expend lots of effort considering very stupid join combinations within
-	 * its LHS or RHS.
 	 */
 	if (result)
 	{
@@ -951,15 +954,10 @@ has_join_restriction(PlannerInfo *root, RelOptInfo *rel)
 		if (bms_overlap(sjinfo->min_lefthand, rel->relids) ||
 			bms_overlap(sjinfo->min_righthand, rel->relids))
 			return true;
-	}
 
-	foreach(l, root->in_info_list)
-	{
-		InClauseInfo *ininfo = (InClauseInfo *) lfirst(l);
-
-        /* CDB: Consider cross product if subquery RHS = rel + some other rel */
-        if (bms_is_subset(rel->relids, ininfo->righthand) &&
-            !bms_equal(rel->relids, ininfo->righthand))
+		/* CDB: Consider cross product if subquery RHS = rel + some other rel */
+		if (sjinfo->jointype == JOIN_SEMI && (bms_is_subset(rel->relids, sjinfo->min_righthand) &&
+			!bms_equal(rel->relids, sjinfo->min_righthand)))
 			return true;
 	}
 
