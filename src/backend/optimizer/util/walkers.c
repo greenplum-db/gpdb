@@ -1180,7 +1180,6 @@ plan_tree_walker(Node *node,
 		case T_FromExpr:
 		case T_JoinExpr:
 		case T_SetOperationStmt:
-		case T_InClauseInfo:
 		case T_SpecialJoinInfo:
 		case T_TableValueExpr:
 		case T_PartSelectedExpr:

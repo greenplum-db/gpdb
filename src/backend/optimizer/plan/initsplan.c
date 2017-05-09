@@ -1319,8 +1319,8 @@ check_outerjoin_delay(PlannerInfo *root,
 	bool		outerjoin_delayed;
 	bool		found_some;
 
-	/* fast path if no outer joins */
-	if (root->oj_info_list == NIL)
+	/* fast path if no special joins */
+	if (root->join_info_list == NIL)
 	{
 		*nullable_relids_p = NULL;
 		return false;

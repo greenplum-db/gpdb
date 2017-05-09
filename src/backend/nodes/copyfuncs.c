@@ -2195,23 +2195,6 @@ _copySpecialJoinInfo(SpecialJoinInfo *from)
 }
 
 /*
- * _copyInClauseInfo
- */
-static InClauseInfo *
-_copyInClauseInfo(InClauseInfo *from)
-{
-	InClauseInfo *newnode = makeNode(InClauseInfo);
-
-	COPY_BITMAPSET_FIELD(righthand);
-	COPY_NODE_FIELD(sub_targetlist);
-	COPY_NODE_FIELD(in_operators);
-
-    COPY_SCALAR_FIELD(try_join_unique);                 /*CDB*/
-
-	return newnode;
-}
-
-/*
  * _copyAppendRelInfo
  */
 static AppendRelInfo *

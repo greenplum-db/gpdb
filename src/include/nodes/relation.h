@@ -229,10 +229,6 @@ typedef struct PlannerInfo
 	
 	List	   *join_info_list;		/* list of SpecialJoinInfos */
 
-	List	   *oj_info_list;	/* list of OuterJoinInfos */
-
-	List	   *in_info_list;	/* list of InClauseInfos */
-
 	List	   *append_rel_list;	/* list of AppendRelInfos */
 
 	List	   *query_pathkeys; /* desired pathkeys for query_planner(), and
@@ -250,7 +246,6 @@ typedef struct PlannerInfo
 	double		tuple_fraction; /* tuple_fraction passed to query_planner */
 
 	bool		hasJoinRTEs;	/* true if any RTEs are RTE_JOIN kind */
-	bool		hasOuterJoins;	/* true if any RTEs are outer joins */
 	bool		hasHavingQual;	/* true if havingQual was non-null */
 	bool		hasPseudoConstantQuals; /* true if any RestrictInfo has
 										 * pseudoconstant = true */
@@ -648,7 +643,6 @@ typedef struct CdbRelDedupInfo
                                          * required for all flattened subqueries
                                          * of the current query level.
                                          */
-    struct InClauseInfo   *join_unique_ininfo;
     struct SpecialJoinInfo   *join_unique_ininfo;
                                         /* uncorrelated "= ANY" subquery with
                                          * exactly the same relids as this rel.
@@ -1551,84 +1545,6 @@ typedef struct SpecialJoinInfo
 								 *  JOIN_UNIQUE method of duplicate suppression.
 								 */
 } SpecialJoinInfo;
-
-
-/*
- * Outer join info.
- *
- * One-sided outer joins constrain the order of joining partially but not
- * completely.	We flatten such joins into the planner's top-level list of
- * relations to join, but record information about each outer join in an
- * OuterJoinInfo struct.  These structs are kept in the PlannerInfo node's
- * oj_info_list.
- *
- * min_lefthand and min_righthand are the sets of base relids that must be
- * available on each side when performing the outer join.  lhs_strict is
- * true if the outer join's condition cannot succeed when the LHS variables
- * are all NULL (this means that the outer join can commute with upper-level
- * outer joins even if it appears in their RHS).  We don't bother to set
- * lhs_strict for FULL JOINs, however.
- *
- * It is not valid for either min_lefthand or min_righthand to be empty sets;
- * if they were, this would break the logic that enforces join order.
- *
- * syn_lefthand and syn_righthand are the sets of base relids that are
- * syntactically below this outer join.  (These are needed to help compute
- * min_lefthand and min_righthand for higher joins, but are not used
- * thereafter.)
- *
- * delay_upper_joins is set TRUE if we detect a pushed-down clause that has
- * to be evaluated after this join is formed (because it references the RHS).
- * Any outer joins that have such a clause and this join in their RHS cannot
- * commute with this join, because that would leave noplace to check the
- * pushed-down clause.	(We don't track this for FULL JOINs, either.)
- *
- * Note: OuterJoinInfo directly represents only LEFT JOIN and FULL JOIN;
- * RIGHT JOIN is handled by switching the inputs to make it a LEFT JOIN.
- * We make an OuterJoinInfo for FULL JOINs even though there is no flexibility
- * of planning for them, because this simplifies make_join_rel()'s API.
- */
-
-typedef struct OuterJoinInfo
-{
-	NodeTag		type;
-	Relids		min_lefthand;	/* base relids in minimum LHS for join */
-	Relids		min_righthand;	/* base relids in minimum RHS for join */
-	Relids		syn_lefthand;	/* base relids syntactically within LHS */
-	Relids		syn_righthand;	/* base relids syntactically within RHS */
-	JoinType	join_type;		/* LEFT, FULL, or ANTI */
-	bool		lhs_strict;		/* joinclause is strict for some LHS rel */
-	bool		delay_upper_joins;		/* can't commute with upper RHS */
-} OuterJoinInfo;
-
-/*
- * IN clause info.
- *
- * When we convert top-level IN quals into join operations, we must restrict
- * the order of joining and use special join methods at some join points.
- * We record information about each such IN clause in an InClauseInfo struct.
- * These structs are kept in the PlannerInfo node's in_info_list.
- *
- * Note: sub_targetlist is a bit misnamed; it is a list of the expressions
- * on the RHS of the IN's join clauses.  (This normally starts out as a list
- * of Vars referencing the subquery outputs, but can get mutated if the
- * subquery is flattened into the main query.)
- */
-
-typedef struct InClauseInfo
-{
-	NodeTag		type;
-	Relids		lefthand;		/* base relids in lefthand expressions */
-	Relids		righthand;		/* base relids coming from the subselect */
-	List	   *sub_targetlist; /* RHS expressions of the IN's comparisons */
-	List	   *in_operators;	/* OIDs of the IN's equality operators */
-
-    bool        try_join_unique;
-                                /* CDB: true => comparison is equality op and
-                                 *  subquery is not correlated.  Ok to consider
-                                 *  JOIN_UNIQUE method of duplicate suppression.
-                                 */
-} InClauseInfo;
 
 /*
  * Append-relation info.

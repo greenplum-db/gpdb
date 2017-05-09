@@ -1353,8 +1353,8 @@ adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ctx)
 											 appinfo->child_relid);
 		return (Node *) fslink;
 	}
-	/* Shouldn't need to handle OuterJoinInfo or AppendRelInfo here */
-	Assert(!IsA(node, OuterJoinInfo));
+	/* Shouldn't need to handle SpecialJoinInfo or AppendRelInfo here */
+	Assert(!IsA(node, SpecialJoinInfo));
 	Assert(!IsA(node, AppendRelInfo));
 
 	/*

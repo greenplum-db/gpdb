@@ -414,7 +414,7 @@ build_join_rel(PlannerInfo *root,
 	/*
 	 * CDB: Attach subquery duplicate suppression info if needed.
 	 */
-	if (root->in_info_list)
+	if (root->join_info_list && hasSemiJoin(root->join_info_list))
 		joinrel->dedup_info = cdb_make_rel_dedup_info(root, joinrel);
 
 	/*
@@ -865,7 +865,7 @@ cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel)
     ListCell           *cell;
     Relids              prejoin_dedup_subqrelids;
     Relids              spent_subqrelids;
-    InClauseInfo       *join_unique_ininfo;
+    SpecialJoinInfo     *join_unique_ininfo;
     bool                partial;
     bool                try_postjoin_dedup;
     int                 subqueries_unfinished;
@@ -915,20 +915,22 @@ cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel)
     join_unique_ininfo = NULL;
     partial = false;
     try_postjoin_dedup = false;
-    subqueries_unfinished = list_length(root->in_info_list);
-    foreach(cell, root->in_info_list)
+    subqueries_unfinished = list_length(root->join_info_list);
+    foreach(cell, root->join_info_list)
     {
-        InClauseInfo   *ininfo = (InClauseInfo *)lfirst(cell);
+        SpecialJoinInfo   *sjinfo = (SpecialJoinInfo *)lfirst(cell);
+        if(sjinfo->jointype != JOIN_SEMI)
+            continue;
 
         /* Got all of the subquery's own tables? */
-        if (bms_is_subset(ininfo->righthand, rel->relids))
+        if (bms_is_subset(sjinfo->min_righthand, rel->relids))
         {
-            /* Early dedup (JOIN_UNIQUE, JOIN_IN) can be applied to this rel. */
+            /* Early dedup (JOIN_UNIQUE, JOIN_SEMI) can be applied to this rel. */
             prejoin_dedup_subqrelids =
-                bms_add_members(prejoin_dedup_subqrelids, ininfo->righthand);
+                bms_add_members(prejoin_dedup_subqrelids, sjinfo->min_righthand);
 
             /* Got all the correlating and left-hand relids too? */
-            if (bms_is_subset(ininfo->righthand, spent_subqrelids))
+            if (bms_is_subset(sjinfo->min_righthand, spent_subqrelids))
             {
                 try_postjoin_dedup = true;
                 subqueries_unfinished--;
@@ -937,11 +939,11 @@ cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel)
                 partial = true;
 
             /* Does rel have exactly the relids of uncorrelated "= ANY" subq? */
-            if (ininfo->try_join_unique &&
-                bms_equal(ininfo->righthand, rel->relids))
-                join_unique_ininfo = ininfo;
+            if (sjinfo->try_join_unique &&
+                bms_equal(sjinfo->min_righthand, rel->relids))
+                join_unique_ininfo = sjinfo;
         }
-        else if (bms_overlap(ininfo->righthand, rel->relids))
+        else if (bms_overlap(sjinfo->min_righthand, rel->relids))
             partial = true;
     }
 

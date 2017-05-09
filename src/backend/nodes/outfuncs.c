@@ -2251,17 +2251,6 @@ _outSpecialJoinInfo(StringInfo str, SpecialJoinInfo *node)
 	WRITE_BOOL_FIELD(lhs_strict);
 	WRITE_BOOL_FIELD(delay_upper_joins);
 	WRITE_NODE_FIELD(join_quals);
-}
-
-static void
-_outInClauseInfo(StringInfo str, InClauseInfo *node)
-{
-	WRITE_NODE_TYPE("INCLAUSEINFO");
-
-	WRITE_BITMAPSET_FIELD(righthand);
-    WRITE_BOOL_FIELD(try_join_unique);                  /*CDB*/
-	WRITE_NODE_FIELD(sub_targetlist);
-	WRITE_NODE_FIELD(in_operators);
 	WRITE_BOOL_FIELD(try_join_unique);	/*CDB*/
 }
 

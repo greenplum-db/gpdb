@@ -2881,3 +2881,18 @@ create_hashjoin_path(PlannerInfo *root,
 
 	return pathnode;
 }
+
+/*
+ * Check if SpecialJoinInfo list contains jointype JOIN_SEMI
+ */
+bool hasSemiJoin(List *join_info_list)
+{
+	ListCell *lc;
+	foreach (lc, join_info_list)
+	{
+		SpecialJoinInfo *sp = (SpecialJoinInfo *) lfirst(lc);
+		if(sp->jointype == JOIN_SEMI)
+			return true;
+	}
+	return false;
+}
