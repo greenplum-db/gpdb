@@ -28,10 +28,6 @@
 #include "lib/stringinfo.h"
 #include "cdb/cdbpullup.h"
 
-extern bool is_simple_subquery(PlannerInfo *root, Query *subquery);
-
-static Node *convert_IN_to_antijoin(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink);
-
 static int	add_expr_subquery_rte(Query *parse, Query *subselect);
 
 static JoinExpr *make_join_expr(Node *larg, int r_rtindex, int join_type);
@@ -111,7 +107,7 @@ cdbsubselect_flatten_sublinks(struct PlannerInfo *root, struct Node *jtnode)
 					cdbsubselect_flatten_sublinks(root, (Node *) lfirst(cell));
 
 				/* Flatten sublinks in WHERE search condition. */
-				fromexpr->quals = pull_up_IN_clauses(root, &rtrlist, fromexpr->quals);
+				fromexpr->quals = pull_up_sublinks(root, &rtrlist, fromexpr->quals);
 
 				/* Append any new RangeTblRef nodes to the FROM clause. */
 				if (rtrlist)
@@ -135,7 +131,7 @@ cdbsubselect_flatten_sublinks(struct PlannerInfo *root, struct Node *jtnode)
 				cdbsubselect_flatten_sublinks(root, joinexpr->rarg);
 
 				/* Flatten sublinks in JOIN...ON search condition. */
-				joinexpr->quals = pull_up_IN_clauses(root, &rtrlist, joinexpr->quals);
+				joinexpr->quals = pull_up_sublinks(root, &rtrlist, joinexpr->quals);
 
 				/* Add any new RangeTblRef nodes to the join. */
 				joinexpr->subqfromlist = rtrlist;
@@ -1085,7 +1081,7 @@ convert_sublink_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublin
 			break;
 
 		case ANY_SUBLINK:
-			result = convert_IN_to_join(root, rtrlist_inout, sublink);
+			result = convert_ANY_sublink_to_join(root, sublink);
 			break;
 
 		case ROWCOMPARE_SUBLINK:
@@ -1768,9 +1764,8 @@ is_targetlist_nullable(Query *subq)
  * The current implementation assumes that the sublink expression occurs
  * in a top-level where clause (or through a series of inner joins).
  */
-static Node *
-convert_IN_to_antijoin(PlannerInfo *root, List **rtrlist_inout __attribute__((unused)),
-					   SubLink *sublink)
+Node *
+convert_IN_to_antijoin(PlannerInfo *root, SubLink *sublink)
 {
 	Query	   *parse = root->parse;
 	Query	   *subselect = (Query *) sublink->subselect;

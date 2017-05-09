@@ -517,15 +517,28 @@ cdb_set_cheapest_dedup(PlannerInfo *root, RelOptInfo *rel)
      */
     if (dedup->join_unique_ininfo)
     {
-    	Assert(dedup->join_unique_ininfo->sub_targetlist);
-    	/* Top off the subpath with DISTINCT ON the result columns. */
-       	upath = create_unique_exprlist_path(root,
-											dedup->cheapest_total_path,
-											dedup->join_unique_ininfo->sub_targetlist,
-											dedup->join_unique_ininfo->in_operators);
+		/*
+		 * GPDB_90_MERGE_FIXME: How should we derive sub_targetlist and
+		 * in_operators here?
+		 * Before the merge, CdbRelDedupInfo had InClauseInfo which
+		 * contained these lists.  Now it contains SpecialJoinInfo
+		 * instead. We might need to modify SpecialJoinInfo to have
+		 * sub_targetlist and in_operators since they are needed
+		 * in this GPDB specific code.  Currently this code path is not
+		 * exercised as join_unique_ininfo is always empty as
+		 * try_join_unique is always set to false.
+		 *
+		 * For now, pass NULLs instead of join_unique_ininfo->sub_targetlist and
+		 * join_unique_ininfo->in_operators to create_unique_exprlist_path.
+		 */
 
-        /* Add to rel's main pathlist. */
-        add_path(root, rel, (Path *)upath);
+		/* Top off the subpath with DISTINCT ON the result columns. */
+		upath = create_unique_exprlist_path(root,
+											dedup->cheapest_total_path,
+											NULL,
+											NULL);
+		/* Add to rel's main pathlist. */
+		add_path(root, rel, (Path *)upath);
     }
 
     /*
@@ -2537,7 +2550,10 @@ create_nestloop_path(PlannerInfo *root,
 
     /* CDB: Change jointype to JOIN_SEMI from JOIN_INNER (if eligible). */
     if (joinrel->dedup_info)
+    {
         jointype = cdb_jointype_to_join_in(joinrel, jointype, inner_path);
+        sjinfo->jointype = jointype;
+    }
 
     /* CDB: Inner indexpath must execute in the same backend as the
      * nested join to receive input values from the outer rel.
@@ -2652,9 +2668,12 @@ create_mergejoin_path(PlannerInfo *root,
     List           *outermotionkeys;
     List           *innermotionkeys;
 
-    /* CDB: Change jointype to JOIN_IN from JOIN_INNER (if eligible). */
+    /* CDB: Change jointype to JOIN_SEMI from JOIN_INNER (if eligible). */
     if (joinrel->dedup_info)
+    {
         jointype = cdb_jointype_to_join_in(joinrel, jointype, inner_path);
+        sjinfo->jointype = jointype;
+    }
 
     /*
      * Do subpaths have useful ordering?
@@ -2811,7 +2830,10 @@ create_hashjoin_path(PlannerInfo *root,
 
 	/* CDB: Change jointype to JOIN_SEMI from JOIN_INNER (if eligible). */
 	if (joinrel->dedup_info)
+	{
 		jointype = cdb_jointype_to_join_in(joinrel, jointype, inner_path);
+		sjinfo->jointype = jointype;
+	}
 
 	/* Add motion nodes above subpaths and decide where to join. */
 	join_locus = cdbpath_motion_for_join(root,

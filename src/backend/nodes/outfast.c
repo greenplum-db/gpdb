@@ -1566,6 +1566,8 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_InClauseInfo:
 				_outInClauseInfo(str, obj);
+			case T_SpecialJoinInfo:
+				_outSpecialJoinInfo(str, obj);
 				break;
 			case T_AppendRelInfo:
 				_outAppendRelInfo(str, obj);

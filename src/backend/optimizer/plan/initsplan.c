@@ -63,8 +63,10 @@ static void distribute_qual_to_rels(PlannerInfo *root, Node *clause,
 						Relids deduced_nullable_relids,
 						List **postponed_qual_list);
 static void distribute_sublink_quals_to_rels(PlannerInfo *root,
-											 FlattenedSubLink *fslink,
-											 bool below_outer_join);
+								 FlattenedSubLink *fslink,
+								 bool below_outer_join,
+								 Relids deduced_nullable_relids,
+								 List **postponed_qual_list);
 static bool check_outerjoin_delay(PlannerInfo *root, Relids *relids_p,
 					  Relids *nullable_relids_p, bool is_pushed_down);
 static bool check_equivalence_delay(PlannerInfo *root,
@@ -390,7 +392,8 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 			/* FlattenedSubLink wrappers need special processing */
 			if (qual && IsA(qual, FlattenedSubLink))
 				distribute_sublink_quals_to_rels(root, (FlattenedSubLink *) qual,
-												 below_outer_join);
+												 below_outer_join, NULL,
+												 postponed_qual_list);
 			else
 				distribute_qual_to_rels(root, (Node *) lfirst(l),
 										false, below_outer_join,
@@ -573,7 +576,8 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 			if (qual && IsA(qual, FlattenedSubLink))
 				distribute_sublink_quals_to_rels(root,
 												 (FlattenedSubLink *) qual,
-												 below_outer_join);
+												 below_outer_join, NULL,
+												 postponed_qual_list);
 			else
 				distribute_qual_to_rels(root, qual,
 										false, below_outer_join,
@@ -1216,7 +1220,9 @@ distribute_qual_to_rels(PlannerInfo *root, Node *clause,
 static void
 distribute_sublink_quals_to_rels(PlannerInfo *root,
 								 FlattenedSubLink *fslink,
-								 bool below_outer_join)
+								 bool below_outer_join,
+								 Relids deduced_nullable_relids,
+								 List **postponed_qual_list)
 {
 	List	   *quals = make_ands_implicit(fslink->quals);
 	SpecialJoinInfo *sjinfo;
@@ -1235,6 +1241,7 @@ distribute_sublink_quals_to_rels(PlannerInfo *root,
 								fslink->righthand,
 								fslink->jointype,
 								quals);
+	sjinfo->try_join_unique = fslink->try_join_unique;
 
 	qualscope = bms_union(sjinfo->syn_lefthand, sjinfo->syn_righthand);
 	ojscope = bms_union(sjinfo->min_lefthand, sjinfo->min_righthand);
@@ -1246,7 +1253,7 @@ distribute_sublink_quals_to_rels(PlannerInfo *root,
 		distribute_qual_to_rels(root, qual,
 								false, below_outer_join,
 								qualscope, ojscope, fslink->lefthand,
-								NULL, NULL);
+								deduced_nullable_relids, postponed_qual_list);
 	}
 
 	/* Now we can add the SpecialJoinInfo to join_info_list */

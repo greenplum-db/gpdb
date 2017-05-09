@@ -557,8 +557,7 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	 * their SubLinks are processed just before pulling them up.
 	 */
 	if (parse->hasSubLinks)
-		parse->jointree->quals = pull_up_sublinks(root,
-												  parse->jointree->quals);
+		cdbsubselect_flatten_sublinks(root, (Node *) parse);
 
 	/*
 	 * Check to see if any subqueries in the rangetable can be merged into
