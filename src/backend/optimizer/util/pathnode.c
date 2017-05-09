@@ -27,6 +27,7 @@
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
 #include "optimizer/tlist.h"
+#include "optimizer/var.h"
 #include "parser/parse_expr.h"
 #include "parser/parse_oper.h"
 #include "parser/parsetree.h"
@@ -702,7 +703,7 @@ cdb_is_path_deduped_walker(Path *path, void* context)
             goto put_deduped_result;
 
         /*
-         * Join with jointype JOIN_IN will suppress duplicates for all
+         * Join with jointype JOIN_SEMI will suppress duplicates for all
          * subqueries whose relids are covered by the join's inner rel.
          */
         case T_HashJoin:
@@ -720,8 +721,8 @@ cdb_is_path_deduped_walker(Path *path, void* context)
             if (status != CdbVisit_Walk)
                 return status;
 
-            /* Subqueries on inner side of JOIN_IN can't cause duplicates. */
-            if (joinpath->jointype == JOIN_IN)
+            /* Subqueries on inner side of JOIN_SEMI can't cause duplicates. */
+            if (joinpath->jointype == JOIN_SEMI)
             {
                 if (!inner_rel->dedup_info ||
                     !inner_rel->dedup_info->prejoin_dedup_subqrelids)
@@ -1246,8 +1247,8 @@ create_index_path(PlannerInfo *root,
 		 * into different lists, it should be sufficient to use pointer
 		 * comparison to remove duplicates.)
 		 *
-		 * Always assume the join type is JOIN_INNER; even if some of the join
-		 * clauses come from other contexts, that's not our problem.
+		 * Note that we force the clauses to be treated as non-join clauses
+		 * during selectivity estimation.
 		 */
 		allclauses = list_union_ptr(rel->baserestrictinfo, allclauses);
 		pathnode->rows = rel->tuples *
@@ -1255,6 +1256,7 @@ create_index_path(PlannerInfo *root,
 								   allclauses,
 								   rel->relid,	/* do not use 0! */
 								   JOIN_INNER,
+								   NULL,
 								   false /* use_damping */);
 		/* Like costsize.c, force estimate to be at least one row */
 		pathnode->rows = clamp_row_est(pathnode->rows);
@@ -1702,10 +1704,22 @@ create_material_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath)
 	return pathnode;
 }
 
+
+/* 8.4-9.0-MERGE-NOTE: Before commit e006a24a, this function used in_info_list
+ * to compute in_operators and uniq_exprs. After this commit, this function used sjinfo instead.
+ * But in GPDB, this function receives distinct_on_operators (in_operators) and distinct_on_exprs (uniq_exprs)
+ * hence we don't need to make any changes here. */
+
 /*
  * create_unique_path
  *	  Creates a path representing elimination of distinct rows from the
- *	  input data.
+ *	  input data.  Distinct-ness is defined according to the needs of the
+ *	  semijoin represented by sjinfo.  If it is not possible to identify
+ *	  how to make the data unique, NULL is returned.
+ *
+ * If used at all, this is likely to be called repeatedly on the same rel;
+ * and the input subpath should always be the same (the cheapest_total path
+ * for the rel).  So we cache the result.
  */
 UniquePath *
 create_unique_path(PlannerInfo *root,
@@ -2523,12 +2537,12 @@ create_worktablescan_path(PlannerInfo *root, RelOptInfo *rel, CdbLocusType ctelo
 
 /*
  * cdb_jointype_to_join_in
- *    Returns JOIN_IN if the jointype should be changed from JOIN_INNER to
- *    JOIN_IN so as to produce at most one matching inner row per outer row.
+ *    Returns JOIN_SEMI if the jointype should be changed from JOIN_INNER to
+ *    JOIN_SEMI so as to produce at most one matching inner row per outer row.
  *    Else returns the given jointype.
  *
- * CDB TODO: Allow outer joins to use the JOIN_IN technique.
- * CDB TODO: Occasionally, symmetric JOIN_IN might be useful (aka 'match join').
+ * CDB TODO: Allow outer joins to use the JOIN_SEMI technique.
+ * CDB TODO: Occasionally, symmetric JOIN_SEMI might be useful (aka 'match join').
  */
 static inline JoinType
 cdb_jointype_to_join_in(RelOptInfo *joinrel, JoinType jointype, Path *inner_path)
@@ -2541,7 +2555,7 @@ cdb_jointype_to_join_in(RelOptInfo *joinrel, JoinType jointype, Path *inner_path
         !IsA(inner_path, UniquePath) &&
         jointype == JOIN_INNER)
     {
-        jointype = JOIN_IN;
+        jointype = JOIN_SEMI;
     }
     return jointype;
 }                               /* cdb_jointype_to_join_in */
@@ -2585,6 +2599,7 @@ path_contains_inner_index(Path *path)
  *
  * 'joinrel' is the join relation.
  * 'jointype' is the type of join required
+ * 'sjinfo' is extra info about the join for selectivity estimation
  * 'outer_path' is the outer path
  * 'inner_path' is the inner path
  * 'restrict_clauses' are the RestrictInfo nodes to apply at the join
@@ -2596,6 +2611,7 @@ NestPath *
 create_nestloop_path(PlannerInfo *root,
 					 RelOptInfo *joinrel,
 					 JoinType jointype,
+					 SpecialJoinInfo *sjinfo,
 					 Path *outer_path,
 					 Path *inner_path,
 					 List *restrict_clauses,
@@ -2606,7 +2622,7 @@ create_nestloop_path(PlannerInfo *root,
     CdbPathLocus    join_locus;
     bool            inner_must_be_local = false;
 
-    /* CDB: Change jointype to JOIN_IN from JOIN_INNER (if eligible). */
+    /* CDB: Change jointype to JOIN_SEMI from JOIN_INNER (if eligible). */
     if (joinrel->dedup_info)
         jointype = cdb_jointype_to_join_in(joinrel, jointype, inner_path);
 
@@ -2674,7 +2690,7 @@ create_nestloop_path(PlannerInfo *root,
 
 	pathnode->path.sameslice_relids = bms_union(inner_path->sameslice_relids, outer_path->sameslice_relids);
 
-	cost_nestloop(pathnode, root);
+	cost_nestloop(pathnode, root, sjinfo);
 
 	return pathnode;
 }
@@ -2686,6 +2702,7 @@ create_nestloop_path(PlannerInfo *root,
  *
  * 'joinrel' is the join relation
  * 'jointype' is the type of join required
+ * 'sjinfo' is extra info about the join for selectivity estimation
  * 'outer_path' is the outer path
  * 'inner_path' is the inner path
  * 'restrict_clauses' are the RestrictInfo nodes to apply at the join
@@ -2707,6 +2724,7 @@ MergePath *
 create_mergejoin_path(PlannerInfo *root,
 					  RelOptInfo *joinrel,
 					  JoinType jointype,
+					  SpecialJoinInfo *sjinfo,
 					  Path *outer_path,
 					  Path *inner_path,
 					  List *restrict_clauses,
@@ -2846,7 +2864,7 @@ create_mergejoin_path(PlannerInfo *root,
 	pathnode->outersortkeys = outersortkeys;
 	pathnode->innersortkeys = innersortkeys;
 
-	cost_mergejoin(pathnode, root);
+	cost_mergejoin(pathnode, root, sjinfo);
 
 	return pathnode;
 }
@@ -2857,6 +2875,7 @@ create_mergejoin_path(PlannerInfo *root,
  *
  * 'joinrel' is the join relation
  * 'jointype' is the type of join required
+ * 'sjinfo' is extra info about the join for selectivity estimation
  * 'outer_path' is the cheapest outer path
  * 'inner_path' is the cheapest inner path
  * 'restrict_clauses' are the RestrictInfo nodes to apply at the join
@@ -2867,6 +2886,7 @@ HashPath *
 create_hashjoin_path(PlannerInfo *root,
 					 RelOptInfo *joinrel,
 					 JoinType jointype,
+					 SpecialJoinInfo *sjinfo,
 					 Path *outer_path,
 					 Path *inner_path,
 					 List *restrict_clauses,
@@ -2876,7 +2896,7 @@ create_hashjoin_path(PlannerInfo *root,
 	HashPath       *pathnode;
 	CdbPathLocus    join_locus;
 
-	/* CDB: Change jointype to JOIN_IN from JOIN_INNER (if eligible). */
+	/* CDB: Change jointype to JOIN_SEMI from JOIN_INNER (if eligible). */
 	if (joinrel->dedup_info)
 		jointype = cdb_jointype_to_join_in(joinrel, jointype, inner_path);
 
@@ -2922,7 +2942,7 @@ create_hashjoin_path(PlannerInfo *root,
 		pathnode->jpath.path.motionHazard = outer_path->motionHazard || inner_path->motionHazard;
 	pathnode->jpath.path.sameslice_relids = bms_union(inner_path->sameslice_relids, outer_path->sameslice_relids);
 
-	cost_hashjoin(pathnode, root);
+	cost_hashjoin(pathnode, root, sjinfo);
 
 	return pathnode;
 }

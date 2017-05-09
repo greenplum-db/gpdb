@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/paths.h,v 1.104 2008/03/31 16:59:26 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/paths.h,v 1.105 2008/08/14 18:48:00 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -90,10 +90,9 @@ extern void create_tidscan_paths(PlannerInfo *root, RelOptInfo *rel, List** ppat
  *	   routines to create join paths
  */
 extern void add_paths_to_joinrel(PlannerInfo *root, RelOptInfo *joinrel,
-					 RelOptInfo *outerrel,
-					 RelOptInfo *innerrel,
-					 JoinType jointype,
-					 List *restrictlist);
+									RelOptInfo *outerrel, RelOptInfo *innerrel,
+									JoinType jointype, SpecialJoinInfo *sjinfo,
+									List *restrictlist);
 
 /*
  * joinrels.c
