@@ -1049,14 +1049,15 @@ SS_process_ctes(PlannerInfo *root)
 Node *
 convert_ANY_sublink_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
 {
-	Query	   *parse = root->parse;
-	Query	   *subselect = (Query *) sublink->subselect;
+	Query		*parse = root->parse;
+	Query		*subselect = (Query *) sublink->subselect;
 	Relids		left_varnos;
 	int			rtindex;
 	RangeTblEntry *rte;
 	RangeTblRef *rtr;
-	List	   *subquery_vars;
-	Expr	   *quals;
+	List		*subquery_vars;
+	Expr		*quals;
+	bool		correlated;
 	FlattenedSubLink *fslink;
 
 	Assert(sublink->subLinkType == ANY_SUBLINK);
@@ -1067,11 +1068,11 @@ convert_ANY_sublink_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *su
 
     if (contain_vars_of_level((Node *) subselect, 1))
         return NULL;
-	/*
+
+    /*
 	 * If subquery returns a set-returning function (SRF) in the targetlist, we
 	 * do not attempt to convert the IN to a join.
 	 */
-	
 	if (expression_returns_set((Node *) subselect->targetList))
 		return NULL;
 
@@ -1080,6 +1081,46 @@ convert_ANY_sublink_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *su
 	 */
 	if (IsSubqueryMultiLevelCorrelated(subselect))
 		return NULL;
+
+	/*
+	 * If there are CTEs, then the transformation does not work. Don't attempt
+	 * to pullup.
+	 */
+	if (parse->cteList)
+		return (Node *) sublink;
+
+	/*
+	 * If uncorrelated, and no Var nodes on lhs, the subquery will be executed
+	 * only once.  It should become an InitPlan, but make_subplan() doesn't
+	 * handle that case, so just flatten it for now.
+	 * CDB TODO: Let it become an InitPlan, so its QEs can be recycled.
+	 */
+	correlated = contain_vars_of_level_or_above(sublink->subselect, 1);
+
+	if (correlated)
+	{
+		/*
+		 * Under certain conditions, we cannot pull up the subquery as a join.
+		 */
+		if (subselect->hasAggs
+			|| (subselect->jointree->fromlist == NULL)
+			|| subselect->havingQual
+			|| subselect->groupClause
+			|| subselect->hasWindFuncs
+			|| subselect->distinctClause
+			|| subselect->setOperations)
+			return NULL;
+
+		/*
+		 * Do not pull subqueries with correlation in a func expr in the from
+		 * clause of the subselect
+		 */
+		if (has_correlation_in_funcexpr_rte(subselect->rtable))
+			return NULL;
+
+		if (contain_subplans(subselect->jointree->quals))
+			return NULL;
+	}
 
 	/*
 	 * The test expression must contain some Vars of the current query,
@@ -1115,14 +1156,6 @@ convert_ANY_sublink_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *su
 
 	/* Tell caller to augment the jointree with a reference to the new RTE. */
 	*rtrlist_inout = lappend(*rtrlist_inout, rtr);
-
-	/*
-	 * We assume it's okay to add the pulled-up subquery to the topmost FROM
-	 * list.  This should be all right for ANY clauses appearing in WHERE
-	 * or in upper-level plain JOIN/ON clauses.  ANYs appearing below any
-	 * outer joins couldn't be placed there, however.
-	 */
-	parse->jointree->fromlist = lappend(parse->jointree->fromlist, rtr);
 
 	/*
 	 * Build a list of Vars representing the subselect outputs.
