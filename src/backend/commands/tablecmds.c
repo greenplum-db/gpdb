@@ -4576,7 +4576,7 @@ column_to_scan(AOCSFileSegInfo **segInfos, int nseg, int natts, Relation aocsrel
 	int segi;
 	int i;
 	AOCSVPInfoEntry *vpe;
-	int64 min_eof = 0x7fffffffffffffff; /* largest value for int64 */
+	int64 min_eof = 0;
 	List *drop_segno_list = NIL;
 
 	for (segi = 0; segi < nseg; ++segi)
@@ -4604,11 +4604,10 @@ column_to_scan(AOCSFileSegInfo **segInfos, int nseg, int natts, Relation aocsrel
 			for (i = 0; i < natts; ++i)
 			{
 				vpe = getAOCSVPEntry(segInfos[segi], i);
-				if (vpe->eof < min_eof && vpe->eof > 0)
+				if (vpe->eof > 0 && (!min_eof || vpe->eof < min_eof))
 				{
 					min_eof = vpe->eof;
 					scancol = i;
-					break;
 				}
 			}
 		}
