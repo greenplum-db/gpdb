@@ -354,6 +354,23 @@ TRY_AND_RETRY () {
 	fi
 	return $RETVAL
 }
+RETRY()
+{
+	RETVAL=$?
+	if [[ "$CURRENT" =~ "ssh" ]]; then
+		for i in 2 4 8; do
+			sleep $i
+			LOG_MSG "[WARN]:-Retrying command -- $CURRENT"
+			eval "$CURRENT"
+			if [ $? = 0 ]; then
+				RETVAL=0
+				# There seems to be no way of grabbing the return code of a
+				# trap other than saving it to a variable
+				return
+			fi
+		done
+	fi
+}
 
 SED_PG_CONF () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
@@ -385,28 +402,32 @@ SED_PG_CONF () {
 				fi
 				RETVAL=$?
 				if [ $RETVAL -ne 0 ]; then
-					ERROR_EXIT "[WARN]:-Failed to replace $SEARCH_TXT in $FILENAME, retrying" 1
+					ERROR_EXIT "[FATAL]:-Failed to replace $SEARCH_TXT in $FILENAME" 2
 				else
 					LOG_MSG "[INFO]:-Replaced line in $FILENAME"
 					$RM -f ${FILENAME}.bak1
 				fi
-				TRY_AND_RETRY "$SED -i'.bak2' -e \"s/^#${SEARCH_TXT}/${SEARCH_TXT}/\" $FILENAME"
+				$SED -i'.bak2' -e "s/^#${SEARCH_TXT}/${SEARCH_TXT}/" $FILENAME
 				RETVAL=$?
 				if [ $RETVAL -ne 0 ]; then
-					ERROR_EXIT "[WARN]:-Failed to replace #$SEARCH_TXT in $FILENAME, retrying" 1
+					ERROR_EXIT "[FATAL]:-Failed to replace #$SEARCH_TXT in $FILENAME" 2
 				else
 					LOG_MSG "[INFO]:-Replaced line in $FILENAME"
 					$RM -f ${FILENAME}.bak2
 				fi
 			fi
 	else
+		# Call out retry for commands that fail
+		trap 'CURRENT=$BASH_COMMAND' DEBUG
+		trap RETRY ERR
+		RETVAL=0 # RETVAL gets modified in RETRY function whenever the trap is called
+
 		if [ `$TRUSTED_SHELL $SED_HOST "$GREP -c \"${SEARCH_TXT}\" $FILENAME"` -gt 1 ]; then
 			LOG_MSG "[INFO]:-Found more than 1 instance of $SEARCH_TXT in $FILENAME on $SED_HOST, will append" 1
 			APPEND=1
 		fi
 		if [ `$TRUSTED_SHELL $SED_HOST "$GREP -c \"${SEARCH_TXT}\" $FILENAME"` -eq 0 ] || [ $APPEND -eq 1 ]; then
-			TRY_AND_RETRY "$TRUSTED_SHELL $SED_HOST \"$ECHO \\\"$SUB_TXT\\\" >> $FILENAME\""
-			RETVAL=$?
+			$TRUSTED_SHELL $SED_HOST "$ECHO \"$SUB_TXT\" >> $FILENAME"
 			if [ $RETVAL -ne 0 ]; then
 				ERROR_EXIT "[WARN]:-Failed to append line $SUB_TXT to $FILENAME on $SED_HOST, retrying" 1
 			else
@@ -419,8 +440,7 @@ SED_PG_CONF () {
 				$ECHO "s/${SEARCH_TXT}.*/${SUB_TXT}/" > $SED_TMP_FILE
 			fi
 			$CAT $SED_TMP_FILE | $TRUSTED_SHELL ${SED_HOST} $DD of=$SED_TMP_FILE > /dev/null 2>&1
-			TRY_AND_RETRY "$TRUSTED_SHELL $SED_HOST \"sed -i'.bak1' -f $SED_TMP_FILE $FILENAME\" > /dev/null 2>&1"
-			RETVAL=$?
+			$TRUSTED_SHELL $SED_HOST "sed -i'.bak1' -f $SED_TMP_FILE $FILENAME" > /dev/null 2>&1
 			if [ $RETVAL -ne 0 ]; then
 				ERROR_EXIT "[WARN]:-Failed to insert $SUB_TXT in $FILENAME on $SED_HOST, retrying" 1
 			else
@@ -429,18 +449,19 @@ SED_PG_CONF () {
 			fi
 			$ECHO "s/^#${SEARCH_TXT}/${SEARCH_TXT}/" > $SED_TMP_FILE
 			$CAT $SED_TMP_FILE | $TRUSTED_SHELL ${SED_HOST} $DD of=$SED_TMP_FILE > /dev/null 2>&1
-			TRY_AND_RETRY "$TRUSTED_SHELL $SED_HOST \"sed -i'.bak2' -f $SED_TMP_FILE $FILENAME\" > /dev/null 2>&1"
-			RETVAL=$?
+			$TRUSTED_SHELL $SED_HOST "sed -i'.bak2' -f $SED_TMP_FILE $FILENAME" > /dev/null 2>&1
 			if [ $RETVAL -ne 0 ]; then
 				ERROR_EXIT "[WARN]:-Failed to substitute #${SEARCH_TXT} in $FILENAME on $SED_HOST, retrying" 1
 			else
 				LOG_MSG "[INFO]:-Replaced line in $FILENAME on $SED_HOST"
 				$TRUSTED_SHELL $SED_HOST "$RM -f ${FILENAME}.bak2" > /dev/null 2>&1
 			fi
-			TRY_AND_RETRY "$TRUSTED_SHELL $SED_HOST \"$RM -f $SED_TMP_FILE\""
+			$TRUSTED_SHELL $SED_HOST "$RM -f $SED_TMP_FILE"
 
 			$RM -f $SED_TMP_FILE
 		fi
+
+		trap - ERR DEBUG # Disable trap
 	fi
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
