@@ -343,19 +343,7 @@ ERROR_CHK () {
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
-TRY_AND_RETRY () {
-	eval "$1"
-	RETVAL=$?
-	if [ $RETVAL -ne 0 ]; then
-		$SLEEP 10 # Arbitrary wait time. There is a very slim chance of an ssh failure.
-		LOG_MSG "[WARN]:-Retrying command -- $1"
-		eval "$1"
-		RETVAL=$?
-	fi
-	return $RETVAL
-}
-RETRY()
-{
+RETRY () {
 	RETVAL=$?
 	if [[ "$CURRENT" =~ "ssh" ]]; then
 		for i in 2 4 8; do
