@@ -17,8 +17,7 @@
   <topic id="topic_kgn_vxl_vp">
     <title>Unsupported SQL Query Features</title>
     <body>
-      <p>These are unsupported features when GPORCA is enabled: <ul
-          id="ul_ndm_gyl_vp">
+      <p>These are unsupported features when GPORCA is enabled: <ul id="ul_ndm_gyl_vp">
           <li>Indexed expressions (an index defined as expression based on one or more columns of
             the table)</li>
           <li><cmdname>PERCENTILE</cmdname> window function</li>
@@ -47,29 +46,27 @@
   <topic id="topic_u4t_vxl_vp">
     <title>Performance Regressions</title>
     <body>
-      <p>When GPORCA is enabled in Greenplum Database, the
-        following features are known performance regressions:<ul id="ul_zp2_4yl_vp">
-          <li>Short running queries - For GPORCA, short running queries might
-            encounter additional overhead due to GPORCA enhancements for
-            determining an optimal query execution plan.</li>
-          <li><cmdname>ANALYZE</cmdname> - For GPORCA, the
-              <cmdname>ANALYZE</cmdname> command generates root partition statistics for partitioned
-            tables. For the legacy optimizer, these statistics are not generated.</li>
-          <li>DML operations - For GPORCA, DML enhancements including the support
-            of updates on partition and distribution keys might require additional overhead. </li>
+      <p>When GPORCA is enabled in Greenplum Database, the following features are known performance
+          regressions:<ul id="ul_zp2_4yl_vp">
+          <li>Short running queries - For GPORCA, short running queries might encounter additional
+            overhead due to GPORCA enhancements for determining an optimal query execution
+            plan.</li>
+          <li><cmdname>ANALYZE</cmdname> - For GPORCA, the <cmdname>ANALYZE</cmdname> command
+            generates root partition statistics for partitioned tables. For the legacy optimizer,
+            these statistics are not generated.</li>
+          <li>DML operations - For GPORCA, DML enhancements including the support of updates on
+            partition and distribution keys might require additional overhead. </li>
         </ul></p>
       <p>Also, enhanced functionality of the features from previous versions could result in
-        additional time required when GPORCA executes SQL statements with the
-        features. </p>
+        additional time required when GPORCA executes SQL statements with the features. </p>
     </body>
   </topic>
   <topic id="topic_fdl_gfb_3r">
-    <title>Greenplum Command Center Database Limitation</title>
+    <title>gpperfmon Database Limitation</title>
     <body>
-      <p>For Greenplum Command Center monitoring performance, use the default setting
-        for GPORCA (<codeph>off</codeph>) for the <i>gpperfmon</i> database that is
-        used by Greenplum Command Center. Enabling GPORCA for the <i>gpperfmon</i>
-        database is not supported. To ensure that GPORCA is disabled for the
+      <p>If you have installed the <codeph>gpperfmon</codeph> database to collect system and query
+        performance metrics, set GPORCA <codeph>off</codeph> in the database. Enabling GPORCA for
+        the <i>gpperfmon</i> database is not supported. To ensure that GPORCA is disabled for the
           <i>gpperfmon</i> database, run this command on the system where the database is
         installed:</p>
       <codeblock>ALTER DATABASE gpperfmon SET OPTIMIZER = OFF</codeblock>

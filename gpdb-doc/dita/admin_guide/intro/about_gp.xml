@@ -249,15 +249,22 @@
                 <li id="iw157657">Loading Data in Parallel</li>
                 <li id="iw157658">System State Reporting</li>
             </ul>
-            <p>Greenplum provides an optional system monitoring and management tool that
-                administrators can install and enable with Greenplum Database. Greenplum Command
-                Center uses data collection agents on each segment host to collect and store
-                Greenplum system metrics in a dedicated database. Segment data collection agents
-                send their data to the Greenplum master at regular intervals (typically every 15
-                seconds). Users can query the Command Center database to see query and system
-                metrics. Greenplum Command Center has a graphical web-based user interface for
-                viewing system metrics, which administrators can install separately from Greenplum
-                Database. For more information, see the Greenplum Command Center documentation.</p>
+            <p>Pivotal provides an optional system monitoring and management tool, Greenplum Command
+                Center, which administrators can install and enable with Greenplum Database.
+                Greenplum Command Center depends upon a dedicated database named
+                <codeph>gpperfmon</codeph>, which is used to collect and store system metrics.
+                Data collection agents on the segments send their data to the Greenplum master at
+                regular intervals (typically every 15 seconds).</p>
+            <p> Greenplum Database includes a <codeph>gpperfmon_install</codeph> management utility,
+                which creates the <codeph>gpperfmon</codeph> database and enables the data
+                collection agents. Users can query the <codeph>gpperfmon</codeph> database to see
+                query and system metrics. </p>
+            <p>Administrators can install Greenplum Command Center, available separately from
+                Greenplum Database, to provide a graphical web-based user interface for viewing the
+                system metrics and to perform additional system management tasks. For more
+                information about Greenplum Command Center, see the <xref
+                    href="https://gpcc.docs.pivotal.io" format="html" scope="external">Greenplum
+                    Command Center documentation</xref>.</p>
             <fig id="iw157682">
                 <title>Greenplum Command Center Architecture</title>
                 <image height="304px" href="../../graphics/cc_arch_gpdb.png" placement="break"

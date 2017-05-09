@@ -12,7 +12,7 @@
             <codeph>filerep_now</codeph> is an external table whose data files are stored in
                <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. Current file replication data
             is stored in <codeph>filerep_now</codeph> during the period between data collection from
-            the Command Center agents and automatic commitment to the
+            the data collection agents and automatic commitment to the
                <codeph>filerep_history</codeph> table.</li>
          <li>
             <codeph>filerep_tail</codeph> is an external table whose data files are stored in

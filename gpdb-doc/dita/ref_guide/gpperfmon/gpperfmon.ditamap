@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
-<map title="Command Center Database Reference">
-    <topicref href="dbref.xml" navtitle="Command Center Database Reference">
+<map title="The gpperfmon Database">
+    <topicref href="dbref.xml" navtitle="The gpperfmon Database">
         <topicref href="db-database.xml" type="topic"/>
         <topicref href="db-diskspace.xml" type="topic"/>
         <topicref href="db-filerep.xml" type="topic"/>

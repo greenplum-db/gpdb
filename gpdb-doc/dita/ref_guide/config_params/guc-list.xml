@@ -3254,7 +3254,7 @@
   <topic id="gp_enable_gpperfmon">
     <title>gp_enable_gpperfmon</title>
     <body>
-      <p>Enables or disables the data collection agents of Greenplum Command Center.</p>
+      <p>Enables or disables the data collection agents that populate the <codeph>gpperfmon</codeph> database for Greenplum Command Center.</p>
       <table id="gp_enable_gpperfmon_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -3840,7 +3840,7 @@
     <title>gp_gpperfmon_send_interval</title>
     <body>
       <p>Sets the frequency that the Greenplum Database server processes send query execution
-        updates to the data collection agent processes used by Command Center. Query operations
+        updates to the data collection agent processes used to populate the <codeph>gpperfmon</codeph> database for Command Center. Query operations
         (iterators) executed during this interval are sent through UDP to the segment monitor
         agents. If you find that an excessive number of UDP packets are dropped during long-running,
         complex queries, you may consider increasing this value.</p>
@@ -3872,7 +3872,7 @@
     <body>
       <p>Controls which message levels are written to the gpperfmon log. Each level includes all the
         levels that follow it. The later the level, the fewer messages are sent to the log. </p>
-      <note>If the Greenplum Database Command Center is installed and is monitoring the database,
+      <note>If the <codeph>gpperfmon</codeph> database is installed and is monitoring the database,
         the default value is warning.</note>
       <table id="gpperfmon_log_alert_level_table">
         <tgroup cols="3">

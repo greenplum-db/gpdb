@@ -11,7 +11,7 @@
             <codeph>database_now</codeph> is an external table whose data files are stored in
                <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. Current query workload data
             is stored in <codeph>database_now</codeph> during the period between data collection
-            from the Command Center agents and automatic commitment to the
+            from the data collection agents and automatic commitment to the
                <codeph>database_history</codeph> table.</li>
          <li>
             <codeph>database_tail</codeph> is an external table whose data files are stored in

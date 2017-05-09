@@ -6,8 +6,7 @@
    <body>
       <p>The <codeph>queries_*</codeph> tables store high-level query status information.</p>
       <p>The <codeph>tmid</codeph>, <codeph>ssid</codeph> and <codeph>ccnt</codeph> columns are the
-         composite key that uniquely identifies a particular query. These columns can be used to
-         join with the <codeph>iterators_*</codeph> tables.</p>
+         composite key that uniquely identifies a particular query.</p>
       <p>There are three queries tables, all having the same columns:</p>
       <ul>
          <li>
@@ -138,9 +137,9 @@
                      <p>CPU usage by all processes across all segments executing this query (in
                         seconds). It is the sum of the CPU usage values taken from all active
                         primary segments in the database system.</p>
-                     <p>Note that Greenplum Command Center logs the value as 0 if the query runtime
+                     <p>Note that the value is logged as 0 if the query runtime
                         is shorter than the value for the quantum. This occurs even if the query
-                        runtime is greater than the values for<codeph> min_query_time</codeph> and
+                        runtime is greater than the values for <codeph>min_query_time</codeph> and
                            <codeph>min_detailed_query</codeph>, and these values are lower than the
                         value for the quantum.</p>
                   </entry>

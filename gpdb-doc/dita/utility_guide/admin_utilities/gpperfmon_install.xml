@@ -4,7 +4,7 @@
 <topic id="topic1">
   <title>gpperfmon_install</title>
   <body>
-    <p>Installs the Command Center database (<codeph>gpperfmon</codeph>) and optionally enables the
+    <p>Installs the <codeph>gpperfmon</codeph> database, which is used by Greenplum Command Center, and optionally enables the
       data collection agents.</p>
     <section id="section2">
       <title>Synopsis</title>
@@ -134,13 +134,13 @@ host       all           gpmon  127.0.0.1/28   password</codeblock></p>
     </section>
     <section>
       <title>Notes</title>
-      <p>Greenplum Command Center requires the <i>gpperfmon</i> the database role
-          <codeph>gpmon</codeph>. After the <i>gpperfmon</i> database and <codeph>gpmon</codeph>
+      <p>The <i>gpperfmon</i> database and Greenplum Command Center require the
+          <codeph>gpmon</codeph> role. After the <i>gpperfmon</i> database and <codeph>gpmon</codeph>
         role have been created, you can change the password for the <codeph>gpmon</codeph> role and
         update the information that Greenplum Command Center uses to connect to the <i>gpperfmon</i>
         database: </p>
       <ol id="ol_wss_knp_wr">
-        <li>Log into Greenplum Database as a superuser and change the <codeph>gpmon</codeph>
+        <li>Log in to Greenplum Database as a superuser and change the <codeph>gpmon</codeph>
           password with the <codeph>ALTER ROLE</codeph>
           command.<codeblock># ALTER ROLE gpmon WITH PASSWORD '<varname>new_password</varname>' ;</codeblock></li>
         <li>Update the password in <codeph>.pgpass</codeph> file that is used by Greenplum Command

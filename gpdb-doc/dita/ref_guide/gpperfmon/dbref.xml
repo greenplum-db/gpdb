@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="overview">
-  <title>Command Center Database Reference</title>
+  <title>The gpperfmon Database</title>
   <body>
-    <p>The Command Center database (<codeph>gpperfmon</codeph>) is a dedicated database where
-      monitoring agents on Greenplum segment hosts save statistics for use by the Greenplum Command
-      Center management tool. The <codeph>gpperfmon</codeph> database is created using the
+    <p>The <codeph>gpperfmon</codeph> database is a dedicated database where monitoring agents on
+      Greenplum segment hosts save statistics for use by the Greenplum Command Center management
+      tool. The <codeph>gpperfmon</codeph> database is created using the
         <codeph>gpperfmon_install</codeph> command-line utility. The utility creates the database
       and the <codeph>gpmon</codeph> database role and enables monitoring agents on the segment
       hosts. See the <codeph>gpperfmon_install</codeph> reference in the <cite>Greenplum Database
         Utility Guide</cite> for information about using the utility.</p>
-    <p>The Command Center database consists of three sets of tables.</p>
+    <p>The <codeph>gpperfmon</codeph> database consists of three sets of tables.</p>
     <ul id="ul_oqn_xsy_tz">
       <li>
         <codeph>now</codeph> tables store data on current system metrics such as active
@@ -19,9 +19,9 @@
       <li><codeph>tail</codeph> tables are for data in transition. <codeph>Tail</codeph> tables are
         for internal use only and should not be queried by users. The <codeph>now</codeph> and
           <codeph>tail</codeph> data are stored as text files on the master host file system, and
-        accessed by the Command Center database via external tables. The <codeph>history</codeph>
-        tables are regular database tables stored within the Command Center
-          (<codeph>gpperfmon</codeph>) database.</li>
+        accessed by the <codeph>gpperfmon</codeph> database via external tables. The
+          <codeph>history</codeph> tables are regular database tables stored within the
+          <codeph>gpperfmon</codeph>database.</li>
     </ul>
     <p>The database contains the following categories of tables:</p>
     <ul>
@@ -59,7 +59,7 @@
         store statistical metrics about UDP communications for a Greenplum Database instance. Note:
         These tables are in place for future use and are not currently populated.</li>
     </ul>
-    <p>The Command Center database also contains the following views:</p>
+    <p>The <codeph>gpperfmon</codeph> database also contains the following views:</p>
     <ul>
       <li>The <codeph><xref
             href="db-dynamic-memory-info.xml#CommandCenterDatabaseReference-dynamic_memory_info"

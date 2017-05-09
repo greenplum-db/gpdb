@@ -289,7 +289,7 @@
 	</chapter>
 	<chapter href="ref_guide/gp_toolkit.xml" navtitle="The gp_toolkit Administrative Schema"
 		id="gp_toolkit"/>
-	<chapter href="ref_guide/gpperfmon/dbref.xml" navtitle="Command Center Database Reference">
+	<chapter href="ref_guide/gpperfmon/dbref.xml" navtitle="The gpperfmon Database">
 		<topicref href="ref_guide/gpperfmon/db-database.xml" type="topic"/>
 		<topicref href="ref_guide/gpperfmon/db-diskspace.xml" type="topic"/>
 		<topicref href="ref_guide/gpperfmon/db-filerep.xml" type="topic"/>

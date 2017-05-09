@@ -4,8 +4,8 @@
 <topic id="topic36">
    <title>Greenplum Command Center Agent</title>
    <body>
-      <p>The following parameters configure the data collection agents for Greenplum Command
-            Center.</p>
+      <p>The following parameters configure the data collection agents that populate the
+            <codeph>gpperfmon</codeph> database used by Greenplum Command Center.</p>
       <simpletable id="kh171891">
          <strow>
             <stentry>

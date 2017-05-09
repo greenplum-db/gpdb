@@ -17,18 +17,19 @@
     <title id="kj157177">Monitoring Database Activity and Performance</title>
     <body>
       <p>Pivotal provides an optional system monitoring and management tool, Greenplum Command
-        Center, that administrators can enable within Greenplum Database.</p>
-      <p>Enabling Greenplum Command Center is a two-part process. First, enable the Greenplum
-        Database server to collect and store system metrics. Next, install and configure the
-        Greenplum Command Center Console, an online application used to view the system metrics
-        collected and store them in the Command Center's dedicated Greenplum database. </p>
-      <p>The Greenplum Command Center Console ships separately from your Greenplum Database
-        installation. Download the Greenplum Command Center Console package from <xref
-          href="https://network.pivotal.io" scope="external" format="html">Pivotal Network
-        </xref>and documentation from <xref href="http://gpdb.docs.pivotal.io" scope="external"
-          format="html">Pivotal Documentation</xref>. See the <cite>Greenplum Database Command
-          Center Administrator Guide</cite> for more information on installing and using the
-        Greenplum Command Center Console.</p>
+        Center, which administrators can enable with Greenplum Database. Greenplum Command Center
+        depends upon a dedicated database, <codeph>gpperfmon</codeph>, and segment data collection
+        agents that collect and store system metrics in the database. </p>
+      <p>The Greenplum Database <codeph>gpperfmon_install</codeph> management utility creates the
+          <codeph>gpperfmon</codeph> database and manages the data collection agents on the segment
+        hosts. Administrators can query metrics in the <codeph>gpperfmon</codeph> database.</p>
+      <p>The Greenplum Command Center Console is a web-based interface that graphically displays
+        metrics collected in the <codeph>gpperfmon</codeph> database and provides additional system
+        management tools. Greenplum Command Center ships separately from the Greenplum Database
+        distribution. Download the Greenplum Command Center package from <xref
+          href="https://network.pivotal.io" scope="external" format="html">Pivotal Network</xref>
+        and view documentation at the <xref href="http://gpcc.docs.pivotal.io" scope="external"
+          format="html">Greenplum Command Center Documentation</xref> web site. </p>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en">
@@ -729,7 +730,8 @@ Distributed by: (sale_id)
                   </entry>
                   <entry colname="col2">timestamptz</entry>
                   <entry colname="col3"/>
-                  <entry colname="col4">The last time a query process in this session became idle.</entry>
+                  <entry colname="col4">The last time a query process in this session became
+                    idle.</entry>
                 </row>
               </tbody>
             </tgroup>
