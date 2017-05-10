@@ -4050,7 +4050,8 @@
   <topic id="gp_interconnect_fc_method">
     <title>gp_interconnect_fc_method</title>
     <body>
-      <p>Specifies the flow control method used for the Greenplum Database UDPIFC interconnect.</p>
+      <p>Specifies the flow control method used for the default Greenplum Database UDPIFC
+        interconnect.</p>
       <p>For capacity based flow control, senders do not send packets when receivers do not have the
         capacity.</p>
       <p>Loss based flow control is based on capacity based flow control, and also tunes the sending
@@ -4082,7 +4083,7 @@
     <title>gp_interconnect_hash_multiplier</title>
     <body>
       <p>Sets the size of the hash table used by the Greenplum Database to track interconnect
-        connections with the UDPIFC interconnect. This number is multiplied by the number of
+        connections with the default UDPIFC interconnect. This number is multiplied by the number of
         segments to determine the number of buckets in the hash table. Increasing the value may
         increase interconnect performance for complex multi-slice queries (while consuming slightly
         more memory on the segment hosts).</p>
@@ -4114,11 +4115,11 @@
     <body>
       <p>Sets the amount of data per-peer to be queued by the Greenplum Database interconnect on
         receivers (when data is received but no space is available to receive it the data will be
-        dropped, and the transmitter will need to resend it) for the UDPIFC interconnect. Increasing
-        the depth from its default value will cause the system to use more memory, but may increase
-        performance. It is reasonable to set this value between 1 and 10. Queries with data skew
-        potentially perform better with an increased queue depth. Increasing this may radically
-        increase the amount of memory used by the system.</p>
+        dropped, and the transmitter will need to resend it) for the default UDPIFC interconnect.
+        Increasing the depth from its default value will cause the system to use more memory, but
+        may increase performance. It is reasonable to set this value between 1 and 10. Queries with
+        data skew potentially perform better with an increased queue depth. Increasing this may
+        radically increase the amount of memory used by the system.</p>
       <table id="gp_interconnect_queue_depth_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4173,10 +4174,11 @@
   <topic id="gp_interconnect_snd_queue_depth">
     <title>gp_interconnect_snd_queue_depth</title>
     <body>
-      <p>Sets the amount of data per-peer to be queued by the UDPIFC interconnect on senders.
-        Increasing the depth from its default value will cause the system to use more memory, but
-        may increase performance. Reasonable values for this parameter are between 1 and 4.
-        Increasing the value might radically increase the amount of memory used by the system.</p>
+      <p>Sets the amount of data per-peer to be queued by the default UDPIFC interconnect on
+        senders. Increasing the depth from its default value will cause the system to use more
+        memory, but may increase performance. Reasonable values for this parameter are between 1 and
+        4. Increasing the value might radically increase the amount of memory used by the
+        system.</p>
       <table id="gp_interconnect_snd_queue_depth_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4205,9 +4207,10 @@
     <body>
       <p>Sets the networking protocol used for Greenplum Database interconnect traffic. UDPIFC
         specifies using UDP with flow control for interconnect traffic, and is the only value
-        supported. </p>
-      <p>Specify the interconnect flow control method with <xref href="#gp_interconnect_fc_method"
-          format="dita"/>.</p>
+        supported.</p>
+      <p>UDPIFC (the default) specifies using UDP with flow control for interconnect traffic. Specify the
+         interconnect flow control method with <xref href="#gp_interconnect_fc_method" format="dita"/>.</p>
+      <p>With TCP as the interconnect protocol, Greenplum Database has an upper limit of 1000 segment instances - less than that if the query workload involves complex, multi-slice queries.</p>
       <table id="table_jn5_frn_xv">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4222,7 +4225,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">UDPIFC</entry>
+              <entry colname="col1">UDPIFC<p>TCP</p></entry>
               <entry colname="col2">UDPIFC</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
@@ -4380,7 +4383,7 @@
   <topic id="gp_max_packet_size">
     <title>gp_max_packet_size</title>
     <body>
-      <p>Sets the tuple-serialization chunk size for the UDPIFC interconnect.</p>
+      <p>Sets the tuple-serialization chunk size for the interconnect.</p>
       <table id="gp_max_packet_size_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>

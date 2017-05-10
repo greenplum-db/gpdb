@@ -33,7 +33,7 @@
          </strow>
       </simpletable>
       <p>
-         <note>Greenplum Database supports only the UDPIFC interconnect type.</note>
+         <note>Greenplum Database supports only the UDPIFC and TCP interconnect types.</note>
       </p>
    </body>
 </topic>
