@@ -823,19 +823,6 @@ updateSharedLocalSnapshot(DtxContextInfo *dtxContextInfo, Snapshot snapshot, cha
 	SharedLocalSnapshotSlot->snapshot.xmax = snapshot->xmax;
 	SharedLocalSnapshotSlot->snapshot.xcnt = snapshot->xcnt;
 
-	/* UNDONE: Are xip and subxids broken in the SharedLocalSnapshotSlot? */
-
-	/*
-	 * Copy all active subtransctions to shared snapshot.
-	 *
-	 */
-	UpdateSubtransactionsInSharedSnapshot(dtxContextInfo->distributedXid);
-
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "updateSharedLocalSnapshot subxid cnt: total %u, in memory %u",
-		 SharedLocalSnapshotSlot->total_subcnt,
-		 SharedLocalSnapshotSlot->inmemory_subcnt);
-
 	if (snapshot->xcnt > 0)
 	{
 		Assert(snapshot->xip != NULL);
@@ -1265,13 +1252,6 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 
 				elog((Debug_print_snapshot_dtm ? LOG : DEBUG5), "Reader qExec setting shared local snapshot to: xmin: %d xmax: %d curcid: %d",
 					 snapshot->xmin, snapshot->xmax, snapshot->curcid);
-				
-				if (Debug_print_full_dtm)
-				{
-					ShowSubtransactionsForSharedSnapshot();
-				}
-
-				GetSubXidsInXidBuffer();
 
 				elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
 					 "GetSnapshotData(): READER currentcommandid %d curcid %d segmatesync %d",

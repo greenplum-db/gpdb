@@ -18,7 +18,7 @@
 #include "access/htup.h"
 #include "storage/buf.h"
 #include "utils/timestamp.h"  /* TimestampTz */
-#include "access/xact.h"   /* MaxGpSavePoints */
+#include "access/xact.h"
 #include "utils/combocid.h" /*MaxComboCids*/
 #include "utils/rel.h"	/* Relation */
 

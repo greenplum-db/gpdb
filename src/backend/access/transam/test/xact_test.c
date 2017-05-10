@@ -3,7 +3,34 @@
 #include <setjmp.h>
 #include "cmockery.h"
 
+/* Fetch definition of PG_exception_stack */
+#include "postgres.h"
+
+/*
+ * Must be defined before including the module under test (xact.c) so
+ * that elog_finish() calls within xact.c code will be replaced with
+ * elog_finish_impl().
+ */
+#define elog_finish elog_finish_impl
+int
+elog_finish_impl(int level __attribute__((unused)),
+				 int dummy __attribute__((unused)),
+				 ...)
+{
+	if (level >= ERROR)
+		siglongjmp(*PG_exception_stack, 1);
+	return 0;
+}
+
 #include "../xact.c"
+
+void helper_elog(LOG_LEVEL)
+{
+	expect_any(elog_start, filename);
+	expect_any(elog_start, lineno);
+	expect_any(elog_start, funcname);
+	will_be_called(elog_start);
+}
 
 void
 test_TransactionIdIsCurrentTransactionIdInternal(void **state)
@@ -125,13 +152,117 @@ test_TransactionIdIsCurrentTransactionIdInternal(void **state)
 
 }
 
-int 
+void helper_ExpectLWLock() {
+	expect_value(LWLockAcquire, lockid, ProcArrayLock);
+	expect_value(LWLockAcquire, mode, LW_SHARED);
+	will_be_called(LWLockAcquire);
+	expect_value(LWLockRelease, lockid, ProcArrayLock);
+	will_be_called(LWLockRelease);
+}
+
+void
+test_IsCurrentTransactionIdForReader(void **state)
+{
+	PGPROC testProc = {0};
+
+	SharedSnapshotSlot testSlot = {0};
+	SharedLocalSnapshotSlot = &testSlot;
+
+	/* test: writer_proc is null */
+	SharedLocalSnapshotSlot->writer_proc = NULL;
+	helper_ExpectLWLock();
+	helper_elog(ERROR);
+	PG_TRY();
+	{
+		IsCurrentTransactionIdForReader(100);
+		assert_false("No elog(ERROR, ...) was called");
+	}
+	PG_CATCH();
+	{
+	}
+	PG_END_TRY();
+
+	/* test: writer_proc->pid is invalid */
+	testSlot.writer_proc = &testProc;
+	testProc.pid = 0;
+	helper_ExpectLWLock();
+	helper_elog(ERROR);
+	PG_TRY();
+	{
+		IsCurrentTransactionIdForReader(100);
+		assert_false("No elog(ERROR, ...) was called");
+	}
+	PG_CATCH();
+	{
+	}
+	PG_END_TRY();
+
+	/*
+	 * test: writer_proc->xid is invalid, e.g. lazy xid not assigned
+	 * xid yet.
+	 */
+	testProc.pid = 1234;
+	testProc.xid = 0;
+
+	helper_ExpectLWLock();
+	assert_false(IsCurrentTransactionIdForReader(100));
+
+	/*
+	 * test: not a subtransaction - xid matches writer's top
+	 * transaction ID
+	 */
+	testProc.xid = 100;
+
+	helper_ExpectLWLock();
+	helper_elog(DEBUG5);
+	assert_true(IsCurrentTransactionIdForReader(100));
+
+	/* test: subtransaction found in writer_proc cache */
+	testProc.xid = 90;
+	testProc.subxids.nxids = 2;
+	testProc.subxids.xids[0] = 100;
+	testProc.subxids.xids[1] = 110;
+
+	helper_ExpectLWLock();
+	assert_true(IsCurrentTransactionIdForReader(100));
+
+	/* test: no subtransaction found in writer_proc cache */
+	helper_ExpectLWLock();
+	assert_false(IsCurrentTransactionIdForReader(120));
+
+	/* test: overflow, with top xid matching writer's xid */
+	testProc.xid = 90;
+	testProc.subxids.nxids = 0;
+	testProc.subxids.overflowed = true;
+
+	helper_ExpectLWLock();
+
+	expect_value(SubTransGetTopmostTransaction, xid, 100);
+	will_return(SubTransGetTopmostTransaction, 90);
+
+	assert_true(IsCurrentTransactionIdForReader(100));
+
+	/* test: overflow, with top xid not matching writer's xid */
+	testProc.xid = 80;
+	testProc.subxids.nxids = 0;
+	testProc.subxids.overflowed = true;
+
+	helper_ExpectLWLock();
+
+	expect_value(SubTransGetTopmostTransaction, xid, 100);
+	will_return(SubTransGetTopmostTransaction, 90);
+
+	assert_false(IsCurrentTransactionIdForReader(100));
+}
+
+int
 main(int argc, char* argv[])
 {
 	cmockery_parse_arguments(argc, argv);
 
 	const UnitTest tests[] = {
-		unit_test(test_TransactionIdIsCurrentTransactionIdInternal)
+		unit_test(test_TransactionIdIsCurrentTransactionIdInternal),
+		unit_test(test_IsCurrentTransactionIdForReader)
 	};
 
 	MemoryContextInit();

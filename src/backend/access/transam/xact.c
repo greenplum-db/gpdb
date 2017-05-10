@@ -88,7 +88,6 @@ int			CommitSiblings = 5; /* # concurrent xacts needed to sleep */
  */
 bool		MyXactAccessedTempRel = false;
 #endif
-XidBuffer subxbuf;
 int32 gp_subtrans_warn_limit = 16777216; /* 16 million */
 
 /* gp-specific
@@ -323,13 +322,7 @@ static const char *BlockStateAsString(TBlockState blockState);
 static const char *TransStateAsString(TransState state);
 static void DispatchRollbackToSavepoint(char *name);
 
-static bool search_binary_xids(TransactionId *ids, uint32 size,
-			       TransactionId xid, int32 *index);
-static void
-AddSubtransactionsToSharedSnapshot(DistributedTransactionId dxid,
-								   volatile SharedSnapshotSlot *shared_snapshot,
-								   TransactionId *subxids,
-								   uint32 subcnt);
+static bool IsCurrentTransactionIdForReader(TransactionId xid);
 
 extern void FtsCondSetTxnReadOnly(bool *);
 
@@ -555,19 +548,6 @@ AssignTransactionId(TransactionState s)
 	{
 		Assert(TransactionIdPrecedes(s->parent->transactionId, s->transactionId));
 		SubTransSetParent(s->transactionId, s->parent->transactionId);
-		elog((Debug_print_full_dtm ? LOG : DEBUG5),
-			 "adding subtransaction xid %u to Shared Local Snapshot",
-			 s->transactionId);
-		if (SharedLocalSnapshotSlot)
-		{
-			TransactionId temp_subxid = s->transactionId;
-
-			AddSubtransactionsToSharedSnapshot(
-						SharedLocalSnapshotSlot->QDxid,
-						SharedLocalSnapshotSlot,
-						&temp_subxid,
-						1);
-		}
 	}
 
 	/*
@@ -756,15 +736,93 @@ TransactionIdIsCurrentTransactionIdInternal(TransactionId xid)
 }
 
 /*
+ * IsCurrentTransactionIdForReader
+ *
+ * We can either be a cursor reader or normal reader.
+ *
+ * The writer_proc will contain all of the subtransaction xids of the current transaction.
+ * - case 1: check writer's top transaction id
+ * - case 2: if not, check writer's subtransactions
+ * - case 3: if overflowed, check topmostxid from pg_subtrans with writer's top transaction id
+ */
+static
+bool IsCurrentTransactionIdForReader(TransactionId xid) {
+	TransactionId topxid;
+
+	Assert(!Gp_is_writer);
+
+	LWLockAcquire(ProcArrayLock, LW_SHARED);
+
+	PGPROC* writer_proc = SharedLocalSnapshotSlot->writer_proc;
+
+	if (!writer_proc)
+	{
+		LWLockRelease(ProcArrayLock);
+		elog(ERROR, "SharedLocalSnapshotSlot is not initialized with writer_proc.");
+	}
+	else if (!writer_proc->pid)
+	{
+		LWLockRelease(ProcArrayLock);
+		elog(ERROR, "SharedLocalSnapshotSlot->writer_proc is invalid.");
+	}
+
+	TransactionId writer_xid = writer_proc->xid;
+	bool overflowed = writer_proc->subxids.overflowed;
+	bool isCurrent = false;
+
+	if (TransactionIdIsValid(writer_xid))
+	{
+		/*
+		 * Case 1: check top transaction id
+		 */
+		if (TransactionIdEquals(xid, writer_xid))
+		{
+			elog((Debug_print_full_dtm ? LOG : DEBUG5),"qExec Reader CheckSharedSnapshotForSubtransaction(xid = %u) = true -- TOP", xid);
+			isCurrent = true;
+		}
+		else
+		{
+			/*
+			 * Case 2: check cached subtransaction ids from latest to earliest
+			 */
+			int subx_index = writer_proc->subxids.nxids - 1;
+			while (!isCurrent &&  subx_index >= 0)
+			{
+				isCurrent = TransactionIdEquals(writer_proc->subxids.xids[subx_index], xid);
+				subx_index--;
+			}
+		}
+	}
+
+	/* release the lock before accessing pg_subtrans */
+	LWLockRelease(ProcArrayLock);
+
+	/*
+	 * Case 3: if subxids overflowed, check topmostxid of xid from pg_subtrans
+	 */
+	if (!isCurrent && overflowed)
+	{
+		Assert(TransactionIdIsValid(writer_xid));
+
+		topxid = SubTransGetTopmostTransaction(xid);
+		Assert(TransactionIdIsValid(topxid));
+
+		if (TransactionIdEquals(topxid, writer_xid))
+		{
+			isCurrent = true;
+		}
+	}
+
+	return isCurrent;
+}
+
+/*
  *	TransactionIdIsCurrentTransactionId
  */
 bool
 TransactionIdIsCurrentTransactionId(TransactionId xid)
 {
 	bool		isCurrentTransactionId = false;
-	int32		index = 0;
-	uint32		cnt = 0;
-	uint32		sub = 0;
 
 	/*
 	 * We always say that BootstrapTransactionId is "not my transaction ID"
@@ -785,44 +843,7 @@ TransactionIdIsCurrentTransactionId(TransactionId xid)
     if (DistributedTransactionContext == DTX_CONTEXT_QE_READER ||
 		DistributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON)
 	{
-		if (TransactionIdEquals(xid, TopTransactionStateData.transactionId))
-		{
-			elog((Debug_print_full_dtm ? LOG : DEBUG5),"qExec Reader CheckSharedSnapshotForSubtransaction(xid = %u) = true -- TOP", xid);
-			return true;
-		}
-
-		/*
-		 * Now either the xid is a subtransaction of our "top" xid, or it isn't part of the
-		 * current transaction. We've just got to check out sub-transaction list, and we're
-		 * done.
-		 * We can either be a cursor reader or normal reader. The subxbuf will
-		 * contain all of the subtransaction xids of the current transaction.
-		 * In qExec Readers, we do not have real transaction and subtransaction
-		 * state.  The Writer copies the active subtransactions information
-		 * into the shared snapshot which in turn is copied into subxbuf.
-		 */
-		isCurrentTransactionId = false;		/* Assume. */
-
-		/*
-		 * For readers if sub-transactions fit in-memory can leverage the
-		 * writers array instead of subxbuf.
-		 */
-		if (SharedLocalSnapshotSlot->inmemory_subcnt ==
-				SharedLocalSnapshotSlot->total_subcnt)
-		{
-			for (sub = 0; sub < SharedLocalSnapshotSlot->total_subcnt; sub++)
-			{
-				if (TransactionIdEquals(xid, SharedLocalSnapshotSlot->subxids[sub]))
-				{
-					isCurrentTransactionId = true;
-					break;
-				}
-			}
-		}
-		else
-		{
-			isCurrentTransactionId = FindXidInXidBuffer(&subxbuf, xid, &cnt, &index);
-		}
+		isCurrentTransactionId = IsCurrentTransactionIdForReader(xid);
 
 		elog((Debug_print_full_dtm ? LOG : DEBUG5),
 		     "qExec Reader CheckSharedSnapshotForSubtransaction(xid = %u) = %s -- Subtransaction",
@@ -2218,676 +2239,6 @@ SetSharedTransactionId_reader(TransactionId xid, CommandId cid)
 }
 
 /*
- * ============== XID BUFFER Functions ===================
- * Functions to manipulate XidBuffer: pages of sorted transaction ids.
- */
-
-static bool
-search_binary_xids(TransactionId *ids, uint32 size, TransactionId xid,
-		   int32 *index)
-{
-	uint32 mid;
-	uint32 begin;
-	uint32 end;
-
-	*index = -1;
-	if (size == 0)
-	{
-		return false;
-	}
-
-	begin = 0;
-	end = size;
-	while (begin < end)
-	{
-		mid = (begin + end)/2;
-
-		if (TransactionIdFollows(ids[mid], xid))
-		{
-			end = mid;
-		}
-		else if (TransactionIdPrecedes(ids[mid], xid))
-		{
-			begin = mid+1;
-		}
-		else
-		{
-			*index = mid;
-			return true;
-		}
-	}
-
-	return false;
-}
-
-static inline bool
-IsXidBufferEmpty(XidBuffer *xidbuf)
-{
-	return (xidbuf->actual_bufs == 0);
-}
-
-bool
-FindXidInXidBuffer(XidBuffer *xidbuf, TransactionId xid, uint32 *cnt,
-		   int32 *index)
-{
-	uint32 size;
-
-	if (IsXidBufferEmpty(xidbuf))
-		return false;
-
-	for (*cnt = 1; *cnt < xidbuf->actual_bufs; (*cnt)++)
-	{
-		if (TransactionIdFollows(*xidbuf->ids_buf[*cnt], xid))
-			break;
-	}
-
-	size = ((*cnt == xidbuf->actual_bufs) || (xidbuf->actual_bufs == 1))
-		? xidbuf->last_buf_cnt : MAX_XIDBUF_XIDS;
-	(*cnt)--;
-
-	return search_binary_xids(xidbuf->ids_buf[*cnt], size, xid, index);
-}
-
-static inline void
-AdvanceNextIndexForXidBuffer(XidBuffer *xidbuf, uint32 *cnt, uint32 *index)
-{
-	int i;
-
-	if ((xidbuf->last_buf_cnt != 0) &&
-	    (xidbuf->last_buf_cnt < MAX_XIDBUF_XIDS))
-	{
-		*cnt = xidbuf->actual_bufs - 1;
-		*index = xidbuf->last_buf_cnt;
-		xidbuf->last_buf_cnt++;
-		return;
-	}
-
-again:
-	if (xidbuf->actual_bufs < xidbuf->max_bufs)
-	{
-		xidbuf->ids_buf[xidbuf->actual_bufs] = (TransactionId *)
-			MemoryContextAllocZero(TopMemoryContext,
-					       MAX_XIDBUF_SIZE);
-		*cnt = xidbuf->actual_bufs++;
-		xidbuf->last_buf_cnt = 1;
-		*index = 0;
-		return;
-	}
-
-	if (xidbuf->max_bufs)
-	{
-		xidbuf->max_bufs *= 2;
-	}
-	else
-	{
-		xidbuf->max_bufs = MAX_XIDBUF_INIT_PAGES;
-	}
-
-	if (xidbuf->ids_buf != NULL)
-	{
-		xidbuf->ids_buf = (TransactionId **)repalloc(xidbuf->ids_buf,
-						    xidbuf->max_bufs *
-						    sizeof(TransactionId *));
-	}
-	else
-	{
-		xidbuf->ids_buf = (TransactionId **)MemoryContextAlloc(
-						    TopMemoryContext,
-						    xidbuf->max_bufs *
-						    sizeof(TransactionId *));
-	}
-
-	for (i = xidbuf->actual_bufs; i < xidbuf->max_bufs; i++)
-	{
-		xidbuf->ids_buf[i] = NULL;
-	}
-
-	goto again;
-
-	/* Not reached */
-	return;
-}
-
-void
-AddSortedToXidBuffer(XidBuffer *xidbuf, TransactionId *xids,
-			      uint32 count)
-{
-	uint32 index;
-	uint32 cnt = 0;
-	uint32 i;
-
-	for (i = 0; i < count; i++)
-	{
-		AdvanceNextIndexForXidBuffer(xidbuf, &cnt, &index);
-		xidbuf->ids_buf[cnt][index] = xids[i];
-	}
-}
-
-void
-ResetXidBuffer(XidBuffer *xidbuf)
-{
-	int i;
-
-	for (i = 0; i < xidbuf->actual_bufs; i ++)
-	{
-		pfree(xidbuf->ids_buf[i]);
-	}
-
-	if (xidbuf->max_bufs)
-		pfree(xidbuf->ids_buf);
-
-	bzero(xidbuf, sizeof(*xidbuf));
-}
-
-static char *
-Subtransaction_filename(volatile TransactionId xid)
-{
-	static char filename[MAXPGPATH];
-
-	snprintf(filename, sizeof(filename), "sess%u", xid);
-	return filename;
-}
-
-static inline void
-OpenOrCreateSubtransIdFile(DistributedTransactionId dxid)
-{
-	if (subxip_file == 0)
-	{
-		subxip_file = OpenTemporaryFile(
-			Subtransaction_filename(dxid),
-			false, true, true, false);
-		// What should be done if this fails ??
-	}
-}
-
-TransactionId
-GetLastTransactionIdFromSnapshot(DistributedTransactionId dxid)
-{
-	if (SharedLocalSnapshotSlot->inmemory_subcnt > 0)
-	{
-		return SharedLocalSnapshotSlot->subxids[
-			SharedLocalSnapshotSlot->inmemory_subcnt - 1];
-	}
-	else if (SharedLocalSnapshotSlot->total_subcnt > 0)
-	{
-		TransactionId last_id;
-		int64 offset;
-		int64 file_size;
-
-		/*
-		 * Read from subtransaction file.
-		 */
-		OpenOrCreateSubtransIdFile(dxid);
-		Assert(subxip_file != 0);
-
-		file_size = (SharedLocalSnapshotSlot->total_subcnt-1) *
-			sizeof(TransactionId);
-		offset = FileSeek(subxip_file, file_size, SEEK_SET);
-		if (FileRead(subxip_file, (char *)(&last_id),
-			     sizeof(TransactionId)) != sizeof(TransactionId))
-		{
-			elog(ERROR, "Error in reading subtransaction file.");
-		}
-		return last_id;
-	}
-	else
-	{
-		return InvalidTransactionId;
-	}
-}
-
-static void
-reverse_xids(TransactionId *subxids, uint32 subcnt)
-{
-	int i;
-	TransactionId id;
-
-	/*
-	 * IDs are sorted in decreasing order, reverse it.
-	 */
-	for (i = 0; i < subcnt/2; i++)
-	{
-		id = subxids[i];
-		subxids[i] = subxids[subcnt - i - 1];
-		subxids[subcnt - i - 1] = id;
-	}
-}
-
-/*
- * ========= Functions to update Subxids in shared snapshot =============
- */
-static void
-GetAddedSubtransactionsFromTree(TransactionId xid, TransactionState state,
-				TransactionId **subxids, uint32 *subcnt)
-{
-	TransactionState s;
-	uint32 size = MaxGpSavePoints;
-
-	*subxids = (TransactionId *)MemoryContextAlloc(TopMemoryContext,
-						size * sizeof(TransactionId));
-	*subcnt = 0;
-
-	/*
-	 * Scan the transaction stack for active subtransactions.
-	 * Transaction Ids get added to the array in decreasing order.
-	 */
-	for (s = state; s != NULL; s = s->parent)
-	{
-		int			i;
-
-		/* it can't have any child XIDs too */
-		if (!TransactionIdIsValid(s->transactionId))
-			continue;
-
-		/*
-		 * subcommitted child XIDs
-		 */
-		while (size < *subcnt + s->nChildXids + 1)
-		{
-			size *= 2;
-			*subxids = (TransactionId *) repalloc((*subxids),
-												  size * sizeof(TransactionId));
-		}
-		for (i = 0; i < s->nChildXids; i++)
-		{
-			TransactionId childXid = s->childXids[i];
-
-			Assert(*subcnt < size);
-			elog((Debug_print_full_dtm ? LOG : DEBUG5),
-			     "Adding subcommitted child xid %u as #%u to shared"
-			     " snapshot", childXid, *subcnt);
-
-			if (TransactionIdPrecedesOrEquals(childXid, xid))
-				continue;
-
-			(*subxids)[(*subcnt)++] = childXid;
-		}
-
-		if (s->nestingLevel == 1)
-			break;
-
-		if (TransactionIdPrecedesOrEquals(s->transactionId, xid))
-			continue;
-
-		/*
-		 * Ignore aborted subtransactions.
-		 */
-		if (s->state == TRANS_ABORT)
-			continue;
-
-		Assert(*subcnt < size);
-		elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		     "Adding subcommitted child xid %u as #%u to shared"
-		     " snapshot", s->transactionId, *subcnt);
-
-		(*subxids)[(*subcnt)++] = s->transactionId;
-	}
-
-	reverse_xids(*subxids, *subcnt);
-}
-
-static TransactionId
-GetLastSubTransactionIdFromTree(TransactionState s)
-{
-	Assert(s != NULL);
-
-	for (; s != NULL; s = s->parent)
-	{
-		/* it can't have any child XIDs too */
-		if (!TransactionIdIsValid(s->transactionId))
-			continue;
-
-		/*
-		 * subcommitted child XIDs
-		 */
-		if (s->childXids && s->nChildXids > 0)
-			return s->childXids[s->nChildXids - 1];
-		else if (s->nestingLevel >= 2)
-			return s->transactionId;
-	}
-
-	/* Not reached */
-	return InvalidTransactionId;
-}
-
-static void
-AppendToSubxidFile(TransactionId *subxids, uint32 subcnt)
-{
-	Assert(subxip_file != 0);
-	FileSeek(subxip_file, 0, SEEK_END);
-	if (FileWrite(subxip_file, (char *)subxids,
-		      subcnt * sizeof(TransactionId)) < 0)
-	{
-		elog(ERROR, "Error in saving subtransaction ids");
-	}
-
-	SIMPLE_FAULT_INJECTOR(SubtransactionFlushToFile);
-}
-
-static void
-ResetSharedSnapshotSubxids(volatile SharedSnapshotSlot *shared_snapshot)
-{
-	if ((DistributedTransactionContext ==
-		DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER ||
-	     DistributedTransactionContext ==
-		DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER ||
-	     DistributedTransactionContext ==
-		DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE ||
-	     DistributedTransactionContext ==
-		DTX_CONTEXT_QE_AUTO_COMMIT_IMPLICIT) &&
-	    (shared_snapshot != NULL))
-	{
-		shared_snapshot->inmemory_subcnt = 0;
-		shared_snapshot->total_subcnt = 0;
-	}
-
-	if (subxip_file)
-	{
-		FileClose(subxip_file);
-	}
-	subxip_file = 0;
-}
-
-static void
-AddSubtransactionsToSharedSnapshot(DistributedTransactionId dxid,
-				   volatile SharedSnapshotSlot *shared_snapshot,
-				   TransactionId *subxids,
-				   uint32 subcnt)
-{
-	if (shared_snapshot->inmemory_subcnt + subcnt <= MaxGpSavePoints)
-	{
-		memcpy((void *)(&shared_snapshot->subxids[
-		       shared_snapshot->inmemory_subcnt]),
-		       subxids, subcnt * sizeof(TransactionId));
-		shared_snapshot->inmemory_subcnt += subcnt;
-		shared_snapshot->total_subcnt += subcnt;
-		return;
-	}
-
-	/*
-	 * Subtransaction ids do not fit. Move them to the file.
-	 * Create the file, if it does not exist.
-	 */
-	OpenOrCreateSubtransIdFile(dxid);
-
-	AppendToSubxidFile((TransactionId *)(shared_snapshot->subxids),
-			   shared_snapshot->inmemory_subcnt);
-	AppendToSubxidFile(subxids, subcnt);
-	shared_snapshot->inmemory_subcnt = 0;
-	shared_snapshot->total_subcnt += subcnt;
-}
-
-static void
-RemoveSubtransactionsFromSharedSnapshot(DistributedTransactionId dxid,
-					TransactionId xid_tree,
-					volatile SharedSnapshotSlot *shared_snapshot)
-{
-	uint32 removed;
-	TransactionId *subxids = NULL;
-	int64 offset;
-	int32 index = 0;
-	int64 size;
-	int64 read_size;
-	int64 total_size;
-	bool found;
-
-	/*
-	 * First, find the xid in memory cache of subxids in SharedSnapshotSlot.
-	 */
-	if (search_binary_xids((TransactionId *)shared_snapshot->subxids,
-		  		shared_snapshot->inmemory_subcnt,
-			  	xid_tree, &index))
-	{
-		removed = shared_snapshot->inmemory_subcnt - index - 1;
-		bzero((void *)(&shared_snapshot->subxids[index+1]),
-		      sizeof(TransactionId) * removed);
-		shared_snapshot->inmemory_subcnt = (index + 1);	
-		shared_snapshot->total_subcnt -= removed;
-		return;
-	}
-
-	/*
-	 * The inmemory cache is either empty or the given xid
-	 * is not in this cache in which case it is smaller than the smallest
-	 * id in the cache. In both these cases we need to search in the file.
-	 */
-	Assert((shared_snapshot->inmemory_subcnt == 0) ||
-	       TransactionIdPrecedes(xid_tree, shared_snapshot->subxids[0]));
-
-	shared_snapshot->total_subcnt -= shared_snapshot->inmemory_subcnt;
-	shared_snapshot->inmemory_subcnt = 0;
-
-	size = shared_snapshot->total_subcnt * sizeof(TransactionId);
-
-	OpenOrCreateSubtransIdFile(dxid);
-	Assert(subxip_file != 0);
-	total_size = 0;
-	offset = FileSeek(subxip_file, 0, SEEK_SET);
-
-	subxids = palloc(MAX_XIDBUF_SIZE);
-	while (size > 0)
-	{
-		read_size = size > MAX_XIDBUF_SIZE ? MAX_XIDBUF_SIZE : size;
-		if (FileRead(subxip_file, (char *)subxids, read_size) !=
-			     read_size)
-		{
-			elog(ERROR, "Error in Reading Subtransaction file.");
-		}
-
-		if (TransactionIdFollowsOrEquals(
-		     subxids[(read_size/sizeof(TransactionId)) - 1], xid_tree))
-		{
-			found = search_binary_xids(subxids,
-					   read_size/sizeof(TransactionId),
-					   xid_tree, &index);
-			Assert(found || (TransactionIdEquals(xid_tree,
-						InvalidTransactionId)));
-			total_size += sizeof(TransactionId) * (index+1);
-			break;
-		}
-
-		total_size += read_size;
-		size -= read_size;
-	}
-	pfree(subxids);
-
-	FileTruncate(subxip_file, total_size);
-	shared_snapshot->total_subcnt = total_size/sizeof(TransactionId);
-}
-
-/*
- * For QE writer, Subtransaction IDs are stored in the transaction tree
- * (CurrentTransactionState). For efficiency of searching, they are also stored
- * XidBuffer of the snapshot (private copy). In addition, for sharing with
- * the QE reader, they are stored in SharedSnapshotSlot's array in shared
- * memory, and whatever overflows goes in a file, also seen by the QE reader.
- * For QE reader, Subtransaction IDs are stored in XidBuffer of the snapshot
- * for fast searching and the QE reader can also see the IDs stored in
- * the SharedSnapshot slot, and in the file.
- *
- * This function computes the differential between shared snapshot and the
- * actual state of the transaction tree of the QE writer and updates the
- * shared snapshot accordingly. It also updates the XidBuffer of the
- * writer's snapshot to have the actual number of xids.
- * Since the last time the snapshot was updated, there can be three cases:
- * - No subtransaction id got added.
- * - Subtransactions got added due to creation of new subtransactions.
- * - Subtransactions got removed from the tree due to rollback.
- */
-void
-UpdateSubtransactionsInSharedSnapshot(DistributedTransactionId dxid)
-{
-	TransactionId *temp_subxids;
-	uint32 temp_cnt = 0;
-	TransactionId xid;
-	TransactionId xid_tree;
-
-	if (SharedLocalSnapshotSlot == NULL)
-	{
-		return;
-	}
-	
-	xid = GetLastTransactionIdFromSnapshot(dxid);
-	xid_tree = GetLastSubTransactionIdFromTree(CurrentTransactionState);		
-	if (TransactionIdFollows(xid_tree, xid))
-	{
-		GetAddedSubtransactionsFromTree(xid, CurrentTransactionState,
-						&temp_subxids, &temp_cnt);
-		if (temp_cnt > 0)
-		{
-			AddSubtransactionsToSharedSnapshot(
-						dxid,
-						SharedLocalSnapshotSlot,
-						temp_subxids,
-						temp_cnt);
-		}
-
-		pfree(temp_subxids);
-	}
-	else if (TransactionIdPrecedes(xid_tree, xid))
-	{
-		RemoveSubtransactionsFromSharedSnapshot(dxid, xid_tree,
-						SharedLocalSnapshotSlot);
-	}
-}
-
-/*
- * Called by QE Reader to copy transaction IDs from shared snapshot into
- * its XID buffer.
- * This can be optimized to get only the changes. For now, it copies all
- * subxids from the snapshot.
- */
-void
-GetSubXidsInXidBuffer(void)
-{
-	TransactionId* subxids = NULL;
-	int64 offset;
-	int64 size;
-	int64 read_size;
-
-	/*
-	 * We only add subxids to the subxbuf, if it doen't fit the 
-	 * writers SharedSnapshot slot inmemory limit. Else we can refer the writers 
-	 * SharedSnapshot array itself as earlier to Subtransaction Limit Removal feature.
-	 * Check if there are any ids in file.
-	 */
-	if (SharedLocalSnapshotSlot->inmemory_subcnt !=
-	    SharedLocalSnapshotSlot->total_subcnt)
-	{
-		ResetXidBuffer(&subxbuf);
-		if (subxip_file == 0)
-		{
-			subxip_file = OpenTemporaryFile(
-				Subtransaction_filename(
-					SharedLocalSnapshotSlot->QDxid),
-				false, false, false, false);
-
-			if (subxip_file == 0)
-			{
-				elog(ERROR,
-				     "Error in Opening Subtransaction file.");
-			}
-		}
-
-		SIMPLE_FAULT_INJECTOR(SubtransactionReadFromFile);
-
-		offset = FileSeek(subxip_file, 0, SEEK_SET);
-		size = (SharedLocalSnapshotSlot->total_subcnt -
-			SharedLocalSnapshotSlot->inmemory_subcnt) *
-			sizeof(TransactionId);
-
-		subxids = palloc(MAX_XIDBUF_SIZE);
-		while (size > 0)
-		{
-			read_size = size > MAX_XIDBUF_SIZE ?
-				    MAX_XIDBUF_SIZE : size;
-			if (FileRead(subxip_file, (char *)subxids, read_size)
-				!= read_size)
-			{
-				elog(ERROR,
-				     "Error in Reading Subtransaction file.");
-			}
-			AddSortedToXidBuffer(&subxbuf, subxids,
-					     read_size/sizeof(TransactionId));
-			size -= read_size;
-		}
-		pfree(subxids);
-
-		AddSortedToXidBuffer(&subxbuf,
-			    (TransactionId *)(SharedLocalSnapshotSlot->subxids),
-			    SharedLocalSnapshotSlot->inmemory_subcnt);
-	}
-}
-
-/*
- * MPP debug routine for showing currently active subtransaction ids.
- */
-void
-ShowSubtransactionsForSharedSnapshot(void)
-{
-	int i;
-	TransactionId* subxids = NULL;
-
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-	     "Reader qExec count of subtransaction ids %u",
-	     SharedLocalSnapshotSlot->total_subcnt);
-
-	if (SharedLocalSnapshotSlot->inmemory_subcnt !=
-	    SharedLocalSnapshotSlot->total_subcnt)
-	{	
-		if (subxip_file == 0)
-		{
-			subxip_file = OpenTemporaryFile(
-				Subtransaction_filename(
-					SharedLocalSnapshotSlot->QDxid),
-				false, false, false, false);
-
-			if (subxip_file == 0)
-			{
-				elog(ERROR,
-				     "Error in Opening Subtransaction file for showing.");
-			}
-		}
-
-		int64 offset;
-		uint32 size;
-		uint32 read_size;
-
-		offset = FileSeek(subxip_file, 0, SEEK_SET);
-		size = (SharedLocalSnapshotSlot->total_subcnt -
-			SharedLocalSnapshotSlot->inmemory_subcnt) *
-			sizeof(TransactionId);
-		
-		subxids = palloc(MAX_XIDBUF_SIZE);
-		do
-		{
-			read_size = size > MAX_XIDBUF_SIZE ? MAX_XIDBUF_SIZE : size;
-			if ((FileRead(subxip_file, (char *)subxids, read_size)) <
-				      read_size)
-			{
-				elog(ERROR, "Error in Reading Subtransaction file.");
-			}
-
-			for (i = 0; i < read_size/sizeof(TransactionId); i++)
-			{
-				elog((Debug_print_full_dtm ? LOG : DEBUG5), "subxid %u",
-				     subxids[i]);
-			}
-
-			size -= read_size;
-		} while (size > 0);
-
-		pfree(subxids);
-	}
-
-	for (i = 0; i < SharedLocalSnapshotSlot->inmemory_subcnt; i++)
-	{
-		elog((Debug_print_full_dtm ? LOG : DEBUG5), "subxid %u",
-		     SharedLocalSnapshotSlot->subxids[i]);
-	}
-}
-
-/*
  *	StartTransaction
  */
 void
@@ -3059,6 +2410,7 @@ StartTransaction(void)
 				SharedLocalSnapshotSlot->startTimestamp = stmtStartTimestamp;
 				SharedLocalSnapshotSlot->QDxid = QEDtxContextInfo.distributedXid;
 				SharedLocalSnapshotSlot->pid = MyProc->pid;
+				SharedLocalSnapshotSlot->writer_proc = MyProc;
 			}
 		}
 		break;
@@ -3457,9 +2809,6 @@ CommitTransaction(void)
 
 	AtCommit_Memory();
 
-	ResetXidBuffer(&subxbuf);
-	ResetSharedSnapshotSubxids(SharedLocalSnapshotSlot);
-
 	finishDistributedTransactionContext("CommitTransaction", false);
 
 	if (gp_local_distributed_cache_stats)
@@ -3771,9 +3120,6 @@ PrepareTransaction(void)
 	 */
 	s->state = TRANS_DEFAULT;
 
-	ResetXidBuffer(&subxbuf);
-	ResetSharedSnapshotSubxids(SharedLocalSnapshotSlot);
-
 	RESUME_INTERRUPTS();
 }
 
@@ -3901,9 +3247,6 @@ AbortTransaction(void)
 	latestXid = RecordTransactionAbort(false);
 
 	PG_TRACE1(transaction__abort, MyProc->lxid);
-
-	ResetXidBuffer(&subxbuf);
-	ResetSharedSnapshotSubxids(SharedLocalSnapshotSlot);
 
 	/*
 	 * Let others know about no transaction in progress by me. Note that this
@@ -6190,19 +5533,6 @@ CleanupSubTransaction(void)
 	s->state = TRANS_DEFAULT;
 
 	PopTransaction();
-
-	/*
-	 * While aborting the subtransaction and if we are writer, lets deregister
-	 * ourselves from the SharedLocalSnapshot, so that calls to
-	 * TransactionIdIsCurrentTransaction return FALSE for this transaction for
-	 * QE readers.
-	 */
-	if (SharedLocalSnapshotSlot && TransactionIdIsValid(localXid) &&
-		(DistributedTransactionContext != DTX_CONTEXT_QE_READER &&
-		  DistributedTransactionContext != DTX_CONTEXT_QE_ENTRY_DB_SINGLETON))
-	{
-		UpdateSubtransactionsInSharedSnapshot(SharedLocalSnapshotSlot->QDxid);
-	}
 }
 
 /*
@@ -6219,8 +5549,6 @@ PushTransaction(void)
 	TransactionState s;
 
 	currentSavepointTotal++;
-	if (currentSavepointTotal >= MaxGpSavePoints)
-		elog(DEBUG5, "Using subtransaction file for storing subtransactions");
 
 	if ((currentSavepointTotal >= gp_subtrans_warn_limit) &&
 	    (currentSavepointTotal % gp_subtrans_warn_limit == 0))

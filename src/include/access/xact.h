@@ -158,12 +158,6 @@ typedef struct xl_xact_distributed_forget
 	TMGXACT_LOG gxact_log;
 } xl_xact_distributed_forget;
 
-/*
- * Maximum number of subtransactions per transaction allowed under MPP until
- * we can move away from a static length SharedSnapshot structure.
- */
-#define MaxGpSavePoints 100
-
 typedef enum
 {
 	XACT_INFOKIND_NONE = 0,
@@ -171,17 +165,6 @@ typedef enum
 	XACT_INFOKIND_ABORT,
 	XACT_INFOKIND_PREPARE
 } XactInfoKind;
-
-typedef struct XidBuffer
-{
-	uint32          max_bufs;
-	uint32          actual_bufs;
-	uint32          last_buf_cnt;
-	TransactionId   **ids_buf;
-} XidBuffer;
-
-extern XidBuffer subxbuf;
-extern File subxip_file;
 
 /* ----------------
  *		extern definitions
@@ -265,16 +248,5 @@ extern bool xact_redo_get_info(
 		int 						*subXidCount);
 extern void xact_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
 extern const char *IsoLevelAsUpperString(int IsoLevel);
-
-extern bool FindXidInXidBuffer(XidBuffer *xidbuf,
-			       TransactionId xid, uint32 *cnt, int32 *index);
-extern void AddSortedToXidBuffer(XidBuffer *xidbuf, TransactionId *xids,
-                                 uint32 cnt);
-extern void ResetXidBuffer(XidBuffer *xidbuf);
-extern TransactionId GetLastTransactionIdFromSnapshot(DistributedTransactionId);
-
-void ShowSubtransactionsForSharedSnapshot(void);
-void GetSubXidsInXidBuffer(void);
-void UpdateSubtransactionsInSharedSnapshot(DistributedTransactionId dxid);
 
 #endif   /* XACT_H */
