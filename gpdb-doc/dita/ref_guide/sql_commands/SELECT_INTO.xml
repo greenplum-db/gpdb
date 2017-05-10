@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="eh20941">SELECT INTO</title><body><p id="sql_command_desc">Defines a new table from the results of a query.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">SELECT [ALL | DISTINCT [ON ( <varname>expression</varname> [, ...] )]]
+<topic id="topic1">
+    <title id="eh20941">SELECT INTO</title>
+    <body>
+        <p id="sql_command_desc">Defines a new table from the results of a query.</p>
+        <section id="section2">
+            <title>Synopsis</title>
+            <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] <varname>with_query</varname> [, ...] ]
+SELECT [ALL | DISTINCT [ON ( <varname>expression</varname> [, ...] )]]
     * | <varname>expression</varname> [AS <varname>output_name</varname>] [, ...]
     INTO [TEMPORARY | TEMP] [TABLE] <varname>new_table</varname>
     [FROM <varname>from_item</varname> [, ...]]
@@ -13,16 +20,53 @@
     [LIMIT {<varname>count</varname> | ALL}]
     [OFFSET <varname>start</varname>]
     [FOR {UPDATE | SHARE} [OF <varname>table_name</varname> [, ...]] [NOWAIT] 
-    [...]]</codeblock></section><section id="section3"><title>Description</title><p><codeph>SELECT INTO</codeph> creates a new table and fills it with data
-computed by a query. The data is not returned to the client, as it is
-with a normal <codeph>SELECT</codeph>. The new table's columns have
-the names and data types associated with the output columns of the <codeph>SELECT</codeph>.
-</p></section><section id="section4"><title>Parameters</title><p>The majority of parameters for <codeph>SELECT INTO</codeph> are the same as <codeph><xref
-            href="SELECT.xml#topic1" type="topic" format="dita"/></codeph>. </p><parml><plentry><pt>TEMPORARY</pt><pt>TEMP</pt><pd>If specified, the table is created as a temporary table.</pd></plentry><plentry><pt><varname>new_table</varname></pt><pd>The name (optionally schema-qualified) of the table to be created.</pd></plentry></parml></section><section id="section5"><title>Examples</title><p>Create a new table <codeph>films_recent</codeph> consisting of only recent entries from the table
-          <codeph>films</codeph>: </p><codeblock>SELECT * INTO films_recent FROM films WHERE date_prod &gt;= 
-'2006-01-01';</codeblock></section><section id="section6"><title>Compatibility</title><p>The SQL standard uses <codeph>SELECT INTO</codeph> to represent selecting values into scalar
-        variables of a host program, rather than creating a new table. The Greenplum Database usage
-        of <codeph>SELECT INTO</codeph> to represent table creation is historical. It is best to use
-            <codeph><xref href="CREATE_TABLE_AS.xml#topic1" type="topic" format="dita"/></codeph>
-        for this purpose in new applications.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="SELECT.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="CREATE_TABLE_AS.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+    [...]]</codeblock>
+        </section>
+        <section id="section3">
+            <title>Description</title>
+            <p><codeph>SELECT INTO</codeph> creates a new table and fills it with data computed by a
+                query. The data is not returned to the client, as it is with a normal
+                    <codeph>SELECT</codeph>. The new table's columns have the names and data types
+                associated with the output columns of the <codeph>SELECT</codeph>. </p>
+        </section>
+        <section id="section4">
+            <title>Parameters</title>
+            <p>The majority of parameters for <codeph>SELECT INTO</codeph> are the same as
+                        <codeph><xref href="SELECT.xml#topic1" type="topic" format="dita"
+                /></codeph>. </p>
+            <parml>
+                <plentry>
+                    <pt>TEMPORARY</pt>
+                    <pt>TEMP</pt>
+                    <pd>If specified, the table is created as a temporary table.</pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>new_table</varname></pt>
+                    <pd>The name (optionally schema-qualified) of the table to be created.</pd>
+                </plentry>
+            </parml>
+        </section>
+        <section id="section5">
+            <title>Examples</title>
+            <p>Create a new table <codeph>films_recent</codeph> consisting of only recent entries
+                from the table <codeph>films</codeph>: </p>
+            <codeblock>SELECT * INTO films_recent FROM films WHERE date_prod &gt;= 
+'2006-01-01';</codeblock>
+        </section>
+        <section id="section6">
+            <title>Compatibility</title>
+            <p>The SQL standard uses <codeph>SELECT INTO</codeph> to represent selecting values into
+                scalar variables of a host program, rather than creating a new table. The Greenplum
+                Database usage of <codeph>SELECT INTO</codeph> to represent table creation is
+                historical. It is best to use <codeph><xref href="CREATE_TABLE_AS.xml#topic1"
+                        type="topic" format="dita"/></codeph> for this purpose in new
+                applications.</p>
+        </section>
+        <section id="section7">
+            <title>See Also</title>
+            <p><codeph><xref href="SELECT.xml#topic1" type="topic" format="dita"/></codeph>,
+                        <codeph><xref href="CREATE_TABLE_AS.xml#topic1" type="topic" format="dita"
+                    /></codeph></p>
+        </section>
+    </body>
+</topic>
