@@ -729,6 +729,7 @@ with_perl
 with_tcl
 enable_thread_safety
 INCLUDES
+enable_gpbackup
 enable_mapreduce
 enable_netbackup
 enable_ddboost
@@ -851,6 +852,7 @@ enable_snmp
 enable_ddboost
 enable_netbackup
 enable_mapreduce
+enable_gpbackup
 enable_thread_safety
 enable_thread_safety_force
 with_tcl
@@ -1529,6 +1531,7 @@ Optional Features:
   --enable-ddboost        enable DD Boost support
   --enable-netbackup      enable NetBackup support
   --enable-mapreduce      enable Greenplum Mapreduce support
+  --enable-gpbackup      enable building gpbackup
   --disable-thread-safety  Do not make client libraries thread-safe
   --enable-thread-safety-force  force thread-safety despite thread test failure
   --disable-largefile     omit support for large files
@@ -5992,6 +5995,38 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with Greenplum Mapreduce... $enable_mapreduce" >&5
 $as_echo "checking whether to build with Greenplum Mapreduce... $enable_mapreduce" >&6; }
 
+
+#
+# --enable-gpbackup enables gpbackup support
+#
+
+pgac_args="$pgac_args enable_gpbackup"
+
+# Check whether --enable-gpbackup was given.
+if test "${enable_gpbackup+set}" = set; then :
+  enableval=$enable_gpbackup;
+  case $enableval in
+    yes)
+
+$as_echo "#define USE_GPBACKUP 1" >>confdefs.h
+
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --enable-gpbackup option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  enable_gpbackup=no
+
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with gpbackup... $enable_gpbackup" >&5
+$as_echo "checking whether to build with gpbackup... $enable_gpbackup" >&6; }
 
 #
 # Include directories
