@@ -68,7 +68,7 @@ test: sreh
 
 ignore: gp_portal_error
 test: external_table external_table_create_privs column_compression eagerfree mapred gpdtm_plpgsql alter_table_aocs alter_table_aocs2 alter_distribution_policy ic aoco_privileges aocs
-test: alter_table_gp alter_table_ao ao_create_alter_valid_table subtransaction_limit oid_consistency udf_exception_blocks
+test: alter_table_gp alter_table_ao ao_create_alter_valid_table subtransaction_visibility oid_consistency udf_exception_blocks
 ignore: icudp_full
 
 test: resource_queue
