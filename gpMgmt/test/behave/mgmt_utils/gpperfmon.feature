@@ -84,3 +84,15 @@ Feature: gpperfmon
         Given gpperfmon is configured and running in qamode
         When the user truncates "diskspace_history" tables in "gpperfmon"
         Then wait until the results from boolean sql "SELECT count(*) > 0 FROM diskspace_history" is "true"
+
+    @gpperfmon_skew_rows
+    Scenario: gpperfmon detects row skew
+        Given gpperfmon is configured and running in qamode
+        Given database "gptest" is dropped and recreated
+        Given the user runs "psql gptest -c 'create table test_row_skew( id int, val int ) DISTRIBUTED BY ( id );'"
+        Then psql should return a return code of 0
+        When the user truncates "queries_history" tables in "gpperfmon"
+        # 1 million skewed rows too few to detect skew, but 10M seems to let gpperfmon detect row skew. Why?
+        And the user runs "psql gptest -c 'INSERT INTO test_row_skew SELECT 1, i FROM generate_series(1,10000000) AS i;'"
+        Then psql should return a return code of 0
+        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where skew_rows > 0" is "true"
