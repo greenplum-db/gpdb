@@ -329,7 +329,7 @@
       <p>The types <i>anyelement</i>, <i>anyarray</i>, <i>anynonarray</i>, and <i>anyenum</i> are
         psuedo-types called polymorphic types. Some procedural languages also support polymorphic
         functions using the types <i>anyarray</i>, <i>anyelement</i>, <i>anyenum</i>, and
-          <i>anynonarray</i>. These types are called polymorphic types.</p>
+          <i>anynonarray</i>.</p>
       <p>For more information about pseudo-types, see the Postgres documentation about <xref
           href="https://www.postgresql.org/docs/8.3/static/datatype-pseudo.html" format="html"
           scope="external">Pseudo-Types</xref>.</p>
