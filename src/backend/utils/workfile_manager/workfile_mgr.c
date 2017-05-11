@@ -37,8 +37,20 @@ typedef struct workset_info
 	char *dir_path;
 } workset_info;
 
+typedef struct open_workset_info
+{
+	ResourceOwner  owner;	/* owner of this workset */
+	workfile_set  *workset; /* workset */
+} open_workset_info;
+
 /* Counter to keep track of workfile segspace used without a workfile set. */
 static int64 used_segspace_not_in_workfile_set;
+
+/*
+ * Linked list of open "workset". These are allocated in TopMemoryContext,
+ * and tracked by resource owners.
+ */
+static List *open_worksets = NIL;
 
 /* Forward declarations */
 static void workfile_mgr_populate_set(const void *resource, const void *param);
@@ -48,7 +60,12 @@ static void workfile_mgr_unlink_directory(const char *dirpath);
 static StringInfo get_name_from_nodeType(const NodeTag node_type);
 static uint64 get_operator_work_mem(PlanState *ps);
 static char *create_workset_directory(NodeTag node_type, int slice_id);
-
+static void append_open_workset(workfile_set *workset);
+static void delete_open_workset(workfile_set *workset);
+static void workset_abort_callback(ResourceReleasePhase phase,
+								   bool isCommit,
+								   bool isTopLevel,
+								   void *arg);
 
 /* Workfile manager cache is stored here, once attached to */
 Cache *workfile_mgr_cache = NULL;
@@ -205,6 +222,8 @@ workfile_mgr_create_set(enum ExecWorkFileType type, bool can_be_reused, PlanStat
 	Assert(NULL != newEntry);
 	workfile_set *work_set = CACHE_ENTRY_PAYLOAD(newEntry);
 	Assert(work_set != NULL);
+
+	append_open_workset(work_set);
 
 	elog(gp_workfile_caching_loglevel, "new spill file set. key=0x%x prefix=%s opMemKB=" INT64_FORMAT,
 			work_set->key, work_set->path, work_set->metadata.operator_work_mem);
@@ -449,6 +468,8 @@ workfile_mgr_close_set(workfile_set *work_set)
 
 	CacheEntry *cache_entry = CACHE_ENTRY_HEADER(work_set);
 	Cache_Release(workfile_mgr_cache, cache_entry);
+
+	delete_open_workset(work_set);
 }
 
 /*
@@ -462,6 +483,9 @@ workfile_mgr_cleanup(void)
 	Cache_SurrenderClientEntries(workfile_mgr_cache);
 	WorkfileDiskspace_Commit(0, used_segspace_not_in_workfile_set, false /* update_query_space */);
 	used_segspace_not_in_workfile_set = 0;
+
+	list_free_deep(open_worksets);
+	open_worksets = NIL;
 }
 
 /*
@@ -508,6 +532,86 @@ workfile_mgr_report_error(void)
 
 	ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_RESOURCES),
 		errmsg("%s", message)));
+}
+
+static void
+append_open_workset(workfile_set *workset)
+{
+	MemoryContext      oldctx;
+	open_workset_info *workset_info;
+	static bool	       callback_registered = false;
+
+	if (!callback_registered)
+	{
+		RegisterResourceReleaseCallback(workset_abort_callback, NULL);
+		callback_registered = true;
+	}
+
+	oldctx = MemoryContextSwitchTo(TopMemoryContext);
+
+	workset_info = palloc(sizeof(open_workset_info));
+	workset_info->owner = CurrentResourceOwner;
+	workset_info->workset = workset;
+	open_worksets = lappend(open_worksets, workset_info);
+
+	MemoryContextSwitchTo(oldctx);
+}
+
+static void
+delete_open_workset(workfile_set *workset)
+{
+	ListCell *lc;
+
+	foreach(lc, open_worksets)
+	{
+		open_workset_info *workset_info = lfirst(lc);
+
+		if (workset_info->workset == workset)
+		{
+			pfree(workset_info);
+			open_worksets = list_delete_ptr(open_worksets, workset_info);
+			break;
+		}
+	}
+}
+
+/*
+ * Resource owner call back function
+ *		Close any open workfile sets on transaction abort.
+ */
+static void
+workset_abort_callback(ResourceReleasePhase phase,
+					   bool isCommit,
+					   bool isTopLevel,
+					   void *arg)
+{
+	ListCell *lc;
+
+	if (phase != RESOURCE_RELEASE_BEFORE_LOCKS)
+		return;
+
+	/* cannot use foreach here because of possible list_delete */
+	lc = list_head(open_worksets);
+	while (lc)
+	{
+		open_workset_info *workset_info = (open_workset_info *) lfirst(lc);
+
+		/* must advance lc before list_delete possibly pfree's it */
+		lc = lnext(lc);
+
+		if (workset_info->owner == CurrentResourceOwner)
+		{
+			CacheEntry *cache_entry = CACHE_ENTRY_HEADER(workset_info->workset);
+
+			if (isCommit)
+				elog(WARNING, "workfile set leak: %p", cache_entry);
+
+			Cache_Release(workfile_mgr_cache, cache_entry);
+
+			pfree(workset_info);
+			open_worksets = list_delete_ptr(open_worksets, workset_info);
+		}
+	}
 }
 
 /* EOF */
