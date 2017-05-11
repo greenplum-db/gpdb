@@ -5460,7 +5460,7 @@ CTranslatorDXLToPlStmt::JtFromEdxljt
 			jt = JOIN_SEMI;
 			break;
 		case EdxljtLeftAntiSemijoin:
-			jt = JOIN_LASJ;
+			jt = JOIN_ANTI;
 			break;
 		case EdxljtLeftAntiSemijoinNotIn:
 			jt = JOIN_LASJ_NOTIN;

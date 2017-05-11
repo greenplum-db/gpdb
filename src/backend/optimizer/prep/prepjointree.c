@@ -334,7 +334,7 @@ pull_up_subqueries(PlannerInfo *root, Node *jtnode,
 											 below_outer_join, false);
 				break;
 			case JOIN_LEFT:
-			case JOIN_LASJ:
+			case JOIN_ANTI:
 			case JOIN_LASJ_NOTIN:
 				j->larg = pull_up_subqueries(root, j->larg,
 											 below_outer_join, false);

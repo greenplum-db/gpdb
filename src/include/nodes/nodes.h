@@ -695,8 +695,6 @@ typedef enum JoinType
 	 */
 	JOIN_UNIQUE_OUTER,			/* LHS path must be made unique */
 	JOIN_UNIQUE_INNER,			/* RHS path must be made unique */
-	JOIN_LASJ,					/* Left Anti Semi Join:
-								   one copy of outer row with no match in inner */
 	JOIN_LASJ_NOTIN				/* Left Anti Semi Join with Not-In semantics:
 									If any NULL values are produced by inner side,
 									return no join results. Otherwise, same as LASJ */

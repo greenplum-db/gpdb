@@ -248,7 +248,6 @@ ExecNestLoop(NestLoopState *node)
 			if (!node->nl_MatchedOuter &&
 				(node->js.jointype == JOIN_LEFT ||
 				 node->js.jointype == JOIN_ANTI ||
-				 node->js.jointype == JOIN_LASJ ||
 				 node->js.jointype == JOIN_LASJ_NOTIN))
 			{
 				/*
@@ -315,7 +314,7 @@ ExecNestLoop(NestLoopState *node)
 			node->nl_MatchedOuter = true;
 
 			/* In an antijoin, we never return a matched tuple */
-			if (node->js.jointype == JOIN_LASJ || node->js.jointype == JOIN_LASJ_NOTIN || node->js.jointype == JOIN_ANTI)
+			if (node->js.jointype == JOIN_LASJ_NOTIN || node->js.jointype == JOIN_ANTI)
 			{
 				node->nl_NeedNewOuter = true;
 				continue;		/* return to top of loop */
@@ -462,7 +461,6 @@ ExecInitNestLoop(NestLoop *node, EState *estate, int eflags)
 			break;
 		case JOIN_LEFT:
 		case JOIN_ANTI:
-		case JOIN_LASJ:
 		case JOIN_LASJ_NOTIN:
 			nlstate->nl_NullInnerTupleSlot =
 				ExecInitNullTupleSlot(estate,

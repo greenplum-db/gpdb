@@ -227,7 +227,6 @@ sort_inner_and_outer(PlannerInfo *root,
 		case JOIN_LEFT:
 		case JOIN_SEMI:
 		case JOIN_ANTI:
-		case JOIN_LASJ:
 		case JOIN_LASJ_NOTIN:
 		case JOIN_UNIQUE_OUTER:
 		case JOIN_UNIQUE_INNER:
@@ -420,7 +419,6 @@ match_unsorted_outer(PlannerInfo *root,
 		case JOIN_LEFT:
 		case JOIN_SEMI:
 		case JOIN_ANTI:
-		case JOIN_LASJ:
 		case JOIN_LASJ_NOTIN:
 			nestjoinOK = true;
 			useallclauses = false;
@@ -881,7 +879,7 @@ hash_inner_and_outer(PlannerInfo *root,
 	/*
 	 * Hashjoin only supports inner, left, semi, and anti joins.
 	 */
-    Assert(jointype == JOIN_INNER || jointype == JOIN_LEFT || jointype == JOIN_LASJ || jointype == JOIN_LASJ_NOTIN || jointype == JOIN_ANTI);
+    Assert(jointype == JOIN_INNER || jointype == JOIN_LEFT || jointype == JOIN_LASJ_NOTIN || jointype == JOIN_ANTI  || jointype == JOIN_SEMI);
     Assert(hashclause_list);
 
     /*

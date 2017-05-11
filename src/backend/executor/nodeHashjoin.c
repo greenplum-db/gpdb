@@ -24,7 +24,7 @@
 #include "utils/faultinjector.h"
 #include "utils/memutils.h"
 
-/* Returns true for JOIN_LEFT and JOIN_ANTI jointypes */
+/* Returns true for JOIN_LEFT, JOIN_ANTI and JOIN_LASJ_NOTIN jointypes */
 #define HASHJOIN_IS_OUTER(hjstate)  ((hjstate)->hj_NullInnerTupleSlot != NULL)
 
 #include "cdb/cdbvars.h"
@@ -130,8 +130,6 @@ ExecHashJoin(HashJoinState *node)
 			 * consumption by ExecHashJoinOuterGetTuple.
 			 */
 			if ((HASHJOIN_IS_OUTER(node)) ||
-					(node->js.jointype == JOIN_LASJ) ||
-					(node->js.jointype == JOIN_LASJ_NOTIN) ||
 					(outerNode->plan->startup_cost < hashNode->ps.plan->total_cost &&
 						!node->hj_OuterNotEmpty))
 			{
@@ -232,8 +230,6 @@ ExecHashJoin(HashJoinState *node)
 		 * outer join, we can quit without scanning the outer relation.
 		 */
 		if (!HASHJOIN_IS_OUTER(node)
-			&& node->js.jointype != JOIN_LASJ
-			&& node->js.jointype != JOIN_LASJ_NOTIN
 			&& node->hj_InnerEmpty)
 		{
 			/*
@@ -367,8 +363,7 @@ ExecHashJoin(HashJoinState *node)
 				node->hj_MatchedOuter = true;
 
 				/* In an antijoin, we never return a matched tuple */
-				if (node->js.jointype == JOIN_LASJ || node->js.jointype == JOIN_LASJ_NOTIN ||
-					node->js.jointype == JOIN_ANTI)
+				if (node->js.jointype == JOIN_LASJ_NOTIN || node->js.jointype == JOIN_ANTI)
 				{
 					node->hj_NeedNewOuter = true;
 					break;		/* out of loop over hash bucket */
@@ -407,9 +402,7 @@ ExecHashJoin(HashJoinState *node)
 		node->hj_NeedNewOuter = true;
 
 		if (!node->hj_MatchedOuter &&
-			(HASHJOIN_IS_OUTER(node) ||
-			 node->js.jointype == JOIN_LASJ ||
-			 node->js.jointype == JOIN_LASJ_NOTIN))
+			(HASHJOIN_IS_OUTER(node)))
 		{
 			/*
 			 * We are doing an outer join and there were no join matches for
@@ -543,7 +536,6 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 			break;
 		case JOIN_LEFT:
 		case JOIN_ANTI:
-		case JOIN_LASJ:
 		case JOIN_LASJ_NOTIN:
 			hjstate->hj_NullInnerTupleSlot =
 				ExecInitNullTupleSlot(estate,
@@ -726,9 +718,7 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 			econtext->ecxt_outertuple = slot;
 
 			bool hashkeys_null = false;
-			bool keep_nulls = (HASHJOIN_IS_OUTER(hjstate)) ||
-					(hjstate->js.jointype == JOIN_LASJ) ||
-					(hjstate->js.jointype == JOIN_LASJ_NOTIN) ||
+			bool keep_nulls = (HASHJOIN_IS_OUTER(hjstate))||
 					hjstate->hj_nonequijoin;
 			if (ExecHashGetHashValue(hashState, hashtable, econtext,
 									 hjstate->hj_OuterHashKeys,
@@ -872,9 +862,7 @@ start_over:
 	{
 		batch = hashtable->batches[curbatch];
 		if (batch->outerside.workfile != NULL &&
-			((HASHJOIN_IS_OUTER(hjstate)) ||
-			 (hjstate->js.jointype == JOIN_LASJ) ||
-			 (hjstate->js.jointype == JOIN_LASJ_NOTIN)))
+			HASHJOIN_IS_OUTER(hjstate))
 			break;				/* must process due to rule 1 */
 		if (batch->innerside.workfile != NULL &&
 			nbatch != hashtable->nbatch_original)
