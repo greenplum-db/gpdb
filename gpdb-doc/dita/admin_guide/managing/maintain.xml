@@ -194,9 +194,9 @@ analyzedb -s pg_catalog -d $DBNAME
             <i>cust_info</i> table.<codeblock>ANALYZE cust_info;
 VACUUM cust_info;</codeblock></p>
         <note type="important">If you intend to execute queries on partitioned tables with GPORCA
-          enabled, you must collect statistics on the partitioned table root partition with the
-            <cmdname>ANALYZE ROOTPARTITION</cmdname> command. For information about GPORCA, see
-            <xref href="../query/topics/query-piv-opt-overview.xml"/>. </note>
+          enabled (the default), you must collect statistics on the partitioned table root partition
+          with the <cmdname>ANALYZE ROOTPARTITION</cmdname> command. For information about GPORCA,
+          see <xref href="../query/topics/query-piv-opt-overview.xml"/>. </note>
         <note>You can use the Greenplum Database utility <cmdname>analyzedb</cmdname> to update
           table statistics. Tables can be analyzed concurrently. For append optimized tables,
             <cmdname>analyzedb</cmdname> updates statistics only if the statistics are not current.

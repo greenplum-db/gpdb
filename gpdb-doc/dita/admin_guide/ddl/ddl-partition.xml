@@ -336,10 +336,10 @@ GRANT SELECT ON sales TO guest;
           enforced only on the parts of the partitioned table, not on the partitioned table as a
           whole.</p>
         <p>GPORCA, the Greenplum next generation query optimizer, supports uniform multi-level
-          partitioned tables. If GPORCA is enabled and the multi-level partitioned table is not
-          uniform, Greenplum Database executes queries against the table with the legacy query
-          optimizer. For information about uniform multi-level partitioned tables, see <xref
-            href="../query/topics/query-piv-uniform-part-tbl.xml#topic1"/>.</p>
+          partitioned tables. If GPORCA is enabled (the default) and the multi-level partitioned
+          table is not uniform, Greenplum Database executes queries against the table with the
+          legacy query optimizer. For information about uniform multi-level partitioned tables, see
+            <xref href="../query/topics/query-piv-uniform-part-tbl.xml#topic1"/>.</p>
         <p>Exchanging a leaf child partition with an external table is not supported if the
           partitioned table is created with the <codeph>SUBPARTITION</codeph> clause or if a
           partition has a subpartition. For information about exchanging a leaf child partition with

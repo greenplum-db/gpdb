@@ -4,8 +4,8 @@
 <topic id="topic1">
   <title>Determining the Query Optimizer that is Used</title>
   <abstract>
-    <shortdesc> When GPORCA is enabled, you can determine if Greenplum Database is using GPORCA or is falling back to the
-      legacy query optimizer. </shortdesc>
+    <shortdesc> When GPORCA is enabled (the default), you can determine if Greenplum Database is
+      using GPORCA or is falling back to the legacy query optimizer. </shortdesc>
   </abstract>
   <body>
     <p>You can examine the <codeph>EXPLAIN</codeph> query plan for the query determine which query
