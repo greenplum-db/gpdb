@@ -1488,10 +1488,29 @@ raw_expression_tree_walker(Node *node, bool (*walker) (), void *context)
 		case T_ParamRef:
 		case T_A_Const:
 		case T_A_Star:
+		case T_OuterJoinInfo:
+		case T_DMLActionExpr:
+		case T_PartOidExpr:
+		case T_PartSelectedExpr:
+		case T_PartDefaultExpr:
+		case T_PartBoundExpr:
+		case T_PartBoundInclusionExpr:
+		case T_PartBoundOpenExpr:
+		case T_PartListRuleExpr:
+		case T_PartListNullTestExpr:
 			/* primitive node types with no subnodes */
 			break;
 		case T_Alias:
 			/* we assume the colnames list isn't interesting */
+			break;
+		case T_WindowRef:
+			{
+				WindowRef	   *expr = (WindowRef *) node;
+
+				if (walker(expr->args, context))
+					return true;
+				/* don't recurse on implicit args under winspec */
+			}
 			break;
 		case T_RangeVar:
 			return walker(((RangeVar *) node)->alias, context);
@@ -1626,6 +1645,14 @@ raw_expression_tree_walker(Node *node, bool (*walker) (), void *context)
 				/* operator name is deemed uninteresting */
 			}
 			break;
+		case T_InClauseInfo:
+			{
+				InClauseInfo *ininfo = (InClauseInfo *) node;
+
+				if (walker(ininfo->sub_targetlist, context))
+					return true;
+			}
+			break;
 		case T_ColumnRef:
 			/* we assume the fields contain nothing interesting */
 			break;
@@ -1636,6 +1663,85 @@ raw_expression_tree_walker(Node *node, bool (*walker) (), void *context)
 				if (walker(fcall->args, context))
 					return true;
 				/* function name is deemed uninteresting */
+			}
+			break;
+		case T_GroupingClause:
+			{
+				GroupingClause *g = (GroupingClause *) node;
+				if (walker(g->groupsets, context))
+					return true;
+			}
+			break;
+		case T_GroupingFunc:
+			break;
+		case T_Grouping:
+		case T_GroupId:
+		case T_GroupClause:
+		case T_SortClause: /* occurs in WindowSpec lists */
+			{
+				/* do nothing */
+			}
+			break;
+		case T_TableValueExpr:
+			{
+				TableValueExpr *expr = (TableValueExpr *) node;
+
+				return walker(expr->subquery, context);
+			}
+			break;
+		case T_WindowSpec:
+			{
+				WindowSpec *wspec = (WindowSpec *)node;
+
+				if (walker(wspec->partition, context))
+					return true;
+				if (walker(wspec->order, context))
+					return true;
+				if (walker(wspec->frame, context))
+					return true;
+				return false;
+			}
+			break;
+		case T_WindowFrame:
+			{
+				WindowFrame *frame = (WindowFrame *)node;
+
+				if (walker(frame->trail, context))
+					return true;
+				if (walker(frame->lead, context))
+					return true;
+			}
+			break;
+		case T_WindowKey:
+			{
+				WindowKey *wk = (WindowKey *) node;
+
+				if (walker((Node *) wk->frame, context))
+					return true;
+			}
+			break;
+		case T_WindowFrameEdge:
+			{
+				WindowFrameEdge *edge = (WindowFrameEdge *)node;
+
+				if (walker((Node *) edge->val, context))
+					return true;
+			}
+			break;
+		case T_PercentileExpr:
+			{
+				PercentileExpr *perc = (PercentileExpr *) node;
+
+				if (walker((Node *) perc->args, context))
+					return true;
+				if (walker((Node *) perc->sortClause, context))
+					return true;
+				if (walker((Node *) perc->sortTargets, context))
+					return true;
+				if (walker((Node *) perc->pcExpr, context))
+					return true;
+				if (walker((Node *) perc->tcExpr, context))
+					return true;
 			}
 			break;
 		case T_A_Indices:
