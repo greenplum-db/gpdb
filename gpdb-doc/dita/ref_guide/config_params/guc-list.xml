@@ -8013,12 +8013,11 @@
   <topic id="standard_conforming_strings">
     <title>standard_conforming_strings</title>
     <body>
-      <p>Reports whether ordinary string literals ('...') treat backslashes literally, as specified
-        in the SQL standard. The value is currently always off, indicating that backslashes are
-        treated as escapes. It is planned that this will change to on in a future release when
-        string literal syntax changes to meet the standard. Applications may check this parameter to
-        determine how string literals will be processed. The presence of this parameter can also be
-        taken as an indication that the escape string syntax (E'...') is supported. </p>
+      <p>Determines whether ordinary string literals ('...') treat backslashes literally, as
+        specified in the SQL standard. The default value is on. Turn this parameter off to treat
+        backslashes in string literals as escape characters. Applications may check this parameter
+        to determine how string literals are processed. The presence of this parameter can also be
+        taken as an indication that the escape string syntax (E'...') is supported.</p>
       <table id="standard_conforming_strings_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -8034,8 +8033,8 @@
           <tbody>
             <row>
               <entry colname="col1">Boolean</entry>
-              <entry colname="col2">off</entry>
-              <entry colname="col3">read only</entry>
+              <entry colname="col2">on</entry>
+              <entry colname="col3">master<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
         </tgroup>
