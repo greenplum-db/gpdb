@@ -2285,7 +2285,7 @@ is_dummy_plan_walker(Node *node, bool *context)
 
 					case JOIN_SEMI:
 					case JOIN_LASJ_NOTIN:
-					case JOIN_LASJ:		/* outer */
+					case JOIN_ANTI:		/* outer */
 						*context = is_dummy_plan(outerPlan(node));
 						break;
 

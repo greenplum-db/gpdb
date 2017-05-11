@@ -607,7 +607,7 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 	 */
 	switch (sjinfo->jointype)
 	{
-		case JOIN_LASJ:
+		case JOIN_ANTI:
 		case JOIN_LASJ_NOTIN:
 			/*
 			 * For antijoins, the outer and inner rel are fixed.
@@ -679,16 +679,6 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 									 JOIN_UNIQUE_OUTER, sjinfo,
 									 restrictlist);
 			}
-			break;
-		case JOIN_ANTI:
-			if (is_dummy_rel(rel1))
-			{
-				mark_dummy_join(root, joinrel);
-				break;
-			}
-			add_paths_to_joinrel(root, joinrel, rel1, rel2,
-								 JOIN_ANTI, sjinfo,
-								 restrictlist);
 			break;
 		default:
 			elog(ERROR, "unrecognized join type: %d", (int) sjinfo->jointype);
