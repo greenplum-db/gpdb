@@ -4,8 +4,8 @@
 <topic id="topic1">
   <title>gpperfmon_install</title>
   <body>
-    <p>Installs the <codeph>gpperfmon</codeph> database, which is used by Greenplum Command Center, and optionally enables the
-      data collection agents.</p>
+    <p>Installs the <codeph>gpperfmon</codeph> database, which is used by Greenplum Command Center,
+      and optionally enables the data collection agents.</p>
     <section id="section2">
       <title>Synopsis</title>
       <codeblock><b>gpperfmon_install</b>
@@ -22,14 +22,6 @@
           (<codeph>gpadmin</codeph>) in order to run this utility. If using the
           <codeph>--enable</codeph> option, Greenplum Database must be restarted after the utility
         completes.</p>
-      <note type="important">Greenplum Command Center does not support the <i>gpperfmon</i> database
-        when GPORCA is enabled for the database. To ensure that the Pivotal Query Optimizer is
-        disabled for the <i>gpperfmon</i> database, run this command on the system where the
-        database is
-          installed:<codeblock>ALTER DATABASE gpperfmon SET OPTIMIZER = OFF</codeblock><p>In
-          Greenplum Database, GPORCA co-exists with the legacy query optimizer. For information
-          about GPORCA, see "Querying Data" in the <cite>Greenplum Database Administrator
-            Guide</cite>.</p></note>
       <p>When run without any options, the utility will just create the <codeph>gpperfmon</codeph>
         database (the database used to store system metrics collected by the data collection
         agents). When run with the <codeph>--enable</codeph> option, the utility will also run the
@@ -91,8 +83,11 @@ host       all           gpmon  127.0.0.1/28   password</codeblock></p>
             <li><codeph>gpperfmon_port=8888</codeph> (in all <codeph>postgresql.conf</codeph> files) </li>
             <li><codeph>gp_external_enable_exec=on</codeph> (in the master
                 <codeph>postgresql.conf</codeph> file)</li>
-          </ul><p>For information about the Greenplum Command Center, see the <cite>Greenplum
-              Command Center Administrator Guide</cite>.</p></li>
+          </ul><p>Data collection agents can be configured by setting parameters in the
+              <codeph>gpperfmon.conf</codeph> configuration file. See <xref
+              href="#topic1/section_p51_bxc_wz" format="dita"/> for details.</p><p>For information
+            about the Greenplum Command Center, see the <cite>Greenplum Command Center Administrator
+              Guide</cite>.</p></li>
       </ol>
     </section>
     <section id="section4">
@@ -132,13 +127,101 @@ host       all           gpmon  127.0.0.1/28   password</codeblock></p>
         </plentry>
       </parml>
     </section>
+    <section id="section_p51_bxc_wz">
+      <title>Data Collection Agent Configuration</title>
+      <p>The <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf</codeph> file stores
+        configuration parameters for the data collection agents. For configuration changes to these
+        options to take effect, you must save <codeph>gpperfmon.conf</codeph> and then restart
+        Greenplum Database server (<codeph>gpstop -r</codeph>).</p>
+      <p>The <codeph>gpperfmon.conf</codeph> file contains the following configuration
+        parameters.</p>
+      <simpletable frame="all" id="simpletable_xhc_qtc_wz">
+        <sthead>
+          <stentry>Parameter</stentry>
+          <stentry>Description</stentry>
+        </sthead>
+        <strow>
+          <stentry>log_location</stentry>
+          <stentry>Specifies a directory location for gpperfmon log files. Default is
+              <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/logs</codeph>.</stentry>
+        </strow>
+        <strow>
+          <stentry>min_query_time</stentry>
+          <stentry>
+            <p>Specifies the minimum query run time in seconds for statistics collection. All
+              queries that run longer than this value are logged in the
+                <codeph>queries_history</codeph> table. For queries with shorter run times, no
+              historical data is collected. Defaults to 20 seconds.</p>
+            <p>If you know that you want to collect data for all queries, you can set this parameter
+              to a low value. Setting the minimum query run time to zero, however, collects data
+              even for the numerous queries run by Greenplum Command Center, creating a large amount
+              of data that may not be useful.</p>
+          </stentry>
+        </strow>
+        <strow>
+          <stentry>min_detailed_query_time</stentry>
+          <stentry>
+            <p>Specifies the minimum iterator run time in seconds for statistics collection.
+              Iterators that run longer than this value are logged in the
+                <codeph>iterators_history</codeph> table. For iterators with shorter run times, no
+              data is collected. Minimum value is 10 seconds.</p>
+            <p>This parameter’s value must always be equal to, or greater than, the value of
+                <codeph>min_query_time</codeph>. Setting <codeph>min_detailed_query_time</codeph>
+              higher than <codeph>min_query_time</codeph> allows you to log detailed query plan
+              iterator data only for especially complex, long-running queries, while still logging
+              basic query data for shorter queries.</p>
+            <p>Given the complexity and size of iterator data, you may want to adjust this parameter
+              according to the size of data collected. If the <codeph>iterators_*</codeph> tables
+              are growing to excessive size without providing useful information, you can raise the
+              value of this parameter to log iterator detail for fewer queries.</p>
+          </stentry>
+        </strow>
+        <strow>
+          <stentry>max_log_size</stentry>
+          <stentry>
+            <p>This parameter is not included in <codeph>gpperfmon.conf</codeph>, but it may be
+              added to this file.</p>
+            <p>To prevent the log files from growing to excessive size, you can add the
+                <codeph>max_log_size</codeph> parameter to <codeph>gpperfmon.conf</codeph>. The
+              value of this parameter is measured in bytes. For example:</p>
+            <codeblock>max_log_size = 10485760</codeblock>
+            <p>With this setting, the log files will grow to 10MB before the system rolls over to a
+              new log file.</p>
+          </stentry>
+        </strow>
+        <strow>
+          <stentry>partition_age</stentry>
+          <stentry>The number of months that gperfmon statistics data will be retained. The default
+            it is 0, which means we won’t drop any data.</stentry>
+        </strow>
+        <strow>
+          <stentry>quantum</stentry>
+          <stentry>Specifies the time in seconds between updates from data collection agents on all
+            segments. Valid values are 10, 15, 20, 30, and 60. Defaults to 15 seconds.<p>If you
+              prefer a less granular view of performance, or want to collect and analyze minimal
+              amounts of data for system metrics, choose a higher quantum. To collect data more
+              frequently, choose a lower value.</p></stentry>
+        </strow>
+        <strow>
+          <stentry>smdw_aliases</stentry>
+          <stentry>This parameter allows you to specify additional host names for the standby
+            master. For example, if the standby master has two NICs, you can
+              enter:<codeblock>smdw_aliases=smdw-1,smdw-2</codeblock><p>This optional fault
+              tolerance parameter is useful if the Greenplum Command Center loses connectivity with
+              the standby master. Instead of continuously retrying to connect to host smdw, it will
+              try to connect to the NIC-based aliases of <codeph>smdw-1</codeph> and/or
+                <codeph>smdw-2</codeph>. This ensures that the Command Center Console can
+              continuously poll and monitor the standby master.</p></stentry>
+        </strow>
+      </simpletable>
+    </section>
     <section>
       <title>Notes</title>
       <p>The <i>gpperfmon</i> database and Greenplum Command Center require the
-          <codeph>gpmon</codeph> role. After the <i>gpperfmon</i> database and <codeph>gpmon</codeph>
-        role have been created, you can change the password for the <codeph>gpmon</codeph> role and
-        update the information that Greenplum Command Center uses to connect to the <i>gpperfmon</i>
-        database: </p>
+          <codeph>gpmon</codeph> role. After the <i>gpperfmon</i> database and
+          <codeph>gpmon</codeph> role have been created, you can change the password for the
+          <codeph>gpmon</codeph> role and update the information that Greenplum Command Center uses
+        to connect to the <i>gpperfmon</i> database: </p>
       <ol id="ol_wss_knp_wr">
         <li>Log in to Greenplum Database as a superuser and change the <codeph>gpmon</codeph>
           password with the <codeph>ALTER ROLE</codeph>
@@ -151,9 +234,9 @@ host       all           gpmon  127.0.0.1/28   password</codeblock></p>
         <li>Restart the Greenplum Command Center with the Command Center <codeph>gpcmdr</codeph>
           utility. <codeblock> $ gpcmdr --restart</codeblock></li>
       </ol>
-	  <p>This gpperfmon monitoring system requires some initialization after startup,
-		  so expect monitoring information to appear after a few minutes have passed, and not 
-		  immediately after installation and startup of the gpperfmon system.</p>
+      <p>This gpperfmon monitoring system requires some initialization after startup, so expect
+        monitoring information to appear after a few minutes have passed, and not immediately after
+        installation and startup of the gpperfmon system.</p>
     </section>
     <section id="section5">
       <title>Examples</title>
