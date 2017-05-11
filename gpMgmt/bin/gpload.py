@@ -107,7 +107,6 @@ valid_tokens_load = {
     "force_not_null": {'parse_children': False, 'parent': "input"},
     "error_limit": {'parse_children': True, 'parent': "input"},
     "error_percent": {'parse_children': True, 'parent': "input"},
-    "error_table": {'parse_children': True, 'parent': "input"},
     "log_errors": {'parse_children': False, 'parent': "input"},
     "header": {'parse_children': True, 'parent': "input"},
     "fully_qualified_domain_name": {'parse_children': False, 'parent': 'input'},
