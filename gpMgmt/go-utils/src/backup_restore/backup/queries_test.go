@@ -442,4 +442,29 @@ SET SUBPARTITION TEMPLATE
 			Expect(results.DefaultWithOids).To(Equal("false"))
 		})
 	})
+	Describe("GetDatabaseGUCs", func() {
+		headerDatabaseGUC := []string{"datconfig"}
+		defaultOIDGUC := []driver.Value{"default_with_oids=true"}
+		searchPathGUC := []driver.Value{"search_path=pg_catalog, public"}
+		storageOptionsGUC := []driver.Value{"gp_default_storage_options=appendonly=true,blocksize=32768,compresstype=none,checksum=true,orientation=row"}
+
+		It("returns a single database GUC", func() {
+			fakeDatabaseGUCs := sqlmock.NewRows(headerDatabaseGUC).AddRow(defaultOIDGUC...)
+
+			mock.ExpectQuery("SELECT(.*)").WillReturnRows(fakeDatabaseGUCs)
+			results := backup.GetDatabaseGUCs(connection)
+			Expect(len(results)).To(Equal(1))
+			Expect(results[0].DatConfig).To(Equal("default_with_oids=true"))
+		})
+		It("returns multiple database GUCs", func() {
+			fakeDatabaseGUCs := sqlmock.NewRows(headerDatabaseGUC).AddRow(defaultOIDGUC...).AddRow(searchPathGUC...).AddRow(storageOptionsGUC...)
+
+			mock.ExpectQuery("SELECT(.*)").WillReturnRows(fakeDatabaseGUCs)
+			results := backup.GetDatabaseGUCs(connection)
+			Expect(len(results)).To(Equal(3))
+			Expect(results[0].DatConfig).To(Equal("default_with_oids=true"))
+			Expect(results[1].DatConfig).To(Equal("search_path=pg_catalog, public"))
+			Expect(results[2].DatConfig).To(Equal("gp_default_storage_options=appendonly=true,blocksize=32768,compresstype=none,checksum=true,orientation=row"))
+		})
+	})
 })

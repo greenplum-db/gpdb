@@ -97,6 +97,10 @@ func backupPredata(filename string, tables []utils.Table) {
 	logger.Verbose("Writing CREATE DATABASE statement to predata file")
 	PrintCreateDatabaseStatement(predataFile)
 
+	logger.Verbose("Writing database GUCs to predata file")
+	databaseGucs := GetDatabaseGUCs(connection)
+	PrintDatabaseGUCs(predataFile, databaseGucs, connection.DBName)
+
 	logger.Verbose("Writing CREATE SCHEMA statements to predata file")
 	schemas := GetAllUserSchemas(connection)
 	PrintCreateSchemaStatements(predataFile, schemas)

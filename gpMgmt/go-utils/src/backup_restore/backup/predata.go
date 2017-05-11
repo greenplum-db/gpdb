@@ -248,3 +248,9 @@ SET standard_conforming_strings = %s;
 SET default_with_oids = %s
 `, gucs.ClientEncoding, gucs.StdConformingStrings, gucs.DefaultWithOids)
 }
+
+func PrintDatabaseGUCs(predataFile io.Writer, gucs []QueryDatabaseGUC, dbname string) {
+	for _, guc := range gucs {
+		fmt.Fprintf(predataFile, "\nALTER DATABASE %s SET %s;", dbname, guc.DatConfig)
+	}
+}

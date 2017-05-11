@@ -703,4 +703,26 @@ SET default_with_oids = false`)
 		})
 	})
 
+	Describe("PrintDatabaseGUCs", func() {
+		buffer := gbytes.NewBuffer()
+		dbname := "testdb"
+		defaultOidGUC := backup.QueryDatabaseGUC{"default_with_oids=true"}
+		searchPathGUC := backup.QueryDatabaseGUC{"search_path=pg_catalog, public"}
+		defaultStorageGUC := backup.QueryDatabaseGUC{"gp_default_storage_options=appendonly=true,blocksize=32768"}
+
+		It("prints single database GUC", func() {
+			gucs := []backup.QueryDatabaseGUC{defaultOidGUC}
+
+			backup.PrintDatabaseGUCs(buffer, gucs, dbname)
+			testutils.ExpectRegexp(buffer, `ALTER DATABASE testdb SET default_with_oids=true;`)
+		})
+		It("prints multiple database GUCs", func() {
+			gucs := []backup.QueryDatabaseGUC{defaultOidGUC, searchPathGUC, defaultStorageGUC}
+
+			backup.PrintDatabaseGUCs(buffer, gucs, dbname)
+			testutils.ExpectRegexp(buffer, `ALTER DATABASE testdb SET default_with_oids=true;
+ALTER DATABASE testdb SET search_path=pg_catalog, public;
+ALTER DATABASE testdb SET gp_default_storage_options=appendonly=true,blocksize=32768;`)
+		})
+	})
 })

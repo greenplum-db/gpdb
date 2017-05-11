@@ -301,3 +301,17 @@ func GetSessionGUCs(connection *utils.DBConn) QuerySessionGUCs {
 	utils.CheckError(err)
 	return result
 }
+
+type QueryDatabaseGUC struct {
+	DatConfig string
+}
+
+func GetDatabaseGUCs(connection *utils.DBConn) []QueryDatabaseGUC {
+	results := make([]QueryDatabaseGUC, 0)
+	query := fmt.Sprintf(`SELECT unnest(datconfig) as datconfig
+FROM   pg_database
+WHERE  datname = '%s' `, connection.DBName)
+	err := connection.Select(&results, query)
+	utils.CheckError(err)
+	return results
+}
