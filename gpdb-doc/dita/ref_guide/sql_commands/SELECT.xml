@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Retrieves rows from a table or view.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] <varname>with_query</varname> [, ...] ]
+      <codeblock id="sql_command_synopsis">[ WITH <varname>with_query</varname> [, ...] ]
 SELECT [ALL | DISTINCT [ON (<varname>expression</varname> [, ...])]]
   * | <varname>expression </varname>[[AS] <varname>output_name</varname>] [, ...]
   [FROM <varname>from_item</varname> [, ...]]
@@ -104,7 +104,18 @@ with_query_name</varname> [ [AS] <varname>alias</varname> [( <varname>column_ali
     </section>
     <section id="section4">
       <title>Parameters</title>
-      <sectiondiv id="section5">
+      <sectiondiv>
+        <b>The WITH Clause</b>
+        <p>The optional <codeph>WITH</codeph> clause allows you to specify one or more subqueries
+          that can be referenced by name in the primary query. The subqueries effectively act as
+          temporary tables or views for the duration of the primary query. Each subquery can be a
+            <codeph>SELECT</codeph>, or <codeph>VALUES</codeph> command. </p><p>A
+            <varname>with_query_name</varname> without schema qualification must be specified for
+          each query in the <codeph>WITH</codeph> clause. Optionally, a list of column names can be
+          specified; if the list of column names is omitted, the names are inferred from the
+          subquery. The primary query and the <codeph>WITH</codeph> queries are all (notionally)
+          executed at the same time. </p>
+      </sectiondiv><sectiondiv id="section5">
         <b>The SELECT List</b>
         <p>The <codeph>SELECT</codeph> list (between the key words <codeph>SELECT</codeph> and
             <codeph>FROM</codeph>) specifies expressions that form the output rows of the
@@ -167,12 +178,12 @@ with_query_name</varname> [ [AS] <varname>alias</varname> [( <varname>column_ali
               <varname>with_query_name</varname>
             </pt>
             <pd>A <varname>with_query</varname> is referenced in the <codeph>FROM</codeph> clause by
-              specifying its <varname>with_query_name</varname>, just as though the name is a table
-              name. The <varname>with_query_name</varname> cannot contain a schema qualifier. An
-              alias can be provided in the same way as for a table. </pd>
-            <pd>The with_query hides a table of the same name for the purposes of the primary query.
-              If necessary, you can refer to a table of the same name by qualifying the table name
-              with the schema.</pd>
+              specifying its <varname>with_query_name</varname>, just as though the name were a
+              table name. The <varname>with_query_name</varname> cannot contain a schema qualifier.
+              An alias can be provided in the same way as for a table. </pd>
+            <pd>The <varname>with_query</varname> hides a table of the same name for the purposes of
+              the primary query. If necessary, you can refer to a table of the same name by
+              qualifying the table name with the schema.</pd>
           </plentry>
           <plentry>
             <pt>
@@ -256,30 +267,6 @@ with_query_name</varname> [ [AS] <varname>alias</varname> [( <varname>column_ali
             <codeph>boolean</codeph>. Any row that does not satisfy this condition will be
           eliminated from the output. A row satisfies the condition if it returns true when the
           actual row values are substituted for any variable references. </p></sectiondiv>
-      <sectiondiv>
-        <b>The WITH Clause</b>
-        <p>The optional <codeph>WITH</codeph> clause allows you to specify one or more subqueries
-          that can be referenced by name in the primary query. The subqueries effectively act as
-          temporary tables or views for the duration of the primary query. Each subquery can be a
-            <codeph>SELECT</codeph>, or <codeph>VALUES</codeph> command. </p><p>A
-            <varname>with_query_name</varname> without schema qualification must be specified for
-          each query in the <codeph>WITH</codeph> clause. Optionally, a list of column names can be
-          specified; if the list of column names is omitted, the names are inferred from the
-          subquery. The primary query and the <codeph>WITH</codeph> queries are all (notionally)
-          executed at the same time. </p><p>If <codeph>RECURSIVE</codeph> is specified, it allows a
-          subquery to reference itself by name. Such a subquery must have the
-          form</p><pre><varname>non_recursive_term</varname> UNION [ ALL ] <varname>recursive_term</varname></pre><p>where
-          the recursive self-reference must appear on the right-hand side of the <codeph>UNION
-            [ALL]</codeph> keyword. Only one recursive self-reference is permitted per
-          query.</p><p>Another effect of <codeph>RECURSIVE</codeph> is that <codeph>WITH</codeph>
-          queries need not be ordered: a query can reference another one that is later in the list.
-          (However, circular references, or mutual recursion, are not implemented.) Without
-            <codeph>RECURSIVE</codeph>, <codeph>WITH</codeph> queries can only reference sibling
-            <codeph>WITH</codeph> queries that are earlier in the <codeph>WITH</codeph>
-          list.</p><p>A useful property of <codeph>WITH</codeph> queries is that they are evaluated
-          only once per execution of the primary query, even if the primary query refers to them
-          more than once.</p>
-      </sectiondiv>
       <sectiondiv id="section8"><b>The GROUP BY Clause</b><p>The optional <codeph>GROUP BY</codeph>
           clause has the general
           form:</p><codeblock>GROUP BY <varname>grouping_element </varname>[, ...]</codeblock><p>where
@@ -754,26 +741,6 @@ GROUP BY region, product;
 </codeblock>
       <p>The example could have been written without the <codeph>WITH</codeph> clause but would have
         required two levels of nested sub-<codeph>SELECT</codeph> statements.</p>
-      <p>This example uses <codeph>WITH RECURSIVE</codeph> to find all subordinates (direct or
-        indirect) of the employee Mary, and their level of indirectness, from a table that shows
-        only direct subordinates:</p>
-      <codeblock>WITH RECURSIVE employee_recursive(distance, employee_name, manager_name) AS (
-    SELECT 1, employee_name, manager_name
-    FROM employee
-    WHERE manager_name = 'Mary'
-  UNION ALL
-    SELECT er.distance + 1, e.employee_name, e.manager_name
-    FROM employee_recursive er, employee e
-    WHERE er.employee_name = e.manager_name
-  )
-SELECT distance, employee_name FROM employee_recursive;
-
-Notice the typical form of recursive queries: an initial condition, followed by UNION, followed by the recursive part of the query. Be sure that the recursive part of the query will eventually return no tuples, or else the query will loop indefinitely. (See Section 7.8 for more examples.)
-</codeblock>
-      <p>The typical form of recursive queries: an initial condition, followed by
-          <codeph>UNION</codeph>, followed by the recursive part of the query. Be sure that the
-        recursive part of the query will eventually return no tuples, or else the query will loop
-        indefinitely.</p>
     </section>
     <section id="section19"><title>Compatibility</title><p>The <codeph>SELECT</codeph> statement is
         compatible with the SQL standard, but there are some extensions and some missing features.

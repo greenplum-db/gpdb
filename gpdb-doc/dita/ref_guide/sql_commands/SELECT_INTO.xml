@@ -7,7 +7,7 @@
         <p id="sql_command_desc">Defines a new table from the results of a query.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] <varname>with_query</varname> [, ...] ]
+            <codeblock id="sql_command_synopsis">[ WITH <varname>with_query</varname> [, ...] ]
 SELECT [ALL | DISTINCT [ON ( <varname>expression</varname> [, ...] )]]
     * | <varname>expression</varname> [AS <varname>output_name</varname>] [, ...]
     INTO [TEMPORARY | TEMP] [TABLE] <varname>new_table</varname>
