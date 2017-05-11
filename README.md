@@ -458,4 +458,7 @@ http://greenplum.org/docs/
 For further information beyond the scope of this README, please see
 [our wiki](https://github.com/greenplum-db/gpdb/wiki)
 
+For further information beyond the scope of this README, please see
+[our wiki](https://github.com/greenplum-db/gpdb/wiki)
+
 There is also a Vagrant-based quickstart guide for developers in `src/tools/vagrant/README.md`.
