@@ -8015,9 +8015,10 @@
     <body>
       <p>Determines whether ordinary string literals ('...') treat backslashes literally, as
         specified in the SQL standard. The default value is on. Turn this parameter off to treat
-        backslashes in string literals as escape characters. Applications may check this parameter
-        to determine how string literals are processed. The presence of this parameter can also be
-        taken as an indication that the escape string syntax (E'...') is supported.</p>
+        backslashes in string literals as escape characters instead of literal backslashes.
+        Applications may check this parameter to determine how string literals are processed. The
+        presence of this parameter can also be taken as an indication that the escape string syntax
+        (E'...') is supported.</p>
       <table id="standard_conforming_strings_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
