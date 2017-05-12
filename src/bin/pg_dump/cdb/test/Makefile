@@ -2,7 +2,7 @@ subdir=src/bin/pg_dump/cdb/test
 top_builddir=../../../../..
 include $(top_builddir)/src/Makefile.global
 
-TARGETS=cdb_dump_util cdb_bsa_util cdb_lockbox
+TARGETS=cdb_dump_util cdb_lockbox
 
 override CPPFLAGS+= -I$(top_srcdir)/src/interfaces/libpq -I$(top_srcdir)/gpAux/ext/$(BLD_ARCH)/include
 
@@ -17,21 +17,10 @@ ifeq ($(enable_ddboost), yes)
 DDBOOSTLIB += -lDDBoost
 endif
 
-ifeq ($(enable_netbackup), yes)
-NETBACKUPLIB77 += -L$(top_srcdir)/gpAux/ext/$(BLD_ARCH)/Netbackup/nbu77/lib -lxbsa64
-GPBSALIB += -L$(top_builddir)/src/bin/pg_dump/cdb -lgpbsa -Wl,-rpath-link,'$(top_srcdir)/gpAux/ext/$(BLD_ARCH)/Netbackup/nbu77/lib'
-override CFLAGS += -I$(top_srcdir)/gpAux/ext/$(BLD_ARCH)/Netbackup/nbu77/include
-endif
-
-
 # The command line here should resemble the one used to build cdb_dump_agent
 cdb_dump_util.t: cdb_dump_util_test.o ../dumputils.o ../cdb_lockbox.o ../keywords.o ../kwlookup.o $(CMOCKERY_OBJS)
 	$(CC) $^ $(libpq) $(LDFLAGS) $(LIBS) $(DDBOOSTLIB) -o $@
 
 # The command line here should resemble the one used to build libgpbsa
-cdb_bsa_util.t: cdb_bsa_util_test.o ../cdb_dump_util.o ../cdb_lockbox.o ../dumputils.o ../keywords.o ../kwlookup.o $(CMOCKERY_OBJS)
-	$(CC) $^ $(libpq) $(LDFLAGS) $(LIBS) $(DDBOOSTLIB) $(NETBACKUPLIB77) -o $@
-
-# The command line here should resemble the one used to build libgpbsa
 cdb_lockbox.t: cdb_lockbox_test.o ../cdb_dump_util.o ../dumputils.o ../keywords.o ../kwlookup.o $(CMOCKERY_OBJS)
-	$(CC) $^ $(libpq) $(LDFLAGS) $(LIBS) $(DDBOOSTLIB) $(NETBACKUPLIB77) -o $@
+	$(CC) $^ $(libpq) $(LDFLAGS) $(LIBS) $(DDBOOSTLIB) -o $@
