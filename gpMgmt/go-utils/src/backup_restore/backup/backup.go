@@ -4,6 +4,7 @@ import (
 	"backup_restore/utils"
 	"flag"
 	"fmt"
+	"os"
 )
 
 var connection *utils.DBConn
@@ -21,23 +22,35 @@ func DoSetup() {
 }
 
 func DoBackup() {
-	fmt.Println("The current time is", utils.CurrentTimestamp())
-	fmt.Printf("Database %s is %s\n", connection.DBName, connection.GetDBSize())
-
-	fooArray := make([]struct {
-		I int
-	}, 0)
+	fmt.Println("-- The current time is", utils.CurrentTimestamp())
+	fmt.Printf("-- Database %s is %s\n", connection.DBName, connection.GetDBSize())
 
 	connection.Begin()
 
-	_, err := connection.Exec("SELECT pg_sleep(2)")
-	utils.CheckError(err)
+	allConstraints := make([]string, 0)
+	allFkConstraints := make([]string, 0) // Slice for FOREIGN KEY allConstraints, since they must be printed after PRIMARY KEY allConstraints
+	tables := GetAllUserTables(connection)
+	PrintCreateSchemaStatements(os.Stdout, tables)
+	for _, table := range tables {
+		tableAttributes := GetTableAttributes(connection, table.Oid)
+		tableDefaults := GetTableDefaults(connection, table.Oid)
 
-	err = connection.Select(&fooArray, "SELECT * FROM foo ORDER BY i")
-	utils.CheckError(err)
-	for _, datum := range fooArray {
-		fmt.Printf("%d\n", datum.I)
+		distPolicy := GetDistributionPolicy(connection, table.Oid)
+		partitionDef := GetPartitionDefinition(connection, table.Oid)
+		partTemplateDef := GetPartitionTemplateDefinition(connection, table.Oid)
+		storageOpts := GetStorageOptions(connection, table.Oid)
+
+		columnDefs := ConsolidateColumnInfo(tableAttributes, tableDefaults)
+		tableDef := TableDefinition{distPolicy, partitionDef, partTemplateDef, storageOpts}
+		PrintCreateTableStatement(os.Stdout, table, columnDefs, tableDef) // TODO: Change to write to file
 	}
+	for _, table := range tables {
+		conList := GetConstraints(connection, table.Oid)
+		tableCons, tableFkCons := ProcessConstraints(table, conList)
+		allConstraints = append(allConstraints, tableCons...)
+		allFkConstraints = append(allFkConstraints, tableFkCons...)
+	}
+	PrintConstraintStatements(os.Stdout, allConstraints, allFkConstraints) // TODO: Change to write to file
 
 	connection.Commit()
 }

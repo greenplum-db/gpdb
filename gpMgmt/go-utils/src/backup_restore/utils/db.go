@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -23,8 +24,28 @@ type DBConn struct {
 }
 
 type Table struct {
-	Schema string
-	Table  string
+	Oid        uint32
+	Schemaname string
+	Tablename  string
+}
+
+func (table Table) ToFQN() string {
+	return fmt.Sprintf("%s.%s", table.Schemaname, table.Tablename) // TODO: handle special character escaping here
+}
+
+func GetUniqueSchemas(tables []Table) []string {
+	schemaMap := make(map[string]bool, 0)
+	for _, table := range tables {
+		schemaMap[table.Schemaname] = true
+	}
+	schemas := make([]string, 0)
+	for schema := range schemaMap {
+		if schema != "public" {
+			schemas = append(schemas, schema)
+		}
+	}
+	sort.Strings(schemas)
+	return schemas
 }
 
 func NewDBConn(dbname string) *DBConn {
@@ -57,7 +78,7 @@ func NewDBConn(dbname string) *DBConn {
 
 func (dbconn *DBConn) Begin() {
 	if dbconn.Tx != nil {
-		Abort("Cannot begin transation; there is already a transaction in progress")
+		Abort("Cannot begin transaction; there is already a transaction in progress")
 	}
 	var err error
 	dbconn.Tx, err = dbconn.Conn.Beginx()
@@ -107,7 +128,7 @@ func (dbconn *DBConn) Get(dest interface{}, query string) error {
 }
 
 func (dbconn *DBConn) GetDBSize() string {
-	size := struct{DBSize string}{}
+	size := struct{ DBSize string }{}
 	sizeQuery := fmt.Sprintf("SELECT pg_size_pretty(sodddatsize) as dbsize FROM gp_toolkit.gp_size_of_database WHERE sodddatname='%s'", dbconn.DBName)
 	err := dbconn.Get(&size, sizeQuery)
 	CheckError(err)
