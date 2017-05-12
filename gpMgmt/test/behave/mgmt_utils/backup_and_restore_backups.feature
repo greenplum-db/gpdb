@@ -1020,7 +1020,7 @@ Feature: Validate command line arguments
         And the full backup timestamp from gpcrondump is stored
         And all the data from the remote segments in "bkdb67" are stored in path "/tmp/custom_timestamps" for "full"
         And verify that the file "/tmp/custom_timestamps/db_dumps/20140101/gp_dump_status_0_2_20140101010101" does not contain "reading indexes"
-        And verify that the file "/tmp/custom_timestamps/db_dumps/20140101/gp_dump_status_-1_1_20140101010101" contains "reading indexes"
+        And verify that the file "/tmp/custom_timestamps/db_dumps/20140101/gp_dump_status_*_1_20140101010101" contains "reading indexes"
 
     Scenario: 68 Restore -T for incremental dump should restore metadata/postdata objects for tablenames with English and multibyte (chinese) characters
         Given the backup test is initialized with database "bkdb68"
@@ -1626,121 +1626,95 @@ Feature: Validate command line arguments
 
     Scenario: 120 Simple full backup and restore with special character
         Given the backup test is initialized for special characters
-        When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
+        When the user runs command "gpcrondump -a -x "$SP_CHAR_DB""
         And the timestamp from gpcrondump is stored
         Then gpcrondump should return a return code of 0
-        When the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/120_special_table_data.ans"
+        When the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql "$SP_CHAR_DB" > /tmp/120_special_table_data.ans"
 
     Scenario: 121 gpcrondump with -T option where table name, schema name and database name contains special character
         Given the backup test is initialized for special characters
-        And a list of files "121_ao,121_heap" of tables " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 , S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . heap_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " exists for validation
-        When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " -T " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 "." co_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 ""
+        And a list of files "121_ao,121_heap" of tables "$SP_CHAR_SCHEMA.$SP_CHAR_AO,$SP_CHAR_SCHEMA.$SP_CHAR_HEAP" in "$SP_CHAR_DB" exists for validation
+        When the user runs command "gpcrondump -a -x "$SP_CHAR_DB" -T "$SP_CHAR_SCHEMA"."$SP_CHAR_CO""
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
 
     Scenario: 122 gpcrondump with --exclude-table-file option where table name, schema name and database name contains special character
         Given the backup test is initialized for special characters
-        And a list of files "122_ao,122_heap" of tables " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 , S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . heap_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " exists for validation
-        When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " --exclude-table-file test/behave/mgmt_utils/steps/data/special_chars/exclude-table-file.txt"
+        And a list of files "122_ao,122_heap" of tables "$SP_CHAR_SCHEMA.$SP_CHAR_AO,$SP_CHAR_SCHEMA.$SP_CHAR_HEAP" in "$SP_CHAR_DB" exists for validation
+        When the user runs command "gpcrondump -a -x "$SP_CHAR_DB" --exclude-table-file test/behave/mgmt_utils/steps/data/special_chars/exclude-table-file.txt"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
 
     Scenario: 123 gpcrondump with --table-file option where table name, schema name and database name contains special character
         Given the backup test is initialized for special characters
-        And a list of files "123_ao,123_heap" of tables " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 , S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . heap_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " exists for validation
-        When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " --table-file test/behave/mgmt_utils/steps/data/special_chars/table-file.txt"
+        And a list of files "123_ao,123_heap" of tables "$SP_CHAR_SCHEMA.$SP_CHAR_AO,$SP_CHAR_SCHEMA.$SP_CHAR_HEAP" in "$SP_CHAR_DB" exists for validation
+        When the user runs command "gpcrondump -a -x "$SP_CHAR_DB" --table-file test/behave/mgmt_utils/steps/data/special_chars/table-file.txt"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
 
     Scenario: 124 gpcrondump with -t option where table name, schema name and database name contains special character
         Given the backup test is initialized for special characters
-        And a list of files "124_ao" of tables " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " exists for validation
-        When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " -t " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 "." ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 ""
+        And a list of files "124_ao" of tables "$SP_CHAR_SCHEMA.$SP_CHAR_AO" in "$SP_CHAR_DB" exists for validation
+        When the user runs "gpcrondump -a -x "$SP_CHAR_DB" -t "$SP_CHAR_SCHEMA"."$SP_CHAR_AO""
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
 
     Scenario: 125 gpcrondump with --schema-file option when schema name and database name contains special character
         Given the backup test is initialized for special characters
-        When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " --schema-file test/behave/mgmt_utils/steps/data/special_chars/schema-file.txt"
+        When the user runs command "gpcrondump -a -x "$SP_CHAR_DB" --schema-file test/behave/mgmt_utils/steps/data/special_chars/schema-file.txt"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
-        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/125_special_table_data.ans"
+        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql "$SP_CHAR_DB" > /tmp/125_special_table_data.ans"
 
     Scenario: 126 gpcrondump with -s option when schema name and database name contains special character
         Given the backup test is initialized for special characters
-        When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " -s " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 ""
+        When the user runs "gpcrondump -a -x "$SP_CHAR_DB" -s "$SP_CHAR_SCHEMA""
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
-        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/126_special_table_data.ans"
+        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql "$SP_CHAR_DB" > /tmp/126_special_table_data.ans"
 
     Scenario: 127 gpcrondump with --exclude-schema-file option when schema name and database name contains special character
         Given the backup test is initialized for special characters
-        When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " --exclude-schema-file test/behave/mgmt_utils/steps/data/special_chars/schema-file.txt"
+        When the user runs command "gpcrondump -a -x "$SP_CHAR_DB" --exclude-schema-file test/behave/mgmt_utils/steps/data/special_chars/schema-file.txt"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
 
     Scenario: 128 gpcrondump with -S option when schema name and database name contains special character
         Given the backup test is initialized for special characters
-        When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " -S " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 ""
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-
-    Scenario: 129 Gpdbrestore with --table-file option when table name, schema name and database name contains special character
-        Given the backup test is initialized for special characters
-        And a list of files "129_ao,129_heap" of tables " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 , S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . heap_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " exists for validation
-        When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
+        When the user runs command "gpcrondump -a -x "$SP_CHAR_DB" -S "$SP_CHAR_SCHEMA""
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
 
     Scenario: 130 Gpdbrestore with -T, --truncate, and --change-schema options when table name, schema name and database name contains special character
         Given the backup test is initialized for special characters
-        And the user runs command "psql -f  psql -c """select * from \" S\`~@#\$%^&*()-+[{]}|\\;: \\'\"\"/?><1 \".\" ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"\"/?><1 \" order by 1""" -d " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 "  > /tmp/130_table_data.ans"
-        And the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
+        And the user runs command "psql -f  psql -c """select * from \"$SP_CHAR_SCHEMA\".\"$SP_CHAR_AO\" order by 1""" -d "$SP_CHAR_DB"  > /tmp/130_table_data.ans"
+        And the user runs command "gpcrondump -a -x "$SP_CHAR_DB""
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
 
     Scenario: 131 gpcrondump with --incremental option when table name, schema name and database name contains special character
         Given the backup test is initialized for special characters
-        When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
+        When the user runs command "gpcrondump -a -x "$SP_CHAR_DB""
         Then gpcrondump should return a return code of 0
         Given the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/insert_into_special_table.sql template1"
-        When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " --incremental"
+        When the user runs command "gpcrondump -a -x "$SP_CHAR_DB" --incremental"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
-        When the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/131_special_table_data.ans"
+        When the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql "$SP_CHAR_DB" > /tmp/131_special_table_data.ans"
 
     Scenario: 132 gpdbrestore with --redirect option with special db name, and all table name, schema name and database name contain special character
         Given the backup test is initialized for special characters
-        When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
+        When the user runs command "gpcrondump -a -x "$SP_CHAR_DB""
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
-        When the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/132_special_table_data.ans"
+        When the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql "$SP_CHAR_DB" > /tmp/132_special_table_data.ans"
 
     Scenario: 133 gpdbrestore, -S option, -S truncate option schema level restore with special chars in schema name
         Given the backup test is initialized for special characters
-        When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
+        When the user runs command "gpcrondump -a -x "$SP_CHAR_DB""
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
-        When the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/133_special_table_data.ans"
-
-    Scenario: 134 gpdbrestore, --noplan option with special chars in database name, schema name, and table name
-        Given the backup test is initialized for special characters
-        When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
-        Then gpcrondump should return a return code of 0
-        Given the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/insert_into_special_ao_table.sql template1"
-        When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " --incremental"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        When the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_ao_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/134_special_ao_table_data.ans"
-
-    Scenario: 135 Gpdbrestore, --change-schema option does not work with -S schema level restore option
-        Given the backup test is initialized for special characters
-        And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_database.sql template1"
-        And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_schema.sql template1"
-        And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_table.sql template1"
-        When the user runs command "gpcrondump -a -x " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
+        When the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql "$SP_CHAR_DB" > /tmp/133_special_table_data.ans"
 
     @skip_for_gpdb_43
     Scenario: 136 Backup and restore CAST, with associated function in restored schema, base_file_name=dump_func_name

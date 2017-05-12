@@ -656,7 +656,7 @@ PGAC_ARG_BOOL(enable, testutils, no, [  --enable-testutils      enable testing u
 #
 # Enable Greenplum ORCA optimizer
 #
-PGAC_ARG_BOOL(enable, orca, no, [  --enable-orca           enable ORCA optimizer],
+PGAC_ARG_BOOL(enable, orca, yes, [  --disable-orca          disable ORCA optimizer],
               [AC_DEFINE([USE_ORCA], 1,
                          [Define to 1 to build with Greenplum ORCA optimizer. (--enable-orca)])])
 AC_MSG_RESULT([checking whether to build with ORCA... $enable_orca])
@@ -1296,8 +1296,9 @@ fi
 # Check for Greenplum Query Optimizer (orca) and supporting Greenplum OS header files.
 AS_IF([test "$enable_orca" = yes],
 [ # then
-  AC_CHECK_HEADERS(gpopt/init.h,  [], [AC_MSG_ERROR([gpopt/init.h GPOPT header file is required for Greenplum Query Optimizer (orca)])])
-  AC_CHECK_HEADERS(gpos/config.h, [], [AC_MSG_ERROR([gpos/config.h GPOS header file is required for Greenplum Query Optimizer (orca)])])
+  PGAC_CHECK_ORCA_HEADERS
+  PGAC_CHECK_ORCA_XERCES
+  PGAC_CHECK_ORCA_LIBS
 ]) # fi
 
 dnl sys/socket.h is required by AC_FUNC_ACCEPT_ARGTYPES

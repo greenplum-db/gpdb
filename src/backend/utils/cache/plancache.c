@@ -109,6 +109,7 @@ InitPlanCache(void)
 CachedPlanSource *
 CreateCachedPlan(Node *raw_parse_tree,
 				 const char *query_string,
+				 NodeTag sourceTag,
 				 const char *commandTag,
 				 Oid *param_types,
 				 int num_params,
@@ -145,6 +146,7 @@ CreateCachedPlan(Node *raw_parse_tree,
 	plansource = (CachedPlanSource *) palloc(sizeof(CachedPlanSource));
 	plansource->raw_parse_tree = copyObject(raw_parse_tree);
 	plansource->query_string = query_string ? pstrdup(query_string) : NULL;
+	plansource->sourceTag = sourceTag;
 	plansource->commandTag = commandTag;		/* no copying needed */
 	if (num_params > 0)
 	{
@@ -207,6 +209,7 @@ CreateCachedPlan(Node *raw_parse_tree,
 CachedPlanSource *
 FastCreateCachedPlan(Node *raw_parse_tree,
 					 char *query_string,
+					 NodeTag sourceTag,
 					 const char *commandTag,
 					 Oid *param_types,
 					 int num_params,
@@ -233,6 +236,7 @@ FastCreateCachedPlan(Node *raw_parse_tree,
 	plansource = (CachedPlanSource *) palloc(sizeof(CachedPlanSource));
 	plansource->raw_parse_tree = raw_parse_tree;
 	plansource->query_string = query_string;
+	plansource->sourceTag = sourceTag;
 	plansource->commandTag = commandTag;		/* no copying needed */
 	plansource->param_types = param_types;
 	plansource->num_params = num_params;

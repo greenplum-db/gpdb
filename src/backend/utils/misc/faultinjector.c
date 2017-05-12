@@ -301,6 +301,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault after truncate in vacuum full */
 	_("vacuum_relation_end_of_first_round"),
 		/* inject fault at the end of first round of vacuumRelation loop */
+	_("vacuum_relation_open_relation_during_drop_phase"),
+		/* inject fault during the open relation of the drop phase of vacuumRelation loop */
 	_("rebuild_pt_db"),
 		/* inject fault while rebuilding persistent tables (for each db) */
 	_("procarray_add"),

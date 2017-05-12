@@ -10239,6 +10239,21 @@ WHERE  e.deptno = dc1.deptno AND
        m.deptno = dmc1.dept_mgr_no
 ORDER BY 1, 2, 3, 4 DESC LIMIT 25;
 
+-- Test that SharedInputScan within the same slice is always executed 
+set gp_cte_sharing=on;
+
+-- start_ignore
+CREATE TABLE car (a int, b int);
+CREATE TABLE zoo (c int, d int);
+insert into car select i, (i+1) from generate_series(1,10) i;
+insert into zoo values (4,4);
+-- end_ignore
+
+WITH c as (SELECT sum(a) as a_sum, b FROM car GROUP BY b)
+SELECT * FROM c as c1, zoo WHERE zoo.c != 4 AND c1.b = zoo.c
+UNION ALL
+SELECT * FROM c as c1, zoo WHERE zoo.c = c1.b;
+
 -- start_ignore
 drop schema qp_with_clause cascade;
 -- end_ignore

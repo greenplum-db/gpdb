@@ -409,6 +409,7 @@ class GpInjectFaultProgram:
 			      "vacuum_full_before_truncate (inject fault before truncate in vacuum full), " \
 			      "vacuum_full_after_truncate (inject fault after truncate in vacuum full), " \
 			      "vacuum_relation_end_of_first_round (inject fault at the end of first round of vacuumRelation loop), " \
+			      "vacuum_relation_open_relation_during_drop_phase (inject fault during open relation of drop phase of vacuumRelation loop), " \
 			      "rebuild_pt_db (inject fault while rebuilding persistent tables (for each db)), " \
 			      "procarray_add (inject fault while adding PGPROC to procarray), " \
 			      "exec_hashjoin_new_batch (inject fault before switching to a new batch in Hash Join), " \

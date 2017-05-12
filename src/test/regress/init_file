@@ -89,4 +89,8 @@ s/^\d+.*gpfaultinjector.*-\[INFO\]:-//
 # Mask out line numbers
 m/ERROR:  <SEGID> is required for file name.*/
 s/ERROR:  <SEGID> is required for file name.*/ERROR:  <SEGID> is required for file name/
+
+# Mask out oid in error concurrent drop message
+m/\d+ was concurrently dropped/
+s/\d+ was concurrently dropped/##### was concurrently dropped/
 -- end_matchsubs

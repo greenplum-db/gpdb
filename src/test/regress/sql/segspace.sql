@@ -298,3 +298,29 @@ where x.a = ctesisc.i1) y;
 -- check counter leak
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
 
+-- Check if we delete workfile_set at each subtransaction.
+-- This test doesn't depend on the guc `gp_workfile_limit_per_segment` like rest
+-- start_ignore
+drop external table if exists exttest;
+create external web table exttest (x int)
+execute E'echo 1; echo 2; echo 3; echo bogus; echo 5'
+on master
+format 'text';
+-- end_ignore
+
+create or replace function workset_cleanup_test()
+returns integer as
+$func$
+begin
+   for i in 1..2 loop
+     begin
+       select * from exttest a, exttest b;
+     exception when others then
+       raise notice 'caught exception: %', sqlerrm;
+     end;
+   end loop;
+  return (select count(*) from gp_toolkit.gp_workfile_entries);
+end;
+$func$ language plpgsql;
+
+select workset_cleanup_test();

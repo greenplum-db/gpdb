@@ -1,0 +1,65 @@
+-- @Description Ensures next vacuum drops segfiles in AOSEG_STATE_AWAITING_DROP
+--              left over by a previous vacuum
+--
+CREATE TABLE aoco_vacuum_after_vacuum_skip_drop (a INT, b INT) WITH (appendonly=true, orientation=column);
+CREATE
+INSERT INTO aoco_vacuum_after_vacuum_skip_drop SELECT i as a, i as b FROM generate_series(1, 10) AS i;
+INSERT 10
+
+DELETE FROM aoco_vacuum_after_vacuum_skip_drop;
+DELETE 10
+
+-- We should see all aocssegs in state 1
+2U: SELECT segno, column_num, state FROM gp_toolkit.__gp_aocsseg_name('aoco_vacuum_after_vacuum_skip_drop');
+segno|column_num|state
+-----+----------+-----
+1    |0         |1    
+1    |1         |1    
+(2 rows)
+
+-- VACUUM while another session holds lock
+1: BEGIN;
+BEGIN
+1: SELECT COUNT(*) FROM aoco_vacuum_after_vacuum_skip_drop;
+count
+-----
+0    
+(1 row)
+2: VACUUM aoco_vacuum_after_vacuum_skip_drop;
+VACUUM
+1: END;
+END
+
+-- We should see an aocsseg in state 2 (AOSEG_STATE_AWAITING_DROP)
+2U: SELECT segno, column_num, state FROM gp_toolkit.__gp_aocsseg_name('aoco_vacuum_after_vacuum_skip_drop');
+segno|column_num|state
+-----+----------+-----
+1    |0         |2    
+1    |1         |2    
+2    |0         |1    
+2    |1         |1    
+(4 rows)
+
+-- The VACUUM should clean up aocssegs in state 2 (AOSEG_STATE_AWAITING_DROP)
+1: VACUUM aoco_vacuum_after_vacuum_skip_drop;
+VACUUM
+2U: SELECT segno, column_num, state FROM gp_toolkit.__gp_aocsseg_name('aoco_vacuum_after_vacuum_skip_drop');
+segno|column_num|state
+-----+----------+-----
+1    |0         |1    
+1    |1         |1    
+2    |0         |1    
+2    |1         |1    
+(4 rows)
+
+-- Check if insert goes into segno 1 instead of segno 2
+1: INSERT INTO aoco_vacuum_after_vacuum_skip_drop SELECT i as a, i as b FROM generate_series(1, 100) AS i;
+INSERT 100
+2U: SELECT segno, tupcount > 0, state FROM gp_toolkit.__gp_aocsseg_name('aoco_vacuum_after_vacuum_skip_drop');
+segno|?column?|state
+-----+--------+-----
+1    |t       |1    
+1    |t       |1    
+2    |f       |1    
+2    |f       |1    
+(4 rows)

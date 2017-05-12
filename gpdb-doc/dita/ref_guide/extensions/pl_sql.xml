@@ -9,6 +9,9 @@
       <li id="pt222286">
         <xref href="#topic2" type="topic" format="dita"/>
       </li>
+      <li id="pt222717">
+        <xref href="#topic67" type="topic" format="dita"/>
+      </li>
       <li id="pt222315">
         <xref href="#topic6" type="topic" format="dita"/>
       </li>
@@ -136,6 +139,18 @@ $$ LANGUAGE plpgsql;</codeblock>
         </body>
       </topic>
     </topic>
+  </topic>
+  <topic id="topic67" xml:lang="en">
+    <title id="pt21749299">PL/pgSQL Plan Caching</title>
+    <body>
+        <p>A PL/pgSQL function’s volatility classification has implications on how Greenplum Database caches plans that reference the function.  Refer to <xref href="../../admin_guide/query/topics/functions-operators.xml#topic281">Function Volatility and Plan Caching</xref> in the <cite>Greenplum Database Administrator
+              Guide</cite> for information on plan caching considerations for Greenplum Database function volatility categories.</p>
+        <p>When a PL/pgSQL function executes for the first time in a database session, the PL/pgSQL interpreter parses the function’s SQL expressions and commands. The interpreter creates a prepared execution plan as each expression and SQL command is first executed in the function. The PL/pgSQL interpreter reuses the execution plan for a specific expression and SQL command for the life of the database connection. While this reuse substantially reduces the total amount of time required to parse and generate plans, errors in a specific expression or command cannot be detected until run time when that part of the function is executed.</p>
+        <p>Greenplum Database will automatically re-plan a saved query plan if there is any schema change to any relation used in the query, or if any user-defined function used in the query is redefined. This makes the re-use of a prepared plan transparent in most cases.</p>
+        <p>The SQL commands that you use in a PL/pgSQL function must refer to the same tables and columns on every execution. You cannot use a parameter as the name of a table or a column in an SQL command.</p>
+        <p>PL/pgSQL caches a separate query plan for each combination of actual argument types in which you invoke a polymorphic function to ensure that data type differences do not cause unexpected failures.</p>
+        <p>Refer to the PostgreSQL <xref href="https://www.postgresql.org/docs/9.0/static/plpgsql-implementation.html#PLPGSQL-PLAN-CACHING" scope="external" format="html">Plan Caching</xref> documentation for a detailed discussion of plan caching considerations in the PL/pgSQL language.</p>
+    </body>
   </topic>
   <topic id="topic6" xml:lang="en">
     <title id="pt217492">PL/pgSQL Examples</title>

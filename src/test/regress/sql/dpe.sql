@@ -239,6 +239,33 @@ select * from t, pt where a = b;
 rollback;
 
 --
+-- partition selector with 0 tuples and 0 matched partitions
+--
+
+drop table if exists t;
+drop table if exists pt;
+create table t(a int);
+create table pt(b int) DISTRIBUTED BY (b) PARTITION BY RANGE(b)
+(START (0) END (5) EVERY (1));
+
+begin;
+set enable_hashjoin=off; -- foring nestloop join
+set enable_nestloop=on;
+set enable_seqscan=on;
+
+-- 7 in seg1, 8 in seg2, no data in seg0
+insert into t select i from generate_series(7,8) i;
+-- 0~2 in seg0, 3~4 in seg 1, no data in seg2
+insert into pt select i from generate_series(0,4) i;
+
+analyze t;
+analyze pt;
+
+explain select * from t, pt where a = b;
+select * from t, pt where a = b;
+rollback;
+
+--
 -- Multi-level partitions
 --
 

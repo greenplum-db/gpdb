@@ -1,6 +1,7 @@
 test: commit_transaction_block_checkpoint
 test: pg_views_concurrent_drop
 test: resource_group
+test: resource_queue
 
 test: setup
 # Tests on Append-Optimized tables (row-oriented).
@@ -48,6 +49,7 @@ test: uao/vacuum_self_serializable2_row
 test: uao/vacuum_self_serializable3_row
 test: uao/vacuum_while_insert_row
 test: uao/vacuum_while_vacuum_row
+test: uao/vacuum_cleanup_row
 
 # Tests on Append-Optimized tables (column-oriented).
 test: uao/alter_while_vacuum_column
@@ -94,3 +96,6 @@ test: uao/vacuum_self_serializable2_column
 test: uao/vacuum_self_serializable3_column
 test: uao/vacuum_while_insert_column
 test: uao/vacuum_while_vacuum_column
+test: uao/vacuum_cleanup_column
+test: add_column_after_vacuum_skip_drop_column
+test: vacuum_after_vacuum_skip_drop_column

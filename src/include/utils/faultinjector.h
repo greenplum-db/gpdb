@@ -196,6 +196,7 @@ typedef enum FaultInjectorIdentifier_e {
 	VacuumFullBeforeTruncate,
 	VacuumFullAfterTruncate,
 	VacuumRelationEndOfFirstRound,
+	VacuumRelationOpenRelationDuringDropPhase,
 
 	RebuildPTDB,
 

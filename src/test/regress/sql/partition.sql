@@ -38,7 +38,7 @@ select * from region where r_regionkey = 6;
 -- Test indexes with insert
 -- start_matchsubs
 --
--- # Note: insert is different partition depending on endianess
+-- # Note: insert is different partition depending on endianness
 --
 -- m/ERROR:.*duplicate key violates unique constraint.*region_1_prt_p1_2_prt_sp\d+_3_prt_1_pkey/
 -- s/sp\d+/SPSOMETHING/
@@ -48,7 +48,7 @@ select * from region where r_regionkey = 6;
 insert into region values(7, 'abc', 'def');
 select * from region where r_regionkey = '7';
 -- test duplicate key. We shouldn't really allow primary keys on partitioned
--- tables since we cannot enfoce them. But since this insert maps to a 
+-- tables since we cannot enforce them. But since this insert maps to a
 -- single definitive partition, we can detect it.
 insert into region values(7, 'abc', 'def');
 
@@ -117,7 +117,7 @@ set session authorization part_role;
 -- should fail
 alter table foo_p exchange partition for(rank(6)) with table bar_p;
 
--- back to super user
+-- back to superuser
 \c -
 alter table bar_p owner to part_role;
 set session authorization part_role;
@@ -1302,7 +1302,7 @@ drop table v;
 
 -- test AO seg totals
 --
--- Note: ignore partition tablenames due to endianess issues
+-- Note: ignore partition tablenames due to endianness issues
 --
 create  or replace function ao_ptotal(relname text) returns float8 as $$
 declare

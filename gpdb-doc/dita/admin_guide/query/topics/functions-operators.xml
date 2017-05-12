@@ -73,6 +73,7 @@
                     </tbody>
                 </tgroup>
             </table>
+            <p>Refer to the PostgreSQL <xref href="https://www.postgresql.org/docs/8.3/static/xfunc-volatility.html" scope="external" format="html">Function Volatility Categories</xref> documentation for additional information about the Greenplum Database function volatility classifications.</p>
             <p>In Greenplum Database, data is divided up across segments — each segment is a
                 distinct PostgreSQL database. To prevent inconsistent or unexpected results, do not
                 execute functions classified as <codeph>VOLATILE</codeph> at the segment level if
@@ -100,6 +101,12 @@ SELECT foo();
                     (<codeph>rangeFuncs</codeph>) or functions that use the
                     <codeph>refCursor</codeph> datatype.</p>
         </body>
+    <topic id="topic281" xml:lang="en">
+        <title id="in1414519">Function Volatility and Plan Caching</title>
+        <body>
+            <p>There is relatively little difference between the <codeph>STABLE</codeph> and <codeph>IMMUTABLE</codeph> function volatility categories for simple interactive queries that are planned and immediately executed. It does not matter much whether a function is executed once during planning or once during query execution startup. But there is a big difference when you save the plan and reuse it later. If you mislabel a function <codeph>IMMUTABLE</codeph>, Greenplum Database may prematurely fold it to a constant during planning, possibly reusing a stale value during subsequent execution of the plan. You may run into this hazard when using <codeph>PREPARE</codeph>d statements, or when using languages such as PL/pgSQL that cache plans.</p>
+        </body>
+    </topic>
     </topic>
     <topic id="topic28" xml:lang="en">
         <title id="in141451">User-Defined Functions</title>

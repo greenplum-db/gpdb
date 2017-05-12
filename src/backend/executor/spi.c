@@ -2550,6 +2550,7 @@ _SPI_save_plan(SPIPlanPtr plan)
 
 		newsource = CreateCachedPlan(plansource->raw_parse_tree,
 									 plansource->query_string,
+									 plansource->sourceTag,
 									 plansource->commandTag,
 									 newplan->argtypes,
 									 newplan->nargs,

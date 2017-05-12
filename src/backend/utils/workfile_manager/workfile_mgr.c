@@ -49,6 +49,39 @@ static StringInfo get_name_from_nodeType(const NodeTag node_type);
 static uint64 get_operator_work_mem(PlanState *ps);
 static char *create_workset_directory(NodeTag node_type, int slice_id);
 
+static workfile_set *open_workfile_sets = NULL;
+static bool workfile_sets_resowner_callback_registered = false;
+
+
+static void
+workfile_set_free_callback(ResourceReleasePhase phase,
+					 bool isCommit,
+					 bool isTopLevel,
+					 void *arg)
+{
+	workfile_set *curr;
+	workfile_set *next;
+
+	if (phase != RESOURCE_RELEASE_AFTER_LOCKS)
+		return;
+
+
+	next = open_workfile_sets;
+	while (next)
+	{
+		curr = next;
+		next = curr->next;
+
+		if (curr->owner == CurrentResourceOwner)
+		{
+			if (isCommit)
+				elog(WARNING, "workfile_set reference leak: %p still referenced", curr);
+			workfile_mgr_close_set(curr);
+		}
+	}
+	AssertImply(isTopLevel, open_workfile_sets == NULL);
+}
+
 
 /* Workfile manager cache is stored here, once attached to */
 Cache *workfile_mgr_cache = NULL;
@@ -178,6 +211,13 @@ workfile_mgr_create_set(enum ExecWorkFileType type, bool can_be_reused, PlanStat
 		node_type = ps->type;
 	}
 	char *dir_path = create_workset_directory(node_type, currentSliceId);
+
+
+	if (!workfile_sets_resowner_callback_registered)
+	{
+		RegisterResourceReleaseCallback(workfile_set_free_callback, NULL);
+		workfile_sets_resowner_callback_registered = true;
+	}
 
 	/* Create parameter info for the populate function */
 	workset_info set_info;
@@ -323,6 +363,13 @@ workfile_mgr_populate_set(const void *resource, const void *param)
 	work_set->command_count = gp_command_count;
 	work_set->session_start_time = set_info->session_start_time;
 
+	work_set->owner = CurrentResourceOwner;
+	work_set->next = open_workfile_sets;
+	work_set->prev = NULL;
+	if (open_workfile_sets)
+		open_workfile_sets->prev = work_set;
+	open_workfile_sets = work_set;
+
 	Assert(strlen(set_info->dir_path) < MAXPGPATH);
 	strlcpy(work_set->path, set_info->dir_path, MAXPGPATH);
 }
@@ -441,6 +488,13 @@ void
 workfile_mgr_close_set(workfile_set *work_set)
 {
 	Assert(work_set!=NULL);
+	/* Although work_set is in shared memory only this process has access to it */
+	if (work_set->prev)
+		work_set->prev->next = work_set->next;
+	else
+		open_workfile_sets = work_set->next;
+	if (work_set->next)
+		work_set->next->prev = work_set->prev;
 
 	elog(gp_workfile_caching_loglevel, "closing workfile set: location: %s, size=" INT64_FORMAT
 			" in_progress_size=" INT64_FORMAT,

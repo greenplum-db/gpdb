@@ -1423,7 +1423,22 @@ static CdbVisitOpt
 squelchNodeWalker(PlanState *node,
 				  void *context)
 {
-	if (IsA(node, MotionState))
+	if (IsA(node, ShareInputScanState))
+	{
+		ShareInputScanState* sisc_state = (ShareInputScanState *)node;
+		ShareType share_type = ((ShareInputScan *)sisc_state->ss.ps.plan)->share_type;
+		/*
+		 * If there is a SharedInputScan that is shared within the same slice
+		 * then its subtree may still need to be executed and the motions in the
+		 * subtree cannot yet be stopped. Thus, we short-circuit
+		 * squelchNodeWalker in this case.
+		 */
+		if (share_type == SHARE_MATERIAL || share_type == SHARE_SORT)
+		{
+			return CdbVisit_Skip;
+		}
+	}
+	else if (IsA(node, MotionState))
 	{
 		ExecStopMotion((MotionState *) node);
 		return CdbVisit_Skip;	/* don't visit subtree */

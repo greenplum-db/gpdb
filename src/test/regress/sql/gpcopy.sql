@@ -708,10 +708,16 @@ INSERT INTO test_copy_on_segment VALUES (3, 'h', 'j');
 INSERT INTO test_copy_on_segment VALUES (4, 'i', 'l');
 INSERT INTO test_copy_on_segment VALUES (5, 'q', 'w');
 
+CREATE TABLE test_copy_on_segment_withoids (a int, b text, c text) WITH OIDS;
+INSERT INTO test_copy_on_segment_withoids VALUES (1, 's', 'd');
+INSERT INTO test_copy_on_segment_withoids VALUES (2, 'f', 'g');
+INSERT INTO test_copy_on_segment_withoids VALUES (3, 'h', 'j');
+
 COPY test_copy_on_segment TO '/tmp/invalid_filename.txt' ON SEGMENT;
 COPY test_copy_on_segment TO '/tmp/valid_filename<SEGID>.txt' ON SEGMENT;
 COPY test_copy_on_segment TO '/tmp/valid_filename<SEGID>.bin' ON SEGMENT BINARY;
-COPY test_copy_on_segment TO '/tmp/valid_filename<SEGID>.csv' ON SEGMENT CSV HEADER;
+COPY test_copy_on_segment TO '/tmp/valid_filename<SEGID>.csv' WITH ON SEGMENT CSV QUOTE '"' FORCE QUOTE a,b,c ESCAPE E'\\' NULL '\N' DELIMITER ',' HEADER IGNORE EXTERNAL PARTITIONS;
+COPY test_copy_on_segment_withoids TO '/tmp/withoids_valid_filename<SEGID>.csv' WITH ON SEGMENT OIDS CSV QUOTE '"' FORCE QUOTE a,b,c ESCAPE E'\\' NULL '\N' DELIMITER ',' IGNORE EXTERNAL PARTITIONS;
 
 CREATE EXTERNAL WEB TABLE check_copy_onsegment_txt1 (a int, b text, c text)
 EXECUTE E'(cat /tmp/valid_filename*.txt)'
@@ -724,6 +730,12 @@ EXECUTE E'(tail -q -n +2 /tmp/valid_filename*.csv)'
 ON SEGMENT 0
 FORMAT 'csv';
 SELECT * FROM check_copy_onsegment_csv1 ORDER BY a;
+
+CREATE EXTERNAL WEB TABLE check_copy_onsegment_withoids (sum int)
+EXECUTE E'(cat /tmp/withoids_valid_filename*.csv|wc -l)'
+ON SEGMENT 0
+FORMAT 'text';
+SELECT * FROM check_copy_onsegment_withoids;
 
 CREATE TABLE onek_copy_onsegment (
     unique1     int4,

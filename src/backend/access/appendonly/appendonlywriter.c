@@ -857,8 +857,9 @@ SetSegnoForCompaction(Relation rel,
 			(errmsg("segment file %i for append-only relation \"%s\" (%d): state %d",
 					i, RelationGetRelationName(rel), RelationGetRelid(rel), segfilestat->state)));
 
-		if (segfilestat->state == AWAITING_DROP_READY && 
-				!usedByConcurrentTransaction(segfilestat, i))
+		if ((segfilestat->state == AWAITING_DROP_READY ||
+			segfilestat->state == COMPACTED_AWAITING_DROP) &&
+			!usedByConcurrentTransaction(segfilestat, i))
 		{
 			ereportif(Debug_appendonly_print_segfile_choice, LOG,
 				(errmsg("Found segment awaiting drop for append-only relation \"%s\" (%d)",

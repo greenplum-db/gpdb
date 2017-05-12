@@ -182,10 +182,10 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 			m.filespaceoid = xlrec->filespace;
 
 			m.dbid1 = xlrec->u.dbid.master;
-    		strncpy(m.path1, xlrec->master_path, MAXPGPATH);
+			strlcpy(m.path1, xlrec->master_path, MAXPGPATH);
 
 			m.dbid2 = xlrec->u.dbid.mirror;
-			strncpy(m.path2, xlrec->mirror_path, MAXPGPATH);
+			strlcpy(m.path2, xlrec->mirror_path, MAXPGPATH);
 			add_filespace_map_entry(&m, &beginLoc, "mmxlog_redo");
 		}
 		else if (xlrec->objtype == MM_OBJ_TABLESPACE && IsStandbyMode())
@@ -325,15 +325,8 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 			if (errno != EEXIST)
 				elog(WARNING, "could open open file %s: %m", path);
 		}
-
-		/*
-		 * Yes, close(2) can fail! The only interesting error here is
-		 * that we were interrupted. Don't leak the file descriptor
-		 */
-		while (close(fd) < 0 && errno == EINTR)
-			/* loop */
-			;
-
+		else
+			gp_retry_close(fd);
 	}
 	else if (info == MMXLOG_REMOVE_FILE)
 	{

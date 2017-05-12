@@ -30,6 +30,8 @@ typedef struct ResGroupData
 	int			totalExecuted;	/* total number of executed trans */
 	int			totalQueued;	/* total number of queued trans	*/
 	Interval	totalQueuedTime;/* total queue time */
+
+	bool		lockedForDrop;  /* true if resource group is dropped but not committed yet */
 } ResGroupData;
 typedef ResGroupData *ResGroup;
 
@@ -64,7 +66,7 @@ extern void ResGroupControlInit(void);
 extern void	InitResGroups(void);
 
 extern void AllocResGroupEntry(Oid groupId);
-extern void FreeResGroupEntry(Oid groupId, char *name);
+extern void FreeResGroupEntry(Oid groupId);
 
 /* Acquire and release resource group slot */
 extern void ResGroupSlotAcquire(void);
@@ -74,6 +76,8 @@ extern void ResGroupSlotRelease(void);
 extern void ResGroupGetStat(Oid groupId, ResGroupStatType type, char *retStr, int retStrLen);
 
 extern void ResGroupAlterCheckForWakeup(Oid groupId);
+extern void ResGroupDropCheckForWakeup(Oid groupId, bool isCommit);
+extern void ResGroupCheckForDrop(Oid groupId, char *name);
 extern int CalcConcurrencyValue(int groupId, int val, int proposed, int newProposed);
 
 #define LOG_RESGROUP_DEBUG(...) \

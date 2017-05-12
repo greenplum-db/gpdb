@@ -956,7 +956,6 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 	Relation			onerel;
 	LockRelId			onerelid;
 	MemoryContext		oldctx;
-	bool				bTemp;
 	VacuumStatsContext stats_context;
 
 	vacstmt = copyObject(vacstmt);
@@ -994,17 +993,29 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 
 	while (!getnextrelation)
 	{
-		bTemp = false;
 		getnextrelation = true;
 
+		/*
+		 * The following block of code is relevant only for AO tables.  The
+		 * only phases relevant are prepare phase, compaction phase and the
+		 * first phase of cleanup for VACUUM FULL (truncatePhase set to true
+		 * refers to this phase). 
+		 */
 		if (Gp_role != GP_ROLE_EXECUTE && (!dropPhase || truncatePhase))
 		{
-			/* Reset the compaction segno if new relation or segment file is started */
+			 /* Reset the compaction segno if new relation or segment file is
+			  * started
+			  */
 			list_free(vacstmt->appendonly_compaction_segno);
 			list_free(vacstmt->appendonly_compaction_insert_segno);
 			vacstmt->appendonly_compaction_segno = NIL;
 			vacstmt->appendonly_compaction_insert_segno = NIL;
-			vacstmt->appendonly_compaction_vacuum_cleanup = false;
+			/*
+			 * We should not reset the cleanup flag for truncate phase because
+			 * it is a sub part of the cleanup phase for VACUUM FULL case 
+			 */ 
+			if (!truncatePhase)
+				vacstmt->appendonly_compaction_vacuum_cleanup = false;
 		}
 
 		/* Set up the distributed transaction context. */
@@ -1072,19 +1083,40 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 		 */
 		onerel = open_relation_and_check_permission(vacstmt, relid, RELKIND_RELATION, dropPhase);
 
+		/*
+		 * onerel can be NULL for the following cases:
+		 * 1. If the user does not have the permissions to vacuum the table
+		 * 2. For AO tables if the drop phase cannot be performed and should be skipped 
+		 */
 		if (onerel == NULL)
 		{
-			if (Gp_role != GP_ROLE_EXECUTE)
+			if ((Gp_role != GP_ROLE_EXECUTE) && dropPhase)
 			{
+				/*
+				 * To ensure that vacuum decreases the age for appendonly
+				 * tables even if drop phase is getting skipped, perform
+				 * cleanup phase so that the relfrozenxid value is updated
+				 * correctly in pg_class
+				 */
+				vacstmt->appendonly_compaction_vacuum_cleanup = true;
+				dropPhase = false;
+				/*
+				 * Since the drop phase needs to be skipped, we need to
+				 * deregister the segnos which were marked for drop in the
+				 * compaction phase
+				 */
 				DeregisterSegnoForCompactionDrop(relid,
-									vacstmt->appendonly_compaction_segno);
+								vacstmt->appendonly_compaction_segno);
+				onerel = open_relation_and_check_permission(vacstmt, relid, RELKIND_RELATION, false);
+			}		
+
+			if (onerel == NULL)
+			{
 				CommitTransactionCommand();
+				continue;
 			}
-			continue;
 		}
 
-		/* XXX not about temporary table, this is about meta data tracking. */
-		bTemp = vacuumStatement_IsTemporary(onerel);
 
 		vacuumStatement_AssignRelation(vacstmt, relid, relations);
 
@@ -1113,89 +1145,98 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 						vacstmt->heap_truncate = true;
 				}
 			}
-			/* the rest is about AO tables */
-			else if (vacstmt->appendonly_compaction_vacuum_prepare)
-			{
-				getnextrelation = false;
-				dropPhase = false;
-			}
-			else if (!dropPhase)
-			{
-				if (!vacuumStatement_AssignAppendOnlyCompactionInfo(vacstmt,
-							onerel, compactedSegmentFileList,
-							insertedSegmentFileList, &getnextrelation))
-				{
-					MemoryContextSwitchTo(oldctx);
-					/* Nothing left to do for this relation */
-					relation_close(onerel, NoLock);
-					CommitTransactionCommand();
-					/* don't dispatch this iteration */
-					continue;
-				}
-
-				compactedSegmentFileList =
-					list_union_int(compactedSegmentFileList,
-						vacstmt->appendonly_compaction_segno);
-				insertedSegmentFileList =
-					list_union_int(insertedSegmentFileList,
-						vacstmt->appendonly_compaction_insert_segno);
-
-				dropPhase = !getnextrelation;
-			}
 			else
 			{
-				if (HasSerializableBackends(false))
+				/* the rest is about AO tables */
+				if (vacstmt->appendonly_compaction_vacuum_prepare)
 				{
-					/*
-					 * Checking at this point is safe because
-					 * any serializable transaction that could start afterwards
-					 * will already see the state with AWAITING_DROP. We
-					 * have only to deal with transactions that started before
-					 * our transaction.
-					 *
-					 * We immediatelly get the next relation. There is no
-					 * reason to stay in this relation. Actually, all
-					 * other ao relation will skip the compaction step.
-					 */
-					elogif(Debug_appendonly_print_compaction, LOG,
-							"Skipping freeing compacted append-only segment file "
-							"because of concurrent serializable transaction");
-
-					DeregisterSegnoForCompactionDrop(relid, vacstmt->appendonly_compaction_segno);
-					MemoryContextSwitchTo(oldctx);
-					relation_close(onerel, NoLock);
-					CommitTransactionCommand();
-					/* don't dispatch this iteration */
-					continue;
-				}
-				elogif(Debug_appendonly_print_compaction, LOG,
-						"Dispatch drop transaction on append-only relation %s",
-						RelationGetRelationName(onerel));
-
-				RegisterSegnoForCompactionDrop(relid, vacstmt->appendonly_compaction_segno);
-				list_free(vacstmt->appendonly_compaction_insert_segno);
-				vacstmt->appendonly_compaction_insert_segno = NIL;
-				dropPhase = false;
-				getnextrelation = false;
-			}
-			MemoryContextSwitchTo(oldctx);
-
-			/*
-			 * For AO tables VACUUM FULL, we perform two-step for aux relations.
-			 */
-			if (!RelationIsHeap(onerel) &&
-				vacstmt->full &&
-				vacstmt->appendonly_compaction_vacuum_cleanup)
-			{
-				if (!truncatePhase)
-				{
-					truncatePhase = true;
 					getnextrelation = false;
+					dropPhase = false;
+				}
+				else if (dropPhase)
+				{
+					if (HasSerializableBackends(false))
+					{
+						/*
+						 * Checking at this point is safe because
+						 * any serializable transaction that could start afterwards
+						 * will already see the state with AWAITING_DROP. We
+						 * have only to deal with transactions that started before
+						 * our transaction.
+						 *
+						 * We immediatelly get the next relation. There is no
+						 * reason to stay in this relation. Actually, all
+						 * other ao relation will skip the compaction step.
+						 */
+						elogif(Debug_appendonly_print_compaction, LOG,
+								"Skipping freeing compacted append-only segment file "
+								"because of concurrent serializable transaction");
+
+						DeregisterSegnoForCompactionDrop(relid, vacstmt->appendonly_compaction_segno);
+						vacstmt->appendonly_compaction_vacuum_cleanup = true;
+						dropPhase = false;
+						getnextrelation = false;
+					}
+					else
+					{
+						elogif(Debug_appendonly_print_compaction, LOG,
+								"Dispatch drop transaction on append-only relation %s",
+								RelationGetRelationName(onerel));
+
+						RegisterSegnoForCompactionDrop(relid, vacstmt->appendonly_compaction_segno);
+						list_free(vacstmt->appendonly_compaction_insert_segno);
+						vacstmt->appendonly_compaction_insert_segno = NIL;
+						dropPhase = false;
+						getnextrelation = false;
+					}
 				}
 				else
 				{
-					truncatePhase = false;
-					vacstmt->heap_truncate = true;
+					/* Either we are in cleanup or in compaction phase */
+					if (!vacstmt->appendonly_compaction_vacuum_cleanup)
+					{
+						/* This block is only relevant for compaction */
+						if (!vacuumStatement_AssignAppendOnlyCompactionInfo(vacstmt,
+									onerel, compactedSegmentFileList,
+									insertedSegmentFileList, &getnextrelation))
+						{
+							MemoryContextSwitchTo(oldctx);
+							/* Nothing left to do for this relation */
+							relation_close(onerel, NoLock);
+							CommitTransactionCommand();
+							/* don't dispatch this iteration */
+							continue;
+						}
+
+						compactedSegmentFileList =
+							list_union_int(compactedSegmentFileList,
+								vacstmt->appendonly_compaction_segno);
+						insertedSegmentFileList =
+							list_union_int(insertedSegmentFileList,
+								vacstmt->appendonly_compaction_insert_segno);
+
+						dropPhase = !getnextrelation;
+					}
+				}
+				MemoryContextSwitchTo(oldctx);
+
+				/*
+				 * If VACUUM FULL and in cleanup phase, perform two-step for
+				 * aux relations.
+				 */
+				if (vacstmt->full &&
+					vacstmt->appendonly_compaction_vacuum_cleanup)
+				{
+					if (truncatePhase)
+					{
+						truncatePhase = false;
+						vacstmt->heap_truncate = true;
+					}
+					else
+					{
+						truncatePhase = true;
+						getnextrelation = false;
+					}
 				}
 			}
 		}
@@ -1311,6 +1352,34 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 					UpdateMasterAosegTotalsFromSegments(onerel, SnapshotNow, vacstmt->appendonly_compaction_segno, 0);
 				}
 			}
+
+			/*
+			 * We need some transaction to update the catalog.  We could do
+			 * it on the outer vacuumStatement, but it is useful to track
+			 * relation by relation.
+			 */
+			if (relationRound == 0 && !vacuumStatement_IsTemporary(onerel))
+			{
+				char *vsubtype = ""; /* NOFULL */
+
+				if (IsAutoVacuumWorkerProcess())
+					vsubtype = "AUTO";
+				else
+				{
+					if (vacstmt->full &&
+						(0 == vacstmt->freeze_min_age))
+						vsubtype = "FULL FREEZE";
+					else if (vacstmt->full)
+						vsubtype = "FULL";
+					else if (0 == vacstmt->freeze_min_age)
+						vsubtype = "FREEZE";
+				}
+				MetaTrackUpdObject(RelationRelationId,
+								   relid,
+								   GetUserId(),
+								   "VACUUM",
+								   vsubtype);
+			}
 		}
 
 		/*
@@ -1322,34 +1391,6 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 		 */
 		relation_close(onerel, NoLock);
 
-		/*
-		 * MPP-6929: metadata tracking
-		 * We need some transaction to update the catalog.  We could do
-		 * it on the outer vacuumStatement, but it is useful to track
-		 * relation by relation.
-		 */
-		if (relationRound == 0 && !bTemp && (Gp_role == GP_ROLE_DISPATCH))
-		{
-			char *vsubtype = ""; /* NOFULL */
-
-			if (IsAutoVacuumWorkerProcess())
-				vsubtype = "AUTO";
-			else
-			{
-				if (vacstmt->full &&
-					(0 == vacstmt->freeze_min_age))
-					vsubtype = "FULL FREEZE";
-				else if (vacstmt->full)
-					vsubtype = "FULL";
-				else if (0 == vacstmt->freeze_min_age)
-					vsubtype = "FREEZE";
-			}
-			MetaTrackUpdObject(RelationRelationId,
-							   relid,
-							   GetUserId(),
-							   "VACUUM",
-							   vsubtype);
-		}
 
 		if (list_length(relations) > 1)
 		{
@@ -5374,6 +5415,7 @@ open_relation_and_check_permission(VacuumStmt *vacstmt,
 {
 	Relation onerel;
 	LOCKMODE lmode;
+	bool dontWait = false;
 
 	/*
 	 * If this is a drop transaction and there is another parallel drop transaction
@@ -5396,6 +5438,7 @@ open_relation_and_check_permission(VacuumStmt *vacstmt,
 	if (isDropTransaction && !vacstmt->full)
 	{
 		MyProc->inDropTransaction = true;
+		SIMPLE_FAULT_INJECTOR(VacuumRelationOpenRelationDuringDropPhase);
 		if (HasDropTransaction(false))
 		{
 			elogif(Debug_appendonly_print_compaction, LOG,
@@ -5412,7 +5455,10 @@ open_relation_and_check_permission(VacuumStmt *vacstmt,
 	 * For analyze, we use ShareUpdateExclusiveLock.
 	 */
 	if (isDropTransaction)
+	{
 		lmode = AccessExclusiveLock;
+		dontWait = true;
+	}
 	else if (!vacstmt->vacuum)
 		lmode = ShareUpdateExclusiveLock;
 	else
@@ -5424,9 +5470,9 @@ open_relation_and_check_permission(VacuumStmt *vacstmt,
 	 * There's a race condition here: the rel may have gone away since the
 	 * last time we saw it.  If so, we don't need to vacuum it.
 	 */
-	onerel = try_relation_open(relid, lmode, false);
+	onerel = try_relation_open(relid, lmode, dontWait);
 
-	if (!onerel)
+	if (!RelationIsValid(onerel))
 		return NULL;
 
 	/*

@@ -9,7 +9,6 @@ class GpBuild(GpdbBuildBase):
 
     def configure(self):
         return subprocess.call(["./configure",
-                                "--enable-orca",
                                 "--enable-mapreduce",
                                 "--with-perl",
                                 "--with-libxml",

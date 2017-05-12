@@ -48,7 +48,7 @@ static bool localResWaiting = false;
 static ResGroup ResGroupHashNew(Oid groupId);
 static ResGroup ResGroupHashFind(Oid groupId);
 static bool ResGroupHashRemove(Oid groupId);
-static void ResGroupWait(ResGroup group);
+static void ResGroupWait(ResGroup group, bool isLocked);
 static bool ResGroupCreate(Oid groupId);
 static void AtProcExit_ResGroup(int code, Datum arg);
 static void ResGroupWaitCancel(void);
@@ -149,35 +149,9 @@ AllocResGroupEntry(Oid groupId)
  * Remove a resource group entry from the hash table
  */
 void
-FreeResGroupEntry(Oid groupId, char *name)
+FreeResGroupEntry(Oid groupId)
 {
-	ResGroup group;
-
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
-
-	group = ResGroupHashFind(groupId);
-	if (group == NULL)
-	{
-		LWLockRelease(ResGroupLock);
-		
-		ereport(ERROR,
-				(errcode(ERRCODE_DATA_CORRUPTED),
-			 	 errmsg("Cannot find resource group with Oid %d in shared memory", groupId)));
-	}
-
-	if (group->nRunning > 0)
-	{
-		int nQuery = group->nRunning + group->waitProcs.size;
-		LWLockRelease(ResGroupLock);
-
-		Assert(name != NULL);
-		ereport(ERROR,
-				(errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST),
-				 errmsg("Cannot drop resource group \"%s\" with Oid %d", name, groupId),
-				 errhint(" The resource group is currently managing %d query(ies) and cannot be dropped.\n"
-						 "\tTerminate the queries first or try dropping the group later.\n"
-						 "\tThe view pg_stat_activity tracks the queries managed by resource groups.", nQuery)));
-	}
 
 #ifdef USE_ASSERT_CHECKING
 	bool groupOK = 
@@ -249,6 +223,107 @@ exit:
 }
 
 /*
+ * Check resource group status when DROP RESOURCE GROUP
+ *
+ * Errors out if there're running transactions, otherwise lock the resource group.
+ * New transactions will be queued if the resource group is locked.
+ */
+void
+ResGroupCheckForDrop(Oid groupId, char *name)
+{
+	ResGroup group;
+
+	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
+
+	group = ResGroupHashFind(groupId);
+	if (group == NULL)
+	{
+		LWLockRelease(ResGroupLock);
+
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_CORRUPTED),
+				 errmsg("Cannot find resource group with Oid %d in shared memory", groupId)));
+	}
+
+	if (group->nRunning > 0)
+	{
+		int nQuery = group->nRunning + group->waitProcs.size;
+		LWLockRelease(ResGroupLock);
+
+		Assert(name != NULL);
+		ereport(ERROR,
+				(errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST),
+				 errmsg("Cannot drop resource group \"%s\"", name),
+				 errhint(" The resource group is currently managing %d query(ies) and cannot be dropped.\n"
+						 "\tTerminate the queries first or try dropping the group later.\n"
+						 "\tThe view pg_stat_activity tracks the queries managed by resource groups.", nQuery)));
+	}
+	group->lockedForDrop = true;
+
+	LWLockRelease(ResGroupLock);
+}
+
+/*
+ * Wake up the backends in the wait queue when DROP RESOURCE GROUP finishes.
+ * Unlock the resource group if the transaction is abortted.
+ * Remove the resource group entry in shared memory if the transaction is committed.
+ *
+ * This function is called in the callback function of DROP RESOURCE GROUP.
+ */
+void ResGroupDropCheckForWakeup(Oid groupId, bool isCommit)
+{
+	int wakeNum;
+	PROC_QUEUE	*waitQueue;
+	ResGroup	group;
+
+	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
+
+	group = ResGroupHashFind(groupId);
+	if (group == NULL)
+	{
+		LWLockRelease(ResGroupLock);
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_CORRUPTED),
+				errmsg("Cannot find resource group %d in shared memory", groupId)));
+	}
+
+	Assert(group->lockedForDrop);
+
+	waitQueue = &(group->waitProcs);
+	wakeNum = waitQueue->size;
+
+	while(wakeNum > 0)
+	{
+		PGPROC *waitProc;
+
+		/* wake up one process in the wait queue */
+		waitProc = (PGPROC *) MAKE_PTR(waitQueue->links.next);
+		SHMQueueDelete(&(waitProc->links));
+		waitQueue->size--;
+
+		waitProc->resWaiting = false;
+		waitProc->resGranted = false;
+		SetLatch(&waitProc->procLatch);
+		wakeNum--;
+	}
+
+	if (isCommit)
+	{
+#ifdef USE_ASSERT_CHECKING
+		bool groupOK = 
+#endif
+			ResGroupHashRemove(groupId);
+		Assert(groupOK);
+	}
+	else
+	{
+		group->lockedForDrop = false;
+	}
+
+	LWLockRelease(ResGroupLock);
+}
+
+/*
  * Wake up the backends in the wait queue when 'concurrency' is increased.
  * This function is called in the callback function of ALTER RESOURCE GROUP.
  */
@@ -291,6 +366,7 @@ void ResGroupAlterCheckForWakeup(Oid groupId)
 		waitQueue->size--;
 
 		waitProc->resWaiting = false;
+		waitProc->resGranted = true;
 		SetLatch(&waitProc->procLatch);
 
 		group->nRunning++;
@@ -311,7 +387,7 @@ ResGroupGetStat(Oid groupId, ResGroupStatType type, char *retStr, int retStrLen)
 	if (!IsResGroupEnabled())
 		return;
 
-	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
+	LWLockAcquire(ResGroupLock, LW_SHARED);
 
 	group = ResGroupHashFind(groupId);
 	if (group == NULL)
@@ -365,7 +441,7 @@ CalcConcurrencyValue(int groupId, int val, int proposed, int newProposed)
 	if (!IsResGroupEnabled())
 		return newProposed;
 
-	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
+	LWLockAcquire(ResGroupLock, LW_SHARED);
 
 	group = ResGroupHashFind(groupId);
 	if (group == NULL)
@@ -413,6 +489,7 @@ ResGroupCreate(Oid groupId)
 	group->totalExecuted = 0;
 	group->totalQueued = 0;
 	memset(&group->totalQueuedTime, 0, sizeof(group->totalQueuedTime));
+	group->lockedForDrop = false;
 
 	return true;
 }
@@ -428,27 +505,45 @@ ResGroupSlotAcquire(void)
 	ResGroup	group;
 	Oid			groupId;
 	int			concurrencyProposed;
+	bool		retried = false;
 
 	groupId = GetResGroupIdForRole(GetUserId());
 	if (groupId == InvalidOid)
 		groupId = superuser() ? ADMINRESGROUP_OID : DEFAULTRESGROUP_OID;
-
 	CurrentResGroupId = groupId;
 
 	GetConcurrencyForResGroup(groupId, NULL, &concurrencyProposed);
 
+retry:
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 
 	group = ResGroupHashFind(groupId);
-
 	if (group == NULL)
 	{
 		LWLockRelease(ResGroupLock);
-		ereport(ERROR,
-				(errcode(ERRCODE_DATA_CORRUPTED),
-			 	 errmsg("Cannot find resource group %d in shared memory", groupId)));
+
+		if (retried)
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					 errmsg("Resource group %d was concurrently dropped", groupId)));
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_DATA_CORRUPTED),
+					 errmsg("Cannot find resource group %d in shared memory", groupId)));
 	}
 
+	/* wait on the queue if the group is locked for drop */
+	if (group->lockedForDrop)
+	{
+		Assert(group->nRunning == 0);
+		ResGroupWait(group, true);
+
+		/* retry if the drop resource group transaction is finished */
+		retried = true;
+		goto retry;
+	}
+
+	/* acquire a slot */
 	if (concurrencyProposed == RESGROUP_CONCURRENCY_UNLIMITED || group->nRunning < concurrencyProposed)
 	{
 		group->nRunning++;
@@ -459,7 +554,8 @@ ResGroupSlotAcquire(void)
 		return;
 	}
 
-	ResGroupWait(group);
+	/* wait on the queue for a slot */
+	ResGroupWait(group, false);
 
 	/*
 	 * The waking process has granted us the slot.
@@ -476,6 +572,8 @@ static void
 addTotalQueueDuration(ResGroup group)
 {
 	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	if (group == NULL)
+		return;
 
 	TimestampTz start = pgstat_fetch_resgroup_queue_timestamp();
 	TimestampTz now = GetCurrentTimestamp();
@@ -535,6 +633,7 @@ ResGroupSlotRelease(void)
 	waitProc = (PGPROC *) MAKE_PTR(waitQueue->links.next);
 	SHMQueueDelete(&(waitProc->links));
 	waitQueue->size--;
+	waitProc->resGranted = true;
 	LWLockRelease(ResGroupLock);
 
 	waitProc->resWaiting = false;
@@ -543,8 +642,11 @@ ResGroupSlotRelease(void)
 	CurrentResGroupId = InvalidOid;
 }
 
+/*
+ * Wait on the queue of resource group 
+ */
 static void
-ResGroupWait(ResGroup group)
+ResGroupWait(ResGroup group, bool isLocked)
 {
 	PGPROC *proc = MyProc, *headProc;
 	PROC_QUEUE *waitQueue;
@@ -559,8 +661,8 @@ ResGroupWait(ResGroup group)
 	SHMQueueInsertBefore(&(headProc->links), &(proc->links));
 	waitQueue->size++;
 
-	group->totalQueued++;
-
+	if (!isLocked)
+		group->totalQueued++;
 	pgstat_report_resgroup(GetCurrentTimestamp(), group->groupId);
 
 	LWLockRelease(ResGroupLock);
@@ -634,7 +736,7 @@ ResGroupHashFind(Oid groupId)
 	bool		found;
 	ResGroup	group = NULL;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(LWLockHeldByMe(ResGroupLock));
 
 	group = (ResGroup)
 		hash_search(pResGroupControl->htbl, (void *) &groupId, HASH_FIND, &found);
@@ -665,88 +767,97 @@ ResGroupHashRemove(Oid groupId)
 	return true;
 }
 
+/* Process exit without waiting for slot or received SIGTERM */
 static void
 AtProcExit_ResGroup(int code, Datum arg)
 {
 	ResGroupWaitCancel();
 }
 
+/*
+ * Handle the interrupt cases when waiting on the queue
+ *
+ * The proc may wait on the queue for a slot, or wait for the
+ * DROP transaction to finish. In the first case, at the same time
+ * we get interrupted (SIGINT or SIGTERM), we could have been
+ * grantted a slot or not. In the second case, there's no running
+ * transaction in the group. If the DROP transaction is finished
+ * (commit or abort) at the same time as we get interrupted,
+ * MyProc should have been removed from the wait queue, and the
+ * ResGroup entry may have been removed if the DROP is committed.
+ */
 static void
-ResGroupWaitCancel(void)
+ResGroupWaitCancel()
 {
 	ResGroup group;
 	PROC_QUEUE	*waitQueue;
 	PGPROC		*waitProc;
-	bool		granted = false;
 
-	if (CurrentResGroupId == InvalidOid)
+	/* Process exit without waiting for slot */
+	if (CurrentResGroupId == InvalidOid || !localResWaiting)
 		return;
 
-	if (!localResWaiting)
-		return;
-
-	/* we are sure to be interrupted in the for loop of ResGroupWait now */
+	/* We are sure to be interrupted in the for loop of ResGroupWait now */
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 	group = ResGroupHashFind(CurrentResGroupId);
 
-	/*
-	 * We either have been granted the lock, or is still on the waiting list, so
-	 * this group should not have been dropped
-	 */
-	Assert(group != NULL);
-
-	/*
-	 * Check if we are on the waiting list to decide whether we have been granted
-	 * the lock, not resWaiting.
-	 */
-	if (MyProc->links.next == INVALID_OFFSET)
+	/* Group was concurrenty dropped */
+	if (group == NULL)
 	{
-		Assert(MyProc->links.prev == INVALID_OFFSET);
-		granted = true;
+		LWLockRelease(ResGroupLock);
+		localResWaiting = false;
+		pgstat_report_waiting(PGBE_WAITING_NONE);
+		return;
 	}
 
-	addTotalQueueDuration(group);
-
 	waitQueue = &(group->waitProcs);
-	if (granted)
+
+	if (MyProc->links.next != INVALID_OFFSET)
 	{
+		/* Still waiting on the queue when get interrupted, remove myself from the queue */
+		Assert(waitQueue->size > 0);
+		Assert(MyProc->resWaiting);
+
+		addTotalQueueDuration(group);
+
+		SHMQueueDelete(&(MyProc->links));
+		waitQueue->size--;
+	}
+	else if (MyProc->links.next == INVALID_OFFSET && !MyProc->resGranted)
+	{
+		/* Woken up by a slot holder */
 		group->totalExecuted++;
+		addTotalQueueDuration(group);
 
 		if (waitQueue->size == 0)
 		{
+			/* This is the last transaction on the wait queue, don't have to wake up others */
 			Assert(waitQueue->links.next == MAKE_OFFSET(&waitQueue->links) &&
 				   waitQueue->links.prev == MAKE_OFFSET(&waitQueue->links));
 			Assert(group->nRunning > 0);
 
 			group->nRunning--;
-
-			LWLockRelease(ResGroupLock);
-			localResWaiting = false;
-			return;
 		}
-
-		/* wake up one process in the wait queue */
-		waitProc = (PGPROC *) MAKE_PTR(waitQueue->links.next);
-		SHMQueueDelete(&(waitProc->links));
-		waitQueue->size --;
-
-		LWLockRelease(ResGroupLock);
-
-		waitProc->resWaiting = false;
-		SetLatch(&waitProc->procLatch);
-
-		localResWaiting = false;
-		return;
+		else
+		{
+			/* wake up one process on the wait queue */
+			waitProc = (PGPROC *) MAKE_PTR(waitQueue->links.next);
+			SHMQueueDelete(&(waitProc->links));
+			waitQueue->size--;
+			waitProc->resGranted = true;
+			waitProc->resWaiting = false;
+			SetLatch(&waitProc->procLatch);
+		}
 	}
-
-	Assert(waitQueue->size > 0);
-	Assert(MyProc->resWaiting);
-
-	SHMQueueDelete(&(MyProc->links));
-	waitQueue->size --;
+	else
+	{
+		/*
+		 * The transaction of DROP RESOURCE GROUP is abortted,
+		 * ResGroupSlotAcquire will do the retry.
+		 */
+	}
 
 	LWLockRelease(ResGroupLock);
 	localResWaiting = false;
-
 	pgstat_report_waiting(PGBE_WAITING_NONE);
 }

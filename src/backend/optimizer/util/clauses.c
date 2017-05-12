@@ -829,36 +829,6 @@ contain_mutable_functions_walker(Node *node, void *context)
 			return true;
 		/* else fall through to check args */
 	}
-	else if (IsA(node, CoerceViaIO))
-	{
-		CoerceViaIO *expr = (CoerceViaIO *) node;
-		Oid             iofunc;
-		Oid             typioparam;
-		bool    typisvarlena;
-
-		/* check the result type's input function */
-		getTypeInputInfo(expr->resulttype,
-					&iofunc, &typioparam);
-		if (func_volatile(iofunc) != PROVOLATILE_IMMUTABLE)
-			return true;
-		/* check the input type's output function */
-		getTypeOutputInfo(exprType((Node *) expr->arg),
-					&iofunc, &typisvarlena);
-		if (func_volatile(iofunc) != PROVOLATILE_IMMUTABLE)
-			return true;
-		/* else fall through to check args */
-	}
-	else if (IsA(node, ArrayCoerceExpr))
-	{
-		ArrayCoerceExpr *expr = (ArrayCoerceExpr *) node;
-
-		if (OidIsValid(expr->elemfuncid) &&
-			func_volatile(expr->elemfuncid) != PROVOLATILE_IMMUTABLE)
-		{
-			return true;
-		}
-		/* else fall through to check args */
-	}
 	else if (IsA(node, RowCompareExpr))
 	{
 		RowCompareExpr *rcexpr = (RowCompareExpr *) node;

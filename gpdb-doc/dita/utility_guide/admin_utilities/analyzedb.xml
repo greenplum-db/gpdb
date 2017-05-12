@@ -164,8 +164,8 @@ public.lineitem -i l_shipdate, l_receiptdate </codeblock></pd>
           <pd>
             <p>Skip refreshing root partition statistics if any of the leaf partitions that are also
               analyzed require updating. </p>
-            <p>Do not specify this option if you use GPORCA to execute queries
-              against partitioned tables.</p>
+            <p>Do not specify this option if you use GPORCA to execute queries against partitioned
+              tables (the default).</p>
           </pd>
         </plentry>
         <plentry>

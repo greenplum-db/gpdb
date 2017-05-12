@@ -1098,146 +1098,138 @@ Feature: Validate command line arguments
 
     Scenario: 120 Simple full backup and restore with special character
         Given the old timestamps are read from json
+        And the backup test is initialized for special characters
         When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.out"
-        And the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
+        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql "$SP_CHAR_DB" > /tmp/special_table_data.out"
+        And the user runs command "dropdb "$SP_CHAR_DB""
 
     Scenario: 121 gpcrondump with -T option where table name, schema name and database name contains special character
         Given the old timestamps are read from json
+        And the backup test is initialized for special characters
         When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And verify with backedup file "121_ao" that there is a "ao" table " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " with data
-        And verify with backedup file "121_heap" that there is a "heap" table " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . heap_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " with data
-        And verify that there is no table " co_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 "
-        And the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
+        And verify with backedup file "121_ao" that there is a "ao" table "$SP_CHAR_SCHEMA.$SP_CHAR_AO" in "$SP_CHAR_DB" with data
+        And verify with backedup file "121_heap" that there is a "heap" table "$SP_CHAR_SCHEMA.$SP_CHAR_HEAP" in "$SP_CHAR_DB" with data
+        And verify that there is no table "$SP_CHAR_CO" in "$SP_CHAR_DB"
+        And the user runs command "dropdb "$SP_CHAR_DB""
 
     Scenario: 122 gpcrondump with --exclude-table-file option where table name, schema name and database name contains special character
         Given the old timestamps are read from json
-        Given the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_database.sql template1"
+        And the backup test is initialized for special characters
+        And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_database.sql template1"
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_schema.sql template1"
         When the user runs gpdbrestore -e with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And verify with backedup file "122_ao" that there is a "ao" table " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " with data
-        And verify with backedup file "122_heap" that there is a "heap" table " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . heap_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " with data
-        And verify that there is no table " co_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 "
-        And the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
+        And verify with backedup file "122_ao" that there is a "ao" table "$SP_CHAR_SCHEMA.$SP_CHAR_AO" in "$SP_CHAR_DB" with data
+        And verify with backedup file "122_heap" that there is a "heap" table "$SP_CHAR_SCHEMA.$SP_CHAR_HEAP" in "$SP_CHAR_DB" with data
+        And verify that there is no table "$SP_CHAR_CO" in "$SP_CHAR_DB"
+        And the user runs command "dropdb "$SP_CHAR_DB""
 
     Scenario: 123 gpcrondump with --table-file option where table name, schema name and database name contains special character
         Given the old timestamps are read from json
-        Given the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_database.sql template1"
+        And the backup test is initialized for special characters
+        And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_database.sql template1"
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_schema.sql template1"
         When the user runs gpdbrestore without -e with the stored timestamp and options " "
         Then gpdbrestore should return a return code of 0
-        And verify with backedup file "123_ao" that there is a "ao" table " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " with data
-        And verify with backedup file "123_heap" that there is a "heap" table " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . heap_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " with data
-        And verify that there is no table " co_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 "
-        And the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
+        And verify with backedup file "123_ao" that there is a "ao" table "$SP_CHAR_SCHEMA.$SP_CHAR_AO" in "$SP_CHAR_DB" with data
+        And verify with backedup file "123_heap" that there is a "heap" table "$SP_CHAR_SCHEMA.$SP_CHAR_HEAP" in "$SP_CHAR_DB" with data
+        And verify that there is no table "$SP_CHAR_CO" in "$SP_CHAR_DB"
+        And the user runs command "dropdb "$SP_CHAR_DB""
 
     Scenario: 124 gpcrondump with -t option where table name, schema name and database name contains special character
         Given the old timestamps are read from json
-        Given the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_database.sql template1"
+        And the backup test is initialized for special characters
+        And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_database.sql template1"
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_schema.sql template1"
         When the user runs gpdbrestore without -e with the stored timestamp and options " "
         Then gpdbrestore should return a return code of 0
-        And verify with backedup file "124_ao" that there is a "ao" table " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " with data
-        And verify that there is no table " co_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 "
-        And the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
+        And verify with backedup file "124_ao" that there is a "ao" table "$SP_CHAR_SCHEMA.$SP_CHAR_AO" in "$SP_CHAR_DB" with data
+        And verify that there is no table "$SP_CHAR_CO" in "$SP_CHAR_DB"
+        And the user runs command "dropdb "$SP_CHAR_DB""
 
     Scenario: 125 gpcrondump with --schema-file option when schema name and database name contains special character
         Given the old timestamps are read from json
+        And the backup test is initialized for special characters
         When the user runs gpdbrestore -e with the stored timestamp
-        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.out"
+        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql "$SP_CHAR_DB" > /tmp/special_table_data.out"
         And verify that the contents of the files "/tmp/special_table_data.out" and "/tmp/125_special_table_data.ans" are identical
-        When the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
+        When the user runs command "dropdb "$SP_CHAR_DB""
 
     Scenario: 126 gpcrondump with -s option when schema name and database name contains special character
         Given the old timestamps are read from json
+        And the backup test is initialized for special characters
         When the user runs gpdbrestore -e with the stored timestamp
-        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.out"
+        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql "$SP_CHAR_DB" > /tmp/special_table_data.out"
         And verify that the contents of the files "/tmp/special_table_data.out" and "/tmp/126_special_table_data.ans" are identical
-        When the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
+        When the user runs command "dropdb "$SP_CHAR_DB""
 
     Scenario: 127 gpcrondump with --exclude-schema-file option when schema name and database name contains special character
         Given the old timestamps are read from json
+        And the backup test is initialized for special characters
         When the user runs gpdbrestore -e with the stored timestamp
-        Then verify that there is no table " ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 "
-        And verify that there is no table " co_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 "
-        And verify that there is no table " heap_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 "
-        When the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
+        Then verify that there is no table "$SP_CHAR_AO" in "$SP_CHAR_DB"
+        And verify that there is no table "$SP_CHAR_CO" in "$SP_CHAR_DB"
+        And verify that there is no table "$SP_CHAR_HEAP" in "$SP_CHAR_DB"
+        When the user runs command "dropdb "$SP_CHAR_DB""
 
     Scenario: 128 gpcrondump with -S option when schema name and database name contains special character
         Given the old timestamps are read from json
+        And the backup test is initialized for special characters
         When the user runs gpdbrestore -e with the stored timestamp
-        Then verify that there is no table " ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 "
-        And verify that there is no table " co_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 "
-        And verify that there is no table " heap_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 "
-        When the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
-
-    Scenario: 129 Gpdbrestore with --table-file option when table name, schema name and database name contains special character
-        Given the old timestamps are read from json
-        When the user runs gpdbrestore -e with the stored timestamp and options "--table-file test/behave/mgmt_utils/steps/data/special_chars/table-file.txt"
-        Then gpdbrestore should return a return code of 0
-        And verify with backedup file "129_ao" that there is a "ao" table " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " with data
-        And verify with backedup file "129_heap" that there is a "heap" table " S`~@#$%^&*()-+[{]}|\;: \'"/?><1 . heap_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 " with data
-        And verify that there is no table " co_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 " in " DB`~@#$%^&*()_-+[{]}|\;: \'/?><;1 "
+        Then verify that there is no table "$SP_CHAR_AO" in "$SP_CHAR_DB"
+        And verify that there is no table "$SP_CHAR_CO" in "$SP_CHAR_DB"
+        And verify that there is no table "$SP_CHAR_HEAP" in "$SP_CHAR_DB"
+        When the user runs command "dropdb "$SP_CHAR_DB""
 
     Scenario: 130 Gpdbrestore with -T, --truncate, and --change-schema options when table name, schema name and database name contains special character
         Given the old timestamps are read from json
+        And the backup test is initialized for special characters
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_database.sql template1"
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_schema.sql template1"
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/add_schema.sql template1"
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_table.sql template1"
-        When the user runs gpdbrestore without -e with the stored timestamp and options "-T " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 "." ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 " --change-schema=" S\`~@#\$%^&*()_-+[{]}|\\;: \\'\"/?><1 " -S " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><2 " "
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T "$SP_CHAR_SCHEMA"."$SP_CHAR_AO" --change-schema="$SP_CHAR_SCHEMA" -S "$SP_CHAR_SCHEMA2""
         Then gpdbrestore should return a return code of 2
         And gpcrondump should print "-S option cannot be used with --change-schema option" to stdout
-        When the user runs gpdbrestore without -e with the stored timestamp and options "-T " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 "." ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 " --change-schema=" S\`~@#\$%^&*()_-+[{]}|\\;: \\'\"/?><2 " --truncate"
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T "$SP_CHAR_SCHEMA"."$SP_CHAR_AO" --change-schema="$SP_CHAR_SCHEMA2" --truncate"
         Then gpdbrestore should return a return code of 0
-        And the user runs command "psql -f  psql -c """select * from \" S\`~@#\$%^&*()_-+[{]}|\\;: \\'\"\"/?><2 \".\" ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"\"/?><1 \" order by 1""" -d " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 "  > /tmp/table_data.out"
+        And the user runs command "psql -f  psql -c """select * from \"$SP_CHAR_SCHEMA2\".\"$SP_CHAR_AO\" order by 1""" -d "$SP_CHAR_DB"  > /tmp/table_data.out"
         And verify that the contents of the files "/tmp/130_table_data.ans" and "/tmp/table_data.out" are identical
-        When the user runs gpdbrestore without -e with the stored timestamp and options "-T " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 "." ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 " --truncate"
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T "$SP_CHAR_SCHEMA"."$SP_CHAR_AO" --truncate"
         Then gpdbrestore should return a return code of 0
-        And the user runs command "psql -f  psql -c """select * from \" S\`~@#\$%^&*()-+[{]}|\\;: \\'\"\"/?><1 \".\" ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"\"/?><1 \" order by 1""" -d " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 "  > /tmp/table_data.out"
+        And the user runs command "psql -f  psql -c """select * from \"$SP_CHAR_SCHEMA\".\"$SP_CHAR_AO\" order by 1""" -d "$SP_CHAR_DB"  > /tmp/table_data.out"
         Then verify that the contents of the files "/tmp/130_table_data.ans" and "/tmp/table_data.out" are identical
-        When the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
+        When the user runs command "dropdb "$SP_CHAR_DB""
 
     Scenario: 131 gpcrondump with --incremental option when table name, schema name and database name contains special character
         Given the old timestamps are read from json
+        And the backup test is initialized for special characters
         When the user runs gpdbrestore -e with the stored timestamp
-        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.out"
+        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql "$SP_CHAR_DB" > /tmp/special_table_data.out"
         Then verify that the contents of the files "/tmp/special_table_data.out" and "/tmp/131_special_table_data.ans" are identical
-        When the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
+        When the user runs command "dropdb "$SP_CHAR_DB""
 
     Scenario: 132 gpdbrestore with --redirect option with special db name, and all table name, schema name and database name contain special character
         Given the old timestamps are read from json
+        And the backup test is initialized for special characters
         When the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/drop_special_database.sql template1"
-        When the user runs gpdbrestore without -e with the stored timestamp and options "--redirect " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;2 ""
-        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;2 " > /tmp/special_table_data.out"
+        When the user runs gpdbrestore without -e with the stored timestamp and options "--redirect "$SP_CHAR_DB""
+        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql "$SP_CHAR_DB" > /tmp/special_table_data.out"
         Then verify that the contents of the files "/tmp/special_table_data.out" and "/tmp/132_special_table_data.ans" are identical
-        When the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;2 ""
+        When the user runs command "dropdb "$SP_CHAR_DB""
 
     Scenario: 133 gpdbrestore, -S option, -S truncate option schema level restore with special chars in schema name
         Given the old timestamps are read from json
-        When the user runs gpdbrestore -e with the stored timestamp and options "-S " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 ""
-        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.out"
+        And the backup test is initialized for special characters
+        When the user runs gpdbrestore -e with the stored timestamp and options "-S "$SP_CHAR_SCHEMA""
+        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql "$SP_CHAR_DB" > /tmp/special_table_data.out"
         Then verify that the contents of the files "/tmp/special_table_data.out" and "/tmp/133_special_table_data.ans" are identical
-        When the user runs gpdbrestore without -e with the stored timestamp and options "-S " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 " --truncate"
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-S "$SP_CHAR_SCHEMA" --truncate"
         Then gpdbrestore should return a return code of 0
-        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_table_data.out"
+        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_table.sql "$SP_CHAR_DB" > /tmp/special_table_data.out"
         Then verify that the contents of the files "/tmp/special_table_data.out" and "/tmp/133_special_table_data.ans" are identical
-
-    Scenario: 134 gpdbrestore, --noplan option with special chars in database name, schema name, and table name
-        Given the old timestamps are read from json
-        And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/truncate_special_ao_table.sql template1"
-        When the user runs gpdbrestore without -e with the stored timestamp and options "--noplan"
-        And the user runs command "psql -f test/behave/mgmt_utils/steps/data/special_chars/select_from_special_ao_table.sql " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 " > /tmp/special_ao_table_data.out"
-        Then verify that the contents of the files "/tmp/special_ao_table_data.out" and "/tmp/134_special_ao_table_data.ans" are identical
-
-    Scenario: 135 Gpdbrestore, --change-schema option does not work with -S schema level restore option
-        Given the old timestamps are read from json
-        When the user runs gpdbrestore -e with the stored timestamp and options "-T " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 "." ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 " --change-schema=" S\`~@#\$%^&*()_-+[{]}|\\;: \\'\"/?><1 " -S " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><2 " "
-        Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print "-S option cannot be used with --change-schema option" to stdout
 
     @skip_for_gpdb_43
     Scenario: 136 Backup and restore CAST, with associated function in restored schema, base_file_name=dump_func_name

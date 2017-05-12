@@ -3,6 +3,7 @@
 import os
 import socket
 import gzip
+import glob
 from gppylib.commands.base import Command, REMOTE, WorkerPool, CommandResult
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray
@@ -212,8 +213,8 @@ def impl(context, target):
             fd.close()
 
 def __get_dump_metadata_path(context, dump_dir):
-    filename = "gp_dump_-1_1_%s.gz" % context.backup_timestamp
-    metadata_path = os.path.join(dump_dir, "db_dumps", context.backup_timestamp[0:8], filename)
+    filename = "gp_dump_*_1_%s.gz" % context.backup_timestamp
+    metadata_path = glob.glob(os.path.join(dump_dir, "db_dumps", context.backup_timestamp[0:8], filename))[0]
     return metadata_path
 
 def get_comment_keys(line):
@@ -411,12 +412,17 @@ def impl(context, role_name, dbname):
 def impl(context, filenames, table_list, dbname):
     files = [f for f in filenames.split(',')]
     tables = [t for t in table_list.split(',')]
+    dbname = replace_special_char_env(dbname)
     for t,f in zip(tables,files):
+        t = replace_special_char_env(t)
+        f = replace_special_char_env(f)
         backup_data_to_file(context, t, dbname, f)
 
 @when('verify with backedup file "{filename}" that there is a "{table_type}" table "{tablename}" in "{dbname}" with data')
 @then('verify with backedup file "{filename}" that there is a "{table_type}" table "{tablename}" in "{dbname}" with data')
 def impl(context, filename, table_type, tablename, dbname):
+    dbname = replace_special_char_env(dbname)
+    tablename = replace_special_char_env(tablename)
     if not check_table_exists(context, dbname=dbname, table_name=tablename, table_type=table_type):
         raise Exception("Table '%s' does not exist when it should" % tablename)
     validate_restore_data_in_file(context, tablename, dbname, filename)

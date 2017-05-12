@@ -9,7 +9,7 @@
                 <codeph>gpinitsystem</codeph>.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpdeletesystem</b> <b>-d</b> <varname>master_data_directory</varname> [<b>-B</b> <varname>parallel_processes</varname>] 
+            <codeblock><b>gpdeletesystem</b> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] 
    [<b>-f</b>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-D</b>]
 
 <b>gpdeletesystem</b> <b>-?</b> 
@@ -18,7 +18,7 @@
         </section>
         <section id="section3">
             <title>Description</title>
-            <p>The <codeph>gpdeletesystem</codeph> utility will perform the following actions:</p>
+            <p>The <codeph>gpdeletesystem</codeph> utility performs the following actions:</p>
             <ul>
                 <li id="jr138351">Stop all <codeph>postgres</codeph> processes (the segment
                     instances and master instance).</li>
@@ -39,11 +39,11 @@
             <title>Options</title>
             <parml>
                 <plentry>
-                    <pt>-d <varname>data_directory</varname></pt>
+                    <pt>-d <varname>master_data_directory</varname></pt>
                     <pd>Specifies the master host data directory. If this option is not specified,
                         the setting for the environment variable
-                            <codeph>MASTER_DATA_DIRECTORY</codeph> is used. If
-                            <varname>data_directory</varname> cannot be determined, the utility
+                            <codeph>MASTER_DATA_DIRECTORY</codeph> is used. If this option is specified, it overrides any setting of <codeph>MASTER_DATA_DIRECTORY</codeph>. If
+                            <varname>master_data_directory</varname> cannot be determined, the utility
                         returns an error. </pd>
                 </plentry>
                 <plentry>

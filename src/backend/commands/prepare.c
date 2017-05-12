@@ -489,6 +489,7 @@ StorePreparedStatement(const char *stmt_name,
 	/* Create a plancache entry */
 	plansource = CreateCachedPlan(raw_parse_tree,
 								  query_string,
+								  sourceTag,
 								  commandTag,
 								  param_types,
 								  num_params,

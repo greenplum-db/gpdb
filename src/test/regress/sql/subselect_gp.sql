@@ -1,3 +1,7 @@
+-- start_ignore
+create schema subselect_gp;
+set search_path to subselect_gp;
+-- end_ignore
 set optimizer_enable_master_only_queries = on;
 set optimizer_segments = 3;
 set optimizer_nestloop_factor = 1.0;
@@ -593,3 +597,13 @@ drop table nested_in_tbl;
 -- Window query with a function scan that has non-correlated subquery.
 --
 SELECT rank() over (partition by min(c) order by min(c)) AS p_rank FROM (SELECT d AS c FROM (values(1)) d1, generate_series(0,(SELECT 2)) AS d) tt GROUP BY c;
+
+--
+-- Remove unused subplans
+--
+create table foo(a int, b int) distributed by (a) partition by range(b) (start(1) end(3) every(1));
+create table bar(a int, b int) distributed by (a);
+
+with CT as (select a from foo except select a from bar)
+select * from foo
+where exists (select 1 from CT where CT.a = foo.a);

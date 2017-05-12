@@ -21,3 +21,11 @@ CREATE
 
 create or replace view locktest_segments as SELECT coalesce( case when relname like 'pg_toast%index' then 'toast index' when relname like 'pg_toast%' then 'toast table' when relname like 'pg_aoseg%' then 'aoseg table' when relname like 'pg_aovisimap%index' then 'aovisimap index' when relname like 'pg_aovisimap%' then 'aovisimap table' else relname end, 'dropped table'), mode, locktype, case when count(*) = 1 then '1 segment' else 'n segments' end as node FROM gp_dist_random('locktest_segments_dist') group by relname, relation, mode, locktype;
 CREATE
+
+-- start_ignore
+create language plpythonu;
+CREATE
+-- end_ignore
+
+CREATE OR REPLACE FUNCTION wait_for_trigger_fault(fault text, segno int) RETURNS bool as $$ import subprocess import time cmd = 'gpfaultinjector -f %s -y status -s %d | grep -i triggered | wc -l' % (fault, segno) for i in range(100): cmd_output = subprocess.Popen(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, shell=True) if int(cmd_output.stdout.read()): return True time.sleep(0.5) return False $$ LANGUAGE plpythonu;
+CREATE

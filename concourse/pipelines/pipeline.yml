@@ -9,12 +9,15 @@ resources:
     branch: {{gpdb-git-branch}}
     private_key: {{gpdb-git-key}}
     uri: {{gpdb-git-remote}}
+    ignore_paths:
+    - gpdb-doc/*
+    - README*
 
 - name: gpaddon_src
   type: git
   source:
     branch: {{gpaddon-git-branch}}
-    private_key: {{gpdb-git-key}}
+    private_key: {{gpaddon-git-key}}
     uri: {{gpaddon-git-remote}}
 
 - name: centos-gpdb-dev-6
@@ -561,6 +564,7 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       MAKE_TEST_COMMAND: sub_transaction_limit_removal
+      BLDWRAP_POSTGRES_CONF_ADDONS: fsync=off
       TEST_OS: centos
 
 - name: gpperfmon

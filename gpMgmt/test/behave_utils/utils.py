@@ -1651,3 +1651,10 @@ def is_process_running(proc_name):
 def file_contains_line(filepath, target_line):
     with open(filepath, 'r') as myfile:
         return target_line in myfile.read().splitlines()
+
+def replace_special_char_env(str):
+    for var in ["SP_CHAR_DB", "SP_CHAR_SCHEMA", "SP_CHAR_AO", "SP_CHAR_CO", "SP_CHAR_HEAP"]:
+        if var in os.environ:
+            str = str.replace("$%s" % var, os.environ[var])
+    return str
+

@@ -128,10 +128,6 @@
                                 /></codeph>.</pd>
                     </plentry>
                     <plentry>
-                        <pt>-r | --resource-queues</pt>
-                        <pd>Dump resource queue definitions.</pd>
-                    </plentry>
-                    <plentry>
                         <pt>-s | --schema-only</pt>
                         <pd>Dump only the object definitions (schema), not data.</pd>
                     </plentry>
@@ -143,6 +139,10 @@
                             better to leave this out, and instead start the resulting script as a
                                     superuser.<note>Greenplum Database does not
                                 support user-defined triggers.</note></pd>
+                    </plentry>
+                    <plentry>
+                        <pt>-t | --tablespaces-only</pt>
+                        <pd>Dump only tablespaces, not databases or roles.</pd>
                     </plentry>
                     <plentry>
                         <pt>-v | --verbose</pt>
@@ -175,6 +175,14 @@
                                 support user-defined triggers.</note></pd>
                     </plentry>
                     <plentry>
+                        <pt>--resource-queues</pt>
+                        <pd>Dump resource queue definitions.</pd>
+                    </plentry>
+                    <plentry>
+                        <pt>--roles-only</pt>
+                        <pd>Dump only roles, not databases, tablespaces, or filespaces.</pd>
+                    </plentry>
+                    <plentry>
                         <pt>--use-set-session-authorization</pt>
                         <pd>Output SQL-standard <codeph>SET SESSION AUTHORIZATION</codeph> commands
                             instead of <codeph>ALTER OWNER</codeph> commands to determine object
@@ -192,31 +200,44 @@
                                 RANDOMLY</codeph> clauses) of a Greenplum Database
                             table to be dumped, which is useful for restoring into other Greenplum Database systems.</pd>
                     </plentry>
+                    <plentry>
+                        <pt>--no-gp-syntax</pt>
+                        <pd>Do not output the table distribution clauses in the <codeph>CREATE
+                                TABLE</codeph> statements. </pd>
+                    </plentry>
                 </parml>
             </sectiondiv>
             <sectiondiv id="section6">
                 <b>Connection Options</b>
                 <parml>
                     <plentry>
-                        <pt>-h <varname>host</varname> | --host <varname>host</varname></pt>
+                        <pt>-h <varname>host</varname> | --host=<varname>host</varname></pt>
                         <pd>The host name of the machine on which the Greenplum master database server is running. If
                             not specified, reads from the environment variable
                                 <codeph>PGHOST</codeph> or defaults to
                             <codeph>localhost</codeph>.</pd>
                     </plentry>
                     <plentry>
-                        <pt>-p <varname>port</varname> | --port <varname>port</varname></pt>
+                        <pt>-l <varname>dbname</varname> | --database=<varname>dbname</varname></pt>
+                        <pd>Specifies the name of the database in which to connect to dump global objects. If not specified, the <codeph>postgres</codeph> database is used. If the <codeph>postgres</codeph> database does not exist, the <codeph>template1</codeph> database is used.</pd>
+                    </plentry>
+                    <plentry>
+                        <pt>-p <varname>port</varname> | --port=<varname>port</varname></pt>
                         <pd>The TCP port on which the Greenplum master
                             database server is listening for connections. If not specified, reads
                             from the environment variable <codeph>PGPORT</codeph> or defaults to
                             5432.</pd>
                     </plentry>
                     <plentry>
-                        <pt>-U <varname>username</varname> | --username
+                        <pt>-U <varname>username</varname> | --username=
                             <varname>username</varname></pt>
                         <pd>The database role name to connect as. If not specified, reads from the
                             environment variable <codeph>PGUSER</codeph> or defaults to the current
                             system role name.</pd>
+                    </plentry>
+                    <plentry>
+                        <pt>-w</pt>
+                        <pd>Never prompt for a password.</pd>
                     </plentry>
                     <plentry>
                         <pt>-W | --password</pt>
@@ -244,7 +265,7 @@
             <p>To reload this file:</p>
             <codeblock>psql template1 -f db.out</codeblock>
             <p>To dump only global objects (including filespaces and resource queues):</p>
-            <codeblock>pg_dumpall -g -f -r</codeblock>
+            <codeblock>pg_dumpall -g -F --resource-queues</codeblock>
         </section>
         <section id="section9">
             <title>See Also</title>

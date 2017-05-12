@@ -548,7 +548,7 @@ calcHashAggTableSizes(double memquota,	/* Memory quota in bytes. */
 	Assert(ngroups >= 0);
 
 	/* Estimate the overhead per entry in the hash table */
-	entrysize = entrywidth + OVERHEAD_PER_BUCKET / gp_hashagg_groups_per_bucket;
+	entrysize = entrywidth + OVERHEAD_PER_BUCKET / (double) gp_hashagg_groups_per_bucket;
 
 	elog(HHA_MSG_LVL, "HashAgg: ngroups = %g, memquota = %g, entrysize = %g",
 		 ngroups, memquota, entrysize);
@@ -1725,8 +1725,7 @@ agg_hash_reload(AggState *aggstate)
 		(unsigned) LOG2(spill_file->parent_spill_set->num_spill_files);
 
 
-	if (spill_file->file_info != NULL &&
-		spill_file->file_info->wfile != NULL)
+	if (spill_file->file_info->wfile != NULL)
 	{
 		ExecWorkFile_Restart(spill_file->file_info->wfile);
 		hashtable->mem_for_metadata  += FREEABLE_BATCHFILE_METADATA;

@@ -94,6 +94,14 @@ typedef struct workfile_set
 	/* Operator-specific metadata */
 	workfile_set_op_metadata metadata;
 
+  /*
+   * To make sure we don't leak workfile_set handles on abort, we keep them in
+   * a linked list. We use the ResourceOwner mechanism to free them on abort.
+   */
+  ResourceOwner owner;
+  struct workfile_set *next;
+  struct workfile_set *prev;
+
 } workfile_set;
 
 /* The key for an entry stored in the Queryspace Hashtable */

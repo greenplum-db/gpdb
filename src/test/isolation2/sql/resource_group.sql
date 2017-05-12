@@ -91,6 +91,47 @@
 21:DROP role role_concurrency_test;
 21:DROP RESOURCE GROUP rg_concurrency_test;
 
+-- test4: concurrently drop resource group
+
+31:CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=.02, memory_limit=.02);
+31:CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
+
+-- DROP should fail if there're running transactions
+32:SET ROLE role_concurrency_test;
+32:BEGIN;
+31:BEGIN;
+31:DROP ROLE role_concurrency_test;
+31:DROP RESOURCE GROUP rg_concurrency_test;
+31:END;
+32:END;
+32:RESET ROLE;
+
+-- DROP is abortted
+31:BEGIN;
+31:DROP ROLE role_concurrency_test;
+31:DROP RESOURCE GROUP rg_concurrency_test;
+31:SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+32:SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+32:SET ROLE role_concurrency_test;
+32&:BEGIN;
+31:ABORT;
+32<:
+32:SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+32:END;
+32:RESET ROLE;
+
+-- DROP is committed 
+31:BEGIN;
+31:DROP ROLE role_concurrency_test;
+31:DROP RESOURCE GROUP rg_concurrency_test;
+31:SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+32:SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+32:SET ROLE role_concurrency_test;
+32&:BEGIN;
+31:END;
+32<:
+33:SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+
 
 -- reset the GUC and restart cluster.
 -- start_ignore

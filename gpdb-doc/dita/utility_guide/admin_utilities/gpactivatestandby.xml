@@ -9,7 +9,7 @@
             system.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpactivatestandby</b> <b>-d</b> <varname>standby_master_datadir</varname> [<b>-f</b>] [<b>-a</b>] [<b>-q</b>] 
+            <codeblock><b>gpactivatestandby</b> [<b>-d</b> <varname>standby_master_datadir</varname>] [<b>-f</b>] [<b>-a</b>] [<b>-q</b>] 
     [<b>-l</b> <varname>logfile_directory</varname>]
 
 <b>gpactivatestandby</b> <b>-v</b> 
@@ -81,9 +81,9 @@
                     <pd>The absolute path of the data directory for the master host you are
                         activating.</pd>
                     <pd>If this option is not specified, <codeph>gpactivatestandby</codeph> uses the
-                        value specified by the environment variable
-                            <codeph>MASTER_DATA_DIRECTORY</codeph> of the master host you are
-                        activating. </pd>
+                        value of the 
+                            <codeph>MASTER_DATA_DIRECTORY</codeph> environment variable setting on the master host you are
+                        activating. If this option is specified, it overrides any setting of <codeph>MASTER_DATA_DIRECTORY</codeph>. </pd>
                     <pd>If a directory cannot be determined, the utility returns an error. </pd>
                 </plentry>
                 <plentry>

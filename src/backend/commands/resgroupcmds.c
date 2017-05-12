@@ -301,12 +301,7 @@ DropResourceGroup(DropResourceGroupStmt *stmt)
 
 	if (IsResGroupEnabled())
 	{
-		/*
-		 * Remove the group from shared memory, this should be performed before
-		 * modifying catalog, since the check of no exiting running transaction may
-		 * fail
-		 */
-		FreeResGroupEntry(groupid, stmt->name);
+		ResGroupCheckForDrop(groupid, stmt->name);
 
 		/* Argument of callback function should be allocated in heap region */
 		callbackArg = (Oid *)MemoryContextAlloc(TopMemoryContext, sizeof(Oid));
@@ -716,7 +711,7 @@ createResGroupAbortCallback(ResourceReleasePhase phase,
 		 * FreeResGroupEntry would acquire LWLock, since this callback is called
 		 * after LWLockReleaseAll in AbortTransaction, it is safe here
 		 */
-		FreeResGroupEntry(groupId, NULL);
+		FreeResGroupEntry(groupId);
 	}
 
 	UnregisterResourceReleaseCallback(createResGroupAbortCallback, arg);
@@ -725,7 +720,7 @@ createResGroupAbortCallback(ResourceReleasePhase phase,
 /*
  * Resource owner call back function
  *
- * Restore resource group entry in shared memory when abort transaction which
+ * Remove resource group entry in shared memory when commit transaction which
  * drops resource groups
  */
 static void
@@ -739,17 +734,8 @@ dropResGroupAbortCallback(ResourceReleasePhase phase,
 		phase != RESOURCE_RELEASE_BEFORE_LOCKS)
 		return;
 
-	if (!isCommit)
-	{
-		groupId = *(Oid *)arg;
-
-		/*
-		 * AllocResGroupEntry would acquire LWLock, since this callback is called
-		 * after LWLockReleaseAll in AbortTransaction, it is safe here
-		 */
-		AllocResGroupEntry(groupId);
-	}
-
+	groupId = *(Oid *)arg;
+	ResGroupDropCheckForWakeup(groupId, isCommit);
 	UnregisterResourceReleaseCallback(dropResGroupAbortCallback, arg);
 }
 

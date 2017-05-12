@@ -15,6 +15,7 @@
  */
 #include "postgres.h"
 
+#include "access/aocs_compaction.h"
 #include "access/appendonlywriter.h"
 #include "access/bitmap.h"
 #include "access/genam.h"
@@ -4561,38 +4562,60 @@ ATAocsWriteNewColumns(
 
 /*
  * Choose the column that has the smallest segfile size so as to
- * minimize disk I/O in subsequent varblock header scan.  natts
- * includes only existing columns and not the ones being added.
+ * minimize disk I/O in subsequent varblock header scan. The natts arg
+ * includes only existing columns and not the ones being added. Once
+ * we find a segfile with nonzero tuplecount and find the column with
+ * the smallest eof to return, we continue the loop but skip over all
+ * segfiles except for those in AOSEG_STATE_AWAITING_DROP state which
+ * we need to append to our drop list.
  */
 static int
-column_to_scan(AOCSFileSegInfo **segInfos, int nseg, int natts)
+column_to_scan(AOCSFileSegInfo **segInfos, int nseg, int natts, Relation aocsrel)
 {
 	int scancol = -1;
 	int segi;
 	int i;
 	AOCSVPInfoEntry *vpe;
-	int64 min_eof = 0x7fffffffffffffff; /* largest value for int64 */
-	for (segi = 0; segi < nseg && scancol == -1; ++segi)
+	int64 min_eof = 0;
+	List *drop_segno_list = NIL;
+
+	for (segi = 0; segi < nseg; ++segi)
 	{
 		/*
-		 * Skip over appendonly segments with no tuples (caused by
-		 * VACUUM) or those left over by compaction process.
+		 * Append to drop_segno_list and skip if state is in
+		 * AOSEG_STATE_AWAITING_DROP. At the end of the loop, we will
+		 * try to drop the segfiles since we currently have the
+		 * AccessExclusiveLock. If we don't do this, aocssegfiles in
+		 * this state will have vpinfo size containing info for less
+		 * number of columns compared to the relation's relnatts in
+		 * its pg_class entry (e.g. in calls to getAOCSVPEntry).
 		 */
-		if (segInfos[segi]->total_tupcount > 0 &&
-			(segInfos[segi]->state != AOSEG_STATE_AWAITING_DROP))
+		if (segInfos[segi]->state == AOSEG_STATE_AWAITING_DROP)
+		{
+			drop_segno_list = lappend_int(drop_segno_list, segInfos[segi]->segno);
+			continue;
+		}
+
+		/*
+		 * Skip over appendonly segments with no tuples (caused by VACUUM)
+		 */
+		if (segInfos[segi]->total_tupcount > 0 && scancol == -1)
 		{
 			for (i = 0; i < natts; ++i)
 			{
 				vpe = getAOCSVPEntry(segInfos[segi], i);
-				if (vpe->eof < min_eof && vpe->eof > 0)
+				if (vpe->eof > 0 && (!min_eof || vpe->eof < min_eof))
 				{
 					min_eof = vpe->eof;
 					scancol = i;
-					break;
 				}
 			}
 		}
 	}
+
+	if (list_length(drop_segno_list) > 0 && Gp_role != GP_ROLE_DISPATCH)
+		AOCSDrop(aocsrel, drop_segno_list);
+
 	return scancol;
 }
 
@@ -4660,7 +4683,7 @@ ATAocsNoRewrite(AlteredTableInfo *tab)
 							 list_length(tab->newvals));
 	}
 
-	scancol = column_to_scan(segInfos, nseg, tab->oldDesc->natts);
+	scancol = column_to_scan(segInfos, nseg, tab->oldDesc->natts, rel);
 	elogif(Debug_appendonly_print_storage_headers, LOG,
 		   "using column %d of relation %s for alter table scan",
 		   scancol, RelationGetRelationName(rel));
@@ -4734,6 +4757,25 @@ ATAocsNoRewrite(AlteredTableInfo *tab)
 		aocs_addcol_finish(idesc);
 		ExecDropSingleTupleTableSlot(slot);
 	}
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		/*
+		 * We remove the hash entry for this relation even though
+		 * there is no rewrite because we may have dropped some
+		 * segfiles that were in AOSEG_STATE_AWAITING_DROP state in
+		 * column_to_scan(). The cost of recreating the entry later on
+		 * is cheap so this should be fine. If we don't remove the
+		 * hash entry and we had done any segfile drops, master will
+		 * continue to see those segfiles as unavailable for use.
+		 *
+		 * Note that ALTER already took an exclusive lock on the
+		 * relation so we are guaranteed to not drop the hash
+		 * entry from under any concurrent operation.
+		 */
+		AORelRemoveHashEntry(RelationGetRelid(rel));
+	}
+
 	FreeExecutorState(estate);
 	heap_close(rel, NoLock);
 	return true;

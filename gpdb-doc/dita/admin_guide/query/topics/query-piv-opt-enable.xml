@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
-  <title>Enabling GPORCA</title>
+  <title>Enabling and Disabling GPORCA</title>
   <abstract>
-    <shortdesc>To GPORCA, you set Greenplum Database server
-      configuration parameters.</shortdesc>
+    <shortdesc>By default, Greenplum Database uses GPORCA instead of the legacy query planner.
+      Server configuration parameters enable or disable GPORCA.</shortdesc>
   </abstract>
   <body>
     <ul id="ul_o5l_tqk_br">
@@ -12,9 +12,10 @@
             <codeph>optimizer_analyze_root_partition</codeph> parameter to
           <codeph>on</codeph></xref> to enable statistics collection for the root partition of a
         partitioned table.</li>
-      <li>Set the <cmdname>optimizer</cmdname> parameter to <codeph>on</codeph> to enable GPORCA. You can set the parameter at these levels:<ul id="ul_frw_y51_kr">
-          <li><xref href="#topic_byp_lqk_br" format="dita">A Greenplum Database
-              system</xref></li>
+      <li>Set the <cmdname>optimizer</cmdname> parameter to <codeph>on</codeph> (the default) or
+          <codeph>off</codeph> to enable or disable GPORCA. You can set the parameter at these
+          levels:<ul id="ul_frw_y51_kr">
+          <li><xref href="#topic_byp_lqk_br" format="dita">A Greenplum Database system</xref></li>
           <li><xref href="#topic_pzr_3db_3r" format="dita">A specific Greenplum database</xref></li>
           <li><xref href="#topic_lx4_vqk_br" format="dita">A session or query</xref></li>
         </ul></li>

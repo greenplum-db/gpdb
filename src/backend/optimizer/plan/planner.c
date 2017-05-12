@@ -555,6 +555,15 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		top_plan = apply_shareinput_xslice(top_plan, glob);
 	}
 
+	/*
+	 * walk plan and remove unused subplans.
+	 * Executor initializes state for subplans even they are unused.
+	 * When the generated subplan is not used and has motion inside,
+	 * causing motionID not being assigned, which will break sanity
+	 * check when executor tries to initialize subplan state.
+	 */
+	remove_unused_subplans(top_plan, root);
+
 	top_plan = zap_trivial_result(root, top_plan);
 
 	/* fix ShareInputScans for EXPLAIN */

@@ -28,9 +28,8 @@ momentarily takes exclusive lock on the parent table, blocking both writes
 and reads. The subsequent <codeph>CREATE INDEX</codeph> locks out writes
 but not reads; since the index is not there, no read will attempt to
 use it, meaning that there will be no blocking but reads may be forced
-into expensive sequential scans. Another important point is that the
-drop/create approach invalidates any cached query plans that use the
-index, while <codeph>REINDEX</codeph> does not.</p><p>Reindexing a single index or table requires being the owner of that
+into expensive sequential scans. 
+</p><p>Reindexing a single index or table requires being the owner of that
 index or table. Reindexing a database requires being the owner of the
 database (note that the owner can therefore rebuild indexes of tables
 owned by other users). Of course, superusers can always reindex anything.</p><p>If you suspect that shared global system catalog indexes are corrupted,

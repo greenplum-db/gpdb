@@ -272,11 +272,6 @@ WalReceiverMain(void)
 	/* We allow SIGQUIT (quickdie) at all times */
 	sigdelset(&BlockSig, SIGQUIT);
 
-	/* Load the libpq-specific functions */
-	if (walrcv_connect == NULL || walrcv_receive == NULL ||
-		walrcv_send == NULL || walrcv_disconnect == NULL)
-		elog(ERROR, "libpqwalreceiver didn't initialize correctly");
-
 	/*
 	 * Create a resource owner to keep track of our resources (not clear that
 	 * we need this, but may as well have one).
@@ -418,9 +413,10 @@ WalReceiverMain(void)
 static void
 WalRcvUsr2Handler(SIGNAL_ARGS)
 {
+#define BUF_SIZE 80
 	File file;
 	int nbytes = 0;
-	char buf[80];
+	char buf[BUF_SIZE];
 
 	/* Read the type of action to take later from the file in the $PGDATA */
 	if ((file = PathNameOpenFile("wal_rcv_test", O_RDONLY | PG_BINARY, 0600)) < 0)
@@ -430,7 +426,7 @@ WalRcvUsr2Handler(SIGNAL_ARGS)
 	}
 	else
 	{
-		nbytes = FileRead(file, buf, 80);
+		nbytes = FileRead(file, buf, BUF_SIZE - 1);
 		if (nbytes <= 0)
 		{
 			/* Cleanup */
@@ -441,7 +437,7 @@ WalRcvUsr2Handler(SIGNAL_ARGS)
 		}
 		FileClose(file);
 
-		Assert(nbytes < 80);
+		Assert(nbytes < BUF_SIZE);
 		buf[nbytes] = '\0';
 
 		if (strcmp(buf,"wait_before_send_ack") == 0)
@@ -477,8 +473,7 @@ WalRcvDie(int code, Datum arg)
 	SpinLockRelease(&walrcv->mutex);
 
 	/* Terminate the connection gracefully. */
-	if (walrcv_disconnect != NULL)
-		walrcv_disconnect();
+	walrcv_disconnect();
 }
 
 /* SIGHUP: set flag to re-read config file at next convenient time */

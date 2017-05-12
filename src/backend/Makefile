@@ -59,15 +59,6 @@ LIBS := $(filter-out -lpgport, $(LIBS)) $(LDAP_LIBS_BE)
 # The backend doesn't need everything that's in LIBS, however
 LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses, $(LIBS))
 
-# Add ORCA libraries
-#
-# The order of the libraries is significant, when building against static
-# ORCA libraries.
-ifeq ($(enable_orca),yes)
-LIBS := $(LIBS) -lgpopt -lnaucrates -lgpdbcost -lgpos
-LIBS := $(LIBS) -lxerces-c-3.1
-endif
-
 # adding codegen libraries
 ifeq ($(enable_codegen),yes)
 LIBS := $(LIBS) -L$(top_builddir)/src/backend/codegen -lgpcodegen

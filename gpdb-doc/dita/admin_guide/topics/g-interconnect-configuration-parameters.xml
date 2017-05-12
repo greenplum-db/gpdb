@@ -33,10 +33,7 @@
          </strow>
       </simpletable>
       <p>
-         <note>The Greenplum Database interconnect types TCP and UDP are deprecated. In the next
-            major release, only the UDPIFC interconnect type will be supported by Greenplum
-            Database. The server configuration parameter <codeph>gp_interconnect_type</codeph>
-            controls the interconnect type.</note>
+         <note>Greenplum Database supports only the UDPIFC and TCP interconnect types.</note>
       </p>
    </body>
 </topic>

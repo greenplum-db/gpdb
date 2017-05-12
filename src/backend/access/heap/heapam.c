@@ -979,28 +979,12 @@ try_relation_open(Oid relationId, LOCKMODE lockmode, bool noWait)
 			/*
 			 * noWait is a Greenplum addition to the open_relation code
 			 * basically to support INSERT ... FOR UPDATE NOWAIT.  Our NoWait
-			 * handling needs to be more tollerant of failed locks than standard
+			 * handling needs to be more tolerant of failed locks than standard
 			 * postgres largely due to the fact that we have to promote certain
 			 * update locks in order to handle distributed updates.
 			 */
 			if (!ConditionalLockRelationOid(relationId, lockmode))
-			{
-				/* Get the name for error reporting */
-				char *relname = get_rel_name(relationId);
-
-				/* 
-				 * If the relation was dropped then accept the lock 
-				 * failure and return null.
-				 */
-				if (relname == NULL)
-					return NULL;
-				
-				/* Otherwise report the failed lock */
-				ereport(ERROR, 
-						(errcode(ERRCODE_LOCK_NOT_AVAILABLE),
-						 errmsg("could not obtain lock on relation \"%s\"",
-								relname)));
-			}
+				return NULL;
 		}
 	}
 

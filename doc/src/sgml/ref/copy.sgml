@@ -47,6 +47,7 @@ COPY {table [(column [, ...])] | (query)} TO {'file' | STDOUT}
         [ESCAPE [ AS ] 'escape' | 'OFF']
         [CSV [QUOTE [ AS ] 'quote'] 
              [FORCE QUOTE column [, ...]] ]
+      [IGNORE EXTERNAL PARTITIONS ]
 </synopsis>
  </refsynopsisdiv>
  

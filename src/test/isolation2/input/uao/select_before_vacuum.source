@@ -29,7 +29,7 @@ DELETE FROM ao WHERE a < 128;
 1: SELECT COUNT(*) FROM ao;
 1: SELECT * FROM locktest_master WHERE coalesce = 'ao';
 1: SELECT * FROM locktest_segments WHERE coalesce = 'ao';
-2&: VACUUM ao;
+2&: VACUUM FULL ao;
 1: COMMIT;
 2<:
 1: SELECT COUNT(*) FROM ao;

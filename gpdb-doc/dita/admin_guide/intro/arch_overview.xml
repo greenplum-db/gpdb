@@ -95,15 +95,13 @@
       <p>The <i>interconnect</i> refers to the inter-process communication between segments and the
         network infrastructure on which this communication relies. The Greenplum interconnect uses a
         standard 10-Gigabit Ethernet switching fabric.</p>
-      <p>By default, the interconnect uses User Datagram Protocol (UDP) with flow control for
+      <p>By default, the interconnect uses User Datagram Protocol with flow control (UDPIFC) for
         interconnect traffic to send messages over the network. The Greenplum software performs
         packet verification beyond what is provided by UDP. This means the reliability is equivalent
         to Transmission Control Protocol (TCP), and the performance and scalability exceeds TCP. If
-        the interconnect used TCP, Greenplum Database would have a scalability limit of 1000 segment
-        instances. With UDP as the current default protocol for the interconnect, this limit is not
-        applicable. For information about the types of interconnect supported by Greeplum Database,
-        see server configuration parameter <codeph>gp_interconnect_type</codeph> in the
-          <cite>Greenplum Database Reference Guide</cite>.</p>
+        the interconnect is changed to TCP, Greenplum Database has a scalability limit of 1000
+        segment instances. With UDPIFC as the default protocol for the interconnect, this limit is
+        not applicable.</p>
     </body>
   </topic>
 </topic>

@@ -2,9 +2,7 @@
  *
  * gp_libpqwalreceiver.c
  *
- * This file contains the libpq-specific parts of walreceiver. It's
- * loaded as a dynamic module to avoid linking the main server binary with
- * libpq.
+ * This file contains the libpq-specific parts of walreceiver.
  *
  * GPDB uses gp_libpq_fe instead of plain libpq library.
  *
@@ -13,7 +11,7 @@
  *
  *
  * IDENTIFICATION
- *	  src/backend/replication/libpqwalreceiver/libpqwalreceiver.c
+ *	  src/backend/replication/gp_libpqwalreceiver/gp_libpqwalreceiver.c
  *
  *-------------------------------------------------------------------------
  */

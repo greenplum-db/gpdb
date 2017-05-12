@@ -1197,10 +1197,7 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList,
 			 * what the caller expects will happen at runtime.
 			 */
 			if (junkFilter)
-			{
-				TupleDesc cleanTupType = ExecCleanTypeFromTL(tlist, false /* hasoid */);
-				*junkFilter = ExecInitJunkFilter(tlist, cleanTupType, NULL);
-			}
+				*junkFilter = ExecInitJunkFilter(tlist, false, NULL);
 			return true;
 		}
 		Assert(tupdesc);

@@ -1088,6 +1088,8 @@ def impl(context, options):
 
 @then('verify that there is no table "{tablename}" in "{dbname}"')
 def impl(context, tablename, dbname):
+    dbname = replace_special_char_env(dbname)
+    tablename = replace_special_char_env(tablename)
     if check_table_exists(context, dbname=dbname, table_name=tablename):
         raise Exception("Table '%s' still exists when it should not" % tablename)
 
@@ -1390,24 +1392,24 @@ def verify_file_contents(context, file_type, file_dir, text_find, should_contain
     elif file_type == 'report':
         fn = '%sgp_dump_%s.rpt' % (context.dump_prefix, context.backup_timestamp)
     elif file_type == 'status':
-        fn = '%sgp_dump_status_-1_1_%s' % (context.dump_prefix, context.backup_timestamp)
+        fn = '%sgp_dump_status_*_1_%s' % (context.dump_prefix, context.backup_timestamp)
     elif file_type == 'filter':
         fn = '%sgp_dump_%s_filter' % (context.dump_prefix, context.backup_timestamp)
     elif file_type == "statistics":
-        fn = '%sgp_statistics_-1_1_%s' % (context.dump_prefix, context.backup_timestamp)
+        fn = '%sgp_statistics_*_1_%s' % (context.dump_prefix, context.backup_timestamp)
     elif file_type == 'schema':
         fn = '%sgp_dump_%s_schema' % (context.dump_prefix, context.backup_timestamp)
     elif file_type == 'cdatabase':
-        fn = '%sgp_cdatabase_-1_1_%s' % (context.dump_prefix, context.backup_timestamp)
+        fn = '%sgp_cdatabase_*_1_%s' % (context.dump_prefix, context.backup_timestamp)
     elif file_type == 'dump':
-        fn = '%sgp_dump_-1_1_%s.gz' % (context.dump_prefix, context.backup_timestamp)
+        fn = '%sgp_dump_*_1_%s.gz' % (context.dump_prefix, context.backup_timestamp)
 
     subdirectory = context.backup_timestamp[0:8]
 
     if file_type == 'pg_dump_log':
         full_path = os.path.join(file_dir, fn)
     else:
-        full_path = os.path.join(file_dir, 'db_dumps', subdirectory, fn)
+        full_path = glob.glob(os.path.join(file_dir, 'db_dumps', subdirectory, fn))[0]
 
     if not os.path.isfile(full_path):
         raise Exception("Can not find %s file: %s" % (file_type, full_path))
@@ -1637,7 +1639,7 @@ def impl(context, filetype, dir):
     elif filetype == "plan":
         filename = 'gp_restore_%s_plan' % context.backup_timestamp
     elif filetype == "global":
-        filename = 'gp_global_-1_1_%s' % context.backup_timestamp
+        filename = 'gp_global_*_1_%s' % context.backup_timestamp
     elif filetype == "report":
         filename = 'gp_dump_%s.rpt' % context.backup_timestamp
     elif filetype == "dump":
@@ -1665,9 +1667,9 @@ def impl(context, filetype, dir):
     elif filetype == "plan":
         filename = 'gp_restore_%s_plan' % context.backup_timestamp
     elif filetype == "global":
-        filename = 'gp_global_-1_1_%s' % context.backup_timestamp
+        filename = 'gp_global_*_1_%s' % context.backup_timestamp
     elif filetype == "statistics":
-        filename = 'gp_statistics_-1_1_%s' % context.backup_timestamp
+        filename = 'gp_statistics_*_1_%s' % context.backup_timestamp
     elif filetype == 'pipes':
         filename = 'gp_dump_%s_pipes' % context.backup_timestamp
     elif filetype == 'regular_files':
@@ -1680,8 +1682,7 @@ def impl(context, filetype, dir):
         raise Exception("Unknown filetype '%s' specified" % filetype)
 
     dump_dir = dir.strip() if len(dir.strip()) != 0 else master_data_dir
-    file_path = os.path.join(dump_dir, 'db_dumps', context.backup_timestamp[0:8],
-                             '%s%s' % (context.dump_prefix, filename))
+    file_path = glob.glob(os.path.join(dump_dir, 'db_dumps', context.backup_timestamp[0:8], '%s%s' % (context.dump_prefix, filename)))[0]
 
     if not os.path.exists(file_path):
         raise Exception("File path %s does not exist for filetype '%s'" % (file_path, filetype))
@@ -2853,13 +2854,13 @@ def impl(context, file_type, directory, options):
     reg_file_count = 6
 
     pipes_pattern_list = ['gp_dump_.*_%s.*(?:\.gz)?' % context.backup_timestamp]
-    regular_pattern_list = ['gp_cdatabase_-1_1_%s' % context.backup_timestamp,
-                            'gp_dump_%s.*' % context.backup_timestamp,
-                            'gp_dump_status_-1_1_%s' % context.backup_timestamp]
+    regular_pattern_list = ['gp_cdatabase_.*_1_%s' % context.backup_timestamp,
+            'gp_dump_%s.*' % context.backup_timestamp,
+            'gp_dump_status_.*_1_%s' % context.backup_timestamp]
 
     if '-G' in option_list:
         pipe_file_count += 1
-        pipes_pattern_list += ['gp_global_-1_1_%s' % context.backup_timestamp]
+        pipes_pattern_list += ['gp_global_.*_1_%s' % context.backup_timestamp]
     if '-g' in option_list:
         pipe_file_count += get_num_segments(primary=True, mirror=False, master=True, standby=False)
         pipes_pattern_list += ['gp_master_config_files_%s.*' % context.backup_timestamp,
@@ -4310,12 +4311,14 @@ def impl(context, dbname, query, nrows):
 
 @then('verify that the file "{filepath}" contains "{line}"')
 def impl(context, filepath, line):
+    filepath = glob.glob(filepath)[0]
     if line not in open(filepath).read():
         raise Exception("The file '%s' does not contain '%s'" % (filepath, line))
 
 
 @then('verify that the file "{filepath}" does not contain "{line}"')
 def impl(context, filepath, line):
+    filepath = glob.glob(filepath)[0]
     if line in open(filepath).read():
         raise Exception("The file '%s' does contain '%s'" % (filepath, line))
 
@@ -4403,6 +4406,12 @@ def impl(context, dbname):
 
 @given('the backup test is initialized for special characters')
 def impl(context):
+    os.environ["SP_CHAR_DB"] = """ DB`~@#$%^&*()_-+[{]}|\;: \\'/?><;1 """
+    os.environ["SP_CHAR_SCHEMA"] = """ S`~@#$%^&*()-+[{]}|\;: \\'"/?><1 """
+    os.environ["SP_CHAR_SCHEMA2"] = """ S`~@#$%^&*()_-+[{]}|\;: \\'"/?><2 """
+    os.environ["SP_CHAR_HEAP"] = """ heap_T`~@#$%^&*()-+[{]}|\;: \\'"/?><1 """
+    os.environ["SP_CHAR_AO"] = """ ao_T`~@#$%^&*()-+[{]}|\;: \\'"/?><1 """
+    os.environ["SP_CHAR_CO"] = """ co_T`~@#$%^&*()-+[{]}|\;: \\'"/?><1 """
     context.execute_steps(u'''
         Given the database is running
         And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_database.sql template1"

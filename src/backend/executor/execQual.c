@@ -896,15 +896,11 @@ ExecEvalWholeRowVar(WholeRowVarExprState *wrvstate, ExprContext *econtext,
 			if (junk_filter_needed)
 			{
 				MemoryContext oldcontext;
-				TupleDesc cleanTupType;
 
 				oldcontext = MemoryContextSwitchTo(econtext->ecxt_per_query_memory);
-				cleanTupType =
-					ExecCleanTypeFromTL(subplan->plan->targetlist,
-										ExecGetResultType(subplan)->tdhasoid);
 				wrvstate->wrv_junkFilter =
 					ExecInitJunkFilter(subplan->plan->targetlist,
-									   cleanTupType,
+									   ExecGetResultType(subplan)->tdhasoid,
 									   NULL);
 				MemoryContextSwitchTo(oldcontext);
 			}

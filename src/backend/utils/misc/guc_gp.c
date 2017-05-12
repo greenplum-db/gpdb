@@ -2432,7 +2432,12 @@ struct config_bool ConfigureNamesBool_gp[] =
 			NULL
 		},
 		&optimizer,
-		false, assign_optimizer, NULL
+#ifdef USE_ORCA
+		true,
+#else
+		false,
+#endif
+		assign_optimizer, NULL
 	},
 
 	{
@@ -4511,7 +4516,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_UNIT_KB | GUC_GPDB_ADDOPT
 		},
 		&optimizer_mdcache_size,
-		0, 0, INT_MAX, NULL, NULL
+		16384, 0, INT_MAX, NULL, NULL
 	},
 
 	{

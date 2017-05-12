@@ -4,7 +4,8 @@
 <topic id="topic1">
   <title>Changed Behavior with the GPORCA</title>
   <abstract>
-    <shortdesc>There are changes to Greenplum Database behavior the GPORCA optimizer is enabled.</shortdesc>
+    <shortdesc>There are changes to Greenplum Database behavior with the GPORCA optimizer enabled
+      (the default) as compared to the legacy planner.</shortdesc>
   </abstract>
   <body>
     <ul id="ul_v1c_kll_gr">

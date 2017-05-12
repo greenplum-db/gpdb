@@ -1,0 +1,45 @@
+0:CREATE RESOURCE QUEUE rq_concurrency_test WITH (active_statements = 1);
+CREATE
+0:CREATE role role_concurrency_test RESOURCE QUEUE rq_concurrency_test;
+CREATE
+
+1:SET role role_concurrency_test;
+SET
+1:BEGIN;
+BEGIN
+1:DECLARE c1 CURSOR FOR SELECT 1;
+DECLARE
+
+2:SET role role_concurrency_test;
+SET
+2:PREPARE fooplan AS SELECT 1;
+PREPARE
+2&:EXECUTE fooplan;  <waiting ...>
+
+-- EXECUTE statement(cached plan) will be blocked when the concurrency limit of the resource queue is reached.
+0:SELECT rsqcountvalue FROM gp_toolkit.gp_resqueue_status WHERE rsqname='rq_concurrency_test';
+rsqcountvalue
+-------------
+1            
+(1 row)
+0:SELECT waiting_reason from pg_stat_activity where current_query = 'EXECUTE fooplan;';
+waiting_reason
+--------------
+lock          
+(1 row)
+
+1:END;
+END
+
+2<:  <... completed>
+?column?
+--------
+1       
+(1 row)
+2:END;
+END
+
+0:DROP role role_concurrency_test;
+DROP
+0:DROP RESOURCE QUEUE rq_concurrency_test;
+DROP

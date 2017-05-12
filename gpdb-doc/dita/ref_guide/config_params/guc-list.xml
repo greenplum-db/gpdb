@@ -4050,8 +4050,8 @@
   <topic id="gp_interconnect_fc_method">
     <title>gp_interconnect_fc_method</title>
     <body>
-      <p>Specifies the flow control method used for UDP interconnect when the value of <xref
-          href="#gp_interconnect_type" format="dita"/> is <codeph>UDPIFC</codeph>.</p>
+      <p>Specifies the flow control method used for the default Greenplum Database UDPIFC
+        interconnect.</p>
       <p>For capacity based flow control, senders do not send packets when receivers do not have the
         capacity.</p>
       <p>Loss based flow control is based on capacity based flow control, and also tunes the sending
@@ -4083,11 +4083,10 @@
     <title>gp_interconnect_hash_multiplier</title>
     <body>
       <p>Sets the size of the hash table used by the Greenplum Database to track interconnect
-        connections when <xref href="#gp_interconnect_type" format="dita"/> is <codeph>UDP</codeph>
-        or <codeph>UDPIFC</codeph>. This number is multiplied by the number of segments to determine
-        the number of buckets in the hash table. Increasing the value may increase interconnect
-        performance for complex multi-slice queries (while consuming slightly more memory on the
-        segment hosts).</p>
+        connections with the default UDPIFC interconnect. This number is multiplied by the number of
+        segments to determine the number of buckets in the hash table. Increasing the value may
+        increase interconnect performance for complex multi-slice queries (while consuming slightly
+        more memory on the segment hosts).</p>
       <table id="gp_interconnect_hash_multiplier_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4114,14 +4113,13 @@
   <topic id="gp_interconnect_queue_depth">
     <title>gp_interconnect_queue_depth</title>
     <body>
-      <p>When <xref href="#gp_interconnect_type" format="dita"/> is <codeph>UDP</codeph> or
-          <codeph>UDPIFC</codeph>, sets the amount of data per-peer to be queued by the Greenplum
-        Database interconnect on receivers (when data is received but no space is available to
-        receive it the data will be dropped, and the transmitter will need to resend it). Increasing
-        the depth from its default value will cause the system to use more memory; but may increase
-        performance. It is reasonable for this to be set between 1 and 10. Queries with data skew
-        potentially perform better when this is increased. Increasing this may radically increase
-        the amount of memory used by the system.</p>
+      <p>Sets the amount of data per-peer to be queued by the Greenplum Database interconnect on
+        receivers (when data is received but no space is available to receive it the data will be
+        dropped, and the transmitter will need to resend it) for the default UDPIFC interconnect.
+        Increasing the depth from its default value will cause the system to use more memory, but
+        may increase performance. It is reasonable to set this value between 1 and 10. Queries with
+        data skew potentially perform better with an increased queue depth. Increasing this may
+        radically increase the amount of memory used by the system.</p>
       <table id="gp_interconnect_queue_depth_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4148,8 +4146,8 @@
   <topic id="gp_interconnect_setup_timeout">
     <title>gp_interconnect_setup_timeout</title>
     <body>
-      <p>When the <xref href="#gp_interconnect_type" format="dita"/> is <codeph>UDP</codeph>, the
-        time to wait for the Interconnect to complete setup before it times out.</p>
+      <note>This parameter is deprecated, as it applies only to an interconnect type  that is no
+        longer supported (<codeph>UDP</codeph>).</note>
       <table id="gp_interconnect_setup_timeout_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4176,13 +4174,11 @@
   <topic id="gp_interconnect_snd_queue_depth">
     <title>gp_interconnect_snd_queue_depth</title>
     <body>
-      <p>Sets the amount of data per-peer to be queued by the UDP interconnect on senders when <xref
-          href="#gp_interconnect_type" format="dita"/> is set to <codeph>UDPIFC</codeph>. Increasing
-        the depth from its default value will cause the system to use more memory; but may increase
-        performance. Reasonable values for this parameter are between 1 and 4. Increasing the value
-        might radically increase the amount of memory used by the system. For information about
-        interconnect types, see <xref href="#gp_interconnect_type" format="dita"
-          >gp_interconnect_type</xref>.</p>
+      <p>Sets the amount of data per-peer to be queued by the default UDPIFC interconnect on
+        senders. Increasing the depth from its default value will cause the system to use more
+        memory, but may increase performance. Reasonable values for this parameter are between 1 and
+        4. Increasing the value might radically increase the amount of memory used by the
+        system.</p>
       <table id="gp_interconnect_snd_queue_depth_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4209,17 +4205,12 @@
   <topic id="gp_interconnect_type">
     <title>gp_interconnect_type</title>
     <body>
-      <p>Sets the networking protocol used for Greenplum Database interconnect traffic. With the TCP
-        protocol, Greenplum Database has an upper limit of 1000 segment instances - less than that
-        if the query workload involves complex, multi-slice queries.</p>
-      <p>The UDP protocol allows for greater interconnect scalability. Note that the Greenplum
-        Database software does the additional packet verification and checking not performed by UDP,
-        so reliability and performance is equivalent to TCP.</p>
-      <p>UDPIFC specifies using UDP with flow control for interconnect traffic. Specify the
-        interconnect flow control method with <xref href="#gp_interconnect_fc_method" format="dita"
-        />.</p>
-      <note>The Greenplum Database interconnect types TCP and UDP are deprecated. In the next major
-        release, only the UDPIFC interconnect type will be supported by Greenplum Database. </note>
+      <p>Sets the networking protocol used for Greenplum Database interconnect traffic. UDPIFC
+        specifies using UDP with flow control for interconnect traffic, and is the only value
+        supported.</p>
+      <p>UDPIFC (the default) specifies using UDP with flow control for interconnect traffic. Specify the
+         interconnect flow control method with <xref href="#gp_interconnect_fc_method" format="dita"/>.</p>
+      <p>With TCP as the interconnect protocol, Greenplum Database has an upper limit of 1000 segment instances - less than that if the query workload involves complex, multi-slice queries.</p>
       <table id="table_jn5_frn_xv">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4234,7 +4225,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">TCP<p>UDP</p><p>UDPIFC</p></entry>
+              <entry colname="col1">UDPIFC<p>TCP</p></entry>
               <entry colname="col2">UDPIFC</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
@@ -4392,13 +4383,7 @@
   <topic id="gp_max_packet_size">
     <title>gp_max_packet_size</title>
     <body>
-      <p>Sets the size (in bytes) of messages sent by the UDP interconnect, and sets the
-        tuple-serialization chunk size when <xref href="#gp_interconnect_type" format="dita"/> is
-          <codeph>tcp</codeph>, <codeph>UDP</codeph> or <codeph>UDPIFC</codeph>.</p>
-      <note>The Greenplum Database interconnect types TCP and UDP are deprecated. In the next major
-        release, only the UDPIFC interconnect type will be supported by Greenplum Database. The
-        server configuration parameter <xref href="#gp_interconnect_type" type="section"
-          >gp_interconnect_type</xref> controls the interconnect type.</note>
+      <p>Sets the tuple-serialization chunk size for the interconnect.</p>
       <table id="gp_max_packet_size_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -6855,11 +6840,11 @@
   <topic id="optimizer">
     <title>optimizer</title>
     <body>
-      <p>Enables GPORCA when running SQL queries. The default is <codeph>off</codeph>, Greenplum
-        Database uses only the legacy query optimizer. </p>
-      <p>GPORCA co-exists with the legacy query optimizer. When the Pivotal Query Optimizer is
-        enabled, Greenplum Database uses GPORCA to generate an execution plan for a query when
-        possible. If GPORCA cannot be used, the legacy query optimizer is used. </p>
+      <p>Enables or disables GPORCA when running SQL queries. The default is <codeph>on</codeph>. If
+        you disable GPORCA, Greenplum Database uses only the legacy query optimizer. </p>
+      <p>GPORCA co-exists with the legacy query optimizer. With GPORCA enabled, Greenplum Database
+        uses GPORCA to generate an execution plan for a query when possible. If GPORCA cannot be
+        used, then the legacy query optimizer is used. </p>
       <p>The <cmdname>optimizer</cmdname> parameter can be set for a database system, an individual
         database, or a session or query.</p>
       <p>For information about the legacy query optimizer and GPORCA, see "Querying Data" in the
@@ -6879,7 +6864,7 @@
           <tbody>
             <row>
               <entry colname="col1">Boolean</entry>
-              <entry colname="col2">off</entry>
+              <entry colname="col2">on</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
@@ -6925,10 +6910,10 @@
   <topic id="optimizer_array_expansion_threshold">
     <title>optimizer_array_expansion_threshold</title>
     <body>
-      <p>When GPORCA is enabled and is processing a query that contains a predicate with a constant
-        array, the <codeph>optimizer_array_expansion_threshold</codeph> parameter limits the
-        optimization process based on the number of constants in the array. If the array in the
-        query predicate contains more than the number elements specified by parameter, GPORCA
+      <p>When GPORCA is enabled (the default) and is processing a query that contains a predicate
+        with a constant array, the <codeph>optimizer_array_expansion_threshold</codeph> parameter
+        limits the optimization process based on the number of constants in the array. If the array
+        in the query predicate contains more than the number elements specified by parameter, GPORCA
         disables the transformation of the predicate into its disjunctive normal form during query
         optimization. </p>
       <p>The default value is 25. </p>
@@ -7000,11 +6985,10 @@
   <topic id="optimizer_enable_master_only_queries">
     <title>optimizer_enable_master_only_queries</title>
     <body>
-      <p dir="ltr">When GPORCA is enabled (the server configuration parameter
-          <codeph>optimizer</codeph> is <codeph>on</codeph>), this parameter allows the Pivotal
-        Query Optimizer to execute catalog queries that run only on the Greenplum Database master.
-        For the default value <codeph>off</codeph>, only the legacy query optimizer can execute
-        catalog queries that run only on the Greenplum Database master.</p>
+      <p dir="ltr">When GPORCA is enabled (the default), this parameter allows GPORCA to execute
+        catalog queries that run only on the Greenplum Database master. For the default value
+          <codeph>off</codeph>, only the legacy query optimizer can execute catalog queries that run
+        only on the Greenplum Database master.</p>
       <p>The parameter can be set for a database system, an individual database, or a session or
         query.</p>
       <note>Enabling this parameter decreases performance of short running catalog queries. To avoid
@@ -7114,9 +7098,9 @@
   <topic id="optimizer_parallel_union">
     <title>optimizer_parallel_union</title>
     <body>
-      <p>When GPORCA is enabled, <codeph>optimizer_parallel_union</codeph> controls the amount of
-        parallelization that occurs for queries that contain a <codeph>UNION</codeph> or
-          <codeph>UNION ALL</codeph> clause. </p>
+      <p>When GPORCA is enabled (the default), <codeph>optimizer_parallel_union</codeph> controls
+        the amount of parallelization that occurs for queries that contain a <codeph>UNION</codeph>
+        or <codeph>UNION ALL</codeph> clause. </p>
       <p>When the value is <codeph>off</codeph>, the default, GPORCA generates a query plan where
         each child of an APPEND(UNION) operator is in the same slice as the APPEND operator. During
         query execution, the children are executed in a sequential manner. </p>
@@ -7152,12 +7136,12 @@
   <topic id="optimizer_sort_factor">
     <title>optimizer_sort_factor</title>
     <body>
-      <p>When GPORCA is enabled, <codeph>optimizer_sort_factor</codeph> controls the cost factor to
-        apply to sorting operations during query optimization. The default value <codeph>1</codeph>
-        specifies the default sort cost factor. The value is a ratio of increase or decrease from
-        the default factor. For example, a value of <codeph>2.0</codeph> sets the cost factor at
-        twice the default, and a value of <codeph>0.5</codeph> sets the factor at half the
-        default.</p>
+      <p>When GPORCA is enabled (the default), <codeph>optimizer_sort_factor</codeph> controls the
+        cost factor to apply to sorting operations during query optimization. The default value
+          <codeph>1</codeph> specifies the default sort cost factor. The value is a ratio of
+        increase or decrease from the default factor. For example, a value of <codeph>2.0</codeph>
+        sets the cost factor at twice the default, and a value of <codeph>0.5</codeph> sets the
+        factor at half the default.</p>
       <p>The parameter can be set for a database system, an individual database, or a session or
         query.</p>
       <table id="table_mrv_z1m_zx">
@@ -8013,12 +7997,12 @@
   <topic id="standard_conforming_strings">
     <title>standard_conforming_strings</title>
     <body>
-      <p>Reports whether ordinary string literals ('...') treat backslashes literally, as specified
-        in the SQL standard. The value is currently always off, indicating that backslashes are
-        treated as escapes. It is planned that this will change to on in a future release when
-        string literal syntax changes to meet the standard. Applications may check this parameter to
-        determine how string literals will be processed. The presence of this parameter can also be
-        taken as an indication that the escape string syntax (E'...') is supported. </p>
+      <p>Determines whether ordinary string literals ('...') treat backslashes literally, as
+        specified in the SQL standard. The default value is on. Turn this parameter off to treat
+        backslashes in string literals as escape characters instead of literal backslashes.
+        Applications may check this parameter to determine how string literals are processed. The
+        presence of this parameter can also be taken as an indication that the escape string syntax
+        (E'...') is supported.</p>
       <table id="standard_conforming_strings_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -8034,8 +8018,8 @@
           <tbody>
             <row>
               <entry colname="col1">Boolean</entry>
-              <entry colname="col2">off</entry>
-              <entry colname="col3">read only</entry>
+              <entry colname="col2">on</entry>
+              <entry colname="col3">session</entry>
             </row>
           </tbody>
         </tgroup>

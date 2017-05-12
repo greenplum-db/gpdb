@@ -1357,7 +1357,8 @@ adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ctx)
 	 * require two separate copies of the subplan, one for each SubPlan
 	 * reference. That's because even if a plan is otherwise the same, we
 	 * may want to later apply different flow to different SubPlans
-	 * referring it.
+	 * referring it. Any subplan that is left unused, because we created
+	 * the new copy here, will be removed by remove_unused_subplans().
 	 */
 	if (IsA(node, SubPlan))
 	{

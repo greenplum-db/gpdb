@@ -726,7 +726,7 @@ Distributed by: (sale_id)
                 </row>
                 <row>
                   <entry colname="col1">
-                    <codeph>idle_state</codeph>
+                    <codeph>idle_start</codeph>
                   </entry>
                   <entry colname="col2">timestamptz</entry>
                   <entry colname="col3"/>

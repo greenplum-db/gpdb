@@ -206,6 +206,95 @@ DROP
 21:DROP RESOURCE GROUP rg_concurrency_test;
 DROP
 
+-- test4: concurrently drop resource group
+
+31:CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=.02, memory_limit=.02);
+CREATE
+31:CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
+CREATE
+
+-- DROP should fail if there're running transactions
+32:SET ROLE role_concurrency_test;
+SET
+32:BEGIN;
+BEGIN
+31:BEGIN;
+BEGIN
+31:DROP ROLE role_concurrency_test;
+DROP
+31:DROP RESOURCE GROUP rg_concurrency_test;
+ERROR:  Cannot drop resource group "rg_concurrency_test"
+HINT:   The resource group is currently managing 1 query(ies) and cannot be dropped.
+	Terminate the queries first or try dropping the group later.
+	The view pg_stat_activity tracks the queries managed by resource groups.
+31:END;
+END
+32:END;
+END
+32:RESET ROLE;
+RESET
+
+-- DROP is abortted
+31:BEGIN;
+BEGIN
+31:DROP ROLE role_concurrency_test;
+DROP
+31:DROP RESOURCE GROUP rg_concurrency_test;
+DROP
+31:SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+rsgname|num_running|num_queueing|num_queued|num_executed
+-------+-----------+------------+----------+------------
+(0 rows)
+32:SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+rsgname            |num_running|num_queueing|num_queued|num_executed
+-------------------+-----------+------------+----------+------------
+rg_concurrency_test|0          |0           |0         |2           
+(1 row)
+32:SET ROLE role_concurrency_test;
+SET
+32&:BEGIN;  <waiting ...>
+31:ABORT;
+ABORT
+32<:  <... completed>
+BEGIN
+32:SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+rsgname            |num_running|num_queueing|num_queued|num_executed
+-------------------+-----------+------------+----------+------------
+rg_concurrency_test|1          |0           |0         |3           
+(1 row)
+32:END;
+END
+32:RESET ROLE;
+RESET
+
+-- DROP is committed
+31:BEGIN;
+BEGIN
+31:DROP ROLE role_concurrency_test;
+DROP
+31:DROP RESOURCE GROUP rg_concurrency_test;
+DROP
+31:SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+rsgname|num_running|num_queueing|num_queued|num_executed
+-------+-----------+------------+----------+------------
+(0 rows)
+32:SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+rsgname            |num_running|num_queueing|num_queued|num_executed
+-------------------+-----------+------------+----------+------------
+rg_concurrency_test|0          |0           |0         |4           
+(1 row)
+32:SET ROLE role_concurrency_test;
+SET
+32&:BEGIN;  <waiting ...>
+31:END;
+END
+32<:  <... completed>
+ERROR:  Resource group 197234 was concurrently dropped
+33:SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
+rsgname|num_running|num_queueing|num_queued|num_executed
+-------+-----------+------------+----------+------------
+(0 rows)
+
 
 -- reset the GUC and restart cluster.
 -- start_ignore
