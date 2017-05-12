@@ -10,6 +10,9 @@ import (
 )
 
 var (
+	DumpTimestamp string
+	DumpDatestamp string
+
 	FPTimeNow  = time.Now
 	FPOsGetenv = os.Getenv
 )
@@ -61,4 +64,10 @@ func TryEnv(varname string, defval string) string {
 		return defval
 	}
 	return val
+}
+
+func SetDumpTimestamp() string {
+	DumpTimestamp = CurrentTimestamp()
+	DumpDatestamp = DumpTimestamp[0:8]
+	return DumpTimestamp
 }

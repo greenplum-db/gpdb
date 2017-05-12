@@ -14,11 +14,16 @@ var (
 var ( // Command-line flags
 	dbname  = flag.String("dbname", "", "The database to be backed up")
 	debug   = flag.Bool("debug", false, "Print verbose and debug log messages")
+	dumpDir = flag.String("dumpdir", "", "The directory to which all dump files will be written")
 	verbose = flag.Bool("verbose", false, "Print verbose log messages")
 )
 
 func DoInit() { // Handles setup that can be done before parsing flags
-	logger = utils.InitializeLogging("gpbackup", "", utils.LOGINFO)
+	SetLogger(utils.InitializeLogging("gpbackup", "", utils.LOGINFO))
+}
+
+func SetLogger(log *utils.Logger) {
+	logger = log
 }
 
 func DoValidation() {
@@ -34,6 +39,16 @@ func DoSetup() { // Handles setup that must be done after parsing flags
 	connection = utils.NewDBConn(*dbname)
 	connection.Connect()
 	connection.Exec("SET application_name TO 'gpbackup'")
+
+	utils.SetDumpTimestamp()
+
+	if *dumpDir != "" {
+		utils.BaseDumpDir = *dumpDir
+	}
+	logger.Verbose("Creating dump directories")
+	utils.DumpPathFmtStr = fmt.Sprintf("%s/backups/%s/%s", utils.BaseDumpDir, utils.DumpDatestamp, utils.DumpTimestamp)
+	segConfig := utils.GetSegmentConfiguration(connection)
+	utils.CreateDumpDirs(segConfig)
 }
 
 func DoBackup() {
@@ -41,8 +56,9 @@ func DoBackup() {
 	logger.Info("Dump Database = %s", utils.QuoteIdent(connection.DBName))
 	logger.Info("Database Size = %s", connection.GetDBSize())
 
-	predataFilename := "/tmp/predata.sql"
-	postdataFilename := "/tmp/postdata.sql"
+	masterDumpDir := utils.SegDirMap[-1]
+	predataFilename := fmt.Sprintf("%s/predata.sql", masterDumpDir)
+	postdataFilename := fmt.Sprintf("%s/postdata.sql", masterDumpDir)
 
 	connection.Begin()
 	tables := GetAllUserTables(connection)
@@ -50,6 +66,10 @@ func DoBackup() {
 	logger.Info("Writing pre-data metadata to %s", predataFilename)
 	backupPredata(predataFilename, tables)
 	logger.Info("Pre-data metadata dump complete")
+
+	logger.Info("Writing data to file")
+	backupData(tables)
+	logger.Info("Data dump complete")
 
 	logger.Info("Writing post-data metadata to %s", postdataFilename)
 	backupPostdata(postdataFilename, tables)
@@ -85,6 +105,15 @@ func backupPredata(filename string, tables []utils.Table) {
 	logger.Verbose("Writing CREATE SEQUENCE statements to predata file")
 	sequenceDefs := GetAllSequenceDefinitions(connection)
 	PrintCreateSequenceStatements(predataFile, sequenceDefs)
+}
+
+func backupData(tables []utils.Table) {
+	for _, table := range tables {
+		logger.Verbose("Writing data for table %s to file", table.ToString())
+		CopyTableOut(connection, table)
+	}
+	logger.Verbose("Writing table map file to %s/gpbackup_%s_table_map", utils.SegDirMap[-1], utils.DumpTimestamp)
+	WriteTableMapFile(tables)
 }
 
 func backupPostdata(filename string, tables []utils.Table) {

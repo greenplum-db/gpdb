@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"backup_restore/backup"
 	"backup_restore/utils"
 	"fmt"
 	"regexp"
@@ -28,6 +29,7 @@ func SetupTestLogger() (*utils.Logger, *gbytes.Buffer, *gbytes.Buffer, *gbytes.B
 	testStderr := gbytes.NewBuffer()
 	testLogfile := gbytes.NewBuffer()
 	testLogger := utils.NewLogger(testStdout, testStderr, testLogfile, utils.LOGINFO, "testProgram:testUser:testHost:000000-[%s]:-")
+	backup.SetLogger(testLogger)
 	utils.FPSetLogger(testLogger)
 	utils.FPTimeNow = func() time.Time { return time.Date(2017, time.January, 1, 1, 1, 1, 1, time.Local) }
 	return testLogger, testStdout, testStderr, testLogfile
@@ -53,7 +55,7 @@ func ExpectRegexp(buffer *gbytes.Buffer, testStr string) {
 }
 
 func ExpectRegex(result string, testStr string) {
-	Expect(result).To(Equal(regexp.QuoteMeta(testStr)))
+	Expect(result).Should(MatchRegexp(regexp.QuoteMeta(testStr)))
 }
 
 func ShouldPanicWithMessage(message string) {
