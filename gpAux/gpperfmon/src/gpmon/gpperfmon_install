@@ -24,12 +24,12 @@ import os, sys, time, re
 from subprocess import Popen
 
 try:
-    from optparse import Option, OptionParser 
+    from optparse import Option, OptionParser
     from gppylib.gpparseopts import OptParser, OptChecker
     from gppylib.userinput import ask_input
     from gppylib.gplog import get_default_logger, setup_tool_logging
     from gppylib.commands.unix import getLocalHostname, getUserName
-except ImportError, e:    
+except ImportError, e:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
 EXECNAME = os.path.split(__file__)[-1]
@@ -74,7 +74,7 @@ def cli_help():
 
 def usage():
     print cli_help() or __doc__
-    
+
 
 ###### main()
 if __name__ == '__main__':
@@ -106,7 +106,7 @@ if __name__ == '__main__':
         usage()
         sys.exit(1)
 
-    if not options.port: 
+    if not options.port:
         logger.error("--port must be specified")
         sys.exit(1)
 
@@ -149,7 +149,7 @@ if __name__ == '__main__':
         if not os.path.isfile( pg_hba ):
             logger.error("can not find pg_hba.conf at %s" % pg_hba)
             sys.exit(1)
-        
+
         if not os.path.isdir(home_dir):
             logger.error("can not find $HOME")
             sys.exit(1)
