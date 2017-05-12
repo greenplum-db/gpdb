@@ -1,12 +1,3 @@
-top_builddir = ../../../..
-include $(top_builddir)/src/Makefile.global
-
-ifeq ($(enable_gpbackup), no)
-all:
-		@echo "Configuration not enabled for gpbackup"
-
-else
-
 all: build
 SHELL := /bin/bash
 .DEFAULT_GOAL := test
@@ -17,25 +8,40 @@ DIR_PATH=$(shell dirname `pwd`)
 
 DEST = .
 
+GOFLAGS := -o $(DEST)
+dependencies :
+		go get github.com/jmoiron/sqlx
+		go get github.com/maxbrunsfeld/counterfeiter
+		go get github.com/onsi/ginkgo/ginkgo
+		go get github.com/onsi/gomega
+		go get golang.org/x/tools/cmd/goimports
+		go get gopkg.in/DATA-DOG/go-sqlmock.v1
+		go get github.com/go-errors/errors
+		go get github.com/lib/pq
+
 format :
 		goimports -w .
 		go fmt .
 
-test :
-		./test_gpbackup.bash
+ginkgo : depend
+		ginkgo -r -randomizeSuites -randomizeAllSpecs 2>&1
 
-ci : test
+test : ginkgo
 
-build :
-		./build_gpbackup.bash
+ci : ginkgo
+
+depend : dependencies
+
+build : 
+		go build $(GOFLAGS) -o $(MODULE_NAME)
 
 build_rhel:
-		env GOOS=linux GOARCH=amd64 ./build_gpbackup.bash
+		env GOOS=linux GOARCH=amd64 go build $(GOFLAGS) -o $(MODULE_NAME)
 
 build_osx:
-		env GOOS=darwin GOARCH=amd64 ./build_gpbackup.bash
+		env GOOS=darwin GOARCH=amd64 go build $(GOFLAGS) -o $(MODULE_NAME)
 
 clean :
 		rm -f $(MODULE_NAME)
+		rm -rf /tmp/go-build*
 		rm -rf /tmp/ginkgo*
-endif
