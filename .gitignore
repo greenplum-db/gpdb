@@ -40,6 +40,10 @@ Release
 pgsql.sln
 cscope.*
 build.sh
+gpMgmt/go-utils/bin
+gpMgmt/go-utils/src/github.com
+gpMgmt/go-utils/src/golang.org
+gpMgmt/go-utils/src/gopkg.in
 
 # Local excludes in root directory
 /GNUmakefile
