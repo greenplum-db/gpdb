@@ -97,3 +97,39 @@ Feature: gpperfmon
         And the user runs "psql gptest -c 'INSERT INTO test_row_skew SELECT 1, i FROM generate_series(1,10000000) AS i;'"
         Then psql should return a return code of 0
         Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where skew_rows > 0" is "true"
+
+    """
+    The gpperfmon_skew_cpu_and_cpu_elapsed does not work on MacOS because of Sigar lib limitations.
+    To run all the other scenarios and omit this test on MacOS, use:
+    $ behave test/behave/mgmt_utils/gpperfmon.feature --tags @gpperfmon --tags ~@gpperfmon_skew_cpu_and_cpu_elapsed
+    """
+    @gpperfmon_skew_cpu_and_cpu_elapsed
+    Scenario: gpperfmon records skew_cpu and cpu_elapsed
+        Given gpperfmon is configured and running in qamode
+        Given the user truncates "queries_history" tables in "gpperfmon"
+        Given database "gptest" is dropped and recreated
+        When below sql is executed in "gptest" db
+        """
+        CREATE TABLE sales (id int, date date, amt decimal(10,2))
+        DISTRIBUTED BY (id)
+        PARTITION BY RANGE (date)
+        ( START (date '2016-11-01') INCLUSIVE
+          END (date '2016-12-02') EXCLUSIVE
+          EVERY (INTERVAL '1 day') );
+        """
+        When below sql is executed in "gptest" db
+        """
+        insert into sales values(generate_series(1,1000000),'2016-12-01',21);
+        insert into sales values(generate_series(1,1000000),'2016-11-30',21);
+        insert into sales values(generate_series(1,1000000),'2016-11-29',21);
+        insert into sales values(generate_series(1,1000000),'2016-11-28',21);
+        insert into sales values(generate_series(1,1000000),'2016-11-25',21);
+        insert into sales values(generate_series(1,1000000),'2016-11-24',21);
+        insert into sales values(generate_series(1,10000000),'2016-11-30',2333);
+        """
+        When below sql is executed in "gptest" db
+        """
+        select count(*) from sales where date between '2016-11-30' and '2016-11-30';
+        """
+        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where skew_cpu > 0" is "true"
+        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where cpu_elapsed > 0" is "true"
