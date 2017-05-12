@@ -11,22 +11,22 @@ func GetAllUserTables(connection *utils.DBConn) []utils.Table {
 	query := `
 SELECT
 	c.oid,
-  n.nspname AS schemaname,
-  c.relname AS tablename
+	n.nspname AS schemaname,
+	c.relname AS tablename
 FROM pg_class c
 LEFT JOIN pg_partition_rule pr
-  ON c.oid = pr.parchildrelid
+	ON c.oid = pr.parchildrelid
 LEFT JOIN pg_partition p
-  ON pr.paroid = p.oid
+	ON pr.paroid = p.oid
 LEFT JOIN pg_namespace n
-  ON c.relnamespace = n.oid
+	ON c.relnamespace = n.oid
 WHERE relkind = 'r'
 AND c.oid NOT IN (SELECT
-  p.parchildrelid
+	p.parchildrelid
 FROM pg_partition_rule p
 LEFT
 JOIN pg_exttable e
-  ON p.parchildrelid = e.reloid
+	ON p.parchildrelid = e.reloid
 WHERE e.reloid IS NULL)
 AND (c.relnamespace > 16384
 OR n.nspname = 'public')
@@ -149,34 +149,35 @@ WHERE a.attrelid = %d;`, oid)
 	}
 }
 
-type QueryPartDef struct {
-	PartitionDef string
+type QueryDefStatement struct {
+	DefStatement string
+}
+
+func getDefinitionStatement(connection *utils.DBConn, query string) string {
+	results := make([]QueryDefStatement, 0)
+	err := connection.Select(&results, query)
+	utils.CheckError(err)
+	if len(results) == 1 {
+		return results[0].DefStatement
+	} else if len(results) > 1 {
+		logger.Fatal("Too many rows returned from query to get object definition: got %d rows, expected 1 row", len(results))
+	}
+	return ""
 }
 
 func GetPartitionDefinition(connection *utils.DBConn, oid uint32) string {
-	query := fmt.Sprintf("SELECT * FROM pg_get_partition_def(%d, true, true) AS partitiondef WHERE partitiondef IS NOT NULL", oid)
-	results := make([]QueryPartDef, 0)
-	err := connection.Select(&results, query)
-	utils.CheckError(err)
-	if len(results) == 1 {
-		return results[0].PartitionDef
-	} else if len(results) > 1 {
-		utils.Abort("Too many rows returned from query to get partition definition: got %d rows, expected 1 row", len(results))
-	}
-	return ""
+	query := fmt.Sprintf("SELECT * FROM pg_get_partition_def(%d, true, true) AS defstatement WHERE partitiondef IS NOT NULL", oid)
+	return getDefinitionStatement(connection, query)
 }
 
 func GetPartitionTemplateDefinition(connection *utils.DBConn, oid uint32) string {
-	query := fmt.Sprintf("SELECT * FROM pg_get_partition_template_def(%d, true, true) AS partitiondef WHERE partitiondef IS NOT NULL", oid)
-	results := make([]QueryPartDef, 0)
-	err := connection.Select(&results, query)
-	utils.CheckError(err)
-	if len(results) == 1 {
-		return results[0].PartitionDef
-	} else if len(results) > 1 {
-		utils.Abort("Too many rows returned from query to get partition template definition: got %d rows, expected 1 row", len(results))
-	}
-	return ""
+	query := fmt.Sprintf("SELECT * FROM pg_get_partition_template_def(%d, true, true) AS defstatement WHERE partitiondef IS NOT NULL", oid)
+	return getDefinitionStatement(connection, query)
+}
+
+func GetIndexDefinition(connection *utils.DBConn, oid uint32) string {
+	query := fmt.Sprintf("SELECT pg_get_indexdef(i.indexrelid) AS defstatement FROM pg_index i JOIN pg_class t ON (t.oid = i.indexrelid) WHERE i.indrelid = %d", oid)
+	return getDefinitionStatement(connection, query)
 }
 
 type QueryStorageOptions struct {
@@ -194,7 +195,7 @@ WHERE oid = %d AND reloptions IS NOT NULL;`, oid)
 	if len(results) == 1 {
 		return results[0].StorageOptions.String
 	} else if len(results) > 1 {
-		utils.Abort("Too many rows returned from query to get storage options: got %d rows, expected 1 row", len(results))
+		logger.Fatal("Too many rows returned from query to get storage options: got %d rows, expected 1 row", len(results))
 	}
 	return ""
 }

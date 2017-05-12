@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	. "github.com/onsi/ginkgo"
@@ -20,6 +21,16 @@ func CreateAndConnectMockDB() (*utils.DBConn, sqlmock.Sqlmock) {
 	connection.Driver = driver
 	connection.Connect()
 	return connection, mock
+}
+
+func SetupTestLogger() (*utils.Logger, *gbytes.Buffer, *gbytes.Buffer, *gbytes.Buffer) {
+	testStdout := gbytes.NewBuffer()
+	testStderr := gbytes.NewBuffer()
+	testLogfile := gbytes.NewBuffer()
+	testLogger := utils.NewLogger(testStdout, testStderr, testLogfile, utils.LOGINFO, "testProgram:testUser:testHost:000000-[%s]:-")
+	utils.FPSetLogger(testLogger)
+	utils.FPTimeNow = func() time.Time { return time.Date(2017, time.January, 1, 1, 1, 1, 1, time.Local) }
+	return testLogger, testStdout, testStderr, testLogfile
 }
 
 func CreateMockDB() (*sqlx.DB, sqlmock.Sqlmock) {
@@ -48,7 +59,7 @@ func ExpectRegex(result string, testStr string) {
 func ShouldPanicWithMessage(message string) {
 	if r := recover(); r != nil {
 		errMsg := strings.TrimSpace(fmt.Sprintf("%v", r))
-		if errMsg != message {
+		if !strings.Contains(errMsg, message) {
 			Fail(fmt.Sprintf("Expected panic message '%s', got '%s'", message, errMsg))
 		}
 	} else {
