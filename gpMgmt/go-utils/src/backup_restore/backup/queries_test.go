@@ -360,4 +360,64 @@ SET SUBPARTITION TEMPLATE
 			Expect(results).To(Equal("(appendonly=true, orientation=column, fillfactor=42, compresstype=zlib, blocksize=32768, compresslevel=1)"))
 		})
 	})
+	Describe("GetAllSequences", func() {
+		header := []string{"objoid", "objname"}
+		rowOne := []driver.Value{1, "seq_one"}
+		rowTwo := []driver.Value{2, "seq_two"}
+
+		It("returns a slice of sequences", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(rowOne...).AddRow(rowTwo...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetAllSequences(connection)
+			Expect(len(results)).To(Equal(2))
+			Expect(results[0].ObjOid).To(Equal(uint32(1)))
+			Expect(results[0].ObjName).To(Equal("seq_one"))
+			Expect(results[1].ObjOid).To(Equal(uint32(2)))
+			Expect(results[1].ObjName).To(Equal("seq_two"))
+		})
+	})
+	Describe("GetAllSequenceDefinitions", func() {
+		headerSeq := []string{"objoid", "objname"}
+		seqOne := []driver.Value{1, "seq_one"}
+		seqTwo := []driver.Value{2, "seq_two"}
+		headerSeqDef := []string{"sequence_name", "last_value", "increment_by", "max_value", "min_value", "cache_value", "log_cnt", "is_cycled", "is_called"}
+		seqDefOne := []driver.Value{"seq_one", 3, 1, 1000, 1, 2, 41, "f", "f"}
+		seqDefTwo := []driver.Value{"seq_two", 7, 1, 9223372036854775807, 1, 5, 42, "f", "f"}
+
+		It("returns a slice of definitions for all sequences", func() {
+			fakeSequences := sqlmock.NewRows(headerSeq).AddRow(seqOne...).AddRow(seqTwo...)
+			fakeResultOne := sqlmock.NewRows(headerSeqDef).AddRow(seqDefOne...)
+			fakeResultTwo := sqlmock.NewRows(headerSeqDef).AddRow(seqDefTwo...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeSequences)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResultOne)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResultTwo)
+			results := backup.GetAllSequenceDefinitions(connection)
+			Expect(len(results)).To(Equal(2))
+			Expect(results[0].Name).To(Equal("seq_one"))
+			Expect(results[0].LastVal).To(Equal(int64(3)))
+			Expect(results[0].Increment).To(Equal(int64(1)))
+			Expect(results[1].Name).To(Equal("seq_two"))
+			Expect(results[1].LastVal).To(Equal(int64(7)))
+			Expect(results[1].Increment).To(Equal(int64(1)))
+		})
+	})
+	Describe("GetAllUserSchemas", func() {
+		headerSchema := []string{"objoid", "objname", "objcomment"}
+		schemaOne := []driver.Value{1, "schema_one", nil}
+		schemaTwo := []driver.Value{2, "schema_two", "some_comment"}
+
+		It("returns a slice of definitions for all schemas", func() {
+			fakeSchema := sqlmock.NewRows(headerSchema).AddRow(schemaOne...).AddRow(schemaTwo...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeSchema)
+			results := backup.GetAllUserSchemas(connection)
+			Expect(len(results)).To(Equal(2))
+			Expect(results[0].ObjOid).To(Equal(uint32(1)))
+			Expect(results[0].ObjName).To(Equal("schema_one"))
+			Expect(results[0].ObjComment.Valid).To(Equal(false))
+			Expect(results[1].ObjOid).To(Equal(uint32(2)))
+			Expect(results[1].ObjName).To(Equal("schema_two"))
+			Expect(results[1].ObjComment.Valid).To(Equal(true))
+			Expect(results[1].ObjComment.String).To(Equal("some_comment"))
+		})
+	})
 })

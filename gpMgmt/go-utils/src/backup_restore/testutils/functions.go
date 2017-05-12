@@ -58,9 +58,9 @@ func ExpectRegex(result string, testStr string) {
 
 func ShouldPanicWithMessage(message string) {
 	if r := recover(); r != nil {
-		errMsg := strings.TrimSpace(fmt.Sprintf("%v", r))
-		if !strings.Contains(errMsg, message) {
-			Fail(fmt.Sprintf("Expected panic message '%s', got '%s'", message, errMsg))
+		errorMessage := strings.TrimSpace(fmt.Sprintf("%v", r))
+		if !strings.Contains(errorMessage, message) {
+			Fail(fmt.Sprintf("Expected panic message '%s', got '%s'", message, errorMessage))
 		}
 	} else {
 		Fail("Function did not panic as expected")

@@ -31,13 +31,13 @@ func ConstructDefinitionsForTable(connection *utils.DBConn, table utils.Table) (
 	tableAttributes := GetTableAttributes(connection, table.TableOid)
 	tableDefaults := GetTableDefaults(connection, table.TableOid)
 
-	distPolicy := GetDistributionPolicy(connection, table.TableOid)
+	distributionPolicy := GetDistributionPolicy(connection, table.TableOid)
 	partitionDef := GetPartitionDefinition(connection, table.TableOid)
 	partTemplateDef := GetPartitionTemplateDefinition(connection, table.TableOid)
-	storageOpts := GetStorageOptions(connection, table.TableOid)
+	storageOptions := GetStorageOptions(connection, table.TableOid)
 
 	columnDefs := ConsolidateColumnInfo(tableAttributes, tableDefaults)
-	tableDef := TableDefinition{distPolicy, partitionDef, partTemplateDef, storageOpts}
+	tableDef := TableDefinition{distributionPolicy, partitionDef, partTemplateDef, storageOptions}
 	return columnDefs, tableDef
 }
 
@@ -45,10 +45,10 @@ func ConstructConstraintsForAllTables(connection *utils.DBConn, tables []utils.T
 	allConstraints := make([]string, 0)
 	allFkConstraints := make([]string, 0) // separate slice for FOREIGN KEY constraints, since they must be printed after PRIMARY KEY constraints
 	for _, table := range tables {
-		conList := GetConstraints(connection, table.TableOid)
-		tableCons, tableFkCons := ProcessConstraints(table, conList)
-		allConstraints = append(allConstraints, tableCons...)
-		allFkConstraints = append(allFkConstraints, tableFkCons...)
+		constraintList := GetConstraints(connection, table.TableOid)
+		tableConstraints, tableFkConstraints := ProcessConstraints(table, constraintList)
+		allConstraints = append(allConstraints, tableConstraints...)
+		allFkConstraints = append(allFkConstraints, tableFkConstraints...)
 	}
 	return allConstraints, allFkConstraints
 }
@@ -98,20 +98,24 @@ func ProcessConstraints(table utils.Table, constraints []QueryConstraint) ([]str
 	return cons, fkCons
 }
 
+func PrintCreateDatabaseStatement(predataFile io.Writer) {
+	fmt.Fprintf(predataFile, "\n\nCREATE DATABASE %s;", utils.QuoteIdent(connection.DBName))
+}
+
 func PrintCreateTableStatement(predataFile io.Writer, table utils.Table, columnDefs []ColumnDefinition, tableDef TableDefinition) {
 	fmt.Fprintf(predataFile, "\n\nCREATE TABLE %s (\n", table.ToString())
 	lines := make([]string, 0)
-	for _, col := range columnDefs {
-		if !col.IsDropped {
-			line := fmt.Sprintf("\t%s %s", utils.QuoteIdent(col.Name), col.TypName)
-			if col.HasDef {
-				line += fmt.Sprintf(" DEFAULT %s", col.DefVal)
+	for _, column := range columnDefs {
+		if !column.IsDropped {
+			line := fmt.Sprintf("\t%s %s", utils.QuoteIdent(column.Name), column.TypName)
+			if column.HasDef {
+				line += fmt.Sprintf(" DEFAULT %s", column.DefVal)
 			}
-			if col.NotNull {
+			if column.NotNull {
 				line += " NOT NULL"
 			}
-			if col.Encoding.Valid {
-				line += fmt.Sprintf(" ENCODING (%s)", col.Encoding.String)
+			if column.Encoding.Valid {
+				line += fmt.Sprintf(" ENCODING (%s)", column.Encoding.String)
 			}
 			lines = append(lines, line)
 		}
@@ -133,20 +137,65 @@ func PrintCreateTableStatement(predataFile io.Writer, table utils.Table, columnD
 	}
 }
 
-func PrintConstraintStatements(predataFile io.Writer, cons []string, fkCons []string) {
-	sort.Strings(cons)
-	sort.Strings(fkCons)
-	for _, con := range cons {
-		fmt.Fprintln(predataFile, con)
+func PrintConstraintStatements(predataFile io.Writer, constraints []string, fkConstraints []string) {
+	sort.Strings(constraints)
+	sort.Strings(fkConstraints)
+	for _, constraint := range constraints {
+		fmt.Fprintln(predataFile, constraint)
 	}
-	for _, con := range fkCons {
-		fmt.Fprintln(predataFile, con)
+	for _, constraint := range fkConstraints {
+		fmt.Fprintln(predataFile, constraint)
 	}
 }
 
-func PrintCreateSchemaStatements(predataFile io.Writer, tables []utils.Table) {
-	schemas := utils.GetUniqueSchemas(tables)
+func PrintCreateSchemaStatements(predataFile io.Writer, schemas []utils.DBObject) {
 	for _, schema := range schemas {
-		fmt.Fprintf(predataFile, "\n\nCREATE SCHEMA %s;", schema.ToString())
+		fmt.Fprintln(predataFile)
+		if schema.ObjName != "public" {
+			fmt.Fprintf(predataFile, "\nCREATE SCHEMA %s;", schema.ToString())
+		}
+		if schema.ObjComment.Valid {
+			fmt.Fprintf(predataFile, "\nCOMMENT ON SCHEMA %s IS '%s';", schema.ToString(), schema.ObjComment.String)
+		}
+	}
+}
+
+func GetAllSequenceDefinitions(connection *utils.DBConn) []QuerySequence {
+	allSequences := GetAllSequences(connection)
+	sequenceDefs := make([]QuerySequence, 0)
+	for _, sequence := range allSequences {
+		sequenceDef := GetSequence(connection, sequence.ObjName)
+		sequenceDefs = append(sequenceDefs, sequenceDef)
+	}
+	return sequenceDefs
+}
+
+func PrintCreateSequenceStatements(predataFile io.Writer, sequences []QuerySequence) {
+	maxVal := int64(9223372036854775807)
+	minVal := int64(-9223372036854775807)
+	for _, sequence := range sequences {
+		fmt.Fprintln(predataFile, "\n\nCREATE SEQUENCE", sequence.Name)
+		if !sequence.IsCalled {
+			fmt.Fprintln(predataFile, "\tSTART WITH", sequence.LastVal)
+		}
+		fmt.Fprintln(predataFile, "\tINCREMENT BY", sequence.Increment)
+
+		if !((sequence.MaxVal == maxVal && sequence.Increment > 0) || (sequence.MaxVal == -1 && sequence.Increment < 0)) {
+			fmt.Fprintln(predataFile, "\tMAXVALUE", sequence.MaxVal)
+		} else {
+			fmt.Fprintln(predataFile, "\tNO MAXVALUE")
+		}
+		if !((sequence.MinVal == minVal && sequence.Increment < 0) || (sequence.MinVal == 1 && sequence.Increment > 0)) {
+			fmt.Fprintln(predataFile, "\tMINVALUE", sequence.MinVal)
+		} else {
+			fmt.Fprintln(predataFile, "\tNO MINVALUE")
+		}
+		cycleStr := ""
+		if sequence.IsCycled {
+			cycleStr = "\n\tCYCLE"
+		}
+		fmt.Fprintf(predataFile, "\tCACHE %d%s;", sequence.CacheVal, cycleStr)
+
+		fmt.Fprintf(predataFile, "\n\nSELECT pg_catalog.setval('%s', %d, %v);\n", sequence.Name, sequence.LastVal, sequence.IsCalled)
 	}
 }
