@@ -1195,6 +1195,7 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 	int			total_primaries = 0;
 	int			i;
 	Oid			fmtErrTblOid = InvalidOid;
+	char       *on_clause = NULL;
 
 	/* various processing flags */
 	bool		using_execute = false;	/* true if EXECUTE is used */
@@ -1291,6 +1292,8 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 		uri = ParseExternalTableUri(first_uri_str);
 	}
 
+	/* get the ON clause information */
+	on_clause = (char *) strVal(lfirst(list_head(rel->execlocationlist)));
 
 	/*
 	 * Now we do the actual assignment of work to the segment databases (where
@@ -1337,6 +1340,11 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 	/* (1) */
 	if (using_location && (uri->protocol == URI_FILE || uri->protocol == URI_HTTP))
 	{
+		if (strcmp(on_clause, "MASTER_ONLY") == 0) {
+			ereport(ERROR, (errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+							errmsg("\'ON MASTER\' is not supported by this protocol yet")));
+		}
+
 		/*
 		 * extract file path and name from URI strings and assign them a
 		 * primary segdb
@@ -1434,17 +1442,19 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 
 	}
 	/* (2) */
-	else if(using_location && (uri->protocol == URI_GPFDIST || 
-							   uri->protocol == URI_GPFDISTS || 
+	else if (using_location && (uri->protocol == URI_GPFDIST ||
+							   uri->protocol == URI_GPFDISTS ||
 							   uri->protocol == URI_CUSTOM))
 	{
-		char       *on_clause = NULL;
-		on_clause = (char *) strVal(lfirst(list_head(rel->execlocationlist)));
-
-		if (strcmp(on_clause, "MASTER_ONLY") == 0 && uri->protocol == URI_CUSTOM){
-			const char *uri_str = (char *) strVal(lfirst(list_head(rel->urilocationlist)));
-			segdb_file_map[0] = pstrdup(uri_str);
-			ismasteronly = true;
+		if (strcmp(on_clause, "MASTER_ONLY") == 0) {
+			if (uri->protocol == URI_CUSTOM) {
+				const char *uri_str = (char *) strVal(lfirst(list_head(rel->urilocationlist)));
+				segdb_file_map[0] = pstrdup(uri_str);
+				ismasteronly = true;
+			} else {
+				ereport(ERROR, (errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+								errmsg("\'ON MASTER\' is not supported by this protocol yet")));
+			}
 		} else {
 		/*
 		 * Re-write the location list for GPFDIST or GPFDISTS before mapping to segments.
@@ -1621,7 +1631,6 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 								" when trying to assign segments for gpfdist(s)")));
 			}		
 		}
-
 	}
 	}
 	/* (3) */
@@ -1630,7 +1639,6 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 		const char *command = rel->execcommand;
 		const char *prefix = "execute:";
 		char	   *prefixed_command = NULL;
-		char	   *on_clause = NULL;
 		bool		match_found = false;
 
 		/* build the command string for the executor - 'execute:command' */
@@ -1642,9 +1650,6 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 		pfree(buf->data);
 		pfree(buf);
 		buf = NULL;
-
-		/* get the ON clause (execute location) information */
-		on_clause = (char *) strVal(lfirst(list_head(rel->execlocationlist)));
 
 		/*
 		 * Now we handle each one of the ON locations separately:
@@ -1814,6 +1819,11 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 	/* (4) */
 	else if (using_location && uri->protocol == URI_GPHDFS)
 	{
+		if (strcmp(on_clause, "MASTER_ONLY") == 0) {
+			ereport(ERROR, (errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+							errmsg("\'ON MASTER\' is not supported by this protocol yet")));
+		}
+
 		const char *uri_str = (char *) strVal(lfirst(list_head(rel->urilocationlist)));
 
 		for (i = 0; i < db_info->total_segment_dbs; i++)
