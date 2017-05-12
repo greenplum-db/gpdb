@@ -189,31 +189,4 @@ var _ = Describe("utils/db tests", func() {
 			Expect(testSlice[1].Tablename).To(Equal("table2"))
 		})
 	})
-	Describe("GetUniqueSchemas", func() {
-		publicOne := utils.Table{0, "public", "foo"}
-		publicTwo := utils.Table{0, "public", "bar"}
-		otherOne := utils.Table{0, "otherschema", "foo"}
-		otherTwo := utils.Table{0, "otherschema", "bar"}
-
-		It("has multiple tables with the public schema", func() {
-			tables := []utils.Table{publicOne, publicTwo}
-			schemas := utils.GetUniqueSchemas(tables)
-			Expect(schemas).To(Equal([]string{}))
-		})
-		It("has multiple tables with a non-public schema", func() {
-			tables := []utils.Table{otherOne, otherTwo}
-			schemas := utils.GetUniqueSchemas(tables)
-			Expect(schemas).To(Equal([]string{"otherschema"}))
-		})
-		It("has no tables", func() {
-			tables := []utils.Table{}
-			schemas := utils.GetUniqueSchemas(tables)
-			Expect(schemas).To(Equal([]string{}))
-		})
-		It("has multiple schemas, each with multiple tables", func() {
-			tables := []utils.Table{publicOne, publicTwo, otherOne, otherTwo}
-			schemas := utils.GetUniqueSchemas(tables)
-			Expect(schemas).To(Equal([]string{"otherschema"}))
-		})
-	})
 })

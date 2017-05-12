@@ -19,7 +19,7 @@ func TestPredata(t *testing.T) {
 var _ = Describe("backup/predata tests", func() {
 	Describe("PrintCreateTableStatement", func() {
 		buffer := gbytes.NewBuffer()
-		testTable := utils.Table{0, "public", "tablename"}
+		testTable := utils.Table{0, 0, "public", "tablename"}
 		rowOne := backup.ColumnDefinition{1, "i", false, false, false, "int", sql.NullString{String: "", Valid: false}, ""}
 		rowTwo := backup.ColumnDefinition{2, "j", false, false, false, "character varying(20)", sql.NullString{String: "", Valid: false}, ""}
 		rowDropped := backup.ColumnDefinition{2, "j", false, false, true, "character varying(20)", sql.NullString{String: "", Valid: false}, ""}
@@ -379,7 +379,7 @@ SET SUBPARTITION TEMPLATE
 		})
 	})
 	Describe("ProcessConstraints", func() {
-		testTable := utils.Table{0, "public", "tablename"}
+		testTable := utils.Table{0, 0, "public", "tablename"}
 		uniqueOne := backup.QueryConstraint{"tablename_i_key", "u", "UNIQUE (i)"}
 		uniqueTwo := backup.QueryConstraint{"tablename_j_key", "u", "UNIQUE (j)"}
 		primarySingle := backup.QueryConstraint{"tablename_pkey", "p", "PRIMARY KEY (i)"}

@@ -10,7 +10,7 @@ import (
 func GetIndexesForAllTables(connection *utils.DBConn, tables []utils.Table) []string {
 	indexes := make([]string, 0)
 	for _, table := range tables {
-		indexList := GetIndexDefinitions(connection, table.Oid)
+		indexList := GetIndexDefinitions(connection, table.TableOid)
 		for _, index := range indexList {
 			indexes = append(indexes, fmt.Sprintf("\n\n%s;", index.IndexDef))
 		}

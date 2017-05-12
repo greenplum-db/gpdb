@@ -25,9 +25,9 @@ var _ = Describe("backup/postdata tests", func() {
 	})
 
 	Describe("GetIndexesForAllTables", func() {
-		tableOne := utils.Table{0, "public", "table_one"}
-		tableTwo := utils.Table{0, "public", "table_two"}
-		tableWithout := utils.Table{0, "public", "table_no_index"}
+		tableOne := utils.Table{0, 0, "public", "table_one"}
+		tableTwo := utils.Table{0, 0, "public", "table_two"}
+		tableWithout := utils.Table{0, 0, "public", "table_no_index"}
 
 		header := []string{"indexdef"}
 		resultEmpty := sqlmock.NewRows(header)
