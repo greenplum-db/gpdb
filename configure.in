@@ -574,6 +574,9 @@ AC_SUBST(BLD_ARCH)
 bash getversion > VERSION
 GP_VERSION=`cat VERSION`
 
+GP_VERSION_SHORT=`bash ./getversion --short`
+AC_SUBST(GP_VERSION_SHORT)
+
 GP_VERSION_IN="src/include/catalog/gp_version.in"
 GP_VERSION_HEADER="src/include/catalog/gp_version.h"
 if grep '\$\$' $GP_VERSION_IN > /dev/null 2>&1 ; then

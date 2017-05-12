@@ -740,6 +740,7 @@ enable_orca
 autodepend
 TAS
 GP_MAJORVERSION
+GP_VERSION_SHORT
 BLD_ARCH
 GCC
 CPP
@@ -5732,6 +5733,9 @@ BLD_ARCH=`echo $BLD_ARCH`
 # Get the Greenplum version string from VERSION
 bash getversion > VERSION
 GP_VERSION=`cat VERSION`
+
+GP_VERSION_SHORT=`bash ./getversion --short`
+
 
 GP_VERSION_IN="src/include/catalog/gp_version.in"
 GP_VERSION_HEADER="src/include/catalog/gp_version.h"
