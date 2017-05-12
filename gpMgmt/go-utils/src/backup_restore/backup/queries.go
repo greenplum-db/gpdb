@@ -227,7 +227,7 @@ WHERE oid = %d AND reloptions IS NOT NULL;`, oid)
 }
 
 func GetAllSequences(connection *utils.DBConn) []utils.DBObject {
-	query := fmt.Sprintf("SELECT oid AS objoid, relname AS objname FROM pg_class WHERE relkind = 'S'")
+	query := "SELECT oid AS objoid, relname AS objname FROM pg_class WHERE relkind = 'S'"
 	results := make([]utils.DBObject, 0)
 	err := connection.Select(&results, query)
 	utils.CheckError(err)
@@ -250,6 +250,24 @@ func GetSequence(connection *utils.DBConn, seqName string) QuerySequence {
 	query := fmt.Sprintf("SELECT * FROM %s", seqName)
 	result := QuerySequence{}
 	err := connection.Get(&result, query)
+	utils.CheckError(err)
+	return result
+}
+
+type QuerySessionGUCs struct {
+	ClientEncoding       string `db:"client_encoding"`
+	StdConformingStrings string `db:"standard_conforming_strings"`
+	DefaultWithOids      string `db:"default_with_oids"`
+}
+
+func GetSessionGUCs(connection *utils.DBConn) QuerySessionGUCs {
+	result := QuerySessionGUCs{}
+	query := "SHOW client_encoding;"
+	err := connection.Get(&result, query)
+	query = "SHOW standard_conforming_strings;"
+	err = connection.Get(&result, query)
+	query = "SHOW default_with_oids;"
+	err = connection.Get(&result, query)
 	utils.CheckError(err)
 	return result
 }

@@ -199,3 +199,13 @@ func PrintCreateSequenceStatements(predataFile io.Writer, sequences []QuerySeque
 		fmt.Fprintf(predataFile, "\n\nSELECT pg_catalog.setval('%s', %d, %v);\n", sequence.Name, sequence.LastVal, sequence.IsCalled)
 	}
 }
+
+func PrintSessionGUCs(predataFile io.Writer, gucs QuerySessionGUCs) {
+	fmt.Fprintf(predataFile, `SET statement_timeout = 0;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+SET client_encoding = '%s';
+SET standard_conforming_strings = %s;
+SET default_with_oids = %s
+`, gucs.ClientEncoding, gucs.StdConformingStrings, gucs.DefaultWithOids)
+}

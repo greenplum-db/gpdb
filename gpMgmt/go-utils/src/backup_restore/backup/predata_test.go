@@ -687,5 +687,20 @@ COMMENT ON SCHEMA schema_with_comments IS 'Comment, not comet';`)
 			testutils.ExpectRegexp(buffer, `CREATE SCHEMA schema_with_no_comments;`)
 		})
 	})
+	Describe("PrintSessionGUCs", func() {
+		buffer := gbytes.NewBuffer()
+
+		It("prints session GUCs", func() {
+			gucs := backup.QuerySessionGUCs{"UTF8", "on", "false"}
+
+			backup.PrintSessionGUCs(buffer, gucs)
+			testutils.ExpectRegexp(buffer, `SET statement_timeout = 0;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET default_with_oids = false`)
+		})
+	})
 
 })
