@@ -146,6 +146,8 @@ def impl(context, backup_pg, dbname):
 @when('verify the metadata dump file syntax under "{directory}" for comments and types')
 @then('verify the metadata dump file syntax under "{directory}" for comments and types')
 def impl(context, directory):
+    if use_netbackup():
+        return
     names = ["Name", "Data", "Data for Name"]
     types = ["TABLE", "TABLE DATA", "EXTERNAL TABLE", "ACL", "CONSTRAINT", "COMMENT", "PROCEDURAL LANGUAGE", "SCHEMA", "AOSTORAGEOPTS"]
     master_dump_dir = directory if len(directory.strip()) != 0 else master_data_dir
@@ -500,3 +502,9 @@ def impl(context, dbname, schema):
 
     if check_cast_exists(dbname, schema):
         raise Exception('A function "casttoint" exists in %s in schema %s when it should not' % (dbname, schema))
+
+def use_netbackup():
+    if os.getenv('NETBACKUP'):
+        return True
+    else:
+        return False
