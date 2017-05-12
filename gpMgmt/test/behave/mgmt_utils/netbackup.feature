@@ -5,18 +5,6 @@ Feature: NetBackup Integration with GPDB
     Scenario: Setup to load NBU libraries
         Given the NetBackup "7.7" libraries are loaded
 
-    @nbusetup76
-    Scenario: Setup to load NBU libraries
-        Given the NetBackup "7.6" libraries are loaded
-
-    @nbusetup75
-    Scenario: Setup to load NBU libraries
-        Given the NetBackup "7.5" libraries are loaded
-
-    @nbusetup71
-    Scenario: Setup to load NBU libraries
-        Given the NetBackup "7.1" libraries are loaded
-
     @nbupartI
     Scenario: Valgrind test of gp_dump with netbackup
         Given the backup test is initialized with no backup files

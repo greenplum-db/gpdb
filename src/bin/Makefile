@@ -11,7 +11,7 @@
 
 subdir = src/bin
 top_builddir = ../..
-nbu_libdir = $(shell cd $(top_builddir)/gpAux/ext/$(BLD_ARCH)/Netbackup/nbu75/lib; pwd)
+nbu_libdir = $(shell cd $(top_builddir)/gpAux/ext/$(BLD_ARCH)/Netbackup/nbu77/lib; pwd)
 include $(top_builddir)/src/Makefile.global
 
 ifneq ($(enable_coverage), yes)

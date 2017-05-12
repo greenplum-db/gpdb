@@ -941,11 +941,7 @@ copy-nbu-libs:
 	#Copy NetBackup libs
 ifeq ($(BLD_ARCH),$(filter $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64 rhel5_x86_64))
 	rm -f $(INSTLOC)/lib/libxbsa64.so;
-	rm -f $(INSTLOC)/lib/libnbclientcST.so;
-	rm -f $(INSTLOC)/lib/libnbbasecST.so;
-	rm -f $(INSTLOC)/lib/libvxcPBXST.so;
-	cp -fpr $(BLD_THIRDPARTY_LIB_DIR)/../Netbackup/nbu71 $(INSTLOC)/lib/;
-	cp -fpr $(BLD_THIRDPARTY_LIB_DIR)/../Netbackup/nbu75 $(INSTLOC)/lib/;
+	cp -fpr $(BLD_THIRDPARTY_LIB_DIR)/../Netbackup/nbu77 $(INSTLOC)/lib/;
 endif
 
 copylibs : thirdparty-dist copy-nbu-libs
