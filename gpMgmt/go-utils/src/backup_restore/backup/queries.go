@@ -1,5 +1,11 @@
 package backup
 
+ /*
+ * This file contains structs and functions related to executing specific
+ * queries that gather object metadata and database information that will
+ * be backed up during a dump.
+ */
+
 import (
 	"backup_restore/utils"
 	"database/sql"
@@ -7,7 +13,24 @@ import (
 	"strings"
 )
 
+/*
+ * All queries in this file come from one of three sources:
+ * - Copied from pg_dump largely unmodified
+ * - Derived from the output of a psql flag like \d+ or \df
+ * - Constructed from scratch
+ * In the former two cases, a reference to the query source is provided for
+ * further reference.
+ *
+ * All structs in this file whose names begin with "Query" are intended only
+ * for use with the functions immediately following them.  Structs in the utils
+ * package (especially Table and DBObject) are intended for more general use.
+ */
+
 func GetAllUserSchemas(connection *utils.DBConn) []utils.DBObject {
+	/* This query is constructed from scratch, but the list of schemas to exclude
+	 * is copied from gpcrondump so that gpbackup exhibits similar behavior regarding
+	 * which schemas are dumped.
+	 */
 	query := `
 SELECT
 	oid AS objoid,
@@ -26,6 +49,7 @@ ORDER BY objname;`
 }
 
 func GetAllUserTables(connection *utils.DBConn) []utils.Table {
+	// This query is adapted from the getTables() function in pg_dump.c.
 	query := `
 SELECT
 	n.oid AS schemaoid,
@@ -59,21 +83,22 @@ ORDER BY schemaname, tablename;`
 }
 
 type QueryTableAtts struct {
-	AttNum       int
-	AttName      string
-	AttNotNull   bool
-	AttHasDef    bool
-	AttIsDropped bool
-	AttTypName   string
-	AttEncoding  sql.NullString
+	AttNum        int
+	AttName       string
+	AttNotNull    bool
+	AttHasDefault bool
+	AttIsDropped  bool
+	AttTypName    string
+	AttEncoding   sql.NullString
 }
 
 func GetTableAttributes(connection *utils.DBConn, oid uint32) []QueryTableAtts {
+	// This query is adapted from the getTableAttrs() function in pg_dump.c.
 	query := fmt.Sprintf(`
 SELECT a.attnum,
 	a.attname,
 	a.attnotnull,
-	a.atthasdef,
+	a.atthasdefault,
 	a.attisdropped,
 	pg_catalog.format_type(t.oid,a.atttypmod) AS atttypname,
 	pg_catalog.array_to_string(e.attoptions, ',') AS attencoding
@@ -92,21 +117,22 @@ ORDER BY a.attrelid,
 	return results
 }
 
-type QueryTableDef struct {
+type QueryTableDefault struct {
 	AdNum  int
-	DefVal string
+	DefaultVal string
 }
 
-func GetTableDefaults(connection *utils.DBConn, oid uint32) []QueryTableDef {
+func GetTableDefaults(connection *utils.DBConn, oid uint32) []QueryTableDefault {
+	// This query is adapted from the hasdefaults == true case of the getTableAttrs() function in pg_dump.c.
 	query := fmt.Sprintf(`
 SELECT adnum,
-	pg_catalog.pg_get_expr(adbin, adrelid) AS defval 
+	pg_catalog.pg_get_expr(adbin, adrelid) AS defaultval
 FROM pg_catalog.pg_attrdef
 WHERE adrelid = %d
 ORDER BY adrelid,
 	adnum;`, oid)
 
-	results := make([]QueryTableDef, 0)
+	results := make([]QueryTableDefault, 0)
 	err := connection.Select(&results, query)
 	utils.CheckError(err)
 	return results
@@ -119,10 +145,7 @@ type QueryConstraint struct {
 }
 
 func GetConstraints(connection *utils.DBConn, oid uint32) []QueryConstraint {
-	/* The following query is not taken from pg_dump, as the pg_dump query gets a lot of information we
-	 * don't need and is relatively slow due to several JOINS, the slowest of which is on pg_depend. This
-	 * query is based on the queries underlying \d in psql, has roughly half the cost according to EXPLAIN,
-	 * and gets us only the information we need.*/
+	// This query is adapted from the queries underlying \d in psql.
 	query := fmt.Sprintf(`
 SELECT
 	conname,
@@ -143,6 +166,7 @@ type QueryDistPolicy struct {
 }
 
 func GetDistributionPolicy(connection *utils.DBConn, oid uint32) string {
+	// This query is adapted from the addDistributedBy() function in pg_dump.c.
 	query := fmt.Sprintf(`
 SELECT a.attname
 FROM pg_attribute a
@@ -185,11 +209,17 @@ func GetDefinitionStatement(connection *utils.DBConn, query string) string {
 }
 
 func GetPartitionDefinition(connection *utils.DBConn, oid uint32) string {
+	/* This query is adapted from the gp_partitioning_available == true case of the dumpTableSchema
+	 * function in pg_dump.c.
+	 */
 	query := fmt.Sprintf("SELECT * FROM pg_get_partition_def(%d, true, true) AS partitiondef WHERE partitiondef IS NOT NULL", oid)
 	return GetDefinitionStatement(connection, query)
 }
 
 func GetPartitionTemplateDefinition(connection *utils.DBConn, oid uint32) string {
+	/* This query is adapted from the isTemplatesSupported == true case of the dumpTableSchema
+	 * function in pg_dump.c.
+	 */
 	query := fmt.Sprintf("SELECT * FROM pg_get_partition_template_def(%d, true, true) AS partitiondef WHERE partitiondef IS NOT NULL", oid)
 	return GetDefinitionStatement(connection, query)
 }

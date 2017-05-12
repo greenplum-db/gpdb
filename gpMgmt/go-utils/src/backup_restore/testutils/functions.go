@@ -15,6 +15,10 @@ import (
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
 )
 
+/*
+ * Functions for setting up the test environment and mocking out global variables
+ */
+
 func CreateAndConnectMockDB() (*utils.DBConn, sqlmock.Sqlmock) {
 	mockdb, mock := CreateMockDB()
 	driver := utils.TestDriver{DBExists: true, DB: mockdb, DBName: "testdb"}
@@ -24,6 +28,11 @@ func CreateAndConnectMockDB() (*utils.DBConn, sqlmock.Sqlmock) {
 	return connection, mock
 }
 
+/*
+ * This function creates a test logger and assigns it to both backup.logger and utils.logger,
+ * so no assignment to those variables in the tests is necessary.  The logger and gbytes.buffers
+ * are returned to allow checking for output written to those buffers during tests if desired.
+ */
 func SetupTestLogger() (*utils.Logger, *gbytes.Buffer, *gbytes.Buffer, *gbytes.Buffer) {
 	testStdout := gbytes.NewBuffer()
 	testStderr := gbytes.NewBuffer()
@@ -43,6 +52,10 @@ func CreateMockDB() (*sqlx.DB, sqlmock.Sqlmock) {
 	}
 	return mockdb, mock
 }
+
+/*
+ * Wrapper functions aroung gomega operators for ease of use in tests
+ */
 
 func ExpectBegin(mock sqlmock.Sqlmock) {
 	fakeResult := utils.TestResult{Rows: 0}

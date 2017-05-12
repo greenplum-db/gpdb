@@ -1,5 +1,10 @@
 package utils
 
+/*
+ * This file contains miscellaneous functions that are generally useful and
+ * don't fit into any other file.
+ */
+
 import (
 	"fmt"
 	"os"
@@ -16,6 +21,17 @@ var (
 	FPTimeNow  = time.Now
 	FPOsGetenv = os.Getenv
 )
+
+/*
+ * The Abort() and AbortWithStackTrace() functions are for handling critical
+ * errors.  They panic() to unwind the call stack until the panic is caught
+ * by the recover() in DoTeardown() in backup.go, at which point any necessary
+ * cleanup is performed.
+ *
+ * The log.Fatal() function calls AbortWithStackTrace() if the log level is set
+ * to Verbose or Debug or calls Abort() otherwise, so generally that function
+ * should be used instead of calling either of these functions directly.
+ */
 
 func Abort(output ...interface{}) {
 	errStr := ""
@@ -49,6 +65,10 @@ func CheckError(err error) {
 		logger.Fatal(err.Error())
 	}
 }
+
+/*
+ * General helper functions
+ */
 
 func CurrentDatestamp() string {
 	return FPTimeNow().Format("20060102")

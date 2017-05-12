@@ -1,5 +1,10 @@
 package utils
 
+/*
+ * This file contains structs and functions related to interacting with files
+ * and directories, both locally and remotely over SSH.
+ */
+
 import (
 	"io"
 	"os"
@@ -8,20 +13,36 @@ import (
 )
 
 var (
+	/*
+	 * The following two variables are used to construct the dump path for all
+	 * backup files for the duration of the dump and must be set in DoSetup()
+	 * function in backup.go.  They're used in the data dump COPY ... TO SEGMENT;
+	 * query, and so can use <SEG_DATA_DIR> and <SEGID> instead of explicitly
+	 * constructing paths for each segment.
+	 */
 	BaseDumpDir    = "<SEG_DATA_DIR>"
-	DumpPathFmtStr = "" // Format string to be used in COPY ... TO SEGMENT; must be set in setup function
+	DumpPathFmtStr = ""
+
+	/*
+	 * The following two maps map a segment's content id to its host and segment
+	 * data directory, respectively.  They're set in the CreateDumpDirectories
+	 * function for use throughout the rest of the dump.
+	 */
 	SegHostMap map[int]string
 	SegDirMap  map[int]string
 
+	/*
+	 * The following variables, and any others named "FP[package][function name]",
+	 * are function pointers used to enable unit testing.
+	 */
+	FPDirectoryMustExist = DirectoryMustExist
 	FPGetUserAndHostInfo = GetUserAndHostInfo
+	FPMustOpenFile       = MustOpenFile
 	FPOsIsNotExist       = os.IsNotExist
 	FPOsMkdir            = os.Mkdir
 	FPOsMkdirAll         = os.MkdirAll
 	FPOsCreate           = os.Create
 	FPOsStat             = os.Stat
-
-	FPDirectoryMustExist = DirectoryMustExist
-	FPMustOpenFile       = MustOpenFile
 )
 
 /*

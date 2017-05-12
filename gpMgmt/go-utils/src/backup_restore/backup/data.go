@@ -1,5 +1,9 @@
 package backup
 
+/*
+ * This file contains structs and functions related to dumping data on the segments.
+ */
+
 import (
 	"backup_restore/utils"
 	"fmt"

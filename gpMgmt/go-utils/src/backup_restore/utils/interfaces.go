@@ -1,5 +1,10 @@
 package utils
 
+/*
+ * This file contains structs and functions used for unit testing other structs
+ * and functions in this directory via dependency injection.
+ */
+
 import (
 	"errors"
 	"fmt"

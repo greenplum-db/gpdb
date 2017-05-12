@@ -41,6 +41,12 @@ build_rhel:
 build_osx:
 		env GOOS=darwin GOARCH=amd64 go build $(GOFLAGS) -o $(MODULE_NAME)
 
+install: all installdirs
+		$(INSTALL_PROGRAM) gpbackup$(X) '$(DESTDIR)$(bindir)/gpbackup$(X)'
+
+installdirs:
+		$(MKDIR_P) '$(DESTDIR)$(bindir)'
+
 clean :
 		rm -f $(MODULE_NAME)
 		rm -rf /tmp/go-build*

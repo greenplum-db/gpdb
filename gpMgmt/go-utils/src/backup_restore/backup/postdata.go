@@ -1,5 +1,11 @@
 package backup
 
+/*
+ * This file contains structs and functions related to dumping "post-data" metadata
+ * on the master, which is any metadata that needs to be restored after data is
+ * restored, such as indexes and rules.
+ */
+
 import (
 	"backup_restore/utils"
 	"fmt"

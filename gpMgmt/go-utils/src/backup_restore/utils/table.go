@@ -1,5 +1,10 @@
 package utils
 
+/*
+ * This file contains structs and functions related to storing schema and
+ * table information for querying the database and filtering backup lists.
+ */
+
 import (
 	"database/sql"
 	"fmt"
@@ -42,7 +47,7 @@ type Table struct {
  * Functions for escaping schemas and tables
  */
 
-// Quote an unquoted identifier (schema or table) like quote_ident in Postgres
+// This function quotes an unquoted identifier like quote_ident() in Postgres.
 func QuoteIdent(ident string) string {
 	if !unquotedIdentifier.MatchString(ident) {
 		ident = replacerTo.Replace(ident)
@@ -51,28 +56,18 @@ func QuoteIdent(ident string) string {
 	return ident
 }
 
-func (s DBObject) ToString() string {
-	return QuoteIdent(s.ObjName)
-}
-
-// Print a table in schema.table format, with everything escaped appropriately.
+/*
+ * This function prints a table in fully-qualified schema.table format, with
+ * everything quoted and escaped appropriately.
+ */
 func (t Table) ToString() string {
 	schema := QuoteIdent(t.SchemaName)
 	table := QuoteIdent(t.TableName)
 	return fmt.Sprintf("%s.%s", schema, table)
 }
 
-func DBObjectFromString(name string) DBObject {
-	var object string
-	var matches []string
-	if matches = quotedIdentifier.FindStringSubmatch(name); len(matches) != 0 {
-		object = replacerFrom.Replace(matches[1])
-	} else if matches = unquotedIdentifier.FindStringSubmatch(name); len(matches) != 0 {
-		object = replacerFrom.Replace(matches[1])
-	} else {
-		logger.Fatal("\"%s\" is not a valid identifier", name)
-	}
-	return DBObject{0, object, sql.NullString{"", false}}
+func (s DBObject) ToString() string {
+	return QuoteIdent(s.ObjName)
 }
 
 /* Parse an appropriately-escaped schema.table string into a Table.  The Table's
@@ -97,6 +92,19 @@ func TableFromString(name string) Table {
 		logger.Fatal("\"%s\" is not a valid fully-qualified table expression", name)
 	}
 	return Table{0, 0, schema, table}
+}
+
+func DBObjectFromString(name string) DBObject {
+	var object string
+	var matches []string
+	if matches = quotedIdentifier.FindStringSubmatch(name); len(matches) != 0 {
+		object = replacerFrom.Replace(matches[1])
+	} else if matches = unquotedIdentifier.FindStringSubmatch(name); len(matches) != 0 {
+		object = replacerFrom.Replace(matches[1])
+	} else {
+		logger.Fatal("\"%s\" is not a valid identifier", name)
+	}
+	return DBObject{0, object, sql.NullString{"", false}}
 }
 
 /*
@@ -149,8 +157,11 @@ func SortTables(tables Tables) {
  * Other schema- and table-related utility functions
  */
 
-// Given a list of Tables, returns a sorted list of their Schemas.
-// Assumes that the Table list is sorted by schema and then by table.
+/*
+ * Given a list of Tables, this function returns a sorted list of their Schemas.
+ * It assumes that the Table list is sorted by schema and then by table, so it
+ * doesn't need to do any sorting itself.
+ */
 func GetUniqueSchemas(schemas []DBObject, tables []Table) []DBObject {
 	currentSchemaOid := uint32(0)
 	uniqueSchemas := make([]DBObject, 0)

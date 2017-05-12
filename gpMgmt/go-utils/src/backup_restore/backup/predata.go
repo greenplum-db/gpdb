@@ -1,5 +1,11 @@
 package backup
 
+/*
+ * This file contains structs and functions related to dumping "pre-data" metadata
+ * on the master, which is any metadata that needs to be restored before data is
+ * restored, such as table definitions and check constraints.
+ */
+
 import (
 	"backup_restore/utils"
 	"database/sql"
@@ -10,14 +16,14 @@ import (
 )
 
 type ColumnDefinition struct {
-	Num       int
-	Name      string
-	NotNull   bool
-	HasDef    bool
-	IsDropped bool
-	TypName   string
-	Encoding  sql.NullString
-	DefVal    string
+	Num        int
+	Name       string
+	NotNull    bool
+	HasDefault bool
+	IsDropped  bool
+	TypName    string
+	Encoding   sql.NullString
+	DefaultVal string
 }
 
 type TableDefinition struct {
@@ -27,6 +33,11 @@ type TableDefinition struct {
 	StorageOpts     string
 }
 
+/*
+ * This function calls all the functions needed to gather the metadata for a
+ * single table and assembles the metadata into ColumnDef and TableDef structs
+ * for more convenient handling in the PrintCreateTableStatement() function.
+ */
 func ConstructDefinitionsForTable(connection *utils.DBConn, table utils.Table) ([]ColumnDefinition, TableDefinition) {
 	tableAttributes := GetTableAttributes(connection, table.TableOid)
 	tableDefaults := GetTableDefaults(connection, table.TableOid)
@@ -41,9 +52,15 @@ func ConstructDefinitionsForTable(connection *utils.DBConn, table utils.Table) (
 	return columnDefs, tableDef
 }
 
+/*
+ * This function calls per-table functions to get constraints related to each
+ * table, then consolidates them in two slices holding all constraints for all
+ * tables.  Two slices are needed because FOREIGN KEY constraints must be dumped
+ * after PRIMARY KEY constraints, so they're separated out to be handled last.
+ */
 func ConstructConstraintsForAllTables(connection *utils.DBConn, tables []utils.Table) ([]string, []string) {
 	allConstraints := make([]string, 0)
-	allFkConstraints := make([]string, 0) // separate slice for FOREIGN KEY constraints, since they must be printed after PRIMARY KEY constraints
+	allFkConstraints := make([]string, 0)
 	for _, table := range tables {
 		constraintList := GetConstraints(connection, table.TableOid)
 		tableConstraints, tableFkConstraints := ProcessConstraints(table, constraintList)
@@ -53,36 +70,48 @@ func ConstructConstraintsForAllTables(connection *utils.DBConn, tables []utils.T
 	return allConstraints, allFkConstraints
 }
 
-func ConsolidateColumnInfo(atts []QueryTableAtts, defs []QueryTableDef) []ColumnDefinition {
+/*
+ * This function zips up table attributes and column default information into
+ * one struct, instead of performing an expensive join to get everything in
+ * a single query.
+ */
+func ConsolidateColumnInfo(atts []QueryTableAtts, defs []QueryTableDefault) []ColumnDefinition {
 	colDefs := make([]ColumnDefinition, 0)
-	// The queries to get attributes and defaults ORDER BY oid and then attribute number, so we can assume the arrays are in the same order without sorting
+	/*
+	 * The queries to get attributes and defaults ORDER BY oid and then attribute
+	 * number, so we can assume the arrays are in the same order without sorting.
+	 */
 	j := 0
 	for i := range atts {
-		defVal := ""
-		if atts[i].AttHasDef {
+		defaultVal := ""
+		if atts[i].AttHasDefault {
 			for j < len(defs) {
 				if atts[i].AttNum == defs[j].AdNum {
-					defVal = defs[j].DefVal
+					defaultVal = defs[j].DefaultVal
 					break
 				}
 				j++
 			}
 		}
 		colDef := ColumnDefinition{
-			Num:       atts[i].AttNum,
-			Name:      atts[i].AttName,
-			NotNull:   atts[i].AttNotNull,
-			HasDef:    atts[i].AttHasDef,
-			IsDropped: atts[i].AttIsDropped,
-			TypName:   atts[i].AttTypName,
-			Encoding:  atts[i].AttEncoding,
-			DefVal:    defVal,
+			Num:        atts[i].AttNum,
+			Name:       atts[i].AttName,
+			NotNull:    atts[i].AttNotNull,
+			HasDefault: atts[i].AttHasDefault,
+			IsDropped:  atts[i].AttIsDropped,
+			TypName:    atts[i].AttTypName,
+			Encoding:   atts[i].AttEncoding,
+			DefaultVal: defaultVal,
 		}
 		colDefs = append(colDefs, colDef)
 	}
 	return colDefs
 }
 
+/*
+ * There's no built-in function to generate constraint definitions like there is for other types of
+ * metadata, so this function constructs them.
+ */
 func ProcessConstraints(table utils.Table, constraints []QueryConstraint) ([]string, []string) {
 	alterStr := fmt.Sprintf("\n\nALTER TABLE ONLY %s ADD CONSTRAINT", table.ToString())
 	cons := make([]string, 0)
@@ -102,14 +131,20 @@ func PrintCreateDatabaseStatement(predataFile io.Writer) {
 	fmt.Fprintf(predataFile, "\n\nCREATE DATABASE %s;", utils.QuoteIdent(connection.DBName))
 }
 
+/*
+ * This function prints CREATE TABLE statements in a format very similar to pg_dump.  Unlike pg_dump,
+ * however, table names are printed fully qualified with their schemas instead of relying on setting
+ * the search_path; this will aid in later filtering to include or exclude certain tables during the
+ * backup process, and allows customers to copy just the CREATE TABLE block in order to use it directly.
+ */
 func PrintCreateTableStatement(predataFile io.Writer, table utils.Table, columnDefs []ColumnDefinition, tableDef TableDefinition) {
 	fmt.Fprintf(predataFile, "\n\nCREATE TABLE %s (\n", table.ToString())
 	lines := make([]string, 0)
 	for _, column := range columnDefs {
 		if !column.IsDropped {
 			line := fmt.Sprintf("\t%s %s", utils.QuoteIdent(column.Name), column.TypName)
-			if column.HasDef {
-				line += fmt.Sprintf(" DEFAULT %s", column.DefVal)
+			if column.HasDefault {
+				line += fmt.Sprintf(" DEFAULT %s", column.DefaultVal)
 			}
 			if column.NotNull {
 				line += " NOT NULL"
@@ -170,6 +205,10 @@ func GetAllSequenceDefinitions(connection *utils.DBConn) []QuerySequence {
 	return sequenceDefs
 }
 
+/*
+ * This function is largely derived from the dumpSequence() function in pg_dump.c.  The values of
+ * minVal and maxVal come from SEQ_MINVALUE and SEQ_MAXVALUE, defined in include/commands/sequence.h.
+ */
 func PrintCreateSequenceStatements(predataFile io.Writer, sequences []QuerySequence) {
 	maxVal := int64(9223372036854775807)
 	minVal := int64(-9223372036854775807)

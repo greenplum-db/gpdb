@@ -15,10 +15,12 @@ var ( // Command-line flags
 	dbname  = flag.String("dbname", "", "The database to be backed up")
 	debug   = flag.Bool("debug", false, "Print verbose and debug log messages")
 	dumpDir = flag.String("dumpdir", "", "The directory to which all dump files will be written")
+	quiet   = flag.Bool("quiet", false, "Suppress non-warning, non-error log messages")
 	verbose = flag.Bool("verbose", false, "Print verbose log messages")
 )
 
-func DoInit() { // Handles setup that can be done before parsing flags
+// This function handles setup that can be done before parsing flags.
+func DoInit() {
 	SetLogger(utils.InitializeLogging("gpbackup", "", utils.LOGINFO))
 }
 
@@ -26,12 +28,19 @@ func SetLogger(log *utils.Logger) {
 	logger = log
 }
 
+/*
+ * This function handles argument parsing and validation, e.g. checking that a passed filename exists.
+ * It should only validate; initialization with any sort of side effects should go in DoInit or DoSetup.
+ */
 func DoValidation() {
 	flag.Parse()
 }
 
-func DoSetup() { // Handles setup that must be done after parsing flags
-	if *debug {
+// This function handles setup that must be done after parsing flags.
+func DoSetup() {
+	if *quiet {
+		logger.SetVerbosity(utils.LOGERROR)
+	} else if *debug {
 		logger.SetVerbosity(utils.LOGDEBUG)
 	} else if *verbose {
 		logger.SetVerbosity(utils.LOGVERBOSE)

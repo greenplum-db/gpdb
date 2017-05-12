@@ -26,7 +26,7 @@ var _ = Describe("backup/queries tests", func() {
 	})
 
 	Describe("GetTableAttributes", func() {
-		header := []string{"attname", "attnotnull", "atthasdef", "attisdropped", "atttypname", "attencoding"}
+		header := []string{"attname", "attnotnull", "atthasdefault", "attisdropped", "atttypname", "attencoding"}
 		rowOne := []driver.Value{"i", "f", "f", "f", "int", nil}
 		rowTwo := []driver.Value{"j", "f", "f", "f", "character varying(20)", nil}
 		rowEncoded := []driver.Value{"j", "f", "f", "f", "character varying(20)", "compresstype=zlib, blocksize=65536"}
@@ -38,7 +38,7 @@ var _ = Describe("backup/queries tests", func() {
 			results := backup.GetTableAttributes(connection, 0)
 			Expect(len(results)).To(Equal(1))
 			Expect(results[0].AttName).To(Equal("i"))
-			Expect(results[0].AttHasDef).To(Equal(false))
+			Expect(results[0].AttHasDefault).To(Equal(false))
 			Expect(results[0].AttIsDropped).To(Equal(false))
 		})
 		It("returns a slice for a table with two columns", func() {
@@ -79,7 +79,7 @@ var _ = Describe("backup/queries tests", func() {
 		})
 	})
 	Describe("GetTableDefaults", func() {
-		header := []string{"adnum", "defval"}
+		header := []string{"adnum", "defaultval"}
 		rowOne := []driver.Value{"1", "42"}
 		rowTwo := []driver.Value{"2", "bar"}
 
@@ -89,7 +89,7 @@ var _ = Describe("backup/queries tests", func() {
 			results := backup.GetTableDefaults(connection, 0)
 			Expect(len(results)).To(Equal(1))
 			Expect(results[0].AdNum).To(Equal(1))
-			Expect(results[0].DefVal).To(Equal("42"))
+			Expect(results[0].DefaultVal).To(Equal("42"))
 		})
 		It("returns a slice for a table with two columns having default values", func() {
 			fakeResult := sqlmock.NewRows(header).AddRow(rowOne...).AddRow(rowTwo...)
@@ -97,9 +97,9 @@ var _ = Describe("backup/queries tests", func() {
 			results := backup.GetTableDefaults(connection, 0)
 			Expect(len(results)).To(Equal(2))
 			Expect(results[0].AdNum).To(Equal(1))
-			Expect(results[0].DefVal).To(Equal("42"))
+			Expect(results[0].DefaultVal).To(Equal("42"))
 			Expect(results[1].AdNum).To(Equal(2))
-			Expect(results[1].DefVal).To(Equal("bar"))
+			Expect(results[1].DefaultVal).To(Equal("bar"))
 		})
 		It("returns a slice for a table with no columns having default values", func() {
 			fakeResult := sqlmock.NewRows(header)

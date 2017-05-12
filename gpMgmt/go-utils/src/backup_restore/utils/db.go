@@ -1,5 +1,10 @@
 package utils
 
+/*
+ * This file contains structs and functions related to connecting to a database
+ * and executing queries.
+ */
+
 import (
 	"database/sql"
 	"fmt"
@@ -47,6 +52,13 @@ func NewDBConn(dbname string) *DBConn {
 	}
 }
 
+/*
+ * Wrapper functions for built-in sqlx and database/sql functionality; they will
+ * automatically execute the query as part of an existing transaction if one is
+ * in progress, to ensure that the whole backup process occurs in one transaction
+ * without requiring that to be ensured at the call site.
+ */
+
 func (dbconn *DBConn) Begin() {
 	if dbconn.Tx != nil {
 		logger.Fatal("Cannot begin transaction; there is already a transaction in progress")
@@ -54,6 +66,11 @@ func (dbconn *DBConn) Begin() {
 	var err error
 	dbconn.Tx, err = dbconn.Conn.Beginx()
 	CheckError(err)
+	/*
+	 * This uses a SERIALIZABLE transaction so the backup can effectively take a
+	 * "snapshot" of the database via MVCC, to keep backups consistent without
+	 * requiring a pg_class lock.
+	 */
 	_, err = dbconn.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
 	CheckError(err)
 }
@@ -72,12 +89,6 @@ func (dbconn *DBConn) Commit() {
 	err = dbconn.Tx.Commit()
 	CheckError(err)
 	dbconn.Tx = nil
-}
-
-func escapeDBName(dbname string) string {
-	dbname = strings.Replace(dbname, `\`, `\\`, -1)
-	dbname = strings.Replace(dbname, `'`, `\'`, -1)
-	return dbname
 }
 
 func (dbconn *DBConn) Connect() {
@@ -112,17 +123,27 @@ func (dbconn *DBConn) Get(destination interface{}, query string) error {
 	return dbconn.Conn.Get(destination, query)
 }
 
+func (dbconn *DBConn) Select(destination interface{}, query string) error {
+	if dbconn.Tx != nil {
+		return dbconn.Tx.Select(destination, query)
+	}
+	return dbconn.Conn.Select(destination, query)
+}
+
+/*
+ * Other useful/helper functions involving DBConn
+ */
+
+func escapeDBName(dbname string) string {
+	dbname = strings.Replace(dbname, `\`, `\\`, -1)
+	dbname = strings.Replace(dbname, `'`, `\'`, -1)
+	return dbname
+}
+
 func (dbconn *DBConn) GetDBSize() string {
 	size := struct{ DBSize string }{}
 	sizeQuery := fmt.Sprintf("SELECT pg_size_pretty(sodddatsize) as dbsize FROM gp_toolkit.gp_size_of_database WHERE sodddatname=E'%s'", escapeDBName(dbconn.DBName))
 	err := dbconn.Get(&size, sizeQuery)
 	CheckError(err)
 	return size.DBSize
-}
-
-func (dbconn *DBConn) Select(destination interface{}, query string) error {
-	if dbconn.Tx != nil {
-		return dbconn.Tx.Select(destination, query)
-	}
-	return dbconn.Conn.Select(destination, query)
 }
