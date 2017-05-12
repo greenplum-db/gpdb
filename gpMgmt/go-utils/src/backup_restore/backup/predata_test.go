@@ -12,7 +12,7 @@ import (
 	"github.com/onsi/gomega/gbytes"
 )
 
-func TestMetadata(t *testing.T) {
+func TestPredata(t *testing.T) {
 	RegisterFailHandler(Fail)
 }
 

@@ -149,16 +149,16 @@ WHERE a.attrelid = %d;`, oid)
 	}
 }
 
-type QueryDefStatement struct {
-	DefStatement string
+type QueryPartDef struct {
+	PartitionDef string
 }
 
-func getDefinitionStatement(connection *utils.DBConn, query string) string {
-	results := make([]QueryDefStatement, 0)
+func GetDefinitionStatement(connection *utils.DBConn, query string) string {
+	results := make([]QueryPartDef, 0)
 	err := connection.Select(&results, query)
 	utils.CheckError(err)
 	if len(results) == 1 {
-		return results[0].DefStatement
+		return results[0].PartitionDef
 	} else if len(results) > 1 {
 		logger.Fatal("Too many rows returned from query to get object definition: got %d rows, expected 1 row", len(results))
 	}
@@ -166,18 +166,25 @@ func getDefinitionStatement(connection *utils.DBConn, query string) string {
 }
 
 func GetPartitionDefinition(connection *utils.DBConn, oid uint32) string {
-	query := fmt.Sprintf("SELECT * FROM pg_get_partition_def(%d, true, true) AS defstatement WHERE partitiondef IS NOT NULL", oid)
-	return getDefinitionStatement(connection, query)
+	query := fmt.Sprintf("SELECT * FROM pg_get_partition_def(%d, true, true) AS partitiondef WHERE partitiondef IS NOT NULL", oid)
+	return GetDefinitionStatement(connection, query)
 }
 
 func GetPartitionTemplateDefinition(connection *utils.DBConn, oid uint32) string {
-	query := fmt.Sprintf("SELECT * FROM pg_get_partition_template_def(%d, true, true) AS defstatement WHERE partitiondef IS NOT NULL", oid)
-	return getDefinitionStatement(connection, query)
+	query := fmt.Sprintf("SELECT * FROM pg_get_partition_template_def(%d, true, true) AS partitiondef WHERE partitiondef IS NOT NULL", oid)
+	return GetDefinitionStatement(connection, query)
 }
 
-func GetIndexDefinition(connection *utils.DBConn, oid uint32) string {
-	query := fmt.Sprintf("SELECT pg_get_indexdef(i.indexrelid) AS defstatement FROM pg_index i JOIN pg_class t ON (t.oid = i.indexrelid) WHERE i.indrelid = %d", oid)
-	return getDefinitionStatement(connection, query)
+type QueryIndexDef struct {
+	IndexDef string
+}
+
+func GetIndexDefinitions(connection *utils.DBConn, oid uint32) []QueryIndexDef {
+	query := fmt.Sprintf("SELECT pg_get_indexdef(i.indexrelid) AS indexdef FROM pg_index i JOIN pg_class t ON (t.oid = i.indexrelid) WHERE i.indrelid = %d", oid)
+	results := make([]QueryIndexDef, 0)
+	err := connection.Select(&results, query)
+	utils.CheckError(err)
+	return results
 }
 
 type QueryStorageOptions struct {
