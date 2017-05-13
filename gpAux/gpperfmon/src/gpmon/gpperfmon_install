@@ -166,6 +166,9 @@ if __name__ == '__main__':
         cmd = Command("""echo "host     all         gpmon         127.0.0.1/28    md5" >> %s""" % pg_hba, showOutput=True)
         commands.append(cmd)
 
+        cmd = Command("""echo "host     all         gpmon         ::1/128    md5" >> %s""" % pg_hba, showOutput=True)
+        commands.append(cmd)
+
         ################################################
         # these commands add a new line to the top of .pgpass and save a copy of old .pgpass
         cmd = Command("""touch %s""" % (pg_pass))

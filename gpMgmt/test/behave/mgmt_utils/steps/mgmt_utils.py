@@ -4213,11 +4213,11 @@ def impl(context, filename, output):
     check_stdout_msg(context, output)
 
 
-@then('verify that the last line of the master postgres configuration file contains the string "{output}"')
-def impl(context, output):
+@then('verify that the last line of the file "{filename}" in the master data directory contains the string "{output}"')
+def impl(context, filename, output):
     contents = ''
-    filename = master_data_dir + "/postgresql.conf"
-    with open(filename) as fr:
+    file_path = os.path.join(master_data_dir, filename)
+    with open(file_path) as fr:
         for line in fr:
             contents = line.strip()
     pat = re.compile(output)
@@ -4883,7 +4883,7 @@ def impl(context):
             When the user runs "gpstart -a"
             Then gpstart should return a return code of 0
             And verify that a role "gpmon" exists in database "gpperfmon"
-            And verify that the last line of the master postgres configuration file contains the string "gpperfmon_log_alert_level=warning"
+            And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "gpperfmon_log_alert_level=warning"
             And verify that there is a "heap" table "database_history" in "gpperfmon"
             Then wait until the process "gpmmon" is up
             And wait until the process "gpsmon" is up
