@@ -2883,13 +2883,18 @@ getProcLangs(int *numProcLangs)
 	/* Make sure we are in proper schema */
 	selectSourceSchema("pg_catalog");
 
+	/*
+	 * The laninline column was added in upstream 90000 but was backported to
+	 * Greenplum 5, so the check needs to go further back than 90000.
+	 */
 	if (g_gp_supportsLanOwner)
 	{
+		/* pg_language has a laninline column */
 		/* pg_language has a lanowner column */
 		appendPQExpBuffer(query, "SELECT tableoid, oid, "
 						  "lanname, lanpltrusted, lanplcallfoid, "
-						  "lanvalidator,  lanacl, "
-						  "(%s lanowner) as lanowner "
+						  "laninline, lanvalidator, lanacl, "
+						  "(%s lanowner) AS lanowner "
 						  "FROM pg_language "
 						  "WHERE lanispl "
 						  "ORDER BY oid",
