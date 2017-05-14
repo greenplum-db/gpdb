@@ -1292,8 +1292,14 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 		uri = ParseExternalTableUri(first_uri_str);
 	}
 
-	/* get the ON clause information */
+	/* get the ON clause information, and restrict 'ON MASTER' to custom
+	 * protocols only */
 	on_clause = (char *) strVal(lfirst(list_head(rel->execlocationlist)));
+	if ((strcmp(on_clause, "MASTER_ONLY") == 0)
+		&& using_location && (uri->protocol != URI_CUSTOM)) {
+		ereport(ERROR, (errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+				errmsg("\'ON MASTER\' is not supported by this protocol yet.")));
+	}
 
 	/*
 	 * Now we do the actual assignment of work to the segment databases (where
@@ -1340,11 +1346,6 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 	/* (1) */
 	if (using_location && (uri->protocol == URI_FILE || uri->protocol == URI_HTTP))
 	{
-		if (strcmp(on_clause, "MASTER_ONLY") == 0) {
-			ereport(ERROR, (errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							errmsg("\'ON MASTER\' is not supported by this protocol yet")));
-		}
-
 		/*
 		 * extract file path and name from URI strings and assign them a
 		 * primary segdb
@@ -1446,15 +1447,10 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 							   uri->protocol == URI_GPFDISTS ||
 							   uri->protocol == URI_CUSTOM))
 	{
-		if (strcmp(on_clause, "MASTER_ONLY") == 0) {
-			if (uri->protocol == URI_CUSTOM) {
-				const char *uri_str = (char *) strVal(lfirst(list_head(rel->urilocationlist)));
-				segdb_file_map[0] = pstrdup(uri_str);
-				ismasteronly = true;
-			} else {
-				ereport(ERROR, (errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-								errmsg("\'ON MASTER\' is not supported by this protocol yet")));
-			}
+		if ((strcmp(on_clause, "MASTER_ONLY") == 0) && (uri->protocol == URI_CUSTOM)) {
+			const char *uri_str = (char *) strVal(lfirst(list_head(rel->urilocationlist)));
+			segdb_file_map[0] = pstrdup(uri_str);
+			ismasteronly = true;
 		} else {
 		/*
 		 * Re-write the location list for GPFDIST or GPFDISTS before mapping to segments.
@@ -1819,11 +1815,6 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 	/* (4) */
 	else if (using_location && uri->protocol == URI_GPHDFS)
 	{
-		if (strcmp(on_clause, "MASTER_ONLY") == 0) {
-			ereport(ERROR, (errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							errmsg("\'ON MASTER\' is not supported by this protocol yet")));
-		}
-
 		const char *uri_str = (char *) strVal(lfirst(list_head(rel->urilocationlist)));
 
 		for (i = 0; i < db_info->total_segment_dbs; i++)
