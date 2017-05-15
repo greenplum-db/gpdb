@@ -289,38 +289,20 @@ select * from t, pt where t1 = pt1 and ptid = tid;
 explain select * from pt where ptid in (select tid from t where t1 = 'hello' || tid);
                                                       QUERY PLAN                                                       
 -----------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=1.10..20.12 rows=27 width=31)
-   ->  Hash Join  (cost=1.10..20.12 rows=9 width=31)
-         Hash Cond: dpe_single.pt.ptid = t.tid
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=1.12..20.27 rows=27 width=31)
+   ->  Hash Semi Join  (cost=1.12..20.27 rows=9 width=31)
+         Hash Cond: public.pt.ptid = t.tid
          ->  Append  (cost=0.00..18.54 rows=18 width=31)
-               ->  Result  (cost=0.00..3.09 rows=3 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_junk_data pt  (cost=0.00..3.09 rows=3 width=31)
-               ->  Result  (cost=0.00..3.09 rows=3 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_2 pt  (cost=0.00..3.09 rows=3 width=31)
-               ->  Result  (cost=0.00..3.09 rows=3 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_3 pt  (cost=0.00..3.09 rows=3 width=31)
-               ->  Result  (cost=0.00..3.09 rows=3 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_4 pt  (cost=0.00..3.09 rows=3 width=31)
-               ->  Result  (cost=0.00..3.09 rows=3 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_5 pt  (cost=0.00..3.09 rows=3 width=31)
-               ->  Result  (cost=0.00..3.09 rows=3 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
-         ->  Hash  (cost=1.09..1.09 rows=1 width=11)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=1.06..1.09 rows=1 width=11)
-                     Filter: t.tid
-                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=1.06..1.09 rows=1 width=11)
-                           ->  HashAggregate  (cost=1.06..1.07 rows=1 width=36)
-                                 Group By: t.tid
-                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.06 rows=1 width=11)
-                                       Hash Key: t.tid
-                                       ->  Seq Scan on t  (cost=0.00..1.04 rows=1 width=11)
-                                             Filter: t1 = ('hello'::text || tid::text)
+               ->  Seq Scan on pt_1_prt_junk_data pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_2 pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_3 pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_4 pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_5 pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
+         ->  Hash  (cost=1.08..1.08 rows=1 width=11)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=1 width=11)
+                     ->  Seq Scan on t  (cost=0.00..1.04 rows=1 width=11)
+                           Filter: t1 = ('hello'::text || tid::text)
  Settings:  gp_segments_for_planner=2; optimizer_segments=2
  Optimizer status: legacy query optimizer
 (34 rows)
@@ -352,33 +334,19 @@ explain select * from pt where exists (select 1 from t where tid = ptid and t1 =
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=1.09..20.18 rows=27 width=31)
-   ->  Hash EXISTS Join  (cost=1.09..20.18 rows=9 width=31)
-         Hash Cond: dpe_single.pt.ptid = t.tid
+   ->  Hash Semi Join  (cost=1.09..20.18 rows=9 width=31)
+         Hash Cond: public.pt.ptid = t.tid
          ->  Append  (cost=0.00..18.54 rows=18 width=31)
-               ->  Result  (cost=0.00..3.09 rows=3 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_junk_data pt  (cost=0.00..3.09 rows=3 width=31)
-               ->  Result  (cost=0.00..3.09 rows=3 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_2 pt  (cost=0.00..3.09 rows=3 width=31)
-               ->  Result  (cost=0.00..3.09 rows=3 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_3 pt  (cost=0.00..3.09 rows=3 width=31)
-               ->  Result  (cost=0.00..3.09 rows=3 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_4 pt  (cost=0.00..3.09 rows=3 width=31)
-               ->  Result  (cost=0.00..3.09 rows=3 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_5 pt  (cost=0.00..3.09 rows=3 width=31)
-               ->  Result  (cost=0.00..3.09 rows=3 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_junk_data pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_2 pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_3 pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_4 pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_5 pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
          ->  Hash  (cost=1.07..1.07 rows=1 width=11)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.07 rows=1 width=11)
-                     Filter: t.tid
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.07 rows=1 width=11)
-                           ->  Seq Scan on t  (cost=0.00..1.04 rows=1 width=11)
-                                 Filter: t1 = ('hello'::text || tid::text)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.07 rows=1 width=11)
+                     ->  Seq Scan on t  (cost=0.00..1.04 rows=1 width=11)
+                           Filter: t1 = ('hello'::text || tid::text)
  Settings:  gp_segments_for_planner=2; optimizer_segments=2
  Optimizer status: legacy query optimizer
 (30 rows)
