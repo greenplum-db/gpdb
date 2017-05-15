@@ -405,8 +405,11 @@ SED_PG_CONF () {
 				fi
 			fi
 	else
-		# Call out retry for commands that fail
+		# trap DEBUG will always be called first, when other traps are triggered.
+		# We need to make sure that we save the current running command, so
+		# that the RETRY function re-runs the command
 		trap 'CURRENT=$BASH_COMMAND' DEBUG
+		# Call out retry for commands that fail
 		trap RETRY ERR
 		RETVAL=0 # RETVAL gets modified in RETRY function whenever the trap is called
 
