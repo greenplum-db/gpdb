@@ -292,7 +292,7 @@ gistMakeUnionKey(GISTSTATE *giststate, int attno,
 bool
 gistKeyIsEQ(GISTSTATE *giststate, int attno, Datum a, Datum b)
 {
-	bool		result;
+	bool		result = false;
 
 	FunctionCall3(&giststate->equalFn[attno],
 				  a, b,

@@ -219,8 +219,8 @@ chooseLR(GIST_SPLITVEC *v,
 		}
 		else
 		{
-			float		p1,
-						p2;
+			float		p1 = 0.0;
+			float		p2 = 0.0;
 			GISTENTRY	oldUnion,
 						addon;
 

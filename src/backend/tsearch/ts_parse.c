@@ -350,8 +350,8 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
 void
 parsetext(Oid cfgId, ParsedText *prs, char *buf, int buflen)
 {
-	int			type,
-				lenlemm;
+	int			type;
+	int			lenlemm = 0;
 	char	   *lemm = NULL;
 	LexizeData	ldata;
 	TSLexeme   *norms;
