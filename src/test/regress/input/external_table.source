@@ -1333,6 +1333,14 @@ SELECT COUNT(*) FROM gp_read_error_log('exttab_heap_join_1');
 DROP EXTERNAL TABLE IF EXISTS exttab_with_on_master;
 -- end_ignore
 
+-- Create external table with on clause
+CREATE EXTERNAL TABLE exttab_with_on_master( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') ON MASTER FORMAT 'TEXT' (DELIMITER '|');
+
+SELECT * FROM exttab_with_on_master;
+
+DROP EXTERNAL TABLE IF EXISTS exttab_with_on_master;
+
 -- start_ignore
 DROP EXTERNAL TABLE IF EXISTS exttab_with_option_empty;
 DROP EXTERNAL TABLE IF EXISTS exttab_with_option_1;
