@@ -26,7 +26,7 @@
   <topic id="topic2" xml:lang="en">
     <title id="nw149721">Installing Python</title>
     <body>
-      <p>The Greenplum loader program (<codeph>gpload.py</codeph>) for Windows requires Python 2.5
+      <p>The Greenplum loader program (<codeph>gpload.py</codeph>) for Windows requires Python 2.7
         (32-bit version) to also be installed on your machine. If you do not have an installation of
         Python, you can get one from <xref href="https://www.python.org" scope="external"
           format="html">https://www.python.org</xref>. </p>
@@ -35,7 +35,7 @@
       <section id="nw149727">
         <title>To install Python</title>
         <ol>
-          <li id="nw149728">Download the Python 2.5 installer for Windows from <xref
+          <li id="nw149728">Download the Python 2.7 installer for Windows from <xref
               href="https://www.python.org/downloads/" scope="external" format="html"
               >https://www.python.org/downloads/</xref>.</li>
           <li id="nw149730">Locate, then double-click on the <codeph>python Load Tools for
