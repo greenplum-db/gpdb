@@ -37,7 +37,7 @@
         extension includes support for GiST-based R-Tree spatial indexes and functions for analysis
         and processing of GIS objects. </p>
       <p>Go to<xref href="http://postgis.refractions.net/" scope="external" format="html">
-          http://postgis.refractions.net/ </xref>for more information about PostGIS.</p>
+          http://postgis.refractions.net/</xref> for more information about PostGIS.</p>
       <p>For information about Greenplum Database PostGIS extension support, see <xref
           href="#postgis_support" format="dita"/>.</p>
     </body>
@@ -239,7 +239,7 @@ USING GIST ( <i>geometryfield</i> );</codeblock>
           <li><apiname>ST_Estimated_Extent</apiname> function is not supported. The function
             requires table column statistics for user defined data types that are not available with
             Greenplum Database.</li>
-          <li><apiname>ST_GeomFronGeoJSON</apiname> function is not supported. The function requires
+          <li><apiname>ST_GeomFromGeoJSON</apiname> function is not supported. The function requires
             JSON support. JSON is not supported in Greenplum Database.</li>
           <li>These PostGIS aggregates are not supported by Greenplum Database:<ul
               id="ul_ylg_hpb_3p">
