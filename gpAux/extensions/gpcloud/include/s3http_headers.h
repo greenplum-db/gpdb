@@ -15,6 +15,7 @@ enum HeaderField {
     ETAG,
     X_AMZ_DATE,
     X_AMZ_CONTENT_SHA256,
+    X_AMZ_SERVER_SIDE_ENCRYPTION,
 };
 
 // HTTPHeaders wraps curl_slist using std::map to ease manipulating HTTP

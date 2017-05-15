@@ -401,9 +401,12 @@ string S3InterfaceService::getUploadId(const S3Url &s3Url) {
                 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");  // sha256hex
                                                                                       // of empty
                                                                                       // string
+    if (params.getSSEType() == SSE_S3) {
+        headers.Add(X_AMZ_SERVER_SIDE_ENCRYPTION, "AES256");
+    }
 
-    SignRequestV4("POST", &headers, s3Url.getRegion(), s3Url.getPathForCurl(), "uploads=",
-                  this->params.getCred());
+    SignRequestV4("POST", &headers, s3Url.getRegion(), s3Url.getPathForCurl(),
+                  "uploads=", this->params.getCred());
 
     stringstream urlWithQuery;
     urlWithQuery << s3Url.getFullUrlForCurl() << "?uploads";

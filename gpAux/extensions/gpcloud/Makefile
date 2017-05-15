@@ -44,10 +44,9 @@ lint:
 
 format:
 	@-[ -n "`command -v dos2unix`" ] && dos2unix -k -q src/*.cpp bin/gpcheckcloud/*.cpp test/*.cpp include/*.h
-	@-[ -n "`command -v clang-format`" ] && clang-format --version \
-		| grep -q 'clang-format version 4.0.0' \
+	@-[ -n "`command -v clang-format`" ] && clang-format --version | grep -q 'version 5.0.0' \
 		&& clang-format -style="{BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 100, AllowShortFunctionsOnASingleLine: None}" -i src/*.cpp bin/gpcheckcloud/*.cpp test/*.cpp include/*.h \
-		|| echo clang-format 4.0.0 is not found.
+		|| echo clang-format 5.0.0 is not found.
 
 cleanall:
 	@-$(MAKE) clean # incase PGXS not included

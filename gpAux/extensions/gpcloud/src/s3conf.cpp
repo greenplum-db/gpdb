@@ -70,6 +70,13 @@ S3Params InitConfig(const string& urlWithOptions) {
 
     S3Params params(sourceUrl, useHttps, version, urlRegion);
 
+    string sse_type = s3Cfg.Get(configSection, "server_side_encryption", "none");
+    if (sse_type == "sse-s3") {
+        params.setSSEType(SSE_S3);
+    } else {
+        params.setSSEType(SSE_NONE);
+    }
+
     string content = s3Cfg.Get(configSection, "loglevel", "WARNING");
     s3ext_loglevel = getLogLevel(content.c_str());
 

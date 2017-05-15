@@ -5,6 +5,8 @@
 #include "s3memory_mgmt.h"
 #include "s3url.h"
 
+enum S3SSEType { SSE_NONE, SSE_S3 };
+
 class S3Params {
    public:
     S3Params(const string& sourceUrl = "", bool useHttps = true, const string& version = "",
@@ -17,7 +19,8 @@ class S3Params {
           lowSpeedTime(0),
           debugCurl(false),
           autoCompress(false),
-          verifyCert(false) {
+          verifyCert(false),
+          sseType(SSE_NONE) {
     }
 
     virtual ~S3Params() {
@@ -118,6 +121,14 @@ class S3Params {
         return s3Url;
     }
 
+    const S3SSEType& getSSEType() const {
+        return sseType;
+    }
+
+    void setSSEType(S3SSEType sseType) {
+        this->sseType = sseType;
+    }
+
    private:
     S3Url s3Url;  // original url to read/write.
 
@@ -135,6 +146,8 @@ class S3Params {
     bool autoCompress;  // whether to compress data before uploading
     bool verifyCert;  // This option determines whether curl verifies the authenticity of the peer's
                       // certificate.
+
+    S3SSEType sseType;
 
     S3MemoryContext memoryContext;
 };

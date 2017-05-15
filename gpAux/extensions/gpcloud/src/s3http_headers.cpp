@@ -81,6 +81,8 @@ const char *GetFieldString(HeaderField f) {
             return "x-amz-date";
         case X_AMZ_CONTENT_SHA256:
             return "x-amz-content-sha256";
+        case X_AMZ_SERVER_SIDE_ENCRYPTION:
+            return "x-amz-server-side-encryption";
         default:
             return "Unknown";
     }

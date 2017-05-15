@@ -1,0 +1,23 @@
+CREATE READABLE EXTERNAL TABLE s3write_quick_read_with_encrypt (date text, time text, open float, high float, low float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_encrypt_prefix@/quick/ config=/home/gpadmin/s3.conf section=sse_s3') FORMAT 'csv';
+CREATE WRITABLE EXTERNAL TABLE s3write_quick_write_with_encrypt (date text, time text, open float, high float, low float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_encrypt_prefix@/quick/ config=/home/gpadmin/s3.conf section=sse_s3') FORMAT 'csv';
+CREATE WRITABLE EXTERNAL TABLE s3write_quick_write_no_encryption (date text, time text, open float, high float, low float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_encrypt_prefix@/quick/ config=/home/gpadmin/s3.conf') FORMAT 'csv';
+SELECT * FROM s3write_quick_read;
+ date | time | open | high | low | volume
+------+------+------+------+-----+--------
+(0 rows)
+
+INSERT INTO s3write_quick_write_with_encrypt (date, time, open, high, low, volume) VALUES ('2016-07-28', '12:00:00', 0.5, 0.5, 0.3, 1);
+INSERT INTO s3write_quick_write_no_encryption (date, time, open, high, low, volume) VALUES ('2016-07-28', '12:00:00', 0.5, 0.5, 0.3, 1);
+ERROR:  Failed to init gpcloud extension (segid = 0, segnum = 2), please check your configurations and network connection: writer_init caught a S3LogicError exception: AWS returns error AccessDenied : Access Denied, Function: getUploadId, File: src/s3interface.cpp(421). (gpcloud.cpp:352)  (seg0 172.17.0.7:40000 pid=201843)
+SELECT * FROM s3write_quick_read;
+    date    |   time   | open | high | low | volume
+------------+----------+------+------+-----+--------
+ 2016-07-28 | 12:00:00 |  0.5 |  0.5 | 0.3 |      1
+(1 row)
+
+DROP EXTERNAL TABLE IF EXISTS s3write_quick_read_with_encrypt;
+DROP EXTERNAL TABLE IF EXISTS s3write_quick_write_with_encrypt;
+DROP EXTERNAL TABLE IF EXISTS s3write_quick_write_no_encryption;

@@ -13,6 +13,7 @@ TEST(Common, GetFieldString) {
     EXPECT_STREQ("ETag", GetFieldString(ETAG));
     EXPECT_STREQ("x-amz-date", GetFieldString(X_AMZ_DATE));
     EXPECT_STREQ("x-amz-content-sha256", GetFieldString(X_AMZ_CONTENT_SHA256));
+    EXPECT_STREQ("x-amz-server-side-encryption", GetFieldString(X_AMZ_SERVER_SIDE_ENCRYPTION));
     EXPECT_STREQ("Unknown", GetFieldString((HeaderField)INT_MAX));
 }
 

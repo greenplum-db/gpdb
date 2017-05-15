@@ -30,6 +30,8 @@ TEST(Config, Basic) {
     EXPECT_EQ((uint64_t)600, params.getLowSpeedTime());
 
     EXPECT_FALSE(params.isDebugCurl());
+
+    EXPECT_EQ(SSE_S3, params.getSSEType());
 }
 
 TEST(Config, SpecialSectionValues) {
@@ -42,6 +44,7 @@ TEST(Config, SpecialSectionValues) {
     EXPECT_EQ((uint64_t)60, params.getLowSpeedTime());
 
     EXPECT_FALSE(params.isDebugCurl());
+    EXPECT_EQ(SSE_NONE, params.getSSEType());
 }
 
 TEST(Config, SpecialSectionLowValues) {

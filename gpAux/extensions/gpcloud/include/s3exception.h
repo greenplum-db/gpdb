@@ -89,8 +89,8 @@ class S3PartialResponseError : public S3Exception {
     }
     virtual string getMessage() {
         return "Response is not fully received. Expected: " +
-               std::to_string((unsigned long long)expectedLength) + ", actual received: " +
-               std::to_string((unsigned long long)receivedLength);
+               std::to_string((unsigned long long)expectedLength) +
+               ", actual received: " + std::to_string((unsigned long long)receivedLength);
     }
     virtual string getType() {
         return "S3PartialResponseError";
@@ -179,8 +179,8 @@ class S3MemoryOverLimit : public S3Exception {
     }
     virtual string getMessage() {
         return "Memory allocation is over limit, requested: " +
-               std::to_string((unsigned long long)allocSize) + ", limit: " +
-               std::to_string((unsigned long long)limit);
+               std::to_string((unsigned long long)allocSize) +
+               ", limit: " + std::to_string((unsigned long long)limit);
     }
     virtual string getType() {
         return "S3MemoryOverLimit";
