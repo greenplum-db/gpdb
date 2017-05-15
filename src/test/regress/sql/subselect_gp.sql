@@ -607,3 +607,10 @@ create table bar(a int, b int) distributed by (a);
 with CT as (select a from foo except select a from bar)
 select * from foo
 where exists (select 1 from CT where CT.a = foo.a);
+--
+-- Multiple SUBPLAN nodes must not refer to same plan_id
+--
+CREATE TABLE bar_s (c integer, d character varying(10));
+INSERT INTO bar_s VALUES (9,9);
+SELECT * FROM bar_s T1 WHERE c = (SELECT max(c) FROM bar_s T2 WHERE T2.d = T1.d GROUP BY c) AND c < 10;
+DROP TABLE bar_s;

@@ -252,6 +252,13 @@ gen_implied_quals(PlannerInfo *root, RestrictInfo *rinfo)
 			if (!bms_overlap(em1->em_relids, rinfo->clause_relids))
 				continue;		/* this member cannot appear in the clause */
 
+			/*
+			 * Skip duplicating subplans clauses as multiple subplan node referring
+			 * to the same plan node fails the assertion made by the code which adds
+			 * motion to the plan
+			 */
+			if (contain_subplans((Node *) em1->em_expr))
+				continue;
 			/* now try to apply to others in the equivalence class */
 			foreach(lcem2, eclass->ec_members)
 			{
@@ -263,6 +270,9 @@ gen_implied_quals(PlannerInfo *root, RestrictInfo *rinfo)
 				if (exprType((Node *) em1->em_expr) == exprType((Node *) em2->em_expr)
 					&& exprTypmod((Node *) em1->em_expr) == exprTypmod((Node *) em2->em_expr))
 				{
+					/* Skip SubPlans */
+					if (contain_subplans((Node *) em2->em_expr))
+						continue;
 					gen_implied_qual(root,
 									 rinfo,
 									 (Node *) em1->em_expr,

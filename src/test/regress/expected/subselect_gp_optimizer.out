@@ -1314,3 +1314,17 @@ where exists (select 1 from CT where CT.a = foo.a);
 ---+---
 (0 rows)
 
+--
+-- Multiple SUBPLAN nodes must not refer to same plan_id
+--
+CREATE TABLE bar_s (c integer, d character varying(10));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO bar_s VALUES (9,9);
+SELECT * FROM bar_s T1 WHERE c = (SELECT max(c) FROM bar_s T2 WHERE T2.d = T1.d GROUP BY c) AND c < 10;
+ c | d
+---+---
+ 9 | 9
+(1 row)
+
+DROP TABLE bar_s;
