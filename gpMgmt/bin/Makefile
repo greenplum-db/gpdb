@@ -31,7 +31,7 @@ PYLIB_DIR=$(SRC)/ext
 core: pygresql subprocess32
 
 ifneq "$(wildcard $(CURDIR)/pythonSrc/ext/*.tar.gz)" ""
-all: core lockfile paramiko pycrypto stream psutil unittest2
+all: core lockfile paramiko pycrypto stream psutil
 else
 all: core stream
 endif
@@ -203,10 +203,7 @@ UNITTEST2_VERSION=0.5.1
 UNITTEST2_DIR=unittest2-${UNITTEST2_VERSION}
 unittest2:
 	@echo "--- unittest2"
-	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(UNITTEST2_DIR).tar.gz
-	cd $(PYLIB_SRC_EXT)/$(UNITTEST2_DIR)/ && python setup.py build
-	cp -r $(PYLIB_SRC_EXT)/$(UNITTEST2_DIR)/build/lib/unittest2  $(PYLIB_DIR)/
-
+	cd $(PYLIB_SRC_EXT)/ && pip install unittest2
 
 PYTHON_FILES=`grep -l --exclude=Makefile --exclude=gplogfilter "/bin/env python" *`\
 			 `grep -l "/bin/env python" $(SRC)/../sbin/*`\
