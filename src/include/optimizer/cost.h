@@ -169,7 +169,7 @@ extern Selectivity clause_selectivity(PlannerInfo *root,
 				   Node *clause,
 				   int varRelid,
 				   JoinType jointype,
-				SpecialJoinInfo *sjinfo,
+				   SpecialJoinInfo *sjinfo,
 				   bool use_damping);
 extern int planner_segment_count(void);
 extern double global_work_mem(PlannerInfo *root);

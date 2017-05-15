@@ -337,6 +337,7 @@ ExecNestLoop(NestLoopState *node)
 					ENL1_printf("qualification succeeded, projecting tuple");
 
 					Gpmon_Incr_Rows_Out(GpmonPktFromNLJState(node));
+
 					CheckSendPlanStateGpmonPkt(&node->js.ps);
 					return ExecProject(node->js.ps.ps_ProjInfo, NULL);
 				}

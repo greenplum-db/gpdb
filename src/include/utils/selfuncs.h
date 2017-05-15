@@ -151,11 +151,11 @@ extern Datum nlikejoinsel(PG_FUNCTION_ARGS);
 extern Datum icnlikejoinsel(PG_FUNCTION_ARGS);
 
 extern Selectivity booltestsel(PlannerInfo *root, BoolTestType booltesttype,
-							   Node *arg, int varRelid,
-							   JoinType jointype, SpecialJoinInfo *sjinfo);
+			Node *arg, int varRelid,
+			JoinType jointype, SpecialJoinInfo *sjinfo);
 extern Selectivity nulltestsel(PlannerInfo *root, NullTestType nulltesttype,
-							   Node *arg, int varRelid,
-							   JoinType jointype, SpecialJoinInfo *sjinfo);
+			Node *arg, int varRelid,
+			JoinType jointype, SpecialJoinInfo *sjinfo);
 extern Selectivity scalararraysel(PlannerInfo *root,
 			   ScalarArrayOpExpr *clause,
 			   bool is_join_clause,

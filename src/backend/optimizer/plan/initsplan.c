@@ -663,10 +663,10 @@ make_outerjoininfo(PlannerInfo *root,
 	Relids		min_righthand;
 	ListCell   *l;
 
-   /*
- 	* We should not see RIGHT JOIN here because left/right were switched
-	* earlier
- 	*/
+	/*
+	 * We should not see RIGHT JOIN here because left/right were switched
+	 * earlier
+	 */
 	Assert(jointype != JOIN_INNER);
 	Assert(jointype != JOIN_RIGHT);
 
@@ -1059,11 +1059,11 @@ distribute_qual_to_rels(PlannerInfo *root, Node *clause,
 			maybe_equivalence = false;
 
 			/*
- 			 * It's possible that this is an IS NULL clause that's redundant
- 			 * with a lower antijoin; if so we can just discard it.  We need
- 			 * not test in any of the other cases, because this will only
- 			 * be possible for pushed-down, delayed clauses.
- 			 */
+			 * It's possible that this is an IS NULL clause that's redundant
+			 * with a lower antijoin; if so we can just discard it.  We need
+			 * not test in any of the other cases, because this will only
+			 * be possible for pushed-down, delayed clauses.
+			 */
 			if (check_redundant_nullability_qual(root, clause))
 				return;
 		}

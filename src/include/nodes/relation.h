@@ -226,8 +226,8 @@ typedef struct PlannerInfo
 
 	List	   *full_join_clauses;		/* list of RestrictInfos for
 										 * mergejoinable full join clauses */
-	
-	List	   *join_info_list;		/* list of SpecialJoinInfos */
+
+	List	   *join_info_list; /* list of SpecialJoinInfos */
 
 	List	   *append_rel_list;	/* list of AppendRelInfos */
 
@@ -1104,7 +1104,7 @@ typedef enum
 typedef struct UniquePath
 {
 	Path		path;
-	Path		*subpath;
+	Path	   *subpath;
 	UniquePathMethod umethod;
 	double		rows;			/* estimated number of result tuples */
     List       *distinct_on_exprs;
@@ -1538,7 +1538,7 @@ typedef struct SpecialJoinInfo
 	JoinType	jointype;		/* always INNER, LEFT, FULL, SEMI, or ANTI */
 	bool		lhs_strict;		/* joinclause is strict for some LHS rel */
 	bool		delay_upper_joins;		/* can't commute with upper RHS */
-	List		*join_quals;		/* join quals, in implicit-AND list format */
+	List	   *join_quals;		/* join quals, in implicit-AND list format */
 	bool		try_join_unique;
 								/* CDB: true => comparison is equality op and
 								 *  subquery is not correlated.  Ok to consider
