@@ -241,7 +241,7 @@ dumpCastOid(Archive *AH, CastInfo *info)
 void
 dumpConversionOid(PGconn *conn, Archive *AH, ConvInfo *info)
 {
-	PQExpBuffer	upgrade_query = createPQExpBuffer();
+	PQExpBuffer	upgrade_query;
 	int			ntups;
 	PGresult   *upgrade_res;
 	Oid			connamespace;
@@ -249,6 +249,8 @@ dumpConversionOid(PGconn *conn, Archive *AH, ConvInfo *info)
 	/* Skip if not to be dumped */
 	if (!info->dobj.dump)
 		return;
+
+	upgrade_query = createPQExpBuffer();
 
 	appendPQExpBuffer(upgrade_query,
 					  "SELECT connamespace "
@@ -318,7 +320,7 @@ dumpRuleOid(Archive *AH, RuleInfo *info)
 void
 dumpOpFamilyOid(PGconn *conn, Archive *AH, OpfamilyInfo *info)
 {
-	PQExpBuffer	upgrade_query = createPQExpBuffer();
+	PQExpBuffer	upgrade_query;
 	int			ntups;
 	PGresult   *upgrade_res;
 	Oid			opfnamespace;
@@ -326,6 +328,8 @@ dumpOpFamilyOid(PGconn *conn, Archive *AH, OpfamilyInfo *info)
 	/* Skip if not to be dumped */
 	if (!info->dobj.dump)
 		return;
+
+	upgrade_query = createPQExpBuffer();
 
 	appendPQExpBuffer(upgrade_query,
 					  "SELECT opfnamespace "
@@ -369,7 +373,7 @@ dumpOpFamilyOid(PGconn *conn, Archive *AH, OpfamilyInfo *info)
 void
 dumpOpClassOid(PGconn *conn, Archive *AH, OpclassInfo *info)
 {
-	PQExpBuffer	upgrade_query = createPQExpBuffer();
+	PQExpBuffer	upgrade_query;
 	int			ntups;
 	PGresult   *upgrade_res;
 	Oid			pg_opclass_oid;
@@ -378,6 +382,8 @@ dumpOpClassOid(PGconn *conn, Archive *AH, OpclassInfo *info)
 	/* Skip if not to be dumped */
 	if (!info->dobj.dump)
 		return;
+
+	upgrade_query = createPQExpBuffer();
 
 	appendPQExpBuffer(upgrade_query,
 					  "SELECT oid, opcnamespace "
