@@ -46,4 +46,4 @@ build.sh
 /config.log
 /config.status
 /VERSION
-
+/greenplum-dev
