@@ -1,0 +1,25 @@
+Parsed test spec with 2 sessions
+
+starting permutation: s2begin s2select s1update s1createindexonc s2select s2forceindexscan s2select
+step s2begin: BEGIN ISOLATION LEVEL SERIALIZABLE;
+step s2select: select '#' as expected, c from hot where c = '#'
+                  union all
+                  select '$', c from hot where c = '$';
+expected       c              
+
+#              #              
+step s1update: update hot set c = '$' where c = '#';
+step s1createindexonc: create index idx_c on hot (c);
+step s2select: select '#' as expected, c from hot where c = '#'
+                  union all
+                  select '$', c from hot where c = '$';
+expected       c              
+
+#              #              
+step s2forceindexscan: set enable_indexscan=on; set enable_seqscan=off;
+step s2select: select '#' as expected, c from hot where c = '#'
+                  union all
+                  select '$', c from hot where c = '$';
+expected       c              
+
+#              #              
