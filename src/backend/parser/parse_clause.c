@@ -1392,7 +1392,6 @@ transformFromClauseItem(ParseState *pstate, Node *n,
 		RangeTblRef *rtr;
 		RangeTblEntry *rte = NULL;
 		int			rtindex;
-		RangeVar *rangeVar = (RangeVar *)n;
 
 		/*
 		 * If it is an unqualified name, it might be a reference to some
