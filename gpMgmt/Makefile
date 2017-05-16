@@ -75,13 +75,27 @@ install: generate_greenplum_path_file
 
 	# Setup /lib/python contents
 	cp -rp bin/gppylib $(DESTDIR)$(prefix)/lib/python
-	cp -rp bin/ext/Crypto $(DESTDIR)$(prefix)/lib/python
-	cp -rp bin/ext/__init__.py $(DESTDIR)$(prefix)/lib/python
-	cp -rp bin/ext/lockfile $(DESTDIR)$(prefix)/lib/python
-	cp -rp bin/ext/paramiko $(DESTDIR)$(prefix)/lib/python
-	cp -rp bin/ext/psutil $(DESTDIR)$(prefix)/lib/python
-	cp -rp bin/ext/pygresql $(DESTDIR)$(prefix)/lib/python
-	cp -rp bin/ext/yaml $(DESTDIR)$(prefix)/lib/python
+	if [ -e bin/ext/Crypto ]; then \
+	    cp -rp bin/ext/Crypto $(DESTDIR)$(prefix)/lib/python ; \
+	fi
+	if [ -e bin/ext/__init__.py ]; then \
+	    cp -rp bin/ext/__init__.py $(DESTDIR)$(prefix)/lib/python ; \
+	fi
+	if [ -e bin/ext/lockfile ]; then \
+	    cp -rp bin/ext/lockfile $(DESTDIR)$(prefix)/lib/python ; \
+	fi
+	if [ -e bin/ext/paramiko ]; then \
+	    cp -rp bin/ext/paramiko $(DESTDIR)$(prefix)/lib/python ; \
+	fi
+	if [ -e bin/ext/psutil ]; then \
+	    cp -rp bin/ext/psutil $(DESTDIR)$(prefix)/lib/python ; \
+	fi
+	if [ -e bin/ext/pygresql ]; then \
+	    cp -rp bin/ext/pygresql $(DESTDIR)$(prefix)/lib/python ; \
+	fi
+	if [ -e bin/ext/yaml ]; then \
+	    cp -rp bin/ext/yaml $(DESTDIR)$(prefix)/lib/python ; \
+	fi
 
 	# Setup /bin contents
 	cp -rp bin $(DESTDIR)$(prefix)
