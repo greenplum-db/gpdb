@@ -50,3 +50,9 @@ clean:
 	@echo ""
 
 .PHONY: all cluster probe clean check clean
+
+nuke-cluster:
+	@./nuke-cluster.sh
+
+create-cluster:
+	@./create-cluster.sh
