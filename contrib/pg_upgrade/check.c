@@ -708,7 +708,7 @@ check_for_reg_data_type_usage(migratorContext *ctx, Cluster whichCluster)
 			pg83_atts_str = "0";
 		else
 			pg83_atts_str =		"'pg_catalog.regconfig'::pg_catalog.regtype, "
-								"			'pg_catalog.regdictionary'::pg_catalog.regtype) AND ";
+								"			'pg_catalog.regdictionary'::pg_catalog.regtype ";
 
 		snprintf(query, sizeof(query),
 								"SELECT n.nspname, c.relname, a.attname "
