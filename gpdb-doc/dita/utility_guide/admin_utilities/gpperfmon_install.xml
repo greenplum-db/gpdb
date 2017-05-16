@@ -246,7 +246,7 @@ $ gpperfmon_install</codeblock>
       <p>Create the <codeph>gpperfmon</codeph> database, create the<codeph> gpmon</codeph>
         superuser, and enable the data collection agents:</p>
       <codeblock>$ su - gpadmin
-$ gpperfmon_install --enable --password p@$$word --port 5432
+$ gpperfmon_install --enable --password changeme --port 5432
 $ gpstop -r</codeblock>
     </section>
     <section id="section6">
