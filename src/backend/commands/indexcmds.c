@@ -68,6 +68,7 @@
 #include "cdb/cdbcat.h"
 #include "cdb/cdbrelsize.h"
 #include "cdb/cdboidsync.h"
+#include "gp-libpq-fe.h"
 
 /* non-export function prototypes */
 static void CheckPredicate(Expr *predicate);
@@ -83,6 +84,93 @@ static Oid GetIndexOpClass(List *opclass, Oid attrType,
 				char *accessMethodName, Oid accessMethodId);
 static bool relationHasPrimaryKey(Relation rel);
 static bool relationHasUniqueIndex(Relation rel);
+
+
+/*
+ * Helper function, to check indcheckxmin for an index on all segments, and
+ * set it on the master if it was set on any segment.
+ *
+ * If CREATE INDEX creates a "broken" HOT chain, the new index must not be
+ * used by new queries, with an old snapshot, that would need to see the old
+ * values. See src/backend/access/heap/README.HOT. This is enforced by
+ * setting indcheckxmin in the pg_index row. In GPDB, we use the pg_index
+ * row in the master for planning, but all the data is stored in the
+ * segments, so indcheckxmin must be set in the master, if it's set in any
+ * of the segments.
+ */
+static void
+cdb_sync_indcheckxmin_with_segments(Oid indexRelationId)
+{
+	CdbPgResults cdb_pgresults = {NULL, 0};
+	int			i;
+	char		cmd[100];
+	bool		indcheckxmin_set_in_any_segment;
+
+	Assert(Gp_role == GP_ROLE_DISPATCH && !IsBootstrapProcessingMode());
+
+	/*
+	 * Query all the segments, for their indcheckxmin value for this index.
+	 */
+	snprintf(cmd, sizeof(cmd),
+			 "select indcheckxmin from pg_catalog.pg_index where indexrelid = '%u'",
+			 indexRelationId);
+
+	CdbDispatchCommand(cmd, DF_WITH_SNAPSHOT, &cdb_pgresults);
+
+	indcheckxmin_set_in_any_segment = false;
+	for (i = 0; i < cdb_pgresults.numResults; i++)
+	{
+		char	   *val;
+
+		if (PQresultStatus(cdb_pgresults.pg_results[i]) != PGRES_TUPLES_OK)
+		{
+			cdbdisp_clearCdbPgResults(&cdb_pgresults);
+			elog(ERROR, "could not fetch indcheckxmin from segment");
+		}
+
+		if (PQntuples(cdb_pgresults.pg_results[i]) != 1 ||
+			PQnfields(cdb_pgresults.pg_results[i]) != 1 ||
+			PQgetisnull(cdb_pgresults.pg_results[i], 0, 0))
+			elog(ERROR, "unexpected shape of result set for indcheckxmin query");
+
+		val = PQgetvalue(cdb_pgresults.pg_results[i], 0, 0);
+		if (val[0] == 't')
+			indcheckxmin_set_in_any_segment = true;
+		else if (val[0] != 'f')
+			elog(ERROR, "invalid boolean value received from segment: %s", val);
+	}
+
+	cdbdisp_clearCdbPgResults(&cdb_pgresults);
+
+	/*
+	 * If indcheckxmin was set on any segment, also set it in the master.
+	 */
+	if (indcheckxmin_set_in_any_segment)
+	{
+		Relation	pg_index;
+		HeapTuple	indexTuple;
+		Form_pg_index indexForm;
+
+		pg_index = heap_open(IndexRelationId, RowExclusiveLock);
+
+		indexTuple = SearchSysCacheCopy(INDEXRELID,
+										ObjectIdGetDatum(indexRelationId),
+										0, 0, 0);
+		if (!HeapTupleIsValid(indexTuple))
+			elog(ERROR, "cache lookup failed for index %u", indexRelationId);
+		indexForm = (Form_pg_index) GETSTRUCT(indexTuple);
+
+		if (!indexForm->indcheckxmin)
+		{
+			indexForm->indcheckxmin = true;
+			simple_heap_update(pg_index, &indexTuple->t_self, indexTuple);
+			CatalogUpdateIndexes(pg_index, indexTuple);
+		}
+
+		heap_freetuple(indexTuple);
+		heap_close(pg_index, RowExclusiveLock);
+	}
+}
 
 
 /*
@@ -559,12 +647,18 @@ DefineIndex(RangeVar *heapRelation,
 		 * (For a concurrent build, we do this later, see below.)
 		 */
 		if (shouldDispatch)
+		{
 			CdbDispatchUtilityStatement((Node *) stmt,
 										DF_CANCEL_ON_ERROR |
 										DF_WITH_SNAPSHOT |
 										DF_NEED_TWO_PHASE,
 										GetAssignedOidsForDispatch(),
 										NULL);
+
+			/* Set indcheckxmin in the master, if it was set on any segment */
+			if (!indexInfo->ii_BrokenHotChain)
+				cdb_sync_indcheckxmin_with_segments(indexRelationId);
+		}
 
 		return;					/* We're done, in the standard case */
 	}
