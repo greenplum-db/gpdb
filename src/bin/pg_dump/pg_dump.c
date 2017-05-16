@@ -4568,21 +4568,6 @@ getTableAttrs(TableInfo *tblinfo, int numTables)
 
 		PQclear(res);
 
-
-		/*
-		 *	ALTER TABLE DROP COLUMN clears pg_attribute.atttypid, so we
-		 *	set the column data type to 'TEXT;  we will later drop the
-		 *	column.
-		 */
-		if (binary_upgrade)
-		{
-			for (j = 0; j < ntups; j++)
-			{
-				if (tbinfo->attisdropped[j])
-					tbinfo->atttypnames[j] = strdup("TEXT");
-			}
-		}
-			
 		/*
 		 * Get info about column defaults
 		 */
@@ -9837,6 +9822,18 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				appendPQExpBuffer(q, "%s ",
 								  fmtId(tbinfo->attnames[j]));
 
+				if (tbinfo->attisdropped[j])
+				{
+					/*
+					 * ALTER TABLE DROP COLUMN clears pg_attribute.atttypid,
+					 * so we will not have gotten a valid type name; insert
+					 * INTEGER as a stopgap.  We'll clean things up later.
+					 */
+					appendPQExpBuffer(q, "INTEGER /* dummy */");
+					/* Skip all the rest, too */
+					continue;
+				}
+
 				/* Attribute type */
 				appendPQExpBuffer(q, "%s",
 								  tbinfo->atttypnames[j]);
@@ -10055,8 +10052,16 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		}
 
 		/*
-		 * For binary-compatible heap files, we create dropped columns
-		 * above and drop them here.
+		 * To create binary-compatible heap files, we have to ensure the
+		 * same physical column order, including dropped columns, as in the
+		 * original.  Therefore, we create dropped columns above and drop
+		 * them here, also updating their attlen/attalign values so that
+		 * the dropped column can be skipped properly.  (We do not bother
+		 * with restoring the original attbyval setting.)  Also, inheritance
+		 * relationships are set up by doing ALTER INHERIT rather than using
+		 * an INHERITS clause --- the latter would possibly mess up the
+		 * column order.  That also means we have to take care about setting
+		 * attislocal correctly, plus fix up any inherited CHECK constraints.
 		 */
 		if (binary_upgrade)
 		{
@@ -10064,41 +10069,99 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			{
 				if (tbinfo->attisdropped[j])
 				{
+					/*
+					 * Greenplum doesn't allow altering system catalogs without
+					 * setting the allow_system_table_mods GUC first.
+					 */
+					appendPQExpBuffer(q, "SET allow_system_table_mods = 'dml';\n");
+
+					appendPQExpBuffer(q, "\n-- For binary upgrade, recreate dropped column.\n");
+					appendPQExpBuffer(q, "UPDATE pg_catalog.pg_attribute\n"
+									  "SET attlen = %d, "
+									  "attalign = '%c', attbyval = false\n"
+									  "WHERE attname = ",
+									  tbinfo->attlen[j],
+									  tbinfo->attalign[j]);
+					appendStringLiteralAH(q, tbinfo->attnames[j], fout);
+					appendPQExpBuffer(q, "\n  AND attrelid = ");
+					appendStringLiteralAH(q, fmtId(tbinfo->dobj.name), fout);
+					appendPQExpBuffer(q, "::pg_catalog.regclass;\n");
+
 					appendPQExpBuffer(q, "ALTER TABLE ONLY %s ",
 									  fmtId(tbinfo->dobj.name));
 					appendPQExpBuffer(q, "DROP COLUMN %s;\n",
 									  fmtId(tbinfo->attnames[j]));
-
+				}
+				else if (!tbinfo->attislocal[j])
+				{
 					/*
-					 *	ALTER TABLE DROP COLUMN clears pg_attribute.atttypid,
-					 *	so we have to set pg_attribute.attlen and
-					 *	pg_attribute.attalign values because that is what
-					 *	is used to skip over dropped columns in the heap tuples.
-					 *	We have atttypmod, but it seems impossible to know the
-					 *	correct data type that will yield pg_attribute values
-					 *	that match the old installation.
-					 *	See comment in backend/catalog/heap.c::RemoveAttributeById()
+					 * Greenplum doesn't allow altering system catalogs without
+					 * setting the allow_system_table_mods GUC first.
 					 */
-					appendPQExpBuffer(q, "\n-- For binary upgrade, recreate dropped column's length and alignment.\n");
-					appendPQExpBuffer(q, "UPDATE pg_attribute\n"
-										 "SET attlen = %d, "
-										 "attalign = '%c'\n"
-										 "WHERE	attname = '%s'\n"
-										 "	AND attrelid = \n"
-										 "	(\n"
-										 "		SELECT oid\n"
-										 "		FROM pg_class\n"
-										 "		WHERE	relnamespace = "
-										 "(SELECT oid FROM pg_namespace "
-										 "WHERE nspname = CURRENT_SCHEMA)\n"
-										 "			AND relname = '%s'\n"
-										 "	);",
-										 tbinfo->attlen[j],
-										 tbinfo->attalign[j],
-										 tbinfo->attnames[j],
-										 tbinfo->dobj.name);
+					appendPQExpBuffer(q, "SET allow_system_table_mods = 'dml';\n");
+
+					appendPQExpBuffer(q, "\n-- For binary upgrade, recreate inherited column.\n");
+					appendPQExpBuffer(q, "UPDATE pg_catalog.pg_attribute\n"
+									  "SET attislocal = false\n"
+									  "WHERE attname = ");
+					appendStringLiteralAH(q, tbinfo->attnames[j], fout);
+					appendPQExpBuffer(q, "\n  AND attrelid = ");
+					appendStringLiteralAH(q, fmtId(tbinfo->dobj.name), fout);
+					appendPQExpBuffer(q, "::pg_catalog.regclass;\n");
 				}
 			}
+
+			for (k = 0; k < tbinfo->ncheck; k++)
+			{
+				ConstraintInfo *constr = &(tbinfo->checkexprs[k]);
+
+				if (constr->separate)
+					continue;
+
+				/*
+				 * Greenplum doesn't allow altering system catalogs without
+				 * setting the allow_system_table_mods GUC first.
+				 */
+				appendPQExpBuffer(q, "SET allow_system_table_mods = 'dml';\n");
+
+				appendPQExpBuffer(q, "\n-- For binary upgrade, set up inherited constraint.\n");
+				appendPQExpBuffer(q, "ALTER TABLE ONLY %s ",
+								  fmtId(tbinfo->dobj.name));
+				appendPQExpBuffer(q, " ADD CONSTRAINT %s ",
+								  fmtId(constr->dobj.name));
+				appendPQExpBuffer(q, "%s;\n", constr->condef);
+				appendPQExpBuffer(q, "UPDATE pg_catalog.pg_constraint\n"
+								  "SET conislocal = false\n"
+								  "WHERE contype = 'c' AND conname = ");
+				appendStringLiteralAH(q, constr->dobj.name, fout);
+				appendPQExpBuffer(q, "\n  AND conrelid = ");
+				appendStringLiteralAH(q, fmtId(tbinfo->dobj.name), fout);
+				appendPQExpBuffer(q, "::pg_catalog.regclass;\n");
+			}
+
+			if (numParents > 0)
+			{
+				appendPQExpBuffer(q, "\n-- For binary upgrade, set up inheritance this way.\n");
+				for (k = 0; k < numParents; k++)
+				{
+					TableInfo  *parentRel = parents[k];
+
+					appendPQExpBuffer(q, "ALTER TABLE ONLY %s INHERIT ",
+									  fmtId(tbinfo->dobj.name));
+					if (parentRel->dobj.namespace != tbinfo->dobj.namespace)
+						appendPQExpBuffer(q, "%s.",
+										  fmtId(parentRel->dobj.namespace->dobj.name));
+					appendPQExpBuffer(q, "%s;\n",
+									  fmtId(parentRel->dobj.name));
+				}
+			}
+
+			/*
+			 * We have probably bumped allow_system_table_mods to 'dml' in the
+			 * above processing, but even we didn't let's just reset it here
+			 * since it doesn't to do any harm to.
+			 */
+			appendPQExpBuffer(q, "RESET allow_system_table_mods;\n");
 		}
 	
 		/*
