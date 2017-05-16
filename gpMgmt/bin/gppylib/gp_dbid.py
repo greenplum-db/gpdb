@@ -139,7 +139,7 @@ def writeGpDbidFile(directory, dbid, logger=None):
 #
 if __name__ == '__main__':
     import copy, shutil
-    import unittest2 as unittest
+    import unittest
 
     TESTDIR = 'test_gp_dbid1'
 

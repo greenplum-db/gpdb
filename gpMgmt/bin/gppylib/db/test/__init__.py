@@ -1,4 +1,4 @@
-import unittest2 as unittest
+import unittest
 from gppylib.db.dbconn import connect, DbURL
 
 def skipIfDatabaseDown():

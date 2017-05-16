@@ -6,7 +6,7 @@
 """ Unittesting for pygres module
 """
 import logging
-import unittest2 as unittest
+import unittest
 
 
 from pygresql import pg

@@ -154,7 +154,7 @@ def read_era(datadir, logger):
 #
 if __name__ == '__main__':
     import copy, shutil
-    import unittest2 as unittest
+    import unittest
 
     TESTDIR = 'test_gp_era1'
 

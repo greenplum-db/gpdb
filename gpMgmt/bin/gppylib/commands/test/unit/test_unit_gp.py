@@ -5,7 +5,7 @@
 
 import os
 import shutil
-import unittest2 as unittest
+import unittest
 from gppylib.commands.base import CommandResult
 from mock import patch, MagicMock, Mock
 import gppylib.commands.gp as gp

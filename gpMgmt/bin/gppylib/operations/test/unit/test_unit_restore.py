@@ -5,7 +5,7 @@
 #
 
 import sys
-import unittest2 as unittest
+import unittest
 import tempfile, os, shutil
 from gppylib.commands.base import CommandResult, Command, ExecutionError
 from gppylib.operations.backup_utils import *

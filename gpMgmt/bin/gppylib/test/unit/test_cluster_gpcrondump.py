@@ -5,7 +5,7 @@ import sys
 import imp
 gpcrondump_path = os.path.abspath('gpcrondump')
 gpcrondump = imp.load_source('gpcrondump', gpcrondump_path)
-import unittest2 as unittest
+import unittest
 from datetime import datetime
 from gppylib import gplog
 from gpcrondump import GpCronDump

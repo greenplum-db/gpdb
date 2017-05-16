@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import os, sys
-import unittest2 as unittest
+import unittest
 from gppylib import gplog
 from gppylib.commands.base import CommandResult
 from gpsegstop import SegStop, SegStopStatus

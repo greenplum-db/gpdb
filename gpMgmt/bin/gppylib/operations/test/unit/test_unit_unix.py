@@ -3,7 +3,7 @@
 # Copyright (c) Greenplum Inc 2014. All Rights Reserved. 
 #
 
-import unittest2 as unittest
+import unittest
 from gppylib.commands.base import CommandResult
 from gppylib.operations.unix import RemoteOperation, CleanSharedMem
 from mock import Mock, MagicMock, patch

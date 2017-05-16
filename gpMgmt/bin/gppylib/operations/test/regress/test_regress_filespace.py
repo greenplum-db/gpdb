@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import unittest2 as unittest
+import unittest
 
 from gppylib.operations.filespace import FileType 
 from gppylib.commands.base import Command, WorkerPool

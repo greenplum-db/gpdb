@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import os
-import unittest2 as unittest
+import unittest
 
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 from gppylib.operations.reload import GpReload

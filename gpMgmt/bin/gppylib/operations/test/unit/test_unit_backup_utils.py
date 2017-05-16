@@ -5,7 +5,7 @@
 
 import os
 import shutil
-import unittest2 as unittest
+import unittest
 from gppylib.commands.base import CommandResult
 from gppylib.gparray import GpArray, GpDB
 from gppylib.operations.backup_utils import *

@@ -14,7 +14,7 @@ from gppylib.operations.backup_utils import write_lines_to_file
 from gppylib.operations.dump import MailDumpEvent
 from gppylib.operations.utils import DEFAULT_NUM_WORKERS
 from mock import patch, Mock, MagicMock, mock_open
-import unittest2 as unittest
+import unittest
 from . import setup_fake_gparray
 
 

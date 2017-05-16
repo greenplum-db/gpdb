@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import unittest2 as unittest
+import unittest
 from gppylib.operations.deletesystem import validate_pgport
 from mock import patch, MagicMock, Mock
 

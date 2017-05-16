@@ -176,8 +176,8 @@ Testing Management Scripts
 --------------------------
 
 This directory contains the unit tests for the management scripts. These tests
-require the following Python modules to be installed: mock, pygresql, and
-unittest2.  These modules can be installed by running "git submodule update --init --recursive"
+require the following Python modules to be installed: mock and pygresql.
+These modules can be installed by running "git submodule update --init --recursive"
 if they are not already installed on your machine.
 
 If you installed the dependencies using the above git command, you can run the tests with
@@ -192,9 +192,9 @@ be installed and currently running.
 If you did not install the dependencies using the git submodule, use the following commands in
 place of the above make commands, still in the current directory:
 
-"python -m unittest2 discover --verbose -s gppylib -p 'test_unit*.py' -p 'test_cluster*.py'" will
+"python -m unittest discover --verbose -s gppylib -p 'test_unit*.py' -p 'test_cluster*.py'" will
 run all of the unit tests.
 
-"python -m unittest2 discover --verbose -s gppylib -p 'test_unit*.py'" will run only the unit
+"python -m unittest discover --verbose -s gppylib -p 'test_unit*.py'" will run only the unit
 tests that do not require a running cluster.
 

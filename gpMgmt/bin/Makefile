@@ -31,7 +31,7 @@ PYLIB_DIR=$(SRC)/ext
 core: pygresql subprocess32
 
 ifneq "$(wildcard $(CURDIR)/pythonSrc/ext/*.tar.gz)" ""
-all: core lockfile paramiko pycrypto stream psutil unittest2
+all: core lockfile paramiko pycrypto stream psutil
 else
 all: core stream
 endif
@@ -199,15 +199,6 @@ $(BEHAVE_BIN):
 	@cd $(PYLIB_SRC_EXT)/$(BEHAVE_DIR)/ && PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL)
 	@echo "--- behave done"
 
-UNITTEST2_VERSION=0.5.1
-UNITTEST2_DIR=unittest2-${UNITTEST2_VERSION}
-unittest2:
-	@echo "--- unittest2"
-	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(UNITTEST2_DIR).tar.gz
-	cd $(PYLIB_SRC_EXT)/$(UNITTEST2_DIR)/ && python setup.py build
-	cp -r $(PYLIB_SRC_EXT)/$(UNITTEST2_DIR)/build/lib/unittest2  $(PYLIB_DIR)/
-
-
 PYTHON_FILES=`grep -l --exclude=Makefile --exclude=gplogfilter "/bin/env python" *`\
 			 `grep -l "/bin/env python" $(SRC)/../sbin/*`\
 			 `find ./gppylib -name "*.py"`\
@@ -224,7 +215,7 @@ check-regress:
 	@PYTHONPATH=$(SRC):$(SRC)/ext:$(PYTHONPATH) \
 	gppylib/gpunit discover --verbose -s gppylib -p "test_regress*.py" 2> $(SRC)/../gpMgmt_testregress_results.log 1> $(SRC)/../gpMgmt_testregress_output.log
 
-check: $(MOCK_BIN) unittest2
+check: $(MOCK_BIN)
 	@echo "Running pure unit and also "unit" tests that require cluster to be up..."
 	@TMPDIR=/tmp PYTHONPATH=$(SERVER_SRC):$(SERVER_SBIN):$(PYTHONPATH):$(PYTHONSRC_INSTALL_PYTHON_PATH):$(SRC)/ext:$(SBIN_DIR):$(LIB_DIR):$(PYLIB_DIR)/mock-1.0.1 \
 	gppylib/gpunit discover --verbose -s $(SRC)/gppylib -p "test_unit*.py" 2> $(SRC)/../gpMgmt_testunit_results.log 1> $(SRC)/../gpMgmt_testunit_output.log
@@ -233,7 +224,7 @@ check: $(MOCK_BIN) unittest2
 
 unitdevel:
 	@echo "Running pure unit tests..."
-	python -m unittest2 discover --verbose -s $(SRC)/gppylib -p "test_unit*.py"
+	python -m unittest discover --verbose -s $(SRC)/gppylib -p "test_unit*.py"
 
 solarisTest:
 	@if [ `uname -s` = 'SunOS' ]; then \

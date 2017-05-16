@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import unittest2 as unittest
+import unittest
 import os, socket
 
 from gppylib.commands.base import Command, ExecutionError

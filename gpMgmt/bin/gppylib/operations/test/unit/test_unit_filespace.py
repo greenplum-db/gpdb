@@ -3,7 +3,7 @@
 # Copyright (c) Greenplum Inc 2012. All Rights Reserved. 
 #
 
-import unittest2 as unittest
+import unittest
 from mock import patch
 from gppylib.operations.filespace import is_filespace_configured
 import os

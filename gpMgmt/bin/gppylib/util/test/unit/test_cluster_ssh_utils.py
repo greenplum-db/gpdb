@@ -2,7 +2,7 @@
 
 import mock
 import sys, os, pwd
-import unittest2 as unittest
+import unittest
 from StringIO import StringIO
 from mock import patch
 

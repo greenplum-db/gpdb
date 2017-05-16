@@ -5,7 +5,7 @@
 """ 
 Unit testing for gpversion module
 """
-import unittest2 as unittest
+import unittest
 
 from gpversion import *
 

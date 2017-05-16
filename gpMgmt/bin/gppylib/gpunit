@@ -13,8 +13,8 @@ so that it can be integrated with Pulse.
 
 __unittest = True
 
-import unittest2 as unittest
-from unittest2.main import USAGE_AS_MAIN
+import unittest
+from unittest.main import USAGE_AS_MAIN
 from gppylib import gpMgmttest
 
 unittest.TestProgram.USAGE = USAGE_AS_MAIN

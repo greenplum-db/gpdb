@@ -1,4 +1,4 @@
-import unittest2 as unittest
+import unittest
 import time
 
 class GpMgmtTestRunner(unittest.TextTestRunner):

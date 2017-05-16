@@ -6,7 +6,7 @@
 """ Unittesting for gphostcachelookup module
 """
 import os, sys
-import unittest2 as unittest
+import unittest
 from gppylib import gplog
 from gppylib.commands.base import Command, ExecutionError
 

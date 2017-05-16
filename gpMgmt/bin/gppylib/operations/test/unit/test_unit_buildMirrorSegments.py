@@ -3,7 +3,7 @@
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
 #
 
-import unittest2 as unittest
+import unittest
 import tempfile, os, shutil
 from gppylib.commands.base import CommandResult
 from gppylib.operations.buildMirrorSegments import GpMirrorListToBuild

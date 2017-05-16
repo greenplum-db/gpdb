@@ -6,7 +6,7 @@
 import os
 import re
 import shutil
-import unittest2 as unittest
+import unittest
 from collections import defaultdict
 from gppylib.gpversion import GpVersion
 from gppylib.commands.base import Command, CommandResult, ExecutionError

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import os
-import unittest2 as unittest
+import unittest
 
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 from gppylib.operations.initstandby import get_standby_pg_hba_info, update_pg_hba, update_pg_hba_conf_on_segments

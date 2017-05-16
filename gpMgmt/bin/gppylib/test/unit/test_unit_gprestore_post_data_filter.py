@@ -2,7 +2,7 @@
 # coding: utf-8 
 
 import os, sys
-import unittest2 as unittest
+import unittest
 from gppylib import gplog
 from mock import patch
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded

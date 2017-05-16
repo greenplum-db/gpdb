@@ -3,7 +3,7 @@
 # Copyright (c) Greenplum Inc 2012. All Rights Reserved. 
 #
 
-import unittest2 as unittest
+import unittest
 from gppylib.commands.base import Command, WorkerPool
 from mock import patch
 

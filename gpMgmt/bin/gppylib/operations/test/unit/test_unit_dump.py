@@ -2,7 +2,7 @@
 # Copyright (c) Greenplum Inc 2012. All Rights Reserved.
 #
 
-import unittest2 as unittest
+import unittest
 from datetime import datetime
 from gppylib.commands.base import Command, CommandResult
 from gppylib.gparray import GpArray, GpDB

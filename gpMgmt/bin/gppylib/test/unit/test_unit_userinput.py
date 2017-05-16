@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import sys, os, getpass
-import unittest2 as unittest
+import unittest
 from gppylib.userinput import ask_create_password
 
 
