@@ -36,7 +36,9 @@ extern void dumpTypeOid(PGconn *conn, Archive *fout, Archive *AH, TypeInfo *info
 extern void dumpNamespaceOid(Archive *AH, NamespaceInfo *info);
 extern void dumpRuleOid(Archive *AH, RuleInfo *info);
 extern void dumpConstraintOid(PGconn *conn, Archive *AH, ConstraintInfo *info);
-extern void dumpProcLangOid(Archive *AH, ProcLangInfo *info);
+extern void dumpProcLangOid(PGconn *conn, Archive *fout, Archive *AH, ProcLangInfo *info);
 extern void dumpCastOid(Archive *AH, CastInfo *info);
+extern void dumpTSObjectOid(Archive *AH, DumpableObject *info);
+extern void dumpExtensionOid(Archive *AH, ExtensionInfo *info);
 
 #endif /* BINARY_UPGRADE_H */

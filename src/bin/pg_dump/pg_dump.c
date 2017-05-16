@@ -5468,10 +5468,23 @@ dumpBinaryUpgrade(Archive *fout, DumpableObject **dobjs, int numObjs)
 				dumpConstraintOid(g_conn, fout, (ConstraintInfo *) dobj);
 				break;
 			case DO_PROCLANG:
-				dumpProcLangOid(fout, (ProcLangInfo *) dobj);
+				dumpProcLangOid(g_conn, g_fout, fout, (ProcLangInfo *) dobj);
 				break;
 			case DO_CAST:
 				dumpCastOid(fout, (CastInfo *) dobj);
+				break;
+			case DO_EXTENSION:
+				dumpExtensionOid(fout, (ExtensionInfo *) dobj);
+				break;
+			/*
+			 * All TS objects have the same preassignments so use a common
+			 * function for them all
+			 */
+			case DO_TSPARSER:
+			case DO_TSDICT:
+			case DO_TSTEMPLATE:
+			case DO_TSCONFIG:
+				dumpTSObjectOid(fout, dobj);
 				break;
 
 			/*
@@ -5491,22 +5504,13 @@ dumpBinaryUpgrade(Archive *fout, DumpableObject **dobjs, int numObjs)
 				break;
 
 			/*
-			 * GPDB_84_MERGE_FIXME:  Support for binary upgrade has not yet
-			 * been added for the following dumpable objects as they were
-			 * first introduced in Greenplum 5.0. When merging PostgreSQL 8.4,
-			 * implement this oid dispatch to cover the * 5.0 -> 6.0 upgrade
-			 * cycle.
-			 *
-			 * Ideally, support should be added even before then to be able
-			 * to upgrade 5.0 -> 5.0 in order to test the GPDB version of
-			 * pg_upgrade.
+			 * To ensure that new object types are added to the upgrade when
+			 * introduced, make unhandled object types an error condition.
 			 */
-			case DO_EXTENSION:
-			case DO_TSPARSER:
-			case DO_TSDICT:
-			case DO_TSTEMPLATE:
-			case DO_TSCONFIG:
-				break;
+			default:
+				write_msg(NULL, "unhandled object type encountered in binary upgrade");
+				exit_nicely();
+				return; /* not reached */
 		}
 	}
 }
