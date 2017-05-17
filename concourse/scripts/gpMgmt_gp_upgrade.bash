@@ -12,6 +12,8 @@ function gen_env(){
 		source /opt/gcc_env.sh
 		source \${base_path}/gpdb_src/gpAux/gpdemo/gpdemo-env.sh
 		cd \${base_path}/gpdb_src/gpMgmt/go-utils/src/gp_upgrade
+		export GOPATH=\${base_path}/gpdb_src/gpMgmt/go-utils
+		export PATH=\$PATH:/usr/local/go/bin:\$GOPATH/bin
 		make test
 	EOF
 
