@@ -151,6 +151,13 @@ installcheck-world:
 installcheck-resgroup:
 	$(MAKE) -C src/test/isolation2 $@
 
+# Create or destory a demo cluster.
+create-demo-cluster:
+	$(MAKE) -C gpAux/gpdemo create-demo-cluster
+
+destroy-demo-cluster:
+	$(MAKE) -C gpAux/gpdemo destroy-demo-cluster
+
 # Run mock tests, that don't require a running server. Arguably these should
 # be part of [install]check-world, but we treat them more like part of
 # compilation than regression testing, in the CI. But they are too heavy-weight

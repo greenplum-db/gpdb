@@ -27,10 +27,10 @@ export NUM_PRIMARY_MIRROR_PAIRS
 all:
 	$(MAKE) clean
 	$(MAKE) check
-	$(MAKE) cluster
+	$(MAKE) create-demo-cluster
 	$(MAKE) probe
 
-cluster:
+cluster create-demo-cluster:
 	@./demo_cluster.sh
 	@echo ""
 
@@ -42,11 +42,11 @@ check:
 	@./demo_cluster.sh -c
 	@echo ""
 
-clean:
+clean destroy-demo-cluster:
 	@echo "======================================================================"
 	@echo "Deleting cluster.... "
 	@echo "======================================================================"
 	@./demo_cluster.sh -d
 	@echo ""
 
-.PHONY: all cluster probe clean check clean
+.PHONY: all cluster create-demo-cluster probe clean check clean destroy-demo-cluster
