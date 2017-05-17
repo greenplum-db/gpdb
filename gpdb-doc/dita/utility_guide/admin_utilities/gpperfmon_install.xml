@@ -35,7 +35,7 @@
           Greenplum Database master instance.</li>
         <li id="ou143437">Updates the <codeph>$MASTER_DATA_DIRECTORY/pg_hba.conf</codeph> file. The
           utility adds the following lines to the host-based authentication file
-            (<codeph>pg_hba.conf</codeph>):<codeblock>local      gpperfmon     gpmon                 md5 
+            (<codeph>pg_hba.conf</codeph>):<codeblock>local      gpperfmon     gpmon                 md5
 host       all           gpmon  127.0.0.1/28   md5
 host       all           gpmon  ::1/128        md5</codeblock><note>
             <p>It may be necessary to edit the <codeph>pg_hba.conf</codeph> file after running the
@@ -50,7 +50,7 @@ host       all           gpmon  ::1/128        md5</codeblock><note>
 host       <b>gpperfmon</b>     gpmon    ::1/128  md5</codeblock></li>
               <li>
                 <p>The <codeph>gpperfmon_install</codeph> utility assumes the default MD5
-                  authentication method. Greenplum Database may optionally be configured to use the
+                  authentication method. Greenplum Database can optionally be configured to use the
                   SHA-256 or SHA-256-FIPS hash algorithm to compute the password hashes saved in the
                   system catalog. This is incompatible with the MD5 authentication method, which
                   expects an MD5 hash or clear text password in the system catalog. Because of this,
@@ -58,7 +58,7 @@ host       <b>gpperfmon</b>     gpmon    ::1/128  md5</codeblock></li>
                   you must edit the <codeph>pg_hba.conf</codeph> file after running the
                     <codeph>gpperfmon_install</codeph> utility to change the authentication method
                   for the <codeph>gpmon</codeph> role from <codeph>md5</codeph> to
-                    <codeph>password</codeph>:<codeblock>local      gpperfmon     gpmon                 md5 
+                    <codeph>password</codeph>:<codeblock>local      gpperfmon     gpmon                 md5
 host       all           gpmon  127.0.0.1/28   <b>password</b>
 host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
                 <p>The <codeph>password</codeph> authentication method submits the user's clear text
@@ -67,8 +67,7 @@ host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
                     Administrator Guide</i> for more information about configuring password
                   hashing.</p>
               </li>
-            </ul>
-          </note></li>
+            </ul></note></li>
         <li id="ou143384">Updates the password file (<codeph>.pgpass</codeph>). In order to allow
           the data collection agents to connect as the <codeph>gpmon</codeph> role without a
           password prompt, you must have a password file that has an entry for the
