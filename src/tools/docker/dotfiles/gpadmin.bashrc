@@ -6,7 +6,7 @@ if [ ! -e /tmp/demo_sem ]; then
   touch /tmp/demo_sem
 
   pushd /workspace/gpdb/gpAux/gpdemo
-    make cluster
+    make create-demo-cluster
   popd
 fi
 

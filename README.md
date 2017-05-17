@@ -138,7 +138,7 @@ source /usr/local/gpdb/greenplum_path.sh
 # Start demo cluster (gpdemo-env.sh is created which contain
 # __PGPORT__ and __MASTER_DATA_DIRECTORY__ values)
 cd gpAux/gpdemo
-make cluster
+make create-demo-cluster
 source gpdemo-env.sh
 ```
 

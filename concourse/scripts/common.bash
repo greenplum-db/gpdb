@@ -36,7 +36,7 @@ function make_cluster() {
   export DEFAULT_QD_MAX_CONNECT=150
   workaround_before_concourse_stops_stripping_suid_bits
   pushd gpdb_src/gpAux/gpdemo
-      su gpadmin -c make cluster
+      su gpadmin -c make create-demo-cluster
   popd
 }
 
