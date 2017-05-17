@@ -168,6 +168,24 @@
           </row>
           <row>
             <entry colname="col1">
+              <codeph>typmodin</codeph>
+            </entry>
+            <entry colname="col2">regproc</entry>
+            <entry colname="col3">pg_proc.oid</entry>
+            <entry colname="col4">Type modifier input function, or 0 if the type does not support
+              modifiers.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typmodout</codeph>
+            </entry>
+            <entry colname="col2">regproc</entry>
+            <entry colname="col3">pg_proc.oid</entry>
+            <entry colname="col4">Type modifier output function, or 0 to use the standard 
+              format.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
               <codeph>typanalyze</codeph>
             </entry>
             <entry colname="col2">regproc</entry>

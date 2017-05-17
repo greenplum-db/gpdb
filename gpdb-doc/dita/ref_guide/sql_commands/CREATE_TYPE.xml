@@ -10,6 +10,8 @@ CREATE TYPE <varname>name</varname> (
     OUTPUT = <varname>output_function</varname>
     [, RECEIVE = <varname>receive_function</varname>]
     [, SEND = <varname>send_function</varname>]
+    [, TYPMOD_IN = <varname>type_modifier_input_function</varname> ]
+    [, TYPMOD_OUT = <varname>type_modifier_output_function</varname> ]
     [, INTERNALLENGTH = {<varname>internallength</varname> | VARIABLE}]
     [, PASSEDBYVALUE]
     [, ALIGNMENT = <varname>alignment</varname>]
@@ -40,7 +42,7 @@ PostgreSQL documentation. Enum types take a list of one or more quoted labels, e
                     not only that shown in the syntax, and most are optional. You must register two
                     or more functions (using <codeph>CREATE FUNCTION</codeph>) before defining the
                     type. The support functions <varname>input_function</varname> and <varname>output_function</varname> are
-                    required, while the functions <varname>receive_function</varname>, <varname>send_function</varname> and
+                    required, while the functions <varname>receive_function</varname>, <varname>send_function</varname>, <varname>type_modifier_input_function</varname>, <varname>type_modifier_output_function</varname>, and
                         <varname>analyze_function</varname> are optional. Generally these functions have to be
                     coded in C or another low-level language. In Greenplum Database, any function
                     used to implement a data type must be defined as
@@ -86,7 +88,32 @@ PostgreSQL documentation. Enum types take a list of one or more quoted labels, e
                     If this function is not supplied, the type cannot participate in binary output.
                     The send function must be declared as taking one argument of the new data type.
                     The send function must return type <codeph>bytea</codeph>. Send functions are
-                    not invoked for <codeph>NULL</codeph> values. </p><p>You should at this point be
+                    not invoked for <codeph>NULL</codeph> values. </p>
+                    <p>The optional <varname>type_modifier_input_function</varname> and
+                      <varname>type_modifier_output_function</varname> are required if the type
+                      supports modifiers. Modifiers are optional constraints attached to a type
+                      declaration, such as <codeph>char(5)</codeph> or 
+                      <codeph>numeric(30,2)</codeph>. While Greenplum Database
+                      allows user-defined types to take one or more simple constants or identifiers
+                      as modifiers, this information must fit into a single
+                      non-negative integer value for storage in the system catalogs. Greenplum
+                      Database passes the declared modifier(s) to the
+                      <varname>type_modifier_input_function</varname> in the form of a
+                      <codeph>cstring</codeph> array. The modifier input function must check the
+                      values for validity, throwing an error if they are incorrect. If the values
+                      are correct, the modifier input function returns a single non-negative integer
+                      value that Greenplum Database stores as the column "typmod". Type modifiers
+                      are rejected if the type
+                      was not defined with a <varname>type_modifier_input_function</varname>.
+                      The <varname>type_modifier_output_function</varname> converts the internal
+                      integer typmod value back to the correct form for user display. The 
+                      modifier output function must return a <codeph>cstring</codeph> value that
+                      is the exact string to append to the type name. For example,
+                      <codeph>numeric</codeph>'s function might return <codeph>(30,2)</codeph>.
+                      The <varname>type_modifier_output_function</varname> is optional. When not
+                      specified, the default display format is the stored typmod integer value
+                      enclosed in parentheses.</p>
+                    <p>You should at this point be
                     wondering how the input and output functions can be declared to have results or
                     arguments of the new type, when they have to be created before the new type can
                     be created. The answer is that the type should first be defined as a shell type,
@@ -168,7 +195,10 @@ type. </pd></plentry>
 textual form to its internal form. </pd></plentry><plentry><pt><varname>output_function</varname></pt><pd>The name of a function that converts data from the type's internal
 form to its external textual form. </pd></plentry><plentry><pt><varname>receive_function</varname></pt><pd>The name of a function that converts data from the type's external
 binary form to its internal form. </pd></plentry><plentry><pt><varname>send_function</varname></pt><pd>The name of a function that converts data from the type's internal
-form to its external binary form. </pd></plentry><plentry><pt><varname>internallength</varname></pt><pd>A numeric constant that specifies the length in bytes of the new
+form to its external binary form. </pd></plentry>
+<plentry><pt><varname>type_modifier_input_function</varname></pt><pd>The name of a function that converts an array of modifier(s) for the type to internal form.</pd></plentry> 
+<plentry><pt><varname>type_modifier_output_function</varname></pt><pd>The name of a function that converts the internal form of the type's modifier(s) to external textual form.</pd></plentry> 
+<plentry><pt><varname>internallength</varname></pt><pd>A numeric constant that specifies the length in bytes of the new
 type's internal representation. The default assumption is that it is
 variable-length. </pd></plentry><plentry><pt><varname>alignment</varname></pt><pd>The storage alignment requirement of the data type. Must be one of
 <codeph>char</codeph>, <codeph>int2</codeph>, <codeph>int4</codeph>,

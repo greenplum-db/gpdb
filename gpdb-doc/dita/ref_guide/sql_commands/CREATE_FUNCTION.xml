@@ -46,8 +46,8 @@ in the <codeph>FROM</codeph> clause simply returns a set of
 rows, execution may be allowed on the segments:</p><codeblock>SELECT * FROM foo();</codeblock><p>One exception to this rule are functions that return a table reference
 (<codeph>rangeFuncs</codeph>) or functions that use the <codeph>refCursor</codeph>
 data type. Note that you cannot return a <codeph>refcursor</codeph> from
-any kind of function in Greenplum Database.</p></sectiondiv></section><section id="section5"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of the function to create.</pd></plentry><plentry><pt><varname>argmode</varname></pt><pd>The mode of an argument: either <codeph>IN</codeph>, <codeph>OUT</codeph>,
-or <codeph>INOUT</codeph>. If omitted, the default is <codeph>IN</codeph>.
+any kind of function in Greenplum Database.</p></sectiondiv></section><section id="section5"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of the function to create.</pd></plentry><plentry><pt><varname>argmode</varname></pt><pd>The mode of an argument: either <codeph>IN</codeph>, <codeph>OUT</codeph>, <codeph>INOUT</codeph>, 
+or <codeph>VARIADIC</codeph>. Only <codeph>OUT</codeph> arguments can follow an argument declared as <codeph>VARIADIC</codeph>. If omitted, the default is <codeph>IN</codeph>.
 </pd></plentry><plentry><pt><varname>argname</varname></pt><pd>The name of an argument. Some languages (currently only PL/pgSQL)
 let you use the name in the function body. For other languages the name
 of an input argument is just extra documentation. But the name of an
@@ -179,8 +179,8 @@ CREATE FUNCTION foo(int, int default 42) ...</codeblock>
 be called.</p>
 <p>When repeated <codeph>CREATE FUNCTION</codeph> calls refer to the same
 object file, the file is only loaded once. To unload and reload the file,
-use the <codeph>LOAD</codeph> command. </p><p>To be able to define a function, the user must have the <codeph>USAGE</codeph>
-privilege on the language.</p><p>It is often helpful to use dollar quoting to write the function definition
+use the <codeph>LOAD</codeph> command. </p><p>You must have the <codeph>USAGE</codeph> privilege on a language to be able to define a function using that language.</p>
+<p>It is often helpful to use dollar quoting to write the function definition
 string, rather than the normal single quote syntax. Without dollar quoting,
 any single quotes or backslashes in the function definition must be escaped
 by doubling them. A dollar-quoted string constant consists of a dollar
@@ -200,7 +200,12 @@ $SomeTag$Dianne's horse$SomeTag$</codeblock>
                     FUNCTION</codeph>
                 <codeph>SET</codeph> clause, much as it would for a previous <codeph>SET
                     LOCAL</codeph> command. The effects of such a command will persist after the
-                function exits, unless the current transaction is rolled back.</p><sectiondiv id="section7"><b>Using Functions With Queries on Distributed Data</b><p>In some cases, Greenplum Database does not support using functions in
+                function exits, unless the current transaction is rolled back.</p>
+            <p>If a function with a <codeph>VARIADIC</codeph> argument is declared as
+              <codeph>STRICT</codeph>, the strictness check tests that the variadic array as a
+               whole is non-null. PL/pgSQL will still call the function if the array has null
+               elements.</p>
+<sectiondiv id="section7"><b>Using Functions With Queries on Distributed Data</b><p>In some cases, Greenplum Database does not support using functions in
 a query where the data in a table specified in the <codeph>FROM</codeph>
 clause is distributed over Greenplum Database segments. As an example,
 this SQL query contains the function <codeph>func()</codeph>:</p><codeblock>SELECT func(a) FROM table1;</codeblock><p>The function is not supported for use in the query if all of the following

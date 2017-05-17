@@ -372,6 +372,10 @@
         example, declaring a function as <codeph>myfunc(<i>anyelement</i>, <i>anyenum</i>)</codeph>
         is equivalent to declaring it as <codeph>myfunc(<i>anyenum</i>, <i>anyenum</i>)</codeph>:
         both actual arguments must be the same <codeph>enum</codeph> type.</p>
+      <p>A variadic function (one taking a variable number of arguments) is polymorphic when its 
+        last parameter is declared as <codeph>VARIADIC <i>anyarray</i></codeph>. For purposes of
+        argument matching and determining the actual result type, such a function behaves the 
+        same as if you had declared the appropriate number of <i>anynonarray</i> parameters.</p>
       <p>For more information about polymorphic types, see the Postgres documentation about <xref
           href="https://www.postgresql.org/docs/8.3/static/xfunc-c.html#AEN41553" format="html"
           scope="external">Polymorphic Arguments and Return Types</xref>.</p>

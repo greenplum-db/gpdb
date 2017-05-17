@@ -7,11 +7,11 @@ function. To execute this command the user must be the owner of the function.
 The argument types to the function must be specified, since several different
 functions may exist with the same name and different argument lists.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>IF EXISTS</pt><pd>Do not throw an error if the function does not exist. A notice is
 issued in this case. </pd></plentry><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of an existing function.</pd></plentry><plentry><pt><varname>argmode</varname></pt><pd>The mode of an argument: either <codeph>IN</codeph>, <codeph>OUT</codeph>,
-or <codeph>INOUT</codeph>. If omitted, the default is IN. Note that <codeph>DROP
+<codeph>INOUT</codeph>, or <codeph>VARIADIC</codeph>. If omitted, the default is IN. Note that <codeph>DROP
 FUNCTION</codeph> does not actually pay any attention to <codeph>OUT</codeph>
 arguments, since only the input arguments are needed to determine the
-function's identity. So it is sufficient to list the <codeph>IN</codeph>
-and <codeph>INOUT</codeph> arguments. </pd></plentry><plentry><pt><varname>argname</varname></pt><pd>The name of an argument. Note that <codeph>DROP FUNCTION</codeph>
+function's identity. So it is sufficient to list the <codeph>IN</codeph>,
+ <codeph>INOUT</codeph>, and <codeph>VARIADIC</codeph> arguments. </pd></plentry><plentry><pt><varname>argname</varname></pt><pd>The name of an argument. Note that <codeph>DROP FUNCTION</codeph>
 does not actually pay any attention to argument names, since only the
 argument data types are needed to determine the function's identity.
 </pd></plentry><plentry><pt><varname>argtype</varname></pt><pd>The data type(s) of the function's arguments (optionally schema-qualified),

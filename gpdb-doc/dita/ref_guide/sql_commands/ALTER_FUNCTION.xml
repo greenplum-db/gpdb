@@ -26,12 +26,12 @@ or indirect member of the new owning role, and that role must have <codeph>CREAT
 privilege on the function's schema. (These restrictions enforce that
 altering the owner does not do anything you could not do by dropping
 and recreating the function. However, a superuser can alter ownership
-of any function anyway.) </p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of an existing function. </pd></plentry><plentry><pt><varname>argmode</varname></pt><pd>The mode of an argument: either <codeph>IN</codeph>, <codeph>OUT</codeph>,
-or <codeph>INOUT</codeph>. If omitted, the default is <codeph>IN</codeph>.
+of any function anyway.) </p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of an existing function. </pd></plentry><plentry><pt><varname>argmode</varname></pt><pd>The mode of an argument: either <codeph>IN</codeph>, <codeph>OUT</codeph>, <codeph>INOUT</codeph>, 
+or <codeph>VARIADIC</codeph>. If omitted, the default is <codeph>IN</codeph>.
 Note that <codeph>ALTER FUNCTION</codeph> does not actually pay any attention
 to <codeph>OUT</codeph> arguments, since only the input arguments are
 needed to determine the function's identity. So it is sufficient to
-list the <codeph>IN</codeph> and <codeph>INOUT</codeph> arguments.</pd></plentry><plentry><pt><varname>argname</varname></pt><pd>The name of an argument. Note that <codeph>ALTER FUNCTION</codeph>
+list the <codeph>IN</codeph>, <codeph>INOUT</codeph>, and <codeph>VARIADIC</codeph> arguments.</pd></plentry><plentry><pt><varname>argname</varname></pt><pd>The name of an argument. Note that <codeph>ALTER FUNCTION</codeph>
 does not actually pay any attention to argument names, since only the
 argument data types are needed to determine the function's identity.
 </pd></plentry><plentry><pt><varname>argtype</varname></pt><pd>The data type(s) of the function's arguments (optionally schema-qualified),
