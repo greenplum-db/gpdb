@@ -17,7 +17,7 @@
                 system (DBMS). It is based on PostgreSQL 8.2.15, and in most cases is very similar
                 to PostgreSQL with regard to SQL support, features, configuration options, and
                 end-user functionality. Database users interact with Greenplum Database as they
-                would a regular PostgreSQL DBMS. </p><p>The internals of PostgreSQL have been
+                would with a regular PostgreSQL DBMS. </p><p>The internals of PostgreSQL have been
                 modified or supplemented to support the parallel structure of Greenplum Database.
                 For example, the system catalog, query planner, optimizer, query executor, and
                 transaction manager components have been modified and enhanced to be able to execute
