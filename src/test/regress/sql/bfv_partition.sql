@@ -784,6 +784,35 @@ EVERY ('2 mons'::interval)
 explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
 drop table mpp8031;
 
+-- Partitioned tables with default partitions and indexes on all parts,
+-- queries on them with a predicate on index column must not consider the scan
+-- as partial and should not fallback.
+CREATE TABLE part_tbl
+(
+	time_client_key numeric(16,0) NOT NULL,
+	ngin_service_key numeric NOT NULL,
+	profile_key numeric NOT NULL
+)
+DISTRIBUTED BY (time_client_key)
+PARTITION BY RANGE(time_client_key)
+SUBPARTITION BY LIST (ngin_service_key)
+SUBPARTITION TEMPLATE
+(
+	SUBPARTITION Package5 VALUES (479534741),
+	DEFAULT SUBPARTITION other_services
+)
+(
+	PARTITION p20151110 START (2015111000::numeric) 
+END (2015111100::numeric) WITH (appendonly=false)
+);
+INSERT INTO part_tbl VALUES (2015111000, 479534741, 99999999);
+INSERT INTO part_tbl VALUES (2015111000, 479534742, 99999999);
+CREATE INDEX part_tbl_idx 
+ON part_tbl(profile_key);
+EXPLAIN SELECT * FROM part_tbl WHERE profile_key = 99999999;
+SELECT * FROM part_tbl WHERE profile_key = 99999999;
+DROP TABLE part_tbl;
+
 -- CLEANUP
 -- start_ignore
 drop schema if exists bfv_partition;

@@ -1882,6 +1882,58 @@ explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
 (34 rows)
 
 drop table mpp8031;
+-- Partitioned tables with default partitions and indexes on all parts,
+-- queries on them with a predicate on index column must not consider the scan
+-- as partial and should not fallback.
+CREATE TABLE part_tbl
+(
+	time_client_key numeric(16,0) NOT NULL,
+	ngin_service_key numeric NOT NULL,
+	profile_key numeric NOT NULL
+)
+DISTRIBUTED BY (time_client_key)
+PARTITION BY RANGE(time_client_key)
+SUBPARTITION BY LIST (ngin_service_key)
+SUBPARTITION TEMPLATE
+(
+	SUBPARTITION Package5 VALUES (479534741),
+	DEFAULT SUBPARTITION other_services
+)
+(
+	PARTITION p20151110 START (2015111000::numeric) 
+END (2015111100::numeric) WITH (appendonly=false)
+);
+NOTICE:  CREATE TABLE will create partition "part_tbl_1_prt_p20151110" for table "part_tbl"
+NOTICE:  CREATE TABLE will create partition "part_tbl_1_prt_p20151110_2_prt_package5" for table "part_tbl_1_prt_p20151110"
+NOTICE:  CREATE TABLE will create partition "part_tbl_1_prt_p20151110_2_prt_other_services" for table "part_tbl_1_prt_p20151110"
+INSERT INTO part_tbl VALUES (2015111000, 479534741, 99999999);
+INSERT INTO part_tbl VALUES (2015111000, 479534742, 99999999);
+CREATE INDEX part_tbl_idx 
+ON part_tbl(profile_key);
+NOTICE:  building index for child partition "part_tbl_1_prt_p20151110"
+NOTICE:  building index for child partition "part_tbl_1_prt_p20151110_2_prt_package5"
+NOTICE:  building index for child partition "part_tbl_1_prt_p20151110_2_prt_other_services"
+EXPLAIN SELECT * FROM part_tbl WHERE profile_key = 99999999;
+                                                      QUERY PLAN                                                      
+----------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..942.50 rows=60 width=80)
+   ->  Append  (cost=0.00..942.50 rows=20 width=80)
+         ->  Seq Scan on part_tbl_1_prt_p20151110_2_prt_package5 part_tbl  (cost=0.00..471.25 rows=10 width=80)
+               Filter: profile_key = 99999999::numeric
+         ->  Seq Scan on part_tbl_1_prt_p20151110_2_prt_other_services part_tbl  (cost=0.00..471.25 rows=10 width=80)
+               Filter: profile_key = 99999999::numeric
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(8 rows)
+
+SELECT * FROM part_tbl WHERE profile_key = 99999999;
+ time_client_key | ngin_service_key | profile_key 
+-----------------+------------------+-------------
+      2015111000 |        479534741 |    99999999
+      2015111000 |        479534742 |    99999999
+(2 rows)
+
+DROP TABLE part_tbl;
 -- CLEANUP
 -- start_ignore
 drop schema if exists bfv_partition;

@@ -1197,7 +1197,19 @@ CTranslatorRelcacheToDXL::PmdindexPartTable
 		pdrgpulKeyCols->Append(GPOS_NEW(pmp) ULONG(UlPosition(iAttno, pulAttrMap)));
 	}
 	
+	/*
+	 * If an index exists only on a leaf part, pnodePartCnstr refers to the expression
+	 * identifying the path to reach the partition holding the index. For indexes
+	 * available on all parts it is set to NULL.
+	 */
 	Node *pnodePartCnstr = pidxinfo->partCons;
+	
+	/*
+	 * If an index exists all on the parts including default, the logical index
+	 * info created marks defaultLevels as NIL. However, if an index exists only on
+	 * leaf parts plDefaultLevel contains the default part level which come across while
+	 * reaching to the leaf part from root.
+	 */
 	List *plDefaultLevels = pidxinfo->defaultLevels;
 	
 	// get number of partitioning levels
@@ -1205,7 +1217,10 @@ CTranslatorRelcacheToDXL::PmdindexPartTable
 	const ULONG ulLevels = gpdb::UlListLength(plPartKeys);
 	gpdb::FreeList(plPartKeys);
 
-	// get relation constraints
+	/* get relation constraints
+	 * plDefaultLevelsRel indicates the levels on which default partitions exists
+	 * for the partitioned table
+	 */
 	List *plDefaultLevelsRel = NIL;
 	Node *pnodePartCnstrRel = gpdb::PnodePartConstraintRel(oidRel, &plDefaultLevelsRel);
 
@@ -1215,14 +1230,28 @@ CTranslatorRelcacheToDXL::PmdindexPartTable
 		fUnbounded = fUnbounded && FDefaultPartition(plDefaultLevelsRel, ul);
 	}
 
+	/*
+	 * If pnodePartCnstr is NULL and plDefaultLevels is NIL,
+	 * it indicates that the index is available on all the parts including
+	 * default part. So, we can say that levels on which default partitions
+	 * exists for the relation applies to the index as well and the relative
+	 * scan will not be partial.
+	 */
+	List *plDefaultLevelsDerived = NIL;
+	if (NULL == pnodePartCnstr && NIL == plDefaultLevels)
+		plDefaultLevelsDerived = plDefaultLevelsRel;
+	else
+		plDefaultLevelsDerived = plDefaultLevels;
+	
 	DrgPul *pdrgpulDefaultLevels = GPOS_NEW(pmp) DrgPul(pmp);
 	for (ULONG ul = 0; ul < ulLevels; ul++)
 	{
-		if (fUnbounded || FDefaultPartition(plDefaultLevels, ul))
+		if (fUnbounded || FDefaultPartition(plDefaultLevelsDerived, ul))
 		{
 			pdrgpulDefaultLevels->Append(GPOS_NEW(pmp) ULONG(ul));
 		}
 	}
+	gpdb::FreeList(plDefaultLevelsDerived);
 
 	BOOL fPartial = (NULL != pnodePartCnstr || NIL != plDefaultLevels);
 
