@@ -110,7 +110,7 @@ psql
 To run the tests:
 ```shell
 cd ~/gpdb
-make installcheck-good
+make installcheck-world
 ```
 
 If you are curious how this happened, take a look at the following scripts:
