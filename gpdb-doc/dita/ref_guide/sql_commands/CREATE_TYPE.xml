@@ -102,16 +102,16 @@ PostgreSQL documentation. Enum types take a list of one or more quoted labels, e
                       <codeph>cstring</codeph> array. The modifier input function must check the
                       values for validity, throwing an error if they are incorrect. If the values
                       are correct, the modifier input function returns a single non-negative integer
-                      value that Greenplum Database stores as the column "typmod". Type modifiers
+                      value that Greenplum Database stores as the column <codeph>typmod</codeph>. Type modifiers
                       are rejected if the type
                       was not defined with a <varname>type_modifier_input_function</varname>.
                       The <varname>type_modifier_output_function</varname> converts the internal
-                      integer typmod value back to the correct form for user display. The 
+                      integer <codeph>typmod</codeph> value back to the correct form for user display. The 
                       modifier output function must return a <codeph>cstring</codeph> value that
                       is the exact string to append to the type name. For example,
                       <codeph>numeric</codeph>'s function might return <codeph>(30,2)</codeph>.
                       The <varname>type_modifier_output_function</varname> is optional. When not
-                      specified, the default display format is the stored typmod integer value
+                      specified, the default display format is the stored <codeph>typmod</codeph> integer value
                       enclosed in parentheses.</p>
                     <p>You should at this point be
                     wondering how the input and output functions can be declared to have results or
