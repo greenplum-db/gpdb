@@ -19,7 +19,7 @@ function install_gpdb() {
 }
 
 function configure() {
-  source /opt/gcc_env.sh
+  source /opt/gcc_env.sh #this doesn't help make it available at test runtime if you use `run_test` on a file at `/opt/run_test.sh`
   pushd gpdb_src
       # The full set of configure options which were used for building the
       # tree must be used here as well since the toplevel Makefile depends

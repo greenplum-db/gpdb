@@ -8,9 +8,9 @@ source "${CWDIR}/common.bash"
 function gen_env(){
   cat > /opt/run_test.sh <<-EOF
 		base_path=\${1}
-		source /usr/local/greenplum-db-devel/greenplum_path.sh
-		source /opt/gcc_env.sh
-		source \${base_path}/gpdb_src/gpAux/gpdemo/gpdemo-env.sh
+		# source /usr/local/greenplum-db-devel/greenplum_path.sh
+		# source /opt/gcc_env.sh
+		# source \${base_path}/gpdb_src/gpAux/gpdemo/gpdemo-env.sh
 		cd \${base_path}/gpdb_src/gpMgmt/go-utils/src/gp_upgrade
 		export GOPATH=\${base_path}/gpdb_src/gpMgmt/go-utils
 		export PATH=\$PATH:/usr/local/go/bin:\$GOPATH/bin
@@ -27,9 +27,9 @@ function setup_gpadmin_user() {
 function _main() {
 
     configure
-    install_gpdb
+    # install_gpdb
     setup_gpadmin_user
-    make_cluster
+    # make_cluster
     gen_env
     run_test
 }
