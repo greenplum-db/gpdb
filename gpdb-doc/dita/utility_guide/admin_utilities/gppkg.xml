@@ -5,8 +5,8 @@
     <!--install_guide/refs/gppkg.xml has a conref to this topic. -->
     <title id="jt142031">gppkg</title>
     <body>
-        <p>Installs Greenplum Database extensions such as pgcrypto, PL/R, PostGIS, and MADlib, along
-            with their dependencies, across an entire cluster.</p>
+        <p>Installs Greenplum Database extensions such as PostGIS and MADlib, along with their
+            dependencies, across an entire cluster.</p>
         <section id="section2">
             <title>Synopsis</title>
             <codeblock><b>gppkg</b> [<b>-i</b> <varname>package</varname> | <b>-u</b> <varname>package</varname> | <b>-r </b> <varname>name</varname>-<varname>version</varname> | <b>-c</b>] 
@@ -36,9 +36,7 @@
                 Greenplum Package Manager are:</p>
             <ul>
                 <li id="jt141959">PostGIS</li>
-                <li id="jt141961">PL/R</li>
                 <li id="jt142629">MADlib</li>
-                <li id="jt141963">Pgcrypto</li>
             </ul>
             <p>Note that Greenplum Package Manager installation files for extension packages might
                 release outside of standard product release cycles. Current packages are available

@@ -55,8 +55,8 @@
   <topic id="topic4" xml:lang="en">
     <title id="pw217326">Enabling and Removing PL/Python support</title>
     <body>
-      <p>The PL/Python language is installed with Greenplum Database. To create and run a PL\Python
-        user-defined function (UDF) in a database, you must register the PL\Python language with the
+      <p>The PL/Python language is installed with Greenplum Database. To create and run a PL/Python
+        user-defined function (UDF) in a database, you must register the PL/Python language with the
         database. </p>
     </body>
     <topic id="topic5" xml:lang="en">

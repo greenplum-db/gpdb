@@ -431,21 +431,24 @@
   <topic id="topic8" xml:lang="en">
     <title>Encrypting Data</title>
     <body>
-      <p>PostgreSQL provides an optional package of encryption/decryption functions called
-          <codeph>pgcrypto</codeph>, which can also be installed and used in Greenplum Database. The <codeph>pgcrypto</codeph> package is not installed by default
-        with Greenplum Database, however you can download a <codeph>pgcrypto</codeph>
-        package from <xref href="https://network.pivotal.io" scope="external"
-          format="html">Pivotal Network</xref>, and use the Greenplum Package Manager
-          (<codeph>gppkg</codeph>) to install <codeph>pgcrypto</codeph> across your entire
-        cluster.</p>
-      <p>The <codeph>pgcrypto</codeph> functions allow database administrators to store certain
-        columns of data in encrypted form. This adds an extra layer of protection for sensitive
-        data, as data stored in Greenplum Database in encrypted form cannot be read by
-        anyone who does not have the encryption key, nor can it be read directly from the disks. </p>
+      <p>Greenplum Database includes an optional package of encryption/decryption functions called
+          <codeph>pgcrypto</codeph>. The <codeph>pgcrypto</codeph> functions allow database
+        administrators to store certain columns of data in encrypted form. This adds an extra layer
+        of protection for sensitive data, as data stored in Greenplum Database in encrypted form
+        cannot be read by anyone who does not have the encryption key, nor can it be read directly
+        from the disks. </p>
       <note>The <codeph>pgcrypto</codeph> functions run inside the database server, which means that
         all the data and passwords move between <codeph>pgcrypto</codeph> and the client application
         in clear-text. For optimal security, consider also using SSL connections between the client
         and the Greenplum master server.</note>
+      <p>To use <codeph>pgcrypto</codeph> functions, run the installation script
+          <codeph>$GPHOME/share/postgresql/contrib/pgcrypto.sql</codeph> in each database where you
+        want the ability to query other
+        databases:<codeblock>$ psql -d testdb -f $GPHOME/share/postgresql/contrib/pgcrypto.sql</codeblock></p>
+      <p>See <xref
+          href="https://www.postgresql.org/docs/8.3/static/pgcrypto.htmlhttps://www.postgresql.org/docs/8.3/static/pgcrypto.html"
+          format="html" scope="external">pgcrypto</xref> in the PostgreSQL documentation for more
+        information about individual functions.</p>
     </body>
   </topic>
   <topic id="topic9" xml:lang="en">
