@@ -15,13 +15,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import tinctest
-
 from tinctest.lib import local_path
 from tinctest.models.scenario import ScenarioTestCase
-from mpp.gpdb.tests.storage.sub_transaction_limit_removal.sub_transaction_limit_scenario import SubTransactionLimitRemovalTestCase
 
-class SubTransactionLimitRemovalScenarioTestCase(ScenarioTestCase):
+class SubTransactionScenarioTestCase(ScenarioTestCase):
 
     '''
     @summary: The basic idea of the test is to have a long script wiht many nested subtransactions running. 
@@ -33,52 +30,30 @@ class SubTransactionLimitRemovalScenarioTestCase(ScenarioTestCase):
 
     def __init__(self, methodName):
         self.path = local_path("data")
-        super(SubTransactionLimitRemovalScenarioTestCase,self).__init__(methodName)
+        super(SubTransactionScenarioTestCase, self).__init__(methodName)
 
-    def test_sub_trans_lim_removal_01(self):
-        self.run_tests('SubtransactionFlushToFile', 'failover_to_mirror')
-    def test_sub_trans_lim_removal_02(self):
-        self.run_tests('SubtransactionReadFromFile', 'failover_to_mirror')
-    def test_sub_trans_lim_removal_03(self):
+    def test_sub_trans_release_failover_to_mirror(self):
         self.run_tests('SubtransactionRelease', 'failover_to_mirror')
-    def test_sub_trans_lim_removal_04(self):
+    def test_sub_trans_rollback_failover_to_mirror(self):
         self.run_tests('SubtransactionRollback', 'failover_to_mirror')
 
-    def test_sub_trans_lim_removal_05(self):
-        self.run_tests('SubtransactionFlushToFile', 'postmaster_reset')
-    def test_sub_trans_lim_removal_06(self):
-        self.run_tests('SubtransactionReadFromFile', 'postmaster_reset')
-    def test_sub_trans_lim_removal_07(self):
+    def test_sub_trans_release_postmaster_reset(self):
         self.run_tests('SubtransactionRelease', 'postmaster_reset')
-    def test_sub_trans_lim_removal_08(self):
+    def test_sub_trans_rollback_postmaster_reset(self):
         self.run_tests('SubtransactionRollback', 'postmaster_reset')
 
-    def test_sub_trans_lim_removal_09(self):
-        self.run_tests('SubtransactionReadFromFile', 'failover_to_primary')
-    def test_sub_trans_lim_removal_10(self):
+    def test_sub_trans_release_failover_to_primary(self):
         self.run_tests('SubtransactionRelease', 'failover_to_primary')
-    def test_sub_trans_lim_removal_11(self):
-        self.run_tests('SubtransactionFlushToFile', 'failover_to_primary')
-    def test_sub_trans_lim_removal_12(self):
+    def test_sub_trans_rollback_failover_to_primary(self):
         self.run_tests('SubtransactionRollback', 'failover_to_primary')
 
 
-    def test_sub_trans_lim_removal_13(self):
-        """
-        @tags skip_ckpt
-        """
-        self.run_tests('SubtransactionFlushToFile', 'failover_to_mirror', True)
-    def test_sub_trans_lim_removal_14(self):
-        """
-        @tags skip_ckpt
-        """
-        self.run_tests('SubtransactionReadFromFile', 'failover_to_mirror', True)
-    def test_sub_trans_lim_removal_15(self):
+    def test_sub_trans_release_failover_to_mirror_skip_checkpoint(self):
         """
         @tags skip_ckpt
         """
         self.run_tests('SubtransactionRelease', 'failover_to_mirror', True)
-    def test_sub_trans_lim_removal_16(self):
+    def test_sub_trans_rollback_failover_to_mirror_skip_checkpoint(self):
         """
         @tags skip_ckpt
         """
@@ -88,14 +63,14 @@ class SubTransactionLimitRemovalScenarioTestCase(ScenarioTestCase):
         self.run_validate()
 
     def run_validate(self):
-        path_to_init="mpp.gpdb.tests.storage.sub_transaction_limit_removal.sub_transaction_limit_scenario.SubTransactionLimitRemovalTestCase."
+        path_to_init="mpp.gpdb.tests.storage.sub_transaction.sub_transaction_scenario.SubTransactionTestCase."
         validation = []
         validation.append((path_to_init+"_validation"))
         self.test_case_scenario.append(validation) 
 
     def run_tests(self, fault_name, trans_state, skip_ckpt=False):
 
-        path_to_init="mpp.gpdb.tests.storage.sub_transaction_limit_removal.sub_transaction_limit_scenario.SubTransactionLimitRemovalTestCase."
+        path_to_init="mpp.gpdb.tests.storage.sub_transaction.sub_transaction_scenario.SubTransactionTestCase."
 
         cleandb = []
         cleandb.append(path_to_init+"cleandb")

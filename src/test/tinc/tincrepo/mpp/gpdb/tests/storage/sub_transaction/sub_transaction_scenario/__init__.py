@@ -16,8 +16,7 @@ limitations under the License.
 """
 
 import tinctest
-import os
-import multiprocessing
+
 from gppylib.commands.base import Command
 
 from tinctest.lib import local_path, Gpdiff, run_shell_command
@@ -36,10 +35,10 @@ from mpp.gpdb.tests.storage.lib import Database
 from mpp.lib.gpfilespace import Gpfilespace
 
 
-class SubTransactionLimitRemovalTestCase(MPPTestCase):
+class SubTransactionTestCase(MPPTestCase):
 
     def __init__(self, methodName):    
-        super(SubTransactionLimitRemovalTestCase,self).__init__(methodName)
+        super(SubTransactionTestCase, self).__init__(methodName)
    
     def check_system(self):
         '''
@@ -186,7 +185,7 @@ class SubTransactionLimitRemovalTestCase(MPPTestCase):
     def checkPSQLRun(self, test):
         '''Check if the psql run started in parallel is over before running the _post.sql '''
         tinctest.logger.info("[STLRTest] Running checkPSQLRun")   
-        cmd_str = 'ps -ef|grep sub_transaction_limit_removal|grep psql'
+        cmd_str = 'ps -ef|grep sub_transaction|grep psql'
         while(1):
             is_running = 0 
             (rc , out) = shell.run(cmd_str)

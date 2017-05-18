@@ -39,7 +39,7 @@ from mpp.gpdb.tests.storage.lib.common_utils import *
 class GPDBStorageBaseTestCase():
     '''
     Base Class for Storage test-suits like Crash Recovery, 
-    Pg_Two_Phase, sub_transaction_limit_removal
+    Pg_Two_Phase, sub_transaction
     '''
 
     def __init__(self, config=None):

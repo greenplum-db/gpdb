@@ -237,10 +237,6 @@ FaultInjectorIdentifierEnumToString[] = {
     	/* inject fault after segment receives state transition request */
 	_("segment_probe_response"),
 		/* inject fault after segment is probed by FTS */
-	_("SubtransactionFlushToFile"),
-		/* inject fault while writing subxids to file */
-	_("SubtransactionReadFromFile"),
-		/* inject fault while reading subxids from file */
 	_("SubtransactionRelease"),
 		/* inject fault before sub-transaction commit is recorded in xlog */
 	_("SubtransactionRollback"),
@@ -1102,8 +1098,6 @@ FaultInjector_NewHashEntry(
 		case TwoPhaseTransactionCommitPrepared:
 		case TwoPhaseTransactionAbortPrepared:
 		
-//		case SubtransactionFlushToFile:
-//		case SubtransactionReadFromFile:
 //		case SubtransactionRelease:
 //		case SubtransactionRollback:
 		/* Ashwin */
