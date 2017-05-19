@@ -784,6 +784,29 @@ EVERY ('2 mons'::interval)
 explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
 drop table mpp8031;
 
+-- Tests for ORCA to use an index on the leaf partition.
+-- start_ignore
+DROP TABLE IF EXISTS tbl1;
+CREATE TABLE tbl1 ( id int, someval int) DISTRIBUTED by (id)
+PARTITION BY RANGE(someval) (PARTITION p1 START (1) END (100000) INCLUSIVE,
+PARTITION p2 START (100001) END (200000) INCLUSIVE);
+
+CREATE INDEX ix_tbl1 on tbl1 USING btree (someval);
+
+INSERT INTO tbl1 (id, someval) select i,i from generate_series(1,200000) i;
+ANALYZE tbl1;
+-- end_ignore
+
+-- Query the root partition and then leaf partition
+explain select * from tbl1 where someval=175000;
+explain select * from tbl1_1_prt_p2 where someval=175000;
+
+-- CLEANUP
+-- start_ignore
+DROP INDEX ix_tbl1;
+DROP TABLE IF EXISTS tbl1;
+-- end_ignore
+
 -- CLEANUP
 -- start_ignore
 drop schema if exists bfv_partition;

@@ -1882,6 +1882,48 @@ explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
 (34 rows)
 
 drop table mpp8031;
+-- Tests for ORCA to use an index on the leaf partition.
+-- start_ignore
+DROP TABLE IF EXISTS tbl1;
+NOTICE:  table "tbl1" does not exist, skipping
+CREATE TABLE tbl1 ( id int, someval int) DISTRIBUTED by (id)
+PARTITION BY RANGE(someval) (PARTITION p1 START (1) END (100000) INCLUSIVE,
+PARTITION p2 START (100001) END (200000) INCLUSIVE);
+NOTICE:  CREATE TABLE will create partition "tbl1_1_prt_p1" for table "tbl1"
+NOTICE:  CREATE TABLE will create partition "tbl1_1_prt_p2" for table "tbl1"
+CREATE INDEX ix_tbl1 on tbl1 USING btree (someval);
+NOTICE:  building index for child partition "tbl1_1_prt_p1"
+NOTICE:  building index for child partition "tbl1_1_prt_p2"
+INSERT INTO tbl1 (id, someval) select i,i from generate_series(1,200000) i;
+ANALYZE tbl1;
+-- end_ignore
+-- Query the root partition and then leaf partition
+explain select * from tbl1 where someval=175000;
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.34 rows=1 width=8)
+   ->  Append  (cost=0.00..200.34 rows=1 width=8)
+         ->  Index Scan using ix_tbl1_1_prt_p2 on tbl1_1_prt_p2 tbl1  (cost=0.00..200.34 rows=1 width=8)
+               Index Cond: someval = 175000
+ Optimizer status: legacy query optimizer
+(5 rows)
+
+explain select * from tbl1_1_prt_p2 where someval=175000;
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.34 rows=1 width=8)
+   ->  Index Scan using ix_tbl1_1_prt_p2 on tbl1_1_prt_p2  (cost=0.00..200.34 rows=1 width=8)
+         Index Cond: someval = 175000
+ Optimizer status: legacy query optimizer
+(4 rows)
+
+-- CLEANUP
+-- start_ignore
+DROP INDEX ix_tbl1;
+WARNING:  Only dropped the index "ix_tbl1"
+HINT:  To drop other indexes on child partitions, drop each one explicitly.
+DROP TABLE IF EXISTS tbl1;
+-- end_ignore
 -- CLEANUP
 -- start_ignore
 drop schema if exists bfv_partition;
