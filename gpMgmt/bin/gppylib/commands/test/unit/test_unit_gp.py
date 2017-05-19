@@ -3,16 +3,14 @@
 # Copyright (c) Greenplum Inc 2012. All Rights Reserved. 
 #
 
-import os
-import shutil
-import unittest
 from gppylib.commands.base import CommandResult
-from mock import patch, MagicMock, Mock
-import gppylib.commands.gp as gp
+from mock import patch
 
 from gppylib.commands.gp import is_pid_postmaster, get_postmaster_pid_locally
+from test.unit.gp_unittest import GpTestCase, run_tests
 
-class GpTestCase(unittest.TestCase):
+
+class GpCommandTestCase(GpTestCase):
 
     @patch('gppylib.commands.gp.Command.run') 
     @patch('gppylib.commands.gp.Command.get_results', side_effect=[CommandResult(0, "", "", True, False),
@@ -159,3 +157,6 @@ class GpTestCase(unittest.TestCase):
     @patch('gppylib.commands.gp.Command.run', return_value=CommandResult(0, "", "", True, False))
     def test_get_postmaster_pid_locally_empty(self, mock1):
         self.assertEqual(get_postmaster_pid_locally('/tmp'), -1)
+
+if __name__ == '__main__':
+    run_tests()
