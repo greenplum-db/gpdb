@@ -387,9 +387,9 @@ testdb=#</codeblock>
                   displayed for the table. For column-oriented tables, storage options are displayed
                   for each column.</p></li>
               <li id="kb151095">The command form <codeph>\dS</codeph> is identical, except that
-                system information is displayed as well as user information.For example,
+                system information is displayed as well as user information. For example,
                   <codeph>\dt</codeph> displays user tables, but not system tables;
-                  <codeph>\dtS</codeph> displays both user and system tables.Both these commands can
+                  <codeph>\dtS</codeph> displays both user and system tables. Both these commands can
                 take the <codeph>+</codeph> parameter to display additional information, as in
                   <codeph>\dt+</codeph> and <codeph>\dtS+</codeph>.<p>If <codeph>\d</codeph> is used
                   without a pattern argument, it is equivalent to <codeph>\dtvs</codeph> which will
@@ -767,7 +767,7 @@ lo_import 152801</codeblock>
           <pt>\t [novalue | on | off]</pt>
           <pd>The <codeph>\t</codeph> command by itself toggles a display of output column name
             headings and row count footer. The values <codeph>on</codeph> and <codeph>off</codeph>
-            set the tuples display, regardless of the current setting.This command is equivalent to
+            set the tuples display, regardless of the current setting. This command is equivalent to
               <codeph>\pset tuples_only</codeph> and is provided for convenience. </pd>
         </plentry>
         <plentry>

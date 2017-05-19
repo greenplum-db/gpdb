@@ -798,7 +798,7 @@ INTO (PARTITION jan09, default partition);
       <title>Exchanging a Leaf Child Partition with an External Table</title>
       <body>
         <p>You can exchange a leaf child partition of a partitioned table with a readable external
-          table.The external table data can reside on a host file system, an NFS mount, or a Hadoop
+          table. The external table data can reside on a host file system, an NFS mount, or a Hadoop
           file system (HDFS).</p>
         <p>For example, if you have a partitioned table that is created with monthly partitions and
           most of the queries against the table only access the newer data, you can copy the older,

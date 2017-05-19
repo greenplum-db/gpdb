@@ -238,7 +238,7 @@ For PDF, the connectivity tools ditamap requires the pdf-note transform -->
         <body>
           <ul>
             <li id="ok158726">The Kerberos <codeph>kinit</codeph> utility is required on the client
-              machine. he <codeph>kinit.exe</codeph> utility is available with Kerberos for Windows.
+              machine. The <codeph>kinit.exe</codeph> utility is available with Kerberos for Windows.
               Greenplum Database supports Kerberos for Windows version 3.2.2. Kerberos for Windows
               is available from the Kerberos web site <xref href="http://web.mit.edu/kerberos/"
                 scope="external" format="html">http://web.mit.edu/kerberos/</xref>. When you install

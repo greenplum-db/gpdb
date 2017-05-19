@@ -842,7 +842,7 @@ DETAIL:
         <title>Administration Commands</title>
         <body>
           <p>From the PgBouncer Administrator console you can control connections between PgBouncer
-            and Greenplum Database.You can also set PgBouncer configuration parameters. </p>
+            and Greenplum Database. You can also set PgBouncer configuration parameters. </p>
           <p>The following PgBouncer administration commands control the PgBouncer process.</p>
           <parml>
             <plentry>

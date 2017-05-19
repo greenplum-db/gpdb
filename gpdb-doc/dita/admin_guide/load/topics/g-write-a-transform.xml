@@ -4,7 +4,7 @@
 <topic id="topic77">
    <title>Write a Transform</title>
    <body>
-      <p>The transform specifies what to extract from the data.You can use any authoring
+      <p>The transform specifies what to extract from the data. You can use any authoring
                     environment and language appropriate for your project. For XML transformations
                     choose a technology such as XSLT, Joost (STX), Java, Python,
                     or Perl, based on the goals and scope of the project.</p>

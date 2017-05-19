@@ -287,7 +287,7 @@ date: 1865
                             href="#topic3/GPFDIST" format="dita">GPFDIST</xref> and <xref
                             href="#topic3/EXEC" format="dita">EXEC</xref> inputs. Specifies a single
                           character that separates data values. The default is a tab character in
-                            <codeph>TEXT</codeph> mode, a comma in <codeph>CSV</codeph> mode.The
+                            <codeph>TEXT</codeph> mode, a comma in <codeph>CSV</codeph> mode. The
                           delimiter character must only appear between any two data value fields. Do
                           not place a delimiter at the beginning or end of a row.</p>
                       </pd>

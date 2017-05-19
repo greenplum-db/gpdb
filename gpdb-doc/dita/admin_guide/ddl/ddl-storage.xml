@@ -739,7 +739,7 @@ GRANT SELECT ON sales TO guest;
         </title>
         <body>
           <p>A partition that is added to a table that has subpartitions with compression settings
-            inherits the compression settings from the subpartition.The following example shows how
+            inherits the compression settings from the subpartition. The following example shows how
             to create a table with subpartition encodings, then alter it to add a partition.</p>
           <p>
             <codeblock>CREATE TABLE ccddl (i int, j int, k int, l int)

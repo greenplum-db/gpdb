@@ -59,13 +59,13 @@ to be used by a tablespace.</p><section id="section2"><title>Synopsis</title><co
           <pt>--showtempfilespace</pt>
           <pd>Show the name of the filespace currently associated with temporary files. This option
             checks that all primary and mirror segments, master and master standby are using the
-            same filespace or temporary files.You will receive a warning message and an email if any
+            same filespace or temporary files. You will receive a warning message and an email if any
             inconsistencies exist.</pd>
         </plentry><plentry>
           <pt>--showtransfilespace</pt>
           <pd>Show the name of the filespace currently associated with transaction files. This
             option checks that all primary and mirror segments, master and master standby are using
-            the same filespace or transaction files.You will receive a warning message and an email
+            the same filespace or transaction files. You will receive a warning message and an email
             if any inconsistencies exist.</pd>
         </plentry><plentry><pt>-v | --version (show utility version)</pt><pd>Displays the version of this utility.</pd></plentry><plentry><pt>-? | --help (help)</pt><pd>Displays the utility usage and syntax.</pd></plentry></parml><sectiondiv id="section5"><b>Connection Options</b><parml><plentry><pt>-h host | --host <varname>host</varname></pt><pd>The host name of the machine on which the Greenplum master database
               server is running. If not specified, reads from the environment variable

@@ -28,7 +28,7 @@ FORMAT 'CUSTOM' (formatter=fixedwidth_in,
             </li>
             <li id="du200722">Set options for blank and null characters.<p>Trailing blanks are
                     trimmed by default. To keep trailing blanks, use the
-                        <codeph>preserve_blanks=on</codeph> option.You can reset the trailing blanks
+                        <codeph>preserve_blanks=on</codeph> option. You can reset the trailing blanks
                     option to the default with the <codeph>preserve_blanks=off</codeph> option.</p>
                 <p>Use the null=<codeph>'null_string_value'</codeph> option to specify a value for
                     null characters. </p>

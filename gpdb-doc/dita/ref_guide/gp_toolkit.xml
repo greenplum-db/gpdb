@@ -659,7 +659,7 @@
       <body class="- topic/body ">
         <p>This function returns metadata information contained in a column-oriented
           append-optimized table's on-disk segment file. Each row describes a segment for a column
-          in the table.The data is complex, but users with a deep understanding of the system may
+          in the table. The data is complex, but users with a deep understanding of the system may
           find it useful for debugging.</p>
         <p>The input argument is the oid of a column-oriented append-optimized table. Call as
           __gp_aocsseg_history_name('table_name') to get the same result with the table name as

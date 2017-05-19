@@ -18,7 +18,7 @@
         segments, as shown in <xref href="#topic2/iy139990" type="fig" format="dita"/>. The master
         dispatches targeted query plans to a single segment, as shown in <xref
           href="#topic2/iy145883" type="fig" format="dita"/>. Each segment is responsible for
-        executing local database operations on its own set of data.query plans </p>
+        executing local database operations on its own set of data.</p>
       <p>Most database operations—such as table scans, joins, aggregations, and sorts—execute across
         all segments in parallel. Each operation is performed on a segment database independent of
         the data stored in the other segment databases.</p>

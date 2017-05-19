@@ -112,7 +112,7 @@ COMMAND:   command
          <plentry id="p_stderr">
             <pt>STDERR</pt>
             <pd>
-               <p>Optional.The values are <codeph>server</codeph> and
+               <p>Optional. The values are <codeph>server</codeph> and
                                         <codeph>console</codeph>.</p>
                <p>This setting specifies how to handle standard error output from the
                   transformation. The default, <codeph>server</codeph>, specifies that

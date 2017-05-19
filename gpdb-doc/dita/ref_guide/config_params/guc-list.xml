@@ -6459,7 +6459,7 @@
         well. For more information about limiting concurrent connections, see "Configuring Client
         Authentication" in the <i>Greenplum Database Administrator Guide</i>.</p>
       <p>Increasing this parameter may cause Greenplum Database to request more shared
-        memory.Increasing this parameter might cause Greenplum Database to request more shared
+        memory. Increasing this parameter might cause Greenplum Database to request more shared
         memory. See <xref href="#shared_buffers" format="dita"/> for information about Greenplum
         server instance shared memory buffers.</p>
       <table id="max_connections_table">

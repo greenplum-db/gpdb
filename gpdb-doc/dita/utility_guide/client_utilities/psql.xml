@@ -771,7 +771,7 @@ lo_import 152801</codeblock>
           <pt>\t [novalue | on | off]</pt>
           <pd>The <codeph>\t</codeph> command by itself toggles a display of output column name
             headings and row count footer. The values <codeph>on</codeph> and <codeph>off</codeph>
-            set the tuples display, regardless of the current setting.This command is equivalent to
+            set the tuples display, regardless of the current setting. This command is equivalent to
               <codeph>\pset tuples_only</codeph> and is provided for convenience. </pd>
         </plentry>
         <plentry>
