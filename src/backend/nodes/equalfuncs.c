@@ -23,7 +23,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/equalfuncs.c,v 1.318.2.1 2009/04/16 20:42:27 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/equalfuncs.c,v 1.332 2008/10/04 21:56:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -2226,24 +2226,24 @@ _equalRangeTblEntry(RangeTblEntry *a, RangeTblEntry *b)
 	COMPARE_SCALAR_FIELD(rtekind);
 	COMPARE_SCALAR_FIELD(relid);
 	COMPARE_NODE_FIELD(subquery);
+	COMPARE_SCALAR_FIELD(jointype);
+	COMPARE_NODE_FIELD(joinaliasvars);
 	COMPARE_NODE_FIELD(funcexpr);
 	COMPARE_NODE_FIELD(funccoltypes);
 	COMPARE_NODE_FIELD(funccoltypmods);
 	COMPARE_VARLENA_FIELD(funcuserdata, -1);
 	COMPARE_NODE_FIELD(values_lists);
-	COMPARE_SCALAR_FIELD(jointype);
-	COMPARE_NODE_FIELD(joinaliasvars);
+	COMPARE_STRING_FIELD(ctename);
+	COMPARE_SCALAR_FIELD(ctelevelsup);
+	COMPARE_SCALAR_FIELD(self_reference);
+	COMPARE_NODE_FIELD(ctecoltypes);
+	COMPARE_NODE_FIELD(ctecoltypmods);
 	COMPARE_NODE_FIELD(alias);
 	COMPARE_NODE_FIELD(eref);
 	COMPARE_SCALAR_FIELD(inh);
 	COMPARE_SCALAR_FIELD(inFromCl);
 	COMPARE_SCALAR_FIELD(requiredPerms);
 	COMPARE_SCALAR_FIELD(checkAsUser);
-	COMPARE_STRING_FIELD(ctename);
-	COMPARE_SCALAR_FIELD(ctelevelsup);
-	COMPARE_SCALAR_FIELD(self_reference);
-	COMPARE_NODE_FIELD(ctecoltypes);
-	COMPARE_NODE_FIELD(ctecoltypmods);
 
 	return true;
 }
@@ -3122,10 +3122,10 @@ equal(void *a, void *b)
 			retval = _equalRowMarkClause(a, b);
 			break;
 		case T_WithClause:
-			retval = _equalWithClause(a,b);
+			retval = _equalWithClause(a, b);
 			break;
 		case T_CommonTableExpr:
-			retval = _equalCommonTableExpr(a,b);
+			retval = _equalCommonTableExpr(a, b);
 			break;
 		case T_FkConstraint:
 			retval = _equalFkConstraint(a, b);

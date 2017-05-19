@@ -32,6 +32,8 @@ extern bool range_table_walker(List *rtable, bool (*walker) (),
 extern bool query_or_expression_tree_walker(Node *node, bool (*walker) (),
 												   void *context, int flags);
 
+extern bool raw_expression_tree_walker(Node *node, bool (*walker) (),
+									   void *context);
 
 /* The plan associated with a SubPlan is found in a list.  During planning this is in
  * the global structure found through the root PlannerInfo.  After planning this is in

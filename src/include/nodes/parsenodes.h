@@ -13,7 +13,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/parsenodes.h,v 1.359 2008/02/07 17:09:51 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/parsenodes.h,v 1.376 2008/10/04 21:56:55 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -632,9 +632,9 @@ typedef enum RTEKind
 	RTE_SPECIAL,				/* special rule relation (NEW or OLD) */
 	RTE_FUNCTION,				/* function in FROM */
 	RTE_VALUES,					/* VALUES (<exprlist>), (<exprlist>), ... */
-    RTE_VOID,                   /* CDB: deleted RTE */
-	RTE_CTE,                    /* CommonTableExpr in FROM */
+	RTE_CTE,					/* common table expr (WITH list element) */
 	RTE_TABLEFUNCTION,          /* CDB: Functions over multiset input */
+	RTE_VOID,                   /* CDB: deleted RTE */
 } RTEKind;
 
 typedef struct RangeTblEntry
@@ -667,6 +667,20 @@ typedef struct RangeTblEntry
 	List		*subquery_pathkeys;
 
 	/*
+	 * Fields valid for a join RTE (else NULL/zero):
+	 *
+	 * joinaliasvars is a list of Vars or COALESCE expressions corresponding
+	 * to the columns of the join result.  An alias Var referencing column K
+	 * of the join result can be replaced by the K'th element of joinaliasvars
+	 * --- but to simplify the task of reverse-listing aliases correctly, we
+	 * do not do that until planning time.	In a Query loaded from a stored
+	 * rule, it is also possible for joinaliasvars items to be NULL Consts,
+	 * denoting columns dropped since the rule was made.
+	 */
+	JoinType	jointype;		/* type of join */
+	List	   *joinaliasvars;	/* list of alias-var expansions */
+
+	/*
 	 * Fields valid for a function RTE (else NULL):
 	 *
 	 * If the function returns RECORD, funccoltypes lists the column types
@@ -684,32 +698,18 @@ typedef struct RangeTblEntry
 	List	   *values_lists;	/* list of expression lists */
 
 	/*
-	 * Fields valid for a join RTE (else NULL/zero):
-	 *
-	 * joinaliasvars is a list of Vars or COALESCE expressions corresponding
-	 * to the columns of the join result.  An alias Var referencing column K
-	 * of the join result can be replaced by the K'th element of joinaliasvars
-	 * --- but to simplify the task of reverse-listing aliases correctly, we
-	 * do not do that until planning time.	In a Query loaded from a stored
-	 * rule, it is also possible for joinaliasvars items to be NULL Consts,
-	 * denoting columns dropped since the rule was made.
+	 * Fields valid for a CTE RTE (else NULL/zero):
 	 */
-	JoinType	jointype;		/* type of join */
-	List	   *joinaliasvars;	/* list of alias-var expansions */
+	char	   *ctename;		/* name of the WITH list item */
+	Index		ctelevelsup;	/* number of query levels up */
+	bool		self_reference;	/* is this a recursive self-reference? */
+	List	   *ctecoltypes;	/* OID list of column type OIDs */
+	List	   *ctecoltypmods;	/* integer list of column typmods */
 
 	/* GPDB: Valid for base-relations, true if GP_DIST_RANDOM
 	 * pseudo-function was specified as modifier in FROM-clause
 	 */
 	bool		forceDistRandom;
-
-	/*
-	 * Fields valid for a CTE RTE (else NULL/zero):
-	 */
-	char	   *ctename;		/* name of the WITH list item */
-	Index		ctelevelsup;	/* number of query levels up */
-	bool		self_reference; /* is this a recursive self-reference? */
-	List	   *ctecoltypes;	/* OID list of column type OIDs */
-	List	   *ctecoltypmods;	/* integer list of column typmods */
 
 	/*
 	 * Fields valid in all RTEs:
@@ -955,7 +955,7 @@ typedef struct SelectStmt
 	Node	   *havingClause;	/* HAVING conditional-expression */
 	List	   *windowClause;	/* window specification clauses */
 	List       *scatterClause;	/* GPDB: TableValueExpr data distribution */
-	WithClause *withClause; 	/* with clause */
+	WithClause *withClause; 	/* WITH clause */
 
 	/*
 	 * In a "leaf" node representing a VALUES list, the above fields are all

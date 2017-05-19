@@ -11,7 +11,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/primnodes.h,v 1.137 2008/01/01 19:45:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/primnodes.h,v 1.142 2008/10/04 21:56:55 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -556,6 +556,9 @@ typedef struct TableValueExpr
  *
  * In EXISTS, EXPR, and ARRAY SubLinks, testexpr and operName are unused and
  * are always null.
+ *
+ * The CTE_SUBLINK case never occurs in actual SubLink nodes, but it is used
+ * in SubPlans generated for WITH subqueries.
  */
 typedef enum SubLinkType
 {
@@ -565,6 +568,7 @@ typedef enum SubLinkType
 	ROWCOMPARE_SUBLINK,
 	EXPR_SUBLINK,
 	ARRAY_SUBLINK,
+	CTE_SUBLINK,
 	NOT_EXISTS_SUBLINK
 } SubLinkType;
 

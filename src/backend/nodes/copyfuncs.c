@@ -16,7 +16,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/copyfuncs.c,v 1.388.2.2 2010/08/18 15:22:15 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/copyfuncs.c,v 1.406 2008/10/04 21:56:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -315,6 +315,27 @@ _copySequence(Sequence *from)
 	Sequence *newnode = makeNode(Sequence);
 	CopyPlanFields((Plan *) from, (Plan *) newnode);
 	COPY_NODE_FIELD(subplans);
+
+	return newnode;
+}
+
+/*
+ * _copyRecursiveUnion
+ */
+static RecursiveUnion *
+_copyRecursiveUnion(RecursiveUnion *from)
+{
+	RecursiveUnion	   *newnode = makeNode(RecursiveUnion);
+
+	/*
+	 * copy node superclass fields
+	 */
+	CopyPlanFields((Plan *) from, (Plan *) newnode);
+
+	/*
+	 * copy remainder of node
+	 */
+	COPY_SCALAR_FIELD(wtParam);
 
 	return newnode;
 }
@@ -713,6 +734,49 @@ _copyValuesScan(ValuesScan *from)
 	 * copy remainder of node
 	 */
 	COPY_NODE_FIELD(values_lists);
+
+	return newnode;
+}
+
+/*
+ * _copyCteScan
+ */
+static CteScan *
+_copyCteScan(CteScan *from)
+{
+	CteScan *newnode = makeNode(CteScan);
+
+	/*
+	 * copy node superclass fields
+	 */
+	CopyScanFields((Scan *) from, (Scan *) newnode);
+
+	/*
+	 * copy remainder of node
+	 */
+	COPY_SCALAR_FIELD(ctePlanId);
+	COPY_SCALAR_FIELD(cteParam);
+
+	return newnode;
+}
+
+/*
+ * _copyWorkTableScan
+ */
+static WorkTableScan *
+_copyWorkTableScan(WorkTableScan *from)
+{
+	WorkTableScan *newnode = makeNode(WorkTableScan);
+
+	/*
+	 * copy node superclass fields
+	 */
+	CopyScanFields((Scan *) from, (Scan *) newnode);
+
+	/*
+	 * copy remainder of node
+	 */
+	COPY_SCALAR_FIELD(wtParam);
 
 	return newnode;
 }
@@ -2169,13 +2233,18 @@ _copyRangeTblEntry(RangeTblEntry *from)
 	COPY_SCALAR_FIELD(rtekind);
 	COPY_SCALAR_FIELD(relid);
 	COPY_NODE_FIELD(subquery);
+	COPY_SCALAR_FIELD(jointype);
+	COPY_NODE_FIELD(joinaliasvars);
 	COPY_NODE_FIELD(funcexpr);
 	COPY_NODE_FIELD(funccoltypes);
 	COPY_NODE_FIELD(funccoltypmods);
 	COPY_VARLENA_FIELD(funcuserdata, -1);
 	COPY_NODE_FIELD(values_lists);
-	COPY_SCALAR_FIELD(jointype);
-	COPY_NODE_FIELD(joinaliasvars);
+	COPY_STRING_FIELD(ctename);
+	COPY_SCALAR_FIELD(ctelevelsup);
+	COPY_SCALAR_FIELD(self_reference);
+	COPY_NODE_FIELD(ctecoltypes);
+	COPY_NODE_FIELD(ctecoltypmods);
 	COPY_NODE_FIELD(alias);
 	COPY_NODE_FIELD(eref);
 	COPY_SCALAR_FIELD(inh);
@@ -4513,6 +4582,9 @@ copyObject(void *from)
 		case T_Append:
 			retval = _copyAppend(from);
 			break;
+		case T_RecursiveUnion:
+			retval = _copyRecursiveUnion(from);
+			break;
 		case T_Sequence:
 			retval = _copySequence(from);
 			break;
@@ -4572,6 +4644,12 @@ copyObject(void *from)
 			break;
 		case T_ValuesScan:
 			retval = _copyValuesScan(from);
+			break;
+		case T_CteScan:
+			retval = _copyCteScan(from);
+			break;
+		case T_WorkTableScan:
+			retval = _copyWorkTableScan(from);
 			break;
 		case T_Join:
 			retval = _copyJoin(from);

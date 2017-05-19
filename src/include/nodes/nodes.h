@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/nodes.h,v 1.205 2008/01/01 19:45:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/nodes.h,v 1.213 2008/10/04 21:56:55 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -53,7 +53,6 @@ typedef enum NodeTag
 	T_Plan = 100,
 	T_Scan,
 	T_Join,
-	T_CteScan,
 
 	/* Real plan node starts below.  Scan and Join are "Virtal nodes",
 	 * It will take the form of IndexScan, SeqScan, etc. 
@@ -62,6 +61,7 @@ typedef enum NodeTag
 	T_Result,
 	T_Plan_Start = T_Result,
 	T_Append,
+	T_RecursiveUnion,
 	T_Sequence,
 	T_BitmapAnd,
 	T_BitmapOr,
@@ -82,6 +82,8 @@ typedef enum NodeTag
 	T_FunctionScan,
 	T_TableFunctionScan,
 	T_ValuesScan,
+	T_CteScan,
+	T_WorkTableScan,
 	T_NestLoop,
 	T_MergeJoin,
 	T_HashJoin,
@@ -119,6 +121,7 @@ typedef enum NodeTag
 	 */
 	T_ResultState,
 	T_AppendState,
+	T_RecursiveUnionState,
 	T_SequenceState,
 	T_BitmapAndState,
 	T_BitmapOrState,
@@ -139,6 +142,8 @@ typedef enum NodeTag
 	T_FunctionScanState,
 	T_TableFunctionState,
 	T_ValuesScanState,
+	T_CteScanState,
+	T_WorkTableScanState,
 	T_NestLoopState,
 	T_MergeJoinState,
 	T_HashJoinState,
@@ -461,6 +466,7 @@ typedef enum NodeTag
 	T_ParamRef,
 	T_A_Const,
 	T_FuncCall,
+	T_A_Star,
 	T_A_Indices,
 	T_A_Indirection,
 	T_A_ArrayExpr,
