@@ -112,7 +112,6 @@ CTranslatorDXLToScalar::PexprFromDXLNodeScalar
 		{EdxlopScalarArray, &CTranslatorDXLToScalar::PexprArray},
 		{EdxlopScalarArrayRef, &CTranslatorDXLToScalar::PexprArrayRef},
 		{EdxlopScalarDMLAction, &CTranslatorDXLToScalar::PexprDMLAction},
-		{EdxlopScalarPartOid, &CTranslatorDXLToScalar::PexprPartOid},
 		{EdxlopScalarPartDefault, &CTranslatorDXLToScalar::PexprPartDefault},
 		{EdxlopScalarPartBound, &CTranslatorDXLToScalar::PexprPartBound},
 		{EdxlopScalarPartBoundInclusion, &CTranslatorDXLToScalar::PexprPartBoundInclusion},
@@ -1617,29 +1616,6 @@ CTranslatorDXLToScalar::PconstGeneric
 	}
 
 	return pconst;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorDXLToScalar::PexprPartOid
-//
-//	@doc:
-//		Translates a DXL part oid into a GPDB part oid
-//
-//---------------------------------------------------------------------------
-Expr *
-CTranslatorDXLToScalar::PexprPartOid
-	(
-	const CDXLNode *pdxlnPartOid,
-	CMappingColIdVar * //pmapcidvar
-	)
-{
-	CDXLScalarPartOid *pdxlop = CDXLScalarPartOid::PdxlopConvert(pdxlnPartOid->Pdxlop());
-
-	PartOidExpr *pexpr = MakeNode(PartOidExpr);
-	pexpr->level = pdxlop->UlLevel();
-
-	return (Expr *) pexpr;
 }
 
 //---------------------------------------------------------------------------

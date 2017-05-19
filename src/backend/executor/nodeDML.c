@@ -55,12 +55,7 @@ ExecDML(DMLState *node)
 
 	bool isnull = false;
 	int action = DatumGetUInt32(slot_getattr(slot, plannode->actionColIdx, &isnull));
-
 	Assert(!isnull);
-
-	isnull = false;
-	Datum oid = slot_getattr(slot, plannode->oidColIdx, &isnull);
-	slot->tts_tableOid = DatumGetUInt32(oid);
 
 	bool isUpdate = false;
 	if (node->ps.state->es_plannedstmt->commandType == CMD_UPDATE)
@@ -87,20 +82,23 @@ ExecDML(DMLState *node)
 
 	if (DML_INSERT == action)
 	{
-
 		/* Respect any given tuple Oid when updating a tuple. */
-		if(isUpdate &&
-		    plannode->tupleoidColIdx != 0)
+		if (isUpdate && plannode->tupleoidColIdx != 0)
 		{
+			Oid			oid;
+			HeapTuple	htuple;
+
 			isnull = false;
 			oid = slot_getattr(slot, plannode->tupleoidColIdx, &isnull);
-			HeapTuple htuple = ExecFetchSlotHeapTuple(node->cleanedUpSlot);
+			htuple = ExecFetchSlotHeapTuple(node->cleanedUpSlot);
 			Assert(htuple == node->cleanedUpSlot->PRIVATE_tts_heaptuple);
 			HeapTupleSetOid(htuple, oid);
 		}
 
-		/* The plan origin is required since ExecInsert performs different actions 
-		 * depending on the type of plan (constraint enforcement and triggers.) 
+		/*
+		 * The plan origin is required since ExecInsert performs different
+		 * actions depending on the type of plan (constraint enforcement and
+		 * triggers.)
 		 */
 		ExecInsert(node->cleanedUpSlot, NULL /* destReceiver */,
 				node->ps.state, PLANGEN_OPTIMIZER /* Plan origin */, 

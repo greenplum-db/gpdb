@@ -4363,9 +4363,11 @@ CTranslatorDXLToPlStmt::PplanDML
 		gpdb::GPDBFree(plTargetListDML);
 		plTargetListDML = plTargetListWithDroppedCols;
 	}
-	
-	// add ctid, action and oid columns to target list
-	pdml->oidColIdx = UlAddTargetEntryForColId(&plTargetListDML, &dxltrctxChild, pdxlop->UlOid(), true /*fResjunk*/);
+
+	// Extract column numbers of the action and ctid columns from the
+	// target list. ORCA also includes a third similar column for
+	// partition Oid to the target list, but we don't use it for anything
+	// in GPDB.
 	pdml->actionColIdx = UlAddTargetEntryForColId(&plTargetListDML, &dxltrctxChild, pdxlop->UlAction(), true /*fResjunk*/);
 	pdml->ctidColIdx = UlAddTargetEntryForColId(&plTargetListDML, &dxltrctxChild, pdxlop->UlCtid(), true /*fResjunk*/);
 	if (pdxlop->FPreserveOids())
@@ -4378,7 +4380,6 @@ CTranslatorDXLToPlStmt::PplanDML
 	}
 
 	GPOS_ASSERT(0 != pdml->actionColIdx);
-	GPOS_ASSERT(0 != pdml->oidColIdx);
 
 	pplan->targetlist = plTargetListDML;
 	

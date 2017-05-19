@@ -1129,7 +1129,6 @@ typedef struct DML
 {
 	Plan		plan;
 	Index		scanrelid;		/* index into the range table */
-	AttrNumber	oidColIdx;		/* index of table oid into the target list */
 	AttrNumber	actionColIdx;	/* index of action column into the target list */
 	AttrNumber	ctidColIdx;		/* index of ctid column into the target list */
 	AttrNumber	tupleoidColIdx;	/* index of tuple oid column into the target list */
