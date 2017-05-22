@@ -181,7 +181,6 @@ function _main() {
       # require `./configure --with-zlib`.
       unittest_check_gpdb
   fi
-  unittest_check_gpdb
   export_gpdb
   export_gpdb_extensions
   export_gpdb_win32_ccl
