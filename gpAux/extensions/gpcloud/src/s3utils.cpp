@@ -372,14 +372,16 @@ void SignRequestV4(const string &method, HTTPHeaders *headers, const string &ori
 
     string signed_headers;
     if (headers->Get(X_AMZ_SERVER_SIDE_ENCRYPTION) != NULL) {
-        canonical_str << "\nx-amz-server-side-encryption:" << headers->Get(X_AMZ_SERVER_SIDE_ENCRYPTION)
-            << "\n\n" << "host;x-amz-content-sha256;x-amz-date;x-amz-server-side-encryption\n"
-            << headers->Get(X_AMZ_CONTENT_SHA256);
+        canonical_str << "\nx-amz-server-side-encryption:"
+                      << headers->Get(X_AMZ_SERVER_SIDE_ENCRYPTION) << "\n\n"
+                      << "host;x-amz-content-sha256;x-amz-date;x-amz-server-side-encryption\n"
+                      << headers->Get(X_AMZ_CONTENT_SHA256);
 
         signed_headers = "host;x-amz-content-sha256;x-amz-date;x-amz-server-side-encryption";
     } else {
-        canonical_str << "\n\n" << "host;x-amz-content-sha256;x-amz-date\n"
-            << headers->Get(X_AMZ_CONTENT_SHA256);
+        canonical_str << "\n\n"
+                      << "host;x-amz-content-sha256;x-amz-date\n"
+                      << headers->Get(X_AMZ_CONTENT_SHA256);
 
         signed_headers = "host;x-amz-content-sha256;x-amz-date";
     }
