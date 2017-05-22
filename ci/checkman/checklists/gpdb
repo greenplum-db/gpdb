@@ -1,0 +1,33 @@
+#- gpdb_master
+MU_backup-restore: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master MU_backup-restore
+MU_check_centos: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master MU_check_centos
+MU_gpcheckcat: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master MU_gpcheckcat
+MU_gpexpand: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master MU_gpexpand
+MU_gprecoverseg: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master MU_gprecoverseg
+MU_gptransfer-43x-to-5x: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master MU_gptransfer-43x-to-5x
+MU_gptransfer-5x-to-5x: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master MU_gptransfer-5x-to-5x
+MU_kerberos-smoke: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master MU_kerberos-smoke
+MU_netbackup76: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master MU_netbackup76
+QP_memory-accounting: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master QP_memory-accounting
+QP_runaway-query: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master QP_runaway-query
+compile_gpdb_centos6: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master compile_gpdb_centos6
+compile_gpdb_centos7: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master compile_gpdb_centos7
+compile_gpdb_custom_config_centos6: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master compile_gpdb_custom_config_centos6
+coverity_scan: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master coverity_scan
+cs-aoco-compression: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master cs-aoco-compression
+cs-pg-two-phase: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master cs-pg-two-phase
+cs-walrepl-multinode: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master cs-walrepl-multinode
+fts: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master fts
+gpdb_rc_packaging_centos: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master gpdb_rc_packaging_centos
+icw_gporca_centos6: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master icw_gporca_centos6
+icw_gporca_centos7: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master icw_gporca_centos7
+icw_gporca_codegen_centos6: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master icw_gporca_codegen_centos6
+icw_planner_centos6: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master icw_planner_centos6
+icw_planner_codegen_centos6: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master icw_planner_codegen_centos6
+mpp_interconnect: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master mpp_interconnect
+regression_tests_gpcloud_centos: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master regression_tests_gpcloud_centos
+regression_tests_gphdfs_centos: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master regression_tests_gphdfs_centos
+storage: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master storage
+subtransaction: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master subtransaction
+unite_ccle_gpdb5: concourse.check https://gpdb.ci.pivotalci.info gpdb gpdb_master unite_ccle_gpdb5
+
