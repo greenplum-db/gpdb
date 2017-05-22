@@ -776,10 +776,9 @@ convert_sourcefiles_in(char *source, char * dest_dir, char *dest, char *suffix)
 static void
 convert_sourcefiles(void)
 {
-	convert_sourcefiles_in("input", inputdir, "sql", "sql");
+	convert_sourcefiles_in("input", outputdir, "sql", "sql");
 	convert_sourcefiles_in("output", outputdir, "expected", "out");
-
-	convert_sourcefiles_in("mapred", inputdir, "yml", "yml");
+	convert_sourcefiles_in("mapred", outputdir, "yml", "yml");
 }
 
 /*
