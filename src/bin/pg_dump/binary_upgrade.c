@@ -490,11 +490,37 @@ dumpExtensionOid(Archive *AH, ExtensionInfo *info)
 void
 dumpShellTypeOid(PGconn *conn, Archive *fout, Archive *AH, ShellTypeInfo *info)
 {
+	PQExpBuffer		upgrade_query;
+	int				ntups;
+	Oid				pg_type_oid;
+	PGresult	   *upgrade_res;
+
 	/* Skip if not to be dumped */
 	if (!info->dobj.dump)
 		return;
+	
+	upgrade_query = createPQExpBuffer();
 
-	preassign_type_oid(conn, fout, AH, info->dobj.catId.oid, info->dobj.name);
+	appendPQExpBuffer(upgrade_query,
+					  "SELECT oid FROM pg_catalog.pg_type "
+					  "WHERE typname = '%s'::text;",
+					 info->dobj.name);
+
+	upgrade_res = PQexec(conn, upgrade_query->data);
+	check_sql_result(upgrade_res, conn, upgrade_query->data, PGRES_TUPLES_OK);
+
+	ntups = PQntuples(upgrade_res);
+	if (ntups != 1)
+	{
+		write_msg(NULL, "ERROR: type \"%s\" not found in catalog", info->dobj.name);
+		exit_nicely();
+	}
+
+	pg_type_oid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "oid")));
+	preassign_type_oid(conn, fout, AH, pg_type_oid, info->dobj.name);
+
+	PQclear(upgrade_res);
+	destroyPQExpBuffer(upgrade_query);
 }
 
 void
