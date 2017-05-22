@@ -10,12 +10,15 @@ TAR?=$(shell which tar)
 $(BEHAVE_BIN):
 	TAR=$(TAR) make -C bin $(BEHAVE_BIN)
 
+# multiple skip_tags are not supported!
+# skip_tags=~foo,~bar will not respect either
+# skip_tags=~foo skip_tags=~bar will respect bar but not foo
 behave: $(BEHAVE_BIN)
 	@echo "Running behave on management scripts..."
-	if [ -n ""$(tags)"" ] && [ -n ""$(skip_tags)"" ]; then \
+	@if [ -n ""$(tags)"" ] && [ -n ""$(skip_tags)"" ]; then \
 	        PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH):$(GPMGMT_SRC) python $(BEHAVE_BIN) $(GPMGMT_SRC)/test/behave/* -s -k --tags=$(tags) --tags=$(skip_tags) 2>&1 ; \
 	elif [ -n ""$(tags)"" ]; then \
 	        PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH):$(GPMGMT_SRC) python $(BEHAVE_BIN) $(GPMGMT_SRC)/test/behave/* -s -k --tags=$(tags) 2>&1 ; \
 	else \
-	        PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH):$(GPMGMT_SRC) python $(BEHAVE_BIN) $(GPMGMT_SRC)/test/behave/* -s 2>&1; \
+	        echo "Please specify tags=tagname "; \
 	fi
