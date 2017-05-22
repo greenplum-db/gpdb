@@ -498,13 +498,14 @@ dumpShellTypeOid(PGconn *conn, Archive *fout, Archive *AH, ShellTypeInfo *info)
 	/* Skip if not to be dumped */
 	if (!info->dobj.dump)
 		return;
-	
+
 	upgrade_query = createPQExpBuffer();
 
 	appendPQExpBuffer(upgrade_query,
-					  "SELECT oid FROM pg_catalog.pg_type "
-					  "WHERE typname = '%s'::text;",
-					 info->dobj.name);
+					  "SELECT oid "
+					  "FROM   pg_catalog.pg_type "
+					  "WHERE  typname = '%s'::text;",
+					  info->dobj.name);
 
 	upgrade_res = PQexec(conn, upgrade_query->data);
 	check_sql_result(upgrade_res, conn, upgrade_query->data, PGRES_TUPLES_OK);
@@ -597,9 +598,10 @@ preassign_enum_oid(PGconn *conn, Archive *AH, Oid enum_oid, char *objname)
 		label = PQgetvalue(upgrade_res, i, PQfnumber(upgrade_res, "enumlabel"));
 
 		appendPQExpBuffer(upgrade_buffer,
-						  "SELECT binary_upgrade.preassign_enum_oid('%u'::pg_catalog.oid, "
-																   "'%u'::pg_catalog.oid, "
-																   "'%s'::text);\n",
+						  "SELECT binary_upgrade.preassign_enum_oid("
+								"'%u'::pg_catalog.oid, "
+								"'%u'::pg_catalog.oid, "
+								"'%s'::text);\n",
 						  oid, enum_oid, label);
 	}
 
@@ -730,7 +732,7 @@ preassign_type_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_type_oid, ch
 	/* This shouldn't happen.. */
 	if (!type)
 	{
-		write_msg(NULL, "ERROR: didn't find type information in cache\n");
+		write_msg(NULL, "ERROR: didn't find type information in cache for %u (%s)\n", pg_type_oid, objname);
 		exit_nicely();
 	}
 
