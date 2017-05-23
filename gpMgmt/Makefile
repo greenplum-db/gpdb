@@ -115,6 +115,8 @@ install: generate_greenplum_path_file
 	cp $(top_builddir)/src/test/regress/*.pm $(DESTDIR)$(prefix)/bin
 	if [ ! -d ${DESTDIR}${prefix}/docs ] ; then mkdir ${DESTDIR}${prefix}/docs ; fi
 	if [ -d doc ]; then cp -rp doc $(DESTDIR)$(prefix)/docs/cli_help; fi
+	mkdir -p $(DESTDIR)$(prefix)/etc
+	cp -p doc/gpconfigs/gpcheck.cnf $(DESTDIR)$(prefix)/etc/
 
 #	THIS NEEDS TO MOVE
 #	if [ -d demo/gpfdist_transform ]; then \

@@ -6,6 +6,7 @@ ext
 /gpbitmapreindexc
 /gpcheckcatc
 /gpcheckperfc
+/gpcheckresgroupimplc
 /gpchecksubnetcfgc
 /gpconfigc
 /gpcrondumpc
