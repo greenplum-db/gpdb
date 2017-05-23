@@ -6465,25 +6465,29 @@ generate_relation_name(Oid relid, List *namespaces)
 	reltup = (Form_pg_class) GETSTRUCT(tp);
 	relname = NameStr(reltup->relname);
 
-	/* Check for conflicting CTE name */
-	need_qual = false;
-	foreach(nslist, namespaces)
-	{
-		deparse_namespace *dpns = (deparse_namespace *) lfirst(nslist);
-		ListCell   *ctlist;
-
-		foreach(ctlist, dpns->ctes)
+	if (gp_always_schema_qualify)
+		need_qual = true;
+	else
+	{/* Check for conflicting CTE name */
+		need_qual = false;
+		foreach(nslist, namespaces)
 		{
-			CommonTableExpr *cte = (CommonTableExpr *) lfirst(ctlist);
+			deparse_namespace *dpns = (deparse_namespace *) lfirst(nslist);
+			ListCell   *ctlist;
 
-			if (strcmp(cte->ctename, relname) == 0)
+			foreach(ctlist, dpns->ctes)
 			{
-				need_qual = true;
-				break;
+				CommonTableExpr *cte = (CommonTableExpr *) lfirst(ctlist);
+
+				if (strcmp(cte->ctename, relname) == 0)
+				{
+					need_qual = true;
+					break;
+				}
 			}
+			if (need_qual)
+				break;
 		}
-		if (need_qual)
-			break;
 	}
 
 	/* Otherwise, qualify the name if not visible in search path */

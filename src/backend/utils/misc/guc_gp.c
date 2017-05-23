@@ -590,6 +590,11 @@ char	   *gp_default_storage_options = NULL;
 
 int			writable_external_table_bufsize = 64;
 
+/*
+ * GUC for formatting relation names during backup
+ */
+bool		gp_always_schema_qualify;
+
 IndexCheckType gp_indexcheck_insert = INDEX_CHECK_NONE;
 IndexCheckType gp_indexcheck_vacuum = INDEX_CHECK_NONE;
 
@@ -3258,6 +3263,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&pljava_classpath_insecure,
 		false, assign_pljava_classpath_insecure, NULL
+	},
+
+	{
+		{"gp_always_schema_qualify", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Functions for formatting database object definitions will always schema qualify table names"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_always_schema_qualify,
+		false, NULL, NULL
 	},
 	/* End-of-list marker */
 	{
