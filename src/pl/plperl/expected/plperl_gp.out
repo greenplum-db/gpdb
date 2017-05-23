@@ -45,3 +45,5 @@ CONTEXT:  PL/Perl function "plperlerrorhandling1_0"
  124
 (1 row)
 
+CREATE FUNCTION tf_perl(anytable) returns int AS $$ return 1 $$ language plperl NO SQL;
+ERROR:  PL/Perl functions cannot accept type anytable

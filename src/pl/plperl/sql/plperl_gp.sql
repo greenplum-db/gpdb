@@ -32,3 +32,5 @@ $$ language PLPERL;
 
 select PLPERLerrorhandling1_0();
 select * from PLPERLerrorhandling1_0();
+
+CREATE FUNCTION tf_perl(anytable) returns int AS $$ return 1 $$ language plperl NO SQL;

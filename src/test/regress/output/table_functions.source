@@ -2302,7 +2302,6 @@ SELECT * FROM multiset_5( TABLE( SELECT 1::integer, 'hello'::text) ) as tf;
 -- ============================================
 -- start_ignore
 -- These may have been created by previous test
-create language plperl;
 create language plpythonu;
 -- end_ignore
 CREATE FUNCTION tf_sql(anytable) returns int AS $$ SELECT 1 $$ language sql CONTAINS SQL;
@@ -2313,8 +2312,6 @@ BEGIN
 END; 
 $$ language plpgsql NO SQL;
 ERROR:  PL/pgSQL functions cannot accept type anytable
-CREATE FUNCTION tf_perl(anytable) returns int AS $$ return 1 $$ language plperl NO SQL;
-ERROR:  PL/Perl functions cannot accept type anytable
 -- python functions have no validator, error at call time.
 CREATE FUNCTION tf_python(anytable) returns int AS $$ return 1 $$ language plpythonu NO SQL;
 SELECT * FROM tf_python( TABLE(SELECT 1) );
