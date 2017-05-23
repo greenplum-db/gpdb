@@ -144,16 +144,16 @@ select array(select x from csq_d1); -- {1}
 -- CSQs involving master-only and distributed tables
 --
 
-drop table if exists t3coquicklz;
+drop table if exists t3cozlib;
 
-create table t3coquicklz (c1 int , c2 varchar) with (appendonly=true, compresstype=quicklz, orientation=column) distributed by (c1);
+create table t3cozlib (c1 int , c2 varchar) with (appendonly=true, compresstype=zlib, orientation=column) distributed by (c1);
 
 drop table if exists pg_attribute_storage;
 
 create table pg_attribute_storage (attrelid int, attnum int, attoptions text[]) distributed by (attrelid);
 
-insert into pg_attribute_storage values ('t3coquicklz'::regclass, 1, E'{\'something\'}');
-insert into pg_attribute_storage values ('t3coquicklz'::regclass, 2, E'{\'something2\'}');
+insert into pg_attribute_storage values ('t3cozlib'::regclass, 1, E'{\'something\'}');
+insert into pg_attribute_storage values ('t3cozlib'::regclass, 2, E'{\'something2\'}');
 
 SELECT a.attname
 , pg_catalog.format_type(a.atttypid, a.atttypmod)
@@ -172,7 +172,7 @@ WHERE s.attrelid = a.attrelid AND s.attnum = a.attnum
 ) newcolumn
 
 FROM pg_catalog.pg_attribute a
-WHERE a.attrelid = 't3coquicklz'::regclass AND a.attnum > 0 AND NOT a.attisdropped
+WHERE a.attrelid = 't3cozlib'::regclass AND a.attnum > 0 AND NOT a.attisdropped
 ORDER BY a.attnum
 ; -- expect to see 2 rows
 
@@ -209,6 +209,9 @@ select * from csq_m1 where x not in (select x from csq_d1) or x < -100; -- (3)
 
 explain select * from csq_d1 where x not in (select x from csq_m1) or x < -100; -- broadcast motion
 select * from csq_d1 where x not in (select x from csq_m1) or x < -100; -- (4)
+
+-- drop csq_m1 since we deleted its gp_distribution_policy entry
+drop table csq_m1;
 
 --
 -- MPP-14441 Don't lose track of initplans

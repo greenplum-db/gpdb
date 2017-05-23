@@ -23,6 +23,6 @@ PG_CPPFLAGS = -I$(shell $(PG_CONFIG) --includedir)
 SHLIB_LINK = -L$(shell $(PG_CONFIG) --libdir) -lgppc
 include $(PGXS)
 
-REGRESS_OPTS = --init-file=init_file
+REGRESS_OPTS = --dbname=tabfunc_gppc_demo --init-file=init_file
 
 installcheck: install

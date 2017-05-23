@@ -31,9 +31,10 @@ mkpath = lambda *x: os.path.join(MYD, *x)
 UPD = os.path.abspath(mkpath('..'))
 dataPath = MYD + "/data"
 configPath = MYD + "/config"
+if not os.path.exists(configPath):
+    os.mkdir(configPath)
 if UPD not in sys.path:
     sys.path.append(UPD)
-
 
 if platform.system() in ['Windows', 'Microsoft']:
     remove_command = "del"

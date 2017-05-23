@@ -1,4 +1,6 @@
 query*.out
 query*.sql
+gpload/config
 gpload2/config
 gpload2/setup.out
+gpload2/data_file.txt
