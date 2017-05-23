@@ -1468,6 +1468,9 @@ if test "$with_rt" = yes; then
 fi
 
 if test "$enable_mapreduce" = yes; then
+  if test "$with_perl" = no; then
+    AC_MSG_ERROR([Greenplum Mapreduce requires Perl, reconfigure with --with-perl])
+  fi
   AC_CHECK_HEADERS(yaml.h, [], [AC_MSG_ERROR([YAML includes required for Greenplum Mapreduce])])
 fi
 

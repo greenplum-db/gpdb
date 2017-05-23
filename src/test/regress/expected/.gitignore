@@ -11,7 +11,6 @@ constraints_optimizer.out
 aocs.out
 appendonly.out
 gptokencheck.out
-mapred.out
 sreh.out
 upg2.out
 ereport.out

@@ -778,7 +778,8 @@ convert_sourcefiles(void)
 {
 	convert_sourcefiles_in("input", outputdir, "sql", "sql");
 	convert_sourcefiles_in("output", outputdir, "expected", "out");
-	convert_sourcefiles_in("mapred", outputdir, "yml", "yml");
+
+	convert_sourcefiles_in("yml_in", inputdir, "yml", "yml");
 }
 
 /*

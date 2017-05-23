@@ -4,6 +4,10 @@
 #include "funcapi.h"
 #include "catalog/pg_type.h"
 
+#ifdef PG_MODULE_MAGIC
+PG_MODULE_MAGIC;
+#endif
+
 extern Datum int4_accum(PG_FUNCTION_ARGS);
 extern Datum int8_add(PG_FUNCTION_ARGS);
 

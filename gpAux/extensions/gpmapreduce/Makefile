@@ -18,22 +18,30 @@ SRCDIR= src
 BUILDDIR= src
 endif
 
+# Build dynamically-loaded object file for CREATE FUNCTION ... LANGUAGE C
+# functions in regression tests
+
+NAME = regress
+OBJS = mapred_test.o
+
+include $(top_srcdir)/src/Makefile.shlib
+
 override CPPFLAGS += $(BLD_CPPFLAGS_SOLARIS_OLD_VERSIONS) -DFRONTEND -I$(SRCDIR) -I$(INCDIR) -I$(libpq_srcdir)
 override LDFLAGS  += -lyaml
 
 FILES     = main.o mapred.o parse.o yaml_scan.o yaml_parse.o 
 GENFILES  = yaml_parse.h yaml_parse.c yaml_scan.c yaml_scan.h
 
-OBJS      = $(addprefix $(BUILDDIR)/, $(FILES))
+MAPREDOBJS= $(addprefix $(BUILDDIR)/, $(FILES))
 GENOBJS   = $(addprefix $(SRCDIR)/, $(GENFILES))
 
 FLEXFLAGS = -i
 BISONFLAGS = -d
 
-all: submake-libpq gpmapreduce
+all: submake-libpq gpmapreduce all-lib
 
-gpmapreduce: $(OBJS) $(libpq_builddir)/libpq.a
-	$(CC) $(CFLAGS) $(OBJS) $(libpq_pgport) $(LDFLAGS) $(LIBS) -o $@$(X)
+gpmapreduce: $(MAPREDOBJS) $(libpq_builddir)/libpq.a
+	$(CC) $(CFLAGS) $(MAPREDOBJS) $(libpq_pgport) $(LDFLAGS) $(LIBS) -o $@$(X)
 
 internal:
 	rm -f $(SRCDIR)/mapred.o $(SRCDIR)/main.o
@@ -56,6 +64,11 @@ else
 	@$(missing) bison $< $@
 endif
 
+abs_srcdir := $(shell cd "$(srcdir)" && pwd)
+
+installcheck: all
+	$(top_builddir)/src/test/regress/pg_regress --dbname=mapred_regression --inputdir=$(srcdir) --top-builddir=$(top_builddir) --srcdir=$(abs_srcdir) --temp-port=$(TEMP_PORT) mapred
+
 install: all installdirs
 	$(INSTALL_PROGRAM) gpmapreduce$(X) '$(DESTDIR)$(bindir)/gpmapreduce$(X)'
 
@@ -65,8 +78,8 @@ installdirs:
 uninstall:
 	rm -f '$(DESTDIR)$(bindir)/gpmapreduce$(X)'
 
-clean distclean maintainer-clean:
-	rm -f gpmapreduce$(X) $(OBJS) $(GENOBJS)
+clean distclean maintainer-clean: clean-lib
+	rm -f gpmapreduce$(X) $(MAPREDOBJS) $(GENOBJS)
 
 # Other dependencies
 $(SRCDIR)/yaml_parse.c  : $(INCDIR)/parser.h $(INCDIR)/mapred.h

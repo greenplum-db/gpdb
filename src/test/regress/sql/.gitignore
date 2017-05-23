@@ -15,7 +15,6 @@ bkuprestore_cleanup.sql
 aocs.sql
 appendonly.sql
 bkup_bkupdb.sql
-mapred.sql
 filespace.sql
 upgrade.sql
 auth_constraint.sql

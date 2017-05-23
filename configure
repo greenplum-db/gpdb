@@ -12306,6 +12306,9 @@ done
 fi
 
 if test "$enable_mapreduce" = yes; then
+  if test "$with_perl" = no; then
+    as_fn_error $? "Greenplum Mapreduce requires Perl, reconfigure with --with-perl" "$LINENO" 5
+  fi
   for ac_header in yaml.h
 do :
   ac_fn_c_check_header_mongrel "$LINENO" "yaml.h" "ac_cv_header_yaml_h" "$ac_includes_default"
