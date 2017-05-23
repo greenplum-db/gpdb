@@ -63,6 +63,7 @@ def parseargs():
     parser = OptParser(option_class=OptChecker)
     parser.remove_option('-h')
     parser.add_option('-?', '--help', action='help')
+    parser.setHelp('')
     parser.add_option('--stdout', action='store_true')
     parser.add_option('--zipout', action='store_true')
     parser.add_option('--verbose', action='store_true')
