@@ -175,6 +175,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* report if compacting is in progress */
 	_("change_tracking_disable"),
 		/* inject fault during fsync to Change Tracking log */
+	_("transaction_start_under_entry_db_singleton"),
+		/* inject fault during transaction start with DistributedTransactionContext in ENTRY_DB_SINGLETON mode */
 	_("transaction_abort_after_distributed_prepared"),
 		/* inject fault after transaction is prepared */
 	_("transaction_commit_pass1_from_create_pending_to_created"),

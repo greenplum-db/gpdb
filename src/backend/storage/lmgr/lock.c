@@ -835,7 +835,7 @@ LockAcquire(const LOCKTAG *locktag,
 	 * wait queue.	Otherwise, check for conflict with already-held locks.
 	 * (That's last because most complex check.)
 	 */
-	if (lockMethodTable->conflictTab[lockmode] & lock->waitMask)
+	if (MyProc == lockHolderProcPtr && (lockMethodTable->conflictTab[lockmode] & lock->waitMask))
 		status = STATUS_FOUND;
 	else
 		status = LockCheckConflicts(lockMethodTable, lockmode,
