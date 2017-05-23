@@ -22,6 +22,7 @@
             <li><xref href="#amazon-emr/s3_prereq" format="dita"/></li>
             <li><xref href="#amazon-emr/section_stk_c2r_kx" format="dita"/></li>
             <li><xref href="#amazon-emr/section_c2f_zvs_3x" format="dita"/></li>
+            <li><xref href="#amazon-emr/s3_serversideencrypt" format="dita"/></li>
             <li><xref href="#amazon-emr/s3_config_param" format="dita"/></li>
             <li><xref href="#amazon-emr/s3_config_file" format="dita"/></li>
             <li><xref href="#amazon-emr/section_tsq_n3t_3x" format="dita"/></li>
@@ -188,7 +189,7 @@ s3://domain/test1/abcdefff</codeblock>
       <section id="section_c2f_zvs_3x">
          <title>About S3 Data Files</title>
          <p>For each <codeph>INSERT</codeph> operation to a writable S3 table, each Greenplum
-            Database segment uploads a single file to the configured the S3 bucket using the
+            Database segment uploads a single file to the configured S3 bucket using the
             filename format <codeph>
                &lt;prefix>&lt;segment_id>&lt;random>.&lt;extension>[.gz]</codeph> where:<ul
                id="ul_sw1_qvs_3x">
@@ -228,6 +229,43 @@ s3://domain/test1/abcdefff</codeblock>
             there was sufficient network bandwidth, creating 16 files in the S3 location allows each
             segment to download a file from the S3 location. In contrast, if the location contained
             only 1 or 2 files, only 1 or 2 segments download data.</p>
+      </section>
+      <section id="s3_serversideencrypt">
+         <title>s3 Protocol AWS Server-Side Encryption Support</title>
+         <p>Greenplum Database supports server-side encryption using Amazon S3-managed keys
+           (SSE-S3) for AWS S3 files you access with readable and writable external tables created using the <codeph>s3</codeph>
+           protocol. SSE-S3 encrypts your object data as it writes to disk, and transparently
+           decrypts the data for you when you access it.</p>
+         <note>The <codeph>s3</codeph> protocol supports SSE-S3 only for Amazon Web Services S3 files. SS3-SE is not supported when accessing files in S3 compatible services.</note>
+         <p> Your S3 <codeph>accessid</codeph> and <codeph>secret</codeph> permissions govern your access
+             to all S3 bucket objects, whether the data is encrypted or not. However, you must configure
+             your client to use S3-managed keys for accessing encrypted data.</p>
+           <p>Refer to
+           <xref href="http://docs.aws.amazon.com/AmazonS3/latest/dev/serv-side-encryption.html" format="html" scope="external">Protecting Data Using Server-Side Encryption</xref>
+            in the AWS documentation for additional information about AWS Server-Side Encryption. </p>
+          <sectiondiv>
+            <p><b>Configuring S3 Server-Side Encryption</b></p>
+            <p><codeph>s3</codeph> protocol server-side encryption is disabled by default. To take
+               advantage of server-side encryption on AWS S3 objects you write using the Greenplum
+               Database <codeph>s3</codeph> protocol, you must set the
+               <codeph>server_side_encryption</codeph> configuration parameter in your
+               <codeph>s3</codeph> configuration file to the value <codeph>sse-s3</codeph>:</p>
+<p><codeblock>
+server_side_encryption = sse-s3
+</codeblock> </p>
+               <p>When the configuration file you provide to a <codeph>CREATE WRITABLE EXTERNAL TABLE</codeph>
+               call using the <codeph>s3</codeph> protocol includes the <codeph>server_side_encryption = sse-s3</codeph>
+               setting, Greenplum Database applies encryption headers for you on
+               all <codeph>INSERT</codeph> operations on that external table. S3 then encrypts on
+               write the object(s) identified by the URI you provided in the <codeph>LOCATION</codeph> clause.</p>
+             <p>S3 transparently decrypts data during read operations of encrypted files accessed
+               via readable external tables you create using the <codeph>s3</codeph> protocol.
+               No additional configuration is required.  </p>
+             <p>For further encryption configuration granularity, you may consider creating Amazon
+               Web Services S3 <i>Bucket Policy</i>(s), identifying the objects you want to
+               encrypt and the write actions on those objects as described in the
+               <xref href="http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingServerSideEncryption.html" format="html" scope="external">Protecting Data Using Server-Side Encryption with Amazon S3-Managed Encryption Keys (SSE-S3)</xref> AWS documentation.</p>
+          </sectiondiv>
       </section>
       <section id="s3_config_param">
          <title>About the S3 Protocol config Parameter</title>
@@ -352,6 +390,14 @@ chunksize = 67108864</codeblock></p>
                      of 0 specifies no time limit.</pd>
                </plentry>
                <plentry>
+                  <pt>server_side_encryption</pt>
+                  <pd>The S3 server-side encryption method that has been configured for the bucket.
+                     Greenplum Database supports
+                     only server-side encryption with Amazon S3-managed keys, identified by
+                     the configuration parameter value <codeph>sse-s3</codeph>. Server-side
+                     encryption is disabled (<codeph>none</codeph>) by default.</pd>
+               </plentry>
+               <plentry>
                   <pt>threadnum</pt>
                   <pd>The maximum number of concurrent threads a segment can create when uploading
                      data to or downloading data from the S3 bucket. The default is 4. The minimum
@@ -378,7 +424,7 @@ chunksize = 67108864</codeblock></p>
                </plentry>
                <plentry>
                   <pt>version</pt>
-                  <pd>Specifies the version of the information in specified in the
+                  <pd>Specifies the version of the information specified in the
                         <codeph>LOCATION</codeph> clause of the <codeph>CREATE EXTERNAL
                         TABLE</codeph> command. The value is either <codeph>1</codeph> or
                         <codeph>2</codeph>. The default value is <codeph>1</codeph>.</pd>
@@ -433,8 +479,6 @@ chunksize = 67108864</codeblock></p>
                <li>Only a single URL and optional configuration file is supported in the
                      <codeph>LOCATION</codeph> clause of the <codeph>CREATE EXTERNAL TABLE</codeph>
                   command.</li>
-               <li>S3 encryption is not supported. The S3 file property <uicontrol>Server Side
-                     Encryption</uicontrol> must be <codeph>None</codeph>.</li>
                <li>If the <codeph>NEWLINE</codeph> parameter is not specified in the <codeph>CREATE
                      EXTERNAL TABLE</codeph> command, the newline character must be identical in all
                   data files for specific prefix. If the newline character is different in some data
