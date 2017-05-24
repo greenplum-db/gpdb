@@ -237,10 +237,6 @@ FaultInjectorIdentifierEnumToString[] = {
     	/* inject fault after segment receives state transition request */
 	_("segment_probe_response"),
 		/* inject fault after segment is probed by FTS */
-	_("SubtransactionRelease"),
-		/* inject fault before sub-transaction commit is recorded in xlog */
-	_("SubtransactionRollback"),
-		/* inject fault before sub-transaction abort is recorded in xlog */
 	_("local_tm_record_transaction_commit"),
 		/* inject fault after recording transaction commit for local transaction  */
 	_("malloc_failure"),
@@ -1098,9 +1094,6 @@ FaultInjector_NewHashEntry(
 		case TwoPhaseTransactionCommitPrepared:
 		case TwoPhaseTransactionAbortPrepared:
 		
-//		case SubtransactionRelease:
-//		case SubtransactionRollback:
-		/* Ashwin */
 		case FileRepChangeTrackingCompacting:
 
 		/* We do not use vmem on master. Therefore, we only attempt large palloc on segments. */

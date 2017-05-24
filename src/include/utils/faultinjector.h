@@ -154,8 +154,6 @@ typedef enum FaultInjectorIdentifier_e {
 
 	SegmentProbeResponse,
 
-	SubtransactionRelease,
-	SubtransactionRollback,
 	LocalTmRecordTransactionCommit,
 	
 	MallocFailure,
