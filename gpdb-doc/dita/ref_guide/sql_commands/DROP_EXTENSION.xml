@@ -12,8 +12,9 @@
     <section id="section3">
       <title>Description</title>
       <p><codeph>DROP EXTENSION</codeph> removes extensions from the database. Dropping an extension
-        causes its component objects to be dropped as well. The required supporting extension files
-        what were installed to create the extension are not deleted.</p>
+        causes its component objects to be dropped as well. </p>
+      <note>The required supporting extension files what were installed to create the extension are
+        not deleted. The files must be manually removed from the Greenplum Database hosts.</note>
       <p>You must own the extension to use <codeph>DROP EXTENSION</codeph>.</p>
       <p>This command fails if any of the extension objects are in use in the database. For example,
         if a table is defined with columns of the extension type. Add the <codeph>CASCADE</codeph>
