@@ -1,10 +1,11 @@
-all: gpnetbenchClient gpnetbenchServer
+.PHONY: gpnetbench
+all: gpnetbench
 
-gpnetbenchServer:
-	$(MAKE) -C gpnetbench gpnetbenchServer
-
-gpnetbenchClient:
-	$(MAKE) -C gpnetbench gpnetbenchClient
+gpnetbench:
+	$(MAKE) -C gpnetbench all
 
 clean:
 	$(MAKE) -C gpnetbench clean
+
+install: all
+	$(MAKE) -C gpnetbench install

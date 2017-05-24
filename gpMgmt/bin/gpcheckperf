@@ -373,6 +373,7 @@ def runSetup():
         cmd = 'rm -rf %s ; mkdir -p %s' % (dirs, dirs)
         (ok, out) = gpssh(cmd)
         if not ok:
+            print 'failed gpssh: %s' % out
             sys.exit("[Error] unable to make gpcheckperf directory. \n"
                      + "        command failed: " + cmd)
 

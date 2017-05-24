@@ -30,6 +30,7 @@ all:
 	$(MAKE) -C contrib/pgcrypto all
 	$(MAKE) -C gpAux/extensions mapreduce
 	$(MAKE) -C gpAux/gpperfmon all
+	$(MAKE) -C gpAux/platform all
 	@echo "All of Greenplum Database successfully made. Ready to install."
 
 install:
@@ -54,6 +55,7 @@ install:
 	$(MAKE) -C gpMgmt $@
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
+	$(MAKE) -C gpAux/platform $@
 	@echo "Greenplum Database installation complete."
 
 installdirs uninstall:
@@ -109,6 +111,7 @@ clean:
 # calling top-level configure and this Makefile
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
+	$(MAKE) -C gpAux/platform $@
 	$(MAKE) -C gpMgmt $@
 # Garbage from autoconf:
 	@rm -rf autom4te.cache/
@@ -119,6 +122,7 @@ distclean maintainer-clean:
 #	-$(MAKE) -C doc $@
 	-$(MAKE) -C gpAux/extensions $@
 	-$(MAKE) -C gpAux/gpperfmon $@
+	-$(MAKE) -C gpAux/platform $@
 	-$(MAKE) -C contrib $@
 	-$(MAKE) -C config $@
 	-$(MAKE) -C src $@

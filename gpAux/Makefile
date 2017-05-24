@@ -326,7 +326,6 @@ define BUILD_STEPS
 	#@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) mkpgbouncer INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
 	@$(MAKE) mkpgbench INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
-	@$(MAKE) mkplatform INSTLOC=$(INSTLOC)
 	if [ "$(findstring $(BLD_ARCH),$(SERVER_PLATFORMS))" != "" ]; then \
 	  $(MAKE) mkgpcloud INSTLOC=$(INSTLOC) && \
 	  $(MAKE) mkgphdfs INSTLOC=$(INSTLOC) && \
@@ -869,11 +868,6 @@ else
 	@cd extensions/pgbouncer/source && ./configure --with-libevent=$(BLD_TOP)/ext/$(BLD_ARCH) --prefix=$(INSTLOC) --enable-evdns
 	$(MAKE) -C extensions/pgbouncer/source install
 endif
-
-mkplatform:
-	@cd $(PLATFORM) && $(MAKE)
-	cp -p platform/gpnetbench/gpnetbenchServer $(INSTLOC)/bin/lib
-	cp -p platform/gpnetbench/gpnetbenchClient $(INSTLOC)/bin/lib
 
 copydocs :
 	@if [ ! -d $($INSTLOC)/docs ] ; then mkdir -p $(INSTLOC)/docs; fi
