@@ -91,11 +91,10 @@ storage_persistent_accessmethods_and_vacuum:
 	-s vacuum \
 	-q "class!=XidlimitsTests"
 
-storage_filerep_and_sub_transaction:
+storage_filerep:
 	$(TESTER) $(DISCOVER) \
 	-q "class!=Mpp18816" \
-	-s tincrepo/mpp/gpdb/tests/storage/filerep \
-	-s tincrepo/mpp/gpdb/tests/storage/sub_transaction
+	-s tincrepo/mpp/gpdb/tests/storage/filerep
 
 # cs-walrepl-multinode
 # The following targets are pulled from:

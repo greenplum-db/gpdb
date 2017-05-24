@@ -675,10 +675,10 @@ jobs:
         TEST_OS: centos
       image: centos-gpdb-dev-6
       timeout: 3h
-    - task: storage_filerep_and_sub_transaction
+    - task: storage_filerep
       file: gpdb_src/concourse/tasks/tinc_gpdb.yml
       params:
-        MAKE_TEST_COMMAND: storage_filerep_and_sub_transaction
+        MAKE_TEST_COMMAND: storage_filerep
         TEST_OS: centos
       image: centos-gpdb-dev-6
       timeout: 3h
