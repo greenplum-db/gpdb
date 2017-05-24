@@ -199,22 +199,33 @@ NOTICE:  abort me -3
  
 (1 row)
 
-declare cursor c1 select count(*) = 30 passed from subxact1 where a in (-2, -3);
-ERROR:  syntax error at or near "c1"
-LINE 1: declare cursor c1 select count(*) = 30 passed from subxact1 ...
-                       ^
+declare c1 cursor for select count(*) = 30 passed from subxact1 where a in (-2, -3);
 select recurse(35, -2, false); -- committed
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ recurse 
+---------
+ 
+(1 row)
+
 savepoint subtx_with_overflow_mixed_abort;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
 -- Validate that rows inserted by committed subtransactions are
 -- visible and rows inserted by aborted subtransactions aren't.
 fetch all in c1;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ passed 
+--------
+ t
+(1 row)
+
 release subtx_with_overflow_mixed_abort;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
 select count(*) = 65 as passed from subxact1 where a = -2;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ passed 
+--------
+ t
+(1 row)
+
 select count(*) = 0 as passed from subxact1 where a = -3;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ passed 
+--------
+ t
+(1 row)
+
 commit;

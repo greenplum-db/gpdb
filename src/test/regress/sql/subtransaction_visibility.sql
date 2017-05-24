@@ -64,7 +64,7 @@ commit;
 begin;
 select recurse(30, -2, false); -- committed
 select recurse(10, -3, true); -- aborted
-declare cursor c1 select count(*) = 30 passed from subxact1 where a in (-2, -3);
+declare c1 cursor for select count(*) = 30 passed from subxact1 where a in (-2, -3);
 select recurse(35, -2, false); -- committed
 savepoint subtx_with_overflow_mixed_abort;
 -- Validate that rows inserted by committed subtransactions are
