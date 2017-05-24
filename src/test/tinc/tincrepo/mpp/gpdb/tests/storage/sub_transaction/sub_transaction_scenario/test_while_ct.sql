@@ -1,1 +1,0 @@
-Create table test_while_ct(i int, t text);
