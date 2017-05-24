@@ -153,10 +153,10 @@ test_TransactionIdIsCurrentTransactionIdInternal(void **state)
 }
 
 void helper_ExpectLWLock() {
-	expect_value(LWLockAcquire, lockid, ProcArrayLock);
+	expect_value(LWLockAcquire, lockid, SharedLocalSnapshotSlotLock);
 	expect_value(LWLockAcquire, mode, LW_SHARED);
 	will_be_called(LWLockAcquire);
-	expect_value(LWLockRelease, lockid, ProcArrayLock);
+	expect_value(LWLockRelease, lockid, SharedLocalSnapshotSlotLock);
 	will_be_called(LWLockRelease);
 }
 

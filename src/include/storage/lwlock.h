@@ -99,6 +99,7 @@ typedef enum LWLockId
 	FirstLockMgrLock = FirstBufMappingLock + NUM_BUFFER_PARTITIONS,
 	SessionStateLock = FirstLockMgrLock + NUM_LOCK_PARTITIONS,
 	RelfilenodeGenLock,
+	SharedLocalSnapshotSlotLock, /* protecting concurrent access between readers and the writer */
 
 	/* must be last except for MaxDynamicLWLock: */
 	NumFixedLWLocks,
