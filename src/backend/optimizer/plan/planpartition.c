@@ -305,7 +305,18 @@ FindEqKey(PlannerInfo *root, Bitmapset *inner_relids,
 
 					if (!bms_is_subset(inner_em->em_relids, inner_relids))
 						continue; /* not computable on the inner side */
-
+					/*
+					 * The condition will be duplicated as the partition
+					 * selection key in the PartitionSelector node. It is
+					 * not OK to duplicate the expression, if it contains
+					 * SubPlans, because the code that adds motion nodes to a
+					 * subplan gets confused if there are multiple SubPlans
+					 * referring the same subplan ID. It would probably
+					 * perform badly too, since subplans are typically quite
+					 * expensive.
+					 */
+					if (contain_subplans((Node *) inner_em->em_expr))
+						continue;
 					/*
 					 * This can be computed from the inner side.
 					 *

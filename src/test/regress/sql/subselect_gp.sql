@@ -613,4 +613,11 @@ where exists (select 1 from CT where CT.a = foo.a);
 CREATE TABLE bar_s (c integer, d character varying(10));
 INSERT INTO bar_s VALUES (9,9);
 SELECT * FROM bar_s T1 WHERE c = (SELECT max(c) FROM bar_s T2 WHERE T2.d = T1.d GROUP BY c) AND c < 10;
+CREATE TABLE foo_s (a integer, b integer)  PARTITION BY RANGE(b)
+    (PARTITION sub_one START (1) END (10),
+     PARTITION sub_two START (11) END (22));
+INSERT INTO foo_s VALUES (9,9);
+INSERT INTO foo_s VALUES (2,9);
+SELECT bar_s.c from bar_s, foo_s WHERE foo_s.a=2 AND foo_s.b = (SELECT max(b) FROM foo_s WHERE bar_s.c = 9);
 DROP TABLE bar_s;
+DROP TABLE foo_s;
