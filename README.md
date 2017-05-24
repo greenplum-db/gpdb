@@ -218,16 +218,21 @@ gpperfmon is dependent on several libraries like apr, apu, and libsigar
 make installcheck-world
 ```
 
+* The top-level target __installcheck-world__ will run all regression
+  tests in GPDB against the running cluster. For testing individual
+  parts, the respective targets can be run separately.
+
 * The PostgreSQL __check__ target does not work. Setting up a
   Greenplum cluster is more complicated than a single-node PostgreSQL
   installation, and no-one's done the work to have __make check__
   create a cluster. Create a cluster manually or use gpAux/gpdemo/
-  (example below) and run __make installcheck-world__ against
-  that. Patches are welcome!
+  (example below) and run the toplevel __make installcheck-world__
+  against that. Patches are welcome!
 
 * The PostgreSQL __installcheck__ target does not work either, because
   some tests are known to fail with Greenplum. The
-  __installcheck-world__ schedule excludes those tests.
+  __installcheck-good__ schedule in __src/test/regress__ excludes those
+  tests.
 
 * When adding a new test, please add it to one of the GPDB-specific tests,
   in greenplum_schedule, rather than the PostgreSQL tests inherited from the
