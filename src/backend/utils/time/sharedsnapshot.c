@@ -441,6 +441,8 @@ retry:
 	slot->QDxid = 0;
 	slot->QDcid = 0;
 	slot->segmateSync = 0;
+	/* Remember the writer proc for IsCurrentTransactionIdForReader */
+	slot->writer_proc = MyProc;
 
 	LWLockRelease(SharedSnapshotLock);
 
@@ -578,9 +580,6 @@ addSharedSnapshot(char *creatorDescription, int id)
 						   SharedSnapshotDump())));
 	}
 	SharedLocalSnapshotSlot = slot;
-
-	/* Remember the writer proc for IsCurrentTransactionIdForReader */
-	SharedLocalSnapshotSlot->writer_proc = MyProc;
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),"%s added Shared Local Snapshot slot for gp_session_id = %d (address %p)",
 		 creatorDescription, id, SharedLocalSnapshotSlot);
