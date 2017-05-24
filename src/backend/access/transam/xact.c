@@ -753,6 +753,8 @@ bool IsCurrentTransactionIdForReader(TransactionId xid) {
 
 	LWLockAcquire(ProcArrayLock, LW_SHARED);
 
+	Assert(!SharedLocalSnapshotSlot);
+
 	PGPROC* writer_proc = SharedLocalSnapshotSlot->writer_proc;
 
 	if (!writer_proc)
