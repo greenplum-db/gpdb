@@ -13,6 +13,7 @@
 #include "nodes/plannodes.h"
 #include "nodes/params.h"
 #include "nodes/relation.h"
+#include "optimizer/walkers.h"
 
 extern Plan *apply_motion(struct PlannerInfo *root, Plan *plan, Query *query);
 
@@ -47,7 +48,7 @@ extern void assign_plannode_id(PlannedStmt *stmt);
 extern List *getExprListFromTargetList(List *tlist, int numCols, AttrNumber *colIdx,
 									   bool useExecutorVarFormat);
 extern void remove_unused_initplans(Plan *plan, PlannerInfo *root);
-extern void remove_unused_subplans(Plan *plan, PlannerInfo *root);
+extern void remove_unused_subplans(PlannerInfo *root, SubPlanWalkerContext *context);
 
 extern int32 cdbhash_const(Const *pconst, int iSegments);
 extern int32 cdbhash_const_list(List *plConsts, int iSegments);
@@ -55,4 +56,5 @@ extern int32 cdbhash_const_list(List *plConsts, int iSegments);
 extern Node *exec_make_plan_constant(struct PlannedStmt *stmt, bool is_SRI, List **cursorPositions);
 extern Node *planner_make_plan_constant(struct PlannerInfo *root, Node *n, bool is_SRI);
 extern void remove_subquery_in_RTEs(Node *node);
+extern void fixup_subplans(Plan *plan, PlannerInfo *root, SubPlanWalkerContext *context);
 #endif   /* CDBMUTATE_H */

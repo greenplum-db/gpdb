@@ -532,6 +532,10 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	/* walk plan and remove unused initplans and their params */
 	remove_unused_initplans(top_plan, root);
 
+	/* walk subplans and fixup subplan node referring to same plan_id */
+	SubPlanWalkerContext subplan_context;
+	fixup_subplans(top_plan, root, &subplan_context);
+
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		top_plan = cdbparallelize(root, top_plan, parse,
@@ -556,13 +560,14 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	}
 
 	/*
-	 * walk plan and remove unused subplans.
+	 * Remove unused subplans.
 	 * Executor initializes state for subplans even they are unused.
 	 * When the generated subplan is not used and has motion inside,
 	 * causing motionID not being assigned, which will break sanity
 	 * check when executor tries to initialize subplan state.
 	 */
-	remove_unused_subplans(top_plan, root);
+	remove_unused_subplans(root, &subplan_context);
+	bms_free(subplan_context.bms_subplans);
 
 	top_plan = zap_trivial_result(root, top_plan);
 

@@ -72,12 +72,6 @@ typedef struct
 	List	   *cursorPositions;
 } pre_dispatch_function_evaluation_context;
 
-typedef struct SubPlanWalkerContext
-{
-	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
-	Bitmapset	   *bms_subplans; /* Bitmapset for used subplans */
-} SubPlanWalkerContext;
-
 static Node *
 pre_dispatch_function_evaluation_mutator(Node *node,
 										 pre_dispatch_function_evaluation_context * context);
@@ -113,7 +107,7 @@ doesUpdateAffectPartitionCols(PlannerInfo  *root,
 
 static bool replace_shareinput_targetlists_walker(Node *node, PlannerGlobal *glob, bool fPop);
 
-static bool subplan_walker(Node *node, SubPlanWalkerContext *context);
+static bool fixup_subplan_walker(Node *node, SubPlanWalkerContext *context);
 
 /*
  * Given an expression, return true if it contains anything non-constant.
@@ -2985,8 +2979,12 @@ void remove_unused_initplans(Plan *top_plan, PlannerInfo *root)
 	bms_free(context.scanrelids);
 }
 
+/*
+ * Append duplicate subplans and update plan id to refer them if same
+ * subplan is referred at multiple places
+ */
 static bool
-subplan_walker(Node *node, SubPlanWalkerContext *context)
+fixup_subplan_walker(Node *node, SubPlanWalkerContext *context)
 {
 	if (node == NULL)
 		return false;
@@ -2994,38 +2992,67 @@ subplan_walker(Node *node, SubPlanWalkerContext *context)
 	if (IsA(node, SubPlan))
 	{
 		SubPlan *subplan = (SubPlan *) node;
-		int i = subplan->plan_id - 1;
-		if (!bms_is_member(i, context->bms_subplans))
-			context->bms_subplans = bms_add_member(context->bms_subplans, i);
+		int plan_id = subplan->plan_id;
+		if (!bms_is_member(plan_id, context->bms_subplans))
+		/*
+		 * Add plan_id to bitmapset to maintain the plan_id's found
+		 * while traversing the plan
+		 */
+			context->bms_subplans = bms_add_member(context->bms_subplans, plan_id);
 		else
+		{
+			/*
+			 * If plan_id is already available in the bitmapset, it means that there is
+			 * more than one subplan node which refer to the same plan_id. In this case
+			 * create a duplicate subplan, append it to the glob->subplans and update the plan_id
+			 * of the subplan to refer to the new copy of the subplan node
+			 */
+			PlannerInfo *root = (PlannerInfo *)context->base.node;
+			Plan *dupsubplan = (Plan *) copyObject(planner_subplan_get_plan(root, subplan));
+			int newplan_id = list_length(root->glob->subplans) + 1;
+			subplan->plan_id = newplan_id;
+			root->glob->subplans = lappend(root->glob->subplans, dupsubplan);
+			context->bms_subplans = bms_add_member(context->bms_subplans, newplan_id);
 			return false;
+		}
 	}
-	return plan_tree_walker(node, subplan_walker, context);
+	return plan_tree_walker(node, fixup_subplan_walker, context);
 }
+
+/*
+ * Entry point for fixing subplan references. A SubPlan node
+ * cannot be parallelized twice, so if multiple subplan node
+ * refer to the same plan_id, create a duplicate subplan and update
+ * the plan_id of the subplan to refer to the new copy of subplan node
+ * created in PlannedStmt subplans
+ */
+void
+fixup_subplans(Plan *top_plan, PlannerInfo *root, SubPlanWalkerContext *context)
+{
+	context->base.node = (Node *) root;
+	context->bms_subplans = NULL;
+
+	/*
+	 * If there are no subplans, no fixup will be required
+	 */
+	if (!root->glob->subplans)
+		return;
+
+	fixup_subplan_walker((Node *) top_plan, context);
+}
+
 
 /*
  * Remove unused subplans from PlannerGlobal subplans
  */
 void
-remove_unused_subplans(Plan *top_plan, PlannerInfo *root)
+remove_unused_subplans(PlannerInfo *root, SubPlanWalkerContext *context)
 {
-	SubPlanWalkerContext context;
-	List		*glob_subplans = root->glob->subplans;
-	ListCell	*lc;
-	int 		i;
-	int 		num_subplans = list_length(glob_subplans);
 
-	if (num_subplans == 0)
-		return;
-
-	context.base.node = (Node *) root;
-	context.bms_subplans = NULL;
-
-	subplan_walker((Node *) top_plan, &context);
-
-	for (i = 0; i < num_subplans; i++)
+	ListCell *lc;
+	for (int i = 1; i <= list_length(root->glob->subplans); i++)
 	{
-		if (!bms_is_member(i, context.bms_subplans))
+		if (!bms_is_member(i, context->bms_subplans))
 		{
 			/*
 			 * This subplan is unused. Replace it in the global list of
@@ -3033,15 +3060,13 @@ remove_unused_subplans(Plan *top_plan, PlannerInfo *root)
 			 * global list, because that would screw up the plan_id
 			 * numbering of the subplans).
 			 */
-			lc = list_nth_cell(glob_subplans, i);
+			lc = list_nth_cell(root->glob->subplans, i-1);
 			pfree(lfirst(lc));
 			lfirst(lc) = make_result(root, NIL,
 									 (Node *) list_make1(makeBoolConst(false, false)),
 									 NULL);
 		}
 	}
-
-	bms_free(context.bms_subplans);
 }
 
 Node *
