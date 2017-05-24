@@ -52,7 +52,7 @@ storage_targets: discover_targets non_discover_targets
 
 discover_targets: storage walrep_multinode \
 	pgtwophase \
-	sub_transaction_limit_removal filerep_schematopology_crashrecov
+	filerep_schematopology_crashrecov
 
 non_discover_targets: aoco_compression filerep_end_to_end fts
 
@@ -237,20 +237,6 @@ fts_transitions_part02:
 
 fts_transitions_part03:
 	$(TESTER) mpp.gpdb.tests.storage.fts.fts_transitions.test_fts_transitions_03
-
-
-# cs-sub-transaction-limit-removal
-# The following targets are pulled from:
-# http://pulse-cloud.gopivotal.com/admin/projects/cs-sub-transaction-limit-removal
-#
-# Refer to the properties of the pulse project and individual build
-# stages for configuration requirements.
-
-sub_transaction_limit_removal:
-	$(TESTER) $(DISCOVER) \
-	-s tincrepo/mpp/gpdb/tests/storage/sub_transaction_limit_removal \
-	-p test*.py
-
 
 # cs-filerep-schema-topology-crashrecov
 # The following targets are pulled from:

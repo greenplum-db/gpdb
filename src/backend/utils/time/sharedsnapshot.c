@@ -441,6 +441,8 @@ retry:
 	slot->QDxid = 0;
 	slot->QDcid = 0;
 	slot->segmateSync = 0;
+	/* Remember the writer proc for IsCurrentTransactionIdForReader */
+	slot->writer_proc = MyProc;
 
 	LWLockRelease(SharedSnapshotLock);
 
@@ -645,7 +647,6 @@ dumpSharedLocalSnapshot_forCursor(void)
 	BufFile *f = NULL;
 	Size count=0;
 	TransactionId *xids = NULL;
-	int64 sub_size;
 	int64 size_read;
 	ResourceOwner oldowner;
 	MemoryContext oldcontext;
@@ -688,14 +689,7 @@ dumpSharedLocalSnapshot_forCursor(void)
 		/* Write our length as zero. (we'll fix it later). */
 		count = 0;
 
-		/*
-		 * We write two counts here: One is count of first part,
-		 * second is size of subtransaction xids copied from
-		 * SharedLocalSnapshotSlot. This can be a big number.
-		 */
 		FileWriteFieldWithCount(count, f, count);
-		FileWriteFieldWithCount(count, f, src->total_subcnt);
-
 		FileWriteFieldWithCount(count, f, src->pid);
 		FileWriteFieldWithCount(count, f, src->xid);
 		FileWriteFieldWithCount(count, f, src->cid);
@@ -714,72 +708,8 @@ dumpSharedLocalSnapshot_forCursor(void)
 		FileWriteFieldWithCount(count, f, src->snapshot.curcid);
 
 		/*
-		 * THE STUFF IN THE SHARED LOCAL VERSION OF
-		 * snapshot.distribSnapshotWithLocalMapping
-		 * APPEARS TO *NEVER* BE USED, SO THERE IS
-		 * NO POINT IN TRYING TO DUMP IT (IN FACT,
-		 * IT'S ALLOCATION STRATEGY ISN'T SHMEM-FRIENDLY).
-		 */
-
-		/*
-		 * THIS STUFF IS USED IN THE FILENAME
-		 * SO THE READER ALREADY HAS IT.
-		 *
-
-		 dst->QDcid = src->QDcid;
-		 dst->segmateSync = src->segmateSync;
-		 dst->QDxid = src->QDxid;
-		 dst->ready = src->ready;
-
-		 *
-		 */
-
-		if (src->total_subcnt > src->inmemory_subcnt)
-		{
-			Assert(subxip_file != 0);
-
-			xids = palloc(MAX_XIDBUF_SIZE);
-
-			FileSeek(subxip_file, 0, SEEK_SET);
-			sub_size = (src->total_subcnt - src->inmemory_subcnt)
-				    * sizeof(TransactionId);
-			while (sub_size > 0)
-			{
-				size_read = (sub_size > MAX_XIDBUF_SIZE) ?
-						MAX_XIDBUF_SIZE : sub_size;
-				if (size_read != FileRead(subxip_file, (char *)xids,
-							  size_read))
-				{
-					elog(ERROR,
-					     "Error in reading subtransaction file.");
-				}
-
-				if (!FileWriteOK(f, xids, sub_size))
-				{
-					break;
-				}
-
-				sub_size -= size_read;
-			}
-
-			pfree(xids);
-			if (sub_size != 0)
-				break;
-		}
-
-		if (src->inmemory_subcnt > 0)
-		{
-			sub_size = src->inmemory_subcnt * sizeof(TransactionId);
-			if (!FileWriteOK(f, src->subxids, sub_size))
-			{
-				break;
-			}
-		}
-
-		/*
 		 * Now update our length field: seek to beginning and overwrite
-		 * our original zero-length. count does not include
-		 * subtransaction ids.
+		 * our original zero-length.
 		 */
 		if (BufFileSeek(f, 0 /* fileno */, 0 /* offset */, SEEK_SET) != 0)
 			break;
@@ -817,10 +747,7 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot)
 
 	uint32 combocidcnt;
 	ComboCidKeyData tmp_combocids[MaxComboCids];
-	uint32 sub_size;
 	uint32 read_size;
-	int64 subcnt;
-	TransactionId *subxids = NULL;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE);
 	Assert(!Gp_is_writer);
@@ -872,9 +799,6 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot)
 		elog(ERROR, "cursor snapshot failed sanity %u != %u",
 			    (unsigned int)sanity, (unsigned int)count);
 	p += sizeof(sanity);
-
-	memcpy(&sub_size, p, sizeof(uint32));
-	p += sizeof(uint32);
 
 	/* see dumpSharedLocalSnapshot_forCursor() for the correct order here */
 
@@ -930,36 +854,6 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot)
 
 	/* Now we're done with the buffer */
 	pfree(buffer);
-
-	/*
-	 * Now read the subtransaction ids. This can be a big number, so cannot
-	 * allocate memory all at once.
-	 */
-	sub_size *= sizeof(TransactionId);
-
-	ResetXidBuffer(&subxbuf);
-
-	if (sub_size)
-	{
-		subxids = palloc(MAX_XIDBUF_SIZE);
-	}
-
-	while (sub_size > 0)
-	{
-		read_size = sub_size > MAX_XIDBUF_SIZE ? MAX_XIDBUF_SIZE : sub_size;
-		if (!FileReadOK(f, (char *)subxids, read_size))
-		{
-			elog(ERROR, "Error in Reading Subtransaction file.");
-		}
-		subcnt = read_size/sizeof(TransactionId);
-		AddSortedToXidBuffer(&subxbuf, subxids, subcnt);
-		sub_size -= read_size;
-	}
-
-	if (subxids)
-	{
-		pfree(subxids);
-	}
 
 	/* we're done with file. */
 	BufFileClose(f);
