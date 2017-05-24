@@ -15,7 +15,7 @@ ifneq (${ENV_JAVA_HOME},)
 	JAVA_HOME=${ENV_JAVA_HOME}
 endif
 
-all: mkgphdfs mkgpcloud
+all: mkgphdfs
 
 .PHONY:
 mapreduce:
@@ -24,9 +24,13 @@ mapreduce:
 		$(MAKE) -C gpmapreduce; \
 	fi
 
-install: mapreduce
+install: mapreduce mkgpcloud
 	@if [ "$(enable_mapreduce)" = "yes" ]; then \
 		$(MAKE) -C gpmapreduce install; \
+	fi
+	@if [ "$(enable_gpcloud)" = "yes" ]; then \
+		$(MAKE) -C gpcloud install; \
+		$(MAKE) -C gpcloud/bin/gpcheckcloud install; \
 	fi
 
 clean:
@@ -44,8 +48,11 @@ mkgphdfs:
 
 .PHONY:
 mkgpcloud:
-	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gpcloud USE_PGXS=1 install
-	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gpcloud/bin/gpcheckcloud USE_PGXS=1 install
+	@if [ "$(enable_gpcloud)" = "yes" ]; then \
+		echo "gpcloud enabled"; \
+		$(MAKE) -C gpcloud; \
+		$(MAKE) -C gpcloud/bin/gpcheckcloud; \
+	fi
 
 # Only include include these files when running enterprise build
 ENTERPRISE_TARGETS="mkgphdfs mkorafce"

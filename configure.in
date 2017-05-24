@@ -730,6 +730,20 @@ AC_MSG_RESULT([checking whether to build with Greenplum Mapreduce... $enable_map
 AC_SUBST(enable_mapreduce)
 
 #
+# gpcloud, enabled by default
+#
+PGAC_ARG_BOOL(enable, gpcloud, yes, [  --disable-gpcloud       disable gpcloud support],
+              [AC_DEFINE([USE_GPCLOUD], 1,
+			             [Define to 1 to build with gpcloud (--enable-gpcloud)])])
+AC_MSG_RESULT([checking whether to build with gpcloud... $enable_gpcloud])
+AC_SUBST(enable_gpcloud)
+
+AS_IF([test "$enable_gpcloud" = yes],
+[ # then
+  AX_CXX_COMPILE_STDCXX([11], [noext], [mandatory])
+]) # fi
+
+#
 # Include directories
 #
 ac_save_IFS=$IFS

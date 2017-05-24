@@ -29,6 +29,7 @@ all:
 	$(MAKE) -C contrib/pg_upgrade all
 	$(MAKE) -C contrib/pgcrypto all
 	$(MAKE) -C gpAux/extensions mapreduce
+	$(MAKE) -C gpAux/extensions mkgpcloud
 	$(MAKE) -C gpAux/gpperfmon all
 	$(MAKE) -C gpAux/platform all
 	@echo "All of Greenplum Database successfully made. Ready to install."
