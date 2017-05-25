@@ -5,7 +5,7 @@ create index computer_terms_index2 on computer_terms using btree(category);
 insert into computer_terms values('computer display', 'X-A01-Y', 'a comment 1');
 insert into computer_terms values('computer graphics', 'T-B01-Y', 'a comment 2');
 insert into computer_terms values('computer programmer', 'S-Z01-Y', 'a comment 3');
-vacuum computer_terms;
+analyze computer_terms;
 select * from computer_terms ORDER BY 1,2,3;
 select * from computer_terms where category = 'X-A01-Y' ORDER BY 1,2,3;
 select * from computer_terms where category ~* 'x-a01-y' ORDER BY 1,2,3;

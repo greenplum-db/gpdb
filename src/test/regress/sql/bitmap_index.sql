@@ -147,7 +147,7 @@ create table bm_test (i int, j int);
 insert into bm_test values (0, 0), (0, 0), (0, 1), (1,0), (1,0), (1,1);
 create index bm_test_j on bm_test using bitmap(j);
 delete from bm_test where j =1;
-vacuum bm_test;
+analyze bm_test;
 insert into bm_test values (0, 0), (1,0);
 
 set enable_seqscan=off;
@@ -164,7 +164,7 @@ create table bm_test (i int,j int);
 insert into bm_test values (1, 1), (1, 2);
 create index bm_test_j on bm_test using bitmap(j);
 update bm_test set j=20 where j=1;
-vacuum bm_test;
+analyze bm_test;
 drop table bm_test;
 
 -- unique index with null value tests

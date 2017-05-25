@@ -199,7 +199,6 @@ insert into foo select a from generate_series(1,10000)a;
 
 update foo set b = 'B' where b is null;
 
-vacuum full foo;
 RESET ALL;
 
 -- ----------------------------------------------------------------------
@@ -226,7 +225,6 @@ insert into mpp7966 select * from mpp7966;
 
 create index mpp7966_j on mpp7966 using bitmap(j);
 
-vacuum mpp7966;
 analyze mpp7966;
 
 select count(*) from mpp7966 where j in (1, 20);
