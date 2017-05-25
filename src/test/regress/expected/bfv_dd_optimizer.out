@@ -85,7 +85,8 @@ INFO:  Dispatch command to ALL contents
 
 -- cte with function scans
 with cte as (select generate_series(1,10) g)  select * from  dd_singlecol_1 t1, cte where t1.a=cte.g and t1.a=1 limit 100;
-INFO:  Dispatch command to SINGLE content
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
  a | b | g 
 ---+---+---
  1 | 1 | 1
