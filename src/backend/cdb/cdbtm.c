@@ -3552,9 +3552,9 @@ setupQEDtxContext (DtxContextInfo *dtxContextInfo)
 		{
 			if (DTM_DEBUG5 >= log_min_messages)
 			{
-				LWLockAcquire(SharedLocalSnapshotSlotLock, LW_SHARED);
+				LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_SHARED);
 				SharedSnapshotSlot slot = *SharedLocalSnapshotSlot;
-				LWLockRelease(SharedLocalSnapshotSlotLock);
+				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 
 				elog(DTM_DEBUG5,
 					 "setupQEDtxContext inputs (part 2b):  shared local snapshot xid = %u "

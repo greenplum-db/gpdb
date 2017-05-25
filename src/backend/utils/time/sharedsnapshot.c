@@ -226,7 +226,7 @@ SharedSnapshotShmemSize(void)
 	 * multiply that by two (to account for slow de-allocation on
 	 * cleanup, for instance).
 	 */
-	slotCount = 2 * max_prepared_xacts;
+	slotCount = NUM_SHARED_SNAPSHOT_SLOTS;
 
 	size = offsetof(SharedSnapshotStruct, xips);
 	size = add_size(size, mul_size(slotSize, slotCount));
@@ -285,6 +285,7 @@ CreateSharedSnapshotArray(void)
 
 			tmpSlot->slotid = -1;
 			tmpSlot->slotindex = i;
+			tmpSlot->slotLock = LWLockAssign();
 
 			/*
 			 * Fixup xip array pointer reference space allocated after slot structs:
@@ -580,9 +581,16 @@ addSharedSnapshot(char *creatorDescription, int id)
 						   SharedSnapshotDump())));
 	}
 
-	LWLockAcquire(SharedLocalSnapshotSlotLock, LW_EXCLUSIVE);
+	LWLockId slotLock = NullLock;
+	if (SharedLocalSnapshotSlot)
+	{
+		slotLock = SharedLocalSnapshotSlot->slotLock;
+		LWLockAcquire(slotLock, LW_EXCLUSIVE);
+	}
 	SharedLocalSnapshotSlot = slot;
-	LWLockRelease(SharedLocalSnapshotSlotLock);
+	if (slotLock != NullLock)
+		LWLockRelease(slotLock);
+
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),"%s added Shared Local Snapshot slot for gp_session_id = %d (address %p)",
 		 creatorDescription, id, SharedLocalSnapshotSlot);
@@ -607,9 +615,15 @@ lookupSharedSnapshot(char *lookerDescription, char *creatorDescription, int id)
 						 lookerDescription, creatorDescription, creatorDescription)));
 	}
 
-	LWLockAcquire(SharedLocalSnapshotSlotLock, LW_EXCLUSIVE);
+	LWLockId slotLock = NullLock;
+	if (SharedLocalSnapshotSlot)
+	{
+		slotLock = SharedLocalSnapshotSlot->slotLock;
+		LWLockAcquire(slotLock, LW_EXCLUSIVE);
+	}
 	SharedLocalSnapshotSlot = slot;
-	LWLockRelease(SharedLocalSnapshotSlotLock);
+	if (slotLock != NullLock)
+		LWLockRelease(slotLock);
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),"%s found Shared Local Snapshot slot for gp_session_id = %d created by %s (address %p)",
 		 lookerDescription, id, creatorDescription, SharedLocalSnapshotSlot);
@@ -657,9 +671,9 @@ dumpSharedLocalSnapshot_forCursor(void)
 	Assert(Gp_role == GP_ROLE_DISPATCH || (Gp_role == GP_ROLE_EXECUTE && Gp_is_writer));
 	Assert(SharedLocalSnapshotSlot != NULL);
 
-	LWLockAcquire(SharedLocalSnapshotSlotLock, LW_SHARED);
+	LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_SHARED);
 	SharedSnapshotSlot slot = *SharedLocalSnapshotSlot;
-	LWLockRelease(SharedLocalSnapshotSlotLock);
+	LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 
 	fname = sharedLocalSnapshot_filename(slot.QDxid, slot.QDcid, slot.segmateSync);
 

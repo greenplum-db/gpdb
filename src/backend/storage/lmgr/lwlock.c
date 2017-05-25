@@ -25,13 +25,14 @@
 #include "access/multixact.h"
 #include "access/distributedlog.h"
 #include "access/subtrans.h"
+#include "access/twophase.h"
 #include "miscadmin.h"
 #include "pg_trace.h"
 #include "storage/barrier.h"
 #include "storage/ipc.h"
 #include "storage/proc.h"
 #include "storage/spin.h"
-
+#include "utils/sharedsnapshot.h"
 
 /* We use the ShmemLock spinlock to protect LWLockAssign */
 extern slock_t *ShmemLock;
@@ -195,6 +196,9 @@ NumLWLocks(void)
 
 	/* cdbdistributedlog.c needs one per DistributedLog buffer */
 	numLocks += NUM_DISTRIBUTEDLOG_BUFFERS;
+
+	/* sharedsnapshot.c needs one per shared snapshot slot */
+	numLocks += NUM_SHARED_SNAPSHOT_SLOTS;
     
 	/*
 	 * Add any requested by loadable modules; for backwards-compatibility

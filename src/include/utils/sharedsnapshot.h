@@ -13,6 +13,9 @@
 #ifndef SHAREDSNAPSHOT_H
 #define SHAREDSNAPSHOT_H
 
+#include "utils/combocid.h"
+#include "utils/tqual.h"
+
 /* MPP Shared Snapshot */
 typedef struct SharedSnapshotSlot
 {
@@ -30,7 +33,7 @@ typedef struct SharedSnapshotSlot
 	uint32			combocidcnt;
 	ComboCidKeyData combocids[MaxComboCids];
 	SnapshotData	snapshot;
-
+	LWLockId        slotLock;
 } SharedSnapshotSlot;
 
 extern volatile SharedSnapshotSlot *SharedLocalSnapshotSlot;
@@ -48,5 +51,7 @@ extern void dumpSharedLocalSnapshot_forCursor(void);
 extern void readSharedLocalSnapshot_forCursor(Snapshot snapshot);
 
 extern void AtEOXact_SharedSnapshot(void);
+
+#define NUM_SHARED_SNAPSHOT_SLOTS (2 * max_prepared_xacts)
 
 #endif   /* SHAREDSNAPSHOT_H */
