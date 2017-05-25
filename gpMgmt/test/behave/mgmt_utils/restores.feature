@@ -32,6 +32,7 @@ Feature: Validate command line arguments
         Then gpdbrestore should return a return code of 2
         And gpdbrestore should print "Name has an invalid character" to stdout
 
+    @ddpartIII
     Scenario: gpdbrestore -b with Full timestamp
         Given the backup test is initialized with no backup files
         And there is a "ao" table "public.ao_index_table" in "bkdb" with data
@@ -82,3 +83,18 @@ Feature: Validate command line arguments
         Then gpdbrestore should return a return code of 2
         And gpdbrestore should print "-u cannot be used with DDBoost parameters" to stdout
 
+    Scenario: gpdbrestore with -d with invalid master data directory
+        When the user runs "gpdbrestore -a -t 20140101010101 -d /tmp"
+        Then gpdbrestore should return a return code of 2
+        And gpdbrestore should print "gpdbrestore failed.* No such file or directory" to stdout
+
+    Scenario: gpdbrestore with -l to log to /tmp directory
+        Given the backup test is initialized with no backup files
+        When the user runs "gpdbrestore -l /tmp"
+        Then gpdbrestore should return a return code of 2
+        And the "gpdbrestore" log file should exist under "/tmp"
+
+    @ddonly
+    @ddboostsetup
+    Scenario: Cleanup DDBoost dump directories
+        Given the DDBoost dump directory is deleted

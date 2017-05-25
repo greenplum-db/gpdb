@@ -6,6 +6,7 @@ BEHAVE_BIN=$(PYTHONSRC_INSTALL)/bin/behave
 PYTHONSRC_INSTALL_SITE=$(shell find $(PYLIB_SRC_EXT)/install/lib -name "site-packages")
 PYTHONSRC_INSTALL_PYTHON_PATH=$(PYTHONPATH):$(PYTHONSRC_INSTALL_SITE)
 TAR?=$(shell which tar)
+PEXPECT_LIB=$(GPHOME)/bin/lib
 
 $(BEHAVE_BIN):
 	TAR=$(TAR) make -C bin $(BEHAVE_BIN)
@@ -15,9 +16,9 @@ $(BEHAVE_BIN):
 behave: $(BEHAVE_BIN)
 	@echo "Running behave on management scripts..."
 	@if [ -n """$(flags)""" ]; then \
-	        PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH):$(GPMGMT_SRC) python $(BEHAVE_BIN) $(GPMGMT_SRC)/test/behave/* -s -k $(flags) 2>&1 ; \
+		PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH):$(GPMGMT_SRC):$(PEXPECT_LIB) python $(BEHAVE_BIN) $(GPMGMT_SRC)/test/behave/* -s -k $(flags) 2>&1 ; \
 	elif [ -n """$(tags)""" ]; then \
-	        PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH):$(GPMGMT_SRC) python $(BEHAVE_BIN) $(GPMGMT_SRC)/test/behave/* -s -k --tags=$(tags) 2>&1 ; \
+		PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH):$(GPMGMT_SRC):$(PEXPECT_LIB) python $(BEHAVE_BIN) $(GPMGMT_SRC)/test/behave/* -s -k --tags=$(tags) 2>&1 ; \
 	else \
-	        echo "Please specify tags=tagname or flags=[behave flags]"; \
+		echo "Please specify tags=tagname or flags=[behave flags]"; \
 	fi

@@ -1011,7 +1011,12 @@ def get_backup_dirs_for_hosts(dbname='template1'):
 def cleanup_backup_files(context, dbname, location=None):
     dir_map = get_backup_dirs_for_hosts(dbname)
     for host in dir_map:
-        if location:
+
+        if os.getenv('DDBOOST'):
+            ddboost_dir = context._root['ddboost_backupdir']
+            cmd_str = "ssh %s 'for DIR in %s; do if [ -d \"$DIR/%s\" ]; then rm -rf $DIR/%s $DIR/gpcrondump.pid; fi; done'"
+            cmd = cmd_str % (host, " ".join(dir_map[host]), ddboost_dir, ddboost_dir)
+        elif location:
             cmd_str = "ssh %s 'DIR=%s;if [ -d \"$DIR/db_dumps/\" ]; then rm -rf $DIR/db_dumps $DIR/gpcrondump.pid; fi'"
             cmd = cmd_str % (host, location)
         else:
