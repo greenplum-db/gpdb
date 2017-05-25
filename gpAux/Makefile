@@ -161,7 +161,7 @@ APU_CONFIG=--with-apu-config=$(BLD_THIRDPARTY_BIN_DIR)/apu-1-config
 
 CODEGEN_CONFIG=--enable-codegen --with-codegen-prefix=/opt/llvm-3.7.1
 
-win32_CONFIGFLAGS=--with-gssapi --without-libcurl $(APR_CONFIG)
+win32_CONFIGFLAGS=--with-gssapi --without-libcurl --disable-orca $(APR_CONFIG)
 sol10_x86_64_CONFIGFLAGS=--enable-snmp --with-libxml $(APR_CONFIG)
 rhel5_x86_32_CONFIGFLAGS=--host=i686-pc-linux-gnu --enable-snmp --enable-ddboost --with-gssapi --enable-netbackup --with-libxml $(APR_CONFIG)
 rhel5_x86_64_CONFIGFLAGS=--enable-snmp --enable-gpperfmon --enable-ddboost --with-gssapi --enable-netbackup ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
@@ -648,6 +648,11 @@ else
 ifneq "$(FILESET_LIB_GCC)" ""
 	(cd $(CLIENTINSTLOC_LIB)/ && $(TAR) cf - -C $(FILESET_LIB_GCC_LOC) $(FILESET_LIB_GCC) | $(TAR) xpf -)$(check_pipe_for_errors)
 endif
+
+	# ---- copy scripts fileset ----
+	mkdir -p $(CLIENTINSTLOC)
+	cp -f client/scripts/greenplum_$@_path$(SCRIPT) $(CLIENTINSTLOC)/
+
 	# ---- copy license files ----
 	cp ${BLD_TOP}/../LICENSE $(CLIENTINSTLOC)
 	cp ${BLD_TOP}/../NOTICE $(CLIENTINSTLOC)
@@ -718,6 +723,10 @@ endif
 ifneq "$(findstring $(BLD_ARCH),sol10_sparc_32)" ""
 	(cd /usr/local/lib/ && $(TAR) cf - libiconv.so* libexpat.so*) | (cd $(LOADERSINSTLOC_LIB)/ && $(TAR) xpf -)$(check_pipe_for_errors)
 endif
+
+	# ---- copy scripts fileset ----
+	mkdir -p $(LOADERSINSTLOC)
+	cp -f client/scripts/greenplum_$@_path$(SCRIPT) $(LOADERSINSTLOC)/
 
 	# ---- copy license files ----
 	cp ${BLD_TOP}/../LICENSE $(LOADERSINSTLOC)

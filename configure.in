@@ -526,6 +526,7 @@ fi
 # We already have this in Makefile.win32, but configure needs it too
 if test "$PORTNAME" = "win32"; then
   CPPFLAGS="$CPPFLAGS -I$srcdir/src/include/port/win32 -IgpAux/ext/win32/kfw-3-2-2/inc/krb5 -IgpAux/ext/win32/kfw-3-2-2/inc/krb5/gssapi -LgpAux/ext/win32/kfw-3-2-2/lib  -DEXEC_BACKEND -DUNSAFE_STAT_OK"
+
 fi
 
 # Check if the compiler still works with the template settings
@@ -1296,14 +1297,15 @@ fi
 ## Header files
 ##
 
+AC_INCLUDES_DEFAULT
+
 # Check for Greenplum Query Optimizer (orca) and supporting Greenplum OS header files.
-AS_IF([test "$enable_orca" = yes],
-[ # then
+if test "$enable_orca" = yes; then
   PGAC_CHECK_ORCA_HEADERS
   PGAC_CHECK_ORCA_XERCES
   PGAC_CHECK_ORCA_LIBS
   PGAC_CHECK_ORCA_VERSION
-]) # fi
+fi
 
 dnl sys/socket.h is required by AC_FUNC_ACCEPT_ARGTYPES
 AC_CHECK_HEADERS([atomic.h crypt.h dld.h endian.h fp_class.h getopt.h ieeefp.h ifaddrs.h langinfo.h mbarrier.h poll.h pwd.h sys/ioctl.h sys/ipc.h sys/poll.h sys/pstat.h sys/resource.h sys/select.h sys/sem.h sys/shm.h sys/socket.h sys/sockio.h sys/tas.h sys/time.h sys/un.h termios.h ucred.h utime.h wchar.h wctype.h kernel/OS.h kernel/image.h SupportDefs.h])
