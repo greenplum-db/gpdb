@@ -41,41 +41,30 @@
                   <codeph>log_duration</codeph>
                </p>
             </stentry>
-            <stentry>
-               <p>
+            <stentry><p>
                   <codeph>log_executor_stats</codeph>
-               </p>
-               <p>
+               </p><p>
                   <codeph>log_hostname</codeph>
-               </p>
-               <p>
+               </p><p>
                   <codeph>log_parser_stats</codeph>
-               </p>
-               <p>
+               </p><p>
                   <codeph>log_planner_stats</codeph>
-               </p>
-               <p>
+               </p><p>
                   <codeph>log_statement</codeph>
-               </p>
-               <p>
+               </p><p>
                   <codeph>log_statement_stats</codeph>
-               </p>
-               <p>
+               </p><p>
                   <codeph>log_timezone</codeph>
-               </p>
-               <p>
+               </p><p>
                   <codeph>gp_debug_linger</codeph>
-               </p>
-               <p>
+               </p><p>
                   <codeph>gp_log_format</codeph>
-               </p>
+               </p><codeph>gp_log_gang</codeph>
                <p>
                   <codeph>gp_max_csv_line_length</codeph>
-               </p>
-               <p>
+               </p><p>
                   <codeph>gp_reraise_signal</codeph>
-               </p>
-            </stentry>
+               </p></stentry>
          </strow>
       </simpletable>
    </body>

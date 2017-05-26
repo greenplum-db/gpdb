@@ -351,6 +351,9 @@
               <xref href="#gp_log_fts"/>
             </li>
             <li>
+              <xref href="#gp_log_gang"/>
+            </li>
+            <li>
               <xref href="#gp_max_csv_line_length"/>
             </li>
             <li>
@@ -625,19 +628,49 @@
               <xref href="#optimizer_control" type="section">optimizer_control</xref>
             </li>
             <li>
+              <xref href="#optimizer_cte_inlining_bound" type="section"
+                >optimizer_cte_inlining_bound</xref>
+            </li>
+            <li>
               <xref href="#optimizer_enable_master_only_queries" type="section"
                 >optimizer_enable_master_only_queries</xref>
+            </li>
+            <li>
+              <xref href="#optimizer_force_multistage_agg" type="section"
+                >optimizer_force_multistage_agg</xref>
+            </li>
+            <li>
+              <xref href="#optimizer_force_three_stage_scalar_dqa" type="section"
+                >optimizer_force_three_stage_scalar_dqa</xref>
             </li>
             <li>
               <xref href="#optimizer_join_order_threshold" type="section"
                 >optimizer_join_order_threshold</xref>
             </li>
             <li>
+              <xref href="#optimizer_mdcache_size" type="section"/>
+            </li>
+            <li>
+              <xref href="#optimizer_metadata_caching" type="section"/>
+            </li>
+            <li>
               <xref href="#optimizer_minidump" type="section">optimizer_minidump</xref>
+            </li>
+            <li>
+              <xref href="#optimizer_nestloop_factor" type="section"
+                >optimizer_nestloop_factor</xref>
             </li>
             <li>
               <xref href="#optimizer_parallel_union" type="section"
               >optimizer_parallel_union</xref></li>
+            <li>
+              <xref href="#optimizer_print_missing_stats" type="section"
+                >optimizer_print_missing_stats</xref>
+            </li>
+            <li>
+              <xref href="#optimizer_print_optimization_stats" type="section"
+                >optimizer_print_optimization_stats</xref>
+            </li>
             <li>
               <xref href="#optimizer_sort_factor" format="dita">optimizer_sort_factor</xref></li>
             <li>
@@ -3837,6 +3870,35 @@
       </table>
     </body>
   </topic>
+  <topic id="gp_log_gang">
+    <title>gp_log_gang</title>
+    <body>
+      <p>Controls the amount of information that is written to the log file about query worker
+        process creation and query management. The default value is <codeph>OFF</codeph>, do not log
+        information.</p>
+      <table id="gp_log_fts_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">OFF<p>TERSE</p><p>VERBOSE</p><p>DEBUG</p></entry>
+              <entry colname="col2">OFF</entry>
+              <entry colname="col3">master<p>session</p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="gp_gpperfmon_send_interval">
     <title>gp_gpperfmon_send_interval</title>
     <body>
@@ -4148,8 +4210,8 @@
   <topic id="gp_interconnect_setup_timeout">
     <title>gp_interconnect_setup_timeout</title>
     <body>
-      <note>This parameter is deprecated, as it applies only to an interconnect type that is no
-        longer supported (<codeph>UDP</codeph>).</note>
+      <p>Specifies the amount of time to wait for the Greenplum Database interconnect to complete
+        setup before it times out.</p>
       <table id="gp_interconnect_setup_timeout_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4388,7 +4450,7 @@
   <topic id="gp_max_packet_size">
     <title>gp_max_packet_size</title>
     <body>
-      <p>Sets the tuple-serialization chunk size for the interconnect.</p>
+      <p>Sets the tuple-serialization chunk size for the Greenplum Database interconnect.</p>
       <table id="gp_max_packet_size_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -6469,7 +6531,7 @@
         well. For more information about limiting concurrent connections, see "Configuring Client
         Authentication" in the <i>Greenplum Database Administrator Guide</i>.</p>
       <p>Increasing this parameter may cause Greenplum Database to request more shared
-        memory. Increasing this parameter might cause Greenplum Database to request more shared
+        memory.Increasing this parameter might cause Greenplum Database to request more shared
         memory. See <xref href="#shared_buffers" format="dita"/> for information about Greenplum
         server instance shared memory buffers.</p>
       <table id="max_connections_table">
@@ -6997,6 +7059,37 @@
       </table>
     </body>
   </topic>
+  <topic id="optimizer_cte_inlining_bound">
+    <title>optimizer_cte_inlining_bound</title>
+    <body>
+      <p>When GPORCA is enabled (the default), this parameter controls the amount of inlining
+        performed for common table expression (CTE) queries (queries that contain a
+          <codeph>WHERE</codeph> clause). The default value, 0, disables inlining.</p>
+      <p>The parameter can be set for a database system, an individual database, or a session or
+        query.</p>
+      <table id="table_dq1_xlj_tz">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Decimal >= 0</entry>
+              <entry colname="col2">0</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="optimizer_enable_master_only_queries">
     <title>optimizer_enable_master_only_queries</title>
     <body>
@@ -7033,12 +7126,76 @@
       </table>
     </body>
   </topic>
+  <topic id="optimizer_force_multistage_agg">
+    <title>optimizer_force_multistage_agg</title>
+    <body>
+      <p>For the default settings, GPORCA is enabled and this parameter is <codeph>true</codeph>,
+        GPORCA chooses a 3 stage aggregate plan for scalar distinct qualified aggregate when such a
+        plan alternative is generated. When the value is <codeph>false</codeph>, GPORCA makes a cost
+        based choice rather than a heuristic choice.</p>
+      <p>The parameter can be set for a database system, an individual database, or a session or
+        query. </p>
+      <table id="table_kmz_vnr_tz">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">true</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="optimizer_force_three_stage_scalar_dqa">
+    <title>optimizer_force_three_stage_scalar_dqa</title>
+    <body>
+      <p>For the default settings, GPORCA is enabled and this parameter is <codeph>true</codeph>,
+        GPORCA chooses a plan with multistage aggregates when such a plan alternative is generated.
+        When the value is <codeph>false</codeph>, GPORCA makes a cost based choice rather than a
+        heuristic choice.</p>
+      <p>The parameter can be set for a database system, an individual database, or a session, or
+        query.</p>
+      <table id="table_dqy_vnr_tz">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">true</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="optimizer_join_order_threshold">
     <title>optimizer_join_order_threshold</title>
     <body>
-      <p>Sets the maximum number of join children for which GPORCA will use the dynamic
-        programming-based join ordering algorithm. You can set this value for a single query or for
-        an entire session.</p>
+      <p>When GPORCA is enabled (the default), this parameter sets the maximum number of join
+        children for which GPORCA will use the dynamic programming-based join ordering algorithm.
+        You can set this value for a single query or for an entire session.</p>
       <table id="table_z1c_bqp_jx">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -7055,6 +7212,82 @@
             <row>
               <entry colname="col1">0 - INT_MAX</entry>
               <entry colname="col2">10</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="optimizer_mdcache_size">
+    <title>optimizer_mdcache_size</title>
+    <body>
+      <p dir="ltr">Sets the maximum amount of memory on the Greenplum Database master that GPORCA
+        uses to cache query metadata (optimization data) during query optimization. The memory limit
+        session based. GPORCA caches query metadata during query optimization with the default
+        settings: GPORCA is enabled and <codeph><xref href="#optimizer_metadata_caching"
+            format="dita">optimizer_metadata_caching</xref></codeph> is <codeph>on</codeph>. </p>
+      <p dir="ltr">The default value is 16384 (16MB). This is an optimal value that has been
+        determined through performance analysis.</p>
+      <p dir="ltr">You can specify a value in KB, MB, or GB. The default unit is KB. For example, a
+        value of 16384 is 16384KB. A value of 1GB is the same as 1024MB or 1048576KB. If the value
+        is 0, the size of the cache is not limited. </p>
+      <p>This parameter can be set for a database system, an individual database, or a session or
+        query.</p>
+      <table id="optimizer_mdcache_size_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Integer >= 0</entry>
+              <entry colname="col2">16384</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="optimizer_metadata_caching">
+    <title>optimizer_metadata_caching</title>
+    <body>
+      <p dir="ltr" id="docs-internal-guid-698e4ca6-574c-b75b-5cbe-8c7bfd011557">When GPORCA is
+        enabled (the default), this parameter specifies whether GPORCA caches query metadata
+        (optimization data) in memory on the Greenplum Database master during query optimization.
+        The default for this parameter is <codeph>on</codeph>, enable caching. The cache is session
+        based. When a session ends, the cache is released. If the amount of query metadata exceeds
+        the cache size, then old, unused metadata is evicted from the cache. </p>
+      <p dir="ltr">If the value is <codeph>off</codeph>, GPORCA does not cache metadata during query
+        optimization.</p>
+      <p>This parameter can be set for a database system, an individual database, or a session or
+        query.</p>
+      <p>The server configuration parameter <codeph><xref href="#optimizer_mdcache_size"
+            format="dita"/></codeph> controls the size of the query metadata cache.</p>
+      <table id="optimizer_metadata_caching_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">on</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
@@ -7110,6 +7343,39 @@
       </table>
     </body>
   </topic>
+  <topic id="optimizer_nestloop_factor">
+    <title>optimizer_nestloop_factor</title>
+    <body>
+      <p>When GPORCA is enabled (the default), this parameter controls nested loop join cost factor
+        to apply to during query optimization. The default value, <codeph>1</codeph>, specifies the
+        default sort cost factor. The value is a ratio of increase or decrease from the default
+        factor. For example, a value of <codeph>2.0</codeph> sets the cost factor at twice the
+        default, and a value of <codeph>0.5</codeph> sets the factor at half the default.</p>
+      <p>The parameter can be set for a database system, an individual database, or a session or
+        query.</p>
+      <table id="table_zy2_xlj_tz">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Decimal > 0</entry>
+              <entry colname="col2">1</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="optimizer_parallel_union">
     <title>optimizer_parallel_union</title>
     <body>
@@ -7140,6 +7406,78 @@
           <tbody>
             <row>
               <entry colname="col1">boolean</entry>
+              <entry colname="col2">off</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="optimizer_print_missing_stats">
+    <title>optimizer_print_missing_stats</title>
+    <body>
+      <p>When GPORCA is enabled (the default), this parameter controls the display of table column
+        information about columns with missing statistics for a query. The default value is
+          <codeph>true</codeph>, display the column information to the client. When the value is
+          <codeph>false</codeph>, the information is not sent to the client.</p>
+      <p>The information is displayed during query execution, or with the <codeph>EXPLAIN</codeph>
+        or <codeph>EXPLAIN ANALYZE</codeph> commands.</p>
+      <p>The parameter can be set for a database system, an individual database, or a session. </p>
+      <table id="table_z35_fsj_tz">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">true</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="optimizer_print_optimization_stats">
+    <title>optimizer_print_optimization_stats</title>
+    <body>
+      <p>When GPORCA is enabled (the default), this parameter enables logging of GPORCA query
+        optimization statistics for various optimization stages for a query. The default value is
+          <systemoutput>off</systemoutput>, do not log optimization statistics. To log the
+        optimization statistics, this parameter must be set to <systemoutput>on</systemoutput> and
+        the parameter <systemoutput>client_min_messages</systemoutput> must be set to
+          <systemoutput>log</systemoutput>.<ul id="ul_ysz_tx2_5z">
+          <li><codeph>set optimizer_print_optimization_stats = on;</codeph></li>
+          <li><codeph>set client_min_messages = 'log';</codeph></li>
+        </ul></p>
+      <p>The information is logged during query execution, or with the <codeph>EXPLAIN</codeph> or
+          <codeph>EXPLAIN ANALYZE</codeph> commands.</p>
+      <p>This parameter can be set for a database system, an individual database,or a session or
+        query.</p>
+      <table id="table_pdm_kx2_5z">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
               <entry colname="col2">off</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
