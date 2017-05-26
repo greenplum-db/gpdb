@@ -20,5 +20,13 @@ extern void ExecReScanPartitionSelector(PartitionSelectorState *node, ExprContex
 extern int ExecCountSlotsPartitionSelector(PartitionSelector *node);
 extern void initGpmonPktForPartitionSelector(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
 
+/*
+ * partition_selector_walker - check whether the child nodes contain partition selector
+ *
+ * @node				the root node
+ * @return			True if contain partition selector; otherwise false
+ */
+extern bool contain_partition_selector(Node *node);
+
 #endif   /* NODEPARTITIONSELECTOR_H */
 

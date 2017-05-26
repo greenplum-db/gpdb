@@ -23,6 +23,7 @@
 #include "access/skey.h"
 #include "nodes/makefuncs.h"
 #include "executor/execHHashagg.h"
+#include "executor/nodePartitionSelector.h"
 #include "optimizer/clauses.h"
 #include "optimizer/cost.h"
 #include "optimizer/pathnode.h"
@@ -2757,7 +2758,7 @@ create_nestloop_plan(PlannerInfo *root,
 		mat->plan.plan_rows = inner_plan->plan_rows;
 		mat->plan.plan_width = inner_plan->plan_width;
 
-		if (best_path->outerjoinpath->motionHazard)
+		if (best_path->outerjoinpath->motionHazard || contain_partition_selector((Node *)mat))
 		{
 			mat->cdb_strict = true;
 			prefetch = true;
@@ -2771,8 +2772,9 @@ create_nestloop_plan(PlannerInfo *root,
 	 * its strictness.
 	 */
 	else if (IsA(best_path->innerjoinpath, MaterialPath) &&
-			 best_path->innerjoinpath->motionHazard &&
-			 best_path->outerjoinpath->motionHazard)
+			 ((best_path->innerjoinpath->motionHazard &&
+			 best_path->outerjoinpath->motionHazard) ||
+			 (contain_partition_selector((Node *)inner_plan))))
 	{
 		Material   *mat = (Material *) inner_plan;
 

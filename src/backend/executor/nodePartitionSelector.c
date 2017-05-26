@@ -346,5 +346,26 @@ partition_propagation(EState *estate, List *partOids, List *scanIds, int32 selec
 	}
 }
 
+static bool
+partition_selector_walker(Node *node, void *context)
+{
+	Node *outerNode = NULL;
+
+	Assert(IsA(node, Material));
+
+	outerNode = (Node *)((Plan *)node)->lefttree;
+	if (outerNode == NULL)
+	{
+		return false;
+	}
+	return IsA(outerNode, PartitionSelector);
+}
+
+bool
+contain_partition_selector(Node *node)
+{
+	return partition_selector_walker(node, NULL);
+}
+
 /* EOF */
 
