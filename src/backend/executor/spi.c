@@ -1788,7 +1788,7 @@ _SPI_execute_plan(_SPI_plan * plan, ParamListInfo paramLI,
 			if (plan->saved)
 			{
 				/* Replan if needed, and increment plan refcount locally */
-				cplan = RevalidateCachedPlan(plansource, true);
+				cplan = RevalidateCachedPlanWithParams(plansource, true, paramLI, NULL);
 				stmt_list = cplan->stmt_list;
 			}
 			else
