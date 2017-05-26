@@ -75,7 +75,8 @@
             <p>Greenplum Database end-users interact with Greenplum Database (through the master) as
                 they would with a typical PostgreSQL database. They connect to the database using
                 client programs such as <codeph>psql</codeph> or application programming interfaces
-                (APIs) such as libpq, JDBC or ODBC.</p>
+                (APIs) such as JDBC, ODBC or <xref href="https://www.postgresql.org/docs/current/static/libpq.html" format="html"
+                scope="external">libpq</xref> (the PostgreSQL C API).</p>
             <p>The master is where the <i>global system catalog</i> resides. The global system
                 catalog is the set of system tables that contain metadata about the Greenplum
                 Database system itself. The master does not contain any user data; data resides only
