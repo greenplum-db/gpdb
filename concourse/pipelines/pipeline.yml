@@ -1,4 +1,14 @@
 ## ======================================================================
+## resource types
+## ======================================================================
+
+resource_types:
+- name: s3-week-long-urls
+  type: docker-image
+  source:
+    repository: pivotaldata/s3-resource
+
+## ======================================================================
 ## resources
 ## ======================================================================
 
@@ -105,7 +115,7 @@ resources:
 #     regexp: windows-cl/greenplum-loaders-5.(.*)-WinXP-x86_32.msi
 
 - name: installer_rhel6_gpdb_rc
-  type: s3
+  type: s3-week-long-urls
   source:
     access_key_id: {{bucket-access-key-id}}
     bucket: {{bucket-name}}
@@ -231,7 +241,7 @@ resources:
     regexp: deliverables/greenplum-loaders-5.(.*)-rhel7-x86_64.zip
 
 - name: qautils_rhel6_tarball
-  type: s3
+  type: s3-week-long-urls
   source:
     access_key_id: {{bucket-access-key-id}}
     bucket: {{bucket-name}}
@@ -277,7 +287,7 @@ resources:
     regexp: deliverables/greenplum-loaders-5.(.*)-sles11-x86_64.zip
 
 - name: gpdb_src_tinc_tarball
-  type: s3
+  type: s3-week-long-urls
   source:
     access_key_id: {{bucket-access-key-id}}
     bucket: {{bucket-name}}
