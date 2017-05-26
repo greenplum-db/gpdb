@@ -20,7 +20,7 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-[ WITH <replaceable class="parameter">with_query</replaceable> [, ...] ]
+[ WITH [ RECURSIVE ] <replaceable class="parameter">with_query</replaceable> [, ...] ]
 SELECT [ ALL | DISTINCT [ ON ( <replaceable class="parameter">expression</replaceable> [, ...] ) ] ]
     * | <replaceable class="parameter">expression</replaceable> [ [AS] <replaceable class="parameter">output_name</replaceable> ] [, ...]
     [ FROM <replaceable class="parameter">from_item</replaceable> [, ...] ]
@@ -62,6 +62,7 @@ where <replaceable class="parameter">from_item</replaceable> can be one of:
 
     [ ONLY ] <replaceable class="parameter">table_name</replaceable> [ * ] [ [ AS ] <replaceable class="parameter">alias</replaceable> [ ( <replaceable class="parameter">column_alias</replaceable> [, ...] ) ] ]
     ( <replaceable class="parameter">select</replaceable> ) [ AS ] <replaceable class="parameter">alias</replaceable> [ ( <replaceable class="parameter">column_alias</replaceable> [, ...] ) ]
+    <replaceable class="parameter">with_query_name</replaceable> [ [ AS ] <replaceable class="parameter">alias</replaceable> [ ( <replaceable class="parameter">column_alias</replaceable> [, ...] ) ] ]
     <replaceable class="parameter">function_name</replaceable> ( [ <replaceable class="parameter">argument</replaceable> [, ...] ] ) [ AS ] <replaceable class="parameter">alias</replaceable> [ ( <replaceable class="parameter">column_alias</replaceable> [, ...] | <replaceable class="parameter">column_definition</replaceable> [, ...] ) ]
     <replaceable class="parameter">function_name</replaceable> ( [ <replaceable class="parameter">argument</replaceable> [, ...] ] ) AS ( <replaceable class="parameter">column_definition</replaceable> [, ...] )
     <replaceable class="parameter">from_item</replaceable> [ NATURAL ] <replaceable class="parameter">join_type</replaceable> <replaceable class="parameter">from_item</replaceable> [ ON <replaceable class="parameter">join_condition</replaceable> | USING ( <replaceable class="parameter">join_column</replaceable> [, ...] ) ]
@@ -73,10 +74,9 @@ where <replaceable class="parameter">group_elem</replaceable> can be one of:
     GROUPING SETS ( <replaceable class="parameter">group_elem</replaceable> [, ...] ] )
     ( )
 
-and <replaceable class="parameter">with_query</replaceable> can be:
-    <replaceable class="parameter">query_name</replaceable> [ ( <replaceable class="parameter">column</replaceable> [, ...] ) ]
-    AS ( { VALUES ( <replaceable class="PARAMETER">expression</replaceable> [, ...] ) | <replaceable class="parameter">query</replaceable> } )
+and <replaceable class="parameter">with_query</replaceable> is:
 
+    <replaceable class="parameter">with_query_name</replaceable> [ ( <replaceable class="parameter">column_name</replaceable> [, ...] ) ] AS ( <replaceable class="parameter">select</replaceable> )
 </synopsis>
 
  </refsynopsisdiv>
@@ -89,6 +89,17 @@ and <replaceable class="parameter">with_query</replaceable> can be:
    The general processing of <command>SELECT</command> is as follows:
 
    <orderedlist>
+    <listitem>
+     <para>
+      All queries in the <literal>WITH</literal> list are computed.
+      These effectively serve as temporary tables that can be referenced
+      in the <literal>FROM</literal> list.  A <literal>WITH</literal> query
+      that is referenced more than once in <literal>FROM</literal> is
+      computed only once.
+      (See <xref linkend="sql-with" endterm="sql-with-title"> below.)
+     </para>
+    </listitem>
+
     <listitem>
      <para>
       All elements in the <literal>FROM</literal> list are computed.
@@ -201,6 +212,56 @@ and <replaceable class="parameter">with_query</replaceable> can be:
  <refsect1>
   <title>Parameters</title>
 
+  <refsect2 id="SQL-WITH">
+   <title id="sql-with-title"><literal>WITH</literal> Clause</title>
+
+   <para>
+    The <literal>WITH</literal> clause allows you to specify one or more
+    subqueries that can be referenced by name in the primary query.
+    The subqueries effectively act as temporary tables or views
+    for the duration of the primary query.
+   </para>
+
+   <para>
+    A name (without schema qualification) must be specified for each
+    <literal>WITH</literal> query.  Optionally, a list of column names
+    can be specified; if this is omitted,
+    the column names are inferred from the subquery.
+   </para>
+
+   <para>
+    If <literal>RECURSIVE</literal> is specified, it allows a
+    subquery to reference itself by name.  Such a subquery must have
+    the form
+<synopsis>
+<replaceable class="parameter">non_recursive_term</replaceable> UNION ALL <replaceable class="parameter">recursive_term</replaceable>
+</synopsis>
+    where the recursive self-reference must appear on the right-hand
+    side of <literal>UNION ALL</>.  Only one recursive self-reference
+    is permitted per query.
+   </para>
+
+   <para>
+    Another effect of <literal>RECURSIVE</literal> is that
+    <literal>WITH</literal> queries need not be ordered: a query
+    can reference another one that is later in the list.  (However,
+    circular references, or mutual recursion, are not implemented.)
+    Without <literal>RECURSIVE</literal>, <literal>WITH</literal> queries
+    can only reference sibling <literal>WITH</literal> queries
+    that are earlier in the <literal>WITH</literal> list.
+   </para>
+
+   <para>
+    A useful property of <literal>WITH</literal> queries is that they
+    are evaluated only once per execution of the primary query,
+    even if the primary query refers to them more than once.
+   </para>
+
+   <para>
+    See <xref linkend="queries-with"> for additional information.
+   </para>
+  </refsect2>
+
   <refsect2 id="SQL-FROM">
    <title id="sql-from-title"><literal>FROM</literal> Clause</title>
 
@@ -263,6 +324,21 @@ and <replaceable class="parameter">with_query</replaceable> can be:
         provided for it.  A
         <xref linkend="sql-values" endterm="sql-values-title"> command
         can also be used here.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><replaceable class="parameter">with_query_name</replaceable></term>
+      <listitem>
+       <para>
+        A <literal>WITH</> query is referenced by writing its name,
+        just as though the query's name were a table name.  (In fact,
+        the <literal>WITH</> query hides any real table of the same name
+        for the purposes of the primary query.  If necessary, you can
+        refer to a real table of the same name by schema-qualifying
+        the table's name.)
+        An alias can be provided in the same way as for a table.
        </para>
       </listitem>
      </varlistentry>
@@ -1135,6 +1211,58 @@ SELECT * FROM distributors_2(111) AS (f1 int, f2 text);
  111 | Walt Disney
 </programlisting>
   </para>
+
+  <para>
+   This example shows how to use a simple <literal>WITH</> clause:
+
+<programlisting>
+WITH t AS (
+    SELECT random() as x FROM generate_series(1, 3)
+  )
+SELECT * FROM t
+UNION ALL
+SELECT * FROM t
+
+         x          
+--------------------
+  0.534150459803641
+  0.520092216785997
+ 0.0735620250925422
+  0.534150459803641
+  0.520092216785997
+ 0.0735620250925422
+</programlisting>
+
+   Notice that the <literal>WITH</> query was evaluated only once,
+   so that we got two sets of the same three random values.
+  </para>
+
+  <para>
+   This example uses <literal>WITH RECURSIVE</literal> to find all
+   subordinates (direct or indirect) of the employee Mary, and their
+   level of indirectness, from a table that shows only direct
+   subordinates:
+
+<programlisting>
+WITH RECURSIVE employee_recursive(distance, employee_name, manager_name) AS (
+    SELECT 1, employee_name, manager_name
+    FROM employee
+    WHERE manager_name = 'Mary'
+  UNION ALL
+    SELECT er.distance + 1, e.employee_name, e.manager_name
+    FROM employee_recursive er, employee e
+    WHERE er.employee_name = e.manager_name
+  )
+SELECT distance, employee_name FROM employee_recursive;
+</programlisting>
+
+   Notice the typical form of recursive queries:
+   an initial condition, followed by <literal>UNION ALL</literal>,
+   followed by the recursive part of the query. Be sure that the
+   recursive part of the query will eventually return no tuples, or
+   else the query will loop indefinitely.  (See <xref linkend="queries-with">
+   for more examples.)
+  </para>
  </refsect1>
  
  <refsect1>
@@ -1216,7 +1344,7 @@ SELECT distributors.* WHERE distributors.name = 'Westward';
 
    <para>
     SQL:1999 and later use a slightly different definition which is not
-    entirely upward compatible with SQL-92.  
+    entirely upward compatible with SQL-92.
     In most cases, however, <productname>PostgreSQL</productname>
     will interpret an <literal>ORDER BY</literal> or <literal>GROUP
     BY</literal> expression the same way SQL:1999 does.
