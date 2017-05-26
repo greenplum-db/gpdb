@@ -1801,21 +1801,35 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	 */
 	Assert(estate->es_subplanstates == NIL);
 	i = 1;						/* subplan indices count from 1 */
+	Motion *m = NULL;
+	bool eliminate_aliens = memory_profiler_dataset_size == 9 && Gp_segment == 0 && LocallyExecutingSliceIndex(estate) != 0  /* && LocallyExecutingSliceIndex(estate) == 1 && LocallyExecutingSliceIndex(estate) != RootSliceIndex(estate) */;
+	List *sub_plan_roots = NULL;
+
+	if (eliminate_aliens)
+	{
+		m = getLocalMotion(plannedstmt, LocallyExecutingSliceIndex(estate));
+		sub_plan_roots = getLocalSubplans(plannedstmt, m);
+	}
+
 	foreach(l, plannedstmt->subplans)
 	{
 		Plan	   *subplan = (Plan *) lfirst(l);
-		PlanState  *subplanstate;
-		int			sp_eflags;
 
-		/*
-		 * A subplan will never need to do BACKWARD scan nor MARK/RESTORE.
-		 *
-		 * GPDB: We always set the REWIND flag, to delay eagerfree.
-		 */
-		sp_eflags = eflags & EXEC_FLAG_EXPLAIN_ONLY;
-		sp_eflags |= EXEC_FLAG_REWIND;
+		PlanState  *subplanstate = NULL;
+		int			sp_eflags = 0;
 
-		subplanstate = ExecInitNode(subplan, estate, sp_eflags);
+		if (!eliminate_aliens || list_find(sub_plan_roots, subplan) != -1)
+		{
+			/*
+			 * A subplan will never need to do BACKWARD scan nor MARK/RESTORE.
+			 *
+			 * GPDB: We always set the REWIND flag, to delay eagerfree.
+			 */
+			sp_eflags = eflags & EXEC_FLAG_EXPLAIN_ONLY;
+			sp_eflags |= EXEC_FLAG_REWIND;
+
+			subplanstate = ExecInitNode(subplan, estate, sp_eflags);
+		}
 
 		estate->es_subplanstates = lappend(estate->es_subplanstates,
 										   subplanstate);
@@ -1828,11 +1842,10 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	 * tree.  This opens files, allocates storage and leaves us ready to start
 	 * processing tuples.
 	 */
-	if (memory_profiler_dataset_size == 9 && Gp_segment != -1 && LocallyExecutingSliceIndex(estate) != 0  /* && LocallyExecutingSliceIndex(estate) == 1 && LocallyExecutingSliceIndex(estate) != RootSliceIndex(estate) */)
+	if (eliminate_aliens)
 	{
-		Motion *m = getLocalMotion(plannedstmt, LocallyExecutingSliceIndex(estate));
 		//elog(WARNING, "After: %x\n%s", m, nodeToString(m));
-		planstate = ExecInitNode(m, estate, eflags);
+		planstate = ExecInitNode((Plan *) m, estate, eflags);
 	}
 	else
 	{
@@ -2513,8 +2526,10 @@ ExecEndPlan(PlanState *planstate, EState *estate)
 	foreach(l, estate->es_subplanstates)
 	{
 		PlanState  *subplanstate = (PlanState *) lfirst(l);
-
-		ExecEndNode(subplanstate);
+		if (subplanstate != NULL)
+		{
+			ExecEndNode(subplanstate);
+		}
 	}
 
 	/*

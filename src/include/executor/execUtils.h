@@ -25,6 +25,7 @@ extern void AssignGangs(QueryDesc *queryDesc);
 extern void ReleaseGangs(QueryDesc *queryDesc);
 
 extern Motion *getLocalMotion(PlannedStmt *plannedstmt, int sliceIndex);
+extern List *getLocalSubplans(PlannedStmt *plannedstmt, Motion *root);
 
 #ifdef USE_ASSERT_CHECKING
 struct PlannedStmt;

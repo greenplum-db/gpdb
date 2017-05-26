@@ -2267,6 +2267,12 @@ typedef struct MotionFinderContext
 	Motion *motion; /* Output */
 } MotionFinderContext;
 
+typedef struct SubPlanFinderContext
+{
+	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
+	List *subplans; /* Output */
+} SubPlanFinderContext;
+
 /**
  * Walker method that finds motion state node within a planstate tree.
  */
@@ -2315,7 +2321,7 @@ MotionFinderWalker(Plan *node,
 	}
 
 	/* Continue walking */
-	return plan_tree_walker(node, MotionFinderWalker, ctx);
+	return plan_tree_walker((Node*)node, MotionFinderWalker, ctx);
 }
 
 /**
@@ -2341,7 +2347,7 @@ Motion *getLocalMotion(PlannedStmt *plannedstmt, int sliceIndex)
 
 	Plan *planTree = plannedstmt->planTree;
 	MotionFinderContext ctx;
-	ctx.base.node = plannedstmt;
+	ctx.base.node = (Node*)plannedstmt;
 	ctx.motionId = sliceIndex;
 	ctx.motion = NULL;
 	MotionFinderWalker(planTree, &ctx);
@@ -2349,6 +2355,44 @@ Motion *getLocalMotion(PlannedStmt *plannedstmt, int sliceIndex)
 //	elog(WARNING, "Before: %x\n%s", ctx.motion, nodeToString(ctx.motion));
 	return ctx.motion;
 }
+
+static bool
+SubPlanFinderWalker(Plan *node,
+				  void *context)
+{
+	Assert(context);
+	SubPlanFinderContext *ctx = (SubPlanFinderContext *) context;
+
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, Motion))
+	{
+		return true;	/* don't visit subtree */
+	}
+
+	if (IsA(node, SubPlan))
+	{
+		SubPlan *sub_plan = (SubPlan *) node;
+		Plan *sub_plan_root = plan_tree_base_subplan_get_plan(context, sub_plan);
+		lappend(ctx->subplans, sub_plan_root);
+	}
+
+	/* Continue walking */
+	return plan_tree_walker((Node*)node, SubPlanFinderWalker, ctx);
+}
+
+List *getLocalSubplans(PlannedStmt *plannedstmt, Motion *root)
+{
+	SubPlanFinderContext ctx;
+	Plan* root_plan = outerPlan(root);
+	ctx.base.node = (Node*)plannedstmt;
+	ctx.subplans = NIL;
+	SubPlanFinderWalker(root_plan, &ctx);
+//	elog(WARNING, "Before: %x\n%s", ctx.motion, nodeToString(ctx.motion));
+	return ctx.subplans;
+}
+
 
 /**
  * Provide index of locally executing slice
