@@ -430,9 +430,9 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 
 		if (nattr > 13)
 		{
-			TupleDescInitEntry(tupdesc, (AttrNumber) 14, "rsgid", OIDOID, -1, 0);
-			TupleDescInitEntry(tupdesc, (AttrNumber) 15, "rsgname", TEXTOID, -1, 0);
-			TupleDescInitEntry(tupdesc, (AttrNumber) 16, "rsgqueueduration", INTERVALOID, -1, 0);
+			TupleDescInitEntry(tupdesc, (AttrNumber) 14, "rg_id", OIDOID, -1, 0);
+			TupleDescInitEntry(tupdesc, (AttrNumber) 15, "rg_name", TEXTOID, -1, 0);
+			TupleDescInitEntry(tupdesc, (AttrNumber) 16, "rg_queued_duration", INTERVALOID, -1, 0);
 		}
 
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
