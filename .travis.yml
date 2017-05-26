@@ -82,7 +82,7 @@ before_script:
 
 script:
   - cd ${TRAVIS_BUILD_DIR}
-  - ./configure --with-openssl --with-ldap --with-libcurl --prefix=${TRAVIS_BUILD_DIR}/gpsql --with-apr-config=${TRAVIS_BUILD_DIR}/tools/bin/apr-1-config --disable-orca
+  - ./configure --with-openssl --with-ldap --with-libcurl --prefix=${TRAVIS_BUILD_DIR}/gpsql --with-apr-config=${TRAVIS_BUILD_DIR}/tools/bin/apr-1-config --disable-orca --disable-gpcloud
 
   - make
   - make install
@@ -105,7 +105,7 @@ script:
 ## ----------------------------------------------------------------------
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
-       brew install libevent          ; 
+       brew install libevent;
     fi
 
 ## ----------------------------------------------------------------------
