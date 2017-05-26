@@ -328,6 +328,8 @@
 		navtitle="Greenplum PL/Python Language Extension" id="pl_python"/>
 	<chapter href="ref_guide/extensions/pl_java.xml" navtitle="Greenplum PL/Java Language Extension"
 		id="pl_java"/>
+	<chapter href="ref_guide/extensions/pl_perl.xml"
+		navtitle="Greenplum PL/Perl Language Extension" id="pl_perl"/>
 	<chapter href="ref_guide/extensions/madlib.xml"
 		navtitle="Greenplum MADlib Extension for Analytics" id="madlib"/>
 	<chapter href="ref_guide/extensions/fuzzystrmatch.xml"

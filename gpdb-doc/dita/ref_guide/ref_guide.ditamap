@@ -234,6 +234,8 @@
 			id="pl_python"/>
 		<topicref href="extensions/pl_java.xml" navtitle="Greenplum PL/Java Language Extension"
 			id="pl_java"/>
+		<topicref href="extensions/pl_perl.xml" navtitle="Greenplum PL/Perl Language Extension"
+			id="pl_perl"/>
 		<topicref href="extensions/madlib.xml" navtitle="Greenplum MADlib Extension for Analytics"
 			id="madlib"/>
 		<topicref href="extensions/fuzzystrmatch.xml"
