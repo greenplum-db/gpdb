@@ -24,8 +24,6 @@ class GpCheckInfo:
         self.host_type = HostType.GPCHECK_HOSTTYPE_UNDEFINED
         self.appliance_version = None
         self.hosts = dict()
-        self.collection_start_time = 0 # used in NTPD testing
-        self.collection_end_time = 0 # used in NTPD testing
 
 class GpCheckConfig:
     def __init__(self):
@@ -415,17 +413,6 @@ def testIOSchedulers(host):
 
             printError(host.hostname, "on device (%s) IO scheduler '%s' does not match expected value '%s'" % (dev, scheduler, expectedScheduler))
 
-def testNtp(host):
-
-    if host.data.ntp.currenttime < (gpcheck_info.collection_start_time - 1):
-        printError(host.hostname, "potential NTPD issue.  gpcheck start time (%s) time on machine (%s)" % (time.ctime(gpcheck_info.collection_start_time), time.ctime(host.data.ntp.currenttime)))
-
-    if host.data.ntp.currenttime > (gpcheck_info.collection_end_time + 1):
-        printError(host.hostname, "potential NTPD issue.  gpcheck end time (%s) time on machine (%s)" % (time.ctime(gpcheck_info.collection_start_time), time.ctime(host.data.ntp.currenttime)))
-
-    if not host.data.ntp.running:
-        printError(host.hostname, "ntpd not detected on machine")
-
 
 def testLimitsConf(host):
 
@@ -517,9 +504,6 @@ def testGenericLinuxHost(host):
 
     # test XFS mounts
     testLinuxMounts(host)
-
-    # ntpd tests
-    testNtp(host)
 
 def testGenericSolarisHost(host):
 
