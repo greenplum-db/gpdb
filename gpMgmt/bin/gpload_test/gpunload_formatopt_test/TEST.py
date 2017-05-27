@@ -56,7 +56,7 @@ def getPortMasterOnly(host = 'localhost',master_value = None,
 
     (ok,out) = run(cmd)
     if not ok:
-        raise GPTestError("Unable to connect to segment server %s as user %s" % (host, user))
+        raise Exception("Unable to connect to segment server %s as user %s" % (host, user))
 
     for line in out:
         out = line.split('\n')
@@ -66,7 +66,7 @@ def getPortMasterOnly(host = 'localhost',master_value = None,
 
     if master_value == None:
         error_msg = "".join(out)
-        raise GPTestError(error_msg)
+        raise Exception(error_msg)
 
     return str(master_value)
 
@@ -79,7 +79,7 @@ UPD = os.path.abspath(mkpath('..'))
 if UPD not in sys.path:
     sys.path.append(UPD)
 
-DBNAME = "gptest"
+DBNAME = "postgres"
 USER = os.environ.get( "LOGNAME" )
 HOST = socket.gethostname()
 GPHOME = os.getenv("GPHOME")
@@ -95,7 +95,7 @@ d = mkpath('config')
 if not os.path.exists(d):
     os.mkdir(d)
 
-def write_config_file(reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',append='False'):
+def write_config_file(reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',append='False'):
 
     f = open(mkpath('config/config_file'),'w')
     f.write("VERSION: 1.0.0.1")
@@ -273,9 +273,9 @@ def isFileEqual( f1, f2, optionalFlags = "", outputPath = "", myinitfile = ""):
 
     LMYD = os.path.abspath(os.path.dirname(__file__))
     if not os.access( f1, os.R_OK ):
-        raise GPTestError( 'Error: cannot find file %s' % f1 )
+        raise Exception( 'Error: cannot find file %s' % f1 )
     if not os.access( f2, os.R_OK ):
-        raise GPTestError( 'Error: cannot find file %s' % f2 )
+        raise Exception( 'Error: cannot find file %s' % f2 )
     dfile = diffFile( f1, outputPath = outputPath )
     # Gets the suitePath name to add init_file
     suitePath = f1[0:f1.rindex( "/" )]
@@ -407,39 +407,39 @@ class gpunload_FormatOpts_TestCase(unittest.TestCase):
 
     def test_01_gpunload_formatOpts_delimiter(self):
         "1  gpunload formatOpts delimiter '|' with reuse "
-        write_config_file(reuse_flag='true',formatOpts='text',file='data/data_file_01.txt',table='texttable',delimiter="'|'")
+        write_config_file(reuse_flag='true',formatOpts='text',file='data_file_01.txt',table='texttable',delimiter="'|'")
         self.doTest(1)
 
     def test_02_gpunload_formatOpts_delimiter(self):
         "2  gpunload formatOpts delimiter '\t' with reuse"
-        write_config_file(reuse_flag='true',formatOpts='text',file='data/data_file_02.txt',table='texttable',delimiter="'\t'")
+        write_config_file(reuse_flag='true',formatOpts='text',file='data_file_02.txt',table='texttable',delimiter="'\t'")
         self.doTest(2)
 
     def test_03_gpunload_formatOpts_delimiter(self):
         "3  gpunload formatOpts delimiter E'\t' with reuse"
-        write_config_file(reuse_flag='true',formatOpts='text',file='data/data_file_03.txt',table='texttable',delimiter="E'\\t'")
+        write_config_file(reuse_flag='true',formatOpts='text',file='data_file_03.txt',table='texttable',delimiter="E'\\t'")
         self.doTest(3)
 
     def test_04_gpunload_formatOpts_delimiter(self):
         "4  gpunload formatOpts delimiter E'\u0009' with reuse"
-        write_config_file(reuse_flag='true',formatOpts='text',file='data/data_file_04.txt',table='texttable',delimiter="E'\u0009'")
+        write_config_file(reuse_flag='true',formatOpts='text',file='data_file_04.txt',table='texttable',delimiter="E'\u0009'")
         self.doTest(4)
 
     def test_05_gpunload_formatOpts_delimiter(self):
         "5  gpunload formatOpts delimiter E'\\'' with reuse"
-        write_config_file(reuse_flag='true',formatOpts='text',file='data/data_file_05.txt',table='texttable',delimiter="E'\''")
+        write_config_file(reuse_flag='true',formatOpts='text',file='data_file_05.txt',table='texttable',delimiter="E'\''")
         self.doTest(5)
 
     def test_06_gpunload_formatOpts_delimiter(self):
         "6  gpunload formatOpts delimiter \"'\" with reuse"
-        write_config_file(reuse_flag='true',formatOpts='text',file='data/data_file_06.txt',table='texttable',delimiter="\"'\"")
+        write_config_file(reuse_flag='true',formatOpts='text',file='data_file_06.txt',table='texttable',delimiter="\"'\"")
         self.doTest(6)
 
     def test_07_gpunload_file_append(self):
         "7  gpunload extracts data from table to file with append"
-        write_config_file(reuse_flag='true',formatOpts='text',file='data/data_file_06.txt',table='texttable',delimiter="\"'\"",append='true')
+        write_config_file(reuse_flag='true',formatOpts='text',file='data_file_06.txt',table='texttable',delimiter="\"'\"",append='true')
         f = open(mkpath('query7.sql'),'a')
-        f.write("\! wc data/data_file_06.txt\n")
+        f.write("\! wc data_file_06.txt\n")
         f.close()
         self.doTest(7)
 

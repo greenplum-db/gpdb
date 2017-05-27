@@ -12,4 +12,4 @@
 2017-04-26 08:14:49|INFO|running time: 0.05 seconds
 2017-04-26 08:14:49|INFO|rows Extracted          = 12
 2017-04-26 08:14:49|INFO|gpunload succeeded
-  36   72 2916 data/data_file_06.txt
+  36   72 2916 data_file_06.txt
