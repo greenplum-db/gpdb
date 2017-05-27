@@ -1382,6 +1382,7 @@ static void session_detach(request_t* r)
 		if (session->is_get && session->nrequest == 0)
 		{
 			gprintln(r, "session has finished all segment requests");
+			session_free(session);
 		}
 
 		/* for auto-tid sessions, we can free it now */
