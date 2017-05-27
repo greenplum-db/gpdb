@@ -830,16 +830,55 @@ LockAcquire(const LOCKTAG *locktag,
 			 lock->tag.locktag_field3);
 		Insist(false);
 	}
+
 	/*
-	 * If lock requested conflicts with locks requested by waiters, must join
-	 * wait queue.	Otherwise, check for conflict with already-held locks.
-	 * (That's last because most complex check.)
+	 * If WRITER (MyProc == lockHolderProcPtr), check if lock requested
+	 * conflicts with locks requested by waiters, must join wait queue.
+	 *
+	 * If READER (MyProc != lockHolderProcPtr), check if requested a same
+	 * lock already held by its writer, just granted (STATUS_OK), otherwise
+	 * wait in the queue if conflicting with waitMask.
+	 *
+	 * Otherwise, check for conflict with already-held locks. (That's
+	 * last because most complex check.)
 	 */
-	if (MyProc == lockHolderProcPtr && (lockMethodTable->conflictTab[lockmode] & lock->waitMask))
-		status = STATUS_FOUND;
-	else
+	status = STATUS_ERROR; /*init to an invalid value.*/
+	if (MyProc == lockHolderProcPtr)
+	{
+		if (lockMethodTable->conflictTab[lockmode] & lock->waitMask)
+			status = STATUS_FOUND;
+	}
+	else if (MyProc != lockHolderProcPtr)
+	{
+		PROCLOCKTAG writerProcLockTag;
+
+		uint32 writerProcLockHashCode;
+
+		writerProcLockTag.myLock = lock;
+		writerProcLockTag.myProc = lockHolderProcPtr;
+
+		writerProcLockHashCode = ProcLockHashCode(&writerProcLockTag, hashcode);
+
+		hash_search_with_hash_value(LockMethodProcLockHash,
+									(void *) &writerProcLockTag,
+									writerProcLockHashCode,
+									HASH_FIND,
+									&found);
+		if (found)
+		{
+			status = STATUS_OK;
+		}
+		else if (lockMethodTable->conflictTab[lockmode] & lock->waitMask)
+		{
+			status = STATUS_FOUND;
+		}
+	}
+
+	if (status == STATUS_ERROR)
+	{
 		status = LockCheckConflicts(lockMethodTable, lockmode,
 									lock, proclock, MyProc);
+	}
 
 	if (status == STATUS_OK)
 	{
