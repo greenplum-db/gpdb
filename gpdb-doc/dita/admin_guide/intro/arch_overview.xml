@@ -94,7 +94,7 @@
     <body>
       <p>The <i>interconnect</i> refers to the inter-process communication between segments and the
         network infrastructure on which this communication relies. The Greenplum interconnect uses a
-        standard 10-Gigabit Ethernet switching fabric.</p>
+        standard Ethernet switching fabric. For performance reasons, this should be a 10-Gigabit system, or faster.</p>
       <p>By default, the interconnect uses User Datagram Protocol with flow control (UDPIFC) for
         interconnect traffic to send messages over the network. The Greenplum software performs
         packet verification beyond what is provided by UDP. This means the reliability is equivalent
