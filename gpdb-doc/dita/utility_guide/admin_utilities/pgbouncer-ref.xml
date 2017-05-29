@@ -741,7 +741,7 @@ db = ...
           <b>Minimal Configuration</b>
         </p>
         <codeblock>[databases]
-template1 = host=127.0.0.1 dbname=template1 auth_user=gpadmin
+postgres = host=127.0.0.1 dbname=postgres auth_user=gpadmin
 
 [pgbouncer]
 pool_mode = session

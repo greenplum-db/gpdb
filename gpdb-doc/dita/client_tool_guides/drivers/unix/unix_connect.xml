@@ -130,7 +130,7 @@ Driver =
 greenplum-connectivity-4.3.x.x/drivers/odbc/psqlodbc-02.08.0500/unixodbc-2.2.14/psqlodbcw.so
 Trace = 1
 Debug=1
-Database = template1
+Database = postgres
 Servername = gpmaster_hostname
 UserName = gpadmin
 Password = dbpassword_for_gpadmin

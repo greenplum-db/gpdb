@@ -305,13 +305,13 @@ Valid starting     Expires            Service principal
         <steps>
           <step>
             <cmd>Create a Greenplum Database administrator role in the database
-                <codeph>template1</codeph> for the Kerberos principal that is used as the database
+                <codeph>postgres</codeph> for the Kerberos principal that is used as the database
               administrator. The following example uses <codeph>gpamin/kerberos-gpdb</codeph>.</cmd>
             <stepxmp>
-              <codeblock>psql template1 -c 'create role "gpadmin/kerberos-gpdb" login superuser;'
+              <codeblock>psql postgres -c 'create role "gpadmin/kerberos-gpdb" login superuser;'
 </codeblock>
             </stepxmp>
-            <info> The role you create in the database <codeph>template1</codeph> will be available
+            <info> The role you create in the database <codeph>postgres</codeph> will be available
               in any new Greenplum Database that you create. </info>
           </step>
           <step id="nr157586">
@@ -346,7 +346,7 @@ Valid starting     Expires            Service principal
             <cmd>As a test, log in to the database as the <codeph>gpadmin</codeph> role with the
               Kerberos credentials <codeph>gpadmin/kerberos-gpdb</codeph>:</cmd>
             <stepxmp>
-              <codeblock>psql -U "gpadmin/kerberos-gpdb" -h master.test template1
+              <codeblock>psql -U "gpadmin/kerberos-gpdb" -h master.test postgres
 </codeblock>
             </stepxmp>
             <info>

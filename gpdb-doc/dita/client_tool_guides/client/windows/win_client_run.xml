@@ -33,7 +33,7 @@
                             <entry colname="col1">Database name</entry>
                             <entry colname="col2">The name of the database to which you want to
                                 connect. For a newly initialized system, use the
-                                    <codeph>template1</codeph> database to connect for the first
+                                    <codeph>postgres</codeph> database to connect for the first
                                 time.</entry>
                             <entry colname="col3"><codeph>$PGDATABASE</codeph></entry>
                         </row>
@@ -80,8 +80,8 @@ $ psql.exe gpdatabase
 
 $ psql.exe</codeblock>
             <p>If a user-defined database has not yet been created, you can access the system by
-                connecting to the <codeph>template1</codeph> database. For example:</p>
-            <codeblock>$ psql.exe template1</codeblock>
+                connecting to the <codeph>postgres</codeph> database. For example:</p>
+            <codeblock>$ psql.exe postgres</codeblock>
             <p>After connecting to a database, <codeph>psql</codeph> provides a prompt with the name
                 of the database to which <codeph>psql</codeph> is currently connected, followed by
                 the string <codeph>=&gt;</codeph> (or <codeph>=#</codeph> if you are the database

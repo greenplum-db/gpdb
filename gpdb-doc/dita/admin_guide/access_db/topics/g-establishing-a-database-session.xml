@@ -37,7 +37,7 @@
                <row>
                   <entry colname="col1">Database name</entry>
                   <entry colname="col2">The name of the database to which you want to connect. For a
-                     newly initialized system, use the <codeph>template1</codeph> database to
+                     newly initialized system, use the <codeph>postgres</codeph> database to
                      connect for the first time.</entry>
                   <entry colname="col3">
                      <codeph>$PGDATABASE</codeph>
