@@ -23,7 +23,7 @@
     </ul>
     <p>Pivotal provides an optional system monitoring and management tool, Greenplum Command
       Center, which administrators can install and enable with Greenplum Database.
-      Greenplum Command Center depends upon a dedicated database named
+      Greenplum Command Center depends upon a dedicated database in GPDB, named
       <codeph>gpperfmon</codeph>, which is used to collect and store system metrics.
       Data collection agents on the segments send their data to the Greenplum master at
       regular intervals (typically every 15 seconds).</p>
