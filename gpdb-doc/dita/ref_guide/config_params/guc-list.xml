@@ -7831,7 +7831,7 @@
           <tbody>
             <row>
               <entry colname="col1">string</entry>
-              <entry colname="col2">8.2.15</entry>
+              <entry colname="col2">8.3.23</entry>
               <entry colname="col3">read only</entry>
             </row>
           </tbody>
@@ -7859,7 +7859,7 @@
           <tbody>
             <row>
               <entry colname="col1">integer</entry>
-              <entry colname="col2">80215</entry>
+              <entry colname="col2">80323</entry>
               <entry colname="col3">read only</entry>
             </row>
           </tbody>

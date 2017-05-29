@@ -6,7 +6,7 @@
     <body>
         <p>Greenplum Database stores and processes large amounts of data by distributing the data
             and processing workload across several servers or <i>hosts</i>. Greenplum Database is an
-                <i>array</i> of individual databases based upon PostgreSQL 8.2 working together to
+                <i>array</i> of individual databases based upon PostgreSQL 8.3 working together to
             present a single database image. The <i>master</i> is the entry point to the Greenplum
             Database system. It is the database instance to which clients connect and submit SQL
             statements. The master coordinates its work with the other database instances in the

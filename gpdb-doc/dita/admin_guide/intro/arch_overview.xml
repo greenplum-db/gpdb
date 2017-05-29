@@ -14,7 +14,7 @@
       resources in parallel to process a query.</p>
     <p>Greenplum Database is based on PostgreSQL open-source technology. It is essentially several
       PostgreSQL database instances acting together as one cohesive database management system
-      (DBMS). It is based on PostgreSQL 8.2.15, and in most cases is very similar to PostgreSQL with
+      (DBMS). It is based on PostgreSQL 8.3.23, and in most cases is very similar to PostgreSQL with
       regard to SQL support, features, configuration options, and end-user functionality. Database
       users interact with Greenplum Database as they would with a regular PostgreSQL DBMS. </p>
     <p>The internals of PostgreSQL have been modified or supplemented to support the parallel
@@ -31,7 +31,7 @@
       developed by Greenplum, and it is now in standard PostgreSQL.</p>
     <p>Greenplum Database stores and processes large amounts of data by distributing the data and
       processing workload across several servers or <i>hosts</i>. Greenplum Database is an
-        <i>array</i> of individual databases based upon PostgreSQL 8.2 working together to present a
+        <i>array</i> of individual databases based upon PostgreSQL 8.3 working together to present a
       single database image. The <i>master</i> is the entry point to the Greenplum Database system.
       It is the database instance to which clients connect and submit SQL statements. The master
       coordinates its work with the other database instances in the system, called <i>segments</i>,
