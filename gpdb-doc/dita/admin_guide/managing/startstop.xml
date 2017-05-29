@@ -146,6 +146,9 @@
           </stepxmp>
         </step>
       </steps-unordered>
+      By default, you are not allowed to shut down Greenplum Database if there are any
+      client connections to the database. Use the <codeph>-M fast</codeph> option to roll
+      back all in progress transactions and terminate any connections before shutting down.</p>
     </taskbody>
   </task>
 </topic>
