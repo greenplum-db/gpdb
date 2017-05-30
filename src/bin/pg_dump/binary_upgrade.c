@@ -79,6 +79,64 @@ dumpNamespaceOid(Archive *AH, NamespaceInfo *info)
 }
 
 void
+dumpAggProcedureOid(PGconn *conn, Archive *fout, Archive *AH, AggInfo *info)
+{
+	char		upgrade_query[QUERY_ALLOC];
+	PQExpBuffer	upgrade_buffer;
+	int 		i;
+	int			ntups;
+	PGresult   *upgrade_res;
+
+	if (!info->aggfn.dobj.dump)
+		return;
+
+	upgrade_buffer = createPQExpBuffer();
+
+	for (i = 0; i < AGG_FUNCS; i++)
+	{
+		Oid			procoid;
+		Oid			nsoid;
+		char	   *proname;
+
+		if (agg_fns[i].version > fout->remoteVersion)
+			continue;
+
+		snprintf(upgrade_query, sizeof(upgrade_query),
+				 "SELECT p.oid, p.proname, p.pronamespace "
+				 "FROM   pg_catalog.pg_proc p JOIN pg_catalog.pg_aggregate a "
+				 "       ON (p.oid = a.%s) where a.aggfnoid = '%u'::pg_catalog.oid;",
+				 agg_fns[i].name, info->aggfn.dobj.catId.oid);
+
+		upgrade_res = PQexec(conn, upgrade_query);
+		check_sql_result(upgrade_res, conn, upgrade_query, PGRES_TUPLES_OK);
+		ntups = PQntuples(upgrade_res);
+
+		if (ntups <= 0)
+			continue;
+
+		procoid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "oid")));
+		nsoid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "pronamespace")));
+		proname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "proname"));
+
+		appendPQExpBuffer(upgrade_buffer,
+						  "SELECT binary_upgrade.preassign_procedure_oid("
+						  "'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid);\n",
+						  procoid, proname, nsoid);
+
+		PQclear(upgrade_res);
+	}
+
+	ArchiveEntry(AH, nilCatalogId, createDumpId(),
+				 info->aggfn.dobj.name,
+				 NULL, NULL, "",
+				 false, "BINARY UPGRADE AGGREGATE", upgrade_buffer->data, "", NULL,
+				 NULL, 0,
+				 NULL, NULL);
+
+	destroyPQExpBuffer(upgrade_buffer);
+}
+
+void
 dumpProcedureOid(Archive *AH, FuncInfo *info)
 {
 	/* Skip if not to be dumped */

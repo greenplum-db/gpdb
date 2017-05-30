@@ -16,11 +16,30 @@
 #ifndef BINARY_UPGRADE_H
 #define BINARY_UPGRADE_H
 
-#define QUERY_ALLOC 8192
-
 #include "postgres_fe.h"
 #include "pg_backup_archiver.h"
 #include "libpq/libpq-fs.h"
+
+#define QUERY_ALLOC 8192
+
+#define AGG_FUNCS	6
+
+typedef struct AggregateFunction
+{
+	char	name[NAMEDATALEN];
+	int		version;
+} AggregateFunction;
+
+static AggregateFunction agg_fns[AGG_FUNCS] =
+{
+	{"aggfnoid",		80300},
+	{"aggtransfn",		80300},
+	{"agginvtransfn",	80300},
+	{"aggfinalfn",		80300},
+	{"aggprelimfn",		80300},
+	{"agginvprelimfn",	80300}
+};
+
 
 extern void dumpTableOid(PGconn *conn, Archive *fout, Archive *AH, TableInfo *info);
 extern void dumpIndexOid(PGconn *conn, Archive *AH, IndxInfo *info);
@@ -40,5 +59,6 @@ extern void dumpProcLangOid(PGconn *conn, Archive *fout, Archive *AH, ProcLangIn
 extern void dumpCastOid(Archive *AH, CastInfo *info);
 extern void dumpTSObjectOid(Archive *AH, DumpableObject *info);
 extern void dumpExtensionOid(Archive *AH, ExtensionInfo *info);
+extern void dumpAggProcedureOid(PGconn *conn, Archive *fout, Archive *AH, AggInfo *info);
 
 #endif /* BINARY_UPGRADE_H */

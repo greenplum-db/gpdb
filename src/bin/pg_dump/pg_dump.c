@@ -5457,6 +5457,9 @@ dumpBinaryUpgrade(Archive *fout, DumpableObject **dobjs, int numObjs)
 			case DO_CONSTRAINT:
 				dumpConstraintOid(g_conn, fout, (ConstraintInfo *) dobj);
 				break;
+			case DO_AGG:
+				dumpAggProcedureOid(g_conn, g_fout, fout, (AggInfo *) dobj);
+				break;
 			case DO_PROCLANG:
 				dumpProcLangOid(g_conn, g_fout, fout, (ProcLangInfo *) dobj);
 				break;
@@ -5483,7 +5486,6 @@ dumpBinaryUpgrade(Archive *fout, DumpableObject **dobjs, int numObjs)
 			 * only or are exempt from Oid pre-assignment due to handling Oid
 			 * synchronization in another way.
 			 */
-			case DO_AGG:
 			case DO_BLOBS:
 			case DO_BLOB_COMMENTS:
 			case DO_TRIGGER:
