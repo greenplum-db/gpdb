@@ -20,7 +20,7 @@
           Greenplum Database uses <i>template1</i> to create databases unless you
         specify another template. Do not create any objects in <i>template1</i> unless you want
         those objects to be in every database you create. </p>
-      <p>Greenplum uses another database templates, <i>template0</i>, internally. Do not drop or
+      <p>Greenplum Database uses another database templates, <i>template0</i>, internally. Do not drop or
           modify <i>template0</i>. You can use <i>template0</i> to create a completely clean
           database containing only the standard objects predefined by Greenplum Database at
           initialization, especially if you modified <i>template1</i>.</p>
