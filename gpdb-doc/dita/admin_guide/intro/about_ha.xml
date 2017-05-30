@@ -27,7 +27,7 @@
         segment to protect against a single host failure. In virtualized environments, the
         secondary (mirror) must always reside on a different storage system than the master.
         Mirror segments can be arranged over the remaining hosts in the cluster in configurations
-        designed to maximize availability or minimize the performance degradation when hosts or
+        designed to maximize availability, or minimize the performance degradation when hosts or
         multiple primary segments fail. </p>
       <p>Two standard mirroring configurations are available when you initialize or expand a
         Greenplum system. The default configuration, called <i>group mirroring</i>, places all the
