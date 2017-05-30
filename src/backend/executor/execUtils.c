@@ -2316,7 +2316,7 @@ MotionFinderWalker(Plan *node,
 		if (m->motionID == ctx->motionId)
 		{
 			ctx->motion = m;
-			return true;	/* don't visit subtree */
+			return false;	/* don't visit subtree */
 		}
 	}
 
@@ -2363,19 +2363,16 @@ SubPlanFinderWalker(Plan *node,
 	Assert(context);
 	SubPlanFinderContext *ctx = (SubPlanFinderContext *) context;
 
-	if (node == NULL)
-		return false;
-
-	if (IsA(node, Motion))
+	if (node == NULL || IsA(node, Motion))
 	{
-		return true;	/* don't visit subtree */
+		return false;	/* don't visit subtree */
 	}
 
 	if (IsA(node, SubPlan))
 	{
 		SubPlan *sub_plan = (SubPlan *) node;
 		Plan *sub_plan_root = plan_tree_base_subplan_get_plan(context, sub_plan);
-		lappend(ctx->subplans, sub_plan_root);
+		ctx->subplans = lappend(ctx->subplans, sub_plan_root);
 	}
 
 	/* Continue walking */
