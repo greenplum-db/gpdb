@@ -200,7 +200,7 @@ preassign_opclass_oid(PG_FUNCTION_ARGS)
 {
 	Oid			opcoid = PG_GETARG_OID(0);
 	char	   *objname = GET_STR(PG_GETARG_TEXT_P(1));
-	Oid			opcnamespace = PG_GETARG_OID(1);
+	Oid			opcnamespace = PG_GETARG_OID(2);
 
 	if (Gp_role == GP_ROLE_UTILITY)
 	{
