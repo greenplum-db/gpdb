@@ -1,4 +1,4 @@
-export GP_JAVA_OPT='-Xmx1000m -XX:+DisplayVMOutputToStderr'
+export GP_JAVA_OPT='-Xmx1000m -XX:+DisplayVMOutputToStderr -Dhadoop.root.logger=INFO,console, -Dhadoop.security.logger=INFO,NullAppender'
 export PATH=$JAVA_HOME/bin:$PATH
 export KRB5CCNAME=$GP_SEG_DATADIR/gpdb-gphdfs.krb5cc
 JAVA=$JAVA_HOME/bin/java
