@@ -688,6 +688,7 @@ static void
 preassign_type_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_type_oid, char *objname)
 {
 	PQExpBuffer upgrade_query;
+	PQExpBuffer	upgrade_buffer;
 	int			ntups;
 	PGresult   *upgrade_res;
 	int			i;
@@ -761,13 +762,16 @@ preassign_type_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_type_oid, ch
 				 */
 				if (PQgetisnull(upgrade_res, i, i_arr_name))
 				{
-					char array_name[NAMEDATALEN];
+					if (fout->remoteVersion <= 80200)
+					{
+						char array_name[NAMEDATALEN];
 
-					typecache[i].arraytypoid = InvalidOid,
-					typecache[i].arraytypnsp = atooid(PQgetvalue(upgrade_res, i, i_nsp));
+						typecache[i].arraytypoid = InvalidOid,
+						typecache[i].arraytypnsp = atooid(PQgetvalue(upgrade_res, i, i_nsp));
 
-					snprintf(array_name, NAMEDATALEN, "_%s", PQgetvalue(upgrade_res, i, i_name));
-					typecache[i].arraytypname = strdup(array_name);
+						snprintf(array_name, NAMEDATALEN, "_%s", PQgetvalue(upgrade_res, i, i_name));
+						typecache[i].arraytypname = strdup(array_name);
+					}
 				}
 				else
 				{
@@ -794,20 +798,33 @@ preassign_type_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_type_oid, ch
 		exit_nicely();
 	}
 
-	snprintf(query_buffer, sizeof(query_buffer),
-			 "SELECT binary_upgrade.preassign_type_oid('%u'::pg_catalog.oid, "
-			 "'%s'::text, '%u'::pg_catalog.oid);\n"
-			 "SELECT binary_upgrade.preassign_arraytype_oid('%u'::pg_catalog.oid, "
-			 "'%s'::text, '%u'::pg_catalog.oid);\n",
-			 pg_type_oid, type->dobj.name, type->typnsp,
-			 type->arraytypoid, type->arraytypname, type->arraytypnsp);
+	upgrade_buffer = createPQExpBuffer();
+
+	appendPQExpBuffer(upgrade_buffer,
+			 		  "SELECT binary_upgrade.preassign_type_oid("
+					  "'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid);\n",
+					  pg_type_oid, type->dobj.name, type->typnsp);
+
+	/*
+	 * All types doesn't automatically have an arraytype, ensure we have found
+	 * (or added) one above before preassigning.
+	 */
+	if (OidIsValid(type->arraytypoid))
+	{
+		appendPQExpBuffer(upgrade_buffer,
+						  "SELECT binary_upgrade.preassign_arraytype_oid("
+						  "'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid);\n",
+						  type->arraytypoid, type->arraytypname, type->arraytypnsp);
+	}
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
 				 objname,
 				 NULL, NULL, "",
-				 false, "BINARY UPGRADE", query_buffer, "", NULL,
+				 false, "BINARY UPGRADE", upgrade_buffer->data, "", NULL,
 				 NULL, 0,
 				 NULL, NULL);
+
+	destroyPQExpBuffer(upgrade_buffer);
 }
 
 /*
