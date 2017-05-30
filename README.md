@@ -117,7 +117,7 @@ Some configure options are nominally optional, but required to pass
 all regression tests. The minimum set of options for running the
 regression tests successfully is:
 
-`./configure --with-perl --with-python --with-libxml --enable-mapreduce`
+`./configure --with-perl --with-python --with-libxml`
 
 ### Build GPDB with Planner
 
@@ -126,7 +126,7 @@ regression tests successfully is:
 make distclean
 
 # Configure build environment to install at /usr/local/gpdb
-./configure --with-perl --with-python --with-libxml --enable-mapreduce --prefix=/usr/local/gpdb
+./configure --with-perl --with-python --with-libxml --prefix=/usr/local/gpdb
 
 # Compile and install
 make
@@ -175,7 +175,7 @@ Next, change your `configure` command to have the additional option `--enable-or
 # Build with perl module (PL/Perl)
 # Build with python module (PL/Python)
 # Build with XML support
-./configure --with-perl --with-python --with-libxml --enable-mapreduce --enable-orca --prefix=/usr/local/gpdb
+./configure --with-perl --with-python --with-libxml --enable-orca --prefix=/usr/local/gpdb
 ```
 
 Once build and started, run `psql` and check the GPOPT (e.g. GPORCA) version:
@@ -197,7 +197,7 @@ your system.
 ```
 # Configure build environment to install at /usr/local/gpdb
 # Enable CODEGEN
-./configure --with-perl --with-python --with-libxml ---enable-mapreduce --enable-codegen --prefix=/usr/local/gpdb --with-codegen-prefix="/path/to/llvm;/path/to/clang"
+./configure --with-perl --with-python --with-libxml --enable-codegen --prefix=/usr/local/gpdb --with-codegen-prefix="/path/to/llvm;/path/to/clang"
 ```
 
 ### Build GPDB with gpperfmon enabled

@@ -16,15 +16,14 @@
     <title id="im140508">About Template Databases</title>
     <body>
       <p>Each new database you create is based on a <i>template</i>. Greenplum provides a default database, <i>template1</i>. Use
-          <i>template1</i> to connect to Greenplum Database for the first time.
+          <i>postgres</i> to connect to Greenplum Database for the first time.
           Greenplum Database uses <i>template1</i> to create databases unless you
         specify another template. Do not create any objects in <i>template1</i> unless you want
         those objects to be in every database you create. </p>
-      <p>Greenplum Database uses two other database templates, <i>template0</i> and
-          <i>postgres</i>, internally. Do not drop or modify <i>template0</i> or <i>postgres</i>.
-        You can use <i>template0</i> to create a completely clean database containing only the
-        standard objects predefined by Greenplum Database at initialization,
-        especially if you modified <i>template1</i>.</p>
+      <p>Greenplum Database uses another database templates, <i>template0</i>, internally. Do not drop or
+          modify <i>template0</i>. You can use <i>template0</i> to create a completely clean
+          database containing only the standard objects predefined by Greenplum Database at
+          initialization, especially if you modified <i>template1</i>.</p>
     </body>
   </topic>
   <topic id="topic4" xml:lang="en">
@@ -93,10 +92,10 @@
         system catalog entries for the database and deletes the database directory on disk that
         contains the data. You must be the database owner or a superuser to drop a database, and you
         cannot drop a database while you or anyone else is connected to it. Connect to
-          <codeph>template1</codeph> (or another database) before dropping a database. For
+          <codeph>postgres</codeph> (or another database) before dropping a database. For
         example:</p>
       <p>
-        <codeblock>=&gt; \c template1
+        <codeblock>=&gt; \c postgres
 =&gt; DROP DATABASE mydatabase;</codeblock>
       </p>
       <p>You can also use the client program <codeph>dropdb</codeph> to drop a database. For

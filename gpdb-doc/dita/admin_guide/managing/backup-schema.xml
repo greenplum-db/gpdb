@@ -7,8 +7,8 @@
   <body>
     <p>The <codeph>gp_dump</codeph> utility dumps the contents of a database into SQL script files,
       which can then be used to restore the database schema and user data at a later time using
-        <codeph>gp_restore</codeph> The following command will create a shcema dump of the
-        <codeph>template1</codeph> database:</p>
-    <codeblock>$ gp_dump -s template1</codeblock>
+        <codeph>gp_restore</codeph> The following command will create a schema dump of the
+        <codeph>postgres</codeph> database:</p>
+    <codeblock>$ gp_dump -s postgres</codeblock>
   </body>
 </topic>

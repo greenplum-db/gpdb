@@ -268,7 +268,7 @@ gp_email_to='gpdb_dba_group@example.com'
           <p>If the master host can contact the SMTP server, log in to <codeph>psql</codeph> and
             test email notifications with the following command:</p>
           <p>
-            <codeblock>$ psql template1
+            <codeblock>$ psql postgres
 =# SELECT gp_elog('Test GPDB Email',true); gp_elog
 </codeblock>
           </p>

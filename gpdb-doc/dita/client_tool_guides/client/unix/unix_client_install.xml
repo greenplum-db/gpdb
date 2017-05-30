@@ -238,7 +238,7 @@
                                 into the Greenplum Database on the machine
                                     <codeph>kerberos-gpdb</codeph> as the <codeph>gpadmin</codeph>
                                 user with the Kerberos credentials
-                                    <codeph>gpadmin/kerberos-gpdb</codeph>:</p><codeblock>$ psql -U "gpadmin/kerberos-gpdb" -h kerberos-gpdb template1</codeblock></li>
+                                    <codeph>gpadmin/kerberos-gpdb</codeph>:</p><codeblock>$ psql -U "gpadmin/kerberos-gpdb" -h kerberos-gpdb postgres</codeblock></li>
                     </ol>
                 </section>
             </body>

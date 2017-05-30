@@ -458,7 +458,7 @@ print(my_data)</codeblock>
           <li>
             <p>This error can occur when the Kerberos keytab does not contain a matching
               cryptographic type to a client attempting to connect.
-              <codeblock>psql -h 'hostname' template1
+              <codeblock>psql -h 'hostname' postgres
 psql: GSSAPI continuation error: Unspecified GSS failure. Minor code may provide more information
 GSSAPI continuation error: Key version is not available</codeblock></p>
             <p>The resolution is to add the additional encryption types to the keytab using

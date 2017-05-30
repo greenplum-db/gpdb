@@ -95,7 +95,7 @@
           <li>Create a PgBouncer configuration file, for example <codeph>pgbouncer.ini</codeph>.
             Here is a simple configuration
               file:<codeblock>[databases]
-template1 = host=127.0.0.1 port=5432 dbname=template1
+postgres = host=127.0.0.1 port=5432 dbname=postgres
 mydb = host=127.0.0.1 port=5432 dbname=mydb
 
 [pgbouncer]
@@ -146,7 +146,7 @@ md53ce96652dedd8226c498e09ae2d26220</codeblock></p><p>And
             options.</p></li>
           <li>Update client applications to connect to <codeph>pgbouncer</codeph> instead of
             directly to Greenplum Database server. To start <codeph>psql</codeph>, for
-            example:<codeblock>$ psql -p 6543 -U <varname>someuser</varname> template1</codeblock></li>
+            example:<codeblock>$ psql -p 6543 -U <varname>someuser</varname> postgres</codeblock></li>
         </ol>
       </body>
     </topic>

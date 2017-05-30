@@ -507,13 +507,6 @@ class test_backup_restore(BackupTestCase):
         self.run_restore('bkdb3', option = '-T public.ao_table1 -T public.heap_table3 -T public.mixed_part01 -a  --truncate --ddboost')
         self.validate_restore("restore_T_with_e", 'bkdb3')
 
-    def test_ddboost_29_remove_backup_dir(self):
-        cmd_del_dir = "gpddboost --del-dir=%s" % self.BACKUPDIR
-        (err, out) = self.run_command(cmd_del_dir)
-        if err:
-            msg = "Failed to delete backup directory\n" % self.BACKUPDIR
-            raise Exception('Error: %s\n%s'% (msg,out))
-
     def test_ddboost_30_restore_should_not_restore_sequence(self):
         """
         MPP-25744, restoring single table should not restore any sequence with ddboost
@@ -646,3 +639,10 @@ class test_backup_restore(BackupTestCase):
 
         # cleanup the dumped files on DD server
         self.delete_ddboost_files(os.path.join(self.BACKUPDIR, self.full_backup_timestamp[:8]), dumped_files, alternative_storage_unit)
+
+    def test_ddboost_99_remove_backup_dir(self):
+        cmd_del_dir = "gpddboost --del-dir=%s" % self.BACKUPDIR
+        (err, out) = self.run_command(cmd_del_dir)
+        if err:
+            msg = "Failed to delete backup directory %s\n" % self.BACKUPDIR
+            raise Exception('Error: %s\n%s'% (msg,out))
