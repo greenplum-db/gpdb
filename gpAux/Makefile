@@ -165,8 +165,8 @@ win32_CONFIGFLAGS=--with-gssapi --without-libcurl $(APR_CONFIG)
 sol10_x86_64_CONFIGFLAGS=--enable-snmp --with-libxml $(APR_CONFIG)
 rhel5_x86_32_CONFIGFLAGS=--host=i686-pc-linux-gnu --enable-snmp --enable-ddboost --with-gssapi --enable-netbackup --with-libxml $(APR_CONFIG)
 rhel5_x86_64_CONFIGFLAGS=--enable-snmp --enable-gpperfmon --enable-ddboost --with-gssapi --enable-netbackup ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
-rhel6_x86_64_CONFIGFLAGS=--enable-snmp --enable-gpperfmon --enable-ddboost --with-gssapi --enable-netbackup ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
-rhel7_x86_64_CONFIGFLAGS=--enable-snmp --enable-gpperfmon --enable-ddboost --with-gssapi --enable-netbackup ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+rhel6_x86_64_CONFIGFLAGS=--enable-snmp --enable-gpperfmon --enable-ddboost --with-gssapi --enable-netbackup --enable-mapreduce ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+rhel7_x86_64_CONFIGFLAGS=--enable-snmp --enable-gpperfmon --enable-ddboost --with-gssapi --enable-netbackup --enable-mapreduce ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 suse10_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 suse11_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 sles11_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
@@ -183,7 +183,11 @@ PG_LANG=false
 endif
 
 ifneq (false, ${PG_LANG})
+ifeq ($(BLD_ARCH), sles11_x86_64)
+CONFIGFLAGS+= --with-python
+else
 CONFIGFLAGS+= --with-perl --with-python
+endif   # ifdef sles11
 ifdef TCL_CFG
 CONFIGFLAGS+= --with-tcl-config=${TCL_CFG}
 endif
@@ -331,7 +335,6 @@ define BUILD_STEPS
 	  $(MAKE) mkgphdfs INSTLOC=$(INSTLOC) && \
 	  $(MAKE) mkorafce INSTLOC=$(INSTLOC);  \
 	fi
-	cd extensions/gpmapreduce/ && $(MAKE) install
 	@$(MAKE) copydocs INSTLOC=$(INSTLOC)
 	@$(MAKE) copylibs INSTLOC=$(INSTLOC)
 	@$(MAKE) clients INSTLOC=$(INSTLOC) CLIENTINSTLOC=$(CLIENTINSTLOC)
@@ -380,9 +383,6 @@ define BUILD_STEPS
 	cd $(BUILDDIR)/src/interfaces/ecpg/ && $(MAKE) install
 	cd $(BUILDDIR)/src/include/ && $(MAKE) install
 	cd $(BUILDDIR)/src/interfaces/libpq/ && $(MAKE) install
-	if [ "$(findstring win,$(BLD_ARCH))" != "win" ]; then \
-	  cd extensions/gpmapreduce/ && $(MAKE) install ; \
-	fi
 	cd $(BUILDDIR)/src/bin/gpfdist && $(MAKE) install
 	cp -p $(GPMGMT)/bin/gpload $(INSTLOC)/bin/gpload
 	cp -p $(GPMGMT)/bin/gpload.py $(INSTLOC)/bin/gpload.py
@@ -539,9 +539,11 @@ define tmpCLIENT_FILESET
 	pg_dumpall$(EXE_EXT)
 	psql$(EXE_EXT)
 endef
-define Unix_CLIENT_FILESET
+ifeq "$(findstring rhel,$(BLD_ARCH))" "rhel"
+define Unix_CLICENT_FILESET
 	gpmapreduce$(EXE_EXT)
 endef
+endif
 CLIENT_FILESET = $(strip $(tmpCLIENT_FILESET) $($(DOC_TYPE)_CLIENT_FILESET))
 
 # yes, the doubled gpload lines are correct
