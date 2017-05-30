@@ -4762,8 +4762,8 @@ getTableAttrs(TableInfo *tblinfo, int numTables)
 bool
 shouldPrintColumn(TableInfo *tbinfo, int colno)
 {
-	return ((tbinfo->attislocal[colno] || tbinfo->relstorage == RELSTORAGE_EXTERNAL) &&
-			(!tbinfo->attisdropped[colno] || binary_upgrade));
+	return (((tbinfo->attislocal[colno] || tbinfo->relstorage == RELSTORAGE_EXTERNAL) &&
+			!tbinfo->attisdropped[colno]) || binary_upgrade);
 }
 
 
@@ -9825,6 +9825,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				if (actual_atts > 0)
 					appendPQExpBuffer(q, ",");
 				appendPQExpBuffer(q, "\n    ");
+				actual_atts++;
 
 				/* Attribute name */
 				appendPQExpBuffer(q, "%s ",
@@ -9855,17 +9856,17 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 									  tbinfo->attrdefs[j]->adef_expr);
 
 				/*
-				 * Not Null constraint --- suppress if inherited
+				 * Not Null constraint --- suppress if inherited, except in
+				 * binary-upgrade mode where taht won't work.
 				 */
-				if (tbinfo->notnull[j] && !tbinfo->inhNotNull[j])
+				if (tbinfo->notnull[j] &&
+					(!tbinfo->inhNotNull[j] || binary_upgrade))
 					appendPQExpBuffer(q, " NOT NULL");
 
 				/* Column Storage attributes */
 				if (tbinfo->attencoding[j] != NULL)
 					appendPQExpBuffer(q, " ENCODING (%s)",
 										tbinfo->attencoding[j]);
-
-				actual_atts++;
 			}
 		}
 
@@ -9894,7 +9895,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		/*
 		 * Emit the INHERITS clause if this table has parents.
 		 */
-		if (numParents > 0)
+		if (numParents > 0 && !binary_upgrade)
 		{
 			appendPQExpBuffer(q, "\nINHERITS (");
 			for (k = 0; k < numParents; k++)
@@ -10119,6 +10120,11 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				}
 			}
 
+/*
+ * GPDB_84_MERGE_FIXME - When we in 8.4 get conislocal, reactivate this code
+ * for handling constraints. Left if 0'd out to minimize merge conflicts.
+ */
+#if 0
 			for (k = 0; k < tbinfo->ncheck; k++)
 			{
 				ConstraintInfo *constr = &(tbinfo->checkexprs[k]);
@@ -10146,6 +10152,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				appendStringLiteralAH(q, fmtId(tbinfo->dobj.name), fout);
 				appendPQExpBuffer(q, "::pg_catalog.regclass;\n");
 			}
+#endif
 
 			if (numParents > 0)
 			{
