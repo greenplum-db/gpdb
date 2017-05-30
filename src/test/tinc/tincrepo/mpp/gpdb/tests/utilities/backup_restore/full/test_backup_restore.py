@@ -644,5 +644,5 @@ class test_backup_restore(BackupTestCase):
         cmd_del_dir = "gpddboost --del-dir=%s" % self.BACKUPDIR
         (err, out) = self.run_command(cmd_del_dir)
         if err:
-            msg = "Failed to delete backup directory\n" % self.BACKUPDIR
+            msg = "Failed to delete backup directory %s\n" % self.BACKUPDIR
             raise Exception('Error: %s\n%s'% (msg,out))
