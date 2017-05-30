@@ -462,8 +462,8 @@ dumpOpClassOid(PGconn *conn, Archive *AH, OpclassInfo *info)
 	opcnamespace = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "opcnamespace")));
 
 	snprintf(query_buffer, sizeof(query_buffer),
-			 "SELECT binary_upgrade.preassign_opclass_oid('%u'::pg_opclass.oid, "
-			 "'%s'::text, '%u'::pg_opclass.opcnamespace);",
+			 "SELECT binary_upgrade.preassign_opclass_oid('%u'::pg_catalog.oid, "
+			 "'%s'::text, '%u'::pg_catalog.oid);",
 			 info->dobj.catId.oid, info->dobj.name, opcnamespace);
 
 	PQclear(upgrade_res);
