@@ -22,6 +22,7 @@
 
 #include "postgres.h"
 
+#include "access/xact.h"
 #include "cdb/cdbvars.h"
 #include "executor/executor.h"
 #include "executor/nodeShareInputScan.h"
@@ -887,6 +888,23 @@ shareinput_writer_waitdone(void *ctxt, int share_id, int nsharer_xslice)
 	while(ack_needed > 0)
 	{
 		CHECK_FOR_INTERRUPTS();
+
+		/*
+ 		 * Writer won't wait for data reading done notification from readers if transaction is
+ 		 * aborting. Readers may fail to send data reading done notification to writer in two
+		 * cases:
+		 *
+		 *     1. The transaction is aborted due to interrupts or exceptions, i.e., user cancels
+		 *        query, division by zero on some segment
+		 *
+		 *     2. Logic errors in reader which incur its unexpected exit, i.e., segmentation fault
+		 */
+		if (IsAbortInProgress())
+		{
+			elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): do not wait for data-reading-done notification from readers, if the transaction is aborting",
+				 share_id, currentSliceId, ack_needed);
+			break;
+		}
 	
 		MPP_FD_ZERO(&rset);
 		MPP_FD_SET(pctxt->donefd, &rset);
