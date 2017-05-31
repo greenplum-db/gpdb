@@ -131,6 +131,7 @@
 #include "pg_trace.h"
 
 #include "codegen/codegen_wrapper.h"
+#include "utils/debugutils.h"
 
 #ifdef CDB_TRACE_EXECUTOR
 #include "nodes/print.h"
@@ -1097,6 +1098,8 @@ ExecProcNode(PlanState *node)
 
 		case T_AggState:
 			result = ExecAgg((AggState *) node);
+//			if (memory_profiler_dataset_size >= 8 && Gp_segment <= 0 && !TupIsNull(result))
+//				elog(WARNING, "Tuple: %d, %s", Gp_segment, tup2str(result));
 			break;
 
 		case T_UniqueState:

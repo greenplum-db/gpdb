@@ -2273,6 +2273,12 @@ typedef struct SubPlanFinderContext
 	List *subplans; /* Output */
 } SubPlanFinderContext;
 
+typedef struct ParamExtractorContext
+{
+	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
+	EState *estate;
+} ParamExtractorContext;
+
 /**
  * Walker method that finds motion state node within a planstate tree.
  */
@@ -2356,6 +2362,68 @@ Motion *getLocalMotion(PlannedStmt *plannedstmt, int sliceIndex)
 	return ctx.motion;
 }
 
+static void ExtractSubPlanParam(SubPlan *subplan, EState *estate)
+{
+	/*
+	 * If this plan is un-correlated or undirect correlated one and want to
+	 * set params for parent plan then mark parameters as needing evaluation.
+	 *
+	 * Note that in the case of un-correlated subqueries we don't care about
+	 * setting parent->chgParam here: indices take care about it, for others -
+	 * it doesn't matter...
+	 */
+	if (subplan->setParam != NIL)
+	{
+		ListCell   *lst;
+
+		foreach(lst, subplan->setParam)
+		{
+			int			paramid = lfirst_int(lst);
+			ParamExecData *prmExec = &(estate->es_param_exec_vals[paramid]);
+
+			/**
+			 * Has this parameter been already
+			 * evaluated as part of preprocess_initplan()? If so,
+			 * we shouldn't re-evaluate it. If it has been evaluated,
+			 * we will simply substitute the actual value from
+			 * the external parameters.
+			 */
+			if (Gp_role == GP_ROLE_EXECUTE && subplan->is_initplan)
+			{
+				ParamListInfo paramInfo = estate->es_param_list_info;
+				ParamExternData *prmExt = NULL;
+				int extParamIndex = -1;
+
+				Assert(paramInfo);
+				Assert(paramInfo->numParams > 0);
+
+				/*
+				 * To locate the value of this pre-evaluated parameter, we need to find
+				 * its location in the external parameter list.
+				 */
+				extParamIndex = paramInfo->numParams - estate->es_plannedstmt->nParamExec + paramid;
+
+				prmExt = &paramInfo->params[extParamIndex];
+
+				/* Make sure the types are valid */
+				if (!OidIsValid(prmExt->ptype))
+				{
+					prmExec->execPlan = NULL;
+					prmExec->isnull = true;
+					prmExec->value = (Datum) 0;
+				}
+				else
+				{
+					/** Hurray! Copy value from external parameter and don't bother setting up execPlan. */
+					prmExec->execPlan = NULL;
+					prmExec->isnull = prmExt->isnull;
+					prmExec->value = prmExt->value;
+				}
+			}
+		}
+	}
+}
+
 static bool
 SubPlanFinderWalker(Plan *node,
 				  void *context)
@@ -2379,6 +2447,29 @@ SubPlanFinderWalker(Plan *node,
 	return plan_tree_walker((Node*)node, SubPlanFinderWalker, ctx);
 }
 
+static bool
+ParamExtractorWalker(Plan *node,
+				  void *context)
+{
+	Assert(context);
+	ParamExtractorContext *ctx = (ParamExtractorContext *) context;
+
+	/* Assuming InitPlan always runs on the master */
+	if (node == NULL || IsA(node, Motion))
+	{
+		return false;	/* don't visit subtree */
+	}
+
+	if (IsA(node, SubPlan))
+	{
+		SubPlan *sub_plan = (SubPlan *) node;
+		ExtractSubPlanParam(sub_plan, ctx->estate);
+	}
+
+	/* Continue walking */
+	return plan_tree_walker((Node*)node, ParamExtractorWalker, ctx);
+}
+
 List *getLocalSubplans(PlannedStmt *plannedstmt, Motion *root)
 {
 	SubPlanFinderContext ctx;
@@ -2390,6 +2481,13 @@ List *getLocalSubplans(PlannedStmt *plannedstmt, Motion *root)
 	return ctx.subplans;
 }
 
+void ExtractAllParams(PlannedStmt *plannedstmt, EState *estate)
+{
+	ParamExtractorContext ctx;
+	ctx.base.node = (Node*)plannedstmt;
+	ctx.estate = estate;
+	ParamExtractorWalker(plannedstmt->planTree, &ctx);
+}
 
 /**
  * Provide index of locally executing slice

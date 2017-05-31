@@ -1818,7 +1818,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		PlanState  *subplanstate = NULL;
 		int			sp_eflags = 0;
 
-		if (!eliminate_aliens || list_find(sub_plan_roots, subplan) != -1)
+		if (!eliminate_aliens || list_find_ptr(sub_plan_roots, subplan) != -1)
 		{
 			/*
 			 * A subplan will never need to do BACKWARD scan nor MARK/RESTORE.
@@ -1844,6 +1844,8 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	 */
 	if (eliminate_aliens)
 	{
+		// extract all precomputed parameters from the root slice
+		ExtractAllParams(plannedstmt, estate);
 		//elog(WARNING, "After: %x\n%s", m, nodeToString(m));
 		planstate = ExecInitNode((Plan *) m, estate, eflags);
 	}
