@@ -494,13 +494,9 @@
 $ gpstop -u</codeblock></p>
       <p>To set <codeph>password_encryption</codeph> in a session, use the SQL <codeph>SET</codeph>
         command:<codeblock>=# SET password_encryption = 'on';</codeblock></p>
-      <p>Passwords may be hashed using the SHA-256 (or SHA-256-FIPS) hash algorithm instead of the
+      <p>Passwords may be hashed using the SHA-256 hash algorithm instead of the
         default MD5 hash algorithm. The algorithm produces a 64-byte hexadecimal string prefixed
-        with the characters <codeph>sha256</codeph>. The SHA-256-FIPS hash algorithm supports
-          <cite>Federal Information Processing Standard</cite> (FIPS) 140-2, which is generally the
-        reason to use SHA-256 instead of MD5. If SHA-256-FIPS is specified and Greenplum Database is not linked with the RSA BSAFE library, an error is raised. When
-        SHA-256 is specified, no error is raised; the hash is produced by the RSA BSAFE library or
-        the OpenSSL library linked with Greenplum Database.</p>
+        with the characters <codeph>sha256</codeph>.</p>
       <note>
         <p>Although SHA-256 uses a stronger cryptographic algorithm and produces a longer hash
           string, it cannot be used with the MD5 authentication method. To use SHA-256 password
@@ -515,7 +511,7 @@ $ gpstop -u</codeblock></p>
       </note>
       <p>To enable SHA-256 hashing, change the <codeph>password_hash_algorithm</codeph>
         configuration parameter from its default value, <codeph>md5</codeph>, to
-          <codeph>sha-256</codeph> or <codeph>sha-256-fips</codeph>. The parameter can be set either
+          <codeph>sha-256</codeph>. The parameter can be set either
         globally or at the session level. To set <codeph>password_hash_algorithm</codeph> globally,
         execute these commands in a shell as the <codeph>gpadmin</codeph>
         user:<codeblock>$ gpconfig -c password_hash_algorithm -v 'sha-256'

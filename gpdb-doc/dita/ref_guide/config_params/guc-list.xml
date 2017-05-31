@@ -7573,7 +7573,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">MD5<p>SHA-256</p><p>SHA-256-FIPS</p></entry>
+              <entry colname="col1">MD5<p>SHA-256</p></entry>
               <entry colname="col2">MD5</entry>
               <entry colname="col3">master<p>session</p><p>reload</p><p>superuser</p></entry>
             </row>
