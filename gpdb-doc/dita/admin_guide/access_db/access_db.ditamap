@@ -12,7 +12,6 @@
   <topicref href="topics/g-installing-pgadmin-iii-for-greenplum-database.xml"/>
   <topicref href="topics/g-documentation-for-pgadmin-iii-for-greenplum-database.xml"/>
   <topicref href="topics/g-performing-administrative-tasks-with-pgadmin-iii.xml">
-   <topicref href="topics/g-editing-server-configuration.xml"/>
    <topicref href="topics/g-viewing-a-graphical-query-plan.dita"/>
   </topicref>
  </topicref>
