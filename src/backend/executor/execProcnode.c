@@ -231,19 +231,9 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	appendStringInfo(codegenManagerName, "%s-%d-%d", "execProcnode", node->plan_node_id, node->type);
 	void	   *CodegenManager = CodeGeneratorManagerCreate(codegenManagerName->data);
 
+
 	START_CODE_GENERATOR_MANAGER(CodegenManager);
 	{
-		if (memory_profiler_dataset_size == 9 &&
-				(eflags & EXEC_FLAG_EXPLAIN_ONLY) == 0 &&  /* Don't touch EXPLAIN */
-					currentSliceId >= 0 && /* Otherwise select version() crashes with a currentSliceId == -1 */
-					!(currentSliceId == 0 && estate->es_sliceTable->doInstrument) && /* Master needs all the slices when doing explain analyze */
-					!((currentSliceId == LocallyExecutingSliceIndex(estate)) ||
-					(nodeTag(node) == T_Motion && ((Motion*)node)->motionID == currentSliceId) ||
-					(nodeTag(node) == T_Motion && ((Motion*)node)->motionID == currentSliceId - 1)))
-		{
-			return NULL;
-		}
-
 //		if (IsA(node, Motion))
 //		{
 //			elog(WARNING, "Motion ID: %d", ((Motion*)node)->motionID);
@@ -261,6 +251,10 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	bool isAlienPlanNode = !((currentSliceId == origSliceIdInPlan) ||
 			(nodeTag(node) == T_Motion && ((Motion*)node)->motionID == currentSliceId));
 
+	if (memory_profiler_dataset_size == 9 && Gp_segment >= 0)
+	{
+		isAlienPlanNode = false;
+	}
 	/*
 	 * As of 03/28/2014, there is no support for BitmapTableScan
 	 * in the planner/optimizer. Therefore, for testing purpose

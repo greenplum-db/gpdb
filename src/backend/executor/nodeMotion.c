@@ -975,7 +975,10 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 	/*
 	 * initializes child nodes.
 	 */
-	outerPlanState(motionstate) = ExecInitNode(outerPlan(node), estate, eflags);
+	if (!(memory_profiler_dataset_size == 9 && Gp_segment != -1 && LocallyExecutingSliceIndex(estate) != 0)  || motionstate->mstype == MOTIONSTATE_SEND)
+	{
+		outerPlanState(motionstate) = ExecInitNode(outerPlan(node), estate, eflags);
+	}
 
 	/*
 	 * initialize tuple type.  no need to initialize projection info

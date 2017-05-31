@@ -1802,7 +1802,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	Assert(estate->es_subplanstates == NIL);
 	i = 1;						/* subplan indices count from 1 */
 	Motion *m = NULL;
-	bool eliminate_aliens = memory_profiler_dataset_size == 9 && Gp_segment == 0 && LocallyExecutingSliceIndex(estate) != 0  /* && LocallyExecutingSliceIndex(estate) == 1 && LocallyExecutingSliceIndex(estate) != RootSliceIndex(estate) */;
+	bool eliminate_aliens = memory_profiler_dataset_size == 9 && Gp_segment != -1 && LocallyExecutingSliceIndex(estate) != 0  /* && LocallyExecutingSliceIndex(estate) == 1 && LocallyExecutingSliceIndex(estate) != RootSliceIndex(estate) */;
 	List *sub_plan_roots = NULL;
 
 	if (eliminate_aliens)
