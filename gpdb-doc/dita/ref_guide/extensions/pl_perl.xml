@@ -165,7 +165,7 @@ database superusers create an anonymous code block with the untrusted
 </p>
 <p>
 The syntax of the <codeph>CREATE FUNCTION</codeph> command requires that you write
-the PL/Perl function body as a string constant. While it is more convient to use
+the PL/Perl function body as a string constant. While it is more convenient to use
 dollar-quoting, you can choose to use escape string syntax (<codeph>E''</codeph>)
 provided that you double any single quote marks and backslashes used in the body
 of the function.
