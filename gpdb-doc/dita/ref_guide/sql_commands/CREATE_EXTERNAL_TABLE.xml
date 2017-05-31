@@ -360,9 +360,15 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
         </plentry>
         <plentry>
           <pt>ON MASTER</pt>
-          <pd>Permitted only on readable and writable external tables created with the 
-            <codeph>s3</codeph> protocol. Restricts all table-related
-	    operations to the Greenplum master segment.</pd>
+          <pd>Restricts all table-related operations to the Greenplum master segment. Permitted 
+            only on readable and writable external tables created with the 
+            <codeph>s3</codeph> or custom protocols. The <codeph>gpfdist</codeph>,
+            <codeph>gpfdists</codeph>, <codeph>gphdfs</codeph>, and <codeph>file</codeph>
+            protocols do not support <codeph>ON MASTER</codeph>.
+            <note>Be aware of potential resource impacts when reading from or writing to
+            external tables you create with the <codeph>ON MASTER</codeph> clause. You may
+            encounter performance issues when you restrict table operations solely to the
+            Greenplum master segment.</note></pd>
         </plentry>
         <plentry>
           <pt>EXECUTE <varname>'command'</varname> [ON ...]</pt>
