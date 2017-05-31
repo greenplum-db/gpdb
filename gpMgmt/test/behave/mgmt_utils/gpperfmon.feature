@@ -131,5 +131,6 @@ Feature: gpperfmon
         """
         select count(*) from sales where date between '2016-11-30' and '2016-11-30';
         """
-        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where skew_cpu > 0" is "true"
-        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where cpu_elapsed > 0" is "true"
+        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where cpu_elapsed > 1 and query_text like 'select count(*)%'" is "true"
+        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where skew_cpu > 0.05 and db = 'gptest'" is "true"
+
