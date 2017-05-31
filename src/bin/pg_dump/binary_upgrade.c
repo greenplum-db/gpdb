@@ -1372,6 +1372,9 @@ preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_
 		Oid			contyp_oid;
 		Oid			con_oid;
 		Oid			prev_oid = InvalidOid;
+		Oid			attrdef_oid;
+		int			adnum;
+		int			partups;
 
 		appendPQExpBuffer(parquery,
 						  "SELECT cc.oid, "
@@ -1379,34 +1382,49 @@ preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_
 						  "       co.oid AS conoid, "
 						  "       co.conname, "
 						  "       co.connamespace, "
-						  "       co.contypid "
+						  "       co.contypid, "
+						  "       d.oid AS attrdefoid, "
+						  "       d.adnum "
 						  "FROM pg_partitions p "
 						  "JOIN pg_catalog.pg_class c ON "
 						  "  (p.tablename = c.relname AND c.oid = '%u'::pg_catalog.oid) "
 						  "JOIN pg_catalog.pg_class cc ON "
 						  "  (p.partitiontablename = cc.relname) "
 						  "LEFT JOIN pg_catalog.pg_constraint co ON "
-						  "  (cc.oid = co.conrelid);",
+						  "  (cc.oid = co.conrelid) "
+						  "LEFT JOIN pg_catalog.pg_attrdef d ON "
+						  "  (cc.oid = d.adrelid) "
+						  "ORDER BY 1;",
 						  pg_rel_oid);
 
 		par_res = PQexec(conn, parquery->data);
 		check_sql_result(par_res, conn, parquery->data, PGRES_TUPLES_OK);
 
-		if (PQntuples(par_res) > 0)
+		partups = PQntuples(par_res);
+
+		if (partups > 0)
 		{
-			for (i = 0; i < PQntuples(par_res); i++)
+			for (i = 0; i < partups; i++)
 			{
 				part_oid = atooid(PQgetvalue(par_res, i, PQfnumber(par_res, "oid")));
 
 				/*
 				 * Partitions with multiple constraint will be on multiple
-				 * rows so ensure to only save their Oids once.
+				 * rows, so ensure to save the non-constrant related Oids only
+				 * once (relation, type and attrdef).
 				 */
 				if (part_oid != prev_oid)
 				{
 					strlcpy(name, PQgetvalue(par_res, i, PQfnumber(par_res, "name")), sizeof(name));
 					preassign_type_oids_by_rel_oid(conn, fout, AH, part_oid, name);
-					preassign_pg_class_oids(conn, AH, part_oid);
+					preassign_pg_class_oids(conn, fout, AH, part_oid);
+
+					attrdef_oid = atooid(PQgetvalue(par_res, i, PQfnumber(par_res, "attrdefoid")));
+					if (OidIsValid(attrdef_oid))
+					{
+						adnum = atoi(PQgetvalue(par_res, i, PQfnumber(par_res, "adnum")));
+						preassign_attrdefs_oid(AH, attrdef_oid, part_oid, adnum);
+					}
 				}
 
 				if (!PQgetisnull(par_res, i, PQfnumber(par_res, "conname")))
