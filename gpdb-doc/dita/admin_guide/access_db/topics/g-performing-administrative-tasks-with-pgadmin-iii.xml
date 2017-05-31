@@ -4,8 +4,7 @@
 <topic id="topic9">
   <title>Performing Administrative Tasks with pgAdmin III</title>
   <body>
-    <p>This topic highlights two of the many Greenplum Database administrative tasks
-      you can perform with pgAdmin III: editing the server configuration, and viewing a graphical
-      representation of a query plan.</p>
+    <p>This topic highlights one of the many Greenplum Database administrative tasks
+      you can perform with pgAdmin III: viewing a graphical representation of a query plan.</p>
   </body>
 </topic>

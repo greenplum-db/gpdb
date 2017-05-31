@@ -16,8 +16,6 @@
          <li id="io147524">Resource queues</li>
          <li id="io147525">Graphical <codeph>EXPLAIN ANALYZE</codeph>
          </li>
-         <li id="io149928">Greenplum server configuration
-            parameters</li>
       </ul>
       <fig id="io149932">
          <title>Greenplum Options in pgAdmin III</title>
