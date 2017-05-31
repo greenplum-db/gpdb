@@ -587,7 +587,7 @@ jobs:
       BLDWRAP_POSTGRES_CONF_ADDONS: fsync=off
       TEST_OS: centos
 
-- name: gpperfmon
+- name: MM_gpperfmon
   plan:
   - aggregate:
     - get: gpdb_src
@@ -607,7 +607,7 @@ jobs:
       BEHAVE_TAGS: gpperfmon
       BLDWRAP_POSTGRES_CONF_ADDONS: ""
 
-- name: pt-rebuild
+- name: MM_pt-rebuild
   plan:
   - aggregate:
     - get: gpdb_src
@@ -936,7 +936,7 @@ jobs:
 
 # Stage 3: Trigger jobs that rely on packaging
 
-- name: MU_netbackup77
+- name: DPM_netbackup77
   plan:
   - get: nightly-trigger
     trigger: true
@@ -976,7 +976,7 @@ jobs:
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params: *pulse_properties
 
-- name: MU_backup-restore
+- name: DPM_backup-restore
   plan:
   - aggregate: &post_packaging_gets_trigger_true
     - get: gpdb_src
@@ -1011,7 +1011,7 @@ jobs:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore_Harmonize"
 
-- name: MU_backup_43_restore_5
+- name: DPM_backup_43_restore_5
   plan:
   - get: nightly-trigger
     trigger: true
@@ -1031,7 +1031,7 @@ jobs:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore-43_to_5"
 
-- name: MU_gpcheckcat
+- name: MM_gpcheckcat
   plan:
   - aggregate: *post_packaging_gets_trigger_true
   - task: trigger_pulse
@@ -1049,7 +1049,7 @@ jobs:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "GPDB-BehaveGPCheckcat"
 
-- name: MU_gprecoverseg
+- name: MM_gprecoverseg
   plan:
   - aggregate: *post_packaging_gets_trigger_true
   - task: trigger_pulse
@@ -1067,7 +1067,7 @@ jobs:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "GPDB-BehaveGPRecoverseg"
 
-- name: MU_gpexpand
+- name: MM_gpexpand
   plan:
   - get: nightly-trigger
     trigger: true
@@ -1087,7 +1087,7 @@ jobs:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
 
-- name: MU_gptransfer-43x-to-5x
+- name: DPM_gptransfer-43x-to-5x
   plan:
   - get: nightly-trigger
     trigger: true
@@ -1107,7 +1107,7 @@ jobs:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_43x_to_5x"
 
-- name: MU_gptransfer-5x-to-5x
+- name: DPM_gptransfer-5x-to-5x
   plan:
   - aggregate: *post_packaging_gets_trigger_true
   - task: trigger_pulse
@@ -1286,7 +1286,7 @@ jobs:
         BLDWRAP_POSTGRES_CONF_ADDONS: fsync=off optimizer_print_missing_stats=off
         TEST_OS: centos
 
-- name: MU_ddboost_full
+- name: DPM_ddboost_full
   plan:
   - get: nightly-trigger
     trigger: true
@@ -1307,7 +1307,7 @@ jobs:
       PULSE_PROJECT_NAME: "GPDB-DDBOOST_Full"
 
 
-- name: MU_ddboost_incremental
+- name: DPM_ddboost_incremental
   plan:
   - get: nightly-trigger
     trigger: true
@@ -1327,7 +1327,7 @@ jobs:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "GPDB-DDBOOST_Incremental"
 
-- name: MU_MFR
+- name: DPM_MFR
   plan:
   - get: nightly-trigger
     trigger: true
