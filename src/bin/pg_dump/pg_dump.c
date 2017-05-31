@@ -11721,8 +11721,8 @@ addDistributedBy(PQExpBuffer q, TableInfo *tbinfo, int actual_atts)
 {
 	PQExpBuffer query = createPQExpBuffer();
 	PGresult   *res;
-	char	   *policydef = NULL;
-	char	   *policycol = NULL;
+	char	   *policydef;
+	char	   *policycol;
 
 	appendPQExpBuffer(query,
 					  "SELECT attrnums FROM gp_distribution_policy as p "
@@ -11760,7 +11760,6 @@ addDistributedBy(PQExpBuffer q, TableInfo *tbinfo, int actual_atts)
 		{
 			write_msg(NULL, "query to obtain distribution policy of table \"%s\" returned more than one policy\n",
 					  tbinfo->dobj.name);
-
 			exit_nicely();
 		}
 	}
@@ -11780,9 +11779,9 @@ addDistributedBy(PQExpBuffer q, TableInfo *tbinfo, int actual_atts)
 			policycol = nextToken(&policydef, ",");
 			appendPQExpBuffer(q, " DISTRIBUTED BY (%s",
 							  fmtId(tbinfo->attnames[atoi(policycol) - 1]));
-			for (; (policycol = nextToken(&policydef, ",")) != NULL;)
+			while ((policycol = nextToken(&policydef, ",")) != NULL)
 			{
-				appendPQExpBuffer(q, " ,%s",
+				appendPQExpBuffer(q, ", %s",
 							   fmtId(tbinfo->attnames[atoi(policycol) - 1]));
 			}
 			appendPQExpBufferChar(q, ')');
@@ -11792,12 +11791,10 @@ addDistributedBy(PQExpBuffer q, TableInfo *tbinfo, int actual_atts)
 			/* policy has an empty policy - distribute randomly */
 			appendPQExpBufferStr(q, " DISTRIBUTED RANDOMLY");
 		}
-
 	}
 
 	PQclear(res);
 	destroyPQExpBuffer(query);
-
 }
 
 /*
