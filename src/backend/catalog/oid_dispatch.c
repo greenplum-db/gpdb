@@ -554,8 +554,9 @@ GetPreassignedOidForTuple(Relation catalogrel, HeapTuple tuple)
 			 RelationGetRelationName(catalogrel));
 
 	if ((oid = GetPreassignedOid(&searchkey)) == InvalidOid)
-		elog(ERROR, "no pre-assigned OID for %s tuple \"%s\"",
-			 RelationGetRelationName(catalogrel), searchkey.objname ? searchkey.objname : "");
+		elog(ERROR, "no pre-assigned OID for %s tuple \"%s\" (namespace:%u keyOid1:%u keyOid2:%u)",
+			 RelationGetRelationName(catalogrel), searchkey.objname ? searchkey.objname : "",
+			 searchkey.namespaceOid, searchkey.keyOid1, searchkey.keyOid2);
 	return oid;
 }
 
