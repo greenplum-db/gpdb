@@ -43,7 +43,7 @@ ExecTableScan(TableScanState *node)
 	
 	if (!TupIsNull(slot))
 	{
-		Gpmon_M_Incr_Rows_Out(GpmonPktFromTableScanState(node));
+		Gpmon_Incr_Rows_Out(GpmonPktFromTableScanState(node));
 		CheckSendPlanStateGpmonPkt(&scanState->ps);
 	}
 	
@@ -72,7 +72,6 @@ ExecTableReScan(TableScanState *node, ExprContext *exprCtxt)
 {
 	ReScanRelation((ScanState *)node);
 
-	Gpmon_M_Incr(GpmonPktFromTableScanState(node), GPMON_TABLESCAN_RESCAN);
 	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 }
 
@@ -87,7 +86,6 @@ ExecTableRestrPos(TableScanState *node)
 {
 	RestrPosScanRelation((ScanState *)node);
 
-	Gpmon_M_Incr(GpmonPktFromTableScanState(node), GPMON_TABLESCAN_RESTOREPOS);
 	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 }
 
@@ -106,12 +104,7 @@ initGpmonPktForTableScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *esta
 		   IsA(planNode, AppendOnlyScan) ||
 		   IsA(planNode, AOCSScan));
 
-	RangeTblEntry *rte = rt_fetch(((Scan *)planNode)->scanrelid, estate->es_range_table);
-	char schema_rel_name[SCAN_REL_NAME_BUF_SIZE] = {0};
-	
-	Assert(GPMON_TABLESCAN_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_TableScan,
-						 (int64) planNode->plan_rows, GetScanRelNameGpmon(rte->relid, schema_rel_name));
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

@@ -283,7 +283,7 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 
 		if (!TupIsNull(slot))
 		{
-			Gpmon_M_Incr_Rows_Out(GpmonPktFromBitmapAppendOnlyScanState(node));
+			Gpmon_Incr_Rows_Out(GpmonPktFromBitmapAppendOnlyScanState(node));
 			CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		}
 		return slot;
@@ -341,7 +341,6 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 
 			/* Make sure we never cross 15-bit offset number [MPP-24326] */
 			Assert(tbmres->ntuples <= INT16_MAX + 1);
-			Gpmon_M_Incr(GpmonPktFromBitmapAppendOnlyScanState(node), GPMON_BITMAPAPPENDONLYSCAN_PAGE);
 			CheckSendPlanStateGpmonPkt(&node->ss.ps);
 
 		 	node->baos_gotpage = true;
@@ -452,7 +451,7 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 		/* OK to return this tuple */
       	if (!TupIsNull(slot))
 		{
-			Gpmon_M_Incr_Rows_Out(GpmonPktFromBitmapAppendOnlyScanState(node));
+			Gpmon_Incr_Rows_Out(GpmonPktFromBitmapAppendOnlyScanState(node));
 			CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		}
 
@@ -524,7 +523,6 @@ ExecBitmapAppendOnlyReScan(BitmapAppendOnlyScanState *node, ExprContext *exprCtx
 	 * Always rescan the input immediately, to ensure we can pass down any
 	 * outer tuple that might be used in index quals.
 	 */
-	Gpmon_M_Incr(GpmonPktFromBitmapAppendOnlyScanState(node), GPMON_BITMAPAPPENDONLYSCAN_RESCAN);
 	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 
 	ExecReScan(outerPlanState(node), exprCtxt);
@@ -696,16 +694,7 @@ initGpmonPktForBitmapAppendOnlyScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, E
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, BitmapAppendOnlyScan));
 
-	{
-		RangeTblEntry *rte = rt_fetch(((BitmapAppendOnlyScan *)planNode)->scan.scanrelid,
-									  estate->es_range_table);
-		char schema_rel_name[SCAN_REL_NAME_BUF_SIZE] = {0};
-		
-		Assert(GPMON_BITMAPAPPENDONLYSCAN_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_BitmapAppendOnlyScan,
-							 (int64)planNode->plan_rows,
-							 GetScanRelNameGpmon(rte->relid, schema_rel_name));
-	}
+    InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

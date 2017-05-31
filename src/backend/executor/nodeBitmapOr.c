@@ -263,8 +263,5 @@ initGpmonPktForBitmapOr(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estat
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, BitmapOr));
 
-	{
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_BitmapOr,
-							  (int64)0,  NULL);
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

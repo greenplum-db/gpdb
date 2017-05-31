@@ -31,14 +31,6 @@ extern void ExecHashJoinSaveTuple(PlanState *ps, MemTuple tuple, uint32 hashvalu
 								  MemoryContext bfCxt);
 extern void ExecEagerFreeHashJoin(HashJoinState *node);
 
-enum 
-{
-	GPMON_HASHJOIN_SPILLBATCH = GPMON_QEXEC_M_NODE_START,
-	GPMON_HASHJOIN_SPILLTUPLE,
-	GPMON_HASHJOIN_SPILLBYTE,
-	GPMON_HASHJOIN_TOTAL,
-};
-
 static inline gpmon_packet_t * GpmonPktFromHashJoinState(HashJoinState *s)
 {
 	return &s->js.ps.gpmon_pkt;

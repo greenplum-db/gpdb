@@ -23,12 +23,6 @@ extern void ExecEndMergeJoin(MergeJoinState *node);
 extern void ExecReScanMergeJoin(MergeJoinState *node, ExprContext *exprCtxt);
 extern void ExecEagerFreeMergeJoin(MergeJoinState *node);
 
-enum {
-	GPMON_MERGEJOIN_INNERTUPLE = GPMON_QEXEC_M_NODE_START,
-	GPMON_MERGEJOIN_OUTERTUPLE,
-	GPMON_MERGEJOIN_TOTAL,
-};
-
 static inline gpmon_packet_t *GpmonPktFromMergeJoinState(MergeJoinState *node)
 {
 	return &node->js.ps.gpmon_pkt;

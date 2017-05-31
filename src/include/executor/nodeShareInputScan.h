@@ -21,12 +21,6 @@ extern void ExecEagerFreeShareInputScan(ShareInputScanState *node);
 
 extern void ExecSliceDependencyShareInputScan(ShareInputScanState *node);
 
-enum {
-	GPMON_SHAREINPUT_RESTOREPOS = GPMON_QEXEC_M_NODE_START,
-	GPMON_SHAREINPUT_RESCAN,
-	GPMON_SHAREINPUT_TOTAL,
-};
-
 static inline gpmon_packet_t * GpmonPktFromShareInputState(ShareInputScanState *node)
 {
 	return &node->ss.ps.gpmon_pkt;

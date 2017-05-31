@@ -144,7 +144,7 @@ ExecMaterial(MaterialState *node)
 
 				break;
 			}
-			Gpmon_M_Incr(GpmonPktFromMaterialState(node), GPMON_QEXEC_M_ROWSIN);
+			Gpmon_Incr_Rows_In(GpmonPktFromMaterialState(node));
 
 			ntuplestore_acc_put_tupleslot(tsa, outerslot);
 		}
@@ -196,7 +196,7 @@ ExecMaterial(MaterialState *node)
 		ntuplestore_acc_current_tupleslot(tsa, slot);
 		if (!TupIsNull(slot))
 		{
-			Gpmon_M_Incr_Rows_Out(GpmonPktFromMaterialState(node));
+			Gpmon_Incr_Rows_Out(GpmonPktFromMaterialState(node));
 			CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		}
 		return slot;
@@ -233,7 +233,7 @@ ExecMaterial(MaterialState *node)
 			return NULL;
 		}
 
-		Gpmon_M_Incr(GpmonPktFromMaterialState(node), GPMON_QEXEC_M_ROWSIN);
+		Gpmon_Incr_Rows_In(GpmonPktFromMaterialState(node));
 
 		if (tsa)
 			ntuplestore_acc_put_tupleslot(tsa, outerslot);
@@ -242,7 +242,7 @@ ExecMaterial(MaterialState *node)
 		 * And return a copy of the tuple.	(XXX couldn't we just return the
 		 * outerslot?)
 		 */
-		Gpmon_M_Incr_Rows_Out(GpmonPktFromMaterialState(node));
+		Gpmon_Incr_Rows_Out(GpmonPktFromMaterialState(node));
 		CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		return ExecCopySlot(slot, outerslot);
 	}
@@ -548,7 +548,6 @@ ExecChildRescan(MaterialState *node, ExprContext *exprCtxt)
 	 */
 	if (((PlanState *) node)->lefttree->chgParam == NULL)
 	{
-		Gpmon_M_Incr(GpmonPktFromMaterialState(node), GPMON_MATERIAL_RESCAN);
 		CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		ExecReScan(((PlanState *) node)->lefttree, exprCtxt);
 	}
@@ -618,11 +617,8 @@ void
 initGpmonPktForMaterial(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Material));
-	Assert(GPMON_MATERIAL_TOTAL <= (int) GPMON_QEXEC_M_COUNT);
 
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_Materialize,
-						 (int64)planNode->plan_rows,
-						 NULL);
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

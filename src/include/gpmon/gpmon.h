@@ -78,8 +78,6 @@ struct gpmon_fsinfo_t
    ------------------------------------------------------------------ */
 struct gpmon_metrics_t
 {
-	/* if you modify this, do not forget to edit gpperfmon/src/gpmon/gpmonlib.c:gpmon_ntohpkt() */
-
 	char hname[NAMEDATALEN];
 	struct
 	{
@@ -118,7 +116,6 @@ struct gpmon_metrics_t
    ------------------------------------------------------------------ */
 
 struct gpmon_qlogkey_t {
-    /* if you modify this, do not forget to edit gpperfmon/src/gpmon/gpmonlib.c:gpmon_ntohpkt() */
 	int32 tmid;  /* transaction time */
     int32 ssid; /* session id */
     int32 ccnt; /* command count */
@@ -193,45 +190,21 @@ typedef struct gpmon_qexec_hash_key_t {
  * QE will NOT need to touch anything begin with _
  */
 typedef struct gpmon_qexeckey_t {
-    /* if you modify this, do not forget to edit gpperfmon/src/gpmon/gpmonlib.c:gpmon_ntohpkt() */
     int32 tmid;  /* transaction time */
     int32 ssid; /* session id */
     int16 ccnt;	/* command count */
     gpmon_qexec_hash_key_t hash_key;
 }gpmon_qexeckey_t;
 
-
-enum {
-	GPMON_QEXEC_M_ROWSIN = 0,
-#if 0
-	GPMON_QEXEC_M_BYTESIN,
-	GPMON_QEXEC_M_BYTESOUT,
-#endif
-	GPMON_QEXEC_M_NODE_START,
-	GPMON_QEXEC_M_COUNT = 10,
-	GPMON_QEXEC_M_DBCOUNT = 16
-};
-
-/* there is an array of 10 measurements in the array inside a gpmon packet
-   however the gpperfmon DB will contain 16 measurements.
-   long term we need a more extensible solution. short term we limit size of packets
-   to what is actually used to conserve resources
-*/
-
 struct gpmon_qexec_t {
-	/* if you modify this, do not forget to edit gpperfmon/src/gpmon/gpmonlib.c:gpmon_ntohpkt() */
 	gpmon_qexeckey_t key;
 	int32  		pnid;	/* plan parent node id */
 	char		_hname[NAMEDATALEN];
-	uint16		nodeType; 					/* using enum PerfmonNodeType */
 	uint8		status;    /* node status using PerfmonNodeStatus */
-	int32 		tstart, tduration; /* start (wall clock) time and duration.  XXX Leave as 0 for now. */
-	uint64 		p_mem, p_memmax;   /* XXX Aset instrumentation.  Leave as 0 for now. */
 	uint64		_cpu_elapsed; /* CPU elapsed for iter */
 	gpmon_proc_metrics_t 	_p_metrics;
-	uint64 		rowsout, rowsout_est;
-	uint64 		measures[GPMON_QEXEC_M_COUNT];
-	char		relation_name[SCAN_REL_NAME_BUF_SIZE];
+	uint64 		rowsout;
+	uint64 		rowsin;
 };
 
 /*
@@ -254,13 +227,13 @@ struct gpmon_hello_t {
 };
 
 
-
+/*
+ * This value is a constant that identifies gpperfmon packets in general.
+ */
 #define GPMON_MAGIC     0x78ab928d
 
 /*
- *  When updating the format of the packets update these variables
- *  in order to make sure that the communication between the GPDB
- *  and perfmon is compatible
+ *  This version must match the most significant digit of the greenplum system version.
  */
 #define GPMON_PACKET_VERSION   5
 #define GPMMON_PACKET_VERSION_STRING "gpmmon packet version 5\n"
@@ -302,87 +275,6 @@ extern const char* gpmon_qlog_status_string(int gpmon_qlog_status);
 /* when adding a node type for perfmon display be sure to also update the corresponding structures in
    in gpperfmon/src/gpmon/gpmonlib.c */
 
-typedef enum PerfmonNodeType
-{
-    PMNT_Invalid = 0,
-    PMNT_Append,
-    PMNT_AppendOnlyScan,
-    PMNT_AssertOp,
-    PMNT_Aggregate,
-    PMNT_GroupAggregate,
-    PMNT_HashAggregate,
-    PMNT_AppendOnlyColumnarScan,
-    PMNT_BitmapAnd,
-    PMNT_BitmapOr,
-    PMNT_BitmapAppendOnlyScan,
-    PMNT_BitmapHeapScan,
-    PMNT_BitmapTableScan,
-    PMNT_BitmapIndexScan,
-    PMNT_DML,
-    PMNT_DynamicIndexScan,
-    PMNT_DynamicTableScan,
-    PMNT_ExternalScan,
-    PMNT_FunctionScan,
-    PMNT_Group,
-    PMNT_Hash,
-    PMNT_HashJoin,
-    PMNT_HashLeftJoin,
-    PMNT_HashLeftAntiSemiJoin,
-    PMNT_HashFullJoin,
-    PMNT_HashRightJoin,
-    PMNT_HashExistsJoin,
-    PMNT_HashReverseInJoin,
-    PMNT_HashUniqueOuterJoin,
-    PMNT_HashUniqueInnerJoin,
-    PMNT_IndexScan,
-    PMNT_Limit,
-    PMNT_Materialize,
-    PMNT_MergeJoin,
-    PMNT_MergeLeftJoin,
-    PMNT_MergeLeftAntiSemiJoin,
-    PMNT_MergeFullJoin,
-    PMNT_MergeRightJoin,
-    PMNT_MergeExistsJoin,
-    PMNT_MergeReverseInJoin,
-    PMNT_MergeUniqueOuterJoin,
-    PMNT_MergeUniqueInnerJoin,
-    PMNT_RedistributeMotion,
-    PMNT_BroadcastMotion,
-    PMNT_GatherMotion,
-    PMNT_ExplicitRedistributeMotion,
-    PMNT_NestedLoop,
-    PMNT_NestedLoopLeftJoin,
-    PMNT_NestedLoopLeftAntiSemiJoin,
-    PMNT_NestedLoopFullJoin,
-    PMNT_NestedLoopRightJoin,
-    PMNT_NestedLoopExistsJoin,
-    PMNT_NestedLoopReverseInJoin,
-    PMNT_NestedLoopUniqueOuterJoin,
-    PMNT_NestedLoopUniqueInnerJoin,
-    PMNT_PartitionSelector,
-    PMNT_Result,
-    PMNT_Repeat,
-    PMNT_RowTrigger,
-    PMNT_SeqScan,
-    PMNT_Sequence,
-    PMNT_SetOp,
-    PMNT_SetOpIntersect,
-    PMNT_SetOpIntersectAll,
-    PMNT_SetOpExcept,
-    PMNT_SetOpExceptAll,
-    PMNT_SharedScan,
-    PMNT_Sort,
-    PMNT_SplitUpdate,
-    PMNT_SubqueryScan,
-    PMNT_TableFunctionScan,
-    PMNT_TableScan,
-    PMNT_TidScan,
-    PMNT_Unique,
-    PMNT_ValuesScan,
-    PMNT_Window,
-	PMNT_MAXIMUM_ENUM
-
-} PerfmonNodeType;
 
 typedef enum PerfmonNodeStatus
 {

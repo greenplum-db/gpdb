@@ -157,7 +157,6 @@ ExecBitmapIndexReScan(BitmapIndexScanState *node, ExprContext *exprCtxt)
 		node->bitmap = NULL;
 	}
 
-	Gpmon_M_Incr(GpmonPktFromBitmapIndexScanState(node), GPMON_BITMAPINDEXSCAN_RESCAN);
 	CheckSendPlanStateGpmonPkt(&scanState->ss.ps);
 }
 
@@ -246,17 +245,5 @@ initGpmonPktForBitmapIndexScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState
 {
 	Assert(NULL != planNode && NULL != gpmon_pkt && IsA(planNode, BitmapIndexScan));
 
-	{
-		char *relname = get_rel_name(((BitmapIndexScan *)planNode)->indexid);
-		
-		Assert(GPMON_BITMAPINDEXSCAN_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_BitmapIndexScan,
-							 (int64)planNode->plan_rows, 
-							 relname);
-		if (NULL != relname)
-		{
-			pfree(relname);
-		}
-	}
-	
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

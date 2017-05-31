@@ -98,7 +98,7 @@ ExecBitmapTableScan(BitmapTableScanState *node)
 
 	if (!TupIsNull(slot))
 	{
-		Gpmon_M_Incr_Rows_Out(GpmonPktFromBitmapTableScanState(node));
+		Gpmon_Incr_Rows_Out(GpmonPktFromBitmapTableScanState(node));
 		CheckSendPlanStateGpmonPkt(&scanState->ps);
 	}
 	else if (!scanState->ps.delayEagerFree)
@@ -120,7 +120,6 @@ ExecBitmapTableReScan(BitmapTableScanState *node, ExprContext *exprCtxt)
 	 * Always rescan the input immediately, to ensure we can pass down any
 	 * outer tuple that might be used in index quals.
 	 */
-	Gpmon_M_Incr(GpmonPktFromBitmapTableScanState(node), GPMON_BITMAPTABLESCAN_RESCAN);
 	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 	ExecReScan(outerPlanState(node), exprCtxt);
 }

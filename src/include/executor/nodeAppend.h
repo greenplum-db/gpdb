@@ -22,12 +22,6 @@ extern TupleTableSlot *ExecAppend(AppendState *node);
 extern void ExecEndAppend(AppendState *node);
 extern void ExecReScanAppend(AppendState *node, ExprContext *exprCtxt);
 
-enum 
-{
-	GPMON_APPEND_CURRTABLE = GPMON_QEXEC_M_NODE_START,
-	GPMON_APPEND_TOTAL
-};
-
 static inline gpmon_packet_t * GpmonPktFromAppendState(AppendState *node)
 {
 	return &node->ps.gpmon_pkt;

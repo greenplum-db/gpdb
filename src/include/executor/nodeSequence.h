@@ -16,12 +16,6 @@ extern void ExecReScanSequence(SequenceState *node, ExprContext *exprCtxt);
 extern void ExecEndSequence(SequenceState *node);
 extern int ExecCountSlotsSequence(Sequence *node);
 
-enum 
-{
-	GPMON_SEQUENCE_CURRTABLE = GPMON_QEXEC_M_NODE_START,
-	GPMON_SEQUENCE_TOTAL
-};
-
 static inline gpmon_packet_t * GpmonPktFromSequenceState(SequenceState *node)
 {
 	return &node->ps.gpmon_pkt;

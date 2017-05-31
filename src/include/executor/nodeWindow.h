@@ -44,10 +44,6 @@ extern Datum first_value_generic(PG_FUNCTION_ARGS);
 extern Datum lag_generic(PG_FUNCTION_ARGS);
 extern Datum lead_lag_frame_maker(PG_FUNCTION_ARGS);
 
-enum {
-	GPMON_WINDOW_TOTAL = GPMON_QEXEC_M_NODE_START,
-};
-
 static inline gpmon_packet_t * GpmonPktFromWindowState(WindowState *node)
 {
 	return &node->ps.gpmon_pkt;

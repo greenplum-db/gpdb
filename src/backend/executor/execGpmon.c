@@ -70,26 +70,10 @@ void EndPlanStateGpmonPkt(PlanState *ps)
 /*
  * InitPlanNodeGpmonPkt -- initialize the init gpmon package, and send it off.
  */
-void InitPlanNodeGpmonPkt(Plan *plan, gpmon_packet_t *gpmon_pkt, EState *estate,
-						  PerfmonNodeType type,
-						  int64 rowsout_est,
-						  char* relname)
+void InitPlanNodeGpmonPkt(Plan *plan, gpmon_packet_t *gpmon_pkt, EState *estate)
 {
-	int rowsout_adjustment_factor = 0;
-
 	if(!plan)
 		return;
-
-	/* The estimates are now global so we need to adjust by
-	 * the number of segments in the array.
-	 */
-	rowsout_adjustment_factor = getgpsegmentCount();
-
-	/* Make sure we don't div by zero below */
-	if (rowsout_adjustment_factor < 1)
-		rowsout_adjustment_factor = 1;
-
-	Assert(rowsout_adjustment_factor >= 1);
 
 	memset(gpmon_pkt, 0, sizeof(gpmon_packet_t));
 
@@ -106,15 +90,7 @@ void InitPlanNodeGpmonPkt(Plan *plan, gpmon_packet_t *gpmon_pkt, EState *estate,
 
 	gpmon_pkt->u.qexec.pnid = plan->plan_parent_node_id;
 
-	gpmon_pkt->u.qexec.nodeType = (uint16) type;
-
 	gpmon_pkt->u.qexec.rowsout = 0;
-	gpmon_pkt->u.qexec.rowsout_est = rowsout_est / rowsout_adjustment_factor;
-
-	if (relname)
-	{
-		snprintf(gpmon_pkt->u.qexec.relation_name, sizeof(gpmon_pkt->u.qexec.relation_name), "%s", relname);
-	}
 
 	gpmon_pkt->u.qexec.status = (uint8)PMNS_Initialize;
 

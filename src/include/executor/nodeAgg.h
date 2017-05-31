@@ -194,19 +194,6 @@ extern Datum datumCopyWithMemManager(Datum oldvalue, Datum value, bool typByVal,
 									 MemoryManagerContainer *mem_manager);
 extern void ExecEagerFreeAgg(AggState *aggstate);
 
-enum {
-	GPMON_AGG_SPILLTUPLE = GPMON_QEXEC_M_NODE_START,
-	GPMON_AGG_SPILLBYTE,
-	GPMON_AGG_SPILLBATCH,
-	GPMON_AGG_SPILLPASS, 
-	GPMON_AGG_CURRSPILLPASS_READTUPLE,
-	GPMON_AGG_CURRSPILLPASS_READBYTE,
-	GPMON_AGG_CURRSPILLPASS_TUPLE,
-	GPMON_AGG_CURRSPILLPASS_BYTE,
-	GPMON_AGG_CURRSPILLPASS_BATCH,
-	GPMON_AGG_TOTAL
-};
-
 static inline gpmon_packet_t * GpmonPktFromAggState(AggState *node)
 {
 	return &node->ss.ps.gpmon_pkt;

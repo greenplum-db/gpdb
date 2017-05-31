@@ -142,7 +142,7 @@ ExternalNext(ExternalScanState *node)
 				ExecClearTuple(slot);
 				continue;
 			}
-			Gpmon_M_Incr_Rows_Out(GpmonPktFromExtScanState(node));
+			Gpmon_Incr_Rows_Out(GpmonPktFromExtScanState(node));
 			CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		    /*
 		     * CDB: Label each row with a synthetic ctid if needed for subquery dedup.
@@ -383,8 +383,7 @@ ExecExternalReScan(ExternalScanState *node, ExprContext *exprCtxt)
 		estate->es_evTupleNull[scanrelid - 1] = false;
 		return;
 	}
-	Gpmon_M_Incr(GpmonPktFromExtScanState(node), GPMON_EXTSCAN_RESCAN);
-     	CheckSendPlanStateGpmonPkt(&node->ss.ps);
+	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 	fileScan = node->ess_ScanDesc;
 
 	ItemPointerSet(&node->cdb_fake_ctid, 0, 0);
@@ -397,16 +396,7 @@ initGpmonPktForExternalScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *e
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, ExternalScan));
 
-	{
-		RangeTblEntry *rte = rt_fetch(((ExternalScan *)planNode)->scan.scanrelid,
-									  estate->es_range_table);
-		char schema_rel_name[SCAN_REL_NAME_BUF_SIZE] = {0};
-		
-		Assert(GPMON_EXTSCAN_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_ExternalScan,
-							 (int64)planNode->plan_rows,
-							 GetScanRelNameGpmon(rte->relid, schema_rel_name));
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

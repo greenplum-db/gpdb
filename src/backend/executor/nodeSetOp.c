@@ -94,7 +94,7 @@ ExecSetOp(SetOpState *node)
 			if (TupIsNull(node->ps.ps_OuterTupleSlot))
 				node->subplan_done = true;
 			else
-				Gpmon_M_Incr(GpmonPktFromSetOpState(node), GPMON_QEXEC_M_ROWSIN);
+				Gpmon_Incr_Rows_In(GpmonPktFromSetOpState(node));
 		}
 		inputTupleSlot = node->ps.ps_OuterTupleSlot;
 
@@ -206,7 +206,7 @@ ExecSetOp(SetOpState *node)
 	Assert(node->numOutput > 0);
 	node->numOutput--;
 
-	Gpmon_M_Incr_Rows_Out(GpmonPktFromSetOpState(node)); 
+	Gpmon_Incr_Rows_Out(GpmonPktFromSetOpState(node));
 	CheckSendPlanStateGpmonPkt(&node->ps);
 
 	return resultTupleSlot;
@@ -332,29 +332,5 @@ initGpmonPktForSetOp(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, SetOp));
 
-	{
-		PerfmonNodeType type = PMNT_Invalid;
-
-		switch(((SetOp *)planNode)->cmd)
-		{
-			case SETOPCMD_INTERSECT:
-				type = PMNT_SetOpIntersect;
-			break;
-			case SETOPCMD_INTERSECT_ALL:
-				type = PMNT_SetOpIntersectAll;
-			break;
-			case SETOPCMD_EXCEPT:
-				type = PMNT_SetOpExcept;
-			break;
-			case SETOPCMD_EXCEPT_ALL:
-				type = PMNT_SetOpExceptAll;
-			break;
-		}
-
-		Assert(type != PMNT_Invalid);
-		Assert(GPMON_SETOP_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, type,
-							 (int64)planNode->plan_rows,
-							 NULL);
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

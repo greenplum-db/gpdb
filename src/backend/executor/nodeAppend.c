@@ -352,7 +352,7 @@ ExecAppend(AppendState *node)
 			 * because it may have the wrong tuple descriptor in
 			 * inherited-UPDATE cases.
 			 */
-			Gpmon_M_Incr_Rows_Out(GpmonPktFromAppendState(node));
+			Gpmon_Incr_Rows_Out(GpmonPktFromAppendState(node));
 			CheckSendPlanStateGpmonPkt(&node->ps);
 			return result;
 		}
@@ -368,7 +368,6 @@ ExecAppend(AppendState *node)
 		else
 			node->as_whichplan--;
 
-		Gpmon_M_Incr(GpmonPktFromAppendState(node), GPMON_APPEND_CURRTABLE); 
 		CheckSendPlanStateGpmonPkt(&node->ps);
 
 		if (!exec_append_initialize_next(node))
@@ -459,10 +458,5 @@ initGpmonPktForAppend(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
 		Assert(last_plan >= 0 && last_plan < list_length(((Append*)planNode)->appendplans));
 	}
 
-	{
-		Assert(GPMON_APPEND_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_Append,
-							  (int64)planNode->plan_rows,
-							  NULL);
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

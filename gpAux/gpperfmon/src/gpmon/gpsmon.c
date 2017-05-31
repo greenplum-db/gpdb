@@ -48,7 +48,6 @@ static struct
 	const char* arg_port;
 	const char* log_dir;
 	apr_uint64_t max_log_size;
-	int iterator_aggregate;
 	// The timeout in seconds for smon to restart if no requests
 	// come during that period.
 	apr_uint64_t terminate_timeout;
@@ -253,7 +252,6 @@ static void send_smon_to_mon_pkt(SOCKET sock, gp_smon_to_mmon_packet_t* pkt)
 	send_fully(sock, &pkt->header, sizeof(gp_smon_to_mmon_header_t));
 	if (pkt->header.pkttype == GPMON_PKTTYPE_QEXEC) {
 		send_fully(sock, &pkt->u.qexec_packet.data, sizeof(qexec_packet_data_t) );
-		send_fully(sock, pkt->u.qexec_packet.line, pkt->u.qexec_packet.data.size_of_line);
 	} else {
 		send_fully(sock, &pkt->u, get_size_by_pkttype_smon_to_mmon(pkt->header.pkttype));
 	}
@@ -938,7 +936,6 @@ static void gx_gettcpcmd(SOCKET sock, short event, void* arg)
 
 	/* push out records */
 	{
-		void* vptr;
 		apr_hash_index_t* hi;
 		gp_smon_to_mmon_packet_t* ppkt = 0;
 		gp_smon_to_mmon_packet_t localPacketObject;
@@ -948,6 +945,7 @@ static void gx_gettcpcmd(SOCKET sock, short event, void* arg)
 
 		for (hi = apr_hash_first(0, querysegtab); hi; hi = apr_hash_next(hi))
 		{
+ 			void* vptr;
 			apr_hash_this(hi, 0, 0, &vptr);
 			ppkt = vptr;
 			if (ppkt->header.pkttype != GPMON_PKTTYPE_QUERYSEG)
@@ -960,6 +958,7 @@ static void gx_gettcpcmd(SOCKET sock, short event, void* arg)
 
 		for (hi = apr_hash_first(0, segtab); hi; hi = apr_hash_next(hi))
 		{
+ 			void* vptr;
 			apr_hash_this(hi, 0, 0, &vptr);
 			ppkt = vptr;
 			if (ppkt->header.pkttype != GPMON_PKTTYPE_SEGINFO)
@@ -977,6 +976,7 @@ static void gx_gettcpcmd(SOCKET sock, short event, void* arg)
 
 		for (hi = apr_hash_first(0, qdtab); hi; hi = apr_hash_next(hi))
 		{
+ 			void* vptr;
 			apr_hash_this(hi, 0, 0, &vptr);
 			ppkt = vptr;
 			if (ppkt->header.pkttype != GPMON_PKTTYPE_QLOG)
@@ -989,29 +989,18 @@ static void gx_gettcpcmd(SOCKET sock, short event, void* arg)
 		for (hi = apr_hash_first(0, qetab); hi; hi = apr_hash_next(hi))
 		{
 			gpmon_qexec_t* qexec;
-			gpmon_qexec_t qexec_local;
 			void *vptr;
 
-			if (opt.iterator_aggregate) { //Create the aggregated packet to send
-				qexec_agg_t* qexec_agg;
-
-				apr_hash_this(hi, 0, 0, &vptr);
-				qexec_agg = vptr;
-				/* Loop through the inner hash table and aggregate the packets */
-				qexec_agg_packets(qexec_agg, pidtab, &qexec_local);
-				qexec = &qexec_local;
-			} else {
-				apr_hash_this(hi, 0, 0, &vptr);
-				qexec = vptr;
-				/* fill in _p_metrics */
-				pidrec = apr_hash_get(pidtab, &qexec->key.hash_key.pid, sizeof(qexec->key.hash_key.pid));
-				if (pidrec) {
-					qexec->_p_metrics = pidrec->p_metrics;
-					qexec->_cpu_elapsed = pidrec->cpu_elapsed;
-				} else {
-					memset(&qexec->_p_metrics, 0, sizeof(qexec->_p_metrics));
-				}
-			}
+			apr_hash_this(hi, 0, 0, &vptr);
+            qexec = vptr;
+            /* fill in _p_metrics */
+            pidrec = apr_hash_get(pidtab, &qexec->key.hash_key.pid, sizeof(qexec->key.hash_key.pid));
+            if (pidrec) {
+                qexec->_p_metrics = pidrec->p_metrics;
+                qexec->_cpu_elapsed = pidrec->cpu_elapsed;
+            } else {
+                memset(&qexec->_p_metrics, 0, sizeof(qexec->_p_metrics));
+            }
 
 			/* fill in _hname */
 			strncpy(qexec->_hname, gx.hostname, sizeof(qexec->_hname) - 1);
@@ -1021,7 +1010,7 @@ static void gx_gettcpcmd(SOCKET sock, short event, void* arg)
 				break;
 			}
 
-			TR2(("sending qexec, pkttype %d, size_of_line %d\n", localPacketObject.header.pkttype, localPacketObject.u.qexec_packet.data.size_of_line));
+			TR2(("sending qexec, pkttype %d\n", localPacketObject.header.pkttype));
 			send_smon_to_mon_pkt(sock, &localPacketObject);
 			count++;
 		}
@@ -1033,6 +1022,7 @@ static void gx_gettcpcmd(SOCKET sock, short event, void* arg)
 		// loop through PID's and add to Query CPU Hash Table
 		for (hi = apr_hash_first(0, pidtab); hi; hi = apr_hash_next(hi))
 		{
+			void* vptr;
 			pidrec_t* lookup;
 
 			apr_hash_this(hi, 0, 0, &vptr);
@@ -1072,6 +1062,7 @@ static void gx_gettcpcmd(SOCKET sock, short event, void* arg)
 		// loop through the query per cpu table and send the metrics
 		for (hi = apr_hash_first(0, query_cpu_table); hi; hi = apr_hash_next(hi))
 		{
+			void* vptr;
 			apr_hash_this(hi, 0, 0, &vptr);
 			pidrec = vptr;
 
@@ -1221,28 +1212,6 @@ static void gx_recvqlog(gpmon_packet_t* pkt)
 	}
 }
 
-static void update_max_value(apr_uint32_t* total, apr_uint32_t newdata)
-{
-	if (newdata > *total)
-	{
-		*total = newdata;
-	}
-}
-
-static void update_avg_value(apr_uint32_t totalcount, apr_uint32_t* totalavg, apr_uint32_t newcount, apr_uint32_t newavg)
-{
-	//OldAverage*oldCount + AverageInNewPacket*countInNewPacket
-	//----------------------------------------------------------
-	// OldCount + countInNewPacket
-
-	*totalavg = (apr_uint32_t)(( (*totalavg * (double)totalcount) + (newavg * (double)newcount) ) / ((double)(totalcount+newcount)));
-}
-
-static void update_count_value(apr_uint32_t* total, apr_uint32_t newdata)
-{
-	*total += newdata;
-}
-
 static void gx_recvsegment(gpmon_packet_t* pkt)
 {
 	gpmon_seginfo_t* p;
@@ -1267,136 +1236,18 @@ static void gx_recvsegment(gpmon_packet_t* pkt)
 	}
 }
 
-#define SINGLE_METRIC_BUFSZ 100
-typedef char single_metric_string[SINGLE_METRIC_BUFSZ];
-
 /**
-* write the iterator table row the qexec packet.
-* @note This function was moved from gpmon_agg.c
+* write the qexec packet.
 * @return 1 if success, 0 if failure
 */
 static apr_uint32_t create_qexec_packet(const gpmon_qexec_t* qexec, gp_smon_to_mmon_packet_t* pkt)
 {
-	single_metric_string metrics[GPMON_QEXEC_M_DBCOUNT];
-	char qexec_tstamp[GPMON_DATE_BUF_SIZE];
-	int i, len = 0;
-	const char* measure_name = NULL;
-	const char* unit_name = NULL;
-	apr_status_t r = APR_SUCCESS;
-	char phase[4] = " ";
-	char tname[16] = "Name";
-	char nowstr[GPMON_DATE_BUF_SIZE];
-
-	gpmon_datetime_rounded(time(NULL), nowstr);
-
-	if( PMNT_MAXIMUM_ENUM <= qexec->nodeType) {
-		TR0( ("Error !!!! node type out of range: %d >= %d\n", qexec->nodeType, PMNT_MAXIMUM_ENUM));
-		return 0;
-	}
-
 	// Copy over needed values
 	memcpy(&pkt->u.qexec_packet.data.key, &qexec->key, sizeof(gpmon_qexeckey_t));
-	pkt->u.qexec_packet.data.measures_rows_in = qexec->measures[GPMON_QEXEC_M_ROWSIN];
+	pkt->u.qexec_packet.data.measures_rows_in = qexec->rowsin;
 	pkt->u.qexec_packet.data._cpu_elapsed = qexec->_cpu_elapsed;
 	pkt->u.qexec_packet.data.rowsout = qexec->rowsout;
 
-	for (i = 0; i < GPMON_QEXEC_M_DBCOUNT; i++) {
-		if (r == APR_SUCCESS) {
-			/* after this function returns failure 1 time don't try again for remaining numbers in array */
-			/* GPMON_QEXEC_M_DBCOUNT is number of metrics output to the DB; GPMON_QEXEC_M_COUNT is number of metrics in the packets */
-
-			if (i < GPMON_QEXEC_M_COUNT) {
-				r = gpdb_getnode_metricinfo(qexec->nodeType, i, &measure_name, &unit_name);
-			} else {
-				r = APR_NOTFOUND;
-			}
-		}
-
-		if (r == APR_SUCCESS) {
-			snprintf(metrics[i], SINGLE_METRIC_BUFSZ, "%s|%s|%" FMT64 "|0", measure_name, unit_name, qexec->measures[i]);
-		} else {
-			snprintf(metrics[i], SINGLE_METRIC_BUFSZ, "%s", "null|null|null|null");
-		}
-	}
-
-	if (opt.iterator_aggregate) { // leave the segid blank
-		len = snprintf(qexec_smon_temp_line, QEXEC_MAX_ROW_BUF_SIZE,
-			"%s|%d|%d|%d|null|%d|%d|%d|%s|%s|%s|%s|%d|%" FMT64 "|%" FMT64 "|%" FMT64 "|%" FMT64 "|%" FMT64 "|%" FMT64 "|%.2f|%s|%" FMT64 "|%" FMT64 "|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s" "|%s|%s",
-			nowstr,
-			qexec->key.tmid,
-			qexec->key.ssid,
-			qexec->key.ccnt,
-			qexec->key.hash_key.pid,
-			qexec->key.hash_key.nid,
-			qexec->pnid,
-			qexec->_hname,
-			gpdb_getnodename(qexec->nodeType),
-			gpdb_getnodestatus(qexec->status),
-			gpmon_datetime((time_t)qexec->tstart, qexec_tstamp),
-			qexec->tduration,
-			qexec->p_mem,
-			qexec->p_memmax,
-			qexec->_p_metrics.mem.size,
-			qexec->_p_metrics.mem.resident,
-			qexec->_p_metrics.mem.share,
-			qexec->_cpu_elapsed,
-			qexec->_p_metrics.cpu_pct,
-			phase,
-			qexec->rowsout,
-			qexec->rowsout_est,
-			metrics[0], metrics[1], metrics[2], metrics[3],
-			metrics[4], metrics[5], metrics[6], metrics[7],
-			metrics[8], metrics[9], metrics[10], metrics[11],
-			metrics[12], metrics[13], metrics[14], metrics[15],
-			tname,
-			qexec->relation_name);
-
-	} else {
-		len = snprintf(qexec_smon_temp_line, QEXEC_MAX_ROW_BUF_SIZE,
-			"%s|%d|%d|%d|%d|%d|%d|%d|%s|%s|%s|%s|%d|%" FMT64 "|%" FMT64 "|%" FMT64 "|%" FMT64 "|%" FMT64 "|%" FMT64 "|%.2f|%s|%" FMT64 "|%" FMT64 "|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s" "|%s|%s",
-			nowstr,
-			qexec->key.tmid,
-			qexec->key.ssid,
-			qexec->key.ccnt,
-			qexec->key.hash_key.segid,
-			qexec->key.hash_key.pid,
-			qexec->key.hash_key.nid,
-			qexec->pnid,
-			qexec->_hname,
-			gpdb_getnodename(qexec->nodeType),
-			gpdb_getnodestatus(qexec->status),
-			gpmon_datetime((time_t)qexec->tstart, qexec_tstamp),
-			qexec->tduration,
-			qexec->p_mem,
-			qexec->p_memmax,
-			qexec->_p_metrics.mem.size,
-			qexec->_p_metrics.mem.resident,
-			qexec->_p_metrics.mem.share,
-			qexec->_cpu_elapsed,
-			qexec->_p_metrics.cpu_pct,
-			phase,
-			qexec->rowsout,
-			qexec->rowsout_est,
-			metrics[0], metrics[1], metrics[2], metrics[3],
-			metrics[4], metrics[5], metrics[6], metrics[7],
-			metrics[8], metrics[9], metrics[10], metrics[11],
-			metrics[12], metrics[13], metrics[14], metrics[15],
-			tname,
-			qexec->relation_name);
-	}
-
-
-	pkt->u.qexec_packet.line = qexec_smon_temp_line; //Set the line to the temp memory
-	if (len < 0) {
-		gpmon_warning(FLINE, "iterator line could not copy sprintf returned -1");
-		return 0;
-	}
-	if ((len + 1) == QEXEC_MAX_ROW_BUF_SIZE) {
-		gpmon_warning(FLINE, "iterator line too long ... ignored: %s", pkt->u.qexec_packet.line);
-		return 0;
-	}
-
-	pkt->u.qexec_packet.data.size_of_line = len + 1; // Set the line length
 	gp_smon_to_mmon_set_header(pkt,GPMON_PKTTYPE_QEXEC);
 	return 1;
 }
@@ -1424,7 +1275,7 @@ static void extract_segments_exec(gpmon_packet_t* pkt)
 	if (rec)
 	{
 		rec->u.queryseg.sum_cpu_elapsed += pidrec->cpu_elapsed;
-		rec->u.queryseg.sum_measures_rows_in += p->measures[GPMON_QEXEC_M_ROWSIN];
+		rec->u.queryseg.sum_measures_rows_in += p->rowsin;
 		if (p->key.hash_key.segid == -1 && p->key.hash_key.nid == 1)
 		{
 			rec->u.queryseg.final_rowsout = p->rowsout;
@@ -1446,7 +1297,7 @@ static void extract_segments_exec(gpmon_packet_t* pkt)
 			rec->u.queryseg.final_rowsout = -1;
 		}
 		rec->u.queryseg.sum_cpu_elapsed = pidrec->cpu_elapsed;
-		rec->u.queryseg.sum_measures_rows_in = p->measures[GPMON_QEXEC_M_ROWSIN];
+		rec->u.queryseg.sum_measures_rows_in = p->rowsin;
 		apr_hash_set(gx.querysegtab, &rec->u.queryseg.key, sizeof(rec->u.queryseg.key), rec);
 	}
 }
@@ -1454,10 +1305,10 @@ static void extract_segments_exec(gpmon_packet_t* pkt)
 static void gx_recvqexec(gpmon_packet_t* pkt)
 {
 	gpmon_qexec_t* p;
-	gpmon_qexec_t* rec;
 
 	if (pkt->pkttype != GPMON_PKTTYPE_QEXEC)
 		gpsmon_fatal(FLINE, "assert failed; expected pkttype qexec");
+    TR2(("received qexec packet\n"));
 
 	p = &pkt->u.qexec;
 	get_pid_metrics(p->key.hash_key.pid,
@@ -1495,7 +1346,7 @@ static void gx_recvfrom(SOCKET sock, short event, void* arg)
 
 	if (n != sizeof(pkt))
 	{
-		gpmon_warning(FLINE, "bad packet (length %d)", n);
+		gpmon_warning(FLINE, "bad packet (length %d). Expected packet size %d", n, sizeof(pkt));
 		return;
 	}
 
@@ -1973,34 +1824,14 @@ void gx_main(int port, apr_int64_t signature)
 		/* get pid metrics */
 		for (hi = apr_hash_first(0, gx.qexectab); hi; hi = apr_hash_next(hi))
 		{
-			if (opt.iterator_aggregate) {
-				qexec_agg_t* qexec_agg;
-				void* vptr;
-				apr_hash_index_t* hj;
-
-				apr_hash_this(hi, 0, 0, &vptr);
-				qexec_agg = vptr;
-
-				for (hj = apr_hash_first(0, qexec_agg->qexecaggtab); hj; hj = apr_hash_next(hj)) {
-					gpmon_qexec_t* rec;
-
-					apr_hash_this(hj, 0, 0, &vptr);
-					rec = vptr;
-					get_pid_metrics(rec->key.hash_key.pid,
-							rec->key.tmid,
-							rec->key.ssid,
-							rec->key.ccnt);
-				}
-			} else {
-				void* vptr;
-				gpmon_qexec_t* rec;
-				apr_hash_this(hi, 0, 0, &vptr);
-				rec = vptr;
-				get_pid_metrics(rec->key.hash_key.pid,
-						rec->key.tmid,
-						rec->key.ssid,
-						rec->key.ccnt);
-			}
+            void* vptr;
+            gpmon_qexec_t* rec;
+            apr_hash_this(hi, 0, 0, &vptr);
+            rec = vptr;
+            get_pid_metrics(rec->key.hash_key.pid,
+                    rec->key.tmid,
+                    rec->key.ssid,
+                    rec->key.ccnt);
 		}
 
 		/* check log size */
@@ -2097,9 +1928,6 @@ static void parse_command_line(int argc, const char* const argv[])
 			break;
 		case 'm':
 			opt.max_log_size = apr_atoi64(arg);
-			break;
-		case 'a':
-			opt.iterator_aggregate = 1;
 			break;
 		case 't':
 			opt.terminate_timeout = apr_atoi64(arg);

@@ -211,16 +211,7 @@ initGpmonPktForBitmapTableScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, BitmapTableScan));
 
-	{
-		RangeTblEntry *rte = rt_fetch(((BitmapTableScan *)planNode)->scan.scanrelid,
-									  estate->es_range_table);
-		char schema_rel_name[SCAN_REL_NAME_BUF_SIZE] = {0};
-
-		Assert(GPMON_BITMAPTABLESCAN_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_BitmapTableScan,
-							 (int64)planNode->plan_rows,
-							 GetScanRelNameGpmon(rte->relid, schema_rel_name));
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 /*

@@ -4537,7 +4537,7 @@ fetchCurrentRow(WindowState * wstate)
 		if (TupIsNull(slot))
 			return NULL;
 
-		Gpmon_M_Incr(GpmonPktFromWindowState(wstate), GPMON_QEXEC_M_ROWSIN);
+		Gpmon_Incr_Rows_In(GpmonPktFromWindowState(wstate));
 		CheckSendPlanStateGpmonPkt(&wstate->ps);
 		if (buffer == NULL)
 		{
@@ -4768,7 +4768,7 @@ fetchTupleSlotThroughBuf(WindowState * wstate)
 		if (TupIsNull(slot))
 			return NULL;
 
-		Gpmon_M_Incr(GpmonPktFromWindowState(wstate), GPMON_QEXEC_M_ROWSIN);
+		Gpmon_Incr_Rows_In(GpmonPktFromWindowState(wstate));
 		CheckSendPlanStateGpmonPkt(&wstate->ps);
 		/* Put the new tuple into the input buffer */
 		ntuplestore_acc_put_tupleslot(buffer->writer, slot);
@@ -4917,7 +4917,7 @@ ExecWindow(WindowState * wstate)
 
 	if (!TupIsNull(resultSlot))
 	{
-		Gpmon_M_Incr_Rows_Out(GpmonPktFromWindowState(wstate));
+		Gpmon_Incr_Rows_Out(GpmonPktFromWindowState(wstate));
 		CheckSendPlanStateGpmonPkt(&wstate->ps);
 	}
 
@@ -6997,11 +6997,7 @@ initGpmonPktForWindow(Plan * planNode, gpmon_packet_t * gpmon_pkt, EState *estat
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Window));
 
-	{
-		Assert(GPMON_WINDOW_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_Window,
-							 (int64) planNode->plan_rows, NULL);
-	}
+		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

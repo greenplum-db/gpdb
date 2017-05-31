@@ -44,9 +44,7 @@ initGpmonPktForPartitionSelector(Plan *planNode, gpmon_packet_t *gpmon_pkt, ESta
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, PartitionSelector));
 
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_PartitionSelector,
-							(int64)planNode->plan_rows,
-							NULL);
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 /* ----------------------------------------------------------------

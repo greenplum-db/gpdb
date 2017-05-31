@@ -645,13 +645,7 @@ initGpmonPktForSort(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Sort));
 	
-	{
-		Assert(GPMON_SORT_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
-
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_Sort,
-							 (int64)planNode->plan_rows, 
-							 NULL); 
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

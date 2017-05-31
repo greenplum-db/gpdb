@@ -1253,7 +1253,7 @@ puttuple_common(Tuplesortstate_mk *state, MKEntry *e)
 	state->totalNumTuples++;
 
 	if (state->gpmon_pkt)
-		Gpmon_M_Incr(state->gpmon_pkt, GPMON_QEXEC_M_ROWSIN);
+		Gpmon_Incr_Rows_In(state->gpmon_pkt);
 
 	bool		growSucceed = true;
 
@@ -1661,7 +1661,7 @@ tuplesort_gettupleslot_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos,
 #endif
 
 		if (state->gpmon_pkt)
-			Gpmon_M_Incr_Rows_Out(state->gpmon_pkt);
+			Gpmon_Incr_Rows_Out(state->gpmon_pkt);
 
 		return true;
 	}
@@ -1967,14 +1967,6 @@ mergeruns(Tuplesortstate_mk *state)
 	{
 		lt = LogicalTapeSetGetTape(state->tapeset, tapenum);
 		LogicalTapeRewind(state->tapeset, lt, false);
-	}
-
-	/* Clear gpmon for respilling data */
-	if (state->gpmon_pkt)
-	{
-		Gpmon_M_Incr(state->gpmon_pkt, GPMON_SORT_SPILLPASS);
-		Gpmon_M_Reset(state->gpmon_pkt, GPMON_SORT_CURRSPILLPASS_TUPLE);
-		Gpmon_M_Reset(state->gpmon_pkt, GPMON_SORT_CURRSPILLPASS_BYTE);
 	}
 
 	for (;;)
@@ -2790,14 +2782,6 @@ writetup_heap(Tuplesortstate_mk *state, LogicalTape *lt, MKEntry *e)
 	{
 		LogicalTapeWrite(state->tapeset, lt, (void *) &tuplen, sizeof(tuplen));
 		ret += sizeof(tuplen);
-	}
-
-	if (state->gpmon_pkt)
-	{
-		Gpmon_M_Incr(state->gpmon_pkt, GPMON_SORT_SPILLTUPLE);
-		Gpmon_M_Add(state->gpmon_pkt, GPMON_SORT_SPILLBYTE, tuplen);
-		Gpmon_M_Incr(state->gpmon_pkt, GPMON_SORT_CURRSPILLPASS_TUPLE);
-		Gpmon_M_Add(state->gpmon_pkt, GPMON_SORT_CURRSPILLPASS_BYTE, tuplen);
 	}
 
 	pfree(e->ptr);

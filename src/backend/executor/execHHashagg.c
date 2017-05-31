@@ -868,7 +868,7 @@ agg_hash_initial_pass(AggState *aggstate)
 			break;
 		}
 
-		Gpmon_M_Incr(GpmonPktFromAggState(aggstate), GPMON_QEXEC_M_ROWSIN);
+		Gpmon_Incr_Rows_In(GpmonPktFromAggState(aggstate));
 
 		if (aggstate->hashslot->tts_tupleDescriptor == NULL)
 		{
@@ -1314,9 +1314,6 @@ spill_hash_table(AggState *aggstate)
 
 			hashtable->num_batches++;
 			
-			Gpmon_M_Incr(GpmonPktFromAggState(aggstate), GPMON_AGG_SPILLBATCH);
-			Gpmon_M_Incr(GpmonPktFromAggState(aggstate), GPMON_AGG_CURRSPILLPASS_BATCH);
-			
 			CheckSendPlanStateGpmonPkt(&aggstate->ss.ps);
 		}
 
@@ -1343,12 +1340,6 @@ spill_hash_table(AggState *aggstate)
 					spill_file->file_info->total_bytes += written_bytes;
 
 					hashtable->num_spill_groups++;
-
-					Gpmon_M_Incr(GpmonPktFromAggState(aggstate), GPMON_AGG_SPILLTUPLE);
-					Gpmon_M_Add(GpmonPktFromAggState(aggstate), GPMON_AGG_SPILLBYTE, written_bytes);
-
-					Gpmon_M_Incr(GpmonPktFromAggState(aggstate), GPMON_AGG_CURRSPILLPASS_TUPLE);
-					Gpmon_M_Add(GpmonPktFromAggState(aggstate), GPMON_AGG_CURRSPILLPASS_BYTE, written_bytes);
 				}
 			}
 
@@ -1748,9 +1739,6 @@ agg_hash_reload(AggState *aggstate)
 			Assert((hashkey >> spill_file->batch_hash_bit) %
 				   spill_file->parent_spill_set->num_spill_files == 
 				   spill_file->index_in_parent);
-
-			Gpmon_M_Incr(GpmonPktFromAggState(aggstate), GPMON_AGG_CURRSPILLPASS_READTUPLE);
-			Gpmon_M_Add(GpmonPktFromAggState(aggstate), GPMON_AGG_CURRSPILLPASS_READBYTE, input_size);
 		}
 
 		else
@@ -2124,17 +2112,6 @@ agg_hash_explain(AggState *aggstate)
 static void
 Gpmon_ResetAggHashTable(AggState* aggstate)
 {
-	Gpmon_M_Incr(GpmonPktFromAggState(aggstate), GPMON_AGG_SPILLPASS);
-	/* Reset current pass read tuples must be before current pass spill tuples */
-	Gpmon_M_Reset(GpmonPktFromAggState(aggstate),
-			GPMON_AGG_CURRSPILLPASS_READTUPLE);
-	Gpmon_M_Reset(GpmonPktFromAggState(aggstate),
-			GPMON_AGG_CURRSPILLPASS_READBYTE);
-	Gpmon_M_Reset(GpmonPktFromAggState(aggstate),
-			GPMON_AGG_CURRSPILLPASS_TUPLE);
-	Gpmon_M_Reset(GpmonPktFromAggState(aggstate), GPMON_AGG_CURRSPILLPASS_BYTE);
-	Gpmon_M_Reset(GpmonPktFromAggState(aggstate),
-			GPMON_AGG_CURRSPILLPASS_BATCH);
 	CheckSendPlanStateGpmonPkt(&aggstate->ss.ps);
 }
 

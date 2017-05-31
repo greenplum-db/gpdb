@@ -25,17 +25,6 @@ extern void ExecSortRestrPos(SortState *node);
 extern void ExecReScanSort(SortState *node, ExprContext *exprCtxt);
 extern void ExecEagerFreeSort(SortState *node);
 
-enum
-{
-	GPMON_SORT_MEMORY_BYTE = GPMON_QEXEC_M_NODE_START,
-	GPMON_SORT_SPILLTUPLE,
-	GPMON_SORT_SPILLBYTE,
-	GPMON_SORT_SPILLPASS,
-	GPMON_SORT_CURRSPILLPASS_TUPLE,
-	GPMON_SORT_CURRSPILLPASS_BYTE,
-	GPMON_SORT_TOTAL,
-};
-
 static inline gpmon_packet_t * GpmonPktFromSortState(SortState *node)
 {
 	return &node->ss.ps.gpmon_pkt;

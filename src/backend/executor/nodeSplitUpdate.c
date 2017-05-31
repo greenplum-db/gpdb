@@ -215,10 +215,6 @@ initGpmonPktForSplitUpdate(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *es
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, SplitUpdate));
 
-	PerfmonNodeType type = PMNT_SplitUpdate;
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, type,
-									 (int64)planNode->plan_rows,
-									 NULL);
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 

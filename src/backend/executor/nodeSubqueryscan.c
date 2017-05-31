@@ -78,7 +78,7 @@ SubqueryNext(SubqueryScanState *node)
 
     if (!TupIsNull(slot))
     {
-        Gpmon_M_Incr_Rows_Out(GpmonPktFromSubqueryScanState(node));
+        Gpmon_Incr_Rows_Out(GpmonPktFromSubqueryScanState(node));
         CheckSendPlanStateGpmonPkt(&node->ss.ps);
     }
 
@@ -264,22 +264,12 @@ ExecSubqueryReScan(SubqueryScanState *node, ExprContext *exprCtxt)
 	node->ss.ss_ScanTupleSlot = NULL;
 	/*node->ss.ps.ps_TupFromTlist = false;*/
 
-	Gpmon_M_Incr(GpmonPktFromSubqueryScanState(node), GPMON_SUBQUERYSCAN_RESCAN);
 	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 }
 	
 void
 initGpmonPktForSubqueryScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
 {
-	RangeTblEntry *rte;
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, SubqueryScan));
-
-	rte = rt_fetch(((SubqueryScan *)planNode)->scan.scanrelid, estate->es_range_table);
-
-	if (rte && rte->rtekind != RTE_VOID)
-	{
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_SubqueryScan,
-							 (int64)planNode->plan_rows, 
-							 rte->eref->aliasname); 
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

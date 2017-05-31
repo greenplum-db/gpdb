@@ -233,7 +233,7 @@ ExecLimit(LimitState *node)
 
         if (!TupIsNull(slot))
         {
-            Gpmon_M_Incr_Rows_Out(GpmonPktFromLimitState(node));
+            Gpmon_Incr_Rows_Out(GpmonPktFromLimitState(node));
             CheckSendPlanStateGpmonPkt(&node->ps); 
         }
 	return slot;
@@ -454,8 +454,5 @@ initGpmonPktForLimit(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Limit));
 
-	{
-		Assert(GPMON_LIMIT_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_Limit, (int64)0, NULL);
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

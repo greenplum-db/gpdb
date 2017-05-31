@@ -103,11 +103,7 @@ apr_queue_t* message_queue = NULL;
 sigset_t unblocksig;
 sigset_t blocksig;
 
-/* Temporary global memory to store the qexec line upon a receive until it is copied into a mmon_qexec_t struct; only use in main receive thread*/
-char	qexec_mmon_temp_line[QEXEC_MAX_ROW_BUF_SIZE];
-
 extern int gpdb_exec_search_for_at_least_one_row(const char* QUERY, PGconn* persistant_conn);
-
 
 /* Function defs */
 static int read_conf_file(char *conffile);
@@ -632,6 +628,7 @@ static void* conm_main(apr_thread_t* thread_, void* arg_)
 						snprintf(line, line_size, "ssh -v -o 'BatchMode yes' -o 'StrictHostKeyChecking no'"
 								" %s '%s echo -e \"%" APR_INT64_T_FMT "\\n\\n\" | %s/bin/gpsmon -m %" FMT64 " -t %" FMT64 " -l %s%s -v %d %d' 2>&1",
 								active_hostname, kill_gpsmon, ax.signature, ax.gphome, opt.max_log_size, smon_terminate_timeout, ptr_smon_log_location, ptr_smon_log_location_suffix, opt.v, ax.port);
+
 					}
 
 					if (h->ever_connected)
@@ -747,11 +744,6 @@ static void* harvest_main(apr_thread_t* thread_, void* arg_)
 	unsigned int partition_check_interval = 3600 * 6; // check for new partitions every 6 hours
 
 	gpdb_check_partitions(&opt);
-
-	if (opt.iterator_aggregate)
-	{
-		remove_segid_constraint();
-	}
 
 	for (loop = 1; !ax.exit; loop++)
 	{
@@ -1289,10 +1281,6 @@ static int read_conf_file(char *conffile)
 			{
 				opt.max_disk_space_messages_per_interval = atoi(pVal);
 			}
-			else if (apr_strnatcasecmp(pName, "iterator_aggregate") == 0)
-			{
-				opt.iterator_aggregate = atoi(pVal);
-			}
 			else if (apr_strnatcasecmp(pName, "partition_age") == 0)
 			{
 				opt.partition_age = atoi(pVal);
@@ -1493,12 +1481,6 @@ int main(int argc, const char* const argv[])
 	}
 
 	parse_command_line(argc, argv);
-
-	if ( gpdb_debug_string_lookup_table() != APR_SUCCESS)
-	{
-		interuptable_sleep(30); // sleep to prevent loop of forking process and failing
-		gpmon_fatal(FLINE, "internal consistency check failed at gpperfmon startup");
-	}
 
 	/* Set env if we got a port.  This will be picked up by libpq */
 	if (opt.gpdb_port)
@@ -1836,12 +1818,6 @@ static apr_status_t recvpkt(int sock, gp_smon_to_mmon_packet_t* pkt, bool loop_u
 		{
 			return e;
 		}
-		if (0 != (e = recv_data(sock, qexec_mmon_temp_line, pkt->u.qexec_packet.data.size_of_line)))
-		{
-			return e;
-		}
-		pkt->u.qexec_packet.line = qexec_mmon_temp_line;
-		TR2(("received qexec line size %d, %s\n", pkt->u.qexec_packet.data.size_of_line, pkt->u.qexec_packet.line));
 	}
 	else
 	{

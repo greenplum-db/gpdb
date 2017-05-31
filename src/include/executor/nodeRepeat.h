@@ -25,10 +25,6 @@ extern int ExecCountSlotsRepeat(Repeat *node);
 extern void ExecEndRepeat(RepeatState *node);
 extern void ExecReScanRepeat(RepeatState *node, ExprContext *exprCtxt);
 
-enum {
-	GPMON_REPEAT_TOTAL = GPMON_QEXEC_M_NODE_START,
-};
-
 static inline gpmon_packet_t * GpmonPktFromRepeatState(RepeatState *node)
 {
 	return &node->ps.gpmon_pkt;

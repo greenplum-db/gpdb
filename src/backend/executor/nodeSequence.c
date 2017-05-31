@@ -127,7 +127,7 @@ ExecSequence(SequenceState *node)
 	
 	if (!TupIsNull(result))
 	{
-		Gpmon_M_Incr_Rows_Out(GpmonPktFromSequenceState(node));
+		Gpmon_Incr_Rows_Out(GpmonPktFromSequenceState(node));
 		CheckSendPlanStateGpmonPkt(&node->ps);
 	}
 
@@ -183,8 +183,5 @@ initGpmonPktForSequence(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estat
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Sequence));
 
-	Assert(GPMON_SEQUENCE_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_Sequence,
-						 (int64)planNode->plan_rows,
-						 NULL);
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

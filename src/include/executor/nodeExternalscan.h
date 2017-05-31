@@ -19,11 +19,6 @@ extern void ExecStopExternalScan(ExternalScanState *node);
 extern void ExecExternalReScan(ExternalScanState *node, ExprContext *exprCtxt);
 extern void ExecEagerFreeExternalScan(ExternalScanState *node);
 
-enum {
-    GPMON_EXTSCAN_RESCAN = GPMON_QEXEC_M_NODE_START,
-    GPMON_EXTSCAN_TOTAL,
-};
-
 static inline gpmon_packet_t *GpmonPktFromExtScanState(ExternalScanState *node)
 {
 	return &node->ss.ps.gpmon_pkt;

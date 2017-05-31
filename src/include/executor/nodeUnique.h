@@ -22,11 +22,7 @@ extern TupleTableSlot *ExecUnique(UniqueState *node);
 extern void ExecEndUnique(UniqueState *node);
 extern void ExecReScanUnique(UniqueState *node, ExprContext *exprCtxt);
 
-enum {
-	GPMON_UNIQUE_TOTAL = GPMON_QEXEC_M_NODE_START,
-};
-
-static inline gpmon_packet_t * GpmonPktFromUniqueState(UniqueState *node) 
+static inline gpmon_packet_t * GpmonPktFromUniqueState(UniqueState *node)
 {
 	return &node->ps.gpmon_pkt;
 }

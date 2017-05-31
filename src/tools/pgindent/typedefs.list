@@ -1691,7 +1691,6 @@ PerlInterpreter
 Perl_check_t
 Perl_ppaddr_t
 PerfmonNodeStatus
-PerfmonNodeType
 PersistentDatabaseData
 PersistentDatabaseSharedData
 PersistentEndXactAppendOnlyMirrorResyncEofs

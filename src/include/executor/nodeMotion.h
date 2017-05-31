@@ -24,21 +24,6 @@ extern void ExecStopMotion(MotionState *node);
 
 extern bool isMotionGather(const Motion *m);
 
-
-enum 
-{
-	GPMON_MOTION_BYTES_SENT = GPMON_QEXEC_M_NODE_START,
-	GPMON_MOTION_TOTAL_ACK_TIME,
-	GPMON_MOTION_AVG_ACK_TIME,
-	GPMON_MOTION_MAX_ACK_TIME,
-	GPMON_MOTION_MIN_ACK_TIME,
-	GPMON_MOTION_COUNT_RESENT,
-	GPMON_MOTION_MAX_RESENT,
-	GPMON_MOTION_BYTES_RECEIVED,
-	GPMON_MOTION_COUNT_DROPPED,
-	GPMON_MOTION_TOTAL
-};
-
 static inline gpmon_packet_t * GpmonPktFromMotionState(MotionState *node)
 {
 	return &node->ps.gpmon_pkt;

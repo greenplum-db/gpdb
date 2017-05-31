@@ -287,7 +287,7 @@ ExecHashJoin(HashJoinState *node)
 				return NULL;
 			}
 
-			Gpmon_M_Incr(GpmonPktFromHashJoinState(node), GPMON_QEXEC_M_ROWSIN);
+			Gpmon_Incr_Rows_In(GpmonPktFromHashJoinState(node));
 			CheckSendPlanStateGpmonPkt(&node->js.ps);
 			node->js.ps.ps_OuterTupleSlot = outerTupleSlot;
 			econtext->ecxt_outertuple = outerTupleSlot;
@@ -380,7 +380,7 @@ ExecHashJoin(HashJoinState *node)
 
 				if (otherqual == NIL || ExecQual(otherqual, econtext, false))
 				{
-					Gpmon_M_Incr_Rows_Out(GpmonPktFromHashJoinState(node));
+					Gpmon_Incr_Rows_Out(GpmonPktFromHashJoinState(node));
 					CheckSendPlanStateGpmonPkt(&node->js.ps);
 					return ExecProject(node->js.ps.ps_ProjInfo, NULL);
 				}
@@ -417,7 +417,7 @@ ExecHashJoin(HashJoinState *node)
 
 			if (otherqual == NIL || ExecQual(otherqual, econtext, false))
 			{
-				Gpmon_M_Incr_Rows_Out(GpmonPktFromHashJoinState(node));
+				Gpmon_Incr_Rows_Out(GpmonPktFromHashJoinState(node));
 				CheckSendPlanStateGpmonPkt(&node->js.ps);
 				return ExecProject(node->js.ps.ps_ProjInfo, NULL);
 			}
@@ -758,7 +758,7 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 		elog(gp_workfile_caching_loglevel, "HashJoin built table with %.1f tuples for batch %d", hashtable->totalTuples, curbatch);
 #endif
 
-		Gpmon_M_Incr_Rows_Out(GpmonPktFromHashJoinState(hjstate));
+		Gpmon_Incr_Rows_Out(GpmonPktFromHashJoinState(hjstate));
 		CheckSendPlanStateGpmonPkt(&hjstate->js.ps);
 	} /* if (curbatch == 0) */
 
@@ -792,7 +792,6 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 		elog(gp_workfile_caching_loglevel, "HashJoin built table with %.1f tuples for batch %d", hashtable->totalTuples, curbatch);
 #endif
 
-		Gpmon_M_Incr(GpmonPktFromHashJoinState(hjstate), GPMON_HASHJOIN_SPILLBATCH);
 		CheckSendPlanStateGpmonPkt(&hjstate->js.ps);
 	}
 
@@ -1054,8 +1053,6 @@ ExecHashJoinSaveTuple(PlanState *ps, MemTuple tuple, uint32 hashvalue,
 
 	if (ps)
 	{
-		Gpmon_M_Incr(&ps->gpmon_pkt, GPMON_HASHJOIN_SPILLTUPLE);
-		Gpmon_M_Add(&ps->gpmon_pkt, GPMON_HASHJOIN_SPILLBYTE, memtuple_get_size(tuple));
 		CheckSendPlanStateGpmonPkt(ps);
 	}
 }
@@ -1245,47 +1242,7 @@ initGpmonPktForHashJoin(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estat
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, HashJoin));
 
-	{
-		PerfmonNodeType type = PMNT_Invalid;
-
-		switch (((HashJoin *) planNode)->join.jointype)
-		{
-			case JOIN_INNER:
-				type = PMNT_HashJoin;
-				break;
-			case JOIN_LEFT:
-				type = PMNT_HashLeftJoin;
-				break;
-			case JOIN_LASJ:
-			case JOIN_LASJ_NOTIN:
-				type = PMNT_HashLeftAntiSemiJoin;
-				break;
-			case JOIN_FULL:
-				type = PMNT_HashFullJoin;
-				break;
-			case JOIN_RIGHT:
-				type = PMNT_HashRightJoin;
-				break;
-			case JOIN_IN:
-				type = PMNT_HashExistsJoin;
-				break;
-			case JOIN_REVERSE_IN:
-				type = PMNT_HashReverseInJoin;
-				break;
-			case JOIN_UNIQUE_OUTER:
-				type = PMNT_HashUniqueOuterJoin;
-				break;
-			case JOIN_UNIQUE_INNER:
-				type = PMNT_HashUniqueInnerJoin;
-				break;
-		}
-
-		Assert(type != PMNT_Invalid);
-		Assert(GPMON_HASHJOIN_TOTAL <= (int) GPMON_QEXEC_M_COUNT);
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, type,
-							 (int64) planNode->plan_rows,
-							 NULL);
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

@@ -185,7 +185,7 @@ BitmapHeapNext(BitmapHeapScanState *node)
 
 		if (!TupIsNull(slot))
 		{
-			Gpmon_M_Incr_Rows_Out(GpmonPktFromBitmapHeapScanState(node));
+			Gpmon_Incr_Rows_Out(GpmonPktFromBitmapHeapScanState(node));
 			CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		}
 		return slot;
@@ -252,7 +252,6 @@ BitmapHeapNext(BitmapHeapScanState *node)
 			 */
 			bitgetpage(scan, tbmres);
 
-			Gpmon_M_Incr(GpmonPktFromBitmapHeapScanState(node), GPMON_BITMAPHEAPSCAN_PAGE);
 			CheckSendPlanStateGpmonPkt(&node->ss.ps);
 
 			/*
@@ -319,7 +318,7 @@ BitmapHeapNext(BitmapHeapScanState *node)
 		/* OK to return this tuple */
 		if (!TupIsNull(slot))
 		{
-			Gpmon_M_Incr_Rows_Out(GpmonPktFromBitmapHeapScanState(node));
+			Gpmon_Incr_Rows_Out(GpmonPktFromBitmapHeapScanState(node));
 			CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		}
 		return slot;
@@ -494,7 +493,6 @@ ExecBitmapHeapReScan(BitmapHeapScanState *node, ExprContext *exprCtxt)
 	 * Always rescan the input immediately, to ensure we can pass down any
 	 * outer tuple that might be used in index quals.
 	 */
-	Gpmon_M_Incr(GpmonPktFromBitmapHeapScanState(node), GPMON_BITMAPHEAPSCAN_RESCAN);
 	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 	ExecReScan(outerPlanState(node), exprCtxt);
 }
@@ -652,16 +650,7 @@ initGpmonPktForBitmapHeapScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState 
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, BitmapHeapScan));
 
-	{
-		RangeTblEntry *rte = rt_fetch(((BitmapHeapScan *)planNode)->scan.scanrelid,
-									  estate->es_range_table);
-		char schema_rel_name[SCAN_REL_NAME_BUF_SIZE] = {0};
-		
-		Assert(GPMON_BITMAPHEAPSCAN_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_BitmapHeapScan,
-							 (int64)planNode->plan_rows,
-							 GetScanRelNameGpmon(rte->relid, schema_rel_name));
-	}
+    InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

@@ -362,7 +362,5 @@ initGpmonPktForValuesScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *est
 
 	rte = rt_fetch(((ValuesScan *)planNode)->scan.scanrelid, estate->es_range_table);
 
-	{
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_ValuesScan, (int64)0, rte->eref->aliasname);
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

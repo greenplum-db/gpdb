@@ -26,13 +26,6 @@ extern void BitmapTableScanReScanPartition(ScanState *node);
 extern TupleTableSlot *BitmapTableScanFetchNext(ScanState *node);
 
 
-enum
-{
-	GPMON_BITMAPTABLESCAN_PAGE = GPMON_QEXEC_M_NODE_START,
-    GPMON_BITMAPTABLESCAN_RESCAN,
-	GPMON_BITMAPTABLESCAN_TOTAL
-};
-
 static inline gpmon_packet_t * GpmonPktFromBitmapTableScanState(BitmapTableScanState *node)
 {
 	return &node->ss.ps.gpmon_pkt;

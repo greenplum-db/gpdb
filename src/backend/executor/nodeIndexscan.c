@@ -151,7 +151,7 @@ IndexNext(IndexScanState *node)
 		/* Flag for the next call that no more tuples */
 		estate->es_evTupleNull[scanrelid - 1] = true;
 
-		Gpmon_M_Incr_Rows_Out(GpmonPktFromIndexScanState(node));
+		Gpmon_Incr_Rows_Out(GpmonPktFromIndexScanState(node));
                 CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		return slot;
 	}
@@ -171,7 +171,7 @@ IndexNext(IndexScanState *node)
 					   scandesc->xs_cbuf,		/* buffer containing tuple */
 					   false);	/* don't pfree */
 
-		Gpmon_M_Incr_Rows_Out(GpmonPktFromIndexScanState(node));
+		Gpmon_Incr_Rows_Out(GpmonPktFromIndexScanState(node));
                 CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		return slot;
 	}
@@ -277,7 +277,6 @@ ExecIndexReScan(IndexScanState *node, ExprContext *exprCtxt)
 	/* reset index scan */
 	index_rescan(node->iss_ScanDesc, node->iss_ScanKeys);
 
-	Gpmon_M_Incr(GpmonPktFromIndexScanState(node), GPMON_INDEXSCAN_RESCAN); 
 	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 }
 
@@ -513,7 +512,6 @@ void
 ExecIndexRestrPos(IndexScanState *node)
 {
 	index_restrpos(node->iss_ScanDesc);
-	Gpmon_M_Incr(GpmonPktFromIndexScanState(node), GPMON_INDEXSCAN_RESTOREPOS); 
 	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 }
 
@@ -1097,16 +1095,7 @@ initGpmonPktForIndexScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *esta
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, IndexScan));
 
-	{
-		char *relname = get_rel_name(((IndexScan *)planNode)->indexid);
-		
-		Assert(GPMON_INDEXSCAN_TOTAL <= (int) GPMON_QEXEC_M_COUNT);
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_IndexScan,
-							 (int64)planNode->plan_rows, 
-							 relname);
-		if (relname)
-			pfree(relname);
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

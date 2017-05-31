@@ -96,7 +96,6 @@ HeapScanNext(ScanState *scanState)
 		if (scandesc->rs_pageatatime &&
 		   IsA(scanState, TableScanState))
 		{
-			Gpmon_M_Incr(GpmonPktFromTableScanState((TableScanState *)scanState), GPMON_TABLESCAN_PAGE);
 			CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		}
 	}

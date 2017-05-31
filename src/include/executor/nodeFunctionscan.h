@@ -23,10 +23,6 @@ extern void ExecEndFunctionScan(FunctionScanState *node);
 extern void ExecFunctionReScan(FunctionScanState *node, ExprContext *exprCtxt);
 extern void ExecEagerFreeFunctionScan(FunctionScanState *node);
 
-enum {
-	GPMON_FUNCSCAN_TOTAL = GPMON_QEXEC_M_NODE_START,
-};
-
 static inline gpmon_packet_t * GpmonPktFromFuncScanState(FunctionScanState *node)
 {
 	return &node->ss.ps.gpmon_pkt;

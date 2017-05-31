@@ -223,7 +223,7 @@ ShareInputNext(ShareInputScanState *node)
 		if(!gotOK)
 			return NULL;
 
-		Gpmon_M_Incr_Rows_Out(GpmonPktFromShareInputState(node)); 
+		Gpmon_Incr_Rows_Out(GpmonPktFromShareInputState(node));
 		CheckSendPlanStateGpmonPkt(&node->ss.ps);
 
 		SIMPLE_FAULT_INJECTOR(ExecShareInputNext);
@@ -414,7 +414,6 @@ void ExecShareInputScanReScan(ShareInputScanState *node, ExprContext *exprCtxt)
 		Assert(!"ExecShareInputScanReScan: invalid share type ");
 	}
 
-	Gpmon_M_Incr(GpmonPktFromShareInputState(node), GPMON_SHAREINPUT_RESCAN); 
 	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 }
 
@@ -932,12 +931,7 @@ initGpmonPktForShareInputScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState 
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, ShareInputScan));
 
-	{
-		Assert(GPMON_SHAREINPUT_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_SharedScan,
-							 (int64)planNode->plan_rows, 
-							 NULL);
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 /*

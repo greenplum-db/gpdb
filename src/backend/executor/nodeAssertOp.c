@@ -201,10 +201,6 @@ initGpmonPktForAssertOp(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estat
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, AssertOp));
 
-	PerfmonNodeType type = PMNT_AssertOp;
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, type,
-								 (int64)planNode->plan_rows,
-								 NULL);
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 

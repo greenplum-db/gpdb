@@ -113,7 +113,7 @@ FunctionNext(FunctionScanState *node)
 
 	if (!TupIsNull(slot))
 	{
-		Gpmon_M_Incr_Rows_Out(GpmonPktFromFuncScanState(node));
+		Gpmon_Incr_Rows_Out(GpmonPktFromFuncScanState(node));
 		CheckSendPlanStateGpmonPkt(&node->ss.ps);
 	}
 
@@ -363,20 +363,7 @@ initGpmonPktForFunctionScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *e
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, FunctionScan));
 
-	{
-		RangeTblEntry *rte = rt_fetch(((Scan *)planNode)->scanrelid, estate->es_range_table);
-		char *funcname = (rte->funcexpr && IsA(rte->funcexpr, FuncExpr)) ? 
-					get_func_name(((FuncExpr *)rte->funcexpr)->funcid)
-				 	: rte->eref->aliasname;
-
-		Assert(GPMON_FUNCSCAN_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_FunctionScan,
-							 (int64)planNode->plan_rows,
-							 funcname);
-
-		if (funcname && funcname != rte->eref->aliasname)
-			pfree(funcname);
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

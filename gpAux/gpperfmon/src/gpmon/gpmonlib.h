@@ -204,14 +204,11 @@ typedef struct qexec_packet_data_t
 	apr_uint64_t 		rowsout;
 	apr_uint64_t		_cpu_elapsed; /* CPU elapsed for iter */
 	apr_uint64_t 		measures_rows_in;
-	apr_uint16_t		size_of_line; //the size of the string plus the null terminator
 } qexec_packet_data_t;
 
 typedef struct qexec_packet_t
 {
 	qexec_packet_data_t data;
-	char* 				line;
-
 } qexec_packet_t;
 
 typedef struct gp_smon_to_mmon_header_t {
@@ -244,11 +241,6 @@ double subtractTimeOfDay(struct timeval* begin, struct timeval* end);
 /* Set header*/
 extern void gp_smon_to_mmon_set_header(gp_smon_to_mmon_packet_t* pkt, apr_int16_t pkttype);
 
-unsigned int gpdb_getnode_number_metrics(PerfmonNodeType type);
-const char* gpdb_getnodename(PerfmonNodeType type);
-const char* gpdb_getnodestatus(PerfmonNodeStatus status);
-apr_status_t gpdb_getnode_metricinfo(PerfmonNodeType type, apr_byte_t metricnum, const char** name, const char** unit);
-apr_status_t gpdb_debug_string_lookup_table(void);
 apr_status_t apr_pool_create_alloc(apr_pool_t ** newpool, apr_pool_t *parent);
 void gpdb_get_single_string_from_query(const char* QUERY, char** resultstring, apr_pool_t* pool);
 #endif /* GPMONLIB_H */

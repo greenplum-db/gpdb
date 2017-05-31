@@ -1204,8 +1204,8 @@ agg_retrieve_direct(AggState *aggstate)
 				 * comparison (in group mode) and for projection.
 				 */
 
-				Gpmon_M_Incr(GpmonPktFromAggState(aggstate), GPMON_QEXEC_M_ROWSIN);
-                                CheckSendPlanStateGpmonPkt(&aggstate->ss.ps);
+				Gpmon_Incr_Rows_In(GpmonPktFromAggState(aggstate));
+				CheckSendPlanStateGpmonPkt(&aggstate->ss.ps);
 				slot_getallattrs(outerslot);
 				aggstate->grp_firstTuple = memtuple_form_to(firstSlot->tts_mt_bind,
 						slot_get_values(outerslot),
@@ -1324,7 +1324,7 @@ agg_retrieve_direct(AggState *aggstate)
 						break;
 					}
 
-					Gpmon_M_Incr(GpmonPktFromAggState(aggstate), GPMON_QEXEC_M_ROWSIN);
+					Gpmon_Incr_Rows_In(GpmonPktFromAggState(aggstate));
 					CheckSendPlanStateGpmonPkt(&aggstate->ss.ps);
 					/* set up for next advance aggregates call */
 					tmpcontext->ecxt_outertuple = outerslot;
@@ -1544,7 +1544,7 @@ agg_retrieve_direct(AggState *aggstate)
 			 * and the representative input tuple.	Note we do not support
 			 * aggregates returning sets ...
 			 */
-			Gpmon_M_Incr_Rows_Out(GpmonPktFromAggState(aggstate));
+			Gpmon_Incr_Rows_Out(GpmonPktFromAggState(aggstate));
 			CheckSendPlanStateGpmonPkt(&aggstate->ss.ps);
 
 			return ExecProject(projInfo, NULL);
@@ -1660,7 +1660,7 @@ agg_retrieve_hash_table(AggState *aggstate)
 			 * and the representative input tuple.	Note we do not support
 			 * aggregates returning sets ...
 			 */
-			Gpmon_M_Incr_Rows_Out(GpmonPktFromAggState(aggstate));
+			Gpmon_Incr_Rows_Out(GpmonPktFromAggState(aggstate));
 			CheckSendPlanStateGpmonPkt(&aggstate->ss.ps);
 			return ExecProject(projInfo, NULL);
 		}
@@ -2695,28 +2695,7 @@ initGpmonPktForAgg(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Agg));
 
-	{
-		PerfmonNodeType type = PMNT_Invalid;
-
-		switch (((Agg *) planNode)->aggstrategy)
-		{
-			case AGG_PLAIN:
-				type = PMNT_Aggregate;
-				break;
-			case AGG_SORTED:
-				type = PMNT_GroupAggregate;
-				break;
-			case AGG_HASHED:
-				type = PMNT_HashAggregate;
-				break;
-		}
-
-		Assert(type != PMNT_Invalid);
-		Assert(GPMON_AGG_TOTAL <= (int) GPMON_QEXEC_M_COUNT);
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, type,
-							 (int64) planNode->plan_rows,
-							 NULL);
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 /*

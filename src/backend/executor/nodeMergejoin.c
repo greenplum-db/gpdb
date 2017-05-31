@@ -1,13 +1,3 @@
-/*
- * GPDB_83_MERGE_FIXME: I left out gpmon counter stuff like this:
- *
- * Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_MERGEJOIN_OUTERTUPLE);
- * Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_QEXEC_M_ROWSIN);
- *
- * Do we really need that stuff? There are counters in the inner and outer nodes themselves.
- */
-
-
 /*-------------------------------------------------------------------------
  *
  * nodeMergejoin.c
@@ -669,8 +659,7 @@ ExecMergeJoin(MergeJoinState *node)
 		innerTupleSlot = ExecProcNode(innerPlan);
           	if (!TupIsNull(innerTupleSlot))
           	{
-          		Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_MERGEJOIN_INNERTUPLE);
-          		Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_QEXEC_M_ROWSIN); 
+          		Gpmon_Incr_Rows_In(GpmonPktFromMergeJoinState(node));
           	}
 		node->mj_InnerTupleSlot = innerTupleSlot;
 
@@ -1467,8 +1456,7 @@ ExecMergeJoin(MergeJoinState *node)
 				}
 				else
 				{
-					Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_MERGEJOIN_INNERTUPLE);
-					Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_QEXEC_M_ROWSIN); 
+					Gpmon_Incr_Rows_In(GpmonPktFromMergeJoinState(node));
 				}
 
 				/* Else remain in ENDOUTER state and process next tuple. */
@@ -1497,7 +1485,7 @@ ExecMergeJoin(MergeJoinState *node)
 					result = MJFillOuter(node);
 					if (result)
 					{
-						Gpmon_M_Incr_Rows_Out(GpmonPktFromMergeJoinState(node));
+						Gpmon_Incr_Rows_Out(GpmonPktFromMergeJoinState(node));
                                	CheckSendPlanStateGpmonPkt(&node->js.ps);
 						return result;
 					}
@@ -1794,49 +1782,7 @@ initGpmonPktForMergeJoin(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *esta
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, MergeJoin));
 	
-	{
-		PerfmonNodeType type = PMNT_Invalid;
-
-		switch(((MergeJoin *)planNode)->join.jointype)
-		{
-			case JOIN_INNER:
-				type = PMNT_MergeJoin;
-				break;
-			case JOIN_LEFT:
-				type = PMNT_MergeLeftJoin;
-				break;
-			case JOIN_LASJ:
-				type = PMNT_MergeLeftAntiSemiJoin;
-				break;
-			case JOIN_FULL:
-				type = PMNT_MergeFullJoin;
-				break;
-			case JOIN_RIGHT:
-				type = PMNT_MergeRightJoin;
-				break;
-			case JOIN_IN:
-				type = PMNT_MergeExistsJoin;
-				break;
-			case JOIN_REVERSE_IN:
-				type = PMNT_MergeReverseInJoin;
-				break;
-			case JOIN_UNIQUE_OUTER:
-				type = PMNT_MergeUniqueOuterJoin;
-				break;
-			case JOIN_UNIQUE_INNER:
-				type = PMNT_MergeUniqueInnerJoin;
-				break;
-			case JOIN_LASJ_NOTIN:
-				elog(ERROR, "Join type not supported");
-				break;
-		}
-
-		Assert(type != PMNT_Invalid);
-		Assert(GPMON_MERGEJOIN_TOTAL <= (int) GPMON_QEXEC_M_COUNT);
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, type, 
-							 (int64)planNode->plan_rows,
-							 NULL);
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

@@ -124,7 +124,7 @@ MultiExecHash(HashState *node)
 		if (TupIsNull(slot))
 			break;
 
-		Gpmon_M_Incr(GpmonPktFromHashState(node), GPMON_QEXEC_M_ROWSIN);
+		Gpmon_Incr_Rows_In(GpmonPktFromHashState(node));
 		CheckSendPlanStateGpmonPkt(&node->ps);
 		/* We have to compute the hash value */
 		econtext->ecxt_innertuple = slot;
@@ -985,7 +985,6 @@ ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
 			/* Gpmon stuff */
 			if(ps)
 			{
-				Gpmon_M_Set(&ps->gpmon_pkt, GPMON_HASH_SPILLBATCH, hashtable->nbatch);
 				CheckSendPlanStateGpmonPkt(ps);
 			}
 		}
@@ -1657,11 +1656,5 @@ void
 initGpmonPktForHash(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Hash));
-
-	{
-		Assert(GPMON_HASH_TOTAL <= (int) GPMON_QEXEC_M_COUNT);
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_Hash,
-							 (int64) planNode->plan_rows,
-							 NULL);
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

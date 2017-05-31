@@ -16,12 +16,6 @@ extern void ExecDynamicTableMarkPos(DynamicTableScanState *node);
 extern void ExecDynamicTableRestrPos(DynamicTableScanState *node);
 extern void ExecDynamicTableReScan(DynamicTableScanState *node, ExprContext *exprCtxt);
 
-enum 
-{
-	GPMON_DYNAMICTABLESCAN_RESCAN = GPMON_QEXEC_M_NODE_START,
-	GPMON_DYNAMICTABLESCAN_TOTAL,
-};
-
 static inline gpmon_packet_t * GpmonPktFromDynamicTableScanState(DynamicTableScanState *node)
 {
 	return &node->tableScanState.ss.ps.gpmon_pkt;

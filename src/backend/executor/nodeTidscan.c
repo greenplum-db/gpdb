@@ -299,7 +299,7 @@ TidNext(TidScanState *node)
 		estate->es_evTupleNull[scanrelid - 1] = true;
           	if (!TupIsNull(slot))
                 {
-          		Gpmon_M_Incr_Rows_Out(GpmonPktFromTidScanState(node));
+          		Gpmon_Incr_Rows_Out(GpmonPktFromTidScanState(node));
                         CheckSendPlanStateGpmonPkt(&node->ss.ps);
                 }
 		return slot;
@@ -608,14 +608,5 @@ initGpmonPktForTidScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, TidScan));
 	
-	{
-		RangeTblEntry *rte = rt_fetch(((TidScan *)planNode)->scan.scanrelid,
-									  estate->es_range_table);
-		char schema_rel_name[SCAN_REL_NAME_BUF_SIZE] = {0};
-		
-		Assert(GPMON_TIDSCAN_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_TidScan,
-							 (int64)planNode->plan_rows, 
-							 GetScanRelNameGpmon(rte->relid, schema_rel_name));
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

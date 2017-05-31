@@ -252,7 +252,7 @@ TableFunctionNext(TableFunctionState *node)
 	/* Update gpmon statistics */
 	if (!TupIsNull(slot))
 	{
-		Gpmon_M_Incr_Rows_Out(GpmonPktFromTableFunctionState(node));
+		Gpmon_Incr_Rows_Out(GpmonPktFromTableFunctionState(node));
 		CheckSendPlanStateGpmonPkt(&node->ss.ps);
 	}
 
@@ -488,8 +488,7 @@ initGpmonPktForTableFunction(Plan *planNode,
 	Assert(gpmon_pkt != NULL);
 	Assert(IsA(planNode, TableFunctionScan));
 
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_TableFunctionScan,
-						 (int64) planNode->plan_rows, NULL);
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 gpmon_packet_t *

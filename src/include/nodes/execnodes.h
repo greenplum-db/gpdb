@@ -1435,44 +1435,21 @@ typedef struct Gpmon_NameVal_Text
 	char	   *value;
 } Gpmon_NameVal_Text;
 
-/* Gpperfmon helper functions defined in execGpmon.h */
+/* Gpperfmon helper functions defined in execGpmon.c */
 extern char *GetScanRelNameGpmon(Oid relid, char schema_table_name[SCAN_REL_NAME_BUF_SIZE]);
 extern void CheckSendPlanStateGpmonPkt(PlanState *ps);
 extern void EndPlanStateGpmonPkt(PlanState *ps);
-extern void InitPlanNodeGpmonPkt(Plan* plan, gpmon_packet_t *gpmon_pkt, EState *estate,
-								 PerfmonNodeType type, int64 rowsout_est,
-								 char* relname);
-
+extern void InitPlanNodeGpmonPkt(Plan* plan, gpmon_packet_t *gpmon_pkt, EState *estate);
 
 extern uint64 PlanStateOperatorMemKB(const PlanState *ps);
 
-static inline void Gpmon_M_Incr(gpmon_packet_t *pkt, int nth)
+static inline void Gpmon_Incr_Rows_In(gpmon_packet_t *pkt)
 {
-	++pkt->u.qexec.measures[nth];
+    ++pkt->u.qexec.rowsin;
 }
-static inline void Gpmon_M_Incr_Rows_Out(gpmon_packet_t *pkt)
+static inline void Gpmon_Incr_Rows_Out(gpmon_packet_t *pkt)
 {
     ++pkt->u.qexec.rowsout;
-}
-static inline void Gpmon_M_Add_Rows_Out(gpmon_packet_t *pkt, int val)
-{
-    pkt->u.qexec.rowsout += val;
-}
-static inline void Gpmon_M_Add(gpmon_packet_t *pkt, int nth, int val)
-{
-	pkt->u.qexec.measures[nth] += val;
-}
-static inline void Gpmon_M_Set(gpmon_packet_t *pkt, int nth, int64 val)
-{
-	pkt->u.qexec.measures[nth] = val;
-}
-static inline int64 Gpmon_M_Get(gpmon_packet_t *pkt, int nth)
-{
-	return pkt->u.qexec.measures[nth];
-}
-static inline void Gpmon_M_Reset(gpmon_packet_t *pkt, int nth)
-{
-	pkt->u.qexec.measures[nth] = 0;
 }
 
 /* ----------------

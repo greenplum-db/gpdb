@@ -24,10 +24,6 @@ extern void ExecValuesMarkPos(ValuesScanState *node);
 extern void ExecValuesRestrPos(ValuesScanState *node);
 extern void ExecValuesReScan(ValuesScanState *node, ExprContext *exprCtxt);
 
-enum {
-	GPMON_NODEVALUESCAN_TOTAL = GPMON_QEXEC_M_NODE_START, 
-};
-
 static inline gpmon_packet_t * GpmonPktFromValueScanState(ValuesScanState *node)
 {
 	return &node->ss.ps.gpmon_pkt;

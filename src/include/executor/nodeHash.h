@@ -49,14 +49,6 @@ extern void ExecHashTableExplainInit(HashState *hashState, HashJoinState *hjstat
                                      HashJoinTable  hashtable);
 extern void ExecHashTableExplainBatchEnd(HashState *hashState, HashJoinTable hashtable);
 
-enum 
-{
-	GPMON_HASH_SPILLBATCH = GPMON_QEXEC_M_NODE_START,
-	GPMON_HASH_SPILLTUPLE,
-	GPMON_HASH_SPILLBYTE,
-	GPMON_HASH_TOTAL,
-};
-
 static inline gpmon_packet_t * GpmonPktFromHashState(HashState *node)
 {
 	return &node->ps.gpmon_pkt;

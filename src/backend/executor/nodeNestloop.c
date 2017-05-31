@@ -118,8 +118,7 @@ ExecNestLoop(NestLoopState *node)
 	if (node->prefetch_inner)
 	{
 		innerTupleSlot = ExecProcNode(innerPlan);
-		Gpmon_M_Incr(GpmonPktFromNLJState(node), GPMON_NLJ_INNERTUPLE);
-		Gpmon_M_Incr(GpmonPktFromNLJState(node), GPMON_QEXEC_M_ROWSIN);
+		Gpmon_Incr_Rows_In(GpmonPktFromNLJState(node));
 
 		node->reset_inner = true;
 		econtext->ecxt_innertuple = innerTupleSlot;
@@ -175,8 +174,7 @@ ExecNestLoop(NestLoopState *node)
 		{
 			ENL1_printf("getting new outer tuple");
 			outerTupleSlot = ExecProcNode(outerPlan);
-			Gpmon_M_Incr(GpmonPktFromNLJState(node), GPMON_NLJ_OUTERTUPLE);
-			Gpmon_M_Incr(GpmonPktFromNLJState(node), GPMON_QEXEC_M_ROWSIN);
+			Gpmon_Incr_Rows_In(GpmonPktFromNLJState(node));
 
 			/*
 			 * if there are no more outer tuples, then the join is complete..
@@ -239,8 +237,7 @@ ExecNestLoop(NestLoopState *node)
 		ENL1_printf("getting new inner tuple");
 
 		innerTupleSlot = ExecProcNode(innerPlan);
-		Gpmon_M_Incr(GpmonPktFromNLJState(node), GPMON_NLJ_INNERTUPLE);
-          	CheckSendPlanStateGpmonPkt(&node->js.ps);
+		CheckSendPlanStateGpmonPkt(&node->js.ps);
 
 		node->reset_inner = true;
 		econtext->ecxt_innertuple = innerTupleSlot;
@@ -281,7 +278,7 @@ ExecNestLoop(NestLoopState *node)
 					 */
 					ENL1_printf("qualification succeeded, projecting tuple");
 
-					Gpmon_M_Incr_Rows_Out(GpmonPktFromNLJState(node)); 
+					Gpmon_Incr_Rows_Out(GpmonPktFromNLJState(node));
                           	CheckSendPlanStateGpmonPkt(&node->js.ps);
 					return ExecProject(node->js.ps.ps_ProjInfo, NULL);
 				}
@@ -340,7 +337,7 @@ ExecNestLoop(NestLoopState *node)
 				 */
 				ENL1_printf("qualification succeeded, projecting tuple");
 
-				Gpmon_M_Incr_Rows_Out(GpmonPktFromNLJState(node));
+				Gpmon_Incr_Rows_Out(GpmonPktFromNLJState(node));
                      	CheckSendPlanStateGpmonPkt(&node->js.ps);
 				return ExecProject(node->js.ps.ps_ProjInfo, NULL);
 			}
@@ -589,48 +586,8 @@ void
 initGpmonPktForNestLoop(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, NestLoop));
-	
-	{
-		PerfmonNodeType type = PMNT_Invalid;
 
-		switch(((NestLoop *)planNode)->join.jointype)
-		{
-			case JOIN_INNER:
-				type = PMNT_NestedLoop;
-			break;
-			case JOIN_LEFT:
-				type = PMNT_NestedLoopLeftJoin;
-			break;
-			case JOIN_LASJ:
-			case JOIN_LASJ_NOTIN:
-				type = PMNT_NestedLoopLeftAntiSemiJoin;
-			break;
-			case JOIN_FULL:
-				type = PMNT_NestedLoopFullJoin;
-			break;
-			case JOIN_RIGHT:
-				type = PMNT_NestedLoopRightJoin;
-			break;
-			case JOIN_IN:
-				type = PMNT_NestedLoopExistsJoin;
-			break;
-			case JOIN_REVERSE_IN:
-				type = PMNT_NestedLoopReverseInJoin;
-			break;
-			case JOIN_UNIQUE_OUTER:
-				type = PMNT_NestedLoopUniqueOuterJoin;
-			break;
-			case JOIN_UNIQUE_INNER:
-				type = PMNT_NestedLoopUniqueInnerJoin;
-			break;
-		}
-
-		Assert(type != PMNT_Invalid);
-		Assert(GPMON_NLJ_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, type,
-							 (int64)planNode->plan_rows,
-							 NULL);
-	}
+    InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 /* ----------------------------------------------------------------

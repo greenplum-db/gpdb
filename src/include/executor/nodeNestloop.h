@@ -22,12 +22,6 @@ extern TupleTableSlot *ExecNestLoop(NestLoopState *node);
 extern void ExecEndNestLoop(NestLoopState *node);
 extern void ExecReScanNestLoop(NestLoopState *node, ExprContext *exprCtxt);
 
-enum {
-	GPMON_NLJ_INNERTUPLE = GPMON_QEXEC_M_NODE_START, 
-	GPMON_NLJ_OUTERTUPLE,
-	GPMON_NLJ_TOTAL
-};
-
 static inline gpmon_packet_t * GpmonPktFromNLJState(NestLoopState *node)
 {
 	return &node->js.ps.gpmon_pkt;

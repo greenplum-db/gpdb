@@ -174,9 +174,6 @@ void gpmon_send(gpmon_packet_t* p)
 	}
 
 	if (p->pkttype == GPMON_PKTTYPE_QEXEC) {
-		p->u.qexec.p_mem = TopMemoryContext->allBytesAlloc - TopMemoryContext->allBytesFreed;
-		p->u.qexec.p_memmax = TopMemoryContext->maxBytesHeld;
-
 		if (gp_perfmon_print_packet_info)
 		{
 			elog(LOG,

@@ -175,25 +175,6 @@ setMotionStatsForGpmon(MotionState *node)
 	uint64 avgAckTime = 0;
 	if (transportEntry->stat_count_acks > 0)
 		avgAckTime = transportEntry->stat_total_ack_time / transportEntry->stat_count_acks;
-
-	Gpmon_M_Set(GpmonPktFromMotionState(node), GPMON_MOTION_BYTES_SENT,
-				mlEntry->stat_total_bytes_sent);
-	Gpmon_M_Set(GpmonPktFromMotionState(node), GPMON_MOTION_TOTAL_ACK_TIME,
-				transportEntry->stat_total_ack_time);
-	Gpmon_M_Set(GpmonPktFromMotionState(node), GPMON_MOTION_AVG_ACK_TIME,
-				avgAckTime);
-	Gpmon_M_Set(GpmonPktFromMotionState(node), GPMON_MOTION_MAX_ACK_TIME,
-				transportEntry->stat_max_ack_time);
-	Gpmon_M_Set(GpmonPktFromMotionState(node), GPMON_MOTION_MIN_ACK_TIME,
-				transportEntry->stat_min_ack_time);
-	Gpmon_M_Set(GpmonPktFromMotionState(node), GPMON_MOTION_COUNT_RESENT,
-				transportEntry->stat_count_resent);
-	Gpmon_M_Set(GpmonPktFromMotionState(node), GPMON_MOTION_MAX_RESENT,
-				transportEntry->stat_max_resent);
-	Gpmon_M_Set(GpmonPktFromMotionState(node), GPMON_MOTION_BYTES_RECEIVED,
-				mlEntry->stat_total_bytes_recvd);
-	Gpmon_M_Set(GpmonPktFromMotionState(node), GPMON_MOTION_COUNT_DROPPED,
-				transportEntry->stat_count_dropped);
 }
 
 
@@ -259,8 +240,8 @@ ExecMotion(MotionState * node)
 			node->ps.state->active_recv_id = -1;
 		else
 		{
-			Gpmon_M_Incr(GpmonPktFromMotionState(node), GPMON_QEXEC_M_ROWSIN);
-			Gpmon_M_Incr_Rows_Out(GpmonPktFromMotionState(node));
+			Gpmon_Incr_Rows_In(GpmonPktFromMotionState(node));
+			Gpmon_Incr_Rows_Out(GpmonPktFromMotionState(node));
 			setMotionStatsForGpmon(node);
 		}
 #ifdef MEASURE_MOTION_TIME
@@ -349,7 +330,7 @@ execMotionSender(MotionState * node)
 			doSendTuple(motion, node, outerTupleSlot);
 			/* doSendTuple() may have set node->stopRequested as a side-effect */
 
-			Gpmon_M_Incr_Rows_Out(GpmonPktFromMotionState(node)); 
+			Gpmon_Incr_Rows_Out(GpmonPktFromMotionState(node));
 			setMotionStatsForGpmon(node);
 			CheckSendPlanStateGpmonPkt(&node->ps);
 
@@ -1608,30 +1589,5 @@ initGpmonPktForMotion(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Motion));
 
-	{
-		MotionType motionType = ((Motion *)planNode)->motionType;
-		PerfmonNodeType type = PMNT_Invalid;
-		if (motionType == MOTIONTYPE_HASH)
-		{
-			type = PMNT_RedistributeMotion;
-		}
-		else if (motionType == MOTIONTYPE_EXPLICIT)
-		{
-			type = PMNT_ExplicitRedistributeMotion;
-		}
-		else if (((Motion *)planNode)->numOutputSegs == 0)
-		{
-			type = PMNT_BroadcastMotion;
-		}
-		else
-		{
-			type = PMNT_GatherMotion;
-		}
-
-		Assert(GPMON_MOTION_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
-
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, 
-							type,
-							 (int64) planNode->plan_rows, NULL); 
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

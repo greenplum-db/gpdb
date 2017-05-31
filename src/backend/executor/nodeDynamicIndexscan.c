@@ -305,7 +305,7 @@ ExecDynamicIndexScan(DynamicIndexScanState *node)
 		if (!TupIsNull(slot))
 		{
 			/* Report output rows to Gpmon */
-			Gpmon_M_Incr_Rows_Out(GpmonPktFromDynamicIndexScanState(node));
+			Gpmon_Incr_Rows_Out(GpmonPktFromDynamicIndexScanState(node));
 			CheckSendPlanStateGpmonPkt(&indexState->ss.ps);
 		}
 		else
@@ -419,7 +419,6 @@ ExecDynamicIndexReScan(DynamicIndexScanState *node, ExprContext *exprCtxt)
 		ResetExprContext(econtext);
 	}
 
-	Gpmon_M_Incr(GpmonPktFromDynamicIndexScanState(node), GPMON_DYNAMICINDEXSCAN_RESCAN);
 	CheckSendPlanStateGpmonPkt(&node->indexScanState.ss.ps);
 }
 
@@ -431,13 +430,5 @@ initGpmonPktForDynamicIndexScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EStat
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, DynamicIndexScan));
 
-	{
-		RangeTblEntry *rte = rt_fetch(((Scan *)planNode)->scanrelid, estate->es_range_table);
-		char schema_rel_name[SCAN_REL_NAME_BUF_SIZE] = {0};
-
-		Assert(GPMON_DYNAMICINDEXSCAN_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
-
-		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_DynamicIndexScan,
-					(int64) planNode->plan_rows, GetScanRelNameGpmon(rte->relid, schema_rel_name));
-	}
+	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
