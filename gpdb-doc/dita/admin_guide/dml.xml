@@ -107,9 +107,9 @@
           </tbody>
         </tgroup>
       </table>
-      <note id="lock_note">In Greenplum Database, <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>,
-        and <codeph>SELECT FOR UPDATE</codeph> acquire the more restrictive lock EXCLUSIVE rather
-        than ROW EXCLUSIVE.</note>
+      <note id="lock_note">Greenplum Database acquires the more restrictive EXCLUSIVE lock (rather
+        than ROW EXCLUSIVE in PostgreSQL) for <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and
+        <codeph>SELECT FOR UPDATE</codeph>.</note>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en">
