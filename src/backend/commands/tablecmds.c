@@ -6299,6 +6299,13 @@ ATPrepColumnDefault(Relation rel, bool recurse, AlterTableCmd *cmd)
 	 */
 	if (!recurse && find_inheritance_children(RelationGetRelid(rel)) != NIL)
 	{
+		/*
+		 * In binary upgrade we are handling the children manually when dumping
+		 * the schema so not recursing is allowed
+		 */
+		if (IsBinaryUpgrade)
+			return;
+
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 				 errmsg("Column default of relation \"%s\" must be added to its child relation(s)",
