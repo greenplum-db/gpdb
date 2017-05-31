@@ -32,13 +32,13 @@
           scope="external" format="html"><ph>The pg_hba.conf File</ph></xref> in the PostgreSQL
         documentation for more information. </p>
       <p>The general format of the <filepath>pg_hba.conf</filepath> file is a set of records, one
-        per line. Greenplum Database ignores blank lines and any text after the <codeph>#</codeph>
-        comment character. When processing the lines, the first matching line will be used for
-        authentication. After the first match, no more lines are evaluated. If the client cannot
-        be authenticated using the method specified in the first matching line, the connection
-        is rejected. A record consists of a number of fields that are separated by spaces
-        and/or tabs. Fields can contain white space if the field value is quoted. Records cannot be
-        continued across lines. Each remote client access record has the following format:</p>
+        per line. Blank lines and any text after the <codeph>#</codeph> comment character are ignored.
+        The first matching record is used for authentication. After the first match, the following
+        records are not evaluated. If the client cannot be authenticated using the method specified
+        in the first matching record, the connection is rejected. A record consists of a number of
+        fields that are separated by spaces and/or tabs. Fields can contain white space if the field
+        value is quoted. Records cannot be continued across multiple lines.
+        Each remote client access record has the following format:</p>
       <codeblock><i>host</i>   <i>database</i>   <i>role</i>   <i>CIDR-address</i>   <i>authentication-method</i></codeblock>
       <p>Each UNIX-domain socket access record has the following format:</p>
       <codeblock><i>local</i>   <i>database</i>   <i>role</i>   <i>authentication-method</i></codeblock>
