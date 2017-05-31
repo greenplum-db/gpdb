@@ -5448,14 +5448,14 @@ dumpBinaryUpgrade(Archive *fout, DumpableObject **dobjs, int numObjs)
 				dumpAttrDefsOid(fout, (AttrDefInfo *) dobj);
 				break;
 			case DO_INDEX:
-				dumpIndexOid(g_conn, fout, (IndxInfo *) dobj);
+				dumpIndexOid(g_conn, g_fout, fout, (IndxInfo *) dobj);
 				break;
 			case DO_RULE:
 				dumpRuleOid(fout, (RuleInfo *) dobj);
 				break;
 			case DO_FK_CONSTRAINT:
 			case DO_CONSTRAINT:
-				dumpConstraintOid(g_conn, fout, (ConstraintInfo *) dobj);
+				dumpConstraintOid(g_conn, g_fout, fout, (ConstraintInfo *) dobj);
 				break;
 			case DO_AGG:
 				dumpAggProcedureOid(g_conn, g_fout, fout, (AggInfo *) dobj);

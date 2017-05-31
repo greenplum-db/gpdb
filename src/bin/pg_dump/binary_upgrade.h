@@ -42,7 +42,7 @@ static AggregateFunction agg_fns[AGG_FUNCS] =
 
 
 extern void dumpTableOid(PGconn *conn, Archive *fout, Archive *AH, TableInfo *info);
-extern void dumpIndexOid(PGconn *conn, Archive *AH, IndxInfo *info);
+extern void dumpIndexOid(PGconn *conn, Archive *fout, Archive *AH, IndxInfo *info);
 extern void dumpAttrDefsOid(Archive *AH, AttrDefInfo *info);
 extern void dumpConversionOid(PGconn *conn, Archive *AH, ConvInfo *info);
 extern void dumpOperatorOid(Archive *AH, OprInfo *info);
@@ -54,7 +54,7 @@ extern void dumpShellTypeOid(PGconn *conn, Archive *fout, Archive *AH, ShellType
 extern void dumpTypeOid(PGconn *conn, Archive *fout, Archive *AH, TypeInfo *info);
 extern void dumpNamespaceOid(Archive *AH, NamespaceInfo *info);
 extern void dumpRuleOid(Archive *AH, RuleInfo *info);
-extern void dumpConstraintOid(PGconn *conn, Archive *AH, ConstraintInfo *info);
+extern void dumpConstraintOid(PGconn *conn, Archive *fout, Archive *AH, ConstraintInfo *info);
 extern void dumpProcLangOid(PGconn *conn, Archive *fout, Archive *AH, ProcLangInfo *info);
 extern void dumpCastOid(Archive *AH, CastInfo *info);
 extern void dumpTSObjectOid(Archive *AH, DumpableObject *info);
