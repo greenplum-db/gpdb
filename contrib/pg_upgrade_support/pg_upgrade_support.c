@@ -138,7 +138,7 @@ preassign_arraytype_oid(PG_FUNCTION_ARGS)
 	char	   *objname = GET_STR(PG_GETARG_TEXT_P(1));
 	Oid			typnamespace = PG_GETARG_OID(2);
 
-	if (Gp_role == GP_ROLE_UTILITY)
+	if (Gp_role != GP_ROLE_UTILITY)
 		PG_RETURN_VOID();
 
 	if (typoid == InvalidOid && GpIdentity.dbid != MASTER_DBID)
