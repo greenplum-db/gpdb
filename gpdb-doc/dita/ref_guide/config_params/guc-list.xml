@@ -3904,7 +3904,7 @@
     <body>
       <p>Sets the frequency that the Greenplum Database server processes send query execution
         updates to the data collection agent processes used to populate the
-          <codeph>gpperfmon</codeph> database for Command Center. Query operations (iterators)
+          <codeph>gpperfmon</codeph> database for Command Center. Query operations
         executed during this interval are sent through UDP to the segment monitor agents. If you
         find that an excessive number of UDP packets are dropped during long-running, complex
         queries, you may consider increasing this value.</p>
