@@ -612,13 +612,6 @@ static void* conm_main(apr_thread_t* thread_, void* arg_)
 						ptr_smon_log_location_suffix = gpperfmon_string;
 					}
 
-					const char *ignore_qexec_packet_opt = "";
-					if (opt.ignore_qexec_packet)
-					{
-						ignore_qexec_packet_opt = "-i";
-					}
-					ignore_qexec_packet = opt.ignore_qexec_packet;
-
 					const int kill_cmd_size = 1024;
 					char kill_gpsmon[kill_cmd_size];
 					memset(kill_gpsmon, 0, kill_cmd_size);
@@ -633,14 +626,12 @@ static void* conm_main(apr_thread_t* thread_, void* arg_)
 
 					if (h->smon_bin_location) { //if this if filled, then use it as the directory for smon istead of the default
 						snprintf(line, line_size, "ssh -v -o 'BatchMode yes' -o 'StrictHostKeyChecking no'"
-								" %s '%s echo -e \"%" APR_INT64_T_FMT "\\n\\n\" | %s -m %" FMT64 " %s -t %" FMT64 " -l %s%s -v %d %s%d' 2>&1",
-								active_hostname, kill_gpsmon, ax.signature, h->smon_bin_location, opt.max_log_size, ignore_qexec_packet_opt, smon_terminate_timeout, ptr_smon_log_location, ptr_smon_log_location_suffix, opt.v,
-								((opt.iterator_aggregate)?"-a ":""), ax.port);
+								" %s '%s echo -e \"%" APR_INT64_T_FMT "\\n\\n\" | %s -m %" FMT64 " -t %" FMT64 " -l %s%s -v %d %d' 2>&1",
+								active_hostname, kill_gpsmon, ax.signature, h->smon_bin_location, opt.max_log_size, smon_terminate_timeout, ptr_smon_log_location, ptr_smon_log_location_suffix, opt.v, ax.port);
 					} else {
 						snprintf(line, line_size, "ssh -v -o 'BatchMode yes' -o 'StrictHostKeyChecking no'"
-								" %s '%s echo -e \"%" APR_INT64_T_FMT "\\n\\n\" | %s/bin/gpsmon -m %" FMT64 " %s -t %" FMT64 " -l %s%s -v %d %s%d' 2>&1",
-								active_hostname, kill_gpsmon, ax.signature, ax.gphome, opt.max_log_size, ignore_qexec_packet_opt, smon_terminate_timeout, ptr_smon_log_location, ptr_smon_log_location_suffix, opt.v,
-								((opt.iterator_aggregate)?"-a ":""), ax.port);
+								" %s '%s echo -e \"%" APR_INT64_T_FMT "\\n\\n\" | %s/bin/gpsmon -m %" FMT64 " -t %" FMT64 " -l %s%s -v %d %d' 2>&1",
+								active_hostname, kill_gpsmon, ax.signature, ax.gphome, opt.max_log_size, smon_terminate_timeout, ptr_smon_log_location, ptr_smon_log_location_suffix, opt.v, ax.port);
 					}
 
 					if (h->ever_connected)
@@ -1164,7 +1155,6 @@ static int read_conf_file(char *conffile)
 	opt.max_disk_space_messages_per_interval = MAX_MESSAGES_PER_INTERVAL;
 	opt.disk_space_interval = (60*MINIMUM_MESSAGE_INTERVAL);
 	opt.partition_age = 0;
-	opt.ignore_qexec_packet = true;
 
 	if (!fp)
 	{
@@ -1306,22 +1296,6 @@ static int read_conf_file(char *conffile)
 			else if (apr_strnatcasecmp(pName, "partition_age") == 0)
 			{
 				opt.partition_age = atoi(pVal);
-			}
-			else if (apr_strnatcasecmp(pName, "ignore_qexec_packet") == 0)
-			{
-				if (apr_strnatcasecmp(pVal, "true") == 0)
-				{
-					opt.ignore_qexec_packet = true;
-				}
-				else if (apr_strnatcasecmp(pVal, "false") == 0)
-				{
-					opt.ignore_qexec_packet = false;
-				}
-				else
-				{
-					fprintf(stderr, "value of ignore_qexec_packet should be true"
-							" or false, but %s found\n", pVal);
-				}
 			}
 			else
 			{

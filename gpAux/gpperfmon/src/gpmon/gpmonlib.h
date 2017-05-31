@@ -137,9 +137,7 @@ typedef struct mmon_options_t
 	int error_disk_space_percentage;
 	time_t disk_space_interval; // interval in seconds
 	unsigned int max_disk_space_messages_per_interval;
-	int iterator_aggregate;
-	int partition_age;  		// in month 
-	bool ignore_qexec_packet;
+	int partition_age;  		// in month
 } mmon_options_t;
 
 typedef struct addressinfo_holder_t addressinfo_holder_t;
