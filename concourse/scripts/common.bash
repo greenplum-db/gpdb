@@ -23,8 +23,13 @@ function configure() {
   pushd gpdb_src
       # The full set of configure options which were used for building the
       # tree must be used here as well since the toplevel Makefile depends
-      # on these options for deciding what to test
-      ./configure --prefix=/usr/local/greenplum-db-devel --with-perl --with-python --with-libxml --enable-mapreduce --disable-orca
+      # on these options for deciding what to test. Since we don't ship
+      # Perl on SLES we must also skip GPMapreduce as it uses pl/perl.
+      if [ "$TEST_OS" == "sles" ]; then
+        ./configure --prefix=/usr/local/greenplum-db-devel --with-python --with-libxml --disable-orca
+	  else
+        ./configure --prefix=/usr/local/greenplum-db-devel --with-perl --with-python --with-libxml --enable-mapreduce --disable-orca
+      fi
   popd
 }
 
