@@ -4,14 +4,15 @@
 <topic id="overview">
    <title>Overview</title>
    <body>
-      <p>The <codeph>gpperfmon</codeph> database consists of three sets of tables; <codeph>now</codeph> tables
-         store data on current system metrics such as active queries, <codeph>history</codeph>
-         tables store data on historical metrics, and <codeph>tail</codeph> tables are for data in
-         transition. <codeph>Tail</codeph> tables are for internal use only and should not be
-         queried by users. The <codeph>now</codeph> and <codeph>tail</codeph> data are stored as
-         text files on the master host file system, and accessed by the <codeph>gpperfmon</codeph> database via
-         external tables. The <codeph>history</codeph> tables are regular database tables stored
-         within the <codeph>gpperfmon</codeph> database.</p>
+      <p>The <codeph>gpperfmon</codeph> database consists of three sets of tables;
+            <codeph>now</codeph> tables store data on current system metrics such as active queries,
+            <codeph>history</codeph> tables store data on historical metrics, and
+            <codeph>tail</codeph> tables are for data in transition. <codeph>Tail</codeph> tables
+         are for internal use only and should not be queried by users. The <codeph>now</codeph> and
+            <codeph>tail</codeph> data are stored as text files on the master host file system, and
+         accessed by the <codeph>gpperfmon</codeph> database via external tables. The
+            <codeph>history</codeph> tables are regular database tables stored within the
+            <codeph>gpperfmon</codeph> database.</p>
       <p>The database consists of three sets of tables:</p>
       <ul>
          <li>
@@ -27,17 +28,11 @@
       <ul>
          <li>The <codeph>database_*</codeph> tables store query workload information for a Greenplum
             Database instance.</li>
-         <li>The <codeph>emcconnect_history</codeph> table displays information about ConnectEMC
-            events and alerts. ConnectEMC events are triggered based on a hardware failure, a fix to
-            a failed hardware component, or a Greenplum Database startup. Once a ConnectEMC event is
-            triggered, an alert is sent to EMC Support.</li>
          <li>The <codeph>diskspace_*</codeph> tables store diskspace metrics.</li>
          <li>The<codeph> filerep_*</codeph> tables store health and status metrics for the file
             replication process. This process is how high-availability/mirroring is achieved in
             Greenplum Database instance. Statistics are maintained for each primary-mirror
             pair.</li>
-         <li>The <codeph>health_*</codeph> tables store system health metrics for the EMC Data
-            Computing Appliance.</li>
          <li>The <codeph>interface_stats_*</codeph> tables store statistical metrics for each active
             interface of a Greenplum Database instance. Note: These tables are in place for future
             use and are not currently populated.</li>
@@ -50,12 +45,6 @@
             for a Greenplum Database instance. Note: These tables are in place for future use and
             are not currently populated.</li>
          <li>The <codeph>system_*</codeph> tables store system utilization metrics.</li>
-         <li>The <codeph>tcp_stats_*</codeph> tables store statistical metrics about TCP
-            communications for a Greenplum Database instance. Note: These tables are in place for
-            future use and are not currently populated.</li>
-         <li>The <codeph>udp_stats_*</codeph> tables store statistical metrics about UDP
-            communications for a Greenplum Database instance. Note: These tables are in place for
-            future use and are not currently populated.</li>
       </ul>
       <p>The <codeph>gpperfmon</codeph> database also contains the following views:</p>
       <ul>

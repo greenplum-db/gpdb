@@ -293,15 +293,12 @@
 		<topicref href="ref_guide/gpperfmon/db-database.xml" type="topic"/>
 		<topicref href="ref_guide/gpperfmon/db-diskspace.xml" type="topic"/>
 		<topicref href="ref_guide/gpperfmon/db-filerep.xml" type="topic"/>
-		<topicref href="ref_guide/gpperfmon/db-health.xml" type="topic"/>
 		<topicref href="ref_guide/gpperfmon/db-interface-stats.xml" type="topic"/>
 		<topicref href="ref_guide/gpperfmon/db-log-alert.xml" type="topic"/>
 		<topicref href="ref_guide/gpperfmon/db-queries.xml" type="topic"/>
 		<topicref href="ref_guide/gpperfmon/db-segment.xml" type="topic"/>
 		<topicref href="ref_guide/gpperfmon/db-socket-stats.xml" type="topic"/>
 		<topicref href="ref_guide/gpperfmon/db-system.xml" type="topic"/>
-		<topicref href="ref_guide/gpperfmon/db-tcp-stats.xml" type="topic"/>
-		<topicref href="ref_guide/gpperfmon/db-udp-stats.xml" type="topic"/>
 		<topicref href="ref_guide/gpperfmon/db-dynamic-memory-info.xml" type="topic"/>
 		<topicref href="ref_guide/gpperfmon/db-memory-info.xml" type="topic"/>
 	</chapter>

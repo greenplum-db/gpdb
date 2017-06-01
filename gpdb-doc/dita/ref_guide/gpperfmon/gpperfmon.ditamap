@@ -5,15 +5,12 @@
         <topicref href="db-database.xml" type="topic"/>
         <topicref href="db-diskspace.xml" type="topic"/>
         <topicref href="db-filerep.xml" type="topic"/>
-        <topicref href="db-health.xml" type="topic"/>
         <topicref href="db-interface-stats.xml" type="topic"/>
         <topicref href="db-log-alert.xml" type="topic"/>
         <topicref href="db-queries.xml" type="topic"/>
         <topicref href="db-segment.xml" type="topic"/>
         <topicref href="db-socket-stats.xml" type="topic"/>
         <topicref href="db-system.xml" type="topic"/>
-        <topicref href="db-tcp-stats.xml" type="topic"/>
-        <topicref href="db-udp-stats.xml" type="topic"/>
         <topicref href="db-dynamic-memory-info.xml" type="topic"/>
         <topicref href="db-memory-info.xml" type="topic"/>
     </topicref>

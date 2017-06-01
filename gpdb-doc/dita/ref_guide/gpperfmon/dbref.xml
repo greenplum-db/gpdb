@@ -34,8 +34,6 @@
         health and status metrics for the file replication process. This process is how
         high-availability/mirroring is achieved in Greenplum Database instance. Statistics are
         maintained for each primary-mirror pair.</li>
-      <li>The <codeph><xref href="db-health.xml#db-health">health_*</xref></codeph> tables store
-        system health metrics for the EMC Data Computing Appliance.</li>
       <li>The <codeph><xref href="db-interface-stats.xml#db-interface_stats"
             >interface_stats_*</xref></codeph> tables store statistical metrics for each active
         interface of a Greenplum Database instance. Note: These tables are in place for future use
@@ -53,12 +51,6 @@
         currently populated.</li>
       <li>The <codeph><xref href="db-system.xml#db-system">system_*</xref></codeph> tables store
         system utilization metrics.</li>
-      <li>The <codeph><xref href="db-tcp-stats.xml#db-tcp_stats">tcp_stats_*</xref></codeph> tables
-        store statistical metrics about TCP communications for a Greenplum Database instance. Note:
-        These tables are in place for future use and are not currently populated.</li>
-      <li>The <codeph><xref href="db-udp-stats.xml#db-udp_stats">udp_stats_*</xref></codeph> tables
-        store statistical metrics about UDP communications for a Greenplum Database instance. Note:
-        These tables are in place for future use and are not currently populated.</li>
     </ul>
     <p>The <codeph>gpperfmon</codeph> database also contains the following views:</p>
     <ul>
