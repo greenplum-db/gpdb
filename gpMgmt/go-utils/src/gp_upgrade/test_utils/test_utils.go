@@ -1,4 +1,4 @@
-package utils
+package test_utils
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ func Check(msg string, e error) {
 	}
 }
 
-func SetHomeDir(temp_home_dir string) string {
+func NukeAndSetHomeDir(temp_home_dir string) string {
 	save := os.Getenv("HOME")
 	err := os.RemoveAll(temp_home_dir)
 	Check("cannot remove home temp dir", err)

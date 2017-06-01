@@ -16,7 +16,7 @@ import (
 
 	"log"
 
-	. "gp_upgrade/utils"
+	. "gp_upgrade/test_utils"
 
 	"golang.org/x/crypto/ssh"
 )

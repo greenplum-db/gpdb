@@ -14,7 +14,7 @@ import (
 
 	"strings"
 
-	"gp_upgrade/utils"
+	"gp_upgrade/test_utils"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -34,9 +34,9 @@ var _ = BeforeEach(func() {
 	path := os.Getenv("GOPATH")
 	sshd = exec.Command(path + "/bin/test/sshd")
 	_, err := sshd.StdoutPipe()
-	utils.Check("cannot get stdout", err)
+	test_utils.Check("cannot get stdout", err)
 	_, err = sshd.StderrPipe()
-	utils.Check("cannot get stderr", err)
+	test_utils.Check("cannot get stderr", err)
 
 	err = sshd.Start()
 	Expect(err).ToNot(HaveOccurred())

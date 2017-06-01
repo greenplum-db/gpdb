@@ -1,7 +1,7 @@
 package commands_test
 
 import (
-	. "gp_upgrade/utils"
+	. "gp_upgrade/test_utils"
 
 	"bytes"
 	"encoding/binary"
@@ -90,7 +90,9 @@ var _ = Describe("monitor", func() {
 		Describe("when the default private key is found", func() {
 			Describe("and the key works", func() {
 				It("works", func() {
-					save := SetHomeDir(temp_home_dir)
+					save := NukeAndSetHomeDir(temp_home_dir)
+					defer os.Setenv("HOME", save)
+
 					cheatSheet := CheatSheet{Response: grep_pg_upgrade, ReturnCode: intToBytes(0)}
 					cheatSheet.WriteToFile()
 					path := os.Getenv("GOPATH")
@@ -103,14 +105,15 @@ var _ = Describe("monitor", func() {
 
 					session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--user", "pivotal")
 
-					os.Setenv("HOME", save)
 					Eventually(session).Should(Exit(0))
 					Eventually(session.Out).Should(Say("pg_upgrade is running on host localhost"))
 				})
 			})
 			Describe("and the key does not work", func() {
 				It("complains", func() {
-					save := SetHomeDir(temp_home_dir)
+					save := NukeAndSetHomeDir(temp_home_dir)
+					defer os.Setenv("HOME", save)
+
 					cheatSheet := CheatSheet{Response: grep_pg_upgrade, ReturnCode: intToBytes(0)}
 					cheatSheet.WriteToFile()
 					path := os.Getenv("GOPATH")
@@ -123,7 +126,6 @@ var _ = Describe("monitor", func() {
 
 					session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--user", "pivotal")
 
-					os.Setenv("HOME", save)
 					Eventually(session).Should(Exit(1))
 					Eventually(session.Err).Should(Say("ssh: handshake failed: ssh: unable to authenticate, attempted methods"))
 					Eventually(session.Err).Should(Say(" no supported methods remain"))
@@ -136,10 +138,10 @@ var _ = Describe("monitor", func() {
 				It("complains", func() {
 					save := os.Getenv("HOME")
 					os.Setenv("HOME", "")
+					defer os.Setenv("HOME", save)
 
 					session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--user", "pivotal")
 
-					os.Setenv("HOME", save)
 					Eventually(session).Should(Exit(1))
 					Eventually(session.Err).Should(Say("user has not specified a HOME environment value"))
 				})
@@ -147,11 +149,11 @@ var _ = Describe("monitor", func() {
 
 			Describe("because there is no file at the default ssh location", func() {
 				It("complains", func() {
-					save := SetHomeDir("/tmp/gp_upgrade_test_temp_home_dir")
+					save := NukeAndSetHomeDir("/tmp/gp_upgrade_test_temp_home_dir")
+					defer os.Setenv("HOME", save)
 
 					session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--user", "pivotal")
 
-					os.Setenv("HOME", save)
 					Eventually(session).Should(Exit(1))
 					Eventually(session.Err).Should(Say("open /tmp/gp_upgrade_test_temp_home_dir/.ssh/id_rsa: no such file or directory"))
 				})

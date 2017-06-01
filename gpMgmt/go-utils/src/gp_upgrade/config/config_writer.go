@@ -4,27 +4,26 @@ import (
 	"bytes"
 	"os"
 
-	"database/sql"
 	"encoding/json"
+	"gp_upgrade/utils"
 )
 
-type ConfigWriter struct {
-	tableJsonData []map[string]interface{}
+type Writer struct {
+	TableJsonData []map[string]interface{}
 }
 
-// todo all of this file's error paths are not unit tested. There are 3 stories in backlog to do them.  LAH 28 Mar 2017
-func NewConfigWriter(rows *sql.Rows) (*ConfigWriter, error) {
-	tableData, err := translateColumnsIntoGenericListStructureForJson(rows)
+func NewWriter(rows utils.RowsWrapper) (*Writer, error) {
+	tableData, err := translateColumnsIntoGenericStructure(rows)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &ConfigWriter{tableJsonData: tableData}, nil
+	return &Writer{TableJsonData: tableData}, nil
 }
 
-func (cmd ConfigWriter) ParseAndWriteConfig() error {
-	jsonData, err := json.Marshal(cmd.tableJsonData)
+func (configWriter Writer) Write() error {
+	jsonData, err := json.Marshal(configWriter.TableJsonData)
 	if err != nil {
 		return err
 	}
@@ -55,7 +54,7 @@ func prettyJson(b []byte) ([]byte, error) {
 	return out.Bytes(), err
 }
 
-func translateColumnsIntoGenericListStructureForJson(rows *sql.Rows) ([]map[string]interface{}, error) {
+func translateColumnsIntoGenericStructure(rows utils.RowsWrapper) ([]map[string]interface{}, error) {
 	columns, err := rows.Columns()
 	if err != nil {
 		return nil, err
