@@ -29,9 +29,9 @@ PREREQUISITES FOR SOLARIS USERS
 RUNNING GP DEMO
 ******************************************************************
 
-1. Login as the Greenplum designated user (i.e. 'bgadmin').
+1. Login as the Greenplum designated user (i.e. 'gpadmin').
 
-	su - bgadmin
+	su - gpadmin
 
 2. Go to the directory where you wish to unpack and run the Greenplum demo 
    program. This directory should have at least 110 MB of free space.
