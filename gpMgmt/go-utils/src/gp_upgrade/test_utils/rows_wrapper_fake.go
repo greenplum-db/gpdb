@@ -21,7 +21,7 @@ func (fake *FakeRows) Next() bool {
 
 func (fake *FakeRows) Scan(dest ...interface{}) error {
 	if len(dest) != len(fake.FakeColumns) {
-		return fmt.Errorf("sql: expected %d destination arguments in Scan, not %d", len(fake.FakeColumns), len(dest))
+		return fmt.Errorf("rows_wrapper_fake: expected %d destination arguments in Scan, not %d", len(fake.FakeColumns), len(dest))
 	}
 	if len(fake.SampleRow) != len(fake.FakeColumns) {
 		return fmt.Errorf("rows_wrapper_fake: column count %d needs to match length of sample row %d", len(fake.FakeColumns), len(fake.SampleRow))

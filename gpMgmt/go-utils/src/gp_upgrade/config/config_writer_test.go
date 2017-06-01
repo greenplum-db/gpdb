@@ -52,6 +52,16 @@ var _ = Describe("configWriter", func() {
 
 				Expect(err).To(HaveOccurred())
 			})
+
+			It("returns an error if the given rows do not parse via Columns()", func() {
+				fakeRows := test_utils.FakeRows{
+					FakeColumns: []string{"colname1", "colname2"},
+					NumRows:     1,
+					SampleRow:   []string{"value1"},
+				}
+				_, err := config.NewWriter(&fakeRows)
+				Expect(err).To(HaveOccurred())
+			})
 		})
 	})
 
@@ -108,7 +118,6 @@ var _ = Describe("configWriter", func() {
 
 			//	todo need error case for json.Marshal in source
 			//	todo need error case for f.Write(pretty) in source
-			//	todo need error case for 	columns, err := rows.Columns() in source
 		})
 	})
 })
