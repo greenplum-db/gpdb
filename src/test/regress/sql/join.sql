@@ -528,3 +528,14 @@ select q1, unique2, thousand, hundred
 select f1, unique2, case when unique2 is null then f1 else 0 end
   from int4_tbl a left join tenk1 b on f1 = unique2
   where (case when unique2 is null then f1 else 0 end) = 0;
+
+
+--
+-- test proper positioning of one-time quals in EXISTS (8.4devel bug)
+--
+prepare foo(bool) as
+select count(*) from tenk1 a left join tenk1 b
+on (a.unique2 = b.unique1 and exists
+(select 1 from tenk1 c where c.thousand = b.unique2 and $1));
+execute foo(true);
+execute foo(false);

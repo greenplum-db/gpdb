@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/var.c,v 1.75 2008/08/14 18:47:59 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/var.c,v 1.84 2009/02/25 03:30:37 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -71,7 +71,6 @@ static bool pull_var_clause_walker(Node *node,
 					   pull_var_clause_context *context);
 static Node *flatten_join_alias_vars_mutator(Node *node,
 								flatten_join_alias_vars_context *context);
-static Relids alias_relid_set(PlannerInfo *root, Relids relids);
 
 
 /*
@@ -753,24 +752,6 @@ flatten_join_alias_vars_mutator(Node *node,
 
 		return newvar;
 	}
-	if (IsA(node, FlattenedSubLink))
-	{
-		/* Copy the FlattenedSubLink node with correct mutation of subnodes */
-		FlattenedSubLink *fslink;
-
-		fslink = (FlattenedSubLink *) expression_tree_mutator(node,
-															  flatten_join_alias_vars_mutator,
-															  (void *) context);
-		/* now fix FlattenedSubLink's relid sets */
-		if (context->sublevels_up == 0)
-		{
-			fslink->lefthand = alias_relid_set(context->root,
-											   fslink->lefthand);
-			fslink->righthand = alias_relid_set(context->root,
-												fslink->righthand);
-		}
-		return (Node *) fslink;
-	}
 
 	if (IsA(node, Query))
 	{
@@ -795,29 +776,4 @@ flatten_join_alias_vars_mutator(Node *node,
 
 	return expression_tree_mutator(node, flatten_join_alias_vars_mutator,
 								   (void *) context);
-}
-
-/*
- * alias_relid_set: in a set of RT indexes, replace joins by their
- * underlying base relids
- */
-static Relids
-alias_relid_set(PlannerInfo *root, Relids relids)
-{
-	Relids		result = NULL;
-	Relids		tmprelids;
-	int			rtindex;
-
-	tmprelids = bms_copy(relids);
-	while ((rtindex = bms_first_member(tmprelids)) >= 0)
-	{
-		RangeTblEntry *rte = rt_fetch(rtindex, root->parse->rtable);
-
-		if (rte->rtekind == RTE_JOIN)
-			result = bms_join(result, get_relids_for_join(root, rtindex));
-		else
-			result = bms_add_member(result, rtindex);
-	}
-	bms_free(tmprelids);
-	return result;
 }
