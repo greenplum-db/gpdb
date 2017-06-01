@@ -210,6 +210,27 @@ See [more information about gpperfmon here](gpAux/gpperfmon/README.md)
 
 gpperfmon is dependent on several libraries like apr, apu, and libsigar
 
+### Building Managed Utilities written in Go
+
+Install go
+```
+mkdir -p ~/go/src
+brew install go --cross-compile-common  #Or get the latest from https://golang.org/dl/
+```
+
+Setup Go environment variables
+```
+cat >> ~/.bash_profile <<"EOF"
+export GOPATH=$HOME/go
+export PATH=$GOPATH/bin:$PATH
+EOF
+```
+
+Setup dependent git repositories
+```
+git clone https://github.com/greenplum-db/gpbackup $GOPATH/src
+```
+
 ## Regression tests
 
 * The default regression tests
