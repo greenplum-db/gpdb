@@ -20,13 +20,10 @@ extern void SS_process_ctes(PlannerInfo *root);
 extern Node *convert_testexpr(PlannerInfo *root,
 				 Node *testexpr,
 				 List *subst_nodes);
-extern bool convert_ANY_sublink_to_join(PlannerInfo *root, SubLink *sublink,
-										Relids available_rels,
-										Node **new_qual, List **fromlist);
-extern bool convert_EXISTS_sublink_to_join(PlannerInfo *root, SubLink *sublink,
-											bool under_not,
-											Relids available_rels,
-											Node **new_qual, List **fromlist);
+extern JoinExpr *convert_ANY_sublink_to_join(PlannerInfo *root, SubLink *sublink,
+										Relids available_rels);
+extern Node *convert_EXISTS_sublink_to_join(PlannerInfo *root, SubLink *sublink,
+											bool under_not, Relids available_rels);
 extern Node *SS_replace_correlation_vars(PlannerInfo *root, Node *expr);
 extern Node *SS_process_sublinks(PlannerInfo *root, Node *expr, bool isQual);
 extern void SS_finalize_plan(PlannerInfo *root, Plan *plan,

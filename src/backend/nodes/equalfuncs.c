@@ -787,17 +787,6 @@ _equalRestrictInfo(RestrictInfo *a, RestrictInfo *b)
 }
 
 static bool
-_equalFlattenedSubLink(FlattenedSubLink *a, FlattenedSubLink *b)
-{
-	COMPARE_SCALAR_FIELD(jointype);
-	COMPARE_BITMAPSET_FIELD(lefthand);
-	COMPARE_BITMAPSET_FIELD(righthand);
-	COMPARE_NODE_FIELD(quals);
-	
-	return true;
-}
-
-static bool
 _equalSpecialJoinInfo(SpecialJoinInfo *a, SpecialJoinInfo *b)
 {
 	COMPARE_BITMAPSET_FIELD(min_lefthand);
@@ -2692,9 +2681,6 @@ equal(void *a, void *b)
 			break;
 		case T_RestrictInfo:
 			retval = _equalRestrictInfo(a, b);
-			break;
-		case T_FlattenedSubLink:
-			retval = _equalFlattenedSubLink(a, b);
 			break;
 		case T_SpecialJoinInfo:
 			retval = _equalSpecialJoinInfo(a, b);

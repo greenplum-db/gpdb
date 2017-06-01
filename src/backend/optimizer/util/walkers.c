@@ -416,15 +416,6 @@ expression_tree_walker(Node *node,
 					return true;
 			}
 			break;
-		case T_FlattenedSubLink:
-			{
-				FlattenedSubLink *fslink = (FlattenedSubLink *) node;
-
-				if (expression_tree_walker((Node *) fslink->quals,
-										   walker, context))
-					return true;
-			}
-			break;
 		case T_AppendRelInfo:
 			{
 				AppendRelInfo *appinfo = (AppendRelInfo *) node;

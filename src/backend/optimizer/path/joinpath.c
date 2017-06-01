@@ -1002,7 +1002,7 @@ select_mergejoin_clauses(PlannerInfo *root,
 						 JoinType jointype)
 {
 	List	   *result_list = NIL;
-	bool		isouterjoin = IS_OUTER_JOIN(jointype);
+	bool		isouterjoin = IS_OUTER_JOIN(jointype) && jointype != JOIN_SEMI;
 	bool		have_nonmergeable_joinclause = false;
 	ListCell   *l;
 

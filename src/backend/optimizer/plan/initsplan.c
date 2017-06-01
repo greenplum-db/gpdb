@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/initsplan.c,v 1.142 2008/08/17 01:19:59 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/initsplan.c,v 1.148 2009/02/25 03:30:37 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -62,11 +62,6 @@ static void distribute_qual_to_rels(PlannerInfo *root, Node *clause,
 						Relids outerjoin_nonnullable,
 						Relids deduced_nullable_relids,
 						List **postponed_qual_list);
-static void distribute_sublink_quals_to_rels(PlannerInfo *root,
-								 FlattenedSubLink *fslink,
-								 bool below_outer_join,
-								 Relids deduced_nullable_relids,
-								 List **postponed_qual_list);
 static bool check_outerjoin_delay(PlannerInfo *root, Relids *relids_p,
 					  Relids *nullable_relids_p, bool is_pushed_down);
 static bool check_equivalence_delay(PlannerInfo *root,
@@ -387,18 +382,11 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 		 */
 		foreach(l, (List *) f->quals)
 		{
-			Node *qual = (Node *) lfirst(l);
-
-			/* FlattenedSubLink wrappers need special processing */
-			if (qual && IsA(qual, FlattenedSubLink))
-				distribute_sublink_quals_to_rels(root, (FlattenedSubLink *) qual,
-												 below_outer_join, NULL,
-												 postponed_qual_list);
-			else
-				distribute_qual_to_rels(root, (Node *) lfirst(l),
-										false, below_outer_join,
-										*qualscope, NULL, NULL, NULL,
-										postponed_qual_list);
+			Node   *qual = (Node *) lfirst(l);
+			distribute_qual_to_rels(root, qual,
+									false, below_outer_join,
+									*qualscope, NULL, NULL, NULL,
+									postponed_qual_list);
 		}
 	}
 	else if (IsA(jtnode, JoinExpr))
@@ -459,6 +447,20 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 				*inner_join_rels = bms_union(left_inners, right_inners);
 				nonnullable_rels = leftids;
 				break;
+			case JOIN_SEMI:
+				leftjoinlist = deconstruct_recurse(root, j->larg,
+												   below_outer_join,
+												   &leftids, &left_inners,
+												   &child_postponed_quals);
+				rightjoinlist = deconstruct_recurse(root, j->rarg,
+													below_outer_join,
+													&rightids, &right_inners,
+													&child_postponed_quals);
+				*qualscope = bms_union(leftids, rightids);
+				*inner_join_rels = bms_union(left_inners, right_inners);
+				/* Semi join adds no restrictions for quals */
+				nonnullable_rels = NULL;
+ 				break;
 			case JOIN_FULL:
 				leftjoinlist = deconstruct_recurse(root, j->larg,
 												   true,
@@ -527,6 +529,9 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 		 * semantic scope (ojscope) to pass to distribute_qual_to_rels.  But
 		 * we mustn't add it to join_info_list just yet, because we don't want
 		 * distribute_qual_to_rels to think it is an outer join below us.
+		 *
+		 * Semijoins are a bit of a hybrid: we build a SpecialJoinInfo,
+		 * but we want ojscope = NULL for distribute_qual_to_rels.
 		 */
 		if (j->jointype != JOIN_INNER)
 		{
@@ -535,7 +540,11 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 										*inner_join_rels,
 										j->jointype,
 										(List *) j->quals);
-			ojscope = bms_union(sjinfo->min_lefthand, sjinfo->min_righthand);
+			if (j->jointype == JOIN_SEMI)
+				ojscope = NULL;
+			else
+				ojscope = bms_union(sjinfo->min_lefthand,
+ 									sjinfo->min_righthand);
 		}
 		else
 		{
@@ -570,18 +579,11 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 		/* Process the qual clauses */
 		foreach(l, (List *) j->quals)
 		{
-			Node *qual = (Node *) lfirst(l);
-			/* FlattenedSubLink wrappers need special processing */
-			if (qual && IsA(qual, FlattenedSubLink))
-				distribute_sublink_quals_to_rels(root,
-												 (FlattenedSubLink *) qual,
-												 below_outer_join, NULL,
-												 postponed_qual_list);
-			else
-				distribute_qual_to_rels(root, qual,
-										false, below_outer_join,
-										*qualscope, ojscope, nonnullable_rels, NULL,
-										postponed_qual_list);
+			Node   *qual = (Node *) lfirst(l);
+			distribute_qual_to_rels(root, qual,
+									false, below_outer_join,
+									*qualscope, ojscope, nonnullable_rels, NULL,
+									postponed_qual_list);
 		}
 
 
@@ -1209,55 +1211,6 @@ distribute_qual_to_rels(PlannerInfo *root, Node *clause,
 	root->non_eq_clauses = lappend(root->non_eq_clauses, restrictinfo);
 }
 
-/*
- * distribute_sublink_quals_to_rels
- *	  Pull sublink quals out of a FlattenedSubLink node and distribute
- *	  them appropriately; then add a SpecialJoinInfo node to the query's
- *	  join_info_list.  The FlattenedSubLink node itself is no longer
- *	  needed and does not propagate into further processing.
- */
-static void
-distribute_sublink_quals_to_rels(PlannerInfo *root,
-								 FlattenedSubLink *fslink,
-								 bool below_outer_join,
-								 Relids deduced_nullable_relids,
-								 List **postponed_qual_list)
-{
-	List	   *quals = make_ands_implicit(fslink->quals);
-	SpecialJoinInfo *sjinfo;
-	Relids		qualscope;
-	Relids		ojscope;
-	ListCell   *l;
-
-	/*
-	 * Build a suitable SpecialJoinInfo for the sublink.  Note: using
-	 * righthand as inner_join_rels is the conservative worst case;
-	 * it might be possible to use a smaller set and thereby allow
-	 * the sublink join to commute with others inside its RHS.
-	 */
-	sjinfo = make_outerjoininfo(root,
-								fslink->lefthand, fslink->righthand,
-								fslink->righthand,
-								fslink->jointype,
-								quals);
-	sjinfo->try_join_unique = fslink->try_join_unique;
-
-	qualscope = bms_union(sjinfo->syn_lefthand, sjinfo->syn_righthand);
-	ojscope = bms_union(sjinfo->min_lefthand, sjinfo->min_righthand);
-
-	/* Distribute the join quals much as for a regular LEFT JOIN */
-	foreach(l, quals)
-	{
-		Node   *qual = (Node *) lfirst(l);
-		distribute_qual_to_rels(root, qual,
-								false, below_outer_join,
-								qualscope, ojscope, fslink->lefthand,
-								deduced_nullable_relids, postponed_qual_list);
-	}
-
-	/* Now we can add the SpecialJoinInfo to join_info_list */
-	root->join_info_list = lappend(root->join_info_list, sjinfo);
-}
 
 /*
  * check_outerjoin_delay

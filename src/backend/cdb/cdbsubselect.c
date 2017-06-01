@@ -531,7 +531,7 @@ safe_to_convert_EXPR(SubLink *sublink, ConvertSubqueryToJoinContext *ctx1)
  *
  * Method attempts to convert an EXPR_SUBLINK of the form select * from T where a > (select 10*avg(x) from R where T.b=R.y)
  */
-Node *
+JoinExpr*
 convert_EXPR_to_join(PlannerInfo *root, OpExpr *opexp)
 {
 	Assert(root);
@@ -596,7 +596,7 @@ convert_EXPR_to_join(PlannerInfo *root, OpExpr *opexp)
 
 		Assert(larg != NULL);
 
-		JoinExpr   *join_expr = make_join_expr(larg, rteIndex, JOIN_INNER);
+		JoinExpr   *join_expr = make_join_expr(NULL, rteIndex, JOIN_INNER);
 
 		Node	   *joinQual = ctx1.joinQual;
 
@@ -607,8 +607,6 @@ convert_EXPR_to_join(PlannerInfo *root, OpExpr *opexp)
 		IncrementVarSublevelsUp(joinQual, -1, 1);
 
 		join_expr->quals = joinQual;
-
-		root->parse->jointree->fromlist = list_make1(join_expr);	/* Replace the fromlist with the new one */
 
 		TargetEntry *subselectAggTLE = (TargetEntry *) list_nth(subselect->targetList, list_length(subselect->targetList) - 1);
 
@@ -623,9 +621,10 @@ convert_EXPR_to_join(PlannerInfo *root, OpExpr *opexp)
 
 		list_nth_replace(opexp->args, 1, aggVar);
 
+		return join_expr;
 	}
 
-	return (Node *) opexp;
+	return NULL;
 }
 
 /* NOTIN subquery transformation -start */
@@ -1261,7 +1260,7 @@ is_targetlist_nullable(Query *subq)
  * The current implementation assumes that the sublink expression occurs
  * in a top-level where clause (or through a series of inner joins).
  */
-Node *
+JoinExpr*
 convert_IN_to_antijoin(PlannerInfo *root, SubLink *sublink)
 {
 	Query	   *parse = root->parse;
@@ -1271,15 +1270,9 @@ convert_IN_to_antijoin(PlannerInfo *root, SubLink *sublink)
 	{
 		Assert(list_length(parse->jointree->fromlist) == 1);
 
-		Node	   *larg = lfirst(list_head(parse->jointree->fromlist));		/* represents the
-																				 * top-level join tree
-																				 * entry */
-
-		Assert(larg != NULL);
-
 		int			subq_indx = add_notin_subquery_rte(parse, subselect);
 		bool		inner_nullable = is_targetlist_nullable(subselect);
-		JoinExpr   *join_expr = make_join_expr(larg, subq_indx, JOIN_LASJ_NOTIN);
+		JoinExpr   *join_expr = make_join_expr(NULL, subq_indx, JOIN_LASJ_NOTIN);
 
 		join_expr->quals = make_lasj_quals(root, sublink, subq_indx);
 
@@ -1288,16 +1281,10 @@ convert_IN_to_antijoin(PlannerInfo *root, SubLink *sublink)
 			join_expr->quals = add_null_match_clause(join_expr->quals);
 		}
 
-		parse->jointree->fromlist = list_make1(join_expr);		/* Replace the join-tree
-																 * with the new one */
-
-		return NULL;
+		return join_expr;
 	}
-	else
-	{
-		/* Not safe to perform transformation. */
-		return (Node *) sublink;
-	}
+	/* Not safe to perform transformation. */
+	return NULL;
 }
 
 /*
