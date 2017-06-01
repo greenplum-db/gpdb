@@ -5424,7 +5424,7 @@ dumpBinaryUpgrade(Archive *fout, DumpableObject **dobjs, int numObjs)
 				dumpShellTypeOid(g_conn, g_fout, fout, (ShellTypeInfo *) dobj);
 				break;
 			case DO_FUNC:
-				dumpProcedureOid(fout, (FuncInfo *) dobj);
+				dumpProcedureOid(g_conn, g_fout, fout, (FuncInfo *) dobj);
 				break;
 			case DO_EXTPROTOCOL:
 				dumpExternalProtocolOid(fout, (ExtProtInfo *) dobj);

@@ -49,7 +49,7 @@ extern void dumpOperatorOid(Archive *AH, OprInfo *info);
 extern void dumpOpFamilyOid(PGconn *conn, Archive *AH, OpfamilyInfo *info);
 extern void dumpOpClassOid(PGconn *conn, Archive *AH, OpclassInfo *info);
 extern void dumpExternalProtocolOid(Archive *AH, ExtProtInfo *info);
-extern void dumpProcedureOid(Archive *AH, FuncInfo *info);
+extern void dumpProcedureOid(PGconn *conn, Archive *fout, Archive *AH, FuncInfo *info);
 extern void dumpShellTypeOid(PGconn *conn, Archive *fout, Archive *AH, ShellTypeInfo *info);
 extern void dumpTypeOid(PGconn *conn, Archive *fout, Archive *AH, TypeInfo *info);
 extern void dumpNamespaceOid(Archive *AH, NamespaceInfo *info);

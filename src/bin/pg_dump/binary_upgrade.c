@@ -137,11 +137,38 @@ dumpAggProcedureOid(PGconn *conn, Archive *fout, Archive *AH, AggInfo *info)
 }
 
 void
-dumpProcedureOid(Archive *AH, FuncInfo *info)
+dumpProcedureOid(PGconn *conn, Archive *fout, Archive *AH, FuncInfo *info)
 {
+	char		upgrade_query[QUERY_ALLOC];
+	PGresult   *upgrade_res;
+	Oid			typoid;
+	char	   *typname;
+	int			ntups;
+
 	/* Skip if not to be dumped */
 	if (!info->dobj.dump)
 		return;
+
+	snprintf(upgrade_query, sizeof(upgrade_query),
+			 "SELECT t.oid, t.typname "
+			 "FROM   pg_catalog.pg_proc p "
+			 "       JOIN pg_catalog.pg_type t ON (p.prorettype = t.oid) "
+			 "WHERE  p.oid = '%u'::pg_catalog.oid AND p.proretset = True;",
+			 info->dobj.catId.oid);
+
+	upgrade_res = PQexec(conn, upgrade_query);
+	check_sql_result(upgrade_res, conn, upgrade_query, PGRES_TUPLES_OK);
+	ntups = PQntuples(upgrade_res);
+
+	if (ntups > 0)
+	{
+		typoid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "oid")));
+		typname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "typname"));
+
+		preassign_type_oid(conn, fout, AH, typoid, typname);
+	}
+
+	PQclear(upgrade_res);
 
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_procedure_oid("
