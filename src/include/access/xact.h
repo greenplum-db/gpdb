@@ -174,7 +174,7 @@ typedef enum
 /* Greenplum Database specific */ 
 extern char *XactInfoKind_Name(
 	const XactInfoKind		kind);
-extern void SetSharedTransactionId(void);
+extern void SetSharedTransactionId_writer(void);
 extern void SetSharedTransactionId_reader(TransactionId xid, CommandId cid);
 extern bool IsTransactionState(void);
 extern bool IsAbortInProgress(void);

@@ -825,67 +825,57 @@ updateSharedLocalSnapshot(DtxContextInfo *dtxContextInfo, Snapshot snapshot, cha
 	SharedLocalSnapshotSlot->snapshot.xmax = snapshot->xmax;
 	SharedLocalSnapshotSlot->snapshot.xcnt = snapshot->xcnt;
 
-	LWLockRelease(SharedLocalSnapshotSlot->slotLock);
-
 	if (snapshot->xcnt > 0)
 	{
 		Assert(snapshot->xip != NULL);
 
-		elog((Debug_print_full_dtm ? LOG : DEBUG5),"updateSharedLocalSnapshot count of in-doubt ids %u", snapshot->xcnt);
+		elog((Debug_print_full_dtm ? LOG : DEBUG5),"updateSharedLocalSnapshot count of in-doubt ids %u", SharedLocalSnapshotSlot->snapshot.xcnt);
 
-		LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
 		memcpy(SharedLocalSnapshotSlot->snapshot.xip, snapshot->xip, snapshot->xcnt * sizeof(TransactionId));
-		LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 	}
 	
 	/* combocid stuff */
 	combocidSize = ((usedComboCids < MaxComboCids) ? usedComboCids : MaxComboCids );
 
-	LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
 	SharedLocalSnapshotSlot->combocidcnt = combocidSize;	
 	memcpy((void *)SharedLocalSnapshotSlot->combocids, comboCids,
 		   combocidSize * sizeof(ComboCidKeyData));
 
 	SharedLocalSnapshotSlot->snapshot.curcid = snapshot->curcid;
-	uint32 currentSegmateSync = SharedLocalSnapshotSlot->segmateSync;
-	LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),
 		 "updateSharedLocalSnapshot: combocidsize is now %d max %d segmateSync %d->%d",
-		 combocidSize, MaxComboCids, currentSegmateSync, dtxContextInfo->segmateSync);
+		 combocidSize, MaxComboCids, SharedLocalSnapshotSlot->segmateSync, dtxContextInfo->segmateSync);
 
-	SetSharedTransactionId();
+	SetSharedTransactionId_writer();
 	
-	LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
 	SharedLocalSnapshotSlot->QDcid = dtxContextInfo->curcid;
 	SharedLocalSnapshotSlot->QDxid = dtxContextInfo->distributedXid;
 		
 	SharedLocalSnapshotSlot->ready = true;
 
 	SharedLocalSnapshotSlot->segmateSync = dtxContextInfo->segmateSync;
-	SharedSnapshotSlot slot = *SharedLocalSnapshotSlot;
-	LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),
 		 "updateSharedLocalSnapshot for DistributedTransactionContext = '%s' setting shared local snapshot xid = %u (xmin: %u xmax: %u xcnt: %u) curcid: %d, QDxid = %u, QDcid = %u", 
 		 DtxContextToString(DistributedTransactionContext),
-		 slot.xid,
-		 slot.snapshot.xmin,
-		 slot.snapshot.xmax,
-		 slot.snapshot.xcnt,
-		 slot.snapshot.curcid,
-		 slot.QDxid,
-		 slot.QDcid);
+		 SharedLocalSnapshotSlot->xid,
+		 SharedLocalSnapshotSlot->snapshot.xmin,
+		 SharedLocalSnapshotSlot->snapshot.xmax,
+		 SharedLocalSnapshotSlot->snapshot.xcnt,
+		 SharedLocalSnapshotSlot->snapshot.curcid,
+		 SharedLocalSnapshotSlot->QDxid,
+		 SharedLocalSnapshotSlot->QDcid);
 
 	elog((Debug_print_snapshot_dtm ? LOG : DEBUG5), "[Distributed Snapshot #%u] *Writer Set Shared* gxid %u, currcid %d (gxid = %u, slot #%d, '%s', '%s')", 
 		QEDtxContextInfo.distributedSnapshot.header.distribSnapshotId,
-		slot.QDxid,
-		slot.QDcid,
+		SharedLocalSnapshotSlot->QDxid,
+		SharedLocalSnapshotSlot->QDcid,
 		getDistributedTransactionId(),
-		slot.slotid,
+		SharedLocalSnapshotSlot->slotid,
 		debugCaller,
 		DtxContextToString(DistributedTransactionContext));
-
+	LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 }
 
 static int
@@ -1260,13 +1250,15 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 
 				uint32 segmateSync = SharedLocalSnapshotSlot->segmateSync;
 				uint32 comboCidCnt = SharedLocalSnapshotSlot->combocidcnt;
+
 				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 
 				elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
 					 "Reader qExec usedComboCids: %d shared %d segmateSync %d",
 					 usedComboCids, comboCidCnt, segmateSync);
 				
-				SetSharedTransactionId();
+				SetSharedTransactionId_reader(SharedLocalSnapshotSlot->xid,
+											  SharedLocalSnapshotSlot->snapshot.curcid);
 
 				elog((Debug_print_snapshot_dtm ? LOG : DEBUG5), "Reader qExec setting shared local snapshot to: xmin: %d xmax: %d curcid: %d",
 					 snapshot->xmin, snapshot->xmax, snapshot->curcid);
@@ -1293,8 +1285,6 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 				total_sleep_time_us += sleep_per_check_us;
 
 				LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_SHARED);
-				SharedSnapshotSlot slot = *SharedLocalSnapshotSlot;
-				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 
 				if (total_sleep_time_us >= segmate_timeout_us)
 				{
@@ -1307,11 +1297,11 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 									   "DistributedTransactionContext = %s. "
 									   " Our slotindex is: %d \n"
 									   "Dump of all sharedsnapshots in shmem: %s",
-									   QEDtxContextInfo.distributedXid, slot.QDxid,
+									   QEDtxContextInfo.distributedXid, SharedLocalSnapshotSlot->QDxid,
 									   QEDtxContextInfo.curcid, 
-									   slot.QDcid,  slot.ready,
+									   SharedLocalSnapshotSlot->QDcid, SharedLocalSnapshotSlot->ready,
 									   DtxContextToString(DistributedTransactionContext),
-									   slot.slotindex, SharedSnapshotDump())));
+									   SharedLocalSnapshotSlot->slotindex, SharedSnapshotDump())));
 				}
 				else if (warning_sleep_time_us > 1000 * 1000)
 				{
@@ -1321,9 +1311,9 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 					elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),"[Distributed Snapshot #%u] *No Match* gxid %u = %u and currcid %d = %d (%s)", 
 						 QEDtxContextInfo.distributedSnapshot.header.distribSnapshotId,
 						 QEDtxContextInfo.distributedXid,
-						 slot.QDxid,
+						 SharedLocalSnapshotSlot->QDxid,
 						 QEDtxContextInfo.curcid,
-						 slot.QDcid,
+						 SharedLocalSnapshotSlot->QDcid,
 						 DtxContextToString(DistributedTransactionContext));
 
 
@@ -1334,15 +1324,16 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 						 " Our slotindex is: %d \n"
 						 "DistributedTransactionContext = %s.",
 						 QEDtxContextInfo.distributedXid, QEDtxContextInfo.segmateSync,
-						 slot.QDxid, slot.segmateSync,
+						 SharedLocalSnapshotSlot->QDxid, SharedLocalSnapshotSlot->segmateSync,
 						 QEDtxContextInfo.curcid,
-						 slot.QDcid,
-						 slot.ready,
-						 slot.slotindex,
+						 SharedLocalSnapshotSlot->QDcid,
+						 SharedLocalSnapshotSlot->ready,
+						 SharedLocalSnapshotSlot->slotindex,
 						 DtxContextToString(DistributedTransactionContext));
 					warning_sleep_time_us = 0;
 				}
 
+				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 				/* UNDONE: Back-off from checking every millisecond... */
 			}
 		}
@@ -1663,17 +1654,16 @@ void UpdateSerializableCommandId(void)
 	{
 		int combocidSize;
 
-		LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_SHARED);
-		SharedSnapshotSlot slot = *SharedLocalSnapshotSlot;
-		LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+		LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
 
 		if (SharedLocalSnapshotSlot->QDxid != QEDtxContextInfo.distributedXid)
 		{
 			elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),"[Distributed Snapshot #%u] *Can't Update Serializable Command Id* QDxid = %u (gxid = %u, '%s')", 
 			 	  QEDtxContextInfo.distributedSnapshot.header.distribSnapshotId,
-			 	  slot.QDxid,
+			 	  SharedLocalSnapshotSlot->QDxid,
 			 	  getDistributedTransactionId(),
 			 	  DtxContextToString(DistributedTransactionContext));
+			LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 			return;
 		}
 
@@ -1681,18 +1671,15 @@ void UpdateSerializableCommandId(void)
 			 "[Distributed Snapshot #%u] *Update Serializable Command Id* segment currcid = %d, QDcid = %d, SerializableSnapshot currcid = %d, Shared currcid = %d (gxid = %u, '%s')", 
 		 	  QEDtxContextInfo.distributedSnapshot.header.distribSnapshotId,
 		 	  QEDtxContextInfo.curcid,
-		 	  slot.QDcid,
+		 	  SharedLocalSnapshotSlot->QDcid,
 		 	  SerializableSnapshot->curcid,
-		 	  slot.snapshot.curcid,
+		 	  SharedLocalSnapshotSlot->snapshot.curcid,
 		 	  getDistributedTransactionId(),
 		 	  DtxContextToString(DistributedTransactionContext));
 
 		elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
-			 "serializable writer updating combocid: used combocids %d shared %d", usedComboCids, slot.combocidcnt);
-
-		LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
-
-		SharedLocalSnapshotSlot->ready = false;
+			 "serializable writer updating combocid: used combocids %d shared %d",
+			 usedComboCids, SharedLocalSnapshotSlot->combocidcnt);
 
 		combocidSize = ((usedComboCids < MaxComboCids) ? usedComboCids : MaxComboCids );
 
@@ -1703,8 +1690,6 @@ void UpdateSerializableCommandId(void)
 		SharedLocalSnapshotSlot->snapshot.curcid = SerializableSnapshot->curcid;
 		SharedLocalSnapshotSlot->QDcid = QEDtxContextInfo.curcid;
 		SharedLocalSnapshotSlot->segmateSync = QEDtxContextInfo.segmateSync;
-
-		SharedLocalSnapshotSlot->ready = true;
 
 		LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 	}

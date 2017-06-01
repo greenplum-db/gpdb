@@ -581,16 +581,7 @@ addSharedSnapshot(char *creatorDescription, int id)
 						   SharedSnapshotDump())));
 	}
 
-	LWLockId slotLock = NullLock;
-	if (SharedLocalSnapshotSlot)
-	{
-		slotLock = SharedLocalSnapshotSlot->slotLock;
-		LWLockAcquire(slotLock, LW_EXCLUSIVE);
-	}
 	SharedLocalSnapshotSlot = slot;
-	if (slotLock != NullLock)
-		LWLockRelease(slotLock);
-
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),"%s added Shared Local Snapshot slot for gp_session_id = %d (address %p)",
 		 creatorDescription, id, SharedLocalSnapshotSlot);
@@ -615,15 +606,7 @@ lookupSharedSnapshot(char *lookerDescription, char *creatorDescription, int id)
 						 lookerDescription, creatorDescription, creatorDescription)));
 	}
 
-	LWLockId slotLock = NullLock;
-	if (SharedLocalSnapshotSlot)
-	{
-		slotLock = SharedLocalSnapshotSlot->slotLock;
-		LWLockAcquire(slotLock, LW_EXCLUSIVE);
-	}
 	SharedLocalSnapshotSlot = slot;
-	if (slotLock != NullLock)
-		LWLockRelease(slotLock);
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),"%s found Shared Local Snapshot slot for gp_session_id = %d created by %s (address %p)",
 		 lookerDescription, id, creatorDescription, SharedLocalSnapshotSlot);
@@ -662,6 +645,7 @@ sharedLocalSnapshot_filename(TransactionId xid, CommandId cid, uint32 segmateSyn
 void
 dumpSharedLocalSnapshot_forCursor(void)
 {
+	SharedSnapshotSlot *src = NULL;
 	char* fname = NULL;
 	BufFile *f = NULL;
 	Size count=0;
@@ -672,10 +656,9 @@ dumpSharedLocalSnapshot_forCursor(void)
 	Assert(SharedLocalSnapshotSlot != NULL);
 
 	LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_SHARED);
-	SharedSnapshotSlot slot = *SharedLocalSnapshotSlot;
-	LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 
-	fname = sharedLocalSnapshot_filename(slot.QDxid, slot.QDcid, slot.segmateSync);
+	src = (SharedSnapshotSlot *)SharedLocalSnapshotSlot;
+	fname = sharedLocalSnapshot_filename(src->QDxid, src->QDcid, src->segmateSync);
 
 	/*
 	 * Create our dump-file. Hold the reference to it in
@@ -710,22 +693,22 @@ dumpSharedLocalSnapshot_forCursor(void)
 		count = 0;
 
 		FileWriteFieldWithCount(count, f, count);
-		FileWriteFieldWithCount(count, f, slot.pid);
-		FileWriteFieldWithCount(count, f, slot.xid);
-		FileWriteFieldWithCount(count, f, slot.cid);
-		FileWriteFieldWithCount(count, f, slot.startTimestamp);
+		FileWriteFieldWithCount(count, f, src->pid);
+		FileWriteFieldWithCount(count, f, src->xid);
+		FileWriteFieldWithCount(count, f, src->cid);
+		FileWriteFieldWithCount(count, f, src->startTimestamp);
 
-		FileWriteFieldWithCount(count, f, slot.combocidcnt);
-		FileWriteFieldWithCount(count, f, slot.combocids);
-		FileWriteFieldWithCount(count, f, slot.snapshot.xmin);
-		FileWriteFieldWithCount(count, f, slot.snapshot.xmax);
-		FileWriteFieldWithCount(count, f, slot.snapshot.xcnt);
+		FileWriteFieldWithCount(count, f, src->combocidcnt);
+		FileWriteFieldWithCount(count, f, src->combocids);
+		FileWriteFieldWithCount(count, f, src->snapshot.xmin);
+		FileWriteFieldWithCount(count, f, src->snapshot.xmax);
+		FileWriteFieldWithCount(count, f, src->snapshot.xcnt);
 
-		if (!FileWriteOK(f, &slot.snapshot.xip, slot.snapshot.xcnt * sizeof(TransactionId)))
+		if (!FileWriteOK(f, &src->snapshot.xip, src->snapshot.xcnt * sizeof(TransactionId)))
 			break;
-		count += slot.snapshot.xcnt * sizeof(TransactionId);
+		count += src->snapshot.xcnt * sizeof(TransactionId);
 
-		FileWriteFieldWithCount(count, f, slot.snapshot.curcid);
+		FileWriteFieldWithCount(count, f, src->snapshot.curcid);
 
 		/*
 		 * Now update our length field: seek to beginning and overwrite
@@ -745,10 +728,12 @@ dumpSharedLocalSnapshot_forCursor(void)
 		 * BufFileClose(f);
 		 */
 
+		LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 		return;
 	}
 	while (0);
 
+	LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 	elog(ERROR, "Failed to write shared snapshot to temp-file");
 }
 
