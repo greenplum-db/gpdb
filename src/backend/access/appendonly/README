@@ -48,11 +48,12 @@ Aosegments table
 ----------------
 
 In addition to the segment files that store the user data, there are
-three auxiliary heap tables for each AO table, which store
-metadata. The aosegments table is always named as
-"pg_aoseg.pg_aoseg_<relfilenode>", where <relfilenode> is the current
-relfilenode value of the AO table's pg_class row. These are similar to
-the TOAST tables, for heaps. An append-only table can also have a TOAST
+three auxiliary heap tables for each AO table, which store metadata.
+The aosegments table is always named as "pg_aoseg.pg_aoseg_<oid>",
+where <oid> is the current oid value of the AO table's pg_class row.
+The mapping between AO tables and their respective aosegments tables
+is recorded in "pg_catalog.pg_appendonly". These are similar to the
+TOAST tables, for heaps. An append-only table can also have a TOAST
 table, too, in addition to the AO-specific auxiliary tables.
 
 The segment table lists all the segment files that exist. For each
@@ -75,7 +76,7 @@ Visibility map table
 --------------------
 
 The visibility map for each AO table is stored in a heap table named
-"pg_aoseg.pg_aovisimap_<relfilenode>".  It is not to be confused with
+"pg_aoseg.pg_aovisimap_<oid>".  It is not to be confused with
 the visibility map used for heaps in PostgreSQL 8.4 and above!
 
 The AO visibility map is used to implement DELETEs and UPDATEs. An
