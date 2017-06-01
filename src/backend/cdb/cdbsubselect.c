@@ -76,78 +76,6 @@ static bool is_targetlist_nullable(Query *subq);
 #define DUMMY_COLUMN_NAME "zero"
 
 /*
- * cdbsubselect_flatten_sublinks
- */
-void
-cdbsubselect_flatten_sublinks(struct PlannerInfo *root, struct Node *jtnode)
-{
-	List	   *rtrlist = NIL;
-	ListCell   *cell;
-
-	if (jtnode == NULL)
-		return;
-
-	switch (jtnode->type)
-	{
-		case T_Query:
-			{
-				Query	   *query = (Query *) jtnode;
-
-				/* Flatten sublinks in JOIN...ON and WHERE search conditions. */
-				cdbsubselect_flatten_sublinks(root, (Node *) query->jointree);
-				break;
-			}
-
-		case T_FromExpr:
-			{
-				FromExpr   *fromexpr = (FromExpr *) jtnode;
-
-				/* Flatten sublinks in JOIN...ON search conditions. */
-				foreach(cell, fromexpr->fromlist)
-					cdbsubselect_flatten_sublinks(root, (Node *) lfirst(cell));
-
-				/* Flatten sublinks in WHERE search condition. */
-				fromexpr->quals = pull_up_sublinks(root, &rtrlist, fromexpr->quals);
-
-				/* Append any new RangeTblRef nodes to the FROM clause. */
-				if (rtrlist)
-					fromexpr->fromlist = list_concat(fromexpr->fromlist, rtrlist);
-				break;
-			}
-
-		case T_JoinExpr:
-			{
-				JoinExpr   *joinexpr = (JoinExpr *) jtnode;
-
-				/*
-				 * We support flattening of sublinks in JOIN...ON only for
-				 * inner joins
-				 */
-				if (joinexpr->jointype != JOIN_INNER)
-					break;
-
-				/* Process left and right inputs of JOIN. */
-				cdbsubselect_flatten_sublinks(root, joinexpr->larg);
-				cdbsubselect_flatten_sublinks(root, joinexpr->rarg);
-
-				/* Flatten sublinks in JOIN...ON search condition. */
-				joinexpr->quals = pull_up_sublinks(root, &rtrlist, joinexpr->quals);
-
-				/* Add any new RangeTblRef nodes to the join. */
-				joinexpr->subqfromlist = rtrlist;
-				break;
-			}
-
-		case T_RangeTblRef:
-			break;
-
-		default:
-			Assert(0);
-	}
-}	/* cdbsubselect_flatten_sublinks */
-
-
-/*
  * cdbsubselect_drop_distinct
  */
 void
@@ -604,7 +532,7 @@ safe_to_convert_EXPR(SubLink *sublink, ConvertSubqueryToJoinContext *ctx1)
  * Method attempts to convert an EXPR_SUBLINK of the form select * from T where a > (select 10*avg(x) from R where T.b=R.y)
  */
 Node *
-convert_EXPR_to_join(PlannerInfo *root, List **rtrlist_inout, OpExpr *opexp)
+convert_EXPR_to_join(PlannerInfo *root, OpExpr *opexp)
 {
 	Assert(root);
 	Assert(list_length(opexp->args) == 2);
@@ -680,8 +608,7 @@ convert_EXPR_to_join(PlannerInfo *root, List **rtrlist_inout, OpExpr *opexp)
 
 		join_expr->quals = joinQual;
 
-		root->parse->jointree->fromlist = list_make1(join_expr);		/* Replace the join-tree
-																		 * with the new one */
+		root->parse->jointree->fromlist = list_make1(join_expr);	/* Replace the fromlist with the new one */
 
 		TargetEntry *subselectAggTLE = (TargetEntry *) list_nth(subselect->targetList, list_length(subselect->targetList) - 1);
 

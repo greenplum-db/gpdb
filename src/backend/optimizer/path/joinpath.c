@@ -254,16 +254,6 @@ sort_inner_and_outer(PlannerInfo *root,
 	outer_path = outerrel->cheapest_total_path;
 	inner_path = innerrel->cheapest_total_path;
 
-	/* 8.4-9.0-MERGE-FIX-ME: In Upstream commit e006a24a, we create UniquePath for
-	 * JOIN_UNIQUE_OUTER and JOIN_UNIQUE_INNER by calling create_unique_path().
-	 * However, in GPDB we cannot call create_unique_path() at this point, since
-	 * we do not have GPDB specific arguements for this function.
-	 */
-	if (jointype == JOIN_UNIQUE_OUTER || jointype == JOIN_UNIQUE_INNER)
-	{
-		jointype = JOIN_INNER;
-	}
-
 	/*
 	 * Each possible ordering of the available mergejoin clauses will generate
 	 * a differently-sorted result path at essentially the same cost.  We have

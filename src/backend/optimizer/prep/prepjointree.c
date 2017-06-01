@@ -37,9 +37,6 @@
 #include "parser/parsetree.h"
 #include "rewrite/rewriteManip.h"
 
-#include "cdb/cdbsubselect.h"           /* cdbsubselect_flatten_sublinks() */
-
-
 typedef struct reduce_outer_joins_state
 {
 	Relids		relids;			/* base relids within this subtree */
@@ -47,6 +44,10 @@ typedef struct reduce_outer_joins_state
 	List	   *sub_states;		/* List of states for subtree components */
 } reduce_outer_joins_state;
 
+static Node *pull_up_sublinks_jointree_recurse(PlannerInfo *root, Node *jtnode,
+								  Relids *relids);
+static Node *pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node,
+							  Relids available_rels, List **fromlist);
 static void pull_up_fromlist_subqueries(PlannerInfo    *root,
                                         List          **inout_fromlist,
 				                        bool            below_outer_join);
@@ -77,96 +78,268 @@ extern void UpdateScatterClause(Query *query, List *newtlist);
 
 /*
  * pull_up_sublinks
- *		Attempt to pull up top-level ANY and EXISTS SubLinks to be treated
- *		as semijoins or anti-semijoins.
+ *		Attempt to pull up ANY and EXISTS SubLinks to be treated as
+ *		semijoins or anti-semijoins.
  *
- * A clause "foo op ANY (sub-SELECT)" appearing at the top level of WHERE
- * can be processed by pulling the sub-SELECT up to become a rangetable entry
- * and handling the implied comparisons as quals of a semijoin.
- * This optimization *only* works at the top level of WHERE, because
- * it cannot distinguish whether the ANY ought to return FALSE or NULL in
- * cases involving NULL inputs.  Similarly, EXISTS and NOT EXISTS clauses
- * can be handled by pulling up the sub-SELECT and creating a semijoin
- * or anti-semijoin respectively.
+ * A clause "foo op ANY (sub-SELECT)" can be processed by pulling the
+ * sub-SELECT up to become a rangetable entry and treating the implied
+ * comparisons as quals of a semijoin.  However, this optimization *only*
+ * works at the top level of WHERE or a JOIN/ON clause, because we cannot
+ * distinguish whether the ANY ought to return FALSE or NULL in cases
+ * involving NULL inputs.  Also, in an outer join's ON clause we can only
+ * do this if the sublink is degenerate (ie, references only the nullable
+ * side of the join).  In that case we can effectively push the semijoin
+ * down into the nullable side of the join.  If the sublink references any
+ * nonnullable-side variables then it would have to be evaluated as part
+ * of the outer join, which makes things way too complicated.
+ *
+ * Under similar conditions, EXISTS and NOT EXISTS clauses can be handled
+ * by pulling up the sub-SELECT and creating a semijoin or anti-semijoin.
  *
  * This routine searches for such clauses and does the necessary parsetree
  * transformations if any are found.
  *
- * This routine has to run before preprocess_expression(), so the WHERE
- * clause is not yet reduced to implicit-AND format.  That means we need
+ * This routine has to run before preprocess_expression(), so the quals
+ * clauses are not yet reduced to implicit-AND format.  That means we need
  * to recursively search through explicit AND clauses, which are
  * probably only binary ANDs.  We stop as soon as we hit a non-AND item.
- *
- * Returns the possibly-modified version of the given qual-tree node.
- * There may be side-effects on the query's rtable and jointree, too.
  */
-Node *
-pull_up_sublinks(PlannerInfo * root, List **rtrlist_inout, Node *node)
+void
+pull_up_sublinks(PlannerInfo *root)
+{
+	Relids		relids;
+
+	/* Begin recursion through the jointree */
+	root->parse->jointree = (FromExpr *)
+		pull_up_sublinks_jointree_recurse(root,
+										  (Node *) root->parse->jointree,
+										  &relids);
+}
+
+/*
+ * Recurse through jointree nodes for pull_up_sublinks()
+ *
+ * In addition to returning the possibly-modified jointree node, we return
+ * a relids set of the contained rels into *relids.
+ */
+static Node *
+pull_up_sublinks_jointree_recurse(PlannerInfo *root, Node *jtnode,
+								  Relids *relids)
+{
+	if (jtnode == NULL)
+	{
+		*relids = NULL;
+	}
+	else if (IsA(jtnode, RangeTblRef))
+	{
+		int			varno = ((RangeTblRef *) jtnode)->rtindex;
+
+		*relids = bms_make_singleton(varno);
+		/* jtnode is returned unmodified */
+	}
+	else if (IsA(jtnode, FromExpr))
+	{
+		FromExpr   *f = (FromExpr *) jtnode;
+		List	   *newfromlist = NIL;
+		Node	   *newquals;
+		List	   *subfromlist = NIL;
+		Relids		frelids = NULL;
+		ListCell   *l;
+
+		/* First, recurse to process children and collect their relids */
+		foreach(l, f->fromlist)
+		{
+			Node   *newchild;
+			Relids	childrelids;
+
+			newchild = pull_up_sublinks_jointree_recurse(root,
+														 lfirst(l),
+														 &childrelids);
+			newfromlist = lappend(newfromlist, newchild);
+			frelids = bms_join(frelids, childrelids);
+		}
+		/* Now process qual --- all children are available for use */
+		newquals = pull_up_sublinks_qual_recurse(root, f->quals, frelids,
+												 &subfromlist);
+		/* Any pulled-up subqueries can just be attached to the fromlist */
+		if (subfromlist)
+		{
+			newfromlist = list_concat(newfromlist, subfromlist);
+
+			/*
+			 * Although we could include the pulled-up subqueries in the returned
+			 * relids, there's no need since upper quals couldn't refer to their
+			 * outputs anyway.
+			 */
+			*relids = frelids;
+			jtnode = (Node *) makeFromExpr(newfromlist, newquals);
+		}
+		else
+			f->quals = newquals;
+	}
+	else if (IsA(jtnode, JoinExpr))
+	{
+		JoinExpr   *j;
+		Relids		leftrelids;
+		Relids		rightrelids;
+		List	   *subfromlist = NIL;
+
+		/*
+		 * Make a modifiable copy of join node, but don't bother copying
+		 * its subnodes (yet).
+		 */
+		j = (JoinExpr *) palloc(sizeof(JoinExpr));
+		memcpy(j, jtnode, sizeof(JoinExpr));
+
+		/* Recurse to process children and collect their relids */
+		j->larg = pull_up_sublinks_jointree_recurse(root, j->larg,
+													&leftrelids);
+		j->rarg = pull_up_sublinks_jointree_recurse(root, j->rarg,
+													&rightrelids);
+
+		/*
+		 * Now process qual, showing appropriate child relids as available,
+		 * and then attach any pulled-up jointree items at the right place.
+		 * The pulled-up items must go below where the quals that refer to
+		 * them will be placed.  Since the JoinExpr itself can only handle
+		 * two child nodes, we hack up a valid jointree by inserting dummy
+		 * FromExprs that have no quals.  These should get flattened out
+		 * during deconstruct_recurse(), so they won't impose any extra
+		 * overhead.
+		 */
+		switch (j->jointype)
+		{
+			case JOIN_INNER:
+				j->quals = pull_up_sublinks_qual_recurse(root, j->quals,
+														 bms_union(leftrelids,
+																  rightrelids),
+														 &subfromlist);
+				/* We arbitrarily put pulled-up subqueries into right child */
+				if (subfromlist)
+					j->rarg = (Node *) makeFromExpr(lcons(j->rarg,
+														  subfromlist),
+													NULL);
+				break;
+			case JOIN_LEFT:
+				j->quals = pull_up_sublinks_qual_recurse(root, j->quals,
+														 rightrelids,
+														 &subfromlist);
+				/* Any pulled-up subqueries must go into right child */
+				if (subfromlist)
+					j->rarg = (Node *) makeFromExpr(lcons(j->rarg,
+														  subfromlist),
+													NULL);
+				break;
+			case JOIN_FULL:
+				/* can't do anything with full-join quals */
+				break;
+			case JOIN_RIGHT:
+				j->quals = pull_up_sublinks_qual_recurse(root, j->quals,
+														 leftrelids,
+														 &subfromlist);
+				/* Any pulled-up subqueries must go into left child */
+				if (subfromlist)
+					j->larg = (Node *) makeFromExpr(lcons(j->larg,
+														  subfromlist),
+													NULL);
+				break;
+			default:
+				elog(ERROR, "unrecognized join type: %d",
+					 (int) j->jointype);
+				break;
+		}
+
+		/*
+		 * Although we could include the pulled-up subqueries in the returned
+		 * relids, there's no need since upper quals couldn't refer to their
+		 * outputs anyway.  But we *do* need to include the join's own rtindex
+		 * because we haven't yet collapsed join alias variables, so upper
+		 * levels would mistakenly think they couldn't use references to this
+		 * join.
+		 */
+		*relids = bms_add_member(bms_join(leftrelids, rightrelids),
+								 j->rtindex);
+		jtnode = (Node *) j;
+	}
+	else
+		elog(ERROR, "unrecognized node type: %d",
+			 (int) nodeTag(jtnode));
+	return jtnode;
+}
+
+/*
+ * Recurse through top-level qual nodes for pull_up_sublinks()
+ *
+ * Caller must have initialized *fromlist to NIL.  We append any new
+ * jointree items to that list.
+ */
+static Node *
+pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node,
+							  Relids available_rels, List **fromlist)
 {
 	if (node == NULL)
 		return NULL;
 	if (IsA(node, SubLink))
 	{
 		SubLink    *sublink = (SubLink *) node;
-		Node	   *subst;
+		Node	   *new_qual = NULL;
+		List	   *new_fromlist;
 
 		/* Is it a convertible ANY or EXISTS clause? */
 		if (sublink->subLinkType == ANY_SUBLINK)
 		{
-			subst = convert_ANY_sublink_to_join(root, rtrlist_inout, sublink);
-			if (subst)
-				return subst;
+			if (convert_ANY_sublink_to_join(root, sublink,
+											available_rels,
+											&new_qual, &new_fromlist))
+			{
+				*fromlist = list_concat(*fromlist, new_fromlist);
+				return new_qual;
+			}
 		}
 		else if (sublink->subLinkType == EXISTS_SUBLINK)
 		{
-			subst = convert_EXISTS_sublink_to_join(root, sublink, false);
-			if (subst)
-				return subst;
-		}
-		else if (sublink->subLinkType == NOT_EXISTS_SUBLINK)
-		{
-			sublink->subLinkType = EXISTS_SUBLINK;
-			subst = convert_EXISTS_sublink_to_join(root, sublink, true);
-			if (subst)
-				return subst;
-			return (Node *) make_notclause((Expr *) sublink);
+			if (convert_EXISTS_sublink_to_join(root, sublink, false,
+											   available_rels,
+											   &new_qual, &new_fromlist))
+			{
+				*fromlist = list_concat(*fromlist, new_fromlist);
+				return new_qual;
+			}
+			else if(new_qual)
+				return new_qual;
 		}
 		else if (sublink->subLinkType == ALL_SUBLINK)
 		{
-			subst = convert_IN_to_antijoin(root, sublink);
-			return subst;
+			return convert_IN_to_antijoin(root, sublink);
 		}
 		/* Else return it unmodified */
 		return node;
 	}
-	if (and_clause(node))
-	{
-		List	   *newclauses = NIL;
-		ListCell   *l;
-
-		foreach(l, ((BoolExpr *) node)->args)
-		{
-			Node	   *oldclause = (Node *) lfirst(l);
-			Node	   *newclause = pull_up_sublinks(root, rtrlist_inout, oldclause);
-
-			if (newclause)
-				newclauses = lappend(newclauses, newclause);
-		}
-		return (Node *) make_ands_explicit(newclauses);
-	}
 	if (not_clause(node))
 	{
-
-		Node	   *arg = (Node *) get_notclausearg((Expr *) node);
 		/* If the immediate argument of NOT is EXISTS, try to convert */
 		SubLink    *sublink = (SubLink *) get_notclausearg((Expr *) node);
+		Node	   *arg = (Node *) get_notclausearg((Expr *) node);
+		Node	   *new_qual = NULL;
+		List	   *new_fromlist;
 
 		if (sublink && IsA(sublink, SubLink))
 		{
 			if (sublink->subLinkType == EXISTS_SUBLINK)
 			{
-				sublink->subLinkType = NOT_EXISTS_SUBLINK;
+				if (convert_EXISTS_sublink_to_join(root, sublink, true,
+												   available_rels,
+												   &new_qual, &new_fromlist))
+				{
+					*fromlist = list_concat(*fromlist, new_fromlist);
+					return new_qual;
+				}
+				else if(new_qual)
+					return new_qual;
+				else
+					return node;
 			}
+
 			/*
 			 *	 We normalize NOT subqueries using the following axioms:
 			 *
@@ -177,39 +350,56 @@ pull_up_sublinks(PlannerInfo * root, List **rtrlist_inout, Node *node)
 			else if (sublink->subLinkType == ANY_SUBLINK)
 			{
 				sublink->subLinkType = ALL_SUBLINK;
-				sublink->testexpr = (Node *) canonicalize_qual(
-															   make_notclause((Expr *) sublink->testexpr));
+				sublink->testexpr = (Node *) canonicalize_qual(make_notclause((Expr *) sublink->testexpr));
 			}
 			else if (sublink->subLinkType == ALL_SUBLINK)
 			{
 				sublink->subLinkType = ANY_SUBLINK;
-				sublink->testexpr = (Node *) canonicalize_qual(
-															   make_notclause((Expr *) sublink->testexpr));
+				sublink->testexpr = (Node *) canonicalize_qual(make_notclause((Expr *) sublink->testexpr));
 			}
-			else
-			{
-				return node;
-			}
-			return pull_up_sublinks(root, rtrlist_inout, (Node *) sublink);
+			return pull_up_sublinks_qual_recurse(root, (Node *) sublink, available_rels, fromlist);
 		}
+
 		else if (not_clause(arg))
 		{
 			/* NOT NOT (expr) => (expr)  */
-			return (Node *) pull_up_sublinks(root, rtrlist_inout,
-											 (Node *) get_notclausearg((Expr *) arg));
+			return (Node *) pull_up_sublinks_qual_recurse(root,
+														 (Node *) get_notclausearg((Expr *) arg),
+														 available_rels, fromlist);
 		}
 		else if (or_clause(arg))
 		{
 			/* NOT OR (expr1) (expr2) => (expr1) AND (expr2) */
-			return (Node *) pull_up_sublinks(root, rtrlist_inout,
-											 (Node *) canonicalize_qual((Expr *) node));
-
+			return (Node *) pull_up_sublinks_qual_recurse(root,
+														 (Node *) canonicalize_qual((Expr *) node),
+														 available_rels, fromlist);
 		}
+
 		/* Else return it unmodified */
 		return node;
 	}
+	if (and_clause(node))
+	{
+		/* Recurse into AND clause */
+		List	   *newclauses = NIL;
+		ListCell   *l;
 
-	/**
+		foreach(l, ((BoolExpr *) node)->args)
+		{
+			Node	   *oldclause = (Node *) lfirst(l);
+			Node	   *newclause;
+
+			newclause = pull_up_sublinks_qual_recurse(root,
+													  oldclause,
+													  available_rels,
+													  fromlist);
+			if(newclause)
+				newclauses = lappend(newclauses, newclause);
+		}
+		return (Node *) make_ands_explicit(newclauses);
+	}
+
+	/*
 	 * (expr) op SUBLINK
 	 */
 	if (IsA(node, OpExpr))
@@ -225,10 +415,11 @@ pull_up_sublinks(PlannerInfo * root, List **rtrlist_inout, Node *node)
 
 			if (IsA(rarg, SubLink))
 			{
-				return (Node *) convert_EXPR_to_join(root, rtrlist_inout, opexp);
+				return (Node *) convert_EXPR_to_join(root, opexp);
 			}
 		}
 	}
+
 	/* Stop if not an AND */
 	return node;
 }
@@ -317,7 +508,7 @@ pull_up_subqueries(PlannerInfo *root, Node *jtnode,
 		FromExpr   *f = (FromExpr *) jtnode;
 
 		Assert(!append_rel_member);
-        pull_up_fromlist_subqueries(root, &f->fromlist, below_outer_join);
+		pull_up_fromlist_subqueries(root, &f->fromlist, below_outer_join);
 	}
 	else if (IsA(jtnode, JoinExpr))
 	{
@@ -461,7 +652,7 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	}
 
     /* CDB: Stash subquery jointree relids before flattening subqueries. */
-    subroot->currlevel_relids = get_relids_in_jointree((Node *)subquery->jointree);
+    subroot->currlevel_relids = get_relids_in_jointree((Node *)subquery->jointree, false);
     
     /* Ensure that jointree has been normalized. See normalize_query_jointree_mutator() */
     AssertImply(subquery->jointree->fromlist, list_length(subquery->jointree->fromlist) == 1);
@@ -475,7 +666,7 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	 * leave unoptimized SubLinks behind.
 	 */
 	if (subquery->hasSubLinks)
-        cdbsubselect_flatten_sublinks(subroot, (Node *)subquery);
+        pull_up_sublinks(subroot);
 
 	/*
 	 * Recursively pull up the subquery's subqueries, so that
@@ -666,7 +857,7 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	{
 		Relids		subrelids;
 
-		subrelids = get_relids_in_jointree((Node *) subquery->jointree);
+		subrelids = get_relids_in_jointree((Node *) subquery->jointree, false);
 		fix_flattened_sublink_relids((Node *) parse, varno, subrelids);
 		fix_append_rel_relids(root->append_rel_list, varno, subrelids);
 	}
@@ -1542,10 +1733,13 @@ fix_append_rel_relids(List *append_rel_list, int varno, Relids subrelids)
 }
 
 /*
- * get_relids_in_jointree: get set of base RT indexes present in a jointree
+ * get_relids_in_jointree: get set of RT indexes present in a jointree
+ *
+ * If include_joins is true, join RT indexes are included; if false,
+ * only base rels are included.
  */
 Relids
-get_relids_in_jointree(Node *jtnode)
+get_relids_in_jointree(Node *jtnode, bool include_joins)
 {
 	Relids		result = NULL;
 	ListCell   *l;
@@ -1565,19 +1759,23 @@ get_relids_in_jointree(Node *jtnode)
 		foreach(l, f->fromlist)
 		{
 			result = bms_join(result,
-							  get_relids_in_jointree(lfirst(l)));
+							  get_relids_in_jointree(lfirst(l),
+													 include_joins));
 		}
 	}
 	else if (IsA(jtnode, JoinExpr))
 	{
 		JoinExpr   *j = (JoinExpr *) jtnode;
 
-		/* join's own RT index is not wanted in result */
-		result = get_relids_in_jointree(j->larg);
-		result = bms_join(result, get_relids_in_jointree(j->rarg));
+		result = get_relids_in_jointree(j->larg, include_joins);
+		result = bms_join(result, get_relids_in_jointree(j->rarg, include_joins));
 
+		if (include_joins)
+			result = bms_add_member(result, j->rtindex);
+
+		/* GPDB_90_MERGE_FIXME: Not present upstream; is this really needed? */
 		foreach(l, j->subqfromlist)
-			result = bms_join(result, get_relids_in_jointree((Node *)lfirst(l)));
+			result = bms_join(result, get_relids_in_jointree((Node *)lfirst(l), include_joins));
 	}
 	else
 		elog(ERROR, "unrecognized node type: %d",
@@ -1597,7 +1795,7 @@ get_relids_for_join(PlannerInfo *root, int joinrelid)
 										joinrelid);
 	if (!jtnode)
 		elog(ERROR, "could not find join node %d", joinrelid);
-	return get_relids_in_jointree(jtnode);
+	return get_relids_in_jointree(jtnode, false);
 }
 
 /*

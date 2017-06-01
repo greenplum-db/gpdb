@@ -53,7 +53,6 @@
 #include "cdb/cdbpathtoplan.h"	/* cdbpathtoplan_create_flow() */
 #include "cdb/cdbgroup.h"		/* grouping_planner extensions */
 #include "cdb/cdbsetop.h"		/* motion utilities */
-#include "cdb/cdbsubselect.h"	/* cdbsubselect_flatten_sublinks() */
 #include "cdb/cdbvars.h"
 
 
@@ -548,16 +547,16 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	AssertImply(parse->jointree->fromlist, list_length(parse->jointree->fromlist) == 1);
 
 	/* CDB: Stash current query level's relids before pulling up subqueries. */
-	root->currlevel_relids = get_relids_in_jointree((Node *) parse->jointree);
+	root->currlevel_relids = get_relids_in_jointree((Node *) parse->jointree, false);
 
 	/*
-	 * Look for ANY and EXISTS SubLinks at the top level of WHERE, and try to
-	 * transform them into joins.  Note that this step only handles SubLinks
-	 * originally at top level of WHERE; if we pull up any subqueries below,
-	 * their SubLinks are processed just before pulling them up.
+	 * Look for ANY and EXISTS SubLinks in WHERE and JOIN/ON clauses, and try
+	 * to transform them into joins. Note that this step does not descend
+	 * into subqueries; if we pull up any subqueries below, their SubLinks are
+	 * processed just before pulling them up.
 	 */
 	if (parse->hasSubLinks)
-		cdbsubselect_flatten_sublinks(root, (Node *) parse);
+		pull_up_sublinks(root);
 
 	/*
 	 * Check to see if any subqueries in the rangetable can be merged into

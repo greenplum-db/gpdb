@@ -13,9 +13,7 @@
 struct Node;                            /* #include "nodes/nodes.h" */
 struct PlannerInfo;                     /* #include "nodes/relation.h" */
 
-extern void cdbsubselect_flatten_sublinks(struct PlannerInfo *root, struct Node *jtnode);
-
-extern Node *convert_EXPR_to_join(PlannerInfo *root, List** rtrlist_inout, OpExpr *opexp);
+extern Node *convert_EXPR_to_join(PlannerInfo *root, OpExpr *opexp);
 
 extern void cdbsubselect_drop_orderby(Query *subselect);
 extern void cdbsubselect_drop_distinct(Query *subselect);
