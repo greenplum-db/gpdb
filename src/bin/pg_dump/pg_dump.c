@@ -7307,8 +7307,6 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	else if (prodataaccess[0] == PRODATAACCESS_MODIFIES)
 		appendPQExpBuffer(q, " MODIFIES SQL DATA");
 
-	appendPQExpBuffer(q, ";\n");
-
 	for (i = 0; i < nconfigitems; i++)
 	{
 		/* we feel free to scribble on configitems[] here */
