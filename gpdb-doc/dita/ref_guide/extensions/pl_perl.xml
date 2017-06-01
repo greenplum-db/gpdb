@@ -358,6 +358,7 @@ to the original encoding.</li>
 <li>Nesting named PL/Perl subroutines retains the same dangers as in Perl.</li>
 <li>Only the untrusted PL/Perl language variant supports module import. Use
 <codeph>plperlu</codeph> with care.</li>
+<li>Any module that you use in a <codeph>plperlu</codeph> function must be available from the same location on all Greenplum hosts.</li>
 </ul>
 </p>
 </body>
