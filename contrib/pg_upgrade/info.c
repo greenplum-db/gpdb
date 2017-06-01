@@ -581,9 +581,40 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 		if (relstorage == 'a' || relstorage == 'c')
 		{
 			char		aoquery[QUERY_ALLOC];
+			char	   *segrel;
+			char	   *visimaprel;
+			char	   *blkdirrel = NULL;
 			PGresult   *aores;
 			int			j;
-			Oid			blkdirrelid;
+
+			/*
+			 * First query the catalog for the auxiliary heap relations which
+			 * describe AO{CS} relations. The segrel and visimap must exist
+			 * but the blkdirrel is created when required so it might be exist
+			 */
+			snprintf(aoquery, sizeof(aoquery),
+					 "SELECT cs.relname AS segrel, "
+					 "       cv.relname AS visimaprel, "
+					 "       cb.relname AS blkdirrel "
+					 "FROM   pg_appendonly a "
+					 "       JOIN pg_class cs on (cs.oid = a.segrelid) "
+					 "       JOIN pg_class cv on (cv.oid = a.visimaprelid) "
+					 "       LEFT JOIN pg_class cb on (cb.oid = a.blkdirrelid "
+					 "                                 AND a.blkdirrelid <> 0) "
+					 "WHERE  a.relid = %u::pg_catalog.oid",
+					 curr->reloid);
+
+			aores = executeQueryOrDie(ctx, conn, aoquery);
+			if (PQntuples(aores) == 0)
+				pg_log(ctx, PG_FATAL, "Unable to find auxiliary AO relations for %u (%s)\n",
+					   curr->reloid, curr->relname);
+
+			segrel = pg_strdup(ctx, PQgetvalue(aores, 0, PQfnumber(aores, "segrel")));
+			visimaprel = pg_strdup(ctx, PQgetvalue(aores, 0, PQfnumber(aores, "visimaprel")));
+			if (!PQgetisnull(aores, 0, PQfnumber(aores, "blkdirrel")))
+				blkdirrel = pg_strdup(ctx, PQgetvalue(aores, 0, PQfnumber(aores, "blkdirrel")));
+
+			PQclear(aores);
 
 			if (relstorage == 'a')
 			{
@@ -598,17 +629,22 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 				if (GET_MAJOR_VERSION(ctx->old.major_version) <= 802 && whichCluster == CLUSTER_OLD)
 				{
 					snprintf(aoquery, sizeof(aoquery),
-							 "SELECT segno, eof, tupcount, varblockcount, eofuncompressed, modcount, state, ao.version as formatversion "
-							 "FROM pg_aoseg.pg_aoseg_%u, pg_catalog.pg_appendonly ao "
-							 "WHERE ao.relid = %u /* %s */",
-							 curr->reloid, curr->reloid, relname);
+							 "SELECT segno, eof, tupcount, varblockcount, "
+							 "       eofuncompressed, modcount, state, "
+							 "       ao.version as formatversion "
+							 "FROM   pg_aoseg.%s, "
+							 "       pg_catalog.pg_appendonly ao "
+							 "WHERE  ao.relid = %u",
+							 segrel, curr->reloid);
 				}
 				else
 				{
 					snprintf(aoquery, sizeof(aoquery),
-							 "SELECT segno, eof, tupcount, varblockcount, eofuncompressed, modcount, state, formatversion "
-							 "FROM pg_aoseg.pg_aoseg_%u",
-							 curr->reloid);
+							 "SELECT segno, eof, tupcount, varblockcount, "
+							 "       eofuncompressed, modcount, state, "
+							 "       formatversion "
+							 "FROM   pg_aoseg.%s",
+							 segrel);
 				}
 				aores = executeQueryOrDie(ctx, conn, aoquery);
 
@@ -639,18 +675,18 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 					snprintf(aoquery, sizeof(aoquery),
 							 "SELECT segno, tupcount, varblockcount, vpinfo, "
 							 "       modcount, state, ao.version as formatversion "
-							 "FROM   pg_aoseg.pg_aocsseg_%u, "
+							 "FROM   pg_aoseg.%s, "
 							 "       pg_catalog.pg_appendonly ao "
 							 "WHERE  ao.relid = %u",
-							 curr->reloid, curr->reloid);
+							 segrel, curr->reloid);
 				}
 				else
 				{
 					snprintf(aoquery, sizeof(aoquery),
 							 "SELECT segno, tupcount, varblockcount, vpinfo, "
 							 "       modcount, formatversion, state "
-							 "FROM   pg_aoseg.pg_aocsseg_%u",
-							 curr->reloid);
+							 "FROM   pg_aoseg.%s",
+							 segrel);
 				}
 
 				aores = executeQueryOrDie(ctx, conn, aoquery);
@@ -697,15 +733,15 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 				}
 				snprintf(aoquery, sizeof(aoquery),
 						 "SELECT segno, first_row_no, pg_temp.bitmaphack(visimap) as visimap "
-						 "FROM pg_aoseg.pg_aovisimap_%u",
-						 curr->reloid);
+						 "FROM pg_aoseg.%s",
+						 visimaprel);
 			}
 			else
 			{
 				snprintf(aoquery, sizeof(aoquery),
 						 "SELECT segno, first_row_no, visimap "
-						 "FROM pg_aoseg.pg_aovisimap_%u",
-						 curr->reloid);
+						 "FROM pg_aoseg.%s",
+						 visimaprel);
 			}
 			aores = executeQueryOrDie(ctx, conn, aoquery);
 
@@ -727,20 +763,12 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 			 * Get contents of pg_aoblkdir_<oid>. If pg_appendonly.blkdirrelid
 			 * is InvalidOid then there is no blkdir table.
 			 */
-			snprintf(aoquery, sizeof(aoquery),
-					 "SELECT blkdirrelid FROM pg_appendonly WHERE relid = '%u'::pg_catalog.oid",
-					 curr->reloid);
-			aores = executeQueryOrDie(ctx, conn, aoquery);
-
-			blkdirrelid = atooid(PQgetvalue(aores, 0, PQfnumber(aores, "blkdirrelid")));
-			PQclear(aores);
-			
-			if (blkdirrelid != InvalidOid)
+			if (blkdirrel)
 			{
 				snprintf(aoquery, sizeof(aoquery),
 						 "SELECT segno, columngroup_no, first_row_no, minipage::bit(36)::bigint "
-						 "FROM   pg_aoseg.pg_aoblkdir_%u",
-						 curr->reloid);
+						 "FROM   pg_aoseg.%s",
+						 blkdirrel);
 				aores = executeQueryOrDie(ctx, conn, aoquery);
 
 				curr->naoblkdirs = PQntuples(aores);
@@ -763,6 +791,12 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 				curr->aoblkdirs = NULL;
 				curr->naoblkdirs = 0;
 			}
+
+
+			pg_free(segrel);
+			pg_free(visimaprel);
+			pg_free(blkdirrel);
+
 		}
 		else
 		{
