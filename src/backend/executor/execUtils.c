@@ -2486,7 +2486,14 @@ void ExtractAllParams(PlannedStmt *plannedstmt, EState *estate)
 	ParamExtractorContext ctx;
 	ctx.base.node = (Node*)plannedstmt;
 	ctx.estate = estate;
-	ParamExtractorWalker(plannedstmt->planTree, &ctx);
+
+	Plan *root = plannedstmt->planTree;
+	/* If gather motion shows up at top, we still need to find master only init plan */
+	if (IsA(root, Motion))
+	{
+		root = outerPlan(root);
+	}
+	ParamExtractorWalker(root, &ctx);
 }
 
 /**
