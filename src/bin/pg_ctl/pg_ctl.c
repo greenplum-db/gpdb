@@ -683,9 +683,6 @@ read_post_opts(void)
 				write_stderr(_("%s: could not read file \"%s\"\n"), progname, postopts_file);
 				exit(1);
 			}
-
-			/* Free the results of readfile. */
-			free_readfile(optlines);
 		}
 		else if (optlines[0] == NULL || optlines[1] != NULL)
 		{
@@ -713,16 +710,19 @@ read_post_opts(void)
 				    (arg1 = strstr(optline, " -")) != NULL)
 				{
 					*arg1 = '\0';	/* terminate so we get only program name */
-					post_opts = arg1 + 1; /* point past whitespace */
+					post_opts = strdup(arg1 + 1); /* point past whitespace */
 				}
 				else
 					post_opts = "";
 				if (postgres_path == NULL)
-					postgres_path = optline;
+					postgres_path = strdup(optline);
 			}
 			else
-				post_opts = optline;
+				post_opts = strdup(optline);
 		}
+
+		/* Free the results of readfile. */
+		free_readfile(optlines);
 	}
 }
 
