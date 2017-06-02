@@ -5,8 +5,8 @@
     <!--install_guide/refs/gppkg.xml has a conref to this topic. -->
     <title id="jt142031">gppkg</title>
     <body>
-        <p>Installs Greenplum Database extensions such as PostGIS and MADlib, along with their
-            dependencies, across an entire cluster.</p>
+        <p>Installs Greenplum Database extensions such as PL/Java, PL/R, PostGIS, and MADlib, along
+            with their dependencies, across an entire cluster.</p>
         <section id="section2">
             <title>Synopsis</title>
             <codeblock><b>gppkg</b> [<b>-i</b> <varname>package</varname> | <b>-u</b> <varname>package</varname> | <b>-r </b> <varname>name</varname>-<varname>version</varname> | <b>-c</b>] 
@@ -35,6 +35,8 @@
             <p>Examples of database extensions and packages software that are delivered using the
                 Greenplum Package Manager are:</p>
             <ul>
+                <li>PL/Java</li>
+                <li>PL/R</li>
                 <li id="jt141959">PostGIS</li>
                 <li id="jt142629">MADlib</li>
             </ul>
