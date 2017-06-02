@@ -50,11 +50,14 @@ Aosegments table
 In addition to the segment files that store the user data, there are
 three auxiliary heap tables for each AO table, which store metadata.
 The aosegments table is always named as "pg_aoseg.pg_aoseg_<oid>",
-where <oid> is the current oid value of the AO table's pg_class row.
-The mapping between AO tables and their respective aosegments tables
-is recorded in "pg_catalog.pg_appendonly". These are similar to the
-TOAST tables, for heaps. An append-only table can also have a TOAST
-table, too, in addition to the AO-specific auxiliary tables.
+where <oid> is the initial Oid with which the table was created. This
+is not guaranteed to match the current Oid of the aosegments table,
+as some ALTER TABLE operations will rewrite the table causing the
+Oid to change. In order to find the aosegments table of an AO table,
+the "pg_catalog.pg_appendonly" catalog relation must be queried.
+Aosegment tables are similar to the TOAST tables, for heaps. An
+append-only table can have a TOAST table, too, in addition to the
+AO-specific auxiliary tables.
 
 The segment table lists all the segment files that exist. For each
 segfile, it stores the current length of the table. This is used to
