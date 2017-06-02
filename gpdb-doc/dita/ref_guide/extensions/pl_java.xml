@@ -116,7 +116,6 @@
           differently in a distributed Greenplum Database environment than in the PostgreSQL environment.<sl>
             <sli><codeph>sqlj.install_jar</codeph>
             </sli>
-            <sli><codeph>sqlj.install_jar</codeph></sli>
             <sli><codeph>sqlj.replace_jar</codeph>
             </sli>
             <sli><codeph>sqlj.remove_jar</codeph></sli>
