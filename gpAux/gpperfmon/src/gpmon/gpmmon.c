@@ -1138,7 +1138,7 @@ static int read_conf_file(char *conffile)
 	int section = 0, section_found = 0;
 
 	opt.q = quantum;
-	opt.m = min_query_time;
+	opt.min_query_time = min_query_time;
 	opt.harvest_interval = 120;
 	opt.max_log_size = 0;
 	opt.log_dir = strdup(DEFAULT_GPMMON_LOGDIR);
@@ -1198,7 +1198,7 @@ static int read_conf_file(char *conffile)
 			}
 			else if (apr_strnatcasecmp(pName, "min_query_time") == 0)
 			{
-				opt.m = atoi(pVal);
+				opt.min_query_time = atoi(pVal);
 			}
 			else if (apr_strnatcasecmp(pName, "verbose") == 0)
 			{
@@ -1302,8 +1302,8 @@ static int read_conf_file(char *conffile)
 		opt.q = 15;
 	}
 
-	if (opt.m < 0)
-		opt.m = 0;
+	if (opt.min_query_time < 0)
+		opt.min_query_time = 0;
 
 	if (opt.log_dir == NULL)
 	{
@@ -1362,7 +1362,7 @@ static int read_conf_file(char *conffile)
 	}
 
 	verbose = opt.v;
-	min_query_time = opt.m;
+	min_query_time = opt.min_query_time;
 	quantum = opt.q;
 
 	fclose(fp);

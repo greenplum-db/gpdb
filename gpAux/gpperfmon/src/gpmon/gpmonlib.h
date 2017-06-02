@@ -127,7 +127,7 @@ typedef struct mmon_options_t
 	int max_fd; /* this is the max fd value we ever seen */
 	int v;
 	int q;
-	int m;
+	int min_query_time;
 	int qamode;
 	int harvest_interval;
 	apr_uint64_t tail_buffer_max;
