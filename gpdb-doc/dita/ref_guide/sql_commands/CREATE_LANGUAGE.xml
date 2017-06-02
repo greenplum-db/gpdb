@@ -34,9 +34,9 @@ CREATE [TRUSTED] [PROCEDURAL] LANGUAGE <varname>name</varname>
                 existing implementation of a programming language. The handler itself is a C
                 language function compiled into a shared object and loaded on demand, just like any
                 other C function. There are currently four procedural language packages included in
-                the standard Greenplum Database distribution: PL/pgSQL, PL/Perl, PL/Python, and
-                PL/Java. A language handler has also been added for PL/R, but the PL/R language
-                package is not pre-installed with Greenplum Database. See the topic on <xref
+                the standard Greenplum Database distribution: PL/pgSQL, PL/Perl, and PL/Python.
+                Language handlers have also been added for PL/Java and PL/R, but those languages are
+                not pre-installed with Greenplum Database. See the topic on <xref
                     href="https://www.postgresql.org/docs/8.3/static/xplang.html" scope="external"
                     format="html">Procedural Languages</xref> in the PostgreSQL documentation for
                 more information on developing functions using these procedural languages.</p>
