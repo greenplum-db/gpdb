@@ -5433,7 +5433,7 @@ dumpBinaryUpgrade(Archive *fout, DumpableObject **dobjs, int numObjs)
 				dumpOperatorOid(fout, (OprInfo *) dobj);
 				break;
 			case DO_OPCLASS:
-				dumpOpClassOid(g_conn, fout, (OpclassInfo *) dobj);
+				dumpOpClassOid(g_conn, g_fout, fout, (OpclassInfo *) dobj);
 				break;
 			case DO_OPFAMILY:
 				dumpOpFamilyOid(g_conn, fout, (OpfamilyInfo *) dobj);

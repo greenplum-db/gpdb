@@ -189,6 +189,12 @@ install_system_functions_internal(migratorContext *ctx, char *dbname)
 							  "RETURNS VOID "
 							  "AS '$libdir/pg_upgrade_support' "
 							  "LANGUAGE C STRICT;"));
+	PQclear(executeQueryOrDie(ctx, conn,
+							  "CREATE OR REPLACE FUNCTION "
+							  "binary_upgrade.preassign_amop_oid(OID, OID) "
+							  "RETURNS VOID "
+							  "AS '$libdir/pg_upgrade_support' "
+							  "LANGUAGE C STRICT;"));
 	PQfinish(conn);
 }
 

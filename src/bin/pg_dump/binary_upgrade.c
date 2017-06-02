@@ -456,24 +456,71 @@ dumpOpFamilyOid(PGconn *conn, Archive *AH, OpfamilyInfo *info)
  * Preassign Oid for CREATE OPERATOR CLASS .. operations
  */
 void
-dumpOpClassOid(PGconn *conn, Archive *AH, OpclassInfo *info)
+dumpOpClassOid(PGconn *conn, Archive *fout, Archive *AH, OpclassInfo *info)
 {
 	PQExpBuffer	upgrade_query;
+	PQExpBuffer upgrade_buffer;
 	int			ntups;
 	PGresult   *upgrade_res;
 	Oid			pg_opclass_oid;
 	Oid			opcnamespace;
+	Oid			amopoid;
+	Oid			amopmethod;
+	int			i;
 
 	/* Skip if not to be dumped */
 	if (!info->dobj.dump)
 		return;
 
 	upgrade_query = createPQExpBuffer();
+	upgrade_buffer = createPQExpBuffer();
 
+	/* Start by dumping the amop entries */
+	if (fout->remoteVersion >= 80300)
+	{
+		/*
+		 * Print only those opfamily members that are tied to the opclass by
+		 * pg_depend entries.
+		 */
+		appendPQExpBuffer(upgrade_query,
+						  "SELECT ao.oid, ao.amopmethod "
+						  "FROM   pg_catalog.pg_amop ao, pg_catalog.pg_depend "
+						  "WHERE  refclassid = 'pg_catalog.pg_opclass'::pg_catalog.regclass "
+						  "       AND refobjid = '%u'::pg_catalog.oid "
+						  "       AND classid = 'pg_catalog.pg_amop'::pg_catalog.regclass "
+						  "       AND objid = ao.oid",
+						  info->dobj.catId.oid);
+	}
+	else
+	{
+		/* XXX: no amopmethod in 4.3 */
+	}
+	
+	upgrade_res = PQexec(conn, upgrade_query->data);
+	check_sql_result(upgrade_res, conn, upgrade_query->data, PGRES_TUPLES_OK);
+	ntups = PQntuples(upgrade_res);
+	if (ntups > 0)
+	{
+		for (i = 0; i < ntups; i++)
+		{
+			amopoid = atooid(PQgetvalue(upgrade_res, i, PQfnumber(upgrade_res, "oid")));
+			amopmethod = atooid(PQgetvalue(upgrade_res, i, PQfnumber(upgrade_res, "amopmethod")));
+
+			appendPQExpBuffer(upgrade_buffer,
+							  "SELECT binary_upgrade.preassign_amop_oid("
+							  "'%u'::pg_catalog.oid, '%u'::pg_catalog.oid);",
+							  amopoid, amopmethod);
+		}
+	}
+
+	PQclear(upgrade_res);
+	resetPQExpBuffer(upgrade_query);
+
+	/* Now dump the opclass */
 	appendPQExpBuffer(upgrade_query,
 					  "SELECT oid, opcnamespace "
-					  "FROM pg_catalog.pg_opclass "
-					  "WHERE opcname = $$%s$$::text",
+					  "FROM   pg_catalog.pg_opclass "
+					  "WHERE  opcname = $$%s$$::text",
 					  info->dobj.name);
 
 	upgrade_res = PQexec(conn, upgrade_query->data);
@@ -488,20 +535,22 @@ dumpOpClassOid(PGconn *conn, Archive *AH, OpclassInfo *info)
 	pg_opclass_oid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "oid")));
 	opcnamespace = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "opcnamespace")));
 
-	snprintf(query_buffer, sizeof(query_buffer),
-			 "SELECT binary_upgrade.preassign_opclass_oid('%u'::pg_catalog.oid, "
-			 "$$%s$$::text, '%u'::pg_catalog.oid);",
-			 info->dobj.catId.oid, info->dobj.name, opcnamespace);
+	appendPQExpBuffer(upgrade_buffer,
+					  "SELECT binary_upgrade.preassign_opclass_oid("
+					  "'%u'::pg_catalog.oid, $$%s$$::text, '%u'::pg_catalog.oid);",
+					  info->dobj.catId.oid, info->dobj.name, opcnamespace);
 
 	PQclear(upgrade_res);
-	destroyPQExpBuffer(upgrade_query);
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
 				 info->dobj.name,
 				 NULL, NULL, "",
-				 false, "BINARY UPGRADE", query_buffer, "", NULL,
+				 false, "BINARY UPGRADE", upgrade_buffer->data, "", NULL,
 				 NULL, 0,
 				 NULL, NULL);
+
+	destroyPQExpBuffer(upgrade_buffer);
+	destroyPQExpBuffer(upgrade_query);
 }
 
 void
