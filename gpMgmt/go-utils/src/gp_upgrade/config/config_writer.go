@@ -1,7 +1,6 @@
 package config
 
 import (
-	"bytes"
 	"os"
 
 	"encoding/json"
@@ -10,6 +9,8 @@ import (
 
 type Writer struct {
 	TableJsonData []map[string]interface{}
+	Formatter     Formatter
+	FileWriter    FileWriter
 }
 
 func NewWriter(rows utils.RowsWrapper) (*Writer, error) {
@@ -19,11 +20,16 @@ func NewWriter(rows utils.RowsWrapper) (*Writer, error) {
 		return nil, err
 	}
 
-	return &Writer{TableJsonData: tableData}, nil
+	return &Writer{TableJsonData: tableData, Formatter: NewJsonFormatter(), FileWriter: NewRealFileWriter()}, nil
 }
 
 func (configWriter Writer) Write() error {
 	jsonData, err := json.Marshal(configWriter.TableJsonData)
+	if err != nil {
+		return err
+	}
+
+	pretty, err := configWriter.Formatter.Format(jsonData)
 	if err != nil {
 		return err
 	}
@@ -39,19 +45,8 @@ func (configWriter Writer) Write() error {
 	}
 	defer f.Close()
 
-	pretty, err := prettyJson(jsonData)
-	if err != nil {
-		return err
-	}
-
-	_, err = f.Write(pretty)
+	err = configWriter.FileWriter.Write(f, pretty)
 	return err
-}
-
-func prettyJson(b []byte) ([]byte, error) {
-	var out bytes.Buffer
-	err := json.Indent(&out, b, "", "  ")
-	return out.Bytes(), err
 }
 
 func translateColumnsIntoGenericStructure(rows utils.RowsWrapper) ([]map[string]interface{}, error) {

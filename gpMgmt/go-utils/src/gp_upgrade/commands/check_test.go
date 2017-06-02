@@ -26,12 +26,12 @@ var _ = Describe("check", func() {
 		err := os.RemoveAll(sqlite3_database_path)
 		test_utils.Check("Cannot remove sqllite database file", err)
 	})
-	Describe("happy: the database is running, master_host is provided, and connection is successful", func() {
+	Describe("happy: the database is running, master-host is provided, and connection is successful", func() {
 		It("writes a file to ~/.gp_upgrade/cluster_config.json with correct json", func() {
 			path := os.Getenv("GOPATH") + "/src/gp_upgrade/commands/fixtures/segment_config.sql"
 			setupSqlite3Database(getFileContents(path))
 
-			session := runCommand("check", "--master_host", "localhost", "--database_type", "sqlite3", "--database_config_file", sqlite3_database_path)
+			session := runCommand("check", "--master-host", "localhost", "--database_type", "sqlite3", "--database_config_file", sqlite3_database_path)
 
 			Eventually(session).Should(Exit(0))
 			content, err := ioutil.ReadFile(jsonFilePath())
@@ -48,7 +48,7 @@ var _ = Describe("check", func() {
 	Describe("error cases", func() {
 		Describe("the database cannot be opened", func() {
 			It("returns error", func() {
-				session := runCommand("check", "--master_host", "localhost", "--database_type", "foo", "--database_config_file", "bar")
+				session := runCommand("check", "--master-host", "localhost", "--database_type", "foo", "--database_config_file", "bar")
 
 				Eventually(session).Should(Exit(1))
 				Expect(string(session.Err.Contents())).To(ContainSubstring(`sql: unknown driver "foo" (forgotten import?)`))
@@ -56,7 +56,7 @@ var _ = Describe("check", func() {
 		})
 		Describe("the database query fails", func() {
 			It("returns error", func() {
-				session := runCommand("check", "--master_host", "localhost", "--database_type", "sqlite3", "--database_config_file", sqlite3_database_path)
+				session := runCommand("check", "--master-host", "localhost", "--database_type", "sqlite3", "--database_config_file", sqlite3_database_path)
 
 				Eventually(session).Should(Exit(1))
 				Expect(string(session.Err.Contents())).To(ContainSubstring(`no such table: gp_segment_configuration`))

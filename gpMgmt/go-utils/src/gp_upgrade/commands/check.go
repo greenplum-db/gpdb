@@ -12,8 +12,8 @@ import (
 )
 
 type CheckCommand struct {
-	Master_host string `long:"master_host" required:"yes" description:"Domain name or IP of host"`
-	Master_port int    `long:"master_port" required:"no" default:"5432" description:"Port for master database"`
+	Master_host string `long:"master-host" required:"yes" description:"Domain name or IP of host"`
+	Master_port int    `long:"master-port" required:"no" default:"5432" description:"Port for master database"`
 
 	// for testing only, so using hidden:"true"
 	Database_type   string `long:"database_type" default:"postgres" hidden:"true"`
