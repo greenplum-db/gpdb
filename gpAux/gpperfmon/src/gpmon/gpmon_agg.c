@@ -77,7 +77,6 @@ typedef struct dbmetrics_t {
 } dbmetrics_t;
 
 extern int min_query_time;
-extern int min_detailed_query_time;
 extern mmon_options_t opt;
 extern apr_queue_t* message_queue;
 

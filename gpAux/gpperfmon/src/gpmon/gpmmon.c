@@ -90,7 +90,6 @@ int verbose = 0; /* == opt.v */
 int very_verbose = 0; /* == opt.V */
 int quantum = 15; /* == opt.q */
 int min_query_time = 60; /* == opt.m */
-int min_detailed_query_time = 60; /* == opt.d */
 
 /* thread handles */
 static apr_thread_t* conm_th = NULL;
@@ -1140,7 +1139,6 @@ static int read_conf_file(char *conffile)
 
 	opt.q = quantum;
 	opt.m = min_query_time;
-	opt.d = min_detailed_query_time;
 	opt.harvest_interval = 120;
 	opt.max_log_size = 0;
 	opt.log_dir = strdup(DEFAULT_GPMMON_LOGDIR);
@@ -1201,10 +1199,6 @@ static int read_conf_file(char *conffile)
 			else if (apr_strnatcasecmp(pName, "min_query_time") == 0)
 			{
 				opt.m = atoi(pVal);
-			}
-			else if (apr_strnatcasecmp(pName, "min_detailed_query_time") == 0)
-			{
-				opt.d = atoi(pVal);
 			}
 			else if (apr_strnatcasecmp(pName, "verbose") == 0)
 			{
@@ -1311,20 +1305,6 @@ static int read_conf_file(char *conffile)
 	if (opt.m < 0)
 		opt.m = 0;
 
-	if (opt.d < opt.m)
-	{
-		opt.d = opt.m;
-		fprintf(stderr, "Performance Monitor - min_detail_query_time cannot be less than min_query_time.  "
-				"Setting min_detail_query_time equal to min_query_time\n");
-	}
-
-	if (opt.d < 10 && !opt.qamode)
-	{
-		fprintf(stderr, "Performance Monitor - invalid value for min_detailed_query_time.  "
-				"Using default value 60\n");
-		opt.d = 60;
-	}
-
 	if (opt.log_dir == NULL)
 	{
 		char log_dir[MAXPATHLEN + 1] = { 0 };
@@ -1383,7 +1363,6 @@ static int read_conf_file(char *conffile)
 
 	verbose = opt.v;
 	min_query_time = opt.m;
-	min_detailed_query_time = opt.d;
 	quantum = opt.q;
 
 	fclose(fp);

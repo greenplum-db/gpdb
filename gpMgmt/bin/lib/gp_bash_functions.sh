@@ -870,13 +870,6 @@ quantum = 15
 # data is collected.
 min_query_time = 20
 
-# Specifies the minimum iterator run time in seconds for
-# statistics collection. The monitor logs all iterators that
-# run longer than this value in the iterators_history table.
-# For iterators with shorter run times, no data is collected.
-# Minimum value is 10 seconds.
-min_detailed_query_time = 60
-
 # This should be a percentage between 0 and 100 and should be
 # less than the error_disk_space_percentage.  If a filesystem’s
 # disk space used percentage equals or exceeds this value a

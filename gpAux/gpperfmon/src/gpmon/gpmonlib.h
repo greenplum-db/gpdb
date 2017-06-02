@@ -128,7 +128,6 @@ typedef struct mmon_options_t
 	int v;
 	int q;
 	int m;
-	int d;
 	int qamode;
 	int harvest_interval;
 	apr_uint64_t tail_buffer_max;

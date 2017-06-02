@@ -139,9 +139,8 @@
                         primary segments in the database system.</p>
                      <p>Note that the value is logged as 0 if the query runtime
                         is shorter than the value for the quantum. This occurs even if the query
-                        runtime is greater than the values for <codeph>min_query_time</codeph> and
-                           <codeph>min_detailed_query</codeph>, and these values are lower than the
-                        value for the quantum.</p>
+                        runtime is greater than the value for <codeph>min_query_time</codeph>,
+                        and this value is lower than the value for the quantum.</p>
                   </entry>
                </row>
                <row>

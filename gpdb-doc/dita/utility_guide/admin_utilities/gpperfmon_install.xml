@@ -166,24 +166,6 @@ host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
           </stentry>
         </strow>
         <strow>
-          <stentry>min_detailed_query_time</stentry>
-          <stentry>
-            <p>Specifies the minimum iterator run time in seconds for statistics collection.
-              Iterators that run longer than this value are logged in the
-                <codeph>iterators_history</codeph> table. For iterators with shorter run times, no
-              data is collected. Minimum value is 10 seconds.</p>
-            <p>This parameter’s value must always be equal to, or greater than, the value of
-                <codeph>min_query_time</codeph>. Setting <codeph>min_detailed_query_time</codeph>
-              higher than <codeph>min_query_time</codeph> allows you to log detailed query plan
-              iterator data only for especially complex, long-running queries, while still logging
-              basic query data for shorter queries.</p>
-            <p>Given the complexity and size of iterator data, you may want to adjust this parameter
-              according to the size of data collected. If the <codeph>iterators_*</codeph> tables
-              are growing to excessive size without providing useful information, you can raise the
-              value of this parameter to log iterator detail for fewer queries.</p>
-          </stentry>
-        </strow>
-        <strow>
           <stentry>max_log_size</stentry>
           <stentry>
             <p>This parameter is not included in <codeph>gpperfmon.conf</codeph>, but it may be
