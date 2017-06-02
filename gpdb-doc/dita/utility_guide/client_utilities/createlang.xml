@@ -26,14 +26,13 @@
         <li id="pa140043"><codeph>PL/pgSQL</codeph></li>
         <li id="pa140054"><codeph>PL/Perl</codeph></li>
         <li id="pa140061"><codeph>PL/Python</codeph></li>
-        <li id="pa140068"><codeph>PL/Java</codeph></li>
       </ul>
       <p>The <codeph>PL/pgSQL</codeph> language is registered in all databases by default.</p>
-      <p>Greenplum Database has a language handler for <codeph>PL/R</codeph>, but the
-          <codeph>PL/R</codeph> language package is not pre-installed with Greenplum Database. A package is available for <codeph>PL/Tcl</codeph> that you can
-        enable. See the <xref href="https://www.postgresql.org/docs/8.3/static/xplang.html"
-          scope="external" format="html">Procedural Languages</xref> section in the PostgreSQL
-        documentation for more information.</p>
+      <p>Greenplum Database also has language handlers for <codeph>PL/Java</codeph> and
+          <codeph>PL/R</codeph>, but those languages are not pre-installed with Greenplum Database.
+        See the <xref href="https://www.postgresql.org/docs/8.3/static/xplang.html" scope="external"
+          format="html">Procedural Languages</xref> section in the PostgreSQL documentation for more
+        information.</p>
     </section>
     <section id="section4"><title>Options</title><parml>
         <plentry>
