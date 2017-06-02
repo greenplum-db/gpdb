@@ -67,7 +67,7 @@ dumpNamespaceOid(Archive *AH, NamespaceInfo *info)
 
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_namespace_oid("
-			 "'%u'::pg_catalog.oid, '%s'::text);\n",
+			 "'%u'::pg_catalog.oid, $$%s$$::text);\n",
 			 info->dobj.catId.oid, info->dobj.name);
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
@@ -120,7 +120,7 @@ dumpAggProcedureOid(PGconn *conn, Archive *fout, Archive *AH, AggInfo *info)
 
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.preassign_procedure_oid("
-						  "'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid);\n",
+						  "'%u'::pg_catalog.oid, $$%s$$::text, '%u'::pg_catalog.oid);\n",
 						  procoid, proname, nsoid);
 
 		PQclear(upgrade_res);
@@ -172,7 +172,7 @@ dumpProcedureOid(PGconn *conn, Archive *fout, Archive *AH, FuncInfo *info)
 
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_procedure_oid("
-			 "'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid);\n",
+			 "'%u'::pg_catalog.oid, $$%s$$::text, '%u'::pg_catalog.oid);\n",
 			 info->dobj.catId.oid, info->dobj.name, info->dobj.namespace->dobj.catId.oid);
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
@@ -224,7 +224,7 @@ dumpProcLangOid(PGconn *conn, Archive *fout, Archive *AH, ProcLangInfo *info)
 					  "       LEFT OUTER JOIN pg_catalog.pg_proc v "
 					  "            ON (v.proname = tmplvalidator) "
 					  "       %s "
-					  "WHERE  tmplname = '%s'::text;",
+					  "WHERE  tmplname = $$%s$$::text;",
 					  (fout->remoteVersion >= 80300)
 					  ? ",i.oid AS inlineoid, i.pronamespace AS inlinens, i.proname AS inline"
 					  : "",
@@ -249,7 +249,7 @@ dumpProcLangOid(PGconn *conn, Archive *fout, Archive *AH, ProcLangInfo *info)
 	proname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "handler"));
 	appendPQExpBuffer(upgrade_buffer,
 					  "SELECT binary_upgrade.preassign_procedure_oid("
-					  "'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid);\n",
+					  "'%u'::pg_catalog.oid, $$%s$$::text, '%u'::pg_catalog.oid);\n",
 					  procoid, proname, nsoid);
 
 	/* Validator function */
@@ -260,7 +260,7 @@ dumpProcLangOid(PGconn *conn, Archive *fout, Archive *AH, ProcLangInfo *info)
 		proname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "validator"));
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.preassign_procedure_oid("
-						  "'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid);\n",
+						  "'%u'::pg_catalog.oid, $$%s$$::text, '%u'::pg_catalog.oid);\n",
 						  procoid, proname, nsoid);
 	}
 
@@ -274,14 +274,14 @@ dumpProcLangOid(PGconn *conn, Archive *fout, Archive *AH, ProcLangInfo *info)
 			proname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "inline"));
 			appendPQExpBuffer(upgrade_buffer,
 							  "SELECT binary_upgrade.preassign_procedure_oid("
-							  "'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid);\n",
+							  "'%u'::pg_catalog.oid, $$%s$$::text, '%u'::pg_catalog.oid);\n",
 							  procoid, proname, nsoid);
 		}
 	}
 
 	appendPQExpBuffer(upgrade_buffer,
 					  "SELECT binary_upgrade.preassign_language_oid("
-					  "'%u'::pg_catalog.oid, '%s'::text);\n",
+					  "'%u'::pg_catalog.oid, $$%s$$::text);\n",
 					  info->dobj.catId.oid, info->dobj.name);
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
@@ -357,7 +357,7 @@ dumpConversionOid(PGconn *conn, Archive *AH, ConvInfo *info)
 
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_conversion_oid('%u'::pg_catalog.oid, "
-			 "'%s'::text, '%u'::pg_catalog.oid);\n",
+			 "$$%s$$::text, '%u'::pg_catalog.oid);\n",
 			 info->dobj.catId.oid, info->dobj.name, connamespace);
 
 	PQclear(upgrade_res);
@@ -386,7 +386,7 @@ dumpRuleOid(Archive *AH, RuleInfo *info)
 
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_rule_oid("
-			 "'%u'::pg_catalog.oid, '%u'::pg_catalog.oid, '%s'::text);\n",
+			 "'%u'::pg_catalog.oid, '%u'::pg_catalog.oid, $$%s$$::text);\n",
 			 info->dobj.catId.oid, tbinfo->dobj.catId.oid, info->dobj.name);
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
@@ -436,7 +436,7 @@ dumpOpFamilyOid(PGconn *conn, Archive *AH, OpfamilyInfo *info)
 
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_opfam_oid('%u'::pg_catalog.oid, "
-			 "'%s'::text, '%u'::pg_catalog.oid);",
+			 "$$%s$$::text, '%u'::pg_catalog.oid);",
 			 info->dobj.catId.oid, info->dobj.name, opfnamespace);
 
 	PQclear(upgrade_res);
@@ -473,7 +473,7 @@ dumpOpClassOid(PGconn *conn, Archive *AH, OpclassInfo *info)
 	appendPQExpBuffer(upgrade_query,
 					  "SELECT oid, opcnamespace "
 					  "FROM pg_catalog.pg_opclass "
-					  "WHERE opcname = '%s'::text",
+					  "WHERE opcname = $$%s$$::text",
 					  info->dobj.name);
 
 	upgrade_res = PQexec(conn, upgrade_query->data);
@@ -490,7 +490,7 @@ dumpOpClassOid(PGconn *conn, Archive *AH, OpclassInfo *info)
 
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_opclass_oid('%u'::pg_catalog.oid, "
-			 "'%s'::text, '%u'::pg_catalog.oid);",
+			 "$$%s$$::text, '%u'::pg_catalog.oid);",
 			 info->dobj.catId.oid, info->dobj.name, opcnamespace);
 
 	PQclear(upgrade_res);
@@ -540,7 +540,7 @@ dumpTSObjectOid(Archive *AH, DumpableObject *info)
 
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.%s('%u'::pg_catalog.oid, "
-			 "'%u'::pg_catalog.oid, '%s'::text);\n",
+			 "'%u'::pg_catalog.oid, $$%s$$::text);\n",
 			 funcname, d->catId.oid, d->namespace->dobj.catId.oid, d->name);
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
@@ -560,7 +560,7 @@ dumpExtensionOid(Archive *AH, ExtensionInfo *info)
 
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_extension_oid('%u'::pg_catalog.oid, "
-			 "'%u'::pg_catalog.oid, '%s'::text);\n",
+			 "'%u'::pg_catalog.oid, $$%s$$::text);\n",
 			 info->dobj.catId.oid, info->dobj.namespace->dobj.catId.oid,
 			 info->dobj.name);
 
@@ -589,7 +589,7 @@ dumpShellTypeOid(PGconn *conn, Archive *fout, Archive *AH, ShellTypeInfo *info)
 	appendPQExpBuffer(upgrade_query,
 					  "SELECT oid "
 					  "FROM   pg_catalog.pg_type "
-					  "WHERE  typname = '%s'::text;",
+					  "WHERE  typname = $$%s$$::text;",
 					  info->dobj.name);
 
 	upgrade_res = PQexec(conn, upgrade_query->data);
@@ -686,7 +686,7 @@ preassign_enum_oid(PGconn *conn, Archive *AH, Oid enum_oid, char *objname)
 						  "SELECT binary_upgrade.preassign_enum_oid("
 								"'%u'::pg_catalog.oid, "
 								"'%u'::pg_catalog.oid, "
-								"'%s'::text);\n",
+								"$$%s$$::text);\n",
 						  oid, enum_oid, label);
 	}
 
@@ -829,7 +829,7 @@ preassign_type_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_type_oid, ch
 
 	appendPQExpBuffer(upgrade_buffer,
 			 		  "SELECT binary_upgrade.preassign_type_oid("
-					  "'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid);\n",
+					  "'%u'::pg_catalog.oid, $$%s$$::text, '%u'::pg_catalog.oid);\n",
 					  pg_type_oid, type->dobj.name, type->typnsp);
 
 	/*
@@ -840,7 +840,7 @@ preassign_type_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_type_oid, ch
 	{
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.preassign_arraytype_oid("
-						  "'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid);\n",
+						  "'%u'::pg_catalog.oid, $$%s$$::text, '%u'::pg_catalog.oid);\n",
 						  type->arraytypoid, type->arraytypname, type->arraytypnsp);
 	}
 
@@ -924,7 +924,7 @@ preassign_constraint_oid(Archive *AH, Oid constroid, Oid nsoid, char *objname, O
 {
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_constraint_oid('%u'::pg_catalog.oid, "
-			 "'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid, '%u'::pg_catalog.oid);\n",
+			 "'%u'::pg_catalog.oid, $$%s$$::text, '%u'::pg_catalog.oid, '%u'::pg_catalog.oid);\n",
 			 constroid, nsoid, objname, contable, condomain);
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
@@ -949,7 +949,7 @@ dumpExternalProtocolOid(Archive *AH, ExtProtInfo *info)
 
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_extprotocol_oid("
-			 "'%u'::pg_catalog.oid, '%s'::text);\n",
+			 "'%u'::pg_catalog.oid, $$%s$$::text);\n",
 			 info->dobj.catId.oid, info->dobj.name);
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
@@ -1077,7 +1077,7 @@ preassign_view_rule_oids(PGconn *conn, Archive *AH, Oid view_oid)
 
 		appendPQExpBuffer(upgrade_buffer,
 			 "SELECT binary_upgrade.preassign_rule_oid("
-			 "'%u'::pg_catalog.oid, '%u'::pg_catalog.oid, '%s'::text);\n",
+			 "'%u'::pg_catalog.oid, '%u'::pg_catalog.oid, $$%s$$::text);\n",
 			 rule_oid, view_oid, rule_name);
 	}
 
@@ -1165,7 +1165,7 @@ preassign_pg_class_oids(PGconn *conn, Archive *fout, Archive *AH, Oid pg_class_o
 
 	appendPQExpBuffer(upgrade_buffer,
 					  "SELECT binary_upgrade.preassign_relation_oid('%u'::pg_catalog.oid, "
-																   "'%s'::text, "
+																   "$$%s$$::text, "
 																   "'%u'::pg_catalog.oid);\n",
 					  pg_class_oid, pg_class_relname, pg_class_relnamespace);
 
@@ -1276,7 +1276,7 @@ preassign_pg_class_oids(PGconn *conn, Archive *fout, Archive *AH, Oid pg_class_o
 		bm_name = PQgetvalue(bm_res, 0, PQfnumber(bm_res, "bm_name"));
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.preassign_relation_oid('%u'::pg_catalog.oid, "
-																	   "'%s'::text, "
+																	   "$$%s$$::text, "
 																	   "'%u'::pg_catalog.oid);\n",
 						  bm_oid, bm_name, bm_ns);
 
@@ -1288,7 +1288,7 @@ preassign_pg_class_oids(PGconn *conn, Archive *fout, Archive *AH, Oid pg_class_o
 		bm_name = PQgetvalue(bm_res, 0, PQfnumber(bm_res, "bmi_name"));
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.preassign_relation_oid('%u'::pg_catalog.oid, "
-																	   "'%s'::text, "
+																	   "$$%s$$::text, "
 																	   "'%u'::pg_catalog.oid);\n",
 						  bm_oid, bm_name, bm_ns);
 
