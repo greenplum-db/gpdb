@@ -390,6 +390,7 @@ static char *gp_test_deadlock_hazard_report_level_str;
 bool		gp_cancel_query_print_log;
 int			gp_cancel_query_delay_time;
 bool		vmem_process_interrupt = false;
+bool		slice_local_execution = false;
 
 /* partitioning GUC */
 bool		gp_partitioning_dynamic_selection_log;
@@ -3263,7 +3264,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 #endif
 		assign_codegen, NULL
 	},
-
 	{
 		{"vmem_process_interrupt", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Checks for interrupts before reserving VMEM"),
@@ -3271,6 +3271,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
 		},
 		&vmem_process_interrupt,
+		false, NULL, NULL
+	},
+	{
+		{"slice_local_execution", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Optimize execution based on current slice"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
+		},
+		&slice_local_execution,
 		false, NULL, NULL
 	},
 	{
