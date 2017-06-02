@@ -58,7 +58,7 @@ static const bool gpdb_exec_ddl(PGconn* conn, const char* ddl_query)
 	return errmsg == NULL;
 }
 
-
+// creates a connection and then runs the query
 static const char* gpdb_exec(PGconn** pconn, PGresult** pres, const char* query)
 {
 	const char *connstr = "dbname='" GPMON_DB "' user='" GPMON_DBUSER
@@ -66,10 +66,11 @@ static const char* gpdb_exec(PGconn** pconn, PGresult** pres, const char* query)
 	PGconn *conn = NULL;
 
 	conn = PQconnectdb(connstr);
+	// early assignment to pconn guarantees connection available to get freed by the caller
+	*pconn = conn;
+
 	if (PQstatus(conn) != CONNECTION_OK)
 		return PQerrorMessage(conn);
-
-	*pconn = conn;
 
 	return gpdb_exec_only(conn, pres, query);
 }
@@ -1292,35 +1293,34 @@ void gpdb_import_alert_log(apr_pool_t *pool)
 /* insert _tail data into history table */
 apr_status_t gpdb_check_partitions(mmon_options_t *opt)
 {
-	apr_status_t r3, r4;
+	apr_status_t result;
 
-	// open a connection
-	PGconn* conn = NULL;
+	PGconn *conn = NULL;
 	conn = PQconnectdb(GPDB_CONNECTION_STRING);
 
-	if (PQstatus(conn) != CONNECTION_OK)
-	{
+	if (PQstatus(conn) != CONNECTION_OK) {
 		gpmon_warning(
-			FLINE,
-			"error creating GPDB client connection to dynamically "
-			"check/create gpperfmon partitions: %s",
-		PQerrorMessage(conn));
+				FLINE,
+				"error creating GPDB client connection to dynamically "
+						"check/create gpperfmon partitions: %s",
+				PQerrorMessage(conn));
+		result = APR_EINVAL;
+	} else {
+		result = call_for_each_table_with_opt(check_partition, NULL, conn, opt);
 
-		return APR_EINVAL;
+		// make sure to run check_partition even if we just got a failure from the previous call
+		apr_status_t temp_result;
+		temp_result = check_partition("log_alert", NULL, conn, opt);
+
+		// use the first error that occurred, if any
+		if (result == APR_SUCCESS) {
+			result = temp_result;
+		}
 	}
-
-	r3 = call_for_each_table_with_opt(check_partition, NULL, conn, opt);
-
-	r4 = check_partition("log_alert", NULL, conn, opt);
 
 	// close connection
 	PQfinish(conn);
-
-	if (r3 != APR_SUCCESS)
-	{
-		return r3;
-	}
-	return r4;
+	return result;
 }
 
 static void convert_tuples_to_hash(PGresult *result, apr_hash_t *hash, apr_pool_t *pool)

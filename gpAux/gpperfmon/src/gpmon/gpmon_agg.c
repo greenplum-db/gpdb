@@ -999,14 +999,14 @@ static apr_uint32_t write_dbmetrics(dbmetrics_t* dbmetrics, char* nowstr)
              dbmetrics->queries_running,
              dbmetrics->queries_queued);
 
-	bytes_written = strlen(line) + 1;
-	if (bytes_written == line_size){
-		gpmon_warning(FLINE, "dbmetrics line too long ... ignored:: %s", line);
-		return 0;
+	if (strlen(line) + 1 == line_size){
+		gpmon_warning(FLINE, "dbmetrics line too long ... ignored: %s", line);
+		bytes_written = 0;
+	} else {
+		fprintf(fp, "%s\n", line);
+		fprintf(fp2, "%s\n", line);
+		bytes_written = strlen(line) + 1;
 	}
-
-	fprintf(fp, "%s\n", line);
-    fprintf(fp2, "%s\n", line);
 
     fclose(fp);
     fclose(fp2);
