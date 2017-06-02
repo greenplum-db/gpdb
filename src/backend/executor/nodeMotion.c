@@ -973,9 +973,10 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 	ExecInitResultTupleSlot(estate, &motionstate->ps);
 
 	/*
-	 * initializes child nodes.
+	 * initializes child nodes. For alien elimination, we always skip children of
+	 * receiver motion.
 	 */
-	if (!(memory_profiler_dataset_size == 9 && Gp_segment != -1 && LocallyExecutingSliceIndex(estate) != 0)  || motionstate->mstype == MOTIONSTATE_SEND)
+	if (!estate->eliminateAliens || motionstate->mstype == MOTIONSTATE_SEND)
 	{
 		outerPlanState(motionstate) = ExecInitNode(outerPlan(node), estate, eflags);
 	}

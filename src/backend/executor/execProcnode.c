@@ -252,10 +252,8 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	bool isAlienPlanNode = !((currentSliceId == origSliceIdInPlan) ||
 			(nodeTag(node) == T_Motion && ((Motion*)node)->motionID == currentSliceId));
 
-	if (memory_profiler_dataset_size == 9 && Gp_segment >= 0)
-	{
-		isAlienPlanNode = false;
-	}
+	AssertImply(estate->eliminateAliens, !isAlienPlanNode || Gp_segment == -1 || estate->es_plannedstmt->nMotionNodes == 0);
+
 	/*
 	 * As of 03/28/2014, there is no support for BitmapTableScan
 	 * in the planner/optimizer. Therefore, for testing purpose
@@ -1098,8 +1096,6 @@ ExecProcNode(PlanState *node)
 
 		case T_AggState:
 			result = ExecAgg((AggState *) node);
-//			if (memory_profiler_dataset_size >= 8 && Gp_segment <= 0 && !TupIsNull(result))
-//				elog(WARNING, "Tuple: %d, %s", Gp_segment, tup2str(result));
 			break;
 
 		case T_UniqueState:

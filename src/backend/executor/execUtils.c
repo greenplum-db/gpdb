@@ -262,6 +262,7 @@ CreateExecutorState(void)
 	estate->currentExecutingSliceId = 0;
 	estate->currentSubplanLevel = 0;
 	estate->rootSliceId = 0;
+	estate->eliminateAliens = false;
 
 	/*
 	 * Return the executor state structure
@@ -2357,7 +2358,7 @@ Motion *getLocalMotion(PlannedStmt *plannedstmt, int sliceIndex)
 	ctx.motionId = sliceIndex;
 	ctx.motion = NULL;
 	MotionFinderWalker(planTree, &ctx);
-	Assert(ctx.motion != NULL);
+	//Assert(ctx.motion != NULL);
 //	elog(WARNING, "Before: %x\n%s", ctx.motion, nodeToString(ctx.motion));
 	return ctx.motion;
 }
@@ -2402,10 +2403,6 @@ static void ExtractSubPlanParam(SubPlan *subplan, EState *estate)
 				 * its location in the external parameter list.
 				 */
 				extParamIndex = paramInfo->numParams - estate->es_plannedstmt->nParamExec + paramid;
-
-//				if (Gp_segment == 0 && memory_profiler_dataset_size == 9)
-//					elog(WARNING, "paramid: %d, totalParams: %d, numExecParams: %d, extParamIndex: %d", paramid, paramInfo->numParams, estate->es_plannedstmt->nParamExec, extParamIndex);
-
 				prmExt = &paramInfo->params[extParamIndex];
 
 				/* Make sure the types are valid */
@@ -2426,43 +2423,6 @@ static void ExtractSubPlanParam(SubPlan *subplan, EState *estate)
 		}
 	}
 }
-
-//static void ExtractSubPlanParam(SubPlan *subplan, EState *estate)
-//{
-//	if (Gp_role == GP_ROLE_EXECUTE)
-//	{
-//		ParamListInfo paramInfo = estate->es_param_list_info;
-//		if (paramInfo == NULL) return;
-//
-//		int totalParams = paramInfo->numParams;
-//		int numExecParams = estate->es_plannedstmt->nParamExec;
-//
-//		int startIndex = totalParams - numExecParams + 1;
-//
-//		for (int i = startIndex; i < totalParams; i++)
-//		{
-//			ParamExternData *prmExt = &paramInfo->params[totalParams - numExecParams + (i - totalParams + numExecParams)];
-//
-//			int paramid = i - startIndex + 1;
-//			ParamExecData *prmExec = &(estate->es_param_exec_vals[paramid]);
-//
-//			/* Make sure the types are valid */
-//			if (!OidIsValid(prmExt->ptype))
-//			{
-//				prmExec->execPlan = NULL;
-//				prmExec->isnull = true;
-//				prmExec->value = (Datum) 0;
-//			}
-//			else
-//			{
-//				/** Hurray! Copy value from external parameter and don't bother setting up execPlan. */
-//				prmExec->execPlan = NULL;
-//				prmExec->isnull = prmExt->isnull;
-//				prmExec->value = prmExt->value;
-//			}
-//		}
-//	}
-//}
 
 static bool
 SubPlanFinderWalker(Plan *node,

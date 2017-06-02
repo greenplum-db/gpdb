@@ -646,6 +646,9 @@ typedef struct EState
 	 * Information relevant to dynamic table scans.
 	 */
 	DynamicTableScanInfo *dynamicTableScanInfo;
+
+	/* Should the executor skip past the alien plan nodes */
+	bool eliminateAliens;
 } EState;
 
 struct PlanState;

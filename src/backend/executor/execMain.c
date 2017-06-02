@@ -326,6 +326,8 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	 * Build EState, switch into per-query memory context for startup.
 	 */
 	estate = CreateExecutorState();
+	estate->eliminateAliens = slice_local_execution && Gp_segment != -1 && queryDesc->plannedstmt->nMotionNodes > 0;
+
 	queryDesc->estate = estate;
 
 	oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);
@@ -1802,13 +1804,15 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	Assert(estate->es_subplanstates == NIL);
 	i = 1;						/* subplan indices count from 1 */
 	Motion *m = NULL;
-	bool eliminate_aliens = memory_profiler_dataset_size == 9 && Gp_segment != -1 && LocallyExecutingSliceIndex(estate) != 0  /* && LocallyExecutingSliceIndex(estate) == 1 && LocallyExecutingSliceIndex(estate) != RootSliceIndex(estate) */;
 	List *sub_plan_roots = NULL;
+	Plan *start_plan_node = plannedstmt->planTree;
 
-	if (eliminate_aliens)
+	if (estate->eliminateAliens)
 	{
 		m = getLocalMotion(plannedstmt, LocallyExecutingSliceIndex(estate));
+		Assert(NULL != m);
 		sub_plan_roots = getLocalSubplans(plannedstmt, m);
+		start_plan_node = (Plan *) m;
 	}
 
 	foreach(l, plannedstmt->subplans)
@@ -1818,7 +1822,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		PlanState  *subplanstate = NULL;
 		int			sp_eflags = 0;
 
-		if (!eliminate_aliens || list_find_ptr(sub_plan_roots, subplan) != -1)
+		if (!estate->eliminateAliens || list_find_ptr(sub_plan_roots, subplan) != -1)
 		{
 			/*
 			 * A subplan will never need to do BACKWARD scan nor MARK/RESTORE.
@@ -1837,26 +1841,15 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		i++;
 	}
 
+	// extract all precomputed parameters from init plans
+	ExtractAllParams(plannedstmt, plannedstmt->planTree, estate);
+
 	/*
 	 * Initialize the private state information for all the nodes in the query
 	 * tree.  This opens files, allocates storage and leaves us ready to start
 	 * processing tuples.
 	 */
-	if (eliminate_aliens)
-	{
-		// extract all precomputed parameters from the root slice
-		ExtractAllParams(plannedstmt, plannedstmt->planTree, estate);
-		if ((Plan *) m != plannedstmt->planTree)
-		{
-			ExtractAllParams(plannedstmt, (Plan *) m, estate);
-		}
-		//elog(WARNING, "After: %x\n%s", m, nodeToString(m));
-		planstate = ExecInitNode((Plan *) m, estate, eflags);
-	}
-	else
-	{
-		planstate = ExecInitNode(plannedstmt->planTree, estate, eflags);
-	}
+	planstate = ExecInitNode(start_plan_node, estate, eflags);
 
 	queryDesc->planstate = planstate;
 
