@@ -15,6 +15,10 @@
       <li id="pv161280" otherprops="pivotal">
         <xref href="#topic4" type="topic" format="dita"/>
       </li>
+      <li otherprops="pivotal">
+        <xref href="#topic7" format="dita"/></li>
+      <li otherprops="pivotal">
+        <xref href="#topic6" format="dita"/></li>
       <li id="pv161254">
         <xref href="#topic13" type="topic" format="dita"/>
       </li>

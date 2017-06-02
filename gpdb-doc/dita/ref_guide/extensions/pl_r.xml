@@ -9,15 +9,14 @@
       <li id="py213657">
         <xref href="#topic2" type="topic" format="dita"/>
       </li>
-      <li id="py219391">
+      <li id="py219391" otherprops="pivotal">
         <xref href="#topic3" type="topic" format="dita"/>
       </li>
-      <li id="py214876">
+      <li id="py214876" otherprops="pivotal">
         <xref href="#topic6" type="topic" format="dita"/>
       </li>
       <li>
-        <xref href="#topic_om3_kbr_lp" type="topic" format="dita"/>
-      </li>
+        <xref href="#topic5" format="dita"/></li>
       <li id="py217384">
         <xref href="#topic9" type="topic" format="dita"/>
       </li>
@@ -41,7 +40,7 @@
       <p>For information about supported PL/R versions, see the <cite>Greenplum Database Release
           Notes</cite>. </p>
     </body>
-    <topic id="topic3" xml:lang="en">
+    <topic id="topic3" xml:lang="en" otherprops="pivotal">
       <title id="py217167">Installing PL/R</title>
       <body>
         <p>The PL/R extension is available as a package. Download the package from <xref
@@ -67,14 +66,14 @@
                 scope="external">Pivotal Network</xref>, then copy it to the master host. </li>
             <li id="py214844">Install the software extension package by running the
                 <codeph>gppkg</codeph> command. This example installs the PL/R extension on a Linux
-              system:<codeblock>$ gppkg -i plr-ossv8.3.0.12_pv2.0_gpdb&lt;version>-rhel6-x86_64.gppkg
+              system:<codeblock>$ gppkg -i plr-ossv8.3.0.15_pv2.2.0-GPDB-&lt;version>-orca-rhel6-x86_64.gppkg
 </codeblock></li>
             <li id="py215420">Restart the database.<codeblock>$ gpstop -r
 </codeblock></li>
             <li id="py215434">Source the file <codeph>$GPHOME/greenplum_path.sh</codeph>.</li>
           </ol>
           <p>The extension and the R environment is installed in this directory:</p>
-          <codeblock>$GPHOME/ext/R-2.12.0/
+          <codeblock>$GPHOME/ext/R-3.3.1/
 </codeblock>
           <note type="note">The version of some shared libraries installed with the operating system
             might not be compatible with the Greenplum Database PL/R extension. <p>If a shared
@@ -83,23 +82,11 @@
                 <codeph>LD_LIBRARY_PATH </codeph>to specify the location that is installed with the
               PL/R extension.
             </p><codeblock>export <i>LD_LIBRARY_PATH= 
-   $GPHOME/ext/R-2.12.0/lib64/R/lib:$LD_LIBRARY_PATH</i></codeblock></note>
-        </body>
-      </topic>
-      <topic id="topic5" xml:lang="en">
-        <title>Enabling PL/R Language Support</title>
-        <body>
-          <p>For each database that requires its use, register the PL/R language with the SQL
-            command <codeph>CREATE LANGUAGE</codeph> or the utility <codeph>createlang</codeph>.
-            Because PL/R is an untrusted language, only superusers can register PL/R with a
-            database. For example, running this command as the <codeph>gpadmin</codeph> system user
-            registers the language with the database named <i>testdb</i>:</p>
-          <codeblock>$ createlang plr -d testdb</codeblock>
-          <p>PL/R is registered as an untrusted language.</p>
+   $GPHOME/ext/R-3.3.1/lib:$LD_LIBRARY_PATH</i></codeblock></note>
         </body>
       </topic>
     </topic>
-    <topic id="topic6" xml:lang="en">
+    <topic id="topic6" xml:lang="en" otherprops="pivotal">
       <title id="py213692">Uninstalling PL/R</title>
       <body>
         <ul id="ul_mhq_rl2_4p">
@@ -131,7 +118,7 @@
           <p>If no databases have PL/R as a registered language, uninstall the Greenplum PL/R
             extension with the <codeph>gppkg</codeph> utility. This example uninstalls PL/R package
             version 1.0</p>
-          <codeblock>$ gppkg -r plr-1.0</codeblock>
+          <codeblock>$ gppkg -r plr-2.20</codeblock>
           <p>You can run the <codeph>gppkg</codeph> utility with the options <codeph>-q
               --all</codeph> to list the installed extensions and their versions.</p>
           <p>Restart the database.</p>
@@ -139,25 +126,16 @@
         </body>
       </topic>
     </topic>
-    <topic id="topic_om3_kbr_lp">
-      <title>Migrating the PL/R Extension to use R Language Version 3.3.1</title>
+    <topic id="topic5" xml:lang="en">
+      <title>Enabling PL/R Language Support</title>
       <body>
-        <p>The PL/R extension package for Greenplum Database supports R language version 3.3.1. </p>
-        <p>To migrate the Greenplum Database PL/R extension to the PL/R extension that supports R
-          3.3.1, uninstall the old PL/R extension package and install the extension package that
-          supports R 3.3.1. </p>
-        <p>See <xref href="#topic8" format="dita"/> and <xref href="#topic4" format="dita"/> for
-          information about uninstalling and installing the PL/R extension package.</p>
-        <p>After installing PL/R extension package that supports R 3.3.1, you must re-install R
-          packages. </p>
-        <p>This page on the R web site (or the <codeph>NEWS</codeph> file in the R 3.3.1 release
-          download), describes the changes to R: </p>
-        <p>
-          <xref href="https://cran.r-project.org/doc/manuals/r-release/NEWS.html" format="html"
-            scope="external">https://cran.r-project.org/doc/manuals/r-release/NEWS.html</xref>
-        </p>
-        <p>See the information in section <cite>CHANGES IN R 3.3.1</cite> and earlier sections for
-          information about changes in R3.3.1 and earlier.</p>
+        <p>For each database that requires its use, register the PL/R language with the SQL command
+            <codeph>CREATE LANGUAGE</codeph> or the utility <codeph>createlang</codeph>. Because
+          PL/R is an untrusted language, only superusers can register PL/R with a database. For
+          example, running this command as the <codeph>gpadmin</codeph> system user registers the
+          language with the database named <i>testdb</i>:</p>
+        <codeblock>$ createlang plr -d testdb</codeblock>
+        <p>PL/R is registered as an untrusted language.</p>
       </body>
     </topic>
     <topic id="topic9" xml:lang="en">
@@ -348,7 +326,7 @@ LANGUAGE 'plr';</codeblock><p>This
             format="html" scope="external">MADlib</xref> directly from R.</p>
         <p>R documentation is installed with the Greenplum R package:</p>
         <p>
-          <codeph>$GPHOME/ext/R-2.12.0/lib64/R/doc</codeph>
+          <codeph>$GPHOME/ext/R-3.3.1/doc</codeph>
         </p>
       </body>
       <topic id="topic16" xml:lang="en">
