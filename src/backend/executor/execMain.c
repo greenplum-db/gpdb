@@ -1845,7 +1845,11 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	if (eliminate_aliens)
 	{
 		// extract all precomputed parameters from the root slice
-		ExtractAllParams(plannedstmt, estate);
+		ExtractAllParams(plannedstmt, plannedstmt->planTree, estate);
+		if ((Plan *) m != plannedstmt->planTree)
+		{
+			ExtractAllParams(plannedstmt, (Plan *) m, estate);
+		}
 		//elog(WARNING, "After: %x\n%s", m, nodeToString(m));
 		planstate = ExecInitNode((Plan *) m, estate, eflags);
 	}

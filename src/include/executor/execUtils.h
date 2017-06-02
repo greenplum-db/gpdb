@@ -26,7 +26,8 @@ extern void ReleaseGangs(QueryDesc *queryDesc);
 
 extern Motion *getLocalMotion(PlannedStmt *plannedstmt, int sliceIndex);
 extern List *getLocalSubplans(PlannedStmt *plannedstmt, Motion *root);
-extern void ExtractAllParams(PlannedStmt *plannedstmt, EState *estate);
+extern void ExtractAllParams(PlannedStmt *plannedstmt, Plan *root, EState *estate);
+extern bool isMotionGather(const Motion *m);
 
 #ifdef USE_ASSERT_CHECKING
 struct PlannedStmt;

@@ -803,7 +803,7 @@ EndMotionLayerNode(MotionLayerState *mlStates, int16 motNodeID, bool flushCommLa
 
 	if (Gp_segment <= 0 && statement_mem > 200000 && currentSliceId == 1)
 	{
-		ereport(WARNING, (errmsg("EndMotionLayerNode: %x, %d, %d", mlStates, motNodeID, flushCommLayer), errprintstack(true)));
+//		ereport(WARNING, (errmsg("EndMotionLayerNode: %x, %d, %d", mlStates, motNodeID, flushCommLayer), errprintstack(true)));
 	}
 	pMNEntry = getMotionNodeEntry(mlStates, motNodeID, "EndMotionLayerNode");
 
@@ -940,8 +940,8 @@ getMotionNodeEntry(MotionLayerState *mlStates, int16 motNodeID, char *errString 
 	/* Only log on master and segment 0 and if the statement_me is greater than 200MB for slice 1 (crashing slice) */
 	if (Gp_segment <= 0 && statement_mem > 200000 && currentSliceId == 1)
 	{
-		elog(WARNING, "motNodeID, mlStates->mneCount,  pointer, mlStates->mnEntries[motNodeID - 1].valid => %d, %d, %x, %d",
-			motNodeID, mlStates->mneCount, &mlStates->mnEntries[motNodeID - 1].valid, mlStates->mnEntries[motNodeID - 1].valid);
+//		elog(WARNING, "motNodeID, mlStates->mneCount,  pointer, mlStates->mnEntries[motNodeID - 1].valid => %d, %d, %x, %d",
+//			motNodeID, mlStates->mneCount, &mlStates->mnEntries[motNodeID - 1].valid, mlStates->mnEntries[motNodeID - 1].valid);
 	}
 	if (motNodeID > mlStates->mneCount ||
 		!mlStates->mnEntries[motNodeID - 1].valid)
