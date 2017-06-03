@@ -26,6 +26,24 @@ var _ = Describe("check", func() {
 		err := os.RemoveAll(sqlite3_database_path)
 		test_utils.Check("Cannot remove sqllite database file", err)
 	})
+	Describe("object-count", func() {
+		Describe("happy: the object count prints a count of append-optimized and heap objects", func() {
+			It("prints the count of append-optimized and heap objects to stdout", func() {
+				// queries the database to get the count and then prints that to the command line
+
+				path := os.Getenv("GOPATH") + "/src/gp_upgrade/commands/fixtures/object_count.sql"
+				setupSqlite3Database(getFileContents(path))
+				session := runCommand("check", "object-count", "--master-host",
+					"localhost", "--master-port", "15432", "--database_type",
+					"sqlite3", "--database_config_file", sqlite3_database_path)
+
+				Eventually(session).Should(Exit(0))
+
+				Expect(string(session.Out.Contents())).To(ContainSubstring(`Number of AO objects - 2`))
+				Expect(string(session.Out.Contents())).To(ContainSubstring(`Number of heap objects - 1`))
+			})
+		})
+	})
 	Describe("happy: the database is running, master-host is provided, and connection is successful", func() {
 		It("writes a file to ~/.gp_upgrade/cluster_config.json with correct json", func() {
 			path := os.Getenv("GOPATH") + "/src/gp_upgrade/commands/fixtures/segment_config.sql"
