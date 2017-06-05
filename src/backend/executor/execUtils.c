@@ -71,6 +71,7 @@
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "storage/ipc.h"
+#include "cdb/cdbllize.h"
 
 /* ----------------------------------------------------------------
  *		global counters for number of tuples processed, retrieved,
@@ -2280,6 +2281,12 @@ typedef struct ParamExtractorContext
 	EState *estate;
 } ParamExtractorContext;
 
+typedef struct MotionAssignerContext
+{
+	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
+	List *motStack; /* Motion Stack */
+} MotionAssignerContext;
+
 /**
  * Walker method that finds motion state node within a planstate tree.
  */
@@ -2476,6 +2483,35 @@ ParamExtractorWalker(Plan *node,
 	return plan_tree_walker((Node*)node, ParamExtractorWalker, ctx);
 }
 
+static bool
+MotionAssignerWalker(Plan *node,
+				  void *context)
+{
+	if (node == NULL) return false;
+
+	Assert(context);
+	MotionAssignerContext *ctx = (MotionAssignerContext *) context;
+
+	if (is_plan_node((Node*)node))
+	{
+		Plan *plan = (Plan *) node;
+		Assert(NULL == plan->motionNode);
+		plan->motionNode = ctx->motStack != NIL ? (Plan *) lfirst(list_head(ctx->motStack)) : NULL;
+	}
+
+	if (IsA(node, Motion))
+	{
+		ctx->motStack = lcons(node, ctx->motStack);
+		plan_tree_walker((Node *)node, MotionAssignerWalker, ctx);
+		ctx->motStack = list_delete_first(ctx->motStack);
+
+		return false;
+	}
+
+	/* Continue walking */
+	return plan_tree_walker((Node*)node, MotionAssignerWalker, ctx);
+}
+
 List *getLocalSubplans(PlannedStmt *plannedstmt, Motion *root)
 {
 	SubPlanFinderContext ctx;
@@ -2499,6 +2535,15 @@ void ExtractAllParams(PlannedStmt *plannedstmt, Plan *root, EState *estate)
 		root = outerPlan(root);
 	}
 	ParamExtractorWalker(root, &ctx);
+}
+
+void AssignParentMotionToPlanNodes(PlannedStmt *plannedstmt)
+{
+	MotionAssignerContext ctx;
+	ctx.base.node = (Node*)plannedstmt;
+	ctx.motStack = NIL;
+
+	MotionAssignerWalker(plannedstmt->planTree, &ctx);
 }
 
 /**

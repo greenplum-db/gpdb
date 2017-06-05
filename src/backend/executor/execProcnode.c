@@ -235,11 +235,8 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 
 	START_CODE_GENERATOR_MANAGER(CodegenManager);
 	{
-//		if (IsA(node, Motion))
-//		{
-//			elog(WARNING, "Motion ID: %d", ((Motion*)node)->motionID);
-//		}
 
+	int localMotionId = LocallyExecutingSliceIndex(estate);
 	/*
 	 * Is current plan node supposed to execute in current slice?
 	 * Special case is sending motion node, which is supposed to
@@ -249,10 +246,18 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	 * motion before we call ExecInitMotion to make sure we don't
 	 * miss its allocation memory
 	 */
-	bool isAlienPlanNode = !((currentSliceId == origSliceIdInPlan) ||
-			(nodeTag(node) == T_Motion && ((Motion*)node)->motionID == currentSliceId));
+	Motion *parentMotion = (Motion *) node->motionNode;
+	AssertImply(estate->eliminateAliens && Gp_segment != -1 && Gp_role == GP_ROLE_EXECUTE && nodeTag(node) != T_Motion, parentMotion != NULL);
+	int parentMotionId = parentMotion != NULL ? parentMotion->motionID : -1;
 
-	AssertImply(estate->eliminateAliens, !isAlienPlanNode || Gp_segment == -1 || estate->es_plannedstmt->nMotionNodes == 0);
+	/*
+	 * No node is alien on the master as we need those for collecting stats.
+	 * We will optimize this in next phase.
+	 */
+	bool isAlienPlanNode = !((localMotionId == parentMotionId) ||
+			(nodeTag(node) == T_Motion && ((Motion*)node)->motionID == localMotionId) || Gp_segment == -1);
+
+	AssertImply(estate->eliminateAliens && parentMotion != NULL, !isAlienPlanNode || Gp_segment == -1 || estate->es_plannedstmt->nMotionNodes == 0);
 
 	/*
 	 * As of 03/28/2014, there is no support for BitmapTableScan

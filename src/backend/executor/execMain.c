@@ -328,6 +328,8 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	estate = CreateExecutorState();
 	estate->eliminateAliens = slice_local_execution && Gp_segment != -1 && queryDesc->plannedstmt->nMotionNodes > 0;
 
+	AssignParentMotionToPlanNodes(queryDesc->plannedstmt);
+
 	queryDesc->estate = estate;
 
 	oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);

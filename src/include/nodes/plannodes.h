@@ -276,6 +276,8 @@ typedef struct Plan
 
 	/* MemoryAccount to use for recording the memory usage of different plan nodes. */
 	MemoryAccountIdType memoryAccountId;
+
+	struct Plan *motionNode;
 } Plan;
 
 /* ----------------
