@@ -30,12 +30,50 @@ Users always connect to the master server, which divides up the query
 into fragments that are executed in the segments, sends the fragments
 to the segments, and collects the results.
 
-## Requirements
+## Building Greenplum Database with GPORCA
 
-* **gpMgmt** utilities - command line tools for managing the cluster.
+Currently GPDB assumes ORCA libraries and headers are available in the targeted
+system and tries to build with ORCA by default.  For your convenience, here are
+the steps of how to build the optimizer. For the most up-to-date way of
+building, see the README at the following repositories:
 
-  You will need to add the following Python modules (2.7 & 2.6 are
-  supported) into your installation
+1. https://github.com/greenplum-db/gp-xerces
+1. https://github.com/greenplum-db/gporca
+
+<a name="buildOrca"></a>
+### Build the optimizer
+
+1. Install our patched version of Xerces-C
+
+    ```
+    git clone https://github.com/greenplum-db/gp-xerces
+    mkdir gp-xerces/build
+    cd gp-xerces/build
+    ../configure
+    make install
+    ```
+
+1. ORCA requires [CMake](https://cmake.org) and
+   [Ninja](https://ninja-build.org/), make sure you have them installed.
+   Installation instructions vary, please check the CMake and Ninja websites.
+
+1. Install ORCA, the query optimizer:
+
+    ```
+    git clone https://github.com/greenplum-db/gporca
+    mkdir gporca/build
+    cd gporca/build
+    cmake -GNinja ..
+    ninja install
+    ```
+    **Note**: Get the latest ORCA `git pull --ff-only` if you see an error message like below:
+    ```
+    checking Checking ORCA version... configure: error: Your ORCA version is expected to be 2.33.XXX
+    ```
+
+### Install needed python modules
+
+  Add the following Python modules (2.7 & 2.6 are supported)
 
   * psutil
   * lockfile (>= 0.9.1)
@@ -45,7 +83,188 @@ to the segments, and collects the results.
 
   If necessary, upgrade modules using "pip install --upgrade".
   pip should be at least version 7.x.x.
+    
+### Build the database
+```
+# Clean environment
+make distclean
 
+# Configure build environment to install at /usr/local/gpdb
+./configure --with-perl --with-python --with-libxml --prefix=/usr/local/gpdb
+
+# Compile and install
+make
+make install
+
+# Bring in greenplum environment into your running shell
+source /usr/local/gpdb/greenplum_path.sh
+
+# Start demo cluster (gpdemo-env.sh is created which contain
+# __PGPORT__ and __MASTER_DATA_DIRECTORY__ values)
+cd gpAux/gpdemo
+make create-demo-cluster
+source gpdemo-env.sh
+```
+
+Compilation can be sped up with parallelization. Instead of `make`, consider:
+
+```
+make -j8
+```
+
+The directory and the TCP ports for the demo cluster can be changed on the fly.
+Instead of `make cluster`, consider:
+
+```
+DATADIRS=/tmp/gpdb-cluster MASTER_PORT=15432 PORT_BASE=25432 make cluster
+```
+
+The TCP port for the regression test can be changed on the fly:
+
+```
+PGPORT=15432 make installcheck-world
+```
+
+Once build and started, run `psql` and check the GPOPT (e.g. GPORCA) version:
+
+```
+select gp_opt_version();
+```
+
+To turn ORCA off and use legacy planner for query optimization:
+```
+set optimizer=off;
+```
+
+## Running tests
+
+* The default regression tests
+
+```
+make installcheck-world
+```
+
+* The top-level target __installcheck-world__ will run all regression
+  tests in GPDB against the running cluster. For testing individual
+  parts, the respective targets can be run separately.
+
+* The PostgreSQL __check__ target does not work. Setting up a
+  Greenplum cluster is more complicated than a single-node PostgreSQL
+  installation, and no-one's done the work to have __make check__
+  create a cluster. Create a cluster manually or use gpAux/gpdemo/
+  (example below) and run the toplevel __make installcheck-world__
+  against that. Patches are welcome!
+
+* The PostgreSQL __installcheck__ target does not work either, because
+  some tests are known to fail with Greenplum. The
+  __installcheck-good__ schedule in __src/test/regress__ excludes those
+  tests.
+
+* When adding a new test, please add it to one of the GPDB-specific tests,
+  in greenplum_schedule, rather than the PostgreSQL tests inherited from the
+  upstream. We try to keep the upstream tests identical to the upstream
+  versions, to make merging with newer PostgreSQL releases easier.
+
+## Alternative Configurations
+
+### Building GPDB without GPORCA
+Currently, GPDB is built with ORCA by default so latest ORCA libraries and headers need
+to be available in the environment. [Build and Install](#buildOrca) the latest ORCA.
+
+If you want to build GPDB without ORCA, configure requires `--disable-orca` flag to be set.
+
+```
+# Clean environment
+make distclean
+
+# Configure build environment to install at /usr/local/gpdb
+./configure --disable-orca --with-perl --with-python --with-libxml --prefix=/usr/local/gpdb
+```
+
+### Building GPDB with code generation enabled
+
+To build GPDB with code generation (codegen) enabled, you will need cmake 2.8 or higher
+and a recent version of llvm and clang (include headers and developer libraries). Codegen utils
+is currently developed against the LLVM 3.7.X release series. You can find more details about the codegen feature,
+including details about obtaining the prerequisites, building and testing GPDB with codegen in the [Codegen README](src/backend/codegen).
+
+In short, you can change the `configure` with additional option
+`--enable-codegen`, optionally giving the path to llvm and clang libraries on
+your system.
+```
+# Configure build environment to install at /usr/local/gpdb
+# Enable CODEGEN
+./configure --with-perl --with-python --with-libxml --enable-codegen --prefix=/usr/local/gpdb --with-codegen-prefix="/path/to/llvm;/path/to/clang"
+```
+
+### Building GPDB with gpperfmon enabled
+
+gpperfmon tracks a variety of queries, statistics, system properties, and metrics.
+To build with it enabled, change your `configure` to have an additional option
+`--enable-gpperfmon`
+
+See [more information about gpperfmon here](gpAux/gpperfmon/README.md)
+
+gpperfmon is dependent on several libraries like apr, apu, and libsigar
+
+## Development with Docker
+
+We provide a docker image with all dependencies required to compile and test
+GPDB. You can view the dependency dockerfile at `./src/tools/docker/base/Dockerfile`.
+The image is hosted on docker hub at `pivotaldata/gpdb-devel`. This docker
+image is currently under heavy development.
+
+A quickstart guide to Docker can be found on the [Pivotal Engineering Journal](http://engineering.pivotal.io/post/docker-gpdb/).
+
+Known issues:
+* The `installcheck-world` make target has at least 4 failures, some of which
+  are non-deterministic
+
+### Running regression tests with Docker
+
+1. Create a docker host with 8gb RAM and 4 cores
+    ```bash
+    docker-machine create -d virtualbox --virtualbox-cpu-count 4 --virtualbox-disk-size 50000 --virtualbox-memory 8192 gpdb
+    eval $(docker-machine env gpdb)
+    ```
+
+1. Build your code on gpdb-devel rootfs
+    ```bash
+    cd [path/to/gpdb]
+    docker build .
+    # image beefc4f3 built
+    ```
+    The top level Dockerfile will automatically sync your current working
+    directory into the docker image. This means that any code you are working
+    on will automatically be built and ready for testing in the docker context
+
+1. Log into docker image
+    ```bash
+    docker run -it beefc4f3
+    ```
+
+1. As `gpadmin` user run `installcheck-world`
+    ```bash
+    su gpadmin
+    cd /workspace/gpdb
+    make installcheck-world
+    ```
+
+### Caveats
+
+* No Space Left On Device
+    On macOS the docker-machine vm can periodically become full with unused images.
+    You can clear these images with a combination of docker commands.
+    ```bash
+    # assuming no currently running containers
+    # remove all stopped containers from cache
+    docker ps -aq | xargs -n 1 docker rm
+    # remove all untagged images
+    docker images -aq --filter dangling=true | xargs -n 1 docker rmi
+    ```
+
+* The Native macOS docker client available with docker 1.12+ (beta) or
+  Community Edition 17+ may also work
 
 ## Code layout
 
@@ -109,228 +328,6 @@ throughout the codebase, but a few larger additions worth noting:
 
   FTS is a process that runs in the master node, and periodically
   polls the segments to maintain the status of each segment.
-
-## Build Greenplum Database with GPORCA
-
-Currently GPDB assumes ORCA libraries and headers are available in the targeted
-system and tries to build with ORCA by default.  For your convenience, here are
-the steps of how to build the optimizer. For the most up-to-date way of
-building, see the README at the following repositories:
-
-1. https://github.com/greenplum-db/gp-xerces
-1. https://github.com/greenplum-db/gporca
-
-<a name="buildOrca"></a>
-### Build the optimizer
-
-1. Install our patched version of Xerces-C
-
-    ```
-    git clone https://github.com/greenplum-db/gp-xerces
-    mkdir gp-xerces/build
-    cd gp-xerces/build
-    ../configure
-    make install
-    ```
-
-1. ORCA requires [CMake](https://cmake.org) and
-   [Ninja](https://ninja-build.org/), make sure you have them installed.
-   Installation instructions vary, please check the CMake and Ninja websites.
-
-1. Install ORCA, the query optimizer:
-
-    ```
-    git clone https://github.com/greenplum-db/gporca
-    mkdir gporca/build
-    cd gporca/build
-    cmake -GNinja ..
-    ninja install
-    ```
-    **Note**: Get the latest ORCA `git pull --ff-only` if you see an error message like below:
-    ```
-    checking Checking ORCA version... configure: error: Your ORCA version is expected to be 2.33.XXX
-    ```
-    
-### Build the database
-```
-# Clean environment
-make distclean
-
-# Configure build environment to install at /usr/local/gpdb
-./configure --with-perl --with-python --with-libxml --prefix=/usr/local/gpdb
-
-# Compile and install
-make
-make install
-
-# Bring in greenplum environment into your running shell
-source /usr/local/gpdb/greenplum_path.sh
-
-# Start demo cluster (gpdemo-env.sh is created which contain
-# __PGPORT__ and __MASTER_DATA_DIRECTORY__ values)
-cd gpAux/gpdemo
-make create-demo-cluster
-source gpdemo-env.sh
-```
-
-Compilation can be sped up with parallelization. Instead of `make`, consider:
-
-```
-make -j8
-```
-
-The directory and the TCP ports for the demo cluster can be changed on the fly.
-Instead of `make cluster`, consider:
-
-```
-DATADIRS=/tmp/gpdb-cluster MASTER_PORT=15432 PORT_BASE=25432 make cluster
-```
-
-The TCP port for the regression test can be changed on the fly:
-
-```
-PGPORT=15432 make installcheck-world
-```
-
-Once build and started, run `psql` and check the GPOPT (e.g. GPORCA) version:
-
-```
-select gp_opt_version();
-```
-
-To turn ORCA off and use legacy planner for query optimization:
-```
-set optimizer=off;
-```
-
-
-### Build GPDB without GPORCA
-Currently, GPDB is built with ORCA by default so latest ORCA libraries and headers need
-to be available in the environment. [Build and Install](#buildOrca) the latest ORCA.
-
-If you want to build GPDB without ORCA, configure requires `--disable-orca` flag to be set.
-
-```
-# Clean environment
-make distclean
-
-# Configure build environment to install at /usr/local/gpdb
-./configure --disable-orca --with-perl --with-python --with-libxml --prefix=/usr/local/gpdb
-```
-
-### Build GPDB with code generation enabled
-
-To build GPDB with code generation (codegen) enabled, you will need cmake 2.8 or higher
-and a recent version of llvm and clang (include headers and developer libraries). Codegen utils
-is currently developed against the LLVM 3.7.X release series. You can find more details about the codegen feature,
-including details about obtaining the prerequisites, building and testing GPDB with codegen in the [Codegen README](src/backend/codegen).
-
-In short, you can change the `configure` with additional option
-`--enable-codegen`, optionally giving the path to llvm and clang libraries on
-your system.
-```
-# Configure build environment to install at /usr/local/gpdb
-# Enable CODEGEN
-./configure --with-perl --with-python --with-libxml --enable-codegen --prefix=/usr/local/gpdb --with-codegen-prefix="/path/to/llvm;/path/to/clang"
-```
-
-### Build GPDB with gpperfmon enabled
-
-gpperfmon tracks a variety of queries, statistics, system properties, and metrics.
-To build with it enabled, change your `configure` to have an additional option
-`--enable-gpperfmon`
-
-See [more information about gpperfmon here](gpAux/gpperfmon/README.md)
-
-gpperfmon is dependent on several libraries like apr, apu, and libsigar
-
-## Regression tests
-
-* The default regression tests
-
-```
-make installcheck-world
-```
-
-* The top-level target __installcheck-world__ will run all regression
-  tests in GPDB against the running cluster. For testing individual
-  parts, the respective targets can be run separately.
-
-* The PostgreSQL __check__ target does not work. Setting up a
-  Greenplum cluster is more complicated than a single-node PostgreSQL
-  installation, and no-one's done the work to have __make check__
-  create a cluster. Create a cluster manually or use gpAux/gpdemo/
-  (example below) and run the toplevel __make installcheck-world__
-  against that. Patches are welcome!
-
-* The PostgreSQL __installcheck__ target does not work either, because
-  some tests are known to fail with Greenplum. The
-  __installcheck-good__ schedule in __src/test/regress__ excludes those
-  tests.
-
-* When adding a new test, please add it to one of the GPDB-specific tests,
-  in greenplum_schedule, rather than the PostgreSQL tests inherited from the
-  upstream. We try to keep the upstream tests identical to the upstream
-  versions, to make merging with newer PostgreSQL releases easier.
-
-## Development with Docker
-
-We provide a docker image with all dependencies required to compile and test
-GPDB. You can view the dependency dockerfile at `./src/tools/docker/base/Dockerfile`.
-The image is hosted on docker hub at `pivotaldata/gpdb-devel`. This docker
-image is currently under heavy development.
-
-A quickstart guide to Docker can be found on the [Pivotal Engineering Journal](http://engineering.pivotal.io/post/docker-gpdb/).
-
-Known issues:
-* The `installcheck-world` make target has at least 4 failures, some of which
-  are non-deterministic
-
-### Running regression tests with Docker
-
-1. Create a docker host with 8gb RAM and 4 cores
-    ```bash
-    docker-machine create -d virtualbox --virtualbox-cpu-count 4 --virtualbox-disk-size 50000 --virtualbox-memory 8192 gpdb
-    eval $(docker-machine env gpdb)
-    ```
-
-1. Build your code on gpdb-devel rootfs
-    ```bash
-    cd [path/to/gpdb]
-    docker build .
-    # image beefc4f3 built
-    ```
-    The top level Dockerfile will automatically sync your current working
-    directory into the docker image. This means that any code you are working
-    on will automatically be built and ready for testing in the docker context
-
-1. Log into docker image
-    ```bash
-    docker run -it beefc4f3
-    ```
-
-1. As `gpadmin` user run `installcheck-world`
-    ```bash
-    su gpadmin
-    cd /workspace/gpdb
-    make installcheck-world
-    ```
-
-### Caveats
-
-* No Space Left On Device
-    On macOS the docker-machine vm can periodically become full with unused images.
-    You can clear these images with a combination of docker commands.
-    ```bash
-    # assuming no currently running containers
-    # remove all stopped containers from cache
-    docker ps -aq | xargs -n 1 docker rm
-    # remove all untagged images
-    docker images -aq --filter dangling=true | xargs -n 1 docker rmi
-    ```
-
-* The Native macOS docker client available with docker 1.12+ (beta) or
-  Community Edition 17+ may also work
 
 ## Contributing
 
