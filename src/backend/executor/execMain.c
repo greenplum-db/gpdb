@@ -326,14 +326,6 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	 * Build EState, switch into per-query memory context for startup.
 	 */
 	estate = CreateExecutorState();
-	estate->eliminateAliens = slice_local_execution && Gp_segment != -1 && queryDesc->plannedstmt->nMotionNodes > 0;
-
-	/*
-	 * Assign a Motion Node to every Plan Node. This makes it
-	 * easy to identify which slice any Node belongs to
-	 */
-	AssignParentMotionToPlanNodes(queryDesc->plannedstmt);
-
 	queryDesc->estate = estate;
 
 	oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);
@@ -444,6 +436,16 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 
 		/* set our global sliceid variable for elog. */
 		currentSliceId = LocallyExecutingSliceIndex(estate);
+
+		// We don't eliminate aliens if we don't have a local motion to start execution
+		estate->eliminateAliens = slice_local_execution && currentSliceId != 0 && Gp_segment != -1;
+
+		/*
+		 * Assign a Motion Node to every Plan Node. This makes it
+		 * easy to identify which slice any Node belongs to
+		 */
+		AssignParentMotionToPlanNodes(queryDesc->plannedstmt);
+
 
 		/* Determine OIDs for into relation, if any */
 		if (queryDesc->plannedstmt->intoClause != NULL)
@@ -4751,7 +4753,7 @@ OpenIntoRel(QueryDesc *queryDesc)
 	 * and we follow the PostgreSQL codepath, resolving the defaults here.
 	 */
 	if (queryDesc->ddesc)
-		intoTableSpaceName = queryDesc->ddesc->intoTableSpaceName;
+	intoTableSpaceName = queryDesc->ddesc->intoTableSpaceName;
 	else
 		intoTableSpaceName = into->tableSpaceName;
 

@@ -28,6 +28,7 @@ extern Motion *getLocalMotion(PlannedStmt *plannedstmt, int sliceIndex);
 extern List *getLocalSubplans(PlannedStmt *plannedstmt, Motion *root);
 extern void ExtractAllParams(PlannedStmt *plannedstmt, Plan *root, EState *estate);
 extern void AssignParentMotionToPlanNodes(PlannedStmt *plannedstmt);
+extern bool isMotionGather(const Motion *m);
 
 #ifdef USE_ASSERT_CHECKING
 struct PlannedStmt;

@@ -253,7 +253,7 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	 * of motion in the plan.
 	 */
 
-	AssertImply(estate->eliminateAliens, parentMotion != NULL);
+	AssertImply(estate->eliminateAliens, parentMotion != NULL || (IsA(node, Motion) && ((Motion*)node)->motionID == 1));
 	int parentMotionId = parentMotion != NULL ? parentMotion->motionID : -1;
 
 	/*

@@ -2487,7 +2487,11 @@ MotionAssignerWalker(Plan *node,
 	if (is_plan_node((Node*)node))
 	{
 		Plan *plan = (Plan *) node;
-		Assert(NULL == plan->motionNode);
+		// TODO: For cached plan we may be assigning multiple times.
+		// The eventual goal is to relocate it to planner. So, we won't
+		// check for duplicate assignment here.
+		//Assert(NULL == plan->motionNode);
+		if (NULL != plan->motionNode) return true;
 		plan->motionNode = ctx->motStack != NIL ? (Plan *) lfirst(list_head(ctx->motStack)) : NULL;
 	}
 
@@ -2535,6 +2539,15 @@ void AssignParentMotionToPlanNodes(PlannedStmt *plannedstmt)
 	ctx.motStack = NIL;
 
 	MotionAssignerWalker(plannedstmt->planTree, &ctx);
+}
+
+/**
+ * Is it a gather motion?
+ */
+bool isMotionGather(const Motion *m)
+{
+	return (m->motionType == MOTIONTYPE_FIXED
+			&& m->numOutputSegs == 1);
 }
 
 /**
