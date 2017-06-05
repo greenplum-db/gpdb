@@ -1,8 +1,0 @@
-select * from heap_table1;
- col_text | col_numeric 
-----------+-------------
- 2_two    |           2
- 0_zero   |           0
- 1_one    |           1
-(3 rows)
-

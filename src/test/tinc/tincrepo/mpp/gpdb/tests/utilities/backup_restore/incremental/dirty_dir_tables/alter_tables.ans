@@ -1,8 +1,0 @@
-insert into public.ao_table1 select * from public.ao_table1;
-INSERT 0 3
-TRUNCATE public.co_part01_1_prt_3_2_prt_sub1;
-TRUNCATE TABLE
-Drop table new_coschema1.co_table3;
-DROP TABLE
-Drop table public.heap_table3;
-DROP TABLE
