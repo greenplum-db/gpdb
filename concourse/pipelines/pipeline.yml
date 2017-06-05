@@ -648,6 +648,26 @@ jobs:
         BLDWRAP_POSTGRES_CONF_ADDONS: ""
         GPCHECK_SETUP: true
 
+- name: MM_gppkg
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [compile_gpdb_centos6]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: gppkg
+    file: gpdb_src/concourse/tasks/behave_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_TAGS: gppkg
+      BLDWRAP_POSTGRES_CONF_ADDONS: ""
+
 - name: MM_pt-rebuild
   plan:
   - aggregate:
