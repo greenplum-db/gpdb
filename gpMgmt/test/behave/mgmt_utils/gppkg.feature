@@ -37,3 +37,10 @@ Feature: gppkg tests
         And gppkg should print "called if the function references a package file that has been removed." to stdout
         And gppkg should print "Skipping update of gppkg based on user input" to stdout
         And gppkg should print "Do you still want to continue ?" to stdout
+
+    @gppkg_query
+    Scenario: gppkg --query --all when nothing is installed should report nothing installed
+        Given the database is running
+        When the user runs "gppkg --query --all"
+        Then gppkg should return a return code of 0
+        And gppkg should print "Starting gppkg with args: --query --all" to stdout
