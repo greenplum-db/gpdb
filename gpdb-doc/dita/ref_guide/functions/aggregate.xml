@@ -480,7 +480,7 @@ SELECT count(*) FROM sometable;
                 <codeph>median(<i>expr</i>)</codeph>
               </entry>
               <entry colname="col2">
-                <codeph>timestamp, timestampz, interval, float</codeph>
+                <codeph>timestamp, timestamptz, interval, float</codeph>
               </entry>
               <entry colname="col3">
                 <codeph>median(<i>expression</i>)</codeph>
@@ -500,7 +500,7 @@ GROUP BY department_id; </codeblock>
                   [DESC/ASC])</codeph>
               </entry>
               <entry colname="col2">
-                <codeph>timestamp, timestampz, interval, float</codeph>
+                <codeph>timestamp, timestamptz, interval, float</codeph>
               </entry>
               <entry colname="col3">
                 <codeph>percentile_cont(<i>percentage</i>) WITHIN GROUP (ORDER BY
@@ -523,7 +523,7 @@ FROM employees GROUP BY department_id;</codeblock>
               <entry colname="col1"><codeph>percentile_disc (<i>expr</i>) WITHIN GROUP (ORDER BY
                     <i>expr</i> [DESC/ASC]</codeph>)</entry>
               <entry colname="col2">
-                <codeph>timestamp, timestampz, interval, float</codeph>
+                <codeph>timestamp, timestamptz, interval, float</codeph>
               </entry>
               <entry colname="col3">
                 <codeph>percentile_disc(<i>percentage</i>) WITHIN GROUP (ORDER BY

@@ -451,7 +451,7 @@
                   time)</entry>
               </row>
               <row>
-                <entry colname="col1">timestampz</entry>
+                <entry colname="col1">timestamptz</entry>
                 <entry colname="col2">java.sql.Timestamp</entry>
               </row>
               <row>

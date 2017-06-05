@@ -25,7 +25,7 @@
             <tbody>
                <row>
                   <entry colname="col1">cmdtime</entry>
-                  <entry colname="col2">timestampz</entry>
+                  <entry colname="col2">timestamptz</entry>
                   <entry colname="col3">Timestamp when the error occurred.</entry>
                </row>
                <row>

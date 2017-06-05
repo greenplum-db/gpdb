@@ -1131,7 +1131,7 @@ SELECT foo();
                 <codeph>MEDIAN (<i>expr</i>)</codeph>
               </entry>
               <entry colname="col2">
-                <codeph>timestamp, timestampz, interval, float</codeph>
+                <codeph>timestamp, timestamptz, interval, float</codeph>
               </entry>
               <entry colname="col3">
                 <codeph>MEDIAN (<i>expression</i>)</codeph>
@@ -1151,7 +1151,7 @@ GROUP BY department_id; </codeblock>
                   [DESC/ASC])</codeph>
               </entry>
               <entry colname="col2">
-                <codeph>timestamp, timestampz, interval, float</codeph>
+                <codeph>timestamp, timestamptz, interval, float</codeph>
               </entry>
               <entry colname="col3">
                 <codeph>PERCENTILE_CONT(<i>percentage</i>) WITHIN GROUP (ORDER BY
@@ -1174,7 +1174,7 @@ FROM employees GROUP BY department_id;</codeblock>
               <entry colname="col1"><codeph>PERCENTILE_DISC (<i>expr</i>) WITHIN GROUP (ORDER BY
                     <i>expr</i> [DESC/ASC])</codeph></entry>
               <entry colname="col2">
-                <codeph>timestamp, timestampz, interval, float</codeph>
+                <codeph>timestamp, timestamptz, interval, float</codeph>
               </entry>
               <entry colname="col3">
                 <codeph>PERCENTILE_DISC(<i>percentage</i>) WITHIN GROUP (ORDER BY

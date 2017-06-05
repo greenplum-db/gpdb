@@ -1795,7 +1795,7 @@ SELECT foo();
                 </entry>
 
                 <entry colname="col2">
-                  <codeph>timestamp, timestampz, interval, float</codeph>
+                  <codeph>timestamp, timestamptz, interval, float</codeph>
                 </entry>
 
                 <entry colname="col3">
@@ -1819,7 +1819,7 @@ GROUP BY department_id; </codeblock>
                 </entry>
 
                 <entry colname="col2">
-                  <codeph>timestamp, timestampz, interval, float</codeph>
+                  <codeph>timestamp, timestamptz, interval, float</codeph>
                 </entry>
 
                 <entry colname="col3">
@@ -1846,7 +1846,7 @@ FROM employees GROUP BY department_id;</codeblock>
                       <i>expr</i> [DESC/ASC]</codeph>)</entry>
 
                 <entry colname="col2">
-                  <codeph>timestamp, timestampz, interval, float</codeph>
+                  <codeph>timestamp, timestamptz, interval, float</codeph>
                 </entry>
 
                 <entry colname="col3">
