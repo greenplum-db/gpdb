@@ -328,6 +328,10 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	estate = CreateExecutorState();
 	estate->eliminateAliens = slice_local_execution && Gp_segment != -1 && queryDesc->plannedstmt->nMotionNodes > 0;
 
+	/*
+	 * Assign a Motion Node to every Plan Node. This makes it
+	 * easy to identify which slice any Node belongs to
+	 */
 	AssignParentMotionToPlanNodes(queryDesc->plannedstmt);
 
 	queryDesc->estate = estate;
@@ -1105,7 +1109,6 @@ ExecutorEnd(QueryDesc *queryDesc)
 	}
 	END_MEMORY_ACCOUNT();
 
-//	elog(WARNING, "Alien Peak: " UINT64_FORMAT, AlienExecutorMemoryAccount->peak);
 	if (gp_dump_memory_usage)
 	{
 		MemoryAccounting_SaveToFile(currentSliceId);
@@ -1809,6 +1812,11 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	List *sub_plan_roots = NULL;
 	Plan *start_plan_node = plannedstmt->planTree;
 
+	/*
+	 * If eliminateAliens is true then we extract the local Motion node
+	 * and subplans for our current slice. We can then call ExecInitNode for
+	 * only a subset of the plan tree.
+	 */
 	if (estate->eliminateAliens)
 	{
 		m = getLocalMotion(plannedstmt, LocallyExecutingSliceIndex(estate));

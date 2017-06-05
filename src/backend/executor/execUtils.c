@@ -2365,8 +2365,6 @@ Motion *getLocalMotion(PlannedStmt *plannedstmt, int sliceIndex)
 	ctx.motionId = sliceIndex;
 	ctx.motion = NULL;
 	MotionFinderWalker(planTree, &ctx);
-	//Assert(ctx.motion != NULL);
-//	elog(WARNING, "Before: %x\n%s", ctx.motion, nodeToString(ctx.motion));
 	return ctx.motion;
 }
 
@@ -2466,12 +2464,6 @@ ParamExtractorWalker(Plan *node,
 	{
 		return false;	/* don't visit subtree */
 	}
-//	else if (IsA(node, Motion))
-//	{
-//		Motion *motion = (Motion *) node;
-//		if (!isMotionGather(motion))
-//			return false;
-//	}
 
 	if (IsA(node, SubPlan))
 	{
@@ -2519,7 +2511,6 @@ List *getLocalSubplans(PlannedStmt *plannedstmt, Motion *root)
 	ctx.base.node = (Node*)plannedstmt;
 	ctx.subplans = NIL;
 	SubPlanFinderWalker(root_plan, &ctx);
-//	elog(WARNING, "Before: %x\n%s", ctx.motion, nodeToString(ctx.motion));
 	return ctx.subplans;
 }
 

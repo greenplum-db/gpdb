@@ -247,7 +247,13 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	 * miss its allocation memory
 	 */
 	Motion *parentMotion = (Motion *) node->motionNode;
-	AssertImply(estate->eliminateAliens && Gp_segment != -1 && Gp_role == GP_ROLE_EXECUTE && nodeTag(node) != T_Motion, parentMotion != NULL);
+	/*
+	 * If it's not on the master, the motion should have a parent motion. The
+	 * utility queries are guarded by eliminateAliens, which checks for number
+	 * of motion in the plan.
+	 */
+
+	AssertImply(estate->eliminateAliens, parentMotion != NULL);
 	int parentMotionId = parentMotion != NULL ? parentMotion->motionID : -1;
 
 	/*
@@ -257,7 +263,8 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	bool isAlienPlanNode = !((localMotionId == parentMotionId) ||
 			(nodeTag(node) == T_Motion && ((Motion*)node)->motionID == localMotionId) || Gp_segment == -1);
 
-	AssertImply(estate->eliminateAliens && parentMotion != NULL, !isAlienPlanNode || Gp_segment == -1 || estate->es_plannedstmt->nMotionNodes == 0);
+	// We cannot have alien nodes if we are eliminating aliens
+	AssertImply(estate->eliminateAliens, !isAlienPlanNode);
 
 	/*
 	 * As of 03/28/2014, there is no support for BitmapTableScan
