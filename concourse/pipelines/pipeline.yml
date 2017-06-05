@@ -624,7 +624,6 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       BEHAVE_TAGS: gpperfmon
-      BLDWRAP_POSTGRES_CONF_ADDONS: ""
 
 - name: MM_gpcheck
   plan:
@@ -645,7 +644,6 @@ jobs:
       image: centos-gpdb-dev-6
       params:
         BEHAVE_TAGS: gpcheck_as_gpadmin
-        BLDWRAP_POSTGRES_CONF_ADDONS: ""
         GPCHECK_SETUP: true
 
 - name: MM_gppkg
@@ -666,7 +664,6 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       BEHAVE_TAGS: gppkg
-      BLDWRAP_POSTGRES_CONF_ADDONS: ""
 
 - name: MM_pt-rebuild
   plan:
@@ -687,13 +684,11 @@ jobs:
       image: centos-gpdb-dev-6
       params:
         BEHAVE_TAGS: persistent_rebuild
-        BLDWRAP_POSTGRES_CONF_ADDONS: ""
     - task: persistent_table_rebuild_crash_recovery
       file: gpdb_src/concourse/tasks/tinc_gpdb.yml
       image: centos-gpdb-dev-6
       params:
         MAKE_TEST_COMMAND: persistent_table_rebuild
-        BLDWRAP_POSTGRES_CONF_ADDONS: ""
         TEST_OS: centos
 
 - name: fts
@@ -793,7 +788,6 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       MAKE_TEST_COMMAND: memory_accounting
-      BLDWRAP_POSTGRES_CONF_ADDONS: ""
       TEST_OS: "centos"
 
 - name: regression_tests_gphdfs_centos
@@ -1315,7 +1309,6 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       MAKE_TEST_COMMAND: runaway_query
-      BLDWRAP_POSTGRES_CONF_ADDONS: ""
       TEST_OS: "centos"
 
 - name: QP_optimizer-functional
