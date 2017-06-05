@@ -3556,13 +3556,13 @@
           <row>
             <entry colname="col1">X113</entry>
             <entry colname="col2">Host language support for XML: STRIP WHITESPACE option</entry>
-            <entry colname="col3">NO</entry>
+            <entry colname="col3">YES</entry>
             <entry colname="col4"/>
           </row>
           <row>
             <entry colname="col1">X114</entry>
             <entry colname="col2">Host language support for XML: PRESERVE WHITESPACE option</entry>
-            <entry colname="col3">NO</entry>
+            <entry colname="col3">YES</entry>
             <entry colname="col4"/>
           </row>
           <row>
