@@ -151,6 +151,15 @@ formatTuple(StringInfo buf, HeapTuple tup, TupleDesc tupdesc, Oid *outputFunArra
 }
 #endif
 
+/**
+ * Is it a gather motion?
+ */
+bool isMotionGather(const Motion *m)
+{
+	return (m->motionType == MOTIONTYPE_FIXED
+			&& m->numOutputSegs == 1);
+}
+
 /*
  * Set the statistic info in gpmon packet.
  */

@@ -26,7 +26,7 @@ extern "C" {
 #include "nodes/print.h"
 #include "nodes/pg_list.h"
 #include "executor/execdesc.h"
-#include "executor/execUtils.h"
+#include "executor/nodeMotion.h"
 #include "parser/parsetree.h"
 #include "utils/inval.h"
 #include "utils/lsyscache.h"

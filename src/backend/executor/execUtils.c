@@ -2542,15 +2542,6 @@ void AssignParentMotionToPlanNodes(PlannedStmt *plannedstmt)
 }
 
 /**
- * Is it a gather motion?
- */
-bool isMotionGather(const Motion *m)
-{
-	return (m->motionType == MOTIONTYPE_FIXED
-			&& m->numOutputSegs == 1);
-}
-
-/**
  * Provide index of locally executing slice
  */
 int LocallyExecutingSliceIndex(EState *estate)
