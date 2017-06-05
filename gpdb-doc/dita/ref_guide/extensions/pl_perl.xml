@@ -27,14 +27,11 @@
 <p>
 With the Greenplum Database PL/Perl extension, you can write user-defined functions
 in Perl that take advantage of its advanced string manipulation operators and
-functions.
+functions. PL/Perl provides both trusted and untrusted variants of the language.
 </p>
 <p>
 PL/Perl is embedded in your Greenplum Database distribution. Greenplum Database
-PL/Perl utilizes the system Perl installation, providing both trusted and untrusted
-variants of the language.
-</p>
-<p>
+PL/Perl requires Perl to be installed on the system of each database host.
 </p>
 <p>
 Refer to the <xref href="https://www.postgresql.org/docs/9.1/static/plperl.html" scope="external" format="html">
@@ -52,10 +49,18 @@ PostgreSQL PL/Perl documentation
 Limitations of the Greenplum Database PL/Perl language include:
 <ul>
 <li>Greenplum Database does not support PL/Perl triggers.</li>
-<li>PL/Perl has some limitations with respect to communication between interpreters
-and the number of interpreters running in a single process. Refer to <xref href="https://www.postgresql.org/docs/9.1/static/plperl-under-the-hood.html#PLPERL-MISSING" scope="external" format="html"> Limitations and Missing Features</xref>
-in the PostgreSQL documentation for additional information on this and other
-limitations of PL/Perl.</li>
+<li>PL/Perl functions cannot call each other directly.</li>
+<li>SPI is not yet fully implemented.</li>
+<li>If you fetch very large data sets using <codeph>spi_exec_query()</codeph>, you should be
+aware that these will all go into memory. You can avoid this problem by using
+<codeph>spi_query()/spi_fetchrow()</codeph>. A similar problem occurs if a
+set-returning function passes a large set of rows back to Greenplum Database
+via a <codeph>return</codeph> statement. Use <codeph>return_next</codeph> for
+each row returned to avoid this problem.</li>
+<li>When a session ends normally, not due to a fatal error, PL/Perl executes any
+<codeph>END</codeph> blocks that you have defined. No other actions are currently
+performed. (File handles are not automatically flushed and objects are not
+automatically destroyed.)</li>
 </ul> </p>
 </body>
 </topic>
@@ -71,17 +76,23 @@ PL/Perl includes trusted and untrusted language variants.
 The PL/Perl trusted language is named <codeph>plperl</codeph>. The trusted PL/Perl
 language restricts file system operations, as well as <codeph>require</codeph>,
 <codeph>use</codeph>, and other statements that could potentially interact with
-the operating system and database server process. With these restrictions in
+the operating system or database server process. With these restrictions in
 place, any Greenplum Database user can create and execute functions in the trusted
 <codeph>plperl</codeph> language.
 </p>
 <p>
 The PL/Perl untrusted language is named <codeph>plperlu</codeph>. You cannot
-restrict operation of functions created with the <codeph>plperlu</codeph>
+restrict the operation of functions you create with the <codeph>plperlu</codeph>
 untrusted language. Only database superusers have privileges to create untrusted
 PL/Perl user-defined functions. And only database superusers and other database
-users explicitly granted the permissions can execute untrusted PL/Perl
+users that are explicitly granted the permissions can execute untrusted PL/Perl
 user-defined functions.
+</p>
+<p>
+PL/Perl has limitations with respect to communication between interpreters
+and the number of interpreters running in a single process. Refer to the
+PostgreSQL <xref href="https://www.postgresql.org/docs/9.1/static/plperl-trusted.html" scope="external" format="html">Trusted and Untrusted PL/Perl</xref>
+documentation for additional information.
 </p>
 </body>
 </topic>
@@ -93,16 +104,19 @@ user-defined functions.
 You must register the PL/Perl language with a database before you can create and
 execute a PL/Perl user-defined function within that database. To remove PL/Perl
 support, you must explicitly remove the extension from each database in which it
-was used. You must be a database superuser or owner to register and remove trusted
-languages in Greenplum databases.
+was registered. You must be a database superuser or owner to register or remove
+trusted languages in Greenplum databases.
 </p>
-<note>Only database superusers may register or remove support for the untrusted
-PL/Perl language <codeph>plperlu</codeph>.</note>
+<note>Only database superusers may register or remove support for the
+<i>untrusted</i> PL/Perl language <codeph>plperlu</codeph>.</note>
 <p>
-Before you enable or remove PL/Perl support from a database, make sure that your
-Greenplum database is running, you have sourced <codeph>greenplum_path.sh</codeph>,
-and that the <codeph>$MASTER_DATA_DIRECTORY</codeph> and <codeph>$GPHOME</codeph>
-environment variables are set.
+Before you enable or remove PL/Perl support in a database, ensure that:
+<ul>
+<li>Your Greenplum Database is running.</li>
+<li>You have sourced <codeph>greenplum_path.sh</codeph>.</li>
+<li>You have set the <codeph>$MASTER_DATA_DIRECTORY</codeph> and
+<codeph>$GPHOME</codeph> environment variables.</li>
+</ul>
 </p>
 </body>
 <topic id="topic61" xml:lang="en">
@@ -140,8 +154,10 @@ Type "help" for help.
 testdb=# DROP LANGUAGE plperl;
 </codeblock>
 <p>
-When you remove PL/Perl language support from a database, any user-defined PL/Perl
-functions that you created in the database will no longer be available.
+The default <codeph>DROP LANGUAGE</codeph> behavior is <codeph>RESTRICT</codeph>;
+the command fails if any existing objects (such as functions) depend on the
+language. Specify the <codeph>CASCADE</codeph> clause to also drop all dependent
+objects, including functions that you created with PL/Perl.
 </p>
 </body>
 </topic>
@@ -175,8 +191,9 @@ PL/Perl arguments and results are handled as they are in Perl. Arguments you pas
 in to a PL/Perl function are accessed via the <codeph>@_</codeph> array. You
 return a result value with the <codeph>return</codeph> statement, or as the last
 expression evaluated in the function. A PL/Perl function cannot directly return a
-list because you call it in a scalar context. You can return non-scalar types such
-as arrays, records, and sets in a PL/Perl function by returning a reference.
+non-scalar type because you call it in a scalar context. You can return non-scalar
+types such as arrays, records, and sets in a PL/Perl function by returning a
+reference.
 </p>
 <p>
 PL/Perl treats null argument values as "undefined". Adding the
@@ -358,7 +375,7 @@ to the original encoding.</li>
 <li>Nesting named PL/Perl subroutines retains the same dangers as in Perl.</li>
 <li>Only the untrusted PL/Perl language variant supports module import. Use
 <codeph>plperlu</codeph> with care.</li>
-<li>Any module that you use in a <codeph>plperlu</codeph> function must be available from the same location on all Greenplum hosts.</li>
+<li>Any module that you use in a <codeph>plperlu</codeph> function must be available from the same location on all Greenplum Database hosts.</li>
 </ul>
 </p>
 </body>
