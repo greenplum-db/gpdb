@@ -1,3 +1,4 @@
+#if 0
 /*-------------------------------------------------------------------------
  *
  * nodeSeqscan.h
@@ -23,20 +24,6 @@ extern void ExecEndSeqScan(SeqScanState *node);
 extern void ExecSeqMarkPos(SeqScanState *node);
 extern void ExecSeqRestrPos(SeqScanState *node);
 extern void ExecSeqReScan(SeqScanState *node, ExprContext *exprCtxt);
-extern void ExecEagerFreeSeqScan(SeqScanState *node);
-
-/* Gpmon stuff */
-enum 
-{
-	GPMON_SEQSCAN_PAGE = GPMON_QEXEC_M_NODE_START,
-	GPMON_SEQSCAN_RESTOREPOS,
-	GPMON_SEQSCAN_RESCAN,
-	GPMON_SEQSCAN_TOTAL,
-};
-
-static inline gpmon_packet_t * GpmonPktFromSeqScanState(SeqScanState *node)
-{
-	return &node->ps.gpmon_pkt;
-}
 
 #endif   /* NODESEQSCAN_H */
+#endif
