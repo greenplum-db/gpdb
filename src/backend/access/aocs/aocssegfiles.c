@@ -352,16 +352,20 @@ GetAllAOCSFileSegInfo_pg_aocsseg_rel(int numOfColumns,
 
 		Assert(!null[Anum_pg_aocs_vpinfo - 1]);
         {
+            uint32 len;
             struct varlena *v = (struct varlena *) DatumGetPointer(d[Anum_pg_aocs_vpinfo - 1]);
             struct varlena *dv = pg_detoast_datum(v);
 
             /* 
              * VARSIZE(dv) may be less than aocs_vpinfo_size, in case of
              * add column, we try to do a ctas from old table to new table.
+             *
+             * Also, VARSIZE(dv) may be greater than aocs_vpinfo_size, in case
+             * of begin transaction, add column and assign a new segno for insert,
+             * and then rollback transaction.
              */
-            Assert(VARSIZE(dv) <= aocs_vpinfo_size(nvp));
-
-            memcpy(&seginfo->vpinfo, dv, VARSIZE(dv));
+            len = (VARSIZE(dv) < aocs_vpinfo_size(nvp)) ? VARSIZE(dv) : aocs_vpinfo_size(nvp);
+            memcpy(&seginfo->vpinfo, dv, len);
             if(dv!=v)
                 pfree(dv);
         }
