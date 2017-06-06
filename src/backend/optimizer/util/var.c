@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/var.c,v 1.73.2.1 2010/07/08 00:14:16 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/var.c,v 1.75 2008/08/14 18:47:59 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -752,20 +752,25 @@ flatten_join_alias_vars_mutator(Node *node,
 
 		return newvar;
 	}
-	if (IsA(node, InClauseInfo))
+	if (IsA(node, FlattenedSubLink))
 	{
-		/* Copy the InClauseInfo node with correct mutation of subnodes */
-		InClauseInfo *ininfo;
+		/* Copy the FlattenedSubLink node with correct mutation of subnodes */
+		FlattenedSubLink *fslink;
 
-		ininfo = (InClauseInfo *) expression_tree_mutator(node,
-											 flatten_join_alias_vars_mutator,
-														  (void *) context);
-		/* now fix InClauseInfo's relid sets */
+		fslink = (FlattenedSubLink *) expression_tree_mutator(node,
+															  flatten_join_alias_vars_mutator,
+															  (void *) context);
+		/* now fix FlattenedSubLink's relid sets */
 		if (context->sublevels_up == 0)
-			ininfo->righthand = alias_relid_set(context->root,
-												ininfo->righthand);
-		return (Node *) ininfo;
+		{
+			fslink->lefthand = alias_relid_set(context->root,
+											   fslink->lefthand);
+			fslink->righthand = alias_relid_set(context->root,
+												fslink->righthand);
+		}
+		return (Node *) fslink;
 	}
+
 	if (IsA(node, Query))
 	{
 		/* Recurse into RTE subquery or not-yet-planned sublink subquery */

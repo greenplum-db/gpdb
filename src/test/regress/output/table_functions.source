@@ -1759,7 +1759,7 @@ explain SELECT * FROM example where (a,b) in (select * from multiset_5( TABLE(SE
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice2; segments: 2)  (cost=2.58..4.76 rows=2 width=16)
-   ->  Hash EXISTS Join  (cost=2.58..4.76 rows=2 width=16)
+   ->  Hash Semi Join  (cost=2.58..4.76 rows=2 width=16)
          Hash Cond: table_function.example.a = multiset_5.a AND table_function.example.b = multiset_5.b
          ->  Seq Scan on example  (cost=0.00..2.10 rows=5 width=16)
          ->  Hash  (cost=2.43..2.43 rows=5 width=36)
@@ -1774,7 +1774,7 @@ explain SELECT * FROM example where (a,b) in (select * from multiset_5( TABLE(SE
                                                    QUERY PLAN                                                    
 -----------------------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice3; segments: 2)  (cost=2.58..4.76 rows=2 width=16)
-   ->  Hash EXISTS Join  (cost=2.58..4.76 rows=2 width=16)
+   ->  Hash Semi Join  (cost=2.58..4.76 rows=2 width=16)
          Hash Cond: table_function.example.a = multiset_5.a AND table_function.example.b = multiset_5.b
          ->  Seq Scan on example  (cost=0.00..2.10 rows=5 width=16)
          ->  Hash  (cost=2.43..2.43 rows=5 width=36)
@@ -1791,7 +1791,7 @@ explain SELECT * FROM multiset_5( TABLE(SELECT a, b from example)) where (a,b) i
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice2; segments: 2)  (cost=2.25..4.76 rows=2 width=36)
-   ->  Hash EXISTS Join  (cost=2.25..4.76 rows=2 width=36)
+   ->  Hash Semi Join  (cost=2.25..4.76 rows=2 width=36)
          Hash Cond: multiset_5.a = table_function.example.a AND multiset_5.b = table_function.example.b
          ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..2.43 rows=5 width=36)
                Hash Key: multiset_5.a
@@ -1806,7 +1806,7 @@ explain SELECT * FROM multiset_5( TABLE(SELECT a, b from example scatter by b)) 
                                                 QUERY PLAN                                                 
 -----------------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice3; segments: 2)  (cost=2.25..4.76 rows=2 width=36)
-   ->  Hash EXISTS Join  (cost=2.25..4.76 rows=2 width=36)
+   ->  Hash Semi Join  (cost=2.25..4.76 rows=2 width=36)
          Hash Cond: multiset_5.a = table_function.example.a AND multiset_5.b = table_function.example.b
          ->  Redistribute Motion 2:2  (slice2; segments: 2)  (cost=0.00..2.43 rows=5 width=36)
                Hash Key: multiset_5.a
@@ -1874,20 +1874,21 @@ explain SELECT * FROM multiset_5( TABLE( SELECT count(*)::integer, 'hello'::text
 explain SELECT * FROM example_r WHERE (10, 'hello') in (SELECT * FROM multiset_5( TABLE( SELECT count(*)::integer, 'hello'::text from example_r )));
                                                    QUERY PLAN                                                   
 ----------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice3; segments: 2)  (cost=2.28..4.51 rows=5 width=16)
-   ->  Nested Loop  (cost=2.28..4.51 rows=5 width=16)
-         ->  Broadcast Motion 1:2  (slice2; segments: 1)  (cost=2.28..2.31 rows=1 width=36)
-               ->  HashAggregate  (cost=2.31..2.32 rows=1 width=36)
-                     Group By: multiset_5.a, multiset_5.b
-                     ->  Table Function Scan on multiset_5  (cost=2.24..2.27 rows=8 width=36)
-                           Filter: 10 = a AND 'hello'::text = b
-                           ->  Aggregate  (cost=2.24..2.25 rows=1 width=36)
-                                 ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=2.13..2.23 rows=1 width=8)
-                                       ->  Aggregate  (cost=2.13..2.14 rows=1 width=8)
-                                             ->  Seq Scan on example_r  (cost=0.00..2.10 rows=5 width=0)
-         ->  Seq Scan on example_r  (cost=0.00..2.10 rows=5 width=16)
- Settings:  gp_segments_for_planner=8
-(13 rows)
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=3.27..6.37 rows=10 width=16)
+   ->  Result  (cost=3.27..6.37 rows=4 width=16)
+         One-Time Filter: (hashed subplan)
+         ->  Seq Scan on example_r  (cost=3.27..6.37 rows=4 width=16)
+         SubPlan 1
+           ->  Materialize  (cost=3.27..3.28 rows=1 width=36)
+                 ->  Broadcast Motion 1:3  (slice2; segments: 1)  (cost=3.24..3.27 rows=1 width=36)
+                       ->  Table Function Scan on multiset_5  (cost=3.24..3.27 rows=1 width=36)
+                             ->  Aggregate  (cost=3.24..3.25 rows=1 width=36)
+                                   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=3.13..3.23 rows=1 width=8)
+                                         ->  Aggregate  (cost=3.13..3.14 rows=1 width=8)
+                                               ->  Seq Scan on example_r  (cost=0.00..3.10 rows=4 width=0)
+ Settings:  gp_segments_for_planner=8; optimizer=off
+ Optimizer status: legacy query optimizer
+(14 rows)
 
 explain SELECT * FROM multiset_5( TABLE( SELECT * from example_v) );
                                  QUERY PLAN                                  

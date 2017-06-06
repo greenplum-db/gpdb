@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/planmain.h,v 1.106.2.1 2008/04/17 21:22:23 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/planmain.h,v 1.111 2008/08/14 18:48:00 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -215,7 +215,6 @@ extern int	join_collapse_limit;
 
 extern void add_base_rels_to_query(PlannerInfo *root, Node *jtnode);
 extern void build_base_rel_tlists(PlannerInfo *root, List *final_tlist);
-extern void add_IN_vars_to_tlists(PlannerInfo *root);
 extern void add_vars_to_targetlist(PlannerInfo *root, List *vars,
 					   Relids where_needed);
 extern List *deconstruct_jointree(PlannerInfo *root);

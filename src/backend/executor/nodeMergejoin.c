@@ -19,7 +19,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeMergejoin.c,v 1.90.2.1 2010/05/28 01:14:16 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeMergejoin.c,v 1.92 2008/08/14 18:47:58 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -867,7 +867,7 @@ ExecMergeJoin(MergeJoinState *node)
 				innerTupleSlot = node->mj_InnerTupleSlot;
 				econtext->ecxt_innertuple = innerTupleSlot;
 
-				if (node->js.jointype == JOIN_IN &&
+				if (node->js.jointype == JOIN_SEMI &&
 					node->mj_MatchedOuter)
 					qualResult = false;
 				else
@@ -883,7 +883,7 @@ ExecMergeJoin(MergeJoinState *node)
 					node->mj_MatchedInner = true;
 
 					/* In an antijoin, we never return a matched tuple */
-					if (node->js.jointype == JOIN_LASJ) 
+					if (node->js.jointype == JOIN_ANTI)
 					{
 						node->mj_JoinState = EXEC_MJ_NEXTOUTER;
 						break;
@@ -1634,12 +1634,12 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 	switch (node->join.jointype)
 	{
 		case JOIN_INNER:
-		case JOIN_IN:
+		case JOIN_SEMI:
 			mergestate->mj_FillOuter = false;
 			mergestate->mj_FillInner = false;
 			break;
 		case JOIN_LEFT:
-		case JOIN_LASJ:
+		case JOIN_ANTI:
 			mergestate->mj_FillOuter = true;
 			mergestate->mj_FillInner = false;
 			mergestate->mj_NullInnerTupleSlot =
@@ -1805,7 +1805,7 @@ initGpmonPktForMergeJoin(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *esta
 			case JOIN_LEFT:
 				type = PMNT_MergeLeftJoin;
 				break;
-			case JOIN_LASJ:
+			case JOIN_ANTI:
 				type = PMNT_MergeLeftAntiSemiJoin;
 				break;
 			case JOIN_FULL:
@@ -1814,7 +1814,7 @@ initGpmonPktForMergeJoin(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *esta
 			case JOIN_RIGHT:
 				type = PMNT_MergeRightJoin;
 				break;
-			case JOIN_IN:
+			case JOIN_SEMI:
 				type = PMNT_MergeExistsJoin;
 				break;
 			case JOIN_REVERSE_IN:

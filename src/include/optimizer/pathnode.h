@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/pathnode.h,v 1.77 2008/01/01 19:45:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/pathnode.h,v 1.78 2008/08/14 18:48:00 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -68,6 +68,11 @@ extern TidPath *create_tidscan_path(PlannerInfo *root, RelOptInfo *rel,
 extern AppendPath *create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths);
 extern ResultPath *create_result_path(List *quals);
 extern MaterialPath *create_material_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath);
+extern UniquePath *create_unique_path(PlannerInfo *root,
+									  Path *subpath,
+									  List        *distinct_on_exprs,
+									  List		   *distinct_on_operators,
+									  Relids       distinct_on_rowid_relids);
 extern Path *create_subqueryscan_path(PlannerInfo *root, RelOptInfo *rel, List *pathkeys);
 extern Path *create_functionscan_path(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte);
 extern Path *create_tablefunction_path(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte);
@@ -79,6 +84,7 @@ extern bool path_contains_inner_index(Path *path);
 extern NestPath *create_nestloop_path(PlannerInfo *root,
 					 RelOptInfo *joinrel,
 					 JoinType jointype,
+					 SpecialJoinInfo *sjinfo,
 					 Path *outer_path,
 					 Path *inner_path,
 					 List *restrict_clauses,
@@ -88,6 +94,7 @@ extern NestPath *create_nestloop_path(PlannerInfo *root,
 extern MergePath *create_mergejoin_path(PlannerInfo *root,
 					  RelOptInfo *joinrel,
 					  JoinType jointype,
+					  SpecialJoinInfo *sjinfo,
 					  Path *outer_path,
 					  Path *inner_path,
 					  List *restrict_clauses,
@@ -100,6 +107,7 @@ extern MergePath *create_mergejoin_path(PlannerInfo *root,
 extern HashPath *create_hashjoin_path(PlannerInfo *root,
 					 RelOptInfo *joinrel,
 					 JoinType jointype,
+					 SpecialJoinInfo *sjinfo,
 					 Path *outer_path,
 					 Path *inner_path,
 					 List *restrict_clauses,
@@ -117,7 +125,7 @@ extern RelOptInfo *build_join_rel(PlannerInfo *root,
 			   Relids joinrelids,
 			   RelOptInfo *outer_rel,
 			   RelOptInfo *inner_rel,
-			   JoinType jointype,
+			   SpecialJoinInfo *sjinfo,
 			   List **restrictlist_ptr);
 extern void build_joinrel_tlist(PlannerInfo *root, RelOptInfo *joinrel, List *input_tlist);
 
@@ -134,5 +142,7 @@ extern CdbRelColumnInfo *cdb_find_pseudo_column(PlannerInfo *root, Var *var);
 extern CdbRelColumnInfo *cdb_rte_find_pseudo_column(RangeTblEntry *rte, AttrNumber attno);
 
 extern CdbRelDedupInfo *cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel);
+
+extern bool hasSemiJoin (List *join_info_list);
 
 #endif   /* PATHNODE_H */

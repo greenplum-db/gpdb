@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/outfuncs.c,v 1.322.2.3 2010/08/18 15:22:15 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/outfuncs.c,v 1.334 2008/08/14 18:47:58 tgl Exp $
  *
  * NOTES
  *	  Every node type that can appear in stored rules' parsetrees *must*
@@ -1977,8 +1977,7 @@ _outPlannerInfo(StringInfo str, PlannerInfo *node)
 	WRITE_NODE_FIELD(left_join_clauses);
 	WRITE_NODE_FIELD(right_join_clauses);
 	WRITE_NODE_FIELD(full_join_clauses);
-	WRITE_NODE_FIELD(oj_info_list);
-	WRITE_NODE_FIELD(in_info_list);
+	WRITE_NODE_FIELD(join_info_list);
 	WRITE_NODE_FIELD(append_rel_list);
 	WRITE_NODE_FIELD(query_pathkeys);
 	WRITE_NODE_FIELD(group_pathkeys);
@@ -1986,7 +1985,6 @@ _outPlannerInfo(StringInfo str, PlannerInfo *node)
 	WRITE_FLOAT_FIELD(total_table_pages, "%.0f");
 	WRITE_FLOAT_FIELD(tuple_fraction, "%.4f");
 	WRITE_BOOL_FIELD(hasJoinRTEs);
-	WRITE_BOOL_FIELD(hasOuterJoins);
 	WRITE_BOOL_FIELD(hasHavingQual);
 	WRITE_BOOL_FIELD(hasPseudoConstantQuals);
 }
@@ -2199,31 +2197,32 @@ _outInnerIndexscanInfo(StringInfo str, InnerIndexscanInfo *node)
 	WRITE_NODE_FIELD(cheapest_total_innerpath);
 }
 
-#ifndef COMPILING_BINARY_FUNCS
 static void
-_outOuterJoinInfo(StringInfo str, OuterJoinInfo *node)
+_outFlattenedSubLink(StringInfo str, FlattenedSubLink *node)
 {
-	WRITE_NODE_TYPE("OUTERJOININFO");
+	WRITE_NODE_TYPE("FLATTENEDSUBLINK");
+	
+	WRITE_ENUM_FIELD(jointype, JoinType);
+	WRITE_BITMAPSET_FIELD(lefthand);
+	WRITE_BITMAPSET_FIELD(righthand);
+	WRITE_NODE_FIELD(quals);
+	WRITE_BOOL_FIELD(try_join_unique);	/*CDB*/
+}
 
+static void
+_outSpecialJoinInfo(StringInfo str, SpecialJoinInfo *node)
+{
+	WRITE_NODE_TYPE("SPECIALJOININFO");
+	
 	WRITE_BITMAPSET_FIELD(min_lefthand);
 	WRITE_BITMAPSET_FIELD(min_righthand);
 	WRITE_BITMAPSET_FIELD(syn_lefthand);
 	WRITE_BITMAPSET_FIELD(syn_righthand);
-	WRITE_ENUM_FIELD(join_type, JoinType);
+	WRITE_ENUM_FIELD(jointype, JoinType);
 	WRITE_BOOL_FIELD(lhs_strict);
 	WRITE_BOOL_FIELD(delay_upper_joins);
-}
-#endif /* COMPILING_BINARY_FUNCS */
-
-static void
-_outInClauseInfo(StringInfo str, InClauseInfo *node)
-{
-	WRITE_NODE_TYPE("INCLAUSEINFO");
-
-	WRITE_BITMAPSET_FIELD(righthand);
-    WRITE_BOOL_FIELD(try_join_unique);                  /*CDB*/
-	WRITE_NODE_FIELD(sub_targetlist);
-	WRITE_NODE_FIELD(in_operators);
+	WRITE_NODE_FIELD(join_quals);
+	WRITE_BOOL_FIELD(try_join_unique);	/*CDB*/
 }
 
 static void
@@ -4685,11 +4684,11 @@ _outNode(StringInfo str, void *obj)
 			case T_InnerIndexscanInfo:
 				_outInnerIndexscanInfo(str, obj);
 				break;
-			case T_OuterJoinInfo:
-				_outOuterJoinInfo(str, obj);
+			case T_FlattenedSubLink:
+				_outFlattenedSubLink(str, obj);
 				break;
-			case T_InClauseInfo:
-				_outInClauseInfo(str, obj);
+			case T_SpecialJoinInfo:
+				_outSpecialJoinInfo(str, obj);
 				break;
 			case T_AppendRelInfo:
 				_outAppendRelInfo(str, obj);

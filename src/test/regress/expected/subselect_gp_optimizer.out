@@ -137,7 +137,7 @@ explain select * from mrs_t1 where exists (select x from mrs_t1 where x < -1);
                                             QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..1293.00 rows=20 width=4)
-   ->  Nested Loop EXISTS Join  (cost=0.00..1293.00 rows=10 width=4)
+   ->  Nested Loop Semi Join  (cost=0.00..1293.00 rows=10 width=4)
          Join Filter: true
          ->  Table Scan on mrs_t1  (cost=0.00..431.00 rows=10 width=4)
          ->  Materialize  (cost=0.00..431.00 rows=2 width=1)
@@ -157,7 +157,7 @@ explain select * from mrs_t1 where exists (select x from mrs_t1 where x = 1);
                                             QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..1293.00 rows=20 width=4)
-   ->  Nested Loop EXISTS Join  (cost=0.00..1293.00 rows=10 width=4)
+   ->  Nested Loop Semi Join  (cost=0.00..1293.00 rows=10 width=4)
          Join Filter: true
          ->  Table Scan on mrs_t1  (cost=0.00..431.00 rows=10 width=4)
          ->  Materialize  (cost=0.00..431.00 rows=2 width=1)
@@ -818,7 +818,7 @@ explain select * from csq_pullup t0 where not exists (select 1 from csq_pullup t
                                       QUERY PLAN                                      
 --------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..862.00 rows=1 width=19)
-   ->  Hash Left Anti Semi Join  (cost=0.00..862.00 rows=1 width=19)
+   ->  Hash Anti Join  (cost=0.00..862.00 rows=1 width=19)
          Hash Cond: public.csq_pullup.t = public.csq_pullup.t
          ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=19)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
@@ -843,7 +843,7 @@ explain select * from csq_pullup t0 where not exists (select 1 from csq_pullup t
                                             QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..862.00 rows=1 width=19)
-   ->  Hash Left Anti Semi Join  (cost=0.00..862.00 rows=1 width=19)
+   ->  Hash Anti Join  (cost=0.00..862.00 rows=1 width=19)
          Hash Cond: public.csq_pullup.i = (public.csq_pullup.i + 1)
          ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=19)
          ->  Hash  (cost=431.00..431.00 rows=2 width=4)
@@ -878,7 +878,7 @@ explain select * from subselect_t1 where x in (select y from subselect_t2);
                                     QUERY PLAN                                    
 ----------------------------------------------------------------------------------
  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..862.00 rows=2 width=4)
-   ->  Hash EXISTS Join  (cost=0.00..862.00 rows=1 width=4)
+   ->  Hash Semi Join  (cost=0.00..862.00 rows=1 width=4)
          Hash Cond: subselect_t1.x = subselect_t2.y
          ->  Table Scan on subselect_t1  (cost=0.00..431.00 rows=1 width=4)
          ->  Hash  (cost=431.00..431.00 rows=2 width=4)
@@ -929,7 +929,7 @@ explain select count(*) from subselect_t1 where x in (select y from subselect_t2
  Aggregate  (cost=0.00..862.00 rows=1 width=8)
    ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..862.00 rows=1 width=8)
          ->  Aggregate  (cost=0.00..862.00 rows=1 width=8)
-               ->  Hash EXISTS Join  (cost=0.00..862.00 rows=1 width=1)
+               ->  Hash Semi Join  (cost=0.00..862.00 rows=1 width=1)
                      Hash Cond: subselect_t1.x = subselect_t2.y
                      ->  Table Scan on subselect_t1  (cost=0.00..431.00 rows=1 width=4)
                      ->  Hash  (cost=431.00..431.00 rows=2 width=4)

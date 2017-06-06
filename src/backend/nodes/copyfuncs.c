@@ -16,7 +16,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/copyfuncs.c,v 1.388.2.2 2010/08/18 15:22:15 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/copyfuncs.c,v 1.400 2008/08/14 18:47:58 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -2102,38 +2102,40 @@ _copyRestrictInfo(RestrictInfo *from)
 }
 
 /*
- * _copyOuterJoinInfo
+ * _copyFlattenedSubLink
  */
-static OuterJoinInfo *
-_copyOuterJoinInfo(OuterJoinInfo *from)
+static FlattenedSubLink *
+_copyFlattenedSubLink(FlattenedSubLink *from)
 {
-	OuterJoinInfo *newnode = makeNode(OuterJoinInfo);
-
-	COPY_BITMAPSET_FIELD(min_lefthand);
-	COPY_BITMAPSET_FIELD(min_righthand);
-	COPY_BITMAPSET_FIELD(syn_lefthand);
-	COPY_BITMAPSET_FIELD(syn_righthand);
-	COPY_SCALAR_FIELD(join_type);
-	COPY_SCALAR_FIELD(lhs_strict);
-	COPY_SCALAR_FIELD(delay_upper_joins);
-
+	FlattenedSubLink *newnode = makeNode(FlattenedSubLink);
+	
+	COPY_SCALAR_FIELD(jointype);
+	COPY_BITMAPSET_FIELD(lefthand);
+	COPY_BITMAPSET_FIELD(righthand);
+	COPY_NODE_FIELD(quals);
+	COPY_SCALAR_FIELD(try_join_unique);	/* CDB */
+	
 	return newnode;
 }
 
 /*
- * _copyInClauseInfo
+ * _copySpecialJoinInfo
  */
-static InClauseInfo *
-_copyInClauseInfo(InClauseInfo *from)
+static SpecialJoinInfo *
+_copySpecialJoinInfo(SpecialJoinInfo *from)
 {
-	InClauseInfo *newnode = makeNode(InClauseInfo);
-
-	COPY_BITMAPSET_FIELD(righthand);
-	COPY_NODE_FIELD(sub_targetlist);
-	COPY_NODE_FIELD(in_operators);
-
-    COPY_SCALAR_FIELD(try_join_unique);                 /*CDB*/
-
+	SpecialJoinInfo *newnode = makeNode(SpecialJoinInfo);
+	
+	COPY_BITMAPSET_FIELD(min_lefthand);
+	COPY_BITMAPSET_FIELD(min_righthand);
+	COPY_BITMAPSET_FIELD(syn_lefthand);
+	COPY_BITMAPSET_FIELD(syn_righthand);
+	COPY_SCALAR_FIELD(jointype);
+	COPY_SCALAR_FIELD(lhs_strict);
+	COPY_SCALAR_FIELD(delay_upper_joins);
+	COPY_NODE_FIELD(join_quals);
+	COPY_SCALAR_FIELD(try_join_unique);	/* CDB */
+	
 	return newnode;
 }
 
@@ -4788,12 +4790,11 @@ copyObject(void *from)
 		case T_RestrictInfo:
 			retval = _copyRestrictInfo(from);
 			break;
-		case T_OuterJoinInfo:
-			retval = _copyOuterJoinInfo(from);
+		case T_FlattenedSubLink:
+			retval = _copyFlattenedSubLink(from);
 			break;
-		case T_InClauseInfo:
-			retval = _copyInClauseInfo(from);
-			break;
+		case T_SpecialJoinInfo:
+			retval = _copySpecialJoinInfo(from);
 		case T_AppendRelInfo:
 			retval = _copyAppendRelInfo(from);
 			break;

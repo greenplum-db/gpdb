@@ -270,15 +270,13 @@ INSERT INTO foorescan values(5009,5,'abc.5009.5');
 CREATE FUNCTION foorescan(int,int) RETURNS setof foorescan AS 'SELECT * FROM foorescan WHERE fooid >= $1 and fooid < $2 ;' LANGUAGE SQL;
 --invokes ExecFunctionReScan
 SELECT * FROM foorescan f WHERE f.fooid IN (SELECT fooid FROM foorescan(5002,5004)) ORDER BY 1,2;
-ERROR:  query plan with multiple segworker groups is not supported
-HINT:  likely caused by a function that reads or modifies data in a distributed table
-CONTEXT:  SQL function "foorescan" statement 1
+ERROR:  function cannot execute on segment because it accesses relation "public.foorescan"
+DETAIL:  SQL function "foorescan" during startup
 CREATE VIEW vw_foorescan AS SELECT * FROM foorescan(5002,5004);
 --invokes ExecFunctionReScan
 SELECT * FROM foorescan f WHERE f.fooid IN (SELECT fooid FROM vw_foorescan) ORDER BY 1,2;
-ERROR:  query plan with multiple segworker groups is not supported
-HINT:  likely caused by a function that reads or modifies data in a distributed table
-CONTEXT:  SQL function "foorescan" statement 1
+ERROR:  function cannot execute on segment because it accesses relation "public.foorescan"
+DETAIL:  SQL function "foorescan" during startup
 CREATE TABLE barrescan (fooid int primary key);
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "barrescan_pkey" for table "barrescan"
 INSERT INTO barrescan values(5003);

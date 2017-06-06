@@ -223,7 +223,7 @@ explain select * from pt where ptid in (select tid from t where t1 = 'hello' || 
                                                QUERY PLAN                                                
 ---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.01 rows=9 width=31)
-   ->  Hash EXISTS Join  (cost=0.00..862.01 rows=3 width=31)
+   ->  Hash Semi Join  (cost=0.00..862.01 rows=3 width=31)
          Hash Cond: pt.ptid = t.tid
          ->  Dynamic Table Scan on pt (dynamic scan id: 1)  (cost=0.00..431.00 rows=18 width=31)
          ->  Hash  (cost=100.00..100.00 rows=34 width=4)
@@ -263,7 +263,7 @@ explain select * from pt where exists (select 1 from t where tid = ptid and t1 =
                                                QUERY PLAN                                                
 ---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.01 rows=9 width=31)
-   ->  Hash EXISTS Join  (cost=0.00..862.01 rows=3 width=31)
+   ->  Hash Semi Join  (cost=0.00..862.01 rows=3 width=31)
          Hash Cond: pt.ptid = t.tid
          ->  Dynamic Table Scan on pt (dynamic scan id: 1)  (cost=0.00..431.00 rows=18 width=31)
          ->  Hash  (cost=100.00..100.00 rows=34 width=4)

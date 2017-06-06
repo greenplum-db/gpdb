@@ -11,7 +11,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/createplan.c,v 1.237.2.2 2009/07/17 23:20:15 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/createplan.c,v 1.245 2008/08/14 18:47:59 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -185,7 +185,7 @@ create_plan(PlannerInfo *root, Path *path)
 	Plan	   *plan;
 
 	/* Modify path to support unique rowid operation for subquery preds. */
-	if (root->in_info_list)
+	if (root->join_info_list && hasSemiJoin(root->join_info_list))
 		cdbpath_dedup_fixup(root, path);
 
 	/* Generate the Plan tree. */
@@ -803,8 +803,8 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path)
 {
 	Plan	   *plan;
 	Plan	   *subplan;
-	List	   *uniq_exprs;
 	List	   *in_operators;
+	List	   *uniq_exprs;
 	List	   *newtlist;
 	int			nextresno;
 	bool		newitems;
@@ -838,7 +838,7 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path)
 		return (Plan *) limitplan;
 	}
 
-	/*----------
+	/*
 	 * As constructed, the subplan has a "flat" tlist containing just the
 	 * Vars needed here and at upper levels.  The values we are supposed
 	 * to unique-ify may be expressions in these variables.  We have to
@@ -853,13 +853,6 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path)
 	 * Therefore newtlist starts from build_relation_tlist() not just a
 	 * copy of the subplan's tlist; and we don't install it into the subplan
 	 * unless we are sorting or stuff has to be added.
-	 *
-	 * To find the correct list of values to unique-ify, we look in the
-	 * information saved for IN expressions.  If this code is ever used in
-	 * other scenarios, some other way of finding what to unique-ify will
-	 * be needed.  The IN clause's operators are needed too, since they
-	 * determine what the meaning of "unique" is in this context.
-	 *----------
 	 */
 	uniq_exprs = best_path->distinct_on_exprs;	/* CDB */
 	in_operators = best_path->distinct_on_eq_operators; /* CDB */
