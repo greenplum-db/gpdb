@@ -2005,6 +2005,9 @@ AtPrepare_Locks(void)
 {
 	HASH_SEQ_STATUS status;
 	LOCALLOCK  *locallock;
+	TwoPhaseLockRecord record;
+	List *demotedLocks = NIL;
+	LockAcquireResult r;
 
 	/*
 	 * We don't need to touch shared memory for this --- all the necessary
@@ -2014,7 +2017,6 @@ AtPrepare_Locks(void)
 
 	while ((locallock = (LOCALLOCK *) hash_seq_search(&status)) != NULL)
 	{
-		TwoPhaseLockRecord record;
 		LOCALLOCKOWNER *lockOwners = locallock->lockOwners;
 		int			i;
 
@@ -2061,10 +2063,52 @@ AtPrepare_Locks(void)
 		 * Create a 2PC record.
 		 */
 		memcpy(&(record.locktag), &(locallock->tag.lock), sizeof(LOCKTAG));
-		record.lockmode = locallock->tag.mode;
+
+		/*
+		 * Downgrade AccessExclusiveLock to ExclusiveLock on system
+		 * tables before persisting the TwoPhaseLockRecord.  So that
+		 * in COMMIT phase of 2PC, the dummy PGPROC will not block
+		 * legitimate backends from being initialized.  This is
+		 * relevant if we either crash or fail over to mirror after
+		 * PREPARE phase is complete and COMMIT phase is handled
+		 * during recovery.  Doing this is not unsafe, because a
+		 * preparing transaction has finished writing every data file
+		 * it wanted to and no further writes are possible.  So a
+		 * reader would not see partially updated data and MVCC
+		 * protects us from effects of transactions yet to be
+		 * committed.
+		 */
+		if (locallock->tag.lock.locktag_type == LOCKTAG_RELATION &&
+			locallock->tag.mode == AccessExclusiveLock &&
+			locallock->tag.lock.locktag_field2 < FirstNormalObjectId)
+		{
+			record.lockmode = ExclusiveLock;
+			demotedLocks = lcons(locallock, demotedLocks);
+		}
+		else
+		{
+			record.lockmode = locallock->tag.mode;
+		}
 
 		RegisterTwoPhaseRecord(TWOPHASE_RM_LOCK_ID, 0,
 							   &record, sizeof(TwoPhaseLockRecord));
+	}
+
+	/*
+	 * Make in-memory state consistent for the locks whose
+	 * TwoPhaseLockRecord's were written with downgraded mode.
+	 */
+	ListCell *cell;
+	foreach(cell, demotedLocks)
+	{
+		locallock = lfirst(cell);
+		r = LockAcquire(&locallock->tag.lock, ExclusiveLock, false, false);
+		elog(LOG, "downgrading AccessExclusiveLock id(%u,%u,%u,%u,%u,%u) to "
+			 "ExclusiveLock, lock acquire result: %d", locallock->tag.lock.locktag_field1,
+			 locallock->tag.lock.locktag_field2, locallock->tag.lock.locktag_field3,
+			 locallock->tag.lock.locktag_field4, locallock->tag.lock.locktag_type,
+			 locallock->tag.lock.locktag_lockmethodid, r);
+		LockRelease(&locallock->tag.lock, locallock->tag.mode, false);
 	}
 }
 
@@ -2721,7 +2765,10 @@ lock_twophase_postcommit(TransactionId xid, uint16 info,
 												HASH_FIND,
 												NULL);
 	if (!lock)
-		elog(PANIC, "failed to re-find shared lock object");
+		elog(PANIC, "failed to re-find shared lock id(%u,%u,%u,%u,%u,%u)",
+			 locktag->locktag_field1, locktag->locktag_field2,
+			 locktag->locktag_field3, locktag->locktag_field4,
+			 locktag->locktag_type, locktag->locktag_lockmethodid);
 
 	/*
 	 * Re-find the proclock object (ditto).
