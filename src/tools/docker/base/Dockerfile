@@ -30,7 +30,7 @@ RUN yum -y update \
                       zlib-devel
 
 RUN curl -SL https://bootstrap.pypa.io/get-pip.py | python \
-    && pip install psutil lockfile paramiko setuptools epydoc
+    && pip install psutil lockfile paramiko setuptools
 
 # compile GPDB
 

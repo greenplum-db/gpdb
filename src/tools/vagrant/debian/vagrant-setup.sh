@@ -22,7 +22,6 @@ pip install cffi --upgrade
 pip install lockfile
 pip install paramiko --upgrade
 pip install setuptools --upgrade
-pip install epydoc
 pip install --pre psutil
 pip install cryptography --upgrade
 

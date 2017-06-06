@@ -379,8 +379,7 @@ class MPPTestCase(tinctest.TINCTestCase):
     def defaultTestResult(self, stream=None, descriptions=None, verbosity=None):
         """
         TODO: This method should not be exposed as a public method. All result objects
-        will be internal. Should find out if epydocs allows some language to ignore
-        certain methods even if it does not start with an '_'.
+        will be internal.
 
         Return a custom result object for MPPTestCase. We need a handle on
         whether the test errored out / failed to honor metadata like 'restart'

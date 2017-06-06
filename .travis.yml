@@ -46,7 +46,6 @@ install:
   - pip install --user lockfile
   - pip install --user paramiko
   - pip install --user setuptools
-  - pip install --user epydoc
 
 ## ----------------------------------------------------------------------
 ## Build APR & APR-UTIL used to build gpfdist

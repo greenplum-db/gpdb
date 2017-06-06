@@ -26,7 +26,6 @@ apt-get install -y python-pip
 pip install lockfile
 pip install paramiko
 pip install setuptools
-pip install epydoc
 pip install psutil
 Note: debian8 required pip install --pre psutil
 
