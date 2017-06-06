@@ -8,9 +8,8 @@
       and optionally enables the data collection agents.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpperfmon_install</b>
-      [<b>--enable</b> <b>--password</b> <varname>gpmon_password</varname> <b>--port</b> <varname>gpdb_port</varname>]
-      [<b>--pgpass</b> <varname>path_to_file</varname>]
+      <codeblock><b>gpperfmon_install --port <varname>gpdb_port</varname> </b>
+      [<b>--enable</b> <b>--password</b> <varname>gpmon_password</varname> [<b>--pgpass</b> <varname>path_to_file</varname>]]
       [<b>--verbose</b>]
 
 <b>gpperfmon_install</b> <b>--help</b> | <b>-h</b> | <b>-?</b></codeblock>
@@ -19,13 +18,15 @@
       <title>Description</title>
       <p>The <codeph>gpperfmon_install</codeph> utility automates the steps required to enable the
         data collection agents. You must be the Greenplum Database system user
-          (<codeph>gpadmin</codeph>) in order to run this utility. If using the
-          <codeph>--enable</codeph> option, Greenplum Database must be restarted after the utility
-        completes.</p>
-      <p>When run without any options, the utility will just create the <codeph>gpperfmon</codeph>
-        database (the database used to store system metrics collected by the data collection
-        agents). When run with the <codeph>--enable</codeph> option, the utility will also run the
-        following additional tasks necessary to enable the data collection agents:</p>
+          (<codeph>gpadmin</codeph>) to run this utility. The <codeph>--port</codeph> option is
+        required. When using the <codeph>--enable</codeph> option, the <codeph>--password</codeph>
+        option is also required. If using the <codeph>--enable</codeph> option, Greenplum Database
+        must be restarted after the utility completes.</p>
+      <p>When run without the <codeph>--enable</codeph> option, the utility just creates the
+          <codeph>gpperfmon</codeph> database (the database used to store system metrics collected
+        by the data collection agents). When run with the <codeph>--enable</codeph> and
+          <codeph>--password</codeph> options, the utility also runs the following additional tasks
+        necessary to enable the data collection agents:</p>
       <ol>
         <li id="ou143278">Creates the <codeph>gpmon</codeph> superuser role in Greenplum Database.
           The data collection agents require this role to connect to the database and write their
@@ -38,28 +39,29 @@
             (<codeph>pg_hba.conf</codeph>):<codeblock>local      gpperfmon     gpmon                 md5
 host       all           gpmon  127.0.0.1/28   md5
 host       all           gpmon  ::1/128        md5</codeblock><p>The
-            second and third lines, the <codeph>host</codeph> entries, give access to all Greenplum
-            Database system databases to <codeph>gpmon</codeph>.</p><note>It might be necessary to
-            edit the lines in the <codeph>pg_hba.conf</codeph> file after running the
+            second and third lines, the <codeph>host</codeph> entries, give <codeph>gpmon</codeph>
+            access to all Greenplum Database databases.</p><note>It might be necessary to edit the
+            lines in the <codeph>pg_hba.conf</codeph> file after running the
               <codeph>gpperfmon_install</codeph> utility to limit the <codeph>gpmon</codeph> role's
             access to databases or to change the authentication method. After you edit the file, run
               <codeph>gpstop -u</codeph> to reload the file in Greenplum Database.<ul
               id="ul_ffm_ysw_k5">
               <li>To limit <codeph>gpmon</codeph> access to just the <codeph>gpperfmon</codeph>
-                database, edit the in the <codeph>host</codeph> entries in
-                  the<codeph>pg_hba.conf</codeph> file. For the <codeph>gpmon</codeph> user change
-                the second field from <codeph>all</codeph> to
+                database, edit the <codeph>host</codeph> entries in the<codeph>pg_hba.conf</codeph>
+                file. For the <codeph>gpmon</codeph> user change the second field from
+                  <codeph>all</codeph> to
                 <codeph>gpperfmon</codeph>:<codeblock>local      gpperfmon     gpmon                  md5
 host       <b>gpperfmon</b>     gpmon    127.0.0.1/28  md5
 host       <b>gpperfmon</b>     gpmon    ::1/128       md5</codeblock></li>
               <li>
                 <p>The <codeph>gpperfmon_install</codeph> utility assumes the default MD5
                   authentication method. Greenplum Database can optionally be configured to use the
-                  SHA-256 or SHA-256-FIPS hash algorithm to compute the password hashes saved in the
-                  system catalog. This is incompatible with the MD5 authentication method, which
-                  expects an MD5 hash or clear text password in the system catalog. Because of this,
-                  if you have enabled the SHA-256 or SHA-256-FIPS hash algorithm in the database,
-                  you must edit the <codeph>pg_hba.conf</codeph> file after running the
+                  SHA-256 <ph otherprops="pivotal">or SHA-256-FIPS </ph>hash algorithm to compute
+                  the password hashes saved in the system catalog. This is incompatible with the MD5
+                  authentication method, which expects an MD5 hash or clear text password in the
+                  system catalog. Because of this, if you have enabled the SHA-256 <ph
+                    otherprops="pivotal">or SHA-256-FIPS </ph>hash algorithm in the database, you
+                  must edit the <codeph>pg_hba.conf</codeph> file after running the
                     <codeph>gpperfmon_install</codeph> utility. For the <codeph>host</codeph>
                   entries, change the authentication method for the <codeph>gpmon</codeph> role from
                     <codeph>md5</codeph> to
@@ -248,9 +250,9 @@ host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
             <codeph>gpmon</codeph>
           password.<codeblock>*:5432:gpperfmon:gpmon:<varname>new_password</varname></codeblock></li>
         <li>Restart the Greenplum Command Center with the Command Center <codeph>gpcmdr</codeph>
-          utility. <codeblock> $ gpcmdr --restart</codeblock></li>
+          utility. <codeblock>$ gpcmdr --restart</codeblock></li>
       </ol>
-      <p>The gpperfmon monitoring system requires some initialization after startup, monitoring
+      <p>The gpperfmon monitoring system requires some initialization after startup. Monitoring
         information appears after a few minutes have passed, and not immediately after installation
         and startup of the gpperfmon system.</p>
     </section>
@@ -258,8 +260,8 @@ host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
       <title>Examples</title>
       <p>Create the <codeph>gpperfmon</codeph> database only:</p>
       <codeblock>$ su - gpadmin
-$ gpperfmon_install</codeblock>
-      <p>Create the <codeph>gpperfmon</codeph> database, create the<codeph> gpmon</codeph>
+$ gpperfmon_install --port 5432 --password changeme</codeblock>
+      <p>Create the <codeph>gpperfmon</codeph> database, create the <codeph>gpmon</codeph>
         superuser, and enable the data collection agents:</p>
       <codeblock>$ su - gpadmin
 $ gpperfmon_install --enable --password changeme --port 5432
