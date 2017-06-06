@@ -237,6 +237,16 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	{
 
 	int localMotionId = LocallyExecutingSliceIndex(estate);
+
+	/*
+	 * If it's not on the master, the motion should have a parent motion. The
+	 * utility queries are guarded by eliminateAliens, which checks for number
+	 * of motion in the plan.
+	 */
+	Motion *parentMotion = (Motion *) node->motionNode;
+	AssertImply(estate->eliminateAliens, parentMotion != NULL || (IsA(node, Motion) && ((Motion*)node)->motionID == 1));
+	int parentMotionId = parentMotion != NULL ? parentMotion->motionID : -1;
+
 	/*
 	 * Is current plan node supposed to execute in current slice?
 	 * Special case is sending motion node, which is supposed to
@@ -245,18 +255,7 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	 * below. But, we want to set up a memory account for sender
 	 * motion before we call ExecInitMotion to make sure we don't
 	 * miss its allocation memory
-	 */
-	Motion *parentMotion = (Motion *) node->motionNode;
-	/*
-	 * If it's not on the master, the motion should have a parent motion. The
-	 * utility queries are guarded by eliminateAliens, which checks for number
-	 * of motion in the plan.
-	 */
-
-	AssertImply(estate->eliminateAliens, parentMotion != NULL || (IsA(node, Motion) && ((Motion*)node)->motionID == 1));
-	int parentMotionId = parentMotion != NULL ? parentMotion->motionID : -1;
-
-	/*
+	 *
 	 * No node is alien on the master as we need those for collecting stats.
 	 * We will optimize this in next phase.
 	 */
