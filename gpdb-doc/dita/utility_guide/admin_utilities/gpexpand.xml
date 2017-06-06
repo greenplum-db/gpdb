@@ -119,13 +119,12 @@
           <pd>This file can contain hostnames with or without network interfaces specified. The
               <codeph>gpexpand</codeph> utility handles either case, adding interface numbers to end
             of the hostname if the original nodes are configured with multiple network
-              interfaces.<note>The Greenplum Database segment host naming
-              convention is <codeph>sdwN</codeph> where <codeph>sdw</codeph> is a prefix and
-                <codeph>N</codeph> is an integer. For example, on a Greenplum Database DCA system,
-              segment host names would be <codeph>sdw1</codeph>, <codeph>sdw2</codeph> and so on.
+              interfaces.<note>The Greenplum Database segment host naming convention is
+                <codeph>sdwN</codeph> where <codeph>sdw</codeph> is a prefix and <codeph>N</codeph>
+              is an integer. For example, <codeph>sdw1</codeph>, <codeph>sdw2</codeph> and so on.
               For hosts with multiple interfaces, the convention is to append a dash
                 (<codeph>-</codeph>) and number to the host name. For example,
-                s<codeph>dw1-1</codeph> and s<codeph>dw1-2</codeph> are the two interface names for
+                <codeph>sdw1-1</codeph> and <codeph>sdw1-2</codeph> are the two interface names for
               host <codeph>sdw1</codeph>. </note></pd>
         </plentry>
         <plentry>

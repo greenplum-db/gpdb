@@ -34,10 +34,9 @@
       </ol>
       <note type="note">The Greenplum Database segment host naming convention is
           <codeph>sdwN</codeph> where <codeph>sdw</codeph> is a prefix and <codeph>N</codeph> is an
-        integer. For example, on a Greenplum Database DCA system, segment host names would be
-          <codeph>sdw1</codeph>, <codeph>sdw2</codeph> and so on. For hosts with multiple
+        integer ( <codeph>sdw1</codeph>, <codeph>sdw2</codeph> and so on). For hosts with multiple
         interfaces, the convention is to append a dash (<codeph>-</codeph>) and number to the host
-        name. For example, s<codeph>dw1-1</codeph> and s<codeph>dw1-2</codeph> are the two interface
+        name. For example, <codeph>sdw1-1</codeph> and <codeph>sdw1-2</codeph> are the two interface
         names for host <codeph>sdw1</codeph>. </note>
       <section id="no160715">
         <title>To exchange SSH keys as root</title>

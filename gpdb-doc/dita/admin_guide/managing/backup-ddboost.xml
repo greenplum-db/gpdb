@@ -205,9 +205,9 @@
     <title id="title21">Configuring Distributed Segment Processing in Data Domain</title>
     <body>
       <p>Configure the distributed segment processing option on the Data Domain system. The
-        configuration applies to all the DCA servers and the Data Domain Boost plug-in installed on
-        them. This option is enabled by default, but verify that it is enabled before using Data
-        Domain Boost backups: </p>
+        configuration applies to all the Greenplum Database servers with the Data Domain Boost
+        plug-in installed on them. This option is enabled by default, but verify that it is enabled
+        before using Data Domain Boost backups: </p>
       <codeblock># ddboost option show</codeblock>
       <p>To enable or disable distributed segment processing:</p>
       <codeblock># ddboost option set distributed-segment-processing {enabled | disabled}</codeblock>
@@ -265,22 +265,22 @@
     </topic>
   </topic>
   <topic id="topic23" xml:lang="en">
-    <title id="kk166437">Export the Data Domain Path to the DCA Network</title>
+    <title id="kk166437">Export the Data Domain Path to Greenplum Database Hosts</title>
     <body>
       <p>The commands and options in this topic apply to DDOS 5.0.x and 5.1.x. See the Data Domain
         documentation for details.</p>
       <p> Use the following Data Domain commands to export the <codeph>/backup/ost</codeph>
-        directory to the DCA for Data Domain Boost backups.
+        directory to a Greenplum Database host for Data Domain Boost backups.
           <codeblock># nfs add /backup/ost 192.0.2.0/24, 198.51.100.0/24 (insecure)</codeblock><note
-          type="note">The IP addresses refer to the Greenplum system working with the Data Domain
-          Boost system.</note></p>
+          type="note">The IP addresses refer to the Greenplum Database system working with the Data
+          Domain Boost system.</note></p>
     </body>
     <topic id="topic24" xml:lang="en">
       <title>
-        <ph>Create the Data Domain Login Credentials for the DCA</ph>
+        <ph>Create the Data Domain Login Credentials for the Greenplum Database Host</ph>
       </title>
       <body>
-        <p> Create a username and password for the DCA to access the DD Boost Storage Unit (SU) at
+        <p> Create a username and password for the host to access the DD Boost Storage Unit (SU) at
           the time of backup and restore: </p>
         <codeblock># user add <varname>user</varname> [password <varname>password</varname>] [priv {admin | security | user}]</codeblock>
       </body>

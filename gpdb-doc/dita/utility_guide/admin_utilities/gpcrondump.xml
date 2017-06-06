@@ -811,7 +811,7 @@ EMAIL_DETAILS:
 EMAIL_DETAILS:
     -
         DBNAME: testdb100
-        FROM: RRP_MPE2_DCA_1
+        FROM: RRP_MPE2_1
         SUBJECT: backup completed for Database 'testdb100'
     -
         DBNAME: testdb200
