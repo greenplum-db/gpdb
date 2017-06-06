@@ -8,7 +8,6 @@
       level of service, each component must have a standby ready to take its place if it should
       fail.</p>
   </body>
-
   <topic id="topic_vrb_sxc_54">
     <title>Disk Storage</title>
     <body>
@@ -218,18 +217,60 @@
         Dell EMC Data Domain or Veritas NetBackup enterprise backup platforms. </p>
       <section>
         <title>Best Practices</title>
-        <ul id="ul_em5_sfp_1s">
-          <li>Backup Greenplum databases regularly unless the data is easily restored from
-            sources.</li>
-          <li>Use incremental backups if heap tables are relatively small and few append-optimized
-            or column-oriented partitions are modified between backups.</li>
-          <li>If backups are saved to local cluster storage, move the files to a safe, off-cluster
-            location when the backup is complete. </li>
-          <li>If backups are saved to NFS mounts, use a scale-out NFS solution such as Dell EMC Isilon to
-            prevent IO bottlenecks.</li>
-          <li>Consider using Greenplum integration to stream backups to the Dell EMC Data Domain or
-            Veritas NetBackup enterprise backup platforms. </li>
-        </ul>
+        <p>
+          <ul id="ul_nry_scl_b1b">
+            <li dir="ltr">
+              <p dir="ltr">Back up Greenplum databases regularly unless the data is easily restored
+                from sources.</p>
+            </li>
+            <li dir="ltr">
+              <p dir="ltr">Use the <codeph>gpcrondump</codeph>
+                <codeph>-s</codeph>, <codeph>-S</codeph>, <codeph>-t</codeph>, or
+                  <codeph>-T</codeph> options to specify only the schema and tables that need to be
+                backed up. See the <xref
+                  href="https://gpdb.docs.pivotal.io/latest/utility_guide/admin_utilities/gpcrondump.html"
+                  format="html" scope="external">gpcrondump</xref> reference in the <cite>Greenplum
+                  Database Utility Reference Guide</cite> for more information.</p>
+            </li>
+            <li dir="ltr">
+              <p dir="ltr">Back up one schema at a time to reduce the length of time the
+                  <codeph>pg_class</codeph> table is locked.</p>
+              <p dir="ltr">At the start of the backup, <codeph>gpcrondump</codeph> places an
+                EXCLUSIVE lock on the <codeph>pg_class</codeph> table, which prevents creating,
+                altering, or dropping tables. This lock is held while <codeph>gpcrondump</codeph>
+                computes the set of tables to back up and then places SHARED ACCESS locks on the
+                tables. Once the tables are locked and backup processes started on the segments, the
+                EXCLUSIVE lock on <codeph>pg_class</codeph> is released. In a database with many
+                objects the duration of the EXCLUSIVE lock may be disruptive. Backing up one schema
+                at a time can reduce the duration of the EXCLUSIVE lock. Backups with fewer tables
+                are also more efficient for selectively restoring schemas and tables, since
+                  <codeph>gpdbrestore</codeph> does not have to search through the entire database.
+                See <xref
+                  href="http://gpdb.docs.pivotal.io/latest/admin_guide/managing/backup-locks.html"
+                  format="html" scope="external">Backup Process and Locks</xref> for more
+                information. </p>
+            </li>
+            <li dir="ltr">Use incremental backups when heap tables are relatively small and few
+              append-optimized or column-oriented partitions are modified between backups. </li>
+            <li dir="ltr">If backups are saved to local cluster storage, move the files to a safe,
+              off-cluster location when the backup is complete. Backup files and database files that
+              reside on the same storage can be lost simultaneously.</li>
+            <li dir="ltr">
+              <p dir="ltr">If your operating system supports direct I/O, set the
+                  <codeph>gp_backup_directIO</codeph> configuration parameter to reduce CPU usage
+                during backups. See <xref
+                  href="http://docs.gpdb.pivotal.io/latest/admin_guide/managing/backup-direct-io.html"
+                  format="html" scope="external">Using Direct I/O</xref> for more information. </p>
+            </li>
+            <li dir="ltr">
+              <p dir="ltr">If backups are saved to NFS mounts, use a scale-out NFS solution such as
+                Dell EMC Isilon to prevent IO bottlenecks.</p>
+            </li>
+            <li dir="ltr" otherprops="pivotal">Consider using Pivotal Greenplum Database integration
+              to stream backups to the Dell EMC Data Domain or Veritas NetBackup enterprise backup
+              platforms.</li>
+          </ul>
+        </p>
       </section>
     </body>
   </topic>
@@ -249,10 +290,10 @@
         configuration parameter. If <codeph>ftsprobe</codeph> cannot connect to a segment, it marks
         the segment “down” in the Greenplum Database system catalog. The segment remains down until
         an administrator runs the <codeph>gprecoverseg</codeph> recovery utility. </p>
-     <p>You can configure a Greenplum Database system to trigger SNMP (Simple
-        Network Management Protocol) alerts or send email notifications to system administrators
-        if certain database events occur. See "Using SNMP with a Greenplum Database System" in the 
-          <cite>Pivotal Greenplum Database Administrator Guide</cite> for instructions to set up SNMP.</p>
+      <p>You can configure a Greenplum Database system to trigger SNMP (Simple Network Management
+        Protocol) alerts or send email notifications to system administrators if certain database
+        events occur. See "Using SNMP with a Greenplum Database System" in the <cite>Pivotal
+          Greenplum Database Administrator Guide</cite> for instructions to set up SNMP.</p>
       <section>
         <title>Best Practices</title>
         <ul id="ul_b4h_rxl_v4">
