@@ -604,11 +604,11 @@ LockAcquire(const LOCKTAG *locktag,
 					lockHolderProcPtr = proc;
 				}
 				else
-					elog(DEBUG1,"Could not find writer proc entry!");
+					elog(ERROR,"could not find writer proc entry!");
 		
-					elog(DEBUG1,"Reader gang member trying to acquire a lock [%u,%u] %s %d",
-						 locktag->locktag_field1, locktag->locktag_field2,
-						 lock_mode_names[lockmode], (int)locktag->locktag_type);
+				elog(DEBUG1,"Reader gang member trying to acquire a lock [%u,%u] %s %d",
+					 locktag->locktag_field1, locktag->locktag_field2,
+					 lock_mode_names[lockmode], (int)locktag->locktag_type);
 			}
 				
 		}
@@ -831,34 +831,44 @@ LockAcquire(const LOCKTAG *locktag,
 		Insist(false);
 	}
 
-	/*
-	 * If WRITER (MyProc == lockHolderProcPtr), check if lock requested
-	 * conflicts with locks requested by waiters, must join wait queue.
-	 *
-	 * If READER (MyProc != lockHolderProcPtr), check if requested a same
-	 * lock already held by its writer, just granted (STATUS_OK), otherwise
-	 * wait in the queue if conflicting with waitMask.
-	 *
-	 * Otherwise, check for conflict with already-held locks. (That's
-	 * last because most complex check.)
-	 */
-	status = STATUS_ERROR; /*init to an invalid value.*/
 	if (MyProc == lockHolderProcPtr)
 	{
+		/*
+		 * We are a writer or utility mode connection.  The following logic is
+		 * identical to upstream PostgreSQL.
+		 */
+
+		/*
+		 * If lock requested conflicts with locks requested by waiters, must join
+		 * wait queue.	Otherwise, check for conflict with already-held locks.
+		 * (That's last because most complex check.)
+		 */
 		if (lockMethodTable->conflictTab[lockmode] & lock->waitMask)
 			status = STATUS_FOUND;
+		else
+			status = LockCheckConflicts(lockMethodTable, lockmode,
+										lock, proclock, MyProc);
 	}
-	else if (MyProc != lockHolderProcPtr)
+	else
 	{
-		PROCLOCKTAG writerProcLockTag;
+		/*
+		 * We are a reader.  Check if the writer holds the lock already.  If
+		 * no, waitMask must be checked to avoid starvation of backends already
+		 * waiting on the same lock.
+		 */
+		Assert(!Gp_is_writer);
 
+		PROCLOCKTAG writerProcLockTag;
 		uint32 writerProcLockHashCode;
 
 		writerProcLockTag.myLock = lock;
 		writerProcLockTag.myProc = lockHolderProcPtr;
-
 		writerProcLockHashCode = ProcLockHashCode(&writerProcLockTag, hashcode);
-
+		/*
+		 * It is safe to access LockMethodProcLock hash table because
+		 * partitionLock is already held at this point.
+		 */
+		Assert(LWLockHeldByMe(partitionLock));
 		hash_search_with_hash_value(LockMethodProcLockHash,
 									(void *) &writerProcLockTag,
 									writerProcLockHashCode,
@@ -866,18 +876,24 @@ LockAcquire(const LOCKTAG *locktag,
 									&found);
 		if (found)
 		{
+			/*
+			 * Writer already holds this lock, grant it to reader
+			 * unconditionally.
+			 */
 			status = STATUS_OK;
 		}
 		else if (lockMethodTable->conflictTab[lockmode] & lock->waitMask)
 		{
+			/*
+			 * Writer does not hold this lock and the lockmode conflicts with
+			 * another process waiting on the same lock.  Reader must wait so
+			 * as not to starve existing waiters.
+			 */
 			status = STATUS_FOUND;
 		}
-	}
-
-	if (status == STATUS_ERROR)
-	{
-		status = LockCheckConflicts(lockMethodTable, lockmode,
-									lock, proclock, MyProc);
+		else
+			status = LockCheckConflicts(lockMethodTable, lockmode,
+										lock, proclock, MyProc);
 	}
 
 	if (status == STATUS_OK)
