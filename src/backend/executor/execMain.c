@@ -76,6 +76,7 @@
 #include "utils/ps_status.h"
 #include "utils/typcache.h"
 #include "utils/workfile_mgr.h"
+#include "utils/faultinjector.h"
 
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_class.h"
@@ -509,6 +510,8 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 
 				Assert(!estate->interconnect_context);
 				SetupInterconnect(estate);
+
+				SIMPLE_FAULT_INJECTOR(QEGotSnapshotAndInterconnect);
 				Assert(estate->interconnect_context);
 			}
 			PG_CATCH();

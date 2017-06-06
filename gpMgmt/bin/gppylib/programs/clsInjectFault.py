@@ -422,7 +422,7 @@ class GpInjectFaultProgram:
                   "process_startup_packet (inject fault when processing startup packet during backend initialization), " \
                   "quickdie (inject fault when auxiliary processes quitting), " \
                   "after_one_slice_dispatched (inject fault after one slice was dispatched when dispatching plan), " \
-                  "cursor_qe_reader_after_snapshot (inject fault after QE READER has populated snashot for cursor)" \
+                  "qe_got_snapshot_and_interconnect(inject fault after qe got snapshot and interconnect)" \
 			      "fsync_counter (inject fault to count buffers fsync'ed by checkpoint process), " \
 			      "bg_buffer_sync_default_logic (inject fault to 'skip' in order to flush all buffers in BgBufferSync()), " \
                   "finish_prepared_after_record_commit_prepared (inject fault in FinishPreparedTransaction() after recording the commit prepared record), " \

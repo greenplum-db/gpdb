@@ -49,18 +49,18 @@ abort;
 -- Test to validate cursor QE reader is correctly able to perform visibility in
 -- subtransaction, even after QE writer has moved ahead and updated the tuple
 CREATE TABLE cursor_writer_reader (a int, b int) DISTRIBUTED BY (a);
-\! gpfaultinjector -q -f cursor_qe_reader_after_snapshot -y suspend --seg_dbid 2
 BEGIN;
 INSERT INTO cursor_writer_reader VALUES(1, 666);
+\! gpfaultinjector -q -f qe_got_snapshot_and_interconnect -y suspend --seg_dbid 2
 DECLARE cursor_c2 CURSOR FOR SELECT * FROM cursor_writer_reader WHERE b=666 ORDER BY 1;
 SAVEPOINT x;
 UPDATE cursor_writer_reader SET b=333 WHERE b=666;
-\! gpfaultinjector -f cursor_qe_reader_after_snapshot -y status --seg_dbid 2 | grep triggered | uniq | wc -l
-\! gpfaultinjector -q -f cursor_qe_reader_after_snapshot -y resume --seg_dbid 2
+\! gpfaultinjector -f qe_got_snapshot_and_interconnect -y status --seg_dbid 2 | grep triggered | uniq | wc -l
+\! gpfaultinjector -q -f qe_got_snapshot_and_interconnect -y resume --seg_dbid 2
 FETCH cursor_c2;
 SELECT * FROM cursor_writer_reader WHERE b=666 ORDER BY 1;
 END;
-\! gpfaultinjector -q -f cursor_qe_reader_after_snapshot -y reset --seg_dbid 2
+\! gpfaultinjector -q -f qe_got_snapshot_and_interconnect -y reset --seg_dbid 2
 
 
 -- start_ignore

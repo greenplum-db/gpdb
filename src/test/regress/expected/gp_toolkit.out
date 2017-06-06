@@ -352,12 +352,13 @@ select autnspname,autrelname,autrelkind from gp_toolkit.__gp_user_tables where a
 -- gp_param_settings\(\)
 select paramsegment,paramname from gp_toolkit.gp_param_settings() where paramname like 'gp_%' and paramsegment=0 and paramname IN ('gp_contentid', 'gp_dbid', 'gp_interconnect_type', 'gp_role', 'gp_session_id') order by 2;
  paramsegment |      paramname       
---------------+---------------
+--------------+----------------------
             0 | gp_contentid
             0 | gp_dbid
+            0 | gp_interconnect_type
             0 | gp_role
             0 | gp_session_id
-(4 rows)
+(5 rows)
 
 -- Expected to have no results
 -- However it will show there is a difference if segment guc is different

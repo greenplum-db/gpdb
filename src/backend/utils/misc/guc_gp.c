@@ -124,6 +124,8 @@ extern struct config_generic *find_option(const char *name, bool create_placehol
 
 extern bool enable_partition_rules;
 
+extern int listenerBacklog;
+
 /* GUC lists for gp_guc_list_show().  (List of struct config_generic) */
 List	   *gp_guc_list_for_explain;
 List	   *gp_guc_list_for_no_plan;
@@ -1029,6 +1031,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
 		},
 		&gp_selectivity_damping_sigsort,
+		true, NULL, NULL
+	},
+
+	{
+		{"gp_enable_interconnect_aggressive_retry", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enable application-level fast-track interconnect retries"),
+			NULL,
+			GUC_NO_RESET_ALL | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_interconnect_aggressive_retry,
 		true, NULL, NULL
 	},
 
@@ -3968,6 +3980,16 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"gp_interconnect_tcp_listener_backlog", PGC_USERSET, GP_ARRAY_TUNING,
+			gettext_noop("Size of the listening queue for each TCP interconnect socket"),
+			gettext_noop("Cooperate with kernel parameter net.core.somaxconn and net.ipv4.tcp_max_syn_backlog to tune network performance."),
+			GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
+		},
+		&listenerBacklog,
+		128, 0, 65535, NULL, NULL
+	},
+
+	{
 		{"gp_snapshotadd_timeout", PGC_USERSET, GP_ARRAY_TUNING,
 			gettext_noop("Timeout (in seconds) on setup of new connection snapshot"),
 			gettext_noop("Used by the transaction manager."),
@@ -5063,7 +5085,7 @@ struct config_string ConfigureNamesString_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_log_gang_str,
-		"terse", gpvars_assign_gp_log_gang, gpvars_show_gp_log_gang
+		"off", gpvars_assign_gp_log_gang, gpvars_show_gp_log_gang
 	},
 
 	{
@@ -5087,10 +5109,10 @@ struct config_string ConfigureNamesString_gp[] =
 	},
 
 	{
-		{"gp_interconnect_type", PGC_USERSET, GP_ARRAY_TUNING,
+		{"gp_interconnect_type", PGC_BACKEND, GP_ARRAY_TUNING,
 			gettext_noop("Sets the protocol used for inter-node communication."),
-			gettext_noop("Only support \"udpifc\" for now."),
-			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_DISALLOW_IN_FILE
+			gettext_noop("Valid values are \"tcp\" and \"udpifc\"."),
+			GUC_GPDB_ADDOPT
 		},
 		&gp_interconnect_type_str,
 		"udpifc", gpvars_assign_gp_interconnect_type, gpvars_show_gp_interconnect_type

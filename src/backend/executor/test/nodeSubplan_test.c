@@ -81,6 +81,7 @@ test__ExecSetParamPlan__Check_Dispatch_Results(void **state)
 	expect_any(TeardownInterconnect,transportStates);
 	expect_any(TeardownInterconnect,mlStates);
 	expect_any(TeardownInterconnect,forceEOS);
+	expect_any(TeardownInterconnect,hasError);
 	will_be_called(TeardownInterconnect);
 
 	/* Catch PG_RE_THROW(); after cleaning with CdbCheckDispatchResult */

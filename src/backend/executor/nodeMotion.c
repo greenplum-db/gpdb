@@ -320,6 +320,7 @@ execMotionSender(MotionState * node)
 			node->otherTime.tv_sec++;
 		}
 #endif
+
 		if (done || TupIsNull(outerTupleSlot))
 		{
 			doSendEndOfStream(motion, node);

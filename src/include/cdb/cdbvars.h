@@ -394,7 +394,9 @@ extern int	Gp_max_packet_size;	/* GUC var */
 /*
  * Support for multiple "types" of interconnect
  */
-#define INTERCONNECT_TYPE_UDPIFC (0)
+
+#define INTERCONNECT_TYPE_TCP    (0)
+#define INTERCONNECT_TYPE_UDPIFC (1)
 
 extern int Gp_interconnect_type;
 
@@ -451,6 +453,15 @@ extern int 	Gp_udp_bufsize_k;
  *
  */
 extern int	Gp_interconnect_hash_multiplier;
+
+/*
+ * Parameter gp_interconnect_aggressive_retry
+ *
+ * The run-time parameter gp_interconnect_aggressive_retry controls the
+ * activation of the application-level retry (which acts much faster than the OS-level
+ * TCP retries); In most cases this should stay enabled.
+ */
+extern bool gp_interconnect_aggressive_retry; /* fast-track app-level retry */
 
 /*
  * Parameter gp_interconnect_full_crc
@@ -1005,6 +1016,14 @@ typedef struct GpId
 extern GpId GpIdentity;
 #define UNINITIALIZED_GP_IDENTITY_VALUE (-10000)
 extern int GpStandbyDbid;
+
+
+/* Stores the listener port that this process uses to listen for incoming
+ * Interconnect connections from other Motion nodes.
+ */
+extern int	Gp_listener_port;
+
+
 
 /* SequenceServer information to be shared with everyone */
 typedef struct SeqServerControlBlock

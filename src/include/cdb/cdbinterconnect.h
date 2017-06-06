@@ -92,7 +92,11 @@ typedef struct icpkthdr
 typedef enum MotionConnState
 {
     mcsNull,
+	mcsAccepted,
     mcsSetupOutgoingConnection,
+	mcsConnecting,
+	mcsRecvRegMsg,
+	mcsSendRegMsg,
     mcsStarted,
 	mcsEosSent
 } MotionConnState;
@@ -239,6 +243,8 @@ struct MotionConn
 
     MotionConnState state;
 
+	uint64		wakeup_ms;
+
 	struct icpkthdr		conn_info;
 	bool		isMirror;
 
@@ -301,11 +307,25 @@ typedef struct ChunkTransportStateEntry
 	int			numConns;               /* all, including mirrors if present */
     int         numPrimaryConns;        /* does not include mirrors */
 
+	/*
+	 * used for receiving. to select() from a set of interesting MotionConns
+	 * to see when data is ready to be read.  When the incoming connections
+	 * are established, read interest is turned on.  It is turned off when an
+	 * EOS (End of Stream) message is read.
+	 */
+	mpp_fd_set  readSet;
+
+	/* highest file descriptor in the readSet. */
+	int			highReadSock;
+
     int         scanStart;
 
     /* slice table entries */
     struct Slice   *sendSlice;
     struct Slice   *recvSlice;
+
+	/* setup info */
+	int			outgoingPortRetryCount;
 
 	int			txfd;
 	int			txfd_family;
@@ -494,7 +514,10 @@ typedef struct ChunkTransportState
 	/* keeps track of if we've "activated" connections via SetupInterconnect(). */
 	bool		activated;
 
+	bool		aggressiveRetry;
+
 	bool		teardownActive;
+	List		*incompleteConns;
 
 	/* slice table stuff. */
 	struct SliceTable  *sliceTable;

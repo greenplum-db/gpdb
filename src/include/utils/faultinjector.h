@@ -213,7 +213,7 @@ typedef enum FaultInjectorIdentifier_e {
 	AfterOneSliceDispatched,
 
 	InterconnectStopAckIsLost,
-	CursorQEReaderAfterSnapshot,
+	QEGotSnapshotAndInterconnect,
 
 	FsyncCounter,
 	BgBufferSyncDefaultLogic,

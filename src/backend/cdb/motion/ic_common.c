@@ -24,6 +24,7 @@
 #include "cdb/tupchunklist.h"
 #include "cdb/ml_ipc.h"
 #include "cdb/cdbvars.h"
+#include "cdb/cdbdisp.h"
 
 #include <fcntl.h>
 #include <limits.h>
@@ -59,19 +60,9 @@
  * GLOBAL STATE VARIABLES
  */
 
-/* Socket file descriptor for the listener and sender. */
-int		ICListenerSocket;
-int 	ICSenderSocket;
-
-/*
- * Ports of Interconnect, assigned by initMotionLayerIPC() at process startup.
- * These ports are used for the duration of this process and should never change.
- */
-uint16	ICListenerPort;
-uint16 	ICSenderPort;
-
-int 	ICSenderFamily;
-
+/* Socket file descriptor for the listener. */
+int		TCP_listenerFd;
+int		UDP_listenerFd;
 
 /* Socket file descriptor for the sequence server. */
 int		savedSeqServerFd = -1;
@@ -107,7 +98,7 @@ logChunkParseDetails(MotionConn *conn)
 }
 
 TupleChunkListItem
-RecvTupleChunk(MotionConn *conn, bool inTeardown)
+RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates)
 {
 	TupleChunkListItem tcItem;
 	TupleChunkListItem firstTcItem = NULL;
@@ -115,8 +106,19 @@ RecvTupleChunk(MotionConn *conn, bool inTeardown)
 	uint32		tcSize;
 	int			bytesProcessed = 0;
 
-	/* go through and form us some TupleChunks. */
-	bytesProcessed = sizeof(struct icpkthdr);
+	if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
+	{
+		/* read the packet in from the network. */
+		readPacket(conn, transportStates);
+
+		/* go through and form us some TupleChunks. */
+		bytesProcessed = PACKET_HEADER_SIZE;
+	}
+	else
+	{
+		/* go through and form us some TupleChunks. */
+		bytesProcessed = sizeof(struct icpkthdr);
+	}
 
 #ifdef AMS_VERBOSE_LOGGING
 	elog(DEBUG5, "recvtuple chunk recv bytes %d msgsize %d conn->pBuff %p conn->msgPos: %p",
@@ -142,7 +144,7 @@ RecvTupleChunk(MotionConn *conn, bool inTeardown)
 		{
 			/* see MPP-720: it is possible that our message got messed
 			 * up by a cancellation ? */
-			ML_CHECK_FOR_INTERRUPTS(inTeardown);
+			ML_CHECK_FOR_INTERRUPTS(transportStates->teardownActive);
 
 			/*
 			 * MPP-4010: add some extra debugging.
@@ -162,6 +164,22 @@ RecvTupleChunk(MotionConn *conn, bool inTeardown)
 		}
 
 
+		/* we only check for interrupts here when we don't have a guaranteed full-message */
+		if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
+		{
+			if (tcSize >= conn->msgSize)
+			{
+				/* see MPP-720: it is possible that our message got
+				 * messed up by a cancellation ? */
+				ML_CHECK_FOR_INTERRUPTS(transportStates->teardownActive);
+
+				logChunkParseDetails(conn);
+
+				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+								errmsg("Interconnect error parsing message"),
+								errdetail("tcSize %d >= conn->msgSize %d", tcSize, conn->msgSize)));
+			}
+		}
 		Assert(tcSize < conn->msgSize);
 
 		/*
@@ -209,13 +227,20 @@ RecvTupleChunk(MotionConn *conn, bool inTeardown)
 void
 InitMotionLayerIPC(void)
 {
+	uint16 tcp_listener = 0;
+	uint16 udp_listener = 0;
+
 	/*activated = false;*/
 	savedSeqServerFd = -1;
 
-	/* use a local uint16 to remove warning of 'incompatible type' */
-	InitMotionUDPIFC();
+	if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
+		InitMotionTCP(&TCP_listenerFd, &tcp_listener);
+	else if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
+		InitMotionUDPIFC(&UDP_listenerFd, &udp_listener);
 
-	elog(DEBUG1, "Interconnect listener port %d, sender port %d", ICListenerPort, ICSenderPort);
+	Gp_listener_port = (udp_listener<<16) | tcp_listener;
+
+	elog(LOG, "Interconnect listening on tcp port %d udp port %d (0x%x)", tcp_listener, udp_listener, Gp_listener_port);
 }
 
 /* See ml_ipc.h */
@@ -225,16 +250,22 @@ CleanUpMotionLayerIPC(void)
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
     	elog(DEBUG3, "Cleaning Up Motion Layer IPC...");
 
-	CleanupMotionUDPIFC();
+	if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
+		CleanupMotionTCP();
+	else if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
+		CleanupMotionUDPIFC();
 
 	/* close down the Interconnect listener socket. */
+    if (TCP_listenerFd >= 0)
+        closesocket(TCP_listenerFd);
 
-	if (ICListenerSocket >= 0)
-		closesocket(ICListenerSocket);
+	if (UDP_listenerFd >= 0)
+		closesocket(UDP_listenerFd);
 
 	/* be safe and reset global state variables. */
-	ICListenerPort = 0;
-	ICListenerSocket = -1;
+	Gp_listener_port = 0;
+	TCP_listenerFd = -1;
+	UDP_listenerFd = -1;
 }
 
 /* See ml_ipc.h */
@@ -451,8 +482,27 @@ DeregisterReadInterest(ChunkTransportState *transportStates,
              reason);
     }
 
-	markUDPConnInactiveIFC(conn);
+	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
+	{
+#ifdef AMS_VERBOSE_LOGGING
+		elog(LOG, "deregisterReadInterest set stillactive = false for node %d route %d (%s)", motNodeID, srcRoute, reason);
+#endif
+		markUDPConnInactiveIFC(conn);
+	}
+	else
+	{
+		/*
+		 * we also mark the connection as "done." The way synchronization works is
+		 * strange. On QDs the "teardown" doesn't get called until all segments
+		 * are finished, which means that we need some way for the QEs to know
+		 * that Teardown should complete, otherwise we deadlock the entire query
+		 * (QEs wait in their Teardown calls, while the QD waits for them to
+		 * finish)
+		 */
+		shutdown(conn->sockfd, SHUT_WR);
 
+		MPP_FD_CLR(conn->sockfd, &pEntry->readSet);
+	}
 	return;
 }
 
@@ -604,10 +654,32 @@ setupSeqServerConnection(char *seqServerHost, uint16 seqServerPort)
 void
 SetupInterconnect(EState *estate)
 {
-	SetupUDPIFCInterconnect(estate);
-	return;
+	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
+		SetupUDPIFCInterconnect(estate);
+	else if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
+		SetupTCPInterconnect(estate);
 }
 
+/*
+ * Move this out to separate stack frame, so that we don't have to mark
+ * tons of stuff volatile in TeardownInterconnect().
+ */
+void
+forceEosToPeers(MotionLayerState       *mlStates,
+				ChunkTransportState    *transportStates,
+				int                     motNodeID)
+{
+	if (!transportStates)
+	{
+		elog(FATAL, "no transport-states.");
+	}
+
+	transportStates->teardownActive = true;
+
+	transportStates->SendEos(mlStates, transportStates, motNodeID, get_eos_tuplechunklist());
+
+	transportStates->teardownActive = false;
+}
 
 /* TeardownInterconnect() function is used to cleanup interconnect resources that
  * were allocated during SetupInterconnect().  This function should ALWAYS be
@@ -617,10 +689,16 @@ SetupInterconnect(EState *estate)
 void
 TeardownInterconnect(ChunkTransportState *transportStates,
 					 MotionLayerState *mlStates,
-					 bool forceEOS)
+					 bool forceEOS, bool hasError)
 {
-	TeardownUDPIFCInterconnect(transportStates, mlStates, forceEOS);
-	return;
+	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
+	{
+		TeardownUDPIFCInterconnect(transportStates, mlStates, forceEOS);
+	}
+	else if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
+	{
+		TeardownTCPInterconnect(transportStates, mlStates, forceEOS, hasError);
+	}
 }
 
 /*=========================================================================
@@ -705,6 +783,7 @@ createChunkTransportState(ChunkTransportState *transportStates,
         conn->tupleCount = 0;
         conn->stillActive = false;
         conn->stopRequested = false;
+        conn->wakeup_ms = 0;
         conn->cdbProc = NULL;
         conn->sent_record_typmod = 0;
         conn->remapper = NULL;
@@ -749,6 +828,8 @@ removeChunkTransportState(ChunkTransportState *transportStates,
 		transportStates->states[motNodeID - 1].valid = false;
 		pEntry = &transportStates->states[motNodeID - 1];
 	}
+
+	MPP_FD_ZERO(&pEntry->readSet);
 
 	return pEntry;
 }
@@ -805,6 +886,27 @@ void adjustMasterRouting(Slice *recvSlice)
 }
 
 /*
+ * checkForCancelFromQD
+ * 		Check for cancel from QD.
+ *
+ * Should be called only inside the dispatcher
+ */
+void
+checkForCancelFromQD(ChunkTransportState *pTransportStates)
+{
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+	Assert(pTransportStates);
+	Assert(pTransportStates->estate);
+
+	if (cdbdisp_checkForCancel(pTransportStates->estate->dispatcherState))
+	{
+		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+						errmsg(CDB_MOTION_LOST_CONTACT_STRING)));
+		/* not reached */
+	}
+}
+
+/*
 * WaitInterconnectQuit
 *
 * Wait for the ic thread to quit, don't clean any resource owned by ic thread
@@ -812,5 +914,8 @@ void adjustMasterRouting(Slice *recvSlice)
 void
 WaitInterconnectQuit(void)
 {
-	WaitInterconnectQuitUDPIFC();
+	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
+	{
+		WaitInterconnectQuitUDPIFC();
+	}
 }

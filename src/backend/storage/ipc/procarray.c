@@ -1171,8 +1171,6 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 		{
 			readSharedLocalSnapshot_forCursor(snapshot);
 
-			SIMPLE_FAULT_INJECTOR(CursorQEReaderAfterSnapshot);
-
 			return snapshot;
 		}
 

@@ -1212,7 +1212,7 @@ PG_TRY();
 
 		TeardownInterconnect(queryDesc->estate->interconnect_context, 
 							 queryDesc->estate->motionlayer_context,
-							 false); /* following success on QD */
+							 false, false); /* following success on QD */
 		queryDesc->estate->interconnect_context = NULL;
 	}
 }
@@ -1260,7 +1260,7 @@ PG_CATCH();
 	{
 		TeardownInterconnect(queryDesc->estate->interconnect_context,
 							 queryDesc->estate->motionlayer_context,
-							 true);
+							 true, false);
 		queryDesc->estate->interconnect_context = NULL;
 	}
 	PG_RE_THROW();

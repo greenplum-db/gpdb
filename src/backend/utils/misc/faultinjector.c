@@ -319,8 +319,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault in cdbdisp_dispatchX*/
 	_("interconnect_stop_ack_is_lost"),
 		/* inject fault in interconnect to skip sending the stop ack */
-	_("cursor_qe_reader_after_snapshot"),
-		/* inject fault after QE READER has populated snashot for cursor */
+	_("qe_got_snapshot_and_interconnect"),
+		/* inject fault after qe got snapshot and interconnect*/
 	_("fsync_counter"),
 		/* inject fault to 'skip' in order to flush all buffers in BgBufferSync() */
 	_("bg_buffer_sync_default_logic"),

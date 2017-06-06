@@ -593,6 +593,10 @@ cdbdisp_buildPlanQueryParms(struct QueryDesc *queryDesc,
 	splan = serializeNode((Node *) queryDesc->plannedstmt, &splan_len, &splan_len_uncompressed);
 
 	uint64 plan_size_in_kb = ((uint64) splan_len_uncompressed) / (uint64) 1024;
+
+	elog(((gp_log_gang >= GPVARS_VERBOSITY_TERSE) ? LOG : DEBUG1),
+		 "Query plan size to dispatch: " UINT64_FORMAT "KB", plan_size_in_kb);
+
 	if (0 < gp_max_plan_size && plan_size_in_kb > gp_max_plan_size)
 	{
 		ereport(ERROR,

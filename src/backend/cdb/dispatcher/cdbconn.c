@@ -395,8 +395,11 @@ void cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
 		else
 		{
 			if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
-				write_log("Connected to %s motionListener=%d with options: %s\n",
-						segdbDesc->whoami, segdbDesc->motionListener, options);
+				write_log("Connected to %s motionListener=%d/%d with options: %s\n",
+						  segdbDesc->whoami,
+						  (segdbDesc->motionListener & 0x0ffff),
+						  ((segdbDesc->motionListener>>16) & 0x0ffff),
+						  options);
 		}
 	}
 }

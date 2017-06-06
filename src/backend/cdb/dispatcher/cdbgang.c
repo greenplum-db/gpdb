@@ -37,7 +37,6 @@
 #include "cdb/cdbtm.h"			/* discardDtxTransaction() */
 #include "cdb/cdbutil.h"		/* CdbComponentDatabaseInfo */
 #include "cdb/cdbvars.h"		/* Gp_role, etc. */
-#include "cdb/ml_ipc.h"
 #include "storage/bfz.h"
 #include "gp-libpq-fe.h"
 #include "gp-libpq-int.h"
@@ -950,7 +949,12 @@ static CdbProcess *makeCdbProcess(SegmentDatabaseDescriptor *segdbDesc)
 	}
 
 	process->listenerAddr = pstrdup(qeinfo->hostip);
-	process->listenerPort = segdbDesc->motionListener;
+
+	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
+		process->listenerPort = (segdbDesc->motionListener >> 16) & 0x0ffff;
+	else if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
+		process->listenerPort = (segdbDesc->motionListener & 0x0ffff);
+
 	process->pid = segdbDesc->backendPid;
 	process->contentid = segdbDesc->segindex;
 	return process;
@@ -1049,7 +1053,11 @@ getCdbProcessesForQD(int isPrimary)
 	 * interconnect connection.
 	 */
 	proc->listenerAddr = NULL;
-	proc->listenerPort = ICListenerPort;
+
+	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
+		proc->listenerPort = (Gp_listener_port >> 16) & 0x0ffff;
+	else if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
+		proc->listenerPort = (Gp_listener_port & 0x0ffff);
 
 	proc->pid = MyProcPid;
 	proc->contentid = -1;

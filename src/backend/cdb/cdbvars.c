@@ -179,6 +179,13 @@ bool		gp_enable_slow_writer_testmode = false;
  */
 bool		gp_enable_slow_cursor_testmode = false;
 
+/*
+ * TCP port the Interconnect listens on for incoming connections from other
+ * backends.  Assigned by initMotionLayerIPC() at process startup.  This port
+ * is used for the duration of this process and should never change.
+ */
+int			Gp_listener_port;
+
 int			Gp_max_packet_size; /* max Interconnect packet size */
 
 int			Gp_interconnect_queue_depth = 4;	/* max number of messages
@@ -200,6 +207,8 @@ int			Gp_interconnect_hash_multiplier = 2;		/* sets the size of the
 int			interconnect_setup_timeout = 7200;
 
 int			Gp_interconnect_type = INTERCONNECT_TYPE_UDPIFC;
+
+bool		gp_interconnect_aggressive_retry = true; /* fast-track app-level retry */
 
 bool		gp_interconnect_full_crc = false;	/* sanity check UDP data. */
 
@@ -886,12 +895,13 @@ gpvars_assign_gp_interconnect_type(const char *newval, bool doit, GucSource sour
 {
 	int			newtype = 0;
 
-	if (newval == NULL || newval[0] == 0)
+	if (newval == NULL || newval[0] == 0 ||
+		!pg_strcasecmp("udpifc", newval))
 		newtype = INTERCONNECT_TYPE_UDPIFC;
-	else if (!pg_strcasecmp("udpifc", newval))
-		newtype = INTERCONNECT_TYPE_UDPIFC;
+	else if (!pg_strcasecmp("tcp", newval))
+		newtype = INTERCONNECT_TYPE_TCP;
 	else
-		elog(ERROR, "Only support UDPIFC, (current type is '%s')", gpvars_show_gp_interconnect_type());
+		elog(ERROR, "Unknown interconnect type. (current type is '%s')", gpvars_show_gp_interconnect_type());
 
 	if (doit)
 	{
@@ -904,8 +914,15 @@ gpvars_assign_gp_interconnect_type(const char *newval, bool doit, GucSource sour
 const char *
 gpvars_show_gp_interconnect_type(void)
 {
-	return "UDPIFC";
-}	/* gpvars_show_gp_log_interconnect */
+	switch(Gp_interconnect_type)
+	{
+		case INTERCONNECT_TYPE_TCP:
+			return "TCP";
+		case INTERCONNECT_TYPE_UDPIFC:
+		default:
+			return "UDPIFC";
+	}
+}                               /* gpvars_show_gp_log_interconnect */
 
 /*
  * gpvars_assign_gp_interconnect_fc_method
