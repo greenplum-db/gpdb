@@ -605,6 +605,35 @@ SELECT current_user = 'temp_reset_user';
 
 DROP ROLE temp_reset_user;
 --
+-- Tests for gp_always_schema_qualify GUC
+--
+BEGIN;
+CREATE TABLE test_schema_qualify(i int);
+CREATE INDEX qualify_index ON test_schema_qualify USING btree (i);
+-- GUC not set
+SET gp_always_schema_qualify=false;
+SELECT pg_get_indexdef(i.indexrelid)
+FROM pg_index i
+JOIN pg_class t ON (t.oid = i.indexrelid)
+WHERE i.indrelid = 'test_schema_qualify' :: regclass :: oid;
+                             pg_get_indexdef
+-------------------------------------------------------------------
+ CREATE INDEX qualify_index ON test_schema_qualify USING btree (i)
+(1 row)
+
+-- GUC set
+SET gp_always_schema_qualify=true;
+SELECT pg_get_indexdef(i.indexrelid)
+FROM pg_index i
+JOIN pg_class t ON (t.oid = i.indexrelid)
+WHERE i.indrelid = 'test_schema_qualify' :: regclass :: oid;
+                             pg_get_indexdef
+--------------------------------------------------------------------------
+ CREATE INDEX qualify_index ON public.test_schema_qualify USING btree (i)
+(1 row)
+
+ROLLBACK;
+--
 -- Tests for function-local GUC settings
 --
 set regex_flavor = advanced;

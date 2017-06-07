@@ -547,6 +547,11 @@ extern int log_count_recovered_files_batch;
 
 extern int writable_external_table_bufsize;
 
+/*
+ * GUC for formatting relation names during backup
+ */
+extern bool gp_always_schema_qualify;
+
 typedef enum
 {
 	INDEX_CHECK_NONE,
