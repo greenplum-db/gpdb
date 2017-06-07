@@ -164,14 +164,17 @@ WHERE relname='myexttable';</codeblock></li>
           instances as resources allow. Take advantage of the CPU, memory, and networking resources
           available to increase the amount of data that can be transferred from ETL servers to the
           Greenplum Database.</li>
-        <li>Use the <codeph>LOG ERRORS INTO &lt;tablename></codeph> clause of the
-            <codeph>COPY</codeph> statement to save error rows in a table to handle later. If a row
-          has errors in the formatting&#8212;for example missing or extra values, or incorrect data
-          types&#8212;the row is saved to the error table and the load continues. The
-            <codeph>SEGMENT REJECT LIMIT</codeph> clause sets the limit for the number of rows or
-          percentage of rows that can have errors before the <codeph>COPY FROM</codeph> command is
-          aborted. The reject limit is per segment; when any one segment exceeds the limit, the
-          command is aborted and no rows are added.</li>
+        <li>Use the <codeph>SEGMENT REJECT LIMIT</codeph> clause of the <codeph>COPY</codeph>
+          statement to set a limit for the number or percentage of rows that can have errors before
+          the <codeph>COPY FROM</codeph> command is aborted. The reject limit is per segment; when
+          any one segment exceeds the limit, the command is aborted and no rows are added. Use the
+            <codeph>LOG ERRORS</codeph> clause to save error rows. If a row has errors in the
+          formatting&#8212;for example missing or extra values, or incorrect data
+          types&#8212;Greenplum Database stores the error information and row internally. Use the
+            <codeph>gp_read_error_log()</codeph> built-in SQL function to access this stored
+          information. <note>Specifying an error table for error rows with <codeph>LOG ERRORS INTO
+                <varname>error_table</varname></codeph> is deprecated and will be unsupported in
+            future releases. </note></li>
         <li>If the load has errors, run <codeph>VACUUM</codeph> on the table to recover space.</li>
         <li>After you load data into a table, run <codeph>VACUUM</codeph> on heap tables, including
           system catalogs, and <codeph>ANALYZE</codeph> on all tables. It is not necessary to run
@@ -197,5 +200,4 @@ GROUP BY gp_segment_id ORDER BY 2;</codeblock></li>
       </section>
     </body>
   </topic>
-
 </topic>
