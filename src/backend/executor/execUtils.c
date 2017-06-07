@@ -2518,6 +2518,15 @@ MotionAssignerWalker(Plan *node,
 		plan->motionNode = ctx->motStack != NIL ? (Plan *) lfirst(list_head(ctx->motStack)) : NULL;
 	}
 
+	/*
+	 * Subplans get dynamic motion assignment as they can be executed from
+	 * arbitrary expressions. So, we don't assign any motion to these nodes.
+	 */
+	if (IsA(node, SubPlan))
+	{
+		return false;
+	}
+
 	if (IsA(node, Motion))
 	{
 		ctx->motStack = lcons(node, ctx->motStack);
