@@ -8,9 +8,9 @@ collection agents.
 SYNOPSIS
 *****************************************************
 
-gpperfmon_install 
-      [--enable --password <gpmon_password> --port <gpdb_port>] 
-      [--pgpass <path_to_file>] 
+gpperfmon_install --port <gpdb_port>
+      [--enable --password <gpmon_password> --port <gpdb_port> 
+        [--pgpass <path_to_file>]]
       [--verbose]
 
 
@@ -24,45 +24,47 @@ DESCRIPTION
 The gpperfmon_install utility automates the steps required 
 to enable the performance monitor data collection agents. You 
 must be the Greenplum Database administrative user (gpadmin) 
-in order to run this utility. If using the --enable option, 
-Greenplum Database must be restarted after the utility completes.
+to run this utility. If using the --enable option, Greenplum
+Database must be restarted after the utility completes.
 
-When run without any options, the utility will just create the 
+When run with only the --port option, the utility just creates the 
 gpperfmon database (the database used to store performance monitor 
-data). When run with the --enable option, the utility will also 
-run the following additional tasks necessary to enable the 
-performance monitor data collection agents:
+data). When run with the --enable option, the utility also runs the
+following additional tasks necessary to enable the performance monitor 
+data collection agents:
 
 1. Creates the gpmon superuser role in Greenplum Database. 
    The performance monitor data collection agents require this 
    role to connect to the database and write their data. The 
    gpmon superuser role uses MD5-encrypted password authentication 
-   by default. Use the --password option to set the gpmon superuser’s 
+   by default. Use the --password option to set the gpmon superuser's 
    password. Use the --port option to supply the port of the 
    Greenplum Database master instance.
 
 2. Updates the $MASTER_DATA_DIRECTORY/pg_hba.conf file. The 
-   utility will add the following line to the host-based 
+   utility adds the following line to the host-based 
    authentication file (pg_hba.conf). This allows the gpmon 
    user to locally connect to any database using MD5-encrypted 
    password authentication:
         local     all    gpmon    md5
+        host      all    gpmon  127.0.0.1/28   md5
+        host      all    gpmon  ::1/128        md5
 
 3. Updates the password file (.pgpass). In order to allow the 
    data collection agents to connect as the gpmon role without 
    a password prompt, you must have a password file that has an 
-   entry for the gpmon user. The utility add the following entry 
+   entry for the gpmon user. The utility adds the following entry 
    to your password file (if the file does not exist, the utility 
-   will create it):
+   creates it):
          *:5432:gpperfmon:gpmon:gpmon_password
    If your password file is not located in the default location 
    (~/.pgpass), use the --pgpass option to specify the file location.
 
 4. Sets the server configuration parameters for performance monitor. 
-   The following parameters must be enabled in order for the data 
-   collection agents to begin collecting data. The utility will set 
-   the following parameters in the Greenplum Database postgresql.conf 
-   configuration files:
+   The following parameters must be enabled for the data collection 
+   agents to begin collecting data. The utility sets the following 
+   parameters in the Greenplum Database postgresql.conf configuration
+   files: 
       gp_enable_gpperfmon=on (in all postgresql.conf files)
       gpperfmon_port=8888 (in the master postgresql.conf file)
       gp_external_enable_exec=on (in the master postgresql.conf file)
@@ -77,8 +79,8 @@ OPTIONS
   In addition to creating the gpperfmon database, performs the 
   additional steps required to enable the performance monitor 
   data collection agents. When --enable is specified the utility 
-  will also create and configure the gpmon superuser account and 
-  set the performance monitor server configuration parameters in 
+  also creates and configures the gpmon superuser account and 
+  sets the performance monitor server configuration parameters in 
   the postgresql.conf files.
 
 
@@ -91,9 +93,8 @@ OPTIONS
 
 --port <gpdb_port>
 
-  Required if --enable is specified. Specifies the connection port 
-  of the Greenplum Database master.
-
+  Required. Specifies the connection port of the Greenplum Database 
+  master.
 
 
 --pgpass <path_to_file>
@@ -124,7 +125,7 @@ Create the gpperfmon database only:
 
   $ su - gpadmin
 
-  $ gpperfmon_install
+  $ gpperfmon_install --port 5432
 
 
 Create the gpperfmon database, create the gpmon superuser, 
@@ -132,7 +133,7 @@ and enable the performance monitor agents:
 
   $ su - gpadmin
 
-  $ gpperfmon_install --enable --password p@$$word --port 5432
+  $ gpperfmon_install --enable --password changeme --port 5432
 
   $ gpstop -r
 
