@@ -523,7 +523,12 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 		}
 	}
 
-	// We don't eliminate aliens if we don't have an MPP plan
+	/*
+	 * We don't eliminate aliens if we don't have an MPP plan
+	 * or we are executing on master.
+	 *
+	 * TODO: eliminate aliens even on master, if not EXPLAIN ANALYZE
+	 */
 	estate->eliminateAliens = execute_pruned_plan && queryDesc->plannedstmt->nMotionNodes > 0 && Gp_segment != -1;
 
 	/*
@@ -1112,10 +1117,6 @@ ExecutorEnd(QueryDesc *queryDesc)
 	}
 	END_MEMORY_ACCOUNT();
 
-	if (gp_dump_memory_usage)
-	{
-		MemoryAccounting_SaveToFile(currentSliceId);
-	}
 	ReportOOMConsumption();
 }
 
@@ -1613,7 +1614,6 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	PlanState  *planstate;
 	TupleDesc	tupType;
 	ListCell   *l;
-	int			i;
 	bool		shouldDispatch = Gp_role == GP_ROLE_DISPATCH && plannedstmt->planTree->dispatch == DISPATCH_PARALLEL;
 
 	Assert(plannedstmt->intoPolicy == NULL
@@ -1810,18 +1810,17 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	 * ExecInitSubPlan expects to be able to find these entries.
 	 */
 	Assert(estate->es_subplanstates == NIL);
-	i = 1;						/* subplan indices count from 1 */
 	List *sub_plan_roots = NULL;
 	Plan *start_plan_node = plannedstmt->planTree;
 
 	/*
 	 * If eliminateAliens is true then we extract the local Motion node
-	 * and subplans for our current slice. We can then call ExecInitNode for
-	 * only a subset of the plan tree.
+	 * and subplans for our current slice. This enables us to call ExecInitNode
+	 * for only a subset of the plan tree.
 	 */
 	if (estate->eliminateAliens)
 	{
-		Motion *m = getLocalMotion(plannedstmt, LocallyExecutingSliceIndex(estate));
+		Motion *m = findSenderMotion(plannedstmt, LocallyExecutingSliceIndex(estate));
 
 		/*
 		 * We may not have any motion in the current slice, e.g., in insert query
@@ -1831,7 +1830,8 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		{
 			start_plan_node = (Plan *) m;
 		}
-		sub_plan_roots = getLocalSubplans(plannedstmt, start_plan_node);
+		/* Compute SubPlans' root plan nodes for SubPlans reachable from this plan root */
+		sub_plan_roots = getLocallyExecutableSubplans(plannedstmt, start_plan_node);
 	}
 
 	foreach(l, plannedstmt->subplans)
@@ -1841,6 +1841,11 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		PlanState  *subplanstate = NULL;
 		int			sp_eflags = 0;
 
+		/*
+		 * Initialize only the subplans that are reachable from our local slice.
+		 * If alien elimination is not turned on, then all subplans are considered
+		 * reachable.
+		 */
 		if (!estate->eliminateAliens || list_find_ptr(sub_plan_roots, subplan) != -1)
 		{
 			/*
@@ -1856,12 +1861,13 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 
 		estate->es_subplanstates = lappend(estate->es_subplanstates,
 										   subplanstate);
-
-		i++;
 	}
 
-	// extract all precomputed parameters from init plans
-	ExtractAllParams(plannedstmt, plannedstmt->planTree, estate);
+	/* No more use for sub_plan_roots */
+	list_free(sub_plan_roots);
+
+	/* Extract all precomputed parameters from init plans */
+	ExtractParamsFromInitPlans(plannedstmt, plannedstmt->planTree, estate);
 
 	/*
 	 * Initialize the private state information for all the nodes in the query

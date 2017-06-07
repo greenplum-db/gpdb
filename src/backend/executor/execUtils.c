@@ -86,37 +86,6 @@ int			NTupleDeleted;
 int			NIndexTupleInserted;
 int			NIndexTupleProcessed;
 
-typedef struct MotionStateFinderContext
-{
-	int motionId; /* Input */
-	MotionState *motionState; /* Output */
-} MotionStateFinderContext;
-
-typedef struct MotionFinderContext
-{
-	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
-	int motionId; /* Input */
-	Motion *motion; /* Output */
-} MotionFinderContext;
-
-typedef struct SubPlanFinderContext
-{
-	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
-	List *subplans; /* Output */
-} SubPlanFinderContext;
-
-typedef struct ParamExtractorContext
-{
-	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
-	EState *estate;
-} ParamExtractorContext;
-
-typedef struct MotionAssignerContext
-{
-	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
-	List *motStack; /* Motion Stack */
-} MotionAssignerContext;
-
 static void ShutdownExprContext(ExprContext *econtext);
 
 
@@ -2285,6 +2254,15 @@ uint64 PlanStateOperatorMemKB(const PlanState *ps)
 }
 
 /**
+ * Methods to find motionstate object within a planstate tree given a motion id (which is the same as slice index)
+ */
+typedef struct MotionStateFinderContext
+{
+	int motionId; /* Input */
+	MotionState *motionState; /* Output */
+} MotionStateFinderContext;
+
+/**
  * Walker method that finds motion state node within a planstate tree.
  */
 static CdbVisitOpt
@@ -2309,6 +2287,30 @@ MotionStateFinderWalker(PlanState *node,
 	/* Continue walking */
 	return CdbVisit_Walk;
 }
+
+/**
+ * Given a slice index, find the motionstate that corresponds to this slice index. This will iterate over the planstate tree
+ * to get the right node.
+ */
+MotionState *getMotionState(struct PlanState *ps, int sliceIndex)
+{
+	Assert(ps);
+	Assert(sliceIndex > -1);
+
+	MotionStateFinderContext ctx;
+	ctx.motionId = sliceIndex;
+	ctx.motionState = NULL;
+	planstate_walk_node(ps, MotionStateFinderWalker, &ctx);
+	Assert(ctx.motionState != NULL);
+	return ctx.motionState;
+}
+
+typedef struct MotionFinderContext
+{
+	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
+	int motionId; /* Input */
+	Motion *motion; /* Output */
+} MotionFinderContext;
 
 /*
  * Walker to find a motion node that matches a particular motionID
@@ -2338,27 +2340,10 @@ MotionFinderWalker(Plan *node,
 	return plan_tree_walker((Node*)node, MotionFinderWalker, ctx);
 }
 
-/**
- * Given a slice index, find the motionstate that corresponds to this slice index. This will iterate over the planstate tree
- * to get the right node.
- */
-MotionState *getMotionState(struct PlanState *ps, int sliceIndex)
-{
-	Assert(ps);
-	Assert(sliceIndex > -1);
-
-	MotionStateFinderContext ctx;
-	ctx.motionId = sliceIndex;
-	ctx.motionState = NULL;
-	planstate_walk_node(ps, MotionStateFinderWalker, &ctx);
-	Assert(ctx.motionState != NULL);
-	return ctx.motionState;
-}
-
 /*
  * Given the Plan and a Slice index, find the motion node that is the root of the slice's subtree.
  */
-Motion *getLocalMotion(PlannedStmt *plannedstmt, int sliceIndex)
+Motion *findSenderMotion(PlannedStmt *plannedstmt, int sliceIndex)
 {
 	Assert(sliceIndex > -1);
 
@@ -2370,6 +2355,62 @@ Motion *getLocalMotion(PlannedStmt *plannedstmt, int sliceIndex)
 	MotionFinderWalker(planTree, &ctx);
 	return ctx.motion;
 }
+
+typedef struct SubPlanFinderContext
+{
+	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
+	List *subplans; /* Output */
+} SubPlanFinderContext;
+
+/*
+ * Walker to find all the subplans in a PlanTree between 'node' and the next motion node
+ */
+static bool
+SubPlanFinderWalker(Plan *node,
+				  void *context)
+{
+	Assert(context);
+	SubPlanFinderContext *ctx = (SubPlanFinderContext *) context;
+
+	if (node == NULL || IsA(node, Motion))
+	{
+		return false;	/* don't visit subtree */
+	}
+
+	if (IsA(node, SubPlan))
+	{
+		SubPlan *sub_plan = (SubPlan *) node;
+		Plan *sub_plan_root = plan_tree_base_subplan_get_plan(context, sub_plan);
+		ctx->subplans = lappend(ctx->subplans, sub_plan_root);
+	}
+
+	/* Continue walking */
+	return plan_tree_walker((Node*)node, SubPlanFinderWalker, ctx);
+}
+
+/*
+ * Given a plan and a root motion node find all the subplans
+ * between 'root' and the next motion node in the tree
+ */
+List *getLocallyExecutableSubplans(PlannedStmt *plannedstmt, Plan *root)
+{
+	SubPlanFinderContext ctx;
+	Plan* root_plan = root;
+	if (IsA(root, Motion))
+	{
+		root_plan = outerPlan(root);
+	}
+	ctx.base.node = (Node*)plannedstmt;
+	ctx.subplans = NIL;
+	SubPlanFinderWalker(root_plan, &ctx);
+	return ctx.subplans;
+}
+
+typedef struct ParamExtractorContext
+{
+	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
+	EState *estate;
+} ParamExtractorContext;
 
 /*
  * Given a subplan determine if it is an initPlan (subplan->is_initplan) then copy its params
@@ -2437,32 +2478,6 @@ static void ExtractSubPlanParam(SubPlan *subplan, EState *estate)
 }
 
 /*
- * Walker to find all the subplans in a PlanTree between 'node' and the next motion node
- */
-static bool
-SubPlanFinderWalker(Plan *node,
-				  void *context)
-{
-	Assert(context);
-	SubPlanFinderContext *ctx = (SubPlanFinderContext *) context;
-
-	if (node == NULL || IsA(node, Motion))
-	{
-		return false;	/* don't visit subtree */
-	}
-
-	if (IsA(node, SubPlan))
-	{
-		SubPlan *sub_plan = (SubPlan *) node;
-		Plan *sub_plan_root = plan_tree_base_subplan_get_plan(context, sub_plan);
-		ctx->subplans = lappend(ctx->subplans, sub_plan_root);
-	}
-
-	/* Continue walking */
-	return plan_tree_walker((Node*)node, SubPlanFinderWalker, ctx);
-}
-
-/*
  * Walker to extract all the precomputer InitPlan params in a plan tree.
  */
 static bool
@@ -2489,14 +2504,39 @@ ParamExtractorWalker(Plan *node,
 }
 
 /*
- * Walker to set plan->motionNode for every Plan node to its corresponding parent motion node.
+ * Find and extract all the InitPlan setParams in a root node's subtree.
+ */
+void ExtractParamsFromInitPlans(PlannedStmt *plannedstmt, Plan *root, EState *estate)
+{
+	ParamExtractorContext ctx;
+	ctx.base.node = (Node*)plannedstmt;
+	ctx.estate = estate;
+
+	/* If gather motion shows up at top, we still need to find master only init plan */
+	if (IsA(root, Motion))
+	{
+		root = outerPlan(root);
+	}
+	ParamExtractorWalker(root, &ctx);
+}
+
+typedef struct MotionAssignerContext
+{
+	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
+	List *motStack; /* Motion Stack */
+} MotionAssignerContext;
+
+/*
+ * Walker to set plan->motionNode for every Plan node to its corresponding parent
+ * motion node.
  *
- * This function maintains a stack of motion nodes. When we encounter a motion node we pop it on
- * to the stack, walk its subtree, and then pop it off the stack. When we encounter any node (motion nodes included)
- * we assign its plan->motionNode to the top of the stack.
+ * This function maintains a stack of motion nodes. When we encounter a motion node
+ * we push it on to the stack, walk its subtree, and then pop it off the stack.
+ * When we encounter any plan node (motion nodes included) we assign its plan->motionNode
+ * to the top of the stack.
  *
- * NOTE: Motion nodes will have their motionNode value set to the previous motion node we encountered
- * while walking the subtree.
+ * NOTE: Motion nodes will have their motionNode value set to the previous motion node
+ * we encountered while walking the subtree.
  */
 static bool
 MotionAssignerWalker(Plan *node,
@@ -2510,11 +2550,13 @@ MotionAssignerWalker(Plan *node,
 	if (is_plan_node((Node*)node))
 	{
 		Plan *plan = (Plan *) node;
-		// TODO: For cached plan we may be assigning multiple times.
-		// The eventual goal is to relocate it to planner. So, we won't
-		// check for duplicate assignment here.
-		//Assert(NULL == plan->motionNode);
-		if (NULL != plan->motionNode) return true;
+		/*
+		 * TODO: For cached plan we may be assigning multiple times.
+		 * The eventual goal is to relocate it to planner. For now,
+		 * ignore already assigned nodes.
+		 */
+		if (NULL != plan->motionNode)
+			return true;
 		plan->motionNode = ctx->motStack != NIL ? (Plan *) lfirst(list_head(ctx->motStack)) : NULL;
 	}
 
@@ -2541,41 +2583,6 @@ MotionAssignerWalker(Plan *node,
 }
 
 /*
- * Given a plan and a root motion node find all the subplans
- * between 'root' and the next motion node in the tree
- */
-List *getLocalSubplans(PlannedStmt *plannedstmt, Plan *root)
-{
-	SubPlanFinderContext ctx;
-	Plan* root_plan = root;
-	if (IsA(root, Motion))
-	{
-		root_plan = outerPlan(root);
-	}
-	ctx.base.node = (Node*)plannedstmt;
-	ctx.subplans = NIL;
-	SubPlanFinderWalker(root_plan, &ctx);
-	return ctx.subplans;
-}
-
-/*
- * Find and extract all the InitPlan setParams in a root node's subtree.
- */
-void ExtractAllParams(PlannedStmt *plannedstmt, Plan *root, EState *estate)
-{
-	ParamExtractorContext ctx;
-	ctx.base.node = (Node*)plannedstmt;
-	ctx.estate = estate;
-
-	/* If gather motion shows up at top, we still need to find master only init plan */
-	if (IsA(root, Motion))
-	{
-		root = outerPlan(root);
-	}
-	ParamExtractorWalker(root, &ctx);
-}
-
-/*
  * Assign every node in plannedstmt->planTree its corresponding
  * parent Motion Node if it has one
  *
@@ -2590,6 +2597,8 @@ void AssignParentMotionToPlanNodes(PlannedStmt *plannedstmt)
 	ctx.motStack = NIL;
 
 	MotionAssignerWalker(plannedstmt->planTree, &ctx);
+	/* The entire motion stack should have been unwounded */
+	Assert(ctx->motStack == NIL);
 }
 
 /**

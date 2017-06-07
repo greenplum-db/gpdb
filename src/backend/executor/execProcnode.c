@@ -131,7 +131,6 @@
 #include "pg_trace.h"
 
 #include "codegen/codegen_wrapper.h"
-#include "utils/debugutils.h"
 
 #ifdef CDB_TRACE_EXECUTOR
 #include "nodes/print.h"
@@ -232,37 +231,37 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	appendStringInfo(codegenManagerName, "%s-%d-%d", "execProcnode", node->plan_node_id, node->type);
 	void	   *CodegenManager = CodeGeneratorManagerCreate(codegenManagerName->data);
 
-
 	START_CODE_GENERATOR_MANAGER(CodegenManager);
 	{
 
 	int localMotionId = LocallyExecutingSliceIndex(estate);
 
 	/*
-	 * If it's not on the master, the motion should have a parent motion. The
-	 * utility queries are guarded by eliminateAliens, which checks for number
-	 * of motion in the plan.
+	 * For most plan nodes the ascendant motion is the parent motion
+	 * node. However, subplans are different. They can be executed under
+	 * different slices, althought appearing in another slice. Other
+	 * exception includes two stage agg where agg node on the master
+	 * does not have any parent motion. Any time we see such null parent
+	 * motion, we assume they are not alien. They either assume "citizen"
+	 * status under a subplan, or they are the root of the execution on
+	 * the master.
 	 */
 	Motion *parentMotion = (Motion *) node->motionNode;
-	//AssertImply(estate->eliminateAliens, parentMotion != NULL || (IsA(node, Motion)));// && ((Motion*)node)->motionID == currentSliceId));
 	int parentMotionId = parentMotion != NULL ? parentMotion->motionID : UNSET_SLICE_ID;
 
 	/*
 	 * Is current plan node supposed to execute in current slice?
-	 * Special case is sending motion node, which is supposed to
-	 * update estate->currentSliceIdInPlan inside ExecInitMotion,
-	 * but wouldn't get a chance to do so until called in the code
-	 * below. But, we want to set up a memory account for sender
-	 * motion before we call ExecInitMotion to make sure we don't
-	 * miss its allocation memory
+	 * Special case is sending motion node, which may be at the root
+	 * and therefore parentless. We can sending motions motionId to
+	 * determine its alien status.
 	 *
-	 * No node is alien on the master as we need those for collecting stats.
-	 * We will optimize this in next phase.
+	 * On master we don't do alien elimination because of EXPLAIN ANALYZE
+	 * gathering stats from all slices.
 	 */
 	bool isAlienPlanNode = !((localMotionId == parentMotionId) || (parentMotionId == UNSET_SLICE_ID) ||
 			(nodeTag(node) == T_Motion && ((Motion*)node)->motionID == localMotionId) || Gp_segment == -1);
 
-	// We cannot have alien nodes if we are eliminating aliens
+	/* We cannot have alien nodes if we are eliminating aliens */
 	AssertImply(estate->eliminateAliens, !isAlienPlanNode);
 
 	/*
@@ -1495,17 +1494,14 @@ transportUpdateNodeWalker(PlanState *node, void *context)
 	 */
 	if (IsA(node, MotionState))
 	{
-		((MotionState *) node)->ps.state->interconnect_context = (ChunkTransportState *) context;
+		node->state->interconnect_context = (ChunkTransportState *) context;
 		/* visit subtree */
 
-		MotionState *motionState = (MotionState *)node;
-		Motion *motion = (Motion *) motionState->ps.plan;
-
-		if (motion->motionID != LocallyExecutingSliceIndex(node->state))
-		{
-			// Don't visit subtree
-			return CdbVisit_Skip;
-		}
+//		if (node->state->eliminateAliens && ((Motion *)node->plan)->motionID != LocallyExecutingSliceIndex(node->state))
+//		{
+//			// Don't visit subtree
+//			return CdbVisit_Skip;
+//		}
 	}
 
 	return CdbVisit_Walk;

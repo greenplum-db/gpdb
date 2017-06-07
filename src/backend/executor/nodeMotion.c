@@ -973,8 +973,8 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 	ExecInitResultTupleSlot(estate, &motionstate->ps);
 
 	/*
-	 * initializes child nodes. For alien elimination, we always skip children of
-	 * receiver motion.
+	 * Initializes child nodes. If alien elimination is on,
+	 * we skip children of receiver motion.
 	 */
 	if (!estate->eliminateAliens || motionstate->mstype == MOTIONSTATE_SEND)
 	{
