@@ -2598,7 +2598,7 @@ void AssignParentMotionToPlanNodes(PlannedStmt *plannedstmt)
 
 	MotionAssignerWalker(plannedstmt->planTree, &ctx);
 	/* The entire motion stack should have been unwounded */
-	Assert(ctx->motStack == NIL);
+	Assert(ctx.motStack == NIL);
 }
 
 /**
