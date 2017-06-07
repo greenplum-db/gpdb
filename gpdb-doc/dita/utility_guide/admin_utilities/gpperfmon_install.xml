@@ -20,20 +20,21 @@
         data collection agents. You must be the Greenplum Database system user
           (<codeph>gpadmin</codeph>) to run this utility. The <codeph>--port</codeph> option is
         required. When using the <codeph>--enable</codeph> option, the <codeph>--password</codeph>
-        option is also required. If using the <codeph>--enable</codeph> option, Greenplum Database
+        option is also required. Use the <codeph>--port</codeph> option to
+        supply the port of the Greenplum Database master instance. If using the
+        <codeph>--enable</codeph> option, Greenplum Database
         must be restarted after the utility completes.</p>
       <p>When run without the <codeph>--enable</codeph> option, the utility just creates the
           <codeph>gpperfmon</codeph> database (the database used to store system metrics collected
-        by the data collection agents). When run with the <codeph>--enable</codeph> and
-          <codeph>--password</codeph> options, the utility also runs the following additional tasks
-        necessary to enable the data collection agents:</p>
+        by the data collection agents). When run with the <codeph>--enable</codeph>
+          option, the utility also runs the following additional tasks
+        necessary to enable the performance monitor data collection agents:</p>
       <ol>
         <li id="ou143278">Creates the <codeph>gpmon</codeph> superuser role in Greenplum Database.
           The data collection agents require this role to connect to the database and write their
           data. The <codeph>gpmon</codeph> superuser role uses MD5-encrypted password authentication
           by default. Use the <codeph>--password</codeph> option to set the <codeph>gpmon</codeph>
-          superuser's password. Use the <codeph>--port</codeph> option to supply the port of the
-          Greenplum Database master instance.</li>
+          superuser's password.</li>
         <li id="ou143437">Updates the <codeph>$MASTER_DATA_DIRECTORY/pg_hba.conf</codeph> file. The
           utility adds these lines to the host-based authentication file
             (<codeph>pg_hba.conf</codeph>):<codeblock>local      gpperfmon     gpmon                 md5
@@ -112,12 +113,12 @@ host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
         <plentry>
           <pt>--password <varname>gpmon_password</varname></pt>
           <pd>Required if <codeph>--enable</codeph> is specified. Sets the password of the
-              <codeph>gpmon</codeph> superuser.</pd>
+              <codeph>gpmon</codeph> superuser. Disallowed if <codeph>--enable</codeph> is not
+              specified.</pd>
         </plentry>
         <plentry>
           <pt>--port <varname>gpdb_port</varname></pt>
-          <pd>Required if <codeph>--enable</codeph> is specified. Specifies the connection port of
-            the Greenplum Database master.</pd>
+          <pd>Required. Specifies the connection port of the Greenplum Database master.</pd>
         </plentry>
         <plentry>
           <pt>--pgpass <varname>path_to_file</varname></pt>
@@ -259,7 +260,7 @@ host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
       <title>Examples</title>
       <p>Create the <codeph>gpperfmon</codeph> database only:</p>
       <codeblock>$ su - gpadmin
-$ gpperfmon_install --port 5432 --password changeme</codeblock>
+$ gpperfmon_install --port 5432</codeblock>
       <p>Create the <codeph>gpperfmon</codeph> database, create the <codeph>gpmon</codeph>
         superuser, and enable the data collection agents:</p>
       <codeblock>$ su - gpadmin

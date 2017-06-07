@@ -9,8 +9,7 @@ SYNOPSIS
 *****************************************************
 
 gpperfmon_install --port <gpdb_port>
-      [--enable --password <gpmon_password> --port <gpdb_port> 
-        [--pgpass <path_to_file>]]
+      [--enable --password <gpmon_password> [--pgpass <path_to_file>]]
       [--verbose]
 
 
@@ -23,11 +22,12 @@ DESCRIPTION
 
 The gpperfmon_install utility automates the steps required 
 to enable the performance monitor data collection agents. You 
-must be the Greenplum Database administrative user (gpadmin) 
-to run this utility. If using the --enable option, Greenplum
+must be the Greenplum Database administrative user (gpadmin) to run this
+utility. Use the --port option to supply the port of the Greenplum
+Database master instance. If using the --enable option, Greenplum
 Database must be restarted after the utility completes.
 
-When run with only the --port option, the utility just creates the 
+When run without the --enable option, the utility just creates the
 gpperfmon database (the database used to store performance monitor 
 data). When run with the --enable option, the utility also runs the
 following additional tasks necessary to enable the performance monitor 
@@ -38,8 +38,7 @@ data collection agents:
    role to connect to the database and write their data. The 
    gpmon superuser role uses MD5-encrypted password authentication 
    by default. Use the --password option to set the gpmon superuser's 
-   password. Use the --port option to supply the port of the 
-   Greenplum Database master instance.
+   password.
 
 2. Updates the $MASTER_DATA_DIRECTORY/pg_hba.conf file. The 
    utility adds the following line to the host-based 
@@ -87,8 +86,7 @@ OPTIONS
 --password <gpmon_password>
 
   Required if --enable is specified. Sets the password of the 
-  gpmon superuser.
-
+  gpmon superuser. Disallowed if --enable is not specified.
 
 
 --port <gpdb_port>
@@ -102,7 +100,6 @@ OPTIONS
   Optional if --enable is specified. If the password file is not 
   in the default location of ~/.pgpass, specifies the location of 
   the password file.
-
 
 
 --verbose
