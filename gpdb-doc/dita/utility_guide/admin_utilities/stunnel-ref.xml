@@ -368,15 +368,6 @@
             </dd>
           </dlentry>
           <dlentry>
-            <dt id="fips-yes-no">fips = yes | no</dt>
-            <dd>
-              <p>Enable or disable FIPS 140-2 mode.</p>
-              <p>This option allows you to disable entering FIPS mode if <codeph>stunnel</codeph>
-                was compiled with FIPS 140-2 support.</p>
-              <p>Default: no (since version 5.00)</p>
-            </dd>
-          </dlentry>
-          <dlentry>
             <dt id="foreground-yes-no-Unix-only">foreground = yes | no (Unix only)</dt>
             <dd>
               <p>Enable or disable foreground mode.</p>
