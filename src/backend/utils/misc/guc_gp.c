@@ -3275,7 +3275,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 	{
 		{"execute_pruned_plan", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Optimize execution based on current slice"),
+			gettext_noop("Prune plan to discard unwanted plan nodes for each slice before execution"),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
 		},

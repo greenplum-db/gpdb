@@ -537,8 +537,6 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	 */
 	AssignParentMotionToPlanNodes(queryDesc->plannedstmt);
 
-
-
 	/* If the interconnect has been set up; we need to catch any
 	 * errors to shut it down -- so we have to wrap InitPlan in a PG_TRY() block. */
 	PG_TRY();
@@ -4766,7 +4764,7 @@ OpenIntoRel(QueryDesc *queryDesc)
 	 * and we follow the PostgreSQL codepath, resolving the defaults here.
 	 */
 	if (queryDesc->ddesc)
-	intoTableSpaceName = queryDesc->ddesc->intoTableSpaceName;
+		intoTableSpaceName = queryDesc->ddesc->intoTableSpaceName;
 	else
 		intoTableSpaceName = into->tableSpaceName;
 
