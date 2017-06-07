@@ -1496,12 +1496,6 @@ transportUpdateNodeWalker(PlanState *node, void *context)
 	{
 		node->state->interconnect_context = (ChunkTransportState *) context;
 		/* visit subtree */
-
-//		if (node->state->eliminateAliens && ((Motion *)node->plan)->motionID != LocallyExecutingSliceIndex(node->state))
-//		{
-//			// Don't visit subtree
-//			return CdbVisit_Skip;
-//		}
 	}
 
 	return CdbVisit_Walk;
