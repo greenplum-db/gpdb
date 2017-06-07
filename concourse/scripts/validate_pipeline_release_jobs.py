@@ -5,7 +5,8 @@ import re
 import yaml
 
 RELEASE_VALIDATOR_JOB = ['Release_Candidate']
-JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = ['compile_gpdb_binary_swap_centos6'] + RELEASE_VALIDATOR_JOB
+PXF_JOBS = ['compile_gpdb_pxf_centos6','icw_planner_pxf_centos6','icw_gporca_pxf_centos6','regression_tests_pxf_centos']
+JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = ['compile_gpdb_binary_swap_centos6'] + RELEASE_VALIDATOR_JOB + PXF_JOBS
 
 pipeline_raw = open(os.environ['PIPELINE_FILE'],'r').read()
 pipeline_buffer_cleaned = re.sub('{{', '', re.sub('}}', '', pipeline_raw)) # ignore concourse v2.x variable interpolation

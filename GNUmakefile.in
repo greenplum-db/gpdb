@@ -177,6 +177,7 @@ destroy-demo-cluster:
 unittest-check:
 	$(MAKE) -C src/backend unittest-check
 	$(MAKE) -C src/bin unittest-check
+	$(MAKE) -C gpAux/extensions unittest-check
 
 
 GNUmakefile: GNUmakefile.in $(top_builddir)/config.status

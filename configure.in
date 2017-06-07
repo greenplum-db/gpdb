@@ -850,6 +850,14 @@ AC_MSG_RESULT([$with_python])
 AC_SUBST(with_python)
 
 #
+# Optionally build PXF support
+#
+AC_MSG_CHECKING([whether to build PXF modules])
+PGAC_ARG_BOOL(with, pxf, no, [  --with-pxf              build Greenplum PXF support])
+AC_MSG_RESULT([$with_pxf])
+AC_SUBST(with_pxf)
+
+#
 # GSSAPI
 #
 AC_MSG_CHECKING([whether to build with GSSAPI support])

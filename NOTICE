@@ -2327,3 +2327,33 @@ documentation will at all times remain with copyright holders.
 
 The sample data used in the world database is Copyright Statistics
 Finland, http://www.stat.fi/worldinfigures.
+
+=================================================================
+------------------ PXF ------------------------------------------
+=================================================================
+
+For the following components:
+ gpAux\extensions\pxf\src\libchurl.c
+ gpAux\extensions\pxf\src\libchurl.h
+ gpAux\extensions\pxf\src\pxfbridge.c
+ gpAux\extensions\pxf\src\pxfbridge.h
+ gpAux\extensions\pxf\src\pxfheaders.c
+ gpAux\extensions\pxf\src\pxfheaders.h
+ gpAux\extensions\pxf\src\pxfprotocol.c
+ gpAux\extensions\pxf\src\pxfuriparser.c
+ gpAux\extensions\pxf\src\pxfuriparser.h
+ gpAux\extensions\pxf\src\pxfutils.c
+ gpAux\extensions\pxf\src\pxfutils.h
+ gpAux\extensions\pxf\test\pxfheaders_test.c
+ gpAux\extensions\pxf\test\pxfprotocol_test.c
+ gpAux\extensions\pxf\test\pxfuriparser_test.c
+ gpAux\extensions\pxf\test\pxfutils_test.c
+
+Apache HAWQ (incubating)
+Copyright 2017 The Apache Software Foundation.
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+You may obtain a copy of the License at
+http://www.apache.org/licenses/LICENSE-2.0
