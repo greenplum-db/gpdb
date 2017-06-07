@@ -25,7 +25,7 @@ extern void AssignGangs(QueryDesc *queryDesc);
 extern void ReleaseGangs(QueryDesc *queryDesc);
 
 extern Motion *getLocalMotion(PlannedStmt *plannedstmt, int sliceIndex);
-extern List *getLocalSubplans(PlannedStmt *plannedstmt, Motion *root);
+extern List *getLocalSubplans(PlannedStmt *plannedstmt, Plan *root);
 extern void ExtractAllParams(PlannedStmt *plannedstmt, Plan *root, EState *estate);
 extern void AssignParentMotionToPlanNodes(PlannedStmt *plannedstmt);
 

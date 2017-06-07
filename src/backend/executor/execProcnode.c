@@ -244,8 +244,8 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	 * of motion in the plan.
 	 */
 	Motion *parentMotion = (Motion *) node->motionNode;
-	AssertImply(estate->eliminateAliens, parentMotion != NULL || (IsA(node, Motion) && ((Motion*)node)->motionID == 1));
-	int parentMotionId = parentMotion != NULL ? parentMotion->motionID : -1;
+	//AssertImply(estate->eliminateAliens, parentMotion != NULL || (IsA(node, Motion)));// && ((Motion*)node)->motionID == currentSliceId));
+	int parentMotionId = parentMotion != NULL ? parentMotion->motionID : UNSET_SLICE_ID;
 
 	/*
 	 * Is current plan node supposed to execute in current slice?
@@ -259,7 +259,7 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	 * No node is alien on the master as we need those for collecting stats.
 	 * We will optimize this in next phase.
 	 */
-	bool isAlienPlanNode = !((localMotionId == parentMotionId) ||
+	bool isAlienPlanNode = !((localMotionId == parentMotionId) || (parentMotionId == UNSET_SLICE_ID) ||
 			(nodeTag(node) == T_Motion && ((Motion*)node)->motionID == localMotionId) || Gp_segment == -1);
 
 	// We cannot have alien nodes if we are eliminating aliens

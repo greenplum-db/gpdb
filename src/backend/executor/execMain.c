@@ -437,16 +437,6 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 		/* set our global sliceid variable for elog. */
 		currentSliceId = LocallyExecutingSliceIndex(estate);
 
-		// We don't eliminate aliens if we don't have a local motion to start execution
-		estate->eliminateAliens = slice_local_execution && currentSliceId != 0 && Gp_segment != -1;
-
-		/*
-		 * Assign a Motion Node to every Plan Node. This makes it
-		 * easy to identify which slice any Node belongs to
-		 */
-		AssignParentMotionToPlanNodes(queryDesc->plannedstmt);
-
-
 		/* Determine OIDs for into relation, if any */
 		if (queryDesc->plannedstmt->intoClause != NULL)
 		{
@@ -532,6 +522,17 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 			PG_END_TRY();
 		}
 	}
+
+	// We don't eliminate aliens if we don't have an MPP plan
+	estate->eliminateAliens = execute_pruned_plan && queryDesc->plannedstmt->nMotionNodes > 0 && Gp_segment != -1;
+
+	/*
+	 * Assign a Motion Node to every Plan Node. This makes it
+	 * easy to identify which slice any Node belongs to
+	 */
+	AssignParentMotionToPlanNodes(queryDesc->plannedstmt);
+
+
 
 	/* If the interconnect has been set up; we need to catch any
 	 * errors to shut it down -- so we have to wrap InitPlan in a PG_TRY() block. */
@@ -1810,7 +1811,6 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	 */
 	Assert(estate->es_subplanstates == NIL);
 	i = 1;						/* subplan indices count from 1 */
-	Motion *m = NULL;
 	List *sub_plan_roots = NULL;
 	Plan *start_plan_node = plannedstmt->planTree;
 
@@ -1821,10 +1821,17 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	 */
 	if (estate->eliminateAliens)
 	{
-		m = getLocalMotion(plannedstmt, LocallyExecutingSliceIndex(estate));
-		Assert(NULL != m);
-		sub_plan_roots = getLocalSubplans(plannedstmt, m);
-		start_plan_node = (Plan *) m;
+		Motion *m = getLocalMotion(plannedstmt, LocallyExecutingSliceIndex(estate));
+
+		/*
+		 * We may not have any motion in the current slice, e.g., in insert query
+		 * the root may not have any motion.
+		 */
+		if (NULL != m)
+		{
+			start_plan_node = (Plan *) m;
+		}
+		sub_plan_roots = getLocalSubplans(plannedstmt, start_plan_node);
 	}
 
 	foreach(l, plannedstmt->subplans)

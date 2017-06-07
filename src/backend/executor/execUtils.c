@@ -2535,10 +2535,14 @@ MotionAssignerWalker(Plan *node,
  * Given a plan and a root motion node find all the subplans
  * between 'root' and the next motion node in the tree
  */
-List *getLocalSubplans(PlannedStmt *plannedstmt, Motion *root)
+List *getLocalSubplans(PlannedStmt *plannedstmt, Plan *root)
 {
 	SubPlanFinderContext ctx;
-	Plan* root_plan = outerPlan(root);
+	Plan* root_plan = root;
+	if (IsA(root, Motion))
+	{
+		root_plan = outerPlan(root);
+	}
 	ctx.base.node = (Node*)plannedstmt;
 	ctx.subplans = NIL;
 	SubPlanFinderWalker(root_plan, &ctx);
