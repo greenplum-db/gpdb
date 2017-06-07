@@ -3280,7 +3280,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
 		},
 		&execute_pruned_plan,
-		false, NULL, NULL
+		true, NULL, NULL
 	},
 	{
 		{"pljava_classpath_insecure", PGC_POSTMASTER, CUSTOM_OPTIONS,
