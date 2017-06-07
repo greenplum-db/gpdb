@@ -112,11 +112,11 @@
         partition elimination. Check the explain plan for queries to make sure that partitions are
         eliminated. See <xref href="../query/topics/query-profiling.xml#topic39"/> for more about
         partition elimination.</p>
-      <p><b>Note:</b> Be very careful with multi-level partitioning because the number of partition files can
-        grow very quickly. For example, if a table is partitioned by both day and city, and there
-        are 1,000 days of data and 1,000 cities, the total number of partitions is one million.
-        Column-oriented tables store each column in a physical table, so if this table has 100
-        columns, the system would be required to manage 100 million files for the table. </p>
+      <note type="warning">Be very careful with multi-level partitioning because the number of
+        partition files can grow very quickly. For example, if a table is partitioned by both day and
+        city, and there are 1,000 days of data and 1,000 cities, the total number of partitions is one
+        million. Column-oriented tables store each column in a physical table, so if this table has
+        100 columns, the system would be required to manage 100 million files for the table.</note>
       <p>Before settling on a multi-level partitioning strategy, consider a single level partition
         with bitmap indexes. Indexes slow down data loads, so performance testing with your data and
         schema is recommended to decide on the best strategy. </p>
