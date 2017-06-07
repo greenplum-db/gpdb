@@ -1,3 +1,7 @@
+-- start_ignore
+create schema subselect_gp2;
+set search_path to subselect_gp2;
+-- end_ignore
 -- Test using an external table in a subquery.
 --
 -- We used to have a bug where the scan on the external table was not
@@ -23,3 +27,11 @@ where (select count(*) from echotable as i where i.c2 = o.c2) >= 2;
 
 -- Planner test to make sure the initplan is not removed for function scan
 explain select sess_id from pg_stat_activity where current_query = (select current_query());
+
+CREATE TABLE foo (a integer, b integer)  PARTITION BY RANGE(b)
+    (PARTITION sub_one START (1) END (10),
+     PARTITION sub_two START (11) END (22));
+CREATE TABLE bar (c integer, d character varying(10));
+insert into foo values (9,9);
+insert into bar values (9,9);
+select bar.c from bar, foo where foo.b = (select max(b) from foo where bar.c = 9);

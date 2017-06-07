@@ -49,3 +49,21 @@ explain select sess_id from pg_stat_activity where current_query = (select curre
  Optimizer status: legacy query optimizer
 (13 rows)
 
+CREATE TABLE foo (a integer, b integer)  PARTITION BY RANGE(b)
+    (PARTITION sub_one START (1) END (10),
+     PARTITION sub_two START (11) END (22));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_sub_one" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_sub_two" for table "foo"
+CREATE TABLE bar (c integer, d character varying(10));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into foo values (9,9);
+insert into bar values (9,9);
+select bar.c from bar, foo where foo.b = (select max(b) from foo where bar.c = 9);
+ c 
+---
+ 9
+(1 row)
+

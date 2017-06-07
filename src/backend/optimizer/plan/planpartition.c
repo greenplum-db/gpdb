@@ -28,6 +28,8 @@ static void add_restrictinfos(PlannerInfo *root, DynamicScanInfo *dsinfo, Bitmap
 
 static bool IsPartKeyVar(Expr *expr, int partVarno, int partKeyAttno);
 
+static bool inner_contains_subplan(JoinPath *join_path);
+
 /*
  * Try to perform "partition selection" on a join.
  *
@@ -145,9 +147,15 @@ inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path,
 		return false;
 
 	/*
-	 * Cannot do it, if there inner and outer sides are not in the same slice.
+	 * Cannot do it, if the inner and outer sides are not in the same slice.
 	 */
 	if (bms_is_empty(outerpath->sameslice_relids))
+		return false;
+
+	/*
+	 * Cannot do it, if the join condition has subplan on the inner side.
+	 */
+	if (inner_contains_subplan(join_path))
 		return false;
 
 	/*
@@ -444,6 +452,34 @@ IsPartKeyVar(Expr *expr, int partVarno, int partKeyAttno)
 		Var *var = (Var *) expr;
 
 		if (var->varno == partVarno && var->varattno == partKeyAttno)
+			return true;
+	}
+	return false;
+}
+
+/*
+ * Check whether the join restrict info in inner child contains SubPlan.
+ */
+static bool
+inner_contains_subplan(JoinPath *join_path)
+{
+	ListCell	   *lc;
+	EquivalenceMember *em;
+
+	foreach (lc, join_path->joinrestrictinfo)
+	{
+		RestrictInfo	*resInfo = (RestrictInfo *) lfirst(lc);
+
+		if (resInfo->outer_is_left)
+		{
+			em = resInfo->right_em;
+		}
+		else
+		{
+			em = resInfo->left_em;
+		}
+
+		if (em && IsA(em->em_expr, SubPlan))
 			return true;
 	}
 	return false;
