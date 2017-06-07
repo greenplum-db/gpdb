@@ -91,7 +91,7 @@
         the network infrastructure on which this communication relies. You can achieve a highly
         available interconnect using by deploying dual Gigabit Ethernet switches on your network
         and redundant Gigabit connections to the Greenplum Database host (master and segment)
-        servers. For performance reasons, 10-Gb Ethernet is recommended. </p>
+        servers. For performance reasons, 10-Gb Ethernet, or faster, is recommended. </p>
     </section>
   </body>
 </topic>
