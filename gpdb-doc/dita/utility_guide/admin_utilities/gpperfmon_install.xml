@@ -56,12 +56,11 @@ host       <b>gpperfmon</b>     gpmon    ::1/128       md5</codeblock></li>
               <li>
                 <p>The <codeph>gpperfmon_install</codeph> utility assumes the default MD5
                   authentication method. Greenplum Database can optionally be configured to use the
-                  SHA-256 <ph otherprops="pivotal">or SHA-256-FIPS </ph>hash algorithm to compute
-                  the password hashes saved in the system catalog. This is incompatible with the MD5
-                  authentication method, which expects an MD5 hash or clear text password in the
-                  system catalog. Because of this, if you have enabled the SHA-256 <ph
-                    otherprops="pivotal">or SHA-256-FIPS </ph>hash algorithm in the database, you
-                  must edit the <codeph>pg_hba.conf</codeph> file after running the
+                  SHA-256 hash algorithm to compute the password hashes saved in the system catalog.
+                  This is incompatible with the MD5 authentication method, which expects an MD5 hash
+                  or clear text password in the system catalog. Because of this, if you have enabled
+                  the SHA-256 hash algorithm in the database, you must edit the
+                    <codeph>pg_hba.conf</codeph> file after running the
                     <codeph>gpperfmon_install</codeph> utility. For the <codeph>host</codeph>
                   entries, change the authentication method for the <codeph>gpmon</codeph> role from
                     <codeph>md5</codeph> to
