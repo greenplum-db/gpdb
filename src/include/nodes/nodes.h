@@ -687,17 +687,16 @@ typedef enum JoinType
 	 */
 	JOIN_SEMI,					/* 1 copy of each LHS row that has match(es) */
 	JOIN_ANTI,					/* 1 copy of each LHS row that has no match */
+	JOIN_LASJ_NOTIN,			/* Left Anti Semi Join with Not-In semantics:
+									If any NULL values are produced by inner side,
+									return no join results. Otherwise, same as LASJ */
 	JOIN_REVERSE_IN,			/* at most one result per inner row */
 	/*
 	 * These codes are used internally in the planner, but are not supported
 	 * by the executor (nor, indeed, by most of the planner).
 	 */
 	JOIN_UNIQUE_OUTER,			/* LHS path must be made unique */
-	JOIN_UNIQUE_INNER,			/* RHS path must be made unique */
-	JOIN_LASJ_NOTIN				/* Left Anti Semi Join with Not-In semantics:
-									If any NULL values are produced by inner side,
-									return no join results. Otherwise, same as LASJ */
-
+	JOIN_UNIQUE_INNER			/* RHS path must be made unique */
 	/*
 	 * We might need additional join types someday.
 	 */

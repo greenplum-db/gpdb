@@ -414,7 +414,7 @@ build_join_rel(PlannerInfo *root,
 	/*
 	 * CDB: Attach subquery duplicate suppression info if needed.
 	 */
-	if (root->join_info_list && hasSemiJoin(root->join_info_list))
+	if (root->join_info_list)
 		joinrel->dedup_info = cdb_make_rel_dedup_info(root, joinrel);
 
 	/*
@@ -903,7 +903,7 @@ cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel)
      * this rel.
      *
      * (A subquery can be identified by its set of relids: the righthand relids
-     * in its InClauseInfo.)
+     * in its SpecialJoinInfo.)
      *
      * Post-join duplicate removal can be applied to a rel that contains the
      * sublink's lefthand relids, the subquery's own tables (the sublink's
@@ -919,18 +919,18 @@ cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel)
     foreach(cell, root->join_info_list)
     {
         SpecialJoinInfo   *sjinfo = (SpecialJoinInfo *)lfirst(cell);
-        if(sjinfo->jointype != JOIN_SEMI)
+        if(!sjinfo->consider_dedup)
             continue;
 
         /* Got all of the subquery's own tables? */
-        if (bms_is_subset(sjinfo->min_righthand, rel->relids))
+        if (bms_is_subset(sjinfo->syn_righthand, rel->relids))
         {
             /* Early dedup (JOIN_UNIQUE, JOIN_SEMI) can be applied to this rel. */
             prejoin_dedup_subqrelids =
-                bms_add_members(prejoin_dedup_subqrelids, sjinfo->min_righthand);
+                bms_add_members(prejoin_dedup_subqrelids, sjinfo->syn_righthand);
 
             /* Got all the correlating and left-hand relids too? */
-            if (bms_is_subset(sjinfo->min_righthand, spent_subqrelids))
+            if (bms_is_subset(sjinfo->syn_righthand, spent_subqrelids))
             {
                 try_postjoin_dedup = true;
                 subqueries_unfinished--;
@@ -940,10 +940,10 @@ cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel)
 
             /* Does rel have exactly the relids of uncorrelated "= ANY" subq? */
             if (sjinfo->try_join_unique &&
-                bms_equal(sjinfo->min_righthand, rel->relids))
+                bms_equal(sjinfo->syn_righthand, rel->relids))
                 join_unique_ininfo = sjinfo;
         }
-        else if (bms_overlap(sjinfo->min_righthand, rel->relids))
+        else if (bms_overlap(sjinfo->syn_righthand, rel->relids))
             partial = true;
     }
 

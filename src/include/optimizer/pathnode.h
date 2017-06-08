@@ -144,6 +144,4 @@ extern CdbRelColumnInfo *cdb_rte_find_pseudo_column(RangeTblEntry *rte, AttrNumb
 
 extern CdbRelDedupInfo *cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel);
 
-extern bool hasSemiJoin (List *join_info_list);
-
 #endif   /* PATHNODE_H */

@@ -1520,6 +1520,12 @@ typedef struct SpecialJoinInfo
 								 *  subquery is not correlated.  Ok to consider
 								 *  JOIN_UNIQUE method of duplicate suppression.
 								 */
+	bool		consider_dedup;	/* true => Denotes this SpecialJoinInfo was
+								 * constructed for IN or EXISTS sublink which
+								 * got pulled into JOIN_SEMI. If we choose to
+								 * go ahead with INNER JOIN path for this JOIN_SEMI
+								 * then we MAY need to deduplicate the join result.
+								 */
 } SpecialJoinInfo;
 
 /*

@@ -2240,6 +2240,7 @@ _outSpecialJoinInfo(StringInfo str, SpecialJoinInfo *node)
 	WRITE_BOOL_FIELD(delay_upper_joins);
 	WRITE_NODE_FIELD(join_quals);
 	WRITE_BOOL_FIELD(try_join_unique);	/*CDB*/
+	WRITE_BOOL_FIELD(consider_dedup);	/*CDB*/
 }
 
 static void

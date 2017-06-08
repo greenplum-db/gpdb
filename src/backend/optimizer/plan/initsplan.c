@@ -702,6 +702,18 @@ make_outerjoininfo(PlannerInfo *root,
 	/* this always starts out false */
 	sjinfo->delay_upper_joins = false;
 	sjinfo->join_quals = clause;
+
+	/* If we chose to take inner join path for this semi join then we MAY
+	 * need to deduplicate the join result.
+	 */
+	sjinfo->consider_dedup = jointype == JOIN_SEMI ? true : false;
+
+	/*
+	 * GPDB_90_MERGE_FIXME: Set try_join_unique appropriately once we have
+	 * pre-join-deduplication mechanism implemented.
+	 */
+	sjinfo->try_join_unique = false;
+
 	if (jointype == JOIN_FULL)
 	{
 		sjinfo->min_lefthand = bms_copy(left_rels);

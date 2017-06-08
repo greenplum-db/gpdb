@@ -2173,6 +2173,7 @@ _copySpecialJoinInfo(SpecialJoinInfo *from)
 	COPY_SCALAR_FIELD(delay_upper_joins);
 	COPY_NODE_FIELD(join_quals);
 	COPY_SCALAR_FIELD(try_join_unique);	/* CDB */
+	COPY_SCALAR_FIELD(consider_dedup);	/* CDB */
 	
 	return newnode;
 }

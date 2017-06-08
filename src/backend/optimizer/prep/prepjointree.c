@@ -191,8 +191,8 @@ pull_up_sublinks_jointree_recurse(PlannerInfo *root, Node *jtnode,
 	else if (IsA(jtnode, JoinExpr))
 	{
 		JoinExpr   *j;
-		Relids		leftrelids;
-		Relids		rightrelids;
+		Relids		leftrelids = NULL;
+		Relids		rightrelids = NULL;
 		Node	   *jtlink;
 
 		/*
@@ -207,27 +207,27 @@ pull_up_sublinks_jointree_recurse(PlannerInfo *root, Node *jtnode,
 		 * We support flattening of sublinks in JOIN...ON only for
 		 * inner joins
 		 */
-		if (j->jointype != JOIN_INNER)
-			return jtnode;
+		if (j->jointype == JOIN_INNER)
+		{
+			/* Recurse to process children and collect their relids */
+			j->larg = pull_up_sublinks_jointree_recurse(root, j->larg,
+														&leftrelids);
+			j->rarg = pull_up_sublinks_jointree_recurse(root, j->rarg,
+														&rightrelids);
 
-		/* Recurse to process children and collect their relids */
-		j->larg = pull_up_sublinks_jointree_recurse(root, j->larg,
-													&leftrelids);
-		j->rarg = pull_up_sublinks_jointree_recurse(root, j->rarg,
-													&rightrelids);
-
-		/*
-		 * Now process qual, showing appropriate child relids as available,
-		 * and attach any pulled-up jointree items at the right place.
-		 * We put new JoinExprs above the existing one (much as for a
-		 * FromExpr-style join). The point of the available_rels
-		 * machinations is to ensure that we only pull up quals for 
-		 * which that's okay.
-		 */
-		j->quals = pull_up_sublinks_qual_recurse(root, j->quals,
-												 bms_union(leftrelids,
-														   rightrelids),
-												 &jtlink);
+			/*
+			 * Now process qual, showing appropriate child relids as available,
+			 * and attach any pulled-up jointree items at the right place.
+			 * We put new JoinExprs above the existing one (much as for a
+			 * FromExpr-style join). The point of the available_rels
+			 * machinations is to ensure that we only pull up quals for
+			 * which that's okay.
+			 */
+			j->quals = pull_up_sublinks_qual_recurse(root, j->quals,
+													 bms_union(leftrelids,
+															   rightrelids),
+													 &jtlink);
+		}
 
 		/*
 		 * Although we could include the pulled-up subqueries in the returned
@@ -529,13 +529,13 @@ pull_up_subqueries(PlannerInfo *root, Node *jtnode,
 		switch (j->jointype)
 		{
 			case JOIN_INNER:
+			case JOIN_SEMI:
 				j->larg = pull_up_subqueries(root, j->larg,
 											 below_outer_join, false);
 				j->rarg = pull_up_subqueries(root, j->rarg,
 											 below_outer_join, false);
 				break;
 			case JOIN_LEFT:
-			case JOIN_SEMI:
 			case JOIN_ANTI:
 			case JOIN_LASJ_NOTIN:
 				j->larg = pull_up_subqueries(root, j->larg,
