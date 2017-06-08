@@ -1747,7 +1747,6 @@ best_inner_indexscan(PlannerInfo *root, RelOptInfo *rel,
 			isouterjoin = false;
 			break;
 		case JOIN_LEFT:
-		case JOIN_SEMI:
 		case JOIN_ANTI:
 			isouterjoin = true;
 			break;

@@ -2558,7 +2558,7 @@ create_worktablescan_path(PlannerInfo *root, RelOptInfo *rel, CdbLocusType ctelo
  * CDB TODO: Occasionally, symmetric JOIN_SEMI might be useful (aka 'match join').
  */
 static inline JoinType
-cdb_jointype_to_join_in(RelOptInfo *joinrel, JoinType jointype, Path *inner_path)
+cdb_jointype_to_join_semi(RelOptInfo *joinrel, JoinType jointype, Path *inner_path)
 {
     CdbRelDedupInfo    *dedup = joinrel->dedup_info;
 
@@ -2571,7 +2571,7 @@ cdb_jointype_to_join_in(RelOptInfo *joinrel, JoinType jointype, Path *inner_path
         jointype = JOIN_SEMI;
     }
     return jointype;
-}                               /* cdb_jointype_to_join_in */
+}                               /* cdb_jointype_to_join_semi */
 
 bool
 path_contains_inner_index(Path *path)
@@ -2638,7 +2638,7 @@ create_nestloop_path(PlannerInfo *root,
     /* CDB: Change jointype to JOIN_SEMI from JOIN_INNER (if eligible). */
     if (joinrel->dedup_info)
     {
-        jointype = cdb_jointype_to_join_in(joinrel, jointype, inner_path);
+        jointype = cdb_jointype_to_join_semi(joinrel, jointype, inner_path);
         sjinfo->jointype = jointype;
     }
 
@@ -2758,7 +2758,7 @@ create_mergejoin_path(PlannerInfo *root,
     /* CDB: Change jointype to JOIN_SEMI from JOIN_INNER (if eligible). */
     if (joinrel->dedup_info)
     {
-        jointype = cdb_jointype_to_join_in(joinrel, jointype, inner_path);
+        jointype = cdb_jointype_to_join_semi(joinrel, jointype, inner_path);
         sjinfo->jointype = jointype;
     }
 
@@ -2918,7 +2918,7 @@ create_hashjoin_path(PlannerInfo *root,
 	/* CDB: Change jointype to JOIN_SEMI from JOIN_INNER (if eligible). */
 	if (joinrel->dedup_info)
 	{
-		jointype = cdb_jointype_to_join_in(joinrel, jointype, inner_path);
+		jointype = cdb_jointype_to_join_semi(joinrel, jointype, inner_path);
 		sjinfo->jointype = jointype;
 	}
 
@@ -2967,19 +2967,4 @@ create_hashjoin_path(PlannerInfo *root,
 	cost_hashjoin(pathnode, root, sjinfo);
 
 	return pathnode;
-}
-
-/*
- * Check if SpecialJoinInfo list contains jointype JOIN_SEMI
- */
-bool hasSemiJoin(List *join_info_list)
-{
-	ListCell *lc;
-	foreach (lc, join_info_list)
-	{
-		SpecialJoinInfo *sp = (SpecialJoinInfo *) lfirst(lc);
-		if(sp->jointype == JOIN_SEMI)
-			return true;
-	}
-	return false;
 }

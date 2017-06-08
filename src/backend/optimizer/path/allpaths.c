@@ -296,7 +296,7 @@ set_plain_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 		set_baserel_size_estimates(root, rel);
 
 	/* CDB: Attach subquery duplicate suppression info. */
-	if (root->join_info_list && hasSemiJoin(root->join_info_list))
+	if (root->join_info_list)
 		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
 
 	/*
@@ -734,7 +734,7 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		rel->tuples = rel->subplan->plan_rows;
 
 	/* CDB: Attach subquery duplicate suppression info. */
-	if (root->join_info_list && hasSemiJoin(root->join_info_list))
+	if (root->join_info_list)
 		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
 
 	/* Mark rel with estimated output rows, width, etc */
@@ -766,7 +766,7 @@ set_function_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	rel->onerow = !expression_returns_set(rte->funcexpr);
 
 	/* CDB: Attach subquery duplicate suppression info. */
-	if (root->join_info_list && hasSemiJoin(root->join_info_list))
+	if (root->join_info_list)
 		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
 
 	/* Mark rel with estimated output rows, width, etc */
@@ -825,7 +825,7 @@ set_tablefunction_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rt
 	rel->onerow = !expression_returns_set(rte->funcexpr);
 
 	/* Attach subquery duplicate suppression info. */
-	if (root->join_info_list && hasSemiJoin(root->join_info_list))
+	if (root->join_info_list)
 		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
 
 	/* Mark rel with estimated output rows, width, etc */
@@ -853,7 +853,7 @@ set_values_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 				   !expression_returns_set((Node *) rte->values_lists));
 
 	/* CDB: Attach subquery duplicate suppression info. */
-	if (root->join_info_list && hasSemiJoin(root->join_info_list))
+	if (root->join_info_list)
 		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
 
 	/* Generate appropriate path */

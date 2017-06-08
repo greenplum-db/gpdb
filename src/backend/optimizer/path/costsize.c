@@ -125,7 +125,7 @@ static MergeScanSelCache *cached_scansel(PlannerInfo *root,
 static bool cost_qual_eval_walker(Node *node, cost_qual_eval_context *context);
 static Selectivity approx_selectivity(PlannerInfo *root, List *quals,
 				   SpecialJoinInfo *sjinfo);
-static Selectivity join_in_selectivity(JoinPath *path, PlannerInfo *root, SpecialJoinInfo *sjinfo);
+static Selectivity join_in_selectivity(JoinPath *path, PlannerInfo *root);
 static double relation_byte_size(double tuples, int width);
 static double page_size(double tuples, int width);
 static Selectivity adjust_selectivity_for_nulltest(Selectivity selec,
@@ -1724,7 +1724,7 @@ cost_nestloop(NestPath *path, PlannerInfo *root, SpecialJoinInfo *sjinfo)
 	 * selectivity.  (This assumes that all the quals attached to the join are
 	 * IN quals, which should be true.)
 	 */
-	joininfactor = join_in_selectivity(path, root, sjinfo);
+	joininfactor = join_in_selectivity(path, root);
 
 	/* cost of source data */
 
@@ -2034,7 +2034,7 @@ cost_mergejoin(MergePath *path, PlannerInfo *root, SpecialJoinInfo *sjinfo)
 	 * output size.  (This assumes that all the quals attached to the join are
 	 * IN quals, which should be true.)
 	 */
-	joininfactor = join_in_selectivity(&path->jpath, root, sjinfo);
+	joininfactor = join_in_selectivity(&path->jpath, root);
 
 	/*
 	 * The number of tuple comparisons needed is approximately number of outer
@@ -2304,7 +2304,7 @@ cost_hashjoin(HashPath *path, PlannerInfo *root, SpecialJoinInfo *sjinfo)
 	 * output size.  (This assumes that all the quals attached to the join are
 	 * IN quals, which should be true.)
 	 */
-	joininfactor = join_in_selectivity(&path->jpath, root, sjinfo);
+	joininfactor = join_in_selectivity(&path->jpath, root);
 
 	/*
 	 * The number of tuple comparisons needed is the number of outer tuples
@@ -2871,7 +2871,6 @@ set_joinrel_size_estimates(PlannerInfo *root, RelOptInfo *rel,
 	Selectivity pselec;
 	double		nrows;
 	double		adjnrows;
-	UniquePath  *upath;
 
 	/*
 	 * Compute joinclause selectivity.	Note that we are only considering
@@ -2970,15 +2969,6 @@ set_joinrel_size_estimates(PlannerInfo *root, RelOptInfo *rel,
 				nrows = inner_rel->rows;
 			nrows *= pselec;
 			break;
-		case JOIN_SEMI:
-			upath = create_unique_path(root, inner_rel->cheapest_total_path, NIL, NIL, NULL);
-			if (upath)
-				nrows = outer_rel->rows * upath->rows * jselec;
-			else
-				nrows = outer_rel->rows * inner_rel->rows * jselec;
-			if (nrows > outer_rel->rows)
-				nrows = outer_rel->rows;
-			break;
 		case JOIN_ANTI:
 		case JOIN_LASJ_NOTIN:
 			nrows = outer_rel->rows * jselec;
@@ -3017,7 +3007,7 @@ set_joinrel_size_estimates(PlannerInfo *root, RelOptInfo *rel,
  * 'sjinfo' must be the JOIN_SEMI SpecialJoinInfo for the join
  */
 static Selectivity
-join_in_selectivity(JoinPath *path, PlannerInfo *root, SpecialJoinInfo *sjinfo)
+join_in_selectivity(JoinPath *path, PlannerInfo *root)
 {
 	RelOptInfo *innerrel;
 	Selectivity selec;
@@ -3026,7 +3016,6 @@ join_in_selectivity(JoinPath *path, PlannerInfo *root, SpecialJoinInfo *sjinfo)
 	/* Return 1.0 whenever it's not JOIN_SEMI */
 	if (path->jointype != JOIN_SEMI)
 		return 1.0;
-	Assert(sjinfo && sjinfo->jointype == JOIN_SEMI);
 
 	/*
 	 * Return 1.0 if the inner side is already known unique.  The case where

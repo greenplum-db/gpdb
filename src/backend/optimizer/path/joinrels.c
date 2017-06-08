@@ -554,6 +554,18 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 	}
 
 	/*
+	 * For semi joins, we generate JOIN_INNER paths and perform duplicate
+	 * suppression if necessary. This happends in cdb_set_cheapest_dedup().
+	 * Upstream handles this differently by generating JOIN_UNIQUE_INNER &
+	 * JOIN_UNIQUE_OUTER paths; however these jointypes are obsolete for us.
+	 * Set the jointype to JOIN_INNER from here onwards; the jointype
+	 * will be set back to JOIN_SEMI in cdb_jointype_to_join_semi()
+	 * when we finalize the join path.
+	 */
+	if (sjinfo->jointype == JOIN_SEMI)
+		sjinfo->jointype = JOIN_INNER;
+
+	/*
 	 * Find or build the join RelOptInfo, and compute the restrictlist that
 	 * goes with this particular joining.
 	 */
@@ -620,8 +632,8 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 			}
 			add_paths_to_joinrel(root, joinrel, rel1, rel2, sjinfo->jointype, sjinfo, restrictlist);
 			break;
-
 		case JOIN_INNER:
+
 			if (is_dummy_rel(rel1) || is_dummy_rel(rel2))
 			{
 				mark_dummy_join(root, joinrel);
@@ -653,32 +665,6 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 								 restrictlist);
 			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_FULL, sjinfo,
 								 restrictlist);
-			break;
-		case JOIN_SEMI:
-			if (is_dummy_rel(rel1) || is_dummy_rel(rel2))
-			{
-				mark_dummy_join(root, joinrel);
-				break;
-			}
-			add_paths_to_joinrel(root, joinrel, rel1, rel2,
-								 JOIN_SEMI, sjinfo,
-								 restrictlist);
-			
-			/*
-			 * If we know how to unique-ify the RHS and one input rel is
-			 * exactly the RHS (not a superset) we can consider unique-ifying
-			 * it and then doing a regular join.
-			 */
-			if (bms_equal(sjinfo->syn_righthand, rel2->relids) &&
-				create_unique_path(root, rel2->cheapest_total_path, NIL, NIL, NULL) != NULL)
-			{
-				add_paths_to_joinrel(root, joinrel, rel1, rel2,
-									 JOIN_UNIQUE_INNER, sjinfo,
-									 restrictlist);
-				add_paths_to_joinrel(root, joinrel, rel2, rel1,
-									 JOIN_UNIQUE_OUTER, sjinfo,
-									 restrictlist);
-			}
 			break;
 		default:
 			elog(ERROR, "unrecognized join type: %d", (int) sjinfo->jointype);
@@ -882,7 +868,7 @@ have_join_order_restriction(PlannerInfo *root,
 		 * means of a simple heuristic.
 		 */
 
-		if (sjinfo->jointype == JOIN_SEMI && (bms_is_subset(rel1->relids, sjinfo->min_righthand) &&
+		if (sjinfo->consider_dedup && (bms_is_subset(rel1->relids, sjinfo->min_righthand) &&
 			bms_is_subset(rel2->relids, sjinfo->min_righthand) &&
 			bms_num_members(rel1->relids) + bms_num_members(rel2->relids) ==
 			bms_num_members(sjinfo->min_righthand)))
@@ -943,11 +929,6 @@ has_join_restriction(PlannerInfo *root, RelOptInfo *rel)
 		/* restricted if it overlaps LHS or RHS, but doesn't contain SJ */
 		if (bms_overlap(sjinfo->min_lefthand, rel->relids) ||
 			bms_overlap(sjinfo->min_righthand, rel->relids))
-			return true;
-
-		/* CDB: Consider cross product if subquery RHS = rel + some other rel */
-		if (sjinfo->jointype == JOIN_SEMI && (bms_is_subset(rel->relids, sjinfo->min_righthand) &&
-			!bms_equal(rel->relids, sjinfo->min_righthand)))
 			return true;
 	}
 
