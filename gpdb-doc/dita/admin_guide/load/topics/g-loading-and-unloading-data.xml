@@ -24,7 +24,10 @@
           distribution program. It is an HTTP server that is used with external tables to allow
           Greenplum Database segments to load external data in parallel, from multiple file systems.
           You can run multiple instances of <codeph>gpfdist</codeph> on different hosts and network
-          interfaces and access them in parallel. </li>
+          interfaces and access them in parallel. See the <xref
+          href="http://engineering.pivotal.io/post/The_gpfdist_protocol_for_External_Tables_in_Greenplum_Database/"
+          format="html" scope="external">gpfdist protocol for External Tables in Greenplum Database</xref>
+          blog post about frequently asked questions.</li>
         <li>The <codeph>gpload</codeph> utility automates the steps of a load task using a
           YAML-formatted control file. </li>
         <li>The GemFire-Greenplum Connector allows the transfer of data between a Pivotal GemFire
