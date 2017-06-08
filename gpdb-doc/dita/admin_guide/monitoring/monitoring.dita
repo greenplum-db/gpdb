@@ -398,9 +398,7 @@ WHERE logseverity in ('FATAL', 'ERROR')
                                         Greenplum
                                     <codeph>gpcheckcat</codeph> utility in each
                                     database:<codeblock>gpcheckcat -R persistent</codeblock></entry>
-                                <entry>Run repair scripts for any issues detected. <ph
-                                        otherprops="pivotal">If any problems are identified, contact
-                                        Pivotal support for assistance.</ph></entry>
+                                <entry>Run repair scripts for any issues detected.</entry>
                             </row>
                             <row>
                                 <entry>Check for <codeph>pg_class</codeph> entries that have no

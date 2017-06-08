@@ -186,8 +186,8 @@
         </tgroup>
       </table>
       <p>
-        <note type="note"><sup>1</sup>QuickLZ compression is available only in the commercial
-          release of Pivotal Greenplum Database.</note>
+        <note type="note"><sup>1</sup>QuickLZ compression is not available in the open source
+          version of Greenplum Database.</note>
       </p>
       <p>When choosing a compression type and level for append-optimized tables, consider these
         factors:</p>

@@ -4,9 +4,10 @@
 <topic id="topic19">
    <title>Cost-Based Vacuum Delay Parameters</title>
    <body>
-      <note type="warning">Pivotal does not recommend cost-based vacuum delay because it runs
+      <note type="warning">Using cost-based vacuum delay is discouraged because it runs
          asynchronously among the segment instances. The vacuum cost limit and delay is invoked at
-         the segment level without taking into account the state of the entire Greenplum array.</note>
+         the segment level without taking into account the state of the entire Greenplum
+         array.</note>
       <p>You can configure the execution cost of <codeph>VACUUM</codeph> and
               <codeph>ANALYZE</codeph> commands to reduce the I/O impact on concurrent database
             activity. When the accumulated cost of I/O operations reaches the limit, the process

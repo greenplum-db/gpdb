@@ -490,22 +490,18 @@ WHERE x &lt; (SELECT count(*) FROM t3 WHERE t1.y = t3.y)
                     are available to the same process. This usage is similar to using a
                         <codeph>DISTRIBUTED BY</codeph> clause when creating a table, but the
                     redistribution occurs when the query runs.</p>
-                <p>The following command uses the <codeph>TABLE</codeph> function with the
-                        <codeph>SCATTER BY</codeph> clause in the the GPText function
+                <note type="note">Based on the distribution of data, Greenplum Database
+                    automatically parallelizes table functions with <codeph>TABLE</codeph> value
+                    parameters over the nodes of the cluster.</note>
+                <p otherprops="pivotal">The following command uses the <codeph>TABLE</codeph>
+                    function with the <codeph>SCATTER BY</codeph> clause in the the GPText function
                         <codeph>gptext.index()</codeph> to populate the index
-                        <codeph>mytest.articles</codeph> with data from the messages table:</p>
-                <p>
-                    <codeblock>SELECT * FROM gptext.index(TABLE(SELECT * FROM messages 
+                        <codeph>mytest.articles</codeph> with data from the messages
+                    table:<codeblock>SELECT * FROM gptext.index(TABLE(SELECT * FROM messages 
 SCATTER BY distrib_id), 'mytest.articles');
-</codeblock>
-                </p>
-                <note type="note">
-                    <p>Based on the distribution of data, Greenplum Database
-                        automatically parallelizes table functions with <codeph>TABLE</codeph> value
-                        parameters over the nodes of the cluster.</p>
-                </note>
-                <p>For information about the function <codeph>gptext.index()</codeph>, see the
-                    Pivotal GPText documentation.</p>
+</codeblock></p>
+                <p otherprops="pivotal">For information about the function
+                        <codeph>gptext.index()</codeph>, see the Pivotal GPText documentation.</p>
             </body>
         </topic>
         <topic id="topic23" xml:lang="en">

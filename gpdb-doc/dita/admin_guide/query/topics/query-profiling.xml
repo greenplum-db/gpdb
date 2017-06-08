@@ -180,13 +180,12 @@ Gather Motion 2:1 (slice1; segments: 2) (cost=0.00..20.88 rows=1 width=13)
       <topic id="topic_idt_2ll_gr">
         <title>Determining the Query Optimizer</title>
         <body>
-          <p>You can view <cmdname>EXPLAIN</cmdname> output to determine if the Pivotal Query
-            Optimizer is enabled for the query plan and whether GPORCA or the
-            legacy query optimizer generated the explain plan. The information appears at the end of
-            the <cmdname>EXPLAIN</cmdname> output. The <codeph>Settings</codeph> line displays the
-            setting of the server configuration parameter <codeph>OPTIMIZER</codeph>. The
-              <codeph>Optimizer status</codeph> line displays whether GPORCA or
-            the legacy query optimizer generated the explain plan.</p>
+          <p>You can view <cmdname>EXPLAIN</cmdname> output to determine if GPORCA is enabled for
+            the query plan and whether GPORCA or the legacy query optimizer generated the explain
+            plan. The information appears at the end of the <cmdname>EXPLAIN</cmdname> output. The
+              <codeph>Settings</codeph> line displays the setting of the server configuration
+            parameter <codeph>OPTIMIZER</codeph>. The <codeph>Optimizer status</codeph> line
+            displays whether GPORCA or the legacy query optimizer generated the explain plan.</p>
           <p>For these two example query plans, GPORCA is enabled, the server
             configuration parameter <codeph>OPTIMIZER</codeph> is <codeph>on</codeph>. For the first
             plan, GPORCA generated the <cmdname>EXPLAIN</cmdname> plan. For the
