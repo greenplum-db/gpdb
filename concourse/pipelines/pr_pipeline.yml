@@ -3,17 +3,20 @@
 ## ======================================================================
 
 resource_types:
-  - name: pull_request_with_submodule
+  - name: pull_request
     type: docker-image
     source:
       repository: jtarchie/pr
 
 resources:
   - name: gpdb_pr
-    type: pull_request_with_submodule
+    type: pull_request
     source:
       repo: greenplum-db/gpdb
       access_token: {{gpdb-git-access-token}}
+      ignore_paths:
+      - gpdb-doc/*
+      - README*
 
   - name: centos-gpdb-dev-6
     type: docker-image
