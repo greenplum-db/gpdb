@@ -13,11 +13,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var (
-	saved_old_home string
-)
-
 var _ = Describe("configWriter", func() {
+	var (
+		saved_old_home string
+	)
 
 	BeforeEach(func() {
 		saved_old_home = test_utils.ResetTempHomeDir()

@@ -11,6 +11,9 @@ import (
 
 	"io/ioutil"
 
+	"path"
+	"runtime"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
@@ -18,20 +21,24 @@ import (
 )
 
 const (
-	grep_pg_upgrade = `
+	GREP_PG_UPGRADE = `
 gpadmin            7520   0.0  0.0  2432772    676 s004  S+    3:56PM   0:00.00 grep pg_upgrade
-pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bindir  /usr/local/greenplum-db-5/bin --old-datadir /data/gpdata/master/gpseg-1 --new-datadir /data/gp5data/master/gpseg-1 --old-port 5432 --new-port 6543 --link
+pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bindir  /usr/local/greenplum-db-5/bin --old-datadir /data/gpdata/master/gpseg-1 --new-datadir /data/gp5data/master/gpseg-1 --old-port 25437 --new-port 6543 --link
 `
 )
 
 var _ = Describe("monitor", func() {
 
 	var (
-		save_home_dir string
+		save_home_dir    string
+		private_key_path string
 	)
 
 	BeforeEach(func() {
+		_, this_file_dir, _, _ := runtime.Caller(0)
+		private_key_path = path.Dir(this_file_dir) + "/sshd/private_key.pem"
 		save_home_dir = ResetTempHomeDir()
+		WriteSampleConfig()
 	})
 	AfterEach(func() {
 		// todo replace CheatSheet, which uses file system as information transfer, to instead be a socket call on our running SSHD daemon to set up the next response
@@ -44,10 +51,10 @@ var _ = Describe("monitor", func() {
 
 	Describe("when pg_upgrade is running on the target host", func() {
 		It("reports that pg_upgrade is running", func() {
-			cheatSheet := CheatSheet{Response: grep_pg_upgrade, ReturnCode: intToBytes(0)}
+			cheatSheet := CheatSheet{Response: GREP_PG_UPGRADE, ReturnCode: intToBytes(0)}
 			cheatSheet.WriteToFile()
 
-			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
+			session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--private_key", private_key_path, "--user", "pivotal")
 
 			Eventually(session).Should(Exit(0))
 			Eventually(session.Out).Should(Say("pg_upgrade is running on host localhost"))
@@ -60,7 +67,7 @@ var _ = Describe("monitor", func() {
 			cheatSheet := CheatSheet{Response: only_grep_itself, ReturnCode: intToBytes(0)}
 			cheatSheet.WriteToFile()
 
-			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
+			session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--private_key", private_key_path, "--user", "pivotal")
 
 			Eventually(session).Should(Exit(0))
 			expectedMsg := "pg_upgrade is not running on host localhost"
@@ -72,7 +79,7 @@ var _ = Describe("monitor", func() {
 		It("complains with standard ssh error phrasing", func() {
 			ShutDownSshdServer()
 
-			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
+			session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--private_key", private_key_path, "--user", "pivotal")
 
 			Eventually(session).Should(Exit(1))
 			Eventually(session.Err).Should(Say("getsockopt: connection refused"))
@@ -96,7 +103,7 @@ var _ = Describe("monitor", func() {
 		Describe("when the default private key is found", func() {
 			Describe("and the key works", func() {
 				It("works", func() {
-					cheatSheet := CheatSheet{Response: grep_pg_upgrade, ReturnCode: intToBytes(0)}
+					cheatSheet := CheatSheet{Response: GREP_PG_UPGRADE, ReturnCode: intToBytes(0)}
 					cheatSheet.WriteToFile()
 					path := os.Getenv("GOPATH")
 					content, err := ioutil.ReadFile(path + "/src/gp_upgrade/commands/fixtures/registered_private_key.pem")
@@ -106,7 +113,7 @@ var _ = Describe("monitor", func() {
 					ioutil.WriteFile(TempHomeDir+"/.ssh/id_rsa", content, 0500)
 					Check("cannot write private key file", err)
 
-					session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--user", "pivotal")
+					session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--user", "pivotal")
 
 					Eventually(session).Should(Exit(0))
 					Eventually(session.Out).Should(Say("pg_upgrade is running on host localhost"))
@@ -114,7 +121,7 @@ var _ = Describe("monitor", func() {
 			})
 			Describe("and the key does not work", func() {
 				It("complains", func() {
-					cheatSheet := CheatSheet{Response: grep_pg_upgrade, ReturnCode: intToBytes(0)}
+					cheatSheet := CheatSheet{Response: GREP_PG_UPGRADE, ReturnCode: intToBytes(0)}
 					cheatSheet.WriteToFile()
 					path := os.Getenv("GOPATH")
 					content, err := ioutil.ReadFile(path + "/src/gp_upgrade/commands/fixtures/unregistered_private_key.pem")
@@ -124,7 +131,7 @@ var _ = Describe("monitor", func() {
 					ioutil.WriteFile(TempHomeDir+"/.ssh/id_rsa", content, 0500)
 					Check("cannot write private key file", err)
 
-					session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--user", "pivotal")
+					session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--user", "pivotal")
 
 					Eventually(session).Should(Exit(1))
 					Eventually(session.Err).Should(Say("ssh: handshake failed: ssh: unable to authenticate, attempted methods"))
@@ -140,7 +147,7 @@ var _ = Describe("monitor", func() {
 					os.Setenv("HOME", "")
 					defer os.Setenv("HOME", save)
 
-					session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--user", "pivotal")
+					session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--user", "pivotal")
 
 					Eventually(session).Should(Exit(1))
 					Eventually(session.Err).Should(Say("user has not specified a HOME environment value"))
@@ -149,7 +156,7 @@ var _ = Describe("monitor", func() {
 
 			Describe("because there is no file at the default ssh location", func() {
 				It("complains", func() {
-					session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--user", "pivotal")
+					session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--user", "pivotal")
 
 					Eventually(session).Should(Exit(1))
 					Eventually(session.Err).Should(Say("open /tmp/gp_upgrade_test_temp_home_dir/.ssh/id_rsa: no such file or directory"))
@@ -163,7 +170,7 @@ var _ = Describe("monitor", func() {
 			cheatSheet := CheatSheet{Response: "foo output", ReturnCode: intToBytes(1)}
 			cheatSheet.WriteToFile()
 
-			session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--private_key", "sshd/private_key.pem", "--user", "pivotal")
+			session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--private_key", private_key_path, "--user", "pivotal")
 
 			Eventually(session).Should(Exit(1))
 			expectedMsg := "cannot run pgrep command on remote host, output: foo output\nError: Process exited with status 1"
