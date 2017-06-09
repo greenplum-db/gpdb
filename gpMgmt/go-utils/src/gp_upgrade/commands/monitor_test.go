@@ -22,18 +22,24 @@ const (
 gpadmin            7520   0.0  0.0  2432772    676 s004  S+    3:56PM   0:00.00 grep pg_upgrade
 pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bindir  /usr/local/greenplum-db-5/bin --old-datadir /data/gpdata/master/gpseg-1 --new-datadir /data/gp5data/master/gpseg-1 --old-port 5432 --new-port 6543 --link
 `
-	temp_home_dir = "/tmp/gp_upgrade_test_temp_home_dir"
 )
 
 var _ = Describe("monitor", func() {
-	// todo replace CheatSheet, which uses file system as information transfer, to instead be a socket call on our running SSHD daemon to set up the next response
+
+	var (
+		save_home_dir string
+	)
+
+	BeforeEach(func() {
+		save_home_dir = ResetTempHomeDir()
+	})
 	AfterEach(func() {
+		// todo replace CheatSheet, which uses file system as information transfer, to instead be a socket call on our running SSHD daemon to set up the next response
 		// remove any leftover cheatsheet (sshd fake reply)
 		cheatSheet := CheatSheet{}
 		cheatSheet.RemoveFile()
 
-		err := os.RemoveAll(temp_home_dir)
-		Check("cannot remote temp home dir", err)
+		os.Setenv("HOME", save_home_dir)
 	})
 
 	Describe("when pg_upgrade is running on the target host", func() {
@@ -90,17 +96,14 @@ var _ = Describe("monitor", func() {
 		Describe("when the default private key is found", func() {
 			Describe("and the key works", func() {
 				It("works", func() {
-					save := NukeAndSetHomeDir(temp_home_dir)
-					defer os.Setenv("HOME", save)
-
 					cheatSheet := CheatSheet{Response: grep_pg_upgrade, ReturnCode: intToBytes(0)}
 					cheatSheet.WriteToFile()
 					path := os.Getenv("GOPATH")
 					content, err := ioutil.ReadFile(path + "/src/gp_upgrade/commands/fixtures/registered_private_key.pem")
 					Check("cannot read private key file", err)
-					err = os.MkdirAll(temp_home_dir+"/.ssh", 0700)
+					err = os.MkdirAll(TempHomeDir+"/.ssh", 0700)
 					Check("cannot create .ssh", err)
-					ioutil.WriteFile(temp_home_dir+"/.ssh/id_rsa", content, 0500)
+					ioutil.WriteFile(TempHomeDir+"/.ssh/id_rsa", content, 0500)
 					Check("cannot write private key file", err)
 
 					session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--user", "pivotal")
@@ -111,17 +114,14 @@ var _ = Describe("monitor", func() {
 			})
 			Describe("and the key does not work", func() {
 				It("complains", func() {
-					save := NukeAndSetHomeDir(temp_home_dir)
-					defer os.Setenv("HOME", save)
-
 					cheatSheet := CheatSheet{Response: grep_pg_upgrade, ReturnCode: intToBytes(0)}
 					cheatSheet.WriteToFile()
 					path := os.Getenv("GOPATH")
 					content, err := ioutil.ReadFile(path + "/src/gp_upgrade/commands/fixtures/unregistered_private_key.pem")
 					Check("cannot read private key file", err)
-					err = os.MkdirAll(temp_home_dir+"/.ssh", 0700)
+					err = os.MkdirAll(TempHomeDir+"/.ssh", 0700)
 					Check("cannot create .ssh", err)
-					ioutil.WriteFile(temp_home_dir+"/.ssh/id_rsa", content, 0500)
+					ioutil.WriteFile(TempHomeDir+"/.ssh/id_rsa", content, 0500)
 					Check("cannot write private key file", err)
 
 					session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--user", "pivotal")
@@ -149,9 +149,6 @@ var _ = Describe("monitor", func() {
 
 			Describe("because there is no file at the default ssh location", func() {
 				It("complains", func() {
-					save := NukeAndSetHomeDir("/tmp/gp_upgrade_test_temp_home_dir")
-					defer os.Setenv("HOME", save)
-
 					session := runCommand("monitor", "--host", "localhost", "--segment_id", "42", "--port", "2022", "--user", "pivotal")
 
 					Eventually(session).Should(Exit(1))

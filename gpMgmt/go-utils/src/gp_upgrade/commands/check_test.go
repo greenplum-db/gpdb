@@ -10,6 +10,8 @@ import (
 
 	"encoding/json"
 
+	"gp_upgrade/config"
+
 	_ "github.com/mattn/go-sqlite3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -52,7 +54,7 @@ var _ = Describe("check", func() {
 			session := runCommand("check", "--master-host", "localhost", "--database_type", "sqlite3", "--database_config_file", sqlite3_database_path)
 
 			Eventually(session).Should(Exit(0))
-			content, err := ioutil.ReadFile(jsonFilePath())
+			content, err := ioutil.ReadFile(config.GetConfigFilePath())
 			Expect(err).NotTo(HaveOccurred())
 			expectedJson, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/gp_upgrade/commands/fixtures/segment_config.json")
 			Expect(err).NotTo(HaveOccurred())
@@ -83,10 +85,6 @@ var _ = Describe("check", func() {
 	})
 })
 
-func jsonFilePath() string {
-	return os.Getenv("HOME") + "/.gp_upgrade/cluster_config.json"
-}
-
 func setupSqlite3Database(inputSql string) {
 	// clean any prior db
 	err := ioutil.WriteFile(sqlite3_database_path, []byte(""), 0644)
@@ -99,7 +97,7 @@ func setupSqlite3Database(inputSql string) {
 	_, err = db.Exec(inputSql)
 	test_utils.Check("cannot run sqlite config", err)
 
-	err = os.RemoveAll(jsonFilePath())
+	err = os.RemoveAll(config.GetConfigFilePath())
 	test_utils.Check("cannot remove json file", err)
 }
 

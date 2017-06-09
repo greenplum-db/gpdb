@@ -34,12 +34,11 @@ func (configWriter Writer) Write() error {
 		return err
 	}
 
-	upgrade_config_dir := os.Getenv("HOME") + "/.gp_upgrade"
-	err = os.MkdirAll(upgrade_config_dir, 0700)
+	err = os.MkdirAll(GetConfigDir(), 0700)
 	if err != nil {
 		return err
 	}
-	f, err := os.Create(upgrade_config_dir + "/cluster_config.json")
+	f, err := os.Create(GetConfigFilePath())
 	if err != nil {
 		return err
 	}

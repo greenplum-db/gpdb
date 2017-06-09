@@ -13,10 +13,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const (
-	temp_home_dir = "/tmp/gp_upgrade_test_temp_home_dir"
-)
-
 var (
 	saved_old_home string
 )
@@ -24,7 +20,7 @@ var (
 var _ = Describe("configWriter", func() {
 
 	BeforeEach(func() {
-		saved_old_home = test_utils.NukeAndSetHomeDir(temp_home_dir)
+		saved_old_home = test_utils.ResetTempHomeDir()
 	})
 
 	AfterEach(func() {
@@ -93,13 +89,13 @@ var _ = Describe("configWriter", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 
-			content, err := ioutil.ReadFile(temp_home_dir + "/.gp_upgrade/cluster_config.json")
+			content, err := ioutil.ReadFile(config.GetConfigFilePath())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(expected_json).To(Equal(string(content)))
 		})
 		Describe("error cases", func() {
 			It("returns an error when home directory is not writable", func() {
-				os.Chmod(temp_home_dir, 0100)
+				os.Chmod(test_utils.TempHomeDir, 0100)
 				subject := config.Writer{
 					TableJsonData: json_structure,
 					Formatter:     config.NewJsonFormatter(),
@@ -108,14 +104,12 @@ var _ = Describe("configWriter", func() {
 				err := subject.Write()
 
 				Expect(err).To(HaveOccurred())
-				Expect(string(err.Error())).To(ContainSubstring(fmt.Sprintf("mkdir %v/.gp_upgrade: permission denied", temp_home_dir)))
+				Expect(string(err.Error())).To(ContainSubstring(fmt.Sprintf("mkdir %v/.gp_upgrade: permission denied", test_utils.TempHomeDir)))
 			})
-			It("returns an error when cluster config file cannot be opened", func() {
+			It("returns an error when cluster config.go file cannot be opened", func() {
 				// pre-create the directory with 0100 perms
-				upgrade_config_dir := temp_home_dir + "/.gp_upgrade"
-				err := os.RemoveAll(upgrade_config_dir)
+				err := os.MkdirAll(config.GetConfigDir(), 0100)
 				Expect(err).NotTo(HaveOccurred())
-				os.MkdirAll(upgrade_config_dir, 0100)
 
 				subject := config.Writer{
 					TableJsonData: json_structure,
@@ -124,7 +118,7 @@ var _ = Describe("configWriter", func() {
 				err = subject.Write()
 
 				Expect(err).To(HaveOccurred())
-				Expect(string(err.Error())).To(ContainSubstring(fmt.Sprintf("open %v/.gp_upgrade/cluster_config.json: permission denied", temp_home_dir)))
+				Expect(string(err.Error())).To(ContainSubstring(fmt.Sprintf("open %v/.gp_upgrade/cluster_config.json: permission denied", test_utils.TempHomeDir)))
 			})
 			It("returns an error when json marshalling fails", func() {
 				myMap := make(map[string]interface{})

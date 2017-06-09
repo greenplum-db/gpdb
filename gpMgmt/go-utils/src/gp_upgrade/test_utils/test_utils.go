@@ -5,19 +5,27 @@ import (
 	"os"
 )
 
+const (
+	TempHomeDir = "/tmp/gp_upgrade_test_temp_home_dir"
+)
+
 func Check(msg string, e error) {
 	if e != nil {
 		panic(fmt.Sprintf("%s: %s\n", msg, e.Error()))
 	}
 }
 
-func NukeAndSetHomeDir(temp_home_dir string) string {
+func SetHomeDir(temp_home_dir string) string {
 	save := os.Getenv("HOME")
-	err := os.RemoveAll(temp_home_dir)
-	Check("cannot remove home temp dir", err)
-	err = os.MkdirAll(temp_home_dir, 0700)
+	err := os.MkdirAll(temp_home_dir, 0700)
 	Check("cannot create home temp dir", err)
 	err = os.Setenv("HOME", temp_home_dir)
 	Check("cannot set home dir", err)
 	return save
+}
+
+func ResetTempHomeDir() string {
+	err := os.RemoveAll(TempHomeDir)
+	Check("cannot remove temp home", err)
+	return SetHomeDir(TempHomeDir)
 }
