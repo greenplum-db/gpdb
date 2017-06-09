@@ -1034,20 +1034,31 @@ test__MemoryAccounting_ToString__Validate(void **state)
 	char *templateString =
 "Root: Peak/Cur 0/0bytes. Quota: 0bytes.\n\
   Top: Peak/Cur %" PRIu64 "/%" PRIu64 "bytes. Quota: 0bytes.\n\
-    X_Hash: Peak/Cur %" PRIu64 "/%" PRIu64 "bytes. Quota: 0bytes.\n\
+    X_Agg: Peak/Cur %" PRIu64 "/%" PRIu64 "bytes. Quota: 0bytes.\n\
   X_Alien: Peak/Cur 0/0bytes. Quota: 0bytes.\n\
   MemAcc: Peak/Cur %" PRIu64 "/%" PRIu64 "bytes. Quota: 0bytes.\n\
-  Rollover: Peak/Cur 0/0bytes. Quota: 0bytes.\n\
+  Rollover: Peak/Cur %" PRIu64 "/%" PRIu64 "bytes. Quota: 0bytes.\n\
+    X_Hash: Peak/Cur 0/0bytes. Quota: 0bytes.\n\
   SharedHeader: Peak/Cur %" PRIu64 "/%" PRIu64 "bytes. Quota: 0bytes.\n";
 
+	MemoryAccountIdType oldAccountId = CreateMemoryAccountImpl(0, MEMORY_OWNER_TYPE_Exec_Hash, ActiveMemoryAccountId);
+	/* Make oldAccountId obsolete */
+	MemoryAccounting_Reset();
+
+	MemoryAccount *rollover = MemoryAccounting_ConvertIdToAccount(MEMORY_OWNER_TYPE_Rollover);
+	MemoryAccount *newAccount1 = MemoryAccounting_ConvertIdToAccount(CreateMemoryAccountImpl(0, MEMORY_OWNER_TYPE_Exec_Hash, oldAccountId));
+	/* Although newAccount has the oldAccount as parent, the serializer will use Rollover as its parent */
+	assert_true(newAccount1->parentId == oldAccountId);
+
 	/* ActiveMemoryAccount should be Top at this point */
-	MemoryAccount *newAccount = MemoryAccounting_ConvertIdToAccount(CreateMemoryAccountImpl(0, MEMORY_OWNER_TYPE_Exec_Hash, ActiveMemoryAccountId));
+	MemoryAccount *newAccount2 = MemoryAccounting_ConvertIdToAccount(CreateMemoryAccountImpl(0, MEMORY_OWNER_TYPE_Exec_Agg, ActiveMemoryAccountId));
+
 	MemoryAccount *topAccount = MemoryAccounting_ConvertIdToAccount(liveAccountStartId);
 
 	void * dummy1 = palloc(NEW_ALLOC_SIZE);
 	void * dummy2 = palloc(NEW_ALLOC_SIZE);
 
-	MemoryAccounting_SwitchAccount(newAccount->id);
+	MemoryAccounting_SwitchAccount(newAccount2->id);
 
 	void * dummy3 = palloc(NEW_ALLOC_SIZE);
 
@@ -1066,15 +1077,17 @@ test__MemoryAccounting_ToString__Validate(void **state)
 	char		buf[MAX_OUTPUT_BUFFER_SIZE];
 	snprintf(buf, sizeof(buf), templateString,
 			topAccount->peak, (topAccount->allocated - topAccount->freed), /* Top */
-			newAccount->peak, (newAccount->allocated - newAccount->freed), /* X_Hash */
+			newAccount2->peak, (newAccount2->allocated - newAccount2->freed), /* X_Agg */
 			MemoryAccountMemoryAccount->peak, (MemoryAccountMemoryAccount->allocated - MemoryAccountMemoryAccount->freed), /* MemoryAccountMemoryAccount */
+			rollover->peak, (rollover->allocated - rollover->freed), /* Rollover */
 			SharedChunkHeadersMemoryAccount->peak, (SharedChunkHeadersMemoryAccount->allocated - SharedChunkHeadersMemoryAccount->freed) /* SharedChunkHeadersMemoryAccount */);
 
     assert_true(strcmp(buffer.data, buf) == 0);
 
     pfree(tree);
     pfree(buffer.data);
-    pfree(newAccount);
+    pfree(newAccount1);
+    pfree(newAccount2);
 }
 
 /*
