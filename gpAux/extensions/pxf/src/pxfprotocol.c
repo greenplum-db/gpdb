@@ -66,23 +66,18 @@ Datum
 pxfprotocol_import(PG_FUNCTION_ARGS)
 {
     /* Must be called via the external table format manager */
-    if (!CALLED_AS_EXTPROTOCOL(fcinfo)) {
-        printf("inside\n");
-        //PG_RETURN_INT32(22);
+    if (!CALLED_AS_EXTPROTOCOL(fcinfo))
         elog(ERROR, "extprotocol_import: not called by external protocol manager");
-    }
-
-    printf("outside\n");
-
 
     /* retrieve user context */
     context_t *context = (context_t *) EXTPROTOCOL_GET_USER_CTX(fcinfo);
 
     /* last call -- cleanup */
     if (EXTPROTOCOL_IS_LAST_CALL(fcinfo)) {
-        pfree(context);
-
+        if (context != NULL)
+            pfree(context);
         EXTPROTOCOL_SET_USER_CTX(fcinfo, NULL);
+
         PG_RETURN_INT32(0);
     }
 

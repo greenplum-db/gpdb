@@ -24,16 +24,21 @@ test_pxfprotocol_export(void **state)
 }
 
 void
-test_pxfprotocol_import(void **state)
+test_pxfprotocol_import_last_call(void **state)
 {
     PG_FUNCTION_ARGS = palloc(sizeof(FunctionCallInfoData));
-    //fcinfo->context = palloc(sizeof(ExtProtocolData));
+    fcinfo->context = palloc(sizeof(ExtProtocolData));
+    fcinfo->context->type = T_ExtProtocolData;
+    EXTPROTOCOL_SET_USER_CTX(fcinfo, NULL);
+    EXTPROTOCOL_SET_LAST_CALL(fcinfo);
 
-    //Datum d = pxfprotocol_import(fcinfo);
-    //printf("Datum=%d converted=%d\n", d, (unsigned long long) DatumGetInt32(d));
+    Datum d = pxfprotocol_import(fcinfo);
 
-    //assert_int_equal(DatumGetInt32(d), 0);
-    //pfree(fcinfo->context);
+    assert_int_equal(DatumGetInt32(d), 0);
+
+    // TODO: check EXTPROTOCOL_GET_USER_CTX is set to null
+
+    pfree(fcinfo->context);
     pfree(fcinfo);
 }
 
@@ -45,7 +50,7 @@ main(int argc, char* argv[])
     const UnitTest tests[] = {
             unit_test(test_pxfprotocol_validate_urls),
             unit_test(test_pxfprotocol_export),
-            unit_test(test_pxfprotocol_import)
+            unit_test(test_pxfprotocol_import_last_call)
     };
 
     MemoryContextInit();
