@@ -1,20 +1,3 @@
-"""
-Copyright (C) 2004-2015 Pivotal Software, Inc. All rights reserved.
-
-This program and the accompanying materials are made available under
-the terms of the under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
-
 from gppylib.commands.base import Command
 from mpp.lib.PSQL import PSQL
 from mpp.models import MPPTestCase
@@ -23,7 +6,7 @@ from mpp.gpdb.tests.storage.lib import Database
 import os
 import subprocess
 
-class test_mpp19535(MPPTestCase):
+class test_tmlock(MPPTestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -31,16 +14,13 @@ class test_mpp19535(MPPTestCase):
         db.setupDatabase()
         os.environ['PGDATABASE'] = os.environ['USER']
 
-    def test_mpp19535(self):
-        """
-        
-        @description Test MPP-19535, TmLock issue
-        @created 2013-04-22 00:00:00
-        @modified 2013-04-22 00:00:00
-        @tags storage DTM schedule_transaction
-        @product_version gpdb: [4.2.5.2- main]
-        """
-
+    def test_tmlock(self):
+        # Summary:
+	# The problem occurs because some backend acquires a lock, does not
+        # release it and continues to listen for subsequent statements from
+        # the application. As a result, newer backends wanting this lock
+        # get stuck at the lock acquire due to flawed DTM recovery flow.
+        #
         # 1. gpstart
         # 2. pg_ctl -D $MASTER_DATA_DIRECTORY restart
         # 3. gpfaultinjector -f exec_simple_query_end_command -H ALL -r primary
@@ -48,8 +28,8 @@ class test_mpp19535(MPPTestCase):
         # 5. once 4. succeeded, connect anothe psql, try some DDL like create table.
         # 6. check the master log if it reports 'DTM initialization, caught exception'
 
-        PSQL.run_sql_command('DROP TABLE IF EXISTS mpp19535_1')
-        PSQL.run_sql_command('DROP TABLE IF EXISTS mpp19535_2')
+        PSQL.run_sql_command('DROP TABLE IF EXISTS tmlock_1')
+        PSQL.run_sql_command('DROP TABLE IF EXISTS tmlock_2')
 
         # Reset fault injection if any.
         gpfaultinjector = Command('fault injector',
@@ -93,12 +73,12 @@ class test_mpp19535(MPPTestCase):
 
         # Connect a psql client to the master, causing DTM recovery.
         # Due to the fault above, this will retry.
-        psql1 = subprocess.Popen(['psql', '-c', 'SET client_min_messages TO WARNING;CREATE TABLE mpp19535_1(a int)'],
+        psql1 = subprocess.Popen(['psql', '-c', 'SET client_min_messages TO WARNING;CREATE TABLE tmlock_1(a int)'],
                                 stdout=subprocess.PIPE)
 
         # While the first client is still connecting after the retry,
         # another client can proceed and should not be blocked.
-        psql2 = subprocess.Popen(['psql', '-c', 'SET client_min_messages TO WARNING;CREATE TABLE mpp19535_2(a int)'])
+        psql2 = subprocess.Popen(['psql', '-c', 'SET client_min_messages TO WARNING;CREATE TABLE tmlock_2(a int)'])
 
         psql2.wait()
         assert psql2.returncode == 0
