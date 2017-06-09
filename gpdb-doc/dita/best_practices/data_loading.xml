@@ -172,9 +172,7 @@ WHERE relname='myexttable';</codeblock></li>
           formatting&#8212;for example missing or extra values, or incorrect data
           types&#8212;Greenplum Database stores the error information and row internally. Use the
             <codeph>gp_read_error_log()</codeph> built-in SQL function to access this stored
-          information. <note>Specifying an error table for error rows with <codeph>LOG ERRORS INTO
-                <varname>error_table</varname></codeph> is deprecated and will be unsupported in
-            future releases. </note></li>
+          information.</li>
         <li>If the load has errors, run <codeph>VACUUM</codeph> on the table to recover space.</li>
         <li>After you load data into a table, run <codeph>VACUUM</codeph> on heap tables, including
           system catalogs, and <codeph>ANALYZE</codeph> on all tables. It is not necessary to run
