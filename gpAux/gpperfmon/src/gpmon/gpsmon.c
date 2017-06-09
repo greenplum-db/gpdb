@@ -845,24 +845,6 @@ static void send_machine_metrics(SOCKET sock)
 	pswap = swap, pcpu = cpu;
 }
 
-
-/*
-* This helper function sums the upper and lower portions of the new 64 bit value
-* The upper_sum is the value being used to calculate the upper portion (56 bits worth) of the sum
-* The lower_sum is the value being used to calculate the lower portion (8 bits worth) of the sum
-* The upper_sum can handle the maximum value up to 4096 max values before it overflows ((2^56)-1) X 4096 = (2^64)-1)
-* The lower_sum can handle the maximum value up to 16843009 max values before it overflows ((2^8)-1) X 16843009 = (2^32)-1)
-*/
-static inline void qexec_average_sum_calc_64_unsigned(apr_uint64_t* upper_sum, apr_uint32_t* lower_sum, apr_uint64_t new_value)
-{
-	if (new_value == 0){
-		return;
-	}
-	*upper_sum+= (new_value >> 8);
-	*lower_sum+= (new_value & 0xFF);
-	return;
-}
-
 static void gx_gettcpcmd(SOCKET sock, short event, void* arg)
 {
 	char dump;
