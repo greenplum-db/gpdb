@@ -21,7 +21,10 @@
 #include "fmgr.h"
 #include "access/extprotocol.h"
 
+/* define magic module unless run as a part of test cases */
+#ifndef TEST_CASE
 PG_MODULE_MAGIC;
+#endif
 
 PG_FUNCTION_INFO_V1(pxfprotocol_export);
 PG_FUNCTION_INFO_V1(pxfprotocol_import);
@@ -63,8 +66,14 @@ Datum
 pxfprotocol_import(PG_FUNCTION_ARGS)
 {
     /* Must be called via the external table format manager */
-    if (!CALLED_AS_EXTPROTOCOL(fcinfo))
+    if (!CALLED_AS_EXTPROTOCOL(fcinfo)) {
+        printf("inside\n");
+        //PG_RETURN_INT32(22);
         elog(ERROR, "extprotocol_import: not called by external protocol manager");
+    }
+
+    printf("outside\n");
+
 
     /* retrieve user context */
     context_t *context = (context_t *) EXTPROTOCOL_GET_USER_CTX(fcinfo);

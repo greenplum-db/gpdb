@@ -15,30 +15,17 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-#top_builddir = ../../..
-#include $(top_builddir)/src/Makefile.global
 
 MODULE_big = pxf
 OBJS       = src/pxfprotocol.o
 REGRESS    = basic
 
-CFLAGS += -lcurl
-
-#default: all
-
-#all: pxf_protocol.c
-#       gcc -o pxf_protocol pxf_protocol.c
+#default: unittest-check
 
 #ifdef USE_PGXS
 PGXS := $(shell pg_config --pgxs)
 include $(PGXS)
-#else
-#subdir = src/bin/gpfusion
-#include $(top_srcdir)/contrib/contrib-global.mk
 #endif
 
-
-all: unittest install
-
-unittest:
-    @$(MAKE) -C test test
+unittest-check:
+	$(MAKE) -C test check

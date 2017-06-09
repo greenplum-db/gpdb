@@ -32,7 +32,7 @@ Assuming you configured GPDB build with `--prefix=/usr/local/gpdb`
 source /usr/local/gpdb/greenplum_path.sh
 make
 ```
-This will compile pxf client code into `pxf.so` shared library.
+This will compile pxf client code into `pxf.so` shared library and run unit tests located in `test` directory.
 
 * Install PXF extension
 ```
