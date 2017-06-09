@@ -41,7 +41,7 @@ RUNNING GP DEMO
    Note: There is a space between the dot and the slash.
 
    The "." will source the greenplum_path.sh into the current
-   shell, instead of staring a subprocess.
+   shell, instead of starting a subprocess.
 
 4. Create the cluster:
 
@@ -78,7 +78,7 @@ REMOVING GP DEMO
 MODIFYING GP DEMO SETTINGS
 ******************************************************************
 
-Certain parameter of the demo cluster are adjustable, by setting
+Certain parameters of the demo cluster are adjustable by setting
 environment variables before initializing the cluster:
 
 * Master TCP port:
@@ -91,7 +91,7 @@ environment variables before initializing the cluster:
 
   The cluster will use the ports following the base port.
 
-* Number segments:
+* Number of segments:
 
 	export NUM_PRIMARY_MIRROR_PAIRS=<number segments>
 
