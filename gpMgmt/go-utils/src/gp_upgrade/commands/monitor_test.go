@@ -1,18 +1,15 @@
 package commands_test
 
 import (
-	. "gp_upgrade/test_utils"
-
 	"bytes"
 	"encoding/binary"
 	"fmt"
-
 	"os"
-
 	"io/ioutil"
-
 	"path"
 	"runtime"
+
+	. "gp_upgrade/test_utils"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -32,6 +29,7 @@ var _ = Describe("monitor", func() {
 	var (
 		save_home_dir    string
 		private_key_path string
+		this_file_dir    string
 	)
 
 	BeforeEach(func() {
@@ -75,6 +73,21 @@ var _ = Describe("monitor", func() {
 		})
 	})
 
+	Describe("when segmentId provided is not in config", func() {
+		It("reports unknown segmentId and returns 1", func() {
+			only_grep_itself := "gpadmin            7520   0.0  0.0  2432772    676 s004  S+    3:56PM   0:00.00 grep pg_upgrade"
+			unknown_segment_id := "8"
+			cheatSheet := CheatSheet{Response: only_grep_itself, ReturnCode: intToBytes(0)}
+			cheatSheet.WriteToFile()
+
+			session := runCommand("monitor", "--host", "localhost", "--segment_id", unknown_segment_id, "--port", "2022", "--private_key", private_key_path, "--user", "pivotal")
+
+			Eventually(session).Should(Exit(1))
+			expectedMsg := fmt.Sprintf("segment_id %s not known in this cluster configuration", unknown_segment_id)
+			Eventually(session.Err).Should(Say(expectedMsg))
+		})
+	})
+
 	Describe("when SSH is not running at the remote end", func() {
 		It("complains with standard ssh error phrasing", func() {
 			ShutDownSshdServer()
@@ -95,8 +108,13 @@ var _ = Describe("monitor", func() {
 		})
 	})
 
-	XDescribe("when the private key is found but does not succeed", func() {
-
+	Describe("when the private key is found but ssh does not succeed", func() {
+		It("complains", func() {
+			invalid_private_key_path := path.Dir(this_file_dir) + "/sshd/invalid_private_key.pem"
+			session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--private_key", invalid_private_key_path, "--user", "pivotal")
+			Eventually(session).Should(Exit(1))
+			Eventually(session.Err).Should(Say("ssh: no key found"))
+		})
 	})
 
 	Describe("when --private_key option is not provided", func() {

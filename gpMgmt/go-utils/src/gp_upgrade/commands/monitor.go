@@ -3,11 +3,14 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"io"
+	"os"
+
 	"gp_upgrade/config"
 	"gp_upgrade/shell_parsers"
 	"gp_upgrade/ssh_client"
-	"io"
 )
+
 
 type MonitorCommand struct {
 	Host       string `long:"host" required:"yes" description:"Domain name or IP of host"`
@@ -27,12 +30,12 @@ func (cmd MonitorCommand) Execute([]string) error {
 	reader := config.Reader{}
 	err = reader.Read()
 	if err != nil {
-		//return err  // TODO
+		return err
 	}
 	targetPort := reader.GetPortForSegment(cmd.Segment_id)
 	if targetPort == -1 {
-		// TODO test
-		return errors.New(fmt.Sprintf("Cannot get port for segment_id %s", cmd.Segment_id))
+		fmt.Fprintf(os.Stderr, "segment_id %d not known in this cluster configuration", cmd.Segment_id)
+		os.Exit(1)
 	}
 
 	connector := ssh_client.NewSshConnector()
@@ -55,6 +58,7 @@ func (cmd MonitorCommand) Execute([]string) error {
 
 	addNot := ""
 	shellParser := shell_parsers.NewShellParser(output)
+	fmt.Println("got here: %d, output: %s", targetPort, output)
 	if !shellParser.IsPgUpgradeRunning(targetPort) {
 		addNot = "not "
 	}
