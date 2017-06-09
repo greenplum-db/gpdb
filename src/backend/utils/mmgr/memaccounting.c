@@ -811,9 +811,13 @@ ConvertMemoryAccountArrayToTree(MemoryAccount** longLiving, MemoryAccount** shor
 			{
 				parentAccount = longLiving[shortLivingAccount->parentId];
 			}
-			else
+			else if (shortLivingAccount->parentId >= liveStartId)
 			{
 				parentAccount = shortLiving[shortLivingAccount->parentId - liveStartId];
+			}
+			else /* Dead parent account. Use Rollover as parent */
+			{
+				parentAccount = longLiving[MEMORY_OWNER_TYPE_Rollover];
 			}
 
 			Assert(NULL != parentAccount);
