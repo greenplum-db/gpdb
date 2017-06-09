@@ -594,6 +594,7 @@ typedef struct AckSendParam
  * capacityCountingTime      - counting times used to compute totalCapacity.
  * totalBuffers              - total buffers available when sending packets.
  * bufferCountingTime        - counting times when compute totalBuffers.
+ * activeConnectionsNum      - the number of active connections.
  * retransmits               - the number of packet retransmits.
  * mismatchNum               - the number of mismatched packets received.
  * crcErrors                 - the number of crc errors.
@@ -613,6 +614,7 @@ typedef struct ICStatistics
 	uint64	capacityCountingTime;
 	uint64	totalBuffers;
 	uint64	bufferCountingTime;
+	uint32  activeConnectionsNum;
 	int32	retransmits;
 	int32	startupCachedPktNum;
 	int32	mismatchNum;
@@ -1614,6 +1616,9 @@ connAddHash(ConnHashTable *ht, MotionConn *conn)
 
 	if (ht->cxt)
 		MemoryContextSwitchTo(old);
+
+	ic_statistics.activeConnectionsNum++;
+
 	return true;
 }
 
@@ -1665,6 +1670,9 @@ connDelHash(ConnHashTable *ht, MotionConn *conn)
 		pfree(trash);
 	else
 		free(trash);
+
+	ic_statistics.activeConnectionsNum--;
+
 	return;
 }
 
@@ -6783,4 +6791,10 @@ send_error:
 	if (sockfd != -1)
 		closesocket(sockfd);
 	return;
+}
+
+uint32
+getActiveMotionConns(void)
+{
+	return ic_statistics.activeConnectionsNum;
 }

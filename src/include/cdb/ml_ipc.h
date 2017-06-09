@@ -326,7 +326,7 @@ extern void TeardownUDPIFCInterconnect(ChunkTransportState *transportStates,
 								 MotionLayerState *mlStates,
 								 bool forceEOS);
 
-
+extern uint32 getActiveMotionConns(void);
 extern void adjustMasterRouting(Slice *recvSlice);
 
 #endif   /* ML_IPC_H */
