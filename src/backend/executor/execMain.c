@@ -1808,7 +1808,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	 * ExecInitSubPlan expects to be able to find these entries.
 	 */
 	Assert(estate->es_subplanstates == NIL);
-	List *sub_plan_roots = NULL;
+	Bitmapset *locallyExecutableSubplans = NULL;
 	Plan *start_plan_node = plannedstmt->planTree;
 
 	/*
@@ -1829,13 +1829,12 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 			start_plan_node = (Plan *) m;
 		}
 		/* Compute SubPlans' root plan nodes for SubPlans reachable from this plan root */
-		sub_plan_roots = getLocallyExecutableSubplans(plannedstmt, start_plan_node);
+		locallyExecutableSubplans = getLocallyExecutableSubplans(plannedstmt, start_plan_node);
 	}
 
+	int subplan_id = 0;
 	foreach(l, plannedstmt->subplans)
 	{
-		Plan	   *subplan = (Plan *) lfirst(l);
-
 		PlanState  *subplanstate = NULL;
 		int			sp_eflags = 0;
 
@@ -1844,7 +1843,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		 * If alien elimination is not turned on, then all subplans are considered
 		 * reachable.
 		 */
-		if (!estate->eliminateAliens || list_find_ptr(sub_plan_roots, subplan) != -1)
+		if (!estate->eliminateAliens || bms_is_member(subplan_id, locallyExecutableSubplans))
 		{
 			/*
 			 * A subplan will never need to do BACKWARD scan nor MARK/RESTORE.
@@ -1854,15 +1853,17 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 			sp_eflags = eflags & EXEC_FLAG_EXPLAIN_ONLY;
 			sp_eflags |= EXEC_FLAG_REWIND;
 
+			Plan	   *subplan = (Plan *) lfirst(l);
 			subplanstate = ExecInitNode(subplan, estate, sp_eflags);
 		}
 
-		estate->es_subplanstates = lappend(estate->es_subplanstates,
-										   subplanstate);
+		estate->es_subplanstates = lappend(estate->es_subplanstates, subplanstate);
+
+		++subplan_id;
 	}
 
-	/* No more use for sub_plan_roots */
-	list_free(sub_plan_roots);
+	/* No more use for locallyExecutableSubplans */
+	bms_free(locallyExecutableSubplans);
 
 	/* Extract all precomputed parameters from init plans */
 	ExtractParamsFromInitPlans(plannedstmt, plannedstmt->planTree, estate);

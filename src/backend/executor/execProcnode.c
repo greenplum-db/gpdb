@@ -239,7 +239,7 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	/*
 	 * For most plan nodes the ascendant motion is the parent motion
 	 * node. However, subplans are different. They can be executed under
-	 * different slices, althought appearing in another slice. Other
+	 * different slices, although appearing in another slice. Other
 	 * exception includes two stage agg where agg node on the master
 	 * does not have any parent motion. Any time we see such null parent
 	 * motion, we assume they are not alien. They either assume "citizen"

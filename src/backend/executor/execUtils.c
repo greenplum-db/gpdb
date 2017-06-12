@@ -2332,7 +2332,7 @@ MotionFinderWalker(Plan *node,
 		if (m->motionID == ctx->motionId)
 		{
 			ctx->motion = m;
-			return false;	/* don't visit subtree */
+			return true;	/* found our node; no more visit */
 		}
 	}
 
@@ -2359,7 +2359,7 @@ Motion *findSenderMotion(PlannedStmt *plannedstmt, int sliceIndex)
 typedef struct SubPlanFinderContext
 {
 	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
-	List *subplans; /* Output */
+	Bitmapset *bms_subplans; /* Bitmapset for relevant subplans in current slice */
 } SubPlanFinderContext;
 
 /*
@@ -2379,10 +2379,13 @@ SubPlanFinderWalker(Plan *node,
 
 	if (IsA(node, SubPlan))
 	{
-		SubPlan *sub_plan = (SubPlan *) node;
-		Plan *sub_plan_root = plan_tree_base_subplan_get_plan(context, sub_plan);
-		ctx->subplans = lappend(ctx->subplans, sub_plan_root);
-	}
+		SubPlan *subplan = (SubPlan *) node;
+		int i = subplan->plan_id - 1;
+		if (!bms_is_member(i, ctx->bms_subplans))
+			ctx->bms_subplans = bms_add_member(ctx->bms_subplans, i);
+		else
+			return false;
+	 }
 
 	/* Continue walking */
 	return plan_tree_walker((Node*)node, SubPlanFinderWalker, ctx);
@@ -2392,7 +2395,7 @@ SubPlanFinderWalker(Plan *node,
  * Given a plan and a root motion node find all the subplans
  * between 'root' and the next motion node in the tree
  */
-List *getLocallyExecutableSubplans(PlannedStmt *plannedstmt, Plan *root)
+Bitmapset *getLocallyExecutableSubplans(PlannedStmt *plannedstmt, Plan *root)
 {
 	SubPlanFinderContext ctx;
 	Plan* root_plan = root;
@@ -2401,9 +2404,9 @@ List *getLocallyExecutableSubplans(PlannedStmt *plannedstmt, Plan *root)
 		root_plan = outerPlan(root);
 	}
 	ctx.base.node = (Node*)plannedstmt;
-	ctx.subplans = NIL;
+	ctx.bms_subplans = NULL;
 	SubPlanFinderWalker(root_plan, &ctx);
-	return ctx.subplans;
+	return ctx.bms_subplans;
 }
 
 typedef struct ParamExtractorContext

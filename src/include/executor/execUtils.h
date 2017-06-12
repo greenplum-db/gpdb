@@ -25,7 +25,7 @@ extern void AssignGangs(QueryDesc *queryDesc);
 extern void ReleaseGangs(QueryDesc *queryDesc);
 
 extern Motion *findSenderMotion(PlannedStmt *plannedstmt, int sliceIndex);
-extern List *getLocallyExecutableSubplans(PlannedStmt *plannedstmt, Plan *root);
+extern Bitmapset *getLocallyExecutableSubplans(PlannedStmt *plannedstmt, Plan *root);
 extern void ExtractParamsFromInitPlans(PlannedStmt *plannedstmt, Plan *root, EState *estate);
 extern void AssignParentMotionToPlanNodes(PlannedStmt *plannedstmt);
 
