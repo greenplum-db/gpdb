@@ -20,7 +20,7 @@ MODULE_big = pxf
 OBJS       = src/pxfprotocol.o
 REGRESS    = basic
 
-#default: unittest-check
+default: unittest-check
 
 #ifdef USE_PGXS
 PGXS := $(shell pg_config --pgxs)
@@ -29,3 +29,8 @@ include $(PGXS)
 
 unittest-check:
 	$(MAKE) -C test check
+
+unittest-clean:
+	$(MAKE) -C test clean
+
+clean: unittest-clean
