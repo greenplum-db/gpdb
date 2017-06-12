@@ -22,7 +22,7 @@
 #include "access/extprotocol.h"
 
 /* define magic module unless run as a part of test cases */
-#ifndef TEST_CASE
+#ifndef UNIT_TESTING
 PG_MODULE_MAGIC;
 #endif
 
@@ -34,6 +34,7 @@ Datum pxfprotocol_export(PG_FUNCTION_ARGS);
 Datum pxfprotocol_import(PG_FUNCTION_ARGS);
 Datum pxfprotocol_validate_urls(PG_FUNCTION_ARGS);
 
+/* include explicitly as cdbvars.h is not available when compiling as an extension */
 typedef struct GpId {
     int4 numsegments; /* count of distinct segindexes */
     int4 dbid;        /* the dbid of this database */
@@ -77,7 +78,6 @@ pxfprotocol_import(PG_FUNCTION_ARGS)
         if (context != NULL)
             pfree(context);
         EXTPROTOCOL_SET_USER_CTX(fcinfo, NULL);
-
         PG_RETURN_INT32(0);
     }
 

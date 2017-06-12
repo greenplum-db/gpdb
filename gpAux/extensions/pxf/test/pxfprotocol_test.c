@@ -3,8 +3,8 @@
 #include <setjmp.h>
 #include "cmockery.h"
 
-/* Define TEST_CASE so that the extension can skip declaring PG_MODULE_MAGIC */
-#define TEST_CASE
+/* Define UNIT_TESTING so that the extension can skip declaring PG_MODULE_MAGIC */
+#define UNIT_TESTING
 
 /* include unit under test */
 #include "../src/pxfprotocol.c"
@@ -24,19 +24,73 @@ test_pxfprotocol_export(void **state)
 }
 
 void
-test_pxfprotocol_import_last_call(void **state)
+test_pxfprotocol_import_first_call(void **state)
 {
+    /* setup call info with no call context */
+    GpIdentity.segindex = 31;
+    const char *EXPECTED_TUPLE = "31,hello world 31";
+
     PG_FUNCTION_ARGS = palloc(sizeof(FunctionCallInfoData));
     fcinfo->context = palloc(sizeof(ExtProtocolData));
     fcinfo->context->type = T_ExtProtocolData;
-    EXTPROTOCOL_SET_USER_CTX(fcinfo, NULL);
+    EXTPROTOCOL_GET_DATALEN(fcinfo) = 100;
+    EXTPROTOCOL_GET_DATABUF(fcinfo) = palloc0(EXTPROTOCOL_GET_DATALEN(fcinfo));
+    ((ExtProtocolData*) fcinfo->context)->prot_last_call = false;
+
+    Datum d = pxfprotocol_import(fcinfo);
+
+    assert_int_equal(DatumGetInt32(d), strlen(EXTPROTOCOL_GET_DATABUF(fcinfo)));
+    assert_string_equal(EXTPROTOCOL_GET_DATABUF(fcinfo), EXPECTED_TUPLE);
+
+    context_t *call_context = EXTPROTOCOL_GET_USER_CTX(fcinfo);
+    assert_true(call_context != NULL);
+    assert_int_equal(call_context->row_count, 1);
+
+    pfree(EXTPROTOCOL_GET_DATABUF(fcinfo));
+    pfree(fcinfo->context);
+    pfree(fcinfo);
+}
+
+void
+test_pxfprotocol_import_second_call(void **state)
+{
+    /* setup call info with call context */
+    PG_FUNCTION_ARGS = palloc(sizeof(FunctionCallInfoData));
+    fcinfo->context = palloc(sizeof(ExtProtocolData));
+    fcinfo->context->type = T_ExtProtocolData;
+    EXTPROTOCOL_GET_DATALEN(fcinfo) = 100;
+    EXTPROTOCOL_GET_DATABUF(fcinfo) = palloc0(EXTPROTOCOL_GET_DATALEN(fcinfo));
+    ((ExtProtocolData*) fcinfo->context)->prot_last_call = false;
+
+    Datum d = pxfprotocol_import(fcinfo);
+
+    assert_int_equal(DatumGetInt32(d), 0);
+    assert_int_equal(strlen(EXTPROTOCOL_GET_DATABUF(fcinfo)), 0);
+
+    context_t *call_context = EXTPROTOCOL_GET_USER_CTX(fcinfo);
+    assert_true(call_context != NULL);
+    assert_int_equal(call_context->row_count, 1);
+
+    pfree(EXTPROTOCOL_GET_DATABUF(fcinfo));
+    pfree(fcinfo->context);
+    pfree(fcinfo);
+}
+
+void
+test_pxfprotocol_import_last_call(void **state)
+{
+    /* setup call info with a call context and last call indicator */
+    PG_FUNCTION_ARGS = palloc(sizeof(FunctionCallInfoData));
+    fcinfo->context = palloc(sizeof(ExtProtocolData));
+    fcinfo->context->type = T_ExtProtocolData;
+    context_t *call_context = palloc(sizeof(context_t));
+    EXTPROTOCOL_SET_USER_CTX(fcinfo, call_context);
     EXTPROTOCOL_SET_LAST_CALL(fcinfo);
 
     Datum d = pxfprotocol_import(fcinfo);
 
     assert_int_equal(DatumGetInt32(d), 0);
-
-    // TODO: check EXTPROTOCOL_GET_USER_CTX is set to null
+    assert_true(EXTPROTOCOL_GET_USER_CTX(fcinfo) == NULL);
 
     pfree(fcinfo->context);
     pfree(fcinfo);
@@ -50,6 +104,8 @@ main(int argc, char* argv[])
     const UnitTest tests[] = {
             unit_test(test_pxfprotocol_validate_urls),
             unit_test(test_pxfprotocol_export),
+            unit_test(test_pxfprotocol_import_first_call),
+            unit_test(test_pxfprotocol_import_second_call),
             unit_test(test_pxfprotocol_import_last_call)
     };
 
