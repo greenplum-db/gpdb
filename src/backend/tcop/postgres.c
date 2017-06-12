@@ -1858,8 +1858,6 @@ exec_simple_query(const char *query_string, const char *seqServerHost, int seqSe
 							Debug_dtm_action, commandTag)));
 		}
 
-		SIMPLE_FAULT_INJECTOR(ExecSimpleQueryEndCommand);
-
 		/*
 		 * Tell client that we're done with this query.  Note we emit exactly
 		 * one EndCommand report for each raw parsetree, thus one for each SQL

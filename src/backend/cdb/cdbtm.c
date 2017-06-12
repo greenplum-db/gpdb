@@ -1525,6 +1525,7 @@ initTM(void)
 				}
 			}
 
+			Assert(!LWLockHeldByMe(shmControlLock));
 			/*
 			 * We are done with the recovery.
 			 */

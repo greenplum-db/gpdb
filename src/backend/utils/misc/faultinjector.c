@@ -253,8 +253,6 @@ FaultInjectorIdentifierEnumToString[] = {
 	 /* inject fault before we close workfile in ExecHashJoinNewBatch */
 	_("update_committed_eof_in_persistent_table"),
 		/* inject fault before committed EOF is updated in gp_persistent_relation_node for Append Only segment files */
-	_("exec_simple_query_end_command"),
-		/* inject fault before EndCommand in exec_simple_query */
 	_("multi_exec_hash_large_vmem"),
 		/* large palloc inside MultiExecHash to attempt to exceed vmem limit */
 	_("execsort_before_sorting"),

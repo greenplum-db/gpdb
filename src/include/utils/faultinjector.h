@@ -166,7 +166,6 @@ typedef enum FaultInjectorIdentifier_e {
 
 	UpdateCommittedEofInPersistentTable,
 
-	ExecSimpleQueryEndCommand,
 	MultiExecHashLargeVmem,
 
 	ExecSortBeforeSorting,
