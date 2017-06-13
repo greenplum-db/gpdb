@@ -869,24 +869,27 @@ LockAcquire(const LOCKTAG *locktag,
 		 * partitionLock is already held at this point.
 		 */
 		Assert(LWLockHeldByMe(partitionLock));
-		hash_search_with_hash_value(LockMethodProcLockHash,
-									(void *) &writerProcLockTag,
-									writerProcLockHashCode,
-									HASH_FIND,
-									&found);
+		PROCLOCK *writerProcLock = (PROCLOCK *)
+			hash_search_with_hash_value(LockMethodProcLockHash,
+										(void *) &writerProcLockTag,
+										writerProcLockHashCode,
+										HASH_FIND,
+										&found);
 		if (found)
 		{
 			/*
-			 * Writer already holds this lock, grant it to reader
-			 * unconditionally.
+			 * Writer is either holding the same lock or waiting on the same
+			 * lock.  If the writer is already holding the same lock, readers
+			 * can grab it right away.  If the writer is waiting for the same
+			 * lock, readers must wait.
 			 */
-			status = STATUS_OK;
+			status = (writerProcLock->holdMask) ? STATUS_OK : STATUS_FOUND;
 		}
 		else if (lockMethodTable->conflictTab[lockmode] & lock->waitMask)
 		{
 			/*
 			 * Writer does not hold this lock and the lockmode conflicts with
-			 * another process waiting on the same lock.  Reader must wait so
+			 * another process waiting on the same lock.  Readers must wait so
 			 * as not to starve existing waiters.
 			 */
 			status = STATUS_FOUND;
