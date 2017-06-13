@@ -1148,12 +1148,12 @@ PortalRunSelect(Portal portal,
 	 */
 	if (forward)
 	{
-		elog(INFO, "PortalRunSelect(), forward, count: " INT64_FORMAT, count);
+		// elog(INFO, "PortalRunSelect(), forward, count: " INT64_FORMAT, count); FIXME: diagnostics
 		if (portal->atEnd || count <= 0)
 		{
 			direction = NoMovementScanDirection;
 			count = 0;	/* don't pass negative count to executor */
-			elog(INFO, "PortalRunSelect(), reset counter");
+			// elog(INFO, "PortalRunSelect(), reset counter"); FIXME: diagnostics
                 }
 		else
 			direction = ForwardScanDirection;
@@ -1182,7 +1182,7 @@ PortalRunSelect(Portal portal,
 	}
 	else
 	{
-		elog(INFO, "PortalRunSelect(), backward, count: " INT64_FORMAT, count);
+		// elog(INFO, "PortalRunSelect(), backward, count: " INT64_FORMAT, count); FIXME: diagnostics
 		if (portal->cursorOptions & CURSOR_OPT_NO_SCROLL)
 			ereport(ERROR,
 					(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
@@ -1193,7 +1193,7 @@ PortalRunSelect(Portal portal,
                 {
 			direction = NoMovementScanDirection;
 			count = 0;	/* don't pass negative count to executor */
-			elog(INFO, "PortalRunSelect(), reset counter");
+			// elog(INFO, "PortalRunSelect(), reset counter"); FIXME: diagnostics
                 }
 		else
 			direction = BackwardScanDirection;
