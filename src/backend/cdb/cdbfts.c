@@ -221,13 +221,13 @@ FtsReConfigureMPP(bool create_new_gangs)
 }
 
 void
-FtsHandleNetFailure(SegmentDatabaseDescriptor ** segDB, int numOfFailed)
+FtsHandleNetFailure(SegmentDatabaseDescriptor ** segDB, int64 numOfFailed)
 {
-	elog(LOG, "FtsHandleNetFailure: numOfFailed %d", numOfFailed);
+	elog(LOG, "FtsHandleNetFailure: numOfFailed " INT64_FORMAT, numOfFailed);
 
 	FtsReConfigureMPP(true);
 
-	ereport(ERROR, (errmsg_internal("MPP detected %d segment failures, system is reconnected", numOfFailed),
+	ereport(ERROR, (errmsg_internal("MPP detected " INT64_FORMAT " segment failures, system is reconnected", numOfFailed),
 			errSendAlert(true)));
 }
 

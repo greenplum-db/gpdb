@@ -2041,7 +2041,7 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 		if (sliceRunsOnQE(currentSlice))
 		{
 			estate->es_processed +=
-				cdbdisp_sumCmdTuples(pr, LocallyExecutingSliceIndex(estate));
+				cdbdisp_sumCmdTuples(pr, LocallyExecutingSliceIndex(estate)); /* FIXME: diagnostics */
 			estate->es_lastoid =
 				cdbdisp_maxLastOid(pr, LocallyExecutingSliceIndex(estate));
 			aopartcounts = cdbdisp_sumAoPartTupCount(estate->es_result_partitions, pr);
@@ -2100,7 +2100,7 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 								 estate->es_snapshot,
 								 estate->es_num_result_relations,
 								 estate,
-								 estate->es_processed);
+								 estate->es_processed); /* FIXME: diagnostics */
 		}
 
 		/*

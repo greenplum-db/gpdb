@@ -293,12 +293,12 @@ FormErrorTuple(CdbSreh *cdbsreh)
  * SREH operations. Information includes the total number of rejected
  * rows, and whether rows were ignored or logged into an error log file.
  */
-void ReportSrehResults(CdbSreh *cdbsreh, int total_rejected)
+void ReportSrehResults(CdbSreh *cdbsreh, int64 total_rejected)
 {
 	if(total_rejected > 0)
 	{
 		ereport(NOTICE,
-			(errmsg("Found %d data formatting errors (%d or more "
+			(errmsg("Found " INT64_FORMAT " data formatting errors (" INT64_FORMAT " or more "
 			"input rows). Rejected related input data.",
 			total_rejected, total_rejected)));
 	}
@@ -310,7 +310,7 @@ void ReportSrehResults(CdbSreh *cdbsreh, int total_rejected)
  * Using this function the QE sends back to the client QD the number 
  * of rows that were rejected in this last data load in SREH mode.
  */
-void SendNumRowsRejected(int numrejected)
+void SendNumRowsRejected(int64 numrejected)
 {
 	StringInfoData buf;
 	
@@ -318,7 +318,7 @@ void SendNumRowsRejected(int numrejected)
 		elog(FATAL, "SendNumRowsRejected: called outside of execute context.");
 
 	pq_beginmessage(&buf, 'j'); /* 'j' is the msg code for rejected records */
-	pq_sendint(&buf, numrejected, 4);
+	pq_sendint64(&buf, numrejected, 4);
 	pq_endmessage(&buf);	
 }
 

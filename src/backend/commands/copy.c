@@ -1754,20 +1754,20 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 	/* Clean up storage (probably not really necessary) */
 	processed = cstate->processed;
 
-    /* MPP-4407. Logging number of tuples copied */
+	/* MPP-4407. Logging number of tuples copied */
 	if (Gp_role == GP_ROLE_DISPATCH
 			&& is_from
 			&& relationOid != InvalidOid
 			&& GetCommandLogLevel((Node *) stmt) <= log_statement)
 	{
-		elog(DEBUG1, "type_of_statement = %s dboid = %d tableoid = %d num_tuples_modified = %u",
+		elog(DEBUG1, "type_of_statement = %s dboid = %d tableoid = %d num_tuples_modified = " UINT64_FORMAT,
 				autostats_cmdtype_to_string(AUTOSTATS_CMDTYPE_COPY),
 				MyDatabaseId,
 				relationOid,
-				(unsigned int) processed);
+				processed);
 	}
 
-    /* 	 Fix for MPP-4082. Issue automatic ANALYZE if conditions are satisfied. */
+	/* 	 Fix for MPP-4082. Issue automatic ANALYZE if conditions are satisfied. */
 	if (Gp_role == GP_ROLE_DISPATCH && is_from)
 	{
 		auto_stats(AUTOSTATS_CMDTYPE_COPY, relationOid, processed, false /* inFunction */);
@@ -2907,7 +2907,7 @@ CopyFromDispatch(CopyState cstate)
 	Datum	   *values;
 	bool	   *nulls;
 	int		   *attr_offsets;
-	int			total_rejected_from_qes = 0;
+	int64			total_rejected_from_qes = 0;
 	bool		isnull;
 	bool	   *isvarlena;
 	ResultRelInfo *resultRelInfo;
