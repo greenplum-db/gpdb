@@ -28,7 +28,7 @@
             <topicref href="topics/g-transaction-id-management-parameters.xml" type="topic"/>
          </topicref>
          <topicref href="topics/g-query-tuning-parameters.xml" type="topic">
-            <topicref href="topics/g-pivotal-query-optimizer-parameters.xml" type="topic"/>
+            <topicref href="topics/gporca-parameters.xml" type="topic"/>
             <topicref href="topics/g-query-plan-operator-control-parameters.xml" type="topic"/>
             <topicref href="topics/g-query-planner-costing-parameters.xml" type="topic"/>
             <topicref href="topics/g-database-statistics-sampling-parameters.xml" type="topic"/>

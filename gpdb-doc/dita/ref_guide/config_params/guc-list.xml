@@ -311,7 +311,7 @@
             <li>
               <xref href="#gpperfmon_log_alert_level"/>
             </li>
-            <li>
+            <li otherprops="oss">
               <xref href="#gp_hadoop_home"/>
             </li>
             <li>
@@ -3961,13 +3961,13 @@
       </table>
     </body>
   </topic>
-  <topic id="gp_hadoop_home">
+  <topic id="gp_hadoop_home" otherprops="oss">
     <title>gp_hadoop_home</title>
     <body>
-      <p>When using Pivotal HD (not supported), specify the installation directory for Hadoop. For
-        example, the default installation directory is <codeph>/usr/lib/gphd</codeph>.</p>
-      <p>When using Greenplum HD 1.2 or earlier (not supported), specify the same value as the
-        HADOOP_HOME environment variable.</p>
+      <p>When using Pivotal HD, specify the installation directory for Hadoop. For example, the
+        default installation directory is <codeph>/usr/lib/gphd</codeph>.</p>
+      <p>When using Greenplum HD 1.2 or earlier, specify the same value as the HADOOP_HOME
+        environment variable.</p>
       <table id="gp_hadoop_home_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -7299,10 +7299,9 @@
     <title>optimizer_minidump</title>
     <body>
       <p>GPORCA generates minidump files to describe the optimization context for a given query. The
-        minidump files are used by Pivotal support to analyze Greenplum Database issues. The
-        information in the file is not in a format that can be easily used by customers for
-        debugging or troubleshooting. The minidump file is located under the master data directory
-        and uses the following naming format:</p>
+        information in the file is not in a format that can be easily used for debugging or
+        troubleshooting. The minidump file is located under the master data directory and uses the
+        following naming format:</p>
       <p>
         <codeph>Minidump_<varname>date</varname>_<varname>time</varname>.mdp</codeph>
       </p>
@@ -7310,8 +7309,7 @@
           <li>Catalog objects including data types, tables, operators, and statistics required by
             GPORCA</li>
           <li>An internal representation (DXL) of the query</li>
-          <li>An internal representation (DXL) of the plan produced by the Pivotal Query
-            Optimizer</li>
+          <li>An internal representation (DXL) of the plan produced by GPORCA</li>
           <li>System configuration information passed to GPORCA such as server configuration
             parameters, cost and statistics configuration, and number of segments</li>
           <li>A stack trace of errors generated while optimizing the query</li>
@@ -9146,8 +9144,9 @@
         value is <codeph>true</codeph>, enable the test.</p>
       <p>If Greenplum Database detects a corruption in the free TID list, the free TID list is
         rebuilt, a warning is logged, and a warning is returned by queries for which the check
-        failed. Greenplum Database attempts to execute the queries. If a warning is returned, please
-        contact Pivotal Global Support Services.</p>
+        failed. Greenplum Database attempts to execute the queries. </p>
+      <note otherprops="pivotal">If a warning is returned, please contact Pivotal Global Support
+        Services.</note>
       <table id="table_fkc_4pb_1w">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>

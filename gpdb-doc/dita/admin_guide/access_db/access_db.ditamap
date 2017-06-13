@@ -17,7 +17,6 @@
  </topicref>
   <topicref href="topics/pgbouncer.xml"/>
  <topicref href="topics/g-database-application-interfaces.xml"/>
- <topicref href="topics/g-third-party-client-tools.xml"/>
  <topicref href="topics/g-troubleshooting-connection-problems.xml"/>
 </topicref>
 </map>

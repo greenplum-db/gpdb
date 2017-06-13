@@ -235,7 +235,8 @@
 		<topicref href="function-summary.xml" id="func_summary"/>
 		<topicref href="yaml_spec.xml" navtitle="Greenplum MapReduce Specification" id="yaml_spec"/>
 		<topicref href="extensions/pl_sql.xml" navtitle="Greenplum PL/pgSQL Extension" id="pl_sql"/>
-		<topicref href="extensions/postGIS.xml" navtitle="Greenplum PostGIS Extension" id="postGIS"/>
+		<topicref href="extensions/postGIS.xml" navtitle="Greenplum PostGIS Extension" id="postGIS"
+			otherprops="pivotal"/>
 		<topicref href="extensions/pl_r.xml" navtitle="Greenplum PL/R Language Extension" id="pl_r"/>
 		<topicref href="extensions/pl_python.xml" navtitle="Greenplum PL/Python Language Extension"
 			id="pl_python"/>

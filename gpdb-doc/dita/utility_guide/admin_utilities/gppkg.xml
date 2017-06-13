@@ -5,8 +5,9 @@
     <!--install_guide/refs/gppkg.xml has a conref to this topic. -->
     <title id="jt142031">gppkg</title>
     <body>
-        <p>Installs Greenplum Database extensions such as PL/Java, PL/R, PostGIS, and MADlib, along
-            with their dependencies, across an entire cluster.</p>
+        <p>Installs Greenplum Database extensions in <codeph>.gppkg</codeph> format, such as
+            PL/Java, PL/R<ph otherprops="pivotal">, PostGIS</ph>, and MADlib, along with their
+            dependencies, across an entire cluster.</p>
         <section id="section2">
             <title>Synopsis</title>
             <codeblock><b>gppkg</b> [<b>-i</b> <varname>package</varname> | <b>-u</b> <varname>package</varname> | <b>-r </b> <varname>name</varname>-<varname>version</varname> | <b>-c</b>] 
@@ -26,25 +27,15 @@
                 Database extensions, along with any dependencies, on all hosts across a cluster. It
                 will also automatically install extensions on new hosts in the case of system
                 expansion and segment recovery.</p>
-            <p>First, download one or more of the available packages from <xref
-                    href="https://network.pivotal.io" scope="external" format="html"
-                    >Pivotal Network</xref> then copy it to the master host. Use the Greenplum
-                Package Manager to install each package using the options described below.</p>
             <note type="note">After a major upgrade to Greenplum Database, you must download and
-                install all extensions again.</note>
-            <p>Examples of database extensions and packages software that are delivered using the
-                Greenplum Package Manager are:</p>
-            <ul>
-                <li>PL/Java</li>
-                <li>PL/R</li>
-                <li id="jt141959">PostGIS</li>
-                <li id="jt142629">MADlib</li>
-            </ul>
-            <p>Note that Greenplum Package Manager installation files for extension packages might
-                release outside of standard product release cycles. Current packages are available
-                from <xref href="https://network.pivotal.io" scope="external"
-                    format="html">Pivotal Network</xref>. Information about package compatibility is
-                the <cite>Greenplum Database Release Notes</cite>.</p>
+                install all <codeph>gppkg</codeph> extensions again.</note>
+            <p otherprops="pivotal">Examples of database extensions and packages software that are
+                delivered using the Greenplum Package Manager are:<ul id="ul_g35_g2j_f1b">
+                    <li>PL/Java</li>
+                    <li>PL/R</li>
+                    <li id="jt141959" otherprops="pivotal">PostGIS</li>
+                    <li id="jt142629">MADlib</li>
+                </ul></p>
         </section>
         <section id="section4">
             <title>Options</title>
@@ -75,8 +66,9 @@
                         <varname>GPHOME_2</varname></pt>
                     <pd>Migrates packages from a separate <codeph>$GPHOME</codeph>. Carries over
                         packages from one version of Greenplum Database to another.</pd>
-                    <pd>For example: <codeph>gppkg --migrate /usr/local/greenplum-db-4.2.0.1
-                            /usr/local/greenplum-db-4.2.1.0</codeph></pd>
+                    <pd>For example: <codeph>gppkg --migrate
+                            /usr/local/greenplum-db-&lt;old-version>
+                            /usr/local/greenplum-db-&lt;new-version></codeph></pd>
                     <pd>This option is automatically invoked by the installer during minor upgrades.
                         This option is given here for cases when the user wants to migrate packages
                         manually.</pd>

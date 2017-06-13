@@ -600,7 +600,7 @@ done</codeblock></p>
             and specifies a namespace for the Avro schema.</p>
           <codeblock>CREATE WRITABLE EXTERNAL TABLE atudt1 (id int, info myt, birth date, salary numeric ) 
    LOCATION ('gphdfs://my_hdfs:8020/tmp/emp01.avro
-      ?namespace=public.pivotal.avro') 
+      ?namespace=public.example.avro') 
    FORMAT 'avro';</codeblock>
         </body>
       </topic>

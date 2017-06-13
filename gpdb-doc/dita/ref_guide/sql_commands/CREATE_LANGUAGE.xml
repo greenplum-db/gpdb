@@ -33,17 +33,17 @@ CREATE [TRUSTED] [PROCEDURAL] LANGUAGE <varname>name</varname>
                 execution, and so on or it could serve as a bridge between Greenplum Database and an
                 existing implementation of a programming language. The handler itself is a C
                 language function compiled into a shared object and loaded on demand, just like any
-                other C function. There are currently four procedural language packages included in
-                the standard Greenplum Database distribution: PL/pgSQL, PL/Perl, and PL/Python.
-                Language handlers have also been added for PL/Java and PL/R, but those languages are
-                not pre-installed with Greenplum Database. See the topic on <xref
+                other C function. Therese procedural language packages are included in the standard
+                Greenplum Database distribution: PL/pgSQL, PL/Perl, and PL/Python. Language handlers
+                have also been added for PL/Java and PL/R, but those languages are not pre-installed
+                with Greenplum Database. See the topic on <xref
                     href="https://www.postgresql.org/docs/8.3/static/xplang.html" scope="external"
                     format="html">Procedural Languages</xref> in the PostgreSQL documentation for
                 more information on developing functions using these procedural languages.</p>
             <p>The PL/Perl, PL/Java, and PL/R libraries require the correct versions of Perl, Java,
                 and R to be installed, respectively. </p>
-            <p>On RHEL and SUSE platforms, download the appropriate extensions from <xref
-                    href="https://network.pivotal.io" scope="external" format="html">Pivotal
+            <p otherprops="pivotal">On RHEL and SUSE platforms, download the appropriate extensions
+                from <xref href="https://network.pivotal.io" scope="external" format="html">Pivotal
                     Network</xref>, then install the extensions using the Greenplum Package Manager
                     (<codeph>gppkg</codeph>) utility to ensure that all dependencies are installed
                 as well as the extensions. See the Greenplum Database Utility Guide for details

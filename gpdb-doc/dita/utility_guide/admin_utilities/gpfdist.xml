@@ -183,9 +183,9 @@
       <p>Follow the instructions below to download, register and activate <codeph>gpfdist</codeph>
         as a service: </p>
       <ol>
-        <li id="ku139499">Update your Greenplum Database Loader package to the latest version. This
-          package is available from <xref href="https://network.pivotal.io" scope="external"
-            format="html">Pivotal Network</xref>. </li>
+        <li id="ku139499" otherprops="pivotal">Update your Greenplum Database Loader package to the
+          latest version. This package is available from <xref href="https://network.pivotal.io"
+            scope="external" format="html">Pivotal Network</xref>. </li>
         <li id="ku139444">Register <codeph>gpfdist</codeph> as a Windows service:<ol>
             <li id="ku139445">Open a Windows command window</li>
             <li id="ku139446">Run the following

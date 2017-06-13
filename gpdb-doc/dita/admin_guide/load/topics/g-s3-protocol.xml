@@ -92,14 +92,14 @@
                   location and prefix used to select existing data files that comprise the S3 table.
                   For example:
                      <codeblock>CREATE READABLE EXTERNAL TABLE S3TBL (date text, time text, amt int)
-   LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/
+   LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/
       config=/home/gpadmin/aws_s3/s3.conf')
    FORMAT 'csv';</codeblock><p>For
                      writable S3 tables, the protocol URL defines the S3 location in which Greenplum
                      database stores data files for the table, as well as a prefix to use when
                      creating files for table <codeph>INSERT</codeph> operations. For
                      example:<codeblock>CREATE WRITABLE EXTERNAL TABLE S3WRIT (LIKE S3TBL)
-   LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/
+   LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/
       config=/home/gpadmin/aws_s3/s3.conf')
    FORMAT 'csv';</codeblock></p><p>See
                         <xref href="#amazon-emr/section_stk_c2r_kx" format="dita"/> for more
@@ -434,12 +434,12 @@ chunksize = 67108864</codeblock></p>
                      clause supports S3 compatible services and must include the
                         <codeph>region</codeph> parameter. The <codeph>region</codeph> parameter
                      specifies the S3 data source region. For this S3 URL
-                        <codeph>s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/</codeph>,
+                        <codeph>s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/</codeph>,
                      the AWS S3 region is <codeph>us-west-2</codeph>. </pd>
                   <pd>If <codeph>version</codeph> is 1 or is not specified, this is an example of
                      the <codeph>LOCATION</codeph> clause of the <codeph>CREATE EXTERNAL
                         TABLE</codeph> command that specifies an Amazon S3
-                     endpoint.<codeblock>LOCATION ('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/
+                     endpoint.<codeblock>LOCATION ('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/
       config=/home/gpadmin/aws_s3/s3.conf')</codeblock></pd>
                   <pd> If <codeph>version</codeph> is 2, this is an example
                         <codeph>LOCATION</codeph> clause with the <codeph>region</codeph> parameter
@@ -449,7 +449,7 @@ chunksize = 67108864</codeblock></p>
                   <pd>If <codeph>version</codeph> is 2, the <codeph>LOCATION</codeph> clause can
                      also specify an Amazon S3 endpoint. This example specifies an Amazon S3
                      endpoint that uses the <codeph>region</codeph>
-                     parameter.<codeblock>LOCATION ('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/ region=us-west-2
+                     parameter.<codeblock>LOCATION ('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/ region=us-west-2
       config=/home/gpadmin/aws_s3/s3.conf') </codeblock></pd>
                </plentry>
             </parml>

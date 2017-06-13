@@ -21,8 +21,8 @@
         can specify a set of column names, in which case the statistics only for those columns are
         collected.</p>
       <p><codeph>ANALYZE</codeph> does not collect statistics on external tables. </p>
-      <note type="important">If you intend to execute queries on partitioned tables with the Pivotal
-        Query Optimizer enabled, you must collect statistics on the root partition of the
+      <note type="important">If you intend to execute queries on partitioned tables with GPORCA
+        enabled (the default), then you must collect statistics on the root partition of the
         partitioned table with the <codeph>ANALYZE ROOTPARTITION</codeph> command. For information
         about GPORCA, see "Querying Data" in the <cite>Greenplum Database Administrator
         Guide</cite>.</note>

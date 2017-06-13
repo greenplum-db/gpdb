@@ -44,8 +44,8 @@
   <topic id="topic3" xml:lang="en" otherprops="pivotal">
     <title id="pz214493">Installing MADlib</title>
     <body>
-      <p>For Pivotal Greenplum Database, the MADlib extension is available as a package. Download
-        the package from <xref href="https://network.pivotal.io" scope="external" format="html"
+      <p>For Greenplum Database, the MADlib extension is available as a package. Download the
+        package from <xref href="https://network.pivotal.io" scope="external" format="html"
           class="- topic/xref ">Pivotal Network</xref> and then install it with the Greenplum
         Package Manager (<codeph>gppkg</codeph>). </p>
       <p>To install MADlib on Greenplum Database, you install the Greenplum MADlib package on

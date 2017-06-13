@@ -653,6 +653,8 @@ $$ language plpythonu;</codeblock>
     <topic id="topic13" xml:lang="en">
       <title>Technical References</title>
       <body>
+        <p>For information about the Python language, see <xref href="https://www.python.org/"
+            scope="external" format="html">https://www.python.org/</xref>.</p>
         <p>For information about PL/Python see the PostgreSQL documentation at <xref
             href="https://www.postgresql.org/docs/8.3/static/plpython.html" scope="external"
             format="html">https://www.postgresql.org/docs/8.3/static/plpython.html</xref>. </p>
@@ -677,18 +679,6 @@ $$ language plpythonu;</codeblock>
                   <codeph>wget</codeph> command downloads the Distribute package tar
                 file.<codeblock>wget http://pypi.python.org/packages/source/d/distribute/distribute-0.6.21.tar.gz</codeblock></note></li>
           </ul></p>
-      </body>
-    </topic>
-    <topic id="topic14" xml:lang="en">
-      <title>Useful Reading</title>
-      <body>
-        <p>For information about the Python language, see <xref href="https://www.python.org/"
-            scope="external" format="html">https://www.python.org/</xref>.</p>
-        <p>A set of slides that were used in a talk about how the Pivotal data science team uses the
-          PyData stack in the Pivotal MPP databases and on Pivotal Cloud Foundry <xref
-            href="https://www.slideshare.net/SrivatsanRamanujam/all-thingspythonpivotal"
-            format="html" scope="external"
-            >https://www.slideshare.net/SrivatsanRamanujam/all-thingspythonpivotal</xref>.</p>
       </body>
     </topic>
   </topic>

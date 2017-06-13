@@ -266,7 +266,7 @@
     <topic id="topic19" xml:lang="en">
       <title>Cost-Based Vacuum Delay Parameters</title>
       <body>
-        <note type="warning">Pivotal does not recommend cost-based vacuum delay because it runs
+        <note type="warning">Do not use cost-based vacuum delay because it runs
           asynchronously among the segment instances. The vacuum cost limit and delay is invoked at
           the segment level without taking into account the state of the entire Greenplum Database
           array</note>

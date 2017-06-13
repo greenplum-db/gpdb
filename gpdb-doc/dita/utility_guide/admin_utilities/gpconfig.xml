@@ -142,8 +142,8 @@
             operate on any server configuration parameter, including hidden parameters and
             restricted parameters that cannot be changed by <codeph>gpconfig</codeph>. When used
             with the <codeph>-l</codeph> option (list), it shows the list of restricted parameters.
-            This option should only be used to set parameters when directed by Pivotal Customer
-            Support. </pd>
+              <note type="warning">Use extreme caution when setting configuration parameters with
+              this option. </note></pd>
         </plentry>
         <plentry>
           <pt>--verbose </pt>

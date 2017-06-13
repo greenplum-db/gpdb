@@ -116,8 +116,8 @@ a.current_query
                     managing the agents. See documentation for the tables and views in the
                         <codeph>gpperfmon</codeph> database in the <cite>Greenplum Database
                         Reference Guide</cite>.</p>
-                <p>The optional Greenplum Command Center web-based user interface graphically
-                    displays query and system utilization metrics saved in the
+                <p otherprops="pivotal">The optional Greenplum Command Center web-based user
+                    interface graphically displays query and system utilization metrics saved in the
                         <codeph>gpperfmon</codeph> database. See the <xref
                         href="https://gpcc.docs.pivotal.io" format="html" scope="external">Greenplum
                         Command Center Documentation</xref> web site for procedures to enable

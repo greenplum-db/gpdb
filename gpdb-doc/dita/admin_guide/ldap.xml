@@ -29,11 +29,11 @@
           <codeph>ldap</codeph> line and specify the <codeph>ldaptls</codeph> parameter with the
         value 1. The default port is 389. In this example, the authentication method parameters
         include the <codeph>ldaptls</codeph> parameter.
-        <codeblock>ldap ldapserver=myldap.com ldaptls=1 ldapprefix="uid=" ldapsuffix=",ou=People,dc=pivotal,dc=com"</codeblock></p>
+        <codeblock>ldap ldapserver=myldap.com ldaptls=1 ldapprefix="uid=" ldapsuffix=",ou=People,dc=example,dc=com"</codeblock></p>
       <p>Specify a non-default port with the <codeph>ldapport</codeph> parameter. In this example,
         the authentication method includes the <codeph>ldaptls</codeph> parameter and the
           <codeph>ldapport</codeph> parameter to specify the port
-        550.<codeblock>ldap ldapserver=myldap.com ldaptls=1 ldapport=500 ldapprefix="uid=" ldapsuffix=",ou=People,dc=pivotal,dc=com"</codeblock></p>
+        550.<codeblock>ldap ldapserver=myldap.com ldaptls=1 ldapport=500 ldapprefix="uid=" ldapsuffix=",ou=People,dc=example,dc=com"</codeblock></p>
     </section>
     <section>
       <title>Enabing LDAP Authentication with a Secure Connection and TLS/SSL </title>
@@ -68,8 +68,8 @@
             certificate directory and certificate file specified.<p>As the root user, edit the
               OpenLDAP configuration file
               <codeph>/etc/openldap/ldap.conf</codeph>:</p><codeblock>SASL_NOCANON on
- URI ldaps://ldapA.pivotal.priv ldaps://ldapB.pivotal.priv ldaps://ldapC.pivotal.priv
- BASE dc=pivotal,dc=priv
+ URI ldaps://ldapA.example.priv ldaps://ldapB.example.priv ldaps://ldapC.example.priv
+ BASE dc=example,dc=priv
  TLS_CACERTDIR /etc/pki/tls/certs
  TLS_CACERT /etc/pki/tls/certs/&lt;ca-certificate-file></codeblock><note>For
               certificate validation to succeed, the hostname in the certificate must match a
@@ -99,13 +99,13 @@
       <p>These are example entries from an <filepath>pg_hba.conf</filepath> file.</p>
       <p>This example specifies LDAP authentication with no encryption between Greenplum Database
         and the LDAP server. </p>
-      <codeblock>host all plainuser 0.0.0.0/0 ldap ldapserver=myldap.com ldapprefix="uid=" ldapsuffix=",ou=People,dc=pivotal,dc=com"</codeblock>
+      <codeblock>host all plainuser 0.0.0.0/0 ldap ldapserver=myldap.com ldapprefix="uid=" ldapsuffix=",ou=People,dc=example,dc=com"</codeblock>
       <p>This example specifies LDAP authentication with the STARTTLS and TLS protocol between
         Greenplum Database and the LDAP server. </p>
-      <codeblock>host all tlsuser 0.0.0.0/0 ldap ldapserver=myldap.com ldaptls=1 ldapprefix="uid=" ldapsuffix=",ou=People,dc=pivotal,dc=com" </codeblock>
+      <codeblock>host all tlsuser 0.0.0.0/0 ldap ldapserver=myldap.com ldaptls=1 ldapprefix="uid=" ldapsuffix=",ou=People,dc=example,dc=com" </codeblock>
       <p>This example specifies LDAP authentication with a secure connection and TLS/SSL protocol
         between Greenplum Database and the LDAP server. </p>
-      <codeblock>host all ldapsuser 0.0.0.0/0 ldap ldapserver=ldaps://myldap.com ldapprefix="uid=" ldapsuffix=",ou=People,dc=pivotal,dc=com"</codeblock>
+      <codeblock>host all ldapsuser 0.0.0.0/0 ldap ldapserver=ldaps://myldap.com ldapprefix="uid=" ldapsuffix=",ou=People,dc=example,dc=com"</codeblock>
     </section>
   </body>
 </topic>

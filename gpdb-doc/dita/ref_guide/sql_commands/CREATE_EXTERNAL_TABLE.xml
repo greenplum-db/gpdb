@@ -316,17 +316,17 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
             />.</pd>
           <pd>This is an example read-only external table definition with the <codeph>s3</codeph>
             protocol.<codeblock>CREATE READABLE EXTERNAL TABLE S3TBL (date text, time text, amt int)
-   LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/
+   LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/
       config=/home/gpadmin/aws_s3/s3.conf')
    FORMAT 'csv';</codeblock></pd>
           <pd>The S3 bucket is at the S3 endpoint <codeph>s3-us-west-2.amazonaws.com</codeph> and
-            the S3 bucket name is <codeph>s3test.pivotal.io</codeph>. The S3 prefix for the files in
-            the bucket is <codeph>/dataset1/normal/</codeph>. The configuration file is in
+            the S3 bucket name is <codeph>s3test.example.com</codeph>. The S3 prefix for the files
+            in the bucket is <codeph>/dataset1/normal/</codeph>. The configuration file is in
               <codeph>/home/gpadmin/s3/s3.conf</codeph> on all Greenplum Database segments.</pd>
           <pd>This example read-only external table specifies the same location and specifies Amazon
             S3 region <codeph>us-west-2</codeph> with the <codeph>region</codeph>
             parameter.<codeblock>CREATE READABLE EXTERNAL TABLE S3TBL (date text, time text, amt int)
-   LOCATION('s3://amazonaws.com/s3test.pivotal.io/dataset1/normal/
+   LOCATION('s3://amazonaws.com/s3test.example.com/dataset1/normal/
       region=s3-us-west-2 config=/home/gpadmin/aws_s3/s3.conf')
    FORMAT 'csv';</codeblock></pd>
           <pd>The <varname>port</varname> is optional in the URL of the <codeph>LOCATION</codeph>
@@ -352,7 +352,7 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
       config=/home/gpadmin/aws_s3/s3.conf')</codeblock></pd>
           <pd>When the <codeph>version</codeph> parameter is <codeph>2</codeph>, you can also
             specify an Amazon S3 endpoint. This example specifies an Amazon S3
-            endpoint.<codeblock>LOCATION ('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/ <b>region=us-west-2</b>
+            endpoint.<codeblock>LOCATION ('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/ <b>region=us-west-2</b>
       config=/home/gpadmin/aws_s3/s3.conf')</codeblock></pd>
           <pd>For information about the <codeph>s3</codeph> protocol, see <xref
               href="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr">s3://

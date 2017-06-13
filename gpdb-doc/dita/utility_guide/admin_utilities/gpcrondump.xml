@@ -141,7 +141,7 @@
         information about using DD Boost and Data Domain systems with Greenplum Database, see
         "Backing Up and Restoring Databases" in the <cite>Greenplum Database Administrator
           Guide</cite>.</p></section>
-    <section><b>Using NetBackup</b>
+    <section otherprops="pivotal"><b>Using NetBackup</b>
       <p>Veritas NetBackup integration is included with Pivotal Greenplum Database. Greenplum
         Database must be configured to communicate with the Veritas NetBackup master server that is
         used to backup the database. </p><p>When backing up a large amount of data, set the
@@ -173,17 +173,18 @@
         </p><note>The UNIX mail utility must be running on Greenplum Database host and must be
         configured to allow the Greenplum superuser (<codeph>gpadmin</codeph>) to send
       email.</note></section>
-    <section><b>Limitations</b><p>Dell EMC DD Boost is integrated with Pivotal Greenplum Database
-        and requires a DD Boost license. Open source Greenplum Database cannot use the DD Boost
-        software, but can back up to a Dell EMC Data Domain system mounted as an NFS share on the
-        Greenplum master and segment hosts.</p><p>NetBackup is not compatible with DD Boost. Both
-        NetBackup and DD Boost cannot be used in a single back up operation.</p><p>For incremental
-        back up sets, a full backup and associated incremental backups, the backup set must be on a
-        single device. For example, a backup set must all be on a file system. The backup set cannot
-        have some backups on the local file system and others on a Data Domain system or a NetBackup
-        system.</p><p>For external tables, the table definition is backed up, however the data is
-        not backed up. For leaf child partition of a partitioned table that is a readable external
-        table, the leaf child partition data is not backed up. </p></section>
+    <section><b>Limitations</b><p otherprops="pivotal">Dell EMC DD Boost is integrated with Pivotal
+        Greenplum Database and requires a DD Boost license. Open source Greenplum Database cannot
+        use the DD Boost software, but can back up to a Dell EMC Data Domain system mounted as an
+        NFS share on the Greenplum master and segment hosts.</p><p otherprops="pivotal">NetBackup is
+        not compatible with DD Boost. Both NetBackup and DD Boost cannot be used in a single back up
+        operation.</p><p>For incremental back up sets, a full backup and associated incremental
+        backups, the backup set must be on a single device. For example, a backup set must all be on
+        a file system. <ph otherprops="pivotal">The backup set cannot have some backups on the local
+          file system and others on a Data Domain system or a NetBackup system.</ph></p><p>For
+        external tables, the table definition is backed up, however the data is not backed up. For
+        leaf child partition of a partitioned table that is a readable external table, the leaf
+        child partition data is not backed up. </p></section>
     <section id="section7">
       <title>Options</title>
       <parml>

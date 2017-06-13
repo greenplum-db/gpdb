@@ -27,11 +27,11 @@
           interfaces and access them in parallel. </li>
         <li>The <codeph>gpload</codeph> utility automates the steps of a load task using a
           YAML-formatted control file. </li>
-        <li>The GemFire-Greenplum Connector allows the transfer of data between a Pivotal GemFire
-          region and a Greenplum Database table. Pivotal Gemfire is an in-memory data management
-          system that provides reliable asynchronous event notifications and guaranteed message
-          delivery. For information about using GemFire-Greenplum Connector, see <xref
-            href="http://ggc.docs.pivotal.io/" format="html" scope="external"
+        <li otherprops="pivotal">The GemFire-Greenplum Connector allows the transfer of data between
+          a Pivotal GemFire region and a Greenplum Database table. Pivotal Gemfire is an in-memory
+          data management system that provides reliable asynchronous event notifications and
+          guaranteed message delivery. For information about using GemFire-Greenplum Connector, see
+            <xref href="http://ggc.docs.pivotal.io/" format="html" scope="external"
             >http://ggc.docs.pivotal.io/</xref>. For information about Pivotal Gemfire, see <xref
             href="http://gemfire.docs.pivotal.io/" format="html" scope="external"
             >http://gemfire.docs.pivotal.io/</xref>.</li>

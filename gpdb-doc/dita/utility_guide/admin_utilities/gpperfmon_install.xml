@@ -94,9 +94,10 @@ host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
                 <codeph>postgresql.conf</codeph> file)</li>
           </ul><p>Data collection agents can be configured by setting parameters in the
               <codeph>gpperfmon.conf</codeph> configuration file. See <xref
-              href="#topic1/section_p51_bxc_wz" format="dita"/> for details.</p><p>For information
-            about Greenplum Command Center, see the <xref href="https://gpcc.docs.pivotal.io"
-              format="html" scope="external">Greenplum Command Center Documentation</xref>.</p></li>
+              href="#topic1/section_p51_bxc_wz" format="dita"/> for details.</p><p
+            otherprops="pivotal">For information about Greenplum Command Center, see the <xref
+              href="https://gpcc.docs.pivotal.io" format="html" scope="external">Greenplum Command
+              Center Documentation</xref>.</p></li>
       </ol>
     </section>
     <section id="section4">

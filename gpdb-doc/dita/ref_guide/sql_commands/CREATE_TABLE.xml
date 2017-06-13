@@ -646,7 +646,7 @@
       </ul>
       <note type="important">The current Greenplum Database legacy optimizer allows list partitions
         with multi-column (composite) partition keys. GPORCA does not support composite keys, so
-        Pivotal does not recommend using composite partition keys.</note>
+        using composite partition keys is not recommended.</note>
     </section>
     <section id="section6">
       <title>Examples</title>

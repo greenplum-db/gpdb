@@ -67,15 +67,14 @@ export HADOOP_HOME=/usr/lib/gphd</codeblock><p>The
                            </entry>
                            <entry colname="col4">master<p>session</p>reload </entry>
                         </row>
-                        <row>
+                        <row otherprops="oss">
                            <entry colname="col1">
                               <codeph>gp_hadoop_home</codeph>
                            </entry>
-                           <entry colname="col2">With Pivotal HD (not supported) this parameter
-                              specifies the installation directory for Hadoop. For example, the
-                              default installation directory is
-                                 <filepath>/usr/lib/gphd</filepath>.<p>When using Greenplum HD 1.2
-                                 or earlier (not supported), specify the same value as the
+                           <entry colname="col2">With Pivotal HD, this parameter specifies the
+                              installation directory for Hadoop. For example, the default
+                              installation directory is <filepath>/usr/lib/gphd</filepath>.<p>When
+                                 using Greenplum HD 1.2 or earlier, specify the same value as the
                                  HADOOP_HOME environment variable.</p></entry>
                            <entry colname="col3">
                               <codeph>NULL</codeph>
