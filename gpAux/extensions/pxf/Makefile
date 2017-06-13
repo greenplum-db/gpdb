@@ -20,12 +20,15 @@ MODULE_big = pxf
 OBJS       = src/pxfprotocol.o
 REGRESS    = basic
 
-##default: pxf
-
-#ifdef USE_PGXS
+# Launch
+ifdef USE_PGXS
 PGXS := $(shell pg_config --pgxs)
 include $(PGXS)
-#endif
+else
+top_builddir = ../../..
+include $(top_builddir)/src/Makefile.global
+include $(top_srcdir)/contrib/contrib-global.mk
+endif
 
 unittest-check:
 	$(MAKE) -C test check
