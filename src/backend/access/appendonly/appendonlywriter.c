@@ -1514,6 +1514,7 @@ UpdateMasterAosegTotalsFromSegments(Relation parentrel,
 									int64 modcount_added)
 {
 	ListCell	   *l;
+/* FIXME: diagnostics: int64 or uint64 */
 	int64		   *total_tupcount;
 
 	Assert(RelationIsAoRows(parentrel) || RelationIsAoCols(parentrel));
@@ -1528,7 +1529,9 @@ UpdateMasterAosegTotalsFromSegments(Relation parentrel,
 	foreach (l, segmentNumList)
 	{
 		int		qe_segno = lfirst_int(l);
+/* FIXME: diagnostics: int64 or uint64 */
 		int64	qe_tupcount = total_tupcount[qe_segno];
+/* FIXME: diagnostics: int64 or uint64 */
 		int64	known_tupcount = 0;
 
 		Assert(qe_segno >= 0);
@@ -1569,6 +1572,7 @@ UpdateMasterAosegTotalsFromSegments(Relation parentrel,
 		 */
 		if (known_tupcount != qe_tupcount)
 		{
+/* FIXME: diagnostics: int64 or uint64 */
 			int64	tupcount_diff = qe_tupcount - known_tupcount;
 
 			elog(DEBUG3, "UpdateMasterAosegTotalsFromSegments: updating "
@@ -1593,6 +1597,7 @@ UpdateMasterAosegTotalsFromSegments(Relation parentrel,
  * track of file 'segments' and their EOF's and decide which segno to use in
  * future writes into the table.
  */
+/* FIXME: diagnostics: int64 or uint64 */
 void UpdateMasterAosegTotals(Relation parentrel, int segno, int64 tupcount, int64 modcount_added)
 {
 	AORelHashEntry	aoHashEntry = NULL;
@@ -1600,6 +1605,7 @@ void UpdateMasterAosegTotals(Relation parentrel, int segno, int64 tupcount, int6
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 	Assert(segno >= 0);
 
+/* FIXME: diagnostics: int64 or uint64 */
 	ereportif(Debug_appendonly_print_segfile_choice, LOG,
 		(errmsg("UpdateMasterAosegTotals: Updating aoseg entry for append-only relation %d "
 							"with " INT64_FORMAT " new tuples for segno %d",

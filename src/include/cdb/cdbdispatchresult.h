@@ -107,7 +107,7 @@ typedef struct CdbDispatchResult
 	bool wasCanceled;
 
 	/* num rows rejected in SREH mode */
-	int	numrowsrejected;
+	int64	numrowsrejected;
 } CdbDispatchResult;
 
 /*

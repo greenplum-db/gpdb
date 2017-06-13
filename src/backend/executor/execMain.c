@@ -125,7 +125,7 @@ static void initResultRelInfo(ResultRelInfo *resultRelInfo,
 static void ExecCheckPlanOutput(Relation resultRel, List *targetList);
 static TupleTableSlot *ExecutePlan(EState *estate, PlanState *planstate,
 			CmdType operation,
-			long numberTuples,
+			uint64 numberTuples, /* FIXME: diagnostics */
 			ScanDirection direction,
 			DestReceiver *dest);
 static void ExecSelect(TupleTableSlot *slot,
@@ -763,7 +763,7 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
  */
 TupleTableSlot *
 ExecutorRun(QueryDesc *queryDesc,
-			ScanDirection direction, long count)
+			ScanDirection direction, uint64 count)
 {
 	EState	   *estate;
 	CmdType		operation;
@@ -2454,7 +2454,7 @@ SendAOTupCounts(EState *estate)
 					pq_sendint64(&buf, tupcount);
 
 					if (Debug_appendonly_print_insert)
-						ereport(LOG,(errmsg("sent tupcount " INT64_FORMAT " for "
+						ereport(LOG,(errmsg("sent tupcount " UINT64_FORMAT " for "
 											"relation %d", tupcount, relid)));
 
 				}
@@ -2685,7 +2685,7 @@ static TupleTableSlot *
 ExecutePlan(EState *estate,
 			PlanState *planstate,
 			CmdType operation,
-			long numberTuples,
+			uint64 numberTuples,
 			ScanDirection direction,
 			DestReceiver *dest)
 {
@@ -2694,7 +2694,7 @@ ExecutePlan(EState *estate,
 	TupleTableSlot *slot;
 	ItemPointer tupleid = NULL;
 	ItemPointerData tuple_ctid;
-	long		current_tuple_count;
+	uint64		current_tuple_count;
 	TupleTableSlot *result;
 
 	/*

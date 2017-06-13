@@ -103,5 +103,11 @@ void		plperl_spi_cursor_close(char *);
 char	   *plperl_sv_to_literal(SV *, char *);
 
 
+/* Perl 5.19.4 changed array indices from I32 to SSize_t */
+#if PERL_BCDVERSION >= 0x5019004
+#define AV_SIZE_MAX SSize_t_MAX
+#else
+#define AV_SIZE_MAX I32_MAX
+#endif
 
 #endif   /* PL_PERL_H */
