@@ -73,6 +73,12 @@ installcheck:
 		$(MAKE) -C gpmapreduce installcheck; \
 	fi
 
+unittest-check:
+	@if [ "$(enable_pxf)" = "yes" ]; then \
+		echo "pxf enabled"; \
+		$(MAKE) -C pxf unittest-check; \
+	fi
+
 #
 # below targets will be built via top_builddir/gpAux/Makefile
 #
