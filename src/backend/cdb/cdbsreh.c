@@ -318,7 +318,7 @@ void SendNumRowsRejected(int64 numrejected)
 		elog(FATAL, "SendNumRowsRejected: called outside of execute context.");
 
 	pq_beginmessage(&buf, 'j'); /* 'j' is the msg code for rejected records */
-	pq_sendint64(&buf, numrejected, 4);
+	pq_sendint64(&buf, numrejected);
 	pq_endmessage(&buf);	
 }
 

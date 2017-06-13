@@ -1554,7 +1554,7 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 	 * targrows in analyze_rel_internal() is an int,
 	 * it's unlikely that this query will return more rows
 	 */
-	assert(SPI_processed < INT_MAX);
+	Assert(SPI_processed < INT_MAX);
 	sampleTuples = (int) SPI_processed;
 
 	/* Ok, read in the tuples to *rows */
