@@ -15,9 +15,6 @@
       <li id="ij168816">
         <xref href="#topic5" type="topic" format="dita"/>
       </li>
-      <li>
-        <xref href="#topic_urn_wcj_bq" format="dita"/>
-      </li>
       <li id="ij172091">
         <xref href="#topic6" type="topic" format="dita"/>
       </li>
@@ -36,44 +33,56 @@
         Information Systems) objects to be stored in the database. The Greenplum Database PostGIS
         extension includes support for GiST-based R-Tree spatial indexes and functions for analysis
         and processing of GIS objects. </p>
-      <p>Go to<xref href="http://postgis.refractions.net/" scope="external" format="html">
-          http://postgis.refractions.net/</xref> for more information about PostGIS.</p>
+      <p>The Greenplum Database PostGIS extension supports the PostGIS extension PostGIS Raster. The
+        PostGIS Raster extension implements the <codeph>raster</codeph> data type as much as
+        possible like the PostGIS <codeph>geometry</codeph> data type to offer a single set of
+        overlay SQL functions (like <codeph>ST_Intersects</codeph>) operating seamlessly on vector
+        and raster coverages. PostGIS Raster uses the GDAL (Geospatial Data Abstraction Library)
+        translator library for raster geospatial data formats that presents a <xref
+          href="http://www.gdal.org/gdal_datamodel.html" format="html" scope="external">single
+          raster abstract data model</xref> to a calling application. </p>
       <p>For information about Greenplum Database PostGIS extension support, see <xref
           href="#postgis_support" format="dita"/>.</p>
+      <p>For information about PostGIS, see <xref href="http://postgis.refractions.net/"
+          scope="external" format="html"> http://postgis.refractions.net/</xref>
+      </p>
+      <p>For information about GDAL, see <xref href="http://www.gdal.org" format="html"
+          scope="external">http://www.gdal.org</xref>. </p>
     </body>
     <topic id="topic3" xml:lang="en">
       <title id="ij168742">Greenplum PostGIS Extension</title>
       <body>
-        <p>The Greenplum Database PostGIS extension is available from <xref
-            href="https://network.pivotal.io" scope="external" format="html"><ph>Pivotal
-              Network</ph></xref>. You can install it using the Greenplum Package Manager
+        <!--For OSS, compile and install the PostGIS extension package. -->
+        <p otherprops="oss-only">To use the PostGIS extension, build and compile the extension. See
+          the instructions in the Github Greenplum Database PostGIS extension repo.</p>
+        <!--The PostGIS extension package is available for Pivotal Greenplum only.-->
+        <p otherprops="pivotal">The Greenplum Database PostGIS extension package is available from
+            <xref href="https://network.pivotal.io" scope="external" format="html"><ph>Pivotal
+              Network</ph></xref>. You can install the package using the Greenplum Package Manager
             (<codeph>gppkg</codeph>). For details, see <codeph>gppkg</codeph> in the <cite>Greenplum
             Database Utility Guide</cite>.</p>
-        <p>For the information about supported extension packages and software versions see the
-            <cite>Greenplum Database Release Notes</cite>.</p>
-        <p>Major enhancements and changes in 2.0.3 from 1.4.2 include:</p>
-        <ul id="ul_mk2_p42_4p">
-          <li id="ij170226">Support for geographic coordinates (latitude and longitude) with a
-            GEOGRAPHY type and related functions.</li>
-          <li id="ij170227">Input format support for these formats: GML, KML, and JSON</li>
-          <li id="ij173515">Unknown SRID changed from -1 to 0</li>
-          <li id="ij173483">3D relationship and measurement support functions</li>
-          <li id="ij170230">Making spatial indexes 3D aware</li>
-          <li id="ij173412">KNN GiST centroid distance operator</li>
-          <li id="ij170231">Many deprecated functions are removed</li>
-          <li id="ij172262">Performance improvements</li>
-        </ul>
-        <p>See the PostGIS documentation for a list of changes: <xref
-            href="http://postgis.net/docs/manual-2.0/release_notes.html" scope="external"
-            format="html"><ph>http://postgis.net/docs/manual-2.0/release_notes.html</ph></xref></p>
-        <note type="warning">PostGIS 2.0 removed many functions that were deprecated but available
-          in PostGIS 1.4. Functions and applications written with functions that were deprecated in
-          PostGIS 1.4 might need to be rewritten. See the PostGIS documentation for a list of new,
-          enhanced, or changed functions: <xref
-            href="http://postgis.net/docs/manual-2.0/PostGIS_Special_Functions_Index.html#NewFunctions"
-            scope="external" format="html"
-              ><ph>http://postgis.net/docs/manual-2.0/PostGIS_Special_Functions_Index.html
-              #NewFunctions</ph></xref></note>
+        <p>Greenplum Database supports the PostGIS extension with these component versions.<ul
+            id="ul_csh_q3z_d1b">
+            <li>PostGIS 2.1.5</li>
+            <li>Proj 4.8.0 </li>
+            <li>Geos 3.4.2</li>
+            <li>GDAL 1.11.1</li>
+            <li>Json 0.12</li>
+            <li>Expat 2.1.0</li>
+          </ul></p>
+        <p otherprops="pivotal">For the information about supported extension packages and software
+          versions see the <cite>Greenplum Database Release Notes</cite>.</p>
+        <p>Major enhancements and changes in PostGIS 2.1.5 from 2.0.3 include new PostGIS Raster
+          functions. For a list of new and enhanced functions in PostGIS 2.1, see the PostGIS
+          documentation <xref
+            href="http://postgis.net/docs/manual-2.1/PostGIS_Special_Functions_Index.html#NewFunctions_2_1"
+            format="html" scope="external">PostGIS Functions new or enhanced in 2.1</xref>.</p>
+        <p>For a list of breaking changes in PostGIS 2.1, see <xref
+            href="http://postgis.net/docs/manual-2.1/PostGIS_Special_Functions_Index.html#ChangedFunctions_2_1"
+            format="html" scope="external">PostGIS functions breaking changes in 2.1</xref>.</p>
+        <p>For a comprehensive list of PostGIS changes in PostGIS 2.1.5 and earlier, see PostGIS 2.1
+          Appendix A <xref href="http://postgis.net/docs/manual-2.1/release_notes.html#idm34802"
+            format="html" scope="external">Release 2.1.5</xref>.</p>
       </body>
       <topic id="topic4" xml:lang="en">
         <title>Greenplum Database PostGIS Limitations</title>
@@ -81,7 +90,6 @@
           <p>The Greenplum Database PostGIS extension does not support the following features:</p>
           <ul id="ul_mm2_p42_4p">
             <li id="ij169095">Topology</li>
-            <li id="ij169096">Raster</li>
             <li id="ij166819">A small number of user defined functions and aggregates</li>
             <li id="ij166822">PostGIS long transaction support</li>
             <li id="ij169588">Geometry and geography type modifier</li>
@@ -96,48 +104,70 @@
     <title id="ij169610">Enabling PostGIS Support</title>
     <body>
       <p>After installing the PostGIS extension package, you enable PostGIS support for each
-        database that requires its use. To enable the support, run enabler SQL scripts that are
-        supplied with the PostGIS package, in your target database.</p>
-      <p>For PosgGIS 1.4 the enabler script is <codeph>postgis.sql</codeph></p>
-      <codeblock>psql -f postgis.sql -d <i>your_database</i></codeblock>
-      <p>
-        <ph>Your database is now spatially enabled.</ph>
-      </p>
-      <p>For PostGIS 2.0.3, you run two SQL scripts <codeph>postgis.sql</codeph> and
-          <codeph>spatial_ref_sys.sql</codeph> in your target database.</p>
-      <p>For example:</p>
+        database that requires its use. To enable PostGIS support in your database, run SQL scripts
+        that are supplied with the PostGIS package in
+          <codeph>$GPHOME/share/postgresql/contrib/postgis-2.1/</codeph> .</p>
+      <p dir="ltr" id="docs-internal-guid-8c038020-7f9c-b023-7fae-617656ae21e7">These scripts enable
+        PostGIS, and PostGIS Raster in a database.<ul id="ul_iph_ddm_d1b">
+          <li><codeph>postgis.sql</codeph> - Load the PostGIS object and function definitions.</li>
+          <li><codeph>rtpostgis.sql</codeph> - Load the PostGIS <codeph>raster</codeph> object and
+            function definitions.</li>
+        </ul></p>
+      <p>These SQL scripts add data and comments to a PostGIS enabled database.<ul
+          id="ul_l3c_zbz_d1b">
+          <li><codeph>spatial_ref_sys.sql</codeph> - Populate the <codeph>spatial_ref_sys</codeph>
+            table with a complete set of EPSG coordinate system definition identifiers. With the
+            definition identifiers you can perform <codeph>ST_Transform()</codeph> operations on
+              geometries.<note type="note">If you have overridden standard entries and want to use
+              those overrides, do not load the <codeph>spatial_ref_sys.sql</codeph> file when
+              creating the new database.</note></li>
+          <li><codeph>postgis_comments.sql</codeph> - Add comments to the PostGIS functions.</li>
+          <li><codeph>raster_comments.sql</codeph> - Add comments to the PostGIS Raster
+            functions.</li>
+        </ul></p>
+      <p>You can view comments with the <codeph>pslq</codeph> meta-command <codeph>\dd
+            <varname>function_name</varname></codeph> or from any tool that can show Greenplum
+        Database function comments.</p>
+      <p>For example, these commands run the SQL scripts <codeph>postgis.sql</codeph>,
+          <codeph>rtpostgis.sql</codeph> and <codeph>spatial_ref_sys.sql</codeph> in the database
+          <codeph>mydatabase</codeph>.</p>
       <codeblock>psql -d mydatabase -f 
-  $GPHOME/share/postgresql/contrib/postgis-2.0/postgis.sql
+  $GPHOME/share/postgresql/contrib/postgis-2.1/postgis.sql
 psql -d mydatabase -f 
-  $GPHOME/share/postgresql/contrib/postgis-2.0/spatial_ref_sys.sql</codeblock>
-      <note type="note"><codeph>spatial_ref_sys.sql</codeph> populates the
-          <codeph>spatial_ref_sys</codeph> table with EPSG coordinate system definition identifiers.
-        If you have overridden standard entries and want to use those overrides, do not load the
-          <codeph>spatial_ref_sys.sql</codeph> file when creating the new database. </note>
-      <p>Your database is now spatially enabled.</p>
+  $GPHOME/share/postgresql/contrib/postgis-2.1/rtpostgis.sql
+psql -d mydatabase -f 
+  $GPHOME/share/postgresql/contrib/postgis-2.1/spatial_ref_sys.sql</codeblock>
+      <p>After running the scripts, the database is spatially enabled and is PostGIS Raster
+        enabled.</p>
     </body>
-  </topic>
-  <topic id="topic_urn_wcj_bq">
-    <title>Upgrading the Greenplum PostGIS Extension</title>
-    <body>
-      <p>If you upgrade from PostGIS extension package version 2.0 (pv2.0) or later, you must run
-          <codeph>postgis_upgrade_20_minor.sql</codeph> in your target database. This example
-        upgrades the PostGIS extension package and runs the script:</p>
-      <codeblock>gppkg -u postgis-ossv2.0.3_pv2.0.1_gpdb<varname>version</varname>-rhel6-x86_64.gppkg
-
-psql -d mydatabase -f $GPHOME/share/postgresql/contrib/postgis-2.0/postgis_upgrade_20_minor.sql</codeblock>
-    </body>
+    <topic id="topic_l4l_gg1_21b">
+      <title>Support for PostGIS Raster</title>
+      <body>
+        <p dir="ltr">The postGIS package installation adds these lines to the
+            <codeph>greenplum_path.sh</codeph> file for PostGIS Raster support.</p>
+        <codeblock>export GDAL_DATA=$GPHOME/share/gdal
+export POSTGIS_ENABLE_OUTDB_RASTERS=0
+export POSTGIS_GDAL_ENABLED_DRIVERS=ENABLE_ALL</codeblock>
+        <p><codeph>GDAL_DATA</codeph> specifies location of and GDAL utilities and support files
+          used by the GDAL library. For example, in order for GDAL to properly evaluate EPSG codes
+          requires EPSG support files (so called dictionaries, mostly in ​CSV format), such as
+            <codeph>gcs.csv​</codeph> and <codeph>pcs.csv</codeph>​, found in the
+            <codeph>GDAL_DATA</codeph> directory.</p>
+        <p><codeph>POSTGIS_GDAL_ENABLED_DRIVERS</codeph> sets the enabled GDAL drivers in the
+          PostGIS environment.</p>
+        <p><codeph>POSTGIS_ENABLE_OUTDB_RASTERS</codeph> is boolean configuration option to enable
+          access to out of database raster bands. </p>
+      </body>
+    </topic>
   </topic>
   <topic id="topic6" xml:lang="en">
-    <title id="ij169830">Migrating from PostGIS 1.4 to 2.0</title>
+    <title id="ij169830">Migrating from PostGIS 2.0 to 2.1</title>
     <body>
-      <p>To migrate a PostGIS-enabled database from 1.4 to 2.0 you must perform a PostGIS HARD
-        UPGRADE. A HARD UPGRADE consists of dumping a database that is enabled with PostGIS 1.4 and
-        loading the database the data to a new database that is enabled with PostGIS 2.0.</p>
-      <p>For information about a PostGIS HARD UPGRADE procedure, see the PostGIS documentation:
-          <xref href="http://postgis.net/docs/manual-2.0/postgis_installation.html#hard_upgrade"
-          scope="external" format="html"
-            ><ph>http://postgis.net/docs/manual-2.0/postgis_installation.html#hard_upgrade</ph></xref></p>
+      <p>To migrate a PostGIS-enabled database from 2.0 to 2.1 you can perform a PostGIS SOFT
+        UPGRADE. A SOFT UPGRADE consists of running a SQL script.</p>
+      <p>For information about the PostGIS upgrade procedure, see the PostGIS upgrade documentation:
+          <xref href="http://postgis.net/docs/manual-2.1/postgis_installation.html#upgrading"
+          format="html" scope="external">PostGIS upgrade documentation:</xref>.</p>
     </body>
   </topic>
   <topic id="topic7" xml:lang="en">
@@ -197,6 +227,7 @@ USING GIST ( <i>geometryfield</i> );</codeblock>
         <li>
           <xref href="#topic_y5z_nkb_3p" format="dita"/>
         </li>
+        <li><xref href="#topic_bl3_4vy_d1b" format="dita"/></li>
         <li>
           <xref href="#topic_wy2_rkb_3p" format="dita"/>
         </li>
@@ -204,7 +235,7 @@ USING GIST ( <i>geometryfield</i> );</codeblock>
       <p>The Greenplum Database PostGIS extension does not support the following features:</p>
       <ul id="ul_xpr_21h_kp">
         <li>Topology</li>
-        <li>Raster</li>
+        <li>Some Raster Functions</li>
       </ul>
     </body>
     <topic id="topic_g2d_hkb_3p">
@@ -216,8 +247,31 @@ USING GIST ( <i>geometryfield</i> );</codeblock>
           <li dir="ltr">box3d</li>
           <li dir="ltr">geometry</li>
           <li dir="ltr">geography</li>
-          <li dir="ltr">spheroid</li>
         </ul>
+        <p>For a list of PostGIS data types, operators, and functions, see the <xref
+            href="http://postgis.net/docs/manual-2.1/reference.html" format="html" scope="external"
+            >PostGIS reference documentation</xref>.</p>
+      </body>
+    </topic>
+    <topic id="topic_bl3_4vy_d1b">
+      <title>Supported PostGIS Raster Data Types</title>
+      <body>
+        <p dir="ltr">Greenplum Database PostGIS supports these PostGIS Raster data types. </p>
+        <ul id="ul_obf_z2m_d1b">
+          <li dir="ltr">geomval</li>
+          <li dir="ltr">addbandarg</li>
+          <li dir="ltr">rastbandarg</li>
+          <li dir="ltr">raster</li>
+          <li dir="ltr">reclassarg </li>
+          <li dir="ltr">summarystats </li>
+          <li dir="ltr">unionarg</li>
+        </ul>
+        <p>For information about PostGIS Raster data Management, queries, and applications <xref
+            href="http://postgis.net/docs/manual-2.1/using_raster_dataman.html" format="html"
+            scope="external">http://postgis.net/docs/manual-2.1/using_raster_dataman.html</xref></p>
+        <p>For a list of PostGIS Raster data types, operators, and functions, see the <xref
+            href="http://postgis.net/docs/manual-2.1/RT_reference.html" format="html"
+            scope="external">PostGIS Raster reference documentation</xref>.</p>
       </body>
     </topic>
     <topic id="topic_y5z_nkb_3p">
@@ -231,16 +285,14 @@ USING GIST ( <i>geometryfield</i> );</codeblock>
       <title>PostGIS Extension Limitations</title>
       <body>
         <p>This section lists the Greenplum Database PostGIS extension limitations for user defined
-          functions (UDFs), data types and aggregates. </p>
+          functions (UDFs), data types, and aggregates. </p>
         <ul id="ul_vzc_bpb_3p">
-          <li>Data types and functions related to PostGIS topology or raster functionality, such as
-              <apiname>TopoGeometry</apiname> and <apiname>ST_AsRaster</apiname> are not supported
-            by Greenplum Database.</li>
-          <li><apiname>ST_Estimated_Extent</apiname> function is not supported. The function
-            requires table column statistics for user defined data types that are not available with
-            Greenplum Database.</li>
-          <li><apiname>ST_GeomFromGeoJSON</apiname> function is not supported. The function requires
-            JSON support. JSON is not supported in Greenplum Database.</li>
+          <li>Data types and functions related to PostGIS topology functionality, such as
+              <apiname>TopoGeometry</apiname>, are not supported by Greenplum Database.</li>
+          <li> Functions that perform <codeph>ANALYZE</codeph> operations for user-defined data
+            types are not supported. For example, <apiname>ST_Estimated_Extent</apiname> function is
+            not supported. The function requires table column statistics for user defined data types
+            that are not available with Greenplum Database.</li>
           <li>These PostGIS aggregates are not supported by Greenplum Database:<ul
               id="ul_ylg_hpb_3p">
               <li><apiname>ST_MemCollect</apiname></li>
