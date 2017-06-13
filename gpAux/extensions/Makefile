@@ -15,18 +15,24 @@ ifneq (${ENV_JAVA_HOME},)
 	JAVA_HOME=${ENV_JAVA_HOME}
 endif
 
-.PHONY: all install clean distclean installcheck mapreduce gpcloud mkgphdfs mkorafce
+.PHONY: all install clean distclean installcheck mapreduce pxf gpcloud mkgphdfs mkorafce
 
 #
 # targets built via top_builddir/GNUmakefile
 #
 
-all: mapreduce gpcloud
+all: mapreduce pxf gpcloud
 
 mapreduce:
 	@if [ "$(enable_mapreduce)" = "yes" ]; then \
 		echo "gpmapreduce enabled"; \
 		$(MAKE) -C gpmapreduce; \
+	fi
+
+pxf:
+	@if [ "$(enable_pxf)" = "yes" ]; then \
+		echo "pxf enabled"; \
+		$(MAKE) -C pxf; \
 	fi
 
 gpcloud:
@@ -40,6 +46,9 @@ install:
 	@if [ "$(enable_mapreduce)" = "yes" ]; then \
 		$(MAKE) -C gpmapreduce install; \
 	fi
+	@if [ "$(enable_pxf)" = "yes" ]; then \
+		$(MAKE) -C pxf install; \
+	fi
 	@if [ "$(enable_gpcloud)" = "yes" ]; then \
 		$(MAKE) -C gpcloud install; \
 		$(MAKE) -C gpcloud/bin/gpcheckcloud install; \
@@ -47,10 +56,12 @@ install:
 
 clean:
 	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce clean; fi
+	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf clean; fi
 	if [ "$(enable_gpcloud)" = "yes" ]; then $(MAKE) -C gpcloud clean; fi
 
 distclean:
 	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce distclean; fi
+	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf distclean; fi
 	if [ "$(enable_gpcloud)" = "yes" ]; then $(MAKE) -C gpcloud distclean; fi
 
 installcheck:

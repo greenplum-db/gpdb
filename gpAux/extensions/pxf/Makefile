@@ -20,7 +20,7 @@ MODULE_big = pxf
 OBJS       = src/pxfprotocol.o
 REGRESS    = basic
 
-default: unittest-check
+##default: pxf
 
 #ifdef USE_PGXS
 PGXS := $(shell pg_config --pgxs)
