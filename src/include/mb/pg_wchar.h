@@ -254,6 +254,9 @@ typedef struct pg_encname
 {
 	char	   *name;
 	pg_enc		encoding;
+#ifdef WIN32
+	unsigned	codepage;
+#endif
 } pg_encname;
 
 extern pg_encname pg_encname_tbl[];
