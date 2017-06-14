@@ -32,6 +32,8 @@ to the segments, and collects the results.
 
 ## Building Greenplum Database with GPORCA
 
+For macOS X developers, follow [these steps](README.macOS.md) for getting your system ready for GPDB 
+
 Currently GPDB assumes ORCA libraries and headers are available in the targeted
 system and tries to build with ORCA by default.  For your convenience, here are
 the steps of how to build the optimizer. For the most up-to-date way of
