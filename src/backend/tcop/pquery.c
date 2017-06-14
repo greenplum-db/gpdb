@@ -1152,7 +1152,7 @@ PortalRunSelect(Portal portal,
 		if (portal->atEnd || count <= 0)
 		{
 			direction = NoMovementScanDirection;
-			count = 0;	/* don't pass negative count to executor */
+			//count = 0;	/* don't pass negative count to executor */
 			// elog(INFO, "PortalRunSelect(), reset counter"); FIXME: diagnostics
                 }
 		else
@@ -1192,7 +1192,7 @@ PortalRunSelect(Portal portal,
 		if (portal->atStart || count <= 0)
                 {
 			direction = NoMovementScanDirection;
-			count = 0;	/* don't pass negative count to executor */
+			//count = 0;	/* don't pass negative count to executor */
 			// elog(INFO, "PortalRunSelect(), reset counter"); FIXME: diagnostics
                 }
 		else
