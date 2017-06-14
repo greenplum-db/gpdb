@@ -89,12 +89,32 @@ ResourceOwner TopTransactionResourceOwner = NULL;
  */
 typedef struct ResourceReleaseCallbackItem
 {
+	struct ResourceReleaseCallbackItem *prev;
 	struct ResourceReleaseCallbackItem *next;
 	ResourceReleaseCallback callback;
 	void	   *arg;
 } ResourceReleaseCallbackItem;
 
-static ResourceReleaseCallbackItem *ResourceRelease_callbacks = NULL;
+static ResourceReleaseCallbackItem ResourceRelease_callbacks_head =
+{
+	.prev = &ResourceRelease_callbacks_head,
+	.next = &ResourceRelease_callbacks_head,
+	.callback = NULL,
+	.arg = NULL,
+};
+
+static ResourceReleaseCallbackItem *ResourceRelease_callbacks =
+		&ResourceRelease_callbacks_head;
+
+#define foreach_resource_release_callback(iter, tmp) \
+	for (iter = ResourceRelease_callbacks->next, tmp = iter->next; \
+		 iter != ResourceRelease_callbacks; \
+		 iter = tmp, tmp = iter->next)
+
+#define rforeach_resource_release_callback(iter, tmp) \
+	for (iter = ResourceRelease_callbacks->prev, tmp = iter->prev; \
+		 iter != ResourceRelease_callbacks; \
+		 iter = tmp, tmp = iter->prev)
 
 
 /* Internal routines */
@@ -205,7 +225,7 @@ ResourceOwnerReleaseInternal(ResourceOwner owner,
 {
 	ResourceOwner child;
 	ResourceOwner save;
-	ResourceReleaseCallbackItem *item, *next;
+	ResourceReleaseCallbackItem *item, *tmp;
 
 	/* Recurse to handle descendants */
 	for (child = owner->firstchild; child != NULL; child = child->nextchild)
@@ -339,10 +359,19 @@ ResourceOwnerReleaseInternal(ResourceOwner owner,
 	}
 
 	/* Let add-on modules get a chance too */
-	for (item = ResourceRelease_callbacks; item; item = next)
+	if (isCommit)
 	{
-		next = item->next;
-		(*item->callback) (phase, isCommit, isTopLevel, item->arg);
+		foreach_resource_release_callback(item, tmp)
+		{
+			(*item->callback) (phase, isCommit, isTopLevel, item->arg);
+		}
+	}
+	else
+	{
+		rforeach_resource_release_callback(item, tmp)
+		{
+			(*item->callback) (phase, isCommit, isTopLevel, item->arg);
+		}
 	}
 
 	CurrentResourceOwner = save;
@@ -472,25 +501,28 @@ RegisterResourceReleaseCallback(ResourceReleaseCallback callback, void *arg)
 						   sizeof(ResourceReleaseCallbackItem));
 	item->callback = callback;
 	item->arg = arg;
+	/*
+	 * Append the new function to tail of the fifo,
+	 * so they get called in the same order as they are registered.
+	 */
+	item->prev = ResourceRelease_callbacks->prev;
 	item->next = ResourceRelease_callbacks;
-	ResourceRelease_callbacks = item;
+	item->prev->next = item;
+	item->next->prev = item;
 }
 
 void
 UnregisterResourceReleaseCallback(ResourceReleaseCallback callback, void *arg)
 {
 	ResourceReleaseCallbackItem *item;
-	ResourceReleaseCallbackItem *prev;
+	ResourceReleaseCallbackItem *tmp;
 
-	prev = NULL;
-	for (item = ResourceRelease_callbacks; item; prev = item, item = item->next)
+	foreach_resource_release_callback(item, tmp)
 	{
 		if (item->callback == callback && item->arg == arg)
 		{
-			if (prev)
-				prev->next = item->next;
-			else
-				ResourceRelease_callbacks = item->next;
+			item->prev->next = item->next;
+			item->next->prev = item->prev;
 			pfree(item);
 			break;
 		}
