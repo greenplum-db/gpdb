@@ -729,10 +729,11 @@ with_python
 with_perl
 with_tcl
 enable_thread_safety
+enable_clients
 INCLUDES
+enable_segwalrep
 HAVE_CXX11
 enable_gpcloud
-enable_segwalrep
 enable_mapreduce
 enable_netbackup
 enable_ddboost
@@ -858,6 +859,7 @@ enable_netbackup
 enable_mapreduce
 enable_gpcloud
 enable_segwalrep
+enable_clients
 enable_thread_safety
 enable_thread_safety_force
 with_tcl
@@ -1539,6 +1541,7 @@ Optional Features:
   --enable-mapreduce      enable Greenplum Mapreduce support
   --disable-gpcloud       disable gpcloud support
   --enable-segwalrep      enable segment WAL replication
+  --disable-clients       disable clients support
   --disable-thread-safety  Do not make client libraries thread-safe
   --enable-thread-safety-force  force thread-safety despite thread test failure
   --disable-largefile     omit support for large files
@@ -6931,7 +6934,6 @@ $as_echo "#define HAVE_CXX11 1" >>confdefs.h
 
 fi # fi
 
-
 #
 # Enable segment WAL replication
 #
@@ -6981,6 +6983,39 @@ $as_echo "$as_me: WARNING: *** Include directory $dir does not exist." >&2;}
 done
 IFS=$ac_save_IFS
 
+
+# clients, enabled by default
+#
+
+pgac_args="$pgac_args enable_clients"
+
+# Check whether --enable-clients was given.
+if test "${enable_clients+set}" = set; then :
+  enableval=$enable_clients;
+  case $enableval in
+    yes)
+
+$as_echo "#define USE_CLIENTS 1" >>confdefs.h
+
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --enable-clients option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  enable_clients=yes
+
+$as_echo "#define USE_CLIENTS 1" >>confdefs.h
+
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with clients... $enable_clients" >&5
+$as_echo "checking whether to build with clients... $enable_clients" >&6; }
 
 
 #

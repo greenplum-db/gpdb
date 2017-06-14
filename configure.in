@@ -769,6 +769,13 @@ done
 IFS=$ac_save_IFS
 AC_SUBST(INCLUDES)
 
+# clients, enabled by default
+#
+PGAC_ARG_BOOL(enable, clients, yes, [  --disable-clients       disable clients support],
+              [AC_DEFINE([USE_CLIENTS], 1,
+                                    [Define to 1 to build with clients (--enable-clients)])])
+AC_MSG_RESULT([checking whether to build with clients... $enable_clients])
+AC_SUBST(enable_clients)
 
 #
 # Library directories
