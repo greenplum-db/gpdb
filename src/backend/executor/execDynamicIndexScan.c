@@ -85,6 +85,7 @@ IndexScan_RemapIndexScanVars(IndexScanState *indexScanState, bool initQual, bool
 		IndexScan_RemapLogicalIndexInfo(indexScanState, attMap);
 
 		DynamicScan_RemapExpression((ScanState *)indexScanState, attMap, (Node*)indexScan->indexqual);
+		DynamicScan_RemapExpression((ScanState *)indexScanState, attMap, (Node*)indexScan->indexqualorig);
 
 		if (initQual)
 		{
