@@ -1832,7 +1832,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		locallyExecutableSubplans = getLocallyExecutableSubplans(plannedstmt, start_plan_node);
 	}
 
-	int subplan_id = 0;
+	int subplan_idx = 0;
 	foreach(l, plannedstmt->subplans)
 	{
 		PlanState  *subplanstate = NULL;
@@ -1843,7 +1843,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		 * If alien elimination is not turned on, then all subplans are considered
 		 * reachable.
 		 */
-		if (!estate->eliminateAliens || bms_is_member(subplan_id, locallyExecutableSubplans))
+		if (!estate->eliminateAliens || bms_is_member(subplan_idx, locallyExecutableSubplans))
 		{
 			/*
 			 * A subplan will never need to do BACKWARD scan nor MARK/RESTORE.
@@ -1859,7 +1859,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 
 		estate->es_subplanstates = lappend(estate->es_subplanstates, subplanstate);
 
-		++subplan_id;
+		++subplan_idx;
 	}
 
 	/* No more use for locallyExecutableSubplans */
