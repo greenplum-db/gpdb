@@ -3,7 +3,6 @@ resources:
   type: git
   source:
     branch: {{gpdb-git-branch}}
-    private_key: {{gpdb-git-key}}
     uri: {{gpdb-git-remote}}
 
 - name: centos-coverity
