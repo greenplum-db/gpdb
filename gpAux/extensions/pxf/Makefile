@@ -18,7 +18,6 @@
 
 MODULE_big = pxf
 OBJS       = src/pxfprotocol.o
-REGRESS    = basic
 
 # Launch
 ifdef USE_PGXS
@@ -35,5 +34,8 @@ unittest-check:
 
 unittest-clean:
 	$(MAKE) -C test clean
+
+installcheck:
+	$(MAKE) -C regress
 
 clean: unittest-clean

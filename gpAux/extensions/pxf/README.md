@@ -1,54 +1,53 @@
-The PXF extension client for GPDB
-===================================
+# The PXF extension client for GPDB
 
-Table of Contents
-=================
+## Table of Contents
 
-* Introduction
-* Package Contents
-* Building
+* Usage
+ * Initialize and start GPDB cluster
+ * Enable PXF extension
+ * Run unit tests
+ * Run regression tests
 
-Introduction
-============
+## Usage
 
-Package Contents
-================
-
-Usage
-========
-
-* Install and start GPDB cluster
+### Initialize and start GPDB cluster
 
 ```
-cd ../../../gpAux/gpdemo
+cd ../../gpAux/gpdemo
 make
 source ./gpdemo-env.sh
 ```
 
-* Build PXF extension
+### Enable PXF extension
 
-Assuming you configured GPDB build with `--prefix=/usr/local/gpdb`
+Configure GPDB to build the pxf extension by adding the "--enable-pxf"
+configure option. This is required to setup the PXF build environment.
+Here is an example:
+
 ```
-source /usr/local/gpdb/greenplum_path.sh
+cd ../../../
+configure --enable-pxf <plus other options of your choice>
 make
-```
-This will compile pxf client code into `pxf.so` shared library and run unit tests located in `test` directory.
-
-* Install PXF extension
-```
 make install
 ```
-This will copy the shared library `pxf.so` into `/usr/local/gpdb/lib/postgresql/`
 
-* Run regression test
+In addition to building GPDB, this will compile the pxf client code
+into the `pxf.so` shared library and install it into
+`$GPHOME/lib/postgres.`
+
+### Run unit tests
+
+This will run the unit tests located in the `test` directory
+
+```
+make unittest-check
+```
+
+## Run regression tests
+
 ```
 make installcheck
 ```
-This will connect to the running database, and run `basic.sql` test which creates the functions, the protocol, external table and selects test records from the table.
 
-* To run the test manaully
-```
-psql -d template1 -f ./sql/basic.sql
-```
-
-You can now define your external readable tables or writable tables.
+This will connect to the running database, and run the regression
+tests located in the `regress` directory.
