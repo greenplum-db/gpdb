@@ -1233,53 +1233,26 @@ preassign_pg_class_oids(PGconn *conn, Archive *fout, Archive *AH, Oid pg_class_o
 	PQExpBuffer aoseg_query;
 	PGresult   *aoseg_res;
 	Oid			aoseg_namespace;
+	bool		columnstore;
 	bool		bitmapindex;
 	PQExpBuffer bm_query;
 	PGresult   *bm_res;
 	Oid			bm_oid;
 	Oid			bm_ns;
 	char	   *bm_name;
-	char	   *segrelname;
-	char	   *blkdirrelname;
-	char	   *blkdiridxname;
-	char	   *visimaprelname;
-	char	   *visimapidxname;
 
 	appendPQExpBuffer(upgrade_query,
-					  "SELECT c.relname, c.relnamespace, "
-					  "       c.reltoastrelid, t.reltoastidxid, t.relnamespace AS toastnamespace, "
-					  /* AO segments aux relation */
-					  "       ao.segrelid, "
-					  "       aoseg.relname AS segrelname, "
-					  /* AO blkdir aux relations */
-					  "       ao.blkdirrelid, "
-					  "       aoblk.relname AS blkdirrelname, "
-					  "       ao.blkdiridxid, "
-					  "       aoblkidx.relname AS blkdiridxname, "
-					  /* AO Visimap aux relations */
-					  "       ao.visimaprelid, "
-					  "       aovis.relname AS visimaprelname, "
-					  "       ao.visimapidxid, "
-					  "       aovisidx.relname AS visimapidxname, "
-					  /* Index access method name */
+					  "SELECT c.reltoastrelid, t.reltoastidxid, "
+					  "       t.relnamespace as toastnamespace, "
+					  "       ao.segrelid, c.relnamespace, "
+					  "       ao.blkdirrelid, ao.blkdiridxid, "
+					  "       ao.visimaprelid, ao.visimapidxid, "
+					  "       c.relname, ao.columnstore, "
 					  "       a.amname "
 					  "FROM   pg_catalog.pg_class c "
-					  "       LEFT JOIN pg_catalog.pg_class t "
-					  "           ON (c.reltoastrelid = t.oid) "
-					  "       LEFT JOIN pg_catalog.pg_appendonly ao "
-					  "           ON (ao.relid = c.oid) "
-					  "       LEFT JOIN pg_catalog.pg_class aoseg "
-					  "           ON (ao.segrelid = aoseg.oid) "
-					  "       LEFT JOIN pg_catalog.pg_class aovis "
-					  "           ON (ao.visimaprelid = aovis.oid) "
-					  "       LEFT JOIN pg_catalog.pg_class aovisidx "
-					  "           ON (ao.visimapidxid = aovisidx.oid) "
-					  "       LEFT JOIN pg_catalog.pg_class aoblk "
-					  "           ON (ao.blkdirrelid = aoblk.oid) "
-					  "       LEFT JOIN pg_catalog.pg_class aoblkidx "
-					  "           ON (ao.blkdiridxid = aoblkidx.oid) "
-					  "       LEFT JOIN pg_catalog.pg_am a "
-					  "           ON (a.oid = c.relam AND c.relam <> 0) "
+					  "       LEFT JOIN pg_catalog.pg_class t ON (c.reltoastrelid = t.oid) "
+					  "       LEFT JOIN pg_catalog.pg_appendonly ao ON (ao.relid = c.oid) "
+					  "       LEFT JOIN pg_catalog.pg_am a ON (a.oid = c.relam AND c.relam <> 0) "
 					  "WHERE  c.oid = '%u'::pg_catalog.oid;",
 					  pg_class_oid);
 
@@ -1307,6 +1280,7 @@ preassign_pg_class_oids(PGconn *conn, Archive *fout, Archive *AH, Oid pg_class_o
 	pg_appendonly_blkdiridxid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "blkdiridxid")));
 	pg_appendonly_visimaprelid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "visimaprelid")));
 	pg_appendonly_visimapidxid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "visimapidxid")));
+	columnstore = (strcmp(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "columnstore")), "t") == 0) ? true : false;
 	bitmapindex = (strcmp(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "amname")), "bitmap") == 0) ? true : false;
 
 	appendPQExpBuffer(upgrade_buffer,
@@ -1358,46 +1332,41 @@ preassign_pg_class_oids(PGconn *conn, Archive *fout, Archive *AH, Oid pg_class_o
 	}
 	if (OidIsValid(pg_appendonly_segrelid))
 	{
-		segrelname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "segrelname"));
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.preassign_relation_oid('%u'::pg_catalog.oid, "
-																	   "$$%s$$::text, "
+																	   "'pg_ao%sseg_%u'::text, "
 																	   "'%u'::pg_catalog.oid);\n",
-						  pg_appendonly_segrelid, segrelname, aoseg_namespace);
+						  pg_appendonly_segrelid, (columnstore ? "cs" : ""), pg_class_oid, aoseg_namespace);
 	}
 	if (OidIsValid(pg_appendonly_blkdirrelid))
 	{
-		blkdirrelname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "blkdirrelname"));
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.preassign_relation_oid('%u'::pg_catalog.oid, "
-																	   "$$%s$$::text, "
+																	   "'pg_aoblkdir_%u'::text, "
 																	   "'%u'::pg_catalog.oid);\n",
-						  pg_appendonly_blkdirrelid, blkdirrelname, aoseg_namespace);
+						  pg_appendonly_blkdirrelid, pg_class_oid, aoseg_namespace);
 
 		/* every aoblkdir table has an index */
-		blkdiridxname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "blkdiridxname"));
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.preassign_relation_oid('%u'::pg_catalog.oid, "
-																	   "$$%s$$::text, "
+																	   "'pg_aoblkdir_%u_index'::text, "
 																	   "'%u'::pg_catalog.oid);\n",
-						  pg_appendonly_blkdiridxid, blkdiridxname, aoseg_namespace);
+						  pg_appendonly_blkdiridxid, pg_class_oid, aoseg_namespace);
 	}
 	if (OidIsValid(pg_appendonly_visimaprelid))
 	{
-		visimaprelname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "visimaprelname"));
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.preassign_relation_oid('%u'::pg_catalog.oid, "
-																	   "$$%s$$::text, "
+																	   "'pg_aovisimap_%u'::text, "
 																	   "'%u'::pg_catalog.oid);\n",
-						  pg_appendonly_visimaprelid, visimaprelname, aoseg_namespace);
+						  pg_appendonly_visimaprelid, pg_class_oid, aoseg_namespace);
 
 		/* every aovisimap table has an index */
-		visimapidxname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "visimapidxname"));
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.preassign_relation_oid('%u'::pg_catalog.oid, "
-																	   "$$%s$$::text, "
+																	   "'pg_aovisimap_%u_index'::text, "
 																	   "'%u'::pg_catalog.oid);\n",
-						  pg_appendonly_visimapidxid, visimapidxname, aoseg_namespace);
+						  pg_appendonly_visimapidxid, pg_class_oid, aoseg_namespace);
 	}
 
 	/*
@@ -1470,6 +1439,7 @@ preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_
 	int			ntups;
 	PGresult   *upgrade_res;
 	Oid			pg_type_oid;
+	bool		columnstore;
 
 	upgrade_query = createPQExpBuffer();
 	upgrade_buffer = createPQExpBuffer();
@@ -1477,36 +1447,27 @@ preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_
 	appendPQExpBuffer(upgrade_query,
 					  "SELECT c.reltype AS crel, t.reltype AS trel, "
 					  "       t.relnamespace AS trelnamespace, "
-
-					  /* AO segments aux relation */
 					  "       aoseg.reltype AS aosegrel, "
 					  "       aoseg.relnamespace AS aonamespace, "
-					  "       aoseg.relname AS aosegrelname, "
-
-					  /* AO blkdir aux relations */
 					  "       aoblkdir.reltype AS aoblkdirrel, "
 					  "       aoblkdir.relnamespace AS aoblkdirnamespace, "
-					  "       aoblkdir.relname AS aoblkdirrelname, "
-
-					  /* AO visimap aux relations */
 					  "       aovisimap.reltype AS aovisimaprel, "
 					  "       aovisimap.relnamespace AS aovisimapnamespace, "
-					  "       aovisimap.relname AS aovisimaprelname, "
-
+					  "       ao.columnstore, "
 					  "       CASE WHEN c.relhassubclass THEN True "
 					  "       ELSE NULL END AS par_parent "
-					  "FROM   pg_catalog.pg_class c "
-					  "       LEFT JOIN pg_catalog.pg_class t "
-					  "           ON (c.reltoastrelid = t.oid) "
-					  "       LEFT JOIN pg_catalog.pg_appendonly ao "
-					  "           ON (c.oid = ao.relid) "
-					  "       LEFT JOIN pg_catalog.pg_class aoseg "
-					  "           ON (ao.segrelid = aoseg.oid) "
-					  "       LEFT JOIN pg_catalog.pg_class aoblkdir "
-					  "           ON (ao.blkdirrelid = aoblkdir.oid) "
-					  "       LEFT JOIN pg_catalog.pg_class aovisimap "
-					  "           ON (ao.visimaprelid = aovisimap.oid) "
-					  "WHERE  c.oid = '%u'::pg_catalog.oid;",
+					  "FROM pg_catalog.pg_class c "
+					  "LEFT JOIN pg_catalog.pg_class t ON "
+					  "  (c.reltoastrelid = t.oid) "
+					  "LEFT JOIN pg_catalog.pg_appendonly ao ON "
+					  "  (c.oid = ao.relid) "
+					  "LEFT JOIN pg_catalog.pg_class aoseg ON "
+					  "  (ao.segrelid = aoseg.oid) "
+					  "LEFT JOIN pg_catalog.pg_class aoblkdir ON "
+					  "  (ao.blkdirrelid = aoblkdir.oid) "
+					  "LEFT JOIN pg_catalog.pg_class aovisimap ON "
+					  "  (ao.visimaprelid = aovisimap.oid) "
+					  "WHERE c.oid = '%u'::pg_catalog.oid;",
 					  pg_rel_oid);
 
 	upgrade_res = PQexec(conn, upgrade_query->data);
@@ -1524,6 +1485,7 @@ preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_
 	}
 
 	pg_type_oid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "crel")));
+	columnstore = (strcmp(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "columnstore")), "t") == 0) ? true : false;
 
 	preassign_type_oid(conn, fout, AH, pg_type_oid, objname);
 
@@ -1549,13 +1511,12 @@ preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_
 											PQfnumber(upgrade_res, "aosegrel")));
 		Oid			pg_type_aonamespace_oid = atooid(PQgetvalue(upgrade_res, 0,
 											PQfnumber(upgrade_res, "aonamespace")));
-		char 	   *aosegrelname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "aosegrelname"));
 
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.preassign_type_oid('%u'::pg_catalog.oid, "
-																   "$$%s$$::text, "
+																   "'pg_ao%sseg_%u'::text, "
 																   "'%u'::pg_catalog.oid);\n",
-						  pg_type_aosegments_oid, aosegrelname, pg_type_aonamespace_oid);
+						  pg_type_aosegments_oid, (columnstore ? "cs" : ""), pg_rel_oid, pg_type_aonamespace_oid);
 	}
 
 	if (!PQgetisnull(upgrade_res, 0, PQfnumber(upgrade_res, "aoblkdirrel")))
@@ -1565,13 +1526,12 @@ preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_
 											PQfnumber(upgrade_res, "aoblkdirrel")));
 		Oid			pg_type_aoblockdir_namespace = atooid(PQgetvalue(upgrade_res, 0,
 											PQfnumber(upgrade_res, "aoblkdirnamespace")));
-		char	   *aoblkdirrelname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "aoblkdirrelname"));
 
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.preassign_type_oid('%u'::pg_catalog.oid, "
-																   "$$%s$$::text, "
+																   "'pg_aoblkdir_%u'::text, "
 																   "'%u'::pg_catalog.oid);\n",
-						  pg_type_aoblockdir_oid, aoblkdirrelname, pg_type_aoblockdir_namespace);
+						  pg_type_aoblockdir_oid, pg_rel_oid, pg_type_aoblockdir_namespace);
 	}
 
 	if (!PQgetisnull(upgrade_res, 0, PQfnumber(upgrade_res, "aovisimaprel")))
@@ -1581,13 +1541,12 @@ preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_
 											PQfnumber(upgrade_res, "aovisimaprel")));
 		Oid			pg_type_aovisimap_namespace = atooid(PQgetvalue(upgrade_res, 0,
 											PQfnumber(upgrade_res, "aovisimapnamespace")));
-		char	   *aovisimaprelname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "aovisimaprelname"));
 
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.preassign_type_oid('%u'::pg_catalog.oid, "
-																   "$$%s$$::text, "
+																   "'pg_aovisimap_%u'::text, "
 																   "'%u'::pg_catalog.oid);\n",
-						  pg_type_aovisimap_oid, aovisimaprelname, pg_type_aovisimap_namespace);
+						  pg_type_aovisimap_oid, pg_rel_oid, pg_type_aovisimap_namespace);
 	}
 
 	PQclear(upgrade_res);
