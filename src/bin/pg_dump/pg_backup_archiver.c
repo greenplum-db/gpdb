@@ -316,13 +316,6 @@ RestoreArchive(Archive *AHX, RestoreOptions *ropt)
 
 		defnDumped = false;
 
-		if (strcmp(te->desc, "BINARY UPGRADE") == 0)
-		{
-			_printTocEntry(AH, te, ropt, false, false);
-			defnDumped = true;
-			continue;
-		}
-
 		if ((reqs & REQ_SCHEMA) != 0)	/* We want the schema */
 		{
 			ahlog(AH, 1, "creating %s %s\n", te->desc, te->tag);
@@ -2095,10 +2088,6 @@ static teReqs
 _tocEntryRequired(TocEntry *te, RestoreOptions *ropt, bool include_acls)
 {
 	teReqs		res = REQ_ALL;
-
-	/* BINARY UPGRADE items are dumped specially so always reject */
-	if (strcmp(te->desc, "BINARY UPGRADE") == 0)
-		return 0;
 
 	/* ENCODING and STDSTRINGS items are dumped specially, so always reject */
 	if (strcmp(te->desc, "ENCODING") == 0 ||

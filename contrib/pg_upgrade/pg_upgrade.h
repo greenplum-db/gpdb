@@ -36,7 +36,10 @@
 /* contains both global db information and CREATE DATABASE commands */
 #define GLOBALS_DUMP_FILE	"pg_upgrade_dump_globals.sql"
 #define DB_DUMP_FILE		"pg_upgrade_dump_db.sql"
-#define ARRAY_DUMP_FILE		"pg_upgrade_dump_arraytypes.sql"
+
+#define GLOBAL_OIDS_DUMP_FILE "pg_upgrade_dump_global_oids.sql"
+#define DB_OIDS_DUMP_FILE_MASK	"pg_upgrade_dump_%u_oids.sql"
+
 
 /* needs to be kept in sync with pg_class.h */
 #define RELSTORAGE_EXTERNAL	'x'
@@ -101,8 +104,7 @@ typedef struct
 	int			segno;
 	int			columngroup_no;
 	int64		first_row_no;
-	int64		minipage;		/* representation of the "bit varying" field */
-
+	char	   *minipage;		/* text representation of the "bit varying" field */
 } AOBlkDir;
 
 /* To hold contents of pg_aoseg_<oid> */
@@ -203,6 +205,8 @@ typedef struct
 	char		db_name[NAMEDATALEN];	/* database name */
 	char		db_tblspace[MAXPGPATH]; /* database default tablespace path */
 	RelInfoArr	rel_arr;		/* array of all user relinfos */
+
+	char	   *reserved_oids;	/* as a string */
 } DbInfo;
 
 typedef struct
@@ -305,6 +309,8 @@ typedef struct
 	Oid			pg_database_oid;	/* OID of pg_database relation */
 	char	   *libpath;		/* pathname for cluster's pkglibdir */
 	char	   *tablespace_suffix;		/* directory specification */
+
+	char	   *global_reserved_oids; /* OID preassign calls for shared objects */
 } ClusterInfo;
 
 
@@ -338,6 +344,7 @@ typedef struct
 	bool		progress;		/* TRUE -> file based progress queue */
 	bool		debug;			/* TRUE -> log more information */
 	transferMode transfer_mode; /* copy files or link them? */
+	bool		dispatcher_mode;	/* TRUE -> upgrading QD node */
 } migratorContext;
 
 
@@ -517,6 +524,8 @@ void new_9_0_populate_pg_largeobject_metadata(migratorContext *ctx,
 									  bool check_mode, Cluster whichCluster);
 void new_gpdb5_0_invalidate_indexes(migratorContext *ctx, bool check_mode,
 									Cluster whichCluster);
+void new_gpdb_invalidate_bitmap_indexes(migratorContext *ctx, bool check_mode,
+										Cluster whichCluster);
 
 /* version_old_8_3.c */
 
@@ -536,6 +545,10 @@ char *old_8_3_create_sequence_script(migratorContext *ctx,
 							   Cluster whichCluster);
 
 /* version_old_gpdb4.c */
-void old_GPDB4_dump_array_types(migratorContext *ctx, Cluster whichCluster);
 void old_GPDB4_check_for_money_data_type_usage(migratorContext *ctx, Cluster whichCluster);
 void old_GPDB4_check_no_free_aoseg(migratorContext *ctx, Cluster whichCluster);
+
+/* oid_dump.c */
+void dump_new_oids(migratorContext *ctx);
+void get_old_oids(migratorContext *ctx);
+void slurp_oid_files(migratorContext *ctx);

@@ -19,8 +19,6 @@
  */
 extern void AlterTableCreateToastTable(Oid relOid, bool is_part_child);
 
-extern bool RelationNeedsToastTable(Relation rel);
-
 extern void BootstrapToastTable(char *relName,
 					Oid toastOid, Oid toastIndexOid);
 

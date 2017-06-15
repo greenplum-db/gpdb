@@ -124,7 +124,7 @@ new_gpdb5_0_invalidate_indexes(migratorContext *ctx, bool check_mode,
 
 		/*
 		 * check_mode doesn't do much interesting for this but at least
-		 * we'll know we are alloewed to change allow_system_table_mods
+		 * we'll know we are allowed to change allow_system_table_mods
 		 * which is required
 		 */
 		if (!check_mode)
@@ -133,6 +133,49 @@ new_gpdb5_0_invalidate_indexes(migratorContext *ctx, bool check_mode,
 					 "UPDATE pg_index SET indisvalid = false WHERE indexrelid >= %u",
 					 FirstNormalObjectId);
 			PQclear(executeQueryOrDie(ctx, conn, query));
+		}
+		PQfinish(conn);
+	}
+
+	check_ok(ctx);
+}
+
+/*
+ * new_gpdb_invalidate_bitmap_indexes()
+ *
+ * TODO: We are currently missing the support to migrate over bitmap indexes.
+ * Hence, mark all bitmap indexes as invalid.
+ */
+void
+new_gpdb_invalidate_bitmap_indexes(migratorContext *ctx, bool check_mode,
+								   Cluster whichCluster)
+{
+	int			dbnum;
+
+	prep_status(ctx, "Invalidating indexes in new cluster");
+
+	for (dbnum = 0; dbnum < ctx->old.dbarr.ndbs; dbnum++)
+	{
+		DbInfo	   *olddb = &ctx->old.dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(ctx, olddb->db_name, CLUSTER_NEW);
+
+		/*
+		 * GPDB doesn't allow hacking the catalogs without setting
+		 * allow_system_table_mods first.
+		 */
+		PQclear(executeQueryOrDie(ctx, conn,
+								  "set allow_system_table_mods='dml'"));
+
+		/*
+		 * check_mode doesn't do much interesting for this but at least
+		 * we'll know we are allowed to change allow_system_table_mods
+		 * which is required
+		 */
+		if (!check_mode)
+		{
+			PQclear(executeQueryOrDie(ctx, conn,
+									  "UPDATE pg_index SET indisvalid = false FROM pg_class c WHERE c.oid = indexrelid AND indexrelid >= %u AND relam = 3013;",
+									  FirstNormalObjectId));
 		}
 		PQfinish(conn);
 	}

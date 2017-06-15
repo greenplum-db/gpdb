@@ -172,6 +172,7 @@ start_postmaster(migratorContext *ctx, Cluster whichCluster, bool quiet)
 #else
 	char		*output_filename = DEVNULL;
 #endif
+	char		*gpdb_options;
 
 	if (whichCluster == CLUSTER_OLD)
 	{
@@ -188,6 +189,11 @@ start_postmaster(migratorContext *ctx, Cluster whichCluster, bool quiet)
 		cluster = &ctx->new;
 	}
 
+	if (ctx->dispatcher_mode)
+		gpdb_options = "--gp_dbid=1 --gp_num_contents_in_cluster=0 --gp_contentid=-1";
+	else
+		gpdb_options = "--gp_dbid=1 --gp_num_contents_in_cluster=0 --gp_contentid=0";
+
 	/*
 	 * On Win32, we can't send both pg_upgrade output and pg_ctl output to the
 	 * same file because we get the error: "The process cannot access the file
@@ -196,11 +202,12 @@ start_postmaster(migratorContext *ctx, Cluster whichCluster, bool quiet)
 	 */
 	snprintf(cmd, sizeof(cmd),
 			 SYSTEMQUOTE "\"%s/pg_ctl\" -l \"%s\" -D \"%s\" "
-			 "-o \"-p %d %s\" start >> \"%s\" 2>&1" SYSTEMQUOTE,
+			 "-o \"-p %d %s %s\" start >> \"%s\" 2>&1" SYSTEMQUOTE,
 			 bindir, output_filename, datadir, port,
+			 gpdb_options,
 			 (cluster->controldata.cat_ver >=
-				BINARY_UPGRADE_SERVER_FLAG_CAT_VER) ? "-b --gp_dbid=1 --gp_num_contents_in_cluster=0 --gp_contentid=-1" :
-				"--gp_dbid=1 --gp_num_contents_in_cluster=0 --gp_contentid=-1 -c autovacuum=off -c autovacuum_freeze_max_age=2000000000",
+				BINARY_UPGRADE_SERVER_FLAG_CAT_VER) ? "-b" :
+				"-c autovacuum=off -c autovacuum_freeze_max_age=2000000000",
 			 output_filename);
 	exec_prog(ctx, true, "%s", cmd);
 

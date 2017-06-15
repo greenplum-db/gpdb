@@ -35,6 +35,7 @@
 
 static bool create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 							   bool is_part_child);
+static bool needs_toast_table(Relation rel);
 
 
 /*
@@ -133,7 +134,7 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 	/*
 	 * Check to see whether the table actually needs a TOAST table.
 	 */
-	if (!RelationNeedsToastTable(rel))
+	if (!needs_toast_table(rel))
 		return false;
 
 	/*
@@ -327,8 +328,8 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
  * of a tuple could exceed TOAST_TUPLE_THRESHOLD.  (We don't want to
  * create a toast table for something like "f1 varchar(20)".)
  */
-bool
-RelationNeedsToastTable(Relation rel)
+static bool
+needs_toast_table(Relation rel)
 {
 	int32		data_length = 0;
 	bool		maxlength_unknown = false;

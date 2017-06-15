@@ -158,6 +158,9 @@ check_old_cluster(migratorContext *ctx, bool live_check,
 	 */
 	if (!ctx->check)
 	{
+		if (ctx->dispatcher_mode)
+			get_old_oids(ctx);
+
 		report_progress(ctx, CLUSTER_OLD, SCHEMA_DUMP, "Creating catalog dump");
 		generate_old_dump(ctx);
 		split_old_dump(ctx);

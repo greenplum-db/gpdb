@@ -830,7 +830,9 @@ GetNewOid(Relation relation)
 
 	/* Otherwise, use the index to find a nonconflicting OID */
 	indexrel = index_open(oidIndex, AccessShareLock);
-	newOid = GetNewOidWithIndex(relation, indexrel);
+	do {
+		newOid = GetNewOidWithIndex(relation, indexrel);
+	} while(!IsOidAcceptable(newOid));
 	index_close(indexrel, AccessShareLock);
 
 	/*
@@ -911,6 +913,13 @@ GetNewSequenceRelationOid(Relation relation)
 	IndexScanDesc scan;
 	ScanKeyData key;
 	bool		collides;
+	RelFileNode rnode;
+	char	   *rpath;
+	int			fd;
+
+	/* This should match RelationInitPhysicalAddr */
+	rnode.spcNode = relation->rd_rel->reltablespace ? relation->rd_rel->reltablespace : MyDatabaseTableSpace;
+	rnode.dbNode = relation->rd_rel->relisshared ? InvalidOid : MyDatabaseId;
 
 	/* We should only be using pg_class */
 	Assert(RelationGetRelid(relation) == RelationRelationId);
@@ -942,6 +951,49 @@ GetNewSequenceRelationOid(Relation relation)
 		collides = HeapTupleIsValid(index_getnext(scan, ForwardScanDirection));
 
 		index_endscan(scan);
+
+		if (!collides)
+		{
+			/* Check for existing file of same name */
+			rpath = relpath(rnode);
+			fd = BasicOpenFile(rpath, O_RDONLY | PG_BINARY, 0);
+
+			if (fd >= 0)
+			{
+				/* definite collision */
+				gp_retry_close(fd);
+				collides = true;
+			}
+			else
+			{
+				/*
+				 * Here we have a little bit of a dilemma: if errno is something
+				 * other than ENOENT, should we declare a collision and loop? In
+				 * particular one might think this advisable for, say, EPERM.
+				 * However there really shouldn't be any unreadable files in a
+				 * tablespace directory, and if the EPERM is actually complaining
+				 * that we can't read the directory itself, we'd be in an infinite
+				 * loop.  In practice it seems best to go ahead regardless of the
+				 * errno.  If there is a colliding file we will get an smgr
+				 * failure when we attempt to create the new relation file.
+				 */
+				collides = false;
+			}
+		}
+
+		/*
+		 * Also check that the OID hasn't been pre-assigned for a different
+		 * relation.
+		 *
+		 * We're a bit sloppy between OIDs and relfilenodes here; it would be
+		 * OK to use a value that's been reserved for use as a type or
+		 * relation OID here, as long as the relfilenode is free. But there's
+		 * no harm in skipping over those too, so we don't bother to
+		 * distinguish them.
+		 */
+		if (!collides && !IsOidAcceptable(newOid))
+			collides = true;
+
 	} while (collides);
 
 	index_close(indexrel, AccessShareLock);
@@ -975,6 +1027,9 @@ GetNewRelFileNode(Oid reltablespace, bool relisshared)
 
 		/* Generate the Relfilenode */
 		rnode.relNode = GetNewSegRelfilenode();
+
+		if (!IsOidAcceptable(rnode.relNode))
+			continue;
 
 		/* Check for existing file of same name */
 		rpath = relpath(rnode);
