@@ -1679,10 +1679,17 @@ pg_resqueue_status(PG_FUNCTION_ARGS)
 		/* Return to original context when allocating transient memory */
 		MemoryContextSwitchTo(oldcontext);
 
-		/* Get a snapshot of current state of resource queues */
-		BuildQueueStatusContext(fctx);
+		if (IsResQueueEnabled())
+		{
+			/* Get a snapshot of current state of resource queues */
+			BuildQueueStatusContext(fctx);
 
-		funcctx->max_calls = fctx->numRecords;
+			funcctx->max_calls = fctx->numRecords;
+		}
+		else
+		{
+			funcctx->max_calls = fctx->numRecords = 0;
+		}
 	}
 
 	funcctx = SRF_PERCALL_SETUP();
@@ -1922,10 +1929,17 @@ pg_resqueue_status_kv(PG_FUNCTION_ARGS)
 		/* Return to original context when allocating transient memory */
 		MemoryContextSwitchTo(oldcontext);
 
-		/* Get a snapshot of current state of resource queues */
-		BuildQueueStatusContext(fctx);
+		if (IsResQueueEnabled())
+		{
+			/* Get a snapshot of current state of resource queues */
+			BuildQueueStatusContext(fctx);
 
-		funcctx->max_calls = fctx->numRecords * PG_RESQUEUE_STATUS_KV_RECORDS_PER_QUEUE;
+			funcctx->max_calls = fctx->numRecords * PG_RESQUEUE_STATUS_KV_RECORDS_PER_QUEUE;
+		}
+		else
+		{
+			funcctx->max_calls = fctx->numRecords = 0;
+		}
 	}
 
 	funcctx = SRF_PERCALL_SETUP();

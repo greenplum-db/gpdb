@@ -12,3 +12,7 @@
 -- end_ignore
 
 SHOW gp_resource_manager;
+
+-- resource queue statistics should not crash
+SELECT * FROM pg_resqueue_status;
+SELECT * FROM gp_toolkit.gp_resqueue_status;

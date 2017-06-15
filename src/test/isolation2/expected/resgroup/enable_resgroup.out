@@ -27,3 +27,13 @@ gp_resource_manager
 -------------------
 group              
 (1 row)
+
+-- resource queue statistics should not crash
+SELECT * FROM pg_resqueue_status;
+rsqname|rsqcountlimit|rsqcountvalue|rsqcostlimit|rsqcostvalue|rsqwaiters|rsqholders
+-------+-------------+-------------+------------+------------+----------+----------
+(0 rows)
+SELECT * FROM gp_toolkit.gp_resqueue_status;
+queueid|rsqname|rsqcountlimit|rsqcountvalue|rsqcostlimit|rsqcostvalue|rsqmemorylimit|rsqmemoryvalue|rsqwaiters|rsqholders
+-------+-------+-------------+-------------+------------+------------+--------------+--------------+----------+----------
+(0 rows)
