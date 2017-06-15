@@ -23,25 +23,24 @@ CREATE
 INSERT INTO deadlock_entry_db_singleton_table select i, i+1 from generate_series(1,10) i;
 INSERT 10
 
--- Function that needs ExclusiceLock on a table.  Declare this
--- function volatile so that ENTRY_DB_SINGLETON process executes the
--- function and the lock is requested during execution of the fuction.
--- Without volatile, the lock is requested during plan generation of
--- the calling SQL statement and we don't get ENTRY_DB_SINGLETON
--- process.
+-- Function that needs ExclusiveLock on a table.  Use a non-SQL
+-- language for this function so that parser cannot understand its
+-- definition.  That way, ExclusiveLock is requested during during
+-- execution of the fuction.  If the lock is acquired during plan
+-- generation of the calling SQL statement, we don't get the deadlock.
 CREATE FUNCTION function_volatile(x int) RETURNS int AS $$ /*in func*/ BEGIN /*in func*/ UPDATE deadlock_entry_db_singleton_table SET d = d + 1  WHERE c = $1; /*in func*/ RETURN $1 + 1; /*in func*/ END $$ /*in func*/ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
 CREATE
 
 -- inject fault on QD
 ! gpfaultinjector -f transaction_start_under_entry_db_singleton -m async -y reset -o 0 -s 1;
-20170605:16:59:30:008493 gpfaultinjector:asimmac:apraveen-[INFO]:-Starting gpfaultinjector with args: -f transaction_start_under_entry_db_singleton -m async -y reset -o 0 -s 1
-20170605:16:59:30:008493 gpfaultinjector:asimmac:apraveen-[INFO]:-Injecting fault on content=-1:dbid=1:mode=s:status=u
-20170605:16:59:30:008493 gpfaultinjector:asimmac:apraveen-[INFO]:-DONE
+20170615:16:48:25:020364 gpfaultinjector::-[INFO]:-Starting gpfaultinjector with args: -f transaction_start_under_entry_db_singleton -m async -y reset -o 0 -s 1
+20170615:16:48:25:020364 gpfaultinjector::-[INFO]:-Injecting fault on content=-1:dbid=1:mode=s:status=u
+20170615:16:48:25:020364 gpfaultinjector::-[INFO]:-DONE
 
 ! gpfaultinjector -f transaction_start_under_entry_db_singleton -m async -y suspend -o 0 -s 1;
-20170605:16:59:30:008505 gpfaultinjector:asimmac:apraveen-[INFO]:-Starting gpfaultinjector with args: -f transaction_start_under_entry_db_singleton -m async -y suspend -o 0 -s 1
-20170605:16:59:30:008505 gpfaultinjector:asimmac:apraveen-[INFO]:-Injecting fault on content=-1:dbid=1:mode=s:status=u
-20170605:16:59:30:008505 gpfaultinjector:asimmac:apraveen-[INFO]:-DONE
+20170615:16:48:25:020376 gpfaultinjector::-[INFO]:-Starting gpfaultinjector with args: -f transaction_start_under_entry_db_singleton -m async -y suspend -o 0 -s 1
+20170615:16:48:25:020376 gpfaultinjector::-[INFO]:-Injecting fault on content=-1:dbid=1:mode=s:status=u
+20170615:16:48:25:020376 gpfaultinjector::-[INFO]:-DONE
 
 
 -- The QD should already hold RowExclusiveLock and ExclusiveLock on
@@ -51,10 +50,10 @@ CREATE
 
 -- verify the fault hit
 ! gpfaultinjector -f transaction_start_under_entry_db_singleton -m async -y status -o 0 -s 1;
-20170605:16:59:31:008529 gpfaultinjector:asimmac:apraveen-[INFO]:-Starting gpfaultinjector with args: -f transaction_start_under_entry_db_singleton -m async -y status -o 0 -s 1
-20170605:16:59:31:008529 gpfaultinjector:asimmac:apraveen-[INFO]:-Injecting fault on content=-1:dbid=1:mode=s:status=u
-20170605:16:59:31:008529 gpfaultinjector:asimmac:apraveen-[INFO]:-fault name:'transaction_start_under_entry_db_singleton' fault type:'suspend' ddl statement:'' database name:'' table name:'' occurrence:'-1' sleep time:'10' fault injection state:'triggered'  num times hit:'1' 
-20170605:16:59:31:008529 gpfaultinjector:asimmac:apraveen-[INFO]:-DONE
+20170615:16:48:26:020397 gpfaultinjector::-[INFO]:-Starting gpfaultinjector with args: -f transaction_start_under_entry_db_singleton -m async -y status -o 0 -s 1
+20170615:16:48:26:020397 gpfaultinjector::-[INFO]:-Injecting fault on content=-1:dbid=1:mode=s:status=u
+20170615:16:48:26:020397 gpfaultinjector::-[INFO]:-fault name:'transaction_start_under_entry_db_singleton' fault type:'suspend' ddl statement:'' database name:'' table name:'' occurrence:'-1' sleep time:'10' fault injection state:'triggered'  num times hit:'1' 
+20170615:16:48:26:020397 gpfaultinjector::-[INFO]:-DONE
 
 
 -- This session will wait for ExclusiveLock on
@@ -68,14 +67,14 @@ CREATE
 -- ENTRY_DB_SINGLETON reader because its writer already holds the
 -- lock.  Otherwise, we may have a deadlock.
 ! gpfaultinjector -f transaction_start_under_entry_db_singleton -m async -y resume  -o 0 -s 1;
-20170605:16:59:32:008543 gpfaultinjector:asimmac:apraveen-[INFO]:-Starting gpfaultinjector with args: -f transaction_start_under_entry_db_singleton -m async -y resume -o 0 -s 1
-20170605:16:59:32:008543 gpfaultinjector:asimmac:apraveen-[INFO]:-Injecting fault on content=-1:dbid=1:mode=s:status=u
-20170605:16:59:32:008543 gpfaultinjector:asimmac:apraveen-[INFO]:-DONE
+20170615:16:48:27:020411 gpfaultinjector::-[INFO]:-Starting gpfaultinjector with args: -f transaction_start_under_entry_db_singleton -m async -y resume -o 0 -s 1
+20170615:16:48:27:020411 gpfaultinjector::-[INFO]:-Injecting fault on content=-1:dbid=1:mode=s:status=u
+20170615:16:48:27:020411 gpfaultinjector::-[INFO]:-DONE
 
 ! gpfaultinjector -f transaction_start_under_entry_db_singleton -m async -y reset -o 0 -s 1;
-20170605:16:59:32:008555 gpfaultinjector:asimmac:apraveen-[INFO]:-Starting gpfaultinjector with args: -f transaction_start_under_entry_db_singleton -m async -y reset -o 0 -s 1
-20170605:16:59:32:008555 gpfaultinjector:asimmac:apraveen-[INFO]:-Injecting fault on content=-1:dbid=1:mode=s:status=u
-20170605:16:59:32:008555 gpfaultinjector:asimmac:apraveen-[INFO]:-DONE
+20170615:16:48:27:020423 gpfaultinjector::-[INFO]:-Starting gpfaultinjector with args: -f transaction_start_under_entry_db_singleton -m async -y reset -o 0 -s 1
+20170615:16:48:27:020423 gpfaultinjector::-[INFO]:-Injecting fault on content=-1:dbid=1:mode=s:status=u
+20170615:16:48:27:020423 gpfaultinjector::-[INFO]:-DONE
 
 
 -- verify the deadlock across multiple pids with same mpp session id
@@ -89,7 +88,7 @@ founddeadlockprocess
 -- we expect to see an ERROR message here due to function_volatile function
 -- tried to update table from ENTRY_DB_SINGLETON (which is read-only) in session1
 1<:  <... completed>
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (entry db 127.0.0.1:15432 pid=8528)
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (entry db 127.0.0.1:15432 pid=20396)
 DETAIL:  
 SQL statement "UPDATE deadlock_entry_db_singleton_table SET d = d + 1 WHERE c =  $1 "
 PL/pgSQL function "function_volatile" line 3 at SQL statement

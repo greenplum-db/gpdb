@@ -852,9 +852,11 @@ LockAcquire(const LOCKTAG *locktag,
 	else
 	{
 		/*
-		 * We are a reader.  Check if the writer holds the lock already.  If
-		 * no, waitMask must be checked to avoid starvation of backends already
-		 * waiting on the same lock.
+		 * We are a reader.  Check waitMask conflict only if the writer doesn't
+		 * hold this lock.  We don't want a reader waiting for a lock that the
+		 * writer is holding.  This could lead to a deadlock.  If writer
+		 * doesn't hold the lock, waitMask conflict must be checked to avoid
+		 * starvation of backends already waiting on the same lock.
 		 */
 		Assert(!Gp_is_writer);
 
@@ -875,28 +877,28 @@ LockAcquire(const LOCKTAG *locktag,
 										writerProcLockHashCode,
 										HASH_FIND,
 										&found);
-		if (found)
+		if (found && writerProcLock->holdMask)
 		{
-			/*
-			 * Writer is either holding the same lock or waiting on the same
-			 * lock.  If the writer is already holding the same lock, readers
-			 * can grab it right away.  If the writer is waiting for the same
-			 * lock, readers must wait.
-			 */
-			status = (writerProcLock->holdMask) ? STATUS_OK : STATUS_FOUND;
-		}
-		else if (lockMethodTable->conflictTab[lockmode] & lock->waitMask)
-		{
-			/*
-			 * Writer does not hold this lock and the lockmode conflicts with
-			 * another process waiting on the same lock.  Readers must wait so
-			 * as not to starve existing waiters.
-			 */
-			status = STATUS_FOUND;
-		}
-		else
+			/* Writer holds the same lock, bypass waitMask check. */
 			status = LockCheckConflicts(lockMethodTable, lockmode,
 										lock, proclock, MyProc);
+		}
+		else
+		{
+			/*
+			 * Writer either hasn't requested this lock or is waiting on this
+			 * lock.  Checking for waitMask conflict is necessary to avoid
+			 * starvation of existing waiters.  Special case is conflict with
+			 * awaiting writer's lockmode.  Should the reader move ahead or
+			 * continue to wait?  It seems best to keep parity with behavior
+			 * prior to this change, which is to let the reader wait.
+			 */
+			if (lockMethodTable->conflictTab[lockmode] & lock->waitMask)
+				status = STATUS_FOUND;
+			else
+				status = LockCheckConflicts(lockMethodTable, lockmode,
+											lock, proclock, MyProc);
+		}			
 	}
 
 	if (status == STATUS_OK)

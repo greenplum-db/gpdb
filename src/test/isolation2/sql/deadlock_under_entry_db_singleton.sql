@@ -21,12 +21,11 @@
 CREATE TABLE deadlock_entry_db_singleton_table (c int, d int);
 INSERT INTO deadlock_entry_db_singleton_table select i, i+1 from generate_series(1,10) i;
 
--- Function that needs ExclusiceLock on a table.  Declare this
--- function volatile so that ENTRY_DB_SINGLETON process executes the
--- function and the lock is requested during execution of the fuction.
--- Without volatile, the lock is requested during plan generation of
--- the calling SQL statement and we don't get ENTRY_DB_SINGLETON
--- process.
+-- Function that needs ExclusiveLock on a table.  Use a non-SQL
+-- language for this function so that parser cannot understand its
+-- definition.  That way, ExclusiveLock is requested during during
+-- execution of the fuction.  If the lock is acquired during plan
+-- generation of the calling SQL statement, we don't get the deadlock.
 CREATE FUNCTION function_volatile(x int) RETURNS int AS $$ /*in func*/
 BEGIN /*in func*/
 	UPDATE deadlock_entry_db_singleton_table SET d = d + 1  WHERE c = $1; /*in func*/
