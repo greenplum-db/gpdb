@@ -124,7 +124,6 @@ DynamicIndexScan_ReMapColumns(DynamicIndexScanState *scanState, Oid newOid)
 		change_varattnos_of_a_varno((Node*)indexScan->scan.plan.targetlist, attMap, indexScan->scan.scanrelid);
 		change_varattnos_of_a_varno((Node*)indexScan->scan.plan.qual, attMap, indexScan->scan.scanrelid);
 		change_varattnos_of_a_varno((Node*)indexScan->indexqual, attMap, indexScan->scan.scanrelid);
-		change_varattnos_of_a_varno((Node*)indexScan->indexqualorig, attMap, indexScan->scan.scanrelid);
 
 		pfree(attMap);
 
