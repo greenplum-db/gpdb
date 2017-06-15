@@ -609,9 +609,8 @@ dumpExtensionOid(Archive *AH, ExtensionInfo *info)
 
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_extension_oid('%u'::pg_catalog.oid, "
-			 "'%u'::pg_catalog.oid, $$%s$$::text);\n",
-			 info->dobj.catId.oid, info->dobj.namespace->dobj.catId.oid,
-			 info->dobj.name);
+			 "$$%s$$::text);\n",
+			 info->dobj.catId.oid, info->dobj.name);
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
 				 "preassign_extension",

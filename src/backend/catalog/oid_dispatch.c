@@ -221,7 +221,11 @@ CreateKeyFromCatalogTuple(Relation catalogrel, HeapTuple tuple,
 			{
 				Form_pg_extension extForm = (Form_pg_extension) GETSTRUCT(tuple);
 
-				key.namespaceOid = extForm->extnamespace;
+				/*
+				 * Note that unlike most catalogs with a "namespace" column,
+				 * extnamespace is not meant to imply that the extension
+				 * belongs to that schema.
+				 */
 				key.objname = NameStr(extForm->extname);
 				break;
 			}

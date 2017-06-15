@@ -2,7 +2,7 @@
 
 # contrib/pg_upgrade/test_gpdb.sh
 #
-# Test driver for upgrading a Greenplum cluster with pg_upgrade. For testdata,
+# Test driver for upgrading a Greenplum cluster with pg_upgrade. For test data,
 # this script assumes the gpdemo cluster in gpAux/gpdemo/datadirs contains the
 # end-state of an ICW test run. Performs a pg_dumpall, initializes a parallel
 # gpdemo cluster and upgrades it against the ICW cluster and then performs
@@ -36,15 +36,15 @@ realpath()
 
 restore_cluster()
 {
-	# Reset the pg_control files from the old cluster which were renamed .old
-	# by pg_upgrade to avoid booting up an upgraded cluster.
+	# Reset the pg_control files from the old cluster which were renamed
+	# .old by pg_upgrade to avoid booting up an upgraded cluster.
 	find ${OLD_DATADIR} -type f -name 'pg_control.old' |
 	while read control_file; do
 		mv "${control_file}" "${control_file%.old}"
 	done
 
-	# Remove the copied lalshell unless we're running in the gpdemo directory
-	# where it's version controlled
+	# Remove the copied lalshell unless we're running in the gpdemo
+	# directory where it's version controlled
 	if ! git ls-files lalshell --error-unmatch >/dev/null 2>&1; then
 		rm -f lalshell
 	fi
@@ -53,9 +53,9 @@ restore_cluster()
 upgrade_node()
 {
 	mkdir -p $1
-	# If we are passed a filename as the fourth parameter, copy the file into
-	# our working directory for the upgrade. This is useful for the Oid file
-	# from the QD to the segments
+	# If we are passed a filename as the fourth parameter, copy the file
+	# into our working directory for the upgrade. This is useful for the
+	# Oid file from the QD to the segments
 	if [ $# == 4 ] && [ -f $4 ]; then
 		cp $4 $1
 	fi
@@ -120,9 +120,9 @@ fi
 
 trap restore_cluster EXIT
 
-# The cluster should be running by now, but in case it isn't issue a restart.
-# Worst case we powercycle once for no reason but better than failing due to
-# not having a cluster to work with.
+# The cluster should be running by now, but in case it isn't, issue a restart.
+# Worst case we powercycle once for no reason, but it's better than failing
+# due to not having a cluster to work with.
 gpstart -a
 
 # Run any pre-upgrade tasks to prep the cluster
@@ -130,8 +130,8 @@ if [ -f "test_gpdb_pre.sql" ]; then
 	psql -f test_gpdb_pre.sql regression
 fi
 
-# Ensure that the catalog is sane before attempting an upgrade, while there is
-# (limited) catalog checking inside pg_upgrade it won't catch all issues and
+# Ensure that the catalog is sane before attempting an upgrade. While there is
+# (limited) catalog checking inside pg_upgrade, it won't catch all issues, and
 # upgrading a faulty catalog won't work.
 gpcheckcat
 if (( $? )) ; then
