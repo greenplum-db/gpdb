@@ -1392,6 +1392,9 @@ gp_list_backend_priorities(PG_FUNCTION_ARGS)
 	context = (Context *) funcctx->user_fctx;
 	Assert(context);
 
+	if (!IsResQueueEnabled() || !gp_enable_resqueue_priority)
+		SRF_RETURN_DONE(funcctx);
+
 	while (context->currentIndex < backoffSingleton->numEntries)
 	{
 		Datum		values[4];

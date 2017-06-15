@@ -417,7 +417,8 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 		ShmemBackendArrayAllocation();
 #endif
 
-	BackoffStateInit();
+	if (gp_enable_resqueue_priority)
+		BackoffStateInit();
 	
 	if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE)
 	{

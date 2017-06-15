@@ -1234,6 +1234,13 @@ gpvars_assign_gp_resource_manager_policy(const char *newval, bool doit, GucSourc
 	if (doit)
 	{
 		Gp_resource_manager_policy = newtype;
+
+		/*
+		 * disable backoff mechanism of resource queue if we are going to enable
+		 * resource group
+		 */
+		if (newtype == RESOURCE_MANAGER_POLICY_GROUP)
+			gp_enable_resqueue_priority = false;
 	}
 
 	return newval;

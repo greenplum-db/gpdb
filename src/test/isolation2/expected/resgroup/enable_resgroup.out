@@ -37,3 +37,7 @@ SELECT * FROM gp_toolkit.gp_resqueue_status;
 queueid|rsqname|rsqcountlimit|rsqcountvalue|rsqcostlimit|rsqcostvalue|rsqmemorylimit|rsqmemoryvalue|rsqwaiters|rsqholders
 -------+-------+-------------+-------------+------------+------------+--------------+--------------+----------+----------
 (0 rows)
+SELECT * FROM gp_toolkit.gp_resq_priority_backend;
+rqpsession|rqpcommand|rqppriority|rqpweight
+----------+----------+-----------+---------
+(0 rows)
