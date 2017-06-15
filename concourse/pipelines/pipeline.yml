@@ -7,7 +7,6 @@ resources:
   type: git
   source:
     branch: {{gpdb-git-branch}}
-    private_key: {{gpdb-git-key}}
     uri: {{gpdb-git-remote}}
     ignore_paths:
     - gpdb-doc/*
@@ -17,7 +16,6 @@ resources:
   type: git
   source:
     branch: {{gpdb-binary-swap-git-tag}}
-    private_key: {{gpdb-git-key}}
     uri: {{gpdb-binary-swap-git-remote}}
     ignore_paths:
     - gpdb-doc/*
