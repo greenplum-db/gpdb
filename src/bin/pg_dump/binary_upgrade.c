@@ -1041,14 +1041,85 @@ preassign_attrdefs_oid(Archive *AH, Oid attrdefoid, Oid attreloid, int adnum)
 				 NULL, NULL);
 }
 
+/*
+ * dumpIndexOid
+ *
+ * Preassign the Oid of an index, and potentially all related indexes in case
+ * the index is a on a partitioned table.
+ */
 void
 dumpIndexOid(PGconn *conn, Archive *fout, Archive *AH, IndxInfo *info)
 {
+	PQExpBuffer		index_query;
+	int				i;
+	int				i_oid;
+	Oid				idx_oid;
+	PGresult	   *index_res;
+
 	/* Skip if not to be dumped */
 	if (!info->dobj.dump)
 		return;
 
 	preassign_pg_class_oids(conn, fout, AH, info->dobj.catId.oid);
+
+	/*
+	 * If the index is created on a partition hierarchy parent, it will be
+	 * created on the partitions and subpartitions as well. These indexes will
+	 * however not be dumped separately so we need to figure it out manually
+	 * and ensure to preassign the Oids for the partition indexes. The indexes
+	 * which are created on the partitions have a strict naming scheme, but
+	 * since a partition which is exchanged into the hierarchy may have a
+	 * pre-existing index not adhering to the naming convention we must grab
+	 * all the indexes we can find and preassign them.
+	 *
+	 * Since the pg_partition catalogs aren't replicated to segments, we avoid
+	 * them here and instead use the inheritance catalogs.
+	 */
+	index_query = createPQExpBuffer();
+	appendPQExpBuffer(index_query,
+					  "WITH partitions AS ( "
+					  "     ( "
+					  "      SELECT p.inhrelid "
+					  "      FROM   pg_catalog.pg_index i "
+					  "             join pg_catalog.pg_inherits p "
+					  "               ON (i.indrelid = p.inhparent) "
+					  "      WHERE  i.indexrelid = '%u'::pg_catalog.oid "
+					  "     ) "
+					  "     UNION "
+					  "     ( "
+					  "      SELECT sp.inhrelid "
+					  "      FROM   pg_catalog.pg_index i "
+					  "             JOIN pg_catalog.pg_inherits p "
+					  "               ON (i.indrelid = p.inhparent) "
+					  "             JOIN pg_catalog.pg_inherits sp "
+					  "               ON (sp.inhparent = p.inhrelid) "
+					  "      WHERE  i.indexrelid = '%u'::pg_catalog.oid "
+					  "     ) "
+					  ") "
+					  "SELECT ir.indexrelid "
+					  "FROM   pg_catalog.pg_index ir "
+					  "       JOIN partitions p "
+					  "         ON (p.inhrelid = ir.indrelid);",
+					  info->dobj.catId.oid, info->dobj.catId.oid);
+
+	index_res = PQexec(conn, index_query->data);
+
+	/*
+	 * If there were indexes, preassign the index Oid
+	 */
+	if (PQntuples(index_res) > 0)
+	{
+		i_oid = PQfnumber(index_res, "indexrelid");
+
+		for (i = 0; i < PQntuples(index_res); i++)
+		{
+			idx_oid = atooid(PQgetvalue(index_res, i, i_oid));
+			preassign_pg_class_oids(conn, fout, AH, idx_oid);
+		}
+	}
+
+	PQclear(index_res);
+	destroyPQExpBuffer(index_query);
 }
 
 void
