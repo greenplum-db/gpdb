@@ -3339,7 +3339,7 @@ getTables(int *numTables)
 					  RELKIND_SEQUENCE,
 					  RELKIND_RELATION, RELKIND_SEQUENCE,
 					  RELKIND_VIEW, RELKIND_COMPOSITE_TYPE,
-					  g_fout->remoteVersion >= 80209 ?
+					  g_fout->remoteVersion >= 80209 && !binary_upgrade ?
 					  "AND c.oid NOT IN (select p.parchildrelid from pg_partition_rule p left "
 					  "join pg_exttable e on p.parchildrelid=e.reloid where e.reloid is null)" : "");
 
@@ -3413,7 +3413,7 @@ getTables(int *numTables)
 		tblinfo[i].reltablespace = strdup(PQgetvalue(res, i, i_reltablespace));
 		tblinfo[i].reloptions = strdup(PQgetvalue(res, i, i_reloptions));
 		tblinfo[i].parrelid = atooid(PQgetvalue(res, i, i_parrelid));
-		if (tblinfo[i].parrelid != 0)
+		if (tblinfo[i].parrelid != 0 && !binary_upgrade)
 		{
 			/*
 			 * Length of tmpStr is bigger than the sum of NAMEDATALEN 
@@ -3430,10 +3430,20 @@ getTables(int *numTables)
 		 * Decide whether we want to dump this table.
 		 */
 		if (tblinfo[i].relkind == RELKIND_COMPOSITE_TYPE)
+		{
 			tblinfo[i].dobj.dump = false;
+			tblinfo[i].interesting = false;
+		}
+		else if (tblinfo[i].relkind == RELKIND_RELATION && tblinfo[i].parrelid != 0 && binary_upgrade)
+		{
+			tblinfo[i].dobj.dump = false;
+			tblinfo[i].interesting = true;
+		}
 		else
+		{
 			selectDumpableTable(&tblinfo[i]);
-		tblinfo[i].interesting = tblinfo[i].dobj.dump;
+			tblinfo[i].interesting = tblinfo[i].dobj.dump;
+		}
 
 		/*
 		 * Read-lock target tables to make sure they aren't DROPPED or altered

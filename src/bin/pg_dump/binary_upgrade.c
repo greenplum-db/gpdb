@@ -1128,7 +1128,7 @@ dumpTableOid(PGconn *conn, Archive *fout, Archive *AH, TableInfo *info)
 	int		j;
 
 	/* Skip if not to be dumped */
-	if (!info->dobj.dump)
+	if (!info->dobj.dump && info->parrelid == 0)
 		return;
 
 	preassign_pg_class_oids(conn, fout, AH, info->dobj.catId.oid);
@@ -1540,94 +1540,6 @@ preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_
 																	   "'pg_toast_%u'::text, "
 																	   "'%u'::pg_catalog.oid);\n",
 						  pg_type_toast_oid, pg_rel_oid, pg_type_toast_namespace_oid);
-	}
-
-	/*
-	 * If the table is partitioned and is the parent, we need to dump the Oids
-	 * of the child tables as well
-	 */
-	if (!PQgetisnull(upgrade_res, 0, PQfnumber(upgrade_res, "par_parent")))
-	{
-		PQExpBuffer parquery = createPQExpBuffer();
-		PGresult   *par_res;
-		int			i;
-		char		name[NAMEDATALEN];
-		Oid			part_oid;
-		Oid			conns_oid;
-		Oid			contyp_oid;
-		Oid			con_oid;
-		Oid			prev_oid = InvalidOid;
-		Oid			attrdef_oid;
-		int			adnum;
-		int			partups;
-
-		appendPQExpBuffer(parquery,
-						  "SELECT cc.oid, "
-						  "       p.partitiontablename AS name, "
-						  "       co.oid AS conoid, "
-						  "       co.conname, "
-						  "       co.connamespace, "
-						  "       co.contypid, "
-						  "       d.oid AS attrdefoid, "
-						  "       d.adnum "
-						  "FROM pg_partitions p "
-						  "JOIN pg_catalog.pg_class c ON "
-						  "  (p.tablename = c.relname AND c.oid = '%u'::pg_catalog.oid) "
-						  "JOIN pg_catalog.pg_class cc ON "
-						  "  (p.partitiontablename = cc.relname) "
-						  "LEFT JOIN pg_catalog.pg_constraint co ON "
-						  "  (cc.oid = co.conrelid) "
-						  "LEFT JOIN pg_catalog.pg_attrdef d ON "
-						  "  (cc.oid = d.adrelid) "
-						  "ORDER BY 1;",
-						  pg_rel_oid);
-
-		par_res = PQexec(conn, parquery->data);
-		check_sql_result(par_res, conn, parquery->data, PGRES_TUPLES_OK);
-
-		partups = PQntuples(par_res);
-
-		if (partups > 0)
-		{
-			for (i = 0; i < partups; i++)
-			{
-				part_oid = atooid(PQgetvalue(par_res, i, PQfnumber(par_res, "oid")));
-
-				/*
-				 * Partitions with multiple constraint will be on multiple
-				 * rows, so ensure to save the non-constrant related Oids only
-				 * once (relation, type and attrdef).
-				 */
-				if (part_oid != prev_oid)
-				{
-					strlcpy(name, PQgetvalue(par_res, i, PQfnumber(par_res, "name")), sizeof(name));
-					preassign_type_oids_by_rel_oid(conn, fout, AH, part_oid, name);
-					preassign_pg_class_oids(conn, fout, AH, part_oid);
-
-					attrdef_oid = atooid(PQgetvalue(par_res, i, PQfnumber(par_res, "attrdefoid")));
-					if (OidIsValid(attrdef_oid))
-					{
-						adnum = atoi(PQgetvalue(par_res, i, PQfnumber(par_res, "adnum")));
-						preassign_attrdefs_oid(AH, attrdef_oid, part_oid, adnum);
-					}
-				}
-
-				if (!PQgetisnull(par_res, i, PQfnumber(par_res, "conname")))
-				{
-					strlcpy(name, PQgetvalue(par_res, i, PQfnumber(par_res, "conname")), sizeof(name));
-					con_oid = atooid(PQgetvalue(par_res, i, PQfnumber(par_res, "conoid")));
-					conns_oid = atooid(PQgetvalue(par_res, i, PQfnumber(par_res, "connamespace")));
-					contyp_oid = atooid(PQgetvalue(par_res, i, PQfnumber(par_res, "contypid")));
-
-					preassign_constraint_oid(AH, con_oid, conns_oid, name, part_oid, contyp_oid);
-				}
-
-				prev_oid = part_oid;
-			}
-		}
-
-		PQclear(par_res);
-		destroyPQExpBuffer(parquery);
 	}
 
 	if (!PQgetisnull(upgrade_res, 0, PQfnumber(upgrade_res, "aosegrel")))
