@@ -3028,20 +3028,23 @@ plperl_return_next(SV *sv)
 	}
 	else
 	{
-		Datum		ret;
-		bool		isNull;
+		Datum		ret[1];
+		bool		isNull[1];
 
-		ret = plperl_sv_to_datum(sv,
+		MemSet(ret, 0, sizeof(ret));
+		MemSet(isNull, 0, sizeof(isNull));
+
+		ret[0] = plperl_sv_to_datum(sv,
 								 prodesc->result_oid,
 								 -1,
 								 fcinfo,
 								 &prodesc->result_in_func,
 								 prodesc->result_typioparam,
-								 &isNull);
+								 isNull);
 
 		tuplestore_putvalues(current_call_data->tuple_store,
 							 current_call_data->ret_tdesc,
-							 &ret, &isNull);
+							 ret, isNull);
 	}
 
 	MemoryContextSwitchTo(old_cxt);
