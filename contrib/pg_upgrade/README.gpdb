@@ -37,15 +37,8 @@ is supported in pg_dump.
   object entry in CreateKeyFromCatalogTuple() in the oid dispatcher code
   (src/backend/catalog/oid_dispatch.c).
 
-* Implement a dump function for the new dumpable object in the binary upgrade
-  code in src/bin/pg_dump/binary_upgrade.c. This function should result in a
-  SQL call to the previously created function added as an ArchiveEntry. See the
-  already existing dump functions for examples on what to do. If additional
-  information on top of what already exist in the Info object is required, SQL
-  calls to the running server can be performed via libpq here.
-
-* In src/bin/pg_dump/pg_dump.c, add the dumpable object type to the list in
-  dumpBinaryUpgrade() with a call to the dump function.
+* Ensure that the Oid dumping in contrib/pg_upgrade/oid_dump.c is covering the
+  new object, and extend it if not.
 
 * In case any special handling is required during the upgrade, or any special
   checks are warranted, add these to the appropriate places in pg_upgrade.

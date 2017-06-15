@@ -28,6 +28,9 @@ extern Oid GetPreassignedOidForRelation(Oid namespaceOid, const char *relname);
 extern Oid GetPreassignedOidForType(Oid namespaceOid, const char *typname);
 extern Oid GetPreassignedOidForDatabase(const char *datname);
 
+/* Functions used in binary upgrade */
+extern bool IsOidAcceptable(Oid oid);
+
 extern void AtEOXact_DispatchOids(bool isCommit);
 
 #endif   /* OID_DISPATCH_H */

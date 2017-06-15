@@ -48,6 +48,9 @@ parseCommandLine(migratorContext *ctx, int argc, char *argv[])
 		{"logfile", required_argument, NULL, 'l'},
 		{"verbose", no_argument, NULL, 'v'},
 		{"progress", no_argument, NULL, 'X'},
+
+		{"dispatcher-mode", no_argument, NULL, 1},
+
 		{NULL, 0, NULL, 0}
 	};
 	int			option;			/* Command line option */
@@ -165,6 +168,21 @@ parseCommandLine(migratorContext *ctx, int argc, char *argv[])
 			case 'X':
 				pg_log(ctx, PG_REPORT, "Running in progress report mode\n");
 				ctx->progress = true;
+				break;
+
+			case 1:		/* --dispatcher-mode */
+				/*
+				 * XXX: Ideally, we could tell just by looking at the data
+				 * directory, whether it's a QD node, or a QE node. You might
+				 * think that we could look at Gp_role or gp_contentid, but
+				 * alas, we pass those options on the pg_ctl command line,
+				 * they are not stored permanently in the data directory
+				 * itself, and we don't want to dig into the auxiliary
+				 * config files created by gpinitsystem. So for now, the
+				 * caller of pg_upgrade must use the --dispatcher-mode
+				 * option, when upgrading the QD node.
+				 */
+				ctx->dispatcher_mode = true;
 				break;
 
 			default:

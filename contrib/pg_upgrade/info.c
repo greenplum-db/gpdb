@@ -494,7 +494,8 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 			 /* exclude possible orphaned temp tables */
 			 "  (((n.nspname !~ '^pg_temp_' AND "
 			 "    n.nspname !~ '^pg_toast_temp_' AND "
-			 "    n.nspname NOT IN ('gp_toolkit', 'pg_catalog', 'information_schema', 'binary_upgrade', 'pg_aoseg') AND "
+			 "    n.nspname NOT IN ('gp_toolkit', 'pg_catalog', 'information_schema', 'binary_upgrade', 'pg_aoseg', 'pg_bitmapindex') AND "
+			 "    c.relkind <> 'i' AND " // GPDB TODO: Indexes not supported
 			 "	  c.oid >= %u) "
 			 "	) OR ( "
 			 "	n.nspname = 'pg_catalog' "
@@ -592,6 +593,11 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 			 * describe AO{CS} relations. The segrel and visimap must exist
 			 * but the blkdirrel is created when required so it might not
 			 * exist.
+			 *
+			 * We don't dump the block directory, even if it exists, if the table
+			 * doesn't have any indexes. This isn't just an optimization: restoring
+			 * it wouldn't work, because without indexes, restore won't create
+			 * a block directory in the new cluster.
 			 */
 			snprintf(aoquery, sizeof(aoquery),
 					 "SELECT cs.relname AS segrel, "
@@ -601,8 +607,9 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 					 "       JOIN pg_class cs on (cs.oid = a.segrelid) "
 					 "       JOIN pg_class cv on (cv.oid = a.visimaprelid) "
 					 "       LEFT JOIN pg_class cb on (cb.oid = a.blkdirrelid "
-					 "                                 AND a.blkdirrelid <> 0) "
-					 "WHERE  a.relid = %u::pg_catalog.oid",
+					 "                                 AND a.blkdirrelid <> 0 "
+					 "                                 AND EXISTS (SELECT 1 FROM pg_index i WHERE i.indrelid = a.relid)) "
+					 "WHERE  a.relid = %u::pg_catalog.oid ",
 					 curr->reloid);
 
 			aores = executeQueryOrDie(ctx, conn, aoquery);
@@ -722,19 +729,25 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 			 *
 			 * pg_aovisimap_<oid> is identical for row and column oriented
 			 * tables.
+			 *
+			 * pg_aoblkdir_<oid>.minipage columns have the same issue. Unfortunately,
+			 * we noticed that too late in the release cycle to fix the datatype,
+			 * so that's still incorrectly using the "bit varying" datatype. Hence,
+			 * function.c will create a corresponding hack function to load the
+			 * invalid varbit values back in.
 			 */
 			if (GET_MAJOR_VERSION(ctx->old.major_version) <= 802 && whichCluster == CLUSTER_OLD)
 			{
 				if (!bitmaphack_created)
 				{
 					PQclear(executeQueryOrDie(ctx, conn,
-											  "create function pg_temp.bitmaphack(bit varying) "
+											  "create function pg_temp.bitmaphack_out(bit varying) "
 											  " RETURNS cstring "
 											  " LANGUAGE INTERNAL AS 'byteaout'"));
 					bitmaphack_created = true;
 				}
 				snprintf(aoquery, sizeof(aoquery),
-						 "SELECT segno, first_row_no, pg_temp.bitmaphack(visimap) as visimap "
+						 "SELECT segno, first_row_no, pg_temp.bitmaphack_out(visimap) as visimap "
 						 "FROM pg_aoseg.%s",
 						 visimaprel);
 			}
@@ -783,7 +796,7 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 					aoblkdir->segno = atoi(PQgetvalue(aores, j, PQfnumber(aores, "segno")));
 					aoblkdir->columngroup_no = atoi(PQgetvalue(aores, j, PQfnumber(aores, "columngroup_no")));
 					aoblkdir->first_row_no = atoll(PQgetvalue(aores, j, PQfnumber(aores, "first_row_no")));
-					aoblkdir->minipage = atoi(PQgetvalue(aores, j, PQfnumber(aores, "minipage")));
+					aoblkdir->minipage = pg_strdup(ctx, PQgetvalue(aores, j, PQfnumber(aores, "minipage")));
 				}
 
 				PQclear(aores);

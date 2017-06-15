@@ -7,6 +7,39 @@
  */
 
 #include "pg_upgrade.h"
+#include "pqexpbuffer.h"
+
+/*
+ * We cannot use executeQueryOrDie for the INSERTs below, because it has a size limit
+ * on the query.
+ */
+static void
+executeLargeCommandOrDie(migratorContext *ctx, PGconn *conn, const char *command)
+{
+	PGresult   *result;
+	ExecStatusType status;
+
+	pg_log(ctx, PG_DEBUG, "executing: %s\n", command);
+	result = PQexec(conn, command);
+	status = PQresultStatus(result);
+
+	if ((status != PGRES_TUPLES_OK) && (status != PGRES_COMMAND_OK))
+	{
+		/*
+		 * Put these on separate lines, because the command can be so large that
+		 * pg_log truncates it. We don't want the error message to be truncated
+		 * even if that happens.
+		 */
+		pg_log(ctx, PG_REPORT, "DB command failed\n%s\n%s\n", command);
+		pg_log(ctx, PG_REPORT, "libpq error was: %s\n",
+			   PQerrorMessage(conn));
+		PQclear(result);
+		PQfinish(conn);
+		exit_nicely(ctx, true);
+	}
+
+	PQclear(result);
+}
 
 /*
  * Populate contents of the AO segment, block directory, and visibility
@@ -15,30 +48,35 @@
 static void
 restore_aosegment_table(migratorContext *ctx, PGconn *conn, RelInfo *rel)
 {
-	char		query[QUERY_ALLOC];
+	PQExpBuffer query;
 	int			i;
 	int			segno;
+
+	/* The visibility maps and such can be quite large, so we need a large buffer. */
+	query = createPQExpBuffer();
 
 	/* Restore the entry in the AO segment table. */
 	for (i = 0; i < rel->naosegments; i++)
 	{
+		resetPQExpBuffer(query);
+
 		/* Row oriented AO table */
 		if (rel->relstorage == 'a')
 		{
 			AOSegInfo  *seg = &rel->aosegments[i];
 
-			snprintf(query, sizeof(query),
-					 "INSERT INTO pg_aoseg.pg_aoseg_%u (segno, eof, tupcount, varblockcount, eofuncompressed, modcount, formatversion, state) "
-					 " VALUES (%d, " INT64_FORMAT ", " INT64_FORMAT ", " INT64_FORMAT ", " INT64_FORMAT ", " INT64_FORMAT ", %d, %d)",
-					 rel->reloid,
-					 seg->segno,
-					 seg->eof,
-					 seg->tupcount,
-					 seg->varblockcount,
-					 seg->eofuncompressed,
-					 seg->modcount,
-					 seg->version,
-					 seg->state);
+			appendPQExpBuffer(query,
+							  "INSERT INTO pg_aoseg.pg_aoseg_%u (segno, eof, tupcount, varblockcount, eofuncompressed, modcount, formatversion, state) "
+							  " VALUES (%d, " INT64_FORMAT ", " INT64_FORMAT ", " INT64_FORMAT ", " INT64_FORMAT ", " INT64_FORMAT ", %d, %d)",
+							  rel->reloid,
+							  seg->segno,
+							  seg->eof,
+							  seg->tupcount,
+							  seg->varblockcount,
+							  seg->eofuncompressed,
+							  seg->modcount,
+							  seg->version,
+							  seg->state);
 
 			segno = seg->segno;
 		}
@@ -52,24 +90,23 @@ restore_aosegment_table(migratorContext *ctx, PGconn *conn, RelInfo *rel)
 			if (vpinfo_escaped == NULL)
 				pg_log(ctx, PG_FATAL, "%s: out of memory\n", ctx->progname);
 
-			snprintf(query, sizeof(query),
-					 "INSERT INTO pg_aoseg.pg_aocsseg_%u (segno, tupcount, varblockcount, vpinfo, modcount, formatversion, state) "
-					 " VALUES (%d, " INT64_FORMAT ", " INT64_FORMAT ", %s, " INT64_FORMAT ", %d, %d)",
-					 rel->reloid,
-					 seg->segno,
-					 seg->tupcount,
-					 seg->varblockcount,
-					 vpinfo_escaped,
-					 seg->modcount,
-					 seg->version,
-					 seg->state);
-
+			appendPQExpBuffer(query,
+							  "INSERT INTO pg_aoseg.pg_aocsseg_%u (segno, tupcount, varblockcount, vpinfo, modcount, formatversion, state) "
+							  " VALUES (%d, " INT64_FORMAT ", " INT64_FORMAT ", %s, " INT64_FORMAT ", %d, %d)",
+							  rel->reloid,
+							  seg->segno,
+							  seg->tupcount,
+							  seg->varblockcount,
+							  vpinfo_escaped,
+							  seg->modcount,
+							  seg->version,
+							  seg->state);
 			free(vpinfo_escaped);
 
 			segno = seg->segno;
 		}
 
-		PQclear(executeQueryOrDie(ctx, conn, query));
+		executeLargeCommandOrDie(ctx, conn, query->data);
 	}
 
 	/* Restore the entries in the AO visimap table. */
@@ -78,38 +115,49 @@ restore_aosegment_table(migratorContext *ctx, PGconn *conn, RelInfo *rel)
 		AOVisiMapInfo  *seg = &rel->aovisimaps[i];
 		char	   *visimap_escaped;
 
+		resetPQExpBuffer(query);
+
 		visimap_escaped = PQescapeLiteral(conn, seg->visimap, strlen(seg->visimap));
 		if (visimap_escaped == NULL)
 			pg_log(ctx, PG_FATAL, "%s: out of memory\n", ctx->progname);
 
-		snprintf(query, sizeof(query),
-				 "INSERT INTO pg_aoseg.pg_aovisimap_%u (segno, first_row_no, visimap) "
-				 " VALUES (%d, " INT64_FORMAT ", %s)",
-				 rel->reloid,
-				 seg->segno,
-				 seg->first_row_no,
-				 visimap_escaped);
+		appendPQExpBuffer(query,
+						  "INSERT INTO pg_aoseg.pg_aovisimap_%u (segno, first_row_no, visimap) "
+						  " VALUES (%d, " INT64_FORMAT ", %s)",
+						  rel->reloid,
+						  seg->segno,
+						  seg->first_row_no,
+						  visimap_escaped);
 		PQfreemem(visimap_escaped);
 
-		PQclear(executeQueryOrDie(ctx, conn, query));
+		executeLargeCommandOrDie(ctx, conn, query->data);
 	}
 
 	/* Restore the entries in the AO blkdir table. */
 	for (i = 0; i < rel->naoblkdirs; i++)
 	{
 		AOBlkDir	*seg = &rel->aoblkdirs[i];
+		char	   *minipage_escaped;
 
-		snprintf(query, sizeof(query),
-				 "INSERT INTO pg_aoseg.pg_aoblkdir_%u (segno, columngroup_no, first_row_no, minipage) "
-				 " VALUES (%d, %d, " INT64_FORMAT ", " INT64_FORMAT "::bit(36))",
-				 rel->reloid,
-				 seg->segno,
-				 seg->columngroup_no,
-				 seg->first_row_no,
-				 seg->minipage);
+		resetPQExpBuffer(query);
 
-		PQclear(executeQueryOrDie(ctx, conn, query));
+		minipage_escaped = PQescapeLiteral(conn, seg->minipage, strlen(seg->minipage));
+		if (minipage_escaped == NULL)
+			pg_log(ctx, PG_FATAL, "%s: out of memory\n", ctx->progname);
+
+		appendPQExpBuffer(query,
+						  "INSERT INTO pg_aoseg.pg_aoblkdir_%u (segno, columngroup_no, first_row_no, minipage) "
+						  " VALUES (%d, %d, " INT64_FORMAT ", binary_upgrade.bitmaphack_in(%s))",
+						  rel->reloid,
+						  seg->segno,
+						  seg->columngroup_no,
+						  seg->first_row_no,
+						  minipage_escaped);
+
+		executeLargeCommandOrDie(ctx, conn, query->data);
 	}
+
+	destroyPQExpBuffer(query);
 }
 
 void

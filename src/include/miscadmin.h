@@ -202,6 +202,9 @@ extern bool IsPostmasterEnvironment;
 extern PGDLLIMPORT bool IsUnderPostmaster;
 extern bool IsBinaryUpgrade;
 
+/* Are we binary-upgrading a QE node? */
+#define IsBinaryUpgradeQE() (IsBinaryUpgrade && GpIdentity.segindex >= 0)
+
 extern bool ExitOnAnyError;
 
 extern PGDLLIMPORT char *DataDir;

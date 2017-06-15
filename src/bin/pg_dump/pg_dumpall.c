@@ -27,7 +27,6 @@
 int			optreset;
 #endif
 
-#include "binary_upgradeall.h"
 #include "dumputils.h"
 #include "pg_backup.h"
 
@@ -721,16 +720,7 @@ dumpResQueues(PGconn *conn)
 			if (0 == strcmp(rsqname, "pg_default"))
 				appendPQExpBuffer(buf, "ALTER RESOURCE QUEUE %s", fmtId(rsqname));
 			else
-			{
-				/*
-				 * Oid dispatching doesn't apply to default queues so only perform
-				 * dispatch in the non-default case
-				 */
-				if (binary_upgrade)
-					dumpResqueueOid(OPF, conn, server_version, rqoid, (char *) rsqname);
-
 				appendPQExpBuffer(buf, "CREATE RESOURCE QUEUE %s", fmtId(rsqname));
-			}
 		}
 
 		/* NOTE: currently 3.3-style, but will switch to one WITH clause... */
@@ -896,9 +886,6 @@ dumpRoles(PGconn *conn)
 
 		if (output_clean)
 			appendPQExpBuffer(buf, "DROP ROLE %s;\n", fmtId(rolename));
-
-		if (binary_upgrade)
-			dumpRoleOid(OPF, roleoid, rolename);
 
 		/*
 		 * We dump CREATE ROLE followed by ALTER ROLE to ensure that the role
@@ -1150,9 +1137,6 @@ dumpFilespaces(PGconn *conn)
 		if (output_clean)
 			appendPQExpBuffer(buf, "DROP FILESPACE %s;\n", fsname);
 
-		if (binary_upgrade)
-			dumpFilespaceOid(OPF, conn, fsname);
-
 		/* Begin creating the filespace definition */
 		appendPQExpBuffer(buf, "CREATE FILESPACE %s", fsname);
 		appendPQExpBuffer(buf, " OWNER %s", fmtId(fsowner));
@@ -1258,9 +1242,6 @@ dumpTablespaces(PGconn *conn)
 		if (output_clean)
 			appendPQExpBuffer(buf, "DROP TABLESPACE %s;\n", spcname);
 
-		if (binary_upgrade)
-			dumpTablespaceOid(OPF, conn, spcname);
-
 		appendPQExpBuffer(buf, "CREATE TABLESPACE %s", spcname);
 		appendPQExpBuffer(buf, " OWNER %s", fmtId(spcowner));
 		appendPQExpBuffer(buf, " FILESPACE %s;\n", fmtId(fsname));
@@ -1319,8 +1300,7 @@ dumpCreateDB(PGconn *conn)
 					   "coalesce(rolname, (select rolname from pg_authid where oid=(select datdba from pg_database where datname='template0'))), "
 					   "pg_encoding_to_char(d.encoding), "
 					   "datistemplate, datacl, datconnlimit, "
-					   "(SELECT spcname FROM pg_tablespace t WHERE t.oid = d.dattablespace) AS dattablespace, "
-					   "d.oid "
+					   "(SELECT spcname FROM pg_tablespace t WHERE t.oid = d.dattablespace) AS dattablespace "
 			  "FROM pg_database d LEFT JOIN pg_authid u ON (datdba = u.oid) "
 					   "WHERE datallowconn ORDER BY 1");
 
@@ -1333,7 +1313,6 @@ dumpCreateDB(PGconn *conn)
 		char	   *dbacl = PQgetvalue(res, i, 4);
 		char	   *dbconnlimit = PQgetvalue(res, i, 5);
 		char	   *dbtablespace = PQgetvalue(res, i, 6);
-		Oid			dboid = atooid(PQgetvalue(res, i, 7));
 		char	   *fdbname;
 
 		fdbname = strdup(fmtId(dbname));
@@ -1350,9 +1329,6 @@ dumpCreateDB(PGconn *conn)
 		{
 			if (output_clean)
 				appendPQExpBuffer(buf, "DROP DATABASE %s;\n", fdbname);
-
-			if (binary_upgrade)
-				dumpDatabaseOid(OPF, dboid, fdbname);
 
 			appendPQExpBuffer(buf, "CREATE DATABASE %s", fdbname);
 

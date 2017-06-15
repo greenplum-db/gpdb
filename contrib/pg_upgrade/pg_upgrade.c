@@ -453,13 +453,6 @@ create_new_objects(migratorContext *ctx)
 	dbarr_free(&ctx->new.dbarr);
 	get_db_and_rel_infos(ctx, &ctx->new.dbarr, CLUSTER_NEW);
 
-	/*
-	 * When upgrading from GPDB4, dump the OIDs of the created array types
-	 * before shutting down the new cluster
-	 */
-	if (GET_MAJOR_VERSION(ctx->old.major_version) <= 802)
-		old_GPDB4_dump_array_types(ctx, CLUSTER_NEW);
-
 	uninstall_support_functions(ctx);
 
 	/*
@@ -472,6 +465,15 @@ create_new_objects(migratorContext *ctx)
 	 */
 	if (GET_MAJOR_VERSION(ctx->old.major_version) <= 802)
 		new_gpdb5_0_invalidate_indexes(ctx, ctx->check, CLUSTER_NEW);
+	else
+	{
+		/* TODO: Bitmap indexes are not supported, so mark them as invalid. */
+		new_gpdb_invalidate_bitmap_indexes(ctx, ctx->check, CLUSTER_NEW);
+	}
+
+	/* Before shutting down the cluster, dump all OIDs, if this was the QD node */
+	if (ctx->dispatcher_mode)
+		dump_new_oids(ctx);
 
 	stop_postmaster(ctx, false, false);
 }
