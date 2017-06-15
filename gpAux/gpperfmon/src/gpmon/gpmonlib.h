@@ -35,9 +35,9 @@ extern int verbose;
 #define TR1_FILE(x) if (verbose == 1) gpmon_print_file x
 
 /* Architecture specific limits for metrics */
-#if defined(osx104_x86) || defined(osx105_x86) || defined(rhel4_x86_32) || defined(rhel5_x86_32)
+#if defined(osx104_x86) || defined(osx105_x86) || defined(rhel5_x86_32)
 	#define GPSMON_METRIC_MAX 0xffffffffUL
-#elif defined(rhel4_x86_64) || defined(rhel5_x86_64) || defined(rhel7_x86_64) || defined(rhel6_x86_64) || defined(sol10_x86_64) || defined(suse10_x86_64)
+#elif defined(rhel5_x86_64) || defined(rhel7_x86_64) || defined(rhel6_x86_64) || defined(suse10_x86_64)
 	#define GPSMON_METRIC_MAX 0xffffffffffffffffULL
 #else
 	#define GPSMON_METRIC_MAX 0xffffffffUL

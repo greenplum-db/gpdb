@@ -21,11 +21,6 @@
 
 #define FMT64 APR_INT64_T_FMT
 
-/* Macros for min because solaris doesn't have it. */
-#ifndef MIN
-#define	MIN(a,b) (((a)<(b))?(a):(b))
-#endif /* MIN */
-
 void update_log_filename(void);
 void gx_main(int, apr_int64_t);
 
@@ -368,7 +363,7 @@ static apr_uint64_t metric_diff_calc( sigar_uint64_t newval, apr_uint64_t oldval
 	{
 		diff = newval - oldval;
 	}
-#if defined(rhel4_x86_64) || defined(rhel5_x86_64) || defined(rhel7_x86_64) || defined(rhel6_x86_64) || defined(sol10_x86_64) || defined(suse10_x86_64)
+#if defined(rhel5_x86_64) || defined(rhel7_x86_64) || defined(rhel6_x86_64) || defined(suse10_x86_64)
 	// Add this debug on 64 bit machines to try and debug strange values we are seeing
 	if(diff > 1000000000000000000  ) {
 		TR0(("Crazy high value for diff! new value=%" APR_UINT64_T_FMT ", old value=%" APR_UINT64_T_FMT ", diff=%" APR_UINT64_T_FMT "  for %s metric %s; assume the value was reset and set diff to new value.\n",
