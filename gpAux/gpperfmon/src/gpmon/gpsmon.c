@@ -5,9 +5,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/stat.h>
-#if defined (sun)
-	#include <kstat.h>
-#endif /* sun */
 #include <math.h>
 #include <sys/param.h>
 #include "apr_getopt.h"
@@ -123,10 +120,6 @@ typedef struct qexec_agg_t{
 }qexec_agg_t;
 
 static struct gx_t gx = { 0 };
-
-#if defined (sun)
-static kstat_ctl_t *kc = NULL;
-#endif /* sun */
 
 /* structs and hash tables for metrics */
 static apr_hash_t* net_devices = NULL;
@@ -322,27 +315,7 @@ static void get_pid_metrics(apr_int32_t pid, apr_int32_t tmid, apr_int32_t ssid,
 	rec->cpu_elapsed = cpu.total;
 }
 
-#if defined (sun)
-/* Takes a kstat entry and determines if it is
- * and active network card on the system.
- */
-int is_active_nic(kstat_t *ksp)
-{
-	char nic_name[64] = { '\0' };
 
-	if (ksp == NULL)
-		return 0;
-
-	/* An example of a kstat entry that would match would be module=e1000g and
-	 * instance=1.
-	 */
-	if (strcmp(ksp->ks_class, "net") == 0 && strcmp(ksp->ks_module, "lo") != 0)
-		snprintf(nic_name, 64, "%s%d", ksp->ks_module, ksp->ks_instance);
-		if (strcmp(ksp->ks_name, nic_name) == 0)
-			return 1;
-	return 0;
-}
-#endif /* sun */
 
 #define FSUSAGE_TOBYTES(X) (X * 1024)
 
@@ -380,7 +353,7 @@ static void send_fsinfo(SOCKET sock)
 		}
 	}
 }
-#if !(defined (sun))
+
 // Helper function to calculate the metric differences
 static apr_uint64_t metric_diff_calc( sigar_uint64_t newval, apr_uint64_t oldval, const char *name_for_log, const char* value_name_for_log ){
 	apr_uint64_t diff;
@@ -404,7 +377,7 @@ static apr_uint64_t metric_diff_calc( sigar_uint64_t newval, apr_uint64_t oldval
 #endif
 	return diff;
 }
-#endif
+
 
 // Helper function to calculate cpu percentage during a period
 static float calc_diff_percentage(sigar_uint64_t newvalue, sigar_uint64_t oldvalue, int total_diff, const char *itemname)
@@ -439,16 +412,10 @@ static void send_machine_metrics(SOCKET sock)
 	gp_smon_to_mmon_packet_t pkt;
 	struct timeval currenttime = { 0 };
 	double seconds_duration = 0.0;
-#if defined (sun)
-	kstat_t *ksp = NULL;
-	kstat_named_t *knp = NULL;
-	kstat_io_t kio;
-#else /* sun */
 	sigar_file_system_usage_t fsusage;
 	const char** fsdir;
 	const char** netname;
 	sigar_net_interface_stat_t netstat;
-#endif /* sun */
 	int cpu_total_diff;
 
 	/* NIC metrics */
@@ -484,191 +451,6 @@ static void send_machine_metrics(SOCKET sock)
 	memset(&tdisk, 0, sizeof(tdisk));
 	memset(&tnet, 0, sizeof(tnet));
 
-#if defined (sun)
-	/* libsigar currently doesn't support ZFS, so for now
-	 use kstat directly for drive I/O stats
-
-	 Additionally, thumper and thors have network I/O stat
-	 issues with libsigar so we'll pull those from kstat
-	 as well.
-
-	 TODO: Fix libsigar (update it?)
-	 */
-	kstat_chain_update(kc);
-
-	for (ksp = kc->kc_chain; ksp != NULL; ksp = ksp->ks_next)
-	{
-		switch(ksp->ks_type)
-		{
-			case KSTAT_TYPE_IO:
-			if (strcmp(ksp->ks_class, "disk") == 0)
-			{
-				disk_device_t* disk = (disk_device_t*)apr_hash_get(disk_devices, ksp->ks_name, APR_HASH_KEY_STRING);
-				/* Check if this is a new device */
-				if (!disk)
-				{
-					disk = (disk_device_t*)apr_palloc(gx.pool, sizeof(disk_device_t));
-					disk->name = apr_pstrdup(gx.pool, ksp->ks_name);
-					disk->read_bytes = disk->write_bytes = disk->reads = disk->writes = 0;
-					apr_hash_set(disk_devices, disk->name, APR_HASH_KEY_STRING, disk);
-				}
-
-				reads = disk->reads;
-				writes = disk->writes;
-				read_bytes = disk->read_bytes;
-				write_bytes = disk->write_bytes;
-
-				kstat_read(kc, ksp, &kio);
-				if (kio.reads < disk->reads)
-				{
-					disk->reads = (GPSMON_METRIC_MAX - disk->reads) + kio.reads;
-					reads = disk->reads;
-				}
-				else
-				{
-					reads = kio.reads - disk->reads;
-					disk->reads = kio.reads;
-				}
-
-				if (kio.writes < disk->writes)
-				{
-					disk->writes = (GPSMON_METRIC_MAX - disk->writes) + kio.writes;
-					writes = disk->writes;
-				}
-				else
-				{
-					writes = kio.writes - disk->writes;
-					disk->writes = kio.writes;
-				}
-
-				if (kio.nwritten < disk->write_bytes)
-				{
-					disk->write_bytes = (GPSMON_METRIC_MAX - disk->write_bytes) + kio.nwritten;
-					write_bytes = disk->write_bytes;
-				}
-				else
-				{
-					write_bytes = kio.nwritten - disk->write_bytes;
-					disk->write_bytes = kio.nwritten;
-				}
-
-				if (kio.nread < disk->read_bytes)
-				{
-					disk->read_bytes = (GPSMON_METRIC_MAX - disk->read_bytes) + kio.nread;
-					read_bytes = disk->read_bytes;
-				}
-				else
-				{
-					read_bytes = kio.nread - disk->read_bytes;
-					disk->read_bytes = kio.nread;
-				}
-
-				tdisk.reads += reads;
-				tdisk.writes += writes;
-				tdisk.write_bytes += write_bytes;
-				tdisk.read_bytes += read_bytes;
-			}
-			break;
-			case KSTAT_TYPE_NAMED:
-			if (is_active_nic(ksp))
-			{
-				char nic_name[64] = { '\0' };
-
-				snprintf(nic_name, 64, "%s%d", ksp->ks_module, ksp->ks_instance);
-
-				net_device_t* nic = (net_device_t*)apr_hash_get(net_devices, nic_name, APR_HASH_KEY_STRING);
-				/* Check if this is a new device */
-				if (!nic)
-				{
-					nic = (net_device_t*)apr_palloc(gx.pool, sizeof(net_device_t));
-					nic->name = apr_pstrdup(gx.pool, nic_name);
-					nic->tx_bytes = nic->rx_bytes = nic->tx_packets = nic->rx_packets = 0;
-					apr_hash_set(net_devices, nic->name, APR_HASH_KEY_STRING, nic);
-				}
-
-				rx_packets = nic->rx_packets;
-				tx_packets = nic->tx_packets;
-				rx_bytes = nic->rx_bytes;
-				tx_bytes = nic->tx_bytes;
-
-				kstat_read(kc, ksp, NULL);
-				/* outbound bytes */
-				knp = kstat_data_lookup(ksp, "obytes64");
-				if (knp)
-				{
-					if (knp->value.ui64 < nic->tx_bytes)
-					{
-						nic->tx_bytes = (GPSMON_METRIC_MAX - nic->tx_bytes) + knp->value.ui64;
-						tx_bytes = nic->tx_bytes;
-					}
-					else
-					{
-						tx_bytes = knp->value.ui64 - nic->tx_bytes;
-						nic->tx_bytes = knp->value.ui64;
-					}
-				}
-				/* inbound bytes */
-				knp = kstat_data_lookup(ksp, "rbytes64");
-				if (knp)
-				{
-					if (knp->value.ui64 < nic->rx_bytes)
-					{
-						nic->rx_bytes = (GPSMON_METRIC_MAX - nic->rx_bytes) + knp->value.ui64;
-						rx_bytes = nic->rx_bytes;
-					}
-					else
-					{
-						rx_bytes = knp->value.ui64 - nic->rx_bytes;
-						nic->rx_bytes = knp->value.ui64;
-					}
-				}
-				/* outbound packets */
-				knp = kstat_data_lookup(ksp, "opackets64");
-				if (knp)
-				{
-					if (knp->value.ui64 < nic->tx_packets)
-					{
-						nic->tx_packets = (GPSMON_METRIC_MAX - nic->tx_packets) + knp->value.ui64;
-						tx_packets = nic->tx_packets;
-					}
-					else
-					{
-						tx_packets = knp->value.ui64 - nic->tx_packets;
-						nic->tx_packets = knp->value.ui64;
-					}
-				}
-				/* inbound packets */
-				knp = kstat_data_lookup(ksp, "ipackets64");
-				if (knp)
-				{
-					if (knp->value.ui64 < nic->rx_packets)
-					{
-						nic->rx_packets = (GPSMON_METRIC_MAX - nic->rx_packets) + knp->value.ui64;
-						rx_packets = nic->rx_packets;
-					}
-					else
-					{
-						rx_packets = knp->value.ui64 - nic->rx_packets;
-						nic->rx_packets = knp->value.ui64;
-					}
-				}
-				/* Add this interfaces diff to the total
-				 * Overflow here is extremely unlikely considering these are 64-bit values
-				 * and it's just a diff...  An example would be on a system with 4 NICs sending
-				 * a total of 0xffffffffffffffff bytes between updates.
-				 */
-				tnet.rx_bytes += rx_bytes;
-				tnet.tx_bytes += tx_bytes;
-				tnet.rx_packets += rx_packets;
-				tnet.tx_packets += tx_packets;
-			}
-			break;
-			default:
-			/* not interested */
-			break;
-		}
-	}
-#else /* sun */
 	for (fsdir = gx.fslist; *fsdir; fsdir++)
 	{
 		int e = sigar_file_system_usage_get(gx.sigar, *fsdir, &fsusage);
@@ -711,12 +493,10 @@ static void send_machine_metrics(SOCKET sock)
 			tdisk.read_bytes += read_bytes;
 		}
 	}
-#endif /* sun */
 	TR2(("disk reads: %" APR_UINT64_T_FMT " writes: %" APR_UINT64_T_FMT
 		 " rbytes: %" APR_UINT64_T_FMT " wbytes: %" APR_UINT64_T_FMT "\n",
 		 tdisk.reads, tdisk.writes, tdisk.read_bytes, tdisk.write_bytes));
 
-#if !defined(sun)
 	for (netname = gx.netlist; *netname; netname++)
 	{
 		int e = sigar_net_interface_stat_get(gx.sigar, *netname, &netstat);
@@ -756,7 +536,7 @@ static void send_machine_metrics(SOCKET sock)
 			tnet.tx_bytes += tx_bytes;
 		}
 	}
-#endif /* !sun */
+
 	TR2(("rx: %" APR_UINT64_T_FMT " rx_bytes: %" APR_UINT64_T_FMT "\n",
 					tnet.rx_packets, tnet.rx_bytes));
 	TR2(("tx: %" APR_UINT64_T_FMT " tx_bytes: %" APR_UINT64_T_FMT "\n",
@@ -792,22 +572,6 @@ static void send_machine_metrics(SOCKET sock)
 		float cpu_sys  = calc_diff_percentage(cpu.sys,  pcpu.sys,  cpu_total_diff, "cpu.sys")  + calc_diff_percentage(cpu.wait, pcpu.wait, cpu_total_diff, "cpu.wait");
 		float cpu_idle = calc_diff_percentage(cpu.idle, pcpu.idle, cpu_total_diff, "cpu.idle");
 
-#if defined (sun)
-		// lib sigar on sun returns total cpu% of 100% times number of cores
-		// normalize to make total 100%
-		float cpu_norm = round(  (cpu_user + cpu_sys + cpu_idle) / 100.0f  );
-		TR2(("cpu_norm = %f", cpu_norm));
-
-		// paranoid check for divide by zero
-		if (cpu_norm < .95)
-		{
-			cpu_norm = 1.0;
-		}
-
-		cpu_user /= cpu_norm;
-		cpu_sys /= cpu_norm;
-		cpu_idle /= cpu_norm;
-#endif
 
 		pkt.u.metrics.cpu.user_pct = cpu_user;
 		pkt.u.metrics.cpu.sys_pct = cpu_sys;
@@ -1957,10 +1721,6 @@ int main(int argc, const char* const argv[])
 			gpsmon_fatalx(FLINE, e, "apr_proc_detach failed");
 	}
 
-#if defined (sun)
-	if (NULL == (kc = kstat_open()))
-	gpsmon_fatal(FLINE, "failed to open kstat");
-#endif /* sun */
 
 	number_cpu_cores = (int)sysconf(_SC_NPROCESSORS_CONF);
 

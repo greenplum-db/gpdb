@@ -825,7 +825,7 @@ static void delete_old_files(bloom_t* bloom)
 
 			if (0 == stat(p, &stbuf))
 			{
-#if defined(sun) || defined(linux)
+#if defined(linux)
 				int expired = stbuf.st_mtime < cutoff;
 #else
 				int expired = stbuf.st_mtimespec.tv_sec < cutoff;
