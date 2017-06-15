@@ -3,8 +3,14 @@ package test_utils
 import (
 	"fmt"
 	"gp_upgrade/config"
+	"gp_upgrade/db"
+	"gpbackup/testutils"
 	"io/ioutil"
 	"os"
+
+	"github.com/jmoiron/sqlx"
+	. "github.com/onsi/ginkgo"
+	"gopkg.in/DATA-DOG/go-sqlmock.v1"
 )
 
 const (
@@ -54,4 +60,23 @@ func WriteSampleConfig() {
 	Check("cannot create sample dir", err)
 	err = ioutil.WriteFile(config.GetConfigFilePath(), []byte(SAMPLE_JSON), 0600)
 	Check("cannot write sample config", err)
+}
+
+func createMockDB() (*sqlx.DB, sqlmock.Sqlmock) {
+	db, mock, err := sqlmock.New()
+	mockdb := sqlx.NewDb(db, "sqlmock")
+	if err != nil {
+		Fail("Could not create mock database connection")
+	}
+	return mockdb, mock
+}
+
+func CreateMockDBConn(masterHost string, masterPort int) (*db.DBConn, sqlmock.Sqlmock) {
+	mockdb, mock := createMockDB()
+	dbConn := db.NewDBConn(masterHost, masterPort, "testdb")
+	dbConn.Driver = testutils.TestDriver{DBExists: true, DB: mockdb, DBName: "testdb"}
+	if dbConn.Conn != nil && dbConn.Conn.Stats().OpenConnections > 0 {
+		Fail("connection before connect is called")
+	}
+	return dbConn, mock
 }

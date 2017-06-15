@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"os"
 	"io/ioutil"
+	"os"
 	"path"
 	"runtime"
 
@@ -29,12 +29,11 @@ var _ = Describe("monitor", func() {
 	var (
 		save_home_dir    string
 		private_key_path string
-		this_file_dir    string
 	)
 
 	BeforeEach(func() {
-		_, this_file_dir, _, _ := runtime.Caller(0)
-		private_key_path = path.Dir(this_file_dir) + "/sshd/private_key.pem"
+		_, this_file_path, _, _ := runtime.Caller(0)
+		private_key_path = path.Join(path.Dir(this_file_path), "sshd/private_key.pem")
 		save_home_dir = ResetTempHomeDir()
 		WriteSampleConfig()
 	})
@@ -48,7 +47,7 @@ var _ = Describe("monitor", func() {
 	})
 
 	Describe("when pg_upgrade is running on the target host", func() {
-		It("reports that pg_upgrade is running", func() {
+		It("happy: reports that pg_upgrade is running", func() {
 			cheatSheet := CheatSheet{Response: GREP_PG_UPGRADE, ReturnCode: intToBytes(0)}
 			cheatSheet.WriteToFile()
 
@@ -110,7 +109,7 @@ var _ = Describe("monitor", func() {
 
 	Describe("when the private key is found but ssh does not succeed", func() {
 		It("complains", func() {
-			invalid_private_key_path := path.Dir(this_file_dir) + "/sshd/invalid_private_key.pem"
+			invalid_private_key_path := path.Join(path.Dir(private_key_path), "invalid_private_key.pem")
 			session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--private_key", invalid_private_key_path, "--user", "pivotal")
 			Eventually(session).Should(Exit(1))
 			Eventually(session.Err).Should(Say("ssh: no key found"))

@@ -11,7 +11,6 @@ import (
 	"gp_upgrade/ssh_client"
 )
 
-
 type MonitorCommand struct {
 	Host       string `long:"host" required:"yes" description:"Domain name or IP of host"`
 	Port       int    `long:"port" default:"22" description:"SSH port for communication"`

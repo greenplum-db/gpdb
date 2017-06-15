@@ -1,14 +1,24 @@
 package commands
 
 import (
-	"fmt"
-
 	"database/sql"
+	"fmt"
 	"gp_upgrade/config"
 
 	_ "github.com/lib/pq"
-	// must have sqlite3 for testing
+
+	"io"
+
+	"gp_upgrade/db"
+	"os"
+
+	"regexp"
+
+	"gp_upgrade/utils"
+
+	"github.com/cppforlife/go-semi-semantic/version"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/pkg/errors"
 )
 
 type ObjectCountCommand struct {
@@ -17,11 +27,18 @@ type ObjectCountCommand struct {
 	Database_name   string `long:"database-name" default:"template1" hidden:"true"`
 }
 
-type CheckCommand struct {
-	Object_count ObjectCountCommand `command:"object-count" alias:"oc" description:"stuff happened here"`
+type VersionCommand struct {
+	Master_host   string `long:"master-host" required:"yes" description:"Domain name or IP of host"`
+	Master_port   int    `long:"master-port" required:"no" default:"15432" description:"Port for master database"`
+	Database_name string `long:"database-name" default:"template1" hidden:"true"`
+}
 
-	Master_host string `long:"master-host" required:"yes" description:"Domain name or IP of host"`
-	Master_port int    `long:"master-port" required:"no" default:"5432" description:"Port for master database"`
+type CheckCommand struct {
+	Object_count ObjectCountCommand `command:"object-count" alias:"oc" description:"count database objects and numeric objects"`
+	GPDB_version VersionCommand     `command:"version" alias:"ver" description:"validate current version is upgradable"`
+
+	Master_host string `long:"master-host" required:"no" description:"Domain name or IP of host"`
+	Master_port int    `long:"master-port" required:"no" default:"15432" description:"Port for master database"`
 
 	// for testing only, so using hidden:"true"
 	Database_type   string `long:"database_type" default:"postgres" hidden:"true"`
@@ -29,13 +46,23 @@ type CheckCommand struct {
 	Database_name   string `long:"database-name" default:"template1" hidden:"true"`
 }
 
+//TODO: these are just defaults for dev work
+//TODO: will be replaced as we adopt DBConn
 const (
 	host = "localhost"
 	port = 15432
 	user = "pivotal"
+
+	MINIMUM_VERSION = "4.3.9.0"
 )
 
 func (cmd CheckCommand) Execute([]string) error {
+	// to work around a bug in go-flags, where an attribute is required in both parent and child command,
+	// we make that attribute optional in the command struct used by go-flags
+	// but enforce the requirement in our code here.
+	if cmd.Master_host == "" {
+		return errors.New("the required flag '--master-host' was not specified")
+	}
 	if cmd.Database_config == "" {
 		cmd.Database_config = fmt.Sprintf("host=%s port=%d user=%s "+
 			"dbname=%s sslmode=disable",
@@ -60,11 +87,7 @@ func (cmd CheckCommand) Execute([]string) error {
 	}
 
 	err = configWriter.Write()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (cmd ObjectCountCommand) Execute([]string) error {
@@ -130,4 +153,35 @@ func (cmd ObjectCountCommand) Execute([]string) error {
 	fmt.Println("Number of heap objects -", count)
 
 	return nil
+}
+
+func (cmd VersionCommand) Execute([]string) error {
+	dbConn := db.NewDBConn(cmd.Master_host, cmd.Master_port, cmd.Database_name)
+	return cmd.execute(dbConn, os.Stdout)
+}
+
+func (cmd VersionCommand) execute(dbConn *db.DBConn, outputWriter io.Writer) error {
+	err := dbConn.Connect()
+	if err != nil {
+		return utils.DatabaseConnectionError{Parent: err}
+	}
+	defer dbConn.Close()
+
+	re := regexp.MustCompile("Greenplum Database (.*) build")
+
+	var row string
+	err = dbConn.Conn.QueryRow("SELECT version()").Scan(&row)
+	if err != nil {
+		return err
+	}
+
+	version_string := re.FindStringSubmatch(row)[1]
+	version_object := version.MustNewVersionFromString(version_string)
+
+	if version_object.IsGt(version.MustNewVersionFromString(MINIMUM_VERSION)) {
+		fmt.Fprintf(outputWriter, "gp_upgrade: Version Compatibility Check [OK]\n")
+	} else {
+		fmt.Fprintf(outputWriter, "gp_upgrade: Version Compatibility Check [Failed]\n")
+	}
+	return err
 }

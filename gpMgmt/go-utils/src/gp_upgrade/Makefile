@@ -13,6 +13,7 @@ export GOPATH := $(DIR_PATH)/..
 export PATH := $(PATH):$(GOPATH)/bin
 
 dependencies :
+		go get github.com/cppforlife/go-semi-semantic/version
 		go get github.com/onsi/ginkgo/ginkgo
 		go get golang.org/x/tools/cmd/goimports
 		go get github.com/maxbrunsfeld/counterfeiter

@@ -47,32 +47,45 @@ var _ = Describe("check", func() {
 		})
 	})
 	Describe("happy: the database is running, master-host is provided, and connection is successful", func() {
-		It("writes a file to ~/.gp_upgrade/cluster_config.json with correct json", func() {
-			path := os.Getenv("GOPATH") + "/src/gp_upgrade/commands/fixtures/segment_config.sql"
-			setupSqlite3Database(getFileContents(path))
+		Context("check", func() {
+			It("writes a file to ~/.gp_upgrade/cluster_config.json with correct json", func() {
+				path := os.Getenv("GOPATH") + "/src/gp_upgrade/commands/fixtures/segment_config.sql"
+				setupSqlite3Database(getFileContents(path))
 
-			session := runCommand("check", "--master-host", "localhost", "--database_type", "sqlite3", "--database_config_file", sqlite3_database_path)
+				session := runCommand("check", "--master-host", "localhost", "--database_type", "sqlite3", "--database_config_file", sqlite3_database_path)
 
-			Eventually(session).Should(Exit(0))
-			content, err := ioutil.ReadFile(config.GetConfigFilePath())
-			Expect(err).NotTo(HaveOccurred())
-			expectedJson, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/gp_upgrade/commands/fixtures/segment_config.json")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(expectedJson).To(Equal(content))
-			var json_structure []map[string]interface{}
-			err = json.Unmarshal(content, &json_structure)
-			Expect(err).NotTo(HaveOccurred())
+				Eventually(session).Should(Exit(0))
+				content, err := ioutil.ReadFile(config.GetConfigFilePath())
+				Expect(err).NotTo(HaveOccurred())
+				expectedJson, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/gp_upgrade/commands/fixtures/segment_config.json")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(expectedJson).To(Equal(content))
+				var json_structure []map[string]interface{}
+				err = json.Unmarshal(content, &json_structure)
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 	})
 
 	Describe("error cases", func() {
 		Describe("the database cannot be opened", func() {
-			It("returns error", func() {
-				session := runCommand("check", "--master-host", "localhost", "--database_type", "foo", "--database_config_file", "bar")
+			Context("check", func() {
+				It("returns error", func() {
+					session := runCommand("check", "--master-host", "localhost", "--database_type", "foo", "--database_config_file", "bar")
 
-				Eventually(session).Should(Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring(`sql: unknown driver "foo" (forgotten import?)`))
+					Eventually(session).Should(Exit(1))
+					Expect(string(session.Err.Contents())).To(ContainSubstring(`sql: unknown driver "foo" (forgotten import?)`))
+				})
 			})
+			Context("check version", func() {
+				It("returns database connection error", func() {
+					session := runCommand("check", "version", "--master-host", "localhost", "--database-name", "invalidDB")
+
+					Eventually(session).Should(Exit(65))
+					Expect(string(session.Err.Contents())).To(ContainSubstring(`Database Connection Error: pq: database "invalidDB" does not exist`))
+				})
+			})
+
 		})
 		Describe("the database query fails", func() {
 			It("returns error", func() {
