@@ -4,11 +4,12 @@ ABOUT GP DEMO
 
 The GP demo program will setup a virtual Greenplum Database system
 on a single host. It creates and starts a GP master instance and
-three segment instances within the same directory. Running GP demo
-is a good way to test your initial installation before deploying
-the Greenplum Database software on a multi-host array. It is also
-a good way to become familiar with the system without investing
-the time involved in a multi-host setup.
+three segment instances (three primary and three mirror segments)
+within the same directory. Running GP demo is a good way to test
+your initial installation before deploying the Greenplum Database
+software on a multi-host array. It is also a good way to become
+familiar with the system without investing the time involved in a
+multi-host setup.
 
 ******************************************************************
 BEFORE YOU BEGIN
