@@ -65,7 +65,7 @@ static void PortalRunMulti(Portal portal, bool isTopLevel,
 			   char *completionTag);
 static uint64 DoPortalRunFetch(Portal portal,
 				 FetchDirection fdirection,
-				 uint64 count,
+				 int64 count,
 				 DestReceiver *dest);
 static void DoPortalRewind(Portal portal);
 static void PortalSetBackoffWeight(Portal portal);
@@ -909,7 +909,7 @@ PortalSetResultFormat(Portal portal, int nFormats, int16 *formats)
  * suspended due to exhaustion of the count parameter.
  */
 bool
-PortalRun(Portal portal, uint64 count, bool isTopLevel,
+PortalRun(Portal portal, int64 count, bool isTopLevel,
 		  DestReceiver *dest, DestReceiver *altdest,
 		  char *completionTag)
 {
@@ -1155,7 +1155,7 @@ PortalRunSelect(Portal portal,
 			count = 0;
 
 		if (portal->holdStore)
-			nprocessed = RunFromStore(portal, direction, count, dest);
+			nprocessed = RunFromStore(portal, direction, (uint64) count, dest);
 		else
 		{
 			ActiveSnapshot = queryDesc->snapshot;
@@ -1195,7 +1195,7 @@ PortalRunSelect(Portal portal,
 			count = 0;
 
 		if (portal->holdStore)
-			nprocessed = RunFromStore(portal, direction, count, dest);
+			nprocessed = RunFromStore(portal, direction, (uint64) count, dest);
 		else
 		{
 			ActiveSnapshot = queryDesc->snapshot;
@@ -1528,7 +1528,7 @@ PortalRunMulti(Portal portal, bool isTopLevel,
 uint64
 PortalRunFetch(Portal portal,
 			   FetchDirection fdirection,
-			   uint64 count,
+			   int64 count,
 			   DestReceiver *dest)
 {
 	uint64		result = 0;
@@ -1635,7 +1635,7 @@ PortalRunFetch(Portal portal,
 static uint64
 DoPortalRunFetch(Portal portal,
 				 FetchDirection fdirection,
-				 uint64 count,
+				 int64 count,
 				 DestReceiver *dest)
 {
 	bool		forward;
@@ -1726,7 +1726,7 @@ DoPortalRunFetch(Portal portal,
 						PortalRunSelect(portal, true, count - pos - 1,
 										None_Receiver);
 				}
-				return PortalRunSelect(portal, true, 1L, dest);
+				return PortalRunSelect(portal, true, 1, dest);
 			}
 			else if (count < 0)
 			{
@@ -1746,7 +1746,7 @@ DoPortalRunFetch(Portal portal,
 				PortalRunSelect(portal, true, FETCH_ALL, None_Receiver);
 				if (count < -1)
 					PortalRunSelect(portal, false, -count - 1, None_Receiver);
-				return PortalRunSelect(portal, false, 1L, dest);
+				return PortalRunSelect(portal, false, 1, dest);
 			}
 			else
 			{
@@ -1759,7 +1759,7 @@ DoPortalRunFetch(Portal portal,
 				
 				/* Rewind to start, return zero rows */
 				DoPortalRewind(portal);
-				return PortalRunSelect(portal, true, 0L, dest);
+				return PortalRunSelect(portal, true, 0, dest);
 			}
 			break;
 		case FETCH_RELATIVE:
@@ -1770,7 +1770,7 @@ DoPortalRunFetch(Portal portal,
 				 */
 				if (count > 1)
 					PortalRunSelect(portal, true, count - 1, None_Receiver);
-				return PortalRunSelect(portal, true, 1L, dest);
+				return PortalRunSelect(portal, true, 1, dest);
 			}
 			else if (count < 0)
 			{
@@ -1786,7 +1786,7 @@ DoPortalRunFetch(Portal portal,
 				
 				if (count < -1)
 					PortalRunSelect(portal, false, -count - 1, None_Receiver);
-				return PortalRunSelect(portal, false, 1L, dest);
+				return PortalRunSelect(portal, false, 1, dest);
 			}
 			else
 			{
@@ -1832,7 +1832,7 @@ DoPortalRunFetch(Portal portal,
 			 */
 			if (on_row)
 			{
-				PortalRunSelect(portal, false, 1L, None_Receiver);
+				PortalRunSelect(portal, false, 1, None_Receiver);
 				/* Set up to fetch one row forward */
 				count = 1;
 				forward = true;
