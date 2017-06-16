@@ -18,6 +18,9 @@ import (
 
 	. "gp_upgrade/test_utils"
 
+	"path"
+	"runtime"
+
 	"golang.org/x/crypto/ssh"
 )
 
@@ -42,7 +45,7 @@ func startShell(channel ssh.Channel, requests <-chan *ssh.Request) {
 				Check("Cannot get stdoutpipe", err)
 
 				var cheatSheet CheatSheet
-				//TODO: Currently reading from a file; possibly passing through ssh server instead?
+				//TODO: Currently reading from a cheatsheet file; possibly passing through ssh server instead?
 				err = cheatSheet.ReadFromFile()
 				Check("Cannot read from file", err)
 
@@ -137,7 +140,9 @@ func listenerForever() {
 }
 
 func startSshServer() {
-	authorizedKeysBytes, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/gp_upgrade/commands/sshd/authorized_keys")
+	_, this_file_path, _, _ := runtime.Caller(0)
+	sshd_directory := path.Dir(this_file_path)
+	authorizedKeysBytes, err := ioutil.ReadFile(path.Join(sshd_directory, "authorized_keys"))
 	if err != nil {
 		log.Fatalf("Failed to load authorized_keys, err: %v", err)
 	}
@@ -165,7 +170,7 @@ func startSshServer() {
 		},
 	}
 
-	pBytes, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/gp_upgrade/commands/sshd/private_key.pem")
+	pBytes, err := ioutil.ReadFile(path.Join(sshd_directory, "private_key.pem"))
 	if err != nil {
 		panic(err)
 	}

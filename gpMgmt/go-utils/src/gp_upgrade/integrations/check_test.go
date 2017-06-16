@@ -1,4 +1,4 @@
-package commands_test
+package integrations_test
 
 import (
 	"database/sql"
@@ -12,6 +12,9 @@ import (
 
 	"gp_upgrade/config"
 
+	"path"
+	"runtime"
+
 	_ "github.com/mattn/go-sqlite3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -24,6 +27,12 @@ const (
 
 var _ = Describe("check", func() {
 
+	var fixture_path string
+	BeforeEach(func() {
+		_, this_file_path, _, _ := runtime.Caller(0)
+		fixture_path = path.Join(path.Dir(this_file_path), "fixtures")
+	})
+
 	AfterEach(func() {
 		err := os.RemoveAll(sqlite3_database_path)
 		test_utils.Check("Cannot remove sqllite database file", err)
@@ -33,8 +42,8 @@ var _ = Describe("check", func() {
 			It("prints the count of append-optimized and heap objects to stdout", func() {
 				// queries the database to get the count and then prints that to the command line
 
-				path := os.Getenv("GOPATH") + "/src/gp_upgrade/commands/fixtures/object_count.sql"
-				setupSqlite3Database(getFileContents(path))
+				object_count_path := path.Join(fixture_path, "object_count.sql")
+				setupSqlite3Database(getFileContents(object_count_path))
 				session := runCommand("check", "object-count", "--master-host",
 					"localhost", "--master-port", "15432", "--database_type",
 					"sqlite3", "--database_config_file", sqlite3_database_path)
@@ -49,15 +58,15 @@ var _ = Describe("check", func() {
 	Describe("happy: the database is running, master-host is provided, and connection is successful", func() {
 		Context("check", func() {
 			It("writes a file to ~/.gp_upgrade/cluster_config.json with correct json", func() {
-				path := os.Getenv("GOPATH") + "/src/gp_upgrade/commands/fixtures/segment_config.sql"
-				setupSqlite3Database(getFileContents(path))
+				config_path := path.Join(fixture_path, "segment_config.sql")
+				setupSqlite3Database(getFileContents(config_path))
 
 				session := runCommand("check", "--master-host", "localhost", "--database_type", "sqlite3", "--database_config_file", sqlite3_database_path)
 
 				Eventually(session).Should(Exit(0))
 				content, err := ioutil.ReadFile(config.GetConfigFilePath())
 				Expect(err).NotTo(HaveOccurred())
-				expectedJson, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/gp_upgrade/commands/fixtures/segment_config.json")
+				expectedJson, err := ioutil.ReadFile(path.Join(fixture_path, "segment_config.json"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(expectedJson).To(Equal(content))
 				var json_structure []map[string]interface{}

@@ -1,4 +1,4 @@
-package commands_test
+package integrations_test
 
 import (
 	"bytes"
@@ -29,11 +29,13 @@ var _ = Describe("monitor", func() {
 	var (
 		save_home_dir    string
 		private_key_path string
+		fixture_path     string
 	)
 
 	BeforeEach(func() {
 		_, this_file_path, _, _ := runtime.Caller(0)
 		private_key_path = path.Join(path.Dir(this_file_path), "sshd/private_key.pem")
+		fixture_path = path.Join(path.Dir(this_file_path), "fixtures")
 		save_home_dir = ResetTempHomeDir()
 		WriteSampleConfig()
 	})
@@ -121,8 +123,7 @@ var _ = Describe("monitor", func() {
 				It("works", func() {
 					cheatSheet := CheatSheet{Response: GREP_PG_UPGRADE, ReturnCode: intToBytes(0)}
 					cheatSheet.WriteToFile()
-					path := os.Getenv("GOPATH")
-					content, err := ioutil.ReadFile(path + "/src/gp_upgrade/commands/fixtures/registered_private_key.pem")
+					content, err := ioutil.ReadFile(path.Join(fixture_path, "registered_private_key.pem"))
 					Check("cannot read private key file", err)
 					err = os.MkdirAll(TempHomeDir+"/.ssh", 0700)
 					Check("cannot create .ssh", err)
@@ -139,8 +140,7 @@ var _ = Describe("monitor", func() {
 				It("complains", func() {
 					cheatSheet := CheatSheet{Response: GREP_PG_UPGRADE, ReturnCode: intToBytes(0)}
 					cheatSheet.WriteToFile()
-					path := os.Getenv("GOPATH")
-					content, err := ioutil.ReadFile(path + "/src/gp_upgrade/commands/fixtures/unregistered_private_key.pem")
+					content, err := ioutil.ReadFile(path.Join(fixture_path, "unregistered_private_key.pem"))
 					Check("cannot read private key file", err)
 					err = os.MkdirAll(TempHomeDir+"/.ssh", 0700)
 					Check("cannot create .ssh", err)

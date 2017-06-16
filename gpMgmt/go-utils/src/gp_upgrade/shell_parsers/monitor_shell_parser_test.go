@@ -36,8 +36,7 @@ pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bin
 				Expect(return_value).To(BeTrue())
 			})
 
-			// todo factor out the sample console output into a constant; use diff target and same console output
-			It("returns false when target port matches", func() {
+			It("returns false when target port does not match", func() {
 				subject := shell_parsers.NewShellParser(`
 gpadmin            7520   0.0  0.0  2432772    676 s004  S+    3:56PM   0:00.00 grep pg_upgrade
 pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bindir  /usr/local/greenplum-db-5/bin --old-datadir /data/gpdata/master/gpseg-1 --new-datadir /data/gp5data/master/gpseg-1 --old-port 404 --new-port 6543 --link

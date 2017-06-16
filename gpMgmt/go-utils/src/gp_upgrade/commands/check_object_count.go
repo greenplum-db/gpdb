@@ -11,8 +11,6 @@ import (
 	"os"
 
 	"gp_upgrade/utils"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type ObjectCountCommand struct {

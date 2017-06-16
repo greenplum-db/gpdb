@@ -9,11 +9,12 @@ import (
 
 	"bufio"
 
-	"os"
-
 	"errors"
 
 	"gp_upgrade/ssh_client"
+
+	"path"
+	"runtime"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -35,8 +36,9 @@ var _ = Describe("SshConnector", func() {
 			SshDialer:    FakeDialer{},
 			SshKeyParser: FakeKeyParser{},
 		}
-		gopath := os.Getenv("GOPATH")
-		test_key_path = gopath + "/src/gp_upgrade/commands/sshd/private_key.pem"
+		_, this_file_path, _, _ := runtime.Caller(0)
+		test_key_path = path.Join(path.Dir(this_file_path), "../integrations/sshd/private_key.pem")
+
 	})
 
 	Describe("#Connect", func() {

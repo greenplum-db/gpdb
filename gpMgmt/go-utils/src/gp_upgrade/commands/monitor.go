@@ -14,7 +14,7 @@ import (
 type MonitorCommand struct {
 	Host       string `long:"host" required:"yes" description:"Domain name or IP of host"`
 	Port       int    `long:"port" default:"22" description:"SSH port for communication"`
-	User       string `long:"user" default:"gpadmin" description:"Name of user at ssh destination"`
+	User       string `long:"user" default:"" description:"Name of user at ssh destination"`
 	PrivateKey string `long:"private_key" description:"Private key for ssh destination"`
 	Segment_id int    `long:"segment_id" required:"yes" description:"ID of segment to monitor"`
 }

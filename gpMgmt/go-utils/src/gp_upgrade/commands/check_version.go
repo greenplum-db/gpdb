@@ -15,7 +15,6 @@ import (
 	"gp_upgrade/utils"
 
 	"github.com/cppforlife/go-semi-semantic/version"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type VersionCommand struct {
