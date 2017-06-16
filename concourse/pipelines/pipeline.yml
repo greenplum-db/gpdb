@@ -33,31 +33,23 @@ resources:
   source:
     repository: pivotaldata/centos-gpdb-dev
     tag: '6-gcc6.2-llvm3.7'
-    username: {{docker_username}}
-    password: {{docker_password}}
 
 - name: centos-gpdb-dev-7
   type: docker-image
   source:
     repository: pivotaldata/centos-gpdb-dev
     tag: 7-gcc6.2-llvm3.7
-    username: {{docker_username}}
-    password: {{docker_password}}
 
 - name: sles-gpdb-dev-11-beta
   type: docker-image
   source:
     repository: pivotaldata/sles-gpdb-dev
     tag: 11-beta
-    username: {{docker_username}}
-    password: {{docker_password}}
 
 - name: centos-mingw
   type: docker-image
   source:
     repository: pivotaldata/centos-mingw
-    username: {{docker_username}}
-    password: {{docker_password}}
 
 - name: bin_gpdb_centos6
   type: s3
