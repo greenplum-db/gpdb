@@ -54,7 +54,7 @@ var _ = Describe("monitor", func() {
 			session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--private_key", private_key_path, "--user", "pivotal")
 
 			Eventually(session).Should(Exit(0))
-			Eventually(session.Out).Should(Say("pg_upgrade is running on host localhost"))
+			Eventually(session.Out).Should(Say(`pg_upgrade is running on host "localhost", segment_id 7`))
 		})
 	})
 
@@ -67,8 +67,7 @@ var _ = Describe("monitor", func() {
 			session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--private_key", private_key_path, "--user", "pivotal")
 
 			Eventually(session).Should(Exit(0))
-			expectedMsg := "pg_upgrade is not running on host localhost"
-			Eventually(session.Out).Should(Say(expectedMsg))
+			Eventually(session.Out).Should(Say(`pg_upgrade is not running on host "localhost", segment_id 7`))
 		})
 	})
 
@@ -133,7 +132,7 @@ var _ = Describe("monitor", func() {
 					session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--user", "pivotal")
 
 					Eventually(session).Should(Exit(0))
-					Eventually(session.Out).Should(Say("pg_upgrade is running on host localhost"))
+					Eventually(session.Out).Should(Say(`pg_upgrade is running on host "localhost", segment_id 7`))
 				})
 			})
 			Describe("and the key does not work", func() {

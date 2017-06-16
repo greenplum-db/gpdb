@@ -57,11 +57,10 @@ func (cmd MonitorCommand) Execute([]string) error {
 
 	addNot := ""
 	shellParser := shell_parsers.NewShellParser(output)
-	fmt.Println("got here: %d, output: %s", targetPort, output)
 	if !shellParser.IsPgUpgradeRunning(targetPort) {
 		addNot = "not "
 	}
-	fmt.Printf("pg_upgrade is %srunning on host %s\n", addNot, cmd.Host)
+	fmt.Printf("pg_upgrade is %srunning on host \"%s\", segment_id %d\n", addNot, cmd.Host, cmd.Segment_id)
 
 	return nil
 }
