@@ -163,7 +163,7 @@ export POSTGIS_GDAL_ENABLED_DRIVERS=ENABLE_ALL</codeblock>
       <p>To remove PostGIS support from a database, run SQL scripts that are supplied with the
         PostGIS extension package in <codeph>$GPHOME/share/postgresql/contrib/postgis-2.1/</codeph>
       </p>
-      <note>If you installed, PostGIS Raster, you must uninstall the PostGIS Raster before you
+      <note>If you installed PostGIS Raster, you must uninstall the PostGIS Raster before you
         uninstall the PostGIS objects. PostGIS Raster depends on PostGIS objects. Greenplum Database
         returns an error if PostGIS objects are removed before PostGIS Raster.</note>
       <p>These scripts remove PostGIS and PostGIS Raster objects from a database.<ul
@@ -202,9 +202,9 @@ INSERT INTO geom_test ( gid, geom, name )
   VALUES ( 3, 'MULTIPOINT(3 4,8 9)', '2D Aggregate Point' );
 SELECT * from geom_test WHERE geom &amp;&amp;
   Box3D(ST_GeomFromEWKT('LINESTRING(2 2 0, 3 3 0)'));</codeblock>
-      <p>The following example SQL statements create a table, adds a geometry column to the table
+      <p>The following example SQL statements create a table and add a geometry column to the table
         with a SRID integer value that references an entry in the <codeph>SPATIAL_REF_SYS</codeph>
-        table. The <codeph>INSERT</codeph> statements add to geopoints to the table.</p>
+        table. The <codeph>INSERT</codeph> statements add two geopoints to the table.</p>
       <codeblock>CREATE TABLE geotest (id INT4, name VARCHAR(32) );
 SELECT AddGeometryColumn('geotest','geopoint', 4326,'POINT',2);
 INSERT INTO geotest (id, name, geopoint)
