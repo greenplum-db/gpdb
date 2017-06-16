@@ -67,7 +67,7 @@ static int	_SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, uint64 tcount);
 static void _SPI_error_callback(void *arg);
 
 static void _SPI_cursor_operation(Portal portal,
-					  FetchDirection direction, uint64 count,
+					  FetchDirection direction, int64 count,
 					  DestReceiver *dest);
 
 static SPIPlanPtr _SPI_copy_plan(SPIPlanPtr plan, MemoryContext parentcxt);
@@ -1292,7 +1292,7 @@ void
 SPI_cursor_fetch(Portal portal, bool forward, long count)
 {
 	_SPI_cursor_operation(portal,
-						  forward ? FETCH_FORWARD : FETCH_BACKWARD, (uint64) count,
+						  forward ? FETCH_FORWARD : FETCH_BACKWARD, (int64) count,
 						  CreateDestReceiver(DestSPI, NULL));
 	/* we know that the DestSPI receiver doesn't need a destroy call */
 }
@@ -1308,7 +1308,7 @@ void
 SPI_cursor_move(Portal portal, bool forward, long count)
 {
 	_SPI_cursor_operation(portal,
-						  forward ? FETCH_FORWARD : FETCH_BACKWARD, (uint64) count,
+						  forward ? FETCH_FORWARD : FETCH_BACKWARD, (int64) count,
 						  None_Receiver);
 }
 
@@ -1323,7 +1323,7 @@ void
 SPI_scroll_cursor_fetch(Portal portal, FetchDirection direction, long count)
 {
 	_SPI_cursor_operation(portal,
-						  direction, (uint64) count,
+						  direction, (int64) count,
 						  CreateDestReceiver(DestSPI, NULL));
 	/* we know that the DestSPI receiver doesn't need a destroy call */
 }
@@ -1338,7 +1338,7 @@ SPI_scroll_cursor_fetch(Portal portal, FetchDirection direction, long count)
 void
 SPI_scroll_cursor_move(Portal portal, FetchDirection direction, long count)
 {
-	_SPI_cursor_operation(portal, direction, (uint64) count, None_Receiver);
+	_SPI_cursor_operation(portal, direction, (int64) count, None_Receiver);
 }
 
 
@@ -2295,7 +2295,7 @@ _SPI_error_callback(void *arg)
  *	Do a FETCH or MOVE in a cursor
  */
 static void
-_SPI_cursor_operation(Portal portal, FetchDirection direction, uint64 count,
+_SPI_cursor_operation(Portal portal, FetchDirection direction, int64 count,
 					  DestReceiver *dest)
 {
 	uint64		nfetched;
