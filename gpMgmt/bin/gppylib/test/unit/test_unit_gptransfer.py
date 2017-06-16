@@ -177,7 +177,7 @@ class GpTransfer(GpTestCase):
                          '|| (cat log_file >&2 && exit 1)"', cmd.cmdStr)
 
 
-    def test__GpCreateGpfdist_with_verbosity(self):
+    def test__GpCreateGpfdist_with_verbose(self):
         cmd = self.subject.GpCreateGpfdist(
             'gpfdist for table %s on %s' % ("some table",
                                             "some segment"),
@@ -196,7 +196,7 @@ class GpTransfer(GpTestCase):
                          '> pid_file && bash -c "(sleep 1 && kill -0 \\`cat pid_file 2> /dev/null\\` && cat log_file) ' \
                          '|| (cat log_file >&2 && exit 1)"', cmd.cmdStr)
 
-    def test__GpCreateGpfdist_with_very_verbosity(self):
+    def test__GpCreateGpfdist_with_very_verbose(self):
         cmd = self.subject.GpCreateGpfdist(
             'gpfdist for table %s on %s' % ("some table",
                                             "some segment"),
@@ -214,6 +214,32 @@ class GpTransfer(GpTestCase):
         self.assertEqual('nohup gpfdist -d some dirname -p 0 -P 1 -m 2 -t 3 -V > log_file 2>&1 < /dev/null & echo \\$! ' \
                          '> pid_file && bash -c "(sleep 1 && kill -0 \\`cat pid_file 2> /dev/null\\` && cat log_file) ' \
                          '|| (cat log_file >&2 && exit 1)"', cmd.cmdStr)
+
+    @patch('os._exit')
+    def test__cleanup_with_gpfdist_no_verbose_or_very_verbose_does_not_show_gpfdist_warning(self, mock1):
+        options = self.setup_normal_to_normal_validation()
+
+        self.subject.GpTransfer(Mock(**options), []).cleanup()
+        warnings = self.get_warnings()
+        self.assertNotIn("gpfdist logs are present in %s on all hosts in the source", warnings)
+
+    @patch('os._exit')
+    def test__cleanup_with_gpfdist_verbose_shows_gpfdist_warning(self, mock1):
+        options = self.setup_normal_to_normal_validation()
+        options.update(gpfdist_verbose=True)
+
+        self.subject.GpTransfer(Mock(**options), []).cleanup()
+        warnings = self.get_warnings()
+        self.assertIn("gpfdist logs are present in %s on all hosts in the source", warnings)
+
+    @patch('os._exit')
+    def test__cleanup_with_gpfdist_very_verbose_shows_gpfdist_warning(self, mock1):
+        options = self.setup_normal_to_normal_validation()
+        options.update(gpfdist_very_verbose=True)
+
+        self.subject.GpTransfer(Mock(**options), []).cleanup()
+        warnings = self.get_warnings()
+        self.assertIn("gpfdist logs are present in %s on all hosts in the source", warnings)
 
     @patch('gptransfer.TableValidatorFactory', return_value=Mock())
     def test__get_distributed_by_quotes_column_name(self, mock1):
@@ -1028,7 +1054,9 @@ class GpTransfer(GpTestCase):
         return [args[0][0] for args in self.subject.logger.info.call_args_list]
 
     def get_warnings(self):
-        return [args[0][0] for args in self.subject.logger.warning.call_args_list]
+        warnings = [args[0][0] for args in self.subject.logger.warning.call_args_list]
+        warns = [args[0][0] for args in self.subject.logger.warn.call_args_list]
+        return warnings + warns
 
     def _get_gptransfer_command(self):
         gptransfer = self.subject
