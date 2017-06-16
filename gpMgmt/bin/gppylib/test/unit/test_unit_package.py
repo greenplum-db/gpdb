@@ -1,6 +1,6 @@
 from mock import *
 from gp_unittest import *
-from gppylib.operations.package import IsVersionCompatible
+from gppylib.operations.package import IsVersionCompatible, ListPackages
 
 
 class IsVersionCompatibleTestCase(GpTestCase):
@@ -51,6 +51,34 @@ class IsVersionCompatibleTestCase(GpTestCase):
         log_messages = [args[1][0] for args in self.mock_logger.method_calls]
         self.assertTrue(len(log_messages) > 2)
         self.assertTrue(any("requires" in message for message in log_messages))
+
+
+class ListPackagesTestCase(GpTestCase):
+    def setUp(self):
+        self.apply_patches([
+            patch('gppylib.operations.package.logger', return_value=Mock(spec=['log', 'info', 'debug', 'error'])),
+            patch('gppylib.operations.package.ListFilesByPattern.run'),
+        ])
+        self.mock_logger = self.get_mock_from_apply_patch('logger')
+
+        self.subject = ListPackages()
+        self.mock_list_files_by_pattern_run = self.get_mock_from_apply_patch('run')
+
+    def test__execute_happy_list_no_packages(self):
+        self.mock_list_files_by_pattern_run.return_value = []
+        package_name_list = self.subject.execute()
+        self.assertTrue(len(package_name_list) == 0)
+
+    def test__execute_happy_list_all_packages(self):
+        self.mock_list_files_by_pattern_run.return_value = ['sample.gppkg', 'sample-version-random_OS-arch_type.gppkg']
+        package_name_list = self.subject.execute()
+        self.assertTrue(len(package_name_list) == 2)
+        self.assertTrue(package_name_list == ['sample', 'sample-version'])
+
+    def test__execute_fail_raise_error_with_no_gppkg_postfix(self):
+        self.mock_list_files_by_pattern_run.return_value = ['sample']
+        with self.assertRaisesRegexp(Exception, "unable to parse sample as a gppkg"):
+            package_name_list = self.subject.execute()
 
 
 if __name__ == '__main__':

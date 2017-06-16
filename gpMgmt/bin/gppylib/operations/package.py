@@ -342,7 +342,13 @@ class ListPackages(Operation):
 
         for pkg in package_list:
             pkg_name = pkg.split('/')[-1]
-            package_name_list.append(pkg_name[:pkg_name.index('-', pkg_name.index('-') + 1)])
+            if len(pkg_name.split('-')) >= 2:
+                package_name_list.append(pkg_name[:pkg_name.index('-', pkg_name.index('-') + 1)])
+            else:
+                try:
+                    package_name_list.append(pkg_name[:pkg_name.index('.')])
+                except ValueError:
+                    raise Exception('unable to parse %s as a gppkg' % pkg_name)
 
         return package_name_list
 
