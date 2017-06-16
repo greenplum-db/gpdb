@@ -40,19 +40,15 @@ func Check(msg string, e error) {
 	}
 }
 
-func SetHomeDir(temp_home_dir string) string {
-	save := os.Getenv("HOME")
-	err := os.MkdirAll(temp_home_dir, 0700)
-	Check("cannot create home temp dir", err)
-	err = os.Setenv("HOME", temp_home_dir)
-	Check("cannot set home dir", err)
-	return save
-}
-
 func ResetTempHomeDir() string {
 	err := os.RemoveAll(TempHomeDir)
 	Check("cannot remove temp home", err)
-	return SetHomeDir(TempHomeDir)
+	save := os.Getenv("HOME")
+	err = os.MkdirAll(TempHomeDir, 0700)
+	Check("cannot create home temp dir", err)
+	err = os.Setenv("HOME", TempHomeDir)
+	Check("cannot set home dir", err)
+	return save
 }
 
 func WriteSampleConfig() {

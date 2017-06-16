@@ -73,7 +73,7 @@ var _ = Describe("check", func() {
 				It("returns error", func() {
 					session := runCommand("check", "--master-host", "localhost", "--database_type", "foo", "--database_config_file", "bar")
 
-					Eventually(session).Should(Exit(1))
+					Eventually(session).Should(Exit(65))
 					Expect(string(session.Err.Contents())).To(ContainSubstring(`sql: unknown driver "foo" (forgotten import?)`))
 				})
 			})

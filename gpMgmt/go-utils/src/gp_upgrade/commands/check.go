@@ -1,13 +1,15 @@
 package commands
 
 import (
-	"database/sql"
-	"fmt"
 	"gp_upgrade/config"
 
 	_ "github.com/lib/pq"
 
 	"gp_upgrade/db"
+
+	"gp_upgrade/utils"
+	"io"
+	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
@@ -33,21 +35,20 @@ func (cmd CheckCommand) Execute([]string) error {
 	if cmd.Master_host == "" {
 		return errors.New("the required flag '--master-host' was not specified")
 	}
-	if cmd.Database_config == "" {
-		// todo fully use dbconn; below just using it for user info
-		dbconn := db.NewDBConn(cmd.Master_host, cmd.Master_port, cmd.Database_name, "", "")
-		cmd.Database_config = fmt.Sprintf("host=%s port=%d user=%s "+
-			"dbname=%s sslmode=disable",
-			cmd.Master_host, cmd.Master_port, dbconn.User, cmd.Database_name)
-	}
 
-	connection, err := sql.Open(cmd.Database_type, cmd.Database_config)
+	return cmd.execute(db.NewDBConn(cmd.Master_host, cmd.Master_port, cmd.Database_name, cmd.Database_type, cmd.Database_config), os.Stdout)
+}
+
+func (cmd CheckCommand) execute(dbConn *db.DBConn, outputWriter io.Writer) error {
+
+	err := dbConn.Connect()
 	if err != nil {
-		return err
+		return utils.DatabaseConnectionError{Parent: err}
 	}
-	defer connection.Close()
 
-	rows, err := connection.Query(`select * from gp_segment_configuration, pg_filespace_entry where fsedbid = dbid`)
+	defer dbConn.Close()
+
+	rows, err := dbConn.Conn.Query(`select * from gp_segment_configuration, pg_filespace_entry where fsedbid = dbid`)
 	if err != nil {
 		return err
 	}
