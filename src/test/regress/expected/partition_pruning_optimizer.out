@@ -2500,6 +2500,54 @@ select * from sales where region = 'usa' or region = 'asia';
         1 | 01-01-2011 |  10.10 | usa
 (1 row)
 
+-- Test DynamicIndexScan with dropped column
+create index idx_sales_date on sales(date);
+NOTICE:  building index for child partition "sales_1_prt_outlying_dates"
+NOTICE:  building index for child partition "sales_1_prt_outlying_dates_2_prt_usa"
+NOTICE:  building index for child partition "sales_1_prt_outlying_dates_2_prt_asia"
+NOTICE:  building index for child partition "sales_1_prt_outlying_dates_2_prt_europe"
+NOTICE:  building index for child partition "sales_1_prt_outlying_dates_2_prt_other_regions"
+NOTICE:  building index for child partition "sales_1_prt_2"
+NOTICE:  building index for child partition "sales_1_prt_2_2_prt_asia"
+NOTICE:  building index for child partition "sales_1_prt_2_2_prt_europe"
+NOTICE:  building index for child partition "sales_1_prt_2_2_prt_other_regions"
+NOTICE:  building index for child partition "sales_1_prt_2_2_prt_usa"
+NOTICE:  building index for child partition "sales_1_prt_3"
+NOTICE:  building index for child partition "sales_1_prt_3_2_prt_usa"
+NOTICE:  building index for child partition "sales_1_prt_3_2_prt_asia"
+NOTICE:  building index for child partition "sales_1_prt_3_2_prt_europe"
+NOTICE:  building index for child partition "sales_1_prt_3_2_prt_other_regions"
+NOTICE:  building index for child partition "sales_1_prt_4"
+NOTICE:  building index for child partition "sales_1_prt_4_2_prt_usa"
+NOTICE:  building index for child partition "sales_1_prt_4_2_prt_asia"
+NOTICE:  building index for child partition "sales_1_prt_4_2_prt_europe"
+NOTICE:  building index for child partition "sales_1_prt_4_2_prt_other_regions"
+NOTICE:  building index for child partition "sales_1_prt_5"
+NOTICE:  building index for child partition "sales_1_prt_5_2_prt_usa"
+NOTICE:  building index for child partition "sales_1_prt_5_2_prt_asia"
+NOTICE:  building index for child partition "sales_1_prt_5_2_prt_europe"
+NOTICE:  building index for child partition "sales_1_prt_5_2_prt_other_regions"
+explain select * from sales where date = '2011-01-01' and region = 'usa';
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..3.00 rows=1 width=24)
+   ->  Sequence  (cost=0.00..3.00 rows=1 width=24)
+         ->  Partition Selector for sales (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
+               Filter: date = '01-01-2011'::date AND region = 'usa'::text
+               Partitions selected: 1 (out of 20)
+         ->  Dynamic Index Scan on sales (dynamic scan id: 1)  (cost=0.00..3.00 rows=1 width=24)
+               Index Cond: date = '01-01-2011'::date
+               Filter: date = '01-01-2011'::date AND region = 'usa'::text
+ Settings:  enable_bitmapscan=on; enable_indexscan=on; enable_seqscan=off
+ Optimizer status: PQO version 2.32.0
+(10 rows)
+
+select * from sales where date = '2011-01-01' and region = 'usa';
+ trans_id |    date    | amount | region 
+----------+------------+--------+--------
+        1 | 01-01-2011 |  10.10 | usa
+(1 row)
+
 -- Updating partition key
 select * from sales_1_prt_2_2_prt_usa;
  trans_id |    date    | amount | region 

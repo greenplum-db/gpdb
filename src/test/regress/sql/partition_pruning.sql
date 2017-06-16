@@ -792,6 +792,11 @@ EXCHANGE PARTITION FOR ('usa') WITH TABLE sales_exchange_part ;
 select get_selected_parts('explain analyze select * from sales where region = ''usa'' or region = ''asia'';');
 select * from sales where region = 'usa' or region = 'asia';
 
+-- Test DynamicIndexScan with dropped column
+create index idx_sales_date on sales(date);
+explain select * from sales where date = '2011-01-01' and region = 'usa';
+select * from sales where date = '2011-01-01' and region = 'usa';
+
 -- Updating partition key
 
 select * from sales_1_prt_2_2_prt_usa;
