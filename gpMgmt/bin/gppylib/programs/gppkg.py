@@ -29,7 +29,7 @@ logger = gplog.get_default_logger()
 class GpPkgProgram:
     """ This is the CLI entry point to package management code.  """
     def __init__(self, options, args):
-        self.master_datadir = options.masterDataDirectory 
+        self.master_datadir = options.masterDataDirectory
 
         # TODO: AK: Program logic should not be dictating master, standby, and segment information
         # In other words, the fundamental Operations should have APIs that preclude the need for this.
@@ -55,7 +55,7 @@ class GpPkgProgram:
             # gppkg -q can be supplemented with --info, --list, --all
             count = sum([1 for opt in ['info', 'list', 'all'] if options.__dict__[opt]])
             if count > 1:
-                raise ExceptionNoStackTraceNeeded('For --query, at most one of the following can be provided: --info, --list, --all') 
+                raise ExceptionNoStackTraceNeeded('For --query, at most one of the following can be provided: --info, --list, --all')
             # for all query options other than --all, a package path must be provided
             if not options.all and len(args) != 1:
                 raise ExceptionNoStackTraceNeeded('A package must be specified for -q, -q --info, and -q --list.')
@@ -67,7 +67,7 @@ class GpPkgProgram:
             elif options.all:
                 self.query = (QueryPackage.ALL, None)
             else:
-                self.query = (None, args[0])   
+                self.query = (None, args[0])
         elif self.migrate:
             if len(args) != 2:
                 raise ExceptionNoStackTraceNeeded('Invalid syntax, expecting "gppkg --migrate <from_gphome> <to_gphome>".')
@@ -84,7 +84,7 @@ class GpPkgProgram:
 
         parser.remove_option('-q')
         parser.remove_option('-l')
-        
+
         add_to = OptionGroup(parser, 'General Options')
         parser.add_option_group(add_to)
 
@@ -107,30 +107,30 @@ class GpPkgProgram:
         add_to.add_option('--all', action='store_true', help='print all the gppkgs installed by gppkg')
 
         return parser
-            
+
     @staticmethod
     def create_program(options, args):
         """ TODO: AK: This convention may be unnecessary. """
-        return GpPkgProgram(options, args)    
+        return GpPkgProgram(options, args)
 
     def _get_gpdb_host_list(self):
         """
         TODO: AK: Get rid of this. Program logic should not be driving host list building .
-        
-            This method gets the host names 
+
+            This method gets the host names
             of all hosts in the gpdb array.
-            It sets the following variables 
+            It sets the following variables
                 GpPkgProgram.master_host to master
                 GpPkgProgram.standby_host to standby
                 GpPkgProgram.segment_host_list to segment hosts
         """
-        
+
         logger.debug('_get_gpdb_host_list')
-        
+
         #Get host list
         gparr = GpArray.initFromCatalog(dbconn.DbURL(port = self.master_port), utility = True)
         master_host = None
-        standby_host = None 
+        standby_host = None
         segment_host_list = []
 
         segs = gparr.getDbList()
@@ -143,11 +143,11 @@ class GpPkgProgram:
             else:
                 segment_host_list.append(seg.getSegmentHostName())
 
-        #Deduplicate the hosts so that we 
+        #Deduplicate the hosts so that we
         #dont install multiple times on the same host
         segment_host_list = list(set(segment_host_list))
 
-        #Segments might exist on the master host. Since we store the 
+        #Segments might exist on the master host. Since we store the
         #master host separately in self.master_host, storing the master_host
         #in the segment_host_list is redundant.
         for host in segment_host_list:
@@ -159,24 +159,24 @@ class GpPkgProgram:
         self.segment_host_list = segment_host_list
 
     def _get_master_port(self, datadir):
-       
+
         '''
             Obtain the master port from the pgconf file
         '''
-       
+
         logger.debug('_get_master_port')
         pgconf_dict = pgconf.readfile(os.path.join(datadir, 'postgresql.conf'))
         return pgconf_dict.int('port') or os.getenv('PGPORT')
 
     def run(self):
         if self.build:
-            BuildGppkg(self.build).run()    
-            return 
+            BuildGppkg(self.build).run()
+            return
 
         #Check for RPM and Solaris OS
         if curr_platform == SUNOS:
             raise ExceptionNoStackTraceNeeded('gppkg is not supported on Solaris')
-                  
+
         try:
             cmd = Command(name = 'Check for rpm', cmdStr = 'rpm --version')
             cmd.run(validateAfter = True)
@@ -186,17 +186,17 @@ class GpPkgProgram:
             if not rpm_version_string.startswith('4.'):
                 raise ExceptionNoStackTraceNeeded('gppkg requires rpm version 4.x')
 
-        except ExecutionError, ex: 
+        except ExecutionError, ex:
             results = ex.cmd.get_results().stderr.strip()
             if len(results) != 0 and 'not found' in results:
-                raise ExceptionNoStackTraceNeeded('gppkg requires RPM to be available in PATH') 
+                raise ExceptionNoStackTraceNeeded('gppkg requires RPM to be available in PATH')
 
         if self.migrate:
             MigratePackages(from_gphome = self.migrate[0],
                             to_gphome = self.migrate[1]).run()
             return
 
-        # MASTER_DATA_DIRECTORY and PGPORT must not need to be set for 
+        # MASTER_DATA_DIRECTORY and PGPORT must not need to be set for
         # --build and --migrate to function properly
         if self.master_datadir is None:
             self.master_datadir = gp.get_masterdatadir()
@@ -207,7 +207,7 @@ class GpPkgProgram:
 
         if self.install:
             pkg = Gppkg.from_package_path(self.install)
-            InstallPackage(pkg, self.master_host, self.standby_host, self.segment_host_list).run() 
+            InstallPackage(pkg, self.master_host, self.standby_host, self.segment_host_list).run()
         elif self.query:
             query_type, package_path = self.query
             QueryPackage(query_type, package_path).run()
