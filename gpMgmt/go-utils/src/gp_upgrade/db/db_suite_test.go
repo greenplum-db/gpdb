@@ -9,5 +9,5 @@ import (
 
 func TestCommands(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "database suite")
+	RunSpecs(t, "Database Suite")
 }

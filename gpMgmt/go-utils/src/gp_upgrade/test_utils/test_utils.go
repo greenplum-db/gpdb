@@ -73,7 +73,7 @@ func createMockDB() (*sqlx.DB, sqlmock.Sqlmock) {
 
 func CreateMockDBConn(masterHost string, masterPort int) (*db.DBConn, sqlmock.Sqlmock) {
 	mockdb, mock := createMockDB()
-	dbConn := db.NewDBConn(masterHost, masterPort, "testdb")
+	dbConn := db.NewDBConn(masterHost, masterPort, "testdb", "", "")
 	dbConn.Driver = testutils.TestDriver{DBExists: true, DB: mockdb, DBName: "testdb"}
 	if dbConn.Conn != nil && dbConn.Conn.Stats().OpenConnections > 0 {
 		Fail("connection before connect is called")

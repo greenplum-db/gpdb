@@ -28,20 +28,20 @@ func (driver GPDBDriver) Connect(driverName string, dataSourceName string) (*sql
 }
 
 type DBConn struct {
-	Conn   *sqlx.DB
-	Driver DBDriver
-	User   string
-	DBName string
-	Host   string
-	Port   int
-	Tx     *sqlx.Tx
+	Conn       *sqlx.DB
+	DriverName string // defaults to "postgres"
+	Driver     DBDriver
+	User       string
+	DBName     string
+	Host       string
+	Port       int
+	Tx         *sqlx.Tx
+	DataSource string // optional fully-described source string, particularly good for integration testing
 }
 
-func NewDBConn(masterHost string, masterPort int, dbname string) *DBConn {
-	username := ""
-
+func NewDBConn(masterHost string, masterPort int, dbname string, driverName string, configPath string) *DBConn {
 	currentUser, _, currentHost := utils.GetUserAndHostInfo()
-	username = utils.TryEnv("PGUSER", currentUser)
+	username := utils.TryEnv("PGUSER", currentUser)
 	if dbname == "" {
 		dbname = utils.TryEnv("PGDATABASE", "")
 	}
@@ -52,14 +52,20 @@ func NewDBConn(masterHost string, masterPort int, dbname string) *DBConn {
 		masterPort, _ = strconv.Atoi(utils.TryEnv("PGPORT", "15432"))
 	}
 
+	if driverName == "" {
+		driverName = "postgres"
+	}
+
 	return &DBConn{
-		Conn:   nil,
-		Driver: GPDBDriver{},
-		User:   username,
-		DBName: dbname,
-		Host:   masterHost,
-		Port:   masterPort,
-		Tx:     nil,
+		Conn:       nil,
+		DriverName: driverName,
+		Driver:     GPDBDriver{},
+		User:       username,
+		DBName:     dbname,
+		Host:       masterHost,
+		Port:       masterPort,
+		Tx:         nil,
+		DataSource: configPath,
 	}
 }
 
@@ -78,9 +84,15 @@ func (dbconn *DBConn) Close() {
 
 func (dbconn *DBConn) Connect() error {
 	dbname := escapeDBName(dbconn.DBName)
-	connStr := fmt.Sprintf(`user=%s dbname='%s' host=%s port=%d sslmode=disable`, dbconn.User, dbname, dbconn.Host, dbconn.Port)
+
+	connStr := dbconn.DataSource
+	if dbconn.DataSource == "" {
+		connStr = fmt.Sprintf(`user=%s dbname='%s' host=%s port=%d sslmode=disable`,
+			dbconn.User, dbname, dbconn.Host, dbconn.Port)
+	}
+
 	var err error
-	dbconn.Conn, err = dbconn.Driver.Connect("postgres", connStr)
+	dbconn.Conn, err = dbconn.Driver.Connect(dbconn.DriverName, connStr)
 	return err
 }
 

@@ -17,7 +17,7 @@ var _ = Describe("db tests", func() {
 	Describe("NewDBConn", func() {
 		Context("Database connection receives its constructor parameters", func() {
 			It("gets the DBName from dbname argument, port from masterPort, and host from masterHost", func() {
-				connection = db.NewDBConn("localhost", 5432, "testdb")
+				connection = db.NewDBConn("localhost", 5432, "testdb", "", "")
 				Expect(connection.DBName).To(Equal("testdb"))
 				Expect(connection.Host).To(Equal("localhost"))
 				Expect(connection.Port).To(Equal(5432))
@@ -29,7 +29,7 @@ var _ = Describe("db tests", func() {
 				os.Setenv("PGDATABASE", "testdb")
 				defer os.Setenv("PGDATABASE", oldPgDatabase)
 
-				connection = db.NewDBConn("localhost", 5432, "testdb")
+				connection = db.NewDBConn("localhost", 5432, "testdb", "", "")
 				Expect(connection.DBName).To(Equal("testdb"))
 			})
 		})
@@ -39,7 +39,7 @@ var _ = Describe("db tests", func() {
 				os.Setenv("PGDATABASE", "")
 				defer os.Setenv("PGDATABASE", oldPgDatabase)
 
-				connection = db.NewDBConn("localhost", 5432, "")
+				connection = db.NewDBConn("localhost", 5432, "", "", "")
 				err := connection.Connect()
 				Expect(err).To(HaveOccurred())
 			})
@@ -50,7 +50,7 @@ var _ = Describe("db tests", func() {
 			It("connects successfully", func() {
 				var mockDBConn *db.DBConn
 				mockDBConn, _ = test_utils.CreateMockDBConn("localhost", 5432)
-				connection = db.NewDBConn("localhost", 5432, "testdb")
+				connection = db.NewDBConn("localhost", 5432, "testdb", "", "")
 				connection.Driver = testutils.TestDriver{DBExists: true, DB: mockDBConn.Conn}
 				err := connection.Connect()
 				defer connection.Close()
@@ -61,7 +61,7 @@ var _ = Describe("db tests", func() {
 			It("fails", func() {
 				var mockDBConn *db.DBConn
 				mockDBConn, _ = test_utils.CreateMockDBConn("localhost", 5432)
-				connection = db.NewDBConn("localhost", 5432, "testdb")
+				connection = db.NewDBConn("localhost", 5432, "testdb", "", "")
 				connection.Driver = testutils.TestDriver{DBExists: false, DB: mockDBConn.Conn}
 				err := connection.Connect()
 				Expect(err).To(HaveOccurred())
