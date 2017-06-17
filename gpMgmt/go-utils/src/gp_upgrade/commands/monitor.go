@@ -9,6 +9,8 @@ import (
 	"gp_upgrade/config"
 	"gp_upgrade/shell_parsers"
 	"gp_upgrade/ssh_client"
+
+	"github.com/greenplum-db/gpbackup/utils"
 )
 
 type MonitorCommand struct {
@@ -38,7 +40,13 @@ func (cmd MonitorCommand) Execute([]string) error {
 	}
 
 	connector := ssh_client.NewSshConnector()
-	session, err := connector.Connect(cmd.Host, cmd.Port, cmd.User, cmd.PrivateKey)
+
+	user := cmd.User
+	if user == "" {
+		user, _, _ = utils.GetUserAndHostInfo() // todo test me: comment out this line and make binary work... need a red UNIT test to mimic what happens in app.  (integration test would be too hard)
+	}
+
+	session, err := connector.Connect(cmd.Host, cmd.Port, user, cmd.PrivateKey)
 	if err != nil {
 		return err
 	}
