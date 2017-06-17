@@ -2,8 +2,9 @@ package db_test
 
 import (
 	"gp_upgrade/db"
-	"gpbackup/testutils"
 	"os"
+
+	"github.com/greenplum-db/gpbackup/testutils"
 
 	"gp_upgrade/test_utils"
 

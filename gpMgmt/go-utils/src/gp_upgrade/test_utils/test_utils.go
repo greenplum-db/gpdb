@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"gp_upgrade/config"
 	"gp_upgrade/db"
-	"gpbackup/testutils"
 	"io/ioutil"
 	"os"
+
+	"github.com/greenplum-db/gpbackup/testutils"
 
 	"path"
 

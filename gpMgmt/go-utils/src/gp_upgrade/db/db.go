@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"gpbackup/utils"
+	"github.com/greenplum-db/gpbackup/utils"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
