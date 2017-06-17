@@ -1,6 +1,9 @@
 package config
 
-import "os"
+import (
+	"os"
+	"path"
+)
 
 //"address": "briarwood",
 //"content": 2,
@@ -28,9 +31,9 @@ type ConfigRow struct {
 }
 
 func GetConfigDir() string {
-	return os.Getenv("HOME") + "/.gp_upgrade"
+	return path.Join(os.Getenv("HOME"), ".gp_upgrade")
 }
 
 func GetConfigFilePath() string {
-	return GetConfigDir() + "/cluster_config.json"
+	return path.Join(GetConfigDir(), "cluster_config.json")
 }

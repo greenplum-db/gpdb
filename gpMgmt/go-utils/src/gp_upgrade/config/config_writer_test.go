@@ -16,10 +16,12 @@ import (
 var _ = Describe("configWriter", func() {
 	var (
 		saved_old_home string
+		subject        *config.Writer
 	)
 
 	BeforeEach(func() {
 		saved_old_home = test_utils.ResetTempHomeDir()
+		subject = config.NewWriter()
 	})
 
 	AfterEach(func() {
@@ -28,12 +30,12 @@ var _ = Describe("configWriter", func() {
 
 	Describe("#NewWriter", func() {
 		It("initializes a configuration", func() {
-			fakeRows := test_utils.FakeRows{
+			fakeRows := &test_utils.FakeRows{
 				FakeColumns: []string{"colname1"},
 				NumRows:     1,
 				SampleRow:   []string{"value1"},
 			}
-			subject, err := config.NewWriter(&fakeRows)
+			err := subject.Load(fakeRows)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(subject.TableJsonData)).To(Equal(1))
@@ -41,20 +43,20 @@ var _ = Describe("configWriter", func() {
 		})
 		Describe("error cases", func() {
 			It("is returns an error if rows are empty", func() {
-				rows := sql.Rows{}
-
-				_, err := config.NewWriter(&rows)
+				rows := &sql.Rows{}
+				err := subject.Load(rows)
 
 				Expect(err).To(HaveOccurred())
 			})
 
 			It("returns an error if the given rows do not parse via Columns()", func() {
-				fakeRows := test_utils.FakeRows{
+				fakeRows := &test_utils.FakeRows{
 					FakeColumns: []string{"colname1", "colname2"},
 					NumRows:     1,
 					SampleRow:   []string{"value1"},
 				}
-				_, err := config.NewWriter(&fakeRows)
+				subject := config.NewWriter()
+				err := subject.Load(fakeRows)
 				Expect(err).To(HaveOccurred())
 			})
 		})

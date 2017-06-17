@@ -11,7 +11,6 @@ import (
 	"io"
 	"os"
 
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
 )
 
@@ -36,10 +35,11 @@ func (cmd CheckCommand) Execute([]string) error {
 		return errors.New("the required flag '--master-host' was not specified")
 	}
 
-	return cmd.execute(db.NewDBConn(cmd.Master_host, cmd.Master_port, cmd.Database_name, cmd.Database_type, cmd.Database_config), os.Stdout)
+	dbConn := db.NewDBConn(cmd.Master_host, cmd.Master_port, cmd.Database_name, cmd.Database_type, cmd.Database_config)
+	return cmd.execute(dbConn, os.Stdout, config.NewWriter())
 }
 
-func (cmd CheckCommand) execute(dbConn *db.DBConn, outputWriter io.Writer) error {
+func (cmd CheckCommand) execute(dbConn *db.DBConn, outputWriter io.Writer, writer config.Store) error {
 
 	err := dbConn.Connect()
 	if err != nil {
@@ -48,17 +48,21 @@ func (cmd CheckCommand) execute(dbConn *db.DBConn, outputWriter io.Writer) error
 
 	defer dbConn.Close()
 
-	rows, err := dbConn.Conn.Query(`select * from gp_segment_configuration, pg_filespace_entry where fsedbid = dbid`)
+	rows, err := dbConn.Conn.Query(`select dbid, content, role, preferred_role,
+	mode, status, port, hostname, address, replication_port, san_mounts, fsefsoid, fsedbid, fselocation
+	from gp_segment_configuration, pg_filespace_entry
+	where fsedbid = dbid`)
+
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 
-	configWriter, err := config.NewWriter(rows)
+	err = writer.Load(rows)
 	if err != nil {
 		return err
 	}
 
-	err = configWriter.Write()
+	err = writer.Write()
 	return err
 }

@@ -7,20 +7,28 @@ import (
 	"gp_upgrade/utils"
 )
 
+type Store interface {
+	Load(rows utils.RowsWrapper) error
+	Write() error
+}
+
 type Writer struct {
 	TableJsonData []map[string]interface{}
 	Formatter     Formatter
 	FileWriter    FileWriter
 }
 
-func NewWriter(rows utils.RowsWrapper) (*Writer, error) {
-	tableData, err := translateColumnsIntoGenericStructure(rows)
-
-	if err != nil {
-		return nil, err
+func NewWriter() *Writer {
+	return &Writer{
+		Formatter:  NewJsonFormatter(),
+		FileWriter: NewRealFileWriter(),
 	}
+}
 
-	return &Writer{TableJsonData: tableData, Formatter: NewJsonFormatter(), FileWriter: NewRealFileWriter()}, nil
+func (configWriter *Writer) Load(rows utils.RowsWrapper) error {
+	var err error
+	configWriter.TableJsonData, err = translateColumnsIntoGenericStructure(rows)
+	return err
 }
 
 func (configWriter Writer) Write() error {

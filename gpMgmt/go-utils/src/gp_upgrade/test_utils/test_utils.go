@@ -8,6 +8,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"path"
+
 	"github.com/jmoiron/sqlx"
 	. "github.com/onsi/ginkgo"
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
@@ -41,6 +43,11 @@ func Check(msg string, e error) {
 }
 
 func ResetTempHomeDir() string {
+	config_dir := path.Join(TempHomeDir, ".gp_upgrade")
+	if _, err := os.Stat(config_dir); !os.IsNotExist(err) {
+		err = os.Chmod(config_dir, 0700)
+		Check("cannot change mod", err)
+	}
 	err := os.RemoveAll(TempHomeDir)
 	Check("cannot remove temp home", err)
 	save := os.Getenv("HOME")
