@@ -523,13 +523,12 @@ Datum
 preassign_extension_oid(PG_FUNCTION_ARGS)
 {
 	Oid			extensionoid = PG_GETARG_OID(0);
-	Oid			nsoid = PG_GETARG_OID(1);
-	char	   *extensionname = GET_STR(PG_GETARG_TEXT_P(2));
+	char	   *extensionname = GET_STR(PG_GETARG_TEXT_P(1));
 
 	if (Gp_role == GP_ROLE_UTILITY)
 	{
 		AddPreassignedOidFromBinaryUpgrade(extensionoid, ExtensionRelationId,
-										   extensionname, nsoid, InvalidOid,
+										   extensionname, InvalidOid, InvalidOid,
 										   InvalidOid);
 	}
 
