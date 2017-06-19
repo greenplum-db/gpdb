@@ -20,8 +20,6 @@ resources:
     source:
       repository: pivotaldata/centos-gpdb-dev
       tag: '6-gcc6.2-llvm3.7'
-      username: {{docker_username}}
-      password: {{docker_password}}
 
   - name: gpaddon_src
     type: git
