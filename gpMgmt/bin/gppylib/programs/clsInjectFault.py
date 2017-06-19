@@ -348,6 +348,7 @@ class GpInjectFaultProgram:
 			      "checkpoint (inject fault before checkpoint is taken), " \
 			      "change_tracking_compacting_report (report if compacting is in progress), " \
 			      "change_tracking_disable (inject fault before fsync to Change Tracking log files), " \
+			      "transaction_start_under_entry_db_singleton (inject fault during transaction start with DistributedTransactionContext in ENTRY_DB_SINGLETON mode), " \
 			      "transaction_abort_after_distributed_prepared (abort prepared transaction), " \
 			      "transaction_commit_pass1_from_create_pending_to_created, " \
 			      "transaction_commit_pass1_from_drop_in_memory_to_drop_pending, " \

@@ -85,6 +85,8 @@ typedef enum FaultInjectorIdentifier_e {
 	
 	ChangeTrackingDisable,
 	
+	TransactionStartUnderEntryDbSingleton,
+
 	TransactionAbortAfterDistributedPrepared,
 	
 	TransactionCommitPass1FromCreatePendingToCreated,

@@ -1,3 +1,5 @@
+test: deadlock_under_entry_db_singleton
+test: starve_case
 test: commit_transaction_block_checkpoint
 test: pg_views_concurrent_drop
 test: resource_queue

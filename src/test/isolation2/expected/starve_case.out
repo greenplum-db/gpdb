@@ -1,0 +1,159 @@
+--
+-- Test to ensure that reader processes do not cause starvation of
+-- processes already waiting on a lock.  Readers must wait on a lock
+-- if their writer does not already hold the lock and the requested
+-- lockmode conflicts with existing waiter's lockmode (waitMask
+-- conflict).
+--
+
+create table starve (c int);
+CREATE
+create table starve_helper (name varchar, sessionid int);
+CREATE
+
+-- Function to access a table so that AccessShare lock is requested on
+-- the table.  Declare this function volatile so that
+-- ENTRY_DB_SINGLETON process executes the function and the lock is
+-- requested during execution of the fuction.  Without volatile, the
+-- lock is requested during plan generation of the calling SQL
+-- statement and we don't get ENTRY_DB_SINGLETON process.
+CREATE OR REPLACE FUNCTION function_starve_volatile(x int) /*in func*/ RETURNS int AS $$ /*in func*/ declare /*in func*/ v int; /*in func*/ BEGIN /*in func*/ SELECT count(c) into v FROM starve; /*in func*/ RETURN $1 + 1; /*in func*/ END $$ /*in func*/ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
+CREATE
+
+-- Function to wait until a specific session is reported as waiting on
+-- a lock.  The session's mppsessionid is obtained from starve_helper
+-- table.  Timeout if no locks are awaited within 2 seconds.
+CREATE OR REPLACE FUNCTION wait_until_locks_awaited(sess_name varchar) /*in func*/ RETURNS bool AS $$ /*in func*/ declare /*in func*/ num_awaited int := 0; /*in func*/ iterations int := 0; /*in func*/ begin /*in func*/ while num_awaited = 0 and iterations < 20 loop /*in func*/ with locks_awaited as /*in func*/ (select * from pg_locks where granted = false and gp_segment_id = -1) /*in func*/ select count(*) into num_awaited from starve_helper s where /*in func*/ s.name = sess_name and s.sessionid in /*in func*/ (select mppsessionid from locks_awaited); /*in func*/ perform pg_sleep(.1); /*in func*/ iterations := iterations + 1; /*in func*/ end loop; /*in func*/ return num_awaited > 0; /*in func*/ end $$ /*in func*/ LANGUAGE plpgsql STABLE;
+CREATE
+
+-- Hold access shared lock, so that session2 must wait.
+1: begin;
+BEGIN
+1: select * from starve;
+c
+-
+(0 rows)
+
+2: insert into starve_helper select 'session2', setting::int from pg_settings where name = 'gp_session_id';
+INSERT 1
+-- Wait on access exclusive lock.
+2: begin;
+BEGIN
+2>: alter table starve rename column c to d;  <waiting ...>
+
+select wait_until_locks_awaited('session2');
+wait_until_locks_awaited
+------------------------
+t                       
+(1 row)
+
+3: insert into starve_helper select 'session3', setting::int from pg_settings where name = 'gp_session_id';
+INSERT 1
+-- ENTRY_DB_SINGLETON reader requests access share lock on table
+-- starve.  The lockmode conflicts with already existing waiter's
+-- lockmode (access exclusive).  And the writer is not holding any
+-- lock on starve table.  So the reader must wait.
+3: begin;
+BEGIN
+3>: select * from starve_helper, function_starve_volatile(5);  <waiting ...>
+
+select wait_until_locks_awaited('session3');
+wait_until_locks_awaited
+------------------------
+t                       
+(1 row)
+
+-- Check the lock table, expect both session2 and session3 to wait.
+-- expect: 2 rows with AccessExclusiveLock and AccessSharedLock
+select mode from pg_locks where granted=false and relation='starve'::regclass and gp_segment_id=-1;
+mode               
+-------------------
+AccessShareLock    
+AccessExclusiveLock
+(2 rows)
+
+-- Let everyone move forward.
+1: commit;
+COMMIT
+
+-- session2 is granted the lock on starve table first.
+2<:  <... completed>
+ALTER
+2: select mode from pg_locks where granted=false and relation='starve'::regclass and gp_segment_id=-1;
+mode           
+---------------
+AccessShareLock
+(1 row)
+2: commit;
+COMMIT
+
+-- session3 is granted the lock after session2 commits.  We should
+-- see error column 'c' doesn't exist because session2 renamed it.
+3<:  <... completed>
+ERROR:  column "c" does not exist  (entry db 127.0.0.1:15432 pid=16367)
+DETAIL:  PL/pgSQL function "function_starve_volatile" line 5 at SQL statement
+3: commit;
+COMMIT
+
+
+--
+-- Test to ensure that writers do not starve processes already waiting
+-- on a lock in case of waitMask conflict.
+--
+truncate table starve_helper;
+TRUNCATE
+
+-- Hold access shared lock, so that session2 must wait.
+1: begin;
+BEGIN
+1: select * from starve;
+d
+-
+(0 rows)
+
+2: insert into starve_helper select 'session2', setting::int from pg_settings where name = 'gp_session_id';
+INSERT 1
+-- Wait on access exclusive lock.
+2: begin;
+BEGIN
+2>: alter table starve add column e int default 0;  <waiting ...>
+
+select wait_until_locks_awaited('session2');
+wait_until_locks_awaited
+------------------------
+t                       
+(1 row)
+
+3: insert into starve_helper select 'session3', setting::int from pg_settings where name = 'gp_session_id';
+INSERT 1
+3: begin;
+BEGIN
+-- Wait on RowExclusiveLock on table starve because session2 is
+-- waiting on the same lock with a conflicting lockmode.
+3>: insert into starve values (1), (2);  <waiting ...>
+
+select wait_until_locks_awaited('session3');
+wait_until_locks_awaited
+------------------------
+t                       
+(1 row)
+
+1: commit;
+COMMIT
+-- Session2 must go first.
+2<:  <... completed>
+ALTER
+-- Ensure that session3 is still waiting.
+2: select mode from pg_locks where granted=false and relation='starve'::regclass and gp_segment_id=-1;
+mode            
+----------------
+RowExclusiveLock
+(1 row)
+2: commit;
+COMMIT
+
+-- Session3 gets the lock only after session2 commits.
+3<:  <... completed>
+INSERT 2
+3: commit;
+COMMIT
