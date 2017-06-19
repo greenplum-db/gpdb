@@ -757,7 +757,15 @@ AcquireExecutorLocks(List *stmt_list, bool acquire)
 			 * acquire a non-conflicting lock.
 			 */
 			if (list_member_int(plannedstmt->resultRelations, rt_index))
-				lockmode = RowExclusiveLock;
+			{
+				/*
+				 * RowExclusiveLock is acquired in PostgreSQL here.  Greenplum
+				 * acquires ExclusiveLock to avoid distributed deadlock due to
+				 * concurrent UPDATE/DELETE on the same table.  This is in
+				 * parity with CdbTryOpenRelation().
+				 */
+				lockmode = ExclusiveLock;
+			}
 			else if (rowmark_member(plannedstmt->rowMarks, rt_index))
 				lockmode = RowShareLock;
 			else
