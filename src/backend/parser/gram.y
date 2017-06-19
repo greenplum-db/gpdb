@@ -301,7 +301,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 				TableFuncElementList opt_type_modifiers
 				prep_type_clause
 				execute_param_clause using_clause returning_clause
-				enum_val_list
+				opt_enum_val_list enum_val_list
 				table_func_column_list scatter_clause dostmt_opt_list
 				columnListUnique
 
@@ -5834,7 +5834,7 @@ DefineStmt:
 					n->ordered = false;
 					$$ = (Node *)n;
 				}
-			| CREATE TYPE_P any_name AS ENUM_P '(' enum_val_list ')'
+			| CREATE TYPE_P any_name AS ENUM_P '(' opt_enum_val_list ')'
 				{
 					CreateEnumStmt *n = makeNode(CreateEnumStmt);
 					n->typeName = $3;
@@ -5937,6 +5937,11 @@ old_aggr_elem:  IDENT '=' def_arg
 				{
 					$$ = makeDefElem($1, (Node *)$3);
 				}
+		;
+
+opt_enum_val_list:
+		enum_val_list							{ $$ = $1; }
+		| /*EMPTY*/								{ $$ = NIL; }
 		;
 
 enum_val_list:	Sconst
