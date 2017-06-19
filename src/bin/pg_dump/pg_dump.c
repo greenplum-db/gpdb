@@ -5795,12 +5795,6 @@ dumpEnumType(Archive *fout, TypeInfo *tinfo)
 	check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
 
 	num = PQntuples(res);
-	/* should be at least 1 value */
-	if (num == 0)
-	{
-		write_msg(NULL, "no label definitions found for enum ID %u\n", tinfo->dobj.catId.oid);
-		exit_nicely();
-	}
 
 	/*
 	 * DROP must be fully qualified in case same name appears in pg_catalog.
