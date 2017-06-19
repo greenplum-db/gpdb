@@ -167,7 +167,7 @@ class GpTransfer(GpTestCase):
         dest_table = gptransfer.GpTransferTable(*dest_args)
         cmd_args['table_pair'] = gptransfer.GpTransferTablePair(source_table, dest_table)
         side_effect = CursorSideEffect()
-        side_effect.append_regexp_key(cursor_keys['attname'], ['foo'])
+        side_effect.append_regexp_key(cursor_keys['attname'], [['foo']])
         self.cursor.side_effect = side_effect.cursor_side_effect
         self.subject.escapeDoubleQuoteInSQLString.return_value='"escaped_string"'
         table_validator = gptransfer.GpTransferCommand(**cmd_args)
@@ -186,7 +186,7 @@ class GpTransfer(GpTestCase):
         dest_table = gptransfer.GpTransferTable(*dest_args)
         cmd_args['table_pair'] = gptransfer.GpTransferTablePair(source_table, dest_table)
         side_effect = CursorSideEffect()
-        side_effect.append_regexp_key(cursor_keys['attname'], ['foo', 'bar'])
+        side_effect.append_regexp_key(cursor_keys['attname'], [['foo'], ['bar']])
         self.cursor.side_effect = side_effect.cursor_side_effect
         self.subject.escapeDoubleQuoteInSQLString.side_effect = ['"first_escaped_value"', '"second_escaped_value"']
         table_validator = gptransfer.GpTransferCommand(**cmd_args)

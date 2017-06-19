@@ -1699,7 +1699,7 @@ FROM (
 
             # NOTE: ideally, we can use pg.escape_identifier for this part, but
             # that is introduced in pygresql 4.1 and we are in 4.0
-            escaped_attnames = [escapeDoubleQuoteInSQLString(attname) for attname in attnames]
+            escaped_attnames = [escapeDoubleQuoteInSQLString(attname[0]) for attname in attnames]
             distributed_by = ", ".join(escaped_attnames)
             return '''DISTRIBUTED BY (%s)''' % distributed_by
         except Exception as e:
