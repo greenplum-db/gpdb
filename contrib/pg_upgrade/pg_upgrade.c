@@ -101,7 +101,7 @@ main(int argc, char **argv)
 	 * because there is no need to have the schema load use new oids.
 	 */
 	prep_status(&ctx, "Setting next oid for new cluster");
-	exec_prog(&ctx, true, SYSTEMQUOTE "\"%s/pg_resetxlog\" -o %u \"%s\" > "
+	exec_prog(&ctx, true, SYSTEMQUOTE "\"%s/pg_resetxlog\" -y -o %u \"%s\" > "
 			  DEVNULL SYSTEMQUOTE,
 		  ctx.new.bindir, ctx.old.controldata.chkpnt_nxtoid, ctx.new.pgdata);
 	check_ok(&ctx);
@@ -538,13 +538,13 @@ copy_clog_xlog_xid(migratorContext *ctx)
 
 	/* set the next transaction id of the new cluster */
 	prep_status(ctx, "Setting next transaction id for new cluster");
-	exec_prog(ctx, true, SYSTEMQUOTE "\"%s/pg_resetxlog\" -f -x %u \"%s\" > " DEVNULL SYSTEMQUOTE,
+	exec_prog(ctx, true, SYSTEMQUOTE "\"%s/pg_resetxlog\" -y -f -x %u \"%s\" > " DEVNULL SYSTEMQUOTE,
 	   ctx->new.bindir, ctx->old.controldata.chkpnt_nxtxid, ctx->new.pgdata);
 	check_ok(ctx);
 
 	/* now reset the wal archives in the new cluster */
 	prep_status(ctx, "Resetting WAL archives");
-	exec_prog(ctx, true, SYSTEMQUOTE "\"%s/pg_resetxlog\" -l 1,%u,%u \"%s\" >> \"%s\" 2>&1" SYSTEMQUOTE,
+	exec_prog(ctx, true, SYSTEMQUOTE "\"%s/pg_resetxlog\" -y -l 1,%u,%u \"%s\" >> \"%s\" 2>&1" SYSTEMQUOTE,
 			  ctx->new.bindir,
 			  ctx->old.controldata.logid, ctx->old.controldata.nxtlogseg,
 			  ctx->new.pgdata,

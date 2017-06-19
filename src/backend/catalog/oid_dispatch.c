@@ -221,7 +221,11 @@ CreateKeyFromCatalogTuple(Relation catalogrel, HeapTuple tuple,
 			{
 				Form_pg_extension extForm = (Form_pg_extension) GETSTRUCT(tuple);
 
-				key.namespaceOid = extForm->extnamespace;
+				/*
+				 * Note that unlike most catalogs with a "namespace" column,
+				 * extnamespace is not meant to imply that the extension
+				 * belongs to that schema.
+				 */
 				key.objname = NameStr(extForm->extname);
 				break;
 			}
@@ -554,8 +558,9 @@ GetPreassignedOidForTuple(Relation catalogrel, HeapTuple tuple)
 			 RelationGetRelationName(catalogrel));
 
 	if ((oid = GetPreassignedOid(&searchkey)) == InvalidOid)
-		elog(ERROR, "no pre-assigned OID for %s tuple \"%s\"",
-			 RelationGetRelationName(catalogrel), searchkey.objname ? searchkey.objname : "");
+		elog(ERROR, "no pre-assigned OID for %s tuple \"%s\" (namespace:%u keyOid1:%u keyOid2:%u)",
+			 RelationGetRelationName(catalogrel), searchkey.objname ? searchkey.objname : "",
+			 searchkey.namespaceOid, searchkey.keyOid1, searchkey.keyOid2);
 	return oid;
 }
 

@@ -3339,7 +3339,7 @@ getTables(int *numTables)
 					  RELKIND_SEQUENCE,
 					  RELKIND_RELATION, RELKIND_SEQUENCE,
 					  RELKIND_VIEW, RELKIND_COMPOSITE_TYPE,
-					  g_fout->remoteVersion >= 80209 ?
+					  g_fout->remoteVersion >= 80209 && !binary_upgrade ?
 					  "AND c.oid NOT IN (select p.parchildrelid from pg_partition_rule p left "
 					  "join pg_exttable e on p.parchildrelid=e.reloid where e.reloid is null)" : "");
 
@@ -3413,7 +3413,7 @@ getTables(int *numTables)
 		tblinfo[i].reltablespace = strdup(PQgetvalue(res, i, i_reltablespace));
 		tblinfo[i].reloptions = strdup(PQgetvalue(res, i, i_reloptions));
 		tblinfo[i].parrelid = atooid(PQgetvalue(res, i, i_parrelid));
-		if (tblinfo[i].parrelid != 0)
+		if (tblinfo[i].parrelid != 0 && !binary_upgrade)
 		{
 			/*
 			 * Length of tmpStr is bigger than the sum of NAMEDATALEN 
@@ -3430,10 +3430,20 @@ getTables(int *numTables)
 		 * Decide whether we want to dump this table.
 		 */
 		if (tblinfo[i].relkind == RELKIND_COMPOSITE_TYPE)
+		{
 			tblinfo[i].dobj.dump = false;
+			tblinfo[i].interesting = false;
+		}
+		else if (tblinfo[i].relkind == RELKIND_RELATION && tblinfo[i].parrelid != 0 && binary_upgrade)
+		{
+			tblinfo[i].dobj.dump = false;
+			tblinfo[i].interesting = true;
+		}
 		else
+		{
 			selectDumpableTable(&tblinfo[i]);
-		tblinfo[i].interesting = tblinfo[i].dobj.dump;
+			tblinfo[i].interesting = tblinfo[i].dobj.dump;
+		}
 
 		/*
 		 * Read-lock target tables to make sure they aren't DROPPED or altered
@@ -4762,8 +4772,8 @@ getTableAttrs(TableInfo *tblinfo, int numTables)
 bool
 shouldPrintColumn(TableInfo *tbinfo, int colno)
 {
-	return ((tbinfo->attislocal[colno] || tbinfo->relstorage == RELSTORAGE_EXTERNAL) &&
-			(!tbinfo->attisdropped[colno] || binary_upgrade));
+	return (((tbinfo->attislocal[colno] || tbinfo->relstorage == RELSTORAGE_EXTERNAL) &&
+			!tbinfo->attisdropped[colno]) || binary_upgrade);
 }
 
 
@@ -5424,7 +5434,7 @@ dumpBinaryUpgrade(Archive *fout, DumpableObject **dobjs, int numObjs)
 				dumpShellTypeOid(g_conn, g_fout, fout, (ShellTypeInfo *) dobj);
 				break;
 			case DO_FUNC:
-				dumpProcedureOid(fout, (FuncInfo *) dobj);
+				dumpProcedureOid(g_conn, g_fout, fout, (FuncInfo *) dobj);
 				break;
 			case DO_EXTPROTOCOL:
 				dumpExternalProtocolOid(fout, (ExtProtInfo *) dobj);
@@ -5433,7 +5443,7 @@ dumpBinaryUpgrade(Archive *fout, DumpableObject **dobjs, int numObjs)
 				dumpOperatorOid(fout, (OprInfo *) dobj);
 				break;
 			case DO_OPCLASS:
-				dumpOpClassOid(g_conn, fout, (OpclassInfo *) dobj);
+				dumpOpClassOid(g_conn, g_fout, fout, (OpclassInfo *) dobj);
 				break;
 			case DO_OPFAMILY:
 				dumpOpFamilyOid(g_conn, fout, (OpfamilyInfo *) dobj);
@@ -5448,14 +5458,17 @@ dumpBinaryUpgrade(Archive *fout, DumpableObject **dobjs, int numObjs)
 				dumpAttrDefsOid(fout, (AttrDefInfo *) dobj);
 				break;
 			case DO_INDEX:
-				dumpIndexOid(g_conn, fout, (IndxInfo *) dobj);
+				dumpIndexOid(g_conn, g_fout, fout, (IndxInfo *) dobj);
 				break;
 			case DO_RULE:
 				dumpRuleOid(fout, (RuleInfo *) dobj);
 				break;
 			case DO_FK_CONSTRAINT:
 			case DO_CONSTRAINT:
-				dumpConstraintOid(g_conn, fout, (ConstraintInfo *) dobj);
+				dumpConstraintOid(g_conn, g_fout, fout, (ConstraintInfo *) dobj);
+				break;
+			case DO_AGG:
+				dumpAggProcedureOid(g_conn, g_fout, fout, (AggInfo *) dobj);
 				break;
 			case DO_PROCLANG:
 				dumpProcLangOid(g_conn, g_fout, fout, (ProcLangInfo *) dobj);
@@ -5483,7 +5496,6 @@ dumpBinaryUpgrade(Archive *fout, DumpableObject **dobjs, int numObjs)
 			 * only or are exempt from Oid pre-assignment due to handling Oid
 			 * synchronization in another way.
 			 */
-			case DO_AGG:
 			case DO_BLOBS:
 			case DO_BLOB_COMMENTS:
 			case DO_TRIGGER:
@@ -7953,7 +7965,8 @@ dumpOpclass(Archive *fout, OpclassInfo *opcinfo)
 	i_opcfamilynsp = PQfnumber(res, "opcfamilynsp");
 	i_amname = PQfnumber(res, "amname");
 
-	opcintype = PQgetvalue(res, 0, i_opcintype);
+	/* opcintype may still be needed after we PQclear res */
+	opcintype = pg_strdup(PQgetvalue(res, 0, i_opcintype));
 	opckeytype = PQgetvalue(res, 0, i_opckeytype);
 	opcdefault = PQgetvalue(res, 0, i_opcdefault);
 	opcfamily = PQgetvalue(res, 0, i_opcfamily);
@@ -8115,6 +8128,15 @@ dumpOpclass(Archive *fout, OpclassInfo *opcinfo)
 
 	PQclear(res);
 
+	/*
+	 * If needComma is still false it means we haven't added anything after
+	 * the AS keyword.  To avoid printing broken SQL, append a dummy STORAGE
+	 * clause with the same datatype.  This isn't sanctioned by the
+	 * documentation, but actually DefineOpClass will treat it as a no-op.
+	 */
+	if (!needComma)
+		appendPQExpBuffer(q, "STORAGE %s", opcintype);
+
 	appendPQExpBuffer(q, ";\n");
 
 	ArchiveEntry(fout, opcinfo->dobj.catId, opcinfo->dobj.dumpId,
@@ -8136,6 +8158,7 @@ dumpOpclass(Archive *fout, OpclassInfo *opcinfo)
 				NULL, opcinfo->rolname,
 				opcinfo->dobj.catId, 0, opcinfo->dobj.dumpId);
 
+	free(opcintype);
 	free(amname);
 	destroyPQExpBuffer(query);
 	destroyPQExpBuffer(q);
@@ -9820,6 +9843,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				if (actual_atts > 0)
 					appendPQExpBuffer(q, ",");
 				appendPQExpBuffer(q, "\n    ");
+				actual_atts++;
 
 				/* Attribute name */
 				appendPQExpBuffer(q, "%s ",
@@ -9850,17 +9874,17 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 									  tbinfo->attrdefs[j]->adef_expr);
 
 				/*
-				 * Not Null constraint --- suppress if inherited
+				 * Not Null constraint --- suppress if inherited, except in
+				 * binary-upgrade mode where taht won't work.
 				 */
-				if (tbinfo->notnull[j] && !tbinfo->inhNotNull[j])
+				if (tbinfo->notnull[j] &&
+					(!tbinfo->inhNotNull[j] || binary_upgrade))
 					appendPQExpBuffer(q, " NOT NULL");
 
 				/* Column Storage attributes */
 				if (tbinfo->attencoding[j] != NULL)
 					appendPQExpBuffer(q, " ENCODING (%s)",
 										tbinfo->attencoding[j]);
-
-				actual_atts++;
 			}
 		}
 
@@ -9889,7 +9913,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		/*
 		 * Emit the INHERITS clause if this table has parents.
 		 */
-		if (numParents > 0)
+		if (numParents > 0 && !binary_upgrade)
 		{
 			appendPQExpBuffer(q, "\nINHERITS (");
 			for (k = 0; k < numParents; k++)
@@ -10114,6 +10138,11 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				}
 			}
 
+/*
+ * GPDB_84_MERGE_FIXME - When we in 8.4 get conislocal, reactivate this code
+ * for handling constraints. Left if 0'd out to minimize merge conflicts.
+ */
+#if 0
 			for (k = 0; k < tbinfo->ncheck; k++)
 			{
 				ConstraintInfo *constr = &(tbinfo->checkexprs[k]);
@@ -10141,6 +10170,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				appendStringLiteralAH(q, fmtId(tbinfo->dobj.name), fout);
 				appendPQExpBuffer(q, "::pg_catalog.regclass;\n");
 			}
+#endif
 
 			if (numParents > 0)
 			{

@@ -13,6 +13,7 @@
 #include "fmgr.h"
 #include "catalog/dependency.h"
 #include "catalog/oid_dispatch.h"
+#include "catalog/pg_amop.h"
 #include "catalog/pg_attrdef.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_cast.h"
@@ -86,6 +87,7 @@ Datum		preassign_tstemplate_oid(PG_FUNCTION_ARGS);
 Datum		preassign_tsconfig_oid(PG_FUNCTION_ARGS);
 Datum		preassign_extension_oid(PG_FUNCTION_ARGS);
 Datum		preassign_enum_oid(PG_FUNCTION_ARGS);
+Datum		preassign_amop_oid(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(preassign_type_oid);
 PG_FUNCTION_INFO_V1(preassign_arraytype_oid);
@@ -114,6 +116,7 @@ PG_FUNCTION_INFO_V1(preassign_tstemplate_oid);
 PG_FUNCTION_INFO_V1(preassign_tsconfig_oid);
 PG_FUNCTION_INFO_V1(preassign_extension_oid);
 PG_FUNCTION_INFO_V1(preassign_enum_oid);
+PG_FUNCTION_INFO_V1(preassign_amop_oid);
 
 Datum
 preassign_type_oid(PG_FUNCTION_ARGS)
@@ -138,7 +141,7 @@ preassign_arraytype_oid(PG_FUNCTION_ARGS)
 	char	   *objname = GET_STR(PG_GETARG_TEXT_P(1));
 	Oid			typnamespace = PG_GETARG_OID(2);
 
-	if (Gp_role == GP_ROLE_UTILITY)
+	if (Gp_role != GP_ROLE_UTILITY)
 		PG_RETURN_VOID();
 
 	if (typoid == InvalidOid && GpIdentity.dbid != MASTER_DBID)
@@ -200,7 +203,7 @@ preassign_opclass_oid(PG_FUNCTION_ARGS)
 {
 	Oid			opcoid = PG_GETARG_OID(0);
 	char	   *objname = GET_STR(PG_GETARG_TEXT_P(1));
-	Oid			opcnamespace = PG_GETARG_OID(1);
+	Oid			opcnamespace = PG_GETARG_OID(2);
 
 	if (Gp_role == GP_ROLE_UTILITY)
 	{
@@ -520,13 +523,12 @@ Datum
 preassign_extension_oid(PG_FUNCTION_ARGS)
 {
 	Oid			extensionoid = PG_GETARG_OID(0);
-	Oid			nsoid = PG_GETARG_OID(1);
-	char	   *extensionname = GET_STR(PG_GETARG_TEXT_P(2));
+	char	   *extensionname = GET_STR(PG_GETARG_TEXT_P(1));
 
 	if (Gp_role == GP_ROLE_UTILITY)
 	{
 		AddPreassignedOidFromBinaryUpgrade(extensionoid, ExtensionRelationId,
-										   extensionname, nsoid, InvalidOid,
+										   extensionname, InvalidOid, InvalidOid,
 										   InvalidOid);
 	}
 
@@ -544,6 +546,25 @@ preassign_enum_oid(PG_FUNCTION_ARGS)
 	{
 		AddPreassignedOidFromBinaryUpgrade(enumoid, EnumRelationId, enumlabel,
 										   InvalidOid, typeoid, InvalidOid);
+	}
+
+	PG_RETURN_VOID();
+}
+
+Datum
+preassign_amop_oid(PG_FUNCTION_ARGS)
+{
+	Oid			amopoid = PG_GETARG_OID(0);
+	Oid			amopmethod = PG_GETARG_OID(1);
+
+	if (Gp_role == GP_ROLE_UTILITY)
+	{
+		AddPreassignedOidFromBinaryUpgrade(amopoid,
+										   AccessMethodOperatorRelationId,
+										   NULL,
+										   InvalidOid,
+										   amopmethod,
+										   InvalidOid);
 	}
 
 	PG_RETURN_VOID();

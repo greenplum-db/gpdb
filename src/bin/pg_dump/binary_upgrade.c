@@ -32,7 +32,7 @@ static int				numtypecache;
 static void preassign_type_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_type_oid, char *objname);
 static void preassign_constraint_oid(Archive *AH, Oid constroid, Oid nsoid, char *objname, Oid contable, Oid condomain);
 static void preassign_attrdefs_oid(Archive *AH, Oid attrdefoid, Oid attreloid, int adnum);
-static void preassign_pg_class_oids(PGconn *conn, Archive *AH, Oid pg_class_oid);
+static void preassign_pg_class_oids(PGconn *conn, Archive *fout, Archive *AH, Oid pg_class_oid);
 static void preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_rel_oid, char *objname);
 static void preassign_enum_oid(PGconn *conn, Archive *AH, Oid enum_oid, char *objname);
 static void preassign_view_rule_oids(PGconn *conn, Archive *AH, Oid view_oid);
@@ -67,7 +67,7 @@ dumpNamespaceOid(Archive *AH, NamespaceInfo *info)
 
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_namespace_oid("
-			 "'%u'::pg_catalog.oid, '%s'::text);\n",
+			 "'%u'::pg_catalog.oid, $$%s$$::text);\n",
 			 info->dobj.catId.oid, info->dobj.name);
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
@@ -79,15 +79,100 @@ dumpNamespaceOid(Archive *AH, NamespaceInfo *info)
 }
 
 void
-dumpProcedureOid(Archive *AH, FuncInfo *info)
+dumpAggProcedureOid(PGconn *conn, Archive *fout, Archive *AH, AggInfo *info)
 {
+	char		upgrade_query[QUERY_ALLOC];
+	PQExpBuffer	upgrade_buffer;
+	int 		i;
+	int			ntups;
+	PGresult   *upgrade_res;
+
+	if (!info->aggfn.dobj.dump)
+		return;
+
+	upgrade_buffer = createPQExpBuffer();
+
+	for (i = 0; i < AGG_FUNCS; i++)
+	{
+		Oid			procoid;
+		Oid			nsoid;
+		char	   *proname;
+
+		if (agg_fns[i].version > fout->remoteVersion)
+			continue;
+
+		snprintf(upgrade_query, sizeof(upgrade_query),
+				 "SELECT p.oid, p.proname, p.pronamespace "
+				 "FROM   pg_catalog.pg_proc p JOIN pg_catalog.pg_aggregate a "
+				 "       ON (p.oid = a.%s) where a.aggfnoid = '%u'::pg_catalog.oid;",
+				 agg_fns[i].name, info->aggfn.dobj.catId.oid);
+
+		upgrade_res = PQexec(conn, upgrade_query);
+		check_sql_result(upgrade_res, conn, upgrade_query, PGRES_TUPLES_OK);
+		ntups = PQntuples(upgrade_res);
+
+		if (ntups <= 0)
+			continue;
+
+		procoid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "oid")));
+		nsoid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "pronamespace")));
+		proname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "proname"));
+
+		appendPQExpBuffer(upgrade_buffer,
+						  "SELECT binary_upgrade.preassign_procedure_oid("
+						  "'%u'::pg_catalog.oid, $$%s$$::text, '%u'::pg_catalog.oid);\n",
+						  procoid, proname, nsoid);
+
+		PQclear(upgrade_res);
+	}
+
+	ArchiveEntry(AH, nilCatalogId, createDumpId(),
+				 info->aggfn.dobj.name,
+				 NULL, NULL, "",
+				 false, "BINARY UPGRADE AGGREGATE", upgrade_buffer->data, "", NULL,
+				 NULL, 0,
+				 NULL, NULL);
+
+	destroyPQExpBuffer(upgrade_buffer);
+}
+
+void
+dumpProcedureOid(PGconn *conn, Archive *fout, Archive *AH, FuncInfo *info)
+{
+	char		upgrade_query[QUERY_ALLOC];
+	PGresult   *upgrade_res;
+	Oid			typoid;
+	char	   *typname;
+	int			ntups;
+
 	/* Skip if not to be dumped */
 	if (!info->dobj.dump)
 		return;
 
+	snprintf(upgrade_query, sizeof(upgrade_query),
+			 "SELECT t.oid, t.typname "
+			 "FROM   pg_catalog.pg_proc p "
+			 "       JOIN pg_catalog.pg_type t ON (p.prorettype = t.oid) "
+			 "WHERE  p.oid = '%u'::pg_catalog.oid AND p.proretset = True;",
+			 info->dobj.catId.oid);
+
+	upgrade_res = PQexec(conn, upgrade_query);
+	check_sql_result(upgrade_res, conn, upgrade_query, PGRES_TUPLES_OK);
+	ntups = PQntuples(upgrade_res);
+
+	if (ntups > 0)
+	{
+		typoid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "oid")));
+		typname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "typname"));
+
+		preassign_type_oid(conn, fout, AH, typoid, typname);
+	}
+
+	PQclear(upgrade_res);
+
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_procedure_oid("
-			 "'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid);\n",
+			 "'%u'::pg_catalog.oid, $$%s$$::text, '%u'::pg_catalog.oid);\n",
 			 info->dobj.catId.oid, info->dobj.name, info->dobj.namespace->dobj.catId.oid);
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
@@ -139,7 +224,7 @@ dumpProcLangOid(PGconn *conn, Archive *fout, Archive *AH, ProcLangInfo *info)
 					  "       LEFT OUTER JOIN pg_catalog.pg_proc v "
 					  "            ON (v.proname = tmplvalidator) "
 					  "       %s "
-					  "WHERE  tmplname = '%s'::text;",
+					  "WHERE  tmplname = $$%s$$::text;",
 					  (fout->remoteVersion >= 80300)
 					  ? ",i.oid AS inlineoid, i.pronamespace AS inlinens, i.proname AS inline"
 					  : "",
@@ -164,7 +249,7 @@ dumpProcLangOid(PGconn *conn, Archive *fout, Archive *AH, ProcLangInfo *info)
 	proname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "handler"));
 	appendPQExpBuffer(upgrade_buffer,
 					  "SELECT binary_upgrade.preassign_procedure_oid("
-					  "'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid);\n",
+					  "'%u'::pg_catalog.oid, $$%s$$::text, '%u'::pg_catalog.oid);\n",
 					  procoid, proname, nsoid);
 
 	/* Validator function */
@@ -175,7 +260,7 @@ dumpProcLangOid(PGconn *conn, Archive *fout, Archive *AH, ProcLangInfo *info)
 		proname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "validator"));
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.preassign_procedure_oid("
-						  "'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid);\n",
+						  "'%u'::pg_catalog.oid, $$%s$$::text, '%u'::pg_catalog.oid);\n",
 						  procoid, proname, nsoid);
 	}
 
@@ -189,14 +274,14 @@ dumpProcLangOid(PGconn *conn, Archive *fout, Archive *AH, ProcLangInfo *info)
 			proname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "inline"));
 			appendPQExpBuffer(upgrade_buffer,
 							  "SELECT binary_upgrade.preassign_procedure_oid("
-							  "'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid);\n",
+							  "'%u'::pg_catalog.oid, $$%s$$::text, '%u'::pg_catalog.oid);\n",
 							  procoid, proname, nsoid);
 		}
 	}
 
 	appendPQExpBuffer(upgrade_buffer,
 					  "SELECT binary_upgrade.preassign_language_oid("
-					  "'%u'::pg_catalog.oid, '%s'::text);\n",
+					  "'%u'::pg_catalog.oid, $$%s$$::text);\n",
 					  info->dobj.catId.oid, info->dobj.name);
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
@@ -272,7 +357,7 @@ dumpConversionOid(PGconn *conn, Archive *AH, ConvInfo *info)
 
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_conversion_oid('%u'::pg_catalog.oid, "
-			 "'%s'::text, '%u'::pg_catalog.oid);\n",
+			 "$$%s$$::text, '%u'::pg_catalog.oid);\n",
 			 info->dobj.catId.oid, info->dobj.name, connamespace);
 
 	PQclear(upgrade_res);
@@ -301,7 +386,7 @@ dumpRuleOid(Archive *AH, RuleInfo *info)
 
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_rule_oid("
-			 "'%u'::pg_catalog.oid, '%u'::pg_catalog.oid, '%s'::text);\n",
+			 "'%u'::pg_catalog.oid, '%u'::pg_catalog.oid, $$%s$$::text);\n",
 			 info->dobj.catId.oid, tbinfo->dobj.catId.oid, info->dobj.name);
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
@@ -351,7 +436,7 @@ dumpOpFamilyOid(PGconn *conn, Archive *AH, OpfamilyInfo *info)
 
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_opfam_oid('%u'::pg_catalog.oid, "
-			 "'%s'::text, '%u'::pg_catalog.oid);",
+			 "$$%s$$::text, '%u'::pg_catalog.oid);",
 			 info->dobj.catId.oid, info->dobj.name, opfnamespace);
 
 	PQclear(upgrade_res);
@@ -371,24 +456,71 @@ dumpOpFamilyOid(PGconn *conn, Archive *AH, OpfamilyInfo *info)
  * Preassign Oid for CREATE OPERATOR CLASS .. operations
  */
 void
-dumpOpClassOid(PGconn *conn, Archive *AH, OpclassInfo *info)
+dumpOpClassOid(PGconn *conn, Archive *fout, Archive *AH, OpclassInfo *info)
 {
 	PQExpBuffer	upgrade_query;
+	PQExpBuffer upgrade_buffer;
 	int			ntups;
 	PGresult   *upgrade_res;
 	Oid			pg_opclass_oid;
 	Oid			opcnamespace;
+	Oid			amopoid;
+	Oid			amopmethod;
+	int			i;
 
 	/* Skip if not to be dumped */
 	if (!info->dobj.dump)
 		return;
 
 	upgrade_query = createPQExpBuffer();
+	upgrade_buffer = createPQExpBuffer();
 
+	/* Start by dumping the amop entries */
+	if (fout->remoteVersion >= 80300)
+	{
+		/*
+		 * Print only those opfamily members that are tied to the opclass by
+		 * pg_depend entries.
+		 */
+		appendPQExpBuffer(upgrade_query,
+						  "SELECT ao.oid, ao.amopmethod "
+						  "FROM   pg_catalog.pg_amop ao, pg_catalog.pg_depend "
+						  "WHERE  refclassid = 'pg_catalog.pg_opclass'::pg_catalog.regclass "
+						  "       AND refobjid = '%u'::pg_catalog.oid "
+						  "       AND classid = 'pg_catalog.pg_amop'::pg_catalog.regclass "
+						  "       AND objid = ao.oid",
+						  info->dobj.catId.oid);
+	}
+	else
+	{
+		/* XXX: no amopmethod in 4.3 */
+	}
+	
+	upgrade_res = PQexec(conn, upgrade_query->data);
+	check_sql_result(upgrade_res, conn, upgrade_query->data, PGRES_TUPLES_OK);
+	ntups = PQntuples(upgrade_res);
+	if (ntups > 0)
+	{
+		for (i = 0; i < ntups; i++)
+		{
+			amopoid = atooid(PQgetvalue(upgrade_res, i, PQfnumber(upgrade_res, "oid")));
+			amopmethod = atooid(PQgetvalue(upgrade_res, i, PQfnumber(upgrade_res, "amopmethod")));
+
+			appendPQExpBuffer(upgrade_buffer,
+							  "SELECT binary_upgrade.preassign_amop_oid("
+							  "'%u'::pg_catalog.oid, '%u'::pg_catalog.oid);",
+							  amopoid, amopmethod);
+		}
+	}
+
+	PQclear(upgrade_res);
+	resetPQExpBuffer(upgrade_query);
+
+	/* Now dump the opclass */
 	appendPQExpBuffer(upgrade_query,
 					  "SELECT oid, opcnamespace "
-					  "FROM pg_catalog.pg_opclass "
-					  "WHERE opcname = '%s'::text",
+					  "FROM   pg_catalog.pg_opclass "
+					  "WHERE  opcname = $$%s$$::text",
 					  info->dobj.name);
 
 	upgrade_res = PQexec(conn, upgrade_query->data);
@@ -403,20 +535,22 @@ dumpOpClassOid(PGconn *conn, Archive *AH, OpclassInfo *info)
 	pg_opclass_oid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "oid")));
 	opcnamespace = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "opcnamespace")));
 
-	snprintf(query_buffer, sizeof(query_buffer),
-			 "SELECT binary_upgrade.preassign_opclass_oid('%u'::pg_opclass.oid, "
-			 "'%s'::text, '%u'::pg_opclass.opcnamespace);",
-			 info->dobj.catId.oid, info->dobj.name, opcnamespace);
+	appendPQExpBuffer(upgrade_buffer,
+					  "SELECT binary_upgrade.preassign_opclass_oid("
+					  "'%u'::pg_catalog.oid, $$%s$$::text, '%u'::pg_catalog.oid);",
+					  info->dobj.catId.oid, info->dobj.name, opcnamespace);
 
 	PQclear(upgrade_res);
-	destroyPQExpBuffer(upgrade_query);
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
 				 info->dobj.name,
 				 NULL, NULL, "",
-				 false, "BINARY UPGRADE", query_buffer, "", NULL,
+				 false, "BINARY UPGRADE", upgrade_buffer->data, "", NULL,
 				 NULL, 0,
 				 NULL, NULL);
+
+	destroyPQExpBuffer(upgrade_buffer);
+	destroyPQExpBuffer(upgrade_query);
 }
 
 void
@@ -455,7 +589,7 @@ dumpTSObjectOid(Archive *AH, DumpableObject *info)
 
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.%s('%u'::pg_catalog.oid, "
-			 "'%u'::pg_catalog.oid, '%s'::text);\n",
+			 "'%u'::pg_catalog.oid, $$%s$$::text);\n",
 			 funcname, d->catId.oid, d->namespace->dobj.catId.oid, d->name);
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
@@ -475,9 +609,8 @@ dumpExtensionOid(Archive *AH, ExtensionInfo *info)
 
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_extension_oid('%u'::pg_catalog.oid, "
-			 "'%u'::pg_catalog.oid, '%s'::text);\n",
-			 info->dobj.catId.oid, info->dobj.namespace->dobj.catId.oid,
-			 info->dobj.name);
+			 "$$%s$$::text);\n",
+			 info->dobj.catId.oid, info->dobj.name);
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
 				 "preassign_extension",
@@ -490,11 +623,38 @@ dumpExtensionOid(Archive *AH, ExtensionInfo *info)
 void
 dumpShellTypeOid(PGconn *conn, Archive *fout, Archive *AH, ShellTypeInfo *info)
 {
+	PQExpBuffer		upgrade_query;
+	int				ntups;
+	Oid				pg_type_oid;
+	PGresult	   *upgrade_res;
+
 	/* Skip if not to be dumped */
 	if (!info->dobj.dump)
 		return;
 
-	preassign_type_oid(conn, fout, AH, info->dobj.catId.oid, info->dobj.name);
+	upgrade_query = createPQExpBuffer();
+
+	appendPQExpBuffer(upgrade_query,
+					  "SELECT oid "
+					  "FROM   pg_catalog.pg_type "
+					  "WHERE  typname = $$%s$$::text;",
+					  info->dobj.name);
+
+	upgrade_res = PQexec(conn, upgrade_query->data);
+	check_sql_result(upgrade_res, conn, upgrade_query->data, PGRES_TUPLES_OK);
+
+	ntups = PQntuples(upgrade_res);
+	if (ntups != 1)
+	{
+		write_msg(NULL, "ERROR: type \"%s\" not found in catalog", info->dobj.name);
+		exit_nicely();
+	}
+
+	pg_type_oid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "oid")));
+	preassign_type_oid(conn, fout, AH, pg_type_oid, info->dobj.name);
+
+	PQclear(upgrade_res);
+	destroyPQExpBuffer(upgrade_query);
 }
 
 void
@@ -533,7 +693,7 @@ dumpTypeOid(PGconn *conn, Archive *fout, Archive *AH, TypeInfo *info)
 	else if (info->typtype == TYPTYPE_COMPOSITE)
 	{
 		preassign_type_oid(conn, fout, AH, info->dobj.catId.oid, info->dobj.name);
-		preassign_pg_class_oids(conn, AH, info->typrelid);
+		preassign_pg_class_oids(conn, fout, AH, info->typrelid);
 	}
 }
 
@@ -571,9 +731,10 @@ preassign_enum_oid(PGconn *conn, Archive *AH, Oid enum_oid, char *objname)
 		label = PQgetvalue(upgrade_res, i, PQfnumber(upgrade_res, "enumlabel"));
 
 		appendPQExpBuffer(upgrade_buffer,
-						  "SELECT binary_upgrade.preassign_enum_oid('%u'::pg_catalog.oid, "
-																   "'%u'::pg_catalog.oid, "
-																   "'%s'::text);\n",
+						  "SELECT binary_upgrade.preassign_enum_oid("
+								"'%u'::pg_catalog.oid, "
+								"'%u'::pg_catalog.oid, "
+								"$$%s$$::text);\n",
 						  oid, enum_oid, label);
 	}
 
@@ -602,6 +763,7 @@ static void
 preassign_type_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_type_oid, char *objname)
 {
 	PQExpBuffer upgrade_query;
+	PQExpBuffer	upgrade_buffer;
 	int			ntups;
 	PGresult   *upgrade_res;
 	int			i;
@@ -675,13 +837,16 @@ preassign_type_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_type_oid, ch
 				 */
 				if (PQgetisnull(upgrade_res, i, i_arr_name))
 				{
-					char array_name[NAMEDATALEN];
+					if (fout->remoteVersion <= 80200)
+					{
+						char array_name[NAMEDATALEN];
 
-					typecache[i].arraytypoid = InvalidOid,
-					typecache[i].arraytypnsp = atooid(PQgetvalue(upgrade_res, i, i_nsp));
+						typecache[i].arraytypoid = InvalidOid,
+						typecache[i].arraytypnsp = atooid(PQgetvalue(upgrade_res, i, i_nsp));
 
-					snprintf(array_name, NAMEDATALEN, "_%s", PQgetvalue(upgrade_res, i, i_name));
-					typecache[i].arraytypname = strdup(array_name);
+						snprintf(array_name, NAMEDATALEN, "_%s", PQgetvalue(upgrade_res, i, i_name));
+						typecache[i].arraytypname = strdup(array_name);
+					}
 				}
 				else
 				{
@@ -704,24 +869,37 @@ preassign_type_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_type_oid, ch
 	/* This shouldn't happen.. */
 	if (!type)
 	{
-		write_msg(NULL, "ERROR: didn't find type information in cache\n");
+		write_msg(NULL, "ERROR: didn't find type information in cache for %u (%s)\n", pg_type_oid, objname);
 		exit_nicely();
 	}
 
-	snprintf(query_buffer, sizeof(query_buffer),
-			 "SELECT binary_upgrade.preassign_type_oid('%u'::pg_catalog.oid, "
-			 "'%s'::text, '%u'::pg_catalog.oid);\n"
-			 "SELECT binary_upgrade.preassign_arraytype_oid('%u'::pg_catalog.oid, "
-			 "'%s'::text, '%u'::pg_catalog.oid);\n",
-			 pg_type_oid, type->dobj.name, type->typnsp,
-			 type->arraytypoid, type->arraytypname, type->arraytypnsp);
+	upgrade_buffer = createPQExpBuffer();
+
+	appendPQExpBuffer(upgrade_buffer,
+			 		  "SELECT binary_upgrade.preassign_type_oid("
+					  "'%u'::pg_catalog.oid, $$%s$$::text, '%u'::pg_catalog.oid);\n",
+					  pg_type_oid, type->dobj.name, type->typnsp);
+
+	/*
+	 * All types doesn't automatically have an arraytype, ensure we have found
+	 * (or added) one above before preassigning.
+	 */
+	if (OidIsValid(type->arraytypoid))
+	{
+		appendPQExpBuffer(upgrade_buffer,
+						  "SELECT binary_upgrade.preassign_arraytype_oid("
+						  "'%u'::pg_catalog.oid, $$%s$$::text, '%u'::pg_catalog.oid);\n",
+						  type->arraytypoid, type->arraytypname, type->arraytypnsp);
+	}
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
 				 objname,
 				 NULL, NULL, "",
-				 false, "BINARY UPGRADE", query_buffer, "", NULL,
+				 false, "BINARY UPGRADE", upgrade_buffer->data, "", NULL,
 				 NULL, 0,
 				 NULL, NULL);
+
+	destroyPQExpBuffer(upgrade_buffer);
 }
 
 /*
@@ -732,7 +910,7 @@ preassign_type_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_type_oid, ch
  * for consistency with upstream even though we are being executed first.
  */
 void
-dumpConstraintOid(PGconn *conn, Archive *AH, ConstraintInfo *info)
+dumpConstraintOid(PGconn *conn, Archive *fout, Archive *AH, ConstraintInfo *info)
 {
 	/* Skip if not to be dumped */
 	if (!info->dobj.dump)
@@ -746,7 +924,7 @@ dumpConstraintOid(PGconn *conn, Archive *AH, ConstraintInfo *info)
 		if (indxinfo == NULL)
 			return;
 
-		preassign_pg_class_oids(conn, AH, indxinfo->dobj.catId.oid);
+		preassign_pg_class_oids(conn, fout, AH, indxinfo->dobj.catId.oid);
 		preassign_constraint_oid(AH, info->dobj.catId.oid,
 								 info->dobj.namespace->dobj.catId.oid,
 								 info->dobj.name,
@@ -762,7 +940,7 @@ dumpConstraintOid(PGconn *conn, Archive *AH, ConstraintInfo *info)
 			return;
 
 		if (tbinfo)
-			preassign_pg_class_oids(conn, AH, tbinfo->dobj.catId.oid);
+			preassign_pg_class_oids(conn, fout, AH, tbinfo->dobj.catId.oid);
 
 		preassign_constraint_oid(AH, info->dobj.catId.oid,
 								 info->dobj.namespace->dobj.catId.oid,
@@ -794,7 +972,7 @@ preassign_constraint_oid(Archive *AH, Oid constroid, Oid nsoid, char *objname, O
 {
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_constraint_oid('%u'::pg_catalog.oid, "
-			 "'%u'::pg_catalog.oid, '%s'::text, '%u'::pg_catalog.oid, '%u'::pg_catalog.oid);\n",
+			 "'%u'::pg_catalog.oid, $$%s$$::text, '%u'::pg_catalog.oid, '%u'::pg_catalog.oid);\n",
 			 constroid, nsoid, objname, contable, condomain);
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
@@ -819,7 +997,7 @@ dumpExternalProtocolOid(Archive *AH, ExtProtInfo *info)
 
 	snprintf(query_buffer, sizeof(query_buffer),
 			 "SELECT binary_upgrade.preassign_extprotocol_oid("
-			 "'%u'::pg_catalog.oid, '%s'::text);\n",
+			 "'%u'::pg_catalog.oid, $$%s$$::text);\n",
 			 info->dobj.catId.oid, info->dobj.name);
 
 	ArchiveEntry(AH, nilCatalogId, createDumpId(),
@@ -862,14 +1040,85 @@ preassign_attrdefs_oid(Archive *AH, Oid attrdefoid, Oid attreloid, int adnum)
 				 NULL, NULL);
 }
 
+/*
+ * dumpIndexOid
+ *
+ * Preassign the Oid of an index, and potentially all related indexes in case
+ * the index is a on a partitioned table.
+ */
 void
-dumpIndexOid(PGconn *conn, Archive *AH, IndxInfo *info)
+dumpIndexOid(PGconn *conn, Archive *fout, Archive *AH, IndxInfo *info)
 {
+	PQExpBuffer		index_query;
+	int				i;
+	int				i_oid;
+	Oid				idx_oid;
+	PGresult	   *index_res;
+
 	/* Skip if not to be dumped */
 	if (!info->dobj.dump)
 		return;
 
-	preassign_pg_class_oids(conn, AH, info->dobj.catId.oid);
+	preassign_pg_class_oids(conn, fout, AH, info->dobj.catId.oid);
+
+	/*
+	 * If the index is created on a partition hierarchy parent, it will be
+	 * created on the partitions and subpartitions as well. These indexes will
+	 * however not be dumped separately so we need to figure it out manually
+	 * and ensure to preassign the Oids for the partition indexes. The indexes
+	 * which are created on the partitions have a strict naming scheme, but
+	 * since a partition which is exchanged into the hierarchy may have a
+	 * pre-existing index not adhering to the naming convention we must grab
+	 * all the indexes we can find and preassign them.
+	 *
+	 * Since the pg_partition catalogs aren't replicated to segments, we avoid
+	 * them here and instead use the inheritance catalogs.
+	 */
+	index_query = createPQExpBuffer();
+	appendPQExpBuffer(index_query,
+					  "WITH partitions AS ( "
+					  "     ( "
+					  "      SELECT p.inhrelid "
+					  "      FROM   pg_catalog.pg_index i "
+					  "             join pg_catalog.pg_inherits p "
+					  "               ON (i.indrelid = p.inhparent) "
+					  "      WHERE  i.indexrelid = '%u'::pg_catalog.oid "
+					  "     ) "
+					  "     UNION "
+					  "     ( "
+					  "      SELECT sp.inhrelid "
+					  "      FROM   pg_catalog.pg_index i "
+					  "             JOIN pg_catalog.pg_inherits p "
+					  "               ON (i.indrelid = p.inhparent) "
+					  "             JOIN pg_catalog.pg_inherits sp "
+					  "               ON (sp.inhparent = p.inhrelid) "
+					  "      WHERE  i.indexrelid = '%u'::pg_catalog.oid "
+					  "     ) "
+					  ") "
+					  "SELECT ir.indexrelid "
+					  "FROM   pg_catalog.pg_index ir "
+					  "       JOIN partitions p "
+					  "         ON (p.inhrelid = ir.indrelid);",
+					  info->dobj.catId.oid, info->dobj.catId.oid);
+
+	index_res = PQexec(conn, index_query->data);
+
+	/*
+	 * If there were indexes, preassign the index Oid
+	 */
+	if (PQntuples(index_res) > 0)
+	{
+		i_oid = PQfnumber(index_res, "indexrelid");
+
+		for (i = 0; i < PQntuples(index_res); i++)
+		{
+			idx_oid = atooid(PQgetvalue(index_res, i, i_oid));
+			preassign_pg_class_oids(conn, fout, AH, idx_oid);
+		}
+	}
+
+	PQclear(index_res);
+	destroyPQExpBuffer(index_query);
 }
 
 void
@@ -878,10 +1127,10 @@ dumpTableOid(PGconn *conn, Archive *fout, Archive *AH, TableInfo *info)
 	int		j;
 
 	/* Skip if not to be dumped */
-	if (!info->dobj.dump)
+	if (!info->dobj.dump && info->parrelid == 0)
 		return;
 
-	preassign_pg_class_oids(conn, AH, info->dobj.catId.oid);
+	preassign_pg_class_oids(conn, fout, AH, info->dobj.catId.oid);
 	preassign_type_oids_by_rel_oid(conn, fout, AH, info->dobj.catId.oid,
 								   info->dobj.name);
 
@@ -947,7 +1196,7 @@ preassign_view_rule_oids(PGconn *conn, Archive *AH, Oid view_oid)
 
 		appendPQExpBuffer(upgrade_buffer,
 			 "SELECT binary_upgrade.preassign_rule_oid("
-			 "'%u'::pg_catalog.oid, '%u'::pg_catalog.oid, '%s'::text);\n",
+			 "'%u'::pg_catalog.oid, '%u'::pg_catalog.oid, $$%s$$::text);\n",
 			 rule_oid, view_oid, rule_name);
 	}
 
@@ -964,7 +1213,7 @@ preassign_view_rule_oids(PGconn *conn, Archive *AH, Oid view_oid)
 }
 
 static void
-preassign_pg_class_oids(PGconn *conn, Archive *AH, Oid pg_class_oid)
+preassign_pg_class_oids(PGconn *conn, Archive *fout, Archive *AH, Oid pg_class_oid)
 {
 	PQExpBuffer upgrade_query = createPQExpBuffer();
 	PQExpBuffer upgrade_buffer = createPQExpBuffer();
@@ -984,6 +1233,12 @@ preassign_pg_class_oids(PGconn *conn, Archive *AH, Oid pg_class_oid)
 	PGresult   *aoseg_res;
 	Oid			aoseg_namespace;
 	bool		columnstore;
+	bool		bitmapindex;
+	PQExpBuffer bm_query;
+	PGresult   *bm_res;
+	Oid			bm_oid;
+	Oid			bm_ns;
+	char	   *bm_name;
 
 	appendPQExpBuffer(upgrade_query,
 					  "SELECT c.reltoastrelid, t.reltoastidxid, "
@@ -991,11 +1246,13 @@ preassign_pg_class_oids(PGconn *conn, Archive *AH, Oid pg_class_oid)
 					  "       ao.segrelid, c.relnamespace, "
 					  "       ao.blkdirrelid, ao.blkdiridxid, "
 					  "       ao.visimaprelid, ao.visimapidxid, "
-					  "       c.relname, ao.columnstore "
-					  "FROM pg_catalog.pg_class c LEFT JOIN "
-					  "pg_catalog.pg_class t ON (c.reltoastrelid = t.oid) "
-					  "LEFT JOIN pg_catalog.pg_appendonly ao ON (ao.relid = c.oid) "
-					  "WHERE c.oid = '%u'::pg_catalog.oid;",
+					  "       c.relname, ao.columnstore, "
+					  "       a.amname "
+					  "FROM   pg_catalog.pg_class c "
+					  "       LEFT JOIN pg_catalog.pg_class t ON (c.reltoastrelid = t.oid) "
+					  "       LEFT JOIN pg_catalog.pg_appendonly ao ON (ao.relid = c.oid) "
+					  "       LEFT JOIN pg_catalog.pg_am a ON (a.oid = c.relam AND c.relam <> 0) "
+					  "WHERE  c.oid = '%u'::pg_catalog.oid;",
 					  pg_class_oid);
 
 	upgrade_res = PQexec(conn, upgrade_query->data);
@@ -1023,10 +1280,11 @@ preassign_pg_class_oids(PGconn *conn, Archive *AH, Oid pg_class_oid)
 	pg_appendonly_visimaprelid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "visimaprelid")));
 	pg_appendonly_visimapidxid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "visimapidxid")));
 	columnstore = (strcmp(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "columnstore")), "t") == 0) ? true : false;
+	bitmapindex = (strcmp(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "amname")), "bitmap") == 0) ? true : false;
 
 	appendPQExpBuffer(upgrade_buffer,
 					  "SELECT binary_upgrade.preassign_relation_oid('%u'::pg_catalog.oid, "
-																   "'%s'::text, "
+																   "$$%s$$::text, "
 																   "'%u'::pg_catalog.oid);\n",
 					  pg_class_oid, pg_class_relname, pg_class_relnamespace);
 
@@ -1108,6 +1366,53 @@ preassign_pg_class_oids(PGconn *conn, Archive *AH, Oid pg_class_oid)
 																	   "'pg_aovisimap_%u_index'::text, "
 																	   "'%u'::pg_catalog.oid);\n",
 						  pg_appendonly_visimapidxid, pg_class_oid, aoseg_namespace);
+	}
+
+	/*
+	 * Bitmap indexes have an auxiliary heap table called pg_bm_<oid> which we
+	 * need to find the Oid for as well. We could LEFT JOIN this information in
+	 * the above query but rather than paying for that extra join in every rel
+	 * lookup we'll perform a simpler query only for when we know we need it.
+	 */
+	if (bitmapindex)
+	{
+		bm_query = createPQExpBuffer();
+
+		appendPQExpBuffer(bm_query,
+						  "SELECT c.oid AS bm_oid, c.relnamespace AS bm_ns, c.relname AS bm_name, "
+						  "       i.oid AS bmi_oid, i.relnamespace AS bmi_ns, i.relname AS bmi_name "
+						  "FROM   pg_catalog.pg_class c "
+						  "       LEFT JOIN pg_catalog.pg_index ii ON (ii.indrelid = c.oid) "
+						  "       LEFT JOIN pg_catalog.pg_class i ON (ii.indexrelid = i.oid) "
+						  "WHERE  c.relname = 'pg_bm_%u'::text;",
+						  pg_class_oid);
+
+		bm_res = PQexec(conn, bm_query->data);
+
+		/* Extract the auxiliary bitmap index heap table */
+		bm_oid = atooid(PQgetvalue(bm_res, 0, PQfnumber(bm_res, "bm_oid")));
+		bm_ns = atooid(PQgetvalue(bm_res, 0, PQfnumber(bm_res, "bm_ns")));
+		bm_name = PQgetvalue(bm_res, 0, PQfnumber(bm_res, "bm_name"));
+		appendPQExpBuffer(upgrade_buffer,
+						  "SELECT binary_upgrade.preassign_relation_oid('%u'::pg_catalog.oid, "
+																	   "$$%s$$::text, "
+																	   "'%u'::pg_catalog.oid);\n",
+						  bm_oid, bm_name, bm_ns);
+
+		preassign_type_oids_by_rel_oid(conn, fout, AH, bm_oid, bm_name);
+
+		/* Extract the auxiliary bitmap index heap table btree index.. */
+		bm_oid = atooid(PQgetvalue(bm_res, 0, PQfnumber(bm_res, "bmi_oid")));
+		bm_ns = atooid(PQgetvalue(bm_res, 0, PQfnumber(bm_res, "bmi_ns")));
+		bm_name = PQgetvalue(bm_res, 0, PQfnumber(bm_res, "bmi_name"));
+		appendPQExpBuffer(upgrade_buffer,
+						  "SELECT binary_upgrade.preassign_relation_oid('%u'::pg_catalog.oid, "
+																	   "$$%s$$::text, "
+																	   "'%u'::pg_catalog.oid);\n",
+						  bm_oid, bm_name, bm_ns);
+
+		PQclear(bm_res);
+		destroyPQExpBuffer(bm_query);
 	}
 
 	appendPQExpBuffer(upgrade_buffer, "\n");
@@ -1196,76 +1501,6 @@ preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_
 																	   "'pg_toast_%u'::text, "
 																	   "'%u'::pg_catalog.oid);\n",
 						  pg_type_toast_oid, pg_rel_oid, pg_type_toast_namespace_oid);
-	}
-
-	/*
-	 * If the table is partitioned and is the parent, we need to dump the Oids
-	 * of the child tables as well
-	 */
-	if (!PQgetisnull(upgrade_res, 0, PQfnumber(upgrade_res, "par_parent")))
-	{
-		PQExpBuffer parquery = createPQExpBuffer();
-		PGresult   *par_res;
-		int			i;
-		char		name[NAMEDATALEN];
-		Oid			part_oid;
-		Oid			conns_oid;
-		Oid			contyp_oid;
-		Oid			con_oid;
-		Oid			prev_oid = InvalidOid;
-
-		appendPQExpBuffer(parquery,
-						  "SELECT cc.oid, "
-						  "       p.partitiontablename AS name, "
-						  "       co.oid AS conoid, "
-						  "       co.conname, "
-						  "       co.connamespace, "
-						  "       co.contypid "
-						  "FROM pg_partitions p "
-						  "JOIN pg_catalog.pg_class c ON "
-						  "  (p.tablename = c.relname AND c.oid = '%u'::pg_catalog.oid) "
-						  "JOIN pg_catalog.pg_class cc ON "
-						  "  (p.partitiontablename = cc.relname) "
-						  "LEFT JOIN pg_catalog.pg_constraint co ON "
-						  "  (cc.oid = co.conrelid);",
-						  pg_rel_oid);
-
-		par_res = PQexec(conn, parquery->data);
-		check_sql_result(par_res, conn, parquery->data, PGRES_TUPLES_OK);
-
-		if (PQntuples(par_res) > 0)
-		{
-			for (i = 0; i < PQntuples(par_res); i++)
-			{
-				part_oid = atooid(PQgetvalue(par_res, i, PQfnumber(par_res, "oid")));
-
-				/*
-				 * Partitions with multiple constraint will be on multiple
-				 * rows so ensure to only save their Oids once.
-				 */
-				if (part_oid != prev_oid)
-				{
-					strlcpy(name, PQgetvalue(par_res, i, PQfnumber(par_res, "name")), sizeof(name));
-					preassign_type_oids_by_rel_oid(conn, fout, AH, part_oid, name);
-					preassign_pg_class_oids(conn, AH, part_oid);
-				}
-
-				if (!PQgetisnull(par_res, i, PQfnumber(par_res, "conname")))
-				{
-					strlcpy(name, PQgetvalue(par_res, i, PQfnumber(par_res, "conname")), sizeof(name));
-					con_oid = atooid(PQgetvalue(par_res, i, PQfnumber(par_res, "conoid")));
-					conns_oid = atooid(PQgetvalue(par_res, i, PQfnumber(par_res, "connamespace")));
-					contyp_oid = atooid(PQgetvalue(par_res, i, PQfnumber(par_res, "contypid")));
-
-					preassign_constraint_oid(AH, con_oid, conns_oid, name, part_oid, contyp_oid);
-				}
-
-				prev_oid = part_oid;
-			}
-		}
-
-		PQclear(par_res);
-		destroyPQExpBuffer(parquery);
 	}
 
 	if (!PQgetisnull(upgrade_res, 0, PQfnumber(upgrade_res, "aosegrel")))
