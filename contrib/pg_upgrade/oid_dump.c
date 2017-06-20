@@ -234,10 +234,6 @@ slurp_oid_files(migratorContext *ctx)
 	for (dbnum = 0; dbnum < ctx->old.dbarr.ndbs; dbnum++)
 	{
 		DbInfo	   *olddb = &ctx->old.dbarr.dbs[dbnum];
-		char		filename[MAXPGPATH];
-		FILE	   *oid_dump;
-		struct stat st;
-		char	   *reserved_oids;
 
 		snprintf(filename, sizeof(filename), "%s/" DB_OIDS_DUMP_FILE_MASK, ctx->cwd, olddb->db_oid);
 		oid_dump = fopen(filename, "r");
