@@ -11955,7 +11955,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 	
 			/* Step (c) - run on all nodes */
 			ExecutorStart(queryDesc, 0);
-			ExecutorRun(queryDesc, ForwardScanDirection, 0L);
+			ExecutorRun(queryDesc, ForwardScanDirection, 0);
 			ExecutorEnd(queryDesc);
 			FreeQueryDesc(queryDesc);
 

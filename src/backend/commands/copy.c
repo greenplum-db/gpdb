@@ -123,7 +123,7 @@ static void CopyExtractRowMetaData(CopyState cstate);
 static void preProcessDataLine(CopyState cstate);
 static void concatenateEol(CopyState cstate);
 static char *escape_quotes(const char *src);
-static void attr_get_key(CopyState cstate, CdbCopy *cdbCopy, int original_lineno_for_qe,
+static void attr_get_key(CopyState cstate, CdbCopy *cdbCopy, int64 original_lineno_for_qe,
 						 unsigned int target_seg, AttrNumber p_nattrs, AttrNumber *attrs,
 						 Form_pg_attribute *attr_descs, int *attr_offsets, bool *attr_nulls,
 						 FmgrInfo *in_functions, Oid *typioparams, Datum *values);
@@ -212,7 +212,7 @@ else \
 												   sizeof(char) + 1 + 24); \
 \
 		rawdata_is_a_copy = true; \
-		sprintf(cstate->cdbsreh->rawdata, "%d%c%d%c%s", \
+		sprintf(cstate->cdbsreh->rawdata, INT64_FORMAT "%c%d%c%s", \
 			    original_lineno_for_qe, \
 				COPY_METADATA_DELIM, \
 				cstate->line_buf_converted, \
@@ -1754,20 +1754,20 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 	/* Clean up storage (probably not really necessary) */
 	processed = cstate->processed;
 
-    /* MPP-4407. Logging number of tuples copied */
+	/* MPP-4407. Logging number of tuples copied */
 	if (Gp_role == GP_ROLE_DISPATCH
 			&& is_from
 			&& relationOid != InvalidOid
 			&& GetCommandLogLevel((Node *) stmt) <= log_statement)
 	{
-		elog(DEBUG1, "type_of_statement = %s dboid = %d tableoid = %d num_tuples_modified = %u",
+		elog(DEBUG1, "type_of_statement = %s dboid = %d tableoid = %d num_tuples_modified = " UINT64_FORMAT,
 				autostats_cmdtype_to_string(AUTOSTATS_CMDTYPE_COPY),
 				MyDatabaseId,
 				relationOid,
-				(unsigned int) processed);
+				processed);
 	}
 
-    /* 	 Fix for MPP-4082. Issue automatic ANALYZE if conditions are satisfied. */
+	/* 	 Fix for MPP-4082. Issue automatic ANALYZE if conditions are satisfied. */
 	if (Gp_role == GP_ROLE_DISPATCH && is_from)
 	{
 		auto_stats(AUTOSTATS_CMDTYPE_COPY, relationOid, processed, false /* inFunction */);
@@ -2518,7 +2518,7 @@ CopyTo(CopyState cstate)
 		Assert(Gp_role != GP_ROLE_EXECUTE);
 
 		/* run the plan --- the dest receiver will send tuples */
-		ExecutorRun(cstate->queryDesc, ForwardScanDirection, 0L);
+		ExecutorRun(cstate->queryDesc, ForwardScanDirection, 0);
 	}
 
 	/* binary trailer should not be sent in execute mode. */
@@ -2907,7 +2907,7 @@ CopyFromDispatch(CopyState cstate)
 	Datum	   *values;
 	bool	   *nulls;
 	int		   *attr_offsets;
-	int			total_rejected_from_qes = 0;
+	int64			total_rejected_from_qes = 0;
 	bool		isnull;
 	bool	   *isvarlena;
 	ResultRelInfo *resultRelInfo;
@@ -2962,7 +2962,7 @@ CopyFromDispatch(CopyState cstate)
 	 * Variables for original row number tracking
 	 */
 	StringInfoData line_buf_with_lineno;
-	int			original_lineno_for_qe;
+	int64			original_lineno_for_qe;
 
 	/*
 	 * Variables for cdbhash
@@ -4039,7 +4039,7 @@ CopyFromDispatch(CopyState cstate)
 					 * Text/CSV: modify the data to look like:
 				 *    "<lineno>^<linebuf_converted>^<data>"
 				 */
-				appendStringInfo(&line_buf_with_lineno, "%d%c%d%c%s",
+				appendStringInfo(&line_buf_with_lineno, INT64_FORMAT "%c%d%c%s",
 								 original_lineno_for_qe,
 								 COPY_METADATA_DELIM,
 								 cstate->line_buf_converted, \
@@ -4052,7 +4052,7 @@ CopyFromDispatch(CopyState cstate)
 					 * Binary: modify the data to look like:
 					 *    "<lineno:int64><data:bytes>"
 					 */
-					uint64 lineno = htonll((uint64) original_lineno_for_qe);
+					uint64 lineno = htonll(original_lineno_for_qe);
 					appendBinaryStringInfo(&line_buf_with_lineno,
 										   &lineno,
 										   sizeof(lineno));
@@ -4148,8 +4148,8 @@ CopyFromDispatch(CopyState cstate)
 	 */
 	if(cstate->cdbsreh)
 	{
-		int total_rejected = 0;
-		int total_rejected_from_qd = cstate->cdbsreh->rejectcount;
+		int64 total_rejected = 0;
+		int64 total_rejected_from_qd = cstate->cdbsreh->rejectcount;
 
 		/*
 		 * If error log has been requested, then we send the row to the segment
@@ -5624,7 +5624,7 @@ static bool
 DetectLineEnd(CopyState cstate, size_t bytesread  __attribute__((unused)))
 {
 	int			index = 0;
-	int			lineno = 0;
+	int64			lineno = 0;
 	char		c;
 	char		quotec = '\0',
 				escapec = '\0';
@@ -6937,7 +6937,7 @@ void CopyExtractRowMetaData(CopyState cstate)
 						"mixture of newline types in the data. Use the NEWLINE keyword "
 						"in order to resolve this reliably.")));
 
-	cstate->cur_lineno = atoi(line_start);
+	cstate->cur_lineno = atoll(line_start);
 
 	*md_delim = COPY_METADATA_DELIM; /* restore the line_buf byte after setting it to \0 */
 
@@ -7127,7 +7127,7 @@ limit_printout_length(const char *str)
 
 
 static void
-attr_get_key(CopyState cstate, CdbCopy *cdbCopy, int original_lineno_for_qe,
+attr_get_key(CopyState cstate, CdbCopy *cdbCopy, int64 original_lineno_for_qe,
 			 unsigned int target_seg,
 			 AttrNumber p_nattrs, AttrNumber *attrs,
 			 Form_pg_attribute *attr_descs, int *attr_offsets, bool *attr_nulls,

@@ -76,7 +76,7 @@ pqParseInput3(PGconn *conn)
 	char		id;
 	int			msgLength;
 	int			avail;
-	int			numRejected = 0;
+	int64			numRejected = 0;
 
 	/*
 	 * Loop to parse successive complete messages available in the buffer.
@@ -261,7 +261,7 @@ pqParseInput3(PGconn *conn)
 							return;
 					}
 							
-					if (pqGetInt(&(conn->result->naotupcounts), 4, conn))
+					if (pqGetInt(&(conn->result->naotupcounts), 4, conn)) /* number of AO relations in result set */
 						return;
 							
 					/* now just loop through */
@@ -473,7 +473,7 @@ pqParseInput3(PGconn *conn)
 							return;
 					}
 						
-					if (pqGetInt(&numRejected, 4, conn))
+					if (pqGetInt64(&numRejected, conn))
 						return;
 
 					conn->result->numRejected += numRejected;

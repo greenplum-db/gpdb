@@ -31,8 +31,6 @@ _hash_checkqual(IndexScanDesc scan, IndexTuple itup)
 	ScanKey		key = scan->keyData;
 	int			scanKeySize = scan->numberOfKeys;
 
-	IncrIndexProcessed();
-
 	while (scanKeySize > 0)
 	{
 		Datum		datum;

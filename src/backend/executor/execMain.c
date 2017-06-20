@@ -125,7 +125,7 @@ static void initResultRelInfo(ResultRelInfo *resultRelInfo,
 static void ExecCheckPlanOutput(Relation resultRel, List *targetList);
 static TupleTableSlot *ExecutePlan(EState *estate, PlanState *planstate,
 			CmdType operation,
-			long numberTuples,
+			int64 numberTuples,
 			ScanDirection direction,
 			DestReceiver *dest);
 static void ExecSelect(TupleTableSlot *slot,
@@ -763,7 +763,7 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
  */
 TupleTableSlot *
 ExecutorRun(QueryDesc *queryDesc,
-			ScanDirection direction, long count)
+			ScanDirection direction, int64 count)
 {
 	EState	   *estate;
 	CmdType		operation;
@@ -2440,7 +2440,7 @@ SendAOTupCounts(EState *estate)
 									"AO relations... ", aocount)));
 
 			pq_beginmessage(&buf, 'o');
-			pq_sendint(&buf, aocount, 4);
+			pq_sendint(&buf, aocount, 4); /* number of AO relations in result set */
 
 			resultRelInfo = estate->es_result_relations;
 			for (i = 0; i < estate->es_num_result_relations; i++)
@@ -2454,7 +2454,7 @@ SendAOTupCounts(EState *estate)
 					pq_sendint64(&buf, tupcount);
 
 					if (Debug_appendonly_print_insert)
-						ereport(LOG,(errmsg("sent tupcount " INT64_FORMAT " for "
+						ereport(LOG,(errmsg("sent tupcount " UINT64_FORMAT " for "
 											"relation %d", tupcount, relid)));
 
 				}
@@ -2685,7 +2685,7 @@ static TupleTableSlot *
 ExecutePlan(EState *estate,
 			PlanState *planstate,
 			CmdType operation,
-			long numberTuples,
+			int64 numberTuples,
 			ScanDirection direction,
 			DestReceiver *dest)
 {
@@ -2694,7 +2694,7 @@ ExecutePlan(EState *estate,
 	TupleTableSlot *slot;
 	ItemPointer tupleid = NULL;
 	ItemPointerData tuple_ctid;
-	long		current_tuple_count;
+	uint64		current_tuple_count;
 	TupleTableSlot *result;
 
 	/*
@@ -2995,7 +2995,6 @@ ExecSelect(TupleTableSlot *slot,
 		   EState *estate)
 {
 	(*dest->receiveSlot) (slot, dest);
-	IncrRetrieved();
 	(estate->es_processed)++;
 }
 
@@ -3225,7 +3224,6 @@ ExecInsert(TupleTableSlot *slot,
 							true, true, GetCurrentTransactionId());
 	}
 
-	IncrAppended();
 	(estate->es_processed)++;
 	(resultRelInfo->ri_aoprocessed)++;
 	estate->es_lastoid = newId;
@@ -3476,7 +3474,6 @@ ldelete:;
 
 	if (!isUpdate)
 	{
-		IncrDeleted();
 		(estate->es_processed)++;
 		/*
 		 * To notify master if tuples deleted or not, to update mod_count.
@@ -3918,7 +3915,6 @@ lreplace:;
 		heap_freetuple(persistentTuple);
 	}
 
-	IncrReplaced();
 	(estate->es_processed)++;
 	(resultRelInfo->ri_aoprocessed)++;
 
@@ -5058,8 +5054,6 @@ intorel_receive(TupleTableSlot *slot, DestReceiver *self)
 	}
 
 	/* We know this is a newly created relation, so there are no indexes */
-
-	IncrAppended();
 }
 
 /*

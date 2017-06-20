@@ -690,7 +690,7 @@ cdbdisp_sumRejectedRows(CdbDispatchResults *results)
 	CdbDispatchResult *dispatchResult;
 	CdbDispatchResult *resultEnd = cdbdisp_resultEnd(results, -1);
 	PGresult *pgresult;
-	int	totalRejected = 0;
+	int64	totalRejected = 0;
 
 	for (dispatchResult = cdbdisp_resultBegin(results, -1);
 		 dispatchResult < resultEnd; ++dispatchResult)
