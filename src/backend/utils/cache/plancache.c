@@ -762,9 +762,14 @@ AcquireExecutorLocks(List *stmt_list, bool acquire)
 				 * RowExclusiveLock is acquired in PostgreSQL here.  Greenplum
 				 * acquires ExclusiveLock to avoid distributed deadlock due to
 				 * concurrent UPDATE/DELETE on the same table.  This is in
-				 * parity with CdbTryOpenRelation().
+				 * parity with CdbTryOpenRelation().  Catalog tables are
+				 * replicated across cluster and don't suffer from the
+				 * deadlock.
 				 */
-				lockmode = ExclusiveLock;
+				if (rte->relid > FirstNormalObjectId)
+					lockmode = ExclusiveLock;
+				else
+					lockmode = RowExclusiveLock;
 			}
 			else if (rowmark_member(plannedstmt->rowMarks, rt_index))
 				lockmode = RowShareLock;
@@ -831,8 +836,13 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 					 * Greenplum acquires ExclusiveLock to avoid distributed
 					 * deadlock due to concurrent UPDATE/DELETE on the same
 					 * table.  This is in parity with CdbTryOpenRelation().
+					 * Catalog tables are replicated across cluster and don't
+					 * suffer from the deadlock.
 					 */
-					lockmode = ExclusiveLock;
+					if (rte->relid > FirstNormalObjectId)
+						lockmode = ExclusiveLock;
+					else
+						lockmode = RowExclusiveLock;
 				}
 				else if (rowmark_member(parsetree->rowMarks, rt_index))
 					lockmode = RowShareLock;
