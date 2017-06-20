@@ -67,7 +67,7 @@ typedef struct CdbSreh
 
 	/* reject limit state */
 	int		rejectlimit;	/* SEGMENT REJECT LIMIT value */
-	int		rejectcount;	/* how many were rejected so far */
+	int64		rejectcount;	/* how many were rejected so far */
 	bool	is_limit_in_rows; /* ROWS = true, PERCENT = false */
 	
 	/* COPY only vars */

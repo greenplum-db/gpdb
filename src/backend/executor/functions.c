@@ -504,7 +504,7 @@ postquel_getnext(execution_state *es, SQLFunctionCachePtr fcache)
 {
 	TupleTableSlot *result;
 	Snapshot	saveActiveSnapshot;
-	volatile uint64		count;
+	volatile int64		count;
 
 	/* Make our snapshot the active one for any called functions */
 	saveActiveSnapshot = ActiveSnapshot;
