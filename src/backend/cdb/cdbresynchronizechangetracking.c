@@ -3077,7 +3077,7 @@ int ChangeTracking_CompactLogFile(CTFType source, CTFType dest, XLogRecPtr*	upto
 {	
 	StringInfoData 	sqlstmt;
 	int 			ret;
-	int 			proc;
+	int 			proc;	/* 32 bit, only holds metadata */
 	bool 			connected = false;
 	int64			count = 0;
 	ResourceOwner 	save = CurrentResourceOwner;
@@ -3121,7 +3121,7 @@ int ChangeTracking_CompactLogFile(CTFType source, CTFType dest, XLogRecPtr*	upto
 
 		/* Do the query. */
 		ret = SPI_execute(sqlstmt.data, true, 0);
-		proc = SPI_processed;
+		proc = (int) SPI_processed;
 
 		if ((segmentState != SegmentStateChangeTrackingDisabled) &&
 			ret > 0 && SPI_tuptable != NULL)
