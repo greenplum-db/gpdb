@@ -11,6 +11,7 @@
 #include "pg_upgrade.h"
 
 #include "access/transam.h"
+#include "catalog/pg_class.h"
 
 static void get_db_infos(migratorContext *ctx, DbInfoArr *dbinfos,
 			 Cluster whichCluster);
@@ -162,6 +163,9 @@ map_rel(migratorContext *ctx, const RelInfo *oldrel, const RelInfo *newrel,
 	map->atts = oldrel->atts;
 	map->natts = oldrel->natts;
 	map->gpdb4_heap_conversion_needed = oldrel->gpdb4_heap_conversion_needed;
+
+	/* An AO table doesn't necessarily have segment 0 at all. */
+	map->missing_seg0_ok = relstorage_is_ao(oldrel->relstorage);
 }
 
 
