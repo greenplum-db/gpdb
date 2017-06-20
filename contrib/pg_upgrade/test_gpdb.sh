@@ -156,7 +156,7 @@ export DEMO_PORT_BASE=27432
 export NUM_PRIMARY_MIRROR_PAIRS=3
 export MASTER_DATADIR=${temp_root}
 cp ${OLD_DATADIR}/../lalshell .
-${OLD_DATADIR}/../demo_cluster.sh
+BLDWRAP_POSTGRES_CONF_ADDONS=fsync=off ${OLD_DATADIR}/../demo_cluster.sh
 
 NEW_DATADIR="${temp_root}/datadirs"
 
