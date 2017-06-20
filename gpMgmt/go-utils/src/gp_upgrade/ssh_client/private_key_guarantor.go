@@ -25,5 +25,9 @@ func (guarantor PrivateKeyGuarantor) Check(private_key string) (string, error) {
 		dir := os.Getenv("HOME")
 		return filepath.Join(dir, private_key[2:]), nil
 	}
+
+	if _, err := os.Stat(private_key); os.IsNotExist(err) {
+		return "", err
+	}
 	return private_key, nil
 }

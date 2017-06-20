@@ -5,6 +5,8 @@ import (
 
 	"gp_upgrade/ssh_client"
 
+	"io/ioutil"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -20,9 +22,20 @@ var _ = Describe("PrivateKeyGuarantor", func() {
 
 	Describe("#Check", func() {
 		Context("user has specified a private key option", func() {
+			It("returns error when non-existent path is provided", func() {
+				_, err := subject.Check("pathThatDoesNotExist")
+
+				Expect(err).To(HaveOccurred())
+			})
 			It("returns that specified key path", func() {
-				value, _ := subject.Check("foo")
-				Expect(value).To(Equal("foo"))
+				const PRIVATE_KEY_FILE_PATH = "/tmp/testPrivateKeyFile.key"
+				ioutil.WriteFile(PRIVATE_KEY_FILE_PATH, []byte("----TEST PRIVATE KEY ---"), 0600)
+
+				value, err := subject.Check(PRIVATE_KEY_FILE_PATH)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(value).To(Equal(PRIVATE_KEY_FILE_PATH))
+
 			})
 		})
 

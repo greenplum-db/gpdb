@@ -12,10 +12,10 @@ type CheatSheet struct {
 	ReturnCode []byte
 }
 
-const fileName = "/tmp/test_sshd_gp_upgrade"
+const CHEAT_SHEET_FILE = "/tmp/test_sshd_gp_upgrade_response.txt"
 
 func (cheatSheet CheatSheet) WriteToFile() {
-	f, err := os.Create(fileName)
+	f, err := os.Create(CHEAT_SHEET_FILE)
 	Check("Failed to create file", err)
 	w := bufio.NewWriter(f)
 	enc := gob.NewEncoder(w)
@@ -29,11 +29,11 @@ func (cheatSheet CheatSheet) WriteToFile() {
 }
 
 func (cheatSheet *CheatSheet) ReadFromFile() error {
-	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+	if _, err := os.Stat(CHEAT_SHEET_FILE); os.IsNotExist(err) {
 		return err
 	}
 
-	f, err := os.Open(fileName)
+	f, err := os.Open(CHEAT_SHEET_FILE)
 	if err != nil {
 		return err
 	}
@@ -48,5 +48,5 @@ func (cheatSheet *CheatSheet) ReadFromFile() error {
 }
 
 func (cheatSheet *CheatSheet) RemoveFile() {
-	os.Remove(fileName)
+	os.Remove(CHEAT_SHEET_FILE)
 }

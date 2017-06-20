@@ -18,49 +18,30 @@ type MonitorCommand struct {
 	Port       int    `long:"port" default:"22" description:"SSH port for communication"`
 	User       string `long:"user" default:"" description:"Name of user at ssh destination"`
 	PrivateKey string `long:"private_key" description:"Private key for ssh destination"`
-	Segment_id int    `long:"segment_id" required:"yes" description:"ID of segment to monitor"`
+	SegmentId  int    `long:"segment_id" required:"yes" description:"ID of segment to monitor"`
 }
 
 func (cmd MonitorCommand) Execute([]string) error {
-	var err error
-	cmd.PrivateKey, err = ssh_client.NewPrivateKeyGuarantor().Check(cmd.PrivateKey)
+	connector, err := ssh_client.NewSshConnector(cmd.PrivateKey)
 	if err != nil {
 		return err
 	}
-
-	reader := config.Reader{}
-	err = reader.Read()
+	return cmd.execute(connector, os.Stdout)
+}
+func (cmd MonitorCommand) execute(connector ssh_client.SshConnector, writer io.Writer) error {
+	targetPort, err := readConfigForSegmentPort(cmd.SegmentId)
 	if err != nil {
 		return err
 	}
-	targetPort := reader.GetPortForSegment(cmd.Segment_id)
-	if targetPort == -1 {
-		fmt.Fprintf(os.Stderr, "segment_id %d not known in this cluster configuration", cmd.Segment_id)
-		os.Exit(1)
-	}
-
-	connector := ssh_client.NewSshConnector()
 
 	user := cmd.User
 	if user == "" {
-		user, _, _ = utils.GetUserAndHostInfo() // todo test me: comment out this line and make binary work... need a red UNIT test to mimic what happens in app.  (integration test would be too hard)
+		user, _, _ = utils.GetUserAndHostInfo()
 	}
 
-	session, err := connector.Connect(cmd.Host, cmd.Port, user, cmd.PrivateKey)
+	output, err := connector.ConnectAndExecute(cmd.Host, cmd.Port, user, "ps auxx | grep pg_upgrade")
 	if err != nil {
 		return err
-	}
-
-	defer session.Close()
-
-	// pgrep could be used, but it was messy because of exit code 1 when not found;
-	// seems nicer with ps to have 0 exit when not found (but not error)
-	result, err := session.Output("ps auxx | grep pg_upgrade")
-
-	output := string(result)
-	if err != nil && err != io.EOF {
-		msg := "cannot run pgrep command on remote host, output: " + output + "\nError: " + err.Error()
-		return errors.New(msg)
 	}
 
 	addNot := ""
@@ -68,7 +49,22 @@ func (cmd MonitorCommand) Execute([]string) error {
 	if !shellParser.IsPgUpgradeRunning(targetPort) {
 		addNot = "not "
 	}
-	fmt.Printf("pg_upgrade is %srunning on host \"%s\", segment_id %d\n", addNot, cmd.Host, cmd.Segment_id)
+	fmt.Fprintf(writer, "pg_upgrade is %srunning on host \"%s\", segment_id %d\n", addNot, cmd.Host, cmd.SegmentId)
 
 	return nil
+}
+
+func readConfigForSegmentPort(segmentId int) (int, error) {
+	var err error
+	reader := config.Reader{}
+	err = reader.Read()
+	if err != nil {
+		return -1, err
+	}
+	targetPort := reader.GetPortForSegment(segmentId)
+	if targetPort == -1 {
+		return -1, errors.New(fmt.Sprintf("segment_id %d not known in this cluster configuration", segmentId))
+	}
+
+	return targetPort, nil
 }

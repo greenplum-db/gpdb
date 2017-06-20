@@ -17,7 +17,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
 )
 
@@ -48,11 +47,8 @@ var _ = Describe("check tests", func() {
 		Describe("happy: the database is running, master-host is provided, and connection is successful", func() {
 			It("writes a file to ~/.gp_upgrade/cluster_config.json with correct json", func() {
 				setupSegmentConfigInDB(mock)
-				buffer := gbytes.NewBuffer()
+				err := subject.execute(dbConn, config.NewWriter())
 
-				err := subject.execute(dbConn, buffer, config.NewWriter())
-
-				buffer.Close()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(dbConn.Conn.Stats().OpenConnections).To(Equal(0))
 				content, err := ioutil.ReadFile(config.GetConfigFilePath())
@@ -72,7 +68,7 @@ var _ = Describe("check tests", func() {
 				It("returns an error", func() {
 					mock.ExpectQuery(SELECT_SEGMENT_CONFIG_QUERY).WillReturnError(errors.New("the query has failed"))
 
-					err := subject.execute(dbConn, nil, config.NewWriter())
+					err := subject.execute(dbConn, config.NewWriter())
 
 					Expect(dbConn.Conn.Stats().OpenConnections).To(Equal(0))
 					Expect(err).To(HaveOccurred())
@@ -93,12 +89,11 @@ var _ = Describe("check tests", func() {
 			Describe("when the home directory is not writable", func() {
 				It("returns an error", func() {
 					setupSegmentConfigInDB(mock)
-					buffer := gbytes.NewBuffer()
 					err := os.MkdirAll(config.GetConfigDir(), 0500)
 					test_utils.Check("cannot chmod: ", err)
 					subject.Master_host = "localhost"
 
-					err = subject.execute(dbConn, buffer, config.NewWriter())
+					err = subject.execute(dbConn, config.NewWriter())
 
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("open /tmp/gp_upgrade_test_temp_home_dir/.gp_upgrade/cluster_config.json: permission denied"))
@@ -109,11 +104,10 @@ var _ = Describe("check tests", func() {
 				It("returns an error", func() {
 					setupSegmentConfigInDB(mock)
 					mock.ExpectQuery(SELECT_SEGMENT_CONFIG_QUERY).WillReturnError(errors.New("the query has failed"))
-					buffer := gbytes.NewBuffer()
 					subject.Master_host = "localhost"
 
 					fake := FakeWriter{}
-					err := subject.execute(dbConn, buffer, fake)
+					err := subject.execute(dbConn, fake)
 
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("I always fail"))

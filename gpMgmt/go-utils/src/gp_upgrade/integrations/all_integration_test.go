@@ -8,7 +8,7 @@ import (
 )
 
 var _ = Describe("all", func() {
-	It("handle no params call by outputting help text", func() {
+	It("handles no params call by outputting help text", func() {
 		session := runCommand()
 
 		Eventually(session).Should(Exit(1))

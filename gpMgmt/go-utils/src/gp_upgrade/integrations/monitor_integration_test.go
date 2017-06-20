@@ -189,7 +189,7 @@ var _ = Describe("monitor", func() {
 			session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--private_key", private_key_path, "--user", "pivotal")
 
 			Eventually(session).Should(Exit(1))
-			expectedMsg := "cannot run pgrep command on remote host, output: foo output\nError: Process exited with status 1"
+			expectedMsg := "cannot run 'ps auxx | grep pg_upgrade' command on remote host, output: foo output\nError: Process exited with status 1"
 			Eventually(session.Err).Should(Say(expectedMsg))
 		})
 	})

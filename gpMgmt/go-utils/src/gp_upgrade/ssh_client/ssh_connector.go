@@ -7,23 +7,63 @@ import (
 
 	"net"
 
+	"errors"
+	"io"
+
 	"golang.org/x/crypto/ssh"
 )
 
-type SshConnector struct {
-	SshDialer    Dialer
-	SshKeyParser KeyParser
+type SshConnector interface {
+	ConnectAndExecute(host string, port int, user string, command string) (string, error)
+	Connect(Host string, Port int, user string) (Session, error)
 }
 
-func NewSshConnector() *SshConnector {
-	return &SshConnector{
-		SshKeyParser: RealKeyParser{},
-		SshDialer:    RealDialer{},
+type Session interface {
+	Output(cmd string) ([]byte, error)
+	Close() error
+}
+
+type RealSshConnector struct {
+	SshDialer      Dialer
+	SshKeyParser   KeyParser
+	PrivateKeyPath string
+}
+
+func NewSshConnector(privateKeyPath string) (SshConnector, error) {
+	privateKey, err := NewPrivateKeyGuarantor().Check(privateKeyPath)
+	if err != nil {
+		return nil, err
 	}
+
+	return &RealSshConnector{
+		SshKeyParser:   RealKeyParser{},
+		SshDialer:      RealDialer{},
+		PrivateKeyPath: privateKey,
+	}, nil
 }
 
-func (ssh_connector SshConnector) Connect(Host string, Port int, user string, private_key string) (*ssh.Session, error) {
-	pemBytes, err := ioutil.ReadFile(private_key)
+func (ssh_connector *RealSshConnector) ConnectAndExecute(host string, port int, user string, command string) (string, error) {
+	session, err := ssh_connector.Connect(host, port, user)
+	if err != nil {
+		return "", err
+	}
+
+	// pgrep could be used, but it was messy because of exit code 1 when not found;
+	// seems nicer with ps to have 0 exit when not found (but not error)
+	outputBytes, err := session.Output(command)
+	output := string(outputBytes)
+	session.Close() // we just ignore any error from Close() if we had a successful output already
+
+	if err != nil && err != io.EOF {
+		msg := fmt.Sprintf("cannot run '%s' command on remote host, output: %s \nError: %s", command, output, err.Error())
+		return "", errors.New(msg)
+	}
+
+	return output, nil
+}
+
+func (ssh_connector *RealSshConnector) Connect(Host string, Port int, user string) (Session, error) {
+	pemBytes, err := ioutil.ReadFile(ssh_connector.PrivateKeyPath)
 	if err != nil {
 		return nil, err
 	}

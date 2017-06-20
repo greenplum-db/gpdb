@@ -6,7 +6,7 @@ import (
 )
 
 type Reader struct {
-	config Configuration
+	config SegmentConfiguration
 }
 
 func (reader *Reader) Read() error {
@@ -30,5 +30,4 @@ func (reader Reader) GetPortForSegment(segmentDbid int) int {
 	}
 
 	return result
-
 }

@@ -20,9 +20,9 @@ import (
 //"san_mounts": null,
 //"status": "u"
 
-type Configuration []ConfigRow
+type SegmentConfiguration []Segment
 
-type ConfigRow struct {
+type Segment struct {
 	Address  string `json:"address"`
 	Content  int    `json:"content"`
 	DBID     int    `json:"dbid"`

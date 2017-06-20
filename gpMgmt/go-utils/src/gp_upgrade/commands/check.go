@@ -8,8 +8,6 @@ import (
 	"gp_upgrade/db"
 
 	"gp_upgrade/utils"
-	"io"
-	"os"
 
 	"github.com/pkg/errors"
 )
@@ -36,10 +34,10 @@ func (cmd CheckCommand) Execute([]string) error {
 	}
 
 	dbConn := db.NewDBConn(cmd.Master_host, cmd.Master_port, cmd.Database_name, cmd.Database_type, cmd.Database_config)
-	return cmd.execute(dbConn, os.Stdout, config.NewWriter())
+	return cmd.execute(dbConn, config.NewWriter())
 }
 
-func (cmd CheckCommand) execute(dbConn *db.DBConn, outputWriter io.Writer, writer config.Store) error {
+func (cmd CheckCommand) execute(dbConn *db.DBConn, writer config.Store) error {
 
 	err := dbConn.Connect()
 	if err != nil {
