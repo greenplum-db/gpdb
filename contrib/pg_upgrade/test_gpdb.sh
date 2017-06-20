@@ -73,8 +73,7 @@ upgrade_segment()
 	mkdir -p $1
 
 	# Copy the OID files from the QD to segments.
-	ls -l "$qddir"
-	cp "$qddir/pg_upgrade_dump_*_oids.sql" $1
+	cp $qddir/pg_upgrade_dump_*_oids.sql $1
 
 	# Run pg_upgrade
 	pushd $1
