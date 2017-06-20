@@ -54,9 +54,6 @@ upgrade_qd()
 {
 	mkdir -p $1
 
-	# Remember the path to the QD data directory.
-	qddir=$2
-
 	# Run pg_upgrade
 	pushd $1
 	time ${NEW_BINDIR}/pg_upgrade --old-bindir=${OLD_BINDIR} --old-datadir=$2 --new-bindir=${NEW_BINDIR} --new-datadir=$3 --dispatcher-mode
@@ -65,6 +62,10 @@ upgrade_qd()
 		exit 1
 	fi
 	popd
+
+	# Remember where we were when we upgraded the QD node. pg_upgrade generates
+	# some files there that we need to copy to QE nodes.
+	qddir=$1
 }
 
 upgrade_segment()
@@ -72,6 +73,7 @@ upgrade_segment()
 	mkdir -p $1
 
 	# Copy the OID files from the QD to segments.
+	ls -l "$qddir"
 	cp "$qddir/pg_upgrade_dump_*_oids.sql" $1
 
 	# Run pg_upgrade
