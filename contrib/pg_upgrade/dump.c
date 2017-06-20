@@ -140,8 +140,8 @@ split_old_dump(migratorContext *ctx)
 		 * The global OIDs go just after the first \connect. The per-DB OIDs
 		 * go just after each \connect (including the first one).
 		 *
-		 * If we just switched database, dump the preassignments
-		 * */
+		 * If we just switched database, dump the preassignments.
+		 */
 		if (start_of_line && strncmp(line, "\\connect ", strlen("\\connect ")) == 0)
 		{
 			char	   *preassigned_oids;

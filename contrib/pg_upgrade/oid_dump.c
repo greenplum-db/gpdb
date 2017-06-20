@@ -14,7 +14,7 @@
  * tables, and bitmap index LOV tables. Furthermore, we need to use the same
  * OIDs for every object, not just types and relations, between the QD node
  * and the segments. The QD node and the segments are pg_upgraded separately,
- * however. So we use a differ different strategy in GPDB.
+ * however. So we use a different strategy in GPDB.
  *
  * In GPDB, instead of setting the "next OID" just before creating a relation
  * or type, we issue calls like:
@@ -28,7 +28,7 @@
  * pg_class catalog tables from the old cluster, right after dumping the
  * schema with pg_dump.
  *
- * When restoring the schema, we may create more type or relations than what
+ * When restoring the schema, we may create more types or relations than what
  * existed in the old cluster. In particular, when upgrading from GPDB4 to
  * GPDB5, we may need to create array types for user-defined types that didn't
  * exist before. To ensure that the OIDs chosen for the new objects don't
@@ -52,7 +52,7 @@
  * into memory, and inject it to the pg_dump output, just after the \connect
  * line.
  *
- *	Copyright (c) 2016, Pivotal Software Inc
+ *	Copyright (c) 2017, Pivotal Software Inc
  */
 
 #include "pg_upgrade.h"

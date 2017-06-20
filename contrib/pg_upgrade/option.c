@@ -180,7 +180,7 @@ parseCommandLine(migratorContext *ctx, int argc, char *argv[])
 				 * itself, and we don't want to dig into the auxiliary
 				 * config files created by gpinitsystem. So for now, the
 				 * caller of pg_upgrade must use the --dispatcher-mode
-				 * option, when upgrading the QE node.
+				 * option, when upgrading the QD node.
 				 */
 				ctx->dispatcher_mode = true;
 				break;

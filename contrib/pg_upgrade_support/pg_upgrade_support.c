@@ -197,7 +197,6 @@ PG_FUNCTION_INFO_V1(preassign_tsconfig_oid);
 PG_FUNCTION_INFO_V1(preassign_extension_oid);
 PG_FUNCTION_INFO_V1(preassign_enum_oid);
 PG_FUNCTION_INFO_V1(preassign_amop_oid);
-PG_FUNCTION_INFO_V1(reserve_oid);
 
 Datum
 preassign_type_oid(PG_FUNCTION_ARGS)
