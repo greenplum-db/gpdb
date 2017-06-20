@@ -17,6 +17,7 @@
 #include "nodes/nodeFuncs.h"
 #include "parser/analyze.h"
 #include "parser/parse_cte.h"
+#include "parser/parse_expr.h"
 #include "utils/builtins.h"
 
 

@@ -766,7 +766,7 @@ is_simple_subquery(PlannerInfo *root, Query *subquery)
  * any datatype coercions involved, ie, all the leaf queries must emit the
  * same datatypes.
  */
-static bool
+static bool pg_attribute_unused()
 is_simple_union_all(Query *subquery)
 {
 	SetOperationStmt *topop;

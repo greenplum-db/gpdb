@@ -389,7 +389,7 @@ ExecWorkFile_Tell64(ExecWorkFile *workfile)
 	switch(workfile->fileType)
 	{
 		case BUFFILE:
-			BufFileTell((BufFile *)workfile->file, NULL, (int64 *) &bytes);
+			BufFileTell((BufFile *)workfile->file, NULL, (off_t *) &bytes);
 			break;
 			
 		case BFZ:
