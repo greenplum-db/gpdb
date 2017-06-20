@@ -280,7 +280,7 @@ static Datum plperl_hash_to_datum(SV *src, TupleDesc td);
 static void plperl_init_shared_libs(pTHX);
 static void plperl_trusted_init(void);
 static void plperl_untrusted_init(void);
-static HV  *plperl_spi_execute_fetch_result(SPITupleTable *, uint64, int);
+static HV  *plperl_spi_execute_fetch_result(SPITupleTable *, int64, int);
 static char *hek2cstr(HE *he);
 static SV **hv_store_string(HV *hv, const char *key, SV *val);
 static SV **hv_fetch_string(HV *hv, const char *key);
@@ -2901,7 +2901,7 @@ plperl_spi_exec(char *query, int limit)
 
 
 static HV  *
-plperl_spi_execute_fetch_result(SPITupleTable *tuptable, uint64 processed,
+plperl_spi_execute_fetch_result(SPITupleTable *tuptable, int64 processed,
 								int status)
 {
 	HV		   *result;
@@ -2913,7 +2913,7 @@ plperl_spi_execute_fetch_result(SPITupleTable *tuptable, uint64 processed,
 	hv_store_string(result, "status",
 					cstr2sv(SPI_result_code_string(status)));
 	hv_store_string(result, "processed",
-					(processed > (uint64) UV_MAX) ?
+					(processed > (int64) UV_MAX) ?
 					newSVnv((NV) processed) :
 					newSVuv((UV) processed));
 
@@ -2921,10 +2921,10 @@ plperl_spi_execute_fetch_result(SPITupleTable *tuptable, uint64 processed,
 	{
 		AV		   *rows;
 		SV		   *row;
-		uint64			i;
+		int64			i;
 
 		/* Prevent overflow in call to av_extend() */
- 		if (processed > (uint64) AV_SIZE_MAX)
+ 		if (processed > (int64) AV_SIZE_MAX)
  			ereport(ERROR,
  					(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
  			errmsg("query result has too many rows to fit in a Perl array")));
@@ -3495,7 +3495,7 @@ plperl_spi_exec_prepared(char *query, HV *attr, int argc, SV **argv)
 		 * go
 		 ************************************************************/
 		spi_rv = SPI_execute_plan(qdesc->plan, argvalues, nulls,
-							 current_call_data->prodesc->fn_readonly, limit);
+							 current_call_data->prodesc->fn_readonly, (int64) limit);
 		ret_hv = plperl_spi_execute_fetch_result(SPI_tuptable, SPI_processed,
 												 spi_rv);
 		if (argc > 0)

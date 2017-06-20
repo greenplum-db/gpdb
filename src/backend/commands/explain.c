@@ -471,7 +471,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 		/* run the plan */
         PG_TRY();
         {
-		    ExecutorRun(queryDesc, ForwardScanDirection, 0L);
+		    ExecutorRun(queryDesc, ForwardScanDirection, 0);
         }
         PG_CATCH();
         {

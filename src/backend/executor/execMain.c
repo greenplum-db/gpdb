@@ -125,7 +125,7 @@ static void initResultRelInfo(ResultRelInfo *resultRelInfo,
 static void ExecCheckPlanOutput(Relation resultRel, List *targetList);
 static TupleTableSlot *ExecutePlan(EState *estate, PlanState *planstate,
 			CmdType operation,
-			uint64 numberTuples, /* FIXME: diagnostics */
+			int64 numberTuples,
 			ScanDirection direction,
 			DestReceiver *dest);
 static void ExecSelect(TupleTableSlot *slot,
@@ -763,7 +763,7 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
  */
 TupleTableSlot *
 ExecutorRun(QueryDesc *queryDesc,
-			ScanDirection direction, uint64 count)
+			ScanDirection direction, int64 count)
 {
 	EState	   *estate;
 	CmdType		operation;
@@ -2440,7 +2440,7 @@ SendAOTupCounts(EState *estate)
 									"AO relations... ", aocount)));
 
 			pq_beginmessage(&buf, 'o');
-			pq_sendint(&buf, aocount, 4);
+			pq_sendint(&buf, aocount, 4); /* number of AO relations in result set */
 
 			resultRelInfo = estate->es_result_relations;
 			for (i = 0; i < estate->es_num_result_relations; i++)
@@ -2685,7 +2685,7 @@ static TupleTableSlot *
 ExecutePlan(EState *estate,
 			PlanState *planstate,
 			CmdType operation,
-			uint64 numberTuples,
+			int64 numberTuples,
 			ScanDirection direction,
 			DestReceiver *dest)
 {

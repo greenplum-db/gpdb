@@ -155,7 +155,7 @@ static Datum exec_eval_expr(PLpgSQL_execstate *estate,
 			   bool *isNull,
 			   Oid *rettype);
 static int exec_run_select(PLpgSQL_execstate *estate,
-				PLpgSQL_expr *expr, long maxtuples, Portal *portalP);
+				PLpgSQL_expr *expr, int64 maxtuples, Portal *portalP);
 static void exec_move_row(PLpgSQL_execstate *estate,
 			  PLpgSQL_rec *rec,
 			  PLpgSQL_row *row,
@@ -2497,7 +2497,7 @@ exec_stmt_execsql(PLpgSQL_execstate *estate,
 	int			i;
 	Datum	   *values;
 	char	   *nulls;
-	uint64		tcount;
+	int64		tcount;
 	int			rc;
 	PLpgSQL_expr *expr = stmt->sqlstmt;
 
@@ -4160,7 +4160,7 @@ exec_eval_expr(PLpgSQL_execstate *estate,
  */
 static int
 exec_run_select(PLpgSQL_execstate *estate,
-				PLpgSQL_expr *expr, long maxtuples, Portal *portalP)
+				PLpgSQL_expr *expr, int64 maxtuples, Portal *portalP)
 {
 	int			i;
 	Datum	   *values;

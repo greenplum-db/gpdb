@@ -261,7 +261,7 @@ pqParseInput3(PGconn *conn)
 							return;
 					}
 							
-					if (pqGetInt(&(conn->result->naotupcounts), 4, conn))
+					if (pqGetInt(&(conn->result->naotupcounts), 4, conn)) /* number of AO relations in result set */
 						return;
 							
 					/* now just loop through */

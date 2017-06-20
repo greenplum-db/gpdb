@@ -286,7 +286,7 @@ ProcessQuery(Portal portal,
 	/*
 	 * Run the plan to completion.
 	 */
-	ExecutorRun(queryDesc, ForwardScanDirection, 0L);	/* FIXME: diagnostics */
+	ExecutorRun(queryDesc, ForwardScanDirection, 0);
 
 	/* Now take care of any queued AFTER triggers */
 	AfterTriggerEndQuery(queryDesc->estate);

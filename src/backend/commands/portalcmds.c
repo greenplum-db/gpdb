@@ -460,7 +460,7 @@ PersistHoldablePortal(Portal portal)
 		SetTuplestoreDestReceiverDeToast(queryDesc->dest, true);
 
 		/* Fetch the result set into the tuplestore */
-		ExecutorRun(queryDesc, ForwardScanDirection, 0L);
+		ExecutorRun(queryDesc, ForwardScanDirection, 0);
 
 		(*queryDesc->dest->rDestroy) (queryDesc->dest);
 		queryDesc->dest = NULL;
@@ -494,9 +494,9 @@ PersistHoldablePortal(Portal portal)
 			if (portal->atEnd)
 			{
 				/*
-				/* Just force the tuplestore forward to its end.  The size of the
-				/* skip request here is arbitrary.
-				/*
+				 * Just force the tuplestore forward to its end.  The size of the
+				 * skip request here is arbitrary.
+				 */
 				while (tuplestore_advance(portal->holdStore, true))
 					/* continue */ ;
 			}
