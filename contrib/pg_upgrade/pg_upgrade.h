@@ -188,6 +188,7 @@ typedef struct
 	char		old_relname[NAMEDATALEN];		/* old name of the relation */
 	char		new_nspname[NAMEDATALEN];		/* new name of the namespace */
 	char		new_relname[NAMEDATALEN];		/* new name of the relation */
+	bool		missing_seg0_ok;
 
 	/* Extra information for heap tables */
 	bool		gpdb4_heap_conversion_needed;

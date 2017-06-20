@@ -126,6 +126,8 @@ transfer_single_new_db(migratorContext *ctx, pageCnvCtx *pageConverter,
 		char		new_file[MAXPGPATH];
 		struct dirent **namelist = NULL;
 		int			numFiles;
+		bool		seg0_missing;
+		struct stat st;
 
 		/* Copying files might take some time, so give feedback. */
 
@@ -137,11 +139,18 @@ transfer_single_new_db(migratorContext *ctx, pageCnvCtx *pageConverter,
 		 * Copy/link the relation file to the new cluster
 		 */
 		unlink(new_file);
-		transfer_relfile(ctx, pageConverter, old_file, new_file,
+
+		if (!maps[mapnum].missing_seg0_ok || stat(old_file, &st) == 0)
+		{
+			transfer_relfile(ctx, pageConverter, old_file, new_file,
 						 maps[mapnum].old_nspname, maps[mapnum].old_relname,
 						 maps[mapnum].new_nspname, maps[mapnum].new_relname,
 						 maps[mapnum].gpdb4_heap_conversion_needed,
 						 maps[mapnum].has_numerics, maps[mapnum].atts, maps[mapnum].natts);
+			seg0_missing = false;
+		}
+		else
+			seg0_missing = true;
 
 		/* fsm/vm files added in PG 8.4 */
 		if (GET_MAJOR_VERSION(ctx->old.major_version) >= 804)
