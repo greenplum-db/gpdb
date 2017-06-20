@@ -2806,4 +2806,18 @@ CTranslatorUtils::UlNonSystemColumns
 	return ulNonSystemCols;
 }
 
+// Function to check if we should create stats bucket in DXL
+// Returns true if column datatype is not text/char/varchar/bpchar
+BOOL
+CTranslatorUtils::FCreateStatsBucket
+	(
+	OID oidAttType
+	)
+{
+	if (oidAttType != TEXTOID && oidAttType != CHAROID && oidAttType != VARCHAROID && oidAttType != BPCHAROID)
+		return true;
+
+	return false;
+}
+
 // EOF

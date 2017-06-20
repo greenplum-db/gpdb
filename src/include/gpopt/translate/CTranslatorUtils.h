@@ -410,6 +410,10 @@ namespace gpdxl
 			// return the count of non-system columns in the relation
 			static
 			ULONG UlNonSystemColumns(const IMDRelation *pmdrel);
+
+			// check if we need to create stats buckets in DXL for the column attribute
+			static
+			BOOL FCreateStatsBucket(OID oidAttType);
 	};
 }
 

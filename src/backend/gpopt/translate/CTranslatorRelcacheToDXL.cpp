@@ -2366,32 +2366,42 @@ CTranslatorRelcacheToDXL::PimdobjColStats
 					&pdrgdatumHistValues, &iNumHistValues,
 					NULL, NULL);
 
-	// transform all the bits and pieces from pg_statistic
-	// to a single bucket structure
-	DrgPdxlbucket *pdrgpdxlbucketTransformed =
-			PdrgpdxlbucketTransformStats
-					(
-					pmp,
-					oidAttType,
-					dDistinct,
-					dNullFrequency,
-					pdrgdatumMCVValues,
-					pdrgfMCVFrequencies,
-					ULONG(iNumMCVValues),
-					pdrgdatumHistValues,
-					ULONG(iNumHistValues)
-					);
-
-	GPOS_ASSERT(NULL != pdrgpdxlbucketTransformed);
-
 	CDouble dNDVBuckets(0.0);
 	CDouble dFreqBuckets(0.0);
-	const ULONG ulBuckets = pdrgpdxlbucketTransformed->UlLength();
-	for (ULONG ul = 0; ul < ulBuckets; ul++)
+
+	// We only want to create statistics buckets if the column is NOT a text, varchar, char or bpchar type
+	// For the above column types we will use NDVRemain and NullFreq to do cardinality estimation.
+
+	if (CTranslatorUtils::FCreateStatsBucket(oidAttType))
 	{
-	   CDXLBucket *pdxlbucket = (*pdrgpdxlbucketTransformed)[ul];
-	   dNDVBuckets = dNDVBuckets + pdxlbucket->DDistinct();
-	   dFreqBuckets = dFreqBuckets + pdxlbucket->DFrequency();
+		// transform all the bits and pieces from pg_statistic
+		// to a single bucket structure
+		DrgPdxlbucket *pdrgpdxlbucketTransformed =
+		PdrgpdxlbucketTransformStats
+		(
+		 pmp,
+		 oidAttType,
+		 dDistinct,
+		 dNullFrequency,
+		 pdrgdatumMCVValues,
+		 pdrgfMCVFrequencies,
+		 ULONG(iNumMCVValues),
+		 pdrgdatumHistValues,
+		 ULONG(iNumHistValues)
+		 );
+
+		GPOS_ASSERT(NULL != pdrgpdxlbucketTransformed);
+
+		const ULONG ulBuckets = pdrgpdxlbucketTransformed->UlLength();
+		for (ULONG ul = 0; ul < ulBuckets; ul++)
+		{
+			CDXLBucket *pdxlbucket = (*pdrgpdxlbucketTransformed)[ul];
+			dNDVBuckets = dNDVBuckets + pdxlbucket->DDistinct();
+			dFreqBuckets = dFreqBuckets + pdxlbucket->DFrequency();
+		}
+
+		CUtils::AddRefAppend(pdrgpdxlbucket, pdrgpdxlbucketTransformed);
+		pdrgpdxlbucketTransformed->Release();
 	}
 
 	// there will be remaining tuples if the merged histogram and the NULLS do not cover
@@ -2406,15 +2416,11 @@ CTranslatorRelcacheToDXL::PimdobjColStats
  		dFreqRemain = std::max(CDouble(0.0), (1 - dFreqBuckets - dNullFrequency));
 	}
 
-	CUtils::AddRefAppend(pdrgpdxlbucket, pdrgpdxlbucketTransformed);
-
 	// free up allocated datum and float4 arrays
 	gpdb::FreeAttrStatsSlot(oidAttType, pdrgdatumMCVValues, iNumMCVValues, pdrgfMCVFrequencies, iNumMCVFrequencies);
 	gpdb::FreeAttrStatsSlot(oidAttType, pdrgdatumHistValues, iNumHistValues, NULL, 0);
 
 	gpdb::FreeHeapTuple(heaptupleStats);
-
-	pdrgpdxlbucketTransformed->Release();
 
 	// create col stats object
 	pmdidColStats->AddRef();
