@@ -1010,14 +1010,17 @@ class GpCronDump(Operation):
             if self.context.dump_config:
                 pipe_list.append('%s:%s' % (segdb.getSegmentHostName(), self.context.generate_filename("segment_config", dbid=segdb.getSegmentDbId())))
 
-        pipe_list.append('%s:%s' % (master.getSegmentHostName(), self.context.generate_filename("metadata")))
-        pipe_list.append('%s:%s' % (master.getSegmentHostName(), self.context.generate_filename("postdata")))
-
         if self.context.dump_global:
-            pipe_list.append('%s:%s' % (master.getSegmentHostName(), self.context.generate_filename("global")))
+            master_pipe_list.append("global")
 
         if self.context.dump_config:
-            pipe_list.append('%s:%s' % (master.getSegmentHostName(), self.context.generate_filename("master_config")))
+            master_pipe_list.append("master_config")
+
+        if self.context.dump_stats:
+            master_pipe_list.append("stats")
+
+        for filetype in master_pipe_list:
+            pipe_list.append('%s:%s' % (master.getSegmentHostName(), self.context.generate_filename(filetype)))
 
         return pipe_list
 

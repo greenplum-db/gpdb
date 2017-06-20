@@ -898,6 +898,25 @@ class GpcrondumpTestCase(unittest.TestCase):
 
     @patch('gpcrondump.validate_current_timestamp')
     @patch('gppylib.operations.backup_utils.Context.get_master_port')
+    def test_get_pipes_file_list5(self, mock1, mock2, mock3):
+        self.options.timestamp_key = None
+        self.options.masterDataDirectory = '/data/master'
+        self.options.dump_stats = True
+        gpcd = GpCronDump(self.options, None)
+        gpcd.context.timestamp = '20130101010101'
+        dump_dir = gpcd.context.get_backup_dir()
+        primaries = self.context.get_current_primaries()
+        master = [m for m in self.context.gparray.getDbList() if m.isSegmentMaster()][0]
+        pipes_file_list = gpcd._get_pipes_file_list(master, primaries)
+        expected_files_list = ['mdw:/data/master/db_dumps/20130101/gp_dump_-1_1_20130101010101.gz',
+                               'mdw:/data/master/db_dumps/20130101/gp_dump_-1_1_20130101010101_post_data.gz',
+                               'mdw:/data/master/db_dumps/20130101/gp_statistics_-1_1_20130101010101',
+                               'sdw1:/data/primary0/db_dumps/20130101/gp_dump_0_2_20130101010101.gz',
+                               'sdw2:/data/primary1/db_dumps/20130101/gp_dump_1_3_20130101010101.gz']
+        self.assertEqual(sorted(pipes_file_list), sorted(expected_files_list))
+
+    @patch('gpcrondump.validate_current_timestamp')
+    @patch('gppylib.operations.backup_utils.Context.get_master_port')
     def test_gpcrondump_init0(self, mock1, mock2, mock3):
         self.options.timestamp_key = None
         self.options.local_dump_prefix = 'foo'
