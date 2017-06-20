@@ -220,7 +220,7 @@ slurp_oid_files(migratorContext *ctx)
 	/* Read the Oids of global objects */
 	oid_dump = fopen(GLOBAL_OIDS_DUMP_FILE, "r");
 	if (!oid_dump)
-		pg_log(ctx, PG_FATAL, "Could not open necessary file:  %s\n", filename);
+		pg_log(ctx, PG_FATAL, "Could not open necessary file:  %s\n", GLOBAL_OIDS_DUMP_FILE);
 
 	fstat(fileno(oid_dump), &st);
 
