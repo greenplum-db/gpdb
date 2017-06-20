@@ -53,10 +53,10 @@ var _ = Describe("monitor", func() {
 			cheatSheet := CheatSheet{Response: GREP_PG_UPGRADE, ReturnCode: intToBytes(0)}
 			cheatSheet.WriteToFile()
 
-			session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--private_key", private_key_path, "--user", "pivotal")
+			session := runCommand("monitor", "--host", "localhost", "--segment-id", "7", "--port", "2022", "--private_key", private_key_path, "--user", "pivotal")
 
 			Eventually(session).Should(Exit(0))
-			Eventually(session.Out).Should(Say(`pg_upgrade is running on host "localhost", segment_id 7`))
+			Eventually(session.Out).Should(Say(fmt.Sprintf(`pg_upgrade state - active {"segment_id":%d,"host":"%s"}`, 7, "localhost")))
 		})
 	})
 
@@ -66,10 +66,10 @@ var _ = Describe("monitor", func() {
 			cheatSheet := CheatSheet{Response: only_grep_itself, ReturnCode: intToBytes(0)}
 			cheatSheet.WriteToFile()
 
-			session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--private_key", private_key_path, "--user", "pivotal")
+			session := runCommand("monitor", "--host", "localhost", "--segment-id", "7", "--port", "2022", "--private_key", private_key_path, "--user", "pivotal")
 
 			Eventually(session).Should(Exit(0))
-			Eventually(session.Out).Should(Say(`pg_upgrade is not running on host "localhost", segment_id 7`))
+			Eventually(session.Out).Should(Say(fmt.Sprintf(`pg_upgrade state - inactive {"segment_id":%d,"host":"%s"}`, 7, "localhost")))
 		})
 	})
 
@@ -80,7 +80,7 @@ var _ = Describe("monitor", func() {
 			cheatSheet := CheatSheet{Response: only_grep_itself, ReturnCode: intToBytes(0)}
 			cheatSheet.WriteToFile()
 
-			session := runCommand("monitor", "--host", "localhost", "--segment_id", unknown_segment_id, "--port", "2022", "--private_key", private_key_path, "--user", "pivotal")
+			session := runCommand("monitor", "--host", "localhost", "--segment-id", unknown_segment_id, "--port", "2022", "--private_key", private_key_path, "--user", "pivotal")
 
 			Eventually(session).Should(Exit(1))
 			expectedMsg := fmt.Sprintf("segment_id %s not known in this cluster configuration", unknown_segment_id)
@@ -92,7 +92,7 @@ var _ = Describe("monitor", func() {
 		It("complains with standard ssh error phrasing", func() {
 			ShutDownSshdServer()
 
-			session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--private_key", private_key_path, "--user", "pivotal")
+			session := runCommand("monitor", "--host", "localhost", "--segment-id", "7", "--port", "2022", "--private_key", private_key_path, "--user", "pivotal")
 
 			Eventually(session).Should(Exit(1))
 			Eventually(session.Err).Should(Say("getsockopt: connection refused"))
@@ -104,14 +104,14 @@ var _ = Describe("monitor", func() {
 			session := runCommand("monitor")
 
 			Eventually(session).Should(Exit(1))
-			Eventually(session.Err).Should(Say("the required flags `--host' and `--segment_id' were not specified"))
+			Eventually(session.Err).Should(Say("the required flags `--host' and `--segment-id' were not specified"))
 		})
 	})
 
 	Describe("when the private key is found but ssh does not succeed", func() {
 		It("complains", func() {
 			invalid_private_key_path := path.Join(path.Dir(private_key_path), "invalid_private_key.pem")
-			session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--private_key", invalid_private_key_path, "--user", "pivotal")
+			session := runCommand("monitor", "--host", "localhost", "--segment-id", "7", "--port", "2022", "--private_key", invalid_private_key_path, "--user", "pivotal")
 			Eventually(session).Should(Exit(1))
 			Eventually(session.Err).Should(Say("ssh: no key found"))
 		})
@@ -130,10 +130,10 @@ var _ = Describe("monitor", func() {
 					ioutil.WriteFile(TempHomeDir+"/.ssh/id_rsa", content, 0500)
 					Check("cannot write private key file", err)
 
-					session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--user", "pivotal")
+					session := runCommand("monitor", "--host", "localhost", "--segment-id", "7", "--port", "2022", "--user", "pivotal")
 
 					Eventually(session).Should(Exit(0))
-					Eventually(session.Out).Should(Say(`pg_upgrade is running on host "localhost", segment_id 7`))
+					Eventually(session.Out).Should(Say(fmt.Sprintf(`pg_upgrade state - active {"segment_id":%d,"host":"%s"}`, 7, "localhost")))
 				})
 			})
 			Describe("and the key does not work", func() {
@@ -147,7 +147,7 @@ var _ = Describe("monitor", func() {
 					ioutil.WriteFile(TempHomeDir+"/.ssh/id_rsa", content, 0500)
 					Check("cannot write private key file", err)
 
-					session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--user", "pivotal")
+					session := runCommand("monitor", "--host", "localhost", "--segment-id", "7", "--port", "2022", "--user", "pivotal")
 
 					Eventually(session).Should(Exit(1))
 					Eventually(session.Err).Should(Say("ssh: handshake failed: ssh: unable to authenticate, attempted methods"))
@@ -163,7 +163,7 @@ var _ = Describe("monitor", func() {
 					os.Setenv("HOME", "")
 					defer os.Setenv("HOME", save)
 
-					session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--user", "pivotal")
+					session := runCommand("monitor", "--host", "localhost", "--segment-id", "7", "--port", "2022", "--user", "pivotal")
 
 					Eventually(session).Should(Exit(1))
 					Eventually(session.Err).Should(Say("user has not specified a HOME environment value"))
@@ -172,7 +172,7 @@ var _ = Describe("monitor", func() {
 
 			Describe("because there is no file at the default ssh location", func() {
 				It("complains", func() {
-					session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--user", "pivotal")
+					session := runCommand("monitor", "--host", "localhost", "--segment-id", "7", "--port", "2022", "--user", "pivotal")
 
 					Eventually(session).Should(Exit(1))
 					Eventually(session.Err).Should(Say("open /tmp/gp_upgrade_test_temp_home_dir/.ssh/id_rsa: no such file or directory"))
@@ -186,7 +186,7 @@ var _ = Describe("monitor", func() {
 			cheatSheet := CheatSheet{Response: "foo output", ReturnCode: intToBytes(1)}
 			cheatSheet.WriteToFile()
 
-			session := runCommand("monitor", "--host", "localhost", "--segment_id", "7", "--port", "2022", "--private_key", private_key_path, "--user", "pivotal")
+			session := runCommand("monitor", "--host", "localhost", "--segment-id", "7", "--port", "2022", "--private_key", private_key_path, "--user", "pivotal")
 
 			Eventually(session).Should(Exit(1))
 			expectedMsg := "cannot run 'ps auxx | grep pg_upgrade' command on remote host, output: foo output\nError: Process exited with status 1"

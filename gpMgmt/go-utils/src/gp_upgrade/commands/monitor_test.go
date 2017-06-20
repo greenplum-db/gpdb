@@ -12,6 +12,8 @@ import (
 
 	"gp_upgrade/ssh_client"
 
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -74,7 +76,7 @@ var _ = Describe("monitor", func() {
 			err := subject.execute(fake, buffer)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(string(buffer.Contents())).To(ContainSubstring("pg_upgrade is running on host"))
+			Expect(string(buffer.Contents())).To(ContainSubstring(fmt.Sprintf(`pg_upgrade state - active`)))
 		})
 
 	})
@@ -88,7 +90,7 @@ var _ = Describe("monitor", func() {
 
 			Expect(err).To(HaveOccurred())
 		})
-		It("returns an error when the configuration has no entry for the segment_id specified by user", func() {
+		It("returns an error when the configuration has no entry for the segment-id specified by user", func() {
 			fake := &FailingSshConnecter{}
 			ioutil.WriteFile(config.GetConfigFilePath(), []byte("[]"), 0600)
 			err := subject.execute(fake, buffer)
