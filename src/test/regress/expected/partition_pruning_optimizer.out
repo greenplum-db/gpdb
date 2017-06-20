@@ -2500,7 +2500,7 @@ select * from sales where region = 'usa' or region = 'asia';
         1 | 01-01-2011 |  10.10 | usa
 (1 row)
 
--- Test DynamicIndexScan with dropped column
+-- Test DynamicIndexScan with extra filter
 create index idx_sales_date on sales(date);
 NOTICE:  building index for child partition "sales_1_prt_outlying_dates"
 NOTICE:  building index for child partition "sales_1_prt_outlying_dates_2_prt_usa"
