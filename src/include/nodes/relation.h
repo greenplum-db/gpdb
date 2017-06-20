@@ -1490,6 +1490,10 @@ typedef struct InnerIndexscanInfo
  * For JOIN_SEMI joins, this is cleared to NIL in create_unique_path() if
  * the join is found not to be suitable for a uniqueify-the-RHS plan.
  *
+ * For a semijoin, we also extract the join operators and their RHS arguments
+ * and set semi_operators and semi_rhs_exprs. This is used for applying pre-join
+ * deduplication used by cdb_make_rel_dedup_info().
+ *
  * jointype is never JOIN_RIGHT; a RIGHT JOIN is handled by switching
  * the inputs to make it a LEFT JOIN.  So the allowed values of jointype
  * in a join_info_list member are only LEFT, FULL, SEMI, or ANTI.
@@ -1526,6 +1530,8 @@ typedef struct SpecialJoinInfo
 								 * go ahead with INNER JOIN path for this JOIN_SEMI
 								 * then we MAY need to deduplicate the join result.
 								 */
+	List		*semi_operators; /* OIDs of equality join operators */
+	List		*semi_rhs_exprs; /* righthand-side expressions of these ops */
 } SpecialJoinInfo;
 
 /*
