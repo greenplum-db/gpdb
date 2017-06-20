@@ -776,17 +776,18 @@ static void check_and_add_partition(PGconn* conn, const char* tbl, int begin_yea
 		// this partition does not exist, create it
 
 		snprintf(qry, QRYBUFSIZ, ADD_QRYFMT, tbl, begin_year, begin_month, end_year, end_month);
+		TR0(("Add partition table '%s\n'", qry));
 		errmsg = gpdb_exec_only(conn, &result, qry);
 		if (errmsg)
 		{
-			gpmon_warning(FLINE, "partion add response from server: %s\n", errmsg);
+			gpmon_warning(FLINE, "partition add response from server: %s\n", errmsg);
 		}
 
 		PQclear(result);
 	}
 }
 
-// Drop pretty old partitons if exists.
+// Drop old partitions if partition_age option is set.
 static void drop_old_partitions(PGconn* conn, const char* tbl, mmon_options_t *opt)
 {
 	const int QRYBUFSIZ = 1024;
@@ -801,13 +802,14 @@ static void drop_old_partitions(PGconn* conn, const char* tbl, mmon_options_t *o
 
 	int partition_age = opt->partition_age;
 
-	if (partition_age <= 0)
+	if (partition_age <= 0) {
+		TR0(("partition_age turned off\n"));
 		return;
+	}
 
 	// partition_age + 1 because we always add 2 partitions for the boundary case
 	snprintf(qry, QRYBUFSIZ, SELECT_QRYFMT, tbl, partition_age + 1);
 
-	TR2(("drop partition: executing select query '%s\n'", qry));
 	errmsg = gpdb_exec_only(conn, &result, qry);
 	if (errmsg)
 	{
@@ -822,13 +824,25 @@ static void drop_old_partitions(PGconn* conn, const char* tbl, mmon_options_t *o
 			PGresult* dropResult = NULL;
 			char* partitiontablename  = PQgetvalue(result, i, 0);
 			char* partitionrangestart = PQgetvalue(result, i, 1);
-			snprintf(qry, QRYBUFSIZ, DROP_QRYFMT, tbl, partitionrangestart);
-			TR0(("Dropped partition table '%s\n'", partitiontablename));
+
+			// partitionrangestart comes out looking like `'2017-02-01 00:00:00'::timestamp(0) without time zone`
+			//                                       or   `'2010-01-01 00:00:00-08'::timestamp with time zone`
+			char *unwanted = strstr(partitionrangestart, "::" );
+
+			size_t substring_size = unwanted - partitionrangestart + 1;
+			char *substring = (char *) malloc(substring_size);
+			memcpy(substring, partitionrangestart, substring_size);
+			substring[substring_size - 1] = '\0';
+
+			snprintf(qry, QRYBUFSIZ, DROP_QRYFMT, tbl, substring);
+
+			free(substring);
+			TR0(("Dropping partition table '%s'\n", partitiontablename));
 			errmsg = gpdb_exec_only(conn, &dropResult, qry);
 			PQclear(dropResult);
 			if (errmsg)
 			{
-				gpmon_warning(FLINE, "drop partion: drop query '%s' response from server: %s\n", qry, errmsg);
+				gpmon_warning(FLINE, "drop partition: drop query '%s' response from server: %s\n", qry, errmsg);
 				break;
 			}
 		}

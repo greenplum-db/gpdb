@@ -1530,6 +1530,7 @@ int main(int argc, const char* const argv[])
 			interuptable_sleep(30); // sleep to prevent loop of forking process and failing
 			gpmon_fatal(FLINE, "\nfailed (1) to open perfmon log file %s\n", mmon_log_filename);
 		}
+		TR0(("starting mmon logging\n"));
 	}
 
 	/* check port */

@@ -86,6 +86,44 @@ Feature: gpperfmon
         When the user truncates "diskspace_history" tables in "gpperfmon"
         Then wait until the results from boolean sql "SELECT count(*) > 0 FROM diskspace_history" is "true"
 
+    @gpperfmon_partition
+    Scenario: gpperfmon keeps all partitions upon restart if partition_age not set, drops excess partitions otherwise
+        Given gpperfmon is configured and running in qamode
+        Given the setting "partition_age" is NOT set in the configuration file "gpperfmon/conf/gpperfmon.conf"
+        # default history table is created with three partitions
+        Then wait until the results from boolean sql "SELECT count(*) = 3 FROM pg_partitions WHERE tablename = 'diskspace_history'" is "true"
+        Then wait until the results from boolean sql "SELECT count(*) = 1 from pg_partitions where tablename = 'diskspace_history' and partitionrangestart like '%' || date_part('year', CURRENT_DATE) || '-' || to_char(CURRENT_DATE, 'MM') || '%';" is "true"
+        Then wait until the results from boolean sql "SELECT count(*) = 1 from pg_partitions where tablename = 'diskspace_history' and partitionrangestart like '%' || date_part('year', CURRENT_DATE) || '-' || to_char(CURRENT_DATE  + interval '1 month' * 1, 'MM') || '%';" is "true"
+        When below sql is executed in "gpperfmon" db
+            """
+            ALTER table diskspace_history add partition
+            start ('2-01-17 00:00:00'::timestamp without time zone) inclusive
+            end ('3-01-17 00:00:00'::timestamp without time zone) exclusive;
+            ALTER table diskspace_history add partition
+            start ('3-01-17 00:00:00'::timestamp without time zone) inclusive
+            end ('4-01-17 00:00:00'::timestamp without time zone) exclusive;
+            ALTER table diskspace_history add partition
+            start ('4-01-17 00:00:00'::timestamp without time zone) inclusive
+            end ('5-01-17 00:00:00'::timestamp without time zone) exclusive;
+            ALTER table diskspace_history add partition
+            start ('5-01-17 00:00:00'::timestamp without time zone) inclusive
+            end ('6-01-17 00:00:00'::timestamp without time zone) exclusive;
+            """
+        Then wait until the results from boolean sql "SELECT count(*) = 7 FROM pg_partitions WHERE tablename = 'diskspace_history'" is "true"
+        When the user runs command "pkill gpmmon"
+        Then wait until the process "gpmmon" is up
+        And wait until the process "gpsmon" is up
+        # to make sure that no partition reaping is going to happen, we could add a step like this, but it is implementation specific:
+        # wait until the latest gpperfmon log file contains the line "partition_age turned off"
+        Then wait until the results from boolean sql "SELECT count(*) = 7 FROM pg_partitions WHERE tablename = 'diskspace_history'" is "true"
+        When the setting "partition_age = 4" is placed in the configuration file "gpperfmon/conf/gpperfmon.conf"
+        Then verify that the last line of the file "gpperfmon/conf/gpperfmon.conf" in the master data directory contains the string "partition_age = 4"
+        When the user runs command "pkill gpmmon"
+        Then wait until the process "gpmmon" is up
+        And wait until the process "gpsmon" is up
+        # Note that the code considers partition_age + 1 as the number of partitions to keep
+        Then wait until the results from boolean sql "SELECT count(*) = 5 FROM pg_partitions WHERE tablename = 'diskspace_history'" is "true"
+
     @gpperfmon_skew_rows
     Scenario: gpperfmon detects row skew
         Given gpperfmon is configured and running in qamode
