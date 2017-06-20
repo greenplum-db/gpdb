@@ -196,7 +196,7 @@ if [ -f "test_gpdb_post.sql" ]; then
 	psql -f test_gpdb_post.sql regression
 fi
 
-pg_dumpall --schema-only -f "$temp_root/dump2.sql"
+${NEW_BINDIR}/pg_dumpall --schema-only -f "$temp_root/dump2.sql"
 gpstop -a
 export PGPORT=15432
 export MASTER_DATA_DIRECTORY="${OLD_DATADIR}/qddir/demoDataDir-1"
