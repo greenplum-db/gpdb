@@ -44,13 +44,10 @@ var _ = AfterEach(func() {
 	ShutDownSshdServer()
 })
 
-var _ = SynchronizedBeforeSuite(func() []byte {
-	executable_path, err := Build("gp_upgrade")
+var _ = BeforeSuite(func() {
+	var err error
+	commandPath, err = Build("gp_upgrade") // if you want build flags, do a separate Build() in a specific integration test
 	Expect(err).NotTo(HaveOccurred())
-	return []byte(executable_path)
-}, func(data []byte) {
-	commandPath = string(data)
-	setPrivateKeyPermissions()
 })
 
 var _ = SynchronizedAfterSuite(func() {}, func() {

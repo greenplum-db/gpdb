@@ -1,16 +1,13 @@
 SHELL := /bin/bash
-.DEFAULT_GOAL := test
+.DEFAULT_GOAL := all
 MODULE_NAME=$(shell basename `pwd`)
-DIR_PATH=$(shell dirname `pwd`)
+ARCH := amd64
+GPDB_VERSION := $(shell ../../../../getversion --short)
 
-.PHONY : build
-
-DEST = bin/gp_upgrade
-
-GOFLAGS := -o $(DEST)
-
-export GOPATH := $(DIR_PATH)/..
+export GOPATH := $(shell dirname `pwd`)/..
 export PATH := $(PATH):$(GOPATH)/bin
+
+all : build test
 
 dependencies :
 		go get github.com/greenplum-db/gpbackup/utils
@@ -21,22 +18,28 @@ dependencies :
 		go get github.com/maxbrunsfeld/counterfeiter
 		go get github.com/onsi/gomega
 		go get github.com/jessevdk/go-flags
-		go get
 
 format : dependencies
 		goimports -w .
 		go fmt .
 
-ginkgo : dependencies
-		ginkgo -r -randomizeSuites -randomizeAllSpecs -race 2>&1
+unit : dependencies sshd_build
+		ginkgo -r -randomizeSuites -randomizeAllSpecs -race --skipPackage=integrations
 
-sshd_build :
-		./compile_test_sshd_server.sh
+sshd_build : dependencies
+		make -C integrations/sshd
 
-test : format sshd_build ginkgo
+integration: dependencies sshd_build unit
+		ginkgo -r -randomizeAllSpecs -race integrations
 
-ci : ginkgo
+test : format unit sshd_build integration
 
-build :
-		mkdir -p build
-		go build $(GOFLAGS) -o $(GOPATH)/bin/$(MODULE_NAME)
+build : dependencies
+		go build -ldflags "-X gp_upgrade/commands.GpdbVersion=$(GPDB_VERSION)" -o $(GOPATH)/bin/$(MODULE_NAME)
+
+linux :
+		GOOS=$@ GOARCH=$(ARCH) go build -ldflags "-X gp_upgrade/commands.GpdbVersion=$(GPDB_VERSION)" -o $(GOPATH)/bin/$(MODULE_NAME).$@
+darwin :
+		GOOS=$@ GOARCH=$(ARCH) go build -ldflags "-X gp_upgrade/commands.GpdbVersion=$(GPDB_VERSION)" -o $(GOPATH)/bin/$(MODULE_NAME).$@
+
+platforms: linux darwin
