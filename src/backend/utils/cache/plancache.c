@@ -825,7 +825,15 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 			case RTE_RELATION:
 				/* Acquire or release the appropriate type of lock */
 				if (rt_index == parsetree->resultRelation)
-					lockmode = RowExclusiveLock;
+				{
+					/*
+					 * RowExclusiveLock is acquired in PostgreSQL here.
+					 * Greenplum acquires ExclusiveLock to avoid distributed
+					 * deadlock due to concurrent UPDATE/DELETE on the same
+					 * table.  This is in parity with CdbTryOpenRelation().
+					 */
+					lockmode = ExclusiveLock;
+				}
 				else if (rowmark_member(parsetree->rowMarks, rt_index))
 					lockmode = RowShareLock;
 				else
