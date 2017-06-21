@@ -37,9 +37,7 @@ installcheck: install
 
 uninstall: uninstall-lib
 
-clean:
+clean distclean: clean-lib
 	rm -f $(OBJS)
  
-distclean: clean clean-lib
- 
-maintainer-clean: distclean
+maintainer-clean: distclean maintainer-clean-lib
