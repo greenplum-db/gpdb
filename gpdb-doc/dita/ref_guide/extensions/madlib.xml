@@ -44,19 +44,13 @@
   <topic id="topic3" xml:lang="en" otherprops="pivotal">
     <title id="pz214493">Installing MADlib</title>
     <body>
-      <p>For Greenplum Database, the MADlib extension is available as a package. Download the
-        package from <xref href="https://network.pivotal.io" scope="external" format="html"
-          class="- topic/xref ">Pivotal Network</xref> and then install it with the Greenplum
-        Package Manager (<codeph>gppkg</codeph>). </p>
-      <p>To install MADlib on Greenplum Database, you install the Greenplum MADlib package on
-        Greenplum Database and then install the MADlib function libraries on the databases that use
-        MADlib. For the versions of the MADlib extension supported by your version of Greenplum
-        Database, see the <cite>Greenplum Database Release Notes</cite>.</p>
-      <p>The <codeph>gppkg</codeph> utility installs Greenplum Database extensions, along with any
+      <p>To install MADlib on Greenplum Database, you first install a compatible Greenplum MADlib
+        package and then install the MADlib function libraries on all databases that will use
+        MADlib.</p>
+      <p>The <codeph><xref href="../../utility_guide/admin_utilities/gppkg.xml#topic1"
+          >gppkg</xref></codeph> utility installs Greenplum Database extensions, along with any
         dependencies, on all hosts across a cluster. It also automatically installs extensions on
         new hosts in the case of system expansion segment recovery. </p>
-      <p>For information about <codeph>gppkg</codeph>, see the <cite>Greenplum Database Utility
-          Guide</cite>.</p>
     </body>
     <topic id="topic4" xml:lang="en">
       <title>Installing the Greenplum Database MADlib Package</title>
@@ -65,9 +59,10 @@
           you have sourced <codeph>greenplum_path.sh</codeph>, and that the<codeph>
             $MASTER_DATA_DIRECTORY</codeph> and <codeph>$GPHOME</codeph> variables are set.</p>
         <ol>
-          <li id="pz214496">Download the MADlib extension package from <xref
+          <li id="pz214496" otherprops="pivotal">Download the MADlib extension package from <xref
               href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
-              >Pivotal Network</xref>, then copy it to the master host.</li>
+              >Pivotal Network</xref>.</li>
+          <li>Copy the MADlib package to the Greenplum Database master host.</li>
           <li id="pz216990">Install the software package by running the <codeph>gppkg</codeph>
             command. This example installs the MADlib 1.11 package on a Linux
             system:<codeblock>$ gppkg -i madlib-ossv1.11_pv1.9.8_gpdb&lt;version>-rhel6-x86_64.gppkg</codeblock></li>

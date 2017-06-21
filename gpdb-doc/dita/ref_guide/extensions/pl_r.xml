@@ -43,10 +43,10 @@
     <topic id="topic3" xml:lang="en" otherprops="pivotal">
       <title id="py217167">Installing PL/R</title>
       <body>
-        <p>The PL/R extension is available as a package. Download the package from <xref
-            href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
-            >Pivotal Network</xref> and install it with the Greenplum Package Manager
-            (<codeph>gppkg</codeph>). </p>
+        <p otherprops="pivotal">The PL/R extension is available as a package. Download the package
+          from <xref href="https://network.pivotal.io/products/pivotal-gpdb" format="html"
+            scope="external">Pivotal Network</xref> and install it with the Greenplum Package
+          Manager (<codeph>gppkg</codeph>). </p>
         <p>The <codeph>gppkg</codeph> utility installs Greenplum Database extensions, along with any
           dependencies, on all hosts across a cluster. It also automatically installs extensions on
           new hosts in the case of system expansion and segment recovery.</p>
@@ -61,9 +61,10 @@
               <codeph>$MASTER_DATA_DIRECTORY</codeph> and <codeph>$GPHOME</codeph> variables are
             set.</p>
           <ol id="ol_nxv_ql2_4p">
-            <li id="py213681">Download the PL/R extension package from <xref
+            <li id="py213681" otherprops="pivotal">Download the PL/R extension package from <xref
                 href="https://network.pivotal.io/products/pivotal-gpdb" format="html"
-                scope="external">Pivotal Network</xref>, then copy it to the master host. </li>
+                scope="external">Pivotal Network</xref>.</li>
+            <li>Copy the PL/R package to the Greenplum Database master host. </li>
             <li id="py214844">Install the software extension package by running the
                 <codeph>gppkg</codeph> command. This example installs the PL/R extension on a Linux
               system:<codeblock>$ gppkg -i plr-ossv8.3.0.15_pv2.2.0-GPDB-&lt;version>-orca-rhel6-x86_64.gppkg
@@ -314,16 +315,13 @@ LANGUAGE 'plr';</codeblock><p>This
         <p>
           <xref href="http://www.r-project.org/" scope="external" format="html"
             >http://www.r-project.org/</xref> - The R Project home page</p>
-        <p><xref href="https://github.com/pivotalsoftware/gp-r" format="html" scope="external"
-            >https://github.com/pivotalsoftware/gp-r</xref> - GitHub repository that contains
-          information about using R with Pivotal Data Fabric, including Pivotal Greenplum
-          Database.</p>
-        <p><xref href="https://github.com/pivotalsoftware/PivotalR" format="html" scope="external"
-            >https://github.com/pivotalsoftware/PivotalR</xref> - GitHub repository for PivotalR, a
-          package that provides an R interface to operate on Greenplum Database tables and views
-          that is similar to the R <cmdname>data.frame</cmdname>. PivotalR also supports using the
-          machine learning package <xref href="http://madlib.incubator.apache.org/"
-            format="html" scope="external">MADlib</xref> directly from R.</p>
+        <p><xref href="https://cran.r-project.org/web/packages/PivotalR/" format="html"
+            scope="external">https://cran.r-project.org/web/packages/PivotalR/</xref> - The home
+          page for PivotalR, a package that provides an R interface to operate on Greenplum Database
+          tables and views that is similar to the R <cmdname>data.frame</cmdname>. PivotalR also
+          supports using the machine learning package <xref
+            href="http://madlib.incubator.apache.org/" format="html" scope="external">MADlib</xref>
+          directly from R.</p>
         <p>R documentation is installed with the Greenplum R package:</p>
         <p>
           <codeph>$GPHOME/ext/R-3.3.1/doc</codeph>
