@@ -11,5 +11,4 @@
 	<chapter href="admin_guide/admin_guide.ditamap" format="ditamap"/>
 	<chapter href="utility_guide/utility_guide.ditamap" format="ditamap"/>
 	<chapter href="ref_guide/ref_guide.ditamap" format="ditamap"/>
-	<chapter href="client_tool_guides/client_tool_guides.ditamap" format="ditamap"/>
 </bookmap>
