@@ -209,7 +209,7 @@ else \
 	{\
 		Insist(cstate->err_loc_type == ROWNUM_ORIGINAL);\
 		cstate->cdbsreh->rawdata = (char *) palloc(strlen(cstate->line_buf.data) * \
-												   sizeof(char) + 1 + 24); \
+												   sizeof(char) + 1 + 24 + 4); \
 \
 		rawdata_is_a_copy = true; \
 		sprintf(cstate->cdbsreh->rawdata, INT64_FORMAT "%c%d%c%s", \
