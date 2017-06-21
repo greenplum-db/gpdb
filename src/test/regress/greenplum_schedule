@@ -103,7 +103,7 @@ test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition DML_over_joins 
 test: aggregate_with_groupingsets 
 
 test: nested_case_null sort bb_mpph
-test: bb_memory_quota
+test: bb_memory_quota memconsumption
 
 # NOTE: The bfv_temp test assumes that there are no temporary tables in
 # other sessions. Therefore the other tests in this group mustn't create
