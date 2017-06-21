@@ -75,11 +75,14 @@
               <note>When you install the Kerberos packages, you can use other Kerberos utilities
                 such as <codeph>klist</codeph> to display Kerberos ticket information. </note>
             </p></li>
-          <li id="kd158450">Java JDK <p>Java JDK 1.7.0_17 is supported on Red Hat Enterprise Linux
-              6.x. </p><p>Java JDK 1.6.0_21 is supported on Red Hat Enterprise Linux 5.x. </p></li>
-          <li id="kd158455">Ensure that JAVA_HOME is set to the installation directory of the
-            supported Java JDK. </li>
         </ul>
+        <p>Java applications require this additional software:<ul id="ul_w5p_pxj_h1b">
+            <li id="kd158450">Java JDK <p>Java JDK 1.7.0_17 is supported on Red Hat Enterprise Linux
+                6.x. </p><p>Java JDK 1.6.0_21 is supported on Red Hat Enterprise Linux 5.x.
+              </p></li>
+            <li id="kd158455">Ensure that JAVA_HOME is set to the installation directory of the
+              supported Java JDK. </li>
+          </ul></p>
       </body>
     </topic>
   </topic>
@@ -106,6 +109,25 @@
           <codeblock>&gt; kinit -k -t gpdb-kerberos.keytab -c /home/gpadmin/cache.txt 
    gpadmin/kerberos-gpdb@KRB.EXAMPLE.COM</codeblock></li>
       </ol>
+    </body>
+  </topic>
+  <topic id="topic12" xml:lang="en">
+    <title id="mh151086">Running psql </title>
+    <body>
+      <p>From a remote system, you can access a Greenplum Database that has Kerberos authentication
+        enabled. </p>
+      <section id="mh151095">
+        <title>To connect to Greenplum Database with psql</title>
+        <ol id="ol_xzc_lxj_h1b">
+          <li id="mh151096">As the gpadmin user, open a command window. </li>
+          <li id="mh151099">Start <codeph>psql</codeph> from the command window and specify a
+            connection to the Greenplum Database specifying the user that is configured with
+            Kerberos authentication.<p>The following example logs into the Greenplum Database on the
+              machine <codeph>kerberos-gpdb</codeph> as the <codeph>gpadmin</codeph> user with the
+              Kerberos credentials
+            <codeph>gpadmin/kerberos-gpdb</codeph>:</p><codeblock>$ psql -U "gpadmin/kerberos-gpdb" -h kerberos-gpdb postgres</codeblock></li>
+        </ol>
+      </section>
     </body>
   </topic>
   <topic id="topic18" xml:lang="en">
