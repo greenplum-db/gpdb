@@ -4260,10 +4260,6 @@ class GpTransfer(object):
 # Main
 # --------------------------------------------------------------------------
 if __name__ == '__main__':
-    if curr_platform != LINUX:
-        logger.error("gptransfer is only available on Linux.")
-        sys.exit(1)
-
     # Preemptively check for command -h | --help.
     # This will automacially exit gptransfer and print the help text if -h | --help is found
     exit_on_help = create_parser()
