@@ -4297,7 +4297,7 @@ CopyFrom(CopyState cstate)
 	bool		no_more_data = false;
 	ListCell   *cur;
 	bool		cur_row_rejected = false;
-	int			original_lineno_for_qe = 0; /* keep compiler happy (var referenced by macro) */
+	int64			original_lineno_for_qe = 0; /* keep compiler happy (var referenced by macro) */
 	CdbCopy    *cdbCopy = NULL; /* never used... for compiling COPY_HANDLE_ERROR */
 	tupDesc = RelationGetDescr(cstate->rel);
 	attr = tupDesc->attrs;
