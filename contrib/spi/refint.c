@@ -578,7 +578,7 @@ check_foreign_key(PG_FUNCTION_ARGS)
 
 		snprintf(ident, sizeof(ident), "%s$%u", trigger->tgname, rel->rd_id);
 		plan = find_plan(ident, &FPlans, &nFPlans);
-		ret = SPI_execp(plan->splan[r], kvals, NULL, (int64) tcount);
+		ret = SPI_execp(plan->splan[r], kvals, NULL, tcount);
 		/* we have no NULLs - so we pass   ^^^^  here */
 
 		if (ret < 0)
