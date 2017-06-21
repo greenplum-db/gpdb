@@ -36,6 +36,8 @@
 
    [<b>-v</b> | <b>--verbose</b>]
    [<b>-q</b> | <b>--quiet</b>]
+   [<b>--gpfdist-verbose</b>]
+   [<b>--gpfdist-very-verbose</b>]
    [<b>-a</b>]
 
 <b>gptransfer --version</b>
@@ -124,6 +126,19 @@
             <p>Source and destination systems must be able to access the <codeph>gptransfer</codeph>
                 work directory. The default directory is the user's home directory. You can specify
                 a different directory with the <codeph>--work-base-dir</codeph> option. </p>
+            <p>The <codeph>gptransfer</codeph> utility logs messages in the
+                    <codeph>~/gpAdminLogs</codeph> directory on the master host.
+                    <codeph>gptransfer</codeph> creates a log file with the name
+                        <codeph>gptransfer_<varname>date</varname>.log</codeph> and appends messages
+                to it each time it runs on that day. You can specify a different directory for the
+                log file using the <codeph>-l <varname>log_directory</varname></codeph> option. </p>
+            <p>Work directories named <codeph>~/gptransfer_<varname>process_id</varname></codeph>
+                are created on segment hosts in the source cluster. Log files for the
+                    <codeph>gpfdist</codeph> instances that <codeph>gptransfer</codeph> creates are
+                in these directories. Adding the <codeph>--gpfdist-verbose</codeph> or
+                    <codeph>--gpfdist-very-verbose</codeph> options to the
+                    <codeph>gptransfer</codeph> command line increases the <codeph>gpfdist</codeph>
+                logging level.</p>
             <p>The <codeph>gptransfer</codeph> utility does not move configuration files such as
                     <codeph>postgres.conf</codeph> and <codeph>pg_hba.conf</codeph>. You must set up
                 the destination system configuration separately. </p>
@@ -169,11 +184,11 @@
             <sectiondiv id="section5">
                 <b>Limitation for the Source and Destination Systems</b>
                 <p>If you are copying data from a system with a larger number of segments to a
-                    system with a fewer number of segment hosts, then the total number of primary segments on
-                    the destination system must be greater than or equal to the total number of
-                    segment hosts on the source system. </p>
-                <p>For example, assume a destination system has a total of 24 primary
-                    segments. This means that the source system cannot have more than 24 segment hosts.</p>
+                    system with a fewer number of segment hosts, then the total number of primary
+                    segments on the destination system must be greater than or equal to the total
+                    number of segment hosts on the source system. </p>
+                <p>For example, assume a destination system has a total of 24 primary segments. This
+                    means that the source system cannot have more than 24 segment hosts.</p>
                 <p>When you copy data from a source Greenplum Database system with a larger number
                     of primary segment instances than on the destination system, the data transfer
                     might be slower when compared to a transfer where the source system has fewer
@@ -503,9 +518,28 @@
                         >Notes</xref>.</note></pd>
                 </plentry>
                 <plentry>
+                    <pt>--gpfdist-verbose</pt>
+                    <pd>Set the logging level for <codeph>gpfdist</codeph> processes to verbose
+                            (<codeph>-v</codeph>). Cannot be specified with
+                            <codeph>--gpfdist-very-verbose</codeph>.</pd>
+                    <pd>The output is recorded in <codeph>gpfdist</codeph> log files in the
+                                <codeph>~/gptransfer_<varname>process_id</varname></codeph>
+                        directory on segment hosts in the source Greenplum Database cluster.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--gpfdist-very-verbose</pt>
+                    <pd>Set the logging level for <codeph>gpfdist</codeph> processes to very verbose
+                            (<codeph>-V</codeph>). Cannot be specified with
+                            <codeph>--gpfdist-verbose</codeph>.</pd>
+                    <pd>The output is recorded in <codeph>gpfdist</codeph> log files in the
+                                <codeph>~/gptransfer_<varname>process_id</varname></codeph>
+                        directory on segment hosts in the source Greenplum Database cluster.</pd>
+                </plentry>
+                <plentry>
                     <pt>-l <varname>log_dir</varname></pt>
                     <pd>Specify the <codeph>gptransfer</codeph> log file directory. If not
-                        specified, the default is <codeph>~/gpAdminLogs</codeph>.</pd>
+                        specified, the default is <codeph>~/gpAdminLogs</codeph>. This directory is
+                        created on the master host in the source Greenplum cluster.</pd>
                 </plentry>
                 <plentry>
                     <pt>--max-line-length=<varname>length</varname></pt>
