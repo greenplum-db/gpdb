@@ -592,6 +592,27 @@ def create_parser():
 
     parser.add_option_group(validation_option_group)
 
+    # Gpfdist Options ####
+    gpfdist_option_group = OptionGroup(parser, 'Gpfdist Options')
+
+    gpfdist_option_group.add_option(
+        '--gpfdist-verbose',
+        dest='gpfdist_verbose',
+        action='store_true',
+        default=False,
+        help='Run gpfdist with -v'
+    )
+
+    gpfdist_option_group.add_option(
+        '--gpfdist-very-verbose',
+        dest='gpfdist_very_verbose',
+        action='store_true',
+        default=False,
+        help='Run gpfdist with -V'
+    )
+
+    parser.add_option_group(gpfdist_option_group)
+
     parser.setHelp(__help__)
 
     return parser
@@ -1288,7 +1309,7 @@ class GpCreateGpfdist(Command):
     """
 
     def __init__(self, name, directory, data_file, port, last_port, max_line_length, timeout,
-                 pid_file, log_file, ctxt=LOCAL, remoteHost=None):
+                 pid_file, log_file, ctxt=LOCAL, remoteHost=None, verbosity=""):
         """
         name: name of the command
         dir: directory for gpfdist to use as its root directory
@@ -1301,9 +1322,9 @@ class GpCreateGpfdist(Command):
         self._data_file = data_file
 
         cmdStr = \
-            'nohup gpfdist -d %s -p %d -P %d -m %d -t %d > %s 2>&1 < /dev/null & echo \\$! > ' \
+            'nohup gpfdist -d %s -p %d -P %d -m %d -t %d %s> %s 2>&1 < /dev/null & echo \\$! > ' \
             '%s && bash -c "(sleep 1 && kill -0 \`cat %s 2> /dev/null\` && cat %s) || (cat %s >&2 && exit 1)"' % \
-            (directory, port, last_port, max_line_length, timeout, log_file, pid_file, pid_file, log_file, log_file)
+            (directory, port, last_port, max_line_length, timeout, verbosity, log_file, pid_file, pid_file, log_file, log_file)
 
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
@@ -1474,7 +1495,7 @@ class GpTransferCommand(Command):
             dest_user, table_pair, dest_exists, truncate, analyze, drop,
             fast_mode, exclusive_lock, schema_only, work_dir,
             host_map, source_config, batch_size, gpfdist_port, gpfdist_last_port,
-            gpfdist_instance_count, max_line_length, timeout, wait_time,
+            gpfdist_instance_count, gpfdist_verbosity, max_line_length, timeout, wait_time,
             delimiter, validator, format, quote, table_transfer_set_total):
         """
         name: name of the command
@@ -1530,6 +1551,7 @@ class GpTransferCommand(Command):
         self._gpfdist_port = gpfdist_port
         self._gpfdist_last_port = gpfdist_last_port
         self._gpfdist_instance_count = gpfdist_instance_count
+        self._gpfdist_verbosity = gpfdist_verbosity
         self._max_line_length = max_line_length
         self._timeout = timeout
         self._wait_time = wait_time
@@ -1927,8 +1949,9 @@ FROM (
                                      % (str(self._table_pair.source), i)),
                         os.path.join(self._work_dir, 'gpfdist_write_%s_%d.log'
                                      % (str(self._table_pair.source), i)),
-                        REMOTE,
-                        address
+                        ctxt = REMOTE,
+                        remoteHost = address,
+                        verbosity =  self._gpfdist_verbosity
                     )
                     self._pool.addCommand(cmd)
 
@@ -1969,8 +1992,10 @@ FROM (
                                  % (str(self._table_pair.source), seg.getSegmentContentId())),
                     os.path.join(self._work_dir, 'gpfdist_read_%s_%d.log'
                                  % (str(self._table_pair.source), seg.getSegmentContentId())),
-                    REMOTE,
-                    address)
+                    ctxt = REMOTE,
+                    remoteHost = address,
+                    verbosity =  self._gpfdist_verbosity
+                )
                 self._pool.addCommand(cmd)
         else:
             for host in self._host_map.keys():
@@ -1990,8 +2015,9 @@ FROM (
                                      % (str(self._table_pair.source), i)),
                         os.path.join(self._work_dir, 'gpfdist_read_%s_%d.log'
                                      % (str(self._table_pair.source), i)),
-                        REMOTE,
-                        address,
+                        ctxt = REMOTE,
+                        remoteHost = address,
+                        verbosity =  self._gpfdist_verbosity
                     )
                     self._pool.addCommand(cmd)
         self._pool.join()
@@ -2526,6 +2552,12 @@ class GpTransfer(object):
             if self._options.partition_transfer_non_pt_target:
                 self.before_dest_tables_dict = self.get_dest_row_count_before_transfer()
 
+            gpfdist_verbosity = ""
+            if self._options.gpfdist_verbose:
+                gpfdist_verbosity = "-v "
+            elif self._options.gpfdist_very_verbose:
+                gpfdist_verbosity = "-V "
+
             for table_pair in self._table_transfer_set:
                 truncate = (True if self._options.truncate and table_pair.dest in self._dest_tables else False)
                 drop = (True if self._options.drop and table_pair.dest in self._dest_tables else False)
@@ -2554,6 +2586,7 @@ class GpTransfer(object):
                     self._options.base_port,
                     self._options.last_port,
                     self._gpfdist_instance_count,
+                    gpfdist_verbosity,
                     self._options.max_line_length,
                     self._options.timeout,
                     self._options.wait_time,
@@ -2971,7 +3004,7 @@ class GpTransfer(object):
                                                      'used with --validate option')
 
         if self._options.truncate and self._options.partition_transfer_non_pt_target:
-            raise Exception('--truncate is not allowed with option --partition-transfer-non-partition-target')
+            raise ProgramArgumentValidationException('--truncate is not allowed with option --partition-transfer-non-partition-target')
 
         if self._options.full and (self._options.truncate or self._options.drop or
                                        self._options.skip_existing):
@@ -3084,6 +3117,9 @@ class GpTransfer(object):
         if self._options.delimiter == ',' and self._options.format.lower() == 'text':
             raise ProgramArgumentValidationException(
                 'Invalid --delimiter. Default delimiter "," is not allowed in TEXT format. Specify --delimiter option for TEXT')
+
+        if self._options.gpfdist_verbose and self._options.gpfdist_very_verbose:
+            raise ProgramArgumentValidationException('--gpfdist-verbose option cannot be used with the --gpfdist-very-verbose option')
 
     def _post_validate_options(self):
         """

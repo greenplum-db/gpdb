@@ -96,6 +96,7 @@ class GpTransfer(GpTestCase):
             gpfdist_port='foo',
             gpfdist_last_port='foo',
             gpfdist_instance_count='foo',
+            gpfdist_verbosity='foo',
             max_line_length='foo',
             timeout='foo',
             wait_time='foo',
@@ -147,6 +148,8 @@ class GpTransfer(GpTestCase):
             truncate=False,
             validator=None,
             verbose=None,
+            gpfdist_verbose=False,
+            gpfdist_very_verbose=False,
             wait_time=3,
             work_base_dir='/home/gpadmin/',
         )
@@ -155,6 +158,62 @@ class GpTransfer(GpTestCase):
         shutil.rmtree(self.TEMP_DIR)
         super(GpTransfer, self).tearDown()
 
+    def test__GpCreateGpfdist(self):
+        cmd = self.subject.GpCreateGpfdist(
+            'gpfdist for table %s on %s' % ("some table",
+                                            "some segment"),
+            "some dirname",
+            "some datafile",
+            0,
+            1,
+            2,
+            3,
+            "pid_file",
+            "log_file",
+            ctxt=self.subject.REMOTE,
+            remoteHost="address")
+        self.assertEqual('nohup gpfdist -d some dirname -p 0 -P 1 -m 2 -t 3 > log_file 2>&1 < /dev/null & echo \\$! ' \
+                         '> pid_file && bash -c "(sleep 1 && kill -0 \\`cat pid_file 2> /dev/null\\` && cat log_file) ' \
+                         '|| (cat log_file >&2 && exit 1)"', cmd.cmdStr)
+
+
+    def test__GpCreateGpfdist_with_verbosity(self):
+        cmd = self.subject.GpCreateGpfdist(
+            'gpfdist for table %s on %s' % ("some table",
+                                            "some segment"),
+            "some dirname",
+            "some datafile",
+            0,
+            1,
+            2,
+            3,
+            "pid_file",
+            "log_file",
+            ctxt = self.subject.REMOTE,
+            remoteHost = "address",
+            verbosity = "-v ")
+        self.assertEqual('nohup gpfdist -d some dirname -p 0 -P 1 -m 2 -t 3 -v > log_file 2>&1 < /dev/null & echo \\$! ' \
+                         '> pid_file && bash -c "(sleep 1 && kill -0 \\`cat pid_file 2> /dev/null\\` && cat log_file) ' \
+                         '|| (cat log_file >&2 && exit 1)"', cmd.cmdStr)
+
+    def test__GpCreateGpfdist_with_very_verbosity(self):
+        cmd = self.subject.GpCreateGpfdist(
+            'gpfdist for table %s on %s' % ("some table",
+                                            "some segment"),
+            "some dirname",
+            "some datafile",
+            0,
+            1,
+            2,
+            3,
+            "pid_file",
+            "log_file",
+            ctxt = self.subject.REMOTE,
+            remoteHost = "address",
+            verbosity = "-V ")
+        self.assertEqual('nohup gpfdist -d some dirname -p 0 -P 1 -m 2 -t 3 -V > log_file 2>&1 < /dev/null & echo \\$! ' \
+                         '> pid_file && bash -c "(sleep 1 && kill -0 \\`cat pid_file 2> /dev/null\\` && cat log_file) ' \
+                         '|| (cat log_file >&2 && exit 1)"', cmd.cmdStr)
 
     @patch('gptransfer.TableValidatorFactory', return_value=Mock())
     def test__get_distributed_by_quotes_column_name(self, mock1):

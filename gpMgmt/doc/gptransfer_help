@@ -36,7 +36,9 @@ gptransfer
    [--quote=<character> ]
 
    [-v | --verbose] 
-   [-q | --quiet] 
+   [-q | --quiet]
+   [--gpfdist-verbose]
+   [--gpfdist-very-verbose]
    [-a] 
 
 gptransfer --version 
@@ -526,13 +528,27 @@ OPTIONS
  number of tables with large amounts of data. Because of the overhead 
  required to set up parallel transfers, the utility is not recommended 
  when the databases contain tables with small amounts of data. For more 
- information, see Notes. 
+ information, see Notes.
 
+--gpfdist-verbose
+
+ Set the logging level for gpfdist processes to verbose (-v). Cannot be 
+ specified with --gpfdist-very-verbose. The output is recorded in gpfdist 
+ log files in the ~/gptransfer_process_id directory on segment hosts in 
+ the source Greenplum Database cluster.
+
+--gpfdist-very-verbose
+
+ Set the logging level for gpfdist processes to very verbose (-V). Cannot 
+ be specified with --gpfdist-verbose. The output is recorded in gpfdist 
+ log files in the ~/gptransfer_process_id directory on segment hosts in 
+ the source Greenplum Database cluster.
 
 -l <log_dir> 
 
  Specify the gptransfer log file directory. If not specified, the default 
- is ~/gpAdminLogs. 
+ is ~/gpAdminLogs. This directory is created on the master host in the 
+ source Greenplum cluster.
 
 
 --max-line-length=<length> 
