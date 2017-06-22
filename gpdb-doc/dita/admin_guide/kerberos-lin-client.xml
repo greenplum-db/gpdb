@@ -78,8 +78,7 @@
         </ul>
         <p>Java applications require this additional software:<ul id="ul_w5p_pxj_h1b">
             <li id="kd158450">Java JDK <p>Java JDK 1.7.0_17 is supported on Red Hat Enterprise Linux
-                6.x. </p><p>Java JDK 1.6.0_21 is supported on Red Hat Enterprise Linux 5.x.
-              </p></li>
+                6.x. </p></li>
             <li id="kd158455">Ensure that JAVA_HOME is set to the installation directory of the
               supported Java JDK. </li>
           </ul></p>
