@@ -1548,10 +1548,8 @@ doSendTuple(Motion * motion, MotionState * node, TupleTableSlot *outerTupleSlot)
 void
 ExecReScanMotion(MotionState *node, ExprContext *exprCtxt)
 {
-	if (node->ps.chgParam != NULL
-			&& (node->mstype != MOTIONSTATE_RECV ||
+	if (node->mstype != MOTIONSTATE_RECV ||
 					node->numTuplesToParent != 0)
-		)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INTERNAL_ERROR),
