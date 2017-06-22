@@ -59,7 +59,7 @@
       <p>
         <codeblock>SELECT customer, amount
 FROM sales JOIN customer USING (cust_id)
-WHERE dateCol = '04-30-2008';
+WHERE dateCol = '04-30-2016';
 </codeblock>
       </p>
       <p><xref href="#topic3/iy140224" type="fig" format="dita"/> shows the query plan. Each segment
