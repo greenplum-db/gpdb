@@ -349,7 +349,6 @@ extern void EndRestoreBlob(ArchiveHandle *AH, Oid oid);
 extern void EndRestoreBlobs(ArchiveHandle *AH);
 
 extern void InitArchiveFmt_Custom(ArchiveHandle *AH);
-extern void InitArchiveFmt_Files(ArchiveHandle *AH);
 extern void InitArchiveFmt_Null(ArchiveHandle *AH);
 extern void InitArchiveFmt_Tar(ArchiveHandle *AH);
 

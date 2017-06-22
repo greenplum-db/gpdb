@@ -667,9 +667,6 @@ PrintTOCSummary(Archive *AHX, RestoreOptions *ropt)
 
 	switch (AH->format)
 	{
-		case archFiles:
-			fmtName = "FILES";
-			break;
 		case archCustom:
 			fmtName = "CUSTOM";
 			break;
@@ -1805,10 +1802,6 @@ _allocAH(const char *FileSpec, const ArchiveFormat fmt,
 	{
 		case archCustom:
 			InitArchiveFmt_Custom(AH);
-			break;
-
-		case archFiles:
-			InitArchiveFmt_Files(AH);
 			break;
 
 		case archNull:
