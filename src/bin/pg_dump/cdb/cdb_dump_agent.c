@@ -4430,17 +4430,11 @@ dumpOpr(Archive *fout, OprInfo *oprinfo)
 
 	name = convertRegProcReference(oprrest);
 	if (name)
-	{
 		appendPQExpBuffer(details, ",\n    RESTRICT = %s", name);
-		free(name);
-	}
 
 	name = convertRegProcReference(oprjoin);
 	if (name)
-	{
 		appendPQExpBuffer(details, ",\n    JOIN = %s", name);
-		free(name);
-	}
 
 	/*
 	 * DROP must be fully qualified in case same name appears in pg_catalog
