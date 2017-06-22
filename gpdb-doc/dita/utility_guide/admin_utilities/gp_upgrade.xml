@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="ow138313">gp_upgrade</title>
+  <body>
+    <draft-comment author="msk">5000 DRAFT - upgrade a GPDB system<p>Ported from postgres <xref
+          href="https://www.postgresql.org/docs/9.0/static/pgupgrade.html" format="html"
+          scope="external">gp_upgrade -9.0</xref></p><p>TODO -- edit, formatting, and postgres ->
+        GPDB. - Need required, optional, conflicting options.</p><p>Cherry-pick "pg_dump
+        --binary-upgrade" option from PostgreSQL 8.4. see also <xref
+          href="https://github.com/greenplum-db/gpdb/pull/1340" format="html" scope="external"
+          >gpdb/pull/1340</xref></p></draft-comment>
+    <section>
+      <p>Upgrades Greenplum Database 4.3.x the current major release.</p>
+    </section>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock><b>gp_upgrade</b> 
+{<b>-b</b> | <b>--old-bindir</b>} <varname>old_bindir</varname>
+{<b>-B</b> | <b>--new-bindir</b>} <varname>new_bindir</varname>
+{<b>-c</b> | <b>--check</b>}
+{<b>-d</b> | <b>--old-datadir</b>} <varname>old_datadir</varname>
+{<b>-D</b> | <b>--new-datadir</b>} <varname>new_datadir</varname>
+{<b>-g</b> | <b>--debug</b>}
+{<b>-G</b> | <b>--debugfile</b>} <varname>debug_filename</varname>
+{<b>-k</b> | <b>--link</b>}
+{<b>-l</b> | <b>--logfile</b>} <varname>log_filename</varname>
+{<b>-p</b> | <b>--old-port</b>} <varname>old_port_num</varname>
+{<b>-P</b> | <b>--new-port</b>} <varname>new_port_num</varname>
+{<b>-u</b> | <b>--user</b>} <varname>user_name</varname>
+{<b>-v</b> | <b>--verbose</b>}
+
+<b>gp_upgrade</b> <b>-V</b> | <b>--version</b>
+
+<b>gp_upgrade</b> <b>-?</b> | <b>-h</b> | <b>--help</b></codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p>gp_upgrade (formerly called pg_migrator) allows data stored in Greenplum Database data
+        files to be migrated to a later Greenplum Database major version without the data
+        dump/reload typically required for major version upgrades, e.g. from 4.3.x release to the
+        current major release of Greenplum Database. It is not required for minor version upgrades,
+        e.g. from 5.0.0 to 5.0.1.</p>
+      <p>gp_upgrade works because, though new features are regularly added to Greenplum Database
+        major releases, the internal data storage format rarely changes. gp_upgrade does its best to
+        make sure the old and new clusters are binary-compatible, e.g. by checking for compatible
+        compile-time settings, [REMOVE? >] including 32/64-bit binaries. It is important that any
+        external modules are also binary compatible, though this cannot be checked by
+        gp_upgrade.</p>
+      <p>gp_upgrade supports upgrades from 4.3.x and later to the current major release of Greenplum
+        Database, [REMOVE? >] including snapshot and alpha releases.</p>
+      <draft-comment author="msk">external partitions not supported <xref
+          href="https://github.com/greenplum-db/gpdb/pull/2053" format="html" scope="external"
+          >gpdb/pull/2053</xref></draft-comment>
+      <p>Upgrading a database that contains a partitioned table with external partitions is not
+        supported. Prior to the upgrade, external partitions must be either moved out of the
+        partition hierarchy with <codeph>ALTER TABLE EXCHANGE</codeph>, or dropped.</p>
+      <p>Management of external partitions is not allowed in utility mode.</p>
+    </section>
+    <section id="section4">
+      <title>Options</title>
+      <p>gp_upgrade accepts the following command-line arguments:</p>
+      <parml>
+        <plentry>
+          <pt>[-b | --old-bindir] <varname>old_bindir</varname></pt>
+          <pd>specify the old cluster executable directory</pd>
+        </plentry>
+        <plentry>
+          <pt>[<b>-B</b> | <b>--new-bindir</b>] <varname>new_bindir</varname></pt>
+          <pd>specify the new cluster executable directory</pd>
+        </plentry>
+        <plentry>
+          <pt>[-c | <b>--check</b>]</pt>
+          <pd>check clusters only, don't change any data</pd>
+        </plentry>
+        <plentry>
+          <pt>[-d | <b>--old-datadir</b>] <varname>old_datadir</varname></pt>
+          <pd>specify the old cluster data directory</pd>
+        </plentry>
+        <plentry>
+          <pt>[-D | --new-datadir] <varname>new_datadir</varname></pt>
+          <pd>specify the new cluster data directory</pd>
+        </plentry>
+        <plentry>
+          <pt>[-g | --debug]</pt>
+          <pd>enable debugging</pd>
+        </plentry>
+        <plentry>
+          <pt>[-G | --debugfile] <varname>debug_filename</varname></pt>
+          <pd>output debugging activity to file</pd>
+        </plentry>
+        <plentry>
+          <pt>[-k | --link]</pt>
+          <pd>use hard links instead of copying files to the new cluster</pd>
+        </plentry>
+        <plentry>
+          <pt>[-l | --logfile] <varname>log_filename</varname></pt>
+          <pd>log session activity to file</pd>
+        </plentry>
+        <plentry>
+          <pt>[-p | --old-port] <varname>old_port_num</varname></pt>
+          <pd>specify the old cluster port number</pd>
+        </plentry>
+        <plentry>
+          <pt>[-P | --new-port] <varname>new_port_num</varname></pt>
+          <pd>specify the new cluster port number</pd>
+        </plentry>
+        <plentry>
+          <pt>[-u | --user] <varname>user_name</varname></pt>
+          <pd>clusters superuser</pd>
+        </plentry>
+        <plentry>
+          <pt>-v | --verbose</pt>
+          <pd>enable verbose output</pd>
+        </plentry>
+        <plentry>
+          <pt>-V | --version</pt>
+          <pd>display version information, then exit</pd>
+        </plentry>
+        <plentry>
+          <pt>-? | -h | --help</pt>
+          <pd>show help, then exit</pd>
+        </plentry>
+      </parml>
+    </section>
+    <section>
+      <title>Upgrade Steps</title>
+      <ol id="ol_syr_dr1_jy">
+        <li>Optionally move the old cluster<p>If you are using a version-specific installation
+            directory, e.g. <codeph>/usr/local/greenplum-db-4.3.11.0</codeph>, you do not need to
+            move the old cluster. The one-click installers all use version-specific installation
+            directories.</p><p>If your installation directory is not version-specific, e.g.
+              <codeph>/usr/local/greenplum-db</codeph>, it is necessary to move the current
+            Greenplum Database install directory so it does not interfere with the new Greenplum
+            Database installation. Once the current Greenplum Database server is shut down, it is
+            safe to rename the Greenplum Database installation directory; assuming the old directory
+            is /usr/local/pgsql, you can
+            do:</p><codeblock>mv /usr/local/pgsql /usr/local/pgsql.old</codeblock><p>to rename the
+            directory.</p><draft-comment author="msk">GPDB installer creates /usr/local/greenplum-db
+            as a logical link to /usr/local/greenplum-db-&lt;version></draft-comment></li>
+        <li>[REMOVE this step?] For source installs, build the new version<p>Build the new
+            PostgreSQL source with configure flags that are compatible with the old cluster.
+            gp_upgrade will check pg_controldata to make sure all settings are compatible before
+            starting the upgrade.</p></li>
+        <li>Install the new Greenplum Database binaries<p>Install the new server's binaries and
+            support files. You can use the same port numbers for both clusters, typically 5432,
+            because the old and new clusters will not be running at the same time.</p><p>[REMOVE?]
+            For source installs, if you wish to install the new server in a custom location, use the
+            prefix
+          variable:</p><codeblock>gmake prefix=/usr/local/pgsql.new install</codeblock></li>
+        <li>Install gp_upgrade and gp_upgrade_support<p>Install gp_upgrade and gp_upgrade_support in
+            the new Greenplum Database cluster</p></li>
+        <li>Initialize the new Greenplum Database cluster<p>Initialize the new cluster using initdb.
+            Again, use compatible initdb flags that match the old cluster. Many prebuilt installers
+            do this step automatically. There is no need to start the new cluster.</p></li>
+        <li>Install custom shared object files<p>Install any custom shared object files (or DLLs)
+            used by the old cluster into the new cluster, e.g. pgcrypto.so, whether they are from
+            contrib or some other source. Do not install the schema definitions, e.g. pgcrypto.sql,
+            because these will be migrated from the old cluster.</p></li>
+        <li>Adjust authentication<p>gp_upgrade will connect to the old and new servers several
+            times, so you might want to set local Unix-domain socket authentication to ident in
+            pg_hba.conf or use a ~/.pgpass file (see <xref
+              href="https://www.postgresql.org/docs/9.0/static/libpq-pgpass.html" format="html"
+              scope="external">Section 31.14</xref>).</p></li>
+        <li>Stop both servers<p>Make sure both database servers are stopped using, on Unix,
+            e.g.:</p><codeblock>pg_ctl -D /opt/PostgreSQL/8.4 stop
+pg_ctl -D /opt/PostgreSQL/9.0 stop</codeblock><p>or
+            on Windows, using the proper service
+            names:</p><codeblock>NET STOP postgresql-8.4
+NET STOP postgresql-9.0</codeblock><p>or</p><codeblock>NET STOP pgsql-8.3  (PostgreSQL 8.3 and older used a different service name)</codeblock></li>
+        <li>Run gp_upgrade<p>Always run the gp_upgrade binary of the new server, not the old one.
+            gp_upgrade requires the specification of the old and new cluster's data and executable
+            (bin) directories. You can also specify user and port values, and whether you want the
+            data linked instead of copied (the default).</p><p>If you use link mode, the upgrade
+            will be much faster (no file copying), but you will not be able to access your old
+            cluster once you start the new cluster after the upgrade. Link mode also requires that
+            the old and new cluster data directories be in the same file system. See gp_upgrade
+            --help for a full list of options.</p><p>For Windows users, you must be logged into an
+            administrative account, and then start a shell as the postgres user and set the proper
+            path:</p><codeblock>RUNAS /USER:postgres "CMD.EXE"
+SET PATH=%PATH%;C:\Program Files\PostgreSQL\9.0\bin;</codeblock><p>and
+            then run gp_upgrade with quoted directories,
+            e.g.:</p><codeblock>gp_upgrade.exe
+        --old-datadir "C:/Program Files/PostgreSQL/8.4/data"
+        --new-datadir "C:/Program Files/PostgreSQL/9.0/data"
+        --old-bindir "C:/Program Files/PostgreSQL/8.4/bin"
+        --new-bindir "C:/Program Files/PostgreSQL/9.0/bin"</codeblock><p>Once
+            started, gp_upgrade will verify the two clusters are compatible and then do the
+            migration. You can use gp_upgrade --check to perform only the checks, even if the old
+            server is still running. gp_upgrade --check will also outline any manual adjustments you
+            will need to make after the migration. gp_upgrade requires write permission in the
+            current directory.</p><p>Obviously, no one should be accessing the clusters during the
+            migration. Consider using a non-default port number, e.g. 50432, for old and new
+            clusters to avoid unintended client connections during the upgrade.</p><p>If an error
+            occurs while restoring the database schema, gp_upgrade will exit and you will have to
+            revert to the old cluster as outlined in <xref
+              href="https://www.postgresql.org/docs/9.0/static/pgupgrade.html#PGUPGRADE-STEP-REVERT"
+              format="html" scope="external">step 14</xref> below. To try gp_upgrade again, you will
+            need to modify the old cluster so the gp_upgrade schema restore succeeds. If the problem
+            is a contrib module, you might need to uninstall the contrib module from the old cluster
+            and install it in the new cluster after the migration, assuming the module is not being
+            used to store user data.</p></li>
+        <li>Restore pg_hba.conf<p>If you modified pg_hba.conf, restore its original
+          settings.</p></li>
+        <li>Post-migration processing<p>If any post-migration processing is required, gp_upgrade
+            will issue warnings as it completes. It will also generate script files that must be run
+            by the administrator. The script files will connect to each database that needs
+            post-migration processing. Each script should be run
+            using:</p><codeblock>psql --username postgres --file script.sql postgres</codeblock><p>The
+            scripts can be run in any order and can be deleted once they have been run.<note
+              type="warning">In general it is unsafe to access tables referenced in rebuild scripts
+              until the rebuild scripts have run to completion; doing so could yield incorrect
+              results or poor performance. Tables not referenced in rebuild scripts can be accessed
+              immediately.</note></p></li>
+        <li>Statistics<p>Because optimizer statistics are not transferred by gp_upgrade, you will be
+            instructed to run a command to regenerate that information at the end of the
+            migration.</p></li>
+        <li>Delete old cluster<p>Once you are satisfied with the upgrade, you can delete the old
+            cluster's data directories by running the script mentioned when gp_upgrade completes.
+            You can also delete the old installation directories (e.g. bin, share).</p></li>
+        <li>Reverting to old cluster<p>If, after running gp_upgrade, you wish to revert to the old
+            cluster, there are several options:</p><ul id="ul_uyr_dr1_jy">
+            <li>If you ran gp_upgrade with --check, no modifications were made to the old cluster
+              and you can re-use it anytime.</li>
+            <li>If you ran gp_upgrade with --link, the data files are shared between the old and new
+              cluster. If you started the new cluster, the new server has written to those shared
+              files and it is unsafe to use the old cluster.</li>
+            <li>If you ran gp_upgrade without --link or did not start the new server, the old
+              cluster was not modified except that an .old suffix was appended to
+              $PGDATA/global/pg_control and perhaps tablespace directories. To reuse the old
+              cluster, remove the .old suffix from $PGDATA/global/pg_control. and, if migrating to
+              8.4 or earlier, remove the tablespace directories created by the migration and remove
+              the .old suffix from the tablespace directory names; then you can restart the old
+              cluster.</li>
+          </ul></li>
+      </ol>
+    </section>
+    <section>
+      <title>Limitations in Migrating from PostgreSQL 8.3</title>
+      <draft-comment author="msk">Are any of these true for GPDB 4.3.x to 5.0?</draft-comment>
+      <p>Upgrading from PostgreSQL 8.3 has additional restrictions not present when upgrading from
+        later PostgreSQL releases. For example, gp_upgrade will not work for a migration from 8.3 if
+        a user column is defined as:</p>
+      <ul id="ul_rfv_qr1_jy">
+        <li>a tsquery data type</li>
+        <li>data type name and is not the first column</li>
+      </ul>
+      <p>gp_upgrade will not work if the ltree contrib module is installed in a database.</p>
+      <p>You must drop any such columns and migrate them manually.</p>
+      <p>gp_upgrade will require a table rebuild if:</p>
+      <ul id="ul_sfv_qr1_jy">
+        <li>a user column is of data type tsvector</li>
+      </ul>
+      <p>gp_upgrade will require a reindex if:</p>
+      <ul id="ul_tfv_qr1_jy">
+        <li>an index is of type hash or GIN</li>
+        <li>an index uses <codeblock>bpchar_pattern_ops</codeblock></li>
+      </ul>
+      <p>Also, the default datetime storage format changed to integer after PostgreSQL 8.3.
+        gp_upgrade will check that the datetime storage format used by the old and new clusters
+        match. Make sure your new cluster is built with the configure flag
+        --disable-integer-datetimes.</p>
+      <p>For Windows users, note that due to different integer datetimes settings used by the
+        one-click installer and the MSI installer, it is only possible to upgrade from version 8.3
+        of the one-click distribution to version 8.4 or later of the one-click distribution. It is
+        not possible to upgrade from the MSI installer to the one-click installer.</p>
+    </section>
+    <section>
+      <title>Notes</title>
+      <p>gp_upgrade does not support migration of databases containing these reg* OID-referencing
+        system data types: regproc, regprocedure, regoper, regoperator, regconfig, and
+        regdictionary. (regtype can be migrated.)</p>
+      <p>All failure, rebuild, and reindex cases will be reported by gp_upgrade if they affect your
+        installation; post-migration scripts to rebuild tables and indexes will be generated
+        automatically.</p>
+      <p>For deployment testing, create a schema-only copy of the old cluster, insert dummy data,
+        and migrate that.</p>
+      <p>If you want to use link mode and you don't want your old cluster to be modified when the
+        new cluster is started, make a copy of the old cluster and migrate that with link mode. To
+        make a valid copy of the old cluster, use rsync to create a dirty copy of the old cluster
+        while the server is running, then shut down the old server and run rsync again to update the
+        copy with any changes to make it consistent.</p>
+      <p>===================</p>
+      <p>From readme <xref
+          href="https://github.com/greenplum-db/gpdb/tree/master/contrib/gp_upgrade" format="html"
+          scope="external">gp_upgrade/README.gpdb</xref></p>
+      <p>Also see <xref
+          href="https://github.com/greenplum-db/gpdb/blob/master/contrib/gp_upgrade/IMPLEMENTATION"
+          format="html" scope="external">gp_upgrade/IMPLEMENTATION</xref></p>
+      <p>The Greenplum gp_upgrade code is based on gp_upgrade from 9.0.23 and has been extended to
+        work with Greenplum. This README is intended to document the changes that have been
+        done.</p>
+      <p>Operation of gp_upgrade remains unchanged as are the available command line parameters.
+        Upgrading a Greenplum cluster with gp_upgrade is done by first upgrading the QD and then the
+        QEs.</p>
+      <p><b>Extensions to upstream PostgresSQL gp_upgrade</b></p>
+      <p>gp_upgrade in PostgreSQL only maintains the Oids of types, Greenplum Database requires all
+        Oids to be maintained such that they are synchronized between QD and QEs after upgrade. The
+        binary-upgrade option in pg_dump has been extended to inject Oid preservation calls for all
+        required object types in the dump. Technically, the Oids needn't be preserved during upgrade
+        as long as they are synchronized between QD/QEs after the upgrade. The current
+        implementation preserves the Oids rather than allocate new ones.</p>
+      <p>Functionality for restoring the append-only catalog relations is in aotable.c, Greenplum
+        specific checks for upgrading from GPDB 4 are added to version_old_gpdb4.c.</p>
+      <p><b>Upgrading from 4.3 to 5.0</b></p>
+      <p>When upgrading from 4.3 to 5.0 the QD must be upgraded before any QEs are upgraded. This is
+        because new Oids are allocated during the QD upgrade and these needs to be distributed to
+        the QEs in order to preserve the QD/QE Oid synchronization.</p>
+      <ul id="ul_zry_y5h_jy">
+        <li>Each base relation type is in 5.0 defined as an array type, something which is not
+          supported in 4.3. The arraytypes for base relations will be created during upgrade and
+          thier Oids recorded. To be able to distribute the Oids to the QEs, the upgrade will leave
+          a dump file in the working directory named gp_upgrade_dump_arraytypes.sql. If this file is
+          placed in the working directory of upgrading a QE, gp_upgrade will use it to ensure that
+          the Oids are synchronized.</li>
+        <li>The on-disk format of the NUMERIC data type was changed in 5.0 due to the merge of
+          PostgreSQL 8.3, both heap and AO tables are affected by this. There were also changes to
+          the flags in the heap page header. PostgreSQL doesn't support upgrading with gp_upgrade
+          from 8.2 to 8.3, thus handling this format change was added to gp_upgrade for
+            Greenplum:<ul id="ul_qzb_1vh_jy">
+            <li>Heap tables are rewritten as part of the upgrade, any pages containing numeric
+              attributes will be converted when the segment files are copied to the new data
+              directory.</li>
+            <li>AO table segment files will be rewritten when a segment containing numeric
+              attributes are written to from database operations.</li>
+          </ul><draft-comment author="msk">external partitions not supported <xref
+              href="https://github.com/greenplum-db/gpdb/pull/2053" format="html" scope="external"
+              >gpdb/pull/2053</xref></draft-comment></li>
+        <li>Upgrading a database that contains a partitioned table with external partitions is not
+          supported. prior to the upgrade, external partitions must be either moved out of the
+          partition hierarchy with <codeph>ALTER TABLE EXCHANGE</codeph>, or dropped.<p>Management
+            of external partitions is not allowed in utility mode.</p></li>
+      </ul>
+    </section>
+    <section id="section5">
+      <title>Examples</title>
+      <p>???</p>
+    </section>
+    <section id="section6">
+      <title>See Also</title>
+      <p>???</p>
+    </section>
+  </body>
+</topic>
