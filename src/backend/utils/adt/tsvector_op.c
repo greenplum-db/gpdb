@@ -1097,7 +1097,7 @@ static TSVectorStat *
 ts_stat_sql(MemoryContext persistentContext, text *txt, text *ws)
 {
 	char	   *query = text_to_cstring(txt);
-	int			i;
+	int64			i;
 	TSVectorStat *stat;
 	bool		isnull;
 	Portal		portal;

@@ -167,7 +167,7 @@ static Datum exec_eval_expr(PLpgSQL_execstate *estate,
 			   bool *isNull,
 			   Oid *rettype);
 static int exec_run_select(PLpgSQL_execstate *estate,
-				PLpgSQL_expr *expr, long maxtuples, Portal *portalP);
+				PLpgSQL_expr *expr, int64 maxtuples, Portal *portalP);
 static int exec_for_query(PLpgSQL_execstate *estate, PLpgSQL_stmt_forq *stmt,
 			   Portal portal, bool prefetch_ok);
 static void eval_expr_params(PLpgSQL_execstate *estate,
@@ -2741,7 +2741,7 @@ exec_stmt_execsql(PLpgSQL_execstate *estate,
 {
 	Datum	   *values;
 	char	   *nulls;
-	long		tcount;
+	int64		tcount;
 	int			rc;
 	PLpgSQL_expr *expr = stmt->sqlstmt;
 
@@ -2870,14 +2870,14 @@ exec_stmt_execsql(PLpgSQL_execstate *estate,
 	}
 
 	/* All variants should save result info for GET DIAGNOSTICS */
-	estate->eval_processed = SPI_processed64;
+	estate->eval_processed = SPI_processed;
 	estate->eval_lastoid = SPI_lastoid;
 
 	/* Process INTO if present */
 	if (stmt->into)
 	{
 		SPITupleTable *tuptab = SPI_tuptable;
-		uint32		n = SPI_processed;
+		uint64		n = SPI_processed;
 		PLpgSQL_rec *rec = NULL;
 		PLpgSQL_row *row = NULL;
 
@@ -3060,7 +3060,7 @@ exec_stmt_dynexecute(PLpgSQL_execstate *estate,
 	if (stmt->into)
 	{
 		SPITupleTable *tuptab = SPI_tuptable;
-		uint32		n = SPI_processed;
+		uint64		n = SPI_processed;
 		PLpgSQL_rec *rec = NULL;
 		PLpgSQL_row *row = NULL;
 
@@ -4205,7 +4205,7 @@ exec_eval_expr(PLpgSQL_execstate *estate,
  */
 static int
 exec_run_select(PLpgSQL_execstate *estate,
-				PLpgSQL_expr *expr, long maxtuples, Portal *portalP)
+				PLpgSQL_expr *expr, int64 maxtuples, Portal *portalP)
 {
 	Datum	   *values;
 	char	   *nulls;

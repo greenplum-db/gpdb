@@ -1376,7 +1376,7 @@ ChangeTracking_GetIncrementalChangeList(void)
 	IncrementalChangeList *result = NULL;
 	StringInfoData sqlstmt;
 	int			ret;
-	int			proc;
+	int			proc;	/* 32 bit, only holds metadata */
 	volatile bool connected = false;
 	ResourceOwner save = CurrentResourceOwner;
 	MemoryContext oldcontext = CurrentMemoryContext;
@@ -1432,7 +1432,7 @@ ChangeTracking_GetIncrementalChangeList(void)
 
 		/* Do the query. */
 		ret = SPI_execute(sqlstmt.data, true, 0);
-		proc = SPI_processed;
+		proc = (int) SPI_processed;
 
 
 		if (ret > 0 && SPI_tuptable != NULL)
@@ -1653,7 +1653,7 @@ ChangeTracking_GetChanges(ChangeTrackingRequest *request)
 	ChangeTrackingResult *result = NULL;
 	StringInfoData sqlstmt;
 	int			ret;
-	int			proc;
+	int			proc;	/* 32 bit, only holds metadata */
 	int			i;
 	volatile bool connected = false;	/* needs to survive PG_TRY()/CATCH() */
 	ResourceOwner save = CurrentResourceOwner;
@@ -1727,7 +1727,7 @@ ChangeTracking_GetChanges(ChangeTrackingRequest *request)
 
 		/* Do the query. */
 		ret = SPI_execute(sqlstmt.data, true, 0);
-		proc = SPI_processed;
+		proc = (int) SPI_processed;
 
 
 		if (ret > 0 && SPI_tuptable != NULL)
@@ -3193,7 +3193,7 @@ ChangeTracking_CompactLogFile(CTFType source, CTFType dest, XLogRecPtr *uptolsn)
 {
 	StringInfoData sqlstmt;
 	int			ret;
-	int			proc;
+	int			proc;	/* 32 bit, only holds metadata */
 	bool		connected = false;
 	int64		count = 0;
 	ResourceOwner save = CurrentResourceOwner;
@@ -3240,7 +3240,7 @@ ChangeTracking_CompactLogFile(CTFType source, CTFType dest, XLogRecPtr *uptolsn)
 
 		/* Do the query. */
 		ret = SPI_execute(sqlstmt.data, true, 0);
-		proc = SPI_processed;
+		proc = (int) SPI_processed;
 
 		if ((segmentState != SegmentStateChangeTrackingDisabled) &&
 			ret > 0 && SPI_tuptable != NULL)

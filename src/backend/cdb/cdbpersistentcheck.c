@@ -981,7 +981,7 @@ Persistent_ExecuteQuery(char const *query, bool readOnlyQuery)
 {
 	StringInfoData sqlstmt;
 	int			ret;
-	int			proc = 0;
+	int			proc = 0;	/* 32 bit, only holds metadata */
 
 	Assert(query);
 	Insist(connected);
@@ -1000,7 +1000,7 @@ Persistent_ExecuteQuery(char const *query, bool readOnlyQuery)
 
 		/* Run the query. */
 		ret = SPI_execute(sqlstmt.data, readOnlyQuery, 0);
-		proc = SPI_processed;
+		proc = (int) SPI_processed;
 
 		if (ret > 0 && SPI_tuptable != NULL)
 		{

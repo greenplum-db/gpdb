@@ -347,8 +347,37 @@ static inline int64 DatumGetInt64(Datum d) { return (int64) d; }
 static inline Datum Int64GetDatum(int64 i64) { return (Datum) i64; } 
 static inline Datum Int64GetDatumFast(int64 x) { return Int64GetDatum(x); } 
 
+/* FIXME: diagnostics: remove
 static inline uint64 DatumGetUInt64(Datum d) { return (uint64) d; } 
 static inline Datum UInt64GetDatum(uint64 ui64) { return (Datum) ui64; } 
+*/
+
+/*
+ * DatumGetUInt64
+ *		Returns 64-bit unsigned integer value of a datum.
+ *
+ * Note: this macro hides whether int64 is pass by value or by reference.
+ */
+
+#ifdef USE_FLOAT8_BYVAL
+#define DatumGetUInt64(X) ((uint64) GET_8_BYTES(X))
+#else
+#define DatumGetUInt64(X) (* ((uint64 *) DatumGetPointer(X)))
+#endif
+
+/*
+ * UInt64GetDatum
+ *		Returns datum representation for a 64-bit unsigned integer.
+ *
+ * Note: if int64 is pass by reference, this function returns a reference
+ * to palloc'd space.
+ */
+
+#ifdef USE_FLOAT8_BYVAL
+#define UInt64GetDatum(X) ((Datum) SET_8_BYTES(X))
+#else
+#define UInt64GetDatum(X) Int64GetDatum((int64) (X))
+#endif
 
 static inline Oid DatumGetObjectId(Datum d) { return (Oid) d; } 
 static inline Datum ObjectIdGetDatum(Oid oid) { return (Datum) oid; } 

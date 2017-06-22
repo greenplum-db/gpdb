@@ -263,7 +263,7 @@ tsquery_rewrite_query(PG_FUNCTION_ARGS)
 	SPIPlanPtr	plan;
 	Portal		portal;
 	bool		isnull;
-	int			i;
+	int64			i;
 
 	if (query->size == 0)
 	{

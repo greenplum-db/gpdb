@@ -22,8 +22,8 @@
 typedef struct SPITupleTable
 {
 	MemoryContext tuptabcxt;	/* memory context of result table */
-	uint32		alloced;		/* # of alloced vals */
-	uint32		free;			/* # of free vals */
+	uint64		alloced;		/* # of alloced vals */
+	uint64		free;			/* # of free vals */
 	TupleDesc	tupdesc;		/* tuple descriptor */
 	HeapTuple  *vals;			/* tuples */
 } SPITupleTable;
@@ -58,8 +58,7 @@ typedef struct _SPI_plan *SPIPlanPtr;
 #define SPI_OK_UPDATE_RETURNING 13
 #define SPI_OK_REWRITTEN		14
 
-extern PGDLLIMPORT uint32 SPI_processed;
-extern PGDLLIMPORT uint64 SPI_processed64;
+extern PGDLLIMPORT uint64 SPI_processed;
 extern PGDLLIMPORT Oid SPI_lastoid;
 extern PGDLLIMPORT SPITupleTable *SPI_tuptable;
 extern PGDLLIMPORT int SPI_result;
@@ -71,21 +70,21 @@ extern void SPI_pop(void);
 extern bool SPI_push_conditional(void);
 extern void SPI_pop_conditional(bool pushed);
 extern void SPI_restore_connection(void);
-extern int	SPI_execute(const char *src, bool read_only, long tcount);
+extern int	SPI_execute(const char *src, bool read_only, int64 tcount);
 extern int SPI_execute_plan(SPIPlanPtr plan, Datum *Values, const char *Nulls,
-				 bool read_only, long tcount);
-extern int	SPI_exec(const char *src, long tcount);
+				 bool read_only, int64 tcount);
+extern int	SPI_exec(const char *src, int64 tcount);
 extern int SPI_execp(SPIPlanPtr plan, Datum *Values, const char *Nulls,
-		  long tcount);
+		  int64 tcount);
 extern int SPI_execute_snapshot(SPIPlanPtr plan,
 					 Datum *Values, const char *Nulls,
 					 Snapshot snapshot,
 					 Snapshot crosscheck_snapshot,
-					 bool read_only, bool fire_triggers, long tcount);
+					 bool read_only, bool fire_triggers, int64 tcount);
 extern int SPI_execute_with_args(const char *src,
 					  int nargs, Oid *argtypes,
 					  Datum *Values, const char *Nulls,
-					  bool read_only, long tcount);
+					  bool read_only, int64 tcount);
 extern SPIPlanPtr SPI_prepare(const char *src, int nargs, Oid *argtypes);
 extern SPIPlanPtr SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes,
 				   int cursorOptions);

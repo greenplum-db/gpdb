@@ -186,7 +186,7 @@ PerformPortalFetch(FetchStmt *stmt,
 				   char *completionTag)
 {
 	Portal		portal;
-	long		nprocessed;
+	uint64		nprocessed;
 
 	/*
 	 * Disallow empty-string cursor name (conflicts with protocol-level
@@ -219,7 +219,7 @@ PerformPortalFetch(FetchStmt *stmt,
 
 	/* Return command status if wanted */
 	if (completionTag)
-		snprintf(completionTag, COMPLETION_TAG_BUFSIZE, "%s %ld",
+		snprintf(completionTag, COMPLETION_TAG_BUFSIZE, "%s " UINT64_FORMAT,
 				 stmt->ismove ? "MOVE" : "FETCH",
 				 nprocessed);
 }
@@ -451,7 +451,7 @@ PersistHoldablePortal(Portal portal)
 										true);
 
 		/* Fetch the result set into the tuplestore */
-		ExecutorRun(queryDesc, ForwardScanDirection, 0L);
+		ExecutorRun(queryDesc, ForwardScanDirection, 0);
 
 		(*queryDesc->dest->rDestroy) (queryDesc->dest);
 		queryDesc->dest = NULL;
@@ -485,18 +485,16 @@ PersistHoldablePortal(Portal portal)
 		{
 			if (portal->atEnd)
 			{
-				/* we can handle this case even if posOverflow */
+				/*
+				 * Just force the tuplestore forward to its end.  The size of the
+				 * skip request here is arbitrary.
+				 */
 				while (tuplestore_advance(portal->holdStore, true))
 					/* continue */ ;
 			}
 			else
 			{
 				int64		store_pos;
-	
-				if (portal->posOverflow)	/* oops, cannot trust portalPos */
-					ereport(ERROR,
-							(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
-							 errmsg("could not reposition held cursor")));
 	
 				tuplestore_rescan(portal->holdStore);
 	

@@ -1447,7 +1447,7 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 	float4		relTuples;
 	float4		relPages;
 	int			ret;
-	int			sampleTuples;
+	int			sampleTuples;	/* 32 bit - assume that number of tuples will not > 2B */
 	Datum	   *vals;
 	bool	   *nulls;
 	MemoryContext oldcxt;
@@ -1587,7 +1587,12 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 	 */
 	ret = SPI_execute(str.data, false, 0);
 	Assert(ret > 0);
-	sampleTuples = SPI_processed;
+	/*
+	 * targrows in analyze_rel_internal() is an int,
+	 * it's unlikely that this query will return more rows
+	 */
+	Assert(SPI_processed < INT_MAX);
+	sampleTuples = (int) SPI_processed;
 
 	/* Ok, read in the tuples to *rows */
 	MemoryContextSwitchTo(oldcxt);

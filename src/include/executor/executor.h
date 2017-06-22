@@ -238,7 +238,7 @@ typedef struct ScanMethod
 extern void ExecutorStart(QueryDesc *queryDesc, int eflags);
 extern void standard_ExecutorStart(QueryDesc *queryDesc, int eflags);
 extern void ExecutorRun(QueryDesc *queryDesc,
-			ScanDirection direction, long count);
+			ScanDirection direction, int64 count);
 extern void standard_ExecutorRun(QueryDesc *queryDesc,
 					 ScanDirection direction, long count);
 extern void ExecutorEnd(QueryDesc *queryDesc);

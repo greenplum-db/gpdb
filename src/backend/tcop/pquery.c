@@ -51,16 +51,16 @@ static void ProcessQuery(Portal portal, /* Resource queueing need SQL, so we pas
 			 DestReceiver *dest,
 			 char *completionTag);
 static void FillPortalStore(Portal portal, bool isTopLevel);
-static uint64 RunFromStore(Portal portal, ScanDirection direction, int64 count,
+static uint64 RunFromStore(Portal portal, ScanDirection direction, uint64 count,
 			 DestReceiver *dest);
-static int64 PortalRunSelect(Portal portal, bool forward, int64 count,
+static uint64 PortalRunSelect(Portal portal, bool forward, int64 count,
 				DestReceiver *dest);
 static void PortalRunUtility(Portal portal, Node *utilityStmt, bool isTopLevel,
 				 DestReceiver *dest, char *completionTag);
 static void PortalRunMulti(Portal portal, bool isTopLevel,
 			   DestReceiver *dest, DestReceiver *altdest,
 			   char *completionTag);
-static int64 DoPortalRunFetch(Portal portal,
+static uint64 DoPortalRunFetch(Portal portal,
 				 FetchDirection fdirection,
 				 int64 count,
 				 DestReceiver *dest);
@@ -288,7 +288,7 @@ ProcessQuery(Portal portal,
 	/*
 	 * Run the plan to completion.
 	 */
-	ExecutorRun(queryDesc, ForwardScanDirection, 0L);
+	ExecutorRun(queryDesc, ForwardScanDirection, 0);
 
 	/* Now take care of any queued AFTER triggers */
 	AfterTriggerEndQuery(queryDesc->estate);
@@ -758,7 +758,6 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 				portal->atStart = true;
 				portal->atEnd = false;	/* allow fetches */
 				portal->portalPos = 0;
-				portal->posOverflow = false;
 				break;
 
 			case PORTAL_UTIL_SELECT:
@@ -780,7 +779,6 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 				portal->atStart = true;
 				portal->atEnd = false;	/* allow fetches */
 				portal->portalPos = 0;
-				portal->posOverflow = false;
 				break;
 
 			case PORTAL_MULTI_QUERY:
@@ -871,8 +869,8 @@ PortalSetResultFormat(Portal portal, int nFormats, int16 *formats)
  *
  * count <= 0 is interpreted as a no-op: the destination gets started up
  * and shut down, but nothing else happens.  Also, count == FETCH_ALL is
- * interpreted as "all rows".  Note that count is ignored in multi-query
- * situations, where we always run the portal to completion.
+ * interpreted as "all rows".  (cf FetchStmt.howMany)
+ * Note that count is ignored in multi-query
  *
  * isTopLevel: true if query is being executed at backend "top level"
  * (that is, directly from a client command message)
@@ -1082,7 +1080,7 @@ PortalRun(Portal portal, int64 count, bool isTopLevel,
  *
  * Returns number of rows processed (suitable for use in result tag)
  */
-static int64
+static uint64
 PortalRunSelect(Portal portal,
 				bool forward,
 				int64 count,
@@ -1123,8 +1121,13 @@ PortalRunSelect(Portal portal,
 	 */
 	if (forward)
 	{
+		// elog(INFO, "PortalRunSelect(), forward, count: " INT64_FORMAT, count); FIXME: diagnostics
 		if (portal->atEnd || count <= 0)
+		{
 			direction = NoMovementScanDirection;
+			//count = 0;	/* don't pass negative count to executor */
+			// elog(INFO, "PortalRunSelect(), reset counter"); FIXME: diagnostics
+                }
 		else
 			direction = ForwardScanDirection;
 
@@ -1133,7 +1136,7 @@ PortalRunSelect(Portal portal,
 			count = 0;
 
 		if (portal->holdStore)
-			nprocessed = RunFromStore(portal, direction, count, dest);
+			nprocessed = RunFromStore(portal, direction, (uint64) count, dest);
 		else
 		{
 			PushActiveSnapshot(queryDesc->snapshot);
@@ -1144,22 +1147,16 @@ PortalRunSelect(Portal portal,
 
 		if (!ScanDirectionIsNoMovement(direction))
 		{
-			long		oldPos;
-
 			if (nprocessed > 0)
 				portal->atStart = false;		/* OK to go backward now */
-			if (count == 0 ||
-				(unsigned long) nprocessed < (unsigned long) count)
+			if (count == 0 || nprocessed < count)
 				portal->atEnd = true;	/* we retrieved 'em all */
-			oldPos = portal->portalPos;
 			portal->portalPos += nprocessed;
-			/* portalPos doesn't advance when we fall off the end */
-			if (portal->portalPos < oldPos)
-				portal->posOverflow = true;
 		}
 	}
 	else
 	{
+		// elog(INFO, "PortalRunSelect(), backward, count: " INT64_FORMAT, count); FIXME: diagnostics
 		if (portal->cursorOptions & CURSOR_OPT_NO_SCROLL)
 			ereport(ERROR,
 					(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
@@ -1167,7 +1164,11 @@ PortalRunSelect(Portal portal,
 					 errhint("Declare it with SCROLL option to enable backward scan.")));
 
 		if (portal->atStart || count <= 0)
+                {
 			direction = NoMovementScanDirection;
+			//count = 0;	/* don't pass negative count to executor */
+			// elog(INFO, "PortalRunSelect(), reset counter"); FIXME: diagnostics
+                }
 		else
 			direction = BackwardScanDirection;
 
@@ -1176,7 +1177,7 @@ PortalRunSelect(Portal portal,
 			count = 0;
 
 		if (portal->holdStore)
-			nprocessed = RunFromStore(portal, direction, count, dest);
+			nprocessed = RunFromStore(portal, direction, (uint64) count, dest);
 		else
 		{
 			PushActiveSnapshot(queryDesc->snapshot);
@@ -1192,22 +1193,14 @@ PortalRunSelect(Portal portal,
 				portal->atEnd = false;	/* OK to go forward now */
 				portal->portalPos++;	/* adjust for endpoint case */
 			}
-			if (count == 0 ||
-				(unsigned long) nprocessed < (unsigned long) count)
+			if (count == 0 || nprocessed < count)
 			{
 				portal->atStart = true; /* we retrieved 'em all */
 				portal->portalPos = 0;
-				portal->posOverflow = false;
 			}
 			else
 			{
-				int64		oldPos;
-
-				oldPos = portal->portalPos;
 				portal->portalPos -= nprocessed;
-				if (portal->portalPos > oldPos ||
-					portal->portalPos <= 0)
-					portal->posOverflow = true;
 			}
 		}
 	}
@@ -1280,10 +1273,10 @@ FillPortalStore(Portal portal, bool isTopLevel)
  * out for memory leaks.
  */
 static uint64
-RunFromStore(Portal portal, ScanDirection direction, int64 count,
+RunFromStore(Portal portal, ScanDirection direction, uint64 count,
 			 DestReceiver *dest)
 {
-	int64		current_tuple_count = 0;
+	uint64		current_tuple_count = 0;
 	TupleTableSlot *slot;
 
 	slot = MakeSingleTupleTableSlot(portal->tupDesc);
@@ -1332,7 +1325,7 @@ RunFromStore(Portal portal, ScanDirection direction, int64 count,
 
 	ExecDropSingleTupleTableSlot(slot);
 
-	return (uint32) current_tuple_count;
+	return current_tuple_count;
 }
 
 /*
@@ -1534,13 +1527,13 @@ PortalRunMulti(Portal portal, bool isTopLevel,
  *
  * Returns number of rows processed (suitable for use in result tag)
  */
-int64
+uint64
 PortalRunFetch(Portal portal,
 			   FetchDirection fdirection,
 			   int64 count,
 			   DestReceiver *dest)
 {
-	int64		result = 0;
+	uint64		result = 0;
 	Portal		saveActivePortal;
 	ResourceOwner saveResourceOwner;
 	MemoryContext savePortalContext;
@@ -1634,9 +1627,13 @@ PortalRunFetch(Portal portal,
  * DoPortalRunFetch
  *		Guts of PortalRunFetch --- the portal context is already set up
  *
+ * count <= 0 is interpreted as a no-op: the destination gets started up
+ * and shut down, but nothing else happens.  Also, count == FETCH_ALL is
+ * interpreted as "all rows".  (cf FetchStmt.howMany)
+ * 
  * Returns number of rows processed (suitable for use in result tag)
  */
-static int64
+static uint64
 DoPortalRunFetch(Portal portal,
 				 FetchDirection fdirection,
 				 int64 count,
@@ -1683,14 +1680,28 @@ DoPortalRunFetch(Portal portal,
 			{
 				/*
 				 * Definition: Rewind to start, advance count-1 rows, return
-				 * next row (if any).  In practice, if the goal is less than
-				 * halfway back to the start, it's better to scan from where
-				 * we are.	In any case, we arrange to fetch the target row
-				 * going forwards.
+				 * next row (if any).
+				 *
+				 * In practice, if the goal is less than halfway back to the
+				 * start, it's better to scan from where we are.
+				 *
+				 * Also, if current portalPos is outside the range of "long",
+				 * do it the hard way to avoid possible overflow of the count
+				 * argument to PortalRunSelect.  We must exclude exactly
+				 * LONG_MAX, as well, lest the count look like FETCH_ALL.
+				 *
+				 * In any case, we arrange to fetch the target row going
+				 * forwards.
 				 */
+				/*
+				 * FIXME: diagnostics
+				 *
 				if (portal->posOverflow || 
 					portal->portalPos ==  INT64CONST(0x7FFFFFFFFFFFFFFF) ||
 					count - 1 <= portal->portalPos / 2)
+				 */
+				if ((uint64) (count - 1) <= portal->portalPos / 2 ||
+					portal->portalPos >= (uint64) LONG_MAX)
 				{
 					/* until we enable backward scan - bail out here */
 					if(portal->portalPos > 0)
@@ -1705,7 +1716,7 @@ DoPortalRunFetch(Portal portal,
 				}
 				else
 				{
-					int64		pos = portal->portalPos;
+					uint64		pos = portal->portalPos;
 
 					if (portal->atEnd)
 						pos++;	/* need one extra fetch if off end */
@@ -1716,7 +1727,7 @@ DoPortalRunFetch(Portal portal,
 						PortalRunSelect(portal, true, count - pos - 1,
 										None_Receiver);
 				}
-				return PortalRunSelect(portal, true, 1L, dest);
+				return PortalRunSelect(portal, true, 1, dest);
 			}
 			else if (count < 0)
 			{
@@ -1736,7 +1747,7 @@ DoPortalRunFetch(Portal portal,
 				PortalRunSelect(portal, true, FETCH_ALL, None_Receiver);
 				if (count < -1)
 					PortalRunSelect(portal, false, -count - 1, None_Receiver);
-				return PortalRunSelect(portal, false, 1L, dest);
+				return PortalRunSelect(portal, false, 1, dest);
 			}
 			else
 			{
@@ -1749,7 +1760,7 @@ DoPortalRunFetch(Portal portal,
 				
 				/* Rewind to start, return zero rows */
 				DoPortalRewind(portal);
-				return PortalRunSelect(portal, true, 0L, dest);
+				return PortalRunSelect(portal, true, 0, dest);
 			}
 			break;
 		case FETCH_RELATIVE:
@@ -1760,7 +1771,7 @@ DoPortalRunFetch(Portal portal,
 				 */
 				if (count > 1)
 					PortalRunSelect(portal, true, count - 1, None_Receiver);
-				return PortalRunSelect(portal, true, 1L, dest);
+				return PortalRunSelect(portal, true, 1, dest);
 			}
 			else if (count < 0)
 			{
@@ -1776,7 +1787,7 @@ DoPortalRunFetch(Portal portal,
 				
 				if (count < -1)
 					PortalRunSelect(portal, false, -count - 1, None_Receiver);
-				return PortalRunSelect(portal, false, 1L, dest);
+				return PortalRunSelect(portal, false, 1, dest);
 			}
 			else
 			{
@@ -1809,7 +1820,7 @@ DoPortalRunFetch(Portal portal,
 		if (dest->mydest == DestNone)
 		{
 			/* MOVE 0 returns 0/1 based on if FETCH 0 would return a row */
-			return on_row ? 1L : 0L;
+			return on_row ? 1 : 0;
 		}
 		else
 		{
@@ -1822,7 +1833,7 @@ DoPortalRunFetch(Portal portal,
 			 */
 			if (on_row)
 			{
-				PortalRunSelect(portal, false, 1L, None_Receiver);
+				PortalRunSelect(portal, false, 1, None_Receiver);
 				/* Set up to fetch one row forward */
 				count = 1;
 				forward = true;
@@ -1835,7 +1846,7 @@ DoPortalRunFetch(Portal portal,
 	 */
 	if (!forward && count == FETCH_ALL && dest->mydest == DestNone)
 	{
-		int64		result = portal->portalPos;
+		uint64		result = portal->portalPos;
 
 		/* until we enable backward scan - bail out here */
 		ereport(ERROR,
@@ -1845,7 +1856,6 @@ DoPortalRunFetch(Portal portal,
 		if (result > 0 && !portal->atEnd)
 			result--;
 		DoPortalRewind(portal);
-		/* result is bogus if pos had overflowed, but it's best we can do */
 		return result;
 	}
 
@@ -1872,7 +1882,6 @@ DoPortalRewind(Portal portal)
 	portal->atStart = true;
 	portal->atEnd = false;
 	portal->portalPos = 0;
-	portal->posOverflow = false;
 }
 
 /*
