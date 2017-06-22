@@ -643,6 +643,13 @@ ERROR:  function maxodd(integer) is not defined as STRICT
 LINE 1: SELECT j, maxodd(i) FILTER (WHERE TRUE) from filter_test gro...
                   ^
 HINT:  The filter clause is only supported over functions defined as STRICT.
+-- TEST view deparsing of FILTER expressions.
+CREATE VIEW filter_view AS SELECT count(*) FILTER (WHERE TRUE) FROM filter_test;
+SELECT definition from pg_views WHERE viewname='filter_view';
+                                      definition                                       
+---------------------------------------------------------------------------------------
+ SELECT count(CASE WHEN true THEN 1 ELSE NULL::integer END) AS count FROM filter_test;
+(1 row)
+
 drop aggregate maxodd(int);
 drop function _maxodd(int,int);
-drop table filter_test;

@@ -597,7 +597,16 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 		aggref->aggfnoid    = funcid;
 		aggref->aggtype     = rettype;
 		aggref->args        = fargs;
-		aggref->aggstar     = agg_star;
+
+		/*
+		 * If we had a FILTER clause with a star, we replaced the star with
+		 * a CASE WHEN expression above. Set 'aggstar' accordingly.
+		 */
+		if (agg_filter && agg_star)
+			aggref->aggstar = false;
+		else
+			aggref->aggstar = agg_star;
+
 		aggref->aggdistinct = agg_distinct;
 		aggref->location = location;
 
