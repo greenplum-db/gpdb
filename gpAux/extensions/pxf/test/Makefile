@@ -1,4 +1,4 @@
-subdir=gpAux/extensions/pxf
+subdir=gpAux/extensions/pxf/test
 top_builddir=../../../..
 include $(top_builddir)/src/Makefile.global
 

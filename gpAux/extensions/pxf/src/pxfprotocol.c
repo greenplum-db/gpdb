@@ -99,7 +99,7 @@ pxfprotocol_import(PG_FUNCTION_ARGS)
     int32 data_len = EXTPROTOCOL_GET_DATALEN(fcinfo);
 
     /* produce a tuple */
-    sprintf(data_buf, "%d,hello world %d", GpIdentity.segindex, GpIdentity.segindex);
+    snprintf(data_buf, data_len, "%d,hello world %d", GpIdentity.segindex, GpIdentity.segindex);
 
     /* save state */
     context->row_count++;
