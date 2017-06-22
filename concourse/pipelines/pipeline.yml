@@ -1358,23 +1358,3 @@ jobs:
         MAKE_TEST_COMMAND: optimizer_functional_part2
         BLDWRAP_POSTGRES_CONF_ADDONS: fsync=off optimizer_print_missing_stats=off
         TEST_OS: centos
-
-- name: DPM_MFR
-  plan:
-  - get: nightly-trigger
-    trigger: true
-  - aggregate: *post_packaging_gets_trigger_false
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-MFR"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-MFR"

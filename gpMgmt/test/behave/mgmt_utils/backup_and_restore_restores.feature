@@ -6,6 +6,11 @@ Feature: Validate command line arguments
     Scenario: Setup to load NBU libraries
         Given the test suite is initialized for Netbackup "7.7"
 
+    @ddonly
+    @ddboostsetup
+    Scenario: Setup DDBoost configuration
+        Given the test suite is initialized for DDBoost
+
     Scenario: 1 Dirty table list check on recreating a table with same data and contents
         Given the old timestamps are read from json
         When the user runs gpdbrestore -e with the stored timestamp
@@ -951,7 +956,7 @@ Feature: Validate command line arguments
         And verify that the data of "9" tables in "bkdb94" is validated after restore
 
     @nbupartIII
-    @ddpartIII
+    @ddpartII
     Scenario: 95 Filtered Incremental Backup with Partition Table
         Given the old timestamps are read from json
         When the user runs gpdbrestore -e with the stored timestamp and options "-T public.ao_part_table"
@@ -961,7 +966,7 @@ Feature: Validate command line arguments
         And verify that the data of "9" tables in "bkdb95" is validated after restore
 
     @nbupartIII
-    @ddpartIII
+    @ddpartII
     Scenario: 96 gpdbrestore runs ANALYZE on restored table only
         Given the old timestamps are read from json
         And the backup test is initialized with database "bkdb96"
@@ -973,7 +978,7 @@ Feature: Validate command line arguments
         And verify that the table "public.heap_table" in database "bkdb96" is not analyzed
 
     @nbupartIII
-    @ddpartIII
+    @ddpartII
     Scenario: 97 Full Backup with multiple -S option and Restore
         Given the old timestamps are read from json
         When the user runs gpdbrestore -e with the stored timestamp
@@ -983,7 +988,7 @@ Feature: Validate command line arguments
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb97" with data
 
     @nbupartIII
-    @ddpartIII
+    @ddpartII
     Scenario: 98 Full Backup with option -S and Restore
         Given the old timestamps are read from json
         When the user runs gpdbrestore -e with the stored timestamp
@@ -1463,7 +1468,50 @@ Feature: Validate command line arguments
         And check that there is a "heap" table "public.heap_table" in "bkdb145-2" with same data from "bkdb145"
         And check that there is a "ao" table "public.ao_part_table" in "bkdb145-2" with same data from "bkdb145"
 
+    @ddpartIII
+    @ddonly
+    Scenario: 146 Full backup and restore with remote DataDomain replication using gpcrondump
+        Given the old timestamps are read from json
+        When the remote backup sets are restored to the local storage unit
+        And the user runs gpdbrestore -e with the stored timestamp
+        Then gpdbrestore should return a return code of 0
+        Then verify that the data of "2" tables in "bkdb146" is validated after restore
+        And verify that the tuple count of all appendonly tables are consistent in "bkdb146"
+
+    @ddpartIII
+    @ddonly
+    Scenario: 147 Full backup and restore with remote DataDomain replication using gp_mfr
+        Given the old timestamps are read from json
+        When the remote backup sets are restored to the local storage unit
+        And the user runs gpdbrestore -e with the stored timestamp
+        Then gpdbrestore should return a return code of 0
+        Then verify that the data of "2" tables in "bkdb147" is validated after restore
+        And verify that the tuple count of all appendonly tables are consistent in "bkdb147"
+        And the backup sets on the "remote" storage unit are deleted using gp_mfr
+
+    @ddpartIII
+    @ddonly
+    Scenario: 148 Incremental backup and restore with remote DataDomain replication using gpcrondump
+        Given the old timestamps are read from json
+        When the remote backup sets are restored to the local storage unit
+        And the user runs gpdbrestore -e with the stored timestamp
+        Then gpdbrestore should return a return code of 0
+        Then verify that the data of "3" tables in "bkdb148" is validated after restore
+        And verify that the tuple count of all appendonly tables are consistent in "bkdb148"
+
+    @ddpartIII
+    @ddonly
+    Scenario: 149 Incremental backup and restore with remote DataDomain replication using gp_mfr
+        Given the old timestamps are read from json
+        When the remote backup sets are restored to the local storage unit
+        And the user runs gpdbrestore -e with the stored timestamp
+        Then gpdbrestore should return a return code of 0
+        Then verify that the data of "3" tables in "bkdb149" is validated after restore
+        And verify that the tuple count of all appendonly tables are consistent in "bkdb149"
+        And the backup sets on the "remote" storage unit are deleted using gp_mfr
+
     @ddonly
     @ddboostsetup
-    Scenario: 146 Cleanup DDBoost dump directories
-        Given the DDBoost dump directory is deleted
+    Scenario: 150 Cleanup DDBoost dump directories
+        Given the DDBoost dump directory is deleted for the "local" storage unit
+        Given the DDBoost dump directory is deleted for the "remote" storage unit

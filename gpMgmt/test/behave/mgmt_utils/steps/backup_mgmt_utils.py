@@ -7,6 +7,7 @@ import glob
 from gppylib.commands.base import Command, REMOTE, WorkerPool, CommandResult
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray
+from gppylib.operations.backup_utils import Context
 from gppylib.operations.unix import CheckFile
 from test.behave_utils.utils import *
 
@@ -508,3 +509,60 @@ def use_netbackup():
         return True
     else:
         return False
+
+@then('the backup sets are replicated to the remote DataDomain')
+def impl(context):
+    master_port = os.environ.get('PGPORT')
+    for timestamp in context.inc_backup_timestamps:
+        cmdStr = 'gpmfr.py --replicate="%s" --master-port=%s --max-streams=15' % (timestamp, master_port)
+        cmd = Command("Replicate backup files", cmdStr)
+        cmd.run(validateAfter=True)
+        results = cmd.get_results()
+        if results.rc != 0:
+            raise Exception("Error replicating backup files for backup set %s: %s" % (timestamp, results.stderr))
+
+@then('the files in the backup sets are validated for the "{which}" storage unit')
+def impl(context, which):
+    master_port = os.environ.get('PGPORT')
+    cmdStr = 'gpmfr.py --list-files="%s" --master-port=%s' % ("%s", master_port)
+    if which == "remote":
+        cmdStr += " --remote"
+    elif which != "local":
+        raise Exception('Invalid storage unit specified.  Options are "local" and "remote".')
+
+    for timestamp in context.inc_backup_timestamps:
+        cmd = Command("List %s backup files" % which, cmdStr % timestamp)
+        cmd.run(validateAfter=True)
+        results = cmd.get_results()
+        stdout = results.stdout.strip()
+        if not stdout:
+            raise Exception("No backup files found on %s storage unit for backup set %s" % (which, timestamp))
+
+        # We assume that if the metadata files and at least one data file exist, the backup was successful, no need to check for every file
+        backup_utils = Context()
+        metadata_filename = "%s%s.gz" % (backup_utils.generate_prefix("metadata"), timestamp)
+        data_filename = "%s%s.gz" % (backup_utils.generate_prefix("dump", dbid=2), timestamp)
+        postdata_filename = "%s%s.gz" % (backup_utils.generate_prefix("postdata"), timestamp)
+        if not (metadata_filename in stdout and data_filename in stdout and postdata_filename in stdout):
+            raise Exception("Backup set %s on storage unit %s is missing files:\n%s" % (timestamp, which, stdout))
+
+@then('the backup sets on the "{which}" storage unit are deleted using gp_mfr')
+def impl(context, which):
+    master_port = os.environ.get('PGPORT')
+    for timestamp in context.inc_backup_timestamps:
+        cmdStr = 'echo "y" | gpmfr.py --delete="%s" --master-port=%s' % (timestamp, master_port)
+        cmd = Command("Delete backup files", cmdStr)
+        cmd.run(validateAfter=True)
+        results = cmd.get_results()
+        if results.rc != 0:
+            raise Exception("Error deleting backup files for backup set %s: %s" % (timestamp, results.stderr))
+
+@when('the remote backup sets are restored to the local storage unit')
+def impl(context):
+    master_port = os.environ.get('PGPORT')
+    cmdStr = 'gpmfr.py --recover="%s" --master-port=%s --max-streams=15' % (context.backup_timestamp, master_port)
+    cmd = Command("Recover backup files", cmdStr)
+    cmd.run(validateAfter=True)
+    results = cmd.get_results()
+    if results.rc != 0:
+        raise Exception("Error recovering backup files for backup set %s: %s" % (context.backup_timestamp, results.stderr))

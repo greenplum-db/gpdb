@@ -1,6 +1,11 @@
 @restores
 Feature: Validate command line arguments
 
+    @ddonly
+    @ddboostsetup
+    Scenario: Setup DDBoost configuration
+        Given the test suite is initialized for DDBoost
+
     Scenario: gpdbrestore list_backup option with -e
         Given the backup test is initialized with no backup files
         When the user runs "gpdbrestore -a -e --list-backup -t 20160101010101"
@@ -97,4 +102,5 @@ Feature: Validate command line arguments
     @ddonly
     @ddboostsetup
     Scenario: Cleanup DDBoost dump directories
-        Given the DDBoost dump directory is deleted
+        Given the DDBoost dump directory is deleted for the "local" storage unit
+        Given the DDBoost dump directory is deleted for the "remote" storage unit

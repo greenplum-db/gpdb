@@ -1477,7 +1477,7 @@ Feature: Validate command line arguments
         And all the data from "bkdb94" is saved for verification
 
     @nbupartIII
-    @ddpartIII
+    @ddpartII
     Scenario: 95 Filtered Incremental Backup with Partition Table
         Given the backup test is initialized with database "bkdb95"
         And there is a "heap" table "public.heap_table" in "bkdb95" with data
@@ -1490,7 +1490,7 @@ Feature: Validate command line arguments
         And all the data from "bkdb95" is saved for verification
 
     @nbupartIII
-    @ddpartIII
+    @ddpartII
     Scenario: 96 gpdbrestore runs ANALYZE on restored table only
         Given the backup test is initialized with database "bkdb96"
         And there is a "heap" table "public.heap_table" in "bkdb96" with data
@@ -1505,7 +1505,7 @@ Feature: Validate command line arguments
         And the user deletes rows from the table "heap_table" of database "bkdb96" where "column1" is "1088"
 
     @nbupartIII
-    @ddpartIII
+    @ddpartII
     Scenario: 97 Full Backup with multiple -S option and Restore
         Given the backup test is initialized with database "bkdb97"
         And schema "schema_heap, schema_ao, testschema" exists in "bkdb97"
@@ -1519,7 +1519,7 @@ Feature: Validate command line arguments
         And verify that the "report" file in " " dir contains "Backup Type: Full"
 
     @nbupartIII
-    @ddpartIII
+    @ddpartII
     Scenario: 98 Full Backup with option -S and Restore
         Given the backup test is initialized with database "bkdb98"
         And schema "schema_heap, schema_ao" exists in "bkdb98"
@@ -1960,3 +1960,77 @@ Feature: Validate command line arguments
         When the user runs "gpcrondump -a -x bkdb145 --prefix=foo -u /tmp"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
+
+    @ddpartIII
+    @ddonly
+    Scenario: 146 Full backup and restore with remote DataDomain replication using gpcrondump
+        Given the backup test is initialized with database "bkdb146"
+        And there is a "heap" table "public.heap_table" in "bkdb146" with data
+        And there is a "ao" table "public.ao_index_table" in "bkdb146" with data
+        And a backup file of tables "public.heap_table, public.ao_index_table" in "bkdb146" exists for validation
+        And all the data from "bkdb146" is saved for verification
+        And there is a list to store the incremental backup timestamps
+        When the user runs "gpcrondump -a -x bkdb146 --replicate --max-streams=15"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored in a list
+        And the files in the backup sets are validated for the "local" storage unit
+        And the files in the backup sets are validated for the "remote" storage unit
+        And the backup sets on the "local" storage unit are deleted using gp_mfr
+
+    @ddpartIII
+    @ddonly
+    Scenario: 147 Full backup and restore with remote DataDomain replication using gp_mfr
+        Given the backup test is initialized with database "bkdb147"
+        And there is a "heap" table "public.heap_table" in "bkdb147" with data
+        And there is a "ao" table "public.ao_index_table" in "bkdb147" with data
+        And a backup file of tables "public.heap_table, public.ao_index_table" in "bkdb147" exists for validation
+        And all the data from "bkdb147" is saved for verification
+        And there is a list to store the incremental backup timestamps
+        When the user runs "gpcrondump -a -x bkdb147"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored in a list
+        And the backup sets are replicated to the remote DataDomain
+        And the files in the backup sets are validated for the "local" storage unit
+        And the files in the backup sets are validated for the "remote" storage unit
+        And the backup sets on the "local" storage unit are deleted using gp_mfr
+
+    @ddpartIII
+    @ddonly
+    Scenario: 148 Incremental backup and restore with remote DataDomain replication using gpcrondump
+        Given the backup test is initialized with database "bkdb148"
+        And there is a "heap" table "public.heap_table" in "bkdb148" with data
+        And there is a "ao" table "public.ao_index_table" in "bkdb148" with data
+        And a backup file of tables "public.heap_table, public.ao_index_table" in "bkdb148" exists for validation
+        And all the data from "bkdb148" is saved for verification
+        And there is a list to store the incremental backup timestamps
+        When the user runs "gpcrondump -a -x bkdb148 --replicate --max-streams=15"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored in a list
+        And table "public.ao_index_table" is assumed to be in dirty state in "bkdb148"
+        When the user runs "gpcrondump -a -x bkdb148 --incremental --replicate --max-streams=15"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored in a list
+        And the files in the backup sets are validated for the "local" storage unit
+        And the files in the backup sets are validated for the "remote" storage unit
+        And the backup sets on the "local" storage unit are deleted using gp_mfr
+
+    @ddpartIII
+    @ddonly
+    Scenario: 149 Incremental backup and restore with remote DataDomain replication using gp_mfr
+        Given the backup test is initialized with database "bkdb149"
+        And there is a "heap" table "public.heap_table" in "bkdb149" with data
+        And there is a "ao" table "public.ao_index_table" in "bkdb149" with data
+        And a backup file of tables "public.heap_table, public.ao_index_table" in "bkdb149" exists for validation
+        And all the data from "bkdb149" is saved for verification
+        And there is a list to store the incremental backup timestamps
+        When the user runs "gpcrondump -a -x bkdb149"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored in a list
+        And table "public.ao_index_table" is assumed to be in dirty state in "bkdb149"
+        When the user runs "gpcrondump -a -x bkdb149 --incremental"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored in a list
+        And the backup sets are replicated to the remote DataDomain
+        And the files in the backup sets are validated for the "local" storage unit
+        And the files in the backup sets are validated for the "remote" storage unit
+        And the backup sets on the "local" storage unit are deleted using gp_mfr

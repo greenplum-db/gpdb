@@ -1,6 +1,11 @@
 @backups
 Feature: Validate command line arguments
 
+    @ddonly
+    @ddboostsetup
+    Scenario: Setup DDBoost configuration
+        Given the test suite is initialized for DDBoost
+
     Scenario: Entering an invalid argument
         When the user runs "gpcrondump -X"
         Then gpcrondump should print "no such option: -X" error message
@@ -785,4 +790,5 @@ Feature: Validate command line arguments
     @ddonly
     @ddboostsetup
     Scenario: Cleanup DDBoost dump directories
-        Given the DDBoost dump directory is deleted
+        Given the DDBoost dump directory is deleted for the "local" storage unit
+        Given the DDBoost dump directory is deleted for the "remote" storage unit

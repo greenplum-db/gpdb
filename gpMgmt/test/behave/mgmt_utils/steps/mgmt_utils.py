@@ -772,11 +772,6 @@ def impl(context):
     context.inc_backup_timestamps = []
 
 
-@given('there is a list to store the backup timestamps')
-def impl(context):
-    context.backup_timestamp_list = []
-
-
 @then('the timestamp from gpcrondump is stored in a list')
 @when('the timestamp from gpcrondump is stored in a list')
 def impl(context):
@@ -4381,7 +4376,8 @@ def impl(context):
         And database "bkdb" is dropped and recreated
         And there are no backup files
         And the backup files in "/tmp" are deleted
-        And the DDBoost dump directory is deleted
+        And the DDBoost dump directory is deleted for the "local" storage unit
+        And the DDBoost dump directory is deleted for the "remote" storage unit
     ''')
 
 
@@ -4964,8 +4960,8 @@ def ddboost_config_setup(context, storage_unit=None):
     run_command(context, cmd_remove_config)
 
     cmd_config = "gpcrondump --ddboost-host %s --ddboost-user %s --ddboost-backupdir %s" % \
-                    (context._root['ddboost_host'], \
-                    context._root['ddboost_user'], \
+                    (context._root['local_ddboost_host'], \
+                    context._root['local_ddboost_user'], \
                     context._root['ddboost_backupdir'])
 
     if storage_unit:
@@ -4974,7 +4970,22 @@ def ddboost_config_setup(context, storage_unit=None):
     cmd_config
     local = pexpect.spawn(cmd_config)
     local.expect('Password: ')
-    local.sendline(context._root['ddboost_password'])
+    local.sendline(context._root['local_ddboost_password'])
+    local.expect(pexpect.EOF)
+    local.close()
+
+    cmd_config = "gpcrondump --ddboost-host %s --ddboost-user %s --ddboost-backupdir %s --ddboost-remote" % \
+                    (context._root['remote_ddboost_host'], \
+                    context._root['remote_ddboost_user'], \
+                    context._root['ddboost_backupdir'])
+
+    if storage_unit:
+        cmd_config += " --ddboost-storage-unit %s" % storage_unit
+
+    cmd_config
+    local = pexpect.spawn(cmd_config)
+    local.expect('Password: ')
+    local.sendline(context._root['remote_ddboost_password'])
     local.expect(pexpect.EOF)
     local.close()
 
@@ -5028,18 +5039,28 @@ def impl(context):
     os.environ["DDBOOST"] = "TRUE"
     DDBOOSTDICT = defaultdict(dict)
     DDBOOSTDICT['DDBOOSTINFO'] = parse_config_params()
-    context._root['ddboost_host'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_HOST']
-    context._root['ddboost_user'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_USER']
-    context._root['ddboost_password'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_PASSWORD']
+    context._root['local_ddboost_host'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_HOST_1']
+    context._root['local_ddboost_user'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_USER_1']
+    context._root['local_ddboost_password'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_PASSWORD_1']
+    context._root['remote_ddboost_host'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_HOST_2']
+    context._root['remote_ddboost_user'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_USER_2']
+    context._root['remote_ddboost_password'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_PASSWORD_2']
     if 'ddboost_backupdir' not in context._root:
         directory = os.getenv('PULSE_PROJECT', default='GPDB') + os.getenv('PULSE_BUILD_VERSION', default='') + os.getenv('PULSE_STAGE', default='') + '_DIR'
         context._root['ddboost_backupdir'] = directory
     ddboost_config_setup(context, storage_unit="GPDB")
 
-@given('the DDBoost dump directory is deleted')
-def impl(context):
+@given('the DDBoost dump directory is deleted for the "{which}" storage unit')
+@then('the DDBoost dump directory is deleted for the "{which}" storage unit')
+@when('the DDBoost dump directory is deleted for the "{which}" storage unit')
+def impl(context, which):
     if use_ddboost():
-        cmd_del_dir = "gpddboost --del-dir=%s" % context._root['ddboost_backupdir']
+        if which == "local":
+            cmd_del_dir = "gpddboost --del-dir=%s" % context._root['ddboost_backupdir']
+        elif which == "remote":
+            cmd_del_dir = "gpddboost --del-dir=%s --remote" % context._root['ddboost_backupdir']
+        else:
+            raise Exception('Invalid storage unit specified.  Options are "local" and "remote".')
         run_command(context, cmd_del_dir)
 
 @then('gpcrondump should print the correct disk space check message')
