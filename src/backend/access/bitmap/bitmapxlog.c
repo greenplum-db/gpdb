@@ -914,6 +914,7 @@ bitmap_xlog_cleanup(void)
 
 		lovBuffer = XLogReadBuffer(reln, action->bm_lov_blkno, false);
 
+		newWords.curword = action->bm_num_cwords;
 		newWords.num_cwords = action->bm_num_cwords;
 		newWords.start_wordno = action->bm_start_wordno;
 
