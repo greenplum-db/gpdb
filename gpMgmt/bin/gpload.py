@@ -2696,6 +2696,26 @@ class gpload:
             self.db.query("COMMIT")
 
 
+    def stop_gpfdists(self):
+        if self.subprocesses:
+            self.log(self.LOG, 'killing gpfdist')
+            for a in self.subprocesses:
+                try:
+                    if platform.system() in ['Windows', 'Microsoft']:
+                        # win32 API is better but hard for us
+                        # to install, so we use the crude method
+                        subprocess.Popen("taskkill /F /T /PID %i" % a.pid,
+                                         shell=True, stdout=subprocess.PIPE,
+                                         stderr=subprocess.PIPE)
+
+                    else:
+                        os.kill(a.pid, signal.SIGTERM)
+                except OSError:
+                    pass
+        for t in self.threads:
+            t.join()
+
+
     def run2(self):
         self.log(self.DEBUG, 'config ' + str(self.config))
         start = time.time()
@@ -2732,6 +2752,8 @@ class gpload:
                     self.log(self.ERROR, "unexpected error -- backtrace " +
                              "written to log file")
         finally:
+            self.stop_gpfdists()
+
             if self.cleanupSql:
                 self.log(self.LOG, 'removing temporary data')
                 self.setup_connection()
@@ -2739,27 +2761,10 @@ class gpload:
                     try:
                         self.log(self.DEBUG, a)
                         self.db.query(a.encode('utf-8'))
-                    except Exception:
+                    except (Exception, SystemExit):
                         traceback.print_exc(file=self.logfile)
                         self.logfile.flush()
                         traceback.print_exc()
-            if self.subprocesses:
-                self.log(self.LOG, 'killing gpfdist')
-                for a in self.subprocesses:
-                    try:
-                        if platform.system() in ['Windows', 'Microsoft']:
-                            # win32 API is better but hard for us
-                            # to install, so we use the crude method
-                            subprocess.Popen("taskkill /F /T /PID %i" % a.pid,
-                                             shell=True, stdout=subprocess.PIPE,
-                                             stderr=subprocess.PIPE)
-
-                        else:
-                            os.kill(a.pid, signal.SIGTERM)
-                    except OSError:
-                        pass
-            for t in self.threads:
-                t.join()
 
             if self.db != None:
                 self.db.close()
