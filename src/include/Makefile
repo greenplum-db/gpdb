@@ -55,6 +55,7 @@ install: all installdirs
 	$(INSTALL_DATA) $(srcdir)/cdb/cdbdef.h   $(DESTDIR)$(includedir_internal_cdb)
 	$(INSTALL_DATA) $(srcdir)/cdb/cdbdistributedsnapshot.h   $(DESTDIR)$(includedir_internal_cdb)
 	$(INSTALL_DATA) $(srcdir)/cdb/cdblocaldistribxact.h   $(DESTDIR)$(includedir_internal_cdb)
+	$(INSTALL_DATA) $(srcdir)/cdb/cdbvars.h   $(DESTDIR)$(includedir_internal_cdb)
 ifeq ($(vpath_build),yes)
 	for file in dynloader.h parser/parse.h; do \
 	  cp $$file '$(DESTDIR)$(includedir_server)'/$$file || exit; \
