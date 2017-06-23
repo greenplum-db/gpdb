@@ -48,9 +48,10 @@ building, see the README at the following repositories:
     ```
     git clone https://github.com/greenplum-db/gp-xerces
     mkdir gp-xerces/build
-    cd gp-xerces/build
+    pushd gp-xerces/build
     ../configure
     make install
+    popd
     ```
 
 1. ORCA requires [CMake](https://cmake.org) and
@@ -62,9 +63,10 @@ building, see the README at the following repositories:
     ```
     git clone https://github.com/greenplum-db/gporca
     mkdir gporca/build
-    cd gporca/build
+    pushd gporca/build
     cmake -GNinja ..
     ninja install
+    popd
     ```
     **Note**: Get the latest ORCA `git pull --ff-only` if you see an error message like below:
     ```
