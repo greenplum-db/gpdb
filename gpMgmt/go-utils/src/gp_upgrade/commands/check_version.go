@@ -17,7 +17,7 @@ import (
 	"github.com/cppforlife/go-semi-semantic/version"
 )
 
-type VersionCommand struct {
+type CheckVersionCommand struct {
 	Master_host   string `long:"master-host" required:"yes" description:"Domain name or IP of host"`
 	Master_port   int    `long:"master-port" required:"no" default:"15432" description:"Port for master database"`
 	Database_name string `long:"database-name" default:"template1" hidden:"true"`
@@ -27,12 +27,12 @@ const (
 	MINIMUM_VERSION = "4.3.9.0"
 )
 
-func (cmd VersionCommand) Execute([]string) error {
+func (cmd CheckVersionCommand) Execute([]string) error {
 	dbConn := db.NewDBConn(cmd.Master_host, cmd.Master_port, cmd.Database_name, "", "")
 	return cmd.execute(dbConn, os.Stdout)
 }
 
-func (cmd VersionCommand) execute(dbConn *db.DBConn, outputWriter io.Writer) error {
+func (cmd CheckVersionCommand) execute(dbConn *db.DBConn, outputWriter io.Writer) error {
 	err := dbConn.Connect()
 	if err != nil {
 		return utils.DatabaseConnectionError{Parent: err}

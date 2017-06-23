@@ -15,10 +15,10 @@ import (
 var _ = Describe("version tests", func() {
 	var mock sqlmock.Sqlmock
 	var dbConn *db.DBConn
-	var subject VersionCommand
+	var subject CheckVersionCommand
 	BeforeEach(func() {
 		dbConn, mock = test_utils.CreateMockDBConn("localhost", 5432)
-		subject = VersionCommand{}
+		subject = CheckVersionCommand{}
 	})
 
 	Describe("check version", func() {

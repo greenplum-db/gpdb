@@ -13,8 +13,8 @@ import (
 )
 
 type CheckCommand struct {
-	Object_count ObjectCountCommand `command:"object-count" alias:"oc" description:"count database objects and numeric objects"`
-	GPDB_version VersionCommand     `command:"version" alias:"ver" description:"validate current version is upgradable"`
+	Object_count ObjectCountCommand  `command:"object-count" alias:"oc" description:"count database objects and numeric objects"`
+	GPDB_version CheckVersionCommand `command:"version" alias:"ver" description:"validate current version is upgradable"`
 
 	Master_host string `long:"master-host" required:"no" description:"Domain name or IP of host"`
 	Master_port int    `long:"master-port" required:"no" default:"15432" description:"Port for master database"`
