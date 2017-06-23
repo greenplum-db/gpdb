@@ -524,16 +524,16 @@
                   the partition will contain.</pd>
                 <pd><b><codeph>START</codeph></b> — For range partitions, defines the starting range
                   value for the partition. By default, start values are <codeph>INCLUSIVE</codeph>.
-                  For example, if you declared a start date of '<codeph>2008-01-01</codeph>', then
+                  For example, if you declared a start date of '<codeph>2016-01-01</codeph>', then
                   the partition would contain all dates greater than or equal to
-                    '<codeph>2008-01-01</codeph>'. Typically the data type of the
+                    '<codeph>2016-01-01</codeph>'. Typically the data type of the
                     <codeph>START</codeph> expression is the same type as the partition key column.
                   If that is not the case, then you must explicitly cast to the intended data type. </pd>
                 <pd><b><codeph>END</codeph></b> — For range partitions, defines the ending range
                   value for the partition. By default, end values are <codeph>EXCLUSIVE</codeph>.
-                  For example, if you declared an end date of '<codeph>2008-02-01</codeph>', then
+                  For example, if you declared an end date of '<codeph>2016-02-01</codeph>', then
                   the partition would contain all dates less than but not equal to
-                    '<codeph>2008-02-01</codeph>'. Typically the data type of the
+                    '<codeph>2016-02-01</codeph>'. Typically the data type of the
                     <codeph>END</codeph> expression is the same type as the partition key column. If
                   that is not the case, then you must explicitly cast to the intended data
                   type.</pd>
@@ -694,7 +694,7 @@ PARTITION BY RANGE (year)
        SUBPARTITION asia VALUES ('asia'),
        DEFAULT SUBPARTITION other_regions)
 
-( START (2002) END (2010) EVERY (1),
+( START (2008) END (2016) EVERY (1),
   DEFAULT PARTITION outlying_years);</codeblock>
     </section>
     <section id="section7">
