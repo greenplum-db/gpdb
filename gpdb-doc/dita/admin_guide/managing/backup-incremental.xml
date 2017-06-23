@@ -59,8 +59,8 @@
     <section id="kk175790">
       <title>Incremental Backup Example</title>
       <p>Each backup set has a key, which is a timestamp taken when the backup is created. For
-        example, if you create a backup on May 14, 2012, the backup set file names contain
-            <codeph>20120514<varname>hhmmss</varname></codeph>. The <varname>hhmmss</varname>
+        example, if you create a backup on May 14, 2016, the backup set file names contain
+            <codeph>20160514<varname>hhmmss</varname></codeph>. The <varname>hhmmss</varname>
         represents the time: hour, minute, and second.</p>
       <p>For this example, assume you have created both full and incremental backups of the database
           <i>mytest</i>. To create the full backup, you used the following command: </p>
@@ -71,34 +71,34 @@
       <p>When you specify the <codeph>-u</codeph> option, the backups are created in the
           <codeph>/backupdir</codeph> directory on each Greenplum Database host. The file names
         include the following timestamp keys. The full backups have the timestamp key
-          <codeph>20120514054532</codeph> and <codeph>20121114064330</codeph>. The other backups are
+          <codeph>20160514054532</codeph> and <codeph>20161114064330</codeph>. The other backups are
         incremental backups.</p>
       <p id="p_ryy_33p_34">
         <ul id="ul_cwq_j3p_34">
-          <li><codeph>20120514054532</codeph> (full backup)</li>
+          <li><codeph>20160514054532</codeph> (full backup)</li>
           <li>
-            <codeph>20120714095512</codeph>
+            <codeph>20160714095512</codeph>
           </li>
           <li>
-            <codeph>20120914081205</codeph>
+            <codeph>20160914081205</codeph>
           </li>
-          <li><codeph>20121114064330</codeph> (full backup) </li>
+          <li><codeph>20161114064330</codeph> (full backup) </li>
           <li>
-            <codeph>20130114051246</codeph>
+            <codeph>20170114051246</codeph>
           </li>
         </ul>
       </p>
       <p>To create a new incremental backup, you need both the most recent incremental backup
-          <codeph>20130114051246</codeph> and the preceding full backup
-          <codeph>20121114064330</codeph>. Also, you must specify the same <codeph>-u</codeph>
+          <codeph>20170114051246</codeph> and the preceding full backup
+          <codeph>20161114064330</codeph>. Also, you must specify the same <codeph>-u</codeph>
         option for any incremental backups that are part of the backup set. </p>
-      <p>To restore a database with the incremental backup <codeph>20120914081205</codeph>, you need
-        the incremental backups <codeph>20120914081205</codeph> and <codeph>20120714095512</codeph>,
-        and the full backup <codeph>20120514054532</codeph>.</p>
+      <p>To restore a database with the incremental backup <codeph>20160914081205</codeph>, you need
+        the incremental backups <codeph>20160914081205</codeph> and <codeph>20160714095512</codeph>,
+        and the full backup <codeph>20160514054532</codeph>.</p>
       <p>To restore the <i>mytest</i> database with the incremental backup
-          <codeph>20130114051246</codeph>, you need only the incremental backup and the full backup
-          <codeph>20121114064330</codeph>. The restore command would be similar to this command.</p>
-      <codeblock>gpdbrestore -t 20130114051246 -u /backupdir</codeblock>
+          <codeph>20170114051246</codeph>, you need only the incremental backup and the full backup
+          <codeph>20161114064330</codeph>. The restore command would be similar to this command.</p>
+      <codeblock>gpdbrestore -t 20170114051246 -u /backupdir</codeblock>
     </section>
     <section id="section_djm_lbb_tt">
       <title>Incremental Backup with Sets</title>

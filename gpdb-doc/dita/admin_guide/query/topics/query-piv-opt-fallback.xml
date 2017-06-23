@@ -58,8 +58,8 @@
     amount decimal(9,2), region text)
    DISTRIBUTED BY (trans_id)
    PARTITION BY RANGE (date)
-      (START (date '2011­01­01') 
-       INCLUSIVE END (date '2012­01­01') 
+      (START (date '2016­01­01') 
+       INCLUSIVE END (date '2017­01­01') 
        EXCLUSIVE EVERY (INTERVAL '1 month'),
    DEFAULT PARTITION outlying_dates );</codeblock></p>
       <p>This query against the table is supported by GPORCA and does not

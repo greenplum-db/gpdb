@@ -65,9 +65,9 @@
         <li>Full table scan. Partitions are not enumerated in
           plans.<codeblock>SELECT * FROM sales;</codeblock></li>
         <li>Query with a constant filter predicate. Partition elimination is
-          performed.<codeblock>SELECT * FROM sales WHERE yr_qtr = 201201;</codeblock></li>
+          performed.<codeblock>SELECT * FROM sales WHERE yr_qtr = 201501;</codeblock></li>
         <li>Range selection. Partition elimination is
-          performed.<codeblock>SELECT * FROM sales WHERE yr_qtr BETWEEN 201301 AND 201404 ;</codeblock></li>
+          performed.<codeblock>SELECT * FROM sales WHERE yr_qtr BETWEEN 201601 AND 201704 ;</codeblock></li>
         <li>Joins involving partitioned tables. In this example, the partitioned dimension table
             <i>date_dim</i> is joined with fact table
           <i>catalog_sales</i>:<codeblock>SELECT * FROM catalog_sales

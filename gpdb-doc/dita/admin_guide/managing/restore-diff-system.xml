@@ -37,16 +37,16 @@
         <li id="kk158088">Ensure that the database you are restoring to is created in the system.
           For example:<codeblock>$ createdb <varname>database_name</varname></codeblock></li>
         <li id="kk158025">Load the master dump file to restore the database objects. For
-          example:<codeblock>$ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_-1_1_20120714</codeblock></li>
+          example:<codeblock>$ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_-1_1_20160714</codeblock></li>
         <li id="kk158097">Load each segment dump file to restore the data. For
-          example:<codeblock>$ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_0_2_20120714
-$ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_1_3_20120714
-$ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_2_4_20120714
-$ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_3_5_20120714
+          example:<codeblock>$ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_0_2_20160714
+$ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_1_3_20160714
+$ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_2_4_20160714
+$ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_3_5_20160714
 ...</codeblock></li>
         <li id="kk159206">Load the post data file to restore database objects such as indexes,
           triggers, primary key constraints,
-          etc.<codeblock>$ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_0_5_20120714_post_data</codeblock></li>
+          etc.<codeblock>$ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_0_5_20160714_post_data</codeblock></li>
         <li>Update the database sequences based on the values from the original database. <p>You can
             use the system utilities <codeph>gunzip</codeph> and <codeph>egrep</codeph> to extract
             the sequence value information from the original Greenplum Database master dump file

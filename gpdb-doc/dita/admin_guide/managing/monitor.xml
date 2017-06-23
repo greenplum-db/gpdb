@@ -176,7 +176,7 @@
               the system <codeph>snmpd</codeph> daemon is not running. If the daemon is running,
               output similar to the following displays:</p>
             <screen>SNMPv2-MIB::sysDescr.0 = STRING: Linux <i>hostname</i> 
-2.6.18-92.el5 #1 SMP Tue Jun 10 18:51:06 EDT 2010 x86_64</screen>
+2.6.18-92.el5 #1 SMP Tue Jun 10 18:51:06 EDT 2016 x86_64</screen>
           </body>
         </topic>
         <topic id="topic9" xml:lang="en">
@@ -546,9 +546,9 @@ Distributed by: (sale_id)
    WHERE objname='cust';
  schema | table | role | action  | type  | time
 --------+-------+------+---------+-------+--------------------------
-  sales | cust  | main | CREATE  | TABLE | 2010-02-09 18:10:07.867977-08
-  sales | cust  | main | VACUUM  |       | 2010-02-10 13:32:39.068219-08
-  sales | cust  | main | ANALYZE |       | 2010-02-25 16:07:01.157168-08
+  sales | cust  | main | CREATE  | TABLE | 2016-02-09 18:10:07.867977-08
+  sales | cust  | main | VACUUM  |       | 2016-02-10 13:32:39.068219-08
+  sales | cust  | main | ANALYZE |       | 2016-02-25 16:07:01.157168-08
 (3 rows)
 </codeblock>
           </p>
