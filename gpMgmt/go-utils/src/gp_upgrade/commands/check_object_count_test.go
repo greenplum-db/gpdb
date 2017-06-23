@@ -70,8 +70,11 @@ var _ = Describe("object count tests", func() {
 				})
 			})
 			Describe("when the db dbConn fails", func() {
-				It("returns an error", func() {
+				XIt("returns an error", func() {
+					// Pending because it fails if a real Greenplum is not running. Turn back on when DBConn.Connect() is more directly mock-able
+					// This codepath currently calls the public method Execute() but based on team discussion, there's no particular reason for that
 					subject.Database_name = "invalidDBthatnobodywouldeverhave"
+
 					err := subject.Execute(nil)
 
 					Expect(err).To(HaveOccurred())

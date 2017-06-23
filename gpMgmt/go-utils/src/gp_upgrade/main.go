@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"runtime/debug"
 
@@ -13,11 +12,10 @@ import (
 
 func main() {
 	debug.SetTraceback("all")
-	parser := flags.NewParser(&commands.ALL, flags.HelpFlag)
+	parser := flags.NewParser(&commands.ALL, flags.HelpFlag|flags.PrintErrors)
 
 	_, err := parser.Parse()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(utils.GetExitCodeForError(err))
 	}
 }
