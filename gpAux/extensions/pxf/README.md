@@ -51,3 +51,17 @@ make installcheck
 
 This will connect to the running database, and run the regression
 tests located in the `regress` directory.
+
+## Install PXF extension
+Run as a GPDB superuser in psql:
+```
+# CREATE EXTENSION pxf;
+```
+
+## Create table which uses PXF
+```
+# CREATE EXTERNAL TABLE table_name 
+( column_name data_type [, ...] )
+LOCATION ('pxf://host[:port]/external_path?Profile=ProfileName')
+FORMAT 'TEXT' (DELIMITER ',');
+```

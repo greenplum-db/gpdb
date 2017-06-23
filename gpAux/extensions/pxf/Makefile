@@ -15,7 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-
+EXTENSION = pxf
+DATA = pxf--1.0.sql
 MODULE_big = pxf
 OBJS       = src/pxfprotocol.o
 
