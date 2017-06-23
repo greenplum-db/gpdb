@@ -1324,7 +1324,7 @@ class gpload:
         if level <= self.options.qv:
             sys.stdout.write(str)
 
-        if level <= self.options.qv or level <= self.INFO:
+        if level <= self.options.qv or level <= self.LOG:
             try:
                self.logfile.write(str)
                self.logfile.flush()
