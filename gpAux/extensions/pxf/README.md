@@ -10,30 +10,17 @@
 
 ## Usage
 
-### Initialize and start GPDB cluster
+### Enable PXF extension in GPDB build process.
 
-```
-cd ../../gpAux/gpdemo
-make
-source ./gpdemo-env.sh
-```
-
-### Enable PXF extension
-
-Configure GPDB to build the pxf extension by adding the "--enable-pxf"
+Configure GPDB to build the pxf extension by adding the `--enable-pxf`
 configure option. This is required to setup the PXF build environment.
-Here is an example:
 
-```
-cd ../../../
-configure --enable-pxf <plus other options of your choice>
-make
-make install
-```
+The build will produce the pxf client `pxf.so` shared library. It
+will be installed it into `$GPHOME/lib/postgres.`
 
-In addition to building GPDB, this will compile the pxf client code
-into the `pxf.so` shared library and install it into
-`$GPHOME/lib/postgres.`
+Additional instructions on building and starting a GPDB cluster can be
+found in the top-level [README.md](../../../README.md) ("_Build the
+database_" section).
 
 ### Run unit tests
 
