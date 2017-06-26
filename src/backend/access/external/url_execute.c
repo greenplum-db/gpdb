@@ -97,6 +97,9 @@ create_execute_handle(void)
 	return h;
 }
 
+/*
+ * Close any open handles on abort.
+ */
 static void
 destroy_execute_handle(execute_handle_t *h)
 {
@@ -113,6 +116,9 @@ destroy_execute_handle(execute_handle_t *h)
 
 }
 
+/*
+ * Cleanup open handles.
+ */
 static void
 cleanup_execute_handle(execute_handle_t *h)
 {
@@ -772,11 +778,13 @@ pclose_with_stderr(int pid, int *pipes, StringInfo sinfo)
  *
  * close our data and error pipes
  * we don't probe for any error message or suspend the current process.
+ * this function is meant for scenarios when the current slice doesn't
+ * need to wait for the error message available at the completion of
+ * the child process.
  */
 static void
 pclose_without_stderr(int *pipes)
 {
-	/* close the data pipe. we can now read from error pipe without being blocked */
 	close(pipes[EXEC_DATA_P]);
 	close(pipes[EXEC_ERR_P]);
 }
