@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <math.h>
 #include <sys/param.h>
+#include <errno.h>
 #include "apr_getopt.h"
 #include "apr_env.h"
 #include "apr_hash.h"
@@ -248,10 +249,10 @@ static void send_smon_to_mon_pkt(SOCKET sock, gp_smon_to_mmon_packet_t* pkt)
 
 static void get_pid_metrics(apr_int32_t pid, apr_int32_t tmid, apr_int32_t ssid, apr_int32_t ccnt)
 {
+	apr_int32_t status;
 	sigar_proc_cpu_t cpu;
 	sigar_proc_mem_t mem;
 	sigar_proc_fd_t fd;
-	/*int newrec = 0;*/
 	pidrec_t* rec;
 	apr_pool_t* pool = apr_hash_pool_get(gx.pidtab);
 
@@ -259,21 +260,19 @@ static void get_pid_metrics(apr_int32_t pid, apr_int32_t tmid, apr_int32_t ssid,
 	if (rec && rec->updated_tick == gx.tick)
 		return; /* updated in current cycle */
 
-	TR2(("--------------------- stating %d\n", pid));
 	memset(&cpu, 0, sizeof(cpu));
 	memset(&mem, 0, sizeof(mem));
 	memset(&fd, 0, sizeof(fd));
-	sigar_proc_mem_get(gx.sigar, pid, &mem);
-	sigar_proc_cpu_get(gx.sigar, pid, &cpu);
-	sigar_proc_fd_get(gx.sigar, pid, &fd);
+
+	TR2(("--------------------- starting %d\n", pid));
 
 	if (!rec)
 	{
 		sigar_proc_exe_t exe;
 
-		/*newrec = 1;*/
-
-		rec = apr_palloc(pool, sizeof(*rec));
+		/* There might be cases where the pid no longer exist, so we'll just
+		 * zero out the memory first before doing anything */
+		rec = apr_pcalloc(pool, sizeof(*rec));
 		CHECKMEM(rec);
 
 		rec->pid = pid;
@@ -293,6 +292,34 @@ static void get_pid_metrics(apr_int32_t pid, apr_int32_t tmid, apr_int32_t ssid,
 			rec->cwd = "unknown";
 
 		apr_hash_set(gx.pidtab, &rec->pid, sizeof(rec->pid), rec);
+	}
+
+	status = sigar_proc_mem_get(gx.sigar, pid, &mem);
+	/* ESRCH is error 3: (No such process) */
+	if (status != SIGAR_OK)
+	{
+		if (status != ESRCH) {
+			TR2(("[WARNING] %s. PID: %d\n", sigar_strerror(gx.sigar, status), pid));
+		}
+		return;
+	}
+
+	status = sigar_proc_cpu_get(gx.sigar, pid, &cpu);
+	if (status != SIGAR_OK)
+	{
+		if (status != ESRCH) {
+			TR2(("[WARNING] %s. PID: %d\n", sigar_strerror(gx.sigar, status), pid));
+		}
+		return;
+	}
+
+	status = sigar_proc_fd_get(gx.sigar, pid, &fd);
+	if (status != SIGAR_OK)
+	{
+		if (status != ESRCH) {
+			TR2(("[WARNING] %s. PID: %d\n", sigar_strerror(gx.sigar, status), pid));
+		}
+		return;
 	}
 
 	rec->updated_tick = gx.tick;
@@ -1552,11 +1579,15 @@ void gx_main(int port, apr_int64_t signature)
 		gx.now = time(NULL);
 		tv.tv_sec = 2;
 		tv.tv_usec = 0;
+
+		/* event dispatch blocks for a certain time based on the seconds given
+		 * to event_loopexit */
 		if (-1 == event_loopexit(&tv))
 		{
 			gpmon_warningx(FLINE, APR_FROM_OS_ERROR(errno),
 					"event_loopexit failed");
 		}
+
 		if (-1 == event_dispatch())
 		{
 			gpsmon_fatalx(FLINE, APR_FROM_OS_ERROR(errno), "event_dispatch failed");
