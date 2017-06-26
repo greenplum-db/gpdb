@@ -299,3 +299,14 @@ SELECT numActiveMotionConns();
 
 DROP FUNCTION numActiveMotionConns();
 DROP TABLE foo_test;
+
+--
+-- Test dangling Gang would be destroyed if interrupted during the creation
+--
+\c
+\! gpfaultinjector -q -f gang_created -y reset -s 1
+\! gpfaultinjector -q -f gang_created -y error -s 1
+select 1 from gp_dist_random('gp_id') limit 1;
+-- if previous gang is not destroyed, snapshot collision would happen
+select 1 from gp_dist_random('gp_id') limit 1;
+\! gpfaultinjector -q -f gang_created -y reset -s 1

@@ -327,6 +327,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault to count buffers fsync'ed by checkpoint process */
 	_("finish_prepared_after_record_commit_prepared"),
 		/* inject fault in FinishPreparedTransaction() after recording the commit prepared record */
+	_("gang_created"),
+		/* inject fault to report ERROR just after creating Gang */
 	_("not recognized"),
 };
 

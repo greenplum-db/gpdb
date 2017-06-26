@@ -52,8 +52,8 @@
  * the slice this QE should execute
  */
 int qe_gang_id = 0;
-
 MemoryContext GangContext = NULL;
+Gang *gangInCreating = NULL;
 
 CreateGangFunc pCreateGangFunc = NULL;
 
@@ -1420,6 +1420,19 @@ void freeGangsForPortal(char *portal_name)
 
 	if (Gp_role != GP_ROLE_DISPATCH)
 		return;
+
+	if (gangInCreating != NULL)
+	{
+		GangType type = gangInCreating->type;
+		DisconnectAndDestroyGang(gangInCreating);
+		gangInCreating = NULL;
+
+		if (type == GANGTYPE_PRIMARY_WRITER)
+		{
+			DisconnectAndDestroyAllGangs(true);
+			CheckForResetSession();
+		}
+	}
 
 	/*
 	 * the primary writer gangs "belong" to the unnamed portal --

@@ -12,6 +12,7 @@
 #include "cdb/cdbutil.h"
 #include "executor/execdesc.h"
 #include <pthread.h>
+#include "utils/faultinjector.h"
 
 struct Port;
 struct QueryDesc;
@@ -53,8 +54,8 @@ typedef struct Gang
 } Gang;
 
 extern int qe_gang_id;
-
 extern MemoryContext GangContext;
+extern Gang *gangInCreating;
 
 extern Gang *AllocateReaderGang(GangType type, char *portal_name);
 
