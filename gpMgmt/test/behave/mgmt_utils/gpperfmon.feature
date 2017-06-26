@@ -86,6 +86,34 @@ Feature: gpperfmon
         When the user truncates "diskspace_history" tables in "gpperfmon"
         Then wait until the results from boolean sql "SELECT count(*) > 0 FROM diskspace_history" is "true"
 
+    """
+    The gpperfmon_skew_cpu_and_cpu_elapsed does not work on MacOS because of Sigar lib limitations.
+    To run all the other scenarios and omit this test on MacOS, use:
+    $ behave test/behave/mgmt_utils/gpperfmon.feature --tags @gpperfmon --tags ~@gpperfmon_skew_cpu_and_cpu_elapsed
+    """
+    @gpperfmon_skew_cpu_and_cpu_elapsed
+    Scenario: gpperfmon records skew_cpu and cpu_elapsed
+        Given gpperfmon is configured and running in qamode
+        Given the user truncates "queries_history" tables in "gpperfmon"
+        Given database "gptest" is dropped and recreated
+        When below sql is executed in "gptest" db
+        """
+        CREATE TABLE sales (id int, date date, amt decimal(10,2))
+        DISTRIBUTED BY (id);
+        """
+        When below sql is executed in "gptest" db
+        """
+        insert into sales values(generate_series(2,10), '2016-12-01', generate_series(1,20));
+        insert into sales values(1, '2016-12-01', generate_series(1,10000000));
+        """
+        When below sql is executed in "gptest" db
+        """
+        select count(*) from sales;
+        """
+        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where cpu_elapsed > 1 and query_text like 'select count(*)%'" is "true"
+        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where skew_cpu > 0.05 and db = 'gptest'" is "true"
+        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where skew_rows > 0 and db = 'gptest'" is "true"
+
     @gpperfmon_partition
     Scenario: gpperfmon keeps all partitions upon restart if partition_age not set, drops excess partitions otherwise
         Given gpperfmon is configured and running in qamode
@@ -123,52 +151,3 @@ Feature: gpperfmon
         And wait until the process "gpsmon" is up
         # Note that the code considers partition_age + 1 as the number of partitions to keep
         Then wait until the results from boolean sql "SELECT count(*) = 5 FROM pg_partitions WHERE tablename = 'diskspace_history'" is "true"
-
-    @gpperfmon_skew_rows
-    Scenario: gpperfmon detects row skew
-        Given gpperfmon is configured and running in qamode
-        Given database "gptest" is dropped and recreated
-        Given the user runs "psql gptest -c 'create table test_row_skew( id int, val int ) DISTRIBUTED BY ( id );'"
-        Then psql should return a return code of 0
-        When the user truncates "queries_history" tables in "gpperfmon"
-        # 1 million skewed rows too few to detect skew, but 10M seems to let gpperfmon detect row skew. Why?
-        And the user runs "psql gptest -c 'INSERT INTO test_row_skew SELECT 1, i FROM generate_series(1,10000000) AS i;'"
-        Then psql should return a return code of 0
-        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where skew_rows > 0" is "true"
-
-    """
-    The gpperfmon_skew_cpu_and_cpu_elapsed does not work on MacOS because of Sigar lib limitations.
-    To run all the other scenarios and omit this test on MacOS, use:
-    $ behave test/behave/mgmt_utils/gpperfmon.feature --tags @gpperfmon --tags ~@gpperfmon_skew_cpu_and_cpu_elapsed
-    """
-    @gpperfmon_skew_cpu_and_cpu_elapsed
-    Scenario: gpperfmon records skew_cpu and cpu_elapsed
-        Given gpperfmon is configured and running in qamode
-        Given the user truncates "queries_history" tables in "gpperfmon"
-        Given database "gptest" is dropped and recreated
-        When below sql is executed in "gptest" db
-        """
-        CREATE TABLE sales (id int, date date, amt decimal(10,2))
-        DISTRIBUTED BY (id)
-        PARTITION BY RANGE (date)
-        ( START (date '2016-11-01') INCLUSIVE
-          END (date '2016-12-02') EXCLUSIVE
-          EVERY (INTERVAL '1 day') );
-        """
-        When below sql is executed in "gptest" db
-        """
-        insert into sales values(generate_series(1,1000000),'2016-12-01',21);
-        insert into sales values(generate_series(1,1000000),'2016-11-30',21);
-        insert into sales values(generate_series(1,1000000),'2016-11-29',21);
-        insert into sales values(generate_series(1,1000000),'2016-11-28',21);
-        insert into sales values(generate_series(1,1000000),'2016-11-25',21);
-        insert into sales values(generate_series(1,1000000),'2016-11-24',21);
-        insert into sales values(generate_series(1,10000000),'2016-11-30',2333);
-        """
-        When below sql is executed in "gptest" db
-        """
-        select count(*) from sales where date between '2016-11-30' and '2016-11-30';
-        """
-        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where cpu_elapsed > 1 and query_text like 'select count(*)%'" is "true"
-        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where skew_cpu > 0.05 and db = 'gptest'" is "true"
-
