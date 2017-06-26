@@ -20,6 +20,7 @@ cdbgang.t: \
 	$(MOCK_DIR)/backend/cdb/cdbfts_mock.o \
 	$(MOCK_DIR)/backend/utils/misc/superuser_mock.o \
 	$(MOCK_DIR)/backend/gp_libpq_fe/fe-connect_mock.o \
-	$(MOCK_DIR)/backend/utils/mmgr/redzone_handler_mock.o
+	$(MOCK_DIR)/backend/utils/mmgr/redzone_handler_mock.o \
+	$(MOCK_DIR)/backend/utils/misc/faultinjector_mock.o
 
 include $(top_builddir)/src/backend/mock.mk

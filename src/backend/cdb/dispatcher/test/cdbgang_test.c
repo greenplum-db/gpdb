@@ -138,6 +138,12 @@ static void test__createWriterGang(void **state)
 	will_return_count(getgpsegmentCount, segmentCount, -1);
 	will_return_count(getFtsVersion, ftsVersion, 1);
 
+	expect_any(FaultInjector_InjectFaultIfSet, identifier);
+	expect_any(FaultInjector_InjectFaultIfSet, ddlStatement);
+	expect_any(FaultInjector_InjectFaultIfSet, databaseName);
+	expect_any(FaultInjector_InjectFaultIfSet, tableName);
+	will_return(FaultInjector_InjectFaultIfSet, false);
+
 	mockLibpq(conn, motionListener, qePid);
 
 	cdbgang_setAsync(false);
@@ -184,6 +190,11 @@ static void test__createReaderGang(void **state)
 	will_return_count(getgpsegmentCount, segmentCount, -1);
 	will_return_count(getFtsVersion, ftsVersion, 1);
 
+	expect_any(FaultInjector_InjectFaultIfSet, identifier);
+	expect_any(FaultInjector_InjectFaultIfSet, ddlStatement);
+	expect_any(FaultInjector_InjectFaultIfSet, databaseName);
+	expect_any(FaultInjector_InjectFaultIfSet, tableName);
+	will_return(FaultInjector_InjectFaultIfSet, false);
 	mockLibpq(conn, motionListener, qePid);
 
 	cdbgang_setAsync(false);
