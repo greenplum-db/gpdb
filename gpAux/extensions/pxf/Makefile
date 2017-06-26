@@ -19,6 +19,7 @@ EXTENSION = pxf
 DATA = pxf--1.0.sql
 MODULE_big = pxf
 OBJS       = src/pxfprotocol.o
+REGRESS    = setup pxf
 
 ifdef USE_PGXS
 PGXS := $(shell pg_config --pgxs)
@@ -35,7 +36,6 @@ unittest-check:
 unittest-clean:
 	$(MAKE) -C test clean
 
-installcheck:
-	$(MAKE) -C regress
-
 clean: unittest-clean
+
+.PHONY: unittest-check unittest-clean
