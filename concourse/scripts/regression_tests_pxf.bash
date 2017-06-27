@@ -22,7 +22,7 @@ function gen_env(){
 	fi
 
 	cd "\${1}/gpdb_src/gpAux/extensions/pxf"
-	make installcheck pgxs_dir=/usr/local/greenplum-db-devel/lib/postgresql/pgxs
+	make installcheck USE_PGXS=1
 
 	[ -s regression.diffs ] && cat regression.diffs && exit 1
 	exit 0
