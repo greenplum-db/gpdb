@@ -4852,32 +4852,38 @@ def impl(context):
 def impl(context):
     target_line = 'qamode = 1'
     gpperfmon_config_file = "%s/gpperfmon/conf/gpperfmon.conf" % os.getenv("MASTER_DATA_DIRECTORY")
-    if not check_db_exists("gpperfmon", "localhost") or \
-            not is_process_running("gpsmon") or \
-            not file_contains_line(gpperfmon_config_file, target_line):
+    if not check_db_exists("gpperfmon", "localhost"):
         context.execute_steps(u'''
-            When the user runs "gpperfmon_install --port 15432 --enable --password foo"
-            Then gpperfmon_install should return a return code of 0
-            When the user runs command "echo 'qamode = 1' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
-            Then echo should return a return code of 0
-            When the user runs command "echo 'verbose = 1' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
-            Then echo should return a return code of 0
-            When the user runs command "echo 'min_query_time = 0' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
-            Then echo should return a return code of 0
-            When the user runs command "echo 'quantum = 10' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
-            Then echo should return a return code of 0
-            When the user runs command "echo 'harvest_interval = 5' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
-            Then echo should return a return code of 0
-            When the database is not running
-            Then wait until the process "postgres" goes down
-            When the user runs "gpstart -a"
-            Then gpstart should return a return code of 0
-            And verify that a role "gpmon" exists in database "gpperfmon"
-            And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "gpperfmon_log_alert_level=warning"
-            And verify that there is a "heap" table "database_history" in "gpperfmon"
-            Then wait until the process "gpmmon" is up
-            And wait until the process "gpsmon" is up
-        ''')
+                              When the user runs "gpperfmon_install --port 15432 --enable --password foo"
+                              Then gpperfmon_install should return a return code of 0
+                              ''')
+
+    if not file_contains_line(gpperfmon_config_file, target_line):
+        context.execute_steps(u'''
+                              When the user runs command "echo 'qamode = 1' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
+                              Then echo should return a return code of 0
+                              When the user runs command "echo 'verbose = 1' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
+                              Then echo should return a return code of 0
+                              When the user runs command "echo 'min_query_time = 0' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
+                              Then echo should return a return code of 0
+                              When the user runs command "echo 'quantum = 10' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
+                              Then echo should return a return code of 0
+                              When the user runs command "echo 'harvest_interval = 5' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
+                              Then echo should return a return code of 0
+                              ''')
+
+    if not is_process_running("gpsmon"):
+        context.execute_steps(u'''
+                              When the database is not running
+                              Then wait until the process "postgres" goes down
+                              When the user runs "gpstart -a"
+                              Then gpstart should return a return code of 0
+                              And verify that a role "gpmon" exists in database "gpperfmon"
+                              And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "gpperfmon_log_alert_level=warning"
+                              And verify that there is a "heap" table "database_history" in "gpperfmon"
+                              Then wait until the process "gpmmon" is up
+                              And wait until the process "gpsmon" is up
+                              ''')
 
 @given('the setting "{variable_name}" is NOT set in the configuration file "{path_to_file}"')
 @when('the setting "{variable_name}" is NOT set in the configuration file "{path_to_file}"')
