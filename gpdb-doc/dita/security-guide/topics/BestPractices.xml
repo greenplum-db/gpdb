@@ -3,8 +3,8 @@
 <topic id="topic_nyc_mdf_jr">
   <title>Security Best Practices</title>
   <body>
-    <p> This chapter describes basic security best practices that you should follow to
-      ensure the highest level of system security.  </p>
+    <p> This chapter describes basic security best practices that you should follow to ensure the
+      highest level of system security.  </p>
     <p>Greenplum Database default security configuration:<ul id="ul_mhk_rrg_4r">
         <li>Only local connections are allowed. </li>
         <li>Basic authentication is configured for the superuser (<codeph>gpadmin</codeph>).</li>
@@ -92,13 +92,13 @@
       <ul id="ul_gd3_fxg_4r">
         <li> John The Ripper. A fast and flexible password cracking program. It allows the use of
           multiple word lists and is capable of brute-force password cracking. It is available
-          online at <xref href="http://www.commoncriteriaportal.org/products/?expand#ALL"
-            format="html" scope="external">http://www.openwall.com/john/</xref>. </li>
+          online at <xref href="http://www.openwall.com/john/" format="html" scope="external"
+            >http://www.openwall.com/john/</xref>. </li>
         <li>Crack. Perhaps the most well-known password cracking software, Crack is also very fast,
           though not as easy to use as John The Ripper. It can be found online at <xref
-            href="http://www.commoncriteriaportal.org/products/?expand#ALL" format="html"
-            scope="external">http://www.crypticide.com/alecm/security/crack/c50-faq.html</xref>. 
-        </li>
+            href="https://dropsafe.crypticide.com/alecm/software/crack/c50-faq.html" format="html"
+            scope="external"
+            >https://dropsafe.crypticide.com/alecm/software/crack/c50-faq.html</xref>.  </li>
       </ul>
       <p>The security of the entire system depends on the strength of the root password. This
         password should be at least 12 characters long and include a mix of capitalized letters,
@@ -217,6 +217,5 @@ chmod 644 passwd group
 chmod 400 shadow gshadow
 </codeblock>
     </section>
-
   </body>
 </topic>

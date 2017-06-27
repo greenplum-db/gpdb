@@ -193,16 +193,16 @@ host    all   dba   192.168.0.0/32  md5
             </plentry>
           </parml></p>
         <p>Following are some sample <codeph>pg_hba.conf</codeph> basic authentication
-          entries:<codeblock>Hostnossl    all   all        0.0.0.0   reject
+          entries:<codeblock>hostnossl    all   all        0.0.0.0   reject
 hostssl      all   testuser   0.0.0.0/0 md5
-Local        all   gpuser               ident
+local        all   gpuser               ident
 </codeblock></p>
       </section>
       <section id="kerberos_auth">
         <title>Kerberos Authentication</title>
         <p>You can authenticate against a Kerberos server (RFC 2743, 1964).</p>
         <p>The format for Kerberos authentication in the <codeph>pg_hba.conf</codeph> file
-          is:<codeblock>Servicename/hostname@realm</codeblock></p>
+          is:<codeblock>servicename/hostname@realm</codeblock></p>
         <p>The following options may be added to the entry:<parml>
             <plentry>
               <pt>Map</pt>
@@ -224,7 +224,7 @@ Local        all   gpuser               ident
           </parml></p>
         <p>Following is an example <codeph>pg_hba.conf</codeph> entry for
           Kerberos:<codeblock>host    all all 0.0.0.0/0   krb5
-Hostssl all all 0.0.0.0/0   krb5 map=krbmap
+hostssl all all 0.0.0.0/0   krb5 map=krbmap
 </codeblock></p>
         <p>The following Kerberos server settings are specified in <codeph>postgresql.conf</codeph>: <parml>
             <plentry>
@@ -280,27 +280,27 @@ Hostssl all all 0.0.0.0/0   krb5 map=krbmap
           </ol></p>
         <p>Specify the following parameter <codeph>auth-options</codeph>. <parml>
             <plentry>
-              <pt>Ldapserver</pt>
+              <pt>ldapserver</pt>
               <pd>Names or IP addresses of LDAP servers to connect to. Multiple servers may be
                 specified, separated by spaces.</pd>
             </plentry>
             <plentry>
-              <pt>Ldapprefix</pt>
+              <pt>ldapprefix</pt>
               <pd>String to prepend to the user name when forming the DN to bind as, when doing
                 simple bind authentication.</pd>
             </plentry>
             <plentry>
-              <pt>Ldapsuffix</pt>
+              <pt>ldapsuffix</pt>
               <pd>String to append to the user name when forming the DN to bind as, when doing
                 simple bind authentication.</pd>
             </plentry>
             <plentry>
-              <pt>Ldapport</pt>
+              <pt>ldapport</pt>
               <pd>Port number on LDAP server to connect to. If no port is specified, the LDAP
                 library's default port setting will be used.</pd>
             </plentry>
             <plentry>
-              <pt>Ldaptls</pt>
+              <pt>ldaptls</pt>
               <pd>Set to 1 to make the connection between PostgreSQL and the LDAP server use TLS
                 encryption. Note that this only encrypts the traffic to the LDAP server — the
                 connection to the client will still be unencrypted unless SSL is used.</pd>
@@ -423,7 +423,7 @@ Hostssl testdb all 192.168.0.0/16 cert map=gpuser
       <p>SSL options:<parml>
           <plentry>
             <pt>
-              <codeph>Require</codeph>
+              <codeph>require</codeph>
             </pt>
             <pd>Only use SSL connection. If a root CA file is present, verify the certificate in the
               same way as if <codeph>verify-ca</codeph> was specified.</pd>
@@ -443,33 +443,33 @@ Hostssl testdb all 192.168.0.0/16 cert map=gpuser
               trusted CA and that the server host name matches that in the certificate.</pd>
           </plentry>
           <plentry>
-            <pt>Sslcert</pt>
+            <pt>sslcert</pt>
             <pd>The file name of the client SSL certificate. The default is
                 <codeph>~/.postgresql/postgresql.crt</codeph>. </pd>
           </plentry>
           <plentry>
-            <pt>Sslkey</pt>
+            <pt>sslkey</pt>
             <pd>The secret key used for the client certificate. The default is
                 <codeph>~/.postgresql/postgresql.key</codeph>.</pd>
           </plentry>
           <plentry>
-            <pt>Sslrootcert</pt>
+            <pt>sslrootcert</pt>
             <pd>The name of a file containing SSL Certificate Authority certificate(s). The default
               is <codeph>~/.postgresql/root.crt</codeph>.</pd>
           </plentry>
           <plentry>
-            <pt>Sslcrl</pt>
+            <pt>sslcrl</pt>
             <pd>The name of the SSL certificate revocation list. The default is
                 <codeph>~/.postgresql/root.crl</codeph>.</pd>
           </plentry>
         </parml></p>
       <p>The client connection parameters can be set using the following environment variables:<ul
           id="ul_yph_5g2_jr">
-          <li><codeph>Sslmode</codeph> – <codeph>PGSSLMODE</codeph></li>
-          <li><codeph>Sslkey</codeph> – <codeph>PGSSLKEY</codeph></li>
-          <li><codeph>Sslrootcert</codeph> – <codeph>PGSSLROOTCERT</codeph></li>
-          <li><codeph>Sslcert</codeph> – <codeph>PGSSLCERT</codeph></li>
-          <li><codeph>Sslcrl</codeph> – <codeph>PGSSLCRL</codeph> </li>
+          <li><codeph>sslmode</codeph> – <codeph>PGSSLMODE</codeph></li>
+          <li><codeph>sslkey</codeph> – <codeph>PGSSLKEY</codeph></li>
+          <li><codeph>sslrootcert</codeph> – <codeph>PGSSLROOTCERT</codeph></li>
+          <li><codeph>sslcert</codeph> – <codeph>PGSSLCERT</codeph></li>
+          <li><codeph>sslcrl</codeph> – <codeph>PGSSLCRL</codeph> </li>
         </ul></p>
     </body>
   </topic>
@@ -515,25 +515,25 @@ Hostssl testdb all 192.168.0.0/16 cert map=gpuser
         <title>RADIUS Authentication Options</title>
         <parml>
           <plentry>
-            <pt>Radiusserver</pt>
-            <pd>The ame of the RADIUS server.</pd>
+            <pt>radiusserver</pt>
+            <pd>The name of the RADIUS server.</pd>
           </plentry>
           <plentry>
-            <pt>Radiussecret</pt>
+            <pt>radiussecret</pt>
             <pd>The RADIUS shared secret.</pd>
           </plentry>
           <plentry>
-            <pt>Radiusport</pt>
+            <pt>radiusport</pt>
             <pd>The port to connect to on the RADIUS server.</pd>
           </plentry>
           <plentry>
-            <pt>Radiusidentifier</pt>
+            <pt>radiusidentifier</pt>
             <pd>NAS identifier in RADIUS requests.</pd>
           </plentry>
         </parml>
       </section>
       <p>Following are sample <codeph>pg_hba.conf</codeph> entries for RADIUS client
-        authentication:<codeblock>ostssl  all all 0.0.0.0/0 radius radiusserver=servername radiussecret=<varname>sharedsecret</varname></codeblock></p>
+        authentication:<codeblock>hostssl  all all 0.0.0.0/0 radius radiusserver=servername radiussecret=<varname>sharedsecret</varname></codeblock></p>
     </body>
   </topic>
   <topic id="topic_hwn_bk2_jr">

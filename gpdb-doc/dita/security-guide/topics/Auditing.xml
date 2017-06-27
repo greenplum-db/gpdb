@@ -27,7 +27,7 @@
         Schema</i> appendix in the <i>Greenplum Database Reference Guide</i>.</p>
     <section>
       <title>Viewing the Database Server Log Files</title>
-      <p> Every database instance in Greenplum Database (master and segments) is a running a
+      <p> Every database instance in Greenplum Database (master and segments) is a running
         PostgreSQL database server with its own server log file. Daily log files are created in the
           <codeph>pg_log</codeph> directory of the master and each segment data directory. </p>
       <p> The server log files are written in comma-separated values (CSV) format. Not all log
@@ -59,7 +59,6 @@
             </row>
           </thead>
           <tbody>
-
             <row>
               <entry>
                 <p> 1 </p>
@@ -497,7 +496,7 @@
         last three lines of each segment log
         file:<codeblock>$ gpssh -f seg_host_file
   => source /usr/local/greenplum-db/greenplum_path.sh
-  => gplogfilter -n 3 /gpdata/gp*/pg_log/gpdb*.log</codeblock></p>
+  => gplogfilter -n 3 /gpdata/gp*/pg_log/gpdb*.csv</codeblock></p>
       <p> The following are the Greenplum security-related audit (or logging) server configuration
         parameters that are set in the postgresql.conf configuration file:</p>
       <table>
@@ -523,10 +522,9 @@
             </row>
           </thead>
           <tbody>
-
             <row>
               <entry>
-                <p> Log_connections </p>
+                <p> log_connections </p>
               </entry>
               <entry>
                 <p> Boolean </p>
@@ -543,7 +541,7 @@
             </row>
             <row>
               <entry>
-                <p> Log_disconnections </p>
+                <p> log_disconnections </p>
               </entry>
               <entry>
                 <p> Boolean </p>
@@ -558,7 +556,7 @@
             </row>
             <row>
               <entry>
-                <p> Log_statement </p>
+                <p> log_statement </p>
               </entry>
               <entry>
                 <p> NONE </p>
@@ -578,7 +576,7 @@
             </row>
             <row>
               <entry>
-                <p> Log_hostname </p>
+                <p> log_hostname </p>
               </entry>
               <entry>
                 <p> Boolean </p>
@@ -595,7 +593,7 @@
             </row>
             <row>
               <entry>
-                <p> Log_duration </p>
+                <p> log_duration </p>
               </entry>
               <entry>
                 <p> Boolean </p>
@@ -610,7 +608,7 @@
             </row>
             <row>
               <entry>
-                <p> Log_error_verbosity </p>
+                <p> log_error_verbosity </p>
               </entry>
               <entry>
                 <p> TERSE </p>
@@ -724,7 +722,6 @@
           </tbody>
         </tgroup>
       </table>
-
     </section>
   </body>
 </topic>

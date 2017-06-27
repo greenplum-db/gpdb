@@ -134,7 +134,6 @@ FORMAT 'TEXT' ( DELIMITER '|' NULL ' ') ;
         compress data before encrypting. </p>
       <p>Pgcrypto has various levels of encryption ranging from basic to advanced built-in
         functions. The following table shows the supported encryption algorithms.</p>
-
       <table id="table_wzb_4fd_lr">
         <title>Pgcrypto Supported Encryption Functions</title>
         <tgroup cols="4">
@@ -146,7 +145,6 @@ FORMAT 'TEXT' ( DELIMITER '|' NULL ' ') ;
               <entry> Value Functionality </entry>
               <entry> Built-in </entry>
               <entry> With OpenSSL </entry>
-              
             </row>
           </thead>
           <tbody>
@@ -154,64 +152,54 @@ FORMAT 'TEXT' ( DELIMITER '|' NULL ' ') ;
               <entry> MD5 </entry>
               <entry> yes </entry>
               <entry> yes </entry>
-              
             </row>
             <row>
               <entry> SHA1 </entry>
               <entry> yes </entry>
               <entry> yes </entry>
-              
             </row>
             <row>
               <entry> SHA224/256/384/512 </entry>
               <entry> yes </entry>
               <entry> yes <fn>SHA2 algorithms were added to OpenSSL in version 0.9.8. For older
                   versions, pgcrypto will use built-in code.</fn></entry>
-              
             </row>
             <row>
               <entry> Other digest algorithms </entry>
               <entry> no </entry>
               <entry> yes <fn>Any digest algorithm OpenSSL supports is automatically picked up. This
                   is not possible with ciphers, which need to be supported explicitly.</fn></entry>
-              
             </row>
             <row>
               <entry> Blowfish </entry>
               <entry> yes </entry>
               <entry> yes </entry>
-              
             </row>
             <row>
               <entry> AES </entry>
               <entry> yes </entry>
               <entry> yes<fn>AES is included in OpenSSL since version 0.9.7. For older versions,
                   pgcrypto will use built-in code.</fn></entry>
-              
             </row>
             <row>
               <entry> DES/3DES/CAST5 </entry>
               <entry> no </entry>
               <entry> yes </entry>
-              
             </row>
             <row>
               <entry> Raw Encryption </entry>
               <entry> yes </entry>
               <entry> yes </entry>
-              
             </row>
             <row>
               <entry> PGP Symmetric-Key </entry>
               <entry> yes </entry>
               <entry> yes </entry>
-              
             </row>
             <row>
               <entry> PGP Public Key </entry>
               <entry> yes </entry>
               <entry> yes </entry>
-              
             </row>
           </tbody>
         </tgroup>
@@ -221,11 +209,11 @@ FORMAT 'TEXT' ( DELIMITER '|' NULL ' ') ;
         <p>To use PGP asymmetric encryption in Greenplum Database, you must first create public and
           private keys and install them. </p>
         <p>This section assumes you are installing Greenplum Database on a Linux machine with the
-          Gnu Privacy Guard (<codeph>gpg</codeph>) command line tool. Use the
-          latest version of GPG to create keys. Download and install Gnu Privacy Guard (GPG) for
-          your operating system from <xref href="https://www.gnupg.org/download/" format="html"
-            scope="external"/>. On the GnuPG website you will find installers for popular Linux
-          distributions and links for Windows and Mac OS X installers. </p>
+          Gnu Privacy Guard (<codeph>gpg</codeph>) command line tool. Use the latest version of GPG
+          to create keys. Download and install Gnu Privacy Guard (GPG) for your operating system
+          from <xref href="https://www.gnupg.org/download/" format="html" scope="external"/>. On the
+          GnuPG website you will find installers for popular Linux distributions and links for
+          Windows and Mac OS X installers. </p>
         <ol id="ol_vnm_h54_kr">
           <li>As root, execute the following command and choose option 1 from the
             menu:<codeblock># gpg --gen-key 
@@ -233,11 +221,11 @@ gpg (GnuPG) 2.0.14; Copyright (C) 2009 Free Software Foundation, Inc.
 This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
  
-gpg: directory `/root/.gnupg' created
-gpg: new configuration file `/root/.gnupg/gpg.conf' created
-gpg: WARNING: options in `/root/.gnupg/gpg.conf' are not yet active during this run
-gpg: keyring `/root/.gnupg/secring.gpg' created
-gpg: keyring `/root/.gnupg/pubring.gpg' created
+gpg: directory '/root/.gnupg' created
+gpg: new configuration file '/root/.gnupg/gpg.conf' created
+gpg: WARNING: options in '/root/.gnupg/gpg.conf' are not yet active during this run
+gpg: keyring '/root/.gnupg/secring.gpg' created
+gpg: keyring '/root/.gnupg/pubring.gpg' created
 Please select what kind of key you want:
  (1) RSA and RSA (default)
  (2) DSA and Elgamal
@@ -269,7 +257,7 @@ You selected this USER-ID:
 Change (N)ame, (C)omment, (E)mail or (O)kay/(Q)uit? <b>O</b>
 You need a Passphrase to protect your secret key.
 <i>(For this demo the passphrase is blank.)</i>
-can't connect to `/root/.gnupg/S.gpg-agent': No such file or directory
+can't connect to '/root/.gnupg/S.gpg-agent': No such file or directory
 You don't want a passphrase - this is probably a *bad* idea!
 I will do it anyway.  You can change your passphrase at any time,
 using this program with the option "--edit-key".
@@ -301,9 +289,7 @@ sub   2048R/4FD2EFBB 2015-01-13 [expires: 2016-01-13]
 ------------------------
 sec   2048R/2027CC30 2015-01-13 [expires: 2016-01-13]
 uid                  John Doe &lt;jdoe@email.com&gt;
-ssb   2048R/4FD2EFBB 2015-01-13
-
-</codeblock><p>2027CC30
+ssb   2048R/4FD2EFBB 2015-01-13</codeblock><p>2027CC30
               is the public key and will be used to <i>encrypt</i> data in the database. 4FD2EFBB is
               the private (secret) key and will be used to <i>decrypt</i> data.</p></li>
           <li>Export the keys using the following
@@ -311,8 +297,8 @@ ssb   2048R/4FD2EFBB 2015-01-13
 # gpg -a --export-secret-keys 2027CC30 &gt; secret.key</codeblock></li>
         </ol>
         <p>See the <xref href="http://www.postgresql.org/docs/8.3/static/pgcrypto.html"
-            format="html" scope="external">pgcrypto</xref> documentation for for more information
-          about PGP encryption functions. </p>
+            format="html" scope="external">pgcrypto</xref> documentation for more information about
+          PGP encryption functions. </p>
       </section>
       <section>
         <title>Encrypting Data in Tables using PGP</title>
@@ -407,7 +393,7 @@ f \015\004\242\231\263\225%\032\271a\001\035\277\021\375X\232\304\305/\340\334\0
 315G^\027:K_9\254\362\354\215&lt;\001\304\357\331\355\323,\302\213Fe\265\315\232\367\254\245%(\\\373
 4\254\230\331\356\006B\257\333\326H\022\013\353\216F?\023\220\370\035vH5/\227\344b\322\227\026\362=\
 42\033\322&lt;\001}\243\224;)\030zqX\214\340\221\035\275U\345\327\214\032\351\223c\2442\345\304K\016\
-011\214\307\227\237\270\026`R\205\205a~1\263\236[\037C\260\031\205\374\245\317\033k|\366\253\037
+011\214\307\227\237\270\026'R\205\205a~1\263\236[\037C\260\031\205\374\245\317\033k|\366\253\037
 ---------+--------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------
@@ -422,11 +408,11 @@ ssn_id   | 2
 username | Bob
 ssn      | \301\300L\003\235M%_O\322\357\273\001\007\377t>\345\343,\200\256\272\300\012\033M4\265\032L
 L[v\262k\244\2435\264\232B\357\370d9\375\011\002\327\235&lt;\246\210b\030\012\337@\226Z\361\246\032\00
-7`\012c\353]\355d7\360T\335\314\367\370;X\371\350*\231\212\260B\010#RQ0\223\253c7\0132b\355\242\233\34
+7'\012c\353]\355d7\360T\335\314\367\370;X\371\350*\231\212\260B\010#RQ0\223\253c7\0132b\355\242\233\34
 1\000\370\370\366\013\022\357\005i\202~\005\\z\301o\012\230Z\014\362\244\324&amp;\243g\351\362\325\375
 \213\032\226$\2751\256XR\346k\266\030\234\267\201vUh\004\250\337A\231\223u\247\366/i\022\275\276\350\2
 20\316\306|\203+\010\261;\232\254tp\255\243\261\373Rq;\316w\357\006\207\374U\333\365\365\245hg\031\005
-\322\347ea\220\015l\212g\337\264\336b\263\004\311\210.4\340G+\221\274D\035\375\2216\241`\346a0\273wE\2
+\322\347ea\220\015l\212g\337\264\336b\263\004\311\210.4\340G+\221\274D\035\375\2216\241'\346a0\273wE\2
 12\342y^\202\262|A7\202t\240\333p\345G\373\253\243oCO\011\360\247\211\014\024{\272\271\322&lt;\001\267
 \347\240\005\213\0078\036\210\307$\317\322\311\222\035\354\006&lt;\266\264\004\376\251q\256\220(+\030\
 3270\013c\327\272\212%\363\033\252\322\337\354\276\225\232\201\212^\304\210\2269@\3230\370{
@@ -554,8 +540,6 @@ username | decrypted_ssn
               you created a key with passphrase, you may have to enter it here. However for the
               purpose of this example, the passphrase is blank. </p></li>
         </ol>
-
-
       </section>
       <section>
         <title>Key Management</title>
@@ -577,5 +561,4 @@ username | decrypted_ssn
       </section>
     </body>
   </topic>
-
 </topic>
