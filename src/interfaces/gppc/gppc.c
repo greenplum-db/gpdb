@@ -1107,7 +1107,7 @@ GppcSPIExec(const char *src, long tcount)
 	int				rescode;
 	GppcSPIResult	result;
 
-	rescode = SPI_exec(src, tcount);
+	rescode = SPI_exec(src, (int64) tcount);
 	result = (GppcSPIResult) palloc0(sizeof(GppcSPIResultData));
 	if (rescode >= 0)
 	{

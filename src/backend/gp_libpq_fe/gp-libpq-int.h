@@ -195,7 +195,7 @@ struct pg_result
     int	   extraslen;
 
 	/* GPDB: number of rows rejected in SREH (protocol message 'j') */
-	int			numRejected;
+	int64			numRejected;
 	/* GPDB: number of processed tuples for each AO partition */
 	int			naotupcounts;
 	PQaoRelTupCount *aotupcounts;

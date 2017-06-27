@@ -67,7 +67,7 @@ typedef struct CdbSreh
 
 	/* reject limit state */
 	int		rejectlimit;	/* SEGMENT REJECT LIMIT value */
-	int		rejectcount;	/* how many were rejected so far */
+	int64		rejectcount;	/* how many were rejected so far */
 	bool	is_limit_in_rows; /* ROWS = true, PERCENT = false */
 	
 	/* COPY only vars */
@@ -87,8 +87,8 @@ extern CdbSreh *makeCdbSreh(int rejectlimit, bool is_limit_in_rows,
 							char *filename, char *relname, bool log_to_file);
 extern void destroyCdbSreh(CdbSreh *cdbsreh);
 extern void HandleSingleRowError(CdbSreh *cdbsreh);
-extern void ReportSrehResults(CdbSreh *cdbsreh, int total_rejected);
-extern void SendNumRowsRejected(int numrejected);
+extern void ReportSrehResults(CdbSreh *cdbsreh, int64 total_rejected);
+extern void SendNumRowsRejected(int64 numrejected);
 extern bool IsErrorTable(Relation rel);
 extern void ErrorIfRejectLimitReached(CdbSreh *cdbsreh, CdbCopy *cdbCopy);
 extern bool ExceedSegmentRejectHardLimit(CdbSreh *cdbsreh);

@@ -1603,7 +1603,7 @@ void UpdateMasterAosegTotals(Relation parentrel, int segno, int64 tupcount, int6
 	ereportif(Debug_appendonly_print_segfile_choice, LOG,
 		(errmsg("UpdateMasterAosegTotals: Updating aoseg entry for append-only relation %d "
 							"with " INT64_FORMAT " new tuples for segno %d",
-							RelationGetRelid(parentrel), (int64)tupcount, segno)));
+							RelationGetRelid(parentrel), tupcount, segno)));
 
 	// CONSIDER: We should probably get this lock even sooner.
 	LockRelationAppendOnlySegmentFile(

@@ -405,13 +405,13 @@ processCopyEndResults(CdbCopy *c,
 					  SegmentDatabaseDescriptor **failedSegDBs,
 					  bool *err_header,
 					  bool *first_error,
-					  int *failed_count,
-					  int *total_rows_rejected)
+					  int64 *failed_count,
+					  int64 *total_rows_rejected)
 {
 	SegmentDatabaseDescriptor *q;
 	int seg;
 	PGresult *res;
-	int			segment_rows_rejected = 0; /* num of rows rejected by this QE */
+	int64			segment_rows_rejected = 0; /* num of rows rejected by this QE */
 
 	for (seg = 0; seg < size; seg ++)
 	{
@@ -606,7 +606,7 @@ processCopyEndResults(CdbCopy *c,
  * will be 0 however in single row error handling mode 
  * could be larger than 0.
  */
-int
+int64
 cdbCopyEnd(CdbCopy *c)
 {
 	SegmentDatabaseDescriptor *q;
@@ -615,8 +615,8 @@ cdbCopyEnd(CdbCopy *c)
 	int			*results;			/* final result of COPY command execution */
 	int			seg;
 
-	int			failed_count = 0;
-	int			total_rows_rejected = 0; /* total num rows rejected by all QEs */
+	int64			failed_count = 0;
+	int64			total_rows_rejected = 0; /* total num rows rejected by all QEs */
 	bool		err_header = false;
 	bool		first_error = true;
 	struct	SegmentDatabaseDescriptor *db_descriptors;
