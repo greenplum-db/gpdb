@@ -106,7 +106,7 @@ extern int gpdb_exec_search_for_at_least_one_row(const char* QUERY, PGconn* pers
 
 /* Function defs */
 static int read_conf_file(char *conffile);
-static void gethostlist();
+static void gethostlist(void);
 static void getconfig(void);
 static apr_status_t sendpkt(int sock, const gp_smon_to_mmon_packet_t* pkt);
 static apr_status_t recvpkt(int sock, gp_smon_to_mmon_packet_t* pkt, bool loop_until_all_recv);
