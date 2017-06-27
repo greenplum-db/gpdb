@@ -59,7 +59,6 @@ typedef struct CdbCopy
 
 /* global function declarations */
 CdbCopy    *makeCdbCopy(bool copy_in);
-int			cdbCopyGetDbCount(int total_segs, int seg);
 void		cdbCopyStart(CdbCopy *cdbCopy, char *copyCmd);
 void		cdbCopySendDataToAll(CdbCopy *c, const char *buffer, int nbytes);
 void		cdbCopySendData(CdbCopy *c, int target_seg, const char *buffer, int nbytes);
