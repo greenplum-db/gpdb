@@ -126,7 +126,7 @@ typedef struct mmon_options_t
 	apr_uint64_t max_log_size;
 	int max_fd; /* this is the max fd value we ever seen */
 	int v;
-	int q;
+	int quantum;
 	int min_query_time;
 	int qamode;
 	int harvest_interval;
