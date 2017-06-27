@@ -559,43 +559,54 @@ class RestoreDatabase(Operation):
             raise Exception('Unable to locate statistics file %s in dump set' % stats_filename)
 
         # We need to replace existing starelid's in file to match starelid of tables in database in case they're different
-        # First, map each schemaname.tablename to its corresponding starelid
-        query = """SELECT t.schemaname || '.' || t.tablename, c.oid FROM pg_class c join pg_tables t ON c.relname = t.tablename
-                         WHERE t.schemaname NOT IN ('pg_toast', 'pg_bitmapindex', 'pg_temp_1', 'pg_catalog', 'information_schema', 'gp_toolkit')"""
+        # and modify attnum's in case columns were dropped between the backup and restore.
+        # First, map each schemaname.tablename to its corresponding starelid and attnums
+        query = """SELECT t.schemaname || '.' || t.tablename, c.oid, a.attname, a.attnum FROM pg_class c JOIN pg_tables t ON c.relname = t.tablename JOIN pg_attribute a ON a.attrelid = c.oid
+                    WHERE t.schemaname NOT IN ('pg_toast', 'pg_bitmapindex', 'pg_temp_1', 'pg_catalog', 'information_schema', 'gp_toolkit') AND a.attnum > 0;"""
         relids = {}
+        attnums = {}
         rows = execute_sql(query, self.context.master_port, self.context.target_db)
+        # The query returns rows of (schema.table, starelid, attname, attnum).
+        # We construct maps of schema.table to starelid and schema.table.att to attnum
         for row in rows:
-            if len(row) != 2:
-                raise Exception("Invalid return from query: Expected 2 columns, got % columns" % (len(row)))
+            if len(row) != 4:
+                raise Exception("Invalid return from query: Expected 4 columns, got % columns" % (len(row)))
             relids[row[0]] = str(row[1])
+            full_attname = '%s.%s' % (row[0], row[2])
+            attnums[full_attname] = row[3]
 
         # Read in the statistics dump file, find each schemaname.tablename section, and replace the corresponding starelid
         # This section is also where we filter out tables that are not in restore_tables
         with open(stats_filename, "w") as outfile:
             with open(stats_path, "r") as infile:
-                table_pattern = compile("-- Schema: (\w+), Table: (\w+)")
+                table_pattern = compile("-- Schema: (\w+), Table: (\w+), Attribute: (\w+)")
                 print_toggle = True
-                starelid_toggle = False
+                replace_toggle = False
                 new_oid = ""
+                new_attnum = ""
                 for line in infile:
                     matches = search(table_pattern, line)
                     if matches:
                         tablename = '%s.%s' % (matches.group(1), matches.group(2))
+                        attname = '%s.%s' % (tablename, matches.group(3))
                         if len(self.context.restore_tables) == 0 or tablename in self.context.restore_tables:
                             try:
                                 new_oid = relids[tablename]
+                                new_attnum = attnums[attname]
                                 print_toggle = True
-                                starelid_toggle = True
+                                replace_toggle = True
                             except KeyError as e:
                                 if "Attribute" not in line: # Only print a warning once per table, at the tuple count restore section
                                     logger.warning("Cannot restore statistics for table %s: Table does not exist.  Skipping...", tablename)
                                 print_toggle = False
-                                starelid_toggle = False
+                                replace_toggle = False
                         else:
                             print_toggle = False
-                    if starelid_toggle and "::oid" in line:
+                    if replace_toggle and "::oid" in line:
                         line = "    %s::oid,\n" % new_oid
-                        starelid_toggle = False
+                    if replace_toggle and "::smallint" in line:
+                        line = "    %s::smallint,\n" % new_attnum
+                        replace_toggle = False
                     if print_toggle:
                         outfile.write(line)
 
