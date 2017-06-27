@@ -1097,41 +1097,77 @@ static apr_int64_t get_rowsout(qdnode_t* qdnode)
 	return rowsout;
 }
 
+
+static void _get_sum_seg_info(apr_hash_t* segtab, apr_int64_t* total_data_out, int* segcount_out)
+{
+	apr_hash_index_t *hi;
+	void* valptr;
+	apr_int64_t* seg_data_sum = NULL;
+
+	for (hi = apr_hash_first(NULL, segtab); hi; hi = apr_hash_next(hi))
+	{
+		apr_hash_this(hi, 0, 0, &valptr);
+		seg_data_sum = (apr_int64_t*) valptr;
+		*total_data_out += *seg_data_sum;
+		TR2(("(SKEW) Segment resource usage: %d\n", *seg_data_sum));
+		(*segcount_out)++;
+	}
+}
+
+static void _get_sum_deviation_squared(apr_hash_t* segtab, const apr_int64_t data_avg, apr_int64_t* total_deviation_squared_out)
+{
+	apr_hash_index_t *hi;
+	void* valptr;
+	apr_int64_t* seg_data_sum = NULL;
+
+	for (hi = apr_hash_first(NULL, segtab); hi; hi = apr_hash_next(hi))
+	{
+		apr_int64_t dev = 0;
+
+		apr_hash_this(hi, NULL, NULL, &valptr);
+		seg_data_sum = (apr_int64_t*) valptr;
+		dev = *seg_data_sum - data_avg;
+		TR2(("(SKEW) Deviation: %d\n", dev));
+		*total_deviation_squared_out += dev * dev;
+	}
+}
+
 static double get_cpu_skew(qdnode_t* qdnode)
 {
-    apr_pool_t* tmp_pool;
-    apr_hash_t* segtab;
-    apr_hash_index_t *hi;
+	apr_pool_t* tmp_pool;
+	apr_hash_t* segtab;
+	apr_hash_index_t *hi;
 
-//    qenode_t* pqe = NULL;
+	apr_int64_t cpu_avg = 0;
+	apr_int64_t total_cpu = 0;
+	apr_int64_t total_deviation_squared = 0;
+	double variance = 0;
+	double standard_deviation = 0;
+	double coefficient_of_variation = 0;
+	apr_int64_t* seg_cpu_sum = NULL;
+	void* valptr;
 
-    apr_int64_t cpu_avg = 0;
-    apr_int64_t* seg_cpu_sum = NULL;
-    void* valptr;
+	int segcnt = 0;
+	int e;
 
-    double var = 0.0f;
+	if (!qdnode)
+		return 0.0f;
 
-    int segcnt = 0;
-    int e;
-
-    if (!qdnode)
-        return 0.0f;
-
-    if (0 != (e = apr_pool_create_alloc(&tmp_pool, 0)))
+	if (0 != (e = apr_pool_create_alloc(&tmp_pool, 0)))
 	{
-        gpmon_warningx(FLINE, e, "apr_pool_create_alloc failed");
-        return 0.0f;
+		gpmon_warningx(FLINE, e, "apr_pool_create_alloc failed");
+		return 0.0f;
 	}
 
-    segtab = apr_hash_make(tmp_pool);
-    if (!segtab)
+	segtab = apr_hash_make(tmp_pool);
+	if (!segtab)
 	{
-        gpmon_warning(FLINE, "Out of memory");
-        return 0.0f;
+		gpmon_warning(FLINE, "Out of memory");
+		return 0.0f;
 	}
 
-	/* Calc mean per segment */
-	TR2( ("Calc mean per segment\n"));
+	TR2(("Calc mean per segment\n"));
+
 	for (hi = apr_hash_first(NULL, qdnode->query_seginfo_hash); hi; hi = apr_hash_next(hi))
 	{
 		mmon_query_seginfo_t	*rec;
@@ -1151,82 +1187,69 @@ static double get_cpu_skew(qdnode_t* qdnode)
 		apr_hash_set(segtab, &rec->key.segid, sizeof(rec->key.segid), seg_cpu_sum);
 	}
 
-    /* Calc mean across all segments */
-    for (hi = apr_hash_first(NULL, segtab); hi; hi = apr_hash_next(hi))
-    {
-        apr_hash_this(hi, 0, 0, &valptr);
-        seg_cpu_sum = (apr_int64_t*) valptr;
-        cpu_avg += *seg_cpu_sum;
-        TR2(("(SKEW) Segment rusage: %d\n", *seg_cpu_sum));
-        segcnt++;
-    }
+	_get_sum_seg_info(segtab, &total_cpu, &segcnt);
 
-    if (!segcnt) {
-        TR2(("No segments for CPU skew calculation\n"));
-        apr_pool_destroy(tmp_pool);
-        return 0.0f;
-    }
+	if (!segcnt) {
+		TR2(("No segments for CPU skew calculation\n"));
+		apr_pool_destroy(tmp_pool);
+		return 0.0f;
+	}
 
-    cpu_avg = cpu_avg / segcnt;
-    TR2(("(SKEW) Avg rusage: %" FMT64 "\n", cpu_avg));
+	cpu_avg = total_cpu / segcnt;
+	TR2(("(SKEW) Avg resource usage: %" FMT64 "\n", cpu_avg));
 
-    /* Calc sqrt of dev squared mean */
-    for (hi = apr_hash_first(NULL, segtab); hi; hi = apr_hash_next(hi))
-    {
-        apr_int64_t dev = 0;
+	_get_sum_deviation_squared(segtab, cpu_avg, &total_deviation_squared);
 
-        apr_hash_this(hi, NULL, NULL, &valptr);
-        seg_cpu_sum = (apr_int64_t*) valptr;
-        dev = *seg_cpu_sum - cpu_avg;
-        TR2(("(SKEW) Deviation: %d\n", dev));
-        var += dev * dev;
-    }
+	variance = total_deviation_squared / (double)segcnt;
 
-    var = sqrt(var / (double)segcnt);
+	standard_deviation = sqrt(variance);
 
-    TR2(("(SKEW) CPU variance: %f\n", var));
+	TR2(("(SKEW) CPU standard deviation: %f\n", standard_deviation));
 
-    /* Skew calc */
-    apr_pool_destroy(tmp_pool);
-    TR2(("(SKEW) CPU Skew: %f\n", cpu_avg ? var/(double)cpu_avg : 0.0f));
+	coefficient_of_variation = cpu_avg ? standard_deviation/(double)cpu_avg : 0.0f;
 
-    return (cpu_avg ? (var/(double)cpu_avg) * 100.0f : 0.0f);
+	apr_pool_destroy(tmp_pool);
+	TR2(("(SKEW) CPU Skew: %f\n", coefficient_of_variation));
+
+	return coefficient_of_variation;
 }
 
 static double get_row_skew(qdnode_t* qdnode)
 {
+	apr_pool_t* tmp_pool;
+	apr_hash_t* segtab;
+	apr_hash_index_t *hi;
 
-    apr_pool_t* tmp_pool;
-    apr_hash_t* segtab;
-    apr_hash_index_t *hi;
+	apr_int64_t total_row_out = 0;
+	apr_int64_t total_deviation_squared = 0;
+	double variance = 0.0f;
+	double standard_deviation = 0;
+	double coefficient_of_variation = 0;
+	apr_int64_t row_out_avg = 0;
+	apr_int64_t* seg_row_out_sum = NULL;
+	void* valptr;
 
-    apr_int64_t row_out_avg = 0;
-    apr_int64_t* seg_row_out_sum = NULL;
-    void* valptr;
+	int segcnt = 0;
+	int e;
 
-    double var = 0.0f;
+	if (!qdnode)
+		return 0.0f;
 
-    int segcnt = 0;
-    int e;
-
-    if (!qdnode)
-        return 0.0f;
-
-    if (0 != (e = apr_pool_create_alloc(&tmp_pool, 0)))
+	if (0 != (e = apr_pool_create_alloc(&tmp_pool, 0)))
 	{
-        gpmon_warningx(FLINE, e, "apr_pool_create_alloc failed");
-        return 0.0f;
+		gpmon_warningx(FLINE, e, "apr_pool_create_alloc failed");
+		return 0.0f;
 	}
 
-    segtab = apr_hash_make(tmp_pool);
-    if (!segtab)
+	segtab = apr_hash_make(tmp_pool);
+	if (!segtab)
 	{
-        gpmon_warning(FLINE, "Out of memory");
-        return 0.0f;
+		gpmon_warning(FLINE, "Out of memory");
+		return 0.0f;
 	}
 
 	/* Calc rows in sum per segment */
-	TR2( ("Calc rows in sum  per segment\n"));
+	TR2(("Calc rows in sum  per segment\n"));
 	for (hi = apr_hash_first(NULL, qdnode->query_seginfo_hash); hi; hi = apr_hash_next(hi))
 	{
 		mmon_query_seginfo_t	*rec;
@@ -1246,46 +1269,31 @@ static double get_row_skew(qdnode_t* qdnode)
 		apr_hash_set(segtab, &rec->key.segid, sizeof(rec->key.segid), seg_row_out_sum);
 	}
 
-    /* Calc rows in mean across all segments */
-    for (hi = apr_hash_first(NULL, segtab); hi; hi = apr_hash_next(hi))
-    {
-        apr_hash_this(hi, 0, 0, &valptr);
-        seg_row_out_sum = (apr_int64_t*) valptr;
-        row_out_avg += *seg_row_out_sum;
-        segcnt++;
-    }
+	_get_sum_seg_info(segtab, &total_row_out, &segcnt);
 
-    if (!segcnt) {
-        TR2(("No segments for CPU skew calculation\n"));
-        apr_pool_destroy(tmp_pool);
-        return 0.0f;
-    }
+	if (!segcnt) {
+		TR2(("No segments for Rows skew calculation\n"));
+		apr_pool_destroy(tmp_pool);
+		return 0.0f;
+	}
 
-    row_out_avg = row_out_avg / segcnt;
+	row_out_avg = total_row_out / segcnt;
 
-    TR2(("(SKEW) Avg rows out: %" FMT64 "\n", row_out_avg));
+	TR2(("(SKEW) Avg rows out: %" FMT64 "\n", row_out_avg));
 
-    /* Calc sqrt of dev squared mean */
-    for (hi = apr_hash_first(NULL, segtab); hi; hi = apr_hash_next(hi))
-    {
-        apr_int64_t dev = 0;
+	_get_sum_deviation_squared(segtab, row_out_avg, &total_deviation_squared);
 
-        apr_hash_this(hi, NULL, NULL, &valptr);
-	seg_row_out_sum = (apr_int64_t*) valptr;
-        dev = *seg_row_out_sum - row_out_avg;
-        TR2(("(SKEW) Deviation: %d\n", dev));
-        var += dev * dev;
-    }
+	variance = total_deviation_squared / (double)segcnt;
+	standard_deviation = sqrt(variance);
 
-    var = sqrt(var / (double)segcnt);
+	TR2(("(SKEW) Rows in standard deviaton: %f\n", standard_deviation));
 
-    TR2(("(SKEW) Rows in variance: %f\n", var));
+	coefficient_of_variation = row_out_avg ? standard_deviation/(double)row_out_avg : 0.0f;
 
-    /* Skew calc */
-    apr_pool_destroy(tmp_pool);
-    TR2(("(SKEW) Rows out skew: %f\n", row_out_avg ? var/(double)row_out_avg : 0.0f));
+	apr_pool_destroy(tmp_pool);
+	TR2(("(SKEW) Rows out skew: %f\n", coefficient_of_variation));
 
-    return (row_out_avg ? (var/(double)row_out_avg) * 100.0f : 0.0f);
+	return coefficient_of_variation;
 }
 
 
