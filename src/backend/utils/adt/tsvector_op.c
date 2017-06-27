@@ -1140,7 +1140,7 @@ static tsstat *
 ts_stat_sql(text *txt, text *ws)
 {
 	char	   *query = TextPGetCString(txt);
-	int			i;
+	int64			i;
 	tsstat	   *newstat,
 			   *stat;
 	bool		isnull;
