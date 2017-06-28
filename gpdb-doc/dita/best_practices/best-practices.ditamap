@@ -1,27 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE bookmap PUBLIC "-//OASIS//DTD DITA BookMap//EN" "bookmap.dtd">
-<bookmap xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="book">
-    <booktitle>
-        <mainbooktitle>Greenplum Database Best Practices</mainbooktitle>
-    </booktitle>
-    <frontmatter>
-    </frontmatter>
-    <chapter href="intro.xml">
+<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
+<map xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="map">
+    <title>Greenplum Database Best Practices</title>
+    <topicref href="intro.xml">
         <topicref href="summary.xml"/>
-    </chapter>
-    <chapter href="sysconfig.xml"/>
-    <chapter href="schema.xml"/>
-    <chapter href="workloads.xml"/>
-    <chapter href="maintenance.xml">
-        <topicref href="analyze.xml"/>
-        <topicref href="bloat.xml"/>
-        <topicref href="logfiles.xml"/>
-    </chapter>
-    <chapter href="data_loading.xml"/>
-    <chapter href="gptransfer.xml"/>
-    <chapter href="security.xml"/>
-    <chapter href="encryption.xml"/>
-    <chapter href="kerberos-hdfs.xml"/>
-    <chapter href="tuning_queries.xml"/>
-    <chapter href="ha.xml"/>
-</bookmap>
+        <topicref href="sysconfig.xml"/>
+        <topicref href="schema.xml"/>
+        <topicref href="workloads.xml"/>
+        <topicref href="maintenance.xml">
+            <topicref href="analyze.xml"/>
+            <topicref href="bloat.xml"/>
+            <topicref href="logfiles.xml"/>
+        </topicref>
+        <topicref href="data_loading.xml"/>
+        <topicref href="gptransfer.xml"/>
+        <topicref href="security.xml"/>
+        <topicref href="encryption.xml"/>
+        <topicref href="kerberos-hdfs.xml"/>
+        <topicref href="tuning_queries.xml"/>
+        <topicref href="ha.xml"/>
+    </topicref>
+</map>

@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
-<map>
- <title>Security Configuration Guide</title>
- <topicref href="topics/preface.xml" id="preface"/>
- <topicref href="topics/SecuringGPDB.xml"/>
- <topicref href="topics/ports_and_protocols.xml"/>
- <topicref href="topics/Authenticate.xml"/>
- <topicref href="topics/Authorization.xml"/>
- <topicref href="topics/gpcc.xml" otherprops="pivotal"/>
- <topicref href="topics/Auditing.xml"/>
- <topicref href="topics/Encryption.xml"/>
- <topicref href="topics/kerberos-hdfs.xml"/>
- <topicref href="topics/BestPractices.xml"/>
+<map><title>Security Configuration Guide</title>
+    <topicref href="topics/preface.xml">
+        <topicref href="topics/SecuringGPDB.xml"/>
+        <topicref href="topics/ports_and_protocols.xml"/>
+        <topicref href="topics/Authenticate.xml"/>
+        <topicref href="topics/Authorization.xml"/>
+        <topicref href="topics/gpcc.xml" otherprops="pivotal"/>
+        <topicref href="topics/Auditing.xml"/>
+        <topicref href="topics/Encryption.xml"/>
+        <topicref href="topics/kerberos-hdfs.xml"/>
+        <topicref href="topics/BestPractices.xml"/>
+    </topicref>
 </map>

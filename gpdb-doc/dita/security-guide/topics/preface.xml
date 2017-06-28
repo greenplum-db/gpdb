@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title id="nk110126">About This Guide</title>
+  <title id="nk110126">Security Configuration Guide</title>
   <body>
     <p>This guide describes how to secure a Greenplum Database system. The guide consists of the
       following sections:</p>
