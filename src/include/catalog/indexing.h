@@ -348,9 +348,6 @@ DECLARE_UNIQUE_INDEX(pg_exttable_reloid_index, 6041, on pg_exttable using btree(
 DECLARE_UNIQUE_INDEX(pg_window_fnoid_index, 5005, on pg_window using btree(winfnoid oid_ops));
 #define WindowWinfnoidIndexId	5005
 
-DECLARE_UNIQUE_INDEX(gp_san_config_mountid_index, 6111, on gp_san_configuration using btree(mountid int2_ops));
-#define GpSanConfigMountidIndexId	6111
-
 DECLARE_UNIQUE_INDEX(gp_configuration_content_definedprimary_index, 6101, on gp_configuration using btree(content int2_ops, definedprimary bool_ops));
 #define GpConfigurationContentDefinedprimaryIndexId	6101
 DECLARE_UNIQUE_INDEX(gp_configuration_dbid_index, 6102, on gp_configuration using btree(dbid int2_ops));

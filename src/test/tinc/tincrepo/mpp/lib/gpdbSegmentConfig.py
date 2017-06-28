@@ -288,7 +288,7 @@ class GpdbSegmentConfig:
         @return: hostname, port, datadir address and status
         """
         segmentData = []
-        cmd = "SELECT dbid, content, role, preferred_role, mode, status, hostname, address, port, fselocation as datadir, replication_port, san_mounts FROM gp_segment_configuration, pg_filespace_entry, pg_catalog.pg_filespace fs WHERE fsefsoid = fs.oid and fsname='pg_system' and gp_segment_configuration.dbid=pg_filespace_entry.fsedbid ORDER BY content, preferred_role"
+        cmd = "SELECT dbid, content, role, preferred_role, mode, status, hostname, address, port, fselocation as datadir, replication_port FROM gp_segment_configuration, pg_filespace_entry, pg_catalog.pg_filespace fs WHERE fsefsoid = fs.oid and fsname='pg_system' and gp_segment_configuration.dbid=pg_filespace_entry.fsedbid ORDER BY content, preferred_role"
         #(rc, out) = psql.run(dbname='gptest', cmd='%s' % (cmd), ofile='-', flag='-q -t')
         out = self.psql.run_sql_command(sql_cmd='%s' % (cmd),dbname='gptest',out_file='-', flags='-t -q')
         for line in out:
@@ -296,7 +296,7 @@ class GpdbSegmentConfig:
                 data = {}
                 # Check for valid data
                 if len(line) > 10:
-                    (dbid, content, role, preferred_role, mode, status, hostname, address, port, datadir, replication_port, san_mounts) = line.split('|')
+                    (dbid, content, role, preferred_role, mode, status, hostname, address, port, datadir, replication_port) = line.split('|')
                     content = content.strip()
                     role = role.strip()
                     status = status.strip()

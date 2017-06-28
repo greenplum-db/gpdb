@@ -155,7 +155,6 @@
 				<topicref href="system_catalogs/gp_pgdatabase.xml"/>
 				<topicref href="system_catalogs/gp_relation_node.xml"/>
 				<topicref href="system_catalogs/gp_resqueue_status.xml"/>
-				<topicref href="system_catalogs/gp_san_configuration.xml"/>
 				<topicref href="system_catalogs/gp_segment_configuration.xml"/>
 				<topicref href="system_catalogs/gp_transaction_log.xml"/>
 				<topicref href="system_catalogs/gp_version_at_initdb.xml"/>

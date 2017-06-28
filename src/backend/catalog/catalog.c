@@ -649,7 +649,6 @@ IsSharedRelation(Oid relationId)
 		relationId == ResQueueCapabilityRelationId ||
 		relationId == ResGroupRelationId ||
 		relationId == ResGroupCapabilityRelationId ||
-		relationId == GpSanConfigRelationId ||
 		relationId == GpFaultStrategyRelationId ||
 		relationId == GpConfigurationRelationId ||
 		relationId == GpConfigHistoryRelationId ||
@@ -699,7 +698,6 @@ IsSharedRelation(Oid relationId)
 		relationId == ResGroupCapabilityResgroupidResLimittypeIndexId ||
 		relationId == AuthIdRolResQueueIndexId ||
 		relationId == AuthIdRolResGroupIndexId ||
-		relationId == GpSanConfigMountidIndexId ||
 		relationId == GpConfigurationContentDefinedprimaryIndexId ||
 		relationId == GpConfigurationDbidIndexId ||
 		relationId == GpDbInterfacesDbidIndexId ||

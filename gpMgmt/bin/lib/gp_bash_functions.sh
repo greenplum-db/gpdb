@@ -191,7 +191,7 @@ DEFAULTDB=template1
 
 CONFIG_TABLE="(SELECT dbid, content, role, preferred_role, mode, status,
                hostname, address, port, fselocation as datadir,
-               replication_port, san_mounts
+               replication_port
         FROM gp_segment_configuration
         JOIN pg_filespace_entry ON (dbid = fsedbid)
         JOIN pg_filespace fs ON (fs.oid = fsefsoid)

@@ -645,8 +645,6 @@ add_segment_config(seginfo *i)
 	else
 		nulls[Anum_gp_segment_configuration_replication_port - 1] = true;
 
-	nulls[Anum_gp_segment_configuration_san_mounts - 1] = true;
-
 	tuple = heap_form_tuple(RelationGetDescr(rel), values, nulls);
 
 	/* insert a new tuple */

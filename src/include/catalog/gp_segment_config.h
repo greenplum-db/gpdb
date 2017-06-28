@@ -43,7 +43,6 @@ CATALOG(gp_segment_configuration,5036) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
 	text		address;			
 
 	int4		replication_port;	
-	int2vector	san_mounts;			/* one or more mount-points used by this segment. */
 } FormData_gp_segment_configuration;
 
 /* no foreign keys */
@@ -60,7 +59,7 @@ typedef FormData_gp_segment_configuration *Form_gp_segment_configuration;
  *		compiler constants for gp_segment_configuration
  * ----------------
  */
-#define Natts_gp_segment_configuration					11
+#define Natts_gp_segment_configuration					10
 #define Anum_gp_segment_configuration_dbid				1
 #define Anum_gp_segment_configuration_content			2
 #define Anum_gp_segment_configuration_role				3
@@ -71,6 +70,5 @@ typedef FormData_gp_segment_configuration *Form_gp_segment_configuration;
 #define Anum_gp_segment_configuration_hostname			8
 #define Anum_gp_segment_configuration_address			9
 #define Anum_gp_segment_configuration_replication_port	10
-#define Anum_gp_segment_configuration_san_mounts		11
 
 #endif /*_GP_SEGMENT_CONFIG_H_*/

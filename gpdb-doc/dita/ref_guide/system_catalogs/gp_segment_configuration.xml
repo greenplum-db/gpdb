@@ -115,18 +115,6 @@
             <entry colname="col4">The TCP port the file block replication process is using to keep
               primary and mirror segments synchronized.</entry>
           </row>
-          <row>
-            <entry colname="col1">
-              <codeph>san_mounts</codeph>
-            </entry>
-            <entry colname="col2">int2vector</entry>
-            <entry colname="col3"><xref href="gp_san_configuration.xml#topic1" 
-                format="dita">gp_san_ configuration</xref>.oid</entry>
-            <entry colname="col4">An array of references to the <xref
-                href="gp_san_configuration.xml#topic1"  format="dita"
-                >gp_san_configuration</xref> table. Only used on systems that were initialized using
-              sharred storage.</entry>
-          </row>
         </tbody>
       </tgroup>
     </table>

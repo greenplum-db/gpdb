@@ -29,7 +29,6 @@ MASTER_ONLY_TABLES = [
     'gp_db_interfaces',
     'gp_interfaces',
     'gp_fault_strategy',
-    'gp_san_configuration',
     'gp_segment_configuration',
     'pg_description',
     'pg_listener',  # ???
