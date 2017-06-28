@@ -55,7 +55,7 @@ typedef struct Gang
 
 extern int qe_gang_id;
 extern MemoryContext GangContext;
-extern Gang *gangInCreating;
+extern Gang *CurrentGangCreating;
 
 extern Gang *AllocateReaderGang(GangType type, char *portal_name);
 

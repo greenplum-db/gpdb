@@ -93,7 +93,7 @@ createGang_thread(GangType type, int gang_id, int size, int content)
 
 	initPQExpBuffer(&create_gang_error);
 
-	Assert(gangInCreating == NULL);
+	Assert(CurrentGangCreating == NULL);
 
 create_gang_retry:
 	/*
@@ -108,7 +108,7 @@ create_gang_retry:
 
 	/* allocate and initialize a gang structure */
 	newGangDefinition = buildGangDefinition(type, gang_id, size, content);
-	gangInCreating = newGangDefinition;
+	CurrentGangCreating = newGangDefinition;
 
 	Assert(newGangDefinition != NULL);
 	Assert(newGangDefinition->size == size);
@@ -201,7 +201,7 @@ create_gang_retry:
 	{
 		setLargestGangsize(size);
 		termPQExpBuffer(&create_gang_error);
-		gangInCreating = NULL;
+		CurrentGangCreating = NULL;
 
 		return newGangDefinition;
 	}
@@ -229,7 +229,7 @@ create_gang_retry:
 			 */
 			DisconnectAndDestroyGang(newGangDefinition);
 			newGangDefinition = NULL;
-			gangInCreating = NULL;
+			CurrentGangCreating = NULL;
 	
 			ELOG_DISPATCHER_DEBUG("createGang: gang creation failed, but retryable.");
 	
@@ -253,7 +253,7 @@ exit:
 		CheckForResetSession();
 	}
 
-	gangInCreating = NULL;
+	CurrentGangCreating = NULL;
 
 	ereport(ERROR,
 			(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
