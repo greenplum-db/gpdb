@@ -1176,8 +1176,7 @@ static struct config_bool ConfigureNamesBool[] =
 			GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
 		},
 		&data_checksums,
-		false,
-		NULL, NULL, NULL
+		false, NULL, NULL
 	},
 
 	/* End-of-list marker */
