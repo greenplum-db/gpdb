@@ -117,19 +117,19 @@ type FailingSshConnecter struct {
 	user string
 }
 
-func (fakesshconnector FailingSshConnecter) Connect(Host string, Port int, user string) (ssh_client.Session, error) {
+func (sshConnector FailingSshConnecter) Connect(Host string, Port int, user string) (ssh_client.SshSession, error) {
 	return nil, errors.New("fake connect error")
 }
-func (fakesshconnector *FailingSshConnecter) ConnectAndExecute(Host string, Port int, user string, command string) (string, error) {
-	fakesshconnector.user = user
+func (sshConnector *FailingSshConnecter) ConnectAndExecute(Host string, Port int, user string, command string) (string, error) {
+	sshConnector.user = user
 	return "", errors.New("fake ConnectAndExecute error")
 }
 
 type SucceedingSshConnector struct{}
 
-func (fakesshconnector SucceedingSshConnector) Connect(Host string, Port int, user string) (ssh_client.Session, error) {
+func (sshConnector SucceedingSshConnector) Connect(Host string, Port int, user string) (ssh_client.SshSession, error) {
 	return nil, nil
 }
-func (fakesshconnector *SucceedingSshConnector) ConnectAndExecute(Host string, Port int, user string, command string) (string, error) {
+func (sshConnector SucceedingSshConnector) ConnectAndExecute(Host string, Port int, user string, command string) (string, error) {
 	return GREP_PG_UPGRADE, nil
 }

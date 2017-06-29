@@ -16,8 +16,6 @@ import (
 
 	"gp_upgrade/ssh_client"
 
-	"bufio"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -125,12 +123,12 @@ var _ = Describe("SshConnector", func() {
 
 	Describe("#ConnectAndExecute", func() {
 		Context("happy: when command runs successfully", func() {
-			XIt("it returns the output from a command", func() {
+			It("it returns the output from a command", func() {
+
 				result, err := subject.ConnectAndExecute("localhost", 22, "gpadmin", "foo")
 
-				// todo have to control the ssh session that results...  see SshClient.NewSession... should mock out but fails somehow
 				Expect(err).ToNot(HaveOccurred())
-				Expect(result).To(Equal("foobar"))
+				Expect(result).To(Equal("fake session output"))
 			})
 		})
 	})
@@ -153,28 +151,13 @@ func (parser FakeKeyParser) ParsePrivateKey(pemBytes []byte) (ssh.Signer, error)
 }
 
 type FakeSshClient struct {
-	//sshSession ssh.Session
 	buf bytes.Buffer
 }
 
-//func (fakeSshClient FakeSshClient) NewSession() (ssh_client.Session, error) {
-func (fakeSshClient FakeSshClient) NewSession() (*ssh.Session, error) {
-	fakeSshClient.buf.Write([]byte("test session"))
-	reader := bufio.NewReader(&fakeSshClient.buf)
-	result := &ssh.Session{Stdin: reader}
-	return result, nil
-
-	//fakeSession := FakeSession{}
-	//return &fakeSession, nil
+func (FakeSshClient) NewSession() (ssh_client.SshSession, error) {
+	fakeSession := FakeSession{}
+	return &fakeSession, nil
 }
-
-//func (fakeSshClient FakeSshClient) NewSession() (Session, error) {
-//	fakeSshClient.buf.Write([]byte("test session"))
-//	//reader := bufio.NewReader(&fakeSshClient.buf)
-//	//result := &ssh.Session{Stdin: reader}
-//	fakeSession := &FakeSession{bufio.NewReader(&fakeSshClient.buf)}
-//	return fakeSession, nil
-//}
 
 type FakeSession struct{}
 
@@ -188,8 +171,7 @@ func (fakeSession FakeSession) Output(string) ([]byte, error) {
 
 type FakeDialer struct{}
 
-//func (dialer FakeDialer) Dial(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
-func (dialer FakeDialer) Dial(network, addr string, config *ssh.ClientConfig) (ssh_client.SshClient, error) {
+func (FakeDialer) Dial(network, addr string, config *ssh.ClientConfig) (ssh_client.SshClient, error) {
 	param_network = network
 	param_addr = addr
 	param_config = config
@@ -198,26 +180,24 @@ func (dialer FakeDialer) Dial(network, addr string, config *ssh.ClientConfig) (s
 
 type ThrowingKeyParser struct{}
 
-func (parser ThrowingKeyParser) ParsePrivateKey(pemBytes []byte) (ssh.Signer, error) {
+func (ThrowingKeyParser) ParsePrivateKey(pemBytes []byte) (ssh.Signer, error) {
 	return nil, errors.New("test parsing failure")
 }
 
 type ThrowingDialer struct{}
 
-func (dialer ThrowingDialer) Dial(network, addr string, config *ssh.ClientConfig) (ssh_client.SshClient, error) {
+func (ThrowingDialer) Dial(network, addr string, config *ssh.ClientConfig) (ssh_client.SshClient, error) {
 	return nil, errors.New("test dialing failure")
 }
 
 type ThrowingClient struct{}
 
-//func (fakeSshClient ThrowingClient) NewSession() (ssh_client.Session, error) {
-func (fakeSshClient ThrowingClient) NewSession() (*ssh.Session, error) {
+func (ThrowingClient) NewSession() (ssh_client.SshSession, error) {
 	return nil, errors.New("test NewSession failure")
 }
 
 type ThrowingBadClientDialer struct{}
 
-//func (badClientDialer ThrowingBadClientDialer) Dial(network, addr string, config *ssh.ClientConfig) (ssh_client.SshClient, error) {
-func (badClientDialer ThrowingBadClientDialer) Dial(network, addr string, config *ssh.ClientConfig) (ssh_client.SshClient, error) {
+func (ThrowingBadClientDialer) Dial(network, addr string, config *ssh.ClientConfig) (ssh_client.SshClient, error) {
 	return new(ThrowingClient), nil
 }

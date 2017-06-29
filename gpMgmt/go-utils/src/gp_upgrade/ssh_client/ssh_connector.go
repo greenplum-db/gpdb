@@ -15,10 +15,10 @@ import (
 
 type SshConnector interface {
 	ConnectAndExecute(host string, port int, user string, command string) (string, error)
-	Connect(Host string, Port int, user string) (Session, error)
+	Connect(Host string, Port int, user string) (SshSession, error)
 }
 
-type Session interface {
+type SshSession interface {
 	Output(cmd string) ([]byte, error)
 	Close() error
 }
@@ -62,7 +62,7 @@ func (ssh_connector *RealSshConnector) ConnectAndExecute(host string, port int, 
 	return output, nil
 }
 
-func (ssh_connector *RealSshConnector) Connect(Host string, Port int, user string) (Session, error) {
+func (ssh_connector *RealSshConnector) Connect(Host string, Port int, user string) (SshSession, error) {
 	pemBytes, err := ioutil.ReadFile(ssh_connector.PrivateKeyPath)
 	if err != nil {
 		return nil, err
@@ -94,8 +94,17 @@ func (parser RealKeyParser) ParsePrivateKey(pemBytes []byte) (ssh.Signer, error)
 	return ssh.ParsePrivateKey(pemBytes)
 }
 
+type RealClientProxy struct {
+	client *ssh.Client
+}
+
+func (proxy RealClientProxy) NewSession() (SshSession, error) {
+	return proxy.client.NewSession()
+}
+
 type RealDialer struct{}
 
 func (dial RealDialer) Dial(network, addr string, config *ssh.ClientConfig) (SshClient, error) {
-	return ssh.Dial(network, addr, config)
+	client, err := ssh.Dial(network, addr, config)
+	return RealClientProxy{client}, err
 }
