@@ -76,4 +76,20 @@
       </p>
     </body>
   </topic>
+  <topic xml:lang="en">
+    <title>Making a Sequence the default value for a column</title>
+    <body>
+      <p>A sequence can be used in the <codeph>CREATE TABLE</codeph> command (instead of the
+          <codeph>SERIAL</codeph> or <codeph>BIGSERIAL</codeph> type):</p>
+      <p>
+        <codeblock>CREATE TABLE ... (
+            id INT4 DEFAULT nextval('id_seq')
+            );
+</codeblock>
+      </p>
+      <p>Alternatively a column can be altered and a sequence can be added as default value:</p>
+        <codeblock>ALTER TABLE ... ALTER COLUMN id SET DEFAULT nextval('id_seq');
+</codeblock>
+    </body>
+  </topic>
 </topic>
