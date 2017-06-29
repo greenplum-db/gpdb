@@ -1634,13 +1634,18 @@ WHERE relname = '%s' AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspn
             outfile.write("""--
 -- Schema: %s, Table: %s, Attribute: %s
 --
+
+DELETE FROM pg_statistic WHERE starelid = %d AND staattnum = %d;
+
 INSERT INTO pg_statistic VALUES (
     %d::oid,
     %d::smallint,
     %f::real,
     %d::integer,
     %f::real,
-""" % (nspname, relname, attname, starelid, staattnum, stanullfrac, stawidth, stadistinct))
+""" % (nspname, relname, attname,
+       starelid, staattnum,
+       starelid, staattnum, stanullfrac, stawidth, stadistinct))
 
             # If a typname starts with exactly one it describes an array type
             # We can't restore statistics of array columns, so we'll zero and NULL everything out

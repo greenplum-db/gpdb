@@ -615,6 +615,9 @@ class RestoreDatabase(Operation):
                     if replace_toggle and "::smallint" in line:
                         line = "    %s::smallint,\n" % new_attnum
                         replace_toggle = False
+                    if replace_toggle and "DELETE FROM" in line:
+                        line = re.sub("starelid = (\w+)", "starelid = %s" % new_oid, line)
+                        line = re.sub("staattnum = (\w+)", "staattnum = %s" % new_attnum, line)
                     if print_toggle:
                         outfile.write(line)
 
