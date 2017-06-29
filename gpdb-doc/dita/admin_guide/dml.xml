@@ -57,7 +57,7 @@
             <row>
               <entry colname="col1">ROW SHARE</entry>
               <entry colname="col2">
-                <codeph>SELECT FOR SHARE</codeph>
+                <codeph>SELECT FOR SHARE, SELECT FOR UPDATE</codeph>
               </entry>
               <entry colname="col3">EXCLUSIVE, ACCESS EXCLUSIVE</entry>
             </row>
