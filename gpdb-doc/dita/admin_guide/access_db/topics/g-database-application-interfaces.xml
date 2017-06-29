@@ -7,9 +7,9 @@
       <p>You may want to develop your own client applications that interface to Greenplum Database.
          PostgreSQL provides a number of database drivers for the most commonly used database
          application programming interfaces (APIs), which can also be used with Greenplum Database.
-         These drivers are available as a separate download. Each driver is an independent
-         PostgreSQL development project and must be downloaded, installed and configured to connect
-         to Greenplum Database. The following drivers are available:</p>
+         These drivers are available as a separate download. Each driver (except libpq, which comes
+         with PostgreSQL) is an independent PostgreSQL development project and must be downloaded,
+         installed and configured to connect to Greenplum Database. The following drivers are available:</p>
       <table id="io140349">
          <title>Greenplum Database Interfaces</title>
          <tgroup cols="3">
@@ -57,6 +57,13 @@
                   <entry colname="col2">pygresql</entry>
                   <entry colname="col3">
                      <xref href="http://www.pygresql.org/" scope="external" format="html"/>
+                  </entry>
+               </row>
+               <row>
+                  <entry colname="col1">libpq C Library</entry>
+                  <entry colname="col2">libpq</entry>
+                  <entry colname="col3">
+                     <xref href="https://www.postgresql.org/docs/current/static/libpq.html" scope="external" format="html"/>
                   </entry>
                </row>
             </tbody>
