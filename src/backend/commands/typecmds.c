@@ -1179,7 +1179,7 @@ DefineEnum(CreateEnumStmt *stmt)
 				   false);		/* Type NOT NULL */
 
 	/* Enter the enum's values into pg_enum */
-	EnumValuesCreate(enumTypeOid, stmt->vals);
+	EnumValuesCreate(enumTypeOid, stmt->vals, InvalidOid);
 
 	/*
 	 * Create the array type that goes with it.

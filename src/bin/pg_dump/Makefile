@@ -35,14 +35,14 @@ kwlookup.c: % : $(top_srcdir)/src/backend/parser/%
 all: submake-libpq submake-libpgport pg_dump pg_restore pg_dumpall \
     submake-cdb
 
-pg_dump: pg_dump.o common.o pg_dump_sort.o binary_upgrade.o $(OBJS) $(KEYWRDOBJS) $(libpq_builddir)/libpq.a
-	$(CC) $(CFLAGS) pg_dump.o common.o pg_dump_sort.o binary_upgrade.o $(KEYWRDOBJS) $(OBJS) $(libpq_pgport) $(LDFLAGS) $(LIBS) -o $@$(X)
+pg_dump: pg_dump.o common.o pg_dump_sort.o $(OBJS) $(KEYWRDOBJS) $(libpq_builddir)/libpq.a
+	$(CC) $(CFLAGS) pg_dump.o common.o pg_dump_sort.o $(KEYWRDOBJS) $(OBJS) $(libpq_pgport) $(LDFLAGS) $(LIBS) -o $@$(X)
 
 pg_restore: pg_restore.o $(OBJS) $(KEYWRDOBJS) $(libpq_builddir)/libpq.a
 	$(CC) $(CFLAGS) pg_restore.o $(KEYWRDOBJS) $(OBJS) $(libpq_pgport) $(LDFLAGS) $(LIBS) -o $@$(X)
 
-pg_dumpall: pg_dumpall.o dumputils.o binary_upgradeall.o $(KEYWRDOBJS) $(libpq_builddir)/libpq.a
-	$(CC) $(CFLAGS) pg_dumpall.o dumputils.o binary_upgradeall.o $(KEYWRDOBJS) $(WIN32RES) $(libpq_pgport) $(LDFLAGS) $(LIBS) -o $@$(X)
+pg_dumpall: pg_dumpall.o dumputils.o $(KEYWRDOBJS) $(libpq_builddir)/libpq.a
+	$(CC) $(CFLAGS) pg_dumpall.o dumputils.o $(KEYWRDOBJS) $(WIN32RES) $(libpq_pgport) $(LDFLAGS) $(LIBS) -o $@$(X)
 
 submake-cdb:
 	$(MAKE) -C cdb all

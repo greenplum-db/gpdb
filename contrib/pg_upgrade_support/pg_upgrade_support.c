@@ -12,12 +12,18 @@
 
 #include "fmgr.h"
 #include "catalog/dependency.h"
+#include "catalog/namespace.h"
+#include "catalog/pg_class.h"
+#include "catalog/pg_type.h"
+#include "commands/extension.h"
+#include "miscadmin.h"
+#include "utils/builtins.h"
+
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_amop.h"
 #include "catalog/pg_attrdef.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_cast.h"
-#include "catalog/pg_class.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_conversion.h"
 #include "catalog/pg_database.h"
@@ -38,13 +44,87 @@
 #include "catalog/pg_ts_dict.h"
 #include "catalog/pg_ts_parser.h"
 #include "catalog/pg_ts_template.h"
-#include "catalog/pg_type.h"
 #include "cdb/cdbvars.h"
-#include "utils/builtins.h"
 
 #ifdef PG_MODULE_MAGIC
 PG_MODULE_MAGIC;
 #endif
+
+Datum		add_pg_enum_label(PG_FUNCTION_ARGS);
+
+Datum		create_empty_extension(PG_FUNCTION_ARGS);
+
+PG_FUNCTION_INFO_V1(add_pg_enum_label);
+
+PG_FUNCTION_INFO_V1(create_empty_extension);
+
+Datum
+add_pg_enum_label(PG_FUNCTION_ARGS)
+{
+	Oid			enumoid = PG_GETARG_OID(0);
+	Oid			typoid = PG_GETARG_OID(1);
+	Name		label = PG_GETARG_NAME(2);
+
+	EnumValuesCreate(typoid, list_make1(makeString(NameStr(*label))),
+					 enumoid);
+
+	PG_RETURN_VOID();
+}
+
+Datum
+create_empty_extension(PG_FUNCTION_ARGS)
+{
+	text	   *extName = PG_GETARG_TEXT_PP(0);
+	text	   *schemaName = PG_GETARG_TEXT_PP(1);
+	bool		relocatable = PG_GETARG_BOOL(2);
+	text	   *extVersion = PG_GETARG_TEXT_PP(3);
+	Datum		extConfig;
+	Datum		extCondition;
+	List	   *requiredExtensions;
+
+	if (PG_ARGISNULL(4))
+		extConfig = PointerGetDatum(NULL);
+	else
+		extConfig = PG_GETARG_DATUM(4);
+
+	if (PG_ARGISNULL(5))
+		extCondition = PointerGetDatum(NULL);
+	else
+		extCondition = PG_GETARG_DATUM(5);
+
+	requiredExtensions = NIL;
+	if (!PG_ARGISNULL(6))
+	{
+		ArrayType  *textArray = PG_GETARG_ARRAYTYPE_P(6);
+		Datum	   *textDatums;
+		int			ndatums;
+		int			i;
+
+		deconstruct_array(textArray,
+						  TEXTOID, -1, false, 'i',
+						  &textDatums, NULL, &ndatums);
+		for (i = 0; i < ndatums; i++)
+		{
+			text	   *txtname = DatumGetTextPP(textDatums[i]);
+			char	   *extName = text_to_cstring(txtname);
+			Oid			extOid = get_extension_oid(extName, false);
+
+			requiredExtensions = lappend_oid(requiredExtensions, extOid);
+		}
+	}
+
+	InsertExtensionTuple(text_to_cstring(extName),
+						 GetUserId(),
+					   get_namespace_oid(text_to_cstring(schemaName), false),
+						 relocatable,
+						 text_to_cstring(extVersion),
+						 extConfig,
+						 extCondition,
+						 requiredExtensions);
+
+	PG_RETURN_VOID();
+}
+
 
 #define GET_STR(textp) DatumGetCString(DirectFunctionCall1(textout, PointerGetDatum(textp)))
 
@@ -389,13 +469,13 @@ Datum
 preassign_attrdef_oid(PG_FUNCTION_ARGS)
 {
 	Oid			attdefoid = PG_GETARG_OID(0);
-	Oid			attrelid = PG_GETARG_OID(1);
+	Oid			adrelid = PG_GETARG_OID(1);
 	Oid			adnum = PG_GETARG_OID(2);
 
 	if (Gp_role == GP_ROLE_UTILITY)
 	{
 		AddPreassignedOidFromBinaryUpgrade(attdefoid, AttrDefaultRelationId, NULL,
-										   InvalidOid, attrelid, adnum);
+										   InvalidOid, adrelid, adnum);
 	}
 
 	PG_RETURN_VOID();
@@ -523,13 +603,12 @@ Datum
 preassign_extension_oid(PG_FUNCTION_ARGS)
 {
 	Oid			extensionoid = PG_GETARG_OID(0);
-	Oid			nsoid = PG_GETARG_OID(1);
-	char	   *extensionname = GET_STR(PG_GETARG_TEXT_P(2));
+	char	   *extensionname = GET_STR(PG_GETARG_TEXT_P(1));
 
 	if (Gp_role == GP_ROLE_UTILITY)
 	{
 		AddPreassignedOidFromBinaryUpgrade(extensionoid, ExtensionRelationId,
-										   extensionname, nsoid, InvalidOid,
+										   extensionname, InvalidOid, InvalidOid,
 										   InvalidOid);
 	}
 

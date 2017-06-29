@@ -4,7 +4,12 @@
 # Data Directories
 # ======================================================================
 
-DATADIRS=${DATADIRS:-`pwd`/datadirs}
+if [ -z "${MASTER_DATADIR}" ]; then
+  DATADIRS=${DATADIRS:-`pwd`/datadirs}
+else
+  DATADIRS="${MASTER_DATADIR}/datadirs"
+fi
+
 QDDIR=$DATADIRS/qddir
 SEG_PREFIX=demoDataDir
 

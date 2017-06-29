@@ -35,20 +35,21 @@ static int	oid_cmp(const void *p1, const void *p2);
  * vals is a list of Value strings.
  */
 void
-EnumValuesCreate(Oid enumTypeOid, List *vals)
+EnumValuesCreate(Oid enumTypeOid, List *vals,
+				 Oid binary_upgrade_next_pg_enum_oid)
 {
 	Relation	pg_enum;
 	TupleDesc	tupDesc;
 	NameData	enumlabel;
 	Oid		   *oids;
-	int			i,
-				n;
+	int			elemno,
+				num_elems;
 	Datum		values[Natts_pg_enum];
 	bool		nulls[Natts_pg_enum];
 	ListCell   *lc;
 	HeapTuple	tup;
 
-	n = list_length(vals);
+	num_elems = list_length(vals);
 
 	/*
 	 * XXX we do not bother to check the list of values for duplicates --- if
@@ -66,26 +67,38 @@ EnumValuesCreate(Oid enumTypeOid, List *vals)
 	 * counter wraps all the way around before we finish. Which seems
 	 * unlikely.
 	 */
-	oids = (Oid *) palloc(n * sizeof(Oid));
-	for (i = 0; i < n; i++)
+	oids = (Oid *) palloc(num_elems * sizeof(Oid));
+	if (OidIsValid(binary_upgrade_next_pg_enum_oid))
 	{
-		/*
-		 * In QE node, however, use the OIDs assigned by the master (they are delivered
-		 * out-of-band, see oid_dispatch.c.
-		 */
-		if (Gp_role == GP_ROLE_EXECUTE)
-			oids[i] = InvalidOid;
-		else
-			oids[i] = GetNewOid(pg_enum);
+		if (num_elems != 1)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("EnumValuesCreate() can only set a single OID")));
+		oids[0] = binary_upgrade_next_pg_enum_oid;
+		binary_upgrade_next_pg_enum_oid = InvalidOid;
 	}
+	else
+	{
+		for (elemno = 0; elemno < num_elems; elemno++)
+		{
+			/*
+			 * In QE node, however, use the OIDs assigned by the master (they are delivered
+			 * out-of-band, see oid_dispatch.c.
+			 */
+			if (Gp_role == GP_ROLE_EXECUTE)
+				oids[elemno] = InvalidOid;
+			else
+				oids[elemno] = GetNewOid(pg_enum);
+		}
 
-	/* sort them, just in case counter wrapped from high to low */
-	qsort(oids, n, sizeof(Oid), oid_cmp);
+		/* sort them, just in case counter wrapped from high to low */
+		qsort(oids, num_elems, sizeof(Oid), oid_cmp);
+	}
 
 	/* and make the entries */
 	memset(nulls, false, sizeof(nulls));
 
-	i = 0;
+	elemno = 0;
 	foreach(lc, vals)
 	{
 		char	   *lab = strVal(lfirst(lc));
@@ -106,13 +119,13 @@ EnumValuesCreate(Oid enumTypeOid, List *vals)
 		values[Anum_pg_enum_enumlabel - 1] = NameGetDatum(&enumlabel);
 
 		tup = heap_form_tuple(tupDesc, values, nulls);
-		HeapTupleSetOid(tup, oids[i]);
+		HeapTupleSetOid(tup, oids[elemno]);
 
 		simple_heap_insert(pg_enum, tup);
 		CatalogUpdateIndexes(pg_enum, tup);
 		heap_freetuple(tup);
 
-		i++;
+		elemno++;
 	}
 
 	/* clean up */

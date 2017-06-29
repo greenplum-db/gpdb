@@ -26,7 +26,20 @@ install_system_functions_internal(migratorContext *ctx, char *dbname)
 
 	PQclear(executeQueryOrDie(ctx, conn,
 							  "CREATE SCHEMA binary_upgrade;"));
+	PQclear(executeQueryOrDie(ctx, conn,
+							  "CREATE OR REPLACE FUNCTION "
+						  "binary_upgrade.add_pg_enum_label(OID, OID, NAME) "
+							  "RETURNS VOID "
+							  "AS '$libdir/pg_upgrade_support' "
+							  "LANGUAGE C STRICT;"));
+	PQclear(executeQueryOrDie(ctx, conn,
+							  "CREATE OR REPLACE FUNCTION "
+							  "binary_upgrade.create_empty_extension(text, text, bool, text, oid[], text[], text[]) "
+							  "RETURNS VOID "
+							  "AS '$libdir/pg_upgrade_support' "
+							  "LANGUAGE C;"));
 
+	/* Additional GPDB functions. */
 	PQclear(executeQueryOrDie(ctx, conn,
 							  "CREATE OR REPLACE FUNCTION "
 							  "binary_upgrade.preassign_type_oid(OID, TEXT, OID) "
@@ -179,7 +192,7 @@ install_system_functions_internal(migratorContext *ctx, char *dbname)
 							  "LANGUAGE C STRICT;"));
 	PQclear(executeQueryOrDie(ctx, conn,
 							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_extension_oid(OID, OID, TEXT) "
+							  "binary_upgrade.preassign_extension_oid(OID, TEXT) "
 							  "RETURNS VOID "
 							  "AS '$libdir/pg_upgrade_support' "
 							  "LANGUAGE C STRICT;"));
@@ -195,6 +208,12 @@ install_system_functions_internal(migratorContext *ctx, char *dbname)
 							  "RETURNS VOID "
 							  "AS '$libdir/pg_upgrade_support' "
 							  "LANGUAGE C STRICT;"));
+
+	PQclear(executeQueryOrDie(ctx, conn,
+							  "CREATE OR REPLACE FUNCTION binary_upgrade.bitmaphack_in(cstring) "
+							  "RETURNS bit varying "
+							  "LANGUAGE INTERNAL AS 'byteain'"));
+
 	PQfinish(conn);
 }
 
